@@ -199,4 +199,130 @@ subroutine writeToFiles_C(id) BIND(C, NAME="writeToFiles_C")
        
 end subroutine
 
+!mcai-----begin-----------------------------
+
+! void projectHydroGridMixture_C (double density[], double concentration[])
+subroutine projectHydroGridMixture_C (density, concentration)  BIND(C, NAME="projectHydroGrid_C")
+   real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
+   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
+
+   call projectHydroGridMixture (grid, density, concentration)
+   
+end subroutine
+
+! A. Donev: This routine is made to be callable from either Fortran or C codes:
+subroutine projectHydroGridMixture (grid, density, concentration)
+
+   type(HydroGrid), intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
+   real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
+   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
+   
+   !local variables
+   integer :: i, j, k
+   ! Density temp, Density times Y coordinates, Concentratino times Y coordinates
+   real (wp) :: density_tmp(grid%nCells(2)), concentration_tmp(grid%nCells(2)), Y_coor_tmp(grid%nCells(2))
+   real (wp) :: density1_tmp(grid%nCells(2))
+
+   ! size of DensityTimesY_coor and size of ConcentrTimesY_coor
+   ! real (wp) :: DensityTimesY_coor(1, grid%nCells(1), grid%nCells(3)), ConcentrTimesY_coor(1, grid%nCells(1), grid%nCells(3))  
+   real(wp), dimension(:,:), allocatable, target :: DensityTimesY_coor, Density1TimesY_coor, ConcentrTimesY_coor
+   ! averaging values along Y direction
+   real(wp), target :: rho_avg, rho1_avg, c_avg
+  
+   !for writing vtk file
+   integer :: mesh_dims(3), dim, iVariance
+   character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
+   character(len=24), target :: filename
+   
+   ! A. Donev: You can make this a two-dimensional array -- no need for the first dimension to be 1 
+   allocate(DensityTimesY_coor(grid%nCells(1), grid%nCells(3)))
+   allocate(Density1TimesY_coor(grid%nCells(1), grid%nCells(3)))
+   allocate(ConcentrTimesY_coor(grid%nCells(1), grid%nCells(3)))
+
+   ! sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)
+   do i=1, grid%nCells(1)
+      do j=1, grid%nCells(3)
+         do k=1, grid%nCells(2)
+            density_tmp(k)=density(i, k, j, 0)*concentration(i, k, j, 1)
+            ! A. Donev: We also want the center of mass using rho1:
+            density1_tmp(k)=density(i, k, j, 0)*concentration(i, k, j, 1)
+            concentration_tmp(k)=concentration(i, k, j, 1)
+            ! Y_i cooridinates
+            Y_coor_tmp(k)=(k-0.5_wp)*grid%systemLength(2)/grid%nCells(2)    ! it should be (k-1)*dy + dy/2+prob_lo (we assume prob_lo=0)
+         enddo 
+         ! Donev: Calculate also here the average rho, rho1 and c along the y direction
+         DensityTimesY_coor(i, j)=DOT_PRODUCT(density_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
+         Density1TimesY_coor(i, j)=DOT_PRODUCT(density1_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
+         ConcentrTimesY_coor(i, j)=DOT_PRODUCT(concentration_tmp, Y_coor_tmp)/(sum(concentration_tmp, dim=1))
+      enddo
+   enddo
+   rho_avg=sum(density_tmp, dim=1)/grid%nCells(2)
+   rho1_avg=sum(density1_tmp, dim=1)/grid%nCells(2)
+   c_avg=sum(concentration_tmp, dim=1)/grid%nCells(2)
+
+
+   ! grid%nCells(3)=0     ! For testing 2D case 
+   if(grid%nCells(3)>1) then
+
+   !To write the data into VTK file, call WriteRectilinearVTKMesh
+   !we have x z coorinates and the sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i) in stride
+ 
+      filename = "avg_DenConcTimesY.vtk"
+      write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(filename)
+      filename = trim(filename) // C_NULL_CHAR
+      
+      ! swap the axes
+      mesh_dims(1)=grid%nCells(1)
+      mesh_dims(2)=grid%nCells(3)
+      mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)
+   
+      !~~~ we need XZ plane and plot the quantity~~~~~~~~~~~~~~~~
+      varnames(1) = "rho_CofM" // C_NULL_CHAR
+      varnames(2) = "c_CofM" // C_NULL_CHAR
+      varnames(3) = "rho1_CofM" // C_NULL_CHAR
+      varnames(4) = "rho_Avg" // C_NULL_CHAR
+      varnames(5) = "rho1_Avg" // C_NULL_CHAR
+      varnames(6) = "c_Avg" // C_NULL_CHAR
+      
+     
+      call WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
+         ub=0_c_int, dims=mesh_dims+1, &
+         x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
+         y=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(2)) /), &            
+         z=(/ (0.0_wp, dim=0,1) /), &
+         nvars=2, vardim=(/(1, dim=1, 2)/), centering=(/(0, dim=1, 2)/), &
+         varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,2) /), &
+         vars=(/ C_LOC(DensityTimesY_coor), C_LOC(Density1TimesY_coor), &
+                C_LOC(ConcentrTimesY_coor), C_LOC(rho_avg), C_LOC(rho1_avg), C_LOC(c_avg) /))
+
+   else  ! if the grid is a 2D grid, we directly write down X coordinates and sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)  
+      ! sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)
+      do i=1, grid%nCells(1)
+         do k=1, grid%nCells(2)
+            density_tmp(k)=density(i, k, 1, 0)
+            density1_tmp(k)=density(i, k, j, 0)*concentration(i, k, j, 1)
+            concentration_tmp(k)=concentration(i, k, 1, 1)
+            Y_coor_tmp(k)=(k-1/2)*grid%systemLength(2)/grid%nCells(2)    ! it should be (k-1)*dy + dy/2+prob_lo (we assume prob_lo=0)
+         enddo 
+         DensityTimesY_coor(i, 1)=DOT_PRODUCT(density_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
+         Density1TimesY_coor(i, j)=DOT_PRODUCT(density1_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
+         ConcentrTimesY_coor(i, 1)=DOT_PRODUCT(concentration_tmp, Y_coor_tmp)/(sum(concentration_tmp, dim=1))
+      enddo
+
+      open(11,file='DenConcTimesY.dat', status='old', form='formatted')
+      do i = 1, grid%nCells(1)            
+         ! A. Donev: Do not use format * when writing data files
+         write(11, '(1000(g17.9))') ((i-0.5_wp)*grid%systemLength(1)/grid%nCells(1)), &           ! x coord at cell center
+            (DensityTimesY_coor(i, 1)), (Density1TimesY_coor(i, 1)), (ConcentrTimesY_coor(i, 1)), &
+            (rho_avg), (rho1_avg), (c_avg)    
+      enddo  
+      close(11)
+      
+   end if
+
+end subroutine
+!mcai-----end-----------------------------
+
+
+
 END MODULE
