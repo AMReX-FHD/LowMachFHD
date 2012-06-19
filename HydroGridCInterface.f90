@@ -10,7 +10,7 @@ MODULE HydroGridCInterface ! Interface to my HydroGrid module
       ! I use a global variable here but one could use C_F_POINTER
    logical, public, save :: project_2D=.false.
    
-   character(kind=c_char, len=1024) :: file_name="hydroGridOptions.nml"
+   character(kind=c_char, len=1024) :: input_file="hydroGridOptions.nml"
 
 CONTAINS   
 
@@ -21,12 +21,12 @@ subroutine setHydroInputFile_C(filename) BIND(C,NAME="setHydroInputFile_C")
 
    integer :: i
    
-   file_name=""
-   do i=1, len(file_name)
+   input_file=""
+   do i=1, len(input_file)
       if(filename(i)==C_NULL_CHAR) exit
-      file_name(i:i)=filename(i)
+      input_file(i:i)=filename(i)
    end do
-   write(*,*) "Will read Fortran namelist from file ", trim(file_name)
+   write(*,*) "Will read Fortran namelist from file ", trim(input_file)
    
 end subroutine
 
@@ -50,7 +50,7 @@ subroutine createHydroAnalysis_C (nCells, nSpecies, nVelocityDimensions, isSingl
    integer :: nameListFile
    
    nameListFile = 114
-   open (nameListFile, file = trim(file_name), status="old", action="read")
+   open (nameListFile, file = trim(input_file), status="old", action="read")
    
    !write(*,*) "PROJECT_Y=", project2D   
    call createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, &
@@ -283,12 +283,12 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    !To write the data into VTK file, call WriteRectilinearVTKMesh
    !we have x z coorinates and the sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i) in stride
  
-      file_name=""
-      do i=1, len(file_name)
+      input_file=""
+      do i=1, len(input_file)
          if(filename(i)==C_NULL_CHAR) exit
-         file_name(i:i)=filename(i)
+         input_file(i:i)=filename(i)
       end do
-      write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(file_name)
+      write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(input_file)
       
       ! swap the axes
       mesh_dims(1)=grid%nCells(1)
@@ -336,14 +336,14 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
          c_avg(i, 1)=sum(concentration_tmp, dim=1)/grid%nCells(2)
       enddo
 
-      file_name=""
-      do i=1, len(file_name)
+      input_file=""
+      do i=1, len(input_file)
          if(filename(i)==C_NULL_CHAR) exit
-         file_name(i:i)=filename(i)
+         input_file(i:i)=filename(i)
       end do
-      write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(file_name)
+      write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(input_file)
 
-      open(1000, file=trim(file_name), status = "unknown", action = "write")
+      open(1000, file=trim(input_file), status = "unknown", action = "write")
       do i = 1, grid%nCells(1)            
          ! A. Donev: Do not use format * when writing data files
          write(1000, '(1000(g17.9))') ((i-0.5_wp)*grid%systemLength(1)/grid%nCells(1)), &           ! x coord at cell center
@@ -357,7 +357,8 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
 end subroutine
 
 
-
+! A. Donev: Mingchao, make this routine accept density and concentration as arguments and only write them to the VTK file
+! Also, please call writeSnapshotToVTK separately in analyze_spectra, rather than from inside projectHydroGridMixture
 subroutine writeSnapshotToVTK(grid, filename) 
 
    type(HydroGrid), target, intent(in) :: grid ! A. Donev: This can be different from the module variable grid!
@@ -374,12 +375,12 @@ subroutine writeSnapshotToVTK(grid, filename)
    integer :: i
 
    ! define the name of the statfile that will be written
-   file_name=""
-   do i=1, len(file_name)
+   input_file=""
+   do i=1, len(input_file)
       if(filename(i)==C_NULL_CHAR) exit
-         file_name(i:i)=filename(i)
+         input_file(i:i)=filename(i)
    end do 
-   new_filename='3D_'//trim(file_name)
+   new_filename=trim(input_file) // '.scalars.vtk'
    write(*,*) "Writing instantaneous single-fluid variables to file ", trim(new_filename)
    new_filename = trim(new_filename) // C_NULL_CHAR
 
