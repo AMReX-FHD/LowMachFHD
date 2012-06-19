@@ -10,9 +10,6 @@
    ! Variances
    writeVariancesVTK = F ! Should we save a VTK file
    nVariances = 5 ! How many co-variances to calculate and save
-   !correlationCell = 5 5 1 ! The index of the special cell, if calculating correlations in real space
-      ! If so, then use a negative integer for the first variable in variancePairs
-      ! By default correlationCell is the cell in the center of the domain
    ! 1=vx-vx, 2=vy-vy, 3=vx-vy, 4=rho-rho, 5=rho-vx
    variancePairs = "0 2 0 2, 0 3 0 3, 0 2 0 3, 0 1 0 1, 0 1 0 2"
       ! species1 variable1 species2 variable2

@@ -18,8 +18,10 @@ C prototypes for interface to HydroGridModule.f90 via HydroGridCInterface.f90
 
  void updateHydroAnalysisMixture_C (double velocity[], double density[], double concentration[]);
 
- /*mcai projectHydorGridMixture_C */
- void projectHydroGridMixture_C (double density[], double concentration[]);
+ /*mcai------start----------------*/
+ void projectHydroGrid_C (double density[], double concentration[], char * filename);
+ //void writeSnapshotToVTK_C()
+ /*mcai------end------------------*/
 
  /* For simplicity, we alias density as an advected scalar here, if grid%nPassiveScalars>0, otherwise ignore it
   * Note: You can pass NULL or a zero-sized array for vz or density if there is no data (it simply won't be touched) */

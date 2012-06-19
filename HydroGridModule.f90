@@ -2235,6 +2235,7 @@ subroutine energyToTemperature(grid, density, velocity, energy, temperature)
 end subroutine energyToTemperature
 
 
+
 integer function frequencyToArrayIndex(frequency, nCells) result(arrayIndex)
    integer, intent(in) :: frequency, nCells
 
