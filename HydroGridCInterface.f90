@@ -217,7 +217,7 @@ end subroutine
 ! A. Donev: This routine is made to be callable from either Fortran or C codes:
 subroutine projectHydroGridMixture (grid, density, concentration, filename)
 
-   type(HydroGrid), intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
+   type(HydroGrid), target, intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
    real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
    character, target, dimension(*), intent(in) :: filename
@@ -303,7 +303,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
       varnames(5) = "rho1_Avg" // C_NULL_CHAR
       varnames(6) = "c_Avg" // C_NULL_CHAR
       
-     
+
       call WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
          ub=0_c_int, dims=mesh_dims+1, &
          x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
@@ -313,6 +313,9 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
          varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,2) /), &
          vars=(/ C_LOC(DensityTimesY_coor), C_LOC(Density1TimesY_coor), &
                 C_LOC(ConcentrTimesY_coor), C_LOC(rho_avg), C_LOC(rho1_avg), C_LOC(c_avg) /))
+
+      ! also write the 3D data file into a different vtk file 
+      call writeSnapshotToVTK(grid, filename) 
 
    else  ! if the grid is a 2D grid, we directly write down X coordinates and sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)  
       ! sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)
@@ -343,7 +346,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
       open(1000, file=trim(file_name), status = "unknown", action = "write")
       do i = 1, grid%nCells(1)            
          ! A. Donev: Do not use format * when writing data files
-         write(11, '(1000(g17.9))') ((i-0.5_wp)*grid%systemLength(1)/grid%nCells(1)), &           ! x coord at cell center
+         write(1000, '(1000(g17.9))') ((i-0.5_wp)*grid%systemLength(1)/grid%nCells(1)), &           ! x coord at cell center
             (DensityTimesY_coor(i, 1)), (Density1TimesY_coor(i, 1)), (ConcentrTimesY_coor(i, 1)), &
             (rho_avg(i, 1)), (rho1_avg(i, 1)), (c_avg(i, 1))    
       enddo  
@@ -355,54 +358,59 @@ end subroutine
 
 
 
-!subroutine writeSnapshotToVTK_C() &
-!           BIND(C, NAME="writeSnapshotToVTK_C")
-!      ! Write a snapshot of the instantaneous fields
-!   call writeSnapshotToVTK()
+subroutine writeSnapshotToVTK(grid, filename) 
 
-!end subroutine
-
-!subroutine writeSnapshotToVTK() 
+   type(HydroGrid), target, intent(in) :: grid ! A. Donev: This can be different from the module variable grid!
    ! Write a snapshot of the instantaneous fields
-!   integer :: mesh_dims(3), dim, iVariance
-!   character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
+   character, target, dimension(*), intent(in) :: filename
+    
+   !local variables
+   integer :: mesh_dims(3), dim, iVariance
+   character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
+   
+   real(wp), dimension(:,:,:,:), allocatable, target :: velocity
+     
+   character(len=20), target :: new_filename     !local variable, file name for snapshots
+   integer :: i
 
-!   character(len=nMaxCharacters), target :: filename
-      
-!   real(wp), dimension(:,:,:,:), allocatable, target :: velocity
+   ! define the name of the statfile that will be written
+   !file_name=""
+   !do i=1, len(file_name)
+   !   if(filename(i)==C_NULL_CHAR) exit
+   !      file_name(i:i)=filename(i)
+   !end do 
+   !new_filename='3D_'//trim(file_name)
+   new_filename='3D_'//trim(filename)
+   write(*,*) "Writing instantaneous single-fluid variables to file ", trim(new_filename)
+   new_filename = trim(new_filename) // C_NULL_CHAR
 
-!   filename = trim(filenameBase) // ".snapshot.vtk"
-!   write(*,*) "Writing instantaneous single-fluid variables to file ", trim(filename)
-!   filename = trim(filename) // C_NULL_CHAR
+   mesh_dims=grid%nCells(1:3)
+   if(grid%nCells(3)<=1) mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)
 
-!   mesh_dims=grid%nCells(1:3)
-!   if(grid%nCells(3)<=1) mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)
+   allocate(velocity(3, grid%nCells(1), grid%nCells(2), grid%nCells(3)))
+   do dim=1, grid%nDimensions
+      velocity(dim, :, :, :) = grid%primitive(:, :, :, grid%jIdx1 + dim - 1 , 0)
+   end do   
+   velocity(grid%nDimensions+1 : 3, :, :, :) = 0.0_wp
 
-!   allocate(velocity(3, grid%nCells(1), grid%nCells(2), grid%nCells(3)))
-!   do dim=1, grid%nDimensions
-!      velocity(dim, :, :, :) = grid%primitive(:, :, :, grid%jIdx1 + dim - 1 , 0)
-!   end do   
-!   velocity(grid%nDimensions+1 : 3, :, :, :) = 0.0_wp
+   varnames(1) = "Density" // C_NULL_CHAR
+   varnames(2) = "Velocity" // C_NULL_CHAR
+   varnames(3) = "Scalar1" // C_NULL_CHAR
+   varnames(4) = "Scalar2" // C_NULL_CHAR
+   varnames(5) = "Scalar3" // C_NULL_CHAR
+   varnames(6:) = "Scalar" // C_NULL_CHAR
+   CALL WriteRectilinearVTKMesh(filename=C_LOC(new_filename(1:1)), &
+        ub=0_c_int, dims=mesh_dims+1, &
+        x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
+        y=(/ (grid%systemLength(2)/grid%nCells(2)*dim, dim=0,mesh_dims(2)) /), &
+        z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
+        nvars=grid%nVariables+1-grid%nDimensions, vardim=(/1, 3, (1, dim=3,grid%nVariables)/), &
+        centering=(/(0, dim=1,grid%nVariables)/), &
+        varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,grid%nVariables) /), &
+        vars=(/ C_LOC(grid%primitive(1,1,1,grid%mIdx,0)), C_LOC(velocity), &
+             (C_LOC(grid%primitive(1,1,1,grid%eIdx+dim,0)), dim=0,grid%nVariables-grid%eIdx) /))
 
-!   varnames(1) = "Density" // C_NULL_CHAR
-!   varnames(2) = "Velocity" // C_NULL_CHAR
-!   varnames(3) = "Scalar1" // C_NULL_CHAR
-!   varnames(4) = "Scalar2" // C_NULL_CHAR
-!   varnames(5) = "Scalar3" // C_NULL_CHAR
-!   varnames(6:) = "Scalar" // C_NULL_CHAR
-!   CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
-!        ub=0_c_int, dims=mesh_dims+1, &
-!        x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
-!        y=(/ (grid%systemLength(2)/grid%nCells(2)*dim, dim=0,mesh_dims(2)) /), &
-!        z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
-!        nvars=grid%nVariables+1-grid%nDimensions, vardim=(/1, 3, (1, dim=3,grid%nVariables)/), &
-!        centering=(/(0, dim=1,grid%nVariables)/), &
-!        varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,grid%nVariables) /), &
-!        vars=(/ C_LOC(grid%primitive(1,1,1,grid%mIdx,0)), C_LOC(velocity), &
-!             (C_LOC(grid%primitive(1,1,1,grid%eIdx+dim,0)), dim=0,grid%nVariables-grid%eIdx) /))
-
-!end subroutine
-
+end subroutine
 !mcai-----end-----------------------------
 
 
