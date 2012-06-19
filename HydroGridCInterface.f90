@@ -374,13 +374,12 @@ subroutine writeSnapshotToVTK(grid, filename)
    integer :: i
 
    ! define the name of the statfile that will be written
-   !file_name=""
-   !do i=1, len(file_name)
-   !   if(filename(i)==C_NULL_CHAR) exit
-   !      file_name(i:i)=filename(i)
-   !end do 
-   !new_filename='3D_'//trim(file_name)
-   new_filename='3D_'//trim(filename)
+   file_name=""
+   do i=1, len(file_name)
+      if(filename(i)==C_NULL_CHAR) exit
+         file_name(i:i)=filename(i)
+   end do 
+   new_filename='3D_'//trim(file_name)
    write(*,*) "Writing instantaneous single-fluid variables to file ", trim(new_filename)
    new_filename = trim(new_filename) // C_NULL_CHAR
 
