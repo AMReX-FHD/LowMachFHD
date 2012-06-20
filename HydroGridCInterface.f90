@@ -238,8 +238,8 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    real(wp), dimension(:), allocatable, target :: rho_avg_XZ, rho1_avg_XZ, c_avg_XZ
    
    !for writing vtk file
-   character(len=26), target :: input_file_name     !local variable, file name for snapshots
-   character(len=26), target :: hstat_file_name  ! file name for storing horizontal data as DAT file
+   character(len=30), target :: input_file_name     !local variable, file name for snapshots
+   character(len=30), target :: hstat_file_name  ! file name for storing horizontal data as DAT file
    integer :: mesh_dims(3), dim, iVariance
    character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
    
@@ -312,8 +312,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
 
       !To write the data into VTK file, call WriteRectilinearVTKMesh
       !we have x z coorinates and the sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i) in stride
-!      input_file_name=trim(input_file) // '.CofM.vtk'
-!      print *, input_file_name
+
       input_file_name=trim(input_file)// ".CofM.vtk"
       write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(input_file_name) 
       input_file_name=trim(input_file_name) // C_NULL_CHAR
@@ -408,7 +407,7 @@ subroutine writeHydroGridMixture(grid, density, concentration, filename)
    character(len=16), dimension(max(4,grid%nVariables)), target :: varnames
    
    real(wp), dimension(:,:,:,:), allocatable, target :: velocity
-   character(len=26), target :: input_file_name     !local variable, file name for snapshots
+   character(len=30), target :: input_file_name     !local variable, file name for snapshots
    integer :: i
 
    ! define the name of the statfile that will be written
@@ -419,9 +418,7 @@ subroutine writeHydroGridMixture(grid, density, concentration, filename)
          input_file(i:i)=filename(i)
    end do 
     
-   input_file_name=trim(input_file) //".3Dscalars.vtk"
-
-!   input_file_name=trim(input_file) // ".3Dscalars.vtk"  
+   input_file_name=trim(input_file) //".DenCon.vtk"
    write(*,*) "Writing fluid density and concentraion to file ", trim(input_file_name) 
    input_file_name = trim(input_file_name) // C_NULL_CHAR
 
