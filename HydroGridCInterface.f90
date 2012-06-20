@@ -1,4 +1,5 @@
 MODULE HydroGridCInterface ! Interface to my HydroGrid module
+   USE FFTW
    USE, INTRINSIC :: ISO_C_BINDING
    USE HydroGridModule
    IMPLICIT NONE
@@ -220,8 +221,9 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    type(HydroGrid), target, intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
    real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
-   character, target, dimension(*), intent(in) :: filename
-
+   character, dimension(*), intent(in) :: filename
+!   character(len=*) intent(in) :: filenameBase
+   
    !local variables
    integer :: i, j, k
    ! Density temp, Density times Y coordinates, Concentratino times Y coordinates
@@ -232,29 +234,40 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    ! real (wp) :: DensityTimesY_coor(1, grid%nCells(1), grid%nCells(3)), ConcentrTimesY_coor(1, grid%nCells(1), grid%nCells(3))  
    real(wp), dimension(:,:), allocatable, target :: DensityTimesY_coor, Density1TimesY_coor, ConcentrTimesY_coor
    ! averaging values along Y direction
-   real(wp), dimension(:,:), allocatable, target :: rho_avg, rho1_avg, c_avg
-  
+   real(wp), dimension(:,:), allocatable, target :: rho_avg_Y, rho1_avg_Y, c_avg_Y
+   ! averaing values along XZ direction
+   real(wp) :: rho_XZ_tmp, rho1_XZ_tmp, c_XZ_tmp
+   real(wp), dimension(:), allocatable, target :: rho_avg_XZ, rho1_avg_XZ, c_avg_XZ
+   
    !for writing vtk file
+   character(len=20), target :: input_file_name     !local variable, file name for snapshots
+   character(len=20) :: hstat_file_name  ! file name for storing horizontal data as DAT file
    integer :: mesh_dims(3), dim, iVariance
    character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
    
 
-   ! write all data into the 3D VTK file
-   !if(grid%writeMeansVTK) then
-   !  call writeVelocityToVTK()
-   !end if 
+   input_file=""
+   do i=1, len(input_file)
+      if(filename(i)==C_NULL_CHAR) exit
+      input_file(i:i)=filename(i)
+   end do
 
+  
    ! allocate memory for local variables
    allocate(DensityTimesY_coor(grid%nCells(1), grid%nCells(3)))
    allocate(Density1TimesY_coor(grid%nCells(1), grid%nCells(3)))
    allocate(ConcentrTimesY_coor(grid%nCells(1), grid%nCells(3)))
 
-   allocate(rho_avg(grid%nCells(1), grid%nCells(3)))
-   allocate(rho1_avg(grid%nCells(1), grid%nCells(3)))
-   allocate(c_avg(grid%nCells(1), grid%nCells(3)))
+   allocate(rho_avg_Y(grid%nCells(1), grid%nCells(3)))
+   allocate(rho1_avg_Y(grid%nCells(1), grid%nCells(3)))
+   allocate(c_avg_Y(grid%nCells(1), grid%nCells(3)))
+   
+   allocate(rho_avg_XZ(grid%nCells(2)))
+   allocate(rho1_avg_XZ(grid%nCells(2)))
+   allocate(c_avg_XZ(grid%nCells(2)))
 
 
-   ! sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)
+   ! sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i), it works for both 2D(grid%nCells(3)=1) and 3D
    do i=1, grid%nCells(1)
       do j=1, grid%nCells(3)
          do k=1, grid%nCells(2)
@@ -265,31 +278,52 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
             ! Y_i cooridinates
             Y_coor_tmp(k)=(k-0.5_wp)*grid%systemLength(2)/grid%nCells(2)    ! it should be (k-1)*dy + dy/2+prob_lo (we assume prob_lo=0)
          enddo 
-         ! Donev: Calculate also here the average rho, rho1 and c along the y direction
-
+   
          DensityTimesY_coor(i, j)=DOT_PRODUCT(density_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
          Density1TimesY_coor(i, j)=DOT_PRODUCT(density1_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
          ConcentrTimesY_coor(i, j)=DOT_PRODUCT(concentration_tmp, Y_coor_tmp)/(sum(concentration_tmp, dim=1))
+        
+         ! Donev: Calculate also here the average rho, rho1 and c along the y direction
+         rho_avg_Y(i, j)=sum(density_tmp, dim=1)/grid%nCells(2)
+         rho1_avg_Y(i, j)=sum(density1_tmp, dim=1)/grid%nCells(2)
+         c_avg_Y(i, j)=sum(concentration_tmp, dim=1)/grid%nCells(2)
          
-         rho_avg(i, j)=sum(density_tmp, dim=1)/grid%nCells(2)
-         rho1_avg(i, j)=sum(density1_tmp, dim=1)/grid%nCells(2)
-         c_avg(i, j)=sum(concentration_tmp, dim=1)/grid%nCells(2)
       enddo
    enddo
 
-   ! grid%nCells(3)=0     ! For testing 2D case 
+   ! calcuate horizontal average for rho, rho1, and c
+   rho_XZ_tmp=0.0_wp
+   rho1_XZ_tmp=0.0_wp
+   c_XZ_tmp=0.0_wp
+   do k=1, grid%nCells(2)
+      do i= 1, grid%nCells(1)
+         do j=1, grid%nCells(3)
+            rho_XZ_tmp=rho_XZ_tmp+density(i, k, j, 0)
+            rho1_XZ_tmp=rho_XZ_tmp+density(i, k, j, 0)*concentration(i, k, j, 1)
+            c_XZ_tmp=c_XZ_tmp+concentration(i, k, j, 1)
+         end do 
+      end do
+      rho_avg_XZ(k)=rho_XZ_tmp
+      rho1_avg_XZ(k)=rho1_XZ_tmp
+      c_avg_XZ(k)=c_XZ_tmp
+   end do  
+     
+
+   ! grid%nCells(3)=1 if it is 2D case 
    if(grid%nCells(3)>1) then
 
-   !To write the data into VTK file, call WriteRectilinearVTKMesh
-   !we have x z coorinates and the sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i) in stride
- 
-      input_file=""
-      do i=1, len(input_file)
-         if(filename(i)==C_NULL_CHAR) exit
-         input_file(i:i)=filename(i)
-      end do
-      write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(input_file)
-      
+      !To write the data into VTK file, call WriteRectilinearVTKMesh
+      !we have x z coorinates and the sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i) in stride
+      input_file_name=trim(input_file) // '.CofM.vtk'
+!      print *, input_file_name
+!      input_file_name=trim(input_file)// ".CofM.vtk"
+      write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(input_file_name) 
+      input_file_name=trim(input_file_name) // C_NULL_CHAR
+
+     !    filename=trim(filenameBase) // ".S_k.pair=" // trim(adjustl(id_string)) // ".vtk"
+     !    write(*,*) "Writing static structure factor to VTK file ", trim(filename)
+     !    filename = trim(filename) // C_NULL_CHAR
+
       ! swap the axes
       mesh_dims(1)=grid%nCells(1)
       mesh_dims(2)=grid%nCells(3)
@@ -303,8 +337,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
       varnames(5) = "rho1_Avg" // C_NULL_CHAR
       varnames(6) = "c_Avg" // C_NULL_CHAR
       
-
-      call WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
+      call WriteRectilinearVTKMesh(filename=C_LOC(input_file_name(1:1)), &
          ub=0_c_int, dims=mesh_dims+1, &
          x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
          y=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(2)) /), &            
@@ -312,103 +345,107 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
          nvars=2, vardim=(/(1, dim=1, 2)/), centering=(/(0, dim=1, 2)/), &
          varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,2) /), &
          vars=(/ C_LOC(DensityTimesY_coor), C_LOC(Density1TimesY_coor), &
-                C_LOC(ConcentrTimesY_coor), C_LOC(rho_avg), C_LOC(rho1_avg), C_LOC(c_avg) /))
+                C_LOC(ConcentrTimesY_coor), C_LOC(rho_avg_Y), C_LOC(rho1_avg_Y), C_LOC(c_avg_Y) /))
 
-      ! also write the 3D data file into a different vtk file 
-      call writeSnapshotToVTK(grid, filename) 
+      ! for writing horizontal stat data
+      hstat_file_name=trim(input_file_name) // '.avgXZ.dat'
+      write(*,'(2A)') "Saving HydroSTAT FILEs to file ", trim(hstat_file_name)
+      open(2000, file=trim(input_file_name), status = "unknown", action = "write")
+      do k = 1, grid%nCells(2)            
+         write(2000, '(1000(g17.9))') ((k-0.5_wp)*grid%systemLength(2)/grid%nCells(2)), &   ! Y coord at cell center
+                      (rho_avg_XZ(k)), (rho1_avg_XZ(k)), (c_avg_XZ(k))    
+      enddo  
+      close(2000)
 
    else  ! if the grid is a 2D grid, we directly write down X coordinates and sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)  
-      ! sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)
-      do i=1, grid%nCells(1)
-         do k=1, grid%nCells(2)
-            density_tmp(k)=density(i, k, 1, 0)
-            density1_tmp(k)=density(i, k, j, 0)*concentration(i, k, j, 1)
-            concentration_tmp(k)=concentration(i, k, 1, 1)
-            Y_coor_tmp(k)=(k-1/2)*grid%systemLength(2)/grid%nCells(2)    ! it should be (k-1)*dy + dy/2+prob_lo (we assume prob_lo=0)
-         enddo 
-         DensityTimesY_coor(i, 1)=DOT_PRODUCT(density_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
-         Density1TimesY_coor(i, j)=DOT_PRODUCT(density1_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
-         ConcentrTimesY_coor(i, 1)=DOT_PRODUCT(concentration_tmp, Y_coor_tmp)/(sum(concentration_tmp, dim=1))
-         
-         ! for 2D case, we actually just use 1D array
-         rho_avg(i, 1)=sum(density_tmp, dim=1)/grid%nCells(2)
-         rho1_avg(i, 1)=sum(density1_tmp, dim=1)/grid%nCells(2)
-         c_avg(i, 1)=sum(concentration_tmp, dim=1)/grid%nCells(2)
-      enddo
-
-      input_file=""
-      do i=1, len(input_file)
-         if(filename(i)==C_NULL_CHAR) exit
-         input_file(i:i)=filename(i)
-      end do
-      write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(input_file)
-
-      open(1000, file=trim(input_file), status = "unknown", action = "write")
+      
+      ! write the 2D data into input_file directly
+      input_file_name=trim(input_file) // '.2d.dat'
+      open(1000, file=trim(input_file_name), status = "unknown", action = "write")
       do i = 1, grid%nCells(1)            
-         ! A. Donev: Do not use format * when writing data files
          write(1000, '(1000(g17.9))') ((i-0.5_wp)*grid%systemLength(1)/grid%nCells(1)), &           ! x coord at cell center
             (DensityTimesY_coor(i, 1)), (Density1TimesY_coor(i, 1)), (ConcentrTimesY_coor(i, 1)), &
-            (rho_avg(i, 1)), (rho1_avg(i, 1)), (c_avg(i, 1))    
+            (rho_avg_Y(i, 1)), (rho1_avg_Y(i, 1)), (c_avg_Y(i, 1))    
       enddo  
       close(1000)
       
    end if
 
+   !release memory
+   deallocate(DensityTimesY_coor)
+   deallocate(Density1TimesY_coor)
+   deallocate(ConcentrTimesY_coor)
+
+   deallocate(rho_avg_Y)
+   deallocate(rho1_avg_Y)
+   deallocate(c_avg_Y)
+   
+   deallocate(rho_avg_XZ)
+   deallocate(rho1_avg_XZ)
+   deallocate(c_avg_XZ)
+
 end subroutine
 
 
-! A. Donev: Mingchao, make this routine accept density and concentration as arguments and only write them to the VTK file
-! Also, please call writeSnapshotToVTK separately in analyze_spectra, rather than from inside projectHydroGridMixture
-subroutine writeSnapshotToVTK(grid, filename) 
+! also write the 3D data file into a different vtk file 
+! void writeHydroGridMixture_C (double density[], double concentration[])
+subroutine writeHydroGridMixture_C (density, concentration, filename) &
+              BIND(C, NAME="writeHydroGridMixture_C")
+   ! state the in/out args
+   real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
+   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
+   character(kind=c_char), target, dimension(*), intent(in) :: filename
+   
+   call writeHydroGridMixture (grid, density, concentration, filename)
+   
+end subroutine
 
-   type(HydroGrid), target, intent(in) :: grid ! A. Donev: This can be different from the module variable grid!
-   ! Write a snapshot of the instantaneous fields
-   character, target, dimension(*), intent(in) :: filename
+! A. Donev: Mingchao, make this routine accept density and concentration as arguments and only write them to the VTK file
+subroutine writeHydroGridMixture(grid, density, concentration, filename) 
+
+   type(HydroGrid), target, intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
+   real (wp), intent(in), target :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
+   real (wp), intent(in), target :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
+   character, dimension(*), intent(in) :: filename
     
    !local variables
    integer :: mesh_dims(3), dim, iVariance
-   character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
+   character(len=16), dimension(max(4,grid%nVariables)), target :: varnames
    
    real(wp), dimension(:,:,:,:), allocatable, target :: velocity
-     
-   character(len=20), target :: new_filename     !local variable, file name for snapshots
+   character(len=20), target :: input_file_name     !local variable, file name for snapshots
    integer :: i
 
    ! define the name of the statfile that will be written
+  
    input_file=""
    do i=1, len(input_file)
       if(filename(i)==C_NULL_CHAR) exit
          input_file(i:i)=filename(i)
    end do 
-   new_filename=trim(input_file) // '.scalars.vtk'
-   write(*,*) "Writing instantaneous single-fluid variables to file ", trim(new_filename)
-   new_filename = trim(new_filename) // C_NULL_CHAR
+    
+   input_file_name=trim(input_file) //'.3Dscalars.vtk'
 
+!   input_file_name=trim(input_file) // ".3Dscalars.vtk"  
+!   write(*,*) "Writing instantaneous fluid variables to file ", // input_file_name 
+   input_file_name = trim(input_file_name) // C_NULL_CHAR
+
+   
    mesh_dims=grid%nCells(1:3)
    if(grid%nCells(3)<=1) mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)
 
-   allocate(velocity(3, grid%nCells(1), grid%nCells(2), grid%nCells(3)))
-   do dim=1, grid%nDimensions
-      velocity(dim, :, :, :) = grid%primitive(:, :, :, grid%jIdx1 + dim - 1 , 0)
-   end do   
-   velocity(grid%nDimensions+1 : 3, :, :, :) = 0.0_wp
-
-   varnames(1) = "Density" // C_NULL_CHAR
-   varnames(2) = "Velocity" // C_NULL_CHAR
-   varnames(3) = "Scalar1" // C_NULL_CHAR
-   varnames(4) = "Scalar2" // C_NULL_CHAR
-   varnames(5) = "Scalar3" // C_NULL_CHAR
-   varnames(6:) = "Scalar" // C_NULL_CHAR
-   CALL WriteRectilinearVTKMesh(filename=C_LOC(new_filename(1:1)), &
+   varnames(1) = "rho" // C_NULL_CHAR
+   varnames(2) = "c" // C_NULL_CHAR
+   varnames(3) = "c1" // C_NULL_CHAR
+   varnames(4) = "c2" // C_NULL_CHAR
+   CALL WriteRectilinearVTKMesh(filename=C_LOC(input_file_name(1:1)), &
         ub=0_c_int, dims=mesh_dims+1, &
         x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
         y=(/ (grid%systemLength(2)/grid%nCells(2)*dim, dim=0,mesh_dims(2)) /), &
         z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
-        nvars=grid%nVariables+1-grid%nDimensions, vardim=(/1, 3, (1, dim=3,grid%nVariables)/), &
-        centering=(/(0, dim=1,grid%nVariables)/), &
-        varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,grid%nVariables) /), &
-        vars=(/ C_LOC(grid%primitive(1,1,1,grid%mIdx,0)), C_LOC(velocity), &
-             (C_LOC(grid%primitive(1,1,1,grid%eIdx+dim,0)), dim=0,grid%nVariables-grid%eIdx) /))
+        nvars=grid%nSpecies, vardim=(/(1, dim=1,grid%nSpecies)/), centering=(/(0, dim=1,grid%nSpecies)/), &
+        varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,grid%nSpecies) /), &
+        vars=(/ C_LOC(density), (C_LOC(concentration(:,:,:,dim)),dim=1,grid%nSpecies-1) /) )
 
 end subroutine
 !mcai-----end-----------------------------
