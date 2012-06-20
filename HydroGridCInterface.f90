@@ -1,5 +1,4 @@
 MODULE HydroGridCInterface ! Interface to my HydroGrid module
-   USE FFTW
    USE, INTRINSIC :: ISO_C_BINDING
    USE HydroGridModule
    IMPLICIT NONE
@@ -222,7 +221,6 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
    real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
    character, dimension(*), intent(in) :: filename
-!   character(len=*) intent(in) :: filenameBase
    
    !local variables
    integer :: i, j, k
@@ -240,8 +238,8 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    real(wp), dimension(:), allocatable, target :: rho_avg_XZ, rho1_avg_XZ, c_avg_XZ
    
    !for writing vtk file
-   character(len=20), target :: input_file_name     !local variable, file name for snapshots
-   character(len=20) :: hstat_file_name  ! file name for storing horizontal data as DAT file
+   character(len=26), target :: input_file_name     !local variable, file name for snapshots
+   character(len=26), target :: hstat_file_name  ! file name for storing horizontal data as DAT file
    integer :: mesh_dims(3), dim, iVariance
    character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
    
@@ -314,15 +312,11 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
 
       !To write the data into VTK file, call WriteRectilinearVTKMesh
       !we have x z coorinates and the sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i) in stride
-      input_file_name=trim(input_file) // '.CofM.vtk'
+!      input_file_name=trim(input_file) // '.CofM.vtk'
 !      print *, input_file_name
-!      input_file_name=trim(input_file)// ".CofM.vtk"
+      input_file_name=trim(input_file)// ".CofM.vtk"
       write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(input_file_name) 
       input_file_name=trim(input_file_name) // C_NULL_CHAR
-
-     !    filename=trim(filenameBase) // ".S_k.pair=" // trim(adjustl(id_string)) // ".vtk"
-     !    write(*,*) "Writing static structure factor to VTK file ", trim(filename)
-     !    filename = trim(filename) // C_NULL_CHAR
 
       ! swap the axes
       mesh_dims(1)=grid%nCells(1)
@@ -347,10 +341,11 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
          vars=(/ C_LOC(DensityTimesY_coor), C_LOC(Density1TimesY_coor), &
                 C_LOC(ConcentrTimesY_coor), C_LOC(rho_avg_Y), C_LOC(rho1_avg_Y), C_LOC(c_avg_Y) /))
 
-      ! for writing horizontal stat data
-      hstat_file_name=trim(input_file_name) // '.avgXZ.dat'
-      write(*,'(2A)') "Saving HydroSTAT FILEs to file ", trim(hstat_file_name)
-      open(2000, file=trim(input_file_name), status = "unknown", action = "write")
+      ! write horizontal stat data into dat file
+      hstat_file_name=trim(input_file) // ".avgXZ.dat"
+      write(*,*) "Writing fluid density and concentraion to file ", trim(hstat_file_name) 
+      open(2000, file=trim(hstat_file_name), status = "unknown", action = "write")
+      hstat_file_name=trim(hstat_file_name)
       do k = 1, grid%nCells(2)            
          write(2000, '(1000(g17.9))') ((k-0.5_wp)*grid%systemLength(2)/grid%nCells(2)), &   ! Y coord at cell center
                       (rho_avg_XZ(k)), (rho1_avg_XZ(k)), (c_avg_XZ(k))    
@@ -360,7 +355,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    else  ! if the grid is a 2D grid, we directly write down X coordinates and sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)  
       
       ! write the 2D data into input_file directly
-      input_file_name=trim(input_file) // '.2d.dat'
+      input_file_name=trim(input_file) // ".2d.dat"
       open(1000, file=trim(input_file_name), status = "unknown", action = "write")
       do i = 1, grid%nCells(1)            
          write(1000, '(1000(g17.9))') ((i-0.5_wp)*grid%systemLength(1)/grid%nCells(1)), &           ! x coord at cell center
@@ -413,7 +408,7 @@ subroutine writeHydroGridMixture(grid, density, concentration, filename)
    character(len=16), dimension(max(4,grid%nVariables)), target :: varnames
    
    real(wp), dimension(:,:,:,:), allocatable, target :: velocity
-   character(len=20), target :: input_file_name     !local variable, file name for snapshots
+   character(len=26), target :: input_file_name     !local variable, file name for snapshots
    integer :: i
 
    ! define the name of the statfile that will be written
@@ -424,10 +419,10 @@ subroutine writeHydroGridMixture(grid, density, concentration, filename)
          input_file(i:i)=filename(i)
    end do 
     
-   input_file_name=trim(input_file) //'.3Dscalars.vtk'
+   input_file_name=trim(input_file) //".3Dscalars.vtk"
 
 !   input_file_name=trim(input_file) // ".3Dscalars.vtk"  
-!   write(*,*) "Writing instantaneous fluid variables to file ", // input_file_name 
+   write(*,*) "Writing fluid density and concentraion to file ", trim(input_file_name) 
    input_file_name = trim(input_file_name) // C_NULL_CHAR
 
    
