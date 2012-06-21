@@ -275,7 +275,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
       end if      
    end if
   
-   ! allocate memory for local variables
+   ! Calculate vertical averages along y of several quantities
    allocate(DensityTimesY_coor(grid%nCells(1), grid%nCells(3)))
    allocate(Density1TimesY_coor(grid%nCells(1), grid%nCells(3)))
    allocate(ConcentrTimesY_coor(grid%nCells(1), grid%nCells(3)))
@@ -283,12 +283,9 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
    allocate(rho_avg_Y(grid%nCells(1), grid%nCells(3)))
    allocate(rho1_avg_Y(grid%nCells(1), grid%nCells(3)))
    allocate(c_avg_Y(grid%nCells(1), grid%nCells(3)))
-   
-   allocate(rho_avg_XZ(grid%nCells(2)))
-   allocate(rho1_avg_XZ(grid%nCells(2)))
-   allocate(c_avg_XZ(grid%nCells(2)))
-
+      
    ! sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i), it works for both 2D(grid%nCells(3)=1) and 3D
+   !-----------------------------------------------------------
    do i=1, grid%nCells(1)
       do j=1, grid%nCells(3)
       
@@ -312,23 +309,6 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
          
       enddo
    enddo
-
-   ! calcuate horizontal average for rho, rho1, and c
-   do k=1, grid%nCells(2)
-      rho_XZ_tmp=0.0_wp
-      rho1_XZ_tmp=0.0_wp
-      c_XZ_tmp=0.0_wp
-      do i= 1, grid%nCells(1)
-         do j=1, grid%nCells(3)
-            rho_XZ_tmp=rho_XZ_tmp+density(i, k, j, 0)
-            rho1_XZ_tmp=rho1_XZ_tmp+density(i, k, j, 0)*concentration(i, k, j, 1)
-            c_XZ_tmp=c_XZ_tmp+concentration(i, k, j, 1)
-         end do 
-      end do
-      rho_avg_XZ(k)=rho_XZ_tmp/(grid%nCells(1)*grid%nCells(3)) 
-      rho1_avg_XZ(k)=rho1_XZ_tmp/(grid%nCells(1)*grid%nCells(3)) 
-      c_avg_XZ(k)=c_XZ_tmp/(grid%nCells(1)*grid%nCells(3)) 
-   end do  
      
    ! grid%nCells(3)=1 if it is 2D problem
    if(grid%nCells(3)>1) then
@@ -378,6 +358,28 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
       close(1000)
       
    end if
+
+   ! calcuate horizontal average for rho, rho1, and c
+   !-----------------------------------------------------------
+   allocate(rho_avg_XZ(grid%nCells(2)))
+   allocate(rho1_avg_XZ(grid%nCells(2)))
+   allocate(c_avg_XZ(grid%nCells(2)))
+
+   do k=1, grid%nCells(2)
+      rho_XZ_tmp=0.0_wp
+      rho1_XZ_tmp=0.0_wp
+      c_XZ_tmp=0.0_wp
+      do i= 1, grid%nCells(1)
+         do j=1, grid%nCells(3)
+            rho_XZ_tmp=rho_XZ_tmp+density(i, k, j, 0)
+            rho1_XZ_tmp=rho1_XZ_tmp+density(i, k, j, 0)*concentration(i, k, j, 1)
+            c_XZ_tmp=c_XZ_tmp+concentration(i, k, j, 1)
+         end do 
+      end do
+      rho_avg_XZ(k)=rho_XZ_tmp / (grid%nCells(1)*grid%nCells(3))
+      rho1_avg_XZ(k)=rho1_XZ_tmp / (grid%nCells(1)*grid%nCells(3))
+      c_avg_XZ(k)=c_XZ_tmp / (grid%nCells(1)*grid%nCells(3))
+   end do  
 
    ! write horizontal stat data into dat file
    hstat_file_name=trim(input_file_base) // ".hstat.dat"
@@ -457,7 +459,7 @@ subroutine writeHydroGridMixture(grid, density, concentration, filename, id)
    end if
     
    input_file_name=trim(input_file_base) //".scalars.vtk"
-   write(*,*) "Writing fluid density and concentraion to file ", trim(input_file_name) 
+   write(*,*) "Writing fluid density and concentration to file ", trim(input_file_name) 
    input_file_name = trim(input_file_name) // C_NULL_CHAR
    
    mesh_dims=grid%nCells(1:3)
