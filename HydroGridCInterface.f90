@@ -246,7 +246,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
    !local variables
    integer :: i, j, k
    ! Density temp, Density times Y coordinates, Concentratino times Y coordinates
-   real (wp), dimension(grid%nCells(2)) :: density_tmp, concentration_tmp, Y_coor_tmp, density1_tmp
+   real (wp), dimension(grid%nCells(2)) :: density_tmp, density1_tmp, concentration_tmp, Y_coor_tmp
 
    ! size of DensityTimesY_coor and size of ConcentrTimesY_coor
    ! real (wp) :: DensityTimesY_coor(1, grid%nCells(1), grid%nCells(3)), ConcentrTimesY_coor(1, grid%nCells(1), grid%nCells(3))  
@@ -376,9 +376,9 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
             c_XZ_tmp=c_XZ_tmp+concentration(i, k, j, 1)
          end do 
       end do
-      rho_avg_XZ(k)=rho_XZ_tmp / (grid%nCells(1)*grid%nCells(3))
-      rho1_avg_XZ(k)=rho1_XZ_tmp / (grid%nCells(1)*grid%nCells(3))
-      c_avg_XZ(k)=c_XZ_tmp / (grid%nCells(1)*grid%nCells(3))
+      rho_avg_XZ(k)=rho_XZ_tmp/(grid%nCells(1)*grid%nCells(3))
+      rho1_avg_XZ(k)=rho1_XZ_tmp/(grid%nCells(1)*grid%nCells(3))
+      c_avg_XZ(k)=c_XZ_tmp/(grid%nCells(1)*grid%nCells(3))
    end do  
 
    ! write horizontal stat data into dat file

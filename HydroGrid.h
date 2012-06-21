@@ -20,7 +20,7 @@ C prototypes for interface to HydroGridModule.f90 via HydroGridCInterface.f90
 
  /*mcai------start----------------*/
  void projectHydroGrid_C (double density[], double concentration[], char * filename, int id, int save_snapshot);
- void writeHydroGridMixture_C (double density[], double concentration[], char * filename);
+ void writeHydroGridMixture_C (double density[], double concentration[], char * filename, int id, int save_snapshot);
  /*mcai------end------------------*/
 
  /* For simplicity, we alias density as an advected scalar here, if grid%nPassiveScalars>0, otherwise ignore it
