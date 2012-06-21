@@ -19,7 +19,7 @@ C prototypes for interface to HydroGridModule.f90 via HydroGridCInterface.f90
  void updateHydroAnalysisMixture_C (double velocity[], double density[], double concentration[]);
 
  /*mcai------start----------------*/
- void projectHydroGrid_C (double density[], double concentration[], char * filename);
+ void projectHydroGrid_C (double density[], double concentration[], char * filename, int id, int save_snapshot);
  void writeHydroGridMixture_C (double density[], double concentration[], char * filename);
  /*mcai------end------------------*/
 

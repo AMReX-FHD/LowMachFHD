@@ -201,26 +201,47 @@ end subroutine
 
 !mcai-----begin-----------------------------
 
-! void projectHydroGridMixture_C (double density[], double concentration[])
-subroutine projectHydroGrid_C (density, concentration, filename) &
+! void projectHydroGridMixture_C (double density[], double concentration[], char * filename, int id, int save_snapshot)
+subroutine projectHydroGrid_C (density, concentration, filename, id, save_snapshot) &
               BIND(C, NAME="projectHydroGrid_C")
    ! state the in/out args
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
    real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
-   character(kind=c_char), target, dimension(*), intent(in) :: filename
+   character(kind=c_char), dimension(*), intent(in) :: filename ! A C string, OPTIONAL: empty for not present
+   integer(c_int), value :: id ! Append an integer ID to the file name, OPTIONAL: negative for not present
+   integer(c_int), value :: save_snapshot ! Should we also write the full data to a VTK file?
+
+   integer :: i
+   character(len=1024), target :: input_file_base     ! file name as a Fortran string
+
+   ! Convert character array to a string:
+   input_file_base=""
+   do i=1, len(input_file_base)
+      if(filename(i)==C_NULL_CHAR) exit
+      input_file_base(i:i)=filename(i)
+   end do
+   !write(*,*) "input_file_base=", lentrim(input_file_base), trim(input_file_base)
    
-   call projectHydroGridMixture (grid, density, concentration, filename)
+   if(len_trim(input_file_base)>0) then
+      call projectHydroGridMixture (grid, density, concentration, filename=input_file_base)
+      if(save_snapshot/=0) call writeHydroGridMixture (grid, density, concentration, filename=input_file_base)
+   else if(id>0) then
+      call projectHydroGridMixture (grid, density, concentration, id=id)
+      if(save_snapshot/=0) call writeHydroGridMixture (grid, density, concentration, id=id)
+   else   
+      call projectHydroGridMixture (grid, density, concentration)
+      if(save_snapshot/=0) call writeHydroGridMixture (grid, density, concentration, id=id)
+   end if   
    
 end subroutine
 
-
-! A. Donev: This routine is made to be callable from either Fortran or C codes:
-subroutine projectHydroGridMixture (grid, density, concentration, filename)
+subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
 
    type(HydroGrid), target, intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
    real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
-   character, dimension(*), intent(in) :: filename
+   character(len=*), intent(in), optional :: filename
+   integer, intent(in), optional :: id
    
    !local variables
    integer :: i, j, k
@@ -237,17 +258,22 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    real(wp), dimension(:), allocatable, target :: rho_avg_XZ, rho1_avg_XZ, c_avg_XZ
    
    !for writing vtk file
-   character(len=30), target :: input_file_name     !local variable, file name for snapshots
-   character(len=30), target :: hstat_file_name  ! file name for storing horizontal data as DAT file
+   character(25) :: id_string
+   character(len=1024), target :: input_file_base     ! file name
+   character(len=1024), target :: input_file_name     !local variable, file name for snapshots
+   character(len=1024), target :: hstat_file_name  ! file name for storing horizontal data as DAT file
    integer :: mesh_dims(3), dim, iVariance
    character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
    
-   ! Convert character array to a string:
-   input_file=""
-   do i=1, len(input_file)
-      if(filename(i)==C_NULL_CHAR) exit
-      input_file(i:i)=filename(i)
-   end do
+   if(present(filename)) then
+      input_file_base=filename
+   else
+      input_file_base = trim(grid%outputFolder) // "/" // trim(grid%filePrefix)
+      if(present(id)) then
+         write(id_string,"(I6.6)") id
+         input_file_base = trim(input_file_base) // "." // trim(ADJUSTL(id_string))
+      end if      
+   end if
   
    ! allocate memory for local variables
    allocate(DensityTimesY_coor(grid%nCells(1), grid%nCells(3)))
@@ -261,7 +287,6 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    allocate(rho_avg_XZ(grid%nCells(2)))
    allocate(rho1_avg_XZ(grid%nCells(2)))
    allocate(c_avg_XZ(grid%nCells(2)))
-
 
    ! sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i), it works for both 2D(grid%nCells(3)=1) and 3D
    do i=1, grid%nCells(1)
@@ -289,14 +314,14 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
    enddo
 
    ! calcuate horizontal average for rho, rho1, and c
-   rho_XZ_tmp=0.0_wp
-   rho1_XZ_tmp=0.0_wp
-   c_XZ_tmp=0.0_wp
    do k=1, grid%nCells(2)
+      rho_XZ_tmp=0.0_wp
+      rho1_XZ_tmp=0.0_wp
+      c_XZ_tmp=0.0_wp
       do i= 1, grid%nCells(1)
          do j=1, grid%nCells(3)
             rho_XZ_tmp=rho_XZ_tmp+density(i, k, j, 0)
-            rho1_XZ_tmp=rho_XZ_tmp+density(i, k, j, 0)*concentration(i, k, j, 1)
+            rho1_XZ_tmp=rho1_XZ_tmp+density(i, k, j, 0)*concentration(i, k, j, 1)
             c_XZ_tmp=c_XZ_tmp+concentration(i, k, j, 1)
          end do 
       end do
@@ -311,7 +336,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
       !To write the data into VTK file, call WriteRectilinearVTKMesh
       !we have x z coorinates and the sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i) in stride
 
-      input_file_name=trim(input_file)// ".vstat.vtk"
+      input_file_name=trim(input_file_base)// ".vstat.vtk"
       write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(input_file_name) 
       input_file_name=trim(input_file_name) // C_NULL_CHAR
 
@@ -340,23 +365,25 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename)
 
    else  ! if the grid is a 2D grid, we directly write down X coordinates and sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)  
       
-      ! write the 2D data into input_file directly
-      input_file_name=trim(input_file) // ".vstat.dat"
+      ! write the 2D data into input_file_base directly
+      input_file_name=trim(input_file_base) // ".vstat.dat"
+      write(*,*) "Writing average rho*Y and c*Y variables to file ", trim(input_file_name) 
       open(1000, file=trim(input_file_name), status = "unknown", action = "write")
+      write(1000,'(A)') "# rho, rho1, c, rho*y, rho1*y, c*y"
       do i = 1, grid%nCells(1)            
          write(1000, '(1000(g17.9))') ((i-0.5_wp)*grid%systemLength(1)/grid%nCells(1)), &           ! x coord at cell center
-            (DensityTimesY_coor(i, 1)), (Density1TimesY_coor(i, 1)), (ConcentrTimesY_coor(i, 1)), &
-            (rho_avg_Y(i, 1)), (rho1_avg_Y(i, 1)), (c_avg_Y(i, 1))    
+            (rho_avg_Y(i, 1)), (rho1_avg_Y(i, 1)), (c_avg_Y(i, 1)), & 
+            (DensityTimesY_coor(i, 1)), (Density1TimesY_coor(i, 1)), (ConcentrTimesY_coor(i, 1))
       enddo  
       close(1000)
       
    end if
 
    ! write horizontal stat data into dat file
-   hstat_file_name=trim(input_file) // ".hstat.dat"
-   write(*,*) "Writing fluid density and concentraion to file ", trim(hstat_file_name) 
+   hstat_file_name=trim(input_file_base) // ".hstat.dat"
+   write(*,*) "Writing fluid density and concentration to file ", trim(hstat_file_name) 
    open(2000, file=trim(hstat_file_name), status = "unknown", action = "write")
-   hstat_file_name=trim(hstat_file_name)
+   write(2000,'(A)') "# rho, rho1, c"
    do k = 1, grid%nCells(2)            
       write(2000, '(1000(g17.9))') ((k-0.5_wp)*grid%systemLength(2)/grid%nCells(2)), &   ! Y coord at cell center
                    (rho_avg_XZ(k)), (rho1_avg_XZ(k)), (c_avg_XZ(k))    
@@ -380,42 +407,56 @@ end subroutine
 
 
 ! also write the 3D data file into a different vtk file 
-! void writeHydroGridMixture_C (double density[], double concentration[])
+! void writeHydroGridMixture_C (double density[], double concentration[], char * filename)
 subroutine writeHydroGridMixture_C (density, concentration, filename) &
               BIND(C, NAME="writeHydroGridMixture_C")
    ! state the in/out args
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
    real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
-   character(kind=c_char), target, dimension(*), intent(in) :: filename
+   character(kind=c_char), dimension(*), intent(in) :: filename ! A C string
+
+   integer :: i
+   character(len=1024), target :: input_file_base     ! file name as a Fortran string
+
+   ! Convert character array to a string:
+   input_file_base=""
+   do i=1, len(input_file_base)
+      if(filename(i)==C_NULL_CHAR) exit
+      input_file_base(i:i)=filename(i)
+   end do
    
-   call writeHydroGridMixture (grid, density, concentration, filename)
+   call writeHydroGridMixture (grid, density, concentration, input_file_base)
    
 end subroutine
 
-! A. Donev: Mingchao, make this routine accept density and concentration as arguments and only write them to the VTK file
-subroutine writeHydroGridMixture(grid, density, concentration, filename) 
+subroutine writeHydroGridMixture(grid, density, concentration, filename, id)
 
    type(HydroGrid), target, intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
    real (wp), intent(in), target :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
    real (wp), intent(in), target :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
-   character, dimension(*), intent(in) :: filename
+   character(len=*), intent(in), optional :: filename
+   integer, intent(in), optional :: id
     
    !local variables
    integer :: mesh_dims(3), dim, iVariance
    character(len=16), dimension(max(4,grid%nVariables)), target :: varnames
    
    real(wp), dimension(:,:,:,:), allocatable, target :: velocity
-   character(len=30), target :: input_file_name     !local variable, file name for snapshots
+   character(25) :: id_string
+   character(len=1024), target :: input_file_base, input_file_name     !local variable, file name for snapshots
    integer :: i
 
-   ! define the name of the statfile that will be written:  
-   input_file=""
-   do i=1, len(input_file)
-      if(filename(i)==C_NULL_CHAR) exit
-         input_file(i:i)=filename(i)
-   end do 
+   if(present(filename)) then
+      input_file_base=filename
+   else
+      input_file_base = trim(grid%outputFolder) // "/" // trim(grid%filePrefix)
+      if(present(id)) then
+         write(id_string,"(I6.6)") id
+         input_file_base = trim(input_file_base) // "." // trim(ADJUSTL(id_string))
+      end if      
+   end if
     
-   input_file_name=trim(input_file) //".scalars.vtk"
+   input_file_name=trim(input_file_base) //".scalars.vtk"
    write(*,*) "Writing fluid density and concentraion to file ", trim(input_file_name) 
    input_file_name = trim(input_file_name) // C_NULL_CHAR
    
