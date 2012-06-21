@@ -325,9 +325,9 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
             c_XZ_tmp=c_XZ_tmp+concentration(i, k, j, 1)
          end do 
       end do
-      rho_avg_XZ(k)=rho_XZ_tmp/grid%nCells(2)
-      rho1_avg_XZ(k)=rho1_XZ_tmp/grid%nCells(2)
-      c_avg_XZ(k)=c_XZ_tmp/grid%nCells(2)
+      rho_avg_XZ(k)=rho_XZ_tmp/(grid%nCells(1)*grid%nCells(3)) 
+      rho1_avg_XZ(k)=rho1_XZ_tmp/(grid%nCells(1)*grid%nCells(3)) 
+      c_avg_XZ(k)=c_XZ_tmp/(grid%nCells(1)*grid%nCells(3)) 
    end do  
      
    ! grid%nCells(3)=1 if it is 2D problem
