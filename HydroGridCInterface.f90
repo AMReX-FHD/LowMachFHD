@@ -302,7 +302,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
 
          ! This is the "center-of-mass", i.e., the height-weighed average:   
          DensityTimesY_coor(i, j)=DOT_PRODUCT(density_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
-         Density1TimesY_coor(i, j)=DOT_PRODUCT(density1_tmp, Y_coor_tmp)/(sum(density_tmp, dim=1))
+         Density1TimesY_coor(i, j)=DOT_PRODUCT(density1_tmp, Y_coor_tmp)/(sum(density1_tmp, dim=1))
          ConcentrTimesY_coor(i, j)=DOT_PRODUCT(concentration_tmp, Y_coor_tmp)/(sum(concentration_tmp, dim=1))
         
          ! Calculate also here the average rho, rho1 and c along the y direction
