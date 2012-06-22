@@ -222,7 +222,7 @@ module HydroGridModule
    end type HydroGrid
    
    logical, public, save :: writeAbsValue=.true. ! Only write absolute value of static structure factors to VTK files
-   integer, public, save :: writeTheory=-1 ! Write the theoretical prediction for incompressible hydro (-1=none, 0=continuum, 1=MAC)
+   integer, public, save :: writeTheory=-1 ! Write the theoretical prediction for incompressible hydro (-2=for MD analysis, -1=none, 0=continuum, 1=MAC)
    integer, public, save :: useRelativeVelocity=-1 ! Calculate v12 to test two-fluid models
    
 contains
@@ -2108,6 +2108,12 @@ subroutine writeDynamicFactors(grid,filenameBase)
    character(25) :: id_string
    character (nMaxCharacters), target :: filename
    
+   ! Dynamic factors will also be saved for the vortical (solenoidal) modes and divergence of velocity:
+   integer :: ijk(nMaxDims), nModes, iMode, dim1, dim2
+   real(wp) :: k2_discrete, modes(nMaxDims,nMaxDims), k2_proj
+   real(wp), dimension(nMaxDims) :: kdrh, k_discrete
+   complex(wp) :: velocityModes(nMaxDims, grid%nSavedSnapshots)
+   
    if (grid%nWavenumbers <= 0) return
    
    ! Recall grid%dynamicFactors(grid%nSavedSnapshots, grid%nWavenumbers, grid%nStructureFactors)
@@ -2133,20 +2139,101 @@ subroutine writeDynamicFactors(grid,filenameBase)
             2 * pi * (grid%selectedWavenumbers(:, iWavenumber) -1) / grid%systemLength
       end do   
 
+      ProjectModes: if(any(grid%vectorFactors/=0)) then
+         ! We also compute vortical and solenoidal modes for velocity
+         
+         ijk = grid%selectedWavenumbers(:, iWavenumber) ! Wave-index
+         
+         kdrh = ijk * pi / grid%nCells ! This is k*dx/2
+         k_discrete = ijk * 2*pi / grid%systemLength ! Wavenumber
+         if(abs(writeTheory)==1) then ! Account for discretization artifacts
+            where(ijk==0)
+               k_discrete = 0
+            else where
+               ! Consider discrete divergence-free vector fields:
+               k_discrete = k_discrete * (sin(kdrh)/kdrh)
+            end where
+         end if
+         k2_discrete = max(sum(k_discrete**2), epsilon(1.0_wp))
+
+         ! If we want to project velocities onto divergence-free modes:         
+         k2_proj = max(k2_discrete - k_discrete(3)**2, epsilon(1.0_wp)) ! kx^2+ky^2
+         modes(1,:) = k_discrete / sqrt(k2_discrete) ! The divergence of velocity (zero mode)
+         if((i==0).and.(j==0)) then ! This is a singular limit since it depends on the angle between k and the x/y axes
+            ! First incompressible mode:
+            modes(2,:) = (/ 1.0_wp, 0.0_wp, 0.0_wp /)
+            ! Second incompressible mode:
+            modes(3,:) = (/ 0.0_wp, 1.0_wp, 0.0_wp /)
+         else
+            ! First incompressible mode:
+            modes(2,:) = (/ -k_discrete(2), k_discrete(1), 0.0_wp /) / sqrt(k2_proj)
+            ! Second incompressible mode:
+            modes(3,:) = (/ -k_discrete(3)*k_discrete(1), -k_discrete(3)*k_discrete(2), k2_proj /) / sqrt(k2_discrete*k2_proj)
+         end if
+         
+         do iStructureFactor = 1, grid%nStructureFactors               
+            ! Project onto the discretely-divergence free modes into velocityModes(nMaxDims,grid%nSavedSnapshots)
+            
+            ! This assumes the dynamics is time reversible so omega and -omega are equivalent            
+            if(grid%vectorFactors(iStructureFactor)>0) then ! A self-correlation such as <v_x, v_x>
+               dim = grid%vectorFactors(iStructureFactor)
+               ! Add the self contribution from this structure factor to each mode:
+               do iMode=1, grid%nDimensions ! Squared amplitude of a mode
+                  velocityModes(iMode,:) = velocityModes(iMode,:) + &
+                     (modes(iMode,dim)**2)  *  grid%dynamicFactors(:, iWavenumber, iStructureFactor) 
+               end do   
+               if(grid%nDimensions>2) then ! Cross-correlation between two modes (2 and 3)
+                  iMode = 4
+                  velocityModes(iMode,:) = velocityModes(iMode,:) + &
+                     (modes(2,dim)*modes(3,dim)) * grid%dynamicFactors(:, iWavenumber, iStructureFactor)       
+               end if
+            else if(grid%vectorFactors(iStructureFactor)<0) then ! A cross-correlation such as <v_x, v_y>
+               select case(grid%vectorFactors(iStructureFactor))
+               case(-1) ! vx-vy
+                  dim1=1; dim2=2
+               case(-2) ! vy-vz
+                  dim1=2; dim2=3
+               case(-3) ! vx-vz
+                  dim1=1; dim2=3
+               case default
+                  stop "Negative values of vectorFactors must be between -3 and -1"
+               end select
+               do iMode=1, grid%nDimensions ! Squared amplitude of a mode
+                  velocityModes(iMode,:) = velocityModes(iMode,:) + &
+                     modes(iMode,dim1)*modes(iMode,dim2) * grid%dynamicFactors(:, iWavenumber, iStructureFactor) + &
+                     modes(iMode,dim1)*modes(iMode,dim2) * conjg(grid%dynamicFactors(:, iWavenumber, iStructureFactor))
+               end do
+               if(grid%nDimensions>2) then ! Cross-correlation between two modes (2 and 3)
+                  iMode = 4
+                  velocityModes(iMode,:) = velocityModes(iMode,:) + &
+                        modes(2,dim1)*modes(3,dim2)*grid%dynamicFactors(:, iWavenumber, iStructureFactor) + &
+                        modes(3,dim1)*modes(2,dim2)*conjg(grid%dynamicFactors(:, iWavenumber, iStructureFactor))
+               end if
+            end if
+            
+         end do
+         
+      end if ProjectModes
+
       wCell = frequencyToArrayIndex(grid%minWavefrequency, grid%nSavedSnapshots)
       do iWave=grid%minWavefrequency, grid%maxWavefrequency         
          wavefrequency = 2 * pi * iWave / (grid%nSavedSnapshots * grid%timestep)
          
          if(iWave/=0) then ! There is no point in writing zero frequency here
-            write(structureFactorFile(1), '(1000g17.9)') wavefrequency, &
+            write(structureFactorFile(1), '(1000g17.9)', advance="no") wavefrequency, &
                real(grid%dynamicFactors(wCell, iWavenumber, :))
-            write(structureFactorFile(2), '(1000g17.9)') wavefrequency, &
+            write(structureFactorFile(2), '(1000g17.9)', advance="no") wavefrequency, &
                aimag(grid%dynamicFactors(wCell, iWavenumber, :))
+            if(any(grid%vectorFactors/=0)) then
+               write(structureFactorFile(1), '(1000g17.9)') real(velocityModes(:,wCell))
+               write(structureFactorFile(2), '(1000g17.9)') aimag(velocityModes(:,wCell))
+            end if   
          end if      
       
          wCell = wCell + 1 ; if (wCell > grid%nSavedSnapshots) wCell = 1
+
       end do      
-      
+        
       close (structureFactorFile(1))
       close (structureFactorFile(2))
    end do    
