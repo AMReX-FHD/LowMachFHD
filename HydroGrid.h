@@ -13,6 +13,8 @@ C prototypes for interface to HydroGridModule.f90 via HydroGridCInterface.f90
  void destroyHydroAnalysis_C ();
 
  void resetHydroAnalysis_C ();
+ 
+ void updateHydroAnalysisConserved_C (double density[], double current[], double energy[]);
 
  void updateHydroAnalysisIsothermal_C (double velocity[], double density[]);
 

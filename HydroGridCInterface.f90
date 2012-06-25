@@ -83,6 +83,21 @@ subroutine resetHydroAnalysis_C () BIND(C,NAME="resetHydroAnalysis_C")
    if(project_2D) call resetHydroAnalysis (grid_2D)
 end subroutine
 
+! void updateHydroAnalysisConserved_C (double density[], double current[], double energy[])
+subroutine updateHydroAnalysisConserved_C (density, current, energy) BIND(C, NAME="updateHydroAnalysisConserved_C")
+   real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0 : grid%nSpecies - 1)
+   real (wp), intent(in) :: current(grid%nCells(1), grid%nCells(2), grid%nCells(3), grid%nDimensions, 0:grid%nFluids) 
+   real (wp), intent(in) :: energy(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
+
+   call updateHydroAnalysisConserved (grid, density, current, energy)
+   
+   if(project_2D) then
+      call updateHydroAnalysisConserved (grid_2D, density=SUM(density,DIM=2)/grid%nCells(2), &
+         current=SUM(current,DIM=2)/grid%nCells(2), energy=SUM(energy,DIM=2)/grid%nCells(2))
+   end if   
+
+end subroutine
+
 ! void updateHydroAnalysisIsothermal_C (double velocity[], double density[])
 subroutine updateHydroAnalysisIsothermal_C (velocity, density) &
               BIND(C, NAME="updateHydroAnalysisIsothermal_C")
@@ -476,7 +491,7 @@ subroutine writeHydroGridMixture(grid, density, concentration, filename, id)
         z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
         nvars=grid%nSpecies, vardim=(/(1, dim=1,grid%nSpecies)/), centering=(/(0, dim=1,grid%nSpecies)/), &
         varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,grid%nSpecies) /), &
-        vars=(/ C_LOC(density), (C_LOC(concentration(:,:,:,dim)),dim=1,grid%nSpecies-1) /) )
+        vars=(/ C_LOC(density), (C_LOC(concentration(1,1,1,dim)),dim=1,grid%nSpecies-1) /) )
 
 end subroutine
 !mcai-----end-----------------------------

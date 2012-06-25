@@ -209,6 +209,7 @@ module HydroGridModule
          ! Between each of the tracked wavenumbers and the selected wavenumber
       integer :: minWavefrequency, maxWavefrequency
       integer, allocatable :: selectedWavenumbers(:, :) ! Dimension (2/3,nWavenumbers): Indexes in k-grid of selected wavenumbers
+      integer, allocatable :: selectedWaveindices(:, :) ! Conversion to FFT indices
       complex (r_fft), allocatable :: savedStructureFactors(:, :, :) ! Dimension (nSavedSnapshots,nWavenumbers,nVariablesToFFT)
          ! Saved history of the static factors for the selected wavenumbers
       complex (r_fft), allocatable :: dynamicFactors(:, :, :)
@@ -555,6 +556,7 @@ subroutine createDynamicFactors(grid, wavenumbersString)
    if(grid%nWavenumbers <= 0) return
 
    allocate(grid%selectedWavenumbers(3, grid%nWavenumbers))
+   allocate(grid%selectedWaveindices(3, grid%nWavenumbers))
    if(grid%nCells(3)==1) then ! We read only two indices per wavenumber here
       read(wavenumbersString, *) grid%selectedWavenumbers(1:2,1:grid%nWavenumbers)
       grid%selectedWavenumbers(3,1:grid%nWavenumbers)=0      
@@ -568,7 +570,7 @@ subroutine createDynamicFactors(grid, wavenumbersString)
               write(*,*) "Error: Selected wavenumber = ", iDimension, iWavenumber , " out of possible range"
               stop
          end if
-         grid%selectedWavenumbers(iDimension, iWavenumber) = frequencyToArrayIndex( &
+         grid%selectedWaveindices(iDimension, iWavenumber) = frequencyToArrayIndex( &
             grid%selectedWavenumbers(iDimension, iWavenumber), grid%nCells(iDimension) )
       end do
    end do
@@ -1152,9 +1154,9 @@ subroutine updateStructureFactors(grid)
    grid%iSample = grid%iSample + 1
    do iVariable = 1, grid%nVariablesToFFT
       do iWavenumber = 1, grid%nWavenumbers
-         kx = grid%selectedWavenumbers(1, iWavenumber)
-         ky = grid%selectedWavenumbers(2, iWavenumber)
-         kz = grid%selectedWavenumbers(3, iWavenumber)
+         kx = grid%selectedWaveindices(1, iWavenumber)
+         ky = grid%selectedWaveindices(2, iWavenumber)
+         kz = grid%selectedWaveindices(3, iWavenumber)
          grid%savedStructureFactors(grid%iSample, iWavenumber, iVariable) = grid%staticFourierTransforms(kx, ky, kz, iVariable)
       end do
    end do      
@@ -2115,20 +2117,23 @@ subroutine writeDynamicFactors(grid,filenameBase)
    complex(wp) :: velocityModes(nMaxDims, grid%nSavedSnapshots)
    
    if (grid%nWavenumbers <= 0) return
-   
+         
    ! Recall grid%dynamicFactors(grid%nSavedSnapshots, grid%nWavenumbers, grid%nStructureFactors)
 
    ! The definition of the theoretical S_k_w requires normalization of the FFTW result by dx/N_cells:
    grid%dynamicFactors = grid%dynamicFactors * grid%structFactMultiplier * &
       product(grid%systemLength) / product(grid%nCells)**2 * &
       grid%timestep / grid%nSavedSnapshots
+
+   ! For projecting the velocity onto solenoidal modes:
+   nModes=grid%nDimensions ! We do not compute cross-correlations here
    
    do iWavenumber = 1, grid%nWavenumbers
    
       write(id_string,"(I25)") iWavenumber
       filename=trim(filenameBase) // ".S_k_w.k=" // trim(ADJUSTL(id_string))
       
-      write(*,*) "Writing dynamic structure factor S(k,w) for k=", grid%selectedWavenumbers(:, iWavenumber)-1, &
+      write(*,*) "Writing dynamic structure factor S(k,w) for k=", grid%selectedWavenumbers(:, iWavenumber), &
          " to file ", trim(filename) // ".{Re,Im}.dat"
       open (file = trim(filename) // ".Re.dat", unit=structureFactorFile(1), status = "unknown", action = "write")
       open (file = trim(filename) // ".Im.dat", unit=structureFactorFile(2), status = "unknown", action = "write")
@@ -2136,7 +2141,7 @@ subroutine writeDynamicFactors(grid,filenameBase)
       ! This only works if the selected wavenumbers are positive, but this is always the case anyway:
       do iFile=1,2
          write(structureFactorFile(iFile), '(A,100G17.9)')  "# k=", &
-            2 * pi * (grid%selectedWavenumbers(:, iWavenumber) -1) / grid%systemLength
+            2 * pi * (grid%selectedWavenumbers(:, iWavenumber)) / grid%systemLength
       end do   
 
       ProjectModes: if(any(grid%vectorFactors/=0)) then
@@ -2159,7 +2164,7 @@ subroutine writeDynamicFactors(grid,filenameBase)
          ! If we want to project velocities onto divergence-free modes:         
          k2_proj = max(k2_discrete - k_discrete(3)**2, epsilon(1.0_wp)) ! kx^2+ky^2
          modes(1,:) = k_discrete / sqrt(k2_discrete) ! The divergence of velocity (zero mode)
-         if((i==0).and.(j==0)) then ! This is a singular limit since it depends on the angle between k and the x/y axes
+         if(all(ijk(1:2)==0)) then ! This is a singular limit since it depends on the angle between k and the x/y axes
             ! First incompressible mode:
             modes(2,:) = (/ 1.0_wp, 0.0_wp, 0.0_wp /)
             ! Second incompressible mode:
@@ -2170,7 +2175,9 @@ subroutine writeDynamicFactors(grid,filenameBase)
             ! Second incompressible mode:
             modes(3,:) = (/ -k_discrete(3)*k_discrete(1), -k_discrete(3)*k_discrete(2), k2_proj /) / sqrt(k2_discrete*k2_proj)
          end if
+         !write(*,*) "ijk=", ijk, " div=", modes(1,1:grid%nDimensions), " vort=", modes(2,1:grid%nDimensions)
          
+         velocityModes = 0.0_wp
          do iStructureFactor = 1, grid%nStructureFactors               
             ! Project onto the discretely-divergence free modes into velocityModes(nMaxDims,grid%nSavedSnapshots)
             
@@ -2181,12 +2188,9 @@ subroutine writeDynamicFactors(grid,filenameBase)
                do iMode=1, grid%nDimensions ! Squared amplitude of a mode
                   velocityModes(iMode,:) = velocityModes(iMode,:) + &
                      (modes(iMode,dim)**2)  *  grid%dynamicFactors(:, iWavenumber, iStructureFactor) 
+                  !if(iMode==2) write(*,*) iMode, " Adding transform ", iStructureFactor, &
+                  !   " with coefficient ", (modes(iMode,dim)**2)
                end do   
-               if(grid%nDimensions>2) then ! Cross-correlation between two modes (2 and 3)
-                  iMode = 4
-                  velocityModes(iMode,:) = velocityModes(iMode,:) + &
-                     (modes(2,dim)*modes(3,dim)) * grid%dynamicFactors(:, iWavenumber, iStructureFactor)       
-               end if
             else if(grid%vectorFactors(iStructureFactor)<0) then ! A cross-correlation such as <v_x, v_y>
                select case(grid%vectorFactors(iStructureFactor))
                case(-1) ! vx-vy
@@ -2202,13 +2206,9 @@ subroutine writeDynamicFactors(grid,filenameBase)
                   velocityModes(iMode,:) = velocityModes(iMode,:) + &
                      modes(iMode,dim1)*modes(iMode,dim2) * grid%dynamicFactors(:, iWavenumber, iStructureFactor) + &
                      modes(iMode,dim1)*modes(iMode,dim2) * conjg(grid%dynamicFactors(:, iWavenumber, iStructureFactor))
+                  !if(iMode==2) write(*,*) iMode, " Adding transform ", iStructureFactor, &
+                  !   " with coefficient ", 2*modes(iMode,dim1)*modes(iMode,dim2) 
                end do
-               if(grid%nDimensions>2) then ! Cross-correlation between two modes (2 and 3)
-                  iMode = 4
-                  velocityModes(iMode,:) = velocityModes(iMode,:) + &
-                        modes(2,dim1)*modes(3,dim2)*grid%dynamicFactors(:, iWavenumber, iStructureFactor) + &
-                        modes(3,dim1)*modes(2,dim2)*conjg(grid%dynamicFactors(:, iWavenumber, iStructureFactor))
-               end if
             end if
             
          end do
@@ -2225,8 +2225,8 @@ subroutine writeDynamicFactors(grid,filenameBase)
             write(structureFactorFile(2), '(1000g17.9)', advance="no") wavefrequency, &
                aimag(grid%dynamicFactors(wCell, iWavenumber, :))
             if(any(grid%vectorFactors/=0)) then
-               write(structureFactorFile(1), '(1000g17.9)') real(velocityModes(:,wCell))
-               write(structureFactorFile(2), '(1000g17.9)') aimag(velocityModes(:,wCell))
+               write(structureFactorFile(1), '(1000g17.9)') real(velocityModes(1:nModes,wCell))
+               write(structureFactorFile(2), '(1000g17.9)') aimag(velocityModes(1:nModes,wCell))
             end if   
          end if      
       
@@ -2260,7 +2260,7 @@ subroutine writeDynamicFactors(grid,filenameBase)
       write(id_string,"(I25)") iWavenumber
       filename=trim(filenameBase) // ".S_k_t.k=" // trim(ADJUSTL(id_string))
       
-      write(*,*) "Writing dynamic structure factor S(k,t) for k=", grid%selectedWavenumbers(:, iWavenumber)-1, &
+      write(*,*) "Writing dynamic structure factor S(k,t) for k=", grid%selectedWavenumbers(:, iWavenumber), &
          " to file ", trim(filename) // ".{Re,Im}.dat"
       open (file = trim(filename) // ".Re.dat", unit=structureFactorFile(1), status = "unknown", action = "write")
       open (file = trim(filename) // ".Im.dat", unit=structureFactorFile(2), status = "unknown", action = "write")
@@ -2268,7 +2268,7 @@ subroutine writeDynamicFactors(grid,filenameBase)
       ! This only works if the selected wavenumbers are positive, but this is always the case anyway:
       do iFile=1,2
          write(structureFactorFile(iFile), '(A,100G17.9)')  "# k=", &
-            2 * pi * (grid%selectedWavenumbers(:, iWavenumber) -1) / grid%systemLength
+            2 * pi * (grid%selectedWavenumbers(:, iWavenumber)) / grid%systemLength
       end do   
 
       wCell = frequencyToArrayIndex(grid%minWavefrequency, grid%nSavedSnapshots)
