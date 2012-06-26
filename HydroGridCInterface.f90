@@ -225,6 +225,7 @@ subroutine projectHydroGrid_C (density, concentration, filename, id, save_snapsh
    character(kind=c_char), dimension(*), intent(in) :: filename ! A C string, OPTIONAL: empty for not present
    integer(c_int), value :: id ! Append an integer ID to the file name, OPTIONAL: negative for not present
    integer(c_int), value :: save_snapshot ! Should we also write the full data to a VTK file?
+      ! Key: 0=none, >0 = save 3D vtk file, abs>2 = also update grid_2D
 
    integer :: i
    character(len=1024), target :: input_file_base     ! file name as a Fortran string
@@ -237,26 +238,48 @@ subroutine projectHydroGrid_C (density, concentration, filename, id, save_snapsh
    end do
    !write(*,*) "input_file_base=", lentrim(input_file_base), trim(input_file_base)
    
+   if(project_2D.and.(abs(save_snapshot)>1)) then
+      ! Here we also do spectral analysis of the projection and write a file out
+      call resetHydroAnalysis(grid_2D)
+      call projectUtility(grid_2D)
+      if(id>=0) then  
+         call writeToFiles(grid_2D, id)
+      else
+         call writeToFiles(grid_2D)
+      end if
+   else
+      call projectUtility()
+   end if   
+
+contains
+
+subroutine projectUtility(grid_2D)
+   type(HydroGrid), intent(inout), optional :: grid_2D
+   
    if(len_trim(input_file_base)>0) then
-      call projectHydroGridMixture (grid, density, concentration, filename=input_file_base)
-      if(save_snapshot/=0) call writeHydroGridMixture (grid, density, concentration, filename=input_file_base)
-   else if(id>0) then
-      call projectHydroGridMixture (grid, density, concentration, id=id)
-      if(save_snapshot/=0) call writeHydroGridMixture (grid, density, concentration, id=id)
+      call projectHydroGridMixture (grid, density, concentration, filename=input_file_base, grid_2D=grid_2D)
+      if(save_snapshot>0) call writeHydroGridMixture (grid, density, concentration, filename=input_file_base)
+   else if(id>=0) then
+      call projectHydroGridMixture (grid, density, concentration, id=id, grid_2D=grid_2D)
+      if(save_snapshot>0) call writeHydroGridMixture (grid, density, concentration, id=id)
    else   
-      call projectHydroGridMixture (grid, density, concentration)
-      if(save_snapshot/=0) call writeHydroGridMixture (grid, density, concentration, id=id)
+      call projectHydroGridMixture (grid, density, concentration, grid_2D=grid_2D)
+      if(save_snapshot>0) call writeHydroGridMixture (grid, density, concentration)
    end if   
    
 end subroutine
 
-subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
+end subroutine
+
+subroutine projectHydroGridMixture (grid, density, concentration, filename, id, grid_2D)
 
    type(HydroGrid), target, intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
    real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
    character(len=*), intent(in), optional :: filename
    integer, intent(in), optional :: id
+   type(HydroGrid), intent(inout), optional :: grid_2D
+      ! We can call updateHydroGrid and pretend we have temperature
    
    !local variables
    integer :: i, j, k
@@ -324,6 +347,10 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id)
          
       enddo
    enddo
+   
+   if(present(grid_2D)) then
+      call updateHydroAnalysisPrimitive (grid_2D, density=rho_avg_Y, concentration=c_avg_Y, temperature=ConcentrTimesY_coor)
+   end if
      
    ! grid%nCells(3)=1 if it is 2D problem
    if(grid%nCells(3)>1) then

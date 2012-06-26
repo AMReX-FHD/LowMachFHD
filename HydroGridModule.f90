@@ -79,7 +79,7 @@ module HydroGridModule
    type HydroGrid
       integer :: nDimensions = nMaxDims ! How many velocities are stored, 1 (vx), 2 (vx+by) or 3 (vx+vy+vz)
          ! Note that the actual grid is always treated as 3D, since 1D and 2D are simply degenerate cases with Nz/Ny=1
-      
+         
       ! Fluid variables
       ! -------------------------------
       ! What variables are actually represented for the fluid can vary:
@@ -1179,10 +1179,12 @@ subroutine writeToFiles(grid, id)
    
    character (nMaxCharacters) :: filenameBase=""
    character(25) :: id_string
-
+   
    cell=grid%correlationCell
 
    ! First, subtract the means from the variances to get covariances:
+   ! If we only have one sample we cannot evaluate the means so we should not subtract them
+   if(grid%iStep>1) then
    do iVariance = 1, grid%nVariances
       species1  = grid%variancePairs(1, 1, iVariance)
       variable1 = abs(grid%variancePairs(2, 1, iVariance))
@@ -1211,6 +1213,7 @@ subroutine writeToFiles(grid, id)
       end if
               
    end do
+   end if
 
    filenameBase = trim(grid%outputFolder) // "/" // trim(grid%filePrefix)
 
@@ -1218,6 +1221,9 @@ subroutine writeToFiles(grid, id)
       write(id_string,"(I6.6)") id
       filenameBase = trim(filenameBase) // "." // trim(ADJUSTL(id_string))
    end if   
+
+   write(*,*) "Writing HydroGrid files for  ", trim(filenameBase), &
+      " from # of samples / timeseries =", grid%iStep, grid%iTimeSeries
 
    call writeMeansAndVariances(grid, trim(filenameBase))
    call writeStructureFactors(grid, trim(filenameBase))
@@ -1639,7 +1645,8 @@ subroutine writeStructureFactors(grid,filenameBase)
    
    !-----------------------
    ! Now, we subtract the Fourier Transform (FT) of the mean to get a covariance (structure factor)
-   if(grid%subtractMeanFT) then
+   ! It makes no sense to do this if there is only one sample as we will get zero
+   if( grid%subtractMeanFT .and. (grid%iStep>1)) then
    if(allocated(grid%meanStaticTransforms)) then
       ! We are keep track of the mean of the FT, so we can just subtract it:
 
