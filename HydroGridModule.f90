@@ -1924,11 +1924,13 @@ subroutine writeStructureFactors(grid,filenameBase)
             
             kdrh = ijk * pi / grid%nCells ! This is k*dx/2
             k_discrete = ijk * 2*pi / grid%systemLength ! Wavenumber
-            where(ijk==0)
-               k_discrete = 0
-            else where
-               k_discrete = k_discrete * (sin(kdrh)/kdrh)
-            end where
+            if(abs(writeTheory)==1) then ! Account for discretization artifacts
+               where(ijk==0)
+                  k_discrete = 0
+               else where
+                  k_discrete = k_discrete * (sin(kdrh)/kdrh)
+               end where
+            end if   
             k2_discrete = max(sum(k_discrete**2), epsilon(1.0_wp))
             
             ! If we want to project velocities onto divergence-free modes:         
