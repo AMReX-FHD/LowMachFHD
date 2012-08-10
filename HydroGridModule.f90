@@ -1868,9 +1868,6 @@ subroutine writeStructureFactors(grid,filenameBase)
       open (file = trim(filename), unit=structureFactorFile(3), status = "unknown", action = "write")
       write(structureFactorFile(3), "(A)") "# Columns are: mean, std, minval, maxval"
 
-      mesh_dims=grid%nCells(1:3)
-      if(grid%nCells(3)<=1) mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)            
-               
       if(writeAbsValue) then ! Only write the absolute value of the static factors  
          n_S_k_vars=1 ! For abs value
          varnames(1)="S_k" // C_NULL_CHAR         
@@ -2037,15 +2034,46 @@ subroutine writeStructureFactors(grid,filenameBase)
          filename = trim(filename) // C_NULL_CHAR
 
          ! We write the real and imaginary part together here:
-         CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
-            ub=0_c_int, dims=mesh_dims+1, &
-            x=(/ ( wavevector(1)*(dim-0.5_wp), dim = mink(1), maxk(1)+1 ) /), &
-            y=(/ ( wavevector(2)*(dim-0.5_wp), dim = minky, maxky+1 ) /), &
-            z=merge(0.0_wp, 1.0_wp, mesh_dims(3)==0) * &
-              (/ ( wavevector(3)*(dim-0.5_wp), dim = mink(3), maxk(3)+1 ) /), &
-            nvars=n_S_k_vars, vardim=(/(1, dim=1,n_S_k_vars)/), centering=(/(0, dim=1,n_S_k_vars)/), &
-            varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1, n_S_k_vars) /), &
-            vars=(/ (C_LOC(S_k_array(mink(1),mink(2),mink(3),dim)), dim=1, n_S_k_vars) /))
+         mesh_dims=grid%nCells(1:3)
+         if(grid%nCells(3)<=1) then
+            mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)            
+               
+            CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
+               ub=0_c_int, dims=mesh_dims+1, &
+               x=(/ ( wavevector(1)*(dim-0.5_wp), dim = mink(1), maxk(1)+1 ) /), &
+               y=(/ ( wavevector(2)*(dim-0.5_wp), dim = minky, maxky+1 ) /), &
+               z=(/ 0.0_wp, 0.0_wp /), &
+               nvars=n_S_k_vars, vardim=(/(1, dim=1,n_S_k_vars)/), centering=(/(0, dim=1,n_S_k_vars)/), &
+               varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1, n_S_k_vars) /), &
+               vars=(/ (C_LOC(S_k_array(mink(1),mink(2),mink(3),dim)), dim=1, n_S_k_vars) /))
+         
+         else if (maxky==minky) then ! Also a 2D result, so we swap z and y in the vtk file for easier rendering
+         
+            mesh_dims(2)=grid%nCells(3)
+            mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK) 
+
+            CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
+               ub=0_c_int, dims=mesh_dims+1, &
+               x=(/ ( wavevector(1)*(dim-0.5_wp), dim = mink(1), maxk(1)+1 ) /), &
+               y=(/ ( wavevector(3)*(dim-0.5_wp), dim = mink(3), maxk(3)+1 ) /), &
+               z=(/ 0.0_wp, 0.0_wp /), &
+               nvars=n_S_k_vars, vardim=(/(1, dim=1,n_S_k_vars)/), centering=(/(0, dim=1,n_S_k_vars)/), &
+               varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1, n_S_k_vars) /), &
+               vars=(/ (C_LOC(S_k_array(mink(1),mink(2),mink(3),dim)), dim=1, n_S_k_vars) /))
+             
+         else
+
+            CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
+               ub=0_c_int, dims=mesh_dims+1, &
+               x=(/ ( wavevector(1)*(dim-0.5_wp), dim = mink(1), maxk(1)+1 ) /), &
+               y=(/ ( wavevector(2)*(dim-0.5_wp), dim = minky, maxky+1 ) /), &
+               z=(/ ( wavevector(3)*(dim-0.5_wp), dim = mink(3), maxk(3)+1 ) /), &
+               nvars=n_S_k_vars, vardim=(/(1, dim=1,n_S_k_vars)/), centering=(/(0, dim=1,n_S_k_vars)/), &
+               varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1, n_S_k_vars) /), &
+               vars=(/ (C_LOC(S_k_array(mink(1),mink(2),mink(3),dim)), dim=1, n_S_k_vars) /))
+         
+         end if      
+               
 
       end do
       
@@ -2059,6 +2087,9 @@ subroutine writeStructureFactors(grid,filenameBase)
          filename=trim(filenameBase) // ".S_k.trace.vtk"
          write(*,*) "Writing static structure factor to VTK file ", trim(filename)
          filename = trim(filename) // C_NULL_CHAR
+
+         mesh_dims=grid%nCells(1:3)
+         if(grid%nCells(3)<=1) mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)            
          
          CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
             ub=0_c_int, dims=mesh_dims+1, &

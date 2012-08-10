@@ -382,8 +382,8 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id, 
          z=(/ (0.0_wp, dim=0,1) /), &
          nvars=2, vardim=(/(1, dim=1, 2)/), centering=(/(0, dim=1, 2)/), &
          varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,2) /), &
-         vars=(/ C_LOC(DensityTimesY_coor), C_LOC(Density1TimesY_coor), &
-                C_LOC(ConcentrTimesY_coor), C_LOC(rho_avg_Y), C_LOC(rho1_avg_Y), C_LOC(c_avg_Y) /))
+         vars=(/ C_LOC(DensityTimesY_coor), C_LOC(ConcentrTimesY_coor), &
+                C_LOC(Density1TimesY_coor), C_LOC(rho_avg_Y), C_LOC(rho1_avg_Y), C_LOC(c_avg_Y) /))
 
    else  ! if the grid is a 2D grid, we directly write down X coordinates and sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)  
       
