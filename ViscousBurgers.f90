@@ -118,13 +118,18 @@ program ViscousBurgers
 
    ! Set various weights required by the algorithms:
    select case(abs(integrator))
-   case(3) ! RK3
+   case(3) ! RK3 new weights better
+      w1=(2*sqrt(2.0_wp)+sqrt(3.0_wp))/5
+      w2=(-4*sqrt(2.0_wp)+3*sqrt(3.0_wp))/5
+      w3=(sqrt(2.0_wp)-2*sqrt(3.0_wp))/10
+      w4=0; w5=0; w6=0;
+   case(5) ! RK3 new weights but worse
       w1=(2*sqrt(2.0_wp)-sqrt(3.0_wp))/5
       w2=(-4*sqrt(2.0_wp)-3*sqrt(3.0_wp))/5
       w3=(sqrt(2.0_wp)+2*sqrt(3.0_wp))/10
       w4=0; w5=0; w6=0;
    case(4) ! Old weights (first order only)
-      w1=sqrt(3.0_wp)
+      w1=-sqrt(3.0_wp)
       w2=sqrt(3.0_wp)
       w3=0
       w4=0; w5=0; w6=0;
@@ -670,7 +675,7 @@ subroutine TakeTimestep() ! Main routine in the algorithm
       density(1:n_cells) = density(1:n_cells) + ddensity         
       call FixPeriodic(density)
 
-   case(3,4) ! Explicit RK3
+   case(3,4,5) ! Explicit RK3
       denscopy=density ! Make a copy of the old state
 
       ! RK stage 1:
