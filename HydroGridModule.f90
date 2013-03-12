@@ -998,7 +998,7 @@ end subroutine updateVariances
 subroutine updateStructureFactors(grid)
    type (HydroGrid), target :: grid
 
-   integer :: iVariable, species, variable
+   integer :: iVariable, species, variable, iTemp
    integer :: iStructureFactor, jStructureFactor, variable1, variable2, vars(4)
    integer :: iWavenumber, kx, ky, kz, iCross, i, j, k, vel_index
 
@@ -1011,6 +1011,7 @@ subroutine updateStructureFactors(grid)
    
    integer, dimension(nMaxDims) :: mink, maxk, ijk
    real(wp), dimension(nMaxDims) :: kdrh
+   character (nMaxCharacters) :: filenameBase=""
 
    !---------------------------------------
    ! Static structure factors
@@ -1110,11 +1111,11 @@ subroutine updateStructureFactors(grid)
    ! Dynamic structure factors
    if (grid%nWavenumbers <= 0) return
 
-   if (grid%iSample >= grid%nSavedSnapshots) then ! Memory of past history is full, do temporal FFT now
+   if (grid%iSample >= abs(grid%nSavedSnapshots)) then ! Memory of past history is full, do temporal FFT now
       grid%iSample = 0
       grid%iTimeSeries = grid%iTimeSeries + 1
 
-      do iVariable = 1, grid%nVariablesToFFT
+      do iVariable = 1, grid%nVariablesToFFT         
          do iWavenumber = 1, grid%nWavenumbers
             grid%dynamicFFTarray = grid%savedStructureFactors(:, iWavenumber, iVariable)
             call FFTW_Execute(grid%dynamicFFTplan)
@@ -1159,7 +1160,20 @@ subroutine updateStructureFactors(grid)
          kz = grid%selectedWaveindices(3, iWavenumber)
          grid%savedStructureFactors(grid%iSample, iWavenumber, iVariable) = grid%staticFourierTransforms(kx, ky, kz, iVariable)
       end do
-   end do      
+   end do
+
+   if(.true.) then ! Temporary: Save a history of S(k)
+      filenameBase = trim(grid%outputFolder) // "/" // trim(grid%filePrefix) // ".S_k.history.dat"
+      write(*,*) "Writing S(k) history to file ", trim(filenameBase)
+      open (551, file = trim(filenameBase), status = "unknown", action = "write", position="append")
+
+      write(551,'(1000g17.9)') &
+         abs  (grid%savedStructureFactors(grid%iSample, :, :)), &
+         real (grid%savedStructureFactors(grid%iSample, :, :)), &
+         aimag(grid%savedStructureFactors(grid%iSample, :, :))
+         
+      close(551)
+   end if   
 
 end subroutine updateStructureFactors
 
@@ -2108,7 +2122,7 @@ subroutine writeStructureFactors(grid,filenameBase)
       
    end if WriteVTK_S_k
 
-   if (grid%nWavenumbers > 0) call writeDynamicFactors(grid,filenameBase)
+   if (grid%iTimeSeries > 0) call writeDynamicFactors(grid,filenameBase)
 
 contains
 
@@ -2162,9 +2176,9 @@ subroutine writeDynamicFactors(grid,filenameBase)
 
    ! The definition of the theoretical S_k_w requires normalization of the FFTW result by dx/N_cells:
    grid%dynamicFactors = grid%dynamicFactors * grid%structFactMultiplier * &
-      product(grid%systemLength) / product(grid%nCells)**2 * &
-      grid%timestep / grid%nSavedSnapshots
-
+      product(grid%systemLength) / real(product(grid%nCells),wp)**2 * &
+      grid%timestep / grid%nSavedSnapshots ! Note that product(grid%nCells)^2 can overflow in integer
+      
    ! For projecting the velocity onto solenoidal modes:
    nModes=grid%nDimensions ! We do not compute cross-correlations here
    
