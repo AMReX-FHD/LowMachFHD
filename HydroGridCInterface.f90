@@ -452,12 +452,13 @@ end subroutine
 
 ! also write the 3D data file into a different vtk file 
 ! void writeHydroGridMixture_C (double density[], double concentration[], char * filename)
-subroutine writeHydroGridMixture_C (density, concentration, filename) &
+subroutine writeHydroGridMixture_C (density, concentration, filename, id) &
               BIND(C, NAME="writeHydroGridMixture_C")
    ! state the in/out args
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
    real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
    character(kind=c_char), dimension(*), intent(in) :: filename ! A C string
+   integer(c_int), value :: id ! Append an integer ID to the file name, OPTIONAL: negative for not present
 
    integer :: i
    character(len=1024), target :: input_file_base     ! file name as a Fortran string
@@ -469,7 +470,13 @@ subroutine writeHydroGridMixture_C (density, concentration, filename) &
       input_file_base(i:i)=filename(i)
    end do
    
-   call writeHydroGridMixture (grid, density, concentration, input_file_base)
+   if(len_trim(input_file_base)>0) then
+      call writeHydroGridMixture (grid, density, concentration, filename=input_file_base)
+   else if(id>=0) then
+      call writeHydroGridMixture (grid, density, concentration, id=id)
+   else
+      call writeHydroGridMixture (grid, density, concentration) 
+   end if   
    
 end subroutine
 
