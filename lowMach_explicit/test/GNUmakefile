@@ -5,16 +5,18 @@ MKVERBOSE := t
 
 COMP := gfortran
 
-BOXLIB_HOME := ../../../BoxLib
-HYDRO_DIR   := ../../HydroGrid
+# BOXLIB_HOME defines the directory in which we will find all the BoxLib code
+# If you set BOXLIB_HOME as an environment variable, this line will be ignored
+BOXLIB_HOME ?= /path/to/BoxLib/
+HYDROLIB_HOME := ../../../HydroGrid
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
 include ../GPackage.mak
 VPATH_LOCATIONS += ..
 
-include $(HYDRO_DIR)/GPackage.mak
-VPATH_LOCATIONS += $(HYDRO_DIR)
+include $(HYDROLIB_HOME)/GPackage.mak
+VPATH_LOCATIONS += $(HYDROLIB_HOME)
 
 include $(BOXLIB_HOME)/Src/F_BaseLib/GPackage.mak
 VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/F_BaseLib

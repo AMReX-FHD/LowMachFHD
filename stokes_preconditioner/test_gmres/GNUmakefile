@@ -8,7 +8,7 @@ COMP := gfortran
 # BOXLIB_HOME defines the directory in which we will find all the BoxLib code
 # If you set BOXLIB_HOME as an environment variable, this line will be ignored
 BOXLIB_HOME ?= /path/to/BoxLib/
-HYDROLIB_HOME := ../../HydroGrid
+HYDROLIB_HOME := ../../../HydroGrid
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
