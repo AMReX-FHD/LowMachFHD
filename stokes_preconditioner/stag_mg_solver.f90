@@ -1,7 +1,6 @@
 module stag_mg_solver_module
 
   use ml_layout_module
-  use stag_mg_util_module
   use stag_applyop_module
   use convert_module
   use define_bc_module
