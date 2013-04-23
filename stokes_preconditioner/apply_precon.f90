@@ -6,6 +6,7 @@ module apply_precon_module
   use probin_module
   use stag_mg_solver_module
   use macproject_module
+  use div_and_grad_module
   use mac_applyop_module
   use convert_module
   use norm_inner_product_module
@@ -101,7 +102,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! add set mac_rhs = D(x_u^star) to mac_rhs
-        call divumac(mla,x_u,mac_rhs,dx)
+        call compute_divu(mla,x_u,mac_rhs,dx)
 
         ! add b_p to mac_rhs
         do n=1,nlevs
@@ -207,7 +208,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! add set mac_rhs = D(x_u) to mac_rhs
-        call divumac(mla,x_u,mac_rhs,dx)
+        call compute_divu(mla,x_u,mac_rhs,dx)
 
         ! add b_p to mac_rhs
         do n=1,nlevs

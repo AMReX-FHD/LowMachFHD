@@ -4,9 +4,9 @@ module apply_matrix_module
   use multifab_module
   use define_bc_module
   use probin_module
-  use macproject_module
+  use div_and_grad_module
   use stag_applyop_module
-  use compute_gradp_module
+  use div_and_grad_module
   use multifab_physbc_module
   use multifab_physbc_inhomogeneous_module
 
@@ -96,7 +96,7 @@ contains
     end do
         
     ! set b_p = -D x_u
-    call divumac(mla,x_u,b_p,dx)
+    call compute_divu(mla,x_u,b_p,dx)
     do n=1,nlevs
        call multifab_mult_mult_s_c(b_p(n),1,-1.d0,1,0)
     end do

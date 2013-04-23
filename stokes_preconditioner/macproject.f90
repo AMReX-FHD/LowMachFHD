@@ -11,7 +11,7 @@ module macproject_module
 
   private
 
-  public :: macproject, subtract_weighted_gradp, divumac
+  public :: macproject, subtract_weighted_gradp
 
 contains 
 
@@ -109,99 +109,6 @@ contains
 
   end subroutine macproject
   
-  subroutine divumac(mla,umac,rh,dx)
-
-    use ml_restriction_module, only: ml_cc_restriction
-
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: umac(:,:)
-    type(multifab) , intent(inout) :: rh(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:)
-
-    real(kind=dp_t), pointer :: ump(:,:,:,:) 
-    real(kind=dp_t), pointer :: vmp(:,:,:,:) 
-    real(kind=dp_t), pointer :: wmp(:,:,:,:) 
-    real(kind=dp_t), pointer :: rhp(:,:,:,:) 
-    real(kind=dp_t)          :: rhmax
-    integer :: i,n,nlevs,dm,ng_u,ng_r,lo(mla%dim),hi(mla%dim)
-
-    dm = mla%dim
-    nlevs = mla%nlevel
-
-    ng_u = umac(1,1)%ng
-    ng_r = rh(1)%ng
-
-    do n = 1,nlevs
-       do i = 1, nfabs(rh(n))
-          ump => dataptr(umac(n,1), i)
-          vmp => dataptr(umac(n,2), i)
-          rhp => dataptr(rh(n)  , i)
-          lo =  lwb(get_box(rh(n), i))
-          hi =  upb(get_box(rh(n), i))
-          select case (dm)
-          case (2)
-             call divumac_2d(ump(:,:,1,1), vmp(:,:,1,1), ng_u, rhp(:,:,1,1), ng_r, &
-                             dx(n,:),lo,hi)
-          case (3)
-             wmp => dataptr(umac(n,3), i)
-             call divumac_3d(ump(:,:,:,1), vmp(:,:,:,1), wmp(:,:,:,1), ng_u, &
-                             rhp(:,:,:,1), ng_r, dx(n,:),lo,hi)
-          end select
-       end do
-    end do
-
-    rhmax = norm_inf(rh(nlevs))
-    do n = nlevs,2,-1
-       call ml_cc_restriction(rh(n-1),rh(n),mla%mba%rr(n-1,:))
-       rhmax = max(rhmax,norm_inf(rh(n-1)))
-    end do
-
-  end subroutine divumac
-
-  subroutine divumac_2d(umac,vmac,ng_u,rh,ng_r,dx,lo,hi)
-
-    integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_r
-    real(kind=dp_t), intent(in   ) :: umac(lo(1)-ng_u:,lo(2)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: vmac(lo(1)-ng_u:,lo(2)-ng_u:)
-    real(kind=dp_t), intent(inout) ::   rh(lo(1)-ng_r:,lo(2)-ng_r:)
-    real(kind=dp_t), intent(in   ) ::   dx(:)
-
-    integer :: i,j
-
-    do j = lo(2),hi(2)
-       do i = lo(1),hi(1)
-          rh(i,j) = &
-               (umac(i+1,j) - umac(i,j)) / dx(1) + &
-               (vmac(i,j+1) - vmac(i,j)) / dx(2)
-       end do
-    end do
-
-  end subroutine divumac_2d
-
-  subroutine divumac_3d(umac,vmac,wmac,ng_u,rh,ng_r,dx,lo,hi)
-
-    integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_r
-    real(kind=dp_t), intent(in   ) :: umac(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: vmac(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: wmac(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t), intent(inout) ::   rh(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:)
-    real(kind=dp_t), intent(in   ) :: dx(:)
-
-    integer :: i,j,k
-
-    do k = lo(3),hi(3)
-       do j = lo(2),hi(2)
-          do i = lo(1),hi(1)
-             rh(i,j,k) = &
-                  (umac(i+1,j,k) - umac(i,j,k)) / dx(1) + &
-                  (vmac(i,j+1,k) - vmac(i,j,k)) / dx(2) + &
-                  (wmac(i,j,k+1) - wmac(i,j,k)) / dx(3)
-          end do
-       end do
-    end do
-
-  end subroutine divumac_3d
-
   subroutine subtract_weighted_gradp(mla,x_u,alphainv_edge,phi,dx)
 
     type(ml_layout), intent(in   ) :: mla

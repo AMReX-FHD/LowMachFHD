@@ -5,7 +5,7 @@ module convert_to_homogeneous_module
   use define_bc_module
   use multifab_physbc_inhomogeneous_module
   use stag_applyop_module
-  use macproject_module
+  use div_and_grad_module
 
   implicit none
 
@@ -75,7 +75,7 @@ contains
   end do
 
   ! compute divergence of phi
-  call divumac(mla,phi,Dphi,dx)
+  call compute_divu(mla,phi,Dphi,dx)
 
   ! add Dphi to b_p
   do n=1,nlevs

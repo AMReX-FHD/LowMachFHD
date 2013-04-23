@@ -1,8 +1,8 @@
 f90sources += apply_matrix.f90
 f90sources += apply_precon.f90
-f90sources += compute_gradp.f90
 f90sources += convert_stag.f90
 f90sources += convert_to_homogeneous.f90
+f90sources += div_and_grad.f90
 f90sources += gmres.f90
 f90sources += init_precon.f90
 f90sources += init_solution.f90
