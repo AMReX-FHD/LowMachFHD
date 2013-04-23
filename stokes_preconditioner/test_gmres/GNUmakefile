@@ -15,6 +15,9 @@ include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 include ../GPackage.mak
 VPATH_LOCATIONS += ..
 
+include ../../src_gmres/GPackage.mak
+VPATH_LOCATIONS += ../../src_gmres
+
 include ../../src_common/GPackage.mak
 VPATH_LOCATIONS += ../../src_common
 
