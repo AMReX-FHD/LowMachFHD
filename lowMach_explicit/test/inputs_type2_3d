@@ -1,0 +1,39 @@
+&PROBIN
+ dim_in = 3
+
+ max_levs = 1
+
+ n_cells(1:3) = 16 16 16
+! n_cells(1:3) = 32 32 32
+! n_cells(1:3) = 64 64 64
+
+ max_grid_size = 16 16 16
+
+ prob_hi(1:3) = 1.0 1.0 1.0
+
+ max_step  = 1000
+
+ plot_int  = 1000
+ chk_int   = 0
+
+ stop_time = 0.025d0
+ cflfac = 0.05d0
+
+ visc_coef = 0.01d0
+ diff_coef = 0.01d0
+
+ ABC_coefs = 1 1 1
+
+ bc_lo = -1 -1 -1
+ bc_hi = -1 -1 -1
+
+ verbose = 0
+ mg_verbose = 0
+
+ prob_type = 2
+ temporal_scheme = 2
+    ! 0=Euler, 1=Trapezoidal explicit predictor-corrector, 2=Midpoint explicit predictor-corrector, 3=RK3
+
+ print_error_norms = T
+ print_conserved = T
+/

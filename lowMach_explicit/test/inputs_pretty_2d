@@ -1,0 +1,72 @@
+&PROBIN
+ dim_in = 2
+
+ n_cellx = 512
+ n_celly = 256
+
+ max_grid_size = 64 64
+
+ prob_lo(1:2) = -25600.d0 -12800.d0
+ prob_hi(1:2) =  25600.d0  12800.d0
+
+ max_step = 100000
+
+ print_int = 250
+ plot_int  = 250
+ chk_int   = 0
+
+ temporal_scheme = 3
+
+ fixed_dt = 1500.d0
+
+ rhobar(1:2) = 1.25d0 0.75d0
+ c_bc(1:2) = 0.9d0 0.1d0
+
+ visc_coef = 1.d0
+ diff_coef = 0.025d0
+
+ variance_coeff = 0.1d0
+ conc_scal = 1.d0
+
+ grav = 0.d0
+
+ bc_lo = -1 15 ! 14=slip, 15=noslip
+ bc_hi = -1 15 ! 14=slip, 15=noslip
+
+ verbose = 0
+ mg_verbose = 0
+
+! mixing variant
+ prob_type = 12
+
+ enforce_eos = T
+
+ print_eos_error = T
+ print_conserved = T
+
+ ! For stochastic stuff:
+ use_stochastic_forcing = T
+ seed=1
+! hydro_grid_int=10 ! How often to take snapshots
+! n_steps_save_stats=100
+ center_snapshots=T
+/
+
+&hydroAnalysisOptions
+   ! 3D: 1=rho, 2-4=v, 5=T, 6=c
+   ! 2D: 1=rho, 2-3=v, 4=T, 5=c
+   staggeredVelocities = 1 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
+   storeConserved = F ! We are not using conserved variables here due to staggering
+
+   ! Means file:
+   ! 1=y, 2=rho, 3-5=v, 6=T, 7=c in 3D
+   ! 1=y, 2=rho, 3-4=v, 5=T, 6=c in 2D
+
+   ! Save the flow to a VTK file:
+   writeMeansVTK = T ! Save the means over the averaging interval
+   writeSnapshotVTK=T ! Save snapshots of the instantaneous fields
+   
+   outputFolder = "Output"
+   filePrefix = "Mixing2D"
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+/

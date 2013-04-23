@@ -1,0 +1,110 @@
+&PROBIN
+ dim_in = 2
+
+ include_concentration = T ! Binary or single-component fluid
+ !fake_projection = T ! Solve stochastic advection-diffusion equations
+ 
+ temporal_scheme = 3
+    ! 0=Euler, 1=Trapezoidal explicit predictor-corrector, 2=Midpoint explicit predictor-corrector, 3=RK3
+    ! 4=RK3 with new weights
+    ! If negative, the same random increments are used in all stages
+    ! Otherwise the random increments are recalculated each stage
+
+ n_cellx = 32
+ n_celly = 32
+
+ max_grid_size = 32 32
+
+ prob_hi(1:2) = 32.0 32.0
+
+ max_step = 10000
+ n_steps_skip=0 ! How many steps for initial equilibration
+
+ print_int = 200
+ proj_int = -1 ! How often to project onto div(u)=0
+ plot_int  = -1
+ chk_int   = 0
+
+ fixed_dt = 0.1
+
+ visc_coef = 1.0
+ diff_coef = 1.0
+
+ rhobar(1:2) = 1 1 ! 1.5 0.75
+
+ variance_coeff = 1E-6
+ conc_scal = 1.d0 ! To make the conc. spectrum = 1
+
+ ! -1=periodic; 15 = no slip; 14 = slip
+ bc_lo(1:2) = 15 15
+ bc_hi(1:2) = 15 15
+ wallspeed_lo(1,1:2)=0 0 ! Low side
+ wallspeed_hi(1,1:2)=0 0 ! High side
+ u_bc(1:2)=0.0 0.0 ! 1 0 ! Background velocity
+ c_bc(1:2)=0.5 0.5 ! Concentrations at bottom/top
+
+ ! Verbosity level:
+ verbose = 0
+ mg_verbose = 0
+ poisson_rel_tol = 1e-9
+
+ prob_type = 6
+
+ print_eos_error = T
+ print_conserved = T
+ 
+ ! For stochastic stuff:
+ use_stochastic_forcing = T
+ stoch_stress_form = 1 ! 0=nonsymmetric (div(v)=0), 1=symmetric
+ seed=0
+ hydro_grid_int=1 ! How often to take snapshots
+ n_steps_save_stats=-1
+ center_snapshots=F
+/
+
+&hydroAnalysisOptions
+   staggeredVelocities = 1 ! Are velocities on a staggered grid or not
+
+   ! Variable indexing:
+   ! 3D: 1=rho, 2-4=v, 5=T, 6=c
+   ! 2D: 1=rho, 2-3=v, 4=T, 5=c
+
+   ! Means file:
+   ! 1=y, 2=rho, 3-5=v, 6=T, 7=c in 3D
+   ! 1=y, 2=rho, 3-4=v, 5=T, 6=c in 2D
+   storeConserved = F ! It We are not using conserved variables here due to staggering
+   writeMeansVTK = F
+
+   ! Variances
+   writeVariancesVTK = T
+   nVariances = 6
+   !correlationCell = 1 1 1 ! The default is the central cell
+   ! Variance file:
+   ! 1=vx-vx, 2=vy-vy, 3=vx-vy, 4=c-c, 5=c-vx, 6=c-vy, 7=rho-rho
+   variancePairs = "0 2 0 2, 0 3 0 3, 0 2 0 3, 0 5 0 5, 0 5 0 2, 0 5 0 3, 0 1 0 1"
+   ! 1=y, 2=rho-rho, 3=c-c
+   !variancePairs = "0 1 0 1, 0 5 0 5"
+      ! species1 variable1 species2 variable2
+   
+   ! Static structure factors
+   writeSpectrumVTK = T
+   writeAbsValue = T ! Only write absolute values of complex values to VTK file?
+   !estimateCovariances = F
+   !nStructureFactors = 0
+   !structureFactorPairs = ""
+   writeTheory = -1 ! Write the theoretical prediction (0 or 1) or project discretely (-1)
+   nStructureFactors = 6
+   ! 1=vx-vx, 2=vy-vy, 3=vx-vy, 4=c-c, 5=c-vx, 6=c-vy, 7=rho-rho
+   structureFactorPairs = "0 2 0 2, 0 3 0 3, 0 2 0 3, 0 5 0 5, 0 5 0 2, 0 5 0 3, 0 1 0 1"
+   vectorStructureFactor = "1 2 -1 0 0 0 0" ! For grouping into a tensor
+
+   ! Dynamic structure factors:
+   nWavenumbers=0
+   ! Shape (3,nWavenumbers):
+   selectedWavenumbers=""   
+   nSavedSnapshots=1000
+   
+   outputFolder = "Output/"
+   filePrefix = "LowMach" ! Will be ignored and basename used instead
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+/

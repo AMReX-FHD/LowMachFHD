@@ -1,0 +1,65 @@
+&PROBIN
+ dim_in = 3
+
+ max_levs = 1
+
+ n_cellx = 32
+ n_celly = 32
+ n_cellz = 32
+! n_cellx = 64
+! n_celly = 64
+! n_cellz = 64
+! n_cellx = 128
+! n_celly = 128
+! n_cellz = 128
+
+ max_grid_size = 32 32 32
+
+ prob_lo(1:3) = -1.0 -1.0 -1.0
+ prob_hi(1:3) =  1.0  1.0  1.0
+
+ max_step  = 1000
+
+ stop_time = 0.0025d0
+ cflfac = 0.0000001d0
+
+ plot_int  = 1000
+ chk_int   = 0
+
+ !note: the code assumes that density = 1  
+ visc_coef = 0.1d0
+ diff_coef = 0.1d0
+
+ ! -1  =periodic; 15 = no slip; 14 = slip
+
+ prob_dir = 1
+ bc_lo = 15 -1 -1
+ bc_hi = 15 -1 -1
+
+! prob_dir = 2
+! bc_lo = -1 15 -1
+! bc_hi = -1 15 -1
+
+! prob_dir = 3
+! bc_lo = -1 -1 15
+! bc_hi = -1 -1 15
+
+ ! all walls have zero velocity
+ wallspeed_lo(1,1:3) = 0 0 0
+ wallspeed_hi(1,1:3) = 0 0 0
+ wallspeed_lo(2,1:3) = 0 0 0
+ wallspeed_hi(2,1:3) = 0 0 0
+
+ verbose = 0
+ mg_verbose = 0
+
+ prob_type = 11
+ mode_coefs(1:2) = 1 1 ! Wave-indices of mode to test
+ temporal_scheme = 2
+    ! 0=Euler, 1=Trapezoidal explicit predictor-corrector, 2=Midpoint explicit predictor-corrector, 3=RK3
+
+ print_error_norms = T
+ print_conserved = T
+ plot_stag = T
+ center_snapshots=T
+/

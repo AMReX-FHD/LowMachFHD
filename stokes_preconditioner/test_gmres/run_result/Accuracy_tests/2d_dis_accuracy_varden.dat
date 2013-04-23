@@ -1,0 +1,78 @@
+ ! Initial conditions and forcing functions (for exact_solutions.f90)
+  !----------------------
+  prob_coeff = 8     ! Coeff_mat selection (see init_precon.f90 for key) ! variable density
+  prob_sol =   32    ! RHS selection (see init_solutoin.f90/init_precon.f90 for key)
+
+  prob_lo(1:2) = 0.d0 0.d0    ! physical lo coordinate
+  prob_hi(1:2) = 1.d0 1.d0    ! physical hi coordinate
+
+
+! only elliptic operator, no Laplacian 
+  coeff_mag = 1.0d0 0.0d0 0.0d0      ! for control the scalings of alpha, beta, gamma
+
+
+! periodic BC, use 
+  test_type =  0
+
+32*32 mesh 
+ The discretization error: L0 U   =  8.05784398111644151E-002
+ The discretization error: L0 V   =  8.17822581431144613E-002
+ The discretization error: L0 P   =  1.41299789155695521E-002
+
+64*64 mesh
+ The discretization error: L0 U   =  2.01759271495145498E-002
+ The discretization error: L0 V   =  2.04770630982213930E-002
+ The discretization error: L0 P   =  3.55946072922108669E-003
+
+128*128 mesh
+ The discretization error: L0 U   =  5.04594119195189705E-003
+ The discretization error: L0 V   =  5.12123651790119538E-003
+ The discretization error: L0 P   =  8.91556147569971813E-004
+-----------------------------------------------------------------------------
+
+
+Dirichlet BC, we check the other way, we check the discretization error in alternative way
+test_type =2 
+
+32*32 mesh
+ L0 U   =  1.91437196069316196E-003
+ L0 V   =  1.54344493264624294E-003
+ L0 P   =  1.29239055479997145E-002
+ 
+ L1 U   =  5.77456530062975888E-004
+ L1 V   =  5.51840376215290314E-004
+ L1 P   =  5.19907653731107450E-003
+ 
+ L2 U   =  7.57493166335360991E-004
+ L2 V   =  6.63436852486814425E-004
+ L2 P   =  6.43535280271744729E-003
+ 
+
+64*64 mesh
+ L0 U   =  4.81288743049590462E-004
+ L0 V   =  3.87855085045685222E-004
+ L0 P   =  3.26685458425801656E-003
+ 
+ L1 U   =  1.44638472771193714E-004
+ L1 V   =  1.38120363288665710E-004
+ L1 P   =  1.29941139633426715E-003
+ 
+ L2 U   =  1.89220555244101003E-004
+ L2 V   =  1.65843940710212951E-004
+ L2 P   =  1.60341558459144834E-003
+
+
+128*128 mesh
+ L0 U   =  1.20347704280543422E-004
+ L0 V   =  9.70883585548198980E-005
+ L0 P   =  8.18955127028786478E-004
+ 
+ L1 U   =  3.61758621114970235E-005
+ L1 V   =  3.45393258503262434E-005
+ L1 P   =  3.24728390121277444E-004
+ 
+ L2 U   =  4.72956195254215373E-005
+ L2 V   =  4.14600601463547134E-005
+ L2 P   =  4.00516272501735761E-004
+=========================================================================
+

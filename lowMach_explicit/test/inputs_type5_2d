@@ -1,0 +1,35 @@
+&PROBIN
+ dim_in = 2
+
+ max_levs = 1
+
+ n_cells(1:2) = 64 64
+! n_cells(1:2) = 128 128
+! n_cells(1:2) = 256 256
+
+ max_grid_size = 64 64
+
+ prob_hi(1:2) = 1.0 1.0
+
+ max_step  = 1000
+
+ plot_int  = 1000
+ chk_int   = 0
+
+ stop_time = 0.125d0
+ cflfac = 1.d0
+
+ visc_coef = 0.d0
+ diff_coef = 0.d0
+
+ bc_lo = -1 -1
+ bc_hi = -1 -1
+
+ verbose = 0
+ mg_verbose = 0
+
+ prob_type = 5
+
+ print_error_norms = T
+ print_conserved = T
+/

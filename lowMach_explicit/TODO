@@ -1,0 +1,29 @@
+========================
+Algorithmic Fixes
+========================
+-At slip walls, do NOT use dv_t/dn=0, but rather eta*(dv_t/dn + dv_n/dt)=0.
+ Note that for zero normal velocity nothing changes --> dv_t/dn=0.
+ We should set the viscous fluxes at nodes and edges on the boundary
+ to zero, instead of using ghost values.
+
+========================
+Code improvement
+========================
+-Staggered multigrid solver physical boundary condition support.
+
+========================
+Optional / less critical stuff
+========================
+-(Maybe?) In the present version of mkaofs_s, it is not even necessary to keep 
+   arrays fluxx, fluxy etc, since those are trivial to calculate and one 
+   can just directly do the divergence of the flux. Better and more flexible 
+   would be to have the fluxes be edge-based multifabs that are incremented 
+   by each routine and the divergence is calculated at the end.
+   
+-Implement boyce_bc no-slip wall tapering at all walls (it is only
+   implemented at the hi-y boundary in 2D and the hi-z and hi-y boundaries in 3D).
+
+========================
+Major future work
+========================
+-applyop_stag needs to work for dx != dy != dz

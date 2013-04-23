@@ -1,0 +1,56 @@
+1/30/12 Checked in the convergence tests for the incompressible mode with BCs (inputs_type11_2d) 
+        and ABC flow with forced tracer (inputs_type2_3d). They both converge at 2nd order accuracy. 
+        More details are contained in Log.Andy.
+
+2/23/12 I did some preliminary timing tests. I ran 1000 steps of the algorithm using 
+        dt = 0.1 on a 256^2 grid with 8 processors. This took around 2 minutes, 10 seconds 
+        with the ibamr code, and 2 minutes, 30 seconds with the BoxLib code. 
+
+2/29/12 Checked that <c c> and velocity trace spectra converge to 2nd order in time in 2D.
+
+3/1/12 I compared the variance.vtk files to ibamr code. There was no noticeable difference
+       for the vx-vx, vy-vy, vx-vy, and c-c variances. I did this both with hard walls 
+       in one direction, and with hard walls in both directions.
+
+3/20/12 I checked the spectrum for a 3D run with hard walls. The plot looked qualitatively
+        reasonable, with no changes near walls or corners.
+
+10/10/12 Convergence of fluctuations in time, results below (uncertainty small 
+         compared to error unless noted)
+
+*******************************************
+r = 0, alpha = 0
+rho_1 = 1.5
+rho_2 = 0.75
+32 by 32 grid, dx=dy=1.0
+prob_type = 1
+mu = 1.0
+eta = 1.0
+periodic BC's
+c_bar = 0.5
+
+Trapezoidal rule (option 1):
+
+dt  timesteps  vel trace error   conc error  
+
+0.2    5K         .26              .26
+0.1    10K        .062             .064
+0.05   20K        .014             .016
+
+Midpoint rule (option 2):
+
+dt  timesteps  vel trace error   conc error  
+
+0.2    5K         .41               .41
+0.1    10K        .025              .025
+0.05   100K     .0031 +- .00025   .0024 +- .00018
+
+RK3 (option 4):
+
+dt  timesteps  vel trace error   conc error  
+
+0.2    5K         .23               .23
+0.1    10K        .022              .022
+0.05   100K    .0024 +- .007     .0018 +- .0002
+
+*******************************************

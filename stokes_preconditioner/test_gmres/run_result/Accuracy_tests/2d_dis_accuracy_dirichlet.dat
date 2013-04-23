@@ -1,0 +1,121 @@
+2D case, measure the local truncation error and the global error 
+2D Dirichlet case, refer to 2d_accuracy_dirichlet:
+
+For Taylor vortex, if we use [0, 1]^2 domain, the local truncation error 
+happens to be 2nd order, However, if we use shifted domain [0.2, 1.2]^2, the local 
+truncation error is O(1) only. 
+
+We use [0, 1]^2 domain just for simplicity. 
+1. prob_coeff=1, prob_sol=1
+  visc_type = 1 
+
+32*32 mesh
+ The discretization error: L0 U   =  0.52539912478925999     
+ The discretization error: L0 V   =  0.52539912478925999     
+ The discretization error: L0 P   =  5.32907051820075139E-014
+
+ The global error: L0 U   =  6.79080583956144252E-003
+ The global error: L0 V   =  6.79080583956136706E-003
+
+64*64 mesh
+ The discretization error: L0 U   =  0.13239769925974088     
+ The discretization error: L0 V   =  0.13239769925968403     
+ The discretization error: L0 P   =  1.27897692436818033E-013
+
+ The global error: L0 U   =  1.69294831860747905E-003
+ The global error: L0 V   =  1.69294831860836918E-003
+
+128*128 mesh
+ The discretization error: L0 U   =  3.31351477827865892E-002
+ The discretization error: L0 V   =  3.31351477827865892E-002
+ The discretization error: L0 P   =  2.55795384873636067E-013
+
+ The global error: L0 U   =  4.23351034149132123E-004
+ The global error: L0 V   =  4.23351034149302397E-004
+===================================================================
+
+2. prob_coeff=1, prob_sol=1
+   visc_type = 2
+
+32*32 mesh
+ The discretization error: L0 U   =  0.52539912479289796     
+ The discretization error: L0 V   =  0.52539912479289796     
+ The discretization error: L0 P   =  5.32907051820075139E-014
+
+ The global error: L0 U   =  6.79080583955840762E-003
+ The global error: L0 V   =  6.79080583955802078E-003
+
+64*64 mesh
+ The discretization error: L0 U   =  0.13239769925974088     
+ The discretization error: L0 V   =  0.13239769925968403     
+ The discretization error: L0 P   =  1.27897692436818033E-013
+
+ The global error: L0 U   =  1.69294831861600218E-003
+ The global error: L0 V   =  1.69294831861778699E-003
+
+128*128 mesh
+ The discretization error: L0 U   =  3.31351477900625468E-002
+ The discretization error: L0 V   =  3.31351477900625468E-002
+ The discretization error: L0 P   =  2.55795384873636067E-013
+
+ The global error: L0 U   =  4.23351034149244880E-004
+ The global error: L0 V   =  4.23351034151018581E-004
+===================================================================
+
+3. prob_coeff=1, prob_sol=1
+   visc_type = 3 
+
+32*32 mesh
+ The discretization error: L0 U   =  0.52539912478925999     
+ The discretization error: L0 V   =  0.52539912478925999     
+ The discretization error: L0 P   =  5.32907051820075139E-014
+
+ The global error: L0 U   =  6.79080583953115772E-003
+ The global error: L0 V   =  6.79080583953135634E-003
+
+64*64 mesh
+ The discretization error: L0 U   =  0.13239769925974088     
+ The discretization error: L0 V   =  0.13239769925968403     
+ The discretization error: L0 P   =  1.27897692436818033E-013
+
+ The global error: L0 U   =  1.69294831850883790E-003
+ The global error: L0 V   =  1.69294831850942294E-003
+
+128*128 mesh
+ The discretization error: L0 U   =  3.31351477755106316E-002
+ The discretization error: L0 V   =  3.31351477755106316E-002
+ The discretization error: L0 P   =  2.55795384873636067E-013
+
+ The global error: L0 U   =  4.23351033738177866E-004
+ The global error: L0 V   =  4.23351033738711240E-004
+---------------------------------------------------------------
+visc_type= -3
+
+32*32 mesh
+ The discretization error: L0 U   =  0.52539912478923156     
+ The discretization error: L0 V   =  0.52539912478925999     
+ The discretization error: L0 P   =  5.32907051820075139E-014
+
+ The global error: L0 U   =  6.79080583956058383E-003
+ The global error: L0 V   =  6.79080583956076251E-003
+
+64*64 mesh
+ The discretization error: L0 U   =  0.13239769925974088     
+ The discretization error: L0 V   =  0.13239769925968403     
+ The discretization error: L0 P   =  1.27897692436818033E-013
+
+ The global error: L0 U   =  1.69294831860486959E-003
+ The global error: L0 V   =  1.69294831860396342E-003
+
+
+128*128 mesh
+ The discretization error: L0 U   =  3.31351478337182925E-002
+ The discretization error: L0 V   =  3.31351478336898708E-002
+ The discretization error: L0 P   =  2.55795384873636067E-013
+
+ The global error: L0 U   =  4.23351034150609945E-004
+ The global error: L0 V   =  4.23351034151384336E-004
+===================================================================
+
+
+

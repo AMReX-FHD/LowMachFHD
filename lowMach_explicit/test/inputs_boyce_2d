@@ -1,0 +1,46 @@
+&PROBIN
+ dim_in = 2
+
+ temporal_scheme = 2
+    ! 0=Euler, 1=Trapezoidal explicit predictor-corrector, 2=Midpoint explicit predictor-corrector, 3=RK3
+    ! If negative, the same random increments are used in all stages
+    ! Otherwise the random increments are recalculated each stage
+
+ n_cellx = 32
+ n_celly = 32
+
+ max_grid_size = 16 16
+
+ prob_hi(1:2) = 1.d0 1.d0
+
+ max_step = 5000
+ n_steps_skip=0 ! How many steps for initial equilibration
+
+ print_int = 100
+ proj_int = -1 ! How often to project onto div(u)=0
+ plot_int  = 100
+ chk_int   = 0
+
+ fixed_dt = 1.d-3
+
+ visc_coef = 1.d-3
+ diff_coef = 0.d0
+
+! bc = -1    ! periodic
+! bc = 14    ! slip wall
+! bc = 15    ! no-slip wall
+ bc_lo = 15 15
+ bc_hi = 15 15
+
+ ! make hi-y wall speed a smooth function of x
+ boyce_bc = F
+
+ wallspeed_lo(1,1:2) = 0.d0 0.d0 ! Low side
+ wallspeed_hi(1,1:2) = 0.d0 1.d0 ! High side
+
+ verbose = 0
+ mg_verbose = 0
+
+ prob_type = 6
+
+/
