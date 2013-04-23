@@ -1,6 +1,7 @@
 f90sources += convert_to_homogeneous.f90
 f90sources += div_and_grad.f90
 f90sources += gmres.f90
+f90sources += inhomogeneous_bc_val.f90
 f90sources += init_precon.f90
 f90sources += init_solution.f90
 f90sources += macproject.f90

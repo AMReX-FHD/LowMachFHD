@@ -8,7 +8,6 @@ module apply_matrix_module
   use stag_applyop_module
   use div_and_grad_module
   use multifab_physbc_module
-  use multifab_physbc_inhomogeneous_module
 
   implicit none
 

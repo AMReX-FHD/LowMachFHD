@@ -5,7 +5,7 @@ module init_solution_module
   use define_bc_module
   use probin_module
   use bc_module
-  use multifab_physbc_inhomogeneous_module
+  use multifab_physbc_module
 
   use BoxLibRNGs
 
