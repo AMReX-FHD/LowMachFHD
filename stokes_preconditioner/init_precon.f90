@@ -3,12 +3,10 @@ module init_precon_module
   use ml_layout_module
   use multifab_module
   use define_bc_module
-  use probin_module
-
   use BoxLibRNGs
-  ! to do
   use probin_module, only: prob_coeff, prob_sol, prob_lo, prob_hi, smoothing_width, &
-                           var_coeff_mag, coeff_mag, coeff_ratio, fixed_dt
+                           var_coeff_mag, coeff_mag, coeff_ratio, fixed_dt, n_cells, &
+                           visc_type, theta_fac, max_grid_size, ABC_coefs
 
   implicit none
 
@@ -841,7 +839,7 @@ contains
     call boxarray_grow_n(ba_manybox,1)
 
     ! build a layout with the same proc mapping as the standard multifabs build with mla
-    call layout_build_ba(la_manybox,ba_manybox,bx,pmask,explicit_mapping=get_proc(mla%la(1)))
+    call layout_build_ba(la_manybox,ba_manybox,bx,mla%pmask,explicit_mapping=get_proc(mla%la(1)))
 
     ! don't need this anymore - free up memory
     call destroy(ba_manybox)
@@ -856,7 +854,7 @@ contains
     call boxarray_grow_n(ba_onebox,1)
 
     ! build a layout for a multifab with 1 box with valid region grown by 1
-    call layout_build_ba(la_onebox,ba_onebox,bx,pmask)
+    call layout_build_ba(la_onebox,ba_onebox,bx,mla%pmask)
 
     ! don't need this anymore - free up memory
     call destroy(ba_onebox)
