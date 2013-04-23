@@ -518,6 +518,47 @@ contains
        end do
     end do
     
+  contains
+
+    subroutine subtract_weighted_gradp(mla,x_u,alphainv_edge,phi,dx)
+
+      type(ml_layout), intent(in   ) :: mla
+      type(multifab ), intent(inout) :: x_u(:,:)
+      type(multifab ), intent(in   ) :: alphainv_edge(:,:)
+      type(multifab ), intent(in   ) :: phi(:)
+      real(kind=dp_t), intent(in   ) :: dx(:,:)
+
+      ! local
+      integer :: i,dm,n,nlevs
+
+      type(multifab) :: gradp(mla%nlevel,mla%dim)
+
+      nlevs = mla%nlevel
+      dm = mla%dim
+
+      do n=1,nlevs
+         do i=1,dm
+            call multifab_build_edge(gradp(n,i),mla%la(n),1,1,i)
+         end do
+      end do
+
+      call compute_gradp(mla,phi,gradp,dx)
+
+      do n=1,nlevs
+         do i=1,dm
+            call multifab_mult_mult_c(gradp(n,i),1,alphainv_edge(n,i),1,1,0)
+            call saxpy(x_u(n,i),-1.d0,gradp(n,i))
+         end do
+      end do
+
+      do n=1,nlevs
+         do i=1,dm
+            call multifab_destroy(gradp(n,i))
+         end do
+      end do
+
+    end subroutine subtract_weighted_gradp
+
   end subroutine apply_precon
-  
+
 end module apply_precon_module
