@@ -17,7 +17,7 @@ module macproject_module
 
   private
 
-  public :: macproject, subtract_weighted_gradp
+  public :: macproject
 
 contains 
 

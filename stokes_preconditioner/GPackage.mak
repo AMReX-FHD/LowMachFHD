@@ -8,7 +8,6 @@ f90sources += init_precon.f90
 f90sources += init_solution.f90
 f90sources += macproject.f90
 f90sources += main_driver.f90
-f90sources += main.f90
 f90sources += norm_inner_product.f90
 f90sources += probin.f90
 f90sources += stag_applyop.f90
