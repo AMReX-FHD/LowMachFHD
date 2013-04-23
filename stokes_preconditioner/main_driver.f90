@@ -12,7 +12,8 @@ subroutine main_driver()
   use ml_layout_module
   use define_bc_module
   use stag_mg_solver_module
-  use probin_module
+  use probin_module, only: probin_init, n_cells, dim_in, fixed_dt, max_grid_size, &
+       plot_int, seed, test_type, theta_fac, prob_lo, prob_hi, bc_lo, bc_hi
   use macproject_module
   use write_plotfile_module
   use convert_module
@@ -54,7 +55,7 @@ subroutine main_driver()
   type(multifab), allocatable :: beta(:)          ! coefficient for staggered multigrid solver
   type(multifab), allocatable :: gamma(:)         ! coefficient for staggered multigrid solver
 
-  integer    :: dm,nlevs,n
+  integer    :: dm,nlevs,n,i
   real(dp_t) :: dt,time,theta
   
   type(box)         :: bx

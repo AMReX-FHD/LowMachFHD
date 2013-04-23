@@ -3,7 +3,6 @@ module apply_matrix_module
   use ml_layout_module
   use multifab_module
   use define_bc_module
-  use probin_module
   use div_and_grad_module
   use stag_applyop_module
   use div_and_grad_module

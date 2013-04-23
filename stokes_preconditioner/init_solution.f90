@@ -3,7 +3,8 @@ module init_solution_module
   use ml_layout_module
   use multifab_module
   use define_bc_module
-  use probin_module
+  use probin_module, only: prob_dir, prob_sol, coeff_mag, prob_lo, prob_hi, ABC_coefs, &
+       mode_coefs
   use bc_module
   use multifab_physbc_module
 

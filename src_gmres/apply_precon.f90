@@ -3,7 +3,8 @@ module apply_precon_module
   use ml_layout_module
   use multifab_module
   use define_bc_module
-  use probin_module
+  use probin_module, only: mg_verbose, precon_type, stag_mg_verbosity, visc_type, &
+       precon_type
   use stag_mg_solver_module
   use macproject_module
   use div_and_grad_module

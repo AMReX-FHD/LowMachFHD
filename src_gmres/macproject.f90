@@ -8,7 +8,9 @@ module macproject_module
   use convert_module
   use mg_module             , only : mg_tower, mg_tower_build, mg_tower_destroy
   use cc_stencil_fill_module, only : stencil_fill_cc_all_mglevels
-  use probin_module
+  use probin_module, only: mg_max_vcycles, mg_rel_tol, num_mg_vcycles, cg_verbose, &
+       mg_bottom_solver, mg_max_bottom_nlevels, mg_minwidth, mg_nsmooths_bottom, &
+       mg_nsmooths_down, mg_nsmooths_up, mg_verbose
   use stencil_types_module
   use ml_solve_module       , only : ml_cc_solve
   use multifab_physbc_module

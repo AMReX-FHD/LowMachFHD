@@ -6,7 +6,9 @@ module stag_mg_solver_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
-  use probin_module
+  use probin_module, only: visc_type, stag_mg_omega, num_mg_vcycles, stag_mg_max_vcycles, &
+       stag_mg_nsmooths_bottom, stag_mg_nsmooths_down, stag_mg_nsmooths_up, stag_mg_rel_tol, &
+       stag_mg_smoother, stag_mg_verbosity, stag_mg_maxlevs, stag_mg_minwidth
 
   implicit none
 
@@ -651,8 +653,6 @@ contains
     ! compute the number of multigrid levels assuming minwidth is the length of the
     ! smallest dimension of the smallest grid at the coarsest multigrid level
     subroutine compute_nlevs_mg(nlevs_mg,ba)
-
-    use probin_module, only: stag_mg_minwidth, stag_mg_maxlevs
 
     integer       , intent(inout) :: nlevs_mg
     type(boxarray), intent(in   ) :: ba
@@ -1520,8 +1520,6 @@ contains
   subroutine stag_mg_update(la,phi_fc,rhs_fc,Lphi_fc, &
                             alpha_fc,beta_cc,beta_nd,beta_ed,gamma_cc,dx,color_in)
     
-    use probin_module, only: visc_type
-
     type(layout)  , intent(in   ) :: la
     type(multifab), intent(inout) :: phi_fc(:)   ! face-centered
     type(multifab), intent(in   ) :: rhs_fc(:)   ! face-centered
@@ -1622,8 +1620,6 @@ contains
   subroutine stag_mg_update_2d(phix,phiy,ng_p,rhsx,rhsy,ng_r, &
                                Lpx,Lpy,ng_l,alphax,alphay,ng_a,beta,ng_b, &
                                beta_nd,ng_n,gamma,ng_g,lo,hi,dx,color)
-
-    use probin_module, only: visc_type, stag_mg_omega
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_r,ng_l,ng_a,ng_b,ng_n,ng_g
     real(kind=dp_t), intent(inout) ::    phix(lo(1)-ng_p:,lo(2)-ng_p:)
@@ -1888,8 +1884,6 @@ contains
                                Lpx,Lpy,Lpz,ng_l,alphax,alphay,alphaz,ng_a,beta,ng_b, &
                                beta_xy,beta_xz,beta_yz,ng_e,gamma,ng_g, &
                                lo,hi,dx,color)
-
-    use probin_module, only: visc_type, stag_mg_omega
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_r,ng_l,ng_a,ng_b,ng_e,ng_g
     real(kind=dp_t), intent(inout) ::    phix(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
