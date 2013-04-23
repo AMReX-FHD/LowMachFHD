@@ -29,14 +29,15 @@ module define_bc_module
 
 contains
 
-  subroutine initialize_bc(the_bc_tower,num_levs,dm)
+  subroutine initialize_bc(the_bc_tower,num_levs,dm,pmask)
 
      use bc_module
 
-     use probin_module, only : bc_lo, bc_hi, pmask
+     use probin_module, only : bc_lo, bc_hi
 
      type(bc_tower), intent(  out) :: the_bc_tower
      integer       , intent(in   ) :: num_levs,dm
+     logical       , intent(in   ) :: pmask(:)
 
      integer :: domain_phys_bc(dm,2)
 

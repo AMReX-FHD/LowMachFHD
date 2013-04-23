@@ -26,9 +26,6 @@ module probin_module
   integer,save    :: prob_coeff, prob_sol, prob_dir, test_type
   real(dp_t),save :: smoothing_width,var_coeff_mag(3),coeff_mag(3), coeff_ratio(3), ABC_coefs(3)
 
-  ! This will be allocated and defined below
-  logical   , allocatable, save :: pmask(:)
-
   ! Global Counter
   integer, save :: num_mg_vcycles
 
@@ -644,17 +641,9 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Initialize prob_lo, prob_hi, and pmask
+    ! Initialize prob_lo, prob_hi
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    allocate(pmask(dim_in))
-    pmask = .false.
-    do i=1,dim_in
-       if (bc_lo(i) .eq. PERIODIC .and. bc_hi(i) .eq. PERIODIC) then
-          pmask(i) = .true.
-       end if
-    end do
-    
     num_mg_vcycles = 0
 
   contains
@@ -673,8 +662,6 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   subroutine probin_close()
-
-     deallocate(pmask)
 
   end subroutine probin_close
 

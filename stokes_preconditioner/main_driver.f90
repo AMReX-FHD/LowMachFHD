@@ -23,6 +23,7 @@ subroutine main_driver()
   use multifab_physbc_module
   use convert_to_homogeneous_module
   use ParallelRNGs
+  use bc_module
 
   use stag_applyop_module
   use gmres_module
@@ -69,6 +70,8 @@ subroutine main_driver()
 
   real(kind=dp_t) :: mean_val_pres
   real(kind=dp_t), allocatable ::  mean_val_umac(:)
+
+  logical, allocatable :: pmask(:)
 
   call probin_init(namelist_file)
 
@@ -152,6 +155,15 @@ subroutine main_driver()
      call bl_error("Need to build boxarray for n>1")
   end if
 
+  ! build pmask
+  allocate(pmask(dm))
+  pmask = .false.
+  do i=1,dm
+     if (bc_lo(i) .eq. PERIODIC .and. bc_hi(i) .eq. PERIODIC) then
+        pmask(i) = .true.
+     end if
+  end do
+
   ! build the ml_layout, mla
   call ml_layout_build(mla,mba,pmask)
 
@@ -159,11 +171,13 @@ subroutine main_driver()
   call destroy(mba)
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  call initialize_bc(the_bc_tower,nlevs,dm)
+  call initialize_bc(the_bc_tower,nlevs,dm,pmask)
   do n=1,nlevs
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
   end do
+
+  deallocate(pmask)
 
   do n=1,nlevs
      do i=1,dm

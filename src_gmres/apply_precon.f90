@@ -501,7 +501,7 @@ contains
     call multifab_sub_sub_s_c(x_p(1),1,mean_val_pres,1,0)
     
     ! The velocity problem is also singular for periodic systems with no identity piece
-    if(all(pmask(1:dm)) .and. (theta==0.0d0)) then
+    if(all(mla%pmask(1:dm)) .and. (theta==0.0d0)) then
        do i=1,dm
           call multifab_sub_sub_s_c(x_u(1,i),1,mean_val_umac(i),1,0)
        end do
