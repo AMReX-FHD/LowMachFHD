@@ -20,15 +20,14 @@ subroutine main_driver()
   use apply_precon_module
   use apply_matrix_module
   use norm_inner_product_module
-  use init_solution_module
+  use init_module
   use multifab_physbc_module
   use convert_to_homogeneous_module
   use ParallelRNGs
   use bc_module
-
   use stag_applyop_module
   use gmres_module
-  use init_precon_module
+
   implicit none
 
   ! will be allocated with dm components
