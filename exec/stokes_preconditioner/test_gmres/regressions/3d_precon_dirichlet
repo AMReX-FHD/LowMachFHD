@@ -1,21 +1,8 @@
-&probin
-
+&probin_common
 
   ! Problem specification
   !----------------------
   dim_in = 3               ! 2D or 3D  
-
-  ! Initial conditions and forcing functions (for exact_solutions.f90)
-  !----------------------
-  prob_coeff = 1          ! Coeff_mat selection (see init_precon.f90 for key)
-  prob_sol = 100          ! RHS selection (see init_solutoin.f90/init_precon.f90 for key)
-
-  ! test_type>0: call gmres
-  ! test_type=0: check discretization accuracy
-  ! test_type<0: call apply_precon only
-  ! abs(test_type) =1: Choose x with prob_sol, set b=Ax
-  ! abs(test_type)!=1: Choose b with prob_sol
-  test_type = -1
 
   prob_lo(1:3) = 0.d0 0.d0 0.d0 ! physical lo coordinate
   prob_hi(1:3) = 64.d0 64.d0 64.d0 ! physical hi coordinate
@@ -24,35 +11,8 @@
   fixed_dt = 1.d0          ! time step
   plot_int = 0             ! Interval for writing a plotfile (for visit/amrvis)
 
-  ! Physical parameters
-  !----------------------
-  ! For interfaces, we smooth the concentration with tanh profile to avoid a Gibbs phenomenon:
-  smoothing_width = 1.d0   ! The smoothing width is in units of cell lengths, not physical length!
-
-  ! Wave-indices for incompressible modes inside a box
-  ! First component corresponds to prob_dir direction
-  ! Second component corresponds to mod(prob_dir+1,DIM)
-  mode_coefs = 1 1
-  prob_dir = 1            ! Which direction is vorticity along
-  ABC_coefs = 1 1 1       ! for 3d ABC flow
-
-  var_coeff_mag = 0.0d0 0.0d0 0.0d0  ! alpha, beta, gamma variation magnitudes
-  coeff_mag = 1.0d0 1.0d0 1.0d0      ! for control the scalings of alpha, beta, gamma
-  coeff_ratio = 1.0d0 1.0d0 1.0d0    ! for contorl the coefficients ratio of alpha, beta, gamma
-
   ! Algorithm control / selection
   !----------------------
-
-  ! preconditioner type
-  ! 1 = projection preconditioner
-  !-1 = projection preconditioner with expensive pressure update
-  ! 2 = lower triangular preconditioner
-  !-2 = lower triangular preconditioner with negative sign
-  ! 3 = upper triangular preconditioner
-  !-3 = upper triangular preconditioner with negative sign
-  ! 4 = Block diagonal preconditioner
-  !-4 = Block diagonal preconditioner with negative sign
-  precon_type = 1
 
   ! random number seed
   ! 0        = use clock
@@ -69,11 +29,6 @@
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   visc_type = 1
 
-
-  ! weighting of pressure when computing norms and inner products
-  p_norm_weight = 1.d0
-
-
   ! Boundary conditions
   !----------------------
   ! BC specifications:
@@ -83,8 +38,56 @@
   bc_lo(1:3) = 17 17 17
   bc_hi(1:3) = 17 17 17
 
+/
 
-! MAC projection solver parameters:
+&probin
+
+  ! Initial conditions and forcing functions (for exact_solutions.f90)
+  !----------------------
+  prob_coeff = 1          ! Coeff_mat selection (see init_precon.f90 for key)
+  prob_sol = 100          ! RHS selection (see init_solutoin.f90/init_precon.f90 for key)
+
+  ! test_type>0: call gmres
+  ! test_type=0: check discretization accuracy
+  ! test_type<0: call apply_precon only
+  ! abs(test_type) =1: Choose x with prob_sol, set b=Ax
+  ! abs(test_type)!=1: Choose b with prob_sol
+  test_type = -1
+  ! Physical parameters
+  !----------------------
+  ! For interfaces, we smooth the concentration with tanh profile to avoid a Gibbs phenomenon:
+  smoothing_width = 1.d0   ! The smoothing width is in units of cell lengths, not physical length!
+
+  ! Wave-indices for incompressible modes inside a box
+  ! First component corresponds to prob_dir direction
+  ! Second component corresponds to mod(prob_dir+1,DIM)
+  mode_coefs = 1 1
+  prob_dir = 1            ! Which direction is vorticity along
+  ABC_coefs = 1 1 1       ! for 3d ABC flow
+
+  var_coeff_mag = 0.0d0 0.0d0 0.0d0  ! alpha, beta, gamma variation magnitudes
+  coeff_mag = 1.0d0 1.0d0 1.0d0      ! for control the scalings of alpha, beta, gamma
+  coeff_ratio = 1.0d0 1.0d0 1.0d0    ! for contorl the coefficients ratio of alpha, beta, gamma
+
+/
+
+&probin_gmres
+
+  ! preconditioner type
+  ! 1 = projection preconditioner
+  !-1 = projection preconditioner with expensive pressure update
+  ! 2 = lower triangular preconditioner
+  !-2 = lower triangular preconditioner with negative sign
+  ! 3 = upper triangular preconditioner
+  !-3 = upper triangular preconditioner with negative sign
+  ! 4 = Block diagonal preconditioner
+  !-4 = Block diagonal preconditioner with negative sign
+  precon_type = 1
+
+  ! weighting of pressure when computing norms and inner products
+  p_norm_weight = 1.d0
+
+  ! MAC projection solver parameters:
   mg_verbose = 2               ! multigrid verbosity
   cg_verbose = 0               ! BiCGStab (mg_bottom_solver=1) verbosity
   mg_max_vcycles = 100         ! maximum number of V-cycles

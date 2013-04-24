@@ -1,9 +1,46 @@
-&probin
-
+&probin_common
 
   ! Problem specification
   !----------------------
-  dim_in = 3               ! 2D or 3D  
+  dim_in = 3               ! 2D or 3D 
+
+  prob_lo = 0.d0 0.d0 0.d0 ! physical lo coordinate
+  prob_hi = 1.d0 1.d0 1.d0 ! physical hi coordinate
+  n_cells = 64 64 64       ! number of cells in domain
+  max_grid_size = 32 32 32 ! max number of cells in a box
+  fixed_dt = 1.d0          ! time step
+  plot_int = 0             ! Interval for writing a plotfile (for visit/amrvis)
+
+  ! Algorithm control / selection
+  !----------------------
+
+  ! random number seed
+  ! 0        = use clock
+  ! positive = fixed seed
+  seed = 1
+
+  ! 0.0 = time-independent
+  ! 1.0 = time-dependent
+  theta_fac = 0.d0
+
+  ! L phi operator
+  ! if abs(visc_type) = 1, L = div beta grad
+  ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
+  ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
+  visc_type = -1
+ 
+  ! Boundary conditions
+  !----------------------
+  ! BC specifications:
+  ! -1 = periodic
+  ! 16 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
+  ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
+  bc_lo(1:3) = -1 -1 -1
+  bc_hi(1:3) = -1 -1 -1
+
+/
+
+&probin 
 
   ! Initial conditions and forcing functions (for exact_solutions.f90)
   !----------------------
@@ -16,13 +53,6 @@
   ! abs(test_type) =1: Choose x with prob_sol, set b=Ax
   ! abs(test_type)!=1: Choose b with prob_sol
   test_type =  0
-
-  prob_lo = 0.d0 0.d0 0.d0 ! physical lo coordinate
-  prob_hi = 1.d0 1.d0 1.d0 ! physical hi coordinate
-  n_cells = 64 64 64       ! number of cells in domain
-  max_grid_size = 32 32 32 ! max number of cells in a box
-  fixed_dt = 1.d0          ! time step
-  plot_int = 0             ! Interval for writing a plotfile (for visit/amrvis)
 
   ! Physical parameters
   !----------------------
@@ -40,9 +70,9 @@
   coeff_mag = 1.0d0 1.0d0 1.0d0      ! for control the scalings of alpha, beta, gamma
   coeff_ratio = 1.0d0 1.0d0 1.0d0    ! for contorl the coefficients ratio of alpha, beta, gamma
 
+/
 
-  ! Algorithm control / selection
-  !----------------------
+&probin_gmres
 
   ! preconditioner type
   ! 1 = projection preconditioner
@@ -55,34 +85,8 @@
   !-4 = Block diagonal preconditioner with negative sign
   precon_type = 1
 
-  ! random number seed
-  ! 0        = use clock
-  ! positive = fixed seed
-  seed = 1
-
-  ! 0.0 = time-independent
-  ! 1.0 = time-dependent
-  theta_fac = 0.d0
-
-  ! L phi operator
-  ! if abs(visc_type) = 1, L = div beta grad
-  ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
-  ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
-  visc_type = -1
-
   ! weighting of pressure when computing norms and inner products
   p_norm_weight = 1.d0
-
- 
-  ! Boundary conditions
-  !----------------------
-  ! BC specifications:
-  ! -1 = periodic
-  ! 16 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
-  ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
-  bc_lo(1:3) = -1 -1 -1
-  bc_hi(1:3) = -1 -1 -1
-
 
   ! MAC projection solver parameters:
   mg_verbose = 2               ! multigrid verbosity
