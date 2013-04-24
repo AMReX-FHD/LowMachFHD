@@ -1,5 +1,7 @@
 &probin_common
 
+  ! Problem specification
+  !----------------------
   dim_in = 3  ! 2D or 3D  
 
   prob_lo = 0.d0 0.d0 0.d0  ! physical lo coordinate
