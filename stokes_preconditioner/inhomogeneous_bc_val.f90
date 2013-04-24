@@ -2,7 +2,9 @@ module inhomogeneous_bc_val_module
 
   use bl_types
   use bl_error_module
-  use probin_module, only: prob_lo, prob_hi, prob_sol, coeff_mag, ABC_coefs
+  use probin_module       , only: prob_sol, coeff_mag, ABC_coefs
+  use probin_common_module, only: prob_lo, prob_hi
+  
 
   implicit none
 

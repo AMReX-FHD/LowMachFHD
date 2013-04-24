@@ -16,8 +16,8 @@ contains
 
   subroutine init_solution(mla,x_u,x_p,dx,time,the_bc_level)
 
-    use probin_module, only: prob_dir, prob_sol, coeff_mag, prob_lo, prob_hi, &
-         ABC_coefs, mode_coefs
+    use probin_module       , only: prob_dir, prob_sol, coeff_mag, ABC_coefs, mode_coefs
+    use probin_common_module, only: prob_lo, prob_hi
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: x_u(:,:)
@@ -524,8 +524,8 @@ contains
 
   subroutine init_rhs(mla,b_u,b_p,dx,time,the_bc_level)
 
-    use probin_module, only: fixed_dt, prob_coeff, prob_sol, theta_fac, visc_type, &
-         coeff_mag, prob_lo, prob_hi, ABC_coefs
+    use probin_module       , only: prob_coeff, prob_sol, coeff_mag, ABC_coefs
+    use probin_common_module, only: fixed_dt, prob_lo, prob_hi, theta_fac, visc_type
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: b_u(:,:)
@@ -1253,8 +1253,9 @@ contains
 
   subroutine init_mat(mla,alpha,beta,gamma,dx,time,the_bc_level)
 
-    use probin_module, only: n_cells, max_grid_size, visc_type, prob_coeff, prob_sol, &
-         smoothing_width, prob_lo, prob_hi, coeff_ratio, var_coeff_mag, coeff_mag
+    use probin_module       , only: prob_coeff, prob_sol, smoothing_width, coeff_ratio, &
+                                    var_coeff_mag, coeff_mag
+    use probin_common_module, only: n_cells, max_grid_size, visc_type, prob_lo, prob_hi
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: alpha(:)

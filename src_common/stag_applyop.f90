@@ -2,6 +2,9 @@ module stag_applyop_module
 
   use ml_layout_module
   use multifab_module
+  use probin_common_module, only: visc_type
+  use define_bc_module
+  use multifab_physbc_module
 
   implicit none
 
@@ -15,7 +18,6 @@ contains
   subroutine stag_applyop(mla,the_bc_tower,phi_fc,Lphi_fc,alpha_cc,beta_cc, &
                           gamma_cc,theta,dx)
 
-    use define_bc_module
     use convert_module
 
     type(ml_layout), intent(in   ) :: mla
@@ -107,10 +109,6 @@ contains
   subroutine stag_applyop_2d(la,the_bc_level,phi_fc,Lphi_fc,alpha_fc,beta_cc, &
                              beta_nd,gamma_cc,dx,color_in)
     
-    use define_bc_module
-    use multifab_physbc_module
-    use probin_module, only: visc_type
-
     type(layout)   , intent(in   ) :: la
     type(bc_level) , intent(in   ) :: the_bc_level
     type(multifab) , intent(in   ) :: phi_fc(:)   ! face-centered
@@ -187,8 +185,6 @@ contains
   subroutine stag_applyop_2d_work(phix,phiy,ng_p,Lpx,Lpy,ng_l, &
                                   alphax,alphay,ng_a,beta,ng_b,beta_nd,ng_n, &
                                   gamma,ng_g,lo,hi,dx,color)
-
-    use probin_module, only: visc_type
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_l,ng_a,ng_b,ng_n,ng_g
     real(kind=dp_t), intent(in   ) ::    phix(lo(1)-ng_p:,lo(2)-ng_p:)
@@ -493,10 +489,6 @@ contains
   subroutine stag_applyop_3d(la,the_bc_level,phi_fc,Lphi_fc,alpha_fc,beta_cc,beta_ed, &
                              gamma_cc,dx,color_in)
     
-    use define_bc_module
-    use multifab_physbc_module
-    use probin_module, only: visc_type
-
     type(layout)   , intent(in   ) :: la
     type(bc_level) , intent(in   ) :: the_bc_level
     type(multifab) , intent(in   ) :: phi_fc(:)   ! face-centered
@@ -584,8 +576,6 @@ contains
                                   alphax,alphay,alphaz,ng_a,beta,ng_b, &
                                   beta_xy,beta_xz,beta_yz,ng_e, &
                                   gamma,ng_g,lo,hi,dx,color)
-
-    use probin_module, only: visc_type
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_l,ng_a,ng_b,ng_e,ng_g
     real(kind=dp_t), intent(in   ) ::    phix(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)

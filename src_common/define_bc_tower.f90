@@ -33,7 +33,7 @@ contains
 
      use bc_module
 
-     use probin_module, only : bc_lo, bc_hi
+     use probin_common_module, only : bc_lo, bc_hi
 
      type(bc_tower), intent(  out) :: the_bc_tower
      integer       , intent(in   ) :: num_levs,dm

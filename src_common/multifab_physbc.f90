@@ -5,7 +5,7 @@ module multifab_physbc_module
   use bc_module
   use bl_error_module
   use inhomogeneous_bc_val_module
-  use probin_module, only: prob_lo, prob_hi
+  use probin_common_module, only: prob_lo, prob_hi
 
   implicit none
 
