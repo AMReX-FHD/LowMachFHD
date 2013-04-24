@@ -193,10 +193,10 @@ contains
     prob_sol = 2
     test_type = 1
 
-    prob_lo(1:dim_in) = 0.d0
-    prob_hi(1:dim_in) = 1.d0
-    n_cells(1:dim_in) = 64
-    max_grid_size(1:dim_in) = 64
+    prob_lo(1:MAX_SPACEDIM) = 0.d0
+    prob_hi(1:MAX_SPACEDIM) = 1.d0
+    n_cells(1:MAX_SPACEDIM) = 64
+    max_grid_size(1:MAX_SPACEDIM) = 64
     fixed_dt = 1.d0
     plot_int = 0
 
@@ -215,8 +215,8 @@ contains
     visc_type = 1
     p_norm_weight = 1.d0
 
-    bc_lo(1:dim_in) = PERIODIC
-    bc_hi(1:dim_in) = PERIODIC
+    bc_lo(1:MAX_SPACEDIM) = PERIODIC
+    bc_hi(1:MAX_SPACEDIM) = PERIODIC
 
     mg_verbose = 0
     cg_verbose = 0
