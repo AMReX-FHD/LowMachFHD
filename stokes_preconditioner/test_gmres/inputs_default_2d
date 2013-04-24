@@ -42,17 +42,6 @@
   ! Algorithm control / selection
   !----------------------
 
-  ! preconditioner type
-  ! 1 = projection preconditioner
-  !-1 = projection preconditioner with expensive pressure update
-  ! 2 = lower triangular preconditioner
-  !-2 = lower triangular preconditioner with negative sign
-  ! 3 = upper triangular preconditioner
-  !-3 = upper triangular preconditioner with negative sign
-  ! 4 = Block diagonal preconditioner
-  !-4 = Block diagonal preconditioner with negative sign
-  precon_type = 1
-
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
@@ -68,9 +57,6 @@
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   visc_type = 1
 
-  ! weighting of pressure when computing norms and inner products
-  p_norm_weight = 1.d0
-
   ! Boundary conditions
   !----------------------
   ! BC specifications:
@@ -79,6 +65,24 @@
   ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
   bc_lo = -1 -1
   bc_hi = -1 -1
+
+/
+
+&probin_gmres
+
+  ! preconditioner type
+  ! 1 = projection preconditioner
+  !-1 = projection preconditioner with expensive pressure update
+  ! 2 = lower triangular preconditioner
+  !-2 = lower triangular preconditioner with negative sign
+  ! 3 = upper triangular preconditioner
+  !-3 = upper triangular preconditioner with negative sign
+  ! 4 = Block diagonal preconditioner
+  !-4 = Block diagonal preconditioner with negative sign
+  precon_type = 1
+
+  ! weighting of pressure when computing norms and inner products
+  p_norm_weight = 1.d0
 
   ! MAC projection solver parameters:
   mg_verbose = 0                ! multigrid verbosity
