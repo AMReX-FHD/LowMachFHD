@@ -10,16 +10,9 @@ module probin_module
 
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
-  integer,save    :: dim_in,plot_int,mg_verbose,cg_verbose,mg_max_vcycles,precon_type
-  integer,save    :: mg_bottom_solver,mg_nsmooths_down,mg_nsmooths_up,mg_nsmooths_bottom,mg_minwidth
-  real(dp_t),save :: mg_rel_tol,gmres_rel_tol, gmres_abs_tol
-  integer,save    :: mg_max_bottom_nlevels,stag_mg_verbosity,stag_mg_max_vcycles
-  integer,save    :: stag_mg_maxlevs,stag_mg_minwidth,stag_mg_nsmooths_down
-  integer,save    :: stag_mg_nsmooths_bottom
-  integer,save    :: stag_mg_nsmooths_up,gmres_verbose,gmres_max_outer,gmres_max_inner,gmres_max_iter,gmres_min_iter
-  real(dp_t),save :: stag_mg_rel_tol
-  real(dp_t),save :: stag_mg_omega,fixed_dt,theta_fac,p_norm_weight
-  integer,save    :: stag_mg_smoother,visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM)
+  integer,save    :: dim_in,plot_int
+  real(dp_t),save :: fixed_dt,theta_fac,p_norm_weight
+  integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM)
   integer,save    :: seed,mode_coefs(2)
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
@@ -74,17 +67,6 @@ module probin_module
   ! Algorithm control / selection
   !----------------------
 
-  ! preconditioner type
-  ! 1 = projection preconditioner
-  !-1 = projection preconditioner with expensive pressure update
-  ! 2 = lower triangular preconditioner
-  !-2 = lower triangular preconditioner with negative sign
-  ! 3 = upper triangular preconditioner
-  !-3 = upper triangular preconditioner with negative sign
-  ! 4 = Block diagonal preconditioner
-  !-4 = Block diagonal preconditioner with negative sign
-  namelist /probin/ precon_type
-
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
@@ -100,9 +82,6 @@ module probin_module
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   namelist /probin/ visc_type
 
-  ! weighting of pressure when computing norms and inner products
-  namelist /probin/ p_norm_weight
-
   ! Boundary conditions
   !----------------------
   ! BC specifications:
@@ -111,48 +90,11 @@ module probin_module
   ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
   namelist /probin/ bc_lo
   namelist /probin/ bc_hi
-
-  ! MAC projection solver parameters:
-  namelist /probin/ mg_verbose            ! multigrid verbosity
-  namelist /probin/ cg_verbose            ! BiCGStab (mg_bottom_solver=1) verbosity
-  namelist /probin/ mg_max_vcycles        ! maximum number of V-cycles
-  namelist /probin/ mg_minwidth           ! length of box at coarsest multigrid level
-  namelist /probin/ mg_bottom_solver      ! bottom solver type
-                                          ! 0 = smooths only, controlled by mg_nsmooths_bottom
-                                          ! 1 = BiCGStab
-                                          ! 4 = Fancy bottom solve that coarsens as far as possible 
-                                          !     and then applies BiCGStab
-  namelist /probin/ mg_nsmooths_down      ! number of smooths at each level on the way down
-  namelist /probin/ mg_nsmooths_up        ! number of smooths at each level on the way up
-  namelist /probin/ mg_nsmooths_bottom    ! number of smooths at the bottom (only if mg_bottom_solver=0)
-  namelist /probin/ mg_max_bottom_nlevels ! for mg_bottom_solver=4, number of additional levels of multigrid
-  namelist /probin/ mg_rel_tol            ! relative tolerance stopping criteria
-
-  ! Staggered multigrid solver parameters
-  namelist /probin/ stag_mg_verbosity       ! verbosity
-  namelist /probin/ stag_mg_max_vcycles     ! max number of v-cycles
-  namelist /probin/ stag_mg_maxlevs         ! max number of multigrid levels
-  namelist /probin/ stag_mg_minwidth        ! length of box at coarsest multigrid level
-  namelist /probin/ stag_mg_nsmooths_down   ! number of smooths at each level on the way down
-  namelist /probin/ stag_mg_nsmooths_up     ! number of smooths at each level on the way up
-  namelist /probin/ stag_mg_nsmooths_bottom ! number of smooths at the bottom
-  namelist /probin/ stag_mg_omega           ! weighted-jacobi omega coefficient
-  namelist /probin/ stag_mg_smoother        ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
-  namelist /probin/ stag_mg_rel_tol         ! relative tolerance stopping criteria
-
-  ! GMRES solver parameters
-  namelist /probin/ gmres_rel_tol         ! relative tolerance stopping criteria
-  namelist /probin/ gmres_abs_tol         ! absolute tolerance stopping criteria
-  namelist /probin/ gmres_verbose         ! gmres verbosity; if greater than 1, more residuals will be printed out
-  namelist /probin/ gmres_max_outer       ! max number of outer iterations
-  namelist /probin/ gmres_max_inner       ! max number of inner iterations, or restart number
-  namelist /probin/ gmres_max_iter        ! max number of gmres iterations
-  namelist /probin/ gmres_min_iter        ! min number of gmres iterations
   !------------------------------------------------------------- 
 
 contains
 
-  subroutine probin_init(namelist_file)
+  subroutine probin_init()
 
     use f2kcli
     use parallel
@@ -162,7 +104,6 @@ contains
     use bl_error_module
     use bl_constants_module
     use cluster_module
-    integer, intent(out), optional :: namelist_file
     
     integer    :: narg, farg
 
@@ -204,7 +145,6 @@ contains
     coeff_mag(1:3) = 1.d0
     coeff_ratio(1:3) = 1.d0
 
-    precon_type = 1
     seed = 0
     theta_fac = 1.d0
     visc_type = 1
@@ -213,45 +153,7 @@ contains
     bc_lo(1:MAX_SPACEDIM) = PERIODIC
     bc_hi(1:MAX_SPACEDIM) = PERIODIC
 
-    mg_verbose = 0
-    cg_verbose = 0
-    mg_max_vcycles = 100
-    mg_minwidth = 2
-    mg_bottom_solver = 0
-    mg_nsmooths_down = 2
-    mg_nsmooths_up = 2
-    mg_nsmooths_bottom = 8
-    mg_max_bottom_nlevels = 1000
-    mg_rel_tol = 1.d-9
-
-    stag_mg_verbosity = 0
-    stag_mg_max_vcycles = 100
-    stag_mg_maxlevs = 100
-    stag_mg_minwidth = 2
-    stag_mg_nsmooths_down = 2
-    stag_mg_nsmooths_up = 2
-    stag_mg_nsmooths_bottom = 8
-    stag_mg_omega = 1.d0
-    stag_mg_smoother = 1
-    stag_mg_rel_tol = 1.d-9
-
-    gmres_rel_tol = 1.d-9
-    gmres_abs_tol = 0.d0
-    gmres_verbose = 1
-    gmres_max_outer = 20
-    gmres_max_inner = 5
-    gmres_max_iter = 100
-    gmres_min_iter = 1
-
     need_inputs = .true.
-    
-    call get_environment_variable('PROBIN', probin_env, status = ierr)
-    if ( need_inputs .AND. ierr == 0 ) then
-       un = unit_new()
-       open(unit=un, file = probin_env, status = 'old', action = 'read')
-       call read_nml()
-       need_inputs = .false.
-    end if
 
     farg = 1
     if ( need_inputs .AND. narg >= 1 ) then
@@ -261,17 +163,10 @@ contains
           farg = farg + 1
           un = unit_new()
           open(unit=un, file = fname, status = 'old', action = 'read')
-          call read_nml()
+          read(unit=un, nml = probin)
+          close(unit=un)
           need_inputs = .false.
        end if
-    end if
-
-    inquire(file = 'inputs_varden', exist = lexist)
-    if ( need_inputs .AND. lexist ) then
-       un = unit_new()
-       open(unit=un, file = 'inputs_varden', status = 'old', action = 'read')
-       call read_nml()
-       need_inputs = .false.
     end if
 
     ! stuff that can be read in from the command line by appending, e.g., "--prob_hi_x 64.0"
@@ -441,11 +336,6 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_int
 
-       case ('--precon_type')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) precon_type
-
        case ('--seed')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -491,136 +381,6 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) bc_hi(3)
 
-       case ('--mg_verbose')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mg_verbose
-
-       case ('--cg_verbose')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) cg_verbose
-
-       case ('--mg_max_vcycles')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mg_max_vcycles
-
-       case ('--mg_minwidth')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mg_minwidth
-
-       case ('--mg_bottom_solver')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mg_bottom_solver
-
-       case ('--mg_nsmooths_down')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mg_nsmooths_down
-
-       case ('--mg_nsmooths_up')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mg_nsmooths_up
-
-       case ('--mg_nsmooths_bottom')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mg_nsmooths_bottom
-
-       case ('--mg_max_bottom_nlevels')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mg_max_bottom_nlevels
-
-       case ('--mg_rel_tol')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mg_rel_tol
-
-       case ('--stag_mg_verbosity')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_verbosity
-
-       case ('--stag_mg_max_vcycles')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_max_vcycles
-
-       case ('--stag_mg_maxlevs')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_maxlevs
-
-       case ('--stag_mg_minwidth')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_minwidth
-
-       case ('--stag_mg_nsmooths_down')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_nsmooths_down
-
-       case ('--stag_mg_nsmooths_up')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_nsmooths_up
-
-       case ('--stag_mg_nsmooths_bottom')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_nsmooths_bottom
-
-       case ('--stag_mg_omega')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_omega
-
-       case ('--stag_mg_smoother')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_smoother
-
-       case ('--gmres_rel_tol')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) gmres_rel_tol
-
-       case ('--gmres_abs_tol')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) gmres_rel_tol
-
-       case ('--gmres_verbose')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) gmres_verbose
-
-       case ('--gmres_max_outer')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) gmres_max_outer
-
-       case ('--gmres_max_inner')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) gmres_max_inner
-      
-       case ('--gmres_max_iter')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) gmres_max_iter
-
-      case ('--gmres_min_iter')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) gmres_min_iter
-
        case ('--')
           farg = farg + 1
           exit
@@ -634,26 +394,7 @@ contains
 
        farg = farg + 1
     end do
-
-  contains
-  
-    subroutine read_nml()
-       read(unit=un, nml = probin)       
-       if(present(namelist_file)) then
-         namelist_file=un ! We need to read more stuff, it will be closed by someone else
-       else
-         close(unit=un)
-       end if  
-    end subroutine
     
   end subroutine probin_init
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  subroutine probin_close()
-
-  end subroutine probin_close
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end module probin_module

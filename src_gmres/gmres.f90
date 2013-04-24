@@ -12,8 +12,8 @@ module gmres_module
   use bl_constants_module
   use bc_module
   use bl_types
-  use probin_module, only: gmres_max_inner, gmres_abs_tol, gmres_max_iter, gmres_max_outer, &
-       gmres_min_iter, gmres_rel_tol, gmres_verbose, p_norm_weight
+  use probin_gmres_module, only: gmres_max_inner, gmres_abs_tol, gmres_max_iter, &
+       gmres_max_outer, gmres_min_iter, gmres_rel_tol, gmres_verbose, p_norm_weight
   use vcycle_counter_module
   use apply_precon_module
   use apply_matrix_module

@@ -12,8 +12,10 @@ subroutine main_driver()
   use ml_layout_module
   use define_bc_module
   use stag_mg_solver_module
-  use probin_module, only: probin_init, n_cells, dim_in, fixed_dt, max_grid_size, &
-       plot_int, seed, test_type, theta_fac, prob_lo, prob_hi, bc_lo, bc_hi
+  use probin_module      , only: probin_init, n_cells, dim_in, fixed_dt, max_grid_size, &
+                                 plot_int, seed, test_type, theta_fac, prob_lo, prob_hi, &
+                                 bc_lo, bc_hi
+  use probin_gmres_module, only: probin_gmres_init
   use macproject_module
   use write_plotfile_module
   use convert_module
@@ -63,8 +65,6 @@ subroutine main_driver()
 
   type(bc_tower) :: the_bc_tower
 
-  integer :: namelist_file
-
   real(kind=dp_t) :: norm, vol
   real(kind=dp_t), allocatable :: norm_stag(:), norm_u_diff(:)
 
@@ -73,7 +73,8 @@ subroutine main_driver()
 
   logical, allocatable :: pmask(:)
 
-  call probin_init(namelist_file)
+  call probin_init()
+  call probin_gmres_init()
 
   ! Initialize random numbers *after* the global (root) seed has been set:
   call SeedParallelRNG(seed)

@@ -6,11 +6,12 @@ module macproject_module
   use bl_error_module
   use bc_module 
   use convert_module
-  use mg_module             , only : mg_tower, mg_tower_build, mg_tower_destroy
-  use cc_stencil_fill_module, only : stencil_fill_cc_all_mglevels
-  use probin_module, only: mg_max_vcycles, mg_rel_tol, cg_verbose, &
-       mg_bottom_solver, mg_max_bottom_nlevels, mg_minwidth, mg_nsmooths_bottom, &
-       mg_nsmooths_down, mg_nsmooths_up, mg_verbose
+  use mg_module             , only: mg_tower, mg_tower_build, mg_tower_destroy
+  use cc_stencil_fill_module, only: stencil_fill_cc_all_mglevels
+  use probin_gmres_module   , only: mg_max_vcycles, mg_rel_tol, cg_verbose, &
+                                    mg_bottom_solver, mg_max_bottom_nlevels, &
+                                    mg_minwidth, mg_nsmooths_bottom, &
+                                    mg_nsmooths_down, mg_nsmooths_up, mg_verbose
   use vcycle_counter_module
   use stencil_types_module
   use ml_solve_module       , only : ml_cc_solve
