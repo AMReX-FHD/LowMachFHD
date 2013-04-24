@@ -26,11 +26,6 @@ module probin_module
   integer,save    :: prob_coeff, prob_sol, prob_dir, test_type
   real(dp_t),save :: smoothing_width,var_coeff_mag(3),coeff_mag(3), coeff_ratio(3), ABC_coefs(3)
 
-  ! Global Counter
-  integer, save :: num_mg_vcycles
-
-  integer :: i
-
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
   !------------------------------------------------------------- 
@@ -639,12 +634,6 @@ contains
 
        farg = farg + 1
     end do
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Initialize prob_lo, prob_hi
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    num_mg_vcycles = 0
 
   contains
   

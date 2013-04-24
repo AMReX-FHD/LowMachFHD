@@ -6,9 +6,10 @@ module stag_mg_solver_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
-  use probin_module, only: visc_type, stag_mg_omega, num_mg_vcycles, stag_mg_max_vcycles, &
+  use probin_module, only: visc_type, stag_mg_omega, stag_mg_max_vcycles, &
        stag_mg_nsmooths_bottom, stag_mg_nsmooths_down, stag_mg_nsmooths_up, stag_mg_rel_tol, &
        stag_mg_smoother, stag_mg_verbosity, stag_mg_maxlevs, stag_mg_minwidth
+  use vcycle_counter_module
 
   implicit none
 
@@ -618,7 +619,7 @@ contains
 
     end do
 
-    num_mg_vcycles = num_mg_vcycles + dm*stag_mg_max_vcycles
+    vcycle_counter = vcycle_counter + dm*stag_mg_max_vcycles
 
     ! clean up memory
     call bc_tower_destroy(the_bc_tower_mg)

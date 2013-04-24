@@ -13,7 +13,8 @@ module gmres_module
   use bc_module
   use bl_types
   use probin_module, only: gmres_max_inner, gmres_abs_tol, gmres_max_iter, gmres_max_outer, &
-       gmres_min_iter, gmres_rel_tol, gmres_verbose, num_mg_vcycles, p_norm_weight
+       gmres_min_iter, gmres_rel_tol, gmres_verbose, p_norm_weight
+  use vcycle_counter_module
   use apply_precon_module
   use apply_matrix_module
   use norm_inner_product_module
@@ -58,7 +59,7 @@ contains
     type(multifab) :: V_p(mla%nlevel)
 
     integer :: n, d, i, k, dm, nlevs, iter, total_iter, i_copy  ! for looping iteration
-    integer :: num_mg_vcycles_ ! Local copy
+    integer :: vcycle_counter_temp ! Local copy
     real(kind=dp_t) :: norm_b,norm_pre_b,norm_resid,rel_resid, norm_init_resid
     real(kind=dp_t) :: norm_resid_Stokes, norm_init_Stokes
     real(kind=dp_t) :: norm_u, norm_p, norm_init_resid_u, norm_init_resid_p
@@ -128,7 +129,7 @@ contains
     
     total_iter = 0
     iter = 0  
-    num_mg_vcycles = 0
+    vcycle_counter = 0
     OuterLoop: do
 
        ! Calculate tmp = Ax
@@ -170,9 +171,9 @@ contains
     
        ! solve for r = M^{-1} tmp
        ! We should not be counting these toward the number of mg cycles performed
-       num_mg_vcycles_ = num_mg_vcycles
+       vcycle_counter_temp = vcycle_counter
        call apply_precon(mla,tmp_u,tmp_p,r_u,r_p,alpha,beta,gamma,theta,dx,the_bc_tower)
-       num_mg_vcycles = num_mg_vcycles_
+       vcycle_counter = vcycle_counter_temp
 
        ! resid = sqrt(dot_product(r, r))
        call stag_l2_norm(mla,r_u,norm_u)
@@ -190,7 +191,7 @@ contains
        if (gmres_verbose .ge. 3) then
          if (parallel_IOProcessor()) then 
            ! Write the residuals in outer iteration to 205
-           write ( 205, '(I0,100g17.9)' ) num_mg_vcycles, &
+           write ( 205, '(I0,100g17.9)' ) vcycle_counter, &
               norm_resid/norm_init_resid, norm_u/norm_init_resid, norm_p/norm_init_resid, &
               norm_resid_Stokes/norm_init_Stokes, norm_u_noprecon/norm_init_Stokes, norm_p_noprecon/norm_init_Stokes, &
               norm_resid_est/norm_resid
@@ -320,11 +321,11 @@ contains
 
           if (gmres_verbose .ge. 2) then
           if (parallel_IOProcessor()) then 
-             write ( *, '(2i4,a,100g17.9)' ) total_iter, num_mg_vcycles, ',  est. rel. resid. |Pr|/(Pr0,b)= ', &
+             write ( *, '(2i4,a,100g17.9)' ) total_iter, vcycle_counter, ',  est. rel. resid. |Pr|/(Pr0,b)= ', &
                 norm_resid_est/norm_init_resid, norm_resid_est/norm_pre_b
              if (gmres_verbose .ge. 3) then
                 ! Write the convergence information to files
-                write ( 204, '(I0,100g17.9)' ) num_mg_vcycles, norm_resid_est/norm_init_resid
+                write ( 204, '(I0,100g17.9)' ) vcycle_counter, norm_resid_est/norm_init_resid
              end if
           end if 
           end if

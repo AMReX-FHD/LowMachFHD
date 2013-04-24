@@ -8,9 +8,10 @@ module macproject_module
   use convert_module
   use mg_module             , only : mg_tower, mg_tower_build, mg_tower_destroy
   use cc_stencil_fill_module, only : stencil_fill_cc_all_mglevels
-  use probin_module, only: mg_max_vcycles, mg_rel_tol, num_mg_vcycles, cg_verbose, &
+  use probin_module, only: mg_max_vcycles, mg_rel_tol, cg_verbose, &
        mg_bottom_solver, mg_max_bottom_nlevels, mg_minwidth, mg_nsmooths_bottom, &
        mg_nsmooths_down, mg_nsmooths_up, mg_verbose
+  use vcycle_counter_module
   use stencil_types_module
   use ml_solve_module       , only : ml_cc_solve
   use multifab_physbc_module
@@ -100,7 +101,7 @@ contains
                        mla%mba%rr,rel_solver_eps,abs_solver_eps, &
                        mg_max_vcycles_in=mg_max_vcycles,abort_on_max_iter_in=.false.)
 
-    num_mg_vcycles = num_mg_vcycles + mg_max_vcycles
+    vcycle_counter = vcycle_counter + mg_max_vcycles
 
     do n = 1, nlevs
        call multifab_destroy(zero_fab(n))
