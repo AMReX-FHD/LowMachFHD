@@ -48,6 +48,10 @@ contains
     real(kind=dp_t) :: abs_solver_eps
     integer         :: d,dm,i,n,nlevs,bc_comp
 
+    if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
+       print*,"Begin call to macproject"
+    end if
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -114,6 +118,10 @@ contains
     do n = 2,nlevs
        call bndry_reg_destroy(fine_flx(n))
     end do
+
+    if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
+       print*,"End call to macproject"
+    end if
 
   contains
 

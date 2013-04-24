@@ -3,7 +3,7 @@ module apply_precon_module
   use ml_layout_module
   use multifab_module
   use define_bc_module
-  use probin_gmres_module , only: mg_verbose, precon_type, stag_mg_verbosity
+  use probin_gmres_module , only: precon_type
   use probin_common_module, only: visc_type
   use stag_mg_solver_module
   use macproject_module
@@ -84,19 +84,9 @@ contains
        ! STEP 1: Solve for an intermediate state, x_u^star, using an implicit viscous solve
        !         x_u^star = A^{-1} b_u
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-     
-        if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
-           print*,""
-           print*,"Begin viscous solve for x_u^star"
-        end if
 
         ! x_u^star = A^{-1} b_u
         call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u,dx,the_bc_tower)
-
-        if (parallel_IOProcessor().and. stag_mg_verbosity .ge. 1) then
-          print*,""
-          print*,"End viscous solve for x_u^star"
-        end if
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 2: Construct RHS for pressure Poisson problem
@@ -114,19 +104,9 @@ contains
         ! STEP 3: Compute x_u and x_p
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
-          print*,""
-          print*,"Begin projection"
-        end if
-
         ! use multigrid to solve for Phi
         ! x_u^star is only passed in to get a norm for absolute residual criteria
         call macproject(mla,phi,x_u,alpha,mac_rhs,dx,the_bc_tower)
-
-        if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
-          print*,""
-          print*,"End projection"
-        end if
 
         ! compute alphainv_edge on faces by averaging and then inverting
         call average_cc_to_face_inv(nlevs,alpha,alphainv_edge,1,dm+2,1,the_bc_tower%bc_tower_array)
@@ -189,19 +169,9 @@ contains
         ! STEP 1: Solve for x_u using an implicit viscous term
         !         A x_u = b_u
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-     
-        if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
-           print*,""
-           print*,"Begin viscous solve for x_u"
-        end if
 
         ! x_u = A^{-1} b_u
         call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u,dx,the_bc_tower)
-
-        if (parallel_IOProcessor().and. stag_mg_verbosity .ge. 1) then
-          print*,""
-          print*,"End viscous solve for x_u"
-        end if
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 2: Solve a pressure Poisson problem for Phi
@@ -216,20 +186,12 @@ contains
           call multifab_plus_plus_c(mac_rhs(n),1,b_p(n),1,1,0)
         end do
 
-        if (abs(theta) .gt. 0.d0) then 
-           if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
-             print*,""
-             print*,"Begin projection"
-           end if
+        if (abs(theta) .gt. 0.d0) then
 
            ! solves L_alpha Phi = mac_rhs
            ! x_u is only passed in to get a norm for absolute residual criteria
            call macproject(mla,phi,x_u,alpha,mac_rhs,dx,the_bc_tower)
 
-           if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
-             print*,""
-             print*,"End projection"
-           end if
         end if 
     
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -308,18 +270,8 @@ contains
            end do
            call subtract_weighted_gradp(mla,b_u_tmp,alphainv_edge,x_p_tmp,dx)
 
-           if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
-              print*,""
-              print*,"Begin viscous solve for x_u"
-           end if
-
            ! compute = A^(-1)*(b_u-grad(x_p)) 
            call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u_tmp,dx,the_bc_tower)
-
-           if (parallel_IOProcessor().and. stag_mg_verbosity .ge. 1) then
-              print*,""
-              print*,"End viscous solve for x_u"
-           end if
 
         end if
         
@@ -339,20 +291,12 @@ contains
           end if 
         end do
   
-        if (abs(theta) .gt. 0) then   
-          if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
-            print*,""
-            print*,"Begin pressure Poisson solve"
-          end if
+        if (abs(theta) .gt. 0) then
 
           ! solves L_alpha Phi = mac_rhs
           ! x_u^star is only passed in to get a norm for absolute residual criteria
           call macproject(mla,phi,x_u,alpha,mac_rhs,dx,the_bc_tower)
 
-          if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
-            print*,""
-            print*,"End pressure Poisson solve"
-          end if
         end if
         
         do n=1,nlevs
@@ -418,18 +362,8 @@ contains
         !         A x_u = (b_u-G x_p)
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
-          print*,""
-          print*,"Begin viscous solve for x_u"
-        end if
-
         ! compute = A^(-1)*(b_u-grad(x_p)) 
         call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u_tmp,dx,the_bc_tower)
-
-        if (parallel_IOProcessor().and. stag_mg_verbosity .ge. 1) then
-          print*,""
-          print*,"End viscous solve for x_u"
-        end if
 
       case(4) 
         ! block diagonal
@@ -439,18 +373,8 @@ contains
         !         A x_u = b_u
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
-          print*,""
-          print*,"Begin viscous solve for x_u"
-        end if
-
         ! x_u = A^{-1} b_u
         call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u,dx,the_bc_tower)
-
-        if (parallel_IOProcessor().and. stag_mg_verbosity .ge. 1) then
-          print*,""
-          print*,"End viscous solve for x_u"
-        end if
 
         ! x_p = -c*beta*b_p
         do n=1,nlevs
