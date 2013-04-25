@@ -66,7 +66,6 @@ contains
     character(len=128) :: probin_env
 
     logical :: lexist
-    logical :: need_inputs
 
     integer :: un, ierr
 
@@ -90,10 +89,8 @@ contains
     coeff_mag(1:3) = 1.d0
     coeff_ratio(1:3) = 1.d0
 
-    need_inputs = .true.
-
     farg = 1
-    if ( need_inputs .AND. narg >= 1 ) then
+    if (narg >= 1) then
        call get_command_argument(farg, value = fname)
        inquire(file = fname, exist = lexist )
        if ( lexist ) then
@@ -102,7 +99,6 @@ contains
           open(unit=un, file = fname, status = 'old', action = 'read')
           read(unit=un, nml = probin)
           close(unit=un)
-          need_inputs = .false.
        end if
     end if
 

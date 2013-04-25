@@ -156,6 +156,15 @@ subroutine main_driver()
 
 
   time = 0.d0
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! need to do an initial projection to get an initial velocity field
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  ! compute S
+
+  ! project - don't use the preconditioner mac projection since we actually have
+  ! to solve this
   
   do istep=1,max_step
 

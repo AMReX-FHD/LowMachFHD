@@ -10,7 +10,8 @@ module probin_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  integer,save    :: max_step
+  integer   , save :: max_step
+  real(dp_t), save :: rhobar(2)
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -37,7 +38,6 @@ contains
     character(len=128) :: fname
 
     logical :: lexist
-    logical :: need_inputs
 
     integer :: un
 
@@ -48,12 +48,14 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! Defaults
+
     max_step = 1
 
-    need_inputs = .true.
+    rhobar(1) = 1.d0
+    rhobar(2) = 1.d0
 
     farg = 1
-    if ( need_inputs .AND. narg >= 1 ) then
+    if (narg >= 1) then
        call get_command_argument(farg, value = fname)
        inquire(file = fname, exist = lexist )
        if ( lexist ) then
@@ -62,7 +64,6 @@ contains
           open(unit=un, file = fname, status = 'old', action = 'read')
           read(unit=un, nml = probin)
           close(unit=un)
-          need_inputs = .false.
        end if
     end if
 
@@ -75,6 +76,16 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_step
+
+       case ('--rhobar_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(1)
+       case ('--rhobar_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(2)
+
        case ('--')
           farg = farg + 1
           exit
