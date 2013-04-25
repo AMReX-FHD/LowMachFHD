@@ -1,10 +1,5 @@
-f90sources += convert_to_homogeneous.f90
-f90sources += div_and_grad.f90
-f90sources += gmres.f90
 f90sources += inhomogeneous_bc_val.f90
 f90sources += init.f90
-f90sources += macproject.f90
 f90sources += main_driver.f90
-f90sources += norm_inner_product.f90
 f90sources += probin.f90
 f90sources += write_plotfile.f90
