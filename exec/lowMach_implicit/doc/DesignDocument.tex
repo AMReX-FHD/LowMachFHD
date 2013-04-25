@@ -27,6 +27,15 @@
    \kern-.15em\lower.25ex\hbox{\the\scriptscriptfont0 #2}}
   {#1\!/#2}}
 
+\def\Fb {{\bf F}}
+\def\gb {{\bf g}}
+\def\vb {{\bf v}}
+\def\Wb {{\bf W}}
+
+\def\Psib {\boldsymbol{\Psi}}
+\def\taub {\boldsymbol{\tau}}
+\def\Sigmab {\boldsymbol{\Sigma}}
+
 \begin{document}
 
 %==========================================================================
@@ -35,6 +44,37 @@
 \title{Implicit Low Mach Number Binary Mixing Notes}
 
 \maketitle
+
+\section{Equations}
+We have two incompressible fluids with densities $\bar\rho_1$ and $\bar\rho_2$, where 
+each fluid does not change volume upon mixing.  Defining $\rho$ to be the density of
+a mixture of these fluids, the densities of each fluid are $\rho_1 \equiv \rho c$ and 
+$\rho_2 \equiv \rho(1-c)$, where $c$ is the {\it mass} fraction of the first fluid.  
+Thus, $\rho = \rho_1 + \rho_2$.  Since the fluids do not change volume upon mixing, 
+the equation of state will enforce that the {\it volume} fractions must sum to 1:
+\begin{equation}
+\frac{\rho_1}{\bar\rho_1} + \frac{\rho_2}{\bar\rho_2} =
+\frac{\rho c}{\bar\rho_1} + \frac{\rho(1-c)}{\bar\rho_2} = 1 
+\quad \rightarrow \quad
+\rho = \left(\frac{c}{\bar\rho_1} + \frac{1-c}{\bar\rho_2}\right)^{-1}.
+\end{equation}
+The isothermal low Mach number equations of motion are:
+\begin{eqnarray}
+\partial_t\rho &=& -\nabla\cdot(\rho\vb),\\
+\partial_t\rho_1 &=& -\nabla\cdot(\rho_1\vb) + \underbrace{\nabla\cdot\rho\chi\nabla c + \nabla\cdot\Psib}_{\nabla\cdot\Fb},\\
+\partial_t(\rho\vb) &=& -\nabla\cdot(\rho\vb\vb^T) - \nabla\pi + \nabla\cdot\taub + \nabla\cdot\Sigmab + \rho\gb,
+\end{eqnarray}
+subject to
+\begin{equation}
+\nabla\cdot\vb = S \equiv \left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)\nabla\cdot\Fb.
+\end{equation}
+The stochastic terms
+\begin{eqnarray}
+\Psib &=& \sqrt{\frac{2\chi\rho\mu_c^{-1}k_BT}{\Delta t\Delta V}}\widetilde\Wb,\\
+\Sigmab &=& \sqrt{\frac{\eta k_B T}{\Delta t\Delta V}}\left(\Wb + \Wb^T\right),
+\end{eqnarray}
+where $\Wb$ and $\widetilde\Wb$ are standard white-noise random Gaussian tensor
+and vector fields with uncorrelated components
 
 
 
