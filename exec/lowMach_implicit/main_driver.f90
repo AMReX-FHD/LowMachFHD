@@ -7,7 +7,8 @@ subroutine main_driver()
   use ParallelRNGs
   use bc_module
   use define_bc_module
-  use probin_module       , only: probin_init, max_step
+  use init_module
+  use probin_module       , only: probin_init, max_step, nscal
   use probin_common_module, only: probin_common_init, seed, dim_in, n_cells, prob_lo, prob_hi, max_grid_size, &
                                   bc_lo, bc_hi, fixed_dt
   use probin_gmres_module , only: probin_gmres_init
@@ -143,19 +144,18 @@ subroutine main_driver()
         call multifab_build_edge(mnew(n,i),mla%la(n),1,1,i)
      end do
      ! 2 components (rho,rho1) and 2 ghost cells
-     call multifab_build(sold(n),mla%la(n),2,2)
-     call multifab_build(snew(n),mla%la(n),2,2)
+     call multifab_build(sold(n),mla%la(n),nscal,2)
+     call multifab_build(snew(n),mla%la(n),nscal,2)
   end do
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! initialize sold and mold
-
-  
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
   time = 0.d0
+
+  ! initialize sold and mold
+  call init(mold,sold,dx,mla,time)  
+
+
+
+
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! need to do an initial projection to get an initial velocity field

@@ -27,14 +27,19 @@
    \kern-.15em\lower.25ex\hbox{\the\scriptscriptfont0 #2}}
   {#1\!/#2}}
 
+\def\Ab {{\bf A}}
+\def\bb {{\bf b}}
 \def\Fb {{\bf F}}
 \def\gb {{\bf g}}
 \def\vb {{\bf v}}
 \def\Wb {{\bf W}}
+\def\xb {{\bf x}}
 
 \def\Psib {\boldsymbol{\Psi}}
 \def\taub {\boldsymbol{\tau}}
 \def\Sigmab {\boldsymbol{\Sigma}}
+
+\def\half {\frac{1}{2}}
 
 \begin{document}
 
@@ -68,7 +73,7 @@ subject to
 \begin{equation}
 \nabla\cdot\vb = S \equiv \left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)\nabla\cdot\Fb.
 \end{equation}
-The stochastic terms
+Thus, $S \equiv S(\Fb)$.  The stochastic terms are:
 \begin{eqnarray}
 \Psib &=& \sqrt{\frac{2\chi\rho\mu_c^{-1}k_BT}{\Delta t\Delta V}}\widetilde\Wb,\\
 \Sigmab &=& \sqrt{\frac{\eta k_B T}{\Delta t\Delta V}}\left(\Wb + \Wb^T\right),
@@ -76,6 +81,107 @@ The stochastic terms
 where $\Wb$ and $\widetilde\Wb$ are standard white-noise random Gaussian tensor
 and vector fields with uncorrelated components
 
+\section{GMRES Solver}
+We also have a standalone GMRES solver of the form,
+\begin{equation}
+\underbrace{
+\left(\begin{array}{cc}
+\mathcal{A} & \mathcal{G} \\
+-\mathcal{D} & 0
+\end{array}\right)
+}_{\Ab}
+\underbrace{
+\left(\begin{array}{c}
+\xb_{\vb} \\
+x_p
+\end{array}\right)
+}_{\xb}
+=
+\underbrace{
+\left(\begin{array}{c}
+\bb_{\vb}\\
+b_p
+\end{array}\right)}_{\bb},
+\end{equation}
+where $\xb_\vb$ and $\bb_\vb$ are staggered quantities and $x_p$ and $b_p$ are
+cell-centered quantities.  The gradient operator, $\mathcal{G}$, operates on
+cell-centered data and returns a staggered field.  The divergence operator, 
+$\mathcal{D}$, operates on staggered data and returns a cell-centered field.  
+The Helmholtz-like operator, $\mathcal{A}$, has the general form,
+$\mathcal{A} = \Theta\alpha\mathcal{I} - \mathcal{A}_0$, where
+$\Theta$ is a constant parameter,
+$\alpha$ is a cell-centered quantity,
+$\mathcal{I}$ is the identity matrix, 
+and $\mathcal{A}_0$ represents the viscous stress tensor.
+Both $\mathcal{A}$ and $\mathcal{A}_0$ operate on staggered data and return
+a staggered field.\\
 
+The code has several options for the viscous stress tensor.  For ease of exposition,
+we define $\mathcal{A}_0$ as a function of a velocity vector, $\vb$:\\
+\begin{itemize}
+\item $|${\tt visc\_type}$|$=1 $\quad\rightarrow\quad \mathcal{A}_0(\vb) = \nabla\cdot\beta\nabla\vb$.\\
+\item $|${\tt visc\_type}$|$=2 $\quad\rightarrow\quad \mathcal{A}_0(\vb) = \nabla\cdot\left\{\beta[\nabla\vb + (\nabla\vb)^T]\right\}$.\\
+\item $|${\tt visc\_type}$|$=3 $\quad\rightarrow\quad \mathcal{A}_0(\vb) = \nabla\cdot\left\{\beta[\nabla\vb + (\nabla\vb)^T] + \mathcal{I}\left(\gamma - \frac{2}{3}\beta\right)(\nabla\cdot\vb)\right\}$.\\
+\end{itemize}
 
+\section{Algorithm}
+Here is the time-advancement scheme.\\ \\
+{\bf Step 0: Initialization:}\\
+
+If this is the beginning of the simulation, we perform a projection to obtain an initial velocity
+field.
+\begin{equation}
+\nabla\cdot\vb^0 = S^0.
+\end{equation}
+{\bf Step 1: Forward Euler Thermodynamic Predictor:}
+\begin{eqnarray}
+\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^n),\\
+\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^n + \Fb^n),
+\end{eqnarray}
+with
+\begin{equation}
+\Fb^n = (\rho\chi\nabla c)^n + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^nk_BT}{\Delta t\Delta V}}\widetilde\Wb^n.
+\end{equation}
+{\bf Step 2: Crank-Nicolson Velocity Predictor:}
+\begin{equation}
+\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi = \nabla\cdot(-\rho^n\vb^n\vb^n) + \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{*,n+1}) + \nabla\cdot\sqrt{\frac{\eta^n k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Pred}
+\end{equation}
+\begin{equation}
+\nabla\cdot\vb^{*,n+1} = S^{*,n+1}.
+\end{equation}
+We rewrite (\ref{eq:CN Vel Pred}) as
+\begin{eqnarray}
+\left(\rho^{*,n+1} - \frac{\Delta t}{2}\nabla\cdot\taub\right)\vb^{*,n+1} + \Delta t\nabla\pi &=& \rho^n\vb^n\nonumber\\
+&&\hspace{-1.5in}+ \Delta t\left\{\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{\eta^n k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right]\right\}.\label{eq:CN Vel Pred2}
+\end{eqnarray}
+Relating this to the GMRES solver, we can see that we are solving for 
+$(\xb_\vb,x_p) = (\vb^{*,n+1},\Delta t\cdot\pi)$ with $b_p = -S^{*,n+1}$ and $\bb_\vb$ equal to the 
+right-hand-side of (\ref{eq:CN Vel Pred2}).  For the Helmholtz-like operator, 
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1$, $\alpha=\rho^{*,n+1}$,
+and $\mathcal{A}_0$ representing the viscous operator $\taub$, noting that the coefficients
+$\beta$ and $\gamma$ need to be multiplied by $\Delta t/2$.  We actually do not care about
+the result $x_p$ so we essentially throw it away after the GMRES solve.\\ \\
+{\bf Step 3: Trapezoidal Thermodynamic Corrector:}
+\begin{eqnarray}
+\rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\\
+\rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right],
+\end{eqnarray}
+with
+\begin{equation}
+\Fb^{*,n+1} = (\rho\chi\nabla c)^{*,n+1} + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^{*,n+1}k_BT}{\Delta t\Delta V}}\widetilde\Wb^n.
+\end{equation}
+{\bf Step 4: Crank-Nicolson Velocity Corrector:}\\ \\
+We're not really sure how to deal with the random fluxes, so for now we will use the same value as in the predictor.
+\begin{eqnarray}
+\frac{\rho^{n+1}\vb^{n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1})\nonumber\\
+&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{n+1}) + \nabla\cdot\sqrt{\frac{\eta^n k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Corr}
+\end{eqnarray}
+\begin{equation}
+\nabla\cdot\vb^{n+1} = S^{n+1}.
+\end{equation}
+We rewrite (\ref{eq:CN Vel Corr}) as
+\begin{eqnarray}
+\left(\rho^{n+1} - \frac{\Delta t}{2}\nabla\cdot\taub\right)\vb^{n+1} + \Delta t\nabla\pi &=& \rho^n\vb^n\nonumber\\
+&&\hspace{-1.75in}+ \Delta t\left\{\half\nabla\cdot(-\rho^n\vb^n\vb^n-\rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{\eta^n k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right]\right\}.\nonumber\\
+\end{eqnarray}
 \end{document}

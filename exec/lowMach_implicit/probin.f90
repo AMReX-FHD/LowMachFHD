@@ -10,7 +10,7 @@ module probin_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  integer   , save :: max_step
+  integer   , save :: max_step,nscal
   real(dp_t), save :: rhobar(2)
 
   !------------------------------------------------------------- 
@@ -19,6 +19,7 @@ module probin_module
 
   !----------------------
   namelist /probin/ max_step      ! maximum number of time steps
+  namelist /probin/ nscal         ! scalars; nscal=2 means we carry rho and rho*c
 
 contains
 
@@ -50,6 +51,7 @@ contains
     ! Defaults
 
     max_step = 1
+    nscal = 2
 
     rhobar(1) = 1.d0
     rhobar(2) = 1.d0
@@ -76,6 +78,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_step
+
+       case ('--nscal')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) nscal
 
        case ('--rhobar_1')
           farg = farg + 1
