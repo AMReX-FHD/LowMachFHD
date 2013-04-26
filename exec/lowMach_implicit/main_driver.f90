@@ -8,6 +8,7 @@ subroutine main_driver()
   use bc_module
   use define_bc_module
   use init_module
+  use write_plotfile_module
   use probin_module       , only: probin_init, max_step, nscal
   use probin_common_module, only: probin_common_init, seed, dim_in, n_cells, prob_lo, prob_hi, max_grid_size, &
                                   bc_lo, bc_hi, fixed_dt
@@ -151,7 +152,9 @@ subroutine main_driver()
   time = 0.d0
 
   ! initialize sold and mold
-  call init(mold,sold,dx,mla,time)  
+  call init(mold,sold,dx,mla,time)
+
+  call write_plotfile(mla,mold,mold,sold,dx,time,0)
 
 
 

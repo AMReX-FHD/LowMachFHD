@@ -9,7 +9,7 @@ module convert_module
   private
 
   public :: average_face_to_cc, average_cc_to_face, average_cc_to_face_inv, &
-       average_cc_to_node, average_cc_to_edge
+       average_cc_to_node, average_cc_to_edge, shift_face_to_cc
   
 contains
 
@@ -958,5 +958,84 @@ contains
     end if
 
   end subroutine average_cc_to_edge_3d
+
+
+
+  subroutine shift_face_to_cc(mla,face,face_comp,cc,cc_comp)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(in   ) :: face(:)
+    type(multifab) , intent(inout) ::   cc(:)
+    integer        , intent(in   ) :: face_comp,cc_comp
+
+    ! local
+    integer :: n,i,dm,nlevs,ng_f,ng_c
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: ep(:,:,:,:)
+    real(kind=dp_t), pointer :: cp(:,:,:,:)
+
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    ng_f = face(1)%ng
+    ng_c = cc(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(cc(n))
+          cp => dataptr(cc(n), i)
+          ep => dataptr(face(n), i)
+          lo = lwb(get_box(cc(n), i))
+          hi = upb(get_box(cc(n), i))
+          select case (dm)
+          case (2)
+             call shift_face_to_cc_2d(ep(:,:,1,:), ng_f, cp(:,:,1,:), ng_c, &
+                                      face_comp, cc_comp, lo, hi)
+          case (3)
+             call shift_face_to_cc_3d(ep(:,:,:,:), ng_f, cp(:,:,:,:), ng_c, &
+                                      face_comp, cc_comp, lo, hi)
+          end select
+       end do
+    end do
+
+  contains
+    
+    subroutine shift_face_to_cc_2d(face,ng_f,cc,ng_c,face_comp,cc_comp,lo,hi)
+
+      integer        , intent(in   ) :: ng_f,ng_c,face_comp,cc_comp,lo(:),hi(:)
+      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:,:)
+      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
+
+      ! local
+      integer :: i,j
+
+      do j=lo(2),hi(2)
+         do i=lo(1),hi(1)
+            cc(i,j,cc_comp) = face(i,j,face_comp)
+         end do
+      end do
+
+    end subroutine shift_face_to_cc_2d
+
+    subroutine shift_face_to_cc_3d(face,ng_f,cc,ng_c,face_comp,cc_comp,lo,hi)
+
+      integer        , intent(in   ) :: ng_f,ng_c,face_comp,cc_comp,lo(:),hi(:)
+      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
+      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
+
+      ! local
+      integer :: i,j,k
+
+      do k=lo(3),hi(3)
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)
+               cc(i,j,k,cc_comp) = face(i,j,k,face_comp)
+            end do
+         end do
+      end do
+
+    end subroutine shift_face_to_cc_3d
+
+  end subroutine shift_face_to_cc
 
 end module convert_module
