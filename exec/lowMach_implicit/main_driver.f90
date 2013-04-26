@@ -9,10 +9,11 @@ subroutine main_driver()
   use define_bc_module
   use init_module
   use write_plotfile_module
-  use probin_module       , only: probin_init, max_step, nscal
-  use probin_common_module, only: probin_common_init, seed, dim_in, n_cells, prob_lo, prob_hi, max_grid_size, &
-                                  bc_lo, bc_hi, fixed_dt
-  use probin_gmres_module , only: probin_gmres_init
+  use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal
+  use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
+                                   prob_lo, prob_hi, max_grid_size, &
+                                   bc_lo, bc_hi, fixed_dt
+  use probin_gmres_module  , only: probin_gmres_init
 
   implicit none
 
@@ -40,7 +41,7 @@ subroutine main_driver()
   type(multifab), allocatable ::     snew(:)   ! cell-centered
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
-  call probin_init()
+  call probin_lowmach_init()
   call probin_common_init()
   call probin_gmres_init()
 
@@ -185,5 +186,9 @@ subroutine main_driver()
      call destroy(sold(n))
      call destroy(snew(n))
   end do
+
+  call destroy(mla)
+  call bc_tower_destroy(the_bc_tower)
+  deallocate(lo,hi,dx,mold,mnew,sold,snew)
 
 end subroutine main_driver

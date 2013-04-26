@@ -1,7 +1,7 @@
-! This module stores the runtime parameters.  The probin_init() routine is
+! This module stores the runtime parameters.  The probin_lowmach_init() routine is
 ! used to initialize the runtime parameters
 
-module probin_module
+module probin_lowmach_module
 
   use bl_types
 
@@ -18,12 +18,12 @@ module probin_module
   !------------------------------------------------------------- 
 
   !----------------------
-  namelist /probin/ max_step      ! maximum number of time steps
-  namelist /probin/ nscal         ! scalars; nscal=2 means we carry rho and rho*c
+  namelist /probin_lowmach/ max_step      ! maximum number of time steps
+  namelist /probin_lowmach/ nscal         ! scalars; nscal=2 means we carry rho and rho*c
 
 contains
 
-  subroutine probin_init()
+  subroutine probin_lowmach_init()
 
     use f2kcli
     use parallel
@@ -64,7 +64,7 @@ contains
           farg = farg + 1
           un = unit_new()
           open(unit=un, file = fname, status = 'old', action = 'read')
-          read(unit=un, nml = probin)
+          read(unit=un, nml = probin_lowmach)
           close(unit=un)
        end if
     end if
@@ -107,6 +107,6 @@ contains
        farg = farg + 1
     end do
     
-  end subroutine probin_init
+  end subroutine probin_lowmach_init
 
-end module probin_module
+end module probin_lowmach_module

@@ -2,8 +2,8 @@ module write_plotfile_module
 
   use ml_layout_module
   use multifab_module
-  use probin_module, only : nscal
-  use probin_common_module, only: prob_lo, prob_hi
+  use probin_lowmach_module, only : nscal
+  use probin_common_module , only : prob_lo, prob_hi
   use fabio_module
   use convert_module
 
