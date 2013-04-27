@@ -27,7 +27,7 @@ contains
 
   ! solve L_alpha Phi  = D x_u^* - b_p
   ! does not update any other variables
-  subroutine macproject(mla,phi,umac,alpha,mac_rhs,dx,the_bc_tower)
+  subroutine macproject(mla,phi,umac,alpha,mac_rhs,dx,the_bc_tower,full_solve_in)
 
     use bndry_reg_module
 
@@ -38,6 +38,7 @@ contains
     type(multifab ), intent(inout) :: mac_rhs(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower ), intent(in   ) :: the_bc_tower
+    logical, intent(in), optional  :: full_solve_in
 
     ! Local  
     type(multifab)  :: zero_fab(mla%nlevel)
@@ -47,9 +48,15 @@ contains
     real(kind=dp_t) :: rel_solver_eps
     real(kind=dp_t) :: abs_solver_eps
     integer         :: d,dm,i,n,nlevs,bc_comp
+    logical         :: full_solve
 
     if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
        print*,"Begin call to macproject"
+    end if
+
+    full_solve = .false.
+    if (present(full_solve_in)) then
+       full_solve = full_solve_in
     end if
 
     nlevs = mla%nlevel
@@ -94,9 +101,15 @@ contains
     rel_solver_eps = mg_rel_tol
     abs_solver_eps = 1.d-16
 
-    call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_edge,dx,the_bc_tower,bc_comp, &
-                       mla%mba%rr,rel_solver_eps,abs_solver_eps, &
-                       mg_max_vcycles_in=mg_max_vcycles,abort_on_max_iter_in=.false.)
+    if (full_solve) then
+       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_edge,dx,the_bc_tower,bc_comp, &
+                          mla%mba%rr,rel_solver_eps,abs_solver_eps, &
+                          abort_on_max_iter=.true.)
+    else
+       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_edge,dx,the_bc_tower,bc_comp, &
+                          mla%mba%rr,rel_solver_eps,abs_solver_eps, &
+                          abort_on_max_iter=.false.)
+    end if
 
     vcycle_counter = vcycle_counter + mg_max_vcycles
 
@@ -118,8 +131,8 @@ contains
   contains
 
     subroutine mac_multigrid(mla,rh,phi,fine_flx,alpha,beta,dx,the_bc_tower,bc_comp, &
-         ref_ratio,rel_solver_eps,abs_solver_eps, &
-         mg_max_vcycles_in,abort_on_max_iter_in)
+                             ref_ratio,rel_solver_eps,abs_solver_eps, &
+                             abort_on_max_iter)
 
       type(ml_layout), intent(in   ) :: mla
       type(multifab) , intent(inout) :: rh(:),phi(:)
@@ -131,8 +144,7 @@ contains
       integer        , intent(in   ) :: ref_ratio(:,:)
       real(dp_t)     , intent(in   ) :: rel_solver_eps
       real(dp_t)     , intent(in   ) :: abs_solver_eps
-      integer, intent(in), optional  :: mg_max_vcycles_in
-      logical, intent(in), optional  :: abort_on_max_iter_in
+      logical        , intent(in   ) :: abort_on_max_iter
 
       type(layout  ) :: la
       type(box     ) :: pd
@@ -144,13 +156,12 @@ contains
       integer         :: dm, ns, nlevs
 
       ! MG solver defaults
-      integer    :: stencil_type, bottom_max_iter, max_iter, max_nlevel
+      integer    :: stencil_type, bottom_max_iter, max_nlevel
       integer    :: d, n, nub, gamma, cycle_type, smoother
       integer    :: max_nlevel_in,do_diagnostics
       real(dp_t) :: omega,bottom_solver_eps
       real(dp_t) ::  xa(mla%dim),  xb(mla%dim)
       real(dp_t) :: pxa(mla%dim), pxb(mla%dim)
-      logical    :: abort_on_max_iter
 
       type(bl_prof_timer), save :: bpt
 
@@ -169,18 +180,6 @@ contains
       cycle_type        = mgt(nlevs)%cycle_type
       bottom_solver_eps = mgt(nlevs)%bottom_solver_eps
       bottom_max_iter   = mgt(nlevs)%bottom_max_iter
-
-      if (present(mg_max_vcycles_in)) then
-         max_iter = mg_max_vcycles_in
-      else
-         max_iter = mgt(nlevs)%max_iter
-      end if
-
-      if (present(abort_on_max_iter_in)) then
-         abort_on_max_iter = abort_on_max_iter_in
-      else
-         abort_on_max_iter = mgt(nlevs)%abort_on_max_iter
-      end if
 
       ns = 1 + dm*3
 
@@ -202,32 +201,65 @@ contains
 
          stencil_type = CC_CROSS_STENCIL
 
-         call mg_tower_build(mgt(n), mla%la(n), pd, &
-                             the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,bc_comp),&
-                             stencil_type, &
-                             dh = dx(n,:), &
-                             ns = ns, &
-                             smoother = smoother, &
-                             nu1 = mg_nsmooths_down, &
-                             nu2 = mg_nsmooths_up, &
-                             nuf = mg_nsmooths_bottom, &
-                             nub = nub, &
-                             gamma = gamma, &
-                             cycle_type = cycle_type, &
-                             omega = omega, &
-                             bottom_solver = mg_bottom_solver, &
-                             bottom_max_iter = bottom_max_iter, &
-                             bottom_solver_eps = bottom_solver_eps, &
-                             max_iter = max_iter, &
-                             abort_on_max_iter = abort_on_max_iter_in, &
-                             max_nlevel = max_nlevel_in, &
-                             max_bottom_nlevel = mg_max_bottom_nlevels, &
-                             min_width = mg_minwidth, &
-                             eps = rel_solver_eps, &
-                             abs_eps = abs_solver_eps, &
-                             verbose = mg_verbose, &
-                             cg_verbose = cg_verbose, &
-                             nodal = nodal_flags(rh(nlevs)))
+         if (full_solve) then
+
+            call mg_tower_build(mgt(n), mla%la(n), pd, &
+                                the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,bc_comp),&
+                                stencil_type, &
+                                dh = dx(n,:), &
+                                ns = ns, &
+                                smoother = smoother, &
+                                nu1 = mgt(nlevs)%nu1, &
+                                nu2 = mgt(nlevs)%nu2, &
+                                nuf = mgt(nlevs)%nuf, &
+                                nub = nub, &
+                                gamma = gamma, &
+                                cycle_type = cycle_type, &
+                                omega = omega, &
+                                bottom_solver = mgt(nlevs)%bottom_solver, &
+                                bottom_max_iter = bottom_max_iter, &
+                                bottom_solver_eps = bottom_solver_eps, &
+                                max_iter = mgt(nlevs)%max_iter, &
+                                abort_on_max_iter = abort_on_max_iter, &
+                                max_nlevel = max_nlevel_in, &
+                                max_bottom_nlevel = mgt(nlevs)%max_bottom_nlevel, &
+                                min_width = mgt(nlevs)%min_width, &
+                                eps = rel_solver_eps, &
+                                abs_eps = abs_solver_eps, &
+                                verbose = mg_verbose, &
+                                cg_verbose = cg_verbose, &
+                                nodal = nodal_flags(rh(nlevs)))
+
+         else
+
+            call mg_tower_build(mgt(n), mla%la(n), pd, &
+                                the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,bc_comp),&
+                                stencil_type, &
+                                dh = dx(n,:), &
+                                ns = ns, &
+                                smoother = smoother, &
+                                nu1 = mg_nsmooths_down, &
+                                nu2 = mg_nsmooths_up, &
+                                nuf = mg_nsmooths_bottom, &
+                                nub = nub, &
+                                gamma = gamma, &
+                                cycle_type = cycle_type, &
+                                omega = omega, &
+                                bottom_solver = mg_bottom_solver, &
+                                bottom_max_iter = bottom_max_iter, &
+                                bottom_solver_eps = bottom_solver_eps, &
+                                max_iter = mg_max_vcycles, &
+                                abort_on_max_iter = abort_on_max_iter, &
+                                max_nlevel = max_nlevel_in, &
+                                max_bottom_nlevel = mg_max_bottom_nlevels, &
+                                min_width = mg_minwidth, &
+                                eps = rel_solver_eps, &
+                                abs_eps = abs_solver_eps, &
+                                verbose = mg_verbose, &
+                                cg_verbose = cg_verbose, &
+                                nodal = nodal_flags(rh(nlevs)))
+
+            end if
 
       end do
 
