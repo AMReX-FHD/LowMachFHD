@@ -91,15 +91,7 @@ contains
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
 
-    ! loosen the tolerance for multilevel problems
-    if (nlevs .eq. 1) then
-       rel_solver_eps = mg_rel_tol
-    else if (nlevs .eq. 2) then
-       rel_solver_eps = 1.0d1*mg_rel_tol
-    else
-       rel_solver_eps = 1.0d2*mg_rel_tol
-    endif
-
+    rel_solver_eps = mg_rel_tol
     abs_solver_eps = 1.d-16
 
     call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_edge,dx,the_bc_tower,bc_comp, &
@@ -152,11 +144,8 @@ contains
       integer         :: dm, ns, nlevs
 
       ! MG solver defaults
-      integer    :: stencil_type, bottom_solver, bottom_max_iter
-      integer    :: max_iter
-      integer    :: min_width
-      integer    :: max_nlevel
-      integer    :: d, n, nu1, nu2, nuf, nub, gamma, cycle_type, smoother
+      integer    :: stencil_type, bottom_max_iter, max_iter, max_nlevel
+      integer    :: d, n, nub, gamma, cycle_type, smoother
       integer    :: max_nlevel_in,do_diagnostics
       real(dp_t) :: omega,bottom_solver_eps
       real(dp_t) ::  xa(mla%dim),  xb(mla%dim)
@@ -167,10 +156,10 @@ contains
 
       call build(bpt, "mac_multigrid")
 
-      !! Defaults:
-
       nlevs = mla%nlevel
       dm    = mla%dim
+
+      !! Defaults:
 
       max_nlevel        = mgt(nlevs)%max_nlevel
       smoother          = mgt(nlevs)%smoother
@@ -178,44 +167,19 @@ contains
       gamma             = mgt(nlevs)%gamma
       omega             = mgt(nlevs)%omega
       cycle_type        = mgt(nlevs)%cycle_type
-      bottom_solver     = mgt(nlevs)%bottom_solver
       bottom_solver_eps = mgt(nlevs)%bottom_solver_eps
       bottom_max_iter   = mgt(nlevs)%bottom_max_iter
-      min_width         = mgt(nlevs)%min_width
-
-      nu1               = mg_nsmooths_down
-      nu2               = mg_nsmooths_up
-      nuf               = mg_nsmooths_bottom
 
       if (present(mg_max_vcycles_in)) then
-         max_iter          = mg_max_vcycles_in
+         max_iter = mg_max_vcycles_in
       else
-         max_iter          = mgt(nlevs)%max_iter
+         max_iter = mgt(nlevs)%max_iter
       end if
 
       if (present(abort_on_max_iter_in)) then
          abort_on_max_iter = abort_on_max_iter_in
       else
          abort_on_max_iter = mgt(nlevs)%abort_on_max_iter
-      end if
-
-      bottom_solver = 1
-      bottom_solver_eps = 1.d-3
-
-      if ( mg_bottom_solver >= 0 ) then
-         if (mg_bottom_solver == 4 .and. nboxes(phi(1)%la) == 1) then
-            if (parallel_IOProcessor()) then
-               print *,'Dont use mg_bottom_solver == 4 with only one grid -- '
-               print *,'  Reverting to default bottom solver ',bottom_solver
-            end if
-         else if (mg_bottom_solver == 4 .and. mg_max_bottom_nlevels < 2) then
-            if (parallel_IOProcessor()) then
-               print *,'Dont use mg_bottom_solver == 4 with mg_max_bottom_nlevels < 2'
-               print *,'  Reverting to default bottom solver ',bottom_solver
-            end if
-         else
-            bottom_solver = mg_bottom_solver
-         end if
       end if
 
       ns = 1 + dm*3
@@ -244,14 +208,14 @@ contains
                              dh = dx(n,:), &
                              ns = ns, &
                              smoother = smoother, &
-                             nu1 = nu1, &
-                             nu2 = nu2, &
-                             nuf = nuf, &
+                             nu1 = mg_nsmooths_down, &
+                             nu2 = mg_nsmooths_up, &
+                             nuf = mg_nsmooths_bottom, &
                              nub = nub, &
                              gamma = gamma, &
                              cycle_type = cycle_type, &
                              omega = omega, &
-                             bottom_solver = bottom_solver, &
+                             bottom_solver = mg_bottom_solver, &
                              bottom_max_iter = bottom_max_iter, &
                              bottom_solver_eps = bottom_solver_eps, &
                              max_iter = max_iter, &
