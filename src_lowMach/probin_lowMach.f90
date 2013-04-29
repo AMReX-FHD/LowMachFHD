@@ -10,7 +10,7 @@ module probin_lowmach_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  integer   , save :: max_step,nscal
+  integer   , save :: prob_type,max_step,nscal
   real(dp_t), save :: rhobar(2)
 
   !------------------------------------------------------------- 
@@ -18,6 +18,7 @@ module probin_lowmach_module
   !------------------------------------------------------------- 
 
   !----------------------
+  namelist /probin_lowmach/ prob_type     ! sets scalars, vel, coeffs; see exact_solutions.f90
   namelist /probin_lowmach/ max_step      ! maximum number of time steps
   namelist /probin_lowmach/ nscal         ! scalars; nscal=2 means we carry rho and rho*c
   namelist /probin_lowmach/ rhobar        ! rho1bar and rho2bar
@@ -51,6 +52,7 @@ contains
 
     ! Defaults
 
+    prob_type = 1
     max_step = 1
     nscal = 2
 
@@ -74,6 +76,11 @@ contains
     do while ( farg <= narg )
        call get_command_argument(farg, value = fname)
        select case (fname)
+
+       case ('--prob_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) prob_type
 
        case ('--max_step')
           farg = farg + 1

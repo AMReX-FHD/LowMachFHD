@@ -186,10 +186,12 @@ subroutine main_driver()
      do i=1,dm
         call destroy(mold(n,i))
         call destroy(mnew(n,i))
+        call destroy(umac(n,i))
      end do
      call destroy(sold(n))
      call destroy(snew(n))
      call destroy(chi(n))
+     call destroy(eta(n))
   end do
 
   call destroy(mla)

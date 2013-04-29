@@ -1,5 +1,6 @@
 &probin_lowmach
 
+  prob_type = 1             ! sets scalars, vel, coeffs; see exact_solutions.f90
   max_step = 1              ! maximum number of time steps
   nscal = 2                 ! scalars; nscal=2 means we carry rho and rho*c
   rhobar(1:2) = 1.1d0 0.9d0 ! rho1bar and rho2bar
