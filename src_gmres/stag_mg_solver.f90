@@ -2,7 +2,7 @@ module stag_mg_solver_module
 
   use ml_layout_module
   use stag_applyop_module
-  use convert_module
+  use convert_stag_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module

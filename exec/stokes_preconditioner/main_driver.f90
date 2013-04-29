@@ -19,7 +19,7 @@ subroutine main_driver()
   use probin_gmres_module , only: probin_gmres_init
   use macproject_module
   use write_plotfile_module
-  use convert_module
+  use convert_stag_module
   use apply_precon_module
   use apply_matrix_module
   use norm_inner_product_module

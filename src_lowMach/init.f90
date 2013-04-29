@@ -44,12 +44,12 @@ contains
           select case (dm)
           case (2)
              call init_2d(mxp(:,:,1,1), myp(:,:,1,1), sop(:,:,1,:), &
-                              lo, hi, ng_m, ng_s, dx(n,:), time)
+                          lo, hi, ng_m, ng_s, dx(n,:), time)
           case (3)
              mzp => dataptr(m(n,3),i)
              call init_3d(mxp(:,:,:,1), myp(:,:,:,1), mzp(:,:,:,1), &
-                              sop(:,:,:,:), &
-                              lo, hi, ng_m, ng_s, dx(n,:), time)
+                          sop(:,:,:,:), &
+                          lo, hi, ng_m, ng_s, dx(n,:), time)
           end select
        end do
 

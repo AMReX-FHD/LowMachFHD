@@ -5,7 +5,7 @@ module macproject_module
   use bl_constants_module
   use bl_error_module
   use bc_module 
-  use convert_module
+  use convert_stag_module
   use mg_module             , only: mg_tower, mg_tower_build, mg_tower_destroy
   use cc_stencil_fill_module, only: stencil_fill_cc_all_mglevels
   use probin_gmres_module   , only: mg_max_vcycles, mg_rel_tol, cg_verbose, &

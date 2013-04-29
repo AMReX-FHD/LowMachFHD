@@ -35,10 +35,11 @@ subroutine main_driver()
 
   logical, allocatable :: pmask(:)
 
-  type(multifab), allocatable ::     mold(:,:) ! face-based
-  type(multifab), allocatable ::     mnew(:,:) ! face-based
-  type(multifab), allocatable ::     sold(:)   ! cell-centered
-  type(multifab), allocatable ::     snew(:)   ! cell-centered
+  type(multifab), allocatable :: mold(:,:) ! face-based
+  type(multifab), allocatable :: mnew(:,:) ! face-based
+  type(multifab), allocatable :: umac(:,:) ! face-based
+  type(multifab), allocatable :: sold(:)   ! cell-centered
+  type(multifab), allocatable :: snew(:)   ! cell-centered
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_lowmach_init()
@@ -141,9 +142,10 @@ subroutine main_driver()
 
   do n=1,nlevs
      do i=1,dm
-        ! edge-momentum; 1 ghost cell
+        ! edge-momentum and velocity; 1 ghost cell
         call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
         call multifab_build_edge(mnew(n,i),mla%la(n),1,1,i)
+        call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
      end do
      ! 2 components (rho,rho1) and 2 ghost cells
      call multifab_build(sold(n),mla%la(n),nscal,2)
@@ -155,7 +157,7 @@ subroutine main_driver()
   ! initialize sold and mold
   call init(mold,sold,dx,mla,time)
 
-  call write_plotfile(mla,mold,mold,sold,dx,time,0)
+  call write_plotfile(mla,mold,umac,sold,dx,time,0)
 
 
 

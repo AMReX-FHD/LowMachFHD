@@ -1,4 +1,4 @@
-module convert_module
+module convert_stag_module
 
   use multifab_module
   use ml_layout_module
@@ -1038,4 +1038,4 @@ contains
 
   end subroutine shift_face_to_cc
 
-end module convert_module
+end module convert_stag_module

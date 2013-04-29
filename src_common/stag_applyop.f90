@@ -5,6 +5,7 @@ module stag_applyop_module
   use probin_common_module, only: visc_type
   use define_bc_module
   use multifab_physbc_module
+  use convert_stag_module
 
   implicit none
 
@@ -17,8 +18,6 @@ contains
   ! compute Lphi
   subroutine stag_applyop(mla,the_bc_tower,phi_fc,Lphi_fc,alpha_cc,beta_cc, &
                           gamma_cc,theta,dx)
-
-    use convert_module
 
     type(ml_layout), intent(in   ) :: mla
     type(bc_tower) , intent(in   ) :: the_bc_tower

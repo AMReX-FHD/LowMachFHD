@@ -1,4 +1,4 @@
-module convert_module
+module convert_variables_module
 
   use multifab_module
   use ml_layout_module
@@ -87,4 +87,4 @@ contains
     
   end subroutine convert_cons_to_prim
 
-end module convert_module
+end module convert_variables_module
