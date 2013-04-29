@@ -20,7 +20,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_update(:)
     type(multifab) , intent(in   ) ::     prim(:)   ! rho and c
-    type(multifab) , intent(in   ) ::   s_face(:,:) ! rho and rho1 on faces
+    type(multifab) , intent(in   ) ::   s_face(:,:) ! rho on faces
     type(multifab) , intent(in   ) :: chi_face(:,:) ! chi on faces
     type(multifab) , intent(in   ) ::     umac(:,:) ! umac on faces
     real(kind=dp_t), intent(in   ) :: dx(:,:)
@@ -67,7 +67,7 @@ contains
           select case (dm)
           case (2)
              call mk_diffusive_rhoc_fluxdiv_2d(up(:,:,1,2), ng_u, pp(:,:,1,2), ng_p, &
-                                               spx(:,:,1,:), spy(:,:,1,:), ng_s, &
+                                               spx(:,:,1,1), spy(:,:,1,1), ng_s, &
                                                cpx(:,:,1,1), cpy(:,:,1,1), ng_c, &
                                                upx(:,:,1,1), upy(:,:,1,1), ng_m, &
                                                lo, hi, dx(n,:), &
@@ -88,14 +88,14 @@ contains
 
   contains
 
-    subroutine mk_diffusive_rhoc_fluxdiv_2d(s_update,ng_u,c,ng_p,sx,sy,ng_s, &
+    subroutine mk_diffusive_rhoc_fluxdiv_2d(s_update,ng_u,c,ng_p,rhox,rhoy,ng_s, &
                                             chix,chiy,ng_c,umac,vmac,ng_m,lo,hi,dx,adv_bc)
 
       integer        , intent(in   ) :: lo(:), hi(:), ng_u, ng_p, ng_s, ng_c, ng_m
       real(kind=dp_t), intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:)
       real(kind=dp_t), intent(in   ) ::        c(lo(1)-ng_p:,lo(2)-ng_p:)
-      real(kind=dp_t), intent(in   ) ::       sx(lo(1)-ng_s:,lo(2)-ng_s:,:)
-      real(kind=dp_t), intent(in   ) ::       sy(lo(1)-ng_s:,lo(2)-ng_s:,:)
+      real(kind=dp_t), intent(in   ) ::     rhox(lo(1)-ng_s:,lo(2)-ng_s:)
+      real(kind=dp_t), intent(in   ) ::     rhoy(lo(1)-ng_s:,lo(2)-ng_s:)
       real(kind=dp_t), intent(in   ) ::     chix(lo(1)-ng_c:,lo(2)-ng_c:)
       real(kind=dp_t), intent(in   ) ::     chiy(lo(1)-ng_c:,lo(2)-ng_c:)
       real(kind=dp_t), intent(inout) ::     umac(lo(1)-ng_m:,lo(2)-ng_m:)
@@ -117,7 +117,7 @@ contains
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
             ! fluxx = rhoD * grad c
-            fluxx(i,j) = sx(i,j,1)*chix(i,j) * (c(i,j)-c(i-1,j)) / dx(1)
+            fluxx(i,j) = rhox(i,j)*chix(i,j) * (c(i,j)-c(i-1,j)) / dx(1)
          end do
       end do
 
@@ -125,13 +125,13 @@ contains
       if (adv_bc(1,1,4) .eq. FOEXTRAP .or. adv_bc(1,1,4) .eq. EXT_DIR) then
          i=lo(1)
          do j=lo(2),hi(2)
-            fluxx(i,j) = sx(i,j,1)*chix(i,j) * (c(i,j)-c(i-1,j)) / (0.5d0*dx(1))
+            fluxx(i,j) = rhox(i,j)*chix(i,j) * (c(i,j)-c(i-1,j)) / (0.5d0*dx(1))
          end do
       end if
       if (adv_bc(1,2,4) .eq. FOEXTRAP .or. adv_bc(1,2,4) .eq. EXT_DIR) then
          i=hi(1)+1
          do j=lo(2),hi(2)
-            fluxx(i,j) = sx(i,j,1)*chix(i,j) * (c(i,j)-c(i-1,j)) / (0.5d0*dx(1))
+            fluxx(i,j) = rhox(i,j)*chix(i,j) * (c(i,j)-c(i-1,j)) / (0.5d0*dx(1))
          end do
       end if
 
@@ -149,7 +149,7 @@ contains
       do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)
             ! fluxy = rhoD * grad c
-            fluxy(i,j) = sy(i,j,1)*chiy(i,j) * (c(i,j)-c(i,j-1)) / dx(2)
+            fluxy(i,j) = rhoy(i,j)*chiy(i,j) * (c(i,j)-c(i,j-1)) / dx(2)
          end do
       end do
 
@@ -157,13 +157,13 @@ contains
       if (adv_bc(2,1,4) .eq. FOEXTRAP .or. adv_bc(2,1,4) .eq. EXT_DIR) then
          j=lo(2)
          do i=lo(1),hi(1)
-            fluxy(i,j) = sy(i,j,1)*chiy(i,j) * (c(i,j)-c(i,j-1)) / (0.5d0*dx(2))
+            fluxy(i,j) = rhoy(i,j)*chiy(i,j) * (c(i,j)-c(i,j-1)) / (0.5d0*dx(2))
          end do
       end if
       if (adv_bc(2,2,4) .eq. FOEXTRAP .or. adv_bc(2,2,4) .eq. EXT_DIR) then
          j=hi(2)+1
          do i=lo(1),hi(1)
-            fluxy(i,j) = sy(i,j,1)*chiy(i,j) * (c(i,j)-c(i,j-1)) / (0.5d0*dx(2))
+            fluxy(i,j) = rhoy(i,j)*chiy(i,j) * (c(i,j)-c(i,j-1)) / (0.5d0*dx(2))
          end do
       end if
 
