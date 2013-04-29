@@ -32,16 +32,18 @@ contains
           do i=1,dm
              call multifab_copy_c(umac(n,i), 1, m(n,i), 1, 1, 0)
              call multifab_div_div_c(umac(n,i), 1, s_face(n,i), 1, 1, 0)
+             call multifab_fill_boundary(umac(n,i))
           end do
        end do
 
     else
 
-       ! compute m = rho * umac in valid plus ghost region
+       ! compute m = rho * umac in valid region
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(m(n,i), 1, umac(n,i), 1, 1, 1)
-             call multifab_mult_mult_c(m(n,i), 1, s_face(n,i), 1, 1, 1)
+             call multifab_copy_c(m(n,i), 1, umac(n,i), 1, 1, 0)
+             call multifab_mult_mult_c(m(n,i), 1, s_face(n,i), 1, 1, 0)
+             call multifab_fill_boundary(m(n,i))
           end do
        end do
 

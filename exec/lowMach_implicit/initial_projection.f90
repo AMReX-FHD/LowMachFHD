@@ -43,11 +43,11 @@ contains
     nlevs = mla%nlevel
 
     do n=1,nlevs
-       call multifab_build(mac_rhs(n),mla%la(n),1,1)
+       call multifab_build(mac_rhs(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        call setval(phi(n),0.d0)
        do i=1,dm
-          call multifab_build_edge(   rho_face(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(   rho_face(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(rhoinv_face(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(   chi_face(n,i),mla%la(n),1,0,i)
        end do       
@@ -74,7 +74,7 @@ contains
 
     ! temporary way to convert rho*c to c
     do n=1,nlevs
-       call multifab_div_div_c(sold(n),1,sold(n),2,1,2)
+       call multifab_div_div_c(sold(n),1,sold(n),2,1,1)
     end do
 
     ! add del dot rho chi grad c
@@ -83,7 +83,7 @@ contains
 
     ! convert c back to rho*c
     do n=1,nlevs
-       call multifab_mult_mult_c(sold(n),1,sold(n),2,1,2)
+       call multifab_mult_mult_c(sold(n),1,sold(n),2,1,1)
     end do
 
     ! project to solve for phi - use the 'full' solver
@@ -99,8 +99,6 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_fill_boundary(umac(n,i))
-          call multifab_physbc_macvel(umac(n,i),1,i,1, &
-                                      the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
     end do
 

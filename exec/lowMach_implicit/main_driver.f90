@@ -151,10 +151,10 @@ subroutine main_driver()
         call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
      end do
      ! 2 components (rho,rho1) and 2 ghost cells
-     call multifab_build(sold(n),mla%la(n),nscal,2)
-     call multifab_build(snew(n),mla%la(n),nscal,2)
-     call multifab_build(chi(n) ,mla%la(n),nscal,1)
-     call multifab_build(eta(n) ,mla%la(n),nscal,1)
+     call multifab_build(sold(n),mla%la(n),nscal,1)
+     call multifab_build(snew(n),mla%la(n),nscal,1)
+     call multifab_build(chi(n) ,mla%la(n),1    ,1)
+     call multifab_build(eta(n) ,mla%la(n),1    ,1)
   end do
 
   time = 0.d0
