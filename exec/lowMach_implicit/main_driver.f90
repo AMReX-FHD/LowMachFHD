@@ -41,7 +41,8 @@ subroutine main_driver()
   type(multifab), allocatable :: umac(:,:) ! face-based
   type(multifab), allocatable :: sold(:)   ! cell-centered
   type(multifab), allocatable :: snew(:)   ! cell-centered
-  type(multifab), allocatable :: chi(:)   ! cell-centered
+  type(multifab), allocatable :: chi(:)    ! cell-centered
+  type(multifab), allocatable :: eta(:)    ! cell-centered
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_lowmach_init()
@@ -65,7 +66,7 @@ subroutine main_driver()
   ! now that we have nlevs and dm, we can allocate these
   allocate(dx(nlevs,dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm))
-  allocate(sold(nlevs),snew(nlevs),chi(nlevs))
+  allocate(sold(nlevs),snew(nlevs),chi(nlevs),eta(nlevs))
 
   ! tell mba how many levels and dmensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -153,12 +154,19 @@ subroutine main_driver()
      call multifab_build(sold(n),mla%la(n),nscal,2)
      call multifab_build(snew(n),mla%la(n),nscal,2)
      call multifab_build(chi(n) ,mla%la(n),nscal,1)
+     call multifab_build(eta(n) ,mla%la(n),nscal,1)
   end do
 
   time = 0.d0
 
   ! initialize sold and mold
   call init(mold,sold,dx,mla,time)
+
+  ! initialize eta and chi - for now just use a setval
+  do n=1,nlevs
+     call setval(eta(n),1.d0,all=.true.)
+     call setval(chi(n),1.d0,all=.true.)
+  end do
 
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,chi,dx,the_bc_tower)

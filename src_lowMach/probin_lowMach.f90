@@ -20,6 +20,7 @@ module probin_lowmach_module
   !----------------------
   namelist /probin_lowmach/ max_step      ! maximum number of time steps
   namelist /probin_lowmach/ nscal         ! scalars; nscal=2 means we carry rho and rho*c
+  namelist /probin_lowmach/ rhobar        ! rho1bar and rho2bar
 
 contains
 
@@ -53,8 +54,8 @@ contains
     max_step = 1
     nscal = 2
 
-    rhobar(1) = 1.d0
-    rhobar(2) = 1.d0
+    rhobar(1) = 1.1d0
+    rhobar(2) = 0.9d0
 
     farg = 1
     if (narg >= 1) then
