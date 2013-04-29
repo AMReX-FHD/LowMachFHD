@@ -4,6 +4,8 @@ module mk_diffusive_fluxdiv_module
   use define_bc_module
   use bc_module
 
+  use fabio_module
+
   implicit none
 
   private
@@ -12,12 +14,12 @@ module mk_diffusive_fluxdiv_module
 
 contains
 
-  subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,prim,rho_face,chi_face,dx,the_bc_level)
-
-
+  subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_face,chi_face, &
+                                       dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_update(:)
+    integer        , intent(in   ) :: out_comp      ! which component of s_update
     type(multifab) , intent(in   ) ::     prim(:)   ! rho and c
     type(multifab) , intent(in   ) :: rho_face(:,:) ! rho on faces
     type(multifab) , intent(in   ) :: chi_face(:,:) ! chi on faces
@@ -58,7 +60,7 @@ contains
           hi = upb(get_box(prim(n), i))
           select case (dm)
           case (2)
-             call mk_diffusive_rhoc_fluxdiv_2d(up(:,:,1,2), ng_u, pp(:,:,1,2), ng_p, &
+             call mk_diffusive_rhoc_fluxdiv_2d(up(:,:,1,out_comp), ng_u, pp(:,:,1,2), ng_p, &
                                                spx(:,:,1,1), spy(:,:,1,1), ng_s, &
                                                cpx(:,:,1,1), cpy(:,:,1,1), ng_c, &
                                                lo, hi, dx(n,:), &
@@ -66,7 +68,7 @@ contains
           case (3)
              spz => dataptr(rho_face(n,3), i)
              cpz => dataptr(chi_face(n,3), i)
-             call mk_diffusive_rhoc_fluxdiv_3d(up(:,:,:,2), ng_u, pp(:,:,:,2), ng_p, &
+             call mk_diffusive_rhoc_fluxdiv_3d(up(:,:,:,out_comp), ng_u, pp(:,:,:,2), ng_p, &
                                                spx(:,:,:,1), spy(:,:,:,1), spz(:,:,:,1), ng_s, &
                                                cpx(:,:,:,1), cpy(:,:,:,1), cpz(:,:,:,1), ng_c, &
                                                lo, hi, dx(n,:), &

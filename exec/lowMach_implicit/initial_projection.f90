@@ -10,6 +10,8 @@ module initial_projection_module
   use mk_diffusive_fluxdiv_module
   use multifab_physbc_module
 
+  use fabio_module
+
   implicit none
 
   private
@@ -23,7 +25,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
     type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(in   ) :: sold(:)
+    type(multifab) , intent(inout) :: sold(:)
     type(multifab) , intent(in   ) :: chi(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -70,9 +72,19 @@ contains
     ! average chi to faces
     call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
 
+    ! temporary way to convert rho*c to c
+    do n=1,nlevs
+       call multifab_div_div_c(sold(n),1,sold(n),2,1,2)
+    end do
+
     ! add del dot rho chi grad c
-    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,sold,rho_face,chi_face,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,sold,rho_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
+
+    ! convert c back to rho*c
+    do n=1,nlevs
+       call multifab_mult_mult_c(sold(n),1,sold(n),2,1,2)
+    end do
 
     ! project to solve for phi - use the 'full' solver
     call macproject(mla,phi,umac,sold,mac_rhs,dx,the_bc_tower,.true.)
