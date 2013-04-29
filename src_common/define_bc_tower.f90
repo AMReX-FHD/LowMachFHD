@@ -116,7 +116,7 @@ contains
 
     ! Here we allocate dm components for x_u,
     !                  1 component for x_p,
-    !                  1 component for coefficients (alpha, beta, gamma)
+    !                  1 component for coefficients (alpha, beta, gamma, rho, rho1)
     allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,dm+2))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
@@ -124,7 +124,7 @@ contains
 
     ! Here we allocate dm components for x_u,
     !                  1 component for x_p,
-    !                  1 component for coefficients (alpha, beta, gamma)
+    !                  1 component for coefficients (alpha, beta, gamma, rho, rho1)
     allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,dm+2))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
