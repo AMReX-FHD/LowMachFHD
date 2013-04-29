@@ -10,8 +10,6 @@ module initial_projection_module
   use mk_diffusive_fluxdiv_module
   use multifab_physbc_module
 
-  use fabio_module
-
   implicit none
 
   private
