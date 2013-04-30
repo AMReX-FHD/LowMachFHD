@@ -56,16 +56,18 @@ contains
     dm = mla%dim
     
     do n=1,nlevs
+       ! prim needs 2 ghost cells to average to ghost faces used in 
+       ! converting m to umac in m ghost cells
+       call multifab_build(       prim(n),mla%la(n),nscal,2)
        call multifab_build(   s_update(n),mla%la(n),nscal,0)
-       call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
-       call multifab_build(        phi(n),mla%la(n),1,1)
-       call multifab_build(       prim(n),mla%la(n),nscal,1) ! 1 or 2 ghost cells?
+       call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
+       call multifab_build(        phi(n),mla%la(n),1    ,1)
        do i=1,dm
-          call multifab_build_edge(     s_face(n,i),mla%la(n),nscal,0,i)
-          call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   chi_face(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(m_a_fluxdiv(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(m_d_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(     s_face(n,i),mla%la(n),nscal,1,i)
+          call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(   chi_face(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(m_a_fluxdiv(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(m_d_fluxdiv(n,i),mla%la(n),1    ,0,i)
        end do
     end do
 
@@ -107,6 +109,10 @@ contains
     ! compute prim from sold
     call convert_cons_to_prim(mla,sold,prim,.true.)
 
+    do n=1,nlevs
+       call multifab_fill_boundary(prim(n))
+    end do
+
     ! average sold to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,sold,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
@@ -125,10 +131,6 @@ contains
     ! snew = sold + dt * del dot (A+D)
     do n=1,nlevs
        call saxpy(snew(n),1.d0,sold(n),fixed_dt,s_update(n))
-    end do
-
-    ! fill ghost cells
-    do n=1,nlevs
        call multifab_fill_boundary(snew(n))
     end do
 
@@ -210,20 +212,23 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! reset s_update
-    do n=1,nlevs
-       call setval(s_update(n),0.d0,all=.true.)
-    end do
-    
     ! compute prim from snew
     call convert_cons_to_prim(mla,snew,prim,.true.)
+
+    do n=1,nlevs
+       call multifab_fill_boundary(prim(n))
+    end do
 
     ! average snew to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
+    ! reset s_update
+    do n=1,nlevs
+       call setval(s_update(n),0.d0,all=.true.)
+    end do
+    
     ! compute advective flux divergence
     call mk_advective_s_fluxdiv(mla,umac,s_face,s_update,dx)
 
@@ -324,10 +329,10 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     do n=1,nlevs
+       call destroy(prim(n))
        call destroy(s_update(n))
        call destroy(gmres_rhs_p(n))
        call destroy(phi(n))
-       call destroy(prim(n))
        do i=1,dm
           call destroy(s_face(n,i))
           call destroy(gmres_rhs_v(n,i))

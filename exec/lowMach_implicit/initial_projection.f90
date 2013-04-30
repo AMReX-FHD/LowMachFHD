@@ -18,12 +18,13 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,mold,umac,sold,chi,dx,the_bc_tower)
+  subroutine initial_projection(mla,mold,umac,sold,prim,chi,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
     type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(inout) :: sold(:)
+    type(multifab) , intent(in   ) :: sold(:)
+    type(multifab) , intent(in   ) :: prim(:)
     type(multifab) , intent(in   ) :: chi(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -45,7 +46,7 @@ contains
        call multifab_build(phi(n),mla%la(n),1,1)
        call setval(phi(n),0.d0)
        do i=1,dm
-          call multifab_build_edge(   rho_face(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(   rho_face(n,i),mla%la(n),1,1,i)
           call multifab_build_edge(rhoinv_face(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(   chi_face(n,i),mla%la(n),1,0,i)
        end do       
@@ -70,19 +71,9 @@ contains
     ! average chi to faces
     call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
 
-    ! temporary way to convert rho*c to c
-    do n=1,nlevs
-       call multifab_div_div_c(sold(n),1,sold(n),2,1,1)
-    end do
-
     ! add del dot rho chi grad c
-    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,sold,rho_face,chi_face,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,rho_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
-
-    ! convert c back to rho*c
-    do n=1,nlevs
-       call multifab_mult_mult_c(sold(n),1,sold(n),2,1,1)
-    end do
 
     ! project to solve for phi - use the 'full' solver
     call macproject(mla,phi,umac,sold,mac_rhs,dx,the_bc_tower,.true.)

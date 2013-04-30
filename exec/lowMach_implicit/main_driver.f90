@@ -11,6 +11,7 @@ subroutine main_driver()
   use initial_projection_module
   use write_plotfile_module
   use advance_timestep_module
+  use convert_variables_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
@@ -42,6 +43,7 @@ subroutine main_driver()
   type(multifab), allocatable :: umac(:,:) ! face-based
   type(multifab), allocatable :: sold(:)   ! cell-centered
   type(multifab), allocatable :: snew(:)   ! cell-centered
+  type(multifab), allocatable :: prim(:)   ! cell-centered
   type(multifab), allocatable :: chi(:)    ! cell-centered
   type(multifab), allocatable :: eta(:)    ! cell-centered
   type(multifab), allocatable :: kappa(:)    ! cell-centered
@@ -68,7 +70,7 @@ subroutine main_driver()
   ! now that we have nlevs and dm, we can allocate these
   allocate(dx(nlevs,dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm))
-  allocate(sold(nlevs),snew(nlevs),chi(nlevs),eta(nlevs),kappa(nlevs))
+  allocate(sold(nlevs),snew(nlevs),prim(nlevs),chi(nlevs),eta(nlevs),kappa(nlevs))
 
   ! tell mba how many levels and dmensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -153,18 +155,34 @@ subroutine main_driver()
         call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
      end do
      ! 2 components (rho,rho1)
-     ! 1 or 2 ghost cells for s?
-     call multifab_build(sold(n) ,mla%la(n),nscal,1)
-     call multifab_build(snew(n) ,mla%la(n),nscal,1)
-     call multifab_build(chi(n)  ,mla%la(n),1    ,1)
-     call multifab_build(eta(n)  ,mla%la(n),1    ,1)
-     call multifab_build(kappa(n),mla%la(n),1    ,1)
+     ! need 2 ghost cells to average to ghost faces used in 
+     ! converting m to umac in m ghost cells
+     call multifab_build(sold(n) ,mla%la(n),nscal,2)
+     call multifab_build(snew(n) ,mla%la(n),nscal,2)
+     call multifab_build(prim(n) ,mla%la(n),nscal,2)
+
+     ! transport coefficients
+     call multifab_build(chi(n)  ,mla%la(n),1,1)
+     call multifab_build(eta(n)  ,mla%la(n),1,1)
+     call multifab_build(kappa(n),mla%la(n),1,1)
   end do
 
   time = 0.d0
 
   ! initialize sold and mold
   call init(mold,sold,dx,mla,time)
+
+  ! convert cons to prim in valid region
+  call convert_cons_to_prim(mla,sold,prim,.true.)
+
+  ! fill ghost cells for prim
+  do n=1,nlevs
+     call multifab_fill_boundary(prim(n))
+  end do
+
+  ! convert prim to cons in valid and ghost region
+  ! now cons has properly filled ghost cells
+  call convert_cons_to_prim(mla,sold,prim,.false.)
 
   ! initialize chi, eta, and kappa - for now just use a setval
   do n=1,nlevs
@@ -174,7 +192,7 @@ subroutine main_driver()
   end do
 
   ! need to do an initial projection to get an initial velocity field
-  call initial_projection(mla,mold,umac,sold,chi,dx,the_bc_tower)
+  call initial_projection(mla,mold,umac,sold,prim,chi,dx,the_bc_tower)
 
   ! write initial plotfile
   if (plot_int .gt. 0) then

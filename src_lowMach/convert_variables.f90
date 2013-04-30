@@ -27,23 +27,21 @@ contains
 
     if (m_to_umac) then
 
-       ! compute umac = m / rho in valid region
+       ! compute umac = m / rho - NO GHOST CELLS
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(umac(n,i), 1, m(n,i), 1, 1, 0)
              call multifab_div_div_c(umac(n,i), 1, s_face(n,i), 1, 1, 0)
-             call multifab_fill_boundary(umac(n,i))
           end do
        end do
 
     else
 
-       ! compute m = rho * umac in valid region
+       ! compute m = rho * umac - INCLUDING GHOST CELLS
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(m(n,i), 1, umac(n,i), 1, 1, 0)
-             call multifab_mult_mult_c(m(n,i), 1, s_face(n,i), 1, 1, 0)
-             call multifab_fill_boundary(m(n,i))
+             call multifab_copy_c(m(n,i), 1, umac(n,i), 1, 1, m(n,i)%ng)
+             call multifab_mult_mult_c(m(n,i), 1, s_face(n,i), 1, 1, m(n,i)%ng)
           end do
        end do
 
@@ -67,17 +65,17 @@ contains
 
     if (cons_to_prim) then
 
-       ! cons to prim - including ghost cells
+       ! cons to prim - NO GHOST CELLS
        do n=1,nlevs
-          call multifab_copy_c(prim(n),1,s(n),1,nscal,prim(n)%ng)
+          call multifab_copy_c(prim(n),1,s(n),1,nscal,0)
           do i=2,nscal
-             call multifab_div_div_c(prim(n),i,s(n),1,1,prim(n)%ng)
+             call multifab_div_div_c(prim(n),i,s(n),1,1,0)
           end do
        end do
 
     else
 
-       ! prim to cons - including ghost cells
+       ! prim to cons - INCLUDING GHOST CELLS
        do n=1,nlevs
           call multifab_copy_c(s(n),1,prim(n),1,nscal,s(n)%ng)
           do i=2,nscal
