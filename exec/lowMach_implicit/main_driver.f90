@@ -10,10 +10,11 @@ subroutine main_driver()
   use init_module
   use initial_projection_module
   use write_plotfile_module
+  use advance_timestep_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
-                                   bc_lo, bc_hi, fixed_dt
+                                   bc_lo, bc_hi, fixed_dt, plot_int
   use probin_gmres_module  , only: probin_gmres_init
 
   implicit none
@@ -172,13 +173,32 @@ subroutine main_driver()
   call initial_projection(mla,mold,umac,sold,chi,dx,the_bc_tower)
 
   ! write initial plotfile
-  call write_plotfile(mla,mold,umac,sold,dx,time,0)
+  if (plot_int .gt. 0) then
+     call write_plotfile(mla,mold,umac,sold,dx,time,0)
+  end if
   
   do istep=1,max_step
 
+     ! advance the solution by dt
+     call advance_timestep(mla,mold,mnew,umac,sold,snew,eta,chi,dx, &
+                           the_bc_tower%bc_tower_array)
 
+     ! increment simulation time
      time = time + fixed_dt
 
+     ! write a plotfile
+     if (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) then
+        call write_plotfile(mla,mnew,umac,snew,dx,time,istep)
+     end if
+
+     ! set old state to new state
+     do n=1,nlevs
+        call multifab_copy_c(sold(n),1,snew(n),1,nscal,sold(n)%ng)
+        do i=1,dm
+           call multifab_copy_c(mold(n,i),1,mnew(n,i),1,1,mold(n,i)%ng)
+        end do
+     end do
+        
   end do
 
 

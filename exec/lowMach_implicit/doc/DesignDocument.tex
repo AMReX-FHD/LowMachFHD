@@ -133,7 +133,7 @@ field.
 \begin{equation}
 \nabla\cdot\vb^0 = S^0.
 \end{equation}
-{\bf Step 1: Forward Euler Thermodynamic Predictor:}
+{\bf Step 1: Forward Euler Scalar Predictor:}
 \begin{eqnarray}
 \rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^n),\\
 \rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^n + \Fb^n),
@@ -161,7 +161,7 @@ $\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1$, $\alp
 and $\mathcal{A}_0$ representing the viscous operator $\taub$, noting that the coefficients
 $\beta$ and $\gamma$ need to be multiplied by $\Delta t/2$.  We actually do not care about
 the result $x_p$ so we essentially throw it away after the GMRES solve.\\ \\
-{\bf Step 3: Trapezoidal Thermodynamic Corrector:}
+{\bf Step 3: Trapezoidal Scalar Corrector:}
 \begin{eqnarray}
 \rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\\
 \rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right],
