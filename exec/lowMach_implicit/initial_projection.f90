@@ -9,6 +9,7 @@ module initial_projection_module
   use div_and_grad_module
   use mk_diffusive_fluxdiv_module
   use multifab_physbc_module
+  use probin_lowmach_module, only: rhobar
 
   implicit none
 
@@ -31,8 +32,10 @@ contains
 
     ! local
     integer :: i,dm,n,nlevs
+    real(kind=dp_t) :: S_fac
 
     type(multifab) ::     mac_rhs(mla%nlevel)
+    type(multifab) ::        divu(mla%nlevel)
     type(multifab) ::         phi(mla%nlevel)
     type(multifab) ::    rho_face(mla%nlevel,mla%dim)
     type(multifab) :: rhoinv_face(mla%nlevel,mla%dim)
@@ -41,15 +44,22 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
+    S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
+
     do n=1,nlevs
        call multifab_build(mac_rhs(n),mla%la(n),1,0)
+       call multifab_build(divu(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
-       call setval(phi(n),0.d0)
        do i=1,dm
           call multifab_build_edge(   rho_face(n,i),mla%la(n),1,1,i)
           call multifab_build_edge(rhoinv_face(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(   chi_face(n,i),mla%la(n),1,0,i)
        end do       
+    end do
+
+    do n=1,nlevs
+       call setval(mac_rhs(n),0.d0)
+       call setval(phi(n),0.d0)
     end do
 
     ! create average rho to faces
@@ -62,18 +72,25 @@ contains
     ! build rhs = S - div(u)
     !!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! compute mac_rhs = -div(u)
-    call compute_divu(mla,umac,mac_rhs,dx)
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(mac_rhs(n),1,-1.d0,1,0)
-    end do
-
     ! average chi to faces
     call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
 
     ! add del dot rho chi grad c
     call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,rho_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
+
+    ! multiply by S_fac
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(mac_rhs(n),1,S_fac,1,0)
+    end do
+
+    ! compute divu
+    call compute_divu(mla,umac,divu,dx)
+
+    ! subtract divu from S
+    do n=1,nlevs
+       call multifab_sub_sub_c(mac_rhs(n),1,divu(n),1,1,0)
+    end do
 
     ! project to solve for phi - use the 'full' solver
     call macproject(mla,phi,umac,sold,mac_rhs,dx,the_bc_tower,.true.)
@@ -95,12 +112,13 @@ contains
     call convert_m_to_umac(mla,rho_face,mold,umac,.false.)
 
     do n=1,nlevs
-       call destroy(mac_rhs(n))
-       call destroy(phi(n))
+       call multifab_destroy(mac_rhs(n))
+       call multifab_destroy(divu(n))
+       call multifab_destroy(phi(n))
        do i=1,dm
-          call destroy(rho_face(n,i))
-          call destroy(rhoinv_face(n,i))
-          call destroy(chi_face(n,i))
+          call multifab_destroy(rho_face(n,i))
+          call multifab_destroy(rhoinv_face(n,i))
+          call multifab_destroy(chi_face(n,i))
        end do
     end do
 

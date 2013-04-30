@@ -8,7 +8,7 @@ module advance_timestep_module
   use mk_advective_fluxdiv_module
   use mk_diffusive_fluxdiv_module
   use gmres_module
-  use probin_lowmach_module, only: nscal
+  use probin_lowmach_module, only: nscal, rhobar
   use probin_common_module, only: fixed_dt, theta_fac
 
   implicit none
@@ -52,8 +52,12 @@ contains
 
     integer :: i,dm,n,nlevs
 
+    real(kind=dp_t) :: S_fac
+
     nlevs = mla%nlevel
     dm = mla%dim
+
+    S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
     
     do n=1,nlevs
        call multifab_build(   s_update(n),mla%la(n),nscal,0)
@@ -181,6 +185,11 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
 
+    ! multiply by S_fac
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,S_fac,1,0)
+    end do
+
     ! multiply eta and kappa by dt/2
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,fixed_dt/2.d0,1,1)
@@ -296,6 +305,11 @@ contains
     ! add del dot rho chi grad c to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
+
+    ! multiply by S_fac
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,S_fac,1,0)
+    end do
 
     ! multiply eta and kappa by dt/2
     do n=1,nlevs
