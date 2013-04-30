@@ -16,7 +16,7 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,eta,chi,dx,the_bc_level)
+  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,chi,eta,kappa,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: mold(:,:)
@@ -24,14 +24,18 @@ contains
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(in   ) :: sold(:)
     type(multifab) , intent(inout) :: snew(:)
-    type(multifab) , intent(in   ) :: eta(:)
     type(multifab) , intent(in   ) :: chi(:)
+    type(multifab) , intent(inout) :: eta(:)
+    type(multifab) , intent(inout) :: kappa(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local
     type(multifab) :: s_update(mla%nlevel)
-    type(multifab) :: s_face(mla%nlevel,mla%dim)
+    type(multifab) ::   s_face(mla%nlevel,mla%dim)
+
+    type(multifab) :: gmres_rhs_p(mla%nlevel)
+    type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -40,10 +44,15 @@ contains
     
     do n=1,nlevs
        call multifab_build(s_update(n),mla%la(n),nscal,0)
-       call setval(s_update(n),0.d0,all=.true.)
+       call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(s_face(n,i),mla%la(n),nscal,0,i)
+          call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
        end do
+    end do
+
+    do n=1,nlevs
+       call setval(s_update(n),0.d0,all=.true.)
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -72,6 +81,34 @@ contains
     ! Step 2 - Crank-Nicolson Velocity Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    ! multiply eta and kappa by dt/2
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(eta(n)  ,1,fixed_dt/2.d0,1,1)
+       call multifab_mult_mult_s_c(kappa(n),1,fixed_dt/2.d0,1,1)
+    end do
+
+    ! build up the rhs - compute explicit diffusive term and multiply by -dt/2
+
+
+
+    ! build up the rhs - add rho^n v^n
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,mold(n,i),1,1,0)
+       end do
+    end do
+
+    ! build up the rhs - add advective term
+    call mk_advective_m_fluxdiv(mla,umac,mold,gmres_rhs_v,dx)
+
+    ! call gmres
+    
+
+    ! restore eta and kappa by 2/dt
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(eta(n)  ,1,2.d0/fixed_dt,1,1)
+       call multifab_mult_mult_s_c(kappa(n),1,2.d0/fixed_dt,1,1)
+    end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Trapezoidal Scalar Corrector
@@ -83,6 +120,14 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
+    do n=1,nlevs
+       call destroy(s_update(n))
+       call destroy(gmres_rhs_p(n))
+       do i=1,dm
+          call destroy(s_face(n,i))
+          call destroy(gmres_rhs_v(n,i))
+       end do
+    end do
 
   end subroutine advance_timestep
 
