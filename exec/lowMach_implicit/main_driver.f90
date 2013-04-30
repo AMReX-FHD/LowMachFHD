@@ -12,7 +12,8 @@ subroutine main_driver()
   use write_plotfile_module
   use advance_timestep_module
   use convert_variables_module
-  use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal
+  use analysis_module
+  use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int
@@ -184,6 +185,11 @@ subroutine main_driver()
   ! now cons has properly filled ghost cells
   call convert_cons_to_prim(mla,sold,prim,.false.)
 
+  if (print_int .gt. 0) then
+     call eos_check(mla,sold)
+     call sum_mass_momentum(mla,sold,mold)
+  end if
+
   ! initialize chi, eta, and kappa - for now just use a setval
   do n=1,nlevs
      call setval(eta(n)  ,1.d0,all=.true.)
@@ -193,6 +199,10 @@ subroutine main_driver()
 
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,prim,chi,dx,the_bc_tower)
+
+  if (print_int .gt. 0) then
+     call sum_mass_momentum(mla,sold,mold)
+  end if
 
   ! write initial plotfile
   if (plot_int .gt. 0) then
@@ -213,6 +223,13 @@ subroutine main_driver()
           (istep .eq. max_step) ) then
         call write_plotfile(mla,mnew,umac,snew,dx,time,istep)
      end if
+     
+     if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
+          .or. &
+          (istep .eq. max_step) ) then
+        call eos_check(mla,snew)
+        call sum_mass_momentum(mla,snew,mnew)
+     end if
 
      ! set old state to new state
      do n=1,nlevs
@@ -223,7 +240,6 @@ subroutine main_driver()
      end do
         
   end do
-
 
   do n=1,nlevs
      do i=1,dm

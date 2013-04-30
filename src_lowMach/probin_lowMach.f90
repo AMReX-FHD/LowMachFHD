@@ -10,7 +10,7 @@ module probin_lowmach_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  integer   , save :: prob_type,max_step,nscal
+  integer   , save :: prob_type,max_step,nscal,print_int
   real(dp_t), save :: rhobar(2)
 
   !------------------------------------------------------------- 
@@ -21,6 +21,7 @@ module probin_lowmach_module
   namelist /probin_lowmach/ prob_type     ! sets scalars, vel, coeffs; see exact_solutions.f90
   namelist /probin_lowmach/ max_step      ! maximum number of time steps
   namelist /probin_lowmach/ nscal         ! scalars; nscal=2 means we carry rho and rho*c
+  namelist /probin_lowmach/ print_int     ! how often to output EOS drift and sum of conserved quantities
   namelist /probin_lowmach/ rhobar        ! rho1bar and rho2bar
 
 contains
@@ -55,6 +56,7 @@ contains
     prob_type = 1
     max_step = 1
     nscal = 2
+    print_int = 0
 
     rhobar(1) = 1.1d0
     rhobar(2) = 0.9d0
@@ -91,6 +93,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) nscal
+
+       case ('--print_int')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) print_int
 
        case ('--rhobar_1')
           farg = farg + 1
