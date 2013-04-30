@@ -42,7 +42,6 @@ contains
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::    chi_face(mla%nlevel,mla%dim)
     type(multifab) ::    rho_face(mla%nlevel,mla%dim)
-    type(multifab) ::    umac_tmp(mla%nlevel,mla%dim)
 
 
     type(multifab) :: eta_nodal(mla%nlevel)   ! averaged to nodes (2D only)
@@ -65,7 +64,6 @@ contains
           call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(   chi_face(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(   rho_face(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   umac_tmp(n,i),mla%la(n),1,1,i)
        end do
     end do
 
@@ -160,6 +158,10 @@ contains
        call multifab_div_div_c(sold(n),1,sold(n),2,1,1)
     end do
 
+    do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
+    end do
+
     ! build up rhs_p - add del dot rho chi grad c
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,sold,rho_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
@@ -170,14 +172,20 @@ contains
     end do
 
     ! set mnew to umac_old as initial guess
-    call convert_m_to_umac(mla,rho_face,mold,umac_tmp,.true.)
+    call convert_m_to_umac(mla,rho_face,mold,umac,.true.)
+
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_fill_boundary(umac(n,i))
+       end do
+    end do
 
     ! call gmres
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,umac_tmp,phi,snew, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,umac,phi,snew, &
                eta,kappa,theta_fac)
 
     ! multiply mnew by rho
-    call convert_m_to_umac(mla,rho_face,mnew,umac_tmp,.false.)
+    call convert_m_to_umac(mla,rho_face,mnew,umac,.false.)
 
     do n=1,nlevs
        do i=1,dm
@@ -201,6 +209,10 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! End Time-Advancement
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     do n=1,nlevs
        call destroy(s_update(n))
        call destroy(gmres_rhs_p(n))
@@ -210,7 +222,6 @@ contains
           call destroy(gmres_rhs_v(n,i))
           call destroy(chi_face(n,i))
           call destroy(rho_face(n,i))
-          call destroy(umac_tmp(n,i))
        end do
     end do
 
