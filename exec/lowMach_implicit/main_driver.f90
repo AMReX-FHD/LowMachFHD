@@ -190,7 +190,9 @@ subroutine main_driver()
      time = time + fixed_dt
 
      ! write a plotfile
-     if (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) then
+     if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
+          .or. &
+          (istep .eq. max_step) ) then
         call write_plotfile(mla,mnew,umac,snew,dx,time,istep)
      end if
 

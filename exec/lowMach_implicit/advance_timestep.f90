@@ -233,9 +233,11 @@ contains
 
     ! snew = (1/2)*snew + (1/2)*sold + (1/2)*del dot (A+D)
     do n=1,nlevs
-       call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,snew(n)%ng)
-       call saxpy(snew(n),1,0.5d0,sold(n))
-       call saxpy(snew(n),1,fixed_dt/2.d0,s_update(n))
+       call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,0)
+       call multifab_mult_mult_s_c(sold(n),1,0.5d0,nscal,0)
+       call multifab_plus_plus_c(snew(n),1,sold(n),1,nscal,0)
+       call multifab_mult_mult_s_c(s_update(n),1,fixed_dt/2.d0,nscal,0)
+       call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
        call multifab_fill_boundary(snew(n))
     end do
 
@@ -250,18 +252,25 @@ contains
        end do
     end do
 
-    ! add old diffusive flux divergenct to rhs_v
+    ! add (dt/2) * old diffusive flux divergence to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
        end do
     end do
 
-    ! multiply old advective flux divergence by 1/2 and add to rhs_v
+    ! multiply dt * old advective flux divergence by 1/2 and add to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_a_fluxdiv(n,i),1,0.5d0,1,0)
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
+       end do
+    end do
+
+    ! reset m_a_fluxdiv
+    do n=1,nlevs
+       do i=1,dm
+          call setval(m_a_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
 
@@ -334,7 +343,7 @@ contains
        end do
     else
        do n=1,nlevs
-          do i=1,dm
+          do i=1,3
              call multifab_destroy(eta_edge(n,i))
           end do
        end do
