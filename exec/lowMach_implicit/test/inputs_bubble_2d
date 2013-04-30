@@ -1,7 +1,7 @@
 &probin_lowmach
 
   prob_type = 1             ! sets scalars, vel, coeffs; see exact_solutions.f90
-  max_step = 1              ! maximum number of time steps
+  max_step = 100            ! maximum number of time steps
   nscal = 2                 ! scalars; nscal=2 means we carry rho and rho*c
   rhobar(1:2) = 1.1d0 0.9d0 ! rho1bar and rho2bar
 
@@ -16,8 +16,8 @@
   prob_hi(1:2) = 64.d0 64.d0 ! physical hi coordinate
   n_cells(1:2) = 64 64       ! number of cells in domain
   max_grid_size(1:2) = 64 64 ! max number of cells in a box
-  fixed_dt = 1.d0            ! time step
-  plot_int = 1               ! Interval for writing a plotfile (for visit/amrvis)
+  fixed_dt = 0.1d0           ! time step
+  plot_int = 10              ! Interval for writing a plotfile (for visit/amrvis)
 
   ! Algorithm control / selection
   !----------------------

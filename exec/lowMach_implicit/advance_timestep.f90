@@ -37,16 +37,15 @@ contains
     type(multifab) ::    s_update(mla%nlevel)
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::         phi(mla%nlevel)
+    type(multifab) ::        prim(mla%nlevel)
 
     type(multifab) ::      s_face(mla%nlevel,mla%dim)
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::    chi_face(mla%nlevel,mla%dim)
-    type(multifab) ::    rho_face(mla%nlevel,mla%dim)
 
 
     type(multifab) :: eta_nodal(mla%nlevel)   ! averaged to nodes (2D only)
     type(multifab) ::  eta_edge(mla%nlevel,3) ! averaged to edges (3D only; xy/xz/yz edges)
-
 
     logical :: nodal_temp(mla%dim)
 
@@ -59,11 +58,11 @@ contains
        call multifab_build(   s_update(n),mla%la(n),nscal,0)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
        call multifab_build(        phi(n),mla%la(n),1,1)
+       call multifab_build(       prim(n),mla%la(n),nscal,1) ! 1 or 2 ghost cells?
        do i=1,dm
           call multifab_build_edge(     s_face(n,i),mla%la(n),nscal,0,i)
           call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(   chi_face(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   rho_face(n,i),mla%la(n),1,0,i)
        end do
     end do
 
@@ -98,15 +97,25 @@ contains
     ! Step 1 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    ! average s to faces
+    ! compute prim from sold
+    call convert_cons_to_prim(mla,sold,prim,.true.)
+
+    ! average sold to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,sold,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
-    ! compute del dot (-rho*v)
+    ! average chi to faces
+    call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
+
+    ! compute advective flux divergence
     call mk_advective_s_fluxdiv(mla,umac,s_face,s_update,dx)
 
-    ! snew = sold + dt * del dot (-rho*v)
+    ! compute del dot rho c grad c
+    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_face,chi_face,dx, &
+                                   the_bc_tower%bc_tower_array)
+
+    ! snew = sold + dt * del dot (A + D)
     do n=1,nlevs
        call saxpy(snew(n),1.d0,sold(n),fixed_dt,s_update(n))
     end do
@@ -147,45 +156,21 @@ contains
     ! build up the rhs_v - add dt*A
     call mk_advective_m_fluxdiv(mla,umac,mold,gmres_rhs_v,dx)
 
-    ! build up rhs_p - average chi to faces
-    call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
-
-    ! build up rhs_p - average rho to faces
-    call average_cc_to_face(nlevs,sold,rho_face,1,dm+2,1,the_bc_tower%bc_tower_array)
-
-    ! build up rhs_p - temporary way to convert rho*c to c
-    do n=1,nlevs
-       call multifab_div_div_c(sold(n),1,sold(n),2,1,1)
-    end do
-
+    ! initialize rhs_p to zero since subsequent subroutines will add to it
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
-    ! build up rhs_p - add del dot rho chi grad c
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,sold,rho_face,chi_face,dx, &
+    ! add del dot rho chi grad c to rhs_p
+    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! build up rhs_p - convert c back to rho*c
-    do n=1,nlevs
-       call multifab_mult_mult_c(sold(n),1,sold(n),2,1,1)
-    end do
-
-    ! set mnew to umac_old as initial guess
-    call convert_m_to_umac(mla,rho_face,mold,umac,.true.)
-
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_fill_boundary(umac(n,i))
-       end do
-    end do
-
-    ! call gmres
+    ! call gmres to compute umac^{n+1,*}
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,umac,phi,snew, &
                eta,kappa,theta_fac)
 
-    ! multiply mnew by rho
-    call convert_m_to_umac(mla,rho_face,mnew,umac,.false.)
+    ! convert umac to mnew
+    call convert_m_to_umac(mla,s_face,mnew,umac,.false.)
 
     do n=1,nlevs
        do i=1,dm
@@ -202,7 +187,19 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
+    ! average s to faces
+    do i=1,nscal
+       call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
+    end do
 
+    ! reset s_update
+    do n=1,nlevs
+       call setval(s_update(n),0.d0,all=.true.)
+    end do
+
+    ! compute del dot (-rho*v)
+    call mk_advective_s_fluxdiv(mla,umac,s_face,s_update,dx)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 4 - Crank-Nicolson Velocity Corrector
@@ -217,11 +214,11 @@ contains
        call destroy(s_update(n))
        call destroy(gmres_rhs_p(n))
        call destroy(phi(n))
+       call destroy(prim(n))
        do i=1,dm
           call destroy(s_face(n,i))
           call destroy(gmres_rhs_v(n,i))
           call destroy(chi_face(n,i))
-          call destroy(rho_face(n,i))
        end do
     end do
 

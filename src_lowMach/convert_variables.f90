@@ -67,11 +67,11 @@ contains
 
     if (cons_to_prim) then
 
-       ! cons to prim - excluding ghost cells
+       ! cons to prim - including ghost cells
        do n=1,nlevs
-          call multifab_copy_c(prim(n),1,s(n),1,nscal,0)
+          call multifab_copy_c(prim(n),1,s(n),1,nscal,prim(n)%ng)
           do i=2,nscal
-             call multifab_div_div_c(prim(n),i,s(n),1,1,0)
+             call multifab_div_div_c(prim(n),i,s(n),1,1,prim(n)%ng)
           end do
        end do
 
