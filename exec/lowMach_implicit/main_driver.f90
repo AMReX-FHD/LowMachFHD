@@ -202,7 +202,7 @@ subroutine main_driver()
   do istep=1,max_step
 
      ! advance the solution by dt
-     call advance_timestep(mla,mold,mnew,umac,sold,snew,chi,eta,kappa,dx,the_bc_tower)
+     call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,chi,eta,kappa,dx,the_bc_tower)
 
      ! increment simulation time
      time = time + fixed_dt
@@ -233,6 +233,7 @@ subroutine main_driver()
      end do
      call destroy(sold(n))
      call destroy(snew(n))
+     call destroy(prim(n))
      call destroy(chi(n))
      call destroy(eta(n))
      call destroy(kappa(n))

@@ -55,7 +55,7 @@ contains
     ! create average rho to faces
     call average_cc_to_face(nlevs,sold,rho_face,1,dm+2,1,the_bc_tower%bc_tower_array)
 
-    ! convert m to u
+    ! convert m to u in valid region
     call convert_m_to_umac(mla,rho_face,mold,umac,.true.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!
@@ -84,14 +84,14 @@ contains
     ! umac = umac - (1/rho) grad phi
     call subtract_weighted_gradp(mla,umac,rhoinv_face,phi,dx)
 
-    ! fill periodic/interior and physical ghost cells for umac
+    ! fill ghost cells
     do n=1,nlevs
        do i=1,dm
           call multifab_fill_boundary(umac(n,i))
        end do
     end do
 
-    ! convert u to m
+    ! convert u to m in valid plus ghost region
     call convert_m_to_umac(mla,rho_face,mold,umac,.false.)
 
     do n=1,nlevs

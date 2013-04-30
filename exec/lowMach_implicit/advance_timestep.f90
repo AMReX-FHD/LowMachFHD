@@ -19,7 +19,7 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,chi,eta,kappa,dx,the_bc_tower)
+  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,prim,chi,eta,kappa,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -27,6 +27,7 @@ contains
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(inout) :: sold(:)
     type(multifab) , intent(inout) :: snew(:)
+    type(multifab) , intent(inout) :: prim(:)
     type(multifab) , intent(in   ) :: chi(:)
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: kappa(:)
@@ -37,7 +38,6 @@ contains
     type(multifab) ::    s_update(mla%nlevel)
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::         phi(mla%nlevel)
-    type(multifab) ::        prim(mla%nlevel)
 
     type(multifab) ::      s_face(mla%nlevel,mla%dim)
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
@@ -56,9 +56,6 @@ contains
     dm = mla%dim
     
     do n=1,nlevs
-       ! prim needs 2 ghost cells to average to ghost faces used in 
-       ! converting m to umac in m ghost cells
-       call multifab_build(       prim(n),mla%la(n),nscal,2)
        call multifab_build(   s_update(n),mla%la(n),nscal,0)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
        call multifab_build(        phi(n),mla%la(n),1    ,1)
@@ -106,7 +103,7 @@ contains
     ! Step 1 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    ! compute prim from sold
+    ! compute prim from sold in valid region
     call convert_cons_to_prim(mla,sold,prim,.true.)
 
     do n=1,nlevs
@@ -212,7 +209,8 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! compute prim from snew
+
+    ! compute prim from snew in valid region
     call convert_cons_to_prim(mla,snew,prim,.true.)
 
     do n=1,nlevs
@@ -329,7 +327,6 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     do n=1,nlevs
-       call destroy(prim(n))
        call destroy(s_update(n))
        call destroy(gmres_rhs_p(n))
        call destroy(phi(n))
