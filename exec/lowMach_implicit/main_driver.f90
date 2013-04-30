@@ -183,8 +183,7 @@ subroutine main_driver()
   do istep=1,max_step
 
      ! advance the solution by dt
-     call advance_timestep(mla,mold,mnew,umac,sold,snew,chi,eta,kappa,dx, &
-                           the_bc_tower%bc_tower_array)
+     call advance_timestep(mla,mold,mnew,umac,sold,snew,chi,eta,kappa,dx,the_bc_tower)
 
      ! increment simulation time
      time = time + fixed_dt
