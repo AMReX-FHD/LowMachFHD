@@ -8,10 +8,9 @@ module advance_timestep_module
   use mk_advective_fluxdiv_module
   use mk_diffusive_fluxdiv_module
   use gmres_module
+  use init_module
   use probin_lowmach_module, only: nscal, rhobar
   use probin_common_module, only: fixed_dt, theta_fac
-
-  use analysis_module
 
   implicit none
 
@@ -30,7 +29,7 @@ contains
     type(multifab) , intent(inout) :: sold(:)
     type(multifab) , intent(inout) :: snew(:)
     type(multifab) , intent(inout) :: prim(:)
-    type(multifab) , intent(in   ) :: chi(:)
+    type(multifab) , intent(inout) :: chi(:)
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: kappa(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
@@ -108,14 +107,6 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 1 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
-    ! compute prim^n from s^n in valid region
-    call convert_cons_to_prim(mla,sold,prim,.true.)
-
-    ! fill prim^n ghost cells
-    do n=1,nlevs
-       call multifab_fill_boundary(prim(n))
-    end do
 
     ! average s^n to faces
     do i=1,nscal
@@ -186,16 +177,22 @@ contains
 
     ! compute prim^{*,n+1} from s^{*,n+1} in valid region
     call convert_cons_to_prim(mla,snew,prim,.true.)
-
-    ! fill ghost cells
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
     end do
+
+    ! recompute chi, eta, and kappa
+    call compute_chi(mla,chi,prim,dx)
+    call compute_eta(mla,eta,prim,dx)
+    call compute_kappa(mla,kappa,prim,dx)
 
     ! average s^{*,n+1} to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
+
+    ! average chi to faces
+    call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
 
     ! add D^{*,n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
@@ -309,16 +306,22 @@ contains
 
     ! compute prim^{n+1} from s^{n+1} in valid region
     call convert_cons_to_prim(mla,snew,prim,.true.)
-
-    ! fill ghost cells
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
     end do
+
+    ! recompute chi, eta, and kappa
+    call compute_chi(mla,chi,prim,dx)
+    call compute_eta(mla,eta,prim,dx)
+    call compute_kappa(mla,kappa,prim,dx)
 
     ! average s^{n+1} to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
+
+    ! average chi to faces
+    call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
 
     ! add D^{n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &

@@ -173,10 +173,13 @@ subroutine main_driver()
   ! initialize sold and mold
   call init(mold,sold,dx,mla,time)
 
+  if (print_int .gt. 0) then
+     call eos_check(mla,sold)
+     call sum_mass_momentum(mla,sold,mold)
+  end if
+
   ! convert cons to prim in valid region
   call convert_cons_to_prim(mla,sold,prim,.true.)
-
-  ! fill ghost cells for prim
   do n=1,nlevs
      call multifab_fill_boundary(prim(n))
   end do
@@ -185,17 +188,10 @@ subroutine main_driver()
   ! now cons has properly filled ghost cells
   call convert_cons_to_prim(mla,sold,prim,.false.)
 
-  if (print_int .gt. 0) then
-     call eos_check(mla,sold)
-     call sum_mass_momentum(mla,sold,mold)
-  end if
-
-  ! initialize chi, eta, and kappa - for now just use a setval
-  do n=1,nlevs
-     call setval(eta(n)  ,1.d0,all=.true.)
-     call setval(chi(n)  ,1.d0,all=.true.)
-     call setval(kappa(n),1.d0,all=.true.)
-  end do
+  ! initialize chi, eta, and kappa
+  call compute_chi(mla,chi,prim,dx)
+  call compute_eta(mla,eta,prim,dx)
+  call compute_kappa(mla,kappa,prim,dx)
 
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,prim,chi,dx,the_bc_tower)
