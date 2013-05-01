@@ -128,10 +128,17 @@ we define $\mathcal{A}_0$ as a function of a velocity vector, $\vb$:\\
 Here is the time-advancement scheme.\\ \\
 {\bf Step 0: Initialization:}\\
 
-If this is the beginning of the simulation, we perform a projection to obtain an initial velocity
-field.
+If this is the beginning of the simulation, we perform a projection to obtain an initial 
+velocity field, $\vb^0$, that satisfies
 \begin{equation}
 \nabla\cdot\vb^0 = S^0.
+\end{equation}
+We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
+\begin{equation}
+\nabla\cdot\frac{1}{\rho}\nabla\phi = \nabla\cdot\vb^{\rm init} - S^0,
+\end{equation}
+\begin{equation}
+\vb^0 = \vb^{\rm init} - \frac{1}{\rho}\nabla\phi.
 \end{equation}
 {\bf Step 1: Forward Euler Scalar Predictor:}
 \begin{eqnarray}

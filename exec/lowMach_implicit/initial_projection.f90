@@ -69,7 +69,7 @@ contains
     call convert_m_to_umac(mla,rho_face,mold,umac,.true.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!
-    ! build rhs = S - div(u)
+    ! build rhs = div(u) - S
     !!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! average chi to faces
@@ -79,17 +79,17 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,rho_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! multiply by S_fac
+    ! multiply by -S_fac
     do n=1,nlevs
-       call multifab_mult_mult_s_c(mac_rhs(n),1,S_fac,1,0)
+       call multifab_mult_mult_s_c(mac_rhs(n),1,-S_fac,1,0)
     end do
 
     ! compute divu
     call compute_divu(mla,umac,divu,dx)
 
-    ! subtract divu from S
+    ! add divu to -S
     do n=1,nlevs
-       call multifab_sub_sub_c(mac_rhs(n),1,divu(n),1,1,0)
+       call multifab_plus_plus_c(mac_rhs(n),1,divu(n),1,1,0)
     end do
 
     ! project to solve for phi - use the 'full' solver
