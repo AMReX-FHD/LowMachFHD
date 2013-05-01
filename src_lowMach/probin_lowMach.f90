@@ -113,10 +113,7 @@ contains
           exit
 
        case default
-          if ( .not. parallel_q() ) then
-             write(*,*) 'UNKNOWN option = ', fname
-             call bl_error("MAIN")
-          end if
+
        end select
 
        farg = farg + 1
