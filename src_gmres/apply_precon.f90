@@ -376,11 +376,29 @@ contains
         ! x_u = A^{-1} b_u
         call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u,dx,the_bc_tower)
 
-        ! x_p = -c*beta*b_p
+        if (abs(theta) .gt. 0) then  
+
+          do n=1,nlevs
+            ! copy b_p to mac_rhs, mac_rhs is now the rhs for later use 
+            call multifab_copy_c(mac_rhs(n),1,b_p(n),1,1,0)  
+          end do
+
+          ! solves L_alpha Phi = mac_rhs
+          ! x_u^star is only passed in to get a norm for absolute residual criteria
+          call macproject(mla,phi,x_u,alpha,mac_rhs,dx,the_bc_tower)
+
+        end if
+
         do n=1,nlevs
-          ! x_p = beta*bp
+
+          if (abs(theta) .gt. 0) then
+            call multifab_mult_mult_s_c(phi(n),1,theta,1,0)
+          end if 
+          ! x_p = theta*Phi-beta*bp
           call multifab_copy_c(x_p(n),1,b_p(n),1,1,0)
           call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
+          call multifab_sub_sub_c(x_p(n),1,phi(n),1,1,0) 
+
           if ((abs(visc_type) .eq. 1) .and. (precon_type .eq. 4)) then
              ! multiply by -c=-1 for |viscous_type| = 1
              call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
@@ -398,7 +416,6 @@ contains
              call multifab_mult_mult_c(x_p_tmp(n),1,gamma(n),1,1,0)
              call multifab_mult_mult_s_c(x_p_tmp(n),1,-1.d0,1,0)
              call multifab_plus_plus_c(x_p(n),1,x_p_tmp(n),1,1,0)
-             
           else if ((abs(visc_type) .eq. 3) .and. (precon_type .eq. -4)) then
              ! multiply by c=4/3 for precon_type = -4
              call multifab_mult_mult_s_c(x_p(n),1,4.d0/3.d0,1,0)
@@ -406,8 +423,8 @@ contains
              call multifab_copy_c(x_p_tmp(n),1,b_p(n),1,1,0)
              call multifab_mult_mult_c(x_p_tmp(n),1,gamma(n),1,1,0)
              call multifab_plus_plus_c(x_p(n),1,x_p_tmp(n),1,1,0)             
-           
           end if
+
         end do
 
      case default
