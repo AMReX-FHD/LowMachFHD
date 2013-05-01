@@ -180,7 +180,7 @@ with
 {\bf Step 4: Crank-Nicolson Velocity Corrector:}\\ \\
 We're not really sure how to deal with the random fluxes, so for now we will use the same value as in the predictor.
 \begin{eqnarray}
-\frac{\rho^{n+1}\vb^{n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1})\nonumber\\
+\frac{\rho^{n+1}\vb^{n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{n+1}\vb^{n+1})\nonumber\\
 &&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{n+1}) + \nabla\cdot\sqrt{\frac{\eta^n k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Corr}
 \end{eqnarray}
 \begin{equation}

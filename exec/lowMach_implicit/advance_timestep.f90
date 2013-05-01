@@ -109,14 +109,15 @@ contains
     ! Step 1 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    ! compute prim from sold in valid region
+    ! compute prim^n from s^n in valid region
     call convert_cons_to_prim(mla,sold,prim,.true.)
 
+    ! fill prim^n ghost cells
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
     end do
 
-    ! average sold to faces
+    ! average s^n to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,sold,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
@@ -124,20 +125,18 @@ contains
     ! average chi to faces
     call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
 
-    ! compute advective flux divergence
+    ! compute A^n for s
     call mk_advective_s_fluxdiv(mla,umac,s_face,s_update,dx)
 
-    ! compute del dot rho chi grad c
+    ! compute D^n for rho1
     call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! snew = sold + dt * del dot (A+D)
+    ! s^{*,n+1} = s^n + dt * (A^n + D^n)
     do n=1,nlevs
        call saxpy(snew(n),1.d0,sold(n),fixed_dt,s_update(n))
        call multifab_fill_boundary(snew(n))
     end do
-
-    call eos_check(mla,snew)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Crank-Nicolson Velocity Predictor
@@ -150,18 +149,18 @@ contains
        call average_cc_to_edge(nlevs,eta,eta_edge,1,dm+2,1,the_bc_tower%bc_tower_array)
     end if
 
-    ! build up the rhs_v - set rhs to rho^n v^n
+    ! build up rhs_v for gmres solve: set rhs_v to m^n
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(gmres_rhs_v(n,i),1,mold(n,i),1,1,0)
        end do
     end do
 
-    ! compute diffusive flux divergence for m
+    ! compute D^n for m
     call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_nodal,eta_edge, &
                                 kappa,dx,the_bc_tower%bc_tower_array)
 
-    ! multiply by dt/2 and add to rhs_v
+    ! multiply D^n by dt/2 and add to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_d_fluxdiv(n,i),1,fixed_dt/2.d0,1,0)
@@ -169,10 +168,10 @@ contains
        end do
     end do
 
-    ! compute advective flux divergence for m
+    ! compute A^n for m
     call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv,dx)
 
-    ! multiply by dt and add to rhs_v
+    ! multiply A^n by dt and add to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_a_fluxdiv(n,i),1,fixed_dt,1,0)
@@ -180,28 +179,29 @@ contains
        end do
     end do
 
-    ! initialize rhs_p to zero since subsequent subroutines will add to it
+    ! initialize rhs_p for gmres solve to zero since subsequent subroutines will add to it
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
-    ! compute prim from snew in valid region
+    ! compute prim^{*,n+1} from s^{*,n+1} in valid region
     call convert_cons_to_prim(mla,snew,prim,.true.)
 
+    ! fill ghost cells
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
     end do
 
-    ! average snew to faces
+    ! average s^{*,n+1} to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
-    ! add del dot rho chi grad c to rhs_p
+    ! add D^{*,n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! multiply by -S_fac
+    ! multiply by -S_fac since gmres solves -div(u)=S
     do n=1,nlevs
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
@@ -212,19 +212,20 @@ contains
        call multifab_mult_mult_s_c(kappa(n),1,fixed_dt/2.d0,1,1)
     end do
 
-    ! call gmres to compute umac^{n+1,*}
+    ! call gmres to compute v^{*,n+1}
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,umac,phi,snew, &
                eta,kappa,theta_fac)
 
-    ! restore eta and kappa by 2/dt
+    ! restore eta and kappa
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,2.d0/fixed_dt,1,1)
        call multifab_mult_mult_s_c(kappa(n),1,2.d0/fixed_dt,1,1)
     end do
 
-    ! convert umac to mnew
+    ! convert v^{*,n+1} to m^{*,n+1}
     call convert_m_to_umac(mla,s_face,mnew,umac,.false.)
 
+    ! fill ghost cells
     do n=1,nlevs
        do i=1,dm
           call multifab_fill_boundary(mnew(n,i))
@@ -240,14 +241,14 @@ contains
        call setval(s_update(n),0.d0,all=.true.)
     end do
     
-    ! compute advective flux divergence
+    ! compute A^{*,n+1} for s
     call mk_advective_s_fluxdiv(mla,umac,s_face,s_update,dx)
 
-    ! compute del dot rho chi grad c
+    ! compute D^{*,n+1} for rho1
     call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! snew = (1/2)*snew + (1/2)*sold + (1/2)*del dot (A+D)
+    ! s^{n+1} = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2) * (A^{*,n+1} + D^{*,n+1})
     do n=1,nlevs
        call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,0)
        call multifab_mult_mult_s_c(sold(n),1,0.5d0,nscal,0)
@@ -261,21 +262,21 @@ contains
     ! Step 4 - Crank-Nicolson Velocity Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! build up the rhs_v - set rhs to rho^n v^n
+    ! build up rhs_v for gmres solve: set rhs to m^n
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(gmres_rhs_v(n,i),1,mold(n,i),1,1,0)
        end do
     end do
 
-    ! add (dt/2) * old diffusive flux divergence to rhs_v
+    ! add (dt/2) * D^n to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
        end do
     end do
 
-    ! multiply dt * old advective flux divergence by 1/2 and add to rhs_v
+    ! add (dt/2) * A^n to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_a_fluxdiv(n,i),1,0.5d0,1,0)
@@ -290,10 +291,10 @@ contains
        end do
     end do
 
-    ! compute advective flux divergence for m
+    ! compute A^{n+1} for m
     call mk_advective_m_fluxdiv(mla,umac,mnew,m_a_fluxdiv,dx)
 
-    ! multiply by dt/2 and add to rhs_v
+    ! add (dt/2) * A^{n+1} to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_a_fluxdiv(n,i),1,fixed_dt/2.d0,1,0)
@@ -301,28 +302,29 @@ contains
        end do
     end do
 
-    ! initialize rhs_p to zero since subsequent subroutines will add to it
+    ! initialize rhs_p for gmres solve to zero since subsequent subroutines will add to it
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
-    ! compute prim from snew in valid region
+    ! compute prim^{n+1} from s^{n+1} in valid region
     call convert_cons_to_prim(mla,snew,prim,.true.)
 
+    ! fill ghost cells
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
     end do
 
-    ! average snew to faces
+    ! average s^{n+1} to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
-    ! add del dot rho chi grad c to rhs_p
+    ! add D^{n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! multiply by -S_fac
+    ! multiply by -S_fac since gmres solve -div(u)=S
     do n=1,nlevs
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
@@ -333,17 +335,17 @@ contains
        call multifab_mult_mult_s_c(kappa(n),1,fixed_dt/2.d0,1,1)
     end do
 
-    ! call gmres to compute umac^{n+1,*}
+    ! call gmres to compute v^{n+1}
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,umac,phi,snew, &
                eta,kappa,theta_fac)
 
-    ! restore eta and kappa by 2/dt
+    ! restore eta and kappa
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,2.d0/fixed_dt,1,1)
        call multifab_mult_mult_s_c(kappa(n),1,2.d0/fixed_dt,1,1)
     end do
 
-    ! convert umac to mnew
+    ! convert v^{n+1} to m^{n+1}
     call convert_m_to_umac(mla,s_face,mnew,umac,.false.)
 
     do n=1,nlevs
