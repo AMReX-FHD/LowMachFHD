@@ -2,7 +2,6 @@ module div_and_grad_module
 
   use multifab_module
   use ml_layout_module
-  use macproject_module
 
   implicit none
 
