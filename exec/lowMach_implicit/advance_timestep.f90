@@ -11,6 +11,8 @@ module advance_timestep_module
   use probin_lowmach_module, only: nscal, rhobar
   use probin_common_module, only: fixed_dt, theta_fac
 
+  use analysis_module
+
   implicit none
 
   private
@@ -135,6 +137,8 @@ contains
        call multifab_fill_boundary(snew(n))
     end do
 
+    call eos_check(mla,snew)
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Crank-Nicolson Velocity Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -181,13 +185,25 @@ contains
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
+    ! compute prim from snew in valid region
+    call convert_cons_to_prim(mla,snew,prim,.true.)
+
+    do n=1,nlevs
+       call multifab_fill_boundary(prim(n))
+    end do
+
+    ! average snew to faces
+    do i=1,nscal
+       call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
+    end do
+
     ! add del dot rho chi grad c to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! multiply by S_fac
+    ! multiply by -S_fac
     do n=1,nlevs
-       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,S_fac,1,0)
+       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
 
     ! multiply eta and kappa by dt/2
@@ -218,18 +234,6 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! compute prim from snew in valid region
-    call convert_cons_to_prim(mla,snew,prim,.true.)
-
-    do n=1,nlevs
-       call multifab_fill_boundary(prim(n))
-    end do
-
-    ! average snew to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
-    end do
 
     ! reset s_update
     do n=1,nlevs
@@ -302,13 +306,25 @@ contains
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
+    ! compute prim from snew in valid region
+    call convert_cons_to_prim(mla,snew,prim,.true.)
+
+    do n=1,nlevs
+       call multifab_fill_boundary(prim(n))
+    end do
+
+    ! average snew to faces
+    do i=1,nscal
+       call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
+    end do
+
     ! add del dot rho chi grad c to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! multiply by S_fac
+    ! multiply by -S_fac
     do n=1,nlevs
-       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,S_fac,1,0)
+       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
 
     ! multiply eta and kappa by dt/2
@@ -357,7 +373,7 @@ contains
        do n=1,nlevs
           call multifab_destroy(eta_nodal(n))
        end do
-    else
+    else if (dm .eq. 3) then
        do n=1,nlevs
           do i=1,3
              call multifab_destroy(eta_edge(n,i))
