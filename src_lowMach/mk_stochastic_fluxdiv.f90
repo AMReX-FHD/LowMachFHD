@@ -43,29 +43,68 @@ contains
     real(dp_t)     , intent(in   ) :: dx(:,:)
     real(dp_t)     , intent(in   ) :: dt
 
-    ! if chi varies in space, average chi to faces
-    if (diff_coef < 0) then
+    ! local
+    integer n,nlevs,i,dm
 
-    end if
+    real(dp_t) :: variance
 
-    ! create temporary multifab with scaled random numbers
+    type(multifab) :: sflux_fc_temp(mla%nlevel,mla%dim)
 
-    ! if chi varies in space, need to multiply pointwise by sqrt(chi)
-    if (diff_coef < 0) then
+    ! there are no scalars with stochastic terms
+    if (nscal < 2) return
 
-    end if
+    nlevs = mla%nlevel
+    dm = mla%dim
 
-    ! multiply pointwise by
-    ! rho * mu_c^-1 k_b T = rho * c * (1-c)
-    
+    do n=1,nlevs
 
-    ! apply boundary conditions
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       ! create a place to store temporary copy of the random numbers
+       ! these copies will be scaled and used to create the stochastic flux divergence
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       
+       do i=1,dm
+          ! we need one face-centered flux for each concentration
+          call multifab_build_edge(sflux_fc_temp(n,i),mla%la(n),nscal-1,sflux_fc(n,i)%ng,i)
+          ! make a copy of the random numbers
+          call multifab_copy_c(sflux_fc_temp(n,i),1,sflux_fc(n,i),1,nscal-1,sflux_fc_temp(n,i)%ng)
+       end do
 
-    ! sync up random numbers at boundaries and ghost cells
+    end do
 
-    ! add divergence to stoch_s_force
+    do n=1,nlevs
 
+       if (diff_coef < 0) then
+          ! chi varies in space, add its contribution below in an i/j/k loop
+          variance = sqrt(variance_coef*conc_scal*2.d0          /(product(dx(n,1:dm))*dt))
+       else
+          ! chi is constant in space, include it here
+          variance = sqrt(variance_coef*conc_scal*2.d0*diff_coef/(product(dx(n,1:dm))*dt))
+       end if
 
+       ! multiply by variance
+
+       ! if chi varies in space, average chi to faces and multiply pointwise by sqrt(chi)
+       if (diff_coef < 0) then
+
+       end if
+
+       ! multiply pointwise by
+       ! sqrt(rho * mu_c^-1 k_b T) = sqrt(rho * c * (1-c) * M)
+
+       ! apply boundary conditions
+
+       ! sync up random numbers at boundaries and ghost cells
+
+       ! add divergence to stoch_s_force
+
+    end do
+
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_destroy(sflux_fc_temp(n,i))
+       end do
+    end do
 
   end subroutine mk_stochastic_s_fluxdiv
 
@@ -139,18 +178,14 @@ contains
           ! eta varies in space, add its contribution below in an i/j/k loop
           variance = sqrt(variance_coef*2.d0*kT*visc_coef/(product(dx(n,1:dm))*dt))
        else
-          ! eta is constant in space
+          ! eta is constant in space, include it here
           variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*dt))
        end if
 
+       ! multiply by variance
+
        ! if eta varies in space, average eta to nodes (2D) or edges (3D)
-       if (visc_coef < 0) then
-
-       end if
-
-
-
-       ! if eta varies in space, need to multiply pointwise by sqrt(eta)
+       ! and multiply pointwise by sqrt(eta)
        if (visc_coef < 0) then
 
        end if
