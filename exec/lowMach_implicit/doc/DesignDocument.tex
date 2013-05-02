@@ -150,10 +150,18 @@ with
 \begin{equation}
 \Fb^n = (\rho\chi\nabla c)^n + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^nk_BT}{\Delta t\Delta V}}\widetilde\Wb^n.
 \end{equation}
-{\bf Step 2: Crank-Nicolson Velocity Predictor:}
+{\bf Step 2: Crank-Nicolson Velocity Predictor:}\\ \\
+First, define
 \begin{equation}
-\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi = \nabla\cdot(-\rho^n\vb^n\vb^n) + \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{*,n+1}) + \nabla\cdot\sqrt{\frac{\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Pred}
+S^{*,n+1} \equiv S(\Fb^{*,n+1});
+\qquad
+\Fb^{*,n+1} = (\rho\chi\nabla c)^{*,n+1} + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^{*,n+1}k_BT}{\Delta t\Delta V}}\widetilde\Wb^n.
 \end{equation}
+Then, solve the following for $\vb^{*,n+1}$:
+\begin{eqnarray}
+\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \nabla\cdot(-\rho^n\vb^n\vb^n)\nonumber\\
+&&\hspace{-0.5in}+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{*,n+1}) + \nabla\cdot\sqrt{\frac{\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Pred}
+\end{eqnarray}
 \begin{equation}
 \nabla\cdot\vb^{*,n+1} = S^{*,n+1}.
 \end{equation}
@@ -172,17 +180,22 @@ the result $x_p$ so we essentially throw it away after the GMRES solve.\\ \\
 {\bf Step 3: Trapezoidal Scalar Corrector:}
 \begin{eqnarray}
 \rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\\
-\rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right],
+\rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right].
 \end{eqnarray}
-with
-\begin{equation}
-\Fb^{n+1} = (\rho\chi\nabla c)^{n+1} + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^{n+1}k_BT}{\Delta t\Delta V}}\widetilde\Wb^{n+1}.
-\end{equation}
 {\bf Step 4: Crank-Nicolson Velocity Corrector:}\\ \\
-We're not really sure how to deal with the random fluxes, so for now we will use the same value as in the predictor.
+First, define
+\begin{equation}
+S^{n+1} \equiv S(\Fb^{n+1});
+\qquad
+\Fb^{n+1} = (\rho\chi\nabla c)^{n+1} + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^{n+1}k_BT}{\Delta t\Delta V}}\widetilde\Wb^{*,n+1}.
+\end{equation}
+Note the use of time-advanced stochastic concentration fluxes.
+Finally, solve the following for $\vb^{n+1}$.
+We're not really sure how to deal with the random fluxes, so for now we will use 
+the same value as in the predictor.
 \begin{eqnarray}
 \frac{\rho^{n+1}\vb^{n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{n+1}\vb^{n+1})\nonumber\\
-&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{n+1}) + \nabla\cdot\sqrt{\frac{\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Corr}
+&&\hspace{-0.5in}+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{n+1}) + \nabla\cdot\sqrt{\frac{\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Corr}
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot\vb^{n+1} = S^{n+1}.
