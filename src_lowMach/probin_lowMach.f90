@@ -12,19 +12,25 @@ module probin_lowmach_module
   !------------------------------------------------------------- 
   integer   , save :: prob_type,max_step,nscal,print_int
   real(dp_t), save :: rhobar(2),visc_coef,diff_coef
+  real(dp_t), save :: variance_coef,conc_scal
+  integer   , save :: stoch_stress_form,filtering_width
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
   !------------------------------------------------------------- 
 
   !----------------------
-  namelist /probin_lowmach/ prob_type     ! sets scalars, vel, coeffs; see exact_solutions.f90
-  namelist /probin_lowmach/ max_step      ! maximum number of time steps
-  namelist /probin_lowmach/ nscal         ! scalars; nscal=2 means we carry rho and rho*c
-  namelist /probin_lowmach/ print_int     ! how often to output EOS drift and sum of conserved quantities
-  namelist /probin_lowmach/ rhobar        ! rho1bar and rho2bar
-  namelist /probin_lowmach/ visc_coef     ! momentum diffusion coefficient 'eta'   
-  namelist /probin_lowmach/ diff_coef     ! concentration diffusion coefficient 'chi'
+  namelist /probin_lowmach/ prob_type         ! sets scalars, vel, coeffs; see exact_solutions.f90
+  namelist /probin_lowmach/ max_step          ! maximum number of time steps
+  namelist /probin_lowmach/ nscal             ! scalars; nscal=2 means we carry rho and rho*c
+  namelist /probin_lowmach/ print_int         ! how often to output EOS drift and sum of conserved quantities
+  namelist /probin_lowmach/ rhobar            ! rho1bar and rho2bar
+  namelist /probin_lowmach/ visc_coef         ! momentum diffusion coefficient 'eta'   
+  namelist /probin_lowmach/ diff_coef         ! concentration diffusion coefficient 'chi'
+  namelist /probin_lowmach/ variance_coef     ! global scaling epsilon for stochastic forcing
+  namelist /probin_lowmach/ conc_scal         ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
+  namelist /probin_lowmach/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
+  namelist /probin_lowmach/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
 contains
 
@@ -65,6 +71,13 @@ contains
 
     visc_coef = 1.d0
     diff_coef = 1.d0
+
+    variance_coef = 1.d0
+    conc_scal = 1.d0
+
+    filtering_width = 0
+    stoch_stress_form = 1
+    
 
     farg = 1
     if (narg >= 1) then
@@ -122,6 +135,26 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) diff_coef
+
+       case ('--variance_coef')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) variance_coef
+
+       case ('--conc_scal')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) conc_scal
+
+       case ('--filtering_width')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) filtering_width
+
+       case ('--stoch_stress_form')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) stoch_stress_form
 
        case ('--')
           farg = farg + 1
