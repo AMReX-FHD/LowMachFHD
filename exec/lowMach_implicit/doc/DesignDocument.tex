@@ -77,10 +77,16 @@ subject to
 Thus, $S \equiv S(\Fb)$.  The stochastic terms are:
 \begin{eqnarray}
 \Psib &=& \sqrt{\frac{2\chi\rho\mu_c^{-1}k_BT}{\Delta t\Delta V}}\widetilde\Wb,\\
-\Sigmab &=& \sqrt{\frac{\eta k_B T}{\Delta t\Delta V}}\left(\Wb + \Wb^T\right),
+\Sigmab &=& \sqrt{\frac{\eta k_B T}{\Delta t\Delta V}}\left(\Wb + \Wb^T\right),\label{eq:mom stoch}
 \end{eqnarray}
 where $\Wb$ and $\widetilde\Wb$ are standard white-noise random Gaussian tensor
-and vector fields with uncorrelated components
+and vector fields with uncorrelated components.  In our implementation, we replace
+(\ref{eq:mom stoch}) with
+\begin{equation}
+\Sigmab = \sqrt{\frac{2\eta k_B T}{\Delta t\Delta V}}\widehat\Wb,
+\end{equation}
+where $\widehat\Wb$ is a symmetric Gaussian random tensor field, and the
+extra factor of $\sqrt{2}$ accounts for the reduction in variance due to the averaging.
 
 \section{GMRES Solver}
 We also have a standalone GMRES solver of the form,
