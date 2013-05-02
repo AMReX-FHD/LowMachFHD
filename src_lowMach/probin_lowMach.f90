@@ -11,7 +11,7 @@ module probin_lowmach_module
   ! namelist section below
   !------------------------------------------------------------- 
   integer   , save :: prob_type,max_step,nscal,print_int
-  real(dp_t), save :: rhobar(2)
+  real(dp_t), save :: rhobar(2),visc_coef,diff_coef
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -23,6 +23,8 @@ module probin_lowmach_module
   namelist /probin_lowmach/ nscal         ! scalars; nscal=2 means we carry rho and rho*c
   namelist /probin_lowmach/ print_int     ! how often to output EOS drift and sum of conserved quantities
   namelist /probin_lowmach/ rhobar        ! rho1bar and rho2bar
+  namelist /probin_lowmach/ visc_coef     ! momentum diffusion coefficient 'eta'   
+  namelist /probin_lowmach/ diff_coef     ! concentration diffusion coefficient 'chi'
 
 contains
 
@@ -60,6 +62,9 @@ contains
 
     rhobar(1) = 1.1d0
     rhobar(2) = 0.9d0
+
+    visc_coef = 1.d0
+    diff_coef = 1.d0
 
     farg = 1
     if (narg >= 1) then
@@ -107,6 +112,16 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) rhobar(2)
+
+       case ('--visc_coef')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) visc_coef
+
+       case ('--diff_coef')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) diff_coef
 
        case ('--')
           farg = farg + 1

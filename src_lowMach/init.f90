@@ -3,7 +3,7 @@ module init_module
   use bl_types
   use multifab_module
   use ml_layout_module
-  use probin_lowmach_module, only: prob_type, rhobar
+  use probin_lowmach_module, only: prob_type, rhobar, diff_coef, visc_coef
   use probin_common_module , only: prob_lo, prob_hi
 
   implicit none
@@ -225,7 +225,7 @@ contains
 
     select case (prob_type)
     case default
-       chi = 1.d0
+       chi = diff_coef
     end select
 
   end subroutine compute_chi_2d
@@ -239,7 +239,7 @@ contains
 
     select case (prob_type)
     case default
-       chi = 1.d0
+       chi = diff_coef
     end select
 
   end subroutine compute_chi_3d
@@ -296,7 +296,7 @@ contains
 
     select case (prob_type)
     case default
-       eta = 1.d0
+       eta = visc_coef
     end select
 
   end subroutine compute_eta_2d
@@ -310,7 +310,7 @@ contains
 
     select case (prob_type)
     case default
-       eta = 1.d0
+       eta = visc_coef
     end select
 
   end subroutine compute_eta_3d
