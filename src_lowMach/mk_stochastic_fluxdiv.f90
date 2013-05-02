@@ -182,13 +182,13 @@ contains
           variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*dt))
        end if
 
-       ! multiply by variance
-
        ! if eta varies in space, average eta to nodes (2D) or edges (3D)
        ! and multiply pointwise by sqrt(eta)
        if (visc_coef < 0) then
 
        end if
+
+       ! multiply by variance
 
        ! apply boundary conditions
 

@@ -9,7 +9,7 @@ module advance_timestep_module
   use mk_diffusive_fluxdiv_module
   use gmres_module
   use init_module
-  use probin_lowmach_module, only: nscal, rhobar
+  use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef
   use probin_common_module, only: fixed_dt, theta_fac
 
   implicit none
@@ -40,14 +40,14 @@ contains
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::         phi(mla%nlevel)
 
-    type(multifab) ::      s_face(mla%nlevel,mla%dim)
+    type(multifab) ::        s_fc(mla%nlevel,mla%dim)
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
-    type(multifab) ::    chi_face(mla%nlevel,mla%dim)
-    type(multifab) :: m_a_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) :: m_d_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::      chi_fc(mla%nlevel,mla%dim)
+    type(multifab) :: m_a_fluxdiv(mla%nlevel,mla%dim) ! used to store fluxdiv at t^n
+    type(multifab) :: m_d_fluxdiv(mla%nlevel,mla%dim) ! used to store fluxdiv at t^n
 
-    type(multifab) :: eta_nodal(mla%nlevel)   ! averaged to nodes (2D only)
-    type(multifab) ::  eta_edge(mla%nlevel,3) ! averaged to edges (3D only; xy/xz/yz edges)
+    type(multifab) :: eta_nd(mla%nlevel)   ! averaged to nodes (2D only)
+    type(multifab) :: eta_ed(mla%nlevel,3) ! averaged to edges (3D only; xy/xz/yz edges)
 
     logical :: nodal_temp(mla%dim)
 
@@ -65,9 +65,9 @@ contains
        call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
        call multifab_build(        phi(n),mla%la(n),1    ,1)
        do i=1,dm
-          call multifab_build_edge(     s_face(n,i),mla%la(n),nscal,1,i)
+          call multifab_build_edge(       s_fc(n,i),mla%la(n),nscal,1,i)
           call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(   chi_face(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(     chi_fc(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_a_fluxdiv(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_d_fluxdiv(n,i),mla%la(n),1    ,0,i)
        end do
@@ -76,22 +76,22 @@ contains
     ! nodal (in 2D) and edge-based (in 3D) eta
     if (dm .eq. 2) then
        do n=1,nlevs
-          call multifab_build_nodal(eta_nodal(n),mla%la(n),1,0)
+          call multifab_build_nodal(eta_nd(n),mla%la(n),1,0)
        end do
     else
        do n=1,nlevs
           nodal_temp(1) = .true.
           nodal_temp(2) = .true.
           nodal_temp(3) = .false.
-          call multifab_build(eta_edge(n,1),mla%la(n),1,0,nodal_temp)
+          call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
           nodal_temp(1) = .true.
           nodal_temp(2) = .false.
           nodal_temp(3) = .true.
-          call multifab_build(eta_edge(n,2),mla%la(n),1,0,nodal_temp)
+          call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
           nodal_temp(1) = .false.
           nodal_temp(2) = .true.
           nodal_temp(3) = .true.
-          call multifab_build(eta_edge(n,3),mla%la(n),1,0,nodal_temp)
+          call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
        end do
     end if
 
@@ -110,17 +110,25 @@ contains
 
     ! average s^n to faces
     do i=1,nscal
-       call average_cc_to_face(nlevs,sold,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,sold,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
     ! average chi to faces
-    call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
+    if (diff_coef < 0) then
+       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+    else
+       do n=1,nlevs
+          do i=1,dm
+             call setval(chi_fc(n,i),diff_coef,all=.true.)
+          end do
+       end do
+    end if
 
     ! compute A^n for s
-    call mk_advective_s_fluxdiv(mla,umac,s_face,s_update,dx)
+    call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
 
     ! compute D^n for rho1
-    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_face,chi_face,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! s^{*,n+1} = s^n + dt * (A^n + D^n)
@@ -135,9 +143,23 @@ contains
 
     ! compute eta on nodes (2D) or edges (3D)
     if (dm .eq. 2) then
-       call average_cc_to_node(nlevs,eta,eta_nodal,1,dm+2,1,the_bc_tower%bc_tower_array)
+       if (visc_coef < 0) then
+          call average_cc_to_node(nlevs,eta,eta_nd,1,dm+2,1,the_bc_tower%bc_tower_array)
+       else
+          do n=1,nlevs
+             call setval(eta_nd(n),visc_coef,all=.true.)
+          end do
+       end if
     else if (dm .eq. 3) then
-       call average_cc_to_edge(nlevs,eta,eta_edge,1,dm+2,1,the_bc_tower%bc_tower_array)
+       if (visc_coef < 0) then
+          call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_tower%bc_tower_array)
+       else
+          do n=1,nlevs
+             do i=1,dm
+                call setval(eta_ed(n,i),visc_coef,all=.true.)
+             end do
+          end do
+       end if
     end if
 
     ! build up rhs_v for gmres solve: set rhs_v to m^n
@@ -148,7 +170,7 @@ contains
     end do
 
     ! compute D^n for m
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_nodal,eta_edge, &
+    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_nd,eta_ed, &
                                 kappa,dx,the_bc_tower%bc_tower_array)
 
     ! multiply D^n by dt/2 and add to rhs_v
@@ -188,14 +210,18 @@ contains
 
     ! average s^{*,n+1} to faces
     do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
     ! average chi to faces
-    call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
+    if (diff_coef < 0) then
+       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+    else
+       ! do nothing - chi_fc already contains the constant value of diff_coef
+    end if
 
     ! add D^{*,n+1} to rhs_p
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! multiply by -S_fac since gmres solves -div(u)=S
@@ -220,7 +246,7 @@ contains
     end do
 
     ! convert v^{*,n+1} to m^{*,n+1}
-    call convert_m_to_umac(mla,s_face,mnew,umac,.false.)
+    call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
     ! fill ghost cells
     do n=1,nlevs
@@ -239,10 +265,10 @@ contains
     end do
     
     ! compute A^{*,n+1} for s
-    call mk_advective_s_fluxdiv(mla,umac,s_face,s_update,dx)
+    call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
 
     ! compute D^{*,n+1} for rho1
-    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_face,chi_face,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! s^{n+1} = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2) * (A^{*,n+1} + D^{*,n+1})
@@ -317,14 +343,18 @@ contains
 
     ! average s^{n+1} to faces
     do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_face,i,dm+2,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
     ! average chi to faces
-    call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
+    if (diff_coef < 0) then
+       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+    else
+       ! do nothing - chi_fc already contains the constant value of diff_coef
+    end if
 
     ! add D^{n+1} to rhs_p
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_face,chi_face,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! multiply by -S_fac since gmres solve -div(u)=S
@@ -349,7 +379,7 @@ contains
     end do
 
     ! convert v^{n+1} to m^{n+1}
-    call convert_m_to_umac(mla,s_face,mnew,umac,.false.)
+    call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
     do n=1,nlevs
        do i=1,dm
@@ -366,9 +396,9 @@ contains
        call destroy(gmres_rhs_p(n))
        call destroy(phi(n))
        do i=1,dm
-          call destroy(s_face(n,i))
+          call destroy(s_fc(n,i))
           call destroy(gmres_rhs_v(n,i))
-          call destroy(chi_face(n,i))
+          call destroy(chi_fc(n,i))
           call destroy(m_a_fluxdiv(n,i))
           call destroy(m_d_fluxdiv(n,i))
        end do
@@ -376,12 +406,12 @@ contains
 
     if (dm .eq. 2) then
        do n=1,nlevs
-          call multifab_destroy(eta_nodal(n))
+          call multifab_destroy(eta_nd(n))
        end do
     else if (dm .eq. 3) then
        do n=1,nlevs
           do i=1,3
-             call multifab_destroy(eta_edge(n,i))
+             call multifab_destroy(eta_ed(n,i))
           end do
        end do
     end if

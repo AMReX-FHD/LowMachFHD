@@ -13,11 +13,11 @@ module mk_advective_fluxdiv_module
 
 contains
 
-  subroutine mk_advective_s_fluxdiv(mla,umac,s_face,s_update,dx)
+  subroutine mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: umac(:,:)
-    type(multifab) , intent(in   ) :: s_face(:,:)
+    type(multifab) , intent(in   ) :: s_fc(:,:)
     type(multifab) , intent(inout) :: s_update(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
 
@@ -36,14 +36,14 @@ contains
     nlevs = mla%nlevel
     dm    = mla%dim
 
-    ng_s = s_face(1,1)%ng
+    ng_s = s_fc(1,1)%ng
     ng_u = umac(1,1)%ng
     ng_a = s_update(1)%ng
 
     do n=1,nlevs
        do i=1,nfabs(s_update(n))
-          spx => dataptr(s_face(n,1), i)
-          spy => dataptr(s_face(n,2), i)
+          spx => dataptr(s_fc(n,1), i)
+          spy => dataptr(s_fc(n,2), i)
           ump => dataptr(umac(n,1), i)
           vmp => dataptr(umac(n,2), i)
           ap  => dataptr(s_update(n), i)
@@ -56,7 +56,7 @@ contains
                                             ap(:,:,1,:), ng_s, ng_u, ng_a, lo, hi, dx(n,:))
           case (3)
              wmp => dataptr(umac(n,3), i)
-             spz => dataptr(s_face(n,3), i)
+             spz => dataptr(s_fc(n,3), i)
              call mk_advective_s_fluxdiv_3d(spx(:,:,:,:), spy(:,:,:,:), spz(:,:,:,:), &
                                             ump(:,:,:,1), vmp(:,:,:,1), wmp(:,:,:,1), &
                                             ap(:,:,:,:), ng_s, ng_u, ng_a, lo, hi, dx(n,:))

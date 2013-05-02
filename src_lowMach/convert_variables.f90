@@ -11,10 +11,10 @@ module convert_variables_module
   
 contains
 
-  subroutine convert_m_to_umac(mla,s_face,m,umac,m_to_umac)
+  subroutine convert_m_to_umac(mla,s_fc,m,umac,m_to_umac)
     
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) ::    s_face(:,:)
+    type(multifab) , intent(in   ) ::    s_fc(:,:)
     type(multifab) , intent(inout) ::    m(:,:)  
     type(multifab) , intent(inout) :: umac(:,:)
     logical        , intent(in   ) :: m_to_umac
@@ -31,7 +31,7 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(umac(n,i), 1, m(n,i), 1, 1, 0)
-             call multifab_div_div_c(umac(n,i), 1, s_face(n,i), 1, 1, 0)
+             call multifab_div_div_c(umac(n,i), 1, s_fc(n,i), 1, 1, 0)
           end do
        end do
 
@@ -41,7 +41,7 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(m(n,i), 1, umac(n,i), 1, 1, m(n,i)%ng)
-             call multifab_mult_mult_c(m(n,i), 1, s_face(n,i), 1, 1, m(n,i)%ng)
+             call multifab_mult_mult_c(m(n,i), 1, s_fc(n,i), 1, 1, m(n,i)%ng)
           end do
        end do
 

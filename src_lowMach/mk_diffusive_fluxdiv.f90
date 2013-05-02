@@ -14,15 +14,15 @@ module mk_diffusive_fluxdiv_module
 
 contains
 
-  subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_face,chi_face, &
+  subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_fc,chi_fc, &
                                        dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_update(:)
-    integer        , intent(in   ) :: out_comp      ! which component of s_update
-    type(multifab) , intent(in   ) ::     prim(:)   ! rho and c
-    type(multifab) , intent(in   ) :: rho_face(:,:) ! rho on faces
-    type(multifab) , intent(in   ) :: chi_face(:,:) ! chi on faces
+    integer        , intent(in   ) :: out_comp    ! which component of s_update
+    type(multifab) , intent(in   ) ::   prim(:)   ! rho and c
+    type(multifab) , intent(in   ) :: rho_fc(:,:) ! rho on faces
+    type(multifab) , intent(in   ) :: chi_fc(:,:) ! chi on faces
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
@@ -41,8 +41,8 @@ contains
 
     ng_u = s_update(1)%ng
     ng_p = prim(1)%ng
-    ng_s = rho_face(1,1)%ng
-    ng_c = chi_face(1,1)%ng
+    ng_s = rho_fc(1,1)%ng
+    ng_c = chi_fc(1,1)%ng
 
     nlevs = mla%nlevel
     dm    = mla%dim
@@ -52,10 +52,10 @@ contains
        do i=1,nfabs(prim(n))
           up  => dataptr(s_update(n), i)
           pp  => dataptr(prim(n), i)
-          spx => dataptr(rho_face(n,1), i)
-          spy => dataptr(rho_face(n,2), i)
-          cpx => dataptr(chi_face(n,1), i)
-          cpy => dataptr(chi_face(n,2), i)
+          spx => dataptr(rho_fc(n,1), i)
+          spy => dataptr(rho_fc(n,2), i)
+          cpx => dataptr(chi_fc(n,1), i)
+          cpy => dataptr(chi_fc(n,2), i)
           lo = lwb(get_box(prim(n), i))
           hi = upb(get_box(prim(n), i))
           select case (dm)
@@ -66,8 +66,8 @@ contains
                                                lo, hi, dx(n,:), &
                                                the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           case (3)
-             spz => dataptr(rho_face(n,3), i)
-             cpz => dataptr(chi_face(n,3), i)
+             spz => dataptr(rho_fc(n,3), i)
+             cpz => dataptr(chi_fc(n,3), i)
              call mk_diffusive_rhoc_fluxdiv_3d(up(:,:,:,out_comp), ng_u, pp(:,:,:,2), ng_p, &
                                                spx(:,:,:,1), spy(:,:,:,1), spz(:,:,:,1), ng_s, &
                                                cpx(:,:,:,1), cpy(:,:,:,1), cpz(:,:,:,1), ng_c, &
@@ -275,7 +275,7 @@ contains
 
   end subroutine mk_diffusive_rhoc_fluxdiv
 
-  subroutine mk_diffusive_m_fluxdiv(mla,m_update,umac,eta,eta_nodal,eta_edge, &
+  subroutine mk_diffusive_m_fluxdiv(mla,m_update,umac,eta,eta_nd,eta_ed, &
                                     kappa,dx,the_bc_level)
 
     use stag_applyop_module, only: stag_applyop_2d, stag_applyop_3d
@@ -284,8 +284,8 @@ contains
     type(multifab) , intent(inout) ::  m_update(:,:)
     type(multifab) , intent(in   ) ::      umac(:,:)
     type(multifab) , intent(in   ) ::       eta(:)
-    type(multifab) , intent(in   ) :: eta_nodal(:)
-    type(multifab) , intent(in   ) ::  eta_edge(:,:)
+    type(multifab) , intent(in   ) :: eta_nd(:)
+    type(multifab) , intent(in   ) ::  eta_ed(:,:)
     type(multifab) , intent(in   ) ::     kappa(:)
     real(kind=dp_t), intent(in   ) ::  dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -321,10 +321,10 @@ contains
        ! we could compute +L(phi) but then we'd have to multiply beta and kappa by -1
        if (dm .eq. 2) then
           call stag_applyop_2d(mla%la(n),the_bc_level(n),umac(n,:),Lphi_fc(n,:), &
-                               alpha_fc(n,:),eta(n),eta_nodal(n),kappa(n),dx(n,:))
+                               alpha_fc(n,:),eta(n),eta_nd(n),kappa(n),dx(n,:))
        else
           call stag_applyop_3d(mla%la(n),the_bc_level(n),umac(n,:),Lphi_fc(n,:), &
-                               alpha_fc(n,:),eta(n),eta_edge(n,:),kappa(n),dx(n,:))
+                               alpha_fc(n,:),eta(n),eta_ed(n,:),kappa(n),dx(n,:))
        end if
 
        ! subtract -L(phi) to m_update

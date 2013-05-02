@@ -9,7 +9,7 @@ module initial_projection_module
   use div_and_grad_module
   use mk_diffusive_fluxdiv_module
   use multifab_physbc_module
-  use probin_lowmach_module, only: rhobar
+  use probin_lowmach_module, only: rhobar, diff_coef
 
   implicit none
 
@@ -34,12 +34,12 @@ contains
     integer :: i,dm,n,nlevs
     real(kind=dp_t) :: S_fac
 
-    type(multifab) ::     mac_rhs(mla%nlevel)
-    type(multifab) ::        divu(mla%nlevel)
-    type(multifab) ::         phi(mla%nlevel)
-    type(multifab) ::    rho_face(mla%nlevel,mla%dim)
-    type(multifab) :: rhoinv_face(mla%nlevel,mla%dim)
-    type(multifab) ::    chi_face(mla%nlevel,mla%dim)
+    type(multifab) ::   mac_rhs(mla%nlevel)
+    type(multifab) ::      divu(mla%nlevel)
+    type(multifab) ::       phi(mla%nlevel)
+    type(multifab) ::    rho_fc(mla%nlevel,mla%dim)
+    type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
+    type(multifab) ::    chi_fc(mla%nlevel,mla%dim)
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -51,9 +51,9 @@ contains
        call multifab_build(divu(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(   rho_face(n,i),mla%la(n),1,1,i)
-          call multifab_build_edge(rhoinv_face(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   chi_face(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(   rho_fc(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(rhoinv_fc(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(   chi_fc(n,i),mla%la(n),1,0,i)
        end do       
     end do
 
@@ -63,20 +63,28 @@ contains
     end do
 
     ! create average rho to faces
-    call average_cc_to_face(nlevs,sold,rho_face,1,dm+2,1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,sold,rho_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
 
     ! convert m to u in valid region
-    call convert_m_to_umac(mla,rho_face,mold,umac,.true.)
+    call convert_m_to_umac(mla,rho_fc,mold,umac,.true.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!
     ! build rhs = div(u) - S
     !!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! average chi to faces
-    call average_cc_to_face(nlevs,chi,chi_face,1,dm+2,1,the_bc_tower%bc_tower_array)
+    if (diff_coef < 0) then       
+       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+    else
+       do n=1,nlevs
+          do i=1,dm
+             call setval(chi_fc(n,i),diff_coef,all=.true.)
+          end do
+       end do
+    end if
 
     ! add del dot rho chi grad c
-    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,rho_face,chi_face,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,rho_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! multiply by -S_fac
@@ -96,10 +104,10 @@ contains
     call macproject(mla,phi,umac,sold,mac_rhs,dx,the_bc_tower,.true.)
 
     ! compute (1/rho)
-    call average_cc_to_face_inv(nlevs,sold,rhoinv_face,1,dm+2,1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face_inv(nlevs,sold,rhoinv_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
 
     ! umac = umac - (1/rho) grad phi
-    call subtract_weighted_gradp(mla,umac,rhoinv_face,phi,dx)
+    call subtract_weighted_gradp(mla,umac,rhoinv_fc,phi,dx)
 
     ! fill ghost cells
     do n=1,nlevs
@@ -109,16 +117,16 @@ contains
     end do
 
     ! convert u to m in valid plus ghost region
-    call convert_m_to_umac(mla,rho_face,mold,umac,.false.)
+    call convert_m_to_umac(mla,rho_fc,mold,umac,.false.)
 
     do n=1,nlevs
        call multifab_destroy(mac_rhs(n))
        call multifab_destroy(divu(n))
        call multifab_destroy(phi(n))
        do i=1,dm
-          call multifab_destroy(rho_face(n,i))
-          call multifab_destroy(rhoinv_face(n,i))
-          call multifab_destroy(chi_face(n,i))
+          call multifab_destroy(rho_fc(n,i))
+          call multifab_destroy(rhoinv_fc(n,i))
+          call multifab_destroy(chi_fc(n,i))
        end do
     end do
 
