@@ -39,7 +39,8 @@
 \def\taub {\boldsymbol{\tau}}
 \def\Sigmab {\boldsymbol{\Sigma}}
 
-\def\half {\frac{1}{2}}
+\def\half   {\frac{1}{2}}
+\def\myhalf {\sfrac{1}{2}}
 
 \begin{document}
 
@@ -151,7 +152,7 @@ with
 \end{equation}
 {\bf Step 2: Crank-Nicolson Velocity Predictor:}
 \begin{equation}
-\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi = \nabla\cdot(-\rho^n\vb^n\vb^n) + \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{*,n+1}) + \nabla\cdot\sqrt{\frac{\eta^n k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Pred}
+\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi = \nabla\cdot(-\rho^n\vb^n\vb^n) + \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{*,n+1}) + \nabla\cdot\sqrt{\frac{\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Pred}
 \end{equation}
 \begin{equation}
 \nabla\cdot\vb^{*,n+1} = S^{*,n+1}.
@@ -175,13 +176,13 @@ the result $x_p$ so we essentially throw it away after the GMRES solve.\\ \\
 \end{eqnarray}
 with
 \begin{equation}
-\Fb^{*,n+1} = (\rho\chi\nabla c)^{*,n+1} + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^{*,n+1}k_BT}{\Delta t\Delta V}}\widetilde\Wb^n.
+\Fb^{n+1} = (\rho\chi\nabla c)^{n+1} + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^{n+1}k_BT}{\Delta t\Delta V}}\widetilde\Wb^{n+1}.
 \end{equation}
 {\bf Step 4: Crank-Nicolson Velocity Corrector:}\\ \\
 We're not really sure how to deal with the random fluxes, so for now we will use the same value as in the predictor.
 \begin{eqnarray}
 \frac{\rho^{n+1}\vb^{n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{n+1}\vb^{n+1})\nonumber\\
-&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{n+1}) + \nabla\cdot\sqrt{\frac{\eta^n k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Corr}
+&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{n+1}) + \nabla\cdot\sqrt{\frac{\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right],\label{eq:CN Vel Corr}
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot\vb^{n+1} = S^{n+1}.
@@ -189,6 +190,6 @@ We're not really sure how to deal with the random fluxes, so for now we will use
 We rewrite (\ref{eq:CN Vel Corr}) as
 \begin{eqnarray}
 \left(\rho^{n+1} - \frac{\Delta t}{2}\nabla\cdot\taub\right)\vb^{n+1} + \Delta t\nabla\pi &=& \rho^n\vb^n\nonumber\\
-&&\hspace{-1.75in}+ \Delta t\left\{\half\nabla\cdot(-\rho^n\vb^n\vb^n-\rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{\eta^n k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right]\right\}.\nonumber\\
+&&\hspace{-1.75in}+ \Delta t\left\{\half\nabla\cdot(-\rho^n\vb^n\vb^n-\rho^{n+1}\vb^{n+1}\vb^{n+1}) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{\eta^n k_B T}{\Delta t\Delta V}}\left[\Wb^n + (\Wb^n)^T\right]\right\}.\nonumber\\
 \end{eqnarray}
 \end{document}
