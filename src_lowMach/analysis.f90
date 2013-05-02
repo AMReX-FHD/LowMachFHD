@@ -107,7 +107,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: cons(:)
     type(multifab) , intent(in   ) ::    m(:,:)
-    real(kind=dp_t), intent(out), optional :: av_mass(nscal), av_momentum(mla%dim) ! Level 1 only
+    real(kind=dp_t), intent(inout), optional :: av_mass(nscal), av_momentum(mla%dim) ! Level 1 only
 
     ! local
     integer :: i,dm,nlevs,ng_c,ng_m, n_cell

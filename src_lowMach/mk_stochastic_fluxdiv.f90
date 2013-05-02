@@ -7,11 +7,10 @@ module mk_stochastic_fluxdiv_module
   use ml_restriction_module
   use define_bc_module
   use bc_module
-  
   use BoxLibRNGs
-  use analysis_module, only : sum_mass_momentum
-  use probin_module, only : variance_coef, conc_scal, stoch_stress_form, filtering_width
-  use probin_lowmach_module, only: rhobar, visc_coef, diff_coef
+  use analysis_module
+  use probin_lowmach_module, only: rhobar, visc_coef, diff_coef, variance_coef, &
+                                   conc_scal, stoch_stress_form, filtering_width
 
   implicit none
 
@@ -54,7 +53,7 @@ contains
     real(dp_t)     , intent(in   ) :: dt
     real(dp_t), intent(in), optional :: weights(:) ! If present, reuse previously-generated rngs
 
-    integer :: i,n,dm,nlevs,box,idim,rng
+    integer :: n,dm,nlevs,idim
     logical :: reuse
 
     nlevs = mla%nlevel
@@ -361,14 +360,14 @@ contains
                 case (2)
                    if (diff_coef < 0) then
                       call mult_by_sqrt_chi_2d(fp(:,:,1,:),ng_x,dp(:,:,1,1),ng_z,idim, &
-                                               lo,hi,ntracers)
+                                               lo,hi)
                    end if
                   call scale_rhoc_2d(fp(:,:,1,:),ng_x,sp(:,:,1,1:),ng_s,idim,lo,hi, &
                                      the_bc_level(n)%phys_bc_level_array(box,:,:),ntracers)
                 case (3)
                    if (diff_coef < 0) then
                       call mult_by_sqrt_chi_3d(fp(:,:,:,:),ng_x,dp(:,:,:,1),ng_z,idim, &
-                                               lo,hi,ntracers)
+                                               lo,hi)
 
                    end if
                   call scale_rhoc_3d(fp(:,:,:,:),ng_x,sp(:,:,:,1:),ng_s,idim,lo,hi, &
@@ -438,7 +437,7 @@ contains
       ! Could be zero if one does not need to store any rngs
       
    ! Local variables
-   integer :: i,n,dm,nlevs,box,idim,rng
+   integer :: n,dm,nlevs,idim,rng
    logical :: nodal_temp(mla%dim)
    
    ! The zeroth component is used to store the actual stochastic flux
@@ -543,7 +542,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
    integer, intent(in) :: n_rngs
 
-    integer :: i,n,dm,nlevs,box,idim,rng
+    integer :: n,dm,nlevs,idim,rng
 
     nlevs = mla%nlevel
     dm    = mla%dim    
@@ -648,9 +647,9 @@ contains
 
   end subroutine mult_by_sqrt_eta_3d
 
-  subroutine mult_by_sqrt_chi_2d(sflux,ng_x,chi_face,ng_z,idim,lo,hi,ntracers)
+  subroutine mult_by_sqrt_chi_2d(sflux,ng_x,chi_face,ng_z,idim,lo,hi)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_x,ng_z,idim,ntracers
+    integer        , intent(in   ) :: lo(:),hi(:),ng_x,ng_z,idim
     real(kind=dp_t), intent(inout) ::    sflux(lo(1)-ng_x:,lo(2)-ng_x:,:)
     real(kind=dp_t), intent(in   ) :: chi_face(lo(1)-ng_z:,lo(2)-ng_z:)
 
@@ -668,9 +667,9 @@ contains
 
   end subroutine mult_by_sqrt_chi_2d
 
-  subroutine mult_by_sqrt_chi_3d(sflux,ng_x,chi_face,ng_z,idim,lo,hi,ntracers)
+  subroutine mult_by_sqrt_chi_3d(sflux,ng_x,chi_face,ng_z,idim,lo,hi)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_x,ng_z,idim,ntracers
+    integer        , intent(in   ) :: lo(:),hi(:),ng_x,ng_z,idim
     real(kind=dp_t), intent(inout) ::    sflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
     real(kind=dp_t), intent(in   ) :: chi_face(lo(1)-ng_z:,lo(2)-ng_z:,lo(3)-ng_z:)
 
@@ -1067,8 +1066,6 @@ contains
 
  subroutine stoch_s_force_2d(xflux,yflux,ng_x,div,ng_f,umac,vmac,ng_m,dx,lo,hi,adv_bc)
 
-   use probin_module, only: rhobar
-
    integer        , intent(in   ) :: lo(:),hi(:),ng_f,ng_m,ng_x
    real(kind=dp_t), intent(in   ) :: xflux(lo(1)-ng_x:,lo(2)-ng_x:,:)
    real(kind=dp_t), intent(in   ) :: yflux(lo(1)-ng_x:,lo(2)-ng_x:,:)
@@ -1115,8 +1112,6 @@ contains
 
  subroutine stoch_s_force_3d(xflux,yflux,zflux,ng_x,div,ng_f,umac,vmac,wmac,ng_m, &
                              dx,lo,hi,adv_bc)
-
-   use probin_module, only: rhobar
 
    integer        , intent(in   ) :: lo(:),hi(:),ng_f,ng_m,ng_x
    real(kind=dp_t), intent(in   ) :: xflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
@@ -1228,7 +1223,7 @@ contains
          write(*,"(A,100G17.9)") "Randomly INITIALized momenta"
       end if
       
-      call sum_mass_momentum(mla, cons=s_cc, m=m_face, av_momentum=av_mom)
+      call sum_mass_momentum(mla, s_cc, m_face, av_momentum=av_mom)
       do i=1,dm
          call setval(mactemp(1,i), -av_mom(i))
          call saxpy(m_face(1,i), 1.0_dp_t, mactemp(1,i))
@@ -1244,7 +1239,7 @@ contains
     type(multifab) , intent(inout) :: cctemp(:)
 
     ! local
-    integer :: i,n,dm,box,nlevs
+    integer :: n,dm,box,nlevs
     real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
 
     dm = mla%dim
@@ -1283,7 +1278,7 @@ contains
     type(multifab) , intent(inout) :: mfab(:,0:)
     real(dp_t), intent(in) :: weights(:)
 
-    integer :: i,n,dm,rng
+    integer :: n,rng
   
     !--------------------------------------
     ! Ghost cells need not be set here since syncs will set them later
@@ -1303,7 +1298,7 @@ contains
     real(dp_t), intent(in), optional :: variance
     type(multifab) , intent(in), optional :: variance_mfab(:)
 
-    integer :: i,n,dm,box
+    integer :: n,box
     real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
   
     !--------------------------------------
@@ -1335,7 +1330,7 @@ contains
     type(multifab) , intent(inout) :: mfab
     integer, intent(in) :: dm
 
-    integer :: i,j,k,n,box
+    integer :: i,j,k,box
     real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
 
     integer :: lo(3), hi(3), lo_g(3), hi_g(3)
