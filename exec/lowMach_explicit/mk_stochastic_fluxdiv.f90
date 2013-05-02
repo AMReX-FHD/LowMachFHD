@@ -73,15 +73,11 @@ contains
        end do
 
        if (dm .eq. 2) then
-          do n=1,nlevs
-             call multifab_weighted_sum(mflux_nd, weights)
-          end do
+          call multifab_weighted_sum(mflux_nd, weights)
        else if (dm .eq. 3) then
-          do n=1,nlevs
-             call multifab_weighted_sum(mflux_xy, weights)
-             call multifab_weighted_sum(mflux_xz, weights)
-             call multifab_weighted_sum(mflux_yz, weights)
-          end do       
+          call multifab_weighted_sum(mflux_xy, weights)
+          call multifab_weighted_sum(mflux_xz, weights)
+          call multifab_weighted_sum(mflux_yz, weights)
        end if
        
     end if          
