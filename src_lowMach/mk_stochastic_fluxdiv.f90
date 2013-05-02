@@ -79,26 +79,100 @@ contains
     real(dp_t)     , intent(in   ) :: dx(:,:)
     real(dp_t)     , intent(in   ) :: dt
 
+    ! local
+    integer n,nlevs,dm
 
-    ! if eta varies in space, average eta to nodes (2D) or edges (3D)
-    if (visc_coef < 0) then
+    real(dp_t) :: variance
 
-    end if
+    type(multifab) :: mflux_cc_temp(mla%nlevel)
+    type(multifab) :: mflux_nd_temp(mla%nlevel)
+    type(multifab) :: mflux_ed_temp(mla%nlevel,3)
 
-    ! create temporary multifab with scaled random numbers
+    logical :: nodal_temp(mla%dim)
 
-    ! if eta varies in space, need to multiply pointwise by sqrt(eta)
-    if (visc_coef < 0) then
+    nlevs = mla%nlevel
+    dm = mla%dim
 
-    end if
+    do n=1,nlevs
 
-    ! apply boundary conditions
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       ! create a place to store temporary copy of the random numbers
+       ! these copies will be scaled and used to create the stochastic flux divergence
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! sync up random numbers at boundaries and ghost cells
+       ! we need dm cell-centered fluxes for momentum
+       call multifab_build(mflux_cc_temp(n),mla%la(n),dm,max(1,filtering_width))
+       if (dm .eq. 2) then
+          ! in 2D, we need 2 random fluxes at each node
+          nodal_temp = .true.
+          call multifab_build(mflux_nd_temp(n),mla%la(n),2,filtering_width,nodal_temp)
+       else if (dm .eq. 3) then
+          ! in 3D, we need 2 random fluxes at each edge
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .false.
+          call multifab_build(mflux_ed_temp(n,1),mla%la(n),2,filtering_width,nodal_temp)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .false.
+          nodal_temp(3) = .true.
+          call multifab_build(mflux_ed_temp(n,2),mla%la(n),2,filtering_width,nodal_temp)
+          nodal_temp(1) = .false.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .true.
+          call multifab_build(mflux_ed_temp(n,3),mla%la(n),2,filtering_width,nodal_temp)
+       end if
+       
+       ! make a copy of the random numbers
+       call multifab_copy_c(mflux_cc_temp(n),1,mflux_cc(n),1,dm,mflux_cc_temp(n)%ng)
+       if (dm .eq. 2) then
+          call multifab_copy_c(mflux_nd_temp(n),1,mflux_nd(n),1,2,mflux_nd_temp(n)%ng)
+       else if (dm .eq. 3) then
+          call multifab_copy_c(mflux_ed_temp(n,1),1,mflux_ed(n,1),1,2,mflux_ed_temp(n,1)%ng)
+          call multifab_copy_c(mflux_ed_temp(n,2),1,mflux_ed(n,2),1,2,mflux_ed_temp(n,2)%ng)
+          call multifab_copy_c(mflux_ed_temp(n,3),1,mflux_ed(n,3),1,2,mflux_ed_temp(n,3)%ng)
+       end if
+    end do
 
-    ! add divergence to stoch_m_force
+    do n=1,nlevs
+
+       if (visc_coef < 0) then
+          ! eta varies in space, add its contribution below in an i/j/k loop
+          variance = sqrt(variance_coef*2.d0*kT*visc_coef/(product(dx(n,1:dm))*dt))
+       else
+          ! eta is constant in space
+          variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*dt))
+       end if
+
+       ! if eta varies in space, average eta to nodes (2D) or edges (3D)
+       if (visc_coef < 0) then
+
+       end if
 
 
+
+       ! if eta varies in space, need to multiply pointwise by sqrt(eta)
+       if (visc_coef < 0) then
+
+       end if
+
+       ! apply boundary conditions
+
+       ! sync up random numbers at boundaries and ghost cells
+
+       ! add divergence to stoch_m_force
+
+    end do
+
+    do n=1,nlevs
+       call multifab_destroy(mflux_cc_temp(n))
+       if (dm .eq. 2) then
+          call multifab_destroy(mflux_nd_temp(n))
+       else if (dm .eq. 3) then
+          call multifab_destroy(mflux_ed_temp(n,1))
+          call multifab_destroy(mflux_ed_temp(n,2))
+          call multifab_destroy(mflux_ed_temp(n,3))
+       end if
+    end do
 
   end subroutine mk_stochastic_m_fluxdiv
 
