@@ -34,70 +34,10 @@ module mk_stochastic_fluxdiv_module
   
 contains
 
-  ! This is an interface to mk_stochastic_fluxdiv_work
   ! Note that here we *increment* stoch_m_force and stoch_s_force so they must be initialized externally!
   subroutine mk_stochastic_fluxdiv(mla,the_bc_level,stoch_m_force,stoch_s_force,s_face, &
-                                   eta,eta_nodal,eta_edge,chi_face,umac,dx,dt,weights)
-
-    type(ml_layout), intent(in   ) :: mla
-    type(bc_level) , intent(in   ) :: the_bc_level(:)
-    type(multifab) , intent(inout) :: stoch_m_force(:,:)
-    type(multifab) , intent(inout) :: stoch_s_force(:)
-    type(multifab) , intent(in   ) :: s_face(:,:)
-    type(multifab) , intent(in   ) :: eta(:)
-    type(multifab) , intent(in   ) :: eta_nodal(:)
-    type(multifab) , intent(in   ) :: eta_edge(:,:)
-    type(multifab) , intent(in   ) :: chi_face(:,:)
-    type(multifab) , intent(inout) :: umac(:,:)
-    real(dp_t)     , intent(in   ) :: dx(:,:)
-    real(dp_t)     , intent(in   ) :: dt
-    real(dp_t), intent(in), optional :: weights(:) ! If present, reuse previously-generated rngs
-
-    integer :: n,dm,nlevs,idim
-    logical :: reuse
-
-    nlevs = mla%nlevel
-    dm    = mla%dim
-    
-    reuse=.false.
-    
-    if(present(weights)) then ! Make a weighted sum of previously-generated random numbers
-    if(size(weights)>0) then
-       !write(*,*) "REUSING Weiner increments:", weights
-       reuse=.true.
-       
-       call multifab_weighted_sum(mflux_cc, weights)
-       do idim = 1,dm
-         if(ntracers>0) then
-            call multifab_weighted_sum(sflux(:,idim,:), weights)
-         end if   
-       end do
-
-       if (dm .eq. 2) then
-          do n=1,nlevs
-             call multifab_weighted_sum(mflux_nd, weights)
-          end do
-       else if (dm .eq. 3) then
-          do n=1,nlevs
-             call multifab_weighted_sum(mflux_xy, weights)
-             call multifab_weighted_sum(mflux_xz, weights)
-             call multifab_weighted_sum(mflux_yz, weights)
-          end do       
-       end if
-       
-    end if          
-    end if
-
-    call mk_stochastic_fluxdiv_work(mla,the_bc_level,stoch_m_force,stoch_s_force,s_face,dx,dt, &
-                             mflux_cc(:,0),mflux_nd(:,0), &
-                             mflux_xy(:,0),mflux_xz(:,0),mflux_yz(:,0), &
-                             sflux(:,:,0),eta,eta_nodal,eta_edge,chi_face,umac,reuse=reuse)
-  
-  end subroutine mk_stochastic_fluxdiv
-
-  subroutine mk_stochastic_fluxdiv_work(mla,the_bc_level,stoch_m_force,stoch_s_force,s_face, &
-                                 dx,dt,mflux_cc,mflux_nd,mflux_xy,mflux_xz,mflux_yz, &
-                                 sflux,eta,eta_nodal,eta_edge,chi_face,umac,reuse)
+                                   dx,dt,mflux_cc,mflux_nd,mflux_xy,mflux_xz,mflux_yz, &
+                                   sflux,eta,eta_nodal,eta_edge,chi_face,umac)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -116,7 +56,6 @@ contains
     type(multifab) , intent(in   ) :: eta_edge(:,:)
     type(multifab) , intent(in   ) :: chi_face(:,:)
     type(multifab) , intent(inout) :: umac(:,:)
-    logical, intent(in) :: reuse ! Reuse old rngs or generate them on the fly
 
     ! local variables
     ! --------------------------
@@ -175,19 +114,6 @@ contains
              lo = lwb(get_box(mflux_cc(n),box))
              hi = upb(get_box(mflux_cc(n),box))
              
-             if(.not.reuse) then ! Fill the whole grid with random numbers
-               select case(stoch_stress_form)
-               case(0) ! Non-symmetric
-                call NormalRNGs(fp, size(fp)) 
-                call NormalRNGs(sp, size(sp))
-               case default ! Symmetric
-                call NormalRNGs(fp, size(fp))
-                fp=sqrt(2.0d0)*fp
-                call NormalRNGs(sp(:,:,:,1), size(sp(:,:,:,1)))
-                sp(:,:,:,2)=sp(:,:,:,1)
-               end select              
-             end if
-             
              fp = variance*fp
              sp = variance*sp
              if (visc_coef < 0) then
@@ -238,25 +164,6 @@ contains
              ep3 => dataptr(eta_edge(n,3),box)
              lo = lwb(get_box(mflux_cc(n),box))
              hi = upb(get_box(mflux_cc(n),box))
-             
-             if(.not.reuse) then
-               select case(stoch_stress_form)
-               case(0) ! Non-symmetric
-                call NormalRNGs(fp, size(fp)) ! Fill the whole grid with random numbers
-                call NormalRNGs(fxp, size(fxp))
-                call NormalRNGs(fyp, size(fyp))
-                call NormalRNGs(fzp, size(fzp))
-               case default ! Symmetric
-                call NormalRNGs(fp, size(fp)) ! Fill the whole grid with random numbers
-                fp=sqrt(2.0d0)*fp
-                call NormalRNGs(fxp(:,:,:,1), size(fxp(:,:,:,1)))
-                fxp(:,:,:,2)=fxp(:,:,:,1)
-                call NormalRNGs(fyp(:,:,:,1), size(fyp(:,:,:,1)))
-                fyp(:,:,:,2)=fyp(:,:,:,1)
-                call NormalRNGs(fzp(:,:,:,1), size(fzp(:,:,:,1)))
-                fzp(:,:,:,2)=fzp(:,:,:,1)                
-               end select
-             end if
 
              fp  = variance*fp
              fxp = variance*fxp
@@ -350,9 +257,7 @@ contains
                 dp => dataptr(chi_face(n,idim),box)
                 lo =  lwb(get_box(sflux(n,idim),box))
                 hi =  upb(get_box(sflux(n,idim),box))
-                if(.not.reuse) then
-                   call NormalRNGs(fp, size(fp)) ! Fill the whole grid with random numbers
-                end if
+
                 fp = variance*fp
                 ! Include multiplicative rho*c*(1-c) scaling for random rho*c flux
                 ! also sets rho*c flux on walls to zero
@@ -401,7 +306,6 @@ contains
              hi =  upb(get_box(stoch_s_force(n), i))
              select case (dm)
              case (2)
-                fp(:,:,1,1)=0.0_dp_t ! No stochastic forcing for density!
                 call stoch_s_force_2d(fxp(:,:,1,:), fyp(:,:,1,:), ng_x, &
                                       fp(:,:,1,2:), ng_f, &
                                       ump(:,:,1,1), vmp(:,:,1,1), ng_m, &
@@ -410,7 +314,6 @@ contains
              case (3)
                 fzp => dataptr(sflux(n,3), i)
                 wmp => dataptr(umac(n,3), i)
-                fp(:,:,:,1)=0.0_dp_t ! No stochastic forcing for density!
                 call stoch_s_force_3d(fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:), ng_x, &
                                       fp(:,:,:,2:), ng_f, &
                                       ump(:,:,:,1), vmp(:,:,:,1), wmp(:,:,:,1), ng_m, &
@@ -428,7 +331,7 @@ contains
 
     end if
 
-  end subroutine mk_stochastic_fluxdiv_work
+  end subroutine mk_stochastic_fluxdiv
 
   ! Create the stochastic flux multifabs, possibly allowing for storing random numbers
   subroutine create_random_increments(mla,n_rngs)

@@ -400,7 +400,6 @@ contains
              hi =  upb(get_box(stoch_s_force(n), i))
              select case (dm)
              case (2)
-                fp(:,:,1,1)=0.0_dp_t ! No stochastic forcing for density!
                 call stoch_s_force_2d(fxp(:,:,1,:), fyp(:,:,1,:), ng_x, &
                                       fp(:,:,1,2:), ng_f, &
                                       ump(:,:,1,1), vmp(:,:,1,1), ng_m, &
@@ -409,7 +408,6 @@ contains
              case (3)
                 fzp => dataptr(sflux(n,3), i)
                 wmp => dataptr(umac(n,3), i)
-                fp(:,:,:,1)=0.0_dp_t ! No stochastic forcing for density!
                 call stoch_s_force_3d(fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:), ng_x, &
                                       fp(:,:,:,2:), ng_f, &
                                       ump(:,:,:,1), vmp(:,:,:,1), wmp(:,:,:,1), ng_m, &
