@@ -596,7 +596,6 @@ contains
              fp  => dataptr(mflux_cc_temp(n),i)
              sp  => dataptr(mflux_nd_temp(n),i)
              dp  => dataptr(eta(n),i)
-             ep1 => dataptr(eta_nd(n),i)
              lo = lwb(get_box(mflux_cc_temp(n),i))
              hi = upb(get_box(mflux_cc_temp(n),i))
              ! multiply by variance
@@ -604,6 +603,7 @@ contains
              sp = variance*sp
              ! if eta varies in space, multiply pointwise by sqrt(eta)
              if (visc_coef < 0) then
+                ep1 => dataptr(eta_nd(n),i)
                 call mult_by_sqrt_eta_2d(fp(:,:,1,:),ng_c,sp(:,:,1,:),ng_n, &
                                          dp(:,:,1,1),ng_y,ep1(:,:,1,1),ng_w,lo,hi)
              end if
@@ -634,9 +634,6 @@ contains
              fyp => dataptr(mflux_ed_temp(n,2),i)
              fzp => dataptr(mflux_ed_temp(n,3),i)
              dp => dataptr(eta(n),i)
-             ep1 => dataptr(eta_ed(n,1),i)
-             ep2 => dataptr(eta_ed(n,2),i)
-             ep3 => dataptr(eta_ed(n,3),i)
              lo = lwb(get_box(mflux_cc_temp(n),i))
              hi = upb(get_box(mflux_cc_temp(n),i))
              ! multiply by variance
@@ -646,6 +643,9 @@ contains
              fzp = variance*fzp
              ! if eta varies in space, multiply pointwise by sqrt(eta)
              if (visc_coef < 0) then
+                ep1 => dataptr(eta_ed(n,1),i)
+                ep2 => dataptr(eta_ed(n,2),i)
+                ep3 => dataptr(eta_ed(n,3),i)
                 call mult_by_sqrt_eta_3d(fp(:,:,:,:),ng_c, &
                                          fxp(:,:,:,:),fyp(:,:,:,:),fzp(:,:,:,:),ng_e, &
                                          dp(:,:,:,1),ng_y, &
