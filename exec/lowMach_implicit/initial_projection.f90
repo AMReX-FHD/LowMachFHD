@@ -12,6 +12,8 @@ module initial_projection_module
   use multifab_physbc_module
   use probin_lowmach_module, only: rhobar, diff_coef, nscal
 
+  use fabio_module
+
   implicit none
 
   private
@@ -90,7 +92,8 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,mac_rhs,s_fc,chi,dx)
+    ! add divergence of face-centered stochastic fluxes to mac_rhs
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,mac_rhs,s_fc,chi,dx,1)
 
     ! multiply by -S_fac
     do n=1,nlevs

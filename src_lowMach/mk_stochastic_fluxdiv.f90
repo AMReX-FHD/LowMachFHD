@@ -35,7 +35,7 @@ module mk_stochastic_fluxdiv_module
 contains
 
   ! Note that here we *increment* stoch_s_force so it must be initialized externally!
-  subroutine mk_stochastic_s_fluxdiv(mla,the_bc_level,stoch_s_force,s_fc,chi,dx)
+  subroutine mk_stochastic_s_fluxdiv(mla,the_bc_level,stoch_s_force,s_fc,chi,dx,start_outcomp)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -43,6 +43,7 @@ contains
     type(multifab) , intent(in   ) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: chi(:)
     real(dp_t)     , intent(in   ) :: dx(:,:)
+    integer        , intent(in   ) :: start_outcomp
 
     ! local
     integer :: n,nlevs,i,dm,m
@@ -154,13 +155,13 @@ contains
           select case (dm)
           case (2)
              call stoch_s_force_2d(fxp(:,:,1,:), fyp(:,:,1,:), ng_x, &
-                                   fp(:,:,1,2:), ng_f, &
+                                   fp(:,:,1,start_outcomp:), ng_f, &
                                    dx(n,:),lo,hi, &
                                    the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           case (3)
              fzp => dataptr(sflux_fc_temp(n,3), i)
              call stoch_s_force_3d(fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:), ng_x, &
-                                   fp(:,:,:,2:), ng_f, &
+                                   fp(:,:,:,start_outcomp:), ng_f, &
                                    dx(n,:),lo,hi, &
                                    the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           end select
