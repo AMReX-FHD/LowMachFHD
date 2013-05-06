@@ -138,7 +138,8 @@ Here is the time-advancement scheme.\\ \\
 If this is the beginning of the simulation, we perform a projection to obtain an initial 
 velocity field, $\vb^0$, that satisfies
 \begin{equation}
-\nabla\cdot\vb^0 = S^0.
+\nabla\cdot\vb^0 = S(\Fb^0); \qquad 
+\Fb^0 = (\rho\chi\nabla c)^0 + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^0k_BT}{\Delta t\Delta V}}\widetilde\Wb^0.
 \end{equation}
 We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
 \begin{equation}
