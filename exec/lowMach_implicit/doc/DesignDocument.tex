@@ -167,7 +167,7 @@ S^{*,n+1} \equiv S(\Fb^{*,n+1});
 Then, solve the following system for $\vb^{*,n+1}$:
 \begin{eqnarray}
 \frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \nabla\cdot(-\rho^n\vb^n\vb^n)\nonumber\\
-&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{*,n+1}) + \nabla\cdot\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb,\label{eq:CN Vel Pred}
+&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{*,n+1}) + \nabla\cdot\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n,\label{eq:CN Vel Pred}
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot\vb^{*,n+1} = S^{*,n+1},
@@ -176,7 +176,7 @@ with $\eta^{*,n+\myhalf} = (\eta^n + \eta^{*,n+1})/2$.
 We rewrite (\ref{eq:CN Vel Pred}) as
 \begin{eqnarray}
 \left(\rho^{*,n+1} - \frac{\Delta t}{2}\nabla\cdot\taub\right)\vb^{*,n+1} + \Delta t\nabla\pi &=& \rho^n\vb^n\nonumber\\
-&&\hspace{-1.0in}+ \Delta t\left\{\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb\right\}.\label{eq:CN Vel Pred2}
+&&\hspace{-1.0in}+ \Delta t\left\{\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n\right\}.\label{eq:CN Vel Pred2}
 \end{eqnarray}
 Relating this to the GMRES solver, we can see that we are solving for 
 $(\xb_\vb,x_p) = (\vb^{*,n+1},\Delta t\cdot\pi)$ with $b_p = -S^{*,n+1}$ and $\bb_\vb$ equal to the 
@@ -203,7 +203,7 @@ random fluxes in the momentum equation, so for now we will use the same value as
 in the predictor.
 \begin{eqnarray}
 \frac{\rho^{n+1}\vb^{n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{n+1}\vb^{n+1})\nonumber\\
-&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{n+1}) + \nabla\cdot\sqrt{\frac{2\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb,\label{eq:CN Vel Corr}
+&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{n+1}) + \nabla\cdot\sqrt{\frac{2\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n,\label{eq:CN Vel Corr}
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot\vb^{n+1} = S^{n+1}.
@@ -212,6 +212,6 @@ with $\eta^{n+\myhalf} = (\eta^n + \eta^{n+1})/2$.
 We rewrite (\ref{eq:CN Vel Corr}) as
 \begin{eqnarray}
 \left(\rho^{n+1} - \frac{\Delta t}{2}\nabla\cdot\taub\right)\vb^{n+1} + \Delta t\nabla\pi &=& \rho^n\vb^n\nonumber\\
-&&\hspace{-1.75in}+ \Delta t\left\{\half\nabla\cdot(-\rho^n\vb^n\vb^n-\rho^{n+1}\vb^{n+1}\vb^{n+1}) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{2\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb\right\}.
+&&\hspace{-1.75in}+ \Delta t\left\{\half\nabla\cdot(-\rho^n\vb^n\vb^n-\rho^{n+1}\vb^{n+1}\vb^{n+1}) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{2\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n\right\}.
 \end{eqnarray}
 \end{document}
