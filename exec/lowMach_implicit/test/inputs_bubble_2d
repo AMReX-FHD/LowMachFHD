@@ -26,7 +26,7 @@
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
-  seed = 0
+  seed = 1
 
   ! 0.0 = time-independent
   ! 1.0 = time-dependent
