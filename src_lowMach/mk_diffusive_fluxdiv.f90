@@ -3,8 +3,8 @@ module mk_diffusive_fluxdiv_module
   use ml_layout_module
   use define_bc_module
   use bc_module
-
-  use fabio_module
+  use convert_stag_module
+  use probin_lowmach_module, only: visc_coef, diff_coef
 
   implicit none
 
@@ -14,7 +14,7 @@ module mk_diffusive_fluxdiv_module
 
 contains
 
-  subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_fc,chi_fc, &
+  subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_fc,chi, &
                                        dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
@@ -22,7 +22,7 @@ contains
     integer        , intent(in   ) :: out_comp    ! which component of s_update
     type(multifab) , intent(in   ) ::   prim(:)   ! rho and c
     type(multifab) , intent(in   ) :: rho_fc(:,:) ! rho on faces
-    type(multifab) , intent(in   ) :: chi_fc(:,:) ! chi on faces
+    type(multifab) , intent(in   ) ::    chi(:)   ! chi
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
@@ -39,6 +39,8 @@ contains
     real(kind=dp_t), pointer :: cpy(:,:,:,:)
     real(kind=dp_t), pointer :: cpz(:,:,:,:)
 
+    type(multifab) :: chi_fc(mla%nlevel,mla%dim)
+
     ng_u = s_update(1)%ng
     ng_p = prim(1)%ng
     ng_s = rho_fc(1,1)%ng
@@ -46,6 +48,23 @@ contains
 
     nlevs = mla%nlevel
     dm    = mla%dim
+
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_build_edge(chi_fc(n,i),mla%la(n),1,0,i)
+       end do
+    end do
+
+    ! average chi to faces
+    if (diff_coef < 0) then
+       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_level)
+    else
+       do n=1,nlevs
+          do i=1,dm
+             call setval(chi_fc(n,i),diff_coef,all=.true.)
+          end do
+       end do
+    end if
 
     ! compute del dot (rhoD grad c) and add it to s_update
     do n=1,nlevs
@@ -74,6 +93,12 @@ contains
                                                lo, hi, dx(n,:), &
                                                the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           end select
+       end do
+    end do
+
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_destroy(chi_fc(n,i))
        end do
     end do
 
@@ -275,19 +300,16 @@ contains
 
   end subroutine mk_diffusive_rhoc_fluxdiv
 
-  subroutine mk_diffusive_m_fluxdiv(mla,m_update,umac,eta,eta_nd,eta_ed, &
-                                    kappa,dx,the_bc_level)
+  subroutine mk_diffusive_m_fluxdiv(mla,m_update,umac,eta,kappa,dx,the_bc_level)
 
     use stag_applyop_module, only: stag_applyop_2d, stag_applyop_3d
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) ::  m_update(:,:)
-    type(multifab) , intent(in   ) ::      umac(:,:)
-    type(multifab) , intent(in   ) ::       eta(:)
-    type(multifab) , intent(in   ) :: eta_nd(:)
-    type(multifab) , intent(in   ) ::  eta_ed(:,:)
-    type(multifab) , intent(in   ) ::     kappa(:)
-    real(kind=dp_t), intent(in   ) ::  dx(:,:)
+    type(multifab) , intent(inout) :: m_update(:,:)
+    type(multifab) , intent(in   ) ::     umac(:,:)
+    type(multifab) , intent(in   ) ::      eta(:)
+    type(multifab) , intent(in   ) ::    kappa(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
@@ -296,6 +318,11 @@ contains
     type(multifab) :: Lphi_fc(mla%nlevel,mla%dim)
     type(multifab) :: alpha_fc(mla%nlevel,mla%dim)
 
+    type(multifab) :: eta_nd(mla%nlevel)   ! averaged to nodes (2D only)
+    type(multifab) :: eta_ed(mla%nlevel,3) ! averaged to edges (3D only; xy/xz/yz edges)
+
+    logical :: nodal_temp(mla%dim)
+
     nlevs = mla%nlevel
     dm    = mla%dim
 
@@ -303,17 +330,53 @@ contains
        do i=1,dm
           call multifab_build_edge(Lphi_fc(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(alpha_fc(n,i),mla%la(n),1,0,i)
-       end do
-    end do
-
-    ! set coefficients to explicitly compute
-    ! (alpha - D) phi
-    do n=1,nlevs
-       do i=1,dm
           ! set alpha to zero
           call setval(alpha_fc(n,i),0.d0,all=.true.)
        end do
     end do
+
+    ! nodal (in 2D) and edge-based (in 3D) eta
+    if (dm .eq. 2) then
+       do n=1,nlevs
+          call multifab_build_nodal(eta_nd(n),mla%la(n),1,0)
+       end do
+    else
+       do n=1,nlevs
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .false.
+          call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .false.
+          nodal_temp(3) = .true.
+          call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
+          nodal_temp(1) = .false.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .true.
+          call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
+       end do
+    end if
+
+    ! compute eta on nodes (2D) or edges (3D)
+    if (dm .eq. 2) then
+       if (visc_coef < 0) then
+          call average_cc_to_node(nlevs,eta,eta_nd,1,dm+2,1,the_bc_level)
+       else
+          do n=1,nlevs
+             call setval(eta_nd(n),visc_coef,all=.true.)
+          end do
+       end if
+    else if (dm .eq. 3) then
+       if (visc_coef < 0) then
+          call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_level)
+       else
+          do n=1,nlevs
+             do i=1,dm
+                call setval(eta_ed(n,i),visc_coef,all=.true.)
+             end do
+          end do
+       end if
+    end if
 
     do n=1,nlevs
 
@@ -335,6 +398,13 @@ contains
     end do
 
     do n=1,nlevs
+       if (dm .eq. 2) then
+          call multifab_destroy(eta_nd(n))
+       else if (dm .eq. 3) then
+          call multifab_destroy(eta_ed(n,1))
+          call multifab_destroy(eta_ed(n,2))
+          call multifab_destroy(eta_ed(n,3))
+       end if
        do i=1,dm
           call multifab_destroy(Lphi_fc(n,i))
           call multifab_destroy(alpha_fc(n,i))

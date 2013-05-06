@@ -42,7 +42,6 @@ contains
     type(multifab) ::       phi(mla%nlevel)
     type(multifab) ::      s_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
-    type(multifab) ::    chi_fc(mla%nlevel,mla%dim)
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -56,7 +55,6 @@ contains
        do i=1,dm
           call multifab_build_edge(     s_fc(n,i),mla%la(n),nscal,1,i)
           call multifab_build_edge(rhoinv_fc(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(   chi_fc(n,i),mla%la(n),1    ,0,i)
        end do       
     end do
 
@@ -77,19 +75,8 @@ contains
     ! build rhs = div(u) - S
     !!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! average chi to faces
-    if (diff_coef < 0) then       
-       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
-    else
-       do n=1,nlevs
-          do i=1,dm
-             call setval(chi_fc(n,i),diff_coef,all=.true.)
-          end do
-       end do
-    end if
-
     ! add del dot rho chi grad c
-    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,s_fc,chi_fc,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,s_fc,chi,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! add divergence of face-centered stochastic fluxes to mac_rhs
@@ -134,7 +121,6 @@ contains
        do i=1,dm
           call multifab_destroy(s_fc(n,i))
           call multifab_destroy(rhoinv_fc(n,i))
-          call multifab_destroy(chi_fc(n,i))
        end do
     end do
 

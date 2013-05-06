@@ -43,15 +43,9 @@ contains
 
     type(multifab) ::        s_fc(mla%nlevel,mla%dim)
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
-    type(multifab) ::      chi_fc(mla%nlevel,mla%dim)
     type(multifab) :: m_a_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) :: m_d_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) :: m_s_fluxdiv(mla%nlevel,mla%dim)
-
-    type(multifab) :: eta_nd(mla%nlevel)   ! averaged to nodes (2D only)
-    type(multifab) :: eta_ed(mla%nlevel,3) ! averaged to edges (3D only; xy/xz/yz edges)
-
-    logical :: nodal_temp(mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -69,34 +63,11 @@ contains
        do i=1,dm
           call multifab_build_edge(       s_fc(n,i),mla%la(n),nscal,1,i)
           call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(     chi_fc(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_a_fluxdiv(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_d_fluxdiv(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_s_fluxdiv(n,i),mla%la(n),1    ,0,i)
        end do
     end do
-
-    ! nodal (in 2D) and edge-based (in 3D) eta
-    if (dm .eq. 2) then
-       do n=1,nlevs
-          call multifab_build_nodal(eta_nd(n),mla%la(n),1,0)
-       end do
-    else
-       do n=1,nlevs
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .false.
-          call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .false.
-          nodal_temp(3) = .true.
-          call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
-          nodal_temp(1) = .false.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .true.
-          call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
-       end do
-    end if
 
     do n=1,nlevs
        call setval(s_update(n),0.d0,all=.true.)
@@ -117,22 +88,11 @@ contains
        call average_cc_to_face(nlevs,sold,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
-    ! average chi to faces
-    if (diff_coef < 0) then
-       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
-    else
-       do n=1,nlevs
-          do i=1,dm
-             call setval(chi_fc(n,i),diff_coef,all=.true.)
-          end do
-       end do
-    end if
-
     ! compute A^n for s
     call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
 
     ! compute D^n for rho1
-    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi_fc,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! compute St^n for rho1
@@ -148,27 +108,6 @@ contains
     ! Step 2 - Crank-Nicolson Velocity Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! compute eta on nodes (2D) or edges (3D)
-    if (dm .eq. 2) then
-       if (visc_coef < 0) then
-          call average_cc_to_node(nlevs,eta,eta_nd,1,dm+2,1,the_bc_tower%bc_tower_array)
-       else
-          do n=1,nlevs
-             call setval(eta_nd(n),visc_coef,all=.true.)
-          end do
-       end if
-    else if (dm .eq. 3) then
-       if (visc_coef < 0) then
-          call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_tower%bc_tower_array)
-       else
-          do n=1,nlevs
-             do i=1,dm
-                call setval(eta_ed(n,i),visc_coef,all=.true.)
-             end do
-          end do
-       end if
-    end if
-
     ! build up rhs_v for gmres solve: set rhs_v to m^n
     do n=1,nlevs
        do i=1,dm
@@ -177,8 +116,8 @@ contains
     end do
 
     ! compute D^n for m
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_nd,eta_ed, &
-                                kappa,dx,the_bc_tower%bc_tower_array)
+    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,kappa,dx, &
+                                the_bc_tower%bc_tower_array)
 
     ! multiply D^n by dt/2 and add to rhs_v
     do n=1,nlevs
@@ -234,15 +173,8 @@ contains
        call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
-    ! average chi to faces
-    if (diff_coef < 0) then
-       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
-    else
-       ! do nothing - chi_fc already contains the constant value of diff_coef
-    end if
-
     ! add D^{*,n+1} to rhs_p
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! add St^{*,n+1} to rhs_p
@@ -296,7 +228,7 @@ contains
     ! ajn fixme can grab this stuff from above
 
     ! compute D^{*,n+1} for rho1
-    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi_fc,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! compute St^{*,n+1} for rho1
@@ -400,15 +332,8 @@ contains
        call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
-    ! average chi to faces
-    if (diff_coef < 0) then
-       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
-    else
-       ! do nothing - chi_fc already contains the constant value of diff_coef
-    end if
-
     ! add D^{n+1} to rhs_p
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! fill the stochastic multifabs with a new set of random numbers
@@ -458,24 +383,11 @@ contains
        do i=1,dm
           call destroy(s_fc(n,i))
           call destroy(gmres_rhs_v(n,i))
-          call destroy(chi_fc(n,i))
           call destroy(m_a_fluxdiv(n,i))
           call destroy(m_d_fluxdiv(n,i))
           call destroy(m_s_fluxdiv(n,i))
        end do
     end do
-
-    if (dm .eq. 2) then
-       do n=1,nlevs
-          call multifab_destroy(eta_nd(n))
-       end do
-    else if (dm .eq. 3) then
-       do n=1,nlevs
-          do i=1,3
-             call multifab_destroy(eta_ed(n,i))
-          end do
-       end do
-    end if
 
   end subroutine advance_timestep
 
