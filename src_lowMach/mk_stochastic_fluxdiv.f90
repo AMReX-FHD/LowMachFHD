@@ -58,6 +58,8 @@ contains
     real(kind=dp_t), pointer :: fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:)
     integer :: lo(mla%dim), hi(mla%dim)
 
+    return
+
     ! there are no scalars with stochastic terms
     if (nscal < 2) return
 
@@ -579,19 +581,19 @@ contains
 
        if (visc_coef < 0) then
           ! eta varies in space, add its contribution below in an i/j/k loop
-          variance = sqrt(variance_coef*2.d0*kT*visc_coef/(product(dx(n,1:dm))*fixed_dt))
+          variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*fixed_dt))
        else
           ! eta is constant in space, include it here
-          variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*fixed_dt))
+          variance = sqrt(variance_coef*2.d0*kT*visc_coef/(product(dx(n,1:dm))*fixed_dt))
        end if
 
 
        if (dm .eq. 2) then
 
-          ng_n = mflux_nd(1)%ng
+          ng_n = mflux_nd_temp(1)%ng
           ng_w = eta_nd(1)%ng
           
-          do i=1,nfabs(mflux_cc(n))
+          do i=1,nfabs(mflux_cc_temp(n))
              
              fp  => dataptr(mflux_cc_temp(n),i)
              sp  => dataptr(mflux_nd_temp(n),i)
@@ -613,12 +615,12 @@ contains
           end do
 
           ! sync up random numbers at boundaries and ghost cells
-          call multifab_internal_sync(mflux_nd(n))
-          call multifab_fill_boundary(mflux_nd(n))
+          call multifab_internal_sync(mflux_nd_temp(n))
+          call multifab_fill_boundary(mflux_nd_temp(n))
           call multifab_fill_boundary(mflux_cc_temp(n))
           
           if(filtering_width>0) then
-             call multifab_filter(mflux_nd(n), dm)
+             call multifab_filter(mflux_nd_temp(n), dm)
              call multifab_filter(mflux_cc_temp(n), dm)
              call multifab_fill_boundary(mflux_cc_temp(n)) ! First ghost cell is used in divergence
           end if
@@ -669,29 +671,29 @@ contains
              call multifab_filter(mflux_ed_temp(n,1), dm)
              call multifab_filter(mflux_ed_temp(n,2), dm)
              call multifab_filter(mflux_ed_temp(n,3), dm)
-             call multifab_filter(mflux_cc(n), dm)
-             call multifab_fill_boundary(mflux_cc(n)) ! First ghost cell is used in divergence
+             call multifab_filter(mflux_cc_temp(n), dm)
+             call multifab_fill_boundary(mflux_cc_temp(n)) ! First ghost cell is used in divergence
           end if
 
        end if
 
        ! calculate divergence and add to stoch_m_force
        do i=1,nfabs(stoch_m_force(n,1))
-          fp => dataptr(mflux_cc(n), i)
+          fp => dataptr(mflux_cc_temp(n), i)
           dxp => dataptr(stoch_m_force(n,1),i)
           dyp => dataptr(stoch_m_force(n,2),i)
           lo =  lwb(get_box(stoch_m_force(n,1), i))
           hi =  upb(get_box(stoch_m_force(n,1), i))
           select case (dm)
           case (2)
-             sp => dataptr(mflux_nd(n), i)
+             sp => dataptr(mflux_nd_temp(n), i)
              call stoch_m_force_2d(fp(:,:,1,:), sp(:,:,1,:), dxp(:,:,1,1), dyp(:,:,1,1), &
                                    ng_c, ng_n, ng_f, dx(n,:), lo, hi)
           case (3)
              dzp => dataptr(stoch_m_force(n,3), i)
-             fxp => dataptr(mflux_ed(n,1), i)
-             fyp => dataptr(mflux_ed(n,2), i)
-             fzp => dataptr(mflux_ed(n,3), i)
+             fxp => dataptr(mflux_ed_temp(n,1), i)
+             fyp => dataptr(mflux_ed_temp(n,2), i)
+             fzp => dataptr(mflux_ed_temp(n,3), i)
              call stoch_m_force_3d(fp(:,:,:,:), fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:), &
                                    dxp(:,:,:,1), dyp(:,:,:,1), dzp(:,:,:,1), &
                                    ng_c, ng_e, ng_f, dx(n,:), lo, hi)

@@ -148,29 +148,6 @@ contains
     ! Step 2 - Crank-Nicolson Velocity Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! compute prim^{*,n+1} from s^{*,n+1} in valid region
-    call convert_cons_to_prim(mla,snew,prim,.true.)
-    do n=1,nlevs
-       call multifab_fill_boundary(prim(n))
-    end do
-
-    ! recompute chi, eta, and kappa
-    call compute_chi(mla,chi,prim,dx)
-    call compute_eta(mla,eta,prim,dx)
-    call compute_kappa(mla,kappa,prim,dx)
-
-    ! average s^{*,n+1} to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
-    end do
-
-    ! average chi to faces
-    if (diff_coef < 0) then
-       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
-    else
-       ! do nothing - chi_fc already contains the constant value of diff_coef
-    end if
-
     ! compute eta on nodes (2D) or edges (3D)
     if (dm .eq. 2) then
        if (visc_coef < 0) then
@@ -239,6 +216,29 @@ contains
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
+    ! compute prim^{*,n+1} from s^{*,n+1} in valid region
+    call convert_cons_to_prim(mla,snew,prim,.true.)
+    do n=1,nlevs
+       call multifab_fill_boundary(prim(n))
+    end do
+
+    ! recompute chi, eta, and kappa
+    call compute_chi(mla,chi,prim,dx)
+    call compute_eta(mla,eta,prim,dx)
+    call compute_kappa(mla,kappa,prim,dx)
+
+    ! average s^{*,n+1} to faces
+    do i=1,nscal
+       call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
+    end do
+
+    ! average chi to faces
+    if (diff_coef < 0) then
+       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+    else
+       ! do nothing - chi_fc already contains the constant value of diff_coef
+    end if
+
     ! add D^{*,n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
@@ -290,7 +290,9 @@ contains
     call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
 
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ajn fixme can grab this stuff from above
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! ajn fixme can grab this stuff from above
+
     ! compute D^{*,n+1} for rho1
     call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
@@ -312,29 +314,6 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 4 - Crank-Nicolson Velocity Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! compute prim^{n+1} from s^{n+1} in valid region
-    call convert_cons_to_prim(mla,snew,prim,.true.)
-    do n=1,nlevs
-       call multifab_fill_boundary(prim(n))
-    end do
-
-    ! recompute chi, eta, and kappa
-    call compute_chi(mla,chi,prim,dx)
-    call compute_eta(mla,eta,prim,dx)
-    call compute_kappa(mla,kappa,prim,dx)
-
-    ! average s^{n+1} to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
-    end do
-
-    ! average chi to faces
-    if (diff_coef < 0) then
-       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
-    else
-       ! do nothing - chi_fc already contains the constant value of diff_coef
-    end if
 
     ! build up rhs_v for gmres solve: set rhs to m^n
     do n=1,nlevs
@@ -400,6 +379,29 @@ contains
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
+
+    ! compute prim^{n+1} from s^{n+1} in valid region
+    call convert_cons_to_prim(mla,snew,prim,.true.)
+    do n=1,nlevs
+       call multifab_fill_boundary(prim(n))
+    end do
+
+    ! recompute chi, eta, and kappa
+    call compute_chi(mla,chi,prim,dx)
+    call compute_eta(mla,eta,prim,dx)
+    call compute_kappa(mla,kappa,prim,dx)
+
+    ! average s^{n+1} to faces
+    do i=1,nscal
+       call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
+    end do
+
+    ! average chi to faces
+    if (diff_coef < 0) then
+       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+    else
+       ! do nothing - chi_fc already contains the constant value of diff_coef
+    end if
 
     ! add D^{n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
