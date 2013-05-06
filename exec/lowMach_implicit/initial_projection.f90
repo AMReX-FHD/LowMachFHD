@@ -8,8 +8,9 @@ module initial_projection_module
   use macproject_module
   use div_and_grad_module
   use mk_diffusive_fluxdiv_module
+  use mk_stochastic_fluxdiv_module
   use multifab_physbc_module
-  use probin_lowmach_module, only: rhobar, diff_coef
+  use probin_lowmach_module, only: rhobar, diff_coef, nscal
 
   implicit none
 
@@ -37,7 +38,7 @@ contains
     type(multifab) ::   mac_rhs(mla%nlevel)
     type(multifab) ::      divu(mla%nlevel)
     type(multifab) ::       phi(mla%nlevel)
-    type(multifab) ::    rho_fc(mla%nlevel,mla%dim)
+    type(multifab) ::      s_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
     type(multifab) ::    chi_fc(mla%nlevel,mla%dim)
 
@@ -51,9 +52,9 @@ contains
        call multifab_build(divu(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(   rho_fc(n,i),mla%la(n),1,1,i)
-          call multifab_build_edge(rhoinv_fc(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   chi_fc(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(     s_fc(n,i),mla%la(n),nscal,1,i)
+          call multifab_build_edge(rhoinv_fc(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(   chi_fc(n,i),mla%la(n),1    ,0,i)
        end do       
     end do
 
@@ -62,11 +63,13 @@ contains
        call setval(phi(n),0.d0)
     end do
 
-    ! create average rho to faces
-    call average_cc_to_face(nlevs,sold,rho_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+    ! create average sold to faces
+    do i=1,nscal
+       call average_cc_to_face(nlevs,sold,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
+    end do
 
     ! convert m to u in valid region
-    call convert_m_to_umac(mla,rho_fc,mold,umac,.true.)
+    call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!
     ! build rhs = div(u) - S
@@ -84,8 +87,10 @@ contains
     end if
 
     ! add del dot rho chi grad c
-    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,rho_fc,chi_fc,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
+
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,mac_rhs,s_fc,chi,dx)
 
     ! multiply by -S_fac
     do n=1,nlevs
@@ -117,14 +122,14 @@ contains
     end do
 
     ! convert u to m in valid plus ghost region
-    call convert_m_to_umac(mla,rho_fc,mold,umac,.false.)
+    call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
 
     do n=1,nlevs
        call multifab_destroy(mac_rhs(n))
        call multifab_destroy(divu(n))
        call multifab_destroy(phi(n))
        do i=1,dm
-          call multifab_destroy(rho_fc(n,i))
+          call multifab_destroy(s_fc(n,i))
           call multifab_destroy(rhoinv_fc(n,i))
           call multifab_destroy(chi_fc(n,i))
        end do

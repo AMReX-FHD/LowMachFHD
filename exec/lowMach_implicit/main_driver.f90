@@ -13,6 +13,7 @@ subroutine main_driver()
   use advance_timestep_module
   use convert_variables_module
   use analysis_module
+  use mk_stochastic_fluxdiv_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
@@ -193,6 +194,12 @@ subroutine main_driver()
   call compute_eta(mla,eta,prim,dx)
   call compute_kappa(mla,kappa,prim,dx)
 
+  ! allocate and build multifabs that will contain random numbers
+  call init_stochastic(mla)
+
+  ! fill the stochastic multifabs with a new set of random numbers
+  call fill_stochastic(mla)  
+
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,prim,chi,dx,the_bc_tower)
 
@@ -236,6 +243,9 @@ subroutine main_driver()
      end do
         
   end do
+
+  ! destroy and deallocate multifabs that contain random numbers
+  call destroy_stochastic(mla)
 
   do n=1,nlevs
      do i=1,dm

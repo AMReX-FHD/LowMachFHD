@@ -9,6 +9,7 @@ module mk_stochastic_fluxdiv_module
   use BoxLibRNGs
   use analysis_module
   use convert_stag_module
+  use probin_common_module , only: fixed_dt
   use probin_lowmach_module, only: nscal, rhobar, visc_coef, diff_coef, variance_coef, &
                                    conc_scal, stoch_stress_form, filtering_width
 
@@ -34,7 +35,7 @@ module mk_stochastic_fluxdiv_module
 contains
 
   ! Note that here we *increment* stoch_s_force so it must be initialized externally!
-  subroutine mk_stochastic_s_fluxdiv(mla,the_bc_level,stoch_s_force,s_fc,chi,dx,dt)
+  subroutine mk_stochastic_s_fluxdiv(mla,the_bc_level,stoch_s_force,s_fc,chi,dx)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -42,7 +43,6 @@ contains
     type(multifab) , intent(in   ) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: chi(:)
     real(dp_t)     , intent(in   ) :: dx(:,:)
-    real(dp_t)     , intent(in   ) :: dt
 
     ! local
     integer :: n,nlevs,i,dm,m
@@ -98,10 +98,10 @@ contains
 
        if (diff_coef < 0) then
           ! chi varies in space, add its contribution below in an i/j/k loop
-          variance = sqrt(variance_coef*conc_scal*2.d0          /(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef*conc_scal*2.d0          /(product(dx(n,1:dm))*fixed_dt))
        else
           ! chi is constant in space, include it here
-          variance = sqrt(variance_coef*conc_scal*2.d0*diff_coef/(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef*conc_scal*2.d0*diff_coef/(product(dx(n,1:dm))*fixed_dt))
        end if
 
        do i=1,dm       
@@ -469,14 +469,13 @@ contains
   end subroutine mk_stochastic_s_fluxdiv
 
   ! Note that here we *increment* stoch_m_force so it must be initialized externally!
-  subroutine mk_stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,dx,dt)
+  subroutine mk_stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,dx)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: stoch_m_force(:,:)
     type(multifab) , intent(in   ) :: eta(:)
     real(dp_t)     , intent(in   ) :: dx(:,:)
-    real(dp_t)     , intent(in   ) :: dt
 
     ! local
     integer :: n,nlevs,dm,i
@@ -579,16 +578,17 @@ contains
 
        if (visc_coef < 0) then
           ! eta varies in space, add its contribution below in an i/j/k loop
-          variance = sqrt(variance_coef*2.d0*kT*visc_coef/(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef*2.d0*kT*visc_coef/(product(dx(n,1:dm))*fixed_dt))
        else
           ! eta is constant in space, include it here
-          variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*fixed_dt))
        end if
 
 
        if (dm .eq. 2) then
 
           ng_n = mflux_nd(1)%ng
+          ng_w = eta_nd(1)%ng
           
           do i=1,nfabs(mflux_cc(n))
              
