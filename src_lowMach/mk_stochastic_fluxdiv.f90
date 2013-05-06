@@ -46,7 +46,7 @@ contains
 
     ! local
     integer :: n,nlevs,i,dm,m
-    integer :: ng_x,ng_z,ng_s
+    integer :: ng_x,ng_z,ng_s,ng_f
 
     real(dp_t) :: variance
 
@@ -54,6 +54,7 @@ contains
     type(multifab) ::        chi_fc(mla%nlevel,mla%dim)
 
     real(kind=dp_t), pointer :: fp(:,:,:,:), sp(:,:,:,:), dp(:,:,:,:)
+    real(kind=dp_t), pointer :: fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:)
     integer :: lo(mla%dim), hi(mla%dim)
 
     ! there are no scalars with stochastic terms
@@ -91,6 +92,7 @@ contains
     ng_x = sflux_fc_temp(1,1)%ng
     ng_z = chi_fc(1,1)%ng
     ng_s = s_fc(1,1)%ng
+    ng_f = stoch_s_force(1)%ng
 
     do n=1,nlevs
 
@@ -139,20 +141,39 @@ contains
           if (filtering_width > 0) then
              call multifab_filter(sflux_fc_temp(n,i), dm)
           end if
-          
+
        end do
 
-       ! apply boundary conditions
-
-       ! sync up random numbers at boundaries and ghost cells
-
-       ! add divergence to stoch_s_force
+       ! calculate divergence and add to stoch_s_force
+       do i=1,nfabs(stoch_s_force(n))
+          fp  => dataptr(stoch_s_force(n),i)
+          fxp => dataptr(sflux_fc_temp(n,1), i)
+          fyp => dataptr(sflux_fc_temp(n,2), i)
+          lo =  lwb(get_box(stoch_s_force(n), i))
+          hi =  upb(get_box(stoch_s_force(n), i))
+          select case (dm)
+          case (2)
+             call stoch_s_force_2d(fxp(:,:,1,:), fyp(:,:,1,:), ng_x, &
+                                   fp(:,:,1,2:), ng_f, &
+                                   dx(n,:),lo,hi, &
+                                   the_bc_level(n)%adv_bc_level_array(i,:,:,:))
+          case (3)
+             fzp => dataptr(sflux_fc_temp(n,3), i)
+             call stoch_s_force_3d(fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:), ng_x, &
+                                   fp(:,:,:,2:), ng_f, &
+                                   dx(n,:),lo,hi, &
+                                   the_bc_level(n)%adv_bc_level_array(i,:,:,:))
+          end select
+       end do
 
     end do
 
     do n=1,nlevs
        do i=1,dm
           call multifab_destroy(sflux_fc_temp(n,i))
+          if (diff_coef < 0) then
+             call multifab_destroy(chi_fc(n,i))
+          end if
        end do
     end do
 
@@ -398,6 +419,52 @@ contains
       s_fac(:) = rho*fac(:)*(1.0d0-fac(:))* (fac(:)*mol_mass(1)+(1.0d0-fac(:))*mol_mass(2))  
     
     end subroutine concentration_amplitude
+    
+    subroutine stoch_s_force_2d(xflux,yflux,ng_x,div,ng_f,dx,lo,hi,adv_bc)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_f,ng_x
+      real(kind=dp_t), intent(in   ) :: xflux(lo(1)-ng_x:,lo(2)-ng_x:,:)
+      real(kind=dp_t), intent(in   ) :: yflux(lo(1)-ng_x:,lo(2)-ng_x:,:)
+      real(kind=dp_t), intent(inout) ::   div(lo(1)-ng_f:,lo(2)-ng_f:,:)
+      real(kind=dp_t), intent(in   ) ::   dx(:)
+      integer        , intent(in   ) :: adv_bc(:,:,:)
+
+      integer :: i,j
+
+      do j = lo(2),hi(2)
+         do i = lo(1),hi(1)
+            div(i,j,:) = div(i,j,:) + &
+                 (xflux(i+1,j,:) - xflux(i,j,:)) / dx(1) + &
+                 (yflux(i,j+1,:) - yflux(i,j,:)) / dx(2)
+         end do
+      end do
+
+    end subroutine stoch_s_force_2d
+
+    subroutine stoch_s_force_3d(xflux,yflux,zflux,ng_x,div,ng_f,dx,lo,hi,adv_bc)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_f,ng_x
+      real(kind=dp_t), intent(in   ) :: xflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
+      real(kind=dp_t), intent(in   ) :: yflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
+      real(kind=dp_t), intent(in   ) :: zflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
+      real(kind=dp_t), intent(inout) ::   div(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
+      real(kind=dp_t), intent(in   ) :: dx(:)
+      integer        , intent(in   ) :: adv_bc(:,:,:)
+
+      integer :: i,j,k
+
+      do k = lo(3),hi(3)
+         do j = lo(2),hi(2)
+            do i = lo(1),hi(1)
+               div(i,j,k,:) = div(i,j,k,:) + &
+                    (xflux(i+1,j,k,:) - xflux(i,j,k,:)) / dx(1) + &
+                    (yflux(i,j+1,k,:) - yflux(i,j,k,:)) / dx(2) + &
+                    (zflux(i,j,k+1,:) - zflux(i,j,k,:)) / dx(3)
+            end do
+         end do
+      end do
+
+    end subroutine stoch_s_force_3d
 
   end subroutine mk_stochastic_s_fluxdiv
 
@@ -412,15 +479,24 @@ contains
     real(dp_t)     , intent(in   ) :: dt
 
     ! local
-    integer n,nlevs,dm
+    integer :: n,nlevs,dm,i
+    integer :: ng_c,ng_e,ng_y,ng_w,ng_n,ng_f
 
     real(dp_t) :: variance
 
     type(multifab) :: mflux_cc_temp(mla%nlevel)
     type(multifab) :: mflux_nd_temp(mla%nlevel)
     type(multifab) :: mflux_ed_temp(mla%nlevel,3)
+    type(multifab) :: eta_nd(mla%nlevel)
+    type(multifab) :: eta_ed(mla%nlevel,3)
 
     logical :: nodal_temp(mla%dim)
+
+    real(kind=dp_t), pointer :: fp(:,:,:,:), dp(:,:,:,:), sp(:,:,:,:)
+    real(kind=dp_t), pointer :: fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:)
+    real(kind=dp_t), pointer :: dxp(:,:,:,:), dyp(:,:,:,:), dzp(:,:,:,:)
+    real(kind=dp_t), pointer :: ep1(:,:,:,:), ep2(:,:,:,:), ep3(:,:,:,:)
+    integer :: lo(mla%dim), hi(mla%dim)
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -465,6 +541,40 @@ contains
        end if
     end do
 
+    ! if eta varies in space, average eta to nodes (2D) or edges (3D)
+    if (visc_coef < 0) then
+       do n=1,nlevs
+          if (dm .eq. 2) then
+             nodal_temp = .true.
+             call multifab_build(eta_nd(n),mla%la(n),1,0,nodal_temp)
+          else if (dm .eq. 3) then
+             nodal_temp(1) = .true.
+             nodal_temp(2) = .true.
+             nodal_temp(3) = .false.
+             call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
+             nodal_temp(1) = .true.
+             nodal_temp(2) = .false.
+             nodal_temp(3) = .true.
+             call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
+             nodal_temp(1) = .false.
+             nodal_temp(2) = .true.
+             nodal_temp(3) = .true.
+             call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
+          end if
+       end do
+
+       if (dm .eq. 2) then
+          call average_cc_to_node(nlevs,eta,eta_nd,1,dm+2,1,the_bc_level)
+       else if (dm .eq. 3) then
+          call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_level)
+       end if
+
+    end if
+
+    ng_c = mflux_cc_temp(1)%ng
+    ng_y = eta(1)%ng
+    ng_f = stoch_m_force(1,1)%ng
+
     do n=1,nlevs
 
        if (visc_coef < 0) then
@@ -475,32 +585,401 @@ contains
           variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*dt))
        end if
 
-       ! if eta varies in space, average eta to nodes (2D) or edges (3D)
-       ! and multiply pointwise by sqrt(eta)
-       if (visc_coef < 0) then
+
+       if (dm .eq. 2) then
+
+          ng_n = mflux_nd(1)%ng
+          
+          do i=1,nfabs(mflux_cc(n))
+             
+             fp  => dataptr(mflux_cc_temp(n),i)
+             sp  => dataptr(mflux_nd_temp(n),i)
+             dp  => dataptr(eta(n),i)
+             ep1 => dataptr(eta_nd(n),i)
+             lo = lwb(get_box(mflux_cc_temp(n),i))
+             hi = upb(get_box(mflux_cc_temp(n),i))
+             ! multiply by variance
+             fp = variance*fp
+             sp = variance*sp
+             ! if eta varies in space, multiply pointwise by sqrt(eta)
+             if (visc_coef < 0) then
+                call mult_by_sqrt_eta_2d(fp(:,:,1,:),ng_c,sp(:,:,1,:),ng_n, &
+                                         dp(:,:,1,1),ng_y,ep1(:,:,1,1),ng_w,lo,hi)
+             end if
+             ! apply boundary conditions
+             call mflux_bc_2d(sp(:,:,1,:),ng_n,lo,hi, &
+                              the_bc_level(n)%phys_bc_level_array(i,:,:))
+          end do
+
+          ! sync up random numbers at boundaries and ghost cells
+          call multifab_internal_sync(mflux_nd(n))
+          call multifab_fill_boundary(mflux_nd(n))
+          call multifab_fill_boundary(mflux_cc_temp(n))
+          
+          if(filtering_width>0) then
+             call multifab_filter(mflux_nd(n), dm)
+             call multifab_filter(mflux_cc_temp(n), dm)
+             call multifab_fill_boundary(mflux_cc_temp(n)) ! First ghost cell is used in divergence
+          end if
+
+       else if (dm .eq. 3) then
+
+          ng_e = mflux_ed_temp(1,1)%ng
+          ng_w = eta_ed(1,1)%ng
+
+          do i=1,nfabs(mflux_cc_temp(n))
+             fp  => dataptr(mflux_cc_temp(n),i)
+             fxp => dataptr(mflux_ed_temp(n,1),i)
+             fyp => dataptr(mflux_ed_temp(n,2),i)
+             fzp => dataptr(mflux_ed_temp(n,3),i)
+             dp => dataptr(eta(n),i)
+             ep1 => dataptr(eta_ed(n,1),i)
+             ep2 => dataptr(eta_ed(n,2),i)
+             ep3 => dataptr(eta_ed(n,3),i)
+             lo = lwb(get_box(mflux_cc_temp(n),i))
+             hi = upb(get_box(mflux_cc_temp(n),i))
+             ! multiply by variance
+             fp  = variance*fp
+             fxp = variance*fxp
+             fyp = variance*fyp
+             fzp = variance*fzp
+             ! if eta varies in space, multiply pointwise by sqrt(eta)
+             if (visc_coef < 0) then
+                call mult_by_sqrt_eta_3d(fp(:,:,:,:),ng_c, &
+                                         fxp(:,:,:,:),fyp(:,:,:,:),fzp(:,:,:,:),ng_e, &
+                                         dp(:,:,:,1),ng_y, &
+                                         ep1(:,:,:,1),ep2(:,:,:,1),ep3(:,:,:,1),ng_w,lo,hi)
+             end if
+             ! apply boundary conditions
+             call mflux_bc_3d(fxp(:,:,:,:),fyp(:,:,:,:),fzp(:,:,:,:),ng_e,lo,hi, &
+                              the_bc_level(n)%phys_bc_level_array(i,:,:))
+          end do
+          
+          ! sync up random numbers at boundaries and ghost cells
+          call multifab_internal_sync(mflux_ed_temp(n,1))
+          call multifab_internal_sync(mflux_ed_temp(n,2))
+          call multifab_internal_sync(mflux_ed_temp(n,3))
+          call multifab_fill_boundary(mflux_ed_temp(n,1))
+          call multifab_fill_boundary(mflux_ed_temp(n,2))
+          call multifab_fill_boundary(mflux_ed_temp(n,3))
+          call multifab_fill_boundary(mflux_cc_temp(n))
+
+          if(filtering_width>0) then
+             call multifab_filter(mflux_ed_temp(n,1), dm)
+             call multifab_filter(mflux_ed_temp(n,2), dm)
+             call multifab_filter(mflux_ed_temp(n,3), dm)
+             call multifab_filter(mflux_cc(n), dm)
+             call multifab_fill_boundary(mflux_cc(n)) ! First ghost cell is used in divergence
+          end if
 
        end if
 
-       ! multiply by variance
+       ! calculate divergence and add to stoch_m_force
+       do i=1,nfabs(stoch_m_force(n,1))
+          fp => dataptr(mflux_cc(n), i)
+          dxp => dataptr(stoch_m_force(n,1),i)
+          dyp => dataptr(stoch_m_force(n,2),i)
+          lo =  lwb(get_box(stoch_m_force(n,1), i))
+          hi =  upb(get_box(stoch_m_force(n,1), i))
+          select case (dm)
+          case (2)
+             sp => dataptr(mflux_nd(n), i)
+             call stoch_m_force_2d(fp(:,:,1,:), sp(:,:,1,:), dxp(:,:,1,1), dyp(:,:,1,1), &
+                                   ng_c, ng_n, ng_f, dx(n,:), lo, hi)
+          case (3)
+             dzp => dataptr(stoch_m_force(n,3), i)
+             fxp => dataptr(mflux_ed(n,1), i)
+             fyp => dataptr(mflux_ed(n,2), i)
+             fzp => dataptr(mflux_ed(n,3), i)
+             call stoch_m_force_3d(fp(:,:,:,:), fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:), &
+                                   dxp(:,:,:,1), dyp(:,:,:,1), dzp(:,:,:,1), &
+                                   ng_c, ng_e, ng_f, dx(n,:), lo, hi)
 
-       ! apply boundary conditions
-
-       ! sync up random numbers at boundaries and ghost cells
-
-       ! add divergence to stoch_m_force
-
+          end select
+       end do
     end do
 
     do n=1,nlevs
        call multifab_destroy(mflux_cc_temp(n))
        if (dm .eq. 2) then
           call multifab_destroy(mflux_nd_temp(n))
+          if (visc_coef < 0) then
+             call multifab_destroy(eta_nd(n))
+          end if
        else if (dm .eq. 3) then
           call multifab_destroy(mflux_ed_temp(n,1))
           call multifab_destroy(mflux_ed_temp(n,2))
           call multifab_destroy(mflux_ed_temp(n,3))
+          if (visc_coef < 0) then
+             call multifab_destroy(eta_ed(n,1))
+             call multifab_destroy(eta_ed(n,2))
+             call multifab_destroy(eta_ed(n,3))
+          end if
        end if
     end do
+
+  contains
+    
+    subroutine mult_by_sqrt_eta_2d(mflux_cc,ng_c,mflux_nd,ng_n,eta,ng_y,eta_nodal,ng_w,lo,hi)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_n,ng_y,ng_w
+      real(kind=dp_t), intent(inout) ::  mflux_cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
+      real(kind=dp_t), intent(inout) ::  mflux_nd(lo(1)-ng_n:,lo(2)-ng_n:,:)
+      real(kind=dp_t), intent(in   ) ::       eta(lo(1)-ng_y:,lo(2)-ng_y:)
+      real(kind=dp_t), intent(in   ) :: eta_nodal(lo(1)-ng_w:,lo(2)-ng_w:)
+
+      ! local
+      integer i,j
+
+      do j=lo(2)-1,hi(2)+1
+         do i=lo(1)-1,hi(1)+1
+            mflux_cc(i,j,:) = mflux_cc(i,j,:) * sqrt(eta(i,j))
+         end do
+      end do
+
+      do j=lo(2),hi(2)+1
+         do i=lo(1),hi(1)+1
+            mflux_nd(i,j,:) = mflux_nd(i,j,:) * sqrt(eta_nodal(i,j))
+         end do
+      end do
+
+    end subroutine mult_by_sqrt_eta_2d
+
+    subroutine mult_by_sqrt_eta_3d(mflux_cc,ng_c,mflux_xy,mflux_xz,mflux_yz,ng_e,eta,ng_y, &
+         eta_xy,eta_xz,eta_yz,ng_w,lo,hi)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_e,ng_y,ng_w
+      real(kind=dp_t), intent(inout) :: mflux_cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
+      real(kind=dp_t), intent(inout) :: mflux_xy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(inout) :: mflux_xz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(inout) :: mflux_yz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(in   ) ::      eta(lo(1)-ng_y:,lo(2)-ng_y:,lo(3)-ng_y:)
+      real(kind=dp_t), intent(in   ) ::   eta_xy(lo(1)-ng_w:,lo(2)-ng_w:,lo(3)-ng_w:)
+      real(kind=dp_t), intent(in   ) ::   eta_xz(lo(1)-ng_w:,lo(2)-ng_w:,lo(3)-ng_w:)
+      real(kind=dp_t), intent(in   ) ::   eta_yz(lo(1)-ng_w:,lo(2)-ng_w:,lo(3)-ng_w:)
+
+      ! local
+      integer i,j,k
+
+      do k=lo(3)-1,hi(3)+1
+         do j=lo(2)-1,hi(2)+1
+            do i=lo(1)-1,hi(1)+1
+               mflux_cc(i,j,k,:) = mflux_cc(i,j,k,:) * sqrt(eta(i,j,k))
+            end do
+         end do
+      end do
+
+      do k=lo(3),hi(3)
+         do j=lo(2),hi(2)+1
+            do i=lo(1),hi(1)+1
+               mflux_xy(i,j,k,:) = mflux_xy(i,j,k,:) * sqrt(eta_xy(i,j,k))
+            end do
+         end do
+      end do
+
+      do k=lo(3),hi(3)+1
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)+1
+               mflux_xz(i,j,k,:) = mflux_xz(i,j,k,:) * sqrt(eta_xz(i,j,k))
+            end do
+         end do
+      end do
+
+      do k=lo(3),hi(3)+1
+         do j=lo(2),hi(2)+1
+            do i=lo(1),hi(1)
+               mflux_yz(i,j,k,:) = mflux_yz(i,j,k,:) * sqrt(eta_yz(i,j,k))
+            end do
+         end do
+      end do
+
+    end subroutine mult_by_sqrt_eta_3d
+
+    subroutine mflux_bc_2d(mflux_nd,ng_n,lo,hi,phys_bc)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_n
+      real(kind=dp_t), intent(inout) :: mflux_nd(lo(1)-ng_n:,lo(2)-ng_n:,:)
+      integer        , intent(in   ) :: phys_bc(:,:)
+
+      ! y-mom fluxes that live on x-domain boundaries
+      if (phys_bc(1,1) .eq. NO_SLIP_WALL .or. phys_bc(1,1) .eq. INLET) then
+         mflux_nd(lo(1),lo(2):hi(2)+1,:) = sqrt(2.d0)*mflux_nd(lo(1),lo(2):hi(2)+1,:)
+      else if (phys_bc(1,1) .eq. SLIP_WALL) then
+         mflux_nd(lo(1),lo(2):hi(2)+1,:) = 0.d0
+      end if
+      if (phys_bc(1,2) .eq. NO_SLIP_WALL .or. phys_bc(1,2) .eq. INLET) then
+         mflux_nd(hi(1)+1,lo(2):hi(2)+1,:) = sqrt(2.d0)*mflux_nd(hi(1)+1,lo(2):hi(2)+1,:)
+      else if (phys_bc(1,2) .eq. SLIP_WALL) then
+         mflux_nd(hi(1)+1,lo(2):hi(2)+1,:) = 0.d0
+      end if
+
+      ! x-mom fluxes that live on y-domain boundaries
+      if (phys_bc(2,1) .eq. NO_SLIP_WALL .or. phys_bc(2,1) .eq. INLET) then
+         mflux_nd(lo(1):hi(1)+1,lo(2),:) = sqrt(2.d0)*mflux_nd(lo(1):hi(1)+1,lo(2),:)
+      else if (phys_bc(2,1) .eq. SLIP_WALL) then
+         mflux_nd(lo(1):hi(1)+1,lo(2),:) = 0.d0
+      end if
+      if (phys_bc(2,2) .eq. NO_SLIP_WALL .or. phys_bc(2,2) .eq. INLET) then
+         mflux_nd(lo(1):hi(1)+1,hi(2)+1,:) = sqrt(2.d0)*mflux_nd(lo(1):hi(1)+1,hi(2)+1,:)
+      else if (phys_bc(2,2) .eq. SLIP_WALL) then
+         mflux_nd(lo(1):hi(1)+1,hi(2)+1,:) = 0.d0
+      end if
+
+    end subroutine mflux_bc_2d
+
+    subroutine mflux_bc_3d(mflux_xy,mflux_xz,mflux_yz,ng_e,lo,hi,phys_bc)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_e
+      real(kind=dp_t), intent(inout) :: mflux_xy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(inout) :: mflux_xz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(inout) :: mflux_yz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      integer        , intent(in   ) :: phys_bc(:,:)
+
+      ! y-mom and z-mom fluxes that live on x-domain boundaries
+      if (phys_bc(1,1) .eq. NO_SLIP_WALL .or. phys_bc(1,1) .eq. INLET) then
+         mflux_xy(lo(1),lo(2):hi(2)+1,lo(3):hi(3),:) = sqrt(2.d0)*mflux_xy(lo(1),lo(2):hi(2)+1,lo(3):hi(3),:)
+         mflux_xz(lo(1),lo(2):hi(2),lo(3):hi(3)+1,:) = sqrt(2.d0)*mflux_xz(lo(1),lo(2):hi(2),lo(3):hi(3)+1,:)
+      else if (phys_bc(1,1) .eq. SLIP_WALL) then
+         mflux_xy(lo(1),lo(2):hi(2)+1,lo(3):hi(3),:) = 0.d0
+         mflux_xz(lo(1),lo(2):hi(2),lo(3):hi(3)+1,:) = 0.d0
+      end if
+      if (phys_bc(1,2) .eq. NO_SLIP_WALL .or. phys_bc(1,2) .eq. INLET) then
+         mflux_xy(hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3),:) = sqrt(2.d0)*mflux_xy(hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3),:)
+         mflux_xz(hi(1)+1,lo(2):hi(2),lo(3):hi(3)+1,:) = sqrt(2.d0)*mflux_xz(hi(1)+1,lo(2):hi(2),lo(3):hi(3)+1,:)
+      else if (phys_bc(1,2) .eq. SLIP_WALL) then
+         mflux_xy(hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3),:) = 0.d0
+         mflux_xz(hi(1)+1,lo(2):hi(2),lo(3):hi(3)+1,:) = 0.d0
+      end if
+
+      ! x-mom and z-mom fluxes that live on y-domain boundaries
+      if (phys_bc(2,1) .eq. NO_SLIP_WALL .or. phys_bc(2,1) .eq. INLET) then
+         mflux_xy(lo(1):hi(1)+1,lo(2),lo(3):hi(3),:) = sqrt(2.d0)*mflux_xy(lo(1):hi(1)+1,lo(2),lo(3):hi(3),:)
+         mflux_yz(lo(1):hi(1),lo(2),lo(3):hi(3)+1,:) = sqrt(2.d0)*mflux_yz(lo(1):hi(1),lo(2),lo(3):hi(3)+1,:)
+      else if (phys_bc(2,1) .eq. SLIP_WALL) then
+         mflux_xy(lo(1):hi(1)+1,lo(2),lo(3):hi(3),:) = 0.d0
+         mflux_yz(lo(1):hi(1),lo(2),lo(3):hi(3)+1,:) = 0.d0
+      end if
+      if (phys_bc(2,2) .eq. NO_SLIP_WALL .or. phys_bc(2,2) .eq. INLET) then
+         mflux_xy(lo(1):hi(1)+1,hi(2)+1,lo(3):hi(3),:) = sqrt(2.d0)*mflux_xy(lo(1):hi(1)+1,hi(2)+1,lo(3):hi(3),:)
+         mflux_yz(lo(1):hi(1),hi(2)+1,lo(3):hi(3)+1,:) = sqrt(2.d0)*mflux_yz(lo(1):hi(1),hi(2)+1,lo(3):hi(3)+1,:)
+      else if (phys_bc(2,2) .eq. SLIP_WALL) then
+         mflux_xy(lo(1):hi(1)+1,hi(2)+1,lo(3):hi(3),:) = 0.d0
+         mflux_yz(lo(1):hi(1),hi(2)+1,lo(3):hi(3)+1,:) = 0.d0
+      end if
+
+      ! x-mom and y-mom fluxes that live on z-domain boundaries
+      if (phys_bc(3,1) .eq. NO_SLIP_WALL .or. phys_bc(3,1) .eq. INLET) then
+         mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),lo(3),:) = sqrt(2.d0)*mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),lo(3),:)
+         mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,lo(3),:) = sqrt(2.d0)*mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,lo(3),:)
+      else if (phys_bc(3,1) .eq. SLIP_WALL) then
+         mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),lo(3),:) = 0.d0
+         mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,lo(3),:) = 0.d0
+      end if
+      if (phys_bc(3,2) .eq. NO_SLIP_WALL .or. phys_bc(3,2) .eq. INLET) then
+         mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),hi(3)+1,:) = sqrt(2.d0)*mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),hi(3)+1,:)
+         mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,hi(3)+1,:) = sqrt(2.d0)*mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,hi(3)+1,:)
+      else if (phys_bc(3,2) .eq. SLIP_WALL) then
+         mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),hi(3)+1,:) = 0.d0
+         mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,hi(3)+1,:) = 0.d0
+      end if
+
+    end subroutine mflux_bc_3d
+
+    subroutine stoch_m_force_2d(flux_cc,flux_nd,divx,divy,ng_c,ng_n,ng_f,dx,lo,hi)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_n,ng_f
+      real(kind=dp_t), intent(in   ) :: flux_cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
+      real(kind=dp_t), intent(in   ) :: flux_nd(lo(1)-ng_n:,lo(2)-ng_n:,:)
+      real(kind=dp_t), intent(inout) ::    divx(lo(1)-ng_f:,lo(2)-ng_f:)
+      real(kind=dp_t), intent(inout) ::    divy(lo(1)-ng_f:,lo(2)-ng_f:)
+      real(kind=dp_t), intent(in   ) :: dx(:)
+
+      integer :: i,j
+
+      ! divergence on x-faces
+      do j=lo(2),hi(2)
+         do i=lo(1),hi(1)+1
+
+            divx(i,j) = divx(i,j) + &
+                 (flux_cc(i,j,1) - flux_cc(i-1,j,1)) / dx(1) + &
+                 (flux_nd(i,j+1,1) - flux_nd(i,j,1)) / dx(2)
+
+         end do
+      end do
+
+      ! divergence on y-faces
+      do j=lo(2),hi(2)+1
+         do i=lo(1),hi(1)
+
+            divy(i,j) = divy(i,j) + &
+                 (flux_nd(i+1,j,2) - flux_nd(i,j,2)) / dx(1) + &
+                 (flux_cc(i,j,2) - flux_cc(i,j-1,2)) / dx(2)
+
+         end do
+      end do
+
+
+    end subroutine stoch_m_force_2d
+
+    subroutine stoch_m_force_3d(flux_cc,flux_xy,flux_xz,flux_yz,divx,divy,divz, &
+                                ng_c,ng_e,ng_f,dx,lo,hi)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_e,ng_f
+      real(kind=dp_t), intent(in   ) :: flux_cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
+      real(kind=dp_t), intent(in   ) :: flux_xy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(in   ) :: flux_xz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(in   ) :: flux_yz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(inout) ::    divx(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
+      real(kind=dp_t), intent(inout) ::    divy(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
+      real(kind=dp_t), intent(inout) ::    divz(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
+      real(kind=dp_t), intent(in   ) :: dx(:)
+
+      ! local
+      integer :: i,j,k
+
+      ! divergence on x-faces
+      do k=lo(3),hi(3)
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)+1
+
+               divx(i,j,k) = divx(i,j,k) + &
+                    (flux_cc(i,j,k,1) - flux_cc(i-1,j,k,1)) / dx(1) + &
+                    (flux_xy(i,j+1,k,1) - flux_xy(i,j,k,1)) / dx(2) + &
+                    (flux_xz(i,j,k+1,1) - flux_xz(i,j,k,1)) / dx(3)
+
+            end do
+         end do
+      end do
+
+      ! divergence on y-faces
+      do k=lo(3),hi(3)
+         do j=lo(2),hi(2)+1
+            do i=lo(1),hi(1)
+
+               divy(i,j,k) = divy(i,j,k) + &
+                    (flux_xy(i+1,j,k,2) - flux_xy(i,j,k,2)) / dx(1) + &
+                    (flux_cc(i,j,k,2) - flux_cc(i,j-1,k,2)) / dx(2) + &
+                    (flux_yz(i,j,k+1,1) - flux_yz(i,j,k,1)) / dx(3)
+
+            end do
+         end do
+      end do
+
+      ! divergence on z-faces
+      do k=lo(3),hi(3)+1
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)
+
+               divz(i,j,k) = divz(i,j,k) + &
+                    (flux_xz(i+1,j,k,2) - flux_xz(i,j,k,2)) / dx(1) + &
+                    (flux_yz(i,j+1,k,2) - flux_yz(i,j,k,2)) / dx(2) + &
+                    (flux_cc(i,j,k,3) - flux_cc(i,j,k-1,3)) / dx(3)
+
+            end do
+         end do
+      end do
+
+    end subroutine stoch_m_force_3d
 
   end subroutine mk_stochastic_m_fluxdiv
 
@@ -608,7 +1087,7 @@ contains
     type(multifab) , intent(inout) :: mfab
     integer, intent(in) :: dm
 
-    integer :: i,j,k,n,box
+    integer :: i,j,k,box
     real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
 
     integer :: lo(3), hi(3), lo_g(3), hi_g(3)
