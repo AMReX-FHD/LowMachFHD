@@ -204,6 +204,8 @@ contains
 
     ! compute St^n for m
     call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,dx)
+
+    ! multiply St^n by dt and add to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,fixed_dt,1,0)
@@ -366,8 +368,10 @@ contains
     ! ajn fixme - add option to time-center eta
     ! otherwise we are using eta^{n+1}
 
-    ! add dt*St^{n+1} to rhs_v
+    ! compute St^{n+1}
     call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,dx)
+
+    ! multiply St^{n+1} by dt and add to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,fixed_dt,1,0)
