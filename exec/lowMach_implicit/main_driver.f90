@@ -14,6 +14,7 @@ subroutine main_driver()
   use convert_variables_module
   use analysis_module
   use mk_stochastic_fluxdiv_module
+  use project_onto_eos_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
@@ -219,6 +220,8 @@ subroutine main_driver()
 
      ! increment simulation time
      time = time + fixed_dt
+
+     call project_onto_eos(mla,snew)
 
      ! write a plotfile
      if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
