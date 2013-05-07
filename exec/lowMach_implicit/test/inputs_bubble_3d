@@ -1,10 +1,21 @@
 &probin_lowmach
 
-  prob_type = 1             ! sets scalars, vel, coeffs; see exact_solutions.f90
-  max_step = 100            ! maximum number of time steps
-  nscal = 2                 ! scalars; nscal=2 means we carry rho and rho*c
-  print_int = 1             ! how often to output EOS drift and sum of conserved quantities
-  rhobar(1:2) = 1.1d0 0.9d0 ! rho1bar and rho2bar
+  ! simulation properties
+  prob_type = 1              ! sets scalars, vel, coeffs; see exact_solutions.f90
+  max_step = 100             ! maximum number of time steps
+  print_int = 1              ! how often to output EOS drift and sum of conserved quantities
+
+  ! fluid properties
+  nscal = 2                  ! scalars; nscal=2 means we carry rho and rho*c
+  rhobar(1:2) = 1.1d0 0.9d0  ! rho1bar and rho2bar
+  visc_coef = 1.d0           ! momentum diffusion coefficient 'eta'   
+  diff_coef = 1.d0           ! concentration diffusion coefficient 'chi'
+
+  ! stochastic properties
+  variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing
+  conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
+  filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
+  stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
 /
 
@@ -12,13 +23,13 @@
 
   ! Problem specification
   !----------------------
-  dim_in = 3                       ! 2D or 3D  
-  prob_lo(1:3) = 0.d0 0.d0 0.d0    ! physical lo coordinate
+  dim_in = 3                    ! 2D or 3D  
+  prob_lo(1:3) = 0.d0 0.d0 0.d0 ! physical lo coordinate
   prob_hi(1:3) = 64.d0 64.d0 64.d0 ! physical hi coordinate
-  n_cells(1:3) = 32 32 32          ! number of cells in domain
-  max_grid_size(1:3) = 16 16 16    ! max number of cells in a box
-  fixed_dt = 0.05d0                ! time step
-  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
+  n_cells(1:3) = 32 32 32       ! number of cells in domain
+  max_grid_size(1:3) = 16 16 16 ! max number of cells in a box
+  fixed_dt = 0.05d0             ! time step
+  plot_int = 10                 ! Interval for writing a plotfile (for visit/amrvis)
 
   ! Algorithm control / selection
   !----------------------

@@ -19,14 +19,18 @@ module probin_lowmach_module
   ! Input parameters controlled via namelist input, with comments
   !------------------------------------------------------------- 
 
-  !----------------------
+  ! simulation properties
   namelist /probin_lowmach/ prob_type         ! sets scalars, vel, coeffs; see exact_solutions.f90
   namelist /probin_lowmach/ max_step          ! maximum number of time steps
-  namelist /probin_lowmach/ nscal             ! scalars; nscal=2 means we carry rho and rho*c
   namelist /probin_lowmach/ print_int         ! how often to output EOS drift and sum of conserved quantities
+
+  ! fluid properties
+  namelist /probin_lowmach/ nscal             ! scalars; nscal=2 means we carry rho and rho*c
   namelist /probin_lowmach/ rhobar            ! rho1bar and rho2bar
   namelist /probin_lowmach/ visc_coef         ! momentum diffusion coefficient 'eta'   
   namelist /probin_lowmach/ diff_coef         ! concentration diffusion coefficient 'chi'
+
+  ! stochastic properties
   namelist /probin_lowmach/ variance_coef     ! global scaling epsilon for stochastic forcing
   namelist /probin_lowmach/ conc_scal         ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
   namelist /probin_lowmach/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
@@ -63,18 +67,16 @@ contains
 
     prob_type = 1
     max_step = 1
-    nscal = 2
     print_int = 0
 
-    rhobar(1) = 1.1d0
+    nscal = 2
+    rhobar(1) = 1.1d0 
     rhobar(2) = 0.9d0
-
     visc_coef = 1.d0
     diff_coef = 1.d0
 
     variance_coef = 1.d0
     conc_scal = 1.d0
-
     filtering_width = 0
     stoch_stress_form = 1
     
