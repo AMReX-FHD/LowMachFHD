@@ -163,6 +163,8 @@ with
 \begin{equation}
 \Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n}.
 \end{equation}
+Note that $\Fb^n$ has already been computed during {\bf Step 4} of the previous time step
+(or the initialization {\bf Step 0} if $n=0$).\\ \\
 {\bf Step 2: Crank-Nicolson Velocity Predictor:}\\ \\
 First, define
 \begin{equation}
@@ -197,6 +199,7 @@ $\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta 
 \rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\\
 \rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right].
 \end{eqnarray}
+Note that $\Fb^{*,n+1})$ has already been computed during {\bf Step 2}.\\ \\
 {\bf Step 4: Crank-Nicolson Velocity Corrector:}\\ \\
 First, define
 \begin{equation}
