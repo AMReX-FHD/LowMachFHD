@@ -36,7 +36,6 @@
 \def\xb {{\bf x}}
 
 \def\Psib {\boldsymbol{\Psi}}
-\def\taub {\boldsymbol{\tau}}
 \def\Sigmab {\boldsymbol{\Sigma}}
 
 \def\half   {\frac{1}{2}}
@@ -68,7 +67,7 @@ The isothermal low Mach number equations of motion are:
 \begin{eqnarray}
 \partial_t\rho &=& -\nabla\cdot(\rho\vb),\\
 \partial_t\rho_1 &=& -\nabla\cdot(\rho_1\vb) + \underbrace{\nabla\cdot\rho\chi\nabla c + \nabla\cdot\Psib}_{\nabla\cdot\Fb},\\
-\partial_t(\rho\vb) &=& -\nabla\cdot(\rho\vb\vb^T) - \nabla\pi + \nabla\cdot\taub + \nabla\cdot\Sigmab + \rho\gb,
+\partial_t(\rho\vb) &=& -\nabla\cdot(\rho\vb\vb^T) - \nabla\pi + \mathcal{A}_0\vb + \nabla\cdot\Sigmab + \rho\gb,
 \end{eqnarray}
 subject to
 \begin{equation}
@@ -81,7 +80,10 @@ Thus, $S \equiv S(\Fb)$.  The stochastic terms are:
 \end{eqnarray}
 where $\Wb$ and $\widetilde\Wb$ are standard white-noise random Gaussian tensor
 and vector fields with uncorrelated components.  In our implementation, 
-we use an ideal gas mixture for (\ref{eq:rho1 stoch}) with $\mu_c^{-1}k_BT \equiv c(1-c)$
+we use an ideal gas mixture for (\ref{eq:rho1 stoch}) with $\mu_c^{-1}k_BT \equiv c(1-c)$ so that
+\begin{equation}
+\Psib = \sqrt{\frac{2\chi\rho c(1-c)}{\Delta t\Delta V}}\widetilde\Wb
+\end{equation}
 Also, in (\ref{eq:mom stoch}) we use
 \begin{equation}
 \widehat\Wb = \sqrt{2}\left(\Wb + \Wb^T\right) \quad \rightarrow \quad
@@ -89,6 +91,14 @@ Also, in (\ref{eq:mom stoch}) we use
 \end{equation}
 where $\widehat\Wb$ is a symmetric Gaussian random tensor field, and the
 extra factor of $\sqrt{2}$ accounts for the reduction in variance due to the averaging.
+
+The code has several options for the viscous stress tensor.  For ease of exposition,
+we define $\mathcal{A}_0$ as a function of a velocity vector, $\vb$:\\
+\begin{itemize}
+\item $|${\tt visc\_type}$|$=1 $\quad\rightarrow\quad \mathcal{A}_0\vb \equiv \nabla\cdot\beta\nabla\vb$.\\
+\item $|${\tt visc\_type}$|$=2 $\quad\rightarrow\quad \mathcal{A}_0\vb \equiv \nabla\cdot\left\{\beta[\nabla\vb + (\nabla\vb)^T]\right\}$.\\
+\item $|${\tt visc\_type}$|$=3 $\quad\rightarrow\quad \mathcal{A}_0\vb \equiv \nabla\cdot\left\{\beta[\nabla\vb + (\nabla\vb)^T] + \mathcal{I}\left(\gamma - \frac{2}{3}\beta\right)(\nabla\cdot\vb)\right\}$.\\
+\end{itemize}
 
 \section{GMRES Solver}
 We also have a standalone GMRES solver of the form,
@@ -125,14 +135,6 @@ and $\mathcal{A}_0$ represents the viscous stress tensor.
 Both $\mathcal{A}$ and $\mathcal{A}_0$ operate on staggered data and return
 a staggered field.\\
 
-The code has several options for the viscous stress tensor.  For ease of exposition,
-we define $\mathcal{A}_0$ as a function of a velocity vector, $\vb$:\\
-\begin{itemize}
-\item $|${\tt visc\_type}$|$=1 $\quad\rightarrow\quad \mathcal{A}_0(\vb) = \nabla\cdot\beta\nabla\vb$.\\
-\item $|${\tt visc\_type}$|$=2 $\quad\rightarrow\quad \mathcal{A}_0(\vb) = \nabla\cdot\left\{\beta[\nabla\vb + (\nabla\vb)^T]\right\}$.\\
-\item $|${\tt visc\_type}$|$=3 $\quad\rightarrow\quad \mathcal{A}_0(\vb) = \nabla\cdot\left\{\beta[\nabla\vb + (\nabla\vb)^T] + \mathcal{I}\left(\gamma - \frac{2}{3}\beta\right)(\nabla\cdot\vb)\right\}$.\\
-\end{itemize}
-
 \section{Algorithm}
 Here is the time-advancement scheme.\\ \\
 {\bf Step 0: Initialization:}\\
@@ -141,7 +143,7 @@ If this is the beginning of the simulation, we perform a projection to obtain an
 velocity field, $\vb^0$, that satisfies
 \begin{equation}
 \nabla\cdot\vb^0 = S(\Fb^0); \qquad 
-\Fb^0 = (\rho\chi\nabla c)^0 + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^0k_BT}{\Delta t\Delta V}}\widetilde\Wb^0.
+\Fb^0 = (\rho\chi\nabla c)^0 + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^0}{\Delta t\Delta V}}\widetilde\Wb^0}_{\Psib^0}.
 \end{equation}
 We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
 \begin{equation}
@@ -157,36 +159,32 @@ We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
 \end{eqnarray}
 with
 \begin{equation}
-\Fb^n = (\rho\chi\nabla c)^n + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^nk_BT}{\Delta t\Delta V}}\widetilde\Wb^n.
+\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n}.
 \end{equation}
 {\bf Step 2: Crank-Nicolson Velocity Predictor:}\\ \\
 First, define
 \begin{equation}
 S^{*,n+1} \equiv S(\Fb^{*,n+1});
 \qquad
-\Fb^{*,n+1} = (\rho\chi\nabla c)^{*,n+1} + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^{*,n+1}k_BT}{\Delta t\Delta V}}\widetilde\Wb^n.
+\Fb^{*,n+1} = (\rho\chi\nabla c)^{*,n+1} + \Psib^n.
 \end{equation}
 Then, solve the following system for $\vb^{*,n+1}$:
-\begin{eqnarray}
-\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \nabla\cdot(-\rho^n\vb^n\vb^n)\nonumber\\
-&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{*,n+1}) + \nabla\cdot\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n,\label{eq:CN Vel Pred}
-\end{eqnarray}
 \begin{equation}
-\nabla\cdot\vb^{*,n+1} = S^{*,n+1},
+\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi = \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left(\mathcal{A}_0\vb^n + \mathcal{A}_0\vb^{*,n+1}\right) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n},\label{eq:CN Vel Pred}
 \end{equation}
-with $\eta^{*,n+\myhalf} = (\eta^n + \eta^{*,n+1})/2$.
+\begin{equation}
+\nabla\cdot\vb^{*,n+1} = S^{*,n+1}.
+\end{equation}
 We rewrite (\ref{eq:CN Vel Pred}) as
-\begin{eqnarray}
-\left(\rho^{*,n+1} - \frac{\Delta t}{2}\nabla\cdot\taub\right)\vb^{*,n+1} + \Delta t\nabla\pi &=& \rho^n\vb^n\nonumber\\
-&&\hspace{-1.0in}+ \Delta t\left\{\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n\right\}.\label{eq:CN Vel Pred2}
-\end{eqnarray}
+\begin{equation}
+\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0\right)\vb^{*,n+1} + \nabla\pi = \frac{\rho^n\vb^n}{\Delta t} + \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n.\label{eq:CN Vel Pred2}
+\end{equation}
 Relating this to the GMRES solver, we can see that we are solving for 
-$(\xb_\vb,x_p) = (\vb^{*,n+1},\Delta t\cdot\pi)$ with $b_p = -S^{*,n+1}$ and $\bb_\vb$ equal to the 
+$(\xb_\vb,x_p) = (\vb^{*,n+1},\pi)$ with $b_p = -S^{*,n+1}$ and $\bb_\vb$ equal to the 
 right-hand-side of (\ref{eq:CN Vel Pred2}).  For the Helmholtz-like operator, 
-$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1$, $\alpha=\rho^{*,n+1}$,
-and $\mathcal{A}_0$ representing the viscous operator $\taub$, noting that the coefficients
-$\beta$ and $\gamma$ need to be multiplied by $\Delta t/2$.  We actually do not care about
-the result $x_p$ so we essentially throw it away after the GMRES solve.\\ \\
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t$, and $\alpha=\rho^{*,n+1}$,
+noting that the coefficients
+$\beta$ and $\gamma$ need to be multiplied by $\myhalf$.\\ \\
 {\bf Step 3: Trapezoidal Scalar Corrector:}
 \begin{eqnarray}
 \rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\\
@@ -197,23 +195,22 @@ First, define
 \begin{equation}
 S^{n+1} \equiv S(\Fb^{n+1});
 \qquad
-\Fb^{n+1} = (\rho\chi\nabla c)^{n+1} + \sqrt{\frac{2(\chi\rho\mu_c^{-1})^{n+1}k_BT}{\Delta t\Delta V}}\widetilde\Wb^{n+1}.
+\Fb^{n+1} = (\rho\chi\nabla c)^{n+1} + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^{n+1}}{\Delta t\Delta V}}\widetilde\Wb^{n+1}}_{\Psib^{n+1}}.
 \end{equation}
+\clearpage
 Note the use of time-advanced stochastic concentration fluxes.  Finally, solve 
 the following system for $\vb^{n+1}$.  We're not really sure how to deal with the
 random fluxes in the momentum equation, so for now we will use the same value as 
 in the predictor.
 \begin{eqnarray}
-\frac{\rho^{n+1}\vb^{n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{n+1}\vb^{n+1})\nonumber\\
-&&+ \half(\nabla\cdot\taub^n + \nabla\cdot\taub^{n+1}) + \nabla\cdot\sqrt{\frac{2\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n,\label{eq:CN Vel Corr}
+\frac{\rho^{n+1}\vb^{n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half(\mathcal{A}_0\vb^n + \mathcal{A}_0\vb^{n+1}) + \nabla\cdot\Sigmab^n,\nonumber\\
+\label{eq:CN Vel Corr}
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot\vb^{n+1} = S^{n+1}.
 \end{equation}
-with $\eta^{n+\myhalf} = (\eta^n + \eta^{n+1})/2$.
 We rewrite (\ref{eq:CN Vel Corr}) as
-\begin{eqnarray}
-\left(\rho^{n+1} - \frac{\Delta t}{2}\nabla\cdot\taub\right)\vb^{n+1} + \Delta t\nabla\pi &=& \rho^n\vb^n\nonumber\\
-&&\hspace{-1.75in}+ \Delta t\left\{\half\nabla\cdot(-\rho^n\vb^n\vb^n-\rho^{n+1}\vb^{n+1}\vb^{n+1}) + \half\nabla\cdot\taub^n + \nabla\cdot\sqrt{\frac{2\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n\right\}.
-\end{eqnarray}
+\begin{equation}
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0\right)\vb^{n+1} + \nabla\pi = \frac{\rho^n\vb^n}{\Delta t} + \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half\mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n.
+\end{equation}
 \end{document}
