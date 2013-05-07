@@ -35,7 +35,8 @@
 \def\Wb {{\bf W}}
 \def\xb {{\bf x}}
 
-\def\Psib {\boldsymbol{\Psi}}
+\def\deltab {\boldsymbol{\delta}}
+\def\Psib   {\boldsymbol{\Psi}}
 \def\Sigmab {\boldsymbol{\Sigma}}
 
 \def\half   {\frac{1}{2}}
@@ -139,8 +140,8 @@ a staggered field.\\
 Here is the time-advancement scheme.\\ \\
 {\bf Step 0: Initialization:}\\
 
-If this is the beginning of the simulation, we perform a projection to obtain an initial 
-velocity field, $\vb^0$, that satisfies
+Initialize $\vb^{\rm init}, \rho^0, \rho_1^0, \chi^0, \eta^0, \kappa^0$, and $\pi^0$.
+THen, perform projection to obtain an initial velocity field, $\vb^0$, that satisfies
 \begin{equation}
 \nabla\cdot\vb^0 = S(\Fb^0); \qquad 
 \Fb^0 = (\rho\chi\nabla c)^0 + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^0}{\Delta t\Delta V}}\widetilde\Wb^0}_{\Psib^0}.
@@ -168,23 +169,26 @@ S^{*,n+1} \equiv S(\Fb^{*,n+1});
 \qquad
 \Fb^{*,n+1} = (\rho\chi\nabla c)^{*,n+1} + \Psib^n.
 \end{equation}
-Then, solve the following system for $\vb^{*,n+1}$:
+Then, define $\vb^{*,n+1} = \vb^n + \deltab\vb, \pi^{*,n+1} = \pi^n + \delta\pi$ and solve
+for $\deltab\vb$ and $\delta\pi$:
 \begin{equation}
-\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi = \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left(\mathcal{A}_0\vb^n + \mathcal{A}_0\vb^{*,n+1}\right) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n},\label{eq:CN Vel Pred}
+\frac{\rho^{*,n+1}(\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(\pi^n+\delta\pi) = \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0\vb^n + \mathcal{A}_0(\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n}.
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{*,n+1} = S^{*,n+1}.
+\nabla\cdot(\vb^n+\deltab\vb) = S^{*,n+1}.
 \end{equation}
-We rewrite (\ref{eq:CN Vel Pred}) as
+We rewrite this system as
 \begin{equation}
-\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0\right)\vb^{*,n+1} + \nabla\pi = \frac{\rho^n\vb^n}{\Delta t} + \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n.\label{eq:CN Vel Pred2}
+\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0\right)\deltab\vb + \nabla\delta\pi = \frac{(\rho^n-\rho^{*,n+1})\vb^n}{\Delta t} -\nabla\pi^n + \nabla\cdot(-\rho^n\vb^n\vb^n) + \mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n,\label{eq:CN Vel Pred}
+\end{equation}
+\begin{equation}
+\nabla\cdot\deltab\vb = S^{*,n+1} - \nabla\cdot\vb^n.
 \end{equation}
 Relating this to the GMRES solver, we can see that we are solving for 
-$(\xb_\vb,x_p) = (\vb^{*,n+1},\pi)$ with $b_p = -S^{*,n+1}$ and $\bb_\vb$ equal to the 
-right-hand-side of (\ref{eq:CN Vel Pred2}).  For the Helmholtz-like operator, 
-$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t$, and $\alpha=\rho^{*,n+1}$,
-noting that the coefficients
-$\beta$ and $\gamma$ need to be multiplied by $\myhalf$.\\ \\
+$(\xb_\vb,x_p) = (\deltab\vb,\delta\pi)$ with $b_p = \nabla\cdot\vb^n-S^{*,n+1}$ (note the change in sign!) 
+and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:CN Vel Pred}).  For the Helmholtz-like operator, 
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t, \alpha=\rho^{*,n+1}, 
+\beta=\eta/2$, and $\gamma=\kappa/2$.\\ \\
 {\bf Step 3: Trapezoidal Scalar Corrector:}
 \begin{eqnarray}
 \rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\\
@@ -197,20 +201,13 @@ S^{n+1} \equiv S(\Fb^{n+1});
 \qquad
 \Fb^{n+1} = (\rho\chi\nabla c)^{n+1} + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^{n+1}}{\Delta t\Delta V}}\widetilde\Wb^{n+1}}_{\Psib^{n+1}}.
 \end{equation}
-\clearpage
-Note the use of time-advanced stochastic concentration fluxes.  Finally, solve 
-the following system for $\vb^{n+1}$.  We're not really sure how to deal with the
-random fluxes in the momentum equation, so for now we will use the same value as 
-in the predictor.
-\begin{eqnarray}
-\frac{\rho^{n+1}\vb^{n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half(\mathcal{A}_0\vb^n + \mathcal{A}_0\vb^{n+1}) + \nabla\cdot\Sigmab^n,\nonumber\\
-\label{eq:CN Vel Corr}
-\end{eqnarray}
+Note the use of time-advanced stochastic concentration fluxes for use in $S$.  Finally, 
+define $\vb^{n+1} = \vb^n + \deltab\vb$ and $\pi^{n+1} = \pi^n + \delta\pi$ and
+solve the following system for $(\deltab\vb,\delta\pi)$:
 \begin{equation}
-\nabla\cdot\vb^{n+1} = S^{n+1}.
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0\right)\deltab\vb + \nabla\delta\pi = \frac{(\rho^n-\rho^{n+1})\vb^n}{\Delta t} -\nabla\pi^n + \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{*,n+1}\vb^{*,n+1}) + \mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n,
 \end{equation}
-We rewrite (\ref{eq:CN Vel Corr}) as
 \begin{equation}
-\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0\right)\vb^{n+1} + \nabla\pi = \frac{\rho^n\vb^n}{\Delta t} + \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half\mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n.
+\nabla\cdot\deltab\vb = S^{n+1} - \nabla\cdot\vb^n.
 \end{equation}
 \end{document}
