@@ -78,8 +78,9 @@ contains
 
     ! local
     integer :: i,j
-    real(kind=dp_t) :: x,y,r
+    real(kind=dp_t) :: x,y,y1,y2,r
     real(kind=dp_t) :: c_init(2),smoothing_width
+    real(kind=dp_t) :: one_third_domain1,one_third_domain2
 
     select case (prob_type)
     case (1)
@@ -109,6 +110,52 @@ contains
              s(i,j,2) = s(i,j,1)*s(i,j,2)
           enddo
        enddo
+
+    case (2)
+
+       ! bilayer interface (stripe)
+
+       mx = 0.d0
+       my = 0.d0
+
+       one_third_domain1=2.0d0/3.0d0*prob_lo(2)+1.0d0/3.0d0*prob_hi(2)
+       one_third_domain2=1.0d0/3.0d0*prob_lo(2)+2.0d0/3.0d0*prob_hi(2)
+
+       smoothing_width = 1.d0
+
+       c_init(1) = 0.d0
+       c_init(2) = 1.d0
+
+       do j=lo(2),hi(2)
+          y1 =(prob_lo(2) + dx(2)*(dble(j)+0.5d0) - one_third_domain1)
+          y2 =(prob_lo(2) + dx(2)*(dble(j)+0.5d0) - one_third_domain2)
+        
+          do i=lo(1),hi(1)
+             ! tanh smoothing
+             if(abs(smoothing_width)>epsilon(1.0d0)) then
+                s(i,j,2) = c_init(1)+ 0.5d0*(c_init(2)-c_init(1))*&
+                   (tanh(y1/(smoothing_width*dx(2))) - tanh(y2/(smoothing_width*dx(2))))
+                s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
+                s(i,j,2) = s(i,j,1)*s(i,j,2)
+             else
+                ! Try to initialize exactly as we do in the HDMD simulations,
+                ! with finite-volume averaging of sharp interface
+                if((y1<-0.5d0*dx(2)).or.(y2>0.5d0*dx(2))) then
+                   s(i,j,2) = 0
+                   s(i,j,1) = rhobar(2)
+                else if((y1>0.5d0*dx(2)).and.(y2<-0.5d0*dx(2))) then
+                   s(i,j,2) = rhobar(1)
+                   s(i,j,1) = rhobar(1)
+                else if(y1 <= 0.5d0*dx(2)) then
+                   s(i,j,2) = (max(0.0d0,min(0.5d0+y1/dx(2),1.0d0)))*rhobar(1)
+                   s(i,j,1) = s(i,j,2) + (1.0d0-max(0.0d0,min(0.5d0+y1/dx(2),1.0d0)))*rhobar(2)
+                else 
+                   s(i,j,2) = (1.0d0-max(0.0d0,min(0.5d0+y2/dx(2),1.0d0)))*rhobar(1)
+                   s(i,j,1) = s(i,j,2) + (max(0.0d0,min(0.5d0+y2/dx(2),1.0d0)))*rhobar(2)
+                end if   
+             end if  
+          enddo
+       enddo   
 
     case default
 
