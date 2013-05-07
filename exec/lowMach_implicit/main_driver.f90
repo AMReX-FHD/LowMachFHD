@@ -51,7 +51,8 @@ subroutine main_driver()
   type(multifab), allocatable :: chi(:)    ! cell-centered
   type(multifab), allocatable :: eta(:)    ! cell-centered
   type(multifab), allocatable :: kappa(:)  ! cell-centered
-  type(multifab), allocatable :: rhoc_stoch_fluxdiv(:) ! cell-centered
+  type(multifab), allocatable :: rhoc_d_fluxdiv(:) ! cell-centered
+  type(multifab), allocatable :: rhoc_s_fluxdiv(:) ! cell-centered
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_lowmach_init()
@@ -76,7 +77,7 @@ subroutine main_driver()
   allocate(dx(nlevs,dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
-  allocate(chi(nlevs),eta(nlevs),kappa(nlevs),rhoc_stoch_fluxdiv(nlevs))
+  allocate(chi(nlevs),eta(nlevs),kappa(nlevs),rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs))
 
   ! tell mba how many levels and dmensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -176,8 +177,11 @@ subroutine main_driver()
      call multifab_build(eta(n)  ,mla%la(n),1,1)
      call multifab_build(kappa(n),mla%la(n),1,1)
 
-     ! this stores divergence of stochastic fluxes for rhoc
-     call multifab_build(rhoc_stoch_fluxdiv(n),mla%la(n),1,0)
+     ! this stores divergence of stochastic and diffusive fluxes for rhoc
+     call multifab_build(rhoc_d_fluxdiv(n),mla%la(n),1,0)
+     call multifab_build(rhoc_s_fluxdiv(n),mla%la(n),1,0)
+     call multifab_setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
+     call multifab_setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
   end do
 
   time = 0.d0
@@ -212,8 +216,8 @@ subroutine main_driver()
   call fill_stochastic(mla)  
 
   ! need to do an initial projection to get an initial velocity field
-  call initial_projection(mla,mold,umac,sold,prim,chi,rhoc_stoch_fluxdiv, &
-                          dx,the_bc_tower)
+  call initial_projection(mla,mold,umac,sold,prim,chi,rhoc_d_fluxdiv, &
+                          rhoc_s_fluxdiv,dx,the_bc_tower)
 
   if (print_int .gt. 0) then
      call sum_mass_momentum(mla,sold,mold)
@@ -228,7 +232,7 @@ subroutine main_driver()
 
      ! advance the solution by dt
      call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,eta,kappa, &
-                           rhoc_stoch_fluxdiv,dx,the_bc_tower)
+                           rhoc_d_fluxdiv,rhoc_s_fluxdiv,dx,the_bc_tower)
 
      ! increment simulation time
      time = time + fixed_dt
@@ -275,7 +279,8 @@ subroutine main_driver()
      call multifab_destroy(chi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
-     call multifab_destroy(rhoc_stoch_fluxdiv(n))
+     call multifab_destroy(rhoc_d_fluxdiv(n))
+     call multifab_destroy(rhoc_s_fluxdiv(n))
   end do
 
   call destroy(mla)

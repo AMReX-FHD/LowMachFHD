@@ -23,7 +23,7 @@ module advance_timestep_module
 contains
 
   subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,eta,kappa, &
-                              rhoc_stoch_fluxdiv,dx,the_bc_tower)
+                              rhoc_d_fluxdiv,rhoc_s_fluxdiv,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -36,7 +36,8 @@ contains
     type(multifab) , intent(inout) :: chi(:)
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: kappa(:)
-    type(multifab) , intent(inout) :: rhoc_stoch_fluxdiv(:)
+    type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
+    type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -110,13 +111,11 @@ contains
     ! add A^n for s to s_update
     call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
 
-    ! add D^n for rho1 to s_update
-    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi,dx, &
-                                   the_bc_tower%bc_tower_array)
-
+    ! add D^n  for rho1 to s_update
     ! add St^n for rho1 to s_update
     do n=1,nlevs
-       call multifab_plus_plus_c(s_update(n),2,rhoc_stoch_fluxdiv(n),1,1,0)
+       call multifab_plus_plus_c(s_update(n),2,rhoc_d_fluxdiv(n),1,1,0)
+       call multifab_plus_plus_c(s_update(n),2,rhoc_s_fluxdiv(n),1,1,0)
     end do
 
     ! snew = s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
@@ -214,7 +213,7 @@ contains
 
     ! add St^n to rhs_p
     do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_stoch_fluxdiv(n),1,1,0)
+       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_s_fluxdiv(n),1,1,0)
     end do
 
     ! reset s_update, then
@@ -377,25 +376,31 @@ contains
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
-    ! add D^{n+1} to rhs_p
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi,dx, &
+    ! reset to zero since we only add to them
+    do n=1,nlevs
+       call setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
+       call setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
+    end do
+
+    ! create D^{n+1}
+    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi,dx, &
                                    the_bc_tower%bc_tower_array)
 
+    ! add D^{n+1} to rhs_p
+    do n=1,nlevs
+       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_d_fluxdiv(n),1,1,0)
+    end do
 
     ! fill the stochastic multifabs with a new set of random numbers
     call fill_stochastic(mla)
 
     ! create St^{n+1}
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_stoch_fluxdiv,s_fc,chi,dx,1)
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc,chi,dx,1)
 
     ! add St^{n+1} to rhs_p
     do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_stoch_fluxdiv(n),1,1,0)
-    end do
-
-    ! ajn fixme - can save gmres_rhs_p to be used as s_update for next time step
-
-    
+       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_s_fluxdiv(n),1,1,0)
+    end do    
 
     ! multiply by -S_fac since gmres solves -div(u)=S
     do n=1,nlevs

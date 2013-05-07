@@ -22,8 +22,8 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,mold,umac,sold,prim,chi,rhoc_stoch_fluxdiv, &
-                                dx,the_bc_tower)
+  subroutine initial_projection(mla,mold,umac,sold,prim,chi,rhoc_d_fluxdiv, &
+                                rhoc_s_fluxdiv,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -31,7 +31,8 @@ contains
     type(multifab) , intent(in   ) :: sold(:)
     type(multifab) , intent(in   ) :: prim(:)
     type(multifab) , intent(in   ) :: chi(:)
-    type(multifab) , intent(inout) :: rhoc_stoch_fluxdiv(:)
+    type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
+    type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -77,16 +78,21 @@ contains
     ! build rhs = div(u) - S
     !!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! add del dot rho chi grad c
-    call mk_diffusive_rhoc_fluxdiv(mla,mac_rhs,1,prim,s_fc,chi,dx, &
+    ! create D for rhoc
+    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! create divergence of face-centered stochastic fluxes
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_stoch_fluxdiv,s_fc,chi,dx,1)
-
-    ! add divergence of face-centered stochastic fluxes to mac_rhs
+    ! add D to mac_rhs
     do n=1,nlevs
-       call multifab_plus_plus_c(mac_rhs(n),1,rhoc_stoch_fluxdiv(n),1,1,0)
+       call multifab_plus_plus_c(mac_rhs(n),1,rhoc_d_fluxdiv(n),1,1,0)
+    end do
+
+    ! create St for rhoc
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc,chi,dx,1)
+
+    ! add St to mac_rhs
+    do n=1,nlevs
+       call multifab_plus_plus_c(mac_rhs(n),1,rhoc_s_fluxdiv(n),1,1,0)
     end do
 
     ! multiply by -S_fac
