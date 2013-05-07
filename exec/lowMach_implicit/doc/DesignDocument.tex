@@ -182,7 +182,7 @@ We rewrite this system as
 \left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0\right)\deltab\vb + \nabla\delta\pi = \frac{(\rho^n-\rho^{*,n+1})\vb^n}{\Delta t} -\nabla\pi^n + \nabla\cdot(-\rho^n\vb^n\vb^n) + \mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n,\label{eq:CN Vel Pred}
 \end{equation}
 \begin{equation}
-\nabla\cdot\deltab\vb = S^{*,n+1} - \nabla\cdot\vb^n.
+-\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{*,n+1}.
 \end{equation}
 Relating this to the GMRES solver, we can see that we are solving for 
 $(\xb_\vb,x_p) = (\deltab\vb,\delta\pi)$ with $b_p = \nabla\cdot\vb^n-S^{*,n+1}$ (note the change in sign!) 
@@ -208,6 +208,6 @@ solve the following system for $(\deltab\vb,\delta\pi)$:
 \left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0\right)\deltab\vb + \nabla\delta\pi = \frac{(\rho^n-\rho^{n+1})\vb^n}{\Delta t} -\nabla\pi^n + \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{*,n+1}\vb^{*,n+1}) + \mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n,
 \end{equation}
 \begin{equation}
-\nabla\cdot\deltab\vb = S^{n+1} - \nabla\cdot\vb^n.
+-\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{n+1}.
 \end{equation}
 \end{document}
