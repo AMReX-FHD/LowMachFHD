@@ -47,9 +47,10 @@ subroutine main_driver()
   type(multifab), allocatable :: sold(:)   ! cell-centered
   type(multifab), allocatable :: snew(:)   ! cell-centered
   type(multifab), allocatable :: prim(:)   ! cell-centered
+  type(multifab), allocatable :: pres(:)   ! cell-centered
   type(multifab), allocatable :: chi(:)    ! cell-centered
   type(multifab), allocatable :: eta(:)    ! cell-centered
-  type(multifab), allocatable :: kappa(:)    ! cell-centered
+  type(multifab), allocatable :: kappa(:)  ! cell-centered
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_lowmach_init()
@@ -73,7 +74,8 @@ subroutine main_driver()
   ! now that we have nlevs and dm, we can allocate these
   allocate(dx(nlevs,dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm))
-  allocate(sold(nlevs),snew(nlevs),prim(nlevs),chi(nlevs),eta(nlevs),kappa(nlevs))
+  allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
+  allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
 
   ! tell mba how many levels and dmensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -164,6 +166,10 @@ subroutine main_driver()
      call multifab_build(snew(n) ,mla%la(n),nscal,2)
      call multifab_build(prim(n) ,mla%la(n),nscal,2)
 
+     ! pressure
+     ! need 1 ghost cell since we calculate its gradient
+     call multifab_build(pres(n),mla%la(n),1,1)
+
      ! transport coefficients
      call multifab_build(chi(n)  ,mla%la(n),1,1)
      call multifab_build(eta(n)  ,mla%la(n),1,1)
@@ -173,7 +179,7 @@ subroutine main_driver()
   time = 0.d0
 
   ! initialize sold and mold
-  call init(mold,sold,dx,mla,time)
+  call init(mold,sold,pres,dx,mla,time)
 
   if (print_int .gt. 0) then
      call eos_check(mla,sold)
@@ -210,13 +216,14 @@ subroutine main_driver()
 
   ! write initial plotfile
   if (plot_int .gt. 0) then
-     call write_plotfile(mla,mold,umac,sold,dx,time,0)
+     call write_plotfile(mla,mold,umac,sold,pres,dx,time,0)
   end if
   
   do istep=1,max_step
 
      ! advance the solution by dt
-     call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,chi,eta,kappa,dx,the_bc_tower)
+     call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,eta,kappa, &
+                           dx,the_bc_tower)
 
      ! increment simulation time
      time = time + fixed_dt
@@ -227,7 +234,7 @@ subroutine main_driver()
      if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
-        call write_plotfile(mla,mnew,umac,snew,dx,time,istep)
+        call write_plotfile(mla,mnew,umac,snew,pres,dx,time,istep)
      end if
      
      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
@@ -252,16 +259,17 @@ subroutine main_driver()
 
   do n=1,nlevs
      do i=1,dm
-        call destroy(mold(n,i))
-        call destroy(mnew(n,i))
-        call destroy(umac(n,i))
+        call multifab_destroy(mold(n,i))
+        call multifab_destroy(mnew(n,i))
+        call multifab_destroy(umac(n,i))
      end do
-     call destroy(sold(n))
-     call destroy(snew(n))
-     call destroy(prim(n))
-     call destroy(chi(n))
-     call destroy(eta(n))
-     call destroy(kappa(n))
+     call multifab_destroy(sold(n))
+     call multifab_destroy(snew(n))
+     call multifab_destroy(prim(n))
+     call multifab_destroy(pres(n))
+     call multifab_destroy(chi(n))
+     call multifab_destroy(eta(n))
+     call multifab_destroy(kappa(n))
   end do
 
   call destroy(mla)

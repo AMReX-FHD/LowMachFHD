@@ -15,12 +15,13 @@ module write_plotfile_module
 
 contains
 
-  subroutine write_plotfile(mla,m_in,umac_in,s_in,dx,time,istep_to_write)
+  subroutine write_plotfile(mla,m_in,umac_in,s_in,p_in,dx,time,istep_to_write)
 
     type(ml_layout)  , intent(in   ) :: mla
     type(multifab)   , intent(in   ) ::    m_in(:,:)
     type(multifab)   , intent(in   ) :: umac_in(:,:)
     type(multifab)   , intent(in   ) ::    s_in(:)
+    type(multifab)   , intent(in   ) ::    p_in(:)
     integer          , intent(in   ) :: istep_to_write
     real(kind=dp_t)  , intent(in   ) :: dx(:,:), time
 
@@ -53,7 +54,8 @@ contains
     ! momentum_shifted (dm)
     ! densities (nscal) 
     ! concentrations (nscal-1)
-    n_plot_comps = 4*dm+2*nscal-1
+    ! pressure (1)
+    n_plot_comps = 4*dm+2*nscal
 
     allocate(plot_names(n_plot_comps))
 
@@ -76,6 +78,8 @@ contains
     plot_names(4*dm+1) = "rho"
     plot_names(4*dm+2:4*dm+nscal) = "rho*c"
     plot_names(4*dm+nscal+1:4*dm+2*nscal-1) = "c"
+
+    plot_names(4*dm+2*nscal) = "pressure"
 
     plot_names_stagx(1) = "velx"
     plot_names_stagx(2) = "mx"
@@ -122,6 +126,8 @@ contains
        do i=1,nscal-1
           call multifab_div_div_c(plotdata(n),4*dm+nscal+i,s_in(n),1,1,0)
        end do
+       ! pressure
+       call multifab_copy_c(plotdata(n),4*dm+2*nscal,p_in(n),1,1,0)
     end do
 
     ! copy staggered velocity and momentum into plotdata_stag
