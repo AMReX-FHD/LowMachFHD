@@ -21,7 +21,8 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,eta,kappa,dx,the_bc_tower)
+  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,eta,kappa, &
+                              rhoc_stoch_fluxdiv,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -34,6 +35,7 @@ contains
     type(multifab) , intent(inout) :: chi(:)
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: kappa(:)
+    type(multifab) , intent(inout) :: rhoc_stoch_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -97,7 +99,9 @@ contains
                                    the_bc_tower%bc_tower_array)
 
     ! add St^n for rho1 to s_update
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,s_update,s_fc,chi,dx,2)
+    do n=1,nlevs
+       call multifab_plus_plus_c(s_update(n),2,rhoc_stoch_fluxdiv(n),1,1,0)
+    end do
 
     ! snew = s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
     do n=1,nlevs
@@ -178,8 +182,10 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! add St^{*,n+1} to rhs_p
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc,chi,dx,1)
+    ! add St^n to rhs_p
+    do n=1,nlevs
+       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_stoch_fluxdiv(n),1,1,0)
+    end do
 
     ! reset s_update, then
     ! we save work by saving D^{*,n+1} + St^{*,n+1}
@@ -332,8 +338,13 @@ contains
     ! fill the stochastic multifabs with a new set of random numbers
     call fill_stochastic(mla)  
 
+    ! create divergence of face-centered stochastic fluxes
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_stoch_fluxdiv,s_fc,chi,dx,1)
+
     ! add St^{n+1} to rhs_p
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc,chi,dx,1)
+    do n=1,nlevs
+       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_stoch_fluxdiv(n),1,1,0)
+    end do
 
     ! multiply by -S_fac since gmres solve -div(u)=S
     do n=1,nlevs
