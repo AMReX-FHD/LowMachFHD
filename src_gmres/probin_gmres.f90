@@ -112,7 +112,7 @@ contains
 
     mg_verbose = 0
     cg_verbose = 0
-    mg_max_vcycles = 100
+    mg_max_vcycles = 1
     mg_minwidth = 2
     mg_bottom_solver = 0
     mg_nsmooths_down = 2
@@ -122,7 +122,7 @@ contains
     mg_rel_tol = 1.d-9
 
     stag_mg_verbosity = 0
-    stag_mg_max_vcycles = 100
+    stag_mg_max_vcycles = 1
     stag_mg_maxlevs = 100
     stag_mg_minwidth = 2
     stag_mg_nsmooths_down = 2
