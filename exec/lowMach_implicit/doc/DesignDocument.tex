@@ -91,14 +91,15 @@ Also, in (\ref{eq:mom stoch}) we use
 \Sigmab = \sqrt{\frac{2\eta k_B T}{\Delta t\Delta V}}\widehat\Wb,
 \end{equation}
 where $\widehat\Wb$ is a symmetric Gaussian random tensor field, and the
-extra factor of $\sqrt{2}$ accounts for the reduction in variance due to the averaging.
+extra factor of $\sqrt{2}$ accounts for the reduction in variance due to the averaging.\\
 
 The code has several options for the viscous stress tensor.  For ease of exposition,
-we define $\mathcal{A}_0$ as a function of a velocity vector, $\vb$:\\
+we define $\mathcal{A}_0$ as a function of a velocity vector, $\vb$ (the superscript
+for $\mathcal{A}_0$ indicates the temporal discretization for the transport coefficients):\\
 \begin{itemize}
-\item $|${\tt visc\_type}$|$=1 $\quad\rightarrow\quad \mathcal{A}_0\vb \equiv \nabla\cdot\beta\nabla\vb$.\\
-\item $|${\tt visc\_type}$|$=2 $\quad\rightarrow\quad \mathcal{A}_0\vb \equiv \nabla\cdot\left\{\beta[\nabla\vb + (\nabla\vb)^T]\right\}$.\\
-\item $|${\tt visc\_type}$|$=3 $\quad\rightarrow\quad \mathcal{A}_0\vb \equiv \nabla\cdot\left\{\beta[\nabla\vb + (\nabla\vb)^T] + \mathcal{I}\left(\gamma - \frac{2}{3}\beta\right)(\nabla\cdot\vb)\right\}$.\\
+\item $|${\tt visc\_type}$|$=1 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\beta^n\nabla\vb$.\\
+\item $|${\tt visc\_type}$|$=2 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T]\right\}$.\\
+\item $|${\tt visc\_type}$|$=3 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T] + \mathcal{I}\left(\gamma^n - \frac{2}{3}\beta^n\right)(\nabla\cdot\vb)\right\}$.\\
 \end{itemize}
 
 \section{GMRES Solver}
@@ -141,7 +142,7 @@ Here is the time-advancement scheme.\\ \\
 {\bf Step 0: Initialization:}\\
 
 Initialize $\vb^{\rm init}, \rho^0, \rho_1^0, \chi^0, \eta^0, \kappa^0$, and $\pi^0$.
-THen, perform projection to obtain an initial velocity field, $\vb^0$, that satisfies
+Then, perform projection to obtain an initial velocity field, $\vb^0$, that satisfies
 \begin{equation}
 \nabla\cdot\vb^0 = S(\Fb^0); \qquad 
 \Fb^0 = (\rho\chi\nabla c)^0 + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^0}{\Delta t\Delta V}}\widetilde\Wb^0}_{\Psib^0}.
@@ -171,16 +172,18 @@ S^{*,n+1} \equiv S(\Fb^{*,n+1});
 \end{equation}
 Then, define $\vb^{*,n+1} = \vb^n + \deltab\vb, \pi^{*,n+1} = \pi^n + \delta\pi$ and solve
 for $\deltab\vb$ and $\delta\pi$:
-\begin{equation}
-\frac{\rho^{*,n+1}(\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(\pi^n+\delta\pi) = \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0\vb^n + \mathcal{A}_0(\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n}.
-\end{equation}
+\begin{eqnarray}
+\frac{\rho^{*,n+1}(\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(\pi^n+\delta\pi) &=&\nonumber\\
+&&\hspace{-1.5in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}(\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n}.
+\end{eqnarray}
 \begin{equation}
 \nabla\cdot(\vb^n+\deltab\vb) = S^{*,n+1}.
 \end{equation}
 We rewrite this system as
-\begin{equation}
-\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0\right)\deltab\vb + \nabla\delta\pi = \frac{(\rho^n-\rho^{*,n+1})\vb^n}{\Delta t} -\nabla\pi^n + \nabla\cdot(-\rho^n\vb^n\vb^n) + \mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n,\label{eq:CN Vel Pred}
-\end{equation}
+\begin{eqnarray}
+\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{(\rho^n-\rho^{*,n+1})\vb^n}{\Delta t} -\nabla\pi^n\nonumber\\
+&&\hspace{-0.5in}+ \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}\vb^n\right) + \nabla\cdot\Sigmab^n,\label{eq:CN Vel Pred}
+\end{eqnarray}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{*,n+1}.
 \end{equation}
@@ -204,9 +207,10 @@ S^{n+1} \equiv S(\Fb^{n+1});
 Note the use of time-advanced stochastic concentration fluxes for use in $S$.  Finally, 
 define $\vb^{n+1} = \vb^n + \deltab\vb$ and $\pi^{n+1} = \pi^n + \delta\pi$ and
 solve the following system for $(\deltab\vb,\delta\pi)$:
-\begin{equation}
-\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0\right)\deltab\vb + \nabla\delta\pi = \frac{(\rho^n-\rho^{n+1})\vb^n}{\Delta t} -\nabla\pi^n + \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{*,n+1}\vb^{*,n+1}) + \mathcal{A}_0\vb^n + \nabla\cdot\Sigmab^n,
-\end{equation}
+\begin{eqnarray}
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{(\rho^n-\rho^{n+1})\vb^n}{\Delta t} -\nabla\pi^n\nonumber\\
+&&\hspace{-1.25in}+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half\left(\mathcal{A}^n_0\vb^n + \mathcal{A}^{n+1}_0\vb^n\right) + \nabla\cdot\Sigmab^n,
+\end{eqnarray}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{n+1}.
 \end{equation}
