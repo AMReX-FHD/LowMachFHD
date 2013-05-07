@@ -83,22 +83,22 @@ contains
     ! Step 1 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! average s^n to faces
+    ! average sold = s^n to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,sold,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
-    ! compute A^n for s
+    ! add A^n for s to s_update
     call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
 
-    ! compute D^n for rho1
+    ! add D^n for rho1 to s_update
     call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute St^n for rho1
+    ! add St^n for rho1 to s_update
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,s_update,s_fc,chi,dx,2)
 
-    ! s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
+    ! snew = s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
     do n=1,nlevs
        call saxpy(snew(n),1.d0,sold(n),fixed_dt,s_update(n))
        call multifab_fill_boundary(snew(n))
@@ -108,14 +108,14 @@ contains
     ! Step 2 - Crank-Nicolson Velocity Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! build up rhs_v for gmres solve: set rhs_v to m^n
+    ! build up rhs_v for gmres solve: first set rhs_v to mold = m^n
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(gmres_rhs_v(n,i),1,mold(n,i),1,1,0)
        end do
     end do
 
-    ! compute D^n for m
+    ! compute m_d_fluxdiv = D^n for m
     call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
@@ -127,7 +127,7 @@ contains
        end do
     end do
 
-    ! compute A^n for m
+    ! compute m_a_fluxdiv = A^n for m
     call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv,dx)
 
     ! multiply A^n by dt and add to rhs_v
@@ -138,10 +138,21 @@ contains
        end do
     end do
 
+    ! compute prim^{*,n+1} from s^{*,n+1} in valid region
+    call convert_cons_to_prim(mla,snew,prim,.true.)
+    do n=1,nlevs
+       call multifab_fill_boundary(prim(n))
+    end do
+
+    ! recompute chi^{*,n+1}, eta^{*,n+1}, and kappa^{*,n+1}
+    call compute_chi(mla,chi,prim,dx)
+    call compute_eta(mla,eta,prim,dx)
+    call compute_kappa(mla,kappa,prim,dx)
+
     ! ajn fixme - add option to time-center eta
     ! otherwise we are using eta^{*,n+1}
 
-    ! compute St^n for m
+    ! compute m_s_fluxdiv = St^n for m
     call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,dx)
 
     ! multiply St^n by dt and add to rhs_v
@@ -152,25 +163,14 @@ contains
        end do
     end do
 
-    ! initialize rhs_p for gmres solve to zero since subsequent subroutines will add to it
-    do n=1,nlevs
-       call setval(gmres_rhs_p(n),0.d0,all=.true.)
-    end do
-
-    ! compute prim^{*,n+1} from s^{*,n+1} in valid region
-    call convert_cons_to_prim(mla,snew,prim,.true.)
-    do n=1,nlevs
-       call multifab_fill_boundary(prim(n))
-    end do
-
-    ! recompute chi, eta, and kappa
-    call compute_chi(mla,chi,prim,dx)
-    call compute_eta(mla,eta,prim,dx)
-    call compute_kappa(mla,kappa,prim,dx)
-
     ! average s^{*,n+1} to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
+    end do
+
+    ! initialize rhs_p for gmres solve to zero since subsequent subroutines will add to it
+    do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
     ! add D^{*,n+1} to rhs_p
@@ -180,12 +180,20 @@ contains
     ! add St^{*,n+1} to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc,chi,dx,1)
 
+    ! reset s_update, then
+    ! we save work by saving D^{*,n+1} + St^{*,n+1}
+    ! this is used in Step 3 below
+    do n=1,nlevs
+       call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
+       call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
+    end do
+
     ! multiply by -S_fac since gmres solves -div(u)=S
     do n=1,nlevs
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
 
-    ! multiply eta and kappa by dt/2
+    ! multiply eta and kappa by dt/2 to put in proper form for gmres solve
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,fixed_dt/2.d0,1,1)
        call multifab_mult_mult_s_c(kappa(n),1,fixed_dt/2.d0,1,1)
@@ -203,8 +211,6 @@ contains
 
     ! convert v^{*,n+1} to m^{*,n+1}
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
-
-    ! fill ghost cells
     do n=1,nlevs
        do i=1,dm
           call multifab_fill_boundary(mnew(n,i))
@@ -214,28 +220,13 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! reset s_update
-    do n=1,nlevs
-       call setval(s_update(n),0.d0,all=.true.)
-    end do
     
-    ! compute A^{*,n+1} for s
+    ! s_update already contains D^{*,n+1} + St^{*,n+1} from above
+    ! add A^{*,n+1} for s to s_update
     call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
 
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! ajn fixme can grab this stuff from above
-
-    ! compute D^{*,n+1} for rho1
-    call mk_diffusive_rhoc_fluxdiv(mla,s_update,2,prim,s_fc,chi,dx, &
-                                   the_bc_tower%bc_tower_array)
-
-    ! compute St^{*,n+1} for rho1
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,s_update,s_fc,chi,dx,2)
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! s^{n+1} = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1})
+    ! snew = s^{n+1} 
+    !      = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1})
     do n=1,nlevs
        call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,0)
        call multifab_mult_mult_s_c(sold(n),1,0.5d0,nscal,0)
@@ -249,22 +240,23 @@ contains
     ! Step 4 - Crank-Nicolson Velocity Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! build up rhs_v for gmres solve: set rhs to m^n
+    ! build up rhs_v for gmres solve: first set rhs to mold = m^n
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(gmres_rhs_v(n,i),1,mold(n,i),1,1,0)
        end do
     end do
 
-    ! add (dt/2)*D^n to rhs_v
+    ! m_d_fluxdiv already contains (dt/2)*D^n
+    ! add this to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
        end do
     end do
 
-    ! add (dt/2)*A^n to rhs_v
     ! m_a_fluxdiv already contains dt*A^n
+    ! multiply by (1/2) and add to rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_a_fluxdiv(n,i),1,0.5d0,1,0)
@@ -279,7 +271,7 @@ contains
        end do
     end do
 
-    ! compute A^{n+1} for m
+    ! compute m_a_fluxdiv = A^{n+1} for m
     call mk_advective_m_fluxdiv(mla,umac,mnew,m_a_fluxdiv,dx)
 
     ! add (dt/2)*A^{n+1} to rhs_v
@@ -288,32 +280,6 @@ contains
           call multifab_mult_mult_s_c(m_a_fluxdiv(n,i),1,fixed_dt/2.d0,1,0)
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
        end do
-    end do
-
-    ! reset m_s_fluxdiv
-    do n=1,nlevs
-       do i=1,dm
-          call setval(m_s_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-
-    ! ajn fixme - add option to time-center eta
-    ! otherwise we are using eta^{n+1}
-
-    ! compute St^{n+1}
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,dx)
-
-    ! multiply St^{n+1} by dt and add to rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,fixed_dt,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
-       end do
-    end do
-
-    ! initialize rhs_p for gmres solve to zero since subsequent subroutines will add to it
-    do n=1,nlevs
-       call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
     ! compute prim^{n+1} from s^{n+1} in valid region
@@ -327,9 +293,35 @@ contains
     call compute_eta(mla,eta,prim,dx)
     call compute_kappa(mla,kappa,prim,dx)
 
+    ! reset m_s_fluxdiv
+    do n=1,nlevs
+       do i=1,dm
+          call setval(m_s_fluxdiv(n,i),0.d0,all=.true.)
+       end do
+    end do
+
+    ! ajn fixme - add option to time-center eta
+    ! otherwise we are using eta^{n+1}
+
+    ! compute m_s_fluxdiv = St^{n+1} for m
+    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,dx)
+
+    ! multiply St^{n+1} by dt and add to rhs_v
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,fixed_dt,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
+       end do
+    end do
+
     ! average s^{n+1} to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
+    end do
+
+    ! initialize rhs_p for gmres solve to zero since subsequent subroutines will add to it
+    do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
     ! add D^{n+1} to rhs_p
@@ -347,7 +339,7 @@ contains
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
 
-    ! multiply eta and kappa by dt/2
+    ! multiply eta and kappa by dt/2 to put in proper form for gmres solve
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,fixed_dt/2.d0,1,1)
        call multifab_mult_mult_s_c(kappa(n),1,fixed_dt/2.d0,1,1)
@@ -365,7 +357,6 @@ contains
 
     ! convert v^{n+1} to m^{n+1}
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
-
     do n=1,nlevs
        do i=1,dm
           call multifab_fill_boundary(mnew(n,i))
