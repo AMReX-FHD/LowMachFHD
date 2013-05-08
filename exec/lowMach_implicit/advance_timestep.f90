@@ -512,6 +512,8 @@ contains
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(m_a_fluxdiv_old(n,i))
           call multifab_destroy(m_d_fluxdiv_old(n,i))
+          call multifab_destroy(m_a_fluxdiv_new(n,i))
+          call multifab_destroy(m_d_fluxdiv_new(n,i))
           call multifab_destroy(m_s_fluxdiv(n,i))
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(umac_old(n,i))
