@@ -58,8 +58,6 @@ contains
     real(kind=dp_t), pointer :: fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:)
     integer :: lo(mla%dim), hi(mla%dim)
 
-    return
-
     ! there are no scalars with stochastic terms
     if (nscal < 2) return
 
