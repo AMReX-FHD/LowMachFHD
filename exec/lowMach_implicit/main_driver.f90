@@ -15,7 +15,8 @@ subroutine main_driver()
   use analysis_module
   use mk_stochastic_fluxdiv_module
   use project_onto_eos_module
-  use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int
+  use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
+                                   project_eos_int
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int
@@ -237,7 +238,10 @@ subroutine main_driver()
      ! increment simulation time
      time = time + fixed_dt
 
-     call project_onto_eos(mla,snew)
+     ! project rho and rho1 back onto EOS
+     if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
+        call project_onto_eos(mla,snew)
+     end if
 
      ! write a plotfile
      if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &

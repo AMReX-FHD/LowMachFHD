@@ -14,6 +14,7 @@ module probin_lowmach_module
   real(dp_t), save :: rhobar(2),visc_coef,diff_coef
   real(dp_t), save :: variance_coef,conc_scal
   integer   , save :: stoch_stress_form,filtering_width
+  integer   , save :: project_eos_int
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -23,6 +24,7 @@ module probin_lowmach_module
   namelist /probin_lowmach/ prob_type         ! sets scalars, vel, coeffs; see exact_solutions.f90
   namelist /probin_lowmach/ max_step          ! maximum number of time steps
   namelist /probin_lowmach/ print_int         ! how often to output EOS drift and sum of conserved quantities
+  namelist /probin_lowmach/ project_eos_int   ! how often to call project_onto_eos
 
   ! fluid properties
   namelist /probin_lowmach/ nscal             ! scalars; nscal=2 means we carry rho and rho*c
@@ -68,6 +70,7 @@ contains
     prob_type = 1
     max_step = 1
     print_int = 0
+    project_eos_int = 1
 
     nscal = 2
     rhobar(1) = 1.1d0 
@@ -118,6 +121,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) print_int
+
+       case ('--project_eos_int')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) project_eos_int
 
        case ('--rhobar_1')
           farg = farg + 1

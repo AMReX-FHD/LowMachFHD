@@ -4,6 +4,7 @@
   prob_type = 1              ! sets scalars, vel, coeffs; see exact_solutions.f90
   max_step = 1               ! maximum number of time steps
   print_int = 0              ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 1        ! how often to call project_onto_eos
 
   ! fluid properties
   nscal = 2                  ! scalars; nscal=2 means we carry rho and rho*c

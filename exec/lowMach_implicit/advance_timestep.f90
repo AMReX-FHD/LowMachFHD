@@ -397,10 +397,11 @@ contains
        end do
     end do
 
-    ! compute (chi,eta,kappa)^,n+1}
+    ! compute (chi,eta,kappa)^n+1}
     call compute_chi(mla,chi,prim,dx)
     call compute_eta(mla,eta,prim,dx)
     call compute_kappa(mla,kappa,prim,dx)
+
     ! reset m_d_fluxdiv_new
     do n=1,nlevs
        do i=1,dm
