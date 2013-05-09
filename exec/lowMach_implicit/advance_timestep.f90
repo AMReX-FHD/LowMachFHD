@@ -117,7 +117,7 @@ contains
     end do
 
     ! add A^n for s to s_update
-    call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
+    call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx)
 
     ! add D^n  for rho1 to s_update
     ! add St^n for rho1 to s_update
@@ -157,7 +157,7 @@ contains
     end do
 
     ! compute rho^{*,n+1} * v^n
-    call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
+    call convert_m_to_umac(mla,s_fc,mtemp,umac_old,.false.)
 
     do n=1,nlevs
        do i=1,dm
@@ -182,7 +182,7 @@ contains
     end do
 
     ! compute m_a_fluxdiv_old
-    call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv_old,dx)
+    call mk_advective_m_fluxdiv(mla,umac_old,mold,m_a_fluxdiv_old,dx)
 
     ! add m_a_fluxdiv_old to gmres_rhs_v
     do n=1,nlevs
@@ -191,8 +191,8 @@ contains
        end do
     end do
 
-    ! compute m_d_fluxdiv_old
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_old,umac,eta,kappa,dx, &
+    ! set m_d_fluxdiv_old = A_0^n v^n
+    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_old,umac_old,eta,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! multiply m_d_fluxdiv_old by 1/2 and add to gmres_rhs_v
@@ -208,8 +208,8 @@ contains
     call compute_eta(mla,eta,prim,dx)
     call compute_kappa(mla,kappa,prim,dx)
 
-    ! compute m_d_fluxdiv_new
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac,eta,kappa,dx, &
+    ! set m_d_fluxdiv_new = A_0^{*,n+1} v^n
+    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac_old,eta,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! multiply m_d_fluxdiv_new by 1/2 and add to gmres_rhs_v
@@ -256,7 +256,7 @@ contains
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
 
-    ! compute div(u^n)
+    ! compute div(v^n)
     call compute_divu(mla,umac,divu,dx)
 
     ! add div(u^n) to gmres_rhs_p
@@ -278,7 +278,7 @@ contains
        end do
     end do
 
-    ! call gmres to compute v^{*,n+1}
+    ! call gmres to compute delta v
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,snew, &
                eta,kappa,1.d0/fixed_dt)
 
@@ -288,7 +288,7 @@ contains
        call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,1)
     end do
 
-    ! compute v^{*,n+1} = v^n + dumac
+    ! compute v^{*,n+1} = v^n + delta v
     ! no need to compute p^{*,n+1} since we don't use it, 
     ! keep both dpres and dumac as initial guess for corrector
     do n=1,nlevs
@@ -347,7 +347,7 @@ contains
     end do
 
     ! compute rho^{n+1} * v^n
-    call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
+    call convert_m_to_umac(mla,s_fc,mtemp,umac_old,.false.)
 
     do n=1,nlevs
        do i=1,dm
@@ -468,7 +468,7 @@ contains
        call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,1)
     end do
 
-    ! call gmres to compute v^{n+1}
+    ! call gmres to compute delta v
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,snew, &
                eta,kappa,1.d0/fixed_dt)
 
