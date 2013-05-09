@@ -23,9 +23,6 @@ module probin_module
   real(dp_t),save :: poisson_rel_tol=1.d-9 
   integer,save    :: hg_bottom_solver
   integer,save    :: max_mg_bottom_nlevels
-  integer,save    :: stag_mg_verbosity,stag_mg_max_vcycles,stag_mg_maxlevs,stag_mg_minwidth
-  integer,save    :: stag_mg_nsmooths_down,stag_mg_nsmooths_up
-  real(dp_t),save :: stag_mg_omega
   integer,save    :: restart,prob_type,prob_dir
   real(dp_t),save :: cflfac,init_shrink,fixed_dt
   real(dp_t),save :: visc_coef,diff_coef,bulk_visc
@@ -258,15 +255,6 @@ module probin_module
   namelist /probin/ hg_bottom_solver
   namelist /probin/ max_mg_bottom_nlevels
 
-  ! Staggered multigrid solver parameters
-  namelist /probin/ stag_mg_verbosity     ! verbosity
-  namelist /probin/ stag_mg_max_vcycles   ! max number of v-cycles
-  namelist /probin/ stag_mg_maxlevs       ! max number of multigrid levels
-  namelist /probin/ stag_mg_minwidth      ! length of box at coarsest multigrid level
-  namelist /probin/ stag_mg_nsmooths_down ! number of smooths at each level on the way down
-  namelist /probin/ stag_mg_nsmooths_up   ! number of smooths at each level on the way up
-  namelist /probin/ stag_mg_omega         ! weighted-jacobi omega coefficient
-
   !------------------------------------------------------------- 
 
 contains
@@ -362,14 +350,6 @@ contains
     mg_bottom_solver = -1
     hg_bottom_solver = -1
     max_mg_bottom_nlevels = 1000
-
-    stag_mg_verbosity = 0
-    stag_mg_max_vcycles = 100
-    stag_mg_maxlevs = 100
-    stag_mg_minwidth = 2
-    stag_mg_nsmooths_down = 3
-    stag_mg_nsmooths_up = 3
-    stag_mg_omega = 1.d0
 
     init_shrink =  1.0
     fixed_dt    = -1.0
@@ -737,41 +717,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_mg_bottom_nlevels
-
-       case ('--stag_mg_verbosity')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_verbosity
-
-       case ('--stag_mg_max_vcycles')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_max_vcycles
-
-       case ('--stag_mg_maxlevs')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_maxlevs
-
-       case ('--stag_mg_minwidth')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_minwidth
-
-       case ('--stag_mg_nsmooths_down')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_nsmooths_down
-
-       case ('--stag_mg_nsmooths_up')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_nsmooths_up
-
-       case ('--stag_mg_omega')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_omega
 
        case ('--grav')
           farg = farg + 1
