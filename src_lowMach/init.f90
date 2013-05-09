@@ -202,7 +202,7 @@ contains
        c_init(1) = 0.1d0
        c_init(2) = 0.9d0
 
-       smoothing_width = 5.d0
+       smoothing_width = 2.5d0
 
        do k=lo(3),hi(3)
           z = prob_lo(3) + dx(3) * (dble(k)+0.5d0) - 0.5d0*(prob_lo(3)+prob_hi(3))
@@ -215,7 +215,7 @@ contains
 
                 ! tanh smoothing
                 s(i,j,k,2) = c_init(1) + 0.5d0*(c_init(2)-c_init(1))* &
-                     (1.d0 + tanh((r-2.5d0*smoothing_width*dx(1))/(smoothing_width*dx(1))))
+                     (1.d0 + tanh((r-2.0d0*smoothing_width*dx(1))/(smoothing_width*dx(1))))
                 
                 s(i,j,k,1) = 1.0d0/(s(i,j,k,2)/rhobar(1)+(1.0d0-s(i,j,k,2))/rhobar(2))
                 s(i,j,k,2) = s(i,j,k,1)*s(i,j,k,2)
