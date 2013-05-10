@@ -209,7 +209,7 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_TRACT ! transverse velocity
           adv_bc_level(igrid,d,lohi,d   ) = DIR_VEL   ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = EXT_DIR   ! coefficients (alpha, beta, gamma)
+          adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP  ! cell-centered prims and coeffs
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP) then
 
@@ -218,7 +218,16 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! transverse velocity
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP   ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = EXT_DIR    ! coefficients (alpha, beta, gamma)
+          adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP   ! cell-centered prims and coeffs
+
+       else if (phys_bc_level(igrid,d,lohi) == INLET) then
+
+          ! for normal velocity we impose a Dirichlet velocity condition
+          ! for transverse velocity we imposie a Dirichlet velocity condition
+          adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! transverse velocity
+          adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! normal velocity
+          adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP   ! pressure
+          adv_bc_level(igrid,d,lohi,dm+2) = EXT_DIR    ! cell-centered prims and coeffs
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC .or. &
                 phys_bc_level(igrid,d,lohi) == INTERIOR ) then
@@ -263,6 +272,10 @@ contains
           ell_bc_level(igrid,d,lohi,press_comp) = BC_NEU ! pressure
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP) then
+
+          ell_bc_level(igrid,d,lohi,press_comp) = BC_NEU ! pressure
+
+       else if (phys_bc_level(igrid,d,lohi) == INLET) then
 
           ell_bc_level(igrid,d,lohi,press_comp) = BC_NEU ! pressure
 
