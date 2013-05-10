@@ -42,16 +42,17 @@ subroutine main_driver()
 
   logical, allocatable :: pmask(:)
 
-  type(multifab), allocatable :: mold(:,:) ! face-based
-  type(multifab), allocatable :: mnew(:,:) ! face-based
-  type(multifab), allocatable :: umac(:,:) ! face-based
-  type(multifab), allocatable :: sold(:)   ! cell-centered
-  type(multifab), allocatable :: snew(:)   ! cell-centered
-  type(multifab), allocatable :: prim(:)   ! cell-centered
-  type(multifab), allocatable :: pres(:)   ! cell-centered
-  type(multifab), allocatable :: chi(:)    ! cell-centered
-  type(multifab), allocatable :: eta(:)    ! cell-centered
-  type(multifab), allocatable :: kappa(:)  ! cell-centered
+  type(multifab), allocatable :: mold(:,:)         ! face-based
+  type(multifab), allocatable :: mnew(:,:)         ! face-based
+  type(multifab), allocatable :: umac(:,:)         ! face-based
+  type(multifab), allocatable :: sold(:)           ! cell-centered
+  type(multifab), allocatable :: snew(:)           ! cell-centered
+  type(multifab), allocatable :: prim(:)           ! cell-centered
+  type(multifab), allocatable :: pres(:)           ! cell-centered
+  type(multifab), allocatable :: chi(:)            ! cell-centered
+  type(multifab), allocatable :: chi_fc(:,:)       ! face-centered
+  type(multifab), allocatable :: eta(:)            ! cell-centered
+  type(multifab), allocatable :: kappa(:)          ! cell-centered
   type(multifab), allocatable :: rhoc_d_fluxdiv(:) ! cell-centered
   type(multifab), allocatable :: rhoc_s_fluxdiv(:) ! cell-centered
 
@@ -79,6 +80,7 @@ subroutine main_driver()
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs),rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs))
+  allocate(chi_fc(nlevs,dm))
 
   ! tell mba how many levels and dmensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -178,6 +180,10 @@ subroutine main_driver()
      call multifab_build(eta(n)  ,mla%la(n),1,1)
      call multifab_build(kappa(n),mla%la(n),1,1)
 
+     do i=1,dm
+        call multifab_build_edge(chi_fc(n,i),mla%la(n),1,0,i)
+     end do
+
      ! this stores divergence of stochastic and diffusive fluxes for rhoc
      call multifab_build(rhoc_d_fluxdiv(n),mla%la(n),1,0)
      call multifab_build(rhoc_s_fluxdiv(n),mla%la(n),1,0)
@@ -206,7 +212,7 @@ subroutine main_driver()
   call convert_cons_to_prim(mla,sold,prim,.false.)
 
   ! initialize chi, eta, and kappa
-  call compute_chi(mla,chi,prim,dx)
+  call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
   call compute_eta(mla,eta,prim,dx)
   call compute_kappa(mla,kappa,prim,dx)
 
@@ -217,7 +223,7 @@ subroutine main_driver()
   call fill_stochastic(mla)  
 
   ! need to do an initial projection to get an initial velocity field
-  call initial_projection(mla,mold,umac,sold,prim,chi,rhoc_d_fluxdiv, &
+  call initial_projection(mla,mold,umac,sold,prim,chi_fc,rhoc_d_fluxdiv, &
                           rhoc_s_fluxdiv,dx,the_bc_tower)
 
   if (print_int .gt. 0) then
@@ -232,7 +238,7 @@ subroutine main_driver()
   do istep=1,max_step
 
      ! advance the solution by dt
-     call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,eta,kappa, &
+     call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,chi_fc,eta,kappa, &
                            rhoc_d_fluxdiv,rhoc_s_fluxdiv,dx,the_bc_tower)
 
      ! increment simulation time
@@ -285,6 +291,9 @@ subroutine main_driver()
      call multifab_destroy(kappa(n))
      call multifab_destroy(rhoc_d_fluxdiv(n))
      call multifab_destroy(rhoc_s_fluxdiv(n))
+     do i=1,dm
+        call multifab_destroy(chi_fc(n,i))
+     end do
   end do
 
   call destroy(mla)

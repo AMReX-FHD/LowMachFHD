@@ -35,13 +35,14 @@ module mk_stochastic_fluxdiv_module
 contains
 
   ! Note that here we *increment* stoch_s_force so it must be initialized externally!
-  subroutine mk_stochastic_s_fluxdiv(mla,the_bc_level,stoch_s_force,s_fc,chi,dx,start_outcomp)
+  subroutine mk_stochastic_s_fluxdiv(mla,the_bc_level,stoch_s_force,s_fc, &
+                                     chi_fc,dx,start_outcomp)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: stoch_s_force(:)
     type(multifab) , intent(in   ) :: s_fc(:,:)
-    type(multifab) , intent(in   ) :: chi(:)
+    type(multifab) , intent(in   ) :: chi_fc(:,:)
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: start_outcomp
 
@@ -52,7 +53,6 @@ contains
     real(dp_t) :: variance
 
     type(multifab) :: sflux_fc_temp(mla%nlevel,mla%dim)
-    type(multifab) ::        chi_fc(mla%nlevel,mla%dim)
 
     real(kind=dp_t), pointer :: fp(:,:,:,:), sp(:,:,:,:), dp(:,:,:,:)
     real(kind=dp_t), pointer :: fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:)
@@ -79,16 +79,6 @@ contains
        end do
 
     end do
-
-    ! if chi varies in space, average chi to faces
-    if (diff_coef < 0) then
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_build_edge(chi_fc(n,i),mla%la(n),1,0,i)
-          end do
-       end do
-       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_level)
-    end if
 
     ng_x = sflux_fc_temp(1,1)%ng
     ng_z = chi_fc(1,1)%ng
@@ -172,9 +162,6 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_destroy(sflux_fc_temp(n,i))
-          if (diff_coef < 0) then
-             call multifab_destroy(chi_fc(n,i))
-          end if
        end do
     end do
 

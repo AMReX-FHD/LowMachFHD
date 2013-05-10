@@ -22,7 +22,7 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,eta,kappa, &
+  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,chi_fc,eta,kappa, &
                               rhoc_d_fluxdiv,rhoc_s_fluxdiv,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -34,6 +34,7 @@ contains
     type(multifab) , intent(inout) :: prim(:)
     type(multifab) , intent(inout) :: pres(:)
     type(multifab) , intent(inout) :: chi(:)
+    type(multifab) , intent(inout) :: chi_fc(:,:)
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
@@ -204,7 +205,7 @@ contains
     end do
 
     ! compute (chi,eta,kappa)^{*,n+1}
-    call compute_chi(mla,chi,prim,dx)
+    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
     call compute_eta(mla,eta,prim,dx)
     call compute_kappa(mla,kappa,prim,dx)
 
@@ -236,7 +237,7 @@ contains
     end do
 
     ! add D^{*,n+1} to rhs_p
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! add St^n to rhs_p
@@ -398,7 +399,7 @@ contains
     end do
 
     ! compute (chi,eta,kappa)^n+1}
-    call compute_chi(mla,chi,prim,dx)
+    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
     call compute_eta(mla,eta,prim,dx)
     call compute_kappa(mla,kappa,prim,dx)
 
@@ -432,7 +433,7 @@ contains
     end do
 
     ! create D^{n+1}
-    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! add D^{n+1} to rhs_p
@@ -444,7 +445,8 @@ contains
     call fill_stochastic(mla)
 
     ! create St^{n+1}
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc,chi,dx,1)
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
+                                 s_fc,chi_fc,dx,1)
 
     ! add St^{n+1} to rhs_p
     do n=1,nlevs

@@ -22,7 +22,7 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,mold,umac,sold,prim,chi,rhoc_d_fluxdiv, &
+  subroutine initial_projection(mla,mold,umac,sold,prim,chi_fc,rhoc_d_fluxdiv, &
                                 rhoc_s_fluxdiv,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -30,7 +30,7 @@ contains
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(in   ) :: sold(:)
     type(multifab) , intent(in   ) :: prim(:)
-    type(multifab) , intent(in   ) :: chi(:)
+    type(multifab) , intent(in   ) :: chi_fc(:,:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
@@ -79,7 +79,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! create D for rhoc
-    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi,dx, &
+    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! add D to mac_rhs
@@ -88,7 +88,8 @@ contains
     end do
 
     ! create St for rhoc
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc,chi,dx,1)
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc, &
+                                 chi_fc,dx,1)
 
     ! add St to mac_rhs
     do n=1,nlevs

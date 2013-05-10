@@ -14,7 +14,7 @@ module mk_diffusive_fluxdiv_module
 
 contains
 
-  subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_fc,chi, &
+  subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_fc,chi_fc, &
                                        dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
@@ -22,7 +22,7 @@ contains
     integer        , intent(in   ) :: out_comp    ! which component of s_update
     type(multifab) , intent(in   ) ::   prim(:)   ! rho and c
     type(multifab) , intent(in   ) :: rho_fc(:,:) ! rho on faces
-    type(multifab) , intent(in   ) ::    chi(:)   ! chi
+    type(multifab) , intent(in   ) :: chi_fc(:,:) ! chi on faces
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
@@ -39,7 +39,6 @@ contains
     real(kind=dp_t), pointer :: cpy(:,:,:,:)
     real(kind=dp_t), pointer :: cpz(:,:,:,:)
 
-    type(multifab) :: chi_fc(mla%nlevel,mla%dim)
 
     ng_u = s_update(1)%ng
     ng_p = prim(1)%ng
@@ -48,23 +47,6 @@ contains
 
     nlevs = mla%nlevel
     dm    = mla%dim
-
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_build_edge(chi_fc(n,i),mla%la(n),1,0,i)
-       end do
-    end do
-
-    ! average chi to faces
-    if (diff_coef < 0) then
-       call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_level)
-    else
-       do n=1,nlevs
-          do i=1,dm
-             call setval(chi_fc(n,i),diff_coef,all=.true.)
-          end do
-       end do
-    end if
 
     ! compute del dot (rhoD grad c) and add it to s_update
     do n=1,nlevs
@@ -93,12 +75,6 @@ contains
                                                lo, hi, dx(n,:), &
                                                the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           end select
-       end do
-    end do
-
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_destroy(chi_fc(n,i))
        end do
     end do
 

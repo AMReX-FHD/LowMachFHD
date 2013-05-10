@@ -3,6 +3,8 @@ module init_module
   use bl_types
   use multifab_module
   use ml_layout_module
+  use define_bc_module
+  use convert_stag_module
   use probin_lowmach_module, only: prob_type, rhobar, diff_coef, visc_coef
   use probin_common_module , only: prob_lo, prob_hi
 
@@ -231,12 +233,14 @@ contains
 
   end subroutine init_3d
 
-  subroutine compute_chi(mla,chi,prim,dx)
+  subroutine compute_chi(mla,chi,chi_fc,prim,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: chi(:)
+    type(multifab) , intent(inout) :: chi_fc(:,:)
     type(multifab) , intent(in   ) :: prim(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     integer :: nlevs,dm,i,n,ng_c,ng_p
     integer :: lo(mla%dim),hi(mla%dim)
@@ -268,6 +272,8 @@ contains
           end select
        end do
     end do
+
+    call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_level)
 
   end subroutine compute_chi
 
