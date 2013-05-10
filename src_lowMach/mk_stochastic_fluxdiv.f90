@@ -487,8 +487,7 @@ contains
     type(multifab) :: mflux_cc_temp(mla%nlevel)
     type(multifab) :: mflux_nd_temp(mla%nlevel)
     type(multifab) :: mflux_ed_temp(mla%nlevel,3)
-    type(multifab) :: eta_nd(mla%nlevel)
-    type(multifab) :: eta_ed(mla%nlevel,3)
+    type(multifab), allocatable :: eta_ed(:,:)
 
     logical :: nodal_temp(mla%dim)
 
@@ -500,6 +499,12 @@ contains
 
     nlevs = mla%nlevel
     dm = mla%dim
+
+    if (dm .eq. 2) then
+       allocate(eta_ed(nlevs,1))
+    else if (dm .eq. 3) then
+       allocate(eta_ed(nlevs,3))
+    end if
 
     do n=1,nlevs
 
@@ -546,7 +551,7 @@ contains
        do n=1,nlevs
           if (dm .eq. 2) then
              nodal_temp = .true.
-             call multifab_build(eta_nd(n),mla%la(n),1,0,nodal_temp)
+             call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
           else if (dm .eq. 3) then
              nodal_temp(1) = .true.
              nodal_temp(2) = .true.
@@ -564,7 +569,7 @@ contains
        end do
 
        if (dm .eq. 2) then
-          call average_cc_to_node(nlevs,eta,eta_nd,1,dm+2,1,the_bc_level)
+          call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,dm+2,1,the_bc_level)
        else if (dm .eq. 3) then
           call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_level)
        end if
@@ -589,7 +594,7 @@ contains
        if (dm .eq. 2) then
 
           ng_n = mflux_nd_temp(1)%ng
-          ng_w = eta_nd(1)%ng
+          ng_w = eta_ed(1,1)%ng
           
           do i=1,nfabs(mflux_cc_temp(n))
              
@@ -603,7 +608,7 @@ contains
              sp = variance*sp
              ! if eta varies in space, multiply pointwise by sqrt(eta)
              if (visc_coef < 0) then
-                ep1 => dataptr(eta_nd(n),i)
+                ep1 => dataptr(eta_ed(n,1),i)
                 call mult_by_sqrt_eta_2d(fp(:,:,1,:),ng_c,sp(:,:,1,:),ng_n, &
                                          dp(:,:,1,1),ng_y,ep1(:,:,1,1),ng_w,lo,hi)
              end if
@@ -705,7 +710,7 @@ contains
        if (dm .eq. 2) then
           call multifab_destroy(mflux_nd_temp(n))
           if (visc_coef < 0) then
-             call multifab_destroy(eta_nd(n))
+             call multifab_destroy(eta_ed(n,1))
           end if
        else if (dm .eq. 3) then
           call multifab_destroy(mflux_ed_temp(n,1))

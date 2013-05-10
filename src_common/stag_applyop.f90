@@ -32,13 +32,20 @@ contains
     integer :: i,n,dm,nlevs
 
     type(multifab) :: alpha_fc(mla%nlevel,mla%dim)
-    type(multifab) :: beta_nd(mla%nlevel)
-    type(multifab) :: beta_ed(mla%nlevel,3)
+
+    ! nodal in exactly 2 directions (nodes in 2d, edges in 3d)
+    type(multifab), allocatable :: beta_ed(:,:) 
 
     logical :: nodal_temp(mla%dim)
 
     dm = mla%dim
     nlevs = mla%nlevel
+
+    if (dm .eq. 2) then
+       allocate(beta_ed(nlevs,1))  ! nodal
+    else if (dm .eq. 3) then
+       allocate(beta_ed(nlevs,3))  ! edge-based
+    end if
 
     do n=1,nlevs
        do i=1,dm
@@ -54,9 +61,9 @@ contains
 
     if (dm .eq. 2) then
        do n=1,nlevs
-          call multifab_build_nodal(beta_nd(n),mla%la(n),1,0)
+          call multifab_build_nodal(beta_ed(n,1),mla%la(n),1,0)
        end do
-       call average_cc_to_node(nlevs,beta_cc,beta_nd,1,dm+2,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_node(nlevs,beta_cc,beta_ed(:,1),1,dm+2,1,the_bc_tower%bc_tower_array)
     else
        do n=1,nlevs
           nodal_temp(1) = .true.
@@ -79,7 +86,7 @@ contains
        do n=1,nlevs
           call stag_applyop_2d(mla%la(n),the_bc_tower%bc_tower_array(n), &
                                phi_fc(n,:),Lphi_fc(n,:),alpha_fc(n,:),beta_cc(n), &
-                               beta_nd(n),gamma_cc(n),dx(n,:))
+                               beta_ed(n,1),gamma_cc(n),dx(n,:))
        end do
     else if (dm .eq. 3) then
        do n=1,nlevs
@@ -94,11 +101,11 @@ contains
           call multifab_destroy(alpha_fc(n,i))
        end do
        if (dm .eq. 2) then
-          call multifab_destroy(beta_nd(n))
+          call multifab_destroy(beta_ed(n,1))
        else if (dm .eq. 3) then
-          do i=1,3
-             call multifab_destroy(beta_ed(n,i))
-          end do
+          call multifab_destroy(beta_ed(n,1))
+          call multifab_destroy(beta_ed(n,2))
+          call multifab_destroy(beta_ed(n,3))
        end if
     end do
 
@@ -106,7 +113,7 @@ contains
 
   ! compute Lphi
   subroutine stag_applyop_2d(la,the_bc_level,phi_fc,Lphi_fc,alpha_fc,beta_cc, &
-                             beta_nd,gamma_cc,dx,color_in)
+                             beta_ed,gamma_cc,dx,color_in)
     
     type(layout)   , intent(in   ) :: la
     type(bc_level) , intent(in   ) :: the_bc_level
@@ -114,7 +121,7 @@ contains
     type(multifab) , intent(inout) :: Lphi_fc(:)  ! face-centered
     type(multifab) , intent(in   ) :: alpha_fc(:) ! face-centered
     type(multifab) , intent(in   ) :: beta_cc     ! cell-centered
-    type(multifab) , intent(in   ) :: beta_nd     ! nodal
+    type(multifab) , intent(in   ) :: beta_ed     ! nodal
     type(multifab) , intent(in   ) :: gamma_cc    ! cell-centered
     real(kind=dp_t), intent(in   ) :: dx(:)
     integer        , intent(in   ), optional :: color_in
@@ -150,7 +157,7 @@ contains
     ng_l = Lphi_fc(1)%ng
     ng_a = alpha_fc(1)%ng
     ng_b = beta_cc%ng
-    ng_n = beta_nd%ng
+    ng_n = beta_ed%ng
     ng_g = gamma_cc%ng
 
     do i=1,nfabs(phi_fc(1))
@@ -161,7 +168,7 @@ contains
        apx => dataptr(alpha_fc(1), i)
        apy => dataptr(alpha_fc(2), i)
        bp  => dataptr(beta_cc, i)
-       bnp => dataptr(beta_nd, i)
+       bnp => dataptr(beta_ed, i)
        kp  => dataptr(gamma_cc, i)
        lo = lwb(get_box(phi_fc(1), i))
        hi = upb(get_box(phi_fc(1), i))
@@ -182,7 +189,7 @@ contains
   end subroutine stag_applyop_2d
 
   subroutine stag_applyop_2d_work(phix,phiy,ng_p,Lpx,Lpy,ng_l, &
-                                  alphax,alphay,ng_a,beta,ng_b,beta_nd,ng_n, &
+                                  alphax,alphay,ng_a,beta,ng_b,beta_ed,ng_n, &
                                   gamma,ng_g,lo,hi,dx,color)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_l,ng_a,ng_b,ng_n,ng_g
@@ -193,7 +200,7 @@ contains
     real(kind=dp_t), intent(in   ) ::  alphax(lo(1)-ng_a:,lo(2)-ng_a:)
     real(kind=dp_t), intent(in   ) ::  alphay(lo(1)-ng_a:,lo(2)-ng_a:)
     real(kind=dp_t), intent(in   ) ::    beta(lo(1)-ng_b:,lo(2)-ng_b:)
-    real(kind=dp_t), intent(in   ) :: beta_nd(lo(1)-ng_n:,lo(2)-ng_n:)
+    real(kind=dp_t), intent(in   ) :: beta_ed(lo(1)-ng_n:,lo(2)-ng_n:)
     real(kind=dp_t), intent(in   ) ::   gamma(lo(1)-ng_g:,lo(2)-ng_g:)
     real(kind=dp_t), intent(in   ) :: dx(:)
     integer        , intent(in   ) :: color
@@ -235,11 +242,11 @@ contains
              do i=lo(1)+ioff,hi(1)+1,offset
 
                 Lpx(i,j) = phix(i,j)*(alphax(i,j) + &
-                     (beta(i,j)+beta(i-1,j)+beta_nd(i,j+1)+beta_nd(i,j))/dxsq) &
+                     (beta(i,j)+beta(i-1,j)+beta_ed(i,j+1)+beta_ed(i,j))/dxsq) &
                      - ( phix(i+1,j)*beta(i,j) &
                      +phix(i-1,j)*beta(i-1,j) &
-                     +phix(i,j+1)*beta_nd(i,j+1) &
-                     +phix(i,j-1)*beta_nd(i,j) )/dxsq
+                     +phix(i,j+1)*beta_ed(i,j+1) &
+                     +phix(i,j-1)*beta_ed(i,j) )/dxsq
 
              end do
           end do
@@ -254,11 +261,11 @@ contains
              do i=lo(1)+ioff,hi(1),offset
 
                 Lpy(i,j) = phiy(i,j)*(alphay(i,j) + &
-                     (beta(i,j)+beta(i,j-1)+beta_nd(i+1,j)+beta_nd(i,j))/dxsq) &
+                     (beta(i,j)+beta(i,j-1)+beta_ed(i+1,j)+beta_ed(i,j))/dxsq) &
                      - ( phiy(i,j+1)*beta(i,j) &
                      +phiy(i,j-1)*beta(i,j-1) &
-                     +phiy(i+1,j)*beta_nd(i+1,j) &
-                     +phiy(i-1,j)*beta_nd(i,j) )/dxsq
+                     +phiy(i+1,j)*beta_ed(i+1,j) &
+                     +phiy(i-1,j)*beta_ed(i,j) )/dxsq
 
              end do
           end do
@@ -309,17 +316,17 @@ contains
              do i=lo(1)+ioff,hi(1)+1,offset
 
                 Lpx(i,j) = phix(i,j)*(alphax(i,j) + &
-                     (2.d0*beta(i,j)+2.d0*beta(i-1,j)+beta_nd(i,j+1)+beta_nd(i,j))/dxsq) &
+                     (2.d0*beta(i,j)+2.d0*beta(i-1,j)+beta_ed(i,j+1)+beta_ed(i,j))/dxsq) &
                      
                      -( 2.d0*phix(i+1,j)*beta(i,j) &
                      +2.d0*phix(i-1,j)*beta(i-1,j) &
-                     +phix(i,j+1)*beta_nd(i,j+1) &
-                     +phix(i,j-1)*beta_nd(i,j) &
+                     +phix(i,j+1)*beta_ed(i,j+1) &
+                     +phix(i,j-1)*beta_ed(i,j) &
                      
-                     +phiy(i,j+1)*beta_nd(i,j+1) &
-                     -phiy(i,j)*beta_nd(i,j) &
-                     -phiy(i-1,j+1)*beta_nd(i,j+1) &
-                     +phiy(i-1,j)*beta_nd(i,j) )/dxsq
+                     +phiy(i,j+1)*beta_ed(i,j+1) &
+                     -phiy(i,j)*beta_ed(i,j) &
+                     -phiy(i-1,j+1)*beta_ed(i,j+1) &
+                     +phiy(i-1,j)*beta_ed(i,j) )/dxsq
 
              end do
           end do
@@ -334,17 +341,17 @@ contains
              do i=lo(1)+ioff,hi(1),offset
 
                 Lpy(i,j) = phiy(i,j)*(alphay(i,j) + &
-                     (2.d0*beta(i,j)+2.d0*beta(i,j-1)+beta_nd(i+1,j)+beta_nd(i,j))/dxsq) &
+                     (2.d0*beta(i,j)+2.d0*beta(i,j-1)+beta_ed(i+1,j)+beta_ed(i,j))/dxsq) &
                      
                      -( 2.d0*phiy(i,j+1)*beta(i,j) &
                      +2.d0*phiy(i,j-1)*beta(i,j-1) &
-                     +phiy(i+1,j)*beta_nd(i+1,j) &
-                     +phiy(i-1,j)*beta_nd(i,j) &
+                     +phiy(i+1,j)*beta_ed(i+1,j) &
+                     +phiy(i-1,j)*beta_ed(i,j) &
                      
-                     +phix(i+1,j)*beta_nd(i+1,j) &
-                     -phix(i,j)*beta_nd(i,j) &
-                     -phix(i+1,j-1)*beta_nd(i+1,j) &
-                     +phix(i,j-1)*beta_nd(i,j) )/dxsq
+                     +phix(i+1,j)*beta_ed(i+1,j) &
+                     -phix(i,j)*beta_ed(i,j) &
+                     -phix(i+1,j-1)*beta_ed(i+1,j) &
+                     +phix(i,j-1)*beta_ed(i,j) )/dxsq
 
              end do
           end do
@@ -398,17 +405,17 @@ contains
 
                 Lpx(i,j) = phix(i,j)*(alphax(i,j) + &
                      ( fourthirds*beta(i,j)+gamma(i,j)+fourthirds*beta(i-1,j)+gamma(i-1,j) &
-                     +beta_nd(i,j+1)+beta_nd(i,j) )/dxsq) &
+                     +beta_ed(i,j+1)+beta_ed(i,j) )/dxsq) &
                      
                      -( phix(i+1,j)*(fourthirds*beta(i,j)+gamma(i,j)) &
                      +phix(i-1,j)*(fourthirds*beta(i-1,j)+gamma(i-1,j)) &
-                     +phix(i,j+1)*beta_nd(i,j+1) &
-                     +phix(i,j-1)*beta_nd(i,j) &
+                     +phix(i,j+1)*beta_ed(i,j+1) &
+                     +phix(i,j-1)*beta_ed(i,j) &
                      
-                     +phiy(i,j+1)*(beta_nd(i,j+1)-twothirds*beta(i,j)+gamma(i,j)) &
-                     -phiy(i,j)*(beta_nd(i,j)-twothirds*beta(i,j)+gamma(i,j)) &
-                     -phiy(i-1,j+1)*(beta_nd(i,j+1)-twothirds*beta(i-1,j)+gamma(i-1,j)) &
-                     +phiy(i-1,j)*(beta_nd(i,j)-twothirds*beta(i-1,j)+gamma(i-1,j)) )/dxsq
+                     +phiy(i,j+1)*(beta_ed(i,j+1)-twothirds*beta(i,j)+gamma(i,j)) &
+                     -phiy(i,j)*(beta_ed(i,j)-twothirds*beta(i,j)+gamma(i,j)) &
+                     -phiy(i-1,j+1)*(beta_ed(i,j+1)-twothirds*beta(i-1,j)+gamma(i-1,j)) &
+                     +phiy(i-1,j)*(beta_ed(i,j)-twothirds*beta(i-1,j)+gamma(i-1,j)) )/dxsq
 
              end do
           end do
@@ -424,17 +431,17 @@ contains
 
                 Lpy(i,j) = phiy(i,j)*(alphay(i,j) + &
                      ( fourthirds*beta(i,j)+gamma(i,j)+fourthirds*beta(i,j-1)+gamma(i,j-1) &
-                     +beta_nd(i+1,j)+beta_nd(i,j) )/dxsq) &
+                     +beta_ed(i+1,j)+beta_ed(i,j) )/dxsq) &
                      
                      -( phiy(i,j+1)*(fourthirds*beta(i,j)+gamma(i,j)) &
                      +phiy(i,j-1)*(fourthirds*beta(i,j-1)+gamma(i,j-1)) &
-                     +phiy(i+1,j)*beta_nd(i+1,j) &
-                     +phiy(i-1,j)*beta_nd(i,j) &
+                     +phiy(i+1,j)*beta_ed(i+1,j) &
+                     +phiy(i-1,j)*beta_ed(i,j) &
                      
-                     +phix(i+1,j)*(beta_nd(i+1,j)-twothirds*beta(i,j)+gamma(i,j)) &
-                     -phix(i,j)*(beta_nd(i,j)-twothirds*beta(i,j)+gamma(i,j)) &
-                     -phix(i+1,j-1)*(beta_nd(i+1,j)-twothirds*beta(i,j-1)+gamma(i,j-1)) &
-                     +phix(i,j-1)*(beta_nd(i,j)-twothirds*beta(i,j-1)+gamma(i,j-1)) )/dxsq
+                     +phix(i+1,j)*(beta_ed(i+1,j)-twothirds*beta(i,j)+gamma(i,j)) &
+                     -phix(i,j)*(beta_ed(i,j)-twothirds*beta(i,j)+gamma(i,j)) &
+                     -phix(i+1,j-1)*(beta_ed(i+1,j)-twothirds*beta(i,j-1)+gamma(i,j-1)) &
+                     +phix(i,j-1)*(beta_ed(i,j)-twothirds*beta(i,j-1)+gamma(i,j-1)) )/dxsq
 
              end do
           end do

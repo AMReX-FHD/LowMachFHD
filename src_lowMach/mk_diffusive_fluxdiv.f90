@@ -318,13 +318,18 @@ contains
     type(multifab) :: Lphi_fc(mla%nlevel,mla%dim)
     type(multifab) :: alpha_fc(mla%nlevel,mla%dim)
 
-    type(multifab) :: eta_nd(mla%nlevel)   ! averaged to nodes (2D only)
-    type(multifab) :: eta_ed(mla%nlevel,3) ! averaged to edges (3D only; xy/xz/yz edges)
+    type(multifab), allocatable :: eta_ed(:,:)
 
     logical :: nodal_temp(mla%dim)
 
     nlevs = mla%nlevel
     dm    = mla%dim
+
+    if (dm .eq. 2) then
+       allocate(eta_ed(nlevs,1))  ! nodal
+    else if (dm .eq. 3) then
+       allocate(eta_ed(nlevs,3))  ! edge-based
+    end if
 
     do n=1,nlevs
        do i=1,dm
@@ -338,7 +343,7 @@ contains
     ! nodal (in 2D) and edge-based (in 3D) eta
     if (dm .eq. 2) then
        do n=1,nlevs
-          call multifab_build_nodal(eta_nd(n),mla%la(n),1,0)
+          call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
        end do
     else
        do n=1,nlevs
@@ -360,10 +365,10 @@ contains
     ! compute eta on nodes (2D) or edges (3D)
     if (dm .eq. 2) then
        if (visc_coef < 0) then
-          call average_cc_to_node(nlevs,eta,eta_nd,1,dm+2,1,the_bc_level)
+          call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,dm+2,1,the_bc_level)
        else
           do n=1,nlevs
-             call setval(eta_nd(n),visc_coef,all=.true.)
+             call setval(eta_ed(n,1),visc_coef,all=.true.)
           end do
        end if
     else if (dm .eq. 3) then
@@ -384,7 +389,7 @@ contains
        ! we could compute +L(phi) but then we'd have to multiply beta and kappa by -1
        if (dm .eq. 2) then
           call stag_applyop_2d(mla%la(n),the_bc_level(n),umac(n,:),Lphi_fc(n,:), &
-                               alpha_fc(n,:),eta(n),eta_nd(n),kappa(n),dx(n,:))
+                               alpha_fc(n,:),eta(n),eta_ed(n,1),kappa(n),dx(n,:))
        else
           call stag_applyop_3d(mla%la(n),the_bc_level(n),umac(n,:),Lphi_fc(n,:), &
                                alpha_fc(n,:),eta(n),eta_ed(n,:),kappa(n),dx(n,:))
@@ -399,7 +404,7 @@ contains
 
     do n=1,nlevs
        if (dm .eq. 2) then
-          call multifab_destroy(eta_nd(n))
+          call multifab_destroy(eta_ed(n,1))
        else if (dm .eq. 3) then
           call multifab_destroy(eta_ed(n,1))
           call multifab_destroy(eta_ed(n,2))

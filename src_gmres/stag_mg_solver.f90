@@ -61,9 +61,6 @@ contains
     type(multifab), allocatable :: alpha_fc_mg(:,:), rhs_fc_mg(:,:), phi_fc_mg(:,:)
     type(multifab), allocatable :: Lphi_fc_mg(:,:), resid_fc_mg(:,:)
 
-    ! nodal multifabs
-    type(multifab), allocatable :: beta_nd_mg(:)
-
     ! edge multifab
     type(multifab), allocatable :: beta_ed_mg(:,:)
 
@@ -109,8 +106,12 @@ contains
     allocate(  phi_fc_mg(nlevs_mg,dm)) ! face-centered
     allocate( Lphi_fc_mg(nlevs_mg,dm)) ! face-centered
     allocate(resid_fc_mg(nlevs_mg,dm)) ! face-centered
-    allocate( beta_nd_mg(nlevs_mg))    ! nodal
-    allocate( beta_ed_mg(nlevs_mg,3))  ! edge-based
+
+    if (dm .eq. 2) then
+       allocate( beta_ed_mg(nlevs_mg,1))  ! nodal
+    else if (dm .eq. 3) then
+       allocate( beta_ed_mg(nlevs_mg,3))  ! edge-based
+    end if
 
     allocate(dx_mg(nlevs_mg,dm))
     allocate(la_mg(nlevs_mg))
@@ -161,11 +162,10 @@ contains
           call multifab_build_edge(resid_fc_mg(n,i),la_mg(n),1,0,i)
        end do
 
+       ! build beta_ed_mg
        if (dm .eq. 2) then
-          ! build beta_ng_mg
-          call multifab_build_nodal(beta_nd_mg(n),la_mg(n),1,0)
+          call multifab_build_nodal(beta_ed_mg(n,1),la_mg(n),1,0)
        else
-          ! build beta_ed_mg
           nodal_temp(1) = .true.
           nodal_temp(2) = .true.
           nodal_temp(3) = .false.
@@ -199,7 +199,7 @@ contains
 
     if (dm .eq. 2) then
        ! compute beta at nodes at level 1
-       call average_cc_to_node(1,beta_cc_mg,beta_nd_mg, &
+       call average_cc_to_node(1,beta_cc_mg,beta_ed_mg(:,1), &
                                1,dm+2,1,the_bc_tower_mg%bc_tower_array)
     else
        ! compute beta at edges at level 1
@@ -213,7 +213,7 @@ contains
        call cc_restriction(la_mg(n),gamma_cc_mg(n),gamma_cc_mg(n-1),the_bc_tower_mg%bc_tower_array(n-1))
        call stag_restriction(la_mg(n),alpha_fc_mg(n-1,:),alpha_fc_mg(n,:),.true.)
        if (dm .eq. 2) then
-          call nodal_restriction(la_mg(n),beta_nd_mg(n-1),beta_nd_mg(n))
+          call nodal_restriction(la_mg(n),beta_ed_mg(n-1,1),beta_ed_mg(n,1))
        else
           call edge_restriction(la_mg(n),beta_ed_mg(n-1,:),beta_ed_mg(n,:))
        end if
@@ -249,7 +249,7 @@ contains
     if (dm .eq. 2) then
        call stag_applyop_2d(la_mg(1),the_bc_tower_mg%bc_tower_array(1),phi_fc_mg(1,:), &
                             Lphi_fc_mg(1,:),alpha_fc_mg(1,:), &
-                            beta_cc_mg(1),beta_nd_mg(1),gamma_cc_mg(1),dx_mg(1,:))
+                            beta_cc_mg(1),beta_ed_mg(1,1),gamma_cc_mg(1),dx_mg(1,:))
     else
        call stag_applyop_3d(la_mg(1),the_bc_tower_mg%bc_tower_array(1),phi_fc_mg(1,:), &
                             Lphi_fc_mg(1,:),alpha_fc_mg(1,:), &
@@ -313,7 +313,7 @@ contains
              if (dm .eq. 2) then
                 call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                     beta_cc_mg(n),beta_nd_mg(n),gamma_cc_mg(n),dx_mg(n,:))
+                                     beta_cc_mg(n),beta_ed_mg(n,1),gamma_cc_mg(n),dx_mg(n,:))
              else
                 call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
@@ -351,7 +351,7 @@ contains
                 if (dm .eq. 2) then
                    call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                         Lphi_fc_mg(n,:), &
-                                        alpha_fc_mg(n,:),beta_cc_mg(n),beta_nd_mg(n), &
+                                        alpha_fc_mg(n,:),beta_cc_mg(n),beta_ed_mg(n,1), &
                                         gamma_cc_mg(n),dx_mg(n,:),color)
                 else
                    call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
@@ -363,7 +363,7 @@ contains
                 ! update phi = phi + omega*D^{-1}*(rhs-Lphi)
                 call stag_mg_update(la_mg(n),phi_fc_mg(n,:),rhs_fc_mg(n,:), &
                                     Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                    beta_cc_mg(n),beta_nd_mg(n),beta_ed_mg(n,:), &
+                                    beta_cc_mg(n),beta_ed_mg(n,:), &
                                     gamma_cc_mg(n),dx_mg(n,:),color)
 
                 do j=1,dm
@@ -389,7 +389,7 @@ contains
           if (dm .eq. 2) then
              call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                   Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                  beta_cc_mg(n),beta_nd_mg(n),gamma_cc_mg(n),dx_mg(n,:))
+                                  beta_cc_mg(n),beta_ed_mg(n,1),gamma_cc_mg(n),dx_mg(n,:))
           else
              call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                   Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
@@ -458,7 +458,7 @@ contains
              if (dm .eq. 2) then
                 call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                     beta_cc_mg(n),beta_nd_mg(n),gamma_cc_mg(n),dx_mg(n,:))
+                                     beta_cc_mg(n),beta_ed_mg(n,1),gamma_cc_mg(n),dx_mg(n,:))
              else
                 call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
@@ -489,7 +489,7 @@ contains
                 if (dm .eq. 2) then
                    call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                         Lphi_fc_mg(n,:), &
-                                        alpha_fc_mg(n,:),beta_cc_mg(n),beta_nd_mg(n), &
+                                        alpha_fc_mg(n,:),beta_cc_mg(n),beta_ed_mg(n,1), &
                                         gamma_cc_mg(n),dx_mg(n,:),color)
                 else
                    call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
@@ -501,7 +501,7 @@ contains
                 ! update phi = phi + omega*D^{-1}*(rhs-Lphi)
                 call stag_mg_update(la_mg(n),phi_fc_mg(n,:),rhs_fc_mg(n,:), &
                                     Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                    beta_cc_mg(n),beta_nd_mg(n),beta_ed_mg(n,:), &
+                                    beta_cc_mg(n),beta_ed_mg(n,:), &
                                     gamma_cc_mg(n),dx_mg(n,:),color)
 
                 do j=1,dm
@@ -527,7 +527,7 @@ contains
              if (dm .eq. 2) then
                 call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                     beta_cc_mg(n),beta_nd_mg(n),gamma_cc_mg(n),dx_mg(n,:))
+                                     beta_cc_mg(n),beta_ed_mg(n,1),gamma_cc_mg(n),dx_mg(n,:))
              else
                 call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
@@ -558,7 +558,7 @@ contains
        if (dm .eq. 2) then
           call stag_applyop_2d(la_mg(1),the_bc_tower_mg%bc_tower_array(1),phi_fc_mg(1,:), &
                                Lphi_fc_mg(1,:),alpha_fc_mg(1,:), &
-                               beta_cc_mg(1),beta_nd_mg(1),gamma_cc_mg(1),dx_mg(1,:))
+                               beta_cc_mg(1),beta_ed_mg(1,1),gamma_cc_mg(1),dx_mg(1,:))
        else
           call stag_applyop_3d(la_mg(1),the_bc_tower_mg%bc_tower_array(1),phi_fc_mg(1,:), &
                                Lphi_fc_mg(1,:),alpha_fc_mg(1,:), &
@@ -644,18 +644,18 @@ contains
           call multifab_destroy(resid_fc_mg(n,i))
        end do
        if (dm .eq. 2) then
-          call multifab_destroy(beta_nd_mg(n))
+          call multifab_destroy(beta_ed_mg(n,1))
        else
-          do i=1,3
-             call multifab_destroy(beta_ed_mg(n,i))
-          end do
+          call multifab_destroy(beta_ed_mg(n,1))
+          call multifab_destroy(beta_ed_mg(n,2))
+          call multifab_destroy(beta_ed_mg(n,3))
        end if
        if (n .ne. 1) then
           call destroy(la_mg(n))
        end if
     end do
     deallocate(alpha_cc_mg,beta_cc_mg,gamma_cc_mg,alpha_fc_mg,rhs_fc_mg)
-    deallocate(phi_fc_mg,Lphi_fc_mg,resid_fc_mg,beta_nd_mg,la_mg,dx_mg)
+    deallocate(phi_fc_mg,Lphi_fc_mg,resid_fc_mg,beta_ed_mg,la_mg,dx_mg)
 
     if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
        print*,""
@@ -1532,7 +1532,7 @@ contains
     ! finish the Jacobi iteration by multiplying the residual by the inverse
     ! of the diagonal-element-only matrix
     subroutine stag_mg_update(la,phi_fc,rhs_fc,Lphi_fc, &
-                              alpha_fc,beta_cc,beta_nd,beta_ed,gamma_cc,dx,color_in)
+                              alpha_fc,beta_cc,beta_ed,gamma_cc,dx,color_in)
 
       type(layout)  , intent(in   ) :: la
       type(multifab), intent(inout) :: phi_fc(:)   ! face-centered
@@ -1540,7 +1540,6 @@ contains
       type(multifab), intent(in   ) :: Lphi_fc(:)  ! face-centered
       type(multifab), intent(in   ) :: alpha_fc(:) ! face-centered
       type(multifab), intent(in   ) :: beta_cc     ! cell-centered
-      type(multifab), intent(in   ) :: beta_nd     ! nodal
       type(multifab), intent(in   ) :: beta_ed(:)  ! edge-based
       type(multifab), intent(in   ) :: gamma_cc    ! cell-centered
       real(kind=dp_t),intent(in   ) :: dx(:)
@@ -1601,8 +1600,8 @@ contains
          hi = upb(get_box(Lphi_fc(1), i))
          select case(dm)
          case (2)
-            ng_n = beta_nd%ng
-            bnp => dataptr(beta_nd, i)
+            ng_n = beta_ed(1)%ng
+            bnp => dataptr(beta_ed(1), i)
             call stag_mg_update_2d(ppx(:,:,1,1),ppy(:,:,1,1),ng_p, &
                                    rpx(:,:,1,1),rpy(:,:,1,1),ng_r, &
                                    lpx(:,:,1,1),lpy(:,:,1,1),ng_l, &
@@ -1633,7 +1632,7 @@ contains
 
     subroutine stag_mg_update_2d(phix,phiy,ng_p,rhsx,rhsy,ng_r, &
                                  Lpx,Lpy,ng_l,alphax,alphay,ng_a,beta,ng_b, &
-                                 beta_nd,ng_n,gamma,ng_g,lo,hi,dx,color)
+                                 beta_ed,ng_n,gamma,ng_g,lo,hi,dx,color)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_r,ng_l,ng_a,ng_b,ng_n,ng_g
       real(kind=dp_t), intent(inout) ::    phix(lo(1)-ng_p:,lo(2)-ng_p:)
@@ -1645,7 +1644,7 @@ contains
       real(kind=dp_t), intent(in   ) ::  alphax(lo(1)-ng_a:,lo(2)-ng_a:)
       real(kind=dp_t), intent(in   ) ::  alphay(lo(1)-ng_a:,lo(2)-ng_a:)
       real(kind=dp_t), intent(in   ) ::    beta(lo(1)-ng_b:,lo(2)-ng_b:)
-      real(kind=dp_t), intent(in   ) :: beta_nd(lo(1)-ng_n:,lo(2)-ng_n:)
+      real(kind=dp_t), intent(in   ) :: beta_ed(lo(1)-ng_n:,lo(2)-ng_n:)
       real(kind=dp_t), intent(in   ) ::   gamma(lo(1)-ng_g:,lo(2)-ng_g:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       integer        , intent(in   ) :: color
@@ -1685,7 +1684,7 @@ contains
                do i=lo(1)+ioff,hi(1)+1,offset
 
                   fac = alphax(i,j) + &
-                       (beta(i,j)+beta(i-1,j)+beta_nd(i,j)+beta_nd(i,j+1))/dxsq
+                       (beta(i,j)+beta(i-1,j)+beta_ed(i,j)+beta_ed(i,j+1))/dxsq
 
                   phix(i,j) = phix(i,j) + stag_mg_omega*(rhsx(i,j)-Lpx(i,j)) / fac
 
@@ -1702,7 +1701,7 @@ contains
                do i=lo(1)+ioff,hi(1),offset
 
                   fac = alphay(i,j) + &
-                       (beta(i,j)+beta(i,j-1)+beta_nd(i,j)+beta_nd(i+1,j))/dxsq
+                       (beta(i,j)+beta(i,j-1)+beta_ed(i,j)+beta_ed(i+1,j))/dxsq
 
                   phiy(i,j) = phiy(i,j) + stag_mg_omega*(rhsy(i,j)-Lpy(i,j)) / fac
 
@@ -1755,7 +1754,7 @@ contains
                do i=lo(1)+ioff,hi(1)+1,offset
 
                   fac = alphax(i,j) + &
-                       (2.d0*beta(i,j)+2.d0*beta(i-1,j)+beta_nd(i,j)+beta_nd(i,j+1))/dxsq
+                       (2.d0*beta(i,j)+2.d0*beta(i-1,j)+beta_ed(i,j)+beta_ed(i,j+1))/dxsq
 
                   phix(i,j) = phix(i,j) + stag_mg_omega*(rhsx(i,j)-Lpx(i,j)) / fac
 
@@ -1772,7 +1771,7 @@ contains
                do i=lo(1)+ioff,hi(1),offset
 
                   fac = alphay(i,j) + &
-                       (2.d0*beta(i,j)+2.d0*beta(i,j-1)+beta_nd(i,j)+beta_nd(i+1,j))/dxsq
+                       (2.d0*beta(i,j)+2.d0*beta(i,j-1)+beta_ed(i,j)+beta_ed(i+1,j))/dxsq
 
                   phiy(i,j) = phiy(i,j) + stag_mg_omega*(rhsy(i,j)-Lpy(i,j)) / fac
 
@@ -1827,7 +1826,7 @@ contains
                   fac = alphax(i,j) + &
                        ( fourthirds*beta(i,j)+gamma(i,j) &
                        +fourthirds*beta(i-1,j)+gamma(i-1,j) &
-                       +beta_nd(i,j)+beta_nd(i,j+1))/dxsq
+                       +beta_ed(i,j)+beta_ed(i,j+1))/dxsq
 
                   phix(i,j) = phix(i,j) + stag_mg_omega*(rhsx(i,j)-Lpx(i,j)) / fac
 
@@ -1846,7 +1845,7 @@ contains
                   fac = alphay(i,j) + &
                        ( fourthirds*beta(i,j)+gamma(i,j) &
                        +fourthirds*beta(i,j-1)+gamma(i,j-1) &
-                       +beta_nd(i,j)+beta_nd(i+1,j))/dxsq
+                       +beta_ed(i,j)+beta_ed(i+1,j))/dxsq
 
                   phiy(i,j) = phiy(i,j) + stag_mg_omega*(rhsy(i,j)-Lpy(i,j)) / fac
 
