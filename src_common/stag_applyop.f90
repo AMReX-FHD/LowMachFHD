@@ -11,7 +11,7 @@ module stag_applyop_module
 
   private
 
-  public :: stag_applyop, stag_applyop_2d, stag_applyop_3d
+  public :: stag_applyop, stag_applyop_level
 
 contains
   
@@ -42,20 +42,12 @@ contains
        end do
     end do
 
-    if (dm .eq. 2) then
-       do n=1,nlevs
-          call stag_applyop_2d(mla%la(n),the_bc_tower%bc_tower_array(n), &
+    do n=1,nlevs
+       call stag_applyop_level(mla%la(n),the_bc_tower%bc_tower_array(n), &
                                phi_fc(n,:),Lphi_fc(n,:),alpha_fc(n,:), &
                                beta_cc(n),beta_ed(n,:),gamma_cc(n),dx(n,:))
-       end do
-    else if (dm .eq. 3) then
-       do n=1,nlevs
-          call stag_applyop_3d(mla%la(n),the_bc_tower%bc_tower_array(n), &
-                               phi_fc(n,:),Lphi_fc(n,:),alpha_fc(n,:), &
-                               beta_cc(n),beta_ed(n,:),gamma_cc(n),dx(n,:))
-       end do
-    end if
-
+    end do
+    
     ! restore alpha_fc
     do n=1,nlevs
        do i=1,dm
@@ -66,8 +58,8 @@ contains
   end subroutine stag_applyop
 
   ! compute Lphi
-  subroutine stag_applyop_2d(la,the_bc_level,phi_fc,Lphi_fc,alpha_fc,beta_cc, &
-                             beta_ed,gamma_cc,dx,color_in)
+  subroutine stag_applyop_level(la,the_bc_level,phi_fc,Lphi_fc,alpha_fc,beta_cc, &
+                                beta_ed,gamma_cc,dx,color_in)
     
     type(layout)   , intent(in   ) :: la
     type(bc_level) , intent(in   ) :: the_bc_level
@@ -81,17 +73,23 @@ contains
     integer        , intent(in   ), optional :: color_in
     
     ! local
-    integer :: i,dm,ng_p,ng_l,ng_a,ng_b,ng_n,ng_g
+    integer :: i,dm,ng_p,ng_l,ng_a,ng_b,ng_e,ng_g
     integer :: lo(get_dim(la)), hi(get_dim(la))
     integer :: color
     
     real(kind=dp_t), pointer :: ppx(:,:,:,:)
     real(kind=dp_t), pointer :: ppy(:,:,:,:)
+    real(kind=dp_t), pointer :: ppz(:,:,:,:)
     real(kind=dp_t), pointer :: lpx(:,:,:,:)
     real(kind=dp_t), pointer :: lpy(:,:,:,:)
+    real(kind=dp_t), pointer :: lpz(:,:,:,:)
     real(kind=dp_t), pointer :: apx(:,:,:,:)
     real(kind=dp_t), pointer :: apy(:,:,:,:)
+    real(kind=dp_t), pointer :: apz(:,:,:,:)
     real(kind=dp_t), pointer ::  bp(:,:,:,:)
+    real(kind=dp_t), pointer :: bp1(:,:,:,:)
+    real(kind=dp_t), pointer :: bp2(:,:,:,:)
+    real(kind=dp_t), pointer :: bp3(:,:,:,:)
     real(kind=dp_t), pointer :: bnp(:,:,:,:)
     real(kind=dp_t), pointer :: kp(:,:,:,:)
 
@@ -111,7 +109,7 @@ contains
     ng_l = Lphi_fc(1)%ng
     ng_a = alpha_fc(1)%ng
     ng_b = beta_cc%ng
-    ng_n = beta_ed(1)%ng
+    ng_e = beta_ed(1)%ng
     ng_g = gamma_cc%ng
 
     do i=1,nfabs(phi_fc(1))
@@ -122,17 +120,35 @@ contains
        apx => dataptr(alpha_fc(1), i)
        apy => dataptr(alpha_fc(2), i)
        bp  => dataptr(beta_cc, i)
-       bnp => dataptr(beta_ed(1), i)
        kp  => dataptr(gamma_cc, i)
        lo = lwb(get_box(phi_fc(1), i))
        hi = upb(get_box(phi_fc(1), i))
-       call stag_applyop_2d_work(ppx(:,:,1,1),ppy(:,:,1,1),ng_p, &
-                                 lpx(:,:,1,1),lpy(:,:,1,1),ng_l, &
-                                 apx(:,:,1,1),apy(:,:,1,1),ng_a, &
-                                 bp(:,:,1,1),ng_b, &
-                                 bnp(:,:,1,1),ng_n, &
-                                 kp(:,:,1,1),ng_g, &
-                                 lo,hi,dx,color)
+       select case (dm)
+       case (2)
+          bnp => dataptr(beta_ed(1), i)
+          call stag_applyop_2d(ppx(:,:,1,1),ppy(:,:,1,1),ng_p, &
+                               lpx(:,:,1,1),lpy(:,:,1,1),ng_l, &
+                               apx(:,:,1,1),apy(:,:,1,1),ng_a, &
+                               bp(:,:,1,1),ng_b, &
+                               bnp(:,:,1,1),ng_e, &
+                               kp(:,:,1,1),ng_g, &
+                               lo,hi,dx,color)
+       case (3)
+       ppz => dataptr(phi_fc(3), i)
+       lpz => dataptr(Lphi_fc(3), i)
+       apz => dataptr(alpha_fc(3), i)
+       bp1 => dataptr(beta_ed(1), i)
+       bp2 => dataptr(beta_ed(2), i)
+       bp3 => dataptr(beta_ed(3), i)
+       call stag_applyop_3d(ppx(:,:,:,1),ppy(:,:,:,1),ppz(:,:,:,1),ng_p, &
+                            lpx(:,:,:,1),lpy(:,:,:,1),lpz(:,:,:,1),ng_l, &
+                            apx(:,:,:,1),apy(:,:,:,1),apz(:,:,:,1),ng_a, &
+                            bp(:,:,:,1),ng_b, &
+                            bp1(:,:,:,1),bp2(:,:,:,1),bp3(:,:,:,1),ng_e, &
+                            kp(:,:,:,1),ng_g, &
+                            lo,hi,dx,color)
+
+       end select
     end do
 
     do i=1,dm
@@ -140,11 +156,11 @@ contains
        call multifab_physbc_domainvel(Lphi_fc(i),1,i,1,the_bc_level,dx)
     end do
 
-  end subroutine stag_applyop_2d
+  end subroutine stag_applyop_level
 
-  subroutine stag_applyop_2d_work(phix,phiy,ng_p,Lpx,Lpy,ng_l, &
-                                  alphax,alphay,ng_a,beta,ng_b,beta_ed,ng_n, &
-                                  gamma,ng_g,lo,hi,dx,color)
+  subroutine stag_applyop_2d(phix,phiy,ng_p,Lpx,Lpy,ng_l, &
+                             alphax,alphay,ng_a,beta,ng_b,beta_ed,ng_n, &
+                             gamma,ng_g,lo,hi,dx,color)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_l,ng_a,ng_b,ng_n,ng_g
     real(kind=dp_t), intent(in   ) ::    phix(lo(1)-ng_p:,lo(2)-ng_p:)
@@ -443,99 +459,12 @@ contains
 
     end if
 
-  end subroutine stag_applyop_2d_work
-  
-  ! compute Lphi
-  subroutine stag_applyop_3d(la,the_bc_level,phi_fc,Lphi_fc,alpha_fc,beta_cc,beta_ed, &
-                             gamma_cc,dx,color_in)
-    
-    type(layout)   , intent(in   ) :: la
-    type(bc_level) , intent(in   ) :: the_bc_level
-    type(multifab) , intent(in   ) :: phi_fc(:)   ! face-centered
-    type(multifab) , intent(inout) :: Lphi_fc(:)  ! face-centered
-    type(multifab) , intent(in   ) :: alpha_fc(:) ! face-centered
-    type(multifab) , intent(in   ) :: beta_cc     ! cell-centered
-    type(multifab) , intent(in   ) :: beta_ed(:)  ! nodal (2d); edge-centered (3d)
-    type(multifab) , intent(in   ) :: gamma_cc    ! cell-centered
-    real(kind=dp_t), intent(in   ) :: dx(:)
-    integer        , intent(in   ), optional :: color_in
-    
-    ! local
-    integer :: i,dm,ng_p,ng_l,ng_a,ng_b,ng_e,ng_g
-    integer :: lo(get_dim(la)), hi(get_dim(la))
-    integer :: color
-    
-    real(kind=dp_t), pointer :: ppx(:,:,:,:)
-    real(kind=dp_t), pointer :: ppy(:,:,:,:)
-    real(kind=dp_t), pointer :: ppz(:,:,:,:)
-    real(kind=dp_t), pointer :: lpx(:,:,:,:)
-    real(kind=dp_t), pointer :: lpy(:,:,:,:)
-    real(kind=dp_t), pointer :: lpz(:,:,:,:)
-    real(kind=dp_t), pointer :: apx(:,:,:,:)
-    real(kind=dp_t), pointer :: apy(:,:,:,:)
-    real(kind=dp_t), pointer :: apz(:,:,:,:)
-    real(kind=dp_t), pointer :: bp(:,:,:,:)
-    real(kind=dp_t), pointer :: bp1(:,:,:,:)
-    real(kind=dp_t), pointer :: bp2(:,:,:,:)
-    real(kind=dp_t), pointer :: bp3(:,:,:,:)
-    real(kind=dp_t), pointer :: kp(:,:,:,:)
+  end subroutine stag_applyop_2d
 
-    if (dx(1) .ne. dx(2) .or. dx(1) .ne. dx(3)) then
-       call bl_error("stag_applyop_3d requires the same dx in all directions")
-    end if
-
-    dm = get_dim(la)
-
-    if (present(color_in)) then
-       color = color_in
-    else
-       color = 0
-    end if
-
-    ng_p = phi_fc(1)%ng
-    ng_l = Lphi_fc(1)%ng
-    ng_a = alpha_fc(1)%ng
-    ng_b = beta_cc%ng
-    ng_e = beta_ed(1)%ng
-    ng_g = gamma_cc%ng
-
-    do i=1,nfabs(phi_fc(1))
-       ppx => dataptr(phi_fc(1), i)
-       ppy => dataptr(phi_fc(2), i)
-       ppz => dataptr(phi_fc(3), i)
-       lpx => dataptr(Lphi_fc(1), i)
-       lpy => dataptr(Lphi_fc(2), i)
-       lpz => dataptr(Lphi_fc(3), i)
-       apx => dataptr(alpha_fc(1), i)
-       apy => dataptr(alpha_fc(2), i)
-       apz => dataptr(alpha_fc(3), i)
-       bp  => dataptr(beta_cc, i)
-       bp1 => dataptr(beta_ed(1), i)
-       bp2 => dataptr(beta_ed(2), i)
-       bp3 => dataptr(beta_ed(3), i)
-       kp  => dataptr(gamma_cc, i)
-       lo = lwb(get_box(phi_fc(1), i))
-       hi = upb(get_box(phi_fc(1), i))
-       call stag_applyop_3d_work(ppx(:,:,:,1),ppy(:,:,:,1),ppz(:,:,:,1),ng_p, &
-                                 lpx(:,:,:,1),lpy(:,:,:,1),lpz(:,:,:,1),ng_l, &
-                                 apx(:,:,:,1),apy(:,:,:,1),apz(:,:,:,1),ng_a, &
-                                 bp(:,:,:,1),ng_b, &
-                                 bp1(:,:,:,1),bp2(:,:,:,1),bp3(:,:,:,1),ng_e, &
-                                 kp(:,:,:,1),ng_g, &
-                                 lo,hi,dx,color)
-    end do
-
-    do i=1,dm
-       ! set Lphi on physical domain boundaries to zero
-       call multifab_physbc_domainvel(Lphi_fc(i),1,i,1,the_bc_level,dx)
-    end do
-
-  end subroutine stag_applyop_3d
-
-  subroutine stag_applyop_3d_work(phix,phiy,phiz,ng_p,Lpx,Lpy,Lpz,ng_l, &
-                                  alphax,alphay,alphaz,ng_a,beta,ng_b, &
-                                  beta_xy,beta_xz,beta_yz,ng_e, &
-                                  gamma,ng_g,lo,hi,dx,color)
+  subroutine stag_applyop_3d(phix,phiy,phiz,ng_p,Lpx,Lpy,Lpz,ng_l, &
+                             alphax,alphay,alphaz,ng_a,beta,ng_b, &
+                             beta_xy,beta_xz,beta_yz,ng_e, &
+                             gamma,ng_g,lo,hi,dx,color)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_l,ng_a,ng_b,ng_e,ng_g
     real(kind=dp_t), intent(in   ) ::    phix(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
@@ -1088,6 +1017,6 @@ contains
 
     end if
 
-  end subroutine stag_applyop_3d_work
+  end subroutine stag_applyop_3d
 
 end module stag_applyop_module
