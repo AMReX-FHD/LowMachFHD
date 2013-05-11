@@ -761,38 +761,10 @@ contains
 
       do j=lo_c(2),hi_c(2)
          do i=lo_c(1),hi_c(1)
-
             phi_c(i,j) = 0.25d0*(  phi_f(2*i,2*j  ) + phi_f(2*i+1,2*j  ) &
                  + phi_f(2*i,2*j+1) + phi_f(2*i+1,2*j+1) )
          end do
       end do
-
-      ! overwrite x-ghost cells
-      ! value in ghost cells represents boundary value
-      ! average 2 overlying fine values
-      if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
-         do j=lo_c(2),hi_c(2)
-            phi_c(lo_c(1)-1,j) = ( phi_f(lo_f(1)-1,2*j) + phi_f(lo_f(1)-1,2*j+1) ) / 2.d0
-         end do
-      end if
-      if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
-         do j=lo_c(2),hi_c(2)
-            phi_c(hi_c(1)+1,j) = ( phi_f(hi_f(1)+1,2*j) + phi_f(hi_f(1)+1,2*j+1) ) / 2.d0
-         end do
-      end if
-
-      ! overwrite y-ghost cells
-      if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
-         do i=lo_c(1),hi_c(1)
-            phi_c(i,lo_c(2)-1) = ( phi_f(2*i,lo_f(2)-1) + phi_f(2*i+1,lo_f(2)-1) ) / 2.d0
-         end do
-      end if
-      if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
-         do i=lo_c(1),hi_c(1)
-            phi_c(i,hi_c(2)+1) = ( phi_f(2*i,hi_f(2)+1) + phi_f(2*i+1,hi_f(2)+1) ) / 2.d0
-         end do
-
-      end if
 
     end subroutine cc_restriction_2d
 
@@ -811,7 +783,6 @@ contains
       do k=lo_c(3),hi_c(3)
          do j=lo_c(2),hi_c(2)
             do i=lo_c(1),hi_c(1)
-
                phi_c(i,j,k) = 0.125d0*(  phi_f(2*i,2*j  ,2*k  ) + phi_f(2*i+1,2*j  ,2*k  ) &
                     + phi_f(2*i,2*j+1,2*k  ) + phi_f(2*i+1,2*j+1,2*k  ) &
                     + phi_f(2*i,2*j  ,2*k+1) + phi_f(2*i+1,2*j  ,2*k+1) &
@@ -819,62 +790,6 @@ contains
             end do
          end do
       end do
-
-      ! overwrite x-ghost cells
-      ! value in ghost cells represents boundary value
-      ! average 4 overlying fine values
-      if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
-         do k=lo_c(3),hi_c(3)
-            do j=lo_c(2),hi_c(2)
-               phi_c(lo_c(1)-1,j,k) = ( phi_f(lo_f(1)-1,2*j,2*k)   + phi_f(lo_f(1)-1,2*j+1,2*k  ) &
-                    +phi_f(lo_f(1)-1,2*j,2*k+1) + phi_f(lo_f(1)-1,2*j+1,2*k+1) ) / 4.d0
-            end do
-         end do
-      end if
-      if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
-         do k=lo_c(3),hi_c(3)
-            do j=lo_c(2),hi_c(2)
-               phi_c(hi_c(1)+1,j,k) = ( phi_f(hi_f(1)+1,2*j,2*k)   + phi_f(hi_f(1)+1,2*j+1,2*k  ) &
-                    +phi_f(hi_f(1)+1,2*j,2*k+1) + phi_f(hi_f(1)+1,2*j+1,2*k+1) ) / 4.d0
-            end do
-         end do
-      end if
-
-      ! overwrite y-ghost cells
-      if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
-         do k=lo_c(3),hi_c(3)
-            do i=lo_c(1),hi_c(1)
-               phi_c(i,lo_c(2)-1,k) = ( phi_f(2*i,lo_f(2)-1,2*k)   + phi_f(2*i+1,lo_f(2)-1,2*k  ) &
-                    +phi_f(2*i,lo_f(2)-1,2*k+1) + phi_f(2*i+1,lo_f(2)-1,2*k+1) ) / 4.d0
-            end do
-         end do
-      end if
-      if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
-         do k=lo_c(3),hi_c(3)
-            do i=lo_c(1),hi_c(1)
-               phi_c(i,hi_c(2)+1,k) = ( phi_f(2*i,hi_f(2)+1,2*k)   + phi_f(2*i+1,hi_f(2)+1,2*k  ) &
-                    +phi_f(2*i,hi_f(2)+1,2*k+1) + phi_f(2*i+1,hi_f(2)+1,2*k+1) ) / 4.d0
-            end do
-         end do
-      end if
-
-      ! overwrite z-ghost cells
-      if (adv_bc(3,1) .eq. FOEXTRAP .or. adv_bc(3,1) .eq. EXT_DIR) then
-         do j=lo_c(2),hi_c(2)
-            do i=lo_c(1),hi_c(1)
-               phi_c(i,j,lo_c(3)-1) = ( phi_f(2*i,2*j  ,lo_f(3)-1) + phi_f(2*i+1,2*j  ,lo_f(3)-1) &
-                    +phi_f(2*i,2*j+1,lo_f(3)-1) + phi_f(2*i+1,2*j+1,lo_f(3)-1) ) / 4.d0
-            end do
-         end do
-      end if
-      if (adv_bc(3,2) .eq. FOEXTRAP .or. adv_bc(3,2) .eq. EXT_DIR) then
-         do j=lo_c(2),hi_c(2)
-            do i=lo_c(1),hi_c(1)
-               phi_c(i,j,hi_c(3)+1) = ( phi_f(2*i,2*j  ,hi_f(3)+1) + phi_f(2*i+1,2*j  ,hi_f(3)+1) &
-                    +phi_f(2*i,2*j+1,hi_f(3)+1) + phi_f(2*i+1,2*j+1,hi_f(3)+1) ) / 4.d0
-            end do
-         end do
-      end if
 
     end subroutine cc_restriction_3d
 
