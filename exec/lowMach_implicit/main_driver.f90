@@ -41,6 +41,7 @@ subroutine main_driver()
   type(bc_tower) :: the_bc_tower
 
   logical, allocatable :: pmask(:)
+  logical :: nodal_temp(3)
 
   type(multifab), allocatable :: mold(:,:)         ! face-based
   type(multifab), allocatable :: mnew(:,:)         ! face-based
@@ -52,6 +53,7 @@ subroutine main_driver()
   type(multifab), allocatable :: chi(:)            ! cell-centered
   type(multifab), allocatable :: chi_fc(:,:)       ! face-centered
   type(multifab), allocatable :: eta(:)            ! cell-centered
+  type(multifab), allocatable :: eta_ed(:,:)       ! nodal (2d); edge-centered (3d)
   type(multifab), allocatable :: kappa(:)          ! cell-centered
   type(multifab), allocatable :: rhoc_d_fluxdiv(:) ! cell-centered
   type(multifab), allocatable :: rhoc_s_fluxdiv(:) ! cell-centered
@@ -81,6 +83,11 @@ subroutine main_driver()
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs),rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs))
   allocate(chi_fc(nlevs,dm))
+  if (dm .eq. 2) then
+     allocate(eta_ed(nlevs,1))
+  else if (dm .eq. 3) then
+     allocate(eta_ed(nlevs,3))
+  end if
 
   ! tell mba how many levels and dmensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -184,6 +191,23 @@ subroutine main_driver()
         call multifab_build_edge(chi_fc(n,i),mla%la(n),1,0,i)
      end do
 
+     if (dm .eq. 2) then
+        call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
+     else
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .false.
+        call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .false.
+        nodal_temp(3) = .true.
+        call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
+        nodal_temp(1) = .false.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .true.
+        call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
+     end if
+
      ! this stores divergence of stochastic and diffusive fluxes for rhoc
      call multifab_build(rhoc_d_fluxdiv(n),mla%la(n),1,0)
      call multifab_build(rhoc_s_fluxdiv(n),mla%la(n),1,0)
@@ -213,7 +237,7 @@ subroutine main_driver()
 
   ! initialize chi, eta, and kappa
   call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-  call compute_eta(mla,eta,prim,dx)
+  call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
   call compute_kappa(mla,kappa,prim,dx)
 
   ! allocate and build multifabs that will contain random numbers
@@ -238,8 +262,9 @@ subroutine main_driver()
   do istep=1,max_step
 
      ! advance the solution by dt
-     call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,chi_fc,eta,kappa, &
-                           rhoc_d_fluxdiv,rhoc_s_fluxdiv,dx,the_bc_tower)
+     call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,chi_fc, &
+                           eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
+                           dx,the_bc_tower)
 
      ! increment simulation time
      time = time + fixed_dt
@@ -294,6 +319,13 @@ subroutine main_driver()
      do i=1,dm
         call multifab_destroy(chi_fc(n,i))
      end do
+     if (dm .eq. 2) then
+        call multifab_destroy(eta_ed(n,1))
+     else if (dm .eq. 3) then
+        call multifab_destroy(eta_ed(n,1))
+        call multifab_destroy(eta_ed(n,2))
+        call multifab_destroy(eta_ed(n,3))
+     end if
   end do
 
   call destroy(mla)

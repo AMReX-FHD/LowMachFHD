@@ -22,8 +22,9 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,chi_fc,eta,kappa, &
-                              rhoc_d_fluxdiv,rhoc_s_fluxdiv,dx,the_bc_tower)
+  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,chi_fc, &
+                              eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
+                              dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -36,6 +37,7 @@ contains
     type(multifab) , intent(inout) :: chi(:)
     type(multifab) , intent(inout) :: chi_fc(:,:)
     type(multifab) , intent(inout) :: eta(:)
+    type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
@@ -193,7 +195,7 @@ contains
     end do
 
     ! set m_d_fluxdiv_old = A_0^n v^n
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_old,umac_old,eta,kappa,dx, &
+    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_old,umac_old,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! multiply m_d_fluxdiv_old by 1/2 and add to gmres_rhs_v
@@ -206,11 +208,11 @@ contains
 
     ! compute (chi,eta,kappa)^{*,n+1}
     call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-    call compute_eta(mla,eta,prim,dx)
+    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa,prim,dx)
 
     ! set m_d_fluxdiv_new = A_0^{*,n+1} v^n
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac_old,eta,kappa,dx, &
+    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac_old,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! multiply m_d_fluxdiv_new by 1/2 and add to gmres_rhs_v
@@ -222,7 +224,7 @@ contains
     end do
 
     ! compute m_s_fluxdiv = St^n for m
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,dx)
+    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx)
 
     ! add m_s_fluxdiv to gmres_rhs_v
     do n=1,nlevs
@@ -400,7 +402,7 @@ contains
 
     ! compute (chi,eta,kappa)^n+1}
     call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-    call compute_eta(mla,eta,prim,dx)
+    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa,prim,dx)
 
     ! reset m_d_fluxdiv_new
@@ -411,7 +413,7 @@ contains
     end do
 
     ! compute m_d_fluxdiv_new
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac_old,eta,kappa,dx, &
+    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac_old,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add m_s_fluxdiv m to gmres_rhs_v

@@ -276,7 +276,7 @@ contains
 
   end subroutine mk_diffusive_rhoc_fluxdiv
 
-  subroutine mk_diffusive_m_fluxdiv(mla,m_update,umac,eta,kappa,dx,the_bc_level)
+  subroutine mk_diffusive_m_fluxdiv(mla,m_update,umac,eta,eta_ed,kappa,dx,the_bc_level)
 
     use stag_applyop_module, only: stag_applyop_2d, stag_applyop_3d
 
@@ -284,6 +284,7 @@ contains
     type(multifab) , intent(inout) :: m_update(:,:)
     type(multifab) , intent(in   ) ::     umac(:,:)
     type(multifab) , intent(in   ) ::      eta(:)
+    type(multifab) , intent(in   ) ::   eta_ed(:,:)
     type(multifab) , intent(in   ) ::    kappa(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -294,18 +295,8 @@ contains
     type(multifab) :: Lphi_fc(mla%nlevel,mla%dim)
     type(multifab) :: alpha_fc(mla%nlevel,mla%dim)
 
-    type(multifab), allocatable :: eta_ed(:,:)
-
-    logical :: nodal_temp(mla%dim)
-
     nlevs = mla%nlevel
     dm    = mla%dim
-
-    if (dm .eq. 2) then
-       allocate(eta_ed(nlevs,1))  ! nodal
-    else if (dm .eq. 3) then
-       allocate(eta_ed(nlevs,3))  ! edge-based
-    end if
 
     do n=1,nlevs
        do i=1,dm
@@ -315,49 +306,6 @@ contains
           call setval(alpha_fc(n,i),0.d0,all=.true.)
        end do
     end do
-
-    ! nodal (in 2D) and edge-based (in 3D) eta
-    if (dm .eq. 2) then
-       do n=1,nlevs
-          call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
-       end do
-    else
-       do n=1,nlevs
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .false.
-          call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .false.
-          nodal_temp(3) = .true.
-          call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
-          nodal_temp(1) = .false.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .true.
-          call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
-       end do
-    end if
-
-    ! compute eta on nodes (2D) or edges (3D)
-    if (dm .eq. 2) then
-       if (visc_coef < 0) then
-          call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,dm+2,1,the_bc_level)
-       else
-          do n=1,nlevs
-             call setval(eta_ed(n,1),visc_coef,all=.true.)
-          end do
-       end if
-    else if (dm .eq. 3) then
-       if (visc_coef < 0) then
-          call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_level)
-       else
-          do n=1,nlevs
-             do i=1,dm
-                call setval(eta_ed(n,i),visc_coef,all=.true.)
-             end do
-          end do
-       end if
-    end if
 
     do n=1,nlevs
 
@@ -379,13 +327,6 @@ contains
     end do
 
     do n=1,nlevs
-       if (dm .eq. 2) then
-          call multifab_destroy(eta_ed(n,1))
-       else if (dm .eq. 3) then
-          call multifab_destroy(eta_ed(n,1))
-          call multifab_destroy(eta_ed(n,2))
-          call multifab_destroy(eta_ed(n,3))
-       end if
        do i=1,dm
           call multifab_destroy(Lphi_fc(n,i))
           call multifab_destroy(alpha_fc(n,i))

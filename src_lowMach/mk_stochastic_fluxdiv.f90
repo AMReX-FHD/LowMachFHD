@@ -457,12 +457,13 @@ contains
   end subroutine mk_stochastic_s_fluxdiv
 
   ! Note that here we *increment* stoch_m_force so it must be initialized externally!
-  subroutine mk_stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,dx)
+  subroutine mk_stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,eta_ed,dx)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: stoch_m_force(:,:)
     type(multifab) , intent(in   ) :: eta(:)
+    type(multifab) , intent(in   ) :: eta_ed(:,:)
     real(dp_t)     , intent(in   ) :: dx(:,:)
 
     ! local
@@ -474,7 +475,6 @@ contains
     type(multifab) :: mflux_cc_temp(mla%nlevel)
     type(multifab) :: mflux_nd_temp(mla%nlevel)
     type(multifab) :: mflux_ed_temp(mla%nlevel,3)
-    type(multifab), allocatable :: eta_ed(:,:)
 
     logical :: nodal_temp(mla%dim)
 
@@ -486,12 +486,6 @@ contains
 
     nlevs = mla%nlevel
     dm = mla%dim
-
-    if (dm .eq. 2) then
-       allocate(eta_ed(nlevs,1))
-    else if (dm .eq. 3) then
-       allocate(eta_ed(nlevs,3))
-    end if
 
     do n=1,nlevs
 
@@ -532,36 +526,6 @@ contains
           call multifab_copy_c(mflux_ed_temp(n,3),1,mflux_ed(n,3),1,2,mflux_ed_temp(n,3)%ng)
        end if
     end do
-
-    ! if eta varies in space, average eta to nodes (2D) or edges (3D)
-    if (visc_coef < 0) then
-       do n=1,nlevs
-          if (dm .eq. 2) then
-             nodal_temp = .true.
-             call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
-          else if (dm .eq. 3) then
-             nodal_temp(1) = .true.
-             nodal_temp(2) = .true.
-             nodal_temp(3) = .false.
-             call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
-             nodal_temp(1) = .true.
-             nodal_temp(2) = .false.
-             nodal_temp(3) = .true.
-             call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
-             nodal_temp(1) = .false.
-             nodal_temp(2) = .true.
-             nodal_temp(3) = .true.
-             call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
-          end if
-       end do
-
-       if (dm .eq. 2) then
-          call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,dm+2,1,the_bc_level)
-       else if (dm .eq. 3) then
-          call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_level)
-       end if
-
-    end if
 
     ng_c = mflux_cc_temp(1)%ng
     ng_y = eta(1)%ng
@@ -696,18 +660,10 @@ contains
        call multifab_destroy(mflux_cc_temp(n))
        if (dm .eq. 2) then
           call multifab_destroy(mflux_nd_temp(n))
-          if (visc_coef < 0) then
-             call multifab_destroy(eta_ed(n,1))
-          end if
        else if (dm .eq. 3) then
           call multifab_destroy(mflux_ed_temp(n,1))
           call multifab_destroy(mflux_ed_temp(n,2))
           call multifab_destroy(mflux_ed_temp(n,3))
-          if (visc_coef < 0) then
-             call multifab_destroy(eta_ed(n,1))
-             call multifab_destroy(eta_ed(n,2))
-             call multifab_destroy(eta_ed(n,3))
-          end if
        end if
     end do
 

@@ -308,12 +308,14 @@ contains
 
   end subroutine compute_chi_3d
 
-  subroutine compute_eta(mla,eta,prim,dx)
+  subroutine compute_eta(mla,eta,eta_ed,prim,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: eta(:)
+    type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: prim(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     integer :: nlevs,dm,i,n,ng_e,ng_p
     integer :: lo(mla%dim),hi(mla%dim)
@@ -345,6 +347,12 @@ contains
           end select
        end do
     end do
+
+    if (dm .eq. 2) then
+       call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,dm+2,1,the_bc_level)
+    else if (dm .eq. 3) then
+       call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_level)
+    end if
 
   end subroutine compute_eta
 
