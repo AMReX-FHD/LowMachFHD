@@ -16,43 +16,26 @@ module stag_applyop_module
 contains
   
   ! compute Lphi
-  subroutine stag_applyop(mla,the_bc_tower,phi_fc,Lphi_fc,alpha_cc,beta_cc, &
-                          gamma_cc,theta,dx)
+  subroutine stag_applyop(mla,the_bc_tower,phi_fc,Lphi_fc,alpha_fc, &
+                          beta_cc,beta_ed,gamma_cc,theta,dx)
 
     type(ml_layout), intent(in   ) :: mla
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(in   ) :: phi_fc(:,:)   ! face-centered
     type(multifab) , intent(inout) :: Lphi_fc(:,:)  ! face-centered
-    type(multifab) , intent(in   ) :: alpha_cc(:)   ! face-centered
+    type(multifab) , intent(inout) :: alpha_fc(:,:) ! face-centered
     type(multifab) , intent(in   ) :: beta_cc(:)    ! cell-centered
+    type(multifab) , intent(in   ) :: beta_ed(:,:)  ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: gamma_cc(:)   ! cell-centered
     real(kind=dp_t), intent(in   ) :: theta,dx(:,:)
 
     ! local
     integer :: i,n,dm,nlevs
 
-    type(multifab) :: alpha_fc(mla%nlevel,mla%dim)
-
-    ! nodal in exactly 2 directions (nodes in 2d, edges in 3d)
-    type(multifab), allocatable :: beta_ed(:,:) 
-
-    logical :: nodal_temp(mla%dim)
-
     dm = mla%dim
     nlevs = mla%nlevel
 
-    if (dm .eq. 2) then
-       allocate(beta_ed(nlevs,1))  ! nodal
-    else if (dm .eq. 3) then
-       allocate(beta_ed(nlevs,3))  ! edge-based
-    end if
-
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_build_edge(alpha_fc(n,i),mla%la(n),1,0,i)
-       end do
-    end do
-    call average_cc_to_face(nlevs,alpha_cc,alpha_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+    ! multiply alpha_fc by theta
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(alpha_fc(n,i),1,theta,1,0)
@@ -61,52 +44,23 @@ contains
 
     if (dm .eq. 2) then
        do n=1,nlevs
-          call multifab_build_nodal(beta_ed(n,1),mla%la(n),1,0)
-       end do
-       call average_cc_to_node(nlevs,beta_cc,beta_ed(:,1),1,dm+2,1,the_bc_tower%bc_tower_array)
-    else
-       do n=1,nlevs
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .false.
-          call multifab_build(beta_ed(n,1),mla%la(n),1,0,nodal_temp)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .false.
-          nodal_temp(3) = .true.
-          call multifab_build(beta_ed(n,2),mla%la(n),1,0,nodal_temp)
-          nodal_temp(1) = .false.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .true.
-          call multifab_build(beta_ed(n,3),mla%la(n),1,0,nodal_temp)
-       end do
-       call average_cc_to_edge(nlevs,beta_cc,beta_ed,1,dm+2,1,the_bc_tower%bc_tower_array)
-    end if
-
-    if (dm .eq. 2) then
-       do n=1,nlevs
           call stag_applyop_2d(mla%la(n),the_bc_tower%bc_tower_array(n), &
-                               phi_fc(n,:),Lphi_fc(n,:),alpha_fc(n,:),beta_cc(n), &
-                               beta_ed(n,1),gamma_cc(n),dx(n,:))
+                               phi_fc(n,:),Lphi_fc(n,:),alpha_fc(n,:), &
+                               beta_cc(n),beta_ed(n,1),gamma_cc(n),dx(n,:))
        end do
     else if (dm .eq. 3) then
        do n=1,nlevs
           call stag_applyop_3d(mla%la(n),the_bc_tower%bc_tower_array(n), &
-                               phi_fc(n,:),Lphi_fc(n,:),alpha_fc(n,:),beta_cc(n),beta_ed(n,:), &
-                               gamma_cc(n),dx(n,:))
+                               phi_fc(n,:),Lphi_fc(n,:),alpha_fc(n,:), &
+                               beta_cc(n),beta_ed(n,:),gamma_cc(n),dx(n,:))
        end do
     end if
-    
+
+    ! restore alpha_fc
     do n=1,nlevs
        do i=1,dm
-          call multifab_destroy(alpha_fc(n,i))
+          call multifab_mult_mult_s_c(alpha_fc(n,i),1,1.d0/theta,1,0)
        end do
-       if (dm .eq. 2) then
-          call multifab_destroy(beta_ed(n,1))
-       else if (dm .eq. 3) then
-          call multifab_destroy(beta_ed(n,1))
-          call multifab_destroy(beta_ed(n,2))
-          call multifab_destroy(beta_ed(n,3))
-       end if
     end do
 
   end subroutine stag_applyop

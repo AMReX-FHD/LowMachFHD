@@ -137,7 +137,8 @@ contains
     OuterLoop: do
 
        ! Calculate tmp = Ax
-       call apply_matrix(mla,tmp_u,tmp_p,x_u,x_p,alpha,beta,gamma,theta,dx,the_bc_tower)
+       call apply_matrix(mla,tmp_u,tmp_p,x_u,x_p,alpha_fc,beta,beta_ed, &
+                         gamma,theta,dx,the_bc_tower)
 
        ! tmp = b - Ax
        do n=1,nlevs
@@ -274,7 +275,8 @@ contains
              call multifab_copy_c(r_p(n),1,V_p(n),i,1,0)
           end do
           
-          call apply_matrix(mla,tmp_u,tmp_p,r_u,r_p,alpha,beta,gamma,theta,dx,the_bc_tower)
+          call apply_matrix(mla,tmp_u,tmp_p,r_u,r_p,alpha_fc,beta,beta_ed, &
+                            gamma,theta,dx,the_bc_tower)
 
           ! w = M^{-1} A*V(i)
           call apply_precon(mla,tmp_u,tmp_p,w_u,w_p,alpha,alpha_fc, &

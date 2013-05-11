@@ -18,7 +18,7 @@ contains
 
   ! This computes A x = b explicitly
   ! Refer to ./doc/PreconditionerNotes.tex
-  subroutine apply_matrix(mla,b_u,b_p,x_u,x_p,alpha,beta,gamma,theta, &
+  subroutine apply_matrix(mla,b_u,b_p,x_u,x_p,alpha_fc,beta,beta_ed,gamma,theta, &
                           dx,the_bc_tower,use_inhomogeneous_in)
 
     type(ml_layout), intent(in   ) :: mla
@@ -26,8 +26,9 @@ contains
     type(multifab) , intent(inout) :: b_p(:)
     type(multifab) , intent(inout) :: x_u(:,:)
     type(multifab) , intent(inout) :: x_p(:)
-    type(multifab) , intent(inout) :: alpha(:)
+    type(multifab) , intent(inout) :: alpha_fc(:,:)
     type(multifab) , intent(in   ) :: beta(:)
+    type(multifab) , intent(in   ) :: beta_ed(:,:)
     type(multifab) , intent(in   ) :: gamma(:)
     real(kind=dp_t), intent(in   ) :: theta
     real(kind=dp_t), intent(in   ) :: dx(:,:)
@@ -82,7 +83,7 @@ contains
     end do
 
     ! compute b_u = A x_u
-    call stag_applyop(mla,the_bc_tower,x_u,b_u,alpha,beta,gamma,theta,dx)
+    call stag_applyop(mla,the_bc_tower,x_u,b_u,alpha_fc,beta,beta_ed,gamma,theta,dx)
 
     ! compute G x_p and add to b_u
     call compute_gradp(mla,x_p,gx_p,dx)
