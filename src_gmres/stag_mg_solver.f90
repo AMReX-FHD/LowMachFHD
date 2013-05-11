@@ -240,7 +240,7 @@ contains
     if (dm .eq. 2) then
        call stag_applyop_2d(la_mg(1),the_bc_tower_mg%bc_tower_array(1),phi_fc_mg(1,:), &
                             Lphi_fc_mg(1,:),alpha_fc_mg(1,:), &
-                            beta_cc_mg(1),beta_ed_mg(1,1),gamma_cc_mg(1),dx_mg(1,:))
+                            beta_cc_mg(1),beta_ed_mg(1,:),gamma_cc_mg(1),dx_mg(1,:))
     else
        call stag_applyop_3d(la_mg(1),the_bc_tower_mg%bc_tower_array(1),phi_fc_mg(1,:), &
                             Lphi_fc_mg(1,:),alpha_fc_mg(1,:), &
@@ -304,7 +304,7 @@ contains
              if (dm .eq. 2) then
                 call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                     beta_cc_mg(n),beta_ed_mg(n,1),gamma_cc_mg(n),dx_mg(n,:))
+                                     beta_cc_mg(n),beta_ed_mg(n,:),gamma_cc_mg(n),dx_mg(n,:))
              else
                 call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
@@ -342,7 +342,7 @@ contains
                 if (dm .eq. 2) then
                    call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                         Lphi_fc_mg(n,:), &
-                                        alpha_fc_mg(n,:),beta_cc_mg(n),beta_ed_mg(n,1), &
+                                        alpha_fc_mg(n,:),beta_cc_mg(n),beta_ed_mg(n,:), &
                                         gamma_cc_mg(n),dx_mg(n,:),color)
                 else
                    call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
@@ -380,7 +380,7 @@ contains
           if (dm .eq. 2) then
              call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                   Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                  beta_cc_mg(n),beta_ed_mg(n,1),gamma_cc_mg(n),dx_mg(n,:))
+                                  beta_cc_mg(n),beta_ed_mg(n,:),gamma_cc_mg(n),dx_mg(n,:))
           else
              call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                   Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
@@ -449,7 +449,7 @@ contains
              if (dm .eq. 2) then
                 call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                     beta_cc_mg(n),beta_ed_mg(n,1),gamma_cc_mg(n),dx_mg(n,:))
+                                     beta_cc_mg(n),beta_ed_mg(n,:),gamma_cc_mg(n),dx_mg(n,:))
              else
                 call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
@@ -480,7 +480,7 @@ contains
                 if (dm .eq. 2) then
                    call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                         Lphi_fc_mg(n,:), &
-                                        alpha_fc_mg(n,:),beta_cc_mg(n),beta_ed_mg(n,1), &
+                                        alpha_fc_mg(n,:),beta_cc_mg(n),beta_ed_mg(n,:), &
                                         gamma_cc_mg(n),dx_mg(n,:),color)
                 else
                    call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
@@ -518,7 +518,7 @@ contains
              if (dm .eq. 2) then
                 call stag_applyop_2d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
-                                     beta_cc_mg(n),beta_ed_mg(n,1),gamma_cc_mg(n),dx_mg(n,:))
+                                     beta_cc_mg(n),beta_ed_mg(n,:),gamma_cc_mg(n),dx_mg(n,:))
              else
                 call stag_applyop_3d(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
                                      Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
@@ -549,7 +549,7 @@ contains
        if (dm .eq. 2) then
           call stag_applyop_2d(la_mg(1),the_bc_tower_mg%bc_tower_array(1),phi_fc_mg(1,:), &
                                Lphi_fc_mg(1,:),alpha_fc_mg(1,:), &
-                               beta_cc_mg(1),beta_ed_mg(1,1),gamma_cc_mg(1),dx_mg(1,:))
+                               beta_cc_mg(1),beta_ed_mg(1,:),gamma_cc_mg(1),dx_mg(1,:))
        else
           call stag_applyop_3d(la_mg(1),the_bc_tower_mg%bc_tower_array(1),phi_fc_mg(1,:), &
                                Lphi_fc_mg(1,:),alpha_fc_mg(1,:), &

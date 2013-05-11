@@ -249,8 +249,8 @@ subroutine main_driver()
 
   if (abs(test_type) .eq. 1) then
      ! initialize rhs_u and rhs_p by explicitly computing rhs = A x
-     call apply_matrix(mla,rhs_u,rhs_p,umac_exact,pres_exact,alpha,beta,gamma,theta, &
-                       dx,the_bc_tower,use_inhomogeneous_in=.true.)
+     call apply_matrix(mla,rhs_u,rhs_p,umac_exact,pres_exact,alpha_fc,beta,beta_ed, &
+                       gamma,theta,dx,the_bc_tower,use_inhomogeneous_in=.true.)
   else
      ! initialize rhs_u and rhs_p with a subroutine
      call init_rhs(mla,rhs_u,rhs_p,dx,time,the_bc_tower%bc_tower_array)
@@ -260,8 +260,8 @@ TestType: if (test_type==0) then ! Test the order of accuracy of the stencils
     ! Here we keep the inhomogeneous form of the BCs to test them
     
     ! calculate A*x and save it in umac_tmp
-    call apply_matrix(mla,umac_tmp,pres_tmp,umac_exact,pres_exact,alpha,beta,gamma,theta, &
-                       dx,the_bc_tower,use_inhomogeneous_in=.true.)
+    call apply_matrix(mla,umac_tmp,pres_tmp,umac_exact,pres_exact,alpha_fc, &
+                      beta,beta_ed,gamma,theta,dx,the_bc_tower,use_inhomogeneous_in=.true.)
     
     ! calculate f - (A*u)
     do n=1,nlevs
@@ -313,7 +313,8 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
   ! subtracting from the RHS the result of the operator applied to a solution
   ! vector with zeros everywhere in the problem domain, and ghost cells filled to
   ! respect the boundary conditions
-  call convert_to_homogeneous(mla,rhs_u,rhs_p,alpha,beta,gamma,theta,dx,the_bc_tower)
+  call convert_to_homogeneous(mla,rhs_u,rhs_p,alpha_fc,beta,beta_ed, &
+                              gamma,theta,dx,the_bc_tower)
 
   ! compute the average value of umac_exact and pres_exact
   call sum_umac_press(mla,pres_exact,umac_exact,mean_val_pres,mean_val_umac) 
@@ -349,8 +350,8 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
      ! Since we want to solve A*x=b with an initial guess x0, we instead solve
      ! A*dx=(b-A*x0) and set x=x0+dx.
 
-     call apply_matrix(mla,umac_tmp,pres_tmp,umac,pres,alpha,beta,gamma,theta, &
-                       dx,the_bc_tower)
+     call apply_matrix(mla,umac_tmp,pres_tmp,umac,pres,alpha_fc, &
+                       beta,beta_ed,gamma,theta,dx,the_bc_tower)
 
      do n=1,nlevs
         do i=1,dm
@@ -452,6 +453,7 @@ end if TestType
         call multifab_destroy(umac_tmp(n,i))
         call multifab_destroy(rhs_u(n,i))
         call multifab_destroy(grad_pres(n,i))
+        call multifab_destroy(alpha_fc(n,i))
      end do
      call multifab_destroy(rhs_p(n))
      call multifab_destroy(pres_exact(n))
@@ -460,6 +462,13 @@ end if TestType
      call multifab_destroy(alpha(n))
      call multifab_destroy(beta(n))
      call multifab_destroy(gamma(n))
+     if (dm .eq. 2) then
+        call multifab_destroy(beta_ed(n,1))
+     else if (dm .eq. 3) then
+        call multifab_destroy(beta_ed(n,1))
+        call multifab_destroy(beta_ed(n,2))
+        call multifab_destroy(beta_ed(n,3))
+     end if
   end do
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)

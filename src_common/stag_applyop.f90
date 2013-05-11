@@ -46,7 +46,7 @@ contains
        do n=1,nlevs
           call stag_applyop_2d(mla%la(n),the_bc_tower%bc_tower_array(n), &
                                phi_fc(n,:),Lphi_fc(n,:),alpha_fc(n,:), &
-                               beta_cc(n),beta_ed(n,1),gamma_cc(n),dx(n,:))
+                               beta_cc(n),beta_ed(n,:),gamma_cc(n),dx(n,:))
        end do
     else if (dm .eq. 3) then
        do n=1,nlevs
@@ -75,7 +75,7 @@ contains
     type(multifab) , intent(inout) :: Lphi_fc(:)  ! face-centered
     type(multifab) , intent(in   ) :: alpha_fc(:) ! face-centered
     type(multifab) , intent(in   ) :: beta_cc     ! cell-centered
-    type(multifab) , intent(in   ) :: beta_ed     ! nodal
+    type(multifab) , intent(in   ) :: beta_ed(:)  ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: gamma_cc    ! cell-centered
     real(kind=dp_t), intent(in   ) :: dx(:)
     integer        , intent(in   ), optional :: color_in
@@ -111,7 +111,7 @@ contains
     ng_l = Lphi_fc(1)%ng
     ng_a = alpha_fc(1)%ng
     ng_b = beta_cc%ng
-    ng_n = beta_ed%ng
+    ng_n = beta_ed(1)%ng
     ng_g = gamma_cc%ng
 
     do i=1,nfabs(phi_fc(1))
@@ -122,7 +122,7 @@ contains
        apx => dataptr(alpha_fc(1), i)
        apy => dataptr(alpha_fc(2), i)
        bp  => dataptr(beta_cc, i)
-       bnp => dataptr(beta_ed, i)
+       bnp => dataptr(beta_ed(1), i)
        kp  => dataptr(gamma_cc, i)
        lo = lwb(get_box(phi_fc(1), i))
        hi = upb(get_box(phi_fc(1), i))
@@ -455,7 +455,7 @@ contains
     type(multifab) , intent(inout) :: Lphi_fc(:)  ! face-centered
     type(multifab) , intent(in   ) :: alpha_fc(:) ! face-centered
     type(multifab) , intent(in   ) :: beta_cc     ! cell-centered
-    type(multifab) , intent(in   ) :: beta_ed(:)  ! edge-centered
+    type(multifab) , intent(in   ) :: beta_ed(:)  ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: gamma_cc    ! cell-centered
     real(kind=dp_t), intent(in   ) :: dx(:)
     integer        , intent(in   ), optional :: color_in

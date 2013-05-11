@@ -313,7 +313,7 @@ contains
        ! we could compute +L(phi) but then we'd have to multiply beta and kappa by -1
        if (dm .eq. 2) then
           call stag_applyop_2d(mla%la(n),the_bc_level(n),umac(n,:),Lphi_fc(n,:), &
-                               alpha_fc(n,:),eta(n),eta_ed(n,1),kappa(n),dx(n,:))
+                               alpha_fc(n,:),eta(n),eta_ed(n,:),kappa(n),dx(n,:))
        else
           call stag_applyop_3d(mla%la(n),the_bc_level(n),umac(n,:),Lphi_fc(n,:), &
                                alpha_fc(n,:),eta(n),eta_ed(n,:),kappa(n),dx(n,:))
