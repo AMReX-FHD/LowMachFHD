@@ -54,7 +54,9 @@ subroutine main_driver()
   type(multifab), allocatable :: pres(:)          ! pressure increment
   type(multifab), allocatable :: pres_tmp(:)      ! temporary multifab
   type(multifab), allocatable :: alpha(:)         ! coefficient for staggered multigrid solver
+  type(multifab), allocatable :: alpha_fc(:,:)    ! coefficient for staggered multigrid solver
   type(multifab), allocatable :: beta(:)          ! coefficient for staggered multigrid solver
+  type(multifab), allocatable :: beta_ed(:,:)     ! nodal (2d), edge-centered (3d)
   type(multifab), allocatable :: gamma(:)         ! coefficient for staggered multigrid solver
 
   integer    :: dm,nlevs,n,i
@@ -73,6 +75,7 @@ subroutine main_driver()
   real(kind=dp_t), allocatable ::  mean_val_umac(:)
 
   logical, allocatable :: pmask(:)
+  logical :: nodal_temp(3)
 
   call probin_init()
   call probin_common_init()
@@ -105,6 +108,12 @@ subroutine main_driver()
   allocate(rhs_u(nlevs,dm),rhs_p(nlevs),grad_pres(nlevs,dm))
   allocate(pres_exact(nlevs),pres(nlevs),pres_tmp(nlevs))
   allocate(alpha(nlevs),beta(nlevs),gamma(nlevs))
+  allocate(alpha_fc(nlevs,dm))
+  if (dm .eq. 2) then
+     allocate(beta_ed(nlevs,1))
+  else if (dm .eq. 3) then
+     allocate(beta_ed(nlevs,3))
+  end if
 
   ! tell mba how many levels and dmensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -196,6 +205,27 @@ subroutine main_driver()
      call multifab_build(alpha(n)         ,mla%la(n),1,1)
      call multifab_build(beta(n)          ,mla%la(n),1,1)
      call multifab_build(gamma(n)         ,mla%la(n),1,1)
+
+     do i=1,dm
+        call multifab_build_edge(alpha_fc(n,i),mla%la(n),1,0,i)
+     end do
+
+     if (dm .eq. 2) then
+        call multifab_build_nodal(beta_ed(n,1),mla%la(n),1,0)
+     else
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .false.
+        call multifab_build(beta_ed(n,1),mla%la(n),1,0,nodal_temp)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .false.
+        nodal_temp(3) = .true.
+        call multifab_build(beta_ed(n,2),mla%la(n),1,0,nodal_temp)
+        nodal_temp(1) = .false.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .true.
+        call multifab_build(beta_ed(n,3),mla%la(n),1,0,nodal_temp)
+     end if
   end do
 
   ! provide an initial value (or guess) for umac and pres 
@@ -203,6 +233,14 @@ subroutine main_driver()
   
   ! initialize alpha, beta, and gamma
   call init_mat(mla,alpha,beta,gamma,dx,time,the_bc_tower%bc_tower_array)
+
+  ! compute alpha_fc and beta_ed
+  call average_cc_to_face(nlevs,alpha,alpha_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+  if (dm .eq. 2) then
+     call average_cc_to_node(nlevs,beta,beta_ed(:,1),1,dm+2,1,the_bc_tower%bc_tower_array)
+  else if (dm .eq. 3) then
+     call average_cc_to_edge(nlevs,beta,beta_ed,1,dm+2,1,the_bc_tower%bc_tower_array)
+  end if
 
   if (plot_int .gt. 0) then
      ! write a plotfile of umac_exact and pres_exact
@@ -257,7 +295,7 @@ TestType: if (test_type==0) then ! Test the order of accuracy of the stencils
       do n=1,nlevs
         call setval(rhs_p(n),0.d0,all=.true.)
       end do 
-      call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha,beta,gamma,theta)
+      call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha,alpha_fc,beta,beta_ed,gamma,theta)
       ! calculate the norms of the global error
       norm = multifab_norm_inf_c(umac(1,1),1,1,all=.false.)
       if (parallel_IOProcessor()) print*,"The global error: L0 U   =",norm
@@ -300,7 +338,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
   if (test_type>0) then
   
      ! use gmres
-     call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha,beta,gamma,theta)
+     call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha,alpha_fc,beta,beta_ed,gamma,theta)
   
   else
   
@@ -321,7 +359,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
            call multifab_sub_sub_c(rhs_p(n),1,pres_tmp(n),1,1,0)
      end do
 
-     call apply_precon(mla,rhs_u,rhs_p,umac_tmp,pres_tmp,alpha,beta,gamma, &
+     call apply_precon(mla,rhs_u,rhs_p,umac_tmp,pres_tmp,alpha,alpha_fc,beta,beta_ed,gamma, &
                        theta,dx,the_bc_tower)
 
      do n=1,nlevs
@@ -429,5 +467,6 @@ end if TestType
   deallocate(umac_exact,umac,umac_tmp,rhs_u,grad_pres)
   deallocate(pres_exact,pres,pres_tmp,alpha,beta,gamma)
   deallocate(mean_val_umac)
+  deallocate(alpha_fc,beta_ed)
 
 end subroutine main_driver

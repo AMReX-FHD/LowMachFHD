@@ -28,18 +28,20 @@ contains
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   ! if visc_type > 1 we assume constant coefficients
   ! if visc_type < 1 we assume variable coefficients
-  ! alpha_cc, beta_cc, and gamma_cc are cell-centered
-  ! phi_fc and rhs_fc are face-centered
+  ! beta_cc, and gamma_cc are cell-centered
+  ! alpha_fc, phi_fc, and rhs_fc are face-centered
+  ! beta_ed is nodal (2d) or edge-centered (3d)
   ! phi_fc must come in initialized to some value, preferably a reasonable guess
-  subroutine stag_mg_solver(mla,alpha_cc,beta_cc,gamma_cc,theta, &
+  subroutine stag_mg_solver(mla,alpha_fc,beta_cc,beta_ed,gamma_cc,theta, &
                             phi_fc,rhs_fc,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: alpha_cc(:) ! cell-centered
-    type(multifab) , intent(in   ) :: beta_cc(:) ! cell-centered
-    type(multifab) , intent(in   ) :: gamma_cc(:) ! cell-centered
-    type(multifab) , intent(inout) :: phi_fc(:,:) ! face-centered
-    type(multifab) , intent(in   ) :: rhs_fc(:,:) ! face-centered
+    type(multifab) , intent(in   ) :: alpha_fc(:,:) ! face-centered
+    type(multifab) , intent(in   ) ::  beta_cc(:)   ! cell-centered
+    type(multifab) , intent(in   ) ::  beta_ed(:,:) ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(in   ) :: gamma_cc(:)   ! cell-centered
+    type(multifab) , intent(inout) ::   phi_fc(:,:) ! face-centered
+    type(multifab) , intent(in   ) ::   rhs_fc(:,:) ! face-centered
     real(kind=dp_t), intent(in   ) :: theta,dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -55,7 +57,7 @@ contains
     type(boxarray) :: ba_base,ba
 
     ! cell-centered multifabs
-    type(multifab), allocatable :: alpha_cc_mg(:), beta_cc_mg(:), gamma_cc_mg(:)
+    type(multifab), allocatable :: beta_cc_mg(:), gamma_cc_mg(:)
 
     ! face-centered multifabs
     type(multifab), allocatable :: alpha_fc_mg(:,:), rhs_fc_mg(:,:), phi_fc_mg(:,:)
@@ -98,7 +100,6 @@ contains
     call compute_nlevs_mg(nlevs_mg,ba_base)
 
     ! allocate multifabs used in multigrid coarsening
-    allocate(alpha_cc_mg(nlevs_mg))    ! cell-centered
     allocate( beta_cc_mg(nlevs_mg))    ! cell-centered
     allocate(gamma_cc_mg(nlevs_mg))    ! cell-centered
     allocate(alpha_fc_mg(nlevs_mg,dm)) ! face-centered
@@ -150,7 +151,6 @@ contains
        call destroy(ba)
 
        ! build multifabs used in multigrid coarsening
-       call multifab_build(alpha_cc_mg(n),la_mg(n),1,1)
        call multifab_build( beta_cc_mg(n),la_mg(n),1,1)
        call multifab_build(gamma_cc_mg(n),la_mg(n),1,1)
 
@@ -184,28 +184,19 @@ contains
 
     end do
 
-    ! copy level 1 cc coefficients into mg array of coefficients
-    call multifab_copy_c(alpha_cc_mg(1),1,alpha_cc(1),1,1,1)
-    call multifab_copy_c( beta_cc_mg(1),1,beta_cc(1) ,1,1,1)
-    call multifab_copy_c(gamma_cc_mg(1),1,gamma_cc(1),1,1,1)
-    ! multiply alpha_cc_mg by theta
-    call multifab_mult_mult_s_c(alpha_cc_mg(1),1,theta,1,1)
-
-    ! average to face/edge/nodes at level 1 and then coarsen coefficients
-
-    ! compute alpha at faces at level 1
-    call average_cc_to_face(1,alpha_cc_mg,alpha_fc_mg, &
-                            1,dm+2,1,the_bc_tower_mg%bc_tower_array)
-
-    if (dm .eq. 2) then
-       ! compute beta at nodes at level 1
-       call average_cc_to_node(1,beta_cc_mg,beta_ed_mg(:,1), &
-                               1,dm+2,1,the_bc_tower_mg%bc_tower_array)
-    else
-       ! compute beta at edges at level 1
-       call average_cc_to_edge(1,beta_cc_mg,beta_ed_mg, &
-                               1,dm+2,1,the_bc_tower_mg%bc_tower_array)
+    ! copy level 1 coefficients into mg array of coefficients
+    call multifab_copy_c(beta_cc_mg(1),1,beta_cc(1),1,1,1)
+    call multifab_copy_c(beta_ed_mg(1,1),1,beta_ed(1,1),1,1,0)
+    if (dm .eq. 3) then
+       call multifab_copy_c(beta_ed_mg(1,2),1,beta_ed(1,2),1,1,0)
+       call multifab_copy_c(beta_ed_mg(1,3),1,beta_ed(1,3),1,1,0)
     end if
+    call multifab_copy_c(gamma_cc_mg(1),1,gamma_cc(1),1,1,1)
+    do i=1,dm
+       call multifab_copy_c(alpha_fc_mg(1,i),1,alpha_fc(1,i),1,1,0)
+       ! multiply alpha_fc_mg by theta
+       call multifab_mult_mult_s_c(alpha_fc_mg(1,i),1,theta,1,0)
+    end do
 
     ! coarsen coefficients
     do n=2,nlevs_mg
@@ -633,7 +624,6 @@ contains
     call bc_tower_destroy(the_bc_tower_mg)
 
     do n=1,nlevs_mg
-       call multifab_destroy(alpha_cc_mg(n))
        call multifab_destroy(beta_cc_mg(n))
        call multifab_destroy(gamma_cc_mg(n))
        do i=1,dm
@@ -654,7 +644,7 @@ contains
           call destroy(la_mg(n))
        end if
     end do
-    deallocate(alpha_cc_mg,beta_cc_mg,gamma_cc_mg,alpha_fc_mg,rhs_fc_mg)
+    deallocate(beta_cc_mg,gamma_cc_mg,alpha_fc_mg,rhs_fc_mg)
     deallocate(phi_fc_mg,Lphi_fc_mg,resid_fc_mg,beta_ed_mg,la_mg,dx_mg)
 
     if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then

@@ -22,7 +22,8 @@ module apply_precon_module
 contains
 
   ! This computes x = M^{-1} b using the approach in ./doc/PreconditionerNotes.tex
-  subroutine apply_precon(mla,b_u,b_p,x_u,x_p,alpha,beta,gamma,theta,dx,the_bc_tower)
+  subroutine apply_precon(mla,b_u,b_p,x_u,x_p,alpha,alpha_fc,beta,beta_ed, &
+                          gamma,theta,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: b_u(:,:)
@@ -30,7 +31,9 @@ contains
     type(multifab) , intent(inout) :: x_u(:,:)
     type(multifab) , intent(inout) :: x_p(:)
     type(multifab) , intent(in   ) :: alpha(:)
+    type(multifab) , intent(in   ) :: alpha_fc(:,:)
     type(multifab) , intent(in   ) :: beta(:)
+    type(multifab) , intent(in   ) :: beta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: gamma(:)
     real(kind=dp_t), intent(in   ) :: theta
     real(kind=dp_t), intent(in   ) :: dx(:,:)
@@ -86,7 +89,7 @@ contains
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_u^star = A^{-1} b_u
-        call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u,dx,the_bc_tower)
+        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u,dx,the_bc_tower)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 2: Construct RHS for pressure Poisson problem
@@ -171,7 +174,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_u = A^{-1} b_u
-        call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u,dx,the_bc_tower)
+        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u,dx,the_bc_tower)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 2: Solve a pressure Poisson problem for Phi
@@ -271,7 +274,8 @@ contains
            call subtract_weighted_gradp(mla,b_u_tmp,alphainv_edge,x_p_tmp,dx)
 
            ! compute = A^(-1)*(b_u-grad(x_p)) 
-           call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u_tmp,dx,the_bc_tower)
+           call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u_tmp, &
+                               dx,the_bc_tower)
 
         end if
         
@@ -363,7 +367,8 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! compute = A^(-1)*(b_u-grad(x_p)) 
-        call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u_tmp,dx,the_bc_tower)
+        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u_tmp, &
+                            dx,the_bc_tower)
 
       case(4) 
         ! block diagonal
@@ -374,7 +379,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_u = A^{-1} b_u
-        call stag_mg_solver(mla,alpha,beta,gamma,theta,x_u,b_u,dx,the_bc_tower)
+        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u,dx,the_bc_tower)
 
         if (abs(theta) .gt. 0) then  
 
