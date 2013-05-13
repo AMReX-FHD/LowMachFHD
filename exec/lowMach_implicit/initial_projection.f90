@@ -12,8 +12,6 @@ module initial_projection_module
   use multifab_physbc_module
   use probin_lowmach_module, only: rhobar, diff_coef, nscal
 
-  use fabio_module
-
   implicit none
 
   private
