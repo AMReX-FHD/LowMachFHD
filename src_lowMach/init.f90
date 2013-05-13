@@ -65,9 +65,7 @@ contains
        ! with overlapping values and the data on the box with lower number wins. 
        do i=1,dm
           call multifab_internal_sync(m(n,i))
-          call multifab_fill_boundary(m(n,i))
        end do
-       call multifab_fill_boundary(s(n))
 
     enddo
 

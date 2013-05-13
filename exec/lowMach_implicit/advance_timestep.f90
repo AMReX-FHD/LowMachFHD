@@ -11,6 +11,7 @@ module advance_timestep_module
   use gmres_module
   use init_module
   use div_and_grad_module
+  use multifab_physbc_module
   use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef
   use probin_common_module, only: fixed_dt
 
@@ -141,6 +142,9 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.true.)
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
+       do i=1,nscal
+          call multifab_physbc(prim(n),i,dm+2,1,the_bc_tower%bc_tower_array(n))
+       end do
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -297,7 +301,19 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
+       end do
+    end do
+
+    do n=1,nlevs
+       do i=1,dm
+          ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
+          ! set normal velocity on physical domain boundaries to zero
+          call multifab_physbc_domainvel(umac(n,i),1,i,1, &
+                                         the_bc_tower%bc_tower_array(n),dx(n,:))
+          ! set the remaining physical domain boundary ghost cells
+          call multifab_physbc_macvel(umac(n,i),1,i,1, &
+                                      the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
     end do
 
@@ -331,6 +347,9 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.true.)
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
+       do i=1,nscal
+          call multifab_physbc(prim(n),i,dm+2,1,the_bc_tower%bc_tower_array(n))
+       end do
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -490,7 +509,19 @@ contains
        do i=1,dm
           call multifab_copy_c(umac(n,i),1,umac_old(n,i),1,1,0)
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
+       end do
+    end do
+
+    do n=1,nlevs
+       do i=1,dm
+          ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
+          ! set normal velocity on physical domain boundaries to zero
+          call multifab_physbc_domainvel(umac(n,i),1,i,1, &
+                                         the_bc_tower%bc_tower_array(n),dx(n,:))
+          ! set the remaining physical domain boundary ghost cells
+          call multifab_physbc_macvel(umac(n,i),1,i,1, &
+                                      the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
     end do
 

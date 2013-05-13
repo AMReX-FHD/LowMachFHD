@@ -15,6 +15,7 @@ subroutine main_driver()
   use analysis_module
   use mk_stochastic_fluxdiv_module
   use project_onto_eos_module
+  use multifab_physbc_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
                                    project_eos_int
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
@@ -229,6 +230,9 @@ subroutine main_driver()
   call convert_cons_to_prim(mla,sold,prim,.true.)
   do n=1,nlevs
      call multifab_fill_boundary(prim(n))
+     do i=1,nscal
+        call multifab_physbc(prim(n),i,dm+2,1,the_bc_tower%bc_tower_array(n))
+     end do
   end do
 
   ! convert prim to cons in valid and ghost region
