@@ -98,7 +98,7 @@ contains
     end do
 
     ! preconditioned norm_b: norm_pre_b
-    call apply_precon(mla,b_u,b_p,tmp_u,tmp_p,alpha,alpha_fc, &
+    call apply_precon(mla,b_u,b_p,tmp_u,tmp_p,alpha_fc, &
                       beta,beta_ed,gamma,theta,dx,the_bc_tower)
     call stag_l2_norm(mla,tmp_u,norm_u)
     call cc_l2_norm(mla,tmp_p,norm_p)
@@ -177,7 +177,7 @@ contains
        ! solve for r = M^{-1} tmp
        ! We should not be counting these toward the number of mg cycles performed
        vcycle_counter_temp = vcycle_counter
-       call apply_precon(mla,tmp_u,tmp_p,r_u,r_p,alpha,alpha_fc, &
+       call apply_precon(mla,tmp_u,tmp_p,r_u,r_p,alpha_fc, &
                          beta,beta_ed,gamma,theta,dx,the_bc_tower)
        vcycle_counter = vcycle_counter_temp
 
@@ -279,7 +279,7 @@ contains
                             gamma,theta,dx,the_bc_tower)
 
           ! w = M^{-1} A*V(i)
-          call apply_precon(mla,tmp_u,tmp_p,w_u,w_p,alpha,alpha_fc, &
+          call apply_precon(mla,tmp_u,tmp_p,w_u,w_p,alpha_fc, &
                             beta,beta_ed,gamma,theta,dx,the_bc_tower)
 
           do k=1,i

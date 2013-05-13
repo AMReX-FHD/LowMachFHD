@@ -360,7 +360,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
            call multifab_sub_sub_c(rhs_p(n),1,pres_tmp(n),1,1,0)
      end do
 
-     call apply_precon(mla,rhs_u,rhs_p,umac_tmp,pres_tmp,alpha,alpha_fc,beta,beta_ed,gamma, &
+     call apply_precon(mla,rhs_u,rhs_p,umac_tmp,pres_tmp,alpha_fc,beta,beta_ed,gamma, &
                        theta,dx,the_bc_tower)
 
      do n=1,nlevs

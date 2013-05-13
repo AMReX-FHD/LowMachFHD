@@ -22,7 +22,7 @@ module apply_precon_module
 contains
 
   ! This computes x = M^{-1} b using the approach in ./doc/PreconditionerNotes.tex
-  subroutine apply_precon(mla,b_u,b_p,x_u,x_p,alpha,alpha_fc,beta,beta_ed, &
+  subroutine apply_precon(mla,b_u,b_p,x_u,x_p,alpha_fc,beta,beta_ed, &
                           gamma,theta,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -30,7 +30,6 @@ contains
     type(multifab) , intent(in   ) :: b_p(:)
     type(multifab) , intent(inout) :: x_u(:,:)
     type(multifab) , intent(inout) :: x_p(:)
-    type(multifab) , intent(in   ) :: alpha(:)
     type(multifab) , intent(in   ) :: alpha_fc(:,:)
     type(multifab) , intent(in   ) :: beta(:)
     type(multifab) , intent(in   ) :: beta_ed(:,:) ! nodal (2d); edge-centered (3d)
