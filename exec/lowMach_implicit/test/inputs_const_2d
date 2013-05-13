@@ -1,7 +1,10 @@
 &probin_lowmach
 
+  ! problem setup
+  prob_type = 0              ! sets scalars, vel, coeffs; see init.f90
+  c_init(1) = 0.5d0          ! controls initial concentration
+
   ! simulation properties
-  prob_type = 0              ! sets scalars, vel, coeffs; see exact_solutions.f90
   max_step = 100             ! maximum number of time steps
   print_int = 1              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1        ! how often to call project_onto_eos

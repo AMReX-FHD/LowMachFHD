@@ -5,7 +5,8 @@ module init_module
   use ml_layout_module
   use define_bc_module
   use convert_stag_module
-  use probin_lowmach_module, only: prob_type, rhobar, diff_coef, visc_coef
+  use probin_lowmach_module, only: prob_type, rhobar, diff_coef, visc_coef, &
+                                   smoothing_width, c_init
   use probin_common_module , only: prob_lo, prob_hi
 
   implicit none
@@ -83,7 +84,6 @@ contains
     ! local
     integer :: i,j
     real(kind=dp_t) :: x,y,y1,y2,r
-    real(kind=dp_t) :: c_init(2),smoothing_width
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
 
     select case (prob_type)
@@ -119,11 +119,6 @@ contains
 
        p = 0.d0
 
-       c_init(1) = 0.1d0
-       c_init(2) = 0.9d0
-
-       smoothing_width = 5.d0
-
        do j=lo(2),hi(2)
           y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.5d0*(prob_lo(2)+prob_hi(2))
           do i=lo(1),hi(1)
@@ -154,11 +149,6 @@ contains
 
        one_third_domain1=2.0d0/3.0d0*prob_lo(2)+1.0d0/3.0d0*prob_hi(2)
        one_third_domain2=1.0d0/3.0d0*prob_lo(2)+2.0d0/3.0d0*prob_hi(2)
-
-       smoothing_width = 1.d0
-
-       c_init(1) = 0.d0
-       c_init(2) = 1.d0
 
        do j=lo(2),hi(2)
           y1 =(prob_lo(2) + dx(2)*(dble(j)+0.5d0) - one_third_domain1)
@@ -212,7 +202,6 @@ contains
     ! local
     integer :: i,j,k
     real(kind=dp_t) :: x,y,z,r
-    real(kind=dp_t) :: c_init(2),smoothing_width
 
     select case (prob_type)
     case (0)
@@ -250,11 +239,6 @@ contains
        mz = 0.d0
 
        p = 0.d0
-
-       c_init(1) = 0.1d0
-       c_init(2) = 0.9d0
-
-       smoothing_width = 2.5d0
 
        do k=lo(3),hi(3)
           z = prob_lo(3) + dx(3) * (dble(k)+0.5d0) - 0.5d0*(prob_lo(3)+prob_hi(3))

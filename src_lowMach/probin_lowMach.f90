@@ -11,8 +11,8 @@ module probin_lowmach_module
   ! namelist section below
   !------------------------------------------------------------- 
   integer   , save :: prob_type,max_step,nscal,print_int
-  real(dp_t), save :: rhobar(2),visc_coef,diff_coef
-  real(dp_t), save :: variance_coef,conc_scal
+  real(dp_t), save :: rhobar(2),visc_coef,diff_coef,smoothing_width
+  real(dp_t), save :: variance_coef,conc_scal,c_init(2)
   integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
 
@@ -20,8 +20,12 @@ module probin_lowmach_module
   ! Input parameters controlled via namelist input, with comments
   !------------------------------------------------------------- 
 
-  ! simulation properties
+  ! problem setup
   namelist /probin_lowmach/ prob_type         ! sets scalars, vel, coeffs; see exact_solutions.f90
+  namelist /probin_lowmach/ smoothing_width   ! scale factor for smoothing initial profile
+  namelist /probin_lowmach/ c_init            ! controls initial concentration range
+
+  ! simulation parameters
   namelist /probin_lowmach/ max_step          ! maximum number of time steps
   namelist /probin_lowmach/ print_int         ! how often to output EOS drift and sum of conserved quantities
   namelist /probin_lowmach/ project_eos_int   ! how often to call project_onto_eos
@@ -68,6 +72,9 @@ contains
     ! Defaults
 
     prob_type = 1
+    smoothing_width = 1.d0
+    c_init(1:2) = 1.d0
+
     max_step = 1
     print_int = 0
     project_eos_int = 1
@@ -107,15 +114,25 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) prob_type
 
+       case ('--smoothing_width')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) smoothing_width
+
+       case ('--c_init_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(1)
+
+       case ('--c_init_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(2)
+
        case ('--max_step')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_step
-
-       case ('--nscal')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) nscal
 
        case ('--print_int')
           farg = farg + 1
@@ -126,6 +143,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) project_eos_int
+
+       case ('--nscal')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) nscal
 
        case ('--rhobar_1')
           farg = farg + 1
