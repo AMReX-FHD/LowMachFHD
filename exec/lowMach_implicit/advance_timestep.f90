@@ -135,7 +135,6 @@ contains
        call multifab_mult_mult_s_c(s_update(n),1,fixed_dt,nscal,0)
        call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
        call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
-       call multifab_fill_boundary(snew(n))
     end do
 
     ! compute prim^{*,n+1} from s^{*,n+1} in valid region
@@ -146,6 +145,10 @@ contains
           call multifab_physbc(prim(n),i,dm+2,1,the_bc_tower%bc_tower_array(n))
        end do
     end do
+
+    ! convert prim to cons in valid and ghost region
+    ! now cons has properly filled ghost cells
+    call convert_cons_to_prim(mla,snew,prim,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Crank-Nicolson Velocity Predictor
@@ -317,13 +320,9 @@ contains
        end do
     end do
 
-    ! convert v^{*,n+1} to m^{*,n+1}
+    ! convert v^{*,n+1} to m^{*,n+1} in valid and ghost region
+    ! now mnew has properly filled ghost cells
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_fill_boundary(mnew(n,i))
-       end do
-    end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Trapezoidal Scalar Corrector
@@ -340,7 +339,6 @@ contains
        call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,0)
        call multifab_mult_mult_s_c(s_update(n),1,fixed_dt/2.d0,nscal,0)
        call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
-       call multifab_fill_boundary(snew(n))
     end do
 
     ! compute prim^{n+1} from s^{n+1} in valid region
@@ -351,6 +349,10 @@ contains
           call multifab_physbc(prim(n),i,dm+2,1,the_bc_tower%bc_tower_array(n))
        end do
     end do
+
+    ! convert prim to cons in valid and ghost region
+    ! now cons has properly filled ghost cells
+    call convert_cons_to_prim(mla,snew,prim,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 4 - Crank-Nicolson Velocity Corrector
@@ -505,7 +507,6 @@ contains
     ! compute v^{n+1} = v^n + dumac
     do n=1,nlevs
        call multifab_plus_plus_c(pres(n),1,dpres(n),1,1,0)
-       call multifab_fill_boundary(pres(n))
        do i=1,dm
           call multifab_copy_c(umac(n,i),1,umac_old(n,i),1,1,0)
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
@@ -513,6 +514,9 @@ contains
     end do
 
     do n=1,nlevs
+       ! presure ghost cells
+       call multifab_fill_boundary(pres(n))
+       call multifab_physbc(pres(n),1,dm+1,1,the_bc_tower%bc_tower_array(n))
        do i=1,dm
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
@@ -525,13 +529,9 @@ contains
        end do
     end do
 
-    ! convert v^{n+1} to m^{n+1}
+    ! convert v^{n+1} to m^{n+1} in valid and ghost region
+    ! now mnew has properly filled ghost cells
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_fill_boundary(mnew(n,i))
-       end do
-    end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement

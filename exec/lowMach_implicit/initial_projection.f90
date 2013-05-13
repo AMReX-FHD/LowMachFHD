@@ -139,11 +139,19 @@ contains
     ! fill ghost cells
     do n=1,nlevs
        do i=1,dm
+          ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
+          ! set normal velocity on physical domain boundaries to zero
+          call multifab_physbc_domainvel(umac(n,i),1,i,1, &
+                                         the_bc_tower%bc_tower_array(n),dx(n,:))
+          ! set the remaining physical domain boundary ghost cells
+          call multifab_physbc_macvel(umac(n,i),1,i,1, &
+                                      the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
     end do
 
     ! convert u to m in valid plus ghost region
+    ! now mold has properly filled ghost cells
     call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
 
     do n=1,nlevs
