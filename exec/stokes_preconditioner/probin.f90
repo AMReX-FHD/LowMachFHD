@@ -12,6 +12,7 @@ module probin_module
   !------------------------------------------------------------- 
   integer,save    :: mode_coefs(2),prob_coeff,prob_sol,prob_dir,test_type
   real(dp_t),save :: smoothing_width,var_coeff_mag(3),coeff_mag(3),coeff_ratio(3),ABC_coefs(3)
+  real(dp_t),save :: theta_fac
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -31,7 +32,11 @@ module probin_module
   ! Second component corresponds to mod(prob_dir+1,DIM)
   namelist /probin/ mode_coefs
   namelist /probin/ prob_dir   ! Which direction is vorticity along
-  namelist /probin/ ABC_coefs  ! ABC flow in 3D (a/b/c) (like Taylor vortices in 2D):
+  namelist /probin/ ABC_coefs  ! ABC flow in 3D (a/b/c) (like Taylor vortices in 2D)
+
+  ! 0.0 = time-independent
+  ! 1.0 = time-dependent
+  namelist /probin/ theta_fac
 
   ! Physical parameters
   !----------------------
@@ -84,6 +89,8 @@ contains
     mode_coefs(1:2) = 1
     prob_dir = 1
     ABC_coefs(1:3) = 1.d0
+
+    theta_fac = 1.d0
 
     var_coeff_mag(1:3) = 0.d0
     coeff_mag(1:3) = 1.d0
@@ -192,6 +199,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) ABC_coefs(3)
+
+       case ('--theta_fac')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) theta_fac
 
        case ('--')
           farg = farg + 1

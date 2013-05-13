@@ -11,7 +11,7 @@ module probin_common_module
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
   integer,save    :: dim_in,plot_int
-  real(dp_t),save :: fixed_dt,theta_fac
+  real(dp_t),save :: fixed_dt
   integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
@@ -37,10 +37,6 @@ module probin_common_module
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
   namelist /probin_common/ seed
-
-  ! 0.0 = time-independent
-  ! 1.0 = time-dependent
-  namelist /probin_common/ theta_fac
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -99,7 +95,6 @@ contains
     plot_int = 0
 
     seed = 0
-    theta_fac = 1.d0
     visc_type = 1
 
     bc_lo(1:MAX_SPACEDIM) = PERIODIC
@@ -197,11 +192,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) seed
-
-       case ('--theta_fac')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) theta_fac
 
        case ('--visc_type')
           farg = farg + 1

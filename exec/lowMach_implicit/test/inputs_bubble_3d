@@ -40,10 +40,6 @@
   ! positive = fixed seed
   seed = 1
 
-  ! 0.0 = time-independent
-  ! 1.0 = time-dependent
-  theta_fac = 1
-
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]

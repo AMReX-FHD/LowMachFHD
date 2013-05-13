@@ -524,8 +524,8 @@ contains
 
   subroutine init_rhs(mla,b_u,b_p,dx,time,the_bc_level)
 
-    use probin_module       , only: prob_coeff, prob_sol, coeff_mag, ABC_coefs
-    use probin_common_module, only: fixed_dt, prob_lo, prob_hi, theta_fac, visc_type
+    use probin_module       , only: prob_coeff, prob_sol, coeff_mag, ABC_coefs, theta_fac
+    use probin_common_module, only: fixed_dt, prob_lo, prob_hi, visc_type
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: b_u(:,:)

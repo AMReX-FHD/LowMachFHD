@@ -12,9 +12,9 @@ subroutine main_driver()
   use ml_layout_module
   use define_bc_module
   use stag_mg_solver_module
-  use probin_module       , only: probin_init, test_type
+  use probin_module       , only: probin_init, test_type, theta_fac
   use probin_common_module, only: probin_common_init, n_cells, dim_in, fixed_dt, &
-                                  max_grid_size, plot_int, seed, theta_fac, &
+                                  max_grid_size, plot_int, seed, &
                                   prob_lo, prob_hi, bc_lo, bc_hi
   use probin_gmres_module , only: probin_gmres_init
   use macproject_module
