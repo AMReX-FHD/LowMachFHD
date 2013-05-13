@@ -109,11 +109,16 @@ contains
        call multifab_plus_plus_c(mac_rhs(n),1,divu(n),1,1,0)
     end do
 
-    ! project to solve for phi - use the 'full' solver
-    call macproject(mla,phi,umac,sold,mac_rhs,dx,the_bc_tower,.true.)
-
     ! compute (1/rho)
-    call average_cc_to_face_inv(nlevs,sold,rhoinv_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+    do n=1,nlevs
+       do i=1,dm
+          call setval(rhoinv_fc(n,i),1.d0,all=.true.)
+          call multifab_div_div_c(rhoinv_fc(n,i),1,s_fc(n,i),1,1,0)
+       end do
+    end do
+
+    ! project to solve for phi - use the 'full' solver
+    call macproject(mla,phi,umac,rhoinv_fc,mac_rhs,dx,the_bc_tower,.true.)
 
     ! umac = umac - (1/rho) grad phi
     call subtract_weighted_gradp(mla,umac,rhoinv_fc,phi,dx)

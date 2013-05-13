@@ -28,14 +28,14 @@ contains
 
   ! solve L_alpha Phi  = D x_u^* - b_p
   ! does not update any other variables
-  subroutine macproject(mla,phi,umac,alpha,mac_rhs,dx,the_bc_tower,full_solve_in)
+  subroutine macproject(mla,phi,umac,alphainv_fc,mac_rhs,dx,the_bc_tower,full_solve_in)
 
     use bndry_reg_module
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab ), intent(inout) :: phi(:)
     type(multifab ), intent(in   ) :: umac(:,:)
-    type(multifab ), intent(in   ) :: alpha(:)
+    type(multifab ), intent(inout) :: alphainv_fc(:,:)
     type(multifab ), intent(inout) :: mac_rhs(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower ), intent(in   ) :: the_bc_tower
@@ -43,7 +43,6 @@ contains
 
     ! Local  
     type(multifab)  :: zero_fab(mla%nlevel)
-    type(multifab)  :: alphainv_edge(mla%nlevel,mla%dim)
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
     real(kind=dp_t) :: umac_norm(mla%nlevel)
     real(kind=dp_t) :: rel_solver_eps
@@ -67,13 +66,8 @@ contains
 
     do n = 1, nlevs
        call multifab_build(zero_fab(n), mla%la(n),  1, 0)
-       do d = 1,dm
-          call multifab_build_edge(alphainv_edge(n,d), mla%la(n), 1, 0, d)
-       end do
-
        call setval(zero_fab(n),ZERO,all=.true.)
-       call setval(  phi(n),ZERO,all=.true.)
-
+       call setval(phi(n)     ,ZERO,all=.true.)
     end do
 
     ! Compute umac_norm to be used inside the MG solver as part of a stopping criterion
@@ -84,17 +78,14 @@ contains
        end do
     end do
 
-    ! compute alphainv_edge on faces by averaging and then inverting
-    call average_cc_to_face_inv(nlevs,alpha,alphainv_edge,1,dm+2,1,the_bc_tower%bc_tower_array)
-
-    ! multiply alphainv_edge by -1 so we solve L_alpha Phi = mac_rhs
+    ! multiply alphainv_fc by -1 so we solve L_alpha Phi = mac_rhs
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(alphainv_edge(n,i),1,-1.d0,1,0)
+          call multifab_mult_mult_s_c(alphainv_fc(n,i),1,-1.d0,1,0)
        end do
     end do
 
-    ! stores (alphainv_edge/dx**2) grad phi at coarse-fine interfaces
+    ! stores (alphainv_fc/dx**2) grad phi at coarse-fine interfaces
     do n = 2,nlevs
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
@@ -103,22 +94,26 @@ contains
     abs_solver_eps = 1.d-16
 
     if (full_solve) then
-       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_edge,dx,the_bc_tower,bc_comp, &
+       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,bc_comp, &
                           mla%mba%rr,rel_solver_eps,abs_solver_eps, &
                           abort_on_max_iter=.true.)
     else
-       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_edge,dx,the_bc_tower,bc_comp, &
+       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,bc_comp, &
                           mla%mba%rr,rel_solver_eps,abs_solver_eps, &
                           abort_on_max_iter=.false.)
     end if
+
+    ! restore alphainv_fc
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_s_c(alphainv_fc(n,i),1,-1.d0,1,0)
+       end do
+    end do
 
     vcycle_counter = vcycle_counter + mg_max_vcycles
 
     do n = 1, nlevs
        call multifab_destroy(zero_fab(n))
-       do d = 1,dm
-          call multifab_destroy(alphainv_edge(n,d))
-       end do
     end do
 
     do n = 2,nlevs
@@ -328,11 +323,11 @@ contains
 
   end subroutine macproject
 
-  subroutine subtract_weighted_gradp(mla,x_u,alphainv_edge,phi,dx)
+  subroutine subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab ), intent(inout) :: x_u(:,:)
-    type(multifab ), intent(in   ) :: alphainv_edge(:,:)
+    type(multifab ), intent(in   ) :: alphainv_fc(:,:)
     type(multifab ), intent(in   ) :: phi(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
 
@@ -354,7 +349,7 @@ contains
 
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_c(gradp(n,i),1,alphainv_edge(n,i),1,1,0)
+          call multifab_mult_mult_c(gradp(n,i),1,alphainv_fc(n,i),1,1,0)
           call saxpy(x_u(n,i),-1.d0,gradp(n,i))
        end do
     end do

@@ -43,12 +43,13 @@ contains
     integer :: n,nlevs,i,dm
     real(kind=dp_t) :: mean_val_pres, mean_val_umac(mla%dim)
 
-    type(multifab) ::           phi(mla%nlevel)
-    type(multifab) ::       mac_rhs(mla%nlevel)
-    type(multifab) ::      zero_fab(mla%nlevel)
-    type(multifab) ::       x_p_tmp(mla%nlevel)
-    type(multifab) :: alphainv_edge(mla%nlevel,mla%dim)
-    type(multifab) ::       b_u_tmp(mla%nlevel,mla%dim)
+    type(multifab) ::         phi(mla%nlevel)
+    type(multifab) ::     mac_rhs(mla%nlevel)
+    type(multifab) ::    zero_fab(mla%nlevel)
+    type(multifab) ::     x_p_tmp(mla%nlevel)
+    type(multifab) :: alphainv_fc(mla%nlevel,mla%dim)
+    type(multifab) ::     b_u_tmp(mla%nlevel,mla%dim)
+    type(multifab) ::  one_fab_fc(mla%nlevel,mla%dim)
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -60,8 +61,12 @@ contains
        call setval(zero_fab(n),0.d0,all=.true.)
        call multifab_build(x_p_tmp(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(alphainv_edge(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(alphainv_fc(n,i),mla%la(n),1,0,i)
+          call setval(alphainv_fc(n,i),1.d0,all=.true.)
+          call multifab_div_div_c(alphainv_fc(n,i),1,alpha_fc(n,i),1,1,0)
           call multifab_build_edge(b_u_tmp(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(one_fab_fc(n,i),mla%la(n),1,0,i)
+          call setval(one_fab_fc(n,i),1.d0,all=.true.)
        end do
     end do
 
@@ -109,13 +114,10 @@ contains
 
         ! use multigrid to solve for Phi
         ! x_u^star is only passed in to get a norm for absolute residual criteria
-        call macproject(mla,phi,x_u,alpha,mac_rhs,dx,the_bc_tower)
-
-        ! compute alphainv_edge on faces by averaging and then inverting
-        call average_cc_to_face_inv(nlevs,alpha,alphainv_edge,1,dm+2,1,the_bc_tower%bc_tower_array)
+        call macproject(mla,phi,x_u,alphainv_fc,mac_rhs,dx,the_bc_tower)
 
         ! x_u = x_u^star - (alpha I)^-1 grad Phi
-        call subtract_weighted_gradp(mla,x_u,alphainv_edge,phi,dx)
+        call subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx)
 
         ! if precon_type = +1, or theta=0 then x_p = theta*Phi - c*beta*(mac_rhs)
         ! if precon_type = -1             then x_p = theta*Phi - c*beta*L_alpha Phi
@@ -128,7 +130,7 @@ contains
           end do
         else
           ! first set x_p = -L_alpha Phi
-          call mac_applyop(mla,x_p,phi,zero_fab,alphainv_edge,dx, &
+          call mac_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx, &
                            the_bc_tower,bc_comp=dm+1,stencil_order=2)
         end if
 
@@ -193,7 +195,7 @@ contains
 
            ! solves L_alpha Phi = mac_rhs
            ! x_u is only passed in to get a norm for absolute residual criteria
-           call macproject(mla,phi,x_u,alpha,mac_rhs,dx,the_bc_tower)
+           call macproject(mla,phi,x_u,alphainv_fc,mac_rhs,dx,the_bc_tower)
 
         end if 
     
@@ -268,10 +270,9 @@ contains
            do n=1,nlevs
               do i=1,dm
                  call multifab_copy_c(b_u_tmp(n,i),1,b_u(n,i),1,1,0)
-                 call setval(alphainv_edge(n,i),1.d0,all=.true.)
               end do
            end do
-           call subtract_weighted_gradp(mla,b_u_tmp,alphainv_edge,x_p_tmp,dx)
+           call subtract_weighted_gradp(mla,b_u_tmp,one_fab_fc,x_p_tmp,dx)
 
            ! compute = A^(-1)*(b_u-grad(x_p)) 
            call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u_tmp, &
@@ -299,7 +300,7 @@ contains
 
           ! solves L_alpha Phi = mac_rhs
           ! x_u^star is only passed in to get a norm for absolute residual criteria
-          call macproject(mla,phi,x_u,alpha,mac_rhs,dx,the_bc_tower)
+          call macproject(mla,phi,x_u,alphainv_fc,mac_rhs,dx,the_bc_tower)
 
         end if
         
@@ -356,10 +357,9 @@ contains
         do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(b_u_tmp(n,i),1,b_u(n,i),1,1,0)
-             call setval(alphainv_edge(n,i),1.d0,all=.true.)
           end do
         end do
-        call subtract_weighted_gradp(mla,b_u_tmp,alphainv_edge,x_p_tmp,dx)
+        call subtract_weighted_gradp(mla,b_u_tmp,one_fab_fc,x_p_tmp,dx)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 3: Solve for x_u using an implicit viscous term
@@ -390,7 +390,7 @@ contains
 
           ! solves L_alpha Phi = mac_rhs
           ! x_u^star is only passed in to get a norm for absolute residual criteria
-          call macproject(mla,phi,x_u,alpha,mac_rhs,dx,the_bc_tower)
+          call macproject(mla,phi,x_u,alphainv_fc,mac_rhs,dx,the_bc_tower)
 
         end if
 
@@ -460,7 +460,8 @@ contains
        call multifab_destroy(zero_fab(n))
        call multifab_destroy(x_p_tmp(n))
        do i=1,dm
-          call multifab_destroy(alphainv_edge(n,i))
+          call multifab_destroy(alphainv_fc(n,i))
+          call multifab_destroy(one_fab_fc(n,i))
           call multifab_destroy(b_u_tmp(n,i))
        end do
     end do
