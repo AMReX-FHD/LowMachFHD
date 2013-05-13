@@ -87,6 +87,29 @@ contains
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
 
     select case (prob_type)
+    case (0)
+
+       ! constant density
+       mx = 0.d0
+       my = 0.d0
+
+       p = 0.d0
+
+       ! set c to 1.0
+       s(:,:,2) = 1.d0
+
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+
+             ! compute rho with eos
+             s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
+
+             ! compute rho*c
+             s(i,j,2) = s(i,j,1)*s(i,j,2)
+
+          end do
+       end do
+
     case (1)
 
        ! lo density spherical bubble
@@ -108,11 +131,14 @@ contains
 
              r = sqrt (x**2 + y**2)
 
-             ! tanh smoothing
+             ! set c using tanh smoothing
              s(i,j,2) = c_init(1) + 0.5d0*(c_init(2)-c_init(1))* &
                   (1.d0 + tanh((r-2.5d0*smoothing_width*dx(1))/(smoothing_width*dx(1))))
 
+             ! compute rho using eos
              s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
+
+             ! compute rho*c
              s(i,j,2) = s(i,j,1)*s(i,j,2)
           enddo
        enddo
@@ -189,6 +215,32 @@ contains
     real(kind=dp_t) :: c_init(2),smoothing_width
 
     select case (prob_type)
+    case (0)
+
+       ! constant density
+       mx = 0.d0
+       my = 0.d0
+       mz = 0.d0
+
+       p = 0.d0
+
+       ! set c to 1.0
+       s(:,:,:,2) = 1.d0
+
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)
+
+                ! compute rho with eos
+                s(i,j,k,1) = 1.0d0/(s(i,j,k,2)/rhobar(1)+(1.0d0-s(i,j,k,2))/rhobar(2))
+
+                ! compute rho*c
+                s(i,j,k,2) = s(i,j,k,1)*s(i,j,k,2)
+
+             end do
+          end do
+       end do
+
     case (1)
 
        ! lo density spherical bubble
@@ -213,11 +265,14 @@ contains
                 
                 r = sqrt (x**2 + y**2 + z**2)
 
-                ! tanh smoothing
+                ! set c using tanh smoothing
                 s(i,j,k,2) = c_init(1) + 0.5d0*(c_init(2)-c_init(1))* &
                      (1.d0 + tanh((r-2.0d0*smoothing_width*dx(1))/(smoothing_width*dx(1))))
                 
+                ! compute rho using eos
                 s(i,j,k,1) = 1.0d0/(s(i,j,k,2)/rhobar(1)+(1.0d0-s(i,j,k,2))/rhobar(2))
+
+                ! compute rho*c
                 s(i,j,k,2) = s(i,j,k,1)*s(i,j,k,2)
              enddo
           enddo
