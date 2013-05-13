@@ -26,10 +26,10 @@
   !----------------------
   dim_in = 2                 ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate
-  prob_hi(1:2) = 1.d0 1.d0   ! physical hi coordinate
+  prob_hi(1:2) = 64.d0 64.d0 ! physical hi coordinate
   n_cells(1:2) = 64 64       ! number of cells in domain
   max_grid_size(1:2) = 64 64 ! max number of cells in a box
-  fixed_dt = 1.d0            ! time step
+  fixed_dt = 0.2d0           ! time step
   plot_int = 10              ! Interval for writing a plotfile (for visit/amrvis)
 
   ! Algorithm control / selection
@@ -52,8 +52,8 @@
   ! -1 = periodic
   ! 16 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
   ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
-  bc_lo(1:2) = -1 -1
-  bc_hi(1:2) = -1 -1
+  bc_lo(1:2) = 17 17
+  bc_hi(1:2) = 17 17
 
 /
 
