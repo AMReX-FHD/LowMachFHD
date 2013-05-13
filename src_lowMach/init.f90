@@ -95,8 +95,8 @@ contains
 
        p = 0.d0
 
-       ! set c to 1.0
-       s(:,:,2) = 1.d0
+       ! set c to c_init(1)
+       s(:,:,2) = c_init(1)
 
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -213,8 +213,8 @@ contains
 
        p = 0.d0
 
-       ! set c to 1.0
-       s(:,:,:,2) = 1.d0
+       ! set c to c_init(1)
+       s(:,:,:,2) = c_init(1)
 
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)
