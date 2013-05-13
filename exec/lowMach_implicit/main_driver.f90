@@ -265,6 +265,10 @@ subroutine main_driver()
   
   do istep=1,max_step
 
+     if (parallel_IOProcessor()) then
+        print*,"Begin Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
+     end if
+
      ! advance the solution by dt
      call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,chi_fc, &
                            eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
@@ -272,6 +276,10 @@ subroutine main_driver()
 
      ! increment simulation time
      time = time + fixed_dt
+
+    if (parallel_IOProcessor()) then
+        print*,"End Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
+     end if
 
      ! project rho and rho1 back onto EOS
      if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
