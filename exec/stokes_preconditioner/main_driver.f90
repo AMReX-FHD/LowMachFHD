@@ -295,7 +295,7 @@ TestType: if (test_type==0) then ! Test the order of accuracy of the stencils
       do n=1,nlevs
         call setval(rhs_p(n),0.d0,all=.true.)
       end do 
-      call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha,alpha_fc,beta,beta_ed,gamma,theta)
+      call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha_fc,beta,beta_ed,gamma,theta)
       ! calculate the norms of the global error
       norm = multifab_norm_inf_c(umac(1,1),1,1,all=.false.)
       if (parallel_IOProcessor()) print*,"The global error: L0 U   =",norm
@@ -339,7 +339,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
   if (test_type>0) then
   
      ! use gmres
-     call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha,alpha_fc,beta,beta_ed,gamma,theta)
+     call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha_fc,beta,beta_ed,gamma,theta)
   
   else
   

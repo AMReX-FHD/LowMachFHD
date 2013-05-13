@@ -282,7 +282,7 @@ contains
     end do
 
     ! call gmres to compute delta v
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,snew,s_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
                eta,eta_ed,kappa,1.d0/fixed_dt)
 
     ! restore eta and kappa
@@ -473,7 +473,7 @@ contains
     end do
 
     ! call gmres to compute delta v
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,snew,s_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
                eta,eta_ed,kappa,1.d0/fixed_dt)
 
     ! restore eta and kappa

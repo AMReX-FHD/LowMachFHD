@@ -27,7 +27,7 @@ module gmres_module
 contains
   
   subroutine gmres(mla,the_bc_tower,dx,b_u,b_p,x_u,x_p, &
-                   alpha,alpha_fc,beta,beta_ed,gamma,theta)
+                   alpha_fc,beta,beta_ed,gamma,theta)
 
     type(ml_layout),intent(in   ) :: mla
     type(bc_tower), intent(in   ) :: the_bc_tower
@@ -36,7 +36,6 @@ contains
     type(multifab), intent(in   ) :: b_p(:)    ! (nlevs)
     type(multifab), intent(inout) :: x_u(:,:)  ! (nlevs,dm)
     type(multifab), intent(inout) :: x_p(:)    ! (nlevs)
-    type(multifab), intent(inout) :: alpha(:)
     type(multifab), intent(inout) :: alpha_fc(:,:)
     type(multifab), intent(in   ) :: beta(:)
     type(multifab), intent(in   ) :: beta_ed(:,:) ! nodal (2d), edge-centered (3d)
