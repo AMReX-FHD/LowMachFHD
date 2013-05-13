@@ -19,10 +19,6 @@
   ! positive = fixed seed
   seed = 1
 
-  ! 0.0 = time-independent
-  ! 1.0 = time-dependent
-  theta_fac = 0.d0
-
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
@@ -65,6 +61,10 @@
   mode_coefs = 1 1
   prob_dir = 1            ! Which direction is vorticity along
   ABC_coefs = 1 1 1       ! for 3d ABC flow
+
+  ! 0.0 = time-independent
+  ! 1.0 = time-dependent
+  theta_fac = 0.d0
 
   var_coeff_mag = 0.0d0 0.0d0 0.0d0  ! alpha, beta, gamma variation magnitudes
   coeff_mag = 1.0d0 1.0d0 1.0d0      ! for control the scalings of alpha, beta, gamma
