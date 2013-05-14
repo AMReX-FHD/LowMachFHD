@@ -278,6 +278,13 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,1.d0/2.d0,1,1)
        call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,1)
+       if (dm .eq. 2) then
+          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,0)
+       else if (dm .eq. 3) then
+          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,0)
+          call multifab_mult_mult_s_c(eta_ed(n,2),1,1.d0/2.d0,1,0)
+          call multifab_mult_mult_s_c(eta_ed(n,3),1,1.d0/2.d0,1,0)
+       end if
     end do
 
     ! set the initial guess to zero
@@ -296,6 +303,13 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,1)
        call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,1)
+       if (dm .eq. 2) then
+          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,0)
+       else if (dm .eq. 3) then
+          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,0)
+          call multifab_mult_mult_s_c(eta_ed(n,2),1,2.d0,1,0)
+          call multifab_mult_mult_s_c(eta_ed(n,3),1,2.d0,1,0)
+       end if
     end do
 
     ! compute v^{*,n+1} = v^n + delta v
@@ -504,6 +518,13 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,1.d0/2.d0,1,1)
        call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,1)
+       if (dm .eq. 2) then
+          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,0)
+       else if (dm .eq. 3) then
+          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,0)
+          call multifab_mult_mult_s_c(eta_ed(n,2),1,1.d0/2.d0,1,0)
+          call multifab_mult_mult_s_c(eta_ed(n,3),1,1.d0/2.d0,1,0)
+       end if
     end do
 
     ! call gmres to compute delta v and delta p
@@ -514,6 +535,13 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,1)
        call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,1)
+       if (dm .eq. 2) then
+          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,0)
+       else if (dm .eq. 3) then
+          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,0)
+          call multifab_mult_mult_s_c(eta_ed(n,2),1,2.d0,1,0)
+          call multifab_mult_mult_s_c(eta_ed(n,3),1,2.d0,1,0)
+       end if
     end do
 
     ! compute v^{n+1} = v^n + dumac
