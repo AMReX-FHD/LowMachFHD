@@ -20,13 +20,14 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,mold,umac,sold,prim,chi_fc,rhoc_d_fluxdiv, &
+  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,rhoc_d_fluxdiv, &
                                 rhoc_s_fluxdiv,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(in   ) :: sold(:)
+    type(multifab) , intent(inout) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: prim(:)
     type(multifab) , intent(in   ) :: chi_fc(:,:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
@@ -41,7 +42,6 @@ contains
     type(multifab) ::   mac_rhs(mla%nlevel)
     type(multifab) ::      divu(mla%nlevel)
     type(multifab) ::       phi(mla%nlevel)
-    type(multifab) ::      s_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
 
     dm = mla%dim
@@ -54,7 +54,6 @@ contains
        call multifab_build(divu(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(     s_fc(n,i),mla%la(n),nscal,1,i)
           call multifab_build_edge(rhoinv_fc(n,i),mla%la(n),1    ,0,i)
        end do       
     end do
@@ -157,7 +156,6 @@ contains
        call multifab_destroy(divu(n))
        call multifab_destroy(phi(n))
        do i=1,dm
-          call multifab_destroy(s_fc(n,i))
           call multifab_destroy(rhoinv_fc(n,i))
        end do
     end do

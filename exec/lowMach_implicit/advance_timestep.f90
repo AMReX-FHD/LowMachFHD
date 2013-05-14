@@ -23,7 +23,7 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,chi_fc, &
+  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
                               dx,the_bc_tower)
 
@@ -33,6 +33,7 @@ contains
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(inout) :: sold(:)
     type(multifab) , intent(inout) :: snew(:)
+    type(multifab) , intent(inout) :: s_fc(:,:)
     type(multifab) , intent(inout) :: prim(:)
     type(multifab) , intent(inout) :: pres(:)
     type(multifab) , intent(inout) :: chi(:)
@@ -51,7 +52,6 @@ contains
     type(multifab) ::       dpres(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
 
-    type(multifab) ::        s_fc(mla%nlevel,mla%dim)
     type(multifab) ::       mtemp(mla%nlevel,mla%dim)
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) :: m_a_fluxdiv_old(mla%nlevel,mla%dim)
@@ -78,7 +78,6 @@ contains
        call multifab_build(      dpres(n),mla%la(n),1    ,1)
        call multifab_build(       divu(n),mla%la(n),1    ,0)
        do i=1,dm
-          call multifab_build_edge(           s_fc(n,i),mla%la(n),nscal,1,i)
           call multifab_build_edge(          mtemp(n,i),mla%la(n),nscal,1,i)
           call multifab_build_edge(    gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_a_fluxdiv_old(n,i),mla%la(n),1    ,0,i)
@@ -267,7 +266,7 @@ contains
     end do
 
     ! compute div(v^n)
-    call compute_divu(mla,umac,divu,dx)
+    call compute_divu(mla,umac_old,divu,dx)
 
     ! add div(u^n) to gmres_rhs_p
     do n=1,nlevs
@@ -543,7 +542,6 @@ contains
        call multifab_destroy(dpres(n))
        call multifab_destroy(divu(n))
        do i=1,dm
-          call multifab_destroy(s_fc(n,i))
           call multifab_destroy(mtemp(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(m_a_fluxdiv_old(n,i))

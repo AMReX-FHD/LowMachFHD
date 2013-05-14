@@ -49,6 +49,7 @@ subroutine main_driver()
   type(multifab), allocatable :: umac(:,:)         ! face-based
   type(multifab), allocatable :: sold(:)           ! cell-centered
   type(multifab), allocatable :: snew(:)           ! cell-centered
+  type(multifab), allocatable :: s_fc(:,:)         ! face-centered
   type(multifab), allocatable :: prim(:)           ! cell-centered
   type(multifab), allocatable :: pres(:)           ! cell-centered
   type(multifab), allocatable :: chi(:)            ! cell-centered
@@ -83,7 +84,7 @@ subroutine main_driver()
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs),rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs))
-  allocate(chi_fc(nlevs,dm))
+  allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
   else if (dm .eq. 3) then
@@ -179,6 +180,10 @@ subroutine main_driver()
      call multifab_build(snew(n) ,mla%la(n),nscal,2)
      call multifab_build(prim(n) ,mla%la(n),nscal,2)
 
+     do i=1,dm
+        call multifab_build_edge(s_fc(n,i),mla%la(n),nscal,1,i)
+     end do
+
      ! pressure
      ! need 1 ghost cell since we calculate its gradient
      call multifab_build(pres(n),mla%la(n),1,1)
@@ -251,7 +256,7 @@ subroutine main_driver()
   call fill_stochastic(mla)  
 
   ! need to do an initial projection to get an initial velocity field
-  call initial_projection(mla,mold,umac,sold,prim,chi_fc,rhoc_d_fluxdiv, &
+  call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,rhoc_d_fluxdiv, &
                           rhoc_s_fluxdiv,dx,the_bc_tower)
 
   if (print_int .gt. 0) then
@@ -270,7 +275,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance_timestep(mla,mold,mnew,umac,sold,snew,prim,pres,chi,chi_fc, &
+     call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                            eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
                            dx,the_bc_tower)
 
@@ -330,6 +335,7 @@ subroutine main_driver()
      call multifab_destroy(rhoc_s_fluxdiv(n))
      do i=1,dm
         call multifab_destroy(chi_fc(n,i))
+        call multifab_destroy(s_fc(n,i))
      end do
      if (dm .eq. 2) then
         call multifab_destroy(eta_ed(n,1))
@@ -342,6 +348,5 @@ subroutine main_driver()
 
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
-  deallocate(lo,hi,dx,mold,mnew,sold,snew)
 
 end subroutine main_driver
