@@ -17,10 +17,10 @@ subroutine main_driver()
   use project_onto_eos_module
   use multifab_physbc_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
-                                   project_eos_int
+                                   project_eos_int, visc_coef
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
-                                   bc_lo, bc_hi, fixed_dt, plot_int
+                                   bc_lo, bc_hi, fixed_dt, plot_int, visc_type
   use probin_gmres_module  , only: probin_gmres_init
 
   implicit none
@@ -64,6 +64,11 @@ subroutine main_driver()
   call probin_lowmach_init()
   call probin_common_init()
   call probin_gmres_init()
+
+  ! inputs file error checking
+  if (visc_coef .lt. 0.d0 .and. visc_type .gt. 0) then
+     call bl_error("negative visc_coef requires negative visc_type")
+  end if
 
   ! Initialize random numbers *after* the global (root) seed has been set:
   call SeedParallelRNG(seed)
