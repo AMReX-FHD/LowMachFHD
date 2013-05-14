@@ -13,13 +13,21 @@
   ! fluid properties
   nscal = 2                  ! scalars; nscal=2 means we carry rho and rho*c
   rhobar(1:2) = 0.763944 3.05578  ! rho1bar and rho2bar
-  visc_coef = 1.d0           ! momentum diffusion coefficient 'eta'   
-  diff_coef = 1.d0           ! concentration diffusion coefficient 'chi'
+  visc_coef = -5.0           ! momentum diffusion coefficient 'eta'   
+  diff_coef = 0.086963       ! concentration diffusion coefficient 'chi'
+  mol_mass(1:2) = 1.d0 4.d0  ! molar mass of species
+  kT = 1.d0                  ! temperature
 
+  material_properties(1,1) = 0.d0 ! Diffusion is independent of concentration
+
+  ! Kinematic viscosity is linear in concentration:
+  material_properties(1,2) = 1.d0        !(sqrt(R)-1)
+  material_properties(2,2) = 3.d0        !R - 1
+  
   ! stochastic properties
   variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing
   conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
-  filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
+  filtering_width = 4        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
 /

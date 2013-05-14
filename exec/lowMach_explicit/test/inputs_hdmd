@@ -16,8 +16,8 @@
 
  max_step = 4000
 
- print_int = 200
- plot_int  = -10
+ print_int = 10
+ plot_int  = 100
  chk_int   = -1000
 
  temporal_scheme = 3
@@ -67,7 +67,7 @@
  print_cminmax = T
 
  ! Analysis of projections along or perpendicular to the gradient
- stats_int = 40 ! If positive, how often to dump mean/std statistics
+! stats_int = 40 ! If positive, how often to dump mean/std statistics
  project_dir = -2 ! Direction of gradient (projection axes)
  center_snapshots=T ! Average momenta to cell-centers or shift them?
  analyze_conserved=F ! Use conserved or primitive variables for analysis?

@@ -11,7 +11,8 @@ module mk_stochastic_fluxdiv_module
   use convert_stag_module
   use probin_common_module , only: fixed_dt
   use probin_lowmach_module, only: nscal, rhobar, visc_coef, diff_coef, variance_coef, &
-                                   conc_scal, stoch_stress_form, filtering_width
+                                   conc_scal, stoch_stress_form, filtering_width, mol_mass, &
+                                   kT
 
   implicit none
 
@@ -29,8 +30,6 @@ module mk_stochastic_fluxdiv_module
   type(multifab), allocatable, save :: sflux_fc(:,:)
   
   logical   , save :: warn_bad_c=.false. ! Should we issue warnings about c<0 or c>1
-  real(dp_t), save :: kT=1.d0
-  real(dp_t), save :: mol_mass(2)=1.d0
   
 contains
 

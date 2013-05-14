@@ -13,8 +13,10 @@ module probin_lowmach_module
   integer   , save :: prob_type,max_step,nscal,print_int
   real(dp_t), save :: rhobar(2),visc_coef,diff_coef,smoothing_width
   real(dp_t), save :: variance_coef,conc_scal,c_init(2)
+  real(dp_t), save :: mol_mass(2),kT
   integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
+  real(dp_t), save :: material_properties(2,3)
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -35,6 +37,9 @@ module probin_lowmach_module
   namelist /probin_lowmach/ rhobar            ! rho1bar and rho2bar
   namelist /probin_lowmach/ visc_coef         ! momentum diffusion coefficient 'eta'   
   namelist /probin_lowmach/ diff_coef         ! concentration diffusion coefficient 'chi'
+  namelist /probin_lowmach/ mol_mass          ! molar mass of species
+  namelist /probin_lowmach/ kT                ! temperature
+  namelist /probin_lowmach/ material_properties ! a/b for chi/eta/kappa
 
   ! stochastic properties
   namelist /probin_lowmach/ variance_coef     ! global scaling epsilon for stochastic forcing
@@ -84,6 +89,9 @@ contains
     rhobar(2) = 0.9d0
     visc_coef = 1.d0
     diff_coef = 1.d0
+    mol_mass(1:2) = 1.d0
+    kT = 1.d0
+    material_properties(1:2,1:3) = 0.d0
 
     variance_coef = 1.d0
     conc_scal = 1.d0
@@ -167,6 +175,40 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) diff_coef
+
+       case ('--mol_mass_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) mol_mass(1)
+       case ('--mol_mass_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) mol_mass(2)
+
+       case ('--material_properties_1_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) material_properties(1,1)
+       case ('--material_properties_2_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) material_properties(2,1)
+       case ('--material_properties_1_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) material_properties(1,2)
+       case ('--material_properties_2_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) material_properties(2,2)
+       case ('--material_properties_1_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) material_properties(1,3)
+       case ('--material_properties_2_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) material_properties(2,3)
 
        case ('--variance_coef')
           farg = farg + 1

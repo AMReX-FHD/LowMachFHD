@@ -6,7 +6,7 @@ module init_module
   use define_bc_module
   use convert_stag_module
   use probin_lowmach_module, only: prob_type, rhobar, diff_coef, visc_coef, &
-                                   smoothing_width, c_init
+                                   smoothing_width, c_init, material_properties
   use probin_common_module , only: prob_lo, prob_hi
 
   implicit none
@@ -324,23 +324,66 @@ contains
     real(kind=dp_t), intent(in   ) :: prim(lo(1)-ng_p:,lo(2)-ng_p:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
+    ! local
+    real(kind=dp_t) :: conc
+    integer :: i,j
+
     select case (prob_type)
+    case (2)
+
+       ! simple test function
+       ! chi = chi0*(1 + a*c + b*c^2)
+       do j=lo(2)-ng_c,hi(2)+ng_c
+          do i=lo(1)-ng_c,hi(1)+ng_c
+             conc = max(min(prim(i,j,2), 1.d0), 0.d0)
+             chi(i,j) = abs(diff_coef)*(1.d0 + material_properties(1,1)*conc + &
+                                            material_properties(2,1)*conc**2)
+          end do
+       end do
+
     case default
+
        chi = diff_coef
+
     end select
 
   end subroutine compute_chi_2d
 
   subroutine compute_chi_3d(chi,ng_c,prim,ng_p,lo,hi,dx)
 
+    ! compute chi in valid AND ghost regions
+    ! the ghost cells in prim have already been filled properly
+
     integer        , intent(in   ) :: lo(:), hi(:), ng_c, ng_p
     real(kind=dp_t), intent(inout) ::  chi(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
     real(kind=dp_t), intent(in   ) :: prim(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
+    ! local
+    real(kind=dp_t) :: conc
+    integer :: i,j,k
+
     select case (prob_type)
+    case (2)
+
+       ! simple test function
+       do k=lo(3)-ng_c,hi(3)+ng_c
+          do j=lo(2)-ng_c,hi(2)+ng_c
+             do i=lo(1)-ng_c,hi(1)+ng_c
+                conc = max(min(prim(i,j,k,2), 1.0_dp_t), 0.d0)
+                chi(i,j,k) = abs(diff_coef)*(1.d0 + material_properties(1,1)*conc + &
+                                                    material_properties(2,1)*conc**2)
+             end do
+          end do
+       end do
+
+       ! simple test function
+       ! chi = chi0*(1 + a*c + b*c^2)
+
     case default
+
        chi = diff_coef
+
     end select
 
   end subroutine compute_chi_3d
@@ -403,9 +446,27 @@ contains
     real(kind=dp_t), intent(in   ) :: prim(lo(1)-ng_p:,lo(2)-ng_p:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
+    ! local
+    real(kind=dp_t) :: conc
+    integer :: i,j
+
     select case (prob_type)
+    case (2)
+
+       ! simple test function
+       ! eta = eta0*(1+a*c) / (1+b*c)
+       do j=lo(2)-ng_e,hi(2)+ng_e
+       do i=lo(1)-ng_e,hi(1)+ng_e
+          conc = max(min(prim(i,j,2), 1.d0), 0.d0)
+          eta(i,j) = abs(visc_coef)*(1.d0 + material_properties(1,2)*conc) / &
+                                    (1.d0 + material_properties(2,2)*conc)
+       end do
+       end do
+
     case default
+
        eta = visc_coef
+
     end select
 
   end subroutine compute_eta_2d
@@ -417,9 +478,29 @@ contains
     real(kind=dp_t), intent(in   ) :: prim(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
+    ! local
+    real(kind=dp_t) :: conc
+    integer :: i,j,k
+
     select case (prob_type)
+    case (2)
+
+       ! simple test function
+       do k=lo(3)-ng_e,hi(3)+ng_e
+       do j=lo(2)-ng_e,hi(2)+ng_e
+       do i=lo(1)-ng_e,hi(1)+ng_e
+          conc = max(min(prim(i,j,k,2), 1.d0), 0.d0)
+          eta(i,j,k) = abs(visc_coef)*(1.d0 + material_properties(1,2)*conc) / &
+                                      (1.d0 + material_properties(2,2)*conc)
+
+       end do
+       end do
+       end do
+
     case default
+
        eta = visc_coef
+
     end select
 
   end subroutine compute_eta_3d
