@@ -7,7 +7,7 @@
 
   ! simulation properties
   max_step = 4000            ! maximum number of time steps
-  print_int = 200            ! how often to output EOS drift and sum of conserved quantities
+  print_int = 1            ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1        ! how often to call project_onto_eos
 
   ! fluid properties
@@ -40,7 +40,7 @@
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate
   prob_hi(1:2) = 640.d0 640.d0   ! physical hi coordinate
   n_cells(1:2) = 64 64       ! number of cells in domain
-  max_grid_size(1:2) = 32 32 ! max number of cells in a box
+  max_grid_size(1:2) = 64 64 ! max number of cells in a box
   fixed_dt = 1.45d0          ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
 
@@ -56,7 +56,7 @@
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
-  visc_type = 1
+  visc_type = 2
 
   ! Boundary conditions
   !----------------------
