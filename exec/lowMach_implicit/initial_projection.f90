@@ -63,63 +63,52 @@ contains
        call setval(phi(n),0.d0)
     end do
 
-    ! create average sold to faces
+    ! average sold to faces
     do i=1,nscal
        call average_cc_to_face(nlevs,sold,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
     end do
 
-    ! convert m to u in valid region
+    ! convert m^init to v^init in valid region
     call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
 
-    do n=1,nlevs
-       do i=1,dm
-          ! fill periodic and interior ghost cells
-          call multifab_fill_boundary(umac(n,i))
-          ! set normal velocity on physical domain boundaries to zero
-          call multifab_physbc_domainvel(umac(n,i),1,i,1, &
-                                         the_bc_tower%bc_tower_array(n),dx(n,:))
-          ! set the remaining physical domain boundary ghost cells
-          call multifab_physbc_macvel(umac(n,i),1,i,1, &
-                                      the_bc_tower%bc_tower_array(n),dx(n,:))
-       end do
-    end do
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! build rhs = div(v^init) - S^0
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!
-    ! build rhs = div(u) - S
-    !!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! create D for rhoc
+    ! set rhoc_d_fluxdiv = div(rho*chi grad c)^0
     call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    ! add D to mac_rhs
+    ! set mac_rhs to div(rho*chi grad c)^0
     do n=1,nlevs
        call multifab_plus_plus_c(mac_rhs(n),1,rhoc_d_fluxdiv(n),1,1,0)
     end do
 
-    ! create St for rhoc
+    ! set rhoc_s_fluxdiv = div(Psi^0)
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc, &
                                  chi_fc,dx,1)
 
-    ! add St to mac_rhs
+    ! add div(Psi^0) to mac_rhs
     do n=1,nlevs
        call multifab_plus_plus_c(mac_rhs(n),1,rhoc_s_fluxdiv(n),1,1,0)
     end do
 
-    ! multiply by -S_fac
+    ! multiply mac_rhs by -S_fac
+    ! now mac_rhs = -S^0
     do n=1,nlevs
        call multifab_mult_mult_s_c(mac_rhs(n),1,-S_fac,1,0)
     end do
 
-    ! compute divu
+    ! set divu = div(v^init)
     call compute_divu(mla,umac,divu,dx)
 
-    ! add divu to -S
+    ! add div(v^init) to mac_rhs
+    ! now mac_rhs = div(v^init) - S^0
     do n=1,nlevs
        call multifab_plus_plus_c(mac_rhs(n),1,divu(n),1,1,0)
     end do
 
-    ! compute (1/rho)
+    ! compute (1/rho^0)
     do n=1,nlevs
        do i=1,dm
           call setval(rhoinv_fc(n,i),1.d0,all=.true.)
@@ -127,10 +116,11 @@ contains
        end do
     end do
 
-    ! project to solve for phi - use the 'full' solver
+    ! solve div (1/rho^0) grad phi = div(v^init) - S^0
+    ! solve to completion, i.e., use the 'full' solver
     call macproject(mla,phi,umac,rhoinv_fc,mac_rhs,dx,the_bc_tower,.true.)
 
-    ! umac = umac - (1/rho) grad phi
+    ! v^0 = v^init - (1/rho^0) grad phi
     call subtract_weighted_gradp(mla,umac,rhoinv_fc,phi,dx)
 
     ! fill ghost cells
@@ -138,16 +128,16 @@ contains
        do i=1,dm
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
-          ! set normal velocity on physical domain boundaries to zero
+          ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),1,i,1, &
                                          the_bc_tower%bc_tower_array(n),dx(n,:))
-          ! set the remaining physical domain boundary ghost cells
+          ! set transverse velocity behind physical boundaries
           call multifab_physbc_macvel(umac(n,i),1,i,1, &
                                       the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
     end do
 
-    ! convert u to m in valid plus ghost region
+    ! compute mold by converting v^0 to m^0 in valid plus ghost region
     ! now mold has properly filled ghost cells
     call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
 

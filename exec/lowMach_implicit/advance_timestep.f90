@@ -103,7 +103,7 @@ contains
        end do
     end do
 
-    ! make a temporary copy of umac at t^n
+    ! make a temporary copy of v^n
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(umac_old(n,i),1,umac(n,i),1,1,1)
@@ -113,11 +113,6 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 1 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! average sold = s^n to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,sold,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
-    end do
 
     ! add A^n for s to s_update
     call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx)
@@ -138,6 +133,8 @@ contains
 
     ! compute prim^{*,n+1} from s^{*,n+1} in valid region
     call convert_cons_to_prim(mla,snew,prim,.true.)
+
+    ! fill ghost cells for prim^{*,n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
        do i=1,nscal

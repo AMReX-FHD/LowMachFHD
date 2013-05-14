@@ -173,13 +173,14 @@ subroutine main_driver()
         call multifab_build_edge(mnew(n,i),mla%la(n),1,1,i)
         call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
      end do
-     ! 2 components (rho,rho1)
+     ! conservative variables; 2 components (rho,rho1)
      ! need 2 ghost cells to average to ghost faces used in 
      ! converting m to umac in m ghost cells
      call multifab_build(sold(n) ,mla%la(n),nscal,2)
      call multifab_build(snew(n) ,mla%la(n),nscal,2)
      call multifab_build(prim(n) ,mla%la(n),nscal,2)
 
+     ! s on faces
      do i=1,dm
         call multifab_build_edge(s_fc(n,i),mla%la(n),nscal,1,i)
      end do
@@ -193,10 +194,12 @@ subroutine main_driver()
      call multifab_build(eta(n)  ,mla%la(n),1,1)
      call multifab_build(kappa(n),mla%la(n),1,1)
 
+     ! chi on faces
      do i=1,dm
         call multifab_build_edge(chi_fc(n,i),mla%la(n),1,0,i)
      end do
 
+     ! eta on nodes (2d) or edges (3d)
      if (dm .eq. 2) then
         call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
      else
@@ -223,7 +226,7 @@ subroutine main_driver()
 
   time = 0.d0
 
-  ! initialize sold and mold
+  ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pres,dx,mla,time)
 
   if (print_int .gt. 0) then
@@ -233,6 +236,8 @@ subroutine main_driver()
 
   ! convert cons to prim in valid region
   call convert_cons_to_prim(mla,sold,prim,.true.)
+
+  ! fill ghost cells for prim
   do n=1,nlevs
      call multifab_fill_boundary(prim(n))
      do i=1,nscal
