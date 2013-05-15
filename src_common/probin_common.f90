@@ -15,6 +15,8 @@ module probin_common_module
   integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
+  real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
+  real(dp_t),save :: wallspeed_hi(MAX_SPACEDIM-1,MAX_SPACEDIM)
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -52,6 +54,11 @@ module probin_common_module
   ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
   namelist /probin_common/ bc_lo
   namelist /probin_common/ bc_hi
+
+  ! Each no-slip wall may be moving with a specified tangential velocity 
+  ! along the tangential directions:
+  namelist /probin_common/ wallspeed_lo
+  namelist /probin_common/ wallspeed_hi
   !------------------------------------------------------------- 
 
 contains
@@ -99,6 +106,9 @@ contains
 
     bc_lo(1:MAX_SPACEDIM) = PERIODIC
     bc_hi(1:MAX_SPACEDIM) = PERIODIC
+
+    wallspeed_lo = 0.d0
+    wallspeed_hi = 0.d0
 
     need_inputs = .true.
 
@@ -223,6 +233,56 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) bc_hi(3)
+
+       case ('--wallspeed_lo_yvel_xface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_lo(1,1)
+       case ('--wallspeed_lo_zvel_xface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_lo(2,1)
+       case ('--wallspeed_lo_xvel_yface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_lo(1,2)
+       case ('--wallspeed_lo_zvel_yface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_lo(2,2)
+       case ('--wallspeed_lo_xvel_zface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_lo(1,3)
+       case ('--wallspeed_lo_yvel_zface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_lo(2,3)
+
+       case ('--wallspeed_hi_yvel_xface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_hi(1,1)
+       case ('--wallspeed_hi_zvel_xface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_hi(2,1)
+       case ('--wallspeed_hi_xvel_yface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_hi(1,2)
+       case ('--wallspeed_hi_zvel_yface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_hi(2,2)
+       case ('--wallspeed_hi_xvel_zface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_hi(1,3)
+       case ('--wallspeed_hi_yvel_zface')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) wallspeed_hi(2,3)
 
        case ('--')
           farg = farg + 1

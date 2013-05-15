@@ -5,6 +5,7 @@ module advance_timestep_module
   use define_bc_module
   use convert_stag_module
   use convert_variables_module
+  use convert_to_homogeneous_module
   use mk_advective_fluxdiv_module
   use mk_diffusive_fluxdiv_module
   use mk_stochastic_fluxdiv_module
@@ -295,6 +296,13 @@ contains
        end do
     end do
 
+    ! for inhomogeneous boundary conditions, convert problem to homogeneous by
+    ! subtracting from the RHS the result of the operator applied to a solution
+    ! vector with zeros everywhere in the problem domain, and ghost cells filled to
+    ! respect the boundary conditions
+    call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
+                                kappa,1.d0/fixed_dt,dx,the_bc_tower)
+
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
                eta,eta_ed,kappa,1.d0/fixed_dt)
@@ -526,6 +534,13 @@ contains
           call multifab_mult_mult_s_c(eta_ed(n,3),1,1.d0/2.d0,1,eta_ed(n,3)%ng)
        end if
     end do
+
+    ! for inhomogeneous boundary conditions, convert problem to homogeneous by
+    ! subtracting from the RHS the result of the operator applied to a solution
+    ! vector with zeros everywhere in the problem domain, and ghost cells filled to
+    ! respect the boundary conditions
+    call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
+                                kappa,1.d0/fixed_dt,dx,the_bc_tower)
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
