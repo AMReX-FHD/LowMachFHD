@@ -47,7 +47,7 @@ contains
     real(kind=dp_t) :: umac_norm(mla%nlevel)
     real(kind=dp_t) :: rel_solver_eps
     real(kind=dp_t) :: abs_solver_eps
-    integer         :: d,dm,i,n,nlevs,bc_comp
+    integer         :: dm,i,n,nlevs,bc_comp
     logical         :: full_solve
 
     if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
@@ -81,7 +81,7 @@ contains
     ! multiply alphainv_fc by -1 so we solve L_alpha Phi = mac_rhs
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(alphainv_fc(n,i),1,-1.d0,1,0)
+          call multifab_mult_mult_s_c(alphainv_fc(n,i),1,-1.d0,1,alphainv_fc(n,i)%ng)
        end do
     end do
 
@@ -106,7 +106,7 @@ contains
     ! restore alphainv_fc
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(alphainv_fc(n,i),1,-1.d0,1,0)
+          call multifab_mult_mult_s_c(alphainv_fc(n,i),1,-1.d0,1,alphainv_fc(n,i)%ng)
        end do
     end do
 

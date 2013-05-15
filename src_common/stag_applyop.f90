@@ -38,7 +38,7 @@ contains
     ! multiply alpha_fc by theta
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(alpha_fc(n,i),1,theta,1,0)
+          call multifab_mult_mult_s_c(alpha_fc(n,i),1,theta,1,alpha_fc(n,i)%ng)
        end do
     end do
 
@@ -51,7 +51,7 @@ contains
     ! restore alpha_fc
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(alpha_fc(n,i),1,1.d0/theta,1,0)
+          call multifab_mult_mult_s_c(alpha_fc(n,i),1,1.d0/theta,1,alpha_fc(n,i)%ng)
        end do
     end do
 
