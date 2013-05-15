@@ -364,6 +364,13 @@ contains
 
     end do OuterLoop ! end of outer loop (do iter=1,gmres_max_outer)
  
+    ! AJN - this is here since I notice epsilon roundoff errors building up
+    !       just enough to destroy the asymmetry in time-advancement codes that
+    !       ultimately causes lack of convergence in subsequent gmres calls
+    do i=1,dm
+       call multifab_internal_sync(x_u(1,i))
+    end do
+
     ! destroy multifab
     do n=1,nlevs
        do d=1,dm
