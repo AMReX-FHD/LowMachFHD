@@ -38,6 +38,7 @@
 \def\deltab {\boldsymbol{\delta}}
 \def\Psib   {\boldsymbol{\Psi}}
 \def\Sigmab {\boldsymbol{\Sigma}}
+\def\taub   {\boldsymbol{\tau}}
 
 \def\half   {\frac{1}{2}}
 \def\myhalf {\sfrac{1}{2}}
@@ -72,7 +73,7 @@ The isothermal low Mach number equations of motion are:
 \end{eqnarray}
 subject to
 \begin{equation}
-\nabla\cdot\vb = S \equiv \left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)\nabla\cdot\Fb.
+\nabla\cdot\vb = S \equiv \underbrace{\left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)}_{-(\rho^{-1}\beta)}\nabla\cdot\Fb.
 \end{equation}
 Thus, $S \equiv S(\Fb)$.  The stochastic terms are:
 \begin{eqnarray}
@@ -199,7 +200,7 @@ $\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta 
 \rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\\
 \rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right].
 \end{eqnarray}
-Note that $\Fb^{*,n+1})$ has already been computed during {\bf Step 2}.\\ \\
+Note that $\Fb^{*,n+1}$ has already been computed during {\bf Step 2}.\\ \\
 {\bf Step 4: Crank-Nicolson Velocity Corrector:}\\ \\
 First, define
 \begin{equation}
@@ -217,4 +218,30 @@ solve the following system for $(\deltab\vb,\delta\pi)$:
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{n+1}.
 \end{equation}
+
+\section{Boundary Conditions}
+The types of non-periodic boundary conditions we consider are (i) no-slip impermeable walls,
+(ii) free-slip impermeable walls, and (iii) a reservoir conditions.  We impose boundary
+conditions on the primitive variables, i.e., $\rho,c$, and $\vb$.\\
+
+{\bf No-Slip Impermeable Wall:}  For impermeable walls, there can be no diffusive
+flux, $F_n=0$, and zero advective flux, $\rho v_n = \rho_1 v_n = 0$.  The zero
+diffusive flux implies a homogeneous Neumann condition on $c$, and also $\rho$ since it
+can be derived from $c$ and the EOS.  The zero advective flux implies that $v_n=0$ on the
+boundary.  The no-slip condition implies that $v_{\taub}=0$ on the boundary.\\
+
+{\bf Free-Slip Impermeable Wall:}  This is the same situation as the no-slip impermeable
+wall, except that the tangential velocities is subject to the condition that the
+tangential compoment of the normal viscous stres vanishes.  In other words, for each 
+tangential direction $\tau$,
+\begin{equation}
+\eta\left(\frac{\partial v_n}{\partial\tau} + \frac{\partial v_{\tau}}{\partial n}\right) = 0
+\end{equation}
+Note that for impermeable walls, $v_n=0$ and therefore we simply require $\partial v_{\tau}/\partial n=0$.\\
+
+{\bf Reservoir:} We specify $c$ at the boundary, and use the EOS to obtain $\rho$ at the
+boundary.  The normal velocity must be equal to $-(\rho^{-1}\beta)F_n$ in order for
+the EOS to remain satisfied.  NOTE: For now we will use $v_{\tau}=0$ but must write the
+code to handle the free-slip condition.
+
 \end{document}
