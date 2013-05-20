@@ -483,17 +483,22 @@ The velocity solution is smooth but not divergence free and rhs is controled by 
 
 \section{Multigrid}
 We employ a standard V-cycle multigrid approach (cite Briggs ``Multigrid Tutorial'') for
-both the ``cell-centered'' multigrid solver for the weighted Poisson problem and the
-``staggered'' multigrid solver for the viscous operator.  We refer to the solver in this
+both the ``cell-centered'' multigrid solver for weighted Poisson problems and the
+``staggered'' multigrid solver for viscous solves.  We refer to the solvers in this
 way because the cell-centered solver computes a cell-centered $\Phi$, whereas the
-staggered solver computed staggered velocity componentns.
+staggered solver computes staggered velocity componentns.
 Since our multigrid solves are one component of a preconditioned
-GMRES algorithm, we do not solve the problem to a tolerance-based completion, 
-but rather perform a fixed number of V-cycles per solve.
+GMRES algorithm, we do not solve the problem to tolerance-based completion, 
+but rather perform a fixed number of V-cycles per solve with a fixed number of
+relaxation sweeps at each level of multigrid.
 
 Multigrid consists of 3 major components: (i) choice of relaxation at a particular level,
 (ii) coarsening/restriction operator, and (iii) interpolation/prolongation operator.
-For the bottom (coarsest-level) solve, we perform a specified number of relaxations
+The multigrid coarsening factor is 2, and coarsening continues until the smallest
+grid contains either 2 or an odd number of grid points (with respect to cell-centers)
+on any given spatial direction.  Typically, the fine grids are chosen so they are
+uniform and each have $2^n$ grid cells in each spatial direction.
+For the bottom solve, we perform a specified number of relaxations
 rather than use a more elaborate iterative solver, so that we guarantee that each
 application of the preconditioner retains the same symbol.  We use the standard residual
 formulation, so that on all coarsened levels we are solving for the error in the
@@ -524,11 +529,13 @@ The red dots indicate the location of the $\beta$ and the gradients of velocity.
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-{\bf Relaxation.}  Both the staggered and cell-centered solvers use a Gauss-Seidel
-varient with unity weighting factor, $\omega$.  Th cell-centered solver uses standard red-black
+{\bf Relaxation.}  Both the staggered and cell-centered solvers use multicolored Gauss-Seidel
+smoothing with unity weighting factor, $\omega$.  Th cell-centered solver uses standard red-black
 relaxation, whereas the staggered solver uses a 2$D$-colored relaxation,
 where $D$ is the dimensionality of the problem.  In particular, we order the relaxations
 as follows: red-x, black-x, red-y, black-y, red-z, black-z.
+Refer to Figures \ref{fig:viscOp} and \ref{fig:viscOp_3d} for a physical representation
+of the viscous operator stencils.
 Given a cell-centered operator of the form,
 $\nabla\cdot\beta\nabla\phi \equiv \mathcal{L}\phi = r$,
 or a staggered operator of the form,
@@ -547,6 +554,12 @@ the $2^D$ fine cells.  For the staggered solver, we use a slightly more complica
 \phi_{i,j}^{\rm c} = \frac{1}{8}\left(\phi_{2i-1,2j}^{\rm f}+\phi_{2i-1,2j+1}^{\rm f}+\phi_{2i+1,2j}^{\rm f}+\phi_{2i+1,2j+1}^{\rm f}\right) 
 + \frac{1}{4}\left(\phi_{2i,2j}^{\rm f}+\phi_{2i,2j+1}^{\rm f}\right)
 \end{equation}
+As seen in Figures \ref{fig:viscOp} and \ref{fig:viscOp_3d}, for the staggered
+solver we require $\alpha$ at faces, and $\beta$ at both cell-centers and
+nodes (in 2D) or edges (in 3D).  When creating coefficients at coarser levels,
+we obtain $\alpha$ by averaging the overlaying fine faces, cell-centered $\beta$
+by averaging the overlaying fine cell-centered values, $\beta$ on nodes through
+direct injection, and $\beta$ on edges by averaging the overlaying fine edges.
 
 {\bf Prolongation.}  For the cell-centered solver, prolongation is simply direct
 injection from the coarse cell to the overlaying $2^D$ fine cells.  For the
