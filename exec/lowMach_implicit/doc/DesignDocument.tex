@@ -226,21 +226,22 @@ solve the following system for $(\deltab\vb,\delta\pi)$:
 
 \section{Boundary Conditions}
 The types of non-periodic, ``physical'' boundary conditions we consider are 
-(i) no-slip impermeable walls,
-(ii) free-slip impermeable walls,
-(iii) no-reservoir, and
+(i) no-slip (impermeable) walls,
+(ii) free-slip (impermeable) walls,
+(iii) no-slip reservoir, and
 (iv) free-slip reservoir conditions.
 We impose boundary conditions on the primitive variables and velocities,
-i.e., $\rho,c$, and $\vb$.\\
+i.e., $\rho,c$, and $\vb$ and can convert these back to conservative
+variables afterwards if needed.\\
 
-{\bf No-Slip Wall:}  For impermeable walls, there can be no diffusive
-flux, $F_n=0$, and zero advective flux, $\rho v_n = \rho_1 v_n = 0$.  The zero
-diffusive flux implies a homogeneous Neumann condition on $c$, and also $\rho$ since it
-can be derived from $c$ and the EOS.  The zero advective flux implies that $v_n=0$ on the
+{\bf No-Slip Wall:}  For any impermeable wall, the stochastic and diffusive
+fluxes are both zero, $F_n=0$, as well as the advective flux, $\rho v_n = \rho_1 v_n = 0$.  The zero
+diffusive flux implies a homogeneous Neumann condition on $c$ and also for $\rho$ since $\rho$
+is derived from $c$ and the EOS.  The zero advective flux implies that $v_n=0$ on the
 boundary.  The no-slip condition implies that each $v_{\tau}=0$ on the boundary.\\
 
-{\bf Free-Slip Impermeable Wall:}  This is the same situation as the no-slip impermeable
-wall, except that the tangential velocities is subject to the condition that the
+{\bf Free-Slip Wall:}  This is the same situation as the no-slip impermeable
+wall, except that the tangential velocities are subject to the condition that the
 tangential compoment of the normal viscous stres vanishes.  In other words, for each 
 tangential direction $\tau$,
 \begin{equation}
@@ -256,7 +257,7 @@ boundary.\\
 
 {\bf Free-Slip Reservoir:} This is the same situation as the no-slip reservoir, except
 that each $v_{\tau}$ is subject to (\ref{eq:free slip}).  Since in general
-the normal velocity is not constant, we will have an inhomogeneous neumann condition
+the normal velocity is not constant, we will have an inhomogeneous Neumann condition
 on each $v_{\tau}$.
 
 \subsection{Implementation}
@@ -270,7 +271,8 @@ a first-order extrapolation.  For Dirichlet conditions, we prescribe $c$ and use
 the EOS to obtain $\rho$.  Note that the transport coefficients, $(\eta,\kappa,\chi)$,
 are functions of the primitive variables, so when we compute them, we simply loop
 over valid {\it and} ghost cells, and do not require special routines to fill
-the ghost cells aftewards.
+the ghost cells aftewards.  We fill ghost cells for primitive variables using the
+subroutine, {\tt multifab\_physbc}.
 
 \subsubsection{Velocities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -297,25 +299,27 @@ The red dots indicate the location of the $\beta$ and the gradients of velocity.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 It is helpful to first consider the stencils for the viscous operators, as illustrated
 in Figures \ref{fig:viscOp} and \ref{fig:viscOp_3d} for two and three dimensions.
-There are a few key design principles to keep in mind:
+There are a few key design principles to keep in mind:\\
 \begin{itemize}
-\item The evaluation of the viscous operator for faces {\it on} the boundary must
+\item The viscous operator for faces {\it on} the boundary must
 evaluate to zero, so it does not matter what value is stored for the normal component
-of velocity in the ghost face outside of the valid region, unless you are concerned 
-about possible intermediate {\tt NaN} states that will later be overwritten.
+of velocity in the ghost face immediately outside of the valid region, unless you are concerned 
+about possible intermediate {\tt NaN} states that will later be overwritten.\\
 \item The value of the normal velocity {\it on} the boundary {\it does} matter, since it
-enters the stencil for the first interior normal velocity face.
+enters the stencil for the first interior normal velocity face and stencils for the
+transverse velocity near the boundary.\\
 \item The value of transverse velocities in ghost faces behind physical boundaries
 {\it does} matter, so we make sure to fill them using the appropriate physical 
-boundary condition.
+boundary condition.\\
 \item When setting normal velocities on physical boundaries, we don't have to worry
 about corner ghost faces.  Those only matter if we are periodic in the transverse
-direction, in which case the call to {\tt multifab\_physbc} should take care of them.
+direction, in which case the call to {\tt multifab\_fill\_boundary} should take care of
+these periodic values.\\
 \item When setting transverse velocity ghost faces behind physical boundaries, we do
 not have to worry about ghost faces that are outside the valid region with respect
 to the problem domain in the transverse direction.  Those only matter if we are 
-periodic in the transverse direction, in which case the call to {\tt multifab\_physbc} 
-should take care of them.
+periodic in the transverse direction, in which case the call to {\tt multifab\_fill\_boundary}
+should take care of these periodic values.\\
 \end{itemize}
 
 We have two subroutines that deal with velocity boundary conditions.  Each of these
@@ -326,20 +330,45 @@ condition used to determine the ghost face values for transverse velocity.
 If no multifab is passed in, it is assumed that the boundary conditions
 are homogeneous.  The subroutine {\tt multifab\_physbc\_domainvel} sets the 
 value for faces on the boundary.  The subroutine {\tt multifab\_physbc\_macvel}
-sets the transverse velocity ghost faces behind the physical boundary.
+sets the transverse velocity ghost faces behind the physical boundary.\\
 
 For {\tt multifab\_physbc\_domainvel}, the optional multifab that gets passed in
 must be face-centered, and requires no ghost cells.  The boundary face itself
-stores the Dirichlet value.
+stores the Dirichlet value.\\
 
 For {\tt multifab\_physbc\_macvel}, the optional multifab that gets passed in
 must be face-centered, and in three dimensions each velocity component needs
-a separate face-centered multifab (or a multifab with two components) to handle
-boundary conditions at each transverse direction.  These multifabs do not requires
-ghost cells either.  We use the interior cell up against the boundary to represent
+a separate face-centered multifab (or equivalently a multifab with two components) 
+to handle boundary conditions at each transverse domain boundary.  
+These multifabs do not require ghost cells either.
+We use the interior cell against the boundary to represent
 the Dirichlet value, and then depending on the boundary conditions, the appropriate
 stencil is used to fill in the ghost value.  You could in principle use nodal
 (in 2D) or edge-based (in 3D) multifabs here, but hopefully the face-centered 
-version will be less confusing.
+version will be less confusing.\\
+
+We need to write a helper routine to compute the Neumann condition in the case of
+free-slip walls or free-slip reservoir.  This only matters if the normal velocity
+changes as a function of the transverse velocity of interest.  If not, a 
+homogeneous Neumann condition is correct.\\
+
+The stencil for transverse velocities is a two-point stencil involving the
+interior value and the Dirichlet or Neumann boundary value, depending on the
+boundary condition type.
+
+\subsection{GMRES Solver}
+The GMRES solver assumes homogeneous boundary conditions,
+so we use a residual correction technique to convert the problem to one
+with homogeneous boundary conditions of the same type (Neumann or Dirichlet, based on the
+choice of {\tt SLIP} or {\tt NO\_SLIP}):
+\begin{equation}
+\Ab_H\xb = \bb - \Ab\xb_H.
+\end{equation}
+Here, $\Ab_H$ is the same operator as $\Ab$, but with homogeneous boundary conditions
+of the same type.
+The vector $\xb_H$ is a vector with zeros in all valid cells (but possibly
+non-zero values in the ghost cells, depending on the boundary conditions).
+By solving this system for $\xb$, we arrive at the same answer as solving the
+inhomogeneous problem, $\Ab\xb=\bb$.
 
 \end{document}
