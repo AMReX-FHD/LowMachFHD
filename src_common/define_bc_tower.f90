@@ -202,7 +202,7 @@ contains
     do d = 1, dm
     do lohi = 1, 2
 
-       if (phys_bc_level(igrid,d,lohi) == SLIP) then
+       if (phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
 
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet stress condition
@@ -211,7 +211,7 @@ contains
           adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP  ! pressure
           adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP  ! cell-centered prims and coeffs
 
-       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP) then
+       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL) then
 
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet velocity condition
@@ -220,7 +220,7 @@ contains
           adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP   ! pressure
           adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP   ! cell-centered prims and coeffs
 
-       else if (phys_bc_level(igrid,d,lohi) == INLET) then
+       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR) then
 
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet velocity condition
@@ -267,11 +267,11 @@ contains
     do d = 1, dm
     do lohi = 1, 2
 
-       if (phys_bc_level(igrid,d,lohi) == SLIP) then
+       if (phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
 
           ell_bc_level(igrid,d,lohi,press_comp) = BC_NEU ! pressure
 
-       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP) then
+       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL) then
 
           ell_bc_level(igrid,d,lohi,press_comp) = BC_NEU ! pressure
 
