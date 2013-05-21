@@ -329,13 +329,17 @@ value for faces on the boundary.  The subroutine {\tt multifab\_physbc\_macvel}
 sets the transverse velocity ghost faces behind the physical boundary.
 
 For {\tt multifab\_physbc\_domainvel}, the optional multifab that gets passed in
-must be face-centered, and requires no ghost cells.
+must be face-centered, and requires no ghost cells.  The boundary face itself
+stores the Dirichlet value.
 
 For {\tt multifab\_physbc\_macvel}, the optional multifab that gets passed in
 must be face-centered, and in three dimensions each velocity component needs
 a separate face-centered multifab (or a multifab with two components) to handle
 boundary conditions at each transverse direction.  These multifabs do not requires
-ghost cells either.  You could in principle use edge-based multifabs here, but
-hopefully the face-centered version will be less confusing.
+ghost cells either.  We use the interior cell up against the boundary to represent
+the Dirichlet value, and then depending on the boundary conditions, the appropriate
+stencil is used to fill in the ghost value.  You could in principle use nodal
+(in 2D) or edge-based (in 3D) multifabs here, but hopefully the face-centered 
+version will be less confusing.
 
 \end{document}

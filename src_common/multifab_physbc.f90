@@ -76,6 +76,8 @@ contains
        do j=lo(2)-ng,hi(2)+ng
           s(lo(1)-ng:lo(1)-1,j) = s(lo(1),j)
        end do
+    else if (bc(1,1) .eq. EXT_DIR) then
+       call bl_error('physbc_2d: need to write Dirichlet primitive condition for bc(1,1)')
     else if (bc(1,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -92,6 +94,8 @@ contains
        do j=lo(2)-ng,hi(2)+ng
           s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j)
        end do
+    else if (bc(1,2) .eq. EXT_DIR) then
+       call bl_error('physbc_2d: need to write Dirichlet primitive condition for bc(1,2)')
     else if (bc(1,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -108,6 +112,8 @@ contains
        do i=lo(1)-ng,hi(1)+ng
           s(i,lo(2)-ng:lo(2)-1) = s(i,lo(2))
        end do
+    else if (bc(2,1) .eq. EXT_DIR) then
+       call bl_error('physbc_2d: need to write Dirichlet primitive condition for bc(2,1)')
     else if (bc(2,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -124,6 +130,8 @@ contains
        do i=lo(1)-ng,hi(1)+ng
           s(i,hi(2)+1:hi(2)+ng) = s(i,hi(2))
        end do
+    else if (bc(2,2) .eq. EXT_DIR) then
+       call bl_error('physbc_2d: need to write Dirichlet primitive condition for bc(2,2)')
     else if (bc(2,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -158,6 +166,8 @@ contains
              s(lo(1)-ng:lo(1)-1,j,k) = s(lo(1),j,k)
           end do
        end do
+    else if (bc(1,1) .eq. EXT_DIR) then
+       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(1,1)')
     else if (bc(1,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -176,6 +186,8 @@ contains
              s(hi(1)+1:hi(1)+ng,j,k) = s(hi(1),j,k)
           end do
        end do
+    else if (bc(1,2) .eq. EXT_DIR) then
+       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(1,2)')
     else if (bc(1,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -194,6 +206,8 @@ contains
              s(i,lo(2)-ng:lo(2)-1,k) = s(i,lo(2),k)
           end do
        end do
+    else if (bc(2,1) .eq. EXT_DIR) then
+       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(2,1)')
     else if (bc(2,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -212,6 +226,8 @@ contains
              s(i,hi(2)+1:hi(2)+ng,k) = s(i,hi(2),k)
           end do
        end do
+    else if (bc(2,2) .eq. EXT_DIR) then
+       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(2,2)')
     else if (bc(2,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -230,6 +246,8 @@ contains
              s(i,j,lo(3)-ng:lo(3)-1) = s(i,j,lo(3))
           end do
        end do
+    else if (bc(3,1) .eq. EXT_DIR) then
+       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(3,1)')
     else if (bc(3,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -248,6 +266,8 @@ contains
              s(i,j,hi(3)+1:hi(3)+ng) = s(i,j,hi(3))
           end do
        end do
+    else if (bc(3,2) .eq. EXT_DIR) then
+       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(3,2)')
     else if (bc(3,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
