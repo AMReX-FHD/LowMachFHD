@@ -16,23 +16,19 @@ module multifab_physbc_module
 
 contains
 
-  subroutine multifab_physbc(s,scomp,bccomp,num_comp,the_bc_level)
+  subroutine multifab_physbc(s,start_scomp,start_bccomp,num_comp,the_bc_level)
 
     ! this fills ghost cells for rho and pressure/phi.
     ! as well as for transport coefficients (alpha/beta/gamma)
 
     type(multifab) , intent(inout) :: s
-    integer        , intent(in   ) :: scomp,bccomp,num_comp
+    integer        , intent(in   ) :: start_scomp,start_bccomp,num_comp
     type(bc_level) , intent(in   ) :: the_bc_level
    
     ! Local
     integer                  :: lo(get_dim(s)),hi(get_dim(s))
-    integer                  :: i,ng,dm
+    integer                  :: i,ng,dm,scomp,bccomp
     real(kind=dp_t), pointer :: sp(:,:,:,:)
-
-    if (num_comp .ne. 1) then
-       call bl_error('multifab_physbc expects num_comp = 1')
-    end if
 
     ng = nghost(s)
     dm = get_dim(s)
@@ -41,14 +37,17 @@ contains
        sp => dataptr(s,i)
        lo = lwb(get_box(s,i))
        hi = upb(get_box(s,i))
-       select case (dm)
-       case (2)
-          call physbc_2d(sp(:,:,1,scomp), lo, hi, ng, &
-                         the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp)
-       case (3)
-          call physbc_3d(sp(:,:,:,scomp), lo, hi, ng, &
-                         the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp)
-       end select
+       do scomp=start_scomp,start_scomp+num_comp-1
+          bccomp = start_bccomp + (scomp-start_scomp)
+          select case (dm)
+          case (2)
+             call physbc_2d(sp(:,:,1,scomp), lo, hi, ng, &
+                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp)
+          case (3)
+             call physbc_3d(sp(:,:,:,scomp), lo, hi, ng, &
+                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp)
+          end select
+       end do
     end do
  
   end subroutine multifab_physbc
@@ -63,8 +62,8 @@ contains
     ! Local variables
     integer :: i,j
 
-    if (bccomp .ne. 3 .and. bccomp .ne. 4) then
-       call bl_error('physbc_2d requires bccomp = 3 (pressure)')
+    if (bccomp .ne. 3 .and. bccomp .ne. 4 .and. bccomp .ne. 5) then
+       call bl_error('physbc_2d requires bccomp = 3, 4, or 5')
     end if
 
 !!!!!!!!!!!!!!!!!!
@@ -151,8 +150,8 @@ contains
     ! Local variables
     integer :: i,j,k
 
-    if (bccomp .ne. 4 .and. bccomp .ne. 5) then
-       call bl_error('physbc_3d requires bccomp = 4 (pressure)')
+    if (bccomp .ne. 4 .and. bccomp .ne. 5 .and. bccomp .ne. 6) then
+       call bl_error('physbc_3d requires bccomp = 4, 5, or 6')
     end if
 
 !!!!!!!!!!!!!!!!!!

@@ -114,18 +114,19 @@ contains
     call phys_bc_level_build(bct%bc_tower_array(n)%phys_bc_level_array,la, &
                              bct%domain_bc,default_value)
 
-    ! Here we allocate dm components for x_u,
-    !                  1 component for x_p,
+    ! Here we allocate dm components for x_u
+    !                  1 component for x_p
     !                  1 component for coefficients (alpha, beta, gamma, rho, rho1)
     allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,dm+2))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
 
-    ! Here we allocate dm components for x_u,
-    !                  1 component for x_p,
-    !                  1 component for coefficients (alpha, beta, gamma, rho, rho1)
-    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,dm+2))
+    ! This is only used for the cell-centered Poisson solver
+    ! We need to keep x_u so indexing is consistent for x_p
+    !                  dm components for x_u
+    !                  1 component for x_p
+    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,dm+1))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -258,17 +259,16 @@ contains
     do d = 1, dm
     do lohi = 1, 2
 
-       if (phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
+       if (phys_bc_level(igrid,d,lohi) == SLIP_WALL .or. &
+           phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL) then
 
-          ell_bc_level(igrid,d,lohi,press_comp) = BC_NEU ! pressure
-
-       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL) then
-
-          ell_bc_level(igrid,d,lohi,press_comp) = BC_NEU ! pressure
+          ! pressure is homogeneous neumann
+          ell_bc_level(igrid,d,lohi,press_comp) = BC_NEU
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
-          ell_bc_level(igrid,d,lohi,press_comp) = BC_PER ! pressure
+          ! pressure is periodic
+          ell_bc_level(igrid,d,lohi,press_comp) = BC_PER
 
        else if (phys_bc_level(igrid,d,lohi) == INTERIOR) then
 

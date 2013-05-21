@@ -138,9 +138,7 @@ contains
     ! fill ghost cells for prim^{*,n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       do i=1,nscal
-          call multifab_physbc(prim(n),i,dm+2,1,the_bc_tower%bc_tower_array(n))
-       end do
+       call multifab_physbc(prim(n),1,dm+2,2,the_bc_tower%bc_tower_array(n))
     end do
 
     ! convert prim^{*,n+1} to s^{*,n+1} in valid and ghost region
@@ -369,9 +367,7 @@ contains
     ! fill ghost cells for prim^{n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       do i=1,nscal
-          call multifab_physbc(prim(n),i,dm+2,1,the_bc_tower%bc_tower_array(n))
-       end do
+       call multifab_physbc(prim(n),1,dm+2,2,the_bc_tower%bc_tower_array(n))
     end do
 
     ! convert prim^{n+1} to s^{n+1} in valid and ghost region

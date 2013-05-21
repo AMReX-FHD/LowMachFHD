@@ -114,18 +114,20 @@ contains
     call phys_bc_level_build(bct%bc_tower_array(n)%phys_bc_level_array,la, &
                              bct%domain_bc,default_value)
 
-    ! Here we allocate dm components for x_u,
-    !                  1 component for x_p,
-    !                  1 component for coefficients (alpha, beta, gamma, rho, rho1)
-    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,dm+2))
+    ! Here we allocate dm components for x_u
+    !                  1 component for x_p
+    !                  1 component for rho
+    !                  1 component for c
+    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,dm+3))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
 
-    ! Here we allocate dm components for x_u,
-    !                  1 component for x_p,
-    !                  1 component for coefficients (alpha, beta, gamma, rho, rho1)
-    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,dm+2))
+    ! This is only used for the cell-centered Poisson solver
+    ! We need to keep x_u so indexing is consistent for x_p
+    !                  dm components for x_u
+    !                  1 component for x_p
+    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,dm+1))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -212,7 +214,8 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! transverse velocity
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP   ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP   ! primitive variables
+          adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP   ! rho
+          adv_bc_level(igrid,d,lohi,dm+3) = FOEXTRAP   ! c
 
        else if (phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
 
@@ -223,7 +226,8 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_TRACT ! transverse velocity
           adv_bc_level(igrid,d,lohi,d   ) = DIR_VEL   ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP  ! primitive variables
+          adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP  ! rho
+          adv_bc_level(igrid,d,lohi,dm+3) = FOEXTRAP  ! c
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR) then
 
@@ -234,7 +238,8 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! transverse velocity
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP   ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = EXT_DIR    ! primitive variables
+          adv_bc_level(igrid,d,lohi,dm+2) = EXT_DIR    ! rho
+          adv_bc_level(igrid,d,lohi,dm+3) = EXT_DIR    ! c
 
        else if (phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
 
@@ -245,7 +250,8 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_TRACT  ! transverse velocity
           adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP   ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = EXT_DIR    ! primitive variables
+          adv_bc_level(igrid,d,lohi,dm+2) = EXT_DIR    ! rho
+          adv_bc_level(igrid,d,lohi,dm+3) = EXT_DIR    ! c
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC .or. &
                 phys_bc_level(igrid,d,lohi) == INTERIOR ) then
@@ -273,13 +279,10 @@ contains
 
     integer :: dm
     integer :: igrid,d,lohi
-    integer :: press_comp
 
     ell_bc_level = default_value
  
     dm = size(ell_bc_level,dim=2)
-
-    press_comp = dm+1
 
     do igrid = 0, size(ell_bc_level,dim=1)-1
     do d = 1, dm
@@ -291,11 +294,12 @@ contains
            phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
 
           ! pressure is homogeneous neumann
-          ell_bc_level(igrid,d,lohi,press_comp) = BC_NEU
+          ell_bc_level(igrid,d,lohi,dm+1) = BC_NEU
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
-          ell_bc_level(igrid,d,lohi,press_comp) = BC_PER ! pressure
+          ! pressure is periodic
+          ell_bc_level(igrid,d,lohi,dm+1) = BC_PER
 
        else if (phys_bc_level(igrid,d,lohi) == INTERIOR) then
 
