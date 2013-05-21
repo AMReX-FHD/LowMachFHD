@@ -12,11 +12,6 @@ subroutine main_driver()
   use ml_layout_module
   use define_bc_module
   use stag_mg_solver_module
-  use probin_module       , only: probin_init, test_type, theta_fac
-  use probin_common_module, only: probin_common_init, n_cells, dim_in, fixed_dt, &
-                                  max_grid_size, plot_int, seed, &
-                                  prob_lo, prob_hi, bc_lo, bc_hi
-  use probin_gmres_module , only: probin_gmres_init
   use macproject_module
   use write_plotfile_module
   use convert_stag_module
@@ -25,11 +20,17 @@ subroutine main_driver()
   use norm_inner_product_module
   use init_module
   use multifab_physbc_module
+  use set_inhomogeneous_vel_bcs_module
   use convert_to_homogeneous_module
   use ParallelRNGs
   use bc_module
   use stag_applyop_module
   use gmres_module
+  use probin_module       , only: probin_init, test_type, theta_fac
+  use probin_common_module, only: probin_common_init, n_cells, dim_in, fixed_dt, &
+                                  max_grid_size, plot_int, seed, &
+                                  prob_lo, prob_hi, bc_lo, bc_hi
+  use probin_gmres_module , only: probin_gmres_init
 
   implicit none
 
@@ -232,14 +233,14 @@ subroutine main_driver()
      end if
   end do
 
+  ! set inhomogeneous bc condition
+  call set_inhomogeneous_vel_bcs(mla,vel_bc,dx,the_bc_tower%bc_tower_array)
+
   ! provide an initial value (or guess) for umac and pres 
   call init_solution(mla,umac_exact,pres_exact,dx,time,the_bc_tower%bc_tower_array,vel_bc)
   
   ! initialize alpha, beta, and gamma
   call init_mat(mla,alpha,beta,gamma,dx,time,the_bc_tower%bc_tower_array)
-
-  ! set inhomogeneous bc condition
-  ! call set_inhomogeneous_bcs()
 
   ! compute alpha_fc and beta_ed
   call average_cc_to_face(nlevs,alpha,alpha_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
