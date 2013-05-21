@@ -153,7 +153,7 @@ contains
 
     do i=1,dm
        ! set Lphi on physical domain boundaries to zero
-       call multifab_physbc_domainvel(Lphi_fc(i),i,the_bc_level,dx,.false.)
+       call multifab_physbc_domainvel(Lphi_fc(i),i,the_bc_level,dx)
     end do
 
   end subroutine stag_applyop_level

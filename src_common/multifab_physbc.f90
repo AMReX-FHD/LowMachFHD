@@ -275,18 +275,24 @@ contains
 
   end subroutine physbc_3d
 
-  subroutine multifab_physbc_domainvel(s,bccomp,the_bc_level,dx,use_inhomogeneous)
+  subroutine multifab_physbc_domainvel(s,bccomp,the_bc_level,dx,vel_bc)
 
     type(multifab) , intent(inout) :: s
     integer        , intent(in   ) :: bccomp
     type(bc_level) , intent(in   ) :: the_bc_level
     real(kind=dp_t), intent(in   ) :: dx(:)
-    logical        , intent(in   ) :: use_inhomogeneous
+    type(multifab) , intent(in   ), optional :: vel_bc(:)
 
     ! Local
     integer                  :: lo(get_dim(s)),hi(get_dim(s))
-    integer                  :: i,ng_s,dm
-    real(kind=dp_t), pointer :: sp(:,:,:,:)
+    integer                  :: i,ng_s,ng_v,dm
+    real(kind=dp_t), pointer :: sp(:,:,:,:), vp(:,:,:,:)
+    logical                  :: use_inhomogeneous
+
+    use_inhomogeneous = .false.
+    if (present(vel_bc)) then
+       use_inhomogeneous = .true.
+    end if
 
     if (bccomp .gt. get_dim(s)) then
        call bl_error('multifab_physbc_domainvel expects bccomp <= dm')
@@ -302,8 +308,10 @@ contains
        select case (dm)
        case (2)
           if (use_inhomogeneous) then
+             ng_v = vel_bc(bccomp)%ng
+             vp => dataptr(vel_bc(bccomp),i)
              call physbc_domainvel_inhomogeneous_2d(sp(:,:,1,1), ng_s, &
-                                                    lo, hi, &
+                                                    vp(:,:,1,bccomp), ng_v, lo, hi, &
                                                     the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
                                                     bccomp,dx)
           else
@@ -313,7 +321,10 @@ contains
           end if
        case (3)
           if (use_inhomogeneous) then
-             call physbc_domainvel_inhomogeneous_3d(sp(:,:,:,1), ng_s, lo, hi, &
+             ng_v = vel_bc(bccomp)%ng
+             vp => dataptr(vel_bc(bccomp),i)
+             call physbc_domainvel_inhomogeneous_3d(sp(:,:,:,1), ng_s, &
+                                                    vp(:,:,:,bccomp), ng_v, lo, hi, &
                                                     the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
                                                     bccomp,dx)
           else
@@ -329,7 +340,7 @@ contains
   subroutine physbc_domainvel_2d(s,ng_s,lo,hi,bc,bccomp,dx)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_s
-    real(kind=dp_t), intent(inout) :: s(lo(1)-ng_s:,lo(2)-ng_s:)
+    real(kind=dp_t), intent(inout) ::    s(lo(1)-ng_s:,lo(2)-ng_s:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
@@ -408,10 +419,11 @@ contains
 
   end subroutine physbc_domainvel_2d
 
-  subroutine physbc_domainvel_inhomogeneous_2d(s,ng_s,lo,hi,bc,bccomp,dx)
+  subroutine physbc_domainvel_inhomogeneous_2d(s,ng_s,vel_bc,ng_v,lo,hi,bc,bccomp,dx)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s
-    real(kind=dp_t), intent(inout) ::            s(lo(1)-ng_s:,lo(2)-ng_s:)
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_v
+    real(kind=dp_t), intent(inout) ::      s(lo(1)-ng_s:,lo(2)-ng_s:)
+    real(kind=dp_t), intent(inout) :: vel_bc(lo(1)-ng_v:,lo(2)-ng_v:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
@@ -513,7 +525,7 @@ contains
   subroutine physbc_domainvel_3d(s,ng_s,lo,hi,bc,bccomp,dx)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_s
-    real(kind=dp_t), intent(inout) :: s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    real(kind=dp_t), intent(inout) ::    s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
@@ -626,10 +638,11 @@ contains
 
  end subroutine physbc_domainvel_3d
 
-  subroutine physbc_domainvel_inhomogeneous_3d(s,ng_s,lo,hi,bc,bccomp,dx)
+  subroutine physbc_domainvel_inhomogeneous_3d(s,ng_s,vel_bc,ng_v,lo,hi,bc,bccomp,dx)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s
-    real(kind=dp_t), intent(inout) :: s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_v
+    real(kind=dp_t), intent(inout) ::      s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    real(kind=dp_t), intent(in   ) :: vel_bc(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
@@ -788,18 +801,24 @@ contains
 
  end subroutine physbc_domainvel_inhomogeneous_3d
 
-  subroutine multifab_physbc_macvel(s,bccomp,the_bc_level,dx,use_inhomogeneous)
+  subroutine multifab_physbc_macvel(s,bccomp,the_bc_level,dx,vel_bc)
 
     type(multifab) , intent(inout) :: s
     integer        , intent(in   ) :: bccomp
     type(bc_level) , intent(in   ) :: the_bc_level
     real(kind=dp_t), intent(in   ) :: dx(:)
-    logical        , intent(in   ) :: use_inhomogeneous
+    type(multifab) , intent(in   ), optional :: vel_bc(:)
 
     ! Local
     integer                  :: lo(get_dim(s)),hi(get_dim(s))
-    integer                  :: i,ng_s,dm
-    real(kind=dp_t), pointer :: sp(:,:,:,:)
+    integer                  :: i,ng_s,ng_v,dm
+    real(kind=dp_t), pointer :: sp(:,:,:,:), vp(:,:,:,:)
+    logical                  :: use_inhomogeneous
+
+    use_inhomogeneous = .false.
+    if (present(vel_bc)) then
+       use_inhomogeneous = .true.
+    end if
 
     if (bccomp .gt. get_dim(s)) then
        call bl_error('multifab_physbc_macvel expects bccomp <= dm')
@@ -815,7 +834,10 @@ contains
        select case (dm)
        case (2)
           if (use_inhomogeneous) then
-             call physbc_macvel_inhomogeneous_2d(sp(:,:,1,1), ng_s, lo, hi, &
+             ng_v = vel_bc(bccomp)%ng
+             vp => dataptr(vel_bc(bccomp),i)
+             call physbc_macvel_inhomogeneous_2d(sp(:,:,1,1), ng_s, &
+                                                 vp(:,:,1,:), ng_v, lo, hi, &
                                                  the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
                                                  bccomp,dx)
           else
@@ -825,7 +847,10 @@ contains
           end if
        case (3)
           if (use_inhomogeneous) then
-             call physbc_macvel_inhomogeneous_3d(sp(:,:,:,1), ng_s, lo, hi, &
+             ng_v = vel_bc(bccomp)%ng
+             vp => dataptr(vel_bc(bccomp),i)
+             call physbc_macvel_inhomogeneous_3d(sp(:,:,:,1), ng_s, &
+                                                 vp(:,:,:,:), ng_v, lo, hi, &
                                                  the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
                                                  bccomp,dx)
           else
@@ -991,10 +1016,11 @@ contains
 
   end subroutine physbc_macvel_2d
 
-  subroutine physbc_macvel_inhomogeneous_2d(s,ng_s,lo,hi,bc,bccomp,dx)
+  subroutine physbc_macvel_inhomogeneous_2d(s,ng_s,vel_bc,ng_v,lo,hi,bc,bccomp,dx)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s
-    real(kind=dp_t), intent(inout) ::             s(lo(1)-ng_s:,lo(2)-ng_s:)
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_v
+    real(kind=dp_t), intent(inout) ::      s(lo(1)-ng_s:,lo(2)-ng_s:)
+    real(kind=dp_t), intent(in   ) :: vel_bc(lo(1)-ng_v:,lo(2)-ng_v:,:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
@@ -1504,10 +1530,11 @@ contains
 
   end subroutine physbc_macvel_3d
 
-  subroutine physbc_macvel_inhomogeneous_3d(s,ng_s,lo,hi,bc,bccomp,dx)
+  subroutine physbc_macvel_inhomogeneous_3d(s,ng_s,vel_bc,ng_v,lo,hi,bc,bccomp,dx)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s
-    real(kind=dp_t), intent(inout) :: s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_v
+    real(kind=dp_t), intent(inout) ::      s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    real(kind=dp_t), intent(in   ) :: vel_bc(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:,:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)

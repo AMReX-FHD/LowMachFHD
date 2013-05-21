@@ -47,6 +47,7 @@ subroutine main_driver()
   type(multifab), allocatable :: mold(:,:)         ! face-based
   type(multifab), allocatable :: mnew(:,:)         ! face-based
   type(multifab), allocatable :: umac(:,:)         ! face-based
+  type(multifab), allocatable :: vel_bc(:,:)
   type(multifab), allocatable :: sold(:)           ! cell-centered
   type(multifab), allocatable :: snew(:)           ! cell-centered
   type(multifab), allocatable :: s_fc(:,:)         ! face-centered
@@ -86,7 +87,7 @@ subroutine main_driver()
 
   ! now that we have nlevs and dm, we can allocate these
   allocate(dx(nlevs,dm))
-  allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm))
+  allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm),vel_bc(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs),rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs))
   allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm))
@@ -174,9 +175,10 @@ subroutine main_driver()
   do n=1,nlevs
      do i=1,dm
         ! edge-momentum and velocity; 1 ghost cell
-        call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
-        call multifab_build_edge(mnew(n,i),mla%la(n),1,1,i)
-        call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
+        call multifab_build_edge(mold(n,i),mla%la(n)  ,1 ,1,i)
+        call multifab_build_edge(mnew(n,i),mla%la(n)  ,1 ,1,i)
+        call multifab_build_edge(umac(n,i),mla%la(n)  ,1 ,1,i)
+        call multifab_build_edge(vel_bc(n,i),mla%la(n),dm,0,i)
      end do
      ! conservative variables; 2 components (rho,rho1)
      ! need 2 ghost cells to average to ghost faces used in 
@@ -234,6 +236,9 @@ subroutine main_driver()
   ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pres,dx,mla,time)
 
+  ! set inhomogeneous bc condition
+  ! call set_inhomogeneous_bcs()
+
   if (print_int .gt. 0) then
      call eos_check(mla,sold)
      call sum_mass_momentum(mla,sold,mold)
@@ -285,7 +290,7 @@ subroutine main_driver()
      ! advance the solution by dt
      call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                            eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
-                           dx,the_bc_tower)
+                           dx,the_bc_tower,vel_bc)
 
      ! increment simulation time
      time = time + fixed_dt
@@ -331,6 +336,7 @@ subroutine main_driver()
         call multifab_destroy(mold(n,i))
         call multifab_destroy(mnew(n,i))
         call multifab_destroy(umac(n,i))
+        call multifab_destroy(vel_bc(n,i))
      end do
      call multifab_destroy(sold(n))
      call multifab_destroy(snew(n))

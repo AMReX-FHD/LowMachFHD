@@ -26,7 +26,7 @@ contains
 
   subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
-                              dx,the_bc_tower)
+                              dx,the_bc_tower,vel_bc)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -46,6 +46,7 @@ contains
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    type(multifab) , intent(in   ) :: vel_bc(:,:)
 
     ! local
     type(multifab) ::    s_update(mla%nlevel)
@@ -299,7 +300,7 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/fixed_dt,dx,the_bc_tower)
+                                kappa,1.d0/fixed_dt,dx,the_bc_tower,vel_bc)
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
@@ -332,9 +333,9 @@ contains
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
           ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),.false.)
+          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
           ! set transverse velocity behind physical boundaries
-          call multifab_physbc_macvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),.false.)
+          call multifab_physbc_macvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
     end do
 
@@ -534,7 +535,7 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/fixed_dt,dx,the_bc_tower)
+                                kappa,1.d0/fixed_dt,dx,the_bc_tower,vel_bc)
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
@@ -571,9 +572,9 @@ contains
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
           ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),.false.)
+          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
           ! set transverse velocity behind physical boundaries
-          call multifab_physbc_macvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),.false.)
+          call multifab_physbc_macvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
     end do
 

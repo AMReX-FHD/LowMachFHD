@@ -19,7 +19,7 @@ contains
   ! This computes A x = b explicitly
   ! Refer to ./doc/PreconditionerNotes.tex
   subroutine apply_matrix(mla,b_u,b_p,x_u,x_p,alpha_fc,beta,beta_ed,gamma,theta, &
-                          dx,the_bc_tower,use_inhomogeneous_in)
+                          dx,the_bc_tower,v_bc)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: b_u(:,:)
@@ -33,18 +33,11 @@ contains
     real(kind=dp_t), intent(in   ) :: theta
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    logical,  intent(in), optional :: use_inhomogeneous_in
+    type(multifab) , intent(in), optional :: v_bc(:,:)
 
     ! local
     integer :: n,nlevs,i,dm
     type(multifab) ::  gx_p(mla%nlevel,mla%dim)
-    logical :: use_inhomogeneous
-
-    if (present(use_inhomogeneous_in)) then
-       use_inhomogeneous = use_inhomogeneous_in
-    else
-       use_inhomogeneous = .false.
-    end if
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -62,9 +55,17 @@ contains
        call multifab_fill_boundary(x_p(n))
        call multifab_physbc(x_p(n),1,dm+1,1,the_bc_tower%bc_tower_array(n))
        do i=1,dm
-          call multifab_physbc_domainvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),use_inhomogeneous)
+          if (present(v_bc)) then
+             call multifab_physbc_domainvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),v_bc(n,:))
+          else
+             call multifab_physbc_domainvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
+          end if
           call multifab_fill_boundary(x_u(n,i))
-          call multifab_physbc_macvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),use_inhomogeneous)
+          if (present(v_bc)) then
+             call multifab_physbc_macvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),v_bc(n,:))
+          else
+             call multifab_physbc_macvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
+          end if
        end do
     end do
 
