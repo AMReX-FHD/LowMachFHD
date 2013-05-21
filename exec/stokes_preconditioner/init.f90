@@ -65,7 +65,7 @@ contains
        do i=1,dm
           call multifab_internal_sync(x_u(n,i))
           ! It is also necessary to make sure the boundary values are consistent with the BCs:
-          call multifab_physbc_domainvel_inhomogeneous(x_u(n,i),1,i,1,the_bc_level(n),dx(n,:))
+          call multifab_physbc_domainvel(x_u(n,i),i,the_bc_level(n),dx(n,:),.true.)
        end do
 
     enddo
@@ -582,7 +582,7 @@ contains
        do i=1,dm
           call multifab_internal_sync(b_u(n,i))
           ! This will set the forcing on Dirichlet boundaries to zero:
-          call multifab_physbc_domainvel(b_u(n,i),1,i,1,the_bc_level(n),dx(n,:))
+          call multifab_physbc_domainvel(b_u(n,i),i,the_bc_level(n),dx(n,:),.false.)
        end do
 
     enddo

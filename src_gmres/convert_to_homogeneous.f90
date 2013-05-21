@@ -53,15 +53,13 @@ contains
         call setval(phi(n,i),0.d0,all=.true.)
 
         ! set values on physical boundaries
-        call multifab_physbc_domainvel_inhomogeneous(phi(n,i),1,i,1, &
-                                                     the_bc_tower%bc_tower_array(n),dx(n,:))
+        call multifab_physbc_domainvel(phi(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),.true.)
 
         ! fill periodic ghost cells
         call multifab_fill_boundary(phi(n,i))
 
         ! fill physical ghost cells
-        call multifab_physbc_macvel_inhomogeneous(phi(n,i),1,i,1, &
-                                                  the_bc_tower%bc_tower_array(n),dx(n,:))
+        call multifab_physbc_macvel(phi(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),.true.)
 
      end do
   end do

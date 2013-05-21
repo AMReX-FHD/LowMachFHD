@@ -62,17 +62,9 @@ contains
        call multifab_fill_boundary(x_p(n))
        call multifab_physbc(x_p(n),1,dm+1,1,the_bc_tower%bc_tower_array(n))
        do i=1,dm
-          if (use_inhomogeneous) then
-             call multifab_physbc_domainvel_inhomogeneous(x_u(n,i),1,i,1,the_bc_tower%bc_tower_array(n),dx(n,:))             
-          else
-             call multifab_physbc_domainvel(x_u(n,i),1,i,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-          end if
+          call multifab_physbc_domainvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),use_inhomogeneous)
           call multifab_fill_boundary(x_u(n,i))
-          if (use_inhomogeneous) then
-             call multifab_physbc_macvel_inhomogeneous(x_u(n,i),1,i,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-          else
-             call multifab_physbc_macvel(x_u(n,i),1,i,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-          end if
+          call multifab_physbc_macvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),use_inhomogeneous)
        end do
     end do
 

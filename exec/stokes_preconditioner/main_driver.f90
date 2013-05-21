@@ -381,7 +381,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
   ! There is no need to fill ghost cells here
   do n=1,nlevs
      do i=1,dm
-        call multifab_physbc_domainvel_inhomogeneous(umac(n,i),1,i,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+        call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),.true.)
      end do
   end do
 

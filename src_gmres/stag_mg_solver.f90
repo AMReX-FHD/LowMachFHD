@@ -220,13 +220,13 @@ contains
        call multifab_copy_c(phi_fc_mg(1,i),1,phi_fc(1,i),1,1,0)
 
        ! set values on physical boundaries
-       call multifab_physbc_domainvel(phi_fc_mg(1,i),1,i,1,the_bc_tower_mg%bc_tower_array(1),dx_mg(1,:))
+       call multifab_physbc_domainvel(phi_fc_mg(1,i),i,the_bc_tower_mg%bc_tower_array(1),dx_mg(1,:),.false.)
        
        ! fill periodic ghost cells
        call multifab_fill_boundary(phi_fc_mg(1,i))
 
        ! fill physical ghost cells
-       call multifab_physbc_macvel(phi_fc_mg(1,i),1,i,1,the_bc_tower_mg%bc_tower_array(1),dx_mg(1,:))
+       call multifab_physbc_macvel(phi_fc_mg(1,i),i,the_bc_tower_mg%bc_tower_array(1),dx_mg(1,:),.false.)
 
     end do
 
@@ -341,13 +341,13 @@ contains
                 do j=1,dm
                    
                    ! set values on physical boundaries
-                   call multifab_physbc_domainvel(phi_fc_mg(n,j),1,j,1,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+                   call multifab_physbc_domainvel(phi_fc_mg(n,j),j,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:),.false.)
                    
                    ! fill periodic ghost cells
                    call multifab_fill_boundary(phi_fc_mg(n,j))
 
                    ! fill physical ghost cells
-                   call multifab_physbc_macvel(phi_fc_mg(n,j),1,j,1,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+                   call multifab_physbc_macvel(phi_fc_mg(n,j),j,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:),.false.)
 
                 end do
 
@@ -375,13 +375,13 @@ contains
              end if
 
              ! set values on physical boundaries
-             call multifab_physbc_domainvel(Lphi_fc_mg(n,j),1,j,1,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+             call multifab_physbc_domainvel(Lphi_fc_mg(n,j),j,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:),.false.)
 
              ! fill periodic ghost cells
              call multifab_fill_boundary(Lphi_fc_mg(n,j))
 
              ! fill physical ghost cells
-             call multifab_physbc_macvel(Lphi_fc_mg(n,j),1,j,1,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+             call multifab_physbc_macvel(Lphi_fc_mg(n,j),j,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:),.false.)
 
           end do
 
@@ -392,7 +392,7 @@ contains
 
              do j=1,dm
                 ! set residual to zero on physical boundaries
-                call multifab_physbc_domainvel(rhs_fc_mg(n+1,j),1,j,1,the_bc_tower_mg%bc_tower_array(n+1),dx_mg(n+1,:))
+                call multifab_physbc_domainvel(rhs_fc_mg(n+1,j),j,the_bc_tower_mg%bc_tower_array(n+1),dx_mg(n+1,:),.false.)
              end do
 
           end if
@@ -408,13 +408,13 @@ contains
           do j=1,dm
 
              ! set values on physical boundaries
-             call multifab_physbc_domainvel(phi_fc_mg(n,j),1,j,1,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+             call multifab_physbc_domainvel(phi_fc_mg(n,j),j,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:),.false.)
 
              ! fill periodic ghost cells
              call multifab_fill_boundary(phi_fc_mg(n,j))
 
              ! fill physical ghost cells
-             call multifab_physbc_macvel(phi_fc_mg(n,j),1,j,1,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+             call multifab_physbc_macvel(phi_fc_mg(n,j),j,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:),.false.)
 
           end do
 
@@ -460,13 +460,13 @@ contains
                 do j=1,dm
 
                    ! set values on physical boundaries
-                   call multifab_physbc_domainvel(phi_fc_mg(n,j),1,j,1,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+                   call multifab_physbc_domainvel(phi_fc_mg(n,j),j,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:),.false.)
 
                    ! fill periodic ghost cells
                    call multifab_fill_boundary(phi_fc_mg(n,j))
 
                    ! fill physical ghost cells
-                   call multifab_physbc_macvel(phi_fc_mg(n,j),1,j,1,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+                   call multifab_physbc_macvel(phi_fc_mg(n,j),j,the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:),.false.)
                    
                 end do
 
@@ -558,13 +558,13 @@ contains
        call multifab_copy_c(phi_fc(1,j),1,phi_fc_mg(1,j),1,1,0)
 
        ! set values on physical boundaries
-       call multifab_physbc_domainvel(phi_fc(1,j),1,j,1,the_bc_tower%bc_tower_array(1),dx(1,:))
+       call multifab_physbc_domainvel(phi_fc(1,j),j,the_bc_tower%bc_tower_array(1),dx(1,:),.false.)
 
        ! fill periodic ghost cells
        call multifab_fill_boundary(phi_fc(1,j))
 
        ! fill physical ghost cells
-       call multifab_physbc_macvel(phi_fc(1,j),1,j,1,the_bc_tower%bc_tower_array(1),dx(1,:))
+       call multifab_physbc_macvel(phi_fc(1,j),j,the_bc_tower%bc_tower_array(1),dx(1,:),.false.)
 
     end do
 
