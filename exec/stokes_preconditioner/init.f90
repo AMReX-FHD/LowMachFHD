@@ -5,6 +5,7 @@ module init_module
   use define_bc_module
   use BoxLibRNGs
   use multifab_physbc_module
+  use multifab_coefbc_module
 
   implicit none
 
@@ -1423,9 +1424,9 @@ contains
        call multifab_fill_boundary(alpha(n))
        call multifab_fill_boundary(beta(n))
        call multifab_fill_boundary(gamma(n))
-       call multifab_physbc(alpha(n),1,dm+2,1,the_bc_level(n))
-       call multifab_physbc( beta(n),1,dm+2,1,the_bc_level(n))
-       call multifab_physbc(gamma(n),1,dm+2,1,the_bc_level(n))
+       call multifab_coefbc(alpha(n),1,dm+2,1,the_bc_level(n))
+       call multifab_coefbc( beta(n),1,dm+2,1,the_bc_level(n))
+       call multifab_coefbc(gamma(n),1,dm+2,1,the_bc_level(n))
     enddo
 
   contains
