@@ -42,11 +42,14 @@ contains
           hi = upb(get_box(vel_bc(n,1),i))
           select case (dm)
           case (2)
-             call set_inhomogeneous_vel_bcs_2d(vxp(:,:,1,:),vyp(:,:,1,:),vzp(:,:,1,:),ng_v, &
+             call set_inhomogeneous_vel_bcs_2d(vxp(:,:,1,:),vyp(:,:,1,:),ng_v, &
                                                lo,hi,dx(n,:), &
                                                the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           case (3)
              vzp => dataptr(vel_bc(n,3),i)
+             call set_inhomogeneous_vel_bcs_3d(vxp(:,:,:,:),vyp(:,:,:,:),vzp(:,:,:,:),ng_v, &
+                                               lo,hi,dx(n,:), &
+                                               the_bc_level(n)%adv_bc_level_array(i,:,:,:))
 
           end select
        end do
@@ -54,12 +57,11 @@ contains
     
   end subroutine set_inhomogeneous_vel_bcs
 
-  subroutine set_inhomogeneous_vel_bcs_2d(v_bcx,v_bcy,v_bcz,ng_v,lo,hi,dx,bc)
+  subroutine set_inhomogeneous_vel_bcs_2d(v_bcx,v_bcy,ng_v,lo,hi,dx,bc)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_v
     real(kind=dp_t), intent(inout) :: v_bcx(lo(1)-ng_v:,lo(2)-ng_v:,:)
     real(kind=dp_t), intent(inout) :: v_bcy(lo(1)-ng_v:,lo(2)-ng_v:,:)
-    real(kind=dp_t), intent(inout) :: v_bcz(lo(1)-ng_v:,lo(2)-ng_v:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
     integer        , intent(in   ) :: bc(:,:,:)
 
@@ -72,68 +74,95 @@ contains
     !!!!!!!!!!!!!!!!!!!!
 
     ! xvel, lo x-faces
-    x = prob_lo(1)
-    do j=lo(2),hi(2)
-       y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-       v_bcx(lo(1),j,1) = inhomogeneous_bc_val_2d(1,x,y)
-    end do
+    if (bc(1,1,1) .eq. DIR_VEL) then
+       x = prob_lo(1)
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+          v_bcx(lo(1),j,1) = inhomogeneous_bc_val_2d(1,x,y)
+       end do
+    end if
 
     ! xvel, hi x-faces
-    x = prob_hi(1)
-    do j=lo(2),hi(2)
-       y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-       v_bcx(hi(1)+1,j,1) = inhomogeneous_bc_val_2d(1,x,y)
-    end do
+    if (bc(1,2,1) .eq. DIR_VEL) then
+       x = prob_hi(1)
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+          v_bcx(hi(1)+1,j,1) = inhomogeneous_bc_val_2d(1,x,y)
+       end do
+    end if
 
     ! yvel, lo y-faces
-    y = prob_lo(2)
-    do i=lo(1),hi(1)
-       x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-       v_bcy(i,lo(2),2) = inhomogeneous_bc_val_2d(2,x,y)
-    end do
+    if (bc(2,1,2) .eq. DIR_VEL) then
+       y = prob_lo(2)
+       do i=lo(1),hi(1)
+          x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+          v_bcy(i,lo(2),2) = inhomogeneous_bc_val_2d(2,x,y)
+       end do
+    end if
 
     ! yvel, hi y-faces
-    y = prob_hi(2)
-    do i=lo(1),hi(1)
-       x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-       v_bcy(i,hi(2)+1,2) = inhomogeneous_bc_val_2d(2,x,y)
-    end do
+    if (bc(2,2,2) .eq. DIR_VEL) then
+       y = prob_hi(2)
+       do i=lo(1),hi(1)
+          x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+          v_bcy(i,hi(2)+1,2) = inhomogeneous_bc_val_2d(2,x,y)
+       end do
+    end if
 
     !!!!!!!!!!!!!!!!!!!!
     ! transverse velocities
     !!!!!!!!!!!!!!!!!!!!
 
     ! xvel, lo y-faces
-    y = prob_lo(2)
-    do i=lo(1),hi(1)+1
-       x = prob_lo(1) + dble(i)*dx(1)
-       v_bcx(i,lo(2),2) = inhomogeneous_bc_val_2d(1,x,y)
-    end do
+    if (bc(2,1,1) .eq. DIR_VEL .or. bc(2,1,1) .eq. DIR_TRACT) then
+       y = prob_lo(2)
+       do i=lo(1),hi(1)+1
+          x = prob_lo(1) + dble(i)*dx(1)
+          v_bcx(i,lo(2),2) = inhomogeneous_bc_val_2d(1,x,y)
+       end do
+    end if
 
     ! xvel, hi y-faces
-    y = prob_hi(2)
-    do i=lo(1),hi(1)+1
-       x = prob_lo(1) + dble(i)*dx(1)
-       v_bcx(i,hi(2),2) = inhomogeneous_bc_val_2d(1,x,y)
-    end do
+    if (bc(2,2,1) .eq. DIR_VEL .or. bc(2,2,1) .eq. DIR_TRACT) then
+       y = prob_hi(2)
+       do i=lo(1),hi(1)+1
+          x = prob_lo(1) + dble(i)*dx(1)
+          v_bcx(i,hi(2),2) = inhomogeneous_bc_val_2d(1,x,y)
+       end do
+    end if
 
     ! yvel, lo x-faces
-    x = prob_lo(1)
-    do j=lo(2),hi(2)+1
-       y = prob_lo(2) + dble(j)*dx(2)
-       v_bcy(lo(1),j,1) = inhomogeneous_bc_val_2d(2,x,y)
-    end do
+    if (bc(1,1,2) .eq. DIR_VEL .or. bc(1,1,2) .eq. DIR_TRACT) then
+       x = prob_lo(1)
+       do j=lo(2),hi(2)+1
+          y = prob_lo(2) + dble(j)*dx(2)
+          v_bcy(lo(1),j,1) = inhomogeneous_bc_val_2d(2,x,y)
+       end do
+    end if
 
     ! yvel, hi x-faces
-    x = prob_hi(1)
-    do j=lo(2),hi(2)+1
-       y = prob_lo(2) + dble(j)*dx(2)
-       v_bcy(hi(1),j,1) = inhomogeneous_bc_val_2d(2,x,y)
-    end do
+    if (bc(1,2,2) .eq. DIR_VEL .or. bc(1,2,2) .eq. DIR_TRACT) then
+       x = prob_hi(1)
+       do j=lo(2),hi(2)+1
+          y = prob_lo(2) + dble(j)*dx(2)
+          v_bcy(hi(1),j,1) = inhomogeneous_bc_val_2d(2,x,y)
+       end do
+    end if
 
   end subroutine set_inhomogeneous_vel_bcs_2d
 
-  subroutine set_inhomogeneous_vel_bcs_3d()
+  subroutine set_inhomogeneous_vel_bcs_3d(v_bcx,v_bcy,v_bcz,ng_v,lo,hi,dx,bc)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_v
+    real(kind=dp_t), intent(inout) :: v_bcx(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:,:)
+    real(kind=dp_t), intent(inout) :: v_bcy(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:,:)
+    real(kind=dp_t), intent(inout) :: v_bcz(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:,:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
+    integer        , intent(in   ) :: bc(:,:,:)
+
+    ! local
+    integer :: i,j,k
+    real(kind=dp_t) :: x,y,z
 
   end subroutine set_inhomogeneous_vel_bcs_3d
 
