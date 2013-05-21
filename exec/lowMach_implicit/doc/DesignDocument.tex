@@ -13,6 +13,11 @@
 % total number of floats allowed on a page
 \setcounter{totalnumber}{100}
 
+% float page fractions
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.2}
+
 % MarginPar
 \setlength{\marginparwidth}{0.75in}
 \newcommand{\MarginPar}[1]{\marginpar{\vskip-\baselineskip\raggedright\tiny\sffamily\hrule\smallskip{\color{red}#1}\par\smallskip\hrule}}
@@ -224,7 +229,7 @@ The types of non-periodic boundary conditions we consider are (i) no-slip imperm
 (ii) free-slip impermeable walls, and (iii) a reservoir conditions.  We impose boundary
 conditions on the primitive variables, i.e., $\rho,c$, and $\vb$.\\
 
-{\bf No-Slip Impermeable Wall:}  For impermeable walls, there can be no diffusive
+{\bf No-Slip Wall:}  For impermeable walls, there can be no diffusive
 flux, $F_n=0$, and zero advective flux, $\rho v_n = \rho_1 v_n = 0$.  The zero
 diffusive flux implies a homogeneous Neumann condition on $c$, and also $\rho$ since it
 can be derived from $c$ and the EOS.  The zero advective flux implies that $v_n=0$ on the
@@ -235,13 +240,46 @@ wall, except that the tangential velocities is subject to the condition that the
 tangential compoment of the normal viscous stres vanishes.  In other words, for each 
 tangential direction $\tau$,
 \begin{equation}
-\eta\left(\frac{\partial v_n}{\partial\tau} + \frac{\partial v_{\tau}}{\partial n}\right) = 0
+\eta\left(\frac{\partial v_n}{\partial\tau} + \frac{\partial v_{\tau}}{\partial n}\right) = 0.\label{eq:free slip}
 \end{equation}
 Note that for impermeable walls, $v_n=0$ and therefore we simply require $\partial v_{\tau}/\partial n=0$.\\
 
-{\bf Reservoir:} We specify $c$ at the boundary, and use the EOS to obtain $\rho$ at the
+{\bf No-Slip Reservoir:} We specify $c$ at the boundary, and use the EOS to obtain 
+$\rho$ at the
 boundary.  The normal velocity must be equal to $-(\rho^{-1}\beta)F_n$ in order for
-the EOS to remain satisfied.  NOTE: For now we will use $v_{\tau}=0$ but must write the
-code to handle the free-slip condition.
+the EOS to remain satisfied.  The no-slip condition implies that $v_{\taub}=0$ on the 
+boundary.\\
+
+{\bf Free-Slip Reservoir:} This is the same situation as the no-slip reservoir, except
+that $v_{\taub}$ are subject to (\ref{eq:free slip}).  Since in general
+the normal velocity is not constant, we will have an inhomogeneous neumann condition
+on $v_{\taub}$.
+
+\subsection{Implementation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[tb]
+\centering
+\includegraphics[width=5.25in]{viscOp}
+\label{fig:viscOp}
+\caption{The stencils for the $x$-component of (Left) $\nabla\cdot\beta\nabla\vb$, (Middle) 
+$\nabla\cdot\beta(\nabla\vb)^T$, and (Right) $\nabla\cdot[\mathcal{I}(\gamma-\frac{2}{3}\beta)(\nabla\cdot\vb)]$.  
+The black circles indicate locations of $u$.
+The black triangles indicate locations of $v$.
+The red dots indicate the location of the $\beta$ and the gradients of velocity.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[tb]
+\centering
+\includegraphics[width=5.25in]{viscOp_3d}
+\label{fig:viscOp_3d}
+\caption{The stencils for the $x$-component of (Left) $\nabla\cdot\beta\nabla\vb$, (Middle) 
+$\nabla\cdot\beta(\nabla\vb)^T$, and (Right) $\nabla\cdot[\mathcal{I}(\gamma-\frac{2}{3}\beta)(\nabla\cdot\vb)]$.  
+The black circles indicate locations of $u$.
+The black triangles indicate locations of $v$ and $w$.
+The red dots indicate the location of the $\beta$ and the gradients of velocity.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \end{document}
