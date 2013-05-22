@@ -231,14 +231,15 @@ The types of non-periodic, ``physical'' boundary conditions we consider are
 (iii) no-slip reservoir, and
 (iv) free-slip reservoir conditions.
 We impose boundary conditions on the primitive variables and velocities,
-i.e., $\rho,c$, and $\vb$ and can convert these back to conservative
+i.e., $\rho,c$, and $\vb$, and can convert these back to conservative
 variables afterwards if needed.\\
 
 {\bf No-Slip Wall:}  For any impermeable wall, the stochastic and diffusive
 fluxes are both zero, $F_n=0$, as well as the advective flux, $\rho v_n = \rho_1 v_n = 0$.  The zero
 diffusive flux implies a homogeneous Neumann condition on $c$ and also for $\rho$ since $\rho$
 is derived from $c$ and the EOS.  The zero advective flux implies that $v_n=0$ on the
-boundary.  The no-slip condition implies that each $v_{\tau}=0$ on the boundary.\\
+boundary.  The no-slip condition implies that each $v_{\tau}$ is a prescribed value
+on the boundary.\\
 
 {\bf Free-Slip Wall:}  This is the same situation as the no-slip impermeable
 wall, except that the tangential velocities are subject to the condition that the
@@ -247,13 +248,14 @@ tangential direction $\tau$,
 \begin{equation}
 \eta\left(\frac{\partial v_n}{\partial\tau} + \frac{\partial v_{\tau}}{\partial n}\right) = 0.\label{eq:free slip}
 \end{equation}
-Note that for impermeable walls, $v_n=0$ and therefore we simply require $\partial v_{\tau}/\partial n=0$.\\
+Note that for walls with constant $v_n$, including impermeable walls with $v_n=0$,
+we simply require $\partial v_{\tau}/\partial n=0$.\\
 
 {\bf No-Slip Reservoir:} We specify $c$ with a Dirichlet condition at the boundary, 
 and use the EOS to obtain $\rho$ at the
 boundary.  The normal velocity must be equal to $-(\rho^{-1}\beta)F_n$ in order for
-the EOS to remain satisfied.  The no-slip condition implies that each $v_{\tau}=0$ on the 
-boundary.\\
+the EOS to remain satisfied.  The no-slip condition implies that each $v_{\tau}$ is
+a prescribed value on the boundary.\\
 
 {\bf Free-Slip Reservoir:} This is the same situation as the no-slip reservoir, except
 that each $v_{\tau}$ is subject to (\ref{eq:free slip}).  Since in general
