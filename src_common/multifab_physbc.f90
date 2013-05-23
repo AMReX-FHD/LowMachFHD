@@ -275,13 +275,13 @@ contains
 
   end subroutine physbc_3d
 
-  subroutine multifab_physbc_domainvel(s,bccomp,the_bc_level,dx,v_bc)
+  subroutine multifab_physbc_domainvel(s,bccomp,the_bc_level,dx,v_bc_n)
 
     type(multifab) , intent(inout) :: s
     integer        , intent(in   ) :: bccomp
     type(bc_level) , intent(in   ) :: the_bc_level
     real(kind=dp_t), intent(in   ) :: dx(:)
-    type(multifab) , intent(in   ), optional :: v_bc(:)
+    type(multifab) , intent(in   ), optional :: v_bc_n(:)
 
     ! Local
     integer                  :: lo(get_dim(s)),hi(get_dim(s))
@@ -290,7 +290,7 @@ contains
     logical                  :: use_inhomogeneous
 
     use_inhomogeneous = .false.
-    if (present(v_bc)) then
+    if (present(v_bc_n)) then
        use_inhomogeneous = .true.
     end if
 
@@ -308,8 +308,8 @@ contains
        select case (dm)
        case (2)
           if (use_inhomogeneous) then
-             ng_v = v_bc(bccomp)%ng
-             vp => dataptr(v_bc(bccomp),i)
+             ng_v = v_bc_n(bccomp)%ng
+             vp => dataptr(v_bc_n(bccomp),i)
              call physbc_domainvel_inhomogeneous_2d(sp(:,:,1,1), ng_s, &
                                                     vp(:,:,1,bccomp), ng_v, lo, hi, &
                                                     the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
@@ -321,8 +321,8 @@ contains
           end if
        case (3)
           if (use_inhomogeneous) then
-             ng_v = v_bc(bccomp)%ng
-             vp => dataptr(v_bc(bccomp),i)
+             ng_v = v_bc_n(bccomp)%ng
+             vp => dataptr(v_bc_n(bccomp),i)
              call physbc_domainvel_inhomogeneous_3d(sp(:,:,:,1), ng_s, &
                                                     vp(:,:,:,bccomp), ng_v, lo, hi, &
                                                     the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
@@ -419,11 +419,11 @@ contains
 
   end subroutine physbc_domainvel_2d
 
-  subroutine physbc_domainvel_inhomogeneous_2d(s,ng_s,v_bc,ng_v,lo,hi,bc,bccomp,dx)
+  subroutine physbc_domainvel_inhomogeneous_2d(s,ng_s,v_bc_n,ng_v,lo,hi,bc,bccomp,dx)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_v
-    real(kind=dp_t), intent(inout) ::    s(lo(1)-ng_s:,lo(2)-ng_s:)
-    real(kind=dp_t), intent(inout) :: v_bc(lo(1)-ng_v:,lo(2)-ng_v:)
+    real(kind=dp_t), intent(inout) ::      s(lo(1)-ng_s:,lo(2)-ng_s:)
+    real(kind=dp_t), intent(inout) :: v_bc_n(lo(1)-ng_v:,lo(2)-ng_v:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
@@ -444,7 +444,7 @@ contains
        if (bc(1,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           do j=lo(2),hi(2)
-             s(lo(1),j) = v_bc(lo(1),j)
+             s(lo(1),j) = v_bc_n(lo(1),j)
           end do
        else if (bc(1,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
@@ -463,7 +463,7 @@ contains
        if (bc(1,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           do j=lo(2),hi(2)
-             s(hi(1)+1,j) = v_bc(hi(1)+1,j)
+             s(hi(1)+1,j) = v_bc_n(hi(1)+1,j)
           end do
        else if (bc(1,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
@@ -482,7 +482,7 @@ contains
        if (bc(2,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           do i=lo(1),hi(1)
-             s(i,lo(2)) = v_bc(i,lo(2))
+             s(i,lo(2)) = v_bc_n(i,lo(2))
           end do
        else if (bc(2,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
@@ -501,7 +501,7 @@ contains
        if (bc(2,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           do i=lo(1),hi(1)
-             s(i,hi(2)+1) = v_bc(i,hi(2)+1)
+             s(i,hi(2)+1) = v_bc_n(i,hi(2)+1)
           end do
        else if (bc(2,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
@@ -629,11 +629,11 @@ contains
 
  end subroutine physbc_domainvel_3d
 
-  subroutine physbc_domainvel_inhomogeneous_3d(s,ng_s,v_bc,ng_v,lo,hi,bc,bccomp,dx)
+  subroutine physbc_domainvel_inhomogeneous_3d(s,ng_s,v_bc_n,ng_v,lo,hi,bc,bccomp,dx)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_v
-    real(kind=dp_t), intent(inout) ::    s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: v_bc(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
+    real(kind=dp_t), intent(inout) ::      s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    real(kind=dp_t), intent(in   ) :: v_bc_n(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
@@ -792,22 +792,22 @@ contains
 
  end subroutine physbc_domainvel_inhomogeneous_3d
 
-  subroutine multifab_physbc_macvel(s,bccomp,the_bc_level,dx,v_bc)
+  subroutine multifab_physbc_macvel(s,bccomp,the_bc_level,dx,v_bc_t)
 
     type(multifab) , intent(inout) :: s
     integer        , intent(in   ) :: bccomp
     type(bc_level) , intent(in   ) :: the_bc_level
     real(kind=dp_t), intent(in   ) :: dx(:)
-    type(multifab) , intent(in   ), optional :: v_bc(:)
+    type(multifab) , intent(in   ), optional :: v_bc_t(:)
 
     ! Local
     integer                  :: lo(get_dim(s)),hi(get_dim(s))
     integer                  :: i,ng_s,ng_v,dm
-    real(kind=dp_t), pointer :: sp(:,:,:,:), vp(:,:,:,:)
+    real(kind=dp_t), pointer :: sp(:,:,:,:), vp1(:,:,:,:), vp2(:,:,:,:)
     logical                  :: use_inhomogeneous
 
     use_inhomogeneous = .false.
-    if (present(v_bc)) then
+    if (present(v_bc_t)) then
        use_inhomogeneous = .true.
     end if
 
@@ -825,10 +825,14 @@ contains
        select case (dm)
        case (2)
           if (use_inhomogeneous) then
-             ng_v = v_bc(bccomp)%ng
-             vp => dataptr(v_bc(bccomp),i)
+             ng_v = v_bc_t(bccomp)%ng
+             if (bccomp .eq. 1) then
+                vp1 => dataptr(v_bc_t(2),i)
+             else if (bccomp .eq. 2) then
+                vp1 => dataptr(v_bc_t(1),i)
+             end if
              call physbc_macvel_inhomogeneous_2d(sp(:,:,1,1), ng_s, &
-                                                 vp(:,:,1,:), ng_v, lo, hi, &
+                                                 vp1(:,:,1,1), ng_v, lo, hi, &
                                                  the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
                                                  bccomp,dx)
           else
@@ -838,10 +842,19 @@ contains
           end if
        case (3)
           if (use_inhomogeneous) then
-             ng_v = v_bc(bccomp)%ng
-             vp => dataptr(v_bc(bccomp),i)
+             ng_v = v_bc_t(bccomp)%ng
+             if (bccomp .eq. 1) then
+                vp1 => dataptr(v_bc_t(3),i)
+                vp2 => dataptr(v_bc_t(5),i)
+             else if (bccomp .eq. 2) then
+                vp1 => dataptr(v_bc_t(1),i)
+                vp2 => dataptr(v_bc_t(6),i)
+             else if (bccomp .eq. 3) then
+                vp1 => dataptr(v_bc_t(2),i)
+                vp2 => dataptr(v_bc_t(4),i)
+             end if
              call physbc_macvel_inhomogeneous_3d(sp(:,:,:,1), ng_s, &
-                                                 vp(:,:,:,:), ng_v, lo, hi, &
+                                                 vp1(:,:,:,1), vp2(:,:,:,1), ng_v, lo, hi, &
                                                  the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
                                                  bccomp,dx)
           else
@@ -1011,7 +1024,7 @@ contains
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_v
     real(kind=dp_t), intent(inout) ::    s(lo(1)-ng_s:,lo(2)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: v_bc(lo(1)-ng_v:,lo(2)-ng_v:,:)
+    real(kind=dp_t), intent(in   ) :: v_bc(lo(1)-ng_v:,lo(2)-ng_v:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
@@ -1035,7 +1048,7 @@ contains
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do j=lo(2),hi(2)+1
-             s(lo(1)-ng_s:lo(1)-1,j) = 2.d0*v_bc(lo(1),j,1) - s(lo(1),j)
+             s(lo(1)-ng_s:lo(1)-1,j) = 2.d0*v_bc(lo(1),j) - s(lo(1),j)
           end do
        end if
     else if (bc(1,1) .eq. DIR_TRACT) then
@@ -1046,7 +1059,7 @@ contains
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
           do j=lo(2),hi(2)+1
-             s(lo(1)-ng_s:lo(1)-1,j) = s(lo(1),j) - dx(1)*v_bc(lo(1),j,1)
+             s(lo(1)-ng_s:lo(1)-1,j) = s(lo(1),j) - dx(1)*v_bc(lo(1),j)
           end do
        end if
     else if (bc(1,1) .eq. INTERIOR) then
@@ -1068,7 +1081,7 @@ contains
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do j=lo(2),hi(2)+1
-             s(hi(1)+1:hi(1)+ng_s,j) = 2.d0*v_bc(hi(1),j,1) - s(hi(1),j)
+             s(hi(1)+1:hi(1)+ng_s,j) = 2.d0*v_bc(hi(1)+1,j) - s(hi(1),j)
           end do
        end if
     else if (bc(1,2) .eq. DIR_TRACT) then
@@ -1079,7 +1092,7 @@ contains
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
           do j=lo(2),hi(2)+1
-             s(hi(1)+1:hi(1)+ng_s,j) = s(hi(1),j) + dx(1)*v_bc(hi(1),j,1)
+             s(hi(1)+1:hi(1)+ng_s,j) = s(hi(1),j) + dx(1)*v_bc(hi(1)+1,j)
           end do
        end if
     else if (bc(1,2) .eq. INTERIOR) then
@@ -1098,7 +1111,7 @@ contains
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do i=lo(1),hi(1)+1
-             s(i,lo(2)-ng_s:lo(2)-1) = 2.d0*v_bc(i,lo(2),2) - s(i,lo(2))
+             s(i,lo(2)-ng_s:lo(2)-1) = 2.d0*v_bc(i,lo(2)) - s(i,lo(2))
           end do
        else if (bccomp .eq. 2) then
           ! normal velocity
@@ -1109,7 +1122,7 @@ contains
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
           do i=lo(1),hi(1)+1
-             s(i,lo(2)-ng_s:lo(2)-1) = s(i,lo(2)) - dx(1)*v_bc(i,lo(2),2)
+             s(i,lo(2)-ng_s:lo(2)-1) = s(i,lo(2)) - dx(1)*v_bc(i,lo(2))
           end do
        else if (bccomp .eq. 2) then
           print *,'physbc_macvel_inhomogeneous_2d: bc(2,1) = DIR_TRACT for bccomp =',bccomp
@@ -1131,7 +1144,7 @@ contains
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do i=lo(1),hi(1)+1
-             s(i,hi(2)+1:hi(2)+ng_s) = 2.d0*v_bc(i,hi(2),2) - s(i,hi(2))
+             s(i,hi(2)+1:hi(2)+ng_s) = 2.d0*v_bc(i,hi(2)+1) - s(i,hi(2))
           end do
        else if (bccomp .eq. 2) then
           ! normal velocity
@@ -1142,7 +1155,7 @@ contains
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
           do i=lo(1),hi(1)+1
-             s(i,hi(2)+1:hi(2)+ng_s) = s(i,hi(2)) + dx(1)*v_bc(i,hi(2),2)
+             s(i,hi(2)+1:hi(2)+ng_s) = s(i,hi(2)) + dx(1)*v_bc(i,hi(2)+1)
           end do
        else if (bccomp .eq. 2) then
           print *,'physbc_macvel_inhomogeneous_2d: bc(2,2) = DIR_TRACT for bccomp =',bccomp
@@ -1504,11 +1517,12 @@ contains
 
   end subroutine physbc_macvel_3d
 
-  subroutine physbc_macvel_inhomogeneous_3d(s,ng_s,v_bc,ng_v,lo,hi,bc,bccomp,dx)
+  subroutine physbc_macvel_inhomogeneous_3d(s,ng_s,v_bc1,v_bc2,ng_v,lo,hi,bc,bccomp,dx)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_v
-    real(kind=dp_t), intent(inout) ::    s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: v_bc(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:,:)
+    real(kind=dp_t), intent(inout) ::     s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    real(kind=dp_t), intent(in   ) :: v_bc1(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
+    real(kind=dp_t), intent(in   ) :: v_bc2(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)

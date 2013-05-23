@@ -16,7 +16,7 @@ module convert_to_homogeneous_module
 contains
 
   subroutine convert_to_homogeneous(mla,b_u,b_p,alpha_fc,beta,beta_ed,gamma, &
-                                    theta,dx,the_bc_tower,vel_bc)
+                                    theta,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: b_u(:,:)
@@ -27,7 +27,8 @@ contains
     type(multifab) , intent(in   ) :: gamma(:)
     real(kind=dp_t), intent(in   ) :: theta,dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(in   ) :: vel_bc(:,:)
+    type(multifab) , intent(in   ) :: vel_bc_n(:,:)
+    type(multifab) , intent(in   ) :: vel_bc_t(:,:)
 
     ! local
     integer :: n,nlevs,i,dm
@@ -54,13 +55,15 @@ contains
         call setval(phi(n,i),0.d0,all=.true.)
 
         ! set values on physical boundaries
-        call multifab_physbc_domainvel(phi(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),vel_bc(n,:))
+        call multifab_physbc_domainvel(phi(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                       dx(n,:),vel_bc_n(n,:))
 
         ! fill periodic ghost cells
         call multifab_fill_boundary(phi(n,i))
 
         ! fill physical ghost cells
-        call multifab_physbc_macvel(phi(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),vel_bc(n,:))
+        call multifab_physbc_macvel(phi(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                    dx(n,:),vel_bc_t(n,:))
 
      end do
   end do

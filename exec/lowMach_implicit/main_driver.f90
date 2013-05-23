@@ -48,7 +48,6 @@ subroutine main_driver()
   type(multifab), allocatable :: mold(:,:)         ! face-based
   type(multifab), allocatable :: mnew(:,:)         ! face-based
   type(multifab), allocatable :: umac(:,:)         ! face-based
-  type(multifab), allocatable :: vel_bc(:,:)
   type(multifab), allocatable :: sold(:)           ! cell-centered
   type(multifab), allocatable :: snew(:)           ! cell-centered
   type(multifab), allocatable :: s_fc(:,:)         ! face-centered
@@ -61,6 +60,10 @@ subroutine main_driver()
   type(multifab), allocatable :: kappa(:)          ! cell-centered
   type(multifab), allocatable :: rhoc_d_fluxdiv(:) ! cell-centered
   type(multifab), allocatable :: rhoc_s_fluxdiv(:) ! cell-centered
+
+  ! special inhomogeneous boundary condition multifab
+  type(multifab), allocatable :: vel_bc_n(:,:)
+  type(multifab), allocatable :: vel_bc_t(:,:)
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_lowmach_init()
@@ -88,14 +91,16 @@ subroutine main_driver()
 
   ! now that we have nlevs and dm, we can allocate these
   allocate(dx(nlevs,dm))
-  allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm),vel_bc(nlevs,dm))
+  allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm),vel_bc_n(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs),rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs))
   allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
+     allocate(vel_bc_t(nlevs,2))
   else if (dm .eq. 3) then
      allocate(eta_ed(nlevs,3))
+     allocate(vel_bc_t(nlevs,6))
   end if
 
   ! tell mba how many levels and dmensionality of problem
@@ -176,10 +181,9 @@ subroutine main_driver()
   do n=1,nlevs
      do i=1,dm
         ! edge-momentum and velocity; 1 ghost cell
-        call multifab_build_edge(mold(n,i),mla%la(n)  ,1 ,1,i)
-        call multifab_build_edge(mnew(n,i),mla%la(n)  ,1 ,1,i)
-        call multifab_build_edge(umac(n,i),mla%la(n)  ,1 ,1,i)
-        call multifab_build_edge(vel_bc(n,i),mla%la(n),dm,0,i)
+        call multifab_build_edge(mold(n,i),mla%la(n)  ,1,1,i)
+        call multifab_build_edge(mnew(n,i),mla%la(n)  ,1,1,i)
+        call multifab_build_edge(umac(n,i),mla%la(n)  ,1,1,i)
      end do
      ! conservative variables; 2 components (rho,rho1)
      ! need 2 ghost cells to average to ghost faces used in 
@@ -230,6 +234,49 @@ subroutine main_driver()
      call multifab_build(rhoc_s_fluxdiv(n),mla%la(n),1,0)
      call multifab_setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
      call multifab_setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
+
+     ! boundary conditions
+     do i=1,dm
+        call multifab_build_edge(vel_bc_n(n,i),mla%la(n),1,0,i)
+     end do
+     if (dm .eq. 2) then
+        ! y-velocity bc on x-faces (nodal)
+        call multifab_build_nodal(vel_bc_t(n,1),mla%la(n),1,0)
+        ! x-velocity bc on y-faces (nodal)
+        call multifab_build_nodal(vel_bc_t(n,2),mla%la(n),1,0)
+     else
+        ! y-velocity bc on x-faces (nodal in y and x)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .false.
+        call multifab_build(vel_bc_t(n,1),mla%la(n),1,0,nodal_temp)
+        ! z-velocity bc on x-faces (nodal in z and x)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .false.
+        nodal_temp(3) = .true.
+        call multifab_build(vel_bc_t(n,2),mla%la(n),1,0,nodal_temp)
+        ! x-velocity bc on y-faces (nodal in x and y)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .false.
+        call multifab_build(vel_bc_t(n,3),mla%la(n),1,0,nodal_temp)
+        ! z-velocity bc on y-faces (nodal in z and y)
+        nodal_temp(1) = .false.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .true.
+        call multifab_build(vel_bc_t(n,4),mla%la(n),1,0,nodal_temp)
+        ! x-velocity bc on z-faces (nodal in x and z)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .false.
+        nodal_temp(3) = .true.
+        call multifab_build(vel_bc_t(n,5),mla%la(n),1,0,nodal_temp)
+        ! y-velocity bc on z-faces (nodal in y and z)
+        nodal_temp(1) = .false.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .true.
+        call multifab_build(vel_bc_t(n,6),mla%la(n),1,0,nodal_temp)
+     end if
+
   end do
 
   time = 0.d0
@@ -238,7 +285,7 @@ subroutine main_driver()
   call init(mold,sold,pres,dx,mla,time)
 
   ! set inhomogeneous bc condition
-  call set_inhomogeneous_vel_bcs(mla,vel_bc,dx,the_bc_tower%bc_tower_array)
+  call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,dx,the_bc_tower%bc_tower_array)
 
   if (print_int .gt. 0) then
      call eos_check(mla,sold)
@@ -291,7 +338,7 @@ subroutine main_driver()
      ! advance the solution by dt
      call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                            eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
-                           dx,the_bc_tower,vel_bc)
+                           dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
      ! increment simulation time
      time = time + fixed_dt
@@ -337,7 +384,7 @@ subroutine main_driver()
         call multifab_destroy(mold(n,i))
         call multifab_destroy(mnew(n,i))
         call multifab_destroy(umac(n,i))
-        call multifab_destroy(vel_bc(n,i))
+        call multifab_destroy(vel_bc_n(n,i))
      end do
      call multifab_destroy(sold(n))
      call multifab_destroy(snew(n))
@@ -354,10 +401,18 @@ subroutine main_driver()
      end do
      if (dm .eq. 2) then
         call multifab_destroy(eta_ed(n,1))
+        call multifab_destroy(vel_bc_t(n,1))
+        call multifab_destroy(vel_bc_t(n,2))
      else if (dm .eq. 3) then
         call multifab_destroy(eta_ed(n,1))
         call multifab_destroy(eta_ed(n,2))
         call multifab_destroy(eta_ed(n,3))
+        call multifab_destroy(vel_bc_t(n,1))
+        call multifab_destroy(vel_bc_t(n,2))
+        call multifab_destroy(vel_bc_t(n,3))
+        call multifab_destroy(vel_bc_t(n,4))
+        call multifab_destroy(vel_bc_t(n,5))
+        call multifab_destroy(vel_bc_t(n,6))
      end if
   end do
 

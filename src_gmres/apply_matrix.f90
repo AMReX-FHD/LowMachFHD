@@ -19,7 +19,7 @@ contains
   ! This computes A x = b explicitly
   ! Refer to ./doc/PreconditionerNotes.tex
   subroutine apply_matrix(mla,b_u,b_p,x_u,x_p,alpha_fc,beta,beta_ed,gamma,theta, &
-                          dx,the_bc_tower,v_bc)
+                          dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: b_u(:,:)
@@ -33,7 +33,8 @@ contains
     real(kind=dp_t), intent(in   ) :: theta
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(in), optional :: v_bc(:,:)
+    type(multifab) , intent(in), optional :: vel_bc_n(:,:)
+    type(multifab) , intent(in), optional :: vel_bc_t(:,:)
 
     ! local
     integer :: n,nlevs,i,dm
@@ -55,14 +56,16 @@ contains
        call multifab_fill_boundary(x_p(n))
        call multifab_physbc(x_p(n),1,dm+1,1,the_bc_tower%bc_tower_array(n))
        do i=1,dm
-          if (present(v_bc)) then
-             call multifab_physbc_domainvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),v_bc(n,:))
+          if (present(vel_bc_n)) then
+             call multifab_physbc_domainvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                            dx(n,:),vel_bc_n(n,:))
           else
              call multifab_physbc_domainvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
           end if
           call multifab_fill_boundary(x_u(n,i))
-          if (present(v_bc)) then
-             call multifab_physbc_macvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),v_bc(n,:))
+          if (present(vel_bc_t)) then
+             call multifab_physbc_macvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:),vel_bc_t(n,:))
           else
              call multifab_physbc_macvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
           end if

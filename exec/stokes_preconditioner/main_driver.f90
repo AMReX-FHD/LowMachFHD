@@ -61,7 +61,8 @@ subroutine main_driver()
   type(multifab), allocatable :: gamma(:)         ! coefficient for staggered multigrid solver
 
   ! special inhomogeneous boundary condition multifab
-  type(multifab), allocatable :: vel_bc(:,:)
+  type(multifab), allocatable :: vel_bc_n(:,:)
+  type(multifab), allocatable :: vel_bc_t(:,:)
 
   integer    :: dm,nlevs,n,i
   real(dp_t) :: time,theta
@@ -108,15 +109,17 @@ subroutine main_driver()
 
   ! now that we have nlevs and dm, we can allocate these
   allocate(dx(nlevs,dm))
-  allocate(umac_exact(nlevs,dm),umac(nlevs,dm),umac_tmp(nlevs,dm),vel_bc(nlevs,dm))
+  allocate(umac_exact(nlevs,dm),umac(nlevs,dm),umac_tmp(nlevs,dm),vel_bc_n(nlevs,dm))
   allocate(rhs_u(nlevs,dm),rhs_p(nlevs),grad_pres(nlevs,dm))
   allocate(pres_exact(nlevs),pres(nlevs),pres_tmp(nlevs))
   allocate(alpha(nlevs),beta(nlevs),gamma(nlevs))
   allocate(alpha_fc(nlevs,dm))
   if (dm .eq. 2) then
      allocate(beta_ed(nlevs,1))
+     allocate(vel_bc_t(nlevs,2))
   else if (dm .eq. 3) then
      allocate(beta_ed(nlevs,3))
+     allocate(vel_bc_t(nlevs,6))
   end if
 
   ! tell mba how many levels and dmensionality of problem
@@ -201,7 +204,6 @@ subroutine main_driver()
         call multifab_build_edge(umac_tmp(n,i)   ,mla%la(n),1,1,i)
         call multifab_build_edge(rhs_u(n,i)      ,mla%la(n),1,0,i)
         call multifab_build_edge(grad_pres(n,i)  ,mla%la(n),1,0,i)
-        call multifab_build_edge(vel_bc(n,i)     ,mla%la(n),dm,0,i)
      end do
      call multifab_build(rhs_p(n)         ,mla%la(n),1,0)
      call multifab_build(pres_exact(n)    ,mla%la(n),1,1)
@@ -231,13 +233,57 @@ subroutine main_driver()
         nodal_temp(3) = .true.
         call multifab_build(beta_ed(n,3),mla%la(n),1,0,nodal_temp)
      end if
+
+     ! boundary conditions
+     do i=1,dm
+        call multifab_build_edge(vel_bc_n(n,i),mla%la(n),1,0,i)
+     end do
+     if (dm .eq. 2) then
+        ! y-velocity bc on x-faces (nodal)
+        call multifab_build_nodal(vel_bc_t(n,1),mla%la(n),1,0)
+        ! x-velocity bc on y-faces (nodal)
+        call multifab_build_nodal(vel_bc_t(n,2),mla%la(n),1,0)
+     else
+        ! y-velocity bc on x-faces (nodal in y and x)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .false.
+        call multifab_build(vel_bc_t(n,1),mla%la(n),1,0,nodal_temp)
+        ! z-velocity bc on x-faces (nodal in z and x)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .false.
+        nodal_temp(3) = .true.
+        call multifab_build(vel_bc_t(n,2),mla%la(n),1,0,nodal_temp)
+        ! x-velocity bc on y-faces (nodal in x and y)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .false.
+        call multifab_build(vel_bc_t(n,3),mla%la(n),1,0,nodal_temp)
+        ! z-velocity bc on y-faces (nodal in z and y)
+        nodal_temp(1) = .false.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .true.
+        call multifab_build(vel_bc_t(n,4),mla%la(n),1,0,nodal_temp)
+        ! x-velocity bc on z-faces (nodal in x and z)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .false.
+        nodal_temp(3) = .true.
+        call multifab_build(vel_bc_t(n,5),mla%la(n),1,0,nodal_temp)
+        ! y-velocity bc on z-faces (nodal in y and z)
+        nodal_temp(1) = .false.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .true.
+        call multifab_build(vel_bc_t(n,6),mla%la(n),1,0,nodal_temp)
+     end if
+
   end do
 
   ! set inhomogeneous bc condition
-  call set_inhomogeneous_vel_bcs(mla,vel_bc,dx,the_bc_tower%bc_tower_array)
+  call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,dx,the_bc_tower%bc_tower_array)
 
   ! provide an initial value (or guess) for umac and pres 
-  call init_solution(mla,umac_exact,pres_exact,dx,time,the_bc_tower%bc_tower_array,vel_bc)
+  call init_solution(mla,umac_exact,pres_exact,dx,time,the_bc_tower%bc_tower_array, &
+                     vel_bc_n,vel_bc_t)
   
   ! initialize alpha, beta, and gamma
   call init_mat(mla,alpha,beta,gamma,dx,time,the_bc_tower%bc_tower_array)
@@ -258,7 +304,7 @@ subroutine main_driver()
   if (abs(test_type) .eq. 1) then
      ! initialize rhs_u and rhs_p by explicitly computing rhs = A x
      call apply_matrix(mla,rhs_u,rhs_p,umac_exact,pres_exact,alpha_fc,beta,beta_ed, &
-                       gamma,theta,dx,the_bc_tower,vel_bc)
+                       gamma,theta,dx,the_bc_tower,vel_bc_n,vel_bc_t)
   else
      ! initialize rhs_u and rhs_p with a subroutine
      call init_rhs(mla,rhs_u,rhs_p,dx,time,the_bc_tower%bc_tower_array)
@@ -269,7 +315,7 @@ TestType: if (test_type==0) then ! Test the order of accuracy of the stencils
     
     ! calculate A*x and save it in umac_tmp
     call apply_matrix(mla,umac_tmp,pres_tmp,umac_exact,pres_exact,alpha_fc, &
-                      beta,beta_ed,gamma,theta,dx,the_bc_tower,vel_bc)
+                      beta,beta_ed,gamma,theta,dx,the_bc_tower,vel_bc_n,vel_bc_t)
     
     ! calculate f - (A*u)
     do n=1,nlevs
@@ -322,7 +368,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
   ! vector with zeros everywhere in the problem domain, and ghost cells filled to
   ! respect the boundary conditions
   call convert_to_homogeneous(mla,rhs_u,rhs_p,alpha_fc,beta,beta_ed, &
-                              gamma,theta,dx,the_bc_tower,vel_bc)
+                              gamma,theta,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
   ! compute the average value of umac_exact and pres_exact
   call sum_umac_press(mla,pres_exact,umac_exact,mean_val_pres,mean_val_umac) 
@@ -389,7 +435,8 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
   ! There is no need to fill ghost cells here
   do n=1,nlevs
      do i=1,dm
-        call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:),vel_bc(n,:))
+        call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                       dx(n,:),vel_bc_n(n,:))
      end do
   end do
 
@@ -462,7 +509,7 @@ end if TestType
         call multifab_destroy(rhs_u(n,i))
         call multifab_destroy(grad_pres(n,i))
         call multifab_destroy(alpha_fc(n,i))
-        call multifab_destroy(vel_bc(n,i))
+        call multifab_destroy(vel_bc_n(n,i))
      end do
      call multifab_destroy(rhs_p(n))
      call multifab_destroy(pres_exact(n))
@@ -473,10 +520,18 @@ end if TestType
      call multifab_destroy(gamma(n))
      if (dm .eq. 2) then
         call multifab_destroy(beta_ed(n,1))
+        call multifab_destroy(vel_bc_t(n,1))
+        call multifab_destroy(vel_bc_t(n,2))
      else if (dm .eq. 3) then
         call multifab_destroy(beta_ed(n,1))
         call multifab_destroy(beta_ed(n,2))
         call multifab_destroy(beta_ed(n,3))
+        call multifab_destroy(vel_bc_t(n,1))
+        call multifab_destroy(vel_bc_t(n,2))
+        call multifab_destroy(vel_bc_t(n,3))
+        call multifab_destroy(vel_bc_t(n,4))
+        call multifab_destroy(vel_bc_t(n,5))
+        call multifab_destroy(vel_bc_t(n,6))
      end if
   end do
   call destroy(mla)

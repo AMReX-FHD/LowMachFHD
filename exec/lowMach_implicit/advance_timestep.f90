@@ -26,7 +26,7 @@ contains
 
   subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
-                              dx,the_bc_tower,vel_bc)
+                              dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -46,7 +46,8 @@ contains
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(in   ) :: vel_bc(:,:)
+    type(multifab) , intent(in   ) :: vel_bc_n(:,:)
+    type(multifab) , intent(in   ) :: vel_bc_t(:,:)
 
     ! local
     type(multifab) ::    s_update(mla%nlevel)
@@ -300,7 +301,7 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/fixed_dt,dx,the_bc_tower,vel_bc)
+                                kappa,1.d0/fixed_dt,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
@@ -535,7 +536,7 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/fixed_dt,dx,the_bc_tower,vel_bc)
+                                kappa,1.d0/fixed_dt,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &

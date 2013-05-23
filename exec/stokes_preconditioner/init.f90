@@ -15,7 +15,7 @@ module init_module
 
 contains
 
-  subroutine init_solution(mla,x_u,x_p,dx,time,the_bc_level,vel_bc)
+  subroutine init_solution(mla,x_u,x_p,dx,time,the_bc_level,vel_bc_n,vel_bc_t)
 
     use probin_module       , only: prob_dir, prob_sol, coeff_mag, ABC_coefs, mode_coefs
     use probin_common_module, only: prob_lo, prob_hi
@@ -25,7 +25,8 @@ contains
     type(multifab) , intent(inout) :: x_p(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),time
     type(bc_level) , intent(in   ) :: the_bc_level(:)
-    type(multifab) , intent(in   ) :: vel_bc(:,:)
+    type(multifab) , intent(in   ) :: vel_bc_n(:,:)
+    type(multifab) , intent(in   ) :: vel_bc_t(:,:)
 
     ! local
     real(kind=dp_t), pointer :: ump(:,:,:,:), vmp(:,:,:,:), wmp(:,:,:,:)
@@ -66,7 +67,7 @@ contains
        do i=1,dm
           call multifab_internal_sync(x_u(n,i))
           ! It is also necessary to make sure the boundary values are consistent with the BCs:
-          call multifab_physbc_domainvel(x_u(n,i),i,the_bc_level(n),dx(n,:),vel_bc(n,:))
+          call multifab_physbc_domainvel(x_u(n,i),i,the_bc_level(n),dx(n,:),vel_bc_n(n,:))
        end do
 
     enddo
