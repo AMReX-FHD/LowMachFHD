@@ -235,9 +235,8 @@ i.e., $\rho,c$, and $\vb$, and can convert these back to conservative
 variables afterwards if needed.\\
 
 {\bf No-Slip Wall:}  For any impermeable wall, the stochastic and diffusive
-fluxes are both zero, $F_n=\rho\chi\partial c/\partial n+\Psi_n=0$, as well as the 
-advective flux, $\rho v_n = \rho_1 v_n = 0$.
-The zero
+fluxes are both zero, $\rho\chi\partial c/\partial n = \Psi_n = 0$, as well as the 
+advective flux, $\rho v_n = \rho_1 v_n = 0$.  The zero
 diffusive flux implies a homogeneous Neumann condition on $c$ and also for $\rho$ since $\rho$
 is derived from $c$ and the EOS.  The zero advective flux implies that $v_n=0$ on the
 boundary.  The no-slip condition implies that each $v_{\tau}$ is a prescribed value
@@ -245,12 +244,12 @@ on the boundary.\\
 
 {\bf Free-Slip Wall:}  This is the same situation as the no-slip impermeable
 wall, except that the tangential velocities are subject to the condition that the
-tangential compoment of the normal viscous stres vanishes.  In other words, for each 
+tangential compoment of the normal viscous stress vanishes.  In other words, for each 
 tangential direction $\tau$,
 \begin{equation}
 \eta\left(\frac{\partial v_n}{\partial\tau} + \frac{\partial v_{\tau}}{\partial n}\right) = 0.\label{eq:free slip}
 \end{equation}
-Note that for walls with constant $v_n$, including impermeable walls with $v_n=0$,
+Note that for walls with constant $v_n$ (including impermeable walls with $v_n=0$),
 this condition reduces to $\partial v_{\tau}/\partial n=0$.\\
 
 {\bf No-Slip Reservoir:} We specify $c$ with a Dirichlet condition at the boundary, 
@@ -258,15 +257,15 @@ and use the EOS to obtain $\rho$ at the
 boundary.  The normal velocity must be equal to $-(\rho^{-1}\beta)F_n$ in order for
 the EOS to remain satisfied.  We must be careful with sequencing in a sense that
 $F_n$ is not a function of $\vb$, so we can compute $F_n$ first and {\it then}
-use this to directly specify $v_n$ on boundaries.  Since we treat the densities
-explicitly, we can keep these boundary conditions through the implicit velocity
-update.  The no-slip condition implies that each $v_{\tau}$ is
+use this to directly specify $v_n$ on boundaries, making sure that the
+subsequent GMRES solve preserves these boundary conditions.
+The no-slip condition implies that each $v_{\tau}$ is
 a prescribed value on the boundary.\\
 
 {\bf Free-Slip Reservoir:} This is the same situation as the no-slip reservoir, except
 that each $v_{\tau}$ is subject to (\ref{eq:free slip}).  Since in general
-the normal velocity is not constant, we will have an inhomogeneous Neumann condition
-on each $v_{\tau}$.
+the normal velocity is not constant in the tangential direction(s), we will have 
+an inhomogeneous Neumann condition on each $v_{\tau}$.
 
 \subsection{Implementation}
 
@@ -318,8 +317,8 @@ about possible intermediate {\tt NaN} states that will later be overwritten.\\
 enters the stencil for the first interior normal velocity face and stencils for the
 transverse velocity near the boundary.\\
 \item The value of transverse velocities in ghost faces behind physical boundaries
-{\it does} matter, so we make sure to fill them using the appropriate physical 
-boundary condition.\\
+{\it does} matter, since it enters the stencil for the interior transverse face.
+We make sure to fill these using the appropriate physical boundary condition.\\
 \item When setting normal velocities on physical boundaries, we don't have to worry
 about corner ghost faces outside of the domain.  Those only matter if we are periodic 
 in the transverse
@@ -333,12 +332,14 @@ should take care of these periodic values.\\
 \end{itemize}
 
 We carry around several auxiliary multifabs that store the Dirichlet value on the
-boundary.  To deal with normal velocities, the multifab {\tt vel\_bc\_n(nlevs,dm)}
-stores the actual Dirichlet value.  The $d^{\rm th}$ element is a face-centered
-multifab in direction $d$.\\
+boundary, whether they are homogeneous or inhomogeneous.  To deal with normal 
+velocities, the multifab {\tt vel\_bc\_n(nlevs,dm)}
+stores the actual Dirichlet value.  The $(n,d)^{\rm th}$ element is a face-centered
+multifab for refinement level $n$ in direction $d$ and does not require ghost cells.\\
 
 To deal with transverse velocities, the multifab {\tt vel\_bc\_t(nlevs,X)} stores
-either the Dirichlet or Neumann condition, depending on the type.  In 2D, X=2,
+either the Dirichlet or Neumann value (depending on the boundary type), for both 
+inhomogeneous and homogeneous cases.  In 2D, X=2,
 and in 3D, X=6.  In 2D, the multifabs are each nodal and the components represent:\\
 \begin{enumerate}
 \item The y-velocity bc on x-faces.
@@ -355,6 +356,8 @@ and the components represent:\\
 \item The x-velocity bc on z-faces (thus is nodal in x and z).
 \item The y-velocity bc on z-faces (thus is nodal in y and z).\\
 \end{enumerate}
+
+Note that none of these multifabs require any ghost cells.\\
 
 We have two subroutines that deal with velocity boundary conditions.  Each of these
 take in an optional multifab argument that represents the prescribed Dirichlet
@@ -374,13 +377,12 @@ must be face-centered, and requires no ghost cells.  The boundary face itself
 stores the Dirichlet value.\\
 
 For {\tt multifab\_physbc\_macvel}, the optional multifab that gets passed in
-must be nodal in exactly 2 direction, 
+must be nodal in exactly 2 directions.
 We use the domain value to represent
-the Dirichlet value, and then depending on the boundary conditions, the appropriate
-stencil is used to fill in the ghost value.
+the Dirichlet or Neumann value, and then depending on the boundary conditions, the 
+appropriate stencil is used to fill in the ghost value.
 The stencil for transverse velocities is a two-point stencil involving the
-interior value and the Dirichlet or Neumann boundary value, depending on the
-boundary condition type.\\
+interior value and the Dirichlet or Neumann boundary value.\\
 
 We need to write a helper routine to compute the Neumann condition in the case of
 free-slip walls or free-slip reservoirs.  This only matters if the normal velocity
@@ -390,8 +392,7 @@ homogeneous Neumann condition is correct.\\
 \subsection{GMRES Solver}
 The GMRES solver assumes homogeneous boundary conditions,
 so we use a residual correction technique to convert the problem to one
-with homogeneous boundary conditions of the same type (Neumann or Dirichlet, based on the
-choice of {\tt SLIP} or {\tt NO\_SLIP}):
+with homogeneous boundary conditions of the same type (Neumann or Dirichlet):
 \begin{equation}
 \Ab_H\xb = \bb - \Ab\xb_H.
 \end{equation}
