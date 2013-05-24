@@ -159,7 +159,7 @@ contains
        x = prob_hi(1)
        do j=lo(2),hi(2)+1
           y = prob_lo(2) + dble(j)*dx(2)
-          vel_bc_txy(hi(1)+1,j) = inhomogeneous_bc_val_2d(2,x,y)
+          vel_bc_tyx(hi(1)+1,j) = inhomogeneous_bc_val_2d(2,x,y)
        end do
     end if
 
