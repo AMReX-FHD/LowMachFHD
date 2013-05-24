@@ -282,7 +282,7 @@ contains
 
     !!!!!!!!!!!!!!!!!!!!!!!!
     ! transverse velocities
-!!!!!!!!!!!!!!!!!!!!!!!!
+    !!!!!!!!!!!!!!!!!!!!!!!!
     
     ! yvel, lo x-faces
     if (bc(1,1,2) .eq. DIR_VEL .or. bc(1,1,2) .eq. DIR_TRACT) then
@@ -291,6 +291,7 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2),hi(2)+1
              y = prob_lo(2) + dble(j)*dx(2)
+             vel_bc_tyx(lo(1),j,k) = inhomogeneous_bc_val_3d(2,x,y,z)
           end do
        end do
 
@@ -303,6 +304,7 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2),hi(2)+1
              y = prob_lo(2) + dble(j)*dx(2)
+             vel_bc_tyx(hi(1)+1,j,k) = inhomogeneous_bc_val_3d(2,x,y,z)
           end do
        end do
 
@@ -315,6 +317,7 @@ contains
           z = prob_lo(3) + dble(k)*dx(3)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+             vel_bc_tzx(lo(1),j,k) = inhomogeneous_bc_val_3d(3,x,y,z)
           end do
        end do
 
@@ -327,6 +330,7 @@ contains
           z = prob_lo(3) + dble(k)*dx(3)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+             vel_bc_tzx(hi(1)+1,j,k) = inhomogeneous_bc_val_3d(3,x,y,z)
           end do
        end do
 
@@ -339,6 +343,7 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1),hi(1)+1
              x = prob_lo(1) + dble(i)*dx(1)
+             vel_bc_txy(i,lo(2),k) = inhomogeneous_bc_val_3d(1,x,y,z)
           end do
        end do
 
@@ -351,6 +356,7 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1),hi(1)+1
              x = prob_lo(1) + dble(i)*dx(1)
+             vel_bc_txy(i,hi(2)+1,k) = inhomogeneous_bc_val_3d(1,x,y,z)
           end do
        end do
 
@@ -363,6 +369,7 @@ contains
           z = prob_lo(3) + dble(k)*dx(3)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+             vel_bc_tzy(i,lo(2),k) = inhomogeneous_bc_val_3d(3,x,y,z)
           end do
        end do
 
@@ -375,6 +382,7 @@ contains
           z = prob_lo(3) + dble(k)*dx(3)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+             vel_bc_tzy(i,hi(2)+1,k) = inhomogeneous_bc_val_3d(3,x,y,z)
           end do
        end do
 
@@ -387,6 +395,7 @@ contains
           x = prob_lo(1) + dble(i)*dx(1)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+             vel_bc_txz(i,j,lo(3)) = inhomogeneous_bc_val_3d(1,x,y,z)
           end do
        end do
 
@@ -399,6 +408,7 @@ contains
           x = prob_lo(1) + dble(i)*dx(1)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+             vel_bc_txz(i,j,hi(3)+1) = inhomogeneous_bc_val_3d(1,x,y,z)
           end do
        end do
 
@@ -411,6 +421,7 @@ contains
           y = prob_lo(2) + dble(j)*dx(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+             vel_bc_tyz(i,j,lo(3)) = inhomogeneous_bc_val_3d(2,x,y,z)
           end do
        end do
 
@@ -423,6 +434,7 @@ contains
           y = prob_lo(2) + dble(j)*dx(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+             vel_bc_tyz(i,j,hi(3)+1) = inhomogeneous_bc_val_3d(2,x,y,z)
           end do
        end do
 

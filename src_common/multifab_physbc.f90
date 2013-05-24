@@ -313,7 +313,7 @@ contains
              ng_v = vel_bc_n(bccomp)%ng
              vp => dataptr(vel_bc_n(bccomp),i)
              call physbc_domainvel_inhomogeneous_2d(sp(:,:,1,1), ng_s, &
-                                                    vp(:,:,1,bccomp), ng_v, lo, hi, &
+                                                    vp(:,:,1,1), ng_v, lo, hi, &
                                                     the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
                                                     bccomp,dx)
           else
@@ -326,7 +326,7 @@ contains
              ng_v = vel_bc_n(bccomp)%ng
              vp => dataptr(vel_bc_n(bccomp),i)
              call physbc_domainvel_inhomogeneous_3d(sp(:,:,:,1), ng_s, &
-                                                    vp(:,:,:,bccomp), ng_v, lo, hi, &
+                                                    vp(:,:,:,1), ng_v, lo, hi, &
                                                     the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
                                                     bccomp,dx)
           else
@@ -661,7 +661,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)
                 y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-                s(lo(1),j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(lo(1),j,k) = vel_bc_n(lo(1),j,k)
              end do
           end do
        else if (bc(1,1) .eq. INTERIOR) then
@@ -685,7 +685,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)
                 y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-                s(hi(1)+1,j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(hi(1)+1,j,k) = vel_bc_n(hi(1)+1,j,k)
              end do
           end do
        else if (bc(1,2) .eq. INTERIOR) then
@@ -709,7 +709,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,lo(2),k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,lo(2),k) = vel_bc_n(i,lo(2),k)
              end do
           end do
        else if (bc(2,1) .eq. INTERIOR) then
@@ -733,7 +733,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,hi(2)+1,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,hi(2)+1,k) = vel_bc_n(i,hi(2)+1,k)
              end do
           end do
        else if (bc(2,2) .eq. INTERIOR) then
@@ -757,7 +757,7 @@ contains
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,j,lo(3)) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,j,lo(3)) = vel_bc_n(i,j,lo(3))
              end do
           end do
        else if (bc(3,1) .eq. INTERIOR) then
@@ -781,7 +781,7 @@ contains
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,j,hi(3)+1) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,j,hi(3)+1) = vel_bc_n(i,j,hi(3)+1)
              end do
           end do
       else if (bc(3,2) .eq. INTERIOR) then
@@ -1540,6 +1540,13 @@ contains
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
 
+    ! if bccomp=1, v_bc1 represents x-vel on y-faces
+    !              v_bc2 represents x-vel on z-faces
+    ! if bccomp=2, v_bc1 represents y-vel on x-faces
+    !              v_bc2 represents y-vel on z-faces
+    ! if bccomp=3, v_bc1 represents z-vel on x-faces
+    !              v_bc2 represents z-vel on y-faces
+
     ! Local variables
     integer :: i,j,k
     real(kind=dp_t) :: x,y,z
@@ -1564,7 +1571,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)+1
                 y = prob_lo(3) + dble(j)*dx(2)
-                s(lo(1)-ng_s:lo(1)-1,j,k) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(lo(1),j,k)
+                s(lo(1)-ng_s:lo(1)-1,j,k) = 2.d0*v_bc1(lo(1),j,k) - s(lo(1),j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -1575,7 +1582,7 @@ contains
              z = prob_lo(3) + dble(k)*dx(3)
              do j=lo(2),hi(2)
                 y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
-                s(lo(1)-ng_s:lo(1)-1,j,k) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(lo(1),j,k)
+                s(lo(1)-ng_s:lo(1)-1,j,k) = 2.d0*v_bc1(lo(1),j,k) - s(lo(1),j,k)
              end do
           end do
        end if
@@ -1591,7 +1598,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)+1
                 y = prob_lo(3) + dble(j)*dx(2)
-                s(lo(1)-ng_s:lo(1)-1,j,k) = s(lo(1),j,k) - dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(lo(1)-ng_s:lo(1)-1,j,k) = s(lo(1),j,k) - dx(1)*v_bc1(lo(1),j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -1602,7 +1609,7 @@ contains
              z = prob_lo(3) + dble(k)*dx(3)
              do j=lo(2),hi(2)
                 y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
-                s(lo(1)-ng_s:lo(1)-1,j,k) = s(lo(1),j,k) - dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(lo(1)-ng_s:lo(1)-1,j,k) = s(lo(1),j,k) - dx(1)*v_bc1(lo(1),j,k)
              end do
           end do
        end if
@@ -1629,7 +1636,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)+1
                 y = prob_lo(3) + dble(j)*dx(2)
-                s(hi(1)+1:hi(1)+ng_s,j,k) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(hi(1),j,k)
+                s(hi(1)+1:hi(1)+ng_s,j,k) = 2.d0*v_bc1(hi(1)+1,j,k) - s(hi(1),j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -1640,7 +1647,7 @@ contains
              z = prob_lo(3) + dble(k)*dx(3)
              do j=lo(2),hi(2)
                 y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
-                s(hi(1)+1:hi(1)+ng_s,j,k) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(hi(1),j,k)
+                s(hi(1)+1:hi(1)+ng_s,j,k) = 2.d0*v_bc1(hi(1)+1,j,k) - s(hi(1),j,k)
              end do
           end do
        end if
@@ -1656,7 +1663,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)+1
                 y = prob_lo(3) + dble(j)*dx(2)
-                s(hi(1)+1:hi(1)+ng_s,j,k) = s(hi(1),j,k) + dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(hi(1)+1:hi(1)+ng_s,j,k) = s(hi(1),j,k) + dx(1)*v_bc1(hi(1)+1,j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -1667,7 +1674,7 @@ contains
              z = prob_lo(3) + dble(k)*dx(3)
              do j=lo(2),hi(2)
                 y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
-                s(hi(1)+1:hi(1)+ng_s,j,k) = s(hi(1),j,k) + dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(hi(1)+1:hi(1)+ng_s,j,k) = s(hi(1),j,k) + dx(1)*v_bc1(hi(1)+1,j,k)
              end do
           end do
        end if
@@ -1691,7 +1698,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)+1
                 x = prob_lo(1) + dble(i)*dx(1)
-                s(i,lo(2)-ng_s:lo(2)-1,k) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(i,lo(2),k)
+                s(i,lo(2)-ng_s:lo(2)-1,k) = 2.d0*v_bc1(i,lo(2),k) - s(i,lo(2),k)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1705,7 +1712,7 @@ contains
              z = prob_lo(3) + dble(k)*dx(3)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,lo(2)-ng_s:lo(2)-1,k) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(i,lo(2),k)
+                s(i,lo(2)-ng_s:lo(2)-1,k) = 2.d0*v_bc2(i,lo(2),k) - s(i,lo(2),k)
              end do
           end do
        end if
@@ -1718,7 +1725,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)+1
                 x = prob_lo(1) + dble(i)*dx(1)
-                s(i,lo(2)-ng_s:lo(2)-1,k) = s(i,lo(2),k) - dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,lo(2)-ng_s:lo(2)-1,k) = s(i,lo(2),k) - dx(2)*v_bc1(i,lo(2),k)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1732,7 +1739,7 @@ contains
              z = prob_lo(3) + dble(k)*dx(3)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,lo(2)-ng_s:lo(2)-1,k) = s(i,lo(2),k) - dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,lo(2)-ng_s:lo(2)-1,k) = s(i,lo(2),k) - dx(2)*v_bc2(i,lo(2),k)
              end do
           end do
        end if
@@ -1756,7 +1763,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)+1
                 x = prob_lo(1) + dble(i)*dx(1)
-                s(i,hi(2)+1:hi(2)+ng_s,k) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(i,hi(2),k)
+                s(i,hi(2)+1:hi(2)+ng_s,k) = 2.d0*v_bc1(i,hi(2)+1,k) - s(i,hi(2),k)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1770,7 +1777,7 @@ contains
              z = prob_lo(3) + dble(k)*dx(3)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,hi(2)+1:hi(2)+ng_s,k) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(i,hi(2),k)
+                s(i,hi(2)+1:hi(2)+ng_s,k) = 2.d0*v_bc2(i,hi(2)+1,k) - s(i,hi(2),k)
              end do
           end do
        end if
@@ -1783,7 +1790,7 @@ contains
              z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)+1
                 x = prob_lo(1) + dble(i)*dx(1)
-                s(i,hi(2)+1:hi(2)+ng_s,k) = s(i,hi(2),k) + dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,hi(2)+1:hi(2)+ng_s,k) = s(i,hi(2),k) + dx(2)*v_bc1(i,hi(2)+1,k)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1797,7 +1804,7 @@ contains
              z = prob_lo(3) + dble(k)*dx(3)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,hi(2)+1:hi(2)+ng_s,k) = s(i,hi(2),k) + dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,hi(2)+1:hi(2)+ng_s,k) = s(i,hi(2),k) + dx(2)*v_bc2(i,hi(2)+1,k)
              end do
           end do
        end if
@@ -1821,7 +1828,7 @@ contains
              y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)+1
                 x = prob_lo(1) + dble(i)*dx(1)
-                s(i,j,lo(3)-ng_s:lo(3)-1) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(i,j,lo(3))
+                s(i,j,lo(3)-ng_s:lo(3)-1) = 2.d0*v_bc2(i,j,lo(3)) - s(i,j,lo(3))
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1832,7 +1839,7 @@ contains
              y = prob_lo(3) + dble(j)*dx(2)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,j,lo(3)-ng_s:lo(3)-1) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(i,j,lo(3))
+                s(i,j,lo(3)-ng_s:lo(3)-1) = 2.d0*v_bc2(i,j,lo(3)) - s(i,j,lo(3))
              end do
           end do
        else if (bccomp .eq. 3) then 
@@ -1848,7 +1855,7 @@ contains
              y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)+1
                 x = prob_lo(1) + dble(i)*dx(1)
-                s(i,j,lo(3)-ng_s:lo(3)-1) = s(i,j,lo(3)) - dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,j,lo(3)-ng_s:lo(3)-1) = s(i,j,lo(3)) - dx(3)*v_bc2(i,j,lo(3))
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1859,7 +1866,7 @@ contains
              y = prob_lo(3) + dble(j)*dx(2)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,j,lo(3)-ng_s:lo(3)-1) = s(i,j,lo(3)) - dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,j,lo(3)-ng_s:lo(3)-1) = s(i,j,lo(3)) - dx(3)*v_bc2(i,j,lo(3))
              end do
           end do
        else if (bccomp .eq. 3) then 
@@ -1886,7 +1893,7 @@ contains
              y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)+1
                 x = prob_lo(1) + dble(i)*dx(1)
-                s(i,j,hi(3)+1:hi(3)+ng_s) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(i,j,hi(3))
+                s(i,j,hi(3)+1:hi(3)+ng_s) = 2.d0*v_bc2(i,j,hi(3)+1) - s(i,j,hi(3))
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1897,7 +1904,7 @@ contains
              y = prob_lo(3) + dble(j)*dx(2)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,j,hi(3)+1:hi(3)+ng_s) = 2.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) - s(i,j,hi(3))
+                s(i,j,hi(3)+1:hi(3)+ng_s) = 2.d0*v_bc2(i,j,hi(3)+1) - s(i,j,hi(3))
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -1913,7 +1920,7 @@ contains
              y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)+1
                 x = prob_lo(1) + dble(i)*dx(1)
-                s(i,j,hi(3)+1:hi(3)+ng_s) = s(i,j,hi(3)) + dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,j,hi(3)+1:hi(3)+ng_s) = s(i,j,hi(3)) + dx(3)*v_bc2(i,j,hi(3)+1)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1924,7 +1931,7 @@ contains
              y = prob_lo(3) + dble(j)*dx(2)
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,j,hi(3)+1:hi(3)+ng_s) = s(i,j,hi(3)) + dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                s(i,j,hi(3)+1:hi(3)+ng_s) = s(i,j,hi(3)) + dx(3)*v_bc2(i,j,hi(3)+1)
              end do
           end do
        else if (bccomp .eq. 3) then
