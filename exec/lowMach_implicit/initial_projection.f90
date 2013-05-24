@@ -21,7 +21,7 @@ module initial_projection_module
 contains
 
   subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,rhoc_d_fluxdiv, &
-                                rhoc_s_fluxdiv,dx,the_bc_tower)
+                                rhoc_s_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -34,6 +34,8 @@ contains
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    type(multifab) , intent(in   ) :: vel_bc_n(:,:)
+    type(multifab) , intent(in   ) :: vel_bc_t(:,:)
 
     ! local
     integer :: i,dm,n,nlevs
@@ -129,9 +131,11 @@ contains
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
           ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
+          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:),vel_bc_n(n,:))
           ! set transverse velocity behind physical boundaries
-          call multifab_physbc_macvel(umac(n,i),i,the_bc_tower%bc_tower_array(n),dx(n,:))
+          call multifab_physbc_macvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                      dx(n,:),vel_bc_t(n,:))
        end do
     end do
 
