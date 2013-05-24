@@ -189,7 +189,8 @@ contains
     end do
 
     ! compute m_a_fluxdiv_old = A^n for momentum
-    call mk_advective_m_fluxdiv(mla,umac_old,mold,m_a_fluxdiv_old,dx)
+    call mk_advective_m_fluxdiv(mla,umac_old,mold,m_a_fluxdiv_old,dx, &
+                                the_bc_tower%bc_tower_array)
 
     ! add A^n for momentum to gmres_rhs_v
     do n=1,nlevs
@@ -425,7 +426,8 @@ contains
     end do
 
     ! compute m_a_fluxdiv_new = A(s^{n+1},v^{n+1,*}) for momentum
-    call mk_advective_m_fluxdiv(mla,umac,mnew,m_a_fluxdiv_new,dx)
+    call mk_advective_m_fluxdiv(mla,umac,mnew,m_a_fluxdiv_new,dx, &
+                                the_bc_tower%bc_tower_array)
 
     ! add (1/2) m_a_fluxdiv_new to gmres_rhs_v
     do n=1,nlevs
