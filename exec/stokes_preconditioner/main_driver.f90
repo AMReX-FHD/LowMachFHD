@@ -61,6 +61,17 @@ subroutine main_driver()
   type(multifab), allocatable :: gamma(:)         ! coefficient for staggered multigrid solver
 
   ! special inhomogeneous boundary condition multifab
+  ! vel_bc_n(nlevs,dm) are the normal velocities
+  ! in 2D, vel_bc_t(nlevs,2) respresents
+  !   1. y-velocity bc on x-faces (nodal)
+  !   2. x-velocity bc on y-faces (nodal)
+  ! in 3D, vel_bc_t(nlevs,6) represents
+  !   1. y-velocity bc on x-faces (nodal in y and x)
+  !   2. z-velocity bc on x-faces (nodal in z and x)
+  !   3. x-velocity bc on y-faces (nodal in x and y)
+  !   4. z-velocity bc on y-faces (nodal in z and y)
+  !   5. x-velocity bc on z-faces (nodal in x and z)
+  !   6. y-velocity bc on z-faces (nodal in y and z)
   type(multifab), allocatable :: vel_bc_n(:,:)
   type(multifab), allocatable :: vel_bc_t(:,:)
 
