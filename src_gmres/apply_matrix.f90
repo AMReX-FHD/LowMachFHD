@@ -26,7 +26,7 @@ contains
     type(multifab) , intent(inout) :: b_p(:)
     type(multifab) , intent(inout) :: x_u(:,:)
     type(multifab) , intent(inout) :: x_p(:)
-    type(multifab) , intent(inout) :: alpha_fc(:,:)
+    type(multifab) , intent(in   ) :: alpha_fc(:,:)
     type(multifab) , intent(in   ) :: beta(:)
     type(multifab) , intent(in   ) :: beta_ed(:,:)
     type(multifab) , intent(in   ) :: gamma(:)

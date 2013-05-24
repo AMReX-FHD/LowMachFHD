@@ -23,7 +23,7 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(in   ) :: phi_fc(:,:)   ! face-centered
     type(multifab) , intent(inout) :: Lphi_fc(:,:)  ! face-centered
-    type(multifab) , intent(inout) :: alpha_fc(:,:) ! face-centered
+    type(multifab) , intent(in   ) :: alpha_fc(:,:) ! face-centered
     type(multifab) , intent(in   ) :: beta_cc(:)    ! cell-centered
     type(multifab) , intent(in   ) :: beta_ed(:,:)  ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: gamma_cc(:)   ! cell-centered

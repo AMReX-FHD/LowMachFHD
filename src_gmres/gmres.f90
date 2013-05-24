@@ -36,7 +36,7 @@ contains
     type(multifab), intent(in   ) :: b_p(:)    ! (nlevs)
     type(multifab), intent(inout) :: x_u(:,:)  ! (nlevs,dm)
     type(multifab), intent(inout) :: x_p(:)    ! (nlevs)
-    type(multifab), intent(inout) :: alpha_fc(:,:)
+    type(multifab), intent(in   ) :: alpha_fc(:,:)
     type(multifab), intent(in   ) :: beta(:)
     type(multifab), intent(in   ) :: beta_ed(:,:) ! nodal (2d), edge-centered (3d)
     type(multifab), intent(in   ) :: gamma(:)
