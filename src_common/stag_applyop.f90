@@ -31,29 +31,32 @@ contains
 
     ! local
     integer :: i,n,dm,nlevs
+    type(multifab) :: alpha_fc_temp(mla%nlevel,mla%dim)
 
     dm = mla%dim
     nlevs = mla%nlevel
 
-    ! multiply alpha_fc by theta
+    ! multiply alpha_fc_temp by theta
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(alpha_fc(n,i),1,theta,1,alpha_fc(n,i)%ng)
+          call multifab_build_edge(alpha_fc_temp(n,i),mla%la(n),1,0,i)
+          call multifab_copy_c(alpha_fc_temp(n,i),1,alpha_fc(n,i),1,1,0)
+          call multifab_mult_mult_s_c(alpha_fc_temp(n,i),1,theta,1,0)
        end do
     end do
 
     do n=1,nlevs
        call stag_applyop_level(mla%la(n),the_bc_tower%bc_tower_array(n), &
-                               phi_fc(n,:),Lphi_fc(n,:),alpha_fc(n,:), &
+                               phi_fc(n,:),Lphi_fc(n,:),alpha_fc_temp(n,:), &
                                beta_cc(n),beta_ed(n,:),gamma_cc(n),dx(n,:))
     end do
-    
-    ! restore alpha_fc
+
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(alpha_fc(n,i),1,1.d0/theta,1,alpha_fc(n,i)%ng)
+          call multifab_destroy(alpha_fc_temp(n,i))
        end do
     end do
+       
 
   end subroutine stag_applyop
 
