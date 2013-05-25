@@ -9,6 +9,7 @@ module mk_stochastic_fluxdiv_module
   use BoxLibRNGs
   use analysis_module
   use convert_stag_module
+  use multifab_physbc_module
   use probin_common_module , only: fixed_dt
   use probin_lowmach_module, only: nscal, rhobar, visc_coef, diff_coef, variance_coef, &
                                    conc_scal, stoch_stress_form, filtering_width, mol_mass, &
@@ -653,6 +654,11 @@ contains
 
           end select
        end do
+
+       do i=1,dm
+          call multifab_physbc_domainvel(stoch_m_force(n,i),i,the_bc_level(n),dx(n,:))
+       end do
+
     end do
 
     do n=1,nlevs
