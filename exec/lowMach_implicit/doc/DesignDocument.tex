@@ -36,6 +36,8 @@
 \def\bb {{\bf b}}
 \def\Fb {{\bf F}}
 \def\gb {{\bf g}}
+\def\Pb {{\bf P}}
+\def\rb {{\bf r}}
 \def\vb {{\bf v}}
 \def\Wb {{\bf W}}
 \def\xb {{\bf x}}
@@ -109,7 +111,10 @@ for $\mathcal{A}_0$ indicates the temporal discretization for the transport coef
 \end{itemize}
 
 \section{GMRES Solver}
-We also have a standalone GMRES solver of the form,
+
+More details on the GMRES can be found in our upcoming preconditioner paper,
+so here we only summarize some important points.
+We use of GMRES solver that solves systems of the form,
 \begin{equation}
 \underbrace{
 \left(\begin{array}{cc}
@@ -142,6 +147,36 @@ $\mathcal{I}$ is the identity matrix,
 and $\mathcal{A}_0$ represents the viscous stress tensor.
 Both $\mathcal{A}$ and $\mathcal{A}_0$ operate on staggered data and return
 a staggered field.\\
+
+Each residual is therefore composed of two parts, a velocity residual, $r_v$,
+and a pressure residual, $r_p$.  We combine these into a total residual, 
+$r=\sqrt{r_v^2 + {\tt p\_norm\_weight}^2 r_p^2}$.  We consider two
+kinds of residuals, the unpreconditined residual, $r=||\Ab\xb-\bb||$, 
+and the preconditioned 
+residual $r_P=||\Pb^{-1}(\Ab\xb-\bb)||$.  GMRES internally {\it estimates} the 
+preconditioned residual without actually computing it. This estimate 
+is good if the Krylov basis is truly orthogonal but may not be very good 
+if there is some degeneration in orthogonality (usually a sign of bad 
+scaling or ill-conditioning). So the way the convergence testing is done 
+is as follows:\\
+\begin{enumerate}
+\item At the beginning of every outer iteration (restart), we compute 
+both the true and the preconditioned residuals (this is no extra cost 
+since we need to do this anyway).\\
+\item If a minimum number of total iterations have been performed, and the 
+preconditioned residual is within tolerance,
+$r_P < {\tt gmres\_rel\_tol}*\min(||P^{-1}b||,r_{P,\rm init})$
+we terminate the GMRES iteration. If the true residual is larger than 10 
+times the tolerance, we issue a warning since this means that the 
+preconditioned residual is not a good indication of the 
+unpreconditioned residual.\\
+\item In the inner iteration, we  test the estimate of the preconditioned
+residual, and if it is within tolerance, we exit the inner iteration.
+This does not mean the GMRES iteration will terminate, since the actual
+value of the preconditioned residual may be different.
+If the maximum number of inner or outer iterations is reached we exit 
+with an error message.
+\end{enumerate}
 
 \section{Algorithm}
 Here is the time-advancement scheme.\\ \\
@@ -389,7 +424,7 @@ free-slip walls or free-slip reservoirs.  This only matters if the normal veloci
 changes as a function of the transverse velocity of interest.  If not, a 
 homogeneous Neumann condition is correct.\\
 
-\subsection{GMRES Solver}
+\subsubsection{GMRES Boundary Conditions}
 The GMRES solver assumes homogeneous boundary conditions,
 so we use a residual correction technique to convert the problem to one
 with homogeneous boundary conditions of the same type (Neumann or Dirichlet):
