@@ -221,7 +221,7 @@ subroutine projectHydroGrid_C (density, concentration, filename, id, save_snapsh
               BIND(C, NAME="projectHydroGrid_C")
    ! state the in/out args
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
-   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
+   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), max(1,grid%nSpecies-1))
    character(kind=c_char), dimension(*), intent(in) :: filename ! A C string, OPTIONAL: empty for not present
    integer(c_int), value :: id ! Append an integer ID to the file name, OPTIONAL: negative for not present
    integer(c_int), value :: save_snapshot ! Should we also write the full data to a VTK file?
@@ -275,7 +275,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id, 
 
    type(HydroGrid), target, intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
-   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
+   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), max(1,grid%nSpecies-1)) ! There must be at least one concentration here!
    character(len=*), intent(in), optional :: filename
    integer, intent(in), optional :: id
    type(HydroGrid), intent(inout), optional :: grid_2D
@@ -456,7 +456,7 @@ subroutine writeHydroGridMixture_C (density, concentration, filename, id) &
               BIND(C, NAME="writeHydroGridMixture_C")
    ! state the in/out args
    real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
-   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
+   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), max(1,grid%nSpecies-1))
    character(kind=c_char), dimension(*), intent(in) :: filename ! A C string
    integer(c_int), value :: id ! Append an integer ID to the file name, OPTIONAL: negative for not present
 
@@ -484,7 +484,7 @@ subroutine writeHydroGridMixture(grid, density, concentration, filename, id)
 
    type(HydroGrid), target, intent(inout) :: grid ! A. Donev: This can be different from the module variable grid!
    real (wp), intent(in), target :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
-   real (wp), intent(in), target :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
+   real (wp), intent(in), target :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), max(1,grid%nSpecies-1))
    character(len=*), intent(in), optional :: filename
    integer, intent(in), optional :: id
     
