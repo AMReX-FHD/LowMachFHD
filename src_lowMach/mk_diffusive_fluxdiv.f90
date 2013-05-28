@@ -4,7 +4,7 @@ module mk_diffusive_fluxdiv_module
   use define_bc_module
   use bc_module
   use convert_stag_module
-  use probin_lowmach_module, only: visc_coef, diff_coef
+  use probin_lowmach_module, only: visc_coef, diff_coef, rhobar
 
   implicit none
 
@@ -15,7 +15,7 @@ module mk_diffusive_fluxdiv_module
 contains
 
   subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_fc,chi_fc, &
-                                       dx,the_bc_level)
+                                       dx,the_bc_level,vel_bc_n)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_update(:)
@@ -25,9 +25,10 @@ contains
     type(multifab) , intent(in   ) :: chi_fc(:,:) ! chi on faces
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
+    type(multifab) , intent(inout) :: vel_bc_n(:,:) ! inhomogeneous normal vel value
 
     ! local variables
-    integer :: nlevs,dm,i,n,ng_u,ng_p,ng_s,ng_c
+    integer :: nlevs,dm,i,n,ng_u,ng_p,ng_s,ng_c,ng_b
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t), pointer :: up(:,:,:,:)
@@ -38,12 +39,15 @@ contains
     real(kind=dp_t), pointer :: cpx(:,:,:,:)
     real(kind=dp_t), pointer :: cpy(:,:,:,:)
     real(kind=dp_t), pointer :: cpz(:,:,:,:)
-
+    real(kind=dp_t), pointer :: vpx(:,:,:,:)
+    real(kind=dp_t), pointer :: vpy(:,:,:,:)
+    real(kind=dp_t), pointer :: vpz(:,:,:,:)
 
     ng_u = s_update(1)%ng
     ng_p = prim(1)%ng
     ng_s = rho_fc(1,1)%ng
     ng_c = chi_fc(1,1)%ng
+    ng_b = vel_bc_n(1,1)%ng
 
     nlevs = mla%nlevel
     dm    = mla%dim
@@ -57,6 +61,8 @@ contains
           spy => dataptr(rho_fc(n,2), i)
           cpx => dataptr(chi_fc(n,1), i)
           cpy => dataptr(chi_fc(n,2), i)
+          vpx => dataptr(vel_bc_n(n,1), i)
+          vpy => dataptr(vel_bc_n(n,2), i)
           lo = lwb(get_box(prim(n), i))
           hi = upb(get_box(prim(n), i))
           select case (dm)
@@ -64,14 +70,17 @@ contains
              call mk_diffusive_rhoc_fluxdiv_2d(up(:,:,1,out_comp), ng_u, pp(:,:,1,2), ng_p, &
                                                spx(:,:,1,1), spy(:,:,1,1), ng_s, &
                                                cpx(:,:,1,1), cpy(:,:,1,1), ng_c, &
+                                               vpx(:,:,1,1), vpy(:,:,1,1), ng_b, &
                                                lo, hi, dx(n,:), &
                                                the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           case (3)
              spz => dataptr(rho_fc(n,3), i)
              cpz => dataptr(chi_fc(n,3), i)
+             vpz => dataptr(vel_bc_n(n,3), i)
              call mk_diffusive_rhoc_fluxdiv_3d(up(:,:,:,out_comp), ng_u, pp(:,:,:,2), ng_p, &
                                                spx(:,:,:,1), spy(:,:,:,1), spz(:,:,:,1), ng_s, &
                                                cpx(:,:,:,1), cpy(:,:,:,1), cpz(:,:,:,1), ng_c, &
+                                               vpx(:,:,:,1), vpy(:,:,:,1), vpz(:,:,:,1), ng_b, &
                                                lo, hi, dx(n,:), &
                                                the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           end select
@@ -81,15 +90,18 @@ contains
   contains
 
     subroutine mk_diffusive_rhoc_fluxdiv_2d(s_update,ng_u,c,ng_p,rhox,rhoy,ng_s, &
-                                            chix,chiy,ng_c,lo,hi,dx,adv_bc)
+                                            chix,chiy,ng_c,vel_bc_nx,vel_bc_ny,ng_b, &
+                                            lo,hi,dx,adv_bc)
 
-      integer        , intent(in   ) :: lo(:), hi(:), ng_u, ng_p, ng_s, ng_c
-      real(kind=dp_t), intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:)
-      real(kind=dp_t), intent(in   ) ::        c(lo(1)-ng_p:,lo(2)-ng_p:)
-      real(kind=dp_t), intent(in   ) ::     rhox(lo(1)-ng_s:,lo(2)-ng_s:)
-      real(kind=dp_t), intent(in   ) ::     rhoy(lo(1)-ng_s:,lo(2)-ng_s:)
-      real(kind=dp_t), intent(in   ) ::     chix(lo(1)-ng_c:,lo(2)-ng_c:)
-      real(kind=dp_t), intent(in   ) ::     chiy(lo(1)-ng_c:,lo(2)-ng_c:)
+      integer        , intent(in   ) :: lo(:), hi(:), ng_u, ng_p, ng_s, ng_c, ng_b
+      real(kind=dp_t), intent(inout) ::  s_update(lo(1)-ng_u:,lo(2)-ng_u:)
+      real(kind=dp_t), intent(in   ) ::         c(lo(1)-ng_p:,lo(2)-ng_p:)
+      real(kind=dp_t), intent(in   ) ::      rhox(lo(1)-ng_s:,lo(2)-ng_s:)
+      real(kind=dp_t), intent(in   ) ::      rhoy(lo(1)-ng_s:,lo(2)-ng_s:)
+      real(kind=dp_t), intent(in   ) ::      chix(lo(1)-ng_c:,lo(2)-ng_c:)
+      real(kind=dp_t), intent(in   ) ::      chiy(lo(1)-ng_c:,lo(2)-ng_c:)
+      real(kind=dp_t), intent(inout) :: vel_bc_nx(lo(1)-ng_b:,lo(2)-ng_b:)
+      real(kind=dp_t), intent(inout) :: vel_bc_ny(lo(1)-ng_b:,lo(2)-ng_b:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       integer        , intent(in   ) :: adv_bc(:,:,:)
 
@@ -98,6 +110,10 @@ contains
 
       real(kind=dp_t) :: fluxx(lo(1):hi(1)+1,lo(2):hi(2))
       real(kind=dp_t) :: fluxy(lo(1):hi(1),lo(2):hi(2)+1)
+
+      real(kind=dp_t) :: S_fac
+
+      S_fac = 1.d0/rhobar(1)-1.d0/rhobar(2)
 
       ! x-faces
       do j=lo(2),hi(2)
@@ -119,6 +135,16 @@ contains
          do j=lo(2),hi(2)
             fluxx(i,j) = rhox(i,j)*chix(i,j) * (c(i,j)-c(i-1,j)) / (0.5d0*dx(1))
          end do
+      end if
+
+      ! update umac bc based on diffusive flux at boundary
+      if (adv_bc(1,1,1) .eq. DIR_VEL .and. adv_bc(1,1,4) .eq. EXT_DIR) then
+         vel_bc_nx(lo(1),lo(2):hi(2)) = vel_bc_nx(lo(1),lo(2):hi(2)) &
+              + S_fac*fluxx(lo(1),lo(2):hi(2))
+      end if
+      if (adv_bc(1,2,1) .eq. DIR_VEL .and. adv_bc(1,2,4) .eq. EXT_DIR) then
+         vel_bc_nx(hi(1)+1,lo(2):hi(2)) = vel_bc_nx(hi(1)+1,lo(2):hi(2)) &
+              + S_fac*fluxx(hi(1)+1,lo(2):hi(2))
       end if
 
       ! y-faces
@@ -143,6 +169,16 @@ contains
          end do
       end if
 
+      ! update vmac bc based on diffusive flux at boundary
+      if (adv_bc(2,1,2) .eq. DIR_VEL .and. adv_bc(2,1,4) .eq. EXT_DIR) then
+         vel_bc_ny(lo(1):hi(1),lo(2)) = vel_bc_ny(lo(1):hi(1),lo(2)) + &
+              S_fac*fluxy(lo(1):hi(1),lo(2))
+      end if
+      if (adv_bc(2,2,2) .eq. DIR_VEL .and. adv_bc(2,2,4) .eq. EXT_DIR) then
+         vel_bc_ny(lo(1):hi(1),hi(2)+1) = vel_bc_ny(lo(1):hi(1),hi(2)+1) + &
+              S_fac*fluxy(lo(1):hi(1),hi(2)+1)
+      end if
+
       ! flux divergence
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)
@@ -155,17 +191,21 @@ contains
     end subroutine mk_diffusive_rhoc_fluxdiv_2d
 
     subroutine mk_diffusive_rhoc_fluxdiv_3d(s_update,ng_u,c,ng_p,rhox,rhoy,rhoz,ng_s, &
-                                            chix,chiy,chiz,ng_c,lo,hi,dx,adv_bc)
+                                            chix,chiy,chiz,ng_c,vel_bc_nx, &
+                                            vel_bc_ny,vel_bc_nz,ng_b,lo,hi,dx,adv_bc)
 
-      integer        , intent(in   ) :: lo(:), hi(:), ng_u, ng_p, ng_s, ng_c
-      real(kind=dp_t), intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-      real(kind=dp_t), intent(in   ) ::        c(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-      real(kind=dp_t), intent(in   ) ::     rhox(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-      real(kind=dp_t), intent(in   ) ::     rhoy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-      real(kind=dp_t), intent(in   ) ::     rhoz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-      real(kind=dp_t), intent(in   ) ::     chix(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
-      real(kind=dp_t), intent(in   ) ::     chiy(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
-      real(kind=dp_t), intent(in   ) ::     chiz(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
+      integer        , intent(in   ) :: lo(:), hi(:), ng_u, ng_p, ng_s, ng_c,ng_b
+      real(kind=dp_t), intent(inout) ::  s_update(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+      real(kind=dp_t), intent(in   ) ::         c(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real(kind=dp_t), intent(in   ) ::      rhox(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+      real(kind=dp_t), intent(in   ) ::      rhoy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+      real(kind=dp_t), intent(in   ) ::      rhoz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+      real(kind=dp_t), intent(in   ) ::      chix(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
+      real(kind=dp_t), intent(in   ) ::      chiy(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
+      real(kind=dp_t), intent(in   ) ::      chiz(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
+      real(kind=dp_t), intent(inout) :: vel_bc_nx(lo(1)-ng_b:,lo(2)-ng_b:,lo(3)-ng_b:)
+      real(kind=dp_t), intent(inout) :: vel_bc_ny(lo(1)-ng_b:,lo(2)-ng_b:,lo(3)-ng_b:)
+      real(kind=dp_t), intent(inout) :: vel_bc_nz(lo(1)-ng_b:,lo(2)-ng_b:,lo(3)-ng_b:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       integer        , intent(in   ) :: adv_bc(:,:,:)
 
@@ -175,6 +215,10 @@ contains
       real(kind=dp_t) :: fluxx(lo(1):hi(1)+1,lo(2):hi(2),lo(3):hi(3))
       real(kind=dp_t) :: fluxy(lo(1):hi(1),lo(2):hi(2)+1,lo(3):hi(3))
       real(kind=dp_t) :: fluxz(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)+1)
+
+      real(kind=dp_t) :: S_fac
+
+      S_fac = 1.d0/rhobar(1)-1.d0/rhobar(2)
 
       ! x-faces
       do k=lo(3),hi(3)
@@ -202,6 +246,16 @@ contains
                fluxx(i,j,k) = rhox(i,j,k)*chix(i,j,k) * (c(i,j,k)-c(i-1,j,k)) / (0.5d0*dx(1))
             end do
          end do
+      end if
+
+      ! update umac bc based on diffusive flux at boundary
+      if (adv_bc(1,1,1) .eq. DIR_VEL .and. adv_bc(1,1,5) .eq. EXT_DIR) then
+         vel_bc_nx(lo(1),lo(2):hi(2),lo(3):hi(3)) = vel_bc_nx(lo(1),lo(2):hi(2),lo(3):hi(3)) &
+              + S_fac*fluxx(lo(1),lo(2):hi(2),lo(3):hi(3))
+      end if
+      if (adv_bc(1,2,1) .eq. DIR_VEL .and. adv_bc(1,2,5) .eq. EXT_DIR) then
+         vel_bc_nx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = vel_bc_nx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) &
+              + S_fac*fluxx(hi(1)+1,lo(2):hi(2),lo(3):hi(3))
       end if
 
       ! y-faces
@@ -232,6 +286,16 @@ contains
          end do
       end if
 
+      ! update vmac bc based on diffusive flux at boundary
+      if (adv_bc(2,1,2) .eq. DIR_VEL .and. adv_bc(2,1,5) .eq. EXT_DIR) then
+         vel_bc_ny(lo(1):hi(1),lo(2),lo(3):hi(3)) = vel_bc_ny(lo(1):hi(1),lo(2),lo(3):hi(3)) + &
+              S_fac*fluxy(lo(1):hi(1),lo(2),lo(3):hi(3))
+      end if
+      if (adv_bc(2,2,2) .eq. DIR_VEL .and. adv_bc(2,2,5) .eq. EXT_DIR) then
+         vel_bc_ny(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = vel_bc_ny(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) + &
+              S_fac*fluxy(lo(1):hi(1),hi(2)+1,lo(3):hi(3))
+      end if
+
       ! z-faces
       do k=lo(3),hi(3)+1
          do j=lo(2),hi(2)
@@ -258,6 +322,16 @@ contains
                fluxz(i,j,k) = rhoz(i,j,k)*chiz(i,j,k) * (c(i,j,k)-c(i,j,k-1)) / (0.5d0*dx(3))
             end do
          end do
+      end if
+
+      ! update wmac bc based on diffusive flux at boundary
+      if (adv_bc(3,1,3) .eq. DIR_VEL .and. adv_bc(3,1,5) .eq. EXT_DIR) then
+         vel_bc_nz(lo(1):hi(1),lo(2):hi(2),lo(3)) = vel_bc_nz(lo(1):hi(1),lo(2):hi(2),lo(3)) + &
+              S_fac*fluxz(lo(1):hi(1),lo(2):hi(2),lo(3))
+      end if
+      if (adv_bc(3,2,3) .eq. DIR_VEL .and. adv_bc(3,2,5) .eq. EXT_DIR) then
+         vel_bc_nz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = vel_bc_nz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) + &
+              S_fac*fluxz(lo(1):hi(1),lo(2):hi(2),hi(3)+1)
       end if
 
       ! flux divergence

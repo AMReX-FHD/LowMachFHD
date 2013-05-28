@@ -211,11 +211,10 @@ contains
           ! for transverse velocity we imposie a Dirichlet velocity condition
           ! for pressure we use extrapolation
           ! for primitive variables we use extrapolation
-          adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! transverse velocity
-          adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP   ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP   ! rho
-          adv_bc_level(igrid,d,lohi,dm+3) = FOEXTRAP   ! c
+          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL  ! transverse velocity
+          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL  ! normal velocity
+          adv_bc_level(igrid,d,lohi,dm+1)      = FOEXTRAP ! pressure
+          adv_bc_level(igrid,d,lohi,dm+2:dm+3) = FOEXTRAP ! rho and c
 
        else if (phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
 
@@ -223,11 +222,10 @@ contains
           ! for transverse velocity we imposie a Dirichlet stress condition
           ! for pressure we use extrapolation
           ! for primitive variables we use extrapolation
-          adv_bc_level(igrid,d,lohi,1:dm) = DIR_TRACT ! transverse velocity
-          adv_bc_level(igrid,d,lohi,d   ) = DIR_VEL   ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = FOEXTRAP  ! rho
-          adv_bc_level(igrid,d,lohi,dm+3) = FOEXTRAP  ! c
+          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_TRACT ! transverse velocity
+          adv_bc_level(igrid,d,lohi,d   )      = DIR_VEL   ! normal velocity
+          adv_bc_level(igrid,d,lohi,dm+1)      = FOEXTRAP  ! pressure
+          adv_bc_level(igrid,d,lohi,dm+2:dm+3) = FOEXTRAP  ! rho and c
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR) then
 
@@ -235,11 +233,10 @@ contains
           ! for transverse velocity we imposie a Dirichlet velocity condition
           ! for pressure we use extrapolation
           ! for primitive variables we impose a Dirichlet condition
-          adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! transverse velocity
-          adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP   ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = EXT_DIR    ! rho
-          adv_bc_level(igrid,d,lohi,dm+3) = EXT_DIR    ! c
+          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL    ! transverse velocity
+          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL    ! normal velocity
+          adv_bc_level(igrid,d,lohi,dm+1)      = FOEXTRAP   ! pressure
+          adv_bc_level(igrid,d,lohi,dm+2:dm+3) = EXT_DIR    ! rho and c
 
        else if (phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
 
@@ -247,11 +244,10 @@ contains
           ! for transverse velocity we imposie a Dirichlet stress condition
           ! for pressure we use extrapolation
           ! for primitive variables we impose a Dirichlet condition
-          adv_bc_level(igrid,d,lohi,1:dm) = DIR_TRACT  ! transverse velocity
-          adv_bc_level(igrid,d,lohi,1:dm) = DIR_VEL    ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1) = FOEXTRAP   ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2) = EXT_DIR    ! rho
-          adv_bc_level(igrid,d,lohi,dm+3) = EXT_DIR    ! c
+          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_TRACT  ! transverse velocity
+          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL    ! normal velocity
+          adv_bc_level(igrid,d,lohi,dm+1)      = FOEXTRAP   ! pressure
+          adv_bc_level(igrid,d,lohi,dm+2:dm+3) = EXT_DIR    ! rho and c
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC .or. &
                 phys_bc_level(igrid,d,lohi) == INTERIOR ) then

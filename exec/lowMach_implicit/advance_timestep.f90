@@ -46,7 +46,7 @@ contains
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(in   ) :: vel_bc_n(:,:)
+    type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(in   ) :: vel_bc_t(:,:)
 
     ! local
@@ -245,7 +245,7 @@ contains
 
     ! add div(rho*chi grad c)^{*,n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
-                                   the_bc_tower%bc_tower_array)
+                                   the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(Psi^n) to rhs_p
     do n=1,nlevs
@@ -490,7 +490,7 @@ contains
 
     ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
     call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
-                                   the_bc_tower%bc_tower_array)
+                                   the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(rho*chi grad c)^{n+1} to rhs_p
     do n=1,nlevs
