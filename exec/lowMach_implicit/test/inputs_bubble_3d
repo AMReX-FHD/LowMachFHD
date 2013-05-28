@@ -3,7 +3,7 @@
   ! problem setup
   prob_type = 1              ! sets scalars, vel, coeffs; see init.f90
   smoothing_width = 2.5d0    ! scale factor for smoothing initial profile
-  c_init(1:2) = 0.9d0 0.1d0  ! controls initial concentration range
+  c_init(1:2) = 0.1d0 0.9d0  ! controls initial concentration range
 
   ! simulation properties
   max_step = 100             ! maximum number of time steps
@@ -56,8 +56,12 @@
   ! -1 = periodic
   ! 16 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
   ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
-  bc_lo(1:3) = -1 -1 -1
-  bc_hi(1:3) = -1 -1 -1
+  bc_lo(1:3) = 17 17 17
+  bc_hi(1:3) = 17 17 17
+
+  ! set the x-vel and y-vel on the hi-z face
+  wallspeed_hi(1,3) = 0.01d0
+  wallspeed_hi(2,3) = 0.01d0
 
 /
 

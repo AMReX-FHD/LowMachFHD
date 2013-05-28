@@ -37,7 +37,22 @@ contains
    real(kind=dp_t), intent(in   ) :: x,y,z
    real(kind=dp_t)                :: val
 
-   val = 0.d0
+   select case (prob_type)
+   case (1)
+      if (z .eq. prob_hi(3)) then
+         if (comp .eq. 1) then
+            val = wallspeed_hi(1,3)
+         else if (comp .eq. 2) then
+            val = wallspeed_hi(2,3)
+         else
+            val = 0.d0
+         end if
+      else
+         val = 0.d0
+      end if
+   case default
+      val = 0.d0
+   end select
 
  end function inhomogeneous_bc_val_3d
 
