@@ -1401,13 +1401,13 @@ contains
           gp => dataptr(gamma(n),i)
           select case (dm)
           case (2)
-             ap(:,:,1,1) = (ap(:,:,1,1)+cp(:,:,1,1))*coeff_mag(1)
-             bp(:,:,1,1) = (bp(:,:,1,1)+cp(:,:,1,2))*coeff_mag(2)
-             gp(:,:,1,1) = (gp(:,:,1,1)+cp(:,:,1,3))*coeff_mag(3)
+             ap(:,:,1,1) = ap(:,:,1,1)*(1.d0+cp(:,:,1,1))*coeff_mag(1)
+             bp(:,:,1,1) = bp(:,:,1,1)*(1.d0+cp(:,:,1,2))*coeff_mag(2)
+             gp(:,:,1,1) = gp(:,:,1,1)*(1.d0+cp(:,:,1,3))*coeff_mag(3)
           case (3)
-             ap(:,:,:,1) = (ap(:,:,:,1)+cp(:,:,:,1))*coeff_mag(1)
-             bp(:,:,:,1) = (bp(:,:,:,1)+cp(:,:,:,2))*coeff_mag(2)
-             gp(:,:,:,1) = (gp(:,:,:,1)+cp(:,:,:,3))*coeff_mag(3)
+             ap(:,:,:,1) = ap(:,:,:,1)*(1.d0+cp(:,:,:,1))*coeff_mag(1)
+             bp(:,:,:,1) = bp(:,:,:,1)*(1.d0+cp(:,:,:,2))*coeff_mag(2)
+             gp(:,:,:,1) = gp(:,:,:,1)*(1.d0+cp(:,:,:,3))*coeff_mag(3)
           end select
        end do
     end do
