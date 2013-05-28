@@ -50,13 +50,25 @@ module probin_common_module
   !----------------------
   ! BC specifications:
   ! -1 = periodic
-  ! 16 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
-  ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
+  ! 16 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! 17 = no-slip wall      (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 18 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! 19 = no-slip reservoir (Dir condition for normal vel; Dir velocity condition for trans vel)
   namelist /probin_common/ bc_lo
   namelist /probin_common/ bc_hi
 
-  ! Each no-slip wall may be moving with a specified tangential velocity 
-  ! along the tangential directions:
+  ! Each no-slip wall may be moving with a specified tangential 
+  ! velocity along the tangential directions
+  ! In 2D:
+  ! wallspeed_lo/hi(1,1) - yvel on x-face
+  ! wallspeed_lo/hi(1,2) - xvel on y-face
+  ! In 3D:
+  ! wallspeed_lo/hi(1,1) - yvel on x-face
+  ! wallspeed_lo/hi(2,1) - zvel on x-face
+  ! wallspeed_lo/hi(1,2) - xvel on y-face
+  ! wallspeed_lo/hi(2,2) - zvel on y-face
+  ! wallspeed_lo/hi(1,3) - xvel on z-face
+  ! wallspeed_lo/hi(2,3) - yvel on z-face
   namelist /probin_common/ wallspeed_lo
   namelist /probin_common/ wallspeed_hi
   !------------------------------------------------------------- 
@@ -101,14 +113,14 @@ contains
     fixed_dt = 1.d0
     plot_int = 0
 
-    seed = 0
+    seed = 1
     visc_type = 1
 
     bc_lo(1:MAX_SPACEDIM) = PERIODIC
     bc_hi(1:MAX_SPACEDIM) = PERIODIC
 
-    wallspeed_lo = 0.d0
-    wallspeed_hi = 0.d0
+    wallspeed_lo(1:MAX_SPACEDIM-1,1:MAX_SPACEDIM) = 0.d0
+    wallspeed_hi(1:MAX_SPACEDIM-1,1:MAX_SPACEDIM) = 0.d0
 
     need_inputs = .true.
 
