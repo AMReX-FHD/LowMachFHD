@@ -270,7 +270,8 @@ contains
 
     do n=1,nlevs
        do i=1,dm
-          ! to deal with reservoirs
+          ! compute change in normal velocity boundary condition over the time step
+          ! this deals with time-dependent velocity boundary conditions
           call multifab_copy_c(vel_bc_n_delta(n,i),1,vel_bc_n(n,i),1,1,0)
           call multifab_sub_sub_c(vel_bc_n_delta(n,i),1,vel_bc_n_old(n,i),1,1,0)
        end do
@@ -533,7 +534,8 @@ contains
 
     do n=1,nlevs
        do i=1,dm
-          ! to deal with reservoirs
+          ! compute change in normal velocity boundary condition over the time step
+          ! this deals with time-dependent velocity boundary conditions
           call multifab_copy_c(vel_bc_n_delta(n,i),1,vel_bc_n(n,i),1,1,0)
           call multifab_sub_sub_c(vel_bc_n_delta(n,i),1,vel_bc_n_old(n,i),1,1,0)
        end do

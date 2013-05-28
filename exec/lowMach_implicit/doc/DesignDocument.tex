@@ -439,4 +439,11 @@ non-zero values in the ghost cells, depending on the boundary conditions).
 By solving this system for $\xb$, we arrive at the same answer as solving the
 inhomogeneous problem, $\Ab\xb=\bb$.
 
+It is also important to note that we are solving a ``delta'' formulation for
+$(\deltab\vb,\delta\pi)$.  This means we have to be careful when supplying
+a boundary condition to the subroutine that converts the problem to a homogeneous
+problem, in that for time-dependent boundary conditions (such as reservoirs), we
+must supply the {\it change} in the velocity boundary condition, rather than
+the final velocity boundary condition itself.
+
 \end{document}
