@@ -502,7 +502,7 @@ contains
 
     ! create div(Psi^{n+1})
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
-                                 s_fc,chi_fc,dx,1)
+                                 s_fc,chi_fc,dx,vel_bc_n)
 
     ! add div(Psi^{n+1}) to rhs_p
     do n=1,nlevs

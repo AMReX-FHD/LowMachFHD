@@ -195,15 +195,16 @@ We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
 \begin{equation}
 \vb^0 = \vb^{\rm init} - \frac{1}{\rho}\nabla\phi.
 \end{equation}
-{\bf Step 1: Forward Euler Scalar Predictor:}
+{\bf Step 1: Forward Euler Scalar Predictor:}\\ \\
+Using
+\begin{equation}
+\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
+\end{equation}
+compute an advective update,
 \begin{eqnarray}
 \rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^n),\\
-\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^n + \Fb^n),
+\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^n + \Fb^n).
 \end{eqnarray}
-with
-\begin{equation}
-\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n}.
-\end{equation}
 Note that $\Fb^n$ has already been computed during {\bf Step 4} of the previous time step
 (or the initialization {\bf Step 0} if $n=0$).\\ \\
 {\bf Step 2: Crank-Nicolson Velocity Predictor:}\\ \\

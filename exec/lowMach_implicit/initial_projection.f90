@@ -88,7 +88,7 @@ contains
 
     ! set rhoc_s_fluxdiv = div(Psi^0)
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc, &
-                                 chi_fc,dx,1)
+                                 chi_fc,dx,vel_bc_n)
 
     ! add div(Psi^0) to mac_rhs
     do n=1,nlevs

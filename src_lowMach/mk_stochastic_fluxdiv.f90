@@ -36,7 +36,7 @@ contains
 
   ! Note that here we *increment* stoch_s_force so it must be initialized externally!
   subroutine mk_stochastic_s_fluxdiv(mla,the_bc_level,stoch_s_force,s_fc, &
-                                     chi_fc,dx,start_outcomp)
+                                     chi_fc,dx,vel_bc_n)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -44,11 +44,11 @@ contains
     type(multifab) , intent(in   ) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: chi_fc(:,:)
     real(dp_t)     , intent(in   ) :: dx(:,:)
-    integer        , intent(in   ) :: start_outcomp
+    type(multifab) , intent(inout) :: vel_bc_n(:,:)
 
     ! local
     integer :: n,nlevs,i,dm,m
-    integer :: ng_x,ng_z,ng_s,ng_f
+    integer :: ng_x,ng_z,ng_s,ng_f,ng_b
 
     real(dp_t) :: variance
 
@@ -56,6 +56,7 @@ contains
 
     real(kind=dp_t), pointer :: fp(:,:,:,:), sp(:,:,:,:), dp(:,:,:,:)
     real(kind=dp_t), pointer :: fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:)
+    real(kind=dp_t), pointer :: bxp(:,:,:,:), byp(:,:,:,:), bzp(:,:,:,:)
     integer :: lo(mla%dim), hi(mla%dim)
 
     ! there are no scalars with stochastic terms
@@ -84,6 +85,7 @@ contains
     ng_z = chi_fc(1,1)%ng
     ng_s = s_fc(1,1)%ng
     ng_f = stoch_s_force(1)%ng
+    ng_b = vel_bc_n(1,1)%ng
 
     do n=1,nlevs
 
@@ -140,18 +142,23 @@ contains
           fp  => dataptr(stoch_s_force(n),i)
           fxp => dataptr(sflux_fc_temp(n,1), i)
           fyp => dataptr(sflux_fc_temp(n,2), i)
+          bxp => dataptr(vel_bc_n(n,1), i)
+          byp => dataptr(vel_bc_n(n,2), i)
           lo =  lwb(get_box(stoch_s_force(n), i))
           hi =  upb(get_box(stoch_s_force(n), i))
           select case (dm)
           case (2)
              call stoch_s_force_2d(fxp(:,:,1,:), fyp(:,:,1,:), ng_x, &
-                                   fp(:,:,1,start_outcomp:), ng_f, &
+                                   fp(:,:,1,1:), ng_f, &
+                                   bxp(:,:,1,1), byp(:,:,1,1), ng_b, &
                                    dx(n,:),lo,hi, &
                                    the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           case (3)
              fzp => dataptr(sflux_fc_temp(n,3), i)
+             bzp => dataptr(vel_bc_n(n,3), i)
              call stoch_s_force_3d(fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:), ng_x, &
-                                   fp(:,:,:,start_outcomp:), ng_f, &
+                                   fp(:,:,:,1:), ng_f, &
+                                   bxp(:,:,:,1), byp(:,:,:,1), bzp(:,:,:,1), ng_b, &
                                    dx(n,:),lo,hi, &
                                    the_bc_level(n)%adv_bc_level_array(i,:,:,:))
           end select
@@ -408,16 +415,21 @@ contains
     
     end subroutine concentration_amplitude
     
-    subroutine stoch_s_force_2d(xflux,yflux,ng_x,div,ng_f,dx,lo,hi,adv_bc)
+    subroutine stoch_s_force_2d(xflux,yflux,ng_x,div,ng_f,vel_bc_nx,vel_bc_ny,ng_b,dx,lo,hi,adv_bc)
 
-      integer        , intent(in   ) :: lo(:),hi(:),ng_f,ng_x
-      real(kind=dp_t), intent(in   ) :: xflux(lo(1)-ng_x:,lo(2)-ng_x:,:)
-      real(kind=dp_t), intent(in   ) :: yflux(lo(1)-ng_x:,lo(2)-ng_x:,:)
-      real(kind=dp_t), intent(inout) ::   div(lo(1)-ng_f:,lo(2)-ng_f:,:)
+      integer        , intent(in   ) :: lo(:),hi(:),ng_f,ng_x,ng_b
+      real(kind=dp_t), intent(in   ) ::     xflux(lo(1)-ng_x:,lo(2)-ng_x:,:)
+      real(kind=dp_t), intent(in   ) ::     yflux(lo(1)-ng_x:,lo(2)-ng_x:,:)
+      real(kind=dp_t), intent(inout) ::       div(lo(1)-ng_f:,lo(2)-ng_f:,:)
+      real(kind=dp_t), intent(inout) :: vel_bc_nx(lo(1)-ng_b:,lo(2)-ng_b:)
+      real(kind=dp_t), intent(inout) :: vel_bc_ny(lo(1)-ng_b:,lo(2)-ng_b:)
       real(kind=dp_t), intent(in   ) ::   dx(:)
       integer        , intent(in   ) :: adv_bc(:,:,:)
 
       integer :: i,j
+      real(kind=dp_t) :: S_fac
+
+      S_fac = 1.d0/rhobar(1)-1.d0/rhobar(2)
 
       do j = lo(2),hi(2)
          do i = lo(1),hi(1)
@@ -426,20 +438,47 @@ contains
                  (yflux(i,j+1,:) - yflux(i,j,:)) / dx(2)
          end do
       end do
+   
+   ! update umac bc based on flux at boundary
+   if (adv_bc(1,1,1) .eq. DIR_VEL .and. adv_bc(1,1,4) .eq. EXT_DIR) then
+      vel_bc_nx(lo(1),lo(2):hi(2)) = vel_bc_nx(lo(1),lo(2):hi(2)) &
+           + S_fac*xflux(lo(1),lo(2):hi(2),1)
+   end if
+   if (adv_bc(1,2,1) .eq. DIR_VEL .and. adv_bc(1,2,4) .eq. EXT_DIR) then
+      vel_bc_nx(hi(1)+1,lo(2):hi(2)) = vel_bc_nx(hi(1)+1,lo(2):hi(2)) &
+           + S_fac*xflux(hi(1)+1,lo(2):hi(2),1)
+   end if
+
+   ! update vmac bc based on flux at boundary
+   if (adv_bc(2,1,2) .eq. DIR_VEL .and. adv_bc(2,1,4) .eq. EXT_DIR) then
+      vel_bc_ny(lo(1):hi(1),lo(2)) = vel_bc_ny(lo(1):hi(1),lo(2)) + &
+           S_fac*yflux(lo(1):hi(1),lo(2),1)
+   end if
+   if (adv_bc(2,2,2) .eq. DIR_VEL .and. adv_bc(2,2,4) .eq. EXT_DIR) then
+      vel_bc_ny(lo(1):hi(1),hi(2)+1) = vel_bc_ny(lo(1):hi(1),hi(2)+1) + &
+           S_fac*yflux(lo(1):hi(1),hi(2)+1,1)
+   end if
 
     end subroutine stoch_s_force_2d
 
-    subroutine stoch_s_force_3d(xflux,yflux,zflux,ng_x,div,ng_f,dx,lo,hi,adv_bc)
+    subroutine stoch_s_force_3d(xflux,yflux,zflux,ng_x,div,ng_f, &
+                                vel_bc_nx,vel_bc_ny,vel_bc_nz,ng_b,dx,lo,hi,adv_bc)
 
-      integer        , intent(in   ) :: lo(:),hi(:),ng_f,ng_x
-      real(kind=dp_t), intent(in   ) :: xflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
-      real(kind=dp_t), intent(in   ) :: yflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
-      real(kind=dp_t), intent(in   ) :: zflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
-      real(kind=dp_t), intent(inout) ::   div(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
+      integer        , intent(in   ) :: lo(:),hi(:),ng_f,ng_x,ng_b
+      real(kind=dp_t), intent(in   ) ::     xflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
+      real(kind=dp_t), intent(in   ) ::     yflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
+      real(kind=dp_t), intent(in   ) ::     zflux(lo(1)-ng_x:,lo(2)-ng_x:,lo(3)-ng_x:,:)
+      real(kind=dp_t), intent(inout) ::       div(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
+      real(kind=dp_t), intent(inout) :: vel_bc_nx(lo(1)-ng_b:,lo(2)-ng_b:,lo(3)-ng_b:)
+      real(kind=dp_t), intent(inout) :: vel_bc_ny(lo(1)-ng_b:,lo(2)-ng_b:,lo(3)-ng_b:)
+      real(kind=dp_t), intent(inout) :: vel_bc_nz(lo(1)-ng_b:,lo(2)-ng_b:,lo(3)-ng_b:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       integer        , intent(in   ) :: adv_bc(:,:,:)
 
       integer :: i,j,k
+      real(kind=dp_t) :: S_fac
+
+      S_fac = 1.d0/rhobar(1)-1.d0/rhobar(2)
 
       do k = lo(3),hi(3)
          do j = lo(2),hi(2)
@@ -451,6 +490,36 @@ contains
             end do
          end do
       end do
+   
+   ! update umac BC based on flux at boundary
+   if (adv_bc(1,1,1) .eq. EXT_DIR .and. adv_bc(1,1,5) .eq. EXT_DIR) then
+      vel_bc_nx(lo(1),lo(2):hi(2),lo(3):hi(3)) = vel_bc_nx(lo(1),lo(2):hi(2),lo(3):hi(3)) &
+           + S_fac*xflux(lo(1),lo(2):hi(2),lo(3):hi(3),1)
+   end if
+   if (adv_bc(1,2,1) .eq. EXT_DIR .and. adv_bc(1,2,5) .eq. EXT_DIR) then
+      vel_bc_nx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = vel_bc_nx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) &
+           + S_fac*xflux(hi(1)+1,lo(2):hi(2),lo(3):hi(3),1)
+   end if
+
+   ! update vmac BC based on flux at boundary
+   if (adv_bc(2,1,2) .eq. EXT_DIR .and. adv_bc(2,1,5) .eq. EXT_DIR) then
+      vel_bc_ny(lo(1):hi(1),lo(2),lo(3):hi(3)) = vel_bc_ny(lo(1):hi(1),lo(2),lo(3):hi(3)) + &
+           S_fac*yflux(lo(1):hi(1),lo(2),lo(3):hi(3),1)
+   end if
+   if (adv_bc(2,2,2) .eq. EXT_DIR .and. adv_bc(2,2,5) .eq. EXT_DIR) then
+      vel_bc_ny(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = vel_bc_ny(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) + &
+           S_fac*yflux(lo(1):hi(1),hi(2)+1,lo(3):hi(3),1)
+   end if
+
+   ! update wmacBC  based on flux at boundary
+   if (adv_bc(3,1,3) .eq. EXT_DIR .and. adv_bc(3,1,5) .eq. EXT_DIR) then
+      vel_bc_nz(lo(1):hi(1),lo(2):hi(2),lo(3)) = vel_bc_nz(lo(1):hi(1),lo(2):hi(2),lo(3)) + &
+           S_fac*zflux(lo(1):hi(1),lo(2):hi(2),lo(3),1)
+   end if
+   if (adv_bc(3,2,3) .eq. EXT_DIR .and. adv_bc(3,2,5) .eq. EXT_DIR) then
+      vel_bc_nz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = vel_bc_nz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) + &
+           S_fac*zflux(lo(1):hi(1),lo(2):hi(2),hi(3)+1,1)
+   end if
 
     end subroutine stoch_s_force_3d
 
