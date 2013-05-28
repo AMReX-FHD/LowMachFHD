@@ -113,11 +113,11 @@ contains
     else if (bc(2,1) .eq. EXT_DIR) then
        if (bccomp .eq. 4) then
           do i=lo(1)-ng,hi(1)+ng
-             s(i,lo(2)-ng:lo(2)-1) = 1.d0/(0.9d0/1.1d0 + (1.d0-0.9d0)/0.9d0)
+             s(i,lo(2)-ng:lo(2)-1) = 1.d0/(0.1d0/1.1d0 + 0.9d0/0.9d0)
           end do
        else if (bccomp .eq. 5) then
           do i=lo(1)-ng,hi(1)+ng
-             s(i,lo(2)-ng:lo(2)-1) = 0.9d0
+             s(i,lo(2)-ng:lo(2)-1) = 0.1d0
           end do
        else
           call bl_error('physbc_2d: need to write Dirichlet primitive condition for bc(2,1)')
@@ -141,7 +141,7 @@ contains
     else if (bc(2,2) .eq. EXT_DIR) then
        if (bccomp .eq. 4) then
           do i=lo(1)-ng,hi(1)+ng
-             s(i,hi(2)+1:hi(2)+ng) = 1.d0/(0.9d0/1.1d0 + (1.d0-0.9d0)/0.9d0)
+             s(i,hi(2)+1:hi(2)+ng) = 1.d0/(0.9d0/1.1d0 + 0.1d0/0.9d0)
           end do
        else if (bccomp .eq. 5) then
           do i=lo(1)-ng,hi(1)+ng
