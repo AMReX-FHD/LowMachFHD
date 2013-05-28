@@ -95,6 +95,15 @@ contains
        call multifab_plus_plus_c(mac_rhs(n),1,rhoc_s_fluxdiv(n),1,1,0)
     end do
 
+    do n=1,nlevs
+       do i=1,dm
+          ! to deal with reservoirs
+          ! set normal velocity on physical domain boundaries
+          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:),vel_bc_n(n,:))
+       end do
+    end do
+
     ! multiply mac_rhs by -S_fac
     ! now mac_rhs = -S^0
     do n=1,nlevs

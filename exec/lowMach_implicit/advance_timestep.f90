@@ -13,6 +13,7 @@ module advance_timestep_module
   use init_module
   use div_and_grad_module
   use multifab_physbc_module
+  use set_inhomogeneous_vel_bcs_module
   use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef
   use probin_common_module, only: fixed_dt
 
@@ -47,7 +48,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
-    type(multifab) , intent(in   ) :: vel_bc_t(:,:)
+    type(multifab) , intent(inout) :: vel_bc_t(:,:)
 
     ! local
     type(multifab) ::    s_update(mla%nlevel)
@@ -65,6 +66,8 @@ contains
     type(multifab) ::       dumac(mla%nlevel,mla%dim)
     type(multifab) ::    umac_old(mla%nlevel,mla%dim)
     type(multifab) ::       gradp(mla%nlevel,mla%dim)
+    type(multifab) ::    s_fc_old(mla%nlevel,mla%dim)
+    type(multifab) ::  chi_fc_old(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -91,6 +94,8 @@ contains
           call multifab_build_edge(          dumac(n,i),mla%la(n),1    ,1,i)
           call multifab_build_edge(       umac_old(n,i),mla%la(n),1    ,1,i)
           call multifab_build_edge(          gradp(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(       s_fc_old(n,i),mla%la(n),nscal,1,i)
+          call multifab_build_edge(     chi_fc_old(n,i),mla%la(n),1    ,0,i)
        end do
     end do
 
@@ -109,7 +114,9 @@ contains
     ! make a temporary copy of v^n
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(umac_old(n,i),1,umac(n,i),1,1,1)
+          call multifab_copy_c(  umac_old(n,i),1,  umac(n,i),1,1    ,1)
+          call multifab_copy_c(  s_fc_old(n,i),1,  s_fc(n,i),1,nscal,1)
+          call multifab_copy_c(chi_fc_old(n,i),1,chi_fc(n,i),1,1    ,0)
        end do
     end do
 
@@ -243,13 +250,24 @@ contains
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
+    ! reset inhomogeneous bc condition to deal with reservoirs
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,dx,the_bc_tower%bc_tower_array)
+
     ! add div(rho*chi grad c)^{*,n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(Psi^n) to rhs_p
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
+                                 chi_fc_old,dx,vel_bc_n)
+
     do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_s_fluxdiv(n),1,1,0)
+       do i=1,dm
+          ! to deal with reservoirs
+          ! set normal velocity on physical domain boundaries
+          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:),vel_bc_n(n,:))
+       end do
     end do
 
     ! reset s_update for all scalars to zero
@@ -488,6 +506,9 @@ contains
        call setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
     end do
 
+    ! reset inhomogeneous bc condition to deal with reservoirs
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,dx,the_bc_tower%bc_tower_array)
+
     ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
     call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
@@ -503,6 +524,15 @@ contains
     ! create div(Psi^{n+1})
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
                                  s_fc,chi_fc,dx,vel_bc_n)
+
+    do n=1,nlevs
+       do i=1,dm
+          ! to deal with reservoirs
+          ! set normal velocity on physical domain boundaries
+          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:),vel_bc_n(n,:))
+       end do
+    end do
 
     ! add div(Psi^{n+1}) to rhs_p
     do n=1,nlevs
@@ -609,6 +639,8 @@ contains
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(umac_old(n,i))
           call multifab_destroy(gradp(n,i))
+          call multifab_destroy(s_fc_old(n,i))
+          call multifab_destroy(chi_fc_old(n,i))
        end do
     end do
 
