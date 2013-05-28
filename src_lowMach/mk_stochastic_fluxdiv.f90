@@ -492,31 +492,31 @@ contains
       end do
    
    ! update umac BC based on flux at boundary
-   if (adv_bc(1,1,1) .eq. EXT_DIR .and. adv_bc(1,1,5) .eq. EXT_DIR) then
+   if (adv_bc(1,1,1) .eq. DIR_VEL .and. adv_bc(1,1,5) .eq. EXT_DIR) then
       vel_bc_nx(lo(1),lo(2):hi(2),lo(3):hi(3)) = vel_bc_nx(lo(1),lo(2):hi(2),lo(3):hi(3)) &
            + S_fac*xflux(lo(1),lo(2):hi(2),lo(3):hi(3),1)
    end if
-   if (adv_bc(1,2,1) .eq. EXT_DIR .and. adv_bc(1,2,5) .eq. EXT_DIR) then
+   if (adv_bc(1,2,1) .eq. DIR_VEL .and. adv_bc(1,2,5) .eq. EXT_DIR) then
       vel_bc_nx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = vel_bc_nx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) &
            + S_fac*xflux(hi(1)+1,lo(2):hi(2),lo(3):hi(3),1)
    end if
 
    ! update vmac BC based on flux at boundary
-   if (adv_bc(2,1,2) .eq. EXT_DIR .and. adv_bc(2,1,5) .eq. EXT_DIR) then
+   if (adv_bc(2,1,2) .eq. DIR_VEL .and. adv_bc(2,1,5) .eq. EXT_DIR) then
       vel_bc_ny(lo(1):hi(1),lo(2),lo(3):hi(3)) = vel_bc_ny(lo(1):hi(1),lo(2),lo(3):hi(3)) + &
            S_fac*yflux(lo(1):hi(1),lo(2),lo(3):hi(3),1)
    end if
-   if (adv_bc(2,2,2) .eq. EXT_DIR .and. adv_bc(2,2,5) .eq. EXT_DIR) then
+   if (adv_bc(2,2,2) .eq. DIR_VEL .and. adv_bc(2,2,5) .eq. EXT_DIR) then
       vel_bc_ny(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = vel_bc_ny(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) + &
            S_fac*yflux(lo(1):hi(1),hi(2)+1,lo(3):hi(3),1)
    end if
 
    ! update wmacBC  based on flux at boundary
-   if (adv_bc(3,1,3) .eq. EXT_DIR .and. adv_bc(3,1,5) .eq. EXT_DIR) then
+   if (adv_bc(3,1,3) .eq. DIR_VEL .and. adv_bc(3,1,5) .eq. EXT_DIR) then
       vel_bc_nz(lo(1):hi(1),lo(2):hi(2),lo(3)) = vel_bc_nz(lo(1):hi(1),lo(2):hi(2),lo(3)) + &
            S_fac*zflux(lo(1):hi(1),lo(2):hi(2),lo(3),1)
    end if
-   if (adv_bc(3,2,3) .eq. EXT_DIR .and. adv_bc(3,2,5) .eq. EXT_DIR) then
+   if (adv_bc(3,2,3) .eq. DIR_VEL .and. adv_bc(3,2,5) .eq. EXT_DIR) then
       vel_bc_nz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = vel_bc_nz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) + &
            S_fac*zflux(lo(1):hi(1),lo(2):hi(2),hi(3)+1,1)
    end if
