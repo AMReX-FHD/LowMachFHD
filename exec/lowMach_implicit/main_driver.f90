@@ -309,7 +309,7 @@ subroutine main_driver()
   ! fill ghost cells for prim
   do n=1,nlevs
      call multifab_fill_boundary(prim(n))
-     call multifab_physbc(prim(n),1,dm+2,2,the_bc_tower%bc_tower_array(n))
+     call multifab_physbc(prim(n),1,dm+2,2,the_bc_tower%bc_tower_array(n),dx(n,:))
   end do
 
   ! convert prim to cons in valid and ghost region

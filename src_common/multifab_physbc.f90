@@ -15,7 +15,7 @@ module multifab_physbc_module
 
 contains
 
-  subroutine multifab_physbc(s,start_scomp,start_bccomp,num_comp,the_bc_level)
+  subroutine multifab_physbc(s,start_scomp,start_bccomp,num_comp,the_bc_level,dx_in)
 
     ! this fills ghost cells for rho and pressure/phi.
     ! as well as for transport coefficients (alpha/beta/gamma)
@@ -23,14 +23,24 @@ contains
     type(multifab) , intent(inout) :: s
     integer        , intent(in   ) :: start_scomp,start_bccomp,num_comp
     type(bc_level) , intent(in   ) :: the_bc_level
+    real(kind=dp_t), intent(in   ), optional :: dx_in(:)
    
     ! Local
     integer                  :: lo(get_dim(s)),hi(get_dim(s))
     integer                  :: i,ng,dm,scomp,bccomp
     real(kind=dp_t), pointer :: sp(:,:,:,:)
+    real(kind=dp_t), allocatable :: dx(:)
 
     ng = nghost(s)
     dm = get_dim(s)
+
+    allocate(dx(dm))
+
+    if (present(dx_in)) then
+       dx(1:dm) = dx_in(1:dm)
+    else
+       dx = 1.d0
+    end if
     
     do i=1,nfabs(s)
        sp => dataptr(s,i)
@@ -41,25 +51,29 @@ contains
           select case (dm)
           case (2)
              call physbc_2d(sp(:,:,1,scomp), lo, hi, ng, &
-                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp)
+                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp, dx)
           case (3)
              call physbc_3d(sp(:,:,:,scomp), lo, hi, ng, &
-                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp)
+                            the_bc_level%adv_bc_level_array(i,:,:,bccomp),bccomp, dx)
           end select
        end do
     end do
+
+    deallocate(dx)
  
   end subroutine multifab_physbc
 
-  subroutine physbc_2d(s,lo,hi,ng,bc,bccomp)
+  subroutine physbc_2d(s,lo,hi,ng,bc,bccomp,dx)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng
     real(kind=dp_t), intent(inout) ::    s(lo(1)-ng:,lo(2)-ng:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
+    real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! Local variables
     integer :: i,j
+    real(kind=dp_t) :: x,y
 
     if (bccomp .ne. 3 .and. bccomp .ne. 4 .and. bccomp .ne. 5) then
        call bl_error('physbc_2d requires bccomp = 3, 4, or 5')
@@ -75,7 +89,11 @@ contains
           s(lo(1)-ng:lo(1)-1,j) = s(lo(1),j)
        end do
     else if (bc(1,1) .eq. EXT_DIR) then
-       call bl_error('physbc_2d: need to write Dirichlet primitive condition for bc(1,1)')
+       x = prob_lo(1)
+       do j=lo(2)-ng,hi(2)+ng
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+          s(lo(1)-ng:lo(1)-1,j) = inhomogeneous_bc_val_2d(bccomp,x,y)
+       end do
     else if (bc(1,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -93,7 +111,11 @@ contains
           s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j)
        end do
     else if (bc(1,2) .eq. EXT_DIR) then
-       call bl_error('physbc_2d: need to write Dirichlet primitive condition for bc(1,2)')
+       x = prob_hi(1)
+       do j=lo(2)-ng,hi(2)+ng
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+          s(hi(1)+1:hi(1)+ng,j) = inhomogeneous_bc_val_2d(bccomp,x,y)
+       end do
     else if (bc(1,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -111,17 +133,11 @@ contains
           s(i,lo(2)-ng:lo(2)-1) = s(i,lo(2))
        end do
     else if (bc(2,1) .eq. EXT_DIR) then
-       if (bccomp .eq. 4) then
-          do i=lo(1)-ng,hi(1)+ng
-             s(i,lo(2)-ng:lo(2)-1) = 1.d0/(0.1d0/1.1d0 + 0.9d0/0.9d0)
-          end do
-       else if (bccomp .eq. 5) then
-          do i=lo(1)-ng,hi(1)+ng
-             s(i,lo(2)-ng:lo(2)-1) = 0.1d0
-          end do
-       else
-          call bl_error('physbc_2d: need to write Dirichlet primitive condition for bc(2,1)')
-       end if
+       y = prob_lo(2)
+       do i=lo(1)-ng,hi(1)+ng
+          x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+          s(i,lo(2)-ng:lo(2)-1) = inhomogeneous_bc_val_2d(bccomp,x,y)
+       end do
     else if (bc(2,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -139,17 +155,11 @@ contains
           s(i,hi(2)+1:hi(2)+ng) = s(i,hi(2))
        end do
     else if (bc(2,2) .eq. EXT_DIR) then
-       if (bccomp .eq. 4) then
-          do i=lo(1)-ng,hi(1)+ng
-             s(i,hi(2)+1:hi(2)+ng) = 1.d0/(0.9d0/1.1d0 + 0.1d0/0.9d0)
-          end do
-       else if (bccomp .eq. 5) then
-          do i=lo(1)-ng,hi(1)+ng
-             s(i,hi(2)+1:hi(2)+ng) = 0.9d0
-          end do
-       else
-          call bl_error('physbc_2d: need to write Dirichlet primitive condition for bc(2,2)')
-       end if
+       y = prob_hi(2)
+       do i=lo(1)-ng,hi(1)+ng
+          x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+          s(i,hi(2)+1:hi(2)+ng) = inhomogeneous_bc_val_2d(bccomp,x,y)
+       end do
     else if (bc(2,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -159,12 +169,13 @@ contains
 
   end subroutine physbc_2d
 
-  subroutine physbc_3d(s,lo,hi,ng,bc,bccomp)
+  subroutine physbc_3d(s,lo,hi,ng,bc,bccomp,dx)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng
     real(kind=dp_t), intent(inout) ::    s(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)
     integer        , intent(in   ) :: bc(:,:)
     integer        , intent(in   ) :: bccomp
+    real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! Local variables
     integer :: i,j,k

@@ -54,7 +54,7 @@ contains
     ! fill ghost cells for x_u and x_p
     do n=1,nlevs
        call multifab_fill_boundary(x_p(n))
-       call multifab_physbc(x_p(n),1,dm+1,1,the_bc_tower%bc_tower_array(n))
+       call multifab_physbc(x_p(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
        do i=1,dm
           if (present(vel_bc_n)) then
              call multifab_physbc_domainvel(x_u(n,i),i,the_bc_tower%bc_tower_array(n), &

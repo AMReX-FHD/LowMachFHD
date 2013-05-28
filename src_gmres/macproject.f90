@@ -312,7 +312,7 @@ contains
 
       do n = 1,nlevs
          call multifab_fill_boundary(phi(n))
-         call multifab_physbc(phi(n),1,bc_comp,1,the_bc_tower%bc_tower_array(n))
+         call multifab_physbc(phi(n),1,bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
       end do
 
       do n = 1, nlevs

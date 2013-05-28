@@ -262,7 +262,7 @@ contains
            do n=1,nlevs
               call multifab_copy_c(x_p_tmp(n),1,x_p(n),1,1,0)
               call multifab_fill_boundary(x_p_tmp(n))
-              call multifab_physbc(x_p_tmp(n),1,dm+1,1,the_bc_tower%bc_tower_array(n))
+              call multifab_physbc(x_p_tmp(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
            end do
 
            ! contstruct b_u-grad(x_p)
@@ -349,7 +349,7 @@ contains
         do n=1,nlevs
           call multifab_copy_c(x_p_tmp(n),1,x_p(n),1,1,0)
           call multifab_fill_boundary(x_p_tmp(n))
-          call multifab_physbc(x_p_tmp(n),1,dm+1,1,the_bc_tower%bc_tower_array(n))
+          call multifab_physbc(x_p_tmp(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
         end do
 
         ! contstruct b_u-grad(x_p)

@@ -1,8 +1,8 @@
 module inhomogeneous_bc_val_module
 
   use bl_types
-  use probin_common_module,  only: wallspeed_hi, prob_hi
-  use probin_lowmach_module, only: prob_type
+  use probin_common_module,  only: wallspeed_hi, prob_lo, prob_hi
+  use probin_lowmach_module, only: prob_type, rhobar, c_bc
 
   implicit none
 
@@ -19,6 +19,34 @@ contains
    real(kind=dp_t)                :: val
 
    select case (prob_type)
+   case (0)
+
+      if (comp .eq. 4) then
+         ! density
+         if (x .eq. prob_lo(1)) then
+            val = 1.d0/(c_bc(1,1)/rhobar(1) + (1.d0-c_bc(1,1))/rhobar(2))
+         else if (x .eq. prob_hi(1)) then
+            val = 1.d0/(c_bc(1,2)/rhobar(1) + (1.d0-c_bc(1,2))/rhobar(2))
+         else if (y .eq. prob_lo(2)) then
+            val = 1.d0/(c_bc(2,1)/rhobar(1) + (1.d0-c_bc(2,1))/rhobar(2))
+         else if (y .eq. prob_hi(2)) then
+            val = 1.d0/(c_bc(2,2)/rhobar(1) + (1.d0-c_bc(2,2))/rhobar(2))
+         end if
+      else if (comp .eq. 5) then
+         ! concentration
+         if (x .eq. prob_lo(1)) then
+            val = c_bc(1,1)
+         else if (x .eq. prob_hi(1)) then
+            val = c_bc(1,2)
+         else if (y .eq. prob_lo(2)) then
+            val = c_bc(2,1)
+         else if (y .eq. prob_hi(2)) then
+            val = c_bc(2,2)
+         end if
+      else
+         val = 0.d0
+      end if
+
    case (1)
       if (y .eq. prob_hi(2) .and. comp .eq. 1) then
          val = wallspeed_hi(1,2)

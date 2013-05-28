@@ -16,7 +16,7 @@ module probin_lowmach_module
   real(dp_t), save :: mol_mass(2),kT
   integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
-  real(dp_t), save :: material_properties(2,3)
+  real(dp_t), save :: material_properties(2,3),c_bc(3,2)
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -26,6 +26,7 @@ module probin_lowmach_module
   namelist /probin_lowmach/ prob_type         ! sets scalars, vel, coeffs; see exact_solutions.f90
   namelist /probin_lowmach/ smoothing_width   ! scale factor for smoothing initial profile
   namelist /probin_lowmach/ c_init            ! controls initial concentration range
+  namelist /probin_lowmach/ c_bc              ! c boundary conditions (dir,face)
 
   ! simulation parameters
   namelist /probin_lowmach/ max_step          ! maximum number of time steps
@@ -79,6 +80,7 @@ contains
     prob_type = 1
     smoothing_width = 1.d0
     c_init(1:2) = 1.d0
+    c_bc(1:3,1:2) = 1.d0
 
     max_step = 1
     print_int = 0
@@ -96,8 +98,7 @@ contains
     variance_coef = 1.d0
     conc_scal = 1.d0
     filtering_width = 0
-    stoch_stress_form = 1
-    
+    stoch_stress_form = 1    
 
     farg = 1
     if (narg >= 1) then
@@ -131,11 +132,35 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) c_init(1)
-
        case ('--c_init_2')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) c_init(2)
+
+       case ('--c_bc_x_lo')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_bc(1,1)
+       case ('--c_bc_x_hi')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_bc(1,2)
+       case ('--c_bc_y_lo')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_bc(2,1)
+       case ('--c_bc_y_hi')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_bc(2,2)
+       case ('--c_bc_z_lo')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_bc(3,1)
+       case ('--c_bc_z_hi')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_bc(3,2)
 
        case ('--max_step')
           farg = farg + 1
