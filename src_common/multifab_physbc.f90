@@ -179,6 +179,7 @@ contains
 
     ! Local variables
     integer :: i,j,k
+    real(kind=dp_t) :: x,y,z
 
     if (bccomp .ne. 4 .and. bccomp .ne. 5 .and. bccomp .ne. 6) then
        call bl_error('physbc_3d requires bccomp = 4, 5, or 6')
@@ -196,7 +197,14 @@ contains
           end do
        end do
     else if (bc(1,1) .eq. EXT_DIR) then
-       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(1,1)')
+       x = prob_lo(1)
+       do k=lo(3)-ng,hi(3)+ng
+          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
+          do j=lo(2)-ng,hi(2)+ng
+             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+             s(lo(1)-ng:lo(1)-1,j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+          end do
+       end do
     else if (bc(1,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -216,7 +224,14 @@ contains
           end do
        end do
     else if (bc(1,2) .eq. EXT_DIR) then
-       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(1,2)')
+       x = prob_hi(1)
+       do k=lo(3)-ng,hi(3)+ng
+          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
+          do j=lo(2)-ng,hi(2)+ng
+             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+             s(hi(1)+1:hi(1)+ng,j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+          end do
+       end do
     else if (bc(1,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -236,7 +251,14 @@ contains
           end do
        end do
     else if (bc(2,1) .eq. EXT_DIR) then
-       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(2,1)')
+       y = prob_lo(2)
+       do k=lo(3)-ng,hi(3)+ng
+          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
+          do i=lo(1)-ng,hi(1)+ng
+             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+             s(i,lo(2)-ng:lo(2)-1,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+          end do
+       end do
     else if (bc(2,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -256,7 +278,14 @@ contains
           end do
        end do
     else if (bc(2,2) .eq. EXT_DIR) then
-       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(2,2)')
+       y = prob_hi(2)
+       do k=lo(3)-ng,hi(3)+ng
+          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
+          do i=lo(1)-ng,hi(1)+ng
+             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+             s(i,hi(2)+1:hi(2)+ng,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+          end do
+       end do
     else if (bc(2,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -276,7 +305,14 @@ contains
           end do
        end do
     else if (bc(3,1) .eq. EXT_DIR) then
-       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(3,1)')
+       z = prob_lo(3)
+       do j=lo(2)-ng,hi(2)+ng
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+          do i=lo(1)-ng,hi(1)+ng
+             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+             s(i,j,lo(3)-ng:lo(3)-1) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+          end do
+       end do
     else if (bc(3,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
@@ -296,7 +332,14 @@ contains
           end do
        end do
     else if (bc(3,2) .eq. EXT_DIR) then
-       call bl_error('physbc_3d: need to write Dirichlet primitive condition for bc(3,2)')
+       z = prob_hi(3)
+       do j=lo(2)-ng,hi(2)+ng
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+          do i=lo(1)-ng,hi(1)+ng
+             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+             s(i,j,hi(3)+1:hi(3)+ng) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
+          end do
+       end do
     else if (bc(3,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
     else
