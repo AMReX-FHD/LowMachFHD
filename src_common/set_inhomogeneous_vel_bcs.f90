@@ -462,6 +462,9 @@ contains
 
   subroutine modify_traction_bcs(mla,vel_bc_n,vel_bc_t,dx,the_bc_level)
 
+    ! This subroutine modifies the traction bc, f / eta, by subtracting
+    ! off the dv_n/dt part for v_t
+
     ! vel_bc_n(nlevs,dm) are the normal velocities
     ! in 2D, vel_bc_t(nlevs,2) respresents
     !   1. y-velocity bc on x-faces (nodal)
@@ -551,38 +554,47 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!
 
     ! yvel, lo x-faces
-    if (bc(1,1,2) .eq. DIR_VEL .or. bc(1,1,2) .eq. DIR_TRACT) then
+    ! subtract dvx/dy
+    if (bc(1,1,2) .eq. DIR_TRACT) then
        x = prob_lo(1)
        do j=lo(2),hi(2)+1
           y = prob_lo(2) + dble(j)*dx(2)
-          vel_bc_tyx(lo(1),j) = vel_bc_tyx(lo(1),j)
+          vel_bc_tyx(lo(1),j) = vel_bc_tyx(lo(1),j) &
+               - (vel_bc_nx(lo(1),j)-vel_bc_nx(lo(1),j-1)) / dx(2)
        end do
     end if
 
     ! yvel, hi x-faces
-    if (bc(1,2,2) .eq. DIR_VEL .or. bc(1,2,2) .eq. DIR_TRACT) then
+    ! subtract dvx/dy
+    if (bc(1,2,2) .eq. DIR_TRACT) then
        x = prob_hi(1)
        do j=lo(2),hi(2)+1
           y = prob_lo(2) + dble(j)*dx(2)
-          vel_bc_tyx(hi(1)+1,j) = vel_bc_tyx(hi(1)+1,j)
+          vel_bc_tyx(hi(1)+1,j) = vel_bc_tyx(hi(1)+1,j) &
+               - (vel_bc_nx(hi(1)+1,j)-vel_bc_nx(hi(1)+1,j-1)) / dx(2)
        end do
     end if
 
     ! xvel, lo y-faces
-    if (bc(2,1,1) .eq. DIR_VEL .or. bc(2,1,1) .eq. DIR_TRACT) then
+    ! subtract dvy/dx
+    if (bc(2,1,1) .eq. DIR_TRACT) then
        y = prob_lo(2)
        do i=lo(1),hi(1)+1
           x = prob_lo(1) + dble(i)*dx(1)
-          vel_bc_txy(i,lo(2)) = vel_bc_txy(i,lo(2))
+          vel_bc_txy(i,lo(2)) = vel_bc_txy(i,lo(2)) &
+               - (vel_bc_ny(i,lo(2))-vel_bc_ny(i-1,lo(2))) / dx(1)
+
        end do
     end if
 
     ! xvel, hi y-faces
-    if (bc(2,2,1) .eq. DIR_VEL .or. bc(2,2,1) .eq. DIR_TRACT) then
+    ! subtract dvy/dx
+    if (bc(2,2,1) .eq. DIR_TRACT) then
        y = prob_hi(2)
        do i=lo(1),hi(1)+1
           x = prob_lo(1) + dble(i)*dx(1)
-          vel_bc_txy(i,hi(2)+1) = vel_bc_txy(i,hi(2)+1)
+          vel_bc_txy(i,hi(2)+1) = vel_bc_txy(i,hi(2)+1) &
+               - (vel_bc_ny(i,hi(2)+1)-vel_bc_ny(i-1,hi(2)+1)) / dx(1)
        end do
     end if
 
@@ -614,156 +626,180 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!
     
     ! yvel, lo x-faces
-    if (bc(1,1,2) .eq. DIR_VEL .or. bc(1,1,2) .eq. DIR_TRACT) then
+    ! subtract dvx/dy
+    if (bc(1,1,2) .eq. DIR_TRACT) then
        x = prob_lo(1)
        do k=lo(3),hi(3)
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2),hi(2)+1
              y = prob_lo(2) + dble(j)*dx(2)
-             vel_bc_tyx(lo(1),j,k) = vel_bc_tyx(lo(1),j,k)
+             vel_bc_tyx(lo(1),j,k) = vel_bc_tyx(lo(1),j,k) &
+                  - (vel_bc_nx(lo(1),j,k)-vel_bc_nx(lo(1),j-1,k)) / dx(2)
           end do
        end do
 
     end if
 
     ! yvel, hi x-faces
-    if (bc(1,2,2) .eq. DIR_VEL .or. bc(1,2,2) .eq. DIR_TRACT) then
+    ! subtract dvx/dy
+    if (bc(1,2,2) .eq. DIR_TRACT) then
        x = prob_hi(1)
        do k=lo(3),hi(3)
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2),hi(2)+1
              y = prob_lo(2) + dble(j)*dx(2)
-             vel_bc_tyx(hi(1)+1,j,k) = vel_bc_tyx(hi(1)+1,j,k)
+             vel_bc_tyx(hi(1)+1,j,k) = vel_bc_tyx(hi(1)+1,j,k) &
+                  - (vel_bc_nx(hi(1)+1,j,k)-vel_bc_nx(hi(1)+1,j-1,k)) / dx(2)
           end do
        end do
 
     end if
 
     ! zvel, lo x-faces
-    if (bc(1,1,3) .eq. DIR_VEL .or. bc(1,1,3) .eq. DIR_TRACT) then
+    ! subtract dvx/dz
+    if (bc(1,1,3) .eq. DIR_TRACT) then
        x = prob_lo(1)
        do k=lo(3),hi(3)+1
           z = prob_lo(3) + dble(k)*dx(3)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             vel_bc_tzx(lo(1),j,k) = vel_bc_tzx(lo(1),j,k)
+             vel_bc_tzx(lo(1),j,k) = vel_bc_tzx(lo(1),j,k) &
+                  - (vel_bc_nx(lo(1),j,k)-vel_bc_nx(lo(1),j,k-1)) / dx(3)
           end do
        end do
 
     end if
 
     ! zvel, hi x-faces
-    if (bc(1,2,3) .eq. DIR_VEL .or. bc(1,2,3) .eq. DIR_TRACT) then
+    ! subtract dvx/dz
+    if (bc(1,2,3) .eq. DIR_TRACT) then
        x = prob_hi(1)
        do k=lo(3),hi(3)+1
           z = prob_lo(3) + dble(k)*dx(3)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             vel_bc_tzx(hi(1)+1,j,k) = vel_bc_tzx(hi(1)+1,j,k)
+             vel_bc_tzx(hi(1)+1,j,k) = vel_bc_tzx(hi(1)+1,j,k) &
+                  - (vel_bc_nx(hi(1)+1,j,k)-vel_bc_nx(hi(1)+1,j,k-1)) / dx(3)
           end do
        end do
 
     end if
 
     ! xvel, lo y-faces
-    if (bc(2,1,1) .eq. DIR_VEL .or. bc(2,1,1) .eq. DIR_TRACT) then
+    ! subtract dvy/dx
+    if (bc(2,1,1) .eq. DIR_TRACT) then
        y = prob_lo(2)
        do k=lo(3),hi(3)
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1),hi(1)+1
              x = prob_lo(1) + dble(i)*dx(1)
-             vel_bc_txy(i,lo(2),k) = vel_bc_txy(i,lo(2),k)
+             vel_bc_txy(i,lo(2),k) = vel_bc_txy(i,lo(2),k) &
+                  - (vel_bc_ny(i,lo(2),k)-vel_bc_ny(i-1,lo(2),k)) / dx(1)
           end do
        end do
 
     end if
 
     ! xvel, hi y-faces
-    if (bc(2,2,1) .eq. DIR_VEL .or. bc(2,2,1) .eq. DIR_TRACT) then
+    ! subtract dvy/dx
+    if (bc(2,2,1) .eq. DIR_TRACT) then
        y = prob_hi(2)
        do k=lo(3),hi(3)
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1),hi(1)+1
              x = prob_lo(1) + dble(i)*dx(1)
-             vel_bc_txy(i,hi(2)+1,k) = vel_bc_txy(i,hi(2)+1,k)
+             vel_bc_txy(i,hi(2)+1,k) = vel_bc_txy(i,hi(2)+1,k) &
+                  - (vel_bc_ny(i,hi(2)+1,k)-vel_bc_ny(i-1,hi(2)+1,k)) / dx(1)
           end do
        end do
 
     end if
 
     ! zvel, lo y-faces
-    if (bc(2,1,3) .eq. DIR_VEL .or. bc(2,1,3) .eq. DIR_TRACT) then
+    ! subtract dvy/dz
+    if (bc(2,1,3) .eq. DIR_TRACT) then
        y = prob_lo(2)
        do k=lo(3),hi(3)+1
           z = prob_lo(3) + dble(k)*dx(3)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             vel_bc_tzy(i,lo(2),k) = vel_bc_tzy(i,lo(2),k)
+             vel_bc_tzy(i,lo(2),k) = vel_bc_tzy(i,lo(2),k) &
+                  - (vel_bc_ny(i,lo(2),k)-vel_bc_ny(i,lo(2),k-1)) / dx(3)
           end do
        end do
 
     end if
 
     ! zvel, hi y-faces
-    if (bc(2,2,3) .eq. DIR_VEL .or. bc(2,2,3) .eq. DIR_TRACT) then
+    ! subtract dvy/dz
+    if (bc(2,2,3) .eq. DIR_TRACT) then
        y = prob_hi(2)
        do k=lo(3),hi(3)+1
           z = prob_lo(3) + dble(k)*dx(3)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             vel_bc_tzy(i,hi(2)+1,k) = vel_bc_tzy(i,hi(2)+1,k)
+             vel_bc_tzy(i,hi(2)+1,k) = vel_bc_tzy(i,hi(2)+1,k) &
+                  - (vel_bc_ny(i,hi(2)+1,k)-vel_bc_ny(i,hi(2)+1,k-1)) / dx(3)
           end do
        end do
 
     end if
 
     ! xvel, lo z-faces
-    if (bc(3,1,1) .eq. DIR_VEL .or. bc(3,1,1) .eq. DIR_TRACT) then
+    ! subtract dvz/dx
+    if (bc(3,1,1) .eq. DIR_TRACT) then
        z = prob_lo(3)
        do i=lo(1),hi(1)+1
           x = prob_lo(1) + dble(i)*dx(1)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             vel_bc_txz(i,j,lo(3)) = vel_bc_txz(i,j,lo(3))
+             vel_bc_txz(i,j,lo(3)) = vel_bc_txz(i,j,lo(3)) &
+                  - (vel_bc_nz(i,j,lo(3))-vel_bc_nz(i-1,j,lo(3))) / dx(1)
           end do
        end do
 
     end if
 
     ! xvel, hi z-faces
-    if (bc(3,2,1) .eq. DIR_VEL .or. bc(3,2,1) .eq. DIR_TRACT) then
+    ! subtract dvz/dx
+    if (bc(3,2,1) .eq. DIR_TRACT) then
        z = prob_hi(3)
        do i=lo(1),hi(1)+1
           x = prob_lo(1) + dble(i)*dx(1)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             vel_bc_txz(i,j,hi(3)+1) = vel_bc_txz(i,j,hi(3)+1)
+             vel_bc_txz(i,j,hi(3)+1) = vel_bc_txz(i,j,hi(3)+1) &
+                  - (vel_bc_nz(i,j,hi(3)+1)-vel_bc_nz(i-1,j,hi(3)+1)) / dx(1)
           end do
        end do
 
     end if
 
     ! yvel, lo z-faces
-    if (bc(3,1,2) .eq. DIR_VEL .or. bc(3,1,2) .eq. DIR_TRACT) then
+    ! subtract dvz/dy
+    if (bc(3,1,2) .eq. DIR_TRACT) then
        z = prob_lo(3)
        do j=lo(2),hi(2)+1
           y = prob_lo(2) + dble(j)*dx(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             vel_bc_tyz(i,j,lo(3)) = vel_bc_tyz(i,j,lo(3))
+             vel_bc_tyz(i,j,lo(3)) = vel_bc_tyz(i,j,lo(3)) &
+                  - (vel_bc_nz(i,j,lo(3))-vel_bc_nz(i,j-1,lo(3))) / dx(2)
           end do
        end do
 
     end if
 
     ! yvel, hi z-faces
-    if (bc(3,2,2) .eq. DIR_VEL .or. bc(3,2,2) .eq. DIR_TRACT) then
+    ! subtract dvz/dy
+    if (bc(3,2,2) .eq. DIR_TRACT) then
        z = prob_hi(3)
        do j=lo(2),hi(2)+1
           y = prob_lo(2) + dble(j)*dx(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             vel_bc_tyz(i,j,hi(3)+1) = vel_bc_tyz(i,j,hi(3)+1)
+             vel_bc_tyz(i,j,hi(3)+1) = vel_bc_tyz(i,j,hi(3)+1) &
+                  - (vel_bc_nz(i,j,hi(3)+1)-vel_bc_nz(i,j-1,hi(3)+1)) / dx(2)
           end do
        end do
 
