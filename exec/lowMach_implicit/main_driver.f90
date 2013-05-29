@@ -295,9 +295,6 @@ subroutine main_driver()
   ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pres,dx,mla,time)
 
-  ! set inhomogeneous bc condition
-  call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,dx,the_bc_tower%bc_tower_array)
-
   if (print_int .gt. 0) then
      call eos_check(mla,sold)
      call sum_mass_momentum(mla,sold,mold)
@@ -320,6 +317,10 @@ subroutine main_driver()
   call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
   call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
   call compute_kappa(mla,kappa,prim,dx)
+
+  ! set inhomogeneous bc condition for velocities
+  call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+                                 the_bc_tower%bc_tower_array)
 
   ! allocate and build multifabs that will contain random numbers
   call init_stochastic(mla)

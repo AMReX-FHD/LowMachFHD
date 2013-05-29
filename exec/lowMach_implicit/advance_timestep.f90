@@ -258,7 +258,8 @@ contains
     end do
 
     ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,dx,the_bc_tower%bc_tower_array)
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+                                   the_bc_tower%bc_tower_array)
 
     ! add div(rho*chi grad c)^{*,n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
@@ -514,7 +515,8 @@ contains
     end do
 
     ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,dx,the_bc_tower%bc_tower_array)
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+                                   the_bc_tower%bc_tower_array)
 
     ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
     call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
