@@ -262,10 +262,10 @@ solve the following system for $(\deltab\vb,\delta\pi)$:
 
 \section{Boundary Conditions}
 The types of non-periodic, ``physical'' boundary conditions we consider are 
-(i) no-slip (impermeable) walls,
-(ii) free-slip (impermeable) walls,
-(iii) no-slip reservoir, and
-(iv) free-slip reservoir conditions.
+(i) ``no-slip'' (impermeable) walls,
+(ii) ``slip'' (impermeable) walls,
+(iii) ``no-slip'' reservoir, and
+(iv) ``slip'' reservoir conditions.
 We impose boundary conditions on the primitive variables and velocities,
 i.e., $\rho,c$, and $\vb$, and can convert these back to conservative
 variables afterwards if needed.\\
@@ -278,15 +278,16 @@ is derived from $c$ and the EOS.  The zero advective flux implies that $v_n=0$ o
 boundary.  The no-slip condition implies that each $v_{\tau}$ is a prescribed value
 on the boundary.\\
 
-{\bf Free-Slip Wall:}  This is the same situation as the no-slip impermeable
+{\bf Slip Wall:}  This is the same situation as the no-slip impermeable
 wall, except that the tangential velocities are subject to the condition that the
-tangential compoment of the normal viscous stress vanishes.  In other words, for each 
-tangential direction $\tau$,
+traction, or tangential compoment of the normal viscous stress, is prescribed.
+In other words, for each tangential direction $\tau$,
 \begin{equation}
-\eta\left(\frac{\partial v_n}{\partial\tau} + \frac{\partial v_{\tau}}{\partial n}\right) = 0.\label{eq:free slip}
+\eta\left(\frac{\partial v_n}{\partial\tau} + \frac{\partial v_{\tau}}{\partial n}\right) = f.\label{eq:free slip}
 \end{equation}
 Note that for walls with constant $v_n$ (including impermeable walls with $v_n=0$),
-this condition reduces to $\partial v_{\tau}/\partial n=0$.\\
+this condition reduces to $\partial v_{\tau}/\partial n=f/\eta$.  In most cases we
+use a zero traction condition, where $f=0$.\\
 
 {\bf No-Slip Reservoir:} We specify $c$ with a Dirichlet condition at the boundary, 
 and use the EOS to obtain $\rho$ at the
@@ -298,10 +299,10 @@ subsequent GMRES solve preserves these boundary conditions.
 The no-slip condition implies that each $v_{\tau}$ is
 a prescribed value on the boundary.\\
 
-{\bf Free-Slip Reservoir:} This is the same situation as the no-slip reservoir, except
+{\bf Slip Reservoir:} This is the same situation as the no-slip reservoir, except
 that each $v_{\tau}$ is subject to (\ref{eq:free slip}).  Since in general
 the normal velocity is not constant in the tangential direction(s), we will have 
-an inhomogeneous Neumann condition on each $v_{\tau}$.
+an inhomogeneous Neumann condition on each $v_{\tau}$, even if $f=0$.
 
 \subsection{Implementation}
 
