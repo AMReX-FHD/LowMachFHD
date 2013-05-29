@@ -416,15 +416,12 @@ subroutine main_driver()
         call multifab_destroy(vel_bc_t(n,1))
         call multifab_destroy(vel_bc_t(n,2))
      else if (dm .eq. 3) then
-        call multifab_destroy(eta_ed(n,1))
-        call multifab_destroy(eta_ed(n,2))
-        call multifab_destroy(eta_ed(n,3))
-        call multifab_destroy(vel_bc_t(n,1))
-        call multifab_destroy(vel_bc_t(n,2))
-        call multifab_destroy(vel_bc_t(n,3))
-        call multifab_destroy(vel_bc_t(n,4))
-        call multifab_destroy(vel_bc_t(n,5))
-        call multifab_destroy(vel_bc_t(n,6))
+        do i=1,3
+           call multifab_destroy(eta_ed(n,i))
+        end do
+        do i=1,6
+           call multifab_destroy(vel_bc_t(n,i))
+        end do
      end if
   end do
 

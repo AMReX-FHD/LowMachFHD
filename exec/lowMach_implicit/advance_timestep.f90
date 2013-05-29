@@ -72,13 +72,25 @@ contains
     type(multifab) ::   chi_fc_old(mla%nlevel,mla%dim)
     type(multifab) :: vel_bc_n_old(mla%nlevel,mla%dim)
     type(multifab) :: vel_bc_n_delta(mla%nlevel,mla%dim)
+    type(multifab), allocatable :: vel_bc_t_old(:,:)
+    type(multifab), allocatable :: vel_bc_t_delta(:,:)
 
     integer :: i,dm,n,nlevs
+    logical :: nodal_temp(mla%dim)
 
     real(kind=dp_t) :: S_fac
 
     nlevs = mla%nlevel
     dm = mla%dim
+
+    if (dm .eq. 2) then
+       allocate(vel_bc_t_old(nlevs,2))
+       allocate(vel_bc_t_delta(nlevs,2))
+    else if (dm .eq. 3) then
+       allocate(vel_bc_t_old(nlevs,6))
+       allocate(vel_bc_t_delta(nlevs,6))
+
+    end if
 
     S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
     
@@ -103,6 +115,53 @@ contains
           call multifab_build_edge(vel_bc_n_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(vel_bc_n_delta(n,i),mla%la(n),1,0,i)
        end do
+       
+       if (dm .eq. 2) then
+          ! y-velocity bc on x-faces (nodal)
+          call multifab_build_nodal(vel_bc_t_old(n,1)  ,mla%la(n),1,0)
+          call multifab_build_nodal(vel_bc_t_delta(n,1),mla%la(n),1,0)
+          ! x-velocity bc on y-faces (nodal)
+          call multifab_build_nodal(vel_bc_t_old(n,2)  ,mla%la(n),1,0)
+          call multifab_build_nodal(vel_bc_t_delta(n,2),mla%la(n),1,0)
+       else
+          ! y-velocity bc on x-faces (nodal in y and x)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .false.
+          call multifab_build(vel_bc_t_old(n,1)  ,mla%la(n),1,0,nodal_temp)
+          call multifab_build(vel_bc_t_delta(n,1),mla%la(n),1,0,nodal_temp)
+          ! z-velocity bc on x-faces (nodal in z and x)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .false.
+          nodal_temp(3) = .true.
+          call multifab_build(vel_bc_t_old(n,2)  ,mla%la(n),1,0,nodal_temp)
+          call multifab_build(vel_bc_t_delta(n,2),mla%la(n),1,0,nodal_temp)
+          ! x-velocity bc on y-faces (nodal in x and y)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .false.
+          call multifab_build(vel_bc_t_old(n,3)  ,mla%la(n),1,0,nodal_temp)
+          call multifab_build(vel_bc_t_delta(n,3),mla%la(n),1,0,nodal_temp)
+          ! z-velocity bc on y-faces (nodal in z and y)
+          nodal_temp(1) = .false.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .true.
+          call multifab_build(vel_bc_t_old(n,4)  ,mla%la(n),1,0,nodal_temp)
+          call multifab_build(vel_bc_t_delta(n,4),mla%la(n),1,0,nodal_temp)
+          ! x-velocity bc on z-faces (nodal in x and z)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .false.
+          nodal_temp(3) = .true.
+          call multifab_build(vel_bc_t_old(n,5)  ,mla%la(n),1,0,nodal_temp)
+          call multifab_build(vel_bc_t_delta(n,5),mla%la(n),1,0,nodal_temp)
+          ! y-velocity bc on z-faces (nodal in y and z)
+          nodal_temp(1) = .false.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .true.
+          call multifab_build(vel_bc_t_old(n,6)  ,mla%la(n),1,0,nodal_temp)
+          call multifab_build(vel_bc_t_delta(n,6),mla%la(n),1,0,nodal_temp)
+       end if
+
     end do
 
     do n=1,nlevs
@@ -117,7 +176,7 @@ contains
        end do
     end do
 
-    ! make a temporary copy of v^n
+    ! make copies of old quantities
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(  umac_old(n,i),1,  umac(n,i),1,1    ,1)
@@ -125,6 +184,14 @@ contains
           call multifab_copy_c(chi_fc_old(n,i),1,chi_fc(n,i),1,1    ,0)
           call multifab_copy_c(vel_bc_n_old(n,i),1,vel_bc_n(n,i),1,1,0)
        end do
+       if (dm .eq. 2) then
+          call multifab_copy_c(vel_bc_t_old(n,1),1,vel_bc_t(n,1),1,1,0)
+          call multifab_copy_c(vel_bc_t_old(n,2),1,vel_bc_t(n,2),1,1,0)          
+       else if (dm .eq. 3) then
+          do i=1,6
+             call multifab_copy_c(vel_bc_t_old(n,i),1,vel_bc_t(n,i),1,1,0)
+          end do
+       end if
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -276,6 +343,17 @@ contains
           call multifab_copy_c(vel_bc_n_delta(n,i),1,vel_bc_n(n,i),1,1,0)
           call multifab_sub_sub_c(vel_bc_n_delta(n,i),1,vel_bc_n_old(n,i),1,1,0)
        end do
+       if (dm .eq. 2) then
+          do i=1,2
+             call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
+             call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
+          end do          
+       else if (dm .eq. 3) then
+          do i=1,6
+             call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
+             call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
+          end do    
+       end if
     end do
 
     ! reset s_update for all scalars to zero
@@ -328,7 +406,8 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/fixed_dt,dx,the_bc_tower,vel_bc_n_delta,vel_bc_t)
+                                kappa,1.d0/fixed_dt,dx,the_bc_tower, &
+                                vel_bc_n_delta,vel_bc_t_delta)
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
@@ -541,6 +620,17 @@ contains
           call multifab_copy_c(vel_bc_n_delta(n,i),1,vel_bc_n(n,i),1,1,0)
           call multifab_sub_sub_c(vel_bc_n_delta(n,i),1,vel_bc_n_old(n,i),1,1,0)
        end do
+       if (dm .eq. 2) then
+          do i=1,2
+             call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
+             call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
+          end do          
+       else if (dm .eq. 3) then
+          do i=1,6
+             call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
+             call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
+          end do    
+       end if
     end do
 
     ! add div(Psi^{n+1}) to rhs_p
@@ -579,7 +669,8 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/fixed_dt,dx,the_bc_tower,vel_bc_n_delta,vel_bc_t)
+                                kappa,1.d0/fixed_dt,dx,the_bc_tower, &
+                                vel_bc_n_delta,vel_bc_t_delta)
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
@@ -653,7 +744,20 @@ contains
           call multifab_destroy(vel_bc_n_old(n,i))
           call multifab_destroy(vel_bc_n_delta(n,i))
        end do
+       if (dm .eq. 2) then
+          call multifab_destroy(vel_bc_t_old(n,1))
+          call multifab_destroy(vel_bc_t_old(n,2))
+          call multifab_destroy(vel_bc_t_delta(n,1))
+          call multifab_destroy(vel_bc_t_delta(n,2))
+       else if (dm .eq. 3) then
+          do i=1,6
+             call multifab_destroy(vel_bc_t_old(n,i))
+             call multifab_destroy(vel_bc_t_delta(n,i))
+          end do
+       end if
     end do
+
+    deallocate(vel_bc_t_old,vel_bc_t_delta)
 
   end subroutine advance_timestep
 
