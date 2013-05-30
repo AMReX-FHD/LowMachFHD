@@ -59,6 +59,83 @@
 
 \maketitle
 
+\section{Introduction}
+We have developed a new staggered grid code library for solving PDEs where scalars
+are naturally cell-centered, and momentum and velocities are naturally face-centered,
+or ``staggered'' in a MAC-stencil sense (see Figure \ref{fig:grid}).  We currently
+have two applications: (i) a GMRES solver and (ii) an implicit low Mach number binary 
+mixing code, which uses the GMRES solver.  In these notes we describe the implicit
+low Mach number binary mixing code.  The GMRES solver is discussed in full detail 
+in a forthcoming paper.  Within the code we also have an explicit binary mixing code,
+but it is mostly self-contained and ideas from this code were used to develop the
+low Mach number source code.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[b]
+\centering
+\includegraphics[width=5in]{grid}
+\label{fig:grid}
+\caption{Cartesian grid, finite volume grid structure with ``cell-centered'' scalars
+and staggered momenta.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Code Structure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[tb]
+\centering
+\includegraphics[width=3in]{flowchart}
+\caption{Flowchart.}\label{fig:flowchart}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{itemize}
+\item {\tt FluctHydro}\\
+Git repo for all fluctuating hydrodynamics applications.
+\begin{itemize}
+\item {\tt staggered\_grid}\\
+Staggered grid source code.
+\begin{itemize}
+\item {\tt src\_common}\\
+Stuff that is common to all staggered grid codes.
+\item {\tt src\_gmres}\\
+Stuff required for the GMRES solver.
+\item {\tt src\_lowMach}\\
+Stuff required for any low Mach number time-advancement codes.
+\item {\tt exec}\\
+Stores all the run directories.
+\begin{itemize}
+\item {\tt stokes\_preconditioner}\\
+Source code for the GMRES test code.
+\item {\tt lowMach\_implicit}\\
+Source code for the low Mach number implicit code.
+\end{itemize}
+\end{itemize}
+\item {\tt HydroGrid}\\
+Source code for random number generators and some analysis codes.
+\end{itemize}
+\item {\tt BoxLib}\\
+Git repo for all BoxLib applications.
+\begin{itemize}
+\item {\tt Src}\\
+BoxLib source code.
+\begin{itemize}
+\item {\tt F\_BaseLib}\\
+Fortran90 BoxLib source code.
+\item {\tt LinearSolvers}\\
+Linear solver source code.
+\begin{itemize}
+\item {\tt F\_MG}\\
+Fortran linear solver source code.  We use the cell-centered multigrid solver.
+\end{itemize}
+\end{itemize}
+\item {\tt Tools}\\
+BoxLib utilities.
+\begin{itemize}
+\item {\tt F\_mk}\\
+Contains make system for Fortran90 BoxLib applications.
+\end{itemize}
+\end{itemize}
+\end{itemize}
+
 \section{Equations}
 We have two incompressible fluids with densities $\bar\rho_1$ and $\bar\rho_2$, where 
 each fluid does not change volume upon mixing.  Defining $\rho$ to be the density of
@@ -109,17 +186,6 @@ for $\mathcal{A}_0$ indicates the temporal discretization for the transport coef
 \item $|${\tt visc\_type}$|$=2 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T]\right\}$.\\
 \item $|${\tt visc\_type}$|$=3 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T] + \mathcal{I}\left(\gamma^n - \frac{2}{3}\beta^n\right)(\nabla\cdot\vb)\right\}$.\\
 \end{itemize}
-
-\section{Code Structure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{figure}[tb]
-\centering
-\includegraphics[width=3in]{flowchart}
-\caption{Flowchart.}\label{fig:flowchart}
-\end{figure}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 \section{GMRES Solver}
 
@@ -449,7 +515,7 @@ of the same type.
 The vector $\xb_H$ is a vector with zeros in all valid cells (but possibly
 non-zero values in the ghost cells, depending on the boundary conditions).
 By solving this system for $\xb$, we arrive at the same answer as solving the
-inhomogeneous problem, $\Ab\xb=\bb$.
+inhomogeneous problem, $\Ab\xb=\bb$.\\
 
 It is also important to note that we are solving a ``delta'' formulation for
 $(\deltab\vb,\delta\pi)$.  This means we have to be careful when supplying
