@@ -16,7 +16,7 @@ contains
    real(kind=dp_t), intent(in   ) :: x,y
    real(kind=dp_t)                :: val
 
-   val = 0.d0
+   call bl_error("inhomogeneous_bc_val: write a custom routine and put in local source directory"
 
  end function inhomogeneous_bc_val_2d
 
@@ -26,7 +26,7 @@ contains
    real(kind=dp_t), intent(in   ) :: x,y,z
    real(kind=dp_t)                :: val
 
-   val = 0.d0
+   call bl_error("inhomogeneous_bc_val: write a custom routine and put in local source directory"
 
  end function inhomogeneous_bc_val_3d
 

@@ -70,7 +70,7 @@ in a forthcoming paper.  Within the code we also have an explicit binary mixing 
 but it is mostly self-contained and ideas from this code were used to develop the
 low Mach number source code.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{figure}[b]
+\begin{figure}[hb]
 \centering
 \includegraphics[width=5in]{grid}
 \label{fig:grid}
@@ -80,11 +80,13 @@ and staggered momenta.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Code Structure}
+See Figure \ref{fig:flowchart} for a code structure chart.  Here is a summary
+of what is contained within these directories:\\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[tb]
 \centering
 \includegraphics[width=3in]{flowchart}
-\caption{Flowchart.}\label{fig:flowchart}
+\caption{Code structure chart for the source code for our staggered grid applications.}\label{fig:flowchart}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{itemize}
@@ -136,7 +138,7 @@ Contains make system for Fortran90 BoxLib applications.
 \end{itemize}
 \end{itemize}
 
-\section{Equations}
+\section{Low Mach Number Binary Mixing Equations}
 We have two incompressible fluids with densities $\bar\rho_1$ and $\bar\rho_2$, where 
 each fluid does not change volume upon mixing.  Defining $\rho$ to be the density of
 a mixture of these fluids, the densities of each fluid are $\rho_1 \equiv \rho c$ and 
@@ -255,7 +257,7 @@ If the maximum number of inner or outer iterations is reached we exit
 with an error message.
 \end{enumerate}
 
-\section{Algorithm}
+\section{Implicit Low Mach Number Binary Mixing Algorithm}
 Here is the time-advancement scheme.\\ \\
 {\bf Step 0: Initialization:}\\
 
@@ -295,7 +297,7 @@ Then, define $\vb^{*,n+1} = \vb^n + \deltab\vb, \pi^{*,n+1} = \pi^n + \delta\pi$
 for $\deltab\vb$ and $\delta\pi$:
 \begin{eqnarray}
 \frac{\rho^{*,n+1}(\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(\pi^n+\delta\pi) &=&\nonumber\\
-&&\hspace{-1.5in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}(\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n}.
+&&\hspace{-1.5in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}(\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n},
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot(\vb^n+\deltab\vb) = S^{*,n+1}.
@@ -513,7 +515,8 @@ with homogeneous boundary conditions of the same type (Neumann or Dirichlet):
 Here, $\Ab_H$ is the same operator as $\Ab$, but with homogeneous boundary conditions
 of the same type.
 The vector $\xb_H$ is a vector with zeros in all valid cells (but possibly
-non-zero values in the ghost cells, depending on the boundary conditions).
+non-zero values on the boundary and in the ghost cells, depending on the 
+boundary conditions).
 By solving this system for $\xb$, we arrive at the same answer as solving the
 inhomogeneous problem, $\Ab\xb=\bb$.\\
 
@@ -521,7 +524,8 @@ It is also important to note that we are solving a ``delta'' formulation for
 $(\deltab\vb,\delta\pi)$.  This means we have to be careful when supplying
 a boundary condition to the subroutine that converts the problem to a homogeneous
 problem, in that for time-dependent boundary conditions (such as reservoirs), we
-must supply the {\it change} in the velocity boundary condition, rather than
-the final velocity boundary condition itself.
+must supply the {\it change} in the velocity boundary condition as compared to
+the boundary condition at $t^n$, rather than the final velocity boundary 
+condition itself.
 
 \end{document}
