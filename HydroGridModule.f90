@@ -291,6 +291,7 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
    grid%storeConserved = storeConserved
    grid%staggeredVelocities = staggeredVelocities
    if(present(nPassiveScalars)) grid%nPassiveScalars=nPassiveScalars
+   write(6,*)" "
    write(*,*) "Initializing HydroAnalysis for grid of size ", grid%nCells, &
       " nSpecies/isSingleFluid=", grid%nSpecies, grid%isSingleFluid
 
