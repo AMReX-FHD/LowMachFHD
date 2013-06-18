@@ -1,8 +1,8 @@
 module inhomogeneous_bc_val_module
 
   use bl_types
-  use probin_common_module,  only: wallspeed_hi, prob_lo, prob_hi
-  use probin_lowmach_module, only: prob_type, rhobar, c_bc
+  use probin_common_module,  only: wallspeed_hi, prob_lo, prob_hi, prob_type
+  use probin_lowmach_module, only: rhobar, c_bc
 
   implicit none
 

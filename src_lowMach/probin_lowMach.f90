@@ -10,7 +10,7 @@ module probin_lowmach_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  integer   , save :: prob_type,max_step,nscal,print_int
+  integer   , save :: max_step,nscal,print_int
   real(dp_t), save :: rhobar(2),visc_coef,diff_coef,smoothing_width
   real(dp_t), save :: variance_coef,conc_scal,c_init(2)
   real(dp_t), save :: mol_mass(2),kT
@@ -23,7 +23,6 @@ module probin_lowmach_module
   !------------------------------------------------------------- 
 
   ! problem setup
-  namelist /probin_lowmach/ prob_type         ! sets scalars, vel, coeffs; see exact_solutions.f90
   namelist /probin_lowmach/ smoothing_width   ! scale factor for smoothing initial profile
   namelist /probin_lowmach/ c_init            ! controls initial concentration range
   namelist /probin_lowmach/ c_bc              ! c boundary conditions (dir,face)
@@ -77,7 +76,6 @@ contains
 
     ! Defaults
 
-    prob_type = 1
     smoothing_width = 1.d0
     c_init(1:2) = 1.d0
     c_bc(1:3,1:2) = 1.d0
@@ -117,11 +115,6 @@ contains
     do while ( farg <= narg )
        call get_command_argument(farg, value = fname)
        select case (fname)
-
-       case ('--prob_type')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) prob_type
 
        case ('--smoothing_width')
           farg = farg + 1

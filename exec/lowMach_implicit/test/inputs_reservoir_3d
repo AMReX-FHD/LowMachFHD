@@ -1,7 +1,6 @@
 &probin_lowmach
   
   ! problem setup
-  prob_type = 0       ! sets scalars, vel, coeffs; see init.f90
   c_init(1) = 0.1d0   ! initial concentration
   c_bc(2,1) = 0.1d0   ! concentration at lo-y wall
   c_bc(2,2) = 0.9d0   ! concentration at hi-y wall
@@ -36,8 +35,10 @@
   prob_hi(1:3) = 64.d0 64.d0 64.d0 ! physical hi coordinate
   n_cells(1:3) = 32 32 32          ! number of cells in domain
   max_grid_size(1:3) = 16 16 16    ! max number of cells in a box
-  fixed_dt = 0.1d0           ! time step
-  plot_int = 10              ! Interval for writing a plotfile (for visit/amrvis)
+  fixed_dt = 0.1d0                 ! time step
+  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
+  prob_type = 0                    ! sets scalars, m, coefficients (see init.f90),
+                                   ! and boundary conditions (see inhomogeneous_bc_val.f90)
 
   ! Algorithm control / selection
   !----------------------

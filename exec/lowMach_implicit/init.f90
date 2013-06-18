@@ -5,9 +5,9 @@ module init_module
   use ml_layout_module
   use define_bc_module
   use convert_stag_module
-  use probin_lowmach_module, only: prob_type, rhobar, diff_coef, visc_coef, &
+  use probin_lowmach_module, only: rhobar, diff_coef, visc_coef, &
                                    smoothing_width, c_init, material_properties
-  use probin_common_module , only: prob_lo, prob_hi
+  use probin_common_module , only: prob_lo, prob_hi, prob_type
 
   implicit none
 
