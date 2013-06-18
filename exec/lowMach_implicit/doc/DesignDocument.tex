@@ -500,10 +500,17 @@ appropriate stencil is used to fill in the ghost value.
 The stencil for transverse velocities is a two-point stencil involving the
 interior value and the Dirichlet or Neumann boundary value.\\
 
-We need to write a helper routine to compute the Neumann condition in the case of
-free-slip walls or free-slip reservoirs.  This only matters if the normal velocity
+The subroutine {\tt set\_inhomogeneous\_vel\_bcs} set the Dirichlet condition,
+$f$, for normal and transverse velocities.  For the case of reservoir boundary
+conditions, it sets $f=0$ and relies on other subroutines to update the
+normal velocity boundary condition as the fluxes for the concentrations
+are built up.\\
+
+The subroutine {\tt modify\_traction\_bcs} modifies the traction boundary condition
+by subtracting off the $\partial v_n/\partial\tau$ term for the Neumann conditions
+on $v_{\tau}$.  This only matters if the normal velocity
 changes as a function of the transverse velocity of interest.  If not, a 
-homogeneous Neumann condition is correct.\\
+homogeneous Neumann condition is correct.
 
 \subsubsection{GMRES Boundary Conditions}
 The GMRES solver assumes homogeneous boundary conditions,
