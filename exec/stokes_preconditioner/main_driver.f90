@@ -20,7 +20,6 @@ subroutine main_driver()
   use norm_inner_product_module
   use init_module
   use multifab_physbc_module
-  use set_inhomogeneous_vel_bcs_module
   use convert_to_homogeneous_module
   use ParallelRNGs
   use bc_module

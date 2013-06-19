@@ -13,7 +13,6 @@ module advance_timestep_module
   use init_module
   use div_and_grad_module
   use multifab_physbc_module
-  use set_inhomogeneous_vel_bcs_module
   use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef
   use probin_common_module, only: fixed_dt
 
