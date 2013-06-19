@@ -383,9 +383,7 @@ that each $v_{\tau}$ is subject to (\ref{eq:free slip}).  Since in general
 the normal velocity is not constant in the tangential direction(s), we will have 
 an inhomogeneous Neumann condition on each $v_{\tau}$, even if $f=0$.
 
-\subsection{Implementation}
-
-\subsubsection{Primitive Variables}
+\subsection{Design Principles}
 For all physical boundaries, the value of a primitive
 variable on the boundary shall be stored in the ghost cell for convenience.  This
 is true regardless of whether we use a homogeneous Neumann or Dirichlet condition.
@@ -395,9 +393,8 @@ the EOS to obtain $\rho$.  Note that the transport coefficients, $(\eta,\kappa,\
 are functions of the primitive variables, so when we compute them, we simply loop
 over valid {\it and} ghost cells, and do not require special routines to fill
 the ghost cells aftewards.  We fill ghost cells for primitive variables using the
-subroutine, {\tt multifab\_physbc}.
+subroutine, {\tt multifab\_physbc}.\\
 
-\subsubsection{Velocities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[tb]
 \centering
@@ -420,7 +417,8 @@ The black triangles indicate locations of $v$ and $w$.
 The red dots indicate the location of the $\beta$ and the gradients of velocity.}\label{fig:viscOp_3d}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-It is helpful to first consider the stencils for the viscous operators, as illustrated
+For velocities, it is helpful to first consider the stencils 
+for the viscous operators, as illustrated
 in Figures \ref{fig:viscOp} and \ref{fig:viscOp_3d} for two and three dimensions.
 There are a few key design principles to keep in mind:\\
 \begin{itemize}
@@ -445,13 +443,17 @@ not have to worry about ghost faces that are outside the valid region with respe
 to the problem domain in the transverse direction.  Those only matter if we are 
 periodic in the transverse direction, in which case the call to {\tt multifab\_fill\_boundary}
 should take care of these periodic values.\\
+\item Unlike the case for scalars, here the values of velocity in ghost cells represent
+the value extrapolated to that point (for tangential velocities), or the value {\it on}
+the boundary (for normal velocities).
 \end{itemize}
 
 We carry around several auxiliary multifabs that store the Dirichlet value on the
 boundary, whether they are homogeneous or inhomogeneous.  To deal with normal 
 velocities, the multifab {\tt vel\_bc\_n(nlevs,dm)}
 stores the actual Dirichlet value.  The $(n,d)^{\rm th}$ element is a face-centered
-multifab for refinement level $n$ in direction $d$ and does not require ghost cells.\\
+multifab for refinement level $n$ in direction $d$ and does not require ghost cells.
+The boundary face itself stores the Dirichlet value.\\
 
 To deal with transverse velocities, the multifab {\tt vel\_bc\_t(nlevs,X)} stores
 either the Dirichlet or Neumann value (depending on the boundary type), for both 
@@ -475,22 +477,27 @@ and the components represent:\\
 
 Note that none of these multifabs require any ghost cells.\\
 
-We have two subroutines that deal with velocity boundary conditions.  Each of these
-take in an optional multifab argument that represents the prescribed Dirichlet
-or Neumann value on the
-boundary.  Note that this can either refer to the prescribed value
-of normal velocity on the boundary, or a Dirichlet {\it or} Neumann
-condition used to determine the ghost face values for transverse velocity.
+\subsection{Implementation}
+
+To fill {\tt vel\_bc\_n} and {\tt vel\_bc\_t} we call the subroutine,
+{\tt set\_inhomogeneous\_vel\_bcs}.  This routine loops over domain boundary
+faces, and if the domain boundary is a physical boundary, it uses the
+function {\tt inhomogeneous\_bc\_val\_Xd} to fill {\tt vel\_bc\_n} and 
+{\tt vel\_bc\_t}.\\
+
+We have two subroutines that fill velocity domain boundary and ghost cells based
+on the values in {\tt vel\_bc\_n} and {\tt vel\_bc\_t}.
+Each of these take in {\tt vel\_bc\_n} or {\tt vel\_bc\_t} as
+an optional multifab argument that represents the prescribed Dirichlet
+or Neumann value on the boundary.  Note that this can either refer to the 
+prescribed value of normal velocity on the boundary, or a Dirichlet {\it or} 
+Neumann condition used to determine the ghost face values for transverse velocity.
 If no multifab is passed in, it is assumed that the boundary conditions
 are homogeneous.  The subroutine {\tt multifab\_physbc\_domainvel} sets the 
 value for faces on the boundary and can take {\tt vel\_bc\_n} as an input.
 The subroutine {\tt multifab\_physbc\_macvel}
 sets the transverse velocity ghost faces behind the physical boundary and
 can take {\tt vel\_bc\_t} as an input.\\
-
-For {\tt multifab\_physbc\_domainvel}, the optional multifab that gets passed in
-must be face-centered, and requires no ghost cells.  The boundary face itself
-stores the Dirichlet value.\\
 
 For {\tt multifab\_physbc\_macvel}, the optional multifab that gets passed in
 must be nodal in exactly 2 directions.
@@ -500,19 +507,42 @@ appropriate stencil is used to fill in the ghost value.
 The stencil for transverse velocities is a two-point stencil involving the
 interior value and the Dirichlet or Neumann boundary value.\\
 
-The subroutine {\tt set\_inhomogeneous\_vel\_bcs} set the Dirichlet condition,
-$f$, for normal and transverse velocities.  For the case of reservoir boundary
-conditions, it sets $f=0$ and relies on other subroutines to update the
-normal velocity boundary condition as the fluxes for the concentrations
+The subroutine {\tt set\_inhomogeneous\_vel\_bcs} sets the Dirichlet or
+Neumann condition, $f$, for normal and transverse velocities.  For the case of 
+reservoir boundary conditions, it sets $f=0$ and relies on other subroutines 
+to update the normal velocity boundary condition as the fluxes for the concentrations
 are built up.\\
 
-The subroutine {\tt modify\_traction\_bcs} modifies the traction boundary condition
-by subtracting off the $\partial v_n/\partial\tau$ term for the Neumann conditions
+The subroutine {\tt modify\_traction\_bcs} is a standalone subroutine that
+modifies the traction boundary condition by subtracting off the 
+$\partial v_n/\partial\tau$ term for the Neumann conditions
 on $v_{\tau}$.  This only matters if the normal velocity
-changes as a function of the transverse velocity of interest.  If not, a 
-homogeneous Neumann condition is correct.
+changes as a function of the transverse velocity of interest.  This subroutine
+should only be called after calling the inhomogeneous version of 
+{\tt multifab\_physbc\_domainvel}.
 
-\subsubsection{GMRES Boundary Conditions}
+\subsection{Calling Sequence}
+WORK IN PROGRESS... NOT CORRECT YET... Since in the GMRES solve at the end of the
+time step we use new-time stochastic fluxes the sequencing here gets tricky.\\
+
+A typical calling sequence for a low Mach number algorithm for a given time
+step should look something like:
+\begin{enumerate}
+\item Assume we start with $\rho$ and $c$ in the valid region, as well as
+velocities everywhere in the valid region {\it except} on the boundary.
+\item Call {\tt multifab\_fill\_boundary} to fill ghost cells for $\rho$ and
+$c$, noting that the ghost value represent the value on the boundary.
+\item Compute transport coefficients that are a function of $\rho$ and $c$ by
+looping over valid {\it and} ghost regions.
+\item Call {\tt set\_inhomogeneous\_vel\_bcs} to fill the bc multifabs,
+{\tt vel\_bc\_n} and {\tt vel\_bc\_t}.
+\item Compute the diffusive and stochastic $\rho c$ fluxes, making sure to update
+{\tt vel\_bc\_n} for the reservoir case.
+\item Call the inhomogeneous versions of {\tt multifab\_physbc\_macvel} and
+{\tt multifab\_physbc\_domainvel}.
+\end{enumerate}
+
+\subsection{GMRES Boundary Conditions}
 The GMRES solver assumes homogeneous boundary conditions,
 so we use a residual correction technique to convert the problem to one
 with homogeneous boundary conditions of the same type (Neumann or Dirichlet):
