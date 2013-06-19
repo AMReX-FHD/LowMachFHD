@@ -1,7 +1,7 @@
 module inhomogeneous_bc_val_module
 
   use bl_types
-  use probin_common_module,  only: wallspeed_hi, prob_lo, prob_hi
+  use probin_common_module,  only: wallspeed_lo, wallspeed_hi, prob_lo, prob_hi
   use probin_lowmach_module, only: rhobar, c_bc
 
   implicit none
@@ -21,7 +21,9 @@ contains
    if (comp .eq. 1) then
       ! x-vel
 
-      if (y .eq. prob_hi(2)) then
+      if (y .eq. prob_lo(2)) then
+         val = wallspeed_lo(1,2)
+      else if (y .eq. prob_hi(2)) then
          val = wallspeed_hi(1,2)
       else
          val = 0.d0
@@ -30,7 +32,13 @@ contains
    else if (comp .eq. 2) then
       ! y-vel
 
-      val = 0.d0
+      if (x .eq. prob_lo(1)) then
+         val = wallspeed_lo(1,1)
+      else if (x .eq. prob_hi(1)) then
+         val = wallspeed_hi(1,1)
+      else
+         val = 0.d0
+      end if
 
    else if (comp .eq. 4) then
       ! density
@@ -77,7 +85,13 @@ contains
    if (comp .eq. 1) then
       ! x-vel
 
-      if (z .eq. prob_hi(3)) then
+      if (y .eq. prob_lo(2)) then
+         val = wallspeed_lo(1,2)
+      else if (y .eq. prob_hi(2)) then
+         val = wallspeed_hi(1,2)
+      else if (z .eq. prob_lo(3)) then
+         val = wallspeed_lo(1,3)
+      else if (z .eq. prob_hi(3)) then
          val = wallspeed_hi(1,3)
       else
          val = 0.d0
@@ -86,7 +100,13 @@ contains
    else if (comp .eq. 2) then
       ! y-vel
 
-      if (z .eq. prob_hi(3)) then
+      if (x .eq. prob_lo(1)) then
+         val = wallspeed_lo(1,1)
+      else if (x .eq. prob_hi(1)) then
+         val = wallspeed_hi(1,1)
+      else if (z .eq. prob_lo(3)) then
+         val = wallspeed_lo(2,3)
+      else if (z .eq. prob_hi(3)) then
          val = wallspeed_hi(2,3)
       else
          val = 0.d0
@@ -95,7 +115,17 @@ contains
    else if (comp .eq. 3) then
       ! z-vel
 
-      val = 0.d0
+      if (x .eq. prob_lo(1)) then
+         val = wallspeed_lo(2,1)
+      else if (x .eq. prob_hi(1)) then
+         val = wallspeed_hi(2,1)
+      else if (y .eq. prob_lo(2)) then
+         val = wallspeed_lo(2,2)
+      else if (y .eq. prob_hi(2)) then
+         val = wallspeed_hi(2,2)
+      else
+         val = 0.d0
+      end if
 
    else if (comp .eq. 5) then
       ! density
