@@ -164,7 +164,14 @@ contains
        x = prob_lo(1)
        do j=lo(2),hi(2)+1
           y = prob_lo(2) + dble(j)*dx(2)
-          vel_bc_tyx(lo(1),j) = inhomogeneous_bc_val_2d(2,x,y) / eta_nd(lo(1),j)
+          vel_bc_tyx(lo(1),j) = inhomogeneous_bc_val_2d(2,x,y)
+       end do
+    end if
+
+    ! divide by eta for traction condition
+    if (bc(1,1,2) .eq. DIR_TRACT) then
+       do j=lo(2),hi(2)+1
+          vel_bc_tyx(lo(1),j) = vel_bc_tyx(lo(1),j) / eta_nd(lo(1),j)
        end do
     end if
 
@@ -173,7 +180,14 @@ contains
        x = prob_hi(1)
        do j=lo(2),hi(2)+1
           y = prob_lo(2) + dble(j)*dx(2)
-          vel_bc_tyx(hi(1)+1,j) = inhomogeneous_bc_val_2d(2,x,y) / eta_nd(hi(1)+1,j)
+          vel_bc_tyx(hi(1)+1,j) = inhomogeneous_bc_val_2d(2,x,y)
+       end do
+    end if
+
+    ! divide by eta for traction condition
+    if (bc(1,2,2) .eq. DIR_TRACT) then
+       do j=lo(2),hi(2)+1
+          vel_bc_tyx(hi(1)+1,j) = vel_bc_tyx(hi(1)+1,j) / eta_nd(hi(1)+1,j)
        end do
     end if
 
@@ -182,7 +196,14 @@ contains
        y = prob_lo(2)
        do i=lo(1),hi(1)+1
           x = prob_lo(1) + dble(i)*dx(1)
-          vel_bc_txy(i,lo(2)) = inhomogeneous_bc_val_2d(1,x,y) / eta_nd(i,lo(2))
+          vel_bc_txy(i,lo(2)) = inhomogeneous_bc_val_2d(1,x,y)
+       end do
+    end if
+
+    ! divide by eta for traction condition
+    if (bc(2,1,1) .eq. DIR_TRACT) then
+       do i=lo(1),hi(1)+1
+          vel_bc_txy(i,lo(2)) = vel_bc_txy(i,lo(2)) / eta_nd(i,lo(2))
        end do
     end if
 
@@ -191,7 +212,14 @@ contains
        y = prob_hi(2)
        do i=lo(1),hi(1)+1
           x = prob_lo(1) + dble(i)*dx(1)
-          vel_bc_txy(i,hi(2)+1) = inhomogeneous_bc_val_2d(1,x,y) / eta_nd(i,hi(2)+1)
+          vel_bc_txy(i,hi(2)+1) = inhomogeneous_bc_val_2d(1,x,y)
+       end do
+    end if
+
+    ! divide by eta for traction condition
+    if (bc(2,2,1) .eq. DIR_TRACT) then
+       do i=lo(1),hi(1)+1
+          vel_bc_txy(i,hi(2)+1) = vel_bc_txy(i,hi(2)+1) / eta_nd(i,hi(2)+1)
        end do
     end if
 
@@ -309,10 +337,18 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2),hi(2)+1
              y = prob_lo(2) + dble(j)*dx(2)
-             vel_bc_tyx(lo(1),j,k) = inhomogeneous_bc_val_3d(2,x,y,z) / eta_xy(lo(1),j,k)
+             vel_bc_tyx(lo(1),j,k) = inhomogeneous_bc_val_3d(2,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(1,1,2) .eq. DIR_TRACT) then
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)+1
+             vel_bc_tyx(lo(1),j,k) = vel_bc_tyx(lo(1),j,k) / eta_xy(lo(1),j,k)
+          end do
+       end do
     end if
 
     ! yvel, hi x-faces
@@ -322,10 +358,18 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2),hi(2)+1
              y = prob_lo(2) + dble(j)*dx(2)
-             vel_bc_tyx(hi(1)+1,j,k) = inhomogeneous_bc_val_3d(2,x,y,z) / eta_xy(hi(1)+1,j,k)
+             vel_bc_tyx(hi(1)+1,j,k) = inhomogeneous_bc_val_3d(2,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(1,2,2) .eq. DIR_TRACT) then
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)+1
+             vel_bc_tyx(hi(1)+1,j,k) = vel_bc_tyx(hi(1)+1,j,k) / eta_xy(hi(1)+1,j,k)
+          end do
+       end do
     end if
 
     ! zvel, lo x-faces
@@ -335,10 +379,18 @@ contains
           z = prob_lo(3) + dble(k)*dx(3)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             vel_bc_tzx(lo(1),j,k) = inhomogeneous_bc_val_3d(3,x,y,z) / eta_xz(lo(1),j,k)
+             vel_bc_tzx(lo(1),j,k) = inhomogeneous_bc_val_3d(3,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(1,1,3) .eq. DIR_TRACT) then
+       do k=lo(3),hi(3)+1
+          do j=lo(2),hi(2)
+             vel_bc_tzx(lo(1),j,k) = vel_bc_tzx(lo(1),j,k) / eta_xz(lo(1),j,k)
+          end do
+       end do
     end if
 
     ! zvel, hi x-faces
@@ -348,10 +400,18 @@ contains
           z = prob_lo(3) + dble(k)*dx(3)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             vel_bc_tzx(hi(1)+1,j,k) = inhomogeneous_bc_val_3d(3,x,y,z) / eta_xz(hi(1)+1,j,k)
+             vel_bc_tzx(hi(1)+1,j,k) = inhomogeneous_bc_val_3d(3,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(1,2,3) .eq. DIR_TRACT) then
+       do k=lo(3),hi(3)+1
+          do j=lo(2),hi(2)
+             vel_bc_tzx(hi(1)+1,j,k) = vel_bc_tzx(hi(1)+1,j,k) / eta_xz(hi(1)+1,j,k)
+          end do
+       end do
     end if
 
     ! xvel, lo y-faces
@@ -361,10 +421,18 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1),hi(1)+1
              x = prob_lo(1) + dble(i)*dx(1)
-             vel_bc_txy(i,lo(2),k) = inhomogeneous_bc_val_3d(1,x,y,z) / eta_xy(i,lo(2),k)
+             vel_bc_txy(i,lo(2),k) = inhomogeneous_bc_val_3d(1,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(2,1,1) .eq. DIR_TRACT) then
+       do k=lo(3),hi(3)
+          do i=lo(1),hi(1)+1
+             vel_bc_txy(i,lo(2),k) = vel_bc_txy(i,lo(2),k) / eta_xy(i,lo(2),k)
+          end do
+       end do
     end if
 
     ! xvel, hi y-faces
@@ -374,10 +442,18 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1),hi(1)+1
              x = prob_lo(1) + dble(i)*dx(1)
-             vel_bc_txy(i,hi(2)+1,k) = inhomogeneous_bc_val_3d(1,x,y,z) / eta_xy(i,hi(2)+1,k)
+             vel_bc_txy(i,hi(2)+1,k) = inhomogeneous_bc_val_3d(1,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(2,2,1) .eq. DIR_TRACT) then
+       do k=lo(3),hi(3)
+          do i=lo(1),hi(1)+1
+             vel_bc_txy(i,hi(2)+1,k) = vel_bc_txy(i,hi(2)+1,k) / eta_xy(i,hi(2)+1,k)
+          end do
+       end do
     end if
 
     ! zvel, lo y-faces
@@ -387,10 +463,18 @@ contains
           z = prob_lo(3) + dble(k)*dx(3)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             vel_bc_tzy(i,lo(2),k) = inhomogeneous_bc_val_3d(3,x,y,z) / eta_yz(i,lo(2),k)
+             vel_bc_tzy(i,lo(2),k) = inhomogeneous_bc_val_3d(3,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(2,1,3) .eq. DIR_TRACT) then
+       do k=lo(3),hi(3)+1
+          do i=lo(1),hi(1)
+             vel_bc_tzy(i,lo(2),k) = vel_bc_tzy(i,lo(2),k) / eta_yz(i,lo(2),k)
+          end do
+       end do
     end if
 
     ! zvel, hi y-faces
@@ -400,10 +484,18 @@ contains
           z = prob_lo(3) + dble(k)*dx(3)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             vel_bc_tzy(i,hi(2)+1,k) = inhomogeneous_bc_val_3d(3,x,y,z) / eta_yz(i,hi(2)+1,k)
+             vel_bc_tzy(i,hi(2)+1,k) = inhomogeneous_bc_val_3d(3,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(2,2,3) .eq. DIR_TRACT) then
+       do k=lo(3),hi(3)+1
+          do i=lo(1),hi(1)
+             vel_bc_tzy(i,hi(2)+1,k) = vel_bc_tzy(i,hi(2)+1,k) / eta_yz(i,hi(2)+1,k)
+          end do
+       end do
     end if
 
     ! xvel, lo z-faces
@@ -413,10 +505,18 @@ contains
           x = prob_lo(1) + dble(i)*dx(1)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             vel_bc_txz(i,j,lo(3)) = inhomogeneous_bc_val_3d(1,x,y,z) / eta_xz(i,j,lo(3))
+             vel_bc_txz(i,j,lo(3)) = inhomogeneous_bc_val_3d(1,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(3,1,1) .eq. DIR_TRACT) then
+       do i=lo(1),hi(1)+1
+          do j=lo(2),hi(2)
+             vel_bc_txz(i,j,lo(3)) = vel_bc_txz(i,j,lo(3)) / eta_xz(i,j,lo(3))
+          end do
+       end do
     end if
 
     ! xvel, hi z-faces
@@ -426,10 +526,18 @@ contains
           x = prob_lo(1) + dble(i)*dx(1)
           do j=lo(2),hi(2)
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             vel_bc_txz(i,j,hi(3)+1) = inhomogeneous_bc_val_3d(1,x,y,z) / eta_xz(i,j,hi(3)+1)
+             vel_bc_txz(i,j,hi(3)+1) = inhomogeneous_bc_val_3d(1,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(3,2,1) .eq. DIR_TRACT) then
+       do i=lo(1),hi(1)+1
+          do j=lo(2),hi(2)
+             vel_bc_txz(i,j,hi(3)+1) = vel_bc_txz(i,j,hi(3)+1) / eta_xz(i,j,hi(3)+1)
+          end do
+       end do
     end if
 
     ! yvel, lo z-faces
@@ -439,10 +547,18 @@ contains
           y = prob_lo(2) + dble(j)*dx(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             vel_bc_tyz(i,j,lo(3)) = inhomogeneous_bc_val_3d(2,x,y,z) / eta_yz(i,j,lo(3))
+             vel_bc_tyz(i,j,lo(3)) = inhomogeneous_bc_val_3d(2,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(3,1,2) .eq. DIR_TRACT) then
+       do j=lo(2),hi(2)+1
+          do i=lo(1),hi(1)
+             vel_bc_tyz(i,j,lo(3)) = vel_bc_tyz(i,j,lo(3)) / eta_yz(i,j,lo(3))
+          end do
+       end do
     end if
 
     ! yvel, hi z-faces
@@ -452,10 +568,18 @@ contains
           y = prob_lo(2) + dble(j)*dx(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-             vel_bc_tyz(i,j,hi(3)+1) = inhomogeneous_bc_val_3d(2,x,y,z) / eta_yz(i,j,hi(3)+1)
+             vel_bc_tyz(i,j,hi(3)+1) = inhomogeneous_bc_val_3d(2,x,y,z)
           end do
        end do
+    end if
 
+    ! divide by eta for traction condition
+    if (bc(3,2,2) .eq. DIR_TRACT) then
+       do j=lo(2),hi(2)+1
+          do i=lo(1),hi(1)
+             vel_bc_tyz(i,j,hi(3)+1) = vel_bc_tyz(i,j,hi(3)+1) / eta_yz(i,j,hi(3)+1)
+          end do
+       end do
     end if
 
   end subroutine set_inhomogeneous_vel_bcs_3d
