@@ -1,23 +1,13 @@
 prob_type controls the initialization of rho, rho*c, p, and m (see init.f90)
-Also, depending on how bc_lo(1:dm) and bc_hi(1:dm) are set in the inputs file,
-prob_type controls Dirichlet conditions on boundaries for the primitive 
-variables (rho and c) as well as the velocities (see inhomogeneous_bc_val.f90).
 
 prob_type = 0
 Initialization: Sets m=0, p=0, c=c_init(1), and sets rho from the EOS.
-Physical Boundary Conditions: Can support reservoir boundary conditions with 
-                              the concentration value specified by 
-			      c_bc(dir,lohi).
 
 prob_type = 1
 Initialization: Sets m=0 and p=0.  Initializes a low-density spherical bubble .
                 transitioning from c_init(1) to c_init(2) and sets rho from 
 		the EOS.
-Physical Boundary Conditions: Can support a moving hi-y wall (in 2D) and a
-                              moving hi-z wall (in 3D) controlled by 
-			      wallspeed_hi(:,:).
 
 prob_type = 2
 Initialization: Sets m=0 and p=0.  Initializes a bilayer interface (stripe) 
                 controled by c_init(1:2) and sets rho from the EOS.
-Physical Boundary Conditions: None coded up yet.

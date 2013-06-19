@@ -31,8 +31,7 @@ module probin_common_module
   namelist /probin_common/ max_grid_size ! max number of cells in a box
   namelist /probin_common/ fixed_dt      ! time step
   namelist /probin_common/ plot_int      ! Interval for writing a plotfile (for visit/amrvis)
-  namelist /probin_common/ prob_type     ! sets scalars, m, coefficients (see init.f90),
-                                         ! and boundary conditions (see inhomogeneous_bc_val.f90)
+  namelist /probin_common/ prob_type     ! sets scalars, m, coefficients (see init.f90)
 
   ! Algorithm control / selection
   !----------------------
