@@ -123,8 +123,6 @@ contains
 
   subroutine compute_divu(mla,umac,rh,dx)
 
-    use ml_restriction_module, only: ml_cc_restriction
-
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: umac(:,:)
     type(multifab) , intent(inout) :: rh(:)
@@ -164,7 +162,6 @@ contains
 
     rhmax = norm_inf(rh(nlevs))
     do n = nlevs,2,-1
-       call ml_cc_restriction(rh(n-1),rh(n),mla%mba%rr(n-1,:))
        rhmax = max(rhmax,norm_inf(rh(n-1)))
     end do
 
