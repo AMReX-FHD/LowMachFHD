@@ -2,24 +2,30 @@ module div_and_grad_module
 
   use multifab_module
   use ml_layout_module
+  use define_bc_module
+  use bc_module
 
   implicit none
 
   private
 
-  public :: compute_gradp, compute_divu
+  public :: compute_grad, compute_divu
 
 contains
 
-  subroutine compute_gradp(mla,pres,gradp,dx)
+  subroutine compute_grad(mla,phi,gradp,dx,start_comp,start_bccomp,num_comp,the_bc_level)
+
+    ! compute the face-centered gradient of a cell-centered field
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: pres(:)
+    type(multifab) , intent(in   ) :: phi(:)
     type(multifab) , intent(inout) :: gradp(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
+    integer        , intent(in   ) :: start_comp,start_bccomp,num_comp
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local
-    integer :: n,i,dm,nlevs,ng_p,ng_g
+    integer :: n,i,dm,nlevs,ng_p,ng_g,comp,bccomp
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t), pointer :: pp(:,:,:,:)
@@ -30,96 +36,194 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    ng_p = pres(1)%ng
+    ng_p = phi(1)%ng
     ng_g = gradp(1,1)%ng
 
     do n=1,nlevs
-       do i=1,nfabs(pres(n))
-          pp  => dataptr(pres(n), i)
+       do i=1,nfabs(phi(n))
+          pp  => dataptr(phi(n), i)
           gpx => dataptr(gradp(n,1), i)
           gpy => dataptr(gradp(n,2), i)
-          lo = lwb(get_box(pres(n), i))
-          hi = upb(get_box(pres(n), i))
-          select case (dm)
-          case (2)
-             call compute_gradp_2d(pp(:,:,1,1), ng_p, &
-                                   gpx(:,:,1,1), gpy(:,:,1,1), ng_g, &
-                                   lo, hi, dx(n,:))
-          case (3)
-             gpz => dataptr(gradp(n,3), i)
-             call compute_gradp_3d(pp(:,:,:,1), ng_p, &
-                                   gpx(:,:,:,1), gpy(:,:,:,1), gpz(:,:,:,1), ng_g, &
-                                   lo, hi, dx(n,:))
-          end select
+          lo = lwb(get_box(phi(n), i))
+          hi = upb(get_box(phi(n), i))
+          do comp=start_comp,start_comp+num_comp-1
+             bccomp = start_bccomp + (comp-start_comp)
+             select case (dm)
+             case (2)
+                call compute_grad_2d(pp(:,:,1,comp), ng_p, &
+                                     gpx(:,:,1,comp), gpy(:,:,1,comp), ng_g, &
+                                     lo, hi, dx(n,:), &
+                                     the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
+             case (3)
+                gpz => dataptr(gradp(n,3), i)
+                call compute_grad_3d(pp(:,:,:,comp), ng_p, &
+                                     gpx(:,:,:,comp), gpy(:,:,:,comp), gpz(:,:,:,comp), ng_g, &
+                                     lo, hi, dx(n,:), &
+                                     the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
+             end select
+          end do
        end do
     end do
 
   contains
     
-    subroutine compute_gradp_2d(pres,ng_p,gpx,gpy,ng_g,lo,hi,dx)
+    subroutine compute_grad_2d(phi,ng_p,gpx,gpy,ng_g,lo,hi,dx,bc)
 
       integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
-      real(kind=dp_t), intent(in   ) :: pres(lo(1)-ng_p:,lo(2)-ng_p:)
+      real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:)
       real(kind=dp_t), intent(inout) ::  gpx(lo(1)-ng_g:,lo(2)-ng_g:)
       real(kind=dp_t), intent(inout) ::  gpy(lo(1)-ng_g:,lo(2)-ng_g:)
       real(kind=dp_t), intent(in   ) :: dx(:)
+      integer        , intent(in   ) :: bc(:,:)
 
       ! local
       integer :: i,j
 
+      ! x-faces
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
-            gpx(i,j) = ( pres(i,j)-pres(i-1,j) ) / dx(1)
+            gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / dx(1)
          end do
       end do
 
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
+         i=lo(1)
+         do j=lo(2),hi(2)
+            gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / (0.5d0*dx(1))
+         end do
+      end if
+      if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
+         i=hi(1)+1
+         do j=lo(2),hi(2)
+            gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / (0.5d0*dx(1))
+         end do
+      end if
+
+      ! y-faces
       do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)
-            gpy(i,j) = ( pres(i,j)-pres(i,j-1) ) / dx(2)
+            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / dx(2)
          end do
       end do
 
-    end subroutine compute_gradp_2d
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
+         j=lo(2)
+         do i=lo(1),hi(1)
+            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / (0.5d0*dx(2))
+         end do
+      end if
 
-    subroutine compute_gradp_3d(pres,ng_p,gpx,gpy,gpz,ng_g,lo,hi,dx)
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
+         j=hi(2)+1
+         do i=lo(1),hi(1)
+            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / (0.5d0*dx(2))
+         end do
+      end if
+
+    end subroutine compute_grad_2d
+
+    subroutine compute_grad_3d(phi,ng_p,gpx,gpy,gpz,ng_g,lo,hi,dx,bc)
 
       integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
-      real(kind=dp_t), intent(in   ) :: pres(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
       real(kind=dp_t), intent(inout) ::  gpx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
       real(kind=dp_t), intent(inout) ::  gpy(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
       real(kind=dp_t), intent(inout) ::  gpz(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
       real(kind=dp_t), intent(in   ) :: dx(:)
+      integer        , intent(in   ) :: bc(:,:)
 
       ! local
       integer :: i,j,k
-
+      
+      ! x-faces
       do k=lo(3),hi(3)
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)+1
-               gpx(i,j,k) = ( pres(i,j,k)-pres(i-1,j,k) ) / dx(1)
+               gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) / dx(1)
             end do
          end do
       end do
 
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
+         i=lo(1)
+         do k=lo(3),hi(3)
+            do j=lo(2),hi(2)
+               gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) / (0.5d0*dx(1))
+            end do
+         end do
+      end if
+      if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
+         i=hi(1)+1
+         do k=lo(3),hi(3)
+            do j=lo(2),hi(2)
+               gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) / (0.5d0*dx(1))
+            end do
+         end do
+      end if
+
+      ! y-faces
       do k=lo(3),hi(3)
          do j=lo(2),hi(2)+1
             do i=lo(1),hi(1)
-               gpy(i,j,k) = ( pres(i,j,k)-pres(i,j-1,k) ) / dx(2)
+               gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) / dx(2)
             end do
          end do
       end do
 
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
+         j=lo(2)
+         do k=lo(3),hi(3)
+            do i=lo(1),hi(1)
+               gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) / (0.5d0*dx(2))
+            end do
+         end do
+      end if
+      if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
+         j=hi(2)+1
+         do k=lo(3),hi(3)
+            do i=lo(1),hi(1)
+               gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) / (0.5d0*dx(2))
+            end do
+         end do
+      end if
+
+      ! z-faces
       do k=lo(3),hi(3)+1
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)
-               gpz(i,j,k) = ( pres(i,j,k)-pres(i,j,k-1) ) / dx(3)
+               gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) / dx(3)
             end do
          end do
       end do
 
-    end subroutine compute_gradp_3d
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (bc(3,1) .eq. FOEXTRAP .or. bc(3,1) .eq. EXT_DIR) then
+         k=lo(3)
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)
+               gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) / (0.5d0*dx(3))
+            end do
+         end do
+      end if
 
-  end subroutine compute_gradp
+      ! alter stencil at boundary since ghost value represents value at boundary
+      if (bc(3,2) .eq. FOEXTRAP .or. bc(3,2) .eq. EXT_DIR) then
+         k=hi(3)+1
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)
+               gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) / (0.5d0*dx(3))
+            end do
+         end do
+      end if
+
+    end subroutine compute_grad_3d
+
+  end subroutine compute_grad
 
   subroutine compute_divu(mla,umac,rh,dx)
 

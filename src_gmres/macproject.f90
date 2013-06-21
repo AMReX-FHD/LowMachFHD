@@ -322,13 +322,14 @@ contains
 
   end subroutine macproject
 
-  subroutine subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx)
+  subroutine subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab ), intent(inout) :: x_u(:,:)
     type(multifab ), intent(in   ) :: alphainv_fc(:,:)
     type(multifab ), intent(in   ) :: phi(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
     integer :: i,dm,n,nlevs
@@ -344,7 +345,7 @@ contains
        end do
     end do
 
-    call compute_gradp(mla,phi,gradp,dx)
+    call compute_grad(mla,phi,gradp,dx,1,pres_bc_comp,1,the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
        do i=1,dm

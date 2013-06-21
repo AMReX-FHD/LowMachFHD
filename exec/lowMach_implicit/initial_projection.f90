@@ -134,7 +134,7 @@ contains
     call macproject(mla,phi,umac,rhoinv_fc,mac_rhs,dx,the_bc_tower,.true.)
 
     ! v^0 = v^init - (1/rho^0) grad phi
-    call subtract_weighted_gradp(mla,umac,rhoinv_fc,phi,dx)
+    call subtract_weighted_gradp(mla,umac,rhoinv_fc,phi,dx,the_bc_tower)
 
     ! fill ghost cells
     do n=1,nlevs

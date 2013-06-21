@@ -116,7 +116,7 @@ contains
         call macproject(mla,phi,x_u,alphainv_fc,mac_rhs,dx,the_bc_tower)
 
         ! x_u = x_u^star - (alpha I)^-1 grad Phi
-        call subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx)
+        call subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx,the_bc_tower)
 
         ! if precon_type = +1, or theta=0 then x_p = theta*Phi - c*beta*(mac_rhs)
         ! if precon_type = -1             then x_p = theta*Phi - c*beta*L_alpha Phi
@@ -271,7 +271,7 @@ contains
                  call multifab_copy_c(b_u_tmp(n,i),1,b_u(n,i),1,1,0)
               end do
            end do
-           call subtract_weighted_gradp(mla,b_u_tmp,one_fab_fc,x_p_tmp,dx)
+           call subtract_weighted_gradp(mla,b_u_tmp,one_fab_fc,x_p_tmp,dx,the_bc_tower)
 
            ! compute = A^(-1)*(b_u-grad(x_p)) 
            call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u_tmp, &
@@ -358,7 +358,7 @@ contains
              call multifab_copy_c(b_u_tmp(n,i),1,b_u(n,i),1,1,0)
           end do
         end do
-        call subtract_weighted_gradp(mla,b_u_tmp,one_fab_fc,x_p_tmp,dx)
+        call subtract_weighted_gradp(mla,b_u_tmp,one_fab_fc,x_p_tmp,dx,the_bc_tower)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 3: Solve for x_u using an implicit viscous term

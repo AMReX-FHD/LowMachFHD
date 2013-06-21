@@ -217,7 +217,7 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! transverse velocity
           adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = FOEXTRAP ! 
+          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = FOEXTRAP ! scalars
 
        else if (phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
 
@@ -228,7 +228,7 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_TRACT ! transverse velocity
           adv_bc_level(igrid,d,lohi,d   )                    = DIR_VEL   ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = FOEXTRAP  ! 
+          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = FOEXTRAP  ! scalars
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR) then
 
@@ -239,7 +239,7 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL   ! transverse velocity
           adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL   ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = EXT_DIR   ! 
+          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = EXT_DIR   ! scalars
 
        else if (phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
 
@@ -250,7 +250,7 @@ contains
           adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_TRACT ! transverse velocity
           adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL   ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = EXT_DIR   ! 
+          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = EXT_DIR   ! scalars
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC .or. &
                 phys_bc_level(igrid,d,lohi) == INTERIOR ) then
