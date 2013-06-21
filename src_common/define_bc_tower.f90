@@ -29,17 +29,22 @@ module define_bc_module
 
 contains
 
-  subroutine initialize_bc(the_bc_tower,num_levs,dm,pmask)
+  subroutine initialize_bc(the_bc_tower,num_levs,dm,pmask,num_scal_bc_in)
 
      use bc_module
 
      use probin_common_module, only : bc_lo, bc_hi
 
      type(bc_tower), intent(  out) :: the_bc_tower
-     integer       , intent(in   ) :: num_levs,dm
+     integer       , intent(in   ) :: num_levs,dm,num_scal_bc_in
      logical       , intent(in   ) :: pmask(:)
 
      integer :: domain_phys_bc(dm,2)
+
+     vel_bc_comp  = 1
+     pres_bc_comp = dm+1
+     scal_bc_comp = dm+2
+     num_scal_bc  = num_scal_bc_in     
 
      ! Define the physical boundary conditions on the domain
      ! Put the bc values from the inputs file into domain_phys_bc
@@ -116,9 +121,8 @@ contains
 
     ! Here we allocate dm components for x_u
     !                  1 component for x_p
-    !                  1 component for rho
-    !                  1 component for c
-    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,dm+3))
+    !                  num_scal_bc components for scalars
+    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,dm+1+num_scal_bc))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -204,17 +208,16 @@ contains
     do d = 1, dm
     do lohi = 1, 2
 
-
        if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL) then
 
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet velocity condition
           ! for pressure we use extrapolation
           ! for primitive variables we use extrapolation
-          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL  ! transverse velocity
-          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL  ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1)      = FOEXTRAP ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+3) = FOEXTRAP ! rho and c
+          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! transverse velocity
+          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! normal velocity
+          adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP ! pressure
+          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = FOEXTRAP ! 
 
        else if (phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
 
@@ -222,10 +225,10 @@ contains
           ! for transverse velocity we imposie a Dirichlet stress condition
           ! for pressure we use extrapolation
           ! for primitive variables we use extrapolation
-          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_TRACT ! transverse velocity
-          adv_bc_level(igrid,d,lohi,d   )      = DIR_VEL   ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1)      = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+3) = FOEXTRAP  ! rho and c
+          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_TRACT ! transverse velocity
+          adv_bc_level(igrid,d,lohi,d   )                    = DIR_VEL   ! normal velocity
+          adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
+          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = FOEXTRAP  ! 
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR) then
 
@@ -233,10 +236,10 @@ contains
           ! for transverse velocity we imposie a Dirichlet velocity condition
           ! for pressure we use extrapolation
           ! for primitive variables we impose a Dirichlet condition
-          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL    ! transverse velocity
-          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL    ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1)      = FOEXTRAP   ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+3) = EXT_DIR    ! rho and c
+          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL   ! transverse velocity
+          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL   ! normal velocity
+          adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
+          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = EXT_DIR   ! 
 
        else if (phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
 
@@ -244,10 +247,10 @@ contains
           ! for transverse velocity we imposie a Dirichlet stress condition
           ! for pressure we use extrapolation
           ! for primitive variables we impose a Dirichlet condition
-          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_TRACT  ! transverse velocity
-          adv_bc_level(igrid,d,lohi,1:dm)      = DIR_VEL    ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1)      = FOEXTRAP   ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+3) = EXT_DIR    ! rho and c
+          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_TRACT ! transverse velocity
+          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL   ! normal velocity
+          adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
+          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = EXT_DIR   ! 
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC .or. &
                 phys_bc_level(igrid,d,lohi) == INTERIOR ) then
@@ -284,15 +287,7 @@ contains
     do d = 1, dm
     do lohi = 1, 2
 
-       if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL .or. &
-           phys_bc_level(igrid,d,lohi) == SLIP_WALL .or. &
-           phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR .or. &
-           phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
-
-          ! pressure is homogeneous neumann
-          ell_bc_level(igrid,d,lohi,dm+1) = BC_NEU
-
-       else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
+       if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
           ! pressure is periodic
           ell_bc_level(igrid,d,lohi,dm+1) = BC_PER
@@ -303,8 +298,8 @@ contains
 
        else
 
-          print*,'ell_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
-          call bl_error('BC TYPE NOT SUPPORTED')
+          ! pressure is homogeneous neumann
+          ell_bc_level(igrid,d,lohi,dm+1) = BC_NEU
 
        end if
 

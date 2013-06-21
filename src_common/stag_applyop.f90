@@ -4,6 +4,7 @@ module stag_applyop_module
   use multifab_module
   use probin_common_module, only: visc_type
   use define_bc_module
+  use bc_module
   use multifab_physbc_module
   use convert_stag_module
 
@@ -156,7 +157,7 @@ contains
 
     do i=1,dm
        ! set Lphi on physical domain boundaries to zero
-       call multifab_physbc_domainvel(Lphi_fc(i),i,the_bc_level,dx)
+       call multifab_physbc_domainvel(Lphi_fc(i),vel_bc_comp+i-1,the_bc_level,dx)
     end do
 
   end subroutine stag_applyop_level

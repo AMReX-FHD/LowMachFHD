@@ -15,6 +15,7 @@ module macproject_module
   use vcycle_counter_module
   use stencil_types_module
   use ml_solve_module       , only : ml_cc_solve
+  use bc_module
   use multifab_physbc_module
   use div_and_grad_module
 
@@ -47,7 +48,7 @@ contains
     real(kind=dp_t) :: umac_norm(mla%nlevel)
     real(kind=dp_t) :: rel_solver_eps
     real(kind=dp_t) :: abs_solver_eps
-    integer         :: dm,i,n,nlevs,bc_comp
+    integer         :: dm,i,n,nlevs
     logical         :: full_solve
 
     if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
@@ -61,8 +62,6 @@ contains
 
     nlevs = mla%nlevel
     dm = mla%dim
-
-    bc_comp = dm + 1
 
     do n = 1, nlevs
        call multifab_build(zero_fab(n), mla%la(n),  1, 0)
@@ -94,11 +93,11 @@ contains
     abs_solver_eps = 1.d-16
 
     if (full_solve) then
-       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,bc_comp, &
+       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,pres_bc_comp, &
                           mla%mba%rr,rel_solver_eps,abs_solver_eps, &
                           abort_on_max_iter=.true.)
     else
-       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,bc_comp, &
+       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,pres_bc_comp, &
                           mla%mba%rr,rel_solver_eps,abs_solver_eps, &
                           abort_on_max_iter=.false.)
     end if
@@ -126,7 +125,7 @@ contains
 
   contains
 
-    subroutine mac_multigrid(mla,rh,phi,fine_flx,alpha,beta,dx,the_bc_tower,bc_comp, &
+    subroutine mac_multigrid(mla,rh,phi,fine_flx,alpha,beta,dx,the_bc_tower,pres_bc_comp, &
                              ref_ratio,rel_solver_eps,abs_solver_eps, &
                              abort_on_max_iter)
 
@@ -136,7 +135,7 @@ contains
       type(multifab) , intent(in   ) :: alpha(:), beta(:,:)
       real(dp_t)     , intent(in   ) :: dx(:,:)
       type(bc_tower) , intent(in   ) :: the_bc_tower
-      integer        , intent(in   ) :: bc_comp
+      integer        , intent(in   ) :: pres_bc_comp
       integer        , intent(in   ) :: ref_ratio(:,:)
       real(dp_t)     , intent(in   ) :: rel_solver_eps
       real(dp_t)     , intent(in   ) :: abs_solver_eps
@@ -200,7 +199,7 @@ contains
          if (full_solve) then
 
             call mg_tower_build(mgt(n), mla%la(n), pd, &
-                                the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,bc_comp),&
+                                the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
                                 stencil_type, &
                                 dh = dx(n,:), &
                                 ns = ns, &
@@ -229,7 +228,7 @@ contains
          else
 
             call mg_tower_build(mgt(n), mla%la(n), pd, &
-                                the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,bc_comp),&
+                                the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
                                 stencil_type, &
                                 dh = dx(n,:), &
                                 ns = ns, &
@@ -289,7 +288,7 @@ contains
 
          call stencil_fill_cc_all_mglevels(mgt(n), cell_coeffs, face_coeffs, &
               xa, xb, pxa, pxb, 2, &
-              the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,bc_comp))
+              the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp))
 
          call destroy(cell_coeffs(mgt(n)%nlevels))
          deallocate(cell_coeffs)
@@ -312,7 +311,7 @@ contains
 
       do n = 1,nlevs
          call multifab_fill_boundary(phi(n))
-         call multifab_physbc(phi(n),1,bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+         call multifab_physbc(phi(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
       end do
 
       do n = 1, nlevs

@@ -9,6 +9,7 @@ module initial_projection_module
   use div_and_grad_module
   use mk_diffusive_fluxdiv_module
   use mk_stochastic_fluxdiv_module
+  use bc_module
   use multifab_physbc_module
   use probin_lowmach_module, only: rhobar, diff_coef, nscal
 
@@ -99,7 +100,8 @@ contains
        do i=1,dm
           ! to deal with reservoirs
           ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
                                          dx(n,:),vel_bc_n(n,:))
        end do
     end do
@@ -140,10 +142,12 @@ contains
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
           ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
                                          dx(n,:),vel_bc_n(n,:))
           ! set transverse velocity behind physical boundaries
-          call multifab_physbc_macvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+                                      the_bc_tower%bc_tower_array(n), &
                                       dx(n,:),vel_bc_t(n,:))
        end do
     end do
