@@ -13,7 +13,8 @@ module div_and_grad_module
 
 contains
 
-  subroutine compute_grad(mla,phi,gradp,dx,start_comp,start_bccomp,num_comp,the_bc_level)
+  subroutine compute_grad(mla,phi,gradp,dx, &
+                          start_incomp,start_bccomp,start_outcomp,num_comp,the_bc_level)
 
     ! compute the face-centered gradient of a cell-centered field
 
@@ -21,11 +22,11 @@ contains
     type(multifab) , intent(in   ) :: phi(:)
     type(multifab) , intent(inout) :: gradp(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
-    integer        , intent(in   ) :: start_comp,start_bccomp,num_comp
+    integer        , intent(in   ) :: start_incomp,start_bccomp,start_outcomp,num_comp
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local
-    integer :: n,i,dm,nlevs,ng_p,ng_g,comp,bccomp
+    integer :: n,i,dm,nlevs,ng_p,ng_g,comp,bccomp,outcomp
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t), pointer :: pp(:,:,:,:)
@@ -46,18 +47,19 @@ contains
           gpy => dataptr(gradp(n,2), i)
           lo = lwb(get_box(phi(n), i))
           hi = upb(get_box(phi(n), i))
-          do comp=start_comp,start_comp+num_comp-1
-             bccomp = start_bccomp + (comp-start_comp)
+          do comp=start_incomp,start_incomp+num_comp-1
+             bccomp = start_bccomp + (comp-start_incomp)
+             outcomp = start_outcomp + (comp-start_incomp)
              select case (dm)
              case (2)
                 call compute_grad_2d(pp(:,:,1,comp), ng_p, &
-                                     gpx(:,:,1,comp), gpy(:,:,1,comp), ng_g, &
+                                     gpx(:,:,1,outcomp), gpy(:,:,1,outcomp), ng_g, &
                                      lo, hi, dx(n,:), &
                                      the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
              case (3)
                 gpz => dataptr(gradp(n,3), i)
                 call compute_grad_3d(pp(:,:,:,comp), ng_p, &
-                                     gpx(:,:,:,comp), gpy(:,:,:,comp), gpz(:,:,:,comp), ng_g, &
+                                     gpx(:,:,:,outcomp), gpy(:,:,:,outcomp), gpz(:,:,:,outcomp), ng_g, &
                                      lo, hi, dx(n,:), &
                                      the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
              end select

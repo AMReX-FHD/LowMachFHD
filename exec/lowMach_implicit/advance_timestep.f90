@@ -261,7 +261,7 @@ contains
     end do
 
     ! compute grad pi^n
-    call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,the_bc_tower%bc_tower_array)
+    call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
     ! subtract grad pi^n from gmres_rhs_v
     do n=1,nlevs

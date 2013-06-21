@@ -345,7 +345,7 @@ contains
        end do
     end do
 
-    call compute_grad(mla,phi,gradp,dx,1,pres_bc_comp,1,the_bc_tower%bc_tower_array)
+    call compute_grad(mla,phi,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
        do i=1,dm

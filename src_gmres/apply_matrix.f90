@@ -78,7 +78,7 @@ contains
     call stag_applyop(mla,the_bc_tower,x_u,b_u,alpha_fc,beta,beta_ed,gamma,theta,dx)
 
     ! compute G x_p and add to b_u
-    call compute_grad(mla,x_p,gx_p,dx,1,pres_bc_comp,1,the_bc_tower%bc_tower_array)
+    call compute_grad(mla,x_p,gx_p,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
     
     do n=1,nlevs
        do i=1,dm
