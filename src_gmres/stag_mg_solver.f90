@@ -5,7 +5,7 @@ module stag_mg_solver_module
   use convert_stag_module
   use define_bc_module
   use bc_module
-  use multifab_physbc_module
+  use multifab_physbc_stag_module
   use probin_gmres_module , only: stag_mg_omega, stag_mg_max_vcycles, &
                                   stag_mg_nsmooths_bottom, stag_mg_nsmooths_down, &
                                   stag_mg_nsmooths_up, stag_mg_rel_tol, &

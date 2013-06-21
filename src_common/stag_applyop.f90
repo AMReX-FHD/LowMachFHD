@@ -5,7 +5,7 @@ module stag_applyop_module
   use probin_common_module, only: visc_type
   use define_bc_module
   use bc_module
-  use multifab_physbc_module
+  use multifab_physbc_stag_module
   use convert_stag_module
 
   implicit none

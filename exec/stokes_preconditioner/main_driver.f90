@@ -19,7 +19,7 @@ subroutine main_driver()
   use apply_matrix_module
   use norm_inner_product_module
   use init_module
-  use multifab_physbc_module
+  use multifab_physbc_stag_module
   use convert_to_homogeneous_module
   use ParallelRNGs
   use bc_module

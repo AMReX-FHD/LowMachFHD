@@ -4,7 +4,7 @@ module init_module
   use multifab_module
   use define_bc_module
   use BoxLibRNGs
-  use multifab_physbc_module
+  use multifab_physbc_stag_module
   use bc_module
 
   implicit none

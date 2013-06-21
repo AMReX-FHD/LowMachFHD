@@ -8,6 +8,7 @@ module apply_matrix_module
   use div_and_grad_module
   use bc_module
   use multifab_physbc_module
+  use multifab_physbc_stag_module
 
   implicit none
 

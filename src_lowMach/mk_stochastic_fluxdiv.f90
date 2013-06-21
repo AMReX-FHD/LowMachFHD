@@ -10,7 +10,7 @@ module mk_stochastic_fluxdiv_module
   use analysis_module
   use convert_stag_module
   use bc_module
-  use multifab_physbc_module
+  use multifab_physbc_stag_module
   use probin_common_module , only: fixed_dt
   use probin_lowmach_module, only: nscal, rhobar, visc_coef, diff_coef, variance_coef, &
                                    conc_scal, stoch_stress_form, filtering_width, mol_mass, &

@@ -5,7 +5,7 @@ module mk_advective_fluxdiv_module
   use ml_layout_module
   use define_bc_module
   use bc_module
-  use multifab_physbc_module
+  use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal
 
   implicit none

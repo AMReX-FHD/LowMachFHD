@@ -4,7 +4,7 @@ module convert_to_homogeneous_module
   use ml_layout_module
   use define_bc_module
   use bc_module
-  use multifab_physbc_module
+  use multifab_physbc_stag_module
   use stag_applyop_module
   use div_and_grad_module
 

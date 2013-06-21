@@ -16,6 +16,7 @@ subroutine main_driver()
   use mk_stochastic_fluxdiv_module
   use project_onto_eos_module
   use multifab_physbc_module
+  use multifab_physbc_stag_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
                                    project_eos_int, visc_coef
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
