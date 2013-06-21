@@ -182,7 +182,7 @@ subroutine main_driver()
   call destroy(mba)
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask)
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,2)
   do n=1,nlevs
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
@@ -305,7 +305,7 @@ subroutine main_driver()
   ! fill ghost cells for prim
   do n=1,nlevs
      call multifab_fill_boundary(prim(n))
-     call multifab_physbc(prim(n),1,dm+2,2,the_bc_tower%bc_tower_array(n),dx(n,:))
+     call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
   end do
 
   ! convert prim to cons in valid and ghost region

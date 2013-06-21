@@ -2,6 +2,7 @@ module inhomogeneous_bc_val_module
 
   use bl_types
   use bl_error_module
+  use bc_module
   use probin_module       , only: prob_sol, coeff_mag, ABC_coefs
   use probin_common_module, only: prob_lo, prob_hi
   
@@ -37,25 +38,29 @@ contains
       Ly = prob_hi(2)-prob_lo(2)
       time = 0.d0
 
-      if (comp .eq. 1) then
+      if (comp .eq. vel_bc_comp) then
          val = velx - 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
               *cos(2.d0*M_PI*(x-velx*time)/Lx)*sin(2.d0*M_PI*(y-vely*time)/Ly)
-      else if (comp .eq. 2) then
+      else if (comp .eq. vel_bc_comp+1) then
          val = vely + 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
               *sin(2.d0*M_PI*(x-velx*time)/Lx)*cos(2.d0*M_PI*(y-vely*time)/Ly)
+      else
+         val = 0.d0
       end if
    
    case (3)
-      if (comp .eq. 1) then
+      if (comp .eq. vel_bc_comp) then
          val = exp(-8.0d0*M_PI**2*time)*sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
-      else if (comp .eq. 2) then
+      else if (comp .eq. vel_bc_comp+1) then
          val = exp(-8.0d0*M_PI**2*time)*cos(2.d0*M_PI*x)*cos(2.d0*M_PI*y)
+      else
+         val = 0.d0
       end if
 
    case (20)
 
       ! lid driven cavity moving hi-y wall with +x velocity
-      if (y .eq. prob_hi(2) .and. comp .eq. 1) then
+      if (y .eq. prob_hi(2) .and. comp .eq. vel_bc_comp) then
          val = sin(M_PI*(x-prob_lo(1))/(prob_hi(1)-prob_lo(1)))
       else
          val = 0.d0
@@ -63,9 +68,9 @@ contains
   
    case (31,32) ! div not free, for testing accuracy
 
-      if (comp .eq. 1) then
+      if (comp .eq. vel_bc_comp) then
          val = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
-      elseif (comp .eq. 2) then
+      elseif (comp .eq. vel_bc_comp+1) then
          val = cos(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
       else 
          call bl_error('inhomogeneous_bc_val_3d comp should not be greater than  3')
@@ -103,10 +108,10 @@ contains
       Ly = prob_hi(2)-prob_lo(2)
       time = 0.d0
 
-      if (comp .eq. 1) then
+      if (comp .eq. vel_bc_comp) then
          val = velx - 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
               *cos(2.d0*M_PI*(x-velx*time)/Lx)*sin(2.d0*M_PI*(y-vely*time)/Ly)
-      else if (comp .eq. 2) then
+      else if (comp .eq. vel_bc_comp+1) then
          val = vely + 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
               *sin(2.d0*M_PI*(x-velx*time)/Lx)*cos(2.d0*M_PI*(y-vely*time)/Ly)
       else
@@ -125,11 +130,11 @@ contains
       hy = ABC_coefs(2)
       hz = ABC_coefs(3)
 
-      if (comp .eq. 1) then
+      if (comp .eq. vel_bc_comp) then
          val = 1.0d0 + ufac*(hz*cos(freq*(y-time))+hx*sin(freq*(z-time)))
-      else if (comp .eq. 2) then
+      else if (comp .eq. vel_bc_comp+1) then
          val = 1.0d0 + ufac*(hy*sin(freq*(x-time))+hx*cos(freq*(z-time)))
-      else if (comp .eq. 3) then
+      else if (comp .eq. vel_bc_comp+2) then
          val = 1.0d0 + ufac*(hy*cos(freq*(x-time))+hz*sin(freq*(y-time)))
       else 
          call bl_error('inhomogeneous_bc_val_3d comp should not be greater than  3')
@@ -138,7 +143,7 @@ contains
    case (20)
 
       ! lid driven cavity moving hi-z wall with +x and +y velocity
-      if (z .eq. prob_hi(3) .and. (comp .eq. 1 .or. comp .eq. 2) ) then
+      if (z .eq. prob_hi(3) .and. (comp .eq. vel_bc_comp .or. comp .eq. vel_bc_comp+1) ) then
          val = sin(M_PI*(x-prob_lo(1))/(prob_hi(1)-prob_lo(1))) &
               *sin(M_PI*(y-prob_lo(2))/(prob_hi(2)-prob_lo(2)))
       else
@@ -147,11 +152,11 @@ contains
 
    case (31,32) ! div not free, for testing accuracy
 
-      if (comp .eq. 1) then
+      if (comp .eq. vel_bc_comp) then
          val = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)*sin(2.d0*M_PI*z)
-      else if (comp .eq. 2) then
+      else if (comp .eq. vel_bc_comp+1) then
          val = cos(2.d0*M_PI*x)*sin(2.d0*M_PI*y)*sin(2.d0*M_PI*z)
-      else if (comp .eq. 3) then
+      else if (comp .eq. vel_bc_comp+2) then
          val = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)*cos(2.d0*M_PI*z)
       else 
          call bl_error('inhomogeneous_bc_val_3d comp should not be greater than  3')

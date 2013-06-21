@@ -4,6 +4,7 @@ module mk_advective_fluxdiv_module
   use multifab_module
   use ml_layout_module
   use define_bc_module
+  use bc_module
   use multifab_physbc_module
   use probin_lowmach_module, only: nscal
 
@@ -237,7 +238,8 @@ contains
 
        do i=1,dm
           ! set advective update on physical domain boundaries to zero
-          call multifab_physbc_domainvel(m_update(n,i),i,the_bc_level(n),dx(n,:))
+          call multifab_physbc_domainvel(m_update(n,i),vel_bc_comp+i-1, &
+                                         the_bc_level(n),dx(n,:))
        end do
 
     end do

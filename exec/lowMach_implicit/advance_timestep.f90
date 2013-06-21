@@ -12,6 +12,7 @@ module advance_timestep_module
   use gmres_module
   use init_module
   use div_and_grad_module
+  use bc_module
   use multifab_physbc_module
   use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef
   use probin_common_module, only: fixed_dt
@@ -220,7 +221,7 @@ contains
     ! fill ghost cells for prim^{*,n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),1,dm+2,2,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
     ! convert prim^{*,n+1} to s^{*,n+1} in valid and ghost region
@@ -439,10 +440,12 @@ contains
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
           ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
                                          dx(n,:),vel_bc_n(n,:))
           ! set transverse velocity behind physical boundaries
-          call multifab_physbc_macvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+                                      the_bc_tower%bc_tower_array(n), &
                                       dx(n,:),vel_bc_t(n,:))
        end do
     end do
@@ -474,7 +477,7 @@ contains
     ! fill ghost cells for prim^{n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),1,dm+2,2,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
     ! convert prim^{n+1} to s^{n+1} in valid and ghost region
@@ -701,15 +704,17 @@ contains
     do n=1,nlevs
        ! presure ghost cells
        call multifab_fill_boundary(pres(n))
-       call multifab_physbc(pres(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
        do i=1,dm
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
           ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
                                          dx(n,:),vel_bc_n(n,:))
           ! set transverse velocity behind physical boundaries
-          call multifab_physbc_macvel(umac(n,i),i,the_bc_tower%bc_tower_array(n), &
+          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+                                      the_bc_tower%bc_tower_array(n), &
                                       dx(n,:),vel_bc_t(n,:))
        end do
     end do

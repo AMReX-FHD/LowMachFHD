@@ -3,6 +3,7 @@ module convert_to_homogeneous_module
   use multifab_module
   use ml_layout_module
   use define_bc_module
+  use bc_module
   use multifab_physbc_module
   use stag_applyop_module
   use div_and_grad_module
@@ -55,14 +56,16 @@ contains
         call setval(phi(n,i),0.d0,all=.true.)
 
         ! set values on physical boundaries
-        call multifab_physbc_domainvel(phi(n,i),i,the_bc_tower%bc_tower_array(n), &
+        call multifab_physbc_domainvel(phi(n,i),vel_bc_comp+i-1, &
+                                       the_bc_tower%bc_tower_array(n), &
                                        dx(n,:),vel_bc_n(n,:))
 
         ! fill periodic ghost cells
         call multifab_fill_boundary(phi(n,i))
 
         ! fill physical ghost cells
-        call multifab_physbc_macvel(phi(n,i),i,the_bc_tower%bc_tower_array(n), &
+        call multifab_physbc_macvel(phi(n,i),vel_bc_comp+i-1, &
+                                    the_bc_tower%bc_tower_array(n), &
                                     dx(n,:),vel_bc_t(n,:))
 
      end do

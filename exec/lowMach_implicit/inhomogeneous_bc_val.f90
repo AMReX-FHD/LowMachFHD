@@ -1,6 +1,7 @@
 module inhomogeneous_bc_val_module
 
   use bl_types
+  use bc_module
   use probin_common_module,  only: wallspeed_lo, wallspeed_hi, prob_lo, prob_hi
   use probin_lowmach_module, only: rhobar, c_bc
 
@@ -18,7 +19,7 @@ contains
    real(kind=dp_t), intent(in   ) :: x,y
    real(kind=dp_t)                :: val
 
-   if (comp .eq. 1) then
+   if (comp .eq. vel_bc_comp) then
       ! x-vel
 
       if (y .eq. prob_lo(2)) then
@@ -29,7 +30,7 @@ contains
          val = 0.d0
       end if
    
-   else if (comp .eq. 2) then
+   else if (comp .eq. vel_bc_comp+1) then
       ! y-vel
 
       if (x .eq. prob_lo(1)) then
@@ -40,7 +41,7 @@ contains
          val = 0.d0
       end if
 
-   else if (comp .eq. 4) then
+   else if (comp .eq. scal_bc_comp) then
       ! density
 
       if (x .eq. prob_lo(1)) then
@@ -55,7 +56,7 @@ contains
          val = 0.d0
       end if
       
-   else if (comp .eq. 5) then
+   else if (comp .eq. scal_bc_comp+1) then
       ! concentration
 
       if (x .eq. prob_lo(1)) then
@@ -82,7 +83,7 @@ contains
    real(kind=dp_t), intent(in   ) :: x,y,z
    real(kind=dp_t)                :: val
 
-   if (comp .eq. 1) then
+   if (comp .eq. vel_bc_comp) then
       ! x-vel
 
       if (y .eq. prob_lo(2)) then
@@ -97,7 +98,7 @@ contains
          val = 0.d0
       end if
 
-   else if (comp .eq. 2) then
+   else if (comp .eq. vel_bc_comp+1) then
       ! y-vel
 
       if (x .eq. prob_lo(1)) then
@@ -112,7 +113,7 @@ contains
          val = 0.d0
       end if
 
-   else if (comp .eq. 3) then
+   else if (comp .eq. vel_bc_comp+2) then
       ! z-vel
 
       if (x .eq. prob_lo(1)) then
@@ -127,7 +128,7 @@ contains
          val = 0.d0
       end if
 
-   else if (comp .eq. 5) then
+   else if (comp .eq. scal_bc_comp) then
       ! density
 
       if (x .eq. prob_lo(1)) then
@@ -146,7 +147,7 @@ contains
          val = 0.d0
       end if
 
-   else if (comp .eq. 6) then
+   else if (comp .eq. scal_bc_comp+1) then
       ! concentration
 
       if (x .eq. prob_lo(1)) then
