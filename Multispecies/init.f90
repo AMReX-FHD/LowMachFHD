@@ -1,4 +1,4 @@
-module init_rho_module
+module init_module
 
   use multifab_module
   use define_bc_module
@@ -124,4 +124,4 @@ contains
 
   end subroutine init_rho_3d
 
-end module init_rho_module
+end module init_module
