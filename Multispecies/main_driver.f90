@@ -8,176 +8,175 @@ subroutine main_driver()
   use write_plotfile_module
   use advance_module
   use define_bc_module
+  use bc_module
+  use probin_common_module , only: probin_common_init, dim_in, n_cells, &
+                                   prob_lo, prob_hi, max_grid_size, &
+                                   bc_lo, bc_hi, fixed_dt, plot_int
 
   implicit none
 
-  ! stuff you can set with the inputs file (otherwise use default values below)
-  integer :: nspecies, dim, nsteps, plot_int, n_cell, max_grid_size
-  integer :: bc_x_lo, bc_x_hi, bc_y_lo, bc_y_hi, bc_z_lo, bc_z_hi
-
-  ! dummy indices using for reading in inputs file
-  integer :: un, farg, narg
-  logical :: need_inputs_file, found_inputs_file
-  character(len=128) :: inputs_file_name
-
-  integer, allocatable :: phys_bc(:,:)
+  ! will be allocated with dm components
   integer, allocatable :: lo(:), hi(:)
-  integer :: istep,i
 
-  real(dp_t), allocatable :: prob_lo(:), prob_hi(:)
-  real(dp_t) :: dx, dt, time, start_time, run_time, run_time_IOproc
-  
-  logical, allocatable :: is_periodic(:)
+  ! will be allocated with (nlevs,dm) components
+  real(dp_t), allocatable :: dx(:,:)
 
-  type(box)      :: bx
-  type(boxarray) :: ba
-  type(layout)   :: la
-  type(multifab) :: rho
+  integer :: n,nlevs,i,dm,istep
+
+  real(kind=dp_t) :: time
+
+  type(box)         :: bx
+  type(ml_boxarray) :: mba
+  type(ml_layout)   :: mla
 
   type(bc_tower) :: the_bc_tower
 
-  namelist /probin/ nspecies, dim, nsteps, plot_int, n_cell, &
-       max_grid_size, bc_x_lo, bc_x_hi, bc_y_lo, bc_y_hi, bc_z_lo, bc_z_hi
+  logical, allocatable :: pmask(:)
 
+  type(multifab), allocatable :: rho(:)
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! default values - will get overwritten by the inputs file
+  ! fix these later to be read in from inputs file
+  integer :: nspecies, max_step
 
-  nspecies      = 4
-  dim           = 2
-  nsteps        = 1000
-  plot_int      = 100
-  n_cell        = 256
-  max_grid_size = 64
+  call probin_common_init()
 
+  ! in this example we fix nlevs to be 1
+  ! for adaptive simulations where the grids change, cells at finer
+  ! resolution don't necessarily exist depending on your tagging criteria,
+  ! so max_levs isn't necessary equal to nlevs
+  nlevs = 1
 
-  ! allowable options for this example are
-  ! -1 = PERIODIC
-  ! 12 = OUTLET (drho/dn=0 at boundary)
-  ! 15 = NO_SLIP_WALL (wall with fixed rho=1)
-  bc_x_lo       = -1 ! NO_SLIP_WALL
-  bc_x_hi       = -1 ! NO_SLIP_WALL
-  bc_y_lo       = -1 ! NO_SLIP_WALL
-  bc_y_hi       = -1 ! NO_SLIP_WALL
-  bc_z_lo       = -1 ! NO_SLIP_WALL
-  bc_z_hi       = -1 ! NO_SLIP_WALL
+  dm = dim_in
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! fix these later to be read in from inputs file
+  nspecies = 4
+  max_step = 1000
 
-  ! read inputs file and overwrite any default values
-  narg = command_argument_count()
-  need_inputs_file = .true.
-  farg = 1
-  if ( need_inputs_file .AND. narg >= 1 ) then
-     call get_command_argument(farg, value = inputs_file_name)
-     inquire(file = inputs_file_name, exist = found_inputs_file )
-     if ( found_inputs_file ) then
-        farg = farg + 1
-        un = unit_new()
-        open(unit=un, file = inputs_file_name, status = 'old', action = 'read')
-        read(unit=un, nml = probin)
-        close(unit=un)
-        need_inputs_file = .false.
-     end if
+  ! now that we have dm, we can allocate these
+  allocate(lo(dm),hi(dm))
+
+  ! now that we have nlevs and dm, we can allocate these
+  allocate(dx(nlevs,dm))
+  allocate(rho(nlevs))
+
+  ! tell mba how many levels and dmensionality of problem
+  call ml_boxarray_build_n(mba,nlevs,dm)
+
+  ! tell mba about the ref_ratio between levels
+  ! mba%rr(n-1,i) is the refinement ratio between levels n-1 and n in direction i
+  ! we use refinement ratio of 2 in every direction between all levels
+  do n=2,nlevs
+     mba%rr(n-1,:) = 2
+  enddo
+
+  ! set grid spacing at each level
+  ! the grid spacing is the same in each direction
+  dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
+  select case (dm) 
+    case(2)
+      if (dx(1,1) .ne. dx(1,2)) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+      end if    
+    case(3)
+      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+      end if    
+    case default
+      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+  end select
+  do n=2,nlevs
+     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
+  end do
+
+  ! create a box from (0,0) to (n_cells-1,n_cells-1)
+  lo(1:dm) = 0
+  hi(1:dm) = n_cells(1:dm)-1
+  bx = make_box(lo,hi)
+
+  ! tell mba about the problem domain at each level
+  mba%pd(1) = bx
+  do n=2,nlevs
+     mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
+  enddo
+
+  ! initialize the boxarray at level 1 to be one single box
+  call boxarray_build_bx(mba%bas(1),bx)
+
+  ! overwrite the boxarray at level 1 to respect max_grid_size
+  call boxarray_maxsize(mba%bas(1),max_grid_size)
+
+  ! now build the boxarray at other levels
+  if (nlevs .ge. 2) then
+     call bl_error("Need to build boxarray for n>1")
   end if
 
-  ! now that we have dim, we can allocate these
-  allocate(lo(dim),hi(dim))
-  allocate(phys_bc(dim,2))
-  allocate(is_periodic(dim))
-  allocate(prob_lo(dim),prob_hi(dim))
-
-  ! physical problem is a box on (-1,-1) to (1,1)
-  prob_lo(:) = -1.d0
-  prob_hi(:) =  1.d0
-
-  ! build a single array to hold domain boundary conditions
-  phys_bc(1,1) = bc_x_lo
-  phys_bc(1,2) = bc_x_hi
-  phys_bc(2,1) = bc_y_lo
-  phys_bc(2,2) = bc_y_hi
-  if (dim .eq. 3) then
-     phys_bc(3,1) = bc_z_lo
-     phys_bc(3,2) = bc_z_hi
-  end if
-
-  ! build an array indicating periodicity in each direction
-  is_periodic(:) = .false.
-  do i=1,dim
-     if (phys_bc(i,1) .eq. -1 .and. phys_bc(i,2) .ne. -1) then
-        call bl_error("Invalid BC's - both lo and hi need to be periodic")
-     end if
-     if (phys_bc(i,2) .eq. -1 .and. phys_bc(i,1) .ne. -1) then
-        call bl_error("Invalid BC's - both lo and hi need to be periodic")
-     end if
-     if (phys_bc(i,1) .eq. -1 .and. phys_bc(i,2) .eq. -1) then
-        is_periodic(i) = .true.
+  ! build pmask
+  allocate(pmask(dm))
+  pmask = .false.
+  do i=1,dm
+     if (bc_lo(i) .eq. PERIODIC .and. bc_hi(i) .eq. PERIODIC) then
+        pmask(i) = .true.
      end if
   end do
 
-  ! create a box from (0,0) to (n_cell-1,n_cell-1)
-  lo(:) = 0
-  hi(:) = n_cell-1
-  bx = make_box(lo,hi)
+  ! build the ml_layout, mla
+  call ml_layout_build(mla,mba,pmask)
 
-  ! the grid spacing is the same in each direction
-  dx = (prob_hi(1)-prob_lo(1)) / n_cell
+  deallocate(pmask)
 
-  ! initialize the boxarray to be one single box
-  call boxarray_build_bx(ba,bx)
+  ! don't need this anymore - free up memory
+  call destroy(mba)
 
-  ! overwrite the boxarray to respect max_grid_size
-  call boxarray_maxsize(ba,max_grid_size)
-
-  ! build the layout, la
-  ! the third argument is the problem domain, which in this case is bx
-  call layout_build_ba(la,ba,bx,pmask=is_periodic)
-
-  call destroy(ba)
-
-  call initialize_bc(the_bc_tower,1,dim,is_periodic,nspecies)
-  call bc_tower_level_build(the_bc_tower,1,la)
+  ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies)
+  do n=1,nlevs
+     ! define level n of the_bc_tower
+     call bc_tower_level_build(the_bc_tower,n,mla%la(n))
+  end do
 
   ! build multifab with nspecies component and nspecies ghost cell
   ! Donev: Why nspecies ghost cell -- makes no sense, should be 1 ghost cell only
-  call multifab_build(rho,la,nspecies,nspecies)
-  
-  ! initialze rho
+  do n=1,nlevs
+     call multifab_build(rho(n),mla%la(n),nspecies,nspecies)
+  end do
+
+  ! initialize sold = s^0 and mold = m^0
   call init_rho(rho,dx,prob_lo,the_bc_tower)
 
   istep = 0
   time = 0.d0
 
-  ! choice of time step with a diffusive CFL of 1.0
-  dt = 1.d0*dx**2/(2.d0*dim)
+  ! write initial plotfile
+  if (plot_int .gt. 0) then
+     call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
+  end if
+  
+  do istep=1,max_step
 
-  ! write out plotfile 0
-  call write_plotfile(la,rho,istep,dx,time,prob_lo,prob_hi)
-
-  do istep=1,nsteps
-
-     ! we only want one processor to write to screen
-     if ( parallel_IOProcessor() ) then
-        print*,'Advancing time step',istep,'with dt=',dt
-     end if
-     
-     ! advance rho
-     call advance(rho,dx,dt,the_bc_tower)
-
-     time = time + dt
-
-     if (mod(istep,plot_int) .eq. 0 .or. istep .eq. nsteps) then
-        ! write out plotfile
-        call write_plotfile(la,rho,istep,dx,time,prob_lo,prob_hi)
+     if (parallel_IOProcessor()) then
+        print*,"Begin Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
      end if
 
+     ! advance the solution by dt
+     call advance(rho,dx,fixed_dt,the_bc_tower)
+
+     ! increment simulation time
+     time = time + fixed_dt
+
+     ! write a plotfile
+     if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
+          .or. &
+          (istep .eq. max_step) ) then
+        call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
+     end if
+        
   end do
 
-  ! make sure to destroy the multifab or you'll leak memory
-  call destroy(rho)
-  call destroy(la)
+  do n=1,nlevs
+     call multifab_destroy(rho(n))
+  end do
+
+  call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 
-  deallocate(lo,hi,is_periodic,prob_lo,prob_hi)
- 
 end subroutine main_driver

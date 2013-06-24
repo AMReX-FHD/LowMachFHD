@@ -14,45 +14,49 @@ contains
   
   subroutine init_rho(rho,dx,prob_lo,the_bc_tower)
 
-    type(multifab) , intent(inout) :: rho
-    real(kind=dp_t), intent(in   ) :: dx
-    real(kind=dp_t), intent(in   ) :: prob_lo(rho%dim)
+    type(multifab) , intent(inout) :: rho(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables
-    integer :: lo(rho%dim), hi(rho%dim)
-    integer :: nsp, dm, ng, i
+    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
+    integer :: nsp, dm, ng, i, n, nlevs
 
     real(kind=dp_t), pointer :: dp(:,:,:,:)
  
     nsp= 4 ! Amit: what is the way to pass from main.f90 ?
-    dm = rho%dim
-    ng = rho%ng
+    dm = rho(1)%dim
+    ng = rho(1)%ng
 
-    do i=1,nfabs(rho)
-       dp => dataptr(rho,i)
-       lo = lwb(get_box(rho,i))
-       hi = upb(get_box(rho,i))
-       ! Donev: This is wrong, it only handles the last species
-       ! You need 1:nsp, not nsp as the last index.
-       ! Fix this
-       select case(dm)
-       case (2)
-          call init_rho_2d(dp(:,:,1,nsp), ng, lo, hi, prob_lo, dx) 
-       case (3)
-          call init_rho_3d(dp(:,:,:,nsp), ng, lo, hi, prob_lo, dx)
-    ! Amit: 4th index is replaced with nsp instead of 1 to include 
-    ! all species for both case (2) and (3).
-       end select
+    nlevs = size(rho,1)
+
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp => dataptr(rho(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          ! Donev: This is wrong, it only handles the last species
+          ! You need 1:nsp, not nsp as the last index.
+          ! Fix this
+          select case(dm)
+          case (2)
+             call init_rho_2d(dp(:,:,1,nsp), ng, lo, hi, prob_lo, dx(n,1)) 
+          case (3)
+             call init_rho_3d(dp(:,:,:,nsp), ng, lo, hi, prob_lo, dx(n,1))
+             ! Amit: 4th index is replaced with nsp instead of 1 to include 
+             ! all species for both case (2) and (3).
+          end select
+       end do
+
+       ! filling up ghost cells for two adjacent grids at the same level
+       ! this includes periodic domain boundary ghost cells
+       call multifab_fill_boundary(rho(n))
+
+       ! fill non-periodic domain boundary ghost cells
+       ! Amit: Confusing 1,1, entry. 
+       call multifab_physbc(rho(n),1,1,nsp,the_bc_tower%bc_tower_array(n))
     end do
-
-    ! filling up ghost cells for two adjacent grids at the same level
-    ! this includes periodic domain boundary ghost cells
-    call multifab_fill_boundary(rho)
-
-    ! fill non-periodic domain boundary ghost cells
-    ! Amit: Confusing 1,1, entry. 
-    call multifab_physbc(rho,1,1,nsp,the_bc_tower%bc_tower_array(1))
 
   end subroutine init_rho
 

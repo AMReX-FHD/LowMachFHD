@@ -17,8 +17,8 @@ contains
   
   subroutine advance(rho,dx,dt,the_bc_tower)
 
-    type(multifab) , intent(inout) :: rho
-    real(kind=dp_t), intent(in   ) :: dx
+    type(multifab) , intent(inout) :: rho(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -26,21 +26,21 @@ contains
     integer i,dm
 
     ! an array of multifabs; one for each direction
-    type(multifab) :: flux(rho%dim) ! ,nlevs) 
+    type(multifab) :: flux(rho(1)%dim) ! ,nlevs) 
 
-    dm = rho%dim  ! dimensionality
+    dm = rho(1)%dim  ! dimensionality
 
     ! build the flux(:) multifabs
     do i=1,dm
        ! flux(i) has one component, zero ghost cells, and is nodal in direction i
-       call multifab_build_edge(flux(i),rho%la,1,0,i)
+       call multifab_build_edge(flux(i),rho(1)%la,1,0,i)
     end do
 
     ! compute the face-centered gradients in each direction
-    call compute_flux(rho,flux,dx,the_bc_tower)
+    call compute_flux(rho(1),flux,dx(1,1),the_bc_tower)
     
     ! update rho using forward Euler discretization
-    call update_rho(rho,flux,dx,dt,the_bc_tower)
+    call update_rho(rho(1),flux,dx(1,1),dt,the_bc_tower)
 
     ! destroy the multifab to prevent leakage in memory
     do i=1,dm
