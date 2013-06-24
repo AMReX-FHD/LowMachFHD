@@ -100,7 +100,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! add set mac_rhs = D(x_u^star) to mac_rhs
-        call compute_divu(mla,x_u,mac_rhs,dx)
+        call compute_div(mla,x_u,mac_rhs,dx,1,1,1)
 
         ! add b_p to mac_rhs
         do n=1,nlevs
@@ -183,7 +183,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! add set mac_rhs = D(x_u) to mac_rhs
-        call compute_divu(mla,x_u,mac_rhs,dx)
+        call compute_div(mla,x_u,mac_rhs,dx,1,1,1)
 
         ! add b_p to mac_rhs
         do n=1,nlevs

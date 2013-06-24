@@ -113,7 +113,7 @@ contains
     end do
 
     ! set divu = div(v^init)
-    call compute_divu(mla,umac,divu,dx)
+    call compute_div(mla,umac,divu,dx,1,1,1)
 
     ! add div(v^init) to mac_rhs
     ! now mac_rhs = div(v^init) - S^0

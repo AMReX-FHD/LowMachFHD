@@ -372,7 +372,7 @@ contains
     end do
 
     ! compute div(v^n)
-    call compute_divu(mla,umac_old,divu,dx)
+    call compute_div(mla,umac_old,divu,dx,1,1,1)
 
     ! add div(v^n) to gmres_rhs_p
     ! now gmres_rhs_p = div(v^n) - S^{*,n+1}

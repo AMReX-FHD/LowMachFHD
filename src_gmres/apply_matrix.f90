@@ -87,7 +87,7 @@ contains
     end do
         
     ! set b_p = -D x_u
-    call compute_divu(mla,x_u,b_p,dx)
+    call compute_div(mla,x_u,b_p,dx,1,1,1)
     do n=1,nlevs
        call multifab_mult_mult_s_c(b_p(n),1,-1.d0,1,0)
     end do

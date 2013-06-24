@@ -82,7 +82,7 @@ contains
   end do
 
   ! compute divergence of phi
-  call compute_divu(mla,phi,Dphi,dx)
+  call compute_div(mla,phi,Dphi,dx,1,1,1)
 
   ! add Dphi to b_p
   do n=1,nlevs

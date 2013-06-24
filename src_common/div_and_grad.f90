@@ -9,7 +9,7 @@ module div_and_grad_module
 
   private
 
-  public :: compute_grad, compute_divu
+  public :: compute_grad, compute_div
 
 contains
 
@@ -227,94 +227,95 @@ contains
 
   end subroutine compute_grad
 
-  subroutine compute_divu(mla,umac,rh,dx)
+  subroutine compute_div(mla,phi_fc,div,dx,start_incomp,start_outcomp,num_comp)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: umac(:,:)
-    type(multifab) , intent(inout) :: rh(:)
+    type(multifab) , intent(in   ) :: phi_fc(:,:)
+    type(multifab) , intent(inout) :: div(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
+    integer        , intent(in   ) :: start_incomp, start_outcomp, num_comp
 
-    real(kind=dp_t), pointer :: ump(:,:,:,:) 
-    real(kind=dp_t), pointer :: vmp(:,:,:,:) 
-    real(kind=dp_t), pointer :: wmp(:,:,:,:) 
-    real(kind=dp_t), pointer :: rhp(:,:,:,:) 
-    real(kind=dp_t)          :: rhmax
-    integer :: i,n,nlevs,dm,ng_u,ng_r,lo(mla%dim),hi(mla%dim)
+    real(kind=dp_t), pointer :: pxp(:,:,:,:) 
+    real(kind=dp_t), pointer :: pyp(:,:,:,:) 
+    real(kind=dp_t), pointer :: pzp(:,:,:,:) 
+    real(kind=dp_t), pointer :: dp(:,:,:,:) 
+    integer :: i,n,nlevs,dm,ng_p,ng_d,comp,outcomp
+    integer :: lo(mla%dim),hi(mla%dim)
 
     dm = mla%dim
     nlevs = mla%nlevel
 
-    ng_u = umac(1,1)%ng
-    ng_r = rh(1)%ng
+    ng_p = phi_fc(1,1)%ng
+    ng_d = div(1)%ng
 
     do n = 1,nlevs
-       do i = 1, nfabs(rh(n))
-          ump => dataptr(umac(n,1), i)
-          vmp => dataptr(umac(n,2), i)
-          rhp => dataptr(rh(n)  , i)
-          lo =  lwb(get_box(rh(n), i))
-          hi =  upb(get_box(rh(n), i))
-          select case (dm)
-          case (2)
-             call compute_divu_2d(ump(:,:,1,1), vmp(:,:,1,1), ng_u, rhp(:,:,1,1), ng_r, &
-                                  dx(n,:),lo,hi)
-          case (3)
-             wmp => dataptr(umac(n,3), i)
-             call compute_divu_3d(ump(:,:,:,1), vmp(:,:,:,1), wmp(:,:,:,1), ng_u, &
-                                  rhp(:,:,:,1), ng_r, dx(n,:),lo,hi)
-          end select
-       end do
-    end do
-
-    rhmax = norm_inf(rh(nlevs))
-    do n = nlevs,2,-1
-       rhmax = max(rhmax,norm_inf(rh(n-1)))
-    end do
-
-  end subroutine compute_divu
-
-  subroutine compute_divu_2d(umac,vmac,ng_u,rh,ng_r,dx,lo,hi)
-
-    integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_r
-    real(kind=dp_t), intent(in   ) :: umac(lo(1)-ng_u:,lo(2)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: vmac(lo(1)-ng_u:,lo(2)-ng_u:)
-    real(kind=dp_t), intent(inout) ::   rh(lo(1)-ng_r:,lo(2)-ng_r:)
-    real(kind=dp_t), intent(in   ) ::   dx(:)
-
-    integer :: i,j
-
-    do j = lo(2),hi(2)
-       do i = lo(1),hi(1)
-          rh(i,j) = &
-               (umac(i+1,j) - umac(i,j)) / dx(1) + &
-               (vmac(i,j+1) - vmac(i,j)) / dx(2)
-       end do
-    end do
-
-  end subroutine compute_divu_2d
-
-  subroutine compute_divu_3d(umac,vmac,wmac,ng_u,rh,ng_r,dx,lo,hi)
-
-    integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_r
-    real(kind=dp_t), intent(in   ) :: umac(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: vmac(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: wmac(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t), intent(inout) ::   rh(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:)
-    real(kind=dp_t), intent(in   ) :: dx(:)
-
-    integer :: i,j,k
-
-    do k = lo(3),hi(3)
-       do j = lo(2),hi(2)
-          do i = lo(1),hi(1)
-             rh(i,j,k) = &
-                  (umac(i+1,j,k) - umac(i,j,k)) / dx(1) + &
-                  (vmac(i,j+1,k) - vmac(i,j,k)) / dx(2) + &
-                  (wmac(i,j,k+1) - wmac(i,j,k)) / dx(3)
+       do i = 1, nfabs(div(n))
+          pxp => dataptr(phi_fc(n,1), i)
+          pyp => dataptr(phi_fc(n,2), i)
+          dp => dataptr(div(n), i)
+          lo =  lwb(get_box(div(n), i))
+          hi =  upb(get_box(div(n), i))
+          do comp=start_incomp,start_incomp+num_comp-1
+             outcomp = start_outcomp + (comp-start_incomp)
+             select case (dm)
+             case (2)
+                call compute_div_2d(pxp(:,:,1,comp), pyp(:,:,1,comp), ng_p, &
+                                    dp(:,:,1,outcomp), ng_d, dx(n,:),lo,hi)
+             case (3) 
+                pzp => dataptr(phi_fc(n,3), i)
+                call compute_div_3d(pxp(:,:,:,comp), pyp(:,:,:,comp), pzp(:,:,:,comp), ng_p, &
+                                    dp(:,:,:,outcomp), ng_d, dx(n,:),lo,hi)
+             end select
           end do
        end do
     end do
 
-  end subroutine compute_divu_3d
+  contains
+
+    subroutine compute_div_2d(phix,phiy,ng_p,div,ng_d,dx,lo,hi)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d
+      real(kind=dp_t), intent(in   ) :: phix(lo(1)-ng_p:,lo(2)-ng_p:)
+      real(kind=dp_t), intent(in   ) :: phiy(lo(1)-ng_p:,lo(2)-ng_p:)
+      real(kind=dp_t), intent(inout) ::  div(lo(1)-ng_d:,lo(2)-ng_d:)
+      real(kind=dp_t), intent(in   ) ::   dx(:)
+
+      integer :: i,j
+
+      do j = lo(2),hi(2)
+         do i = lo(1),hi(1)
+            div(i,j) = &
+                 (phix(i+1,j) - phix(i,j)) / dx(1) + &
+                 (phiy(i,j+1) - phiy(i,j)) / dx(2)
+         end do
+      end do
+
+    end subroutine compute_div_2d
+
+    subroutine compute_div_3d(phix,phiy,phiz,ng_p,div,ng_d,dx,lo,hi)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d
+      real(kind=dp_t), intent(in   ) :: phix(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real(kind=dp_t), intent(in   ) :: phiy(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real(kind=dp_t), intent(in   ) :: phiz(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real(kind=dp_t), intent(inout) ::  div(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:)
+      real(kind=dp_t), intent(in   ) :: dx(:)
+
+      integer :: i,j,k
+
+      do k = lo(3),hi(3)
+         do j = lo(2),hi(2)
+            do i = lo(1),hi(1)
+               div(i,j,k) = &
+                    (phix(i+1,j,k) - phix(i,j,k)) / dx(1) + &
+                    (phiy(i,j+1,k) - phiy(i,j,k)) / dx(2) + &
+                    (phiz(i,j,k+1) - phiz(i,j,k)) / dx(3)
+            end do
+         end do
+      end do
+
+    end subroutine compute_div_3d
+
+  end subroutine compute_div
 
 end module div_and_grad_module
