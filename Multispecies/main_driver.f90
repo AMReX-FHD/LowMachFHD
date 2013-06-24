@@ -4,7 +4,7 @@ subroutine main_driver()
   use multifab_module
   use bl_IO_module
   use layout_module
-  use init_rho_module
+  use init_module
   use write_plotfile_module
   use advance_module
   use define_bc_module
