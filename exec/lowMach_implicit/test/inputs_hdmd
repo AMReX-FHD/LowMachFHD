@@ -61,9 +61,9 @@
   ! Boundary conditions
   !----------------------
   ! BC specifications:
-  ! -1 = periodic
-  ! 16 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
-  ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
+  ! -1  = periodic
+  ! 100 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
+  ! 200 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
   bc_lo(1:2) = -1 -1
   bc_hi(1:2) = -1 -1
 

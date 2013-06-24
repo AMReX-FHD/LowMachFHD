@@ -10,10 +10,21 @@ module bc_module
   integer, parameter, public ::            INLET  = 11 ! not currently used but needed by BoxLib
   integer, parameter, public ::            OUTLET = 12 ! not currently used but needed by BoxLib
   integer, parameter, public ::          SYMMETRY = 13 ! not currently used but needed by BoxLib
-  integer, parameter, public ::         SLIP_WALL = 16
-  integer, parameter, public ::      NO_SLIP_WALL = 17
-  integer, parameter, public ::    SLIP_RESERVOIR = 18
-  integer, parameter, public :: NO_SLIP_RESERVOIR = 19
+  
+  ! Special BC codes for application codes start at 100 for no-slip walls and 200 for slip walls
+  integer, parameter, public :: NO_SLIP_START       = 100  
+  integer, parameter, public :: NO_SLIP_WALL        = 100
+  integer, parameter, public :: NO_SLIP_RESERVOIR   = 101
+  integer, parameter, public :: NO_SLIP_CLOSED      = 102
+  integer, parameter, public :: NO_SLIP_IMPERMEABLE = 103
+  integer, parameter, public :: NO_SLIP_END         = 103
+
+  integer, parameter, public :: SLIP_START       = 200
+  integer, parameter, public :: SLIP_WALL        = 200
+  integer, parameter, public :: SLIP_RESERVOIR   = 201 ! Mass and heat reservoir
+  integer, parameter, public :: SLIP_CLOSED      = 202 ! Closed (isolated) system
+  integer, parameter, public :: SLIP_IMPERMEABLE = 203 ! Only heat reservoir, no mass flux
+  integer, parameter, public :: SLIP_END         = 203
 
   ! These specify boundary conditions on phi for the cc mg solver  
   integer, parameter, public :: BC_PER       = -1

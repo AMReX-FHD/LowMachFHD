@@ -6,28 +6,58 @@ module inhomogeneous_bc_val_module
 
   private
 
-  public :: inhomogeneous_bc_val_2d, inhomogeneous_bc_val_3d
+  public :: scalar_bc, inhomogeneous_bc_val_2d, inhomogeneous_bc_val_3d
 
 contains
- 
- function inhomogeneous_bc_val_2d(comp,x,y) result(val)
 
-   integer        , intent(in   ) :: comp
-   real(kind=dp_t), intent(in   ) :: x,y
-   real(kind=dp_t)                :: val
+  subroutine scalar_bc(phys_bc, bc_code)
 
-   call bl_error("inhomogeneous_bc_val: write a custom routine and put in local source directory"
+    integer, intent(in) :: phys_bc
+    integer, intent(inout) :: bc_code(1:num_scal_bc)
 
- end function inhomogeneous_bc_val_2d
+    if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
 
- function inhomogeneous_bc_val_3d(comp,x,y,z) result(val)
+       bc_code = FOEXTRAP  ! Pure Neumann
 
-   integer        , intent(in   ) :: comp
-   real(kind=dp_t), intent(in   ) :: x,y,z
-   real(kind=dp_t)                :: val
+    else if ((phys_bc == NO_SLIP_RESERVOIR) .or. (phys_bc == SLIP_RESERVOIR)) then
 
-   call bl_error("inhomogeneous_bc_val: write a custom routine and put in local source directory"
+       bc_code = EXT_DIR   ! Pure Dirichlet
 
- end function inhomogeneous_bc_val_3d
+    else if (phys_bc == PERIODIC .or. phys_bc == INTERIOR ) then
+
+       ! retain the default value of INTERIOR
+
+    else
+
+       ! return an error
+       bc_code = -999
+
+    end if
+
+  end subroutine scalar_bc
+
+  function inhomogeneous_bc_val_2d(comp,x,y) result(val)
+
+    integer        , intent(in   ) :: comp
+    real(kind=dp_t), intent(in   ) :: x,y
+    real(kind=dp_t)                :: val
+
+    val = 0.d0
+
+    call bl_warn("using default inhomogeneous_bc_val_2d; returning homogeneous bc")
+
+  end function inhomogeneous_bc_val_2d
+
+  function inhomogeneous_bc_val_3d(comp,x,y,z) result(val)
+
+    integer        , intent(in   ) :: comp
+    real(kind=dp_t), intent(in   ) :: x,y,z
+    real(kind=dp_t)                :: val
+
+    val = 0.d0
+
+    call bl_warn("using default inhomogeneous_bc_val_2d; returning homogeneous bc")
+
+  end function inhomogeneous_bc_val_3d
 
 end module inhomogeneous_bc_val_module

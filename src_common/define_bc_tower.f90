@@ -3,6 +3,7 @@ module define_bc_module
   use bl_types
   use ml_layout_module
   use bc_module
+  use inhomogeneous_bc_val_module
 
   implicit none
 
@@ -208,59 +209,42 @@ contains
     do d = 1, dm
     do lohi = 1, 2
 
-       if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL) then
+       if (phys_bc_level(igrid,d,lohi) == PERIODIC .or. &
+           phys_bc_level(igrid,d,lohi) == INTERIOR ) then
+
+          ! retain the default value of INTERIOR
+
+       else if ( (phys_bc_level(igrid,d,lohi) >= NO_SLIP_START) .and.  (phys_bc_level(igrid,d,lohi) <= NO_SLIP_END) ) then
 
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet velocity condition
           ! for pressure we use extrapolation
-          ! for primitive variables we use extrapolation
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! transverse velocity
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! normal velocity
+          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! normal and transverse velocity
           adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = FOEXTRAP ! scalars
 
-       else if (phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
+       else if ( (phys_bc_level(igrid,d,lohi) >= SLIP_START) .and.  (phys_bc_level(igrid,d,lohi) <= SLIP_END) ) then
 
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet stress condition
           ! for pressure we use extrapolation
-          ! for primitive variables we use extrapolation
           adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_TRACT ! transverse velocity
           adv_bc_level(igrid,d,lohi,d   )                    = DIR_VEL   ! normal velocity
           adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = FOEXTRAP  ! scalars
-
-       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR) then
-
-          ! for normal velocity we impose a Dirichlet velocity condition
-          ! for transverse velocity we imposie a Dirichlet velocity condition
-          ! for pressure we use extrapolation
-          ! for primitive variables we impose a Dirichlet condition
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL   ! transverse velocity
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL   ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = EXT_DIR   ! scalars
-
-       else if (phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
-
-          ! for normal velocity we impose a Dirichlet velocity condition
-          ! for transverse velocity we imposie a Dirichlet stress condition
-          ! for pressure we use extrapolation
-          ! for primitive variables we impose a Dirichlet condition
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_TRACT ! transverse velocity
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL   ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
-          adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) = EXT_DIR   ! scalars
-
-       else if (phys_bc_level(igrid,d,lohi) == PERIODIC .or. &
-                phys_bc_level(igrid,d,lohi) == INTERIOR ) then
-
-          ! retain the default value of INTERIOR
 
        else
 
           print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
-          call bl_error('BC TYPE NOT SUPPORTED')
+          call bl_error('BC TYPE NOT SUPPORTED 1')
+
+       end if
+       
+       ! The scalars can be handled in many different ways, so defer to application-specific code:
+       call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1))
+
+       if (any(adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) .eq. -999)) then
+
+          print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+          call bl_error('BC TYPE NOT SUPPORTED 2')
 
        end if
 
@@ -287,14 +271,14 @@ contains
     do d = 1, dm
     do lohi = 1, 2
 
-       if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
+       if (phys_bc_level(igrid,d,lohi) == INTERIOR) then
+
+          ! retain the default value of INTERIOR
+
+       else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
           ! pressure is periodic
           ell_bc_level(igrid,d,lohi,dm+1) = BC_PER
-
-       else if (phys_bc_level(igrid,d,lohi) == INTERIOR) then
-
-          ! retain the default value of INTERIOR
 
        else
 

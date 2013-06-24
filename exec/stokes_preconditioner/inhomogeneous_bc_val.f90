@@ -11,163 +11,189 @@ module inhomogeneous_bc_val_module
 
   private
 
-  public :: inhomogeneous_bc_val_2d, inhomogeneous_bc_val_3d
+  public :: scalar_bc, inhomogeneous_bc_val_2d, inhomogeneous_bc_val_3d
 
 contains
- 
- function inhomogeneous_bc_val_2d(comp,x,y) result(val)
 
-   use bl_constants_module, only: M_PI
+  subroutine scalar_bc(phys_bc, bc_code)
 
-   integer        , intent(in   ) :: comp
-   real(kind=dp_t), intent(in   ) :: x,y
-   real(kind=dp_t)                :: val
+    integer, intent(in) :: phys_bc
+    integer, intent(inout) :: bc_code(1:num_scal_bc)
 
-   ! local
-   real(kind=dp_t) :: velx,vely,Lx,Ly,time, visc_coef
+    if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
 
-   visc_coef=coeff_mag(2)/coeff_mag(1)
+       bc_code = FOEXTRAP  ! Pure Neumann
 
-   select case (prob_sol)
-   case (1,2)
+    else if ((phys_bc == NO_SLIP_RESERVOIR) .or. (phys_bc == SLIP_RESERVOIR)) then
 
-      ! Taylor vortex
-      velx = 1.d0
-      vely = 1.d0
-      Lx = prob_hi(1)-prob_lo(1)
-      Ly = prob_hi(2)-prob_lo(2)
-      time = 0.d0
+       bc_code = EXT_DIR   ! Pure Dirichlet
 
-      if (comp .eq. vel_bc_comp) then
-         val = velx - 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
-              *cos(2.d0*M_PI*(x-velx*time)/Lx)*sin(2.d0*M_PI*(y-vely*time)/Ly)
-      else if (comp .eq. vel_bc_comp+1) then
-         val = vely + 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
-              *sin(2.d0*M_PI*(x-velx*time)/Lx)*cos(2.d0*M_PI*(y-vely*time)/Ly)
-      else
-         val = 0.d0
-      end if
-   
-   case (3)
-      if (comp .eq. vel_bc_comp) then
-         val = exp(-8.0d0*M_PI**2*time)*sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
-      else if (comp .eq. vel_bc_comp+1) then
-         val = exp(-8.0d0*M_PI**2*time)*cos(2.d0*M_PI*x)*cos(2.d0*M_PI*y)
-      else
-         val = 0.d0
-      end if
+    else if (phys_bc == PERIODIC .or. phys_bc == INTERIOR ) then
 
-   case (20)
+       ! retain the default value of INTERIOR
 
-      ! lid driven cavity moving hi-y wall with +x velocity
-      if (y .eq. prob_hi(2) .and. comp .eq. vel_bc_comp) then
-         val = sin(M_PI*(x-prob_lo(1))/(prob_hi(1)-prob_lo(1)))
-      else
-         val = 0.d0
-      end if
+    else
+
+       ! return an error
+       bc_code = -999
+
+    end if
+
+  end subroutine scalar_bc
   
-   case (31,32) ! div not free, for testing accuracy
+  function inhomogeneous_bc_val_2d(comp,x,y) result(val)
 
-      if (comp .eq. vel_bc_comp) then
-         val = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
-      elseif (comp .eq. vel_bc_comp+1) then
-         val = cos(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
-      else 
-         call bl_error('inhomogeneous_bc_val_3d comp should not be greater than  3')
-      end if
+    use bl_constants_module, only: M_PI
 
-   case default
+    integer        , intent(in   ) :: comp
+    real(kind=dp_t), intent(in   ) :: x,y
+    real(kind=dp_t)                :: val
 
-      val = 0.d0
+    ! local
+    real(kind=dp_t) :: velx,vely,Lx,Ly,time, visc_coef
 
-   end select
+    visc_coef=coeff_mag(2)/coeff_mag(1)
 
- end function inhomogeneous_bc_val_2d
+    select case (prob_sol)
+    case (1,2)
 
- function inhomogeneous_bc_val_3d(comp,x,y,z) result(val)
+       ! Taylor vortex
+       velx = 1.d0
+       vely = 1.d0
+       Lx = prob_hi(1)-prob_lo(1)
+       Ly = prob_hi(2)-prob_lo(2)
+       time = 0.d0
 
-   use bl_constants_module, only: M_PI
+       if (comp .eq. vel_bc_comp) then
+          val = velx - 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
+               *cos(2.d0*M_PI*(x-velx*time)/Lx)*sin(2.d0*M_PI*(y-vely*time)/Ly)
+       else if (comp .eq. vel_bc_comp+1) then
+          val = vely + 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
+               *sin(2.d0*M_PI*(x-velx*time)/Lx)*cos(2.d0*M_PI*(y-vely*time)/Ly)
+       else
+          val = 0.d0
+       end if
 
-   integer        , intent(in   ) :: comp
-   real(kind=dp_t), intent(in   ) :: x,y,z
-   real(kind=dp_t)                :: val
+    case (3)
+       if (comp .eq. vel_bc_comp) then
+          val = exp(-8.0d0*M_PI**2*time)*sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
+       else if (comp .eq. vel_bc_comp+1) then
+          val = exp(-8.0d0*M_PI**2*time)*cos(2.d0*M_PI*x)*cos(2.d0*M_PI*y)
+       else
+          val = 0.d0
+       end if
 
-   ! local
-   real(kind=dp_t) :: velx,vely,Lx,Ly,time, visc_coef
-   real(kind=dp_t) :: ufac,vfac,pfac,hx,hy,hz,freq
+    case (20)
 
-   visc_coef=coeff_mag(2)/coeff_mag(1)
+       ! lid driven cavity moving hi-y wall with +x velocity
+       if (y .eq. prob_hi(2) .and. comp .eq. vel_bc_comp) then
+          val = sin(M_PI*(x-prob_lo(1))/(prob_hi(1)-prob_lo(1)))
+       else
+          val = 0.d0
+       end if
 
-   select case (prob_sol)
-   case (1)
+    case (31,32) ! div not free, for testing accuracy
 
-      ! Taylor vortex, quasi-2D
-      velx = 1.d0
-      vely = 1.d0
-      Lx = prob_hi(1)-prob_lo(1)
-      Ly = prob_hi(2)-prob_lo(2)
-      time = 0.d0
+       if (comp .eq. vel_bc_comp) then
+          val = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
+       elseif (comp .eq. vel_bc_comp+1) then
+          val = cos(2.d0*M_PI*x)*sin(2.d0*M_PI*y)
+       else 
+          call bl_error('inhomogeneous_bc_val_3d comp should not be greater than  3')
+       end if
 
-      if (comp .eq. vel_bc_comp) then
-         val = velx - 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
-              *cos(2.d0*M_PI*(x-velx*time)/Lx)*sin(2.d0*M_PI*(y-vely*time)/Ly)
-      else if (comp .eq. vel_bc_comp+1) then
-         val = vely + 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
-              *sin(2.d0*M_PI*(x-velx*time)/Lx)*cos(2.d0*M_PI*(y-vely*time)/Ly)
-      else
-         val = 0.d0
-      end if
+    case default
 
-   case (2) 
+       val = 0.d0
 
-      !ABC flow    
-      freq  = 2.d0*M_PI
+    end select
 
-      ufac = dexp(-freq*freq*visc_coef*time)
-      pfac = dexp(-2.0d0*freq*freq*visc_coef*time)
+  end function inhomogeneous_bc_val_2d
 
-      hx = ABC_coefs(1)
-      hy = ABC_coefs(2)
-      hz = ABC_coefs(3)
+  function inhomogeneous_bc_val_3d(comp,x,y,z) result(val)
 
-      if (comp .eq. vel_bc_comp) then
-         val = 1.0d0 + ufac*(hz*cos(freq*(y-time))+hx*sin(freq*(z-time)))
-      else if (comp .eq. vel_bc_comp+1) then
-         val = 1.0d0 + ufac*(hy*sin(freq*(x-time))+hx*cos(freq*(z-time)))
-      else if (comp .eq. vel_bc_comp+2) then
-         val = 1.0d0 + ufac*(hy*cos(freq*(x-time))+hz*sin(freq*(y-time)))
-      else 
-         call bl_error('inhomogeneous_bc_val_3d comp should not be greater than  3')
-      end if
+    use bl_constants_module, only: M_PI
 
-   case (20)
+    integer        , intent(in   ) :: comp
+    real(kind=dp_t), intent(in   ) :: x,y,z
+    real(kind=dp_t)                :: val
 
-      ! lid driven cavity moving hi-z wall with +x and +y velocity
-      if (z .eq. prob_hi(3) .and. (comp .eq. vel_bc_comp .or. comp .eq. vel_bc_comp+1) ) then
-         val = sin(M_PI*(x-prob_lo(1))/(prob_hi(1)-prob_lo(1))) &
-              *sin(M_PI*(y-prob_lo(2))/(prob_hi(2)-prob_lo(2)))
-      else
-         val = 0.d0
-      end if
+    ! local
+    real(kind=dp_t) :: velx,vely,Lx,Ly,time, visc_coef
+    real(kind=dp_t) :: ufac,vfac,pfac,hx,hy,hz,freq
 
-   case (31,32) ! div not free, for testing accuracy
+    visc_coef=coeff_mag(2)/coeff_mag(1)
 
-      if (comp .eq. vel_bc_comp) then
-         val = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)*sin(2.d0*M_PI*z)
-      else if (comp .eq. vel_bc_comp+1) then
-         val = cos(2.d0*M_PI*x)*sin(2.d0*M_PI*y)*sin(2.d0*M_PI*z)
-      else if (comp .eq. vel_bc_comp+2) then
-         val = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)*cos(2.d0*M_PI*z)
-      else 
-         call bl_error('inhomogeneous_bc_val_3d comp should not be greater than  3')
-      end if
+    select case (prob_sol)
+    case (1)
 
-   case default
+       ! Taylor vortex, quasi-2D
+       velx = 1.d0
+       vely = 1.d0
+       Lx = prob_hi(1)-prob_lo(1)
+       Ly = prob_hi(2)-prob_lo(2)
+       time = 0.d0
 
-      val = 0.d0
+       if (comp .eq. vel_bc_comp) then
+          val = velx - 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
+               *cos(2.d0*M_PI*(x-velx*time)/Lx)*sin(2.d0*M_PI*(y-vely*time)/Ly)
+       else if (comp .eq. vel_bc_comp+1) then
+          val = vely + 2.d0*exp(-8.d0*M_PI**2*visc_coef*time/(Lx*Ly)) &
+               *sin(2.d0*M_PI*(x-velx*time)/Lx)*cos(2.d0*M_PI*(y-vely*time)/Ly)
+       else
+          val = 0.d0
+       end if
 
-   end select
+    case (2) 
 
- end function inhomogeneous_bc_val_3d
+       !ABC flow    
+       freq  = 2.d0*M_PI
+
+       ufac = dexp(-freq*freq*visc_coef*time)
+       pfac = dexp(-2.0d0*freq*freq*visc_coef*time)
+
+       hx = ABC_coefs(1)
+       hy = ABC_coefs(2)
+       hz = ABC_coefs(3)
+
+       if (comp .eq. vel_bc_comp) then
+          val = 1.0d0 + ufac*(hz*cos(freq*(y-time))+hx*sin(freq*(z-time)))
+       else if (comp .eq. vel_bc_comp+1) then
+          val = 1.0d0 + ufac*(hy*sin(freq*(x-time))+hx*cos(freq*(z-time)))
+       else if (comp .eq. vel_bc_comp+2) then
+          val = 1.0d0 + ufac*(hy*cos(freq*(x-time))+hz*sin(freq*(y-time)))
+       else 
+          call bl_error('inhomogeneous_bc_val_3d comp should not be greater than  3')
+       end if
+
+    case (20)
+
+       ! lid driven cavity moving hi-z wall with +x and +y velocity
+       if (z .eq. prob_hi(3) .and. (comp .eq. vel_bc_comp .or. comp .eq. vel_bc_comp+1) ) then
+          val = sin(M_PI*(x-prob_lo(1))/(prob_hi(1)-prob_lo(1))) &
+               *sin(M_PI*(y-prob_lo(2))/(prob_hi(2)-prob_lo(2)))
+       else
+          val = 0.d0
+       end if
+
+    case (31,32) ! div not free, for testing accuracy
+
+       if (comp .eq. vel_bc_comp) then
+          val = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)*sin(2.d0*M_PI*z)
+       else if (comp .eq. vel_bc_comp+1) then
+          val = cos(2.d0*M_PI*x)*sin(2.d0*M_PI*y)*sin(2.d0*M_PI*z)
+       else if (comp .eq. vel_bc_comp+2) then
+          val = sin(2.d0*M_PI*x)*sin(2.d0*M_PI*y)*cos(2.d0*M_PI*z)
+       else 
+          call bl_error('inhomogeneous_bc_val_3d comp should not be greater than  3')
+       end if
+
+    case default
+
+       val = 0.d0
+
+    end select
+
+  end function inhomogeneous_bc_val_3d
 
 end module inhomogeneous_bc_val_module
