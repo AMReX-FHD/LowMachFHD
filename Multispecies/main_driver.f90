@@ -135,16 +135,8 @@ subroutine main_driver()
 
   call destroy(ba)
 
-  ! Donev:
-  ! This code needs to do something like:
-  !call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,2)
-  !do n=1,nlevs
-  !   call bc_tower_level_build(the_bc_tower,n,mla%la(n))
-  !end do
-  ! instead of this:
-  ! build boundary conditions
-  call bc_tower_init(the_bc_tower,nspecies,dim,phys_bc)
-  call bc_tower_level_build(the_bc_tower,nspecies,la)
+  call initialize_bc(the_bc_tower,1,dim,is_periodic,nspecies)
+  call bc_tower_level_build(the_bc_tower,1,la)
 
   ! build multifab with nspecies component and nspecies ghost cell
   ! Donev: Why nspecies ghost cell -- makes no sense, should be 1 ghost cell only

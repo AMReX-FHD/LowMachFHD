@@ -1,7 +1,7 @@
 # BOXLIB_HOME defines the directory in which we will find all the BoxLib code
 # If you set BOXLIB_HOME as an environment variable, this line will be ignored
 #BOXLIB_HOME ?= /path/to/BoxLib/
-STAGGERED_HOME := ../../..
+STAGGERED_HOME := ../
 
 NDEBUG    := t
 MPI       := 
