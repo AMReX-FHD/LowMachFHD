@@ -33,6 +33,9 @@ contains
        dp => dataptr(rho,i)
        lo = lwb(get_box(rho,i))
        hi = upb(get_box(rho,i))
+       ! Donev: This is wrong, it only handles the last species
+       ! You need 1:nsp, not nsp as the last index.
+       ! Fix this
        select case(dm)
        case (2)
           call init_rho_2d(dp(:,:,1,nsp), ng, lo, hi, prob_lo, dx) 

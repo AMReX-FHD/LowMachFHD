@@ -1,4 +1,4 @@
-program main
+subroutine main_driver()
 
   use boxlib
   use multifab_module
@@ -39,13 +39,6 @@ program main
   namelist /probin/ nspecies, dim, nsteps, plot_int, n_cell, &
        max_grid_size, bc_x_lo, bc_x_hi, bc_y_lo, bc_y_hi, bc_z_lo, bc_z_hi
 
-  ! if running in parallel, this will print out the number of MPI 
-  ! processes and OpenMP threads
-  call boxlib_initialize()
-
-  ! parallel_wtime() returns the number of wallclock-time seconds since
-  ! the program began
-  start_time = parallel_wtime()
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! default values - will get overwritten by the inputs file
@@ -142,11 +135,19 @@ program main
 
   call destroy(ba)
 
+  ! Donev:
+  ! This code needs to do something like:
+  !call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,2)
+  !do n=1,nlevs
+  !   call bc_tower_level_build(the_bc_tower,n,mla%la(n))
+  !end do
+  ! instead of this:
   ! build boundary conditions
   call bc_tower_init(the_bc_tower,nspecies,dim,phys_bc)
   call bc_tower_level_build(the_bc_tower,nspecies,la)
 
   ! build multifab with nspecies component and nspecies ghost cell
+  ! Donev: Why nspecies ghost cell -- makes no sense, should be 1 ghost cell only
   call multifab_build(rho,la,nspecies,nspecies)
   
   ! initialze rho
@@ -187,36 +188,4 @@ program main
 
   deallocate(lo,hi,is_periodic,prob_lo,prob_hi)
  
-  ! deallocate temporary boxarrays and communication mappings
-  call layout_flush_copyassoc_cache()
-
-  ! check for memory that should have been deallocated
-  if ( parallel_IOProcessor() ) then
-     print*, 'MEMORY STATS AT END OF PROGRAM'
-     print*, ' '
-  end if
-  call print(multifab_mem_stats(),    "    multifab")
-  call print(fab_mem_stats(),         "         fab")
-  call print(boxarray_mem_stats(),    "    boxarray")
-  call print(layout_mem_stats(),      "      layout")
-  call print(boxassoc_mem_stats(),    "    boxassoc")
-  call print(fgassoc_mem_stats(),     "     fgassoc")
-  call print(syncassoc_mem_stats(),   "   syncassoc")
-  call print(copyassoc_mem_stats(),   "   copyassoc")
-  call print(fluxassoc_mem_stats(),   "   fluxassoc")
-
-  ! parallel_wtime() returns the number of wallclock-time seconds since
-  ! the program began
-  run_time = parallel_wtime() - start_time
-
-  ! collect run_time from each processor and store the maximum
-  call parallel_reduce(run_time_IOproc, run_time, MPI_MAX, &
-                       proc = parallel_IOProcessorNode())
-
-  if ( parallel_IOProcessor() ) then
-     print*,"Run time (s) =",run_time_IOproc
-  end if
-
-  call boxlib_finalize()
-
-end program main
+end subroutine main_driver

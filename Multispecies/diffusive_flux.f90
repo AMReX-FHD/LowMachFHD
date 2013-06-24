@@ -4,7 +4,7 @@ module diffusive_flux_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
-  use convert_staggered_module
+  use convert_stag_module
 
   implicit none
 

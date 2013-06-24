@@ -1,6 +1,8 @@
 module inhomogeneous_bc_val_module
 
   use bl_types
+  use bl_error_module 
+  use bc_module
 
   implicit none
 

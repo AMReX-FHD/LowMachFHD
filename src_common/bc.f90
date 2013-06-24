@@ -14,9 +14,9 @@ module bc_module
   ! Special BC codes for application codes start at 100 for no-slip walls and 200 for slip walls
   integer, parameter, public :: NO_SLIP_START       = 100  
   integer, parameter, public :: NO_SLIP_WALL        = 100
-  integer, parameter, public :: NO_SLIP_RESERVOIR   = 101
-  integer, parameter, public :: NO_SLIP_CLOSED      = 102
-  integer, parameter, public :: NO_SLIP_IMPERMEABLE = 103
+  integer, parameter, public :: NO_SLIP_RESERVOIR   = 101 ! Mass and heat reservoir
+  integer, parameter, public :: NO_SLIP_CLOSED      = 102 ! Closed (isolated) system
+  integer, parameter, public :: NO_SLIP_IMPERMEABLE = 103 ! Only heat reservoir, no mass flux
   integer, parameter, public :: NO_SLIP_END         = 103
 
   integer, parameter, public :: SLIP_START       = 200
