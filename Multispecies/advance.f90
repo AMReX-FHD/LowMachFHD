@@ -42,7 +42,7 @@ contains
        end do
 
        ! compute the face-centered gradients in each direction
-       call compute_flux(rho(n),flux,dx(n,1),the_bc_tower)
+       call diffusive_flux(rho(n),flux,dx(n,1),the_bc_tower)
     
        ! update rho using forward Euler discretization
        call update_rho(rho(n),flux,dx(n,1),dt,the_bc_tower)
