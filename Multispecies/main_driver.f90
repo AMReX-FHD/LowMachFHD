@@ -136,8 +136,10 @@ subroutine main_driver()
 
   ! build multifab with nspecies component and nspecies ghost cell
   ! Donev: Why nspecies ghost cell -- makes no sense, should be 1 ghost cell only
+  ! Amit : I thought each component need 1 ghost cell and not same ghost cell
+  ! shared between different species.
   do n=1,nlevs
-     call multifab_build(rho(n),mla%la(n),nspecies,nspecies)
+     call multifab_build(rho(n),mla%la(n),nspecies,1)
   end do
 
   ! initialize sold = s^0 and mold = m^0

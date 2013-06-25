@@ -23,28 +23,34 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables
-    integer i,dm
+    integer i, dm, nsp, n, nlevs
 
     ! an array of multifabs; one for each direction
-    type(multifab) :: flux(rho(1)%dim) ! ,nlevs) 
+    ! Amit : Fluxes don't need to remember levels
+    type(multifab) :: flux(rho(1)%dim) !, nlevs) 
 
+    nsp=4            ! number of species
     dm = rho(1)%dim  ! dimensionality
 
+    nlevs = size(rho,1)    
+
     ! build the flux(:) multifabs
-    do i=1,dm
-       ! flux(i) has one component, zero ghost cells, and is nodal in direction i
-       call multifab_build_edge(flux(i),rho(1)%la,1,0,i)
-    end do
+    do n=1,nlevs
+       do i=1,dm
+          ! flux(i) has one component, zero ghost cells, and is nodal in direction i
+          call multifab_build_edge(flux(i),rho(1)%la,nsp,0,i)
+       end do
 
-    ! compute the face-centered gradients in each direction
-    call compute_flux(rho(1),flux,dx(1,1),the_bc_tower)
+       ! compute the face-centered gradients in each direction
+       call compute_flux(rho(n),flux,dx(n,1),the_bc_tower)
     
-    ! update rho using forward Euler discretization
-    call update_rho(rho(1),flux,dx(1,1),dt,the_bc_tower)
+       ! update rho using forward Euler discretization
+       call update_rho(rho(n),flux,dx(n,1),dt,the_bc_tower)
 
-    ! destroy the multifab to prevent leakage in memory
-    do i=1,dm
-       call multifab_destroy(flux(i))
+       ! destroy the multifab to prevent leakage in memory
+       do i=1,dm
+          call multifab_destroy(flux(i))
+       end do
     end do
 
   end subroutine advance
@@ -59,13 +65,14 @@ contains
 
     ! local variables
     integer :: lo(rho%dim), hi(rho%dim)
-    integer :: dm, ng_p, ng_f, i
+    integer :: dm, ng_p, ng_f, i, nsp
 
     real(kind=dp_t), pointer ::  pp(:,:,:,:)
     real(kind=dp_t), pointer :: fxp(:,:,:,:)
     real(kind=dp_t), pointer :: fyp(:,:,:,:)
     real(kind=dp_t), pointer :: fzp(:,:,:,:)
 
+    nsp  = 4
     dm   = rho%dim
     ng_p = rho%ng
     ng_f = flux(1)%ng
@@ -88,13 +95,13 @@ contains
        hi = upb(get_box(rho,i))
        select case(dm)
        case (2)
-          call update_rho_2d(pp(:,:,1,1), ng_p, &
-                             fxp(:,:,1,1),  fyp(:,:,1,1), ng_f, &
+          call update_rho_2d(pp(:,:,1,nsp), ng_p, &
+                             fxp(:,:,1,nsp),  fyp(:,:,1,nsp), ng_f, &
                              lo, hi, dx, dt)
        case (3)
           fzp => dataptr(flux(3),i)
-          call update_rho_3d(pp(:,:,:,1), ng_p, &
-                             fxp(:,:,:,1),  fyp(:,:,:,1), fzp(:,:,:,1), ng_f, &
+          call update_rho_3d(pp(:,:,:,nsp), ng_p, &
+                             fxp(:,:,:,nsp),  fyp(:,:,:,nsp), fzp(:,:,:,nsp), ng_f, &
                              lo, hi, dx, dt)
        end select
     end do
@@ -104,8 +111,8 @@ contains
     call multifab_fill_boundary(rho)
 
     ! fill non-periodic domain boundary ghost cells
-    call multifab_physbc(rho,1,1,1,the_bc_tower%bc_tower_array(1))  
-    ! not sure about the first 1,1 entry, last 1 is for component
+    call multifab_physbc(rho,1,1,nsp,the_bc_tower%bc_tower_array(1))  
+    ! Amit: not sure about the first 1,1 entry. 
 
   end subroutine update_rho
 
@@ -157,4 +164,3 @@ contains
   end subroutine update_rho_3d
 
 end module advance_module
-

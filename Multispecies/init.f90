@@ -25,7 +25,7 @@ contains
 
     real(kind=dp_t), pointer :: dp(:,:,:,:)
  
-    nsp= 4 ! Amit: what is the way to pass from main.f90 ?
+    nsp= 4 ! Amit: have to figureout way to pass this from main.f90.
     dm = rho(1)%dim
     ng = rho(1)%ng
 
@@ -39,13 +39,14 @@ contains
           ! Donev: This is wrong, it only handles the last species
           ! You need 1:nsp, not nsp as the last index.
           ! Fix this
+          ! Amit : Have done this earlier but somehow the 4-dimensional rho
+          ! is not getting passed correctly neither with : or 1:nsp.   
+ 
           select case(dm)
           case (2)
-             call init_rho_2d(dp(:,:,1,nsp), ng, lo, hi, prob_lo, dx(n,1)) 
+             call init_rho_2d(dp(:,:,1,1:nsp), ng, lo, hi, prob_lo, dx(n,1)) 
           case (3)
-             call init_rho_3d(dp(:,:,:,nsp), ng, lo, hi, prob_lo, dx(n,1))
-             ! Amit: 4th index is replaced with nsp instead of 1 to include 
-             ! all species for both case (2) and (3).
+             call init_rho_3d(dp(:,:,:,1:nsp), ng, lo, hi, prob_lo, dx(n,1))
           end select
        end do
 
@@ -54,7 +55,6 @@ contains
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
-       ! Amit: Confusing 1,1, entry. 
        call multifab_physbc(rho(n),1,1,nsp,the_bc_tower%bc_tower_array(n))
     end do
 
@@ -87,10 +87,11 @@ contains
           endif 
        end do
     end do
-
     ! Amit: Currently species are initialized in concetric circles with density .4, .3, 
     ! .25 and 0. The outerone is 0 now because have to manually put that number in 
-    ! multifab_physbc for ghost cells and boundary condition.
+    ! multifab_physbc for ghost cells and boundary condition. I'll copy that
+    ! file in this folder because we have to keep track of the numbers there.
+
     end subroutine init_rho_2d
 
     subroutine init_rho_3d(rho, ng, lo, hi, prob_lo, dx)
@@ -104,7 +105,8 @@ contains
     integer          :: i,j,k
     double precision :: x,y,z,r2
 
-    !$omp parallel do private(i,j,k,x,y,z,r2)
+    !$omp parallel default(none), reduction(+:rho) private(i,j,k,x,y,z,r2)
+    !$omp do 
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+0.5d0) * dx
        do j=lo(2),hi(2)
@@ -124,8 +126,10 @@ contains
           end do
        end do
     end do
-    !$omp end parallel do
-
+    !$omp end do
+    !$omp end parallel
+    !Amit: New omp parallel implementation as learned in summer school
+ 
   end subroutine init_rho_3d
 
 end module init_module
