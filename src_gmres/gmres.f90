@@ -328,7 +328,7 @@ contains
 
           if (gmres_verbose .ge. 2) then
           if (parallel_IOProcessor()) then 
-             write ( *, '(2i4,a,100g17.9)' ) total_iter, vcycle_counter, ',  est. rel. resid. |Pr|/(Pr0,b)= ', &
+             write ( *, '(2i6,a,100g17.9)' ) total_iter, vcycle_counter, ',  est. rel. resid. |Pr|/(Pr0,b)= ', &
                 norm_resid_est/norm_init_resid, norm_resid_est/norm_pre_b
              if (gmres_verbose .ge. 3) then
                 ! Write the convergence information to files
