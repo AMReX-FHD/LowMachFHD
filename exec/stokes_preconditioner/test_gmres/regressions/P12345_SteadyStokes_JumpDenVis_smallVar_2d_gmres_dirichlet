@@ -117,7 +117,7 @@
   stag_mg_rel_tol = 1.d-12   ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.d-14     ! relative tolerance stopping criteria
+  gmres_rel_tol = 1.d-13     ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0      ! absolute tolerance stopping criteria
   gmres_verbose = 3         ! gmres verbosity
   gmres_max_outer = 100      ! max number of outer iterations
