@@ -38,7 +38,12 @@ subroutine main_driver()
   ! fix these later to be read in from inputs file
   integer :: nspecies, max_step
 
+  !=======================================================
+  ! Initialization
+  !=======================================================
+
   call probin_common_init()
+  !call probin_multispecies_init() ! Donev
 
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
@@ -49,8 +54,8 @@ subroutine main_driver()
   dm = dim_in
 
   ! fix these later to be read in from inputs file
-  nspecies = 4
-  max_step = 1000
+  nspecies = 4 ! Donev: Should be read from input file
+  max_step = 1000 ! Donev: Read from input file
 
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
@@ -59,6 +64,10 @@ subroutine main_driver()
   allocate(dx(nlevs,dm))
   allocate(rho(nlevs))
 
+  !=======================================================
+  ! Setup parallelization: Create boxes and layouts for multifabs
+  !=======================================================
+  
   ! tell mba how many levels and dmensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
 
@@ -127,12 +136,23 @@ subroutine main_driver()
   ! don't need this anymore - free up memory
   call destroy(mba)
 
+  !=======================================================
+  ! Setup boundary condition bc_tower
+  !=======================================================
+
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies)
+  ! Donev: Last argument to initialize_bc is the number of scalar variables
+  ! nscal=nspecies ! Number of scalars (maybe add temperature later)
+  !call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nscal)
   do n=1,nlevs
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
   end do
+
+  !=======================================================
+  ! Build multifabs for all the variables
+  !=======================================================
 
   ! build multifab with nspecies component and nspecies ghost cell
   ! Donev: Why nspecies ghost cell -- makes no sense, should be 1 ghost cell only
@@ -142,8 +162,11 @@ subroutine main_driver()
      call multifab_build(rho(n),mla%la(n),nspecies,1)
   end do
 
-  ! initialize sold = s^0 and mold = m^0
   call init_rho(rho,dx,prob_lo,the_bc_tower)
+
+  !=======================================================
+  ! Begin time stepping loop
+  !=======================================================
 
   istep = 0
   time = 0.d0
@@ -173,6 +196,10 @@ subroutine main_driver()
      end if
         
   end do
+
+  !=======================================================
+  ! Detroy multifabs and layouts
+  !=======================================================
 
   do n=1,nlevs
      call multifab_destroy(rho(n))

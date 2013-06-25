@@ -11,3 +11,8 @@
  bc_hi(1:2) = -1 -1
 
 /
+
+&probin_multispecies
+ nspecies = 4
+ !include_temperature = T ! T or F
+/

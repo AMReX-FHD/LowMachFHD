@@ -3,6 +3,12 @@ module init_module
   use multifab_module
   use define_bc_module
   use multifab_physbc_module
+  ! Donev: Variables you need here:
+  use probin_common_module
+  !use probin_multispecies_module
+  
+  ! Donev:
+  ! replace "double precision" with "real(dp_t)" everywhere in all codes
 
   implicit none
 
@@ -63,7 +69,8 @@ contains
   subroutine init_rho_2d(rho, ng, lo, hi, prob_lo, dx)
 
     integer          :: lo(2), hi(2), ng
-    double precision :: rho(lo(1)-ng:,lo(2)-ng:)
+    ! Donev: These are higher-dimensional arrays
+    double precision :: rho(lo(1)-ng:,lo(2)-ng:,:) ! Last dimension is 1:nspecies
     double precision :: prob_lo(2)
     double precision :: dx
  
@@ -71,6 +78,7 @@ contains
     integer          :: i,j
     double precision :: x,y,r2
 
+    ! Donev: You need to set values for rho(i,j,1:nspecies)
     do j=lo(2),hi(2)
        y = prob_lo(2) + (dble(j)+0.5d0) * dx
        do i=lo(1),hi(1)
@@ -97,7 +105,11 @@ contains
     subroutine init_rho_3d(rho, ng, lo, hi, prob_lo, dx)
 
     integer          :: lo(3), hi(3), ng
+    ! Donev: Make this a rank-4 array
     double precision :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)
+    ! Example:
+    ! real(dp_t) :: diff_coffs(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:,:) ! Last dimensions are (1:nspecies,1:nspecies)
+    ! You can use D = diff_coeffs(i,j,k,1:nspecies,1:nspecies)
     double precision :: prob_lo(3)
     double precision :: dx
  
