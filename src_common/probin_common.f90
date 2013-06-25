@@ -51,10 +51,11 @@ module probin_common_module
   !----------------------
   ! BC specifications:
   ! -1 = periodic
-  ! 16 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
-  ! 17 = no-slip wall      (Dir condition for normal vel; Dir velocity condition for trans vel)
-  ! 18 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
-  ! 19 = no-slip reservoir (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 100 = no-slip wall      (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 101 = no-slip reservoir (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! For a complete list see bc.f90
   namelist /probin_common/ bc_lo
   namelist /probin_common/ bc_hi
 
