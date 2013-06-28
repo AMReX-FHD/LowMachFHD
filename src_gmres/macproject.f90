@@ -252,7 +252,8 @@ contains
                                 abs_eps = abs_solver_eps, &
                                 verbose = mg_verbose, &
                                 cg_verbose = cg_verbose, &
-                                nodal = nodal_flags(rh(nlevs)))
+                                nodal = nodal_flags(rh(nlevs)), &
+                                fancy_bottom_type_in = 0)
 
             end if
 
