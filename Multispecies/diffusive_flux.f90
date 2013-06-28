@@ -74,10 +74,10 @@ contains
 
     integer          :: lo(2), hi(2), ng_p, ng_f
     ! Donev: These arrays need to be made one rank higher for multispecies
-    double precision ::   rho(lo(1)-ng_p:,lo(2)-ng_p:)
-    double precision :: fluxx(lo(1)-ng_f:,lo(2)-ng_f:)
-    double precision :: fluxy(lo(1)-ng_f:,lo(2)-ng_f:)
-    double precision :: dx
+    real(kind=dp_t) ::   rho(lo(1)-ng_p:,lo(2)-ng_p:)
+    real(kind=dp_t) :: fluxx(lo(1)-ng_f:,lo(2)-ng_f:)
+    real(kind=dp_t) :: fluxy(lo(1)-ng_f:,lo(2)-ng_f:)
+    real(kind=dp_t) :: dx
     integer          :: adv_bc(:,:)
 
     ! local variables
@@ -90,11 +90,11 @@ contains
                              lo, hi, dx, adv_bc)
 
     integer          :: lo(3), hi(3), ng_p, ng_f
-    double precision ::   rho(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-    double precision :: fluxx(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    double precision :: fluxy(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    double precision :: fluxz(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    double precision :: dx
+    real(kind=dp_t) ::   rho(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t) :: fluxx(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
+    real(kind=dp_t) :: fluxy(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
+    real(kind=dp_t) :: fluxz(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
+    real(kind=dp_t) :: dx
     integer          :: adv_bc(:,:)
 
     ! local variables
