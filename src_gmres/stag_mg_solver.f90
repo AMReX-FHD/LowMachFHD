@@ -11,7 +11,7 @@ module stag_mg_solver_module
                                   stag_mg_nsmooths_up, stag_mg_rel_tol, &
                                   stag_mg_smoother, stag_mg_verbosity, stag_mg_maxlevs, &
                                   stag_mg_minwidth
-  use probin_common_module, only: visc_type
+  use probin_common_module, only: visc_type, n_cells, max_grid_size
   use vcycle_counter_module
 
   implicit none
@@ -32,8 +32,8 @@ contains
   ! alpha_fc, phi_fc, and rhs_fc are face-centered
   ! beta_ed is nodal (2d) or edge-centered (3d)
   ! phi_fc must come in initialized to some value, preferably a reasonable guess
-  subroutine stag_mg_solver(mla,alpha_fc,beta_cc,beta_ed,gamma_cc,theta, &
-                            phi_fc,rhs_fc,dx,the_bc_tower)
+  recursive subroutine stag_mg_solver(mla,alpha_fc,beta_cc,beta_ed,gamma_cc,theta, &
+                                      phi_fc,rhs_fc,dx,the_bc_tower,do_fancy_bottom_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: alpha_fc(:,:) ! face-centered
@@ -44,6 +44,7 @@ contains
     type(multifab) , intent(in   ) ::   rhs_fc(:,:) ! face-centered
     real(kind=dp_t), intent(in   ) :: theta,dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    logical        , intent(in   ), optional :: do_fancy_bottom_in
 
     ! local variables
     integer :: dm, i, j, vcycle, m, n, nlevs_mg
@@ -75,6 +76,28 @@ contains
     logical :: nodal_temp(mla%dim)
 
     type(bc_tower) :: the_bc_tower_mg
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! fancy bottom solver stuff
+    logical :: do_fancy_bottom
+    type(ml_boxarray) :: mba_fancy
+    type(ml_layout) :: mla_fancy
+    type(multifab) :: alpha_fc_fancy(1,mla%dim)
+    type(multifab) :: beta_cc_fancy(1)
+    type(multifab), allocatable :: beta_ed_fancy(:,:)
+    type(multifab) :: gamma_cc_fancy(1)
+    type(multifab) :: phi_fc_fancy(1,mla%dim)
+    type(multifab) :: rhs_fc_fancy(1,mla%dim)
+    real(kind=dp_t) :: dx_fancy(1,mla%dim)
+    type(bc_tower) :: the_bc_tower_fancy
+    integer :: lo(mla%dim), hi(mla%dim)
+    type(box) :: bx
+
+    if (present(do_fancy_bottom_in)) then
+       do_fancy_bottom = do_fancy_bottom_in
+    else
+       do_fancy_bottom = .true.
+    end if
 
     if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
        print*,""
@@ -291,7 +314,7 @@ contains
        end do
 
        ! down the V-cycle
-       do n=1,nlevs_mg
+       do n=1,nlevs_mg-1
 
           ! print out residual
           if (stag_mg_verbosity .ge. 3) then
@@ -315,9 +338,6 @@ contains
              
           ! control to do a different number of smooths for the bottom solver
           nsmooths = stag_mg_nsmooths_down
-          if (n .eq. nlevs_mg) then
-             nsmooths = stag_mg_nsmooths_bottom
-          end if
 
           do m=1,nsmooths
 
@@ -359,6 +379,7 @@ contains
 
           end do ! end loop over nsmooths
 
+          !!!!!!!!!!!!!!!!!!!
           ! compute residual
 
           ! compute Lphi
@@ -391,20 +412,217 @@ contains
 
           end do
 
-          if (n .ne. nlevs_mg) then
+          ! restrict/coarsen residual and put it in rhs_fc
+          call stag_restriction(la_mg(n),Lphi_fc_mg(n,:),rhs_fc_mg(n+1,:))
 
-             ! restrict/coarsen residual and put it in rhs_fc
-             call stag_restriction(la_mg(n),Lphi_fc_mg(n,:),rhs_fc_mg(n+1,:))
-
-             do j=1,dm
-                ! set residual to zero on physical boundaries
-                call multifab_physbc_domainvel(rhs_fc_mg(n+1,j),vel_bc_comp+j-1, &
-                                               the_bc_tower_mg%bc_tower_array(n+1),dx_mg(n+1,:))
-             end do
-
-          end if
+          do j=1,dm
+             ! set residual to zero on physical boundaries
+             call multifab_physbc_domainvel(rhs_fc_mg(n+1,j),vel_bc_comp+j-1, &
+                                            the_bc_tower_mg%bc_tower_array(n+1),dx_mg(n+1,:))
+          end do
 
        end do ! end loop over nlevs_mg
+
+       ! bottom solve
+       n = nlevs_mg
+
+       if (do_fancy_bottom .and. all(n_cells(1:dm) / max_grid_size(1:dm) .ge. 2) ) then
+          
+          !!!!!!!!!!!!!!!!!!!!!!!
+          ! fancy bottom solver
+          ! puts the entire bottom solve on a single grid and continues to coarsen
+
+          ! tell mba how many levels and dmensionality of problem
+          call ml_boxarray_build_n(mba_fancy,1,mla%dim)
+
+          ! set dx equal to dx of the bottom solve
+          dx_fancy(1,:) = dx_mg(nlevs_mg,:)
+          
+          ! create a box containing number of cells of current bottom solve
+          lo(1:dm) = 0
+          hi(1:dm) = 2 * (n_cells(1:dm) / max_grid_size(1:dm))
+          bx = make_box(lo,hi)
+
+          ! tell mba about the problem domain
+          mba_fancy%pd(1) = bx
+
+          ! initialize the boxarray at level 1 to be one single box
+          call boxarray_build_bx(mba_fancy%bas(1),bx)
+
+          ! build the ml_layout, mla_fancy
+          call ml_layout_build(mla_fancy,mba_fancy,mla%pmask)
+
+          ! don't need this anymore - free up memory
+          call destroy(mba_fancy)
+
+          ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
+          call initialize_bc(the_bc_tower_fancy,1,dm,mla_fancy%pmask,2)
+
+          ! define level 1 of the_bc_tower
+          call bc_tower_level_build(the_bc_tower_fancy,1,mla_fancy%la(1))
+          
+          call multifab_build(beta_cc_fancy(1),mla_fancy%la(1),1,1)
+          call multifab_build(gamma_cc_fancy(1),mla_fancy%la(1),1,1)
+          call multifab_copy_c(beta_cc_fancy(1),1,beta_cc_mg(nlevs_mg),1,1,0)
+          call multifab_copy_c(gamma_cc_fancy(1),1,gamma_cc_mg(nlevs_mg),1,1,0)
+
+          do i=1,dm
+             call multifab_build_edge(alpha_fc_fancy(1,i),mla_fancy%la(1),1,0,i)
+             call multifab_build_edge(  rhs_fc_fancy(1,i),mla_fancy%la(1),1,0,i)
+             call multifab_build_edge(  phi_fc_fancy(1,i),mla_fancy%la(1),1,0,i)
+
+             call multifab_copy_c(alpha_fc_fancy(1,i),1,alpha_fc_mg(nlevs_mg,i),1,1,0)
+             call multifab_copy_c(rhs_fc_fancy(1,i),1,rhs_fc_mg(nlevs_mg,i),1,1,0)
+             call multifab_copy_c(phi_fc_fancy(1,i),1,phi_fc_mg(nlevs_mg,i),1,1,0)
+          end do
+
+          if (dm .eq. 2) then
+             allocate( beta_ed_fancy(1,1))  ! nodal
+             call multifab_build_nodal(beta_ed_fancy(1,1),mla_fancy%la(1),1,0)
+             call multifab_copy_c(beta_ed_fancy(1,1),1,beta_ed_mg(nlevs_mg,1),1,1,0)
+          else
+             allocate( beta_ed_fancy(1,3))  ! edge-based
+             nodal_temp(1) = .true.
+             nodal_temp(2) = .true.
+             nodal_temp(3) = .false.
+             call multifab_build(beta_ed_fancy(1,1),mla_fancy%la(1),1,0,nodal_temp)
+             call multifab_copy_c(beta_ed_fancy(1,1),1,beta_ed_mg(nlevs_mg,1),1,1,0)
+             nodal_temp(1) = .true.
+             nodal_temp(2) = .false.
+             nodal_temp(3) = .true.
+             call multifab_build(beta_ed_fancy(1,2),mla_fancy%la(1),1,0,nodal_temp)
+             call multifab_copy_c(beta_ed_fancy(1,2),1,beta_ed_mg(nlevs_mg,2),1,1,0)
+             nodal_temp(1) = .false.
+             nodal_temp(2) = .true.
+             nodal_temp(3) = .true.
+             call multifab_build(beta_ed_fancy(1,3),mla_fancy%la(1),1,0,nodal_temp)
+             call multifab_copy_c(beta_ed_fancy(1,3),1,beta_ed_mg(nlevs_mg,3),1,1,0)
+          end if
+
+          call stag_mg_solver(mla_fancy,alpha_fc_fancy,beta_cc_fancy,beta_ed_fancy, &
+                              gamma_cc_fancy,theta,phi_fc_fancy,rhs_fc_fancy,dx_fancy, &
+                              the_bc_tower_fancy,.false.)
+
+          call multifab_destroy(beta_cc_fancy(1))
+          call multifab_destroy(gamma_cc_fancy(1))
+          do i=1,dm
+             call multifab_destroy(alpha_fc_fancy(1,i))
+             call multifab_destroy(rhs_fc_fancy(1,i))
+             call multifab_destroy(phi_fc_fancy(1,i))
+          end do
+          if (dm .eq. 2) then
+             call multifab_destroy(beta_ed_fancy(1,1))
+          else
+             call multifab_destroy(beta_ed_fancy(1,1))
+             call multifab_destroy(beta_ed_fancy(1,2))
+             call multifab_destroy(beta_ed_fancy(1,3))
+          end if
+
+          call destroy(mla_fancy)
+          call bc_tower_destroy(the_bc_tower_fancy)
+
+       else
+
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          ! just do smooths at the current level as the bottom solve
+
+          ! print out residual
+          if (stag_mg_verbosity .ge. 3) then
+
+             ! compute Lphi
+             call stag_applyop_level(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
+                                     Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
+                                     beta_cc_mg(n),beta_ed_mg(n,:),gamma_cc_mg(n),dx_mg(n,:))
+
+             do j=1,dm
+                ! compute Lphi - rhs, and report residual
+                call multifab_sub_sub_c(Lphi_fc_mg(n,j),1,rhs_fc_mg(n,j),1,1,0)
+                resid_temp = multifab_norm_inf_c(Lphi_fc_mg(n,j),1,1)
+                if (parallel_IOProcessor()) then
+                   print*,"Residual for comp",j,"before    smooths at level",n,resid_temp
+                end if
+                
+             end do
+             
+          end if
+             
+          ! control to do a different number of smooths for the bottom solver
+          nsmooths = stag_mg_nsmooths_bottom
+
+          do m=1,nsmooths
+
+             ! do the smooths
+             do color=color_start,color_end
+
+                ! the form of weighted Jacobi we are using is
+                ! phi^{k+1} = phi^k + omega*D^{-1}*(rhs-Lphi)
+                ! where D is the diagonal matrix containing the diagonal elements of L
+
+                ! compute Lphi
+                call stag_applyop_level(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
+                                        Lphi_fc_mg(n,:), &
+                                        alpha_fc_mg(n,:),beta_cc_mg(n),beta_ed_mg(n,:), &
+                                        gamma_cc_mg(n),dx_mg(n,:),color)
+
+                ! update phi = phi + omega*D^{-1}*(rhs-Lphi)
+                call stag_mg_update(la_mg(n),phi_fc_mg(n,:),rhs_fc_mg(n,:), &
+                                    Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
+                                    beta_cc_mg(n),beta_ed_mg(n,:), &
+                                    gamma_cc_mg(n),dx_mg(n,:),color)
+
+                do j=1,dm
+                   
+                   ! set values on physical boundaries
+                   call multifab_physbc_domainvel(phi_fc_mg(n,j),vel_bc_comp+j-1, &
+                                                  the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+                   
+                   ! fill periodic ghost cells
+                   call multifab_fill_boundary(phi_fc_mg(n,j))
+
+                   ! fill physical ghost cells
+                   call multifab_physbc_macvel(phi_fc_mg(n,j),vel_bc_comp+j-1, &
+                                               the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+
+                end do
+
+             end do ! end loop over colors
+
+          end do ! end loop over nsmooths
+
+          !!!!!!!!!!!!!!!!!!!
+          ! compute residual
+
+          ! compute Lphi
+          call stag_applyop_level(la_mg(n),the_bc_tower_mg%bc_tower_array(n),phi_fc_mg(n,:), &
+                                  Lphi_fc_mg(n,:),alpha_fc_mg(n,:), &
+                                  beta_cc_mg(n),beta_ed_mg(n,:),gamma_cc_mg(n),dx_mg(n,:))
+
+          do j=1,dm
+
+             ! compute Lphi - rhs, and then multiply by -1
+             call multifab_sub_sub_c(Lphi_fc_mg(n,j),1,rhs_fc_mg(n,j),1,1,0)
+             call multifab_mult_mult_s_c(Lphi_fc_mg(n,j),1,-1.d0,1,0)
+             if (stag_mg_verbosity .ge. 3) then
+                resid_temp = multifab_norm_inf_c(Lphi_fc_mg(n,j),1,1)
+                if (parallel_IOProcessor()) then
+                   print*,"Residual for comp",j,"after all smooths at level",n,resid_temp
+                end if
+             end if
+
+             ! set values on physical boundaries
+             call multifab_physbc_domainvel(Lphi_fc_mg(n,j),vel_bc_comp+j-1, &
+                                            the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+
+             ! fill periodic ghost cells
+             call multifab_fill_boundary(Lphi_fc_mg(n,j))
+
+             ! fill physical ghost cells
+             call multifab_physbc_macvel(Lphi_fc_mg(n,j),vel_bc_comp+j-1, &
+                                         the_bc_tower_mg%bc_tower_array(n),dx_mg(n,:))
+
+          end do
+
+       end if
 
        ! up the V-cycle
        do n=nlevs_mg-1,1,-1
