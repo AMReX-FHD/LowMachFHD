@@ -174,8 +174,8 @@ contains
        call destroy(ba)
 
        ! build multifabs used in multigrid coarsening
-       call multifab_build( beta_cc_mg(n),la_mg(n),1,1)
-       call multifab_build(gamma_cc_mg(n),la_mg(n),1,1)
+       call multifab_build( beta_cc_mg(n),la_mg(n),1,0)
+       call multifab_build(gamma_cc_mg(n),la_mg(n),1,0)
 
        do i=1,dm
           call multifab_build_edge(alpha_fc_mg(n,i),la_mg(n),1,0,i)
@@ -208,13 +208,13 @@ contains
     end do
 
     ! copy level 1 coefficients into mg array of coefficients
-    call multifab_copy_c(beta_cc_mg(1),1,beta_cc(1),1,1,1)
+    call multifab_copy_c(beta_cc_mg(1),1,beta_cc(1),1,1,0)
     call multifab_copy_c(beta_ed_mg(1,1),1,beta_ed(1,1),1,1,0)
     if (dm .eq. 3) then
        call multifab_copy_c(beta_ed_mg(1,2),1,beta_ed(1,2),1,1,0)
        call multifab_copy_c(beta_ed_mg(1,3),1,beta_ed(1,3),1,1,0)
     end if
-    call multifab_copy_c(gamma_cc_mg(1),1,gamma_cc(1),1,1,1)
+    call multifab_copy_c(gamma_cc_mg(1),1,gamma_cc(1),1,1,0)
     do i=1,dm
        call multifab_copy_c(alpha_fc_mg(1,i),1,alpha_fc(1,i),1,1,0)
        ! multiply alpha_fc_mg by theta
@@ -461,8 +461,8 @@ contains
           ! define level 1 of the_bc_tower
           call bc_tower_level_build(the_bc_tower_fancy,1,mla_fancy%la(1))
           
-          call multifab_build(beta_cc_fancy(1),mla_fancy%la(1),1,1)
-          call multifab_build(gamma_cc_fancy(1),mla_fancy%la(1),1,1)
+          call multifab_build(beta_cc_fancy(1),mla_fancy%la(1),1,0)
+          call multifab_build(gamma_cc_fancy(1),mla_fancy%la(1),1,0)
           call multifab_copy_c(beta_cc_fancy(1),1,beta_cc_mg(nlevs_mg),1,1,0)
           call multifab_copy_c(gamma_cc_fancy(1),1,gamma_cc_mg(nlevs_mg),1,1,0)
 
@@ -900,10 +900,6 @@ contains
       dm = get_dim(la)
 
       ng_c = phi_c%ng
-
-      if (ng_c .ne. 1) then
-         call bl_error("cc_restriction assumes only 1 ghost cell for non-periodic boundary conditions")
-      end if
 
       do i=1,nfabs(phi_c)
          acp => dataptr(phi_c, i)
