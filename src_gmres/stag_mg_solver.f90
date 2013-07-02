@@ -49,6 +49,7 @@ contains
     ! local variables
     integer :: dm, i, j, vcycle, m, n, nlevs_mg
     integer :: color,color_start,color_end,nsmooths
+    integer :: vcycle_counter_temp
 
     ! stores initial residual and current residual
     real(kind=dp_t) :: resid0(mla%dim),resid(mla%dim),resid_temp,resid0_l2(mla%dim),resid_l2(mla%dim),temp
@@ -174,8 +175,8 @@ contains
        call destroy(ba)
 
        ! build multifabs used in multigrid coarsening
-       call multifab_build( beta_cc_mg(n),la_mg(n),1,0)
-       call multifab_build(gamma_cc_mg(n),la_mg(n),1,0)
+       call multifab_build( beta_cc_mg(n),la_mg(n),1,1)
+       call multifab_build(gamma_cc_mg(n),la_mg(n),1,1)
 
        do i=1,dm
           call multifab_build_edge(alpha_fc_mg(n,i),la_mg(n),1,0,i)
@@ -208,13 +209,13 @@ contains
     end do
 
     ! copy level 1 coefficients into mg array of coefficients
-    call multifab_copy_c(beta_cc_mg(1),1,beta_cc(1),1,1,0)
+    call multifab_copy_c(beta_cc_mg(1),1,beta_cc(1),1,1,1)
     call multifab_copy_c(beta_ed_mg(1,1),1,beta_ed(1,1),1,1,0)
     if (dm .eq. 3) then
        call multifab_copy_c(beta_ed_mg(1,2),1,beta_ed(1,2),1,1,0)
        call multifab_copy_c(beta_ed_mg(1,3),1,beta_ed(1,3),1,1,0)
     end if
-    call multifab_copy_c(gamma_cc_mg(1),1,gamma_cc(1),1,1,0)
+    call multifab_copy_c(gamma_cc_mg(1),1,gamma_cc(1),1,1,1)
     do i=1,dm
        call multifab_copy_c(alpha_fc_mg(1,i),1,alpha_fc(1,i),1,1,0)
        ! multiply alpha_fc_mg by theta
@@ -461,10 +462,12 @@ contains
           ! define level 1 of the_bc_tower
           call bc_tower_level_build(the_bc_tower_fancy,1,mla_fancy%la(1))
           
-          call multifab_build(beta_cc_fancy(1),mla_fancy%la(1),1,0)
-          call multifab_build(gamma_cc_fancy(1),mla_fancy%la(1),1,0)
+          call multifab_build(beta_cc_fancy(1),mla_fancy%la(1),1,1)
+          call multifab_build(gamma_cc_fancy(1),mla_fancy%la(1),1,1)
           call multifab_copy_c(beta_cc_fancy(1),1,beta_cc_mg(nlevs_mg),1,1,0)
           call multifab_copy_c(gamma_cc_fancy(1),1,gamma_cc_mg(nlevs_mg),1,1,0)
+          call multifab_fill_boundary(beta_cc_fancy(1))
+          call multifab_fill_boundary(gamma_cc_fancy(1))
 
           do i=1,dm
              call multifab_build_edge(alpha_fc_fancy(1,i),mla_fancy%la(1),1,0,i)
@@ -499,9 +502,17 @@ contains
              call multifab_copy_c(beta_ed_fancy(1,3),1,beta_ed_mg(nlevs_mg,3),1,1,0)
           end if
 
+          vcycle_counter_temp = vcycle_counter
+
           call stag_mg_solver(mla_fancy,alpha_fc_fancy,beta_cc_fancy,beta_ed_fancy, &
                               gamma_cc_fancy,theta,phi_fc_fancy,rhs_fc_fancy,dx_fancy, &
                               the_bc_tower_fancy,.false.)
+
+          vcycle_counter = vcycle_counter_temp
+
+          do i=1,dm
+             call multifab_copy_c(phi_fc_mg(nlevs_mg,i),1,phi_fc_fancy(1,i),1,1,0)
+          end do
 
           call multifab_destroy(beta_cc_fancy(1))
           call multifab_destroy(gamma_cc_fancy(1))
