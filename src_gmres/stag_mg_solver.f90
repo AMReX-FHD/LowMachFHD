@@ -426,7 +426,7 @@ contains
        ! bottom solve
        n = nlevs_mg
 
-       if (.false. .and. do_fancy_bottom .and. all(n_cells(1:dm) / max_grid_size(1:dm) .ge. 2) ) then
+       if (do_fancy_bottom .and. all(n_cells(1:dm) / max_grid_size(1:dm) .ge. 2) ) then
           
           !!!!!!!!!!!!!!!!!!!!!!!
           ! fancy bottom solver
@@ -440,7 +440,7 @@ contains
           
           ! create a box containing number of cells of current bottom solve
           lo(1:dm) = 0
-          hi(1:dm) = 2 * (n_cells(1:dm) / max_grid_size(1:dm))
+          hi(1:dm) = 2 * (n_cells(1:dm) / max_grid_size(1:dm)) - 1
           bx = make_box(lo,hi)
 
           ! tell mba about the problem domain
