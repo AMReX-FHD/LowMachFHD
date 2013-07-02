@@ -14,7 +14,7 @@ module probin_common_module
   !------------------------------------------------------------- 
   integer,save    :: dim_in,plot_int,prob_type
   real(dp_t),save :: fixed_dt
-  integer,save    :: bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed !,visc_type
+  integer,save    :: bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed,max_step !,visc_type
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
   !real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
@@ -34,6 +34,7 @@ module probin_common_module
   namelist /probin_common/ fixed_dt      ! time step
   namelist /probin_common/ plot_int      ! Interval for writing a plotfile (for visit/amrvis)
   namelist /probin_common/ prob_type     ! sets scalars, m, coefficients (see init.f90)
+  namelist /probin_common/ max_step      ! maximum steps the numerics will run
 
   ! Algorithm control / selection
   !----------------------
@@ -116,6 +117,7 @@ contains
     plot_int = 0
     prob_type = 1
     seed = 1
+    max_step = 1000
     !visc_type = 1
     bc_lo(1:MAX_SPACEDIM) = -1 !PERIODIC  !Amit:changes
     bc_hi(1:MAX_SPACEDIM) = 1 !PERIODIC
@@ -219,6 +221,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) seed
+
+       case ('--max_step')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) max_step
 
        !case ('--visc_type')
        !   farg = farg + 1

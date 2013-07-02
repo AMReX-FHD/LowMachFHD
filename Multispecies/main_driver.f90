@@ -9,9 +9,12 @@ subroutine main_driver()
   use advance_module
   use define_bc_module
   use bc_module
+  ! Amit: why do we need this only thing? 
   use probin_common_module , only: probin_common_init, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
-                                   bc_lo, bc_hi, fixed_dt, plot_int
+                                   bc_lo, bc_hi, fixed_dt, plot_int, & 
+                                   max_step
+  use probin_multispecies_module
 
   implicit none
 
@@ -43,7 +46,7 @@ subroutine main_driver()
   !=======================================================
 
   call probin_common_init()
-  !call probin_multispecies_init() ! Donev
+  call probin_multispecies_init() 
 
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
@@ -53,9 +56,9 @@ subroutine main_driver()
 
   dm = dim_in
 
-  ! fix these later to be read in from inputs file
+  ! Amit: again, how exactly these numbers should be passed ? 
   nspecies = 4 ! Donev: Should be read from input file
-  max_step = 1000 ! Donev: Read from input file
+  max_step = 1000 ! Amit:included in probin_common but how to pass?
 
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
@@ -141,10 +144,11 @@ subroutine main_driver()
   !=======================================================
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies)
   ! Donev: Last argument to initialize_bc is the number of scalar variables
   ! nscal=nspecies ! Number of scalars (maybe add temperature later)
   !call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nscal)
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies)
+
   do n=1,nlevs
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
@@ -154,10 +158,7 @@ subroutine main_driver()
   ! Build multifabs for all the variables
   !=======================================================
 
-  ! build multifab with nspecies component and nspecies ghost cell
-  ! Donev: Why nspecies ghost cell -- makes no sense, should be 1 ghost cell only
-  ! Amit : I thought each component need 1 ghost cell and not same ghost cell
-  ! shared between different species.
+  ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),nspecies,1)
   end do
@@ -198,7 +199,7 @@ subroutine main_driver()
   end do
 
   !=======================================================
-  ! Detroy multifabs and layouts
+  ! Destroy multifabs and layouts
   !=======================================================
 
   do n=1,nlevs

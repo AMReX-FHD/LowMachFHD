@@ -6,6 +6,8 @@ module advance_module
   use multifab_physbc_module
   use div_and_grad_module
   use diffusive_flux_module
+  use probin_multispecies_module
+  use ml_layout_module
 
   implicit none
 
@@ -17,19 +19,21 @@ contains
   
   subroutine advance(rho,dx,dt,the_bc_tower)
 
+    type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables
-    integer i, dm, nsp, n, nlevs
+    integer i, nspecies, dm, n, nlevs
 
     ! an array of multifabs; one for each direction
-    ! Amit : Fluxes don't need to remember levels
-    type(multifab) :: flux(rho(1)%dim) !, nlevs) 
-
-    nsp=4            ! number of species
+    type(multifab) :: flux(rho(1)%dim) 
+    type(multifab) :: div    
+ 
+    !Amit: nspecies can be passed from mla ? 
+    nspecies = mla%nspecies  
     dm = rho(1)%dim  ! dimensionality
 
     nlevs = size(rho,1)    
@@ -38,14 +42,19 @@ contains
     do n=1,nlevs
        do i=1,dm
           ! flux(i) has one component, zero ghost cells, and is nodal in direction i
-          call multifab_build_edge(flux(i),rho(1)%la,nsp,0,i)
+          call multifab_build_edge(flux(i),rho(1)%la,nspecies,0,i)
        end do
 
-       ! compute the face-centered gradients in each direction
-       call diffusive_flux(rho(n),flux,dx(n,1),the_bc_tower)
+       ! compute the face-centered flux in each direction
+       ! Amit: dx(n,1:dm) ??
+       call diffusive_flux(rho(n),flux,dx(n,1:dm),the_bc_tower)
     
+       ! compute div of the flux 
+       call compute_div(rho(n),flux,div,dx(n,1:dm),1,1,nspecies)
+       
        ! update rho using forward Euler discretization
-       call update_rho(rho(n),flux,dx(n,1),dt,the_bc_tower)
+       !call update_rho(rho(n),flux,dx(n,1),dt,the_bc_tower)
+       call update_rho(rho(n),div,dt,the_bc_tower)
 
        ! destroy the multifab to prevent leakage in memory
        do i=1,dm
@@ -55,24 +64,21 @@ contains
 
   end subroutine advance
 
-  subroutine update_rho(rho,flux,dx,dt,the_bc_tower)
+  subroutine update_rho(rho,div,dt,the_bc_tower)
 
     type(multifab) , intent(inout) :: rho
-    type(multifab) , intent(in   ) :: flux(:)
-    real(kind=dp_t), intent(in   ) :: dx
+    type(multifab) , intent(in   ) :: div
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables
     integer :: lo(rho%dim), hi(rho%dim)
-    integer :: dm, ng_p, ng_f, i, nsp
+    integer :: dm, ng_p, ng_f, i, nspecies
 
-    real(kind=dp_t), pointer ::  pp(:,:,:,:)
-    real(kind=dp_t), pointer :: fxp(:,:,:,:)
-    real(kind=dp_t), pointer :: fyp(:,:,:,:)
-    real(kind=dp_t), pointer :: fzp(:,:,:,:)
+    real(kind=dp_t), pointer ::   pp(:,:,:,:)
+    real(kind=dp_t), pointer :: divp(:,:,:,:)
 
-    nsp  = 4
+    nspecies  = 4 ! passing nspecies to this subroutine? 
     dm   = rho%dim
     ng_p = rho%ng
     ng_f = flux(1)%ng
@@ -86,23 +92,21 @@ contains
     ! Note: Start with component 1 in rho and fluxdiv, copy nspecies components
     ! or, I think this also works
     ! call multifab_plus_plus(rho,fluxdiv)
+    ! Amit: This we have to do within div_and_grad routine?
 
     do i=1,nfabs(rho)
        pp  => dataptr(rho,i)
-       fxp => dataptr(flux(1),i)
-       fyp => dataptr(flux(2),i)
+       divp => dataptr(div,i)
        lo = lwb(get_box(rho,i))
        hi = upb(get_box(rho,i))
        select case(dm)
        case (2)
-          call update_rho_2d(pp(:,:,1,nsp), ng_p, &
-                             fxp(:,:,1,nsp),  fyp(:,:,1,nsp), ng_f, &
-                             lo, hi, dx, dt)
+          call update_rho_2d(pp(:,:,1,nspecies), ng_p, &
+                             divp(:,:,1,nspecies), lo, hi, dt)
        case (3)
           fzp => dataptr(flux(3),i)
-          call update_rho_3d(pp(:,:,:,nsp), ng_p, &
-                             fxp(:,:,:,nsp),  fyp(:,:,:,nsp), fzp(:,:,:,nsp), ng_f, &
-                             lo, hi, dx, dt)
+          call update_rho_3d(pp(:,:,:,nspecies), ng_p, &
+                             divp(:,:,:,nspecies), lo, hi, dt)
        end select
     end do
     
@@ -111,55 +115,29 @@ contains
     call multifab_fill_boundary(rho)
 
     ! fill non-periodic domain boundary ghost cells
-    call multifab_physbc(rho,1,1,nsp,the_bc_tower%bc_tower_array(1))  
-    ! Amit: not sure about the first 1,1 entry. 
+    call multifab_physbc(rho,1,1,nspecies,the_bc_tower%bc_tower_array(1))  
 
   end subroutine update_rho
 
-  subroutine update_rho_2d(rho, ng_p, fluxx, fluxy, ng_f, lo, hi, dx, dt)
+  subroutine update_rho_2d(rho, ng_p, divp, lo, hi, dt)
 
-    integer          :: lo(2), hi(2), ng_p, ng_f
-    real(kind=dp_t) ::   rho(lo(1)-ng_p:,lo(2)-ng_p:)
-    real(kind=dp_t) :: fluxx(lo(1)-ng_f:,lo(2)-ng_f:)
-    real(kind=dp_t) :: fluxy(lo(1)-ng_f:,lo(2)-ng_f:)
-    real(kind=dp_t) :: dx, dt
+    integer          :: lo(2), hi(2), ng_p
+    real(kind=dp_t) ::  rho(lo(1)-ng_p:,lo(2)-ng_p:)
+    real(kind=dp_t) :: divp(lo(1)-ng_p:,lo(2)-ng_p:)
+    real(kind=dp_t) :: dt
 
-    ! local variables
-    integer i,j
-
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-          rho(i,j) = rho(i,j) + dt * &
-               ( fluxx(i+1,j)-fluxx(i,j) + fluxy(i,j+1)-fluxy(i,j) ) / dx
-       end do
-    end do
+    rho(:,:) = rho(:,:) + dt * divp(:,:) 
 
   end subroutine update_rho_2d
 
-  subroutine update_rho_3d(rho, ng_p, fluxx, fluxy, fluxz, ng_f, lo, hi, dx, dt)
+  subroutine update_rho_3d(rho, ng_p, divp, lo, hi, dt)
 
-    integer          :: lo(3), hi(3), ng_p, ng_f
-    real(kind=dp_t) ::   rho(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-    real(kind=dp_t) :: fluxx(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    real(kind=dp_t) :: fluxy(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    real(kind=dp_t) :: fluxz(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    real(kind=dp_t) :: dx, dt
+    integer          :: lo(3), hi(3), ng_p
+    real(kind=dp_t) ::  rho(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t) :: divp(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t) :: dt
 
-    ! local variables
-    integer i,j,k
-
-    !$omp parallel do private(i,j,k)
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-             rho(i,j,k) = rho(i,j,k) + dt * &
-                  ( fluxx(i+1,j,k)-fluxx(i,j,k) &
-                   +fluxy(i,j+1,k)-fluxy(i,j,k) &
-                   +fluxz(i,j,k+1)-fluxz(i,j,k) ) / dx
-          end do
-       end do
-    end do
-    !$omp end parallel do
+    rho(:,:,:) = rho(:,:,:) + dt * divp(:,:,:)
 
   end subroutine update_rho_3d
 

@@ -16,7 +16,7 @@ contains
   
   subroutine init_rho(rho,dx,prob_lo,the_bc_tower)
 
-    type(multifab) , intent(inout) :: rho(:) !1st=nlevs, 2nd=nspecies 
+    type(multifab) , intent(inout) :: rho(:)   !1st=nlevs 
     real(kind=dp_t), intent(in   ) :: dx(:,:)  !1st=nlevs, 2nd=dim         
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim)
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -27,7 +27,7 @@ contains
 
     real(kind=dp_t), pointer :: dp(:,:,:,:)
  
-    ! Amit: how do i populate nspecies using probin_multispecies_module ?
+    ! Amit: how to populate nspecies using probin_multispecies_module, call?
     !nspecies= xxxxxx%nspecies 
     dm = rho(1)%dim
     ng = rho(1)%ng
