@@ -426,7 +426,7 @@ contains
        ! bottom solve
        n = nlevs_mg
 
-       if (do_fancy_bottom .and. all(n_cells(1:dm) / max_grid_size(1:dm) .ge. 2) ) then
+       if (.false. .and. do_fancy_bottom .and. all(n_cells(1:dm) / max_grid_size(1:dm) .ge. 2) ) then
           
           !!!!!!!!!!!!!!!!!!!!!!!
           ! fancy bottom solver
