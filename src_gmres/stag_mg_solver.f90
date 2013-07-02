@@ -503,6 +503,10 @@ contains
                               gamma_cc_fancy,theta,phi_fc_fancy,rhs_fc_fancy,dx_fancy, &
                               the_bc_tower_fancy,.false.)
 
+          do i=1,dm
+             call multifab_copy_c(phi_fc_mg(nlevs_mg,i),1,phi_fc_fancy(1,i),1,1,0)
+          end do
+
           call multifab_destroy(beta_cc_fancy(1))
           call multifab_destroy(gamma_cc_fancy(1))
           do i=1,dm
