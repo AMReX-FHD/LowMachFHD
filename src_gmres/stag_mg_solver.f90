@@ -49,6 +49,7 @@ contains
     ! local variables
     integer :: dm, i, j, vcycle, m, n, nlevs_mg
     integer :: color,color_start,color_end,nsmooths
+    integer :: vcycle_counter_temp
 
     ! stores initial residual and current residual
     real(kind=dp_t) :: resid0(mla%dim),resid(mla%dim),resid_temp,resid0_l2(mla%dim),resid_l2(mla%dim),temp
@@ -501,9 +502,13 @@ contains
              call multifab_copy_c(beta_ed_fancy(1,3),1,beta_ed_mg(nlevs_mg,3),1,1,0)
           end if
 
+          vcycle_counter_temp = vcycle_counter
+
           call stag_mg_solver(mla_fancy,alpha_fc_fancy,beta_cc_fancy,beta_ed_fancy, &
                               gamma_cc_fancy,theta,phi_fc_fancy,rhs_fc_fancy,dx_fancy, &
                               the_bc_tower_fancy,.false.)
+
+          vcycle_counter = vcycle_counter_temp
 
           do i=1,dm
              call multifab_copy_c(phi_fc_mg(nlevs_mg,i),1,phi_fc_fancy(1,i),1,1,0)
