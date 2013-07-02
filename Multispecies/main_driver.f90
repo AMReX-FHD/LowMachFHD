@@ -9,11 +9,7 @@ subroutine main_driver()
   use advance_module
   use define_bc_module
   use bc_module
-  ! Amit: why do we need this only thing? 
-  use probin_common_module , only: probin_common_init, dim_in, n_cells, &
-                                   prob_lo, prob_hi, max_grid_size, &
-                                   bc_lo, bc_hi, fixed_dt, plot_int, & 
-                                   max_step
+  use probin_common_module
   use probin_multispecies_module
 
   implicit none
@@ -38,9 +34,6 @@ subroutine main_driver()
 
   type(multifab), allocatable :: rho(:)
 
-  ! fix these later to be read in from inputs file
-  integer :: nspecies, max_step
-
   !=======================================================
   ! Initialization
   !=======================================================
@@ -55,10 +48,6 @@ subroutine main_driver()
   nlevs = 1
 
   dm = dim_in
-
-  ! Amit: again, how exactly these numbers should be passed ? 
-  nspecies = 4 ! Donev: Should be read from input file
-  max_step = 1000 ! Amit:included in probin_common but how to pass?
 
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))

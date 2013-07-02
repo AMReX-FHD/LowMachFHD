@@ -17,49 +17,48 @@ module advance_module
 
 contains
   
-  subroutine advance(rho,dx,dt,the_bc_tower)
+  subroutine advance(rho,dx,dt,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt
-    type(bc_tower) , intent(in   ) :: the_bc_tower
+    type(bc_level) , intent(in   ) :: the_bc_level
 
     ! local variables
-    integer i, nspecies, dm, n, nlevs
+    integer i, dm, n, nlevs
 
     ! an array of multifabs; one for each direction
-    type(multifab) :: flux(rho(1)%dim) 
-    type(multifab) :: div    
+    type(multifab) :: flux(mla%nlevel,mla%dim)
+    type(multifab) :: fluxdiv(mla%nlevel)
  
-    !Amit: nspecies can be passed from mla ? 
-    nspecies = mla%nspecies  
-    dm = rho(1)%dim  ! dimensionality
-
-    nlevs = size(rho,1)    
+    dm = mla%dim  ! dimensionality
+    nlevs = mla%nlevel  ! number of levels 
 
     ! build the flux(:) multifabs
     do n=1,nlevs
+       call multifab_build(fluxdiv(n),mla%la(n),nspecies,0)
        do i=1,dm
           ! flux(i) has one component, zero ghost cells, and is nodal in direction i
-          call multifab_build_edge(flux(i),rho(1)%la,nspecies,0,i)
+          call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
        end do
-
-       ! compute the face-centered flux in each direction
-       ! Amit: dx(n,1:dm) ??
-       call diffusive_flux(rho(n),flux,dx(n,1:dm),the_bc_tower)
+    end do   
     
-       ! compute div of the flux 
-       call compute_div(rho(n),flux,div,dx(n,1:dm),1,1,nspecies)
+    ! Donev: Fix bc_tower vs bc_level
        
-       ! update rho using forward Euler discretization
-       !call update_rho(rho(n),flux,dx(n,1),dt,the_bc_tower)
-       call update_rho(rho(n),div,dt,the_bc_tower)
+    ! compute the face-centered flux in each direction
+    call diffusive_flux(rho,flux,dx,the_bc_tower)
 
-       ! destroy the multifab to prevent leakage in memory
-       do i=1,dm
-          call multifab_destroy(flux(i))
-       end do
+    ! compute div of the flux 
+    call compute_div(rho(n),flux,div,dx(n,1:dm),1,1,nspecies)
+
+    ! update rho using forward Euler discretization
+    !call update_rho(rho(n),flux,dx(n,1),dt,the_bc_tower)
+    call update_rho(rho(n),div,dt,the_bc_tower)
+
+    ! destroy the multifab to prevent leakage in memory
+    do i=1,dm
+       call multifab_destroy(flux(i))
     end do
 
   end subroutine advance
