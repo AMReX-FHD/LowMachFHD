@@ -99,7 +99,6 @@
   ! Staggered multigrid solver parameters
   stag_mg_verbosity = 0        ! verbosity
   stag_mg_max_vcycles = 1      ! max number of v-cycles
-  stag_mg_maxlevs = 100        ! max number of multigrid levels
   stag_mg_minwidth = 2         ! length of box at coarsest multigrid level
   stag_mg_nsmooths_down = 2    ! number of smooths at each level on the way down
   stag_mg_nsmooths_up = 2      ! number of smooths at each level on the way up

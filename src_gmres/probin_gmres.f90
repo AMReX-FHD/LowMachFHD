@@ -13,9 +13,9 @@ module probin_gmres_module
   integer   , save :: precon_type,mg_verbose,cg_verbose,mg_max_vcycles,mg_minwidth
   integer   , save :: mg_bottom_solver,mg_nsmooths_down,mg_nsmooths_up,mg_nsmooths_bottom
   integer   , save :: mg_max_bottom_nlevels,stag_mg_verbosity,stag_mg_max_vcycles
-  integer   , save :: stag_mg_maxlevs,stag_mg_minwidth,stag_mg_nsmooths_down
+  integer   , save :: stag_mg_minwidth,stag_mg_bottom_solver,stag_mg_nsmooths_down
   integer   , save :: stag_mg_nsmooths_up,stag_mg_nsmooths_bottom,stag_mg_smoother
-  integer   , save :: gmres_verbose,gmres_max_outer,gmres_max_inner
+  integer   , save :: stag_mg_max_bottom_nlevels,gmres_verbose,gmres_max_outer,gmres_max_inner
   integer   , save :: gmres_max_iter,gmres_min_iter
   real(dp_t), save :: p_norm_weight,mg_rel_tol,stag_mg_omega,stag_mg_rel_tol
   real(dp_t), save :: gmres_rel_tol,gmres_abs_tol
@@ -46,8 +46,8 @@ module probin_gmres_module
   namelist /probin_gmres/ mg_bottom_solver      ! bottom solver type
                                                 ! 0 = smooths only, controlled by mg_nsmooths_bottom
                                                 ! 1 = BiCGStab
-                                                ! 4 = Fancy bottom solve that coarsens as far as possible 
-                                                !     and then applies BiCGStab
+                                                ! 4 = Fancy bottom solve that coarsens down additionally
+                                                !     and then applies mg_nsmooths_bottom smooths
   namelist /probin_gmres/ mg_nsmooths_down      ! number of smooths at each level on the way down
   namelist /probin_gmres/ mg_nsmooths_up        ! number of smooths at each level on the way up
   namelist /probin_gmres/ mg_nsmooths_bottom    ! number of smooths at the bottom (only if mg_bottom_solver=0)
@@ -57,11 +57,15 @@ module probin_gmres_module
   ! Staggered multigrid solver parameters
   namelist /probin_gmres/ stag_mg_verbosity       ! verbosity
   namelist /probin_gmres/ stag_mg_max_vcycles     ! max number of v-cycles
-  namelist /probin_gmres/ stag_mg_maxlevs         ! max number of multigrid levels
   namelist /probin_gmres/ stag_mg_minwidth        ! length of box at coarsest multigrid level
+  namelist /probin_gmres/ stag_mg_bottom_solver   ! bottom solver type
+                                                  ! 0 = smooths only, controlled by mg_nsmooths_bottom
+                                                  ! 4 = Fancy bottom solve that coarsens additionally
+                                                  !     and then applies stag_mg_nsmooths_bottom smooths
   namelist /probin_gmres/ stag_mg_nsmooths_down   ! number of smooths at each level on the way down
   namelist /probin_gmres/ stag_mg_nsmooths_up     ! number of smooths at each level on the way up
   namelist /probin_gmres/ stag_mg_nsmooths_bottom ! number of smooths at the bottom
+  namelist /probin_gmres/ stag_mg_max_bottom_nlevels ! for stag_mg_bottom_solver=4, number of additional levels of multigrid
   namelist /probin_gmres/ stag_mg_omega           ! weighted-jacobi omega coefficient
   namelist /probin_gmres/ stag_mg_smoother        ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
   namelist /probin_gmres/ stag_mg_rel_tol         ! relative tolerance stopping criteria
@@ -123,11 +127,12 @@ contains
 
     stag_mg_verbosity = 0
     stag_mg_max_vcycles = 1
-    stag_mg_maxlevs = 100
     stag_mg_minwidth = 2
+    stag_mg_bottom_solver = 0
     stag_mg_nsmooths_down = 2
     stag_mg_nsmooths_up = 2
     stag_mg_nsmooths_bottom = 8
+    stag_mg_max_bottom_nlevels = 1000
     stag_mg_omega = 1.d0
     stag_mg_smoother = 1
     stag_mg_rel_tol = 1.d-9
@@ -231,15 +236,15 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) stag_mg_max_vcycles
 
-       case ('--stag_mg_maxlevs')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stag_mg_maxlevs
-
        case ('--stag_mg_minwidth')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) stag_mg_minwidth
+
+       case ('--stag_mg_bottom_solver')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) stag_mg_bottom_solver
 
        case ('--stag_mg_nsmooths_down')
           farg = farg + 1
@@ -255,6 +260,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) stag_mg_nsmooths_bottom
+
+       case ('--stag_mg_max_bottom_nlevels')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) stag_mg_max_bottom_nlevels
 
        case ('--stag_mg_omega')
           farg = farg + 1

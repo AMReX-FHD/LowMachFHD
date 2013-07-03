@@ -9,8 +9,9 @@ module stag_mg_solver_module
   use probin_gmres_module , only: stag_mg_omega, stag_mg_max_vcycles, &
                                   stag_mg_nsmooths_bottom, stag_mg_nsmooths_down, &
                                   stag_mg_nsmooths_up, stag_mg_rel_tol, &
-                                  stag_mg_smoother, stag_mg_verbosity, stag_mg_maxlevs, &
-                                  stag_mg_minwidth
+                                  stag_mg_smoother, stag_mg_verbosity, &
+                                  stag_mg_minwidth, stag_mg_bottom_solver, &
+                                  stag_mg_max_bottom_nlevels
   use probin_common_module, only: visc_type, n_cells, max_grid_size
   use vcycle_counter_module
 
@@ -97,7 +98,7 @@ contains
     if (present(do_fancy_bottom_in)) then
        do_fancy_bottom = do_fancy_bottom_in
     else
-       do_fancy_bottom = .true.
+       do_fancy_bottom = (stag_mg_bottom_solver .eq. 4)
     end if
 
     if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
@@ -120,7 +121,6 @@ contains
 
     ! compute the number of multigrid levels assuming stag_mg_minwidth is the length of the
     ! smallest dimension of the smallest grid at the coarsest multigrid level
-    ! and stag_mg_maxlevs is the most number of levels allowed
     call compute_nlevs_mg(nlevs_mg,ba_base)
 
     ! allocate multifabs used in multigrid coarsening
@@ -884,8 +884,6 @@ contains
          end do
 
       end do
-
-      nlevs_mg = min(nlevs_mg,stag_mg_maxlevs)
 
     end subroutine compute_nlevs_mg
 
