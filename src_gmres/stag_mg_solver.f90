@@ -92,7 +92,7 @@ contains
     type(multifab) :: rhs_fc_fancy(1,mla%dim)
     real(kind=dp_t) :: dx_fancy(1,mla%dim)
     type(bc_tower) :: the_bc_tower_fancy
-    integer :: lo(mla%dim), hi(mla%dim)
+    integer :: lo(mla%dim), hi(mla%dim), bottom_box_size
     type(box) :: bx
 
     if (present(do_fancy_bottom_in)) then
@@ -441,7 +441,7 @@ contains
           
           ! create a box containing number of cells of current bottom solve
           lo(1:dm) = 0
-          hi(1:dm) = 2 * (n_cells(1:dm) / max_grid_size(1:dm)) - 1
+          hi(1:dm) = stag_mg_minwidth * (n_cells(1:dm) / max_grid_size(1:dm)) - 1
           bx = make_box(lo,hi)
 
           ! tell mba about the problem domain
@@ -450,8 +450,19 @@ contains
           ! initialize the boxarray at level 1 to be one single box
           call boxarray_build_bx(mba_fancy%bas(1),bx)
 
+          ! chop up the box to respect stag_mg_max_bottom_nlevels
+          bottom_box_size = maxval(hi(1:dm))+1
+          bottom_box_size = min(bottom_box_size,stag_mg_minwidth*2**(stag_mg_max_bottom_nlevels-1))
+          call boxarray_maxsize(mba_fancy%bas(1),bottom_box_size)
+
           ! build the ml_layout, mla_fancy
           call ml_layout_build(mla_fancy,mba_fancy,mla%pmask)
+
+          if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
+             print*,'Invoking Fancy Bottom Solver'
+             print*,'# of grids of old bottom solve:',nboxes(mla%la(1))
+             print*,'# of grids of new bottom solve:',nboxes(mla_fancy%la(1))
+          end if
 
           ! don't need this anymore - free up memory
           call destroy(mba_fancy)

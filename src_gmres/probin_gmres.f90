@@ -122,7 +122,7 @@ contains
     mg_nsmooths_down = 2
     mg_nsmooths_up = 2
     mg_nsmooths_bottom = 8
-    mg_max_bottom_nlevels = 1000
+    mg_max_bottom_nlevels = 10
     mg_rel_tol = 1.d-9
 
     stag_mg_verbosity = 0
@@ -132,7 +132,7 @@ contains
     stag_mg_nsmooths_down = 2
     stag_mg_nsmooths_up = 2
     stag_mg_nsmooths_bottom = 8
-    stag_mg_max_bottom_nlevels = 1000
+    stag_mg_max_bottom_nlevels = 10
     stag_mg_omega = 1.d0
     stag_mg_smoother = 1
     stag_mg_rel_tol = 1.d-9
