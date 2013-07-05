@@ -16,24 +16,24 @@ module diffusive_flux_module
 
 contains
  
-  subroutine diffusive_flux(rho,flux,dx,the_bc_level) ! This routine can work on multi-level
+  subroutine diffusive_flux(mla,rho,flux,dx,the_bc_level) 
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
-    type(bc_level) , intent(in   ) :: the_bc_level
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
-    integer :: lo(rho%dim), hi(rho%dim)
-    integer :: dm, ng_p, ng_f, i
+    !integer :: lo(rho(1)%dim), hi(rho(1)%dim)
+    !integer :: dm, ng_p, ng_f, i
 
     ! Donev: or, do
     ! integer :: nspec
     ! nspec = rho%nc ! Number of components
-    dm   = rho%dim     ! dimensionality
-    ng_p = rho%ng      ! number of ghost cells for rho
-    ng_f = flux(1)%ng  ! number of ghost cells for flux 
+    !dm   = rho(1)%dim     ! dimensionality
+    !ng_p = rho(1)%ng      ! number of ghost cells for rho
+    !ng_f = flux(1)%ng  ! number of ghost cells for flux 
 
     ! Donev:
     ! You should use compute_grad from src_common/div_and_grad.f90

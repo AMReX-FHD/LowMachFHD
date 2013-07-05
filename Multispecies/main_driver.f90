@@ -19,19 +19,15 @@ subroutine main_driver()
 
   ! will be allocated with (nlevs,dm) components
   real(dp_t), allocatable :: dx(:,:)
-
-  integer :: n,nlevs,i,dm,istep
-
   real(kind=dp_t) :: time
+  integer :: n,nlevs,i,dm,istep
 
   type(box)         :: bx
   type(ml_boxarray) :: mba
   type(ml_layout)   :: mla
-
-  type(bc_tower) :: the_bc_tower
-
+  type(bc_tower),  intent(in ) :: the_bc_tower
+  type(bc_level),  intent(in ) :: the_bc_level(:)
   logical, allocatable :: pmask(:)
-
   type(multifab), allocatable :: rho(:)
 
   !=======================================================
@@ -173,7 +169,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(rho,dx,fixed_dt,the_bc_tower)
+     call advance(rho,dx,fixed_dt,the_bc_level)
 
      ! increment simulation time
      time = time + fixed_dt
