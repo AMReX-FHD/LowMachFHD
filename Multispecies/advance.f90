@@ -6,8 +6,8 @@ module advance_module
   use multifab_physbc_module
   use div_and_grad_module
   use diffusive_flux_module
-  use probin_multispecies_module
   use ml_layout_module
+  use probin_multispecies_module, only: nspecies
 
   implicit none
 
@@ -17,7 +17,7 @@ module advance_module
 
 contains
   
-  subroutine advance(rho,dx,dt,the_bc_level)
+  subroutine advance(mla,rho,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -52,7 +52,7 @@ contains
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
 
     ! update rho using forward Euler discretization
-    call update_rho(rho,fluxdiv,dt)
+    call update_rho(mla,rho,fluxdiv,dt)
 
     ! destroy the multifab to prevent leakage in memory
     do n=1,nlevs
@@ -64,20 +64,25 @@ contains
 
   end subroutine advance
 
-  subroutine update_rho(rho,fluxdiv,dt)
+  subroutine update_rho(mla,rho,fluxdiv,dt)
 
+    type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    type(multifab) , intent(inout) :: fluxdiv
+    type(multifab) , intent(inout) :: fluxdiv(mla%nlevel)
     real(kind=dp_t), intent(in   ) :: dt
+    ! local variables
+    integer n, nlevs
 
+    nlevs = mla%nlevel  ! number of levels 
     ! Donev: Start with component 1 in rho and fluxdiv, copy nspecies components
     ! call multifab_plus_plus_c(rho,1,fluxdiv,1,nspecies,0)
-    ! Amit: Do Euler explicit time update
-    ! (a) Multiply RHS with scalar dt, (b) add to previous rho to update
-     call multifab_mult_mult_s_c(fluxdiv,1,dt,nspecies,0) 
     
-     call multifab_plus_plus(rho,fluxdiv)
-    
+    ! Amit: Euler explicit time update
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(fluxdiv(n),1,dt,nspecies,0) ! multiply RHS with scalar dt 
+       call multifab_plus_plus(rho(n),fluxdiv(n))              ! add to rho
+    end do 
+
   end subroutine update_rho
 
 end module advance_module

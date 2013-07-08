@@ -24,18 +24,9 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
-    ! local variables
-    !integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    !integer :: dm, ng_p, ng_f, i
-
     ! Donev: or, do
     ! integer :: nspec
     ! nspec = rho%nc ! Number of components
-    !dm   = rho(1)%dim     ! dimensionality
-    !ng_p = rho(1)%ng      ! number of ghost cells for rho
-    !ng_f = flux(1)%ng  ! number of ghost cells for flux 
-
-    ! Donev:
     ! You should use compute_grad from src_common/div_and_grad.f90
     ! to compute the gradient of rho (later, of mole fractions x)
     ! and then from that compute the fluxes
@@ -54,7 +45,6 @@ contains
     !call compute_grad(mla,temperature,flux,dx,1,scal_bc_comp+n_species,n_species+1,1,the_bc_level)
 
   end subroutine diffusive_flux
-
 
 end module diffusive_flux_module
 

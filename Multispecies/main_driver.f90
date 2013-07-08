@@ -26,7 +26,6 @@ subroutine main_driver()
   type(ml_boxarray) :: mba
   type(ml_layout)   :: mla
   type(bc_tower),  intent(in ) :: the_bc_tower
-  type(bc_level),  intent(in ) :: the_bc_level(:)
   logical, allocatable :: pmask(:)
   type(multifab), allocatable :: rho(:)
 
@@ -169,7 +168,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(rho,dx,fixed_dt,the_bc_level)
+     call advance(mla,rho,dx,fixed_dt,the_bc_tower)
 
      ! increment simulation time
      time = time + fixed_dt

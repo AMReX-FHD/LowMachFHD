@@ -19,7 +19,7 @@ contains
     type(multifab) , intent(inout) :: rho(:)   !1st=nlevs 
     real(kind=dp_t), intent(in   ) :: dx(:,:)  !1st=nlevs, 2nd=dim         
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim)
-    type(bc_tower) , intent(in   ) :: the_bc_tower
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
@@ -52,7 +52,7 @@ contains
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho(n),1,1,nspecies,the_bc_tower%bc_tower_array(n))
+       call multifab_physbc(rho(n),1,1,nspecies,the_bc_level(n))
     end do
 
   end subroutine init_rho
