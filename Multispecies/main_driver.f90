@@ -25,7 +25,7 @@ subroutine main_driver()
   type(box)         :: bx
   type(ml_boxarray) :: mba
   type(ml_layout)   :: mla
-  type(bc_tower),  intent(in ) :: the_bc_tower
+  type(bc_tower)    :: the_bc_tower
   logical, allocatable :: pmask(:)
   type(multifab), allocatable :: rho(:)
 
