@@ -79,10 +79,12 @@ contains
     integer :: i,dm,n,nlevs
     logical :: nodal_temp(mla%dim)
 
-    real(kind=dp_t) :: S_fac
+    real(kind=dp_t) :: S_fac, theta_fac
 
     nlevs = mla%nlevel
     dm = mla%dim
+
+    theta_fac = 1.d0/fixed_dt
 
     if (dm .eq. 2) then
        allocate(vel_bc_t_old(nlevs,2))
@@ -90,7 +92,6 @@ contains
     else if (dm .eq. 3) then
        allocate(vel_bc_t_old(nlevs,6))
        allocate(vel_bc_t_delta(nlevs,6))
-
     end if
 
     S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
@@ -412,7 +413,7 @@ contains
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
-               eta,eta_ed,kappa,1.d0/fixed_dt)
+               eta,eta_ed,kappa,theta_fac)
 
     ! restore eta and kappa
     do n=1,nlevs
@@ -677,7 +678,7 @@ contains
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpres,s_fc, &
-               eta,eta_ed,kappa,1.d0/fixed_dt)
+               eta,eta_ed,kappa,theta_fac)
 
     ! restore eta and kappa
     do n=1,nlevs

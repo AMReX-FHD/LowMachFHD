@@ -17,7 +17,7 @@ module probin_gmres_module
   integer   , save :: stag_mg_nsmooths_up,stag_mg_nsmooths_bottom,stag_mg_smoother
   integer   , save :: stag_mg_max_bottom_nlevels,gmres_verbose,gmres_max_outer,gmres_max_inner
   integer   , save :: gmres_max_iter,gmres_min_iter
-  real(dp_t), save :: p_norm_weight,mg_rel_tol,stag_mg_omega,stag_mg_rel_tol
+  real(dp_t), save :: p_norm_weight,scale_factor,mg_rel_tol,stag_mg_omega,stag_mg_rel_tol
   real(dp_t), save :: gmres_rel_tol,gmres_abs_tol
 
   !------------------------------------------------------------- 
@@ -37,6 +37,9 @@ module probin_gmres_module
 
   ! weighting of pressure when computing norms and inner products
   namelist /probin_gmres/ p_norm_weight
+
+  ! scale theta, beta, gamma, and b_u by this, and then scale x_p by the inverse
+  namelist /probin_gmres/ scale_factor
 
   ! MAC projection solver parameters:
   namelist /probin_gmres/ mg_verbose            ! multigrid verbosity
@@ -114,6 +117,8 @@ contains
 
     p_norm_weight = 1.d0
 
+    scale_factor = 1.d0
+
     mg_verbose = 0
     cg_verbose = 0
     mg_max_vcycles = 1
@@ -175,6 +180,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) p_norm_weight
+
+       case ('--scale_factor')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) scale_factor
 
        case ('--mg_verbose')
           farg = farg + 1

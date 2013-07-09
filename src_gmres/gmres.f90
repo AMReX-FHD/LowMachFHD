@@ -13,7 +13,8 @@ module gmres_module
   use bc_module
   use bl_types
   use probin_gmres_module, only: gmres_max_inner, gmres_abs_tol, gmres_max_iter, &
-       gmres_max_outer, gmres_min_iter, gmres_rel_tol, gmres_verbose, p_norm_weight
+       gmres_max_outer, gmres_min_iter, gmres_rel_tol, gmres_verbose, p_norm_weight, &
+       scale_factor
   use vcycle_counter_module
   use apply_precon_module
   use apply_matrix_module
@@ -32,15 +33,15 @@ contains
     type(ml_layout),intent(in   ) :: mla
     type(bc_tower), intent(in   ) :: the_bc_tower
     real(dp_t)    , intent(in   ) :: dx(:,:)
-    type(multifab), intent(in   ) :: b_u(:,:)  ! (nlevs,dm)
+    type(multifab), intent(inout) :: b_u(:,:)  ! (nlevs,dm)
     type(multifab), intent(in   ) :: b_p(:)    ! (nlevs)
     type(multifab), intent(inout) :: x_u(:,:)  ! (nlevs,dm)
     type(multifab), intent(inout) :: x_p(:)    ! (nlevs)
     type(multifab), intent(in   ) :: alpha_fc(:,:)
-    type(multifab), intent(in   ) :: beta(:)
-    type(multifab), intent(in   ) :: beta_ed(:,:) ! nodal (2d), edge-centered (3d)
-    type(multifab), intent(in   ) :: gamma(:)
-    real(dp_t)    , intent(in   ) :: theta
+    type(multifab), intent(inout) :: beta(:)
+    type(multifab), intent(inout) :: beta_ed(:,:) ! nodal (2d), edge-centered (3d)
+    type(multifab), intent(inout) :: gamma(:)
+    real(dp_t)    , intent(inout) :: theta
 
     ! Local
     type(multifab) ::   r_u(mla%nlevel,mla%dim)
@@ -95,6 +96,21 @@ contains
        call multifab_build(tmp_p(n),mla%la(n),1                ,0)
        call multifab_build(V_p(n)  ,mla%la(n),gmres_max_inner+1,0) ! Krylov vectors
     end do
+
+    ! apply scaling factor
+    if (scale_factor .ne. 1.d0) then
+       theta = theta*scale_factor
+       do n=1,nlevs
+          call multifab_mult_mult_s(beta(n),scale_factor,beta(n)%ng)
+          call multifab_mult_mult_s(gamma(n),scale_factor,gamma(n)%ng)
+          do i=1,dm
+             call multifab_mult_mult_s(b_u(n,i),scale_factor,b_u(n,i)%ng)
+          end do
+          do i=1,size(beta_ed,dim=2)
+             call multifab_mult_mult_s(beta_ed(n,i),scale_factor,beta_ed(n,i)%ng)
+          end do
+       end do
+    end if
 
     ! preconditioned norm_b: norm_pre_b
     call apply_precon(mla,b_u,b_p,tmp_u,tmp_p,alpha_fc, &
@@ -370,6 +386,22 @@ contains
     do i=1,dm
        call multifab_internal_sync(x_u(1,i))
     end do
+
+    ! apply scaling factor
+    if (scale_factor .ne. 1.d0) then
+       theta = theta/scale_factor
+       do n=1,nlevs
+          call multifab_mult_mult_s(x_p(n),1.d0/scale_factor,x_p(n)%ng)
+          call multifab_mult_mult_s(beta(n),1.d0/scale_factor,beta(n)%ng)
+          call multifab_mult_mult_s(gamma(n),1.d0/scale_factor,gamma(n)%ng)
+          do i=1,dm
+             call multifab_mult_mult_s(b_u(n,i),1.d0/scale_factor,b_u(n,i)%ng)
+          end do
+          do i=1,size(beta_ed,dim=2)
+             call multifab_mult_mult_s(beta_ed(n,i),1.d0/scale_factor,beta_ed(n,i)%ng)
+          end do
+       end do
+    end if
 
     ! destroy multifab
     do n=1,nlevs
