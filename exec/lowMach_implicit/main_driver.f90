@@ -392,12 +392,6 @@ subroutine main_driver()
   call destroy_stochastic(mla)
 
   do n=1,nlevs
-     do i=1,dm
-        call multifab_destroy(mold(n,i))
-        call multifab_destroy(mnew(n,i))
-        call multifab_destroy(umac(n,i))
-        call multifab_destroy(vel_bc_n(n,i))
-     end do
      call multifab_destroy(sold(n))
      call multifab_destroy(snew(n))
      call multifab_destroy(prim(n))
@@ -408,21 +402,20 @@ subroutine main_driver()
      call multifab_destroy(rhoc_d_fluxdiv(n))
      call multifab_destroy(rhoc_s_fluxdiv(n))
      do i=1,dm
+        call multifab_destroy(mold(n,i))
+        call multifab_destroy(mnew(n,i))
+        call multifab_destroy(umac(n,i))
+        call multifab_destroy(vel_bc_n(n,i))
         call multifab_destroy(chi_fc(n,i))
         call multifab_destroy(s_fc(n,i))
      end do
-     if (dm .eq. 2) then
-        call multifab_destroy(eta_ed(n,1))
-        call multifab_destroy(vel_bc_t(n,1))
-        call multifab_destroy(vel_bc_t(n,2))
-     else if (dm .eq. 3) then
-        do i=1,3
-           call multifab_destroy(eta_ed(n,i))
-        end do
-        do i=1,6
-           call multifab_destroy(vel_bc_t(n,i))
-        end do
-     end if
+     do i=1,size(eta_ed,dim=2)
+        call multifab_destroy(eta_ed(n,i))
+     end do
+     do i=1,size(vel_bc_t,dim=2)
+        call multifab_destroy(vel_bc_t(n,i))
+     end do
+
   end do
 
   call destroy(mla)

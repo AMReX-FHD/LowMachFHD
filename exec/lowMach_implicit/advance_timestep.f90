@@ -86,13 +86,8 @@ contains
 
     theta_fac = 1.d0/fixed_dt
 
-    if (dm .eq. 2) then
-       allocate(vel_bc_t_old(nlevs,2))
-       allocate(vel_bc_t_delta(nlevs,2))
-    else if (dm .eq. 3) then
-       allocate(vel_bc_t_old(nlevs,6))
-       allocate(vel_bc_t_delta(nlevs,6))
-    end if
+    allocate(vel_bc_t_old  (nlevs,size(vel_bc_t,dim=2)))
+    allocate(vel_bc_t_delta(nlevs,size(vel_bc_t,dim=2)))
 
     S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
     
@@ -186,14 +181,9 @@ contains
           call multifab_copy_c(chi_fc_old(n,i),1,chi_fc(n,i),1,1    ,0)
           call multifab_copy_c(vel_bc_n_old(n,i),1,vel_bc_n(n,i),1,1,0)
        end do
-       if (dm .eq. 2) then
-          call multifab_copy_c(vel_bc_t_old(n,1),1,vel_bc_t(n,1),1,1,0)
-          call multifab_copy_c(vel_bc_t_old(n,2),1,vel_bc_t(n,2),1,1,0)          
-       else if (dm .eq. 3) then
-          do i=1,6
-             call multifab_copy_c(vel_bc_t_old(n,i),1,vel_bc_t(n,i),1,1,0)
-          end do
-       end if
+       do i=1,size(vel_bc_t,dim=2)
+          call multifab_copy_c(vel_bc_t_old(n,i),1,vel_bc_t(n,i),1,1,0)
+       end do
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -345,17 +335,10 @@ contains
           call multifab_copy_c(vel_bc_n_delta(n,i),1,vel_bc_n(n,i),1,1,0)
           call multifab_sub_sub_c(vel_bc_n_delta(n,i),1,vel_bc_n_old(n,i),1,1,0)
        end do
-       if (dm .eq. 2) then
-          do i=1,2
-             call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
-             call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
-          end do          
-       else if (dm .eq. 3) then
-          do i=1,6
-             call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
-             call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
-          end do    
-       end if
+       do i=1,size(vel_bc_t,dim=2)
+          call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
+          call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
+       end do
     end do
 
     ! reset s_update for all scalars to zero
@@ -624,17 +607,10 @@ contains
           call multifab_copy_c(vel_bc_n_delta(n,i),1,vel_bc_n(n,i),1,1,0)
           call multifab_sub_sub_c(vel_bc_n_delta(n,i),1,vel_bc_n_old(n,i),1,1,0)
        end do
-       if (dm .eq. 2) then
-          do i=1,2
-             call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
-             call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
-          end do          
-       else if (dm .eq. 3) then
-          do i=1,6
-             call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
-             call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
-          end do    
-       end if
+       do i=1,size(vel_bc_t,dim=2)
+          call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
+          call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
+       end do
     end do
 
     ! add div(Psi^{n+1}) to rhs_p
@@ -750,17 +726,10 @@ contains
           call multifab_destroy(vel_bc_n_old(n,i))
           call multifab_destroy(vel_bc_n_delta(n,i))
        end do
-       if (dm .eq. 2) then
-          call multifab_destroy(vel_bc_t_old(n,1))
-          call multifab_destroy(vel_bc_t_old(n,2))
-          call multifab_destroy(vel_bc_t_delta(n,1))
-          call multifab_destroy(vel_bc_t_delta(n,2))
-       else if (dm .eq. 3) then
-          do i=1,6
-             call multifab_destroy(vel_bc_t_old(n,i))
-             call multifab_destroy(vel_bc_t_delta(n,i))
-          end do
-       end if
+       do i=1,size(vel_bc_t,dim=2)
+          call multifab_destroy(vel_bc_t_old(n,i))
+          call multifab_destroy(vel_bc_t_delta(n,i))
+       end do
     end do
 
     deallocate(vel_bc_t_old,vel_bc_t_delta)
