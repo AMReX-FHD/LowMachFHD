@@ -5,8 +5,9 @@ module probin_multispecies_module
 
   implicit none
 
-  integer,save    :: nspecies
-  namelist /probin_multispecies/ nspecies      ! no of species
+  integer,save    :: nspecies,max_step
+  namelist /probin_multispecies/ nspecies
+  namelist /probin_multispecies/ max_step    
 
 contains
 
@@ -30,6 +31,7 @@ contains
     narg = command_argument_count()
 
     nspecies = 4
+    max_step = 10000
     need_inputs = .true.
     farg = 1
     if ( need_inputs .AND. narg >= 1 ) then
@@ -54,6 +56,10 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) nspecies
+      case ('--max_step')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) max_step
        case ('--')
           farg = farg + 1
           exit

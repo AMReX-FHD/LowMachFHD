@@ -14,7 +14,7 @@ module init_module
 
 contains
   
-  subroutine init_rho(rho,dx,prob_lo,the_bc_tower)
+  subroutine init_rho(rho,dx,prob_lo,the_bc_level)
 
     type(multifab) , intent(inout) :: rho(:)   !1st=nlevs 
     real(kind=dp_t), intent(in   ) :: dx(:,:)  !1st=nlevs, 2nd=dim         
@@ -61,7 +61,7 @@ contains
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t) :: rho(lo(1)-ng:,lo(2)-ng:,:) ! Last dimension is 1:nspecies
-    real(kind=dp_t) :: diff_coeffs(lo(1)-ng:,lo(2)-ng:,:,:) !to hold D matrix
+    !real(kind=dp_t) :: diff_coeffs(lo(1)-ng:,lo(2)-ng:,:,:) !to hold D matrix
     real(kind=dp_t) :: prob_lo(2)
     real(kind=dp_t) :: dx
  
@@ -76,10 +76,10 @@ contains
           x = prob_lo(1) + (dble(i)+0.5d0) * dx
           if ((x*x + y*y) .lt. 0.5d0) then
              rho(i,j,2:nspecies)  = 0.3d0
-             diff_coeffs(i,j,:,:) = 1.d0
+             !diff_coeffs(i,j,:,:) = 1.d0
           else
              rho(i,j,1)           = 0.1d0
-             diff_coeffs(i,j,:,:) = 1.d0
+             !diff_coeffs(i,j,:,:) = 1.d0
           endif 
        end do
     end do
@@ -90,7 +90,7 @@ contains
 
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t) :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)
-    real(kind=dp_t) :: diff_coeffs(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:,:)
+    !real(kind=dp_t) :: diff_coeffs(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:,:)
     ! Example:
     ! real(dp_t) :: diff_coffs(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:,:) ! Last dimensions are (1:nspecies,1:nspecies)
     ! You can use D = diff_coeffs(i,j,k,1:nspecies,1:nspecies)
@@ -112,10 +112,10 @@ contains
              x = prob_lo(1) + (dble(i)+0.5d0) * dx
              if ((x*x + y*y + z*z) .lt. 0.5d0) then
                 rho(i,j,k,2:nspecies)  = 0.3d0
-                diff_coeffs(i,j,k,:,:) = 1.d0
+                !diff_coeffs(i,j,k,:,:) = 1.d0
              else
                 rho(i,j,k,1)           = 0.1d0
-                diff_coeffs(i,j,k,:,:) = 1.d0
+                !diff_coeffs(i,j,k,:,:) = 1.d0
              endif
           end do
        end do

@@ -2,6 +2,7 @@
  
  dim_in = 2
  plot_int = 1000
+ max_step = 10000
  n_cells(1:2) = 256 256
  max_grid_size(1:2) = 64 64
 

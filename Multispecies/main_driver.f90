@@ -147,7 +147,7 @@ subroutine main_driver()
      call multifab_build(rho(n),mla%la(n),nspecies,1)
   end do
 
-  call init_rho(rho,dx,prob_lo,the_bc_tower)
+  call init_rho(rho,dx,prob_lo,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
@@ -168,7 +168,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,dx,fixed_dt,the_bc_tower)
+     call advance(mla,rho,dx,fixed_dt,the_bc_tower%bc_tower_array)
 
      ! increment simulation time
      time = time + fixed_dt
