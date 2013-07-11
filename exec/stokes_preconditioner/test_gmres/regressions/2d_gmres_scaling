@@ -29,10 +29,10 @@
   !----------------------
   ! BC specifications:
   ! -1 = periodic
-  ! 16 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
-  ! 17 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
-  bc_lo(1:2) = -1 -1 ! 17 17
-  bc_hi(1:2) = -1 -1 ! 17 17
+  ! 200 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
+  ! 100 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
+  bc_lo(1:2) = -1 -1 ! 100 100
+  bc_hi(1:2) = -1 -1 ! 100 100
 
 /
 
@@ -41,7 +41,7 @@
   ! Initial conditions and forcing functions (for exact_solutions.f90)
   !----------------------
   prob_coeff = 1           ! Coeff_mat selection (see init_precon.f90 for key)
-  prob_sol = 1           ! RHS selection (see init_solutoin.f90/init_precon.f90 for key)
+  prob_sol = 100           ! RHS selection (see init_solutoin.f90/init_precon.f90 for key)
 
   ! test_type>0: call gmres
   ! test_type=0: check discretization accuracy
