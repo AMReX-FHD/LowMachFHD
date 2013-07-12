@@ -18,16 +18,19 @@ subroutine main_driver()
   integer, allocatable :: lo(:), hi(:)
 
   ! will be allocated with (nlevs,dm) components
-  real(dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t) :: time
-  integer :: n,nlevs,i,dm,istep
+  real(kind=dp_t), allocatable :: dx(:,:)
+  real(kind=dp_t)              :: time
+  integer                      :: n,nlevs,i,dm,istep
 
-  type(box)         :: bx
-  type(ml_boxarray) :: mba
-  type(ml_layout)   :: mla
-  type(bc_tower)    :: the_bc_tower
-  logical, allocatable :: pmask(:)
-  type(multifab), allocatable :: rho(:)
+  type(box)                    :: bx
+  type(ml_boxarray)            :: mba
+  type(ml_layout)              :: mla
+  type(bc_tower)               :: the_bc_tower
+  logical, allocatable         :: pmask(:)
+  
+  ! will be allocated on nlevels
+  type(multifab), allocatable  :: rho(:)
+  !type(multifab), allocatable  :: diff_coeffs(:)
 
   !=======================================================
   ! Initialization
@@ -41,21 +44,19 @@ subroutine main_driver()
   ! resolution don't necessarily exist depending on your tagging criteria,
   ! so max_levs isn't necessary equal to nlevs
   nlevs = 1
-
   dm = dim_in
-
+ 
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
-
-  ! now that we have nlevs and dm, we can allocate these
   allocate(dx(nlevs,dm))
   allocate(rho(nlevs))
+  !allocate(diff_coeffs(nlevs))
 
   !=======================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
   !=======================================================
   
-  ! tell mba how many levels and dmensionality of problem
+  ! tell mba how many levels and dimensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
 
   ! tell mba about the ref_ratio between levels
@@ -66,8 +67,9 @@ subroutine main_driver()
   enddo
 
   ! set grid spacing at each level
-  ! the grid spacing is the same in each direction
+  ! presently the grid spacing is same in each direction
   dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
+  
   select case (dm) 
     case(2)
       if (dx(1,1) .ne. dx(1,2)) then
@@ -129,8 +131,7 @@ subroutine main_driver()
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
   ! Donev: Last argument to initialize_bc is the number of scalar variables
-  ! nscal=nspecies ! Number of scalars (maybe add temperature later)
-  !call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nscal)
+  ! nscal=nspecies  Number of scalars (maybe add temperature later)
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies)
 
   do n=1,nlevs
@@ -145,9 +146,11 @@ subroutine main_driver()
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),nspecies,1)
+     !call multifab_build(diff_coeffs(n),mla%la(n),nspecies,1)
   end do
 
   call init_rho(rho,dx,prob_lo,the_bc_tower%bc_tower_array)
+  !call init_rho(rho,diff_coeffs,dx,prob_lo,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop

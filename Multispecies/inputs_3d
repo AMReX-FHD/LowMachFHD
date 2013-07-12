@@ -11,3 +11,9 @@
  bc_hi(1:3) = -1 -1 -1
 
 /
+
+&probin_multispecies
+ nspecies = 4
+ max_step = 10000
+ !include_temperature = T ! T or F
+/

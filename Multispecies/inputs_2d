@@ -2,8 +2,8 @@
  
  dim_in = 2
  plot_int = 1000
- n_cells(1:2) = 256 256
- max_grid_size(1:2) = 64 64
+ n_cells(1:2) = 64 64
+ max_grid_size(1:2) = 16 16
 
  ! allowable options for this example are
  ! -1 = PERIODIC
@@ -14,6 +14,6 @@
 
 &probin_multispecies
  nspecies = 4
+ max_step = 2000
  !include_temperature = T ! T or F
- max_step = 10000
 /

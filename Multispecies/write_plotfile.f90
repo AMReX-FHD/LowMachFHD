@@ -3,6 +3,7 @@ module write_plotfile_module
   use layout_module
   use multifab_module
   use fabio_module
+  use probin_multispecies_module
 
   implicit none
 
@@ -18,7 +19,8 @@ contains
 
     ! local variables
     character(len=8)  :: plotfile_name
-    character(len=20) :: variable_names(1)
+    character(len=20) :: variable_names(nspecies)
+    integer           :: i
 
     ! dimensioned as an array of size 1 for fabio_ml_multifab_write_d
     type(multifab) :: plotdata(1)
@@ -31,12 +33,15 @@ contains
 
     dx_vec(:) = dx(1,:)
 
-    variable_names(1) = "rho"
+    do i=1,nspecies
+       variable_names(i) = "rho(i)"
+    enddo
 
-    ! build plotdata with 1 component and 0 ghost cells
-    call multifab_build(plotdata(1),mla%la(1),1,0)
+    ! build plotdata with nspecies component and 0 ghost cells
+    call multifab_build(plotdata(1),mla%la(1),nspecies,0)
+    
     ! copy the state into plotdata
-    call multifab_copy_c(plotdata(1),1,rho(1),1,1)
+    call multifab_copy_c(plotdata(1),1,rho(1),1,nspecies)
 
     ! define the name of the plotfile that will be written
     write(unit=plotfile_name,fmt='("plt",i5.5)') istep
