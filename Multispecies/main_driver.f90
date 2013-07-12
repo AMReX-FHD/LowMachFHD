@@ -146,11 +146,9 @@ subroutine main_driver()
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),nspecies,1)
-     !call multifab_build(diff_coeffs(n),mla%la(n),nspecies,1)
   end do
 
   call init_rho(rho,dx,prob_lo,the_bc_tower%bc_tower_array)
-  !call init_rho(rho,diff_coeffs,dx,prob_lo,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop

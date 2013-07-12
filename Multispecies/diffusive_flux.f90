@@ -27,9 +27,6 @@ contains
     ! Donev: or, do
     ! integer :: nspec
     ! nspec = rho%nc ! Number of components
-    ! You should use compute_grad from src_common/div_and_grad.f90
-    ! to compute the gradient of rho (later, of mole fractions x)
-    ! and then from that compute the fluxes
 
     call compute_grad(mla,rho,flux,dx,1,scal_bc_comp,1,nspecies,the_bc_level)
     

@@ -35,12 +35,13 @@ contains
     dm = mla%dim        ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
 
-    ! build the flux(:) multifabs
+    ! build the flux and div-of-flux multifabs
     do n=1,nlevs
        ! fluxdiv is cell-centered scalar with zero ghost cells 
        call multifab_build(fluxdiv(n),mla%la(n),nspecies,0)
        do i=1,dm
-          ! flux(i) has one component, zero ghost cells, and is nodal in direction i
+          ! flux(i) is face-centered, has nspecies component, zero ghost 
+          ! cells & is nodal in direction i
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do   
@@ -74,13 +75,16 @@ contains
     integer n, nlevs
 
     nlevs = mla%nlevel  ! number of levels 
-    ! Donev: Start with component 1 in rho and fluxdiv, copy nspecies components
-    ! call multifab_plus_plus_c(rho,1,fluxdiv,1,nspecies,0)
     
-    ! Amit: Euler explicit time update
+    ! Euler explicit time update
     do n=1,nlevs
-       call multifab_mult_mult_s_c(fluxdiv(n),1,dt,nspecies,0) ! multiply RHS with scalar dt 
-       call multifab_plus_plus(rho(n),fluxdiv(n))              ! add to rho
+       ! multiply div-of-flux from component 1 with dt with zero ghost cell
+       call multifab_mult_mult_s_c(fluxdiv(n),1,dt,nspecies,0) 
+    end do 
+    
+    do n=1,nlevs
+       ! add this to rho to advance in time
+       call multifab_plus_plus(rho(n),fluxdiv(n))            
     end do 
 
   end subroutine update_rho

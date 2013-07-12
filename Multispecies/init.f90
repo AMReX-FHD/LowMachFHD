@@ -26,8 +26,10 @@ contains
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
     integer :: nspecies, dm, ng, i, n, nlevs
 
-    real(kind=dp_t), pointer :: dp(:,:,:,:)       ! for rho
-    !real(kind=dp_t), pointer :: dp1(:,:,:,:,:,:) ! for D
+    ! pointer for rho, last index for nspecies
+    real(kind=dp_t), pointer :: dp(:,:,:,:)       
+    ! pointer for diff_coeffs, 3 for dims, 2 for matrix, 1 for nspecies
+    !real(kind=dp_t), pointer :: dp1(:,:,:,:,:,:) 
  
     dm = rho(1)%dim
     ng = rho(1)%ng
@@ -42,11 +44,11 @@ contains
           
           select case(dm)
           case (2)
-             call init_rho_2d(dp(:,:,1,1:nspecies), ng, lo, hi, prob_lo, dx(n,:)) 
-             !call init_rho_2d(dp(:,:,1,1:nspecies), dp1(:,:,1,:,:,1:nspecies), ng, lo, hi, prob_lo, dx(n,:)) 
+             call init_rho_2d(dp(:,:,1,:), ng, lo, hi, prob_lo, dx(n,:)) 
+             !call init_rho_2d(dp(:,:,1,:), dp1(:,:,1,:,:,:), ng, lo, hi, prob_lo, dx(n,:)) 
           case (3)
-             call init_rho_3d(dp(:,:,:,1:nspecies), ng, lo, hi, prob_lo, dx(n,:))
-             !call init_rho_3d(dp(:,:,:,1:nspecies), dp1(:,:,:,:,:,1:nspecies), ng, lo, hi, prob_lo, dx(n,:)) 
+             call init_rho_3d(dp(:,:,:,:), ng, lo, hi, prob_lo, dx(n,:))
+             !call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:,:,:), ng, lo, hi, prob_lo, dx(n,:)) 
           end select
        end do
 
@@ -73,7 +75,7 @@ contains
  
     ! local varables
     integer          :: i,j
-    real(kind=dp_t) :: x,y,r2
+    real(kind=dp_t) :: x,y
  
     ! Amit: Remember to change multifab_physbc for non-periodic problem
     do j=lo(2),hi(2)
@@ -82,20 +84,15 @@ contains
           x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
           if ((x*x + y*y) .lt. 0.1d0) then
              rho(i,j,1)           = 0.5d0
-             rho(i,j,2)           = 0.4d0
-             rho(i,j,3)           = 0.6d0
-             rho(i,j,4)           = 0.7d0
+             rho(i,j,2:nspecies)  = 0.4d0
              !diff_coeffs(i,j,:,:) = 1.d0
           else
-             rho(i,j,1)           = 0.1d0
-             rho(i,j,2)           = 0.1d0
-             rho(i,j,3)           = 0.1d0
-             rho(i,j,4)           = 0.1d0
+             rho(i,j,1)           = 0.0d0
+             rho(i,j,2:nspecies)  = 0.0d0
              !diff_coeffs(i,j,:,:) = 1.d0
           endif 
        end do
     end do
-    ! Amit: Visit is confusing! can I pass like rho(i,j,1:nspecies)=0.1 say??
  
     end subroutine init_rho_2d
 
@@ -112,9 +109,9 @@ contains
  
     ! local varables
     integer          :: i,j,k
-    real(kind=dp_t) :: x,y,z,r2
+    real(kind=dp_t) :: x,y,z
 
-    !$omp parallel private(i,j,k,x,y,z,r2)
+    !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3)
        do j=lo(2),hi(2)
@@ -123,8 +120,7 @@ contains
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1)
              if ((x*x + y*y + z*z) .lt. 0.5d0) then
                 rho(i,j,k,1)           = 0.5d0
-                rho(i,j,k,2)           = 0.7d0
-                rho(i,j,k,3:nspecies)  = 0.3d0
+                rho(i,j,k,2:nspecies)  = 0.3d0
                 !diff_coeffs(i,j,k,:,:) = 1.d0
              else
                 rho(i,j,k,1)           = 0.0d0
