@@ -101,11 +101,15 @@ contains
     if (scale_factor .ne. 1.d0) then
        theta = theta*scale_factor
        do n=1,nlevs
-          call multifab_mult_mult_s(beta(n),scale_factor,beta(n)%ng)
-          call multifab_mult_mult_s(gamma(n),scale_factor,gamma(n)%ng)
+          ! we will solve for scale*x_p so we need to scale the initial guess
+          call multifab_mult_mult_s(x_p(n),scale_factor,x_p(n)%ng)
+          ! scale the rhs:
           do i=1,dm
              call multifab_mult_mult_s(b_u(n,i),scale_factor,b_u(n,i)%ng)
-          end do
+          end do          
+          ! scale the viscosities:
+          call multifab_mult_mult_s(beta(n),scale_factor,beta(n)%ng)
+          call multifab_mult_mult_s(gamma(n),scale_factor,gamma(n)%ng)
           do i=1,size(beta_ed,dim=2)
              call multifab_mult_mult_s(beta_ed(n,i),scale_factor,beta_ed(n,i)%ng)
           end do
@@ -391,12 +395,15 @@ contains
     if (scale_factor .ne. 1.d0) then
        theta = theta/scale_factor
        do n=1,nlevs
+          ! the solution we got is scale*x_p
           call multifab_mult_mult_s(x_p(n),1.d0/scale_factor,x_p(n)%ng)
-          call multifab_mult_mult_s(beta(n),1.d0/scale_factor,beta(n)%ng)
-          call multifab_mult_mult_s(gamma(n),1.d0/scale_factor,gamma(n)%ng)
+          ! unscale the rhs
           do i=1,dm
              call multifab_mult_mult_s(b_u(n,i),1.d0/scale_factor,b_u(n,i)%ng)
           end do
+          ! unscale the viscosities
+          call multifab_mult_mult_s(beta(n),1.d0/scale_factor,beta(n)%ng)
+          call multifab_mult_mult_s(gamma(n),1.d0/scale_factor,gamma(n)%ng)
           do i=1,size(beta_ed,dim=2)
              call multifab_mult_mult_s(beta_ed(n,i),1.d0/scale_factor,beta_ed(n,i)%ng)
           end do

@@ -29,7 +29,7 @@ subroutine main_driver()
   use probin_common_module, only: probin_common_init, n_cells, dim_in, fixed_dt, &
                                   max_grid_size, plot_int, seed, &
                                   prob_lo, prob_hi, bc_lo, bc_hi
-  use probin_gmres_module , only: probin_gmres_init
+  use probin_gmres_module , only: probin_gmres_init, scale_factor
 
   implicit none
 
@@ -83,7 +83,7 @@ subroutine main_driver()
 
   type(bc_tower) :: the_bc_tower
 
-  real(kind=dp_t) :: norm, vol
+  real(kind=dp_t) :: norm, norm_scale, vol
   real(kind=dp_t), allocatable :: norm_stag(:), norm_u_diff(:)
 
   real(kind=dp_t) :: mean_val_pres
@@ -294,6 +294,15 @@ subroutine main_driver()
   ! provide an initial value (or guess) for umac and pres 
   call init_solution(mla,umac_exact,pres_exact,dx,time,the_bc_tower%bc_tower_array, &
                      vel_bc_n,vel_bc_t)
+
+  ! for testing purposes, ensure mean zero for pressure (should not be required any more)
+  if (.false.) then        
+     do n=1,nlevs
+         mean_val_pres = multifab_sum_c(pres_exact(n),1,1,all=.false.) / &
+                         multifab_volume(pres_exact(n))
+         call multifab_sub_sub_s(pres_exact(n),mean_val_pres,pres_exact(n)%ng) ! Ensure mean zero            
+     end do   
+  end if
   
   ! initialize alpha, beta, and gamma
   call init_mat(mla,alpha,beta,gamma,dx,time,the_bc_tower%bc_tower_array)
@@ -306,19 +315,23 @@ subroutine main_driver()
      call average_cc_to_edge(nlevs,beta,beta_ed,1,dm+2,1,the_bc_tower%bc_tower_array)
   end if
 
-  if (plot_int .gt. 0) then
-     ! write a plotfile of umac_exact and pres_exact
-    call write_plotfile(mla,umac_exact,pres_exact,alpha,beta,gamma,dx,time,0)
-  end if
-
   if (abs(test_type) .eq. 1) then
      ! initialize rhs_u and rhs_p by explicitly computing rhs = A x
+
+     ! try scaling the pressure to make the solution well-scaled
+     call multifab_mult_mult_s(pres_exact(1),1.0d0/scale_factor,pres_exact(1)%ng)
+
      call apply_matrix(mla,rhs_u,rhs_p,umac_exact,pres_exact,alpha_fc,beta,beta_ed, &
                        gamma,theta,dx,the_bc_tower,vel_bc_n,vel_bc_t)
   else
      ! initialize rhs_u and rhs_p with a subroutine
      call init_rhs(mla,rhs_u,rhs_p,dx,time,the_bc_tower%bc_tower_array)
   end if 
+
+  if (plot_int .gt. 0) then
+     ! write a plotfile of umac_exact and pres_exact
+    call write_plotfile(mla,umac_exact,pres_exact,alpha,beta,gamma,dx,time,0)
+  end if
 
 TestType: if (test_type==0) then ! Test the order of accuracy of the stencils
     ! Here we keep the inhomogeneous form of the BCs to test them
@@ -455,6 +468,9 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
      call write_plotfile(mla,umac,pres,alpha,beta,gamma,dx,time,2)
   end if
 
+  ! Due to scaling, this may be very different from 1
+  norm_scale = multifab_norm_inf_c(pres_exact(1),1,1,all=.false.)
+  
   ! for checking the error, umac_exact-umac
   do n=1,nlevs  
      do i=1,dm 
@@ -484,6 +500,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
   end if
   norm = multifab_norm_inf_c(pres_exact(1),1,1,all=.false.)
   if (parallel_IOProcessor()) print*,"L0 P   =",norm
+  if (parallel_IOProcessor()) print*,"L0 P normalized   =", norm/norm_scale
   if (parallel_IOProcessor()) print*,""
 
   ! compute L1 norms for staggered data

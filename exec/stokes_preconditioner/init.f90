@@ -188,7 +188,7 @@ contains
 
       ! local
       real(kind=dp_t) :: velx,vely,Lx,Ly,freq,pfreq,vcst,ucst,ufac,y1,y2,visc_coef
-      real(kind=dp_t) :: mean_value_u, mean_value_v, mean_value_p, random(1)
+      real(kind=dp_t) :: mean_value_u, mean_value_v, mean_value_p
 
       visc_coef = coeff_mag(2)/coeff_mag(1) 
 
@@ -320,13 +320,7 @@ contains
 
       case(100) ! random initial solution
 
-         call UniformRNGs(random,size(random))
-         if (.false. .and. (comp .eq. 3) ) then ! Testing of scaling problems
-            ! scale pressure by eta/dx
-            ! val = random(1) * coeff_mag(2)/dx(1)            
-         else
-            val = random(1)
-         end if
+         call UniformRNG(val)
 
       case default
          call bl_error('ERROR: bad or unimplemented choice for prob_sol in solution_val_2d')
@@ -345,7 +339,7 @@ contains
       ! local
       real(kind=dp_t) :: velx,vely,Lx,Ly,freq,pfreq,vcst,ucst,y1,y2,visc_coef
       real(kind=dp_t) :: mean_value_u, mean_value_v, mean_value_p
-      real(kind=dp_t) :: ufac,vfac,pfac,hx,hy,hz,random(1)
+      real(kind=dp_t) :: ufac,vfac,pfac,hx,hy,hz
 
       visc_coef = coeff_mag(2)/coeff_mag(1) 
 
@@ -514,8 +508,7 @@ contains
 
       case(100) ! random initial solution
 
-         call UniformRNGs(random,size(random))
-         val = random(1)
+         call UniformRNG(val)
 
       case default
          call bl_error('ERROR: bad or unimplemented choice for prob_sol in solution_val_3d')
@@ -708,7 +701,7 @@ contains
       real(kind=dp_t)                :: val
 
       ! local
-      real(kind=dp_t) :: visc_coef, L, freq, random(1)
+      real(kind=dp_t) :: visc_coef, L, freq
 
       visc_coef=coeff_mag(2)/coeff_mag(1)
 
@@ -905,13 +898,11 @@ contains
       elseif ( (abs(prob_sol)==20) .and. (abs(prob_coeff)==1) ) then 
          ! random rhs, Driven cavity BC
 
-         call UniformRNGs(random,size(random))
-         val = random(1)
+         call UniformRNG(val)
 
       elseif ( abs(prob_sol)==100 ) then 
 
-         call UniformRNGs(random,size(random))
-         val = random(1)
+         call UniformRNG(val)
 
       else 
 
@@ -930,7 +921,7 @@ contains
       real(kind=dp_t)                :: val
 
       ! local
-      real(kind=dp_t) :: visc_coef, L, freq, random(1)
+      real(kind=dp_t) :: visc_coef, L, freq
       real(kind=dp_t) :: ufac,pfac,hx,hy,hz
 
       visc_coef=coeff_mag(2)/coeff_mag(1)
@@ -1236,13 +1227,11 @@ contains
       elseif ( (abs(prob_sol)==20) .and. (abs(prob_coeff)==1) ) then 
          ! random rhs, Driven cavity BC
 
-         call UniformRNGs(random,size(random))
-         val = random(1)
+         call UniformRNG(val)
 
       elseif ( abs(prob_sol)==100 ) then 
 
-         call UniformRNGs(random,size(random))
-         val = random(1)
+         call UniformRNG(val)
 
       else 
 
