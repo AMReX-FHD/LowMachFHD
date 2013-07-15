@@ -2,18 +2,25 @@
  
  dim_in = 2
  plot_int = 1000
- n_cells(1:2) = 64 64
  max_grid_size(1:2) = 16 16
+
+ ! Grid size
+ prob_lo(1:2) = 0 0
+ prob_hi(1:2) = 1 1 ! dx=1
+ n_cells(1:2) = 64 64
 
  ! allowable options for this example are
  ! -1 = PERIODIC
  bc_lo(1:2) = -1 -1
  bc_hi(1:2) = -1 -1
+ 
+ ! Time step
+ fixed_dt = 1E-5
 
 /
 
 &probin_multispecies
  nspecies = 4
- max_step = 2000
+ max_step = 1
  !include_temperature = T ! T or F
 /
