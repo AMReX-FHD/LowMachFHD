@@ -73,7 +73,9 @@ contains
  
     ! local varables
     integer          :: i,j
-    real(kind=dp_t) :: x,y
+    real(kind=dp_t) :: x,y, L(2)
+    
+    L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
  
     ! Amit: Remember to change multifab_physbc for non-periodic problem
     do j=lo(2),hi(2)
@@ -87,11 +89,11 @@ contains
           !if ((x-Lx*0.5d0)*(x-Lx*0.5d0) + (y-Ly*0.5d0)*(y-Ly*0.5d0) & 
           !    .lt. Lx*Ly*0.1d0) then
           if ((x*x + y*y) .lt. 0.5d0) then
-             rho(i,j,1)           = 0.5d0
+             rho(i,j,1)           = c_bc(1,1)
              !rho(i,j,2:nspecies)  = 0.3d0
              !diff_coeffs(i,j,:,:) = 1.d0
           else
-             rho(i,j,1)           = 0.0d0
+             rho(i,j,1)           = c_bc(2,1)
              !rho(i,j,2:nspecies)  = 0.0d0
              !diff_coeffs(i,j,:,:) = 1.d0
           endif 

@@ -5,13 +5,15 @@ module probin_multispecies_module
 
   implicit none
 
+  integer, parameter :: max_species=10
+   
   integer,save            :: nspecies,max_step
-  integer,save            :: Lx,Ly,Lz
+  integer,save            :: Lx,Ly,Lz   ! Donev: Delete these from the input 
+  real(kind=dp_t) :: c_bc(2,max_species) ! Boundary values for concentration
+  
   namelist /probin_multispecies/ nspecies
-  namelist /probin_multispecies/ max_step    
-  namelist /probin_multispecies/ Lx    
-  namelist /probin_multispecies/ Ly    
-  namelist /probin_multispecies/ Lz    
+  namelist /probin_multispecies/ max_step   
+  namelist /probin_multispecies/ c_bc
 
 contains
 
@@ -36,6 +38,7 @@ contains
 
     nspecies = 4
     max_step = 10000
+    c_bc = 0
     Lx       = 64
     Ly       = 64
     Lz       = 64

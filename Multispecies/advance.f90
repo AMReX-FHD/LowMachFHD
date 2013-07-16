@@ -30,6 +30,7 @@ contains
 
     ! an array of multifabs; one for each direction
     type(multifab) :: flux(mla%nlevel,mla%dim)
+    type(multifab) :: tempflux(mla%nlevel,mla%dim)
     type(multifab) :: fluxdiv(mla%nlevel)
  
     dm = mla%dim        ! dimensionality
@@ -43,17 +44,20 @@ contains
           ! flux(i) is face-centered, has nspecies component, zero ghost 
           ! cells & is nodal in direction i
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(tempflux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do   
     
     ! compute the face-centered flux in each direction
     call diffusive_flux(mla,rho,flux,dx,the_bc_level)
+    
+    !call compute_flux(rho(1), flux(1,:), dx(1,1)) 
 
     ! compute divergence of the flux 
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
 
     ! update rho using forward Euler discretization
-    call update_rho(mla,rho,fluxdiv,dt)
+    call update_rho(mla,rho,fluxdiv,dt,the_bc_level)
 
     ! destroy the multifab to prevent leakage in memory
     do n=1,nlevs
@@ -65,12 +69,14 @@ contains
 
   end subroutine advance
 
-  subroutine update_rho(mla,rho,fluxdiv,dt)
+  subroutine update_rho(mla,rho,fluxdiv,dt,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: fluxdiv(mla%nlevel)
     real(kind=dp_t), intent(in   ) :: dt
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
+
     ! local variables
     integer n, nlevs
 
@@ -86,6 +92,16 @@ contains
        ! add this to rho to advance in time
        call multifab_plus_plus(rho(n),fluxdiv(n))            
     end do 
+
+    do n=1, nlevs
+
+       ! fill ghost cells for two adjacent grids at the same level
+       ! this includes periodic domain boundary ghost cells
+       call multifab_fill_boundary(rho(n))
+
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(rho(n),1,scal_bc_comp,nspecies,the_bc_level(n))
+    end do   
 
   end subroutine update_rho
 

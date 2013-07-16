@@ -2,7 +2,7 @@
  
  dim_in = 2                     !problem dimension
  plot_int = 100                !plot interval
- max_grid_size(1:2) = 16 16     !?? 
+ max_grid_size(1:2) = 16 16 ! 1024 1024     !?? 
 
  ! Grid size
  prob_lo(1:2) = -1 -1
@@ -14,16 +14,12 @@
  bc_lo(1:2) = -1 -1
  bc_hi(1:2) = -1 -1
  
- ! Time step not used 
- fixed_dt = 1E-2
-
 /
 
 &probin_multispecies
  nspecies = 1
- max_step = 2000
- Lx       = 64
- Ly       = 64
- Lz       = 64
+ max_step = 500
  !include_temperature = T ! T or F
+ 
+ c_bc(1:2,1) = 0.3 0.5 ! Initial concentrations for species 1
 /
