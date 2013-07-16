@@ -78,7 +78,7 @@ contains
     
     ! Euler explicit time update
     do n=1,nlevs
-       ! multiply div-of-flux from component 1 with dt with zero ghost cell
+       ! multiply div-of-flux with dt, starting from component 1 with 0 ghost-cell
        call multifab_mult_mult_s_c(fluxdiv(n),1,dt,nspecies,0) 
     end do 
     

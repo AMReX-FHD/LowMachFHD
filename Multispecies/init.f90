@@ -45,10 +45,8 @@ contains
           select case(dm)
           case (2)
              call init_rho_2d(dp(:,:,1,:), ng, lo, hi, prob_lo, dx(n,:)) 
-             !call init_rho_2d(dp(:,:,1,:), dp1(:,:,1,:,:,:), ng, lo, hi, prob_lo, dx(n,:)) 
           case (3)
              call init_rho_3d(dp(:,:,:,:), ng, lo, hi, prob_lo, dx(n,:))
-             !call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:,:,:), ng, lo, hi, prob_lo, dx(n,:)) 
           end select
        end do
 
@@ -79,16 +77,22 @@ contains
  
     ! Amit: Remember to change multifab_physbc for non-periodic problem
     do j=lo(2),hi(2)
-       y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+       !y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+       y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) 
+       !y = prob_lo(2) + dble(j) * dx(2) 
        do i=lo(1),hi(1)
-          x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-          if ((x*x + y*y) .lt. 0.1d0) then
+          !x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+          x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) 
+          x = prob_lo(1) + dble(i) * dx(1)
+          !if ((x-Lx*0.5d0)*(x-Lx*0.5d0) + (y-Ly*0.5d0)*(y-Ly*0.5d0) & 
+          !    .lt. Lx*Ly*0.1d0) then
+          if ((x*x + y*y) .lt. 0.5d0) then
              rho(i,j,1)           = 0.5d0
-             rho(i,j,2:nspecies)  = 0.4d0
+             !rho(i,j,2:nspecies)  = 0.3d0
              !diff_coeffs(i,j,:,:) = 1.d0
           else
              rho(i,j,1)           = 0.0d0
-             rho(i,j,2:nspecies)  = 0.0d0
+             !rho(i,j,2:nspecies)  = 0.0d0
              !diff_coeffs(i,j,:,:) = 1.d0
           endif 
        end do

@@ -5,9 +5,13 @@ module probin_multispecies_module
 
   implicit none
 
-  integer,save    :: nspecies,max_step
+  integer,save            :: nspecies,max_step
+  integer,save            :: Lx,Ly,Lz
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step    
+  namelist /probin_multispecies/ Lx    
+  namelist /probin_multispecies/ Ly    
+  namelist /probin_multispecies/ Lz    
 
 contains
 
@@ -32,6 +36,9 @@ contains
 
     nspecies = 4
     max_step = 10000
+    Lx       = 64
+    Ly       = 64
+    Lz       = 64
     need_inputs = .true.
     farg = 1
     if ( need_inputs .AND. narg >= 1 ) then
@@ -60,7 +67,19 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_step
-       case ('--')
+      case ('--Lx')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) Lx
+      case ('--Ly')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) Ly
+      case ('--Lz')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) Lz
+      case ('--')
           farg = farg + 1
           exit
 

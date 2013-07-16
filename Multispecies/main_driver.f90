@@ -19,7 +19,7 @@ subroutine main_driver()
 
   ! will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t)              :: time
+  real(kind=dp_t)              :: time,dt
   integer                      :: n,nlevs,i,dm,istep
 
   type(box)                    :: bx
@@ -161,18 +161,21 @@ subroutine main_driver()
   if (plot_int .gt. 0) then
      call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
   end if
-  
+ 
+  ! choice of time step with a diffusive CFL of 0.1
+  dt = 0.1d0*dx(1,1)**2/(2.d0*dm)
+ 
   do istep=1,max_step
 
      if (parallel_IOProcessor()) then
-        print*,"Begin Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
+        print*,"Begin Advance; istep =",istep,"DT =",dt,"TIME =",time
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,dx,fixed_dt,the_bc_tower%bc_tower_array)
+     call advance(mla,rho,dx,dt,the_bc_tower%bc_tower_array)
 
      ! increment simulation time
-     time = time + fixed_dt
+     time = time + dt
 
      ! write a plotfile
      if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
