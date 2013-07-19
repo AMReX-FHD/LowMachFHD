@@ -30,7 +30,7 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
-  !type(multifab), allocatable  :: diff_coeffs(:)
+  type(multifab), allocatable  :: diff_coeffs(:)
 
   !=======================================================
   ! Initialization
@@ -50,7 +50,7 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
   allocate(rho(nlevs))
-  !allocate(diff_coeffs(nlevs))
+  allocate(diff_coeffs(nlevs))
 
   !=======================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -146,9 +146,10 @@ subroutine main_driver()
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),nspecies,1)
+     call multifab_build(diff_coeffs(n),mla%la(n),nspecies,1)
   end do
 
-  call init_rho(rho,dx,prob_lo,the_bc_tower%bc_tower_array)
+  call init_rho(rho,diff_coeffs,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
@@ -168,11 +169,11 @@ subroutine main_driver()
   do istep=1,max_step
 
      if (parallel_IOProcessor()) then
-        print*,"Begin Advance; istep =",istep,"DT =",dt,"TIME =",time
+        print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,dx,dt,the_bc_tower%bc_tower_array)
+     call advance(mla,rho,diff_coeffs,dx,dt,the_bc_tower%bc_tower_array)
 
      ! increment simulation time
      time = time + dt
@@ -192,6 +193,7 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_destroy(rho(n))
+     call multifab_destroy(diff_coeffs(n))
   end do
 
   call destroy(mla)

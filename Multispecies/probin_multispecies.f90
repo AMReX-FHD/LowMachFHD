@@ -6,14 +6,15 @@ module probin_multispecies_module
   implicit none
 
   integer, parameter :: max_species=10
-   
-  integer,save            :: nspecies,max_step
-  integer,save            :: Lx,Ly,Lz   ! Donev: Delete these from the input 
-  real(kind=dp_t) :: c_bc(2,max_species) ! Boundary values for concentration
+  integer, save      :: nspecies,max_step
+  !boundary values (initial) for concentration, 2 for inside & outside circle
+  real(kind=dp_t)    :: c_bc(2,max_species) 
+  real(kind=dp_t)    :: d_bc(max_species) 
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step   
   namelist /probin_multispecies/ c_bc
+  namelist /probin_multispecies/ d_bc
 
 contains
 
@@ -28,20 +29,20 @@ contains
     use bl_constants_module
     use cluster_module
     
-    integer    :: narg, farg
+    integer            :: narg, farg
     character(len=128) :: fname
-    logical :: lexist
-    logical :: need_inputs
-    integer :: un
+    logical            :: lexist
+    logical            :: need_inputs
+    integer            :: un
 
     narg = command_argument_count()
-
+ 
+    !here we set some random values to be replaced from the input file
     nspecies = 4
     max_step = 10000
-    c_bc = 0
-    Lx       = 64
-    Ly       = 64
-    Lz       = 64
+    c_bc     = 1.d0
+    d_bc     = 1.d0
+    
     need_inputs = .true.
     farg = 1
     if ( need_inputs .AND. narg >= 1 ) then
@@ -70,18 +71,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_step
-      case ('--Lx')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) Lx
-      case ('--Ly')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) Ly
-      case ('--Lz')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) Lz
       case ('--')
           farg = farg + 1
           exit

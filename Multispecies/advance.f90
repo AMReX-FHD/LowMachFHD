@@ -17,10 +17,11 @@ module advance_module
 
 contains
   
-  subroutine advance(mla,rho,dx,dt,the_bc_level)
+  subroutine advance(mla,rho,diff_coeffs,dx,dt,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
+    type(multifab) , intent(in   ) :: diff_coeffs(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -30,10 +31,9 @@ contains
 
     ! an array of multifabs; one for each direction
     type(multifab) :: flux(mla%nlevel,mla%dim)
-    type(multifab) :: tempflux(mla%nlevel,mla%dim)
     type(multifab) :: fluxdiv(mla%nlevel)
  
-    dm = mla%dim        ! dimensionality
+    dm    = mla%dim     ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
 
     ! build the flux and div-of-flux multifabs
@@ -44,12 +44,11 @@ contains
           ! flux(i) is face-centered, has nspecies component, zero ghost 
           ! cells & is nodal in direction i
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(tempflux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do   
     
     ! compute the face-centered flux in each direction
-    call diffusive_flux(mla,rho,flux,dx,the_bc_level)
+    call diffusive_flux(mla,rho,diff_coeffs,flux,dx,the_bc_level)
     
     !call compute_flux(rho(1), flux(1,:), dx(1,1)) 
 

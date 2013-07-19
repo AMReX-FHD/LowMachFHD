@@ -16,14 +16,21 @@ module diffusive_flux_module
 
 contains
  
-  subroutine diffusive_flux(mla,rho,flux,dx,the_bc_level) 
+  subroutine diffusive_flux(mla,rho,diff_coeffs,flux,dx,the_bc_level) 
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)
+    type(multifab) , intent(in   ) :: diff_coeffs(:)
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
+    ! local variables
+    integer n,i,dm,nlevs
+
+    dm    = mla%dim     ! dimensionality
+    nlevs = mla%nlevel  ! number of levels 
+ 
     ! Donev: or, do
     ! integer :: nspec
     ! nspec = rho%nc ! Number of components
@@ -31,12 +38,15 @@ contains
     call compute_grad(mla,rho,flux,dx,1,scal_bc_comp,1,nspecies,the_bc_level)
     
     ! Donev: If there is a diff_coeff:
+    ! Amit: You need to multiply, multifab with multifab
     !call multifab_mult_mult_s_c(flux,1,diff_coeff,nspecies,0)
     
-    ! If there are nspecies diff_coeffs:
-    ! do specie=1,nspecies
-    !    call multifab_mult_mult_s_c(flux,specie,diff_coeffs(specie),1,0)
-    ! end do
+    ! Multiply flux with diffusion constants 
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_c(flux(n,i),1,diff_coeffs(n),1,nspecies,0)
+       end do
+    end do
     
     ! Donev: If grad(temperature)
     !call compute_grad(mla,temperature,flux,dx,1,scal_bc_comp+n_species,n_species+1,1,the_bc_level)

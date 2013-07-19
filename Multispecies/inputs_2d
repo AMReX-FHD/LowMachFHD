@@ -1,13 +1,13 @@
 &probin_common
  
  dim_in = 2                     !problem dimension
- plot_int = 100                !plot interval
- max_grid_size(1:2) = 16 16 ! 1024 1024     !?? 
+ plot_int = 100                 !plot interval
+ max_grid_size(1:2) = 16 16     !individual box size 
 
  ! Grid size
- prob_lo(1:2) = -1 -1
- prob_hi(1:2) =  1  1           ! dx=(prob_hi-prob_lo)/ncells
- n_cells(1:2) = 64 64
+ prob_lo(1:2) = 0  0
+ prob_hi(1:2) = 64 64           !physical problem size
+ n_cells(1:2) = 64 64           !to set dx=systemsize/n_cells
 
  ! allowable options for this example are
  ! -1 = PERIODIC
@@ -17,9 +17,11 @@
 /
 
 &probin_multispecies
- nspecies = 1
- max_step = 500
+ nspecies = 4
+ max_step = 10000               !total number of simulational step
  !include_temperature = T ! T or F
  
- c_bc(1:2,1) = 0.3 0.5 ! Initial concentrations for species 1
+ c_bc(1:2,1) = 0.5 0.0          ! Initial concentrations for species 1
+ c_bc(1:2,2) = 0.5 0.3          ! Initial concentrations for species 2,3,4
+ d_bc(1:4)   = 0.1 0.4 0.8 1.2  ! diffusion coefficients for 4 species
 /
