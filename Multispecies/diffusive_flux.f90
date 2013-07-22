@@ -36,11 +36,9 @@ contains
     ! nspec = rho%nc ! Number of components
 
     call compute_grad(mla,rho,flux,dx,1,scal_bc_comp,1,nspecies,the_bc_level)
-    
-    ! Donev: If there is a diff_coeff:
-    ! Amit: You need to multiply, multifab with multifab
-    !call multifab_mult_mult_s_c(flux,1,diff_coeff,nspecies,0)
-    
+
+    ! Donev: Removed outdated comments -- delete Donev notes once you make the change
+        
     ! Multiply flux with diffusion constants 
     do n=1,nlevs
        do i=1,dm

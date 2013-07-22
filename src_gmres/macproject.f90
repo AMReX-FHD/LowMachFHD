@@ -152,9 +152,9 @@ contains
 
       ! MG solver defaults
       integer    :: stencil_type, bottom_max_iter, max_nlevel
-      integer    :: d, n, nub, gamma, cycle_type, smoother
+      integer    :: d, n, nub, cycle_type, smoother
       integer    :: max_nlevel_in,do_diagnostics
-      real(dp_t) :: omega,bottom_solver_eps
+      real(dp_t) :: bottom_solver_eps
       real(dp_t) ::  xa(mla%dim),  xb(mla%dim)
       real(dp_t) :: pxa(mla%dim), pxb(mla%dim)
 
@@ -170,8 +170,6 @@ contains
       max_nlevel        = mgt(nlevs)%max_nlevel
       smoother          = mgt(nlevs)%smoother
       nub               = mgt(nlevs)%nub
-      gamma             = mgt(nlevs)%gamma
-      omega             = mgt(nlevs)%omega
       cycle_type        = mgt(nlevs)%cycle_type
       bottom_solver_eps = mgt(nlevs)%bottom_solver_eps
       bottom_max_iter   = mgt(nlevs)%bottom_max_iter
@@ -208,9 +206,7 @@ contains
                                 nu2 = mgt(nlevs)%nu2, &
                                 nuf = mgt(nlevs)%nuf, &
                                 nub = nub, &
-                                gamma = gamma, &
                                 cycle_type = cycle_type, &
-                                omega = omega, &
                                 bottom_solver = mgt(nlevs)%bottom_solver, &
                                 bottom_max_iter = bottom_max_iter, &
                                 bottom_solver_eps = bottom_solver_eps, &
@@ -237,9 +233,7 @@ contains
                                 nu2 = mg_nsmooths_up, &
                                 nuf = mg_nsmooths_bottom, &
                                 nub = nub, &
-                                gamma = gamma, &
                                 cycle_type = cycle_type, &
-                                omega = omega, &
                                 bottom_solver = mg_bottom_solver, &
                                 bottom_max_iter = bottom_max_iter, &
                                 bottom_solver_eps = bottom_solver_eps, &
