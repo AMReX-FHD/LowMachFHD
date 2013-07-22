@@ -1,7 +1,7 @@
 # BOXLIB_HOME defines the directory in which we will find all the BoxLib code
 # If you set BOXLIB_HOME as an environment variable, this line will be ignored
 #BOXLIB_HOME ?= /path/to/BoxLib/
-STAGGERED_HOME := ../
+STAGGERED_HOME := ..
 
 NDEBUG    := t 
 MPI       := 
@@ -9,12 +9,6 @@ OMP       :=
 PROF      :=
 COMP      := gfortran
 MKVERBOSE := t
-
-# LAPACK95
-# We need to add this to the compilation line
-# -I $(STAGGERED_HOME)/Multispecies/LAPACK95/lapack95_modules/
-# and to the link line
-# $(STAGGERED_HOME)/Multispecies/LAPACK95/lapack95.a -llapack -lblas
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
@@ -26,6 +20,11 @@ VPATH_LOCATIONS += $(STAGGERED_HOME)/src_common
 
 include $(BOXLIB_HOME)/Src/F_BaseLib/GPackage.mak
 VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/F_BaseLib
+
+LAPACK95_DIR = $(STAGGERED_HOME)/Multispecies/LAPACK95
+
+F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
+libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
 
 main.$(suf).exe: $(objects) 
 	$(LINK.f90) -o main.$(suf).exe $(objects) $(libraries)
