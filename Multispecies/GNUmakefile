@@ -14,7 +14,7 @@ MKVERBOSE := t
 # We need to add this to the compilation line
 # -I $(STAGGERED_HOME)/Multispecies/LAPACK95/lapack95_modules/
 # and to the link line
-# $(STAGGERED_HOME)/Multispecies/LAPACK95/lapack95.a
+# $(STAGGERED_HOME)/Multispecies/LAPACK95/lapack95.a -llapack -lblas
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
