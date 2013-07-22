@@ -81,6 +81,7 @@ contains
        y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
        do i=lo(1),hi(1)
           x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+          ! Donev: Use ** for square, i.e., (x-L(1)*0.5d0)**2
           if ((x-L(1)*0.5d0)*(x-L(1)*0.5d0) + (y-L(2)*0.5d0)*(y-L(2)*0.5d0) & 
                .lt. L(1)*L(2)*0.1d0) then
              rho(i,j,1)           = c_bc(1,1)
@@ -121,6 +122,7 @@ contains
           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1)
+             ! Donev: Fix this to be general like 2D and initialize the diffusion coefficients
              if ((x*x + y*y + z*z) .lt. 0.5d0) then
                 rho(i,j,k,1)           = 0.5d0
                 rho(i,j,k,2:nspecies)  = 0.3d0
