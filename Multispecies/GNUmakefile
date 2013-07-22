@@ -10,6 +10,12 @@ PROF      :=
 COMP      := gfortran
 MKVERBOSE := t
 
+# LAPACK95
+# We need to add this to the compilation line
+# -I $(STAGGERED_HOME)/Multispecies/LAPACK95/lapack95_modules/
+# and to the link line
+# $(STAGGERED_HOME)/Multispecies/LAPACK95/lapack95.a
+
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
 include $(STAGGERED_HOME)/Multispecies/GPackage.mak
