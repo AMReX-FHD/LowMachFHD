@@ -50,8 +50,6 @@ contains
     ! compute the face-centered flux in each direction
     call diffusive_flux(mla,rho,diff_coeffs,flux,dx,the_bc_level)
     
-    !call compute_flux(rho(1), flux(1,:), dx(1,1)) 
-
     ! compute divergence of the flux 
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
 
