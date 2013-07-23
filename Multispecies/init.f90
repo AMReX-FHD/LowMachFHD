@@ -46,7 +46,7 @@ contains
           case (2)
              call init_rho_2d(dp(:,:,1,:), dp1(:,:,1,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:)) 
           case (3)
-             call init_rho_3d(dp(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
+             call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
           end select
        end do
 
@@ -81,8 +81,7 @@ contains
        y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
        do i=lo(1),hi(1)
           x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-          ! Donev: Use ** for square, i.e., (x-L(1)*0.5d0)**2
-          if ((x-L(1)*0.5d0)*(x-L(1)*0.5d0) + (y-L(2)*0.5d0)*(y-L(2)*0.5d0) & 
+          if ((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 & 
                .lt. L(1)*L(2)*0.1d0) then
              rho(i,j,1)           = c_bc(1,1)
              rho(i,j,2:nspecies)  = c_bc(1,2)
@@ -91,20 +90,17 @@ contains
              rho(i,j,1)           = c_bc(2,1)
              rho(i,j,2:nspecies)  = c_bc(2,2)
              diff_coeffs(i,j,1:nspecies) = d_bc(1:nspecies)
-          endif 
+          endif
        end do
     end do
  
     end subroutine init_rho_2d
 
-    subroutine init_rho_3d(rho, ng, lo, hi, prob_lo, prob_hi, dx)
+    subroutine init_rho_3d(rho, diff_coeffs, ng, lo, hi, prob_lo, prob_hi, dx)
 
     integer          :: lo(3), hi(3), ng
-    real(kind=dp_t) :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)
-    !real(kind=dp_t) :: diff_coeffs(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:,:)
-    ! Example:
-    ! real(dp_t) :: diff_coeffs(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:,:) ! Last dimensions are (1:nspecies,1:nspecies)
-    ! You can use D = diff_coeffs(i,j,k,1:nspecies,1:nspecies)
+    real(kind=dp_t) :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! Last dimension for species 
+    real(kind=dp_t) :: diff_coeffs(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) 
     real(kind=dp_t) :: prob_lo(3)
     real(kind=dp_t) :: prob_hi(3)
     real(kind=dp_t) :: dx(:)
@@ -117,20 +113,20 @@ contains
     
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
-       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3)
+       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
        do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2)
+          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1)
-             ! Donev: Fix this to be general like 2D and initialize the diffusion coefficients
-             if ((x*x + y*y + z*z) .lt. 0.5d0) then
-                rho(i,j,k,1)           = 0.5d0
-                rho(i,j,k,2:nspecies)  = 0.3d0
-                !diff_coeffs(i,j,k,:,:) = 1.d0
+             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+             if ((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + & 
+                 (z-L(3)*0.5d0)**2 .lt. L(1)*L(2)*L(3)*0.5d0) then
+                 rho(i,j,k,1)           = c_bc(1,1)
+                 rho(i,j,k,2:nspecies)  = c_bc(1,2)
+                 diff_coeffs(i,j,k,1:nspecies) = d_bc(1:nspecies)
              else
-                rho(i,j,k,1)           = 0.0d0
-                rho(i,j,k,2:nspecies)  = 0.0d0
-                !diff_coeffs(i,j,k,:,:) = 1.d0
+                 rho(i,j,k,1)           = c_bc(2,1)
+                 rho(i,j,k,2:nspecies)  = c_bc(2,2)
+                 diff_coeffs(i,j,k,1:nspecies) = d_bc(1:nspecies)
              endif
           end do
        end do

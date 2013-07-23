@@ -9,7 +9,9 @@ module probin_multispecies_module
   integer, save      :: nspecies,max_step
   !boundary values (initial) for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: c_bc(2,max_species) 
-  real(kind=dp_t)    :: d_bc(max_species) ! Donev: Add comments here to explain what variable is for future
+  !boundary values (initial) for diffusivities, presently scalar numbers, 
+  !will add matrices later
+  real(kind=dp_t)    :: d_bc(max_species) 
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step   

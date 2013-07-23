@@ -130,8 +130,8 @@ subroutine main_driver()
   !=======================================================
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  ! Donev: Last argument to initialize_bc is the number of scalar variables
-  ! nscal=nspecies  Number of scalars (maybe add temperature later)
+  ! last argument to initialize_bc is the number of scalar variables
+  ! nscal=nspecies temporarily
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies)
 
   do n=1,nlevs
