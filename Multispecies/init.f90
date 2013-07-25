@@ -5,7 +5,8 @@ module init_module
   use multifab_physbc_module
   use probin_common_module
   use probin_multispecies_module
-  
+  use F95_LAPACK 
+ 
   implicit none
 
   private
@@ -70,13 +71,50 @@ contains
     real(kind=dp_t)  :: prob_lo(2)
     real(kind=dp_t)  :: prob_hi(2)
     real(kind=dp_t)  :: dx(:)
- 
+
     ! local varables
     integer          :: i,j
     real(kind=dp_t)  :: x,y,L(2)
+  
+    ! testing simple matmul and la_getri
+    real(kind=dp_t), dimension(:,:), allocatable :: a,b
+    integer, dimension(:), allocatable :: ipiv
+    integer          :: max_species,lda,info,lwork
     
-    L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
+    lda = nspecies 
+    max_species = 10
+    lwork =max_species*nspecies**2
+    !real(kind=dp_t)  :: work(lwork)
+    allocate(a(nspecies,nspecies))
+    allocate(b(nspecies,nspecies))
+    allocate(ipiv(max_species))
+    
+    !a = transpose(reshape((/1.1, 2.1, 3.1, 4.1, 2.1, 3.1, 4.1, & 
+    !     5.1, 3.1, 4.1, 5.1, 6.1, 4.1, 5.1, 6.1, 7.1/), (/size(a,2),size(a,1)/)))
+    b =  transpose(reshape((/1.1, 2.1, 3.1, 4.1, 2.1, 3.1, 4.1, & 
+         5.1, 3.1, 4.1, 5.1, 6.1, 4.1, 5.1, 6.1, 7.1/), (/size(b,2),size(b,1)/)))
+    !write(*,*) matmul(a,b)
+  
+    a = transpose(reshape((/Dbar_bc(1), Dbar_bc(2), Dbar_bc(3), Dbar_bc(4), & 
+                            Dbar_bc(2), Dbar_bc(5), Dbar_bc(6), Dbar_bc(7), &
+                            Dbar_bc(3), Dbar_bc(6), Dbar_bc(8), Dbar_bc(9), &
+                            Dbar_bc(4), Dbar_bc(7), Dbar_bc(9), Dbar_bc(10)/),& 
+                          (/size(a,2),size(a,1)/)))
+  
+    call sgetrf (nspecies, nspecies, a, lda, ipiv, info)
+    !write(*,*) info
+    !call sgetri (nspecies, a, lda, ipiv, work, lwork, info)
+    !write(*,*) a
+     
+    !call LA_GETRF (nspecies, nspecies, a, lda, ipiv) 
+    !call LA_GETRI (a, ipiv) 
+
+    deallocate(a)
+    deallocate(b)
+    deallocate(ipiv)
  
+    L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
+
     do j=lo(2),hi(2)
        y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
        do i=lo(1),hi(1)
@@ -98,7 +136,7 @@ contains
 
     subroutine init_rho_3d(rho, diff_coeffs, ng, lo, hi, prob_lo, prob_hi, dx)
 
-    integer          :: lo(3), hi(3), ng
+    integer         :: lo(3), hi(3), ng
     real(kind=dp_t) :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! Last dimension for species 
     real(kind=dp_t) :: diff_coeffs(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) 
     real(kind=dp_t) :: prob_lo(3)
@@ -119,7 +157,7 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
              if ((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + & 
-                 (z-L(3)*0.5d0)**2 .lt. L(1)*L(2)*L(3)*0.5d0) then
+                 (z-L(3)*0.5d0)**2 .lt. L(1)*L(2)*L(3)*0.001d0) then
                  rho(i,j,k,1)           = c_bc(1,1)
                  rho(i,j,k,2:nspecies)  = c_bc(1,2)
                  diff_coeffs(i,j,k,1:nspecies) = d_bc(1:nspecies)

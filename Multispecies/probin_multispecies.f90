@@ -6,17 +6,19 @@ module probin_multispecies_module
   implicit none
 
   integer, parameter :: max_species=10
+  integer, parameter :: max_element=max_species*(max_species+1)/2
   integer, save      :: nspecies,max_step
-  !boundary values (initial) for concentration, 2 for inside & outside circle
-  real(kind=dp_t)    :: c_bc(2,max_species) 
-  !boundary values (initial) for diffusivities, presently scalar numbers, 
-  !will add matrices later
-  real(kind=dp_t)    :: d_bc(max_species) 
+  real(kind=dp_t)    :: c_bc(2,max_species) !initial values for concentration, 2 for inside & outside circle
+  real(kind=dp_t)    :: d_bc(max_species)   !initial values for diffusivities, presently scalar numbers 
+  real(kind=dp_t)    :: m_bc(max_species)   ! masses of nspecies
+  real(kind=dp_t)    :: Dbar_bc(max_element)! SM diffusion constant  
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step   
   namelist /probin_multispecies/ c_bc
   namelist /probin_multispecies/ d_bc
+  namelist /probin_multispecies/ m_bc
+  namelist /probin_multispecies/ Dbar_bc
 
 contains
 
@@ -44,6 +46,8 @@ contains
     max_step = 10000
     c_bc     = 1.d0
     d_bc     = 1.d0
+    m_bc     = 1.d0
+    Dbar_bc  = 1.d0
     
     need_inputs = .true.
     farg = 1
