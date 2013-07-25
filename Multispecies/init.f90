@@ -73,35 +73,54 @@ contains
     real(kind=dp_t)  :: dx(:)
 
     ! local varables
-    integer          :: i,j
+    integer          :: i,j,k
     real(kind=dp_t)  :: x,y,L(2)
   
     ! testing simple matmul and la_getri
-    real(kind=dp_t), dimension(:,:), allocatable :: a,b
-    integer, dimension(:), allocatable :: ipiv
+    real(kind=dp_t), dimension(nspecies,nspecies) :: a,b,c
+    integer, dimension(nspecies) :: ipiv
     integer          :: max_species,lda,info,lwork
     
     lda = nspecies 
     max_species = 10
     lwork =max_species*nspecies**2
     !real(kind=dp_t)  :: work(lwork)
-    allocate(a(nspecies,nspecies))
-    allocate(b(nspecies,nspecies))
-    allocate(ipiv(max_species))
     
-    !a = transpose(reshape((/1.1, 2.1, 3.1, 4.1, 2.1, 3.1, 4.1, & 
-    !     5.1, 3.1, 4.1, 5.1, 6.1, 4.1, 5.1, 6.1, 7.1/), (/size(a,2),size(a,1)/)))
+    a = transpose(reshape((/1.1, 2.1, 3.1, 4.1, 2.1, 3.1, 4.1, & 
+         5.1, 3.1, 4.1, 5.1, 6.1, 4.1, 5.1, 6.1, 7.1/), (/size(a,2),size(a,1)/)))
     b =  transpose(reshape((/1.1, 2.1, 3.1, 4.1, 2.1, 3.1, 4.1, & 
          5.1, 3.1, 4.1, 5.1, 6.1, 4.1, 5.1, 6.1, 7.1/), (/size(b,2),size(b,1)/)))
     !write(*,*) matmul(a,b)
   
-    a = transpose(reshape((/Dbar_bc(1), Dbar_bc(2), Dbar_bc(3), Dbar_bc(4), & 
+    if(.false.) a = transpose(reshape((/Dbar_bc(1), Dbar_bc(2), Dbar_bc(3), Dbar_bc(4), & 
                             Dbar_bc(2), Dbar_bc(5), Dbar_bc(6), Dbar_bc(7), &
                             Dbar_bc(3), Dbar_bc(6), Dbar_bc(8), Dbar_bc(9), &
                             Dbar_bc(4), Dbar_bc(7), Dbar_bc(9), Dbar_bc(10)/),& 
                           (/size(a,2),size(a,1)/)))
+    
+    if(.false.) then                      
+    k=0                       
+    do i=1, nspecies
+       do j=1, i-1
+          k=k+1
+          a(i,j)=Dbar_bc(k)
+          a(j,i)=a(i,j) ! symmetric
+       end do
+       a(i,i)=0
+    end do
+    end if
+    
+    
+    call random_number(a)
+    call random_number(b)   
+    call la_gesvx(A=a, B=b, X=c) ! result is written to second argument
+    
+    write(*,*) "ERROR=", matmul(a,c)-b
+    stop
+   
+                                
   
-    call sgetrf (nspecies, nspecies, a, lda, ipiv, info)
+    !call sgetrf (nspecies, nspecies, a, lda, ipiv, info)
     !write(*,*) info
     !call sgetri (nspecies, a, lda, ipiv, work, lwork, info)
     !write(*,*) a
@@ -109,10 +128,6 @@ contains
     !call LA_GETRF (nspecies, nspecies, a, lda, ipiv) 
     !call LA_GETRI (a, ipiv) 
 
-    deallocate(a)
-    deallocate(b)
-    deallocate(ipiv)
- 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
 
     do j=lo(2),hi(2)

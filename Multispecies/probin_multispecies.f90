@@ -6,7 +6,7 @@ module probin_multispecies_module
   implicit none
 
   integer, parameter :: max_species=10
-  integer, parameter :: max_element=max_species*(max_species+1)/2
+  integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step
   real(kind=dp_t)    :: c_bc(2,max_species) !initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: d_bc(max_species)   !initial values for diffusivities, presently scalar numbers 
