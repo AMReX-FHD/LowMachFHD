@@ -50,7 +50,7 @@ contains
 
     ! average mac velocities to cell centers
     do i=1,dm          
-       call average_face_to_cc(mla,umac(:,i),1,plotdata,i)
+       call average_face_to_cc(mla,umac(:,i),1,plotdata,i,1)
     end do
 
     ! pressure

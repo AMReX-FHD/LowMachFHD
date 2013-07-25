@@ -100,22 +100,22 @@ contains
 
     ! vel averaged
     do i=1,dm
-       call average_face_to_cc(mla,umac_in(:,i),1,plotdata,i)
+       call average_face_to_cc(mla,umac_in(:,i),1,plotdata,i,1)
     end do
 
     ! vel shifted
     do i=1,dm
-       call shift_face_to_cc(mla,umac_in(:,i),1,plotdata,dm+i)
+       call shift_face_to_cc(mla,umac_in(:,i),1,plotdata,dm+i,1)
     end do
 
     ! m averaged
     do i=1,dm
-       call average_face_to_cc(mla,m_in(:,i),1,plotdata,2*dm+i)
+       call average_face_to_cc(mla,m_in(:,i),1,plotdata,2*dm+i,1)
     end do
 
     ! m shifted
     do i=1,dm
-       call shift_face_to_cc(mla,m_in(:,i),1,plotdata,3*dm+i)
+       call shift_face_to_cc(mla,m_in(:,i),1,plotdata,3*dm+i,1)
     end do
 
     do n = 1,nlevs

@@ -13,17 +13,18 @@ module convert_stag_module
   
 contains
 
-  subroutine average_face_to_cc(mla,face,face_comp,cc,cc_comp)
+  subroutine average_face_to_cc(mla,face,start_face_comp,cc,start_cc_comp,num_comp)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: face(:)
     type(multifab) , intent(inout) ::   cc(:)
-    integer        , intent(in   ) :: face_comp,cc_comp
+    integer        , intent(in   ) :: start_face_comp,start_cc_comp,num_comp
 
     ! local
     integer :: n,i,dm,nlevs,ng_f,ng_c
     integer :: lo(mla%dim),hi(mla%dim)
     integer :: av_dim ! Along which dimension to do the average
+    integer :: face_comp,cc_comp
 
     real(kind=dp_t), pointer :: ep(:,:,:,:)
     real(kind=dp_t), pointer :: cp(:,:,:,:)
@@ -50,26 +51,27 @@ contains
           ep => dataptr(face(n), i)
           lo = lwb(get_box(cc(n), i))
           hi = upb(get_box(cc(n), i))
-          select case (dm)
-          case (2)
-             call average_face_to_cc_2d(ep(:,:,1,:), ng_f, cp(:,:,1,:), ng_c, &
-                                       face_comp, cc_comp, lo, hi, av_dim)
-          case (3)
-             call average_face_to_cc_3d(ep(:,:,:,:), ng_f, cp(:,:,:,:), ng_c, &
-                                       face_comp, cc_comp, lo, hi, av_dim)
-          end select
-          
-         
+          do face_comp=start_face_comp,start_face_comp+num_comp-1
+             cc_comp = start_cc_comp + (face_comp-start_face_comp)
+             select case (dm)
+             case (2)
+                call average_face_to_cc_2d(ep(:,:,1,face_comp), ng_f, cp(:,:,1,cc_comp), ng_c, &
+                                           lo, hi, av_dim)
+             case (3)
+                call average_face_to_cc_3d(ep(:,:,:,face_comp), ng_f, cp(:,:,:,cc_comp), ng_c, &
+                                           lo, hi, av_dim)
+             end select
+          end do
        end do
     end do
 
   contains
 
-    subroutine average_face_to_cc_2d(face,ng_f,cc,ng_c,face_comp,cc_comp,lo,hi,av_dim)
+    subroutine average_face_to_cc_2d(face,ng_f,cc,ng_c,lo,hi,av_dim)
 
-      integer        , intent(in   ) :: ng_f,ng_c,face_comp,cc_comp,lo(:),hi(:)
-      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:,:)
-      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
+      integer        , intent(in   ) :: ng_f,ng_c,lo(:),hi(:)
+      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:)
+      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:)
       integer, intent(in) :: av_dim
 
       ! local
@@ -79,9 +81,9 @@ contains
          do i=lo(1),hi(1)
             select case(av_dim)
             case(1)
-               cc(i,j,cc_comp) = 0.5d0*(face(i,j,face_comp)+face(i+1,j,face_comp))
+               cc(i,j) = 0.5d0*(face(i,j)+face(i+1,j))
             case(2)   
-               cc(i,j,cc_comp) = 0.5d0*(face(i,j,face_comp)+face(i,j+1,face_comp))
+               cc(i,j) = 0.5d0*(face(i,j)+face(i,j+1))
             case default
                stop "av_dim>2 in 2d"
             end select
@@ -90,11 +92,11 @@ contains
 
     end subroutine average_face_to_cc_2d
 
-    subroutine average_face_to_cc_3d(face,ng_f,cc,ng_c,face_comp,cc_comp,lo,hi,av_dim)
+    subroutine average_face_to_cc_3d(face,ng_f,cc,ng_c,lo,hi,av_dim)
 
-      integer        , intent(in   ) :: ng_f,ng_c,face_comp,cc_comp,lo(:),hi(:)
-      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
-      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
+      integer        , intent(in   ) :: ng_f,ng_c,lo(:),hi(:)
+      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
+      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
       integer, intent(in) :: av_dim
 
       ! local
@@ -105,11 +107,11 @@ contains
             do i=lo(1),hi(1)
                select case(av_dim)
                case(1)
-                  cc(i,j,k,cc_comp) = 0.5d0*(face(i,j,k,face_comp)+face(i+1,j,k,face_comp))
+                  cc(i,j,k) = 0.5d0*(face(i,j,k)+face(i+1,j,k))
                case(2)   
-                  cc(i,j,k,cc_comp) = 0.5d0*(face(i,j,k,face_comp)+face(i,j+1,k,face_comp))
+                  cc(i,j,k) = 0.5d0*(face(i,j,k)+face(i,j+1,k))
                case(3)   
-                  cc(i,j,k,cc_comp) = 0.5d0*(face(i,j,k,face_comp)+face(i,j,k+1,face_comp))
+                  cc(i,j,k) = 0.5d0*(face(i,j,k)+face(i,j,k+1))
                case default
                   stop "av_dim>3 in 3d"
                end select
@@ -759,18 +761,17 @@ contains
 
   end subroutine average_cc_to_edge_3d
 
-
-
-  subroutine shift_face_to_cc(mla,face,face_comp,cc,cc_comp)
+  subroutine shift_face_to_cc(mla,face,start_face_comp,cc,start_cc_comp,num_comp)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: face(:)
     type(multifab) , intent(inout) ::   cc(:)
-    integer        , intent(in   ) :: face_comp,cc_comp
+    integer        , intent(in   ) :: start_face_comp,start_cc_comp,num_comp
 
     ! local
     integer :: n,i,dm,nlevs,ng_f,ng_c
     integer :: lo(mla%dim),hi(mla%dim)
+    integer :: face_comp,cc_comp
 
     real(kind=dp_t), pointer :: ep(:,:,:,:)
     real(kind=dp_t), pointer :: cp(:,:,:,:)
@@ -787,41 +788,44 @@ contains
           ep => dataptr(face(n), i)
           lo = lwb(get_box(cc(n), i))
           hi = upb(get_box(cc(n), i))
-          select case (dm)
-          case (2)
-             call shift_face_to_cc_2d(ep(:,:,1,:), ng_f, cp(:,:,1,:), ng_c, &
-                                      face_comp, cc_comp, lo, hi)
-          case (3)
-             call shift_face_to_cc_3d(ep(:,:,:,:), ng_f, cp(:,:,:,:), ng_c, &
-                                      face_comp, cc_comp, lo, hi)
-          end select
+          do face_comp=start_face_comp,start_face_comp+num_comp-1
+             cc_comp = start_cc_comp + (face_comp-start_face_comp)
+             select case (dm)
+             case (2)
+                call shift_face_to_cc_2d(ep(:,:,1,face_comp), ng_f, cp(:,:,1,cc_comp), ng_c, &
+                                         lo, hi)
+             case (3)
+                call shift_face_to_cc_3d(ep(:,:,:,face_comp), ng_f, cp(:,:,:,cc_comp), ng_c, &
+                                         lo, hi)
+             end select
+          end do
        end do
     end do
 
   contains
     
-    subroutine shift_face_to_cc_2d(face,ng_f,cc,ng_c,face_comp,cc_comp,lo,hi)
+    subroutine shift_face_to_cc_2d(face,ng_f,cc,ng_c,lo,hi)
 
-      integer        , intent(in   ) :: ng_f,ng_c,face_comp,cc_comp,lo(:),hi(:)
-      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:,:)
-      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
+      integer        , intent(in   ) :: ng_f,ng_c,lo(:),hi(:)
+      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:)
+      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:)
 
       ! local
       integer :: i,j
 
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)
-            cc(i,j,cc_comp) = face(i,j,face_comp)
+            cc(i,j) = face(i,j)
          end do
       end do
 
     end subroutine shift_face_to_cc_2d
 
-    subroutine shift_face_to_cc_3d(face,ng_f,cc,ng_c,face_comp,cc_comp,lo,hi)
+    subroutine shift_face_to_cc_3d(face,ng_f,cc,ng_c,lo,hi)
 
-      integer        , intent(in   ) :: ng_f,ng_c,face_comp,cc_comp,lo(:),hi(:)
-      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
-      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
+      integer        , intent(in   ) :: ng_f,ng_c,lo(:),hi(:)
+      real(kind=dp_t), intent(in   ) :: face(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
+      real(kind=dp_t), intent(  out) ::   cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
 
       ! local
       integer :: i,j,k
@@ -829,7 +833,7 @@ contains
       do k=lo(3),hi(3)
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)
-               cc(i,j,k,cc_comp) = face(i,j,k,face_comp)
+               cc(i,j,k) = face(i,j,k)
             end do
          end do
       end do
