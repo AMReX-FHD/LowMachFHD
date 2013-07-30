@@ -30,7 +30,8 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
-  type(multifab), allocatable  :: diff_coeffs(:)
+  !type(multifab), allocatable  :: molarconc(:)
+  type(multifab), allocatable  :: BinvGama(:)
 
   
   !=======================================================
@@ -51,7 +52,8 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
   allocate(rho(nlevs))
-  allocate(diff_coeffs(nlevs))
+  !allocate(molarconc(nlevs))
+  allocate(BinvGama(nlevs))
 
   !=======================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -147,10 +149,12 @@ subroutine main_driver()
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),nspecies,1)
-     call multifab_build(diff_coeffs(n),mla%la(n),nspecies,1)
+     !call multifab_build(molarconc(n),mla%la(n),nspecies,1)
+     call multifab_build(BinvGama(n),mla%la(n),nspecies,1)
   end do
 
-  call init_rho(rho,diff_coeffs,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+  call init_rho(rho,BinvGama,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+  !call init_rho(rho,molarconc,BinvGama,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
@@ -174,7 +178,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,diff_coeffs,dx,dt,the_bc_tower%bc_tower_array)
+     !call advance(mla,rho,BinvGama,dx,dt,the_bc_tower%bc_tower_array)
 
      ! increment simulation time
      time = time + dt
@@ -194,7 +198,8 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_destroy(rho(n))
-     call multifab_destroy(diff_coeffs(n))
+     !call multifab_destroy(molarconc(n))
+     call multifab_destroy(BinvGama(n))
   end do
 
   call destroy(mla)

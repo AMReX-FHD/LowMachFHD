@@ -45,7 +45,6 @@ contains
     nspecies = 4
     max_step = 10000
     c_bc     = 1.d0
-    d_bc     = 1.d0
     m_bc     = 1.d0
     Dbar_bc  = 1.d0
     

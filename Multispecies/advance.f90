@@ -17,11 +17,11 @@ module advance_module
 
 contains
   
-  subroutine advance(mla,rho,diff_coeffs,dx,dt,the_bc_level)
+  subroutine advance(mla,rho,BinvGama,dx,dt,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    type(multifab) , intent(in   ) :: diff_coeffs(:)
+    type(multifab) , intent(in   ) :: BinvGama(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -48,7 +48,7 @@ contains
     end do   
     
     ! compute the face-centered flux in each direction
-    call diffusive_flux(mla,rho,diff_coeffs,flux,dx,the_bc_level)
+    call diffusive_flux(mla,rho,BinvGama,flux,dx,the_bc_level)
     
     ! compute divergence of the flux 
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
