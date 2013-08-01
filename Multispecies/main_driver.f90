@@ -19,6 +19,8 @@ subroutine main_driver()
 
   ! will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
+  real(kind=dp_t), allocatable :: Dbar(:,:)
+  real(kind=dp_t), allocatable :: Gama(:,:)
   real(kind=dp_t)              :: time,dt
   integer                      :: n,nlevs,i,dm,istep
 
@@ -30,34 +32,35 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
-  !type(multifab), allocatable  :: molarconc(:)
+  type(multifab), allocatable  :: molarconc(:)
   type(multifab), allocatable  :: BinvGama(:)
 
   
-  !=======================================================
+  !==============================================================
   ! Initialization
-  !=======================================================
+  !==============================================================
 
   call probin_common_init()
   call probin_multispecies_init() 
 
-  ! in this example we fix nlevs to be 1
-  ! for adaptive simulations where the grids change, cells at finer
-  ! resolution don't necessarily exist depending on your tagging criteria,
-  ! so max_levs isn't necessary equal to nlevs
+  ! for time being, we fix nlevs to be 1. for adaptive simulations where the grids 
+  ! change, cells at finer resolution don't necessarily exist depending on your 
+  ! tagging criteria, so max_levs isn't necessary equal to nlevs
   nlevs = 1
   dm = dim_in
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
+  allocate(Dbar(nspecies,nspecies))
+  allocate(Gama(nspecies,nspecies))
   allocate(rho(nlevs))
-  !allocate(molarconc(nlevs))
+  allocate(molarconc(nlevs))
   allocate(BinvGama(nlevs))
 
-  !=======================================================
+  !==============================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
-  !=======================================================
+  !==============================================================
   
   ! tell mba how many levels and dimensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -71,7 +74,10 @@ subroutine main_driver()
 
   ! set grid spacing at each level
   ! presently the grid spacing is same in each direction
+  ! Set initial Dbar all zero.
   dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
+  Dbar(1:nspecies,1:nspecies) = 0.0d0  
+  Gama(1:nspecies,1:nspecies) = 0.0d0  
   
   select case (dm) 
     case(2)
@@ -149,12 +155,11 @@ subroutine main_driver()
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),nspecies,1)
-     !call multifab_build(molarconc(n),mla%la(n),nspecies,1)
-     call multifab_build(BinvGama(n),mla%la(n),nspecies,1)
+     call multifab_build(molarconc(n),mla%la(n),nspecies,1)
+     call multifab_build(BinvGama(n),mla%la(n),nspecies**2,1)
   end do
 
-  call init_rho(rho,BinvGama,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
-  !call init_rho(rho,molarconc,BinvGama,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+  call init_rho(rho,molarconc,BinvGama,Dbar,Gama,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
@@ -178,7 +183,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     !call advance(mla,rho,BinvGama,dx,dt,the_bc_tower%bc_tower_array)
+     call advance(mla,rho,molarconc,BinvGama,Dbar,Gama,dx,dt,the_bc_tower%bc_tower_array)
 
      ! increment simulation time
      time = time + dt
@@ -198,7 +203,7 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_destroy(rho(n))
-     !call multifab_destroy(molarconc(n))
+     call multifab_destroy(molarconc(n))
      call multifab_destroy(BinvGama(n))
   end do
 
