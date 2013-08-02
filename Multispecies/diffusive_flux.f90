@@ -118,6 +118,7 @@ contains
     ! Donev: As I explained in my notes, you can do here:    
     !real(kind=dp_t)  :: BinvGama(lo(1)-ng:hi(1)+ng,lo(2)-ng:hi(2)+ng,1:nspecies,1:nspecies) 
     ! This makes BinvGama a rank-4 array, see below
+    ! Or, even better, see my comment at the end of this routine
     real(kind=dp_t)  :: BinvGama(lo(1)-ng:,lo(2)-ng:,:)  ! B^(-1)*Gamma; last dimension for nspecies^2
     real(kind=dp_t)  :: Dbar(:,:)                        ! SM diffusion constants 
     real(kind=dp_t)  :: Gama(:,:)                        ! non-ideality coefficient 
@@ -188,7 +189,7 @@ contains
           endif
 
           ! adjust parameter alpha to max val of Bij
-          alpha = maxval(Bij) 
+          alpha = maxval(Bij) ! Donev: this needs maxval(abs(Bij))
   
           ! transform Bprimeij to Bij
           do row=1, nspecies   
@@ -202,6 +203,10 @@ contains
           ! If you do what I said in the comment above, you can just do:
           ! BinvGama(i,j,:,:)=Bij
           ! and not need to do the stuff below   
+          ! Or, even better, see comment at the end and do this:
+          ! call set_Bij(BinvGama(i,j,:),Bij)
+          
+          
           ! store B^(-1)*Gamma on each cell via Lexicographic order
           do row=1, nspecies
              do column=1, nspecies 
@@ -219,6 +224,14 @@ contains
  
        end do
     end do
+    
+    ! Donev:
+    ! Use contained (internal) subroutine to do the copy without doing index algebra:
+    ! subroutine set_Bij(BinvGama_ij, B_ij)
+    !    real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: B_ij
+    !    real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: BinvGamma_ij
+    !    BinvGamma_ij = B_ij
+    ! end subroutine
  
     end subroutine cal_rhoxBinvGama_2d
 
