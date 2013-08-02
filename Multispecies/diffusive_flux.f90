@@ -115,6 +115,9 @@ contains
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density; last dimension for species
     real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:) ! molar concentration;  
+    ! Donev: As I explained in my notes, you can do here:    
+    !real(kind=dp_t)  :: BinvGama(lo(1)-ng:hi(1)+ng,lo(2)-ng:hi(2)+ng,1:nspecies,1:nspecies) 
+    ! This makes BinvGama a rank-4 array, see below
     real(kind=dp_t)  :: BinvGama(lo(1)-ng:,lo(2)-ng:,:)  ! B^(-1)*Gamma; last dimension for nspecies^2
     real(kind=dp_t)  :: Dbar(:,:)                        ! SM diffusion constants 
     real(kind=dp_t)  :: Gama(:,:)                        ! non-ideality coefficient 
@@ -195,6 +198,10 @@ contains
           ! calculate A^(-1)*B; result is written to second argument (B) 
           call la_gesvx(A=Bij, B=Gama, X=c) 
              
+          ! Donev:
+          ! If you do what I said in the comment above, you can just do:
+          ! BinvGama(i,j,:,:)=Bij
+          ! and not need to do the stuff below   
           ! store B^(-1)*Gamma on each cell via Lexicographic order
           do row=1, nspecies
              do column=1, nspecies 
