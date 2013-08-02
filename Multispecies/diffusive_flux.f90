@@ -22,7 +22,7 @@ contains
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    type(multifab) , intent(inout) :: molarconc(:)
+    type(multifab) , intent(inout) :: molarconc(:) ! Donev: Make this intent(in)
     type(multifab) , intent(inout) :: BinvGama(:) ! Cell-centered coefficients
     real(kind=dp_t), intent(in   ) :: Dbar(:,:)
     real(kind=dp_t), intent(in   ) :: Gama(:,:)
@@ -84,6 +84,12 @@ contains
    
     ! change B^(-1)*Gama from cell-centered to face-centered
     ! Donev: These have nspecies**2 components, not nspecies!!!
+    ! Should be done in a loop
+    ! do i=1, nspecies**2
+    ! call average_cc_to_face(nlevs,BinvGama,BinvGama_face,i,scal_bc_comp,1,the_bc_level) 
+    ! Or, if you add +1 component to the bc_tower, you do:
+    ! call average_cc_to_face(nlevs,BinvGama,BinvGama_face,i,scal_bc_comp+nspecies,1,the_bc_level)     
+    ! end do
     call average_cc_to_face(nlevs,BinvGama,BinvGama_face,1,scal_bc_comp,nspecies,the_bc_level) 
 
     ! compute flux as B^(-1)*Gama X grad(molarconc)
@@ -114,7 +120,7 @@ contains
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density; last dimension for species
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:) ! molar concentration;  
+    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:) ! molar concentration; Donev: intent(in)
     ! Donev: As I explained in my notes, you can do here:    
     !real(kind=dp_t)  :: BinvGama(lo(1)-ng:hi(1)+ng,lo(2)-ng:hi(2)+ng,1:nspecies,1:nspecies) 
     ! This makes BinvGama a rank-4 array, see below
@@ -148,12 +154,15 @@ contains
        do i=lo(1),hi(1)
          
           ! calculate total density inside one-cell 
+          ! Donev: This should be moved to convert_cons_to_prim
+          do row=1, nspecies 
           rho_cell=0.d0 
           do row=1, nspecies  
              rho_cell = rho_cell + rho(i,j,row)
           enddo         
              
           ! calculate molar concentrations 
+          ! Donev: This should be moved to convert_cons_to_prim
           do row=1, nspecies 
              molarconc(i,j,row) = mtot*rho(i,j,row)/(m_bc(row)*rho_cell)
           enddo
@@ -227,13 +236,19 @@ contains
        end do
     end do
     
-    ! Donev:
-    ! Use contained (internal) subroutine to do the copy without doing index algebra:
      subroutine set_Bij(BinvGama_ij, B_ij)
         real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: B_ij
         real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: BinvGamma_ij  
         BinvGamma_ij = B_ij
      end subroutine 
+    ! Donev:
+    ! Use contained (internal) subroutine to do the copy without doing index algebra:
+    ! contains
+    ! subroutine set_Bij(BinvGama_ij, B_ij)
+    !    real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: B_ij
+    !    real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: BinvGamma_ij
+    !    BinvGamma_ij = B_ij
+    ! end subroutine
  
     end subroutine cal_rhoxBinvGama_2d
 

@@ -141,6 +141,8 @@ subroutine main_driver()
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
   ! last argument to initialize_bc is the number of scalar variables
   ! nscal=nspecies temporarily
+  ! Donev: If you want to add rules for ghost cells for BinvGamma's do:
+  ! nscal=nspecies+1
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies)
 
   do n=1,nlevs
