@@ -64,7 +64,8 @@ contains
        call multifab_fill_boundary(BinvGama(n))
 
        ! fill non-periodic domain boundary ghost cells
-       ! Amit: shouldn't the 2nd 1 be scal_bc_comp? Also, why BinvGama has
+       ! Amit: shouldn't the 2nd 1 be scal_bc_comp? Donev: Yes
+       ! Also, why BinvGama has
        ! nspecies ? nspecies^2 gives Boxlib error!
        call multifab_physbc(rho(n),1,1,nspecies,the_bc_level(n))
        call multifab_physbc(molarconc(n),1,1,nspecies,the_bc_level(n))

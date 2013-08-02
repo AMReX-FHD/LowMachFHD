@@ -19,6 +19,7 @@ contains
 
   ! Donev: molarconc should not be passed to advance, it should be a local multifab
   ! EVERY time you change rho you must recalculate molconc again -- where is this done?
+  ! You should also calculate rho_tot (total density) and store it in a multifab
   subroutine advance(mla,rho,molarconc,BinvGama,Dbar,Gama,dx,dt,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
@@ -50,6 +51,11 @@ contains
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do   
+    
+    ! Donev:
+    ! Calculate molconc here
+    ! In exec/lowMach_implicit/advance_timestep.f90, this is called convert_cons_to_prim
+    ! call convert_cons_to_prim(rho, rho_tot, molconc)
     
     ! compute the face-centered flux in each direction
     call diffusive_flux(mla,rho,molarconc,BinvGama,Dbar,Gama,flux,dx,the_bc_level)
