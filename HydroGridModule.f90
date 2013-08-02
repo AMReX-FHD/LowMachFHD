@@ -1163,7 +1163,7 @@ subroutine updateStructureFactors(grid)
       end do
    end do
 
-   if(.true.) then ! Temporary: Save a history of S(k)
+   if(.false.) then ! Temporary: Save a history of S(k)
       filenameBase = trim(grid%outputFolder) // "/" // trim(grid%filePrefix) // ".S_k.history.dat"
       write(*,*) "Writing S(k) history to file ", trim(filenameBase)
       open (551, file = trim(filenameBase), status = "unknown", action = "write", position="append")
