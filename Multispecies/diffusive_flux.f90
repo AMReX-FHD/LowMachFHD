@@ -227,6 +227,7 @@ contains
     
     ! Donev:
     ! Use contained (internal) subroutine to do the copy without doing index algebra:
+    ! contains
     ! subroutine set_Bij(BinvGama_ij, B_ij)
     !    real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: B_ij
     !    real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: BinvGamma_ij
