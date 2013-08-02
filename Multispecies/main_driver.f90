@@ -150,7 +150,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),nspecies,1)
      !call multifab_build(molarconc(n),mla%la(n),nspecies,1)
-     call multifab_build(BinvGama(n),mla%la(n),nspecies,1)
+     call multifab_build(BinvGama(n),mla%la(n),nspecies**2,1)
   end do
 
   call init_rho(rho,BinvGama,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
