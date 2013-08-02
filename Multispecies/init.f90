@@ -121,7 +121,8 @@ contains
           if ((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 & 
                .lt. L(1)*L(2)*0.1d0) then
              rho(i,j,1)           = c_bc(1,1)
-             rho(i,j,2:nspecies)  = c_bc(1,2) ! Donev: Why not use c_bc(1,2:nspecies)?
+             rho(i,j,2:nspecies)  = c_bc(1,2:nspecies) ! Donev: Why not use c_bc(1,2:nspecies)?
+                                                       ! Amit: Done!
           else
              rho(i,j,1)           = c_bc(2,1)
              rho(i,j,2:nspecies)  = c_bc(2,2)

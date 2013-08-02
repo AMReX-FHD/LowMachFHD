@@ -189,7 +189,7 @@ contains
           endif
 
           ! adjust parameter alpha to max val of Bij
-          alpha = maxval(Bij) ! Donev: this needs maxval(abs(Bij))
+          alpha = maxval(abs(Bij)) ! Donev: this needs maxval(abs(Bij))
   
           ! transform Bprimeij to Bij
           do row=1, nspecies   
@@ -204,10 +204,11 @@ contains
           ! BinvGama(i,j,:,:)=Bij
           ! and not need to do the stuff below   
           ! Or, even better, see comment at the end and do this:
-          ! call set_Bij(BinvGama(i,j,:),Bij)
+           call set_Bij(BinvGama(i,j,:),Bij)
           
           
           ! store B^(-1)*Gamma on each cell via Lexicographic order
+          if(.false.) then
           do row=1, nspecies
              do column=1, nspecies 
                 BinvGama(i,j,column+nspecies*(row-1)) = Bij(row, column) 
@@ -218,6 +219,7 @@ contains
                 endif
              enddo
           enddo
+          endif
           
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -227,11 +229,11 @@ contains
     
     ! Donev:
     ! Use contained (internal) subroutine to do the copy without doing index algebra:
-    ! subroutine set_Bij(BinvGama_ij, B_ij)
-    !    real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: B_ij
-    !    real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: BinvGamma_ij
-    !    BinvGamma_ij = B_ij
-    ! end subroutine
+     subroutine set_Bij(BinvGama_ij, B_ij)
+        real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: B_ij
+        real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: BinvGamma_ij  
+        BinvGamma_ij = B_ij
+     end subroutine 
  
     end subroutine cal_rhoxBinvGama_2d
 
