@@ -7,7 +7,9 @@ module diffusive_flux_module
   use div_and_grad_module
   use probin_multispecies_module
   use ml_layout_module
-
+  use convert_stag_module
+  use F95_LAPACK
+  
   implicit none
 
   private
@@ -16,34 +18,195 @@ module diffusive_flux_module
 
 contains
  
-  subroutine diffusive_flux(mla,rho,diff_coeffs,flux,dx,the_bc_level) 
+  subroutine diffusive_flux(mla,rho,molarconc,BinvGama,Dbar,Gama,flux,dx,the_bc_level) 
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: rho(:)
-    type(multifab) , intent(in   ) :: diff_coeffs(:)
+    type(multifab) , intent(inout) :: rho(:)
+    type(multifab) , intent(inout) :: molarconc(:)
+    type(multifab) , intent(inout) :: BinvGama(:)
+    real(kind=dp_t), intent(in   ) :: Dbar(:,:)
+    real(kind=dp_t), intent(in   ) :: Gama(:,:)
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
-    integer n,i,dm,nlevs
+    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
+    integer :: n,i,ng,dm,nlevs
+    
+    ! for the face centered B^(-1)*Gama
+    type(multifab) :: BinvGama_face(mla%nlevel,mla%dim)
+    
+    ! pointer for rho(nspecies), molarconc(nspecies), BinvGama(nspecies^2)
+    real(kind=dp_t), pointer       :: dp(:,:,:,:)   ! for rho    
+    real(kind=dp_t), pointer       :: dp1(:,:,:,:)  ! for mole x
+    real(kind=dp_t), pointer       :: dp2(:,:,:,:)  ! for B^(-1)*Gama
 
     dm    = mla%dim     ! dimensionality
+    ng = rho(1)%ng      ! number of ghost cells 
     nlevs = mla%nlevel  ! number of levels 
- 
-    call compute_grad(mla,rho,flux,dx,1,scal_bc_comp,1,nspecies,the_bc_level)
 
-    ! Multiply flux with diffusion constants 
+    ! loop over all boxes 
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp => dataptr(rho(n),i)
+          dp1 => dataptr(molarconc(n),i)
+          dp2 => dataptr(BinvGama(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          
+          select case(dm)
+          case (2)
+             call cal_rhoxBinvGama_2d(dp(:,:,1,:), dp1(:,:,1,:), dp2(:,:,1,:), & 
+                           Dbar(:,:), Gama(:,:), ng, lo, hi, dx(n,:)) 
+          !case (3)
+          !   call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
+          end select
+       end do
+
+       ! filling up ghost cells for two adjacent grids at the same level
+       ! including periodic domain boundary ghost cells
+       call multifab_fill_boundary(rho(n))
+       call multifab_fill_boundary(molarconc(n))
+       call multifab_fill_boundary(BinvGama(n))
+
+       ! fill non-periodic domain boundary ghost cells 
+       ! Amit: shouldn't the 2nd 1 be scal_bc_comp? And also nspecies^2 in BinvGama?
+       call multifab_physbc(rho(n),1,1,nspecies,the_bc_level(n))
+       call multifab_physbc(molarconc(n),1,1,nspecies,the_bc_level(n))
+       call multifab_physbc(BinvGama(n),1,1,nspecies,the_bc_level(n))
+    end do
+    
+    ! calculate face centrered grad(molarconc) 
+    call compute_grad(mla,molarconc,flux,dx,1,scal_bc_comp,1,nspecies,the_bc_level)
+   
+    ! change B^(-1)*Gama from cell-centered to face-centered
+    call average_cc_to_face(nlevs,BinvGama,BinvGama_face,1,scal_bc_comp,nspecies,the_bc_level) 
+
+    ! compute flux as B^(-1)*Gama X grad(molarconc)
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_c(flux(n,i),1,diff_coeffs(n),1,nspecies,0)
+          call multifab_mult_mult_c(flux(n,i),1,BinvGama_face(n,i),1,nspecies,0)
        end do
     end do
     
-    ! Donev: If grad(temperature)
+    !Donev: If grad(temperature)
     !call compute_grad(mla,temperature,flux,dx,1,scal_bc_comp+n_species,n_species+1,1,the_bc_level)
+ 
+    ! destroy B^(-1)*Gama multifab to prevent leakage in memory
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_destroy(BinvGama_face(n,i))
+       end do
+    end do
 
   end subroutine diffusive_flux
+
+  
+  subroutine cal_rhoxBinvGama_2d(rho, molarconc, BinvGama, Dbar, Gama, ng, lo, hi, dx)
+
+    integer          :: lo(2), hi(2), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density; last dimension for species
+    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:) ! molar concentration;  
+    real(kind=dp_t)  :: BinvGama(lo(1)-ng:,lo(2)-ng:,:)  ! B^(-1)*Gamma; last dimension for nspecies^2
+    real(kind=dp_t)  :: Dbar(:,:)                        ! SM diffusion constants 
+    real(kind=dp_t)  :: Gama(:,:)                        ! non-ideality coefficient 
+    real(kind=dp_t)  :: dx(:)                            ! grid spacing
+
+    ! local variables
+    integer          :: i,j,k,n
+    integer          :: row,column
+    real(kind=dp_t)  :: mtot,rho_cell,alpha
+ 
+    ! dummy matrices for inversion using LAPACK 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Bij,c
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !!!!Calculate BinvGama. This chunk should be copied in 3D code too.!!!! 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! Amit: mtot doesn't change(?), so we can declare it as a global
+    ! variable in the probin_multispecies code. 
+    mtot = 0.d0
+    do row=1, nspecies  
+       mtot = mtot + m_bc(row)
+    enddo
+  
+    ! for specific box, now start loops over alloted cells    
+    do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+         
+          ! calculate total density inside one-cell 
+          rho_cell=0.d0 
+          do row=1, nspecies  
+             rho_cell = rho_cell + rho(i,j,row)
+          enddo         
+             
+          ! calculate molar concentrations 
+          do row=1, nspecies 
+             molarconc(i,j,row) = mtot*rho(i,j,row)/(m_bc(row)*rho_cell)
+          enddo
+   
+          ! calculate Bprime matrix (stored as Bij to save memory)
+          Bij=0.d0
+          do row=1, nspecies  
+             do column=1, row-1
+                Bij(row, column) = rho(i,j,row)*mtot**2/(m_bc(row)* &
+                       m_bc(column)*Dbar(row, column)*rho_cell**2) 
+                Bij(column, row) = rho(i,j,column)*mtot**2/(m_bc(row)* &
+                       m_bc(column)*Dbar(column, row)*rho_cell**2) 
+             enddo
+             
+             do column=1, nspecies
+                if (column.ne.row) then
+                   Bij(row, row) = Bij(row, row) - mtot**2/(m_bc(row)*rho_cell**2)* & 
+                              (rho(i,j,column)/(m_bc(column)*Dbar(row,column)))
+                endif
+             enddo
+          enddo
+
+          if(.false.)  then
+            if(i.eq.lo(1) .and. j.eq.lo(2)) then  ! optional checkng Bij, Dbar etc            
+               do row=1, nspecies
+                  do column=1, nspecies 
+                     print*, Bij(row, column)
+                     print*, Dbar(row, column)
+                  enddo
+                  print*, ''        
+               enddo
+            endif 
+          endif
+
+          ! adjust parameter alpha to max val of Bij
+          alpha = maxval(Bij) 
+  
+          ! transform Bprimeij to Bij
+          do row=1, nspecies   
+             Bij(row, row) = alpha + Bij(row, row)
+          enddo
+    
+          ! calculate A^(-1)*B; result is written to second argument (B) 
+          call la_gesvx(A=Bij, B=Gama, X=c) 
+             
+          ! store B^(-1)*Gamma on each cell via Lexicographic order
+          do row=1, nspecies
+             do column=1, nspecies 
+                BinvGama(i,j,column+nspecies*(row-1)) = Bij(row, column) 
+                if(.false.) then 
+                   if(i.eq.lo(1) .and. j.eq.lo(2)) then  ! optional check BinvGama for a cell            
+                      print*, BinvGama(i,j,row+nspecies*(column-1))
+                   endif
+                endif
+             enddo
+          enddo
+          
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ 
+       end do
+    end do
+ 
+    end subroutine cal_rhoxBinvGama_2d
 
 end module diffusive_flux_module
 

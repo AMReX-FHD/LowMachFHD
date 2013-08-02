@@ -17,11 +17,14 @@ module advance_module
 
 contains
   
-  subroutine advance(mla,rho,BinvGama,dx,dt,the_bc_level)
+  subroutine advance(mla,rho,molarconc,BinvGama,Dbar,Gama,dx,dt,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    type(multifab) , intent(in   ) :: BinvGama(:)
+    type(multifab) , intent(inout) :: molarconc(:)
+    type(multifab) , intent(inout) :: BinvGama(:)
+    real(kind=dp_t), intent(in   ) :: Dbar(:,:)
+    real(kind=dp_t), intent(in   ) :: Gama(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -41,14 +44,13 @@ contains
        ! fluxdiv is cell-centered scalar with zero ghost cells 
        call multifab_build(fluxdiv(n),mla%la(n),nspecies,0)
        do i=1,dm
-          ! flux(i) is face-centered, has nspecies component, zero ghost 
-          ! cells & is nodal in direction i
+          ! flux(i) is face-centered, has nspecies component, zero ghost cells & nodal in direction i
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do   
     
     ! compute the face-centered flux in each direction
-    call diffusive_flux(mla,rho,BinvGama,flux,dx,the_bc_level)
+    call diffusive_flux(mla,rho,molarconc,BinvGama,Dbar,Gama,flux,dx,the_bc_level)
     
     ! compute divergence of the flux 
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
@@ -91,7 +93,6 @@ contains
     end do 
 
     do n=1, nlevs
-
        ! fill ghost cells for two adjacent grids at the same level
        ! this includes periodic domain boundary ghost cells
        call multifab_fill_boundary(rho(n))
