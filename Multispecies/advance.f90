@@ -16,7 +16,9 @@ module advance_module
   public :: advance
 
 contains
-  
+
+  ! Donev: molarconc should not be passed to advance, it should be a local multifab
+  ! EVERY time you change rho you must recalculate molconc again -- where is this done?
   subroutine advance(mla,rho,molarconc,BinvGama,Dbar,Gama,dx,dt,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla

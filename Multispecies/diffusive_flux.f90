@@ -23,7 +23,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: molarconc(:)
-    type(multifab) , intent(inout) :: BinvGama(:)
+    type(multifab) , intent(inout) :: BinvGama(:) ! Cell-centered coefficients
     real(kind=dp_t), intent(in   ) :: Dbar(:,:)
     real(kind=dp_t), intent(in   ) :: Gama(:,:)
     type(multifab) , intent(inout) :: flux(:,:)
@@ -74,6 +74,8 @@ contains
        ! Amit: shouldn't the 2nd 1 be scal_bc_comp? And also nspecies^2 in BinvGama?
        call multifab_physbc(rho(n),1,1,nspecies,the_bc_level(n))
        call multifab_physbc(molarconc(n),1,1,nspecies,the_bc_level(n))
+       ! Donev: BinvGamma should NOT need values behind a boundary
+       ! so don't call multifab_physbc here --- focus on periodic BCs first
        call multifab_physbc(BinvGama(n),1,1,nspecies,the_bc_level(n))
     end do
     
@@ -81,12 +83,17 @@ contains
     call compute_grad(mla,molarconc,flux,dx,1,scal_bc_comp,1,nspecies,the_bc_level)
    
     ! change B^(-1)*Gama from cell-centered to face-centered
+    ! Donev: These have nspecies**2 components, not nspecies!!!
     call average_cc_to_face(nlevs,BinvGama,BinvGama_face,1,scal_bc_comp,nspecies,the_bc_level) 
 
     ! compute flux as B^(-1)*Gama X grad(molarconc)
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_c(flux(n,i),1,BinvGama_face(n,i),1,nspecies,0)
+          ! Donev: NO!!! This needs to do a matrix-vector product
+          ! The routine below only muliplies component-by-component
+          ! two multifabs that have the same size
+          ! You need to debug the output to make sure what you are computing here
+          call multifab_mult_mult_c(flux(n,i),1,BinvGama_face(n,i),1,nspecies,0)          
        end do
     end do
     

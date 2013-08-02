@@ -183,6 +183,8 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
+     ! Donev: Where is molarconc updated????
+     ! When you change rho you need to recalculate molarconc
      call advance(mla,rho,molarconc,BinvGama,Dbar,Gama,dx,dt,the_bc_tower%bc_tower_array)
 
      ! increment simulation time

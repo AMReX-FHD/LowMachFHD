@@ -121,7 +121,7 @@ contains
           if ((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 & 
                .lt. L(1)*L(2)*0.1d0) then
              rho(i,j,1)           = c_bc(1,1)
-             rho(i,j,2:nspecies)  = c_bc(1,2) 
+             rho(i,j,2:nspecies)  = c_bc(1,2) ! Donev: Why not use c_bc(1,2:nspecies)?
           else
              rho(i,j,1)           = c_bc(2,1)
              rho(i,j,2:nspecies)  = c_bc(2,2)
@@ -131,6 +131,11 @@ contains
          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
          !!!!Calculate BinvGama. This chunk should be copied in 3D code too.!!!! 
          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+         
+         ! Donev: This is repetitive code and should not be in init
+         ! Init should only initialize rhos. All other calculations should be done elsewher
+         ! in a dedicated routine
+         ! For example: cal_molarconc, cal_BinvGamma, etc.
          
          ! calculate total density inside one-cell
          rho_cell=0.d0 
