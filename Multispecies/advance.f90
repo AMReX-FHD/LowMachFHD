@@ -47,7 +47,7 @@ contains
  
     ! build the local multifabs
     do n=1,nlevs
-       ! fluxdiv is scalar with one ghost cells 
+       ! fluxdiv,rho_tot,molarconc is scalar with one ghost cells 
        call multifab_build(fluxdiv(n),mla%la(n),nspecies,1)
        call multifab_build(rho_tot(n),mla%la(n),1,1)          ! rho_tot is addition of all component
        call multifab_build(molarconc(n),mla%la(n),nspecies,1)
@@ -58,21 +58,24 @@ contains
        end do
     end do   
     
-    ! compute molarconc (primary) and rho_tot (primary) for every cell from rho(1:nspecies)  
+    ! compute molarconc (primary) and rho_tot (primary) for every cell from rho(1:nspecies) 
+    ! Amit: I'm going to copy rho,rho_tot,molarconc etc with
+    ! multifab_fill_boundary in this code, so I'm omitting these in
+    ! convert_cons_to_BinvGamma code. 
     call convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, mtot, the_bc_level)
 
     ! compute cell-centered B^(-1)*Gamma  
     call convert_cons_to_BinvGamma(mla,rho,rho_tot,molarconc,BinvGamma,Dbar,Gama, & 
-         mass,mtot,the_bc_level)
+               mass,mtot,the_bc_level)
  
-    ! compute the face-centered flux in each direction
+    ! compute the face-centered flux in each direction. 
     call diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level)
     
     ! compute divergence of the flux 
-    !call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
+    call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
 
     ! update rho using forward Euler discretization
-    !call update_rho(mla,rho,fluxdiv,dt,the_bc_level)
+    call update_rho(mla,rho,fluxdiv,dt,the_bc_level)
 
     ! destroy the multifab to prevent leakage in memory
     do n=1,nlevs

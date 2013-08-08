@@ -35,7 +35,7 @@ contains
     ng = rho(1)%ng
     nlevs = size(rho,1)
 
-    ! populate SM Dbar matrix, Gama, mtotal etc
+    ! populate SM Dbar matrix, Gama, masses etc
     call populate_DbarGama(Dbar(:,:), Gama(:,:), mass(:)) 
 
     ! looping over boxes 
@@ -59,6 +59,8 @@ contains
 
        ! fill non-periodic domain boundary ghost cells
        ! Amit: shouldn't the 2nd 1 be scal_bc_comp? Donev: Yes
+       ! Amit: scal_bc_comp gives compilation error of implicit type, is any
+       ! other code supposed to be compiled before?
        call multifab_physbc(rho(n),1,1,nspecies,the_bc_level(n))
     end do
 
@@ -71,7 +73,7 @@ contains
     real(kind=dp_t)  :: mass(:)     ! mass of each species
     integer          :: n,row,column
  
-    ! populate SM diff_coeffs, Gama which for initial case doesn't change in each and every cell. 
+    ! populate Dbar,Gama & mass, which for initial case doesn't change in each cell. 
     n=0; 
     do row=1, nspecies  
        do column=1, row-1

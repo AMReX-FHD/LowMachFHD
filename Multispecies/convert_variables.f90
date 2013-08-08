@@ -19,7 +19,7 @@ contains
   subroutine convert_cons_to_prim(mla,rho,rho_tot,molarconc,mass,mtot,the_bc_level)
    
    type(ml_layout), intent(in   )  :: mla
-   type(multifab) , intent(inout)  :: rho(:)
+   type(multifab) , intent(inout)  :: rho(:) 
    type(multifab) , intent(inout)  :: rho_tot(:) 
    type(multifab) , intent(inout)  :: molarconc(:) 
    real(kind=dp_t), intent(in   )  :: mass(:)
@@ -114,9 +114,9 @@ contains
              Gama,mass,mtot,the_bc_level)
    
     type(ml_layout), intent(in   )  :: mla
-    type(multifab) , intent(inout)  :: rho(:)
-    type(multifab) , intent(inout)  :: rho_tot(:) 
-    type(multifab) , intent(inout)  :: molarconc(:) 
+    type(multifab) , intent(in)  :: rho(:)
+    type(multifab) , intent(in)  :: rho_tot(:) 
+    type(multifab) , intent(in)  :: molarconc(:) 
     type(multifab) , intent(inout)  :: BinvGamma(:) 
     real(kind=dp_t), intent(in   )  :: Dbar(:,:) 
     real(kind=dp_t), intent(in   )  :: Gama(:,:) 
@@ -159,9 +159,9 @@ contains
 
        ! filling up ghost cells for two adjacent grids at the same level
        ! including periodic domain boundary ghost cells
-       call multifab_fill_boundary(rho(n))
-       call multifab_fill_boundary(rho_tot(n))
-       call multifab_fill_boundary(molarconc(n))
+       !call multifab_fill_boundary(rho(n))
+       !call multifab_fill_boundary(rho_tot(n))
+       !call multifab_fill_boundary(molarconc(n))
        call multifab_fill_boundary(BinvGamma(n))
 
        ! fill non-periodic domain boundary ghost cells 

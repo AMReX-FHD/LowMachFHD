@@ -21,8 +21,8 @@ contains
   subroutine diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level) 
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: molarconc(:) ! Donev: Make this intent(in)
-    type(multifab) , intent(inout) :: BinvGamma(:)  ! Cell-centered coefficients
+    type(multifab) , intent(in   ) :: molarconc(:) 
+    type(multifab) , intent(in   ) :: BinvGamma(:)  
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -57,7 +57,7 @@ contains
     ! compute flux as B^(-1)*Gama X grad(molarconc). 
     do n=1,nlevs
        do i=1,dm
-          !call multifab_mult_matrixvec_c(flux(n,i),1,BinvGamma_face(n,i),1,nspecies,0)          
+          call multifab_mult_matrixvec_c(flux(n,i),1,BinvGamma_face(n,i),1,nspecies,0)          
        end do
     end do
     
@@ -143,4 +143,3 @@ contains
   end subroutine multifab_mult_matrixvec_c_doit
 
 end module diffusive_flux_module
-
