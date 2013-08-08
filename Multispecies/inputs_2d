@@ -22,7 +22,9 @@
  !include_temperature = T              !T or F
  
  c_bc(1:2,1) = 0.5 0.1                 ! initial concentrations for species 1
- c_bc(1:2,2:4) = 0.5 0.3               ! initial concentrations for species 2,3,4
+ c_bc(1:2,2) = 0.5 0.3                 ! initial concentrations for species 2
+ c_bc(1:2,3) = 0.5 0.3                 ! initial concentrations for species 3
+ c_bc(1:2,4) = 0.5 0.3                 ! initial concentrations for species 4
  m_bc(1:4)   = 0.25 0.25 0.25 0.25     ! molecular mass of 4 species
  Dbar_bc(1:6)= 1.0 2.0 3.0 4.0 5.0 6.0 ! SM diffusion constant arranged in lower-triangle
  
