@@ -73,13 +73,21 @@ contains
 
       integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
       real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:)
-      real(kind=dp_t), intent(inout) ::  gpx(lo(1)-ng_g:,lo(2)-ng_g:)
-      real(kind=dp_t), intent(inout) ::  gpy(lo(1)-ng_g:,lo(2)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       integer        , intent(in   ) :: bc(:,:)
 
       ! local
       integer :: i,j
+
+      if(.false.) then
+      do j=lo(2),hi(2)
+         do i=lo(1),hi(1)
+            print*, phi(i,j)
+         end do
+      end do
+      endif
 
       ! x-faces
       do j=lo(2),hi(2)
@@ -131,9 +139,9 @@ contains
 
       integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
       real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-      real(kind=dp_t), intent(inout) ::  gpx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
-      real(kind=dp_t), intent(inout) ::  gpy(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
-      real(kind=dp_t), intent(inout) ::  gpz(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpz(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       integer        , intent(in   ) :: bc(:,:)
 

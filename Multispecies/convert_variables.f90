@@ -99,10 +99,12 @@ contains
              rho_tot_local = rho_tot_local + rho(i,j,n)
           enddo         
           rho_tot(i,j) = rho_tot_local
+          !print*, rho_tot_local
  
           ! calculate molar concentrations in each cell 
           do n=1, nspecies 
              molarconc(i,j,n) = mtot*rho(i,j,n)/(mass(n)*rho_tot_local)
+             !print*, molarconc(i,j,1)
           enddo
         
        enddo
