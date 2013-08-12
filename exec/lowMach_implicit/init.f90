@@ -5,6 +5,7 @@ module init_module
   use ml_layout_module
   use define_bc_module
   use convert_stag_module
+  use bc_module
   use probin_lowmach_module, only: rhobar, diff_coef, visc_coef, &
                                    smoothing_width, c_init, material_properties
   use probin_common_module , only: prob_lo, prob_hi, prob_type
@@ -310,7 +311,7 @@ contains
        end do
     end do
 
-    call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_level)
+    call average_cc_to_face(nlevs,chi,chi_fc,1,scal_bc_comp,1,the_bc_level)
 
   end subroutine compute_chi
 
@@ -429,9 +430,9 @@ contains
     end do
 
     if (dm .eq. 2) then
-       call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,dm+2,1,the_bc_level)
+       call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,scal_bc_comp,1,the_bc_level)
     else if (dm .eq. 3) then
-       call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_level)
+       call average_cc_to_edge(nlevs,eta,eta_ed,1,scal_bc_comp,1,the_bc_level)
     end if
 
   end subroutine compute_eta

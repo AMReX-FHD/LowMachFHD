@@ -123,16 +123,19 @@ contains
 
   end subroutine average_face_to_cc
 
-  subroutine average_cc_to_face(nlevs,cc,face,start_scomp,start_bccomp,num_comp,the_bc_level)
+  subroutine average_cc_to_face(nlevs,cc,face,start_scomp,start_bccomp,num_comp, &
+                                the_bc_level,increment_bccomp_in)
 
     integer        , intent(in   ) :: nlevs,start_scomp,start_bccomp,num_comp
     type(multifab) , intent(in   ) :: cc(:)
     type(multifab) , intent(inout) :: face(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
+    logical,  intent(in), optional :: increment_bccomp_in
 
     ! local
     integer :: n,i,dm,ng_c,ng_f,scomp,bccomp
     integer :: lo(cc(1)%dim),hi(cc(1)%dim)
+    logical :: increment_bccomp
 
     real(kind=dp_t), pointer :: cp(:,:,:,:)
     real(kind=dp_t), pointer :: epx(:,:,:,:)
@@ -148,6 +151,11 @@ contains
        call bl_error("average_cc_to_face requires ng_f < ng_c")
     end if
 
+    increment_bccomp = .true.
+    if (present(increment_bccomp_in)) then
+       increment_bccomp = increment_bccomp_in
+    end if
+
     do n=1,nlevs
        do i=1,nfabs(cc(n))
           cp  => dataptr(cc(n), i)
@@ -155,25 +163,26 @@ contains
           epy => dataptr(face(n,2), i)
           lo = lwb(get_box(cc(n), i))
           hi = upb(get_box(cc(n), i))
-          select case (dm)
-          case (2)
-             do scomp=start_scomp,start_scomp+num_comp-1
+          do scomp=start_scomp,start_scomp+num_comp-1
+             if (increment_bccomp) then
                 bccomp = start_bccomp + scomp - start_scomp
+             else
+                bccomp = start_bccomp
+             end if
+             select case (dm)
+             case (2)
                 call average_cc_to_face_2d(cp(:,:,1,scomp),ng_c, &
                                            epx(:,:,1,scomp),epy(:,:,1,scomp),ng_f, &
                                            lo,hi, &
                                            the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
-             end do
-          case (3)
-             do scomp=start_scomp,start_scomp+num_comp-1
-                bccomp = start_bccomp + scomp - start_scomp
+             case (3)
                 epz => dataptr(face(n,3), i)
                 call average_cc_to_face_3d(cp(:,:,:,scomp),ng_c, &
                                            epx(:,:,:,scomp),epy(:,:,:,scomp),epz(:,:,:,scomp),ng_f, &
                                            lo,hi, &
                                            the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
-             end do
-          end select
+             end select
+          end do
        end do
     end do
 
@@ -322,16 +331,19 @@ contains
 
   end subroutine average_cc_to_face_3d
 
-  subroutine average_cc_to_node(nlevs,cc,node,start_scomp,start_bccomp,num_comp,the_bc_level)
+  subroutine average_cc_to_node(nlevs,cc,node,start_scomp,start_bccomp,num_comp, &
+                                the_bc_level,increment_bccomp_in)
 
     integer        , intent(in   ) :: nlevs,start_scomp,start_bccomp,num_comp
     type(multifab) , intent(in   ) :: cc(:)
     type(multifab) , intent(inout) :: node(:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
+    logical,  intent(in), optional :: increment_bccomp_in
 
     ! local
     integer :: n,i,dm,ng_c,ng_n,scomp,bccomp
     integer :: lo(cc(1)%dim),hi(cc(1)%dim)
+    logical :: increment_bccomp
 
     real(kind=dp_t), pointer :: cp(:,:,:,:)
     real(kind=dp_t), pointer :: np(:,:,:,:)
@@ -344,6 +356,11 @@ contains
     if (ng_n .ge. ng_c) then
        call bl_error("average_cc_to_node requires ng_n < ng_c")
     end if
+    
+    increment_bccomp = .true.
+    if (present(increment_bccomp_in)) then
+       increment_bccomp = increment_bccomp_in
+    end if
 
     do n=1,nlevs
        do i=1,nfabs(cc(n))
@@ -351,25 +368,25 @@ contains
           np => dataptr(node(n), i)
           lo = lwb(get_box(cc(n), i))
           hi = upb(get_box(cc(n), i))
-          select case (dm)
-          case (2)
-             do scomp=start_scomp,start_scomp+num_comp-1
+          do scomp=start_scomp,start_scomp+num_comp-1
+             if (increment_bccomp) then
                 bccomp = start_bccomp + scomp - start_scomp
+             else
+                bccomp = start_bccomp
+             end if
+             select case (dm)
+             case (2)
                 call average_cc_to_node_2d(cp(:,:,1,scomp),ng_c, &
                                            np(:,:,1,scomp),ng_n, &
                                            lo,hi, &
                                            the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
-          end do
              case (3)
-                call bl_error("should not have to call average_cc_to_node_3d")
-                do scomp=start_scomp,start_scomp+num_comp-1
-                   bccomp = start_bccomp + scomp - start_scomp
-                   call average_cc_to_node_3d(cp(:,:,:,scomp),ng_c, &
-                                              np(:,:,:,scomp),ng_n, &
-                                              lo,hi, &
-                                              the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
-                end do
+                call average_cc_to_node_3d(cp(:,:,:,scomp),ng_c, &
+                                           np(:,:,:,scomp),ng_n, &
+                                           lo,hi, &
+                                           the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
              end select
+          end do
        end do
     end do
 
@@ -526,16 +543,18 @@ contains
   end subroutine average_cc_to_node_3d
 
   subroutine average_cc_to_edge(nlevs,cc,edge,start_scomp,start_bccomp, &
-                                num_comp,the_bc_level)
+                                num_comp,the_bc_level,increment_bccomp_in)
 
     integer        , intent(in   ) :: nlevs,start_scomp,start_bccomp,num_comp
     type(multifab) , intent(in   ) :: cc(:)
     type(multifab) , intent(inout) :: edge(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
+    logical,  intent(in), optional :: increment_bccomp_in
 
     ! local
     integer :: n,i,dm,ng_c,ng_e,scomp,bccomp
     integer :: lo(cc(1)%dim),hi(cc(1)%dim)
+    logical :: increment_bccomp
 
     real(kind=dp_t), pointer :: cp(:,:,:,:)
     real(kind=dp_t), pointer :: ep1(:,:,:,:)
@@ -551,6 +570,11 @@ contains
        call bl_error("average_cc_to_edge requires ng_e < ng_c")
     end if
 
+    increment_bccomp = .true.
+    if (present(increment_bccomp_in)) then
+       increment_bccomp = increment_bccomp_in
+    end if
+
     do n=1,nlevs
        do i=1,nfabs(cc(n))
           cp  => dataptr(cc(n), i)
@@ -559,19 +583,23 @@ contains
           ep3 => dataptr(edge(n,3), i)
           lo = lwb(get_box(cc(n), i))
           hi = upb(get_box(cc(n), i))
-          select case (dm)
-          case (2)
-             call bl_error("no such thing as average_cc_to_edge in 2d")
-          case (3)
-             do scomp=start_scomp,start_scomp+num_comp-1
+          do scomp=start_scomp,start_scomp+num_comp-1
+             if (increment_bccomp) then
                 bccomp = start_bccomp + scomp - start_scomp
+             else
+                bccomp = start_bccomp
+             end if
+             select case (dm)
+             case (2)
+                call bl_error("no such thing as average_cc_to_edge in 2d")
+             case (3)
                 call average_cc_to_edge_3d(cp(:,:,:,scomp),ng_c, &
                                            ep1(:,:,:,scomp),ep2(:,:,:,scomp), &
                                            ep3(:,:,:,scomp),ng_e, &
                                            lo,hi, &
                                            the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
-             end do
-          end select
+             end select
+          end do
        end do
     end do
 

@@ -16,7 +16,8 @@ module multifab_physbc_module
 
 contains
 
-  subroutine multifab_physbc(s,start_scomp,start_bccomp,num_comp,the_bc_level,dx_in)
+  subroutine multifab_physbc(s,start_scomp,start_bccomp,num_comp,the_bc_level, &
+                             dx_in,increment_bccomp_in)
 
     ! this fills ghost cells for rho and pressure/phi.
     ! as well as for transport coefficients (alpha/beta/gamma)
@@ -24,13 +25,16 @@ contains
     type(multifab) , intent(inout) :: s
     integer        , intent(in   ) :: start_scomp,start_bccomp,num_comp
     type(bc_level) , intent(in   ) :: the_bc_level
-    real(kind=dp_t), intent(in   ), optional :: dx_in(:)
+    real(kind=dp_t), intent(in), optional :: dx_in(:)
+    logical,  intent(in), optional :: increment_bccomp_in
    
     ! Local
-    integer                  :: lo(get_dim(s)),hi(get_dim(s))
-    integer                  :: i,ng,dm,scomp,bccomp
-    real(kind=dp_t), pointer :: sp(:,:,:,:)
+    integer :: lo(get_dim(s)),hi(get_dim(s))
+    integer :: i,ng,dm,scomp,bccomp
+    logical :: increment_bccomp
+
     real(kind=dp_t), allocatable :: dx(:)
+    real(kind=dp_t), pointer :: sp(:,:,:,:)
 
     ng = nghost(s)
     dm = get_dim(s)
@@ -42,13 +46,22 @@ contains
     else
        dx = 1.d0
     end if
+
+    increment_bccomp = .true.
+    if (present(increment_bccomp_in)) then
+       increment_bccomp = increment_bccomp_in
+    end if
     
     do i=1,nfabs(s)
        sp => dataptr(s,i)
        lo = lwb(get_box(s,i))
        hi = upb(get_box(s,i))
        do scomp=start_scomp,start_scomp+num_comp-1
-          bccomp = start_bccomp + (scomp-start_scomp)
+          if (increment_bccomp) then
+             bccomp = start_bccomp + (scomp-start_scomp)
+          else
+             bccomp = start_bccomp
+          end if
           select case (dm)
           case (2)
              call physbc_2d(sp(:,:,1,scomp), lo, hi, ng, &

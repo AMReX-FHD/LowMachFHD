@@ -308,11 +308,11 @@ subroutine main_driver()
   call init_mat(mla,alpha,beta,gamma,dx,time,the_bc_tower%bc_tower_array)
 
   ! compute alpha_fc and beta_ed
-  call average_cc_to_face(nlevs,alpha,alpha_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+  call average_cc_to_face(nlevs,alpha,alpha_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
   if (dm .eq. 2) then
-     call average_cc_to_node(nlevs,beta,beta_ed(:,1),1,dm+2,1,the_bc_tower%bc_tower_array)
+     call average_cc_to_node(nlevs,beta,beta_ed(:,1),1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
   else if (dm .eq. 3) then
-     call average_cc_to_edge(nlevs,beta,beta_ed,1,dm+2,1,the_bc_tower%bc_tower_array)
+     call average_cc_to_edge(nlevs,beta,beta_ed,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
   end if
 
   if (abs(test_type) .eq. 1) then

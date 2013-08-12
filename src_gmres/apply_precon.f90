@@ -12,6 +12,7 @@ module apply_precon_module
   use convert_stag_module
   use norm_inner_product_module
   use multifab_physbc_module
+  use bc_module
 
   implicit none
 
@@ -130,7 +131,7 @@ contains
         else
           ! first set x_p = -L_alpha Phi
           call mac_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx, &
-                           the_bc_tower,bc_comp=dm+1,stencil_order=2)
+                           the_bc_tower,pres_bc_comp,stencil_order=2)
         end if
 
         do n=1,nlevs
@@ -262,7 +263,7 @@ contains
            do n=1,nlevs
               call multifab_copy_c(x_p_tmp(n),1,x_p(n),1,1,0)
               call multifab_fill_boundary(x_p_tmp(n))
-              call multifab_physbc(x_p_tmp(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+              call multifab_physbc(x_p_tmp(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
            end do
 
            ! contstruct b_u-grad(x_p)
@@ -349,7 +350,7 @@ contains
         do n=1,nlevs
           call multifab_copy_c(x_p_tmp(n),1,x_p(n),1,1,0)
           call multifab_fill_boundary(x_p_tmp(n))
-          call multifab_physbc(x_p_tmp(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+          call multifab_physbc(x_p_tmp(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
         end do
 
         ! contstruct b_u-grad(x_p)

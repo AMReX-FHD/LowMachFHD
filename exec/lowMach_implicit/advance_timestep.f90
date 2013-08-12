@@ -222,7 +222,8 @@ contains
 
     ! compute s^{*,n+1} to faces
     do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1, &
+                               the_bc_tower%bc_tower_array)
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -471,7 +472,7 @@ contains
 
     ! compute s^{n+1} to faces
     do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

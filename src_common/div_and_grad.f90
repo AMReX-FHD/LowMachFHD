@@ -14,7 +14,8 @@ module div_and_grad_module
 contains
 
   subroutine compute_grad(mla,phi,gradp,dx, &
-                          start_incomp,start_bccomp,start_outcomp,num_comp,the_bc_level)
+                          start_incomp,start_bccomp,start_outcomp,num_comp, &
+                          the_bc_level,increment_bccomp_in)
 
     ! compute the face-centered gradient of a cell-centered field
 
@@ -24,10 +25,12 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: start_incomp,start_bccomp,start_outcomp,num_comp
     type(bc_level) , intent(in   ) :: the_bc_level(:)
+    logical,  intent(in), optional :: increment_bccomp_in
 
     ! local
     integer :: n,i,dm,nlevs,ng_p,ng_g,comp,bccomp,outcomp
     integer :: lo(mla%dim),hi(mla%dim)
+    logical :: increment_bccomp
 
     real(kind=dp_t), pointer :: pp(:,:,:,:)
     real(kind=dp_t), pointer :: gpx(:,:,:,:)
@@ -40,6 +43,11 @@ contains
     ng_p = phi(1)%ng
     ng_g = gradp(1,1)%ng
 
+    increment_bccomp = .true.
+    if (present(increment_bccomp_in)) then
+       increment_bccomp = increment_bccomp_in
+    end if
+
     do n=1,nlevs
        do i=1,nfabs(phi(n))
           pp  => dataptr(phi(n), i)
@@ -48,7 +56,11 @@ contains
           lo = lwb(get_box(phi(n), i))
           hi = upb(get_box(phi(n), i))
           do comp=start_incomp,start_incomp+num_comp-1
-             bccomp = start_bccomp + (comp-start_incomp)
+             if (increment_bccomp) then
+                bccomp = start_bccomp + (comp-start_incomp)
+             else
+                bccomp = start_bccomp
+             end if
              outcomp = start_outcomp + (comp-start_incomp)
              select case (dm)
              case (2)
