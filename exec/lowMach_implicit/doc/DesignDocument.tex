@@ -155,7 +155,7 @@ The isothermal low Mach number equations of motion are:
 \begin{eqnarray}
 \partial_t\rho &=& -\nabla\cdot(\rho\vb),\\
 \partial_t\rho_1 &=& -\nabla\cdot(\rho_1\vb) + \underbrace{\nabla\cdot\rho\chi\nabla c + \nabla\cdot\Psib}_{\nabla\cdot\Fb},\\
-\partial_t(\rho\vb) &=& -\nabla\cdot(\rho\vb\vb^T) - \nabla\pi + \mathcal{A}_0\vb + \nabla\cdot\Sigmab + \rho\gb,
+\partial_t(\rho\vb) &=& -\nabla\cdot(\rho\vb\vb^T) - \nabla\pi + \nabla\cdot\taub(\vb) + \nabla\cdot\Sigmab + \rho\gb,
 \end{eqnarray}
 subject to
 \begin{equation}
@@ -181,19 +181,22 @@ where $\widehat\Wb$ is a symmetric Gaussian random tensor field, and the
 extra factor of $\sqrt{2}$ accounts for the reduction in variance due to the averaging.\\
 
 The code has several options for the viscous stress tensor.  For ease of exposition,
-we define $\mathcal{A}_0$ as a function of a velocity vector, $\vb$ (the superscript
+we define $\nabla\cdot\taub(\vb)\equiv\mathcal{A}_0\vb$ (the superscript
 for $\mathcal{A}_0$ indicates the temporal discretization for the transport coefficients):\\
 \begin{itemize}
 \item $|${\tt visc\_type}$|$=1 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\beta^n\nabla\vb$.\\
 \item $|${\tt visc\_type}$|$=2 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T]\right\}$.\\
 \item $|${\tt visc\_type}$|$=3 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T] + \mathcal{I}\left(\gamma^n - \frac{2}{3}\beta^n\right)(\nabla\cdot\vb)\right\}$.\\
 \end{itemize}
+If {\tt visc\_type} $<0$, we assume the transport coefficients are spatially-varying.
+If {\tt visc\_type} $>0$, we assume the transport coefficients are spatially-constant, and use simplified stencils
+in the code.
 
 \section{GMRES Solver}
 
 More details on the GMRES can be found in our upcoming preconditioner paper,
 so here we only summarize some important points.
-We use of GMRES solver that solves systems of the form,
+We use a GMRES solver that solves saddle-point systems of the form,
 \begin{equation}
 \underbrace{
 \left(\begin{array}{cc}
@@ -220,16 +223,36 @@ cell-centered data and returns a staggered field.  The divergence operator,
 $\mathcal{D}$, operates on staggered data and returns a cell-centered field.  
 The Helmholtz-like operator, $\mathcal{A}$, has the general form,
 $\mathcal{A} = \Theta\alpha\mathcal{I} - \mathcal{A}_0$, where
-$\Theta$ is a constant parameter,
-$\alpha$ is a cell-centered quantity,
+$\Theta$ is a constant parameter that can be adjusted for handle both steady and unsteady flow,
+$\alpha$ is a cell-centered quantity (typically a density if the system represents a momentum discretization),
 $\mathcal{I}$ is the identity matrix, 
 and $\mathcal{A}_0$ represents the viscous stress tensor.
 Both $\mathcal{A}$ and $\mathcal{A}_0$ operate on staggered data and return
 a staggered field.\\
 
-Each residual is therefore composed of two parts, a velocity residual, $r_v$,
+In practice, we allow for a rescaling of the linear system to balance the effects of the terms
+due to the choice of units.  We have the option to include a scaling factor $c$, as in,
+\begin{equation}
+\left(\begin{array}{cc}
+c\mathcal{A} & \mathcal{G} \\
+-\mathcal{D} & 0
+\end{array}\right)
+\left(\begin{array}{c}
+\xb_{\vb} \\
+cx_p
+\end{array}\right)
+=
+\left(\begin{array}{c}
+c\bb_{\vb}\\
+b_p
+\end{array}\right),
+\end{equation}
+This should eliminate the need for the {\tt p\_norm\_weight} scaling factor
+when computing the total residual.\\
+
+Each residual is composed of two parts, a velocity residual, $r_v$,
 and a pressure residual, $r_p$.  We combine these into a total residual, 
-$r=\sqrt{r_v^2 + {\tt p\_norm\_weight}^2 r_p^2}$.  We consider two
+$r=\sqrt{r_v^2 + r_p^2}$.  We consider two
 kinds of residuals, the unpreconditined residual, $r=||\Ab\xb-\bb||$, 
 and the preconditioned 
 residual $r_P=||\Pb^{-1}(\Ab\xb-\bb)||$.  GMRES internally {\it estimates} the 
@@ -264,7 +287,7 @@ Here is the time-advancement scheme.\\ \\
 Initialize $\vb^{\rm init}, \rho^0, \rho_1^0, \chi^0, \eta^0, \kappa^0$, and $\pi^0$.
 Then, perform projection to obtain an initial velocity field, $\vb^0$, that satisfies
 \begin{equation}
-\nabla\cdot\vb^0 = S(\Fb^0); \qquad 
+\nabla\cdot\vb^0 = S^0 \equiv S(\Fb^0); \qquad 
 \Fb^0 = (\rho\chi\nabla c)^0 + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^0}{\Delta t\Delta V}}\widetilde\Wb^0}_{\Psib^0}.
 \end{equation}
 We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
@@ -389,11 +412,11 @@ variable on the boundary shall be stored in the ghost cell for convenience.  Thi
 is true regardless of whether we use a homogeneous Neumann or Dirichlet condition.
 For homogeneous Neumann, we simply copy the interior cell value, thus representing
 a first-order extrapolation.  For Dirichlet conditions, we prescribe $c$ and use
-the EOS to obtain $\rho$.  Note that the transport coefficients, $(\eta,\kappa,\chi)$,
+the EOS to obtain $\rho$.  We fill ghost cells for primitive variables using the
+subroutine, {\tt multifab\_physbc}.  Note that the transport coefficients, $(\eta,\kappa,\chi)$,
 are functions of the primitive variables, so when we compute them, we simply loop
 over valid {\it and} ghost cells, and do not require special routines to fill
-the ghost cells aftewards.  We fill ghost cells for primitive variables using the
-subroutine, {\tt multifab\_physbc}.\\
+the ghost cells aftewards.\\
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[tb]
@@ -445,10 +468,11 @@ periodic in the transverse direction, in which case the call to {\tt multifab\_f
 should take care of these periodic values.\\
 \item Unlike the case for scalars, here the values of velocity in ghost cells represent
 the value extrapolated to that point (for tangential velocities), or the value {\it on}
-the boundary (for normal velocities).
+the boundary (for normal velocities).\\
 \end{itemize}
 
-We carry around several auxiliary multifabs that store the Dirichlet value on the
+We carry around several auxiliary multifabs that store the Dirichlet values 
+for velocity on the
 boundary, whether they are homogeneous or inhomogeneous.  To deal with normal 
 velocities, the multifab {\tt vel\_bc\_n(nlevs,dm)}
 stores the actual Dirichlet value.  The $(n,d)^{\rm th}$ element is a face-centered
@@ -487,17 +511,17 @@ function {\tt inhomogeneous\_bc\_val\_Xd} to fill {\tt vel\_bc\_n} and
 
 We have two subroutines that fill velocity domain boundary and ghost cells based
 on the values in {\tt vel\_bc\_n} and {\tt vel\_bc\_t}.
+
 Each of these take in {\tt vel\_bc\_n} or {\tt vel\_bc\_t} as
 an optional multifab argument that represents the prescribed Dirichlet
-or Neumann value on the boundary.  Note that this can either refer to the 
-prescribed value of normal velocity on the boundary, or a Dirichlet {\it or} 
-Neumann condition used to determine the ghost face values for transverse velocity.
-If no multifab is passed in, it is assumed that the boundary conditions
-are homogeneous.  The subroutine {\tt multifab\_physbc\_domainvel} sets the 
-value for faces on the boundary and can take {\tt vel\_bc\_n} as an input.
+or Neumann value on the boundary.  
+The subroutine {\tt multifab\_physbc\_domainvel} sets the 
+value for faces on the boundary and can take {\tt vel\_bc\_n} as an optional input.
 The subroutine {\tt multifab\_physbc\_macvel}
 sets the transverse velocity ghost faces behind the physical boundary and
-can take {\tt vel\_bc\_t} as an input.\\
+can take {\tt vel\_bc\_t} as an optional input.
+If no multifab is passed in, it is assumed that the boundary conditions
+are homogeneous.\\
 
 For {\tt multifab\_physbc\_macvel}, the optional multifab that gets passed in
 must be nodal in exactly 2 directions.
