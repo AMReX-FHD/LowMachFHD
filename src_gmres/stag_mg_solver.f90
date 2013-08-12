@@ -468,7 +468,7 @@ contains
           call destroy(mba_fancy)
 
           ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-          call initialize_bc(the_bc_tower_fancy,1,dm,mla_fancy%pmask,2)
+          call initialize_bc(the_bc_tower_fancy,1,dm,mla_fancy%pmask,2,1)
 
           ! define level 1 of the_bc_tower
           call bc_tower_level_build(the_bc_tower_fancy,1,mla_fancy%la(1))
@@ -932,11 +932,11 @@ contains
          case (2)
             call cc_restriction_2d(acp(:,:,1,1),afp(:,:,1,1),ng_c, &
                                    lo_c, hi_c, lo_f, hi_f, &
-                                   the_bc_level%adv_bc_level_array(i,:,:,scal_bc_comp))
+                                   the_bc_level%adv_bc_level_array(i,:,:,tran_bc_comp))
          case (3)
             call cc_restriction_3d(acp(:,:,:,1),afp(:,:,:,1),ng_c, &
                                    lo_c, hi_c, lo_f, hi_f, &
-                                   the_bc_level%adv_bc_level_array(i,:,:,scal_bc_comp))
+                                   the_bc_level%adv_bc_level_array(i,:,:,tran_bc_comp))
          end select
       end do
 
