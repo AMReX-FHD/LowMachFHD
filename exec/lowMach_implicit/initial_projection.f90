@@ -68,7 +68,7 @@ contains
 
     ! average sold to faces
     do i=1,nscal
-       call average_cc_to_face(nlevs,sold,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,sold,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
     end do
 
     ! convert m^init to v^init in valid region

@@ -932,11 +932,11 @@ contains
          case (2)
             call cc_restriction_2d(acp(:,:,1,1),afp(:,:,1,1),ng_c, &
                                    lo_c, hi_c, lo_f, hi_f, &
-                                   the_bc_level%adv_bc_level_array(i,:,:,dm+2))
+                                   the_bc_level%adv_bc_level_array(i,:,:,scal_bc_comp))
          case (3)
             call cc_restriction_3d(acp(:,:,:,1),afp(:,:,:,1),ng_c, &
                                    lo_c, hi_c, lo_f, hi_f, &
-                                   the_bc_level%adv_bc_level_array(i,:,:,dm+2))
+                                   the_bc_level%adv_bc_level_array(i,:,:,scal_bc_comp))
          end select
       end do
 

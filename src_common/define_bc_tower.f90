@@ -123,7 +123,7 @@ contains
     ! Here we allocate dm components for x_u
     !                  1 component for x_p
     !                  num_scal_bc components for scalars
-    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,dm+1+num_scal_bc))
+    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -132,7 +132,7 @@ contains
     ! We need to keep x_u so indexing is consistent for x_p
     !                  dm components for x_u
     !                  1 component for x_p
-    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,dm+1))
+    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp:pres_bc_comp))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -220,16 +220,16 @@ contains
           ! for transverse velocity we imposie a Dirichlet velocity condition
           ! for pressure we use extrapolation
           adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! normal and transverse velocity
-          adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP ! pressure
+          adv_bc_level(igrid,d,lohi,pres_bc_comp)                    = FOEXTRAP ! pressure
 
        else if ( (phys_bc_level(igrid,d,lohi) >= SLIP_START) .and.  (phys_bc_level(igrid,d,lohi) <= SLIP_END) ) then
 
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet stress condition
           ! for pressure we use extrapolation
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_TRACT ! transverse velocity
-          adv_bc_level(igrid,d,lohi,d   )                    = DIR_VEL   ! normal velocity
-          adv_bc_level(igrid,d,lohi,dm+1)                    = FOEXTRAP  ! pressure
+          adv_bc_level(igrid,d,lohi,vel_bc_comp:vel_bc_comp+dm-1) = DIR_TRACT ! transverse velocity
+          adv_bc_level(igrid,d,lohi,vel_bc_comp+d-1)              = DIR_VEL   ! normal velocity
+          adv_bc_level(igrid,d,lohi,pres_bc_comp)                 = FOEXTRAP  ! pressure
 
        else
 
@@ -239,9 +239,10 @@ contains
        end if
        
        ! The scalars can be handled in many different ways, so defer to application-specific code:
-       call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1))
+       call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
+                      scal_bc_comp:scal_bc_comp+num_scal_bc-1))
 
-       if (any(adv_bc_level(igrid,d,lohi,dm+2:dm+2+num_scal_bc-1) .eq. -999)) then
+       if (any(adv_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) .eq. -999)) then
 
           print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
           call bl_error('BC TYPE NOT SUPPORTED 2')
@@ -256,7 +257,7 @@ contains
 
   subroutine ell_bc_level_build(ell_bc_level,phys_bc_level,default_value)
 
-    integer  , intent(inout) ::  ell_bc_level(0:,:,:,:)
+    integer  , intent(inout) ::  ell_bc_level(0:,:,:,pres_bc_comp:)
     integer  , intent(in   ) :: phys_bc_level(0:,:,:)
     integer  , intent(in   ) :: default_value
 
@@ -278,12 +279,12 @@ contains
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
           ! pressure is periodic
-          ell_bc_level(igrid,d,lohi,dm+1) = BC_PER
+          ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_PER
 
        else
 
           ! pressure is homogeneous neumann
-          ell_bc_level(igrid,d,lohi,dm+1) = BC_NEU
+          ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_NEU
 
        end if
 
