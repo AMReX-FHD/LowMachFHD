@@ -183,7 +183,7 @@ subroutine main_driver()
   call destroy(mba)
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,2)
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,2,1)
   do n=1,nlevs
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))

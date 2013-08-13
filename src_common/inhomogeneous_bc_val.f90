@@ -8,13 +8,13 @@ module inhomogeneous_bc_val_module
 
   private
 
-  public :: scalar_bc, inhomogeneous_bc_val_2d, inhomogeneous_bc_val_3d
+  public :: scalar_bc, transport_bc, inhomogeneous_bc_val_2d, inhomogeneous_bc_val_3d
 
 contains
 
   subroutine scalar_bc(phys_bc, bc_code)
 
-    integer, intent(in) :: phys_bc
+    integer, intent(in   ) :: phys_bc
     integer, intent(inout) :: bc_code(1:num_scal_bc)
 
     if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
@@ -37,6 +37,32 @@ contains
     end if
 
   end subroutine scalar_bc
+
+  subroutine transport_bc(phys_bc, bc_code)
+
+    integer, intent(in   ) :: phys_bc
+    integer, intent(inout) :: bc_code(1:num_tran_bc)
+
+    if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
+
+       bc_code = FOEXTRAP  ! Pure Neumann
+
+    else if ((phys_bc == NO_SLIP_RESERVOIR) .or. (phys_bc == SLIP_RESERVOIR)) then
+
+       bc_code = EXT_DIR   ! Pure Dirichlet
+
+    else if (phys_bc == PERIODIC .or. phys_bc == INTERIOR ) then
+
+       ! retain the default value of INTERIOR
+
+    else
+
+       ! return an error
+       bc_code = -999
+
+    end if
+
+  end subroutine transport_bc
 
   function inhomogeneous_bc_val_2d(comp,x,y) result(val)
 

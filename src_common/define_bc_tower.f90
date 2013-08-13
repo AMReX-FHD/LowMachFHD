@@ -30,22 +30,25 @@ module define_bc_module
 
 contains
 
-  subroutine initialize_bc(the_bc_tower,num_levs,dm,pmask,num_scal_bc_in)
+  subroutine initialize_bc(the_bc_tower,num_levs,dm,pmask,num_scal_bc_in,num_tran_bc_in)
 
      use bc_module
 
      use probin_common_module, only : bc_lo, bc_hi
 
      type(bc_tower), intent(  out) :: the_bc_tower
-     integer       , intent(in   ) :: num_levs,dm,num_scal_bc_in
+     integer       , intent(in   ) :: num_levs,dm,num_scal_bc_in,num_tran_bc_in
      logical       , intent(in   ) :: pmask(:)
 
      integer :: domain_phys_bc(dm,2)
 
+     num_scal_bc  = num_scal_bc_in
+     num_tran_bc  = num_tran_bc_in
+
      vel_bc_comp  = 1
-     pres_bc_comp = dm+1
-     scal_bc_comp = dm+2
-     num_scal_bc  = num_scal_bc_in     
+     pres_bc_comp = vel_bc_comp+dm
+     scal_bc_comp = pres_bc_comp+1
+     tran_bc_comp = scal_bc_comp+num_scal_bc
 
      ! Define the physical boundary conditions on the domain
      ! Put the bc values from the inputs file into domain_phys_bc
@@ -123,7 +126,7 @@ contains
     ! Here we allocate dm components for x_u
     !                  1 component for x_p
     !                  num_scal_bc components for scalars
-    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc))
+    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc+num_tran_bc))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -241,6 +244,10 @@ contains
        ! The scalars can be handled in many different ways, so defer to application-specific code:
        call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
                       scal_bc_comp:scal_bc_comp+num_scal_bc-1))
+       
+       ! The transport coefficients can be handled in many different ways, so defer to application-specific code:
+       call transport_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
+                         tran_bc_comp:tran_bc_comp+num_tran_bc-1))
 
        if (any(adv_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) .eq. -999)) then
 
