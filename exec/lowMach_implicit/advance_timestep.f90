@@ -8,6 +8,7 @@ module advance_timestep_module
   use convert_to_homogeneous_module
   use mk_advective_fluxdiv_module
   use mk_diffusive_fluxdiv_module
+  use mk_grav_force_module
   use mk_stochastic_fluxdiv_module
   use gmres_module
   use init_module
@@ -15,7 +16,7 @@ module advance_timestep_module
   use bc_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-  use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef
+  use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef, grav
   use probin_common_module, only: fixed_dt
 
   use analysis_module
@@ -311,6 +312,11 @@ contains
        end do
     end do
 
+    ! add gravity term
+    if (any(grav(1:dm) .ne. 0.d0)) then
+       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc)
+    end if
+
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
@@ -567,6 +573,11 @@ contains
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
        end do
     end do
+
+    ! add gravity term
+    if (any(grav(1:dm) .ne. 0.d0)) then
+       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc)
+    end if
 
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
