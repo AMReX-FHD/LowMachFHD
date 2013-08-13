@@ -180,7 +180,37 @@ contains
                 end if   
              end if  
           enddo
-       enddo   
+       enddo
+
+    case (3)
+
+       ! one fluid on top of another
+       ! could be used for diffusive mixing or Rayleigh-Taylor,
+       ! depending on where the heavier fluid is and if gravity is on
+
+       mx = 0.d0
+       my = 0.d0
+
+       p = 0.d0
+
+       ! middle of domain
+       y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          do i=lo(1),hi(1)
+
+             if (y .lt. y1) then
+                s(i,j,2) = c_init(1)
+                s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))             
+             else
+                s(i,j,2) = c_init(2)
+                s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))   
+             end if
+             s(i,j,2) = s(i,j,1)*s(i,j,2)
+             
+          end do
+       end do
 
     case default
 
