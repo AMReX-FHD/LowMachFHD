@@ -8,10 +8,12 @@ subroutine main_driver()
   use bc_module
   use define_bc_module
   use init_module
+  use init_pres_module
   use initial_projection_module
   use write_plotfile_module
   use advance_timestep_module
   use convert_variables_module
+  use div_and_grad_module
   use analysis_module
   use mk_stochastic_fluxdiv_module
   use project_onto_eos_module
@@ -302,6 +304,9 @@ subroutine main_driver()
 
   ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pold,dx,mla,time)
+
+  ! this handles baro-diffusion, probably need to add flag to enable/disable
+  call init_pres(mla,sold,pold,dx,the_bc_tower)
 
   ! compute grad p
   call compute_grad(mla,pold,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
