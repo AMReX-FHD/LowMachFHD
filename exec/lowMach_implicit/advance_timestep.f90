@@ -31,8 +31,8 @@ module advance_timestep_module
 contains
 
   subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
-                              eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,gp0_fc, &
-                              dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                              eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
+                              gp0_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -50,6 +50,7 @@ contains
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
+    type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
     type(multifab) , intent(in   ) :: gp0_fc(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -198,9 +199,11 @@ contains
 
     ! add D^n  for rho1 to s_update
     ! add St^n for rho1 to s_update
+    ! add baro-diffusion^n to s_update
     do n=1,nlevs
        call multifab_plus_plus_c(s_update(n),2,rhoc_d_fluxdiv(n),1,1,0)
        call multifab_plus_plus_c(s_update(n),2,rhoc_s_fluxdiv(n),1,1,0)
+       call multifab_plus_plus_c(s_update(n),2,rhoc_b_fluxdiv(n),1,1,0)
     end do
 
     ! set snew = s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
@@ -332,6 +335,7 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
+    ! add baro-diffusion flux diveregnce to rhs_p
     call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp0_fc,dx, &
                          the_bc_tower%bc_tower_array,vel_bc_n)
 
@@ -594,6 +598,7 @@ contains
     do n=1,nlevs
        call setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
        call setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
+       call setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
     end do
 
     ! reset inhomogeneous bc condition to deal with reservoirs
@@ -604,12 +609,18 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
-    call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp0_fc,dx, &
-                         the_bc_tower%bc_tower_array,vel_bc_n)
-
     ! add div(rho*chi grad c)^{n+1} to rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_d_fluxdiv(n),1,1,0)
+    end do
+
+    ! compute baro-diffusion flux divergence
+    call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp0_fc,dx, &
+                         the_bc_tower%bc_tower_array,vel_bc_n)
+
+    ! add baro-diffusion flux divergence to rhs_p
+    do n=1,nlevs
+       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_b_fluxdiv(n),1,1,0)
     end do
 
     ! fill the stochastic multifabs with a new set of random numbers
@@ -618,19 +629,6 @@ contains
     ! create div(Psi^{n+1})
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
                                  s_fc,chi_fc,dx,vel_bc_n)
-
-    do n=1,nlevs
-       do i=1,dm
-          ! compute change in normal velocity boundary condition over the time step
-          ! this deals with time-dependent velocity boundary conditions
-          call multifab_copy_c(vel_bc_n_delta(n,i),1,vel_bc_n(n,i),1,1,0)
-          call multifab_sub_sub_c(vel_bc_n_delta(n,i),1,vel_bc_n_old(n,i),1,1,0)
-       end do
-       do i=1,size(vel_bc_t,dim=2)
-          call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
-          call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
-       end do
-    end do
 
     ! add div(Psi^{n+1}) to rhs_p
     do n=1,nlevs
@@ -661,6 +659,19 @@ contains
           call multifab_mult_mult_s_c(eta_ed(n,2),1,1.d0/2.d0,1,eta_ed(n,2)%ng)
           call multifab_mult_mult_s_c(eta_ed(n,3),1,1.d0/2.d0,1,eta_ed(n,3)%ng)
        end if
+    end do
+
+    do n=1,nlevs
+       do i=1,dm
+          ! compute change in normal velocity boundary condition over the time step
+          ! this deals with time-dependent velocity boundary conditions
+          call multifab_copy_c(vel_bc_n_delta(n,i),1,vel_bc_n(n,i),1,1,0)
+          call multifab_sub_sub_c(vel_bc_n_delta(n,i),1,vel_bc_n_old(n,i),1,1,0)
+       end do
+       do i=1,size(vel_bc_t,dim=2)
+          call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
+          call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
+       end do
     end do
 
     ! for inhomogeneous boundary conditions, convert problem to homogeneous by

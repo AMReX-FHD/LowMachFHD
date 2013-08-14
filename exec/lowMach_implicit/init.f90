@@ -268,8 +268,9 @@ contains
        p = 0.d0
 
        gpx = 0.d0
+       gpy = 0.d0
 
-       do j=lo(2),hi(2)
+       do j=lo(2)-1,hi(2)+1
           do i=lo(1),hi(1)
 
              s(i,j,2) = c(j)
@@ -283,11 +284,30 @@ contains
           end do
        end do
 
-       ! face-centered grad p0
+       ! face-centered grad p0 - leave the boundary gradient zero
        do j=lo(2),hi(2)+1
           do i=lo(1),hi(1)
-             ! grad p0 in the y direction is rho*g
-             gpy(i,j) = 0.5d0*(s(i,j,1)+s(i-1,j,1))*grav(2)
+
+             if (j .ne. 0 .and. j .ne. 64) then
+                ! grad p0 in the y direction is rho*g
+                gpy(i,j) = 0.5d0*(s(i,j,1)+s(i-1,j,1))*grav(2)
+             end if
+
+          end do
+       end do
+
+       ! hack - set rho constant, even though grad p0 is based on stratified rho
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+
+             s(i,j,2) = 0.5d0
+
+             ! compute rho with eos
+             s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
+
+             ! compute rho*c
+             s(i,j,2) = s(i,j,1)*s(i,j,2)
+
           end do
        end do
 

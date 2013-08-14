@@ -23,7 +23,8 @@ module initial_projection_module
 contains
 
   subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp0_fc,rhoc_d_fluxdiv, &
-                                rhoc_s_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                                rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,the_bc_tower, &
+                                vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -35,6 +36,7 @@ contains
     type(multifab) , intent(in   ) :: gp0_fc(:,:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
+    type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
@@ -96,6 +98,15 @@ contains
     ! add div(Psi^0) to mac_rhs
     do n=1,nlevs
        call multifab_plus_plus_c(mac_rhs(n),1,rhoc_s_fluxdiv(n),1,1,0)
+    end do
+
+    ! compute baro-diffusion flux divergence
+    call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp0_fc,dx, &
+                         the_bc_tower%bc_tower_array,vel_bc_n)
+
+    ! add baro-diffusion to mac_rhs
+    do n=1,nlevs
+       call multifab_plus_plus_c(mac_rhs(n),1,rhoc_b_fluxdiv(n),1,1,0)
     end do
 
     do n=1,nlevs
