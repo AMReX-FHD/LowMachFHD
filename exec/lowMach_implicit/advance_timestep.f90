@@ -32,7 +32,7 @@ contains
 
   subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp0_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                              gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -52,7 +52,7 @@ contains
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
-    type(multifab) , intent(inout) :: gp0_fc(:,:)
+    type(multifab) , intent(inout) :: gp_fc(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
@@ -337,7 +337,7 @@ contains
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add baro-diffusion flux diveregnce to rhs_p
-    call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp0_fc,dx, &
+    call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp_fc,dx, &
                          the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(Psi^n) to rhs_p
@@ -457,7 +457,7 @@ contains
     end do
 
     ! compute grad p^{n+1,*}
-    call compute_grad(mla,pnew,gp0_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    call compute_grad(mla,pnew,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
     ! convert v^{*,n+1} to m^{*,n+1} in valid and ghost region
     ! now mnew has properly filled ghost cells
@@ -624,7 +624,7 @@ contains
     end do
 
     ! compute baro-diffusion flux divergence
-    call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp0_fc,dx, &
+    call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
                          the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add baro-diffusion flux divergence to rhs_p

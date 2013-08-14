@@ -51,7 +51,7 @@ subroutine main_driver()
   type(multifab), allocatable :: sold(:)           ! cell-centered
   type(multifab), allocatable :: snew(:)           ! cell-centered
   type(multifab), allocatable :: s_fc(:,:)         ! face-centered
-  type(multifab), allocatable :: gp0_fc(:,:)       ! face-centered
+  type(multifab), allocatable :: gp_fc(:,:)       ! face-centered
   type(multifab), allocatable :: prim(:)           ! cell-centered
   type(multifab), allocatable :: pold(:)           ! cell-centered
   type(multifab), allocatable :: pnew(:)           ! cell-centered
@@ -109,7 +109,7 @@ subroutine main_driver()
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pold(nlevs),pnew(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
   allocate(rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs),rhoc_b_fluxdiv(nlevs))
-  allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm),gp0_fc(nlevs,dm))
+  allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm),gp_fc(nlevs,dm))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
      allocate(vel_bc_t(nlevs,2))
@@ -207,10 +207,10 @@ subroutine main_driver()
      call multifab_build(snew(n) ,mla%la(n),nscal,2)
      call multifab_build(prim(n) ,mla%la(n),nscal,2)
 
-     ! s on faces, gp0 on faces
+     ! s on faces, gp on faces
      do i=1,dm
         call multifab_build_edge(  s_fc(n,i),mla%la(n),nscal,1,i)
-        call multifab_build_edge(gp0_fc(n,i),mla%la(n),1    ,0,i)
+        call multifab_build_edge(gp_fc(n,i),mla%la(n),1    ,0,i)
      end do
 
      ! pressure
@@ -301,7 +301,10 @@ subroutine main_driver()
   time = 0.d0
 
   ! initialize sold = s^0 and mold = m^0
-  call init(mold,sold,pold,gp0_fc,dx,mla,time)
+  call init(mold,sold,pold,dx,mla,time)
+
+  ! compute grad p
+  call compute_grad(mla,pold,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   if (print_int .gt. 0) then
      call eos_check(mla,sold)
@@ -337,7 +340,7 @@ subroutine main_driver()
   call fill_stochastic(mla)  
 
   ! need to do an initial projection to get an initial velocity field
-  call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp0_fc,rhoc_d_fluxdiv, &
+  call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
                           rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
   if (print_int .gt. 0) then
@@ -358,7 +361,7 @@ subroutine main_driver()
      ! advance the solution by dt
      call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                            eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                           gp0_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                           gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
      ! increment simulation time
      time = time + fixed_dt
@@ -419,7 +422,7 @@ subroutine main_driver()
         call multifab_destroy(vel_bc_n(n,i))
         call multifab_destroy(chi_fc(n,i))
         call multifab_destroy(s_fc(n,i))
-        call multifab_destroy(gp0_fc(n,i))
+        call multifab_destroy(gp_fc(n,i))
      end do
      do i=1,size(eta_ed,dim=2)
         call multifab_destroy(eta_ed(n,i))

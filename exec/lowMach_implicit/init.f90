@@ -23,18 +23,17 @@ contains
   ! *both* sides of the domain with values, even though this is duplicate information
   ! We ensure the two sides are bitwise identical, but low and/or high sides may win
 
-  subroutine init(m,s,p,gp0_fc,dx,mla,time)
+  subroutine init(m,s,p,dx,mla,time)
 
-    type(multifab) , intent(inout) :: m(:,:),s(:),p(:),gp0_fc(:,:)
+    type(multifab) , intent(inout) :: m(:,:),s(:),p(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(ml_layout), intent(in   ) :: mla
     real(kind=dp_t), intent(in   ) :: time
 
     real(kind=dp_t), pointer :: mxp(:,:,:,:), myp(:,:,:,:), mzp(:,:,:,:)
     real(kind=dp_t), pointer :: sop(:,:,:,:), pp(:,:,:,:)
-    real(kind=dp_t), pointer :: gpx(:,:,:,:), gpy(:,:,:,:), gpz(:,:,:,:)
     integer :: lo(mla%dim),hi(mla%dim)
-    integer :: nlevs,n,i,ng_m,ng_s,ng_p,ng_g,dm
+    integer :: nlevs,n,i,ng_m,ng_s,ng_p,dm
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -42,7 +41,6 @@ contains
     ng_m = m(1,1)%ng
     ng_s = s(1)%ng
     ng_p = p(1)%ng
-    ng_g = gp0_fc(1,1)%ng
 
     do n=1,nlevs
        do i = 1, nfabs(s(n))
@@ -50,23 +48,18 @@ contains
           myp => dataptr(m(n,2),i)
           sop => dataptr(s(n),i)
           pp  => dataptr(p(n),i)
-          gpx => dataptr(gp0_fc(n,1),i)
-          gpy => dataptr(gp0_fc(n,2),i)
           lo =  lwb(get_box(s(n),i))
           hi =  upb(get_box(s(n),i))
           select case (dm)
           case (2)
              call init_2d(mxp(:,:,1,1), myp(:,:,1,1), &
                           sop(:,:,1,:), pp(:,:,1,1), &
-                          gpx(:,:,1,1), gpy(:,:,1,1), &
-                          lo, hi, ng_m, ng_s, ng_p, ng_g, dx(n,:), time)
+                          lo, hi, ng_m, ng_s, ng_p, dx(n,:), time)
           case (3)
              mzp => dataptr(m(n,3),i)
-             gpz => dataptr(gp0_fc(n,3),i)
              call init_3d(mxp(:,:,:,1), myp(:,:,:,1), mzp(:,:,:,1), &
                           sop(:,:,:,:), pp(:,:,:,1), &
-                          gpx(:,:,:,1), gpy(:,:,:,1), gpz(:,:,:,1), &
-                          lo, hi, ng_m, ng_s, ng_p, ng_g, dx(n,:), time)
+                          lo, hi, ng_m, ng_s, ng_p, dx(n,:), time)
           end select
        end do
 
@@ -81,15 +74,13 @@ contains
 
   end subroutine init
 
-  subroutine init_2d(mx,my,s,p,gpx,gpy,lo,hi,ng_m,ng_s,ng_p,ng_g,dx,time)
+  subroutine init_2d(mx,my,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p, ng_g
+    integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p
     real(kind=dp_t), intent(inout) ::  mx(lo(1)-ng_m:,lo(2)-ng_m:)
     real(kind=dp_t), intent(inout) ::  my(lo(1)-ng_m:,lo(2)-ng_m:)
     real(kind=dp_t), intent(inout) ::   s(lo(1)-ng_s:,lo(2)-ng_s:,:)
     real(kind=dp_t), intent(inout) ::   p(lo(1)-ng_p:,lo(2)-ng_p:)
-    real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:)
-    real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:)
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
@@ -108,9 +99,6 @@ contains
        my = 0.d0
 
        p = 0.d0
-
-       gpx = 0.d0
-       gpy = 0.d0
 
        ! set c to c_init(1)
        s(:,:,2) = c_init(1)
@@ -135,9 +123,6 @@ contains
        my = 0.d0
 
        p = 0.d0
-
-       gpx = 0.d0
-       gpy = 0.d0
 
        do j=lo(2),hi(2)
           y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.5d0*(prob_lo(2)+prob_hi(2))
@@ -166,9 +151,6 @@ contains
        my = 0.d0
 
        p = 0.d0
-
-       gpx = 0.d0
-       gpy = 0.d0
 
        one_third_domain1=2.0d0/3.0d0*prob_lo(2)+1.0d0/3.0d0*prob_hi(2)
        one_third_domain2=1.0d0/3.0d0*prob_lo(2)+2.0d0/3.0d0*prob_hi(2)
@@ -215,9 +197,6 @@ contains
 
        p = 0.d0
 
-       gpx = 0.d0
-       gpy = 0.d0
-
        ! middle of domain
        y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
@@ -246,9 +225,6 @@ contains
        
        p = 0.d0
 
-       gpx = 0.d0
-       gpy = 0.d0
-
        ! constant rho
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -272,17 +248,14 @@ contains
 
   end subroutine init_2d
 
-  subroutine init_3d(mx,my,mz,s,p,gpx,gpy,gpz,lo,hi,ng_m,ng_s,ng_p,ng_g,dx,time)
+  subroutine init_3d(mx,my,mz,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p, ng_g
+    integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p
     real(kind=dp_t), intent(inout) ::  mx(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
     real(kind=dp_t), intent(inout) ::  my(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
     real(kind=dp_t), intent(inout) ::  mz(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
     real(kind=dp_t), intent(inout) ::   s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
     real(kind=dp_t), intent(inout) ::   p(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-    real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-    real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-    real(kind=dp_t), intent(inout) :: gpz(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
@@ -298,9 +271,6 @@ contains
        mz = 0.d0
 
        p = 0.d0
-
-       gpx = 0.d0
-       gpy = 0.d0
 
        ! set c to c_init(1)
        s(:,:,:,2) = c_init(1)
@@ -328,9 +298,6 @@ contains
        mz = 0.d0
 
        p = 0.d0
-
-       gpx = 0.d0
-       gpy = 0.d0
 
        do k=lo(3),hi(3)
           z = prob_lo(3) + dx(3) * (dble(k)+0.5d0) - 0.5d0*(prob_lo(3)+prob_hi(3))
