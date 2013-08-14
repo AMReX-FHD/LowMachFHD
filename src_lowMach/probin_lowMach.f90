@@ -12,7 +12,7 @@ module probin_lowmach_module
   !------------------------------------------------------------- 
   integer   , save :: max_step,nscal,print_int
   real(dp_t), save :: rhobar(2),visc_coef,diff_coef,smoothing_width
-  real(dp_t), save :: variance_coef,conc_scal,c_init(2)
+  real(dp_t), save :: variance_coef,conc_scal,c_init(2),grav(3)
   real(dp_t), save :: mol_mass(2),kT
   integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
@@ -26,6 +26,7 @@ module probin_lowmach_module
   namelist /probin_lowmach/ smoothing_width   ! scale factor for smoothing initial profile
   namelist /probin_lowmach/ c_init            ! controls initial concentration range
   namelist /probin_lowmach/ c_bc              ! c boundary conditions (dir,face)
+  namelist /probin_lowmach/ grav              ! gravity vector (negative is downwards)
 
   ! simulation parameters
   namelist /probin_lowmach/ max_step          ! maximum number of time steps
@@ -79,6 +80,7 @@ contains
     smoothing_width = 1.d0
     c_init(1:2) = 1.d0
     c_bc(1:3,1:2) = 1.d0
+    grav(1:3) = 0.d0
 
     max_step = 1
     print_int = 0
@@ -154,6 +156,19 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) c_bc(3,2)
+
+       case ('--grav_x')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) grav(1)
+       case ('--grav_y')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) grav(2)
+       case ('--grav_z')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) grav(3)
 
        case ('--max_step')
           farg = farg + 1

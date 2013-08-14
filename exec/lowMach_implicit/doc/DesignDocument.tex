@@ -168,7 +168,8 @@ Thus, $S \equiv S(\Fb)$.  The stochastic terms are:
 \end{eqnarray}
 where $\Wb$ and $\widetilde\Wb$ are standard white-noise random Gaussian tensor
 and vector fields with uncorrelated components.  In our implementation, 
-we use an ideal gas mixture for (\ref{eq:rho1 stoch}) with $\mu_c^{-1}k_BT \equiv c(1-c)$ so that
+we use an ideal gas mixture for (\ref{eq:rho1 stoch}) with 
+$k_BT=1$ and $\mu_c^{-1}=c(1-c)[cm_1+(1-c)m_2]$ with $m_1=m_2=1$ so that
 \begin{equation}
 \Psib = \sqrt{\frac{2\chi\rho c(1-c)}{\Delta t\Delta V}}\widetilde\Wb
 \end{equation}

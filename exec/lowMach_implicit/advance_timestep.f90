@@ -7,7 +7,9 @@ module advance_timestep_module
   use convert_variables_module
   use convert_to_homogeneous_module
   use mk_advective_fluxdiv_module
+  use mk_baro_fluxdiv_module
   use mk_diffusive_fluxdiv_module
+  use mk_grav_force_module
   use mk_stochastic_fluxdiv_module
   use gmres_module
   use init_module
@@ -15,7 +17,7 @@ module advance_timestep_module
   use bc_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-  use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef
+  use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef, grav
   use probin_common_module, only: fixed_dt
 
   use analysis_module
@@ -29,7 +31,7 @@ module advance_timestep_module
 contains
 
   subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
-                              eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
+                              eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,gp0_fc, &
                               dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
@@ -48,6 +50,7 @@ contains
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
+    type(multifab) , intent(in   ) :: gp0_fc(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
@@ -311,6 +314,11 @@ contains
        end do
     end do
 
+    ! add gravity term
+    if (any(grav(1:dm) .ne. 0.d0)) then
+       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc)
+    end if
+
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
@@ -323,6 +331,9 @@ contains
     ! add div(rho*chi grad c)^{*,n+1} to rhs_p
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
+
+    call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp0_fc,dx, &
+                         the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(Psi^n) to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
@@ -568,6 +579,11 @@ contains
        end do
     end do
 
+    ! add gravity term
+    if (any(grav(1:dm) .ne. 0.d0)) then
+       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc)
+    end if
+
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
@@ -587,6 +603,9 @@ contains
     ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
     call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
+
+    call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp0_fc,dx, &
+                         the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(rho*chi grad c)^{n+1} to rhs_p
     do n=1,nlevs

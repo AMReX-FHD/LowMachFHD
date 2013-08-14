@@ -7,6 +7,7 @@ module initial_projection_module
   use define_bc_module
   use macproject_module
   use div_and_grad_module
+  use mk_baro_fluxdiv_module
   use mk_diffusive_fluxdiv_module
   use mk_stochastic_fluxdiv_module
   use bc_module
@@ -21,7 +22,7 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,rhoc_d_fluxdiv, &
+  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp0_fc,rhoc_d_fluxdiv, &
                                 rhoc_s_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
@@ -31,6 +32,7 @@ contains
     type(multifab) , intent(inout) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: prim(:)
     type(multifab) , intent(in   ) :: chi_fc(:,:)
+    type(multifab) , intent(in   ) :: gp0_fc(:,:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
