@@ -65,7 +65,8 @@ contains
              gpz => dataptr(gp0_fc(n,3),i)
              call init_3d(mxp(:,:,:,1), myp(:,:,:,1), mzp(:,:,:,1), &
                           sop(:,:,:,:), pp(:,:,:,1), &
-                          lo, hi, ng_m, ng_s, ng_p, dx(n,:), time)
+                          gpx(:,:,:,1), gpy(:,:,:,1), gpz(:,:,:,1), &
+                          lo, hi, ng_m, ng_s, ng_p, ng_g, dx(n,:), time)
           end select
        end do
 
@@ -97,7 +98,7 @@ contains
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
 
     ! temporaries for centrifuge
-    real(kind=dp_t) :: c(0:63), rho1, rho2, kp1, kp2, S_fac
+    real(kind=dp_t) :: c(-1:64), rho1, rho2, kp1, kp2, S_fac
 
     select case (prob_type)
     case (0)
@@ -107,6 +108,9 @@ contains
        my = 0.d0
 
        p = 0.d0
+
+       gpx = 0.d0
+       gpy = 0.d0
 
        ! set c to c_init(1)
        s(:,:,2) = c_init(1)
@@ -131,6 +135,9 @@ contains
        my = 0.d0
 
        p = 0.d0
+
+       gpx = 0.d0
+       gpy = 0.d0
 
        do j=lo(2),hi(2)
           y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.5d0*(prob_lo(2)+prob_hi(2))
@@ -159,6 +166,9 @@ contains
        my = 0.d0
 
        p = 0.d0
+
+       gpx = 0.d0
+       gpy = 0.d0
 
        one_third_domain1=2.0d0/3.0d0*prob_lo(2)+1.0d0/3.0d0*prob_hi(2)
        one_third_domain2=1.0d0/3.0d0*prob_lo(2)+2.0d0/3.0d0*prob_hi(2)
@@ -205,6 +215,9 @@ contains
 
        p = 0.d0
 
+       gpx = 0.d0
+       gpy = 0.d0
+
        ! middle of domain
        y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
@@ -236,8 +249,8 @@ contains
 
        S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
 
-       c(0) = c_init(1)
-       do j=0,62
+       c(-1) = c_init(1)
+       do j=-1,63
 
           rho1 = 1.d0 / (c(j)/rhobar(1) + (1.d0-c(j))/rhobar(2))
           kp1 = S_fac*c(j)*(1.d0-c(j))
@@ -255,7 +268,6 @@ contains
        p = 0.d0
 
        gpx = 0.d0
-       gpy = 0.d0 ! FIXME
 
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -271,6 +283,14 @@ contains
           end do
        end do
 
+       ! face-centered grad p0
+       do j=lo(2),hi(2)+1
+          do i=lo(1),hi(1)
+             ! grad p0 in the y direction is rho*g
+             gpy(i,j) = 0.5d0*(s(i,j,1)+s(i-1,j,1))*grav(2)
+          end do
+       end do
+
     case default
 
        call bl_error("init_2d: invalid prob_type")
@@ -279,14 +299,17 @@ contains
 
   end subroutine init_2d
 
-  subroutine init_3d(mx,my,mz,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
+  subroutine init_3d(mx,my,mz,s,p,gpx,gpy,gpz,lo,hi,ng_m,ng_s,ng_p,ng_g,dx,time)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p
-    real(kind=dp_t), intent(inout) :: mx(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
-    real(kind=dp_t), intent(inout) :: my(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
-    real(kind=dp_t), intent(inout) :: mz(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
-    real(kind=dp_t), intent(inout) ::  s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
-    real(kind=dp_t), intent(inout) ::  p(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p, ng_g
+    real(kind=dp_t), intent(inout) ::  mx(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    real(kind=dp_t), intent(inout) ::  my(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    real(kind=dp_t), intent(inout) ::  mz(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(inout) ::   p(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t), intent(inout) :: gpz(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
@@ -302,6 +325,9 @@ contains
        mz = 0.d0
 
        p = 0.d0
+
+       gpx = 0.d0
+       gpy = 0.d0
 
        ! set c to c_init(1)
        s(:,:,:,2) = c_init(1)
@@ -329,6 +355,9 @@ contains
        mz = 0.d0
 
        p = 0.d0
+
+       gpx = 0.d0
+       gpy = 0.d0
 
        do k=lo(3),hi(3)
           z = prob_lo(3) + dx(3) * (dble(k)+0.5d0) - 0.5d0*(prob_lo(3)+prob_hi(3))

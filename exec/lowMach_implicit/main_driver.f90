@@ -352,7 +352,7 @@ subroutine main_driver()
      ! advance the solution by dt
      call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                            eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
-                           dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                           gp0_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
      ! increment simulation time
      time = time + fixed_dt
