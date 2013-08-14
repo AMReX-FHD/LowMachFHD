@@ -98,7 +98,7 @@ contains
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
 
     ! temporaries for centrifuge
-    real(kind=dp_t) :: c(-1:64), rho1, rho2, kp1, kp2, S_fac
+    real(kind=dp_t) :: c(-1:64), rho(-1:64), rho1, rho2, kp1, kp2, S_fac, rhoavg, cavg
 
     select case (prob_type)
     case (0)
@@ -259,8 +259,14 @@ contains
           rho2 = 1.d0 / (c(j+1)/rhobar(1) + (1.d0-c(j+1))/rhobar(2))
           kp2 = S_fac*c(j+1)*(1.d0-c(j+1))
           c(j+1) = c(j) - 0.5d0*dx(2)*grav(2)*(kp1*rho1 + kp2*rho2)
-          
+
+
+          rho(j+1) = 1.d0 / (c(j+1)/rhobar(1) + (1.d0-c(j+1))/rhobar(2))   
+
        end do
+
+       rhoavg = sum(rho(0:63)) / 64.d0
+       cavg = (1.d0-rhoavg/rhobar(2)) / (rhoavg/rhobar(1) - rhoavg/rhobar(2))
 
        mx = 0.d0
        my = 0.d0
@@ -300,7 +306,7 @@ contains
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             s(i,j,2) = 0.5d0
+             s(i,j,2) = cavg
 
              ! compute rho with eos
              s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))

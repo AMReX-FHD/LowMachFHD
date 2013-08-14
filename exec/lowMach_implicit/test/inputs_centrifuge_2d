@@ -35,7 +35,7 @@
   prob_hi(1:2) = 64.d0 64.d0 ! physical hi coordinate
   n_cells(1:2) = 64 64       ! number of cells in domain
   max_grid_size(1:2) = 32 32 ! max number of cells in a box
-  fixed_dt = 0.01d0          ! time step
+  fixed_dt = 0.2d0           ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
   prob_type = 4              ! sets scalars, m, coefficients (see init.f90)
 
