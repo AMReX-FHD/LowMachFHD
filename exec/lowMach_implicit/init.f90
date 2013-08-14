@@ -94,7 +94,7 @@ contains
 
     ! local
     integer :: i,j
-    real(kind=dp_t) :: x,y,y1,y2,r
+    real(kind=dp_t) :: x,y,y1,y2,r,pres
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
 
     ! temporaries for centrifuge
@@ -240,33 +240,6 @@ contains
     case (4)
 
        ! the centrifuge test
-       ! assume 64x64 domain for now
-       ! use predictor corrector to solve for 1D profile for c using
-       ! dc/dz = -kp(c)*rho(c)*g
-       ! we use negative g to point down
-       ! kp = S_fac*c*(1-c)
-       ! rho = [c/rho1bar + (1-c)/rho1bar]^-1
-
-       S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
-
-       c(-1) = c_init(1)
-       do j=-1,63
-
-          rho1 = 1.d0 / (c(j)/rhobar(1) + (1.d0-c(j))/rhobar(2))
-          kp1 = S_fac*c(j)*(1.d0-c(j))
-          c(j+1) = c(j) - dx(2)*grav(2)*kp1*rho1
-
-          rho2 = 1.d0 / (c(j+1)/rhobar(1) + (1.d0-c(j+1))/rhobar(2))
-          kp2 = S_fac*c(j+1)*(1.d0-c(j+1))
-          c(j+1) = c(j) - 0.5d0*dx(2)*grav(2)*(kp1*rho1 + kp2*rho2)
-
-
-          rho(j+1) = 1.d0 / (c(j+1)/rhobar(1) + (1.d0-c(j+1))/rhobar(2))   
-
-       end do
-
-       rhoavg = sum(rho(0:63)) / 64.d0
-       cavg = (1.d0-rhoavg/rhobar(2)) / (rhoavg/rhobar(1) - rhoavg/rhobar(2))
 
        mx = 0.d0
        my = 0.d0
@@ -276,37 +249,11 @@ contains
        gpx = 0.d0
        gpy = 0.d0
 
-       do j=lo(2)-1,hi(2)+1
-          do i=lo(1),hi(1)
-
-             s(i,j,2) = c(j)
-
-             ! compute rho with eos
-             s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
-
-             ! compute rho*c
-             s(i,j,2) = s(i,j,1)*s(i,j,2)
-
-          end do
-       end do
-
-       ! face-centered grad p0 - leave the boundary gradient zero
-       do j=lo(2),hi(2)+1
-          do i=lo(1),hi(1)
-
-             if (j .ne. 0 .and. j .ne. 64) then
-                ! grad p0 in the y direction is rho*g
-                gpy(i,j) = 0.5d0*(s(i,j,1)+s(i-1,j,1))*grav(2)
-             end if
-
-          end do
-       end do
-
-       ! hack - set rho constant, even though grad p0 is based on stratified rho
+       ! constant rho
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             s(i,j,2) = cavg
+             s(i,j,2) = c_init(1)
 
              ! compute rho with eos
              s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
