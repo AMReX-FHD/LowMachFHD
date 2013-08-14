@@ -7,6 +7,7 @@ module advance_timestep_module
   use convert_variables_module
   use convert_to_homogeneous_module
   use mk_advective_fluxdiv_module
+  use mk_baro_fluxdiv_module
   use mk_diffusive_fluxdiv_module
   use mk_grav_force_module
   use mk_stochastic_fluxdiv_module
@@ -331,6 +332,9 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
+    call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp0_fc,dx, &
+                         the_bc_tower%bc_tower_array,vel_bc_n)
+
     ! add div(Psi^n) to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
                                  chi_fc_old,dx,vel_bc_n)
@@ -599,6 +603,9 @@ contains
     ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
     call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
+
+    call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp0_fc,dx, &
+                         the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(rho*chi grad c)^{n+1} to rhs_p
     do n=1,nlevs

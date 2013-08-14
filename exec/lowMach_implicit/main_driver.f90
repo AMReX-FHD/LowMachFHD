@@ -331,7 +331,7 @@ subroutine main_driver()
   call fill_stochastic(mla)  
 
   ! need to do an initial projection to get an initial velocity field
-  call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,rhoc_d_fluxdiv, &
+  call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp0_fc,rhoc_d_fluxdiv, &
                           rhoc_s_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
   if (print_int .gt. 0) then
