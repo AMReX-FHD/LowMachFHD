@@ -7,7 +7,8 @@ module init_module
   use convert_stag_module
   use bc_module
   use probin_lowmach_module, only: rhobar, diff_coef, visc_coef, &
-                                   smoothing_width, c_init, material_properties
+                                   smoothing_width, c_init, material_properties, &
+                                   grav
   use probin_common_module , only: prob_lo, prob_hi, prob_type
 
   implicit none
@@ -22,17 +23,18 @@ contains
   ! *both* sides of the domain with values, even though this is duplicate information
   ! We ensure the two sides are bitwise identical, but low and/or high sides may win
 
-  subroutine init(m,s,p,dx,mla,time)
+  subroutine init(m,s,p,gp0_fc,dx,mla,time)
 
-    type(multifab) , intent(inout) :: m(:,:),s(:),p(:)
+    type(multifab) , intent(inout) :: m(:,:),s(:),p(:),gp0_fc(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(ml_layout), intent(in   ) :: mla
     real(kind=dp_t), intent(in   ) :: time
 
     real(kind=dp_t), pointer :: mxp(:,:,:,:), myp(:,:,:,:), mzp(:,:,:,:)
     real(kind=dp_t), pointer :: sop(:,:,:,:), pp(:,:,:,:)
+    real(kind=dp_t), pointer :: gpx(:,:,:,:), gpy(:,:,:,:), gpz(:,:,:,:)
     integer :: lo(mla%dim),hi(mla%dim)
-    integer :: nlevs,n,i,ng_m,ng_s,ng_p,dm
+    integer :: nlevs,n,i,ng_m,ng_s,ng_p,ng_g,dm
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -40,6 +42,7 @@ contains
     ng_m = m(1,1)%ng
     ng_s = s(1)%ng
     ng_p = p(1)%ng
+    ng_g = gp0_fc(1,1)%ng
 
     do n=1,nlevs
        do i = 1, nfabs(s(n))
@@ -47,15 +50,19 @@ contains
           myp => dataptr(m(n,2),i)
           sop => dataptr(s(n),i)
           pp  => dataptr(p(n),i)
+          gpx => dataptr(gp0_fc(n,1),i)
+          gpy => dataptr(gp0_fc(n,2),i)
           lo =  lwb(get_box(s(n),i))
           hi =  upb(get_box(s(n),i))
           select case (dm)
           case (2)
              call init_2d(mxp(:,:,1,1), myp(:,:,1,1), &
                           sop(:,:,1,:), pp(:,:,1,1), &
-                          lo, hi, ng_m, ng_s, ng_p, dx(n,:), time)
+                          gpx(:,:,1,1), gpy(:,:,1,1), &
+                          lo, hi, ng_m, ng_s, ng_p, ng_g, dx(n,:), time)
           case (3)
              mzp => dataptr(m(n,3),i)
+             gpz => dataptr(gp0_fc(n,3),i)
              call init_3d(mxp(:,:,:,1), myp(:,:,:,1), mzp(:,:,:,1), &
                           sop(:,:,:,:), pp(:,:,:,1), &
                           lo, hi, ng_m, ng_s, ng_p, dx(n,:), time)
@@ -73,19 +80,24 @@ contains
 
   end subroutine init
 
-  subroutine init_2d(mx,my,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
+  subroutine init_2d(mx,my,s,p,gpx,gpy,lo,hi,ng_m,ng_s,ng_p,ng_g,dx,time)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p
-    real(kind=dp_t), intent(inout) :: mx(lo(1)-ng_m:,lo(2)-ng_m:)
-    real(kind=dp_t), intent(inout) :: my(lo(1)-ng_m:,lo(2)-ng_m:)
-    real(kind=dp_t), intent(inout) ::  s(lo(1)-ng_s:,lo(2)-ng_s:,:)
-    real(kind=dp_t), intent(inout) ::  p(lo(1)-ng_p:,lo(2)-ng_p:)
+    integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p, ng_g
+    real(kind=dp_t), intent(inout) ::  mx(lo(1)-ng_m:,lo(2)-ng_m:)
+    real(kind=dp_t), intent(inout) ::  my(lo(1)-ng_m:,lo(2)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   s(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    real(kind=dp_t), intent(inout) ::   p(lo(1)-ng_p:,lo(2)-ng_p:)
+    real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:)
+    real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:)
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
     integer :: i,j
     real(kind=dp_t) :: x,y,y1,y2,r
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
+
+    ! temporaries for centrifuge
+    real(kind=dp_t) :: c(0:63), rho1, rho2, kp1, kp2, S_fac
 
     select case (prob_type)
     case (0)
@@ -209,6 +221,53 @@ contains
              end if
              s(i,j,2) = s(i,j,1)*s(i,j,2)
              
+          end do
+       end do
+
+    case (4)
+
+       ! the centrifuge test
+       ! assume 64x64 domain for now
+       ! use predictor corrector to solve for 1D profile for c using
+       ! dc/dz = -kp(c)*rho(c)*g
+       ! we use negative g to point down
+       ! kp = S_fac*c*(1-c)
+       ! rho = [c/rho1bar + (1-c)/rho1bar]^-1
+
+       S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
+
+       c(0) = c_init(1)
+       do j=0,62
+
+          rho1 = 1.d0 / (c(j)/rhobar(1) + (1.d0-c(j))/rhobar(2))
+          kp1 = S_fac*c(j)*(1.d0-c(j))
+          c(j+1) = c(j) - dx(2)*grav(2)*kp1*rho1
+
+          rho2 = 1.d0 / (c(j+1)/rhobar(1) + (1.d0-c(j+1))/rhobar(2))
+          kp2 = S_fac*c(j+1)*(1.d0-c(j+1))
+          c(j+1) = c(j) - 0.5d0*dx(2)*grav(2)*(kp1*rho1 + kp2*rho2)
+          
+       end do
+
+       mx = 0.d0
+       my = 0.d0
+       
+       p = 0.d0
+
+       gpx = 0.d0
+       gpy = 0.d0 ! FIXME
+
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+
+             s(i,j,2) = c(j)
+
+             ! compute rho with eos
+             s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
+
+             ! compute rho*c
+             s(i,j,2) = s(i,j,1)*s(i,j,2)
+
           end do
        end do
 
