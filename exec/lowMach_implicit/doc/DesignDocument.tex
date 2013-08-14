@@ -154,14 +154,18 @@ the equation of state will enforce that the {\it volume} fractions must sum to 1
 The isothermal low Mach number equations of motion are:
 \begin{eqnarray}
 \partial_t\rho &=& -\nabla\cdot(\rho\vb),\\
-\partial_t\rho_1 &=& -\nabla\cdot(\rho_1\vb) + \underbrace{\nabla\cdot\rho\chi\nabla c + \nabla\cdot\Psib}_{\nabla\cdot\Fb},\\
+\partial_t\rho_1 &=& -\nabla\cdot(\rho_1\vb) + \underbrace{\nabla\cdot\rho\chi\left(\nabla c + K_p\nabla p_0\right) + \nabla\cdot\Psib}_{\nabla\cdot\Fb},\\
 \partial_t(\rho\vb) &=& -\nabla\cdot(\rho\vb\vb^T) - \nabla\pi + \nabla\cdot\taub(\vb) + \nabla\cdot\Sigmab + \rho\gb,
 \end{eqnarray}
 subject to
 \begin{equation}
-\nabla\cdot\vb = S \equiv \underbrace{\left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)}_{-(\rho^{-1}\beta)}\nabla\cdot\Fb.
+\nabla\cdot\vb = S \equiv \underbrace{\left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)}_{-\beta/\rho}\nabla\cdot\Fb.
 \end{equation}
-Thus, $S \equiv S(\Fb)$.  The stochastic terms are:
+Thus, $S \equiv S(\Fb)$.  The baro-diffusion coefficient is given by
+\begin{equation}
+K_P = \frac{\beta}{\rho\mu_c} = \left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)\mu_c^{-1},
+\end{equation}
+and $p_0$ is a fixed background pressure stratification.  The stochastic terms are:
 \begin{eqnarray}
 \Psib &=& \sqrt{\frac{2\chi\rho\mu_c^{-1}k_BT}{\Delta t\Delta V}}\widetilde\Wb,\label{eq:rho1 stoch}\\
 \Sigmab &=& \sqrt{\frac{\eta k_B T}{\Delta t\Delta V}}\left(\Wb + \Wb^T\right),\label{eq:mom stoch}
@@ -285,11 +289,11 @@ with an error message.
 Here is the time-advancement scheme.\\ \\
 {\bf Step 0: Initialization:}\\
 
-Initialize $\vb^{\rm init}, \rho^0, \rho_1^0, \chi^0, \eta^0, \kappa^0$, and $\pi^0$.
+Initialize $\vb^{\rm init}, \rho^0, \rho_1^0, \chi^0, K_P^0, \eta^0, \kappa^0$, and $\pi^0$.
 Then, perform projection to obtain an initial velocity field, $\vb^0$, that satisfies
 \begin{equation}
 \nabla\cdot\vb^0 = S^0 \equiv S(\Fb^0); \qquad 
-\Fb^0 = (\rho\chi\nabla c)^0 + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^0}{\Delta t\Delta V}}\widetilde\Wb^0}_{\Psib^0}.
+\Fb^0 = \left[\rho\chi\left(\nabla c + K_P\nabla p_0\right)\right]^0 + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)^0}{\Delta t\Delta V}}\widetilde\Wb^0}_{\Psib^0}.
 \end{equation}
 We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
 \begin{equation}
@@ -301,7 +305,7 @@ We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
 {\bf Step 1: Forward Euler Scalar Predictor:}\\ \\
 Using
 \begin{equation}
-\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
+\Fb^n = \left[\rho\chi\left(\nabla c + K_P\nabla p_0\right)\right]^n + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
 \end{equation}
 compute an advective update,
 \begin{eqnarray}
@@ -315,7 +319,7 @@ First, define
 \begin{equation}
 S^{*,n+1} \equiv S(\Fb^{*,n+1});
 \qquad
-\Fb^{*,n+1} = (\rho\chi\nabla c)^{*,n+1} + \Psib^n.
+\Fb^{*,n+1} = \left[\rho\chi\left(\nabla c + K_P\nabla p_0\right)\right]^{*,n+1} + \Psib^n.
 \end{equation}
 Then, define $\vb^{*,n+1} = \vb^n + \deltab\vb, \pi^{*,n+1} = \pi^n + \delta\pi$ and solve
 for $\deltab\vb$ and $\delta\pi$:
@@ -350,7 +354,7 @@ First, define
 \begin{equation}
 S^{n+1} \equiv S(\Fb^{n+1});
 \qquad
-\Fb^{n+1} = (\rho\chi\nabla c)^{n+1} + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^{n+1}}{\Delta t\Delta V}}\widetilde\Wb^{n+1}}_{\Psib^{n+1}}.
+\Fb^{n+1} = \left[\rho\chi\left(\nabla c + K_P\nabla p_0\right)\right]^{n+1} + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)^{n+1}}{\Delta t\Delta V}}\widetilde\Wb^{n+1}}_{\Psib^{n+1}}.
 \end{equation}
 Note the use of time-advanced stochastic concentration fluxes for use in $S$.  Finally, 
 define $\vb^{n+1} = \vb^n + \deltab\vb$ and $\pi^{n+1} = \pi^n + \delta\pi$ and
@@ -394,7 +398,7 @@ use a zero traction condition, where $f=0$.\\
 
 {\bf No-Slip Reservoir:} We specify $c$ with a Dirichlet condition at the boundary, 
 and use the EOS to obtain $\rho$ at the
-boundary.  The normal velocity must be equal to $-(\rho^{-1}\beta)F_n$ in order for
+boundary.  The normal velocity must be equal to $-(\beta/\rho)F_n$ in order for
 the EOS to remain satisfied.  We must be careful with sequencing in a sense that
 $F_n$ is not a function of $\vb$, so we can compute $F_n$ first and {\it then}
 use this to directly specify $v_n$ on boundaries, making sure that the
