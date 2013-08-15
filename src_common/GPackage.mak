@@ -1,3 +1,4 @@
+f90sources += bds.f90
 f90sources += convert_stag.f90
 f90sources += div_and_grad.f90
 f90sources += inhomogeneous_bc_val.f90
