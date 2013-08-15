@@ -6,7 +6,8 @@ module advance_timestep_module
   use convert_stag_module
   use convert_variables_module
   use convert_to_homogeneous_module
-  use mk_advective_fluxdiv_module
+  use mk_advective_s_fluxdiv_module
+  use mk_advective_m_fluxdiv_module
   use mk_baro_fluxdiv_module
   use mk_diffusive_fluxdiv_module
   use mk_grav_force_module
