@@ -196,7 +196,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! set s_update to A^n for scalars
-    call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx)
+    call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,nscal)
 
     ! add D^n  for rho1 to s_update
     ! add St^n for rho1 to s_update
@@ -469,7 +469,7 @@ contains
     
     ! s_update already contains D^{*,n+1} + St^{*,n+1} for rho1 from above
     ! add A^{*,n+1} for s to s_update
-    call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx)
+    call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
 
     ! snew = s^{n+1} 
     !      = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1})
