@@ -19,6 +19,7 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef, grav
   use probin_common_module, only: fixed_dt
+  use probin_module, only: use_barodiffusion
 
   use analysis_module
 
@@ -336,9 +337,11 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
-    ! add baro-diffusion flux diveregnce to rhs_p
-    call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp_fc,dx, &
-                         the_bc_tower%bc_tower_array,vel_bc_n)
+    if (use_barodiffusion) then
+       ! add baro-diffusion flux diveregnce to rhs_p
+       call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp_fc,dx, &
+                            the_bc_tower%bc_tower_array,vel_bc_n)
+    end if
 
     ! add div(Psi^n) to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
@@ -456,8 +459,10 @@ contains
        end do
     end do
 
-    ! compute grad p^{n+1,*}
-    call compute_grad(mla,pnew,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    if (use_barodiffusion) then
+       ! compute grad p^{n+1,*}
+       call compute_grad(mla,pnew,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    end if
 
     ! convert v^{*,n+1} to m^{*,n+1} in valid and ghost region
     ! now mnew has properly filled ghost cells
@@ -623,14 +628,16 @@ contains
        call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_d_fluxdiv(n),1,1,0)
     end do
 
-    ! compute baro-diffusion flux divergence
-    call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
-                         the_bc_tower%bc_tower_array,vel_bc_n)
+    if (use_barodiffusion) then
+       ! compute baro-diffusion flux divergence
+       call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
+                            the_bc_tower%bc_tower_array,vel_bc_n)
 
-    ! add baro-diffusion flux divergence to rhs_p
-    do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_b_fluxdiv(n),1,1,0)
-    end do
+       ! add baro-diffusion flux divergence to rhs_p
+       do n=1,nlevs
+          call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_b_fluxdiv(n),1,1,0)
+       end do
+    end if
 
     ! fill the stochastic multifabs with a new set of random numbers
     call fill_stochastic(mla)

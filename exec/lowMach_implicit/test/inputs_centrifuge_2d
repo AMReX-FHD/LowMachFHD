@@ -1,3 +1,9 @@
+&probin
+
+  use_barodiffusion = T  ! enable barodiffusion
+
+/
+
 &probin_lowmach
 
   ! problem setup

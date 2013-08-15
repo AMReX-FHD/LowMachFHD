@@ -25,6 +25,7 @@ subroutine main_driver()
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type
   use probin_gmres_module  , only: probin_gmres_init
+  use probin_module        , only: probin_init, use_barodiffusion
 
   implicit none
 
@@ -85,6 +86,7 @@ subroutine main_driver()
   call probin_lowmach_init()
   call probin_common_init()
   call probin_gmres_init()
+  call probin_init()
 
   ! inputs file error checking
   if (visc_coef .lt. 0.d0 .and. visc_type .gt. 0) then
@@ -305,8 +307,10 @@ subroutine main_driver()
   ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pold,dx,mla,time)
 
-  ! this handles baro-diffusion, probably need to add flag to enable/disable
-  call init_pres(mla,sold,pold,dx,the_bc_tower)
+  if (use_barodiffusion) then
+     ! this computes an initial guess at p using HSE
+     call init_pres(mla,sold,pold,dx,the_bc_tower)
+  end if
 
   ! compute grad p
   call compute_grad(mla,pold,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
