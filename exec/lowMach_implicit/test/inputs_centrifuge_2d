@@ -1,7 +1,7 @@
 &probin_lowmach
 
   ! problem setup
-  c_init(1) = 0.1d0   ! initial concentration
+  c_init(1) = 0.5d0   ! initial concentration
 
   ! simulation properties
   max_step = 10000           ! maximum number of time steps
@@ -19,6 +19,7 @@
 
   ! stochastic properties
   variance_coef = 1.d-3      ! global scaling epsilon for stochastic forcing
+  variance_coef = 0          ! global scaling epsilon for stochastic forcing
   conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
@@ -34,7 +35,7 @@
   prob_hi(1:2) = 64.d0 64.d0 ! physical hi coordinate
   n_cells(1:2) = 64 64       ! number of cells in domain
   max_grid_size(1:2) = 32 32 ! max number of cells in a box
-  fixed_dt = 0.01d0          ! time step
+  fixed_dt = 0.2d0           ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
   prob_type = 4              ! sets scalars, m, coefficients (see init.f90)
 

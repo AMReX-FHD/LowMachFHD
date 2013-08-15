@@ -8,10 +8,12 @@ subroutine main_driver()
   use bc_module
   use define_bc_module
   use init_module
+  use init_pres_module
   use initial_projection_module
   use write_plotfile_module
   use advance_timestep_module
   use convert_variables_module
+  use div_and_grad_module
   use analysis_module
   use mk_stochastic_fluxdiv_module
   use project_onto_eos_module
@@ -51,9 +53,10 @@ subroutine main_driver()
   type(multifab), allocatable :: sold(:)           ! cell-centered
   type(multifab), allocatable :: snew(:)           ! cell-centered
   type(multifab), allocatable :: s_fc(:,:)         ! face-centered
-  type(multifab), allocatable :: gp0_fc(:,:)       ! face-centered
+  type(multifab), allocatable :: gp_fc(:,:)       ! face-centered
   type(multifab), allocatable :: prim(:)           ! cell-centered
-  type(multifab), allocatable :: pres(:)           ! cell-centered
+  type(multifab), allocatable :: pold(:)           ! cell-centered
+  type(multifab), allocatable :: pnew(:)           ! cell-centered
   type(multifab), allocatable :: chi(:)            ! cell-centered
   type(multifab), allocatable :: chi_fc(:,:)       ! face-centered
   type(multifab), allocatable :: eta(:)            ! cell-centered
@@ -61,6 +64,7 @@ subroutine main_driver()
   type(multifab), allocatable :: kappa(:)          ! cell-centered
   type(multifab), allocatable :: rhoc_d_fluxdiv(:) ! cell-centered
   type(multifab), allocatable :: rhoc_s_fluxdiv(:) ! cell-centered
+  type(multifab), allocatable :: rhoc_b_fluxdiv(:) ! cell-centered
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -104,9 +108,10 @@ subroutine main_driver()
   ! now that we have nlevs and dm, we can allocate these
   allocate(dx(nlevs,dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm),vel_bc_n(nlevs,dm))
-  allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
-  allocate(chi(nlevs),eta(nlevs),kappa(nlevs),rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs))
-  allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm),gp0_fc(nlevs,dm))
+  allocate(sold(nlevs),snew(nlevs),prim(nlevs),pold(nlevs),pnew(nlevs))
+  allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
+  allocate(rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs),rhoc_b_fluxdiv(nlevs))
+  allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm),gp_fc(nlevs,dm))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
      allocate(vel_bc_t(nlevs,2))
@@ -204,15 +209,16 @@ subroutine main_driver()
      call multifab_build(snew(n) ,mla%la(n),nscal,2)
      call multifab_build(prim(n) ,mla%la(n),nscal,2)
 
-     ! s on faces, gp0 on faces
+     ! s on faces, gp on faces
      do i=1,dm
         call multifab_build_edge(  s_fc(n,i),mla%la(n),nscal,1,i)
-        call multifab_build_edge(gp0_fc(n,i),mla%la(n),1    ,0,i)
+        call multifab_build_edge(gp_fc(n,i),mla%la(n),1    ,0,i)
      end do
 
      ! pressure
      ! need 1 ghost cell since we calculate its gradient
-     call multifab_build(pres(n),mla%la(n),1,1)
+     call multifab_build(pold(n),mla%la(n),1,1)
+     call multifab_build(pnew(n),mla%la(n),1,1)
 
      ! transport coefficients
      call multifab_build(chi(n)  ,mla%la(n),1,1)
@@ -245,8 +251,10 @@ subroutine main_driver()
      ! this stores divergence of stochastic and diffusive fluxes for rhoc
      call multifab_build(rhoc_d_fluxdiv(n),mla%la(n),1,0)
      call multifab_build(rhoc_s_fluxdiv(n),mla%la(n),1,0)
+     call multifab_build(rhoc_b_fluxdiv(n),mla%la(n),1,0)
      call multifab_setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
      call multifab_setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
+     call multifab_setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
 
      ! boundary conditions
      do i=1,dm
@@ -295,7 +303,13 @@ subroutine main_driver()
   time = 0.d0
 
   ! initialize sold = s^0 and mold = m^0
-  call init(mold,sold,pres,gp0_fc,dx,mla,time)
+  call init(mold,sold,pold,dx,mla,time)
+
+  ! this handles baro-diffusion, probably need to add flag to enable/disable
+  call init_pres(mla,sold,pold,dx,the_bc_tower)
+
+  ! compute grad p
+  call compute_grad(mla,pold,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   if (print_int .gt. 0) then
      call eos_check(mla,sold)
@@ -331,8 +345,8 @@ subroutine main_driver()
   call fill_stochastic(mla)  
 
   ! need to do an initial projection to get an initial velocity field
-  call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp0_fc,rhoc_d_fluxdiv, &
-                          rhoc_s_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+  call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
+                          rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
   if (print_int .gt. 0) then
      call sum_mass_momentum(mla,sold,mold)
@@ -340,7 +354,7 @@ subroutine main_driver()
 
   ! write initial plotfile
   if (plot_int .gt. 0) then
-     call write_plotfile(mla,mold,umac,sold,pres,dx,time,0)
+     call write_plotfile(mla,mold,umac,sold,pold,dx,time,0)
   end if
   
   do istep=1,max_step
@@ -350,9 +364,9 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
-                           eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
-                           gp0_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+     call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
+                           eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
+                           gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
      ! increment simulation time
      time = time + fixed_dt
@@ -370,7 +384,7 @@ subroutine main_driver()
      if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
-        call write_plotfile(mla,mnew,umac,snew,pres,dx,time,istep)
+        call write_plotfile(mla,mnew,umac,snew,pnew,dx,time,istep)
      end if
      
      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
@@ -382,6 +396,7 @@ subroutine main_driver()
 
      ! set old state to new state
      do n=1,nlevs
+        call multifab_copy_c(pold(n),1,pnew(n),1,    1,pold(n)%ng)
         call multifab_copy_c(sold(n),1,snew(n),1,nscal,sold(n)%ng)
         do i=1,dm
            call multifab_copy_c(mold(n,i),1,mnew(n,i),1,1,mold(n,i)%ng)
@@ -397,12 +412,14 @@ subroutine main_driver()
      call multifab_destroy(sold(n))
      call multifab_destroy(snew(n))
      call multifab_destroy(prim(n))
-     call multifab_destroy(pres(n))
+     call multifab_destroy(pold(n))
+     call multifab_destroy(pnew(n))
      call multifab_destroy(chi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
      call multifab_destroy(rhoc_d_fluxdiv(n))
      call multifab_destroy(rhoc_s_fluxdiv(n))
+     call multifab_destroy(rhoc_b_fluxdiv(n))
      do i=1,dm
         call multifab_destroy(mold(n,i))
         call multifab_destroy(mnew(n,i))
@@ -410,7 +427,7 @@ subroutine main_driver()
         call multifab_destroy(vel_bc_n(n,i))
         call multifab_destroy(chi_fc(n,i))
         call multifab_destroy(s_fc(n,i))
-        call multifab_destroy(gp0_fc(n,i))
+        call multifab_destroy(gp_fc(n,i))
      end do
      do i=1,size(eta_ed,dim=2)
         call multifab_destroy(eta_ed(n,i))
