@@ -595,4 +595,24 @@ must supply the {\it change} in the velocity boundary condition as compared to
 the boundary condition at $t^n$, rather than the final velocity boundary 
 condition itself.
 
+\section{``Simple'' Algorithm}
+Use GMRES to solve:
+\begin{equation}
+-\half\mathcal A_0\deltab\vb + \nabla\delta p = -\nabla p^n + \mathcal A_0\vb^n + \nabla\cdot\Sigmab^n + \rho^n\gb.
+\end{equation}
+Set $\vb = \vb^n + \deltab\vb$.  Then do predictor advection of species:
+\begin{equation}
+\rho_1^{n+1,*} = \rho^n + \Delta\left[\nabla\cdot(-\rho_1^n\vb + F^n)\right],
+\end{equation}
+\begin{equation}
+F^n = \rho\chi\nabla c^n + \Psib^n.
+\end{equation}
+Then do corrector advection of species:
+\begin{equation}
+\rho_1^{n+1} = \half\rho_1^{n+1} + \half\left[\rho_1^{n+1,*} + \Delta t\nabla\cdot(-\rho_1^{n+1,*}\vb + F^{n+1,*})\right],
+\end{equation}
+\begin{equation}
+F^{n+1,*} = \rho\chi\nabla c^{n+1,*} + \Psib^n.
+\end{equation}
+
 \end{document}
