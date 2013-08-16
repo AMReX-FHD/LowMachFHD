@@ -654,7 +654,7 @@ contains
         do j = js,je 
         do i = is,ie 
 
-          s_update(i,j) = -(  &
+          s_update(i,j) = s_update(i,j) -(  &
                (siphj(i+1,j)*uadv(i+1,j)-siphj(i,j)*uadv(i,j))/hx +  &
                (sijph(i,j+1)*vadv(i,j+1)-sijph(i,j)*vadv(i,j))/hy)
 
