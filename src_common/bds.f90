@@ -42,7 +42,7 @@ contains
       real(kind=dp_t), pointer ::   sip(:,:,:,:)
       real(kind=dp_t), pointer ::   scp(:,:,:,:)
 
-      integer :: dm,ng,n,lev,i
+      integer :: dm,ng,ng_u,n,lev,i
       integer :: lo(2),hi(2)
 
       ! Only worry about one level
@@ -63,6 +63,7 @@ contains
       call multifab_build(  sc,mla%la(lev),4,1)
 
       ng = s(1)%ng 
+      ng_u = s_update(1)%ng
       dm = mla%dim
 
       do i = 1, nfabs(s(lev))
@@ -91,7 +92,7 @@ contains
                                   slxyp(:,:,1,1), slxxp(:,:,1,1), slyyp(:,:,1,1), &
                                   sip(:,:,1,1), scp(:,:,1,:), dx(lev,:)) 
 
-                 call  bdsconc_2d(lo, hi, sop(:,:,1,n), snp(:,:,1,n), ng, &
+                 call  bdsconc_2d(lo, hi, sop(:,:,1,n), ng, snp(:,:,1,n), ng_u, &
                                   avep(:,:,1,1), slxp(:,:,1,1), slyp(:,:,1,1), slxyp(:,:,1,1), &
                                   slxxp(:,:,1,1), slyyp(:,:,1,1), &
                                    sip(:,:,1,1),  scp(:,:,1,:), &
@@ -317,11 +318,11 @@ contains
       ! ***********************************************
 
 
-      subroutine bdsconc_2d(lo,hi,s,s_update,ng,ave,slx,sly,slxy,slxx,slyy,sint,sc,uadv,vadv,dx,dt)
+      subroutine bdsconc_2d(lo,hi,s,ng,s_update,ng_u,ave,slx,sly,slxy,slxx,slyy,sint,sc,uadv,vadv,dx,dt)
 
-      integer        ,intent(in   ) :: lo(:), hi(:), ng
+      integer        ,intent(in   ) :: lo(:), hi(:), ng, ng_u
       real(kind=dp_t),intent(in   ) ::    s(lo(1)-ng:,lo(2)-ng:)
-      real(kind=dp_t),intent(inout) ::   s_update(lo(1)-ng:,lo(2)-ng:)
+      real(kind=dp_t),intent(inout) ::   s_update(lo(1)-ng_u:,lo(2)-ng_u:)
       real(kind=dp_t),intent(in   ) ::  ave(lo(1)- 1:,lo(2)- 1:)
       real(kind=dp_t),intent(in   ) ::  slx(lo(1)- 1:,lo(2)- 1:)
       real(kind=dp_t),intent(in   ) ::  sly(lo(1)- 1:,lo(2)- 1:)

@@ -1,5 +1,6 @@
 &probin
 
+  use_bds = T
   use_simple = T
 
 /
@@ -39,7 +40,7 @@
   max_grid_size(1:2) = 64 64 ! max number of cells in a box
   fixed_dt = 0.2d0           ! time step
   plot_int = 10              ! Interval for writing a plotfile (for visit/amrvis)
-  prob_type = 0              ! sets scalars, m, coefficients (see init.f90)
+  prob_type = 2              ! sets scalars, m, coefficients (see init.f90)
 
   ! Algorithm control / selection
   !----------------------

@@ -26,7 +26,7 @@ subroutine main_driver()
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type
   use probin_gmres_module  , only: probin_gmres_init
-  use probin_module        , only: probin_init, use_barodiffusion, use_simple
+  use probin_module        , only: probin_init, use_barodiffusion, use_simple, use_bds
 
   implicit none
 
@@ -208,9 +208,15 @@ subroutine main_driver()
      ! conservative variables; 2 components (rho,rho1)
      ! need 2 ghost cells to average to ghost faces used in 
      ! converting m to umac in m ghost cells
-     call multifab_build(sold(n) ,mla%la(n),nscal,2)
-     call multifab_build(snew(n) ,mla%la(n),nscal,2)
-     call multifab_build(prim(n) ,mla%la(n),nscal,2)
+     if (use_bds) then
+        call multifab_build(sold(n) ,mla%la(n),nscal,3)
+        call multifab_build(snew(n) ,mla%la(n),nscal,3)
+        call multifab_build(prim(n) ,mla%la(n),nscal,3)
+     else
+        call multifab_build(sold(n) ,mla%la(n),nscal,2)
+        call multifab_build(snew(n) ,mla%la(n),nscal,2)
+        call multifab_build(prim(n) ,mla%la(n),nscal,2)
+     end if
 
      ! s on faces, gp on faces
      do i=1,dm
