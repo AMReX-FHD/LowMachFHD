@@ -196,7 +196,7 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 2 - Crank-Nicolson Velocity Predictor
+    ! Step 1 - Crank-Nicolson Velocity Solver
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve
@@ -226,11 +226,6 @@ contains
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_old(n,i),1,1,0)
        end do
     end do
-
-    ! compute (chi,eta,kappa)^{*,n+1}
-    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
-    call compute_kappa(mla,kappa,prim,dx)
 
     ! compute m_s_fluxdiv = div(Sigma^n)
     call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx)
@@ -285,14 +280,12 @@ contains
 
     ! reset s_update for all scalars to zero
     ! then, set s_update for rho1 to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
-    ! it is used in Step 3 below
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
     end do
 
     ! multiply gmres_rhs_p by -S_fac
-    ! now gmres_rhs_p = -S^{*,n+1}
     do n=1,nlevs
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
@@ -301,7 +294,7 @@ contains
     call compute_div(mla,umac_old,divu,dx,1,1,1)
 
     ! add div(v^n) to gmres_rhs_p
-    ! now gmres_rhs_p = div(v^n) - S^{*,n+1}
+    ! now gmres_rhs_p = div(v^n)
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
@@ -353,9 +346,8 @@ contains
        end if
     end do
 
-    ! compute v^{*,n+1} = v^n + delta v
-    ! compute p^{*,n+1}= p^n + delta p
-    ! keep both dp and dumac as initial guess for corrector
+    ! compute v = v^n + delta v
+    ! compute p^{n+1}= p^n + delta p
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
@@ -391,9 +383,8 @@ contains
     ! now mnew has properly filled ghost cells
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
-
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 1 - Forward-Euler Scalar Predictor
+    ! Step 2 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! set s_update to A^n for scalars
@@ -452,7 +443,6 @@ contains
 
     ! reset s_update for all scalars to zero
     ! then, set s_update for rho1 to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
-    ! it is used in Step 3 below
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
@@ -494,40 +484,15 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 4 - Crank-Nicolson Velocity Corrector
+    ! Step 4 - Compute Stuff for Next Time Step
 
     ! compute (chi,eta,kappa)^{n+1}
     call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
     call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa,prim,dx)
 
-    ! reset to zero since we only add to them
-    ! we store these for use at beginning of next time step
-    do n=1,nlevs
-       call setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
-       call setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
-       call setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
-    end do
-
-    ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
-                                   the_bc_tower%bc_tower_array)
-
-    ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
-    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
-                                   the_bc_tower%bc_tower_array,vel_bc_n)
-    if (use_barodiffusion) then
-       ! compute baro-diffusion flux divergence
-       call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
-                            the_bc_tower%bc_tower_array,vel_bc_n)
-    end if
-
     ! fill the stochastic multifabs with a new set of random numbers
     call fill_stochastic(mla)
-
-    ! create div(Psi^{n+1})
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
-                                 s_fc,chi_fc,dx,vel_bc_n)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement
