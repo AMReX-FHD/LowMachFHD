@@ -12,6 +12,7 @@ subroutine main_driver()
   use initial_projection_module
   use write_plotfile_module
   use advance_timestep_module
+  use advance_timestep_simple_module
   use convert_variables_module
   use div_and_grad_module
   use analysis_module
@@ -25,7 +26,7 @@ subroutine main_driver()
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type
   use probin_gmres_module  , only: probin_gmres_init
-  use probin_module        , only: probin_init, use_barodiffusion
+  use probin_module        , only: probin_init, use_barodiffusion, use_simple, use_bds
 
   implicit none
 
@@ -207,9 +208,15 @@ subroutine main_driver()
      ! conservative variables; 2 components (rho,rho1)
      ! need 2 ghost cells to average to ghost faces used in 
      ! converting m to umac in m ghost cells
-     call multifab_build(sold(n) ,mla%la(n),nscal,2)
-     call multifab_build(snew(n) ,mla%la(n),nscal,2)
-     call multifab_build(prim(n) ,mla%la(n),nscal,2)
+     if (use_bds) then
+        call multifab_build(sold(n) ,mla%la(n),nscal,3)
+        call multifab_build(snew(n) ,mla%la(n),nscal,3)
+        call multifab_build(prim(n) ,mla%la(n),nscal,3)
+     else
+        call multifab_build(sold(n) ,mla%la(n),nscal,2)
+        call multifab_build(snew(n) ,mla%la(n),nscal,2)
+        call multifab_build(prim(n) ,mla%la(n),nscal,2)
+     end if
 
      ! s on faces, gp on faces
      do i=1,dm
@@ -367,10 +374,19 @@ subroutine main_driver()
         print*,"Begin Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
      end if
 
-     ! advance the solution by dt
-     call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
-                           eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                           gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+     if (use_simple) then
+        ! advance the solution by dt
+        call advance_timestep_simple(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
+                              eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
+                              gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+
+
+     else
+        ! advance the solution by dt
+        call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
+                              eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
+                              gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+     end if
 
      ! increment simulation time
      time = time + fixed_dt

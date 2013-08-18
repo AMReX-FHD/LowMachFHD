@@ -9,7 +9,8 @@ module probin_module
 
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
-  logical,save    :: use_barodiffusion
+  logical, save :: use_barodiffusion
+  logical, save :: use_bds,use_simple
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -17,6 +18,8 @@ module probin_module
 
   !----------------------
   namelist /probin/ use_barodiffusion  ! enable barodiffusion
+  namelist /probin/ use_bds            ! enable bds advection in space and time
+  namelist /probin/ use_simple         ! enable simpler scalar predictor-corrector
   !------------------------------------------------------------- 
 
 contains
@@ -46,6 +49,8 @@ contains
 
     ! Defaults
     use_barodiffusion = .false.
+    use_bds = .false.
+    use_simple = .false.
 
     farg = 1
     if (narg >= 1) then
@@ -69,6 +74,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) use_barodiffusion
+
+       case ('--use_bds')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) use_bds
 
        case ('--')
           farg = farg + 1

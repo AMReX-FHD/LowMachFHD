@@ -88,15 +88,12 @@ contains
     use bl_constants_module
     use cluster_module
     
-    integer    :: narg, farg
+    integer    :: narg, farg, un
 
     character(len=128) :: fname
-    character(len=128) :: probin_env
 
     logical :: lexist
     logical :: need_inputs
-
-    integer :: un, ierr
 
     narg = command_argument_count()
 
