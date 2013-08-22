@@ -2282,6 +2282,9 @@ subroutine writeDynamicFactors(grid,filenameBase)
             if(any(grid%vectorFactors/=0)) then
                write(structureFactorFile(1), '(1000g17.9)') real(velocityModes(1:nModes,wCell))
                write(structureFactorFile(2), '(1000g17.9)') aimag(velocityModes(1:nModes,wCell))
+            else ! Write end of lines
+               write(structureFactorFile(1), '(1000g17.9)')
+               write(structureFactorFile(2), '(1000g17.9)')                
             end if   
          end if      
       
