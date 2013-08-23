@@ -3,7 +3,6 @@ module diffusive_flux_module
   use multifab_module
   use define_bc_module
   use bc_module
-  use multifab_physbc_module
   use div_and_grad_module
   use probin_multispecies_module
   use ml_layout_module
@@ -18,7 +17,7 @@ module diffusive_flux_module
 
 contains
  
-  subroutine diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level) 
+  subroutine diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level,mol_frac_bc_comp) 
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: molarconc(:) 
@@ -26,6 +25,7 @@ contains
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
+    integer,         intent(in   ) :: mol_frac_bc_comp
 
     ! local variables
     integer :: n,i,dm,nlevs
@@ -45,13 +45,11 @@ contains
     end do 
  
     ! calculate face-centrered grad(molarconc) 
-    call compute_grad(mla,molarconc,flux,dx,1,scal_bc_comp,1,nspecies,the_bc_level)
+    call compute_grad(mla,molarconc,flux,dx,1,mol_frac_bc_comp,1,nspecies,the_bc_level)
    
     ! compute face-centered B^(-1)*Gamma from cell-centered values 
     do i=1,nspecies**2
-       call average_cc_to_face(nlevs,BinvGamma,BinvGamma_face,i,scal_bc_comp,1,the_bc_level) 
-       ! Donev: Or, if you add +1 component to the bc_tower, you do:
-       ! call average_cc_to_face(nlevs,BinvGamma,BinvGamma_face,i,scal_bc_comp+nspecies,1,the_bc_level)     
+       call average_cc_to_face(nlevs,BinvGamma,BinvGamma_face,i,mol_frac_bc_comp,1,the_bc_level) 
     end do
     
     ! compute flux as B^(-1)*Gama X grad(molarconc). 

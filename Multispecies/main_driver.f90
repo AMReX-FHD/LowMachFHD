@@ -25,6 +25,7 @@ subroutine main_driver()
   real(kind=dp_t), allocatable :: mass(:)
   real(kind=dp_t)              :: time,dt
   integer                      :: n,nlevs,i,dm,istep
+  integer                      :: rho_part_bc_comp, mol_frac_bc_comp
 
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
@@ -137,12 +138,15 @@ subroutine main_driver()
   ! Setup boundary condition bc_tower
   !=======================================================
 
+  rho_part_bc_comp = scal_bc_comp + 1
+  mol_frac_bc_comp = scal_bc_comp + 2
+
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
   ! last argument to initialize_bc is the number of scalar variables
   ! nscal=nspecies temporarily
   ! Donev: If you want to add rules for ghost cells for BinvGamma's do:
-  ! nscal=nspecies+1
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies)
+  ! nscal=nspecies+1. Amit: num_tran_bc_comp (for Dbar)= 1
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies,1)
 
   do n=1,nlevs
      ! define level n of the_bc_tower
@@ -158,7 +162,8 @@ subroutine main_driver()
      call multifab_build(rho(n),mla%la(n),nspecies,1)
   end do
 
-  call init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+  call init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array, & 
+                rho_part_bc_comp)
 
   !=======================================================
   ! Begin time stepping loop
@@ -182,7 +187,8 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array)
+     !call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array,&
+     !             rho_part_bc_comp,mol_frac_bc_comp)
 
      ! increment simulation time
      time = time + dt

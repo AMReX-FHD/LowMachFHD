@@ -18,7 +18,8 @@ module advance_module
 
 contains
 
-  subroutine advance(mla, rho, Dbar, Gama, mass, dx, dt, the_bc_level)
+  subroutine advance(mla, rho, Dbar, Gama, mass, dx, dt, the_bc_level,& 
+                     rho_part_bc_comp,mol_frac_bc_comp)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -28,6 +29,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_level) , intent(in   ) :: the_bc_level(:)
+    integer,         intent(in   ) :: rho_part_bc_comp,mol_frac_bc_comp
 
     ! local variables
     integer i, dm, n, nlevs
@@ -37,7 +39,8 @@ contains
     type(multifab) :: flux(mla%nlevel,mla%dim)
     type(multifab) :: fluxdiv(mla%nlevel)
     
-    ! local array of multifabs for total density, molarconc & BinvGamma in each cell; one for each direction
+    ! local array of multifabs for total density, molarconc & BinvGamma 
+    ! in each cell; one for each direction
     type(multifab) :: rho_tot(mla%nlevel)
     type(multifab) :: molarconc(mla%nlevel)
     type(multifab) :: BinvGamma(mla%nlevel)
@@ -69,13 +72,13 @@ contains
                mass,mtot,the_bc_level)
  
     ! compute the face-centered flux in each direction. 
-    call diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level)
+    call diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level,mol_frac_bc_comp)
     
     ! compute divergence of the flux 
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
 
     ! update rho using forward Euler discretization
-    call update_rho(mla,rho,fluxdiv,dt,the_bc_level)
+    call update_rho(mla,rho,fluxdiv,dt,the_bc_level,dx,rho_part_bc_comp)
 
     ! destroy the multifab to prevent leakage in memory
     do n=1,nlevs
@@ -90,13 +93,15 @@ contains
 
   end subroutine advance
 
-  subroutine update_rho(mla,rho,fluxdiv,dt,the_bc_level)
+  subroutine update_rho(mla,rho,fluxdiv,dt,the_bc_level,dx,rho_part_bc_comp)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: fluxdiv(mla%nlevel)
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_level) , intent(in   ) :: the_bc_level(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    integer,         intent(in   ) :: rho_part_bc_comp 
 
     ! local variables
     integer n, nlevs
@@ -120,7 +125,8 @@ contains
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho(n),1,scal_bc_comp,nspecies,the_bc_level(n))
+       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), & 
+                            dx(n,:),.false.)
     end do   
 
   end subroutine update_rho

@@ -26,6 +26,6 @@
  c_bc(1:2,3) = 0.6 0.2                 ! initial concentrations for species 3
  c_bc(1:2,4) = 0.4 0.1                 ! initial concentrations for species 4
  m_bc(1:4)   = 0.25 0.25 0.25 0.25     ! molecular mass of 4 species
- Dbar_bc(1:6)= 1.0 2.0 3.0 4.0 5.0 6.0 ! SM diffusion constant arranged in lower-triangle
+ Dbar_bc(1:6)= 1.0 1.2 1.4 0.9 1.3 0.8 ! SM diffusion constant arranged in lower-triangle
  
 /

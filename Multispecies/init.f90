@@ -2,6 +2,7 @@ module init_module
 
   use multifab_module
   use define_bc_module
+  use bc_module
   use multifab_physbc_module
   use probin_common_module
   use probin_multispecies_module
@@ -15,7 +16,7 @@ module init_module
 
 contains
   
-  subroutine init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_level)
+  subroutine init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_level,rho_part_bc_comp)
 
     type(multifab) , intent(inout) :: rho(:)            
     real(kind=dp_t), intent(inout) :: Dbar(:,:)           
@@ -25,7 +26,8 @@ contains
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim)
     real(kind=dp_t), intent(in   ) :: prob_hi(rho(1)%dim)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
-
+    integer,         intent(in   ) :: rho_part_bc_comp
+ 
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
     integer :: dm, ng, i, n, nlevs
@@ -58,10 +60,8 @@ contains
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
-       ! Amit: shouldn't the 2nd 1 be scal_bc_comp? Donev: Yes
-       ! Amit: scal_bc_comp gives compilation error of implicit type, is any
-       ! other code supposed to be compiled before?
-       call multifab_physbc(rho(n),1,1,nspecies,the_bc_level(n))
+       ! Amit: changed here.
+       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
     end do
 
   end subroutine init_rho
