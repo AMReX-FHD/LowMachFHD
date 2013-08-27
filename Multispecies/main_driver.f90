@@ -187,8 +187,8 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     !call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array,&
-     !             rho_part_bc_comp,mol_frac_bc_comp)
+     call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array,&
+                  rho_part_bc_comp,mol_frac_bc_comp)
 
      ! increment simulation time
      time = time + dt

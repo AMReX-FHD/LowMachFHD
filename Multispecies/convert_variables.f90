@@ -188,25 +188,29 @@ contains
     real(kind=dp_t)  :: mtot                              ! total mass 
 
     ! local variables
-    integer          :: i,j,k,n
-    integer          :: row,column
-    real(kind=dp_t)  :: alpha
- 
+    integer          :: i,j,k,n,row,column
+    real(kind=dp_t)  :: tolerance             ! tolerance set for pinverse 
+
     ! dummy matrices for inversion using LAPACK 
-    real(kind=dp_t), dimension(nspecies,nspecies) :: Bij,c
+    !real(kind=dp_t), dimension(nspecies,nspecies) :: Bij,c, Bij_store, Gama_store
+    !real(kind=dp_t), dimension(nspecies,nspecies) :: Bij,c, Bij_store, Gama_store
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Bij, Bdag, Sdag
+    real(kind=dp_t), dimension(nspecies,nspecies) :: U, UT, V, VT, BdagGamma
+    real(kind=dp_t), dimension(nspecies)          :: S, W, alpha, Checkmat
 
     ! for specific box, now start loops over alloted cells    
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
          
-          ! calculate Bprime matrix (stored as Bij to save memory)
+          ! calculate Bprime matrix (stored as Bij to save memory) and
+          ! massfraction W_i = rho_i/rho.
           Bij=0.d0
           do row=1, nspecies  
              do column=1, row-1
                 Bij(row, column) = rho(i,j,row)*mtot**2/(mass(row)* &
                        mass(column)*Dbar(row, column)*rho_tot(i,j)**2) 
                 Bij(column, row) = rho(i,j,column)*mtot**2/(mass(row)* &
-                       mass(column)*Dbar(column, row)*rho_tot(i,j)**2) 
+                       mass(column)*Dbar(column, row)*rho_tot(i,j)**2)   
              enddo
              
              do column=1, nspecies
@@ -215,46 +219,79 @@ contains
                               (rho(i,j,column)/(mass(column)*Dbar(row,column)))
                 endif
              enddo
-          enddo
- 
-          ! adjust parameter alpha to max val of Bij
-          alpha = maxval(abs(Bij)) 
-  
-          ! transform Bprimeij to Bij
-          do row=1, nspecies   
-             Bij(row, row) = alpha + Bij(row, row)
-          enddo
- 
-          ! calculate A^(-1)*B; result is written to second argument (B) 
-          call la_gesvx(A=Bij, B=Gama, X=c) 
              
-          if(.false.)  then
-            if(i.eq.lo(1) .and. j.eq.lo(2)) then  ! optional checkng Bij, Dbar etc            
-               do row=1, nspecies
-                  do column=1, nspecies 
-                     print*, Bij(row, column)
-                     print*, Gama(row, column)
-                     print*, c(row, column)
-                     !write(*,*) "ERROR=", matmul(Bij,c)-Gama
-                  enddo
-                  print*, ''        
-               enddo
-            endif 
-          endif
+             W(row) = rho(i,j,row)/rho_tot(i,j)
+          enddo
 
-          ! Do the rank conversion 
-          ! Amit: c is B^(-1)*Gamma and not Bij, so what we need is c.
-          call set_Bij(BinvGamma(i,j,:),c)
+          ! SVD decomposition of Bprime (denoted here as Bij)=U*S*VT; 
+          ! note that Bij is changed. Also do the operations V=(VT)T, UT = (U)T 
+          call la_gesvd(Bij, S, U, VT)
+          V = transpose(VT)
+          UT = transpose(U)
+
+          ! populate diagonal matrix Sdag = 1/S with diagonal=0 below tolerance
+          tolerance = 1e-13
+          do row=1, nspecies
+             do column=1,nspecies
+                Sdag(row,column) = 0.0d0
+             enddo
+             
+             if(S(row).gt.tolerance) then 
+                Sdag(row,row) = 1.0d0/S(row)
+             else
+                Sdag(row,row) = 0.0d0
+             endif 
+          enddo
+
+          ! calculate Bdag = V*Sdag*UT, the pseudoinverse of Bprime & alpha
+          ! Tested psuedoinverse is calculated correctly in here and matlab. 
+          Bdag = matmul(V, matmul(Sdag, UT))
+          alpha = matmul(Bdag, W)
+
+          ! substract alpha from every row element of Bdag to get Bdag*W=0
+          do row=1, nspecies
+             do column=1, nspecies
+                Bdag(row, column) = Bdag(row, column) - alpha(row)
+             enddo
+          enddo
+
+          ! tested that Bdag*W=0 comes correctly. 
+          Checkmat = matmul(Bdag, W)
+          if(.false.) then
+            if(i.eq.4 .and. j.eq.4) then
+               do row=1, nspecies
+                  do column=1,nspecies
+                     !print*, Bdag(row,column)
+                  enddo
+                  print*, W(row), alpha(row) 
+                  !print*, Checkmat(row)
+                  print*, '' 
+               enddo
+             endif 
+          endif
+         
+          ! compute B^(-1)*Gamma which is Bdag*Gamma, result is written to Gamma
+          BdagGamma = matmul(Bdag, Gama); 
+
+          ! do the rank conversion 
+          call set_Bij(BinvGamma(i,j,:), BdagGamma)
+         
+          ! store another SVD way only for one backup 
+          !Bij_store = Bij
+          !Gama_store=Gama
+          ! calculate B^(-1)*Gamma, result is written to Gama, Bij also modified 
+          !call la_gelss(Bij, Gama) 
+          !write(*,*),  "ERROR=", matmul(Bij_store,Gama)-Gama_store
               
        end do
     end do
    
     ! Use contained (internal) subroutine to do the copy without doing index algebra:
     contains 
-     subroutine set_Bij(BinvGamma_ij, c_ij)
-        real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: c_ij
+     subroutine set_Bij(BinvGamma_ij, BdagGamma_ij)
+        real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: BdagGamma_ij
         real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: BinvGamma_ij  
-        BinvGamma_ij = c_ij
+        BinvGamma_ij = BdagGamma_ij
      end subroutine 
 
     end subroutine compute_BinvGamma_2d
