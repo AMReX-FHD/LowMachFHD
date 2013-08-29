@@ -99,43 +99,47 @@ contains
 
     real(dp_t), pointer :: ap(:,:,:,:)
     real(dp_t), pointer :: bp(:,:,:,:)
-
     integer :: i, j, k, n
 
     !$OMP PARALLEL PRIVATE(i,j,k,n)
-    do n=lbound(ap,dim=4), ubound(ap,dim=4)   ! this is 1:nspecies
+    !do n=lbound(ap,dim=4), ubound(ap,dim=4)            ! n=1:nspecies
        !$OMP DO 
-       do k = lbound(ap,dim=3), ubound(ap,dim=3)
-          do j = lbound(ap,dim=2), ubound(ap,dim=2)
-             do i = lbound(ap,dim=1), ubound(ap,dim=1)
-                !print*, ap(i,j,k,:)
-                call matvec_mul(ap(i,j,k,:), bp(i,j,k,:), n)
+       do k = lbound(ap,dim=3), ubound(ap,dim=3)       ! k=1:Lz
+          do j = lbound(ap,dim=2), ubound(ap,dim=2)    ! j=1:Ly
+             do i = lbound(ap,dim=1), ubound(ap,dim=1) ! i=1:Lx
+             
+                call matvec_mul(ap(i,j,k,:), bp(i,j,k,:), i,j)
+             
              end do
           end do
        end do
        !$OMP END DO NOWAIT
-    end do
+    !end do
     !$OMP END PARALLEL
 
     ! Use contained (internal) subroutine to do the rank conversion 
     contains 
-     subroutine matvec_mul(ap_ij, bp_ij, n)
-        real(kind=dp_t), dimension(nspecies),          intent(inout) :: ap_ij
-        real(kind=dp_t), dimension(nspecies,nspecies), intent(in)    :: bp_ij  
-        integer,                                       intent(in)    :: n      
+     subroutine matvec_mul(ap_ij, bp_ij, i,j)
+        real(kind=dp_t), dimension(nspecies),       intent(inout) :: ap_ij
+        real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: bp_ij  
+        integer,                                       intent(in) :: i,j      
        
         ! local variables
-        real(kind=dp_t) :: mvprod
-        integer         :: m      
- 
-        mvprod=0.d0
-        do m=1, nspecies
-           !print*, bp_ij(m,n), ap_ij(m)
-           mvprod = mvprod + bp_ij(n,m)*ap_ij(m)
-        enddo
-        ap_ij(n) = mvprod
-        !print*, ap_ij(n)
-     
+        ! use dummy matrix cp_ij to store the matrix-vector multiplication
+        real(kind=dp_t), dimension(nspecies)  :: cp_ij  
+        real(kind=dp_t)                       :: mvprod
+        integer                               :: m,row,col
+
+        do n=1, nspecies 
+           mvprod=0.d0
+           do m=1, nspecies
+              mvprod = mvprod + bp_ij(n,m)*ap_ij(m)
+           enddo
+           cp_ij(n) = mvprod
+        enddo      
+    
+        ! populate ap_ij with cp_ij 
+        ap_ij = cp_ij
      end subroutine 
 
   end subroutine multifab_mult_matrixvec_c_doit

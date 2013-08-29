@@ -202,6 +202,17 @@ contains
          
           ! calculate Bijprime matrix and massfraction W_i = rho_i/rho.
           Bijprime=0.d0
+          Bdag = 0.d0
+          Sdag = 0.d0
+          U = 0.d0
+          UT = 0.d0
+          V = 0.d0
+          VT=0.d0
+          BdagGamma = 0.d0
+          S = 0.d0
+          W=0.d0
+          alpha=0.d0
+
           do row=1, nspecies  
              do column=1, row-1
                 Bijprime(row, column) = rho(i,j,row)*mtot**2/(mass(row)* &

@@ -106,10 +106,11 @@ contains
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
+    ! for specific box, now start loop over alloted cells     
+    
     ! select problem type, 1=bubble, 2=constant gradient
     select case(init_type) 
     case(1) 
-      ! for specific box, now start loop over alloted cells     
       do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)
@@ -126,13 +127,12 @@ contains
       end do
   
     case(2) 
-      ! for specific box, now start loop over alloted cells     
       do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
-            rho(i,j,1:nspecies) = sin(x)/4.d0
+            rho(i,j,1:nspecies) = sin(x*y)
             !if(i.eq.4 .and. j.eq.4)
               ! print*, x, y, rho(i,j,1:nspecies)
             !endif
