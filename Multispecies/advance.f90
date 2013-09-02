@@ -33,15 +33,15 @@ contains
 
     ! local variables
     integer i, dm, n, nlevs
-    real(kind=dp_t)  :: mtot
 
     ! local array of multifabs for grad and div; one for each direction
     type(multifab) :: flux(mla%nlevel,mla%dim)
     type(multifab) :: fluxdiv(mla%nlevel)
     
-    ! local array of multifabs for total density, molarconc & BinvGamma 
-    ! in each cell; one for each direction
+    ! local array of multifabs for total density, total molarconc, molarconc 
+    ! & BinvGamma in each cell; one for each direction
     type(multifab) :: rho_tot(mla%nlevel)
+    type(multifab) :: molmtot(mla%nlevel)
     type(multifab) :: molarconc(mla%nlevel)
     type(multifab) :: BinvGamma(mla%nlevel)
  
@@ -53,6 +53,7 @@ contains
        ! fluxdiv,rho_tot,molarconc is scalar with one ghost cells 
        call multifab_build(fluxdiv(n),mla%la(n),nspecies,1)
        call multifab_build(rho_tot(n),mla%la(n),1,1)          ! rho_tot is addition of all component
+       call multifab_build(molmtot(n),mla%la(n),1,1)          ! molmtot is total molar mass 
        call multifab_build(molarconc(n),mla%la(n),nspecies,1)
        call multifab_build(BinvGamma(n),mla%la(n),nspecies**2,1)
        do i=1,dm
@@ -62,14 +63,14 @@ contains
     end do   
     
     ! compute molarconc (primary) and rho_tot (primary) for every cell from rho(1:nspecies) 
-    ! Amit: I'm going to copy rho,rho_tot,molarconc etc with
+    ! Amit: I'm going to copy rho,rho_tot,molmtot,molarconc etc with
     ! multifab_fill_boundary in this code, so I'm omitting these in
     ! convert_cons_to_BinvGamma code. 
-    call convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, mtot, the_bc_level)
+    call convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, molmtot, the_bc_level)
 
     ! compute cell-centered B^(-1)*Gamma  
-    call convert_cons_to_BinvGamma(mla,rho,rho_tot,molarconc,BinvGamma,Dbar,Gama, & 
-                                   mass,mtot,the_bc_level)
+    call convert_cons_to_BinvGamma(mla, rho, rho_tot, molarconc, BinvGamma, Dbar, Gama, & 
+                                   mass, molmtot, the_bc_level)
  
     ! compute the face-centered flux in each direction. 
     call diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level,mol_frac_bc_comp)
@@ -84,6 +85,7 @@ contains
     do n=1,nlevs
        call multifab_destroy(fluxdiv(n))
        call multifab_destroy(rho_tot(n))
+       call multifab_destroy(molmtot(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(BinvGamma(n))
        do i=1,dm

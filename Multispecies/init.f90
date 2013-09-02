@@ -74,7 +74,7 @@ contains
     real(kind=dp_t)  :: mass(:)     ! mass of each species
     integer          :: n,row,column
  
-    ! populate Dbar,Gama & mass, which for initial case doesn't change in each cell. 
+    ! populate Dbar, Gama & mass; for initial case doesn't change in each cell. 
     n=0; 
     do row=1, nspecies  
        do column=1, row-1
@@ -84,10 +84,9 @@ contains
           Gama(row, column) = 0.d0       
           Gama(column, row) = Gama(row, column) ! symmetric
        enddo
-       Dbar(row, row) = 0.d0     ! self-diffusion is zero
-       Gama(row, row) = 1.d0     ! set to unit matrix for time being
-       mass(row)      = m_bc(row) ! set to unit matrix for time being
-       !mtot = mtot + m_bc(row)   ! total mass of the species
+       Dbar(row, row) = 0.d0      ! self-diffusion is zero
+       Gama(row, row) = 1.d0      ! set to unit matrix for time being
+       mass(row)      = m_bc(row) ! populate species mass 
     enddo
 
   end subroutine populate_DbarGama
@@ -107,7 +106,6 @@ contains
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
     ! for specific box, now start loop over alloted cells     
-    
     ! select problem type, 1=bubble, 2=constant gradient
     select case(init_type) 
     case(1) 
@@ -131,15 +129,9 @@ contains
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-        
-            rho(i,j,1:nspecies) = sin(x*y)
-            !if(i.eq.4 .and. j.eq.4)
-              ! print*, x, y, rho(i,j,1:nspecies)
-            !endif
+            rho(i,j,1:nspecies) = c_bc(1,1:nspecies)
          end do
-            print*, ''
       end do
-    
     end select
    
     end subroutine init_rho_2d

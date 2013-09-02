@@ -25,7 +25,7 @@ contains
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
-    integer,         intent(in   ) :: mol_frac_bc_comp
+    integer        , intent(in   ) :: mol_frac_bc_comp
 
     ! local variables
     integer :: n,i,dm,nlevs
@@ -79,7 +79,7 @@ contains
     type(multifab), intent(inout) :: a
     type(multifab), intent(in)    :: b
     real(dp_t), pointer           :: ap(:,:,:,:)
-    real(dp_t), pointer           :: bp(:,:,:,:)  ! remember, it's nspecies^2.
+    real(dp_t), pointer           :: bp(:,:,:,:)  ! the last entry is nspecies^2.
     integer                       :: i,lng
     lng = 0; if ( present(ng) ) lng = ng
     if ( lng > 0 ) call bl_assert(a%ng >= ng,"not enough ghost cells in multifab_mult_matrixvec_c")
@@ -99,36 +99,31 @@ contains
 
     real(dp_t), pointer :: ap(:,:,:,:)
     real(dp_t), pointer :: bp(:,:,:,:)
-    integer :: i, j, k, n
+    integer :: i, j, k, m, n
 
-    !$OMP PARALLEL PRIVATE(i,j,k,n)
-    !do n=lbound(ap,dim=4), ubound(ap,dim=4)            ! n=1:nspecies
+    !$OMP PARALLEL PRIVATE(i,j,k,m,n)
        !$OMP DO 
-       do k = lbound(ap,dim=3), ubound(ap,dim=3)       ! k=1:Lz
-          do j = lbound(ap,dim=2), ubound(ap,dim=2)    ! j=1:Ly
-             do i = lbound(ap,dim=1), ubound(ap,dim=1) ! i=1:Lx
-             
-                call matvec_mul(ap(i,j,k,:), bp(i,j,k,:), i,j)
-             
+       do k = lbound(ap,dim=3), ubound(ap,dim=3)       ! 1:Lz
+          do j = lbound(ap,dim=2), ubound(ap,dim=2)    ! 1:Ly
+             do i = lbound(ap,dim=1), ubound(ap,dim=1) ! 1:Lx
+                call matvec_mul(ap(i,j,k,:), bp(i,j,k,:))
              end do
           end do
        end do
        !$OMP END DO NOWAIT
-    !end do
     !$OMP END PARALLEL
 
-    ! Use contained (internal) subroutine to do the rank conversion 
+    ! Use contained (internal) subroutine to do rank conversion and
+    ! matrix-vector multiplication 
     contains 
-     subroutine matvec_mul(ap_ij, bp_ij, i,j)
+     subroutine matvec_mul(ap_ij, bp_ij)
         real(kind=dp_t), dimension(nspecies),       intent(inout) :: ap_ij
         real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: bp_ij  
-        integer,                                       intent(in) :: i,j      
        
         ! local variables
         ! use dummy matrix cp_ij to store the matrix-vector multiplication
         real(kind=dp_t), dimension(nspecies)  :: cp_ij  
         real(kind=dp_t)                       :: mvprod
-        integer                               :: m,row,col
 
         do n=1, nspecies 
            mvprod=0.d0
