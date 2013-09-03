@@ -192,16 +192,18 @@ contains
     real(kind=dp_t)  :: Gama(:,:)                         ! non-ideality coefficient 
     real(kind=dp_t)  :: mass(:)                           ! species molar mass 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
+    logical          :: is_ideal_mixture
 
     ! local variables
-    integer          :: i,j,row,column
+    integer          :: i,j,row,column,info
     real(kind=dp_t)  :: tolerance, Sum_knoti              ! tolerance set for pinverse 
     real(kind=dp_t)  :: Temp, Pres, alpha1    
 
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Bijprime, Bdag, Sdag, Lonsager, CapW
-    real(kind=dp_t), dimension(nspecies,nspecies) :: U, UT, V, VT, BdagGamma 
-    real(kind=dp_t), dimension(nspecies)          :: S, W, alpha, Checkmat 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: U, UT, V, VT, BdagGamma,LU 
+    real(kind=dp_t), dimension(nspecies)          :: S, W, alpha, Checkmat, work 
+    integer, dimension(nspecies)                  :: ipiv
 
     Temp=1.0d0
     Pres=1.0d0
@@ -231,9 +233,9 @@ contains
           if(.false.) then
           do row=1, nspecies  
              do column=1, row-1
-                  Bijprime(row, column) = molarconc(i,j,row)*molarconc(i,j,column)/(rho(i,j,column)* &
+                Bijprime(row, column) = molarconc(i,j,row)*molarconc(i,j,column)/(rho(i,j,column)* &
                                         Dbar(row, column)) 
-                  Bijprime(column, row) = molarconc(i,j,row)*molarconc(i,j,column)/(rho(i,j,row)* &
+                Bijprime(column, row) = molarconc(i,j,row)*molarconc(i,j,column)/(rho(i,j,row)* &
                                         Dbar(row, column)) 
              enddo
              
@@ -294,30 +296,46 @@ contains
                 Bijprime(row, column) = Bijprime(row, column) + alpha1
              enddo
           enddo
-          
+        
+          if(.false.) then
+            if(i.eq.4 .and. j.eq.4) then
+               do row=1, nspecies
+                  do column=1, nspecies
+                     print*, Bijprime(row, column)
+                  enddo
+                  print*, '' 
+               enddo
+            endif
+          endif
+
           ! select LAPACK inversion type, 1=inverse, 2=pseudo inverse 
           select case(inverse_type) 
            
           !%%%%%%%%%%%%%%%%%%% Using Inverse %%%%%%%%%%%%%!
           case(1)
  
-             ! calculate A^(-1)*B = c;  
-             call la_gesvx(A=Bijprime, B=Gama, X=BdagGamma)
- 
+             !calculate A^(-1)*B = c;  
+             !call la_gesvx(A=Bijprime, B=Gama, X=BdagGamma)
+            
+             ! compute Bijprime inverse through LU factorization. 
+             ! Bijprime^(-1) is stored in Bijprime.
+             call dgetrf(nspecies, nspecies, Bijprime, nspecies, ipiv, info) 
+             call dgetri(nspecies, Bijprime, nspecies, ipiv, work, nspecies, info) 
+
+             ! populate Bdagger with B^(-1)
+             Bdag = Bijprime 
+             
              if(.false.) then
                if(i.eq.4 .and. j.eq.4) then
                  do row=1, nspecies
                     do column=1, nspecies
-                       print*, BdagGamma(row, column)
+                       print*, Bdag(row, column)
                     enddo
                     print*, '' 
                  enddo
                endif
              endif
 
-             ! Do the rank conversion 
-             call set_Bij(BinvGamma(i,j,:), BdagGamma)   
-          
           !%%%%%%%%%%%%%%%%%%% Using pseudoinverse %%%%%%%%%%%%%!
           case(2) 
 
@@ -328,18 +346,6 @@ contains
              V = transpose(VT)
              UT = transpose(U)
    
-             if(.false.) then
-               if(i.eq.4 .and. j.eq.4) then
-                  do row=1, nspecies
-                     do column=1, nspecies
-                        print*, VT(row, column)
-                     enddo
-                     print*, S(row)
-                     print*, ''
-                  enddo
-               endif
-             endif
-
              ! populate diagonal matrix Sdag = 1/S with diagonal=0 below a chosen tolerance
              tolerance = 1e-13
              do row=1, nspecies
@@ -356,42 +362,65 @@ contains
 
              ! calculate Bdag = V*Sdag*UT, the pseudoinverse of Bprime & alpha.
              Bdag = matmul(V, matmul(Sdag, UT))
-             alpha = matmul(Bdag, W)
 
-             ! substract alpha from every row element of Bdag to get Bdag*W=0
-             do row=1, nspecies
-                do column=1, nspecies
-                   Bdag(row, column) = Bdag(row, column) - alpha(row)
-                enddo
-             enddo
-
-             ! calculate Onsager matrix L
-             Lonsager = -rho_tot(i,j) * Temp * matmul(Bdag, CapW)/Pres
-             
-             ! compute B^(-1)*Gamma which is Bdag*Gamma, result is written to Gamma
-             BdagGamma = matmul(Bdag, Gama); 
-
-             ! check Bdag*w = 0 
              if(.false.) then
-             Checkmat = matmul(Bdag, W)
                if(i.eq.4 .and. j.eq.4) then
                  do row=1, nspecies
                     do column=1, nspecies
-                       !print*, Bdag(row, column)
-                       print*, BdagGamma(row, column)
-                       !print*, Lonsager(row, column)
-                       !print*, Gama(row, column)
+                       print*, Bdag(row, column)
                     enddo
                     print*, '' 
-                    !print*, Checkmat(row) 
                  enddo
                endif
              endif
-
-             ! do the rank conversion 
-             call set_Bij(BinvGamma(i,j,:), BdagGamma)
-          
+            
           end select
+          !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%!
+               
+          alpha = matmul(Bdag, W)
+
+          ! substract alpha from every row element of Bdag to get Bdag*W=0
+          do row=1, nspecies
+             do column=1, nspecies
+                Bdag(row, column) = Bdag(row, column) - alpha(row)
+             enddo
+          enddo
+
+          ! calculate Onsager matrix L
+          Lonsager = -rho_tot(i,j) * Temp * matmul(Bdag, CapW)/Pres
+            
+          ! compute B^(-1)*Gamma = Bdag*Gamma. 
+          ! make is_ideal_mixture = .true. to deal with ideal mixture
+          is_ideal_mixture = .false.
+             
+          if(is_ideal_mixture) then
+             BdagGamma = Bdag
+          else
+             BdagGamma = matmul(Bdag, Gama)
+          endif 
+
+          ! check Bdag*w = 0 
+          !if(.false.) then
+          Checkmat = matmul(Bdag, W)
+            if(i.eq.4 .and. j.eq.4) then
+              do row=1, nspecies
+                do column=1, nspecies
+                   !print*, Bdag(row, column)
+                   !print*, BdagGamma(row, column)
+                   !print*, Lonsager(row, column)
+                   !print*, Gama(row, column)
+                   ! print*, VT(row, column)
+                enddo
+                print*, Checkmat(row) 
+                !print*, S(row)
+                print*, '' 
+              enddo
+            endif
+          !endif
+
+          ! do the rank conversion 
+          call set_Bij(BinvGamma(i,j,:), BdagGamma)
+          
       end do
     end do
    

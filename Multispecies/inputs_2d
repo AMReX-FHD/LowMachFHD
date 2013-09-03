@@ -21,11 +21,11 @@
  max_step = 1                        ! total number of simulational step
  !include_temperature = T              !T or F
  init_type = 2                         ! initial problem: 1=bubble, 2=const gradient
- inverse_type = 1                      ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
+ inverse_type = 2                      ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  
- c_bc(1:2,1) = 0.6 0.1                 ! initial concentrations for species 1
- c_bc(1:2,2) = 1.05 0.3                 ! initial concentrations for species 2
- c_bc(1:2,3) = 1.35 0.2                 ! initial concentrations for species 3
+ c_bc(1:2,1) = 0.0 0.1                 ! initial concentrations for species 1
+ c_bc(1:2,2) = 0.9 0.3                 ! initial concentrations for species 2
+ c_bc(1:2,3) = 2.1 0.2                 ! initial concentrations for species 3
  m_bc(1:3)   = 1.0 2.0 3.0             ! molecular mass of n-species
  Dbar_bc(1:3)= 0.5 1.0 1.5             ! SM diffusion constant arranged in lower-triangle
  
