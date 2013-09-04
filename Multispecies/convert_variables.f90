@@ -205,8 +205,9 @@ contains
     real(kind=dp_t), dimension(nspecies)          :: S, W, alpha, Checkmat, work 
     integer, dimension(nspecies)                  :: ipiv
 
-    Temp=1.0d0
-    Pres=1.0d0
+    Temp      = 1.0d0
+    Pres      = 1.0d0
+    tolerance = 1e-13
 
     ! for specific box, now start loops over alloted cells    
     do j=lo(2),hi(2)
@@ -227,9 +228,22 @@ contains
           alpha1=0.d0
           CapW=0.d0
           Lonsager=0.d0         
-  
-          ! calculate Bijprime matrix and massfraction W_i = rho_i/rho.
-          ! Bijprime in terms of xi,xj,Dbar only 
+
+          ! change 0 with tolerance so that it get's sorted out
+          do row=1, nspecies
+             if(molarconc(i,j,row) .lt. tolerance) then
+                molarconc(i,j,row) = tolerance
+                rho(i,j,row)       = tolerance
+             endif
+             if(rho_tot(i,j) .lt. tolerance) then
+                rho_tot(i,j) = tolerance
+             endif
+          enddo
+
+          ! calculate Bijprime matrix and massfraction W_i = rho_i/rho (with any method)
+          ! populate the mass fraction matrix CapitalW. 
+
+          !%%%%%%%%%% Bijprime in terms of xi,xj,Dbar only %%%%%%%%%%%%%%%%%%!
           if(.false.) then
           do row=1, nspecies  
              do column=1, row-1
@@ -237,6 +251,8 @@ contains
                                         Dbar(row, column)) 
                 Bijprime(column, row) = molarconc(i,j,row)*molarconc(i,j,column)/(rho(i,j,row)* &
                                         Dbar(row, column)) 
+                CapW(row, column) = 0.d0
+                CapW(column, row) = 0.d0 
              enddo
              
              Sum_knoti=0.d0
@@ -246,13 +262,14 @@ contains
                 endif
                 Bijprime(row, row) = molarconc(i,j,row)*Sum_knoti/rho(i,j,row) 
              enddo
+             
              W(row) = rho(i,j,row)/rho_tot(i,j)
+             CapW(row,row) = W(row)
           enddo
-          endif      
- 
-           ! Bijprime in terms of molmtot,mi,rhotot etc (Alternate description)
-           ! Populate the mass fraction matrix CapitalW. 
-           !if(.false.) then
+          endif    
+   
+          !%%%%%%% Bijprime in terms of molmtot,mi,rhotot etc (alternate description)%%%%%%!
+          ! if(.false.) then
            do row=1, nspecies  
              do column=1, row-1
                 Bijprime(row, column) = rho(i,j,row)*molmtot(i,j)**2/(mass(row)* &
@@ -286,7 +303,8 @@ contains
               enddo
             endif
           endif
-          
+          !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%!
+ 
           ! adjust parameter alpha1 to max val of Bijprime
           alpha1 = maxval(abs(Bijprime))
 
@@ -321,6 +339,10 @@ contains
              ! Bijprime^(-1) is stored in Bijprime.
              call dgetrf(nspecies, nspecies, Bijprime, nspecies, ipiv, info) 
              call dgetri(nspecies, Bijprime, nspecies, ipiv, work, nspecies, info) 
+  
+             !call la_getrf(nspecies, nspecies, Bijprime, nspecies, ipiv, info) 
+             !call la_getri(nspecies, Bijprime, nspecies, ipiv, work, nspecies, info) 
+             !call dgetri_f95(Bijprime, ipiv, info) 
 
              ! populate Bdagger with B^(-1)
              Bdag = Bijprime 
@@ -347,7 +369,6 @@ contains
              UT = transpose(U)
    
              ! populate diagonal matrix Sdag = 1/S with diagonal=0 below a chosen tolerance
-             tolerance = 1e-13
              do row=1, nspecies
                 do column=1,nspecies
                    Sdag(row,column) = 0.0d0
@@ -376,7 +397,7 @@ contains
             
           end select
           !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%!
-               
+            
           alpha = matmul(Bdag, W)
 
           ! substract alpha from every row element of Bdag to get Bdag*W=0
@@ -400,23 +421,23 @@ contains
           endif 
 
           ! check Bdag*w = 0 
-          !if(.false.) then
+          if(.false.) then
           Checkmat = matmul(Bdag, W)
             if(i.eq.4 .and. j.eq.4) then
               do row=1, nspecies
                 do column=1, nspecies
                    !print*, Bdag(row, column)
-                   !print*, BdagGamma(row, column)
+                   print*, BdagGamma(row, column)
                    !print*, Lonsager(row, column)
                    !print*, Gama(row, column)
-                   ! print*, VT(row, column)
+                   !print*, VT(row, column)
                 enddo
-                print*, Checkmat(row) 
+                !print*, Checkmat(row) 
                 !print*, S(row)
                 print*, '' 
               enddo
             endif
-          !endif
+          endif
 
           ! do the rank conversion 
           call set_Bij(BinvGamma(i,j,:), BdagGamma)

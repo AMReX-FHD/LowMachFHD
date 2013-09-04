@@ -14,9 +14,9 @@ module probin_multispecies_module
   real(kind=dp_t)    :: Dbar_bc(max_element)! SM diffusion constant  
   
   namelist /probin_multispecies/ nspecies
-  namelist /probin_multispecies/ max_step   
+  namelist /probin_multispecies/ max_step
   namelist /probin_multispecies/ init_type
-  namelist /probin_multispecies/ inverse_type
+  namelist /probin_multispecies/ inverse_type   
   namelist /probin_multispecies/ c_bc
   namelist /probin_multispecies/ d_bc
   namelist /probin_multispecies/ m_bc
@@ -43,15 +43,15 @@ contains
 
     narg = command_argument_count()
  
-    !here we set some random values to be replaced from the input file
-    nspecies  = 4
+    ! here we set some random values to be replaced from the input file
+    nspecies  = 3
     max_step  = 10000
     init_type = 1
     inverse_type = 1
     c_bc      = 1.d0
     m_bc      = 1.d0
     Dbar_bc   = 1.d0
-    
+ 
     need_inputs = .true.
     farg = 1
     if ( need_inputs .AND. narg >= 1 ) then
