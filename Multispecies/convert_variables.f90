@@ -200,8 +200,8 @@ contains
     real(kind=dp_t)  :: Temp, Pres, alpha1    
 
     ! vectors and matrices to be used by LAPACK 
-    real(kind=dp_t), dimension(nspecies,nspecies) :: Bijprime, Bdag, Sdag, Lonsager, CapW
-    real(kind=dp_t), dimension(nspecies,nspecies) :: U, UT, V, VT, BdagGamma,LU 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Bijprime, Bdag, Sdag, Lonsager
+    real(kind=dp_t), dimension(nspecies,nspecies) :: U, UT, V, VT, BdagGamma,BdagCapW 
     real(kind=dp_t), dimension(nspecies)          :: S, W, alpha, Checkmat, work 
     integer, dimension(nspecies)                  :: ipiv
 
@@ -226,10 +226,11 @@ contains
           W=0.d0
           alpha=0.d0
           alpha1=0.d0
-          CapW=0.d0
           Lonsager=0.d0         
-
-          ! change 0 with tolerance so that it get's sorted out
+          Checkmat=0.d0
+ 
+          ! change 0 with tolerance to prevent division by zero in case species
+          ! density, molar concentration or total density = 0. 
           do row=1, nspecies
              if(molarconc(i,j,row) .lt. tolerance) then
                 molarconc(i,j,row) = tolerance
@@ -240,44 +241,16 @@ contains
              endif
           enddo
 
-          ! calculate Bijprime matrix and massfraction W_i = rho_i/rho (with any method)
+          ! calculate Bijprime matrix and massfraction W_i = rho_i/rho 
           ! populate the mass fraction matrix CapitalW. 
 
-          !%%%%%%%%%% Bijprime in terms of xi,xj,Dbar only %%%%%%%%%%%%%%%%%%!
-          if(.false.) then
-          do row=1, nspecies  
-             do column=1, row-1
-                Bijprime(row, column) = molarconc(i,j,row)*molarconc(i,j,column)/(rho(i,j,column)* &
-                                        Dbar(row, column)) 
-                Bijprime(column, row) = molarconc(i,j,row)*molarconc(i,j,column)/(rho(i,j,row)* &
-                                        Dbar(row, column)) 
-                CapW(row, column) = 0.d0
-                CapW(column, row) = 0.d0 
-             enddo
-             
-             Sum_knoti=0.d0
-             do column=1, nspecies
-                if (column.ne.row) then
-                   Sum_knoti = Sum_knoti - molarconc(i,j,column)/Dbar(row,column)
-                endif
-                Bijprime(row, row) = molarconc(i,j,row)*Sum_knoti/rho(i,j,row) 
-             enddo
-             
-             W(row) = rho(i,j,row)/rho_tot(i,j)
-             CapW(row,row) = W(row)
-          enddo
-          endif    
-   
           !%%%%%%% Bijprime in terms of molmtot,mi,rhotot etc (alternate description)%%%%%%!
-          ! if(.false.) then
            do row=1, nspecies  
              do column=1, row-1
                 Bijprime(row, column) = rho(i,j,row)*molmtot(i,j)**2/(mass(row)* &
                                         mass(column)*Dbar(row, column)*rho_tot(i,j)**2) 
                 Bijprime(column, row) = rho(i,j,column)*molmtot(i,j)**2/(mass(row)* &
                                         mass(column)*Dbar(column, row)*rho_tot(i,j)**2) 
-                CapW(row, column) = 0.d0
-                CapW(column, row) = 0.d0 
              enddo
             
              Sum_knoti=0.d0 
@@ -289,9 +262,7 @@ contains
              enddo
              
              W(row) = rho(i,j,row)/rho_tot(i,j)
-             CapW(row,row) = W(row)
           enddo
-          !endif
 
           if(.false.) then
             if(i.eq.4 .and. j.eq.4) then
@@ -332,7 +303,7 @@ contains
           !%%%%%%%%%%%%%%%%%%% Using Inverse %%%%%%%%%%%%%!
           case(1)
  
-             !calculate A^(-1)*B = c;  
+             ! compute A^(-1)*B = c;  
              !call la_gesvx(A=Bijprime, B=Gama, X=BdagGamma)
             
              ! compute Bijprime inverse through LU factorization. 
@@ -340,10 +311,6 @@ contains
              call dgetrf(nspecies, nspecies, Bijprime, nspecies, ipiv, info) 
              call dgetri(nspecies, Bijprime, nspecies, ipiv, work, nspecies, info) 
   
-             !call la_getrf(nspecies, nspecies, Bijprime, nspecies, ipiv, info) 
-             !call la_getri(nspecies, Bijprime, nspecies, ipiv, work, nspecies, info) 
-             !call dgetri_f95(Bijprime, ipiv, info) 
-
              ! populate Bdagger with B^(-1)
              Bdag = Bijprime 
              
@@ -408,12 +375,15 @@ contains
           enddo
 
           ! calculate Onsager matrix L
-          Lonsager = -rho_tot(i,j) * Temp * matmul(Bdag, CapW)/Pres
+          do column=1, nspecies
+             do row=1, nspecies
+                BdagCapW(row, column) = Bdag(row,column)*W(column)
+             enddo
+          enddo
+          Lonsager = -rho_tot(i,j) * Temp * BdagCapW/Pres
             
-          ! compute B^(-1)*Gamma = Bdag*Gamma. 
-          ! make is_ideal_mixture = .true. to deal with ideal mixture
+          ! compute B^(-1)*Gamma = Bdag*Gamma. is_ideal_mixture = .true. for ideal mixture
           is_ideal_mixture = .false.
-             
           if(is_ideal_mixture) then
              BdagGamma = Bdag
           else
@@ -426,14 +396,15 @@ contains
             if(i.eq.4 .and. j.eq.4) then
               do row=1, nspecies
                 do column=1, nspecies
-                   !print*, Bdag(row, column)
+                   print*, Bdag(row, column)
                    print*, BdagGamma(row, column)
-                   !print*, Lonsager(row, column)
-                   !print*, Gama(row, column)
-                   !print*, VT(row, column)
+                   print*, BdagCapW(row, column)
+                   print*, Lonsager(row, column)
+                   print*, Gama(row, column)
+                   print*, VT(row, column)
                 enddo
-                !print*, Checkmat(row) 
-                !print*, S(row)
+                print*, Checkmat(row) 
+                print*, S(row)
                 print*, '' 
               enddo
             endif
