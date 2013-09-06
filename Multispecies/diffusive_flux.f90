@@ -73,6 +73,7 @@ contains
 
   end subroutine diffusive_flux
 
+  ! Donev: Move this routine to a separate module called matvec_mul.f90 and use the module here
   subroutine multifab_mult_matrixvec_c(a, targ, b, src, nc, ng)
     
     integer, intent(in)           :: targ, src
@@ -103,27 +104,24 @@ contains
     real(dp_t), pointer :: bp(:,:,:,:)
     integer :: i, j, k, m, n
 
-    !print*, lbound(ap,dim=3), ubound(ap,dim=3)
-    !print*, lbound(ap,dim=2), ubound(ap,dim=2)
-    !print*, lbound(ap,dim=1), ubound(ap,dim=1)
+    print*, lbound(ap,dim=3), ubound(ap,dim=3)
+    print*, lbound(ap,dim=2), ubound(ap,dim=2)
+    print*, lbound(ap,dim=1), ubound(ap,dim=1)
 
 
-    !$OMP PARALLEL PRIVATE(i,j,k,m,n)
-       !$OMP DO 
-       do k = lbound(ap,dim=3), ubound(ap,dim=3)       ! 1:Lz
-          do j = lbound(ap,dim=2), ubound(ap,dim=2)    ! 1:Ly
-             do i = lbound(ap,dim=1), ubound(ap,dim=1) ! 1:Lx
-                call matvec_mul(ap(i,j,k,:), bp(i,j,k,:), i, j)
-             end do
+    do k = lbound(ap,dim=3), ubound(ap,dim=3)       ! 1:Lz
+       do j = lbound(ap,dim=2), ubound(ap,dim=2)    ! 1:Ly
+          do i = lbound(ap,dim=1), ubound(ap,dim=1) ! 1:Lx
+             call matvec_mul(ap(i,j,k,:), bp(i,j,k,:), i, j)
           end do
        end do
-       !$OMP END DO NOWAIT
-    !$OMP END PARALLEL
+    end do
 
+    contains 
+    
     ! Use contained (internal) subroutine to do rank conversion and
     ! matrix-vector multiplication 
-    contains 
-     subroutine matvec_mul(ap_ij, bp_ij, i, j)
+    subroutine matvec_mul(ap_ij, bp_ij, i, j)
         real(kind=dp_t), dimension(nspecies),       intent(inout) :: ap_ij
         real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: bp_ij  
         integer,                                       intent(in) :: i,j 
@@ -137,9 +135,9 @@ contains
            mvprod=0.d0
            do m=1, nspecies
               mvprod = mvprod + bp_ij(n,m)*ap_ij(m)
-              !if(i.eq.9 .and. j.eq.11) then
-                 !print*, i, j, bp_ij(n,m)
-              !endif
+              if(i.eq.9 .and. j.eq.11) then
+                 print*, i, j, bp_ij(n,m)
+              endif
            enddo
            cp_ij(n) = mvprod
         enddo      
