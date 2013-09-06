@@ -19,7 +19,7 @@ module advance_module
 contains
 
   subroutine advance(mla, rho, Dbar, Gama, mass, dx, dt, the_bc_level,& 
-                     rho_part_bc_comp,mol_frac_bc_comp)
+                     rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -30,6 +30,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     integer,         intent(in   ) :: rho_part_bc_comp,mol_frac_bc_comp
+    integer,         intent(in   ) :: diff_coeff_bc_comp 
 
     ! local variables
     integer i, dm, n, nlevs
@@ -65,7 +66,9 @@ contains
     ! compute molarconc (primary) and rho_tot (primary) for every cell from rho(1:nspecies) 
     ! Amit: I'm going to copy rho,rho_tot,molmtot,molarconc etc with
     ! multifab_fill_boundary in this code, so I'm omitting these in
-    ! convert_cons_to_BinvGamma code. 
+    ! convert_cons_to_BinvGamma code. Also, molarconc we don't use in
+    ! convert_cons_to_BinvGamma, so unless this isn't needed, I can free up lot
+    ! of memory here.
     call convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, molmtot, the_bc_level)
 
     ! compute cell-centered B^(-1)*Gamma  
@@ -73,13 +76,14 @@ contains
                                    mass, molmtot, the_bc_level)
  
     ! compute the face-centered flux in each direction. 
-    call diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level,mol_frac_bc_comp)
+    call diffusive_flux(mla, molarconc, BinvGamma, flux, dx, the_bc_level, & 
+                        mol_frac_bc_comp, diff_coeff_bc_comp)
     
     ! compute divergence of the flux 
-    call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
+    call compute_div(mla, flux, fluxdiv, dx, 1, 1, nspecies)
 
     ! update rho using forward Euler discretization
-    call update_rho(mla,rho,fluxdiv,dt,the_bc_level,dx,rho_part_bc_comp)
+    call update_rho(mla, rho, fluxdiv, dt, the_bc_level, dx, rho_part_bc_comp)
 
     ! destroy the multifab to prevent leakage in memory
     do n=1,nlevs

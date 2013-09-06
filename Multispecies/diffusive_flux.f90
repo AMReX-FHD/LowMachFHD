@@ -17,7 +17,8 @@ module diffusive_flux_module
 
 contains
  
-  subroutine diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level,mol_frac_bc_comp) 
+  subroutine diffusive_flux(mla, molarconc, BinvGamma, flux, dx, the_bc_level, & 
+                            mol_frac_bc_comp, diff_coeff_bc_comp) 
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: molarconc(:) 
@@ -26,6 +27,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     integer        , intent(in   ) :: mol_frac_bc_comp
+    integer        , intent(in   ) :: diff_coeff_bc_comp 
 
     ! local variables
     integer :: n,i,dm,nlevs
@@ -40,22 +42,22 @@ contains
     ! and nodal in direction i
     do n=1,nlevs
        do i=1,dm
-          call multifab_build_edge(BinvGamma_face(n,i),mla%la(n),nspecies**2,0,i)
+          call multifab_build_edge(BinvGamma_face(n,i), mla%la(n), nspecies**2, 0, i)
        end do
     end do 
- 
-    ! calculate face-centrered grad(molarconc) 
-    call compute_grad(mla,molarconc,flux,dx,1,mol_frac_bc_comp,1,nspecies,the_bc_level)
+
+    ! calculate face-centrered grad(molarconc) (CHECKED) 
+    call compute_grad(mla, molarconc, flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
+                      the_bc_level, .false.)
    
     ! compute face-centered B^(-1)*Gamma from cell-centered values 
-    do i=1,nspecies**2
-       call average_cc_to_face(nlevs,BinvGamma,BinvGamma_face,i,mol_frac_bc_comp,1,the_bc_level) 
-    end do
+    call average_cc_to_face(nlevs, BinvGamma, BinvGamma_face, 1, diff_coeff_bc_comp, & 
+                            nspecies**2, the_bc_level, .false.) 
     
     ! compute flux as B^(-1)*Gama X grad(molarconc). 
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_matrixvec_c(flux(n,i),1,BinvGamma_face(n,i),1,nspecies,0)          
+          call multifab_mult_matrixvec_c(flux(n,i), 1, BinvGamma_face(n,i), 1, nspecies, 0)          
        end do
     end do
     
@@ -101,12 +103,17 @@ contains
     real(dp_t), pointer :: bp(:,:,:,:)
     integer :: i, j, k, m, n
 
+    !print*, lbound(ap,dim=3), ubound(ap,dim=3)
+    !print*, lbound(ap,dim=2), ubound(ap,dim=2)
+    !print*, lbound(ap,dim=1), ubound(ap,dim=1)
+
+
     !$OMP PARALLEL PRIVATE(i,j,k,m,n)
        !$OMP DO 
        do k = lbound(ap,dim=3), ubound(ap,dim=3)       ! 1:Lz
           do j = lbound(ap,dim=2), ubound(ap,dim=2)    ! 1:Ly
              do i = lbound(ap,dim=1), ubound(ap,dim=1) ! 1:Lx
-                call matvec_mul(ap(i,j,k,:), bp(i,j,k,:))
+                call matvec_mul(ap(i,j,k,:), bp(i,j,k,:), i, j)
              end do
           end do
        end do
@@ -116,10 +123,11 @@ contains
     ! Use contained (internal) subroutine to do rank conversion and
     ! matrix-vector multiplication 
     contains 
-     subroutine matvec_mul(ap_ij, bp_ij)
+     subroutine matvec_mul(ap_ij, bp_ij, i, j)
         real(kind=dp_t), dimension(nspecies),       intent(inout) :: ap_ij
         real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: bp_ij  
-       
+        integer,                                       intent(in) :: i,j 
+        
         ! local variables
         ! use dummy matrix cp_ij to store the matrix-vector multiplication
         real(kind=dp_t), dimension(nspecies)  :: cp_ij  
@@ -129,10 +137,12 @@ contains
            mvprod=0.d0
            do m=1, nspecies
               mvprod = mvprod + bp_ij(n,m)*ap_ij(m)
+              !if(i.eq.9 .and. j.eq.11) then
+                 !print*, i, j, bp_ij(n,m)
+              !endif
            enddo
            cp_ij(n) = mvprod
         enddo      
-    
         ! populate ap_ij with cp_ij 
         ap_ij = cp_ij
      end subroutine 

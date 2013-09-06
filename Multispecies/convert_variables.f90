@@ -110,6 +110,8 @@ contains
           do n=1, nspecies 
              molarconc(i,j,n) = molmtot(i,j)*W(n)/mass(n)
           enddo
+          !print*, i, j, molarconc(i,j,1:nspecies)
+          !print*, '' 
         
        enddo
     enddo
@@ -241,10 +243,9 @@ contains
              endif
           enddo
 
-          ! calculate Bijprime matrix and massfraction W_i = rho_i/rho 
-          ! populate the mass fraction matrix CapitalW. 
+          ! calculate Bijprime matrix and massfraction W_i = rho_i/rho, molarconc is 
+          ! expressed in terms of molmtot,mi,rhotot etc. 
 
-          !%%%%%%% Bijprime in terms of molmtot,mi,rhotot etc (alternate description)%%%%%%!
            do row=1, nspecies  
              do column=1, row-1
                 Bijprime(row, column) = rho(i,j,row)*molmtot(i,j)**2/(mass(row)* &
@@ -274,7 +275,6 @@ contains
               enddo
             endif
           endif
-          !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%!
  
           ! adjust parameter alpha1 to max val of Bijprime
           alpha1 = maxval(abs(Bijprime))
@@ -393,18 +393,18 @@ contains
           ! check Bdag*w = 0 
           if(.false.) then
           Checkmat = matmul(Bdag, W)
-            if(i.eq.4 .and. j.eq.4) then
+            if(i.eq.8 .and. j.eq.11) then
               do row=1, nspecies
                 do column=1, nspecies
-                   print*, Bdag(row, column)
+                   !print*, Bdag(row, column)
                    print*, BdagGamma(row, column)
-                   print*, BdagCapW(row, column)
-                   print*, Lonsager(row, column)
-                   print*, Gama(row, column)
-                   print*, VT(row, column)
+                   !print*, BdagCapW(row, column)
+                   !print*, Lonsager(row, column)
+                   !print*, Gama(row, column)
+                   !print*, VT(row, column)
                 enddo
-                print*, Checkmat(row) 
-                print*, S(row)
+                !print*, Checkmat(row) 
+                !print*, S(row)
                 print*, '' 
               enddo
             endif
@@ -412,7 +412,7 @@ contains
 
           ! do the rank conversion 
           call set_Bij(BinvGamma(i,j,:), BdagGamma)
-          
+ 
       end do
     end do
    

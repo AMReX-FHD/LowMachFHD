@@ -93,21 +93,18 @@ contains
       ! local
       integer :: i,j
 
-      if(.false.) then
-      do j=lo(2),hi(2)
-         do i=lo(1),hi(1)
-            print*, phi(i,j)
-         end do
-      end do
-      endif
-
       ! x-faces
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
             gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / dx(1)
+            if(.false.) then
+              if(i.eq.9 .and. j.eq.11) then
+                 print*, gpx(i,j)
+              endif
+            endif
          end do
       end do
-
+   
       ! alter stencil at boundary since ghost value represents value at boundary
       if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
          i=lo(1)
@@ -126,6 +123,11 @@ contains
       do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)
             gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / dx(2)
+            if(.false.) then
+               if(i.eq.14 .and. j.eq.24) then
+                  print*, i,j,phi(i,j),gpy(i,j)
+               endif
+            endif
          end do
       end do
 

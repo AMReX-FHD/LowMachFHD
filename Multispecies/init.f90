@@ -129,7 +129,10 @@ contains
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-            rho(i,j,1:nspecies) = c_bc(1,1:nspecies)
+            !rho(i,j,1:nspecies) = c_bc(1,1:nspecies)
+            rho(i,j,1) = c_bc(1,1) + 0.001d0*x - 0.002d0*y
+            rho(i,j,2) = c_bc(1,2) + 0.003d0*x + 0.001d0*y
+            rho(i,j,3) = c_bc(1,3) + 0.002d0*x - 0.001d0*y
          end do
       end do
     end select

@@ -26,6 +26,7 @@ subroutine main_driver()
   real(kind=dp_t)              :: time,dt
   integer                      :: n,nlevs,i,dm,istep
   integer                      :: rho_part_bc_comp, mol_frac_bc_comp
+  integer                      :: diff_coeff_bc_comp 
 
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
@@ -137,9 +138,14 @@ subroutine main_driver()
   !=======================================================
   ! Setup boundary condition bc_tower
   !=======================================================
+  
+  ! bc_tower strcuture
+  ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = rhot_tot+1,
+  ! mol_frac = rho_tot+2, diff_coeff=tran_bc_comp
 
   rho_part_bc_comp = scal_bc_comp + 1
   mol_frac_bc_comp = scal_bc_comp + 2
+  diff_coeff_bc_comp = tran_bc_comp
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
   ! last argument to initialize_bc is the number of scalar variables
@@ -188,7 +194,7 @@ subroutine main_driver()
 
      ! advance the solution by dt
      call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array,&
-                  rho_part_bc_comp,mol_frac_bc_comp)
+                  rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp)
 
      ! increment simulation time
      time = time + dt
