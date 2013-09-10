@@ -63,7 +63,7 @@ contains
        ng_f = flux(n,1)%ng
        do i=1,dm
           call matvec_mul(flux(n,i), 1, BinvGamma_face(n,i), 1, nspecies, 0, lo, hi, & 
-                          dm, ng_f)          
+                          dm, ng_f, i)          
        end do
     end do
     
