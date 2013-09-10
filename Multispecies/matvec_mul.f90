@@ -15,39 +15,38 @@ module matvec_mul_module
 
 contains
 
-subroutine matvec_mul(a, targ, b, src, nc, ng, lo, hi, dm, ng_f)
-    
-    integer, intent(in)           :: targ, src
-    integer, intent(in)           :: nc
-    integer, intent(in), optional :: ng
-    type(multifab), intent(inout) :: a
-    type(multifab), intent(in)    :: b
-    integer                       :: lo(2), hi(2), dm, ng_f 
+subroutine matvec_mul(x, A) ! Computes x=A*x, where A is an nxn matrix and x is an nx1 vector    
+    type(multifab), intent(inout) :: x
+    type(multifab), intent(in)    :: A
+
+    integer                       :: lo(2), hi(2), dm, ng, nc 
     
     ! local
     real(kind=dp_t), pointer      :: ap(:,:,:,:)
-    real(kind=dp_t), pointer      :: bp(:,:,:,:)  ! the last entry is nspecies^2.
-    integer                       :: i,lng
+    real(kind=dp_t), pointer      :: xp(:,:,:,:) 
     
-    lng = 0; if ( present(ng) ) lng = ng
-    if ( lng > 0 ) call bl_assert(a%ng >= ng,"not enough ghost cells in matvec_mul")
-    do i = 1, nlocal(a%la)
-       if ( lng > 0 ) then
-          ap => dataptr(a, i, grow(get_ibox(a, i),lng), targ, nc)
-          bp => dataptr(b, i, grow(get_ibox(b, i),lng), src, nc**2)
-       else
-          ap => dataptr(a, i, get_ibox(a, i), targ, nc)
-          bp => dataptr(b, i, get_ibox(b, i), src, nc**2)
-!          ap => dataptr(a(1),1)
-!          bp => dataptr(b(1),1)
-       end if
+    do i=1,nfabs(x(n))
 
-       select case (dm)     
-       case (2)
-          !call matvec_mul_2d(ap(:,:,1,:), bp(:,:,1,:), lo, hi, ng_f)
-          call matvec_mul_2d(ap, bp, lo, hi, ng_f)
-       end select
+       ! Donev: Unfinished
+       ap  => dataptr(a(n), i)
+       xp  => dataptr(x(n), i)
+       lo(1) = lbound(pp,1)
+       lo(2) = lbound(pp,2)
+       hi(1) = ubound(pp,1)
+       hi(2) = ubound(pp,2)
+
+       ! Do loops should go from lo:hi 
+
+
+          select case (dm)
+          case (2)
+             call matvec_mul_2d(ap, xp, nc, lo, hi)
+          case (3)
+             stop "3d matvec_mul not implemented"
+          end select
     end do
+
+
 end subroutine matvec_mul
 
  subroutine matvec_mul_2d(ap, bp, lo, hi, ng_f)
