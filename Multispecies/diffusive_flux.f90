@@ -58,14 +58,10 @@ contains
     
     ! compute flux as B^(-1)*Gama X grad(molarconc). 
     do n=1,nlevs
-       lo = lwb(get_box(molarconc(n), 1))
-       hi = upb(get_box(molarconc(n), 1))
-       ng_f = flux(n,1)%ng
        do i=1,dm
-          call matvec_mul(flux(n,i), 1, BinvGamma_face(n,i), 1, nspecies, 0, lo, hi, & 
-                          dm, ng_f, i)          
+          call matvec_mul(flux(n,i), BinvGamma_face(n,i))
        end do
-    end do
+    end do    
     
     !Donev: If grad(temperature)
     !call compute_grad(mla,temperature,flux,dx,1,scal_bc_comp+nspecies,nspecies+1,1,the_bc_level)

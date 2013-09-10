@@ -15,14 +15,38 @@ module matvec_mul_module
 
   contains
 
-  subroutine matvec_mul(a, targ, b, src, nc, ng, lo, hi, dm, ng_f, dim_in)
+subroutine matvec_mul(x, A) ! Computes x=A*x, where A is an nxn matrix and x is an nx1 vector    
+    type(multifab), intent(inout) :: x
+    type(multifab), intent(in)    :: A
+
+    integer                       :: lo(2), hi(2), dm, ng, nc 
     
-  
+    ! local
+    real(kind=dp_t), pointer      :: ap(:,:,:,:)
+    real(kind=dp_t), pointer      :: xp(:,:,:,:) 
+    
+    do i=1,nfabs(x(n))
+
+       ! Donev: Unfinished
+       ap  => dataptr(a(n), i)
+       xp  => dataptr(x(n), i)
+       lo(1) = lbound(pp,1)
+       lo(2) = lbound(pp,2)
+       hi(1) = ubound(pp,1)
+       hi(2) = ubound(pp,2)
+
+       ! Do loops should go from lo:hi 
 
 
+          select case (dm)
+          case (2)
+             call matvec_mul_2d(ap, xp, nc, lo, hi)
+          case (3)
+             stop "3d matvec_mul not implemented"
+          end select
+    end do
 
-
-
+end subroutine matvec_mul
 
   end subroutine matvec_mul
 
