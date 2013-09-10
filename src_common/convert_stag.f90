@@ -205,11 +205,11 @@ contains
     do j=lo(2)-ng_f,hi(2)+ng_f
        do i=lo(1)-ng_f,hi(1)+ng_f+1
           facex(i,j) = 0.5d0*(cc(i,j)+cc(i-1,j))
-          if(.false.) then
+          !if(.false.) then
             if(i.eq.9 .and. j.eq.11) then
                print*, facex(i,j)
             endif
-          endif
+          !endif
        end do
     end do
 

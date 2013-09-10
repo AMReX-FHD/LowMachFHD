@@ -97,11 +97,11 @@ contains
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
             gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / dx(1)
-            if(.false.) then
+            !if(.false.) then
               if(i.eq.9 .and. j.eq.11) then
                  print*, gpx(i,j)
               endif
-            endif
+            !endif
          end do
       end do
    
@@ -125,7 +125,7 @@ contains
             gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / dx(2)
             if(.false.) then
                if(i.eq.14 .and. j.eq.24) then
-                  print*, i,j,phi(i,j),gpy(i,j)
+                  print*, gpy(i,j)
                endif
             endif
          end do

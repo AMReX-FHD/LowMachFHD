@@ -7,6 +7,7 @@ module diffusive_flux_module
   use probin_multispecies_module
   use ml_layout_module
   use convert_stag_module
+  use matvec_mul_module
   use F95_LAPACK
   
   implicit none
@@ -30,8 +31,9 @@ contains
     integer        , intent(in   ) :: diff_coeff_bc_comp 
 
     ! local variables
-    integer :: n,i,dm,nlevs
-    
+    integer :: n,i,dm,nlevs,ng_f
+    integer :: lo(molarconc(1)%dim),hi(molarconc(1)%dim)
+ 
     ! local multifab for the face-centered B^(-1)*Gama
     type(multifab) :: BinvGamma_face(mla%nlevel,mla%dim)
    
@@ -56,8 +58,12 @@ contains
     
     ! compute flux as B^(-1)*Gama X grad(molarconc). 
     do n=1,nlevs
+       lo = lwb(get_box(molarconc(n), 1))
+       hi = upb(get_box(molarconc(n), 1))
+       ng_f = flux(n,1)%ng
        do i=1,dm
-          call multifab_mult_matrixvec_c(flux(n,i), 1, BinvGamma_face(n,i), 1, nspecies, 0)          
+          call matvec_mul(flux(n,i), 1, BinvGamma_face(n,i), 1, nspecies, 0, lo, hi, & 
+                          dm, ng_f)          
        end do
     end do
     
@@ -72,79 +78,5 @@ contains
     end do
 
   end subroutine diffusive_flux
-
-  ! Donev: Move this routine to a separate module called matvec_mul.f90 and use the module here
-  subroutine multifab_mult_matrixvec_c(a, targ, b, src, nc, ng)
-    
-    integer, intent(in)           :: targ, src
-    integer, intent(in)           :: nc
-    integer, intent(in), optional :: ng
-    type(multifab), intent(inout) :: a
-    type(multifab), intent(in)    :: b
-    real(dp_t), pointer           :: ap(:,:,:,:)
-    real(dp_t), pointer           :: bp(:,:,:,:)  ! the last entry is nspecies^2.
-    integer                       :: i,lng
-    lng = 0; if ( present(ng) ) lng = ng
-    if ( lng > 0 ) call bl_assert(a%ng >= ng,"not enough ghost cells in multifab_mult_matrixvec_c")
-    do i = 1, nlocal(a%la)
-       if ( lng > 0 ) then
-          ap => dataptr(a, i, grow(get_ibox(a, i),lng), targ, nc)
-          bp => dataptr(b, i, grow(get_ibox(b, i),lng), src, nc**2)
-       else
-          ap => dataptr(a, i, get_ibox(a, i), targ, nc)
-          bp => dataptr(b, i, get_ibox(b, i), src, nc**2)
-       end if
-       call multifab_mult_matrixvec_c_doit(ap, bp)
-    end do
-  end subroutine multifab_mult_matrixvec_c
-
-   subroutine multifab_mult_matrixvec_c_doit(ap, bp)
-
-    real(dp_t), pointer :: ap(:,:,:,:)
-    real(dp_t), pointer :: bp(:,:,:,:)
-    integer :: i, j, k, m, n
-
-    print*, lbound(ap,dim=3), ubound(ap,dim=3)
-    print*, lbound(ap,dim=2), ubound(ap,dim=2)
-    print*, lbound(ap,dim=1), ubound(ap,dim=1)
-
-
-    do k = lbound(ap,dim=3), ubound(ap,dim=3)       ! 1:Lz
-       do j = lbound(ap,dim=2), ubound(ap,dim=2)    ! 1:Ly
-          do i = lbound(ap,dim=1), ubound(ap,dim=1) ! 1:Lx
-             call matvec_mul(ap(i,j,k,:), bp(i,j,k,:), i, j)
-          end do
-       end do
-    end do
-
-    contains 
-    
-    ! Use contained (internal) subroutine to do rank conversion and
-    ! matrix-vector multiplication 
-    subroutine matvec_mul(ap_ij, bp_ij, i, j)
-        real(kind=dp_t), dimension(nspecies),       intent(inout) :: ap_ij
-        real(kind=dp_t), dimension(nspecies,nspecies), intent(in) :: bp_ij  
-        integer,                                       intent(in) :: i,j 
-        
-        ! local variables
-        ! use dummy matrix cp_ij to store the matrix-vector multiplication
-        real(kind=dp_t), dimension(nspecies)  :: cp_ij  
-        real(kind=dp_t)                       :: mvprod
-
-        do n=1, nspecies 
-           mvprod=0.d0
-           do m=1, nspecies
-              mvprod = mvprod + bp_ij(n,m)*ap_ij(m)
-              if(i.eq.9 .and. j.eq.11) then
-                 print*, i, j, bp_ij(n,m)
-              endif
-           enddo
-           cp_ij(n) = mvprod
-        enddo      
-        ! populate ap_ij with cp_ij 
-        ap_ij = cp_ij
-     end subroutine 
-
-  end subroutine multifab_mult_matrixvec_c_doit
 
 end module diffusive_flux_module

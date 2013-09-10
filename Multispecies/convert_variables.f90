@@ -39,7 +39,7 @@ contains
    dm = mla%dim        ! dimensionality
    ng = rho(1)%ng      ! number of ghost cells 
    nlevs = mla%nlevel  ! number of levels 
-
+ 
     ! loop over all boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
@@ -52,7 +52,8 @@ contains
           
           select case(dm)
           case (2)
-             call compute_molconc_rhotot_2d(dp(:,:,1,:), dp1(:,:,1,1), dp2(:,:,1,:), mass(:), dp3(:,:,1,1), ng, lo, hi) 
+             call compute_molconc_rhotot_2d(dp(:,:,1,:), dp1(:,:,1,1), dp2(:,:,1,:), mass(:), & 
+                                            dp3(:,:,1,1), ng, lo, hi) 
           !case (3)
           !   call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
           end select
@@ -110,8 +111,6 @@ contains
           do n=1, nspecies 
              molarconc(i,j,n) = molmtot(i,j)*W(n)/mass(n)
           enddo
-          !print*, i, j, molarconc(i,j,1:nspecies)
-          !print*, '' 
         
        enddo
     enddo
@@ -265,17 +264,6 @@ contains
              W(row) = rho(i,j,row)/rho_tot(i,j)
           enddo
 
-          if(.false.) then
-            if(i.eq.4 .and. j.eq.4) then
-              do row=1, nspecies
-                 do column=1, nspecies
-                    print*, Bijprime(row, column)
-                 enddo
-                 print*, ''
-              enddo
-            endif
-          endif
- 
           ! adjust parameter alpha1 to max val of Bijprime
           alpha1 = maxval(abs(Bijprime))
 
@@ -286,17 +274,6 @@ contains
              enddo
           enddo
         
-          if(.false.) then
-            if(i.eq.4 .and. j.eq.4) then
-               do row=1, nspecies
-                  do column=1, nspecies
-                     print*, Bijprime(row, column)
-                  enddo
-                  print*, '' 
-               enddo
-            endif
-          endif
-
           ! select LAPACK inversion type, 1=inverse, 2=pseudo inverse 
           select case(inverse_type) 
            
@@ -314,17 +291,6 @@ contains
              ! populate Bdagger with B^(-1)
              Bdag = Bijprime 
              
-             if(.false.) then
-               if(i.eq.4 .and. j.eq.4) then
-                 do row=1, nspecies
-                    do column=1, nspecies
-                       print*, Bdag(row, column)
-                    enddo
-                    print*, '' 
-                 enddo
-               endif
-             endif
-
           !%%%%%%%%%%%%%%%%%%% Using pseudoinverse %%%%%%%%%%%%%!
           case(2) 
 
@@ -351,17 +317,6 @@ contains
              ! calculate Bdag = V*Sdag*UT, the pseudoinverse of Bprime & alpha.
              Bdag = matmul(V, matmul(Sdag, UT))
 
-             if(.false.) then
-               if(i.eq.4 .and. j.eq.4) then
-                 do row=1, nspecies
-                    do column=1, nspecies
-                       print*, Bdag(row, column)
-                    enddo
-                    print*, '' 
-                 enddo
-               endif
-             endif
-            
           end select
           !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%!
             
@@ -396,15 +351,11 @@ contains
             if(i.eq.8 .and. j.eq.11) then
               do row=1, nspecies
                 do column=1, nspecies
-                   !print*, Bdag(row, column)
                    print*, BdagGamma(row, column)
-                   !print*, BdagCapW(row, column)
-                   !print*, Lonsager(row, column)
-                   !print*, Gama(row, column)
-                   !print*, VT(row, column)
+                   print*, Lonsager(row, column)
+                   print*, Gama(row, column)
                 enddo
-                !print*, Checkmat(row) 
-                !print*, S(row)
+                print*, Checkmat(row) 
                 print*, '' 
               enddo
             endif
