@@ -1,7 +1,7 @@
 &probin_common
  
  dim_in = 2                           !problem dimension
- plot_int = 1                        !plot interval
+ plot_int = 100                        !plot interval
  max_grid_size(1:2) = 16 16            !individual box size 
 
  ! Grid size
@@ -18,9 +18,9 @@
 
 &probin_multispecies
  nspecies = 3                          ! number of species
- max_step = 1                          ! total number of computational step
+ max_step = 1000                          ! total number of computational step
  !include_temperature = T              ! T or F
- init_type = 2                         ! initial problem: 1=bubble, 2=const gradient
+ init_type = 1                         ! initial problem: 1=bubble, 2=const gradient
  inverse_type = 1                      ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  
  c_bc(1:2,1) = 0.6 0.1                 ! initial concentrations for species 1

@@ -31,8 +31,7 @@ contains
     integer        , intent(in   ) :: diff_coeff_bc_comp 
 
     ! local variables
-    integer :: n,i,dm,nlevs,ng_f
-    integer :: lo(molarconc(1)%dim),hi(molarconc(1)%dim)
+    integer :: n,i,dm,nlevs
  
     ! local multifab for the face-centered B^(-1)*Gama
     type(multifab) :: BinvGamma_face(mla%nlevel,mla%dim)
@@ -59,7 +58,7 @@ contains
     ! compute flux as B^(-1)*Gama X grad(molarconc). 
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(flux(n,i), BinvGamma_face(n,i))
+          call matvec_mul(mla, flux(n,i), BinvGamma_face(n,i))
        end do
     end do    
     

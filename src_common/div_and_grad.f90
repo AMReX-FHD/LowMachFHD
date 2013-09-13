@@ -60,11 +60,11 @@ contains
           !write(*,*) "Face-centered x: lo=", lwb(get_box(gradp(n,1), i))
           !write(*,*) "Face-centered x: hi=", upb(get_box(gradp(n,1), i))
 
-          write(*,*) "Face-centered x: lbound=", lbound(gpx)
-          write(*,*) "Face-centered x: ubound=", ubound(gpx)
+          !write(*,*) "Face-centered x: lbound=", lbound(gpx)
+          !write(*,*) "Face-centered x: ubound=", ubound(gpx)
 
-          write(*,*) "Cell-centered x: lbound=", lbound(pp)
-          write(*,*) "Cell-centered x: ubound=", ubound(pp)
+          !write(*,*) "Cell-centered x: lbound=", lbound(pp)
+          !write(*,*) "Cell-centered x: ubound=", ubound(pp)
           
           do comp=start_incomp,start_incomp+num_comp-1
              if (increment_bccomp) then
