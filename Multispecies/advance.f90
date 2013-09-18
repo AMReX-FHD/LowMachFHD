@@ -9,7 +9,7 @@ module advance_module
   use ml_layout_module
   use convert_variables_module
   use update_rho_module
-  use probin_multispecies_module, only: nspecies
+  use probin_multispecies_module
 
   implicit none
 
@@ -84,7 +84,8 @@ contains
     call compute_div(mla, flux, fluxdiv, dx, 1, 1, nspecies)
 
     ! update rho using forward Euler discretization
-    call update_rho(mla, rho, fluxdiv, dt, the_bc_level, dx, rho_part_bc_comp)
+    call update_rho(mla,rho,fluxdiv,Dbar,Gama,mass,dx,dt,the_bc_level,& 
+                        rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp) 
 
     ! destroy the multifab to prevent leakage in memory
     do n=1,nlevs
