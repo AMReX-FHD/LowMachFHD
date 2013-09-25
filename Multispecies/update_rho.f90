@@ -16,6 +16,8 @@ module update_rho_module
 
 contains
 
+  ! Donev: Update rho should be calling compute diffusive_fluxdiv rater than taking fluxdiv as input
+  
   subroutine update_rho(mla,rho,fluxdiv,Dbar,Gama,mass,dx,dt,the_bc_level,& 
                         rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp)
 
@@ -41,6 +43,8 @@ contains
    
     select case(timeinteg_type)
  
+    ! Donev: Missing calls to fill_boundary for intermediate results
+    
     case(1)
     !%%%%%% Euler time update 
     do n=1,nlevs
@@ -60,6 +64,7 @@ contains
     !%%%%%% rho_corrector(t+1)=rho(t)+(dt/2)*[fluxdiv(t,rho) + fluxdiv(t+1,rho_predictor(t+1))] %%%%%%%! 
     do n=1,nlevs
        ! store the previous values 
+       ! Wrong: Use multifab_copy for this
        rho_prev(n) = rho(n)       
        fluxdiv_prev(n)  = fluxdiv(n) 
     end do 
@@ -72,6 +77,8 @@ contains
     do n=1,nlevs
        call multifab_plus_plus(rho_prev(n),fluxdiv(n))            
     end do 
+
+    ! Donev: There needs to be a call to ghost cell filling for rho_prev here
 
     ! compute div-of-flux with Predictor results (almost as calling advance 
     ! routine without the update_rho call which is saved as fluxdiv_pred)
