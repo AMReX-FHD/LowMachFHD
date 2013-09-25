@@ -41,7 +41,7 @@ contains
     type(multifab) :: fluxdiv(mla%nlevel)
     
     ! local array of multifabs for total density, total molarconc, molarconc 
-    ! & BinvGamma in each cell; one for each direction
+    ! and BinvGamma in each cell- one for each direction
     type(multifab) :: rho_tot(mla%nlevel)
     type(multifab) :: molmtot(mla%nlevel)
     type(multifab) :: molarconc(mla%nlevel)
@@ -52,7 +52,7 @@ contains
  
     ! build the local multifabs
     do n=1,nlevs
-       ! fluxdiv,rho_tot,molarconc is scalar with one ghost cells 
+       ! fluxdiv,rho_tot,molarconc are scalar with one ghost cells 
        call multifab_build(fluxdiv(n),mla%la(n),nspecies,1)
        call multifab_build(rho_tot(n),mla%la(n),1,1)          ! rho_tot is addition of all component
        call multifab_build(molmtot(n),mla%la(n),1,1)          ! molmtot is total molar mass 
@@ -64,12 +64,7 @@ contains
        end do
     end do   
     
-    ! compute molarconc (primary) and rho_tot (primary) for every cell from rho(1:nspecies) 
-    ! Amit: I'm going to copy rho,rho_tot,molmtot,molarconc etc with
-    ! multifab_fill_boundary in this code, so I'm omitting these in
-    ! convert_cons_to_BinvGamma code. Also, molarconc we don't use in
-    ! convert_cons_to_BinvGamma, so unless this isn't needed, I can free up lot
-    ! of memory here.
+    ! compute molarconc and rho_tot for every cell from rho(1:nspecies) 
     call convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, molmtot, the_bc_level)
 
     ! compute cell-centered B^(-1)*Gamma  

@@ -184,7 +184,7 @@ subroutine main_driver()
   end if
  
   ! choice of time step with a diffusive CFL of 0.1
-  dt = 0.1d0*dx(1,1)**2/(2.d0*dm)
+  dt = 0.01d0*dx(1,1)**2/(2.d0*dm)
  
   do istep=1,max_step
 

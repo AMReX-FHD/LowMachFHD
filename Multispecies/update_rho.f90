@@ -32,13 +32,20 @@ contains
     integer,         intent(in   ) :: diff_coeff_bc_comp 
 
     ! local variables
-    type(multifab)                 :: rho_prev(mla%nlevel), rho_prev1(mla%nlevel)
-    type(multifab)                 :: rho_intm(mla%nlevel), rho_intm1(mla%nlevel)
-    type(multifab)                 :: fluxdiv_prev(mla%nlevel)
-    integer                        :: n, nlevs
+    type(multifab) :: rho_prev(mla%nlevel), rho_prev1(mla%nlevel)
+    type(multifab) :: rho_intm(mla%nlevel), rho_intm1(mla%nlevel)
+    type(multifab) :: fluxdiv_prev(mla%nlevel)
+    integer        :: n, nlevs
     
     nlevs = mla%nlevel  ! number of levels 
-   
+    !do n=1,nlevs
+    !   call setval(rho_prev(n),0.d0,all=.true.)
+    !   call setval(rho_prev1(n),0.d0,all=.true.)
+    !   call setval(rho_intm(n),0.d0,all=.true.)
+    !   call setval(rho_intm1(n),0.d0,all=.true.)
+    !   call setval(fluxdiv_prev(n),0.d0,all=.true.)
+    !end do
+ 
     select case(timeinteg_type)
  
     case(1)
@@ -58,10 +65,11 @@ contains
     !%%%%%% Predictor-Corrector explicit method 
     !%%%%%% rho_predictor(t+1)=rho(t)+dt*fluxdiv(t,rho) %%%%%%%! 
     !%%%%%% rho_corrector(t+1)=rho(t)+(dt/2)*[fluxdiv(t,rho) + fluxdiv(t+1,rho_predictor(t+1))] %%%%%%%! 
+    
     do n=1,nlevs
-       ! store the previous values 
-       rho_prev(n) = rho(n)       
-       fluxdiv_prev(n)  = fluxdiv(n) 
+       ! store the previous values for nspecies and 0 ghost cells
+       call multifab_copy_c(rho_prev(n),1,rho(n),1,nspecies,0)
+       call multifab_copy_c(fluxdiv_prev(n),1,fluxdiv(n),1,nspecies,0)
     end do 
    
     ! Euler Predictor step 
@@ -99,9 +107,10 @@ contains
     !%%%%%% Midpoint method (2-stage) 
     !%%%%%% rho_prev(t+1/2)=rho(t)+(dt/2)*fluxdiv(t,y)                %%%! 
     !%%%%%% rho_new(t+1)=rho(t)+ dt*fluxdiv[t+1/2,rho_prev(t+1/2)] %%%! 
+    
     do n=1,nlevs
        ! store the previous values of rho
-       rho_prev(n) = rho(n)       
+       call multifab_copy_c(rho_prev(n),1,rho(n),1,nspecies,0)
     end do  
     
     do n=1,nlevs
@@ -135,8 +144,8 @@ contains
     ! 1st stage
     do n=1,nlevs
        ! store the previous values for 2nd and 3rd stage
-       rho_prev(n)  = rho(n)       
-       rho_prev1(n) = rho(n)       
+       call multifab_copy_c(rho_prev(n),1,rho(n),1,nspecies,0)
+       call multifab_copy_c(rho_prev1(n),1,rho(n),1,nspecies,0)
     end do 
  
     do n=1,nlevs
@@ -151,7 +160,7 @@ contains
 
     do n=1,nlevs
        ! store this value of rho_prev for 2nd stage
-       rho_intm(n) = rho_prev(n) 
+       call multifab_copy_c(rho_intm(n),1,rho_prev(n),1,nspecies,0)
     end do 
 
     ! 2nd stage
@@ -185,7 +194,7 @@ contains
 
     do n=1,nlevs
        ! store this intermediate value of rho for 3rd stage
-       rho_intm1(n) = rho_intm(n) 
+       call multifab_copy_c(rho_intm1(n),1,rho_intm(n),1,nspecies,0)
     end do 
     
     ! 3rd stage: Amit: After this step code crashing
@@ -224,11 +233,21 @@ contains
        ! fill ghost cells for two adjacent grids at the same level
        ! this includes periodic domain boundary ghost cells
        call multifab_fill_boundary(rho(n))
+       !call multifab_fill_boundary(fluxdiv(n))
 
        ! fill non-periodic domain boundary ghost cells
        call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), & 
                             dx(n,:),.false.)
     end do   
+
+    ! destroy the multifab to prevent leakage in memory
+    do n=1,nlevs
+       call multifab_destroy(rho_prev(n))
+       call multifab_destroy(rho_prev1(n))
+       call multifab_destroy(rho_intm(n))
+       call multifab_destroy(rho_intm1(n))
+       call multifab_destroy(fluxdiv_prev(n))
+    end do
 
   end subroutine update_rho
 

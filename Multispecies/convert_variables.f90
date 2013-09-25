@@ -54,13 +54,13 @@ contains
           case (2)
              call compute_molconc_rhotot_2d(dp(:,:,1,:), dp1(:,:,1,1), dp2(:,:,1,:), mass(:), & 
                                             dp3(:,:,1,1), ng, lo, hi) 
-          !case (3)
-          !   call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
+          case (3)
+             stop
+             !call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
           end select
        end do
 
-       ! filling up ghost cells for two adjacent grids at the same level
-       ! including periodic domain boundary ghost cells
+       ! fill ghost cells for two adjacent grids at same level including periodic domain boundary ghost cells
        call multifab_fill_boundary(rho(n))
        call multifab_fill_boundary(rho_tot(n))
        call multifab_fill_boundary(molarconc(n))
@@ -70,6 +70,7 @@ contains
        !call multifab_physbc(rho(n),      1,1,nspecies,the_bc_level(n))
        !call multifab_physbc(rho_tot(n),  1,1,1       ,the_bc_level(n))
        !call multifab_physbc(molarconc(n),1,1,nspecies,the_bc_level(n))
+       !call multifab_physbc(molmtot(n),  1,1,nspecies,the_bc_level(n))
     end do
 
   end subroutine convert_cons_to_prim
@@ -166,17 +167,8 @@ contains
           end select
        end do
 
-       ! filling up ghost cells for two adjacent grids at the same level
-       ! including periodic domain boundary ghost cells
-       !call multifab_fill_boundary(rho(n))
-       !call multifab_fill_boundary(rho_tot(n))
-       !call multifab_fill_boundary(molarconc(n))
+       ! fill ghost cells for two adjacent grids including periodic domain boundary ghost cells
        call multifab_fill_boundary(BinvGamma(n))
-
-       ! fill non-periodic domain boundary ghost cells 
-       !call multifab_physbc(rho(n),      1,1,nspecies,the_bc_level(n))
-       !call multifab_physbc(rho_tot(n),  1,1,1       ,the_bc_level(n))
-       !call multifab_physbc(molarconc(n),1,1,nspecies,the_bc_level(n))
     end do
 
    end subroutine convert_cons_to_BinvGamma
@@ -244,8 +236,7 @@ contains
 
           ! calculate Bijprime matrix and massfraction W_i = rho_i/rho, molarconc is 
           ! expressed in terms of molmtot,mi,rhotot etc. 
-
-           do row=1, nspecies  
+          do row=1, nspecies  
              do column=1, row-1
                 Bijprime(row, column) = rho(i,j,row)*molmtot(i,j)**2/(mass(row)* &
                                         mass(column)*Dbar(row, column)*rho_tot(i,j)**2) 
