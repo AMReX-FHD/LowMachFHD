@@ -1,4 +1,4 @@
-module advance_module
+module diffusive_fluxdiv_module
 
   use multifab_module
   use define_bc_module
@@ -8,22 +8,17 @@ module advance_module
   use diffusive_flux_module
   use ml_layout_module
   use convert_variables_module
-  use update_rho_module
   use probin_multispecies_module
 
   implicit none
 
   private
 
-  public :: advance
+  public :: diffusive_fluxdiv
 
 contains
 
-
-  ! Donev: This routine should really be called diffusive_fluxdiv
-  ! Variables rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp should be in a module
-  ! (e.g., probin_multispecies) and not passed as arguments
-  subroutine advance(mla, rho, Dbar, Gama, mass, dx, dt, the_bc_level,& 
+  subroutine diffusive_fluxdiv(mla, rho, Dbar, Gama, mass, dx, dt, the_bc_level,& 
                      rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp)
 
     type(ml_layout), intent(in   ) :: mla
@@ -45,7 +40,7 @@ contains
     type(multifab) :: fluxdiv(mla%nlevel)
     
     ! local array of multifabs for total density, total molarconc, molarconc 
-    ! and BinvGamma in each cell- one for each direction
+    ! and BinvGamma in each cell; one for each direction
     type(multifab) :: rho_tot(mla%nlevel)
     type(multifab) :: molmtot(mla%nlevel)
     type(multifab) :: molarconc(mla%nlevel)
@@ -56,8 +51,7 @@ contains
  
     ! build the local multifabs
     do n=1,nlevs
-       ! fluxdiv,rho_tot,molarconc are scalar with one ghost cells 
-       call multifab_build(fluxdiv(n),mla%la(n),nspecies,1)
+       ! fluxdiv,rho_tot,molarconc is scalar with one ghost cells 
        call multifab_build(rho_tot(n),mla%la(n),1,1)          ! rho_tot is addition of all component
        call multifab_build(molmtot(n),mla%la(n),1,1)          ! molmtot is total molar mass 
        call multifab_build(molarconc(n),mla%la(n),nspecies,1)
@@ -69,8 +63,6 @@ contains
     end do   
     
     ! compute molarconc (primary) and rho_tot (primary) for every cell from rho(1:nspecies) 
-    ! Donev: I recommend including ghost cells in the loops instead of fill_boundary
-    ! it is much cheaper to re-calculate than to communicate via MPI
     call convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, molmtot, the_bc_level)
 
     ! compute cell-centered B^(-1)*Gamma  
@@ -83,11 +75,13 @@ contains
     
     ! compute divergence of the flux 
     call compute_div(mla, flux, fluxdiv, dx, 1, 1, nspecies)
-
-    ! update rho using forward Euler discretization
-    call update_rho(mla,rho,fluxdiv,Dbar,Gama,mass,dx,dt,the_bc_level,& 
-                        rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp) 
-
+    
+    ! copy fluxdiv into rho
+    do n=1,nlevs
+       call setval(rho(n),0.d0,all=.true.)
+       call multifab_copy_c(rho(n),1,fluxdiv(n),1,nspecies,0)
+    end do 
+ 
     ! destroy the multifab to prevent leakage in memory
     do n=1,nlevs
        call multifab_destroy(fluxdiv(n))
@@ -100,6 +94,6 @@ contains
        end do
     end do
 
-  end subroutine advance
+  end subroutine diffusive_fluxdiv
   
-end module advance_module
+end module diffusive_fluxdiv_module

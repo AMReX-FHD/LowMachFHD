@@ -19,7 +19,7 @@ contains
   subroutine convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, molmtot, the_bc_level)
    
    type(ml_layout), intent(in   )  :: mla
-   type(multifab) , intent(inout)  :: rho(:) 
+   type(multifab) , intent(in)     :: rho(:) 
    type(multifab) , intent(inout)  :: rho_tot(:) 
    type(multifab) , intent(inout)  :: molarconc(:) 
    real(kind=dp_t), intent(in   )  :: mass(:)
@@ -60,11 +60,13 @@ contains
           end select
        end do
 
-       ! fill ghost cells for two adjacent grids at same level including periodic domain boundary ghost cells
-       call multifab_fill_boundary(rho(n))
-       call multifab_fill_boundary(rho_tot(n))
-       call multifab_fill_boundary(molarconc(n))
-       call multifab_fill_boundary(molmtot(n))
+       ! filling up ghost cells for two adjacent grids at the same level
+       ! including periodic domain boundary ghost cells
+       ! Donev: I recommend including ghost cells in the loops instead of fill_boundary
+       ! it is much cheaper to re-calculate than to communicate via MPI
+       !call multifab_fill_boundary(rho_tot(n))
+       !call multifab_fill_boundary(molarconc(n))
+       !call multifab_fill_boundary(molmtot(n))
 
        ! fill non-periodic domain boundary ghost cells 
        !call multifab_physbc(rho(n),      1,1,nspecies,the_bc_level(n))
@@ -90,8 +92,9 @@ contains
     real(kind=dp_t)  :: Sum_woverm, rho_tot_local
     
     ! for specific box, now start loops over alloted cells    
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
+    ! Donev: Include ghost cells
+    do j=lo(2)-ng, hi(2)+ng
+       do i=lo(1)-ng, hi(1)+ng
 
           ! calculate total density inside each cell
           rho_tot_local=0.d0 
@@ -167,8 +170,14 @@ contains
           end select
        end do
 
-       ! fill ghost cells for two adjacent grids including periodic domain boundary ghost cells
-       call multifab_fill_boundary(BinvGamma(n))
+       ! filling up ghost cells for two adjacent grids at the same level
+       ! including periodic domain boundary ghost cells
+       ! Donev: Better to include ghost cells in the loop then to communicate
+       !call multifab_fill_boundary(BinvGamma(n))
+
+       ! fill non-periodic domain boundary ghost cells 
+       ! Unfinished
+       
     end do
 
    end subroutine convert_cons_to_BinvGamma
@@ -203,8 +212,8 @@ contains
     tolerance = 1e-13
 
     ! for specific box, now start loops over alloted cells    
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
+    do j=lo(2)-ng,hi(2)+ng
+       do i=lo(1)-ng,hi(1)+ng
         
           ! free up the memory  
           Bijprime=0.d0

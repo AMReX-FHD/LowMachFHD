@@ -16,6 +16,8 @@ module update_rho_module
 
 contains
 
+  ! Donev: Update rho should be calling compute diffusive_fluxdiv rater than taking fluxdiv as input
+  
   subroutine update_rho(mla,rho,fluxdiv,Dbar,Gama,mass,dx,dt,the_bc_level,& 
                         rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp)
 
@@ -48,6 +50,8 @@ contains
  
     select case(timeinteg_type)
  
+    ! Donev: Missing calls to fill_boundary for intermediate results
+    
     case(1)
     !%%%%%% Euler time update 
     do n=1,nlevs
@@ -80,6 +84,8 @@ contains
     do n=1,nlevs
        call multifab_plus_plus(rho_prev(n),fluxdiv(n))            
     end do 
+
+    ! Donev: There needs to be a call to ghost cell filling for rho_prev here
 
     ! compute div-of-flux with Predictor results (almost as calling advance 
     ! routine without the update_rho call which is saved as fluxdiv_pred)
@@ -233,7 +239,6 @@ contains
        ! fill ghost cells for two adjacent grids at the same level
        ! this includes periodic domain boundary ghost cells
        call multifab_fill_boundary(rho(n))
-       !call multifab_fill_boundary(fluxdiv(n))
 
        ! fill non-periodic domain boundary ghost cells
        call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), & 
