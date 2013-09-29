@@ -18,8 +18,7 @@ module diffusive_flux_module
 
 contains
  
-  subroutine diffusive_flux(mla, molarconc, BinvGamma, flux, dx, the_bc_level, & 
-                            mol_frac_bc_comp, diff_coeff_bc_comp) 
+  subroutine diffusive_flux(mla, molarconc, BinvGamma, flux, dx, the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: molarconc(:) 
@@ -27,8 +26,6 @@ contains
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
-    integer        , intent(in   ) :: mol_frac_bc_comp
-    integer        , intent(in   ) :: diff_coeff_bc_comp 
 
     ! local variables
     integer :: n,i,dm,nlevs

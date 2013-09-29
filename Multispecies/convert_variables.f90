@@ -59,20 +59,6 @@ contains
              !call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
           end select
        end do
-
-       ! filling up ghost cells for two adjacent grids at the same level
-       ! including periodic domain boundary ghost cells
-       ! Donev: I recommend including ghost cells in the loops instead of fill_boundary
-       ! it is much cheaper to re-calculate than to communicate via MPI
-       !call multifab_fill_boundary(rho_tot(n))
-       !call multifab_fill_boundary(molarconc(n))
-       !call multifab_fill_boundary(molmtot(n))
-
-       ! fill non-periodic domain boundary ghost cells 
-       !call multifab_physbc(rho(n),      1,1,nspecies,the_bc_level(n))
-       !call multifab_physbc(rho_tot(n),  1,1,1       ,the_bc_level(n))
-       !call multifab_physbc(molarconc(n),1,1,nspecies,the_bc_level(n))
-       !call multifab_physbc(molmtot(n),  1,1,nspecies,the_bc_level(n))
     end do
 
   end subroutine convert_cons_to_prim
@@ -92,7 +78,6 @@ contains
     real(kind=dp_t)  :: Sum_woverm, rho_tot_local
     
     ! for specific box, now start loops over alloted cells    
-    ! Donev: Include ghost cells
     do j=lo(2)-ng, hi(2)+ng
        do i=lo(1)-ng, hi(1)+ng
 
@@ -102,6 +87,7 @@ contains
              rho_tot_local = rho_tot_local + rho(i,j,n)
           enddo         
           rho_tot(i,j) = rho_tot_local
+          if(i.eq.4 .and. j.eq.4)  write(*,*), "rho1=",rho(i,j,1),"rho2=",rho(i,j,2),"rho1+rho2=",rho(i,j,1)+rho(i,j,2)
 
           ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i)
           Sum_woverm=0.d0
@@ -169,15 +155,6 @@ contains
           !   call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
           end select
        end do
-
-       ! filling up ghost cells for two adjacent grids at the same level
-       ! including periodic domain boundary ghost cells
-       ! Donev: Better to include ghost cells in the loop then to communicate
-       !call multifab_fill_boundary(BinvGamma(n))
-
-       ! fill non-periodic domain boundary ghost cells 
-       ! Unfinished
-       
     end do
 
    end subroutine convert_cons_to_BinvGamma

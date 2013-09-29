@@ -2,7 +2,7 @@ module probin_multispecies_module
 
   use bl_types
   use bl_space
-
+ 
   implicit none
 
   integer, parameter :: max_species=10
@@ -12,6 +12,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: d_bc(max_species)   !initial values for diffusivities, presently scalar numbers 
   real(kind=dp_t)    :: m_bc(max_species)   ! masses of nspecies
   real(kind=dp_t)    :: Dbar_bc(max_element)! SM diffusion constant  
+  integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step
@@ -29,6 +30,7 @@ contains
 
     use f2kcli
     use parallel
+    use define_bc_module
     use bc_module
     use bl_IO_module
     use bl_prof_module
@@ -54,6 +56,14 @@ contains
     m_bc      = 1.d0
     Dbar_bc   = 1.d0
  
+    ! bc_tower strcuture in memory 
+    ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = rhot_tot+1,
+    ! mol_frac = rho_tot+2, diff_coeff=tran_bc_comp
+    rho_part_bc_comp = scal_bc_comp + 1
+    mol_frac_bc_comp = scal_bc_comp + 2
+    diff_coeff_bc_comp = tran_bc_comp
+ 
+    ! read from input file 
     need_inputs = .true.
     farg = 1
     if ( need_inputs .AND. narg >= 1 ) then

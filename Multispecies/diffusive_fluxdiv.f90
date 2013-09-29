@@ -18,8 +18,7 @@ module diffusive_fluxdiv_module
 
 contains
 
-  subroutine diffusive_fluxdiv(mla, rho, Dbar, Gama, mass, dx, dt, the_bc_level,& 
-                     rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp)
+  subroutine diffusive_fluxdiv(mla, rho, Dbar, Gama, mass, dx, dt, the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -29,8 +28,6 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_level) , intent(in   ) :: the_bc_level(:)
-    integer,         intent(in   ) :: rho_part_bc_comp,mol_frac_bc_comp
-    integer,         intent(in   ) :: diff_coeff_bc_comp 
 
     ! local variables
     integer i, dm, n, nlevs
@@ -56,6 +53,7 @@ contains
        call multifab_build(molmtot(n),mla%la(n),1,1)          ! molmtot is total molar mass 
        call multifab_build(molarconc(n),mla%la(n),nspecies,1)
        call multifab_build(BinvGamma(n),mla%la(n),nspecies**2,1)
+       call multifab_build(fluxdiv(n),mla%la(n),nspecies,1)
        do i=1,dm
           ! flux(i) is face-centered, has nspecies component, zero ghost cells & nodal in direction i
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
@@ -70,16 +68,14 @@ contains
                                    mass, molmtot, the_bc_level)
  
     ! compute the face-centered flux in each direction. 
-    call diffusive_flux(mla, molarconc, BinvGamma, flux, dx, the_bc_level, & 
-                        mol_frac_bc_comp, diff_coeff_bc_comp)
+    call diffusive_flux(mla, molarconc, BinvGamma, flux, dx, the_bc_level)
     
     ! compute divergence of the flux 
     call compute_div(mla, flux, fluxdiv, dx, 1, 1, nspecies)
     
     ! copy fluxdiv into rho
     do n=1,nlevs
-       call setval(rho(n),0.d0,all=.true.)
-       call multifab_copy_c(rho(n),1,fluxdiv(n),1,nspecies,0)
+       call multifab_copy_c(rho(n),1,fluxdiv(n),1,nspecies)
     end do 
  
     ! destroy the multifab to prevent leakage in memory

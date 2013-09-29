@@ -16,7 +16,7 @@ module init_module
 
 contains
   
-  subroutine init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_level,rho_part_bc_comp)
+  subroutine init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_level)
 
     type(multifab) , intent(inout) :: rho(:)            
     real(kind=dp_t), intent(inout) :: Dbar(:,:)           
@@ -26,7 +26,6 @@ contains
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim)
     real(kind=dp_t), intent(in   ) :: prob_hi(rho(1)%dim)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
-    integer,         intent(in   ) :: rho_part_bc_comp
  
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
@@ -61,8 +60,7 @@ contains
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
-       ! Amit: changed here.
-       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
+       !call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
     end do
 
   end subroutine init_rho

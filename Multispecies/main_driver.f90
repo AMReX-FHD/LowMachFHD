@@ -25,9 +25,6 @@ subroutine main_driver()
   real(kind=dp_t), allocatable :: mass(:)
   real(kind=dp_t)              :: time,dt
   integer                      :: n,nlevs,i,dm,istep
-  integer                      :: rho_part_bc_comp, mol_frac_bc_comp
-  integer                      :: diff_coeff_bc_comp 
-
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -129,7 +126,6 @@ subroutine main_driver()
 
   ! build the ml_layout, mla
   call ml_layout_build(mla,mba,pmask)
-
   deallocate(pmask)
 
   ! don't need this anymore - free up memory
@@ -139,15 +135,6 @@ subroutine main_driver()
   ! Setup boundary condition bc_tower
   !=======================================================
   
-  ! bc_tower strcuture
-  ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = rhot_tot+1,
-  ! mol_frac = rho_tot+2, diff_coeff=tran_bc_comp
-
-  rho_part_bc_comp = scal_bc_comp + 1
-  mol_frac_bc_comp = scal_bc_comp + 2
-  diff_coeff_bc_comp = tran_bc_comp
-
-  ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
   ! last argument to initialize_bc is the number of scalar variables
   ! nscal=nspecies temporarily
   ! Donev: If you want to add rules for ghost cells for BinvGamma's do:
@@ -168,8 +155,7 @@ subroutine main_driver()
      call multifab_build(rho(n),mla%la(n),nspecies,1)
   end do
 
-  call init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array, & 
-                rho_part_bc_comp)
+  call init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
@@ -189,17 +175,16 @@ subroutine main_driver()
   do istep=1,max_step
 
      if (parallel_IOProcessor()) then
-        print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+        !print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array,&
-                  rho_part_bc_comp,mol_frac_bc_comp,diff_coeff_bc_comp)
+     call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array)
 
      ! increment simulation time
      time = time + dt
 
-     ! write a plotfile
+     ! write plotfile at intervals
      if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
