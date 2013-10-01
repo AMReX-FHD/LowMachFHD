@@ -71,11 +71,11 @@ contains
     call diffusive_flux(mla, molarconc, BinvGamma, flux, dx, the_bc_level)
     
     ! compute divergence of the flux 
-    call compute_div(mla, flux, fluxdiv, dx, 1, 1, nspecies)
+    call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
     
-    ! copy fluxdiv into rho
+    ! copy fluxdiv into rho (ghost cells aren't copied though allocated)
     do n=1,nlevs
-       call multifab_copy_c(rho(n),1,fluxdiv(n),1,nspecies)
+       call multifab_copy_c(rho(n),1,fluxdiv(n),1,nspecies,rho(n)%ng)
     end do 
  
     ! destroy the multifab to prevent leakage in memory

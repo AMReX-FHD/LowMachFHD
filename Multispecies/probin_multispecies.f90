@@ -8,6 +8,7 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
+  real(kind=dp_t)    :: chi                 !maximum eigenvalue of diffusion matrix 
   real(kind=dp_t)    :: c_bc(2,max_species) !initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: d_bc(max_species)   !initial values for diffusivities, presently scalar numbers 
   real(kind=dp_t)    :: m_bc(max_species)   ! masses of nspecies
@@ -16,6 +17,7 @@ module probin_multispecies_module
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step
+  namelist /probin_multispecies/ chi
   namelist /probin_multispecies/ init_type
   namelist /probin_multispecies/ inverse_type   
   namelist /probin_multispecies/ timeinteg_type   
@@ -49,12 +51,13 @@ contains
     ! here we set some random values to be replaced from the input file
     nspecies  = 3
     max_step  = 10000
+    chi       = 1.0d0
     init_type = 1
     inverse_type = 1
     timeinteg_type = 1
-    c_bc      = 1.d0
-    m_bc      = 1.d0
-    Dbar_bc   = 1.d0
+    c_bc      = 1.0d0
+    m_bc      = 1.0d0
+    Dbar_bc   = 1.0d0
  
     ! bc_tower strcuture in memory 
     ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = rhot_tot+1,
