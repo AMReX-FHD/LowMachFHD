@@ -184,6 +184,7 @@ contains
     real(kind=dp_t), dimension(nspecies)          :: S, W, alpha, Checkmat, work 
     integer, dimension(nspecies)                  :: ipiv
 
+    ! Donev: Eventually Temp and Pres should be input values, not hard-wired (we can discuss how in person)
     Temp      = 1.0d0
     Pres      = 1.0d0
     tolerance = 1e-13
@@ -213,8 +214,13 @@ contains
           do row=1, nspecies
              if(molarconc(i,j,row) .lt. tolerance) then
                 molarconc(i,j,row) = tolerance
-                rho(i,j,row)       = tolerance
+                ! Donev: This should be tolerance*rho_tot(i,j)
+                ! This way it works correctly even if rho_tot has units of 1E55, for example
+                rho(i,j,row)       = tolerance                
              endif
+             ! Donev: Remove this check: rho should never be close to zero!
+             ! Also, you are comparing a number with units (rho) to a dimensionless number
+             ! This is OK for molarconc, but not for rho!
              if(rho_tot(i,j) .lt. tolerance) then
                 rho_tot(i,j) = tolerance
              endif

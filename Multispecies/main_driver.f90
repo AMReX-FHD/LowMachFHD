@@ -22,7 +22,7 @@ subroutine main_driver()
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t), allocatable :: Dbar(:,:)
   real(kind=dp_t), allocatable :: Gama(:,:)
-  real(kind=dp_t), allocatable :: mass(:)
+  real(kind=dp_t), allocatable :: mass(:) 
   real(kind=dp_t)              :: time,dt
   integer                      :: n,nlevs,i,dm,istep
   type(box)                    :: bx
@@ -33,6 +33,10 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
+  ! Donev: The code as written now assumes that Dbar and Gamma are constants
+  ! i.e., they are not multifabs but rather simple arrays
+  ! This is OK for now for simple testing but has to be changed later
+  ! It will affect all routines like diffusive_flux(div) etc.
   
   !==============================================================
   ! Initialization
@@ -137,9 +141,10 @@ subroutine main_driver()
   
   ! last argument to initialize_bc is the number of scalar variables
   ! nscal=nspecies temporarily
-  ! Donev: If you want to add rules for ghost cells for BinvGamma's do:
-  ! nscal=nspecies+1. Amit: num_tran_bc_comp (for Dbar)= 1
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies,1)
+  ! Amit: num_tran_bc_comp (for Dbar)= 1
+  ! Dpnev: Document exactly how the bc_comp are enumerated
+  ! Donev: CHECK THIS -- is there one for rho_tot?
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, num_scal_bc_in=nspecies, num_tran_bc_in=1)
 
   do n=1,nlevs
      ! define level n of the_bc_tower

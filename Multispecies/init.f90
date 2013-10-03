@@ -13,6 +13,8 @@ module init_module
   private
 
   public :: init_rho
+  
+  ! Donev: Add a list here of the different values of init_type and what they mean
 
 contains
   
@@ -60,6 +62,8 @@ contains
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
+       ! Donev: Do not comment this out, leave it in -- it will do nothing for periodic BCs
+       ! Otherwise you will forget it later
        !call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
     end do
 
@@ -106,7 +110,7 @@ contains
     ! for specific box, now start loop over alloted cells     
     ! select problem type, 1=bubble, 2=constant gradient
     select case(init_type) 
-    case(1) 
+    case(1) ! Donev: Add brief explanation in words what this case is
       do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)

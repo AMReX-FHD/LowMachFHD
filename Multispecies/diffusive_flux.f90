@@ -58,10 +58,7 @@ contains
           call matvec_mul(mla, flux(n,i), BinvGamma_face(n,i))
        end do
     end do    
-    
-    !Donev: If grad(temperature)
-    !call compute_grad(mla,temperature,flux,dx,1,scal_bc_comp+nspecies,nspecies+1,1,the_bc_level)
- 
+     
     ! destroy B^(-1)*Gama multifab to prevent leakage in memory
     do n=1,nlevs
        do i=1,dm

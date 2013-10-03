@@ -38,6 +38,9 @@ contains
     
     ! local array of multifabs for total density, total molarconc, molarconc 
     ! and BinvGamma in each cell; one for each direction
+    ! Donev: The following three arrays should be moved outside this routine (in advance)
+    ! since they will be used in several places, including the fluctuating fluxes
+    ! For first testing this is OK but later it needs to change
     type(multifab) :: rho_tot(mla%nlevel)
     type(multifab) :: molmtot(mla%nlevel)
     type(multifab) :: molarconc(mla%nlevel)
@@ -49,11 +52,14 @@ contains
     ! build the local multifabs
     do n=1,nlevs
        ! fluxdiv,rho_tot,molarconc is scalar with one ghost cells 
+       ! Donev: Fluxdiv should have NO ghost cells -- it does not need them
+       ! Donev: Instead of hard-wiring 1 ghost cell, use ng=rho%ng and use ng
+       ! This way if one changes rho to have 2 ghost cells everything works correctly
        call multifab_build(rho_tot(n),mla%la(n),1,1)          ! rho_tot is addition of all component
        call multifab_build(molmtot(n),mla%la(n),1,1)          ! molmtot is total molar mass 
        call multifab_build(molarconc(n),mla%la(n),nspecies,1)
        call multifab_build(BinvGamma(n),mla%la(n),nspecies**2,1)
-       call multifab_build(fluxdiv(n),mla%la(n),nspecies,1)
+       call multifab_build(fluxdiv(n),mla%la(n),nspecies,1) ! Donev: Needs no ghost cells
        do i=1,dm
           ! flux(i) is face-centered, has nspecies component, zero ghost cells & nodal in direction i
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
@@ -61,9 +67,11 @@ contains
     end do   
     
     ! compute molarconc (primary) and rho_tot (primary) for every cell from rho(1:nspecies) 
+    ! Donev: When the code is finalized this call should be outside, in advance, not here
     call convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, molmtot, the_bc_level)
 
     ! compute cell-centered B^(-1)*Gamma  
+    ! Donev: Rename to compute_BinvGamma (this uses both primary and conserved vars)
     call convert_cons_to_BinvGamma(mla, rho, rho_tot, molarconc, BinvGamma, Dbar, Gama, & 
                                    mass, molmtot, the_bc_level)
  

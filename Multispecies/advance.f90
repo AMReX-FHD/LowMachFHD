@@ -37,6 +37,7 @@ contains
     nlevs = mla%nlevel  ! number of levels 
  
     ! build cell-centered multifabs for nspecies and one ghost cell
+    ! Donev: Instead of 1 ghost cell use rho%ng
     do n=1,nlevs
        call multifab_build(rho_prev(n),mla%la(n),nspecies,1)
        call multifab_build(rho_prev1(n),mla%la(n),nspecies,1)
@@ -45,6 +46,8 @@ contains
        call multifab_build(fluxdiv(n),mla%la(n),nspecies,1)
        call multifab_build(fluxdiv_prev(n),mla%la(n),nspecies,1)
     enddo
+    
+    ! Donev: The reasoning about ghost cells here is wrong, come to discuss in person
     
     ! copy rho in fluxdiv for nspecies including ghost cells of rho that has
     ! either been filled in init or at the end of this routine 
@@ -58,6 +61,7 @@ contains
     call diffusive_fluxdiv(mla,fluxdiv,Dbar,Gama,mass,dx,dt,the_bc_level)
    
     ! update the ghost cells 
+    ! Donev: This seems unnecessary
     do n=1,nlevs
        call multifab_fill_boundary(fluxdiv(n))
        
@@ -97,7 +101,9 @@ contains
          call multifab_copy_c(rho_prev(n),1,rho(n),1,nspecies,rho_prev(n)%ng)
          call multifab_copy_c(fluxdiv_prev(n),1,fluxdiv(n),1,nspecies,fluxdiv_prev(n)%ng)
       end do 
-   
+      
+      ! Donev: We need to go through this together, I do not understand what you are doing exactly
+      
       !=====================
       ! Euler Predictor step
       !===================== 

@@ -10,8 +10,11 @@ module probin_multispecies_module
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
   real(kind=dp_t)    :: chi                 !maximum eigenvalue of diffusion matrix 
   real(kind=dp_t)    :: c_bc(2,max_species) !initial values for concentration, 2 for inside & outside circle
+  ! Donev: Delete this, never used
   real(kind=dp_t)    :: d_bc(max_species)   !initial values for diffusivities, presently scalar numbers 
+  ! Donev: Rename this to not contain _bc in the name: e.g., molmass
   real(kind=dp_t)    :: m_bc(max_species)   ! masses of nspecies
+  ! This should be renamed to Dbar_in (it has nothing to do with BCs)
   real(kind=dp_t)    :: Dbar_bc(max_element)! SM diffusion constant  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
   
@@ -23,7 +26,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ timeinteg_type   
   namelist /probin_multispecies/ c_bc
   namelist /probin_multispecies/ d_bc
-  namelist /probin_multispecies/ m_bc
+  namelist /probin_multispecies/ m_bc 
   namelist /probin_multispecies/ Dbar_bc
 
 contains
@@ -59,8 +62,10 @@ contains
     m_bc      = 1.0d0
     Dbar_bc   = 1.0d0
  
-    ! bc_tower strcuture in memory 
-    ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = rhot_tot+1,
+    ! bc_tower strecture in memory 
+    ! Donev: When you called initialize_bc in main you set num_scal_bc_in=nspecies
+    ! which is not consistent with below. It looks like you want num_scal_bc=3 ???
+    ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = scal_bc_comp+1,
     ! mol_frac = rho_tot+2, diff_coeff=tran_bc_comp
     rho_part_bc_comp = scal_bc_comp + 1
     mol_frac_bc_comp = scal_bc_comp + 2
@@ -116,6 +121,8 @@ contains
 
       farg = farg + 1
     end do
+    
+    ! Donev: Check that nspecies<=max_species and if not abort with error message
     
   end subroutine probin_multispecies_init
 

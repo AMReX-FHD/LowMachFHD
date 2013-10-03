@@ -77,6 +77,8 @@ module matvec_mul_module
         cp_ij=0.d0
         
         cp_ij = matmul(ap_ij, xp_ij)
+        ! Donev: In Fortran you can write directly xp_ij = matmul(ap_ij, xp_ij)
+        ! This is better as it may be optimized by the compiler better
         xp_ij = cp_ij
  
     end subroutine matvec_mul_comp 
