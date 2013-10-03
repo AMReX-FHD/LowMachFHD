@@ -18,6 +18,7 @@ module diffusive_fluxdiv_module
 
 contains
 
+  ! Donev: This should take fluxdiv as an argument and return it, and keep rho intent(in)
   subroutine diffusive_fluxdiv(mla, rho, Dbar, Gama, mass, dx, dt, the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
@@ -60,7 +61,7 @@ contains
        call multifab_build(molmtot(n),mla%la(n),1,ng)          ! molmtot is total molar mass 
        call multifab_build(molarconc(n),mla%la(n),nspecies,ng)
        call multifab_build(BinvGamma(n),mla%la(n),nspecies**2,ng)
-       call multifab_build(fluxdiv(n),mla%la(n),nspecies,ng) ! Donev: Needs no ghost cells
+       call multifab_build(fluxdiv(n),mla%la(n),nspecies,0) ! Donev: Needs no ghost cells
        do i=1,dm
           ! flux(i) is face-centered, has nspecies component, zero ghost cells & nodal in direction i
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
@@ -82,6 +83,7 @@ contains
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
     
     ! copy fluxdiv into rho (ghost cells aren't copied though allocated)
+    ! Donev: Get rid of this
     do n=1,nlevs
        call multifab_copy_c(rho(n),1,fluxdiv(n),1,nspecies,rho(n)%ng)
     end do 

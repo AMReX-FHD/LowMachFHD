@@ -42,6 +42,7 @@ contains
     
     ! copy the state into plotdata
     do n = 1,nlevs
+       ! Donev: Plot files should not include ghost cells
        call multifab_copy_c(plotdata(n),1,rho(n),1,nspecies,plotdata(n)%ng)
     enddo
     

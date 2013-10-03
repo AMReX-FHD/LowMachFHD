@@ -38,6 +38,7 @@ contains
  
     ! build cell-centered multifabs for nspecies and one ghost cell
     ! Donev: Instead of 1 ghost cell use rho%ng
+    ! Donev: fluxdiv should not have ghost cells
     do n=1,nlevs
        call multifab_build(rho_prev(n), mla%la(n),nspecies,rho_prev(n)%ng)
        call multifab_build(rho_prev1(n),mla%la(n),nspecies,rho_prev1(n)%ng)
@@ -51,14 +52,16 @@ contains
     
     ! copy rho in fluxdiv for nspecies including ghost cells of rho that has
     ! either been filled in init or at the end of this routine 
-    do n=1,nlevs
-       call multifab_copy_c(fluxdiv(n),1,rho(n),1,nspecies,fluxdiv(n)%ng)
-    end do 
+    ! Donev: Remove this
+    !do n=1,nlevs
+    !   call multifab_copy_c(fluxdiv(n),1,rho(n),1,nspecies,fluxdiv(n)%ng)
+    !end do 
     
     ! compute div-of-flux from rho after filling ghost cells. output will
     ! contain the interior box only, so one has to fill boundary or manually 
     ! fill the ghost cells 
-    call diffusive_fluxdiv(mla,fluxdiv,Dbar,Gama,mass,dx,dt,the_bc_level)
+    ! Donev: This should look like:
+    call diffusive_fluxdiv(mla,rho,fluxdiv,Dbar,Gama,mass,dx,dt,the_bc_level)
    
     ! update the ghost cells 
     ! Donev: This seems unnecessary
@@ -122,6 +125,7 @@ contains
       call diffusive_fluxdiv(mla,rho_prev,Dbar,Gama,mass,dx,dt,the_bc_level)
       
       ! fill the ghost cells of rho_prev
+      ! Donev: This needs to be done before calling fluxdiv routine
       do n=1,nlevs
          call multifab_fill_boundary(rho_prev(n))
         

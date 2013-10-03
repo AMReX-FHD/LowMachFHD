@@ -143,7 +143,7 @@ subroutine main_driver()
   ! nscal=nspecies temporarily
   ! Amit: num_tran_bc_comp (for Dbar)= 1
   ! Donev: Document exactly how the bc_comp are enumerated
-  ! Donev: CHECK THIS -- is there one for rho_tot?
+  ! Donev: It seems you want num_scal_bc_in=3
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, num_scal_bc_in=nspecies, num_tran_bc_in=1)
 
   do n=1,nlevs
