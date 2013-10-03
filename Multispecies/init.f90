@@ -15,6 +15,11 @@ module init_module
   public :: init_rho
   
   ! Donev: Add a list here of the different values of init_type and what they mean
+  ! init_type: 1=rho in concentric circle (Here we put two different values
+  ! inside and outside a circular region for 1-species and accordingly concentric
+  ! circles with two values for n-species), 2=constant gradient (Here we put a
+  ! constant rho and spatially distort proportional to x and y for 1-species and
+  ! accordingly for n-species.
 
 contains
   
@@ -64,7 +69,7 @@ contains
        ! fill non-periodic domain boundary ghost cells
        ! Donev: Do not comment this out, leave it in -- it will do nothing for periodic BCs
        ! Otherwise you will forget it later
-       !call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
+       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
     end do
 
   end subroutine init_rho
@@ -81,14 +86,14 @@ contains
     do row=1, nspecies  
        do column=1, row-1
           n=n+1
-          Dbar(row, column) = Dbar_bc(n)
+          Dbar(row, column) = Dbar_in(n)
           Dbar(column, row) = Dbar(row, column) ! symmetric
           Gama(row, column) = 0.d0       
           Gama(column, row) = Gama(row, column) ! symmetric
        enddo
        Dbar(row, row) = 0.d0      ! self-diffusion is zero
        Gama(row, row) = 1.d0      ! set to unit matrix for time being
-       mass(row)      = m_bc(row) ! populate species mass 
+       mass(row)      = molmass_in(row) ! populate species mass 
     enddo
 
   end subroutine populate_DbarGama
@@ -111,6 +116,9 @@ contains
     ! select problem type, 1=bubble, 2=constant gradient
     select case(init_type) 
     case(1) ! Donev: Add brief explanation in words what this case is
+    !=========================================================================
+    ! Initializing rho's in concentric circle at (Lx/2,Ly/2) with radius^2=0.1
+    !=========================================================================
       do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)
@@ -127,6 +135,9 @@ contains
       end do
   
     case(2) 
+    !========================================================
+    ! Initializing rho's with constant gradient for 2-species  
+    !========================================================
       do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)
@@ -134,7 +145,7 @@ contains
             !rho(i,j,1:nspecies) = c_bc(1,1:nspecies)
             rho(i,j,1) = c_bc(1,1) + 0.001d0*x - 0.002d0*y
             rho(i,j,2) = c_bc(1,2) + 0.003d0*x + 0.001d0*y
-            rho(i,j,3) = c_bc(1,3) + 0.002d0*x - 0.001d0*y
+            !rho(i,j,3) = c_bc(1,3) + 0.002d0*x - 0.001d0*y
          end do
       end do
     end select
@@ -156,6 +167,9 @@ contains
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
+    !================================================================================
+    ! Initializing rho's in concentric circle at (Lx/2,Ly/2,Lz/2) with radius^2=0.001
+    !================================================================================
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0

@@ -12,7 +12,7 @@ module convert_variables_module
 
   private
 
-  public :: convert_cons_to_prim, convert_cons_to_BinvGamma
+  public :: convert_cons_to_prim, compute_BinvGamma
 
 contains
 
@@ -107,7 +107,7 @@ contains
  
   end subroutine compute_molconc_rhotot_2d
 
-  subroutine convert_cons_to_BinvGamma(mla, rho, rho_tot, molarconc, BinvGamma, Dbar, & 
+  subroutine compute_BinvGamma(mla, rho, rho_tot, molarconc, BinvGamma, Dbar, & 
              Gama, mass, molmtot, the_bc_level)
    
     type(ml_layout), intent(in   )  :: mla
@@ -157,7 +157,7 @@ contains
        end do
     end do
 
-   end subroutine convert_cons_to_BinvGamma
+   end subroutine compute_BinvGamma
 
    subroutine compute_BinvGamma_2d(rho, rho_tot, molarconc, BinvGamma, Dbar, Gama, & 
                                    mass, molmtot, ng, lo, hi)
@@ -216,14 +216,14 @@ contains
                 molarconc(i,j,row) = tolerance
                 ! Donev: This should be tolerance*rho_tot(i,j)
                 ! This way it works correctly even if rho_tot has units of 1E55, for example
-                rho(i,j,row)       = tolerance                
+                rho(i,j,row)       = tolerance*rho_tot(i,j)                
              endif
              ! Donev: Remove this check: rho should never be close to zero!
              ! Also, you are comparing a number with units (rho) to a dimensionless number
              ! This is OK for molarconc, but not for rho!
-             if(rho_tot(i,j) .lt. tolerance) then
-                rho_tot(i,j) = tolerance
-             endif
+             !if(rho_tot(i,j) .lt. tolerance) then
+             !   rho_tot(i,j) = tolerance
+             !endif
           enddo
 
           ! calculate Bijprime matrix and massfraction W_i = rho_i/rho, molarconc is 

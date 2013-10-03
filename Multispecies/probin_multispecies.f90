@@ -10,12 +10,8 @@ module probin_multispecies_module
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
   real(kind=dp_t)    :: chi                 !maximum eigenvalue of diffusion matrix 
   real(kind=dp_t)    :: c_bc(2,max_species) !initial values for concentration, 2 for inside & outside circle
-  ! Donev: Delete this, never used
-  real(kind=dp_t)    :: d_bc(max_species)   !initial values for diffusivities, presently scalar numbers 
-  ! Donev: Rename this to not contain _bc in the name: e.g., molmass
-  real(kind=dp_t)    :: m_bc(max_species)   ! masses of nspecies
-  ! This should be renamed to Dbar_in (it has nothing to do with BCs)
-  real(kind=dp_t)    :: Dbar_bc(max_element)! SM diffusion constant  
+  real(kind=dp_t)    :: molmass_in(max_species)   ! masses of nspecies
+  real(kind=dp_t)    :: Dbar_in(max_element)! SM diffusion constant  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
   
   namelist /probin_multispecies/ nspecies
@@ -25,9 +21,8 @@ module probin_multispecies_module
   namelist /probin_multispecies/ inverse_type   
   namelist /probin_multispecies/ timeinteg_type   
   namelist /probin_multispecies/ c_bc
-  namelist /probin_multispecies/ d_bc
-  namelist /probin_multispecies/ m_bc 
-  namelist /probin_multispecies/ Dbar_bc
+  namelist /probin_multispecies/ molmass_in 
+  namelist /probin_multispecies/ Dbar_in
 
 contains
 
@@ -58,9 +53,9 @@ contains
     init_type = 1
     inverse_type = 1
     timeinteg_type = 1
-    c_bc      = 1.0d0
-    m_bc      = 1.0d0
-    Dbar_bc   = 1.0d0
+    c_bc        = 1.0d0
+    molmass_in  = 1.0d0
+    Dbar_in     = 1.0d0
  
     ! bc_tower strecture in memory 
     ! Donev: When you called initialize_bc in main you set num_scal_bc_in=nspecies
@@ -96,32 +91,36 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) nspecies
-      case ('--max_step')
+       case ('--max_step')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_step
-      case ('--init_type')
+       case ('--init_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) init_type
-      case ('--inverse_type')
+       case ('--inverse_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) inverse_type
-      case ('--integrator_type')
+       case ('--integrator_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) timeinteg_type
-      case ('--')
+       case ('--')
           farg = farg + 1
           exit
-      case default
+       case default
 
-      end select
-
-      farg = farg + 1
+       end select
+       farg = farg + 1
     end do
     
+    if(nspecies.gt.max_species) then 
+       call bl_error(" nspecies greater than max_species - Aborting")
+       stop
+    endif
+
     ! Donev: Check that nspecies<=max_species and if not abort with error message
     
   end subroutine probin_multispecies_init

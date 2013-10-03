@@ -26,8 +26,8 @@
  timeinteg_type = 1                    ! integrator type: 1=Euler explicit, 2=predictor-corrector
                                        ! 3=midpoint method, 4=3rd order Runge-Kutta 
  c_bc(1:2,1) = 0.5 0.3                 ! initial concentrations for species 1
- c_bc(1:2,2) = 0.6 0.3                ! initial concentrations for species 2
- m_bc(1:2)   = 1.0 1.0                 ! molecular mass of n-species
- Dbar_bc(1:1)= 0.5                     ! SM diffusion constant arranged in lower-triangle
+ c_bc(1:2,2) = 0.6 0.3                 ! initial concentrations for species 2
+ molmass_in(1:2)   = 1.0 1.0           ! molar mass of n-species
+ Dbar_in(1:1)= 0.5                     ! SM diffusion constant arranged in lower-triangle
  
 /

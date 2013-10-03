@@ -30,7 +30,7 @@ contains
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
-    integer i, dm, n, nlevs
+    integer i, dm, n, ng,nlevs
 
     ! local array of multifabs for grad and div; one for each direction
     type(multifab) :: flux(mla%nlevel,mla%dim)
@@ -48,6 +48,7 @@ contains
  
     dm    = mla%dim     ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
+    ng    = rho(1)%ng   ! number of ghosts for rho
  
     ! build the local multifabs
     do n=1,nlevs
@@ -55,11 +56,11 @@ contains
        ! Donev: Fluxdiv should have NO ghost cells -- it does not need them
        ! Donev: Instead of hard-wiring 1 ghost cell, use ng=rho%ng and use ng
        ! This way if one changes rho to have 2 ghost cells everything works correctly
-       call multifab_build(rho_tot(n),mla%la(n),1,1)          ! rho_tot is addition of all component
-       call multifab_build(molmtot(n),mla%la(n),1,1)          ! molmtot is total molar mass 
-       call multifab_build(molarconc(n),mla%la(n),nspecies,1)
-       call multifab_build(BinvGamma(n),mla%la(n),nspecies**2,1)
-       call multifab_build(fluxdiv(n),mla%la(n),nspecies,1) ! Donev: Needs no ghost cells
+       call multifab_build(rho_tot(n),mla%la(n),1,ng)          ! rho_tot is addition of all component
+       call multifab_build(molmtot(n),mla%la(n),1,ng)          ! molmtot is total molar mass 
+       call multifab_build(molarconc(n),mla%la(n),nspecies,ng)
+       call multifab_build(BinvGamma(n),mla%la(n),nspecies**2,ng)
+       call multifab_build(fluxdiv(n),mla%la(n),nspecies,ng) ! Donev: Needs no ghost cells
        do i=1,dm
           ! flux(i) is face-centered, has nspecies component, zero ghost cells & nodal in direction i
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
@@ -68,12 +69,11 @@ contains
     
     ! compute molarconc (primary) and rho_tot (primary) for every cell from rho(1:nspecies) 
     ! Donev: When the code is finalized this call should be outside, in advance, not here
-    call convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, molmtot, the_bc_level)
+    call convert_cons_to_prim(mla,rho,rho_tot,molarconc,mass,molmtot,the_bc_level)
 
     ! compute cell-centered B^(-1)*Gamma  
     ! Donev: Rename to compute_BinvGamma (this uses both primary and conserved vars)
-    call convert_cons_to_BinvGamma(mla, rho, rho_tot, molarconc, BinvGamma, Dbar, Gama, & 
-                                   mass, molmtot, the_bc_level)
+    call compute_BinvGamma(mla,rho,rho_tot,molarconc,BinvGamma,Dbar,Gama,mass,molmtot,the_bc_level)
  
     ! compute the face-centered flux in each direction. 
     call diffusive_flux(mla, molarconc, BinvGamma, flux, dx, the_bc_level)

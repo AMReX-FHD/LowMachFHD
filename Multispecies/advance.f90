@@ -28,8 +28,8 @@ contains
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
-    type(multifab) :: rho_prev(mla%nlevel), rho_prev1(mla%nlevel)
-    type(multifab) :: rho_intm(mla%nlevel), rho_intm1(mla%nlevel)
+    type(multifab) :: rho_prev(mla%nlevel),rho_prev1(mla%nlevel)
+    type(multifab) :: rho_intm(mla%nlevel),rho_intm1(mla%nlevel)
     type(multifab) :: fluxdiv(mla%nlevel)
     type(multifab) :: fluxdiv_prev(mla%nlevel)
     integer        :: n, nlevs
@@ -39,12 +39,12 @@ contains
     ! build cell-centered multifabs for nspecies and one ghost cell
     ! Donev: Instead of 1 ghost cell use rho%ng
     do n=1,nlevs
-       call multifab_build(rho_prev(n),mla%la(n),nspecies,1)
-       call multifab_build(rho_prev1(n),mla%la(n),nspecies,1)
-       call multifab_build(rho_intm(n),mla%la(n),nspecies,1)
-       call multifab_build(rho_intm1(n),mla%la(n),nspecies,1)
-       call multifab_build(fluxdiv(n),mla%la(n),nspecies,1)
-       call multifab_build(fluxdiv_prev(n),mla%la(n),nspecies,1)
+       call multifab_build(rho_prev(n), mla%la(n),nspecies,rho_prev(n)%ng)
+       call multifab_build(rho_prev1(n),mla%la(n),nspecies,rho_prev1(n)%ng)
+       call multifab_build(rho_intm(n), mla%la(n),nspecies,rho_intm(n)%ng)
+       call multifab_build(rho_intm1(n),mla%la(n),nspecies,rho_intm1(n)%ng)
+       call multifab_build(fluxdiv(n),mla%la(n),nspecies,fluxdiv(n)%ng)
+       call multifab_build(fluxdiv_prev(n),mla%la(n),nspecies,fluxdiv_prev(n)%ng)
     enddo
     
     ! Donev: The reasoning about ghost cells here is wrong, come to discuss in person
@@ -62,13 +62,13 @@ contains
    
     ! update the ghost cells 
     ! Donev: This seems unnecessary
-    do n=1,nlevs
-       call multifab_fill_boundary(fluxdiv(n))
-       
-       ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(fluxdiv(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), & 
-                            dx(n,:),.false.)
-    end do 
+    !do n=1,nlevs
+    !   call multifab_fill_boundary(fluxdiv(n))
+    !   
+    !   ! fill non-periodic domain boundary ghost cells
+    !   call multifab_physbc(fluxdiv(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), & 
+    !                        dx(n,:),.false.)
+    !end do 
  
     select case(timeinteg_type)
  

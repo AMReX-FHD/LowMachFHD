@@ -142,7 +142,7 @@ subroutine main_driver()
   ! last argument to initialize_bc is the number of scalar variables
   ! nscal=nspecies temporarily
   ! Amit: num_tran_bc_comp (for Dbar)= 1
-  ! Dpnev: Document exactly how the bc_comp are enumerated
+  ! Donev: Document exactly how the bc_comp are enumerated
   ! Donev: CHECK THIS -- is there one for rho_tot?
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, num_scal_bc_in=nspecies, num_tran_bc_in=1)
 
