@@ -138,13 +138,12 @@ subroutine main_driver()
   !=======================================================
   ! Setup boundary condition bc_tower
   !=======================================================
-  
-  ! last argument to initialize_bc is the number of scalar variables
-  ! nscal=nspecies temporarily
-  ! Amit: num_tran_bc_comp (for Dbar)= 1
-  ! Donev: Document exactly how the bc_comp are enumerated
-  ! Donev: It seems you want num_scal_bc_in=3
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, num_scal_bc_in=nspecies, num_tran_bc_in=1)
+ 
+  ! bc_tower structure in memory 
+  ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = scal_bc_comp+1,
+  ! mol_frac = rho_tot+2, diff_coeff=tran_bc_comp; num_tran_bc_comp = 1
+  ! rules for scalar variables is 3 (1 rho_tot, 1 rho_i and 1 mol_frac)
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, num_scal_bc_in=3, num_tran_bc_in=1)
 
   do n=1,nlevs
      ! define level n of the_bc_tower

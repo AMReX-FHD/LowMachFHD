@@ -14,7 +14,6 @@ module init_module
 
   public :: init_rho
   
-  ! Donev: Add a list here of the different values of init_type and what they mean
   ! init_type: 1=rho in concentric circle (Here we put two different values
   ! inside and outside a circular region for 1-species and accordingly concentric
   ! circles with two values for n-species), 2=constant gradient (Here we put a
@@ -62,13 +61,10 @@ contains
           end select
        end do
 
-       ! filling up ghost cells for two adjacent grids at the same level
-       ! including periodic domain boundary ghost cells
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
-       ! Donev: Do not comment this out, leave it in -- it will do nothing for periodic BCs
-       ! Otherwise you will forget it later
        call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
     end do
 
@@ -113,9 +109,9 @@ contains
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
     ! for specific box, now start loop over alloted cells     
-    ! select problem type, 1=bubble, 2=constant gradient
     select case(init_type) 
-    case(1) ! Donev: Add brief explanation in words what this case is
+    
+    case(1) 
     !=========================================================================
     ! Initializing rho's in concentric circle at (Lx/2,Ly/2) with radius^2=0.1
     !=========================================================================

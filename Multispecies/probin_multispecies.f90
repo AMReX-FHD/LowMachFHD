@@ -8,15 +8,17 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: chi                 !maximum eigenvalue of diffusion matrix 
-  real(kind=dp_t)    :: c_bc(2,max_species) !initial values for concentration, 2 for inside & outside circle
-  real(kind=dp_t)    :: molmass_in(max_species)   ! masses of nspecies
-  real(kind=dp_t)    :: Dbar_in(max_element)! SM diffusion constant  
+  real(kind=dp_t)    :: chi,Temp,Press  !(chi=maximum eigenvalue of diffusion matrix)
+  real(kind=dp_t)    :: c_bc(2,max_species)  !initial values for concentration, 2 for inside & outside circle
+  real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
+  real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step
   namelist /probin_multispecies/ chi
+  namelist /probin_multispecies/ Temp
+  namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ init_type
   namelist /probin_multispecies/ inverse_type   
   namelist /probin_multispecies/ timeinteg_type   
@@ -56,10 +58,10 @@ contains
     c_bc        = 1.0d0
     molmass_in  = 1.0d0
     Dbar_in     = 1.0d0
+    Temp        = 1.0d0
+    Press       = 1.0d0
  
-    ! bc_tower strecture in memory 
-    ! Donev: When you called initialize_bc in main you set num_scal_bc_in=nspecies
-    ! which is not consistent with below. It looks like you want num_scal_bc=3 ???
+    ! bc_tower structure in memory 
     ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = scal_bc_comp+1,
     ! mol_frac = rho_tot+2, diff_coeff=tran_bc_comp
     rho_part_bc_comp = scal_bc_comp + 1
@@ -116,12 +118,11 @@ contains
        farg = farg + 1
     end do
     
+    ! check that nspecies<=max_species and if not, abort with error message
     if(nspecies.gt.max_species) then 
        call bl_error(" nspecies greater than max_species - Aborting")
        stop
     endif
-
-    ! Donev: Check that nspecies<=max_species and if not abort with error message
     
   end subroutine probin_multispecies_init
 

@@ -35,7 +35,6 @@ module matvec_mul_module
        lo(2) = lbound(ap,2)  ! so in the subroutine loop from lo to hi without ng.
        hi(1) = ubound(ap,1)
        hi(2) = ubound(ap,2)
-       !print*, 'lo(1), hi(1)=',lo(1),hi(1), 'lo(2), hi(2)=',lo(2),hi(2)
 
        select case (dm)
          case (2)
@@ -60,6 +59,7 @@ module matvec_mul_module
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
           call matvec_mul_comp(xp(i,j,:), ap(i,j,:))
+          !print*, xp(i,j,:), ap(i,j,:), i, j
        end do
     end do
 
@@ -71,15 +71,7 @@ module matvec_mul_module
         real(kind=dp_t), dimension(nc),    intent(inout) :: xp_ij
         real(kind=dp_t), dimension(nc,nc), intent(in)    :: ap_ij  
         
-        ! local variables
-        ! use dummy matrix cp_ij to store the matrix-vector multiplication
-        real(kind=dp_t), dimension(nc)  :: cp_ij  
-        cp_ij=0.d0
-        
-        cp_ij = matmul(ap_ij, xp_ij)
-        ! Donev: In Fortran you can write directly xp_ij = matmul(ap_ij, xp_ij)
-        ! This is better as it may be optimized by the compiler better
-        xp_ij = cp_ij
+        xp_ij = matmul(ap_ij, xp_ij)
  
     end subroutine matvec_mul_comp 
 

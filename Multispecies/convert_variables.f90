@@ -176,7 +176,7 @@ contains
     ! local variables
     integer          :: i,j,row,column,info
     real(kind=dp_t)  :: tolerance, Sum_knoti              ! tolerance set for pinverse 
-    real(kind=dp_t)  :: Temp, Pres, alpha1    
+    real(kind=dp_t)  :: alpha1    
 
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Bijprime, Bdag, Sdag, Lonsager
@@ -184,9 +184,6 @@ contains
     real(kind=dp_t), dimension(nspecies)          :: S, W, alpha, Checkmat, work 
     integer, dimension(nspecies)                  :: ipiv
 
-    ! Donev: Eventually Temp and Pres should be input values, not hard-wired (we can discuss how in person)
-    Temp      = 1.0d0
-    Pres      = 1.0d0
     tolerance = 1e-13
 
     ! for specific box, now start loops over alloted cells    
@@ -214,19 +211,11 @@ contains
           do row=1, nspecies
              if(molarconc(i,j,row) .lt. tolerance) then
                 molarconc(i,j,row) = tolerance
-                ! Donev: This should be tolerance*rho_tot(i,j)
-                ! This way it works correctly even if rho_tot has units of 1E55, for example
                 rho(i,j,row)       = tolerance*rho_tot(i,j)                
              endif
-             ! Donev: Remove this check: rho should never be close to zero!
-             ! Also, you are comparing a number with units (rho) to a dimensionless number
-             ! This is OK for molarconc, but not for rho!
-             !if(rho_tot(i,j) .lt. tolerance) then
-             !   rho_tot(i,j) = tolerance
-             !endif
           enddo
 
-          ! calculate Bijprime matrix and massfraction W_i = rho_i/rho, molarconc is 
+          ! compute Bijprime matrix and massfraction W_i = rho_i/rho; molarconc is 
           ! expressed in terms of molmtot,mi,rhotot etc. 
           do row=1, nspecies  
              do column=1, row-1
@@ -260,8 +249,10 @@ contains
           ! select LAPACK inversion type, 1=inverse, 2=pseudo inverse 
           select case(inverse_type) 
            
-          !%%%%%%%%%%%%%%%%%%% Using Inverse %%%%%%%%%%%%%!
           case(1)
+          !==========================================================
+          ! Using Inverse 
+          !==========================================================
  
              ! compute A^(-1)*B = c;  
              !call la_gesvx(A=Bijprime, B=Gama, X=BdagGamma)
@@ -274,12 +265,13 @@ contains
              ! populate Bdagger with B^(-1)
              Bdag = Bijprime 
              
-          !%%%%%%%%%%%%%%%%%%% Using pseudoinverse %%%%%%%%%%%%%!
           case(2) 
+          !==========================================================
+          ! Using pseudoinverse 
+          !==========================================================
 
              ! SVD decomposition of Bijprime = U * S * VTranspose; note that Bijprime 
-             ! is changed. also V=(VT)T, UT = (U)T are needed for pseudoinverse of
-             ! Bprime.
+             ! is changed. also V=(VT)T, UT = (U)T are needed for pseudoinverse of Bprime.
              call la_gesvd(Bijprime, S, U, VT)
              V = transpose(VT)
              UT = transpose(U)
@@ -297,12 +289,12 @@ contains
                 endif 
              enddo
 
-             ! calculate Bdag = V*Sdag*UT, the pseudoinverse of Bprime & alpha.
+             ! compute Bdag = V*Sdag*UT, the pseudoinverse of Bprime & alpha.
              Bdag = matmul(V, matmul(Sdag, UT))
 
           end select
-          !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%!
-            
+           
+          ! compute alpha 
           alpha = matmul(Bdag, W)
 
           ! substract alpha from every row element of Bdag to get Bdag*W=0
@@ -312,13 +304,13 @@ contains
              enddo
           enddo
 
-          ! calculate Onsager matrix L
+          ! compute Onsager matrix L
           do column=1, nspecies
              do row=1, nspecies
                 BdagCapW(row, column) = Bdag(row,column)*W(column)
              enddo
           enddo
-          Lonsager = -rho_tot(i,j) * Temp * BdagCapW/Pres
+          Lonsager = -rho_tot(i,j) * Temp * BdagCapW/Press
             
           ! compute B^(-1)*Gamma = Bdag*Gamma. is_ideal_mixture = .true. for ideal mixture
           is_ideal_mixture = .false.
