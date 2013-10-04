@@ -57,6 +57,7 @@ contains
       
       ! compute rho(t+dt)=rho(t)+dt*fluxdiv(t) (only interior) 
       do n=1,nlevs
+         ! Donev: You can just call saxpy here
          call multifab_saxpy_3(rho(n),dt,fluxdiv(n))
       end do 
     
@@ -68,6 +69,7 @@ contains
       !====================================================================================
       
       ! store old rho in rho_star 
+      ! Donev: Instead of this, use saxpy_4 below (just call saxpy generic)
       do n=1,nlevs
          call multifab_copy_c(rho_star(n),1,rho(n),1,nspecies,rho(n)%ng)
       end do 

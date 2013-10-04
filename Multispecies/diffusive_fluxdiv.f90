@@ -22,7 +22,7 @@ contains
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)
-    type(multifab) , intent(out  ) :: fluxdiv(:)
+    type(multifab) , intent(inout) :: fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: Dbar(:,:)
     real(kind=dp_t), intent(in   ) :: Gama(:,:)
     real(kind=dp_t), intent(in   ) :: mass(:) 
