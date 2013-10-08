@@ -67,9 +67,10 @@ contains
     ! compute cell-centered B^(-1)*Gamma  
     call compute_BinvGamma(mla,rho,rho_tot,molarconc,BinvGamma,Dbar,Gama,mass,molmtot,the_bc_level)
  
-    ! compute the face-centered flux in each direction. 
+    ! compute the face-centered flux (each direction: cells+1 faces while cells
+    ! contain: interior + 2 ghost cells) 
     call diffusive_flux(mla,molarconc,BinvGamma,flux,dx,the_bc_level)
-    
+
     ! compute divergence of the flux 
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
     

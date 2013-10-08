@@ -35,6 +35,7 @@ module matvec_mul_module
        lo(2) = lbound(ap,2)  ! so in the subroutine loop from lo to hi without ng.
        hi(1) = ubound(ap,1)
        hi(2) = ubound(ap,2)
+       !print*, lo(1:2),hi(1:2)
 
        select case (dm)
          case (2)
@@ -56,10 +57,11 @@ module matvec_mul_module
     real(kind=dp_t), intent(in)    :: ap(lo(1):,lo(2):,:)
     integer                        :: i,j,nc
 
+    !print*, lo(1:2), hi(1:2)
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
           call matvec_mul_comp(xp(i,j,:), ap(i,j,:))
-          !print*, xp(i,j,:), ap(i,j,:), i, j
+          print*, xp(i,j,:) 
        end do
     end do
 

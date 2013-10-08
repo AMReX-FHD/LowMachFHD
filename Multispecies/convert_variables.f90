@@ -186,7 +186,7 @@ contains
 
     tolerance = 1e-13
 
-    ! for specific box, now start loops over alloted cells    
+    ! for specific box, now start loops over alloted cells 
     do j=lo(2)-ng,hi(2)+ng
        do i=lo(1)-ng,hi(1)+ng
         
