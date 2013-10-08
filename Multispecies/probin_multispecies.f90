@@ -8,8 +8,8 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: chi,Temp,Press  !(chi=maximum eigenvalue of diffusion matrix)
-  real(kind=dp_t)    :: c_bc(2,max_species)  !initial values for concentration, 2 for inside & outside circle
+  real(kind=dp_t)    :: chi,Temp,Press          ! chi is maximum eigenvalue of diffusion matrix
+  real(kind=dp_t)    :: c_bc(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 

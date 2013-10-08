@@ -87,17 +87,17 @@ contains
              rho_tot_local = rho_tot_local + rho(i,j,n)
           enddo         
           rho_tot(i,j) = rho_tot_local
-          if(i.eq.4 .and. j.eq.4)  write(*,*), "rho1=",rho(i,j,1),"rho2=",rho(i,j,2),"rho1+rho2=",rho(i,j,1)+rho(i,j,2)
+          !if(i.eq.4 .and. j.eq.4)  print*, "rho1=",rho(i,j,1),"rho2=",rho(i,j,2),"rho1+rho2=",rho_tot(i,j)
 
-          ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i)
+          ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i))
           Sum_woverm=0.d0
           do n=1, nspecies  
              W(n) = rho(i,j,n)/rho_tot(i,j)
              Sum_woverm = Sum_woverm + W(n)/mass(n)
           enddo
           molmtot(i,j) = 1.0d0/Sum_woverm 
- 
-          ! calculate molar concentrations in each cell 
+  
+          ! calculate molar concentrations in each cell (x_i=m*w_i/m_i) 
           do n=1, nspecies 
              molarconc(i,j,n) = molmtot(i,j)*W(n)/mass(n)
           enddo

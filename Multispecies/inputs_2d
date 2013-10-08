@@ -1,7 +1,7 @@
 &probin_common
  
  dim_in = 2                           !problem dimension
- plot_int = 10                        !plot interval
+ plot_int = 100                        !plot interval
  max_grid_size(1:2) = 16 16           !individual box size 
 
  ! Grid size
@@ -17,9 +17,9 @@
 /
 
 &probin_multispecies
- nspecies = 3                         ! number of species
- max_step = 10                        ! total number of computational step
- chi      = 0.5                       ! max eigenvalue of diffusionmatrix Dbar_bc 
+ nspecies = 2                         ! number of species
+ max_step = 1000                        ! total number of computational step
+ chi      = 1.0                       ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                       ! Temperature
  Press    = 1.0                       ! Pressure
  !include_temperature = T             ! T or F
@@ -30,6 +30,6 @@
  c_bc(1:2,1) = 1.0 0.5                ! initial concentrations for species 1
  c_bc(1:2,2) = 0.8 0.2                ! initial concentrations for species 2
  molmass_in(1:2) = 1.0 1.0            ! molar mass of n-species
- Dbar_in(1:1)= 0.5                    ! SM diffusion constant arranged in lower-triangle
+ Dbar_in(1:1)= 1.0                    ! SM diffusion constant arranged in lower-triangle
  
 /

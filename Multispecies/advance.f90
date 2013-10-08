@@ -36,16 +36,16 @@ contains
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     ! fluxdiv needs no ghost cells as all computations will be in box interior 
     do n=1,nlevs
-       call multifab_build(rhonew(n),      mla%la(n),nspecies,rho(n)%ng)
-       call multifab_build(fluxdiv(n),     mla%la(n),nspecies,0) 
-       call multifab_build(fluxdivnew(n),  mla%la(n),nspecies,0)
+       call multifab_build(rhonew(n),    mla%la(n),nspecies,rho(n)%ng)
+       call multifab_build(fluxdiv(n),   mla%la(n),nspecies,0) 
+       call multifab_build(fluxdivnew(n),mla%la(n),nspecies,0)
     enddo
    
-    ! set new quantities to zero 
+    ! initialize new quantities to zero 
       do n=1,nlevs
-         call setval(rhonew(n),     0.d0, all=.true.)
-         call setval(fluxdiv(n),    0.d0, all=.true.)
-         call setval(fluxdivnew(n), 0.d0, all=.true.)
+         call setval(rhonew(n),    0.d0,all=.true.)
+         call setval(fluxdiv(n),   0.d0,all=.true.)
+         call setval(fluxdivnew(n),0.d0,all=.true.)
       end do 
  
    !==================================================================================
@@ -53,10 +53,10 @@ contains
    !==================================================================================
  
       case(1)
-      !====================
+      !===================================
       ! Euler time update 
       ! rho(t+dt)  =rho(t) + dt*fluxdiv(t) 
-      !====================
+      !===================================
     
       ! compute fluxdiv; fluxdiv contain results in interior only, while rho contains 
       ! ghost values filled in init or end of this code
