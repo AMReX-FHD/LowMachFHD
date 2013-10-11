@@ -87,7 +87,6 @@ contains
              rho_tot_local = rho_tot_local + rho(i,j,n)
           enddo         
           rho_tot(i,j) = rho_tot_local
-          !if(i.eq.4 .and. j.eq.4)  print*, "rho1=",rho(i,j,1),"rho2=",rho(i,j,2),"rho1+rho2=",rho_tot(i,j)
 
           ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i))
           Sum_woverm=0.d0
@@ -101,6 +100,7 @@ contains
           do n=1, nspecies 
              molarconc(i,j,n) = molmtot(i,j)*W(n)/mass(n)
           enddo
+
         
        enddo
     enddo
@@ -246,7 +246,9 @@ contains
              enddo
           enddo
         
+          !===============================================================          
           ! select LAPACK inversion type, 1=inverse, 2=pseudo inverse 
+          !===============================================================          
           select case(inverse_type) 
            
           case(1)
@@ -263,8 +265,8 @@ contains
              call dgetri(nspecies, Bijprime, nspecies, ipiv, work, nspecies, info) 
   
              ! populate Bdagger with B^(-1)
-             Bdag = Bijprime 
-             
+             Bdag = Bijprime
+     
           case(2) 
           !==========================================================
           ! Using pseudoinverse 
@@ -293,7 +295,8 @@ contains
              Bdag = matmul(V, matmul(Sdag, UT))
 
           end select
-           
+          !===============================================================          
+ 
           ! compute alpha 
           alpha = matmul(Bdag, W)
 
@@ -310,7 +313,7 @@ contains
                 BdagCapW(row, column) = Bdag(row,column)*W(column)
              enddo
           enddo
-          Lonsager = -rho_tot(i,j) * Temp * BdagCapW/Press
+          Lonsager = -rho_tot(i,j)*Temp*BdagCapW/Press
             
           ! compute B^(-1)*Gamma = Bdag*Gamma. is_ideal_mixture = .true. for ideal mixture
           is_ideal_mixture = .false.
@@ -320,17 +323,22 @@ contains
              BdagGamma = matmul(Bdag, Gama)
           endif 
 
+          !print*, i,j,"mol1=",molarconc(i,j,1),"mol2=",molarconc(i,j,2)
           ! check Bdag*w = 0 
           if(.false.) then
           Checkmat = matmul(Bdag, W)
-            if(i.eq.8 .and. j.eq.11) then
+            if(i.eq.7 .and. j.eq.14) then
+               print*, "rho1=",rho(i,j,1),"rho2=",rho(i,j,2),"rho1+rho2=",rho_tot(i,j)
+               print*, "rho1/rho=",W(1),"rho2/rho=",W(2),"w1+w2=",W(1)+W(2)
+               print*, "mol1=",molarconc(i,j,1),"mol2=",molarconc(i,j,2),"mol1+mol2=",molmtot(i,j)
               do row=1, nspecies
                 do column=1, nspecies
-                   print*, BdagGamma(row, column)
-                   print*, Lonsager(row, column)
-                   print*, Gama(row, column)
+                   print*, BdagGamma(row, column)/rho_tot(i,j) 
+                   !print*, BdagGamma(row, column)
+                   !print*, Lonsager(row, column)
+                   !print*, Gama(row, column)
                 enddo
-                print*, Checkmat(row) 
+                !print*, Checkmat(row) 
                 print*, '' 
               enddo
             endif

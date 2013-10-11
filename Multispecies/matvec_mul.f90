@@ -61,9 +61,13 @@ module matvec_mul_module
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
           call matvec_mul_comp(xp(i,j,:), ap(i,j,:))
-          print*, xp(i,j,:) 
+          !if(i.eq.7 .and. j.eq.14) print*, 'x-flux / y-flux'
+          !if(i.eq.7 .and. j.eq.14) print*, "flux1=",xp(i,j,1), "flux2=",xp(i,j,2),"flux1+flux2=",xp(i,j,1)+xp(i,j,2) 
+          !print*, i,j,"x-flux=",xp(i,j,1)!, "x-flux=",xp(i,j,2)
        end do
     end do
+          !print*, '' 
+          !print*, "Now y-flux for 2-species"
 
     contains 
     
