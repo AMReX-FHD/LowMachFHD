@@ -64,7 +64,7 @@ contains
       
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rho(n),dt,fluxdiv(n))
+         call saxpy(rho(n),-dt,fluxdiv(n))
       end do 
     
       case(2)

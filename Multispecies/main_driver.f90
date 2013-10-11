@@ -176,6 +176,7 @@ subroutine main_driver()
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
   dt = 0.1d0*dx(1,1)**2/(2.d0*chi)
+  write(*,*) "Using time step dt=", dt
  
   do istep=1,max_step
 
