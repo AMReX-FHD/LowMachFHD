@@ -104,7 +104,7 @@ contains
  
     ! local varables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,L(2)
+    real(kind=dp_t)  :: x,y,sigma,L(2)
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -144,6 +144,25 @@ contains
             !rho(i,j,3) = c_bc(1,3) + 0.002d0*x - 0.001d0*y
          end do
       end do
+
+    case(3) 
+    !========================================================
+    ! Initializing rho's in Gaussian so as rho_tot=1.0
+    !========================================================
+    sigma = L(1)/10.0d0  ! variance
+  
+    do j=lo(2),hi(2)
+         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         do i=lo(1),hi(1)
+            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+         
+            rho(i,j,1) = exp(-((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)/sigma**2) 
+            rho(i,j,2) = 1.0d0 - exp(-((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)/sigma**2) 
+
+         end do
+      end do
+     
+
     end select
    
     end subroutine init_rho_2d

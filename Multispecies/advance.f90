@@ -88,7 +88,7 @@ contains
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rhonew(n),dt,fluxdiv(n))
+         call saxpy(rhonew(n),-dt,fluxdiv(n))
       end do 
    
       ! update values of the ghost cells of rhonew
@@ -108,8 +108,8 @@ contains
 
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
-         call saxpy(rho(n),dt*0.5d0,fluxdiv(n))
-         call saxpy(rho(n),dt*0.5d0,fluxdivnew(n))
+         call saxpy(rho(n),-dt*0.5d0,fluxdiv(n))
+         call saxpy(rho(n),-dt*0.5d0,fluxdivnew(n))
       enddo
  
       case(3)
@@ -129,7 +129,7 @@ contains
       
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
-         call saxpy(rhonew(n),0.5d0*dt,fluxdiv(n))
+         call saxpy(rhonew(n),-0.5d0*dt,fluxdiv(n))
       end do 
 
       ! update values of the ghost cells of rhonew
@@ -145,7 +145,7 @@ contains
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rho(n),dt,fluxdivnew(n))
+         call saxpy(rho(n),-dt,fluxdivnew(n))
       end do 
       
       case(4)
@@ -170,7 +170,7 @@ contains
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rhonew(n),dt,fluxdiv(n))
+         call saxpy(rhonew(n),-dt,fluxdiv(n))
       end do 
    
       ! update values of the ghost cells of rhonew
@@ -191,8 +191,8 @@ contains
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
          call multifab_mult_mult_s(rhonew(n),0.25d0)
-         call saxpy(rhonew(n),0.75d0,rho(n))
-         call saxpy(rhonew(n),0.25d0*dt,fluxdivnew(n))
+         call saxpy(rhonew(n), 0.75d0,   rho(n))
+         call saxpy(rhonew(n),-0.25d0*dt,fluxdivnew(n))
       end do 
 
       ! update values of the ghost cells of rho_star
@@ -218,8 +218,8 @@ contains
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
          call multifab_mult_mult_s(rho(n),(1.0d0/3.0d0))
-         call saxpy(rho(n),(2.0d0/3.0d0),rhonew(n))
-         call saxpy(rho(n),(2.0d0/3.0d0)*dt,fluxdivnew(n))
+         call saxpy(rho(n), (2.0d0/3.0d0),   rhonew(n))
+         call saxpy(rho(n),-(2.0d0/3.0d0)*dt,fluxdivnew(n))
       end do 
 
     !=============================================================================================
