@@ -1,4 +1,4 @@
-module advance_timestep_module
+module advance_timestep_simple_module
 
   use ml_layout_module
   use multifab_module
@@ -12,6 +12,7 @@ module advance_timestep_module
   use mk_diffusive_fluxdiv_module
   use mk_grav_force_module
   use mk_stochastic_fluxdiv_module
+  use bds_module
   use gmres_module
   use init_module
   use div_and_grad_module
@@ -20,7 +21,7 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef, grav
   use probin_common_module, only: fixed_dt
-  use probin_module, only: use_barodiffusion
+  use probin_module, only: use_barodiffusion, use_bds
 
   use analysis_module
 
@@ -28,11 +29,12 @@ module advance_timestep_module
 
   private
 
-  public :: advance_timestep
+  public :: advance_timestep_simple
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
+  subroutine advance_timestep_simple( &
+                              mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
                               gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
@@ -91,7 +93,7 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    theta_fac = 1.d0/fixed_dt
+    theta_fac = 0.d0
 
     allocate(vel_bc_t_old  (nlevs,size(vel_bc_t,dim=2)))
     allocate(vel_bc_t_delta(nlevs,size(vel_bc_t,dim=2)))
@@ -194,69 +196,13 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 1 - Forward-Euler Scalar Predictor
+    ! Step 1 - Crank-Nicolson Velocity Solver
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! set s_update to A^n for scalars
-    call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,nscal)
-
-    ! add D^n  for rho1 to s_update
-    ! add St^n for rho1 to s_update
-    ! add baro-diffusion^n to s_update
-    do n=1,nlevs
-       call multifab_plus_plus_c(s_update(n),2,rhoc_d_fluxdiv(n),1,1,0)
-       call multifab_plus_plus_c(s_update(n),2,rhoc_s_fluxdiv(n),1,1,0)
-       call multifab_plus_plus_c(s_update(n),2,rhoc_b_fluxdiv(n),1,1,0)
-    end do
-
-    ! set snew = s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(s_update(n),1,fixed_dt,nscal,0)
-       call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
-       call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
-    end do
-
-    ! compute prim^{*,n+1} from s^{*,n+1} in valid region
-    call convert_cons_to_prim(mla,snew,prim,.true.)
-
-    ! fill ghost cells for prim^{*,n+1}
-    do n=1,nlevs
-       call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
-    end do
-
-    ! convert prim^{*,n+1} to s^{*,n+1} in valid and ghost region
-    ! now snew = s^{*,n+1} has properly filled ghost cells
-    call convert_cons_to_prim(mla,snew,prim,.false.)
-
-    ! compute s^{*,n+1} to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-    end do
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 2 - Crank-Nicolson Velocity Predictor
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! build up rhs_v for gmres solve: first set gmres_rhs_v to mold = m^n
+    ! build up rhs_v for gmres solve
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(gmres_rhs_v(n,i),1,mold(n,i),1,1,0)
-       end do
-    end do
-
-    ! compute mtemp = rho^{*,n+1} * v^n
-    call convert_m_to_umac(mla,s_fc,mtemp,umac_old,.false.)
-
-    do n=1,nlevs
-       do i=1,dm
-
-          ! subtract rho^{*,n+1} * v^n from gmres_rhs_v
-          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
-
-          ! multiply gmres_rhs_v by 1/dt
-          call multifab_mult_mult_s_c(gmres_rhs_v(n,i),1,1.d0/fixed_dt,1,0)
-
+          call setval(gmres_rhs_v(n,i),0.d0,all=.true.)
        end do
     end do
 
@@ -270,43 +216,14 @@ contains
        end do
     end do
 
-    ! compute m_a_fluxdiv_old = A^n for momentum
-    call mk_advective_m_fluxdiv(mla,umac_old,mold,m_a_fluxdiv_old,dx, &
-                                the_bc_tower%bc_tower_array)
-
-    ! add A^n for momentum to gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv_old(n,i),1,1,0)
-       end do
-    end do
-
     ! compute m_d_fluxdiv_old = A_0^n v^n
     call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_old,umac_old,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
-    ! add (1/2) A_0^n v^n to gmres_rhs_v
+    ! add A_0^n v^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(m_d_fluxdiv_old(n,i),1,0.5d0,1,0)
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_old(n,i),1,1,0)
-       end do
-    end do
-
-    ! compute (chi,eta,kappa)^{*,n+1}
-    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
-    call compute_kappa(mla,kappa,prim,dx)
-
-    ! set m_d_fluxdiv_new = A_0^{*,n+1} v^n
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac_old,eta,eta_ed,kappa,dx, &
-                                the_bc_tower%bc_tower_array)
-
-    ! add (1/2) A_0^{*,n+1} v^n to gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_s_c(m_d_fluxdiv_new(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_new(n,i),1,1,0)
        end do
     end do
 
@@ -322,7 +239,7 @@ contains
 
     ! add gravity term
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc)
+       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc_old)
     end if
 
     ! initialize rhs_p for gmres solve to zero
@@ -363,14 +280,12 @@ contains
 
     ! reset s_update for all scalars to zero
     ! then, set s_update for rho1 to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
-    ! it is used in Step 3 below
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
     end do
 
     ! multiply gmres_rhs_p by -S_fac
-    ! now gmres_rhs_p = -S^{*,n+1}
     do n=1,nlevs
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
@@ -379,7 +294,7 @@ contains
     call compute_div(mla,umac_old,divu,dx,1,1,1)
 
     ! add div(v^n) to gmres_rhs_p
-    ! now gmres_rhs_p = div(v^n) - S^{*,n+1}
+    ! now gmres_rhs_p = div(v^n)
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
@@ -431,9 +346,8 @@ contains
        end if
     end do
 
-    ! compute v^{*,n+1} = v^n + delta v
-    ! compute p^{*,n+1}= p^n + delta p
-    ! keep both dp and dumac as initial guess for corrector
+    ! compute v = v^n + delta v
+    ! compute p^{n+1}= p^n + delta p
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
@@ -470,12 +384,77 @@ contains
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 2 - Forward-Euler Scalar Predictor
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! set s_update to A^n for scalars
+    if (use_bds) then
+       call bds(mla,umac,sold,s_update,dx,fixed_dt,1,nscal)
+    else
+       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
+    end if
+
+    ! set snew = s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(s_update(n),1,fixed_dt,nscal,0)
+       call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
+       call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
+    end do
+
+    ! compute prim^{*,n+1} from s^{*,n+1} in valid region
+    call convert_cons_to_prim(mla,snew,prim,.true.)
+
+    ! fill ghost cells for prim^{*,n+1}
+    do n=1,nlevs
+       call multifab_fill_boundary(prim(n))
+       call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
+    end do
+
+    ! convert prim^{*,n+1} to s^{*,n+1} in valid and ghost region
+    ! now snew = s^{*,n+1} has properly filled ghost cells
+    call convert_cons_to_prim(mla,snew,prim,.false.)
+
+    ! compute s^{*,n+1} to faces
+    do i=1,nscal
+       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+    end do
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
+    do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
+    end do
+
+    ! add div(rho*chi grad c)^{*,n+1} to rhs_p
+    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
+                                   the_bc_tower%bc_tower_array,vel_bc_n)
+
+    if (use_barodiffusion) then
+       ! add baro-diffusion flux diveregnce to rhs_p
+       call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp_fc,dx, &
+                            the_bc_tower%bc_tower_array,vel_bc_n)
+    end if
+
+    ! add div(Psi^n) to rhs_p
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
+                                 chi_fc_old,dx,vel_bc_n)
+
+    ! reset s_update for all scalars to zero
+    ! then, set s_update for rho1 to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
+    do n=1,nlevs
+       call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
+       call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
+    end do
+
     ! s_update already contains D^{*,n+1} + St^{*,n+1} for rho1 from above
     ! add A^{*,n+1} for s to s_update
-    call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
+    if (use_bds) then
+       call bds(mla,umac,sold,s_update,dx,fixed_dt,1,nscal)
+    else
+       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
+    end if
 
     ! snew = s^{n+1} 
     !      = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1})
@@ -505,249 +484,15 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 4 - Crank-Nicolson Velocity Corrector
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! build up rhs_v for gmres solve: first set rhs to mold = m^n
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_copy_c(gmres_rhs_v(n,i),1,mold(n,i),1,1,0)
-       end do
-    end do
-
-    ! compute mtemp = rho^{n+1} * v^n
-    call convert_m_to_umac(mla,s_fc,mtemp,umac_old,.false.)
-
-    do n=1,nlevs
-       do i=1,dm
-
-          ! subtract rho^{n+1} * v^n from gmres_rhs_v
-          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
-
-          ! multiply gmres_rhs_v by 1/dt
-          call multifab_mult_mult_s_c(gmres_rhs_v(n,i),1,1.d0/fixed_dt,1,0)
-
-       end do
-    end do
-
-    ! gradp already contains grad p
-    ! subtract grad p^n from gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradp(n,i),1,1,0)
-       end do
-    end do
-
-    ! m_a_fluxdiv_old already contains A^n for momentum
-    ! add (1/2) A^n gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_s_c(m_a_fluxdiv_old(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv_old(n,i),1,1,0)
-       end do
-    end do
-
-    ! compute m_a_fluxdiv_new = A(s^{n+1},v^{n+1,*}) for momentum
-    call mk_advective_m_fluxdiv(mla,umac,mnew,m_a_fluxdiv_new,dx, &
-                                the_bc_tower%bc_tower_array)
-
-    ! add (1/2) m_a_fluxdiv_new to gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_s_c(m_a_fluxdiv_new(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv_new(n,i),1,1,0)
-       end do
-    end do
-
-    ! m_d_fluxdiv_old already contains (1/2) A_0^n v^n
-    ! add (1/2) A_0^n v^n to gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_old(n,i),1,1,0)
-       end do
-    end do
+    ! Step 4 - Compute Stuff for Next Time Step
 
     ! compute (chi,eta,kappa)^{n+1}
     call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
     call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa,prim,dx)
 
-    ! reset m_d_fluxdiv_new
-    do n=1,nlevs
-       do i=1,dm
-          call setval(m_d_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
-
-    ! set m_d_fluxdiv_new = A_0^{n+1} v^n
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac_old,eta,eta_ed,kappa,dx, &
-                                the_bc_tower%bc_tower_array)
-
-    ! add (1/2) A_0^{n+1} v^n to gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_s_c(m_d_fluxdiv_new(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_new(n,i),1,1,0)
-       end do
-    end do
-
-    ! add div(Sigma^n) to gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
-       end do
-    end do
-
-    ! add gravity term
-    if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc)
-    end if
-
-    ! initialize rhs_p for gmres solve to zero
-    do n=1,nlevs
-       call setval(gmres_rhs_p(n),0.d0,all=.true.)
-    end do
-
-    ! reset to zero since we only add to them
-    ! we store these for use at beginning of next time step
-    do n=1,nlevs
-       call setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
-       call setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
-       call setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
-    end do
-
-    ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
-                                   the_bc_tower%bc_tower_array)
-
-    ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
-    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
-                                   the_bc_tower%bc_tower_array,vel_bc_n)
-
-    ! add div(rho*chi grad c)^{n+1} to rhs_p
-    do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_d_fluxdiv(n),1,1,0)
-    end do
-
-    if (use_barodiffusion) then
-       ! compute baro-diffusion flux divergence
-       call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
-                            the_bc_tower%bc_tower_array,vel_bc_n)
-
-       ! add baro-diffusion flux divergence to rhs_p
-       do n=1,nlevs
-          call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_b_fluxdiv(n),1,1,0)
-       end do
-    end if
-
     ! fill the stochastic multifabs with a new set of random numbers
     call fill_stochastic(mla)
-
-    ! create div(Psi^{n+1})
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
-                                 s_fc,chi_fc,dx,vel_bc_n)
-
-    ! add div(Psi^{n+1}) to rhs_p
-    do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_s_fluxdiv(n),1,1,0)
-    end do    
-
-    ! multiply gmres_rhs_p -S_fac
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
-    end do
-
-    ! divu already contains div(v^n)
-    ! add div(v^n) to gmres_rhs_p
-    ! now gmres_rhs_p = div(v^n) - S^{n+1}
-    ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
-    do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
-    end do
-
-    ! multiply eta and kappa by 1/2 to put in proper form for gmres solve
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(eta(n)  ,1,1.d0/2.d0,1,eta(n)%ng)
-       call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,eta(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,1.d0/2.d0,1,eta_ed(n,2)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,1.d0/2.d0,1,eta_ed(n,3)%ng)
-       end if
-    end do
-
-    do n=1,nlevs
-       do i=1,dm
-          ! compute change in normal velocity boundary condition over the time step
-          ! this deals with time-dependent velocity boundary conditions
-          call multifab_copy_c(vel_bc_n_delta(n,i),1,vel_bc_n(n,i),1,1,0)
-          call multifab_sub_sub_c(vel_bc_n_delta(n,i),1,vel_bc_n_old(n,i),1,1,0)
-       end do
-       do i=1,size(vel_bc_t,dim=2)
-          call multifab_copy_c(vel_bc_t_delta(n,i),1,vel_bc_t(n,i),1,1,0)
-          call multifab_sub_sub_c(vel_bc_t_delta(n,i),1,vel_bc_t_old(n,i),1,1,0)
-       end do
-    end do
-
-    ! for inhomogeneous boundary conditions, convert problem to homogeneous by
-    ! subtracting from the RHS the result of the operator applied to a solution
-    ! vector with zeros everywhere in the problem domain, and ghost cells filled to
-    ! respect the boundary conditions
-    call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/fixed_dt,dx,the_bc_tower, &
-                                vel_bc_n_delta,vel_bc_t_delta)
-
-    ! call gmres to compute delta v and delta p
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
-               eta,eta_ed,kappa,theta_fac)
-
-    ! restore eta and kappa
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,eta(n)%ng)
-       call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,2.d0,1,eta_ed(n,1)%ng)
-       end if
-    end do
-
-    ! compute v^{n+1} = v^n + dumac
-    ! compute p^{n+1} = p^n + dp
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_copy_c(umac(n,i),1,umac_old(n,i),1,1,0)
-          call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
-       end do
-       call multifab_copy_c(pnew(n),1,pold(n),1,1,0)
-       call multifab_plus_plus_c(pnew(n),1,dp(n),1,1,0)
-    end do
-
-    do n=1,nlevs
-       ! presure ghost cells
-       call multifab_fill_boundary(pnew(n))
-       call multifab_physbc(pnew(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-       do i=1,dm
-          ! fill periodic and interior ghost cells
-          call multifab_fill_boundary(umac(n,i))
-          ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_n(n,:))
-          ! set transverse velocity behind physical boundaries
-          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-                                      the_bc_tower%bc_tower_array(n), &
-                                      dx(n,:),vel_bc_t(n,:))
-       end do
-    end do
-
-    ! convert v^{n+1} to m^{n+1} in valid and ghost region
-    ! now mnew has properly filled ghost cells
-    call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement
@@ -782,6 +527,6 @@ contains
 
     deallocate(vel_bc_t_old,vel_bc_t_delta)
 
-  end subroutine advance_timestep
+  end subroutine advance_timestep_simple
 
-end module advance_timestep_module
+end module advance_timestep_simple_module

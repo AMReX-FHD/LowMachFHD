@@ -14,7 +14,8 @@ module div_and_grad_module
 contains
 
   subroutine compute_grad(mla,phi,gradp,dx, &
-                          start_incomp,start_bccomp,start_outcomp,num_comp,the_bc_level)
+                          start_incomp,start_bccomp,start_outcomp,num_comp, &
+                          the_bc_level,increment_bccomp_in)
 
     ! compute the face-centered gradient of a cell-centered field
 
@@ -24,10 +25,12 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: start_incomp,start_bccomp,start_outcomp,num_comp
     type(bc_level) , intent(in   ) :: the_bc_level(:)
+    logical,  intent(in), optional :: increment_bccomp_in
 
     ! local
     integer :: n,i,dm,nlevs,ng_p,ng_g,comp,bccomp,outcomp
     integer :: lo(mla%dim),hi(mla%dim)
+    logical :: increment_bccomp
 
     real(kind=dp_t), pointer :: pp(:,:,:,:)
     real(kind=dp_t), pointer :: gpx(:,:,:,:)
@@ -40,6 +43,11 @@ contains
     ng_p = phi(1)%ng
     ng_g = gradp(1,1)%ng
 
+    increment_bccomp = .true.
+    if (present(increment_bccomp_in)) then
+       increment_bccomp = increment_bccomp_in
+    end if
+
     do n=1,nlevs
        do i=1,nfabs(phi(n))
           pp  => dataptr(phi(n), i)
@@ -47,8 +55,13 @@ contains
           gpy => dataptr(gradp(n,2), i)
           lo = lwb(get_box(phi(n), i))
           hi = upb(get_box(phi(n), i))
+          
           do comp=start_incomp,start_incomp+num_comp-1
-             bccomp = start_bccomp + (comp-start_incomp)
+             if (increment_bccomp) then
+                bccomp = start_bccomp + (comp-start_incomp)
+             else
+                bccomp = start_bccomp
+             end if
              outcomp = start_outcomp + (comp-start_incomp)
              select case (dm)
              case (2)
@@ -73,8 +86,8 @@ contains
 
       integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
       real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:)
-      real(kind=dp_t), intent(inout) ::  gpx(lo(1)-ng_g:,lo(2)-ng_g:)
-      real(kind=dp_t), intent(inout) ::  gpy(lo(1)-ng_g:,lo(2)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       integer        , intent(in   ) :: bc(:,:)
 
@@ -87,7 +100,7 @@ contains
             gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / dx(1)
          end do
       end do
-
+   
       ! alter stencil at boundary since ghost value represents value at boundary
       if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
          i=lo(1)
@@ -131,9 +144,9 @@ contains
 
       integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
       real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-      real(kind=dp_t), intent(inout) ::  gpx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
-      real(kind=dp_t), intent(inout) ::  gpy(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
-      real(kind=dp_t), intent(inout) ::  gpz(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(inout) :: gpz(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       integer        , intent(in   ) :: bc(:,:)
 

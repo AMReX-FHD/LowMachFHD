@@ -42,9 +42,9 @@ contains
     
     ! copy the state into plotdata
     do n = 1,nlevs
-       call multifab_copy_c(plotdata(n),1,rho(n),1,nspecies)
+       call multifab_copy_c(plotdata(n),1,rho(n),1,nspecies,0)
     enddo
-
+    
     ! define the name of the plotfile that will be written
     write(unit=plotfile_name,fmt='("plt",i5.5)') istep
     if ( parallel_IOProcessor() ) then

@@ -9,21 +9,22 @@ subroutine main_driver()
   use advance_module
   use define_bc_module
   use bc_module
+  use convert_variables_module
   use probin_common_module
   use probin_multispecies_module
  
   implicit none
 
-  ! will be allocated with dm components
+  ! quantities will be allocated with dm components
   integer, allocatable :: lo(:), hi(:)
 
-  ! will be allocated with (nlevs,dm) components
+  ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t), allocatable :: Dbar(:,:)
   real(kind=dp_t), allocatable :: Gama(:,:)
+  real(kind=dp_t), allocatable :: mass(:) 
   real(kind=dp_t)              :: time,dt
   integer                      :: n,nlevs,i,dm,istep
-
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -32,9 +33,10 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
-  type(multifab), allocatable  :: molarconc(:)
-  type(multifab), allocatable  :: BinvGama(:)
-
+  ! Donev: The code as written now assumes that Dbar and Gamma are constants
+  ! i.e., they are not multifabs but rather simple arrays
+  ! This is OK for now for simple testing but has to be changed later
+  ! It will affect all routines like diffusive_flux(div) etc.
   
   !==============================================================
   ! Initialization
@@ -54,9 +56,8 @@ subroutine main_driver()
   allocate(dx(nlevs,dm))
   allocate(Dbar(nspecies,nspecies))
   allocate(Gama(nspecies,nspecies))
+  allocate(mass(nspecies))
   allocate(rho(nlevs))
-  allocate(molarconc(nlevs))
-  allocate(BinvGama(nlevs))
 
   !==============================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -78,6 +79,7 @@ subroutine main_driver()
   dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
   Dbar(1:nspecies,1:nspecies) = 0.0d0  
   Gama(1:nspecies,1:nspecies) = 0.0d0  
+  mass(1:nspecies) = 1.0d0  
   
   select case (dm) 
     case(2)
@@ -128,7 +130,6 @@ subroutine main_driver()
 
   ! build the ml_layout, mla
   call ml_layout_build(mla,mba,pmask)
-
   deallocate(pmask)
 
   ! don't need this anymore - free up memory
@@ -137,11 +138,12 @@ subroutine main_driver()
   !=======================================================
   ! Setup boundary condition bc_tower
   !=======================================================
-
-  ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  ! last argument to initialize_bc is the number of scalar variables
-  ! nscal=nspecies temporarily
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,nspecies)
+ 
+  ! bc_tower structure in memory 
+  ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = scal_bc_comp+1,
+  ! mol_frac = rho_tot+2, diff_coeff=tran_bc_comp; num_tran_bc_comp = 1
+  ! rules for scalar variables is 3 (1 rho_tot, 1 rho_i and 1 mol_frac)
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, num_scal_bc_in=3, num_tran_bc_in=1)
 
   do n=1,nlevs
      ! define level n of the_bc_tower
@@ -155,11 +157,9 @@ subroutine main_driver()
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
      call multifab_build(rho(n),mla%la(n),nspecies,1)
-     call multifab_build(molarconc(n),mla%la(n),nspecies,1)
-     call multifab_build(BinvGama(n),mla%la(n),nspecies**2,1)
   end do
 
-  call init_rho(rho,molarconc,BinvGama,Dbar,Gama,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+  call init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
@@ -173,22 +173,24 @@ subroutine main_driver()
      call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
   end if
  
-  ! choice of time step with a diffusive CFL of 0.1
-  dt = 0.1d0*dx(1,1)**2/(2.d0*dm)
+  ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
+  ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
+  dt = cfl*dx(1,1)**2/chi
+  write(*,*) "Using time step dt=", dt
  
   do istep=1,max_step
 
      if (parallel_IOProcessor()) then
-        print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+        !print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,molarconc,BinvGama,Dbar,Gama,dx,dt,the_bc_tower%bc_tower_array)
+     call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array)
 
      ! increment simulation time
      time = time + dt
 
-     ! write a plotfile
+     ! write plotfile at intervals
      if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
@@ -203,8 +205,6 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_destroy(rho(n))
-     call multifab_destroy(molarconc(n))
-     call multifab_destroy(BinvGama(n))
   end do
 
   call destroy(mla)

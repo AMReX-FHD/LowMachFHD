@@ -154,21 +154,26 @@ the equation of state will enforce that the {\it volume} fractions must sum to 1
 The isothermal low Mach number equations of motion are:
 \begin{eqnarray}
 \partial_t\rho &=& -\nabla\cdot(\rho\vb),\\
-\partial_t\rho_1 &=& -\nabla\cdot(\rho_1\vb) + \underbrace{\nabla\cdot\rho\chi\nabla c + \nabla\cdot\Psib}_{\nabla\cdot\Fb},\\
-\partial_t(\rho\vb) &=& -\nabla\cdot(\rho\vb\vb^T) - \nabla\pi + \mathcal{A}_0\vb + \nabla\cdot\Sigmab + \rho\gb,
+\partial_t\rho_1 &=& -\nabla\cdot(\rho_1\vb) + \underbrace{\nabla\cdot\rho\chi\left(\nabla c + K_p\nabla p_0\right) + \nabla\cdot\Psib}_{\nabla\cdot\Fb},\\
+\partial_t(\rho\vb) &=& -\nabla\cdot(\rho\vb\vb^T) - \nabla p + \nabla\cdot\taub(\vb) + \nabla\cdot\Sigmab + \rho\gb,
 \end{eqnarray}
 subject to
 \begin{equation}
-\nabla\cdot\vb = S \equiv \underbrace{\left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)}_{-(\rho^{-1}\beta)}\nabla\cdot\Fb.
+\nabla\cdot\vb = S \equiv \underbrace{\left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)}_{-\beta/\rho}\nabla\cdot\Fb.
 \end{equation}
-Thus, $S \equiv S(\Fb)$.  The stochastic terms are:
+Thus, $S \equiv S(\Fb)$.  The baro-diffusion coefficient is given by
+\begin{equation}
+K_P = \frac{\beta}{\rho\mu_c} = \left(\frac{1}{\bar\rho_1}-\frac{1}{\bar\rho_2}\right)\mu_c^{-1},
+\end{equation}
+and $p_0$ is a fixed background pressure stratification.  The stochastic terms are:
 \begin{eqnarray}
 \Psib &=& \sqrt{\frac{2\chi\rho\mu_c^{-1}k_BT}{\Delta t\Delta V}}\widetilde\Wb,\label{eq:rho1 stoch}\\
 \Sigmab &=& \sqrt{\frac{\eta k_B T}{\Delta t\Delta V}}\left(\Wb + \Wb^T\right),\label{eq:mom stoch}
 \end{eqnarray}
 where $\Wb$ and $\widetilde\Wb$ are standard white-noise random Gaussian tensor
 and vector fields with uncorrelated components.  In our implementation, 
-we use an ideal gas mixture for (\ref{eq:rho1 stoch}) with $\mu_c^{-1}k_BT \equiv c(1-c)$ so that
+we use an ideal gas mixture for (\ref{eq:rho1 stoch}) with 
+$k_BT=1$ and $\mu_c^{-1}=c(1-c)[cm_1+(1-c)m_2]$ with $m_1=m_2=1$ so that
 \begin{equation}
 \Psib = \sqrt{\frac{2\chi\rho c(1-c)}{\Delta t\Delta V}}\widetilde\Wb
 \end{equation}
@@ -181,19 +186,22 @@ where $\widehat\Wb$ is a symmetric Gaussian random tensor field, and the
 extra factor of $\sqrt{2}$ accounts for the reduction in variance due to the averaging.\\
 
 The code has several options for the viscous stress tensor.  For ease of exposition,
-we define $\mathcal{A}_0$ as a function of a velocity vector, $\vb$ (the superscript
+we define $\nabla\cdot\taub(\vb)\equiv\mathcal{A}_0\vb$ (the superscript
 for $\mathcal{A}_0$ indicates the temporal discretization for the transport coefficients):\\
 \begin{itemize}
 \item $|${\tt visc\_type}$|$=1 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\beta^n\nabla\vb$.\\
 \item $|${\tt visc\_type}$|$=2 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T]\right\}$.\\
 \item $|${\tt visc\_type}$|$=3 $\quad\rightarrow\quad \mathcal{A}_0^n\vb \equiv \nabla\cdot\left\{\beta^n[\nabla\vb + (\nabla\vb)^T] + \mathcal{I}\left(\gamma^n - \frac{2}{3}\beta^n\right)(\nabla\cdot\vb)\right\}$.\\
 \end{itemize}
+If {\tt visc\_type} $<0$, we assume the transport coefficients are spatially-varying.
+If {\tt visc\_type} $>0$, we assume the transport coefficients are spatially-constant, and use simplified stencils
+in the code.
 
 \section{GMRES Solver}
 
 More details on the GMRES can be found in our upcoming preconditioner paper,
 so here we only summarize some important points.
-We use of GMRES solver that solves systems of the form,
+We use a GMRES solver that solves saddle-point systems of the form,
 \begin{equation}
 \underbrace{
 \left(\begin{array}{cc}
@@ -220,16 +228,36 @@ cell-centered data and returns a staggered field.  The divergence operator,
 $\mathcal{D}$, operates on staggered data and returns a cell-centered field.  
 The Helmholtz-like operator, $\mathcal{A}$, has the general form,
 $\mathcal{A} = \Theta\alpha\mathcal{I} - \mathcal{A}_0$, where
-$\Theta$ is a constant parameter,
-$\alpha$ is a cell-centered quantity,
+$\Theta$ is a constant parameter that can be adjusted for handle both steady and unsteady flow,
+$\alpha$ is a cell-centered quantity (typically a density if the system represents a momentum discretization),
 $\mathcal{I}$ is the identity matrix, 
 and $\mathcal{A}_0$ represents the viscous stress tensor.
 Both $\mathcal{A}$ and $\mathcal{A}_0$ operate on staggered data and return
 a staggered field.\\
 
-Each residual is therefore composed of two parts, a velocity residual, $r_v$,
+In practice, we allow for a rescaling of the linear system to balance the effects of the terms
+due to the choice of units.  We have the option to include a scaling factor $c$, as in,
+\begin{equation}
+\left(\begin{array}{cc}
+c\mathcal{A} & \mathcal{G} \\
+-\mathcal{D} & 0
+\end{array}\right)
+\left(\begin{array}{c}
+\xb_{\vb} \\
+cx_p
+\end{array}\right)
+=
+\left(\begin{array}{c}
+c\bb_{\vb}\\
+b_p
+\end{array}\right),
+\end{equation}
+This should eliminate the need for the {\tt p\_norm\_weight} scaling factor
+when computing the total residual.\\
+
+Each residual is composed of two parts, a velocity residual, $r_v$,
 and a pressure residual, $r_p$.  We combine these into a total residual, 
-$r=\sqrt{r_v^2 + {\tt p\_norm\_weight}^2 r_p^2}$.  We consider two
+$r=\sqrt{r_v^2 + r_p^2}$.  We consider two
 kinds of residuals, the unpreconditined residual, $r=||\Ab\xb-\bb||$, 
 and the preconditioned 
 residual $r_P=||\Pb^{-1}(\Ab\xb-\bb)||$.  GMRES internally {\it estimates} the 
@@ -261,11 +289,11 @@ with an error message.
 Here is the time-advancement scheme.\\ \\
 {\bf Step 0: Initialization:}\\
 
-Initialize $\vb^{\rm init}, \rho^0, \rho_1^0, \chi^0, \eta^0, \kappa^0$, and $\pi^0$.
+Initialize $\vb^{\rm init}, \rho^0, \rho_1^0, \chi^0, K_P^0, \eta^0, \kappa^0$, and $p^0$.
 Then, perform projection to obtain an initial velocity field, $\vb^0$, that satisfies
 \begin{equation}
-\nabla\cdot\vb^0 = S(\Fb^0); \qquad 
-\Fb^0 = (\rho\chi\nabla c)^0 + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^0}{\Delta t\Delta V}}\widetilde\Wb^0}_{\Psib^0}.
+\nabla\cdot\vb^0 = S^0 \equiv S(\Fb^0); \qquad 
+\Fb^0 = \left[\rho\chi\left(\nabla c + K_P\nabla p\right)\right]^0 + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)^0}{\Delta t\Delta V}}\widetilde\Wb^0}_{\Psib^0}.
 \end{equation}
 We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
 \begin{equation}
@@ -277,63 +305,64 @@ We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
 {\bf Step 1: Forward Euler Scalar Predictor:}\\ \\
 Using
 \begin{equation}
-\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
+\Fb^n = \left[\rho^n\chi^n\left(\nabla c^n + K_P^n\nabla p^{n,*}\right)\right] + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
 \end{equation}
 compute an advective update,
 \begin{eqnarray}
-\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^n),\\
-\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^n + \Fb^n).
+\rho^{n+1,*} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^n),\\
+\rho_1^{n+1,*} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^n + \Fb^n).
 \end{eqnarray}
 Note that $\Fb^n$ has already been computed during {\bf Step 4} of the previous time step
 (or the initialization {\bf Step 0} if $n=0$).\\ \\
 {\bf Step 2: Crank-Nicolson Velocity Predictor:}\\ \\
 First, define
 \begin{equation}
-S^{*,n+1} \equiv S(\Fb^{*,n+1});
+S^{n+1,*} \equiv S(\Fb^{n+1,*});
 \qquad
-\Fb^{*,n+1} = (\rho\chi\nabla c)^{*,n+1} + \Psib^n.
+\Fb^{n+1,*} = \left[\rho^{n+1,*}\chi^{n+1,*}\left(\nabla c^{n+1,*} + K_P^{n+1,*}\nabla p^{n,*}\right)\right] + \Psib^n.
 \end{equation}
-Then, define $\vb^{*,n+1} = \vb^n + \deltab\vb, \pi^{*,n+1} = \pi^n + \delta\pi$ and solve
-for $\deltab\vb$ and $\delta\pi$:
+Then, define $\vb^{n+1,*} = \vb^n + \deltab\vb, p^{n+1,*} = p^n + \delta p$ and solve
+for $\deltab\vb$ and $\delta p$:
 \begin{eqnarray}
-\frac{\rho^{*,n+1}(\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(\pi^n+\delta\pi) &=&\nonumber\\
-&&\hspace{-1.5in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}(\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n},
+\frac{\rho^{n+1,*}(\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^n+\delta p) &=&\nonumber\\
+&&\hspace{-2.25in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1,*}(\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n} + \left(\frac{\rho^n+\rho^{n+1,*}}{2}\right)\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot(\vb^n+\deltab\vb) = S^{*,n+1}.
+\nabla\cdot(\vb^n+\deltab\vb) = S^{n+1,*}.
 \end{equation}
 We rewrite this system as
 \begin{eqnarray}
-\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{(\rho^n-\rho^{*,n+1})\vb^n}{\Delta t} -\nabla\pi^n\nonumber\\
-&&\hspace{-0.5in}+ \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}\vb^n\right) + \nabla\cdot\Sigmab^n,\label{eq:CN Vel Pred}
+\left(\frac{\rho^{n+1,*}}{\Delta t} - \half\mathcal{A}_0^{n+1,*}\right)\deltab\vb + \nabla\delta p &=& \frac{(\rho^n-\rho^{n+1,*})\vb^n}{\Delta t} -\nabla p^n\nonumber\\
+&&\hspace{-1.5in}+ \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1,*}\vb^n\right) + \nabla\cdot\Sigmab^n + \left(\frac{\rho^n+\rho^{n+1,*}}{2}\right)\gb,\label{eq:CN Vel Pred}
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{*,n+1}.
+-\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{n+1,*}.
 \end{equation}
 Relating this to the GMRES solver, we can see that we are solving for 
-$(\xb_\vb,x_p) = (\deltab\vb,\delta\pi)$ with $b_p = \nabla\cdot\vb^n-S^{*,n+1}$ (note the change in sign!) 
+$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\vb^n-S^{n+1,*}$ (note the change in sign!) 
 and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:CN Vel Pred}).  For the Helmholtz-like operator, 
-$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t, \alpha=\rho^{*,n+1}, 
-\beta=\eta/2$, and $\gamma=\kappa/2$.\\ \\
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t, \alpha=\rho^{n+1,*}, 
+\beta=\eta/2$, and $\gamma=\kappa/2$.
+Next, define $\vb^{n+1,*} = \vb^n + \deltab\vb$ and $p^{n+1,*} = p^n + \delta p$.\\ \\
 {\bf Step 3: Trapezoidal Scalar Corrector:}
 \begin{eqnarray}
-\rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\\
-\rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right].
+\rho^{n+1} &=& \half\rho^n + \half\left[\rho^{n+1,*} + \Delta t\nabla\cdot(-\rho^{n+1,*}\vb^{n+1,*})\right],\\
+\rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{n+1,*} + \Delta t\nabla\cdot(-\rho_1^{n+1,*}\vb^{n+1,*} + \Fb^{n+1,*})\right].
 \end{eqnarray}
-Note that $\Fb^{*,n+1}$ has already been computed during {\bf Step 2}.\\ \\
+Note that $\Fb^{n+1,*}$ has already been computed during {\bf Step 2}.\\ \\
 {\bf Step 4: Crank-Nicolson Velocity Corrector:}\\ \\
 First, define
 \begin{equation}
 S^{n+1} \equiv S(\Fb^{n+1});
 \qquad
-\Fb^{n+1} = (\rho\chi\nabla c)^{n+1} + \underbrace{\sqrt{\frac{2\left[\chi\rho c(1-c)\right]^{n+1}}{\Delta t\Delta V}}\widetilde\Wb^{n+1}}_{\Psib^{n+1}}.
+\Fb^{n+1} = \left[\rho^{n+1}\chi^{n+1}\left(\nabla c^{n+1} + K_P^{n+1}\nabla p^{n+1,*}\right)\right] + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)^{n+1}}{\Delta t\Delta V}}\widetilde\Wb^{n+1}}_{\Psib^{n+1}}.
 \end{equation}
 Note the use of time-advanced stochastic concentration fluxes for use in $S$.  Finally, 
-define $\vb^{n+1} = \vb^n + \deltab\vb$ and $\pi^{n+1} = \pi^n + \delta\pi$ and
-solve the following system for $(\deltab\vb,\delta\pi)$:
+define $\vb^{n+1} = \vb^n + \deltab\vb$ and $p^{n+1} = p^n + \delta p$ and
+solve the following system for $(\deltab\vb,\delta p)$:
 \begin{eqnarray}
-\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{(\rho^n-\rho^{n+1})\vb^n}{\Delta t} -\nabla\pi^n\nonumber\\
-&&\hspace{-1.25in}+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half\left(\mathcal{A}^n_0\vb^n + \mathcal{A}^{n+1}_0\vb^n\right) + \nabla\cdot\Sigmab^n,
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{(\rho^n-\rho^{n+1})\vb^n}{\Delta t} -\nabla p^n\nonumber\\
+&&\hspace{-1.5in}+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1}\vb^{n+1,*}\vb^{n+1,*}) + \half\left(\mathcal{A}^n_0\vb^n + \mathcal{A}^{n+1}_0\vb^n\right) + \nabla\cdot\Sigmab^n + \left(\frac{\rho^n+\rho^{n+1}}{2}\right)\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{n+1}.
@@ -370,7 +399,7 @@ use a zero traction condition, where $f=0$.\\
 
 {\bf No-Slip Reservoir:} We specify $c$ with a Dirichlet condition at the boundary, 
 and use the EOS to obtain $\rho$ at the
-boundary.  The normal velocity must be equal to $-(\rho^{-1}\beta)F_n$ in order for
+boundary.  The normal velocity must be equal to $-(\beta/\rho)F_n$ in order for
 the EOS to remain satisfied.  We must be careful with sequencing in a sense that
 $F_n$ is not a function of $\vb$, so we can compute $F_n$ first and {\it then}
 use this to directly specify $v_n$ on boundaries, making sure that the
@@ -389,11 +418,11 @@ variable on the boundary shall be stored in the ghost cell for convenience.  Thi
 is true regardless of whether we use a homogeneous Neumann or Dirichlet condition.
 For homogeneous Neumann, we simply copy the interior cell value, thus representing
 a first-order extrapolation.  For Dirichlet conditions, we prescribe $c$ and use
-the EOS to obtain $\rho$.  Note that the transport coefficients, $(\eta,\kappa,\chi)$,
+the EOS to obtain $\rho$.  We fill ghost cells for primitive variables using the
+subroutine, {\tt multifab\_physbc}.  Note that the transport coefficients, $(\eta,\kappa,\chi)$,
 are functions of the primitive variables, so when we compute them, we simply loop
 over valid {\it and} ghost cells, and do not require special routines to fill
-the ghost cells aftewards.  We fill ghost cells for primitive variables using the
-subroutine, {\tt multifab\_physbc}.\\
+the ghost cells aftewards.\\
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[tb]
@@ -445,10 +474,11 @@ periodic in the transverse direction, in which case the call to {\tt multifab\_f
 should take care of these periodic values.\\
 \item Unlike the case for scalars, here the values of velocity in ghost cells represent
 the value extrapolated to that point (for tangential velocities), or the value {\it on}
-the boundary (for normal velocities).
+the boundary (for normal velocities).\\
 \end{itemize}
 
-We carry around several auxiliary multifabs that store the Dirichlet value on the
+We carry around several auxiliary multifabs that store the Dirichlet values 
+for velocity on the
 boundary, whether they are homogeneous or inhomogeneous.  To deal with normal 
 velocities, the multifab {\tt vel\_bc\_n(nlevs,dm)}
 stores the actual Dirichlet value.  The $(n,d)^{\rm th}$ element is a face-centered
@@ -487,17 +517,17 @@ function {\tt inhomogeneous\_bc\_val\_Xd} to fill {\tt vel\_bc\_n} and
 
 We have two subroutines that fill velocity domain boundary and ghost cells based
 on the values in {\tt vel\_bc\_n} and {\tt vel\_bc\_t}.
+
 Each of these take in {\tt vel\_bc\_n} or {\tt vel\_bc\_t} as
 an optional multifab argument that represents the prescribed Dirichlet
-or Neumann value on the boundary.  Note that this can either refer to the 
-prescribed value of normal velocity on the boundary, or a Dirichlet {\it or} 
-Neumann condition used to determine the ghost face values for transverse velocity.
-If no multifab is passed in, it is assumed that the boundary conditions
-are homogeneous.  The subroutine {\tt multifab\_physbc\_domainvel} sets the 
-value for faces on the boundary and can take {\tt vel\_bc\_n} as an input.
+or Neumann value on the boundary.  
+The subroutine {\tt multifab\_physbc\_domainvel} sets the 
+value for faces on the boundary and can take {\tt vel\_bc\_n} as an optional input.
 The subroutine {\tt multifab\_physbc\_macvel}
 sets the transverse velocity ghost faces behind the physical boundary and
-can take {\tt vel\_bc\_t} as an input.\\
+can take {\tt vel\_bc\_t} as an optional input.
+If no multifab is passed in, it is assumed that the boundary conditions
+are homogeneous.\\
 
 For {\tt multifab\_physbc\_macvel}, the optional multifab that gets passed in
 must be nodal in exactly 2 directions.
@@ -558,11 +588,31 @@ By solving this system for $\xb$, we arrive at the same answer as solving the
 inhomogeneous problem, $\Ab\xb=\bb$.\\
 
 It is also important to note that we are solving a ``delta'' formulation for
-$(\deltab\vb,\delta\pi)$.  This means we have to be careful when supplying
+$(\deltab\vb,\delta p)$.  This means we have to be careful when supplying
 a boundary condition to the subroutine that converts the problem to a homogeneous
 problem, in that for time-dependent boundary conditions (such as reservoirs), we
 must supply the {\it change} in the velocity boundary condition as compared to
 the boundary condition at $t^n$, rather than the final velocity boundary 
 condition itself.
+
+\section{``Simple'' Algorithm}
+Use GMRES to solve:
+\begin{equation}
+-\half\mathcal A_0\deltab\vb + \nabla\delta p = -\nabla p^n + \mathcal A_0\vb^n + \nabla\cdot\Sigmab^n + \rho^n\gb.
+\end{equation}
+Set $\vb = \vb^n + \deltab\vb$.  Then do predictor advection of species:
+\begin{equation}
+\rho_1^{n+1,*} = \rho^n + \Delta\left[\nabla\cdot(-\rho_1^n\vb + F^n)\right],
+\end{equation}
+\begin{equation}
+F^n = \rho\chi\nabla c^n + \Psib^n.
+\end{equation}
+Then do corrector advection of species:
+\begin{equation}
+\rho_1^{n+1} = \half\rho_1^{n+1} + \half\left[\rho_1^{n+1,*} + \Delta t\nabla\cdot(-\rho_1^{n+1,*}\vb + F^{n+1,*})\right],
+\end{equation}
+\begin{equation}
+F^{n+1,*} = \rho\chi\nabla c^{n+1,*} + \Psib^n.
+\end{equation}
 
 \end{document}

@@ -4,10 +4,9 @@ module advance_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
-  use div_and_grad_module
-  use diffusive_flux_module
   use ml_layout_module
-  use probin_multispecies_module, only: nspecies
+  use diffusive_fluxdiv_module
+  use probin_multispecies_module
 
   implicit none
 
@@ -16,91 +15,232 @@ module advance_module
   public :: advance
 
 contains
-  
-  subroutine advance(mla,rho,molarconc,BinvGama,Dbar,Gama,dx,dt,the_bc_level)
+
+  subroutine advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    type(multifab) , intent(inout) :: molarconc(:)
-    type(multifab) , intent(inout) :: BinvGama(:)
     real(kind=dp_t), intent(in   ) :: Dbar(:,:)
     real(kind=dp_t), intent(in   ) :: Gama(:,:)
+    real(kind=dp_t), intent(in   ) :: mass(:) 
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
-    integer i, dm, n, nlevs
-
-    ! an array of multifabs; one for each direction
-    type(multifab) :: flux(mla%nlevel,mla%dim)
-    type(multifab) :: fluxdiv(mla%nlevel)
- 
-    dm    = mla%dim     ! dimensionality
+    type(multifab) :: rhonew(mla%nlevel),fluxdiv(mla%nlevel),fluxdivnew(mla%nlevel)
+    integer        :: n,nlevs
+    
     nlevs = mla%nlevel  ! number of levels 
-
-    ! build the flux and div-of-flux multifabs
+ 
+    ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
+    ! fluxdiv needs no ghost cells as all computations will be in box interior 
     do n=1,nlevs
-       ! fluxdiv is cell-centered scalar with zero ghost cells 
-       call multifab_build(fluxdiv(n),mla%la(n),nspecies,0)
-       do i=1,dm
-          ! flux(i) is face-centered, has nspecies component, zero ghost cells & nodal in direction i
-          call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
-       end do
+       call multifab_build(rhonew(n),    mla%la(n),nspecies,rho(n)%ng)
+       call multifab_build(fluxdiv(n),   mla%la(n),nspecies,0) 
+       call multifab_build(fluxdivnew(n),mla%la(n),nspecies,0)
+    enddo
+   
+    ! initialize new quantities to zero 
+      do n=1,nlevs
+         call setval(rhonew(n),    0.d0,all=.true.)
+         call setval(fluxdiv(n),   0.d0,all=.true.)
+         call setval(fluxdivnew(n),0.d0,all=.true.)
+      end do 
+ 
+   !==================================================================================
+    select case(timeinteg_type)
+   !==================================================================================
+ 
+      case(1)
+      !===================================
+      ! Euler time update 
+      ! rho(t+dt)  =rho(t) + dt*fluxdiv(t) 
+      !===================================
+    
+      ! compute fluxdiv; fluxdiv contain results in interior only, while rho contains 
+      ! ghost values filled in init or end of this code
+      call diffusive_fluxdiv(mla,rho,fluxdiv,Dbar,Gama,mass,dx,the_bc_level)
+      
+      ! compute rho(t+dt) (only interior) 
+      do n=1,nlevs
+         call saxpy(rho(n),-dt,fluxdiv(n))
+      end do 
+    
+      case(2)
+      !====================================================================================
+      ! Heun's method: Predictor-Corrector explicit method 
+      ! rhonew(t+dt) = rho(t)+dt*fluxdiv(t,rho) 
+      !    rho(t+dt) = rho(t)+(dt/2)*[fluxdiv(t,rho) + fluxdivnew(t+1,rhonew(t+1))] 
+      !====================================================================================
+      
+      ! store old rho in rhonew (rhonew previously set to zero) 
+      do n=1,nlevs
+         call saxpy(rhonew(n),1.0d0,rho(n))
+      end do 
+      
+      !=====================
+      ! Euler Predictor step
+      !===================== 
+      
+      ! compute fluxdiv 
+      call diffusive_fluxdiv(mla,rho,fluxdiv,Dbar,Gama,mass,dx,the_bc_level)
+      
+      ! compute rhonew(t+dt) (only interior) 
+      do n=1,nlevs
+         call saxpy(rhonew(n),-dt,fluxdiv(n))
+      end do 
+   
+      ! update values of the ghost cells of rhonew
+      do n=1,nlevs
+         call multifab_fill_boundary(rhonew(n))
+        
+         ! fill non-periodic domain boundary ghost cells
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
+      enddo
+
+      ! compute fluxdiv(t+1,rhonew(t+1)) 
+      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,Dbar,Gama,mass,dx,the_bc_level)
+
+      !=========================== 
+      ! Trapezoidal Corrector step
+      !===========================
+
+      ! compute rho(t+dt) (only interior)
+      do n=1,nlevs
+         call saxpy(rho(n),-dt*0.5d0,fluxdiv(n))
+         call saxpy(rho(n),-dt*0.5d0,fluxdivnew(n))
+      enddo
+ 
+      case(3)
+      !=====================================================================================
+      ! Midpoint method (2-stage) 
+      ! rhonew(t+dt/2)=rho(t)+(dt/2)*fluxdiv(t,y)                
+      !    rho(t+dt)  =rho(t)+ dt*fluxdivnew[t+dt/2,rhonew(t+dt/2)]  
+      !=====================================================================================
+
+      ! store old rho in rhonew (rhonew is set zero at the start) 
+      do n=1,nlevs
+         call saxpy(rhonew(n),1.0d0,rho(n))
+      end do 
+ 
+      ! compute fluxdiv(t) from rho(t); (interior only) 
+      call diffusive_fluxdiv(mla,rho,fluxdiv,Dbar,Gama,mass,dx,the_bc_level)
+      
+      ! compute rhonew(t+dt/2) (only interior) 
+      do n=1,nlevs
+         call saxpy(rhonew(n),-0.5d0*dt,fluxdiv(n))
+      end do 
+
+      ! update values of the ghost cells of rhonew
+      do n=1,nlevs
+         call multifab_fill_boundary(rhonew(n))
+        
+         ! fill non-periodic domain boundary ghost cells
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
+      enddo
+
+      ! compute new div-of-flux 
+      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,Dbar,Gama,mass,dx,the_bc_level)
+
+      ! compute rho(t+dt) (only interior) 
+      do n=1,nlevs
+         call saxpy(rho(n),-dt,fluxdivnew(n))
+      end do 
+      
+      case(4)
+      !====================================================================================================
+      ! 3rd order Runge-Kutta method 
+      ! rhonew(t+dt)  =     rho(t)+                       dt*fluxdiv(t)                      
+      ! rhonew(t+dt/2)= 3/4*rho(t)+ 1/4*[rhonew(t+dt)   + dt*fluxdivnew(t+dt,rhonew(t+dt))] 
+      !    rho(t+dt)  = 1/3*rho(t)+ 2/3*[rhonew(t+dt/2) + dt*fluxdivnew(t+dt/2,rhonew(t+dt/2))] 
+      !====================================================================================================
+
+      ! store old rho in rhonew (rhonew is set zero at the start) 
+      do n=1,nlevs
+         call saxpy(rhonew(n),1.0d0,rho(n))
+      end do 
+      
+      !===========
+      ! 1st stage
+      !===========
+
+      ! compute fluxdiv(t) from rho(t) (interior only) 
+      call diffusive_fluxdiv(mla,rho,fluxdiv,Dbar,Gama,mass,dx,the_bc_level)
+      
+      ! compute rhonew(t+dt) (only interior) 
+      do n=1,nlevs
+         call saxpy(rhonew(n),-dt,fluxdiv(n))
+      end do 
+   
+      ! update values of the ghost cells of rhonew
+      do n=1,nlevs
+         call multifab_fill_boundary(rhonew(n))
+        
+         ! fill non-periodic domain boundary ghost cells
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
+      enddo
+
+      ! compute fluxdivnew(t+dt,rhonew(t+dt))
+      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,Dbar,Gama,mass,dx,the_bc_level)
+
+      !===========
+      ! 2nd stage
+      !===========
+
+      ! compute rhonew(t+dt/2) (only interior) 
+      do n=1,nlevs
+         call multifab_mult_mult_s(rhonew(n),0.25d0)
+         call saxpy(rhonew(n), 0.75d0,   rho(n))
+         call saxpy(rhonew(n),-0.25d0*dt,fluxdivnew(n))
+      end do 
+
+      ! update values of the ghost cells of rho_star
+      do n=1,nlevs
+         call multifab_fill_boundary(rhonew(n))
+        
+         ! fill non-periodic domain boundary ghost cells
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
+      enddo
+      
+      ! free up the values of fluxdivnew
+      do n=1,nlevs
+         call setval(fluxdivnew(n), 0.d0, all=.true.)
+      end do 
+ 
+      ! compute fluxdiv(t+dt/2,rhonew(t+dt/2)) 
+      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,Dbar,Gama,mass,dx,the_bc_level)
+
+      !===========
+      ! 3rd stage
+      !===========
+
+      ! compute rho(t+dt) (only interior) 
+      do n=1,nlevs
+         call multifab_mult_mult_s(rho(n),(1.0d0/3.0d0))
+         call saxpy(rho(n), (2.0d0/3.0d0),   rhonew(n))
+         call saxpy(rho(n),-(2.0d0/3.0d0)*dt,fluxdivnew(n))
+      end do 
+
+    !=============================================================================================
+    end select  
+    !=============================================================================================
+
+    ! fill the ghost cells of rho
+    do n=1, nlevs
+       call multifab_fill_boundary(rho(n))
+
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
     end do   
-    
-    ! compute the face-centered flux in each direction
-    call diffusive_flux(mla,rho,molarconc,BinvGama,Dbar,Gama,flux,dx,the_bc_level)
-    
-    ! compute divergence of the flux 
-    call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
 
-    ! update rho using forward Euler discretization
-    call update_rho(mla,rho,fluxdiv,dt,the_bc_level)
-
-    ! destroy the multifab to prevent leakage in memory
+    ! free the multifab allocated memory
     do n=1,nlevs
+       call multifab_destroy(rhonew(n))
        call multifab_destroy(fluxdiv(n))
-       do i=1,dm
-          call multifab_destroy(flux(n,i))
-       end do
+       call multifab_destroy(fluxdivnew(n))
     end do
 
   end subroutine advance
 
-  subroutine update_rho(mla,rho,fluxdiv,dt,the_bc_level)
-
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: rho(:)
-    type(multifab) , intent(inout) :: fluxdiv(mla%nlevel)
-    real(kind=dp_t), intent(in   ) :: dt
-    type(bc_level) , intent(in   ) :: the_bc_level(:)
-
-    ! local variables
-    integer n, nlevs
-
-    nlevs = mla%nlevel  ! number of levels 
-    
-    ! Euler explicit time update
-    do n=1,nlevs
-       ! multiply div-of-flux with dt, starting from component 1 with 0 ghost-cell
-       call multifab_mult_mult_s_c(fluxdiv(n),1,dt,nspecies,0) 
-    end do 
-    
-    do n=1,nlevs
-       ! add this to rho to advance in time
-       call multifab_plus_plus(rho(n),fluxdiv(n))            
-    end do 
-
-    do n=1, nlevs
-       ! fill ghost cells for two adjacent grids at the same level
-       ! this includes periodic domain boundary ghost cells
-       call multifab_fill_boundary(rho(n))
-
-       ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho(n),1,scal_bc_comp,nspecies,the_bc_level(n))
-    end do   
-
-  end subroutine update_rho
-
-end module advance_module
+end module advance_module 

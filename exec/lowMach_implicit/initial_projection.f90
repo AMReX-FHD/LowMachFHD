@@ -7,11 +7,13 @@ module initial_projection_module
   use define_bc_module
   use macproject_module
   use div_and_grad_module
+  use mk_baro_fluxdiv_module
   use mk_diffusive_fluxdiv_module
   use mk_stochastic_fluxdiv_module
   use bc_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: rhobar, diff_coef, nscal
+  use probin_module, only: use_barodiffusion
 
   implicit none
 
@@ -21,8 +23,9 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,rhoc_d_fluxdiv, &
-                                rhoc_s_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
+                                rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,the_bc_tower, &
+                                vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -31,8 +34,10 @@ contains
     type(multifab) , intent(inout) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: prim(:)
     type(multifab) , intent(in   ) :: chi_fc(:,:)
+    type(multifab) , intent(in   ) :: gp_fc(:,:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
+    type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
@@ -68,7 +73,7 @@ contains
 
     ! average sold to faces
     do i=1,nscal
-       call average_cc_to_face(nlevs,sold,s_fc,i,dm+2,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,sold,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
     end do
 
     ! convert m^init to v^init in valid region
@@ -95,6 +100,17 @@ contains
     do n=1,nlevs
        call multifab_plus_plus_c(mac_rhs(n),1,rhoc_s_fluxdiv(n),1,1,0)
     end do
+
+    if (use_barodiffusion) then
+       ! compute baro-diffusion flux divergence
+       call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
+                            the_bc_tower%bc_tower_array,vel_bc_n)
+
+       ! add baro-diffusion to mac_rhs
+       do n=1,nlevs
+          call multifab_plus_plus_c(mac_rhs(n),1,rhoc_b_fluxdiv(n),1,1,0)
+       end do
+    end if
 
     do n=1,nlevs
        do i=1,dm

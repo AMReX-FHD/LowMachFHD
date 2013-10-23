@@ -201,7 +201,7 @@ subroutine main_driver()
   call destroy(mba)
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,1)
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,1,1)
   do n=1,nlevs
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
@@ -308,11 +308,11 @@ subroutine main_driver()
   call init_mat(mla,alpha,beta,gamma,dx,time,the_bc_tower%bc_tower_array)
 
   ! compute alpha_fc and beta_ed
-  call average_cc_to_face(nlevs,alpha,alpha_fc,1,dm+2,1,the_bc_tower%bc_tower_array)
+  call average_cc_to_face(nlevs,alpha,alpha_fc,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
   if (dm .eq. 2) then
-     call average_cc_to_node(nlevs,beta,beta_ed(:,1),1,dm+2,1,the_bc_tower%bc_tower_array)
+     call average_cc_to_node(nlevs,beta,beta_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
   else if (dm .eq. 3) then
-     call average_cc_to_edge(nlevs,beta,beta_ed,1,dm+2,1,the_bc_tower%bc_tower_array)
+     call average_cc_to_edge(nlevs,beta,beta_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
   end if
 
   if (abs(test_type) .eq. 1) then

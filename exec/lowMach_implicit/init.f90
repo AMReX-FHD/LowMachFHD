@@ -5,8 +5,10 @@ module init_module
   use ml_layout_module
   use define_bc_module
   use convert_stag_module
+  use bc_module
   use probin_lowmach_module, only: rhobar, diff_coef, visc_coef, &
-                                   smoothing_width, c_init, material_properties
+                                   smoothing_width, c_init, material_properties, &
+                                   grav
   use probin_common_module , only: prob_lo, prob_hi, prob_type
 
   implicit none
@@ -75,16 +77,19 @@ contains
   subroutine init_2d(mx,my,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p
-    real(kind=dp_t), intent(inout) :: mx(lo(1)-ng_m:,lo(2)-ng_m:)
-    real(kind=dp_t), intent(inout) :: my(lo(1)-ng_m:,lo(2)-ng_m:)
-    real(kind=dp_t), intent(inout) ::  s(lo(1)-ng_s:,lo(2)-ng_s:,:)
-    real(kind=dp_t), intent(inout) ::  p(lo(1)-ng_p:,lo(2)-ng_p:)
+    real(kind=dp_t), intent(inout) ::  mx(lo(1)-ng_m:,lo(2)-ng_m:)
+    real(kind=dp_t), intent(inout) ::  my(lo(1)-ng_m:,lo(2)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   s(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    real(kind=dp_t), intent(inout) ::   p(lo(1)-ng_p:,lo(2)-ng_p:)
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
     integer :: i,j
-    real(kind=dp_t) :: x,y,y1,y2,r
+    real(kind=dp_t) :: x,y,y1,y2,r,pres
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
+
+    ! temporaries for centrifuge
+    real(kind=dp_t) :: c(-1:64), rho(-1:64), rho1, rho2, kp1, kp2, S_fac, rhoavg, cavg
 
     select case (prob_type)
     case (0)
@@ -179,7 +184,61 @@ contains
                 end if   
              end if  
           enddo
-       enddo   
+       enddo
+
+    case (3)
+
+       ! one fluid on top of another
+       ! could be used for diffusive mixing or Rayleigh-Taylor,
+       ! depending on where the heavier fluid is and if gravity is on
+
+       mx = 0.d0
+       my = 0.d0
+
+       p = 0.d0
+
+       ! middle of domain
+       y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          do i=lo(1),hi(1)
+
+             if (y .lt. y1) then
+                s(i,j,2) = c_init(1)
+                s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))             
+             else
+                s(i,j,2) = c_init(2)
+                s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))   
+             end if
+             s(i,j,2) = s(i,j,1)*s(i,j,2)
+             
+          end do
+       end do
+
+    case (4)
+
+       ! the centrifuge test
+
+       mx = 0.d0
+       my = 0.d0
+       
+       p = 0.d0
+
+       ! constant rho
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+
+             s(i,j,2) = c_init(1)
+
+             ! compute rho with eos
+             s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
+
+             ! compute rho*c
+             s(i,j,2) = s(i,j,1)*s(i,j,2)
+
+          end do
+       end do
 
     case default
 
@@ -192,11 +251,11 @@ contains
   subroutine init_3d(mx,my,mz,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p
-    real(kind=dp_t), intent(inout) :: mx(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
-    real(kind=dp_t), intent(inout) :: my(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
-    real(kind=dp_t), intent(inout) :: mz(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
-    real(kind=dp_t), intent(inout) ::  s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
-    real(kind=dp_t), intent(inout) ::  p(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t), intent(inout) ::  mx(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    real(kind=dp_t), intent(inout) ::  my(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    real(kind=dp_t), intent(inout) ::  mz(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(inout) ::   p(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
@@ -310,7 +369,7 @@ contains
        end do
     end do
 
-    call average_cc_to_face(nlevs,chi,chi_fc,1,dm+2,1,the_bc_level)
+    call average_cc_to_face(nlevs,chi,chi_fc,1,tran_bc_comp,1,the_bc_level)
 
   end subroutine compute_chi
 
@@ -429,9 +488,9 @@ contains
     end do
 
     if (dm .eq. 2) then
-       call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,dm+2,1,the_bc_level)
+       call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,tran_bc_comp,1,the_bc_level)
     else if (dm .eq. 3) then
-       call average_cc_to_edge(nlevs,eta,eta_ed,1,dm+2,1,the_bc_level)
+       call average_cc_to_edge(nlevs,eta,eta_ed,1,tran_bc_comp,1,the_bc_level)
     end if
 
   end subroutine compute_eta
