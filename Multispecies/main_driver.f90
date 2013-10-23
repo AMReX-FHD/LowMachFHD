@@ -9,6 +9,7 @@ subroutine main_driver()
   use advance_module
   use define_bc_module
   use bc_module
+  use analysis_module
   use convert_variables_module
   use probin_common_module
   use probin_multispecies_module
@@ -33,6 +34,7 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
+  type(multifab), allocatable  :: rho_exact(:)  ! to test L2 norms with exact
   ! Donev: The code as written now assumes that Dbar and Gamma are constants
   ! i.e., they are not multifabs but rather simple arrays
   ! This is OK for now for simple testing but has to be changed later
@@ -58,6 +60,7 @@ subroutine main_driver()
   allocate(Gama(nspecies,nspecies))
   allocate(mass(nspecies))
   allocate(rho(nlevs))
+  allocate(rho_exact(nlevs))
 
   !==============================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -156,17 +159,19 @@ subroutine main_driver()
 
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
-     call multifab_build(rho(n),mla%la(n),nspecies,1)
+     call multifab_build(rho(n),      mla%la(n),nspecies,1)
+     call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
   end do
 
-  call init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+  time = 0.d0
+  call init_rho(rho,rho_exact,Dbar,Gama,mass,dx,prob_lo,prob_hi,time, & 
+                the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
   !=======================================================
 
   istep = 0
-  time = 0.d0
 
   ! write initial plotfile
   if (plot_int .gt. 0) then
@@ -187,6 +192,12 @@ subroutine main_driver()
      ! advance the solution by dt
      call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array)
 
+     ! compute error norms
+     if (print_error_norms) then
+        call print_errors(rho,rho_exact,Dbar,Gama,mass,dx,prob_lo,prob_hi,time,&
+                          the_bc_tower%bc_tower_array)
+     end if
+
      ! increment simulation time
      time = time + dt
 
@@ -205,6 +216,7 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_destroy(rho(n))
+     call multifab_destroy(rho_exact(n))
   end do
 
   call destroy(mla)
