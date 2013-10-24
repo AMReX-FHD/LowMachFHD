@@ -31,7 +31,7 @@ module analysis_module
      type(bc_level) , intent(in   )  :: the_bc_level(:)
  
      ! local variables
-     integer                         :: n,nlevs,n_cell
+     integer                         :: i,n,nlevs,n_cell
      real(kind=dp_t)                 :: norm
 
      nlevs = size(rho,1)
@@ -44,28 +44,21 @@ module analysis_module
         call multifab_sub_sub_c(rho_exact(n),1,rho(n),1,nspecies,0)
      end do
 
-     n_cell = multifab_volume(rho_exact(1))/nspecies
-     norm = multifab_norm_inf_c(rho_exact(1),1,1,all=.false.)
+     n_cell = multifab_volume(rho_exact(1))/nspecies ! Amit: logic not clear
+     !norm = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
     
-     ! print zero norm 
-     if (parallel_IOProcessor()) print*,"L0 RHO  =",norm
-     norm = multifab_norm_inf_c(rho_exact(1),2,1,all=.false.)
-     if (parallel_IOProcessor()) print*,"L0 RHOC =",norm
-     if (parallel_IOProcessor()) print*,""
+     ! Linf norm = max(x_i) 
+     !if (parallel_IOProcessor()) print*,"Linf-norm rho  =",norm
 
-     ! print L1 norm 
-     norm = multifab_norm_l1_c(rho_exact(1),1,1,all=.false.)/dble(n_cell)
-     if (parallel_IOProcessor()) print*,"L1 RHO  =",norm
-     norm = multifab_norm_l1_c(rho_exact(1),2,1,all=.false.)
-     if (parallel_IOProcessor()) print*,"L1 RHOC =",norm/dble(n_cell)
-     if (parallel_IOProcessor()) print*,""
+     ! L1 norm = 1/n_cell*sum(x_i) 
+     !norm = multifab_norm_l1_c(rho_exact(1),1,nspecies,all=.false.)/dble(n_cell)
+     !if (parallel_IOProcessor()) print*,"L1-norm rho  =",norm
 
-     ! print L2 norm 
-     norm = multifab_norm_l2_c(rho_exact(1),1,1,all=.false.)
-     if (parallel_IOProcessor()) print*,"L2 RHO  =",norm / sqrt(dble(n_cell))
-     norm = multifab_norm_l2_c(rho_exact(1),2,1,all=.false.)
-     if (parallel_IOProcessor()) print*,"L2 RHOC =",norm / sqrt(dble(n_cell))
-     if (parallel_IOProcessor()) print*,""
+     ! L2 norm = sqrt{1/n_cell*sum(x_i^2)} 
+     norm = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
+     !if (parallel_IOProcessor()) print*,"L2-norm rho  =",norm
+     !if (parallel_IOProcessor()) print*,""
+     if (parallel_IOProcessor()) print*, time, norm
 
   end subroutine print_errors
 

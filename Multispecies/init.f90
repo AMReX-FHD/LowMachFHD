@@ -158,7 +158,7 @@ contains
     !========================================================
     ! Initializing rho's in Gaussian so as rho_tot=1.0
     !========================================================
-    sigma = L(1)/10.0d0  ! variance
+    sigma = L(1)/50.0d0  ! variance
   
     do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
@@ -173,15 +173,14 @@ contains
               rho_exact(i,j,1) = rho(i,j,1) 
               rho_exact(i,j,2) = rho(i,j,2) 
             else
-              rho_exact(i,j,1) = sqrt(1.0d0/(4.0d0*M_PI*Dbar_in(1)*time))*&
-                  exp(-rsq/(4.0d0*Dbar_in(1)*time))
-              rho_exact(i,j,2) = 1.0d0 - sqrt(1.0d0/(4.0d0*M_PI*Dbar_in(1)*time))*&
-                  exp(-rsq/(4.0d0*Dbar_in(1)*time))
+              rho_exact(i,j,1) = sqrt(M_PI*sigma**2/(M_PI*(sigma**2+4.0d0*Dbar_in(1)*time)))*&
+                  exp(-rsq/(sigma**2 + 4.0d0*Dbar_in(1)*time))
+              rho_exact(i,j,2) = 1.0d0 - sqrt(M_PI*sigma**2/(M_PI*(sigma**2+4.0d0*Dbar_in(1)*time)))*&
+                  exp(-rsq/(sigma**2 + 4.0d0*Dbar_in(1)*time))
             endif
           
          end do
       end do
-     
 
     end select
    
