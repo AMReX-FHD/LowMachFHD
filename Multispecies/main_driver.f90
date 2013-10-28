@@ -180,7 +180,7 @@ subroutine main_driver()
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
-  dt = cfl*dx(1,1)**2/chi
+  dt = cfl*dx(1,1)**2/chi*16.0d0
   write(*,*) "Using time step dt=", dt
  
   do istep=1,max_step
@@ -198,15 +198,13 @@ subroutine main_driver()
                           the_bc_tower%bc_tower_array)
      end if
 
-     ! increment simulation time
-     time = time + dt
-
-     ! write plotfile at intervals
-     if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
-          .or. &
-          (istep .eq. max_step) ) then
+     ! write plotfile at specific intervals
+     if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
         call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
      end if
+     
+     ! increment simulation time
+     time = time + dt
         
   end do
 

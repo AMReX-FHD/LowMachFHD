@@ -44,8 +44,8 @@ module analysis_module
         call multifab_sub_sub_c(rho_exact(n),1,rho(n),1,nspecies,0)
      end do
 
-     n_cell = multifab_volume(rho_exact(1))/nspecies ! Amit: logic not clear
-     !norm = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
+     n_cell = multifab_volume(rho_exact(1))/nspecies 
+     norm = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
     
      ! Linf norm = max(x_i) 
      !if (parallel_IOProcessor()) print*,"Linf-norm rho  =",norm
@@ -55,10 +55,15 @@ module analysis_module
      !if (parallel_IOProcessor()) print*,"L1-norm rho  =",norm
 
      ! L2 norm = sqrt{1/n_cell*sum(x_i^2)} 
-     norm = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
+     !norm = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
      !if (parallel_IOProcessor()) print*,"L2-norm rho  =",norm
      !if (parallel_IOProcessor()) print*,""
-     if (parallel_IOProcessor()) print*, time, norm
+     
+     if (parallel_IOProcessor()) then 
+       if(time .gt. 1) then 
+          print*, time, norm
+       endif
+     endif
 
   end subroutine print_errors
 

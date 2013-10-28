@@ -61,8 +61,8 @@ contains
           select case(dm)
           case (2)
              call init_rho_2d(dp(:,:,1,:),dp1(:,:,1,:),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
-          !case (3)
-          !   call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
+          case (3)
+             call init_rho_3d(dp(:,:,:,:),dp1(:,:,:,:),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
           end select
        end do
 
@@ -106,8 +106,7 @@ contains
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)  ! last dimension for species
     real(kind=dp_t)  :: rho_exact(lo(1)-ng:,lo(2)-ng:,:)  
-    real(kind=dp_t)  :: prob_lo(2)
-    real(kind=dp_t)  :: prob_hi(2)
+    real(kind=dp_t)  :: prob_lo(2),prob_hi(2)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  
@@ -158,7 +157,7 @@ contains
     !========================================================
     ! Initializing rho's in Gaussian so as rho_tot=1.0
     !========================================================
-    sigma = L(1)/50.0d0  ! variance
+    sigma = L(1)/20.0d0  ! variance
   
     do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
@@ -166,41 +165,52 @@ contains
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
-            
             if(time.eq.0) then 
-              rho(i,j,1)       = exp(-rsq/sigma**2) 
-              rho(i,j,2)       = 1.0d0 - exp(-rsq/sigma**2) 
-              rho_exact(i,j,1) = rho(i,j,1) 
-              rho_exact(i,j,2) = rho(i,j,2) 
+               rho(i,j,1)       = dexp(-rsq/(2.0d0*sigma)) 
+               rho(i,j,2)       = 1.0d0-dexp(-rsq/(2.0d0*sigma))
+               !print*, time, i,j,"printing time 0"
+            else if(time.gt.1.0d0 .and. time.lt.1.01d0) then 
+               rho_exact(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
+               rho_exact(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
+               rho(i,j,1)       = rho_exact(i,j,1) 
+               rho(i,j,2)       = rho_exact(i,j,2)
+               !print*, time, i,j,"printing time 1"
             else
-              rho_exact(i,j,1) = sqrt(M_PI*sigma**2/(M_PI*(sigma**2+4.0d0*Dbar_in(1)*time)))*&
-                  exp(-rsq/(sigma**2 + 4.0d0*Dbar_in(1)*time))
-              rho_exact(i,j,2) = 1.0d0 - sqrt(M_PI*sigma**2/(M_PI*(sigma**2+4.0d0*Dbar_in(1)*time)))*&
-                  exp(-rsq/(sigma**2 + 4.0d0*Dbar_in(1)*time))
+               rho_exact(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
+               rho_exact(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
+               !print*, time, i,j,"printing time"
             endif
+         
+           !if(i.eq.42 .and. j.eq.31) then 
+           !   print*, time, rho(i,j,1), rho_exact(i,j,1), rho(i,j,2), rho_exact(i,j,2)
+           !endif
           
          end do
       end do
 
     end select
    
-    end subroutine init_rho_2d
+  end subroutine init_rho_2d
 
-    subroutine init_rho_3d(rho, diff_coeffs, ng, lo, hi, prob_lo, prob_hi, dx)
-
-    integer         :: lo(3), hi(3), ng
-    real(kind=dp_t) :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! Last dimension for species 
-    real(kind=dp_t) :: diff_coeffs(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) 
-    real(kind=dp_t) :: prob_lo(3)
-    real(kind=dp_t) :: prob_hi(3)
-    real(kind=dp_t) :: dx(:)
+  subroutine init_rho_3d(rho,rho_exact,ng,lo,hi,prob_lo,prob_hi,dx,time)
+    
+    integer          :: lo(3), hi(3), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! Last dimension for species 
+    real(kind=dp_t)  :: rho_exact(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  
+    real(kind=dp_t)  :: prob_lo(3),prob_hi(3)
+    real(kind=dp_t)  :: dx(:)
+    real(kind=dp_t)  :: time 
  
     ! local variables
     integer          :: i,j,k
-    real(kind=dp_t)  :: x,y,z,L(3)
+    real(kind=dp_t)  :: x,y,z,rsq,sigma,L(3)
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
+
+    ! for specific box, now start loop over alloted cells     
+    select case(init_type) 
     
+    case(1) 
     !================================================================================
     ! Initializing rho's in concentric circle at (Lx/2,Ly/2,Lz/2) with radius^2=0.001
     !================================================================================
@@ -212,8 +222,8 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
              
-             if ((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + & 
-                 (z-L(3)*0.5d0)**2 .lt. L(1)*L(2)*L(3)*0.001d0) then
+             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
+             if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
                  rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
              else
                  rho(i,j,k,1:nspecies) = rho_in(2,1:nspecies)
@@ -223,7 +233,63 @@ contains
        end do
     end do
     !$omp end parallel do
- 
+
+    case(2) 
+    !========================================================
+    ! Initializing rho's with constant gradient for 2-species  
+    !========================================================
+    !$omp parallel private(i,j,k,x,y,z)
+    do k=lo(3),hi(3)
+       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+    
+            !rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
+            rho(i,j,k,1) = rho_in(1,1) + 0.001d0*x - 0.002d0*y + 0.003d0*z
+            rho(i,j,k,2) = rho_in(1,2) + 0.003d0*x + 0.001d0*y - 0.002d0*z
+            !rho(i,j,k,3) = rho_in(1,3) + 0.002d0*x - 0.001d0*y
+    
+          end do
+       end do
+     end do
+     !$omp end parallel do
+
+     case(3) 
+     !========================================================
+     ! Initializing rho's in Gaussian so as rho_tot=1.0
+     !========================================================
+     sigma = L(1)/20.0d0  ! variance
+  
+     !$omp parallel private(i,j,k,x,y,z)
+     do k=lo(3),hi(3)
+        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        do j=lo(2),hi(2)
+           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           do i=lo(1),hi(1)
+              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+        
+              rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
+          
+              ! exact expression for fixed density-two species problem   
+              rho_exact(i,j,k,1) = sqrt(M_PI*2.0d0*sigma/(M_PI*(2.0d0*sigma+4.0d0*Dbar_in(1)*time)))*&
+                                   dexp(-rsq/(2.0d0*sigma + 4.0d0*Dbar_in(1)*time))
+              rho_exact(i,j,k,2) = 1.0d0 - sqrt(M_PI*2.0d0*sigma/(M_PI*(2.0d0*sigma+4.0d0*Dbar_in(1)*time)))*&
+                                   dexp(-rsq/(2.0d0*sigma + 4.0d0*Dbar_in(1)*time))
+            
+              if(time.eq.0) then 
+                 rho(i,j,k,1)  = rho_exact(i,j,k,1) 
+                 rho(i,j,k,2)  = rho_exact(i,j,k,2) 
+              endif
+          
+           end do
+        end do
+     end do
+     !$omp end parallel do
+
+    end select
+   
   end subroutine init_rho_3d
 
 end module init_module
