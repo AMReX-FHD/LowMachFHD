@@ -34,7 +34,7 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
-  type(multifab), allocatable  :: rho_exact(:)  ! to test L2 norms with exact
+  type(multifab), allocatable  :: rho_exact(:)  ! to test Lnorms with exact expression
   ! Donev: The code as written now assumes that Dbar and Gamma are constants
   ! i.e., they are not multifabs but rather simple arrays
   ! This is OK for now for simple testing but has to be changed later
@@ -76,14 +76,15 @@ subroutine main_driver()
      mba%rr(n-1,:) = 2
   enddo
 
-  ! set grid spacing at each level
-  ! presently the grid spacing is same in each direction
-  ! Set initial Dbar all zero.
+  ! set grid spacing at each level; presently grid spacing is same in all direction
   dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
+  
+  ! initialize quantities to zero.
   Dbar(1:nspecies,1:nspecies) = 0.0d0  
   Gama(1:nspecies,1:nspecies) = 0.0d0  
-  mass(1:nspecies) = 1.0d0  
-  
+  mass(1:nspecies)            = 1.0d0  
+ 
+  ! check whether dimensionality & grid spacing passed correct 
   select case (dm) 
     case(2)
       if (dx(1,1) .ne. dx(1,2)) then
@@ -96,6 +97,8 @@ subroutine main_driver()
     case default
       call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
   end select
+
+  ! use refined dx for next level
   do n=2,nlevs
      dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
   end do
@@ -105,7 +108,7 @@ subroutine main_driver()
   hi(1:dm) = n_cells(1:dm)-1
   bx = make_box(lo,hi)
 
-  ! tell mba about the problem domain at each level
+  ! tell mba about the problem domain at every level
   mba%pd(1) = bx
   do n=2,nlevs
      mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
@@ -180,7 +183,7 @@ subroutine main_driver()
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
-  dt = cfl*dx(1,1)**2/chi*16.0d0
+  dt = cfl*dx(1,1)**2/chi*1.0d0
   write(*,*) "Using time step dt=", dt
  
   do istep=1,max_step

@@ -32,7 +32,7 @@ module analysis_module
  
      ! local variables
      integer                         :: i,n,nlevs,n_cell
-     real(kind=dp_t)                 :: norm
+     real(kind=dp_t)                 :: norm_inf,norm_l1,norm_l2
 
      nlevs = size(rho,1)
 
@@ -45,25 +45,25 @@ module analysis_module
      end do
 
      n_cell = multifab_volume(rho_exact(1))/nspecies 
-     norm = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
-    
-     ! Linf norm = max(x_i) 
-     !if (parallel_IOProcessor()) print*,"Linf-norm rho  =",norm
+     
+     ! Linf norm = max(diff_i) 
+     norm_inf = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
 
-     ! L1 norm = 1/n_cell*sum(x_i) 
-     !norm = multifab_norm_l1_c(rho_exact(1),1,nspecies,all=.false.)/dble(n_cell)
+     ! L1 norm = 1/n_cell*sum(diff_i) 
+     norm_l1 = multifab_norm_l1_c(rho_exact(1),1,nspecies,all=.false.)/dble(n_cell)
      !if (parallel_IOProcessor()) print*,"L1-norm rho  =",norm
 
-     ! L2 norm = sqrt{1/n_cell*sum(x_i^2)} 
-     !norm = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
-     !if (parallel_IOProcessor()) print*,"L2-norm rho  =",norm
-     !if (parallel_IOProcessor()) print*,""
+     ! L2 norm = sqrt{1/n_cell*sum(diff_i^2)} 
+     norm_l2 = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
      
+     ! print the norms
+     !if(.false.) then
      if (parallel_IOProcessor()) then 
-       if(time .gt. 1) then 
-          print*, time, norm
+       if(time .gt. 3) then 
+          print*, time, norm_inf, norm_l1, norm_l2
        endif
      endif
+     !endif
 
   end subroutine print_errors
 

@@ -155,7 +155,8 @@ contains
 
     case(3) 
     !========================================================
-    ! Initializing rho's in Gaussian so as rho_tot=1.0
+    ! Initializing rho's in Gaussian so as rho_tot=constant=1.0
+    ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
     !========================================================
     sigma = L(1)/20.0d0  ! variance
   
@@ -180,7 +181,11 @@ contains
                rho_exact(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
                !print*, time, i,j,"printing time"
             endif
-         
+       
+            if(time.gt.1.5d0 .and. time.lt. 1.51d0) then
+            !print*, rho(i,j,1)
+            endif
+ 
            !if(i.eq.42 .and. j.eq.31) then 
            !   print*, time, rho(i,j,1), rho_exact(i,j,1), rho(i,j,2), rho_exact(i,j,2)
            !endif
@@ -258,9 +263,10 @@ contains
 
      case(3) 
      !========================================================
-     ! Initializing rho's in Gaussian so as rho_tot=1.0
+     ! Initializing rho's in Gaussian so as rho_tot=constant=1.0. Here rho_exact = 
+     ! e^(-r^2/4Dt)/(4piDt)^3/2, For norm, sigma/dx >2 (at t=0) & L/sigma < 8 (at t=t)
      !========================================================
-     sigma = L(1)/20.0d0  ! variance
+     sigma = L(1)/10.0d0  ! variance
   
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
@@ -271,17 +277,28 @@ contains
               x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
               rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
-          
-              ! exact expression for fixed density-two species problem   
-              rho_exact(i,j,k,1) = sqrt(M_PI*2.0d0*sigma/(M_PI*(2.0d0*sigma+4.0d0*Dbar_in(1)*time)))*&
-                                   dexp(-rsq/(2.0d0*sigma + 4.0d0*Dbar_in(1)*time))
-              rho_exact(i,j,k,2) = 1.0d0 - sqrt(M_PI*2.0d0*sigma/(M_PI*(2.0d0*sigma+4.0d0*Dbar_in(1)*time)))*&
-                                   dexp(-rsq/(2.0d0*sigma + 4.0d0*Dbar_in(1)*time))
-            
               if(time.eq.0) then 
-                 rho(i,j,k,1)  = rho_exact(i,j,k,1) 
-                 rho(i,j,k,2)  = rho_exact(i,j,k,2) 
+                 rho(i,j,k,1)       = dexp(-rsq/(2.0d0*sigma)) 
+                 rho(i,j,k,2)       = 1.0d0-dexp(-rsq/(2.0d0*sigma))
+                 !print*, time, i,j,"printing time 0"
+              else if(time.gt.3.0d0 .and. time.lt.3.01d0) then 
+                 rho_exact(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0
+                 rho_exact(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0
+                 rho(i,j,k,1)       = rho_exact(i,j,k,1) 
+                 rho(i,j,k,2)       = rho_exact(i,j,k,2)
+                 !print*, time, i,j,"printing time 1"
+              else
+                 rho_exact(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0
+                 rho_exact(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0
+                 !print*, time, i,j,"printing time"
               endif
+       
+ 
+              !if(time.gt.1.5d0 .and. time.lt. 2.1d0) then
+              !if(i.eq.42 .and. j.eq.31 .and. k.eq. 32) then 
+              !   print*, time, rho(i,j,k,1), rho_exact(i,j,k,1), rho(i,j,k,2), rho_exact(i,j,k,2)
+              !endif
+              !endif
           
            end do
         end do
