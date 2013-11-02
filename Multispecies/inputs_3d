@@ -1,27 +1,38 @@
 &probin_common
-
- dim_in = 3                       !problem dimension
- plot_int = 100                   !plot interval
- max_grid_size(1:3) = 16 16 16    !individual box size 
+ 
+ dim_in = 3                     ! problem dimension
+ plot_int = 200                  ! plot interval
+ max_grid_size(1:3) = 16 16 16  ! individual box size 
 
  ! Grid size
  prob_lo(1:3) = 0  0  0
- prob_hi(1:3) = 64 64 64          !physical problem size
- n_cells(1:3) = 64 64 64          !to set dx=systemsize/n_cells
+ prob_hi(1:3) = 32 32 32        ! physical systemsize = (prob_lo-prob_hi)
+ n_cells(1:3) = 144 144 144        ! to set dx = systemsize/n_cells
 
  ! allowable options for this example are
  ! -1 = PERIODIC
  bc_lo(1:3) = -1 -1 -1
  bc_hi(1:3) = -1 -1 -1
-
+ 
 /
 
 &probin_multispecies
- nspecies = 4
- max_step = 100                  !total number of simulational step
- !include_temperature = T          ! T or F
+ nspecies = 2                   ! number of species
+ max_step = 10                 ! total number of computational step
+ cfl      = 0.01                ! CFL number
+ chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
+ Temp     = 1.0                 ! Temperature
+ Press    = 1.0                 ! Pressure
+ !include_temp = .false.        ! right now no temperature equation
+ init_type = 3                  ! initial problem: 1=bubble,2=const gradient,3=gaussian
+ inverse_type = 1               ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
+ timeinteg_type = 1             ! integrator type: 1=Euler explicit, 2=predictor-corrector
+                                ! 3=midpoint method, 4=3rd order Runge-Kutta 
+ print_error_norms = .true.     ! check L1/L2/Linf norm 
+ is_ideal_mixture  = .false.    ! false=Bdag*Gama, true=Bdag 
+ rho_in(1:2,1) = 0.1 0.9        ! initial concentrations for species 1
+ rho_in(1:2,2) = 0.9 0.1        ! initial concentrations for species 2
+ molmass_in(1:2) = 1.0 1.0      ! molar mass of n-species
+ Dbar_in(1:1)= 1.0              ! SM diffusion constant arranged in lower-triangle
  
- c_bc(1:2,1) = 0.5 0.0             ! Initial concentrations for species 1
- c_bc(1:2,2) = 0.5 0.3             ! Initial concentrations for species 2,3,4
- d_bc(1:4)   = 0.1 0.4 0.8 1.2     ! diffusion coefficients for 4 species
 /

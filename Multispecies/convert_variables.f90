@@ -16,7 +16,7 @@ module convert_variables_module
 
 contains
 
-  subroutine convert_cons_to_prim(mla, rho, rho_tot, molarconc, mass, molmtot, the_bc_level)
+  subroutine convert_cons_to_prim(mla,rho,rho_tot,molarconc,mass,molmtot,the_bc_level)
    
    type(ml_layout), intent(in   )  :: mla
    type(multifab) , intent(in)     :: rho(:) 
@@ -52,21 +52,21 @@ contains
           
           select case(dm)
           case (2)
-             call compute_molconc_rhotot_2d(dp(:,:,1,:), dp1(:,:,1,1), dp2(:,:,1,:), mass(:), & 
-                                            dp3(:,:,1,1), ng, lo, hi) 
+             call compute_molconc_rhotot_2d(dp(:,:,1,:),dp1(:,:,1,1),&
+                           dp2(:,:,1,:),mass(:),dp3(:,:,1,1),ng,lo,hi) 
           case (3)
-             stop
-             !call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
+             call compute_molconc_rhotot_3d(dp(:,:,:,:),dp1(:,:,:,1),&
+                           dp2(:,:,:,:),mass(:),dp3(:,:,:,1),ng,lo,hi) 
           end select
        end do
     end do
 
   end subroutine convert_cons_to_prim
 
-  subroutine compute_molconc_rhotot_2d(rho, rho_tot, molarconc, mass, molmtot, ng, lo, hi)
+  subroutine compute_molconc_rhotot_2d(rho,rho_tot,molarconc,mass,molmtot,ng,lo,hi)
  
     integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density; last dim for numberof species
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density- last dim for #species
     real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:)     ! total density in each cell 
     real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:) ! molar concentration
     real(kind=dp_t)  :: mass(:)                          ! species molar mass 
@@ -101,14 +101,58 @@ contains
              molarconc(i,j,n) = molmtot(i,j)*W(n)/mass(n)
           enddo
 
-        
        enddo
     enddo
  
   end subroutine compute_molconc_rhotot_2d
 
-  subroutine compute_BinvGamma(mla, rho, rho_tot, molarconc, BinvGamma, Dbar, & 
-             Gama, mass, molmtot, the_bc_level)
+  subroutine compute_molconc_rhotot_3d(rho,rho_tot,molarconc,mass,molmtot,ng,lo,hi)
+ 
+    integer          :: lo(3), hi(3), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! density- last dim for #species
+    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)     ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! molar concentration
+    real(kind=dp_t)  :: mass(:)                                    ! species molar mass 
+    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)     ! total molar mass 
+    real(kind=dp_t), dimension(nspecies) :: W                      ! mass fraction w_i = rho_i/rho 
+    
+    ! local variables
+    integer          :: i,j,k,n
+    real(kind=dp_t)  :: Sum_woverm, rho_tot_local
+    
+    ! for specific box, now start loops over alloted cells    
+    do k=lo(3)-ng, hi(3)+ng
+       do j=lo(2)-ng, hi(2)+ng
+          do i=lo(1)-ng, hi(1)+ng
+
+             ! calculate total density inside each cell
+             rho_tot_local=0.d0 
+             do n=1, nspecies  
+                rho_tot_local = rho_tot_local + rho(i,j,k,n)
+             enddo         
+             rho_tot(i,j,k) = rho_tot_local
+
+             ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i))
+             Sum_woverm=0.d0
+             do n=1, nspecies  
+                W(n) = rho(i,j,k,n)/rho_tot(i,j,k)
+                Sum_woverm = Sum_woverm + W(n)/mass(n)
+             enddo
+             molmtot(i,j,k) = 1.0d0/Sum_woverm 
+  
+             ! calculate molar concentrations in each cell (x_i=m*w_i/m_i) 
+             do n=1, nspecies 
+                molarconc(i,j,k,n) = molmtot(i,j,k)*W(n)/mass(n)
+             enddo
+        
+          enddo
+       enddo
+    enddo
+ 
+  end subroutine compute_molconc_rhotot_3d
+
+  subroutine compute_BinvGamma(mla,rho,rho_tot,molarconc,BinvGamma,Dbar,&
+                                          Gama,mass,molmtot,the_bc_level)
    
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -149,18 +193,18 @@ contains
           
           select case(dm)
           case (2)
-             call compute_BinvGamma_2d(dp(:,:,1,:), dp1(:,:,1,1), dp2(:,:,1,:), dp3(:,:,1,:), & 
-                                       Dbar(:,:), Gama(:,:), mass(:), dp4(:,:,1,1), ng, lo, hi) 
-          !case (3)
-          !   call init_rho_3d(dp(:,:,:,:), dp1(:,:,:,:), ng, lo, hi, prob_lo, prob_hi, dx(n,:))
+             call compute_BinvGamma_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
+                  dp3(:,:,1,:),Dbar(:,:),Gama(:,:),mass(:),dp4(:,:,1,1),ng,lo,hi) 
+          case (3)
+             call compute_BinvGamma_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
+                  dp3(:,:,:,:),Dbar(:,:),Gama(:,:),mass(:),dp4(:,:,:,1),ng,lo,hi) 
           end select
        end do
     end do
 
    end subroutine compute_BinvGamma
 
-   subroutine compute_BinvGamma_2d(rho, rho_tot, molarconc, BinvGamma, Dbar, Gama, & 
-                                   mass, molmtot, ng, lo, hi)
+   subroutine compute_BinvGamma_2d(rho,rho_tot,molarconc,BinvGamma,Dbar,Gama,mass,molmtot,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
@@ -171,18 +215,15 @@ contains
     real(kind=dp_t)  :: Gama(:,:)                         ! non-ideality coefficient 
     real(kind=dp_t)  :: mass(:)                           ! species molar mass 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
-    logical          :: is_ideal_mixture
 
     ! local variables
-    integer          :: i,j,row,column,info
+    integer          :: i,j,row,column
     real(kind=dp_t)  :: tolerance, Sum_knoti              ! tolerance set for pinverse 
-    real(kind=dp_t)  :: alpha1    
 
     ! vectors and matrices to be used by LAPACK 
-    real(kind=dp_t), dimension(nspecies,nspecies) :: Bijprime, Bdag, Sdag, Lonsager
-    real(kind=dp_t), dimension(nspecies,nspecies) :: U, UT, V, VT, BdagGamma,BdagCapW 
-    real(kind=dp_t), dimension(nspecies)          :: S, W, alpha, Checkmat, work 
-    integer, dimension(nspecies)                  :: ipiv
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Bijprime, Lonsager
+    real(kind=dp_t), dimension(nspecies,nspecies) :: BdagGamma,BdagCapW 
+    real(kind=dp_t), dimension(nspecies)          :: W 
 
     tolerance = 1e-13
 
@@ -192,19 +233,9 @@ contains
         
           ! free up the memory  
           Bijprime=0.d0
-          Bdag = 0.d0
-          Sdag = 0.d0
-          U = 0.d0
-          UT = 0.d0
-          V = 0.d0
-          VT=0.d0
           BdagGamma = 0.d0
-          S = 0.d0
           W=0.d0
-          alpha=0.d0
-          alpha1=0.d0
           Lonsager=0.d0         
-          Checkmat=0.d0
  
           ! change 0 with tolerance to prevent division by zero in case species
           ! density, molar concentration or total density = 0. 
@@ -236,97 +267,14 @@ contains
              W(row) = rho(i,j,row)/rho_tot(i,j)
           enddo
 
-          ! adjust parameter alpha1 to max val of Bijprime
-          alpha1 = maxval(abs(Bijprime))
-
-          ! transform Bijprime to Bij by adding alpha1*matrix of ones(denoted here as Bijprime)
-          do row=1, nspecies
-             do column=1, nspecies
-                Bijprime(row, column) = Bijprime(row, column) + alpha1
-             enddo
-          enddo
-        
-          !===============================================================          
-          ! select LAPACK inversion type, 1=inverse, 2=pseudo inverse 
-          !===============================================================          
-          select case(inverse_type) 
-           
-          case(1)
-          !==========================================================
-          ! Using Inverse 
-          !==========================================================
- 
-             ! compute A^(-1)*B = c;  
-             !call la_gesvx(A=Bijprime, B=Gama, X=BdagGamma)
-            
-             ! compute Bijprime inverse through LU factorization. 
-             ! Bijprime^(-1) is stored in Bijprime.
-             call dgetrf(nspecies, nspecies, Bijprime, nspecies, ipiv, info) 
-             call dgetri(nspecies, Bijprime, nspecies, ipiv, work, nspecies, info) 
-  
-             ! populate Bdagger with B^(-1)
-             Bdag = Bijprime
-     
-          case(2) 
-          !==========================================================
-          ! Using pseudoinverse 
-          !==========================================================
-
-             ! SVD decomposition of Bijprime = U * S * VTranspose; note that Bijprime 
-             ! is changed. also V=(VT)T, UT = (U)T are needed for pseudoinverse of Bprime.
-             call la_gesvd(Bijprime, S, U, VT)
-             V = transpose(VT)
-             UT = transpose(U)
-   
-             ! populate diagonal matrix Sdag = 1/S with diagonal=0 below a chosen tolerance
-             do row=1, nspecies
-                do column=1,nspecies
-                   Sdag(row,column) = 0.0d0
-                enddo
-             
-                if(S(row).gt.tolerance) then 
-                   Sdag(row,row) = 1.0d0/S(row)
-                else
-                   Sdag(row,row) = 0.0d0
-                endif 
-             enddo
-
-             ! compute Bdag = V*Sdag*UT, the pseudoinverse of Bprime & alpha.
-             Bdag = matmul(V, matmul(Sdag, UT))
-
-          end select
-          !===============================================================          
- 
-          ! compute alpha 
-          alpha = matmul(Bdag, W)
-
-          ! substract alpha from every row element of Bdag to get Bdag*W=0
-          do row=1, nspecies
-             do column=1, nspecies
-                Bdag(row, column) = Bdag(row, column) - alpha(row)
-             enddo
-          enddo
+          ! compute Binverse*Gamma and other relevant matrices
+          call compute_BdagGamma(Bijprime(:,:),BdagGamma(:,:),BdagCapW(:,:),Gama(:,:),W(:),tolerance)
 
           ! compute Onsager matrix L
-          do column=1, nspecies
-             do row=1, nspecies
-                BdagCapW(row, column) = Bdag(row,column)*W(column)
-             enddo
-          enddo
           Lonsager = -rho_tot(i,j)*Temp*BdagCapW/Press
-            
-          ! compute B^(-1)*Gamma = Bdag*Gamma. is_ideal_mixture = .true. for ideal mixture
-          is_ideal_mixture = .false.
-          if(is_ideal_mixture) then
-             BdagGamma = Bdag
-          else
-             BdagGamma = matmul(Bdag, Gama)
-          endif 
 
           !print*, i,j,"mol1=",molarconc(i,j,1),"mol2=",molarconc(i,j,2)
-          ! check Bdag*w = 0 
           if(.false.) then
-          Checkmat = matmul(Bdag, W)
             if(i.eq.7 .and. j.eq.14) then
                print*, "rho1=",rho(i,j,1),"rho2=",rho(i,j,2),"rho1+rho2=",rho_tot(i,j)
                print*, "rho1/rho=",W(1),"rho2/rho=",W(2),"w1+w2=",W(1)+W(2)
@@ -338,7 +286,7 @@ contains
                    !print*, Lonsager(row, column)
                    !print*, Gama(row, column)
                 enddo
-                !print*, Checkmat(row) 
+                !print*, Bdagw(row) 
                 print*, '' 
               enddo
             endif
@@ -358,6 +306,226 @@ contains
         BinvGamma_ij = BdagGamma_ij
      end subroutine 
 
-    end subroutine compute_BinvGamma_2d
+  end subroutine compute_BinvGamma_2d
+
+  subroutine compute_BinvGamma_3d(rho,rho_tot,molarconc,BinvGamma,Dbar,Gama,mass,molmtot,ng,lo,hi)
+   
+    integer          :: lo(3), hi(3), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! density; last dimension for species
+    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! molar concentration; 
+    real(kind=dp_t)  :: BinvGamma(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! B^(-1)*Gamma; last dimension for nspecies^2
+    real(kind=dp_t)  :: Dbar(:,:)                                   ! SM diffusion constants 
+    real(kind=dp_t)  :: Gama(:,:)                                   ! non-ideality coefficient 
+    real(kind=dp_t)  :: mass(:)                                     ! species molar mass 
+    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total molar mass 
+    
+    ! local variables
+    integer          :: i,j,k,row,column
+    real(kind=dp_t)  :: tolerance, Sum_knoti   
+
+    ! vectors and matrices to be used by LAPACK 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Bijprime, Lonsager
+    real(kind=dp_t), dimension(nspecies,nspecies) :: BdagGamma,BdagCapW 
+    real(kind=dp_t), dimension(nspecies)          :: W 
+
+    tolerance = 1e-13
+
+    ! for specific box, now start loops over alloted cells 
+    do k=lo(3)-ng,hi(3)+ng
+       do j=lo(2)-ng,hi(2)+ng
+          do i=lo(1)-ng,hi(1)+ng
+        
+             ! free up the memory  
+             Bijprime=0.d0
+             BdagGamma = 0.d0
+             W=0.d0
+             Lonsager=0.d0         
+ 
+             ! change 0 with tolerance to prevent division by zero in case species
+             ! density, molar concentration or total density = 0. 
+             do row=1, nspecies
+                if(molarconc(i,j,k,row) .lt. tolerance) then
+                   molarconc(i,j,k,row) = tolerance
+                   rho(i,j,k,row)       = tolerance*rho_tot(i,j,k)                
+                endif
+             enddo
+
+             ! compute Bijprime matrix and massfraction W_i = rho_i/rho; molarconc is 
+             ! expressed in terms of molmtot,mi,rhotot etc. 
+             do row=1, nspecies  
+                do column=1, row-1
+                   Bijprime(row, column) = rho(i,j,k,row)*molmtot(i,j,k)**2/(mass(row)* &
+                                           mass(column)*Dbar(row, column)*rho_tot(i,j,k)**2) 
+                   Bijprime(column, row) = rho(i,j,k,column)*molmtot(i,j,k)**2/(mass(row)* &
+                                           mass(column)*Dbar(column, row)*rho_tot(i,j,k)**2) 
+                enddo
+            
+                Sum_knoti=0.d0 
+                do column=1, nspecies
+                   if (column.ne.row) then
+                      Sum_knoti = Sum_knoti - rho(i,j,k,column)/(mass(column)*Dbar(row,column))
+                   endif
+                   Bijprime(row, row) = Sum_knoti*molmtot(i,j,k)**2/(mass(row)*rho_tot(i,j,k)**2)
+                enddo
+             
+                W(row) = rho(i,j,k,row)/rho_tot(i,j,k)
+             enddo
+
+             ! compute Binverse*Gamma and other relevant matrices
+             call compute_BdagGamma(Bijprime(:,:),BdagGamma(:,:),BdagCapW(:,:),Gama(:,:),W(:),tolerance)
+
+             ! compute Onsager matrix L
+             Lonsager = -rho_tot(i,j,k)*Temp*BdagCapW/Press
+
+             ! do the rank conversion 
+             call set_Bij(BinvGamma(i,j,k,:), BdagGamma)
+ 
+          end do
+       end do
+    end do
+   
+    ! use contained (internal) subroutine to do the copy without doing index algebra:
+    contains 
+     subroutine set_Bij(BinvGamma_ij, BdagGamma_ij)
+        real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: BdagGamma_ij
+        real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: BinvGamma_ij  
+        BinvGamma_ij = BdagGamma_ij
+     end subroutine 
+
+  end subroutine compute_BinvGamma_3d
+
+  subroutine compute_BdagGamma(Bijprime,BdagGamma,BdagCapW,Gama,W,tolerance)
+         
+    real(kind=dp_t)  :: Bijprime(:,:)
+    real(kind=dp_t)  :: BdagGamma(:,:)
+    real(kind=dp_t)  :: BdagCapW(:,:)
+    real(kind=dp_t)  :: Gama(:,:)
+    real(kind=dp_t)  :: W(:)
+    real(kind=dp_t)  :: tolerance 
+ 
+    ! local variables
+    integer          :: row,column,info
+    real(kind=dp_t)  :: alpha1    
+
+    ! vectors and matrices to be used by LAPACK
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Bdag, Sdag
+    real(kind=dp_t), dimension(nspecies,nspecies) :: U, UT, V, VT
+    real(kind=dp_t), dimension(nspecies)          :: S, alpha, work 
+    real(kind=dp_t), dimension(nspecies)          :: Bdagw 
+    integer,         dimension(nspecies)          :: ipiv
+
+    ! free up the memory  
+    Bdag   = 0.d0
+    Sdag   = 0.d0
+    U      = 0.d0
+    UT     = 0.d0
+    V      = 0.d0
+    VT     = 0.d0
+    S      = 0.d0
+    alpha  = 0.d0
+    work   = 0.d0
+    Bdagw  = 0.d0
+    alpha1 = 0.d0
+        
+    ! adjust parameter alpha1 to max val of Bijprime
+    alpha1 = maxval(abs(Bijprime))
+
+    ! transform Bijprime to Bij by adding alpha1*matrix of ones(denoted here as Bijprime)
+    do row=1, nspecies
+       do column=1, nspecies
+          Bijprime(row, column) = Bijprime(row, column) + alpha1
+       enddo
+    enddo
+        
+    !===============================================================          
+    ! select LAPACK inversion type, 1=inverse, 2=pseudo inverse 
+    !===============================================================          
+    select case(inverse_type) 
+           
+    case(1)
+    !==========================================================
+    ! Using Inverse 
+    !==========================================================
+ 
+    ! compute A^(-1)*B = c;  
+    !call la_gesvx(A=Bijprime, B=Gama, X=BdagGamma)
+            
+    ! compute Bijprime inverse through LU factorization. 
+    ! Bijprime^(-1) is stored in Bijprime.
+    call dgetrf(nspecies, nspecies, Bijprime, nspecies, ipiv, info) 
+    call dgetri(nspecies, Bijprime, nspecies, ipiv, work, nspecies, info) 
+ 
+    ! populate Bdagger with B^(-1)
+    Bdag = Bijprime
+     
+    case(2) 
+    !==========================================================
+    ! Using pseudoinverse 
+    !==========================================================
+
+    ! SVD decomposition of Bijprime = U * S * VTranspose; note that Bijprime 
+    ! is changed. also V=(VT)T, UT = (U)T are needed for pseudoinverse of Bprime.
+    call la_gesvd(Bijprime, S, U, VT)
+    V = transpose(VT)
+    UT = transpose(U)
+   
+    ! populate diagonal matrix Sdag = 1/S with diagonal=0 below a chosen tolerance
+    do row=1, nspecies
+       do column=1,nspecies
+          Sdag(row,column) = 0.0d0
+       enddo
+       
+       if(S(row).gt.tolerance) then 
+          Sdag(row,row) = 1.0d0/S(row)
+       else
+          Sdag(row,row) = 0.0d0
+       endif 
+    enddo
+
+    ! compute Bdag = V*Sdag*UT, the pseudoinverse of Bprime & alpha.
+    Bdag = matmul(V, matmul(Sdag, UT))
+
+    end select
+    !===============================================================          
+ 
+    ! compute alpha 
+    alpha = matmul(Bdag, W)
+
+    ! substract alpha from every row element of Bdag to get Bdag*W=0
+    do row=1, nspecies
+       do column=1, nspecies
+          Bdag(row, column) = Bdag(row, column) - alpha(row)
+       enddo
+    enddo
+          
+    ! compute B^(-1)*Gamma = Bdag*Gamma. is_ideal_mixture = .true. for ideal mixture
+    if(is_ideal_mixture) then
+       BdagGamma = Bdag
+    else
+       BdagGamma = matmul(Bdag, Gama)
+    endif 
+
+    ! compute BdagCapW for Onsager matrix L
+    do column=1, nspecies
+       do row=1, nspecies
+          BdagCapW(row, column) = Bdag(row,column)*W(column)
+       enddo
+    enddo
+
+    ! check Bdag*w = 0 
+    if(.false.) then
+    Bdagw = matmul(Bdag, W)
+       do row=1, nspecies
+          do column=1, nspecies
+             print*, BdagGamma(row, column)
+             print*, Gama(row, column)
+          enddo
+          print*, Bdagw(row) 
+          print*, '' 
+       enddo
+    endif
+
+  end subroutine compute_BdagGamma
 
 end module convert_variables_module

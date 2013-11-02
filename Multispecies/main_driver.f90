@@ -9,6 +9,7 @@ subroutine main_driver()
   use advance_module
   use define_bc_module
   use bc_module
+  use analysis_module
   use convert_variables_module
   use probin_common_module
   use probin_multispecies_module
@@ -33,6 +34,7 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
+  type(multifab), allocatable  :: rho_exact(:)  ! to test Lnorms with exact expression
   ! Donev: The code as written now assumes that Dbar and Gamma are constants
   ! i.e., they are not multifabs but rather simple arrays
   ! This is OK for now for simple testing but has to be changed later
@@ -58,6 +60,7 @@ subroutine main_driver()
   allocate(Gama(nspecies,nspecies))
   allocate(mass(nspecies))
   allocate(rho(nlevs))
+  allocate(rho_exact(nlevs))
 
   !==============================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -73,14 +76,15 @@ subroutine main_driver()
      mba%rr(n-1,:) = 2
   enddo
 
-  ! set grid spacing at each level
-  ! presently the grid spacing is same in each direction
-  ! Set initial Dbar all zero.
+  ! set grid spacing at each level; presently grid spacing is same in all direction
   dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
+  
+  ! initialize quantities to zero.
   Dbar(1:nspecies,1:nspecies) = 0.0d0  
   Gama(1:nspecies,1:nspecies) = 0.0d0  
-  mass(1:nspecies) = 1.0d0  
-  
+  mass(1:nspecies)            = 1.0d0  
+ 
+  ! check whether dimensionality & grid spacing passed correct 
   select case (dm) 
     case(2)
       if (dx(1,1) .ne. dx(1,2)) then
@@ -93,6 +97,8 @@ subroutine main_driver()
     case default
       call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
   end select
+
+  ! use refined dx for next level
   do n=2,nlevs
      dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
   end do
@@ -102,7 +108,7 @@ subroutine main_driver()
   hi(1:dm) = n_cells(1:dm)-1
   bx = make_box(lo,hi)
 
-  ! tell mba about the problem domain at each level
+  ! tell mba about the problem domain at every level
   mba%pd(1) = bx
   do n=2,nlevs
      mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
@@ -156,17 +162,19 @@ subroutine main_driver()
 
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
-     call multifab_build(rho(n),mla%la(n),nspecies,1)
+     call multifab_build(rho(n),      mla%la(n),nspecies,1)
+     call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
   end do
 
-  call init_rho(rho,Dbar,Gama,mass,dx,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+  time = 0.d0
+  call init_rho(rho,rho_exact,Dbar,Gama,mass,dx,prob_lo,prob_hi,time, & 
+                the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
   !=======================================================
 
   istep = 0
-  time = 0.d0
 
   ! write initial plotfile
   if (plot_int .gt. 0) then
@@ -175,7 +183,7 @@ subroutine main_driver()
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
-  dt = cfl*dx(1,1)**2/chi
+  dt = cfl*dx(1,1)**2/chi*1.0d0
   write(*,*) "Using time step dt=", dt
  
   do istep=1,max_step
@@ -187,15 +195,19 @@ subroutine main_driver()
      ! advance the solution by dt
      call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array)
 
-     ! increment simulation time
-     time = time + dt
+     ! compute error norms
+     if (print_error_norms) then
+        call print_errors(rho,rho_exact,Dbar,Gama,mass,dx,prob_lo,prob_hi,time,&
+                          the_bc_tower%bc_tower_array)
+     end if
 
-     ! write plotfile at intervals
-     if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
-          .or. &
-          (istep .eq. max_step) ) then
+     ! write plotfile at specific intervals
+     if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
         call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
      end if
+     
+     ! increment simulation time
+     time = time + dt
         
   end do
 
@@ -205,6 +217,7 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_destroy(rho(n))
+     call multifab_destroy(rho_exact(n))
   end do
 
   call destroy(mla)

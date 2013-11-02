@@ -47,10 +47,10 @@ contains
     
     ! define the name of the plotfile that will be written
     write(unit=plotfile_name,fmt='("plt",i5.5)') istep
-    if ( parallel_IOProcessor() ) then
-      write(*,'(2A)') "Saving PLOT FILEs to directory ", trim(plotfile_name)
-      write(*,*)
-    end if
+    !if ( parallel_IOProcessor() ) then
+    !  write(*,'(2A)') "Saving PLOT FILEs to directory ", trim(plotfile_name)
+    !  write(*,*)
+    !end if
     
     ! write the plotfile
     call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), plotfile_name, & 
