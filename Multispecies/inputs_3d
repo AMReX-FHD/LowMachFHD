@@ -7,7 +7,7 @@
  ! Grid size
  prob_lo(1:3) = 0  0  0
  prob_hi(1:3) = 32 32 32        ! physical systemsize = (prob_lo-prob_hi)
- n_cells(1:3) = 144 144 144        ! to set dx = systemsize/n_cells
+ n_cells(1:3) = 32 32 32        ! to set dx = systemsize/n_cells
 
  ! allowable options for this example are
  ! -1 = PERIODIC
@@ -18,7 +18,7 @@
 
 &probin_multispecies
  nspecies = 2                   ! number of species
- max_step = 10                 ! total number of computational step
+ max_step = 1                 ! total number of computational step
  cfl      = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature
