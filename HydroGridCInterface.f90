@@ -300,7 +300,7 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id, 
    character(len=1024), target :: input_file_base     ! file name
    character(len=1024), target :: input_file_name     !local variable, file name for snapshots
    character(len=1024), target :: hstat_file_name  ! file name for storing horizontal data as DAT file
-   integer :: mesh_dims(3), dim, iVariance
+   integer :: nvars_vtk, mesh_dims(3), dim, iVariance
    character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
    
    if(present(filename)) then
@@ -368,22 +368,26 @@ subroutine projectHydroGridMixture (grid, density, concentration, filename, id, 
       mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)
    
       !~~~ we need XZ plane and plot the quantity~~~~~~~~~~~~~~~~
-      varnames(1) = "rho_CofM" // C_NULL_CHAR
+      nvars_vtk = 2 ! How many of these to actually write
+      varnames(1) = "c_Avg" // C_NULL_CHAR
       varnames(2) = "c_CofM" // C_NULL_CHAR
-      varnames(3) = "rho1_CofM" // C_NULL_CHAR
-      varnames(4) = "rho_Avg" // C_NULL_CHAR
+
+      varnames(3) = "rho_Avg" // C_NULL_CHAR
+      varnames(4) = "rho_CofM" // C_NULL_CHAR
+
       varnames(5) = "rho1_Avg" // C_NULL_CHAR
-      varnames(6) = "c_Avg" // C_NULL_CHAR
-      
+      varnames(6) = "rho1_CofM" // C_NULL_CHAR
+            
       call WriteRectilinearVTKMesh(filename=C_LOC(input_file_name(1:1)), &
          ub=0_c_int, dims=mesh_dims+1, &
          x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
          y=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(2)) /), &            
          z=(/ (0.0_wp, dim=0,1) /), &
-         nvars=2, vardim=(/(1, dim=1, 2)/), centering=(/(0, dim=1, 2)/), &
-         varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,2) /), &
-         vars=(/ C_LOC(DensityTimesY_coor), C_LOC(ConcentrTimesY_coor), &
-                C_LOC(Density1TimesY_coor), C_LOC(rho_avg_Y), C_LOC(rho1_avg_Y), C_LOC(c_avg_Y) /))
+         nvars=nvars_vtk, vardim=(/(1, dim=1, nvars_vtk)/), centering=(/(0, dim=1, nvars_vtk)/), &
+         varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,nvars_vtk) /), &
+         vars=(/ C_LOC(c_avg_Y),  C_LOC(ConcentrTimesY_coor), &
+                 C_LOC(rho_avg_Y), C_LOC(DensityTimesY_coor), &
+                 C_LOC(rho1_avg_Y), C_LOC(Density1TimesY_coor)  /))
 
    else  ! if the grid is a 2D grid, we directly write down X coordinates and sum(rho1_i*Y_i)/sum(rho1_i) and sum(c_i*Y_i)/sum(c_i)  
       
