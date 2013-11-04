@@ -66,14 +66,7 @@ contains
     Dbar_in           = 1.0d0
     Temp              = 1.0d0
     Press             = 1.0d0
- 
-    ! bc_tower structure in memory 
-    ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = scal_bc_comp+1,
-    ! mol_frac = rho_tot+2, diff_coeff=tran_bc_comp
-    rho_part_bc_comp = scal_bc_comp + 1
-    mol_frac_bc_comp = scal_bc_comp + 2
-    diff_coeff_bc_comp = tran_bc_comp
- 
+  
     ! read from input file 
     need_inputs = .true.
     farg = 1

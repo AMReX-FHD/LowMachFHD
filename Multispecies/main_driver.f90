@@ -156,6 +156,12 @@ subroutine main_driver()
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
   end do
 
+  ! Donev: This has to be done here, *after* the values scal_bc_comp and tran_bc_comp have been set
+  ! Set shortcuts for later use:
+  rho_part_bc_comp = scal_bc_comp + 1
+  mol_frac_bc_comp = scal_bc_comp + 2
+  diff_coeff_bc_comp = tran_bc_comp
+
   !=======================================================
   ! Build multifabs for all the variables
   !=======================================================

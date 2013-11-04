@@ -23,6 +23,10 @@ module init_module
 
 contains
   
+  ! Donev: There should be no rho_exact argument here
+  ! Donev: There should be a simple routine called exact_solution(rho,time) that fills the value of rho
+  ! This routine should be called from init_rho here and also from analysis
+  
   subroutine init_rho(rho,rho_exact,Dbar,Gama,mass,dx,prob_lo,prob_hi,time,the_bc_level)
 
     type(multifab) , intent(inout) :: rho(:)            
