@@ -1,7 +1,7 @@
 &probin_common
  
  dim_in = 3                     ! problem dimension
- plot_int = 200                  ! plot interval
+ plot_int = 50                  ! plot interval
  max_grid_size(1:3) = 16 16 16  ! individual box size 
 
  ! Grid size
@@ -18,7 +18,7 @@
 
 &probin_multispecies
  nspecies = 2                   ! number of species
- max_step = 1                 ! total number of computational step
+ max_step = 500                 ! total number of computational step
  cfl      = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature

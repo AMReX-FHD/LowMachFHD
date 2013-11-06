@@ -1,5 +1,6 @@
 f90sources += init.f90
 f90sources += probin_multispecies.f90
+f90sources += populate_DbarGama.f90 
 f90sources += main_driver.f90
 f90sources += analysis.f90
 f90sources += matvec_mul.f90
