@@ -44,7 +44,6 @@ module analysis_module
      n_cell = multifab_volume(rho_exact(1))/nspecies 
      
      ! Linf norm = max(diff_i) 
-     ! Donev: There is a bug here: some value in rho_exact is not initialized
      norm_inf = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
 
      ! L1 norm = 1/n_cell*sum(diff_i) 
