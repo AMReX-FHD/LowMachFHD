@@ -8,7 +8,7 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: cfl,chi,Temp,Press          ! chi is maximum eigenvalue of diffusion matrix
+  real(kind=dp_t)    :: cfl,chi,Temp,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
   real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
@@ -21,6 +21,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ chi
   namelist /probin_multispecies/ Temp
   namelist /probin_multispecies/ Press
+  namelist /probin_multispecies/ start_time
   namelist /probin_multispecies/ init_type
   namelist /probin_multispecies/ inverse_type   
   namelist /probin_multispecies/ timeinteg_type   
@@ -66,6 +67,7 @@ contains
     Dbar_in           = 1.0d0
     Temp              = 1.0d0
     Press             = 1.0d0
+    start_time        = 1.0d0
   
     ! read from input file 
     need_inputs = .true.

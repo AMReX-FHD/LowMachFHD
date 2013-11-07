@@ -53,11 +53,13 @@ module analysis_module
      norm_l2 = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
      
      ! print the norms
-     if(.false.) then
-       if (parallel_IOProcessor()) then 
-          print*, time, norm_inf, norm_l1, norm_l2
-       end if
-     end if
+     !if(.false.) then
+        if (parallel_IOProcessor()) then 
+            if(time.gt.2.99d0) then
+               print*, time, norm_inf, norm_l1, norm_l2
+            end if
+        end if
+     !end if
 
   end subroutine print_errors
 

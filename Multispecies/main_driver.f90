@@ -25,7 +25,7 @@ subroutine main_driver()
   real(kind=dp_t), allocatable :: Dbar(:,:)
   real(kind=dp_t), allocatable :: Gama(:,:)
   real(kind=dp_t), allocatable :: mass(:) 
-  real(kind=dp_t)              :: time,dt
+  real(kind=dp_t)              :: dt,time
   integer                      :: n,nlevs,i,dm,istep
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
@@ -172,11 +172,12 @@ subroutine main_driver()
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
   end do
 
-  time = 1.0d0  ! start at t=1 to avoid NAN coming from rho_exact at t=0
- 
-  ! populate SM Dbar matrix, Gama, masses at the starting time
+  ! populate SM Dbar matrix, Gama and molar masses 
   call populate_DbarGama(Dbar,Gama,mass) 
- 
+
+  ! initialize the time 
+  time = start_time    
+
   ! initialize rho
   call init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
 
@@ -193,7 +194,7 @@ subroutine main_driver()
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
-  dt = cfl*dx(1,1)**2/chi*1.0d0
+  dt = cfl*dx(1,1)**2/chi
   write(*,*) "Using time step dt=", dt
  
   do istep=1,max_step
