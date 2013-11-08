@@ -17,13 +17,10 @@ module analysis_module
 
   contains
 
-  subroutine print_errors(rho,rho_exact,Dbar,Gama,mass,dx,prob_lo,prob_hi,time,the_bc_level)
+  subroutine print_errors(rho,rho_exact,dx,prob_lo,prob_hi,time,the_bc_level)
   
-     type(multifab) , intent(inout)  :: rho(:)            
-     type(multifab) , intent(inout)  :: rho_exact(:) 
-     real(kind=dp_t), intent(inout)  :: Dbar(:,:)           
-     real(kind=dp_t), intent(inout)  :: Gama(:,:)           
-     real(kind=dp_t), intent(inout)  :: mass(:)           
+     type(multifab) , intent(in)     :: rho(:)            
+     type(multifab) , intent(inout)  :: rho_exact(:)            
      real(kind=dp_t), intent(in   )  :: dx(:,:)           
      real(kind=dp_t), intent(in   )  :: prob_lo(rho(1)%dim)
      real(kind=dp_t), intent(in   )  :: prob_hi(rho(1)%dim)
@@ -33,11 +30,11 @@ module analysis_module
      ! local variables
      integer                         :: i,n,nlevs,n_cell
      real(kind=dp_t)                 :: norm_inf,norm_l1,norm_l2
-
+     
      nlevs = size(rho,1)
 
-     ! calculate rho_exact defined in init.f90
-     call init_rho(rho,rho_exact,Dbar,Gama,mass,dx,prob_lo,prob_hi,time,the_bc_level)
+     ! calculate rho_exact
+     call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 
     
      ! substract the values 
      do n=1,nlevs
@@ -51,19 +48,16 @@ module analysis_module
 
      ! L1 norm = 1/n_cell*sum(diff_i) 
      norm_l1 = multifab_norm_l1_c(rho_exact(1),1,nspecies,all=.false.)/dble(n_cell)
-     !if (parallel_IOProcessor()) print*,"L1-norm rho  =",norm
 
      ! L2 norm = sqrt{1/n_cell*sum(diff_i^2)} 
      norm_l2 = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
      
      ! print the norms
-     !if(.false.) then
-     if (parallel_IOProcessor()) then 
-       if(time .gt. 3) then 
+     if(.false.) then
+       if (parallel_IOProcessor()) then 
           print*, time, norm_inf, norm_l1, norm_l2
-       endif
-     endif
-     !endif
+       end if
+     end if
 
   end subroutine print_errors
 

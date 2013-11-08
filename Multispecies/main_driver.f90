@@ -10,6 +10,7 @@ subroutine main_driver()
   use define_bc_module
   use bc_module
   use analysis_module
+  use populate_DbarGama_module
   use convert_variables_module
   use probin_common_module
   use probin_multispecies_module
@@ -34,7 +35,7 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
-  type(multifab), allocatable  :: rho_exact(:)  ! to test Lnorms with exact expression
+  type(multifab), allocatable  :: rho_exact(:)
   ! Donev: The code as written now assumes that Dbar and Gamma are constants
   ! i.e., they are not multifabs but rather simple arrays
   ! This is OK for now for simple testing but has to be changed later
@@ -156,6 +157,11 @@ subroutine main_driver()
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
   end do
 
+  ! these quantities are populated here and defined in probin_multispecies 
+  rho_part_bc_comp   = scal_bc_comp + 1
+  mol_frac_bc_comp   = scal_bc_comp + 2
+  diff_coeff_bc_comp = tran_bc_comp
+
   !=======================================================
   ! Build multifabs for all the variables
   !=======================================================
@@ -166,9 +172,13 @@ subroutine main_driver()
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
   end do
 
-  time = 0.d0
-  call init_rho(rho,rho_exact,Dbar,Gama,mass,dx,prob_lo,prob_hi,time, & 
-                the_bc_tower%bc_tower_array)
+  time = 1.0d0  ! start at t=1 to avoid NAN coming from rho_exact at t=0
+ 
+  ! populate SM Dbar matrix, Gama, masses at the starting time
+  call populate_DbarGama(Dbar,Gama,mass) 
+ 
+  ! initialize rho
+  call init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
@@ -197,8 +207,7 @@ subroutine main_driver()
 
      ! compute error norms
      if (print_error_norms) then
-        call print_errors(rho,rho_exact,Dbar,Gama,mass,dx,prob_lo,prob_hi,time,&
-                          the_bc_tower%bc_tower_array)
+        call print_errors(rho,rho_exact,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
      end if
 
      ! write plotfile at specific intervals
