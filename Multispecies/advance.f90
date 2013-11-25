@@ -5,6 +5,7 @@ module advance_module
   use bc_module
   use multifab_physbc_module
   use ml_layout_module
+  use external_force_module
   use diffusive_fluxdiv_module
   use probin_multispecies_module
 
@@ -16,7 +17,7 @@ module advance_module
 
 contains
 
-  subroutine advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_level)
+  subroutine advance(mla,rho,Dbar,Gama,mass,dx,dt,time,prob_lo,prob_hi,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -24,13 +25,15 @@ contains
     real(kind=dp_t), intent(in   ) :: Gama(:,:)
     real(kind=dp_t), intent(in   ) :: mass(:) 
     real(kind=dp_t), intent(in   ) :: dx(:,:)
-    real(kind=dp_t), intent(in   ) :: dt
+    real(kind=dp_t), intent(in   ) :: dt,time
+    real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
-    type(multifab) :: rhonew(mla%nlevel),fluxdiv(mla%nlevel),fluxdivnew(mla%nlevel)
-    integer        :: n,nlevs
-    
+    type(multifab)  :: rhonew(mla%nlevel),fluxdiv(mla%nlevel),fluxdivnew(mla%nlevel)
+    integer         :: n,nlevs
+    real(kind=dp_t) :: stage_time  
+ 
     nlevs = mla%nlevel  ! number of levels 
  
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
@@ -57,10 +60,15 @@ contains
       ! Euler time update 
       ! rho(t+dt)  =rho(t) + dt*fluxdiv(t) 
       !===================================
-    
+      
+      stage_time = time   
+ 
       ! compute fluxdiv; fluxdiv contain results in interior only, while rho contains 
       ! ghost values filled in init or end of this code
       call diffusive_fluxdiv(mla,rho,fluxdiv,Dbar,Gama,mass,dx,the_bc_level)
+
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
       
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
@@ -68,11 +76,11 @@ contains
       end do 
     
       case(2)
-      !====================================================================================
+      !============================================================================
       ! Heun's method: Predictor-Corrector explicit method 
       ! rhonew(t+dt) = rho(t)+dt*fluxdiv(t,rho) 
       !    rho(t+dt) = rho(t)+(dt/2)*[fluxdiv(t,rho) + fluxdivnew(t+1,rhonew(t+1))] 
-      !====================================================================================
+      !============================================================================
       
       ! store old rho in rhonew (rhonew previously set to zero) 
       do n=1,nlevs
@@ -85,6 +93,9 @@ contains
       
       ! compute fluxdiv 
       call diffusive_fluxdiv(mla,rho,fluxdiv,Dbar,Gama,mass,dx,the_bc_level)
+      
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
@@ -102,6 +113,10 @@ contains
       ! compute fluxdiv(t+1,rhonew(t+1)) 
       call diffusive_fluxdiv(mla,rhonew,fluxdivnew,Dbar,Gama,mass,dx,the_bc_level)
 
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      stage_time = time + dt  
+      call external_source(mla,rhonew,fluxdivnew,prob_lo,prob_hi,dx,stage_time)
+      
       !=========================== 
       ! Trapezoidal Corrector step
       !===========================
@@ -113,11 +128,11 @@ contains
       enddo
  
       case(3)
-      !=====================================================================================
+      !============================================================
       ! Midpoint method (2-stage) 
       ! rhonew(t+dt/2)=rho(t)+(dt/2)*fluxdiv(t,y)                
       !    rho(t+dt)  =rho(t)+ dt*fluxdivnew[t+dt/2,rhonew(t+dt/2)]  
-      !=====================================================================================
+      !============================================================
 
       ! store old rho in rhonew (rhonew is set zero at the start) 
       do n=1,nlevs
@@ -126,6 +141,10 @@ contains
  
       ! compute fluxdiv(t) from rho(t); (interior only) 
       call diffusive_fluxdiv(mla,rho,fluxdiv,Dbar,Gama,mass,dx,the_bc_level)
+      
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      stage_time = time
+      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
       
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
@@ -143,18 +162,22 @@ contains
       ! compute new div-of-flux 
       call diffusive_fluxdiv(mla,rhonew,fluxdivnew,Dbar,Gama,mass,dx,the_bc_level)
 
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      stage_time = time + dt/2.0d0
+      call external_source(mla,rhonew,fluxdivnew,prob_lo,prob_hi,dx,stage_time)
+      
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
          call saxpy(rho(n),-dt,fluxdivnew(n))
       end do 
       
       case(4)
-      !====================================================================================================
+      !========================================================================================
       ! 3rd order Runge-Kutta method 
       ! rhonew(t+dt)  =     rho(t)+                       dt*fluxdiv(t)                      
       ! rhonew(t+dt/2)= 3/4*rho(t)+ 1/4*[rhonew(t+dt)   + dt*fluxdivnew(t+dt,rhonew(t+dt))] 
       !    rho(t+dt)  = 1/3*rho(t)+ 2/3*[rhonew(t+dt/2) + dt*fluxdivnew(t+dt/2,rhonew(t+dt/2))] 
-      !====================================================================================================
+      !========================================================================================
 
       ! store old rho in rhonew (rhonew is set zero at the start) 
       do n=1,nlevs
@@ -167,6 +190,10 @@ contains
 
       ! compute fluxdiv(t) from rho(t) (interior only) 
       call diffusive_fluxdiv(mla,rho,fluxdiv,Dbar,Gama,mass,dx,the_bc_level)
+      
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      stage_time = time 
+      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
@@ -184,6 +211,10 @@ contains
       ! compute fluxdivnew(t+dt,rhonew(t+dt))
       call diffusive_fluxdiv(mla,rhonew,fluxdivnew,Dbar,Gama,mass,dx,the_bc_level)
 
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      stage_time = time + dt
+      call external_source(mla,rhonew,fluxdivnew,prob_lo,prob_hi,dx,stage_time)
+      
       !===========
       ! 2nd stage
       !===========
@@ -211,6 +242,10 @@ contains
       ! compute fluxdiv(t+dt/2,rhonew(t+dt/2)) 
       call diffusive_fluxdiv(mla,rhonew,fluxdivnew,Dbar,Gama,mass,dx,the_bc_level)
 
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      stage_time = time + dt/2.0d0
+      call external_source(mla,rhonew,fluxdivnew,prob_lo,prob_hi,dx,stage_time)
+      
       !===========
       ! 3rd stage
       !===========

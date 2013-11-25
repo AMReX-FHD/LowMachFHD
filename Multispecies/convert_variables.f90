@@ -36,8 +36,8 @@ contains
    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molar concentrations
    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for total molar concentrations
 
-   dm = mla%dim        ! dimensionality
-   ng = rho(1)%ng      ! number of ghost cells 
+   dm    = mla%dim     ! dimensionality
+   ng    = rho(1)%ng   ! number of ghost cells 
    nlevs = mla%nlevel  ! number of levels 
  
     ! loop over all boxes 

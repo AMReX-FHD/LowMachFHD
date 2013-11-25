@@ -204,7 +204,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,Dbar,Gama,mass,dx,dt,the_bc_tower%bc_tower_array)
+     call advance(mla,rho,Dbar,Gama,mass,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
      ! compute error norms
      if (print_error_norms) then
