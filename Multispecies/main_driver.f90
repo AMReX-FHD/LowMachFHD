@@ -214,6 +214,8 @@ subroutine main_driver()
      ! write plotfile at specific intervals
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
         call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
+        ! for checking analytic solution with visit
+        !call write_plotfile(mla,rho_exact,istep,dx,time,prob_lo,prob_hi)
      end if
      
      ! increment simulation time

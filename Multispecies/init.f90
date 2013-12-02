@@ -19,8 +19,7 @@ module init_module
   ! 1 = rho in concentric circle (two values inside and outside concentric circular region), 
   ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y),
   ! 3 = gaussian spread with total density constant
-  ! 4 = manufactured solution for equal molar mass, gaussian rho & time-independent-space-varying total density
-  ! 5 = manufactured solution for unequal molar mass, gaussian rho & time-independent-space-varying total density
+  ! 4 = manufactured solution for unequal molar mass, gaussian rho & time-independent-space-varying total density
 
 contains
   
@@ -156,7 +155,7 @@ contains
 
             rho(i,j,2) = (1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
                          time/tau))*rhot
-           
+            !print*, rho(i,j,1), rho(i,j,2), rho(i,j,1)+rho(i,j,2) 
          end do
     end do
 

@@ -56,10 +56,13 @@ module analysis_module
      !if(.false.) then
         if (parallel_IOProcessor()) then 
             if(time.gt.2.99d0) then
-               print*, time, norm_inf, norm_l1, norm_l2
+               !print*, time, norm_inf, norm_l1, norm_l2
             end if
         end if
      !end if
+     
+     ! for checking analytic solution with Visit
+     !call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 
 
   end subroutine print_errors
 

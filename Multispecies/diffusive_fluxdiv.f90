@@ -18,11 +18,12 @@ module diffusive_fluxdiv_module
 
 contains
 
-  subroutine diffusive_fluxdiv(mla, rho, fluxdiv, Dbar, Gama, mass, dx, the_bc_level)
+  subroutine diffusive_fluxdiv(mla,rho,fluxdiv,molmtot,Dbar,Gama,mass,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)
     type(multifab) , intent(inout) :: fluxdiv(:)
+    type(multifab) , intent(inout) :: molmtot(:)
     real(kind=dp_t), intent(in   ) :: Dbar(:,:)
     real(kind=dp_t), intent(in   ) :: Gama(:,:)
     real(kind=dp_t), intent(in   ) :: mass(:) 
@@ -35,12 +36,11 @@ contains
     ! local array of multifabs for grad and div; one for each direction
     type(multifab) :: flux(mla%nlevel,mla%dim)
     
-    ! local array of multifabs for total density, total molarconc, molarconc and BinvGamma 
+    ! local array of multifabs for total density, molarconc and BinvGamma 
     ! Donev: The following three arrays should be moved outside this routine (in advance)
     ! since they will be used in several places, including the fluctuating fluxes
     ! For first testing this is OK but later it needs to change
     type(multifab) :: rho_tot(mla%nlevel)
-    type(multifab) :: molmtot(mla%nlevel)
     type(multifab) :: molarconc(mla%nlevel)
     type(multifab) :: BinvGamma(mla%nlevel)
  
@@ -51,7 +51,6 @@ contains
     do n=1,nlevs
        ! fluxdiv,rho_tot,molarconc are cell-cented with ghost cells that rho has
        call multifab_build(rho_tot(n),  mla%la(n),1,rho(n)%ng)  ! rho_tot is addition of all component
-       call multifab_build(molmtot(n),  mla%la(n),1,rho(n)%ng)  ! molmtot is total molar mass 
        call multifab_build(molarconc(n),mla%la(n),nspecies,rho(n)%ng) 
        call multifab_build(BinvGamma(n),mla%la(n),nspecies**2,rho(n)%ng)
        do i=1,dm
@@ -77,7 +76,6 @@ contains
     ! destroy the multifab to prevent leakage in memory
     do n=1,nlevs
        call multifab_destroy(rho_tot(n))
-       call multifab_destroy(molmtot(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(BinvGamma(n))
        do i=1,dm
