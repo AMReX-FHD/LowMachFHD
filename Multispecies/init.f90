@@ -154,8 +154,7 @@ contains
             rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
                          beta*time)*rhot
 
-            rho(i,j,2) = (1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
-                         beta*time))*rhot
+            rho(i,j,2) = rhot - rho(i,j,1)
             !print*, rho(i,j,1), rho(i,j,2), rhot, rho(i,j,1)+rho(i,j,2) 
          end do
     end do

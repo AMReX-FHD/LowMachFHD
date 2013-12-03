@@ -71,7 +71,7 @@ contains
 
     ! local variables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,r,tau,L(2)
+    real(kind=dp_t)  :: x,y,r,tau,L(2), r_temp
 
     tau = 1.0d0
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
@@ -89,9 +89,9 @@ contains
              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
 
              ! for m1 \eq m2 \eq m
-             
-             fluxdiv(i,j,1) = fluxdiv(i,j,1) - dexp(-r**2/(4.0d0*Dbar(1,2)*time) - time)/(4.0d0*Dbar(1,2)*M_PI*time) 
-             fluxdiv(i,j,2) = fluxdiv(i,j,2) + dexp(-r**2/(4.0d0*Dbar(1,2)*time) - time)/(4.0d0*Dbar(1,2)*M_PI*time) 
+             r_temp = dexp(-r**2/(4.0d0*Dbar(1,2)*time) - time)/(4.0d0*Dbar(1,2)*M_PI*time)
+             fluxdiv(i,j,1) = fluxdiv(i,j,1) + rtemp 
+             fluxdiv(i,j,2) = fluxdiv(i,j,2) - rtemp
              !fluxdiv(i,j,1) = fluxdiv(i,j,1) - (dexp(-(r**2*(1.0d0 + time))/(4.0d0*Dbar(1,2)*time) - time/tau)*&
              !                 (4.0d0*Dbar(1,2)*(1.0d0 + 4.0d0*Dbar(1,2)*dexp(r**2/(4.0d0*Dbar(1,2)))*M_PI)*time +&
              !                 r**2*tau))/(64.0d0*Dbar(1,2)**3*M_PI**2*time**2*tau) 
