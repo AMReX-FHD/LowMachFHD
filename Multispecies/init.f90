@@ -76,7 +76,7 @@ contains
  
     ! local varables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,rsq,tau,rhot,L(2)
+    real(kind=dp_t)  :: x,y,rsq,alpha,beta,rhot,L(2)
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -140,7 +140,8 @@ contains
     ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
     ! in time. Manufactured solution rho1_exact = e^(-r^2/4Dt-t/tau)/(4piDt)
     !=======================================================================
-    tau=1.0d0 
+    alpha = 0.0d0 
+    beta  = 1.0d0 
  
     do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
@@ -148,14 +149,14 @@ contains
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
-            rhot = 1.0d0+1.0d0/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
+            rhot = 1.0d0 + alpha/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
            
             rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
-                         time/tau)*rhot
+                         beta*time)*rhot
 
             rho(i,j,2) = (1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
-                         time/tau))*rhot
-            !print*, rho(i,j,1), rho(i,j,2), rho(i,j,1)+rho(i,j,2) 
+                         beta*time))*rhot
+            !print*, rho(i,j,1), rho(i,j,2), rhot, rho(i,j,1)+rho(i,j,2) 
          end do
     end do
 
