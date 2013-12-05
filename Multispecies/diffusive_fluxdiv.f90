@@ -73,6 +73,11 @@ contains
     ! compute divergence of the flux 
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
     
+    ! multiply fluxdiv (having zero ghost cells) with -1 to get -div(-flux).
+    do n=1,nlevs
+       call multifab_mult_mult_s(fluxdiv(n),-1.0d0,fluxdiv(1)%ng)
+    end do
+ 
     ! destroy the multifab to prevent leakage in memory
     do n=1,nlevs
        call multifab_destroy(rho_tot(n))

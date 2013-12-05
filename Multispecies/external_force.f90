@@ -37,9 +37,9 @@ contains
     real(kind=dp_t), pointer :: dp1(:,:,:,:)
     real(kind=dp_t), pointer :: dp2(:,:,:,:)
 
-    dm    = mla%dim     ! dimensionality
+    dm    = mla%dim         ! dimensionality
     ng    = fluxdiv(1)%ng   ! number of ghost cells
-    nlevs = mla%nlevel  ! number of levels
+    nlevs = mla%nlevel      ! number of levels
 
     do n=1,nlevs
        do i = 1, nfabs(rho(n))
@@ -71,15 +71,14 @@ contains
 
     ! local variables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,r,tau,L(2), r_temp
+    real(kind=dp_t)  :: x,y,r,L(2),r_temp
 
-    tau = 1.0d0
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
    
     !print*, lbound(fluxdiv), ubound(fluxdiv) 
     select case(init_type)
     case(4)
-
+     
      ! for specific box, now start loops over alloted cells    
      do j=lo(2), hi(2)
         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
@@ -87,38 +86,15 @@ contains
            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
  
              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
+               
+             ! for m1 = m2 = m and m1 != m2 != m  (for 2-species)
+             r_temp = (dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*Dbar(1,2)*time))*(16.0d0*beta*Dbar(1,2)**2*&
+                      dexp(r**2/(4.0d0*Dbar(1,2)))*M_PI*time + alpha*(r**2 + 4.0d0*beta*Dbar(1,2)*time)))/(64.0d0*&
+                      Dbar(1,2)**3*M_PI**2*time**2)
+  
+             fluxdiv(i,j,1) = fluxdiv(i,j,1) - r_temp 
+             fluxdiv(i,j,2) = fluxdiv(i,j,2) + r_temp
 
-             ! for m1 \eq m2 \eq m
-             r_temp = dexp(-r**2/(4.0d0*Dbar(1,2)*time) - time)/(4.0d0*Dbar(1,2)*M_PI*time)
-             fluxdiv(i,j,1) = fluxdiv(i,j,1) + rtemp 
-             fluxdiv(i,j,2) = fluxdiv(i,j,2) - rtemp
-             !fluxdiv(i,j,1) = fluxdiv(i,j,1) - (dexp(-(r**2*(1.0d0 + time))/(4.0d0*Dbar(1,2)*time) - time/tau)*&
-             !                 (4.0d0*Dbar(1,2)*(1.0d0 + 4.0d0*Dbar(1,2)*dexp(r**2/(4.0d0*Dbar(1,2)))*M_PI)*time +&
-             !                 r**2*tau))/(64.0d0*Dbar(1,2)**3*M_PI**2*time**2*tau) 
-           ! 
-           !  fluxdiv(i,j,2) = fluxdiv(i,j,2) + (dexp(-(r**2*(1.0d0 + time))/(4.0d0*Dbar(1,2)*time) - time/tau)*&
-           !                   (4.0d0*Dbar(1,2)*(1.0d0 + 4.0d0*Dbar(1,2)*dexp(r**2/(4.0d0*Dbar(1,2)))*M_PI)*time +&
-           !                   r**2*tau))/(64.0d0*Dbar(1,2)**3*M_PI**2*time**2*tau)
- 
-             ! for m1 \neq m2 \neq m
-            !fluxdiv(i,j,1) = fluxdiv(i,j,1) + (dexp((-2.0d0*time)/tau - (r**2*(2.0d0 + time))/(4.0d0*Dbar(1,2)*time))*&
-            !                  ((mass(1) - mass(2))*tau*(-2.0d0*r**2 + 4.0d0*Dbar(1,2)*time - r**2*time - 8.0d0*Dbar(1,2)*&
-            !                  dexp(r**2/(4.0d0*Dbar(1,2)))*M_PI*(r**2 - 2.0d0*Dbar(1,2)*time)) - 4.0d0*Dbar(1,2)*dexp(r**2/&
-            !                  (4.0d0*Dbar(1,2)*time) + time/tau)*M_PI*time*(molmtot(i,j)*(1.0d0 + 4.0d0*Dbar(1,2)*dexp(r**2/&
-            !                  (4.0d0*Dbar(1,2)))*M_PI)*(-(r**2*tau) + 4.0d0*Dbar(1,2)*time*(tau + time)) + mass(2)*tau*(r**2 -&
-            !                  4.0d0*Dbar(1,2)*time + r**2*time + 4.0d0*Dbar(1,2)*dexp(r**2/(4.0d0*Dbar(1,2)))*M_PI*(r**2 -&
-            !                  4.0d0*Dbar(1,2)*time)))))/(256.0d0*Dbar(1,2)**4*molmtot(i,j)*M_PI**3*tau*time**4)
-
-            !fluxdiv(i,j,2) = fluxdiv(i,j,2) + (dexp((-2.0d0*time)/tau - (r**2*(2.0d0 + time))/(4.0d0*Dbar(1,2)*time))*&
-            !                 ((mass(1) - mass(2))*tau*(-2.0d0*r**2 + 4.0d0*Dbar(1,2)*time - r**2*time - 8.0d0*Dbar(1,2)*&
-            !                 dexp(r**2/(4.0d0*Dbar(1,2)))*M_PI*(r**2 - 2.0d0*Dbar(1,2)*time)) + 4.0d0*Dbar(1,2)*dexp(r**2/&
-            !                 (4.0d0*Dbar(1,2)*time) + time/tau)*M_PI*time*(molmtot(i,j)*(1.0d0 + 4.0d0*Dbar(1,2)*dexp(r**2/&
-            !                 (4.0d0*Dbar(1,2)))*M_PI)*(-(r**2*tau) + 4.0d0*Dbar(1,2)*time*(tau + time)) + mass(1)*tau*(r**2 -&
-            !                 4.0d0*Dbar(1,2)*time + r**2*time + 4.0d0*Dbar(1,2)*dexp(r**2/(4.0d0*Dbar(1,2)))*M_PI*(r**2 -&
-            !                 4.0d0*Dbar(1,2)*time)))))/(256.0d0*Dbar(1,2)**4*molmtot(i,j)*M_PI**3*tau*time**4)
-           
-            !print*, fluxdiv(i,j,1), fluxdiv(i,j,2)
- 
         enddo
      enddo
    
@@ -138,14 +114,13 @@ contains
 
     ! local variables
     integer          :: i,j,k
-    real(kind=dp_t)  :: x,y,z,rsq,tau,L(3)
+    real(kind=dp_t)  :: x,y,z,r,L(3),r_temp
 
-    tau = 1.0d0
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
     select case(init_type)
     case(4)
-
+    
      ! for specific box, now start loops over alloted cells    
      do k=lo(3), hi(3)
         z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
@@ -154,32 +129,16 @@ contains
            do i=lo(1), hi(1)
               x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0           
    
-              rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
-              fluxdiv(i,j,k,1) = fluxdiv(i,j,k,1) + (dexp(-rsq*(1.0d0+2.0d0*time)/(4.0d0*Dbar_in(1)*time)-&
-                               time/tau)*(-0.0224484d0*Dbar_in(1)**21.0d0*(Dbar_in(1)*time)**3.5d0*dexp(3.0d0*&
-                               rsq/(4.0d0*Dbar_in(1))) + 5.65621d0*10.0d0**(-6.0d0)*Dbar_in(1)**17.0d0*rsq*&
-                               (Dbar_in(1)*time)**3.5d0*tau*dexp(rsq/(4.0d0*Dbar_in(1))) + 6.34864d0*10.0d0**&
-                               (-8.0d0)*Dbar_in(1)**14.5d0*rsq*sqrt(rsq)*(Dbar_in(1)*time)**3.5d0*tau + &
-                               Dbar_in(1)**19.5d0*dexp(rsq/(2.0d0*Dbar_in(1)))*(-0.00100786d0*(Dbar_in(1)*&
-                               time)**3.5d0 - 0.000125983d0*rsq*(Dbar_in(1)*time)**2.5d0*tau)+ Dbar_in(1)**&
-                               18.0d0*dexp(rsq/(4.0d0*Dbar_in(1)))*(-0.0000113124d0*(Dbar_in(1)*time)**3.5d0-&
-                               2.82811d0*10.0d0**(-6.0d0)*rsq*(Dbar_in(1)*time)**2.5d0*tau)))/(Dbar_in(1)**&
-                               19.5d0*(0.0224484d0 + Dbar_in(1)**1.5d0*dexp(rsq/(4.0d0*Dbar_in(1))))*(Dbar_in(1)*&
-                               time)**5.0d0*tau)
-
-              fluxdiv(i,j,k,2) = fluxdiv(i,j,k,2) + (dexp(-rsq*(1.0d0+2.0d0*time)/(4.0d0*Dbar_in(1)*time)-&
-                               time/tau)*(0.0224484d0*Dbar_in(1)**21.0d0*(Dbar_in(1)*time)**3.5d0*dexp(3.0d0*&
-                               rsq/(4.0d0*Dbar_in(1))) + Dbar_in(1)**14.5d0*rsq*sqrt(rsq)*(-6.34864d0*10.0d0**&
-                               (-8.0d0)*(Dbar_in(1)*time)**3.5d0 + 2.82811d0*10.0d0**(-6.0d0)*dexp(rsq/(4.0d0*&
-                               Dbar_in(1)*time)+time/tau)*(Dbar_in(1)*time)**5.0d0)*tau + Dbar_in(1)**17.0d0*rsq*&
-                               (-5.65621d0*10.0d0**(-6.0d0)*(Dbar_in(1)*time)**3.5d0*dexp(rsq/(4.0d0*Dbar_in(1)))+&
-                               0.000251965d0*(Dbar_in(1)*time)**5.0d0*dexp(rsq*(1.0d0+time)/(4.0d0*Dbar_in(1)*time)+&
-                               time/tau))*tau + Dbar_in(1)**18.0d0*dexp(rsq/(4.0d0*Dbar_in(1)))*(0.0000113124d0*&
-                               (Dbar_in(1)*time)**3.5d0 + 2.82811d0*10.0d0**(-6.0d0)*rsq*(Dbar_in(1)*time)**2.5d0*&
-                               tau) + Dbar_in(1)**19.5d0*dexp(rsq/(2.0d0*Dbar_in(1)))*(0.00100786d0*(Dbar_in(1)*&
-                               time)**3.5d0 + 0.000125983d0*rsq*(Dbar_in(1)*time)**2.5d0*tau)))/(Dbar_in(1)**&
-                               19.5d0*(0.0224484d0 + Dbar_in(1)**1.5d0*dexp(rsq/(4.0d0*Dbar_in(1))))*(Dbar_in(1)*&
-                               time)**5.0d0*tau)
+              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2)
+              
+              ! for m1 = m2 = m and m1 != m2 != m (for 2-species)
+              r_temp = (dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*Dbar(1,2)*time))*&
+                       (0.02244839026564582d0*beta*Dbar(1,2)**3.0d0*dexp(r**2/(4.0d0*Dbar(1,2)))*(Dbar(1,2)*&
+                       time)**3.5d0 + alpha*Dbar(1,2)**1.5d0*(0.0001259825563796855d0*r**2*(Dbar(1,2)*time)**2.5d0 +& 
+                       0.000503930225518742d0*beta*(Dbar(1,2)*time)**3.5d0)))/(Dbar(1,2)**3.0d0*(Dbar(1,2)*time)**5.0d0) 
+ 
+              fluxdiv(i,j,k,1) = fluxdiv(i,j,k,1) - r_temp 
+              fluxdiv(i,j,k,2) = fluxdiv(i,j,k,2) + r_temp 
  
            enddo
         enddo

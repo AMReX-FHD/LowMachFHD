@@ -12,6 +12,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
+  real(kind=dp_t)    :: alpha,beta              ! manufactured solution parameters
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
   logical            :: print_error_norms, is_ideal_mixture
   

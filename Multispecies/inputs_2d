@@ -1,13 +1,13 @@
 &probin_common
  
  dim_in = 2                     ! problem dimension
- plot_int = 10000000                ! plot interval
+ plot_int = 1000000                ! plot interval
  max_grid_size(1:2) = 8 8     ! individual box size 
 
  ! Grid size
  prob_lo(1:2) = 0 0
  prob_hi(1:2) = 64 64           ! physical systemsize = (prob_lo-prob_hi)
- n_cells(1:2) = 320 320           ! to set dx = systemsize/n_cells
+ n_cells(1:2) = 64 64           ! to set dx = systemsize/n_cells
 
  ! allowable options for this example are
  ! -1 = PERIODIC
@@ -18,7 +18,7 @@
 
 &probin_multispecies
  nspecies = 2                   ! number of species
- max_step = 13000                 ! total number of computational step
+ max_step = 10                 ! total number of computational step
  cfl      = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature

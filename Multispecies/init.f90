@@ -19,7 +19,7 @@ module init_module
   ! 1 = rho in concentric circle (two values inside and outside concentric circular region), 
   ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y),
   ! 3 = gaussian spread with total density constant
-  ! 4 = manufactured solution for unequal molar mass, gaussian rho & time-independent-space-varying total density
+  ! 4 = manufactured solution for equal/unequal molarmass,gaussian-rho, time-independent-space-varying totaldensity
 
 contains
   
@@ -40,6 +40,10 @@ contains
     dm = rho(1)%dim
     ng = rho(1)%ng
     nlevs = size(rho,1)
+
+    ! assign values of parameters for the gaussian rho, rhototal
+    alpha = 1.0d0 
+    beta  = 1.0d0 
 
     ! looping over boxes 
     do n=1,nlevs
@@ -76,7 +80,7 @@ contains
  
     ! local varables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,rsq,alpha,beta,rhot,L(2)
+    real(kind=dp_t)  :: x,y,rsq,rhot,L(2)
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -136,12 +140,10 @@ contains
     end do
 
     case(4)
-    !=======================================================================
-    ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
-    ! in time. Manufactured solution rho1_exact = e^(-r^2/4Dt-t/tau)/(4piDt)
-    !=======================================================================
-    alpha = 0.0d0 
-    beta  = 1.0d0 
+    !==================================================================================
+    ! Initializing rho1,rho2=Gaussian and rhototal=1+alpha*exp(-r^2/4D)/(4piD) (no-time 
+    ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
+    !==================================================================================
  
     do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
@@ -150,12 +152,10 @@ contains
         
             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
             rhot = 1.0d0 + alpha/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
-           
             rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
                          beta*time)*rhot
-
             rho(i,j,2) = rhot - rho(i,j,1)
-            !print*, rho(i,j,1), rho(i,j,2), rhot, rho(i,j,1)+rho(i,j,2) 
+
          end do
     end do
 
@@ -255,8 +255,7 @@ contains
      ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
      ! in time. Manufactured solution rho1_exact = e^(-r^2/4Dt-t/tau)/(4piDt)^(3/2)
      !=============================================================================
-     tau=1.0d0 
- 
+     
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
         z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
@@ -266,12 +265,11 @@ contains
               x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
               rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
-              rhot = 1.0d0+dexp(-rsq/(4.0d0*Dbar_in(1)))/(4.0d0*M_PI*Dbar_in(1))**1.5d0
+              rhot = 1.0d0 + alpha*dexp(-rsq/(4.0d0*Dbar_in(1)))/(4.0d0*M_PI*Dbar_in(1))**1.5d0
            
               rho(i,j,k,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
-                           time/tau)*rhot
-              rho(i,j,k,2) = (1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
-                           time/tau))*rhot
+                             time*beta)*rhot
+              rho(i,j,k,2) = rhot - rho(i,j,k,1) 
 
            end do
         end do
