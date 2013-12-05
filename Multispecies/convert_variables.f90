@@ -36,8 +36,8 @@ contains
    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molar concentrations
    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for total molar concentrations
 
-   dm = mla%dim        ! dimensionality
-   ng = rho(1)%ng      ! number of ghost cells 
+   dm    = mla%dim     ! dimensionality
+   ng    = rho(1)%ng   ! number of ghost cells 
    nlevs = mla%nlevel  ! number of levels 
  
     ! loop over all boxes 
@@ -87,7 +87,7 @@ contains
              rho_tot_local = rho_tot_local + rho(i,j,n)
           enddo         
           rho_tot(i,j) = rho_tot_local
-
+ 
           ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i))
           Sum_woverm=0.d0
           do n=1, nspecies  

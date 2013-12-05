@@ -15,21 +15,13 @@ module init_module
 
   public :: init_rho
   
-  ! init_type: 1=rho in concentric circle (Here we put two different values
-  ! inside and outside a circular region for 1-species and accordingly concentric
-  ! circles with two values for n-species), 2=constant gradient (Here we put a
-  ! constant rho and spatially distort proportional to x and y for 1-species and
-  ! accordingly for n-species.
+  ! init_type: 
+  ! 1 = rho in concentric circle (two values inside and outside concentric circular region), 
+  ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y),
+  ! 3 = gaussian spread with total density constant
+  ! 4 = manufactured solution for equal/unequal molarmass,gaussian-rho, time-independent-space-varying totaldensity
 
 contains
-  
-  ! Donev: There should be a simple routine called exact_solution(rho,time) that fills the value of rho
-  ! This routine should be called from init_rho here and also from analysis
-  
-  ! Amit: I am going to put one single rho in this routine without writing
-  ! exact_solution module, so this code is going to be called at t=0 and by
-  ! analysis.f90 to calculate exact expression at time t. Dbar, Gama, Mass are 
-  ! included to main_driver via separate code populate_DbarGama.f90.
   
   subroutine init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_level)
 
@@ -41,13 +33,17 @@ contains
     type(bc_level) , intent(in   ) :: the_bc_level(:)
  
     ! local variables
-    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: dm, ng, i, n, nlevs
-    real(kind=dp_t), pointer :: dp(:,:,:,:)   ! pointer for rho (last dim: nspecies)   
+    integer                        :: lo(rho(1)%dim), hi(rho(1)%dim)
+    integer                        :: dm, ng, i, n, nlevs
+    real(kind=dp_t), pointer       :: dp(:,:,:,:)   ! pointer for rho (last dim:nspecies)   
 
     dm = rho(1)%dim
     ng = rho(1)%ng
     nlevs = size(rho,1)
+
+    ! assign values of parameters for the gaussian rho, rhototal
+    alpha = 1.0d0 
+    beta  = 1.0d0 
 
     ! looping over boxes 
     do n=1,nlevs
@@ -84,7 +80,7 @@ contains
  
     ! local varables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,rsq,sigma,L(2)
+    real(kind=dp_t)  :: x,y,rsq,rhot,L(2)
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -130,7 +126,6 @@ contains
     ! Initializing rho's in Gaussian so as rho_tot=constant=1.0
     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
     !========================================================
-    sigma = L(1)/20.0d0  ! variance
   
     do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
@@ -142,7 +137,27 @@ contains
             rho(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
        
          end do
-      end do
+    end do
+
+    case(4)
+    !==================================================================================
+    ! Initializing rho1,rho2=Gaussian and rhototal=1+alpha*exp(-r^2/4D)/(4piD) (no-time 
+    ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
+    !==================================================================================
+ 
+    do j=lo(2),hi(2)
+         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         do i=lo(1),hi(1)
+            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+        
+            rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
+            rhot = 1.0d0 + alpha/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
+            rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
+                         beta*time)*rhot
+            rho(i,j,2) = rhot - rho(i,j,1)
+
+         end do
+    end do
 
     end select
    
@@ -158,7 +173,7 @@ contains
  
     ! local variables
     integer          :: i,j,k
-    real(kind=dp_t)  :: x,y,z,rsq,sigma,L(3)
+    real(kind=dp_t)  :: x,y,z,rsq,tau,rhot,L(3)
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
@@ -212,12 +227,11 @@ contains
      !$omp end parallel do
 
      case(3) 
-     !========================================================
+     !===========================================================
      ! Initializing rho's in Gaussian so as rho_tot=constant=1.0. 
      ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)^3/2, For norm, 
      ! sigma/dx >2 (at t=0) & L/sigma < 8 (at t=t)
-     !========================================================
-     sigma = L(1)/10.0d0  ! variance
+     !===========================================================
   
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
@@ -231,6 +245,32 @@ contains
               rho(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0
               rho(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0
        
+           end do
+        end do
+     end do
+     !$omp end parallel do
+
+     case(4)
+     !=============================================================================
+     ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
+     ! in time. Manufactured solution rho1_exact = e^(-r^2/4Dt-t/tau)/(4piDt)^(3/2)
+     !=============================================================================
+     
+     !$omp parallel private(i,j,k,x,y,z)
+     do k=lo(3),hi(3)
+        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        do j=lo(2),hi(2)
+           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           do i=lo(1),hi(1)
+              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+        
+              rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
+              rhot = 1.0d0 + alpha*dexp(-rsq/(4.0d0*Dbar_in(1)))/(4.0d0*M_PI*Dbar_in(1))**1.5d0
+           
+              rho(i,j,k,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
+                             time*beta)*rhot
+              rho(i,j,k,2) = rhot - rho(i,j,k,1) 
+
            end do
         end do
      end do
