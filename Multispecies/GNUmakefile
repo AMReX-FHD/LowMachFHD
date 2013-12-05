@@ -4,7 +4,7 @@ BOXLIB_HOME = ../../../BoxLib
 STAGGERED_HOME := ..
 
 NDEBUG    := t  
-MPI       := t  
+MPI       :=   
 OMP       :=
 PROF      :=
 COMP      := gfortran
