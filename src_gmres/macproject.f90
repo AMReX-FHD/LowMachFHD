@@ -200,7 +200,6 @@ contains
                                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
                                 stencil_type, &
                                 dh = dx(n,:), &
-                                ns = ns, &
                                 smoother = smoother, &
                                 nu1 = mgt(nlevs)%nu1, &
                                 nu2 = mgt(nlevs)%nu2, &
@@ -227,7 +226,6 @@ contains
                                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
                                 stencil_type, &
                                 dh = dx(n,:), &
-                                ns = ns, &
                                 smoother = smoother, &
                                 nu1 = mg_nsmooths_down, &
                                 nu2 = mg_nsmooths_up, &
