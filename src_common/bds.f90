@@ -98,6 +98,8 @@ contains
                                    sip(:,:,1,1),  scp(:,:,1,:), &
                                   uadvp(:,:,1,1), vadvp(:,:,1,1), dx(lev,:), dt)
               end do
+            case (3)
+               call parallel_abort("BDS advection not supported in 3D for now")  
          end select
       end do
 
