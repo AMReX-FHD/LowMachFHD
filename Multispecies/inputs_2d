@@ -2,7 +2,7 @@
  
  dim_in = 2                     ! problem dimension
  plot_int = 1000000                ! plot interval
- max_grid_size(1:2) = 8 8     ! individual box size 
+ max_grid_size(1:2) = 64 64     ! individual box size 
 
  ! Grid size
  prob_lo(1:2) = 0 0
