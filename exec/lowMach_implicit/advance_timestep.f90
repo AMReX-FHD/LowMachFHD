@@ -20,7 +20,7 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef, grav
   use probin_common_module, only: fixed_dt
-  use probin_module, only: use_barodiffusion
+  use probin_module, only: use_barodiffusion, use_bds
 
   use analysis_module
 
