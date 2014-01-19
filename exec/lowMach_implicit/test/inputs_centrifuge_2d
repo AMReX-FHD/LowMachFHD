@@ -1,5 +1,7 @@
 &probin
 
+  use_bds = F
+  use_simple = F
   use_barodiffusion = T  ! enable barodiffusion
 
 /

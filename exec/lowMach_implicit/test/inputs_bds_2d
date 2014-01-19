@@ -1,7 +1,8 @@
 &probin
 
+  use_barodiffusion = F
   use_bds = T
-  use_simple = T
+  use_simple = F
 
 /
 

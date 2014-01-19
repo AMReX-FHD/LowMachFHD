@@ -1,3 +1,11 @@
+&probin
+
+  use_barodiffusion = F
+  use_bds = F
+  use_simple = F
+
+/
+
 &probin_lowmach
   
   ! problem setup
