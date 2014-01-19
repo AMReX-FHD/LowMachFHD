@@ -15,6 +15,7 @@ module advance_timestep_module
   use gmres_module
   use init_module
   use div_and_grad_module
+  use bds_module
   use bc_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
@@ -199,7 +200,7 @@ contains
 
     ! set s_update to A^n for scalars
     if (use_bds) then
-       call bds(mla,umac_old,s_fc,s_update,dx,1,nscal)
+       call bds(mla,umac_old,sold,s_update,dx,fixed_dt,1,nscal)
     else
        call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,nscal)
     end if
@@ -480,7 +481,7 @@ contains
     ! s_update already contains D^{*,n+1} + St^{*,n+1} for rho1 from above
     ! add A^{*,n+1} for s to s_update
     if (use_bds) then
-       call bds(mla,umac,s_fc,s_update,dx,1,nscal)
+       call bds(mla,umac,snew,s_update,dx,fixed_dt,1,nscal)
     else
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
     end if
