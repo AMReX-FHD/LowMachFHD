@@ -18,22 +18,23 @@
 
 &probin_multispecies
  
- nspecies = 2                   ! number of species
- max_step = 10                 ! total number of computational step
+ nspecies = 3                   ! number of species
+ max_step = 1                   ! total number of computational step
  cfl      = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature
  Press    = 1.0                 ! Pressure
  start_time  = 1.0              ! start at t=1 to avoid NAN coming from rho_exact at t=0
  !include_temp = .false.        ! right now no temperature equation
- init_type = 4                  ! initial problem: 1=bubble,2=const gradient,3=gaussian,4=manufactured solution
+ init_type = 1                  ! initial problem: 1=bubble,2=const gradient,3=gaussian,4=manufactured solution
  inverse_type = 1               ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 1             ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=3rdorder Runge-Kutta 
  print_error_norms = .true.     ! check L1/L2/Linf norm 
  is_ideal_mixture  = .false.    ! false=Bdag*Gama, true=Bdag 
  rho_in(1:2,1) = 0.1 0.9        ! initial concentrations for species 1
  rho_in(1:2,2) = 0.9 0.1        ! initial concentrations for species 2
- molmass_in(1:2) = 1.0 1.0      ! molar mass of n-species
- Dbar_in(1:1)= 1.0              ! SM diffusion constant arranged in lower-triangle
+ rho_in(1:2,3) = 0.2 0.8        ! initial concentrations for species 3
+ molmass_in(1:3) = 1.0 1.0 1.0  ! molar mass of n-species
+ Dbar_in(1:3) = 1.0 1.0 1.0     ! SM diffusion constant arranged in lower-triangle
  
 /

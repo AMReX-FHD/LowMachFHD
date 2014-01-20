@@ -18,7 +18,8 @@ module diffusive_fluxdiv_module
 
 contains
 
-  subroutine diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,Dbar,Gama,mass,dx,the_bc_level)
+  subroutine diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,chi,&
+                               Dbar,Gama,mass,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)
@@ -26,6 +27,7 @@ contains
     type(multifab) , intent(inout) :: molarconc(:)
     type(multifab) , intent(inout) :: molmtot(:)
     type(multifab) , intent(inout) :: BinvGamma(:)
+    type(multifab) , intent(inout) :: chi(:)
     real(kind=dp_t), intent(in   ) :: Dbar(:,:)
     real(kind=dp_t), intent(in   ) :: Gama(:,:)
     real(kind=dp_t), intent(in   ) :: mass(:) 

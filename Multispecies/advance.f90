@@ -32,8 +32,9 @@ contains
     ! local variables
     type(multifab)  :: rhonew(mla%nlevel),fluxdiv(mla%nlevel),fluxdivnew(mla%nlevel)
     type(multifab)  :: molarconc(mla%nlevel) ! local array of multifabs for molar concentration
-    type(multifab)  :: molmtot(mla%nlevel)   ! local array of multifabs for total molarconc
+    type(multifab)  :: molmtot(mla%nlevel)   ! local array of multifabs for total molar mass
     type(multifab)  :: BinvGamma(mla%nlevel) ! local array of multifabs for Bdag
+    type(multifab)  :: chi(mla%nlevel)       ! local array of multifabs for Chi
     integer         :: n,nlevs
     real(kind=dp_t) :: stage_time  
 
@@ -45,9 +46,10 @@ contains
        call multifab_build(rhonew(n),    mla%la(n), nspecies,   rho(n)%ng)
        call multifab_build(fluxdiv(n),   mla%la(n), nspecies,   0) 
        call multifab_build(fluxdivnew(n),mla%la(n), nspecies,   0)
-       call multifab_build(molmtot(n),   mla%la(n), 1,          rho(n)%ng)  ! molmtot is total molar mass 
+       call multifab_build(molmtot(n),   mla%la(n), 1,          rho(n)%ng)  
        call multifab_build(molarconc(n), mla%la(n), nspecies,   rho(n)%ng) 
        call multifab_build(BinvGamma(n), mla%la(n), nspecies**2,rho(n)%ng)
+       call multifab_build(chi(n),       mla%la(n), nspecies**2,rho(n)%ng)
     enddo
    
     ! initialize new quantities to zero 
@@ -58,6 +60,7 @@ contains
          call setval(molarconc(n), 0.d0,all=.true.)
          call setval(molmtot(n),   0.d0,all=.true.)
          call setval(BinvGamma(n), 0.d0,all=.true.)
+         call setval(chi(n),       0.d0,all=.true.)
       end do 
  
    !==================================================================================
@@ -74,7 +77,8 @@ contains
  
       ! compute fluxdiv; fluxdiv contain results in interior only, while rho contains 
       ! ghost values filled in init or end of this code
-      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,Dbar,Gama,mass,dx,the_bc_level)
+      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,chi,& 
+           Dbar,Gama,mass,dx,the_bc_level)
 
       ! compute external forcing for manufactured solution and add to fluxdiv
       call external_source(mla,rho,fluxdiv,molmtot,Dbar,mass,prob_lo,prob_hi,dx,stage_time)
@@ -101,7 +105,8 @@ contains
       !===================== 
       
       ! compute fluxdiv 
-      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,Dbar,Gama,mass,dx,the_bc_level)
+      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,chi,&
+                             Dbar,Gama,mass,dx,the_bc_level)
       
       ! compute external forcing for manufactured solution and add to fluxdiv
       call external_source(mla,rho,fluxdiv,molmtot,Dbar,mass,prob_lo,prob_hi,dx,stage_time)
@@ -120,7 +125,8 @@ contains
       enddo
 
       ! compute fluxdiv(t+1,rhonew(t+1)) 
-      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,molmtot,BinvGamma,Dbar,Gama,mass,dx,the_bc_level)
+      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,molmtot,BinvGamma,chi,&
+                             Dbar,Gama,mass,dx,the_bc_level)
 
       ! compute external forcing for manufactured solution and add to fluxdiv
       stage_time = time + dt  
@@ -149,7 +155,8 @@ contains
       end do 
  
       ! compute fluxdiv(t) from rho(t); (interior only) 
-      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,Dbar,Gama,mass,dx,the_bc_level)
+      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,chi,&
+                             Dbar,Gama,mass,dx,the_bc_level)
       
       ! compute external forcing for manufactured solution and add to fluxdiv
       stage_time = time
@@ -169,7 +176,8 @@ contains
       enddo
 
       ! compute new div-of-flux 
-      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,molmtot,BinvGamma,Dbar,Gama,mass,dx,the_bc_level)
+      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,molmtot,BinvGamma,chi,&
+                             Dbar,Gama,mass,dx,the_bc_level)
 
       ! compute external forcing for manufactured solution and add to fluxdiv
       stage_time = time + dt/2.0d0
@@ -198,7 +206,8 @@ contains
       !===========
 
       ! compute fluxdiv(t) from rho(t) (interior only) 
-      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,Dbar,Gama,mass,dx,the_bc_level)
+      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,molmtot,BinvGamma,chi,&
+                             Dbar,Gama,mass,dx,the_bc_level)
       
       ! compute external forcing for manufactured solution and add to fluxdiv
       stage_time = time 
@@ -218,7 +227,8 @@ contains
       enddo
 
       ! compute fluxdivnew(t+dt,rhonew(t+dt))
-      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,molmtot,BinvGamma,Dbar,Gama,mass,dx,the_bc_level)
+      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,molmtot,BinvGamma,chi,&
+                             Dbar,Gama,mass,dx,the_bc_level)
 
       ! compute external forcing for manufactured solution and add to fluxdiv
       stage_time = time + dt
@@ -249,7 +259,8 @@ contains
       end do 
  
       ! compute fluxdiv(t+dt/2,rhonew(t+dt/2)) 
-      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,molmtot,BinvGamma,Dbar,Gama,mass,dx,the_bc_level)
+      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,molmtot,BinvGamma,chi,&
+                             Dbar,Gama,mass,dx,the_bc_level)
 
       ! compute external forcing for manufactured solution and add to fluxdiv
       stage_time = time + dt/2.0d0
@@ -286,6 +297,7 @@ contains
        call multifab_destroy(molmtot(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(BinvGamma(n))
+       call multifab_destroy(chi(n))
     end do
 
   end subroutine advance
