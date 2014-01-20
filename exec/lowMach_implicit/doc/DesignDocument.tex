@@ -286,6 +286,7 @@ with an error message.
 \end{enumerate}
 
 \section{Implicit Low Mach Number Binary Mixing Algorithm}
+\subsection{Original Algorithm}
 Here is the time-advancement scheme.\\ \\
 {\bf Step 0: Initialization:}\\
 
@@ -305,7 +306,7 @@ We do this by solving for $\phi$ and updating $\vb^{\rm init}$ as follows:
 {\bf Step 1: Forward Euler Scalar Predictor:}\\ \\
 Using
 \begin{equation}
-\Fb^n = \left[\rho^n\chi^n\left(\nabla c^n + K_P^n\nabla p^{n,*}\right)\right] + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
+\Fb^n = \left[\rho^n\chi^n\left(\nabla c^n + K_P^n\nabla p^n\right)\right] + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)^n}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
 \end{equation}
 compute an advective update,
 \begin{eqnarray}
@@ -319,13 +320,13 @@ First, define
 \begin{equation}
 S^{n+1,*} \equiv S(\Fb^{n+1,*});
 \qquad
-\Fb^{n+1,*} = \left[\rho^{n+1,*}\chi^{n+1,*}\left(\nabla c^{n+1,*} + K_P^{n+1,*}\nabla p^{n,*}\right)\right] + \Psib^n.
+\Fb^{n+1,*} = \left[\rho^{n+1,*}\chi^{n+1,*}\left(\nabla c^{n+1,*} + K_P^{n+1,*}\nabla p^n\right)\right] + \Psib^n.
 \end{equation}
 Then, define $\vb^{n+1,*} = \vb^n + \deltab\vb, p^{n+1,*} = p^n + \delta p$ and solve
 for $\deltab\vb$ and $\delta p$:
 \begin{eqnarray}
 \frac{\rho^{n+1,*}(\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^n+\delta p) &=&\nonumber\\
-&&\hspace{-2.25in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1,*}(\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n} + \left(\frac{\rho^n+\rho^{n+1,*}}{2}\right)\gb,\nonumber\\
+&&\hspace{-2.25in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1,*}(\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2(\eta k_B T)^n}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n} + \left(\frac{\rho^n+\rho^{n+1,*}}{2}\right)\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot(\vb^n+\deltab\vb) = S^{n+1,*}.
@@ -367,6 +368,74 @@ solve the following system for $(\deltab\vb,\delta p)$:
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{n+1}.
 \end{equation}
+
+\subsection{Overdamped Limit Algorithm}
+Here is the time-advancement scheme.\\ \\
+{\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
+Using
+\begin{equation}
+\Fb^n = \left[\rho^n\chi^n\left(\nabla c^n + K_P^n\nabla p^n\right)\right] + \sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)^n}{\Delta t\Delta V}}\widetilde\Wb^n,
+\end{equation}
+{\bf Step 2: Predictor Stokes Solve:}\\ \\
+Solve a steady Stokes system with $p^{n+1,*} = p^n + \delta p$ and $\vb^{n+1,*} = \vb^n + \delta\vb$:
+\begin{equation}
+\nabla(p^n + \delta p) = \nabla\cdot\mathcal A_0^n(\vb^n + \deltab\vb) + \nabla\cdot\sqrt{\frac{2(\eta k_B T)^n}{\Delta t\Delta V}}\widehat\Wb^n + \rho^n\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\vb^n + \delta\vb) = S^n,
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^n + \mathcal{A}_0^n\vb^n
++ \nabla\cdot\sqrt{\frac{2(\eta k_B T)^n}{\Delta t\Delta V}}\widehat\Wb^n 
++ \rho^n\gb,\label{eq:Overdamped Pred Stokes}
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^n.
+\end{equation}
+Relating this to the GMRES solver, we can see that we are solving for 
+$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\vb^n-S^n$ (note the change in sign!) 
+and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:Overdamped Pred Stokes}).
+For the Helmholtz-like operator, 
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=0, 
+\beta=\eta$, and $\gamma=\kappa/2$.  Make sure to set $\alpha$ to some non-zero to avoid
+divide-by-zero errors.
+Next, define $\vb^{n+1,*} = \vb^n + \deltab\vb$ and $p^{n+1,*} = p^n + \delta p$.\\ \\
+{\bf Step 3: Forward Euler Scalar Predictor}\\ \\
+Take a predictor forward Euler step for $\rho$ and $\rho_1$:
+\begin{eqnarray}
+\rho^{n+1,*} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^{n+1,*}),\\
+\rho_1^{n+1,*} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^{n+1,*} + \Fb^n).
+\end{eqnarray}
+{\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
+Calculate corrector diffusive fluxes, and reuse the same random numbers:
+\begin{equation}
+\Fb^{n+1,*} = \left[\rho^{n+1,*}\chi^{n+1,*}\left(\nabla c^{n+1,*} + K_P^{n+1,*}\nabla p^{n+1,*}\right)\right]
++ \sqrt{\frac{2\left(\chi\rho\mu_c^{-1}k_B T\right)^{n+1,*}}{\Delta t\Delta V}}\widetilde\Wb^n
+\end{equation}
+{\bf Step 5: Corrector Stokes Solve:}\\ \\
+Solve a steady Stokes system with $p^{n+1} = p^n + \delta p$ and $\vb^{n+1} = \vb^n + \delta\vb$:
+\begin{equation}
+\nabla(p^n + \delta p) = \nabla\cdot\mathcal A_0^{n+1,*}(\vb^n + \deltab\vb) + \nabla\cdot\sqrt{\frac{2(\eta k_B T)^{n+1,*}}{\Delta t\Delta V}}\widehat\Wb^n + \rho^{n+1,*}\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot(\vb^n + \delta\vb) = S^{n+1,*},
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^{n+1,*}\deltab\vb + \nabla\delta p = -\nabla p^n + \mathcal{A}_0^{n+1,*}\vb^n
++ \nabla\cdot\sqrt{\frac{2(\eta k_B T)^{n+1,*}}{\Delta t\Delta V}}\widehat\Wb^n 
++ \rho^{n+1,*}\gb,
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\vb^n - S^{n+1,*}.
+\end{equation}
+{\bf Step 6: Trapezoidal Scalar Corrector:}\\ \\
+Update the scalars using
+\begin{eqnarray}
+\rho^{n+1} &=& \half\rho^n + \half\left[\rho^{n+1,*} + \Delta t\nabla\cdot(-\rho^{n+1,*}\vb^{n+1})\right],\\
+\rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{n+1,*} + \Delta t\nabla\cdot(-\rho_1^{n+1,*}\vb^{n+1} + \Fb^{n+1,*})\right].
+\end{eqnarray}
 
 \section{Boundary Conditions}
 The types of non-periodic, ``physical'' boundary conditions we consider are 
@@ -594,25 +663,5 @@ problem, in that for time-dependent boundary conditions (such as reservoirs), we
 must supply the {\it change} in the velocity boundary condition as compared to
 the boundary condition at $t^n$, rather than the final velocity boundary 
 condition itself.
-
-\section{``Simple'' Algorithm}
-Use GMRES to solve:
-\begin{equation}
--\half\mathcal A_0\deltab\vb + \nabla\delta p = -\nabla p^n + \mathcal A_0\vb^n + \nabla\cdot\Sigmab^n + \rho^n\gb.
-\end{equation}
-Set $\vb = \vb^n + \deltab\vb$.  Then do predictor advection of species:
-\begin{equation}
-\rho_1^{n+1,*} = \rho^n + \Delta\left[\nabla\cdot(-\rho_1^n\vb + F^n)\right],
-\end{equation}
-\begin{equation}
-F^n = \rho\chi\nabla c^n + \Psib^n.
-\end{equation}
-Then do corrector advection of species:
-\begin{equation}
-\rho_1^{n+1} = \half\rho_1^{n+1} + \half\left[\rho_1^{n+1,*} + \Delta t\nabla\cdot(-\rho_1^{n+1,*}\vb + F^{n+1,*})\right],
-\end{equation}
-\begin{equation}
-F^{n+1,*} = \rho\chi\nabla c^{n+1,*} + \Psib^n.
-\end{equation}
 
 \end{document}
