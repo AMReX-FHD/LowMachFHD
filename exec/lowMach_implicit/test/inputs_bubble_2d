@@ -1,8 +1,8 @@
 &probin
 
-  use_barodiffusion = F
-  use_bds = F
-  use_simple = F
+  use_barodiffusion = F   ! enable barodiffusion
+  use_bds = F             ! enable bds advection in space and time
+  use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
 
 /
 

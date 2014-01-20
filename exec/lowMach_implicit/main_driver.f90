@@ -26,7 +26,7 @@ subroutine main_driver()
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type
   use probin_gmres_module  , only: probin_gmres_init
-  use probin_module        , only: probin_init, use_barodiffusion, use_simple, use_bds
+  use probin_module        , only: probin_init, use_barodiffusion, use_overdamped, use_bds
 
   implicit none
 
@@ -374,7 +374,7 @@ subroutine main_driver()
         print*,"Begin Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
      end if
 
-     if (use_simple) then
+     if (use_overdamped) then
         ! advance the solution by dt
         call advance_timestep_simple(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
