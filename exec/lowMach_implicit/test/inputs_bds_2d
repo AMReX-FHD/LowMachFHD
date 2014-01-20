@@ -1,7 +1,8 @@
 &probin
 
-  use_bds = T
-  use_simple = T
+  use_barodiffusion = F   ! enable barodiffusion
+  use_bds = T             ! enable bds advection in space and time
+  use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
 
 /
 
@@ -11,7 +12,7 @@
   c_init(1) = 0.5d0          ! controls initial concentration
 
   ! simulation properties
-  max_step = 10000            ! maximum number of time steps
+  max_step = 10000           ! maximum number of time steps
   print_int = 1              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1        ! how often to call project_onto_eos
 
