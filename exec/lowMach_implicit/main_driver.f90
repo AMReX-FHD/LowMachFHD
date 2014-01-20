@@ -12,7 +12,7 @@ subroutine main_driver()
   use initial_projection_module
   use write_plotfile_module
   use advance_timestep_module
-  use advance_timestep_simple_module
+  use advance_timestep_overdamped_module
   use convert_variables_module
   use div_and_grad_module
   use analysis_module
@@ -376,7 +376,7 @@ subroutine main_driver()
 
      if (use_overdamped) then
         ! advance the solution by dt
-        call advance_timestep_simple(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
+        call advance_timestep_overdamped(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
                               gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 

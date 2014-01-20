@@ -1,4 +1,4 @@
-module advance_timestep_simple_module
+module advance_timestep_overdamped_module
 
   use ml_layout_module
   use multifab_module
@@ -29,11 +29,11 @@ module advance_timestep_simple_module
 
   private
 
-  public :: advance_timestep_simple
+  public :: advance_timestep_overdamped
 
 contains
 
-  subroutine advance_timestep_simple( &
+  subroutine advance_timestep_overdamped( &
                               mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
                               gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
@@ -527,6 +527,6 @@ contains
 
     deallocate(vel_bc_t_old,vel_bc_t_delta)
 
-  end subroutine advance_timestep_simple
+  end subroutine advance_timestep_overdamped
 
-end module advance_timestep_simple_module
+end module advance_timestep_overdamped_module
