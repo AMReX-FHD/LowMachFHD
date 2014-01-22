@@ -179,11 +179,11 @@ $k_BT=1$ and $\mu_c^{-1}=c(1-c)[cm_1+(1-c)m_2]$ with $m_1=m_2=1$ so that
 \end{equation}
 Also, in (\ref{eq:mom stoch}) we use
 \begin{equation}
-\Wb + \Wb^T = \sqrt{2}\widehat\Wb \quad \rightarrow \quad
+\frac{\Wb + \Wb^T}{\sqrt{2}} = \widehat\Wb \quad \rightarrow \quad
 \Sigmab = \sqrt{\frac{2\eta k_B T}{\Delta t\Delta V}}\widehat\Wb,
 \end{equation}
-where $\widehat\Wb$ is a symmetric Gaussian random tensor field, and the
-extra factor of $\sqrt{2}$ accounts for the reduction in variance due to the averaging.\\
+where $\widehat\Wb$ is a symmetric Gaussian random tensor field whose diagonal elements
+have variance 2 and off-diagonal elements have variance 1.\\
 
 The code has several options for the viscous stress tensor.  For ease of exposition,
 we define $\nabla\cdot\taub(\vb)\equiv\mathcal{A}_0\vb$ (the superscript
