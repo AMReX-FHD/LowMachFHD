@@ -55,18 +55,13 @@ contains
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
 
     ! local
+    type(multifab) ::        savg(mla%nlevel)
     type(multifab) ::    s_update(mla%nlevel)
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
 
-    type(multifab) ::       mtemp(mla%nlevel,mla%dim)
-    type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
-    type(multifab) :: m_a_fluxdiv_old(mla%nlevel,mla%dim)
-    type(multifab) :: m_d_fluxdiv_old(mla%nlevel,mla%dim)
-    type(multifab) :: m_a_fluxdiv_new(mla%nlevel,mla%dim)
-    type(multifab) :: m_d_fluxdiv_new(mla%nlevel,mla%dim)
-    type(multifab) :: m_s_fluxdiv    (mla%nlevel,mla%dim)
+    type(multifab) ::  gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::        dumac(mla%nlevel,mla%dim)
     type(multifab) ::     umac_old(mla%nlevel,mla%dim)
     type(multifab) ::        gradp(mla%nlevel,mla%dim)
@@ -93,18 +88,13 @@ contains
     S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
     
     do n=1,nlevs
+       call multifab_build(       savg(n),mla%la(n),nscal,2)
        call multifab_build(   s_update(n),mla%la(n),nscal,0)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
        call multifab_build(         dp(n),mla%la(n),1    ,1)
        call multifab_build(       divu(n),mla%la(n),1    ,0)
        do i=1,dm
-          call multifab_build_edge(          mtemp(n,i),mla%la(n),nscal,1,i)
           call multifab_build_edge(    gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(m_a_fluxdiv_old(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(m_d_fluxdiv_old(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(m_a_fluxdiv_new(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(m_d_fluxdiv_new(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(m_s_fluxdiv    (n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(          dumac(n,i),mla%la(n),1    ,1,i)
           call multifab_build_edge(       umac_old(n,i),mla%la(n),1    ,1,i)
           call multifab_build_edge(          gradp(n,i),mla%la(n),1    ,0,i)
@@ -165,12 +155,7 @@ contains
     do n=1,nlevs
        call setval(s_update(n),0.d0,all=.true.)
        do i=1,dm
-          call setval(m_a_fluxdiv_old(n,i),0.d0,all=.true.)
-          call setval(m_d_fluxdiv_old(n,i),0.d0,all=.true.)
-          call setval(m_a_fluxdiv_new(n,i),0.d0,all=.true.)
-          call setval(m_d_fluxdiv_new(n,i),0.d0,all=.true.)
-          call setval(m_s_fluxdiv    (n,i),0.d0,all=.true.)
-          call setval(          dumac(n,i),0.d0,all=.true.)
+          call setval(dumac(n,i),0.d0,all=.true.)
        end do
     end do
 
@@ -208,30 +193,16 @@ contains
        end do
     end do
 
-    ! compute m_d_fluxdiv_old = A_0^n v^{n-1/2}
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_old,umac_old,eta,eta_ed,kappa,dx, &
+    ! add A_0^n v^{n-1/2} to gmres_rhs_v
+    call mk_diffusive_m_fluxdiv(mla,gmres_rhs_v,umac_old,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
-    ! add A_0^n v^{n-1/2} to gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_old(n,i),1,1,0)
-       end do
-    end do
-
-    ! compute m_s_fluxdiv = div(Sigma^n)
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx)
-
     ! add div(Sigma^n) to gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
-       end do
-    end do
+    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v,eta,eta_ed,dx)
 
-    ! add gravity term
+    ! add gravity term to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc_old)
+       call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
     end if
 
     ! initialize rhs_p for gmres solve to zero
@@ -248,7 +219,7 @@ contains
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(Psi^n) to rhs_p
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc_old,dx,vel_bc_n)
 
     do n=1,nlevs
@@ -341,35 +312,44 @@ contains
     ! set s_update to A^n for scalars
     call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
 
-    ! set snew = s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
+    ! compute s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
+    ! store result in savg (we will later add sold and divide by 2)
     do n=1,nlevs
        call multifab_mult_mult_s_c(s_update(n),1,fixed_dt,nscal,0)
        call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
        call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
     end do
 
-    ! compute prim^{*,n+1} from s^{*,n+1} in valid region
-    call convert_cons_to_prim(mla,snew,prim,.true.)
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 4 - Compute Midpoint Estimates
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! fill ghost cells for prim^{*,n+1}
+    ! add sold to savg (which currently holds s^{*,n+1}
+
+    ! divide by 2 so savg holds s^{*,n+1/2}
+
+    ! convert s^{*,n+1/2} to prim
+    call convert_cons_to_prim(mla,savg,prim,.true.)
+
+    ! fill ghost cells for prim
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
        call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    ! convert prim^{*,n+1} to s^{*,n+1} in valid and ghost region
-    ! now snew = s^{*,n+1} has properly filled ghost cells
-    call convert_cons_to_prim(mla,snew,prim,.false.)
+    ! convert prim to s ^{*,n+1/2} in valid and ghost region
+    ! now s^{*,n+1/2} properly filled ghost cells
+    call convert_cons_to_prim(mla,savg,prim,.false.)
 
-    ! compute s^{*,n+1} to faces
+    ! average s^{*,n+1/2} to faces
     do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,savg,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
     end do
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 4 - Compute Midpoint Estimates
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
+    ! compute (chi,eta,kappa)^{*,n+1/2}
+    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
+    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
+    call compute_kappa(mla,kappa,prim,dx)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Steps 5 and 6 - Corrector Stokes Solve
@@ -388,19 +368,19 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
-    ! add div(Psi^n) to rhs_p
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
-                                 chi_fc_old,dx,vel_bc_n)
+    ! add div(Psi^n') to rhs_p
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+                                 chi_fc,dx,vel_bc_n)
 
     ! reset s_update for all scalars to zero
-    ! then, set s_update for rho1 to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
+    ! then, set s_update for rho1 to F^{*,n+1} = div(rho*chi grad c)^{*,n+1/2} + div(Psi^n')
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
     end do
 
-    ! s_update already contains D^{*,n+1} + St^{*,n+1} for rho1 from above
-    ! add A^{*,n+1} for s to s_update
+    ! s_update already contains D^{*,n+1/2} + St^{*,n+1/2} for rho1 from above
+    ! add A^{*,n+1/2} for s to s_update
     call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
 
     ! snew = s^{n+1} 
@@ -452,18 +432,13 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     do n=1,nlevs
+       call multifab_destroy(savg(n))
        call multifab_destroy(s_update(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dp(n))
        call multifab_destroy(divu(n))
        do i=1,dm
-          call multifab_destroy(mtemp(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
-          call multifab_destroy(m_a_fluxdiv_old(n,i))
-          call multifab_destroy(m_d_fluxdiv_old(n,i))
-          call multifab_destroy(m_a_fluxdiv_new(n,i))
-          call multifab_destroy(m_d_fluxdiv_new(n,i))
-          call multifab_destroy(m_s_fluxdiv(n,i))
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(umac_old(n,i))
           call multifab_destroy(gradp(n,i))
