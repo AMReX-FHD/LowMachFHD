@@ -376,14 +376,14 @@ concentration from time step $n$ to time step $n+1$ (denoted here by superscript
 {\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
 Calculate predictor diffusive and stochastic fluxes,
 \begin{equation}
-\Fb^n = (\rho\chi\nabla c)^n + \sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^n k_B T}{\Delta t\Delta V}}\widetilde\Wb^n,
+\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^n k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
 \end{equation}
 and then evaluate $S^n$ from $\Fb^n$.\\ \\
 {\bf Step 2: Predictor Stokes Solve:}\\ \\
 Generate a random advection velocity by solving the steady Stokes equation with random forcing.
 Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \vb^{n-\myhalf} + \delta\vb$ and solve:
 \begin{equation}
-\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n + \rho^n\gb,
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n} + \rho^n\gb,
 \end{equation}
 \begin{equation}
 \nabla\cdot(\vb^{n-\myhalf} + \delta\vb) = S^n,
@@ -391,7 +391,7 @@ Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \vb^{n-\myhalf} + \delta\vb
 which can be written as
 \begin{equation}
 -\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\vb^{n-\myhalf}
-+ \nabla\cdot\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n 
++ \nabla\cdot\Sigmab^n
 + \rho^n\gb,\label{eq:Overdamped Pred Stokes}
 \end{equation}
 \begin{equation}
@@ -420,12 +420,12 @@ Take a predictor forward Euler step for $\rho$ and $\rho_1$:
 Calculate corrector diffusive fluxes, and reuse the same random numbers:
 \begin{equation}
 \Fb^{*,n+\myhalf} = (\rho\chi\nabla c)^{*,n+\myhalf}
-+ \sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{*,n+\myhalf}k_B T}{\Delta t\Delta V}}\widetilde\Wb^n
++ \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{*,n+\myhalf}k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{n'}}.
 \end{equation}
 {\bf Step 6: Corrector Stokes Solve:}\\ \\
 Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \vb^n + \delta\vb$:
 \begin{equation}
-\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\vb^* + \deltab\vb) + \nabla\cdot\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n + \rho^{*,n+\myhalf}\gb,
+\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{n'}} + \rho^{*,n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
 \nabla\cdot(\vb^* + \delta\vb) = S^{*,n+\myhalf},
@@ -433,7 +433,7 @@ Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\
 which can be written as
 \begin{equation}
 -\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\vb^*
-+ \nabla\cdot\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n 
++ \nabla\cdot\Sigmab^{n'}
 + \rho^{*,n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
