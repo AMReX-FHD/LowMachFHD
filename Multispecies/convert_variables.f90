@@ -12,7 +12,7 @@ module convert_variables_module
 
   private
 
-  public :: convert_cons_to_prim, compute_BinvGamma
+  public :: convert_cons_to_prim, compute_BinvGamma, compute_coefficient
 
 contains
 
@@ -527,13 +527,14 @@ contains
 
   end subroutine compute_BdagGamma
 
-  subroutine compute_chi(mla,rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,the_bc_level)
+  subroutine compute_coefficient(mla,rho,rho_tot,molarconc,chi,rhoWchiGama,Dbar,Gama,mass,molmtot,the_bc_level)
    
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rho_tot(:) 
     type(multifab) , intent(in   )  :: molarconc(:) 
     type(multifab) , intent(inout)  :: chi(:) 
+    type(multifab) , intent(inout)  :: rhoWchiGama(:) 
     real(kind=dp_t), intent(in   )  :: Dbar(:,:) 
     real(kind=dp_t), intent(in   )  :: Gama(:,:) 
     real(kind=dp_t), intent(in   )  :: mass(:)
@@ -550,6 +551,7 @@ contains
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for chi
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for molmtot
+    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for rhoWchiGama
 
     dm = mla%dim        ! dimensionality
     ng = rho(1)%ng      ! number of ghost cells 
@@ -563,23 +565,24 @@ contains
           dp2 => dataptr(molarconc(n),i)
           dp3 => dataptr(chi(n),i)
           dp4 => dataptr(molmtot(n),  i)
+          dp5 => dataptr(rhoWchiGama(n),  i)
           lo  =  lwb(get_box(rho(n), i))
           hi  =  upb(get_box(rho(n), i))
           
           select case(dm)
           case (2)
-             call compute_chi_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
+             call compute_coefficient_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
                   dp3(:,:,1,:),Dbar(:,:),Gama(:,:),mass(:),dp4(:,:,1,1),ng,lo,hi) 
           case (3)
-             call compute_chi_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
+             call compute_coefficient_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
                   dp3(:,:,:,:),Dbar(:,:),Gama(:,:),mass(:),dp4(:,:,:,1),ng,lo,hi) 
           end select
        end do
     end do
 
-   end subroutine compute_chiGamma
+   end subroutine compute_coefficient
  
-subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo,hi)
+subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
@@ -597,7 +600,7 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo
 
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager, Lambda
-    real(kind=dp_t), dimension(nspecies,nspecies) :: chilocal,CapWchiCapW
+    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag,CapWchiCapW
     real(kind=dp_t), dimension(nspecies)          :: W 
 
     tolerance = 1e-13
@@ -609,7 +612,7 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo
           ! free up memory  
           Lonsager     = 0.d0         
           Lambda       = 0.d0         
-          CapWchiGamma = 0.d0         
+          chidag       = 0.d0         
           CapWchiCapW  = 0.d0
           W            = 0.d0
   
@@ -657,7 +660,7 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo
           endif
 
           ! compute chi  
-          call populate_chi(Lambda(:,:),chilocal(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
+          call populate_coefficient(Lambda(:,:),chidag(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
 
           ! compute Onsager matrix L
           Lonsager = rho_tot(i,j)*rho_tot(i,j)*Temp*CapWchiCapW/Press
@@ -693,9 +696,9 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo
         BinvGamma_ij = BdagGamma_ij
      end subroutine 
 
-  end subroutine compute_chi_2d
+  end subroutine compute_coefficient_2d
 
-  subroutine compute_chi_3d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo,hi)
+  subroutine compute_coefficient_3d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo,hi)
    
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! density; last dimension for species
@@ -713,7 +716,7 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo
 
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager, Lambda
-    real(kind=dp_t), dimension(nspecies,nspecies) :: chilocal, CapWchiCapW 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag, CapWchiCapW 
     real(kind=dp_t), dimension(nspecies)          :: W 
 
     tolerance = 1e-13
@@ -726,7 +729,7 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo
              ! free up the memory  
              Lonsager    = 0.d0         
              Lambda      = 0.d0         
-             chilocal    = 0.d0         
+             chidag      = 0.d0         
              CapWchiCapW = 0.d0         
              W           = 0.d0
  
@@ -761,10 +764,10 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo
              enddo
              
              ! compute chi  
-             call populate_chi(Lambda(:,:),chilocal(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
+             call populate_coefficient(Lambda(:,:),chidag(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
 
              ! compute Onsager matrix L
-             Lonsager = rho_tot(i,j)*rho_tot(i,j)*Temp*CapWchiCapW/Press
+             Lonsager = rho_tot(i,j,k)*rho_tot(i,j,k)*Temp*CapWchiCapW/Press
 
              ! do the rank conversion 
              call set_Bij(chi(i,j,k,:), chidag)
@@ -781,12 +784,11 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo
         BinvGamma_ij = BdagGamma_ij
      end subroutine 
 
-  end subroutine compute_chi_3d
+  end subroutine compute_coefficient_3d
 
-subroutine populate_chi(Lambda,chilocal,chidag,CapWchiCapW,Gama,W,tolerance)
+subroutine populate_coefficient(Lambda,chidag,CapWchiCapW,Gama,W,tolerance)
          
     real(kind=dp_t)  :: Lambda(:,:)
-    real(kind=dp_t)  :: chilocal(:,:)
     real(kind=dp_t)  :: chidag(:,:)
     real(kind=dp_t)  :: CapWchiCapW(:,:)
     real(kind=dp_t)  :: Gama(:,:)
@@ -798,7 +800,7 @@ subroutine populate_chi(Lambda,chilocal,chidag,CapWchiCapW,Gama,W,tolerance)
     real(kind=dp_t)  :: alpha    
 
     ! vectors and matrices to be used by LAPACK
-    real(kind=dp_t), dimension(nspecies,nspecies) :: Sdag
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Sdag,chilocal
     real(kind=dp_t), dimension(nspecies,nspecies) :: U, UT, V, VT
     real(kind=dp_t), dimension(nspecies)          :: S, work 
     integer,         dimension(nspecies)          :: ipiv
@@ -812,6 +814,7 @@ subroutine populate_chi(Lambda,chilocal,chidag,CapWchiCapW,Gama,W,tolerance)
     S        = 0.d0
     work     = 0.d0
     alpha    = 0.d0
+    chilocal = 0.d0
  
     ! calculate trace(Lambda)
     alpha = 0.d0
@@ -820,10 +823,9 @@ subroutine populate_chi(Lambda,chilocal,chidag,CapWchiCapW,Gama,W,tolerance)
     enddo
  
     ! calculate Lambda + alpha*W*WT (Equation 6) 
-    chilocal = alpha*matmul(W, transpose(W))
     do row=1, nspecies
        do column=1, nspecies
-          chilocal(row,column) = chilocal(row,column) + Lambda(row,column)
+          chilocal(row,column) = alpha*W(row)*W(column) + Lambda(row,column)
        enddo
     enddo
 
@@ -888,6 +890,6 @@ subroutine populate_chi(Lambda,chilocal,chidag,CapWchiCapW,Gama,W,tolerance)
        enddo
     enddo
 
-  end subroutine populate_chi
+  end subroutine populate_coefficient
 
 end module convert_variables_module
