@@ -151,7 +151,7 @@ contains
        end do
     end do
 
-    ! make copies of old quantities
+    ! save boundary conditions from corrector
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(vel_bc_n_old(n,i),1,vel_bc_n(n,i),1,1,0)
@@ -375,6 +375,16 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
     end if
 
+    ! save boundary conditions from predictor
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(vel_bc_n_old(n,i),1,vel_bc_n(n,i),1,1,0)
+       end do
+       do i=1,size(vel_bc_t,dim=2)
+          call multifab_copy_c(vel_bc_t_old(n,i),1,vel_bc_t(n,i),1,1,0)
+       end do
+    end do
+
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
@@ -387,7 +397,6 @@ contains
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,vel_bc_n)
 
-    ! AJN FIXME - I don't think this is right
     do n=1,nlevs
        do i=1,dm
           ! compute change in normal velocity boundary condition over the time step
