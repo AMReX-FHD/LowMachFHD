@@ -80,6 +80,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) use_bds
 
+       case ('--use_overdamped')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) use_overdamped
+
        case ('--')
           farg = farg + 1
           exit
