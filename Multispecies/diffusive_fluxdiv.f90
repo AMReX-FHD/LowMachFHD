@@ -18,8 +18,8 @@ module diffusive_fluxdiv_module
 
 contains
 
-  subroutine diffusive_fluxdiv(mla,rho,rho_tot,fluxdiv,molarconc,molmtot,BinvGamma,chi,&
-                               Dbar,Gama,mass,dx,the_bc_level)
+  subroutine diffusive_fluxdiv(mla,rho,rho_tot,fluxdiv,molarconc,molmtot,chi,&
+                               rhoWchiGama,Dbar,Gama,mass,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)
@@ -27,8 +27,8 @@ contains
     type(multifab) , intent(inout) :: fluxdiv(:)
     type(multifab) , intent(inout) :: molarconc(:)
     type(multifab) , intent(inout) :: molmtot(:)
-    type(multifab) , intent(inout) :: BinvGamma(:)
     type(multifab) , intent(inout) :: chi(:)
+    type(multifab) , intent(inout) :: rhoWchiGama(:)
     real(kind=dp_t), intent(in   ) :: Dbar(:,:)
     real(kind=dp_t), intent(in   ) :: Gama(:,:)
     real(kind=dp_t), intent(in   ) :: mass(:) 
@@ -52,11 +52,8 @@ contains
        end do
     end do   
     
-    ! compute cell-centered B^(-1)*Gamma  
-    call compute_BinvGamma(mla,rho,rho_tot,molarconc,BinvGamma,Dbar,Gama,mass,molmtot,the_bc_level)
- 
     ! compute the face-centered flux (each direction: cells+1 faces while cells contain interior+2 ghost cells) 
-    call diffusive_flux(mla,rho,molarconc,BinvGamma,chi,Gama,flux,dx,the_bc_level)
+    call diffusive_flux(mla,rho,molarconc,chi,rhoWchiGama,Gama,flux,dx,the_bc_level)
 
     ! compute divergence of the flux 
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)

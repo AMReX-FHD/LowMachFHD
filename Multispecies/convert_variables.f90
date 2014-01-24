@@ -572,27 +572,28 @@ contains
           select case(dm)
           case (2)
              call compute_coefficient_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
-                  dp3(:,:,1,:),Dbar(:,:),Gama(:,:),mass(:),dp4(:,:,1,1),ng,lo,hi) 
+                  dp3(:,:,1,:),Dbar(:,:),Gama(:,:),mass(:),dp4(:,:,1,1),dp5(:,:,1,:),ng,lo,hi) 
           case (3)
              call compute_coefficient_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
-                  dp3(:,:,:,:),Dbar(:,:),Gama(:,:),mass(:),dp4(:,:,:,1),ng,lo,hi) 
+                  dp3(:,:,:,:),Dbar(:,:),Gama(:,:),mass(:),dp4(:,:,:,1),dp5(:,:,:,:),ng,lo,hi) 
           end select
        end do
     end do
 
    end subroutine compute_coefficient
  
-subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo,hi)
+subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,rhoWchiGama,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
     real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:)      ! total density in each cell 
     real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)  ! molar concentration; 
-    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,:)   ! last dimension for nspecies^2
+    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,:)        ! last dimension for nspecies^2
     real(kind=dp_t)  :: Dbar(:,:)                         ! SM diffusion constants 
     real(kind=dp_t)  :: Gama(:,:)                         ! non-ideality coefficient 
     real(kind=dp_t)  :: mass(:)                           ! species molar mass 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
+    real(kind=dp_t)  :: rhoWchiGama(lo(1)-ng:,lo(2)-ng:,:)! last dimension for nspecies^2
 
     ! local variables
     integer          :: i,j,row,column
@@ -600,7 +601,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
 
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager, Lambda
-    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag,CapWchiCapW
+    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag,CapWchiCapW,rhoWchiGamaloc
     real(kind=dp_t), dimension(nspecies)          :: W 
 
     tolerance = 1e-13
@@ -610,11 +611,12 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
        do i=lo(1)-ng,hi(1)+ng
         
           ! free up memory  
-          Lonsager     = 0.d0         
-          Lambda       = 0.d0         
-          chidag       = 0.d0         
-          CapWchiCapW  = 0.d0
-          W            = 0.d0
+          Lonsager       = 0.d0         
+          Lambda         = 0.d0         
+          chidag         = 0.d0         
+          CapWchiCapW    = 0.d0
+          W              = 0.d0
+          rhoWchiGamaloc =0.d0
   
           ! change 0 with tolerance to prevent division by zero in case species
           ! density, molar concentration or total density = 0. 
@@ -646,7 +648,8 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
              enddo
           enddo
 
-          ! check Lambda is numerically correct 
+          ! check Lambda is numerically correct
+          if(.false.) then 
           if(i.eq.7 .and. j.eq.14) then
             do row=1, nspecies
                Sum_knoti=0.d0
@@ -658,32 +661,37 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
                print*, ''
             enddo
           endif
+          endif
 
           ! compute chi  
-          call populate_coefficient(Lambda(:,:),chidag(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
+          call populate_coefficient(Lambda(:,:),chidag(:,:),rhoWchiGamaloc(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
 
           ! compute Onsager matrix L
           Lonsager = rho_tot(i,j)*rho_tot(i,j)*Temp*CapWchiCapW/Press
 
-          !print*, i,j,"mol1=",molarconc(i,j,1),"mol2=",molarconc(i,j,2)
-          if(.false.) then
-            if(i.eq.7 .and. j.eq.14) then
-               print*, "rho1=",rho(i,j,1),"rho2=",rho(i,j,2),"rho1+rho2=",rho_tot(i,j)
-               print*, "rho1/rho=",W(1),"rho2/rho=",W(2),"w1+w2=",W(1)+W(2)
-               print*, "mol1=",molarconc(i,j,1),"mol2=",molarconc(i,j,2),"mol1+mol2=",molmtot(i,j)
-              do row=1, nspecies
+          ! populate -rho*W*chi*Gama
+          do row=1, nspecies
+             do column=1, nspecies
+                rhoWchiGamaloc(row,column) = -rho(i,j,row)*rhoWchiGamaloc(row,column)  
+             enddo
+          enddo
+
+          ! print to match with previous code
+          if(.false.) then 
+          if(i.eq.7 .and. j.eq.14) then
+             print*, 'printing rho*W*chi*Gama'
+             do row=1, nspecies
                 do column=1, nspecies
-                   !print*, Lonsager(row, column)
-                   !print*, Gama(row, column)
+                   print*, rhoWchiGamaloc(row, column)
                 enddo
-                !print*, Bdagw(row) 
-                print*, '' 
-              enddo
-            endif
+                   print*, ''
+             enddo
+          endif
           endif
 
           ! do the rank conversion 
-          call set_Bij(chi(i,j,:), chidag)
+          call set_Bij(chi(i,j,:),         chidag)
+          call set_Bij(rhoWchiGama(i,j,:), rhoWchiGamaloc)
  
       end do
     end do
@@ -698,7 +706,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
 
   end subroutine compute_coefficient_2d
 
-  subroutine compute_coefficient_3d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,ng,lo,hi)
+  subroutine compute_coefficient_3d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmtot,rhoWchiGama,ng,lo,hi)
    
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! density; last dimension for species
@@ -709,6 +717,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
     real(kind=dp_t)  :: Gama(:,:)                                   ! non-ideality coefficient 
     real(kind=dp_t)  :: mass(:)                                     ! species molar mass 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total molar mass 
+    real(kind=dp_t)  :: rhoWchiGama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)! last dimension for nspecies^2
     
     ! local variables
     integer          :: i,j,k,row,column
@@ -716,7 +725,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
 
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager, Lambda
-    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag, CapWchiCapW 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag, CapWchiCapW, rhoWchiGamaloc 
     real(kind=dp_t), dimension(nspecies)          :: W 
 
     tolerance = 1e-13
@@ -727,11 +736,12 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
           do i=lo(1)-ng,hi(1)+ng
         
              ! free up the memory  
-             Lonsager    = 0.d0         
-             Lambda      = 0.d0         
-             chidag      = 0.d0         
-             CapWchiCapW = 0.d0         
-             W           = 0.d0
+             Lonsager       = 0.d0         
+             Lambda         = 0.d0         
+             chidag         = 0.d0         
+             CapWchiCapW    = 0.d0         
+             W              = 0.d0
+             rhoWchiGamaloc = 0.d0
  
              ! change 0 with tolerance to prevent division by zero in case species
              ! density, molar concentration or total density = 0. 
@@ -764,13 +774,21 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
              enddo
              
              ! compute chi  
-             call populate_coefficient(Lambda(:,:),chidag(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
+             call populate_coefficient(Lambda(:,:),chidag(:,:),rhoWchiGamaloc(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
 
              ! compute Onsager matrix L
              Lonsager = rho_tot(i,j,k)*rho_tot(i,j,k)*Temp*CapWchiCapW/Press
 
+             ! populate rho*W*chi*Gama (chiGama matrix rows * rho_i)
+             do row=1, nspecies
+                do column=1, nspecies
+                   rhoWchiGamaloc(row,column) = rho(i,j,k,row)*rhoWchiGamaloc(row,column)  
+                enddo
+             enddo
+
              ! do the rank conversion 
-             call set_Bij(chi(i,j,k,:), chidag)
+             call set_Bij(chi(i,j,k,:),         chidag)
+             call set_Bij(rhoWchiGama(i,j,k,:), rhoWchiGamaloc)
  
           end do
        end do
@@ -786,10 +804,11 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
 
   end subroutine compute_coefficient_3d
 
-subroutine populate_coefficient(Lambda,chidag,CapWchiCapW,Gama,W,tolerance)
+subroutine populate_coefficient(Lambda,chidag,rhoWchiGamaloc,CapWchiCapW,Gama,W,tolerance)
          
     real(kind=dp_t)  :: Lambda(:,:)
     real(kind=dp_t)  :: chidag(:,:)
+    real(kind=dp_t)  :: rhoWchiGamaloc(:,:)
     real(kind=dp_t)  :: CapWchiCapW(:,:)
     real(kind=dp_t)  :: Gama(:,:)
     real(kind=dp_t)  :: W(:)
@@ -889,6 +908,13 @@ subroutine populate_coefficient(Lambda,chidag,CapWchiCapW,Gama,W,tolerance)
           CapWchiCapW(row, column) = W(row)*chidag(row,column)*W(column)
        enddo
     enddo
+
+    ! compute chi*Gamma here (rho*W=rhoi will be multiplied after return) 
+    if(is_ideal_mixture) then
+       rhoWchiGamaloc = chidag
+    else
+       rhoWchiGamaloc = matmul(chidag, Gama)
+    endif 
 
   end subroutine populate_coefficient
 
