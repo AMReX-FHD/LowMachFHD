@@ -15,12 +15,13 @@ module matrix_utilities
 contains
 
     ! nspec is number of species
+    ! num_iterations is the number of terms in the sum to use: 3-5 are reasonable values
     ! Dbar is matrix of Maxwell-Stefan binary diffusion coefficient
     ! chi is the multispecies diffusion matrix
     ! Wk is vector of molecular weights (molecular masses will work as well)
     ! Xk is mole fractions
-    subroutine Dbar2chi_iterative(nspec,Dbar,Wk,Xk,chi)
-      integer, intent(in) :: nspec
+    subroutine Dbar2chi_iterative(nspec,num_iterations,Dbar,Wk,Xk,chi)
+      integer, intent(in) :: nspec, num_iterations
       real(kind=dp_t), intent(in) :: Xk(1:nspec), Wk(1:nspec), Dbar(1:nspec,1:nspec)
       real(kind=dp_t), intent(out) :: chi(1:nspec,1:nspec)
       
@@ -34,9 +35,7 @@ contains
       real(kind=dp_t) :: scr
       real(kind=dp_t) :: Ykp(1:nspec), Xkp(1:nspec)
 
-      integer :: i, j, k, ii, jj, jmax
-
-      jmax = 3 
+      integer :: i, j, k, ii, jj
 
       ! mole fractions correction - EGLIB
       do ii = 1, nspec
@@ -137,20 +136,18 @@ contains
        enddo
       enddo
 
-      if(jmax.gt.0)then
-       do jj = 1,jmax
-        do i = 1, nspec
-         do j = 1, nspec
-          scr = 0.d0
-          do k = 1, nspec
-             scr = scr + PJ(i,k)*chi(k,j)
-          enddo
-           matrix1(i,j) = scr+matrix2(i,j)
+      do jj = 1,num_iterations
+       do i = 1, nspec
+        do j = 1, nspec
+         scr = 0.d0
+         do k = 1, nspec
+            scr = scr + PJ(i,k)*chi(k,j)
          enddo
-        enddo 
-        chi=matrix1
-       enddo
-      endif
+          matrix1(i,j) = scr+matrix2(i,j)
+        enddo
+       enddo 
+       chi=matrix1
+      enddo
 
   end subroutine
 
