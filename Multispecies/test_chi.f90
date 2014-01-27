@@ -1,4 +1,4 @@
-subroutine test_chi()
+program test_chi
 
   use multifab_module
   use init_module
@@ -18,11 +18,21 @@ subroutine test_chi()
 
   call probin_common_init()
   call probin_multispecies_init()
+  
+  call test_chi_routine(nspecies)
+
+contains
+
+
+subroutine test_chi_routine(nspecies)
+  implicit none
+
+  integer, intent(in) :: nspecies
 
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi
   real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc 
   real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,tolerance
-  integer                                       :: n,row,column 
+  integer                                       :: i,j,k,n,row,column 
 
   allocate(Dbar(nspecies,nspecies))
   allocate(Gama(nspecies,nspecies))
@@ -106,5 +116,7 @@ subroutine test_chi()
   deallocate(Gama)
   deallocate(W)
 
-end subroutine test_chi
+end subroutine
+
+end program
 
