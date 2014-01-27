@@ -16,10 +16,13 @@ subroutine test_chi()
   real(kind=dp_t), allocatable :: Gama(:,:)
   real(kind=dp_t), allocatable :: mass(:) 
 
+  call probin_common_init()
+  call probin_multispecies_init()
+
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi
   real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc 
   real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,tolerance
-  integer                                       :: n 
+  integer                                       :: n,row,column 
 
   allocate(Dbar(nspecies,nspecies))
   allocate(Gama(nspecies,nspecies))
@@ -50,7 +53,7 @@ subroutine test_chi()
   ! concentration (x_i=m*w_i/m_i) 
   Sum_woverm=0.d0
   do n=1, nspecies  
-     W(n) = rho(i,j,n)/rho_tot(i,j)
+     W(n) = rho(n)/rho_tot
      Sum_woverm = Sum_woverm + W(n)/mass(n)
   enddo
   molmtot = 1.0d0/Sum_woverm 
