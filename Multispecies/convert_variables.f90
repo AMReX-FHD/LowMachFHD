@@ -665,7 +665,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
 
           ! compute chi either selecting inverse/pseudoinverse or iterative methods 
           if(use_lapack) then
-             call populate_coefficient(Lambda(:,:),chidag(:,:),rhoWchiGamaloc(:,:),Gama(:,:),W(:),tolerance)
+             call populate_coefficient(Lambda(:,:),chidag(:,:),Gama(:,:),W(:),tolerance)
           else
              call Dbar2chi_iterative(nspecies,3,Dbar(:,:),W(:),molarconc(i,j,:),chidag(:,:))
           endif
@@ -793,7 +793,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
              enddo
              
              ! compute chi  
-             call populate_coefficient(Lambda(:,:),chidag(:,:),rhoWchiGamaloc(:,:),Gama(:,:),W(:),tolerance)
+             call populate_coefficient(Lambda(:,:),chidag(:,:),Gama(:,:),W(:),tolerance)
 
              ! compute CapW*chi*CapW and Onsager matrix L
              do column=1, nspecies
@@ -805,7 +805,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
              ! populate rho*W*chi*Gama (chiGama matrix rows * rho_i)
              do row=1, nspecies
                 do column=1, nspecies
-                   rhoWchiGamaloc(row,column) = rho(i,j,k,row)*rhoWchiGamaloc(row,column)  
+                   rhoWchiGamaloc(row,column) = -rho(i,j,k,row)*rhoWchiGamaloc(row,column)  
                 enddo
              enddo
 
@@ -827,11 +827,10 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
 
   end subroutine compute_coefficient_3d
 
-subroutine populate_coefficient(Lambda,chidag,rhoWchiGamaloc,Gama,W,tolerance)
+subroutine populate_coefficient(Lambda,chidag,Gama,W,tolerance)
          
     real(kind=dp_t)  :: Lambda(:,:)
     real(kind=dp_t)  :: chidag(:,:)
-    real(kind=dp_t)  :: rhoWchiGamaloc(:,:)
     real(kind=dp_t)  :: Gama(:,:)
     real(kind=dp_t)  :: W(:)
     real(kind=dp_t)  :: tolerance 

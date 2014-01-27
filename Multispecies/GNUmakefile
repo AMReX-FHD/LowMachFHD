@@ -3,7 +3,7 @@
 BOXLIB_HOME = ../../../BoxLib
 STAGGERED_HOME := ..
 
-NDEBUG    := t 
+NDEBUG    :=  
 MPI       :=   
 OMP       :=
 PROF      :=
@@ -26,8 +26,8 @@ LAPACK95_DIR = $(STAGGERED_HOME)/Multispecies/LAPACK95
 F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
 libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
 
-main.$(suf).exe: $(objects) 
-	$(LINK.f90) -o main.$(suf).exe $(objects) $(libraries)
+#main.$(suf).exe: $(objects) 
+#	$(LINK.f90) -o main.$(suf).exe $(objects) $(libraries)
 
 test_chi.exe: $(objects) 
 	$(LINK.f90) -o test_chi.exe $(objects) $(libraries)

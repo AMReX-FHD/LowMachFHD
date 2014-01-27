@@ -18,7 +18,6 @@ program test_chi
 
   call probin_common_init()
   call probin_multispecies_init()
-  
   call test_chi_routine(nspecies)
 
 contains
@@ -31,16 +30,22 @@ subroutine test_chi_routine(nspecies)
 
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi
   real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc 
-  real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,tolerance
+  real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti,tolerance
   integer                                       :: i,j,k,n,row,column 
 
   allocate(Dbar(nspecies,nspecies))
   allocate(Gama(nspecies,nspecies))
   allocate(mass(nspecies))
 
-  ! populate Dbar, Gama and molar masses 
-  call populate_DbarGama(Dbar,Gama,mass) 
-
+  ! initialize rho's
+  rho(1)    = 0.6d0
+  rho(2)    = 1.05d0
+  rho(3)    = 1.35d0
+  
+  ! free up memory 
+  Dbar      = 0.d0         
+  Gama      = 0.d0         
+  mass      = 0.d0         
   Lambda    = 0.d0         
   chi       = 0.d0         
   W         = 0.d0
@@ -48,12 +53,10 @@ subroutine test_chi_routine(nspecies)
   rho_tot   = 0.d0
   molarconc = 0.d0
   tolerance = 1e-13
-  
-  ! populate rho 
-  rho(1)    = 0.6d0
-  rho(2)    = 1.05d0
-  rho(3)    = 1.35d0
 
+  ! populate Dbar, Gama and molar masses 
+  call populate_DbarGama(Dbar,Gama,mass) 
+  
   ! compute rho_tot
   do n=1, nspecies  
      rho_tot = rho_tot + rho(n)
@@ -75,10 +78,9 @@ subroutine test_chi_routine(nspecies)
   ! expressed in terms of molmtot,mi,rhotot etc. 
   do row=1, nspecies  
      do column=1, row-1
-        Lambda(row, column) = -molarconc(i,j,row)*molarconc(i,j,column)/Dbar(row,column)
-        Lambda(column, row) = Lambda(row, column) 
+        Lambda(row, column) = -molarconc(row)*molarconc(column)/Dbar(row,column)
+        Lambda(column, row) = Lambda(row, column)
      enddo
-     W(row) = rho(i,j,row)/rho_tot(i,j)
   enddo
 
   ! compute Lambda_ii
@@ -96,7 +98,7 @@ subroutine test_chi_routine(nspecies)
   if(use_lapack) then
      call populate_coefficient(Lambda(:,:),chi(:,:),Gama(:,:),W(:),tolerance)
   else
-     call Dbar2chi_iterative(nspecies,3,Dbar(:,:),W(:),molarconc(i,j,:),chi(:,:))
+     call Dbar2chi_iterative(nspecies,3,Dbar(:,:),W(:),molarconc(:),chi(:,:))
   endif
 
   ! print to match with previous code
@@ -114,7 +116,7 @@ subroutine test_chi_routine(nspecies)
 
   deallocate(Dbar)
   deallocate(Gama)
-  deallocate(W)
+  deallocate(mass)
 
 end subroutine
 
