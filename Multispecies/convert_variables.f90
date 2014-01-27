@@ -5,7 +5,8 @@ module convert_variables_module
   use bc_module
   use multifab_physbc_module
   use ml_layout_module
-  use probin_multispecies_module 
+  use probin_multispecies_module
+  use matrix_utilities 
   use F95_LAPACK
 
   implicit none
@@ -601,7 +602,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
 
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager, Lambda
-    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag,CapWchiCapW,rhoWchiGamaloc
+    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag,rhoWchiGamaloc
     real(kind=dp_t), dimension(nspecies)          :: W 
 
     tolerance = 1e-13
@@ -614,7 +615,6 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
           Lonsager       = 0.d0         
           Lambda         = 0.d0         
           chidag         = 0.d0         
-          CapWchiCapW    = 0.d0
           W              = 0.d0
           rhoWchiGamaloc =0.d0
   
@@ -663,13 +663,29 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
           endif
           endif
 
-          ! compute chi  
-          call populate_coefficient(Lambda(:,:),chidag(:,:),rhoWchiGamaloc(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
+          ! compute chi either selecting inverse/pseudoinverse or iterative methods 
+          if(use_lapack) then
+             call populate_coefficient(Lambda(:,:),chidag(:,:),rhoWchiGamaloc(:,:),Gama(:,:),W(:),tolerance)
+          else
+             call Dbar2chi_iterative(nspecies,3,Dbar(:,:),W(:),molarconc(i,j,:),chidag(:,:))
+          endif
 
-          ! compute Onsager matrix L
-          Lonsager = rho_tot(i,j)*rho_tot(i,j)*Temp*CapWchiCapW/Press
+          ! compute CapW*chi*CapW and Onsager matrix L
+          do column=1, nspecies
+             do row=1, nspecies
+                Lonsager(row, column) = rho_tot(i,j)*rho_tot(i,j)*Temp*W(row)*chidag(row,column)*W(column)/Press
+             enddo
+          enddo
+          !Lonsager = rho_tot(i,j)*rho_tot(i,j)*Temp*CapWchiCapW/Press
 
-          ! populate -rho*W*chi*Gama
+          ! compute chi*Gamma here 
+          if(is_ideal_mixture) then
+            rhoWchiGamaloc = chidag
+          else
+            rhoWchiGamaloc = matmul(chidag, Gama)
+          endif 
+          
+          ! populate -rho*W*chi*Gama = -rho_i*chi*Gamma
           do row=1, nspecies
              do column=1, nspecies
                 rhoWchiGamaloc(row,column) = -rho(i,j,row)*rhoWchiGamaloc(row,column)  
@@ -677,9 +693,13 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
           enddo
 
           ! print to match with previous code
-          if(.false.) then 
+          !if(.false.) then 
           if(i.eq.7 .and. j.eq.14) then
-             print*, 'printing rho*W*chi*Gama'
+             if(use_lapack) then 
+                print*, 'printing rho*W*chi*Gama via inverse/p-inverse'
+             else 
+                print*, 'printing rho*W*chi*Gama via iterative methods'
+             endif 
              do row=1, nspecies
                 do column=1, nspecies
                    print*, rhoWchiGamaloc(row, column)
@@ -687,7 +707,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
                    print*, ''
              enddo
           endif
-          endif
+          !endif
 
           ! do the rank conversion 
           call set_Bij(chi(i,j,:),         chidag)
@@ -725,7 +745,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
 
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager, Lambda
-    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag, CapWchiCapW, rhoWchiGamaloc 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag, rhoWchiGamaloc 
     real(kind=dp_t), dimension(nspecies)          :: W 
 
     tolerance = 1e-13
@@ -739,7 +759,6 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
              Lonsager       = 0.d0         
              Lambda         = 0.d0         
              chidag         = 0.d0         
-             CapWchiCapW    = 0.d0         
              W              = 0.d0
              rhoWchiGamaloc = 0.d0
  
@@ -774,10 +793,14 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
              enddo
              
              ! compute chi  
-             call populate_coefficient(Lambda(:,:),chidag(:,:),rhoWchiGamaloc(:,:),CapWchiCapW(:,:),Gama(:,:),W(:),tolerance)
+             call populate_coefficient(Lambda(:,:),chidag(:,:),rhoWchiGamaloc(:,:),Gama(:,:),W(:),tolerance)
 
-             ! compute Onsager matrix L
-             Lonsager = rho_tot(i,j,k)*rho_tot(i,j,k)*Temp*CapWchiCapW/Press
+             ! compute CapW*chi*CapW and Onsager matrix L
+             do column=1, nspecies
+                do row=1, nspecies
+                   Lonsager(row, column) = rho_tot(i,j,k)*rho_tot(i,j,k)*Temp*W(row)*chidag(row,column)*W(column)/Press
+                enddo
+             enddo
 
              ! populate rho*W*chi*Gama (chiGama matrix rows * rho_i)
              do row=1, nspecies
@@ -804,12 +827,11 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
 
   end subroutine compute_coefficient_3d
 
-subroutine populate_coefficient(Lambda,chidag,rhoWchiGamaloc,CapWchiCapW,Gama,W,tolerance)
+subroutine populate_coefficient(Lambda,chidag,rhoWchiGamaloc,Gama,W,tolerance)
          
     real(kind=dp_t)  :: Lambda(:,:)
     real(kind=dp_t)  :: chidag(:,:)
     real(kind=dp_t)  :: rhoWchiGamaloc(:,:)
-    real(kind=dp_t)  :: CapWchiCapW(:,:)
     real(kind=dp_t)  :: Gama(:,:)
     real(kind=dp_t)  :: W(:)
     real(kind=dp_t)  :: tolerance 
@@ -902,20 +924,6 @@ subroutine populate_coefficient(Lambda,chidag,rhoWchiGamaloc,CapWchiCapW,Gama,W,
        enddo
     enddo
           
-    ! compute CapW*chi*CapW for Onsager matrix L
-    do column=1, nspecies
-       do row=1, nspecies
-          CapWchiCapW(row, column) = W(row)*chidag(row,column)*W(column)
-       enddo
-    enddo
-
-    ! compute chi*Gamma here (rho*W=rhoi will be multiplied after return) 
-    if(is_ideal_mixture) then
-       rhoWchiGamaloc = chidag
-    else
-       rhoWchiGamaloc = matmul(chidag, Gama)
-    endif 
-
   end subroutine populate_coefficient
 
 end module convert_variables_module
