@@ -18,7 +18,7 @@
 
 &probin_multispecies
  
- nspecies = 4                   ! number of species
+ nspecies = 3                   ! number of species
  max_step = 1                   ! total number of computational step
  cfl      = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
@@ -32,11 +32,8 @@
  print_error_norms = .true.     ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.     ! false=Bdag*Gama, true=Bdag 
  use_lapack  = .false.           ! false=iterative methods, true=inverse/pseudoinverse 
- rho_in(1:2,1) = 0.1 0.9        ! initial concentrations for species 1
- rho_in(1:2,2) = 0.9 0.1        ! initial concentrations for species 2
- rho_in(1:2,3) = 0.2 0.8        ! initial concentrations for species 3
- rho_in(1:2,4) = 0.3 0.7        ! initial concentrations for species 4
- molmass_in(1:4) = 1.0 2.0 3.0 1.5 ! molar mass of n-species
- Dbar_in(1:6) = 1.0 0.5 0.8 1.2 0.3 0.9    ! SM diffusion constant arranged in lower-triangle
+ rho_in(1,1:3) = 0.6 1.05 1.35  ! initial concentrations for species 1
+ molmass_in(1:3) = 1.0 2.0 3.0  ! molar mass of n-species
+ Dbar_in(1:3) = 0.5 1.0 1.5     ! SM diffusion constant arranged in lower-triangle
  
 /

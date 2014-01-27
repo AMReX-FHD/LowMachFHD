@@ -670,6 +670,23 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
              call Dbar2chi_iterative(nspecies,3,Dbar(:,:),W(:),molarconc(i,j,:),chidag(:,:))
           endif
 
+          ! print to match with previous code
+          !if(.false.) then 
+          if(i.eq.7 .and. j.eq.14) then
+             if(use_lapack) then 
+                print*, 'print chi via inverse/p-inverse'
+             else 
+                print*, 'print chi via iterative methods'
+             endif 
+             do row=1, nspecies
+                do column=1, nspecies
+                   print*, chidag(row, column)
+                enddo
+                   print*, ''
+             enddo
+          endif
+          !endif
+
           ! compute CapW*chi*CapW and Onsager matrix L
           do column=1, nspecies
              do row=1, nspecies
@@ -691,23 +708,6 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
                 rhoWchiGamaloc(row,column) = -rho(i,j,row)*rhoWchiGamaloc(row,column)  
              enddo
           enddo
-
-          ! print to match with previous code
-          !if(.false.) then 
-          if(i.eq.7 .and. j.eq.14) then
-             if(use_lapack) then 
-                print*, 'printing rho*W*chi*Gama via inverse/p-inverse'
-             else 
-                print*, 'printing rho*W*chi*Gama via iterative methods'
-             endif 
-             do row=1, nspecies
-                do column=1, nspecies
-                   print*, rhoWchiGamaloc(row, column)
-                enddo
-                   print*, ''
-             enddo
-          endif
-          !endif
 
           ! do the rank conversion 
           call set_Bij(chi(i,j,:),         chidag)
