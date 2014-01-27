@@ -13,7 +13,7 @@ module convert_variables_module
 
   private
 
-  public :: convert_cons_to_prim, compute_BinvGamma, compute_coefficient
+  public :: convert_cons_to_prim, compute_BinvGamma, compute_coefficient, populate_coefficient
 
 contains
 
