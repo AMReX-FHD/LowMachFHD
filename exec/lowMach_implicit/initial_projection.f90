@@ -13,7 +13,7 @@ module initial_projection_module
   use bc_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: rhobar, diff_coef, nscal
-  use probin_module, only: use_barodiffusion
+  use probin_module, only: barodiffusion_type
 
   implicit none
 
@@ -101,7 +101,7 @@ contains
        call multifab_plus_plus_c(mac_rhs(n),1,rhoc_s_fluxdiv(n),1,1,0)
     end do
 
-    if (use_barodiffusion) then
+    if (barodiffusion_type .gt. 0) then
        ! compute baro-diffusion flux divergence
        call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
                             the_bc_tower%bc_tower_array,vel_bc_n)

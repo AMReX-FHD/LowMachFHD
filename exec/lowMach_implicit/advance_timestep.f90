@@ -21,7 +21,7 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, diff_coef, visc_coef, grav
   use probin_common_module, only: fixed_dt
-  use probin_module, only: use_barodiffusion, use_bds
+  use probin_module, only: barodiffusion_type, use_bds
 
   use analysis_module
 
@@ -343,7 +343,7 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
-    if (use_barodiffusion) then
+    if (barodiffusion_type .gt. 0) then
        ! add baro-diffusion flux diveregnce to rhs_p
        call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp_fc,dx, &
                             the_bc_tower%bc_tower_array,vel_bc_n)
@@ -465,7 +465,7 @@ contains
        end do
     end do
 
-    if (use_barodiffusion) then
+    if (barodiffusion_type .eq. 2) then
        ! compute grad p^{n+1,*}
        call compute_grad(mla,pnew,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
     end if
@@ -638,7 +638,7 @@ contains
        call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_d_fluxdiv(n),1,1,0)
     end do
 
-    if (use_barodiffusion) then
+    if (barodiffusion_type .gt. 0) then
        ! compute baro-diffusion flux divergence
        call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
                             the_bc_tower%bc_tower_array,vel_bc_n)
