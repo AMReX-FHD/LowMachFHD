@@ -216,30 +216,6 @@ contains
           end do
        end do
 
-    case (4)
-
-       ! the centrifuge test
-
-       mx = 0.d0
-       my = 0.d0
-       
-       p = 0.d0
-
-       ! constant rho
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-
-             s(i,j,2) = c_init(1)
-
-             ! compute rho with eos
-             s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
-
-             ! compute rho*c
-             s(i,j,2) = s(i,j,1)*s(i,j,2)
-
-          end do
-       end do
-
     case default
 
        call bl_error("init_2d: invalid prob_type")

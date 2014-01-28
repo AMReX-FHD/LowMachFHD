@@ -45,7 +45,7 @@
   max_grid_size(1:2) = 32 32 ! max number of cells in a box
   fixed_dt = 0.2d0           ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
-  prob_type = 4              ! sets scalars, m, coefficients (see init.f90)
+  prob_type = 0              ! sets scalars, m, coefficients (see init.f90)
 
   ! Algorithm control / selection
   !----------------------
