@@ -1,4 +1,4 @@
-program test_chi
+subroutine main_driver()
 
   use multifab_module
   use init_module
@@ -18,12 +18,12 @@ program test_chi
 
   call probin_common_init()
   call probin_multispecies_init()
-  call test_chi_routine(nspecies)
+  call test_chi(nspecies)
 
 contains
 
 
-subroutine test_chi_routine(nspecies)
+subroutine test_chi(nspecies)
   implicit none
 
   integer, intent(in) :: nspecies
@@ -56,6 +56,9 @@ subroutine test_chi_routine(nspecies)
 
   ! populate Dbar, Gama and molar masses 
   call populate_DbarGama(Dbar,Gama,mass) 
+  write(*,*) "Dbar=", Dbar
+  write(*,*) "Gamma=", Gama
+  write(*,*) "rho=", rho
   
   ! compute rho_tot
   do n=1, nspecies  
@@ -73,6 +76,8 @@ subroutine test_chi_routine(nspecies)
   do n=1, nspecies 
      molarconc(n) = molmtot*W(n)/mass(n)
   enddo
+  write(*,*) "w=", W
+  write(*,*) "X=", molarconc
 
   ! compute Lambda_ij matrix and massfraction W_i = rho_i/rho; molarconc is 
   ! expressed in terms of molmtot,mi,rhotot etc. 
@@ -118,7 +123,6 @@ subroutine test_chi_routine(nspecies)
   deallocate(Gama)
   deallocate(mass)
 
-end subroutine
+end subroutine test_chi
 
-end program
-
+end subroutine main_driver
