@@ -9,9 +9,9 @@
 &probin_lowmach
   
   ! problem setup
-  c_init(1) = 0.1d0   ! initial concentration
-  c_bc(2,1) = 0.1d0   ! concentration at lo-y wall
-  c_bc(2,2) = 0.9d0   ! concentration at hi-y wall
+  c_init(1:2) = 0.1d0 0.5d0  ! initial concentration
+  c_bc(2,1) = 0.1d0          ! concentration at lo-y wall
+  c_bc(2,2) = 0.9d0          ! concentration at hi-y wall
 
   ! simulation properties
   max_step = 1000            ! maximum number of time steps

@@ -9,7 +9,7 @@
 &probin_lowmach
 
   ! problem setup
-  c_init(1) = 0.5d0   ! initial concentration
+  c_init(1:2) = 0.5d0 0.5d0  ! initial concentration
 
   ! simulation properties
   max_step = 10000           ! maximum number of time steps

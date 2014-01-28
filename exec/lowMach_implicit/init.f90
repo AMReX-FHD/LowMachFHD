@@ -85,34 +85,35 @@ contains
 
     ! local
     integer :: i,j
-    real(kind=dp_t) :: x,y,y1,y2,r,pres
+    real(kind=dp_t) :: x,y,y1,y2,r,dy,c_loc
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
-
-    ! temporaries for centrifuge
-    real(kind=dp_t) :: c(-1:64), rho(-1:64), rho1, rho2, kp1, kp2, S_fac, rhoavg, cavg
 
     select case (prob_type)
     case (0)
 
-       ! constant density
+       ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
        mx = 0.d0
        my = 0.d0
 
        p = 0.d0
 
-       ! set c to c_init(1)
-       s(:,:,2) = c_init(1)
-
        do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
 
-             ! compute rho with eos
-             s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
+          ! compute distance from bottom of domain
+          dy = dx(2)*(j+0.5d0)
 
-             ! compute rho*c
-             s(i,j,2) = s(i,j,1)*s(i,j,2)
+          ! linear gradient in c
+          c_loc = c_init(1) + (c_init(2)-c_init(1))*dy/(prob_hi(2)-prob_lo(2))
 
-          end do
+          ! temporarily store c
+          s(lo(1):hi(1),j,2) = c_loc
+
+          ! compute rho with the eos
+          s(lo(1):hi(1),j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+
+          ! compute rho*c
+          s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*s(lo(1):hi(1),j,2)
+
        end do
 
     case (1)
@@ -236,33 +237,35 @@ contains
 
     ! local
     integer :: i,j,k
-    real(kind=dp_t) :: x,y,z,r
+    real(kind=dp_t) :: x,y,z,r,dy,c_loc
 
     select case (prob_type)
     case (0)
 
-       ! constant density
+       ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
        mx = 0.d0
        my = 0.d0
        mz = 0.d0
 
        p = 0.d0
 
-       ! set c to c_init(1)
-       s(:,:,:,2) = c_init(1)
+       do j=lo(2),hi(2)
 
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)
+          ! compute distance from bottom of domain
+          dy = dx(2)*(j+0.5d0)
 
-                ! compute rho with eos
-                s(i,j,k,1) = 1.0d0/(s(i,j,k,2)/rhobar(1)+(1.0d0-s(i,j,k,2))/rhobar(2))
+          ! linear gradient in c
+          c_loc = c_init(1) + (c_init(2)-c_init(1))*dy/(prob_hi(2)-prob_lo(2))
 
-                ! compute rho*c
-                s(i,j,k,2) = s(i,j,k,1)*s(i,j,k,2)
+          ! temporarily store c
+          s(lo(1):hi(1),j,lo(3):hi(3),2) = c_loc
 
-             end do
-          end do
+          ! compute rho with the eos
+          s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+
+          ! compute rho*c
+          s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*s(lo(1):hi(1),j,lo(3):hi(3),2)
+
        end do
 
     case (1)
