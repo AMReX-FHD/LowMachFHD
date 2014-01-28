@@ -43,16 +43,17 @@ subroutine test_chi(nspecies)
   rho(3)    = 1.35d0 
   
   ! free up memory 
-  Dbar      = 0.d0         
-  Gama      = 0.d0         
-  mass      = 0.d0         
-  Lambda    = 0.d0         
-  chi       = 0.d0         
-  W         = 0.d0
-  rho       = 0.d0
-  rho_tot   = 0.d0
-  molarconc = 0.d0
-  tolerance = 1e-13
+  Dbar       = 0.d0         
+  Gama       = 0.d0         
+  mass       = 0.d0         
+  Lambda     = 0.d0         
+  chi        = 0.d0         
+  W          = 0.d0
+  rho_tot    = 0.d0
+  molarconc  = 0.d0
+  Sum_knoti  = 0.d0
+  Sum_woverm = 0.d0
+  tolerance  = 1e-13
 
   ! populate Dbar, Gama and molar masses 
   call populate_DbarGama(Dbar,Gama,mass) 
