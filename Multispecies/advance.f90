@@ -18,12 +18,20 @@ module advance_module
 
 contains
 
+  ! Donev: Renaming requests:
+  ! Using global replace in text editor, rename in *all* files
+  ! Gama->Gamma
+  ! Dbar->D_MS (for Maxwell-Stefan)
   subroutine advance(mla,rho,Dbar,Gama,mass,dx,dt,time,prob_lo,prob_hi,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
+    ! Donev: The following two should not be input, they should be calculated in every cell
+    ! by a rouitine that goes into a separate module called fluid_model
+    ! For now that routine can just set them equal to Dbar_in and Gama_in (i.e., constant)
     real(kind=dp_t), intent(in   ) :: Dbar(:,:)
     real(kind=dp_t), intent(in   ) :: Gama(:,:)
+    ! Donev: Rename mass -> molmass in this routine
     real(kind=dp_t), intent(in   ) :: mass(:) 
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
@@ -31,6 +39,7 @@ contains
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
+    ! Donev: There should be multifabs added here for Dbar and Gama
     type(multifab)  :: rhonew(mla%nlevel),fluxdiv(mla%nlevel),fluxdivnew(mla%nlevel)
     type(multifab)  :: rho_tot(mla%nlevel)     ! local array of multifabs for total density
     type(multifab)  :: molarconc(mla%nlevel)   ! local array of multifabs for molar concentration
@@ -82,8 +91,16 @@ contains
 
       ! compute molmtot,molarconc & rho_tot (primary variables) for each-cell from rho(conserved) 
       call convert_cons_to_prim(mla,rho,rho_tot,molarconc,mass,molmtot,the_bc_level)
+      
+      ! Donev:
+      ! The first thing you need to call here is code to compute Dbar and Gamma
+      ! This code is to be in a separate module called fluid_model
+      ! These values can depend on all of the primitive variables: rho,rho_tot,molarconc,molmtot
 
       ! compute chi and rho*W*chi*Gama
+      ! Donev: This routine should be split into two
+      ! One that calculates chi
+      ! And another one that calculates rhoWchiGama
       call compute_coefficient(mla,rho,rho_tot,molarconc,chi,rhoWchiGama,Dbar,Gama,mass,molmtot,the_bc_level)
  
       ! compute fluxdiv; fluxdiv contain results in interior only, while rho contains 
@@ -92,6 +109,8 @@ contains
                              rhoWchiGama,Dbar,Gama,mass,dx,the_bc_level)
 
       ! compute external forcing for manufactured solution and add to fluxdiv
+      ! This routine should not take Dbar as input
+      ! It should only take primitive variables as input
       call external_source(mla,rho,fluxdiv,molmtot,Dbar,mass,prob_lo,prob_hi,dx,stage_time)
       
       ! compute rho(t+dt) (only interior) 
@@ -135,6 +154,21 @@ contains
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
       enddo
 
+      !=========================== 
+      ! Trapezoidal Corrector step
+      !===========================
+      
+      ! Donev:
+      ! This code is wrong here
+      ! The values of 
+      ! molarconc,molmtot,chi,rhoWchiGama,Dbar,Gama
+      ! need to be updated here because the rho's changed
+      ! So you need to repeat the same computation you did at the beginning
+      ! again here, passing rhonew instead of rho
+      ! For example, you need to call compute_coefficient again!
+      ! Similatly in all other temporal schemes. For RK3 you need to do this one more time in 3rd stage
+      ! IF THIS IS NOT CLEAR MAKE SURE TO TALK TO ME -- IT IS CRUCIAL YOU UNDERSTAND THIS POINT
+
       ! compute fluxdiv(t+1,rhonew(t+1)) 
       call diffusive_fluxdiv(mla,rhonew,rho_tot,fluxdivnew,molarconc,molmtot,chi,&
                              rhoWchiGama,Dbar,Gama,mass,dx,the_bc_level)
@@ -143,10 +177,6 @@ contains
       stage_time = time + dt  
       call external_source(mla,rhonew,fluxdivnew,molmtot,Dbar,mass,prob_lo,prob_hi,dx,stage_time)
       
-      !=========================== 
-      ! Trapezoidal Corrector step
-      !===========================
-
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
          call saxpy(rho(n),dt*0.5d0,fluxdiv(n))
