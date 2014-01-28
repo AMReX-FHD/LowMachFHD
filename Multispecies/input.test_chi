@@ -1,0 +1,39 @@
+&probin_common
+ 
+ dim_in = 2                     ! problem dimension
+ plot_int = 100                ! plot interval
+ max_grid_size(1:2) = 64 64     ! individual box size 
+
+ ! Grid size
+ prob_lo(1:2) = 0 0
+ prob_hi(1:2) = 64 64           ! physical systemsize = (prob_lo-prob_hi)
+ n_cells(1:2) = 64 64           ! to set dx = systemsize/n_cells
+
+ ! allowable options for this example are
+ ! -1 = PERIODIC
+ bc_lo(1:2) = -1 -1
+ bc_hi(1:2) = -1 -1
+ 
+/
+
+&probin_multispecies
+ 
+ nspecies = 3                   ! number of species
+ max_step = 1000                   ! total number of computational step
+ cfl      = 0.01                ! CFL number
+ chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
+ Temp     = 1.0                 ! Temperature
+ Press    = 1.0                 ! Pressure
+ start_time  = 1.0              ! start at t=1 to avoid NAN coming from rho_exact at t=0
+ !include_temp = .false.        ! right now no temperature equation
+ init_type = 1                  ! initial problem: 1=bubble,2=const gradient,3=gaussian,4=manufactured solution
+ inverse_type = 1               ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
+ timeinteg_type = 1             ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=3rdorder Runge-Kutta 
+ print_error_norms = .true.     ! check L1/L2/Linf norm 
+ is_ideal_mixture  = .true.     ! false=Bdag*Gama, true=Bdag 
+ use_lapack  = .true.           ! false=iterative methods, true=inverse/pseudoinverse 
+ rho_in(1,1:3) = 0.6 1.05 1.35  ! initial concentrations for species 1
+ molmass_in(1:3) = 1.0 2.0 3.0  ! molar mass of n-species
+ Dbar_in(1:3) = 0.5 1.0 1.5     ! SM diffusion constant arranged in lower-triangle
+ 
+/
