@@ -26,7 +26,7 @@ subroutine main_driver()
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type
   use probin_gmres_module  , only: probin_gmres_init
-  use probin_module        , only: probin_init, use_barodiffusion, use_overdamped, use_bds
+  use probin_module        , only: probin_init, barodiffusion_type, use_overdamped, use_bds
 
   implicit none
 
@@ -314,7 +314,7 @@ subroutine main_driver()
   ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pold,dx,mla,time)
 
-  if (use_barodiffusion) then
+  if (barodiffusion_type .gt. 0) then
      ! this computes an initial guess at p using HSE
      call init_pres(mla,sold,pold,dx,the_bc_tower)
   end if
