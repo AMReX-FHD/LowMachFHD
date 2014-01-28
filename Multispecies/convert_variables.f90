@@ -671,7 +671,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
           endif
 
           ! print to match with previous code
-          !if(.false.) then 
+          if(.false.) then 
           if(i.eq.7 .and. j.eq.14) then
              if(use_lapack) then 
                 print*, 'print chi via inverse/p-inverse'
@@ -685,7 +685,7 @@ subroutine compute_coefficient_2d(rho,rho_tot,molarconc,chi,Dbar,Gama,mass,molmt
                    print*, ''
              enddo
           endif
-          !endif
+          endif
 
           ! compute CapW*chi*CapW and Onsager matrix L
           do column=1, nspecies

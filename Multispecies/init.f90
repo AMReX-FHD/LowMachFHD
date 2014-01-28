@@ -96,14 +96,12 @@ contains
          do i=lo(1),hi(1)
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
        
-            rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
-            if(.false.) then
+            !rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
             if (rsq .lt. L(1)*L(2)*0.1d0) then
                rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
             else
                rho(i,j,1:nspecies) = rho_in(2,1:nspecies)
-            endif
             endif
     
          end do
