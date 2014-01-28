@@ -31,7 +31,7 @@ subroutine test_chi_routine(nspecies)
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi
   real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc 
   real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti,tolerance
-  integer                                       :: i,j,k,n,row,column 
+  integer                                       :: i,j,k,n,row,column,loop 
 
   allocate(Dbar(nspecies,nspecies))
   allocate(Gama(nspecies,nspecies))
@@ -40,7 +40,7 @@ subroutine test_chi_routine(nspecies)
   ! initialize rho's
   rho(1)    = 0.6d0
   rho(2)    = 1.05d0
-  rho(3)    = 1.35d0
+  rho(3)    = 1.35d0 
   
   ! free up memory 
   Dbar      = 0.d0         
@@ -94,26 +94,26 @@ subroutine test_chi_routine(nspecies)
      enddo
   enddo
 
-  ! compute chi either selecting inverse/pseudoinverse or iterative methods 
-  if(use_lapack) then
-     call populate_coefficient(Lambda(:,:),chi(:,:),Gama(:,:),W(:),tolerance)
-  else
-     call Dbar2chi_iterative(nspecies,3,Dbar(:,:),W(:),molarconc(:),chi(:,:))
-  endif
+  do loop=1,2
+  
+     ! compute chi either selecting inverse/pseudoinverse or iterative methods 
+     if(loop==1) then
+        call populate_coefficient(Lambda,chi,Gama,W,tolerance)
+        print*, 'compute chi via inverse/p-inverse'
+     else
+        call Dbar2chi_iterative(nspecies,3,Dbar,W,molarconc,chi)
+        print*, 'compute chi via iterative methods'
+     endif
 
-  ! print to match with previous code
-  if(use_lapack) then 
-     print*, 'print chi via inverse/p-inverse'
-  else 
-     print*, 'print chi via iterative methods'
-  endif 
      do row=1, nspecies
         do column=1, nspecies
            print*, chi(row, column)
         enddo
         print*, ''
      enddo
-
+  
+  end do
+  
   deallocate(Dbar)
   deallocate(Gama)
   deallocate(mass)
