@@ -9,7 +9,7 @@
 &probin_lowmach
 
   ! problem setup
-  c_init(1) = 0.5d0   ! initial concentration
+  c_init(1:2) = 0.5d0 0.5d0  ! initial concentration
 
   ! simulation properties
   max_step = 10000           ! maximum number of time steps
@@ -45,7 +45,7 @@
   max_grid_size(1:2) = 32 32 ! max number of cells in a box
   fixed_dt = 0.2d0           ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
-  prob_type = 4              ! sets scalars, m, coefficients (see init.f90)
+  prob_type = 0              ! sets scalars, m, coefficients (see init.f90)
 
   ! Algorithm control / selection
   !----------------------
