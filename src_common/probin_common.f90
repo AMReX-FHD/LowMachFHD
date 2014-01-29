@@ -17,6 +17,9 @@ module probin_common_module
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_hi(MAX_SPACEDIM-1,MAX_SPACEDIM)
+  integer,save    :: hydro_grid_int,project_dir,max_grid_projection(MAX_SPACEDIM-1)
+  integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
+  logical,save    :: analyze_conserved,center_snapshots
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -79,6 +82,16 @@ module probin_common_module
   ! wallspeed_lo/hi(2,3) - yvel on z-face
   namelist /probin_common/ wallspeed_lo
   namelist /probin_common/ wallspeed_hi
+
+  namelist /probin_common/ hydro_grid_int
+  namelist /probin_common/ project_dir
+  namelist /probin_common/ max_grid_projection
+  namelist /probin_common/ stats_int
+  namelist /probin_common/ n_steps_save_stats
+  namelist /probin_common/ n_steps_skip
+  namelist /probin_common/ analyze_conserved
+  namelist /probin_common/ center_snapshots
+
   !------------------------------------------------------------- 
 
 contains
@@ -128,6 +141,15 @@ contains
 
     wallspeed_lo(1:MAX_SPACEDIM-1,1:MAX_SPACEDIM) = 0.d0
     wallspeed_hi(1:MAX_SPACEDIM-1,1:MAX_SPACEDIM) = 0.d0
+
+    hydro_grid_int = 0
+    project_dir = 0
+    max_grid_projection = 128
+    stats_int = -1 ! If positive, how often to compute mean and standard deviation over reduced dimensions
+    n_steps_save_stats = -1
+    n_steps_skip = 0
+    analyze_conserved = .false.
+    center_snapshots = .false.
 
     need_inputs = .true.
 
@@ -312,6 +334,50 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) wallspeed_hi(2,3)
+
+       case ('--hydro_grid_int')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) hydro_grid_int
+
+       case ('--project_dir')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) project_dir
+
+       case ('--max_grid_projection_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) max_grid_projection(1)
+       case ('--max_grid_projection_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) max_grid_projection(2)
+
+       case ('--stats_int')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) stats_int
+
+       case ('--n_steps_save_stats')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) n_steps_save_stats
+
+       case ('--n_steps_skip')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) n_steps_skip
+
+       case ('--analyze_conserved')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) analyze_conserved
+
+       case ('--center_snapshots')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) center_snapshots
 
        case ('--')
           farg = farg + 1

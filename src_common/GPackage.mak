@@ -1,3 +1,4 @@
+f90sources += analyze_spectra.f90
 f90sources += bds.f90
 f90sources += convert_stag.f90
 f90sources += div_and_grad.f90
