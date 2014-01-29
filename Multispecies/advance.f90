@@ -19,11 +19,11 @@ module advance_module
 
 contains
 
-  subroutine advance(mla,rho,dx,dt,time,prob_lo,prob_hi,the_bc_level)
+  subroutine advance(mla,rho,molmass,dx,dt,time,prob_lo,prob_hi,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    ! For now that routine can just set them equal to Dbar_in and Gama_in (i.e., constant)
+    real(kind=dp_t), intent(in   ) :: molmass(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 
@@ -40,8 +40,7 @@ contains
     type(multifab)               :: rhoWchiGama(mla%nlevel) ! rho*W*chi*Gama
     integer                      :: n,nlevs
     real(kind=dp_t)              :: stage_time  
-    real(kind=dp_t), allocatable :: molmass(:) 
-    
+        
     nlevs = mla%nlevel  ! number of levels 
  
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
@@ -59,8 +58,7 @@ contains
        call multifab_build(Gama(n),        mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(rhoWchiGama(n), mla%la(n), nspecies**2, rho(n)%ng)
     enddo
-    allocate(molmass(nspecies))
-   
+       
     ! free up memory 
     do n=1,nlevs
        call setval(rhonew(n),      0.d0, all=.true.)
@@ -74,7 +72,6 @@ contains
        call setval(Gama(n),        0.d0, all=.true.)
        call setval(rhoWchiGama(n), 0.d0, all=.true.)
     enddo 
-    molmass(1:nspecies) = 1.0d0  
 
    !==================================================================================
     select case(timeinteg_type)
@@ -91,13 +88,13 @@ contains
       ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
       call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       
-      ! populate D_MS, Gama and molmass
-      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,molmass,the_bc_level)
+      ! populate D_MS, Gama 
+      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
 
-      ! compute chi and rho*W*chi*Gama
-      call compute_chi(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,D_MS,Gama,the_bc_level)
+      ! compute chi 
+      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
       
-      ! compute chi and rho*W*chi*Gama
+      ! compute rho*W*chi*Gama
       call compute_rhoWchiGama(mla,rho,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
  
       ! compute fluxdiv that contain results in interior only while rho contains ghost values filled in 
@@ -129,7 +126,19 @@ contains
       !=====================
       ! Euler Predictor step
       !===================== 
+     
+      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
+      call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       
+      ! populate D_MS, Gama 
+      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+
+      ! compute chi 
+      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
+      
+      ! compute rho*W*chi*Gama
+      call compute_rhoWchiGama(mla,rho,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
+
       ! compute fluxdiv 
       call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
       
@@ -153,16 +162,17 @@ contains
       ! Trapezoidal Corrector step
       !===========================
       
-      ! Donev:
-      ! This code is wrong here
-      ! The values of 
-      ! molarconc,molmtot,chi,rhoWchiGama,D_MS,Gama
-      ! need to be updated here because the rho's changed
-      ! So you need to repeat the same computation you did at the beginning
-      ! again here, passing rhonew instead of rho
-      ! For example, you need to call compute_coefficient again!
-      ! Similatly in all other temporal schemes. For RK3 you need to do this one more time in 3rd stage
-      ! IF THIS IS NOT CLEAR MAKE SURE TO TALK TO ME -- IT IS CRUCIAL YOU UNDERSTAND THIS POINT
+      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rhonew
+      call convert_cons_to_prim(mla,rhonew,rho_tot,molarconc,molmtot,molmass,the_bc_level)
+      
+      ! populate D_MS, Gama 
+      call fluid_model(mla,rhonew,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+
+      ! compute chi 
+      call compute_chi(mla,rhonew,rho_tot,molarconc,chi,D_MS,the_bc_level)
+      
+      ! compute rhonew*W*chi*Gama
+      call compute_rhoWchiGama(mla,rhonew,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
 
       ! compute fluxdiv(t+1,rhonew(t+1)) 
       call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
@@ -189,6 +199,18 @@ contains
          call saxpy(rhonew(n),1.0d0,rho(n))
       enddo 
  
+      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
+      call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
+      
+      ! populate D_MS, Gama 
+      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+
+      ! compute chi 
+      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
+      
+      ! compute rho*W*chi*Gama
+      call compute_rhoWchiGama(mla,rho,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
+ 
       ! compute fluxdiv(t) from rho(t); (interior only) 
       call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
       
@@ -208,6 +230,18 @@ contains
          ! fill non-periodic domain boundary ghost cells
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
       enddo
+
+      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rhonew
+      call convert_cons_to_prim(mla,rhonew,rho_tot,molarconc,molmtot,molmass,the_bc_level)
+      
+      ! populate D_MS, Gama 
+      call fluid_model(mla,rhonew,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+
+      ! compute chi 
+      call compute_chi(mla,rhonew,rho_tot,molarconc,chi,D_MS,the_bc_level)
+      
+      ! compute rhonew*W*chi*Gama
+      call compute_rhoWchiGama(mla,rhonew,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
 
       ! compute new div-of-flux 
       call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
@@ -237,6 +271,18 @@ contains
       !===========
       ! 1st stage
       !===========
+ 
+      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
+      call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
+      
+      ! populate D_MS, Gama 
+      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+
+      ! compute chi 
+      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
+      
+      ! compute rho*W*chi*Gama
+      call compute_rhoWchiGama(mla,rho,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
 
       ! compute fluxdiv(t) from rho(t) (interior only) 
       call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
@@ -257,6 +303,18 @@ contains
          ! fill non-periodic domain boundary ghost cells
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
       enddo
+
+      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rhonew
+      call convert_cons_to_prim(mla,rhonew,rho_tot,molarconc,molmtot,molmass,the_bc_level)
+      
+      ! populate D_MS, Gama 
+      call fluid_model(mla,rhonew,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+
+      ! compute chi 
+      call compute_chi(mla,rhonew,rho_tot,molarconc,chi,D_MS,the_bc_level)
+      
+      ! compute rhonew*W*chi*Gama
+      call compute_rhoWchiGama(mla,rhonew,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
 
       ! compute fluxdivnew(t+dt,rhonew(t+dt))
       call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
@@ -288,6 +346,18 @@ contains
       do n=1,nlevs
          call setval(fluxdivnew(n), 0.d0, all=.true.)
       enddo 
+ 
+      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rhonew
+      call convert_cons_to_prim(mla,rhonew,rho_tot,molarconc,molmtot,molmass,the_bc_level)
+      
+      ! populate D_MS, Gama 
+      call fluid_model(mla,rhonew,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+
+      ! compute chi 
+      call compute_chi(mla,rhonew,rho_tot,molarconc,chi,D_MS,the_bc_level)
+      
+      ! compute rhonew*W*chi*Gama
+      call compute_rhoWchiGama(mla,rhonew,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
  
       ! compute fluxdiv(t+dt/2,rhonew(t+dt/2)) 
       call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
@@ -332,8 +402,7 @@ contains
        call multifab_destroy(Gama(n))
        call multifab_destroy(rhoWchiGama(n))
     enddo
-    deallocate(molmass)
-
+   
   end subroutine advance
 
 end module advance_module 

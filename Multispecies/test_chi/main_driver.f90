@@ -12,34 +12,26 @@ subroutine main_driver()
 
   implicit none
 
-  real(kind=dp_t), allocatable :: D_MS(:,:)
-  real(kind=dp_t), allocatable :: Gama(:,:)
-  real(kind=dp_t), allocatable :: molmass(:) 
-
-  call probin_common_init()
-  call probin_multispecies_init()
-  call test_chi(nspecies)
+  !call probin_common_init()
+  !call probin_multispecies_init()
+  !call test_chi(nspecies)
+  call test_chi
 
 contains
 
-subroutine test_chi(nspecies)
+subroutine test_chi
   implicit none
 
-  integer, intent(in) :: nspecies
-
-  real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi
-  real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc 
+  !integer, intent(in) :: nspecies
+  real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi,D_MS,Gama
+  real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc,molmass,molmass_in,Dbar_in 
   real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti,tolerance
-  integer                                       :: i,j,k,n,row,column,loop 
-
-  allocate(D_MS(nspecies,nspecies))
-  allocate(Gama(nspecies,nspecies))
-  allocate(molmass(nspecies))
+  integer                                       :: i,j,k,n,nspecies,row,column,loop 
+ 
+  nspecies = 3
 
   ! free up memory 
   D_MS       = 0.d0         
-  Gama       = 0.d0         
-  molmass       = 0.d0         
   Lambda     = 0.d0         
   chi        = 0.d0         
   W          = 0.d0
@@ -47,19 +39,34 @@ subroutine test_chi(nspecies)
   molarconc  = 0.d0
   Sum_knoti  = 0.d0
   Sum_woverm = 0.d0
-  tolerance  = 1e-13
 
-  ! initialize rho's
-  rho(1)    = 0.6d0
-  rho(2)    = 1.05d0
-  rho(3)    = 1.35d0 
-  
+  ! initialize conserved and constant quantities
+  rho(1)        = 0.6d0
+  rho(2)        = 1.05d0
+  rho(3)        = 1.35d0
+  molmass_in(1) = 1.0d0 
+  molmass_in(2) = 2.0d0 
+  molmass_in(3) = 3.0d0 
+  Dbar_in(1)    = 0.5d0 
+  Dbar_in(2)    = 1.0d0 
+  Dbar_in(3)    = 1.5d0 
+  tolerance     = 1e-13
+ 
   ! populate D_MS, Gama and molar masses 
-  call populate_DbarGama(D_MS,Gama,molmass) 
-  write(*,*) "D_MS=", D_MS
-  write(*,*) "Gamma=", Gama
-  write(*,*) "rho=", rho
-  
+  n=0; 
+  do row=1, nspecies  
+     do column=1, row-1
+        n=n+1
+        D_MS(row, column) = Dbar_in(n)
+        D_MS(column, row) = D_MS(row, column) ! symmetric
+        Gama(row, column) = 0.d0       
+        Gama(column, row) = Gama(row, column) ! symmetric
+     enddo
+     D_MS_local(row, row) = 0.d0 ! self-diffusion is zero
+     Gama_local(row, row) = 1.d0 ! set to unit matrix for time being
+     molmass(row) = molmass_in(row)
+  enddo
+ 
   ! compute rho_tot
   do n=1, nspecies  
      rho_tot = rho_tot + rho(n)
@@ -76,8 +83,6 @@ subroutine test_chi(nspecies)
   do n=1, nspecies 
      molarconc(n) = molmtot*W(n)/molmass(n)
   enddo
-  write(*,*) "w=", W
-  write(*,*) "X=", molarconc
 
   ! compute Lambda_ij matrix and massfraction W_i = rho_i/rho; molarconc is 
   ! expressed in terms of molmtot,mi,rhotot etc. 
@@ -99,30 +104,32 @@ subroutine test_chi(nspecies)
      enddo
   enddo
 
+  do row=1, nspecies
+     print*, W(n)
+  enddo
+
   do loop=1,2
   
      ! compute chi either selecting inverse/pseudoinverse or iterative methods 
      if(loop==1) then
-        call populate_coefficient(Lambda,chi,Gama,W,tolerance)
+        call populate_chi(Lambda,chi,W,tolerance)
         print*, 'compute chi via inverse/p-inverse'
      else
         call Dbar2chi_iterative(nspecies,3,D_MS,W,molarconc,chi)
         print*, 'compute chi via iterative methods'
      endif
 
+     if(.false.) then
      do row=1, nspecies
         do column=1, nspecies
            print*, chi(row, column)
         enddo
         print*, ''
      enddo
-  
+     endif 
+ 
   end do
   
-  deallocate(D_MS)
-  deallocate(Gama)
-  deallocate(molmass)
-
 end subroutine test_chi
 
 end subroutine main_driver

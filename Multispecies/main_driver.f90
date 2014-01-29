@@ -32,10 +32,7 @@ subroutine main_driver()
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
   type(multifab), allocatable  :: rho_exact(:)
-  ! Donev: The code as written now assumes that D_MS and Gamma are constants
-  ! i.e., they are not multifabs but rather simple arrays
-  ! This is OK for now for simple testing but has to be changed later
-  ! It will affect all routines like diffusive_flux(div) etc.
+  real(kind=dp_t), allocatable :: molmass(:) 
   
   !==============================================================
   ! Initialization
@@ -55,6 +52,7 @@ subroutine main_driver()
   allocate(dx(nlevs,dm))
   allocate(rho(nlevs))
   allocate(rho_exact(nlevs))
+  allocate(molmass(nspecies))
 
   !==============================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -160,6 +158,14 @@ subroutine main_driver()
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
   end do
 
+  !=====================================================================
+  ! Read molar mass from input file (constant throughout space and time)
+  !=====================================================================
+  molmass(1:nspecies) = 0.0d0  
+  do n=1, nspecies
+     molmass(n) = molmass_in(n)  
+  enddo
+
   ! initialize the time 
   time = start_time    
 
@@ -189,7 +195,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+     call advance(mla,rho,molmass,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
      ! compute error norms
      if (print_error_norms) then
@@ -212,6 +218,7 @@ subroutine main_driver()
   ! Destroy multifabs and layouts
   !=======================================================
 
+  deallocate(molmass)
   do n=1,nlevs
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_exact(n))

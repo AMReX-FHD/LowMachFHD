@@ -15,7 +15,7 @@ module fluid_model_module
   
 contains
   
-  subroutine fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,molmass,the_bc_level)
+  subroutine fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
@@ -24,7 +24,6 @@ contains
     type(multifab),  intent(in   )  :: molmtot(:) 
     type(multifab),  intent(inout)  :: D_MS(:)      ! MS diffusion constants 
     type(multifab),  intent(inout)  :: Gama(:)      ! Non-ideality coefficient 
-    real(kind=dp_t), intent(inout)  :: molmass(:)   ! molar mass of each species
     type(bc_level),  intent(in   )  :: the_bc_level(:)
  
     ! local variables
@@ -58,17 +57,17 @@ contains
           select case(dm)
           case (2)
              call compute_D_MSGama_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
-                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),molmass(:),ng,lo,hi) 
+                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),ng,lo,hi) 
           case (3)
              call compute_D_MSGama_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
-                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),molmass(:),ng,lo,hi) 
+                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),ng,lo,hi) 
           end select
        end do
     end do
   
   end subroutine fluid_model
 
-  subroutine compute_D_MSGama_2d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,molmass,ng,lo,hi)
+  subroutine compute_D_MSGama_2d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
@@ -77,7 +76,6 @@ contains
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
     real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
     real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
-    real(kind=dp_t)  :: molmass(:)                        ! species molar mass 
 
     ! local varialbes; vectors and matrices to be used by D_MS, Gama 
     real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local, Gama_local
@@ -87,11 +85,7 @@ contains
     do j=lo(2)-ng,hi(2)+ng
        do i=lo(1)-ng,hi(1)+ng
         
-          ! free up memory  
-          D_MS_local = 0.d0         
-          Gama_local = 0.d0         
-
-          ! populate D_MS,Gama,molmass; for initial case doesn't change in each cell. 
+          ! populate D_MS,Gama; for initial case doesn't change in each cell. 
           n=0; 
           do row=1, nspecies  
              do column=1, row-1
@@ -103,7 +97,6 @@ contains
              enddo
              D_MS_local(row, row) = 0.d0             ! self-diffusion is zero
              Gama_local(row, row) = 1.d0             ! set to unit matrix for time being
-             molmass(row)         = molmass_in(row)  ! read species molmass from input file
           enddo
 
           ! do the rank conversion 
@@ -123,7 +116,7 @@ contains
 
   end subroutine compute_D_MSGama_2d
  
-  subroutine compute_D_MSGama_3d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,molmass,ng,lo,hi)
+  subroutine compute_D_MSGama_3d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,ng,lo,hi)
  
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! density; last dimension for species
@@ -132,7 +125,6 @@ contains
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total molar mass 
     real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
     real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
-    real(kind=dp_t)  :: molmass(:)                                  ! species molar mass 
 
     ! local varialbes; vectors and matrices to be used by D_MS, Gama 
     real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local, Gama_local
@@ -143,11 +135,7 @@ contains
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
 
-             ! free up memory  
-             D_MS_local = 0.d0         
-             Gama_local = 0.d0         
-
-             ! populate D_MS,Gama,molmass; for initial case doesn't change in each cell. 
+             ! populate D_MS,Gama; for initial case doesn't change in each cell. 
              n=0; 
              do row=1, nspecies  
                 do column=1, row-1
@@ -159,7 +147,6 @@ contains
                 enddo
                 D_MS_local(row, row) = 0.d0             ! self-diffusion is zero
                 Gama_local(row, row) = 1.d0             ! set to unit matrix for time being
-                molmass(row)         = molmass_in(row)  ! read species molmass from input file
              enddo
 
              ! do the rank conversion 
