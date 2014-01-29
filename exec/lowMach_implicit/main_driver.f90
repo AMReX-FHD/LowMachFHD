@@ -89,11 +89,6 @@ subroutine main_driver()
   call probin_gmres_init()
   call probin_init()
 
-  ! inputs file error checking
-  if (visc_coef .lt. 0.d0 .and. visc_type .gt. 0) then
-     call bl_error("negative visc_coef requires negative visc_type")
-  end if
-
   ! Initialize random numbers *after* the global (root) seed has been set:
   call SeedParallelRNG(seed)
 

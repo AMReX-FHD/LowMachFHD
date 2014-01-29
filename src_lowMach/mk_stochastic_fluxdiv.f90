@@ -11,7 +11,7 @@ module mk_stochastic_fluxdiv_module
   use convert_stag_module
   use bc_module
   use multifab_physbc_stag_module
-  use probin_common_module , only: fixed_dt
+  use probin_common_module , only: fixed_dt, visc_type, diff_type
   use probin_lowmach_module, only: nscal, rhobar, visc_coef, diff_coef, variance_coef, &
                                    conc_scal, stoch_stress_form, filtering_width, mol_mass, &
                                    kT
@@ -90,7 +90,7 @@ contains
 
     do n=1,nlevs
 
-       if (diff_coef < 0) then
+       if (diff_type < 0) then
           ! chi varies in space, add its contribution below in an i/j/k loop
           variance = sqrt(variance_coef*conc_scal*2.d0          /(product(dx(n,1:dm))*fixed_dt))
        else
@@ -112,14 +112,14 @@ contains
              ! scaling for random rho*c flux and set rho*c flux on walls to zero
              select case (dm)
              case (2)
-                if (diff_coef < 0) then
+                if (diff_type < 0) then
                    dp => dataptr(chi_fc(n,i),m)
                    call mult_by_sqrt_chi_2d(fp(:,:,1,:),ng_x,dp(:,:,1,1),ng_z,i,lo,hi)
                 end if
                 call scale_rhoc_2d(fp(:,:,1,:),ng_x,sp(:,:,1,1:),ng_s,i,lo,hi, &
                                    the_bc_level(n)%phys_bc_level_array(m,:,:))
              case (3)
-                if (diff_coef < 0) then
+                if (diff_type < 0) then
                    dp => dataptr(chi_fc(n,i),m)
                    call mult_by_sqrt_chi_3d(fp(:,:,:,:),ng_x,dp(:,:,:,1),ng_z,i,lo,hi)
                 end if
@@ -603,7 +603,7 @@ contains
 
     do n=1,nlevs
 
-       if (visc_coef < 0) then
+       if (visc_type < 0) then
           ! eta varies in space, add its contribution below in an i/j/k loop
           variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*fixed_dt))
        else
@@ -628,7 +628,7 @@ contains
              fp = variance*fp
              sp = variance*sp
              ! if eta varies in space, multiply pointwise by sqrt(eta)
-             if (visc_coef < 0) then
+             if (visc_type < 0) then
                 ep1 => dataptr(eta_ed(n,1),i)
                 call mult_by_sqrt_eta_2d(fp(:,:,1,:),ng_c,sp(:,:,1,:),ng_n, &
                                          dp(:,:,1,1),ng_y,ep1(:,:,1,1),ng_w,lo,hi)
@@ -668,7 +668,7 @@ contains
              fyp = variance*fyp
              fzp = variance*fzp
              ! if eta varies in space, multiply pointwise by sqrt(eta)
-             if (visc_coef < 0) then
+             if (visc_type < 0) then
                 ep1 => dataptr(eta_ed(n,1),i)
                 ep2 => dataptr(eta_ed(n,2),i)
                 ep3 => dataptr(eta_ed(n,3),i)

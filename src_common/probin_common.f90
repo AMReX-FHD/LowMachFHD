@@ -12,7 +12,7 @@ module probin_common_module
   !------------------------------------------------------------- 
   integer,save    :: dim_in,plot_int,prob_type
   real(dp_t),save :: fixed_dt
-  integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
+  integer,save    :: visc_type,diff_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
@@ -45,7 +45,13 @@ module probin_common_module
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
+  ! positive = assume constant coefficients
+  ! negative = assume spatially-varying coefficients
   namelist /probin_common/ visc_type
+
+  ! 1 = constant coefficients
+  ! -1 = spatially-varing coefficients
+  namelist /probin_common/ diff_type
 
   ! Boundary conditions
   !----------------------
@@ -115,6 +121,7 @@ contains
 
     seed = 1
     visc_type = 1
+    diff_type = 1
 
     bc_lo(1:MAX_SPACEDIM) = PERIODIC
     bc_hi(1:MAX_SPACEDIM) = PERIODIC
@@ -224,6 +231,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) visc_type
+
+       case ('--diff_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) diff_type
 
        case ('--bc_lo_x')
           farg = farg + 1
