@@ -1,3 +1,4 @@
+f90sources += analyze_spectra.f90
 f90sources += analysis.f90
 f90sources += convert_variables.f90
 f90sources += mk_advective_m_fluxdiv.f90

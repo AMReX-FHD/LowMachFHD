@@ -22,11 +22,11 @@ subroutine main_driver()
   use multifab_physbc_stag_module
   use analyze_spectra_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
-                                   project_eos_int, visc_coef
+                                   project_eos_int, visc_coef, &
+                                   hydro_grid_int, n_steps_save_stats, n_steps_skip, stats_int
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
-                                   bc_lo, bc_hi, fixed_dt, plot_int, visc_type, &
-                                   hydro_grid_int, n_steps_save_stats, n_steps_skip, stats_int
+                                   bc_lo, bc_hi, fixed_dt, plot_int, visc_type
   use probin_gmres_module  , only: probin_gmres_init
   use probin_module        , only: probin_init, barodiffusion_type, use_overdamped, use_bds
 
