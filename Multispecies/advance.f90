@@ -91,11 +91,11 @@ contains
       ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
       call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       
-      ! populate D_MS, Gama and molmass 
-      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,molmass,D_MS,Gama,molmass,the_bc_level) 
+      ! populate D_MS, Gama and molmass
+      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,molmass,the_bc_level)
 
       ! compute chi and rho*W*chi*Gama
-      call compute_chi(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,rhoWchiGama,D_MS,Gama,the_bc_level)
+      call compute_chi(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,D_MS,Gama,the_bc_level)
       
       ! compute chi and rho*W*chi*Gama
       call compute_rhoWchiGama(mla,rho,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)

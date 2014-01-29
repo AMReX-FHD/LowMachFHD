@@ -1,5 +1,10 @@
 module fluid_model_module
 
+  use multifab_module
+  use define_bc_module
+  use bc_module
+  use multifab_physbc_module
+  use ml_layout_module
   use probin_multispecies_module
  
   implicit none
@@ -10,7 +15,7 @@ module fluid_model_module
   
 contains
   
-  subroutine fluid_model(mla,rho,rho_tot,molarconc,molmtot,molmass,D_MS,Gama,molmass,the_bc_level)
+  subroutine fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,molmass,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
@@ -31,6 +36,8 @@ contains
     real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rho_tot
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
+    real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_MS
+    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Gama
 
     dm    = mla%dim     ! dimensionality
     ng    = rho(1)%ng   ! number of ghost cells 
@@ -50,11 +57,11 @@ contains
           
           select case(dm)
           case (2)
-             call compute_D_MSGama_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),dp3(:,:,1,1),&
-                                      dp4(:,:,1,:),dp5(:,:,1,:),molmass(:),ng,lo,hi) 
+             call compute_D_MSGama_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
+                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),molmass(:),ng,lo,hi) 
           case (3)
-             call compute_D_MSGama_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),dp3(:,:,:,1),&
-                                      dp4(:,:,:,:),dp5(:,:,:,:),molmass(:),ng,lo,hi) 
+             call compute_D_MSGama_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
+                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),molmass(:),ng,lo,hi) 
           end select
        end do
     end do
@@ -108,7 +115,7 @@ contains
    
     ! use contained (internal) subroutine to do the copy without doing index algebra:
     contains 
-     subroutine set_Bij(Xout_ij, Xin_ij)
+     subroutine set_Xij(Xout_ij, Xin_ij)
         real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: Xin_ij
         real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: Xout_ij  
         Xout_ij = Xin_ij
@@ -129,7 +136,7 @@ contains
 
     ! local varialbes; vectors and matrices to be used by D_MS, Gama 
     real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local, Gama_local
-    integer                                       :: n,i,j,row,column
+    integer                                       :: n,i,j,k,row,column
 
     ! for specific box, now start loops over alloted cells 
     do k=lo(3)-ng,hi(3)+ng
@@ -165,7 +172,7 @@ contains
    
     ! use contained (internal) subroutine to do the copy without doing index algebra:
     contains 
-     subroutine set_Bij(Xout_ij, Xin_ij)
+     subroutine set_Xij(Xout_ij, Xin_ij)
         real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: Xin_ij
         real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: Xout_ij  
         Xout_ij = Xin_ij

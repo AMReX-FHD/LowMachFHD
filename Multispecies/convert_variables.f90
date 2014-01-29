@@ -225,8 +225,7 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,molmtot,D_MS,Gama,molmass,ng
     real(kind=dp_t)  :: tolerance,Sum_knoti   ! tolerance set for pinverse 
 
     ! vectors and matrices to be used by LAPACK 
-    real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager,Lambda,D_MS_loc,Gama_loc
-    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager,Lambda,chidag,D_MS_loc,Gama_loc
     real(kind=dp_t), dimension(nspecies)          :: W 
 
     tolerance = 1e-13
@@ -236,10 +235,12 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,molmtot,D_MS,Gama,molmass,ng
        do i=lo(1)-ng,hi(1)+ng
         
           ! free up memory  
-          Lonsager       = 0.d0         
-          Lambda         = 0.d0         
-          chidag         = 0.d0         
-          W              = 0.d0
+          Lonsager = 0.d0         
+          Lambda   = 0.d0         
+          chidag   = 0.d0         
+          D_MS_loc = 0.d0         
+          Gama_loc = 0.d0         
+          W        = 0.d0
   
           ! do rank conversion to populate local matrix 
           call set_Xij(D_MS_loc, D_MS(i,j,:))
@@ -347,8 +348,7 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,molmtot,D_MS,Gama,molmass,ng
     real(kind=dp_t)  :: tolerance, Sum_knoti   
 
     ! vectors and matrices to be used by LAPACK 
-    real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager,Lambda,D_MS_loc,Gama_loc
-    real(kind=dp_t), dimension(nspecies,nspecies) :: chidag 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager,Lambda,chidag,D_MS_loc,Gama_loc
     real(kind=dp_t), dimension(nspecies)          :: W 
 
     tolerance = 1e-13
@@ -359,10 +359,12 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,molmtot,D_MS,Gama,molmass,ng
           do i=lo(1)-ng,hi(1)+ng
         
              ! free up the memory  
-             Lonsager       = 0.d0         
-             Lambda         = 0.d0         
-             chidag         = 0.d0         
-             W              = 0.d0
+             Lonsager = 0.d0         
+             Lambda   = 0.d0         
+             chidag   = 0.d0         
+             D_MS_loc = 0.d0         
+             Gama_loc = 0.d0         
+             W        = 0.d0
           
              ! do rank conversion to populate local matrix 
              call set_Xij(D_MS_loc, D_MS(i,j,k,:))
@@ -558,10 +560,10 @@ subroutine populate_chi(Lambda,chidag,Gama,W,tolerance)
           
           select case(dm)
           case (2)
-             call compute_chi_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),dp3(:,:,1,:),dp4(:,:,1,:),&
+             call compute_rhoWchiGama_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),dp3(:,:,1,:),dp4(:,:,1,:),&
                                 ng,lo,hi) 
           case (3)
-             call compute_chi_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),dp3(:,:,:,:),dp4(:,:,:,:),&
+             call compute_rhoWchiGama_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),dp3(:,:,:,:),dp4(:,:,:,:),&
                                 ng,lo,hi) 
           end select
        end do
