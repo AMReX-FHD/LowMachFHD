@@ -9,7 +9,7 @@ module init_module
   use probin_lowmach_module, only: rhobar, diff_coef, visc_coef, &
                                    smoothing_width, c_init, material_properties, &
                                    grav
-  use probin_common_module , only: prob_lo, prob_hi, prob_type
+  use probin_common_module , only: prob_lo, prob_hi, prob_type, visc_type, diff_type
 
   implicit none
 
@@ -445,24 +445,32 @@ contains
     real(kind=dp_t) :: conc
     integer :: i,j
 
-    select case (prob_type)
-    case (2)
-
-       ! simple test function
-       ! chi = chi0*(1 + a*c + b*c^2)
-       do j=lo(2)-ng_c,hi(2)+ng_c
-          do i=lo(1)-ng_c,hi(1)+ng_c
-             conc = max(min(prim(i,j,2), 1.d0), 0.d0)
-             chi(i,j) = abs(diff_coef)*(1.d0 + material_properties(1,1)*conc + &
-                                            material_properties(2,1)*conc**2)
-          end do
-       end do
-
-    case default
+    if (diff_type > 0) then
 
        chi = diff_coef
 
-    end select
+    else
+
+       select case (prob_type)
+       case (2)
+
+          ! simple test function
+          ! chi = chi0*(1 + a*c + b*c^2)
+          do j=lo(2)-ng_c,hi(2)+ng_c
+          do i=lo(1)-ng_c,hi(1)+ng_c
+             conc = max(min(prim(i,j,2), 1.d0), 0.d0)
+             chi(i,j) = diff_coef*(1.d0 + material_properties(1,1)*conc + &
+                                          material_properties(2,1)*conc**2)
+          end do
+          end do
+
+       case default
+
+          call bl_error('compute_chi_2d: invalid prob_type for diff_type < 0')
+
+       end select
+
+    end if
 
   end subroutine compute_chi_2d
 
@@ -480,28 +488,34 @@ contains
     real(kind=dp_t) :: conc
     integer :: i,j,k
 
-    select case (prob_type)
-    case (2)
-
-       ! simple test function
-       do k=lo(3)-ng_c,hi(3)+ng_c
-          do j=lo(2)-ng_c,hi(2)+ng_c
-             do i=lo(1)-ng_c,hi(1)+ng_c
-                conc = max(min(prim(i,j,k,2), 1.0_dp_t), 0.d0)
-                chi(i,j,k) = abs(diff_coef)*(1.d0 + material_properties(1,1)*conc + &
-                                                    material_properties(2,1)*conc**2)
-             end do
-          end do
-       end do
-
-       ! simple test function
-       ! chi = chi0*(1 + a*c + b*c^2)
-
-    case default
+    if (diff_type > 0) then
 
        chi = diff_coef
 
-    end select
+    else
+
+       select case (prob_type)
+       case (2)
+
+          ! simple test function
+          ! chi = chi0*(1 + a*c + b*c^2)
+          do k=lo(3)-ng_c,hi(3)+ng_c
+          do j=lo(2)-ng_c,hi(2)+ng_c
+          do i=lo(1)-ng_c,hi(1)+ng_c
+             conc = max(min(prim(i,j,k,2), 1.0_dp_t), 0.d0)
+             chi(i,j,k) = diff_coef*(1.d0 + material_properties(1,1)*conc + &
+                                            material_properties(2,1)*conc**2)
+          end do
+          end do
+          end do
+
+       case default
+
+          call bl_error('compute_chi_3d: invalid prob_type for diff_type < 0')
+
+       end select
+
+    end if
 
   end subroutine compute_chi_3d
 
@@ -567,24 +581,32 @@ contains
     real(kind=dp_t) :: conc
     integer :: i,j
 
-    select case (prob_type)
-    case (2)
-
-       ! simple test function
-       ! eta = eta0*(1+a*c) / (1+b*c)
-       do j=lo(2)-ng_e,hi(2)+ng_e
-       do i=lo(1)-ng_e,hi(1)+ng_e
-          conc = max(min(prim(i,j,2), 1.d0), 0.d0)
-          eta(i,j) = abs(visc_coef)*(1.d0 + material_properties(1,2)*conc) / &
-                                    (1.d0 + material_properties(2,2)*conc)
-       end do
-       end do
-
-    case default
+    if (visc_type > 0) then
 
        eta = visc_coef
 
-    end select
+    else
+
+       select case (prob_type)
+       case (2)
+
+          ! simple test function
+          ! eta = eta0*(1+a*c) / (1+b*c)
+          do j=lo(2)-ng_e,hi(2)+ng_e
+          do i=lo(1)-ng_e,hi(1)+ng_e
+             conc = max(min(prim(i,j,2), 1.d0), 0.d0)
+             eta(i,j) = visc_coef*(1.d0 + material_properties(1,2)*conc) / &
+                                  (1.d0 + material_properties(2,2)*conc)
+          end do
+          end do
+          
+       case default
+
+          call bl_error('compute_eta_2d: invalid prob_type for visc_type < 0')
+
+       end select
+
+    end if
 
   end subroutine compute_eta_2d
 
@@ -599,26 +621,35 @@ contains
     real(kind=dp_t) :: conc
     integer :: i,j,k
 
-    select case (prob_type)
-    case (2)
-
-       ! simple test function
-       do k=lo(3)-ng_e,hi(3)+ng_e
-       do j=lo(2)-ng_e,hi(2)+ng_e
-       do i=lo(1)-ng_e,hi(1)+ng_e
-          conc = max(min(prim(i,j,k,2), 1.d0), 0.d0)
-          eta(i,j,k) = abs(visc_coef)*(1.d0 + material_properties(1,2)*conc) / &
-                                      (1.d0 + material_properties(2,2)*conc)
-
-       end do
-       end do
-       end do
-
-    case default
+    if (visc_type > 0) then
 
        eta = visc_coef
 
-    end select
+    else
+
+       select case (prob_type)
+       case (2)
+
+          ! simple test function
+          ! eta = eta0*(1+a*c) / (1+b*c)
+          do k=lo(3)-ng_e,hi(3)+ng_e
+          do j=lo(2)-ng_e,hi(2)+ng_e
+          do i=lo(1)-ng_e,hi(1)+ng_e
+             conc = max(min(prim(i,j,k,2), 1.d0), 0.d0)
+             eta(i,j,k) = visc_coef*(1.d0 + material_properties(1,2)*conc) / &
+                                    (1.d0 + material_properties(2,2)*conc)
+
+          end do
+          end do
+          end do
+
+       case default
+
+          call bl_error('compute_eta_3d: invalid prob_type for visc_type < 0')
+
+       end select
+
+    end if
 
   end subroutine compute_eta_3d
 
@@ -672,10 +703,7 @@ contains
     real(kind=dp_t), intent(in   ) ::  prim(lo(1)-ng_p:,lo(2)-ng_p:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
-    select case (prob_type)
-    case default
-       kappa = 1.d0
-    end select
+    kappa = 1.d0
 
   end subroutine compute_kappa_2d
 
@@ -686,10 +714,7 @@ contains
     real(kind=dp_t), intent(in   ) ::  prim(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
-    select case (prob_type)
-    case default
-       kappa = 1.d0
-    end select
+    kappa = 1.d0
 
   end subroutine compute_kappa_3d
 
