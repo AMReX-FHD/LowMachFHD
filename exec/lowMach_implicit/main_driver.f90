@@ -20,11 +20,13 @@ subroutine main_driver()
   use project_onto_eos_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
+  use analyze_spectra_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
                                    project_eos_int, visc_coef
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
-                                   bc_lo, bc_hi, fixed_dt, plot_int, visc_type
+                                   bc_lo, bc_hi, fixed_dt, plot_int, visc_type, &
+                                   hydro_grid_int, n_steps_save_stats, n_steps_skip, stats_int
   use probin_gmres_module  , only: probin_gmres_init
   use probin_module        , only: probin_init, barodiffusion_type, use_overdamped, use_bds
 
@@ -392,19 +394,46 @@ subroutine main_driver()
         call project_onto_eos(mla,snew)
      end if
 
-     ! write a plotfile
-     if ( (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) &
-          .or. &
-          (istep .eq. max_step) ) then
-        call write_plotfile(mla,mnew,umac,snew,pnew,dx,time,istep)
-     end if
-     
      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
         call eos_check(mla,snew)
         call sum_mass_momentum(mla,snew,mnew)
      end if
+
+      if (istep > n_steps_skip) then
+
+         ! write plotfile
+         if ( (plot_int > 0) .and. &
+              ( mod(istep-n_steps_skip-1,plot_int) .eq. 0) ) then
+            call write_plotfile(mla,mnew,umac,snew,pnew,dx,time,istep-n_steps_skip)
+         end if
+
+         ! print out projection (average) and variance
+         if ( (stats_int > 0) .and. &
+               (mod(istep-n_steps_skip,stats_int) .eq. 0) ) then
+            call print_stats(mla,snew,mnew,umac,prim,dx,istep-n_steps_skip,time)
+            if (hydro_grid_int<0) then
+               call analyze_hydro_grid(mla,snew,mnew,umac,prim,fixed_dt,dx, &
+                                       istep-n_steps_skip,custom_analysis=.true.)
+            end if   
+         end if
+
+         ! Add this snapshot to the average in HydroGrid
+         if ( (hydro_grid_int > 0) .and. &
+              ( mod(istep-n_steps_skip,hydro_grid_int) .eq. 0 ) ) then
+            call analyze_hydro_grid(mla,snew,mnew,umac,prim,fixed_dt,dx, &
+                                    istep-n_steps_skip,custom_analysis=.false.)
+         end if
+
+         if ( (hydro_grid_int > 0) .and. &
+              (n_steps_save_stats > 0) .and. &
+              ( mod(istep-n_steps_skip,n_steps_save_stats) .eq. 0 ) ) then
+            call save_hydro_grid(id=(istep-n_steps_skip)/n_steps_save_stats, step=istep)
+         end if
+
+      end if
+
 
      ! set old state to new state
      do n=1,nlevs
