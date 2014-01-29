@@ -73,7 +73,7 @@ contains
     enddo
 
   end subroutine init
-
+1
   subroutine init_2d(mx,my,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p
@@ -118,7 +118,8 @@ contains
 
     case (1)
 
-       ! lo density spherical bubble
+       ! spherical bubble with c_init(1) in the interior, c_init(2) on the exterior
+       ! centered in domain where smoothing_width has units of GRID CELLS
 
        mx = 0.d0
        my = 0.d0
@@ -270,7 +271,8 @@ contains
 
     case (1)
 
-       ! lo density spherical bubble
+       ! spherical bubble with c_init(1) in the interior, c_init(2) on the exterior
+       ! centered in domain where smoothing_width has units of GRID CELLS
 
        mx = 0.d0
        my = 0.d0
