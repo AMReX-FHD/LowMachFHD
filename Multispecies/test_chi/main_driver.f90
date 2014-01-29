@@ -2,9 +2,8 @@ subroutine main_driver()
 
   use multifab_module
   use init_module
-  use populate_DbarGama_module
   use convert_variables_module
-  use probin_common_module
+  !use probin_common_module
   use probin_multispecies_module
   use multifab_physbc_module
   use matrix_utilities 
@@ -13,28 +12,24 @@ subroutine main_driver()
   implicit none
 
   !call probin_common_init()
-  !call probin_multispecies_init()
-  !call test_chi(nspecies)
-  call test_chi
+  call probin_multispecies_init()
+  call test_chi(nspecies)
 
 contains
 
-subroutine test_chi
+subroutine test_chi(nspecies)
   implicit none
 
-  !integer, intent(in) :: nspecies
+  integer, intent(in) :: nspecies
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi,D_MS,Gama
   real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc,molmass,molmass_in,Dbar_in 
   real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti,tolerance
-  integer                                       :: i,j,k,n,nspecies,row,column,loop 
+  integer                                       :: i,j,k,n,row,column,loop 
  
-  nspecies = 3
-
   ! free up memory 
   D_MS       = 0.d0         
   Lambda     = 0.d0         
   chi        = 0.d0         
-  W          = 0.d0
   rho_tot    = 0.d0
   molarconc  = 0.d0
   Sum_knoti  = 0.d0
@@ -62,8 +57,8 @@ subroutine test_chi
         Gama(row, column) = 0.d0       
         Gama(column, row) = Gama(row, column) ! symmetric
      enddo
-     D_MS_local(row, row) = 0.d0 ! self-diffusion is zero
-     Gama_local(row, row) = 1.d0 ! set to unit matrix for time being
+     D_MS(row, row) = 0.d0 ! self-diffusion is zero
+     Gama(row, row) = 1.d0 ! set to unit matrix for time being
      molmass(row) = molmass_in(row)
   enddo
  
@@ -104,10 +99,6 @@ subroutine test_chi
      enddo
   enddo
 
-  do row=1, nspecies
-     print*, W(n)
-  enddo
-
   do loop=1,2
   
      ! compute chi either selecting inverse/pseudoinverse or iterative methods 
@@ -119,14 +110,14 @@ subroutine test_chi
         print*, 'compute chi via iterative methods'
      endif
 
-     if(.false.) then
+     !if(.false.) then
      do row=1, nspecies
         do column=1, nspecies
            print*, chi(row, column)
         enddo
         print*, ''
      enddo
-     endif 
+     !endif 
  
   end do
   
