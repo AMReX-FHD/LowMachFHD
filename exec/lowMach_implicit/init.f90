@@ -149,6 +149,7 @@ contains
        ! the lower third and upper third of the domain (in y) has c_init(1)
        ! the middle third of the domain has c_init(2)
        ! smoothing_width has units of GRID CELLS
+       ! if smoothing width is 0, use finite-volume averaging of sharp interface
 
        mx = 0.d0
        my = 0.d0
@@ -162,38 +163,37 @@ contains
           y1 =(prob_lo(2) + dx(2)*(dble(j)+0.5d0) - one_third_domain1)
           y2 =(prob_lo(2) + dx(2)*(dble(j)+0.5d0) - one_third_domain2)
         
-          do i=lo(1),hi(1)
-             ! tanh smoothing
-             if(abs(smoothing_width)>epsilon(1.0d0)) then
-                c_loc = c_init(1)+ 0.5d0*(c_init(2)-c_init(1))*&
-                   (tanh(y1/(smoothing_width*dx(2))) - tanh(y2/(smoothing_width*dx(2))))
-                s(i,j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
-                s(i,j,2) = s(i,j,1)*c_loc
-             else
-                ! Try to initialize exactly as we do in the HDMD simulations,
-                ! with finite-volume averaging of sharp interface
-                if((y1<-0.5d0*dx(2)).or.(y2>0.5d0*dx(2))) then
-                   s(i,j,2) = 0
-                   s(i,j,1) = rhobar(2)
-                else if((y1>0.5d0*dx(2)).and.(y2<-0.5d0*dx(2))) then
-                   s(i,j,2) = rhobar(1)
-                   s(i,j,1) = rhobar(1)
-                else if(y1 <= 0.5d0*dx(2)) then
-                   s(i,j,2) = (max(0.0d0,min(0.5d0+y1/dx(2),1.0d0)))*rhobar(1)
-                   s(i,j,1) = s(i,j,2) + (1.0d0-max(0.0d0,min(0.5d0+y1/dx(2),1.0d0)))*rhobar(2)
-                else 
-                   s(i,j,2) = (1.0d0-max(0.0d0,min(0.5d0+y2/dx(2),1.0d0)))*rhobar(1)
-                   s(i,j,1) = s(i,j,2) + (max(0.0d0,min(0.5d0+y2/dx(2),1.0d0)))*rhobar(2)
-                end if   
-             end if  
-          enddo
+          ! tanh smoothing
+          if(abs(smoothing_width)>epsilon(1.0d0)) then
+             c_loc = c_init(1)+ 0.5d0*(c_init(2)-c_init(1))*&
+                  (tanh(y1/(smoothing_width*dx(2))) - tanh(y2/(smoothing_width*dx(2))))
+             s(lo(1):hi(1),j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+             s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*c_loc
+          else
+             ! Try to initialize exactly as we do in the HDMD simulations,
+             ! with finite-volume averaging of sharp interface
+             if((y1<-0.5d0*dx(2)).or.(y2>0.5d0*dx(2))) then
+                s(lo(1):hi(1),j,2) = 0
+                s(lo(1):hi(1),j,1) = rhobar(2)
+             else if((y1>0.5d0*dx(2)).and.(y2<-0.5d0*dx(2))) then
+                s(lo(1):hi(1),j,2) = rhobar(1)
+                s(lo(1):hi(1),j,1) = rhobar(1)
+             else if(y1 <= 0.5d0*dx(2)) then
+                s(lo(1):hi(1),j,2) = (max(0.0d0,min(0.5d0+y1/dx(2),1.0d0)))*rhobar(1)
+                s(lo(1):hi(1),j,1) = s(lo(1):hi(1),j,2) &
+                     + (1.0d0-max(0.0d0,min(0.5d0+y1/dx(2),1.0d0)))*rhobar(2)
+             else 
+                s(lo(1):hi(1),j,2) = (1.0d0-max(0.0d0,min(0.5d0+y2/dx(2),1.0d0)))*rhobar(1)
+                s(lo(1):hi(1),j,1) = s(lo(1):hi(1),j,2) + (max(0.0d0,min(0.5d0+y2/dx(2),1.0d0)))*rhobar(2)
+             end if
+          end if
        enddo
 
     case (3)
 
        ! one fluid on top of another
-       ! could be used for diffusive mixing or Rayleigh-Taylor,
-       ! depending on where the heavier fluid is and if gravity is on
+       ! c_init(1) in lower half of domain (in y)
+       ! c_init(2) in upper half
 
        mx = 0.d0
        my = 0.d0
@@ -205,18 +205,16 @@ contains
 
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
-          do i=lo(1),hi(1)
 
-             if (y .lt. y1) then
-                s(i,j,2) = c_init(1)
-                s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))             
-             else
-                s(i,j,2) = c_init(2)
-                s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))   
-             end if
-             s(i,j,2) = s(i,j,1)*s(i,j,2)
-             
-          end do
+          if (y .lt. y1) then
+             s(lo(1):hi(1),j,2) = c_init(1)
+             s(lo(1):hi(1),j,1) = 1.0d0/(c_init(1)/rhobar(1)+(1.0d0-c_init(1))/rhobar(2))
+          else
+             s(lo(1):hi(1),j,2) = c_init(2)
+             s(lo(1):hi(1),j,1) = 1.0d0/(c_init(2)/rhobar(1)+(1.0d0-c_init(2))/rhobar(2))
+          end if
+          s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*s(lo(1):hi(1),j,2)
+          
        end do
 
     case default
@@ -239,7 +237,8 @@ contains
 
     ! local
     integer :: i,j,k
-    real(kind=dp_t) :: x,y,z,r,dy,c_loc
+    real(kind=dp_t) :: x,y,y1,y2,z,r,dy,c_loc
+    real(kind=dp_t) :: one_third_domain1,one_third_domain2
 
     select case (prob_type)
     case (0)
@@ -300,6 +299,85 @@ contains
              enddo
           enddo
        end do
+
+    case (2)
+
+       ! bilayer interface (stripe)
+       ! the lower third and upper third of the domain (in y) has c_init(1)
+       ! the middle third of the domain has c_init(2)
+       ! smoothing_width has units of GRID CELLS
+       ! if smoothing width is 0, use finite-volume averaging of sharp interface
+
+       mx = 0.d0
+       my = 0.d0
+       mz = 0.d0
+
+       p = 0.d0
+
+       one_third_domain1=2.0d0/3.0d0*prob_lo(2)+1.0d0/3.0d0*prob_hi(2)
+       one_third_domain2=1.0d0/3.0d0*prob_lo(2)+2.0d0/3.0d0*prob_hi(2)
+
+       do j=lo(2),hi(2)
+          y1 =(prob_lo(2) + dx(2)*(dble(j)+0.5d0) - one_third_domain1)
+          y2 =(prob_lo(2) + dx(2)*(dble(j)+0.5d0) - one_third_domain2)
+        
+          ! tanh smoothing
+          if(abs(smoothing_width)>epsilon(1.0d0)) then
+             c_loc = c_init(1)+ 0.5d0*(c_init(2)-c_init(1))*&
+                  (tanh(y1/(smoothing_width*dx(2))) - tanh(y2/(smoothing_width*dx(2))))
+             s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+             s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*c_loc
+          else
+             ! Try to initialize exactly as we do in the HDMD simulations,
+             ! with finite-volume averaging of sharp interface
+             if((y1<-0.5d0*dx(2)).or.(y2>0.5d0*dx(2))) then
+                s(lo(1):hi(1),j,lo(3):hi(3),2) = 0
+                s(lo(1):hi(1),j,lo(3):hi(3),1) = rhobar(2)
+             else if((y1>0.5d0*dx(2)).and.(y2<-0.5d0*dx(2))) then
+                s(lo(1):hi(1),j,lo(3):hi(3),2) = rhobar(1)
+                s(lo(1):hi(1),j,lo(3):hi(3),1) = rhobar(1)
+             else if(y1 <= 0.5d0*dx(2)) then
+                s(lo(1):hi(1),j,lo(3):hi(3),2) = (max(0.0d0,min(0.5d0+y1/dx(2),1.0d0)))*rhobar(1)
+                s(lo(1):hi(1),j,lo(3):hi(3),1) = s(lo(1):hi(1),j,lo(3):hi(3),2) &
+                     + (1.0d0-max(0.0d0,min(0.5d0+y1/dx(2),1.0d0)))*rhobar(2)
+             else 
+                s(lo(1):hi(1),j,lo(3):hi(3),2) = (1.0d0-max(0.0d0,min(0.5d0+y2/dx(2),1.0d0)))*rhobar(1)
+                s(lo(1):hi(1),j,lo(3):hi(3),1) = s(lo(1):hi(1),j,lo(3):hi(3),2) &
+                     + (max(0.0d0,min(0.5d0+y2/dx(2),1.0d0)))*rhobar(2)
+             end if
+          end if
+       enddo
+
+    case (3)
+
+       ! one fluid on top of another
+       ! c_init(1) in lower half of domain (in y)
+       ! c_init(2) in upper half
+
+       mx = 0.d0
+       my = 0.d0
+       mz = 0.d0
+
+       p = 0.d0
+
+       ! middle of domain
+       y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+
+          if (y .lt. y1) then
+             s(lo(1):hi(1),j,lo(3):hi(3),2) = c_init(1)
+             s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_init(1)/rhobar(1)+(1.0d0-c_init(1))/rhobar(2))
+          else
+             s(lo(1):hi(1),j,lo(3):hi(3),2) = c_init(2)
+             s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_init(2)/rhobar(1)+(1.0d0-c_init(2))/rhobar(2))   
+          end if
+          s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*s(lo(1):hi(1),j,lo(3):hi(3),2)
+          
+       end do
+
+
 
     case default
 
