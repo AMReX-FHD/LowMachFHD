@@ -73,7 +73,7 @@ contains
     enddo
 
   end subroutine init
-1
+
   subroutine init_2d(mx,my,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p
@@ -92,6 +92,7 @@ contains
     case (0)
 
        ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
+
        mx = 0.d0
        my = 0.d0
 
@@ -105,14 +106,11 @@ contains
           ! linear gradient in c
           c_loc = c_init(1) + (c_init(2)-c_init(1))*dy/(prob_hi(2)-prob_lo(2))
 
-          ! temporarily store c
-          s(lo(1):hi(1),j,2) = c_loc
-
           ! compute rho with the eos
           s(lo(1):hi(1),j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
 
           ! compute rho*c
-          s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*s(lo(1):hi(1),j,2)
+          s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*c_loc
 
        end do
 
@@ -148,6 +146,9 @@ contains
     case (2)
 
        ! bilayer interface (stripe)
+       ! the lower third and upper third of the domain (in y) has c_init(1)
+       ! the middle third of the domain has c_init(2)
+       ! smoothing_width has units of GRID CELLS
 
        mx = 0.d0
        my = 0.d0
@@ -164,10 +165,10 @@ contains
           do i=lo(1),hi(1)
              ! tanh smoothing
              if(abs(smoothing_width)>epsilon(1.0d0)) then
-                s(i,j,2) = c_init(1)+ 0.5d0*(c_init(2)-c_init(1))*&
+                c_loc = c_init(1)+ 0.5d0*(c_init(2)-c_init(1))*&
                    (tanh(y1/(smoothing_width*dx(2))) - tanh(y2/(smoothing_width*dx(2))))
-                s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
-                s(i,j,2) = s(i,j,1)*s(i,j,2)
+                s(i,j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+                s(i,j,2) = s(i,j,1)*c_loc
              else
                 ! Try to initialize exactly as we do in the HDMD simulations,
                 ! with finite-volume averaging of sharp interface
@@ -244,6 +245,7 @@ contains
     case (0)
 
        ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
+
        mx = 0.d0
        my = 0.d0
        mz = 0.d0
@@ -258,14 +260,11 @@ contains
           ! linear gradient in c
           c_loc = c_init(1) + (c_init(2)-c_init(1))*dy/(prob_hi(2)-prob_lo(2))
 
-          ! temporarily store c
-          s(lo(1):hi(1),j,lo(3):hi(3),2) = c_loc
-
           ! compute rho with the eos
           s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
 
           ! compute rho*c
-          s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*s(lo(1):hi(1),j,lo(3):hi(3),2)
+          s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*c_loc
 
        end do
 
