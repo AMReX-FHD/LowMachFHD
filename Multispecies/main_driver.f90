@@ -10,7 +10,6 @@ subroutine main_driver()
   use define_bc_module
   use bc_module
   use analysis_module
-  use populate_DbarGama_module
   use convert_variables_module
   use probin_common_module
   use probin_multispecies_module
@@ -22,9 +21,6 @@ subroutine main_driver()
 
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t), allocatable :: Dbar(:,:)
-  real(kind=dp_t), allocatable :: Gama(:,:)
-  real(kind=dp_t), allocatable :: mass(:) 
   real(kind=dp_t)              :: dt,time
   integer                      :: n,nlevs,i,dm,istep
   type(box)                    :: bx
@@ -36,7 +32,7 @@ subroutine main_driver()
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
   type(multifab), allocatable  :: rho_exact(:)
-  ! Donev: The code as written now assumes that Dbar and Gamma are constants
+  ! Donev: The code as written now assumes that D_MS and Gamma are constants
   ! i.e., they are not multifabs but rather simple arrays
   ! This is OK for now for simple testing but has to be changed later
   ! It will affect all routines like diffusive_flux(div) etc.
@@ -57,9 +53,6 @@ subroutine main_driver()
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
-  allocate(Dbar(nspecies,nspecies))
-  allocate(Gama(nspecies,nspecies))
-  allocate(mass(nspecies))
   allocate(rho(nlevs))
   allocate(rho_exact(nlevs))
 
@@ -80,11 +73,6 @@ subroutine main_driver()
   ! set grid spacing at each level; presently grid spacing is same in all direction
   dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
   
-  ! initialize quantities to zero.
-  Dbar(1:nspecies,1:nspecies) = 0.0d0  
-  Gama(1:nspecies,1:nspecies) = 0.0d0  
-  mass(1:nspecies)            = 1.0d0  
- 
   ! check whether dimensionality & grid spacing passed correct 
   select case (dm) 
     case(2)
@@ -172,9 +160,6 @@ subroutine main_driver()
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
   end do
 
-  ! populate SM Dbar matrix, Gama and molar masses 
-  call populate_DbarGama(Dbar,Gama,mass) 
-
   ! initialize the time 
   time = start_time    
 
@@ -204,7 +189,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,Dbar,Gama,mass,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+     call advance(mla,rho,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
      ! compute error norms
      if (print_error_norms) then

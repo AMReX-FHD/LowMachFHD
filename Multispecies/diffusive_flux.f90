@@ -19,14 +19,12 @@ module diffusive_flux_module
 
 contains
  
-  subroutine diffusive_flux(mla,rho,molarconc,chi,rhoWchiGama,Gama,flux,dx,the_bc_level)
+  subroutine diffusive_flux(mla,rho,molarconc,rhoWchiGama,flux,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:) 
     type(multifab) , intent(in   ) :: molarconc(:) 
-    type(multifab) , intent(in   ) :: chi(:)  
     type(multifab) , intent(in   ) :: rhoWchiGama(:)  
-    real(kind=dp_t), intent(in   ) :: Gama(:,:)  
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)

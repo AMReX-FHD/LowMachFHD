@@ -1,6 +1,6 @@
 f90sources += init.f90
 f90sources += probin_multispecies.f90
-f90sources += populate_DbarGama.f90 
+f90sources += fluid_model.f90 
 f90sources += external_force.f90 
 f90sources += main_driver.f90
 f90sources += analysis.f90

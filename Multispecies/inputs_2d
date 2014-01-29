@@ -1,7 +1,7 @@
 &probin_common
  
  dim_in = 2                     ! problem dimension
- plot_int = 1000000                ! plot interval
+ plot_int = 100                ! plot interval
  max_grid_size(1:2) = 64 64     ! individual box size 
 
  ! Grid size
@@ -31,7 +31,7 @@
  timeinteg_type = 1             ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=3rdorder Runge-Kutta 
  print_error_norms = .true.     ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.     ! false=Bdag*Gama, true=Bdag 
- use_lapack  = .false.           ! false=iterative methods, true=inverse/pseudoinverse 
+ use_lapack  = .true.           ! false=iterative methods, true=inverse/pseudoinverse 
  rho_in(1,1:3) = 0.6 1.05 1.35  ! initial concentrations for species 1
  molmass_in(1:3) = 1.0 2.0 3.0  ! molar mass of n-species
  Dbar_in(1:3) = 0.5 1.0 1.5     ! SM diffusion constant arranged in lower-triangle

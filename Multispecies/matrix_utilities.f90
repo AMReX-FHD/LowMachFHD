@@ -16,13 +16,13 @@ contains
 
     ! nspec is number of species
     ! num_iterations is the number of terms in the sum to use: 3-5 are reasonable values
-    ! Dbar is matrix of Maxwell-Stefan binary diffusion coefficient
+    ! D_MS is matrix of Maxwell-Stefan binary diffusion coefficient
     ! chi is the multispecies diffusion matrix
     ! Wk is vector of molecular weights (molecular masses will work as well)
     ! Xk is mole fractions
-    subroutine Dbar2chi_iterative(nspec,num_iterations,Dbar,Wk,Xk,chi)
+    subroutine Dbar2chi_iterative(nspec,num_iterations,D_MS,Wk,Xk,chi)
       integer, intent(in) :: nspec, num_iterations
-      real(kind=dp_t), intent(in) :: Xk(1:nspec), Wk(1:nspec), Dbar(1:nspec,1:nspec)
+      real(kind=dp_t), intent(in) :: Xk(1:nspec), Wk(1:nspec), D_MS(1:nspec,1:nspec)
       real(kind=dp_t), intent(out) :: chi(1:nspec,1:nspec)
       
       ! Local variables
@@ -59,7 +59,7 @@ contains
        term2 = 0.0d0
        do j = 1, nspec
         if(j.ne.i) then
-          term2 = term2 + Xkp(j)/Dbar(i,j)
+          term2 = term2 + Xkp(j)/D_MS(i,j)
         endif
        enddo   
        Di(i) = (1.d0-Ykp(i))/term2 
@@ -90,12 +90,12 @@ contains
           term1 = 0.0d0
           do k = 1, nspec
            if(k.ne.i) then
-            term1 = term1 + Xkp(i)*Xkp(k)/Dbar(i,k)
+            term1 = term1 + Xkp(i)*Xkp(k)/D_MS(i,k)
            endif
           enddo  
           Deltamat(i,i) = term1
          else
-          Deltamat(i,j) = -Xkp(i)*Xkp(j)/Dbar(i,j) 
+          Deltamat(i,j) = -Xkp(i)*Xkp(j)/D_MS(i,j) 
          endif  
           Zmat(i,j) = -Deltamat(i,j)
        enddo
