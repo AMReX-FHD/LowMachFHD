@@ -4,7 +4,7 @@ module mk_baro_fluxdiv_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use probin_lowmach_module, only: visc_coef, diff_coef, rhobar
+  use probin_lowmach_module, only: rhobar
 
   implicit none
 
