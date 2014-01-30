@@ -23,7 +23,7 @@ contains
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    real(kind=dp_t), intent(in   ) :: molmass(nspecies) ! Donev: This can and should be declared as molmass(nspecies) instead of with colon -- in all codes
+    real(kind=dp_t), intent(in   ) :: molmass(nspecies) 
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 
@@ -102,8 +102,6 @@ contains
       call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
 
       ! compute external forcing for manufactured solution and add to fluxdiv
-      ! This routine should not take D_MS as input
-      ! It should only take primitive variables as input
       call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
       
       ! compute rho(t+dt) (only interior) 

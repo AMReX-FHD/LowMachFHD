@@ -100,7 +100,7 @@ subroutine test_chi(nspecies)
   
      ! compute chi either selecting inverse/pseudoinverse or iterative methods 
      if(loop==1) then
-        call compute_chi_local(Lambda,chi,W)
+        call compute_chi_lapack(Lambda,chi,W)
         print*, 'compute chi via inverse/p-inverse'
      else
         call Dbar2chi_iterative(nspecies,3,D_MS,W,molarconc,chi)

@@ -67,8 +67,6 @@ contains
   
   end subroutine fluid_model
   
-  ! Donev: Same comment here as in convert_variables.f90: Local code is duplicated in 2d and 3d
-
   subroutine compute_D_MSGama_2d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
@@ -79,20 +77,16 @@ contains
     real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
     real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
 
-    ! local varialbes; vectors and matrices to be used by D_MS, Gama 
-    real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local,Gama_local
-    integer                                       :: i,j
+    ! local varialbes
+    integer          :: i,j
 
     ! for specific box, now start loops over alloted cells 
     do j=lo(2)-ng,hi(2)+ng
        do i=lo(1)-ng,hi(1)+ng
        
-          call populate_D_MSGama(D_MS_local(:,:),Gama_local(:,:))
+          call compute_D_MSGama_local(rho(i,j,:),rho_tot(i,j),molarconc(i,j,:),&
+                                      molmtot(i,j),D_MS(i,j,:),Gama(i,j,:))
 
-          ! do the rank conversion 
-          call set_Xij(D_MS(i,j,:), D_MS_local)
-          call set_Xij(Gama(i,j,:), Gama_local)
- 
        end do
     end do
    
@@ -108,32 +102,35 @@ contains
     real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
     real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
 
-    ! local varialbes; vectors and matrices to be used by D_MS, Gama 
-    real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local,Gama_local
-    integer                                       :: i,j,k
+    ! local varialbes
+    integer          :: i,j,k
 
     ! for specific box, now start loops over alloted cells 
     do k=lo(3)-ng,hi(3)+ng
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
 
-             call populate_D_MSGama(D_MS_local(:,:),Gama_local(:,:))
-             
-             ! do the rank conversion 
-             call set_Xij(D_MS(i,j,k,:), D_MS_local)
-             call set_Xij(Gama(i,j,k,:), Gama_local)
- 
+             call compute_D_MSGama_local(rho(i,j,k,:),rho_tot(i,j,k),molarconc(i,j,k,:),&
+                                      molmtot(i,j,k),D_MS(i,j,k,:),Gama(i,j,k,:))
+
           end do
        end do
     end do
    
   end subroutine compute_D_MSGama_3d
 
-  subroutine populate_D_MSGama(D_MS_local,Gama_local)
-  
-    real(kind=dp_t)  :: D_MS_local(:,:)
-    real(kind=dp_t)  :: Gama_local(:,:)
-    integer          :: n,row,column
+  subroutine compute_D_MSGama_local(rho,rho_tot,molarconc,molmtot,D_MS,Gama)
+   
+    real(kind=dp_t), intent(in)   :: rho(nspecies)        
+    real(kind=dp_t), intent(in)   :: rho_tot
+    real(kind=dp_t), intent(in)   :: molarconc(nspecies)
+    real(kind=dp_t), intent(in)   :: molmtot
+    real(kind=dp_t), intent(out)  :: D_MS(nspecies**2)
+    real(kind=dp_t), intent(out)  :: Gama(nspecies**2)
+ 
+    ! local varialbes
+    real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local,Gama_local
+    integer                                       :: n,row,column
 
     ! populate D_MS,Gama; for initial case doesn't change in each cell. 
     n=0; 
@@ -145,11 +142,15 @@ contains
           Gama_local(row, column) = 0.d0       
           Gama_local(column, row) = Gama_local(row, column) ! symmetric
        enddo
-       D_MS_local(row, row) = 0.d0             ! self-diffusion is zero
-       Gama_local(row, row) = 1.d0             ! set to unit matrix for time being
+       D_MS_local(row, row) = 0.d0   ! self-diffusion is zero
+       Gama_local(row, row) = 1.d0   ! set to unit matrix for time being
     enddo
 
-  end subroutine populate_D_MSGama
+    ! do the rank conversion 
+    call set_Xij(D_MS(:), D_MS_local)
+    call set_Xij(Gama(:), Gama_local)
+  
+  end subroutine compute_D_MSGama_local
 
   subroutine set_Xij(Xout_ij, Xin_ij)
         
