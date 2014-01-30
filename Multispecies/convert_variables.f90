@@ -23,8 +23,8 @@ contains
    type(multifab) , intent(in)     :: rho(:) 
    type(multifab) , intent(inout)  :: rho_tot(:) 
    type(multifab) , intent(inout)  :: molarconc(:) 
-   type(multifab) , intent(inout)  :: molmtot(nspecies) 
-   real(kind=dp_t), intent(in   )  :: molmass(nspecies)
+   type(multifab) , intent(inout)  :: molmtot(nspecies) ! Donev: FIXME: This is supposed to be colon
+   real(kind=dp_t), intent(in   )  :: molmass(1:nspecies)
    type(bc_level) , intent(in   )  :: the_bc_level(:)
 
    ! local variables
@@ -54,7 +54,7 @@ contains
           select case(dm)
           case (2)
              call compute_molconc_rhotot_2d(dp(:,:,1,:),dp1(:,:,1,1),&
-                           dp2(:,:,1,:),molmass(:),dp3(:,:,1,1),ng,lo,hi) 
+                           dp2(:,:,1,:),molmass(:),dp3(:,:,1,1),ng,lo,hi) ! Donev: You do not need molmass(:), just molmass
           case (3)
              call compute_molconc_rhotot_3d(dp(:,:,:,:),dp1(:,:,:,1),&
                            dp2(:,:,:,:),molmass(:),dp3(:,:,:,1),ng,lo,hi) 
