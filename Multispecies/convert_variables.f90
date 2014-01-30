@@ -66,6 +66,43 @@ contains
 
 ! Donev: See my comment below regarding routine compute_chi_2d about code duplication between 2d and 3d.
 ! Same applies here
+! Also use intent(in) / intent(out) when appropriate
+   
+  subroutine compute_molconc_rhotot_local(rho,rho_tot,molarconc,molmass,molmtot)
+ 
+    real(kind=dp_t), intent(in)  :: rho(nspecies)       ! density- last dim for #species
+    real(kind=dp_t), intent(out)  :: rho_tot     ! total density in each cell 
+    real(kind=dp_t), intent(out)  :: molarconc(nspecies) ! molar concentration
+    real(kind=dp_t), intent(in)  :: molmass(nspecies)                ! species molar mass 
+    real(kind=dp_t), intent(out)  :: molmtot     ! total molar mass 
+    
+    ! local variables
+    integer          :: i,j,n
+    real(kind=dp_t), dimension(nspecies) :: W            ! mass fraction w_i = rho_i/rho 
+    real(kind=dp_t)  :: Sum_woverm, rho_tot_local
+
+    ! calculate total density inside each cell
+    rho_tot_local=0.d0 
+    do n=1, nspecies  
+       rho_tot_local = rho_tot_local + rho(n)
+    enddo         
+    rho_tot = rho_tot_local
+
+    ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i))
+    Sum_woverm=0.d0
+    do n=1, nspecies  
+       W(n) = rho(n)/rho_tot
+       Sum_woverm = Sum_woverm + W(n)/molmass(n)
+    enddo
+    molmtot = 1.0d0/Sum_woverm 
+
+    ! calculate molar concentrations in each cell (x_i=m*w_i/m_i) 
+    do n=1, nspecies 
+       molarconc(n) = molmtot*W(n)/molmass(n)
+    enddo
+    
+  end subroutine  
+
 
   subroutine compute_molconc_rhotot_2d(rho,rho_tot,molarconc,molmass,molmtot,ng,lo,hi)
  
@@ -75,35 +112,17 @@ contains
     real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:) ! molar concentration
     real(kind=dp_t)  :: molmass(nspecies)                ! species molar mass 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)     ! total molar mass 
-    real(kind=dp_t), dimension(nspecies) :: W            ! mass fraction w_i = rho_i/rho 
-    
+        
     ! local variables
     integer          :: i,j,n
+    real(kind=dp_t), dimension(nspecies) :: W            ! mass fraction w_i = rho_i/rho 
     real(kind=dp_t)  :: Sum_woverm, rho_tot_local
     
     ! for specific box, now start loops over alloted cells    
     do j=lo(2)-ng, hi(2)+ng
        do i=lo(1)-ng, hi(1)+ng
-
-          ! calculate total density inside each cell
-          rho_tot_local=0.d0 
-          do n=1, nspecies  
-             rho_tot_local = rho_tot_local + rho(i,j,n)
-          enddo         
-          rho_tot(i,j) = rho_tot_local
- 
-          ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i))
-          Sum_woverm=0.d0
-          do n=1, nspecies  
-             W(n) = rho(i,j,n)/rho_tot(i,j)
-             Sum_woverm = Sum_woverm + W(n)/molmass(n)
-          enddo
-          molmtot(i,j) = 1.0d0/Sum_woverm 
-  
-          ! calculate molar concentrations in each cell (x_i=m*w_i/m_i) 
-          do n=1, nspecies 
-             molarconc(i,j,n) = molmtot(i,j)*W(n)/molmass(n)
-          enddo
+         
+         call compute_molconc_rhotot_local(rho(i,j,:),rho_tot(i,j),molarconc(i,j,:),molmass,molmtot(i,j))
 
        enddo
     enddo
