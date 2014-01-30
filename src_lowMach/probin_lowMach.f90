@@ -51,26 +51,26 @@ module probin_lowmach_module
   namelist /probin_lowmach/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
   namelist /probin_lowmach/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
-  namelist /probin_common/ hydro_grid_int      ! How often to call updateHydroGrid
+  namelist /probin_lowmach/ hydro_grid_int      ! How often to call updateHydroGrid
                                                ! 0 if never
                                                ! negative for projectHydroGrid custom analysis
                                                ! positive for updateHydroGrid
 
-  namelist /probin_common/ project_dir         ! Projection direction (1=x, 2=y, 3=z)
+  namelist /probin_lowmach/ project_dir         ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
   ! -dim=analyze 3D and then project along dim so we also analyze 2D data
   ! It is better to use the conserved variables but it does not quite work for staggered
 
-  namelist /probin_common/ max_grid_projection ! parallelization parameters
-  namelist /probin_common/ stats_int           ! Project grid for analysis
-  namelist /probin_common/ n_steps_save_stats  ! How often to dump HydroGrid output files
-  namelist /probin_common/ n_steps_skip        ! How many steps to skip
-  namelist /probin_common/ analyze_conserved   ! Should we use conserved variables for the analysis
-                                               ! (does not work well)
-  namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
-                                               ! (will smooth fluctuations)
+  namelist /probin_lowmach/ max_grid_projection ! parallelization parameters
+  namelist /probin_lowmach/ stats_int           ! Project grid for analysis
+  namelist /probin_lowmach/ n_steps_save_stats  ! How often to dump HydroGrid output files
+  namelist /probin_lowmach/ n_steps_skip        ! How many steps to skip
+  namelist /probin_lowmach/ analyze_conserved   ! Should we use conserved variables for the analysis
+                                                ! (does not work well)
+  namelist /probin_lowmach/ center_snapshots    ! Should we use cell-centered momenta for the analysis
+                                                ! (will smooth fluctuations)
 
 contains
 
