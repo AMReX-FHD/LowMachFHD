@@ -1,6 +1,7 @@
 subroutine main_driver()
 
   use bl_types
+  use bl_IO_module
   use ml_boxarray_module
   use ml_layout_module
   use bl_error_module
@@ -84,6 +85,10 @@ subroutine main_driver()
   !   6. y-velocity bc on z-faces (nodal in y and z)
   type(multifab), allocatable :: vel_bc_n(:,:)
   type(multifab), allocatable :: vel_bc_t(:,:)
+
+  integer :: narg, farg, un, namelist_file
+  character(len=128) :: fname
+  logical :: lexist
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_lowmach_init()
@@ -306,6 +311,23 @@ subroutine main_driver()
 
   end do
 
+  if(abs(hydro_grid_int)>0 .or. stats_int>0) then
+
+     narg = command_argument_count()
+     farg = 1
+     if (narg >= 1) then
+        call get_command_argument(farg, value = fname)
+        inquire(file = fname, exist = lexist )
+        if ( lexist ) then
+           un = unit_new()
+           open(unit=un, file = fname, status = 'old', action = 'read')
+           call initialize_hydro_grid(mla,sold,mold,fixed_dt,dx,un)
+           close(unit=un)
+        end if
+     end if
+
+  end if
+
   time = 0.d0
 
   ! initialize sold = s^0 and mold = m^0
@@ -448,6 +470,10 @@ subroutine main_driver()
 
   ! destroy and deallocate multifabs that contain random numbers
   call destroy_stochastic(mla)
+
+  if(abs(hydro_grid_int)>0 .or. stats_int>0) then
+     call finalize_hydro_grid()
+  end if
 
   do n=1,nlevs
      call multifab_destroy(sold(n))
