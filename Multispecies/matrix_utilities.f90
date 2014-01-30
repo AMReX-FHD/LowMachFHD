@@ -10,7 +10,7 @@ module matrix_utilities
   public :: Dbar2chi_iterative
   
   ! To avoid zero mass or mole fractions we round up using a tolerance:
-  real(kind=dp_t), public :: fraction_tolerance = 2*epsilon(1.0_dp_t)
+  !real(kind=dp_t), public :: fraction_tolerance = 2*epsilon(1.0_dp_t)
 
 contains
 

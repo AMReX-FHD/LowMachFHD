@@ -23,7 +23,7 @@ contains
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    real(kind=dp_t), intent(in   ) :: molmass(:) ! Donev: This can and should be declared as molmass(nspecies) instead of with colon -- in all codes
+    real(kind=dp_t), intent(in   ) :: molmass(nspecies) ! Donev: This can and should be declared as molmass(nspecies) instead of with colon -- in all codes
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 

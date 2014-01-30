@@ -12,7 +12,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
-  real(kind=dp_t)    :: alpha,beta              ! manufactured solution parameters
+  real(kind=dp_t)    :: alpha,beta,fraction_tolerance  ! manufactured solution parameters
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
   logical            :: print_error_norms, is_ideal_mixture, use_lapack
   
@@ -22,6 +22,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ chi
   namelist /probin_multispecies/ Temp
   namelist /probin_multispecies/ Press
+  namelist /probin_multispecies/ fraction_tolerance
   namelist /probin_multispecies/ start_time
   namelist /probin_multispecies/ init_type
   namelist /probin_multispecies/ inverse_type   
@@ -70,8 +71,9 @@ contains
     Dbar_in           = 1.0d0
     Temp              = 1.0d0
     Press             = 1.0d0
+    fraction_tolerance= 1e-13 
     start_time        = 1.0d0
-  
+ 
     ! read from input file 
     need_inputs = .true.
     farg = 1

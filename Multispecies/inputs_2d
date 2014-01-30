@@ -24,6 +24,7 @@
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature
  Press    = 1.0                 ! Pressure
+ fraction_tolerance = 1e-13     ! to prevent division by zero 
  start_time  = 1.0              ! start at t=1 to avoid NAN coming from rho_exact at t=0
  !include_temp = .false.        ! right now no temperature equation
  init_type = 1                  ! initial problem: 1=bubble,2=const gradient,3=gaussian,4=manufactured solution

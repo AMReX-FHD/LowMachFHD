@@ -3,7 +3,6 @@ subroutine main_driver()
   use multifab_module
   use init_module
   use convert_variables_module
-  !use probin_common_module
   use probin_multispecies_module
   use multifab_physbc_module
   use matrix_utilities 
@@ -11,7 +10,6 @@ subroutine main_driver()
 
   implicit none
 
-  !call probin_common_init()
   call probin_multispecies_init()
   call test_chi(nspecies)
 
@@ -23,7 +21,7 @@ subroutine test_chi(nspecies)
   integer, intent(in) :: nspecies
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi,D_MS,Gama
   real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc,molmass,molmass_in,Dbar_in 
-  real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti,tolerance
+  real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti
   integer                                       :: i,j,k,n,row,column,loop 
  
   ! free up memory 
@@ -45,7 +43,6 @@ subroutine test_chi(nspecies)
   Dbar_in(1)    = 0.5d0 
   Dbar_in(2)    = 1.0d0 
   Dbar_in(3)    = 1.5d0 
-  tolerance     = 1e-13
  
   ! populate D_MS, Gama and molar masses 
   n=0; 
@@ -103,7 +100,7 @@ subroutine test_chi(nspecies)
   
      ! compute chi either selecting inverse/pseudoinverse or iterative methods 
      if(loop==1) then
-        call populate_chi(Lambda,chi,W,tolerance)
+        call compute_chi_local(Lambda,chi,W)
         print*, 'compute chi via inverse/p-inverse'
      else
         call Dbar2chi_iterative(nspecies,3,D_MS,W,molarconc,chi)

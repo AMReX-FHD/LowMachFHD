@@ -32,7 +32,7 @@ subroutine main_driver()
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
   type(multifab), allocatable  :: rho_exact(:)
-  real(kind=dp_t), allocatable :: molmass(:) 
+  real(kind=dp_t),allocatable  :: molmass(:) 
   
   !==============================================================
   ! Initialization

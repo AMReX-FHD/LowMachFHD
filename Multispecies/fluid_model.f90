@@ -80,26 +80,14 @@ contains
     real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
 
     ! local varialbes; vectors and matrices to be used by D_MS, Gama 
-    real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local, Gama_local
-    integer                                       :: n,i,j,row,column
+    real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local,Gama_local
+    integer                                       :: i,j
 
     ! for specific box, now start loops over alloted cells 
     do j=lo(2)-ng,hi(2)+ng
        do i=lo(1)-ng,hi(1)+ng
-        
-          ! populate D_MS,Gama; for initial case doesn't change in each cell. 
-          n=0; 
-          do row=1, nspecies  
-             do column=1, row-1
-                n=n+1
-                D_MS_local(row, column) = Dbar_in(n)
-                D_MS_local(column, row) = D_MS_local(row, column) ! symmetric
-                Gama_local(row, column) = 0.d0       
-                Gama_local(column, row) = Gama_local(row, column) ! symmetric
-             enddo
-             D_MS_local(row, row) = 0.d0             ! self-diffusion is zero
-             Gama_local(row, row) = 1.d0             ! set to unit matrix for time being
-          enddo
+       
+          call populate_D_MSGama(D_MS_local(:,:),Gama_local(:,:))
 
           ! do the rank conversion 
           call set_Xij(D_MS(i,j,:), D_MS_local)
@@ -108,16 +96,8 @@ contains
        end do
     end do
    
-    ! use contained (internal) subroutine to do the copy without doing index algebra:
-    contains 
-     subroutine set_Xij(Xout_ij, Xin_ij)
-        real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: Xin_ij
-        real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: Xout_ij  
-        Xout_ij = Xin_ij
-     end subroutine 
-
   end subroutine compute_D_MSGama_2d
- 
+
   subroutine compute_D_MSGama_3d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,ng,lo,hi)
  
     integer          :: lo(3), hi(3), ng
@@ -129,28 +109,16 @@ contains
     real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
 
     ! local varialbes; vectors and matrices to be used by D_MS, Gama 
-    real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local, Gama_local
-    integer                                       :: n,i,j,k,row,column
+    real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local,Gama_local
+    integer                                       :: i,j,k
 
     ! for specific box, now start loops over alloted cells 
     do k=lo(3)-ng,hi(3)+ng
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
 
-             ! populate D_MS,Gama; for initial case doesn't change in each cell. 
-             n=0; 
-             do row=1, nspecies  
-                do column=1, row-1
-                   n=n+1
-                   D_MS_local(row, column) = Dbar_in(n)
-                   D_MS_local(column, row) = D_MS_local(row, column) ! symmetric
-                   Gama_local(row, column) = 0.d0       
-                   Gama_local(column, row) = Gama_local(row, column) ! symmetric
-                enddo
-                D_MS_local(row, row) = 0.d0             ! self-diffusion is zero
-                Gama_local(row, row) = 1.d0             ! set to unit matrix for time being
-             enddo
-
+             call populate_D_MSGama(D_MS_local(:,:),Gama_local(:,:))
+             
              ! do the rank conversion 
              call set_Xij(D_MS(i,j,k,:), D_MS_local)
              call set_Xij(Gama(i,j,k,:), Gama_local)
@@ -159,14 +127,38 @@ contains
        end do
     end do
    
-    ! use contained (internal) subroutine to do the copy without doing index algebra:
-    contains 
-     subroutine set_Xij(Xout_ij, Xin_ij)
-        real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: Xin_ij
-        real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: Xout_ij  
-        Xout_ij = Xin_ij
-     end subroutine 
-
   end subroutine compute_D_MSGama_3d
+
+  subroutine populate_D_MSGama(D_MS_local,Gama_local)
+  
+    real(kind=dp_t)  :: D_MS_local(:,:)
+    real(kind=dp_t)  :: Gama_local(:,:)
+    integer          :: n,row,column
+
+    ! populate D_MS,Gama; for initial case doesn't change in each cell. 
+    n=0; 
+    do row=1, nspecies  
+       do column=1, row-1
+          n=n+1
+          D_MS_local(row, column) = Dbar_in(n)
+          D_MS_local(column, row) = D_MS_local(row, column) ! symmetric
+          Gama_local(row, column) = 0.d0       
+          Gama_local(column, row) = Gama_local(row, column) ! symmetric
+       enddo
+       D_MS_local(row, row) = 0.d0             ! self-diffusion is zero
+       Gama_local(row, row) = 1.d0             ! set to unit matrix for time being
+    enddo
+
+  end subroutine populate_D_MSGama
+
+  subroutine set_Xij(Xout_ij, Xin_ij)
+        
+    real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: Xin_ij
+    real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: Xout_ij  
+   
+    ! reshape array into matrix without doing index algebra
+    Xout_ij = Xin_ij
+  
+  end subroutine set_Xij 
 
 end module fluid_model_module
