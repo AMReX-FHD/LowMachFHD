@@ -64,6 +64,9 @@ contains
 
   end subroutine convert_cons_to_prim
 
+! Donev: See my comment below regarding routine compute_chi_2d about code duplication between 2d and 3d.
+! Same applies here
+
   subroutine compute_molconc_rhotot_2d(rho,rho_tot,molarconc,molmass,molmtot,ng,lo,hi)
  
     integer          :: lo(2), hi(2), ng
@@ -201,6 +204,16 @@ contains
 
    end subroutine compute_chi
  
+! Donev:
+! If you look below you see that a lot of code is duplicated in 2d and 3d.
+! This code simply calculatest things in one cell, so it is dimension independent
+! You should put the code into a helper routine:
+! subroutine compute_chi_local(rho,rho_tot,molarconc,chi,D_MS)
+! where now all of the arguments do not have (i,j,k) indices: They are just scalars, vectors of length nspecies, or nspecies^2 matrices
+! Then you just call this one routine inside a do-loop in both 2d and 3d
+! You should do this consistently in the code for any routine that has duplication in 2d and 3d.
+! There should be NEVER code duplication unless it is trivial code, and this one is not trivial.
+ 
 subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,D_MS,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
@@ -218,7 +231,8 @@ subroutine compute_chi_2d(rho,rho_tot,molarconc,chi,D_MS,ng,lo,hi)
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager,Lambda,chidag,D_MS_loc
     real(kind=dp_t), dimension(nspecies)          :: W 
 
-    tolerance = 1e-13
+    tolerance = 1e-13 ! Donev: There is already a variable called fraction_tolerance in module matrix_utilities
+    ! Donev: The best thing is to put this variable in probin and make it an input value, and use the same value everywhere
 
     ! for specific box, now start loops over alloted cells 
     do j=lo(2)-ng,hi(2)+ng
@@ -537,6 +551,8 @@ subroutine populate_chi(Lambda,chidag,W,tolerance)
     end do
  
   end subroutine compute_rhoWchiGama
+  
+  ! Same code as before: Remove code duplication
  
   subroutine compute_rhoWchiGama_2d(rho,rho_tot,chi,Gama,rhoWchiGama,ng,lo,hi)
   
@@ -579,6 +595,9 @@ subroutine populate_chi(Lambda,chidag,W,tolerance)
           enddo
 
           ! compute CapW*chi*CapW and Onsager matrix L
+          ! Donev: Why are you computing Lonsager here?
+          ! This should be a separate routine and there should be another multifab that stores Lonsager
+          ! We don't need it yet but we will for fluctuations
           do column=1, nspecies
              do row=1, nspecies
                 Lonsager(row, column) = rho_tot(i,j)*rho_tot(i,j)*Temp*W(row)*chidag(row,column)*W(column)/Press

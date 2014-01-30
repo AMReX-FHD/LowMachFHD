@@ -66,6 +66,8 @@ contains
     end do
   
   end subroutine fluid_model
+  
+  ! Donev: Same comment here as in convert_variables.f90: Local code is duplicated in 2d and 3d
 
   subroutine compute_D_MSGama_2d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,ng,lo,hi)
 

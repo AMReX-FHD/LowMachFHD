@@ -23,7 +23,7 @@ contains
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    real(kind=dp_t), intent(in   ) :: molmass(:)
+    real(kind=dp_t), intent(in   ) :: molmass(:) ! Donev: This can and should be declared as molmass(nspecies) instead of with colon -- in all codes
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 
@@ -126,7 +126,7 @@ contains
       !=====================
       ! Euler Predictor step
       !===================== 
-     
+      
       ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
       call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       
