@@ -47,6 +47,8 @@ contains
     enddo 
 
     ! initialize local multifabs to zero 
+    ! Donev: This is not necessary, and it may hide bugs such as uninitialized variables
+    ! Remove all places where you set multifabs to zero unless it is actually required
     do n=1,nlevs
        do i=1,dm
           call setval(rhoWchiGama_face(n,i),0.d0,all=.true.)

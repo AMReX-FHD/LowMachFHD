@@ -125,7 +125,7 @@ contains
     real(kind=dp_t), intent(in)   :: rho_tot
     real(kind=dp_t), intent(in)   :: molarconc(nspecies)
     real(kind=dp_t), intent(in)   :: molmtot
-    real(kind=dp_t), intent(out)  :: D_MS(nspecies**2)
+    real(kind=dp_t), intent(out)  :: D_MS(nspecies**2) ! Donev: Same comment here -- this should be nspecies,nspecies here
     real(kind=dp_t), intent(out)  :: Gama(nspecies**2)
  
     ! local varialbes

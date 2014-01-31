@@ -85,6 +85,13 @@ contains
       
       stage_time = time   
 
+      ! Donev: The following combination of calls appears many times in this code, and it will appear many times in other codes also
+      ! So it is good to make a helper routine compute_fluxdiv
+      ! which computes the total flux div given rho
+      ! It will call the sequence of routines convert_cons_to_prim up to external_source
+      ! Then you can just call this routine whenever you need to do this sequence of steps
+      ! The code will be much simpler and more readable
+      
       ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
       call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       

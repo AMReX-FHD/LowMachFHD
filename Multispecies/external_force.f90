@@ -116,7 +116,7 @@ contains
     select case(init_type)
     case(4)
      
-    D = Dbar_in(1)
+     D = Dbar_in(1)
     
      ! for specific box, now start loops over alloted cells    
      do k=lo(3), hi(3)

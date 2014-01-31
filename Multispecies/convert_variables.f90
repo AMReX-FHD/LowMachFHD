@@ -250,11 +250,17 @@ contains
 
   subroutine compute_chi_local(rho,rho_tot,molarconc,chi,D_MS,i,j)
     
-    integer,         intent(in)     :: i,j
+    integer,         intent(in)     :: i,j ! Donev: NO, never pass i,j,k here
+    ! Donev: This is a local routine and must not use i,j info.
+    ! If you need to do something with i,j,k like debugging do it in the _2d/_3d routine, NOT here
     real(kind=dp_t), intent(inout)  :: rho(nspecies)         ! density; last dimension for species
     real(kind=dp_t), intent(in)     :: rho_tot               ! total density in each cell 
     real(kind=dp_t), intent(inout)  :: molarconc(nspecies)   ! molar concentration; 
+    ! Donev:
+    ! You can change the rank here, and then you do not need to do any calls to set_Xij
+    ! Just delcar chi(nspecies,nspecies) here
     real(kind=dp_t), intent(out)    :: chi(nspecies**2)      ! last dimension for nspecies^2
+    ! Same comment goes for D_MS, and for ALL local routines. Update them all accordingly
     real(kind=dp_t), intent(in)     :: D_MS(nspecies**2)     ! MS diff-coeffs 
 
     ! local variables
@@ -272,7 +278,7 @@ contains
     W        = 0.d0
   
     ! do rank conversion to populate local matrix 
-    call set_Xij(D_MS_loc, D_MS(:))
+    call set_Xij(D_MS_loc, D_MS(:)) ! Donev: Get rid of D_MS_loc
         
     ! change 0 with tolerance to prevent division by zero in case species
     ! density, molar concentration or total density = 0. 
@@ -334,7 +340,10 @@ contains
   end subroutine compute_chi_local
 
   subroutine compute_chi_lapack(Lambda,chidag,W)
-         
+    
+    ! Donev: It is more efficient to declare these arrays as (nspecies,nspecies) and not (:,:)
+    ! This is subtle Fortran rules that you need to read the book I gave you to understand (and you should)
+    ! but as a general rule any array that is of size (nspecies) or (nspecies,nspecies) should just be declared as such     
     real(kind=dp_t)  :: Lambda(:,:)
     real(kind=dp_t)  :: chidag(:,:)
     real(kind=dp_t)  :: W(:)
@@ -528,12 +537,15 @@ contains
    
   end subroutine compute_rhoWchiGama_3d
   
+  ! Donev: Even though you do not need them in this particular calculation
+  ! I recommend that you always pass *all* primitive variables so they are there if needed
+  ! In particular molconc and molmtot are useful and should be passed even if not used
   subroutine compute_rhoWchiGama_local(rho,rho_tot,chi,Gama,rhoWchiGama,i,j)
    
-    integer,         intent(in)   :: i,j
+    integer,         intent(in)   :: i,j ! Donev: Same comment here, remove all i,j's in all local routines
     real(kind=dp_t), intent(in)   :: rho(nspecies)            
     real(kind=dp_t), intent(in)   :: rho_tot                  
-    real(kind=dp_t), intent(in)   :: chi(nspecies**2)         
+    real(kind=dp_t), intent(in)   :: chi(nspecies**2) ! Donev: Same comment here, make nspecies,nspecies        
     real(kind=dp_t), intent(in)   :: Gama(nspecies**2)        
     real(kind=dp_t), intent(out)  :: rhoWchiGama(nspecies**2) 
  
@@ -610,5 +622,12 @@ contains
     Xout_ij = Xin_ij
   
   end subroutine set_Xij 
+
+  ! Donev: Write also a routine that computes Lonsager:
+  ! subroutine compute_rhoWchiGama_local(rho,rho_tot,molmtot,chi,Lonsager)
+  ! Note that here you will need molmtot at the very least
+  ! Add a cell-centered multifab for Lonsager in the advance routine and test it
+  ! Print Lonsager and compare to what I sent based on Maple script
+  ! That way we have it working
 
 end module convert_variables_module

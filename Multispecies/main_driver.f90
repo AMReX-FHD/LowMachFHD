@@ -134,8 +134,8 @@ subroutine main_driver()
  
   ! bc_tower structure in memory 
   ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = scal_bc_comp+1,
-  ! mol_frac = rho_tot+2, diff_coeff=tran_bc_comp; num_tran_bc_comp = 1
-  ! rules for scalar variables is 3 (1 rho_tot, 1 rho_i and 1 mol_frac)
+  ! mol_frac = scal_bc_comp+2, diff_coeff=tran_bc_comp; num_tran_bc_comp = 1
+  ! number of scalar variables is 3 (1 rho_tot, 1 rho_i and 1 mol_frac)
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, num_scal_bc_in=3, num_tran_bc_in=1)
 
   do n=1,nlevs
@@ -161,7 +161,8 @@ subroutine main_driver()
   !=====================================================================
   ! Read molar mass from input file (constant throughout space and time)
   !=====================================================================
-  molmass(1:nspecies) = 0.0d0  
+  molmass(1:nspecies) = 0.0d0 
+  ! Donev: You can write this more simply as molmass(1:nspecies)=molmass_in(1:nspecies)
   do n=1, nspecies
      molmass(n) = molmass_in(n)  
   enddo
