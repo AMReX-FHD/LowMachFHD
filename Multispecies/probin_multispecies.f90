@@ -56,7 +56,7 @@ contains
     narg = command_argument_count()
 
     ! here we set some random values to be replaced from the input file
-    nspecies          = 3 ! Default should be 2 species
+    nspecies          = 2 
     max_step          = 10000
     cfl               = 1.0d0
     chi               = 1.0d0
@@ -72,7 +72,7 @@ contains
     Temp              = 1.0d0
     Press             = 1.0d0
     fraction_tolerance= 1e-13 
-    start_time        = 1.0d0 ! Donev: Default start time should be zero
+    start_time        = 0.0d0 
  
     ! read from input file 
     need_inputs = .true.

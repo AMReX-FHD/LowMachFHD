@@ -161,11 +161,7 @@ subroutine main_driver()
   !=====================================================================
   ! Read molar mass from input file (constant throughout space and time)
   !=====================================================================
-  molmass(1:nspecies) = 0.0d0 
-  ! Donev: You can write this more simply as molmass(1:nspecies)=molmass_in(1:nspecies)
-  do n=1, nspecies
-     molmass(n) = molmass_in(n)  
-  enddo
+  molmass(1:nspecies) = molmass_in(1:nspecies)  
 
   ! initialize the time 
   time = start_time    

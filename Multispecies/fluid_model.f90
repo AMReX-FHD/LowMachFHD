@@ -111,7 +111,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
 
              call compute_D_MSGama_local(rho(i,j,k,:),rho_tot(i,j,k),molarconc(i,j,k,:),&
-                                      molmtot(i,j,k),D_MS(i,j,k,:),Gama(i,j,k,:))
+                                         molmtot(i,j,k),D_MS(i,j,k,:),Gama(i,j,k,:))
 
           end do
        end do
@@ -125,41 +125,26 @@ contains
     real(kind=dp_t), intent(in)   :: rho_tot
     real(kind=dp_t), intent(in)   :: molarconc(nspecies)
     real(kind=dp_t), intent(in)   :: molmtot
-    real(kind=dp_t), intent(out)  :: D_MS(nspecies**2) ! Donev: Same comment here -- this should be nspecies,nspecies here
-    real(kind=dp_t), intent(out)  :: Gama(nspecies**2)
+    real(kind=dp_t), intent(out)  :: D_MS(nspecies,nspecies) 
+    real(kind=dp_t), intent(out)  :: Gama(nspecies,nspecies)
  
     ! local varialbes
-    real(kind=dp_t), dimension(nspecies,nspecies) :: D_MS_local,Gama_local
-    integer                                       :: n,row,column
+    integer                       :: n,row,column
 
     ! populate D_MS,Gama; for initial case doesn't change in each cell. 
     n=0; 
     do row=1, nspecies  
        do column=1, row-1
           n=n+1
-          D_MS_local(row, column) = Dbar_in(n)
-          D_MS_local(column, row) = D_MS_local(row, column) ! symmetric
-          Gama_local(row, column) = 0.d0       
-          Gama_local(column, row) = Gama_local(row, column) ! symmetric
+          D_MS(row, column) = Dbar_in(n)
+          D_MS(column, row) = D_MS(row, column) ! symmetric
+          Gama(row, column) = 0.d0       
+          Gama(column, row) = Gama(row, column) ! symmetric
        enddo
-       D_MS_local(row, row) = 0.d0   ! self-diffusion is zero
-       Gama_local(row, row) = 1.d0   ! set to unit matrix for time being
+       D_MS(row, row) = 0.d0   ! self-diffusion is zero
+       Gama(row, row) = 1.d0   ! set to unit matrix for time being
     enddo
 
-    ! do the rank conversion 
-    call set_Xij(D_MS(:), D_MS_local)
-    call set_Xij(Gama(:), Gama_local)
-  
   end subroutine compute_D_MSGama_local
-
-  subroutine set_Xij(Xout_ij, Xin_ij)
-        
-    real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: Xin_ij
-    real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: Xout_ij  
-   
-    ! reshape array into matrix without doing index algebra
-    Xout_ij = Xin_ij
-  
-  end subroutine set_Xij 
 
 end module fluid_model_module

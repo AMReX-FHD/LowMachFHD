@@ -46,15 +46,6 @@ contains
        enddo
     enddo 
 
-    ! initialize local multifabs to zero 
-    ! Donev: This is not necessary, and it may hide bugs such as uninitialized variables
-    ! Remove all places where you set multifabs to zero unless it is actually required
-    do n=1,nlevs
-       do i=1,dm
-          call setval(rhoWchiGama_face(n,i),0.d0,all=.true.)
-       enddo
-    enddo 
-
     ! calculate face-centrered grad(molarconc) 
     call compute_grad(mla, molarconc, flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
                       the_bc_level, .false.)

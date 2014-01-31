@@ -15,7 +15,7 @@ module advance_module
 
   private
 
-  public :: advance
+  public :: advance, compute_fluxdiv
 
 contains
 
@@ -35,6 +35,7 @@ contains
     type(multifab)               :: molarconc(mla%nlevel)   ! molar concentration
     type(multifab)               :: molmtot(mla%nlevel)     ! total molar mass
     type(multifab)               :: chi(mla%nlevel)         ! Chi-matrix
+    type(multifab)               :: Lonsager(mla%nlevel)    ! Onsager matrix for fluctuations
     type(multifab)               :: D_MS(mla%nlevel)        ! D_MS-matrix
     type(multifab)               :: Gama(mla%nlevel)        ! Gama-matrix
     type(multifab)               :: rhoWchiGama(mla%nlevel) ! rho*W*chi*Gama
@@ -54,25 +55,12 @@ contains
        call multifab_build(molmtot(n),     mla%la(n), 1,           rho(n)%ng)  
        call multifab_build(molarconc(n),   mla%la(n), nspecies,    rho(n)%ng) 
        call multifab_build(chi(n),         mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(Lonsager(n),    mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(D_MS(n),        mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(Gama(n),        mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(rhoWchiGama(n), mla%la(n), nspecies**2, rho(n)%ng)
     enddo
        
-    ! free up memory 
-    do n=1,nlevs
-       call setval(rhonew(n),      0.d0, all=.true.)
-       call setval(rho_tot(n),     0.d0, all=.true.)
-       call setval(fluxdiv(n),     0.d0, all=.true.)
-       call setval(fluxdivnew(n),  0.d0, all=.true.)
-       call setval(molmtot(n),     0.d0, all=.true.)
-       call setval(molarconc(n),   0.d0, all=.true.)
-       call setval(chi(n),         0.d0, all=.true.)
-       call setval(D_MS(n),        0.d0, all=.true.)
-       call setval(Gama(n),        0.d0, all=.true.)
-       call setval(rhoWchiGama(n), 0.d0, all=.true.)
-    enddo 
-
    !==================================================================================
     select case(timeinteg_type)
    !==================================================================================
@@ -85,32 +73,10 @@ contains
       
       stage_time = time   
 
-      ! Donev: The following combination of calls appears many times in this code, and it will appear many times in other codes also
-      ! So it is good to make a helper routine compute_fluxdiv
-      ! which computes the total flux div given rho
-      ! It will call the sequence of routines convert_cons_to_prim up to external_source
-      ! Then you can just call this routine whenever you need to do this sequence of steps
-      ! The code will be much simpler and more readable
-      
-      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
-      call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
-      
-      ! populate D_MS, Gama 
-      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+      ! compute the total div of flux from rho
+      call compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+                           Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
 
-      ! compute chi 
-      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
-      
-      ! compute rho*W*chi*Gama
-      call compute_rhoWchiGama(mla,rho,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
- 
-      ! compute fluxdiv that contain results in interior only while rho contains ghost values filled in 
-      ! init or end of this code
-      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
-
-      ! compute external forcing for manufactured solution and add to fluxdiv
-      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
-      
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
          call saxpy(rho(n),dt,fluxdiv(n))
@@ -132,23 +98,9 @@ contains
       ! Euler Predictor step
       !===================== 
       
-      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
-      call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
-      
-      ! populate D_MS, Gama 
-      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
-
-      ! compute chi 
-      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
-      
-      ! compute rho*W*chi*Gama
-      call compute_rhoWchiGama(mla,rho,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
-
-      ! compute fluxdiv 
-      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
-      
-      ! compute external forcing for manufactured solution and add to fluxdiv
-      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
+      ! compute the total div of flux from rho
+      call compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+                           Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
@@ -167,25 +119,11 @@ contains
       ! Trapezoidal Corrector step
       !===========================
       
-      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rhonew
-      call convert_cons_to_prim(mla,rhonew,rho_tot,molarconc,molmtot,molmass,the_bc_level)
-      
-      ! populate D_MS, Gama 
-      call fluid_model(mla,rhonew,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
-
-      ! compute chi 
-      call compute_chi(mla,rhonew,rho_tot,molarconc,chi,D_MS,the_bc_level)
-      
-      ! compute rhonew*W*chi*Gama
-      call compute_rhoWchiGama(mla,rhonew,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
-
-      ! compute fluxdiv(t+1,rhonew(t+1)) 
-      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
-
-      ! compute external forcing for manufactured solution and add to fluxdiv
+      ! compute the total div of flux from rho
       stage_time = time + dt  
-      call external_source(mla,rhonew,fluxdivnew,prob_lo,prob_hi,dx,stage_time)
-      
+      call compute_fluxdiv(mla,rhonew,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+                           Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
+
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
          call saxpy(rho(n),dt*0.5d0,fluxdiv(n))
@@ -203,26 +141,12 @@ contains
       do n=1,nlevs
          call saxpy(rhonew(n),1.0d0,rho(n))
       enddo 
- 
-      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
-      call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
-      
-      ! populate D_MS, Gama 
-      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
 
-      ! compute chi 
-      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
-      
-      ! compute rho*W*chi*Gama
-      call compute_rhoWchiGama(mla,rho,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
+      ! compute the total div of flux from rho
+      stage_time = time 
+      call compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+                           Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
  
-      ! compute fluxdiv(t) from rho(t); (interior only) 
-      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
-      
-      ! compute external forcing for manufactured solution and add to fluxdiv
-      stage_time = time
-      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
-      
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
          call saxpy(rhonew(n),0.5d0*dt,fluxdiv(n))
@@ -236,25 +160,11 @@ contains
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
       enddo
 
-      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rhonew
-      call convert_cons_to_prim(mla,rhonew,rho_tot,molarconc,molmtot,molmass,the_bc_level)
-      
-      ! populate D_MS, Gama 
-      call fluid_model(mla,rhonew,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
-
-      ! compute chi 
-      call compute_chi(mla,rhonew,rho_tot,molarconc,chi,D_MS,the_bc_level)
-      
-      ! compute rhonew*W*chi*Gama
-      call compute_rhoWchiGama(mla,rhonew,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
-
-      ! compute new div-of-flux 
-      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
-
-      ! compute external forcing for manufactured solution and add to fluxdiv
+      ! compute the total div of flux from rho
       stage_time = time + dt/2.0d0
-      call external_source(mla,rhonew,fluxdivnew,prob_lo,prob_hi,dx,stage_time)
-      
+      call compute_fluxdiv(mla,rhonew,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+                           Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
+ 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
          call saxpy(rho(n),dt,fluxdivnew(n))
@@ -276,26 +186,12 @@ contains
       !===========
       ! 1st stage
       !===========
- 
-      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
-      call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
-      
-      ! populate D_MS, Gama 
-      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
 
-      ! compute chi 
-      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
-      
-      ! compute rho*W*chi*Gama
-      call compute_rhoWchiGama(mla,rho,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
-
-      ! compute fluxdiv(t) from rho(t) (interior only) 
-      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
-      
-      ! compute external forcing for manufactured solution and add to fluxdiv
+      ! compute the total div of flux from rho
       stage_time = time 
-      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
-      
+      call compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+                           Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
+ 
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
          call saxpy(rhonew(n),dt,fluxdiv(n))
@@ -309,25 +205,11 @@ contains
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:),.false.)
       enddo
 
-      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rhonew
-      call convert_cons_to_prim(mla,rhonew,rho_tot,molarconc,molmtot,molmass,the_bc_level)
-      
-      ! populate D_MS, Gama 
-      call fluid_model(mla,rhonew,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
-
-      ! compute chi 
-      call compute_chi(mla,rhonew,rho_tot,molarconc,chi,D_MS,the_bc_level)
-      
-      ! compute rhonew*W*chi*Gama
-      call compute_rhoWchiGama(mla,rhonew,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
-
-      ! compute fluxdivnew(t+dt,rhonew(t+dt))
-      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
-
-      ! compute external forcing for manufactured solution and add to fluxdiv
+      ! compute the total div of flux from rho
       stage_time = time + dt
-      call external_source(mla,rhonew,fluxdivnew,prob_lo,prob_hi,dx,stage_time)
-      
+      call compute_fluxdiv(mla,rhonew,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+                           Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
+
       !===========
       ! 2nd stage
       !===========
@@ -351,26 +233,12 @@ contains
       do n=1,nlevs
          call setval(fluxdivnew(n), 0.d0, all=.true.)
       enddo 
- 
-      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rhonew
-      call convert_cons_to_prim(mla,rhonew,rho_tot,molarconc,molmtot,molmass,the_bc_level)
-      
-      ! populate D_MS, Gama 
-      call fluid_model(mla,rhonew,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
 
-      ! compute chi 
-      call compute_chi(mla,rhonew,rho_tot,molarconc,chi,D_MS,the_bc_level)
-      
-      ! compute rhonew*W*chi*Gama
-      call compute_rhoWchiGama(mla,rhonew,rho_tot,chi,Gama,rhoWchiGama,the_bc_level)
- 
-      ! compute fluxdiv(t+dt/2,rhonew(t+dt/2)) 
-      call diffusive_fluxdiv(mla,rhonew,fluxdivnew,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
-
-      ! compute external forcing for manufactured solution and add to fluxdiv
+      ! compute the total div of flux from rho
       stage_time = time + dt/2.0d0
-      call external_source(mla,rhonew,fluxdivnew,prob_lo,prob_hi,dx,stage_time)
-      
+      call compute_fluxdiv(mla,rhonew,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+                           Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
+
       !===========
       ! 3rd stage
       !===========
@@ -409,5 +277,49 @@ contains
     enddo
    
   end subroutine advance
+
+  subroutine compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+                             Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
+       
+      type(ml_layout), intent(in   ) :: mla
+      type(multifab) , intent(in   ) :: rho(:)
+      type(multifab) , intent(inout) :: fluxdiv(:)
+      type(multifab) , intent(inout) :: rho_tot(:)
+      type(multifab) , intent(inout) :: molarconc(:)
+      type(multifab) , intent(inout) :: molmtot(:)
+      real(kind=dp_t), intent(in   ) :: molmass(nspecies) 
+      type(multifab) , intent(inout) :: chi(:)
+      type(multifab) , intent(inout) :: Lonsager(:)
+      type(multifab) , intent(inout) :: Gama(:)
+      type(multifab) , intent(inout) :: D_MS(:)
+      real(kind=dp_t), intent(in   ) :: dx(:,:)
+      type(multifab) , intent(inout) :: rhoWchiGama(:)
+      real(kind=dp_t), intent(in   ) :: stage_time 
+      real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 
+      type(bc_level) , intent(in   ) :: the_bc_level(:)
+
+      ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
+      call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
+      
+      ! populate D_MS, Gama 
+      call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+
+      ! compute chi 
+      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
+      
+      ! compute rho*W*chi*Gama
+      call compute_rhoWchiGama(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama,the_bc_level)
+ 
+      ! compute Lonsager
+      call compute_Lonsager(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,Lonsager,the_bc_level)
+      
+      ! compute fluxdiv that contain results in interior only while rho contains ghost values filled in 
+      ! init or end of this code
+      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
+
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
+     
+    end subroutine compute_fluxdiv
 
 end module advance_module 
