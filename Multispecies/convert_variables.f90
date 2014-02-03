@@ -570,6 +570,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     ! compute Onsager matrix L
     do column=1, nspecies
        do row=1, nspecies
+          ! Donev: This will need to be modified when we go to variable temperature
           Lonsager(row, column) = rho_tot*rho_tot*Temp*W(row)*chi(row,column)*W(column)/Press
        enddo
     enddo
