@@ -203,11 +203,9 @@ contains
       enddo
       
       deallocate(diff,smin,smax,sumdif,sgndif,kdp)
-
       return
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! unlimited version is done here
+! comment out these two lines to add in basic limiting
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -317,6 +315,8 @@ contains
                        -sc(i,j,2) - sc(i,j,3) ) / (hx*hy)
         enddo
       enddo
+
+      deallocate(diff,smin,smax,sumdif,sgndif,kdp)
 
       end subroutine bdsslope_2d
 
