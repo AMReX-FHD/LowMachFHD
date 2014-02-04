@@ -562,6 +562,7 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(s_update(n))
+       call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dp(n))
        call multifab_destroy(divu(n))
