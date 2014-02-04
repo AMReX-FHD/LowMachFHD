@@ -427,7 +427,7 @@ subroutine main_driver()
 
          ! write plotfile
          if ( (plot_int > 0) .and. &
-              ( mod(istep-n_steps_skip-1,plot_int) .eq. 0) ) then
+              ( mod(istep-n_steps_skip,plot_int) .eq. 0) ) then
             call write_plotfile(mla,mnew,umac,snew,pnew,dx,time,istep-n_steps_skip)
          end if
 
