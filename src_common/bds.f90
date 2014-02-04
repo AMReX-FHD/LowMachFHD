@@ -15,7 +15,7 @@ module bds_module
  
 contains
 
-      subroutine bds(mla,umac,s,s_update,dx,dt,start_comp,num_comp)
+      subroutine bds(mla,umac,s,s_update,force,dx,dt,start_comp,num_comp)
       ! modified for having the quadratic terms as well
       ! slxx and slyy are 2nd derivatives
       ! ave is the new constant for the polynomial
@@ -23,6 +23,7 @@ contains
       type(ml_layout), intent(in   ) :: mla
       type(multifab) , intent(in   ) :: s(:)
       type(multifab) , intent(inout) :: s_update(:)
+      type(multifab) , intent(in   ) :: force(:)
       type(multifab) , intent(in   ) :: umac(:,:)
       real(kind=dp_t), intent(in   ) :: dx(:,:),dt
       integer        , intent(in   ) :: start_comp, num_comp
@@ -33,6 +34,7 @@ contains
       real(kind=dp_t), pointer :: vadvp(:,:,:,:)
       real(kind=dp_t), pointer ::   sop(:,:,:,:)
       real(kind=dp_t), pointer ::   snp(:,:,:,:)
+      real(kind=dp_t), pointer ::    fp(:,:,:,:)
       real(kind=dp_t), pointer ::  avep(:,:,:,:)
       real(kind=dp_t), pointer ::  slxp(:,:,:,:)
       real(kind=dp_t), pointer ::  slyp(:,:,:,:)
@@ -42,7 +44,7 @@ contains
       real(kind=dp_t), pointer ::   sip(:,:,:,:)
       real(kind=dp_t), pointer ::   scp(:,:,:,:)
 
-      integer :: dm,ng,ng_u,n,lev,i
+      integer :: dm,ng,ng_u,ng_f,n,lev,i
       integer :: lo(2),hi(2)
 
       ! Only worry about one level
@@ -64,6 +66,7 @@ contains
 
       ng = s(1)%ng 
       ng_u = s_update(1)%ng
+      ng_f = force(1)%ng
       dm = mla%dim
 
       do i = 1, nfabs(s(lev))
@@ -72,6 +75,8 @@ contains
 
          sop   => dataptr(s(lev) , i)
          snp   => dataptr(s_update(lev), i)
+
+         fp    => dataptr(force(lev), i)
 
          avep  => dataptr(ave , i)
          slxp  => dataptr(slx , i)
@@ -93,6 +98,7 @@ contains
                                   sip(:,:,1,1), scp(:,:,1,:), dx(lev,:)) 
 
                  call  bdsconc_2d(lo, hi, sop(:,:,1,n), ng, snp(:,:,1,n), ng_u, &
+                                  fp(:,:,1,n), ng_f, &
                                   avep(:,:,1,1), slxp(:,:,1,1), slyp(:,:,1,1), slxyp(:,:,1,1), &
                                   slxxp(:,:,1,1), slyyp(:,:,1,1), &
                                    sip(:,:,1,1),  scp(:,:,1,:), &
@@ -320,11 +326,13 @@ contains
       ! ***********************************************
 
 
-      subroutine bdsconc_2d(lo,hi,s,ng,s_update,ng_u,ave,slx,sly,slxy,slxx,slyy,sint,sc,uadv,vadv,dx,dt)
+      subroutine bdsconc_2d(lo,hi,s,ng,s_update,ng_u,force,ng_f, &
+                            ave,slx,sly,slxy,slxx,slyy,sint,sc,uadv,vadv,dx,dt)
 
-      integer        ,intent(in   ) :: lo(:), hi(:), ng, ng_u
+      integer        ,intent(in   ) :: lo(:), hi(:), ng, ng_u, ng_f
       real(kind=dp_t),intent(in   ) ::    s(lo(1)-ng:,lo(2)-ng:)
       real(kind=dp_t),intent(inout) ::   s_update(lo(1)-ng_u:,lo(2)-ng_u:)
+      real(kind=dp_t),intent(in   ) ::      force(lo(1)-ng_f:,lo(2)-ng_f:)
       real(kind=dp_t),intent(in   ) ::  ave(lo(1)- 1:,lo(2)- 1:)
       real(kind=dp_t),intent(in   ) ::  slx(lo(1)- 1:,lo(2)- 1:)
       real(kind=dp_t),intent(in   ) ::  sly(lo(1)- 1:,lo(2)- 1:)
@@ -348,7 +356,7 @@ contains
       
       real(kind=dp_t) :: hx,hy,dt3rd,hxs,hys
       real(kind=dp_t) :: vtrans,stem,vaddif,vdif,vmult
-      real(kind=dp_t) :: isign, jsign
+      real(kind=dp_t) :: isign, jsign, force_local
       integer i,j,is,ie,js,je
       integer iup,jup
 
@@ -492,9 +500,11 @@ contains
           if (uadv(i+1,j) .gt. 0) then 
              iup   = i
              isign = 1.d0
+             force_local = force(i,j)
           else
              iup   = i+1
              isign = -1.d0
+             force_local = force(i+1,j)
           end if
 
 ! gamm and gamp are updated to handle quadratic terms
@@ -514,7 +524,7 @@ contains
           divu =  &
             (uadv(iup+1,j)-uadv(iup,j))/hx +  &
             (vadv(iup,j+1)-vadv(iup,j))/hy 
-          siphj(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*stem*divu
+          siphj(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*(stem*divu + force_local)
 
         enddo
       enddo
@@ -629,9 +639,11 @@ contains
           if (vadv(i,j+1) .gt. 0) then 
              jup   = j
              jsign = 1.d0
+             force_local = force(i,j)
           else
              jup   = j+1
              jsign = -1.d0
+             force_local = force(i,j+1)
           end if
 
           hys = hy*jsign
@@ -645,7 +657,7 @@ contains
           vaddif = stem*0.5d0*dt*(vadv(i,jup+1) - vadv(i,jup))/hy
           divu =  (uadv(i+1,jup)-uadv(i,jup))/hx +  &
                   (vadv(i,jup+1)-vadv(i,jup))/hy 
-          sijph(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*stem*divu
+          sijph(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*(stem*divu + force_local)
 
         enddo
       enddo
