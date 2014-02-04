@@ -63,6 +63,7 @@ contains
 
     ! local
     type(multifab) ::    s_update(mla%nlevel)
+    type(multifab) ::   bds_force(mla%nlevel)
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
@@ -101,6 +102,7 @@ contains
     
     do n=1,nlevs
        call multifab_build(   s_update(n),mla%la(n),nscal,0)
+       call multifab_build(  bds_force(n),mla%la(n),nscal,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
        call multifab_build(         dp(n),mla%la(n),1    ,1)
        call multifab_build(       divu(n),mla%la(n),1    ,0)
@@ -171,6 +173,7 @@ contains
 
     do n=1,nlevs
        call setval(s_update(n),0.d0,all=.true.)
+       call setval(bds_force(n),0.d0,all=.true.)
        do i=1,dm
           call setval(m_a_fluxdiv_old(n,i),0.d0,all=.true.)
           call setval(m_d_fluxdiv_old(n,i),0.d0,all=.true.)
@@ -200,7 +203,7 @@ contains
 
     ! set s_update to A^n for scalars
     if (use_bds) then
-!       call bds(mla,umac_old,sold,s_update,dx,fixed_dt,1,nscal)
+       call bds(mla,umac_old,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
     else
        call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,nscal)
     end if
@@ -481,7 +484,7 @@ contains
     ! s_update already contains D^{*,n+1} + St^{*,n+1} for rho1 from above
     ! add A^{*,n+1} for s to s_update
     if (use_bds) then
-!       call bds(mla,umac,sold,s_update,dx,fixed_dt,1,nscal)
+       call bds(mla,umac,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
     else
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
     end if
@@ -764,6 +767,7 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(s_update(n))
+       call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dp(n))
        call multifab_destroy(divu(n))
