@@ -20,6 +20,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: fixed_dt
+  use probin_module, only: use_bds
 
   use analysis_module
 
@@ -56,6 +57,7 @@ contains
 
     ! local
     type(multifab) ::    s_update(mla%nlevel)
+    type(multifab) ::   bds_force(mla%nlevel)
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
@@ -85,6 +87,7 @@ contains
     
     do n=1,nlevs
        call multifab_build(   s_update(n),mla%la(n),nscal,0)
+       call multifab_build(  bds_force(n),mla%la(n),nscal,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
        call multifab_build(         dp(n),mla%la(n),1    ,1)
        call multifab_build(       divu(n),mla%la(n),1    ,0)
@@ -146,6 +149,7 @@ contains
 
     do n=1,nlevs
        call setval(s_update(n),0.d0,all=.true.)
+       call setval(bds_force(n),0.d0,all=.true.)
        do i=1,dm
           call setval(dumac(n,i),0.d0,all=.true.)
        end do
@@ -298,8 +302,21 @@ contains
     ! Step 3 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! set s_update to A^n for scalars
-    call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
+    if (use_bds) then
+
+       do n=1,nlevs
+          ! AJN FIXME - ghost cells will stay set zero
+          call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
+       end do
+
+       call bds(mla,umac,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
+
+    else
+
+       ! set s_update to A^n for scalars
+       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
+
+    end if
 
     ! compute s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
     ! store result in snew (we will later add sold and divide by 2)
@@ -484,8 +501,17 @@ contains
     ! Step 7 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! set s_update to A^{*,n+1/2} for scalars
-    call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
+    if (use_bds) then
+
+       ! AJN FIXME?  Keep old bds_force, use updated umac?
+       call bds(mla,umac,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
+
+    else
+
+       ! set s_update to A^{*,n+1/2} for scalars
+       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
+
+    end if
 
     ! compute s^{n+1} = s^n + dt * (A^{*,n+1/2} + D^{*,n+1/2} + St^{*,n+1/2})
     do n=1,nlevs
