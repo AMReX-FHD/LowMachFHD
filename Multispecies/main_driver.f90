@@ -202,6 +202,12 @@ subroutine main_driver()
      ! write plotfile at specific intervals
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
         call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
+
+        ! for checking diff between rho and rho_exact
+        do n=1,nlevs
+           call saxpy(rho_exact(n),-1.0d0,rho(n))
+        enddo
+        
         ! for checking analytic solution with visit
         !call write_plotfile(mla,rho_exact,istep,dx,time,prob_lo,prob_hi)
      end if

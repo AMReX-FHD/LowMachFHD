@@ -66,15 +66,16 @@ contains
 
     ! local variables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,r,L(2),D,r_temp
+    real(kind=dp_t)  :: x,y,r,L(2),D12,D23,r_temp,r_temp1
 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
+    D12    = Dbar_in(1)
+    D23    = Dbar_in(3)
    
-    !print*, lbound(fluxdiv), ubound(fluxdiv) 
     select case(init_type)
-    case(4)
-     
-     D = Dbar_in(1)
+    
+    !==== for m1 = m2 = m and m1 != m2 != m, 2 species ====!
+    case(4) 
 
      ! for specific box, now start loops over alloted cells    
      do j=lo(2), hi(2)
@@ -84,10 +85,9 @@ contains
  
              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
                
-             ! for m1 = m2 = m and m1 != m2 != m  (for 2-species)
-             r_temp = (dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*D*time))*(16.0d0*beta*D**2*&
-                      dexp(r**2/(4.0d0*D))*M_PI*time + alpha*(r**2 + 4.0d0*beta*D*time)))/(64.0d0*&
-                      D**3*M_PI**2*time**2)
+             r_temp = (dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*D12*time))*(16.0d0*beta*D12**2*&
+                      dexp(r**2/(4.0d0*D12))*M_PI*time + alpha*(r**2 + 4.0d0*beta*D12*time)))/(64.0d0*&
+                      D12**3*M_PI**2*time**2)
   
              fluxdiv(i,j,1) = fluxdiv(i,j,1) - r_temp 
              fluxdiv(i,j,2) = fluxdiv(i,j,2) + r_temp
@@ -95,6 +95,35 @@ contains
         enddo
      enddo
    
+    !==== for m2=m3, D12=D13 and Grad(w2)=0, 3 species ====! 
+    case(5) 
+
+     ! for specific box, now start loops over alloted cells    
+     do j=lo(2), hi(2)
+        y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+        do i=lo(1), hi(1)
+           x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+ 
+             r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
+
+             r_temp = -(alpha*(alpha*(D12*molmass_in(1) - D23*molmass_in(2))*(4.0d0*D12 - 2.0d0*r**2) + 4.0d0*&
+                      D12*dexp(r**2/(4.0d0*D12))*(-0.9d0*D12*molmass_in(1) - 0.1*D23*molmass_in(2))*M_PI*(4.0d0*&
+                      D12 - r**2)))/(64.0d0*D12**4*dexp(r**2/(2.0d0*D12))*molmass_in(1)*M_PI**2)
+ 
+             r_temp1 = (beta*D12**3*(D12*(-0.9d0*D12*molmass_in(1) - 0.1d0*D23*molmass_in(2)) +& 
+                       (alpha*(0.07957747154594767*D12*molmass_in(1) - 0.07957747154594767*D23*molmass_in(2)))/&
+                       dexp(r**2/(4.*D12))) + (alpha*(D12 - D23)*(alpha*(D12*molmass_in(1) - D23*molmass_in(2))*&
+                       (4.0d0*D12 - 2.0d0*r**2) + 4.0d0*D12*dexp(r**2/(4.0d0*D12))*(-0.9d0*D12*molmass_in(1) -& 
+                       0.1d0*D23*molmass_in(2))*M_PI*(4.0d0*D12 - r**2)))/(64.0d0*dexp(r**2/(2.0d0*D12))*&
+                       M_PI**2))/(D12**5*dexp(beta*time)*molmass_in(1))           
+            
+             fluxdiv(i,j,1) = fluxdiv(i,j,1) + r_temp 
+             fluxdiv(i,j,2) = fluxdiv(i,j,2) + r_temp1
+             fluxdiv(i,j,3) = fluxdiv(i,j,3) - (r_temp + r_temp1)
+
+        enddo
+     enddo
+    
     end select 
 
   end subroutine external_source_2d
@@ -109,15 +138,17 @@ contains
 
     ! local variables
     integer          :: i,j,k
-    real(kind=dp_t)  :: x,y,z,r,L(3),D,r_temp
+    real(kind=dp_t)  :: x,y,z,r,L(3),D12,D23,r_temp,r_temp1
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
+    D12    = Dbar_in(1)
+    D23    = Dbar_in(3)
     
     select case(init_type)
+    
+    !==== for m1 = m2 = m and m1 != m2 != m, 2 species ====!
     case(4)
      
-     D = Dbar_in(1)
-    
      ! for specific box, now start loops over alloted cells    
      do k=lo(3), hi(3)
         z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
@@ -128,11 +159,10 @@ contains
    
               r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2)
               
-              ! for m1 = m2 = m and m1 != m2 != m (for 2-species)
-              r_temp = (dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*D*time))*&
-                       (0.02244839026564582d0*beta*D**3.0d0*dexp(r**2/(4.0d0*D))*(D*&
-                       time)**3.5d0 + alpha*D**1.5d0*(0.0001259825563796855d0*r**2*(D*time)**2.5d0 +& 
-                       0.000503930225518742d0*beta*(D*time)**3.5d0)))/(D**3.0d0*(D*time)**5.0d0) 
+              r_temp = (dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*D12*time))*&
+                       (0.02244839026564582d0*beta*D12**3.0d0*dexp(r**2/(4.0d0*D12))*(D12*&
+                       time)**3.5d0 + alpha*D12**1.5d0*(0.0001259825563796855d0*r**2*(D12*time)**2.5d0 +& 
+                       0.000503930225518742d0*beta*(D12*time)**3.5d0)))/(D12**3.0d0*(D12*time)**5.0d0) 
  
               fluxdiv(i,j,k,1) = fluxdiv(i,j,k,1) - r_temp 
               fluxdiv(i,j,k,2) = fluxdiv(i,j,k,2) + r_temp 
@@ -140,6 +170,40 @@ contains
            enddo
         enddo
      enddo
+
+    !==== for m2=m3, D12=D13 and Grad(w2)=0, 3 species ====! 
+    case(5) 
+    
+     do k=lo(3), hi(3)
+        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        do j=lo(2), hi(2)
+           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           do i=lo(1), hi(1)
+              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0           
+   
+              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2)
+              
+              r_temp = (-3.174320902392128e-8*alpha*(23812.820490470258*alpha*D12**3.0d0*(D12*molmass_in(1) -& 
+                       D23*molmass_in(2))*(D12 - 0.3333333333333333*r**2) - 954702.6841484157*D12**4.5d0*dexp(&
+                       r**2/(4.0d0*D12))*(D12*molmass_in(1) + 0.11111111111111112*D23*molmass_in(2))*(D12 -& 
+                       0.16666666666666666*r**2)))/(D12**8*dexp(r**2/(2.0d0*D12))*molmass_in(1)) 
+                       
+              r_temp1 = (beta*(-0.9d0 - (0.1d0*D23*molmass_in(2))/(D12*molmass_in(1)) + (alpha*(0.02244839026564582*&
+                        D12**2.5d0*molmass_in(1) - 0.02244839026564582*D12**1.5d0*D23*molmass_in(2)))/(D12**4*dexp(&
+                        r**2/(4.0d0*D12))*molmass_in(1))) + (1.4140527961374542e-6*alpha*(D12 - D23)*(534.5594876958439*&
+                        alpha*D12**1.5d0*(D12*molmass_in(1) - D23*molmass_in(2))*(D12 - 0.3333333333333333*r**2) -& 
+                        21431.538441423232*D12**3*dexp(r**2/(4.0d0*D12))*(D12*molmass_in(1) + 0.11111111111111112*&
+                        D23*molmass_in(2))*(D12 - 0.16666666666666666*r**2)))/(D12**7.5d0*dexp(r**2/(2.0d0*D12))*&
+                        molmass_in(1)))/dexp(beta*time)        
+ 
+              fluxdiv(i,j,k,1) = fluxdiv(i,j,k,1) + r_temp 
+              fluxdiv(i,j,k,2) = fluxdiv(i,j,k,2) + r_temp1 
+              fluxdiv(i,j,k,3) = fluxdiv(i,j,k,3) - (r_temp + r_temp1) 
+
+           enddo
+        enddo
+     enddo
+
 
     end select 
  

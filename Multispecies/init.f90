@@ -17,9 +17,10 @@ module init_module
   
   ! init_type: 
   ! 1 = rho in concentric circle (two values inside and outside concentric circular region), 
-  ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y),
-  ! 3 = gaussian spread with total density constant
-  ! 4 = manufactured solution for equal/unequal molarmass,gaussian-rho, time-independent-space-varying totaldensity
+  ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y), 2-species
+  ! 3 = gaussian spread with total density constant, 2-species
+  ! 4 = manufactured solution for 2-species equal/unequal molarmass,gaussian-rho, time-independent-space-varying totaldensity
+  ! 5 = manufactured solution for 3-species unequal mass, time-independent-space-varying totaldensity
 
 contains
   
@@ -80,7 +81,7 @@ contains
  
     ! local varables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,rsq,rhot,L(2)
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2)
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -96,15 +97,11 @@ contains
          do i=lo(1),hi(1)
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
        
-            rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
-
-            if(.false.) then
             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
             if (rsq .lt. L(1)*L(2)*0.1d0) then
                rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
             else
                rho(i,j,1:nspecies) = rho_in(2,1:nspecies)
-            endif
             endif
     
          end do
@@ -118,10 +115,12 @@ contains
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+    
             !rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
             rho(i,j,1) = rho_in(1,1) + 0.001d0*x - 0.002d0*y
             rho(i,j,2) = rho_in(1,2) + 0.003d0*x + 0.001d0*y
             !rho(i,j,3) = rho_in(1,3) + 0.002d0*x - 0.001d0*y
+    
          end do
       end do
 
@@ -163,6 +162,33 @@ contains
          end do
     end do
 
+    case(5)
+    !==================================================================================
+    ! Initializing w1=0.1+alpha*exp(-r^2/4D12)/(4piD12) and w2=exp(-beta*t), 
+    ! rhototal=1+(m2*D23/m1*D12 -1)*w1, m2=m3, D12=D13 where Dbar_in(1)=D12, Dbar_in(2)=D13, 
+    ! Dbar_in(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
+    !==================================================================================
+ 
+    do j=lo(2),hi(2)
+         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         do i=lo(1),hi(1)
+            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+        
+            rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
+            w1  = 0.1d0 +alpha/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
+            w2  = dexp(-beta*time)
+            rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
+            
+            rho(i,j,1) = rhot*w1
+            rho(i,j,2) = rhot*w2 
+            rho(i,j,3) = rhot-rho(i,j,1)-rho(i,j,2)
+            
+            !if(i.eq.4 .and. j.eq.5) print*,'w1=',w1,'w2=',w2,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),&
+            !                        'rho3=',rho(i,j,3),'rhot=',rhot
+
+         end do
+    end do
+
     end select
    
   end subroutine init_rho_2d
@@ -177,7 +203,7 @@ contains
  
     ! local variables
     integer          :: i,j,k
-    real(kind=dp_t)  :: x,y,z,rsq,tau,rhot,L(3)
+    real(kind=dp_t)  :: x,y,z,rsq,tau,rhot,w1,w2,L(3)
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
@@ -278,6 +304,35 @@ contains
            end do
         end do
      end do
+     !$omp end parallel do
+
+     case(5)
+     !==================================================================================
+     ! Initializing w1=0.1+alpha*exp(-r^2/4D12)/(4piD12) and w2=exp(-beta*t), 
+     ! rhototal=1+(m2*D23/m1*D12 -1)*w1, m2=m3, D12=D13 where Dbar_in(1)=D12,
+     ! Dbar_in(2)=D13, Dbar_in(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
+     !==================================================================================
+
+     !$omp parallel private(i,j,k,x,y,z)
+     do k=lo(3),hi(3)
+        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        do j=lo(2),hi(2)
+           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           do i=lo(1),hi(1)
+              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+
+              rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
+              w1  = 0.1d0 +alpha*dexp(-rsq/(4.0d0*Dbar_in(1)))/(4.0d0*M_PI*Dbar_in(1))**1.5d0
+              w2  = dexp(-beta*time)
+              rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
+
+              rho(i,j,k,1) = rhot*w1
+              rho(i,j,k,2) = rhot*w2
+              rho(i,j,k,3) = rhot-rho(i,j,k,1)-rho(i,j,k,2)
+
+           enddo
+        enddo
+     enddo
      !$omp end parallel do
 
     end select
