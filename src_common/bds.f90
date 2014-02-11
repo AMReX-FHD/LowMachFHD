@@ -4,6 +4,7 @@ module bds_module
   use multifab_module
   use ml_layout_module
   use define_bc_module
+  use bc_module
 
   implicit none
 
@@ -13,15 +14,17 @@ module bds_module
 
 contains
 
-  subroutine bds(mla,umac,s,s_update,force,dx,dt,start_comp,num_comp)
+  subroutine bds(mla,umac,s,s_update,force,s_fc,dx,dt,start_comp,num_comp,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: umac(:,:)
     type(multifab) , intent(in   ) :: s(:)
     type(multifab) , intent(inout) :: s_update(:)
     type(multifab) , intent(in   ) :: force(:)
+    type(multifab) , intent(in   ) :: s_fc(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     integer        , intent(in   ) :: start_comp,num_comp
+    type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! this will hold slx, sly, and slxy
     type(multifab) :: slope(mla%nlevel)
@@ -33,8 +36,11 @@ contains
     real(kind=dp_t), pointer ::  uadvp(:,:,:,:)
     real(kind=dp_t), pointer ::  vadvp(:,:,:,:)
     real(kind=dp_t), pointer ::  wadvp(:,:,:,:)
+    real(kind=dp_t), pointer :: spx(:,:,:,:)
+    real(kind=dp_t), pointer :: spy(:,:,:,:)
+    real(kind=dp_t), pointer :: spz(:,:,:,:)
 
-    integer :: dm,ng_s,ng_c,ng_u,ng_v,ng_f,n,i,comp,nlevs
+    integer :: dm,ng_s,ng_c,ng_u,ng_v,ng_f,ng_e,n,i,comp,nlevs,bccomp
     integer :: lo(mla%dim),hi(mla%dim)
 
     nlevs = mla%nlevel
@@ -67,18 +73,22 @@ contains
     ng_c = slope(1)%ng
     ng_v = umac(1,1)%ng
     ng_f = force(1)%ng
+    ng_e = s_fc(1,1)%ng
 
     do n=1,nlevs
        do i = 1, nfabs(s(n))
           sop    => dataptr(s(n) , i)
           sup    => dataptr(s_update(n), i)
           fp     => dataptr(force(n), i)
+          spx => dataptr(s_fc(n,1), i)
+          spy => dataptr(s_fc(n,2), i)
           slopep => dataptr(slope(n), i)
           uadvp  => dataptr(umac(n,1), i)
           vadvp  => dataptr(umac(n,2), i)
           lo =  lwb(get_box(s(n), i))
           hi =  upb(get_box(s(n), i))
           do comp=start_comp,num_comp
+             bccomp = scal_bc_comp+comp-start_comp
              select case (dm)
              case (2)
                 ! only advancing the tracer
@@ -92,9 +102,12 @@ contains
                                 fp(:,:,1,comp), ng_f, &
                                 slopep(:,:,1,:), ng_c, &
                                 uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
-                                dx(n,:), dt)
+                                dx(n,:), dt, &
+                                spx(:,:,1,comp), spy(:,:,1,comp), ng_e, &
+                                the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
              case (3)
                 wadvp  => dataptr(umac(n,3), i)
+                spz => dataptr(s_fc(n,3), i)
                 ! only advancing the tracer
                 call bdsslope_3d(lo, hi, &
                                  sop(:,:,:,comp), ng_s, &
@@ -580,16 +593,20 @@ contains
 
   end subroutine bdsslope_3d
 
-  subroutine bdsconc_2d(lo,hi,s,ng_s,s_update,ng_u,force,ng_f,slope,ng_c,uadv,vadv,ng_v,dx,dt)
+  subroutine bdsconc_2d(lo,hi,s,ng_s,s_update,ng_u,force,ng_f, &
+                        slope,ng_c,uadv,vadv,ng_v,dx,dt,sx,sy,ng_e,bc)
 
-    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_u,ng_c,ng_v,ng_f
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_u,ng_c,ng_v,ng_f,ng_e
     real(kind=dp_t),intent(in   ) ::        s(lo(1)-ng_s:,lo(2)-ng_s:)
     real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t),intent(in   ) :: force(lo(1)-ng_f:,lo(2)-ng_f:)
     real(kind=dp_t),intent(in   ) :: slope(lo(1)-ng_c:,lo(2)-ng_c:,:)
     real(kind=dp_t),intent(in   ) ::  uadv(lo(1)-ng_v:,lo(2)-ng_v:)
     real(kind=dp_t),intent(in   ) ::  vadv(lo(1)-ng_v:,lo(2)-ng_v:)
+    real(kind=dp_t),intent(in   ) :: sx(lo(1)-ng_e:,lo(2)-ng_e:)
+    real(kind=dp_t),intent(in   ) :: sy(lo(1)-ng_e:,lo(2)-ng_e:)
     real(kind=dp_t),intent(in   ) :: dx(:),dt
+    integer        ,intent(in   ) :: bc(:,:)
 
     ! local variables
     real(kind=dp_t),allocatable ::   siphj(:,:)
@@ -715,6 +732,13 @@ contains
        enddo
     enddo
 
+    if (bc(1,1) .eq. EXT_DIR) then
+
+    end if
+
+    if (bc(1,2) .eq. EXT_DIR) then
+
+    end if
 
     do j = lo(2)-1,hi(2) 
        do i = lo(1),hi(1)
@@ -821,6 +845,14 @@ contains
 
        enddo
     enddo
+
+    if (bc(2,1) .eq. EXT_DIR) then
+       sijph(lo(1):hi(1),lo(2)) = sy(lo(1):hi(1),lo(2))
+    end if
+
+    if (bc(2,2) .eq. EXT_DIR) then
+       sijph(lo(1):hi(1),hi(2)+1) = sy(lo(1):hi(1),hi(2)+1)
+    end if
 
     ! advance solution
     ! conservative update
