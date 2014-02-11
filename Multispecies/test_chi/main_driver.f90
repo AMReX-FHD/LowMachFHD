@@ -103,7 +103,9 @@ subroutine test_chi(nspecies)
         call compute_chi_lapack(Lambda,chi,W)
         print*, 'compute chi via inverse/p-inverse'
      else
-        call Dbar2chi_iterative(nspecies,3,D_MS,W,molarconc,chi)
+!       call Dbar2chi_iterative(nspecies,10,D_MS,W,molarconc,chi)
+!       call Dbar2chi_iterative(nspecies,5,D_MS,molmass,molarconc,chi)
+        call Dbar2chi_iterative(nspecies,3,D_MS,molmass,molarconc,chi)
         print*, 'compute chi via iterative methods'
      endif
 
