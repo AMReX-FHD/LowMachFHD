@@ -5,6 +5,7 @@ module bds_module
   use ml_layout_module
   use define_bc_module
   use bc_module
+  use probin_module, only: advection_type
 
   implicit none
 
@@ -187,100 +188,100 @@ contains
           ! sxy
           slope(i,j,3) = ( sint(i+1,j+1) - sint(i+1,j  ) &
                           -sint(i  ,j+1) + sint(i  ,j  ) ) / (hx*hy)
+          
+          ! limit slopes
+          if (advection_type .eq. 2) then
 
-          ! change to TRUE to limit slopes
-          if (.false.) then
+             ! ++ / sint(i+1,j+1)
+             sc(4) = s(i,j) + 0.5d0*(hx*slope(i,j,1) + hy*slope(i,j,2))  &
+                  + 0.25d0*hx*hy*slope(i,j,3)
 
-          ! ++ / sint(i+1,j+1)
-          sc(4) = s(i,j) + 0.5d0*(hx*slope(i,j,1) + hy*slope(i,j,2))  &
-               + 0.25d0*hx*hy*slope(i,j,3)
+             ! +- / sint(i+1,j  )
+             sc(3) = s(i,j) + 0.5d0*(hx*slope(i,j,1) - hy*slope(i,j,2))  &
+                  - 0.25d0*hx*hy*slope(i,j,3)
 
-          ! +- / sint(i+1,j  )
-          sc(3) = s(i,j) + 0.5d0*(hx*slope(i,j,1) - hy*slope(i,j,2))  &
-               - 0.25d0*hx*hy*slope(i,j,3)
+             ! -+ / sint(i  ,j+1)
+             sc(2) = s(i,j) - 0.5d0*(hx*slope(i,j,1) - hy*slope(i,j,2)) &
+                  - 0.25d0*hx*hy*slope(i,j,3)
 
-          ! -+ / sint(i  ,j+1)
-          sc(2) = s(i,j) - 0.5d0*(hx*slope(i,j,1) - hy*slope(i,j,2)) &
-               - 0.25d0*hx*hy*slope(i,j,3)
+             ! -- / sint(i  ,j  )
+             sc(1) = s(i,j) - 0.5d0*(hx*slope(i,j,1) + hy*slope(i,j,2)) &
+                  + 0.25d0*hx*hy*slope(i,j,3)
 
-          ! -- / sint(i  ,j  )
-          sc(1) = s(i,j) - 0.5d0*(hx*slope(i,j,1) + hy*slope(i,j,2)) &
-               + 0.25d0*hx*hy*slope(i,j,3)
+             ! enforce max/min bounds
+             smin(4) = min(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
+             smax(4) = max(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
 
-          ! enforce max/min bounds
-          smin(4) = min(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
-          smax(4) = max(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
+             smin(3) = min(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
+             smax(3) = max(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
 
-          smin(3) = min(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
-          smax(3) = max(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
+             smin(2) = min(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
+             smax(2) = max(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
 
-          smin(2) = min(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
-          smax(2) = max(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
-
-          smin(1) = min(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
-          smax(1) = max(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
-
-          do mm=1,4
-             sc(mm) = max(min(sc(mm), smax(mm)), smin(mm))
-          enddo
-
-          ! iterative loop
-          do ll = 1,3 
-             sumloc = 0.25d0*(sc(4) + sc(3) + sc(2) + sc(1))
-             sumdif = (sumloc - s(i,j))*4.d0
-             sgndif = sign(1.d0,sumdif)
+             smin(1) = min(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
+             smax(1) = max(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
 
              do mm=1,4
-                diff(mm) = (sc(mm) - s(i,j))*sgndif
+                sc(mm) = max(min(sc(mm), smax(mm)), smin(mm))
              enddo
 
-             kdp = 0
+             ! iterative loop
+             do ll = 1,3 
+                sumloc = 0.25d0*(sc(4) + sc(3) + sc(2) + sc(1))
+                sumdif = (sumloc - s(i,j))*4.d0
+                sgndif = sign(1.d0,sumdif)
 
-             do mm=1,4
-                if (diff(mm) .gt. eps) then
-                   kdp = kdp+1
-                end if
-             end do
+                do mm=1,4
+                   diff(mm) = (sc(mm) - s(i,j))*sgndif
+                enddo
 
-             do mm = 1,4 
-                if (kdp.lt.1) then 
-                   div = 1.d0
-                else
-                   div = dble(kdp)
-                end if
+                kdp = 0
 
-                if (diff(mm).gt.eps) then
-                   redfac = sumdif*sgndif/div
-                   kdp = kdp-1
-                else
-                   redfac = 0.d0
-                end if
+                do mm=1,4
+                   if (diff(mm) .gt. eps) then
+                      kdp = kdp+1
+                   end if
+                end do
 
-                if (sgndif .gt. 0.d0) then
-                   redmax = sc(mm) - smin(mm)
-                else
-                   redmax = smax(mm) - sc(mm)
-                end if
+                do mm = 1,4 
+                   if (kdp.lt.1) then 
+                      div = 1.d0
+                   else
+                      div = dble(kdp)
+                   end if
 
-                redfac = min(redfac,redmax)
-                sumdif = sumdif - redfac*sgndif
-                sc(mm) = sc(mm) - redfac*sgndif
+                   if (diff(mm).gt.eps) then
+                      redfac = sumdif*sgndif/div
+                      kdp = kdp-1
+                   else
+                      redfac = 0.d0
+                   end if
+
+                   if (sgndif .gt. 0.d0) then
+                      redmax = sc(mm) - smin(mm)
+                   else
+                      redmax = smax(mm) - sc(mm)
+                   end if
+
+                   redfac = min(redfac,redmax)
+                   sumdif = sumdif - redfac*sgndif
+                   sc(mm) = sc(mm) - redfac*sgndif
+                enddo
              enddo
-          enddo
 
-          ! final slopes
+             ! final slopes
 
-          ! sx
-          slope(i,j,1) = 0.5d0*( sc(4) + sc(3) &
-                                -sc(1) - sc(2))/hx
+             ! sx
+             slope(i,j,1) = 0.5d0*( sc(4) + sc(3) &
+                                   -sc(1) - sc(2))/hx
 
-          ! sy
-          slope(i,j,2) = 0.5d0*( sc(4) + sc(2) &
-                                -sc(1) - sc(3))/hy
+             ! sy
+             slope(i,j,2) = 0.5d0*( sc(4) + sc(2) &
+                                   -sc(1) - sc(3))/hy
 
-          ! sxy
-          slope(i,j,3) = ( sc(1) + sc(4) &
-                          -sc(2) - sc(3) ) / (hx*hy)
+             ! sxy
+             slope(i,j,3) = ( sc(1) + sc(4) &
+                             -sc(2) - sc(3) ) / (hx*hy)
 
           end if
 
@@ -403,188 +404,188 @@ contains
                                +sint(i  ,j  ,k+1) - sint(i+1,j+1,k  ) - sint(i+1,j  ,k+1) &
                                -sint(i  ,j+1,k+1) + sint(i+1,j+1,k+1) ) / (hx*hy*hz)
 
-             ! change to TRUE to limit slopes
-             if (.false.) then
+             ! limit slopes
+             if (advection_type .eq. 2) then
 
-             ! +++ / sint(i+1,j+1,k+1)
-             sc(8) = s(i,j,k) &
-                  +0.5d0*( hx*slope(i,j,k,1)+hy*slope(i,j,k,2)+hz*slope(i,j,k,3)) &
-                  +0.25d0*( hx*hy*slope(i,j,k,4)+hx*hz*slope(i,j,k,5)+hy*hz*slope(i,j,k,6)) &
-                  +0.125d0*hx*hy*hz*slope(i,j,k,7)
+                ! +++ / sint(i+1,j+1,k+1)
+                sc(8) = s(i,j,k) &
+                     +0.5d0*( hx*slope(i,j,k,1)+hy*slope(i,j,k,2)+hz*slope(i,j,k,3)) &
+                     +0.25d0*( hx*hy*slope(i,j,k,4)+hx*hz*slope(i,j,k,5)+hy*hz*slope(i,j,k,6)) &
+                     +0.125d0*hx*hy*hz*slope(i,j,k,7)
 
-             ! ++- / sint(i+1,j+1,k  )
-             sc(7) = s(i,j,k) &
-                  +0.5d0*( hx*slope(i,j,k,1)+hy*slope(i,j,k,2)-hz*slope(i,j,k,3)) &
-                  +0.25d0*( hx*hy*slope(i,j,k,4)-hx*hz*slope(i,j,k,5)-hy*hz*slope(i,j,k,6)) &
-                  -0.125d0*hx*hy*hz*slope(i,j,k,7)
+                ! ++- / sint(i+1,j+1,k  )
+                sc(7) = s(i,j,k) &
+                     +0.5d0*( hx*slope(i,j,k,1)+hy*slope(i,j,k,2)-hz*slope(i,j,k,3)) &
+                     +0.25d0*( hx*hy*slope(i,j,k,4)-hx*hz*slope(i,j,k,5)-hy*hz*slope(i,j,k,6)) &
+                     -0.125d0*hx*hy*hz*slope(i,j,k,7)
 
-             ! +-+ / sint(i+1,j  ,k+1)
-             sc(6) = s(i,j,k) &
-                  +0.5d0*( hx*slope(i,j,k,1)-hy*slope(i,j,k,2)+hz*slope(i,j,k,3)) &
-                  +0.25d0*(-hx*hy*slope(i,j,k,4)+hx*hz*slope(i,j,k,5)-hy*hz*slope(i,j,k,6)) &
-                  -0.125d0*hx*hy*hz*slope(i,j,k,7)
+                ! +-+ / sint(i+1,j  ,k+1)
+                sc(6) = s(i,j,k) &
+                     +0.5d0*( hx*slope(i,j,k,1)-hy*slope(i,j,k,2)+hz*slope(i,j,k,3)) &
+                     +0.25d0*(-hx*hy*slope(i,j,k,4)+hx*hz*slope(i,j,k,5)-hy*hz*slope(i,j,k,6)) &
+                     -0.125d0*hx*hy*hz*slope(i,j,k,7)
 
-             ! +-- / sint(i+1,j  ,k  )
-             sc(5) = s(i,j,k) &
-                  +0.5d0*( hx*slope(i,j,k,1)-hy*slope(i,j,k,2)-hz*slope(i,j,k,3)) &
-                  +0.25d0*(-hx*hy*slope(i,j,k,4)-hx*hz*slope(i,j,k,5)+hy*hz*slope(i,j,k,6)) &
-                  +0.125d0*hx*hy*hz*slope(i,j,k,7)
+                ! +-- / sint(i+1,j  ,k  )
+                sc(5) = s(i,j,k) &
+                     +0.5d0*( hx*slope(i,j,k,1)-hy*slope(i,j,k,2)-hz*slope(i,j,k,3)) &
+                     +0.25d0*(-hx*hy*slope(i,j,k,4)-hx*hz*slope(i,j,k,5)+hy*hz*slope(i,j,k,6)) &
+                     +0.125d0*hx*hy*hz*slope(i,j,k,7)
 
-             ! -++ / sint(i  ,j+1,k+1)
-             sc(4) = s(i,j,k) &
-                  +0.5d0*(-hx*slope(i,j,k,1)+hy*slope(i,j,k,2)+hz*slope(i,j,k,3)) &
-                  +0.25d0*(-hx*hy*slope(i,j,k,4)-hx*hz*slope(i,j,k,5)+hy*hz*slope(i,j,k,6)) &
-                  -0.125d0*hx*hy*hz*slope(i,j,k,7)
+                ! -++ / sint(i  ,j+1,k+1)
+                sc(4) = s(i,j,k) &
+                     +0.5d0*(-hx*slope(i,j,k,1)+hy*slope(i,j,k,2)+hz*slope(i,j,k,3)) &
+                     +0.25d0*(-hx*hy*slope(i,j,k,4)-hx*hz*slope(i,j,k,5)+hy*hz*slope(i,j,k,6)) &
+                     -0.125d0*hx*hy*hz*slope(i,j,k,7)
 
-             ! -+- / sint(i  ,j+1,k  )
-             sc(3) = s(i,j,k) &
-                  +0.5d0*(-hx*slope(i,j,k,1)+hy*slope(i,j,k,2)-hz*slope(i,j,k,3)) &
-                  +0.25d0*(-hx*hy*slope(i,j,k,4)+hx*hz*slope(i,j,k,5)-hy*hz*slope(i,j,k,6)) &
-                  +0.125d0*hx*hy*hz*slope(i,j,k,7)
+                ! -+- / sint(i  ,j+1,k  )
+                sc(3) = s(i,j,k) &
+                     +0.5d0*(-hx*slope(i,j,k,1)+hy*slope(i,j,k,2)-hz*slope(i,j,k,3)) &
+                     +0.25d0*(-hx*hy*slope(i,j,k,4)+hx*hz*slope(i,j,k,5)-hy*hz*slope(i,j,k,6)) &
+                     +0.125d0*hx*hy*hz*slope(i,j,k,7)
 
-             ! --+ / sint(i  ,j  ,k+1)
-             sc(2) = s(i,j,k) &
-                  +0.5d0*(-hx*slope(i,j,k,1)-hy*slope(i,j,k,2)+hz*slope(i,j,k,3)) &
-                  +0.25d0*( hx*hy*slope(i,j,k,4)-hx*hz*slope(i,j,k,5)-hy*hz*slope(i,j,k,6)) &
-                  +0.125d0*hx*hy*hz*slope(i,j,k,7)
+                ! --+ / sint(i  ,j  ,k+1)
+                sc(2) = s(i,j,k) &
+                     +0.5d0*(-hx*slope(i,j,k,1)-hy*slope(i,j,k,2)+hz*slope(i,j,k,3)) &
+                     +0.25d0*( hx*hy*slope(i,j,k,4)-hx*hz*slope(i,j,k,5)-hy*hz*slope(i,j,k,6)) &
+                     +0.125d0*hx*hy*hz*slope(i,j,k,7)
 
-             ! ---/ sint(i  ,j  ,k  )
-             sc(1) = s(i,j,k) &
-                  +0.5d0*(-hx*slope(i,j,k,1)-hy*slope(i,j,k,2)-hz*slope(i,j,k,3)) &
-                  +0.25d0*( hx*hy*slope(i,j,k,4)+hx*hz*slope(i,j,k,5)+hy*hz*slope(i,j,k,6)) &
-                  -0.125d0*hx*hy*hz*slope(i,j,k,7)
+                ! ---/ sint(i  ,j  ,k  )
+                sc(1) = s(i,j,k) &
+                     +0.5d0*(-hx*slope(i,j,k,1)-hy*slope(i,j,k,2)-hz*slope(i,j,k,3)) &
+                     +0.25d0*( hx*hy*slope(i,j,k,4)+hx*hz*slope(i,j,k,5)+hy*hz*slope(i,j,k,6)) &
+                     -0.125d0*hx*hy*hz*slope(i,j,k,7)
 
-             ! enforce max/min bounds
-             smin(8) = min(s(i,j,k),s(i+1,j,k),s(i,j+1,k),s(i,j,k+1), &
-                           s(i+1,j+1,k),s(i+1,j,k+1),s(i,j+1,k+1),s(i+1,j+1,k+1))
-             smax(8) = max(s(i,j,k),s(i+1,j,k),s(i,j+1,k),s(i,j,k+1), &
-                           s(i+1,j+1,k),s(i+1,j,k+1),s(i,j+1,k+1),s(i+1,j+1,k+1))
+                ! enforce max/min bounds
+                smin(8) = min(s(i,j,k),s(i+1,j,k),s(i,j+1,k),s(i,j,k+1), &
+                     s(i+1,j+1,k),s(i+1,j,k+1),s(i,j+1,k+1),s(i+1,j+1,k+1))
+                smax(8) = max(s(i,j,k),s(i+1,j,k),s(i,j+1,k),s(i,j,k+1), &
+                     s(i+1,j+1,k),s(i+1,j,k+1),s(i,j+1,k+1),s(i+1,j+1,k+1))
 
-             smin(7) = min(s(i,j,k-1),s(i+1,j,k-1),s(i,j+1,k-1),s(i,j,k), &
-                           s(i+1,j+1,k-1),s(i+1,j,k),s(i,j+1,k),s(i+1,j+1,k))
-             smax(7) = max(s(i,j,k-1),s(i+1,j,k-1),s(i,j+1,k-1),s(i,j,k), &
-                           s(i+1,j+1,k-1),s(i+1,j,k),s(i,j+1,k),s(i+1,j+1,k))
+                smin(7) = min(s(i,j,k-1),s(i+1,j,k-1),s(i,j+1,k-1),s(i,j,k), &
+                     s(i+1,j+1,k-1),s(i+1,j,k),s(i,j+1,k),s(i+1,j+1,k))
+                smax(7) = max(s(i,j,k-1),s(i+1,j,k-1),s(i,j+1,k-1),s(i,j,k), &
+                     s(i+1,j+1,k-1),s(i+1,j,k),s(i,j+1,k),s(i+1,j+1,k))
 
-             smin(6) = min(s(i,j-1,k),s(i+1,j-1,k),s(i,j,k),s(i,j-1,k+1), &
-                           s(i+1,j,k),s(i+1,j-1,k+1),s(i,j,k+1),s(i+1,j,k+1))
-             smax(6) = max(s(i,j-1,k),s(i+1,j-1,k),s(i,j,k),s(i,j-1,k+1), &
-                           s(i+1,j,k),s(i+1,j-1,k+1),s(i,j,k+1),s(i+1,j,k+1))
+                smin(6) = min(s(i,j-1,k),s(i+1,j-1,k),s(i,j,k),s(i,j-1,k+1), &
+                     s(i+1,j,k),s(i+1,j-1,k+1),s(i,j,k+1),s(i+1,j,k+1))
+                smax(6) = max(s(i,j-1,k),s(i+1,j-1,k),s(i,j,k),s(i,j-1,k+1), &
+                     s(i+1,j,k),s(i+1,j-1,k+1),s(i,j,k+1),s(i+1,j,k+1))
 
-             smin(5) = min(s(i,j-1,k-1),s(i+1,j-1,k-1),s(i,j,k-1),s(i,j-1,k), &
-                           s(i+1,j,k-1),s(i+1,j-1,k),s(i,j,k),s(i+1,j,k))
-             smax(5) = max(s(i,j-1,k-1),s(i+1,j-1,k-1),s(i,j,k-1),s(i,j-1,k), &
-                           s(i+1,j,k-1),s(i+1,j-1,k),s(i,j,k),s(i+1,j,k))
+                smin(5) = min(s(i,j-1,k-1),s(i+1,j-1,k-1),s(i,j,k-1),s(i,j-1,k), &
+                     s(i+1,j,k-1),s(i+1,j-1,k),s(i,j,k),s(i+1,j,k))
+                smax(5) = max(s(i,j-1,k-1),s(i+1,j-1,k-1),s(i,j,k-1),s(i,j-1,k), &
+                     s(i+1,j,k-1),s(i+1,j-1,k),s(i,j,k),s(i+1,j,k))
 
-             smin(4) = min(s(i-1,j,k),s(i,j,k),s(i-1,j+1,k),s(i-1,j,k+1), &
-                           s(i,j+1,k),s(i,j,k+1),s(i-1,j+1,k+1),s(i,j+1,k+1))
-             smax(4) = max(s(i-1,j,k),s(i,j,k),s(i-1,j+1,k),s(i-1,j,k+1), &
-                           s(i,j+1,k),s(i,j,k+1),s(i-1,j+1,k+1),s(i,j+1,k+1))
+                smin(4) = min(s(i-1,j,k),s(i,j,k),s(i-1,j+1,k),s(i-1,j,k+1), &
+                     s(i,j+1,k),s(i,j,k+1),s(i-1,j+1,k+1),s(i,j+1,k+1))
+                smax(4) = max(s(i-1,j,k),s(i,j,k),s(i-1,j+1,k),s(i-1,j,k+1), &
+                     s(i,j+1,k),s(i,j,k+1),s(i-1,j+1,k+1),s(i,j+1,k+1))
 
-             smin(3) = min(s(i-1,j,k-1),s(i,j,k-1),s(i-1,j+1,k-1),s(i-1,j,k), &
-                           s(i,j+1,k-1),s(i,j,k),s(i-1,j+1,k),s(i,j+1,k))
-             smax(3) = max(s(i-1,j,k-1),s(i,j,k-1),s(i-1,j+1,k-1),s(i-1,j,k), &
-                           s(i,j+1,k-1),s(i,j,k),s(i-1,j+1,k),s(i,j+1,k))
+                smin(3) = min(s(i-1,j,k-1),s(i,j,k-1),s(i-1,j+1,k-1),s(i-1,j,k), &
+                     s(i,j+1,k-1),s(i,j,k),s(i-1,j+1,k),s(i,j+1,k))
+                smax(3) = max(s(i-1,j,k-1),s(i,j,k-1),s(i-1,j+1,k-1),s(i-1,j,k), &
+                     s(i,j+1,k-1),s(i,j,k),s(i-1,j+1,k),s(i,j+1,k))
 
-             smin(2) = min(s(i-1,j-1,k),s(i,j-1,k),s(i-1,j,k),s(i-1,j-1,k+1), &
-                           s(i,j,k),s(i,j-1,k+1),s(i-1,j,k+1),s(i,j,k+1))
-             smax(2) = max(s(i-1,j-1,k),s(i,j-1,k),s(i-1,j,k),s(i-1,j-1,k+1), &
-                           s(i,j,k),s(i,j-1,k+1),s(i-1,j,k+1),s(i,j,k+1))
+                smin(2) = min(s(i-1,j-1,k),s(i,j-1,k),s(i-1,j,k),s(i-1,j-1,k+1), &
+                     s(i,j,k),s(i,j-1,k+1),s(i-1,j,k+1),s(i,j,k+1))
+                smax(2) = max(s(i-1,j-1,k),s(i,j-1,k),s(i-1,j,k),s(i-1,j-1,k+1), &
+                     s(i,j,k),s(i,j-1,k+1),s(i-1,j,k+1),s(i,j,k+1))
 
-             smin(1) = min(s(i-1,j-1,k-1),s(i,j-1,k-1),s(i-1,j,k-1),s(i-1,j-1,k), &
-                           s(i,j,k-1),s(i,j-1,k),s(i-1,j,k),s(i,j,k))
-             smax(1) = max(s(i-1,j-1,k-1),s(i,j-1,k-1),s(i-1,j,k-1),s(i-1,j-1,k), &
-                           s(i,j,k-1),s(i,j-1,k),s(i-1,j,k),s(i,j,k))
-
-             do mm=1,8
-                sc(mm) = max(min(sc(mm), smax(mm)), smin(mm))
-             enddo
-             
-             ! iterative loop
-             do ll = 1,3 
-                sumloc = 0.125d0*(sc(1)+sc(2)+sc(3)+sc(4)+sc(5)+sc(6)+sc(7)+sc(8))
-                sumdif = (sumloc - s(i,j,k))*8.d0
-                sgndif = sign(1.d0,sumdif)
+                smin(1) = min(s(i-1,j-1,k-1),s(i,j-1,k-1),s(i-1,j,k-1),s(i-1,j-1,k), &
+                     s(i,j,k-1),s(i,j-1,k),s(i-1,j,k),s(i,j,k))
+                smax(1) = max(s(i-1,j-1,k-1),s(i,j-1,k-1),s(i-1,j,k-1),s(i-1,j-1,k), &
+                     s(i,j,k-1),s(i,j-1,k),s(i-1,j,k),s(i,j,k))
 
                 do mm=1,8
-                   diff(mm) = (sc(mm) - s(i,j,k))*sgndif
+                   sc(mm) = max(min(sc(mm), smax(mm)), smin(mm))
                 enddo
 
-                kdp = 0
+                ! iterative loop
+                do ll = 1,3 
+                   sumloc = 0.125d0*(sc(1)+sc(2)+sc(3)+sc(4)+sc(5)+sc(6)+sc(7)+sc(8))
+                   sumdif = (sumloc - s(i,j,k))*8.d0
+                   sgndif = sign(1.d0,sumdif)
 
-                do mm=1,8
-                   if (diff(mm) .gt. eps) then
-                      kdp = kdp+1
-                   end if
-                end do
+                   do mm=1,8
+                      diff(mm) = (sc(mm) - s(i,j,k))*sgndif
+                   enddo
 
-                do mm = 1,8
-                   if (kdp.lt.1) then 
-                      div = 1.d0
-                   else
-                      div = dble(kdp)
-                   end if
+                   kdp = 0
 
-                   if (diff(mm).gt.eps) then
-                      redfac = sumdif*sgndif/div
-                      kdp = kdp-1
-                   else
-                      redfac = 0.d0
-                   end if
+                   do mm=1,8
+                      if (diff(mm) .gt. eps) then
+                         kdp = kdp+1
+                      end if
+                   end do
 
-                   if (sgndif .gt. 0.d0) then
-                      redmax = sc(mm) - smin(mm)
-                   else
-                      redmax = smax(mm) - sc(mm)
-                   end if
+                   do mm = 1,8
+                      if (kdp.lt.1) then 
+                         div = 1.d0
+                      else
+                         div = dble(kdp)
+                      end if
 
-                   redfac = min(redfac,redmax)
-                   sumdif = sumdif - redfac*sgndif
-                   sc(mm) = sc(mm) - redfac*sgndif
+                      if (diff(mm).gt.eps) then
+                         redfac = sumdif*sgndif/div
+                         kdp = kdp-1
+                      else
+                         redfac = 0.d0
+                      end if
+
+                      if (sgndif .gt. 0.d0) then
+                         redmax = sc(mm) - smin(mm)
+                      else
+                         redmax = smax(mm) - sc(mm)
+                      end if
+
+                      redfac = min(redfac,redmax)
+                      sumdif = sumdif - redfac*sgndif
+                      sc(mm) = sc(mm) - redfac*sgndif
+                   enddo
                 enddo
-             enddo
 
-             ! final slopes
+                ! final slopes
 
-             ! sx
-             slope(i,j,k,1) = 0.25d0*( ( sc(5) + sc(7) &
-                                        +sc(6) + sc(8)) &
-                                      -( sc(1) + sc(3) &
-                                        +sc(2) + sc(4)) ) / hx
+                ! sx
+                slope(i,j,k,1) = 0.25d0*( ( sc(5) + sc(7) &
+                                           +sc(6) + sc(8)) &
+                                         -( sc(1) + sc(3) &
+                                           +sc(2) + sc(4)) ) / hx
 
-             ! sy
-             slope(i,j,k,2) = 0.25d0*( ( sc(3) + sc(7) &
-                                        +sc(4) + sc(8)) &
-                                      -( sc(1) + sc(5) &
-                                        +sc(2) + sc(6)) ) / hy
+                ! sy
+                slope(i,j,k,2) = 0.25d0*( ( sc(3) + sc(7) &
+                                           +sc(4) + sc(8)) &
+                                         -( sc(1) + sc(5) &
+                                           +sc(2) + sc(6)) ) / hy
 
-             ! sz
-             slope(i,j,k,3) = 0.25d0*( ( sc(2) + sc(6) &
-                                        +sc(4) + sc(8)) &
-                                      -( sc(1) + sc(5) &
-                                        +sc(3) + sc(7)) ) / hz
+                ! sz
+                slope(i,j,k,3) = 0.25d0*( ( sc(2) + sc(6) &
+                                           +sc(4) + sc(8)) &
+                                         -( sc(1) + sc(5) &
+                                           +sc(3) + sc(7)) ) / hz
 
-             ! sxy
-             slope(i,j,k,4) = 0.5d0*( ( sc(1) + sc(2) &
-                                       +sc(7) + sc(8)) &
-                                     -( sc(5) + sc(6) &
-                                       +sc(3) + sc(4)) ) / (hx*hy)
+                ! sxy
+                slope(i,j,k,4) = 0.5d0*( ( sc(1) + sc(2) &
+                                          +sc(7) + sc(8)) &
+                                        -( sc(5) + sc(6) &
+                                          +sc(3) + sc(4)) ) / (hx*hy)
 
-             ! sxz
-             slope(i,j,k,5) = 0.5d0*( ( sc(1) + sc(3) &
-                                       +sc(6) + sc(8)) &
-                                     -( sc(5) + sc(7) &
-                                       +sc(2) + sc(4)) ) / (hx*hz)
+                ! sxz
+                slope(i,j,k,5) = 0.5d0*( ( sc(1) + sc(3) &
+                                          +sc(6) + sc(8)) &
+                                        -( sc(5) + sc(7) &
+                                          +sc(2) + sc(4)) ) / (hx*hz)
 
-             ! syz
-             slope(i,j,k,6) = 0.5d0*( ( sc(1) + sc(5) &
-                                       +sc(4) + sc(8)) &
-                                     -( sc(2) + sc(6) &
-                                       +sc(3) + sc(7)) ) / (hy*hz)
+                ! syz
+                slope(i,j,k,6) = 0.5d0*( ( sc(1) + sc(5) &
+                                          +sc(4) + sc(8)) &
+                                        -( sc(2) + sc(6) &
+                                          +sc(3) + sc(7)) ) / (hy*hz)
 
-             ! sxyz
-             slope(i,j,k,7) = (-sc(1) + sc(5) + sc(3) &
-                               +sc(2) - sc(7) - sc(6) &
-                               -sc(4) + sc(8) ) / (hx*hy*hz)
+                ! sxyz
+                slope(i,j,k,7) = (-sc(1) + sc(5) + sc(3) &
+                                          +sc(2) - sc(7) - sc(6) &
+                                          -sc(4) + sc(8) ) / (hx*hy*hz)
 
              endif
 
