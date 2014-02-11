@@ -389,7 +389,6 @@ contains
 ! ave + (x-xi)*slx + (y-yj)*sly + (x-xi)(y-yj)*slxy
 ! + (x-xi)^2*slxx + (y-yj)^2*slyy
 
-
       do j = js,je 
 
         ! ******************************* 
@@ -519,12 +518,12 @@ contains
                0.5d0*slxx(iup,j)*( (hxs/2. - uadv(i+1,j)*dt*(1.+sqrt(3.))/(2.*sqrt(3.)))**2 + &
                  (hxs/2. + uadv(i+1,j)*dt*(1.-sqrt(3.))/(2.*sqrt(3.)))**2   ) + &
                slyy(iup,j)*hy*hy/12.d0
-          vaddif = stem*0.5d0*dt*( &
-            uadv(iup+1,j) - uadv(iup,j))/hx
+          vaddif = stem*0.5d0*dt*(uadv(iup+1,j) - uadv(iup,j))/hx
           divu =  &
             (uadv(iup+1,j)-uadv(iup,j))/hx +  &
             (vadv(iup,j+1)-vadv(iup,j))/hy 
-          siphj(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*(stem*divu + force_local)
+!          siphj(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*(stem*divu + force_local)
+          siphj(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*force_local
 
         enddo
       enddo
@@ -657,7 +656,8 @@ contains
           vaddif = stem*0.5d0*dt*(vadv(i,jup+1) - vadv(i,jup))/hy
           divu =  (uadv(i+1,jup)-uadv(i,jup))/hx +  &
                   (vadv(i,jup+1)-vadv(i,jup))/hy 
-          sijph(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*(stem*divu + force_local)
+!         sijph(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*(stem*divu + force_local)
+          sijph(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*force_local
 
         enddo
       enddo
