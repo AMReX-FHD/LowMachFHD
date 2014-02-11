@@ -78,10 +78,10 @@ contains
           vadvp  => dataptr(umac(n,2), i)
           lo =  lwb(get_box(s(n), i))
           hi =  upb(get_box(s(n), i))
-          select case (dm)
-          case (2)
-             ! only advancing the tracer
-             do comp=start_comp,num_comp
+          do comp=start_comp,num_comp
+             select case (dm)
+             case (2)
+                ! only advancing the tracer
                 call bdsslope_2d(lo, hi, &
                                  sop(:,:,1,comp), ng_s, &
                                  slopep(:,:,1,:), ng_c, &
@@ -93,11 +93,9 @@ contains
                                 slopep(:,:,1,:), ng_c, &
                                 uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
                                 dx(n,:), dt)
-             end do
-          case (3)
-             wadvp  => dataptr(umac(n,3), i)
-             ! only advancing the tracer
-             do comp=2,s(n)%nc
+             case (3)
+                wadvp  => dataptr(umac(n,3), i)
+                ! only advancing the tracer
                 call bdsslope_3d(lo, hi, &
                                  sop(:,:,:,comp), ng_s, &
                                  slopep(:,:,:,:), ng_c, &
@@ -109,8 +107,8 @@ contains
                                 slopep(:,:,:,:), ng_c, &
                                 uadvp(:,:,:,1), vadvp(:,:,:,1), wadvp(:,:,:,1), ng_v, &
                                 dx(n,:), dt)
-             end do
-          end select
+             end select
+          end do
        end do
     end do
 
