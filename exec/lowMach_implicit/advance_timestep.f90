@@ -21,7 +21,7 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: fixed_dt
-  use probin_module, only: barodiffusion_type, use_bds
+  use probin_module, only: barodiffusion_type, advection_type
 
   use analysis_module
 
@@ -202,7 +202,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! set s_update to A^n for scalars
-    if (use_bds) then
+    if (advection_type .ge. 1) then
        call bds(mla,umac_old,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
     else
        call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,nscal)
@@ -483,7 +483,7 @@ contains
     
     ! s_update already contains D^{*,n+1} + St^{*,n+1} for rho1 from above
     ! add A^{*,n+1} for s to s_update
-    if (use_bds) then
+    if (advection_type .ge. 1) then
        call bds(mla,umac,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
     else
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
