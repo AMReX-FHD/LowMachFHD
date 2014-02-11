@@ -307,6 +307,7 @@ contains
        do n=1,nlevs
           ! AJN FIXME - ghost cells will stay set zero
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
+          call multifab_fill_boundary(bds_force(n))
        end do
 
        call bds(mla,umac,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
@@ -503,7 +504,12 @@ contains
 
     if (use_bds) then
 
-       ! AJN FIXME?  Keep old bds_force, use updated umac?
+       do n=1,nlevs
+          ! AJN FIXME - ghost cells will stay set zero
+          call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
+          call multifab_fill_boundary(bds_force(n))
+       end do
+
        call bds(mla,umac,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
 
     else
