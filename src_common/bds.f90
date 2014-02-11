@@ -119,7 +119,9 @@ contains
                                 fp(:,:,:,comp), ng_f, &
                                 slopep(:,:,:,:), ng_c, &
                                 uadvp(:,:,:,1), vadvp(:,:,:,1), wadvp(:,:,:,1), ng_v, &
-                                dx(n,:), dt)
+                                dx(n,:), dt, &
+                                spx(:,:,:,comp), spy(:,:,:,comp), spz(:,:,:,comp), ng_e, &
+                                the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
              end select
           end do
        end do
@@ -733,11 +735,11 @@ contains
     enddo
 
     if (bc(1,1) .eq. EXT_DIR) then
-
+       siphj(lo(1),lo(2):hi(2)) = sx(lo(1),lo(2):hi(2))
     end if
 
     if (bc(1,2) .eq. EXT_DIR) then
-
+       siphj(hi(1)+1,lo(2):hi(2)) = sx(hi(1)+1,lo(2):hi(2))
     end if
 
     do j = lo(2)-1,hi(2) 
@@ -868,9 +870,10 @@ contains
 
   end subroutine bdsconc_2d
 
-  subroutine bdsconc_3d(lo,hi,s,ng_s,s_update,ng_u,force,ng_f,slope,ng_c,uadv,vadv,wadv,ng_v,dx,dt)
+  subroutine bdsconc_3d(lo,hi,s,ng_s,s_update,ng_u,force,ng_f, &
+                        slope,ng_c,uadv,vadv,wadv,ng_v,dx,dt,sx,sy,sz,ng_e,bc)
 
-    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_c,ng_v,ng_u,ng_f
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_c,ng_v,ng_u,ng_f,ng_e
     real(kind=dp_t),intent(in   ) ::        s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
     real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t),intent(in   ) ::    force(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
@@ -878,7 +881,11 @@ contains
     real(kind=dp_t),intent(in   ) ::  uadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
     real(kind=dp_t),intent(in   ) ::  vadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
     real(kind=dp_t),intent(in   ) ::  wadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
+    real(kind=dp_t),intent(in   ) :: sx(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t),intent(in   ) :: sy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t),intent(in   ) :: sz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
     real(kind=dp_t),intent(in   ) :: dx(:),dt
+    integer        ,intent(in   ) :: bc(:,:)
 
     ! local variables
     integer i,j,k,ioff,joff,koff,ll
@@ -1778,6 +1785,14 @@ contains
        enddo
     enddo
 
+    if (bc(1,1) .eq. EXT_DIR) then
+       sedgex(lo(1),lo(2):hi(2),lo(3):hi(3)) = sx(lo(1),lo(2):hi(2),lo(3):hi(3))
+    end if
+
+    if (bc(1,2) .eq. EXT_DIR) then
+       sedgex(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = sx(hi(1)+1,lo(2):hi(2),lo(3):hi(3))
+    end if
+
     ! compute sedgey on y-faces    
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)+1
@@ -2629,6 +2644,14 @@ contains
        enddo
     enddo
 
+    if (bc(2,1) .eq. EXT_DIR) then
+       sedgey(lo(1):hi(1),lo(2),lo(3):hi(3)) = sy(lo(1):hi(1),lo(2),lo(3):hi(3))
+    end if
+
+    if (bc(2,2) .eq. EXT_DIR) then
+       sedgey(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = sy(lo(1):hi(1),hi(2)+1,lo(3):hi(3))
+    end if
+
     ! compute sedgez on z-faces
     do k=lo(3),hi(3)+1
        do j=lo(2),hi(2)
@@ -3479,6 +3502,14 @@ contains
           enddo
        enddo
     enddo
+
+    if (bc(3,1) .eq. EXT_DIR) then
+       sedgez(lo(1):hi(1),lo(2):hi(2),lo(3)) = sz(lo(1):hi(1),lo(2):hi(2),lo(3))
+    end if
+
+    if (bc(3,2) .eq. EXT_DIR) then
+       sedgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = sz(lo(1):hi(1),lo(2):hi(2),hi(3)+1)
+    end if
 
     ! advance solution
     ! conservative update
