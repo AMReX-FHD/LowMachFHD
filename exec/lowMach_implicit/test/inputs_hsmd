@@ -149,8 +149,8 @@
   mg_bottom_solver = 0         ! bottom solver type
                                ! 0 = smooths only, controlled by mg_nsmooths_bottom
                                ! 1 = BiCGStab
-                               ! 4 = Fancy bottom solve that coarsens as far as possible 
-                               !     and then applies BiCGStab
+                               ! 4 = Fancy bottom solve that coarsens down additionally
+                               !     and then applies mg_nsmooths_bottom smooths
   mg_nsmooths_down = 2         ! number of smooths at each level on the way down
   mg_nsmooths_up = 2           ! number of smooths at each level on the way up
   mg_nsmooths_bottom = 8       ! number of smooths at the bottom (only if mg_bottom_solver=0)
