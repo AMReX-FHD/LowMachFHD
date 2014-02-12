@@ -4,7 +4,7 @@
 &probin
 
   barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
-  use_overdamped = T	  ! enable overdamped (infinite Sc) algorithm
+  use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
 
 /
 
@@ -15,8 +15,8 @@
   c_init(1:2) = 0.d0 1.d0    ! controls initial concentration range
 
   ! simulation properties
-  max_step = 10000           ! maximum number of time steps
-  print_int = 1            ! how often to output EOS drift and sum of conserved quantities
+  max_step = 4000            ! maximum number of time steps
+  print_int = 1              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1        ! how often to call project_onto_eos
 
   ! fluid properties
@@ -24,7 +24,6 @@
   rhobar(1:2) = 0.763944 3.05578  ! rho1bar and rho2bar
   visc_coef = 5.0            ! momentum diffusion coefficient 'eta'   
   diff_coef = 0.086963       ! concentration diffusion coefficient 'chi'
-  diff_coef = 0
   mol_mass(1:2) = 1.d0 4.d0  ! molar mass of species
   kT = 1.d0                  ! temperature
 
@@ -75,7 +74,7 @@
   ! -1 = spatially-varing coefficients
   diff_type = -1
 
-  advection_type = 2         ! 0 = centered, 1 = unlimited bds, 2 = limited bds
+  advection_type = 0         ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
   ! Boundary conditions
   !----------------------
