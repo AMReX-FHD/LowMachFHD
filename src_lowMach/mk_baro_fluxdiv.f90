@@ -78,6 +78,17 @@ contains
                                      lo, hi, dx(n,:), &
                                      the_bc_level(n)%phys_bc_level_array(i,:,:))
           case (3)
+             gpz => dataptr(gp0_fc(n,3), i)
+             spz => dataptr(s_fc(n,3), i)
+             cpz => dataptr(chi_fc(n,3), i)
+             vpz => dataptr(vel_bc_n(n,3), i)
+             call mk_baro_fluxdiv_3d(sup(:,:,:,out_comp), ng_u, &
+                                     gpx(:,:,:,1), gpy(:,:,:,1), gpz(:,:,:,1), ng_g, &
+                                     spx(:,:,:,:), spy(:,:,:,:), spz(:,:,:,:), ng_s, &
+                                     cpx(:,:,:,1), cpy(:,:,:,1), cpz(:,:,:,1), ng_c, &
+                                     vpx(:,:,:,1), vpy(:,:,:,1), vpz(:,:,:,1), ng_b, &
+                                     lo, hi, dx(n,:), &
+                                     the_bc_level(n)%phys_bc_level_array(i,:,:))
           end select
        end do
     end do
@@ -161,6 +172,118 @@ contains
       end do
 
     end subroutine mk_baro_fluxdiv_2d
+
+    subroutine mk_baro_fluxdiv_3d(s_update,ng_u,gpx,gpy,gpz,ng_g,sx,sy,sz,ng_s, &
+                                  chix,chiy,chiz,ng_c,vel_bc_nx,vel_bc_ny,vel_bc_nz,ng_b, &
+                                  lo,hi,dx,bc)
+
+      integer        , intent(in   ) :: lo(:), hi(:), ng_u, ng_g, ng_s, ng_c, ng_b
+      real(kind=dp_t), intent(inout) ::  s_update(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+      real(kind=dp_t), intent(in   ) ::       gpx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(in   ) ::       gpy(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(in   ) ::       gpz(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
+      real(kind=dp_t), intent(in   ) ::        sx(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+      real(kind=dp_t), intent(in   ) ::        sy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+      real(kind=dp_t), intent(in   ) ::        sz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+      real(kind=dp_t), intent(in   ) ::      chix(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
+      real(kind=dp_t), intent(in   ) ::      chiy(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
+      real(kind=dp_t), intent(in   ) ::      chiz(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
+      real(kind=dp_t), intent(inout) :: vel_bc_nx(lo(1)-ng_b:,lo(2)-ng_b:,lo(3)-ng_b:)
+      real(kind=dp_t), intent(inout) :: vel_bc_ny(lo(1)-ng_b:,lo(2)-ng_b:,lo(3)-ng_b:)
+      real(kind=dp_t), intent(inout) :: vel_bc_nz(lo(1)-ng_b:,lo(2)-ng_b:,lo(3)-ng_b:)
+      real(kind=dp_t), intent(in   ) :: dx(:)
+      integer        , intent(in   ) :: bc(:,:)
+
+      ! local
+      integer :: i,j,k
+
+      real(kind=dp_t) :: fluxx(lo(1):hi(1)+1,lo(2):hi(2),lo(3):hi(3))
+      real(kind=dp_t) :: fluxy(lo(1):hi(1),lo(2):hi(2)+1,lo(3):hi(3))
+      real(kind=dp_t) :: fluxz(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)+1)
+
+      real(kind=dp_t) :: S_fac, c_fc, kp
+
+      S_fac = 1.d0/rhobar(1)-1.d0/rhobar(2)
+
+      ! x-faces
+      do k=lo(3),hi(3)
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)+1
+         ! fluxx = rho*chi*kp*gpx
+         c_fc = sx(i,j,k,2)/sx(i,j,k,1)
+         kp = S_fac*c_fc*(1.d0-c_fc)
+         fluxx(i,j,k) = sx(i,j,k,1)*chix(i,j,k)*kp*gpx(i,j,k)
+      end do
+      end do
+      end do
+
+      ! update umac bc based on diffusive flux at boundary
+      if (bc(1,1) .eq. NO_SLIP_RESERVOIR .or. bc(1,1) .eq. SLIP_RESERVOIR) then
+         vel_bc_nx(lo(1),lo(2):hi(2),lo(3):hi(3)) = vel_bc_nx(lo(1),lo(2):hi(2),lo(3):hi(3)) &
+              + S_fac*fluxx(lo(1),lo(2):hi(2),lo(3):hi(3))
+      end if
+      if (bc(1,2) .eq. NO_SLIP_RESERVOIR .or. bc(1,2) .eq. SLIP_RESERVOIR) then
+         vel_bc_nx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = vel_bc_nx(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) &
+              + S_fac*fluxx(hi(1)+1,lo(2):hi(2),lo(3):hi(3))
+      end if
+
+      ! y-faces
+      do k=lo(3),hi(3)
+      do j=lo(2),hi(2)+1
+      do i=lo(1),hi(1)
+         ! fluxy = rho*chi*kp*gpy
+         c_fc = sy(i,j,k,2)/sy(i,j,k,1)
+         kp = S_fac*c_fc*(1.d0-c_fc)
+         fluxy(i,j,k) = sy(i,j,k,1)*chiy(i,j,k)*kp*gpy(i,j,k)
+      end do
+      end do
+      end do
+
+      ! update vmac bc based on diffusive flux at boundary
+      if (bc(2,1) .eq. NO_SLIP_RESERVOIR .or. bc(2,1) .eq. SLIP_RESERVOIR) then
+         vel_bc_ny(lo(1):hi(1),lo(2),lo(3):hi(3)) = vel_bc_ny(lo(1):hi(1),lo(2),lo(3):hi(3)) + &
+              S_fac*fluxy(lo(1):hi(1),lo(2),lo(3):hi(3))
+      end if
+      if (bc(2,2) .eq. NO_SLIP_RESERVOIR .or. bc(2,2) .eq. SLIP_RESERVOIR) then
+         vel_bc_ny(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = vel_bc_ny(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) + &
+              S_fac*fluxy(lo(1):hi(1),hi(2)+1,lo(3):hi(3))
+      end if
+
+      ! z-faces
+      do k=lo(3),hi(3)+1
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
+         ! fluxz = rho*chi*kp*gpz
+         c_fc = sz(i,j,k,2)/sz(i,j,k,1)
+         kp = S_fac*c_fc*(1.d0-c_fc)
+         fluxz(i,j,k) = sz(i,j,k,1)*chiz(i,j,k)*kp*gpz(i,j,k)
+      end do
+      end do
+      end do
+
+      ! update wmac bc based on diffusive flux at boundary
+      if (bc(3,1) .eq. NO_SLIP_RESERVOIR .or. bc(3,1) .eq. SLIP_RESERVOIR) then
+         vel_bc_nz(lo(1):hi(1),lo(2):hi(2),lo(3)) = vel_bc_nz(lo(1):hi(1),lo(2):hi(2),lo(3)) + &
+              S_fac*fluxz(lo(1):hi(1),lo(2):hi(2),lo(3))
+      end if
+      if (bc(3,2) .eq. NO_SLIP_RESERVOIR .or. bc(3,2) .eq. SLIP_RESERVOIR) then
+         vel_bc_nz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = vel_bc_nz(lo(1):hi(1),lo(2):hi(2),hi(3)+1) + &
+              S_fac*fluxz(lo(1):hi(1),lo(2):hi(2),hi(3)+1)
+      end if
+
+      ! flux divergence
+      do k=lo(3),hi(3)
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
+         ! add div(rhoD * grad c) to s_update
+         s_update(i,j,k) = s_update(i,j,k) + (fluxx(i+1,j,k) - fluxx(i,j,k)) / dx(1) &
+                                           + (fluxy(i,j+1,k) - fluxy(i,j,k)) / dx(2) &
+                                           + (fluxz(i,j,k+1) - fluxz(i,j,k)) / dx(3)
+      end do
+      end do
+      end do
+
+    end subroutine mk_baro_fluxdiv_3d
 
   end subroutine mk_baro_fluxdiv
 
