@@ -4,7 +4,7 @@
 &probin
 
   barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
-  use_bds = F             ! enable bds advection in space and time
+  advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
   use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
 
 /

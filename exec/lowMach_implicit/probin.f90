@@ -9,8 +9,8 @@ module probin_module
 
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
-  integer, save :: barodiffusion_type
-  logical, save :: use_bds,use_overdamped
+  integer, save :: barodiffusion_type,advection_type
+  logical, save :: use_overdamped
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -20,7 +20,9 @@ module probin_module
   namelist /probin/ barodiffusion_type ! 0 = no barodiffusion
                                        ! 1 = fixed gradp from initialization
                                        ! 2 = update gradp each time step
-  namelist /probin/ use_bds            ! enable bds advection in space and time
+  namelist /probin/ advection_type     ! 0 = centered explicit
+                                       ! 1 = unlimited bds in space and time
+                                       ! 2 = unlimited bds in space and time
   namelist /probin/ use_overdamped     ! enable overdamped (infinite Sc) algorithm
   !------------------------------------------------------------- 
 
@@ -51,7 +53,7 @@ contains
 
     ! Defaults
     barodiffusion_type = 0
-    use_bds = .false.
+    advection_type = 0
     use_overdamped = .false.
 
     farg = 1
@@ -77,10 +79,10 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) barodiffusion_type
 
-       case ('--use_bds')
+       case ('--advection_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) use_bds
+          read(fname, *) advection_type
 
        case ('--use_overdamped')
           farg = farg + 1

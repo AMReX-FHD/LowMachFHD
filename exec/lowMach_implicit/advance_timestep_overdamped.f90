@@ -20,7 +20,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: fixed_dt
-  use probin_module, only: use_bds
+  use probin_module, only: advection_type
 
   use analysis_module
 
@@ -302,14 +302,15 @@ contains
     ! Step 3 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    if (use_bds) then
+    if (advection_type .ge. 1) then
 
        do n=1,nlevs
           ! AJN FIXME - ghost cells will stay set zero
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
+          call multifab_fill_boundary(bds_force(n))
        end do
 
-       call bds(mla,umac,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
+       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,fixed_dt,1,nscal,the_bc_tower)
 
     else
 
@@ -501,10 +502,15 @@ contains
     ! Step 7 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    if (use_bds) then
+    if (advection_type .ge. 1) then
 
-       ! AJN FIXME?  Keep old bds_force, use updated umac?
-       call bds(mla,umac,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
+       do n=1,nlevs
+          ! AJN FIXME - ghost cells will stay set zero
+          call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
+          call multifab_fill_boundary(bds_force(n))
+       end do
+
+       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,fixed_dt,1,nscal,the_bc_tower)
 
     else
 

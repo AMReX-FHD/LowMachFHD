@@ -29,7 +29,8 @@ subroutine main_driver()
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type
   use probin_gmres_module  , only: probin_gmres_init
-  use probin_module        , only: probin_init, barodiffusion_type, use_overdamped, use_bds
+  use probin_module        , only: probin_init, barodiffusion_type, use_overdamped, &
+                                   advection_type
 
   implicit none
 
@@ -86,7 +87,7 @@ subroutine main_driver()
   type(multifab), allocatable :: vel_bc_n(:,:)
   type(multifab), allocatable :: vel_bc_t(:,:)
 
-  integer :: narg, farg, un, namelist_file
+  integer :: narg, farg, un
   character(len=128) :: fname
   logical :: lexist
 
@@ -210,7 +211,8 @@ subroutine main_driver()
      ! conservative variables; 2 components (rho,rho1)
      ! need 2 ghost cells to average to ghost faces used in 
      ! converting m to umac in m ghost cells
-     if (use_bds) then
+     ! if using advection_type .ge. 1 (bds), need 3 ghost cells
+     if (advection_type .ge. 1) then
         call multifab_build(sold(n) ,mla%la(n),nscal,3)
         call multifab_build(snew(n) ,mla%la(n),nscal,3)
         call multifab_build(prim(n) ,mla%la(n),nscal,3)

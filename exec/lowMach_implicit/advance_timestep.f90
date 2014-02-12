@@ -21,7 +21,7 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: fixed_dt
-  use probin_module, only: barodiffusion_type, use_bds
+  use probin_module, only: barodiffusion_type, advection_type
 
   use analysis_module
 
@@ -201,13 +201,6 @@ contains
     ! Step 1 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! set s_update to A^n for scalars
-    if (use_bds) then
-       call bds(mla,umac_old,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
-    else
-       call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,nscal)
-    end if
-
     ! add D^n  for rho1 to s_update
     ! add St^n for rho1 to s_update
     ! add baro-diffusion^n to s_update
@@ -216,6 +209,23 @@ contains
        call multifab_plus_plus_c(s_update(n),2,rhoc_s_fluxdiv(n),1,1,0)
        call multifab_plus_plus_c(s_update(n),2,rhoc_b_fluxdiv(n),1,1,0)
     end do
+
+    ! set s_update to A^n for scalars
+    if (advection_type .ge. 1) then
+
+       do n=1,nlevs
+          ! AJN FIXME - ghost cells will stay set zero
+          call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
+          call multifab_fill_boundary(bds_force(n))
+       end do
+
+       call bds(mla,umac_old,sold,s_update,bds_force,s_fc,dx,fixed_dt,1,nscal,the_bc_tower)
+
+    else
+
+       call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,nscal)
+
+    end if
 
     ! set snew = s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
     do n=1,nlevs
@@ -483,10 +493,20 @@ contains
     
     ! s_update already contains D^{*,n+1} + St^{*,n+1} for rho1 from above
     ! add A^{*,n+1} for s to s_update
-    if (use_bds) then
-       call bds(mla,umac,sold,s_update,bds_force,dx,fixed_dt,1,nscal)
+    if (advection_type .ge. 1) then
+
+       do n=1,nlevs
+          ! AJN FIXME - ghost cells will stay set zero
+          call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
+          call multifab_fill_boundary(bds_force(n))
+       end do
+
+       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,fixed_dt,1,nscal,the_bc_tower)
+
     else
+
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
+
     end if
 
     ! snew = s^{n+1} 
