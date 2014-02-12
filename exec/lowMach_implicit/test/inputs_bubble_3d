@@ -1,7 +1,6 @@
 &probin
 
   barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
-  advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
   use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
 
 /
@@ -56,7 +55,15 @@
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
+  ! positive = assume constant coefficients
+  ! negative = assume spatially-varying coefficients
   visc_type = 1
+
+  ! 1 = constant coefficients
+  ! -1 = spatially-varing coefficients
+  diff_type = 1
+
+  advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
  ! Boundary conditions
   !----------------------
