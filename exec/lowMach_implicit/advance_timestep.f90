@@ -20,8 +20,8 @@ module advance_timestep_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, grav
-  use probin_common_module, only: fixed_dt
-  use probin_module, only: barodiffusion_type, advection_type
+  use probin_common_module, only: fixed_dt, advection_type
+  use probin_module, only: barodiffusion_type
 
   use analysis_module
 
