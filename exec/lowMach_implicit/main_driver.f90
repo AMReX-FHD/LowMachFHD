@@ -377,7 +377,8 @@ subroutine main_driver()
 
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
-                          rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                          rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,fixed_dt, &
+                          the_bc_tower,vel_bc_n,vel_bc_t)
 
   if (print_int .gt. 0) then
      call sum_mass_momentum(mla,sold,mold)
@@ -397,12 +398,12 @@ subroutine main_driver()
      ! advance the solution by dt
      if (use_overdamped) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,the_bc_tower, &
+                                         chi,chi_fc,eta,eta_ed,kappa,dx,fixed_dt,the_bc_tower, &
                                          vel_bc_n,vel_bc_t)
      else
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                              gp_fc,dx,fixed_dt,the_bc_tower,vel_bc_n,vel_bc_t)
      end if
 
      ! increment simulation time
