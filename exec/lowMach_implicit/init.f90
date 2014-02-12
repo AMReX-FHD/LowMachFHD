@@ -8,7 +8,7 @@ module init_module
   use bc_module
   use probin_lowmach_module, only: rhobar, diff_coef, visc_coef, &
                                    smoothing_width, c_init, material_properties, &
-                                   grav
+                                   grav, u_init
   use probin_common_module , only: prob_lo, prob_hi, prob_type, visc_type, diff_type
 
   implicit none
@@ -209,9 +209,11 @@ contains
           if (y .lt. y1) then
              s(lo(1):hi(1),j,2) = c_init(1)
              s(lo(1):hi(1),j,1) = 1.0d0/(c_init(1)/rhobar(1)+(1.0d0-c_init(1))/rhobar(2))
+             mx(lo(1):hi(1),j) = s(lo(1):hi(1),j,1) * u_init(1)
           else
              s(lo(1):hi(1),j,2) = c_init(2)
              s(lo(1):hi(1),j,1) = 1.0d0/(c_init(2)/rhobar(1)+(1.0d0-c_init(2))/rhobar(2))
+             mx(lo(1):hi(1),j) = s(lo(1):hi(1),j,1) * u_init(2)
           end if
           s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*s(lo(1):hi(1),j,2)
           

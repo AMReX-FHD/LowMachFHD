@@ -12,7 +12,7 @@ module probin_lowmach_module
   !------------------------------------------------------------- 
   integer   , save :: max_step,nscal,print_int
   real(dp_t), save :: rhobar(2),visc_coef,diff_coef,smoothing_width
-  real(dp_t), save :: variance_coef,conc_scal,c_init(2),grav(3)
+  real(dp_t), save :: variance_coef,conc_scal,c_init(2),u_init(2),grav(3)
   real(dp_t), save :: mol_mass(2),kT
   integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
@@ -28,6 +28,7 @@ module probin_lowmach_module
   ! problem setup
   namelist /probin_lowmach/ smoothing_width   ! scale factor for smoothing initial profile
   namelist /probin_lowmach/ c_init            ! controls initial concentration range
+  namelist /probin_lowmach/ u_init            ! controls initial velocity
   namelist /probin_lowmach/ c_bc              ! c boundary conditions (dir,face)
   namelist /probin_lowmach/ grav              ! gravity vector (negative is downwards)
 
@@ -103,6 +104,7 @@ contains
 
     smoothing_width = 1.d0
     c_init(1:2) = 1.d0
+    u_init(1:2) = 0.d0
     c_bc(1:3,1:2) = 1.d0
     grav(1:3) = 0.d0
 
@@ -164,6 +166,15 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) c_init(2)
+
+       case ('--u_init_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) u_init(1)
+       case ('--u_init_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) u_init(2)
 
        case ('--c_bc_x_lo')
           farg = farg + 1
