@@ -33,10 +33,6 @@ module probin_common_module
   namelist /probin_common/ plot_int      ! Interval for writing a plotfile (for visit/amrvis)
   namelist /probin_common/ prob_type     ! sets scalars, m, coefficients (see init.f90)
 
-  namelist /probin_common/ advection_type ! 0 = centered explicit
-                                          ! 1 = unlimited bds in space and time
-                                          ! 2 = unlimited bds in space and time
-
   ! Algorithm control / selection
   !----------------------
 
@@ -56,6 +52,10 @@ module probin_common_module
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
   namelist /probin_common/ diff_type
+
+  namelist /probin_common/ advection_type ! 0 = centered explicit
+                                          ! 1 = unlimited bds in space and time
+                                          ! 2 = unlimited bds in space and time
 
   ! Boundary conditions
   !----------------------
