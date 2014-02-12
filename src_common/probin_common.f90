@@ -10,7 +10,7 @@ module probin_common_module
 
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
-  integer,save    :: dim_in,plot_int,prob_type
+  integer,save    :: dim_in,plot_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt
   integer,save    :: visc_type,diff_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
@@ -32,6 +32,10 @@ module probin_common_module
   namelist /probin_common/ fixed_dt      ! time step
   namelist /probin_common/ plot_int      ! Interval for writing a plotfile (for visit/amrvis)
   namelist /probin_common/ prob_type     ! sets scalars, m, coefficients (see init.f90)
+
+  namelist /probin/ advection_type     ! 0 = centered explicit
+                                       ! 1 = unlimited bds in space and time
+                                       ! 2 = unlimited bds in space and time
 
   ! Algorithm control / selection
   !----------------------
@@ -129,6 +133,8 @@ contains
 
     wallspeed_lo(1:MAX_SPACEDIM-1,1:MAX_SPACEDIM) = 0.d0
     wallspeed_hi(1:MAX_SPACEDIM-1,1:MAX_SPACEDIM) = 0.d0
+
+    advection_type = 0
 
     need_inputs = .true.
 
@@ -313,6 +319,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) wallspeed_hi(2,3)
+
+       case ('--advection_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) advection_type
 
        case ('--')
           farg = farg + 1

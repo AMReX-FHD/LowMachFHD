@@ -27,10 +27,9 @@ subroutine main_driver()
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, stats_int
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
-                                   bc_lo, bc_hi, fixed_dt, plot_int, visc_type
+                                   bc_lo, bc_hi, fixed_dt, plot_int, visc_type, advection_type
   use probin_gmres_module  , only: probin_gmres_init
-  use probin_module        , only: probin_init, barodiffusion_type, use_overdamped, &
-                                   advection_type
+  use probin_module        , only: probin_init, barodiffusion_type, use_overdamped                                   
 
   implicit none
 

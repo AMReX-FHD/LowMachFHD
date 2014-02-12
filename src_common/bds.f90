@@ -5,7 +5,7 @@ module bds_module
   use ml_layout_module
   use define_bc_module
   use bc_module
-  use probin_module, only: advection_type
+  use probin_common_module, only: advection_type
 
   implicit none
 
