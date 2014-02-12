@@ -41,7 +41,7 @@ subroutine main_driver()
 
   integer :: n,nlevs,i,dm,istep
 
-  real(kind=dp_t) :: time
+  real(kind=dp_t) :: time,runtime1,runtime2
 
   type(box)         :: bx
   type(ml_boxarray) :: mba
@@ -391,6 +391,8 @@ subroutine main_driver()
   
   do istep=1,max_step
 
+     runtime1 = parallel_wtime()
+
      if (parallel_IOProcessor()) then
         print*,"Begin Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
      end if
@@ -411,6 +413,12 @@ subroutine main_driver()
 
     if (parallel_IOProcessor()) then
         print*,"End Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
+     end if
+
+     runtime2 = parallel_wtime() - runtime1
+     call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
+     if (parallel_IOProcessor()) then
+        print*,'Time to advance timestep: ',runtime1,' seconds'
      end if
 
      ! project rho and rho1 back onto EOS
