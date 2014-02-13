@@ -22,6 +22,8 @@ subroutine main_driver()
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use analyze_spectra_module
+  use estdt_module
+  use convert_stag_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
                                    project_eos_int, visc_coef, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, stats_int
@@ -41,7 +43,7 @@ subroutine main_driver()
 
   integer :: n,nlevs,i,dm,istep
 
-  real(kind=dp_t) :: time,runtime1,runtime2
+  real(kind=dp_t) :: dt,time,runtime1,runtime2
 
   type(box)         :: bx
   type(ml_boxarray) :: mba
@@ -312,23 +314,6 @@ subroutine main_driver()
 
   end do
 
-  if(abs(hydro_grid_int)>0 .or. stats_int>0) then
-
-     narg = command_argument_count()
-     farg = 1
-     if (narg >= 1) then
-        call get_command_argument(farg, value = fname)
-        inquire(file = fname, exist = lexist )
-        if ( lexist ) then
-           un = unit_new()
-           open(unit=un, file = fname, status = 'old', action = 'read')
-           call initialize_hydro_grid(mla,sold,mold,fixed_dt,dx,un)
-           close(unit=un)
-        end if
-     end if
-
-  end if
-
   time = 0.d0
 
   ! initialize sold = s^0 and mold = m^0
@@ -375,9 +360,33 @@ subroutine main_driver()
   ! fill the stochastic multifabs with a new set of random numbers
   call fill_stochastic(mla)  
 
+  ! set the initial time step
+  if (fixed_dt .gt. 0.d0) then
+     dt = fixed_dt
+  else
+     call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+     call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
+     call estdt(mla,umac,dx,dt)
+  end if
+
+  if(abs(hydro_grid_int)>0 .or. stats_int>0) then
+     narg = command_argument_count()
+     farg = 1
+     if (narg >= 1) then
+        call get_command_argument(farg, value = fname)
+        inquire(file = fname, exist = lexist )
+        if ( lexist ) then
+           un = unit_new()
+           open(unit=un, file = fname, status = 'old', action = 'read')
+           call initialize_hydro_grid(mla,sold,mold,dt,dx,un)
+           close(unit=un)
+        end if
+     end if
+  end if
+
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
-                          rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,fixed_dt, &
+                          rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt, &
                           the_bc_tower,vel_bc_n,vel_bc_t)
 
   if (print_int .gt. 0) then
@@ -393,26 +402,32 @@ subroutine main_driver()
 
      runtime1 = parallel_wtime()
 
+     if (fixed_dt .le. 0.d0) then
+        call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+        call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
+        call estdt(mla,umac,dx,dt)
+     end if
+
      if (parallel_IOProcessor()) then
-        print*,"Begin Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
+        print*,"Begin Advance; istep =",istep,"DT =",dt,"TIME =",time
      end if
 
      ! advance the solution by dt
      if (use_overdamped) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,fixed_dt,the_bc_tower, &
+                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,the_bc_tower, &
                                          vel_bc_n,vel_bc_t)
      else
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp_fc,dx,fixed_dt,the_bc_tower,vel_bc_n,vel_bc_t)
+                              gp_fc,dx,dt,the_bc_tower,vel_bc_n,vel_bc_t)
      end if
 
      ! increment simulation time
-     time = time + fixed_dt
+     time = time + dt
 
     if (parallel_IOProcessor()) then
-        print*,"End Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
+        print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
      end if
 
      runtime2 = parallel_wtime() - runtime1
@@ -446,7 +461,7 @@ subroutine main_driver()
                (mod(istep-n_steps_skip,stats_int) .eq. 0) ) then
             call print_stats(mla,snew,mnew,umac,prim,dx,istep-n_steps_skip,time)
             if (hydro_grid_int<0) then
-               call analyze_hydro_grid(mla,snew,mnew,umac,prim,fixed_dt,dx, &
+               call analyze_hydro_grid(mla,snew,mnew,umac,prim,dt,dx, &
                                        istep-n_steps_skip,custom_analysis=.true.)
             end if   
          end if
@@ -454,7 +469,7 @@ subroutine main_driver()
          ! Add this snapshot to the average in HydroGrid
          if ( (hydro_grid_int > 0) .and. &
               ( mod(istep-n_steps_skip,hydro_grid_int) .eq. 0 ) ) then
-            call analyze_hydro_grid(mla,snew,mnew,umac,prim,fixed_dt,dx, &
+            call analyze_hydro_grid(mla,snew,mnew,umac,prim,dt,dx, &
                                     istep-n_steps_skip,custom_analysis=.false.)
          end if
 
