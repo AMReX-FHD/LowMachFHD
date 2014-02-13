@@ -9,21 +9,21 @@
   
   ! problem setup
   smoothing_width = 1.d0     ! scale factor for smoothing initial profile
-  c_init(1:2) = 0.1d0 0.9d0  ! controls initial concentration range
+  c_init(1:2) = 0.0d0 0.0d0  ! controls initial concentration range
   u_init(1:2) = 0.d0 1.d0    ! controls initial x-velocity
   c_bc(2,1:2) = 0.1d0 0.9d0
-  grav(1:2) = 0.d0 0.d0      ! gravity vector (negative is downwards)
+  grav(1:2) = 0.d0 0.d0    ! gravity vector (negative is downwards)
 
   ! simulation properties
   max_step = 1000            ! maximum number of time steps
   print_int = 0              ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 1        ! how often to call project_onto_eos
+  project_eos_int = 100000        ! how often to call project_onto_eos
 
   ! fluid properties
   nscal = 2                       ! scalars; nscal=2 means we carry rho and rho*c
   rhobar(1:2) = 1.d0 1.d0         ! rho1bar and rho2bar
-  visc_coef = 0.001d0             ! momentum diffusion coefficient 'eta'   
-  diff_coef = 0.001d0             ! concentration diffusion coefficient 'chi'
+  visc_coef = 0.0d0             ! momentum diffusion coefficient 'eta'   
+  diff_coef = 0.0d0             ! concentration diffusion coefficient 'chi'
   mol_mass(1:2) = 1.d0 1.d0       ! molar mass of species
   kT = 1.d0                       ! temperature
 
@@ -46,12 +46,13 @@
   !----------------------
   dim_in = 2                 ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate
-  prob_hi(1:2) = 64.d0 64.d0 ! physical hi coordinate
-  n_cells(1:2) = 64 64       ! number of cells in domain
-  max_grid_size(1:2) = 32 32 ! max number of cells in a box
-  fixed_dt = 0.25d0         ! time step
+  prob_hi(1:2) = 1.d0 1.d0 ! physical hi coordinate
+  n_cells(1:2) = 128 128     ! number of cells in domain
+  max_grid_size(1:2) = 64 64 ! max number of cells in a box
+  fixed_dt = -1
+  cfl = 0.5d0  
   plot_int = 10             ! Interval for writing a plotfile (for visit/amrvis)
-  prob_type = 3              ! sets scalars, m, coefficients (see init.f90)
+  prob_type = 4              ! sets scalars, m, coefficients (see init.f90)
 
   ! Algorithm control / selection
   !----------------------
@@ -84,8 +85,8 @@
   ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
-  bc_lo(1:2) = -1 100
-  bc_hi(1:2) = -1 100
+  bc_lo(1:2) = -1 -1
+  bc_hi(1:2) = -1 -1
 
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions

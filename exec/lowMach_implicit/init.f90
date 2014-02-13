@@ -6,6 +6,7 @@ module init_module
   use define_bc_module
   use convert_stag_module
   use bc_module
+  use bl_constants_module
   use probin_lowmach_module, only: rhobar, diff_coef, visc_coef, &
                                    smoothing_width, c_init, material_properties, &
                                    grav, u_init
@@ -217,6 +218,40 @@ contains
           end if
           s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*s(lo(1):hi(1),j,2)
           
+       end do
+
+    case (4) 
+
+       ! Bell, Colella, Glaz 1989
+       ! jet in a doubly period geometry
+
+       ! constant density
+       s(:,:,1) = 1.d0/30.d0
+
+       ! tracer
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .le. 0.5d0) then
+             s(:,j,2) = 0.d0
+          else
+             s(:,j,2) = 1.d0/30.d0
+          end if
+       end do
+
+       ! x velocity
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .le. 0.5d0) then
+             mx(:,j) = tanh(30.d0*(y-0.25d0)) / 30.d0
+          else
+             mx(:,j) = tanh(30.d0*(0.75d0-y)) / 30.d0
+          end if
+       end do
+
+       ! y-velocity
+       do i=lo(1),hi(1)
+          x = prob_lo(1) + (i+0.5d0)*dx(1)
+          my(i,:) = (0.05d0/30.d0) * sin(2.d0*M_PI*x)
        end do
 
     case default
