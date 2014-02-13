@@ -175,7 +175,7 @@ contains
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
-            w1  = 0.1d0 +alpha/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
+            w1  = 0.01d0 +alpha/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
             w2  = dexp(-beta*time)
             rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
             
@@ -185,6 +185,7 @@ contains
             
             !if(i.eq.4 .and. j.eq.5) print*,'w1=',w1,'w2=',w2,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),&
             !                        'rho3=',rho(i,j,3),'rhot=',rhot
+            !if(i.eq.4 .and. j.eq.5) print*,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),'rho3=',rho(i,j,3),'rhot=',rhot
 
          end do
     end do

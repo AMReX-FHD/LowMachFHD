@@ -178,12 +178,6 @@ subroutine main_driver()
   ! write initial plotfile
   if (plot_int .gt. 0) then
      call write_plotfile(mla,"rho",      rho,istep,dx,time,prob_lo,prob_hi)
-     call write_plotfile(mla,"exact_rho",rho,istep,dx,time,prob_lo,prob_hi)
-     ! initially there are zero error
-     do n=1,nlevs
-        call setval(rho_exact(n), 0.0d0, all=.true.)
-     enddo
-     call write_plotfile(mla,"error_rho",rho_exact,istep,dx,time,prob_lo,prob_hi)
   endif
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
