@@ -20,7 +20,7 @@
  
  nspecies = 3                   ! number of species
  max_step = 600                   ! total number of computational step
- cfl      = 0.01                ! CFL number
+ cfl1     = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature
  Press    = 1.0                 ! Pressure

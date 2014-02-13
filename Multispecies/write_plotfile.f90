@@ -20,7 +20,7 @@ contains
 
     ! local variables
     character(len=20), allocatable  :: plot_names(:)
-    character(len=128)                :: plotfile_name
+    character(len=20)               :: plotfile_name
     integer                         :: n,nlevs
 
     ! multifab of size nlevs  
@@ -54,7 +54,7 @@ contains
     !end if
     
     ! write the plotfile
-    call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), plotfile_name, & 
+    call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), trim(plotfile_name), & 
                                    plot_names, mla%mba%pd(1), prob_lo, prob_hi, & 
                                    time, dx(1,:))
 

@@ -8,7 +8,7 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: cfl,chi,Temp,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
+  real(kind=dp_t)    :: cfl1,chi,Temp,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
   real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
@@ -18,7 +18,7 @@ module probin_multispecies_module
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step
-  namelist /probin_multispecies/ cfl
+  namelist /probin_multispecies/ cfl1
   namelist /probin_multispecies/ chi
   namelist /probin_multispecies/ Temp
   namelist /probin_multispecies/ Press
@@ -58,7 +58,7 @@ contains
     ! here we set some random values to be replaced from the input file
     nspecies          = 2 
     max_step          = 10000
-    cfl               = 1.0d0
+    cfl1               = 1.0d0
     chi               = 1.0d0
     init_type         = 1
     inverse_type      = 1
@@ -103,10 +103,10 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_step
-       case ('--cfl')
+       case ('--cfl1')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) cfl
+          read(fname, *) cfl1
        case ('--chi')
           farg = farg + 1
           call get_command_argument(farg, value = fname)

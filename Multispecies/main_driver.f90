@@ -182,7 +182,7 @@ subroutine main_driver()
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
-  dt = cfl*dx(1,1)**2/chi
+  dt = cfl1*dx(1,1)**2/chi
   write(*,*) "Using time step dt=", dt
  
   do istep=1,max_step
@@ -203,7 +203,7 @@ subroutine main_driver()
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
         
         call write_plotfile(mla,"rho",      rho,istep,dx,time,prob_lo,prob_hi)
-        call write_plotfile(mla,"exact_rho",rho_exact,istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile(mla,"ex",rho_exact,istep,dx,time,prob_lo,prob_hi)
 
         ! difference between rho and rho_exact
         do n=1,nlevs
@@ -211,7 +211,7 @@ subroutine main_driver()
         enddo
         
         ! check error with visit
-        call write_plotfile(mla,"error_rho",rho_exact,istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile(mla,"err",rho_exact,istep,dx,time,prob_lo,prob_hi)
  
      endif
      
