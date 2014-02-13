@@ -19,7 +19,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, grav
-  use probin_common_module, only: fixed_dt, advection_type
+  use probin_common_module, only: advection_type
 
   use analysis_module
 
@@ -32,7 +32,7 @@ module advance_timestep_overdamped_module
 contains
 
   subroutine advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,the_bc_tower, &
+                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,the_bc_tower, &
                                          vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
@@ -49,7 +49,7 @@ contains
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
@@ -190,7 +190,8 @@ contains
                                 the_bc_tower%bc_tower_array)
 
     ! add div(Sigma^n) to gmres_rhs_v
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v,eta,eta_ed,dx)
+    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,dx,dt)
 
     ! add gravity term to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
@@ -212,7 +213,7 @@ contains
 
     ! add div(Psi^n) to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
-                                 chi_fc,dx,vel_bc_n)
+                                 chi_fc,dx,dt,vel_bc_n)
 
     do n=1,nlevs
        do i=1,dm
@@ -262,7 +263,7 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/fixed_dt,dx,the_bc_tower, &
+                                kappa,1.d0/dt,dx,the_bc_tower, &
                                 vel_bc_n_delta,vel_bc_t_delta)
 
     ! call gmres to compute delta v and delta p
@@ -309,7 +310,7 @@ contains
           call multifab_fill_boundary(bds_force(n))
        end do
 
-       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,fixed_dt,1,nscal,the_bc_tower)
+       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
 
     else
 
@@ -321,7 +322,7 @@ contains
     ! compute s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
     ! store result in snew (we will later add sold and divide by 2)
     do n=1,nlevs
-       call multifab_mult_mult_s_c(s_update(n),1,fixed_dt,nscal,0)
+       call multifab_mult_mult_s_c(s_update(n),1,dt,nscal,0)
        call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
        call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
     end do
@@ -385,7 +386,8 @@ contains
                                 the_bc_tower%bc_tower_array)
 
     ! add div(Sigma^n') to gmres_rhs_v
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v,eta,eta_ed,dx)
+    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,dx,dt)
 
     ! add gravity term to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
@@ -412,7 +414,7 @@ contains
 
     ! add div(Psi^n') to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
-                                 chi_fc,dx,vel_bc_n)
+                                 chi_fc,dx,dt,vel_bc_n)
 
     do n=1,nlevs
        do i=1,dm
@@ -462,7 +464,7 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/fixed_dt,dx,the_bc_tower, &
+                                kappa,1.d0/dt,dx,the_bc_tower, &
                                 vel_bc_n_delta,vel_bc_t_delta)
 
     ! call gmres to compute delta v and delta p
@@ -509,7 +511,7 @@ contains
           call multifab_fill_boundary(bds_force(n))
        end do
 
-       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,fixed_dt,1,nscal,the_bc_tower)
+       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
 
     else
 
@@ -520,7 +522,7 @@ contains
 
     ! compute s^{n+1} = s^n + dt * (A^{*,n+1/2} + D^{*,n+1/2} + St^{*,n+1/2})
     do n=1,nlevs
-       call multifab_mult_mult_s_c(s_update(n),1,fixed_dt,nscal,0)
+       call multifab_mult_mult_s_c(s_update(n),1,dt,nscal,0)
        call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
        call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
     end do

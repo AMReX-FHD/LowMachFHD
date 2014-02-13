@@ -41,7 +41,7 @@ subroutine main_driver()
 
   integer :: n,nlevs,i,dm,istep
 
-  real(kind=dp_t) :: time
+  real(kind=dp_t) :: time,runtime1,runtime2
 
   type(box)         :: bx
   type(ml_boxarray) :: mba
@@ -377,7 +377,8 @@ subroutine main_driver()
 
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
-                          rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                          rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,fixed_dt, &
+                          the_bc_tower,vel_bc_n,vel_bc_t)
 
   if (print_int .gt. 0) then
      call sum_mass_momentum(mla,sold,mold)
@@ -390,6 +391,8 @@ subroutine main_driver()
   
   do istep=1,max_step
 
+     runtime1 = parallel_wtime()
+
      if (parallel_IOProcessor()) then
         print*,"Begin Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
      end if
@@ -397,12 +400,12 @@ subroutine main_driver()
      ! advance the solution by dt
      if (use_overdamped) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,the_bc_tower, &
+                                         chi,chi_fc,eta,eta_ed,kappa,dx,fixed_dt,the_bc_tower, &
                                          vel_bc_n,vel_bc_t)
      else
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp_fc,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                              gp_fc,dx,fixed_dt,the_bc_tower,vel_bc_n,vel_bc_t)
      end if
 
      ! increment simulation time
@@ -410,6 +413,12 @@ subroutine main_driver()
 
     if (parallel_IOProcessor()) then
         print*,"End Advance; istep =",istep,"DT =",fixed_dt,"TIME =",time
+     end if
+
+     runtime2 = parallel_wtime() - runtime1
+     call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
+     if (parallel_IOProcessor()) then
+        print*,'Time to advance timestep: ',runtime1,' seconds'
      end if
 
      ! project rho and rho1 back onto EOS

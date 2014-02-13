@@ -11,7 +11,7 @@ module mk_stochastic_fluxdiv_module
   use convert_stag_module
   use bc_module
   use multifab_physbc_stag_module
-  use probin_common_module , only: fixed_dt, visc_type, diff_type
+  use probin_common_module , only: visc_type, diff_type
   use probin_lowmach_module, only: nscal, rhobar, visc_coef, diff_coef, variance_coef, &
                                    conc_scal, stoch_stress_form, filtering_width, mol_mass, &
                                    kT
@@ -37,14 +37,14 @@ contains
 
   ! Note that here we *increment* stoch_s_force so it must be initialized externally!
   subroutine mk_stochastic_s_fluxdiv(mla,the_bc_level,stoch_s_force,s_fc, &
-                                     chi_fc,dx,vel_bc_n)
+                                     chi_fc,dx,dt,vel_bc_n)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: stoch_s_force(:)
     type(multifab) , intent(in   ) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: chi_fc(:,:)
-    real(dp_t)     , intent(in   ) :: dx(:,:)
+    real(dp_t)     , intent(in   ) :: dx(:,:),dt
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
 
     ! local
@@ -92,10 +92,10 @@ contains
 
        if (diff_type < 0) then
           ! chi varies in space, add its contribution below in an i/j/k loop
-          variance = sqrt(variance_coef*conc_scal*2.d0          /(product(dx(n,1:dm))*fixed_dt))
+          variance = sqrt(variance_coef*conc_scal*2.d0          /(product(dx(n,1:dm))*dt))
        else
           ! chi is constant in space, include it here
-          variance = sqrt(variance_coef*conc_scal*2.d0*diff_coef/(product(dx(n,1:dm))*fixed_dt))
+          variance = sqrt(variance_coef*conc_scal*2.d0*diff_coef/(product(dx(n,1:dm))*dt))
        end if
 
        do i=1,dm       
@@ -527,14 +527,14 @@ contains
   end subroutine mk_stochastic_s_fluxdiv
 
   ! Note that here we *increment* stoch_m_force so it must be initialized externally!
-  subroutine mk_stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,eta_ed,dx)
+  subroutine mk_stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,eta_ed,dx,dt)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: stoch_m_force(:,:)
     type(multifab) , intent(in   ) :: eta(:)
     type(multifab) , intent(in   ) :: eta_ed(:,:)
-    real(dp_t)     , intent(in   ) :: dx(:,:)
+    real(dp_t)     , intent(in   ) :: dx(:,:),dt
 
     ! local
     integer :: n,nlevs,dm,i
@@ -605,10 +605,10 @@ contains
 
        if (visc_type < 0) then
           ! eta varies in space, add its contribution below in an i/j/k loop
-          variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*fixed_dt))
+          variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*dt))
        else
           ! eta is constant in space, include it here
-          variance = sqrt(variance_coef*2.d0*kT*visc_coef/(product(dx(n,1:dm))*fixed_dt))
+          variance = sqrt(variance_coef*2.d0*kT*visc_coef/(product(dx(n,1:dm))*dt))
        end if
 
 

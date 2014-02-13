@@ -3,7 +3,6 @@
 &probin
 
   barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
-  advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
   use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
 
 /
@@ -28,7 +27,7 @@
   nscal = 2                  ! scalars; nscal=2 means we carry rho and rho*c
   !rhobar(1:2) = 0.8594366925 0.8594366925 ! mass ratio R=1
   rhobar(1:2) = 0.8594366925 3.437746770 ! mass ratio R=4
-  visc_coef = -4.633407920 ! Hard disk Enskog theory -2.316703960*sqrt(R)
+  visc_coef = 4.633407920 ! Hard disk Enskog theory -2.316703960*sqrt(R)
   !visc_coef = 2.316703960 ! R=1
   !diff_coef = 0.05284803036 ! R=1
   diff_coef = 0.04178003645 ! Enskog theory = 0.05284803036 * sqrt ( (1+R) / (2*R) )
@@ -80,9 +79,17 @@
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
+  ! positive = assume constant coefficients
+  ! negative = assume spatially-varying coefficients
   visc_type = -2
 
- ! Boundary conditions
+  ! 1 = constant coefficients
+  ! -1 = spatially-varing coefficients
+  diff_type = -1
+
+  advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
+
+  ! Boundary conditions
   !----------------------
   ! BC specifications:
   ! -1  = periodic
@@ -142,8 +149,8 @@
   mg_bottom_solver = 0         ! bottom solver type
                                ! 0 = smooths only, controlled by mg_nsmooths_bottom
                                ! 1 = BiCGStab
-                               ! 4 = Fancy bottom solve that coarsens as far as possible 
-                               !     and then applies BiCGStab
+                               ! 4 = Fancy bottom solve that coarsens down additionally
+                               !     and then applies mg_nsmooths_bottom smooths
   mg_nsmooths_down = 2         ! number of smooths at each level on the way down
   mg_nsmooths_up = 2           ! number of smooths at each level on the way up
   mg_nsmooths_bottom = 8       ! number of smooths at the bottom (only if mg_bottom_solver=0)
