@@ -28,8 +28,8 @@ module analysis_module
      type(bc_level) , intent(in   )  :: the_bc_level(:)
  
      ! local variables
-     integer                         :: i,n,nlevs,n_cell
-     real(kind=dp_t)                 :: norm_inf,norm_l1,norm_l2
+     real(kind=dp_t), dimension(nspecies) :: norm_inf,norm_l1,norm_l2
+     integer                              :: i,n,nlevs,n_cell
      
      nlevs = size(rho,1)
 
@@ -39,30 +39,36 @@ module analysis_module
      ! substract the values 
      do n=1,nlevs
         call multifab_sub_sub_c(rho_exact(n),1,rho(n),1,nspecies,0)
-     end do
+     enddo
 
      n_cell = multifab_volume(rho_exact(1))/nspecies 
      
-     ! Linf norm = max(diff_i) 
-     norm_inf = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
+     do i=1, nspecies 
+         
+        ! Linf norm = max(diff_i)
+        norm_inf(i) = multifab_norm_inf_c(rho_exact(1),i,1,all=.false.)
 
-     ! L1 norm = 1/n_cell*sum(diff_i) 
-     norm_l1 = multifab_norm_l1_c(rho_exact(1),1,nspecies,all=.false.)/dble(n_cell)
+        ! L1 norm = 1/n_cell*sum(diff_i) 
+        norm_l1(i) = multifab_norm_l1_c(rho_exact(1),i,1,all=.false.)/dble(n_cell)
 
-     ! L2 norm = sqrt{1/n_cell*sum(diff_i^2)} 
-     norm_l2 = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
+        ! L2 norm = sqrt{1/n_cell*sum(diff_i^2)} 
+        norm_l2(i) = multifab_norm_l2_c(rho_exact(1),i,1,all=.false.)/sqrt(dble(n_cell))
+     
+     enddo
      
      ! print the norms
-     !if(.false.) then
+     if(.false.) then
         if (parallel_IOProcessor()) then 
-            if(time.gt.2.99d0) then
-               print*, time, norm_inf, norm_l1, norm_l2
-            end if
-        end if
-     !end if
+            !if(time.gt.2.99d0) then
+            if(time.gt.0.49d0) then
+               print*, time, norm_inf(1:nspecies), norm_l1(1:nspecies),&
+                       norm_l2(1:nspecies)
+            endif
+        endif
+     end if
      
      ! for checking analytic solution with Visit
-     !call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 
+     call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 
 
   end subroutine print_errors
 

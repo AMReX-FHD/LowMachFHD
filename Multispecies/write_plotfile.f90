@@ -9,21 +9,22 @@ module write_plotfile_module
 
 contains
   
-  subroutine write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
+  subroutine write_plotfile(mla,name,rho,istep,dx,time,prob_lo,prob_hi)
 
-    type(ml_layout)   , intent(in   ) :: mla
-    type(multifab)    , intent(in   ) :: rho(:)
-    integer           , intent(in   ) :: istep
-    real(kind=dp_t)   , intent(in   ) :: dx(:,:),time
-    real(kind=dp_t)   , intent(in   ) :: prob_lo(rho(1)%dim), prob_hi(rho(1)%dim)
+    type(ml_layout),    intent(in)  :: mla
+    character(len=*),   intent(in)  :: name
+    type(multifab),     intent(in)  :: rho(:)
+    integer,            intent(in)  :: istep
+    real(kind=dp_t),    intent(in)  :: dx(:,:),time
+    real(kind=dp_t),    intent(in)  :: prob_lo(rho(1)%dim), prob_hi(rho(1)%dim)
 
     ! local variables
-    character(len=20), allocatable    :: plot_names(:)
-    character(len=8)                  :: plotfile_name
-    integer                           :: n,nlevs
+    character(len=20), allocatable  :: plot_names(:)
+    character(len=128)                :: plotfile_name
+    integer                         :: n,nlevs
 
     ! multifab of size nlevs  
-    type(multifab), allocatable       :: plotdata(:)
+    type(multifab), allocatable     :: plotdata(:)
 
     nlevs = mla%nlevel
   
@@ -46,7 +47,7 @@ contains
     enddo
     
     ! define the name of the plotfile that will be written
-    write(unit=plotfile_name,fmt='("plt",i5.5)') istep
+    write(unit=plotfile_name,fmt='(a,i5.5)') name, istep
     !if ( parallel_IOProcessor() ) then
     !  write(*,'(2A)') "Saving PLOT FILEs to directory ", trim(plotfile_name)
     !  write(*,*)

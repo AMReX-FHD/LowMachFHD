@@ -76,11 +76,11 @@ subroutine main_driver()
     case(2)
       if (dx(1,1) .ne. dx(1,2)) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-      end if    
+      endif    
     case(3)
       if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-      end if    
+      endif    
     case default
       call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
   end select
@@ -88,7 +88,7 @@ subroutine main_driver()
   ! use refined dx for next level
   do n=2,nlevs
      dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
-  end do
+  enddo
 
   ! create a box from (0,0) to (n_cells-1,n_cells-1)
   lo(1:dm) = 0
@@ -110,7 +110,7 @@ subroutine main_driver()
   ! now build the boxarray at other levels
   if (nlevs .ge. 2) then
      call bl_error("Need to build boxarray for n>1")
-  end if
+  endif
 
   ! build pmask
   allocate(pmask(dm))
@@ -118,8 +118,8 @@ subroutine main_driver()
   do i=1,dm
      if (bc_lo(i) .eq. PERIODIC .and. bc_hi(i) .eq. PERIODIC) then
         pmask(i) = .true.
-     end if
-  end do
+     endif
+  enddo
 
   ! build the ml_layout, mla
   call ml_layout_build(mla,mba,pmask)
@@ -141,7 +141,7 @@ subroutine main_driver()
   do n=1,nlevs
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
-  end do
+  enddo
 
   ! these quantities are populated here and defined in probin_multispecies 
   rho_part_bc_comp   = scal_bc_comp + 1
@@ -156,7 +156,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_build(rho(n),      mla%la(n),nspecies,1)
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
-  end do
+  enddo
 
   !=====================================================================
   ! Read molar mass from input file (constant throughout space and time)
@@ -177,8 +177,8 @@ subroutine main_driver()
 
   ! write initial plotfile
   if (plot_int .gt. 0) then
-     call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
-  end if
+     call write_plotfile(mla,"rho",      rho,istep,dx,time,prob_lo,prob_hi)
+  endif
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
@@ -189,7 +189,7 @@ subroutine main_driver()
 
      if (parallel_IOProcessor()) then
         !print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-     end if
+     endif
 
      ! advance the solution by dt
      call advance(mla,rho,molmass,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
@@ -197,19 +197,28 @@ subroutine main_driver()
      ! compute error norms
      if (print_error_norms) then
         call print_errors(rho,rho_exact,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
-     end if
+     endif
 
      ! write plotfile at specific intervals
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
-        call write_plotfile(mla,rho,istep,dx,time,prob_lo,prob_hi)
-        ! for checking analytic solution with visit
-        !call write_plotfile(mla,rho_exact,istep,dx,time,prob_lo,prob_hi)
-     end if
+        
+        call write_plotfile(mla,"rho",      rho,istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile(mla,"exact_rho",rho_exact,istep,dx,time,prob_lo,prob_hi)
+
+        ! difference between rho and rho_exact
+        do n=1,nlevs
+           call saxpy(rho_exact(n),-1.0d0,rho(n))
+        enddo
+        
+        ! check error with visit
+        call write_plotfile(mla,"error_rho",rho_exact,istep,dx,time,prob_lo,prob_hi)
+ 
+     endif
      
      ! increment simulation time
      time = time + dt
         
-  end do
+  enddo
 
   !=======================================================
   ! Destroy multifabs and layouts
@@ -219,7 +228,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_exact(n))
-  end do
+  enddo
 
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
