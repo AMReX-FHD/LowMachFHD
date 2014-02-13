@@ -208,11 +208,11 @@ contains
 
           if (y .lt. y1) then
              s(lo(1):hi(1),j,2) = c_init(1)
-             s(lo(1):hi(1),j,1) = 2.d0!1.0d0/(c_init(1)/rhobar(1)+(1.0d0-c_init(1))/rhobar(2))
+             s(lo(1):hi(1),j,1) = 1.0d0/(c_init(1)/rhobar(1)+(1.0d0-c_init(1))/rhobar(2))
              mx(lo(1):hi(1),j) = s(lo(1):hi(1),j,1) * u_init(1)
           else
              s(lo(1):hi(1),j,2) = c_init(2)
-             s(lo(1):hi(1),j,1) = 1.d0!1.0d0/(c_init(2)/rhobar(1)+(1.0d0-c_init(2))/rhobar(2))
+             s(lo(1):hi(1),j,1) = 1.0d0/(c_init(2)/rhobar(1)+(1.0d0-c_init(2))/rhobar(2))
              mx(lo(1):hi(1),j) = s(lo(1):hi(1),j,1) * u_init(2)
           end if
           s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*s(lo(1):hi(1),j,2)
