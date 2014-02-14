@@ -472,10 +472,11 @@ MAC velocities.
 In our description below, we will use the shorthand $\rm{BDS}(\phi,\vb,q)$ to refer to 
 the scalar edge states computed with the BDS algorithm given a cell-centered field 
 $\phi$, a MAC velocity field $\vb$, and a cell-centered source term $q$.  A key point
-here is that if $q=0$ when using BDS to advect $\rho$, and $q=\nabla\cdot\Fb$, where
+here is that if $q=0$ when computing $\rho$ edge states, and $q=\nabla\cdot\Fb$ when
+compute $\rho_1$ edge states, where
 $\Fb$ is the same flux used to generate the RHS of the divergence constraint on the
-velocity field, that the BDS advection scheme will ensure that the resulting edge
-state $(\rho,\rho_1)$ satisfy the EOS.  There is a proof on our whiteboard here that 
+input velocity field, that the BDS advection scheme will ensure that the resulting edge
+states $(\rho,\rho_1)$ satisfy the EOS.  There is a proof on our whiteboard here that 
 John worked out, but just take this as a given for now.
 
 \subsection{Original Algorithm}
