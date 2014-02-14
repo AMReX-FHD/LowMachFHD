@@ -6,14 +6,16 @@ eps_source = $(wildcard *.eps)
 
 pdf_source = $(eps_source:.eps=.pdf)
 
-DesignDocument.dvi: DesignDocument.tex $(eps_source)
+DesignDocument.dvi: DesignDocument.tex DesignDocument.bib $(eps_source)
 	latex DesignDocument.tex < /dev/null
+	bibtex DesignDocument < /dev/null
 	latex DesignDocument.tex < /dev/null
 	latex DesignDocument.tex < /dev/null
 	latex DesignDocument.tex < /dev/null
 
-DesignDocument.pdf: DesignDocument.tex $(pdf_source)
+DesignDocument.pdf: DesignDocument.tex DesignDocument.bib $(pdf_source)
 	pdflatex DesignDocument.tex < /dev/null
+	bibtex DesignDocument < /dev/null
 	pdflatex DesignDocument.tex < /dev/null
 	pdflatex DesignDocument.tex < /dev/null
 	pdflatex DesignDocument.tex < /dev/null
