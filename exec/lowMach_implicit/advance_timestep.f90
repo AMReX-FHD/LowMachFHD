@@ -77,6 +77,7 @@ contains
     type(multifab) :: m_s_fluxdiv    (mla%nlevel,mla%dim)
     type(multifab) ::        dumac(mla%nlevel,mla%dim)
     type(multifab) ::     umac_old(mla%nlevel,mla%dim)
+    type(multifab) ::     umac_tmp(mla%nlevel,mla%dim)
     type(multifab) ::        gradp(mla%nlevel,mla%dim)
     type(multifab) ::     s_fc_old(mla%nlevel,mla%dim)
     type(multifab) ::   chi_fc_old(mla%nlevel,mla%dim)
@@ -116,6 +117,7 @@ contains
           call multifab_build_edge(m_s_fluxdiv    (n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(          dumac(n,i),mla%la(n),1    ,1,i)
           call multifab_build_edge(       umac_old(n,i),mla%la(n),1    ,1,i)
+          call multifab_build_edge(       umac_tmp(n,i),mla%la(n),1    ,1,i)
           call multifab_build_edge(          gradp(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(       s_fc_old(n,i),mla%la(n),nscal,1,i)
           call multifab_build_edge(     chi_fc_old(n,i),mla%la(n),1    ,0,i)
@@ -214,7 +216,6 @@ contains
     if (advection_type .ge. 1) then
 
        do n=1,nlevs
-          ! AJN FIXME - ghost cells will stay set zero
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
           call multifab_fill_boundary(bds_force(n))
        end do
@@ -496,27 +497,43 @@ contains
     if (advection_type .ge. 1) then
 
        do n=1,nlevs
-          ! AJN FIXME - ghost cells will stay set zero
-          call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
+          call multifab_plus_plus_c(bds_force(n),1,s_update(n),1,nscal,0)
+          call multifab_mult_mult_s_c(bds_force(n),1,0.5d0,nscal,0)
           call multifab_fill_boundary(bds_force(n))
+          do i=1,dm
+             call multifab_copy_c(umac_tmp(n,i),1,umac_old(n,i),1,1,1)
+             call multifab_plus_plus_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
+             call multifab_mult_mult_s_c(umac_tmp(n,i),1,0.5d0,1,1)
+          end do
+          call setval(s_update(n),0.d0,all=.true.)
+          
        end do
 
-       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+       call bds(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+
+       ! snew = s^n + dt * A^{n+1/2} + (dt/2) * (D^n + D^{n+1,*} + S^n + S^{n+1,*})
+       do n=1,nlevs
+          call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
+          call multifab_mult_mult_s_c(s_update(n),1,dt,nscal,0)
+          call multifab_mult_mult_s_c(bds_force(n),1,dt,nscal,0)
+          call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
+          call multifab_plus_plus_c(snew(n),1,bds_force(n),1,nscal,0)
+       end do
 
     else
 
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
 
-    end if
+       ! snew = s^{n+1} 
+       !      = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1})
+       do n=1,nlevs
+          call multifab_plus_plus_c(snew(n),1,sold(n),1,nscal,0)
+          call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,0)
+          call multifab_mult_mult_s_c(s_update(n),1,dt/2.d0,nscal,0)
+          call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
+       end do
 
-    ! snew = s^{n+1} 
-    !      = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1})
-    do n=1,nlevs
-       call multifab_plus_plus_c(snew(n),1,sold(n),1,nscal,0)
-       call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,0)
-       call multifab_mult_mult_s_c(s_update(n),1,dt/2.d0,nscal,0)
-       call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
-    end do
+    end if
 
     ! compute prim^{n+1} from s^{n+1} in valid region
     call convert_cons_to_prim(mla,snew,prim,.true.)
@@ -801,6 +818,7 @@ contains
           call multifab_destroy(m_s_fluxdiv(n,i))
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(umac_old(n,i))
+          call multifab_destroy(umac_tmp(n,i))
           call multifab_destroy(gradp(n,i))
           call multifab_destroy(s_fc_old(n,i))
           call multifab_destroy(chi_fc_old(n,i))
