@@ -10,7 +10,7 @@ module init_module
   use probin_lowmach_module, only: rhobar, diff_coef, visc_coef, &
                                    smoothing_width, c_init, material_properties, &
                                    grav, u_init
-  use probin_common_module , only: prob_lo, prob_hi, prob_type, visc_type, diff_type
+  use probin_common_module , only: prob_lo, prob_hi, prob_type, visc_type, diff_type, n_cells
 
   implicit none
 
@@ -85,7 +85,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
-    integer :: i,j
+    integer :: i,j,mid
     real(kind=dp_t) :: x,y,y1,y2,r,dy,c_loc
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
 
@@ -261,17 +261,23 @@ contains
        ! density
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
-          if (y .le. 0.5d0) then
+          if (y .le. 0.5d0*(prob_hi(2)+prob_lo(2))) then
              s(:,j,1) = 2.d0
           else
              s(:,j,1) = 1.d0
           end if
        end do
 
+       ! density perturbation
+       mid = n_cells(2)/2
+       if (lo(1) .eq. 0 .and. lo(2) .le. mid .and. hi(2) .ge. mid) then
+          s(0,mid,1) = 1.01d0
+       end if
+
        ! tracer
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
-          if (y .le. 0.5d0) then
+          if (y .le. 0.5d0*(prob_hi(2)+prob_lo(2))) then
              s(:,j,2) = 0.d0
           else
              s(:,j,2) = 1.d0
@@ -281,7 +287,7 @@ contains
        ! x velocity
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
-          if (y .le. 0.5d0) then
+          if (y .le. 0.5d0*(prob_hi(2)+prob_lo(2))) then
              mx(:,j) = 0.d0
           else
              mx(:,j) = 1.d0
@@ -290,12 +296,6 @@ contains
 
        ! y-velocity
        my = 0.d0
-
-       ! perturbation
-       if (lo(1) .eq. 32 .and. lo(2) .eq. 32) then
-          mx(33,32) = 0.d0
-       end if
-
 
     case default
 
