@@ -254,6 +254,49 @@ contains
           my(i,:) = (0.05d0/30.d0) * sin(2.d0*M_PI*x)
        end do
 
+    case (5)
+
+       ! Kelvin-Helmholtz
+
+       ! density
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .le. 0.5d0) then
+             s(:,j,1) = 2.d0
+          else
+             s(:,j,1) = 1.d0
+          end if
+       end do
+
+       ! tracer
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .le. 0.5d0) then
+             s(:,j,2) = 0.d0
+          else
+             s(:,j,2) = 1.d0
+          end if
+       end do
+
+       ! x velocity
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .le. 0.5d0) then
+             mx(:,j) = 0.d0
+          else
+             mx(:,j) = 1.d0
+          end if
+       end do
+
+       ! y-velocity
+       my = 0.d0
+
+       ! perturbation
+       if (lo(1) .eq. 32 .and. lo(2) .eq. 32) then
+          mx(33,32) = 0.d0
+       end if
+
+
     case default
 
        call bl_error("init_2d: invalid prob_type")

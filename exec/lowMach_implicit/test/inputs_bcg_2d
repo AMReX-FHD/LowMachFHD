@@ -47,12 +47,12 @@
   dim_in = 2                 ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate
   prob_hi(1:2) = 1.d0 1.d0 ! physical hi coordinate
-  n_cells(1:2) = 64 64     ! number of cells in domain
-  max_grid_size(1:2) = 32 32 ! max number of cells in a box
+  n_cells(1:2) = 128 128     ! number of cells in domain
+  max_grid_size(1:2) = 64 64 ! max number of cells in a box
   fixed_dt = -1
-  cfl = 0.5d0
+  cfl = 0.5d0  
   plot_int = 10             ! Interval for writing a plotfile (for visit/amrvis)
-  prob_type = 5              ! sets scalars, m, coefficients (see init.f90)
+  prob_type = 4              ! sets scalars, m, coefficients (see init.f90)
 
   ! Algorithm control / selection
   !----------------------
@@ -96,7 +96,7 @@
   wallspeed_lo(1,1) = 0.d0
   wallspeed_hi(1,1) = 0.d0
   wallspeed_lo(1,2) = 0.d0
-  wallspeed_hi(1,2) = 0d0
+  wallspeed_hi(1,2) = 1.d0
 
 /
 
@@ -133,7 +133,7 @@
   mg_nsmooths_up = 2           ! number of smooths at each level on the way up
   mg_nsmooths_bottom = 8       ! number of smooths at the bottom (only if mg_bottom_solver=0)
   mg_max_bottom_nlevels = 10   ! for mg_bottom_solver=4, number of additional levels of multigrid
-  mg_rel_tol = 1.d-12          ! relative tolerance stopping criteria
+  mg_rel_tol = 1.d-9           ! relative tolerance stopping criteria
 
   ! Staggered multigrid solver parameters
   stag_mg_verbosity = 0        ! verbosity
@@ -150,10 +150,10 @@
                                   ! number of additional levels of multigrid
   stag_mg_omega = 1.d0         ! weighted-jacobi omega coefficient
   stag_mg_smoother = 1         ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
-  stag_mg_rel_tol = 1.d-12     ! relative tolerance stopping criteria
+  stag_mg_rel_tol = 1.d-9      ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.d-12       ! relative tolerance stopping criteria
+  gmres_rel_tol = 1.d-9        ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0         ! absolute tolerance stopping criteria
   gmres_verbose = 1            ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20         ! max number of outer iterations

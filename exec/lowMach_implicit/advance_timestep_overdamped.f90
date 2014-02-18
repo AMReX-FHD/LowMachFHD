@@ -229,7 +229,7 @@ contains
     end do
 
     ! reset s_update for all scalars to zero
-    ! then, set s_update for rho1 to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
+    ! then, set s_update for rho1 to F^n = div(rho*chi grad c)^n + div(Psi^n)
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)

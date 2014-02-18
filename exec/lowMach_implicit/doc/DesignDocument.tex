@@ -310,8 +310,8 @@ Using
 \end{equation}
 compute an advective update,
 \begin{eqnarray}
-\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^n),\\
-\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^n + \Fb^n).
+\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^n),\label{eq:alg1_1st_rho_adv}\\
+\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^n + \Fb^n).\label{eq:alg1_1st_rho1_adv}
 \end{eqnarray}
 Note that $\Fb^n$ has already been computed during {\bf Step 4} of the previous time step
 (or the initialization {\bf Step 0} if $n=0$).\\ \\
@@ -347,8 +347,8 @@ $\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta 
 Next, define $\vb^{*,n+1} = \vb^n + \deltab\vb$ and $p^{*,n+1} = p^n + \delta p$.\\ \\
 {\bf Step 3: Trapezoidal Scalar Corrector:}
 \begin{eqnarray}
-\rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\\
-\rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right].
+\rho^{n+1} &=& \half\rho^n + \half\left[\rho^{*,n+1} + \Delta t\nabla\cdot(-\rho^{*,n+1}\vb^{*,n+1})\right],\label{eq:alg1_2nd_rho_adv}\\
+\rho_1^{n+1} &=& \half\rho_1^n + \half\left[\rho_1^{*,n+1} + \Delta t\nabla\cdot(-\rho_1^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right].\label{eq:alg1_2nd_rho1_adv}
 \end{eqnarray}
 Note that $\Fb^{*,n+1}$ has already been computed during {\bf Step 2}.\\ \\
 {\bf Step 4: Crank-Nicolson Velocity Corrector:}\\ \\
@@ -408,44 +408,118 @@ Next, define $\vb^* = \vb^{n-\myhalf} + \deltab\vb$ and $p^* = p^{n-\myhalf} + \
 {\bf Step 3: Forward Euler Scalar Predictor}\\ \\
 Take a predictor forward Euler step for $\rho$ and $\rho_1$:
 \begin{eqnarray}
-\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^* + \Fb^n),\\
-\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^*).
+\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^*),\label{eq:alg2_1st_rho_adv}\\
+\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^* + \Fb^n).\label{eq:alg2_1st_rho1_adv}
 \end{eqnarray}
 {\bf Step 4: Compute Midpoint Estimates}
 \begin{eqnarray}
-\rho_1^{*,n+\myhalf} &=& \frac{1}{2}\left(\rho_1^n + \rho_1^{*,n+1}\right)\\
-\rho^{*,n+\myhalf} &=& \frac{1}{2}\left(\rho^n + \rho^{*,n+1}\right)
+\rho_1^{n+\myhalf} &=& \frac{1}{2}\left(\rho_1^n + \rho_1^{*,n+1}\right)\\
+\rho^{n+\myhalf} &=& \frac{1}{2}\left(\rho^n + \rho^{*,n+1}\right)
 \end{eqnarray}
 {\bf Step 5: Corrector Stochastic/Diffusive Fluxes:}\\ \\
 Calculate corrector diffusive fluxes, and reuse the same random numbers:
 \begin{equation}
-\Fb^{*,n+\myhalf} = (\rho\chi\nabla c)^{*,n+\myhalf}
-+ \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{*,n+\myhalf}k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{n'}}.
+\Fb^{n+\myhalf} = (\rho\chi\nabla c)^{n+\myhalf}
++ \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{n+\myhalf}k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{n'}}.
 \end{equation}
 {\bf Step 6: Corrector Stokes Solve:}\\ \\
 Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \vb^n + \delta\vb$:
 \begin{equation}
-\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{n'}} + \rho^{*,n+\myhalf}\gb,
+\nabla(p^* + \delta p) = \mathcal A_0^{n+\myhalf}(\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{n'}} + \rho^{n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot(\vb^* + \delta\vb) = S^{*,n+\myhalf},
+\nabla\cdot(\vb^* + \delta\vb) = S^{n+\myhalf},
 \end{equation}
 which can be written as
 \begin{equation}
--\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\vb^*
+-\mathcal{A}_0^{n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{n+\myhalf}\vb^*
 + \nabla\cdot\Sigmab^{n'}
-+ \rho^{*,n+\myhalf}\gb,
++ \rho^{n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
--\nabla\cdot\deltab\vb = \nabla\cdot\vb^* - S^{*,n+\myhalf}.
+-\nabla\cdot\deltab\vb = \nabla\cdot\vb^* - S^{n+\myhalf}.
 \end{equation}
 Next, define $\vb^{n+\myhalf} = \vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
 {\bf Step 7: Trapezoidal Scalar Corrector:}\\ \\
 Update the densities and concentrations
 \begin{eqnarray}
-\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{*,n+\myhalf}\vb^{n+\myhalf} + \Fb^{*,n+\myhalf}\right),\\
-\rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{*,n+\myhalf}\vb^{n+\myhalf}\right).
+\rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{n+\myhalf}\vb^{n+\myhalf}\right),\label{eq:alg2_2nd_rho_adv}\\
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{n+\myhalf}\vb^{n+\myhalf} + \Fb^{n+\myhalf}\right).\label{eq:alg2_2nd_rho1_adv}
 \end{eqnarray}
+
+\section{BDS Advection}
+We will consider the ``linear'' BDS advection schemes developed in 
+two dimensions \cite{BDS} and three dimensions \cite{BDS3d}.
+The basic idea behind BDS is that given a cell-centered scalar field at time $t^n$,
+$\phi^n \equiv \phi(t^n)$, a
+temporally-constant MAC velocity field, $\vb = (u,v)$, and the following PDE,
+\begin{equation}
+\frac{\partial\phi}{\partial t} + \nabla\cdot(\phi\vb) = q,
+\end{equation}
+is that the BDS algorithm constructs scalar edge states, $\phi_{i+\myhalf,j}$, etc., by
+integrating piecewise-bilinear (trilinear in 3D) profiles of $\phi$ over the 
+space-time region determined by the characteristic domain of dependence of the 
+face over a time interval $\Delta t$.  Thus, $\phi_{i+\myhalf,j}$ can be thought
+of as the average value of $\phi$ passing through a given face over a time step.
+The edge states can be used to compute advective fluxes, e.g.,
+\begin{equation}
+\left[\nabla\cdot(\phi\vb)\right]_{ij} = \frac{\phi_{i+\myhalf,j}u_{i+\myhalf,j} - \phi_{i-\myhalf,j}u_{i-\myhalf,j}}{\Delta x} + \frac{\phi_{i,j+\myhalf}v_{i,j+\myhalf} - \phi_{i,j-\myhalf}v_{i,j-\myhalf}}{\Delta y}.
+\end{equation}
+A key point here is that the MAC velocities are fixed in time, so in order to
+achieve second-order overall accuracy to solve the PDE we ultimately need time-centered
+MAC velocities.
+
+In our description below, we will use the shorthand $\rm{BDS}(\phi,\vb,q)$ to refer to 
+the scalar edge states computed with the BDS algorithm given a cell-centered field 
+$\phi$, a MAC velocity field $\vb$, and a cell-centered source term $q$.  A key point
+here is that if $q=0$ when computing $\rho$ edge states, and $q=\nabla\cdot\Fb$ when
+compute $\rho_1$ edge states, where
+$\Fb$ is the same flux used to generate the RHS of the divergence constraint on the
+input velocity field, that the BDS advection scheme will ensure that the resulting edge
+states $(\rho,\rho_1)$ satisfy the EOS.  There is a proof on our whiteboard here that 
+John worked out, but just take this as a given for now.
+
+\subsection{Original Algorithm}
+To modify the original algorithm, we replace equations (\ref{eq:alg1_1st_rho_adv}) and 
+(\ref{eq:alg1_1st_rho1_adv}) in {\bf Step 1} with
+\begin{eqnarray}
+\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^{{\rm BDS},*}\vb^n),\\
+\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^n + \Fb^n),
+\end{eqnarray}
+where $\rho^{{\rm BDS},*} = {\rm BDS}(\rho^n,\vb^n,0)$ and 
+$\rho_1^{{\rm BDS},*} = {\rm BDS}(\rho_1^n,\vb^n,\nabla\cdot\Fb^n)$.
+Nothing else changes until {\bf Step 3}, where we define
+\begin{eqnarray}
+\vb^{n+\myhalf} &=& \frac{\vb^n + \vb^{*,n+1}}{2},\\
+\Fb^{n+\myhalf} &=& \frac{\Fb^n + \Fb^{*,n+1}}{2},
+\end{eqnarray}
+and then replace equations (\ref{eq:alg1_2nd_rho_adv}) and 
+(\ref{eq:alg1_2nd_rho1_adv}) with
+\begin{eqnarray}
+\rho^{n+1} &=& \rho^n + \Delta t\nabla\cdot\left(-\rho^{\rm BDS}\vb^{n+\myhalf}\right),\\
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\nabla\cdot\left(-\rho_1^{\rm BDS}\vb^{n+\myhalf} + \Fb^{n+\myhalf}\right)
+\end{eqnarray}
+where $\rho^{\rm BDS} = {\rm BDS}(\rho^n,\vb^{n+\myhalf},0)$ and 
+$\rho_1^{\rm BDS} = {\rm BDS}(\rho_1^n,\vb^{n+\myhalf},\nabla\cdot\Fb^{n+\myhalf})$.
+
+\subsection{Overdamped Limit Algorithm}
+To modify the original algorithm, we replace equations (\ref{eq:alg2_1st_rho_adv}) and 
+(\ref{eq:alg2_1st_rho1_adv}) in {\bf Step 3} with
+\begin{eqnarray}
+\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^{{\rm BDS},*}\vb^*),\\
+\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^* + \Fb^n),
+\end{eqnarray}
+where $\rho^{{\rm BDS},*} = {\rm BDS}(\rho^n,\vb^*,0)$ and 
+$\rho_1^{{\rm BDS},*} = {\rm BDS}(\rho_1^n,\vb^*,\nabla\cdot\Fb^n)$.
+
+Nothing else changes until {\bf Step 7}, where we replace equations 
+(\ref{eq:alg2_2nd_rho_adv}) and (\ref{eq:alg2_2nd_rho1_adv}) with
+\begin{eqnarray}
+\rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{\rm BDS}\vb^{n+\myhalf}\right),\\
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{\rm BDS}\vb^{n+\myhalf} + \Fb^{n+\myhalf}\right),
+\end{eqnarray}
+where $\rho^{\rm BDS} = {\rm BDS}(\rho^n,\vb^{n+\myhalf},0)$ and 
+$\rho_1^{\rm BDS} = {\rm BDS}(\rho_1^n,\vb^{n+\myhalf},\nabla\cdot\Fb^{n+\myhalf})$.
 
 \section{Boundary Conditions}
 The types of non-periodic, ``physical'' boundary conditions we consider are 
@@ -673,5 +747,8 @@ problem, in that for time-dependent boundary conditions (such as reservoirs), we
 must supply the {\it change} in the velocity boundary condition as compared to
 the boundary condition at $t^n$, rather than the final velocity boundary 
 condition itself.
+
+\bibliographystyle{plain}
+\bibliography{DesignDocument}
 
 \end{document}
