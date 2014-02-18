@@ -3,7 +3,6 @@ module diffusive_fluxdiv_module
   use multifab_module
   use define_bc_module
   use bc_module
-  use multifab_physbc_module
   use div_and_grad_module
   use diffusive_flux_module
   use ml_layout_module
