@@ -1,9 +1,6 @@
 module matmat_mul_module
 
   use multifab_module
-  use define_bc_module
-  use bc_module
-  use multifab_physbc_module
   use ml_layout_module
 
   implicit none

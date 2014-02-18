@@ -40,8 +40,6 @@ contains
 
     use f2kcli
     use parallel
-    use define_bc_module
-    use bc_module
     use bl_IO_module
     use bl_prof_module
     use bl_error_module

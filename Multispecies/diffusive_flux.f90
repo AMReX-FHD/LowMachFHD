@@ -2,7 +2,6 @@ module diffusive_flux_module
 
   use multifab_module
   use define_bc_module
-  use bc_module
   use div_and_grad_module
   use probin_multispecies_module
   use ml_layout_module

@@ -4,7 +4,6 @@ module analysis_module
   use bl_constants_module
   use multifab_module
   use define_bc_module
-  use bc_module
   use init_module
   use probin_common_module
   use probin_multispecies_module
