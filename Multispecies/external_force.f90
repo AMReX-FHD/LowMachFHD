@@ -86,7 +86,7 @@ contains
              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
                
              r_temp = (dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*D12*time))*(16.0d0*beta*D12**2*&
-                      dexp(r**2/(4.0d0*D12))*M_PI*time + alpha*(r**2 + 4.0d0*beta*D12*time)))/(64.0d0*&
+                      dexp(r**2/(4.0d0*D12))*M_PI*time + alpha1*(r**2 + 4.0d0*beta*D12*time)))/(64.0d0*&
                       D12**3*M_PI**2*time**2)
   
              fluxdiv(i,j,1) = fluxdiv(i,j,1) - r_temp 
@@ -94,9 +94,30 @@ contains
 
         enddo
      enddo
-   
-    !==== for m2=m3, D12=D13 and Grad(w2)=0, 3 species ====! 
+  
+
+    !==== for m1 = m2 = m and m1 != m2 != m, 2 species ====!
     case(5) 
+     
+     ! for specific box, now start loops over alloted cells    
+     do j=lo(2), hi(2)
+        y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+        do i=lo(1), hi(1)
+           x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+ 
+             r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
+               
+             r_temp = (alpha1*D12*(-(dexp(r**2/(2.0d0*sigma**2))*(r**2 - 2.0d0*sigma**2)) +& 
+                      2.0d0*beta*(-r**2 + sigma**2)))/(dexp(r**2/sigma**2)*sigma**4)  
+  
+             fluxdiv(i,j,1) = fluxdiv(i,j,1) + r_temp 
+             fluxdiv(i,j,2) = fluxdiv(i,j,2) - r_temp
+
+        enddo
+     enddo
+ 
+    !==== for m2=m3, D12=D13 and Grad(w2)=0, 3 species ====! 
+    case(6) 
 
      ! for specific box, now start loops over alloted cells    
      do j=lo(2), hi(2)
@@ -106,14 +127,14 @@ contains
  
              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
 
-             r_temp = -(alpha*(alpha*(D12*molmass_in(1) - D23*molmass_in(2))*(4.0d0*D12 -& 
+             r_temp = -(alpha1*(alpha1*(D12*molmass_in(1) - D23*molmass_in(2))*(4.0d0*D12 -& 
                       2.0d0*r**2) + 4.0d0*D12*dexp(r**2/(4.0d0*D12))*(-0.9d0*D12*molmass_in(1) -& 
                       0.1d0*D23*molmass_in(2))*M_PI*(4.0d0*D12 - r**2)))/(64.0d0*D12**4.0d0*&
                       dexp(r**2/(2.0d0*D12))*molmass_in(1)*M_PI**2)
  
              r_temp1 = (beta*D12**3*(D12*(-0.9d0*D12*molmass_in(1) - 0.1d0*D23*molmass_in(2)) +& 
-                       (alpha*(0.07957747154594767d0*D12*molmass_in(1) - 0.07957747154594767d0*&
-                       D23*molmass_in(2)))/dexp(r**2/(4.0d0*D12))) + (alpha*(D12 - D23)*(alpha*&
+                       (alpha1*(0.07957747154594767d0*D12*molmass_in(1) - 0.07957747154594767d0*&
+                       D23*molmass_in(2)))/dexp(r**2/(4.0d0*D12))) + (alpha1*(D12 - D23)*(alpha1*&
                        (D12*molmass_in(1) - D23*molmass_in(2))*(4.0d0*D12 - 2.0d0*r**2) + 4.0d0*&
                        D12*dexp(r**2/(4.0d0*D12))*(-0.9d0*D12*molmass_in(1) - 0.1d0*D23*molmass_in(2))*&
                        M_PI*(4.0d0*D12 - r**2)))/(64.0d0*dexp(r**2/(2.0d0*D12))*M_PI**2))/&
@@ -163,7 +184,7 @@ contains
               
               r_temp = (dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*D12*time))*&
                        (0.02244839026564582d0*beta*D12**3.0d0*dexp(r**2/(4.0d0*D12))*(D12*&
-                       time)**3.5d0 + alpha*D12**1.5d0*(0.0001259825563796855d0*r**2*(D12*time)**2.5d0 +& 
+                       time)**3.5d0 + alpha1*D12**1.5d0*(0.0001259825563796855d0*r**2*(D12*time)**2.5d0 +& 
                        0.000503930225518742d0*beta*(D12*time)**3.5d0)))/(D12**3.0d0*(D12*time)**5.0d0) 
  
               fluxdiv(i,j,k,1) = fluxdiv(i,j,k,1) - r_temp 
@@ -185,16 +206,16 @@ contains
    
               r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2)
               
-              r_temp = (-3.174320902392128e-8*alpha*(23812.820490470258d0*alpha*D12**3.0d0*(D12*&
+              r_temp = (-3.174320902392128e-8*alpha1*(23812.820490470258d0*alpha1*D12**3.0d0*(D12*&
                        molmass_in(1) - D23*molmass_in(2))*(D12 - 0.3333333333333333d0*r**2) - &
                        954702.6841484157d0*D12**4.5d0*dexp(r**2/(4.0d0*D12))*(D12*molmass_in(1) +& 
                        0.11111111111111112d0*D23*molmass_in(2))*(D12 - 0.16666666666666666d0*r**2)))/&
                        (D12**8.0d0*dexp(r**2/(2.0d0*D12))*molmass_in(1)) 
                        
-              r_temp1 = (beta*(-0.9d0 - (0.1d0*D23*molmass_in(2))/(D12*molmass_in(1)) + (alpha*&
+              r_temp1 = (beta*(-0.9d0 - (0.1d0*D23*molmass_in(2))/(D12*molmass_in(1)) + (alpha1*&
                         (0.02244839026564582d0*D12**2.5d0*molmass_in(1) - 0.02244839026564582d0*D12**&
                         1.5d0*D23*molmass_in(2)))/(D12**4.0d0*dexp(r**2/(4.0d0*D12))*molmass_in(1))) +& 
-                        (1.4140527961374542e-6*alpha*(D12 - D23)*(534.5594876958439d0*alpha*D12**&
+                        (1.4140527961374542e-6*alpha1*(D12 - D23)*(534.5594876958439d0*alpha1*D12**&
                         1.5d0*(D12*molmass_in(1) - D23*molmass_in(2))*(D12 - 0.3333333333333333d0*r**2) -& 
                         21431.538441423232d0*D12**3.0d0*dexp(r**2/(4.0d0*D12))*(D12*molmass_in(1) + &
                         0.11111111111111112d0*D23*molmass_in(2))*(D12 - 0.16666666666666666d0*r**2)))/&

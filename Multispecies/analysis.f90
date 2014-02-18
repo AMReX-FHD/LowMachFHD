@@ -29,6 +29,7 @@ module analysis_module
  
      ! local variables
      real(kind=dp_t), dimension(nspecies) :: norm_inf,norm_l1,norm_l2
+     real(kind=dp_t)                      :: norm_inf_tot,norm_l1_tot,norm_l2_tot
      integer                              :: i,n,nlevs,n_cell
      
      nlevs = size(rho,1)
@@ -43,6 +44,7 @@ module analysis_module
 
      n_cell = multifab_volume(rho_exact(1))/nspecies 
      
+     ! calculate norms for each species
      do i=1, nspecies 
          
         ! Linf norm = max(diff_i)
@@ -56,16 +58,21 @@ module analysis_module
      
      enddo
      
+     ! calculate total norms 
+     norm_inf_tot = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
+     norm_l1_tot = multifab_norm_l1_c(rho_exact(1),1,nspecies,all=.false.)/dble(n_cell)
+     norm_l2_tot = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
+     
      ! print the norms
      if(.false.) then
         if (parallel_IOProcessor()) then 
-            !if(time.gt.2.99d0) then
-            if(time.gt.0.49d0) then
-               print*, time, norm_inf(1:nspecies), norm_l1(1:nspecies),&
-                       norm_l2(1:nspecies)
+            if(time.gt.2.99d0) then
+            !if(time.gt.0.49d0) then
+               print*, time, norm_inf(1:nspecies), norm_l1(1:nspecies),norm_l2(1:nspecies),&
+                       norm_inf_tot,norm_l1_tot,norm_l2_tot
             endif
         endif
-     end if
+     endif
      
      ! for checking analytic solution with Visit
      call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 
