@@ -177,7 +177,7 @@ subroutine main_driver()
 
   ! write initial plotfile
   if (plot_int .gt. 0) then
-     call write_plotfile(mla,"rho/plt",rho,istep,dx,time,prob_lo,prob_hi)
+     call write_plotfile(mla,"plt_rho",rho,istep,dx,time,prob_lo,prob_hi)
   endif
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
@@ -202,8 +202,8 @@ subroutine main_driver()
      ! write plotfile at specific intervals
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
         
-        call write_plotfile(mla,"rho/plt",      rho,istep,dx,time,prob_lo,prob_hi)
-        call write_plotfile(mla,"exa/plt",rho_exact,istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile(mla,"plt_rho",      rho,istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile(mla,"plt_exa",rho_exact,istep,dx,time,prob_lo,prob_hi)
 
         ! difference between rho and rho_exact
         do n=1,nlevs
@@ -211,7 +211,7 @@ subroutine main_driver()
         enddo
         
         ! check error with visit
-        call write_plotfile(mla,"err/plt",rho_exact,istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time,prob_lo,prob_hi)
  
      endif
      

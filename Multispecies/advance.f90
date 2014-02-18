@@ -271,6 +271,7 @@ contains
        call multifab_destroy(molmtot(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(chi(n))
+       call multifab_destroy(Lonsager(n))
        call multifab_destroy(D_MS(n))
        call multifab_destroy(Gama(n))
        call multifab_destroy(rhoWchiGama(n))

@@ -165,8 +165,7 @@ contains
 
     case(5)
     !==================================================================================
-    ! Initializing rho1,rho2=Gaussian and rhototal=1+alpha*exp(-r^2/4D)/(4piD) (no-time 
-    ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
+    ! Initializing rho1, rho2=Gaussian and rhototal has no-time dependence).
     !==================================================================================
  
     do j=lo(2),hi(2)
@@ -179,8 +178,6 @@ contains
             rhot = 1.0d0 + beta*dexp(-rsq/(2.0d0*sigma**2))
             rho(i,j,1) = rhot*w1
             rho(i,j,2) = rhot - rho(i,j,1)
-
-            print*,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),'rho=',rhot
 
          end do
     end do
@@ -198,13 +195,15 @@ contains
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
-            w1  = 0.01d0 +alpha1/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
-            w2  = dexp(-beta*time)
+            w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
             rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
+            !w2  = dexp(-beta*time)
             
             rho(i,j,1) = rhot*w1
-            rho(i,j,2) = rhot*w2 
+            rho(i,j,2) = 0.01d0 
             rho(i,j,3) = rhot-rho(i,j,1)-rho(i,j,2)
+            !rho(i,j,2) = rhot*w2 
+            !rho(i,j,3) = rhot-rho(i,j,1)-rho(i,j,2)
             
             !if(i.eq.4 .and. j.eq.5) print*,'w1=',w1,'w2=',w2,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),&
             !                        'rho3=',rho(i,j,3),'rhot=',rhot
