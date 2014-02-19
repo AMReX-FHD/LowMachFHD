@@ -19,7 +19,8 @@ module init_module
   ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y), 2-species
   ! 3 = gaussian spread with total density constant, 2-species
   ! 4 = manufactured solution for 2-species equal/unequal molarmass,gaussian-rho, time-independent-space-varying totaldensity
-  ! 5 = manufactured solution for 3-species unequal mass, time-independent-space-varying totaldensity
+  ! 5 = manufactured solution for 2-species time-independent-space-varying density
+  ! 6 = manufactured solution for 3-species 
 
 contains
   
