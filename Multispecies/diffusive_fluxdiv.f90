@@ -17,11 +17,12 @@ module diffusive_fluxdiv_module
 
 contains
 
-  subroutine diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,&
+  subroutine diffusive_fluxdiv(mla,rho,rho_tot,fluxdiv,molarconc,&
                                rhoWchiGama,molmass,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)
+    type(multifab) , intent(in   ) :: rho_tot(:)
     type(multifab) , intent(inout) :: fluxdiv(:)
     type(multifab) , intent(inout) :: molarconc(:)
     type(multifab) , intent(inout) :: rhoWchiGama(:)
@@ -47,7 +48,7 @@ contains
     end do   
     
     ! compute the face-centered flux (each direction: cells+1 faces while cells contain interior+2 ghost cells) 
-    call diffusive_flux(mla,rho,molarconc,rhoWchiGama,flux,dx,the_bc_level)
+    call diffusive_flux(mla,rho,rho_tot,molarconc,rhoWchiGama,flux,dx,the_bc_level)
 
     ! compute divergence of the flux 
     call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)

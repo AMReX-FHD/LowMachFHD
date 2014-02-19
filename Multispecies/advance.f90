@@ -315,7 +315,7 @@ contains
       
       ! compute fluxdiv that contain results in interior only while rho contains ghost values filled in 
       ! init or end of this code
-      call diffusive_fluxdiv(mla,rho,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
+      call diffusive_fluxdiv(mla,rho,rho_tot,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
 
       ! compute external forcing for manufactured solution and add to fluxdiv
       call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
