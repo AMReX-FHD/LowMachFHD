@@ -132,11 +132,15 @@ subroutine main_driver()
   ! Setup boundary condition bc_tower
   !=======================================================
  
-  ! bc_tower structure in memory 
-  ! 1-3 = velocity, 4 = Pressure, rho_tot = scal_bc_comp, rho_i = scal_bc_comp+1,
-  ! mol_frac = scal_bc_comp+2, diff_coeff=tran_bc_comp; num_tran_bc_comp = 1
-  ! number of scalar variables is 3 (1 rho_tot, 1 rho_i and 1 mol_frac)
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, num_scal_bc_in=3, num_tran_bc_in=1)
+  ! bc_tower structure in memory
+  ! 1:dm = velocity
+  ! dm+1 = pressure
+  ! dm+2 = scal_bc_comp = rho_tot
+  ! scal_bc_comp+1 = rho_i
+  ! scal_bc_comp+nspecies+1 = mol_frac
+  ! scal_bc_comp+2*nspecies+1 = tran_bc_comp = diff_coef
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
+                     num_scal_bc_in=2*nspecies,num_tran_bc_in=1)
 
   do n=1,nlevs
      ! define level n of the_bc_tower
@@ -145,7 +149,7 @@ subroutine main_driver()
 
   ! these quantities are populated here and defined in probin_multispecies 
   rho_part_bc_comp   = scal_bc_comp + 1
-  mol_frac_bc_comp   = scal_bc_comp + 2
+  mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
   diff_coeff_bc_comp = tran_bc_comp
 
   !=======================================================
