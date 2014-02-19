@@ -8,6 +8,7 @@ module diffusive_flux_module
   use convert_stag_module
   use matvec_mul_module
   use matmat_mul_module
+  use correction_flux_module
   use F95_LAPACK
   
   implicit none
@@ -49,6 +50,9 @@ contains
     ! calculate face-centrered grad(molarconc) 
     call compute_grad(mla, molarconc, flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
                       the_bc_level, .false.)
+   
+    ! correct fluxes to avoid round-off error (if sum_flux_allspecies != 0) 
+    if(nspecies .gt. 1) call correction_flux(mla, rho, rho_tot, flux, the_bc_level)
    
     ! compute face-centered rhoWchiGama from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchiGama, rhoWchiGama_face, 1, diff_coeff_bc_comp, &

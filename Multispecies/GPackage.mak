@@ -7,6 +7,7 @@ f90sources += analysis.f90
 f90sources += inhomogeneous_bc_val.f90 
 f90sources += matvec_mul.f90
 f90sources += matmat_mul.f90
+f90sources += correction_flux.f90
 f90sources += diffusive_flux.f90
 f90sources += diffusive_fluxdiv.f90
 f90sources += advance.f90
