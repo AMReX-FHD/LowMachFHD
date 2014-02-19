@@ -25,7 +25,6 @@ contains
     ! local variables
     integer :: n,i,dm,nlevs,ng_p,ng_g
     integer :: lo(mla%dim),hi(mla%dim)
-    logical :: increment_bccomp
 
     ! pointer for rho, rho_tot, flux_x, flux_y and flux_z 
     real(kind=dp_t), pointer :: dp(:,:,:,:)      ! for rho
