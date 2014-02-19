@@ -12,7 +12,7 @@ module analysis_module
 
   private
 
-  public :: print_errors
+  public :: print_errors, sum_mass
 
   contains
 
@@ -77,5 +77,29 @@ module analysis_module
      call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 
 
   end subroutine print_errors
+
+  subroutine sum_mass(rho)
+
+    type(multifab), intent(in   ) :: rho(:)
+
+    ! local
+    real(kind=dp_t) :: mass(nspecies)
+    integer :: i, n, nlevs
+
+    nlevs = size(rho,1)
+    
+    do n=1,nlevs
+       do i=1,nspecies
+          mass(i) = multifab_norm_l1_c(rho(n),i,1,all=.false.)
+          if (parallel_IOProcessor()) then
+             print*,'sum of rho_i for i=',i,mass(i)
+          end if
+       end do
+       if (parallel_IOProcessor()) then
+          print*,'sum of rho=',sum(mass(1:nspecies))
+       end if
+    end do
+
+  end subroutine sum_mass
 
 end module analysis_module
