@@ -179,11 +179,16 @@ subroutine main_driver()
   if (plot_int .gt. 0) then
      call write_plotfile(mla,"plt_rho",rho,istep,dx,time,prob_lo,prob_hi)
   endif
+
+  ! print out the total masses
+  call sum_mass(rho)
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
   dt = cfl1*dx(1,1)**2/chi
-  write(*,*) "Using time step dt=", dt
+  if (parallel_IOProcessor()) then
+     write(*,*) "Using time step dt=", dt
+  end if
  
   do istep=1,max_step
 
@@ -201,6 +206,9 @@ subroutine main_driver()
 
      ! write plotfile at specific intervals
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
+
+        ! print out the total masses
+        call sum_mass(rho)
         
         call write_plotfile(mla,"plt_rho",      rho,istep,dx,time,prob_lo,prob_hi)
         call write_plotfile(mla,"plt_exa",rho_exact,istep,dx,time,prob_lo,prob_hi)
