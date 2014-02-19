@@ -49,7 +49,7 @@ contains
 
     ! calculate face-centrered grad(molarconc) 
     call compute_grad(mla, molarconc, flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
-                      the_bc_level, .false.)
+                      the_bc_level)
    
     ! correct fluxes to avoid round-off error (if sum_flux_allspecies != 0) 
     if(nspecies .gt. 1) call correction_flux(mla, rho, rho_tot, flux, the_bc_level)
