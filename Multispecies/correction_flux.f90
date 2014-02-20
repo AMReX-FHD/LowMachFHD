@@ -96,10 +96,7 @@ contains
             endif
               
             ! correct x-flux for last species  
-            if(abs(flux_x(i,j,nspecies)).gt.abs(sumx) .or. abs(flux_x(i,j,nspecies)) & 
-               .lt.abs(sumx)) then 
-               flux_x(i,j,nspecies) = -sumx             
-            endif
+            flux_x(i,j,nspecies) = -sumx             
 
          enddo
       enddo
@@ -125,10 +122,7 @@ contains
             endif
               
             ! correct y-flux for last species  
-            if(abs(flux_y(i,j,nspecies)).gt.abs(sumy) .or. abs(flux_y(i,j,nspecies)) & 
-               .lt.abs(sumy)) then 
-               flux_y(i,j,nspecies) = -sumy             
-            endif
+            flux_y(i,j,nspecies) = -sumy             
  
          enddo
       enddo
