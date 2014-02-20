@@ -90,15 +90,12 @@ contains
             ! caculate corr and print error if not zero 
             corr = flux_x(i,j,nspecies) + sumx 
             if(corr .gt. rho_tot(i,j)*1e-8) then
-               write(*,*) "Error: sum of x-fluxes greater than rho_tot*1e-8"
-               write(*,*) "sum is",corr
+!               write(*,*) "Error: sum of x-fluxes greater than rho_tot*1e-8"
+!               write(*,*) "sum is",corr
             endif
               
             ! correct x-flux for last species  
-            if(abs(flux_x(i,j,nspecies)).gt.abs(sumx) .or. abs(flux_x(i,j,nspecies)) & 
-               .lt.abs(sumx)) then 
-               flux_x(i,j,nspecies) = -sumx             
-            endif
+            flux_x(i,j,nspecies) = -sumx             
 
          enddo
       enddo
@@ -119,15 +116,12 @@ contains
             ! caculate corr and print error if not zero 
             corr = flux_y(i,j,nspecies) + sumy
             if(corr .gt. rho_tot(i,j)*1e-8) then
-               write(*,*) "Error: sum of y-fluxes greater than rho_tot*1e-8"
-               write(*,*) "sum is",corr         
+!               write(*,*) "Error: sum of y-fluxes greater than rho_tot*1e-8"
+!               write(*,*) "sum is",corr         
             endif
               
             ! correct y-flux for last species  
-            if(abs(flux_y(i,j,nspecies)).gt.abs(sumy) .or. abs(flux_y(i,j,nspecies)) & 
-               .lt.abs(sumy)) then 
-               flux_y(i,j,nspecies) = -sumy             
-            endif
+            flux_y(i,j,nspecies) = -sumy             
  
          enddo
       enddo
