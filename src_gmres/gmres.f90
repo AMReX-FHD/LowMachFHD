@@ -235,10 +235,10 @@ contains
          end if
          exit OuterLoop
        else if(total_iter .ge. gmres_min_iter) then 
-          if(norm_resid <= gmres_rel_tol*min(norm_pre_b, norm_init_resid)) then
           ! other options
-          !if(norm_resid <= gmres_rel_tol*norm_pre_b) then
-          !if(norm_resid <= gmres_rel_tol*norm_init_resid) then
+          if(norm_resid <= gmres_rel_tol*min(norm_pre_b, norm_init_resid) .or. (norm_resid <= gmres_abs_tol)) then
+          !if(norm_resid <= gmres_rel_tol*norm_pre_b .or. (norm_resid <= gmres_abs_tol)) then
+          !if(norm_resid <= gmres_rel_tol*norm_init_resid .or. (norm_resid <= gmres_abs_tol)) then
             if (gmres_verbose .ge. 2) then
               if (parallel_IOProcessor()) then
                 write ( *, '(a, i4,a,i4,a,i4)' ) 'GMRES converged: Outer = ', iter, ',  Inner = ', i, ' Total=', total_iter 
@@ -364,12 +364,11 @@ contains
           if(total_iter >= gmres_max_iter) then
             exit InnerLoop
           else if(total_iter .ge. gmres_min_iter) then 
-             if ((norm_resid_est <= gmres_abs_tol) ) then 
-               exit InnerLoop
-             elseif ((norm_resid_est <= gmres_rel_tol*min(norm_pre_b, norm_init_resid))) then
-             !elseif(norm_resid_est <= gmres_rel_tol*norm_pre_b) then
-             !elseif(norm_resid_est <= gmres_rel_tol*norm_init_resid) then
-               exit InnerLoop
+             ! other options
+             if ((norm_resid_est <= gmres_rel_tol*min(norm_pre_b, norm_init_resid)) .or. (norm_resid_est <= gmres_abs_tol)) then
+             !if(norm_resid_est <= gmres_rel_tol*norm_pre_b .or. (norm_resid_est <= gmres_abs_tol)) then
+             !if(norm_resid_est <= gmres_rel_tol*norm_init_resid .or. (norm_resid_est <= gmres_abs_tol)) then
+                exit InnerLoop
              end if
           end if
 
