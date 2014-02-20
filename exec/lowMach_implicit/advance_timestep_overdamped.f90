@@ -20,6 +20,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_stag_module
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: advection_type
+  use probin_gmres_module, only: gmres_abs_tol
 
   use analysis_module
 
@@ -72,7 +73,7 @@ contains
     integer :: i,dm,n,nlevs
     logical :: nodal_temp(mla%dim)
 
-    real(kind=dp_t) :: S_fac, theta_fac
+    real(kind=dp_t) :: S_fac, theta_fac, norm_pre_rhs
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -266,9 +267,16 @@ contains
                                 kappa,1.d0/dt,dx,the_bc_tower, &
                                 vel_bc_n_delta,vel_bc_t_delta)
 
+    gmres_abs_tol = 0.d0
+
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
-               eta,eta_ed,kappa,theta_fac)
+               eta,eta_ed,kappa,theta_fac,norm_pre_rhs)
+
+    ! for the corrector gmres solve we want the stopping criteria based on the
+    ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
+    ! for cases where du in the corrector should be small the gmres stalls
+    gmres_abs_tol = norm_pre_rhs
 
     ! compute v^* = v^{n-1/2} + delta v
     ! compute p^* = p^{n-1/2} + delta p

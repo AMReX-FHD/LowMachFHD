@@ -28,7 +28,7 @@ module gmres_module
 contains
   
   subroutine gmres(mla,the_bc_tower,dx,b_u,b_p,x_u,x_p, &
-                   alpha_fc,beta,beta_ed,gamma,theta)
+                   alpha_fc,beta,beta_ed,gamma,theta,norm_pre_rhs)
 
     type(ml_layout),intent(in   ) :: mla
     type(bc_tower), intent(in   ) :: the_bc_tower
@@ -42,6 +42,7 @@ contains
     type(multifab), intent(inout) :: beta_ed(:,:) ! nodal (2d), edge-centered (3d)
     type(multifab), intent(inout) :: gamma(:)
     real(dp_t)    , intent(inout) :: theta
+    real(dp_t), optional, intent(out) :: norm_pre_rhs
 
     ! Local
     type(multifab) ::   r_u(mla%nlevel,mla%dim)
@@ -123,6 +124,10 @@ contains
     call cc_l2_norm(mla,tmp_p,norm_p)
     norm_p=p_norm_weight*norm_p
     norm_pre_b = sqrt(norm_u**2+norm_p**2)
+
+    if (present(norm_pre_rhs)) then
+       norm_pre_rhs = norm_pre_b
+    end if
 
     ! calculate the l2 norm of rhs
     call stag_l2_norm(mla,b_u,norm_u)
@@ -235,10 +240,10 @@ contains
          end if
          exit OuterLoop
        else if(total_iter .ge. gmres_min_iter) then 
-          if(norm_resid <= gmres_rel_tol*min(norm_pre_b, norm_init_resid)) then
           ! other options
-          !if(norm_resid <= gmres_rel_tol*norm_pre_b) then
-          !if(norm_resid <= gmres_rel_tol*norm_init_resid) then
+          if(norm_resid <= gmres_rel_tol*min(norm_pre_b, norm_init_resid) .or. (norm_resid <= gmres_abs_tol)) then
+          !if(norm_resid <= gmres_rel_tol*norm_pre_b .or. (norm_resid <= gmres_abs_tol)) then
+          !if(norm_resid <= gmres_rel_tol*norm_init_resid .or. (norm_resid <= gmres_abs_tol)) then
             if (gmres_verbose .ge. 2) then
               if (parallel_IOProcessor()) then
                 write ( *, '(a, i4,a,i4,a,i4)' ) 'GMRES converged: Outer = ', iter, ',  Inner = ', i, ' Total=', total_iter 
@@ -364,12 +369,11 @@ contains
           if(total_iter >= gmres_max_iter) then
             exit InnerLoop
           else if(total_iter .ge. gmres_min_iter) then 
-             if ((norm_resid_est <= gmres_abs_tol) ) then 
-               exit InnerLoop
-             elseif ((norm_resid_est <= gmres_rel_tol*min(norm_pre_b, norm_init_resid))) then
-             !elseif(norm_resid_est <= gmres_rel_tol*norm_pre_b) then
-             !elseif(norm_resid_est <= gmres_rel_tol*norm_init_resid) then
-               exit InnerLoop
+             ! other options
+             if ((norm_resid_est <= gmres_rel_tol*min(norm_pre_b, norm_init_resid)) .or. (norm_resid_est <= gmres_abs_tol)) then
+             !if(norm_resid_est <= gmres_rel_tol*norm_pre_b .or. (norm_resid_est <= gmres_abs_tol)) then
+             !if(norm_resid_est <= gmres_rel_tol*norm_init_resid .or. (norm_resid_est <= gmres_abs_tol)) then
+                exit InnerLoop
              end if
           end if
 
