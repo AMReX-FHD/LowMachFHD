@@ -12,7 +12,7 @@ module probin_lowmach_module
   !------------------------------------------------------------- 
   integer   , save :: max_step,nscal,print_int
   real(dp_t), save :: rhobar(2),visc_coef,diff_coef,smoothing_width
-  real(dp_t), save :: variance_coef,conc_scal,c_init(2),u_init(2),grav(3)
+  real(dp_t), save :: variance_coef,initial_variance,conc_scal,c_init(2),u_init(2),grav(3)
   real(dp_t), save :: mol_mass(2),kT
   integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
@@ -48,6 +48,7 @@ module probin_lowmach_module
 
   ! stochastic properties
   namelist /probin_lowmach/ variance_coef     ! global scaling epsilon for stochastic forcing
+  namelist /probin_lowmach/ initial_variance  ! multiplicative factor for initial fluctuations
   namelist /probin_lowmach/ conc_scal         ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
   namelist /probin_lowmach/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
   namelist /probin_lowmach/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
@@ -122,6 +123,7 @@ contains
     material_properties(1:2,1:3) = 0.d0
 
     variance_coef = 1.d0
+    initial_variance = 0.d0
     conc_scal = 1.d0
     filtering_width = 0
     stoch_stress_form = 1    
@@ -291,6 +293,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) variance_coef
+
+       case ('--initial_variance')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) initial_variance
 
        case ('--conc_scal')
           farg = farg + 1

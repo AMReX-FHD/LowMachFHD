@@ -25,7 +25,7 @@ subroutine main_driver()
   use estdt_module
   use convert_stag_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
-                                   project_eos_int, visc_coef, &
+                                   project_eos_int, visc_coef, variance_coef, initial_variance, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, stats_int
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
@@ -318,6 +318,11 @@ subroutine main_driver()
 
   ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pold,dx,mla,time)
+
+  if (initial_variance .gt. 0.d0) then
+     call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+     call add_momentum_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold,umac)
+  end if
 
   if (barodiffusion_type .gt. 0) then
      ! this computes an initial guess at p using HSE
