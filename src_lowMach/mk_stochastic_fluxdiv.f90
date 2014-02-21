@@ -21,7 +21,7 @@ module mk_stochastic_fluxdiv_module
   private
 
   public :: mk_stochastic_s_fluxdiv, mk_stochastic_m_fluxdiv, fill_stochastic, &
-       init_stochastic, destroy_stochastic
+       init_stochastic, destroy_stochastic, add_momentum_fluctuations
 
   ! Stochastic fluxes for momentum are generated on:
   ! -cell-centered grid for diagonal components
@@ -1064,43 +1064,41 @@ contains
        end do
     end if
 
-  contains
-
-    ! fill a multifab with random numbers
-    subroutine multifab_fill_random(mfab, comp, variance, variance_mfab)
-      type(multifab), intent(inout)           :: mfab(:)
-      integer       , intent(in   ), optional :: comp ! Only one component
-      real(dp_t)    , intent(in   ), optional :: variance
-      type(multifab), intent(in   ), optional :: variance_mfab(:)
-
-      integer :: n,box
-
-      real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
-
-      !--------------------------------------
-      do n=1,size(mfab)
-         do box = 1, nfabs(mfab(n))
-            if(present(comp)) then
-               fp => dataptr(mfab(n),box,comp,1)
-            else
-               fp => dataptr(mfab(n),box)
-            end if
-
-            call NormalRNGs(fp, size(fp)) ! Fill the whole grid with random numbers
-
-            if(present(variance_mfab)) then ! Must have same distribution
-               fpvar => dataptr(variance_mfab(n),box,1,size(fp,4))
-               fp=sqrt(fpvar)*fp
-            end if
-            if(present(variance)) then
-               fp=sqrt(variance)*fp
-            end if
-         end do
-      end do
-
-    end subroutine multifab_fill_random
-
   end subroutine fill_stochastic
+
+  ! fill a multifab with random numbers
+  subroutine multifab_fill_random(mfab, comp, variance, variance_mfab)
+    type(multifab), intent(inout)           :: mfab(:)
+    integer       , intent(in   ), optional :: comp ! Only one component
+    real(dp_t)    , intent(in   ), optional :: variance
+    type(multifab), intent(in   ), optional :: variance_mfab(:)
+
+    integer :: n,box
+
+    real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
+
+    !--------------------------------------
+    do n=1,size(mfab)
+       do box = 1, nfabs(mfab(n))
+          if(present(comp)) then
+             fp => dataptr(mfab(n),box,comp,1)
+          else
+             fp => dataptr(mfab(n),box)
+          end if
+
+          call NormalRNGs(fp, size(fp)) ! Fill the whole grid with random numbers
+
+          if(present(variance_mfab)) then ! Must have same distribution
+             fpvar => dataptr(variance_mfab(n),box,1,size(fp,4))
+             fp=sqrt(fpvar)*fp
+          end if
+          if(present(variance)) then
+             fp=sqrt(variance)*fp
+          end if
+       end do
+    end do
+
+  end subroutine multifab_fill_random
 
   subroutine multifab_filter(mfab, dm)
 
@@ -1349,5 +1347,51 @@ contains
     deallocate(mflux_cc,mflux_nd,mflux_ed,sflux_fc)
 
   end subroutine destroy_stochastic
+
+ ! Add equilibrium fluctuations to the momentum (valid and ghost regions)
+ subroutine add_momentum_fluctuations(mla,dx,variance,s_cc,s_face,m_face,mactemp)
+
+   type(ml_layout), intent(in   ) :: mla
+   real(dp_t)     , intent(in   ) :: variance, dx(:,:)
+   type(multifab) , intent(in   ) :: s_cc(:), s_face(:,:)
+   type(multifab) , intent(inout) :: m_face(:,:)  
+   type(multifab) , intent(inout) :: mactemp(:,:) ! Temporary multifab
+
+   ! local
+   integer :: n,i,dm,nlevs
+   real(dp_t) :: av_mom(mla%dim)
+
+   dm = mla%dim
+   nlevs = mla%nlevel
+
+   ! Generate random numbers first and store them in umac temporarily  
+   do n=1,nlevs
+      do i=1,dm
+         call multifab_fill_random(mactemp(n:n,i), &
+              variance=abs(variance)*kT/product(dx(n,1:dm)), variance_mfab=s_face(n:n,i))
+         call saxpy(m_face(n,i), 1.0_dp_t, mactemp(n,i), all=.true.)
+      end do
+   end do
+
+   do n=1,nlevs
+      do i=1,dm
+         ! We need to ensure periodic BCs are obeyed for the random values
+         call multifab_internal_sync(m_face(n,i))
+      end do
+   enddo
+   
+   if(variance<0) then ! Ensure zero total momentum
+      if (parallel_IOProcessor()) then
+         write(*,"(A,100G17.9)") "Randomly INITIALized momenta"
+      end if
+      
+      call sum_mass_momentum(mla, cons=s_cc, m=m_face, av_momentum=av_mom)
+      do i=1,dm
+         call setval(mactemp(1,i), -av_mom(i))
+         call saxpy(m_face(1,i), 1.0_dp_t, mactemp(1,i))
+      end do
+   end if            
+
+ end subroutine add_momentum_fluctuations
 
 end module mk_stochastic_fluxdiv_module
