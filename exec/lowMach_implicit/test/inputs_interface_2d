@@ -1,33 +1,40 @@
 &probin
 
   barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
-  use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
+  use_overdamped = T	  ! enable overdamped (infinite Sc) algorithm
 
 /
 
 &probin_lowmach
   
   ! problem setup
-  c_init(1) = 0.1d0   ! initial concentration
-  c_init(2) = 0.9d0   ! initial concentration
+  smoothing_width = 1.d0     ! scale factor for smoothing initial profile
+  c_init(1:2) = 0.0d0 1.0d0  ! controls initial concentration range
+  u_init(1:2) = 0.d0 0.d0    ! controls initial x-velocity
+  c_bc(2,1:2) = 0.d0 1.d0
+  grav(1:2) = 0.d0 0.d0    ! gravity vector (negative is downwards)
 
   ! simulation properties
-  max_step = 1000            ! maximum number of time steps
-  print_int = 1              ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 1        ! how often to call project_onto_eos
-  grav(1:2) = 0 -1.d3       ! gravity
+  max_step = 10000          ! maximum number of time steps
+  print_int = 0              ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 100000        ! how often to call project_onto_eos
 
   ! fluid properties
   nscal = 2                       ! scalars; nscal=2 means we carry rho and rho*c
-  rhobar(1:2) = 1.1d0 0.9d0       ! rho1bar and rho2bar
-  visc_coef = 1.d0                ! momentum diffusion coefficient 'eta'   
-  diff_coef = 1.d0                ! concentration diffusion coefficient 'chi'
+  rhobar(1:2) = 1.d0 1.d0         ! rho1bar and rho2bar
+  visc_coef = 100                 ! momentum diffusion coefficient 'eta'   
+  diff_coef = 0.001d0              ! concentration diffusion coefficient 'chi'
   mol_mass(1:2) = 1.d0 1.d0       ! molar mass of species
   kT = 1.d0                       ! temperature
 
+  ! a/b for chi/eta/kappa
+  material_properties(1:2,1) = 0.d0 0.d0 
+  material_properties(1:2,2) = 0.d0 0.d0
+  material_properties(1:2,3) = 0.d0 0.d0
+
   ! stochastic properties
-  variance_coef = 1.d-3      ! global scaling epsilon for stochastic forcing
-  conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
+  variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing
+  conc_scal = 0.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
@@ -39,12 +46,13 @@
   !----------------------
   dim_in = 2                 ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate
-  prob_hi(1:2) = 64.d0 64.d0 ! physical hi coordinate
-  n_cells(1:2) = 64 64       ! number of cells in domain
-  max_grid_size(1:2) = 64 64 ! max number of cells in a box
-  fixed_dt = 0.01d0           ! time step
-  plot_int = 10              ! Interval for writing a plotfile (for visit/amrvis)
-  prob_type = 3              ! sets scalars, m, coefficients (see init.f90)
+  prob_hi(1:2) = 1.d0 1.d0 ! physical hi coordinate
+  n_cells(1:2) = 64 64     ! number of cells in domain
+  max_grid_size(1:2) = 32 32 ! max number of cells in a box
+  fixed_dt = 6.d-5
+!  cfl = 0.9d0
+  plot_int = 100           ! Interval for writing a plotfile (for visit/amrvis)
+  prob_type = 3             ! sets scalars, m, coefficients (see init.f90)
 
   ! Algorithm control / selection
   !----------------------
@@ -71,13 +79,24 @@
   ! Boundary conditions
   !----------------------
   ! BC specifications:
-  ! -1  = periodic
-  ! 100 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
-  ! 101 = no-slip reservoir
-  ! 200 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
-  ! 201 = slip reservoir
-  bc_lo(1:2) = -1 100
-  bc_hi(1:2) = -1 100
+  ! -1 = periodic
+  ! 100 = no-slip wall      (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 101 = no-slip reservoir (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! For a complete list see bc.f90
+  bc_lo(1:2) = -1 -1
+  bc_hi(1:2) = -1 -1
+
+  ! Each no-slip wall may be moving with a specified tangential 
+  ! velocity along the tangential directions
+  ! In 2D:
+  ! wallspeed_lo/hi(1,1) - yvel on x-face
+  ! wallspeed_lo/hi(1,2) - xvel on y-face
+  wallspeed_lo(1,1) = 0.d0
+  wallspeed_hi(1,1) = 0.d0
+  wallspeed_lo(1,2) = 0.d0
+  wallspeed_hi(1,2) = 0.d0
 
 /
 
@@ -97,12 +116,15 @@
   ! weighting of pressure when computing norms and inner products
   p_norm_weight = 1.d0
 
+  ! scale theta, beta, gamma, and b_u by this, and then scale x_p by the inverse
+  scale_factor = 1.d0
+
   ! MAC projection solver parameters:
   mg_verbose = 0               ! multigrid verbosity
   cg_verbose = 0               ! BiCGStab (mg_bottom_solver=1) verbosity
   mg_max_vcycles = 1           ! maximum number of V-cycles
   mg_minwidth = 2              ! length of box at coarsest multigrid level
-  mg_bottom_solver = 0         ! bottom solver type
+  mg_bottom_solver = 4         ! bottom solver type
                                ! 0 = smooths only, controlled by mg_nsmooths_bottom
                                ! 1 = BiCGStab
                                ! 4 = Fancy bottom solve that coarsens down additionally
@@ -110,14 +132,14 @@
   mg_nsmooths_down = 2         ! number of smooths at each level on the way down
   mg_nsmooths_up = 2           ! number of smooths at each level on the way up
   mg_nsmooths_bottom = 8       ! number of smooths at the bottom (only if mg_bottom_solver=0)
-  mg_max_bottom_nlevels = 1000 ! for mg_bottom_solver=4, number of additional levels of multigrid
-  mg_rel_tol = 1.d-9           ! relative tolerance stopping criteria
+  mg_max_bottom_nlevels = 10   ! for mg_bottom_solver=4, number of additional levels of multigrid
+  mg_rel_tol = 1.d-12          ! relative tolerance stopping criteria
 
   ! Staggered multigrid solver parameters
   stag_mg_verbosity = 0        ! verbosity
   stag_mg_max_vcycles = 1      ! max number of v-cycles
   stag_mg_minwidth = 2         ! length of box at coarsest multigrid level
-  stag_mg_bottom_solver = 0    ! bottom solver type
+  stag_mg_bottom_solver = 4    ! bottom solver type
                                ! 0 = smooths only, controlled by mg_nsmooths_bottom
                                ! 4 = Fancy bottom solve that coarsens additionally
                                !     and then applies stag_mg_nsmooths_bottom smooths
@@ -128,10 +150,10 @@
                                   ! number of additional levels of multigrid
   stag_mg_omega = 1.d0         ! weighted-jacobi omega coefficient
   stag_mg_smoother = 1         ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
-  stag_mg_rel_tol = 1.d-9      ! relative tolerance stopping criteria
+  stag_mg_rel_tol = 1.d-12     ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.d-9        ! relative tolerance stopping criteria
+  gmres_rel_tol = 1.d-12       ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0         ! absolute tolerance stopping criteria
   gmres_verbose = 1            ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20         ! max number of outer iterations
