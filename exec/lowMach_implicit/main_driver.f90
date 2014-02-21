@@ -26,7 +26,8 @@ subroutine main_driver()
   use convert_stag_module
   use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
                                    project_eos_int, visc_coef, variance_coef, initial_variance, &
-                                   hydro_grid_int, n_steps_save_stats, n_steps_skip, stats_int
+                                   hydro_grid_int, n_steps_save_stats, n_steps_skip, stats_int, &
+                                   conc_scal
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type, advection_type
@@ -339,6 +340,10 @@ subroutine main_driver()
 
   ! convert cons to prim in valid region
   call convert_cons_to_prim(mla,sold,prim,.true.)
+
+  if (initial_variance .gt. 0.d0) then
+     call add_concentration_fluctuations(mla,dx,initial_variance*variance_coef*conc_scal,prim,sold)
+  end if
 
   ! fill ghost cells for prim
   do n=1,nlevs

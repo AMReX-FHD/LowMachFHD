@@ -21,7 +21,8 @@ module mk_stochastic_fluxdiv_module
   private
 
   public :: mk_stochastic_s_fluxdiv, mk_stochastic_m_fluxdiv, fill_stochastic, &
-       init_stochastic, destroy_stochastic, add_momentum_fluctuations
+       init_stochastic, destroy_stochastic, add_momentum_fluctuations, &
+       add_concentration_fluctuations
 
   ! Stochastic fluxes for momentum are generated on:
   ! -cell-centered grid for diagonal components
@@ -1393,5 +1394,43 @@ contains
    end if            
 
  end subroutine add_momentum_fluctuations
+
+  subroutine add_concentration_fluctuations(mla, dx, variance, prim, cctemp)
+    type(ml_layout), intent(in   ) :: mla
+    real(dp_t)     , intent(in   ) :: variance, dx(:,:)
+    type(multifab) , intent(inout) :: prim(:)
+    type(multifab) , intent(inout) :: cctemp(:)
+
+    ! local
+    integer :: i,n,dm,box,nlevs
+    real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
+
+    dm = mla%dim
+    nlevs = mla%nlevel
+    
+    do n=1,nlevs
+
+       do box = 1, nfabs(prim(n))
+          
+          ! Only interior cells here:
+          fp => dataptr(prim(n), box, get_ibox(prim(n),box))
+          fpvar => dataptr(cctemp(n), box, get_ibox(cctemp(n),box))
+          
+          call NormalRNGs(fpvar(:,:,:,1), size(fpvar(:,:,:,1))) ! Fill the whole grid with random numbers
+
+          ! Concentration fluctuations prefactor M*rho^(-1)*c*(1-c)
+          fpvar(:,:,:,1) = sqrt( fp(:,:,:,2) * (1.0d0-fp(:,:,:,2)) / fp(:,:,:,1) * &
+            (fp(:,:,:,2)*mol_mass(1)+(1.0d0-fp(:,:,:,2))*mol_mass(2)) ) * fpvar(:,:,:,1)
+            
+          ! Now add the fluctuations to the mean:  
+          fp(:,:,:,2) = fp(:,:,:,2) + sqrt(abs(variance)/product(dx(n,1:dm))) * fpvar(:,:,:,1)
+          ! And calculate the density from the EOS:
+          fp(:,:,:,1) = 1.0d0/(fp(:,:,:,2)/rhobar(1)+(1.0d0-fp(:,:,:,2))/rhobar(2))
+          
+       end do   
+
+    end do    
+    
+  end subroutine add_concentration_fluctuations
 
 end module mk_stochastic_fluxdiv_module
