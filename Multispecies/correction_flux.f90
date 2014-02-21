@@ -88,7 +88,9 @@ contains
             enddo
               
             ! caculate corr and print error if not zero 
-            corr = flux_x(i,j,nspecies) + sumx 
+            corr = flux_x(i,j,nspecies) + sumx
+            if(corr .gt. 1e-8) print*, "Sum of x-flux=", corr
+ 
             if(corr .gt. rho_tot(i,j)*1e-8) then
 !               write(*,*) "Error: sum of x-fluxes greater than rho_tot*1e-8"
 !               write(*,*) "sum is",corr
@@ -115,6 +117,8 @@ contains
               
             ! caculate corr and print error if not zero 
             corr = flux_y(i,j,nspecies) + sumy
+            if(corr .gt. 1e-8) print*, "Sum of y-flux=", corr
+            
             if(corr .gt. rho_tot(i,j)*1e-8) then
 !               write(*,*) "Error: sum of y-fluxes greater than rho_tot*1e-8"
 !               write(*,*) "sum is",corr         

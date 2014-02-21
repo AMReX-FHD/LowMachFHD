@@ -19,7 +19,7 @@
 &probin_multispecies
  
  nspecies = 2                   ! number of species
- max_step = 1                 ! total number of computational step
+ max_step = 15000                 ! total number of computational step
  cfl1     = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature
