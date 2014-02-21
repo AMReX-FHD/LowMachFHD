@@ -204,21 +204,40 @@ contains
        ! middle of domain
        y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
+       if(abs(smoothing_width)>epsilon(1.d0)) then
 
-          if (y .lt. y1) then
-             s(lo(1):hi(1),j,2) = c_init(1)
-             s(lo(1):hi(1),j,1) = 1.0d0/(c_init(1)/rhobar(1)+(1.0d0-c_init(1))/rhobar(2))
-             mx(lo(1):hi(1),j) = s(lo(1):hi(1),j,1) * u_init(1)
-          else
-             s(lo(1):hi(1),j,2) = c_init(2)
-             s(lo(1):hi(1),j,1) = 1.0d0/(c_init(2)/rhobar(1)+(1.0d0-c_init(2))/rhobar(2))
-             mx(lo(1):hi(1),j) = s(lo(1):hi(1),j,1) * u_init(2)
-          end if
-          s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*s(lo(1):hi(1),j,2)
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
+
+             ! smoothed version
+             ! c_init(1) in lower half of domain (in y)
+             ! c_init(2) in upper half
+             c_loc = c_init(1) + (c_init(2)-c_init(1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+             s(lo(1):hi(1),j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+             s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*c_loc
+
+          end do
+
+       else
+
+          ! c_init(1) in lower half of domain (in y)
+          ! c_init(2) in upper half
+
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + (j+0.5d0)*dx(2)
+
+             if (y .lt. y1) then
+                c_loc = c_init(1)
+             else
+                c_loc = c_init(2)
+             end if
+
+             s(lo(1):hi(1),j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+             s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*c_loc
           
-       end do
+          end do
+
+       end if
 
     case (4) 
 
