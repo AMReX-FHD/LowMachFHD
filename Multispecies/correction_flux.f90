@@ -92,8 +92,8 @@ contains
             if(corr .gt. 1e-8) print*, "Sum of x-flux=", corr
  
             if(corr .gt. rho_tot(i,j)*1e-8) then
-!               write(*,*) "Error: sum of x-fluxes greater than rho_tot*1e-8"
-!               write(*,*) "sum is",corr
+               write(*,*) "Error: sum of x-fluxes greater than rho_tot*1e-8"
+               write(*,*) "sum is",corr
             endif
               
             ! correct x-flux for last species  
@@ -120,8 +120,8 @@ contains
             if(corr .gt. 1e-8) print*, "Sum of y-flux=", corr
             
             if(corr .gt. rho_tot(i,j)*1e-8) then
-!               write(*,*) "Error: sum of y-fluxes greater than rho_tot*1e-8"
-!               write(*,*) "sum is",corr         
+               write(*,*) "Error: sum of y-fluxes greater than rho_tot*1e-8"
+               write(*,*) "sum is",corr         
             endif
               
             ! correct y-flux for last species  

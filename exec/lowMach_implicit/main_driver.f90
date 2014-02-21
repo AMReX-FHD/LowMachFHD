@@ -43,7 +43,7 @@ subroutine main_driver()
 
   integer :: n,nlevs,i,dm,istep
 
-  real(kind=dp_t) :: dt,time,runtime1,runtime2
+  real(kind=dp_t) :: dt,time,runtime1,runtime2,max_vel
 
   type(box)         :: bx
   type(ml_boxarray) :: mba
@@ -410,6 +410,16 @@ subroutine main_driver()
 
      if (parallel_IOProcessor()) then
         print*,"Begin Advance; istep =",istep,"DT =",dt,"TIME =",time
+     end if
+
+     if (fixed_dt .gt. 0.d0) then
+        call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
+        max_vel = 0.d0
+        max_vel = max(max_vel,multifab_norm_inf_c(umac(1,1),1,1,all=.false.))
+        max_vel = max(max_vel,multifab_norm_inf_c(umac(1,2),1,1,all=.false.))
+        if (parallel_IOProcessor()) then
+           print*,'effective advective CFL=',fixed_dt*max_vel/dx(1,1)
+        end if
      end if
 
      ! advance the solution by dt
