@@ -55,8 +55,9 @@ module probin_common_module
   namelist /probin_common/ diff_type
 
   namelist /probin_common/ advection_type ! 0 = centered explicit
-                                          ! 1 = unlimited bds in space and time
-                                          ! 2 = unlimited bds in space and time
+                                          ! 1 = unlimited bilinear bds in space and time
+                                          ! 2 = limited bliniear bds in space and time
+                                          ! 3 = unlimited quadratic bds in space and time
 
   ! Boundary conditions
   !----------------------
