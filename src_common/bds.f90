@@ -3635,7 +3635,7 @@ contains
                                    slxxp(:,:,1,1), slyyp(:,:,1,1), &
                                    uadvp(:,:,1,1), vadvp(:,:,1,1), dx(lev,:), dt, &
                                    spx(:,:,1,comp), spy(:,:,1,comp), ng_e, &
-                                   the_bc_tower%bc_tower_array(i)%adv_bc_level_array(i,:,:,bccomp))
+                                   the_bc_tower%bc_tower_array(1)%adv_bc_level_array(i,:,:,bccomp))
           case (3)
              call parallel_abort("quadratic BDS advection not supported in 3D")  
           end select
