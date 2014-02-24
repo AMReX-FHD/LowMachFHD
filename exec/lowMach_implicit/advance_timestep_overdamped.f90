@@ -318,7 +318,11 @@ contains
           call multifab_fill_boundary(bds_force(n))
        end do
 
-       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+       else
+          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+       end if
 
     else
 
@@ -519,7 +523,11 @@ contains
           call multifab_fill_boundary(bds_force(n))
        end do
 
-       call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+       else if (advection_type .eq. 3) then
+          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+       end if
 
     else
 
