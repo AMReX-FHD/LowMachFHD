@@ -117,11 +117,14 @@ contains
          do i=lo(1),hi(1)
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
     
-            !rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
+            rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
+
+            if(.false.) then
             rho(i,j,1) = rho_in(1,1) + 0.001d0*x - 0.002d0*y
             rho(i,j,2) = rho_in(1,2) + 0.003d0*x + 0.001d0*y
             !rho(i,j,3) = rho_in(1,3) + 0.002d0*x - 0.001d0*y
-    
+            endif
+
          end do
       end do
 
@@ -269,10 +272,10 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
     
-            !rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
-            rho(i,j,k,1) = rho_in(1,1) + 0.001d0*x - 0.002d0*y + 0.003d0*z
-            rho(i,j,k,2) = rho_in(1,2) + 0.003d0*x + 0.001d0*y - 0.002d0*z
-            !rho(i,j,k,3) = rho_in(1,3) + 0.002d0*x - 0.001d0*y
+           ! rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
+               rho(i,j,k,1) = rho_in(1,1) + 0.001d0*x - 0.002d0*y + 0.003d0*z
+               rho(i,j,k,2) = rho_in(1,2) + 0.003d0*x + 0.001d0*y - 0.002d0*z
+               !rho(i,j,k,3) = rho_in(1,3) + 0.002d0*x - 0.001d0*y
     
           end do
        end do

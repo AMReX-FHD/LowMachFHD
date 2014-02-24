@@ -34,15 +34,15 @@ subroutine test_chi(nspecies)
   Sum_woverm = 0.d0
 
   ! initialize conserved and constant quantities
-  rho(1)        = 0.6d0
-  rho(2)        = 1.05d0
-  rho(3)        = 1.35d0
+  rho(1)        = 0.6d0 
+  rho(2)        = 1.05d0 
+  !rho(3)        = 1.35d0
   molmass_in(1) = 1.0d0 
-  molmass_in(2) = 2.0d0 
-  molmass_in(3) = 3.0d0 
-  Dbar_in(1)    = 0.5d0 
-  Dbar_in(2)    = 1.0d0 
-  Dbar_in(3)    = 1.5d0 
+  molmass_in(2) = 1.0d0 
+  !molmass_in(3) = 3.0d0 
+  Dbar_in(1)    = 1.0d0 
+  !Dbar_in(2)    = 1.0d0 
+  !Dbar_in(3)    = 1.5d0 
  
   ! populate D_MS, Gama and molar masses 
   n=0; 
@@ -63,7 +63,7 @@ subroutine test_chi(nspecies)
   do n=1, nspecies  
      rho_tot = rho_tot + rho(n)
   enddo         
- 
+  
   ! calculate mass fraction,total molar mass (1/m=Sum(w_i/m_i)), molar
   ! concentration (x_i=m*w_i/m_i) 
   Sum_woverm=0.d0
@@ -96,6 +96,13 @@ subroutine test_chi(nspecies)
      enddo
   enddo
 
+  print*, 'print Lambda matrix'
+  do row=1,nspecies
+     do column=1,nspecies
+        print*, Lambda(row,column)
+     enddo
+  enddo
+ 
   do loop=1,2
   
      ! compute chi either selecting inverse/pseudoinverse or iterative methods 

@@ -85,12 +85,12 @@ contains
  
              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
                
-             r_temp = (dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*D12*time))*(16.0d0*beta*D12**2*&
+             r_temp = -(dexp(-(beta*time) - (r**2*(1.0d0 + time))/(4.0d0*D12*time))*(16.0d0*beta*D12**2*&
                       dexp(r**2/(4.0d0*D12))*M_PI*time + alpha1*(r**2 + 4.0d0*beta*D12*time)))/(64.0d0*&
                       D12**3*M_PI**2*time**2)
   
-             fluxdiv(i,j,1) = fluxdiv(i,j,1) - r_temp 
-             fluxdiv(i,j,2) = fluxdiv(i,j,2) + r_temp
+             fluxdiv(i,j,1) = fluxdiv(i,j,1) + r_temp 
+             fluxdiv(i,j,2) = fluxdiv(i,j,2) - r_temp
 
         enddo
      enddo

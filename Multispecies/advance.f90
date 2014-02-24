@@ -305,7 +305,7 @@ contains
       call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
 
       ! compute chi 
-      call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,the_bc_level)
+      call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,the_bc_level)
       
       ! compute rho*W*chi*Gama
       call compute_rhoWchiGama(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama,the_bc_level)
