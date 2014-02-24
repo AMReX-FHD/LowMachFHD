@@ -8,7 +8,7 @@
 &probin_lowmach
   
   ! problem setup
-  smoothing_width = 1.d0     ! scale factor for smoothing initial profile
+  smoothing_width = 0.d0     ! scale factor for smoothing initial profile
   c_init(1:2) = 0.0d0 1.0d0  ! controls initial concentration range
   u_init(1:2) = 0.d0 0.d0    ! controls initial x-velocity
   c_bc(2,1:2) = 0.d0 1.d0
@@ -23,7 +23,7 @@
   nscal = 2                       ! scalars; nscal=2 means we carry rho and rho*c
   rhobar(1:2) = 1.d0 1.d0         ! rho1bar and rho2bar
   visc_coef = 100                 ! momentum diffusion coefficient 'eta'   
-  diff_coef = 0.001d0              ! concentration diffusion coefficient 'chi'
+  diff_coef = 0.005d0             ! concentration diffusion coefficient 'chi'
   mol_mass(1:2) = 1.d0 1.d0       ! molar mass of species
   kT = 1.d0                       ! temperature
 
@@ -74,7 +74,7 @@
   ! -1 = spatially-varing coefficients
   diff_type = 1
 
-  advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
+  advection_type = 3      ! 0 = centered, 1 = unlimited bds, 2 = limited bds, 3 = unlimited quad bds
 
   ! Boundary conditions
   !----------------------
