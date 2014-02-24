@@ -29,7 +29,8 @@ module probin_lowmach_module
   namelist /probin_lowmach/ smoothing_width   ! scale factor for smoothing initial profile
   namelist /probin_lowmach/ c_init            ! controls initial concentration range
   namelist /probin_lowmach/ u_init            ! controls initial velocity
-  namelist /probin_lowmach/ c_bc              ! c boundary conditions (dir,face)
+  namelist /probin_lowmach/ c_bc              ! c boundary conditions (dir,face).
+                                              ! Dirichlet for RESERVOIR; Neumann for WALL
   namelist /probin_lowmach/ grav              ! gravity vector (negative is downwards)
 
   ! simulation parameters
@@ -106,7 +107,7 @@ contains
     smoothing_width = 1.d0
     c_init(1:2) = 1.d0
     u_init(1:2) = 0.d0
-    c_bc(1:3,1:2) = 1.d0
+    c_bc(1:3,1:2) = 0.d0
     grav(1:3) = 0.d0
 
     max_step = 1
