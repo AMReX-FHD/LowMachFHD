@@ -140,7 +140,7 @@ subroutine main_driver()
 
   ! set grid spacing at each level
   ! the grid spacing is the same in each direction
-  dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
+  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
   select case (dm) 
     case(2)
       if (dx(1,1) .ne. dx(1,2)) then
