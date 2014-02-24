@@ -241,9 +241,9 @@ contains
          exit OuterLoop
        else if(total_iter .ge. gmres_min_iter) then 
           ! other options
-          if(norm_resid <= gmres_rel_tol*min(norm_pre_b, norm_init_resid) .or. (norm_resid <= gmres_abs_tol)) then
-          !if(norm_resid <= gmres_rel_tol*norm_pre_b .or. (norm_resid <= gmres_abs_tol)) then
-          !if(norm_resid <= gmres_rel_tol*norm_init_resid .or. (norm_resid <= gmres_abs_tol)) then
+          if(norm_resid <= gmres_rel_tol*min(norm_pre_b, norm_init_resid)) then
+          !if(norm_resid <= gmres_rel_tol*norm_pre_b) then
+          !if(norm_resid <= gmres_rel_tol*norm_init_resid) then
             if (gmres_verbose .ge. 2) then
               if (parallel_IOProcessor()) then
                 write ( *, '(a, i4,a,i4,a,i4)' ) 'GMRES converged: Outer = ', iter, ',  Inner = ', i, ' Total=', total_iter 
@@ -256,6 +256,16 @@ contains
             end if
 
             exit OuterLoop ! Only exit if the *true* preconditioned residual is less than tolerance: Do not trust the gmres estimate
+         else if (norm_resid <= gmres_abs_tol) then
+
+            if (gmres_verbose .ge. 2) then
+              if (parallel_IOProcessor()) then
+                write ( *, '(a, i4,a,i4,a,i4)' ) 'GMRES converged: Outer = ', iter, ',  Inner = ', i, ' Total=', total_iter 
+              end if
+            end if  
+
+            exit OuterLoop
+
           end if
        end if
        
