@@ -376,8 +376,7 @@ contains
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
                                  chi_fc_old,dx,dt,vel_bc_n)
 
-
-    call mk_external_s_force(mla,gmres_rhs_p,dx,time,1)
+    call mk_external_s_force(mla,gmres_rhs_p,dx,time+dt,1)
 
     do n=1,nlevs
        do i=1,dm
