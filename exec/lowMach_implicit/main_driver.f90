@@ -440,7 +440,7 @@ subroutine main_driver()
      else
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp_fc,dx,dt,the_bc_tower,vel_bc_n,vel_bc_t)
+                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t)
      end if
 
      ! increment simulation time
