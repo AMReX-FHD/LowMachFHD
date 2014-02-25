@@ -214,7 +214,10 @@ contains
        call multifab_plus_plus_c(s_update(n),2,rhoc_b_fluxdiv(n),1,1,0)
     end do
 
-    ! set s_update to A^n for scalars
+    ! add external forcing for rho*c
+    call mk_external_s_force(mla,s_update,dx,time,2)
+
+    ! add A^n for scalars to s_update
     if (advection_type .ge. 1) then
 
        do n=1,nlevs
@@ -373,7 +376,8 @@ contains
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
                                  chi_fc_old,dx,dt,vel_bc_n)
 
-    call mk_external_s_force(mla,gmres_rhs_p,sold,dx,time)
+
+    call mk_external_s_force(mla,gmres_rhs_p,dx,time,1)
 
     do n=1,nlevs
        do i=1,dm
@@ -521,14 +525,13 @@ contains
              call multifab_mult_mult_s_c(umac_tmp(n,i),1,0.5d0,1,1)
           end do
           call setval(s_update(n),0.d0,all=.true.)
-          
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
           call bds(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
        else if (advection_type .eq. 3) then
           call bds_quad(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
-       end if
+       end if    
 
        ! snew = s^n + dt * A^{n+1/2} + (dt/2) * (D^n + D^{n+1,*} + S^n + S^{n+1,*})
        do n=1,nlevs
@@ -718,9 +721,7 @@ contains
     ! add div(Psi^{n+1}) to rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_s_fluxdiv(n),1,1,0)
-    end do    
-
-    call mk_external_s_force(mla,gmres_rhs_p,sold,dx,time)
+    end do
 
     ! multiply gmres_rhs_p -S_fac
     do n=1,nlevs
