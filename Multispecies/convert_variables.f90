@@ -289,15 +289,6 @@ contains
     ! free up memory  
     Lambda   = 0.d0         
     W        = 0.d0
-  
-    ! change 0 with tolerance to prevent division by zero in case species
-    ! density, molar concentration or total density = 0. 
-    do row=1, nspecies
-       if(molarconc(row) .lt. fraction_tolerance) then
-          molarconc(row) = fraction_tolerance
-          rho(row)       = fraction_tolerance*rho_tot
-       endif
-    enddo
 
     ! compute Lambda_ij matrix and massfraction W_i = rho_i/rho; molarconc is 
     ! expressed in terms of molmtot,mi,rhotot etc. 

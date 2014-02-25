@@ -9,7 +9,7 @@ module fluid_model_module
 
   private
 
-  public :: fluid_model
+  public :: fluid_model, compute_D_MSGama_local
   
 contains
   
