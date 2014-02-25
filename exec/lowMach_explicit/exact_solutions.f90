@@ -230,7 +230,7 @@ contains
        ! Variable density traveling vortex
 
        ucst = 1.0d0
-       vcst = 0.0d0
+       vcst = 1.0d0
 
        xc = 0.5d0+ucst*time
        yc = 0.5d0+vcst*time

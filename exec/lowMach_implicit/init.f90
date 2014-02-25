@@ -88,6 +88,8 @@ contains
     integer :: i,j,mid
     real(kind=dp_t) :: x,y,y1,y2,r,dy,c_loc
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
+    real(kind=dp_t) :: cosxt,cosyt,freq,pfac,pfreq
+    real(kind=dp_t) :: sinxt,sinyt,ucst,ufac,vcst,xm,xp,ym,yp
 
     select case (prob_type)
     case (0)
@@ -316,6 +318,77 @@ contains
        ! y-momentum
        my = 0.d0
 
+    case (6)
+
+       ! traveling wave with exact solution
+
+       s(:,:,1) = 1.d0
+
+       freq  = 2.d0*M_PI
+       pfreq = 4.d0*M_PI
+
+       ucst = 0.75d0
+       vcst = 0.75d0
+       ufac = dexp(-2.0d0*freq*freq*time*visc_coef)
+       pfac = dexp(-4.0d0*freq*freq*time*visc_coef)/64.0d0
+
+       do j=lo(2),hi(2)
+          y = dx(2) * (dble(j) + half) - vcst*time
+          yp = y+0.5d0*dx(2)
+          ym = y-0.5d0*dx(2)
+          do i=lo(1),hi(1)
+             x = dx(1) * (dble(i) + half) - ucst*time
+
+             xp = x+0.5d0*dx(1)
+             xm = x-0.5d0*dx(1)
+
+             cosxt =  (sin(freq*xp)-sin(freq*xm))/(freq*dx(1))
+             sinxt = -(cos(freq*xp)-cos(freq*xm))/(freq*dx(1))
+             cosyt =  (sin(freq*yp)-sin(freq*ym))/(freq*dx(2))
+             sinyt = -(cos(freq*yp)-cos(freq*ym))/(freq*dx(2))
+
+             s(i,j,2) = ucst + ufac * 0.25d0*cosxt*sinyt
+          enddo
+       enddo
+
+       do j=lo(2),hi(2)
+          y = dx(2) * (dble(j) + half) - vcst*time
+          yp = y+0.5d0*dx(2)
+          ym = y-0.5d0*dx(2)
+          do i=lo(1),hi(1)+1
+             x = dx(1) * (dble(i) ) - ucst*time
+
+             xp = x+0.5d0*dx(1)
+             xm = x-0.5d0*dx(1)
+
+             cosxt =  (sin(freq*xp)-sin(freq*xm))/(freq*dx(1))
+             sinxt = -(cos(freq*xp)-cos(freq*xm))/(freq*dx(1))
+             cosyt =  (sin(freq*yp)-sin(freq*ym))/(freq*dx(2))
+             sinyt = -(cos(freq*yp)-cos(freq*ym))/(freq*dx(2))
+
+             mx(i,j) = ucst + ufac * 0.25d0*cosxt*sinyt
+          enddo
+       enddo
+
+       do j=lo(2),hi(2)+1
+          y = dx(2) * (dble(j)) - vcst*time
+          yp = y+0.5d0*dx(2)
+          ym = y-0.5d0*dx(2)
+          do i=lo(1),hi(1)
+             x = dx(1) * (dble(i) + half) - ucst*time
+
+             xp = x+0.5d0*dx(1)
+             xm = x-0.5d0*dx(1)
+
+             cosxt =  (sin(freq*xp)-sin(freq*xm))/(freq*dx(1))
+             sinxt = -(cos(freq*xp)-cos(freq*xm))/(freq*dx(1))
+             cosyt =  (sin(freq*yp)-sin(freq*ym))/(freq*dx(2))
+             sinyt = -(cos(freq*yp)-cos(freq*ym))/(freq*dx(2))
+
+             my(i,j) = vcst - ufac * 0.25d0*sinxt*cosyt
+          enddo
+       enddo
+
     case default
 
        call bl_error("init_2d: invalid prob_type")
@@ -323,6 +396,65 @@ contains
     end select
 
   end subroutine init_2d
+
+  subroutine Gresho_vortex(u,v,p,rho,r,theta)
+    real(kind=dp_t), intent(out) :: u,v,p,rho
+    real(kind=dp_t), intent(in) :: r,theta  ! radius  and theta
+    !  Return the starting value of 0-Mach vortex problem
+
+    real(kind=dp_t) :: R1,R2,R6,Rval  !  Scaled radius squared
+    real(kind=dp_t) :: nm(25),dm(25),coeff(25),pcst
+    integer ::  k
+
+    data nm/ 1,  6,15, 74,57,174,269,450,153,1564,510,204,1473,1014,1053,558,783,54,38,222,609,184,9, 12, 1/
+    data dm/72,-35,17,-33,32, 31,-15, 29,  8, -27, 13,  5,- 16,  23,  22, -7, 20,19,-9,-17, 32,-15,2,-13,12/
+
+    !  Compute the constant in pressure polynomial ,i.e. p(R)
+    pcst = 0.0d0
+    do k = 1,25
+       coeff(k) = nm(k) / dm(k)
+       pcst = pcst + coeff(k)
+    end do
+
+    R1=r/(0.4d0)
+    R2=R1*R1
+    R6=R2*R2*R2
+
+    if (R1 > 1.0d0) then
+
+       rho = 0.5d0
+       u = 1.0d0*rho
+       v = 0
+       p = 0
+
+    else
+
+       rho = 0.5d0 + 0.5d0*(1.d0-R2)**6
+       Rval = ((1.0d0-R1)**6)*R6
+
+       u = -1024.0d0*Rval*sin(theta)
+       v =  1024.0d0*Rval*cos(theta)
+
+       !  Return the pressure for the variable density Gresho vortex  problem
+       !  (See Eq. 96 in KKM)
+
+       !  Horners rule
+
+       p = coeff(1) * R1 
+       do k = 2,24
+          p = (p + coeff(k)) * R1
+       end do
+       p = p + coeff(25)
+
+       p = p*R6*R6
+       p = p-pcst
+       p = p*(1024.0d0)*(1024.0d0)
+
+       u=(1.0d0+u)*rho
+       v=v*rho
+    end if
+
+  end subroutine Gresho_vortex
 
   subroutine init_3d(mx,my,mz,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
 
