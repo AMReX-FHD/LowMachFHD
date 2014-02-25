@@ -281,7 +281,7 @@ contains
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
           if (y .le. 0.5d0*(prob_hi(2)+prob_lo(2))) then
-             s(:,j,1) = 2.d0
+             s(:,j,1) = 5.d0
           else
              s(:,j,1) = 1.d0
           end if
@@ -303,7 +303,7 @@ contains
           end if
        end do
 
-       ! x velocity
+       ! x-momentum
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
           if (y .le. 0.5d0*(prob_hi(2)+prob_lo(2))) then
@@ -313,7 +313,7 @@ contains
           end if
        end do
 
-       ! y-velocity
+       ! y-momentum
        my = 0.d0
 
     case default
@@ -699,6 +699,15 @@ contains
           end do
           end do
           
+
+       case (5)
+
+          do j=lo(2)-ng_e,hi(2)+ng_e
+          do i=lo(1)-ng_e,hi(1)+ng_e
+             eta(i,j) = visc_coef*prim(i,j,1)
+          end do
+          end do
+
        case default
 
           call bl_error('compute_eta_2d: invalid prob_type for visc_type < 0')
