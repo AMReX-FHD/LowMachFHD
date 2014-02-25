@@ -11,7 +11,8 @@ module convert_variables_module
 
   private
 
-  public :: convert_cons_to_prim,compute_chi,compute_chi_lapack,compute_rhoWchiGama,compute_Lonsager
+  public :: convert_cons_to_prim,compute_chi,compute_rhoWchiGama,compute_Lonsager, &
+            compute_molconc_rhotot_local, compute_chi_local, compute_Lonsager_local
 
 contains
 
