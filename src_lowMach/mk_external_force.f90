@@ -17,36 +17,33 @@ module mk_external_force_module
 
 contains
 
-  subroutine mk_external_s_force(mla,gmres_rhs_p,s,dx,time)
+  subroutine mk_external_s_force(mla,force,dx,time,comp)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: gmres_rhs_p(:)
-    type(multifab) , intent(in   ) :: s(:)
+    type(multifab) , intent(inout) :: force(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),time
+    integer,         intent(in   ) :: comp
 
     ! local
-    integer :: i,n,ng_s,ng_u,dm,nlevs
+    integer :: i,n,ng_u,dm,nlevs
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t), pointer :: fp(:,:,:,:)
-    real(kind=dp_t), pointer :: sp(:,:,:,:)
 
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ng_s  = s(1)%ng
-    ng_u  = gmres_rhs_p(1)%ng
+    ng_u  = force(1)%ng
 
     do n=1,nlevs
-       do i = 1, nfabs(s(n))
-          fp  => dataptr(gmres_rhs_p(n),i)
-          sp  => dataptr(s(n),i)
-          lo = lwb(get_box(s(n), i))
-          hi = upb(get_box(s(n), i))
+       do i = 1, nfabs(force(n))
+          fp  => dataptr(force(n),i)
+          lo = lwb(get_box(force(n), i))
+          hi = upb(get_box(force(n), i))
           select case (dm)
           case (2)
-             call mk_external_s_force_2d(fp(:,:,1,1), sp(:,:,1,:), &
-                                         ng_u, ng_s, lo, hi, dx(n,:), time)
+             call mk_external_s_force_2d(fp(:,:,1,comp), &
+                                         ng_u, lo, hi, dx(n,:), time)
           case (3)
           end select
        end do
@@ -54,11 +51,10 @@ contains
 
   end subroutine mk_external_s_force
 
-  subroutine mk_external_s_force_2d(gmres_rhs_p,s,ng_u,ng_s,lo,hi,dx,time)
+  subroutine mk_external_s_force_2d(force,ng_u,lo,hi,dx,time)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_s
-    real(kind=dp_t), intent(inout) :: gmres_rhs_p(lo(1)-ng_u:,lo(2)-ng_u:)
-    real(kind=dp_t), intent(in   ) ::        s(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    integer        , intent(in   ) :: lo(:),hi(:),ng_u
+    real(kind=dp_t), intent(inout) :: force(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t), intent(in   ) :: dx(:),time
     
 
@@ -78,7 +74,7 @@ contains
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
              x = dx(1) * (dble(i) + half) - ucst*time
-             gmres_rhs_p(i,j) = gmres_rhs_p(i,j) - &
+             force(i,j) = force(i,j) - &
                        pfac*pfreq*sin(pfreq*x)
           enddo
        enddo
