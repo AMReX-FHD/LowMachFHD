@@ -281,7 +281,7 @@ contains
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
           if (y .le. 0.5d0*(prob_hi(2)+prob_lo(2))) then
-             s(:,j,1) = 5.d0
+             s(:,j,1) = 10.d0
           else
              s(:,j,1) = 1.d0
           end if
@@ -290,7 +290,7 @@ contains
        ! density perturbation
        mid = n_cells(2)/2
        if (lo(1) .eq. 0 .and. lo(2) .le. mid .and. hi(2) .ge. mid) then
-          s(0,mid,1) = 1.01d0
+          s(0,mid,1) = 1.01d0*s(0,mid,1)
        end if
 
        ! tracer
