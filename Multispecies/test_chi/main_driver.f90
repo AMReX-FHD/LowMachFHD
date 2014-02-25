@@ -20,10 +20,10 @@ subroutine test_chi(nspecies)
 
   integer, intent(in) :: nspecies
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi,D_MS,Gama
-  real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc,molmass,molmass_in,Dbar_in 
+  real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc,molmass,molmass_in,Dbar_in,chiw 
   real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti
-  integer                                       :: i,j,k,n,row,column,loop 
- 
+  integer                                       :: i,j,k,n,row,column,loop,fraction_tolerance 
+
   ! free up memory 
   D_MS       = 0.d0         
   Lambda     = 0.d0         
@@ -34,8 +34,8 @@ subroutine test_chi(nspecies)
   Sum_woverm = 0.d0
 
   ! initialize conserved and constant quantities
-  rho(1)        = 0.6d0 
-  rho(2)        = 1.05d0 
+  rho(1)        = 1.00000000000000006E-009 
+  rho(2)        = 0.99999999999995715d0 
   !rho(3)        = 1.35d0
   molmass_in(1) = 1.0d0 
   molmass_in(2) = 1.0d0 
@@ -43,6 +43,7 @@ subroutine test_chi(nspecies)
   Dbar_in(1)    = 1.0d0 
   !Dbar_in(2)    = 1.0d0 
   !Dbar_in(3)    = 1.5d0 
+  fraction_tolerance = 1e-9
  
   ! populate D_MS, Gama and molar masses 
   n=0; 
@@ -76,6 +77,15 @@ subroutine test_chi(nspecies)
      molarconc(n) = molmtot*W(n)/molmass(n)
   enddo
 
+  ! change 0 with tolerance to prevent division by zero in case species
+  ! density, molar concentration or total density = 0. 
+    do row=1, nspecies
+       if(molarconc(row) .lt. fraction_tolerance) then
+          molarconc(row) = fraction_tolerance
+          rho(row)       = fraction_tolerance*rho_tot
+       endif
+    enddo
+
   ! compute Lambda_ij matrix and massfraction W_i = rho_i/rho; molarconc is 
   ! expressed in terms of molmtot,mi,rhotot etc. 
   do row=1, nspecies  
@@ -96,13 +106,14 @@ subroutine test_chi(nspecies)
      enddo
   enddo
 
-  print*, 'print Lambda matrix'
-  do row=1,nspecies
-     do column=1,nspecies
-        print*, Lambda(row,column)
-     enddo
-  enddo
- 
+  !print*, 'print Lambda matrix'
+  !do row=1,nspecies
+  !   do column=1,nspecies
+  !      print*, Lambda(row,column)
+  !   enddo
+  !enddo
+
+  print*, fraction_tolerance 
   do loop=1,2
   
      ! compute chi either selecting inverse/pseudoinverse or iterative methods 
@@ -112,17 +123,25 @@ subroutine test_chi(nspecies)
      else
 !       call Dbar2chi_iterative(nspecies,10,D_MS,W,molarconc,chi)
 !       call Dbar2chi_iterative(nspecies,5,D_MS,molmass,molarconc,chi)
-        call Dbar2chi_iterative(nspecies,3,D_MS,molmass,molarconc,chi)
+!        call Dbar2chi_iterative(nspecies,3,D_MS,molmass,molarconc,chi)
+        call Dbar2chi_iterative(nspecies,100,D_MS,molmass,molarconc,chi)
         print*, 'compute chi via iterative methods'
      endif
 
      !if(.false.) then
+     chiw = matmul(chi,W)
      do row=1, nspecies
         do column=1, nspecies
            print*, chi(row, column)
         enddo
         print*, ''
      enddo
+ 
+     print*, 'print chi*w' 
+     do row=1, nspecies
+        print*, chiw(row)
+     enddo
+     print*, ''
      !endif 
  
   end do

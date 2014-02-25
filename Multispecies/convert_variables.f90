@@ -649,7 +649,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     real(kind=dp_t)  :: rhoWchiGama(lo(1)-ng:,lo(2)-ng:,:) ! last dimension for nspecies^2
 
     ! local variables
-    integer          :: i,j,row,column
+    integer          :: i,j,k,row,column
     real(kind=dp_t), dimension(nspecies,nspecies) :: rhoWchiGamaloc 
   
     ! for specific box, now start loops over alloted cells 
@@ -657,7 +657,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
        do i=lo(1)-ng,hi(1)+ng
         
           call compute_rhoWchiGama_local(rho(i,j,:),rho_tot(i,j),molarconc(i,j,:),&
-                          molmass,molmtot(i,j),chi(i,j,:),Gama(i,j,:),rhoWchiGama(i,j,:))
+                          molmass,molmtot(i,j),chi(i,j,:),Gama(i,j,:),rhoWchiGama(i,j,:),i,j,k)
 
           if(.false.) then
           if(i.eq.7 .and. j.eq.14) then
@@ -697,7 +697,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
           do i=lo(1)-ng,hi(1)+ng
        
              call compute_rhoWchiGama_local(rho(i,j,k,:),rho_tot(i,j,k),molarconc(i,j,k,:),&
-                          molmass,molmtot(i,j,k),chi(i,j,k,:),Gama(i,j,k,:),rhoWchiGama(i,j,k,:))
+                          molmass,molmtot(i,j,k),chi(i,j,k,:),Gama(i,j,k,:),rhoWchiGama(i,j,k,:),i,j,k)
               
          end do
       end do
@@ -705,7 +705,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
    
   end subroutine compute_rhoWchiGama_3d
   
-  subroutine compute_rhoWchiGama_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama)
+  subroutine compute_rhoWchiGama_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama,i,j,k)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)            
     real(kind=dp_t), intent(in)   :: rho_tot                  
@@ -715,6 +715,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     real(kind=dp_t), intent(in)   :: chi(nspecies,nspecies)   ! rank conversion done 
     real(kind=dp_t), intent(in)   :: Gama(nspecies,nspecies)        
     real(kind=dp_t), intent(out)  :: rhoWchiGama(nspecies,nspecies) 
+    integer,         intent(in)   :: i,j,k
  
     ! local variables
     integer                              :: row,column
@@ -727,13 +728,20 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
 
     ! check chi*w=0
     chiw = matmul(chi, W)
+    if(i.eq.15 .and. j.eq.16) print*, rho(:)
+    if(i.eq.15 .and. j.eq.16) then 
     do row=1, nspecies
-       !print*, chiw(row)
-       do column=1, nspecies
-          print*, chi(row,column)
-       enddo
-      print*, '' 
+        do column=1, nspecies
+           print*, chi(row,column)
+        enddo
+        !print*, '' 
     enddo
+    print*, 'print chi*w'
+    do row=1, nspecies
+       print*, chiw(row)
+    enddo
+    print*, '' 
+    endif
 
     ! compute chi*Gamma 
     if(is_ideal_mixture) then
