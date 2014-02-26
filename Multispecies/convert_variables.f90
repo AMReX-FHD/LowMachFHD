@@ -285,7 +285,7 @@ contains
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda
     real(kind=dp_t), dimension(nspecies)          :: W 
-       
+      
     ! free up memory  
     Lambda   = 0.d0         
     W        = 0.d0
@@ -315,7 +315,7 @@ contains
     if(use_lapack) then
        call compute_chi_lapack(Lambda(:,:),chi(:,:),W(:))
     else
-       call Dbar2chi_iterative(nspecies,3,D_MS(:,:),molmass(:),molarconc(:),chi(:,:)) 
+       call Dbar2chi_iterative(nspecies,100,D_MS(:,:),molmass(:),molarconc(:),chi(:,:)) 
     endif
 
   end subroutine compute_chi_local
@@ -720,19 +720,8 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
 
     ! check chi*w=0
     chiw = matmul(chi, W)
-    if(i.eq.15 .and. j.eq.16) print*, rho(:)
-    if(i.eq.15 .and. j.eq.16) then 
-    do row=1, nspecies
-        do column=1, nspecies
-           print*, chi(row,column)
-        enddo
-        !print*, '' 
-    enddo
-    print*, 'print chi*w'
-    do row=1, nspecies
-       print*, chiw(row)
-    enddo
-    print*, '' 
+    if(.false.) then
+    if(i.eq.15 .and. j.eq.16) print*, rho, chi, chiw
     endif
 
     ! compute chi*Gamma 

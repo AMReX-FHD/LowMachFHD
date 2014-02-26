@@ -34,6 +34,11 @@ contains
 
       integer :: i, j, k, ii, jj
 
+      ! mole fractions correction - EGLIB
+      do ii = 1, nspec
+       Xkp(ii) = Xk(ii) + fraction_tolerance*(sum(Xk(:))/dble(nspec)-Xk(ii))
+      enddo
+
       ! molecular weight of mixture - EGLIB
       Mwmix = 0.0d0
       do ii = 1, nspec
