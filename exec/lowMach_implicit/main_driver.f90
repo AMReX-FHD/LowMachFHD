@@ -435,7 +435,7 @@ subroutine main_driver()
      ! advance the solution by dt
      if (use_overdamped) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,the_bc_tower, &
+                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
                                          vel_bc_n,vel_bc_t)
      else
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
