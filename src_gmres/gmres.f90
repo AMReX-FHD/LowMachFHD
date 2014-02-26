@@ -148,6 +148,21 @@ contains
              write ( *, *) "gmres.f90: conveged in 0 iteration since rhs=0"
           end if 
        end if
+
+       ! clean up memory
+       do n=1,nlevs
+          do d=1,dm
+             call multifab_destroy(r_u(n,d))
+             call multifab_destroy(w_u(n,d))
+             call multifab_destroy(tmp_u(n,d))
+             call multifab_destroy(V_u(n,d))
+          end do
+          call multifab_destroy(r_p(n))
+          call multifab_destroy(w_p(n))
+          call multifab_destroy(tmp_p(n))
+          call multifab_destroy(V_p(n))
+       end do
+
        return
     end if
 
@@ -424,7 +439,7 @@ contains
        end do
     end if
 
-    ! destroy multifab
+    ! clean up memory
     do n=1,nlevs
        do d=1,dm
           call multifab_destroy(r_u(n,d))
