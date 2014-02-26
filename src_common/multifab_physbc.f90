@@ -98,7 +98,7 @@ contains
        x = prob_lo(1)
        do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(lo(1)-ng:lo(1)-1,j) = s(lo(1),j) - dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(lo(1)-ng:lo(1)-1,j) = s(lo(1),j) - 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
     else if (bc(1,1) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
@@ -131,7 +131,7 @@ contains
        x = prob_lo(1)
        do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j) + dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j) + 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
     else if (bc(1,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
@@ -164,7 +164,7 @@ contains
        y = prob_lo(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,lo(2)-ng:lo(2)-1) = s(i,lo(2)) - dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(i,lo(2)-ng:lo(2)-1) = s(i,lo(2)) - 0.5d0*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
     else if (bc(2,1) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
@@ -197,7 +197,7 @@ contains
        y = prob_hi(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,hi(2)+1:hi(2)+ng) = s(i,hi(2)) + dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(i,hi(2)+1:hi(2)+ng) = s(i,hi(2)) + 0.5d0*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
     else if (bc(2,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
@@ -247,7 +247,7 @@ contains
           do j=lo(2)-ng,hi(2)+ng
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(lo(1)-ng:lo(1)-1,j,k) = s(lo(1),j,k) &
-                  - dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
        end do
     else if (bc(1,1) .eq. HOEXTRAP) then
@@ -291,7 +291,7 @@ contains
           do j=lo(2)-ng,hi(2)+ng
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(hi(1)+1:hi(1)+ng,j,k) = s(hi(1),j,k) &
-                  + dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  + 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
        end do
     else if (bc(1,2) .eq. HOEXTRAP) then
@@ -335,7 +335,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,lo(2)-ng:lo(2)-1,k) = s(i,lo(2),k) &
-                  - dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
        end do
     else if (bc(2,1) .eq. HOEXTRAP) then
@@ -379,7 +379,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,hi(2)+1:hi(2)+ng,k) = s(i,hi(2),k) &
-                  + dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  + 0.5d0*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
        end do
     else if (bc(2,2) .eq. HOEXTRAP) then
@@ -423,7 +423,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,lo(3)-ng:lo(3)-1) = s(i,j,lo(3)) &
-                  - dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
        end do
     else if (bc(3,1) .eq. HOEXTRAP) then
@@ -467,7 +467,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,hi(3)+1:hi(3)+ng) = s(i,j,hi(3)) &
-                  + dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  + 0.5d0*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
        end do
     else if (bc(3,2) .eq. HOEXTRAP) then
