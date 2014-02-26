@@ -3,7 +3,7 @@
 BOXLIB_HOME = ../../../../BoxLib
 STAGGERED_HOME := ../../../staggered_grid
 
-NDEBUG    :=  
+NDEBUG    := t 
 MPI       :=   
 OMP       :=
 PROF      :=

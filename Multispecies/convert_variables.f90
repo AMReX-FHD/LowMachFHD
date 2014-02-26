@@ -285,7 +285,7 @@ contains
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda
     real(kind=dp_t), dimension(nspecies)          :: W 
-        
+       
     ! free up memory  
     Lambda   = 0.d0         
     W        = 0.d0

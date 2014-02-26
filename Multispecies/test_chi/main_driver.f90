@@ -18,7 +18,7 @@ subroutine test_chi(nspecies)
 
   integer, intent(in) :: nspecies
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi,D_MS,Gama
-  real(kind=dp_t), dimension(nspecies)          :: W,rho,drho,molarconc,molmass,molmass_in,Dbar_in,chiw 
+  real(kind=dp_t), dimension(nspecies)          :: W,rho,drho,molarconc,molmass,molmass_in,chiw 
   real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti
   integer                                       :: i,j,k,n,row,column,loop
 
@@ -32,39 +32,41 @@ subroutine test_chi(nspecies)
   Sum_woverm = 0.d0
 
   ! initialize conserved and constant quantities
-  rho(1)        = 0 
-  rho(2)        = 1 
+  rho(1)        = 0.d0 
+  rho(2)        = 1.0d0 
   !rho(3)        = 1.35d0
   molmass_in(1) = 1.0d0 
-  molmass_in(2) = 2.0d0 
+  molmass_in(2) = 1.0d0 
   !molmass_in(3) = 3.0d0 
   Dbar_in(1)    = 1.0d0 
   !Dbar_in(2)    = 0.5d0 
   !Dbar_in(3)    = 1.5d0 
-  fraction_tolerance = 1e-6
+  fraction_tolerance = 1e-9
 
   ! change 0 with tolerance to prevent division by zero in case species
   ! density, molar concentration or total density = 0.
   rho_tot = sum(rho)
-  write(*,*) "TEST=", rho_tot, fraction_tolerance
+  !write(*,*) "TEST=", rho_tot, fraction_tolerance
   do row=1, nspecies
         if(rho(row) .lt. fraction_tolerance*rho_tot) then
            drho(row) = fraction_tolerance*rho_tot
        else
            drho(row) = 0.0d0
        endif
-       write(*,*) row, rho(row), fraction_tolerance*rho_tot, drho(row)
+       !write(*,*) row, rho(row), fraction_tolerance*rho_tot, drho(row)
  enddo
   rho = rho + drho ! Add a correction to make sure no mass or mole fraction is zero
-  write(*,*) "new rho=", rho, " new w=", rho/sum(rho)
+  W   = rho/sum(rho)
+  write(*,*) "new rho=", rho, " new W=", rho/sum(rho)
   
+  ! populate molar masses 
   molmass = molmass_in
   
   ! Compute quantities consistently now
   call compute_molconc_rhotot_local(rho,rho_tot,molarconc,molmass,molmtot)  
-  write(*,*) "rho=",rho_tot, " x=", molarconc, " m=", molmtot
+  write(*,*) "rho_tot=",rho_tot, " x=", molarconc, " m=", molmtot
   
-  ! populate D_MS, Gama and molar masses 
+  ! populate D_MS, Gama 
   call compute_D_MSGama_local(rho,rho_tot,molarconc,molmtot,D_MS,Gama)
 
   do loop=1,2
@@ -77,23 +79,16 @@ subroutine test_chi(nspecies)
         print*, 'compute chi via iterative methods'
         use_lapack = .false.
      endif
+     
      call compute_chi_local(rho,rho_tot,molarconc,molmass,chi,D_MS)
-
      chiw = matmul(chi,W)
-     do row=1, nspecies
-        do column=1, nspecies
-           print*, chi(row, column)
-        enddo
-        print*, ''
-     enddo
- 
+
+     print*, 'print chi' 
+     print*, chi
      print*, 'print chi*w' 
-     do row=1, nspecies
-        print*, chiw(row)
-     enddo
-     print*, ''
+     print*, chiw
  
-  end do
+  enddo
   
   rho = rho - drho ! UNDO the correction so we don't mess up conservation
   
