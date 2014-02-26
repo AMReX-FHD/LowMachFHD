@@ -365,9 +365,7 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! average s^{*,n+1/2} to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-    end do
+    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
 
     ! compute (chi,eta,kappa)^{*,n+1/2}
     call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
@@ -559,10 +557,7 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! compute s^{n+1} to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-    end do
-
+    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Compute stuff for plotfile and next time step

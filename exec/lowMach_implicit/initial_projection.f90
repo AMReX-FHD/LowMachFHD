@@ -72,9 +72,7 @@ contains
     end do
 
     ! average sold to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,sold,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-    end do
+    call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
 
     ! convert m^init to v^init in valid region
     call convert_m_to_umac(mla,s_fc,mold,umac,.true.)

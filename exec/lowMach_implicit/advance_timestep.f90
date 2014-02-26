@@ -258,9 +258,7 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! compute s^{*,n+1} to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-    end do
+    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Crank-Nicolson Velocity Predictor
@@ -570,9 +568,7 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! compute s^{n+1} to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-    end do
+    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 4 - Crank-Nicolson Velocity Corrector
