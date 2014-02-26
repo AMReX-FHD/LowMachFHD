@@ -42,7 +42,7 @@ subroutine test_chi(nspecies)
   !Dbar_in(2)    = 0.5d0 
   !Dbar_in(3)    = 1.5d0 
   inverse_type  = 1
-  fraction_tolerance = 1e-9
+  fraction_tolerance = 1e-16
 
   ! change 0 with tolerance to prevent division by zero in case species
   ! density, molar concentration or total density = 0.
@@ -58,18 +58,18 @@ subroutine test_chi(nspecies)
  enddo
   rho = rho + drho ! Add a correction to make sure no mass or mole fraction is zero
   W   = rho/sum(rho)
-  write(*,*) "new rho=", rho, " new W=", rho/sum(rho)
+  !write(*,*) "new rho=", rho, " new W=", rho/sum(rho)
   
   ! populate molar masses 
   molmass = molmass_in
   
   ! Compute quantities consistently now
   call compute_molconc_rhotot_local(rho,rho_tot,molarconc,molmass,molmtot)  
-  write(*,*) "rho_tot=",rho_tot, " x=", molarconc, " m=", molmtot, " molmass=", molmass
+  !write(*,*) "rho_tot=",rho_tot, " x=", molarconc, " m=", molmtot, " molmass=", molmass
   
   ! populate D_MS, Gama 
   call compute_D_MSGama_local(rho,rho_tot,molarconc,molmtot,D_MS,Gama)
-  write(*,*) "D_MS=",D_MS, " Gama=", Gama
+  !write(*,*) "D_MS=",D_MS
 
   do loop=1,2
   
@@ -87,6 +87,8 @@ subroutine test_chi(nspecies)
 
      print*, 'print chi' 
      print*, chi
+     print*, 'print w' 
+     print*, W
      print*, 'print chi*w' 
      print*, chiw
  
