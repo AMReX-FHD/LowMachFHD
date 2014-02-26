@@ -33,7 +33,6 @@ subroutine main_driver()
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type, advection_type
   use probin_gmres_module  , only: probin_gmres_init
   use probin_module        , only: probin_init, barodiffusion_type, use_overdamped                                   
-
   implicit none
 
   ! will be allocated with dm components
@@ -92,6 +91,9 @@ subroutine main_driver()
   integer :: narg, farg, un
   character(len=128) :: fname
   logical :: lexist
+
+  integer :: n_cell
+  real(kind=dp_t) :: linf,l1,l2
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_lowmach_init()
@@ -512,6 +514,22 @@ subroutine main_driver()
      end do
         
   end do
+
+  !!!!!!!!!!!! convergence testing
+!  call init(mold,sold,pold,dx,mla,time)
+!  do n=1,nlevs
+!     call multifab_sub_sub_c(sold(n),1,snew(n),1,nscal,0)
+!  end do
+!  linf = multifab_norm_inf_c(sold(1),2,1,all=.false.)
+!  l1 = multifab_norm_l1_c(sold(1),2,1,all=.false.)
+!  l2 = multifab_norm_l2_c(sold(1),2,1,all=.false.)
+!  n_cell = multifab_volume(sold(1)) / nscal
+!  if (parallel_IOProcessor()) then
+!     print*,'linf error in rho*c',linf
+!     print*,'l1   error in rho*c',l1 / dble(n_cell)
+!     print*,'l2   error in rho*c',l2 / sqrt(dble(n_cell))
+!  end if
+  !!!!!!!!!!!! convergence testing
 
   ! destroy and deallocate multifabs that contain random numbers
   call destroy_stochastic(mla)
