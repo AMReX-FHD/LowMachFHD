@@ -20,6 +20,7 @@ module advance_timestep_module
   use bc_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
+  use fill_rho_ghost_cells_module
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol
@@ -250,7 +251,8 @@ contains
     ! fill ghost cells for prim^{*,n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! convert prim^{*,n+1} to s^{*,n+1} in valid and ghost region
@@ -560,7 +562,8 @@ contains
     ! fill ghost cells for prim^{n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! convert prim^{n+1} to s^{n+1} in valid and ghost region
