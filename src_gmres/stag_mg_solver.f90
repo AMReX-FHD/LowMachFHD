@@ -281,8 +281,8 @@ contains
     if (all(resid0(1:dm) .eq. 0.d0)) then
        if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
           print*,"Initial residual is zero; exiting staggered multigrid solver"
-          return
        end if
+       return
     end if
 
     ! if some (but not all) of the residuals are zero
