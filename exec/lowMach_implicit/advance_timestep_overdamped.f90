@@ -200,6 +200,8 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
     end if
 
+    call mk_external_m_force(mla,gmres_rhs_v,dx,time+0.5d0*dt)
+
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
@@ -405,6 +407,8 @@ contains
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
     end if
+
+    call mk_external_m_force(mla,gmres_rhs_v,dx,time+0.5d0*dt)
 
     ! save boundary conditions from predictor
     do n=1,nlevs
