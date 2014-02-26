@@ -9,6 +9,7 @@ module advance_timestep_overdamped_module
   use mk_advective_s_fluxdiv_module
   use mk_advective_m_fluxdiv_module
   use mk_diffusive_fluxdiv_module
+  use mk_external_force_module
   use mk_grav_force_module
   use mk_stochastic_fluxdiv_module
   use bds_module
@@ -33,7 +34,7 @@ module advance_timestep_overdamped_module
 contains
 
   subroutine advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,the_bc_tower, &
+                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
                                          vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
@@ -50,7 +51,7 @@ contains
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:),dt
+    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
@@ -199,6 +200,8 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
     end if
 
+    call mk_external_m_force(mla,gmres_rhs_v,dx,time+0.5d0*dt)
+
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
@@ -215,6 +218,9 @@ contains
     ! add div(Psi^n) to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n)
+
+    ! add external forcing for rho*c
+    call mk_external_s_force(mla,gmres_rhs_p,dx,time,1)
 
     do n=1,nlevs
        do i=1,dm
@@ -310,8 +316,8 @@ contains
     ! Step 3 - Forward-Euler Scalar Predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    ! add A^n for scalars to s_update
     if (advection_type .ge. 1) then
-
        do n=1,nlevs
           ! AJN FIXME - ghost cells will stay set zero
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
@@ -323,12 +329,8 @@ contains
        else
           call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
        end if
-
     else
-
-       ! set s_update to A^n for scalars
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
-
     end if
 
     ! compute s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
@@ -406,6 +408,8 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
     end if
 
+    call mk_external_m_force(mla,gmres_rhs_v,dx,time+0.5d0*dt)
+
     ! save boundary conditions from predictor
     do n=1,nlevs
        do i=1,dm
@@ -427,6 +431,9 @@ contains
     ! add div(Psi^n') to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n)
+
+    ! add external forcing for rho*c
+    call mk_external_s_force(mla,gmres_rhs_p,dx,time+0.5d0*dt,1)
 
     do n=1,nlevs
        do i=1,dm
@@ -515,25 +522,20 @@ contains
     ! Step 7 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    ! add A^{*,n+1/2} for scalars to s_update
     if (advection_type .ge. 1) then
-
        do n=1,nlevs
           ! AJN FIXME - ghost cells will stay set zero
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
           call multifab_fill_boundary(bds_force(n))
        end do
-
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
           call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
        else if (advection_type .eq. 3) then
           call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
        end if
-
     else
-
-       ! set s_update to A^{*,n+1/2} for scalars
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
-
     end if
 
     ! compute s^{n+1} = s^n + dt * (A^{*,n+1/2} + D^{*,n+1/2} + St^{*,n+1/2})
