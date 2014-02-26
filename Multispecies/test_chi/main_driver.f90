@@ -18,7 +18,7 @@ subroutine test_chi(nspecies)
 
   integer, intent(in) :: nspecies
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi,D_MS,Gama
-  real(kind=dp_t), dimension(nspecies)          :: W,rho,drho,molarconc,molmass,molmass_in,chiw 
+  real(kind=dp_t), dimension(nspecies)          :: W,rho,drho,molarconc,molmass_in,molmass,chiw 
   real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti
   integer                                       :: i,j,k,n,row,column,loop
 
@@ -32,8 +32,8 @@ subroutine test_chi(nspecies)
   Sum_woverm = 0.d0
 
   ! initialize conserved and constant quantities
-  rho(1)        = 0.d0 
-  rho(2)        = 1.0d0 
+  rho(1)        = 0.6d0 
+  rho(2)        = 1.05d0 
   !rho(3)        = 1.35d0
   molmass_in(1) = 1.0d0 
   molmass_in(2) = 1.0d0 
@@ -41,6 +41,7 @@ subroutine test_chi(nspecies)
   Dbar_in(1)    = 1.0d0 
   !Dbar_in(2)    = 0.5d0 
   !Dbar_in(3)    = 1.5d0 
+  inverse_type  = 1
   fraction_tolerance = 1e-9
 
   ! change 0 with tolerance to prevent division by zero in case species
@@ -64,10 +65,11 @@ subroutine test_chi(nspecies)
   
   ! Compute quantities consistently now
   call compute_molconc_rhotot_local(rho,rho_tot,molarconc,molmass,molmtot)  
-  write(*,*) "rho_tot=",rho_tot, " x=", molarconc, " m=", molmtot
+  write(*,*) "rho_tot=",rho_tot, " x=", molarconc, " m=", molmtot, " molmass=", molmass
   
   ! populate D_MS, Gama 
   call compute_D_MSGama_local(rho,rho_tot,molarconc,molmtot,D_MS,Gama)
+  write(*,*) "D_MS=",D_MS, " Gama=", Gama
 
   do loop=1,2
   

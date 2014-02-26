@@ -223,16 +223,16 @@ contains
           if(.false.) then 
           if(i.eq.7 .and. j.eq.14) then
             if(use_lapack) then 
-              print*, 'print chi via inverse/p-inverse'
+              write(*,*), 'print chi via inverse/p-inverse'
             else 
-              print*, 'print chi via iterative methods'
+              write(*,*), 'print chi via iterative methods'
             endif
             call set_Xij(chilocal, chi(i,j,:)) 
             do row=1, nspecies
                do column=1, nspecies
-                  print*, chilocal(row, column)
+                  write(*,*), chilocal(row, column)
                enddo
-               print*, ''
+               write(*,*), ''
             enddo
           endif
           endif
@@ -285,7 +285,7 @@ contains
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda
     real(kind=dp_t), dimension(nspecies)          :: W 
-       
+      
     ! free up memory  
     Lambda   = 0.d0         
     W        = 0.d0
@@ -346,7 +346,7 @@ contains
     work     = 0.d0
     alpha    = 0.d0
     chilocal = 0.d0
- 
+
     ! calculate trace(Lambda)
     alpha = 0.d0
     do row=1, nspecies
@@ -376,7 +376,7 @@ contains
 
     ! populate chi with B^(-1)
     chi = chilocal   
- 
+    
     case(2) 
     !==========================================================
     ! Using pseudoinverse 
@@ -500,9 +500,9 @@ contains
           call set_Xij(Lonsager_local, Lonsager(i,j,:)) 
             do row=1, nspecies
                do column=1, nspecies
-                  print*, Lonsager_local(row,column) 
+                  write(*,*), Lonsager_local(row,column) 
                enddo
-               print*, '' 
+               write(*,*), '' 
             enddo
           endif
           endif
@@ -656,9 +656,9 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
           call set_Xij(rhoWchiGamaloc, rhoWchiGama(i,j,:))
              do row=1, nspecies
                 do column=1, nspecies
-                   print*, rhoWchiGamaloc(row,column) 
+                   write(*,*), rhoWchiGamaloc(row,column) 
                 enddo
-                print*, '' 
+                write(*,*), '' 
              enddo
           endif
           endif
@@ -720,20 +720,10 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
 
     ! check chi*w=0
     chiw = matmul(chi, W)
-    if(i.eq.15 .and. j.eq.16) print*, rho(:)
-    if(i.eq.15 .and. j.eq.16) then 
-    do row=1, nspecies
-        do column=1, nspecies
-           print*, chi(row,column)
-        enddo
-        !print*, '' 
-    enddo
-    print*, 'print chi*w'
-    do row=1, nspecies
-       print*, chiw(row)
-    enddo
-    print*, '' 
-    endif
+
+    !if(.false.) then
+    if(i.eq.15 .and. j.eq.16) write(*,*), " rho=", rho, " chi=", chi, " chi*w=", chiw
+    !endif
 
     ! compute chi*Gamma 
     if(is_ideal_mixture) then
