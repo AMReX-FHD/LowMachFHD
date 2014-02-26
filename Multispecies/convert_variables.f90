@@ -11,7 +11,8 @@ module convert_variables_module
 
   private
 
-  public :: convert_cons_to_prim,compute_chi,compute_chi_lapack,compute_rhoWchiGama,compute_Lonsager
+  public :: convert_cons_to_prim,compute_chi,compute_rhoWchiGama,compute_Lonsager, &
+            compute_molconc_rhotot_local, compute_chi_local, compute_Lonsager_local
 
 contains
 
@@ -284,19 +285,10 @@ contains
     ! vectors and matrices to be used by LAPACK 
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda
     real(kind=dp_t), dimension(nspecies)          :: W 
-        
+       
     ! free up memory  
     Lambda   = 0.d0         
     W        = 0.d0
-  
-    ! change 0 with tolerance to prevent division by zero in case species
-    ! density, molar concentration or total density = 0. 
-    do row=1, nspecies
-       if(molarconc(row) .lt. fraction_tolerance) then
-          molarconc(row) = fraction_tolerance
-          rho(row)       = fraction_tolerance*rho_tot
-       endif
-    enddo
 
     ! compute Lambda_ij matrix and massfraction W_i = rho_i/rho; molarconc is 
     ! expressed in terms of molmtot,mi,rhotot etc. 

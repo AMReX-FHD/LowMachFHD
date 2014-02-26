@@ -1,17 +1,15 @@
 subroutine main_driver()
 
-  use multifab_module
-  use init_module
   use convert_variables_module
-  use probin_multispecies_module
-  use multifab_physbc_module
+  use fluid_model_module
   use matrix_utilities 
   use F95_LAPACK
+  use probin_multispecies_module
 
   implicit none
 
-  call probin_multispecies_init()
-  call test_chi(nspecies)
+  nspecies=2
+  call test_chi(2)
 
 contains
 
@@ -20,9 +18,9 @@ subroutine test_chi(nspecies)
 
   integer, intent(in) :: nspecies
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi,D_MS,Gama
-  real(kind=dp_t), dimension(nspecies)          :: W,rho,molarconc,molmass,molmass_in,Dbar_in,chiw 
+  real(kind=dp_t), dimension(nspecies)          :: W,rho,drho,molarconc,molmass,molmass_in,chiw 
   real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti
-  integer                                       :: i,j,k,n,row,column,loop,fraction_tolerance 
+  integer                                       :: i,j,k,n,row,column,loop
 
   ! free up memory 
   D_MS       = 0.d0         
@@ -34,117 +32,65 @@ subroutine test_chi(nspecies)
   Sum_woverm = 0.d0
 
   ! initialize conserved and constant quantities
-  rho(1)        = 1.00000000000000006E-009 
-  rho(2)        = 0.99999999999995715d0 
+  rho(1)        = 0.d0 
+  rho(2)        = 1.0d0 
   !rho(3)        = 1.35d0
   molmass_in(1) = 1.0d0 
   molmass_in(2) = 1.0d0 
   !molmass_in(3) = 3.0d0 
   Dbar_in(1)    = 1.0d0 
-  !Dbar_in(2)    = 1.0d0 
+  !Dbar_in(2)    = 0.5d0 
   !Dbar_in(3)    = 1.5d0 
   fraction_tolerance = 1e-9
- 
-  ! populate D_MS, Gama and molar masses 
-  n=0; 
-  do row=1, nspecies  
-     do column=1, row-1
-        n=n+1
-        D_MS(row, column) = Dbar_in(n)
-        D_MS(column, row) = D_MS(row, column) ! symmetric
-        Gama(row, column) = 0.d0       
-        Gama(column, row) = Gama(row, column) ! symmetric
-     enddo
-     D_MS(row, row) = 0.d0 ! self-diffusion is zero
-     Gama(row, row) = 1.d0 ! set to unit matrix for time being
-     molmass(row) = molmass_in(row)
-  enddo
- 
-  ! compute rho_tot
-  do n=1, nspecies  
-     rho_tot = rho_tot + rho(n)
-  enddo         
-  
-  ! calculate mass fraction,total molar mass (1/m=Sum(w_i/m_i)), molar
-  ! concentration (x_i=m*w_i/m_i) 
-  Sum_woverm=0.d0
-  do n=1, nspecies  
-     W(n) = rho(n)/rho_tot
-     Sum_woverm = Sum_woverm + W(n)/molmass(n)
-  enddo
-  molmtot = 1.0d0/Sum_woverm 
-  do n=1, nspecies 
-     molarconc(n) = molmtot*W(n)/molmass(n)
-  enddo
 
   ! change 0 with tolerance to prevent division by zero in case species
-  ! density, molar concentration or total density = 0. 
-    do row=1, nspecies
-       if(molarconc(row) .lt. fraction_tolerance) then
-          molarconc(row) = fraction_tolerance
-          rho(row)       = fraction_tolerance*rho_tot
+  ! density, molar concentration or total density = 0.
+  rho_tot = sum(rho)
+  !write(*,*) "TEST=", rho_tot, fraction_tolerance
+  do row=1, nspecies
+        if(rho(row) .lt. fraction_tolerance*rho_tot) then
+           drho(row) = fraction_tolerance*rho_tot
+       else
+           drho(row) = 0.0d0
        endif
-    enddo
+       !write(*,*) row, rho(row), fraction_tolerance*rho_tot, drho(row)
+ enddo
+  rho = rho + drho ! Add a correction to make sure no mass or mole fraction is zero
+  W   = rho/sum(rho)
+  write(*,*) "new rho=", rho, " new W=", rho/sum(rho)
+  
+  ! populate molar masses 
+  molmass = molmass_in
+  
+  ! Compute quantities consistently now
+  call compute_molconc_rhotot_local(rho,rho_tot,molarconc,molmass,molmtot)  
+  write(*,*) "rho_tot=",rho_tot, " x=", molarconc, " m=", molmtot
+  
+  ! populate D_MS, Gama 
+  call compute_D_MSGama_local(rho,rho_tot,molarconc,molmtot,D_MS,Gama)
 
-  ! compute Lambda_ij matrix and massfraction W_i = rho_i/rho; molarconc is 
-  ! expressed in terms of molmtot,mi,rhotot etc. 
-  do row=1, nspecies  
-     do column=1, row-1
-        Lambda(row, column) = -molarconc(row)*molarconc(column)/D_MS(row,column)
-        Lambda(column, row) = Lambda(row, column)
-     enddo
-  enddo
-
-  ! compute Lambda_ii
-  do row=1,nspecies
-     Sum_knoti = 0.d0
-     do column=1,nspecies
-        if(column.ne.row) then
-           Sum_knoti = Sum_knoti - Lambda(row,column)
-        endif
-        Lambda(row,row) = Sum_knoti
-     enddo
-  enddo
-
-  !print*, 'print Lambda matrix'
-  !do row=1,nspecies
-  !   do column=1,nspecies
-  !      print*, Lambda(row,column)
-  !   enddo
-  !enddo
-
-  print*, fraction_tolerance 
   do loop=1,2
   
      ! compute chi either selecting inverse/pseudoinverse or iterative methods 
      if(loop==1) then
-        call compute_chi_lapack(Lambda,chi,W)
         print*, 'compute chi via inverse/p-inverse'
+        use_lapack = .true.
      else
-!       call Dbar2chi_iterative(nspecies,10,D_MS,W,molarconc,chi)
-!       call Dbar2chi_iterative(nspecies,5,D_MS,molmass,molarconc,chi)
-!        call Dbar2chi_iterative(nspecies,3,D_MS,molmass,molarconc,chi)
-        call Dbar2chi_iterative(nspecies,100,D_MS,molmass,molarconc,chi)
         print*, 'compute chi via iterative methods'
+        use_lapack = .false.
      endif
-
-     !if(.false.) then
+     
+     call compute_chi_local(rho,rho_tot,molarconc,molmass,chi,D_MS)
      chiw = matmul(chi,W)
-     do row=1, nspecies
-        do column=1, nspecies
-           print*, chi(row, column)
-        enddo
-        print*, ''
-     enddo
- 
+
+     print*, 'print chi' 
+     print*, chi
      print*, 'print chi*w' 
-     do row=1, nspecies
-        print*, chiw(row)
-     enddo
-     print*, ''
-     !endif 
+     print*, chiw
  
-  end do
+  enddo
+  
+  rho = rho - drho ! UNDO the correction so we don't mess up conservation
   
 end subroutine test_chi
 

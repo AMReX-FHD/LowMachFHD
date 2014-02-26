@@ -9,9 +9,6 @@ module matrix_utilities
 
   public :: Dbar2chi_iterative
   
-  ! To avoid zero mass or mole fractions we round up using a tolerance:
-  !real(kind=dp_t), public :: fraction_tolerance = 2*epsilon(1.0_dp_t)
-
 contains
 
     ! nspec is number of species
@@ -19,7 +16,7 @@ contains
     ! D_MS is matrix of Maxwell-Stefan binary diffusion coefficient
     ! chi is the multispecies diffusion matrix
     ! Wk is vector of molecular weights (molecular masses will work as well)
-    ! Xk is mole fractions
+    ! Xk is mole fractions --- MUST NOT BE ZERO
     subroutine Dbar2chi_iterative(nspec,num_iterations,D_MS,Wk,Xk,chi)
       integer, intent(in) :: nspec, num_iterations
       real(kind=dp_t), intent(in) :: Xk(1:nspec), Wk(1:nspec), D_MS(1:nspec,1:nspec)
@@ -37,11 +34,6 @@ contains
 
       integer :: i, j, k, ii, jj
 
-      ! mole fractions correction - EGLIB
-      do ii = 1, nspec
-       Xkp(ii) = Xk(ii) + fraction_tolerance*(sum(Xk(:))/dble(nspec)-Xk(ii))
-      enddo
-
       ! molecular weight of mixture - EGLIB
       Mwmix = 0.0d0
       do ii = 1, nspec
@@ -52,7 +44,6 @@ contains
       do ii = 1, nspec
        Ykp(ii) = Wk(ii)/MWmix*Xkp(ii)
       enddo
-
 
       ! Find Di matrix 
       do i = 1, nspec
