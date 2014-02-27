@@ -21,6 +21,7 @@ subroutine main_driver()
   use project_onto_eos_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
+  use fill_rho_ghost_cells_module
   use analyze_spectra_module
   use estdt_module
   use convert_stag_module
@@ -350,7 +351,8 @@ subroutine main_driver()
   ! fill ghost cells for prim
   do n=1,nlevs
      call multifab_fill_boundary(prim(n))
-     call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
+     call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+     call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
   end do
 
   ! convert prim to cons in valid and ghost region

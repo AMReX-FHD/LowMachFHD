@@ -281,8 +281,36 @@ contains
     if (all(resid0(1:dm) .eq. 0.d0)) then
        if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
           print*,"Initial residual is zero; exiting staggered multigrid solver"
-          return
        end if
+
+       ! clean up memory
+       call bc_tower_destroy(the_bc_tower_mg)
+
+       do n=1,nlevs_mg
+          call multifab_destroy(beta_cc_mg(n))
+          call multifab_destroy(gamma_cc_mg(n))
+          do i=1,dm
+             call multifab_destroy(alpha_fc_mg(n,i))
+             call multifab_destroy(rhs_fc_mg(n,i))
+             call multifab_destroy(phi_fc_mg(n,i))
+             call multifab_destroy(Lphi_fc_mg(n,i))
+             call multifab_destroy(resid_fc_mg(n,i))
+          end do
+          if (dm .eq. 2) then
+             call multifab_destroy(beta_ed_mg(n,1))
+          else
+             call multifab_destroy(beta_ed_mg(n,1))
+             call multifab_destroy(beta_ed_mg(n,2))
+             call multifab_destroy(beta_ed_mg(n,3))
+          end if
+          if (n .ne. 1) then
+             call destroy(la_mg(n))
+          end if
+       end do
+       deallocate(beta_cc_mg,gamma_cc_mg,alpha_fc_mg,rhs_fc_mg)
+       deallocate(phi_fc_mg,Lphi_fc_mg,resid_fc_mg,beta_ed_mg,la_mg,dx_mg)
+
+       return
     end if
 
     ! if some (but not all) of the residuals are zero

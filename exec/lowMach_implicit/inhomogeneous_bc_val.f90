@@ -2,6 +2,7 @@ module inhomogeneous_bc_val_module
 
   use bl_types
   use bc_module
+  use bl_error_module
   use probin_common_module,  only: wallspeed_lo, wallspeed_hi, prob_lo, prob_hi
   use probin_lowmach_module, only: rhobar, c_bc
 
@@ -93,21 +94,6 @@ contains
           val = 0.d0
        end if
 
-    else if (comp .eq. scal_bc_comp) then
-       ! density
-
-       if (x .eq. prob_lo(1)) then
-          val = 1.d0/(c_bc(1,1)/rhobar(1) + (1.d0-c_bc(1,1))/rhobar(2))
-       else if (x .eq. prob_hi(1)) then
-          val = 1.d0/(c_bc(1,2)/rhobar(1) + (1.d0-c_bc(1,2))/rhobar(2))
-       else if (y .eq. prob_lo(2)) then
-          val = 1.d0/(c_bc(2,1)/rhobar(1) + (1.d0-c_bc(2,1))/rhobar(2))
-       else if (y .eq. prob_hi(2)) then
-          val = 1.d0/(c_bc(2,2)/rhobar(1) + (1.d0-c_bc(2,2))/rhobar(2))
-       else
-          val = 0.d0
-       end if
-
     else if (comp .eq. scal_bc_comp+1) then
        ! concentration
 
@@ -123,8 +109,15 @@ contains
           val = 0.d0
        end if
 
-    else
+    else if (comp .eq. pres_bc_comp) then
+
        val = 0.d0
+
+    else
+
+       print*,'comp=',comp
+       call bl_error("calling inhomogeneous_bc_val_2d with invalid comp")
+
     end if
 
   end function inhomogeneous_bc_val_2d
@@ -180,25 +173,6 @@ contains
           val = 0.d0
        end if
 
-    else if (comp .eq. scal_bc_comp) then
-       ! density
-
-       if (x .eq. prob_lo(1)) then
-          val = 1.d0/(c_bc(1,1)/rhobar(1) + (1.d0-c_bc(1,1))/rhobar(2))
-       else if (x .eq. prob_hi(1)) then
-          val = 1.d0/(c_bc(1,2)/rhobar(1) + (1.d0-c_bc(1,2))/rhobar(2))
-       else if (y .eq. prob_lo(2)) then
-          val = 1.d0/(c_bc(2,1)/rhobar(1) + (1.d0-c_bc(2,1))/rhobar(2))
-       else if (y .eq. prob_hi(2)) then
-          val = 1.d0/(c_bc(2,2)/rhobar(1) + (1.d0-c_bc(2,2))/rhobar(2))
-       else if (z .eq. prob_lo(3)) then
-          val = 1.d0/(c_bc(3,1)/rhobar(1) + (1.d0-c_bc(3,1))/rhobar(2))
-       else if (z .eq. prob_hi(3)) then
-          val = 1.d0/(c_bc(3,2)/rhobar(1) + (1.d0-c_bc(3,2))/rhobar(2))
-       else
-          val = 0.d0
-       end if
-
     else if (comp .eq. scal_bc_comp+1) then
        ! concentration
 
@@ -218,8 +192,15 @@ contains
           val = 0.d0
        end if
 
-    else
+    else if (comp .eq. pres_bc_comp) then
+
        val = 0.d0
+
+    else
+
+       print*,'comp=',comp
+       call bl_error("calling inhomogeneous_bc_val_2d with invalid comp")
+
     end if
 
   end function inhomogeneous_bc_val_3d

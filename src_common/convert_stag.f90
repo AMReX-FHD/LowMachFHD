@@ -210,12 +210,12 @@ contains
 
     ! overwrite x-boundary faces
     ! value in ghost cells represents boundary value
-    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
+    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. HOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
        do i=lo(1)-ng_f,lo(1)
           facex(i,lo(2)-ng_f:hi(2)+ng_f) = cc(lo(1)-1,lo(2)-ng_f:hi(2)+ng_f)
        end do
     end if
-    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
+    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. HOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
        do i=hi(1)+1,hi(1)+ng_f+1
           facex(i,lo(2)-ng_f:hi(2)+ng_f) = cc(hi(1)+1,lo(2)-ng_f:hi(2)+ng_f)
        end do
@@ -230,12 +230,12 @@ contains
 
     ! overwrite y-boundary faces
     ! value in ghost cells represents boundary value
-    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
+    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. HOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
        do j=lo(2)-ng_f,lo(2)
           facey(lo(1)-ng_f:hi(1)+ng_f,j) = cc(lo(1)-ng_f:hi(1)+ng_f,lo(2)-1)
        end do
     end if
-    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
+    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. HOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
        do j=hi(2)+1,hi(2)+ng_f+1
           facey(lo(1)-ng_f:hi(1)+ng_f,j) = cc(lo(1)-ng_f:hi(1)+ng_f,hi(2)+1)
        end do
@@ -288,13 +288,13 @@ contains
     ! Note: At physical boundaries, the value in ghost cells represents the boundary value
 
     ! overwrite x-boundary faces
-    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
+    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. HOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
        do i=lo(1)-ng_f,lo(1)
           facex(i,lo(2)-ng_f:hi(2)+ng_f,lo(3)-ng_f:hi(3)+ng_f) = &
                cc(lo(1)-1,lo(2)-ng_f:hi(2)+ng_f,lo(3)-ng_f:hi(3)+ng_f)
        end do
     end if
-    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
+    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. HOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
        do i=hi(1)+1,hi(1)+ng_f+1
           facex(i,lo(2)-ng_f:hi(2)+ng_f,lo(3)-ng_f:hi(3)+ng_f) = &
                cc(hi(1)+1,lo(2)-ng_f:hi(2)+ng_f,lo(3)-ng_f:hi(3)+ng_f)
@@ -302,13 +302,13 @@ contains
     end if
 
     ! overwrite y-boundary faces
-    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
+    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. HOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
        do j=lo(2)-ng_f,lo(2)
           facey(lo(1)-ng_f:hi(1)+ng_f,j,lo(3)-ng_f:hi(3)+ng_f) = &
                cc(lo(1)-ng_f:hi(1)+ng_f,lo(2)-1,lo(3)-ng_f:hi(3)+ng_f)
        end do
     end if
-    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
+    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. HOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
        do j=hi(2)+1,hi(2)+ng_f+1
           facey(lo(1)-ng_f:hi(1)+ng_f,j,lo(3)-ng_f:hi(3)+ng_f) = &
                cc(lo(1)-ng_f:hi(1)+ng_f,hi(2)+1,lo(3)-ng_f:hi(3)+ng_f)
@@ -316,13 +316,13 @@ contains
     end if
 
     ! overwrite z-boundary faces
-    if (adv_bc(3,1) .eq. FOEXTRAP .or. adv_bc(3,1) .eq. EXT_DIR) then
+    if (adv_bc(3,1) .eq. FOEXTRAP .or. adv_bc(3,1) .eq. HOEXTRAP .or. adv_bc(3,1) .eq. EXT_DIR) then
        do k=lo(3)-ng_f,lo(3)
           facez(lo(1)-ng_f:hi(1)+ng_f,lo(2)-ng_f:hi(2)+ng_f,k) = &
                cc(lo(1)-ng_f:hi(1)+ng_f,lo(2)-ng_f:hi(2)+ng_f,lo(3)-1)
        end do
     end if
-    if (adv_bc(3,2) .eq. FOEXTRAP .or. adv_bc(3,2) .eq. EXT_DIR) then
+    if (adv_bc(3,2) .eq. FOEXTRAP .or. adv_bc(3,2) .eq. HOEXTRAP .or. adv_bc(3,2) .eq. EXT_DIR) then
        do k=hi(3)+1,hi(3)+ng_f+1
           facez(lo(1)-ng_f:hi(1)+ng_f,lo(2)-ng_f:hi(2)+ng_f,k) = &
                cc(lo(1)-ng_f:hi(1)+ng_f,lo(2)-ng_f:hi(2)+ng_f,hi(3)+1)
@@ -415,14 +415,14 @@ contains
     ! Note: At physical boundaries, the value in ghost cells represents the boundary value
 
     ! overwrite x-boundary nodes
-    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
+    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. HOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
        do j=lo(2)-ng_n,hi(2)+1+ng_n
           do i=lo(1)-ng_n,lo(1)
              node(i,j) = 0.5d0*(cc(lo(1)-1,j)+cc(lo(1)-1,j-1))
           end do
        end do
     end if
-    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
+    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. HOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
        do j=lo(2)-ng_n,hi(2)+1+ng_n
           do i=hi(1)+1,hi(1)+1+ng_n
              node(i,j) = 0.5d0*(cc(hi(1)+1,j)+cc(hi(1)+1,j-1))
@@ -431,14 +431,14 @@ contains
     end if
 
     ! overwrite y-boundary nodes
-    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
+    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. HOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
        do j=lo(2)-ng_n,lo(2)
           do i=lo(1)-ng_n,hi(1)+1+ng_n
              node(i,j) = 0.5d0*(cc(i,lo(2)-1)+cc(i-1,lo(2)-1))
           end do
        end do
     end if
-    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
+    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. HOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
        do j=hi(2)+1,hi(2)+1+ng_n
           do i=lo(1)-ng_n,hi(1)+1+ng_n
              node(i,j) = 0.5d0*(cc(i,hi(2)+1)+cc(i-1,hi(2)+1))
@@ -475,7 +475,7 @@ contains
     ! Note: At physical boundaries, the value in ghost cells represents the boundary value
 
     ! overwrite x-boundary nodes
-    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
+    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. HOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
        do k=lo(3)-ng_n,hi(3)+ng_n
           do j=lo(2)-ng_n,hi(2)+ng_n
              do i=lo(1)-ng_n,lo(1)
@@ -485,7 +485,7 @@ contains
           end do
        end do
     end if
-    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
+    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. HOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
        do k=lo(3)-ng_n,hi(3)+ng_n
           do j=lo(2)-ng_n,hi(2)+ng_n
              do i=hi(1)+1,hi(1)+1+ng_n
@@ -497,7 +497,7 @@ contains
     end if
 
     ! overwrite y-boundary nodes
-    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
+    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. HOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
        do k=lo(3)-ng_n,hi(3)+ng_n
           do j=lo(2)-ng_n,lo(2)
              do i=lo(1)-ng_n,hi(1)+ng_n
@@ -507,7 +507,7 @@ contains
           end do
        end do
     end if
-    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
+    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. HOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
        do k=lo(3)-ng_n,hi(3)+ng_n
           do j=hi(2)+1,hi(2)+1+ng_n
              do i=lo(1)-ng_n,hi(1)+ng_n
@@ -519,7 +519,7 @@ contains
     end if
 
     ! overwrite z-boundary nodes
-    if (adv_bc(3,1) .eq. FOEXTRAP .or. adv_bc(3,1) .eq. EXT_DIR) then
+    if (adv_bc(3,1) .eq. FOEXTRAP .or. adv_bc(3,1) .eq. HOEXTRAP .or. adv_bc(3,1) .eq. EXT_DIR) then
        do k=lo(3)-ng_n,lo(3)
           do j=lo(2)-ng_n,hi(2)+ng_n
              do i=lo(1)-ng_n,hi(1)+ng_n
@@ -529,7 +529,7 @@ contains
           end do
        end do
     end if
-    if (adv_bc(3,2) .eq. FOEXTRAP .or. adv_bc(3,2) .eq. EXT_DIR) then
+    if (adv_bc(3,2) .eq. FOEXTRAP .or. adv_bc(3,2) .eq. HOEXTRAP .or. adv_bc(3,2) .eq. EXT_DIR) then
        do k=hi(3)+1,hi(3)+1+ng_n
           do j=lo(2)-ng_n,hi(2)+ng_n
              do i=lo(1)-ng_n,hi(1)+ng_n
@@ -650,7 +650,7 @@ contains
     ! Note: At physical boundaries, the value in ghost cells represents the boundary value
 
     ! lo-x boundary
-    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
+    if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. HOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
 
        ! overwrite edge_xy
        do k=lo(3)-ng_e,hi(3)+ng_e
@@ -673,7 +673,7 @@ contains
     end if
 
     ! hi-x boundary
-    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
+    if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. HOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
 
        ! overwrite edge_xy
        do k=lo(3)-ng_e,hi(3)+ng_e
@@ -696,7 +696,7 @@ contains
     end if
 
     ! lo-y boundary
-    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
+    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. HOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
 
        ! overwrite edge_xy
        do k=lo(3)-ng_e,hi(3)+ng_e
@@ -719,7 +719,7 @@ contains
     end if
 
     ! hi-y boundary
-    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
+    if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. HOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
 
        ! overwrite edge_xy
        do k=lo(3)-ng_e,hi(3)+ng_e
@@ -742,7 +742,7 @@ contains
     end if
 
     ! lo-z boundary
-    if (adv_bc(3,1) .eq. FOEXTRAP .or. adv_bc(3,1) .eq. EXT_DIR) then
+    if (adv_bc(3,1) .eq. FOEXTRAP .or. adv_bc(3,1) .eq. HOEXTRAP .or. adv_bc(3,1) .eq. EXT_DIR) then
 
        ! overwrite edge_xz
        do k=lo(3)-ng_e,lo(3)
@@ -765,7 +765,7 @@ contains
     end if
 
     ! hi-z boundary
-    if (adv_bc(3,2) .eq. FOEXTRAP .or. adv_bc(3,2) .eq. EXT_DIR) then
+    if (adv_bc(3,2) .eq. FOEXTRAP .or. adv_bc(3,2) .eq. HOEXTRAP .or. adv_bc(3,2) .eq. EXT_DIR) then
 
        ! overwrite edge_xz
        do k=hi(3)+1,hi(3)+1+ng_e

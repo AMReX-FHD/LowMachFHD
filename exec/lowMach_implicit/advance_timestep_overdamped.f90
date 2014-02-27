@@ -19,6 +19,7 @@ module advance_timestep_overdamped_module
   use bc_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
+  use fill_rho_ghost_cells_module
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol
@@ -357,7 +358,8 @@ contains
     ! fill ghost cells for prim
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! convert prim to s^{*,n+1/2} in valid and ghost region
@@ -365,9 +367,7 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! average s^{*,n+1/2} to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-    end do
+    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
 
     ! compute (chi,eta,kappa)^{*,n+1/2}
     call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
@@ -551,7 +551,8 @@ contains
     ! fill ghost cells for prim
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),1,scal_bc_comp,2,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! convert prim to s^{n+1} in valid and ghost region
@@ -559,10 +560,7 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! compute s^{n+1} to faces
-    do i=1,nscal
-       call average_cc_to_face(nlevs,snew,s_fc,i,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-    end do
-
+    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Compute stuff for plotfile and next time step
