@@ -107,7 +107,9 @@ contains
     real(kind=dp_t)  :: rho_tot_local
 
     rho_tot_local = sum(rho)  ! total rho in the cell
-    
+   
+    ! change 0 with tolerance to prevent division by zero in case species
+    ! density, molar concentration or total density = 0.
     do row=1, nspecies
        if(rho(row) .lt. fraction_tolerance*rho_tot_local) then
            drho(row) = fraction_tolerance*rho_tot_local

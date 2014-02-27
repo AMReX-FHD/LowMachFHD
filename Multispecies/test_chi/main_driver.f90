@@ -44,32 +44,18 @@ subroutine test_chi(nspecies)
   inverse_type  = 1
   fraction_tolerance = 1e-14
 
-  ! change 0 with tolerance to prevent division by zero in case species
-  ! density, molar concentration or total density = 0.
-  rho_tot = sum(rho)
-  !write(*,*) "TEST=", rho_tot, fraction_tolerance
-  do row=1, nspecies
-        if(rho(row) .lt. fraction_tolerance*rho_tot) then
-           drho(row) = fraction_tolerance*rho_tot
-       else
-           drho(row) = 0.0d0
-       endif
-       !write(*,*) row, rho(row), fraction_tolerance*rho_tot, drho(row)
- enddo
-  rho = rho + drho ! Add a correction to make sure no mass or mole fraction is zero
-  W   = rho/sum(rho)
-  !write(*,*) "new rho=", rho, " new W=", rho/sum(rho)
-  
   ! populate molar masses 
   molmass = molmass_in
   
+  ! populate drho and add it to rho
+  call correct_rho_with_drho_local(rho,drho)
+  W = rho/sum(rho)
+
   ! Compute quantities consistently now
   call compute_molconc_rhotot_local(rho,rho_tot,molarconc,molmass,molmtot)  
-  !write(*,*) "rho_tot=",rho_tot, " x=", molarconc, " m=", molmtot, " molmass=", molmass
   
   ! populate D_MS, Gama 
   call compute_D_MSGama_local(rho,rho_tot,molarconc,molmtot,D_MS,Gama)
-  !write(*,*) "D_MS=",D_MS
 
   do loop=1,2
   
@@ -93,8 +79,9 @@ subroutine test_chi(nspecies)
      print*, chiw
  
   enddo
-  
-  rho = rho - drho ! UNDO the correction so we don't mess up conservation
+ 
+  ! Undo the correction so we don't mess up conservation
+  rho = rho - drho 
   
 end subroutine test_chi
 
