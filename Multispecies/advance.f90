@@ -328,14 +328,14 @@ contains
       ! init or end of this code
       call diffusive_fluxdiv(mla,rho,rho_tot,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
 
-
+      ! compute external forcing for manufactured solution and add to fluxdiv
+      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
+      
       ! revert back rho to it's original form
       do n=1,nlevs
          call saxpy(rho(n),-1.0d0,drho(n))
       enddo 
-      ! compute external forcing for manufactured solution and add to fluxdiv
-      call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
-    
+      
     end subroutine compute_fluxdiv
 
 end module advance_module 
