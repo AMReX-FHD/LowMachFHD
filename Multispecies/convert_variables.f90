@@ -12,9 +12,114 @@ module convert_variables_module
   private
 
   public :: convert_cons_to_prim,compute_chi,compute_rhoWchiGama,compute_Lonsager, &
-            compute_molconc_rhotot_local, compute_chi_local, compute_Lonsager_local
+            compute_molconc_rhotot_local,compute_chi_local,compute_Lonsager_local, &
+            correct_rho_with_drho,correct_rho_with_drho_local
 
 contains
+  
+  subroutine correct_rho_with_drho(mla,rho,drho,the_bc_level)
+
+   type(ml_layout), intent(in   )  :: mla
+   type(multifab) , intent(inout)  :: rho(:) 
+   type(multifab) , intent(inout)  :: drho(:) 
+   type(bc_level) , intent(in   )  :: the_bc_level(:)
+
+   ! local variables
+   integer :: lo(rho(1)%dim), hi(rho(1)%dim)
+   integer :: n,i,ng,dm,nlevs
+ 
+   ! pointer for rho(nspecies), rho_tot(1), molarconc(nspecies) 
+   real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
+   real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for drho
+
+   dm    = mla%dim     ! dimensionality
+   ng    = rho(1)%ng   ! number of ghost cells 
+   nlevs = mla%nlevel  ! number of levels 
+ 
+    ! loop over all boxes 
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp => dataptr(rho(n),i)
+          dp1 => dataptr(drho(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          
+          select case(dm)
+          case (2)
+             call correct_rho_with_drho_2d(dp(:,:,1,:),dp1(:,:,1,:),ng,lo,hi) 
+          case (3)
+             call correct_rho_with_drho_3d(dp(:,:,:,:),dp1(:,:,:,:),ng,lo,hi) 
+          end select
+       end do
+    end do
+
+  end subroutine correct_rho_with_drho
+
+  subroutine correct_rho_with_drho_2d(rho,drho,ng,lo,hi)
+ 
+    integer          :: lo(2), hi(2), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density- last dim for #species
+    real(kind=dp_t)  :: drho(lo(1)-ng:,lo(2)-ng:,:)      ! total density in each cell 
+        
+    ! local variables
+    integer          :: i,j
+    
+    ! for specific box, now start loops over alloted cells    
+    do j=lo(2)-ng, hi(2)+ng
+       do i=lo(1)-ng, hi(1)+ng
+         
+         call correct_rho_with_drho_local(rho(i,j,:),drho(i,j,:))
+
+       enddo
+    enddo
+ 
+  end subroutine correct_rho_with_drho_2d
+
+  subroutine correct_rho_with_drho_3d(rho,drho,ng,lo,hi)
+ 
+    integer          :: lo(3), hi(3), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! density- last dim for #species
+    real(kind=dp_t)  :: drho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)     ! total density in each cell 
+    
+    ! local variables
+    integer          :: i,j,k
+    
+    ! for specific box, now start loops over alloted cells    
+    do k=lo(3)-ng, hi(3)+ng
+       do j=lo(2)-ng, hi(2)+ng
+          do i=lo(1)-ng, hi(1)+ng
+
+             call correct_rho_with_drho_local(rho(i,j,k,:),drho(i,j,k,:))
+
+          enddo
+       enddo
+    enddo
+ 
+  end subroutine correct_rho_with_drho_3d
+
+  subroutine correct_rho_with_drho_local(rho,drho)
+ 
+    real(kind=dp_t), intent(inout) :: rho(nspecies)    ! density- last dim for #species
+    real(kind=dp_t), intent(out)   :: drho(nspecies)   ! total density in each cell 
+    
+    ! local variables
+    integer          :: row
+    real(kind=dp_t)  :: rho_tot_local
+
+    rho_tot_local = sum(rho)  ! total rho in the cell
+    
+    do row=1, nspecies
+       if(rho(row) .lt. fraction_tolerance*rho_tot_local) then
+           drho(row) = fraction_tolerance*rho_tot_local
+       else
+           drho(row) = 0.0d0
+       endif
+    enddo
+ 
+    ! modify rho  
+    rho = rho + drho 
+
+  end subroutine correct_rho_with_drho_local 
 
   subroutine convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
    
