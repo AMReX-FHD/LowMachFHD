@@ -8,7 +8,7 @@ subroutine main_driver()
 
   implicit none
 
-  nspecies=2
+  nspecies=3
   call test_chi(nspecies)
 
 contains
@@ -32,17 +32,17 @@ subroutine test_chi(nspecies)
   Sum_woverm = 0.d0
 
   ! initialize conserved and constant quantities
-  rho(1)        = 0.0d0
-  rho(2)        = 1.05d0 
-  !rho(3)        = 1.35d0
+  rho(1)        = 0.0d0 ! 0.60
+  rho(2)        = 0.0d0 ! 1.05d0 
+  rho(3)        = 1.35d0
   molmass_in(1) = 1.0d0 
   molmass_in(2) = 2.0d0 
-  !molmass_in(3) = 3.0d0 
+  molmass_in(3) = 3.0d0 
   Dbar_in(1)    = 1.0d0 
-  !Dbar_in(2)    = 0.5d0 
-  !Dbar_in(3)    = 1.5d0 
+  Dbar_in(2)    = 0.5d0 
+  Dbar_in(3)    = 1.5d0 
   inverse_type  = 1
-  fraction_tolerance = 1e-12
+  fraction_tolerance = 1e-14
 
   ! change 0 with tolerance to prevent division by zero in case species
   ! density, molar concentration or total density = 0.
