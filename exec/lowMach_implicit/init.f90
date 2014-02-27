@@ -86,7 +86,7 @@ contains
 
     ! local
     integer :: i,j,mid
-    real(kind=dp_t) :: x,y,y1,y2,r,dy,c_loc
+    real(kind=dp_t) :: x,y,y1,y2,r,dy,c_loc,u_loc
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
     real(kind=dp_t) :: cosxt,cosyt,freq,pfac,pfreq
     real(kind=dp_t) :: sinxt,sinyt,ucst,ufac,vcst,xm,xp,ym,yp,rand
@@ -195,10 +195,9 @@ contains
     case (3)
 
        ! one fluid on top of another
-       ! c_init(1) in lower half of domain (in y)
-       ! c_init(2) in upper half
+       ! c_init(1), u_init(1) in lower half of domain (in y)
+       ! c_init(2), u_init(2) in upper half
 
-       mx = 0.d0
        my = 0.d0
 
        p = 0.d0
@@ -240,6 +239,19 @@ contains
           end do
 
        end if
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+          if (y .lt. y1) then
+             u_loc = u_init(1)
+          else
+             u_loc = u_init(2)
+          end if
+
+          mx(lo(1):hi(1)+1,j) = u_loc*s(lo(1),j,1)
+          
+       end do
 
     case (4) 
 
