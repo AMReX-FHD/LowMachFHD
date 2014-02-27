@@ -34,9 +34,10 @@ contains
 
       integer :: i, j, k, ii, jj
 
-      ! mole fractions correction - EGLIB
+      ! mole fractions correction
+      ! Donev: Turned this off since it should be done in the caller
       do ii = 1, nspec
-       Xkp(ii) = Xk(ii) + fraction_tolerance*(sum(Xk(:))/dble(nspec)-Xk(ii))
+       Xkp(ii) = Xk(ii) ! + fraction_tolerance*(sum(Xk(:))/dble(nspec)-Xk(ii))
       enddo
 
       ! molecular weight of mixture - EGLIB
