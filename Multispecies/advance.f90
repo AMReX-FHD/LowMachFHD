@@ -30,6 +30,7 @@ contains
 
     ! local variables and array of multifabs
     type(multifab)               :: rhonew(mla%nlevel),fluxdiv(mla%nlevel),fluxdivnew(mla%nlevel)
+    type(multifab)               :: drho(mla%nlevel)        ! correction to rho
     type(multifab)               :: rho_tot(mla%nlevel)     ! total density
     type(multifab)               :: molarconc(mla%nlevel)   ! molar concentration
     type(multifab)               :: molmtot(mla%nlevel)     ! total molar mass
@@ -48,6 +49,7 @@ contains
     ! rho_tot is cell-cented with ghost cells that many rho owns.
     do n=1,nlevs
        call multifab_build(rhonew(n),      mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(drho(n),        mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(rho_tot(n),     mla%la(n), 1,           rho(n)%ng) 
        call multifab_build(fluxdiv(n),     mla%la(n), nspecies,    0) 
        call multifab_build(fluxdivnew(n),  mla%la(n), nspecies,    0)
@@ -73,7 +75,7 @@ contains
       stage_time = time   
 
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+      call compute_fluxdiv(mla,rho,drho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                            Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
 
       ! compute rho(t+dt) (only interior) 
@@ -98,7 +100,7 @@ contains
       !===================== 
       
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+      call compute_fluxdiv(mla,rho,drho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                            Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
       
       ! compute rhonew(t+dt) (only interior) 
@@ -120,7 +122,7 @@ contains
       
       ! compute the total div of flux from rho
       stage_time = time + dt  
-      call compute_fluxdiv(mla,rhonew,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+      call compute_fluxdiv(mla,rhonew,drho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                            Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
 
       ! compute rho(t+dt) (only interior)
@@ -143,7 +145,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time 
-      call compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+      call compute_fluxdiv(mla,rho,drho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                            Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
  
       ! compute rhonew(t+dt/2) (only interior) 
@@ -161,7 +163,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time + dt/2.0d0
-      call compute_fluxdiv(mla,rhonew,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+      call compute_fluxdiv(mla,rhonew,drho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                            Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
  
       ! compute rho(t+dt) (only interior) 
@@ -188,7 +190,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time 
-      call compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+      call compute_fluxdiv(mla,rho,drho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                            Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
  
       ! compute rhonew(t+dt) (only interior) 
@@ -206,7 +208,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time + dt
-      call compute_fluxdiv(mla,rhonew,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+      call compute_fluxdiv(mla,rhonew,drho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                            Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
 
       !===========
@@ -235,7 +237,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time + dt/2.0d0
-      call compute_fluxdiv(mla,rhonew,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+      call compute_fluxdiv(mla,rhonew,drho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                            Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
 
       !===========
@@ -264,6 +266,7 @@ contains
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(rhonew(n))
+       call multifab_destroy(drho(n))
        call multifab_destroy(fluxdiv(n))
        call multifab_destroy(fluxdivnew(n))
        call multifab_destroy(rho_tot(n))
@@ -278,11 +281,12 @@ contains
    
   end subroutine advance
 
-  subroutine compute_fluxdiv(mla,rho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
+  subroutine compute_fluxdiv(mla,rho,drho,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                              Gama,D_MS,dx,rhoWchiGama,stage_time,prob_lo,prob_hi,the_bc_level)
        
       type(ml_layout), intent(in   ) :: mla
-      type(multifab) , intent(in   ) :: rho(:)
+      type(multifab) , intent(inout) :: rho(:)
+      type(multifab) , intent(inout) :: drho(:)
       type(multifab) , intent(inout) :: fluxdiv(:)
       type(multifab) , intent(inout) :: rho_tot(:)
       type(multifab) , intent(inout) :: molarconc(:)
@@ -298,6 +302,13 @@ contains
       real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 
       type(bc_level) , intent(in   ) :: the_bc_level(:)
 
+      ! local variables
+      integer :: n, nlevs
+      nlevs = mla%nlevel  ! number of levels 
+
+      ! modify rho with drho to ensure no mass or mole fraction is zero
+      call correct_rho_with_drho(mla,rho,drho,the_bc_level)
+ 
       ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
       call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       
@@ -317,9 +328,14 @@ contains
       ! init or end of this code
       call diffusive_fluxdiv(mla,rho,rho_tot,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
 
+
+      ! revert back rho to it's original form
+      do n=1,nlevs
+         call saxpy(rho(n),-1.0d0,drho(n))
+      enddo 
       ! compute external forcing for manufactured solution and add to fluxdiv
       call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
-     
+    
     end subroutine compute_fluxdiv
 
 end module advance_module 
