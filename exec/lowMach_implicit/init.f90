@@ -89,7 +89,7 @@ contains
     real(kind=dp_t) :: x,y,y1,y2,r,dy,c_loc
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
     real(kind=dp_t) :: cosxt,cosyt,freq,pfac,pfreq
-    real(kind=dp_t) :: sinxt,sinyt,ucst,ufac,vcst,xm,xp,ym,yp
+    real(kind=dp_t) :: sinxt,sinyt,ucst,ufac,vcst,xm,xp,ym,yp,rand
 
     select case (prob_type)
     case (0)
@@ -291,8 +291,14 @@ contains
 
        ! density perturbation
        mid = n_cells(2)/2
-       if (lo(1) .eq. 0 .and. lo(2) .le. mid .and. hi(2) .ge. mid) then
-          s(0,mid,1) = 1.01d0*s(0,mid,1)
+
+
+       if (lo(2) .le. mid .and. hi(2) .ge. mid) then
+          do i=lo(1),hi(1)
+             call random_number(rand)
+             s(i,mid,1) = s(i,mid,1)*(1.d0+0.01d0*rand)
+          end do
+!          s(0,mid,1) = 1.01d0*s(0,mid,1)
        end if
 
        ! tracer
