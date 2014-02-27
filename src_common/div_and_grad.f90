@@ -102,13 +102,13 @@ contains
       end do
    
       ! alter stencil at boundary since ghost value represents value at boundary
-      if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
+      if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
          i=lo(1)
          do j=lo(2),hi(2)
             gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / (0.5d0*dx(1))
          end do
       end if
-      if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
+      if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
          i=hi(1)+1
          do j=lo(2),hi(2)
             gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / (0.5d0*dx(1))
@@ -123,7 +123,7 @@ contains
       end do
 
       ! alter stencil at boundary since ghost value represents value at boundary
-      if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
+      if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
          j=lo(2)
          do i=lo(1),hi(1)
             gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / (0.5d0*dx(2))
@@ -131,7 +131,7 @@ contains
       end if
 
       ! alter stencil at boundary since ghost value represents value at boundary
-      if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
+      if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
          j=hi(2)+1
          do i=lo(1),hi(1)
             gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / (0.5d0*dx(2))
@@ -163,7 +163,7 @@ contains
       end do
 
       ! alter stencil at boundary since ghost value represents value at boundary
-      if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
+      if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
          i=lo(1)
          do k=lo(3),hi(3)
             do j=lo(2),hi(2)
@@ -171,7 +171,7 @@ contains
             end do
          end do
       end if
-      if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
+      if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
          i=hi(1)+1
          do k=lo(3),hi(3)
             do j=lo(2),hi(2)
@@ -190,7 +190,7 @@ contains
       end do
 
       ! alter stencil at boundary since ghost value represents value at boundary
-      if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
+      if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
          j=lo(2)
          do k=lo(3),hi(3)
             do i=lo(1),hi(1)
@@ -198,7 +198,7 @@ contains
             end do
          end do
       end if
-      if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
+      if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
          j=hi(2)+1
          do k=lo(3),hi(3)
             do i=lo(1),hi(1)
@@ -217,7 +217,7 @@ contains
       end do
 
       ! alter stencil at boundary since ghost value represents value at boundary
-      if (bc(3,1) .eq. FOEXTRAP .or. bc(3,1) .eq. EXT_DIR) then
+      if (bc(3,1) .eq. FOEXTRAP .or. bc(3,1) .eq. HOEXTRAP .or. bc(3,1) .eq. EXT_DIR) then
          k=lo(3)
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)
@@ -227,7 +227,7 @@ contains
       end if
 
       ! alter stencil at boundary since ghost value represents value at boundary
-      if (bc(3,2) .eq. FOEXTRAP .or. bc(3,2) .eq. EXT_DIR) then
+      if (bc(3,2) .eq. FOEXTRAP .or. bc(3,2) .eq. HOEXTRAP .or. bc(3,2) .eq. EXT_DIR) then
          k=hi(3)+1
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)
