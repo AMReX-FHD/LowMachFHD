@@ -32,8 +32,8 @@ subroutine test_chi(nspecies)
   Sum_woverm = 0.d0
 
   ! initialize conserved and constant quantities
-  rho(1)        = 0.6d0 
-  rho(2)        = 1.05d0 
+  rho(1)        = 0.0d0 
+  rho(2)        = 1.0d0 
   !rho(3)        = 1.35d0
   molmass_in(1) = 1.0d0 
   molmass_in(2) = 1.0d0 
