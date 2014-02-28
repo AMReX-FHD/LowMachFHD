@@ -837,7 +837,7 @@ contains
     else
 
        select case (prob_type)
-       case (2)
+       case (2,3)
 
           ! simple test function
           ! eta = eta0*(1+a*c) / (1+b*c)
@@ -848,7 +848,6 @@ contains
                                   (1.d0 + material_properties(2,2)*conc)
           end do
           end do
-          
 
        case (5)
 
