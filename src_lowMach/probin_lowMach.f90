@@ -54,7 +54,7 @@ module probin_lowmach_module
   namelist /probin_lowmach/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
   namelist /probin_lowmach/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
-  namelist /probin_lowmach/ hydro_grid_int      ! How often to call updateHydroGrid
+  namelist /probin_lowmach/ hydro_grid_int     ! How often to call updateHydroGrid
                                                ! 0 if never
                                                ! negative for projectHydroGrid custom analysis
                                                ! positive for updateHydroGrid
@@ -68,6 +68,8 @@ module probin_lowmach_module
 
   namelist /probin_lowmach/ max_grid_projection ! parallelization parameters
   namelist /probin_lowmach/ stats_int           ! Project grid for analysis
+                                                ! If positive, how often to compute mean and 
+                                                ! standard deviation over reduced dimensions
   namelist /probin_lowmach/ n_steps_save_stats  ! How often to dump HydroGrid output files
   namelist /probin_lowmach/ n_steps_skip        ! How many steps to skip
   namelist /probin_lowmach/ analyze_conserved   ! Should we use conserved variables for the analysis
@@ -132,7 +134,7 @@ contains
     hydro_grid_int = 0
     project_dir = 0
     max_grid_projection = 128
-    stats_int = -1 ! If positive, how often to compute mean and standard deviation over reduced dimensions
+    stats_int = -1
     n_steps_save_stats = -1
     n_steps_skip = 0
     analyze_conserved = .false.
