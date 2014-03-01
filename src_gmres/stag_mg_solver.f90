@@ -33,7 +33,7 @@ contains
   ! alpha_fc, phi_fc, and rhs_fc are face-centered
   ! beta_ed is nodal (2d) or edge-centered (3d)
   ! phi_fc must come in initialized to some value, preferably a reasonable guess
-  recursive subroutine stag_mg_solver(mla,alpha_fc,beta_cc,beta_ed,gamma_cc,theta, &
+  recursive subroutine stag_mg_solver(mla,alpha_fc,beta_cc,beta_ed,gamma_cc,theta_alpha, &
                                       phi_fc,rhs_fc,dx,the_bc_tower,do_fancy_bottom_in)
 
     type(ml_layout), intent(in   ) :: mla
@@ -43,7 +43,7 @@ contains
     type(multifab) , intent(in   ) :: gamma_cc(:)   ! cell-centered
     type(multifab) , intent(inout) ::   phi_fc(:,:) ! face-centered
     type(multifab) , intent(in   ) ::   rhs_fc(:,:) ! face-centered
-    real(kind=dp_t), intent(in   ) :: theta,dx(:,:)
+    real(kind=dp_t), intent(in   ) :: theta_alpha,dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     logical        , intent(in   ), optional :: do_fancy_bottom_in
 
@@ -218,8 +218,8 @@ contains
     call multifab_copy_c(gamma_cc_mg(1),1,gamma_cc(1),1,1,1)
     do i=1,dm
        call multifab_copy_c(alpha_fc_mg(1,i),1,alpha_fc(1,i),1,1,0)
-       ! multiply alpha_fc_mg by theta
-       call multifab_mult_mult_s_c(alpha_fc_mg(1,i),1,theta,1,0)
+       ! multiply alpha_fc_mg by theta_alpha
+       call multifab_mult_mult_s_c(alpha_fc_mg(1,i),1,theta_alpha,1,0)
     end do
 
     ! coarsen coefficients
@@ -544,7 +544,7 @@ contains
           vcycle_counter_temp = vcycle_counter
 
           call stag_mg_solver(mla_fancy,alpha_fc_fancy,beta_cc_fancy,beta_ed_fancy, &
-                              gamma_cc_fancy,theta,phi_fc_fancy,rhs_fc_fancy,dx_fancy, &
+                              gamma_cc_fancy,theta_alpha,phi_fc_fancy,rhs_fc_fancy,dx_fancy, &
                               the_bc_tower_fancy,.false.)
 
           vcycle_counter = vcycle_counter_temp

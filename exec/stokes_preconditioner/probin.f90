@@ -12,7 +12,7 @@ module probin_module
   !------------------------------------------------------------- 
   integer,save    :: mode_coefs(2),prob_coeff,prob_sol,prob_dir,test_type
   real(dp_t),save :: smoothing_width,var_coeff_mag(3),coeff_mag(3),coeff_ratio(3),ABC_coefs(3)
-  real(dp_t),save :: theta_fac
+  real(dp_t),save :: theta_alpha_fac
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -36,7 +36,7 @@ module probin_module
 
   ! 0.0 = time-independent
   ! 1.0 = time-dependent
-  namelist /probin/ theta_fac
+  namelist /probin/ theta_alpha_fac
 
   ! Physical parameters
   !----------------------
@@ -90,7 +90,7 @@ contains
     prob_dir = 1
     ABC_coefs(1:3) = 1.d0
 
-    theta_fac = 1.d0
+    theta_alpha_fac = 1.d0
 
     var_coeff_mag(1:3) = 0.d0
     coeff_mag(1:3) = 1.d0
@@ -200,10 +200,10 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) ABC_coefs(3)
 
-       case ('--theta_fac')
+       case ('--theta_alpha_fac')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) theta_fac
+          read(fname, *) theta_alpha_fac
 
        case ('--')
           farg = farg + 1

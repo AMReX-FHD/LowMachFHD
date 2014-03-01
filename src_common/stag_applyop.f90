@@ -18,7 +18,7 @@ contains
   
   ! compute Lphi
   subroutine stag_applyop(mla,the_bc_tower,phi_fc,Lphi_fc,alpha_fc, &
-                          beta_cc,beta_ed,gamma_cc,theta,dx)
+                          beta_cc,beta_ed,gamma_cc,theta_alpha,dx)
 
     type(ml_layout), intent(in   ) :: mla
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -28,7 +28,7 @@ contains
     type(multifab) , intent(in   ) :: beta_cc(:)    ! cell-centered
     type(multifab) , intent(in   ) :: beta_ed(:,:)  ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: gamma_cc(:)   ! cell-centered
-    real(kind=dp_t), intent(in   ) :: theta,dx(:,:)
+    real(kind=dp_t), intent(in   ) :: theta_alpha,dx(:,:)
 
     ! local
     integer :: i,n,dm,nlevs
@@ -37,12 +37,12 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    ! multiply alpha_fc_temp by theta
+    ! multiply alpha_fc_temp by theta_alpha
     do n=1,nlevs
        do i=1,dm
           call multifab_build_edge(alpha_fc_temp(n,i),mla%la(n),1,0,i)
           call multifab_copy_c(alpha_fc_temp(n,i),1,alpha_fc(n,i),1,1,0)
-          call multifab_mult_mult_s_c(alpha_fc_temp(n,i),1,theta,1,0)
+          call multifab_mult_mult_s_c(alpha_fc_temp(n,i),1,theta_alpha,1,0)
        end do
     end do
 

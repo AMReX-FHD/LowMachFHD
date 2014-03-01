@@ -24,7 +24,7 @@ contains
 
   ! This computes x = M^{-1} b using the approach in ./doc/PreconditionerNotes.tex
   subroutine apply_precon(mla,b_u,b_p,x_u,x_p,alpha_fc,beta,beta_ed, &
-                          gamma,theta,dx,the_bc_tower)
+                          gamma,theta_alpha,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: b_u(:,:)
@@ -35,7 +35,7 @@ contains
     type(multifab) , intent(in   ) :: beta(:)
     type(multifab) , intent(in   ) :: beta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: gamma(:)
-    real(kind=dp_t), intent(in   ) :: theta
+    real(kind=dp_t), intent(in   ) :: theta_alpha
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -94,7 +94,7 @@ contains
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_u^star = A^{-1} b_u
-        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u,dx,the_bc_tower)
+        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 2: Construct RHS for pressure Poisson problem
@@ -119,10 +119,10 @@ contains
         ! x_u = x_u^star - (alpha I)^-1 grad Phi
         call subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx,the_bc_tower)
 
-        ! if precon_type = +1, or theta=0 then x_p = theta*Phi - c*beta*(mac_rhs)
-        ! if precon_type = -1             then x_p = theta*Phi - c*beta*L_alpha Phi
+        ! if precon_type = +1, or theta_alpha=0 then x_p = theta_alpha*Phi - c*beta*(mac_rhs)
+        ! if precon_type = -1             then x_p = theta_alpha*Phi - c*beta*L_alpha Phi
 
-        if ((precon_type .eq. 1) .or. (theta .eq. 0.d0)) then
+        if ((precon_type .eq. 1) .or. (theta_alpha .eq. 0.d0)) then
           ! first set x_p = -mac_rhs 
           do n=1,nlevs
              call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
@@ -159,10 +159,10 @@ contains
 
           end if
 
-          ! multiply Phi by theta
-          call multifab_mult_mult_s_c(phi(n),1,theta,1,0)
+          ! multiply Phi by theta_alpha
+          call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
 
-          ! add theta*Phi to x_p
+          ! add theta_alpha*Phi to x_p
           call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
 
         end do
@@ -176,7 +176,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_u = A^{-1} b_u
-        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u,dx,the_bc_tower)
+        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 2: Solve a pressure Poisson problem for Phi
@@ -191,7 +191,7 @@ contains
           call multifab_plus_plus_c(mac_rhs(n),1,b_p(n),1,1,0)
         end do
 
-        if (abs(theta) .gt. 0.d0) then
+        if (abs(theta_alpha) .gt. 0.d0) then
 
            ! solves L_alpha Phi = mac_rhs
            ! x_u is only passed in to get a norm for absolute residual criteria
@@ -203,7 +203,7 @@ contains
         ! STEP 3: Update x_p 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        ! x_p = theta*I *Phi - beta*mac_rhs 
+        ! x_p = theta_alpha*I *Phi - beta*mac_rhs 
         do n=1,nlevs
           ! beta part
           if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then 
@@ -231,7 +231,7 @@ contains
              call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
 
              ! gamma part
-             ! x_p = theta*I *Phi - 4/3*beta*mac_rhs - gamma*mac_rhs 
+             ! x_p = theta_alpha*I *Phi - 4/3*beta*mac_rhs - gamma*mac_rhs 
              call multifab_mult_mult_s_c(mac_rhs(n),1,-1.d0,1,0)
              call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
 
@@ -240,11 +240,11 @@ contains
 
           end if
 
-          if (abs(theta) .gt. 0.d0) then         
-             ! multiply Phi by theta
-             call multifab_mult_mult_s_c(phi(n),1,theta,1,0)   
+          if (abs(theta_alpha) .gt. 0.d0) then         
+             ! multiply Phi by theta_alpha
+             call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)   
 
-             ! add theta*Phi to x_p
+             ! add theta_alpha*Phi to x_p
              call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
           end if   
 
@@ -275,7 +275,7 @@ contains
            call subtract_weighted_gradp(mla,b_u_tmp,one_fab_fc,x_p_tmp,dx,the_bc_tower)
 
            ! compute = A^(-1)*(b_u-grad(x_p)) 
-           call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u_tmp, &
+           call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u_tmp, &
                                dx,the_bc_tower)
 
         end if
@@ -296,7 +296,7 @@ contains
           end if 
         end do
   
-        if (abs(theta) .gt. 0) then
+        if (abs(theta_alpha) .gt. 0) then
 
           ! solves L_alpha Phi = mac_rhs
           ! x_u^star is only passed in to get a norm for absolute residual criteria
@@ -333,9 +333,9 @@ contains
             call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
           end if
           
-          if (abs(theta) .gt. 0) then 
-             ! multiply phi by theta 
-             call multifab_mult_mult_s_c(phi(n),1,theta,1,0)
+          if (abs(theta_alpha) .gt. 0) then 
+             ! multiply phi by theta_alpha 
+             call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
              ! add phi to x_p                                           
              call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
           end if
@@ -367,7 +367,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! compute = A^(-1)*(b_u-grad(x_p)) 
-        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u_tmp, &
+        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u_tmp, &
                             dx,the_bc_tower)
 
       case(4) 
@@ -379,9 +379,9 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_u = A^{-1} b_u
-        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta,x_u,b_u,dx,the_bc_tower)
+        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
 
-        if (abs(theta) .gt. 0) then  
+        if (abs(theta_alpha) .gt. 0) then  
 
           do n=1,nlevs
             ! copy b_p to mac_rhs, mac_rhs is now the rhs for later use 
@@ -396,10 +396,10 @@ contains
 
         do n=1,nlevs
 
-          if (abs(theta) .gt. 0) then
-            call multifab_mult_mult_s_c(phi(n),1,theta,1,0)
+          if (abs(theta_alpha) .gt. 0) then
+            call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
           end if 
-          ! x_p = theta*Phi-beta*bp
+          ! x_p = theta_alpha*Phi-beta*bp
           call multifab_copy_c(x_p(n),1,b_p(n),1,1,0)
           call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
           call multifab_sub_sub_c(x_p(n),1,phi(n),1,1,0) 
@@ -448,7 +448,7 @@ contains
     call multifab_sub_sub_s_c(x_p(1),1,mean_val_pres,1,0)
     
     ! The velocity problem is also singular for periodic systems with no identity piece
-    if(all(mla%pmask(1:dm)) .and. (theta==0.0d0)) then
+    if(all(mla%pmask(1:dm)) .and. (theta_alpha==0.0d0)) then
        do i=1,dm
           call multifab_sub_sub_s_c(x_u(1,i),1,mean_val_umac(i),1,0)
        end do

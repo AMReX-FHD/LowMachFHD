@@ -57,7 +57,7 @@
 
   ! 0.0 = time-independent
   ! 1.0 = time-dependent
-  theta_fac = 1.d0
+  theta_alpha_fac = 1.d0
 
   ! Physical parameters
   !----------------------

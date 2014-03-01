@@ -38,7 +38,7 @@ module probin_gmres_module
   ! weighting of pressure when computing norms and inner products
   namelist /probin_gmres/ p_norm_weight
 
-  ! scale theta, beta, gamma, and b_u by this, and then scale x_p by the inverse
+  ! scale theta_alpha, beta, gamma, and b_u by this, and then scale x_p by the inverse
   namelist /probin_gmres/ scale_factor
 
   ! MAC projection solver parameters:

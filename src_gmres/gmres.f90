@@ -28,7 +28,7 @@ module gmres_module
 contains
   
   subroutine gmres(mla,the_bc_tower,dx,b_u,b_p,x_u,x_p, &
-                   alpha_fc,beta,beta_ed,gamma,theta,norm_pre_rhs)
+                   alpha_fc,beta,beta_ed,gamma,theta_alpha,norm_pre_rhs)
 
     type(ml_layout),intent(in   ) :: mla
     type(bc_tower), intent(in   ) :: the_bc_tower
@@ -41,7 +41,7 @@ contains
     type(multifab), intent(inout) :: beta(:)
     type(multifab), intent(inout) :: beta_ed(:,:) ! nodal (2d), edge-centered (3d)
     type(multifab), intent(inout) :: gamma(:)
-    real(dp_t)    , intent(inout) :: theta
+    real(dp_t)    , intent(inout) :: theta_alpha
     real(dp_t), optional, intent(out) :: norm_pre_rhs
 
     ! Local
@@ -100,7 +100,7 @@ contains
 
     ! apply scaling factor
     if (scale_factor .ne. 1.d0) then
-       theta = theta*scale_factor
+       theta_alpha = theta_alpha*scale_factor
        do n=1,nlevs
           ! we will solve for scale*x_p so we need to scale the initial guess
           call multifab_mult_mult_s(x_p(n),scale_factor,x_p(n)%ng)
@@ -119,7 +119,7 @@ contains
 
     ! preconditioned norm_b: norm_pre_b
     call apply_precon(mla,b_u,b_p,tmp_u,tmp_p,alpha_fc, &
-                      beta,beta_ed,gamma,theta,dx,the_bc_tower)
+                      beta,beta_ed,gamma,theta_alpha,dx,the_bc_tower)
     call stag_l2_norm(mla,tmp_u,norm_u)
     call cc_l2_norm(mla,tmp_p,norm_p)
     norm_p=p_norm_weight*norm_p
@@ -177,7 +177,7 @@ contains
 
        ! Calculate tmp = Ax
        call apply_matrix(mla,tmp_u,tmp_p,x_u,x_p,alpha_fc,beta,beta_ed, &
-                         gamma,theta,dx,the_bc_tower)
+                         gamma,theta_alpha,dx,the_bc_tower)
 
        ! tmp = b - Ax
        do n=1,nlevs
@@ -217,7 +217,7 @@ contains
        ! We should not be counting these toward the number of mg cycles performed
        vcycle_counter_temp = vcycle_counter
        call apply_precon(mla,tmp_u,tmp_p,r_u,r_p,alpha_fc, &
-                         beta,beta_ed,gamma,theta,dx,the_bc_tower)
+                         beta,beta_ed,gamma,theta_alpha,dx,the_bc_tower)
        vcycle_counter = vcycle_counter_temp
 
        ! resid = sqrt(dot_product(r, r))
@@ -325,11 +325,11 @@ contains
           end do
           
           call apply_matrix(mla,tmp_u,tmp_p,r_u,r_p,alpha_fc,beta,beta_ed, &
-                            gamma,theta,dx,the_bc_tower)
+                            gamma,theta_alpha,dx,the_bc_tower)
 
           ! w = M^{-1} A*V(i)
           call apply_precon(mla,tmp_u,tmp_p,w_u,w_p,alpha_fc, &
-                            beta,beta_ed,gamma,theta,dx,the_bc_tower)
+                            beta,beta_ed,gamma,theta_alpha,dx,the_bc_tower)
 
           do k=1,i
              ! form H(k,i) Hessenberg matrix
@@ -422,7 +422,7 @@ contains
 
     ! apply scaling factor
     if (scale_factor .ne. 1.d0) then
-       theta = theta/scale_factor
+       theta_alpha = theta_alpha/scale_factor
        do n=1,nlevs
           ! the solution we got is scale*x_p
           call multifab_mult_mult_s(x_p(n),1.d0/scale_factor,x_p(n)%ng)

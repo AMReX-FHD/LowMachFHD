@@ -64,7 +64,7 @@
 
   ! 0.0 = time-independent
   ! 1.0 = time-dependent
-  theta_fac = 1.d0
+  theta_alpha_fac = 1.d0
 
   var_coeff_mag = 0.0d0 0.0d0 0.0d0  ! alpha, beta, gamma variation magnitudes
   coeff_mag = 1.0d0 0.0d0 0.0d0      ! for control the scalings of alpha, beta, gamma

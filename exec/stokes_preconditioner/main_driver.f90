@@ -25,7 +25,7 @@ subroutine main_driver()
   use bc_module
   use stag_applyop_module
   use gmres_module
-  use probin_module       , only: probin_init, test_type, theta_fac
+  use probin_module       , only: probin_init, test_type, theta_alpha_fac
   use probin_common_module, only: probin_common_init, n_cells, dim_in, fixed_dt, &
                                   max_grid_size, plot_int, seed, &
                                   prob_lo, prob_hi, bc_lo, bc_hi
@@ -75,7 +75,7 @@ subroutine main_driver()
   type(multifab), allocatable :: vel_bc_t(:,:)
 
   integer    :: dm,nlevs,n,i
-  real(dp_t) :: time,theta
+  real(dp_t) :: time,theta_alpha
   
   type(box)         :: bx
   type(ml_boxarray) :: mba
@@ -107,7 +107,7 @@ subroutine main_driver()
 
   dm = dim_in
 
-  theta = theta_fac/fixed_dt
+  theta_alpha = theta_alpha_fac/fixed_dt
 
   time = 0.d0
 
@@ -322,7 +322,7 @@ subroutine main_driver()
      call multifab_mult_mult_s(pres_exact(1),1.0d0/scale_factor,pres_exact(1)%ng)
 
      call apply_matrix(mla,rhs_u,rhs_p,umac_exact,pres_exact,alpha_fc,beta,beta_ed, &
-                       gamma,theta,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                       gamma,theta_alpha,dx,the_bc_tower,vel_bc_n,vel_bc_t)
   else
      ! initialize rhs_u and rhs_p with a subroutine
      call init_rhs(mla,rhs_u,rhs_p,dx,time,the_bc_tower%bc_tower_array)
@@ -338,7 +338,7 @@ TestType: if (test_type==0) then ! Test the order of accuracy of the stencils
     
     ! calculate A*x and save it in umac_tmp
     call apply_matrix(mla,umac_tmp,pres_tmp,umac_exact,pres_exact,alpha_fc, &
-                      beta,beta_ed,gamma,theta,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                      beta,beta_ed,gamma,theta_alpha,dx,the_bc_tower,vel_bc_n,vel_bc_t)
     
     ! calculate f - (A*u)
     do n=1,nlevs
@@ -372,7 +372,7 @@ TestType: if (test_type==0) then ! Test the order of accuracy of the stencils
       do n=1,nlevs
         call setval(rhs_p(n),0.d0,all=.true.)
       end do 
-      call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha_fc,beta,beta_ed,gamma,theta)
+      call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha_fc,beta,beta_ed,gamma,theta_alpha)
       ! calculate the norms of the global error
       norm = multifab_norm_inf_c(umac(1,1),1,1,all=.false.)
       if (parallel_IOProcessor()) print*,"The global error: L0 U   =",norm
@@ -391,7 +391,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
   ! vector with zeros everywhere in the problem domain, and ghost cells filled to
   ! respect the boundary conditions
   call convert_to_homogeneous(mla,rhs_u,rhs_p,alpha_fc,beta,beta_ed, &
-                              gamma,theta,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                              gamma,theta_alpha,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
   ! compute the average value of umac_exact and pres_exact
   call sum_umac_press(mla,pres_exact,umac_exact,mean_val_pres,mean_val_umac) 
@@ -416,7 +416,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
   if (test_type>0) then
   
      ! use gmres
-     call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha_fc,beta,beta_ed,gamma,theta)
+     call gmres(mla,the_bc_tower,dx,rhs_u,rhs_p,umac,pres,alpha_fc,beta,beta_ed,gamma,theta_alpha)
   
   else
   
@@ -428,7 +428,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
      ! A*dx=(b-A*x0) and set x=x0+dx.
 
      call apply_matrix(mla,umac_tmp,pres_tmp,umac,pres,alpha_fc, &
-                       beta,beta_ed,gamma,theta,dx,the_bc_tower)
+                       beta,beta_ed,gamma,theta_alpha,dx,the_bc_tower)
 
      do n=1,nlevs
         do i=1,dm
@@ -438,7 +438,7 @@ else TestType ! Actually try to solve the linear system by gmres or pure multigr
      end do
 
      call apply_precon(mla,rhs_u,rhs_p,umac_tmp,pres_tmp,alpha_fc,beta,beta_ed,gamma, &
-                       theta,dx,the_bc_tower)
+                       theta_alpha,dx,the_bc_tower)
 
      do n=1,nlevs
         do i=1,dm

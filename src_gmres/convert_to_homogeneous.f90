@@ -17,7 +17,7 @@ module convert_to_homogeneous_module
 contains
 
   subroutine convert_to_homogeneous(mla,b_u,b_p,alpha_fc,beta,beta_ed,gamma, &
-                                    theta,dx,the_bc_tower,vel_bc_n,vel_bc_t)
+                                    theta_alpha,dx,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: b_u(:,:)
@@ -26,7 +26,7 @@ contains
     type(multifab) , intent(in   ) :: beta(:)
     type(multifab) , intent(in   ) :: beta_ed(:,:)
     type(multifab) , intent(in   ) :: gamma(:)
-    real(kind=dp_t), intent(in   ) :: theta,dx(:,:)
+    real(kind=dp_t), intent(in   ) :: theta_alpha,dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(in   ) :: vel_bc_n(:,:)
     type(multifab) , intent(in   ) :: vel_bc_t(:,:)
@@ -72,7 +72,7 @@ contains
   end do
 
   ! compute Lphi
-  call stag_applyop(mla,the_bc_tower,phi,Lphi,alpha_fc,beta,beta_ed,gamma,theta,dx)
+  call stag_applyop(mla,the_bc_tower,phi,Lphi,alpha_fc,beta,beta_ed,gamma,theta_alpha,dx)
 
   ! subtract Lphi from b_u
   do n=1,nlevs

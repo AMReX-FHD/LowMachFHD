@@ -92,12 +92,12 @@ contains
     integer :: i,dm,n,nlevs
     logical :: nodal_temp(mla%dim)
 
-    real(kind=dp_t) :: S_fac, theta_fac, norm_pre_rhs
+    real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs
 
     nlevs = mla%nlevel
     dm = mla%dim
 
-    theta_fac = 1.d0/dt
+    theta_alpha = 1.d0/dt
 
     allocate(vel_bc_t_old  (nlevs,size(vel_bc_t,dim=2)))
     allocate(vel_bc_t_delta(nlevs,size(vel_bc_t,dim=2)))
@@ -448,7 +448,7 @@ contains
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
-               eta,eta_ed,kappa,theta_fac,norm_pre_rhs)
+               eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
 
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
@@ -770,7 +770,7 @@ contains
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
-               eta,eta_ed,kappa,theta_fac)
+               eta,eta_ed,kappa,theta_alpha)
 
     ! restore eta and kappa
     do n=1,nlevs

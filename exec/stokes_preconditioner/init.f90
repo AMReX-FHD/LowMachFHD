@@ -520,7 +520,7 @@ contains
 
   subroutine init_rhs(mla,b_u,b_p,dx,time,the_bc_level)
 
-    use probin_module       , only: prob_coeff, prob_sol, coeff_mag, ABC_coefs, theta_fac
+    use probin_module       , only: prob_coeff, prob_sol, coeff_mag, ABC_coefs, theta_alpha_fac
     use probin_common_module, only: fixed_dt, prob_lo, prob_hi, visc_type
 
     type(ml_layout), intent(in   ) :: mla
@@ -705,7 +705,7 @@ contains
 
       visc_coef=coeff_mag(2)/coeff_mag(1)
 
-      if( (abs(prob_sol)==1) .and. (abs(prob_coeff)==1) .and. (theta_fac==0.0d0) ) then
+      if( (abs(prob_sol)==1) .and. (abs(prob_coeff)==1) .and. (theta_alpha_fac==0.0d0) ) then
          ! Constant-coefficient Taylor vortex
 
          L = prob_hi(1)-prob_lo(1)
@@ -740,7 +740,7 @@ contains
 
          val = 0.d0 
 
-      elseif ( (abs(prob_sol)==3) .and. (abs(prob_coeff)==5) .and. (theta_fac==0.0d0) ) then  
+      elseif ( (abs(prob_sol)==3) .and. (abs(prob_coeff)==5) .and. (theta_alpha_fac==0.0d0) ) then  
          ! density=1, smooth viscosity flow
 
          freq = 2.d0*M_PI
@@ -906,7 +906,7 @@ contains
 
       else 
 
-         call bl_error('ERROR: bad or unimplemented choice for prob_sol/prob_coeff/theta_fac in rhs_val_2d')
+         call bl_error('ERROR: bad or unimplemented choice for prob_sol/prob_coeff/theta_alpha_fac in rhs_val_2d')
 
       end if
 
@@ -926,7 +926,7 @@ contains
 
       visc_coef=coeff_mag(2)/coeff_mag(1)
 
-      if( (abs(prob_sol)==1) .and. (abs(prob_coeff)==1) .and. (theta_fac==0.0d0) ) then 
+      if( (abs(prob_sol)==1) .and. (abs(prob_coeff)==1) .and. (theta_alpha_fac==0.0d0) ) then 
          ! Constant-coefficient Taylor vortex ! quasi-2D Taylor vortex
 
          L = prob_hi(1)-prob_lo(1)
@@ -961,7 +961,7 @@ contains
             call bl_error('ERROR:rhs_val_3d, bad or unimplemented choice for visc_type')
          end select
 
-      elseif( (abs(prob_sol)==2) .and. (abs(prob_coeff)==1) .and. (theta_fac==0.0d0) ) then
+      elseif( (abs(prob_sol)==2) .and. (abs(prob_coeff)==1) .and. (theta_alpha_fac==0.0d0) ) then
 
          freq  = 2.d0*M_PI
          ufac = dexp(-freq*freq*visc_coef*time)
@@ -1235,7 +1235,7 @@ contains
 
       else 
 
-         call bl_error('ERROR: bad or unimplemented choice for prob_sol/prob_coeff/theta_fac in rhs_val_3d')
+         call bl_error('ERROR: bad or unimplemented choice for prob_sol/prob_coeff/theta_alpha_fac in rhs_val_3d')
 
       end if
 
