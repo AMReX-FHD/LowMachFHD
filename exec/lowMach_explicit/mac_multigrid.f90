@@ -46,17 +46,17 @@ contains
     type(multifab), allocatable :: face_coeffs(:,:)
 
     type(mg_tower)  :: mgt(mla%nlevel)
-    integer         :: dm, ns, nlevs
+    integer         :: dm, nlevs
 
     ! MG solver defaults
     integer    :: stencil_type, bottom_solver, bottom_max_iter
     integer    :: max_iter
     integer    :: min_width
     integer    :: max_nlevel
-    integer    :: d, n, nu1, nu2, nub, gamma, cycle_type, smoother
+    integer    :: d, n, nu1, nu2, nub, cycle_type, smoother
     integer    :: max_nlevel_in,do_diagnostics
     logical    :: doing_viscous_solve
-    real(dp_t) :: omega,bottom_solver_eps
+    real(dp_t) :: bottom_solver_eps
     real(dp_t) ::  xa(mla%dim),  xb(mla%dim)
     real(dp_t) :: pxa(mla%dim), pxb(mla%dim)
     logical    :: abort_on_max_iter
@@ -75,8 +75,6 @@ contains
     nu1               = mgt(nlevs)%nu1
     nu2               = mgt(nlevs)%nu2
     nub               = mgt(nlevs)%nub
-    gamma             = mgt(nlevs)%gamma
-    omega             = mgt(nlevs)%omega
     cycle_type        = mgt(nlevs)%cycle_type
     bottom_solver     = mgt(nlevs)%bottom_solver
     bottom_solver_eps = mgt(nlevs)%bottom_solver_eps
@@ -121,8 +119,6 @@ contains
         end if
     end if
 
-    ns = 1 + dm*3
-
     do n = nlevs, 1, -1
 
        if (n == 1) then
@@ -146,14 +142,11 @@ contains
                               the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,bc_comp),&
                               stencil_type, &
                               dh = dx(n,:), &
-                              ns = ns, &
                               smoother = smoother, &
                               nu1 = nu1, &
                               nu2 = nu2, &
                               nub = nub, &
-                              gamma = gamma, &
                               cycle_type = cycle_type, &
-                              omega = omega, &
                               bottom_solver = bottom_solver, &
                               bottom_max_iter = bottom_max_iter, &
                               bottom_solver_eps = bottom_solver_eps, &
@@ -173,14 +166,11 @@ contains
                               the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,bc_comp),&
                               stencil_type, &
                               dh = dx(n,:), &
-                              ns = ns, &
                               smoother = smoother, &
                               nu1 = nu1, &
                               nu2 = nu2, &
                               nub = nub, &
-                              gamma = gamma, &
                               cycle_type = cycle_type, &
-                              omega = omega, &
                               bottom_solver = bottom_solver, &
                               bottom_max_iter = bottom_max_iter, &
                               bottom_solver_eps = bottom_solver_eps, &
