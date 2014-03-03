@@ -323,7 +323,7 @@ subroutine main_driver()
   ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pold,dx,mla,time)
 
-  if (initial_variance .gt. 0.d0) then
+  if (initial_variance .ne. 0.d0) then
      call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
      call add_momentum_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold,umac)
   end if
@@ -344,7 +344,7 @@ subroutine main_driver()
   ! convert cons to prim in valid region
   call convert_cons_to_prim(mla,sold,prim,.true.)
 
-  if (initial_variance .gt. 0.d0) then
+  if (initial_variance .ne. 0.d0) then
      call add_concentration_fluctuations(mla,dx,initial_variance*variance_coef*conc_scal,prim,sold)
   end if
 

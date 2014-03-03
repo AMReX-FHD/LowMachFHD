@@ -50,6 +50,7 @@ module probin_lowmach_module
   ! stochastic properties
   namelist /probin_lowmach/ variance_coef     ! global scaling epsilon for stochastic forcing
   namelist /probin_lowmach/ initial_variance  ! multiplicative factor for initial fluctuations
+                                              ! (if negative, total momentum is set to zero)
   namelist /probin_lowmach/ conc_scal         ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
   namelist /probin_lowmach/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
   namelist /probin_lowmach/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
