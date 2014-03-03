@@ -14,7 +14,7 @@
  !n_cells(1:2) = 64 64
  n_cells(1:2) = 128 32
 
- max_grid_size = 16 16
+ max_grid_size = 32 32
 
  !prob_hi(1:2) = 640.0 640.0
  !prob_hi(1:2) = 0.08 0.02
@@ -32,7 +32,7 @@
 
  print_int = 100
  proj_int = -1 ! How often to project onto div(u)=0
- plot_int  = -1
+ plot_int  = 100
  chk_int   = 0
 
  !fixed_dt = 1.5
@@ -114,9 +114,9 @@
  
  ! For stochastic stuff:
  use_stochastic_forcing = T
- seed=__SEED__
+ seed= 1
  hydro_grid_int=1 ! How often to take snapshots
- n_steps_save_stats=50000
+ n_steps_save_stats=1000
  !n_steps_save_stats=-1
  center_snapshots=F
  !project_2D=1
