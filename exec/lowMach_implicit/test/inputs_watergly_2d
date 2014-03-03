@@ -3,7 +3,7 @@
   barodiffusion_type = 0  ! 0 = no barodiffusion
                           ! 1 = fixed gradp from initialization
                           ! 2 = update gradp each time step
-  use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
+  use_overdamped = T	  ! enable overdamped (infinite Sc) algorithm
 
 /
 
@@ -13,6 +13,8 @@
   c_init(1:2) = 0.39d0 0.d0  ! controls initial concentration range
   c_bc(2,1:2) = 0.39d0 0.d0
   grav(1:2) = 0.d0 -2364.d0   ! gravity vector (negative is downwards)
+  grav(1:2) = 0.d0 -236.4d0   ! gravity vector (negative is downwards)
+  grav(1:2) = 0.d0 0.d0       ! gravity vector (negative is downwards)
 
   ! simulation properties
   max_step = 10000          ! maximum number of time steps
@@ -22,8 +24,10 @@
   ! fluid properties
   nscal = 2                       ! scalars; nscal=2 means we carry rho and rho*c
   rhobar(1:2) = 1.054d0 1.044d0   ! rho1bar and rho2bar
-  visc_coef = 1.d-3               ! momentum diffusion coefficient 'eta'   
-  diff_coef = 1.d-4               ! concentration diffusion coefficient 'chi'
+  visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta'   
+  diff_coef = 1.d-5               ! concentration diffusion coefficient 'chi'
+!  visc_coef = 1.d-3               ! momentum diffusion coefficient 'eta'   
+!  diff_coef = 1.d-4               ! concentration diffusion coefficient 'chi'
   kT = 4.14d-14                   ! temperature
 
   ! a/b for chi/eta/kappa
@@ -39,7 +43,7 @@
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
-  hydro_grid_int = 1         ! How often to call updateHydroGrid
+  hydro_grid_int = 5         ! How often to call updateHydroGrid
                              ! 0 if never
                              ! negative for projectHydroGrid custom analysis
                              ! positive for updateHydroGrid
@@ -69,7 +73,7 @@
   prob_hi(1:2) = 1.d0 0.25d0 ! physical hi coordinate
   n_cells(1:2) = 128 32      ! number of cells in domain
   max_grid_size(1:2) = 32 32 ! max number of cells in a box
-  fixed_dt = 0.005d0         ! time step
+  fixed_dt = 0.025d0         ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
   prob_type = 0              ! sets scalars, m, coefficients (see init.f90)
 
@@ -242,6 +246,7 @@
       ! species1 variable1 species2 variable2
    
    ! Static structure factors
+   subtractMeanFT = F
    writeSpectrumVTK = T
    writeAbsValue = F ! Only write absolute values of complex values to VTK file?
    writeTheory = -2 ! Write the theoretical prediction (0 or 1) or project discretely (-1)
