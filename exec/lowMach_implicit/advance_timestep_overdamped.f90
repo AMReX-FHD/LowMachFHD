@@ -562,9 +562,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Compute stuff for plotfile and next time step
     
-    ! AJN FIXME
-    ! mnew should hold (1/2)(rho^n + rho^{n+1}) v^{*,n+1/2}
-    ! this actually does mnew = rho^{n+1} v^{*,n+1/2}
+    ! mnew actually holds rho^{n+1} v^{*,n+1/2}, not (1/2)(rho^n + rho^{n+1}) v^{*,n+1/2}
     ! mnew is just a diagnostic, it does not enter the algorithm so for now this is fine
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
