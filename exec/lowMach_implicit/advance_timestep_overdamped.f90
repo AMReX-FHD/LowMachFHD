@@ -271,7 +271,7 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/dt,dx,the_bc_tower, &
+                                kappa,theta_alpha,dx,the_bc_tower, &
                                 vel_bc_n_delta,vel_bc_t_delta)
 
     gmres_abs_tol = 0.d0
@@ -483,7 +483,7 @@ contains
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
     ! respect the boundary conditions
     call convert_to_homogeneous(mla,gmres_rhs_v,gmres_rhs_p,s_fc,eta,eta_ed, &
-                                kappa,1.d0/dt,dx,the_bc_tower, &
+                                kappa,theta_alpha,dx,the_bc_tower, &
                                 vel_bc_n_delta,vel_bc_t_delta)
 
     ! call gmres to compute delta v and delta p
