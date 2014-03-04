@@ -320,7 +320,6 @@ contains
     ! add A^n for scalars to s_update
     if (advection_type .ge. 1) then
        do n=1,nlevs
-          ! AJN FIXME - ghost cells will stay set zero
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
           call multifab_fill_boundary(bds_force(n))
        end do
@@ -496,7 +495,6 @@ contains
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
        end do
-       call multifab_copy_c(pnew(n),1,pold(n),1,1,0)
        call multifab_plus_plus_c(pnew(n),1,dp(n),1,1,0)
     end do
 
@@ -525,7 +523,6 @@ contains
     ! add A^{*,n+1/2} for scalars to s_update
     if (advection_type .ge. 1) then
        do n=1,nlevs
-          ! AJN FIXME - ghost cells will stay set zero
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
           call multifab_fill_boundary(bds_force(n))
        end do
@@ -565,9 +562,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Compute stuff for plotfile and next time step
     
-    ! AJN FIXME
-    ! mnew should hold (1/2)(rho^n + rho^{n+1}) v^{*,n+1/2}
-    ! this actually does mnew = rho^{n+1} v^{*,n+1/2}
+    ! mnew actually holds rho^{n+1} v^{*,n+1/2}, not (1/2)(rho^n + rho^{n+1}) v^{*,n+1/2}
     ! mnew is just a diagnostic, it does not enter the algorithm so for now this is fine
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 

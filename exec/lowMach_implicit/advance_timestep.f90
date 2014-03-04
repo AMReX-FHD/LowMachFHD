@@ -73,9 +73,8 @@ contains
 
     type(multifab) ::       mtemp(mla%nlevel,mla%dim)
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
-    type(multifab) :: m_a_fluxdiv_old(mla%nlevel,mla%dim)
+    type(multifab) :: m_a_fluxdiv    (mla%nlevel,mla%dim)
     type(multifab) :: m_d_fluxdiv_old(mla%nlevel,mla%dim)
-    type(multifab) :: m_a_fluxdiv_new(mla%nlevel,mla%dim)
     type(multifab) :: m_d_fluxdiv_new(mla%nlevel,mla%dim)
     type(multifab) :: m_s_fluxdiv    (mla%nlevel,mla%dim)
     type(multifab) ::        dumac(mla%nlevel,mla%dim)
@@ -113,9 +112,8 @@ contains
        do i=1,dm
           call multifab_build_edge(          mtemp(n,i),mla%la(n),nscal,1,i)
           call multifab_build_edge(    gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(m_a_fluxdiv_old(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(m_a_fluxdiv    (n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_d_fluxdiv_old(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(m_a_fluxdiv_new(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_d_fluxdiv_new(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_s_fluxdiv    (n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(          dumac(n,i),mla%la(n),1    ,1,i)
@@ -180,9 +178,8 @@ contains
        call setval(s_update(n),0.d0,all=.true.)
        call setval(bds_force(n),0.d0,all=.true.)
        do i=1,dm
-          call setval(m_a_fluxdiv_old(n,i),0.d0,all=.true.)
+          call setval(m_a_fluxdiv    (n,i),0.d0,all=.true.)
           call setval(m_d_fluxdiv_old(n,i),0.d0,all=.true.)
-          call setval(m_a_fluxdiv_new(n,i),0.d0,all=.true.)
           call setval(m_d_fluxdiv_new(n,i),0.d0,all=.true.)
           call setval(m_s_fluxdiv    (n,i),0.d0,all=.true.)
           call setval(          dumac(n,i),0.d0,all=.true.)
@@ -298,14 +295,14 @@ contains
        end do
     end do
 
-    ! compute m_a_fluxdiv_old = A^n for momentum
-    call mk_advective_m_fluxdiv(mla,umac_old,mold,m_a_fluxdiv_old,dx, &
+    ! compute m_a_fluxdiv = A^n for momentum
+    call mk_advective_m_fluxdiv(mla,umac_old,mold,m_a_fluxdiv,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add A^n for momentum to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv_old(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -607,24 +604,17 @@ contains
        end do
     end do
 
-    ! m_a_fluxdiv_old already contains A^n for momentum
-    ! add (1/2) A^n gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_s_c(m_a_fluxdiv_old(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv_old(n,i),1,1,0)
-       end do
-    end do
-
-    ! compute m_a_fluxdiv_new = A(s^{n+1},v^{n+1,*}) for momentum
-    call mk_advective_m_fluxdiv(mla,umac,mnew,m_a_fluxdiv_new,dx, &
+    ! m_a_fluxdiv already contains A^n for momentum
+    ! add A(s^{n+1},v^{n+1,*}) for momentum to m_a_fluxdiv
+    call mk_advective_m_fluxdiv(mla,umac,mnew,m_a_fluxdiv,dx, &
                                 the_bc_tower%bc_tower_array)
 
-    ! add (1/2) m_a_fluxdiv_new to gmres_rhs_v
+
+    ! add (1/2) m_a_fluxdiv to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(m_a_fluxdiv_new(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv_new(n,i),1,1,0)
+          call multifab_mult_mult_s_c(m_a_fluxdiv(n,i),1,0.5d0,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -831,9 +821,8 @@ contains
        do i=1,dm
           call multifab_destroy(mtemp(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
-          call multifab_destroy(m_a_fluxdiv_old(n,i))
+          call multifab_destroy(m_a_fluxdiv(n,i))
           call multifab_destroy(m_d_fluxdiv_old(n,i))
-          call multifab_destroy(m_a_fluxdiv_new(n,i))
           call multifab_destroy(m_d_fluxdiv_new(n,i))
           call multifab_destroy(m_s_fluxdiv(n,i))
           call multifab_destroy(dumac(n,i))
