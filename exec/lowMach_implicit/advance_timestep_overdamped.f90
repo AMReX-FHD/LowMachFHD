@@ -22,7 +22,7 @@ module advance_timestep_overdamped_module
   use fill_rho_ghost_cells_module
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: advection_type
-  use probin_gmres_module, only: gmres_abs_tol
+  use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
 
   use analysis_module
 
@@ -283,7 +283,7 @@ contains
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
     ! for cases where du in the corrector should be small the gmres stalls
-    gmres_abs_tol = norm_pre_rhs
+    gmres_abs_tol = norm_pre_rhs*gmres_rel_tol
 
     ! compute v^* = v^{n-1/2} + delta v
     ! compute p^* = p^{n-1/2} + delta p
