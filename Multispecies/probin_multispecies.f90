@@ -12,7 +12,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
-  real(kind=dp_t)    :: alpha1,beta,sigma,fraction_tolerance  ! manufactured solution parameters
+  real(kind=dp_t)    :: alpha1,beta,delta,sigma,fraction_tolerance  ! manufactured solution parameters
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
   logical            :: print_error_norms, is_ideal_mixture, use_lapack
   
@@ -54,23 +54,23 @@ contains
     narg = command_argument_count()
 
     ! here we set some random values to be replaced from the input file
-    nspecies          = 2 
-    max_step          = 10000
+    nspecies           = 2 
+    max_step           = 10000
     cfl1               = 1.0d0
-    chi               = 1.0d0
-    init_type         = 1
-    inverse_type      = 1
-    timeinteg_type    = 1
-    print_error_norms = .true.
-    is_ideal_mixture  = .true.
-    use_lapack        = .true.
-    rho_in            = 1.0d0
-    molmass_in        = 1.0d0
-    Dbar_in           = 1.0d0
-    Temp              = 1.0d0
-    Press             = 1.0d0
-    fraction_tolerance= 1e-13 
-    start_time        = 0.0d0 
+    chi                = 1.0d0
+    init_type          = 1
+    inverse_type       = 1
+    timeinteg_type     = 1
+    print_error_norms  = .true.
+    is_ideal_mixture   = .true.
+    use_lapack         = .true.
+    rho_in             = 1.0d0
+    molmass_in         = 1.0d0
+    Dbar_in            = 1.0d0
+    Temp               = 1.0d0
+    Press              = 1.0d0
+    fraction_tolerance = 1e-13 
+    start_time         = 0.0d0 
  
     ! read from input file 
     need_inputs = .true.

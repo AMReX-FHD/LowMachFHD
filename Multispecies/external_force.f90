@@ -74,7 +74,7 @@ contains
    
     select case(init_type)
     
-    !==== for m1 = m2 = m and m1 != m2 != m, 2 species ====!
+    !==== for m1 = m2 = m and also for m1 != m2 != m, 2 species ====!
     case(4) 
 
      ! for specific box, now start loops over alloted cells    
@@ -96,7 +96,7 @@ contains
      enddo
   
 
-    !==== for m1 = m2 = m and m1 != m2 != m, 2 species ====!
+    !==== for m2=m3, D12=D13 and Grad(w2)=0, 3 species ====! 
     case(5) 
      
      ! for specific box, now start loops over alloted cells    
@@ -106,47 +106,30 @@ contains
            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
  
              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
-               
-             r_temp = (alpha1*D12*(-(dexp(r**2/(2.0d0*sigma**2))*(r**2 - 2.0d0*sigma**2)) +& 
-                      2.0d0*beta*(-r**2 + sigma**2)))/(dexp(r**2/sigma**2)*sigma**4)  
-  
-             fluxdiv(i,j,1) = fluxdiv(i,j,1) + r_temp 
-             fluxdiv(i,j,2) = fluxdiv(i,j,2) - r_temp
+             r_temp  = (alpha1*(2.0d0*alpha1*(D12*molmass_in(1) - D23*molmass_in(2))*(r - sigma)*(r +& 
+                       sigma) - D12*dexp(r**2/(2.0d0*sigma**2))*molmass_in(1)*(r**2 - 2.0d0*sigma**2)))/&
+                       (dexp(r**2/sigma**2)*molmass_in(1)*sigma**4)
 
-        enddo
-     enddo
- 
-    !==== for m2=m3, D12=D13 and Grad(w2)=0, 3 species ====! 
-    case(6) 
-
-     ! for specific box, now start loops over alloted cells    
-     do j=lo(2), hi(2)
-        y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
-        do i=lo(1), hi(1)
-           x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
- 
-             r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
-
-             r_temp = -(alpha1*(alpha1*(D12*molmass_in(1) - D23*molmass_in(2))*(4.0d0*D12 -& 
-                      2.0d0*r**2) + 4.0d0*D12*dexp(r**2/(4.0d0*D12))*(-0.9d0*D12*molmass_in(1) -& 
-                      0.1d0*D23*molmass_in(2))*M_PI*(4.0d0*D12 - r**2)))/(64.0d0*D12**4.0d0*&
-                      dexp(r**2/(2.0d0*D12))*molmass_in(1)*M_PI**2)
- 
-             r_temp1 = (beta*D12**3*(D12*(-0.9d0*D12*molmass_in(1) - 0.1d0*D23*molmass_in(2)) +& 
-                       (alpha1*(0.07957747154594767d0*D12*molmass_in(1) - 0.07957747154594767d0*&
-                       D23*molmass_in(2)))/dexp(r**2/(4.0d0*D12))) + (alpha1*(D12 - D23)*(alpha1*&
-                       (D12*molmass_in(1) - D23*molmass_in(2))*(4.0d0*D12 - 2.0d0*r**2) + 4.0d0*&
-                       D12*dexp(r**2/(4.0d0*D12))*(-0.9d0*D12*molmass_in(1) - 0.1d0*D23*molmass_in(2))*&
-                       M_PI*(4.0d0*D12 - r**2)))/(64.0d0*dexp(r**2/(2.0d0*D12))*M_PI**2))/&
-                       (D12**5.0d0*dexp(beta*time)*molmass_in(1))           
+             r_temp1 = (delta*dexp(-(r**2/sigma**2) - beta*time)*(-(beta*D12*dexp(r**2/sigma**2)*&
+                       molmass_in(1)*sigma**4) - 2.0d0*alpha1**2*(D12 - D23)*(D12*molmass_in(1) -& 
+                       D23*molmass_in(2))*(r - sigma)*(r + sigma) + alpha1*dexp(r**2/(2.0d0*sigma**2))*&
+                       (D12*(D12 - D23)*molmass_in(1)*r**2 + 2.0d0*D12*(-D12 + D23)*molmass_in(1)*sigma**2 +& 
+                       beta*(D12*molmass_in(1) - D23*molmass_in(2))*sigma**4)))/(D12*molmass_in(1)*sigma**4)
             
              fluxdiv(i,j,1) = fluxdiv(i,j,1) + r_temp 
              fluxdiv(i,j,2) = fluxdiv(i,j,2) + r_temp1
              fluxdiv(i,j,3) = fluxdiv(i,j,3) - (r_temp + r_temp1)
+              
+             !== to benchmark eqn1 ==!
+             !r_temp = (alpha1*D12*(-(dexp(r**2/(2.0d0*sigma**2))*(r**2 - 2.0d0*sigma**2)) +& 
+             !         2.0d0*beta*(-r**2 + sigma**2)))/(dexp(r**2/sigma**2)*sigma**4)  
+             !fluxdiv(i,j,1) = fluxdiv(i,j,1) + r_temp 
+             !fluxdiv(i,j,2) = fluxdiv(i,j,2) - r_temp
+             !=======================!
 
         enddo
      enddo
-    
+ 
     end select 
 
   end subroutine external_source_2d

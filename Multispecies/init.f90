@@ -45,6 +45,7 @@ contains
     ! assign values of parameters for the gaussian rho, rhototal
     alpha1 = 0.5d0 
     beta   = 0.1d0 
+    delta  = 0.5d0 
     sigma  = (prob_hi(1)-prob_lo(1))/10.0d0  ! variance of gaussian distribution
 
     ! looping over boxes 
@@ -168,28 +169,9 @@ contains
 
     case(5)
     !==================================================================================
-    ! Initializing rho1, rho2=Gaussian and rhototal has no-time dependence).
-    !==================================================================================
- 
-    do j=lo(2),hi(2)
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
-         do i=lo(1),hi(1)
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-        
-            rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
-            w1   = alpha1*dexp(-rsq/(2.0d0*sigma**2))
-            rhot = 1.0d0 + beta*dexp(-rsq/(2.0d0*sigma**2))
-            rho(i,j,1) = rhot*w1
-            rho(i,j,2) = rhot - rho(i,j,1)
-
-         end do
-    end do
-
-    case(6)
-    !==================================================================================
-    ! Initializing w1=0.1+alpha*exp(-r^2/4D12)/(4piD12) and w2=exp(-beta*t), 
-    ! rhototal=1+(m2*D23/m1*D12 -1)*w1, m2=m3, D12=D13 where Dbar_in(1)=D12, Dbar_in(2)=D13, 
+    ! Initializing m2=m3, D12=D13 where Dbar_in(1)=D12, Dbar_in(2)=D13, 
     ! Dbar_in(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
+    ! (to benchmark eqn1) Initializing rho1, rho2=Gaussian and rhototal has no-time dependence.
     !==================================================================================
  
     do j=lo(2),hi(2)
@@ -199,22 +181,27 @@ contains
         
             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
             w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
+            w2  =  delta*dexp(-beta*time)
             rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
-            !w2  = dexp(-beta*time)
-            
             rho(i,j,1) = rhot*w1
-            rho(i,j,2) = 0.01d0 
+            rho(i,j,2) = rhot*w2 
             rho(i,j,3) = rhot-rho(i,j,1)-rho(i,j,2)
-            !rho(i,j,2) = rhot*w2 
-            !rho(i,j,3) = rhot-rho(i,j,1)-rho(i,j,2)
-            
+           
+            if(rho(i,j,1).lt.0.d0 .or. rho(i,j,2).lt.0.d0 .or. rho(i,j,3).lt.0.d0) then 
+              write(*,*), "rho1 / rho2 / rho3 is negative: STOP"
+              write(*,*), i, j, " w1=", w1, " w2=", w2, " rho1=",rho(i,j,1)," rho2=",rho(i,j,2),&
+                          " rho3=",rho(i,j,3), " rhot=",rhot
+            endif
+ 
             !if(i.eq.4 .and. j.eq.5) print*,'w1=',w1,'w2=',w2,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),&
-            !                        'rho3=',rho(i,j,3),'rhot=',rhot
-            !if(i.eq.4 .and. j.eq.5) print*,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),'rho3=',rho(i,j,3),'rhot=',rhot
+            !                               'rho3=',rho(i,j,3),'rhot=',rhot
+            
+            !rhot = 1.0d0 + beta*dexp(-rsq/(2.0d0*sigma**2))  ! to benchmark eqn1
+            !rho(i,j,2) = rhot - rho(i,j,1)
 
          end do
     end do
-
+            
     end select
    
   end subroutine init_rho_2d

@@ -1,7 +1,7 @@
 &probin_common
  
  dim_in = 2                     ! problem dimension
- plot_int = 100000              ! plot interval
+ plot_int = 1000000              ! plot interval
  max_grid_size(1:2) = 16 16     ! individual box size 
 
  ! Grid size
@@ -18,8 +18,8 @@
 
 &probin_multispecies
  
- nspecies = 2                   ! number of species
- max_step = 1000                 ! total number of computational step
+ nspecies = 3                   ! number of species
+ max_step = 10000                 ! total number of computational step
  cfl1     = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature
@@ -27,14 +27,14 @@
  fraction_tolerance = 1e-14     ! to prevent division by zero 
  start_time  = 1.0              ! start at t=1 to avoid NAN coming from rho_exact at t=0
  !include_temp = .false.        ! right now no temperature equation
- init_type = 4                  ! initprob:1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
+ init_type = 5                  ! initprob:1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
  inverse_type = 1               ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 1             ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=3rdorder Runge-Kutta 
  print_error_norms = .true.     ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.     ! false=Bdag*Gama, true=Bdag 
  use_lapack  = .false.          ! false=iterative methods, true=inverse/pseudoinverse 
- rho_in(1,1:2) = 0.6 1.05       ! initial concentrations 
- molmass_in(1:2) = 1.0 2.0      ! molar mass of n-species
- Dbar_in(1:1) = 1.0             ! SM diffusion constant arranged in lower-triangle
+ rho_in(1,1:3) = 0.6 1.05 1.1   ! initial concentrations 
+ molmass_in(1:3) = 1.0 1.2 1.2  ! molar mass of n-species
+ Dbar_in(1:3) = 1.0 1.0 1.2     ! SM diffusion constant arranged in lower-triangle
  
 /

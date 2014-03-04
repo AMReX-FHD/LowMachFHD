@@ -67,7 +67,7 @@ module analysis_module
         if (parallel_IOProcessor()) then 
             if(time.gt.2.99d0) then
             !if(time.gt.0.49d0) then
-               print*, time, norm_inf(1:nspecies), norm_l1(1:nspecies),norm_l2(1:nspecies),&
+               write(*,*), time, norm_inf(1:nspecies), norm_l1(1:nspecies),norm_l2(1:nspecies),&
                        norm_inf_tot,norm_l1_tot,norm_l2_tot
             endif
         endif
