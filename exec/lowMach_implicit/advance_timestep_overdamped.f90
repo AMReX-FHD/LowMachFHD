@@ -320,7 +320,6 @@ contains
     ! add A^n for scalars to s_update
     if (advection_type .ge. 1) then
        do n=1,nlevs
-          ! AJN FIXME - ghost cells will stay set zero
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
           call multifab_fill_boundary(bds_force(n))
        end do
@@ -524,7 +523,6 @@ contains
     ! add A^{*,n+1/2} for scalars to s_update
     if (advection_type .ge. 1) then
        do n=1,nlevs
-          ! AJN FIXME - ghost cells will stay set zero
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
           call multifab_fill_boundary(bds_force(n))
        end do
