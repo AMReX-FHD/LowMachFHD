@@ -496,7 +496,6 @@ contains
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
        end do
-       call multifab_copy_c(pnew(n),1,pold(n),1,1,0)
        call multifab_plus_plus_c(pnew(n),1,dp(n),1,1,0)
     end do
 
