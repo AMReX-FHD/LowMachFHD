@@ -15,6 +15,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: alpha1,beta,delta,sigma,fraction_tolerance  ! manufactured solution parameters
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
   logical            :: correct_flux, print_error_norms, is_ideal_mixture, use_lapack
+  real(kind=dp_t)    :: c_bc(3,2,max_species)
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step
@@ -34,6 +35,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ rho_in
   namelist /probin_multispecies/ molmass_in 
   namelist /probin_multispecies/ Dbar_in
+  namelist /probin_multispecies/ c_bc              ! boundary conditions (dir,lohi,species)
 
 contains
 
@@ -72,6 +74,7 @@ contains
     Press              = 1.0d0
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
+    c_bc               = 0.d0
  
     ! read from input file 
     need_inputs = .true.
