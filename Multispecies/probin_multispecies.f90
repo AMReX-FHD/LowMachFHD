@@ -14,7 +14,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma,fraction_tolerance  ! manufactured solution parameters
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
-  logical            :: print_error_norms, is_ideal_mixture, use_lapack
+  logical            :: correct_flux, print_error_norms, is_ideal_mixture, use_lapack
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step
@@ -27,6 +27,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ init_type
   namelist /probin_multispecies/ inverse_type   
   namelist /probin_multispecies/ timeinteg_type   
+  namelist /probin_multispecies/ correct_flux   
   namelist /probin_multispecies/ print_error_norms   
   namelist /probin_multispecies/ is_ideal_mixture   
   namelist /probin_multispecies/ use_lapack   

@@ -188,20 +188,14 @@ contains
    
               r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2)
               
-              r_temp = (-3.174320902392128e-8*alpha1*(23812.820490470258d0*alpha1*D12**3.0d0*(D12*&
-                       molmass_in(1) - D23*molmass_in(2))*(D12 - 0.3333333333333333d0*r**2) - &
-                       954702.6841484157d0*D12**4.5d0*dexp(r**2/(4.0d0*D12))*(D12*molmass_in(1) +& 
-                       0.11111111111111112d0*D23*molmass_in(2))*(D12 - 0.16666666666666666d0*r**2)))/&
-                       (D12**8.0d0*dexp(r**2/(2.0d0*D12))*molmass_in(1)) 
+               r_temp = (alpha1*(-(D12*dexp(r**2/(2.0d0*sigma**2))*molmass_in(1)*(r**2 - 3.0d0*sigma**2)) +& 
+                        alpha1*(D12*molmass_in(1) - D23*molmass_in(2))*(2.0d0*r**2 - 3.0d0*sigma**2)))/&
+                        (dexp(r**2/sigma**2)*molmass_in(1)*sigma**4) 
                        
-              r_temp1 = (beta*(-0.9d0 - (0.1d0*D23*molmass_in(2))/(D12*molmass_in(1)) + (alpha1*&
-                        (0.02244839026564582d0*D12**2.5d0*molmass_in(1) - 0.02244839026564582d0*D12**&
-                        1.5d0*D23*molmass_in(2)))/(D12**4.0d0*dexp(r**2/(4.0d0*D12))*molmass_in(1))) +& 
-                        (1.4140527961374542e-6*alpha1*(D12 - D23)*(534.5594876958439d0*alpha1*D12**&
-                        1.5d0*(D12*molmass_in(1) - D23*molmass_in(2))*(D12 - 0.3333333333333333d0*r**2) -& 
-                        21431.538441423232d0*D12**3.0d0*dexp(r**2/(4.0d0*D12))*(D12*molmass_in(1) + &
-                        0.11111111111111112d0*D23*molmass_in(2))*(D12 - 0.16666666666666666d0*r**2)))/&
-                        (D12**7.5d0*dexp(r**2/(2.0d0*D12))*molmass_in(1)))/dexp(beta*time)        
+              r_temp1 = (dexp(-r**2/(2.0d0*sigma**2) - beta*time)*(-(beta*D12*delta*dexp(r**2/(2.0d0*&
+                        sigma**2))*molmass_in(1)*sigma**4) + alpha1*delta*(D12*(D12 - D23)*molmass_in(1)*&
+                        r**2 + 3.0d0*D12*(-D12 + D23)*molmass_in(1)*sigma**2 + beta*(D12*molmass_in(1) -& 
+                        D23*molmass_in(2))*sigma**4)))/(D12*molmass_in(1)*sigma**4)       
  
               fluxdiv(i,j,k,1) = fluxdiv(i,j,k,1) + r_temp 
               fluxdiv(i,j,k,2) = fluxdiv(i,j,k,2) + r_temp1 

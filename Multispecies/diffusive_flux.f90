@@ -52,8 +52,10 @@ contains
                       the_bc_level)
    
     ! correct fluxes to avoid round-off error (if sum_flux_allspecies != 0) 
-    if(nspecies .gt. 1) call correction_flux(mla, rho, rho_tot, flux, the_bc_level)
-   
+    if (correct_flux) then
+       if(nspecies .gt. 1) call correction_flux(mla, rho, rho_tot, flux, the_bc_level)
+    endif
+
     ! compute face-centered rhoWchiGama from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchiGama, rhoWchiGama_face, 1, diff_coeff_bc_comp, &
                             nspecies**2, the_bc_level, .false.) 

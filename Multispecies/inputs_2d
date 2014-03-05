@@ -19,7 +19,7 @@
 &probin_multispecies
  
  nspecies = 3                   ! number of species
- max_step = 400                 ! total number of computational step
+ max_step = 4                 ! total number of computational step
  cfl1     = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature
@@ -30,6 +30,7 @@
  init_type = 5                  ! initprob:1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
  inverse_type = 1               ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 1             ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=3rdorder Runge-Kutta 
+ correct_flux = .true.          ! correct flux to numeric roundoff
  print_error_norms = .true.     ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.     ! false=Bdag*Gama, true=Bdag 
  use_lapack  = .false.          ! false=iterative methods, true=inverse/pseudoinverse 

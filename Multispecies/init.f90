@@ -19,8 +19,7 @@ module init_module
   ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y), 2-species
   ! 3 = gaussian spread with total density constant, 2-species
   ! 4 = manufactured solution for 2-species equal/unequal molarmass,gaussian-rho, time-independent-space-varying totaldensity
-  ! 5 = manufactured solution for 2-species time-independent-space-varying density
-  ! 6 = manufactured solution for 3-species 
+  ! 5 = manufactured solution for 3-species time-independent-space-varying density
 
 contains
   
@@ -216,7 +215,7 @@ contains
  
     ! local variables
     integer          :: i,j,k
-    real(kind=dp_t)  :: x,y,z,rsq,tau,rhot,w1,w2,L(3)
+    real(kind=dp_t)  :: x,y,z,rsq,tau,w1,w2,rhot,L(3)
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
@@ -285,8 +284,10 @@ contains
               x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
               rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
-              rho(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0
-              rho(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0
+              rho(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*&
+                             Dbar_in(1)*time)**1.5d0
+              rho(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*&
+                             M_PI*Dbar_in(1)*time)**1.5d0
        
            end do
         end do
@@ -308,10 +309,11 @@ contains
               x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
               rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
-              rhot = 1.0d0 + alpha1*dexp(-rsq/(4.0d0*Dbar_in(1)))/(4.0d0*M_PI*Dbar_in(1))**1.5d0
+              rhot = 1.0d0 + alpha1*dexp(-rsq/(4.0d0*Dbar_in(1)))/(4.0d0*M_PI*&
+                     Dbar_in(1))**1.5d0
            
-              rho(i,j,k,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
-                             time*beta)*rhot
+              rho(i,j,k,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0*dexp(-rsq/&
+                             (4.0d0*Dbar_in(1)*time) - time*beta)*rhot
               rho(i,j,k,2) = rhot - rho(i,j,k,1) 
 
            end do
@@ -321,9 +323,8 @@ contains
 
      case(5)
      !==================================================================================
-     ! Initializing w1=0.1+alpha*exp(-r^2/4D12)/(4piD12) and w2=exp(-beta*t), 
-     ! rhototal=1+(m2*D23/m1*D12 -1)*w1, m2=m3, D12=D13 where Dbar_in(1)=D12,
-     ! Dbar_in(2)=D13, Dbar_in(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
+     ! Initializing m2=m3, D12=D13 where Dbar_in(1)=D12, Dbar_in(2)=D13, Dbar_in(3)=D23, 
+     ! Grad(w2)=0, manufactured solution for rho1 and rho2 
      !==================================================================================
 
      !$omp parallel private(i,j,k,x,y,z)
@@ -335,13 +336,18 @@ contains
               x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
 
               rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
-              w1  = 0.1d0 +alpha1*dexp(-rsq/(4.0d0*Dbar_in(1)))/(4.0d0*M_PI*Dbar_in(1))**1.5d0
-              w2  = dexp(-beta*time)
+              w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
+              w2  =  delta*dexp(-beta*time)
               rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
-
               rho(i,j,k,1) = rhot*w1
               rho(i,j,k,2) = rhot*w2
               rho(i,j,k,3) = rhot-rho(i,j,k,1)-rho(i,j,k,2)
+           
+              if(rho(i,j,k,1).lt.0.d0 .or. rho(i,j,k,2).lt.0.d0 .or. rho(i,j,k,3).lt.0.d0) then 
+                 write(*,*), "rho1 / rho2 / rho3 is negative: STOP"
+                 write(*,*), i, j, " w1=", w1, " w2=", w2, " rho1=",rho(i,j,k,1)," rho2=",&
+                             rho(i,j,k,2), " rho3=",rho(i,j,k,3), " rhot=",rhot
+              endif
 
            enddo
         enddo
