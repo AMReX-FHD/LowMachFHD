@@ -110,11 +110,10 @@ contains
                        sigma) - D12*dexp(r**2/(2.0d0*sigma**2))*molmass_in(1)*(r**2 - 2.0d0*sigma**2)))/&
                        (dexp(r**2/sigma**2)*molmass_in(1)*sigma**4)
 
-             r_temp1 = (delta*dexp(-(r**2/sigma**2) - beta*time)*(-(beta*D12*dexp(r**2/sigma**2)*&
-                       molmass_in(1)*sigma**4) - 2.0d0*alpha1**2*(D12 - D23)*(D12*molmass_in(1) -& 
-                       D23*molmass_in(2))*(r - sigma)*(r + sigma) + alpha1*dexp(r**2/(2.0d0*sigma**2))*&
-                       (D12*(D12 - D23)*molmass_in(1)*r**2 + 2.0d0*D12*(-D12 + D23)*molmass_in(1)*sigma**2 +& 
-                       beta*(D12*molmass_in(1) - D23*molmass_in(2))*sigma**4)))/(D12*molmass_in(1)*sigma**4)
+             r_temp1 = (dexp(-r**2/(2.0d0*sigma**2) - beta*time)*(-(beta*D12*delta*dexp(r**2/(2.0d0*&
+                       sigma**2))*molmass_in(1)*sigma**4) + alpha1*delta*(D12*(D12 - D23)*molmass_in(1)*&
+                       r**2 + 2.0d0*D12*(-D12 + D23)*molmass_in(1)*sigma**2 + beta*(D12*molmass_in(1) -& 
+                       D23*molmass_in(2))*sigma**4)))/(D12*molmass_in(1)*sigma**4)
             
              fluxdiv(i,j,1) = fluxdiv(i,j,1) + r_temp 
              fluxdiv(i,j,2) = fluxdiv(i,j,2) + r_temp1
