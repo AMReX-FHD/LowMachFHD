@@ -128,14 +128,14 @@ contains
 
     if (bc(1,2) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
-       x = prob_lo(1)
+       x = prob_hi(1)
        do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j) + 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
     else if (bc(1,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
-       x = prob_lo(1)
+       x = prob_hi(1)
        do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(hi(1)+1:hi(1)+ng,j) = (3.d0/8.d0)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
