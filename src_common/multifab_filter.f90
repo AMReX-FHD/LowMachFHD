@@ -20,6 +20,7 @@ contains
     type(multifab), intent(inout) :: mfab
     integer       , intent(in   ) :: width
 
+    ! local
     integer :: i,j,k,box,dm
     real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
 
