@@ -11,6 +11,7 @@ module mk_stochastic_fluxdiv_module
   use convert_stag_module
   use bc_module
   use multifab_physbc_stag_module
+  use multifab_fill_random_module
   use probin_common_module , only: visc_type, diff_type
   use probin_lowmach_module, only: nscal, rhobar, visc_coef, diff_coef, variance_coef, &
                                    conc_scal, stoch_stress_form, filtering_width, mol_mass, &
@@ -1067,40 +1068,6 @@ contains
 
   end subroutine fill_stochastic
 
-  ! fill a multifab with random numbers
-  subroutine multifab_fill_random(mfab, comp, variance, variance_mfab)
-    type(multifab), intent(inout)           :: mfab(:)
-    integer       , intent(in   ), optional :: comp ! Only one component
-    real(dp_t)    , intent(in   ), optional :: variance
-    type(multifab), intent(in   ), optional :: variance_mfab(:)
-
-    integer :: n,box
-
-    real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
-
-    !--------------------------------------
-    do n=1,size(mfab)
-       do box = 1, nfabs(mfab(n))
-          if(present(comp)) then
-             fp => dataptr(mfab(n),box,comp,1)
-          else
-             fp => dataptr(mfab(n),box)
-          end if
-
-          call NormalRNGs(fp, size(fp)) ! Fill the whole grid with random numbers
-
-          if(present(variance_mfab)) then ! Must have same distribution
-             fpvar => dataptr(variance_mfab(n),box,1,size(fp,4))
-             fp=sqrt(fpvar)*fp
-          end if
-          if(present(variance)) then
-             fp=sqrt(variance)*fp
-          end if
-       end do
-    end do
-
-  end subroutine multifab_fill_random
-
   subroutine multifab_filter(mfab, dm)
 
     ! Note: This routine assumes ghost values are valid on entry but does NOT 
@@ -1402,7 +1369,7 @@ contains
     type(multifab) , intent(inout) :: cctemp(:)
 
     ! local
-    integer :: i,n,dm,box,nlevs
+    integer :: n,dm,box,nlevs
     real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
 
     dm = mla%dim
