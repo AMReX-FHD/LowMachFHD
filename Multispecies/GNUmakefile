@@ -1,6 +1,7 @@
 # BOXLIB_HOME defines the directory in which we will find all the BoxLib code
 # If you set BOXLIB_HOME as an environment variable, this line will be ignored
 BOXLIB_HOME = ../../../BoxLib
+HYDROLIB_HOME := ../../HydroGrid
 STAGGERED_HOME := ..
 
 NDEBUG    := t 
@@ -17,6 +18,9 @@ VPATH_LOCATIONS += $(STAGGERED_HOME)/Multispecies
 
 include $(STAGGERED_HOME)/src_common/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_common
+
+include $(HYDROLIB_HOME)/GPackage.mak
+VPATH_LOCATIONS += $(HYDROLIB_HOME)
 
 include $(BOXLIB_HOME)/Src/F_BaseLib/GPackage.mak
 VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/F_BaseLib
