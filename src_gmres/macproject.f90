@@ -142,18 +142,17 @@ contains
       logical        , intent(in   ) :: abort_on_max_iter
 
       type(layout  ) :: la
-      type(box     ) :: pd
 
       type(multifab), allocatable :: cell_coeffs(:)
       type(multifab), allocatable :: face_coeffs(:,:)
 
       type(mg_tower)  :: mgt(mla%nlevel)
-      integer         :: dm, ns, nlevs
+      integer         :: dm, nlevs
 
       ! MG solver defaults
-      integer    :: stencil_type, bottom_max_iter, max_nlevel
+      integer    :: bottom_max_iter, max_nlevel
       integer    :: d, n, nub, cycle_type, smoother
-      integer    :: max_nlevel_in,do_diagnostics
+      integer    :: do_diagnostics
       real(dp_t) :: bottom_solver_eps
       real(dp_t) ::  xa(mla%dim),  xb(mla%dim)
       real(dp_t) :: pxa(mla%dim), pxb(mla%dim)
@@ -166,7 +165,6 @@ contains
       dm    = mla%dim
 
       !! Defaults:
-
       max_nlevel        = mgt(nlevs)%max_nlevel
       smoother          = mgt(nlevs)%smoother
       nub               = mgt(nlevs)%nub
@@ -174,31 +172,13 @@ contains
       bottom_solver_eps = mgt(nlevs)%bottom_solver_eps
       bottom_max_iter   = mgt(nlevs)%bottom_max_iter
 
-      ns = 1 + dm*3
-
       do n = nlevs, 1, -1
-
-         if (n == 1) then
-            max_nlevel_in = max_nlevel
-         else
-            if ( all(ref_ratio(n-1,:) == 2) ) then
-               max_nlevel_in = 1
-            else if ( all(ref_ratio(n-1,:) == 4) ) then
-               max_nlevel_in = 2
-            else
-               call bl_error("MAC_MULTIGRID: confused about ref_ratio")
-            end if
-         end if
-
-         pd = layout_get_pd(mla%la(n))
-
-         stencil_type = CC_CROSS_STENCIL
 
          if (full_solve) then
 
-            call mg_tower_build(mgt(n), mla%la(n), pd, &
+            call mg_tower_build(mgt(n), mla%la(n), layout_get_pd(mla%la(n)), &
                                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
-                                stencil_type, &
+                                stencil_type_in = CC_CROSS_STENCIL, &
                                 dh = dx(n,:), &
                                 smoother = smoother, &
                                 nu1 = mgt(nlevs)%nu1, &
@@ -211,7 +191,7 @@ contains
                                 bottom_solver_eps = bottom_solver_eps, &
                                 max_iter = mgt(nlevs)%max_iter, &
                                 abort_on_max_iter = abort_on_max_iter, &
-                                max_nlevel = max_nlevel_in, &
+                                max_nlevel = max_nlevel, &
                                 max_bottom_nlevel = mgt(nlevs)%max_bottom_nlevel, &
                                 min_width = mgt(nlevs)%min_width, &
                                 eps = rel_solver_eps, &
@@ -222,9 +202,9 @@ contains
 
          else
 
-            call mg_tower_build(mgt(n), mla%la(n), pd, &
+            call mg_tower_build(mgt(n), mla%la(n), layout_get_pd(mla%la(n)), &
                                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
-                                stencil_type, &
+                                stencil_type_in = CC_CROSS_STENCIL, &
                                 dh = dx(n,:), &
                                 smoother = smoother, &
                                 nu1 = mg_nsmooths_down, &
@@ -237,7 +217,7 @@ contains
                                 bottom_solver_eps = bottom_solver_eps, &
                                 max_iter = mg_max_vcycles, &
                                 abort_on_max_iter = abort_on_max_iter, &
-                                max_nlevel = max_nlevel_in, &
+                                max_nlevel = max_nlevel, &
                                 max_bottom_nlevel = mg_max_bottom_nlevels, &
                                 min_width = mg_minwidth, &
                                 eps = rel_solver_eps, &
