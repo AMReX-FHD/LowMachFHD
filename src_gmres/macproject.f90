@@ -178,7 +178,7 @@ contains
 
             call mg_tower_build(mgt(n), mla%la(n), layout_get_pd(mla%la(n)), &
                                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
-                                stencil_type_in = CC_CROSS_STENCIL, &
+                                stencil_type = CC_CROSS_STENCIL, &
                                 dh = dx(n,:), &
                                 smoother = smoother, &
                                 nu1 = mgt(nlevs)%nu1, &
@@ -204,7 +204,7 @@ contains
 
             call mg_tower_build(mgt(n), mla%la(n), layout_get_pd(mla%la(n)), &
                                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
-                                stencil_type_in = CC_CROSS_STENCIL, &
+                                stencil_type = CC_CROSS_STENCIL, &
                                 dh = dx(n,:), &
                                 smoother = smoother, &
                                 nu1 = mg_nsmooths_down, &
@@ -225,7 +225,7 @@ contains
                                 verbose = mg_verbose, &
                                 cg_verbose = cg_verbose, &
                                 nodal = nodal_flags(rh(nlevs)), &
-                                fancy_bottom_type_in = 0)
+                                fancy_bottom_type = 0)
 
             end if
 
