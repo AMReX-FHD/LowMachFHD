@@ -131,7 +131,7 @@ contains
         else
           ! first set x_p = -L_alpha Phi
           call mac_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx, &
-                           the_bc_tower,pres_bc_comp,stencil_order=2)
+                           the_bc_tower,pres_bc_comp,stencil_order_in=2)
         end if
 
         do n=1,nlevs
