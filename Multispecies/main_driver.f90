@@ -10,6 +10,7 @@ subroutine main_driver()
   use define_bc_module
   use bc_module
   use analysis_module
+  use ParallelRNGs 
   use convert_variables_module
   use probin_common_module
   use probin_multispecies_module
@@ -162,6 +163,9 @@ subroutine main_driver()
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
   enddo
 
+  ! Initialize random numbers *after* the global (root) seed has been set:
+  if(use_stoch) call SeedParallelRNG(seed)
+
   !=====================================================================
   ! Read molar mass from input file (constant throughout space and time)
   !=====================================================================
@@ -241,7 +245,6 @@ subroutine main_driver()
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_exact(n))
   enddo
-
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 

@@ -7,7 +7,7 @@
  ! Grid size
  prob_lo(1:3) = 0  0  0
  prob_hi(1:3) = 32 32 32        ! physical systemsize = (prob_lo-prob_hi)
- n_cells(1:3) = 96 96 96        ! to set dx = systemsize/n_cells
+ n_cells(1:3) = 128 128 128        ! to set dx = systemsize/n_cells
 
  ! allowable options for this example are
  ! -1 = PERIODIC
@@ -19,7 +19,7 @@
 &probin_multispecies
  
  nspecies = 3                   ! number of species
- max_step = 3600                   ! total number of computational step
+ max_step = 6400                   ! total number of computational step
  cfl1     = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  Temp     = 1.0                 ! Temperature
@@ -31,6 +31,7 @@
  inverse_type = 1               ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 1             ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=3rdorder Runge-Kutta 
  correct_flux = .true.          ! correct flux to numeric roundoff 
+ use_stoch = .true.             ! use stochastic flux to add with deterministic flux
  print_error_norms = .true.     ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.     ! false=Bdag*Gama, true=Bdag 
  use_lapack  = .false.          ! false=iterative methods, true=inverse/pseudoinverse

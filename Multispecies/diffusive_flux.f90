@@ -60,13 +60,13 @@ contains
     call average_cc_to_face(nlevs, rhoWchiGama, rhoWchiGama_face, 1, diff_coeff_bc_comp, &
                             nspecies**2, the_bc_level, .false.) 
     
-    ! compute flux as B^(-1)*Gama X grad(molarconc). 
+    ! compute flux as rhoWchiGama X grad(molarconc). 
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, flux(n,i), rhoWchiGama_face(n,i))
        enddo
     enddo    
-     
+    
     ! destroy B^(-1)*Gama multifab to prevent leakage in memory
     do n=1,nlevs
        do i=1,dm

@@ -31,11 +31,13 @@
  inverse_type = 1               ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 1             ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=3rdorder Runge-Kutta 
  correct_flux = .true.          ! correct flux to numeric roundoff
+ use_stoch = .false.             ! use stochastic flux to add with deterministic flux
  print_error_norms = .true.     ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.     ! false=Bdag*Gama, true=Bdag 
  use_lapack  = .false.          ! false=iterative methods, true=inverse/pseudoinverse 
  rho_in(1,1:3) = 0.6 1.05 1.1   ! initial concentrations 
  molmass_in(1:3) = 1.0 1.2 1.2  ! molar mass of n-species
  Dbar_in(1:3) = 1.0 1.0 1.2     ! SM diffusion constant arranged in lower-triangle
+ kT = 1.0                       ! Thermal energy
  
 /

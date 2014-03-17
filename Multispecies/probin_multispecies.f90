@@ -12,9 +12,10 @@ module probin_multispecies_module
   real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
-  real(kind=dp_t)    :: alpha1,beta,delta,sigma,fraction_tolerance  ! manufactured solution parameters
-  integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp 
-  logical            :: correct_flux, print_error_norms, is_ideal_mixture, use_lapack
+  real(kind=dp_t)    :: alpha1,beta,delta,sigma,fraction_tolerance  ! manufactured solution parameters populated at init
+  real(kind=dp_t)    :: kT,variance,stochastic_w1,stochastic_w2 ! for stochastic part 
+  integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp ! not input: populated at main 
+  logical            :: correct_flux, use_stoch, print_error_norms, is_ideal_mixture, use_lapack
   real(kind=dp_t)    :: c_bc(3,2,max_species)
   
   namelist /probin_multispecies/ nspecies
@@ -29,12 +30,14 @@ module probin_multispecies_module
   namelist /probin_multispecies/ inverse_type   
   namelist /probin_multispecies/ timeinteg_type   
   namelist /probin_multispecies/ correct_flux   
+  namelist /probin_multispecies/ use_stoch   
   namelist /probin_multispecies/ print_error_norms   
   namelist /probin_multispecies/ is_ideal_mixture   
   namelist /probin_multispecies/ use_lapack   
   namelist /probin_multispecies/ rho_in
   namelist /probin_multispecies/ molmass_in 
   namelist /probin_multispecies/ Dbar_in
+  namelist /probin_multispecies/ kT
   namelist /probin_multispecies/ c_bc              ! boundary conditions (dir,lohi,species)
 
 contains
@@ -64,6 +67,8 @@ contains
     init_type          = 1
     inverse_type       = 1
     timeinteg_type     = 1
+    correct_flux       = .true.
+    use_stoch          = .true.
     print_error_norms  = .true.
     is_ideal_mixture   = .true.
     use_lapack         = .true.
@@ -75,6 +80,7 @@ contains
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
     c_bc               = 0.d0
+    kT                 = 1.0d0
  
     ! read from input file 
     need_inputs = .true.

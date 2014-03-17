@@ -660,8 +660,8 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     real(kind=dp_t), intent(out)  :: Lonsager(nspecies,nspecies) 
  
     ! local variables
-    integer                                       :: row,column
-    real(kind=dp_t), dimension(nspecies)          :: W 
+    integer                              :: row,column,info
+    real(kind=dp_t), dimension(nspecies) :: W 
 
     ! compute massfraction W_i = rho_i/rho; 
     do row=1, nspecies  
@@ -675,6 +675,9 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
           Lonsager(row, column) = rho_tot*rho_tot*Temp*W(row)*chi(row,column)*W(column)/Press
        enddo
     enddo
+
+    ! compute cell-centered Cholesky factor of Lonsager
+    call la_dpotrf('L', nspecies, Lonsager, nspecies, info)
 
   end subroutine compute_Lonsager_local
 
