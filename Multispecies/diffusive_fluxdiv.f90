@@ -131,6 +131,7 @@ contains
       if(use_stoch) then
       
          ! compute stochastic fluxdiv 
+         ! Donev: No need to pass stoch_flux_fc as an argument here, it should be local to stochastic_fluxdiv
          call stochastic_fluxdiv(mla,stoch_flux_fc,stoch_W_fc,stoch_fluxdiv,rho,rho_tot,molarconc,molmass,&
                                  molmtot,chi,Gama,Lonsager,dx,weights,the_bc_level)
 

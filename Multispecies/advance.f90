@@ -37,7 +37,9 @@ contains
     type(multifab)                 :: Gama(mla%nlevel)                   ! Gama-matrix
     type(multifab)                 :: rhoWchiGama(mla%nlevel)            ! rho*W*chi*Gama
     type(multifab)                 :: stoch_fluxdiv(mla%nlevel)          ! stochastic fluxdiv
+    ! Donev: This multifab does not seem used outside of stochastic_fluxdiv, so it should be a local variable there
     type(multifab)                 :: stoch_flux_fc(mla%nlevel,mla%dim)  ! face-centered stochastic flux
+    ! Donev: This should be (nlevs,dim,n_rngs) with nspecies components:
     type(multifab),  allocatable   :: stoch_W_fc(:,:,:,:)                ! WA and WB (nlevs,dim,nspecies,n_rngs) 
     real(kind=dp_t), allocatable   :: weights(:)                         ! weights for RNGs       
     real(kind=dp_t)                :: variance,stage_time
@@ -90,8 +92,11 @@ contains
        ! The rest are used to store random numbers that may be reused later
        allocate(stoch_W_fc(mla%nlevel,mla%dim,nspecies,0:n_rngs))
        allocate(weights(n_rngs))
+       ! Donev: Weights need to be assigned here
+       ! e.g., weights(1)=stochastic_w1
     
        do n=1,nlevs 
+          ! Donev: You do not need a loop over nlevs here, just use first level
           variance = sqrt(2.d0*kT/(product(dx(n,1:dm))*dt))
        enddo
  
