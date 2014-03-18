@@ -37,12 +37,10 @@ contains
     type(multifab)                 :: Gama(mla%nlevel)                   ! Gama-matrix
     type(multifab)                 :: rhoWchiGama(mla%nlevel)            ! rho*W*chi*Gama
     type(multifab)                 :: stoch_fluxdiv(mla%nlevel)          ! stochastic fluxdiv
-    ! Donev: This multifab does not seem used outside of stochastic_fluxdiv, so it should be a local variable there
-    type(multifab)                 :: stoch_flux_fc(mla%nlevel,mla%dim)  ! face-centered stochastic flux
     ! Donev: This should be (nlevs,dim,n_rngs) with nspecies components:
-    type(multifab),  allocatable   :: stoch_W_fc(:,:,:,:)                ! WA and WB (nlevs,dim,nspecies,n_rngs) 
+    type(multifab),  allocatable   :: stoch_W_fc(:,:,:)                  ! WA and WB (nlevs,dim,n_rngs) 
     real(kind=dp_t), allocatable   :: weights(:)                         ! weights for RNGs       
-    real(kind=dp_t)                :: variance,stage_time
+    real(kind=dp_t)                :: stage_time
     integer                        :: n,i,dm,n_rngs,nlevs
  
     nlevs = mla%nlevel  ! number of levels 
@@ -64,9 +62,6 @@ contains
        call multifab_build(Gama(n),          mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(rhoWchiGama(n),   mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(stoch_fluxdiv(n), mla%la(n), nspecies,    0) 
-       do i=1,dm
-          call multifab_build_edge(stoch_flux_fc(n,i), mla%la(n), nspecies, 0, i)
-       enddo
     enddo
 
     !========================================================
@@ -75,7 +70,7 @@ contains
     if(use_stoch) then
  
        if (timeinteg_type .eq. 1) then      ! Euler-Maruyama
-          n_rngs=0
+          n_rngs=1
           stochastic_w1 = 1.d0
           stochastic_w2 = 0.d0
        elseif (timeinteg_type .eq. 2) then  ! Trapezoidal
@@ -90,18 +85,17 @@ contains
  
        ! The zeroth component is used to store the actual stochastic flux
        ! The rest are used to store random numbers that may be reused later
-       allocate(stoch_W_fc(mla%nlevel,mla%dim,nspecies,0:n_rngs))
+       allocate(stoch_W_fc(mla%nlevel,mla%dim,1:n_rngs))
        allocate(weights(n_rngs))
-       ! Donev: Weights need to be assigned here
-       ! e.g., weights(1)=stochastic_w1
-    
-       do n=1,nlevs 
-          ! Donev: You do not need a loop over nlevs here, just use first level
-          variance = sqrt(2.d0*kT/(product(dx(n,1:dm))*dt))
-       enddo
+
+       if(n_rngs>=1) weights(1)=stochastic_w1
+       if(n_rngs>=2) weights(2)=stochastic_w2
+   
+       ! populate the variance (only first level) 
+       variance = sqrt(2.d0*kT/(product(dx(1,1:dm))*dt))
  
        ! initialize stochastic flux on every face W(0,1) 
-       call create_random_increments(mla,n_rngs,stoch_W_fc)
+       call generate_random_increments(mla,n_rngs,stoch_W_fc)
 
     endif
  
@@ -117,7 +111,7 @@ contains
       
       ! compute the total div of flux from rho
       stage_time = time   
-      call compute_fluxdiv(mla,rho,stoch_flux_fc,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
+      call compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
            chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
            weights,n_rngs,the_bc_level)
 
@@ -144,7 +138,7 @@ contains
       
       ! compute the total div of flux from rho
       stage_time = time 
-      call compute_fluxdiv(mla,rho,stoch_flux_fc,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
+      call compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
            chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
            weights,n_rngs,the_bc_level)
       
@@ -167,7 +161,7 @@ contains
       
       ! compute the total div of flux from rho
       stage_time = time + dt  
-      call compute_fluxdiv(mla,rhonew,stoch_flux_fc,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
+      call compute_fluxdiv(mla,rhonew,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
            chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
            weights,n_rngs,the_bc_level)
 
@@ -191,7 +185,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time 
-      call compute_fluxdiv(mla,rho,stoch_flux_fc,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
+      call compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
            chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
            weights,n_rngs,the_bc_level)
  
@@ -210,7 +204,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time + dt/2.0d0
-      call compute_fluxdiv(mla,rhonew,stoch_flux_fc,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
+      call compute_fluxdiv(mla,rhonew,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
            chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
            weights,n_rngs,the_bc_level)
  
@@ -238,7 +232,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time 
-      call compute_fluxdiv(mla,rho,stoch_flux_fc,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
+      call compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
            chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
            weights,n_rngs,the_bc_level)
  
@@ -257,7 +251,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time + dt
-      call compute_fluxdiv(mla,rhonew,stoch_flux_fc,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
+      call compute_fluxdiv(mla,rhonew,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
            chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
            weights,n_rngs,the_bc_level)
 
@@ -287,7 +281,7 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time + dt/2.0d0
-      call compute_fluxdiv(mla,rhonew,stoch_flux_fc,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
+      call compute_fluxdiv(mla,rhonew,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
            chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
            weights,n_rngs,the_bc_level)
 
@@ -328,16 +322,60 @@ contains
        call multifab_destroy(Gama(n))
        call multifab_destroy(rhoWchiGama(n))
        call multifab_destroy(stoch_fluxdiv(n))
-       do i=1,dm
-          call multifab_destroy(stoch_flux_fc(n,i))
-       enddo
     enddo
     
     if(use_stoch) then 
-       call destroy_random_increments(mla,n_rngs)
+       call destroy_random_increments(mla,n_rngs,stoch_W_fc)
        deallocate(stoch_W_fc)
-       deallocate(weights(n_rngs))
+       deallocate(weights)
     endif
+
+  contains
+  
+    subroutine generate_random_increments(mla,n_rngs,stoch_W_fc)
+  
+      type(ml_layout), intent(in   )  :: mla
+      integer,         intent(in   )  :: n_rngs  ! how many random numbers to store per time step
+                                                 ! could be zero if one does not need to store any rngs
+      type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:)  
+
+      ! Local variables
+      integer :: comp,n,dm,nlevs,box,i,rng
+    
+      nlevs = mla%nlevel
+      dm    = mla%dim    
+    
+      ! generate and store the stochastic diffusive flux (random numbers)
+      do rng=1, n_rngs
+         do i = 1,dm
+            call multifab_fill_random(stoch_W_fc(:,i,rng))
+         enddo   
+      enddo   
+  
+    end subroutine generate_random_increments
+  
+    subroutine destroy_random_increments(mla,n_rngs,stoch_W_fc)
+    
+      type(ml_layout), intent(in   )  :: mla
+      integer,         intent(in   )  :: n_rngs
+      type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:)  
+
+      ! Local variables
+      integer :: comp,n,dm,nlevs,box,i,rng
+
+      nlevs = mla%nlevel
+      dm    = mla%dim    
+  
+      ! deallocate stochastic diffusive flux
+      do n=1, nlevs 
+         do rng=1, n_rngs 
+            do i = 1,dm
+               call multifab_destroy(stoch_W_fc(n,i,rng))
+            enddo
+         enddo
+      enddo
+
+    end subroutine destroy_random_increments
 
   end subroutine advance
 
