@@ -3,6 +3,7 @@ module advance_module
   use multifab_module
   use define_bc_module
   use multifab_physbc_module
+  use multifab_fill_random_module
   use ml_layout_module
   use diffusive_fluxdiv_module
   use stochastic_fluxdiv_module
@@ -27,22 +28,21 @@ contains
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables and array of multifabs
-    type(multifab)                 :: rhonew(mla%nlevel),fluxdiv(mla%nlevel),fluxdivnew(mla%nlevel)
-    type(multifab)                 :: rho_tot(mla%nlevel)                ! total density
-    type(multifab)                 :: molarconc(mla%nlevel)              ! molar concentration
-    type(multifab)                 :: molmtot(mla%nlevel)                ! total molar mass
-    type(multifab)                 :: chi(mla%nlevel)                    ! Chi-matrix
-    type(multifab)                 :: Lonsager(mla%nlevel)               ! Onsager matrix for fluctuations
-    type(multifab)                 :: D_MS(mla%nlevel)                   ! D_MS-matrix
-    type(multifab)                 :: Gama(mla%nlevel)                   ! Gama-matrix
-    type(multifab)                 :: rhoWchiGama(mla%nlevel)            ! rho*W*chi*Gama
-    type(multifab)                 :: stoch_fluxdiv(mla%nlevel)          ! stochastic fluxdiv
-    ! Donev: This should be (nlevs,dim,n_rngs) with nspecies components:
-    type(multifab),  allocatable   :: stoch_W_fc(:,:,:)                  ! WA and WB (nlevs,dim,n_rngs) 
-    real(kind=dp_t), allocatable   :: weights(:)                         ! weights for RNGs       
-    real(kind=dp_t)                :: stage_time
-    integer                        :: n,i,dm,n_rngs,nlevs
- 
+    type(multifab)                 :: rhonew(mla%nlevel)
+    type(multifab)                 :: diff_fluxdiv(mla%nlevel)
+    type(multifab)                 :: diff_fluxdivnew(mla%nlevel)
+    type(multifab)                 :: rho_tot(mla%nlevel)        ! total density
+    type(multifab)                 :: molarconc(mla%nlevel)      ! molar concentration
+    type(multifab)                 :: molmtot(mla%nlevel)        ! total molar mass
+    type(multifab)                 :: chi(mla%nlevel)            ! Chi-matrix
+    type(multifab)                 :: D_MS(mla%nlevel)           ! D_MS-matrix
+    type(multifab)                 :: Gama(mla%nlevel)           ! Gama-matrix
+    type(multifab)                 :: rhoWchiGama(mla%nlevel)    ! rho*W*chi*Gama
+    type(multifab)                 :: stoch_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
+    type(multifab),  allocatable   :: stoch_W_fc(:,:,:)          ! WA and WB (nlevs,dim,n_rngs) 
+    real(kind=dp_t), allocatable   :: weights(:)                 ! weights for RNGs       
+    real(kind=dp_t)                :: stoch_w1,stoch_w2,stage_time
+    integer                        :: n,nlevs,i,dm,rng,n_rngs 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! number of dimensions
 
@@ -50,55 +50,53 @@ contains
     ! fluxdiv needs no ghost cells as all computations will be in box interior. 
     ! rho_tot is cell-cented with ghost cells that many rho owns.
     do n=1,nlevs
-       call multifab_build(rhonew(n),        mla%la(n), nspecies,    rho(n)%ng)
-       call multifab_build(rho_tot(n),       mla%la(n), 1,           rho(n)%ng) 
-       call multifab_build(fluxdiv(n),       mla%la(n), nspecies,    0) 
-       call multifab_build(fluxdivnew(n),    mla%la(n), nspecies,    0)
-       call multifab_build(molmtot(n),       mla%la(n), 1,           rho(n)%ng)  
-       call multifab_build(molarconc(n),     mla%la(n), nspecies,    rho(n)%ng) 
-       call multifab_build(chi(n),           mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(Lonsager(n),      mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(D_MS(n),          mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(Gama(n),          mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(rhoWchiGama(n),   mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(stoch_fluxdiv(n), mla%la(n), nspecies,    0) 
+       call multifab_build(rhonew(n),          mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(rho_tot(n),         mla%la(n), 1,           rho(n)%ng) 
+       call multifab_build(diff_fluxdiv(n),    mla%la(n), nspecies,    0) 
+       call multifab_build(diff_fluxdivnew(n), mla%la(n), nspecies,    0)
+       call multifab_build(molmtot(n),         mla%la(n), 1,           rho(n)%ng)  
+       call multifab_build(molarconc(n),       mla%la(n), nspecies,    rho(n)%ng) 
+       call multifab_build(chi(n),             mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(D_MS(n),            mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(Gama(n),            mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(rhoWchiGama(n),     mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(stoch_fluxdiv(n),   mla%la(n), nspecies,    0) 
     enddo
 
     !========================================================
-    ! Initialize random number generator for stochastic flux
+    ! initialize random number generator for stochastic flux
     !========================================================
     if(use_stoch) then
  
        if (timeinteg_type .eq. 1) then      ! Euler-Maruyama
           n_rngs=1
-          stochastic_w1 = 1.d0
-          stochastic_w2 = 0.d0
+          stoch_w1 = 1.d0
+          stoch_w2 = 0.d0
        elseif (timeinteg_type .eq. 2) then  ! Trapezoidal
           n_rngs=1
-          stochastic_w1 = 1.d0        
-          stochastic_w2 = 0.d0
+          stoch_w1 = 1.d0        
+          stoch_w2 = 0.d0
        else                                 ! Midpoint & RK3
           n_rngs=2  
-          stochastic_w1 = 1.d0        !Amit: has to be corrected 
-          stochastic_w2 = 0.d0
+          stoch_w1 = 1.d0        
+          stoch_w2 = 0.d0
        endif
  
-       ! The zeroth component is used to store the actual stochastic flux
-       ! The rest are used to store random numbers that may be reused later
+       ! allocate and build the multifabs
        allocate(stoch_W_fc(mla%nlevel,mla%dim,1:n_rngs))
        allocate(weights(n_rngs))
-       
-       ! Donev: Call multifab_build in a nest of three do loops: nlevs, ndim, n_rngs
-       ! Then destroy later
-
-       if(n_rngs>=1) weights(1)=stochastic_w1
-       if(n_rngs>=2) weights(2)=stochastic_w2
+       do n=1, nlevs 
+          do rng=1, n_rngs 
+             do i = 1,dm
+                call multifab_build(stoch_W_fc(n,i,rng), mla%la(n), nspecies, 0)
+             enddo
+          enddo
+       enddo
+      
+       ! populate weights 
+       if(n_rngs>=1) weights(1)=stoch_w1
+       if(n_rngs>=2) weights(2)=stoch_w2
    
-       ! populate the variance (only first level) 
-       ! Donev: This line should be moved to stochastic_fluxdiv
-       ! There should be no variable variance in probin
-       variance = sqrt(2.d0*kT/(product(dx(1,1:dm))*dt))
- 
        ! initialize stochastic flux on every face W(0,1) 
        call generate_random_increments(mla,n_rngs,stoch_W_fc)
 
@@ -116,16 +114,14 @@ contains
       
       ! compute the total div of flux from rho
       stage_time = time   
-      call compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
-           chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
-           weights,n_rngs,the_bc_level)
+      call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-         ! Donev: I think it is better here to multiply by -dt
-         call saxpy(rho(n),dt,fluxdiv(n))
-         ! Donev: Now call saxpy here and in other places
-         ! if(use_stochastic) call saxpy(rho(n),dt,stoch_fluxdiv(n))
+         call saxpy(rho(n),-dt,diff_fluxdiv(n))
+         if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
       enddo 
     
       case(2)
@@ -146,13 +142,14 @@ contains
       
       ! compute the total div of flux from rho
       stage_time = time 
-      call compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
-           chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
-           weights,n_rngs,the_bc_level)
+      call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rhonew(n),dt,fluxdiv(n))
+         call saxpy(rhonew(n),-dt,diff_fluxdiv(n))
+         if(use_stoch) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
       enddo 
    
       ! update values of the ghost cells of rhonew
@@ -169,14 +166,15 @@ contains
       
       ! compute the total div of flux from rho
       stage_time = time + dt  
-      call compute_fluxdiv(mla,rhonew,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
-           chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
-           weights,n_rngs,the_bc_level)
+      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
-         call saxpy(rho(n),dt*0.5d0,fluxdiv(n))
-         call saxpy(rho(n),dt*0.5d0,fluxdivnew(n))
+         call saxpy(rho(n),-0.5d0*dt,diff_fluxdiv(n))
+         call saxpy(rho(n),-0.5d0*dt,diff_fluxdivnew(n))
+         if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
       enddo
  
       case(3)
@@ -193,13 +191,14 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time 
-      call compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
-           chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
-           weights,n_rngs,the_bc_level)
+      call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
-         call saxpy(rhonew(n),0.5d0*dt,fluxdiv(n))
+         call saxpy(rhonew(n),-0.5d0*dt,diff_fluxdiv(n))
+         if(use_stoch) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
       enddo 
 
       ! update values of the ghost cells of rhonew
@@ -212,13 +211,14 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time + dt/2.0d0
-      call compute_fluxdiv(mla,rhonew,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
-           chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
-           weights,n_rngs,the_bc_level)
+      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rho(n),dt,fluxdivnew(n))
+         call saxpy(rho(n),-dt,diff_fluxdivnew(n))
+         if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
       enddo 
       
       case(4)
@@ -240,13 +240,14 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time 
-      call compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
-           chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
-           weights,n_rngs,the_bc_level)
+      call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rhonew(n),dt,fluxdiv(n))
+         call saxpy(rhonew(n),-dt,diff_fluxdiv(n))
+         if(use_stoch) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
       enddo 
    
       ! update values of the ghost cells of rhonew
@@ -259,9 +260,9 @@ contains
 
       ! compute the total div of flux from rho
       stage_time = time + dt
-      call compute_fluxdiv(mla,rhonew,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
-           chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
-           weights,n_rngs,the_bc_level)
+      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       !===========
       ! 2nd stage
@@ -270,8 +271,9 @@ contains
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
          call multifab_mult_mult_s(rhonew(n),0.25d0)
-         call saxpy(rhonew(n), 0.75d0,   rho(n))
-         call saxpy(rhonew(n), 0.25d0*dt,fluxdivnew(n))
+         call saxpy(rhonew(n),  0.75d0,   rho(n))
+         call saxpy(rhonew(n), -0.25d0*dt,diff_fluxdivnew(n))
+         if(use_stoch) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
       enddo 
 
       ! update values of the ghost cells of rho_star
@@ -284,14 +286,14 @@ contains
       
       ! free up the values of fluxdivnew
       do n=1,nlevs
-         call setval(fluxdivnew(n), 0.d0, all=.true.)
+         call setval(diff_fluxdivnew(n), 0.d0, all=.true.)
       enddo 
 
       ! compute the total div of flux from rho
       stage_time = time + dt/2.0d0
-      call compute_fluxdiv(mla,rhonew,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,&
-           chi,Lonsager,Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
-           weights,n_rngs,the_bc_level)
+      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       !===========
       ! 3rd stage
@@ -300,8 +302,9 @@ contains
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
          call multifab_mult_mult_s(rho(n),(1.0d0/3.0d0))
-         call saxpy(rho(n), (2.0d0/3.0d0),   rhonew(n))
-         call saxpy(rho(n), (2.0d0/3.0d0)*dt,fluxdivnew(n))
+         call saxpy(rho(n), (2.0d0/3.0d0),    rhonew(n))
+         call saxpy(rho(n), -(2.0d0/3.0d0)*dt, diff_fluxdivnew(n))
+         if(use_stoch) call saxpy(rho(n), -dt, stoch_fluxdiv(n))
       enddo 
 
     !=============================================================================================
@@ -319,20 +322,19 @@ contains
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(rhonew(n))
-       call multifab_destroy(fluxdiv(n))
-       call multifab_destroy(fluxdivnew(n))
+       call multifab_destroy(diff_fluxdiv(n))
+       call multifab_destroy(diff_fluxdivnew(n))
        call multifab_destroy(rho_tot(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(molmtot(n))
        call multifab_destroy(chi(n))
-       call multifab_destroy(Lonsager(n))
        call multifab_destroy(D_MS(n))
        call multifab_destroy(Gama(n))
        call multifab_destroy(rhoWchiGama(n))
        call multifab_destroy(stoch_fluxdiv(n))
     enddo
     
-    if(use_stoch) then 
+    if(use_stoch) then
        call destroy_random_increments(mla,n_rngs,stoch_W_fc)
        deallocate(stoch_W_fc)
        deallocate(weights)
@@ -343,8 +345,7 @@ contains
     subroutine generate_random_increments(mla,n_rngs,stoch_W_fc)
   
       type(ml_layout), intent(in   )  :: mla
-      integer,         intent(in   )  :: n_rngs  ! how many random numbers to store per time step
-                                                 ! could be zero if one does not need to store any rngs
+      integer,         intent(in   )  :: n_rngs   ! how many random numbers to store per time step
       type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:)  
 
       ! Local variables
@@ -353,7 +354,7 @@ contains
       nlevs = mla%nlevel
       dm    = mla%dim    
     
-      ! generate and store the stochastic diffusive flux (random numbers)
+      ! generate and store the stochastic flux (random numbers)
       do rng=1, n_rngs
          do i = 1,dm
             call multifab_fill_random(stoch_W_fc(:,i,rng))
@@ -374,7 +375,7 @@ contains
       nlevs = mla%nlevel
       dm    = mla%dim    
   
-      ! deallocate stochastic diffusive flux
+      ! destroy multifab for stochastic flux
       do n=1, nlevs 
          do rng=1, n_rngs 
             do i = 1,dm

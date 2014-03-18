@@ -21,12 +21,12 @@ module diffusive_fluxdiv_module
 
 contains
 
-  subroutine diffusive_fluxdiv(mla,rho,rho_tot,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
+  subroutine diffusive_fluxdiv(mla,rho,rho_tot,diff_fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rho_tot(:)
-    type(multifab) , intent(inout)  :: fluxdiv(:)
+    type(multifab) , intent(inout)  :: diff_fluxdiv(:)
     type(multifab) , intent(inout)  :: molarconc(:)
     type(multifab) , intent(inout)  :: rhoWchiGama(:)
     real(kind=dp_t), intent(in   )  :: molmass(:) 
@@ -54,14 +54,8 @@ contains
     call diffusive_flux(mla,rho,rho_tot,molarconc,rhoWchiGama,flux,dx,the_bc_level)
 
     ! compute divergence of determinstic flux 
-    call compute_div(mla,flux,fluxdiv,dx,1,1,nspecies)
+    call compute_div(mla,flux,diff_fluxdiv,dx,1,1,nspecies)
     
-    ! multiply fluxdiv (having zero ghost cells) with -1 to get -div(-flux).
-    do n=1,nlevs
-       ! Donev: This should be done outside of this routine in saxpy: Use -dt instead of dt
-       call multifab_mult_mult_s(fluxdiv(n),-1.0d0,fluxdiv(1)%ng)
-    end do
- 
     ! destroy the multifab to free the memory
     do n=1,nlevs
        do i=1,dm
@@ -71,30 +65,28 @@ contains
 
   end subroutine diffusive_fluxdiv
 
-  ! Donev: Rename fluxdiv to det_fluxdiv
-  ! Then put det_fluxdiv and stoch_fluxdiv next to eachother in argument list
-  ! Also organize better the argument list here
-  subroutine compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
-                             Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
-                             weights,n_rngs,the_bc_level)
+  subroutine compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                             rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                             stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
-    type(multifab) , intent(inout)   :: stoch_W_fc(:,:,:)
-    type(multifab) , intent(inout)   :: fluxdiv(:)
     type(multifab) , intent(inout)   :: rho_tot(:)
     type(multifab) , intent(inout)   :: molarconc(:)
     type(multifab) , intent(inout)   :: molmtot(:)
     real(kind=dp_t), intent(in   )   :: molmass(nspecies) 
     type(multifab) , intent(inout)   :: chi(:)
-    type(multifab) , intent(inout)   :: Lonsager(:)
     type(multifab) , intent(inout)   :: Gama(:)
     type(multifab) , intent(inout)   :: D_MS(:)
-    real(kind=dp_t), intent(in   )   :: dx(:,:)
     type(multifab) , intent(inout)   :: rhoWchiGama(:)
+    type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
+    type(multifab) , intent(inout)   :: stoch_W_fc(:,:,:)
+    real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
-    real(kind=dp_t), intent(in   )   :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 
+    real(kind=dp_t), intent(in   )   :: dx(:,:)
+    real(kind=dp_t), intent(in   )   :: prob_lo(rho(1)%dim)
+    real(kind=dp_t), intent(in   )   :: prob_hi(rho(1)%dim) 
     real(kind=dp_t), intent(in   )   :: weights(:) 
     integer,         intent(in   )   :: n_rngs
     type(bc_level) , intent(in   )   :: the_bc_level(:)
@@ -124,25 +116,20 @@ contains
     call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,the_bc_level)
       
     ! compute rho*W*chi*Gama
-    call compute_rhoWchiGama(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama,the_bc_level)
+    call compute_rhoWchiGama(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,&
+                             Gama,rhoWchiGama,the_bc_level)
 
     ! compute determinstic fluxdiv (interior only), rho contains ghost filled in init/end of this code
-    call diffusive_fluxdiv(mla,rho,rho_tot,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
+    call diffusive_fluxdiv(mla,rho,rho_tot,diff_fluxdiv,molarconc,rhoWchiGama,&
+                           molmass,dx,the_bc_level)
 
-    ! compute external forcing for manufactured solution and add to fluxdiv
-    call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
+    ! compute external forcing for manufactured solution and add to diff_fluxdiv
+    call external_source(mla,rho,diff_fluxdiv,prob_lo,prob_hi,dx,stage_time)
 
-    if(use_stoch) then
-       ! compute stochastic fluxdiv 
-       call stochastic_fluxdiv(mla,stoch_W_fc,stoch_fluxdiv,rho,rho_tot,molarconc,molmass,&
-                               molmtot,chi,Gama,Lonsager,dx,weights,the_bc_level)
-
-       ! add to deterministic fluxdiv
-       ! Donev: This should be done outside of this routine (use saxpy)
-       do n=1,nlevs
-          call multifab_plus_plus(fluxdiv(n), stoch_fluxdiv(n))
-       enddo
-    endif
+    ! compute stochastic fluxdiv 
+    if(use_stoch) call stochastic_fluxdiv(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,&
+                                          Gama,stoch_W_fc,stoch_fluxdiv,dx,dt,weights,&
+                                          the_bc_level)
       
     ! revert back rho to it's original form
     do n=1,nlevs

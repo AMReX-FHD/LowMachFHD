@@ -8,12 +8,11 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: cfl1,chi,Temp,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
+  real(kind=dp_t)    :: cfl1,chi,k_B,Temp,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
   real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma,fraction_tolerance  ! manufactured solution parameters populated at init
-  real(kind=dp_t)    :: kT,variance,stochastic_w1,stochastic_w2 ! for stochastic part 
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp ! not input: populated at main 
   logical            :: correct_flux, use_stoch, print_error_norms, is_ideal_mixture, use_lapack
   real(kind=dp_t)    :: c_bc(3,2,max_species)
@@ -22,6 +21,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ max_step
   namelist /probin_multispecies/ cfl1
   namelist /probin_multispecies/ chi
+  namelist /probin_multispecies/ k_B
   namelist /probin_multispecies/ Temp
   namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ fraction_tolerance
@@ -37,7 +37,6 @@ module probin_multispecies_module
   namelist /probin_multispecies/ rho_in
   namelist /probin_multispecies/ molmass_in 
   namelist /probin_multispecies/ Dbar_in
-  namelist /probin_multispecies/ kT
   namelist /probin_multispecies/ c_bc              ! boundary conditions (dir,lohi,species)
 
 contains
@@ -75,12 +74,12 @@ contains
     rho_in             = 1.0d0
     molmass_in         = 1.0d0
     Dbar_in            = 1.0d0
+    k_B                = 1.38e-23
     Temp               = 1.0d0
     Press              = 1.0d0
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
     c_bc               = 0.d0
-    kT                 = 1.0d0
  
     ! read from input file 
     need_inputs = .true.
