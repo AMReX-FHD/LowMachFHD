@@ -21,10 +21,13 @@ module stochastic_fluxdiv_module
   ! This code should work the same for any number of nrngs, not just one or two
   
 contains
-
+  
+  ! It seems Lonsager can also be a local multifab here since no-one else uses it
+  ! Donev: Variance should be a local variable here
   subroutine stochastic_fluxdiv(mla,stoch_W_fc,stoch_fluxdiv,rho,rho_tot,molarconc,molmass,&
                                 molmtot,chi,Gama,Lonsager,dx,weights,the_bc_level)
 
+    ! Donev: For those things that are pure input change intent(inout) to intent(in)
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: stoch_W_fc(:,:,:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:) 
@@ -68,6 +71,8 @@ contains
     ! allocate(stoch_W_fc(mla%nlevel,mla%dim,nspecies,1:n_rngs)) ! Not 0:n_rngs
     ! I write the code below assuming we are using stoch_flux_fc
 
+    ! Donev: You need to call setval to set stoch_flux_fc to zero
+    
     ! convert stoch_W_fc into stoch_flux_fc
     do i = 1,dm
        do rng=1, size(weights)
@@ -75,7 +80,7 @@ contains
        enddo   
     enddo
     
-    ! compute cell-centered cholesky-factored Lonsager
+    ! compute cell-centered cholesky-factored Lonsager^(1/2)
     call compute_Lonsager(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,Lonsager,the_bc_level)
                   
     ! compute face-centered cholesky factor of cell-centered cholesky factored Lonsager
@@ -88,6 +93,9 @@ contains
           ! Donev: variance is an undefined variable here
           ! Amit: variance is populated in advance and passed as global varialbe
           ! via probin_multispecies.
+          ! There is a difference between k_b*T and k_b
+          ! which will become important later when T is a variable
+          ! k_b should be a constant in probin
           call multifab_mult_mult_s(stoch_flux_fc(n,i), variance, 0)
        enddo
     enddo  
@@ -95,6 +103,7 @@ contains
     ! compute divergence of stochastic flux
     call compute_div(mla,stoch_flux_fc,stoch_fluxdiv,dx,1,1,nspecies)
 
+    ! Donev: No need to do this for stochastic fluxes: remove
     ! multiply fluxdiv (having zero ghost cells) with -1 to get -div(-flux).
     do n=1,nlevs
        call multifab_mult_mult_s(stoch_fluxdiv(n),-1.0d0,stoch_fluxdiv(1)%ng)

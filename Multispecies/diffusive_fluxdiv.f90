@@ -58,6 +58,7 @@ contains
     
     ! multiply fluxdiv (having zero ghost cells) with -1 to get -div(-flux).
     do n=1,nlevs
+       ! Donev: This should be done outside of this routine in saxpy: Use -dt instead of dt
        call multifab_mult_mult_s(fluxdiv(n),-1.0d0,fluxdiv(1)%ng)
     end do
  
@@ -70,6 +71,9 @@ contains
 
   end subroutine diffusive_fluxdiv
 
+  ! Donev: Rename fluxdiv to det_fluxdiv
+  ! Then put det_fluxdiv and stoch_fluxdiv next to eachother in argument list
+  ! Also organize better the argument list here
   subroutine compute_fluxdiv(mla,rho,stoch_W_fc,fluxdiv,rho_tot,molarconc,molmtot,molmass,chi,Lonsager,&
                              Gama,D_MS,dx,rhoWchiGama,stoch_fluxdiv,stage_time,prob_lo,prob_hi,&
                              weights,n_rngs,the_bc_level)
@@ -125,19 +129,20 @@ contains
     ! compute determinstic fluxdiv (interior only), rho contains ghost filled in init/end of this code
     call diffusive_fluxdiv(mla,rho,rho_tot,fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
 
+    ! compute external forcing for manufactured solution and add to fluxdiv
+    call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
+
     if(use_stoch) then
        ! compute stochastic fluxdiv 
        call stochastic_fluxdiv(mla,stoch_W_fc,stoch_fluxdiv,rho,rho_tot,molarconc,molmass,&
                                molmtot,chi,Gama,Lonsager,dx,weights,the_bc_level)
 
        ! add to deterministic fluxdiv
+       ! Donev: This should be done outside of this routine (use saxpy)
        do n=1,nlevs
           call multifab_plus_plus(fluxdiv(n), stoch_fluxdiv(n))
        enddo
     endif
-
-    ! compute external forcing for manufactured solution and add to fluxdiv
-    call external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,stage_time)
       
     ! revert back rho to it's original form
     do n=1,nlevs

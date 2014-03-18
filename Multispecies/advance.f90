@@ -75,7 +75,7 @@ contains
           stochastic_w2 = 0.d0
        elseif (timeinteg_type .eq. 2) then  ! Trapezoidal
           n_rngs=1
-          stochastic_w1 = 1.d0        !Amit: has to be corrected 
+          stochastic_w1 = 1.d0        
           stochastic_w2 = 0.d0
        else                                 ! Midpoint & RK3
           n_rngs=2  
@@ -87,11 +87,16 @@ contains
        ! The rest are used to store random numbers that may be reused later
        allocate(stoch_W_fc(mla%nlevel,mla%dim,1:n_rngs))
        allocate(weights(n_rngs))
+       
+       ! Donev: Call multifab_build in a nest of three do loops: nlevs, ndim, n_rngs
+       ! Then destroy later
 
        if(n_rngs>=1) weights(1)=stochastic_w1
        if(n_rngs>=2) weights(2)=stochastic_w2
    
        ! populate the variance (only first level) 
+       ! Donev: This line should be moved to stochastic_fluxdiv
+       ! There should be no variable variance in probin
        variance = sqrt(2.d0*kT/(product(dx(1,1:dm))*dt))
  
        ! initialize stochastic flux on every face W(0,1) 
@@ -117,7 +122,10 @@ contains
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
+         ! Donev: I think it is better here to multiply by -dt
          call saxpy(rho(n),dt,fluxdiv(n))
+         ! Donev: Now call saxpy here and in other places
+         ! if(use_stochastic) call saxpy(rho(n),dt,stoch_fluxdiv(n))
       enddo 
     
       case(2)
