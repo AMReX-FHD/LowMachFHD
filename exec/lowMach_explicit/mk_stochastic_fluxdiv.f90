@@ -1179,7 +1179,7 @@ contains
     real(kind=dp_t), intent(out) :: s_fac(ntracers)
     
     ! For ideal mixture use: rho*c*(1-c)*M
-    s_fac(:) = rho*fac(:)*(1.0d0-fac(:))* (fac(:)*mol_mass(1)+(1.0d0-fac(:))*mol_mass(2))  
+    s_fac(:) = rho*fac(:)*(1.0d0-fac(:))* (fac(:)*mol_mass(2)+(1.0d0-fac(:))*mol_mass(1))  
     
   end subroutine
 
@@ -1254,7 +1254,7 @@ contains
 
           ! Concentration fluctuations prefactor M*rho^(-1)*c*(1-c)
           fpvar(:,:,:,1) = sqrt( fp(:,:,:,2) * (1.0d0-fp(:,:,:,2)) / fp(:,:,:,1) * &
-            (fp(:,:,:,2)*mol_mass(1)+(1.0d0-fp(:,:,:,2))*mol_mass(2)) ) * fpvar(:,:,:,1)
+            (fp(:,:,:,2)*mol_mass(2)+(1.0d0-fp(:,:,:,2))*mol_mass(1)) ) * fpvar(:,:,:,1)
             
           ! Now add the fluctuations to the mean:  
           fp(:,:,:,2) = fp(:,:,:,2) + sqrt(abs(variance)/product(dx(n,1:dm))) * fpvar(:,:,:,1)
