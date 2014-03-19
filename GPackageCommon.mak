@@ -3,8 +3,6 @@ vpath %.c $(HYDROLIB_HOME)
 vpath %.h $(HYDROLIB_HOME)
 INCLUDE_LOCATIONS += $(HYDROLIB_HOME)
 
-myf90sources += PAPI.f90
-   # This is needed because libpapi.a caused some problems with icpc
 myf90sources += Precision.f90
 myf90sources += Random.f90
 myf90sources += RNG.f90
