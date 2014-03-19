@@ -683,10 +683,11 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
 
     ! compute cell-centered Cholesky factor of Lonsager
     !call dpotrf_f95(Lonsager,'L', rcond, 'I', info)
-    call dpotrf('U', nspecies, Lonsager, nspecies, info)
+    call dpotrf('L', nspecies, Lonsager, nspecies, info)
+    !call la_potrf('L', nspecies, Lonsager, nspecies, info)
     !if(i.eq.4 .and. j.eq.6) print*, Lonsager
-    !if(i.eq.4 .and. j.eq.6) print*, 'Lower=',matmul(Lonsager, transpose(Lonsager))
-    if(i.eq.4 .and. j.eq.6) print*, 'Upper=',matmul(transpose(Lonsager), Lonsager)
+    if(i.eq.4 .and. j.eq.6) print*, matmul(Lonsager, transpose(Lonsager))
+    !if(i.eq.4 .and. j.eq.6) print*, 'Upper=',matmul(transpose(Lonsager), Lonsager)
      
    
   end subroutine compute_Lonsager_local
