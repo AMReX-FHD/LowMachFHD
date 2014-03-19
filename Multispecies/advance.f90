@@ -40,9 +40,10 @@ contains
     type(multifab)                 :: rhoWchiGama(mla%nlevel)    ! rho*W*chi*Gama
     type(multifab)                 :: stoch_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
     type(multifab),  allocatable   :: stoch_W_fc(:,:,:)          ! WA and WB (nlevs,dim,n_rngs) 
-    real(kind=dp_t), allocatable   :: weights(:)                 ! weights for RNGs       
-    real(kind=dp_t)                :: stoch_w1,stoch_w2,stage_time
+    real(kind=dp_t), allocatable   :: weights(:)                 ! weights for stoch-time-integrators       
+    real(kind=dp_t)                :: stage_time
     integer                        :: n,nlevs,i,dm,rng,n_rngs 
+
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! number of dimensions
 
@@ -70,16 +71,10 @@ contains
  
        if (timeinteg_type .eq. 1) then      ! Euler-Maruyama
           n_rngs=1
-          stoch_w1 = 1.d0
-          stoch_w2 = 0.d0
        elseif (timeinteg_type .eq. 2) then  ! Trapezoidal
           n_rngs=1
-          stoch_w1 = 1.d0        
-          stoch_w2 = 0.d0
        else                                 ! Midpoint & RK3
           n_rngs=2  
-          stoch_w1 = 1.d0        
-          stoch_w2 = 0.d0
        endif
  
        ! allocate and build the multifabs
@@ -93,10 +88,6 @@ contains
           enddo
        enddo
       
-       ! populate weights 
-       if(n_rngs>=1) weights(1)=stoch_w1
-       if(n_rngs>=2) weights(2)=stoch_w2
-   
        ! initialize stochastic flux on every face W(0,1) 
        call generate_random_increments(mla,n_rngs,stoch_W_fc)
 
@@ -107,31 +98,37 @@ contains
    !==================================================================================
  
       case(1)
-      !===================================
+      !==================================================
       ! Euler time update 
-      ! rho(t+dt)  =rho(t) + dt*fluxdiv(t) 
-      !===================================
+      ! rho(t+dt)  =rho(t) + dt*fluxdiv(t) + sqrt(dt)K*W(t)
+      !==================================================
+      
+      stage_time = time  
+      weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      stage_time = time   
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rho(n),-dt,diff_fluxdiv(n))
+                       call saxpy(rho(n),-dt,diff_fluxdiv(n))
          if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
       enddo 
     
       case(2)
       !=========================================================================================
       ! Heun's method: Predictor-Corrector explicit method 
-      ! rhonew(t+dt) = rho(t)+dt*fluxdiv(t,rho)+sqrt(dt)K*W(t) 
+      ! rhonew(t+dt) = rho(t)+ dt*fluxdiv(t,rho)                                 +sqrt(dt)K*W(t) 
       !    rho(t+dt) = rho(t)+(dt/2)*[fluxdiv(t,rho)+fluxdivnew(t+1,rhonew(t+1))]+sqrt(dt)K*W(t)  
       !=========================================================================================
       
-      ! store old rho in rhonew (rhonew previously set to zero) 
+      ! store old rho in rhonew after clearing up memory 
+      do n=1,nlevs
+          call setval(rhonew(n), 0.d0, all=.true.)
+      enddo
+ 
       do n=1,nlevs
          call saxpy(rhonew(n),1.0d0,rho(n))
       enddo 
@@ -140,8 +137,10 @@ contains
       ! Euler Predictor step
       !===================== 
       
-      ! compute the total div of flux from rho
       stage_time = time 
+      weights(1) = 1.0d0 
+      
+      ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
@@ -164,41 +163,53 @@ contains
       ! Trapezoidal Corrector step
       !===========================
       
-      ! compute the total div of flux from rho
       stage_time = time + dt  
+      
+      ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           rhoWchiGama,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
-         call saxpy(rho(n),-0.5d0*dt,diff_fluxdiv(n))
-         call saxpy(rho(n),-0.5d0*dt,diff_fluxdivnew(n))
-         if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
+                       call saxpy(rho(n),-0.5d0*dt,diff_fluxdiv(n))
+                       call saxpy(rho(n),-0.5d0*dt,diff_fluxdivnew(n))
+         if(use_stoch) call saxpy(rho(n),      -dt,stoch_fluxdiv(n))
       enddo
  
       case(3)
-      !============================================================
+      !========================================================================================
       ! Midpoint method (2-stage) 
-      ! rhonew(t+dt/2)=rho(t)+(dt/2)*fluxdiv(t,y)                
-      !    rho(t+dt)  =rho(t)+ dt*fluxdivnew[t+dt/2,rhonew(t+dt/2)]  
-      !============================================================
-
-      ! store old rho in rhonew (rhonew is set zero at the start) 
+      ! rhonew(t+dt/2)=rho(t)+(dt/2)*fluxdiv(t,y)                   + sqrt(dt/2)K*W1(t)                
+      !    rho(t+dt)  =rho(t)+ dt*fluxdivnew[t+dt/2,rhonew(t+dt/2)] + sqrt(dt/2)K*(W1(t)+W2(t))
+      !========================================================================================
+      
+      ! store old rho in rhonew after clearing up memory 
+      do n=1,nlevs
+          call setval(rhonew(n), 0.d0, all=.true.)
+      enddo
+ 
       do n=1,nlevs
          call saxpy(rhonew(n),1.0d0,rho(n))
       enddo 
 
+      !===========
+      ! 1st stage
+      !===========
+
+      stage_time = time
+      weights(1) = sqrt(0.5d0) 
+      weights(2) = 0.0d0 
+      
       ! compute the total div of flux from rho
-      stage_time = time 
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
-         call saxpy(rhonew(n),-0.5d0*dt,diff_fluxdiv(n))
-         if(use_stoch) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
+                       call saxpy(rhonew(n),-0.5d0*dt,diff_fluxdiv(n))
+         if(use_stoch) call saxpy(rhonew(n),      -dt,stoch_fluxdiv(n))
       enddo 
 
       ! update values of the ghost cells of rhonew
@@ -209,45 +220,59 @@ contains
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
       enddo
 
-      ! compute the total div of flux from rho
+      !===========
+      ! 2nd stage
+      !===========
+
       stage_time = time + dt/2.0d0
+      weights(1) = sqrt(0.5d0) 
+      weights(2) = sqrt(0.5d0) 
+
+      ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           rhoWchiGama,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rho(n),-dt,diff_fluxdivnew(n))
-         if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
+                       call saxpy(rho(n), -dt, diff_fluxdivnew(n))
+         if(use_stoch) call saxpy(rho(n), -dt, stoch_fluxdiv(n))
       enddo 
       
       case(4)
-      !========================================================================================
+      !=======================================================================================================================
       ! 3rd order Runge-Kutta method 
-      ! rhonew(t+dt)  =     rho(t)+                       dt*fluxdiv(t)                      
-      ! rhonew(t+dt/2)= 3/4*rho(t)+ 1/4*[rhonew(t+dt)   + dt*fluxdivnew(t+dt,rhonew(t+dt))] 
-      !    rho(t+dt)  = 1/3*rho(t)+ 2/3*[rhonew(t+dt/2) + dt*fluxdivnew(t+dt/2,rhonew(t+dt/2))] 
-      !========================================================================================
+      ! rhonew(t+dt)  =     rho(t)+                       dt*fluxdiv(t)                        + sqrt(dt)K*(a1*W1(t)+b1*W2(t)   
+      ! rhonew(t+dt/2)= 3/4*rho(t)+ 1/4*[rhonew(t+dt)   + dt*fluxdivnew(t+dt,rhonew(t+dt))     + sqrt(dt)K*(a2*W1(t)+b2*W2(t)] 
+      !    rho(t+dt)  = 1/3*rho(t)+ 2/3*[rhonew(t+dt/2) + dt*fluxdivnew(t+dt/2,rhonew(t+dt/2)) + sqrt(dt)K*(a3*W1(t)+b3*W2(t)] 
+      !=======================================================================================================================
 
-      ! store old rho in rhonew (rhonew is set zero at the start) 
+      ! store old rho in rhonew after clearing up memory 
+      do n=1,nlevs
+          call setval(rhonew(n), 0.d0, all=.true.)
+      enddo
+ 
       do n=1,nlevs
          call saxpy(rhonew(n),1.0d0,rho(n))
       enddo 
-      
+
       !===========
       ! 1st stage
       !===========
 
-      ! compute the total div of flux from rho
       stage_time = time 
+      weights(1) = 1.0d0 
+      weights(2) = (2*sqrt(2.0d0)+sqrt(3.0d0))/5.0d0 
+      
+      ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rhonew(n),-dt,diff_fluxdiv(n))
-         if(use_stoch) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
+                       call saxpy(rhonew(n), -dt, diff_fluxdiv(n))
+         if(use_stoch) call saxpy(rhonew(n), -dt, stoch_fluxdiv(n))
       enddo 
    
       ! update values of the ghost cells of rhonew
@@ -258,22 +283,26 @@ contains
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
       enddo
 
-      ! compute the total div of flux from rho
-      stage_time = time + dt
-      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
-                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
-
       !===========
       ! 2nd stage
       !===========
 
+      stage_time = time + dt
+      weights(1) = 0.25d0 
+      weights(2) = (-4*sqrt(2.0d0)+3*sqrt(3.0d0))/5.0d0 
+
+      ! compute the total div of flux from rho
+      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
+
+
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
-         call multifab_mult_mult_s(rhonew(n),0.25d0)
-         call saxpy(rhonew(n),  0.75d0,   rho(n))
-         call saxpy(rhonew(n), -0.25d0*dt,diff_fluxdivnew(n))
-         if(use_stoch) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
+                       call multifab_mult_mult_s(rhonew(n),0.25d0)
+                       call saxpy(rhonew(n),  0.75d0   , rho(n))
+                       call saxpy(rhonew(n), -0.25d0*dt, diff_fluxdivnew(n))
+         if(use_stoch) call saxpy(rhonew(n), -0.25d0*dt, stoch_fluxdiv(n))
       enddo 
 
       ! update values of the ghost cells of rho_star
@@ -284,27 +313,30 @@ contains
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
       enddo
       
+      !===========
+      ! 3rd stage
+      !===========
+
       ! free up the values of fluxdivnew
       do n=1,nlevs
          call setval(diff_fluxdivnew(n), 0.d0, all=.true.)
       enddo 
 
-      ! compute the total div of flux from rho
       stage_time = time + dt/2.0d0
-      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
-                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
+      weights(1) = 2.0d0/3.0d0 
+      weights(2) = (sqrt(2.0d0)-2*sqrt(3.0d0))/10.0d0
 
-      !===========
-      ! 3rd stage
-      !===========
+      ! compute the total div of flux from rho
+      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                           rhoWchiGama,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,dt,&
+                           stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-         call multifab_mult_mult_s(rho(n),(1.0d0/3.0d0))
-         call saxpy(rho(n), (2.0d0/3.0d0),    rhonew(n))
-         call saxpy(rho(n), -(2.0d0/3.0d0)*dt, diff_fluxdivnew(n))
-         if(use_stoch) call saxpy(rho(n), -dt, stoch_fluxdiv(n))
+                       call multifab_mult_mult_s(rho(n),(1.0d0/3.0d0))
+                       call saxpy(rho(n),  (2.0d0/3.0d0)   , rhonew(n))
+                       call saxpy(rho(n), -(2.0d0/3.0d0)*dt, diff_fluxdivnew(n))
+         if(use_stoch) call saxpy(rho(n), -(2.0d0/3.0d0)*dt, stoch_fluxdiv(n))
       enddo 
 
     !=============================================================================================
