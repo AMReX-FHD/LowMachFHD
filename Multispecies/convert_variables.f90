@@ -679,15 +679,32 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
        enddo
     enddo
 
-    if(i.eq.4 .and. j.eq.6) print*, Lonsager
+    if(.false..and.i.eq.4 .and. j.eq.6) then
+       write(*,*) "LOnsager="
+       do row=1, nspecies
+          write(*,*) Lonsager(row,:)
+       enddo    
+    end if
 
     ! compute cell-centered Cholesky factor of Lonsager
-    !call dpotrf_f95(Lonsager,'L', rcond, 'I', info)
-    call dpotrf('U', nspecies, Lonsager, nspecies, info)
-    !if(i.eq.4 .and. j.eq.6) print*, Lonsager
-    !if(i.eq.4 .and. j.eq.6) print*, 'Lower=',matmul(Lonsager, transpose(Lonsager))
-    if(i.eq.4 .and. j.eq.6) print*, 'Upper=',matmul(transpose(Lonsager), Lonsager)
-     
+    if(i.eq.4 .and. j.eq.6) print*, 'L   =', real(LOnsager)
+    
+    call dpotrf_f95(Lonsager,'L', rcond, 'I', info)
+    
+    do row=1, nspecies
+       do column=row+1, nspecies
+          Lonsager(row, column) = 0.0d0          
+       enddo
+    enddo    
+    
+    if(.false..and.i.eq.4 .and. j.eq.6) then
+       write(*,*) "L="
+       do row=1, nspecies
+          write(*,*) Lonsager(row,:)
+       enddo    
+    end if
+    
+    if(i.eq.4 .and. j.eq.6) print*, 'LL^T=', real(matmul(Lonsager, transpose(Lonsager)))     
    
   end subroutine compute_Lonsager_local
 
