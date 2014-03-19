@@ -52,7 +52,7 @@ contains
     dm    = mla%dim
  
     ! populate the variance (only first level) 
-    variance = sqrt(2.d0*k_B*Temp/(product(dx(1,1:dm))*dt))
+    variance = sqrt(2.d0*k_B/(product(dx(1,1:dm))*dt))
 
     ! build multifabs 
     do n=1,nlevs

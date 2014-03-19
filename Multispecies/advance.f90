@@ -88,7 +88,7 @@ contains
        do n=1, nlevs 
           do rng=1, n_rngs 
              do i = 1,dm
-                call multifab_build(stoch_W_fc(n,i,rng), mla%la(n), nspecies, 0)
+                call multifab_build_edge(stoch_W_fc(n,i,rng),mla%la(n),nspecies,0,i)
              enddo
           enddo
        enddo
@@ -125,11 +125,11 @@ contains
       enddo 
     
       case(2)
-      !============================================================================
+      !=========================================================================================
       ! Heun's method: Predictor-Corrector explicit method 
-      ! rhonew(t+dt) = rho(t)+dt*fluxdiv(t,rho) 
-      !    rho(t+dt) = rho(t)+(dt/2)*[fluxdiv(t,rho) + fluxdivnew(t+1,rhonew(t+1))] 
-      !============================================================================
+      ! rhonew(t+dt) = rho(t)+dt*fluxdiv(t,rho)+sqrt(dt)K*W(t) 
+      !    rho(t+dt) = rho(t)+(dt/2)*[fluxdiv(t,rho)+fluxdivnew(t+1,rhonew(t+1))]+sqrt(dt)K*W(t)  
+      !=========================================================================================
       
       ! store old rho in rhonew (rhonew previously set to zero) 
       do n=1,nlevs
