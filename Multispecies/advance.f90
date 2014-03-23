@@ -67,19 +67,21 @@ contains
     !========================================================
     ! initialize random number generator for stochastic flux
     !========================================================
+ 
+    if (timeinteg_type .eq. 1) then       ! Euler-Maruyama
+        n_rngs=1
+    else if (timeinteg_type .eq. 2) then  ! Trapezoidal
+        n_rngs=1
+    else                                ! Midpoint & RK3
+        n_rngs=2  
+    end if
+ 
+    ! allocate the multifabs
+    allocate(stoch_W_fc(mla%nlevel,mla%dim,1:n_rngs))
+    allocate(weights(n_rngs))
+    
     if(use_stoch) then
- 
-       if (timeinteg_type .eq. 1) then      ! Euler-Maruyama
-          n_rngs=1
-       elseif (timeinteg_type .eq. 2) then  ! Trapezoidal
-          n_rngs=1
-       else                                 ! Midpoint & RK3
-          n_rngs=2  
-       endif
- 
-       ! allocate and build the multifabs
-       allocate(stoch_W_fc(mla%nlevel,mla%dim,1:n_rngs))
-       allocate(weights(n_rngs))
+      ! build the multifabs
        do n=1, nlevs 
           do rng=1, n_rngs 
              do i = 1,dm
@@ -90,7 +92,6 @@ contains
       
        ! initialize stochastic flux on every face W(0,1) 
        call generate_random_increments(mla,n_rngs,stoch_W_fc)
-
     endif
  
    !==================================================================================
@@ -104,7 +105,7 @@ contains
       !==================================================
       
       stage_time = time  
-      weights(1) = 1.0d0 
+      if(use_stoch) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
@@ -138,7 +139,7 @@ contains
       !===================== 
       
       stage_time = time 
-      weights(1) = 1.0d0 
+      if(use_stoch) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
@@ -368,9 +369,9 @@ contains
     
     if(use_stoch) then
        call destroy_random_increments(mla,n_rngs,stoch_W_fc)
-       deallocate(stoch_W_fc)
-       deallocate(weights)
     endif
+    deallocate(stoch_W_fc)
+    deallocate(weights)
 
   contains
   

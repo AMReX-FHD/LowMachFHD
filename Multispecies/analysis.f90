@@ -63,7 +63,7 @@ module analysis_module
      norm_l2_tot = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
      
      ! print the norms
-     !if(.false.) then
+     if(.false.) then
         if (parallel_IOProcessor()) then 
             if(time.gt.2.99d0) then
             !if(time.gt.0.49d0) then
@@ -71,7 +71,7 @@ module analysis_module
                        norm_inf_tot,norm_l1_tot,norm_l2_tot
             endif
         endif
-     !endif
+     endif
      
      ! for checking analytic solution with Visit
      call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 
