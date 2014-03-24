@@ -4,13 +4,13 @@ module stochastic_fluxdiv_module
   use bl_constants_module
   use multifab_module
   use ml_layout_module
-  !use ml_restriction_module
   use define_bc_module
   use bc_module
   use convert_variables_module 
   use div_and_grad_module
   use convert_stag_module
   use matvec_mul_module
+  use correction_flux_module
 
   use probin_multispecies_module
 
@@ -100,6 +100,12 @@ contains
           call multifab_fill_boundary(stoch_flux_fc(n,i))  
        enddo
     enddo
+
+    !correct fluxes to ensure mass conservation to roundoff
+    if (correct_flux .and. (nspecies .gt. 1)) then
+       write(*,*) "Checking conservation of stochastic fluxes"
+       call correction_flux(mla, rho, rho_tot, stoch_flux_fc, the_bc_level)
+    endif
  
     ! compute divergence of stochastic flux
     call compute_div(mla,stoch_flux_fc,stoch_fluxdiv,dx,1,1,nspecies)

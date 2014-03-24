@@ -189,7 +189,7 @@ subroutine main_driver()
   endif
 
   ! print out the total masses
-  call sum_mass(rho)
+  call sum_mass(rho, step=0)
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
@@ -207,6 +207,9 @@ subroutine main_driver()
      ! advance the solution by dt
      call advance(mla,rho,molmass,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
+     ! print out the total mass to check conservation
+     call sum_mass(rho, istep)
+
      ! compute error norms
      if (print_error_norms) then
         call print_errors(rho,rho_exact,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
@@ -214,9 +217,6 @@ subroutine main_driver()
 
      ! write plotfile at specific intervals
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
-
-        ! print out the total masses
-        call sum_mass(rho)
         
         call write_plotfile(mla,"plt_rho",      rho,istep,dx,time,prob_lo,prob_hi)
         call write_plotfile(mla,"plt_exa",rho_exact,istep,dx,time,prob_lo,prob_hi)

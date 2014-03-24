@@ -78,9 +78,10 @@ module analysis_module
 
   end subroutine print_errors
 
-  subroutine sum_mass(rho)
+  subroutine sum_mass(rho, step)
 
     type(multifab), intent(in   ) :: rho(:)
+    integer, intent(in) :: step
 
     ! local
     real(kind=dp_t) :: mass(nspecies)
@@ -92,11 +93,11 @@ module analysis_module
        do i=1,nspecies
           mass(i) = multifab_norm_l1_c(rho(n),i,1,all=.false.)
           if (parallel_IOProcessor()) then
-             print*,'sum of rho_i for i=',i,mass(i)
+             print*, step, ' sum of rho_i for i=',i,mass(i)
           end if
        end do
        if (parallel_IOProcessor()) then
-          print*,'sum of rho=',sum(mass(1:nspecies))
+          print*, step, ' sum of rho=',sum(mass(1:nspecies))
        end if
     end do
 

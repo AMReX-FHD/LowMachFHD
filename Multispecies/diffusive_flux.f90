@@ -51,11 +51,6 @@ contains
     call compute_grad(mla, molarconc, flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
                       the_bc_level)
    
-    ! correct fluxes to avoid round-off error (if sum_flux_allspecies != 0) 
-    if (correct_flux) then
-       if(nspecies .gt. 1) call correction_flux(mla, rho, rho_tot, flux, the_bc_level)
-    endif
-
     ! compute face-centered rhoWchiGama from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchiGama, rhoWchiGama_face, 1, diff_coeff_bc_comp, &
                             nspecies**2, the_bc_level, .false.) 
@@ -66,6 +61,13 @@ contains
           call matvec_mul(mla, flux(n,i), rhoWchiGama_face(n,i))
        enddo
     enddo    
+
+    ! Donev: Moved this to after the multiplication
+    !correct fluxes to ensure mass conservation to roundoff
+    if (correct_flux .and. (nspecies .gt. 1)) then
+       write(*,*) "Checking conservation of deterministic fluxes"
+       call correction_flux(mla, rho, rho_tot, flux, the_bc_level)
+    endif
     
     ! destroy B^(-1)*Gama multifab to prevent leakage in memory
     do n=1,nlevs

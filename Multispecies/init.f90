@@ -15,6 +15,7 @@ module init_module
   public :: init_rho
   
   ! init_type: 
+  ! 0 = everything constant in space (thermodynamic equilibrium)
   ! 1 = rho in concentric circle (two values inside and outside concentric circular region), 
   ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y), 2-species
   ! 3 = gaussian spread with total density constant, 2-species
@@ -88,6 +89,18 @@ contains
     
     ! for specific box, now start loop over alloted cells     
     select case(init_type) 
+
+    case(0) 
+    !=========================================================================
+    ! Thermodynamic equilibrium
+    !=========================================================================
+      do j=lo(2),hi(2)
+         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         do i=lo(1),hi(1)
+            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+            rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
+         end do
+      end do  
     
     case(1) 
     !=========================================================================
@@ -221,6 +234,23 @@ contains
 
     ! for specific box, now start loop over alloted cells     
     select case(init_type) 
+    
+    case(0) 
+    !================================================================================
+    ! Thermodynamic equilibrium
+    !================================================================================
+    !$omp parallel private(i,j,k,x,y,z)
+    do k=lo(3),hi(3)
+       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0             
+             rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
+          end do
+       end do
+    end do
+    !$omp end parallel do
     
     case(1) 
     !================================================================================
