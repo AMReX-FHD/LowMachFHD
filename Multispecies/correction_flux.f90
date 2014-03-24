@@ -72,9 +72,10 @@ contains
 
       ! local
       integer         :: i,j,n
-      real(kind=dp_t) :: sumx,sumy,corr
+      real(kind=dp_t) :: sumx,sumy,corr,total_corr
 
       ! x-faces
+      total_corr=0.0d0
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
                
@@ -93,16 +94,19 @@ contains
             ! Donev: Rewrote this slightly            
             !if(corr .gt. fraction_tolerance) print*, "Sum of x-flux=", corr
             if(corr .gt. rho_tot(i,j)*fraction_tolerance) then
-               write(*,*) "Error: sum of x-fluxes = ", corr, " fluxes=", flux_x(i,j,:)
+               !write(*,*) "Error: sum of x-fluxes = ", corr, " fluxes=", flux_x(i,j,:)
             endif
               
             ! correct x-flux for last species  
-            flux_x(i,j,nspecies) = -sumx             
+            flux_x(i,j,nspecies) = -sumx     
+            total_corr = total_corr + abs(corr) ! Donev: Add diagnostics    
 
          enddo
       enddo
+      write(*,*) "x flux correction = ", total_corr
    
       ! y-faces
+      total_corr=0.0d0
       do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)
 
@@ -120,15 +124,17 @@ contains
             !if(corr .gt. fraction_tolerance) print*, "Sum of y-flux=", corr
             
             if(corr .gt. rho_tot(i,j)*1e-8) then
-               write(*,*) "Error: sum of y-fluxes greater than rho_tot*1e-8"
-               write(*,*) "sum is",corr         
+               !write(*,*) "Error: sum of y-fluxes greater than rho_tot*1e-8"
+               !write(*,*) "sum is",corr         
             endif
               
             ! correct y-flux for last species  
             flux_y(i,j,nspecies) = -sumy             
+            total_corr = total_corr + abs(corr) ! Donev: Add diagnostics    
  
          enddo
       enddo
+      write(*,*) "y flux correction = ", total_corr
 
     end subroutine correction_flux_2d
 
@@ -162,10 +168,10 @@ contains
                ! caculate corr and print error if not zero 
                corr = flux_x(i,j,k,nspecies) + sumx 
               
-               if(corr .gt. fraction_tolerance) print*, "Sum of x-flux=", corr
+               !if(corr .gt. fraction_tolerance) print*, "Sum of x-flux=", corr
                if(corr .gt. rho_tot(i,j,k)*1e-8) then
-                  write(*,*) "Error: sum of x-fluxes greater than rho_tot*1e-8"             
-                  write(*,*) "sum is",corr
+                  !write(*,*) "Error: sum of x-fluxes greater than rho_tot*1e-8"             
+                  !write(*,*) "sum is",corr
                endif
               
                ! correct x-flux for last species  

@@ -7,7 +7,7 @@ module matrix_utilities
 
   private
 
-  public :: Dbar2chi_iterative
+  public :: Dbar2chi_iterative, choldc
   
 contains
 
@@ -147,5 +147,82 @@ contains
       enddo
 
   end subroutine
+
+   ! a is input matrix.  
+   ! upon return the lower triangle and diagonal are overwritten by the cholesky factor
+   subroutine choldc(a,np)
+       integer :: np
+       real(kind=dp_t), intent(inout) :: a(np,np)
+
+       real(kind=dp_t) :: p(np), dij(np,np)
+       real(kind=dp_t) :: dd(np,np)
+       real(kind=dp_t) :: yy(np), mwmix 
+
+       integer :: i, j, k, ii, jj
+       real(kind=dp_t) :: sum1
+       real(kind=dp_t) :: small_number = 0.0d0 ! Some tolerance
+
+       integer :: idiag,ising
+
+       do i = 1, np
+
+           ising = 0
+
+        do j = i, np
+
+           sum1 = a(i,j)
+
+           do k = i-1, 1, -1
+
+              sum1 = sum1 - a(i,k)*a(j,k)
+
+           enddo
+
+           if(i.eq.j) then
+
+             if(sum1.le.small_number) then
+
+             p(i) = 0.d0
+
+             ising = 1
+
+             else
+
+             p(i) = sqrt(sum1)
+
+             endif
+
+           else
+
+             if(ising.eq.0)then
+
+                a(j,i) = sum1/p(i)
+
+             else
+
+                a(j,i) = 0.d0
+
+             endif
+
+           endif
+
+        enddo
+
+       enddo
+
+
+       do i = 1, np
+
+          do j = i+1, np
+
+           a(i,j) = 0.0d0 ! Zero upper triangle
+
+          enddo
+          
+          a(i,i) = p(i)
+
+       enddo
+
+    end subroutine
 
 end module
