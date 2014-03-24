@@ -92,7 +92,15 @@ contains
           call multifab_mult_mult_s(stoch_flux_fc(n,i), variance, 0)
        enddo
     enddo  
-     
+    
+    ! sync the fluxes at the boundaries
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_internal_sync(stoch_flux_fc(n,i))
+          call multifab_fill_boundary(stoch_flux_fc(n,i))  
+       enddo
+    enddo
+ 
     ! compute divergence of stochastic flux
     call compute_div(mla,stoch_flux_fc,stoch_fluxdiv,dx,1,1,nspecies)
 
