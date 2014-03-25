@@ -8,7 +8,7 @@ module apply_precon_module
   use stag_mg_solver_module
   use macproject_module
   use div_and_grad_module
-  use mac_applyop_module
+  use cc_applyop_module
   use convert_stag_module
   use norm_inner_product_module
   use multifab_physbc_module
@@ -130,8 +130,8 @@ contains
           end do
         else
           ! first set x_p = -L_alpha Phi
-          call mac_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx, &
-                           the_bc_tower,pres_bc_comp,stencil_order_in=2)
+          call cc_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx, &
+                          the_bc_tower,pres_bc_comp,stencil_order_in=2)
         end if
 
         do n=1,nlevs
