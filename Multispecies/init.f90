@@ -116,7 +116,7 @@ contains
                rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
             else
                rho(i,j,1:nspecies) = rho_in(2,1:nspecies)
-            endif
+            end if
     
          end do
       end do
@@ -136,7 +136,7 @@ contains
             rho(i,j,1) = rho_in(1,1) + 0.001d0*x - 0.002d0*y
             rho(i,j,2) = rho_in(1,2) + 0.003d0*x + 0.001d0*y
             !rho(i,j,3) = rho_in(1,3) + 0.002d0*x - 0.001d0*y
-            endif
+            end if
 
          end do
       end do
@@ -203,7 +203,7 @@ contains
               write(*,*), "rho1 / rho2 / rho3 is negative: STOP"
               write(*,*), i, j, " w1=", w1, " w2=", w2, " rho1=",rho(i,j,1)," rho2=",rho(i,j,2),&
                           " rho3=",rho(i,j,3), " rhot=",rhot
-            endif
+            end if
  
             !if(i.eq.4 .and. j.eq.5) print*,'w1=',w1,'w2=',w2,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),&
             !                               'rho3=',rho(i,j,3),'rhot=',rhot
@@ -269,7 +269,7 @@ contains
                  rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
              else
                  rho(i,j,k,1:nspecies) = rho_in(2,1:nspecies)
-             endif
+             end if
           
           end do
        end do
@@ -377,11 +377,11 @@ contains
                  write(*,*), "rho1 / rho2 / rho3 is negative: STOP"
                  write(*,*), i, j, " w1=", w1, " w2=", w2, " rho1=",rho(i,j,k,1)," rho2=",&
                              rho(i,j,k,2), " rho3=",rho(i,j,k,3), " rhot=",rhot
-              endif
+              end if
 
-           enddo
-        enddo
-     enddo
+           end do
+        end do
+     end do
      !$omp end parallel do
 
     end select

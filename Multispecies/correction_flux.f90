@@ -57,8 +57,8 @@ contains
           call correction_flux_3d(dp(:,:,:,:),dp1(:,:,:,1),ng_p,flux_x(:,:,:,:),flux_y(:,:,:,:),&
                                   flux_z(:,:,:,:),ng_g,lo,hi)
           end select
-       enddo
-    enddo
+       end do
+    end do
 
   contains
     
@@ -86,24 +86,22 @@ contains
             ! sum the x-fluxes upto nspecies-1 
             do n=1, nspecies-1
                sumx = sumx + flux_x(i,j,n)
-            enddo
+            end do
               
             ! caculate corr and print error if not zero 
             corr = flux_x(i,j,nspecies) + sumx
             
-            ! Donev: Rewrote this slightly            
-            !if(corr .gt. fraction_tolerance) print*, "Sum of x-flux=", corr
             if(corr .gt. rho_tot(i,j)*fraction_tolerance) then
                !write(*,*) "Error: sum of x-fluxes = ", corr, " fluxes=", flux_x(i,j,:)
-            endif
+            end if
               
             ! correct x-flux for last species  
             flux_x(i,j,nspecies) = -sumx     
             total_corr = total_corr + abs(corr) ! Donev: Add diagnostics    
 
-         enddo
-      enddo
-      write(*,*) "x flux correction = ", total_corr
+         end do
+      end do
+      !write(*,*) "x flux correction = ", total_corr
    
       ! y-faces
       total_corr=0.0d0
@@ -117,24 +115,22 @@ contains
             ! sum the y-fluxes upto nspecies-1 
             do n=1, nspecies-1
                sumy = sumy + flux_y(i,j,n)
-            enddo
+            end do
               
             ! caculate corr and print error if not zero 
             corr = flux_y(i,j,nspecies) + sumy
-            !if(corr .gt. fraction_tolerance) print*, "Sum of y-flux=", corr
             
-            if(corr .gt. rho_tot(i,j)*1e-8) then
-               !write(*,*) "Error: sum of y-fluxes greater than rho_tot*1e-8"
-               !write(*,*) "sum is",corr         
-            endif
+            if(corr .gt. rho_tot(i,j)*fraction_tolerance) then
+               !write(*,*) "Error: sum of y-fluxes = ", corr, " fluxes=", flux_y(i,j,:)
+            end if
               
             ! correct y-flux for last species  
             flux_y(i,j,nspecies) = -sumy             
             total_corr = total_corr + abs(corr) ! Donev: Add diagnostics    
  
-         enddo
-      enddo
-      write(*,*) "y flux correction = ", total_corr
+         end do
+      end do
+     !write(*,*) "y flux correction = ", total_corr
 
     end subroutine correction_flux_2d
 
@@ -149,9 +145,10 @@ contains
 
       ! local
       integer         :: i,j,k,n
-      real(kind=dp_t) :: sumx,sumy,sumz,corr
+      real(kind=dp_t) :: sumx,sumy,sumz,corr,total_corr
       
       ! x-faces
+      total_corr=0.0d0
       do k=lo(3),hi(3)
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)+1
@@ -159,32 +156,33 @@ contains
                ! free the data
                sumx = 0.d0
                corr = 0.d0
-              
+             
                ! sum the x-fluxes upto nspecies-1 
                do n=1, nspecies-1
                   sumx = sumx + flux_x(i,j,k,n)
-               enddo
+               end do
               
                ! caculate corr and print error if not zero 
                corr = flux_x(i,j,k,nspecies) + sumx 
               
-               !if(corr .gt. fraction_tolerance) print*, "Sum of x-flux=", corr
-               if(corr .gt. rho_tot(i,j,k)*1e-8) then
-                  !write(*,*) "Error: sum of x-fluxes greater than rho_tot*1e-8"             
-                  !write(*,*) "sum is",corr
-               endif
+               if(corr .gt. rho_tot(i,j,k)*fraction_tolerance) then
+                  !write(*,*) "Error: sum of x-fluxes = ", corr, " fluxes=", flux_x(i,j,:)
+               end if
               
                ! correct x-flux for last species  
-               if(abs(flux_x(i,j,k,nspecies)).gt.abs(sumx) .or. abs(flux_x(i,j,k,nspecies)) & 
-                  .lt.abs(sumx)) then 
+               !if(abs(flux_x(i,j,k,nspecies)).gt.abs(sumx) .or. abs(flux_x(i,j,k,nspecies)) & 
+               !   .lt.abs(sumx)) then 
                   flux_x(i,j,k,nspecies) = -sumx             
-               endif
+                  total_corr = total_corr + abs(corr) ! Donev: Add diagnostics    
+               !end if
 
-            enddo
-         enddo
-      enddo
-
+            end do
+         end do
+      end do
+      write(*,*) "x flux correction = ", total_corr
+      
       ! y-faces
+      total_corr=0.0d0
       do k=lo(3),hi(3)
          do j=lo(2),hi(2)+1
             do i=lo(1),hi(1)
@@ -196,28 +194,32 @@ contains
                ! sum the y-fluxes upto nspecies-1 
                do n=1, nspecies-1
                   sumy = sumy + flux_y(i,j,k,n)
-               enddo
+               end do
               
                ! caculate corr and print error if not zero 
                corr = flux_y(i,j,k,nspecies) + sumy 
                
                if(corr .gt. fraction_tolerance) print*, "Sum of y-flux=", corr
                if(corr .gt. rho_tot(i,j,k)*1e-8) then
+               !write(*,*) "Error: sum of y-fluxes = ", corr, " fluxes=", flux_y(i,j,:)
                   write(*,*) "Error: sum of y-fluxes greater than rho_tot*1e-8"             
                   write(*,*) "sum is",corr
-               endif
+               end if
               
                ! correct y-flux for last species  
-               if(abs(flux_y(i,j,k,nspecies)).gt.abs(sumy) .or. abs(flux_y(i,j,k,nspecies)) & 
-                  .lt.abs(sumy)) then 
+               !if(abs(flux_y(i,j,k,nspecies)).gt.abs(sumy) .or. abs(flux_y(i,j,k,nspecies)) & 
+               !   .lt.abs(sumy)) then 
                   flux_y(i,j,k,nspecies) = -sumy             
-               endif
+                  total_corr = total_corr + abs(corr) ! Donev: Add diagnostics    
+               !end if
  
-            enddo
-         enddo
-      enddo
+            end do
+         end do
+      end do
+      write(*,*) "y flux correction = ", total_corr
 
       ! z-faces
+      total_corr=0.0d0
       do k=lo(3),hi(3)+1
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)
@@ -229,26 +231,27 @@ contains
                ! sum the z-fluxes upto nspecies-1 
                do n=1, nspecies-1
                   sumz = sumz + flux_z(i,j,k,n)
-               enddo
+               end do
               
                ! caculate corr and print error if not zero 
                corr = flux_z(i,j,k,nspecies) + sumz 
                
                if(corr .gt. fraction_tolerance) print*, "Sum of z-flux=", corr
                if(corr .gt. rho_tot(i,j,k)*1e-8) then
-                  write(*,*) "Error: sum of z-fluxes greater than rho_tot*1e-8"             
-                  write(*,*) "sum is",corr
-               endif
+                  !write(*,*) "Error: sum of z-fluxes = ", corr, " fluxes=", flux_z(i,j,k,:)
+               end if
               
                ! correct z-flux for last species  
-               if(abs(flux_z(i,j,k,nspecies)).gt.abs(sumz) .or. abs(flux_z(i,j,k,nspecies)) & 
-                  .lt.abs(sumz)) then 
+               !if(abs(flux_z(i,j,k,nspecies)).gt.abs(sumz) .or. abs(flux_z(i,j,k,nspecies)) & 
+               !   .lt.abs(sumz)) then 
                   flux_z(i,j,k,nspecies) = -sumz             
-               endif
+                  total_corr = total_corr + abs(corr) ! Donev: Add diagnostics    
+               !end if
  
-            enddo
-         enddo
-      enddo
+            end do
+         end do
+      end do
+      write(*,*) "z flux correction = ", total_corr
 
     end subroutine correction_flux_3d
 

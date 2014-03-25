@@ -38,18 +38,18 @@ contains
       ! Donev: Turned this off since it should be done in the caller
       do ii = 1, nspec
        Xkp(ii) = Xk(ii) ! + fraction_tolerance*(sum(Xk(:))/dble(nspec)-Xk(ii))
-      enddo
+      end do
 
       ! molecular weight of mixture - EGLIB
       Mwmix = 0.0d0
       do ii = 1, nspec
        MWmix = MWmix + Xkp(ii)*Wk(ii)
-      enddo
+      end do
 
       ! mass fractions correction - EGLIB
       do ii = 1, nspec
        Ykp(ii) = Wk(ii)/MWmix*Xkp(ii)
-      enddo
+      end do
 
       ! Find Di matrix 
       do i = 1, nspec
@@ -57,16 +57,16 @@ contains
        do j = 1, nspec
         if(j.ne.i) then
           term2 = term2 + Xkp(j)/D_MS(i,j)
-        endif
-       enddo   
+        end if
+       end do   
        Di(i) = (1.d0-Ykp(i))/term2 
-      enddo   
+      end do   
 
       ! Compute Mmat and Minv
       do i = 1, nspec
        Mmat(i) = Xkp(i)/Di(i)
        Minv(i) = Di(i)/Xkp(i)
-      enddo
+      end do
 
       ! Compute P matrix
       Pmat = 0.0d0
@@ -75,9 +75,9 @@ contains
          Pmat(i,j) = - Ykp(j) 
          if(i.eq.j) then
           Pmat(i,j) =  Pmat(i,j) + 1.0d0  
-         endif
-       enddo
-      enddo
+         end if
+       end do
+      end do
 
       ! Compute Deltamat
       Deltamat = 0.0d0 
@@ -88,27 +88,27 @@ contains
           do k = 1, nspec
            if(k.ne.i) then
             term1 = term1 + Xkp(i)*Xkp(k)/D_MS(i,k)
-           endif
-          enddo  
+           end if
+          end do  
           Deltamat(i,i) = term1
          else
           Deltamat(i,j) = -Xkp(i)*Xkp(j)/D_MS(i,j) 
-         endif  
+         end if  
           Zmat(i,j) = -Deltamat(i,j)
-       enddo
-      enddo  
+       end do
+      end do  
 
       ! Compute Zmat
       do i = 1, nspec
         Zmat(i,i) = Zmat(i,i) + Mmat(i)
-      enddo  
+      end do  
 
       ! Compute Jmat
       do i = 1, nspec
        do j = 1, nspec
          Jmat(i,j) = Minv(i)*Zmat(i,j)
-        enddo
-       enddo
+        end do
+       end do
 
       ! Compute PJ
       PJ = 0.0d0
@@ -116,9 +116,9 @@ contains
        do j = 1, nspec
         do k = 1, nspec
          PJ(i,j) = PJ(i,j) + Pmat(i,k)*Jmat(k,j)
-        enddo
-       enddo
-      enddo
+        end do
+       end do
+      end do
 
       ! Compute P M^-1 Pt; store it in matrix2
       do i = 1, nspec
@@ -127,11 +127,11 @@ contains
         do k = 1, nspec
          scr = scr + Pmat(i,k)*Minv(k)*Pmat(j,k) 
             ! notice the change in indices for Pmat to represent Pmat^t
-        enddo
+        end do
          matrix2(i,j) = scr
          chi(i,j) = scr
-       enddo
-      enddo
+       end do
+      end do
 
       do jj = 1,num_iterations
        do i = 1, nspec
@@ -139,12 +139,12 @@ contains
          scr = 0.d0
          do k = 1, nspec
             scr = scr + PJ(i,k)*chi(k,j)
-         enddo
+         end do
           matrix1(i,j) = scr+matrix2(i,j)
-        enddo
-       enddo 
+        end do
+       end do 
        chi=matrix1
-      enddo
+      end do
 
   end subroutine
 
@@ -176,7 +176,7 @@ contains
 
               sum1 = sum1 - a(i,k)*a(j,k)
 
-           enddo
+           end do
 
            if(i.eq.j) then
 
@@ -190,7 +190,7 @@ contains
 
              p(i) = sqrt(sum1)
 
-             endif
+             end if
 
            else
 
@@ -202,13 +202,13 @@ contains
 
                 a(j,i) = 0.d0
 
-             endif
+             end if
 
-           endif
+           end if
 
-        enddo
+        end do
 
-       enddo
+       end do
 
 
        do i = 1, np
@@ -217,11 +217,11 @@ contains
 
            a(i,j) = 0.0d0 ! Zero upper triangle
 
-          enddo
+          end do
           
           a(i,i) = p(i)
 
-       enddo
+       end do
 
     end subroutine
 

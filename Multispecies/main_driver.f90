@@ -67,7 +67,7 @@ subroutine main_driver()
   ! we use refinement ratio of 2 in every direction between all levels
   do n=2,nlevs
      mba%rr(n-1,:) = 2
-  enddo
+  end do
 
   ! set grid spacing at each level; presently grid spacing is same in all direction
   dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
@@ -77,11 +77,11 @@ subroutine main_driver()
     case(2)
       if (dx(1,1) .ne. dx(1,2)) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-      endif    
+      end if    
     case(3)
       if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-      endif    
+      end if    
     case default
       call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
   end select
@@ -89,7 +89,7 @@ subroutine main_driver()
   ! use refined dx for next level
   do n=2,nlevs
      dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
-  enddo
+  end do
 
   ! create a box from (0,0) to (n_cells-1,n_cells-1)
   lo(1:dm) = 0
@@ -100,7 +100,7 @@ subroutine main_driver()
   mba%pd(1) = bx
   do n=2,nlevs
      mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
-  enddo
+  end do
 
   ! initialize the boxarray at level 1 to be one single box
   call boxarray_build_bx(mba%bas(1),bx)
@@ -111,7 +111,7 @@ subroutine main_driver()
   ! now build the boxarray at other levels
   if (nlevs .ge. 2) then
      call bl_error("Need to build boxarray for n>1")
-  endif
+  end if
 
   ! build pmask
   allocate(pmask(dm))
@@ -119,8 +119,8 @@ subroutine main_driver()
   do i=1,dm
      if (bc_lo(i) .eq. PERIODIC .and. bc_hi(i) .eq. PERIODIC) then
         pmask(i) = .true.
-     endif
-  enddo
+     end if
+  end do
 
   ! build the ml_layout, mla
   call ml_layout_build(mla,mba,pmask)
@@ -146,7 +146,7 @@ subroutine main_driver()
   do n=1,nlevs
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
-  enddo
+  end do
 
   ! these quantities are populated here and defined in probin_multispecies 
   rho_part_bc_comp   = scal_bc_comp + 1
@@ -161,7 +161,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_build(rho(n),      mla%la(n),nspecies,1)
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
-  enddo
+  end do
 
   ! Initialize random numbers *after* the global (root) seed has been set:
   if(use_stoch) call SeedParallelRNG(seed)
@@ -186,7 +186,7 @@ subroutine main_driver()
   ! write initial plotfile
   if (plot_int .gt. 0) then
      call write_plotfile(mla,"plt_rho",rho,istep,dx,time,prob_lo,prob_hi)
-  endif
+  end if
 
   ! print out the total masses
   call sum_mass(rho, step=0)
@@ -202,18 +202,18 @@ subroutine main_driver()
 
      if (parallel_IOProcessor()) then
         !print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-     endif
+     end if
 
      ! advance the solution by dt
      call advance(mla,rho,molmass,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
      ! print out the total mass to check conservation
-     call sum_mass(rho, istep)
+     !call sum_mass(rho, istep)
 
      ! compute error norms
      if (print_error_norms) then
         call print_errors(rho,rho_exact,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
-     endif
+     end if
 
      ! write plotfile at specific intervals
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
@@ -224,18 +224,21 @@ subroutine main_driver()
         ! difference between rho and rho_exact
         do n=1,nlevs
            call saxpy(rho_exact(n),-1.0d0,rho(n))
-        enddo
+        end do
         
         ! check error with visit
         call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time,prob_lo,prob_hi)
  
-     endif
+     end if
      
      ! increment simulation time
      time = time + dt
         
-  enddo
+  end do
 
+  ! print out the total mass to check conservation
+  call sum_mass(rho, istep)
+  
   !=======================================================
   ! Destroy multifabs and layouts
   !=======================================================
@@ -244,7 +247,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_exact(n))
-  enddo
+  end do
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 

@@ -52,7 +52,7 @@ contains
                                      ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
           end select
        end do
-    enddo
+    end do
 
   end subroutine external_source
 
@@ -92,8 +92,8 @@ contains
              fluxdiv(i,j,1) = fluxdiv(i,j,1) + r_temp 
              fluxdiv(i,j,2) = fluxdiv(i,j,2) - r_temp
 
-        enddo
-     enddo
+        end do
+     end do
   
 
     !==== for m2=m3, D12=D13 and Grad(w2)=0, 3 species ====! 
@@ -126,8 +126,8 @@ contains
              !fluxdiv(i,j,2) = fluxdiv(i,j,2) - r_temp
              !=======================!
 
-        enddo
-     enddo
+        end do
+     end do
  
     end select 
 
@@ -172,9 +172,9 @@ contains
               fluxdiv(i,j,k,1) = fluxdiv(i,j,k,1) - r_temp 
               fluxdiv(i,j,k,2) = fluxdiv(i,j,k,2) + r_temp 
  
-           enddo
-        enddo
-     enddo
+           end do
+        end do
+     end do
 
     !==== for m2=m3, D12=D13 and Grad(w2)=0, 3 species ====! 
     case(5) 
@@ -201,9 +201,9 @@ contains
               fluxdiv(i,j,k,2) = fluxdiv(i,j,k,2) + r_temp1 
               fluxdiv(i,j,k,3) = fluxdiv(i,j,k,3) - (r_temp + r_temp1) 
 
-           enddo
-        enddo
-     enddo
+           end do
+        end do
+     end do
 
 
     end select 

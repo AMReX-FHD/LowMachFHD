@@ -70,8 +70,8 @@ contains
          
          call correct_rho_with_drho_local(rho(i,j,:),drho(i,j,:))
 
-       enddo
-    enddo
+       end do
+    end do
  
   end subroutine correct_rho_with_drho_2d
 
@@ -91,9 +91,9 @@ contains
 
              call correct_rho_with_drho_local(rho(i,j,k,:),drho(i,j,k,:))
 
-          enddo
-       enddo
-    enddo
+          end do
+       end do
+    end do
  
   end subroutine correct_rho_with_drho_3d
 
@@ -115,8 +115,8 @@ contains
            drho(row) = fraction_tolerance*rho_tot_local
        else
            drho(row) = 0.0d0
-       endif
-    enddo
+       end if
+    end do
  
     ! modify rho  
     rho = rho + drho 
@@ -189,8 +189,8 @@ contains
          call compute_molconc_rhotot_local(rho(i,j,:),rho_tot(i,j),&
               molarconc(i,j,:),molmass,molmtot(i,j))
 
-       enddo
-    enddo
+       end do
+    end do
  
   end subroutine compute_molconc_rhotot_2d
 
@@ -214,9 +214,9 @@ contains
              call compute_molconc_rhotot_local(rho(i,j,k,:),rho_tot(i,j,k),&
                   molarconc(i,j,k,:),molmass,molmtot(i,j,k))
 
-          enddo
-       enddo
-    enddo
+          end do
+       end do
+    end do
  
   end subroutine compute_molconc_rhotot_3d
 
@@ -237,7 +237,7 @@ contains
     rho_tot_local=0.d0 
     do n=1, nspecies  
        rho_tot_local = rho_tot_local + rho(n)
-    enddo         
+    end do         
     rho_tot = rho_tot_local
 
     ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i))
@@ -245,13 +245,13 @@ contains
     do n=1, nspecies  
        W(n) = rho(n)/rho_tot
        Sum_woverm = Sum_woverm + W(n)/molmass(n)
-    enddo
+    end do
     molmtot = 1.0d0/Sum_woverm 
 
     ! calculate molar concentrations in each cell (x_i=m*w_i/m_i) 
     do n=1, nspecies 
        molarconc(n) = molmtot*W(n)/molmass(n)
-    enddo
+    end do
     
   end subroutine compute_molconc_rhotot_local 
 
@@ -333,16 +333,16 @@ contains
               print*, 'print chi via inverse/p-inverse'
             else 
               print*, 'print chi via iterative methods'
-            endif
+            end if
             call set_Xij(chilocal, chi(i,j,:)) 
             do row=1, nspecies
                do column=1, nspecies
                   print*, chilocal(row, column)
-               enddo
+               end do
                print*, ''
-            enddo
-          endif
-          endif
+            end do
+          end if
+          end if
 
        end do
     end do
@@ -403,9 +403,9 @@ contains
        do column=1, row-1
           Lambda(row, column) = -molarconc(row)*molarconc(column)/D_MS(row,column)
           Lambda(column, row) = Lambda(row, column) 
-       enddo
+       end do
        W(row) = rho(row)/rho_tot
-    enddo
+    end do
 
     ! compute Lambda_ii
     do row=1, nspecies
@@ -413,17 +413,17 @@ contains
        do column=1, nspecies
           if(column.ne.row) then
              Sum_knoti = Sum_knoti - Lambda(row,column)
-          endif
+          end if
           Lambda(row,row) = Sum_knoti
-       enddo
-    enddo
+       end do
+    end do
 
     ! compute chi either selecting inverse/pseudoinverse or iterative methods 
     if(use_lapack) then
        call compute_chi_lapack(Lambda(:,:),chi(:,:),W(:))
     else
        call Dbar2chi_iterative(nspecies,100,D_MS(:,:),molmass(:),molarconc(:),chi(:,:)) 
-    endif
+    end if
 
   end subroutine compute_chi_local
 
@@ -458,14 +458,14 @@ contains
     alpha = 0.d0
     do row=1, nspecies
        alpha = alpha + Lambda(row,row)
-    enddo
+    end do
  
     ! calculate Lambda + alpha*W*WT (Equation 6) 
     do row=1, nspecies
        do column=1, nspecies
           chilocal(row,column) = alpha*W(row)*W(column) + Lambda(row,column)
-       enddo
-    enddo
+       end do
+    end do
 
     !===============================================================          
     ! select LAPACK inversion type, 1=inverse, 2=pseudo inverse 
@@ -499,14 +499,14 @@ contains
     do row=1, nspecies
        do column=1,nspecies
           Sdag(row,column) = 0.0d0
-       enddo
+       end do
        
        if(S(row).gt.fraction_tolerance) then 
           Sdag(row,row) = 1.0d0/S(row)
        else
           Sdag(row,row) = 0.0d0
-       endif 
-    enddo
+       end if 
+    end do
 
     ! compute chi = V*Sdag*UT, the pseudoinverse of chilocal 
     chi = matmul(V, matmul(Sdag, UT))
@@ -518,8 +518,8 @@ contains
     do row=1, nspecies
        do column=1, nspecies
           chi(row,column) = chi(row,column) - 1.0d0/alpha
-       enddo
-    enddo
+       end do
+    end do
           
   end subroutine compute_chi_lapack
 
@@ -605,14 +605,16 @@ contains
           if(.false.) then
           if(i.eq.7 .and. j.eq.14) then
           call set_Xij(Lonsager_local, Lonsager(i,j,:)) 
+            write(*,*), "Lonsager"
             do row=1, nspecies
-               do column=1, nspecies
-                  print*, Lonsager_local(row,column) 
-               enddo
-               print*, '' 
-            enddo
-          endif
-          endif
+               write(*,*), Lonsager_local(row,:) 
+               !write(*,*), sum(Lonsager_local(row,:))
+            end do
+            do row=1, nspecies
+               write(*,*), sum(Lonsager_local(:,row))
+            end do
+          end if
+          end if
 
        end do
     end do
@@ -667,26 +669,35 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     ! compute massfraction W_i = rho_i/rho; 
     do row=1, nspecies  
        W(row) = rho(row)/rho_tot
-    enddo
+    end do
 
     ! compute Onsager matrix L
     do column=1, nspecies
        do row=1, nspecies
           ! Donev: This will need to be modified when we go to variable temperature
           Lonsager(row, column) = rho_tot*rho_tot*Temp*W(row)*chi(row,column)*W(column)/Press
-       enddo
-    enddo
+       end do
+    end do
 
     ! compute cell-centered Cholesky factor of Lonsager
-    call dpotrf_f95(Lonsager,'L', rcond, 'I', info)
+    if(use_lapack) then
+       
+       call dpotrf_f95(Lonsager,'L', rcond, 'I', info)
     
-    ! remove all the upper-triangular entries that lapack doesn't set to zero 
-    do row=1, nspecies
-       do column=row+1, nspecies
-          Lonsager(row, column) = 0.0d0          
-       enddo
-    enddo    
-   
+       ! remove all the upper-triangular entries and NXN entry that lapack doesn't set to zero 
+       do row=1, nspecies
+          do column=row+1, nspecies
+             Lonsager(row, column) = 0.0d0          
+          end do
+       end do    
+       Lonsager(nspecies, nspecies) = 0.0d0          
+    
+    else
+    
+       call choldc(Lonsager,nspecies)   
+    
+    end if
+
   end subroutine compute_Lonsager_local
 
   subroutine compute_rhoWchiGama(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama,the_bc_level)
@@ -775,11 +786,11 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
              do row=1, nspecies
                 do column=1, nspecies
                    print*, rhoWchiGamaloc(row,column) 
-                enddo
+                end do
                 print*, '' 
-             enddo
-          endif
-          endif
+             end do
+          end if
+          end if
 
        end do
     end do
@@ -833,27 +844,27 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     ! compute massfraction W_i = rho_i/rho; 
     do row=1, nspecies  
        W(row) = rho(row)/rho_tot
-    enddo
+    end do
 
     ! check chi*w=0
     !chiw = matmul(chi, W)
     !if(.false.) then
     !if(i.eq.15 .and. j.eq.16) print*, rho, chi, chiw
-    !endif
+    !end if
 
     ! compute chi*Gamma 
     if(is_ideal_mixture) then
        rhoWchiGama = chi
     else
        rhoWchiGama = matmul(chi, Gama)
-    endif 
+    end if 
           
     ! populate -rho*W*chi*Gama = -rho_i*chi*Gamma
     do row=1, nspecies
        do column=1, nspecies
           rhoWchiGama(row,column) = -rho(row)*rhoWchiGama(row,column)  
-       enddo
-    enddo
+       end do
+    end do
     
   end subroutine compute_rhoWchiGama_local
 

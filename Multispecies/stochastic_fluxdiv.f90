@@ -25,20 +25,19 @@ contains
   subroutine stochastic_fluxdiv(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,&
                                 Gama,stoch_W_fc,stoch_fluxdiv,dx,dt,weights,the_bc_level)
 
-    ! Donev: For those things that are pure input change intent(inout) to intent(in)
     type(ml_layout), intent(in   )   :: mla
-    type(multifab) , intent(inout)   :: rho(:)
-    type(multifab) , intent(inout)   :: rho_tot(:)
-    type(multifab) , intent(inout)   :: molarconc(:)
+    type(multifab) , intent(in   )   :: rho(:)
+    type(multifab) , intent(in   )   :: rho_tot(:)
+    type(multifab) , intent(in   )   :: molarconc(:)
     real(kind=dp_t), intent(in   )   :: molmass(nspecies) 
-    type(multifab) , intent(inout)   :: molmtot(:)
-    type(multifab) , intent(inout)   :: chi(:)
-    type(multifab) , intent(inout)   :: Gama(:)
-    type(multifab) , intent(inout)   :: stoch_W_fc(:,:,:)
+    type(multifab) , intent(in   )   :: molmtot(:)
+    type(multifab) , intent(in   )   :: chi(:)
+    type(multifab) , intent(in   )   :: Gama(:)
+    type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:) 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: dt
-    real(kind=dp_t), intent(in)      :: weights(:)         
+    real(kind=dp_t), intent(in   )   :: weights(:)         
     type(bc_level) , intent(in   )   :: the_bc_level(:)
 
     ! Local variables
@@ -60,24 +59,24 @@ contains
        do i=1,dm
           call multifab_build_edge(Lonsager_fc(n,i),   mla%la(n), nspecies**2, 0, i)
           call multifab_build_edge(stoch_flux_fc(n,i), mla%la(n), nspecies,    0, i)
-       enddo
-    enddo
+       end do
+    end do
  
     ! set stoch_flux_fc to zero
     do n=1,nlevs
        do i = 1,dm
           call setval(stoch_flux_fc(n,i), 0.d0, all=.true.)   
-       enddo   
-    enddo   
+       end do   
+    end do   
     
     ! convert stoch_W_fc into stoch_flux_fc
     do n=1,nlevs
        do i = 1,dm
           do rng=1,size(weights)
              call saxpy(stoch_flux_fc(n,i), weights(rng), stoch_W_fc(n,i,rng))
-          enddo   
-       enddo   
-    enddo
+          end do   
+       end do   
+    end do
     
     ! compute cell-centered cholesky-factored Lonsager^(1/2)
     call compute_Lonsager(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,Lonsager,the_bc_level)
@@ -90,22 +89,22 @@ contains
        do i=1,dm
           call matvec_mul(mla, stoch_flux_fc(n,i), Lonsager_fc(n,i))
           call multifab_mult_mult_s(stoch_flux_fc(n,i), variance, 0)
-       enddo
-    enddo  
+       end do
+    end do  
     
     ! sync the fluxes at the boundaries
     do n=1,nlevs
        do i=1,dm
           call multifab_internal_sync(stoch_flux_fc(n,i))
           call multifab_fill_boundary(stoch_flux_fc(n,i))  
-       enddo
-    enddo
+       end do
+    end do
 
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then
-       write(*,*) "Checking conservation of stochastic fluxes"
+       !write(*,*) "Checking conservation of stochastic fluxes"
        call correction_flux(mla, rho, rho_tot, stoch_flux_fc, the_bc_level)
-    endif
+    end if
  
     ! compute divergence of stochastic flux
     call compute_div(mla,stoch_flux_fc,stoch_fluxdiv,dx,1,1,nspecies)
@@ -116,8 +115,8 @@ contains
        do i=1,dm
           call multifab_destroy(Lonsager_fc(n,i))
           call multifab_destroy(stoch_flux_fc(n,i))
-       enddo
-    enddo
+       end do
+    end do
 
   end subroutine stochastic_fluxdiv
    

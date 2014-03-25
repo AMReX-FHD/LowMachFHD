@@ -130,10 +130,6 @@ contains
 
     end if
 
-
-
-
-
   end function inhomogeneous_bc_val_3d
 
 end module inhomogeneous_bc_val_module
