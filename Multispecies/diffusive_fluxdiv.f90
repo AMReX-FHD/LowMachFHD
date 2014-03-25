@@ -21,15 +21,15 @@ module diffusive_fluxdiv_module
 
 contains
 
-  subroutine diffusive_fluxdiv(mla,rho,rho_tot,diff_fluxdiv,molarconc,rhoWchiGama,molmass,dx,the_bc_level)
+  subroutine diffusive_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchiGama,diff_fluxdiv,dx,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rho_tot(:)
-    type(multifab) , intent(inout)  :: diff_fluxdiv(:)
-    type(multifab) , intent(inout)  :: molarconc(:)
-    type(multifab) , intent(inout)  :: rhoWchiGama(:)
+    type(multifab) , intent(in   )  :: molarconc(:)
     real(kind=dp_t), intent(in   )  :: molmass(:) 
+    type(multifab) , intent(in   )  :: rhoWchiGama(:)
+    type(multifab) , intent(inout)  :: diff_fluxdiv(:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_level) , intent(in   )  :: the_bc_level(:)
 
@@ -81,7 +81,7 @@ contains
     type(multifab) , intent(inout)   :: rhoWchiGama(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
-    type(multifab) , intent(inout)   :: stoch_W_fc(:,:,:)
+    type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -101,7 +101,7 @@ contains
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     do n=1,nlevs
        call multifab_build(drho(n),mla%la(n),nspecies,rho(n)%ng)
-    enddo
+    end do
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
     call correct_rho_with_drho(mla,rho,drho,the_bc_level)
@@ -120,8 +120,7 @@ contains
                              Gama,rhoWchiGama,the_bc_level)
 
     ! compute determinstic fluxdiv (interior only), rho contains ghost filled in init/end of this code
-    call diffusive_fluxdiv(mla,rho,rho_tot,diff_fluxdiv,molarconc,rhoWchiGama,&
-                           molmass,dx,the_bc_level)
+    call diffusive_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchiGama,diff_fluxdiv,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,prob_lo,prob_hi,dx,stage_time)
@@ -134,12 +133,12 @@ contains
     ! revert back rho to it's original form
     do n=1,nlevs
        call saxpy(rho(n),-1.0d0,drho(n))
-    enddo 
+    end do 
       
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(drho(n))
-    enddo
+    end do
 
   end subroutine compute_fluxdiv
   

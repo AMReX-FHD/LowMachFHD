@@ -39,7 +39,7 @@ module analysis_module
      ! substract the values 
      do n=1,nlevs
         call multifab_sub_sub_c(rho_exact(n),1,rho(n),1,nspecies,0)
-     enddo
+     end do
 
      n_cell = multifab_volume(rho_exact(1))/nspecies 
      
@@ -55,7 +55,7 @@ module analysis_module
         ! L2 norm = sqrt{1/n_cell*sum(diff_i^2)} 
         norm_l2(i) = multifab_norm_l2_c(rho_exact(1),i,1,all=.false.)/sqrt(dble(n_cell))
      
-     enddo
+     end do
      
      ! calculate total norms 
      norm_inf_tot = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
@@ -69,9 +69,9 @@ module analysis_module
             !if(time.gt.0.49d0) then
                write(*,*), time, norm_inf(1:nspecies), norm_l1(1:nspecies),norm_l2(1:nspecies),&
                        norm_inf_tot,norm_l1_tot,norm_l2_tot
-            endif
-        endif
-     endif
+            end if
+        end if
+     end if
      
      ! for checking analytic solution with Visit
      call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 

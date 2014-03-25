@@ -44,8 +44,8 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_build_edge(rhoWchiGama_face(n,i),mla%la(n),nspecies**2,0,i)
-       enddo
-    enddo 
+       end do
+    end do 
 
     ! calculate face-centrered grad(molarconc) 
     call compute_grad(mla, molarconc, flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
@@ -59,22 +59,22 @@ contains
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, flux(n,i), rhoWchiGama_face(n,i))
-       enddo
-    enddo    
+       end do
+    end do    
 
     ! Donev: Moved this to after the multiplication
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then
-       write(*,*) "Checking conservation of deterministic fluxes"
+       !write(*,*) "Checking conservation of deterministic fluxes"
        call correction_flux(mla, rho, rho_tot, flux, the_bc_level)
-    endif
+    end if
     
     ! destroy B^(-1)*Gama multifab to prevent leakage in memory
     do n=1,nlevs
        do i=1,dm
           call multifab_destroy(rhoWchiGama_face(n,i))
-       enddo
-    enddo
+       end do
+    end do
 
   end subroutine diffusive_flux
 

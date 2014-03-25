@@ -163,7 +163,7 @@ contains
     if(nspecies.gt.max_species) then 
        call bl_error(" nspecies greater than max_species - Aborting")
        stop
-    endif
+    end if
     
   end subroutine probin_multispecies_init
 

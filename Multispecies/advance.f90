@@ -62,7 +62,7 @@ contains
        call multifab_build(Gama(n),            mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(rhoWchiGama(n),     mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(stoch_fluxdiv(n),   mla%la(n), nspecies,    0) 
-    enddo
+    end do
 
     !========================================================
     ! initialize random number generator for stochastic flux
@@ -86,9 +86,9 @@ contains
           do rng=1, n_rngs 
              do i = 1,dm
                 call multifab_build_edge(stoch_W_fc(n,i,rng),mla%la(n),nspecies,0,i)
-             enddo
-          enddo
-       enddo
+             end do
+          end do
+       end do
       
        ! initialize stochastic flux on every face W(0,1) 
        call generate_random_increments(mla,n_rngs,stoch_W_fc)
@@ -116,7 +116,7 @@ contains
       do n=1,nlevs
                        call saxpy(rho(n),-dt,diff_fluxdiv(n))
          if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
-      enddo 
+      end do 
     
       case(2)
       !=========================================================================================
@@ -128,11 +128,11 @@ contains
       ! store old rho in rhonew after clearing up memory 
       do n=1,nlevs
           call setval(rhonew(n), 0.d0, all=.true.)
-      enddo
+      end do
  
       do n=1,nlevs
          call saxpy(rhonew(n),1.0d0,rho(n))
-      enddo 
+      end do 
       
       !=====================
       ! Euler Predictor step
@@ -150,7 +150,7 @@ contains
       do n=1,nlevs
          call saxpy(rhonew(n),-dt,diff_fluxdiv(n))
          if(use_stoch) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
-      enddo 
+      end do 
    
       ! update values of the ghost cells of rhonew
       do n=1,nlevs
@@ -158,7 +158,7 @@ contains
         
          ! fill non-periodic domain boundary ghost cells
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
-      enddo
+      end do
 
       !=========================== 
       ! Trapezoidal Corrector step
@@ -176,7 +176,7 @@ contains
                        call saxpy(rho(n),-0.5d0*dt,diff_fluxdiv(n))
                        call saxpy(rho(n),-0.5d0*dt,diff_fluxdivnew(n))
          if(use_stoch) call saxpy(rho(n),      -dt,stoch_fluxdiv(n))
-      enddo
+      end do
  
       case(3)
       !========================================================================================
@@ -188,11 +188,11 @@ contains
       ! store old rho in rhonew after clearing up memory 
       do n=1,nlevs
           call setval(rhonew(n), 0.d0, all=.true.)
-      enddo
+      end do
  
       do n=1,nlevs
          call saxpy(rhonew(n),1.0d0,rho(n))
-      enddo 
+      end do 
 
       !===========
       ! 1st stage
@@ -211,7 +211,7 @@ contains
       do n=1,nlevs
                        call saxpy(rhonew(n),-0.5d0*dt,diff_fluxdiv(n))
          if(use_stoch) call saxpy(rhonew(n),      -dt,stoch_fluxdiv(n))
-      enddo 
+      end do 
 
       ! update values of the ghost cells of rhonew
       do n=1,nlevs
@@ -219,7 +219,7 @@ contains
         
          ! fill non-periodic domain boundary ghost cells
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
-      enddo
+      end do
 
       !===========
       ! 2nd stage
@@ -238,7 +238,7 @@ contains
       do n=1,nlevs
                        call saxpy(rho(n), -dt, diff_fluxdivnew(n))
          if(use_stoch) call saxpy(rho(n), -dt, stoch_fluxdiv(n))
-      enddo 
+      end do 
       
       case(4)
       !=======================================================================================================================
@@ -251,11 +251,11 @@ contains
       ! store old rho in rhonew after clearing up memory 
       do n=1,nlevs
           call setval(rhonew(n), 0.d0, all=.true.)
-      enddo
+      end do
  
       do n=1,nlevs
          call saxpy(rhonew(n),1.0d0,rho(n))
-      enddo 
+      end do 
 
       !===========
       ! 1st stage
@@ -274,7 +274,7 @@ contains
       do n=1,nlevs
                        call saxpy(rhonew(n), -dt, diff_fluxdiv(n))
          if(use_stoch) call saxpy(rhonew(n), -dt, stoch_fluxdiv(n))
-      enddo 
+      end do 
    
       ! update values of the ghost cells of rhonew
       do n=1,nlevs
@@ -282,7 +282,7 @@ contains
         
          ! fill non-periodic domain boundary ghost cells
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
-      enddo
+      end do
 
       !===========
       ! 2nd stage
@@ -304,7 +304,7 @@ contains
                        call saxpy(rhonew(n),  0.75d0   , rho(n))
                        call saxpy(rhonew(n), -0.25d0*dt, diff_fluxdivnew(n))
          if(use_stoch) call saxpy(rhonew(n), -0.25d0*dt, stoch_fluxdiv(n))
-      enddo 
+      end do 
 
       ! update values of the ghost cells of rho_star
       do n=1,nlevs
@@ -312,7 +312,7 @@ contains
         
          ! fill non-periodic domain boundary ghost cells
          call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
-      enddo
+      end do
       
       !===========
       ! 3rd stage
@@ -321,7 +321,7 @@ contains
       ! free up the values of fluxdivnew
       do n=1,nlevs
          call setval(diff_fluxdivnew(n), 0.d0, all=.true.)
-      enddo 
+      end do 
 
       stage_time = time + dt/2.0d0
       weights(1) = 2.0d0/3.0d0 
@@ -338,7 +338,7 @@ contains
                        call saxpy(rho(n),  (2.0d0/3.0d0)   , rhonew(n))
                        call saxpy(rho(n), -(2.0d0/3.0d0)*dt, diff_fluxdivnew(n))
          if(use_stoch) call saxpy(rho(n), -(2.0d0/3.0d0)*dt, stoch_fluxdiv(n))
-      enddo 
+      end do 
 
     !=============================================================================================
     end select  
@@ -350,7 +350,7 @@ contains
 
        ! fill non-periodic domain boundary ghost cells
        call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
-    enddo   
+    end do   
 
     ! free the multifab allocated memory
     do n=1,nlevs
@@ -365,7 +365,7 @@ contains
        call multifab_destroy(Gama(n))
        call multifab_destroy(rhoWchiGama(n))
        call multifab_destroy(stoch_fluxdiv(n))
-    enddo
+    end do
     
     if(use_stoch) then
        call destroy_random_increments(mla,n_rngs,stoch_W_fc)
@@ -391,8 +391,8 @@ contains
       do rng=1, n_rngs
          do i = 1,dm
             call multifab_fill_random(stoch_W_fc(:,i,rng))
-         enddo   
-      enddo   
+         end do   
+      end do   
   
     end subroutine generate_random_increments
   
@@ -413,9 +413,9 @@ contains
          do rng=1, n_rngs 
             do i = 1,dm
                call multifab_destroy(stoch_W_fc(n,i,rng))
-            enddo
-         enddo
-      enddo
+            end do
+         end do
+      end do
 
     end subroutine destroy_random_increments
 

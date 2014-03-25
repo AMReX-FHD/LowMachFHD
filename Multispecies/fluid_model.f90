@@ -138,10 +138,10 @@ contains
           D_MS(column, row) = D_MS(row, column) ! symmetric
           Gama(row, column) = 0.d0       
           Gama(column, row) = Gama(row, column) ! symmetric
-       enddo
+       end do
        D_MS(row, row) = 0.d0   ! self-diffusion is zero
        Gama(row, row) = 1.d0   ! set to unit matrix for time being
-    enddo
+    end do
 
   end subroutine compute_D_MSGama_local
 
