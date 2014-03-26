@@ -369,9 +369,9 @@ contains
                             the_bc_tower%bc_tower_array,vel_bc_n)
     end if
 
-    ! add div(Psi^n) to rhs_p
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc_old, &
-                                 chi_fc_old,dx,dt,vel_bc_n)
+    ! add div(Psi^n') to rhs_p
+    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+                                 chi_fc,dx,dt,vel_bc_n)
 
     call mk_external_s_force(mla,gmres_rhs_p,dx,time+dt,1)
 
