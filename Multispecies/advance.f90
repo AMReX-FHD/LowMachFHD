@@ -5,6 +5,7 @@ module advance_module
   use multifab_physbc_module
   use multifab_fill_random_module
   use ml_layout_module
+  use analysis_module
   use diffusive_fluxdiv_module
   use stochastic_fluxdiv_module
   use probin_multispecies_module
@@ -117,7 +118,12 @@ contains
                        call saxpy(rho(n),-dt,diff_fluxdiv(n))
          if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
       end do 
-    
+  
+      ! check the variances 
+      if(stage_time .gt. 0.5d0) then
+         call meanvar_w(mla,rho,rho_tot,the_bc_level)     
+      end if 
+ 
       case(2)
       !=========================================================================================
       ! Heun's method: Predictor-Corrector explicit method 

@@ -611,7 +611,7 @@ contains
                !write(*,*), sum(Lonsager_local(row,:))
             end do
             do row=1, nspecies
-               write(*,*), sum(Lonsager_local(:,row))
+               !write(*,*), sum(Lonsager_local(:,row))
             end do
           end if
           end if
@@ -675,7 +675,8 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     do column=1, nspecies
        do row=1, nspecies
           ! Donev: This will need to be modified when we go to variable temperature
-          Lonsager(row, column) = rho_tot*rho_tot*Temp*W(row)*chi(row,column)*W(column)/Press
+          !Lonsager(row, column) = rho_tot*rho_tot*Temp*W(row)*chi(row,column)*W(column)/Press
+          Lonsager(row, column) = molmtot*rho_tot*W(row)*chi(row,column)*W(column)/k_B
        end do
     end do
 
@@ -684,7 +685,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
        
        call dpotrf_f95(Lonsager,'L', rcond, 'I', info)
     
-       ! remove all the upper-triangular entries and NXN entry that lapack doesn't set to zero 
+       ! remove all upper-triangular entries and NXN entry that lapack doesn't set to zero 
        do row=1, nspecies
           do column=row+1, nspecies
              Lonsager(row, column) = 0.0d0          
@@ -693,9 +694,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
        Lonsager(nspecies, nspecies) = 0.0d0          
     
     else
-    
        call choldc(Lonsager,nspecies)   
-    
     end if
 
   end subroutine compute_Lonsager_local

@@ -50,8 +50,13 @@ contains
     nlevs = mla%nlevel
     dm    = mla%dim
  
-    ! populate the variance (only first level) 
-    variance = sqrt(2.d0*k_B/(product(dx(1,1:dm))*dt))
+    ! populate the variance (only first level)
+    select case(dm)
+    case (2)
+        variance = sqrt(2.d0*k_B/(product(dx(1,1:dm))*thickness*dt))
+    case (3)
+        variance = sqrt(2.d0*k_B/(product(dx(1,1:dm))*dt))
+    end select
 
     ! build multifabs 
     do n=1,nlevs
@@ -84,7 +89,7 @@ contains
     ! compute face-centered cholesky factor of cell-centered cholesky factored Lonsager^(1/2)
     call average_cc_to_face(nlevs,Lonsager,Lonsager_fc,1,diff_coeff_bc_comp,nspecies**2,the_bc_level,.false.)
 
-    ! compute sqrt(2k_B) X cholesky-Lonsager-face X W(0,1) 
+    ! compute variance X cholesky-Lonsager-face X W(0,1) 
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, stoch_flux_fc(n,i), Lonsager_fc(n,i))
