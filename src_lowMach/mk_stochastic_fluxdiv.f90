@@ -29,29 +29,31 @@ module mk_stochastic_fluxdiv_module
   ! Stochastic fluxes for momentum are generated on:
   ! -cell-centered grid for diagonal components
   ! -node-centered (2D) or edge-centered (3D) grid for off-diagonal components
-  type(multifab), allocatable, save :: mflux_cc(:), mflux_nd(:), mflux_ed(:,:)
+  type(multifab), allocatable, save :: mflux_cc(:,:), mflux_nd(:,:), mflux_ed(:,:,:)
 
   ! Stochastic fluxes for scalars are face-centered
-  type(multifab), allocatable, save :: sflux_fc(:,:)
+  type(multifab), allocatable, save :: sflux_fc(:,:,:)
   
-  logical   , save :: warn_bad_c=.false. ! Should we issue warnings about c<0 or c>1
+  logical, save :: warn_bad_c=.false. ! Should we issue warnings about c<0 or c>1
+
+  integer, save :: n_rngs ! how many random number stages
   
 contains
 
   ! Note that here we *increment* stoch_s_force so it must be initialized externally!
   subroutine mk_stochastic_s_fluxdiv(mla,the_bc_level,stoch_s_force,s_fc, &
-                                     chi_fc,dx,dt,vel_bc_n)
+                                     chi_fc,dx,dt,vel_bc_n,weights)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: stoch_s_force(:)
     type(multifab) , intent(in   ) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: chi_fc(:,:)
-    real(dp_t)     , intent(in   ) :: dx(:,:),dt
+    real(dp_t)     , intent(in   ) :: dx(:,:),dt,weights(:)
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
 
     ! local
-    integer :: n,nlevs,i,dm,m
+    integer :: n,nlevs,i,dm,m,comp
     integer :: ng_x,ng_z,ng_s,ng_f,ng_b
 
     real(dp_t) :: variance
@@ -78,9 +80,12 @@ contains
        
        do i=1,dm
           ! we need one face-centered flux for each concentration
-          call multifab_build_edge(sflux_fc_temp(n,i),mla%la(n),nscal-1,sflux_fc(n,i)%ng,i)
-          ! make a copy of the random numbers
-          call multifab_copy_c(sflux_fc_temp(n,i),1,sflux_fc(n,i),1,nscal-1,sflux_fc_temp(n,i)%ng)
+          call multifab_build_edge(sflux_fc_temp(n,i),mla%la(n),nscal-1,sflux_fc(n,i,1)%ng,i)
+          call multifab_setval(sflux_fc_temp(n,i),0.d0,all=.true.)
+          ! add weighted contribution of fluxes
+          do comp=1,n_rngs
+             call saxpy(sflux_fc_temp(n,i),weights(comp),sflux_fc(n,i,comp),all=.true.)
+          end do
        end do
 
     end do
@@ -530,17 +535,17 @@ contains
   end subroutine mk_stochastic_s_fluxdiv
 
   ! Note that here we *increment* stoch_m_force so it must be initialized externally!
-  subroutine mk_stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,eta_ed,dx,dt)
+  subroutine mk_stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,eta_ed,dx,dt,weights)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: stoch_m_force(:,:)
     type(multifab) , intent(in   ) :: eta(:)
     type(multifab) , intent(in   ) :: eta_ed(:,:)
-    real(dp_t)     , intent(in   ) :: dx(:,:),dt
+    real(dp_t)     , intent(in   ) :: dx(:,:),dt,weights(:)
 
     ! local
-    integer :: n,nlevs,dm,i
+    integer :: n,nlevs,dm,i,comp
     integer :: ng_c,ng_e,ng_y,ng_w,ng_n,ng_f
 
     real(dp_t) :: variance
@@ -588,16 +593,28 @@ contains
           nodal_temp(3) = .true.
           call multifab_build(mflux_ed_temp(n,3),mla%la(n),2,filtering_width,nodal_temp)
        end if
-       
-       ! make a copy of the random numbers
-       call multifab_copy_c(mflux_cc_temp(n),1,mflux_cc(n),1,dm,mflux_cc_temp(n)%ng)
+
+       call multifab_setval(mflux_cc_temp(n),0.d0,all=.true.)
        if (dm .eq. 2) then
-          call multifab_copy_c(mflux_nd_temp(n),1,mflux_nd(n),1,2,mflux_nd_temp(n)%ng)
+          call multifab_setval(mflux_nd_temp(n),0.d0,all=.true.)
        else if (dm .eq. 3) then
-          call multifab_copy_c(mflux_ed_temp(n,1),1,mflux_ed(n,1),1,2,mflux_ed_temp(n,1)%ng)
-          call multifab_copy_c(mflux_ed_temp(n,2),1,mflux_ed(n,2),1,2,mflux_ed_temp(n,2)%ng)
-          call multifab_copy_c(mflux_ed_temp(n,3),1,mflux_ed(n,3),1,2,mflux_ed_temp(n,3)%ng)
+          call multifab_setval(mflux_ed_temp(n,1),0.d0,all=.true.)
+          call multifab_setval(mflux_ed_temp(n,2),0.d0,all=.true.)
+          call multifab_setval(mflux_ed_temp(n,3),0.d0,all=.true.)
        end if
+
+       ! add weighted contribution of fluxes
+       do comp=1,n_rngs
+          call saxpy(mflux_cc_temp(n),weights(comp),mflux_cc(n,comp),all=.true.)
+          if (dm .eq. 2) then
+             call saxpy(mflux_nd_temp(n),weights(comp),mflux_nd(n,comp),all=.true.)
+          else if (dm .eq. 3) then
+             call saxpy(mflux_ed_temp(n,1),weights(comp),mflux_ed(n,1,comp),all=.true.)
+             call saxpy(mflux_ed_temp(n,2),weights(comp),mflux_ed(n,2,comp),all=.true.)
+             call saxpy(mflux_ed_temp(n,3),weights(comp),mflux_ed(n,3,comp),all=.true.)
+          end if
+       end do
+
     end do
 
     ng_c = mflux_cc_temp(1)%ng
@@ -1017,105 +1034,114 @@ contains
     type(ml_layout), intent(in   ) :: mla
 
     ! local
-    integer :: n,nlevs,i,dm
+    integer :: n,nlevs,i,dm,comp
 
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ! Diagonal components of stochastic stress tensor for momentum
-    select case(stoch_stress_form)
-    case (0) ! Non-symmetric
-       call multifab_fill_random(mflux_cc)
-    case default ! Symmetric
-       call multifab_fill_random(mflux_cc, variance=2.d0)
-    end select
+    do comp=1,n_rngs
 
-    ! Off-diagonal components of stochastic stress tensor for momentum
-    if (dm .eq. 2) then
-       ! in 2D, we need 2 random fluxes at each node
+       ! Diagonal components of stochastic stress tensor for momentum
        select case(stoch_stress_form)
-       case(0) ! Non-symmetric
-          call multifab_fill_random(mflux_nd)
+       case (0) ! Non-symmetric
+          call multifab_fill_random(mflux_cc(:,comp))
        case default ! Symmetric
-          call multifab_fill_random(mflux_nd, comp=1)
-          do n=1,nlevs
-             call multifab_copy_c(mflux_nd(n),2,mflux_nd(n),1)
-          end do
+          call multifab_fill_random(mflux_cc(:,comp), variance=2.d0)
        end select
-    else if (dm .eq. 3) then
-       ! in 3D, we need 2 random fluxes at each edge
-       select case(stoch_stress_form)
-       case(0) ! Non-symmetric
-          call multifab_fill_random(mflux_ed(:,1))
-          call multifab_fill_random(mflux_ed(:,2))
-          call multifab_fill_random(mflux_ed(:,3))
-       case default ! Symmetric
-          call multifab_fill_random(mflux_ed(:,1), comp=1)
-          call multifab_fill_random(mflux_ed(:,2), comp=1)
-          call multifab_fill_random(mflux_ed(:,3), comp=1)
-          do n = 1, nlevs
-             call multifab_copy_c(mflux_ed(n,1),2,mflux_ed(n,1),1)
-             call multifab_copy_c(mflux_ed(n,2),2,mflux_ed(n,2),1)
-             call multifab_copy_c(mflux_ed(n,3),2,mflux_ed(n,3),1)
-          end do
-       end select
-    end if
 
-    if(nscal>1) then ! Stochastic diffusive flux
-       do i=1,dm
-          call multifab_fill_random(sflux_fc(:,i))
-       end do
-    end if
+       ! Off-diagonal components of stochastic stress tensor for momentum
+       if (dm .eq. 2) then
+          ! in 2D, we need 2 random fluxes at each node
+          select case(stoch_stress_form)
+          case(0) ! Non-symmetric
+             call multifab_fill_random(mflux_nd(:,comp))
+          case default ! Symmetric
+             call multifab_fill_random(mflux_nd(:,comp), comp=1)
+             do n=1,nlevs
+                call multifab_copy_c(mflux_nd(n,comp),2,mflux_nd(n,comp),1)
+             end do
+          end select
+       else if (dm .eq. 3) then
+          ! in 3D, we need 2 random fluxes at each edge
+          select case(stoch_stress_form)
+          case(0) ! Non-symmetric
+             call multifab_fill_random(mflux_ed(:,1,comp))
+             call multifab_fill_random(mflux_ed(:,2,comp))
+             call multifab_fill_random(mflux_ed(:,3,comp))
+          case default ! Symmetric
+             call multifab_fill_random(mflux_ed(:,1,comp), comp=1)
+             call multifab_fill_random(mflux_ed(:,2,comp), comp=1)
+             call multifab_fill_random(mflux_ed(:,3,comp), comp=1)
+             do n = 1, nlevs
+                call multifab_copy_c(mflux_ed(n,1,comp),2,mflux_ed(n,1,comp),1)
+                call multifab_copy_c(mflux_ed(n,2,comp),2,mflux_ed(n,2,comp),1)
+                call multifab_copy_c(mflux_ed(n,3,comp),2,mflux_ed(n,3,comp),1)
+             end do
+          end select
+       end if
+
+       if(nscal>1) then ! Stochastic diffusive flux
+          do i=1,dm
+             call multifab_fill_random(sflux_fc(:,i,comp))
+          end do
+       end if
+
+    end do
 
   end subroutine fill_stochastic
 
   ! call this once at the beginning of simulation to allocate multifabs
   ! that will hold random numbers
-  subroutine init_stochastic(mla)
+  subroutine init_stochastic(mla,n_rngs_in)
 
     type(ml_layout), intent(in   ) :: mla
+    integer        , intent(in   ) :: n_rngs_in
 
     ! local
-    integer :: n,nlevs,i,dm
+    integer :: n,nlevs,i,dm,comp
     logical :: nodal_temp(mla%dim)
     
+    n_rngs = n_rngs_in
+
     nlevs = mla%nlevel
     dm = mla%dim
 
-    allocate(sflux_fc(mla%nlevel,mla%dim))
-    allocate(mflux_cc(mla%nlevel))
-    allocate(mflux_nd(mla%nlevel))
-    allocate(mflux_ed(mla%nlevel,3))
+    allocate(sflux_fc(mla%nlevel, mla%dim, n_rngs))
+    allocate(mflux_cc(mla%nlevel         , n_rngs))
+    allocate(mflux_nd(mla%nlevel         , n_rngs))
+    allocate(mflux_ed(mla%nlevel, 3      , n_rngs))
 
     do n=1,nlevs
-       if(nscal>1) then
-          do i=1,dm
-             ! we need one face-centered flux for each concentration
-            call multifab_build_edge(sflux_fc(n,i),mla%la(n),nscal-1,filtering_width,i)
-         end do
-       end if
-       ! we need dm cell-centered fluxes for momentum
-       call multifab_build(mflux_cc(n),mla%la(n),dm,max(1,filtering_width))
-       if (dm .eq. 2) then
-          ! in 2D, we need 2 random fluxes at each node
-          nodal_temp = .true.
-          call multifab_build(mflux_nd(n),mla%la(n),2,filtering_width,nodal_temp)
-       else if (dm .eq. 3) then
-          ! in 3D, we need 2 random fluxes at each edge
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .false.
-          call multifab_build(mflux_ed(n,1),mla%la(n),2,filtering_width,nodal_temp)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .false.
-          nodal_temp(3) = .true.
-          call multifab_build(mflux_ed(n,2),mla%la(n),2,filtering_width,nodal_temp)
-          nodal_temp(1) = .false.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .true.
-          call multifab_build(mflux_ed(n,3),mla%la(n),2,filtering_width,nodal_temp)
-       end if
-    end do
+       do comp=1,n_rngs
+          if(nscal>1) then
+             do i=1,dm
+                ! we need one face-centered flux for each concentration
+                call multifab_build_edge(sflux_fc(n,i,comp),mla%la(n),nscal-1,filtering_width,i)
+             end do
+          end if
+          ! we need dm cell-centered fluxes for momentum
+          call multifab_build(mflux_cc(n,comp),mla%la(n),dm,max(1,filtering_width))
+          if (dm .eq. 2) then
+             ! in 2D, we need 2 random fluxes at each node
+             nodal_temp = .true.
+             call multifab_build(mflux_nd(n,comp),mla%la(n),2,filtering_width,nodal_temp)
+          else if (dm .eq. 3) then
+             ! in 3D, we need 2 random fluxes at each edge
+             nodal_temp(1) = .true.
+             nodal_temp(2) = .true.
+             nodal_temp(3) = .false.
+             call multifab_build(mflux_ed(n,1,comp),mla%la(n),2,filtering_width,nodal_temp)
+             nodal_temp(1) = .true.
+             nodal_temp(2) = .false.
+             nodal_temp(3) = .true.
+             call multifab_build(mflux_ed(n,2,comp),mla%la(n),2,filtering_width,nodal_temp)
+             nodal_temp(1) = .false.
+             nodal_temp(2) = .true.
+             nodal_temp(3) = .true.
+             call multifab_build(mflux_ed(n,3,comp),mla%la(n),2,filtering_width,nodal_temp)
+          end if
+       end do ! end loop over n_rngs
+    end do ! end loop over nlevs
 
   end subroutine init_stochastic
 
@@ -1125,25 +1151,27 @@ contains
     type(ml_layout), intent(in   ) :: mla
 
     ! local
-    integer :: n,nlevs,i,dm
+    integer :: n,nlevs,i,dm,comp
     
     nlevs = mla%nlevel
     dm = mla%dim
 
     do n=1,nlevs
-       if(nscal>1) then
-          do i=1,dm
-             call multifab_destroy(sflux_fc(n,i))
-         end do
-       end if
-       call multifab_destroy(mflux_cc(n))
-       if (dm .eq. 2) then
-          call multifab_destroy(mflux_nd(n))
-       else if (dm .eq. 3) then
-          call multifab_destroy(mflux_ed(n,1))
-          call multifab_destroy(mflux_ed(n,2))
-          call multifab_destroy(mflux_ed(n,3))
-       end if
+       do comp=1,n_rngs
+          if(nscal>1) then
+             do i=1,dm
+                call multifab_destroy(sflux_fc(n,i,comp))
+             end do
+          end if
+          call multifab_destroy(mflux_cc(n,comp))
+          if (dm .eq. 2) then
+             call multifab_destroy(mflux_nd(n,comp))
+          else if (dm .eq. 3) then
+             call multifab_destroy(mflux_ed(n,1,comp))
+             call multifab_destroy(mflux_ed(n,2,comp))
+             call multifab_destroy(mflux_ed(n,3,comp))
+          end if
+       end do
     end do
     
     deallocate(mflux_cc,mflux_nd,mflux_ed,sflux_fc)

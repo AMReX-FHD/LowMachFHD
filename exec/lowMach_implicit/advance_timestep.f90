@@ -38,7 +38,7 @@ contains
 
   subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t)
+                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t,weights)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -59,7 +59,7 @@ contains
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
     type(multifab) , intent(inout) :: gp_fc(:,:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
+    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time,weights(:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
@@ -336,7 +336,7 @@ contains
     end do
 
     ! compute m_s_fluxdiv = div(Sigma^n)
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx,dt)
+    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx,dt,weights)
 
     ! add div(Sigma^n) to gmres_rhs_v
     do n=1,nlevs
@@ -371,7 +371,7 @@ contains
 
     ! add div(Psi^n') to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
-                                 chi_fc,dx,dt,vel_bc_n)
+                                 chi_fc,dx,dt,vel_bc_n,weights)
 
     call mk_external_s_force(mla,gmres_rhs_p,dx,time+dt,1)
 
@@ -704,7 +704,7 @@ contains
 
     ! create div(Psi^{n+1})
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
-                                 s_fc,chi_fc,dx,dt,vel_bc_n)
+                                 s_fc,chi_fc,dx,dt,vel_bc_n,weights)
 
     ! add div(Psi^{n+1}) to rhs_p
     do n=1,nlevs
