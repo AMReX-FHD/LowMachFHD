@@ -315,6 +315,7 @@ contains
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Forward-Euler Scalar Predictor
+    ! Step 4 - Compute Midpoint Estimates
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^n for scalars to s_update
@@ -333,22 +334,12 @@ contains
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
     end if
 
-    ! compute s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
-    ! store result in snew (we will later add sold and divide by 2)
+    ! compute s^{*,n+1/2} = s^n + (dt/2) * (A^n + D^n + St^n)
+    ! store result in snew
     do n=1,nlevs
-       call multifab_mult_mult_s_c(s_update(n),1,dt,nscal,0)
+       call multifab_mult_mult_s_c(s_update(n),1,0.5d0*dt,nscal,0)
        call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
        call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
-    end do
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 4 - Compute Midpoint Estimates
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! add sold to snew and multiply snew by 1/2 so it holds s^{*,n+1/2}
-    do n=1,nlevs
-       call multifab_plus_plus_c(snew(n),1,sold(n),1,nscal,0)
-       call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,0)
     end do
 
     ! convert s^{*,n+1/2} to prim
