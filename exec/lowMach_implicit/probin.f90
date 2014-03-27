@@ -10,7 +10,7 @@ module probin_module
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
   integer, save :: barodiffusion_type
-  logical, save :: use_overdamped
+  integer, save :: algorithm_type
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -20,7 +20,9 @@ module probin_module
   namelist /probin/ barodiffusion_type ! 0 = no barodiffusion
                                        ! 1 = fixed gradp from initialization
                                        ! 2 = update gradp each time step
-  namelist /probin/ use_overdamped     ! enable overdamped (infinite Sc) algorithm
+  namelist /probin/ algorithm_type     ! 0 = John's Algorithm
+                                       ! 1 = Overdamped with 1 RNG
+                                       ! 2 = Overdamped with 2 RNGs
   !------------------------------------------------------------- 
 
 contains
@@ -50,7 +52,7 @@ contains
 
     ! Defaults
     barodiffusion_type = 0
-    use_overdamped = .false.
+    algorithm_type = 0
 
     farg = 1
     if (narg >= 1) then
@@ -75,10 +77,10 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) barodiffusion_type
 
-       case ('--use_overdamped')
+       case ('--algorithm_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) use_overdamped
+          read(fname, *) algorithm_type
 
        case ('--')
           farg = farg + 1

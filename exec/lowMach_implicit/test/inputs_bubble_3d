@@ -1,7 +1,7 @@
 &probin
 
   barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
-  use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
+  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
 
 /
 
