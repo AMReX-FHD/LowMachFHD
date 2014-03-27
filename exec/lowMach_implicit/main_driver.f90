@@ -93,9 +93,6 @@ subroutine main_driver()
   character(len=128) :: fname
   logical :: lexist
 
-  integer :: n_cell
-  real(kind=dp_t) :: linf,l1,l2
-
   real(kind=dp_t), allocatable :: weights(:)
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
@@ -403,7 +400,7 @@ subroutine main_driver()
         if ( lexist ) then
            un = unit_new()
            open(unit=un, file = fname, status = 'old', action = 'read')
-           call initialize_hydro_grid(mla,sold,mold,dt,dx,un)
+           call initialize_hydro_grid(mla,sold,mold,dt,dx,un,nscal)
            close(unit=un)
         end if
      end if

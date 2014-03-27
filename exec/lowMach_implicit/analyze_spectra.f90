@@ -15,7 +15,7 @@ module analyze_spectra_module
   use HydroGridCInterface 
 
   use probin_common_module, only: n_cells, prob_lo, prob_hi
-  use probin_lowmach_module, only: nscal, variance_coef, &
+  use probin_lowmach_module, only: variance_coef, &
        hydro_grid_int, analyze_conserved, project_dir, &
        center_snapshots, max_grid_projection, stats_int, n_steps_save_stats
 
@@ -37,15 +37,19 @@ module analyze_spectra_module
   ! Must keep the layout around until the end!
   type(layout), save :: la_serial, la_dir, la_projected
 
+  ! number of (non-velocity) scalars to be analyzed
+  integer     , save :: nscal_analysis
+
 contains   
 
-  subroutine initialize_hydro_grid(mla,s_in,m_in,dt,dx,namelist_file)
+  subroutine initialize_hydro_grid(mla,s_in,m_in,dt,dx,namelist_file,nscal_analysis_in)
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_in(:)
     type(multifab) , intent(inout) :: m_in(:,:)
     real(dp_t)     , intent(inout) :: dt
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: namelist_file ! Where to read the namelists from
+    integer        , intent(in   ) :: nscal_analysis_in
 
     ! local
     type(box)  :: bx_serial, bx_dir, bx_projected
@@ -58,9 +62,11 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
+    nscal_analysis = nscal_analysis_in
+
     if(nlevs>1) call parallel_abort("HydroGrid analysis only implemented for a single level!")
 
-    nvar = dm + nscal ! mx, my, [mz,] rho, rho*c (or ux, uy, [uz,] rho, c if primitive)
+    nvar = dm + nscal_analysis ! mx, my, [mz,] rho, rho*c (or ux, uy, [uz,] rho, c if primitive)
 
     ncells(1) = n_cells(1)
     ncells(2) = n_cells(2)
@@ -437,9 +443,9 @@ contains
     
     ! Now gather density and concentration
     if(analyze_conserved) then ! Use rho and rho1
-       call copy(s_serial,dm+1,s_in(1),1,nscal)
+       call copy(s_serial,dm+1,s_in(1),1,nscal_analysis)
     else ! Use rho and c
-       call copy(s_serial,dm+1,prim(1),1,nscal)
+       call copy(s_serial,dm+1,prim(1),1,nscal_analysis)
     end if   
 
     if(parallel_IOProcessor()) then  
@@ -594,9 +600,9 @@ contains
     
     ! Now gather density and concentration
     if(analyze_conserved) then ! Use rho and rho1
-       call copy(s_dir,dm+1,s_in(1),1,nscal)
+       call copy(s_dir,dm+1,s_in(1),1,nscal_analysis)
     else ! Use rho and c
-       call copy(s_dir,dm+1,prim(1),1,nscal)
+       call copy(s_dir,dm+1,prim(1),1,nscal_analysis)
     end if   
 
     ! Compute s_projected as the average along project_dim
@@ -774,9 +780,9 @@ contains
        call multifab_destroy(mac_cc(n))
     end do
     if(analyze_conserved) then
-       call copy(s_dir,dm+1,s_in(1),1,nscal)
+       call copy(s_dir,dm+1,s_in(1),1,nscal_analysis)
     else
-       call copy(s_dir,dm+1,prim(1),1,nscal)
+       call copy(s_dir,dm+1,prim(1),1,nscal_analysis)
     end if
 
     ! Compute s_projected (average) and s_var (variance)
