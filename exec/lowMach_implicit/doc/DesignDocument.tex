@@ -376,14 +376,14 @@ concentration from time step $n$ to time step $n+1$ (denoted here by superscript
 {\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
 Calculate predictor diffusive and stochastic fluxes,
 \begin{equation}
-\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^n k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^n},
+\Fb^n = (\rho\chi\nabla c)^n + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^n k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{(1)}},
 \end{equation}
 and then evaluate $S^n$ from $\Fb^n$.\\ \\
 {\bf Step 2: Predictor Stokes Solve:}\\ \\
 Generate a random advection velocity by solving the steady Stokes equation with random forcing.
 Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \vb^{n-\myhalf} + \delta\vb$ and solve:
 \begin{equation}
-\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n} + \rho^n\gb,
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{(1)}} + \rho^n\gb,
 \end{equation}
 \begin{equation}
 \nabla\cdot(\vb^{n-\myhalf} + \delta\vb) = S^n,
@@ -391,7 +391,7 @@ Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \vb^{n-\myhalf} + \delta\vb
 which can be written as
 \begin{equation}
 -\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\vb^{n-\myhalf}
-+ \nabla\cdot\Sigmab^n
++ \nabla\cdot\Sigmab^{(1)}
 + \rho^n\gb,\label{eq:Overdamped Pred Stokes}
 \end{equation}
 \begin{equation}
@@ -405,46 +405,43 @@ $\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=0,
 \beta=\eta$, and $\gamma=\kappa/2$.  Make sure to set $\alpha$ to some non-zero to avoid
 divide-by-zero errors.
 Next, define $\vb^* = \vb^{n-\myhalf} + \deltab\vb$ and $p^* = p^{n-\myhalf} + \delta p$.\\ \\
-{\bf Step 3: Forward Euler Scalar Predictor}\\ \\
-Take a predictor forward Euler step for $\rho$ and $\rho_1$:
+{\bf Step 3: Forward Euler Scalar Predictor}\\
+{\bf Step 4: Compute Midpoint Estimates}\\ \\
+Take a midpoint predictor forward Euler step for $\rho$ and $\rho_1$:
 \begin{eqnarray}
-\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^n\vb^*),\label{eq:alg2_1st_rho_adv}\\
-\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^n\vb^* + \Fb^n).\label{eq:alg2_1st_rho1_adv}
-\end{eqnarray}
-{\bf Step 4: Compute Midpoint Estimates}
-\begin{eqnarray}
-\rho_1^{n+\myhalf} &=& \frac{1}{2}\left(\rho_1^n + \rho_1^{*,n+1}\right)\\
-\rho^{n+\myhalf} &=& \frac{1}{2}\left(\rho^n + \rho^{*,n+1}\right)
+\rho^{*,n+\myhalf} &=& \rho^n + \frac{\Delta t}{2}\nabla\cdot(-\rho^n\vb^*),\label{eq:alg2_1st_rho_adv}\\
+\rho_1^{*,n+\myhalf} &=& \rho_1^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_1^n\vb^* + \Fb^n).\label{eq:alg2_1st_rho1_adv}
 \end{eqnarray}
 {\bf Step 5: Corrector Stochastic/Diffusive Fluxes:}\\ \\
 Calculate corrector diffusive fluxes, and reuse the same random numbers:
 \begin{equation}
-\Fb^{n+\myhalf} = (\rho\chi\nabla c)^{n+\myhalf}
-+ \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{n+\myhalf}k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{n'}}.
+\Fb^{*,n+\myhalf} = (\rho\chi\nabla c)^{*,n+\myhalf}
++ \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{*,n+\myhalf}k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{(2)}},
 \end{equation}
+and then evaluate $S^{*,n+\myhalf}$ from $\Fb^{*,n+\myhalf}$.\\ \\
 {\bf Step 6: Corrector Stokes Solve:}\\ \\
 Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \vb^n + \delta\vb$:
 \begin{equation}
-\nabla(p^* + \delta p) = \mathcal A_0^{n+\myhalf}(\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{n'}} + \rho^{n+\myhalf}\gb,
+\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{(2)}} + \rho^{*,n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot(\vb^* + \delta\vb) = S^{n+\myhalf},
+\nabla\cdot(\vb^* + \delta\vb) = S^{*,n+\myhalf},
 \end{equation}
 which can be written as
 \begin{equation}
--\mathcal{A}_0^{n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{n+\myhalf}\vb^*
-+ \nabla\cdot\Sigmab^{n'}
-+ \rho^{n+\myhalf}\gb,
+-\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\vb^*
++ \nabla\cdot\Sigmab^{(2)}
++ \rho^{*,n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
--\nabla\cdot\deltab\vb = \nabla\cdot\vb^* - S^{n+\myhalf}.
+-\nabla\cdot\deltab\vb = \nabla\cdot\vb^* - S^{*,n+\myhalf}.
 \end{equation}
 Next, define $\vb^{n+\myhalf} = \vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
 {\bf Step 7: Trapezoidal Scalar Corrector:}\\ \\
 Update the densities and concentrations
 \begin{eqnarray}
-\rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{n+\myhalf}\vb^{n+\myhalf}\right),\label{eq:alg2_2nd_rho_adv}\\
-\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{n+\myhalf}\vb^{n+\myhalf} + \Fb^{n+\myhalf}\right).\label{eq:alg2_2nd_rho1_adv}
+\rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{*,n+\myhalf}\vb^{n+\myhalf}\right),\label{eq:alg2_2nd_rho_adv}\\
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{*,n+\myhalf}\vb^{n+\myhalf} + \Fb^{*,n+\myhalf}\right).\label{eq:alg2_2nd_rho1_adv}
 \end{eqnarray}
 
 \section{BDS Advection}
@@ -506,8 +503,8 @@ $\rho_1^{\rm BDS} = {\rm BDS}(\rho_1^n,\vb^{n+\myhalf},\nabla\cdot\Fb^{n+\myhalf
 To modify the original algorithm, we replace equations (\ref{eq:alg2_1st_rho_adv}) and 
 (\ref{eq:alg2_1st_rho1_adv}) in {\bf Step 3} with
 \begin{eqnarray}
-\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^{{\rm BDS},*}\vb^*),\\
-\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^* + \Fb^n),
+\rho^{*,n+1} &=& \rho^n + \frac{\Delta t}{2}\nabla\cdot(-\rho^{{\rm BDS},*}\vb^*),\\
+\rho_1^{*,n+1} &=& \rho_1^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^* + \Fb^n),
 \end{eqnarray}
 where $\rho^{{\rm BDS},*} = {\rm BDS}(\rho^n,\vb^*,0)$ and 
 $\rho_1^{{\rm BDS},*} = {\rm BDS}(\rho_1^n,\vb^*,\nabla\cdot\Fb^n)$.
