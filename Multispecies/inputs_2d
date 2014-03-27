@@ -19,7 +19,7 @@
 &probin_multispecies
  
  nspecies = 2                   ! number of species
- max_step = 20                  ! total number of computational step
+ max_step = 400                  ! total number of computational step
  cfl1     = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  k_B      = 1E-3                ! Boltzmann constant

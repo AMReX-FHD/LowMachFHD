@@ -202,7 +202,8 @@ subroutine main_driver()
 
   ! set the time counter for the time-average
   step_count=0
-  
+  stdW=0 
+
   do istep=1,max_step
 
      if (parallel_IOProcessor()) then
@@ -221,7 +222,7 @@ subroutine main_driver()
      end if
 
      ! check the variances 
-     if(max_step .gt. 10) then
+     if(max_step .gt. 200) then
         call meanvar_W(mla,rho,stdW)    
         step_count = step_count + 1 
      end if 
@@ -253,8 +254,10 @@ subroutine main_driver()
   ! print out the standard deviation
   if (parallel_IOProcessor()) then
      do i=1,nspecies
-        print*, ' std of W for i=',i, stdW(i)
+        print*, ' std of W for i =',i, stdW(i)/step_count
      end do
+     print*, ' variance =', (molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/&
+                            (product(dx(1,1:dm))*thickness*(rho_in(1,1)+rho_in(1,2))**4)
   end if
 
  

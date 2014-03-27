@@ -247,7 +247,7 @@ module analysis_module
        do n=1, nspecies  
           W(n) = rho(n)/rho_tot
        end do
-
+ 
      end subroutine convert_rho_to_W_local 
 
   end subroutine meanvar_W
