@@ -5,7 +5,6 @@ module advance_module
   use multifab_physbc_module
   use multifab_fill_random_module
   use ml_layout_module
-  use analysis_module
   use diffusive_fluxdiv_module
   use stochastic_fluxdiv_module
   use probin_multispecies_module
@@ -43,7 +42,7 @@ contains
     type(multifab),  allocatable   :: stoch_W_fc(:,:,:)          ! WA and WB (nlevs,dim,n_rngs) 
     real(kind=dp_t), allocatable   :: weights(:)                 ! weights for stoch-time-integrators       
     real(kind=dp_t)                :: stage_time
-    integer                        :: n,nlevs,i,dm,rng,n_rngs 
+    integer                        :: n,nlevs,i,dm,rng,n_rngs
 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! number of dimensions
@@ -94,7 +93,7 @@ contains
        ! initialize stochastic flux on every face W(0,1) 
        call generate_random_increments(mla,n_rngs,stoch_W_fc)
     endif
- 
+
    !==================================================================================
     select case(timeinteg_type)
    !==================================================================================
@@ -119,11 +118,6 @@ contains
          if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
       end do 
   
-      ! check the variances 
-      if(stage_time .gt. 0.5d0) then
-         call meanvar_w(mla,rho,rho_tot,the_bc_level)     
-      end if 
- 
       case(2)
       !=========================================================================================
       ! Heun's method: Predictor-Corrector explicit method 

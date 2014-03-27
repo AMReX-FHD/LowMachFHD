@@ -13,7 +13,7 @@ module analysis_module
 
   private
 
-  public :: print_errors, sum_mass, meanvar_w
+  public :: print_errors, sum_mass, meanvar_W
 
   contains
 
@@ -106,65 +106,150 @@ module analysis_module
 
   end subroutine sum_mass
 
-  subroutine meanvar_w(mla,rho,rho_tot,the_bc_level) 
+  subroutine meanvar_W(mla,rho,stdW) 
 
-    type(ml_layout), intent(in) :: mla
-    type(multifab),  intent(in) :: rho(:)
-    type(multifab),  intent(in) :: rho_tot(:)
-    type(bc_level),  intent(in) :: the_bc_level(:)
+    type(ml_layout), intent(in)    :: mla
+    type(multifab),  intent(in)    :: rho(:)
+    real(kind=dp_t), intent(inout) :: stdW(nspecies)
 
     ! local variables
-    type(multifab)                       :: w(mla%nlevel)
+    type(multifab)                       :: W(mla%nlevel)
     real(kind=dp_t), dimension(nspecies) :: wavg,wsqrtavg,dwsqavg
     integer                              :: i,n,nlevs,n_cell
 
     nlevs  = size(rho,1)
     n_cell = multifab_volume(rho(1))/nspecies 
   
-    ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
+    ! build cell-centered multifabs for nspecies and ghost cells contained in rho
     do n=1,nlevs
-       call multifab_build(w(n),mla%la(n),nspecies,rho(n)%ng)
+       call multifab_build(W(n),mla%la(n),nspecies,rho(n)%ng)
     end do
-
-    ! clear up memory 
-    do n=1,nlevs
-       call setval(w(n), 0.d0, all=.true.)
-    end do
-
-    ! store rho in w 
-    do n=1,nlevs
-       call saxpy(w(n),1.0d0,rho(n))
-    end do
-
-    ! compute w_i=rho_i/rho_tot
-    do n=1,nlevs
-       call multifab_div_div_c(w(n),1,rho_tot(n),1,nspecies,0)
-    end do
- 
+   
+    ! compute W from rho and rho_tot 
+    call convert_rho_to_W(mla,rho,W)
+  
     do n=1,nlevs
        do i=1,nspecies
 
-          ! wavg = sum(w)/n_cell
-          wavg(i) = multifab_norm_l1_c(w(n),i,1,all=.false.)/dble(n_cell)
+          ! wavg = sum(W)/n_cell
+          wavg(i) = multifab_norm_l1_c(W(n),i,1,all=.false.)/dble(n_cell)
 
-          ! wsqrtavg = sqrt{sum(w^2)/n_cell} 
-          wsqrtavg(i) = multifab_norm_l2_c(w(n),i,1,all=.false.)/sqrt(dble(n_cell))
+          ! wsqrtavg = sqrt{sum(W^2)/n_cell} 
+          wsqrtavg(i) = multifab_norm_l2_c(W(n),i,1,all=.false.)/sqrt(dble(n_cell))
 
-          ! standard deviation in w
+          ! standard deviation in W
           dwsqavg(i) = wsqrtavg(i)**2 - wavg(i)**2
 
-          if (parallel_IOProcessor()) then
-                print*, ' std of w for i=',i, dwsqavg(i)
-          end if
-    
+          ! sum <delW_i> over time
+          stdW(i) = stdW(i) + dwsqavg(i)
+
        end do
     end do
 
    ! free the multifab allocated memory
    do n=1,nlevs
-      call multifab_destroy(w(n))
+      call multifab_destroy(W(n))
    end do
 
-  end subroutine meanvar_w
+  contains 
+
+     subroutine convert_rho_to_W(mla,rho,W)
+   
+       type(ml_layout), intent(in   )  :: mla
+       type(multifab) , intent(in   )  :: rho(:) 
+       type(multifab) , intent(inout)  :: W(:) 
+
+       ! local variables
+       integer :: lo(rho(1)%dim), hi(rho(1)%dim)
+       integer :: n,i,ng,dm,nlevs
+ 
+       ! pointer for rho(nspecies), rho_tot(1), molarconc(nspecies) 
+       real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
+       real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for W 
+
+       dm    = mla%dim     ! dimensionality
+       ng    = rho(1)%ng   ! number of ghost cells 
+       nlevs = mla%nlevel  ! number of levels 
+ 
+       ! loop over all boxes 
+       do n=1,nlevs
+          do i=1,nfabs(rho(n))
+             dp => dataptr(rho(n),i)
+             dp1 => dataptr(W(n),i)
+             lo = lwb(get_box(rho(n),i))
+             hi = upb(get_box(rho(n),i))
+          
+             select case(dm)
+             case (2)
+                call convert_rho_to_W_2d(dp(:,:,1,:),dp1(:,:,1,:),ng,lo,hi) 
+             case (3)
+                call convert_rho_to_W_3d(dp(:,:,:,:),dp1(:,:,:,:),ng,lo,hi) 
+             end select
+          end do
+       end do
+
+     end subroutine convert_rho_to_W
+
+     subroutine convert_rho_to_W_2d(rho,W,ng,lo,hi)
+ 
+       integer          :: lo(2), hi(2), ng
+       real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)   ! density- last dim for #species
+       real(kind=dp_t)  ::   W(lo(1)-ng:,lo(2)-ng:,:)   ! W
+        
+       ! local variables
+       integer          :: i,j
+    
+       ! for specific box, now start loops over alloted cells    
+       do j=lo(2)-ng, hi(2)+ng
+          do i=lo(1)-ng, hi(1)+ng
+             call convert_rho_to_W_local(rho(i,j,:),W(i,j,:))
+          end do
+       end do
+ 
+     end subroutine convert_rho_to_W_2d
+
+     subroutine convert_rho_to_W_3d(rho,W,ng,lo,hi)
+ 
+       integer          :: lo(3), hi(3), ng
+       real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! density- last dim for #species
+       real(kind=dp_t)  ::   W(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! W 
+    
+       ! local variables
+       integer          :: i,j,k
+    
+       ! for specific box, now start loops over alloted cells    
+       do k=lo(3)-ng, hi(3)+ng
+          do j=lo(2)-ng, hi(2)+ng
+             do i=lo(1)-ng, hi(1)+ng
+                call convert_rho_to_W_local(rho(i,j,k,:),W(i,j,k,:))
+             end do
+          end do
+       end do
+ 
+     end subroutine convert_rho_to_W_3d
+
+     subroutine convert_rho_to_W_local(rho,W)
+ 
+       real(kind=dp_t), intent(in)   :: rho(nspecies)  ! density
+       real(kind=dp_t), intent(out)  ::   W(nspecies)    ! W 
+    
+       ! local variables
+       integer          :: n
+       real(kind=dp_t)  :: rho_tot        ! total density 
+
+       ! calculate total density inside each cell
+       rho_tot=0.d0 
+       do n=1, nspecies  
+          rho_tot = rho_tot + rho(n)
+       end do         
+  
+       ! calculate mass fraction 
+       do n=1, nspecies  
+          W(n) = rho(n)/rho_tot
+       end do
+
+     end subroutine convert_rho_to_W_local 
+
+  end subroutine meanvar_W
 
 end module analysis_module

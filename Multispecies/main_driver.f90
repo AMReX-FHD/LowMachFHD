@@ -23,7 +23,7 @@ subroutine main_driver()
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time
-  integer                      :: n,nlevs,i,dm,istep
+  integer                      :: n,nlevs,i,dm,istep,step_count
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -34,6 +34,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: rho(:)
   type(multifab), allocatable  :: rho_exact(:)
   real(kind=dp_t),allocatable  :: molmass(:) 
+  real(kind=dp_t),allocatable  :: stdW(:) 
   
   !==============================================================
   ! Initialization
@@ -54,6 +55,7 @@ subroutine main_driver()
   allocate(rho(nlevs))
   allocate(rho_exact(nlevs))
   allocate(molmass(nspecies))
+  allocate(stdW(nspecies))
 
   !==============================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -197,7 +199,10 @@ subroutine main_driver()
   if (parallel_IOProcessor()) then
      write(*,*) "Using time step dt=", dt
   end if
- 
+
+  ! set the time counter for the time-average
+  step_count=0
+  
   do istep=1,max_step
 
      if (parallel_IOProcessor()) then
@@ -214,6 +219,12 @@ subroutine main_driver()
      if (print_error_norms) then
         call print_errors(rho,rho_exact,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
      end if
+
+     ! check the variances 
+     if(max_step .gt. 10) then
+        call meanvar_W(mla,rho,stdW)    
+        step_count = step_count + 1 
+     end if 
 
      ! write plotfile at specific intervals
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
@@ -238,12 +249,21 @@ subroutine main_driver()
 
   ! print out the total mass to check conservation
   call sum_mass(rho, istep)
-  
+ 
+  ! print out the standard deviation
+  if (parallel_IOProcessor()) then
+     do i=1,nspecies
+        print*, ' std of W for i=',i, stdW(i)
+     end do
+  end if
+
+ 
   !=======================================================
   ! Destroy multifabs and layouts
   !=======================================================
 
   deallocate(molmass)
+  deallocate(stdW)
   do n=1,nlevs
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_exact(n))
