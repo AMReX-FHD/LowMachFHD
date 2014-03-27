@@ -1,4 +1,3 @@
-f90sources += analyze_spectra.f90
 f90sources += analysis.f90
 f90sources += convert_variables.f90
 f90sources += fill_rho_ghost_cells.f90
