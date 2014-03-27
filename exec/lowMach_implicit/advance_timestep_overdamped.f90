@@ -20,6 +20,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
+  use probin_module, only: algorithm_type
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
@@ -52,7 +53,8 @@ contains
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time,weights(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
+    real(kind=dp_t), intent(inout) :: weights(:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
@@ -194,8 +196,13 @@ contains
                                 the_bc_tower%bc_tower_array)
 
     ! add div(Sigma^(1)) to gmres_rhs_v
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                 eta,eta_ed,dx,dt,weights)
+    if (algorithm_type .eq. 1) then
+       call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                    eta,eta_ed,dx,dt,weights)
+    else if (algorithm_type .eq. 2) then
+       call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                    eta,eta_ed,dx,0.5d0*dt,weights)
+    end if
 
     ! add rho^n*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
@@ -218,8 +225,13 @@ contains
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(Psi^(1)) to rhs_p
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
-                                 chi_fc,dx,dt,vel_bc_n,weights)
+    if (algorithm_type .eq. 1) then
+       call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+                                    chi_fc,dx,dt,vel_bc_n,weights)
+    else
+       call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+                                    chi_fc,dx,0.5d0*dt,vel_bc_n,weights)  
+    end if
 
     ! add external forcing for rho*c
     call mk_external_s_force(mla,gmres_rhs_p,dx,time,1)
@@ -391,6 +403,10 @@ contains
     call mk_diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
+    if (algorithm_type .eq. 2) then
+       weights = 1.d0/sqrt(2.d0)
+    end if
+
     ! add div(Sigma^(2)) to gmres_rhs_v
     call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
                                  eta,eta_ed,dx,dt,weights)
@@ -423,6 +439,11 @@ contains
     ! add div(Psi^(2)) to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n,weights)
+
+    if (algorithm_type .eq. 2) then
+       weights(1) = 1.d0
+       weights(2) = 0.d0
+    end if
 
     ! add external forcing for rho*c
     call mk_external_s_force(mla,gmres_rhs_p,dx,time+0.5d0*dt,1)

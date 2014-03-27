@@ -378,7 +378,8 @@ subroutine main_driver()
   else if (algorithm_type .eq. 2) then
      call init_stochastic(mla,2)
      allocate(weights(2))
-     weights(:) = 1.d0
+     weights(1) = 1.d0
+     weights(2) = 0.d0
   end if
 
   ! fill the stochastic multifabs with a new set of random numbers
@@ -451,13 +452,10 @@ subroutine main_driver()
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
                               gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t,weights)
-     else if (algorithm_type .eq. 1) then
+     else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
                                          vel_bc_n,vel_bc_t,weights)
-     else if (algorithm_type .eq. 2) then
-
-
      end if
 
      ! increment simulation time
