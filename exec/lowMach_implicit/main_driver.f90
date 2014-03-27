@@ -96,6 +96,8 @@ subroutine main_driver()
   integer :: n_cell
   real(kind=dp_t) :: linf,l1,l2
 
+  real(kind=dp_t), allocatable :: weights(:)
+
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_lowmach_init()
   call probin_common_init()
@@ -369,7 +371,15 @@ subroutine main_driver()
                                  the_bc_tower%bc_tower_array)
 
   ! allocate and build multifabs that will contain random numbers
-  call init_stochastic(mla)
+  if (use_overdamped) then
+     call init_stochastic(mla,1)
+     allocate(weights(1))
+     weights(1) = 1.d0
+  else
+     call init_stochastic(mla,1)
+     allocate(weights(1))
+     weights(1) = 1.d0
+  end if
 
   ! fill the stochastic multifabs with a new set of random numbers
   call fill_stochastic(mla)  
@@ -401,7 +411,7 @@ subroutine main_driver()
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
                           rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt, &
-                          the_bc_tower,vel_bc_n,vel_bc_t)
+                          the_bc_tower,vel_bc_n,vel_bc_t,weights)
 
   if (print_int .gt. 0) then
      call sum_mass_momentum(mla,sold,mold)
@@ -440,11 +450,11 @@ subroutine main_driver()
      if (use_overdamped) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
-                                         vel_bc_n,vel_bc_t)
+                                         vel_bc_n,vel_bc_t,weights)
      else
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t)
+                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t,weights)
      end if
 
      ! increment simulation time

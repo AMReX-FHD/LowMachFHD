@@ -25,7 +25,7 @@ contains
 
   subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
                                 rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt,the_bc_tower, &
-                                vel_bc_n,vel_bc_t)
+                                vel_bc_n,vel_bc_t,weights)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -38,7 +38,7 @@ contains
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:),dt
+    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,weights(:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(in   ) :: vel_bc_t(:,:)
@@ -92,7 +92,7 @@ contains
 
     ! set rhoc_s_fluxdiv = div(Psi^0)
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc, &
-                                 chi_fc,dx,dt,vel_bc_n)
+                                 chi_fc,dx,dt,vel_bc_n,weights)
 
     ! add div(Psi^0) to mac_rhs
     do n=1,nlevs
