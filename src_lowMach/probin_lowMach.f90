@@ -17,9 +17,6 @@ module probin_lowmach_module
   integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(2,3),c_bc(3,2)
-  integer,save     :: hydro_grid_int,project_dir,max_grid_projection(2)
-  integer,save     :: stats_int,n_steps_save_stats,n_steps_skip
-  logical,save     :: analyze_conserved,center_snapshots
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -54,29 +51,6 @@ module probin_lowmach_module
   namelist /probin_lowmach/ conc_scal         ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
   namelist /probin_lowmach/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
   namelist /probin_lowmach/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
-
-  namelist /probin_lowmach/ hydro_grid_int     ! How often to call updateHydroGrid
-                                               ! 0 if never
-                                               ! negative for projectHydroGrid custom analysis
-                                               ! positive for updateHydroGrid
-
-  namelist /probin_lowmach/ project_dir         ! Projection direction (1=x, 2=y, 3=z)
-  ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
-  !          but still need projection if stats_int>0)
-  ! +dim=project along dim then analyze 2D only,
-  ! -dim=analyze 3D and then project along dim so we also analyze 2D data
-  ! It is better to use the conserved variables but it does not quite work for staggered
-
-  namelist /probin_lowmach/ max_grid_projection ! parallelization parameters
-  namelist /probin_lowmach/ stats_int           ! Project grid for analysis
-                                                ! If positive, how often to compute mean and 
-                                                ! standard deviation over reduced dimensions
-  namelist /probin_lowmach/ n_steps_save_stats  ! How often to dump HydroGrid output files
-  namelist /probin_lowmach/ n_steps_skip        ! How many steps to skip
-  namelist /probin_lowmach/ analyze_conserved   ! Should we use conserved variables for the analysis
-                                                ! (does not work well)
-  namelist /probin_lowmach/ center_snapshots    ! Should we use cell-centered momenta for the analysis
-                                                ! (will smooth fluctuations)
 
 contains
 
@@ -130,16 +104,7 @@ contains
     initial_variance = 0.d0
     conc_scal = 1.d0
     filtering_width = 0
-    stoch_stress_form = 1    
-
-    hydro_grid_int = 0
-    project_dir = 0
-    max_grid_projection = 128
-    stats_int = -1
-    n_steps_save_stats = -1
-    n_steps_skip = 0
-    analyze_conserved = .false.
-    center_snapshots = .false.
+    stoch_stress_form = 1
 
     farg = 1
     if (narg >= 1) then
@@ -317,50 +282,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) stoch_stress_form
-
-       case ('--hydro_grid_int')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) hydro_grid_int
-
-       case ('--project_dir')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) project_dir
-
-       case ('--max_grid_projection_1')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) max_grid_projection(1)
-       case ('--max_grid_projection_2')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) max_grid_projection(2)
-
-       case ('--stats_int')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stats_int
-
-       case ('--n_steps_save_stats')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) n_steps_save_stats
-
-       case ('--n_steps_skip')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) n_steps_skip
-
-       case ('--analyze_conserved')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) analyze_conserved
-
-       case ('--center_snapshots')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) center_snapshots
 
        case ('--')
           farg = farg + 1

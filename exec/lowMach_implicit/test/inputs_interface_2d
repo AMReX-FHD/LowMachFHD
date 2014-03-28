@@ -38,16 +38,6 @@
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
- ! Analysis of projections along or perpendicular to the gradient
-! stats_int = 40 ! If positive, how often to dump mean/std statistics
- project_dir = -2 ! Direction of gradient (projection axes)
- center_snapshots=T ! Average momenta to cell-centers or shift them?
- analyze_conserved=F ! Use conserved or primitive variables for analysis?
- hydro_grid_int=10 ! How often to take HydroGrid snapshots (negative means only projectHydroGrid)
- n_steps_save_stats=1000 ! How often to dump HydroGrid statistics
- max_grid_projection(1) = 32
- n_steps_skip = 0 ! How many steps to skip
-
 /
 
 &probin_common
@@ -107,6 +97,16 @@
   wallspeed_hi(1,1) = 0.d0
   wallspeed_lo(1,2) = 0.d0
   wallspeed_hi(1,2) = 0.d0
+
+ ! Analysis of projections along or perpendicular to the gradient
+! stats_int = 40 ! If positive, how often to dump mean/std statistics
+ project_dir = -2 ! Direction of gradient (projection axes)
+ center_snapshots=T ! Average momenta to cell-centers or shift them?
+ analyze_conserved=F ! Use conserved or primitive variables for analysis?
+ hydro_grid_int=10 ! How often to take HydroGrid snapshots (negative means only projectHydroGrid)
+ n_steps_save_stats=1000 ! How often to dump HydroGrid statistics
+ max_grid_projection(1) = 32
+ n_steps_skip = 0 ! How many steps to skip
 
 /
 
