@@ -20,6 +20,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
+  use probin_module, only: algorithm_type
   use probin_lowmach_module, only: nscal, rhobar, grav
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
@@ -52,7 +53,8 @@ contains
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time,weights(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
+    real(kind=dp_t), intent(inout) :: weights(:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
@@ -168,7 +170,8 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Steps 1 and 2 - Predictor Stokes Solve
+    ! Step 1 - Predictor Stochastic/Diffusive Fluxes
+    ! Step 2 - Predictor Stokes Solve
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve
@@ -192,11 +195,16 @@ contains
     call mk_diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
-    ! add div(Sigma^n) to gmres_rhs_v
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                 eta,eta_ed,dx,dt,weights)
+    ! add div(Sigma^(1)) to gmres_rhs_v
+    if (algorithm_type .eq. 1) then
+       call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                    eta,eta_ed,dx,dt,weights)
+    else if (algorithm_type .eq. 2) then
+       call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                    eta,eta_ed,dx,0.5d0*dt,weights)
+    end if
 
-    ! add gravity term to gmres_rhs_v
+    ! add rho^n*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
     end if
@@ -216,9 +224,14 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
-    ! add div(Psi^n) to rhs_p
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
-                                 chi_fc,dx,dt,vel_bc_n,weights)
+    ! add div(Psi^(1)) to rhs_p
+    if (algorithm_type .eq. 1) then
+       call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+                                    chi_fc,dx,dt,vel_bc_n,weights)
+    else
+       call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+                                    chi_fc,dx,0.5d0*dt,vel_bc_n,weights)  
+    end if
 
     ! add external forcing for rho*c
     call mk_external_s_force(mla,gmres_rhs_p,dx,time,1)
@@ -237,7 +250,7 @@ contains
     end do
 
     ! reset s_update for all scalars to zero
-    ! then, set s_update for rho1 to F^n = div(rho*chi grad c)^n + div(Psi^n)
+    ! then, set s_update for rho1 to F^n = div(rho*chi grad c)^n + div(Psi^(1))
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
@@ -315,6 +328,7 @@ contains
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Forward-Euler Scalar Predictor
+    ! Step 4 - Compute Midpoint Estimates
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^n for scalars to s_update
@@ -333,22 +347,12 @@ contains
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
     end if
 
-    ! compute s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
-    ! store result in snew (we will later add sold and divide by 2)
+    ! compute s^{*,n+1/2} = s^n + (dt/2) * (A^n + F^n)
+    ! store result in snew
     do n=1,nlevs
-       call multifab_mult_mult_s_c(s_update(n),1,dt,nscal,0)
+       call multifab_mult_mult_s_c(s_update(n),1,0.5d0*dt,nscal,0)
        call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
        call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
-    end do
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 4 - Compute Midpoint Estimates
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! add sold to snew and multiply snew by 1/2 so it holds s^{*,n+1/2}
-    do n=1,nlevs
-       call multifab_plus_plus_c(snew(n),1,sold(n),1,nscal,0)
-       call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,0)
     end do
 
     ! convert s^{*,n+1/2} to prim
@@ -374,7 +378,8 @@ contains
     call compute_kappa(mla,kappa,prim,dx)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Steps 5 and 6 - Corrector Stokes Solve
+    ! Step 5 - Corrector Stochastic/Diffusive Fluxes
+    ! Step 6 - Corrector Stokes Solve
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve
@@ -398,11 +403,15 @@ contains
     call mk_diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
-    ! add div(Sigma^n') to gmres_rhs_v
+    if (algorithm_type .eq. 2) then
+       weights = 1.d0/sqrt(2.d0)
+    end if
+
+    ! add div(Sigma^(2)) to gmres_rhs_v
     call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
                                  eta,eta_ed,dx,dt,weights)
 
-    ! add gravity term to gmres_rhs_v
+    ! add rho^{*,n+1/2}*g gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
     end if
@@ -427,9 +436,14 @@ contains
     call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
 
-    ! add div(Psi^n') to rhs_p
+    ! add div(Psi^(2)) to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n,weights)
+
+    if (algorithm_type .eq. 2) then
+       weights(1) = 1.d0
+       weights(2) = 0.d0
+    end if
 
     ! add external forcing for rho*c
     call mk_external_s_force(mla,gmres_rhs_p,dx,time+0.5d0*dt,1)
@@ -448,7 +462,7 @@ contains
     end do
 
     ! reset s_update for all scalars to zero
-    ! then, set s_update for rho1 to F^{*,n+1/2} = div(rho*chi grad c)^{*,n+1/2} + div(Psi^n')
+    ! then, set s_update for rho1 to F^{*,n+1/2} = div(rho*chi grad c)^{*,n+1/2} + div(Psi^(2))
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
@@ -520,7 +534,7 @@ contains
     ! Step 7 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! add A^{*,n+1/2} for scalars to s_update
+    ! add A^{n+1/2} for scalars to s_update
     if (advection_type .ge. 1) then
        do n=1,nlevs
           call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
@@ -535,7 +549,7 @@ contains
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
     end if
 
-    ! compute s^{n+1} = s^n + dt * (A^{*,n+1/2} + D^{*,n+1/2} + St^{*,n+1/2})
+    ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})
     do n=1,nlevs
        call multifab_mult_mult_s_c(s_update(n),1,dt,nscal,0)
        call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)

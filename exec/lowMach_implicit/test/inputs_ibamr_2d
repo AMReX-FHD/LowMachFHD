@@ -3,7 +3,7 @@
   barodiffusion_type = 0  ! 0 = no barodiffusion
                           ! 1 = fixed gradp from initialization
                           ! 2 = update gradp each time step
-  use_overdamped = F	  ! enable overdamped (infinite Sc) algorithm
+  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
 
 /
 

@@ -33,7 +33,7 @@ subroutine main_driver()
                                    prob_lo, prob_hi, max_grid_size, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type, advection_type
   use probin_gmres_module  , only: probin_gmres_init
-  use probin_module        , only: probin_init, barodiffusion_type, use_overdamped                                   
+  use probin_module        , only: probin_init, barodiffusion_type, algorithm_type
   implicit none
 
   ! will be allocated with dm components
@@ -92,9 +92,6 @@ subroutine main_driver()
   integer :: narg, farg, un
   character(len=128) :: fname
   logical :: lexist
-
-  integer :: n_cell
-  real(kind=dp_t) :: linf,l1,l2
 
   real(kind=dp_t), allocatable :: weights(:)
 
@@ -371,14 +368,15 @@ subroutine main_driver()
                                  the_bc_tower%bc_tower_array)
 
   ! allocate and build multifabs that will contain random numbers
-  if (use_overdamped) then
+  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
      call init_stochastic(mla,1)
      allocate(weights(1))
      weights(1) = 1.d0
-  else
-     call init_stochastic(mla,1)
-     allocate(weights(1))
+  else if (algorithm_type .eq. 2) then
+     call init_stochastic(mla,2)
+     allocate(weights(2))
      weights(1) = 1.d0
+     weights(2) = 0.d0
   end if
 
   ! fill the stochastic multifabs with a new set of random numbers
@@ -402,7 +400,7 @@ subroutine main_driver()
         if ( lexist ) then
            un = unit_new()
            open(unit=un, file = fname, status = 'old', action = 'read')
-           call initialize_hydro_grid(mla,sold,mold,dt,dx,un)
+           call initialize_hydro_grid(mla,sold,mold,dt,dx,un,nscal)
            close(unit=un)
         end if
      end if
@@ -447,14 +445,14 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     if (use_overdamped) then
-        call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
-                                         vel_bc_n,vel_bc_t,weights)
-     else
+     if (algorithm_type .eq. 0) then
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
                               gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t,weights)
+     else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
+        call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
+                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
+                                         vel_bc_n,vel_bc_t,weights)
      end if
 
      ! increment simulation time
