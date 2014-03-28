@@ -23,7 +23,7 @@ subroutine main_driver()
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time
-  integer                      :: n,nlevs,i,dm,istep,step_count
+  integer                      :: n,nlevs,i,j,dm,istep,step_count
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -35,6 +35,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: rho_exact(:)
   real(kind=dp_t),allocatable  :: molmass(:) 
   real(kind=dp_t),allocatable  :: stdW(:) 
+  real(kind=dp_t),allocatable  :: covW(:,:) 
   
   !==============================================================
   ! Initialization
@@ -56,6 +57,7 @@ subroutine main_driver()
   allocate(rho_exact(nlevs))
   allocate(molmass(nspecies))
   allocate(stdW(nspecies))
+  allocate(covW(nspecies,nspecies))
 
   !==============================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -201,8 +203,9 @@ subroutine main_driver()
   end if
 
   ! set the time counter for the time-average
-  step_count=0
-  stdW=0 
+  step_count = 0
+  stdW       = 0 
+  covW       = 0 
 
   do istep=1,max_step
 
@@ -222,8 +225,8 @@ subroutine main_driver()
      end if
 
      ! check the variances 
-     if(max_step .gt. 200) then
-        call meanvar_W(mla,rho,stdW)    
+     if(max_step .gt. 500) then
+        call meanvar_W(mla,rho,stdW,covW)    
         step_count = step_count + 1 
      end if 
 
@@ -254,10 +257,18 @@ subroutine main_driver()
   ! print out the standard deviation
   if (parallel_IOProcessor()) then
      do i=1,nspecies
-        print*, ' std of W for i =',i, stdW(i)/step_count
+        print*, ' std of W',i,stdW(i)/step_count
      end do
-     print*, ' variance =', (molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/&
-                            (product(dx(1,1:dm))*thickness*(rho_in(1,1)+rho_in(1,2))**4)
+     
+     do i=1,nspecies
+        do j=1,nspecies
+           print*, ' cov of Wij',i,j,covW(i,j)/step_count
+        end do
+     end do
+           
+     print*, ' analytic std of W =', (molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*&
+                                     rho_in(1,1)*rho_in(1,2)/(product(dx(1,1:dm))*thickness*&
+                                     (rho_in(1,1)+rho_in(1,2))**4)
   end if
 
  
@@ -267,6 +278,7 @@ subroutine main_driver()
 
   deallocate(molmass)
   deallocate(stdW)
+  deallocate(covW)
   do n=1,nlevs
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_exact(n))
