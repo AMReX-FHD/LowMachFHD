@@ -19,7 +19,7 @@
 &probin_multispecies
  
  nspecies = 2                   ! number of species
- max_step = 400                  ! total number of computational step
+ max_step = 1000                  ! total number of computational step
  cfl1     = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  k_B      = 1E-3                ! Boltzmann constant
@@ -37,9 +37,9 @@
  print_error_norms = .true.     ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.     ! false=Bdag*Gama, true=Bdag 
  use_lapack  = .false.          ! false=iterative methods, true=inverse/pseudoinverse 
- rho_in(1,1:2) = 0.3 0.7       ! Inside the circle
+ rho_in(1,1:2) = 0.35 1.25       ! Inside the circle
  rho_in(2,1:2) = 1.25 0.75      ! Outside the circle  
- molmass_in(1:2) = 1.0 1.0      ! molar mass of n-species
+ molmass_in(1:2) = 1.0 2.0      ! molar mass of n-species
  Dbar_in(1:1) = 1.0             ! SM diffusion constant arranged in lower-triangle
  
 /
