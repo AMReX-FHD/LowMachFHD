@@ -36,7 +36,6 @@
   material_properties(1:2,3) = 0.d0 0.d0
 
   ! stochastic properties
-  variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing
   initial_variance = 0.d0    ! multiplicative factor for initial fluctuations
                              ! (if negative, total momentum is set to zero)
   conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
@@ -117,6 +116,8 @@
   n_steps_skip = 0           ! How many steps to skip
   analyze_conserved = F      ! Should we use conserved variables for the analysis (does not work well)
   center_snapshots = F       ! Should we use cell-centered momenta for the analysis (will smooth fluctuations)
+
+  variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing
 
 /
 

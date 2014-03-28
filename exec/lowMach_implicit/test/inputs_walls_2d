@@ -34,7 +34,6 @@
   material_properties(1:2,3) = 0.d0 0.d0
 
   ! stochastic properties
-  variance_coef = 0          ! global scaling epsilon for stochastic forcing
   conc_scal = 0.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
@@ -94,6 +93,8 @@
   wallspeed_hi(1,1) = 0.d0
   wallspeed_lo(1,2) = 0.d0
   wallspeed_hi(1,2) = 0.d0
+
+  variance_coef = 0          ! global scaling epsilon for stochastic forcing
 
 /
 

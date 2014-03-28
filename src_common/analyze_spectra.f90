@@ -15,16 +15,13 @@ module analyze_spectra_module
   use HydroGridCInterface 
   use probin_common_module, only: n_cells, prob_lo, prob_hi, &
        hydro_grid_int, project_dir, max_grid_projection, stats_int, n_steps_save_stats, &
-       analyze_conserved, center_snapshots
+       analyze_conserved, center_snapshots, variance_coef
 
   implicit none
 
   private
   public :: initialize_hydro_grid, analyze_hydro_grid, save_hydro_grid, finalize_hydro_grid, &
        print_stats
-
-  ! move these to probin_common
-  real(dp_t), save :: variance_coef
 
   ! Molecular parameters (not used at present since there is no internal energy variable)
   real(dp_t), save :: k_B_over_m=1.0_dp_t

@@ -20,6 +20,7 @@ module probin_common_module
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
+  real(dp_t),save :: variance_coef
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -115,6 +116,9 @@ module probin_common_module
   namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
                                                 ! (will smooth fluctuations)
 
+  ! stochastic properties
+  namelist /probin_common/ variance_coef     ! global scaling epsilon for stochastic forcing
+
   !------------------------------------------------------------- 
 
 contains
@@ -176,6 +180,8 @@ contains
     n_steps_skip = 0
     analyze_conserved = .false.
     center_snapshots = .false.
+
+    variance_coef = 1.d0
 
     need_inputs = .true.
 
@@ -414,6 +420,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) center_snapshots
+
+       case ('--variance_coef')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) variance_coef
 
        case ('--')
           farg = farg + 1
