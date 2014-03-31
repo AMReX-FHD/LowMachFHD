@@ -14,7 +14,7 @@ module mk_stochastic_fluxdiv_module
   use multifab_fill_random_module
   use multifab_filter_module
   use probin_common_module , only: visc_type, diff_type, variance_coef
-  use probin_binarylm_module, only: nscal, rhobar, visc_coef, diff_coef, &
+  use probin_binarylm_module, only: rhobar, visc_coef, diff_coef, &
                                    conc_scal, stoch_stress_form, mol_mass, filtering_width, &
                                    kT
 
@@ -65,9 +65,6 @@ contains
     real(kind=dp_t), pointer :: bxp(:,:,:,:), byp(:,:,:,:), bzp(:,:,:,:)
     integer :: lo(mla%dim), hi(mla%dim)
 
-    ! there are no scalars with stochastic terms
-    if (nscal < 2) return
-
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -80,7 +77,7 @@ contains
        
        do i=1,dm
           ! we need one face-centered flux for each concentration
-          call multifab_build_edge(sflux_fc_temp(n,i),mla%la(n),nscal-1,sflux_fc(n,i,1)%ng,i)
+          call multifab_build_edge(sflux_fc_temp(n,i),mla%la(n),1,sflux_fc(n,i,1)%ng,i)
           call multifab_setval(sflux_fc_temp(n,i),0.d0,all=.true.)
           ! add weighted contribution of fluxes
           do comp=1,n_rngs
@@ -233,20 +230,20 @@ contains
       real(kind=dp_t), intent(in   ) :: s_fc(lo(1)-ng_s:,lo(2)-ng_s:,:)
 
       integer :: i,j
-      real(kind=dp_t) :: rho, fac(nscal-1), s_fac(nscal-1)
+      real(kind=dp_t) :: rho, fac, s_fac
 
       if (idim .eq. 1) then
 
          do j = lo(2),hi(2)
             do i = lo(1),hi(1)+1
                rho = s_fc(i,j,1) ! Density at face
-               fac(:) = s_fc(i,j,2:)/s_fc(i,j,1) ! Concentration at face
+               fac = s_fc(i,j,2)/s_fc(i,j,1) ! Concentration at face
                call concentration_amplitude(s_fac, fac, rho)
-               if (any (s_fac(:) .lt. 0.0d0)) then
+               if (s_fac .lt. 0.0d0) then
                   if(warn_bad_c) call bl_warn ('negative c*(1-c) set to zero')
-                  s_fac(:) = 0.0d0
+                  s_fac = 0.0d0
                end if
-               sflux(i,j,:) = sqrt(s_fac(:))*sflux(i,j,:)
+               sflux(i,j,:) = sqrt(s_fac)*sflux(i,j,:)
             end do
          end do
 
@@ -271,13 +268,13 @@ contains
          do j = lo(2),hi(2)+1
             do i = lo(1),hi(1)
                rho = s_fc(i,j,1) ! Density at face
-               fac(:) = s_fc(i,j,2:)/s_fc(i,j,1) ! Concentration at face
+               fac = s_fc(i,j,2)/s_fc(i,j,1) ! Concentration at face
                call concentration_amplitude(s_fac, fac, rho)
-               if (any (s_fac(:) .lt. 0.0d0)) then
+               if (s_fac .lt. 0.0d0) then
                   if(warn_bad_c) call bl_warn ('negative c*(1-c) set to zero')
-                  s_fac(:) = 0.0d0
+                  s_fac = 0.0d0
                end if
-               sflux(i,j,:) = sqrt(s_fac(:))*sflux(i,j,:)
+               sflux(i,j,:) = sqrt(s_fac)*sflux(i,j,:)
             end do
          end do
 
@@ -309,7 +306,7 @@ contains
       real(kind=dp_t), intent(in   ) :: s_fc(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
 
       integer :: i,j,k
-      real(kind=dp_t) :: rho, fac(nscal-1), s_fac(nscal-1)
+      real(kind=dp_t) :: rho, fac, s_fac
 
       if (idim .eq. 1) then
 
@@ -317,13 +314,13 @@ contains
             do j = lo(2),hi(2)
                do i = lo(1),hi(1)+1
                   rho = s_fc(i,j,k,1) ! Density at face
-                  fac(:) = s_fc(i,j,k,2:)/s_fc(i,j,k,1) ! Concentration at face
+                  fac = s_fc(i,j,k,2)/s_fc(i,j,k,1) ! Concentration at face
                   call concentration_amplitude(s_fac, fac, rho)    
-                  if (any (s_fac(:) .lt. 0.0d0)) then
+                  if (s_fac .lt. 0.0d0) then
                      if(warn_bad_c) call bl_warn ('negative c*(1-c) set to zero')
-                     s_fac(:) = 0.0d0
+                     s_fac = 0.0d0
                   end if
-                  sflux(i,j,k,:) = sqrt(s_fac(:))*sflux(i,j,k,:)
+                  sflux(i,j,k,:) = sqrt(s_fac)*sflux(i,j,k,:)
                end do
             end do
          end do
@@ -350,13 +347,13 @@ contains
             do j = lo(2),hi(2)+1
                do i = lo(1),hi(1)
                   rho = s_fc(i,j,k,1) ! Density at face
-                  fac(:) = s_fc(i,j,k,2:)/s_fc(i,j,k,1) ! Concentration at face
+                  fac = s_fc(i,j,k,2)/s_fc(i,j,k,1) ! Concentration at face
                   call concentration_amplitude(s_fac, fac, rho)
-                  if (any (s_fac(:) .lt. 0.0d0)) then
+                  if (s_fac .lt. 0.0d0) then
                      if(warn_bad_c) call bl_warn ('negative c*(1-c) set to zero')
-                     s_fac(:) = 0.0d0
+                     s_fac = 0.0d0
                   end if
-                  sflux(i,j,k,:) = sqrt(s_fac(:))*sflux(i,j,k,:)
+                  sflux(i,j,k,:) = sqrt(s_fac)*sflux(i,j,k,:)
                end do
             end do
          end do
@@ -383,13 +380,13 @@ contains
             do j = lo(2),hi(2)
                do i = lo(1),hi(1)
                   rho = s_fc(i,j,k,1) ! Density at face
-                  fac(:) = s_fc(i,j,k,2:)/s_fc(i,j,k,1) ! Concentration at face
+                  fac = s_fc(i,j,k,2)/s_fc(i,j,k,1) ! Concentration at face
                   call concentration_amplitude(s_fac, fac, rho)
-                  if (any (s_fac(:) .lt. 0.0d0)) then
+                  if (s_fac .lt. 0.0d0) then
                      if(warn_bad_c) call bl_warn ('negative c*(1-c) set to zero')
-                     s_fac(:) = 0.0d0
+                     s_fac = 0.0d0
                   end if
-                  sflux(i,j,k,:) = sqrt(s_fac(:))*sflux(i,j,k,:)
+                  sflux(i,j,k,:) = sqrt(s_fac)*sflux(i,j,k,:)
                end do
             end do
          end do
@@ -416,11 +413,11 @@ contains
 
     subroutine concentration_amplitude(s_fac, fac, rho)
 
-      real(kind=dp_t), intent(in) :: rho, fac(nscal-1)
-      real(kind=dp_t), intent(out) :: s_fac(nscal-1)
+      real(kind=dp_t), intent(in) :: rho, fac
+      real(kind=dp_t), intent(out) :: s_fac
       
       ! For ideal mixture use: rho*c*(1-c)*(c*m2+(1-c)*m1)
-      s_fac(:) = rho*fac(:)*(1.0d0-fac(:))* (fac(:)*mol_mass(2)+(1.0d0-fac(:))*mol_mass(1))  
+      s_fac = rho*fac*(1.0d0-fac)* (fac*mol_mass(2)+(1.0d0-fac)*mol_mass(1))  
     
     end subroutine concentration_amplitude
     
@@ -1080,11 +1077,9 @@ contains
           end select
        end if
 
-       if(nscal>1) then ! Stochastic diffusive flux
-          do i=1,dm
-             call multifab_fill_random(sflux_fc(:,i,comp))
-          end do
-       end if
+       do i=1,dm
+          call multifab_fill_random(sflux_fc(:,i,comp))
+       end do
 
     end do
 
@@ -1113,12 +1108,10 @@ contains
 
     do n=1,nlevs
        do comp=1,n_rngs
-          if(nscal>1) then
-             do i=1,dm
-                ! we need one face-centered flux for each concentration
-                call multifab_build_edge(sflux_fc(n,i,comp),mla%la(n),nscal-1,filtering_width,i)
-             end do
-          end if
+          do i=1,dm
+             ! we need one face-centered flux for each concentration
+             call multifab_build_edge(sflux_fc(n,i,comp),mla%la(n),1,filtering_width,i)
+          end do
           ! we need dm cell-centered fluxes for momentum
           call multifab_build(mflux_cc(n,comp),mla%la(n),dm,max(1,filtering_width))
           if (dm .eq. 2) then
@@ -1158,11 +1151,9 @@ contains
 
     do n=1,nlevs
        do comp=1,n_rngs
-          if(nscal>1) then
-             do i=1,dm
-                call multifab_destroy(sflux_fc(n,i,comp))
-             end do
-          end if
+          do i=1,dm
+             call multifab_destroy(sflux_fc(n,i,comp))
+          end do
           call multifab_destroy(mflux_cc(n,comp))
           if (dm .eq. 2) then
              call multifab_destroy(mflux_nd(n,comp))

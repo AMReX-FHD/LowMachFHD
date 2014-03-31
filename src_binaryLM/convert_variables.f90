@@ -51,8 +51,6 @@ contains
 
   subroutine convert_cons_to_prim(mla,s,prim,cons_to_prim)
     
-    use probin_binarylm_module, only: nscal
-
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) ::    s(:)
     type(multifab) , intent(inout) :: prim(:)
@@ -67,8 +65,8 @@ contains
 
        ! cons to prim - NO GHOST CELLS
        do n=1,nlevs
-          call multifab_copy_c(prim(n),1,s(n),1,nscal,0)
-          do i=2,nscal
+          call multifab_copy_c(prim(n),1,s(n),1,2,0)
+          do i=2,2
              call multifab_div_div_c(prim(n),i,s(n),1,1,0)
           end do
        end do
@@ -77,8 +75,8 @@ contains
 
        ! prim to cons - INCLUDING GHOST CELLS
        do n=1,nlevs
-          call multifab_copy_c(s(n),1,prim(n),1,nscal,s(n)%ng)
-          do i=2,nscal
+          call multifab_copy_c(s(n),1,prim(n),1,2,s(n)%ng)
+          do i=2,2
              call multifab_mult_mult_c(s(n),i,s(n),1,1,s(n)%ng)
           end do
        end do

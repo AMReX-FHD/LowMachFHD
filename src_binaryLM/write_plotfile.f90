@@ -2,7 +2,6 @@ module write_plotfile_module
 
   use ml_layout_module
   use multifab_module
-  use probin_binarylm_module, only : nscal
   use probin_common_module , only : prob_lo, prob_hi
   use fabio_module
   use convert_stag_module
@@ -52,10 +51,10 @@ contains
     ! velocity_shifted (dm)
     ! momentum_averaged (dm) 
     ! momentum_shifted (dm)
-    ! densities (nscal) 
-    ! concentrations (nscal-1)
+    ! densities (2) 
+    ! concentrations (1)
     ! pressure (1)
-    n_plot_comps = 4*dm+2*nscal
+    n_plot_comps = 4*dm+4
 
     allocate(plot_names(n_plot_comps))
 
@@ -76,10 +75,9 @@ contains
     if (dm > 2) plot_names(3*dm+3) = "mz_shifted"
 
     plot_names(4*dm+1) = "rho"
-    plot_names(4*dm+2:4*dm+nscal) = "rho*c"
-    plot_names(4*dm+nscal+1:4*dm+2*nscal-1) = "c"
-
-    plot_names(4*dm+2*nscal) = "pressure"
+    plot_names(4*dm+2) = "rho*c"
+    plot_names(4*dm+3) = "c"
+    plot_names(4*dm+4) = "pressure"
 
     plot_names_stagx(1) = "velx"
     plot_names_stagx(2) = "mx"
@@ -120,14 +118,12 @@ contains
 
     do n = 1,nlevs
        ! densities
-       call multifab_copy_c(plotdata(n),4*dm+1,s_in(n),1,nscal)
+       call multifab_copy_c(plotdata(n),4*dm+1,s_in(n),1,2)
        ! concentrations
-       call multifab_copy_c(plotdata(n),4*dm+1+nscal,s_in(n),2,nscal-1)
-       do i=1,nscal-1
-          call multifab_div_div_c(plotdata(n),4*dm+nscal+i,s_in(n),1,1,0)
-       end do
+       call multifab_copy_c(plotdata(n),4*dm+3,s_in(n),2,1)
+       call multifab_div_div_c(plotdata(n),4*dm+3,s_in(n),1,1,0)
        ! pressure
-       call multifab_copy_c(plotdata(n),4*dm+2*nscal,p_in(n),1,1,0)
+       call multifab_copy_c(plotdata(n),4*dm+4,p_in(n),1,1,0)
     end do
 
     ! copy staggered velocity and momentum into plotdata_stag

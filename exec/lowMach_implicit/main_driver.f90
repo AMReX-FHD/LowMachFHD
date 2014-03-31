@@ -25,7 +25,7 @@ subroutine main_driver()
   use analyze_spectra_module
   use estdt_module
   use convert_stag_module
-  use probin_binarylm_module, only: probin_binarylm_init, max_step, nscal, print_int, &
+  use probin_binarylm_module, only: probin_binarylm_init, max_step, print_int, &
                                    project_eos_int, visc_coef, initial_variance, &
                                    conc_scal, barodiffusion_type, algorithm_type
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
@@ -217,18 +217,18 @@ subroutine main_driver()
      ! converting m to umac in m ghost cells
      ! if using advection_type .ge. 1 (bds), need 3 ghost cells
      if (advection_type .ge. 1) then
-        call multifab_build(sold(n) ,mla%la(n),nscal,3)
-        call multifab_build(snew(n) ,mla%la(n),nscal,3)
-        call multifab_build(prim(n) ,mla%la(n),nscal,3)
+        call multifab_build(sold(n) ,mla%la(n),2,3)
+        call multifab_build(snew(n) ,mla%la(n),2,3)
+        call multifab_build(prim(n) ,mla%la(n),2,3)
      else
-        call multifab_build(sold(n) ,mla%la(n),nscal,2)
-        call multifab_build(snew(n) ,mla%la(n),nscal,2)
-        call multifab_build(prim(n) ,mla%la(n),nscal,2)
+        call multifab_build(sold(n) ,mla%la(n),2,2)
+        call multifab_build(snew(n) ,mla%la(n),2,2)
+        call multifab_build(prim(n) ,mla%la(n),2,2)
      end if
 
      ! s on faces, gp on faces
      do i=1,dm
-        call multifab_build_edge(  s_fc(n,i),mla%la(n),nscal,1,i)
+        call multifab_build_edge(  s_fc(n,i),mla%la(n),2,1,i)
         call multifab_build_edge(gp_fc(n,i),mla%la(n),1    ,0,i)
      end do
 
@@ -400,7 +400,7 @@ subroutine main_driver()
         if ( lexist ) then
            un = unit_new()
            open(unit=un, file = fname, status = 'old', action = 'read')
-           call initialize_hydro_grid(mla,sold,mold,dt,dx,un,nscal)
+           call initialize_hydro_grid(mla,sold,mold,dt,dx,un,2)
            close(unit=un)
         end if
      end if
@@ -517,7 +517,7 @@ subroutine main_driver()
      ! set old state to new state
      do n=1,nlevs
         call multifab_copy_c(pold(n),1,pnew(n),1,    1,pold(n)%ng)
-        call multifab_copy_c(sold(n),1,snew(n),1,nscal,sold(n)%ng)
+        call multifab_copy_c(sold(n),1,snew(n),1,2,sold(n)%ng)
         do i=1,dm
            call multifab_copy_c(mold(n,i),1,mnew(n,i),1,1,mold(n,i)%ng)
         end do
@@ -528,12 +528,12 @@ subroutine main_driver()
   !!!!!!!!!!!! convergence testing
 !  call init(mold,sold,pold,dx,mla,time)
 !  do n=1,nlevs
-!     call multifab_sub_sub_c(sold(n),1,snew(n),1,nscal,0)
+!     call multifab_sub_sub_c(sold(n),1,snew(n),1,2,0)
 !  end do
 !  linf = multifab_norm_inf_c(sold(1),2,1,all=.false.)
 !  l1 = multifab_norm_l1_c(sold(1),2,1,all=.false.)
 !  l2 = multifab_norm_l2_c(sold(1),2,1,all=.false.)
-!  n_cell = multifab_volume(sold(1)) / nscal
+!  n_cell = multifab_volume(sold(1)) / 2
 !  if (parallel_IOProcessor()) then
 !     print*,'linf error in rho*c',linf
 !     print*,'l1   error in rho*c',l1 / dble(n_cell)

@@ -17,7 +17,6 @@
   project_eos_int = 1        ! how often to call project_onto_eos
 
   ! fluid properties
-  nscal = 2                  ! scalars; nscal=2 means we carry rho and rho*c
   !rhobar(1:2) = 0.8594366925 0.8594366925 ! mass ratio R=1
   rhobar(1:2) = 0.8594366925 3.437746770 ! mass ratio R=4
   visc_coef = 4.633407920 ! Hard disk Enskog theory -2.316703960*sqrt(R)

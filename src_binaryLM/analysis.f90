@@ -2,7 +2,7 @@ module analysis_module
 
   use multifab_module
   use ml_layout_module
-  use probin_binarylm_module, only: nscal, rhobar
+  use probin_binarylm_module, only: rhobar
 
   implicit none
 
@@ -107,13 +107,13 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: cons(:)
     type(multifab) , intent(in   ) ::    m(:,:)
-    real(kind=dp_t), intent(inout), optional :: av_mass(nscal), av_momentum(mla%dim) ! Level 1 only
+    real(kind=dp_t), intent(inout), optional :: av_mass(2), av_momentum(mla%dim) ! Level 1 only
 
     ! local
     integer :: i,dm,nlevs,ng_c,ng_m, n_cell
     integer :: lo(mla%dim), hi(mla%dim)
 
-    real(kind=dp_t) :: mass_tot(nscal) , mass_lev(nscal),  mass_proc(nscal),  mass_grid(nscal)
+    real(kind=dp_t) :: mass_tot(2) , mass_lev(2),  mass_proc(2),  mass_grid(2)
     real(kind=dp_t) :: mom_tot(mla%dim), mom_lev(mla%dim), mom_proc(mla%dim), mom_grid(mla%dim)
 
     real(kind=dp_t), pointer ::  cp(:,:,:,:)
@@ -135,7 +135,7 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
     
-    n_cell = multifab_volume(cons(1)) / nscal
+    n_cell = multifab_volume(cons(1)) / 2
     
     if (nlevs .gt. 1) then
        call bl_error('sum_mass_momentum not written for multilevel yet')
@@ -161,21 +161,21 @@ contains
 
        end select
 
-       mass_proc(1:nscal) = mass_proc(1:nscal) + mass_grid(1:nscal)
+       mass_proc(1:2) = mass_proc(1:2) + mass_grid(1:2)
        mom_proc(1:dm)     = mom_proc(1:dm)     + mom_grid(1:dm)
 
     end do
 
-    call parallel_reduce(mass_lev(1:nscal), mass_proc(1:nscal), MPI_SUM)
+    call parallel_reduce(mass_lev(1:2), mass_proc(1:2), MPI_SUM)
     call parallel_reduce(mom_lev(1:dm)    , mom_proc(1:dm)    , MPI_SUM)
 
     if (parallel_IOProcessor()) then
-       write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", mass_lev(1:nscal)/n_cell
+       write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", mass_lev(1:2)/n_cell
        write(*,"(A,100G17.9)") "CONSERVE: <mom_k>=", mom_lev(1:dm)/n_cell
        write(*,*)
     end if
         
-    if(present(av_mass)) av_mass=mass_lev(1:nscal)/n_cell
+    if(present(av_mass)) av_mass=mass_lev(1:2)/n_cell
     if(present(av_momentum)) av_momentum=mom_lev(1:dm)/n_cell
     
   end subroutine sum_mass_momentum
@@ -194,7 +194,7 @@ contains
     ! mass
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
-          mass(1:nscal) = mass(1:nscal) + cons(i,j,1:nscal)
+          mass(1:2) = mass(1:2) + cons(i,j,1:2)
        end do
     end do
 
@@ -242,7 +242,7 @@ contains
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
-             mass(1:nscal) = mass(1:nscal) + cons(i,j,k,1:nscal)
+             mass(1:2) = mass(1:2) + cons(i,j,k,1:2)
           end do
        end do
     end do

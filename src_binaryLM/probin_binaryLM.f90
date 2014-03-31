@@ -10,7 +10,7 @@ module probin_binarylm_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  integer   , save :: max_step,nscal,print_int
+  integer   , save :: max_step,print_int
   real(dp_t), save :: rhobar(2),visc_coef,diff_coef,smoothing_width
   real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2),grav(3)
   real(dp_t), save :: mol_mass(2),kT
@@ -37,7 +37,6 @@ module probin_binarylm_module
   namelist /probin_binarylm/ project_eos_int   ! how often to call project_onto_eos
 
   ! fluid properties
-  namelist /probin_binarylm/ nscal             ! scalars; nscal=2 means we carry rho and rho*c
   namelist /probin_binarylm/ rhobar            ! rho1bar and rho2bar
   namelist /probin_binarylm/ visc_coef         ! momentum diffusion coefficient 'eta'   
   namelist /probin_binarylm/ diff_coef         ! concentration diffusion coefficient 'chi'
@@ -98,7 +97,6 @@ contains
     print_int = 0
     project_eos_int = 1
 
-    nscal = 2
     rhobar(1) = 1.1d0 
     rhobar(2) = 0.9d0
     visc_coef = 1.d0
@@ -208,11 +206,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) project_eos_int
-
-       case ('--nscal')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) nscal
 
        case ('--rhobar_1')
           farg = farg + 1

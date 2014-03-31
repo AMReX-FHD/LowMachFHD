@@ -13,7 +13,6 @@
   project_eos_int = 1        ! how often to call project_onto_eos
 
   ! fluid properties
-  nscal = 2                  ! scalars; nscal=2 means we carry rho and rho*c
   rhobar(1:2) = 0.763944 3.05578  ! rho1bar and rho2bar
   visc_coef = 5.0            ! momentum diffusion coefficient 'eta'   
   diff_coef = 0.086963       ! concentration diffusion coefficient 'chi'

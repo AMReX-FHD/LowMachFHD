@@ -12,7 +12,7 @@ module initial_projection_module
   use mk_stochastic_fluxdiv_module
   use bc_module
   use multifab_physbc_stag_module
-  use probin_binarylm_module, only: rhobar, nscal, barodiffusion_type
+  use probin_binarylm_module, only: rhobar, barodiffusion_type
 
   implicit none
 
@@ -71,7 +71,7 @@ contains
     end do
 
     ! average sold to faces
-    call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
 
     ! convert m^init to v^init in valid region
     call convert_m_to_umac(mla,s_fc,mold,umac,.true.)

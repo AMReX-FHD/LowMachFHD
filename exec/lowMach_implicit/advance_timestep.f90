@@ -21,7 +21,7 @@ module advance_timestep_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
-  use probin_binarylm_module, only: nscal, rhobar, grav, barodiffusion_type
+  use probin_binarylm_module, only: rhobar, grav, barodiffusion_type
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
 
@@ -103,13 +103,13 @@ contains
     S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
     
     do n=1,nlevs
-       call multifab_build(   s_update(n),mla%la(n),nscal,0)
-       call multifab_build(  bds_force(n),mla%la(n),nscal,1)
+       call multifab_build(   s_update(n),mla%la(n),2    ,0)
+       call multifab_build(  bds_force(n),mla%la(n),2    ,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
        call multifab_build(         dp(n),mla%la(n),1    ,1)
        call multifab_build(       divu(n),mla%la(n),1    ,0)
        do i=1,dm
-          call multifab_build_edge(          mtemp(n,i),mla%la(n),nscal,1,i)
+          call multifab_build_edge(          mtemp(n,i),mla%la(n),2    ,1,i)
           call multifab_build_edge(    gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_a_fluxdiv    (n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(m_d_fluxdiv_old(n,i),mla%la(n),1    ,0,i)
@@ -119,7 +119,7 @@ contains
           call multifab_build_edge(       umac_old(n,i),mla%la(n),1    ,1,i)
           call multifab_build_edge(       umac_tmp(n,i),mla%la(n),1    ,1,i)
           call multifab_build_edge(          gradp(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(       s_fc_old(n,i),mla%la(n),nscal,1,i)
+          call multifab_build_edge(       s_fc_old(n,i),mla%la(n),2    ,1,i)
           call multifab_build_edge(     chi_fc_old(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(vel_bc_n_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(vel_bc_n_delta(n,i),mla%la(n),1,0,i)
@@ -189,7 +189,7 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(  umac_old(n,i),1,  umac(n,i),1,1    ,1)
-          call multifab_copy_c(  s_fc_old(n,i),1,  s_fc(n,i),1,nscal,1)
+          call multifab_copy_c(  s_fc_old(n,i),1,  s_fc(n,i),1,2    ,1)
           call multifab_copy_c(chi_fc_old(n,i),1,chi_fc(n,i),1,1    ,0)
           call multifab_copy_c(vel_bc_n_old(n,i),1,vel_bc_n(n,i),1,1,0)
        end do
@@ -218,27 +218,27 @@ contains
     if (advection_type .ge. 1) then
 
        do n=1,nlevs
-          call multifab_copy_c(bds_force(n),1,s_update(n),1,nscal,0)
+          call multifab_copy_c(bds_force(n),1,s_update(n),1,2,0)
           call multifab_fill_boundary(bds_force(n))
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac_old,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+          call bds(mla,umac_old,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac_old,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+          call bds_quad(mla,umac_old,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        end if
 
     else
 
-       call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,nscal)
+       call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,2)
 
     end if
 
     ! set snew = s^{*,n+1} = s^n + dt * (A^n + D^n + St^n)
     do n=1,nlevs
-       call multifab_mult_mult_s_c(s_update(n),1,dt,nscal,0)
-       call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
-       call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
+       call multifab_mult_mult_s_c(s_update(n),1,dt,2,0)
+       call multifab_copy_c(snew(n),1,sold(n),1,2,0)
+       call multifab_plus_plus_c(snew(n),1,s_update(n),1,2,0)
     end do
 
     ! compute prim^{*,n+1} from s^{*,n+1} in valid region
@@ -256,7 +256,7 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! compute s^{*,n+1} to faces
-    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Crank-Nicolson Velocity Predictor
@@ -511,8 +511,8 @@ contains
     if (advection_type .ge. 1) then
 
        do n=1,nlevs
-          call multifab_plus_plus_c(bds_force(n),1,s_update(n),1,nscal,0)
-          call multifab_mult_mult_s_c(bds_force(n),1,0.5d0,nscal,0)
+          call multifab_plus_plus_c(bds_force(n),1,s_update(n),1,2,0)
+          call multifab_mult_mult_s_c(bds_force(n),1,0.5d0,2,0)
           call multifab_fill_boundary(bds_force(n))
           do i=1,dm
              call multifab_copy_c(umac_tmp(n,i),1,umac_old(n,i),1,1,1)
@@ -523,31 +523,31 @@ contains
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+          call bds(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,nscal,the_bc_tower)
+          call bds_quad(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        end if    
 
        ! snew = s^n + dt * A^{n+1/2} + (dt/2) * (D^n + D^{n+1,*} + S^n + S^{n+1,*})
        do n=1,nlevs
-          call multifab_copy_c(snew(n),1,sold(n),1,nscal,0)
-          call multifab_mult_mult_s_c(s_update(n),1,dt,nscal,0)
-          call multifab_mult_mult_s_c(bds_force(n),1,dt,nscal,0)
-          call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
-          call multifab_plus_plus_c(snew(n),1,bds_force(n),1,nscal,0)
+          call multifab_copy_c(snew(n),1,sold(n),1,2,0)
+          call multifab_mult_mult_s_c(s_update(n),1,dt,2,0)
+          call multifab_mult_mult_s_c(bds_force(n),1,dt,2,0)
+          call multifab_plus_plus_c(snew(n),1,s_update(n),1,2,0)
+          call multifab_plus_plus_c(snew(n),1,bds_force(n),1,2,0)
        end do
 
     else
 
-       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,nscal)
+       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,2)
 
        ! snew = s^{n+1} 
        !      = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1})
        do n=1,nlevs
-          call multifab_plus_plus_c(snew(n),1,sold(n),1,nscal,0)
-          call multifab_mult_mult_s_c(snew(n),1,0.5d0,nscal,0)
-          call multifab_mult_mult_s_c(s_update(n),1,dt/2.d0,nscal,0)
-          call multifab_plus_plus_c(snew(n),1,s_update(n),1,nscal,0)
+          call multifab_plus_plus_c(snew(n),1,sold(n),1,2,0)
+          call multifab_mult_mult_s_c(snew(n),1,0.5d0,2,0)
+          call multifab_mult_mult_s_c(s_update(n),1,dt/2.d0,2,0)
+          call multifab_plus_plus_c(snew(n),1,s_update(n),1,2,0)
        end do
 
     end if
@@ -567,7 +567,7 @@ contains
     call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! compute s^{n+1} to faces
-    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,nscal,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 4 - Crank-Nicolson Velocity Corrector
