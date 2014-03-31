@@ -200,8 +200,11 @@ subroutine main_driver()
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
   dt = cfl1*dx(1,1)**2/chi
+  
   if (parallel_IOProcessor()) then
-     write(*,*) "Using time step dt=", dt
+     write(*,*) "Using time step dt =", dt
+     if(use_stoch) write(*,*), "Noise variance =", sqrt(2.d0*k_B*variance_parameter/(product(dx(1,1:dm))*dt))
+
   end if
 
   ! set the time counter for the time-average
@@ -267,7 +270,7 @@ subroutine main_driver()
      end do
            
      print*, ' analytic std of W =', (molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*&
-                                     rho_in(1,1)*rho_in(1,2)/(product(dx(1,1:dm))*thickness*&
+                                     rho_in(1,1)*rho_in(1,2)*variance_parameter/(product(dx(1,1:dm))*&
                                      (rho_in(1,1)+rho_in(1,2))**4)
   end if
 

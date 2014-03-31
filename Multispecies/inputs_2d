@@ -23,7 +23,7 @@
  cfl1     = 0.01                ! CFL number
  chi      = 1.0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
  k_B      = 1E-3                ! Boltzmann constant
- thickness = 1000               ! thickness of 2D box 
+ variance_parameter = 1E-3      ! parameter to set variance (=1/thickness and =1 ideal) 
  Temp     = 1.0                 ! Temperature
  Press    = 1.0                 ! Pressure
  fraction_tolerance = 1e-14     ! to prevent division by zero 

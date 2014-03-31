@@ -51,12 +51,7 @@ contains
     dm    = mla%dim
  
     ! populate the variance (only first level)
-    select case(dm)
-    case (2)
-        variance = sqrt(2.d0*k_B/(product(dx(1,1:dm))*thickness*dt))
-    case (3)
-        variance = sqrt(2.d0*k_B/(product(dx(1,1:dm))*dt))
-    end select
+    variance = sqrt(2.d0*k_B*variance_parameter/(product(dx(1,1:dm))*dt))
 
     ! build multifabs 
     do n=1,nlevs

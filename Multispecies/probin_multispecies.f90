@@ -13,7 +13,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma ! manufactured solution parameters populated in init
-  real(kind=dp_t)    :: thickness,fraction_tolerance  
+  real(kind=dp_t)    :: variance_parameter,fraction_tolerance  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp ! not input: populated at main 
   logical            :: correct_flux, use_stoch, print_error_norms, is_ideal_mixture, use_lapack
   real(kind=dp_t)    :: c_bc(3,2,max_species)
@@ -23,7 +23,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ cfl1
   namelist /probin_multispecies/ chi
   namelist /probin_multispecies/ k_B
-  namelist /probin_multispecies/ thickness
+  namelist /probin_multispecies/ variance_parameter
   namelist /probin_multispecies/ Temp
   namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ fraction_tolerance
@@ -66,7 +66,7 @@ contains
     cfl1               = 1.0d0
     chi                = 1.0d0
     k_B                = 1E-3
-    thickness          = 1E3
+    variance_parameter = 1E-3
     init_type          = 1
     inverse_type       = 1
     timeinteg_type     = 1
