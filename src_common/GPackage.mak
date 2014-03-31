@@ -4,7 +4,6 @@ f90sources += convert_stag.f90
 f90sources += div_and_grad.f90
 f90sources += estdt.f90
 f90sources += inhomogeneous_bc_val.f90
-f90sources += init.f90
 f90sources += main.f90
 f90sources += main_driver.f90
 f90sources += mk_advective_m_fluxdiv.f90

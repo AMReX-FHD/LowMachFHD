@@ -1,6 +1,8 @@
 f90sources += analysis.f90
 f90sources += convert_variables.f90
 f90sources += fill_rho_ghost_cells.f90
+f90sources += init_pres.f90
+f90sources += initial_projection.f90
 f90sources += mk_baro_fluxdiv.f90
 f90sources += mk_diffusive_fluxdiv.f90
 f90sources += mk_external_force.f90
