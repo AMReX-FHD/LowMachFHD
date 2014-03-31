@@ -106,6 +106,10 @@ module analysis_module
 
   end subroutine sum_mass
 
+  ! Donev: You need to compute <w_i*w_j> *and* <w_i>
+  ! separately, and THEN compute covariance
+  ! You cannot combine the two together, think about why not and give me the explanation
+  ! It is crucial you understand stuff like this, it is basic probability
   subroutine compute_cov(mla,rho,covW) 
 
     type(ml_layout), intent(in)     :: mla
@@ -133,12 +137,21 @@ module analysis_module
           
           select case(dm)
           case (2)
+             ! Donev: Never put a sequence of all colons in argument lists
+             ! Instead of covW(:,:) just pass covW
+             ! They are *different* as I have explained to you several times already
              call compute_cov_2d(dp(:,:,1,:),n_cell,covW(:,:),ng,lo,hi) 
           case (3)
              call compute_cov_3d(dp(:,:,:,:),n_cell,covW(:,:),ng,lo,hi) 
           end select
        end do
     end do
+    ! What you have computed now is a sum over all of the boxes that belong to this processor
+    ! But then you need to combine all the processors together:
+    ! See line:
+    ! call parallel_reduce(r, r1, MPI_SUM)
+    ! in multifab_norm_l1_c in multifab_f.f90
+    ! and make sure you understand why and what it is doing
 
     end subroutine compute_cov
      
@@ -156,7 +169,9 @@ module analysis_module
        cellW   = 0.d0
        cellWij = 0.d0
        
-       ! for specific box, now start loops over alloted cells    
+       ! for specific box, now start loops over alloted cells   
+       ! Donev: This loop must not include ghost cells, look at function
+       ! multifab_norm_l1_c in multifab_f.f90
        do j=lo(2)-ng, hi(2)+ng
           do i=lo(1)-ng, hi(1)+ng
              call compute_cov_local(rho(i,j,:),cellW(:),cellWij(:,:))
@@ -245,6 +260,7 @@ module analysis_module
 
      end subroutine compute_cov_local 
  
+    ! Donev: Am I supposed to be looking at this routine???
     subroutine meanvar_W(mla,rho,covW) 
 
     type(ml_layout), intent(in)    :: mla

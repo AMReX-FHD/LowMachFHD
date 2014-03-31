@@ -419,7 +419,7 @@ contains
       real(kind=dp_t), intent(in) :: rho, fac(nscal-1)
       real(kind=dp_t), intent(out) :: s_fac(nscal-1)
       
-      ! For ideal mixture use: rho*c*(1-c)*M
+      ! For ideal mixture use: rho*c*(1-c)*(c*m2+(1-c)*m1)
       s_fac(:) = rho*fac(:)*(1.0d0-fac(:))* (fac(:)*mol_mass(2)+(1.0d0-fac(:))*mol_mass(1))  
     
     end subroutine concentration_amplitude
