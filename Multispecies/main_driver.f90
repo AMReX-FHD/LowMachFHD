@@ -35,6 +35,8 @@ subroutine main_driver()
   type(multifab), allocatable  :: rho_exact(:)
   real(kind=dp_t),allocatable  :: molmass(:) 
   real(kind=dp_t),allocatable  :: covW(:,:) 
+  real(kind=dp_t),allocatable  :: wiwjt(:,:) 
+  real(kind=dp_t),allocatable  :: wit(:) 
   
   !==============================================================
   ! Initialization
@@ -56,6 +58,8 @@ subroutine main_driver()
   allocate(rho_exact(nlevs))
   allocate(molmass(nspecies))
   allocate(covW(nspecies,nspecies))
+  allocate(wiwjt(nspecies,nspecies))
+  allocate(wit(nspecies))
 
   !==============================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -203,6 +207,8 @@ subroutine main_driver()
   ! set the time counter for the time-average
   step_count = 0
   covW       = 0 
+  wit        = 0 
+  wiwjt      = 0 
 
   do istep=1,max_step
 
@@ -222,9 +228,8 @@ subroutine main_driver()
      end if
 
      ! compute coavariance and variances 
-     if(max_step .gt. 1) then
-        call compute_cov(mla,rho,covW)    
-        !call meanvar_W(mla,rho,covW)   
+     if(max_step .gt. 400) then
+        call compute_cov(mla,rho,wit,wiwjt)    
         step_count = step_count + 1 
      end if 
 
@@ -256,7 +261,8 @@ subroutine main_driver()
   if (parallel_IOProcessor()) then
      do i=1,nspecies
         do j=1,nspecies
-           print*, ' cov of Wij',i,j,covW(i,j)/step_count
+           covW(i,j) = wiwjt(i,j)/step_count - wit(i)*wit(j)/step_count**2
+           print*, ' cov of Wij',i,j,covW(i,j)
         end do
      end do
            
@@ -272,6 +278,8 @@ subroutine main_driver()
 
   deallocate(molmass)
   deallocate(covW)
+  deallocate(wiwjt)
+  deallocate(wit)
   do n=1,nlevs
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_exact(n))

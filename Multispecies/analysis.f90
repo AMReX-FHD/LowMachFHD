@@ -13,7 +13,7 @@ module analysis_module
 
   private
 
-  public :: print_errors, sum_mass, compute_cov, meanvar_W
+  public :: print_errors,sum_mass,compute_cov
 
   contains
 
@@ -106,117 +106,101 @@ module analysis_module
 
   end subroutine sum_mass
 
-  ! Donev: You need to compute <w_i*w_j> *and* <w_i>
-  ! separately, and THEN compute covariance
-  ! You cannot combine the two together, think about why not and give me the explanation
-  ! It is crucial you understand stuff like this, it is basic probability
-  subroutine compute_cov(mla,rho,covW) 
+  subroutine compute_cov(mla,rho,wit,wiwjt) 
 
     type(ml_layout), intent(in)     :: mla
     type(multifab),  intent(in)     :: rho(:)
-    real(kind=dp_t), intent(inout)  :: covW(nspecies,nspecies)
+    real(kind=dp_t), intent(inout)  :: wit(nspecies)
+    real(kind=dp_t), intent(inout)  :: wiwjt(nspecies,nspecies)
 
     ! local variables
+    integer :: n,i,j,dm,nlevs,n_cell
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: n,i,j,ng,dm,nlevs,n_cell
-    
+    real(kind=dp_t), dimension(nspecies) :: cellW, cellW_procavg    
+    real(kind=dp_t), dimension(nspecies,nspecies) :: cellWij, cellWij_procavg   
+ 
     ! pointer for rho 
     real(kind=dp_t), pointer  :: dp(:,:,:,:)  
 
     dm     = mla%dim     ! dimensionality
-    ng     = rho(1)%ng   ! number of ghost cells 
     nlevs  = mla%nlevel 
     n_cell = multifab_volume(rho(1))/nspecies 
-  
+ 
+    cellW_procavg   = 0.d0
+    cellWij_procavg = 0.d0
+    cellW           = 0.d0
+    cellWij         = 0.d0
+ 
     ! loop over all boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
           dp => dataptr(rho(n),i)
           lo = lwb(get_box(rho(n),i))
           hi = upb(get_box(rho(n),i))
-          
+
           select case(dm)
           case (2)
-             ! Donev: Never put a sequence of all colons in argument lists
-             ! Instead of covW(:,:) just pass covW
-             ! They are *different* as I have explained to you several times already
-             call compute_cov_2d(dp(:,:,1,:),n_cell,covW(:,:),ng,lo,hi) 
+             call compute_cov_2d(dp(:,:,1,:),n_cell,cellW,cellWij,lo,hi) 
           case (3)
-             call compute_cov_3d(dp(:,:,:,:),n_cell,covW(:,:),ng,lo,hi) 
+             call compute_cov_3d(dp(:,:,:,:),n_cell,cellW,cellWij,lo,hi) 
           end select
        end do
     end do
-    ! What you have computed now is a sum over all of the boxes that belong to this processor
-    ! But then you need to combine all the processors together:
-    ! See line:
-    ! call parallel_reduce(r, r1, MPI_SUM)
-    ! in multifab_norm_l1_c in multifab_f.f90
-    ! and make sure you understand why and what it is doing
+    
+    ! average over all processors 
+    call parallel_reduce(cellW_procavg, cellW, MPI_SUM)
+    do i=1,nspecies
+       do j=1, nspecies     
+          call parallel_reduce(cellWij_procavg(i,j), cellWij(i,j), MPI_SUM)
+       end do
+    end do
 
+    ! average over n_cell and calculate covW
+    do i=1,nspecies
+       wit(i) = wit(i) + cellW_procavg(i)/dble(n_cell)
+       do j=1, nspecies     
+          wiwjt(i,j) = wiwjt(i,j) + cellWij_procavg(i,j)/dble(n_cell) 
+       end do
+    end do
+ 
     end subroutine compute_cov
      
-    subroutine compute_cov_2d(rho,n_cell,covW,ng,lo,hi)
+    subroutine compute_cov_2d(rho,n_cell,cellW,cellWij,lo,hi)
  
-       integer         :: lo(2), hi(2), ng, n_cell
-       real(kind=dp_t) :: rho(lo(1)-ng:,lo(2)-ng:,:) 
-       real(kind=dp_t) :: covW(nspecies,nspecies)  
+       integer         :: lo(2), hi(2), n_cell
+       real(kind=dp_t) :: rho(lo(1):,lo(2):,:) 
+       real(kind=dp_t) :: cellW(nspecies)  
+       real(kind=dp_t) :: cellWij(nspecies,nspecies)  
    
        ! local variables
-       real(kind=dp_t), dimension(nspecies)          :: cellW
-       real(kind=dp_t), dimension(nspecies,nspecies) :: cellWij
-       integer                                       :: i,j
+       integer  :: i,j
     
-       cellW   = 0.d0
-       cellWij = 0.d0
-       
+              
        ! for specific box, now start loops over alloted cells   
-       ! Donev: This loop must not include ghost cells, look at function
-       ! multifab_norm_l1_c in multifab_f.f90
-       do j=lo(2)-ng, hi(2)+ng
-          do i=lo(1)-ng, hi(1)+ng
-             call compute_cov_local(rho(i,j,:),cellW(:),cellWij(:,:))
-          end do
-       end do
-    
-       do i=1, nspecies
-          !print*, cellW(i)/dble(n_cell)
-       end do
-       ! average over n_cell and calculate covW
-       do i=1,nspecies
-          do j=1, nspecies     
-             covW(i,j) = covW(i,j) + cellWij(i,j)/dble(n_cell) - cellW(i)*cellW(j)/dble(n_cell**2)
+       do j=lo(2), hi(2)
+          do i=lo(1), hi(1)
+             call compute_cov_local(rho(i,j,:),cellW,cellWij)
           end do
        end do
 
-     end subroutine compute_cov_2d
+    end subroutine compute_cov_2d
 
-     subroutine compute_cov_3d(rho,n_cell,covW,ng,lo,hi)
+    subroutine compute_cov_3d(rho,n_cell,cellW,cellWij,lo,hi)
  
-       integer          :: lo(3), hi(3), ng, n_cell
-       real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) 
-       real(kind=dp_t)  :: covW(nspecies,nspecies)  
+       integer          :: lo(3), hi(3), n_cell
+       real(kind=dp_t)  :: rho(lo(1):,lo(2):,lo(3):,:) 
+       real(kind=dp_t)  :: cellW(nspecies)  
+       real(kind=dp_t)  :: cellWij(nspecies,nspecies)  
     
        ! local variables
-       real(kind=dp_t), dimension(nspecies)          :: cellW
-       real(kind=dp_t), dimension(nspecies,nspecies) :: cellWij
-       integer                                       :: i,j,k
+       integer :: i,j,k
    
-       cellW   = 0.d0
-       cellWij = 0.d0
- 
        ! for specific box, now start loops over alloted cells    
-       do k=lo(3)-ng, hi(3)+ng
-          do j=lo(2)-ng, hi(2)+ng
-             do i=lo(1)-ng, hi(1)+ng
-                call compute_cov_local(rho(i,j,k,:),cellW(:),cellWij(:,:))
+       do k=lo(3), hi(3)
+          do j=lo(2), hi(2)
+             do i=lo(1), hi(1)
+                call compute_cov_local(rho(i,j,k,:),cellW,cellWij)
              end do
-          end do
-       end do
-
-       ! average over n_cell and calculate covW
-       do i=1,nspecies
-          do j=1, nspecies     
-             covW(i,j) = covW(i,j) + cellWij(i,j)/dble(n_cell) - cellW(i)*cellW(j)/dble(n_cell**2)
           end do
        end do
 
@@ -224,7 +208,7 @@ module analysis_module
 
      subroutine compute_cov_local(rho,cellW,cellWij)
  
-       real(kind=dp_t)  :: rho(nspecies)  ! density
+       real(kind=dp_t)  :: rho(nspecies)  
        real(kind=dp_t)  :: cellW(nspecies)    
        real(kind=dp_t)  :: cellWij(nspecies,nspecies) 
     
@@ -246,12 +230,12 @@ module analysis_module
           cellW(i) = cellW(i) + W(i) ! compute this for average
        end do
 
-       ! calculate Wij=wi*wj matrix and <Wij>
+       ! calculate Wij=wi*wj matrix and spatial sum over Wij
        do i=1,nspecies
           do j=1, i-1
                  Wij(i,j) = W(i)*W(j)
                  Wij(j,i) = Wij(i,j) 
-             cellWij(i,j) = cellWij(i,j) + Wij(i,j) ! compute for average 
+             cellWij(i,j) = cellWij(i,j) + Wij(i,j)    
              cellWij(j,i) = cellWij(j,i) + Wij(j,i) 
           end do
               Wij(i,i) = W(i)*W(i)
@@ -260,170 +244,4 @@ module analysis_module
 
      end subroutine compute_cov_local 
  
-    ! Donev: Am I supposed to be looking at this routine???
-    subroutine meanvar_W(mla,rho,covW) 
-
-    type(ml_layout), intent(in)    :: mla
-    type(multifab),  intent(in)    :: rho(:)
-    real(kind=dp_t), intent(inout) :: covW(nspecies,nspecies)
-
-    ! local variables
-    type(multifab)                       :: W(mla%nlevel)
-    type(multifab)                       :: Wij(mla%nlevel)
-    real(kind=dp_t), dimension(nspecies) :: wavg,wsqrtavg
-    real(kind=dp_t), dimension(nspecies,nspecies) :: wiwjavg
-    integer                              :: i,j,n,nlevs,n_cell
-
-    nlevs  = size(rho,1)
-    n_cell = multifab_volume(rho(1))/nspecies 
-  
-    ! build cell-centered multifabs for nspecies and ghost cells contained in rho
-    do n=1,nlevs
-       call multifab_build(W(n),mla%la(n),nspecies,rho(n)%ng)
-       call multifab_build(Wij(n),mla%la(n),nspecies**2,rho(n)%ng)
-    end do
-   
-    ! compute W and Wij from rho and rho_tot 
-    call convert_rho_to_W(mla,rho,W,Wij)
-  
-    do n=1,nlevs
-       do i=1,nspecies
-          ! wavg = sum(W)/n_cell
-          wavg(i) = multifab_norm_l1_c(W(n),i,1,all=.false.)/dble(n_cell)
-          !print*, wavg(i)
-       end do
-       do i=1,nspecies
-          do j=1, nspecies     
-  
-          ! <w_i*w_j>
-          wiwjavg(i,j) = multifab_norm_l1_c(Wij(n),i*j,1,all=.false.)/dble(n_cell)
- 
-          ! sum covariance (W_i W_j) over time
-          covW(i,j) = covW(i,j) + wiwjavg(i,j) - wavg(i)*wavg(j)
-
-          end do
-       end do
-   end do
-
-   ! free the multifab allocated memory
-   do n=1,nlevs
-      call multifab_destroy(W(n))
-      call multifab_destroy(Wij(n))
-   end do
-
-  contains 
-
-     subroutine convert_rho_to_W(mla,rho,W,Wij)
-   
-       type(ml_layout), intent(in   )  :: mla
-       type(multifab) , intent(in   )  :: rho(:) 
-       type(multifab) , intent(inout)  :: W(:) 
-       type(multifab) , intent(inout)  :: Wij(:) 
-
-       ! local variables
-       integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-       integer :: n,i,ng,dm,nlevs
- 
-       ! pointer for rho(nspecies), rho_tot(1), molarconc(nspecies) 
-       real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
-       real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for W 
-       real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for Wij 
-
-       dm    = mla%dim     ! dimensionality
-       ng    = rho(1)%ng   ! number of ghost cells 
-       nlevs = mla%nlevel  ! number of levels 
- 
-       ! loop over all boxes 
-       do n=1,nlevs
-          do i=1,nfabs(rho(n))
-             dp => dataptr(rho(n),i)
-             dp1 => dataptr(W(n),i)
-             dp2 => dataptr(Wij(n),i)
-             lo = lwb(get_box(rho(n),i))
-             hi = upb(get_box(rho(n),i))
-          
-             select case(dm)
-             case (2)
-                call convert_rho_to_W_2d(dp(:,:,1,:),dp1(:,:,1,:),dp2(:,:,1,:),ng,lo,hi) 
-             case (3)
-                call convert_rho_to_W_3d(dp(:,:,:,:),dp1(:,:,:,:),dp2(:,:,:,:),ng,lo,hi) 
-             end select
-          end do
-       end do
-
-     end subroutine convert_rho_to_W
-
-     subroutine convert_rho_to_W_2d(rho,W,Wij,ng,lo,hi)
- 
-       integer          :: lo(2), hi(2), ng
-       real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)   ! density- last dim for #species
-       real(kind=dp_t)  ::   W(lo(1)-ng:,lo(2)-ng:,:)   ! W
-       real(kind=dp_t)  :: Wij(lo(1)-ng:,lo(2)-ng:,:)   ! Wij
-        
-       ! local variables
-       integer          :: i,j
-    
-       ! for specific box, now start loops over alloted cells    
-       do j=lo(2)-ng, hi(2)+ng
-          do i=lo(1)-ng, hi(1)+ng
-             call convert_rho_to_W_local(rho(i,j,:),W(i,j,:),Wij(i,j,:))
-          end do
-       end do
- 
-     end subroutine convert_rho_to_W_2d
-
-     subroutine convert_rho_to_W_3d(rho,W,Wij,ng,lo,hi)
- 
-       integer          :: lo(3), hi(3), ng
-       real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! density- last dim for #species
-       real(kind=dp_t)  ::   W(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! W 
-       real(kind=dp_t)  :: Wij(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! Wij 
-    
-       ! local variables
-       integer          :: i,j,k
-    
-       ! for specific box, now start loops over alloted cells    
-       do k=lo(3)-ng, hi(3)+ng
-          do j=lo(2)-ng, hi(2)+ng
-             do i=lo(1)-ng, hi(1)+ng
-                call convert_rho_to_W_local(rho(i,j,k,:),W(i,j,k,:),Wij(i,j,k,:))
-             end do
-          end do
-       end do
- 
-     end subroutine convert_rho_to_W_3d
-
-     subroutine convert_rho_to_W_local(rho,W,Wij)
- 
-       real(kind=dp_t), intent(in)   :: rho(nspecies)  ! density
-       real(kind=dp_t), intent(out)  ::   W(nspecies)    ! Wi (diagonals) 
-       real(kind=dp_t), intent(out)  ::   Wij(nspecies,nspecies) ! Wij (full matrix) 
-    
-       ! local variables
-       integer          :: i,j
-       real(kind=dp_t)  :: rho_tot        ! total density 
-
-       ! calculate total density inside each cell
-       rho_tot=0.d0 
-       do i=1, nspecies  
-          rho_tot = rho_tot + rho(i)
-       end do         
-  
-       ! calculate mass fraction 
-       do i=1, nspecies  
-          W(i) = rho(i)/rho_tot
-       end do
-
-       do i=1,nspecies
-          do j=1, i-1
-             Wij(i,j) = W(i)*W(j)
-             Wij(j,i) = Wij(i,j) 
-          end do
-          Wij(i,i) = W(i)*W(i)
-       end do 
- 
-     end subroutine convert_rho_to_W_local 
-
-  end subroutine meanvar_W
-
 end module analysis_module
