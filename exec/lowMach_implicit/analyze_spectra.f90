@@ -14,10 +14,10 @@ module analyze_spectra_module
   use HydroGridModule
   use HydroGridCInterface 
 
-  use probin_common_module, only: n_cells, prob_lo, prob_hi
-  use probin_lowmach_module, only: variance_coef, &
+  use probin_common_module, only: n_cells, prob_lo, prob_hi, &
        hydro_grid_int, analyze_conserved, project_dir, &
-       center_snapshots, max_grid_projection, stats_int, n_steps_save_stats
+       center_snapshots, max_grid_projection, stats_int, n_steps_save_stats, &
+       variance_coef
 
   implicit none
 
