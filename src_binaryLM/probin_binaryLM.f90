@@ -1,7 +1,7 @@
-! This module stores the runtime parameters.  The probin_lowmach_init() routine is
+! This module stores the runtime parameters.  The probin_binarylm_init() routine is
 ! used to initialize the runtime parameters
 
-module probin_lowmach_module
+module probin_binarylm_module
 
   use bl_types
 
@@ -17,43 +17,51 @@ module probin_lowmach_module
   integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(2,3),c_bc(3,2)
+  integer   , save :: algorithm_type,barodiffusion_type
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
   !------------------------------------------------------------- 
 
   ! problem setup
-  namelist /probin_lowmach/ smoothing_width   ! scale factor for smoothing initial profile
-  namelist /probin_lowmach/ c_init            ! controls initial concentration range
-  namelist /probin_lowmach/ u_init            ! controls initial velocity
-  namelist /probin_lowmach/ c_bc              ! c boundary conditions (dir,face).
+  namelist /probin_binarylm/ smoothing_width   ! scale factor for smoothing initial profile
+  namelist /probin_binarylm/ c_init            ! controls initial concentration range
+  namelist /probin_binarylm/ u_init            ! controls initial velocity
+  namelist /probin_binarylm/ c_bc              ! c boundary conditions (dir,face).
                                               ! Dirichlet for RESERVOIR; Neumann for WALL
-  namelist /probin_lowmach/ grav              ! gravity vector (negative is downwards)
+  namelist /probin_binarylm/ grav              ! gravity vector (negative is downwards)
 
   ! simulation parameters
-  namelist /probin_lowmach/ max_step          ! maximum number of time steps
-  namelist /probin_lowmach/ print_int         ! how often to output EOS drift and sum of conserved quantities
-  namelist /probin_lowmach/ project_eos_int   ! how often to call project_onto_eos
+  namelist /probin_binarylm/ max_step          ! maximum number of time steps
+  namelist /probin_binarylm/ print_int         ! how often to output EOS drift and sum of conserved quantities
+  namelist /probin_binarylm/ project_eos_int   ! how often to call project_onto_eos
 
   ! fluid properties
-  namelist /probin_lowmach/ nscal             ! scalars; nscal=2 means we carry rho and rho*c
-  namelist /probin_lowmach/ rhobar            ! rho1bar and rho2bar
-  namelist /probin_lowmach/ visc_coef         ! momentum diffusion coefficient 'eta'   
-  namelist /probin_lowmach/ diff_coef         ! concentration diffusion coefficient 'chi'
-  namelist /probin_lowmach/ mol_mass          ! molar mass of species
-  namelist /probin_lowmach/ kT                ! temperature
-  namelist /probin_lowmach/ material_properties ! a/b for chi/eta/kappa
+  namelist /probin_binarylm/ nscal             ! scalars; nscal=2 means we carry rho and rho*c
+  namelist /probin_binarylm/ rhobar            ! rho1bar and rho2bar
+  namelist /probin_binarylm/ visc_coef         ! momentum diffusion coefficient 'eta'   
+  namelist /probin_binarylm/ diff_coef         ! concentration diffusion coefficient 'chi'
+  namelist /probin_binarylm/ mol_mass          ! molar mass of species
+  namelist /probin_binarylm/ kT                ! temperature
+  namelist /probin_binarylm/ material_properties ! a/b for chi/eta/kappa
 
   ! stochastic properties
-  namelist /probin_lowmach/ initial_variance  ! multiplicative factor for initial fluctuations
-                                              ! (if negative, total momentum is set to zero)
-  namelist /probin_lowmach/ conc_scal         ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
-  namelist /probin_lowmach/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
-  namelist /probin_lowmach/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+  namelist /probin_binarylm/ initial_variance  ! multiplicative factor for initial fluctuations
+                                               ! (if negative, total momentum is set to zero)
+  namelist /probin_binarylm/ conc_scal         ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
+  namelist /probin_binarylm/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
+  namelist /probin_binarylm/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
+  namelist /probin_binarylm/ barodiffusion_type ! 0 = no barodiffusion
+                                                ! 1 = fixed gradp from initialization
+                                                ! 2 = update gradp each time step
+  namelist /probin_binarylm/ algorithm_type     ! 0 = John's Algorithm
+                                                ! 1 = Overdamped with 1 RNG
+                                                ! 2 = Overdamped with 2 RNGs
 
 contains
 
-  subroutine probin_lowmach_init()
+  subroutine probin_binarylm_init()
 
     use f2kcli
     use parallel
@@ -104,6 +112,9 @@ contains
     filtering_width = 0
     stoch_stress_form = 1
 
+    barodiffusion_type = 0
+    algorithm_type = 0
+
     farg = 1
     if (narg >= 1) then
        call get_command_argument(farg, value = fname)
@@ -112,7 +123,7 @@ contains
           farg = farg + 1
           un = unit_new()
           open(unit=un, file = fname, status = 'old', action = 'read')
-          read(unit=un, nml = probin_lowmach)
+          read(unit=un, nml = probin_binarylm)
           close(unit=un)
        end if
     end if
@@ -276,6 +287,16 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) stoch_stress_form
 
+       case ('--barodiffusion_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) barodiffusion_type
+
+       case ('--algorithm_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) algorithm_type
+
        case ('--')
           farg = farg + 1
           exit
@@ -287,6 +308,6 @@ contains
        farg = farg + 1
     end do
     
-  end subroutine probin_lowmach_init
+  end subroutine probin_binarylm_init
 
-end module probin_lowmach_module
+end module probin_binarylm_module

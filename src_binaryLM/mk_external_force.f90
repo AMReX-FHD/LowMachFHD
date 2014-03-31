@@ -4,7 +4,7 @@ module mk_external_force_module
   use multifab_module
   use ml_layout_module
   use bl_constants_module
-  use probin_lowmach_module, only: diff_coef, visc_coef
+  use probin_binarylm_module, only: diff_coef, visc_coef
   use probin_common_module, only: prob_type
 
   implicit none

@@ -12,8 +12,7 @@ module initial_projection_module
   use mk_stochastic_fluxdiv_module
   use bc_module
   use multifab_physbc_stag_module
-  use probin_lowmach_module, only: rhobar, nscal
-  use probin_module, only: barodiffusion_type
+  use probin_binarylm_module, only: rhobar, nscal, barodiffusion_type
 
   implicit none
 

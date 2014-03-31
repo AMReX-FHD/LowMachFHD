@@ -25,16 +25,16 @@ subroutine main_driver()
   use analyze_spectra_module
   use estdt_module
   use convert_stag_module
-  use probin_lowmach_module, only: probin_lowmach_init, max_step, nscal, print_int, &
+  use probin_binarylm_module, only: probin_binarylm_init, max_step, nscal, print_int, &
                                    project_eos_int, visc_coef, initial_variance, &
-                                   conc_scal
+                                   conc_scal, barodiffusion_type, algorithm_type
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
                                    stats_int, variance_coef, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, visc_type, advection_type
   use probin_gmres_module  , only: probin_gmres_init
-  use probin_module        , only: probin_init, barodiffusion_type, algorithm_type
+
   implicit none
 
   ! will be allocated with dm components
@@ -97,10 +97,9 @@ subroutine main_driver()
   real(kind=dp_t), allocatable :: weights(:)
 
   ! uncomment this once lowMach_implicit/probin.f90 is written
-  call probin_lowmach_init()
+  call probin_binarylm_init()
   call probin_common_init()
   call probin_gmres_init()
-  call probin_init()
 
   ! Initialize random numbers *after* the global (root) seed has been set:
   call SeedParallelRNG(seed)

@@ -20,8 +20,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
-  use probin_module, only: algorithm_type
-  use probin_lowmach_module, only: nscal, rhobar, grav
+  use probin_binarylm_module, only: nscal, rhobar, grav, algorithm_type
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
 

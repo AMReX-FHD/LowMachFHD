@@ -16,8 +16,8 @@ include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 include ../GPackage.mak
 VPATH_LOCATIONS += ..
 
-include $(STAGGERED_HOME)/src_lowMach/GPackage.mak
-VPATH_LOCATIONS += $(STAGGERED_HOME)/src_lowMach
+include $(STAGGERED_HOME)/src_binaryLM/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_binaryLM
 
 include $(STAGGERED_HOME)/src_gmres/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_gmres

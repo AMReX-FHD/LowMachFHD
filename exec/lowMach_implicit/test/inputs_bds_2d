@@ -1,11 +1,4 @@
-&probin
-
-  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
-  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
-
-/
-
-&probin_lowmach
+&probin_binarylm
 
   ! problem setup
   c_init(1) = 0.5d0          ! controls initial concentration
@@ -27,6 +20,9 @@
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
   smoothing_width = .5
+
+  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
+  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
 
 /
 

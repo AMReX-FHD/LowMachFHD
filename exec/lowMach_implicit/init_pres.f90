@@ -3,7 +3,7 @@ module init_pres_module
   use multifab_module
   use ml_layout_module
   use probin_common_module, only: n_cells
-  use probin_lowmach_module, only: grav
+  use probin_binarylm_module, only: grav
   use multifab_physbc_module
   use define_bc_module
   use bc_module

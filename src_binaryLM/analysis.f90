@@ -2,7 +2,7 @@ module analysis_module
 
   use multifab_module
   use ml_layout_module
-  use probin_lowmach_module, only: nscal, rhobar
+  use probin_binarylm_module, only: nscal, rhobar
 
   implicit none
 

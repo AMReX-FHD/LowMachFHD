@@ -4,7 +4,7 @@ module inhomogeneous_bc_val_module
   use bc_module
   use bl_error_module
   use probin_common_module,  only: wallspeed_lo, wallspeed_hi, prob_lo, prob_hi
-  use probin_lowmach_module, only: rhobar, c_bc
+  use probin_binarylm_module, only: rhobar, c_bc
 
   implicit none
 

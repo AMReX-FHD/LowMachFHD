@@ -3,7 +3,7 @@ module mk_grav_force_module
   use bl_types
   use multifab_module
   use ml_layout_module
-  use probin_lowmach_module, only: grav
+  use probin_binarylm_module, only: grav
 
   implicit none
 

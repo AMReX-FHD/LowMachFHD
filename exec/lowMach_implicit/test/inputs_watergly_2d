@@ -1,13 +1,4 @@
-&probin
-
-  barodiffusion_type = 0  ! 0 = no barodiffusion
-                          ! 1 = fixed gradp from initialization
-                          ! 2 = update gradp each time step
-  algorithm_type = 1	  ! enable overdamped (infinite Sc) algorithm
-
-/
-
-&probin_lowmach
+&probin_binarylm
 
   ! problem setup
   c_init(1:2) = 0.39d0 0.d0  ! controls initial concentration range
@@ -41,6 +32,11 @@
   conc_scal = 0.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
+  barodiffusion_type = 0  ! 0 = no barodiffusion
+                          ! 1 = fixed gradp from initialization
+                          ! 2 = update gradp each time step
+  algorithm_type = 1	  ! enable overdamped (infinite Sc) algorithm
 
 /
 

@@ -51,7 +51,7 @@ contains
 
   subroutine convert_cons_to_prim(mla,s,prim,cons_to_prim)
     
-    use probin_lowmach_module, only: nscal
+    use probin_binarylm_module, only: nscal
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) ::    s(:)

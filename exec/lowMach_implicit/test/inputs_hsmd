@@ -1,13 +1,6 @@
 ! Input corresponding to ficticious hard sphere (3d) molecular dynamics simulations (phi=0.45) with mass ratio R=4
 
-&probin
-
-  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
-  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
-
-/
-
-&probin_lowmach
+&probin_binarylm
 
   ! problem setup
   smoothing_width = 1.d0     ! scale factor for smoothing initial profile
@@ -49,6 +42,9 @@
   conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
+  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
+  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
 
 /
 
