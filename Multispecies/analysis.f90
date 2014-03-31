@@ -13,7 +13,7 @@ module analysis_module
 
   private
 
-  public :: print_errors, sum_mass, meanvar_W
+  public :: print_errors, sum_mass, compute_cov, meanvar_W
 
   contains
 
@@ -106,11 +106,149 @@ module analysis_module
 
   end subroutine sum_mass
 
-  subroutine meanvar_W(mla,rho,stdW,covW) 
+  subroutine compute_cov(mla,rho,covW) 
+
+    type(ml_layout), intent(in)     :: mla
+    type(multifab),  intent(in)     :: rho(:)
+    real(kind=dp_t), intent(inout)  :: covW(nspecies,nspecies)
+
+    ! local variables
+    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
+    integer :: n,i,j,ng,dm,nlevs,n_cell
+    
+    ! pointer for rho 
+    real(kind=dp_t), pointer  :: dp(:,:,:,:)  
+
+    dm     = mla%dim     ! dimensionality
+    ng     = rho(1)%ng   ! number of ghost cells 
+    nlevs  = mla%nlevel 
+    n_cell = multifab_volume(rho(1))/nspecies 
+  
+    ! loop over all boxes 
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp => dataptr(rho(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          
+          select case(dm)
+          case (2)
+             call compute_cov_2d(dp(:,:,1,:),n_cell,covW(:,:),ng,lo,hi) 
+          case (3)
+             call compute_cov_3d(dp(:,:,:,:),n_cell,covW(:,:),ng,lo,hi) 
+          end select
+       end do
+    end do
+
+    end subroutine compute_cov
+     
+    subroutine compute_cov_2d(rho,n_cell,covW,ng,lo,hi)
+ 
+       integer         :: lo(2), hi(2), ng, n_cell
+       real(kind=dp_t) :: rho(lo(1)-ng:,lo(2)-ng:,:) 
+       real(kind=dp_t) :: covW(nspecies,nspecies)  
+   
+       ! local variables
+       real(kind=dp_t), dimension(nspecies)          :: cellW
+       real(kind=dp_t), dimension(nspecies,nspecies) :: cellWij
+       integer                                       :: i,j
+    
+       cellW   = 0.d0
+       cellWij = 0.d0
+       
+       ! for specific box, now start loops over alloted cells    
+       do j=lo(2)-ng, hi(2)+ng
+          do i=lo(1)-ng, hi(1)+ng
+             call compute_cov_local(rho(i,j,:),cellW(:),cellWij(:,:))
+          end do
+       end do
+    
+       do i=1, nspecies
+          !print*, cellW(i)/dble(n_cell)
+       end do
+       ! average over n_cell and calculate covW
+       do i=1,nspecies
+          do j=1, nspecies     
+             covW(i,j) = covW(i,j) + cellWij(i,j)/dble(n_cell) - cellW(i)*cellW(j)/dble(n_cell**2)
+          end do
+       end do
+
+     end subroutine compute_cov_2d
+
+     subroutine compute_cov_3d(rho,n_cell,covW,ng,lo,hi)
+ 
+       integer          :: lo(3), hi(3), ng, n_cell
+       real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) 
+       real(kind=dp_t)  :: covW(nspecies,nspecies)  
+    
+       ! local variables
+       real(kind=dp_t), dimension(nspecies)          :: cellW
+       real(kind=dp_t), dimension(nspecies,nspecies) :: cellWij
+       integer                                       :: i,j,k
+   
+       cellW   = 0.d0
+       cellWij = 0.d0
+ 
+       ! for specific box, now start loops over alloted cells    
+       do k=lo(3)-ng, hi(3)+ng
+          do j=lo(2)-ng, hi(2)+ng
+             do i=lo(1)-ng, hi(1)+ng
+                call compute_cov_local(rho(i,j,k,:),cellW(:),cellWij(:,:))
+             end do
+          end do
+       end do
+
+       ! average over n_cell and calculate covW
+       do i=1,nspecies
+          do j=1, nspecies     
+             covW(i,j) = covW(i,j) + cellWij(i,j)/dble(n_cell) - cellW(i)*cellW(j)/dble(n_cell**2)
+          end do
+       end do
+
+     end subroutine compute_cov_3d
+
+     subroutine compute_cov_local(rho,cellW,cellWij)
+ 
+       real(kind=dp_t)  :: rho(nspecies)  ! density
+       real(kind=dp_t)  :: cellW(nspecies)    
+       real(kind=dp_t)  :: cellWij(nspecies,nspecies) 
+    
+       ! local variables
+       real(kind=dp_t), dimension(nspecies)           :: W
+       real(kind=dp_t), dimension(nspecies,nspecies)  :: Wij
+       real(kind=dp_t)                                :: rho_tot             
+       integer                                        :: i,j
+
+       ! calculate total density inside each cell
+       rho_tot=0.d0 
+       do i=1, nspecies  
+          rho_tot = rho_tot + rho(i)
+       end do         
+  
+       ! calculate mass fraction and sum over cell for each species
+       do i=1, nspecies  
+          W(i)     = rho(i)/rho_tot
+          cellW(i) = cellW(i) + W(i) ! compute this for average
+       end do
+
+       ! calculate Wij=wi*wj matrix and <Wij>
+       do i=1,nspecies
+          do j=1, i-1
+                 Wij(i,j) = W(i)*W(j)
+                 Wij(j,i) = Wij(i,j) 
+             cellWij(i,j) = cellWij(i,j) + Wij(i,j) ! compute for average 
+             cellWij(j,i) = cellWij(j,i) + Wij(j,i) 
+          end do
+              Wij(i,i) = W(i)*W(i)
+          cellWij(i,i) = cellWij(i,i) + Wij(i,i) 
+       end do 
+
+     end subroutine compute_cov_local 
+ 
+    subroutine meanvar_W(mla,rho,covW) 
 
     type(ml_layout), intent(in)    :: mla
     type(multifab),  intent(in)    :: rho(:)
-    real(kind=dp_t), intent(inout) :: stdW(nspecies)
     real(kind=dp_t), intent(inout) :: covW(nspecies,nspecies)
 
     ! local variables
@@ -134,16 +272,9 @@ module analysis_module
   
     do n=1,nlevs
        do i=1,nspecies
-
           ! wavg = sum(W)/n_cell
           wavg(i) = multifab_norm_l1_c(W(n),i,1,all=.false.)/dble(n_cell)
-
-          ! wsqrtavg = sqrt{sum(W^2)/n_cell} 
-          wsqrtavg(i) = multifab_norm_l2_c(W(n),i,1,all=.false.)/sqrt(dble(n_cell))
-
-          ! sum standard deviation of W_i over time
-          stdW(i) = stdW(i) + wsqrtavg(i)**2 - wavg(i)**2
-
+          !print*, wavg(i)
        end do
        do i=1,nspecies
           do j=1, nspecies     

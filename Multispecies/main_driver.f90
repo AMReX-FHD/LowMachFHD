@@ -34,7 +34,6 @@ subroutine main_driver()
   type(multifab), allocatable  :: rho(:)
   type(multifab), allocatable  :: rho_exact(:)
   real(kind=dp_t),allocatable  :: molmass(:) 
-  real(kind=dp_t),allocatable  :: stdW(:) 
   real(kind=dp_t),allocatable  :: covW(:,:) 
   
   !==============================================================
@@ -56,7 +55,6 @@ subroutine main_driver()
   allocate(rho(nlevs))
   allocate(rho_exact(nlevs))
   allocate(molmass(nspecies))
-  allocate(stdW(nspecies))
   allocate(covW(nspecies,nspecies))
 
   !==============================================================
@@ -204,7 +202,6 @@ subroutine main_driver()
 
   ! set the time counter for the time-average
   step_count = 0
-  stdW       = 0 
   covW       = 0 
 
   do istep=1,max_step
@@ -224,9 +221,10 @@ subroutine main_driver()
         call print_errors(rho,rho_exact,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
      end if
 
-     ! check the variances 
-     if(max_step .gt. 500) then
-        call meanvar_W(mla,rho,stdW,covW)    
+     ! compute coavariance and variances 
+     if(max_step .gt. 1) then
+        call compute_cov(mla,rho,covW)    
+        !call meanvar_W(mla,rho,covW)   
         step_count = step_count + 1 
      end if 
 
@@ -257,10 +255,6 @@ subroutine main_driver()
   ! print out the standard deviation
   if (parallel_IOProcessor()) then
      do i=1,nspecies
-        print*, ' std of W',i,stdW(i)/step_count
-     end do
-     
-     do i=1,nspecies
         do j=1,nspecies
            print*, ' cov of Wij',i,j,covW(i,j)/step_count
         end do
@@ -277,7 +271,6 @@ subroutine main_driver()
   !=======================================================
 
   deallocate(molmass)
-  deallocate(stdW)
   deallocate(covW)
   do n=1,nlevs
      call multifab_destroy(rho(n))
