@@ -156,17 +156,8 @@ module analysis_module
     end do
 
     ! average over n_cell and calculate covW
-    ! Donev: In Fortran 90 you can just write
-    ! wit=wit+cellW_procavg/n_cell
-    ! wiwjt=wiwjt+cellWij_procavg/ncell
-    ! and you do not have to write loops
-    ! Makes the code easier to read but it is the same thing
-    do i=1,nspecies
-       wit(i) = wit(i) + cellW_procavg(i)/dble(n_cell)
-       do j=1, nspecies     
-          wiwjt(i,j) = wiwjt(i,j) + cellWij_procavg(i,j)/dble(n_cell) 
-       end do
-    end do
+    wit   = wit   + cellW_procavg/dble(n_cell)
+    wiwjt = wiwjt + cellWij_procavg/dble(n_cell) 
  
     end subroutine compute_cov
      
@@ -179,7 +170,6 @@ module analysis_module
    
        ! local variables
        integer  :: i,j
-    
               
        ! for specific box, now start loops over alloted cells   
        do j=lo(2), hi(2)

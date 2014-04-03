@@ -230,7 +230,7 @@ subroutine main_driver()
      end if
 
      ! compute coavariance and variances (after typical relaxation ~ L^2/D) 
-     if(max_step .gt. n_steps_skip) then ! Donev: Use n_steps_skip from probin_common_module
+     if(max_step .gt. n_steps_skip) then 
         call compute_cov(mla,rho,wit,wiwjt)    
         step_count = step_count + 1 
      end if 
@@ -309,7 +309,7 @@ subroutine main_driver()
                     (molmass(1)*rho_in(1,1) + molmass(2)*rho_in(1,2))*rho_in(1,3)))*variance_parameter/(&
                     product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)
       else if(nspecies .eq. 4) then
-        write(*,*), 'analyic S_W for 4-species'
+        write(*,*), 'analyic cov of W for 4-species'
         loc_param = variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3) +& 
                     rho_in(1,4)))
         write(*,*), ''
@@ -319,7 +319,7 @@ subroutine main_driver()
         write(*,*), -0.132d0*loc_param, -0.168d0*loc_param,  -0.076d0*loc_param,   0.376d0*loc_param
  
       else  
-        write(*,*), 'analytic covariance of W for nspecies > 3 not coded'
+        write(*,*), 'analytic covariance of W for nspecies > 4 is not coded'
      end if
 
   end if
