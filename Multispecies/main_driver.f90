@@ -22,7 +22,7 @@ subroutine main_driver()
 
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t)              :: dt,time
+  real(kind=dp_t)              :: dt,time,loc_param
   integer                      :: n,nlevs,i,j,dm,istep,step_count
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
@@ -187,9 +187,8 @@ subroutine main_driver()
   ! Begin time stepping loop
   !=======================================================
 
-  istep = 0
-
   ! write initial plotfile
+  istep = 0
   if (plot_int .gt. 0) then
      call write_plotfile(mla,"plt_rho",rho,istep,dx,time,prob_lo,prob_hi)
   end if
@@ -207,7 +206,7 @@ subroutine main_driver()
 
   end if
 
-  ! set the time counter for the time-average
+  ! free up memory counters for time-average, covariance and <wi>, <wiwj>
   step_count = 0
   covW       = 0 
   wit        = 0 
@@ -230,8 +229,8 @@ subroutine main_driver()
         call print_errors(rho,rho_exact,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
      end if
 
-     ! compute coavariance and variances 
-     if(max_step .gt. 400) then ! Donev: 400 should be replaced with n_steps_skip from probin_common_module
+     ! compute coavariance and variances (after typical relaxation ~ L^2/D) 
+     if(max_step .gt. n_steps_skip) then ! Donev: Use n_steps_skip from probin_common_module
         call compute_cov(mla,rho,wit,wiwjt)    
         step_count = step_count + 1 
      end if 
@@ -309,7 +308,17 @@ subroutine main_driver()
                     rho_in(1,2) + rho_in(1,3))**4)), (rho_in(1,3)*(molmass(3)*(rho_in(1,1) + rho_in(1,2))**2 +& 
                     (molmass(1)*rho_in(1,1) + molmass(2)*rho_in(1,2))*rho_in(1,3)))*variance_parameter/(&
                     product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)
-      else
+      else if(nspecies .eq. 4) then
+        write(*,*), 'analyic S_W for 4-species'
+        loc_param = variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3) +& 
+                    rho_in(1,4)))
+        write(*,*), ''
+        write(*,*),  0.174d0*loc_param, -0.024d0*loc_param,  -0.018d0*loc_param,  -0.132d0*loc_param 
+        write(*,*), -0.024d0*loc_param,  0.2115d0*loc_param, -0.0195d0*loc_param, -0.168d0*loc_param
+        write(*,*), -0.018d0*loc_param, -0.0195d0*loc_param,  0.1135d0*loc_param, -0.076d0*loc_param 
+        write(*,*), -0.132d0*loc_param, -0.168d0*loc_param,  -0.076d0*loc_param,   0.376d0*loc_param
+ 
+      else  
         write(*,*), 'analytic covariance of W for nspecies > 3 not coded'
      end if
 
