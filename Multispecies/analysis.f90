@@ -156,6 +156,11 @@ module analysis_module
     end do
 
     ! average over n_cell and calculate covW
+    ! Donev: In Fortran 90 you can just write
+    ! wit=wit+cellW_procavg/n_cell
+    ! wiwjt=wiwjt+cellWij_procavg/ncell
+    ! and you do not have to write loops
+    ! Makes the code easier to read but it is the same thing
     do i=1,nspecies
        wit(i) = wit(i) + cellW_procavg(i)/dble(n_cell)
        do j=1, nspecies     
@@ -233,12 +238,12 @@ module analysis_module
        ! calculate Wij=wi*wj matrix and spatial sum over Wij
        do i=1,nspecies
           do j=1, i-1
-                 Wij(i,j) = W(i)*W(j)
-                 Wij(j,i) = Wij(i,j) 
+             Wij(i,j) = W(i)*W(j)
+             Wij(j,i) = Wij(i,j) 
              cellWij(i,j) = cellWij(i,j) + Wij(i,j)    
              cellWij(j,i) = cellWij(j,i) + Wij(j,i) 
           end do
-              Wij(i,i) = W(i)*W(i)
+          Wij(i,i) = W(i)*W(i)
           cellWij(i,i) = cellWij(i,i) + Wij(i,i) 
        end do 
 

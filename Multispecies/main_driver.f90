@@ -231,7 +231,7 @@ subroutine main_driver()
      end if
 
      ! compute coavariance and variances 
-     if(max_step .gt. 400) then
+     if(max_step .gt. 400) then ! Donev: 400 should be replaced with n_steps_skip from probin_common_module
         call compute_cov(mla,rho,wit,wiwjt)    
         step_count = step_count + 1 
      end if 
