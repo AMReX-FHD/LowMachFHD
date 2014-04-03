@@ -19,7 +19,7 @@
 &probin_multispecies
  
  nspecies = 3                    ! number of species
- max_step = 1000                 ! total number of computational step
+ max_step = 10000                 ! total number of computational step
  cfl1     = 0.01                 ! CFL number
  chi      = 1.0                  ! max eigenvalue of diffusionmatrix Dbar_bc 
  k_B      = 1E-3                 ! Boltzmann constant
@@ -40,6 +40,6 @@
  rho_in(1,1:3) = 0.2 0.5 0.3     ! inside the circle
  rho_in(2,1:3) = 0.8 0.5 0.7   ! outside the circle  
  molmass_in(1:3) = 1.0 0.75 1.25 ! molar mass of n-species
- Dbar_in(1:3) = 1.0 1.0 1.0      ! SM diffusion constant arranged in lower-triangle
+ Dbar_in(1:3) = 1.0 2.0 2.0      ! SM diffusion constant arranged in lower-triangle
  
 /
