@@ -13,7 +13,7 @@ module stochastic_m_fluxdiv_module
   use multifab_physbc_stag_module
   use multifab_fill_random_module
   use multifab_filter_module
-  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef, k_B, &
+  use probin_common_module , only: visc_coef, diff_type, variance_coef, k_B, &
                                    stoch_stress_form, filtering_width  
 
   implicit none
@@ -30,24 +30,24 @@ module stochastic_m_fluxdiv_module
 
   integer, save :: n_rngs ! how many random number stages
 
-  ! T needs to be passed in as a multifab
-  real(dp_t), save :: temperature
-  
 contains
 
   ! Note that here we *increment* stoch_m_force so it must be initialized externally!
-  subroutine stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,eta_ed,dx,dt,weights)
+  subroutine stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,eta_ed, &
+                                  temperature,temperature_ed,dx,dt,weights)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: stoch_m_force(:,:)
-    type(multifab) , intent(in   ) :: eta(:)
-    type(multifab) , intent(in   ) :: eta_ed(:,:)
+    type(multifab) , intent(in   ) :: eta(:)              ! cell-centered
+    type(multifab) , intent(in   ) :: eta_ed(:,:)         ! nodal (2D), edge-based (3D)
+    type(multifab) , intent(in   ) :: temperature(:)      ! cell-centered
+    type(multifab) , intent(in   ) :: temperature_ed(:,:) ! nodal (2D), edge-based (3D)
     real(dp_t)     , intent(in   ) :: dx(:,:),dt,weights(:)
 
     ! local
     integer :: n,nlevs,dm,i,comp
-    integer :: ng_c,ng_e,ng_y,ng_w,ng_n,ng_f
+    integer :: ng_c,ng_e,ng_y,ng_w,ng_n,ng_f,ng_t,ng_m
 
     real(dp_t) :: variance
 
@@ -57,10 +57,11 @@ contains
 
     logical :: nodal_temp(mla%dim)
 
-    real(kind=dp_t), pointer :: fp(:,:,:,:), dp(:,:,:,:), sp(:,:,:,:)
+    real(kind=dp_t), pointer :: fp(:,:,:,:), dp(:,:,:,:), sp(:,:,:,:), tp(:,:,:,:)
     real(kind=dp_t), pointer :: fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:)
     real(kind=dp_t), pointer :: dxp(:,:,:,:), dyp(:,:,:,:), dzp(:,:,:,:)
     real(kind=dp_t), pointer :: ep1(:,:,:,:), ep2(:,:,:,:), ep3(:,:,:,:)
+    real(kind=dp_t), pointer :: mp1(:,:,:,:), mp2(:,:,:,:), mp3(:,:,:,:)
     integer :: lo(mla%dim), hi(mla%dim)
 
     nlevs = mla%nlevel
@@ -120,40 +121,37 @@ contains
 
     ng_c = mflux_cc_temp(1)%ng
     ng_y = eta(1)%ng
+    ng_t = temperature(1)%ng
     ng_f = stoch_m_force(1,1)%ng
 
     do n=1,nlevs
 
-       if (visc_type < 0) then
-          ! eta varies in space, add its contribution below in an i/j/k loop
-          variance = sqrt(variance_coef*2.d0*k_B*temperature          /(product(dx(n,1:dm))*dt))
-       else
-          ! eta is constant in space, include it here
-          variance = sqrt(variance_coef*2.d0*k_B*temperature*visc_coef/(product(dx(n,1:dm))*dt))
-       end if
-
+       ! include eta and temperature contribution in an ijk loop
+       variance = sqrt(variance_coef*2.d0*k_B/(product(dx(n,1:dm))*dt))
 
        if (dm .eq. 2) then
 
           ng_n = mflux_nd_temp(1)%ng
           ng_w = eta_ed(1,1)%ng
+          ng_m = temperature_ed(1,1)%ng
           
           do i=1,nfabs(mflux_cc_temp(n))
              
              fp  => dataptr(mflux_cc_temp(n),i)
              sp  => dataptr(mflux_nd_temp(n),i)
              dp  => dataptr(eta(n),i)
+             ep1 => dataptr(eta_ed(n,1),i)
+             tp  => dataptr(temperature(n),i)
+             mp1 => dataptr(temperature_ed(n,1),i)
              lo = lwb(get_box(mflux_cc_temp(n),i))
              hi = upb(get_box(mflux_cc_temp(n),i))
              ! multiply by variance
              fp = variance*fp
              sp = variance*sp
-             ! if eta varies in space, multiply pointwise by sqrt(eta)
-             if (visc_type < 0) then
-                ep1 => dataptr(eta_ed(n,1),i)
-                call mult_by_sqrt_eta_2d(fp(:,:,1,:),ng_c,sp(:,:,1,:),ng_n, &
-                                         dp(:,:,1,1),ng_y,ep1(:,:,1,1),ng_w,lo,hi)
-             end if
+             ! multiply by sqrt(temperature*eta)
+             call mult_by_sqrt_eta_2d(fp(:,:,1,:),ng_c,sp(:,:,1,:),ng_n, &
+                                      dp(:,:,1,1),ng_y,ep1(:,:,1,1),ng_w, &
+                                      tp(:,:,1,1),ng_t,mp1(:,:,1,1),ng_m,lo,hi)
              ! apply boundary conditions
              call mflux_bc_2d(sp(:,:,1,:),ng_n,lo,hi, &
                               the_bc_level(n)%phys_bc_level_array(i,:,:))
@@ -174,6 +172,7 @@ contains
 
           ng_e = mflux_ed_temp(1,1)%ng
           ng_w = eta_ed(1,1)%ng
+          ng_m = temperature_ed(1,1)%ng
 
           do i=1,nfabs(mflux_cc_temp(n))
              fp  => dataptr(mflux_cc_temp(n),i)
@@ -181,6 +180,13 @@ contains
              fyp => dataptr(mflux_ed_temp(n,2),i)
              fzp => dataptr(mflux_ed_temp(n,3),i)
              dp => dataptr(eta(n),i)
+             ep1 => dataptr(eta_ed(n,1),i)
+             ep2 => dataptr(eta_ed(n,2),i)
+             ep3 => dataptr(eta_ed(n,3),i)
+             tp => dataptr(temperature(n),i)
+             mp1 => dataptr(temperature_ed(n,1),i)
+             mp2 => dataptr(temperature_ed(n,2),i)
+             mp3 => dataptr(temperature_ed(n,3),i)
              lo = lwb(get_box(mflux_cc_temp(n),i))
              hi = upb(get_box(mflux_cc_temp(n),i))
              ! multiply by variance
@@ -188,16 +194,14 @@ contains
              fxp = variance*fxp
              fyp = variance*fyp
              fzp = variance*fzp
-             ! if eta varies in space, multiply pointwise by sqrt(eta)
-             if (visc_type < 0) then
-                ep1 => dataptr(eta_ed(n,1),i)
-                ep2 => dataptr(eta_ed(n,2),i)
-                ep3 => dataptr(eta_ed(n,3),i)
-                call mult_by_sqrt_eta_3d(fp(:,:,:,:),ng_c, &
-                                         fxp(:,:,:,:),fyp(:,:,:,:),fzp(:,:,:,:),ng_e, &
-                                         dp(:,:,:,1),ng_y, &
-                                         ep1(:,:,:,1),ep2(:,:,:,1),ep3(:,:,:,1),ng_w,lo,hi)
-             end if
+             ! multiply by sqrt(temperature*eta)
+             call mult_by_sqrt_eta_3d(fp(:,:,:,:),ng_c, &
+                                      fxp(:,:,:,:),fyp(:,:,:,:),fzp(:,:,:,:),ng_e, &
+                                      dp(:,:,:,1),ng_y, &
+                                      ep1(:,:,:,1),ep2(:,:,:,1),ep3(:,:,:,1),ng_w, &
+                                      tp(:,:,:,1),ng_t, &
+                                      mp1(:,:,:,1),mp2(:,:,:,1),mp3(:,:,:,1),ng_m, &
+                                      lo,hi)
              ! apply boundary conditions
              call mflux_bc_3d(fxp(:,:,:,:),fyp(:,:,:,:),fzp(:,:,:,:),ng_e,lo,hi, &
                               the_bc_level(n)%phys_bc_level_array(i,:,:))
@@ -266,43 +270,51 @@ contains
 
   contains
     
-    subroutine mult_by_sqrt_eta_2d(mflux_cc,ng_c,mflux_nd,ng_n,eta,ng_y,eta_nodal,ng_w,lo,hi)
+    subroutine mult_by_sqrt_eta_2d(mflux_cc,ng_c,mflux_nd,ng_n,eta,ng_y,eta_nodal,ng_w, &
+         temperature,ng_t,temperature_nodal,ng_m,lo,hi)
 
-      integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_n,ng_y,ng_w
-      real(kind=dp_t), intent(inout) ::  mflux_cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
-      real(kind=dp_t), intent(inout) ::  mflux_nd(lo(1)-ng_n:,lo(2)-ng_n:,:)
-      real(kind=dp_t), intent(in   ) ::       eta(lo(1)-ng_y:,lo(2)-ng_y:)
-      real(kind=dp_t), intent(in   ) :: eta_nodal(lo(1)-ng_w:,lo(2)-ng_w:)
+      integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_n,ng_y,ng_w,ng_t,ng_m
+      real(kind=dp_t), intent(inout) ::          mflux_cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
+      real(kind=dp_t), intent(inout) ::          mflux_nd(lo(1)-ng_n:,lo(2)-ng_n:,:)
+      real(kind=dp_t), intent(in   ) ::               eta(lo(1)-ng_y:,lo(2)-ng_y:)
+      real(kind=dp_t), intent(in   ) ::         eta_nodal(lo(1)-ng_w:,lo(2)-ng_w:)
+      real(kind=dp_t), intent(in   ) ::       temperature(lo(1)-ng_t:,lo(2)-ng_t:)
+      real(kind=dp_t), intent(in   ) :: temperature_nodal(lo(1)-ng_m:,lo(2)-ng_m:)
 
       ! local
       integer i,j
 
       do j=lo(2)-1,hi(2)+1
          do i=lo(1)-1,hi(1)+1
-            mflux_cc(i,j,:) = mflux_cc(i,j,:) * sqrt(eta(i,j))
+            mflux_cc(i,j,:) = mflux_cc(i,j,:) * sqrt(eta(i,j)*temperature(i,j))
          end do
       end do
 
       do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)+1
-            mflux_nd(i,j,:) = mflux_nd(i,j,:) * sqrt(eta_nodal(i,j))
+            mflux_nd(i,j,:) = mflux_nd(i,j,:) * sqrt(eta_nodal(i,j)*temperature_nodal(i,j))
          end do
       end do
 
     end subroutine mult_by_sqrt_eta_2d
 
     subroutine mult_by_sqrt_eta_3d(mflux_cc,ng_c,mflux_xy,mflux_xz,mflux_yz,ng_e,eta,ng_y, &
-                                   eta_xy,eta_xz,eta_yz,ng_w,lo,hi)
+                                   eta_xy,eta_xz,eta_yz,ng_w,temperature,ng_t, &
+                                   temperature_xy,temperature_xz,temperature_yz,ng_m,lo,hi)
 
-      integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_e,ng_y,ng_w
-      real(kind=dp_t), intent(inout) :: mflux_cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
-      real(kind=dp_t), intent(inout) :: mflux_xy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
-      real(kind=dp_t), intent(inout) :: mflux_xz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
-      real(kind=dp_t), intent(inout) :: mflux_yz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
-      real(kind=dp_t), intent(in   ) ::      eta(lo(1)-ng_y:,lo(2)-ng_y:,lo(3)-ng_y:)
-      real(kind=dp_t), intent(in   ) ::   eta_xy(lo(1)-ng_w:,lo(2)-ng_w:,lo(3)-ng_w:)
-      real(kind=dp_t), intent(in   ) ::   eta_xz(lo(1)-ng_w:,lo(2)-ng_w:,lo(3)-ng_w:)
-      real(kind=dp_t), intent(in   ) ::   eta_yz(lo(1)-ng_w:,lo(2)-ng_w:,lo(3)-ng_w:)
+      integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_e,ng_y,ng_w,ng_t,ng_m
+      real(kind=dp_t), intent(inout) ::       mflux_cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
+      real(kind=dp_t), intent(inout) ::       mflux_xy(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(inout) ::       mflux_xz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(inout) ::       mflux_yz(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+      real(kind=dp_t), intent(in   ) ::            eta(lo(1)-ng_y:,lo(2)-ng_y:,lo(3)-ng_y:)
+      real(kind=dp_t), intent(in   ) ::         eta_xy(lo(1)-ng_w:,lo(2)-ng_w:,lo(3)-ng_w:)
+      real(kind=dp_t), intent(in   ) ::         eta_xz(lo(1)-ng_w:,lo(2)-ng_w:,lo(3)-ng_w:)
+      real(kind=dp_t), intent(in   ) ::         eta_yz(lo(1)-ng_w:,lo(2)-ng_w:,lo(3)-ng_w:)
+      real(kind=dp_t), intent(in   ) ::    temperature(lo(1)-ng_t:,lo(2)-ng_t:,lo(3)-ng_t:)
+      real(kind=dp_t), intent(in   ) :: temperature_xy(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+      real(kind=dp_t), intent(in   ) :: temperature_xz(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+      real(kind=dp_t), intent(in   ) :: temperature_yz(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
 
       ! local
       integer i,j,k
@@ -310,7 +322,7 @@ contains
       do k=lo(3)-1,hi(3)+1
          do j=lo(2)-1,hi(2)+1
             do i=lo(1)-1,hi(1)+1
-               mflux_cc(i,j,k,:) = mflux_cc(i,j,k,:) * sqrt(eta(i,j,k))
+               mflux_cc(i,j,k,:) = mflux_cc(i,j,k,:) * sqrt(eta(i,j,k)*temperature(i,j,k))
             end do
          end do
       end do
@@ -318,7 +330,7 @@ contains
       do k=lo(3),hi(3)
          do j=lo(2),hi(2)+1
             do i=lo(1),hi(1)+1
-               mflux_xy(i,j,k,:) = mflux_xy(i,j,k,:) * sqrt(eta_xy(i,j,k))
+               mflux_xy(i,j,k,:) = mflux_xy(i,j,k,:) * sqrt(eta_xy(i,j,k)*temperature_xy(i,j,k))
             end do
          end do
       end do
@@ -326,7 +338,7 @@ contains
       do k=lo(3),hi(3)+1
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)+1
-               mflux_xz(i,j,k,:) = mflux_xz(i,j,k,:) * sqrt(eta_xz(i,j,k))
+               mflux_xz(i,j,k,:) = mflux_xz(i,j,k,:) * sqrt(eta_xz(i,j,k)*temperature_xz(i,j,k))
             end do
          end do
       end do
@@ -334,7 +346,7 @@ contains
       do k=lo(3),hi(3)+1
          do j=lo(2),hi(2)+1
             do i=lo(1),hi(1)
-               mflux_yz(i,j,k,:) = mflux_yz(i,j,k,:) * sqrt(eta_yz(i,j,k))
+               mflux_yz(i,j,k,:) = mflux_yz(i,j,k,:) * sqrt(eta_yz(i,j,k)*temperature_yz(i,j,k))
             end do
          end do
       end do
@@ -678,10 +690,11 @@ contains
    nlevs = mla%nlevel
 
    ! Generate random numbers first and store them in umac temporarily  
+   ! AJN - missing temperature and eta in variance.  Is this ok?
    do n=1,nlevs
       do i=1,dm
          call multifab_fill_random(mactemp(n:n,i), &
-              variance=abs(variance)*k_B*temperature/product(dx(n,1:dm)), variance_mfab=s_face(n:n,i))
+              variance=abs(variance)*k_B/product(dx(n,1:dm)), variance_mfab=s_face(n:n,i))
          call saxpy(m_face(n,i), 1.0_dp_t, mactemp(n,i), all=.true.)
       end do
    end do
