@@ -12,7 +12,7 @@ module stochastic_mass_fluxdiv_module
   use convert_stag_module
   use matvec_mul_module
   use correction_flux_module
-
+  use probin_common_module
   use probin_multispecies_module
 
   implicit none

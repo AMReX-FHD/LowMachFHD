@@ -3,6 +3,7 @@ module convert_variables_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
+  use probin_common_module
   use probin_multispecies_module
   use matrix_utilities 
   use F95_LAPACK

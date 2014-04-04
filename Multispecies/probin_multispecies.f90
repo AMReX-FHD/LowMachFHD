@@ -8,7 +8,7 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: cfl1,chi,k_B,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
+  real(kind=dp_t)    :: cfl1,chi,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
   real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
@@ -22,7 +22,6 @@ module probin_multispecies_module
   namelist /probin_multispecies/ max_step
   namelist /probin_multispecies/ cfl1
   namelist /probin_multispecies/ chi
-  namelist /probin_multispecies/ k_B
   namelist /probin_multispecies/ variance_parameter
   namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ fraction_tolerance
@@ -64,7 +63,6 @@ contains
     max_step           = 10000
     cfl1               = 1.0d0
     chi                = 1.0d0
-    k_B                = 1E-3
     variance_parameter = 1E-3
     init_type          = 1
     inverse_type       = 1
