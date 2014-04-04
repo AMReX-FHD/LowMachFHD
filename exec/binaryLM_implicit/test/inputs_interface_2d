@@ -25,8 +25,6 @@
 
   ! stochastic properties
   conc_scal = 0.d0           ! Scaling for concentration stochastic forcing is variance_coef*conc_scal
-  filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
-  stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
   barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
   algorithm_type = 1	  ! enable overdamped (infinite Sc) algorithm
@@ -104,6 +102,8 @@
 
   variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing
   k_B = 1.d0                 ! Boltzmann's constant
+  filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
+  stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
 /
 

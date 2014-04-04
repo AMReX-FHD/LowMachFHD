@@ -13,7 +13,8 @@ module stochastic_m_fluxdiv_module
   use multifab_physbc_stag_module
   use multifab_fill_random_module
   use multifab_filter_module
-  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef, k_B
+  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef, k_B, &
+                                   stoch_stress_form, filtering_width  
 
   implicit none
 
@@ -29,11 +30,8 @@ module stochastic_m_fluxdiv_module
 
   integer, save :: n_rngs ! how many random number stages
 
-  ! stuff that came from probin_binarylm_module that I need to deal with
-  ! these should all probably be part of probin_common, except that
   ! T needs to be passed in as a multifab
   real(dp_t), save :: temperature
-  integer, save :: stoch_stress_form, filtering_width  
   
 contains
 

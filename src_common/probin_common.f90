@@ -21,6 +21,7 @@ module probin_common_module
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef,k_B,visc_coef
+  integer   , save :: stoch_stress_form,filtering_width
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -120,6 +121,8 @@ module probin_common_module
   ! stochastic properties
   namelist /probin_common/ variance_coef     ! global scaling epsilon for stochastic forcing
   namelist /probin_common/ k_B               ! Boltzmann's constant
+  namelist /probin_common/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
+  namelist /probin_common/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
   !------------------------------------------------------------- 
 
@@ -186,6 +189,8 @@ contains
 
     variance_coef = 1.d0
     k_B = 1.d0
+    filtering_width = 0
+    stoch_stress_form = 1
 
     need_inputs = .true.
 
@@ -439,6 +444,16 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) k_B
+
+       case ('--filtering_width')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) filtering_width
+
+       case ('--stoch_stress_form')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) stoch_stress_form
 
        case ('--')
           farg = farg + 1

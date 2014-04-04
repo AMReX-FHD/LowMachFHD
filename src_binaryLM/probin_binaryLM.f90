@@ -14,7 +14,6 @@ module probin_binarylm_module
   real(dp_t), save :: rhobar(2),diff_coef,smoothing_width
   real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2),grav(3)
   real(dp_t), save :: mol_mass(2),temperature
-  integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(2,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
@@ -47,8 +46,6 @@ module probin_binarylm_module
   namelist /probin_binarylm/ initial_variance  ! multiplicative factor for initial fluctuations
                                                ! (if negative, total momentum is set to zero)
   namelist /probin_binarylm/ conc_scal         ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
-  namelist /probin_binarylm/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
-  namelist /probin_binarylm/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
   namelist /probin_binarylm/ barodiffusion_type ! 0 = no barodiffusion
                                                 ! 1 = fixed gradp from initialization
@@ -105,8 +102,6 @@ contains
 
     initial_variance = 0.d0
     conc_scal = 1.d0
-    filtering_width = 0
-    stoch_stress_form = 1
 
     barodiffusion_type = 0
     algorithm_type = 0
@@ -262,16 +257,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) conc_scal
-
-       case ('--filtering_width')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) filtering_width
-
-       case ('--stoch_stress_form')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stoch_stress_form
 
        case ('--barodiffusion_type')
           farg = farg + 1
