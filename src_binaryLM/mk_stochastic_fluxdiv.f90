@@ -13,10 +13,10 @@ module mk_stochastic_fluxdiv_module
   use multifab_physbc_stag_module
   use multifab_fill_random_module
   use multifab_filter_module
-  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef
+  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef, k_B
   use probin_binarylm_module, only: rhobar, diff_coef, &
                                    conc_scal, stoch_stress_form, mol_mass, filtering_width, &
-                                   kT
+                                   temperature
 
   implicit none
 
@@ -622,10 +622,10 @@ contains
 
        if (visc_type < 0) then
           ! eta varies in space, add its contribution below in an i/j/k loop
-          variance = sqrt(variance_coef*2.d0*kT          /(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef*2.d0*k_B*temperature          /(product(dx(n,1:dm))*dt))
        else
           ! eta is constant in space, include it here
-          variance = sqrt(variance_coef*2.d0*kT*visc_coef/(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef*2.d0*k_B*temperature*visc_coef/(product(dx(n,1:dm))*dt))
        end if
 
 
@@ -1189,7 +1189,7 @@ contains
    do n=1,nlevs
       do i=1,dm
          call multifab_fill_random(mactemp(n:n,i), &
-              variance=abs(variance)*kT/product(dx(n,1:dm)), variance_mfab=s_face(n:n,i))
+              variance=abs(variance)*k_B*temperature/product(dx(n,1:dm)), variance_mfab=s_face(n:n,i))
          call saxpy(m_face(n,i), 1.0_dp_t, mactemp(n,i), all=.true.)
       end do
    end do
