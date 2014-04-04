@@ -674,11 +674,11 @@ contains
   end subroutine destroy_stochastic
 
  ! Add equilibrium fluctuations to the momentum (valid and ghost regions)
- subroutine add_momentum_fluctuations(mla,dx,variance,s_cc,s_face,m_face,mactemp)
+ subroutine add_momentum_fluctuations(mla,dx,variance,s_cc,s_face,temperature_face,m_face,mactemp)
 
    type(ml_layout), intent(in   ) :: mla
    real(dp_t)     , intent(in   ) :: variance, dx(:,:)
-   type(multifab) , intent(in   ) :: s_cc(:), s_face(:,:)
+   type(multifab) , intent(in   ) :: s_cc(:), s_face(:,:), temperature_face(:,:)
    type(multifab) , intent(inout) :: m_face(:,:)  
    type(multifab) , intent(inout) :: mactemp(:,:) ! Temporary multifab
 
@@ -690,11 +690,12 @@ contains
    nlevs = mla%nlevel
 
    ! Generate random numbers first and store them in umac temporarily  
-   ! AJN - missing temperature and eta in variance.  Is this ok?
    do n=1,nlevs
       do i=1,dm
          call multifab_fill_random(mactemp(n:n,i), &
-              variance=abs(variance)*k_B/product(dx(n,1:dm)), variance_mfab=s_face(n:n,i))
+                                   variance=abs(variance)*k_B/product(dx(n,1:dm)), &
+                                   variance_mfab=s_face(n:n,i), &
+                                   variance_mfab2=temperature_face(n:n,i))
          call saxpy(m_face(n,i), 1.0_dp_t, mactemp(n,i), all=.true.)
       end do
    end do
