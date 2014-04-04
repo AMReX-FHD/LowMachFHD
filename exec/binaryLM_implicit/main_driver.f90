@@ -26,13 +26,13 @@ subroutine main_driver()
   use estdt_module
   use convert_stag_module
   use probin_binarylm_module, only: probin_binarylm_init, max_step, print_int, &
-                                   project_eos_int, visc_coef, initial_variance, &
+                                   project_eos_int, initial_variance, &
                                    conc_scal, barodiffusion_type, algorithm_type
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
                                    stats_int, variance_coef, &
-                                   bc_lo, bc_hi, fixed_dt, plot_int, visc_type, advection_type
+                                   bc_lo, bc_hi, fixed_dt, plot_int, advection_type
   use probin_gmres_module  , only: probin_gmres_init
 
   implicit none

@@ -15,7 +15,6 @@
 
   ! fluid properties
   rhobar(1:2) = .8416d0 .8416d0   ! rho1bar and rho2bar
-  visc_coef = .01590624d0         ! momentum diffusion coefficient 'eta'   
   diff_coef = 6.3d-6              ! concentration diffusion coefficient 'chi'
   mol_mass(1:2) = 2.4726d-22 2.4726d-22 ! molar mass of species
   kT = 4.1145d-14                 ! temperature
@@ -66,6 +65,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 1
+  visc_coef = .01590624d0         ! momentum diffusion coefficient 'eta'   
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients

@@ -13,7 +13,7 @@ module stochastic_m_fluxdiv_module
   use multifab_physbc_stag_module
   use multifab_fill_random_module
   use multifab_filter_module
-  use probin_common_module , only: visc_type, diff_type, variance_coef
+  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef
 
   implicit none
 
@@ -32,7 +32,7 @@ module stochastic_m_fluxdiv_module
   ! stuff that came from probin_binarylm_module that I need to deal with
   ! these should all probably be part of probin_common, except that
   ! T needs to be passed in as a multifab
-  real(dp_t), save :: visc_coef, kb, T
+  real(dp_t), save :: kb, T
   integer, save :: stoch_stress_form, filtering_width  
   
 contains

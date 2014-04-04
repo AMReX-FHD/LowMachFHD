@@ -10,7 +10,6 @@
 
   ! fluid properties
   rhobar(1:2) = 1.d0 0.9d0   ! rho1bar and rho2bar
-  visc_coef = 1.d0           ! momentum diffusion coefficient 'eta'   
   diff_coef = 1.d0           ! concentration diffusion coefficient 'chi'
 
   ! stochastic properties
@@ -51,6 +50,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 1
+  visc_coef = 1.d0           ! momentum diffusion coefficient 'eta'   
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
