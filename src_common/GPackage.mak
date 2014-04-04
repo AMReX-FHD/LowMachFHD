@@ -14,3 +14,4 @@ f90sources += multifab_physbc_stag.f90
 f90sources += multifab_zero_edgeval.f90
 f90sources += probin_common.f90
 f90sources += stag_applyop.f90
+f90sources += stochastic_m_fluxdiv.f90

@@ -4,8 +4,8 @@ module mk_external_force_module
   use multifab_module
   use ml_layout_module
   use bl_constants_module
-  use probin_binarylm_module, only: diff_coef, visc_coef
-  use probin_common_module, only: prob_type
+  use probin_binarylm_module, only: diff_coef
+  use probin_common_module, only: prob_type, visc_coef
 
   implicit none
 
@@ -27,7 +27,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:),time
 
     ! local
-    integer :: i,n,ng_s,ng_u,dm,nlevs
+    integer :: i,n,ng_u,dm,nlevs
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t), pointer :: fxp(:,:,:,:)
@@ -119,7 +119,6 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
-    integer i,j,k
 
   end subroutine mk_external_m_force_3d
 

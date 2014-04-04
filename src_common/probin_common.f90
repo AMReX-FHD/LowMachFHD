@@ -20,7 +20,7 @@ module probin_common_module
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
-  real(dp_t),save :: variance_coef
+  real(dp_t),save :: variance_coef,k_B,visc_coef
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -53,6 +53,7 @@ module probin_common_module
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   namelist /probin_common/ visc_type
+  namelist /probin_common/ visc_coef         ! momentum diffusion coefficient 'eta'   
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
@@ -118,6 +119,7 @@ module probin_common_module
 
   ! stochastic properties
   namelist /probin_common/ variance_coef     ! global scaling epsilon for stochastic forcing
+  namelist /probin_common/ k_B               ! Boltzmann's constant
 
   !------------------------------------------------------------- 
 
@@ -162,6 +164,7 @@ contains
 
     seed = 1
     visc_type = 1
+    visc_coef = 1.d0
     diff_type = 1
 
     advection_type = 0
@@ -182,6 +185,7 @@ contains
     center_snapshots = .false.
 
     variance_coef = 1.d0
+    k_B = 1.d0
 
     need_inputs = .true.
 
@@ -290,6 +294,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) visc_type
+
+       case ('--visc_coef')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) visc_coef
 
        case ('--diff_type')
           farg = farg + 1
@@ -425,6 +434,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) variance_coef
+
+       case ('--k_B')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) k_B
 
        case ('--')
           farg = farg + 1

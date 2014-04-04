@@ -14,11 +14,9 @@
 
   ! fluid properties
   rhobar(1:2) = 1.054d0 1.044d0   ! rho1bar and rho2bar
-  visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta'   
   diff_coef = 1.d-5               ! concentration diffusion coefficient 'chi'
-!  visc_coef = 1.d-3               ! momentum diffusion coefficient 'eta'   
 !  diff_coef = 1.d-4               ! concentration diffusion coefficient 'chi'
-  kT = 4.14d-14                   ! temperature
+  temperature = 4.14d-14                   ! temperature
 
   ! a/b for chi/eta/kappa
 !  material_properties(1:2,1) = -2.2d0 1.2d0
@@ -28,7 +26,7 @@
   ! stochastic properties
   initial_variance = -1.d0   ! multiplicative factor for initial fluctuations
                              ! (if negative, total momentum is set to zero)
-  conc_scal = 0.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
+  conc_scal = 0.d0           ! Scaling for concentration stochastic forcing is variance_coef*conc_scal
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
@@ -67,6 +65,8 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 1
+  visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta' 
+!  visc_coef = 1.d-3               ! momentum diffusion coefficient 'eta'     
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
@@ -113,6 +113,7 @@
   center_snapshots = F       ! Should we use cell-centered momenta for the analysis (will smooth fluctuations)
 
   variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing
+  k_B = 1.d0                 ! Boltzmann's constant
 
 /
 

@@ -11,11 +11,10 @@
 
   ! fluid properties
   rhobar(1:2) = 1.1d0 0.9d0  ! rho1bar and rho2bar
-  visc_coef = 1.d0           ! momentum diffusion coefficient 'eta'   
   diff_coef = 1.d0           ! concentration diffusion coefficient 'chi'
 
   ! stochastic properties
-  conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
+  conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coef*conc_scal
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
@@ -52,6 +51,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 1
+  visc_coef = 1.d0           ! momentum diffusion coefficient 'eta'   
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
@@ -72,6 +72,7 @@
   wallspeed_hi(1,2) = 0.01d0
 
   variance_coef = 1.d-5      ! global scaling epsilon for stochastic forcing
+  k_B = 1.d0                 ! Boltzmann's constant
 
 /
 

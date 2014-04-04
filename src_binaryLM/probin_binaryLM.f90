@@ -11,9 +11,9 @@ module probin_binarylm_module
   ! namelist section below
   !------------------------------------------------------------- 
   integer   , save :: max_step,print_int
-  real(dp_t), save :: rhobar(2),visc_coef,diff_coef,smoothing_width
+  real(dp_t), save :: rhobar(2),diff_coef,smoothing_width
   real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2),grav(3)
-  real(dp_t), save :: mol_mass(2),kT
+  real(dp_t), save :: mol_mass(2),temperature
   integer   , save :: stoch_stress_form,filtering_width
   integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(2,3),c_bc(3,2)
@@ -28,7 +28,7 @@ module probin_binarylm_module
   namelist /probin_binarylm/ c_init            ! controls initial concentration range
   namelist /probin_binarylm/ u_init            ! controls initial velocity
   namelist /probin_binarylm/ c_bc              ! c boundary conditions (dir,face).
-                                              ! Dirichlet for RESERVOIR; Neumann for WALL
+                                               ! Dirichlet for RESERVOIR; Neumann for WALL
   namelist /probin_binarylm/ grav              ! gravity vector (negative is downwards)
 
   ! simulation parameters
@@ -38,10 +38,9 @@ module probin_binarylm_module
 
   ! fluid properties
   namelist /probin_binarylm/ rhobar            ! rho1bar and rho2bar
-  namelist /probin_binarylm/ visc_coef         ! momentum diffusion coefficient 'eta'   
   namelist /probin_binarylm/ diff_coef         ! concentration diffusion coefficient 'chi'
   namelist /probin_binarylm/ mol_mass          ! molar mass of species
-  namelist /probin_binarylm/ kT                ! temperature
+  namelist /probin_binarylm/ temperature       ! temperature
   namelist /probin_binarylm/ material_properties ! a/b for chi/eta/kappa
 
   ! stochastic properties
@@ -99,10 +98,9 @@ contains
 
     rhobar(1) = 1.1d0 
     rhobar(2) = 0.9d0
-    visc_coef = 1.d0
     diff_coef = 1.d0
     mol_mass(1:2) = 1.d0
-    kT = 1.d0
+    temperature = 1.d0
     material_properties(1:2,1:3) = 0.d0
 
     initial_variance = 0.d0
@@ -215,11 +213,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) rhobar(2)
-
-       case ('--visc_coef')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) visc_coef
 
        case ('--diff_coef')
           farg = farg + 1
