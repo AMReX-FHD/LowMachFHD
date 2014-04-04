@@ -1,4 +1,4 @@
-module diffusive_fluxdiv_module
+module diffusive_mass_fluxdiv_module
 
   use multifab_module
   use define_bc_module
@@ -9,7 +9,7 @@ module diffusive_fluxdiv_module
   use external_force_module
   use ml_layout_module
   use F95_LAPACK
-  use stochastic_fluxdiv_module
+  use stochastic_mass_fluxdiv_module
   use convert_variables_module
   use probin_multispecies_module
 
@@ -17,11 +17,11 @@ module diffusive_fluxdiv_module
 
   private
 
-  public :: diffusive_fluxdiv, compute_fluxdiv
+  public :: diffusive_mass_fluxdiv, compute_fluxdiv
 
 contains
 
-  subroutine diffusive_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchiGama,diff_fluxdiv,dx,the_bc_level)
+  subroutine diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchiGama,diff_fluxdiv,dx,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -63,10 +63,10 @@ contains
        end do
     end do
 
-  end subroutine diffusive_fluxdiv
+  end subroutine diffusive_mass_fluxdiv
 
   subroutine compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                             rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                             diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                              stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
@@ -78,10 +78,10 @@ contains
     type(multifab) , intent(inout)   :: chi(:)
     type(multifab) , intent(inout)   :: Gama(:)
     type(multifab) , intent(inout)   :: D_MS(:)
-    type(multifab) , intent(inout)   :: rhoWchiGama(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
+    type(multifab) , intent(inout)   :: Temp(:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -93,6 +93,8 @@ contains
 
     ! local variables
     type(multifab)  :: drho(mla%nlevel)  ! correction to rho
+    type(multifab)  :: rhoWchiGama(mla%nlevel)    ! rho*W*chi*Gama
+
     integer         :: n,i,dm,nlevs
 
     nlevs = mla%nlevel  ! number of levels 
@@ -101,6 +103,7 @@ contains
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     do n=1,nlevs
        call multifab_build(drho(n),mla%la(n),nspecies,rho(n)%ng)
+       call multifab_build(rhoWchiGama(n),     mla%la(n), nspecies**2, rho(n)%ng)
     end do
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
@@ -110,7 +113,7 @@ contains
     call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       
     ! populate D_MS and Gama 
-    call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+    call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,Temp,the_bc_level)
 
     ! compute chi 
     call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,the_bc_level)
@@ -119,16 +122,17 @@ contains
     call compute_rhoWchiGama(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,&
                              Gama,rhoWchiGama,the_bc_level)
 
-    ! compute determinstic fluxdiv (interior only), rho contains ghost filled in init/end of this code
-    call diffusive_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchiGama,diff_fluxdiv,dx,the_bc_level)
+    ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled in init/end of this code
+    call diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchiGama,&
+                                diff_fluxdiv,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,prob_lo,prob_hi,dx,stage_time)
 
     ! compute stochastic fluxdiv 
-    if(use_stoch) call stochastic_fluxdiv(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,&
-                                          Gama,stoch_W_fc,stoch_fluxdiv,dx,dt,weights,&
-                                          the_bc_level)
+    if(use_stoch) call stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,&
+                                               molmtot,chi,Gama,stoch_W_fc,stoch_fluxdiv,&
+                                               dx,dt,weights,the_bc_level)
       
     ! revert back rho to it's original form
     do n=1,nlevs
@@ -138,8 +142,9 @@ contains
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(drho(n))
+       call multifab_destroy(rhoWchiGama(n))
     end do
 
   end subroutine compute_fluxdiv
   
-end module diffusive_fluxdiv_module
+end module diffusive_mass_fluxdiv_module

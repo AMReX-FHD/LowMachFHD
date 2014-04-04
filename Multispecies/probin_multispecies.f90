@@ -8,7 +8,7 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: cfl1,chi,k_B,Temp,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
+  real(kind=dp_t)    :: cfl1,chi,k_B,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
   real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
@@ -24,7 +24,6 @@ module probin_multispecies_module
   namelist /probin_multispecies/ chi
   namelist /probin_multispecies/ k_B
   namelist /probin_multispecies/ variance_parameter
-  namelist /probin_multispecies/ Temp
   namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ fraction_tolerance
   namelist /probin_multispecies/ start_time
@@ -78,7 +77,6 @@ contains
     rho_in             = 1.0d0
     molmass_in         = 1.0d0
     Dbar_in            = 1.0d0
-    Temp               = 1.0d0
     Press              = 1.0d0
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
@@ -145,10 +143,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) Dbar_in
-       case ('--Temp')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) Temp
        case ('--Press')
           farg = farg + 1
           call get_command_argument(farg, value = fname)

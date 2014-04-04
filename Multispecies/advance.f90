@@ -3,10 +3,9 @@ module advance_module
   use multifab_module
   use define_bc_module
   use multifab_physbc_module
-  use multifab_fill_random_module
   use ml_layout_module
-  use diffusive_fluxdiv_module
-  use stochastic_fluxdiv_module
+  use diffusive_mass_fluxdiv_module
+  use stochastic_mass_fluxdiv_module
   use probin_multispecies_module
 
   implicit none
@@ -37,10 +36,10 @@ contains
     type(multifab)                 :: chi(mla%nlevel)            ! Chi-matrix
     type(multifab)                 :: D_MS(mla%nlevel)           ! D_MS-matrix
     type(multifab)                 :: Gama(mla%nlevel)           ! Gama-matrix
-    type(multifab)                 :: rhoWchiGama(mla%nlevel)    ! rho*W*chi*Gama
     type(multifab)                 :: stoch_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
     type(multifab),  allocatable   :: stoch_W_fc(:,:,:)          ! WA and WB (nlevs,dim,n_rngs) 
     real(kind=dp_t), allocatable   :: weights(:)                 ! weights for stoch-time-integrators       
+    type(multifab)                 :: Temp(mla%nlevel)           ! Temperature 
     real(kind=dp_t)                :: stage_time
     integer                        :: n,nlevs,i,dm,rng,n_rngs
 
@@ -60,8 +59,8 @@ contains
        call multifab_build(chi(n),             mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(D_MS(n),            mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(Gama(n),            mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(rhoWchiGama(n),     mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(stoch_fluxdiv(n),   mla%la(n), nspecies,    0) 
+       call multifab_build(Temp(n),            mla%la(n), 1,           rho(n)%ng)
     end do
 
     !========================================================
@@ -89,9 +88,10 @@ contains
              end do
           end do
        end do
-      
-       ! initialize stochastic flux on every face W(0,1) 
-       call generate_random_increments(mla,n_rngs,stoch_W_fc)
+    
+      ! initialize stochastic flux on every face W(0,1) 
+      call generate_random_increments(mla,n_rngs,stoch_W_fc)
+
     endif
 
    !==================================================================================
@@ -109,7 +109,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior) 
@@ -143,7 +143,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
       
       ! compute rhonew(t+dt) (only interior) 
@@ -168,7 +168,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,dt,&
+                           diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior)
@@ -204,7 +204,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
       ! compute rhonew(t+dt/2) (only interior) 
@@ -231,7 +231,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,dt,&
+                           diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
       ! compute rho(t+dt) (only interior) 
@@ -267,7 +267,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,dt,&
+                           diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
       ! compute rhonew(t+dt) (only interior) 
@@ -294,7 +294,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,dt,&
+                           diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
 
@@ -329,7 +329,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                           rhoWchiGama,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,dt,&
+                           diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior) 
@@ -363,8 +363,8 @@ contains
        call multifab_destroy(chi(n))
        call multifab_destroy(D_MS(n))
        call multifab_destroy(Gama(n))
-       call multifab_destroy(rhoWchiGama(n))
        call multifab_destroy(stoch_fluxdiv(n))
+       call multifab_destroy(Temp(n))
     end do
     
     if(use_stoch) then
@@ -372,53 +372,7 @@ contains
     endif
     deallocate(stoch_W_fc)
     deallocate(weights)
-
-  contains
   
-    subroutine generate_random_increments(mla,n_rngs,stoch_W_fc)
-  
-      type(ml_layout), intent(in   )  :: mla
-      integer,         intent(in   )  :: n_rngs   ! how many random numbers to store per time step
-      type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:)  
-
-      ! Local variables
-      integer :: comp,n,dm,nlevs,box,i,rng
-    
-      nlevs = mla%nlevel
-      dm    = mla%dim    
-    
-      ! generate and store the stochastic flux (random numbers)
-      do rng=1, n_rngs
-         do i = 1,dm
-            call multifab_fill_random(stoch_W_fc(:,i,rng))
-         end do   
-      end do   
-  
-    end subroutine generate_random_increments
-  
-    subroutine destroy_random_increments(mla,n_rngs,stoch_W_fc)
-    
-      type(ml_layout), intent(in   )  :: mla
-      integer,         intent(in   )  :: n_rngs
-      type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:)  
-
-      ! Local variables
-      integer :: comp,n,dm,nlevs,box,i,rng
-
-      nlevs = mla%nlevel
-      dm    = mla%dim    
-  
-      ! destroy multifab for stochastic flux
-      do n=1, nlevs 
-         do rng=1, n_rngs 
-            do i = 1,dm
-               call multifab_destroy(stoch_W_fc(n,i,rng))
-            end do
-         end do
-      end do
-
-    end subroutine destroy_random_increments
-
   end subroutine advance
 
 end module advance_module 
