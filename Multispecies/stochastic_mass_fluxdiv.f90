@@ -1,4 +1,4 @@
-module stochastic_fluxdiv_module
+module stochastic_mass_fluxdiv_module
 
   use bl_types
   use bl_constants_module
@@ -6,7 +6,8 @@ module stochastic_fluxdiv_module
   use ml_layout_module
   use define_bc_module
   use bc_module
-  use convert_variables_module 
+  use convert_variables_module
+  use multifab_fill_random_module
   use div_and_grad_module
   use convert_stag_module
   use matvec_mul_module
@@ -18,12 +19,12 @@ module stochastic_fluxdiv_module
 
   private
 
-  public :: stochastic_fluxdiv
+  public :: stochastic_mass_fluxdiv, generate_random_increments, destroy_random_increments
   
 contains
   
-  subroutine stochastic_fluxdiv(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,&
-                                Gama,stoch_W_fc,stoch_fluxdiv,dx,dt,weights,the_bc_level)
+  subroutine stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,&
+                                     Gama,stoch_W_fc,stoch_fluxdiv,dx,dt,weights,the_bc_level)
 
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
@@ -118,6 +119,50 @@ contains
        end do
     end do
 
-  end subroutine stochastic_fluxdiv
+  end subroutine stochastic_mass_fluxdiv
+
+  subroutine generate_random_increments(mla,n_rngs,stoch_W_fc)
+  
+      type(ml_layout), intent(in   )  :: mla
+      integer,         intent(in   )  :: n_rngs   ! how many random numbers to store per time step
+      type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:)  
+
+      ! Local variables
+      integer :: comp,n,dm,nlevs,box,i,rng
+    
+      nlevs = mla%nlevel
+      dm    = mla%dim    
+    
+      ! generate and store the stochastic flux (random numbers)
+      do rng=1, n_rngs
+         do i = 1,dm
+            call multifab_fill_random(stoch_W_fc(:,i,rng))
+         end do   
+      end do   
+  
+  end subroutine generate_random_increments
+  
+  subroutine destroy_random_increments(mla,n_rngs,stoch_W_fc)
+    
+      type(ml_layout), intent(in   )  :: mla
+      integer,         intent(in   )  :: n_rngs
+      type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:)  
+
+      ! Local variables
+      integer :: comp,n,dm,nlevs,box,i,rng
+
+      nlevs = mla%nlevel
+      dm    = mla%dim    
+  
+      ! destroy multifab for stochastic flux
+      do n=1, nlevs 
+         do rng=1, n_rngs 
+            do i = 1,dm
+               call multifab_destroy(stoch_W_fc(n,i,rng))
+            end do
+         end do
+      end do
+
+  end subroutine destroy_random_increments
    
-end module stochastic_fluxdiv_module
+end module stochastic_mass_fluxdiv_module
