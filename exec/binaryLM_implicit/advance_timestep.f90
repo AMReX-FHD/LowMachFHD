@@ -70,11 +70,11 @@ contains
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
 
-    type(multifab) ::       mtemp(mla%nlevel,mla%dim)
-    type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
-    type(multifab) :: m_a_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) :: m_d_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) :: m_s_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::        mtemp(mla%nlevel,mla%dim)
+    type(multifab) ::  gmres_rhs_v(mla%nlevel,mla%dim)
+    type(multifab) ::  m_a_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::  m_d_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::  m_s_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) ::        dumac(mla%nlevel,mla%dim)
     type(multifab) ::     umac_old(mla%nlevel,mla%dim)
     type(multifab) ::     umac_tmp(mla%nlevel,mla%dim)
@@ -102,23 +102,23 @@ contains
     S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
     
     do n=1,nlevs
-       call multifab_build(   s_update(n),mla%la(n),2    ,0)
-       call multifab_build(  bds_force(n),mla%la(n),2    ,1)
-       call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
-       call multifab_build(         dp(n),mla%la(n),1    ,1)
-       call multifab_build(       divu(n),mla%la(n),1    ,0)
+       call multifab_build(   s_update(n),mla%la(n),2,0)
+       call multifab_build(  bds_force(n),mla%la(n),2,1)
+       call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
+       call multifab_build(         dp(n),mla%la(n),1,1)
+       call multifab_build(       divu(n),mla%la(n),1,0)
        do i=1,dm
-          call multifab_build_edge(         mtemp(n,i),mla%la(n),2    ,1,i)
-          call multifab_build_edge(   gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(   m_a_fluxdiv(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(   m_d_fluxdiv(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(   m_s_fluxdiv(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(         dumac(n,i),mla%la(n),1    ,1,i)
-          call multifab_build_edge(      umac_old(n,i),mla%la(n),1    ,1,i)
-          call multifab_build_edge(      umac_tmp(n,i),mla%la(n),1    ,1,i)
-          call multifab_build_edge(         gradp(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(      s_fc_old(n,i),mla%la(n),2    ,1,i)
-          call multifab_build_edge(    chi_fc_old(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(         mtemp(n,i),mla%la(n),2,1,i)
+          call multifab_build_edge(   gmres_rhs_v(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(   m_a_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(   m_d_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(   m_s_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(         dumac(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(      umac_old(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(      umac_tmp(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(         gradp(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(      s_fc_old(n,i),mla%la(n),2,1,i)
+          call multifab_build_edge(    chi_fc_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(  vel_bc_n_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(vel_bc_n_delta(n,i),mla%la(n),1,0,i)
        end do
@@ -201,6 +201,7 @@ contains
 
     ! this was already done in Step 0 (initialization) or Step 6
     ! from the previous time step
+    ! rhoc_d_fluxdiv, rhoc_s_fluxdiv, and rhoc_b_fluxdiv contain the fluxes
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Predictor Euler Step
@@ -321,11 +322,6 @@ contains
        end do
     end do
 
-    ! compute (chi,eta,kappa)^{*,n+1}
-    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
-    call compute_kappa(mla,kappa,prim,dx)
-
     ! compute m_s_fluxdiv = div(Sigma^n)
     call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx,dt,weights)
 
@@ -345,6 +341,11 @@ contains
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
+
+    ! compute (chi,eta,kappa)^{*,n+1}
+    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
+    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
+    call compute_kappa(mla,kappa,prim,dx)
 
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
@@ -491,7 +492,7 @@ contains
        call compute_grad(mla,pnew,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
     end if
 
-    ! convert v^{*,n+1} to m^{*,n+1} in valid and ghost region
+    ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
     ! now mnew has properly filled ghost cells
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
@@ -532,6 +533,7 @@ contains
 
     else
 
+       ! compute A^{*,n+1} for scalars
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,2)
 
        ! snew = s^{n+1} 
@@ -598,10 +600,9 @@ contains
     end do
 
     ! m_a_fluxdiv already contains A^n for momentum
-    ! add A(s^{n+1},v^{n+1,*}) for momentum to m_a_fluxdiv
+    ! add A^{*,n+1} = -rho^{*,n+1} v^{*,n+1} v^{*,n+1} for momentum to m_a_fluxdiv
     call mk_advective_m_fluxdiv(mla,umac,mnew,m_a_fluxdiv,dx, &
                                 the_bc_tower%bc_tower_array)
-
 
     ! add (1/2) m_a_fluxdiv to gmres_rhs_v
     do n=1,nlevs
@@ -654,11 +655,6 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc)
     end if
 
-    ! initialize rhs_p for gmres solve to zero
-    do n=1,nlevs
-       call setval(gmres_rhs_p(n),0.d0,all=.true.)
-    end do
-
     ! reset to zero since we only add to them
     ! we store these for use at beginning of next time step
     do n=1,nlevs
@@ -674,6 +670,11 @@ contains
     ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
     call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
                                    the_bc_tower%bc_tower_array,vel_bc_n)
+
+    ! initialize rhs_p for gmres solve to zero
+    do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
+    end do
 
     ! add div(rho*chi grad c)^{n+1} to rhs_p
     do n=1,nlevs
