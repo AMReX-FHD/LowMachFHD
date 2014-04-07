@@ -505,6 +505,8 @@ contains
     if (advection_type .ge. 1) then
 
        do n=1,nlevs
+          ! bds force currently contains D^n + St^n
+          ! add D^{*,n+1} + St^{*,n+1} and then multiply by 1/2
           call multifab_plus_plus_c(bds_force(n),1,s_update(n),1,2,0)
           call multifab_mult_mult_s_c(bds_force(n),1,0.5d0,2,0)
           call multifab_fill_boundary(bds_force(n))

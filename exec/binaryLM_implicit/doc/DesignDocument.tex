@@ -85,7 +85,7 @@ of what is contained within these directories:\\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[tb]
 \centering
-\includegraphics[width=3in]{flowchart}
+\includegraphics[width=4in]{flowchart}
 \caption{Code structure chart for the source code for our staggered grid applications.}\label{fig:flowchart}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -100,15 +100,17 @@ Staggered grid source code.
 Stuff that is common to all staggered grid codes.
 \item {\tt src\_gmres}\\
 Stuff required for the GMRES solver.
-\item {\tt src\_lowMach}\\
-Stuff required for any low Mach number time-advancement codes.
+\item {\tt src\_binaryLM}\\
+Source code specific to the binaryLM\_implicit code.
 \item {\tt exec}\\
 Stores all the run directories.
 \begin{itemize}
 \item {\tt stokes\_preconditioner}\\
 Source code for the GMRES test code.
-\item {\tt lowMach\_implicit}\\
-Source code for the low Mach number implicit code.
+\item {\tt binaryLM\_implicit}\\
+Source code for the low Mach number implicit binary code.
+\item {\tt binaryLM\_implicit}\\
+Source code for the multispecies code.
 \end{itemize}
 \end{itemize}
 \item {\tt HydroGrid}\\
@@ -566,11 +568,11 @@ states $(\rho,\rho_1)$ satisfy the EOS.  There is a proof on our whiteboard here
 John worked out, but just take this as a given for now.
 
 \subsection{Original Algorithm}
-To modify the original algorithm, we replace equations (\ref{eq:alg1_1st_rho_adv}) and 
-(\ref{eq:alg1_1st_rho1_adv}) in {\bf Step 1} with
+To modify the original algorithm, we replace equations
+(\ref{eq:alg1_1st_rho1_adv}) and (\ref{eq:alg1_1st_rho_adv}) in {\bf Step 1} with
 \begin{eqnarray}
-\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^{{\rm BDS},*}\vb^n),\\
-\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^n + \Fb^n),
+\rho_1^{*,n+1} &=& \rho_1^n + \Delta t\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^n + \Fb^n),\\
+\rho^{*,n+1} &=& \rho^n + \Delta t\nabla\cdot(-\rho^{{\rm BDS},*}\vb^n),
 \end{eqnarray}
 where $\rho^{{\rm BDS},*} = {\rm BDS}(\rho^n,\vb^n,0)$ and 
 $\rho_1^{{\rm BDS},*} = {\rm BDS}(\rho_1^n,\vb^n,\nabla\cdot\Fb^n)$.
@@ -579,11 +581,11 @@ Nothing else changes until {\bf Step 3}, where we define
 \vb^{n+\myhalf} &=& \frac{\vb^n + \vb^{*,n+1}}{2},\\
 \Fb^{n+\myhalf} &=& \frac{\Fb^n + \Fb^{*,n+1}}{2},
 \end{eqnarray}
-and then replace equations (\ref{eq:alg1_2nd_rho_adv}) and 
-(\ref{eq:alg1_2nd_rho1_adv}) with
+and then replace equations (\ref{eq:alg1_2nd_rho1_adv}) and
+(\ref{eq:alg1_2nd_rho_adv}) with
 \begin{eqnarray}
-\rho^{n+1} &=& \rho^n + \Delta t\nabla\cdot\left(-\rho^{\rm BDS}\vb^{n+\myhalf}\right),\\
-\rho_1^{n+1} &=& \rho_1^n + \Delta t\nabla\cdot\left(-\rho_1^{\rm BDS}\vb^{n+\myhalf} + \Fb^{n+\myhalf}\right)
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\nabla\cdot\left(-\rho_1^{\rm BDS}\vb^{n+\myhalf} + \Fb^{n+\myhalf}\right),\\
+\rho^{n+1} &=& \rho^n + \Delta t\nabla\cdot\left(-\rho^{\rm BDS}\vb^{n+\myhalf}\right),
 \end{eqnarray}
 where $\rho^{\rm BDS} = {\rm BDS}(\rho^n,\vb^{n+\myhalf},0)$ and 
 $\rho_1^{\rm BDS} = {\rm BDS}(\rho_1^n,\vb^{n+\myhalf},\nabla\cdot\Fb^{n+\myhalf})$.
