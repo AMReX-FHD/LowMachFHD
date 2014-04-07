@@ -614,10 +614,11 @@ contains
        end do
     end do
 
-    ! m_d_fluxdiv_old already contains (1/2) A_0^n v^n
+    ! m_d_fluxdiv_old already contains A_0^n v^n
     ! add (1/2) A_0^n v^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
+          call multifab_mult_mult_s_c(m_d_fluxdiv_old(n,i),1,0.5d0,1,0)
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_old(n,i),1,1,0)
        end do
     end do
