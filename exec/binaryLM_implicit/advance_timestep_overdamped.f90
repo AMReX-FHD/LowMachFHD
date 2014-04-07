@@ -41,11 +41,11 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mnew(:,:)
     type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(inout) :: sold(:)
+    type(multifab) , intent(in   ) :: sold(:)
     type(multifab) , intent(inout) :: snew(:)
     type(multifab) , intent(inout) :: s_fc(:,:)
     type(multifab) , intent(inout) :: prim(:)
-    type(multifab) , intent(inout) :: pold(:)
+    type(multifab) , intent(in   ) :: pold(:)
     type(multifab) , intent(inout) :: pnew(:)
     type(multifab) , intent(inout) :: chi(:)
     type(multifab) , intent(inout) :: chi_fc(:,:)
