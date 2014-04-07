@@ -199,7 +199,14 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 1 - Forward-Euler Scalar Predictor
+    ! Step 1 - Calculate Predictor Diffusive and Stochastic Fluxes
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! this was already done in Step 0 (initialization) or Step 6
+    ! from the previous time step
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 2 - Predictor Euler Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add D^n  for rho1 to s_update
@@ -259,7 +266,8 @@ contains
     call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 2 - Crank-Nicolson Velocity Predictor
+    ! Step 3 - Calculate Corrector Diffusive and Stochastic Fluxes
+    ! Step 4 - Predictor Crank-Nicolson Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve: first set gmres_rhs_v to mold = m^n
@@ -309,10 +317,9 @@ contains
     call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_old,umac_old,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
-    ! add (1/2) A_0^n v^n to gmres_rhs_v
+    ! add A_0^n v^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(m_d_fluxdiv_old(n,i),1,0.5d0,1,0)
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_old(n,i),1,1,0)
        end do
     end do
@@ -321,18 +328,6 @@ contains
     call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
     call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa,prim,dx)
-
-    ! set m_d_fluxdiv_new = A_0^{*,n+1} v^n
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac_old,eta,eta_ed,kappa,dx, &
-                                the_bc_tower%bc_tower_array)
-
-    ! add (1/2) A_0^{*,n+1} v^n to gmres_rhs_v
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_s_c(m_d_fluxdiv_new(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_new(n,i),1,1,0)
-       end do
-    end do
 
     ! compute m_s_fluxdiv = div(Sigma^n)
     call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx,dt,weights)
@@ -372,6 +367,7 @@ contains
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n,weights)
 
+    ! add external forcing for rho*c
     call mk_external_s_force(mla,gmres_rhs_p,dx,time+dt,1)
 
     do n=1,nlevs
@@ -389,7 +385,7 @@ contains
 
     ! reset s_update for all scalars to zero
     ! then, set s_update for rho1 to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
-    ! it is used in Step 3 below
+    ! it is used in Step 5 below
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
@@ -503,7 +499,7 @@ contains
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 3 - Trapezoidal Scalar Corrector
+    ! Step 5 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
     ! s_update already contains D^{*,n+1} + St^{*,n+1} for rho1 from above
@@ -570,7 +566,8 @@ contains
     call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 4 - Crank-Nicolson Velocity Corrector
+    ! Step 6 - Calculate Diffusive and Stochastic Fluxes
+    ! Step 7 - Corrector Crank-Nicolson Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve: first set rhs to mold = m^n
@@ -629,13 +626,6 @@ contains
     call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
     call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa,prim,dx)
-
-    ! reset m_d_fluxdiv_new
-    do n=1,nlevs
-       do i=1,dm
-          call setval(m_d_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
 
     ! set m_d_fluxdiv_new = A_0^{n+1} v^n
     call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac_old,eta,eta_ed,kappa,dx, &
