@@ -13,6 +13,7 @@ module stochastic_m_fluxdiv_module
   use multifab_physbc_stag_module
   use multifab_fill_random_module
   use multifab_filter_module
+  use sum_momenta_module
   use probin_common_module , only: visc_coef, diff_type, variance_coef, k_B, &
                                    stoch_stress_form, filtering_width  
 
@@ -712,7 +713,7 @@ contains
          write(*,"(A,100G17.9)") "Randomly INITIALized momenta"
       end if
       
-      call sum_mass_momentum(mla, cons=s_cc, m=m_face, av_momentum=av_mom)
+      call sum_momenta(mla, m_face, av_mom)
       do i=1,dm
          call setval(mactemp(1,i), -av_mom(i))
          call saxpy(m_face(1,i), 1.0_dp_t, mactemp(1,i))

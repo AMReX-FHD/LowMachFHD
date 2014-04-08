@@ -17,6 +17,7 @@ subroutine main_driver()
   use convert_variables_module
   use div_and_grad_module
   use analysis_module
+  use sum_momenta_module
   use mk_stochastic_fluxdiv_module
   use project_onto_eos_module
   use multifab_physbc_module
@@ -337,7 +338,10 @@ subroutine main_driver()
 
   if (print_int .gt. 0) then
      call eos_check(mla,sold)
-     call sum_mass_momentum(mla,sold,mold)
+     call sum_momenta(mla,mold)
+     do i=1,2
+        write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+     end do
   end if
 
   ! convert cons to prim in valid region
@@ -412,7 +416,7 @@ subroutine main_driver()
                           the_bc_tower,vel_bc_n,vel_bc_t,weights)
 
   if (print_int .gt. 0) then
-     call sum_mass_momentum(mla,sold,mold)
+     call sum_momenta(mla,mold)
   end if
 
   ! write initial plotfile
@@ -477,7 +481,10 @@ subroutine main_driver()
           .or. &
           (istep .eq. max_step) ) then
         call eos_check(mla,snew)
-        call sum_mass_momentum(mla,snew,mnew)
+        call sum_momenta(mla,mnew)
+        do i=1,2
+           write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", multifab_sum_c(snew(1),i,1,all=.false.)/product(n_cells(1:dm))
+        end do
      end if
 
       if (istep > n_steps_skip) then
