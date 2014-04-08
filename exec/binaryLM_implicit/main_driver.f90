@@ -46,7 +46,7 @@ subroutine main_driver()
 
   integer :: n,nlevs,i,dm,istep
 
-  real(kind=dp_t) :: dt,time,runtime1,runtime2,max_vel
+  real(kind=dp_t) :: dt,time,runtime1,runtime2,max_vel,av_mass
 
   type(box)         :: bx
   type(ml_boxarray) :: mba
@@ -340,7 +340,10 @@ subroutine main_driver()
      call eos_check(mla,sold)
      call sum_momenta(mla,mold)
      do i=1,2
-        write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+        av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+        if (parallel_IOProcessor()) then
+           write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
+        end if
      end do
   end if
 
@@ -417,6 +420,12 @@ subroutine main_driver()
 
   if (print_int .gt. 0) then
      call sum_momenta(mla,mold)
+     do i=1,2
+        av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+        if (parallel_IOProcessor()) then
+           write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
+        end if
+     end do
   end if
 
   ! write initial plotfile
@@ -483,7 +492,10 @@ subroutine main_driver()
         call eos_check(mla,snew)
         call sum_momenta(mla,mnew)
         do i=1,2
-           write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", multifab_sum_c(snew(1),i,1,all=.false.)/product(n_cells(1:dm))
+           av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+           if (parallel_IOProcessor()) then
+              write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
+           end if
         end do
      end if
 
