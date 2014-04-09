@@ -8,7 +8,7 @@ module advance_timestep_overdamped_module
   use convert_to_homogeneous_module
   use mk_advective_s_fluxdiv_module
   use mk_advective_m_fluxdiv_module
-  use mk_diffusive_fluxdiv_module
+  use diffusive_rhoc_fluxdiv_module
   use diffusive_m_fluxdiv_module
   use mk_external_force_module
   use mk_grav_force_module
@@ -221,8 +221,8 @@ contains
                                    the_bc_tower%bc_tower_array)
 
     ! add div(rho*chi grad c)^n to rhs_p
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
-                                   the_bc_tower%bc_tower_array,vel_bc_n)
+    call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
+                                the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(Psi^(1)) to rhs_p
     if (algorithm_type .eq. 1) then
@@ -433,8 +433,8 @@ contains
                                    the_bc_tower%bc_tower_array)
 
     ! add div(rho*chi grad c)^{*,n+1/2} to rhs_p
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
-                                   the_bc_tower%bc_tower_array,vel_bc_n)
+    call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
+                                the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(Psi^(2)) to rhs_p
     call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &

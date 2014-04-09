@@ -9,8 +9,8 @@ module advance_timestep_module
   use mk_advective_s_fluxdiv_module
   use mk_advective_m_fluxdiv_module
   use mk_baro_fluxdiv_module
-  use mk_diffusive_fluxdiv_module
   use diffusive_m_fluxdiv_module
+  use diffusive_rhoc_fluxdiv_module
   use mk_grav_force_module
   use mk_external_force_module
   use mk_stochastic_fluxdiv_module
@@ -353,8 +353,8 @@ contains
                                    the_bc_tower%bc_tower_array)
 
     ! add div(rho*chi grad c)^{*,n+1} to rhs_p
-    call mk_diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
-                                   the_bc_tower%bc_tower_array,vel_bc_n)
+    call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
+                                the_bc_tower%bc_tower_array,vel_bc_n)
 
     if (barodiffusion_type .gt. 0) then
        ! add baro-diffusion flux diveregnce to rhs_p
@@ -671,8 +671,8 @@ contains
                                    the_bc_tower%bc_tower_array)
 
     ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
-    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
-                                   the_bc_tower%bc_tower_array,vel_bc_n)
+    call diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
+                                the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs

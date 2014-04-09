@@ -8,7 +8,7 @@ module initial_projection_module
   use macproject_module
   use div_and_grad_module
   use mk_baro_fluxdiv_module
-  use mk_diffusive_fluxdiv_module
+  use diffusive_rhoc_fluxdiv_module
   use mk_stochastic_fluxdiv_module
   use bc_module
   use multifab_physbc_stag_module
@@ -81,8 +81,8 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! set rhoc_d_fluxdiv = div(rho*chi grad c)^0
-    call mk_diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
-                                   the_bc_tower%bc_tower_array,vel_bc_n)
+    call diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
+                                the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! set mac_rhs to div(rho*chi grad c)^0
     do n=1,nlevs

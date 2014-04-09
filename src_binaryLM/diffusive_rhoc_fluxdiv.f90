@@ -1,4 +1,4 @@
-module mk_diffusive_fluxdiv_module
+module diffusive_rhoc_fluxdiv_module
 
   use ml_layout_module
   use define_bc_module
@@ -10,12 +10,12 @@ module mk_diffusive_fluxdiv_module
 
   private
 
-  public :: mk_diffusive_rhoc_fluxdiv
+  public :: diffusive_rhoc_fluxdiv
 
 contains
 
-  subroutine mk_diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_fc,chi_fc, &
-                                       dx,the_bc_level,vel_bc_n)
+  subroutine diffusive_rhoc_fluxdiv(mla,s_update,out_comp,prim,rho_fc,chi_fc, &
+                                    dx,the_bc_level,vel_bc_n)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_update(:)
@@ -80,25 +80,25 @@ contains
           hi = upb(get_box(prim(n), i))
           select case (dm)
           case (2)
-             call mk_diffusive_rhoc_fluxdiv_2d(up(:,:,1,out_comp), ng_u, &
-                                               gcx(:,:,1,1), gcy(:,:,1,1), ng_g, &
-                                               spx(:,:,1,1), spy(:,:,1,1), ng_s, &
-                                               cpx(:,:,1,1), cpy(:,:,1,1), ng_c, &
-                                               vpx(:,:,1,1), vpy(:,:,1,1), ng_b, &
-                                               lo, hi, dx(n,:), &
-                                               the_bc_level(n)%phys_bc_level_array(i,:,:))
+             call diffusive_rhoc_fluxdiv_2d(up(:,:,1,out_comp), ng_u, &
+                                            gcx(:,:,1,1), gcy(:,:,1,1), ng_g, &
+                                            spx(:,:,1,1), spy(:,:,1,1), ng_s, &
+                                            cpx(:,:,1,1), cpy(:,:,1,1), ng_c, &
+                                            vpx(:,:,1,1), vpy(:,:,1,1), ng_b, &
+                                            lo, hi, dx(n,:), &
+                                            the_bc_level(n)%phys_bc_level_array(i,:,:))
           case (3)
              gcz => dataptr(gradc(n,3), i)
              spz => dataptr(rho_fc(n,3), i)
              cpz => dataptr(chi_fc(n,3), i)
              vpz => dataptr(vel_bc_n(n,3), i)
-             call mk_diffusive_rhoc_fluxdiv_3d(up(:,:,:,out_comp), ng_u, &
-                                               gcx(:,:,:,1), gcy(:,:,:,1), gcz(:,:,:,1), ng_g, &
-                                               spx(:,:,:,1), spy(:,:,:,1), spz(:,:,:,1), ng_s, &
-                                               cpx(:,:,:,1), cpy(:,:,:,1), cpz(:,:,:,1), ng_c, &
-                                               vpx(:,:,:,1), vpy(:,:,:,1), vpz(:,:,:,1), ng_b, &
-                                               lo, hi, dx(n,:), &
-                                               the_bc_level(n)%phys_bc_level_array(i,:,:))
+             call diffusive_rhoc_fluxdiv_3d(up(:,:,:,out_comp), ng_u, &
+                                            gcx(:,:,:,1), gcy(:,:,:,1), gcz(:,:,:,1), ng_g, &
+                                            spx(:,:,:,1), spy(:,:,:,1), spz(:,:,:,1), ng_s, &
+                                            cpx(:,:,:,1), cpy(:,:,:,1), cpz(:,:,:,1), ng_c, &
+                                            vpx(:,:,:,1), vpy(:,:,:,1), vpz(:,:,:,1), ng_b, &
+                                            lo, hi, dx(n,:), &
+                                            the_bc_level(n)%phys_bc_level_array(i,:,:))
           end select
        end do
     end do
@@ -111,9 +111,9 @@ contains
 
   contains
 
-    subroutine mk_diffusive_rhoc_fluxdiv_2d(s_update,ng_u,gradcx,gradcy,ng_g,rhox,rhoy,ng_s, &
-                                            chix,chiy,ng_c,vel_bc_nx,vel_bc_ny,ng_b, &
-                                            lo,hi,dx,bc)
+    subroutine diffusive_rhoc_fluxdiv_2d(s_update,ng_u,gradcx,gradcy,ng_g,rhox,rhoy,ng_s, &
+                                         chix,chiy,ng_c,vel_bc_nx,vel_bc_ny,ng_b, &
+                                         lo,hi,dx,bc)
 
       integer        , intent(in   ) :: lo(:), hi(:), ng_u, ng_g, ng_s, ng_c, ng_b
       real(kind=dp_t), intent(inout) ::  s_update(lo(1)-ng_u:,lo(2)-ng_u:)
@@ -183,12 +183,12 @@ contains
          end do
       end do
 
-    end subroutine mk_diffusive_rhoc_fluxdiv_2d
+    end subroutine diffusive_rhoc_fluxdiv_2d
 
-    subroutine mk_diffusive_rhoc_fluxdiv_3d(s_update,ng_u,gradcx,gradcy,gradcz,ng_g, &
-                                            rhox,rhoy,rhoz,ng_s, &
-                                            chix,chiy,chiz,ng_c,vel_bc_nx, &
-                                            vel_bc_ny,vel_bc_nz,ng_b,lo,hi,dx,bc)
+    subroutine diffusive_rhoc_fluxdiv_3d(s_update,ng_u,gradcx,gradcy,gradcz,ng_g, &
+                                         rhox,rhoy,rhoz,ng_s, &
+                                         chix,chiy,chiz,ng_c,vel_bc_nx, &
+                                         vel_bc_ny,vel_bc_nz,ng_b,lo,hi,dx,bc)
 
       integer        , intent(in   ) :: lo(:), hi(:), ng_u, ng_g, ng_s, ng_c, ng_b
       real(kind=dp_t), intent(inout) ::  s_update(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
@@ -290,8 +290,8 @@ contains
          end do
       end do
 
-    end subroutine mk_diffusive_rhoc_fluxdiv_3d
+    end subroutine diffusive_rhoc_fluxdiv_3d
 
-  end subroutine mk_diffusive_rhoc_fluxdiv
+  end subroutine diffusive_rhoc_fluxdiv
 
-end module mk_diffusive_fluxdiv_module
+end module diffusive_rhoc_fluxdiv_module
