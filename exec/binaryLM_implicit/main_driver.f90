@@ -18,7 +18,8 @@ subroutine main_driver()
   use div_and_grad_module
   use analysis_module
   use sum_momenta_module
-  use mk_stochastic_fluxdiv_module
+  use stochastic_m_fluxdiv_module
+  use stochastic_rhoc_fluxdiv_module
   use project_onto_eos_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
@@ -325,7 +326,7 @@ subroutine main_driver()
 
   if (initial_variance .ne. 0.d0) then
      call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-     call add_momentum_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold,umac)
+     call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold,umac)
   end if
 
   if (barodiffusion_type .gt. 0) then
@@ -351,7 +352,7 @@ subroutine main_driver()
   call convert_cons_to_prim(mla,sold,prim,.true.)
 
   if (initial_variance .ne. 0.d0) then
-     call add_concentration_fluctuations(mla,dx,initial_variance*variance_coef*conc_scal,prim,sold)
+     call add_c_fluctuations(mla,dx,initial_variance*variance_coef*conc_scal,prim,sold)
   end if
 
   ! fill ghost cells for prim
@@ -376,18 +377,21 @@ subroutine main_driver()
 
   ! allocate and build multifabs that will contain random numbers
   if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
-     call init_stochastic(mla,1)
+     call init_m_stochastic(mla,1)
+     call init_rhoc_stochastic(mla,1)
      allocate(weights(1))
      weights(1) = 1.d0
   else if (algorithm_type .eq. 2) then
-     call init_stochastic(mla,2)
+     call init_m_stochastic(mla,2)
+     call init_rhoc_stochastic(mla,2)
      allocate(weights(2))
      weights(1) = 1.d0
      weights(2) = 0.d0
   end if
 
   ! fill the stochastic multifabs with a new set of random numbers
-  call fill_stochastic(mla)  
+  call fill_m_stochastic(mla)  
+  call fill_rhoc_stochastic(mla)  
 
   ! set the initial time step
   if (fixed_dt .gt. 0.d0) then
@@ -561,7 +565,8 @@ subroutine main_driver()
   !!!!!!!!!!!! convergence testing
 
   ! destroy and deallocate multifabs that contain random numbers
-  call destroy_stochastic(mla)
+  call destroy_m_stochastic(mla)
+  call destroy_rhoc_stochastic(mla)
 
   if(abs(hydro_grid_int)>0 .or. stats_int>0) then
      call finalize_hydro_grid()

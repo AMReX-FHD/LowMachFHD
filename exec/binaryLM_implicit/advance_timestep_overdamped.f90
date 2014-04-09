@@ -12,7 +12,8 @@ module advance_timestep_overdamped_module
   use diffusive_m_fluxdiv_module
   use mk_external_force_module
   use mk_grav_force_module
-  use mk_stochastic_fluxdiv_module
+  use stochastic_m_fluxdiv_module
+  use stochastic_rhoc_fluxdiv_module
   use bds_module
   use gmres_module
   use init_module
@@ -197,11 +198,11 @@ contains
 
     ! add div(Sigma^(1)) to gmres_rhs_v
     if (algorithm_type .eq. 1) then
-       call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                    eta,eta_ed,dx,dt,weights)
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,dx,dt,weights)
     else if (algorithm_type .eq. 2) then
-       call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                    eta,eta_ed,dx,0.5d0*dt,weights)
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,dx,0.5d0*dt,weights)
     end if
 
     ! add rho^n*g to gmres_rhs_v
@@ -226,10 +227,10 @@ contains
 
     ! add div(Psi^(1)) to rhs_p
     if (algorithm_type .eq. 1) then
-       call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+       call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                     chi_fc,dx,dt,vel_bc_n,weights)
     else
-       call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+       call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                     chi_fc,dx,0.5d0*dt,vel_bc_n,weights)  
     end if
 
@@ -408,8 +409,8 @@ contains
     end if
 
     ! add div(Sigma^(2)) to gmres_rhs_v
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                 eta,eta_ed,dx,dt,weights)
+    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                              eta,eta_ed,dx,dt,weights)
 
     ! add rho^{*,n+1/2}*g gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
@@ -437,7 +438,7 @@ contains
                                 the_bc_tower%bc_tower_array,vel_bc_n)
 
     ! add div(Psi^(2)) to rhs_p
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n,weights)
 
     if (algorithm_type .eq. 2) then
@@ -586,7 +587,8 @@ contains
     call compute_kappa(mla,kappa,prim,dx)
 
     ! fill the stochastic multifabs with a new set of random numbers
-    call fill_stochastic(mla)
+    call fill_m_stochastic(mla)
+    call fill_rhoc_stochastic(mla)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement

@@ -9,7 +9,7 @@ module initial_projection_module
   use div_and_grad_module
   use mk_baro_fluxdiv_module
   use diffusive_rhoc_fluxdiv_module
-  use mk_stochastic_fluxdiv_module
+  use stochastic_rhoc_fluxdiv_module
   use bc_module
   use multifab_physbc_stag_module
   use probin_binarylm_module, only: rhobar, barodiffusion_type
@@ -90,7 +90,7 @@ contains
     end do
 
     ! set rhoc_s_fluxdiv = div(Psi^0)
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc, &
+    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n,weights)
 
     ! add div(Psi^0) to mac_rhs

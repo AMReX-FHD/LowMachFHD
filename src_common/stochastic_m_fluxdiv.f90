@@ -7,14 +7,12 @@ module stochastic_m_fluxdiv_module
   use define_bc_module
   use bc_module
   use BoxLibRNGs
-  use analysis_module
-  use convert_stag_module
   use bc_module
   use multifab_physbc_stag_module
   use multifab_fill_random_module
   use multifab_filter_module
   use sum_momenta_module
-  use probin_common_module , only: visc_coef, diff_type, variance_coef, k_B, &
+  use probin_common_module , only: visc_coef, variance_coef, k_B, &
                                    stoch_stress_form, filtering_width  
 
   implicit none

@@ -13,7 +13,8 @@ module advance_timestep_module
   use diffusive_rhoc_fluxdiv_module
   use mk_grav_force_module
   use mk_external_force_module
-  use mk_stochastic_fluxdiv_module
+  use stochastic_m_fluxdiv_module
+  use stochastic_rhoc_fluxdiv_module
   use gmres_module
   use init_module
   use div_and_grad_module
@@ -324,7 +325,7 @@ contains
     end do
 
     ! compute m_s_fluxdiv = div(Sigma^n)
-    call mk_stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx,dt,weights)
+    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx,dt,weights)
 
     ! add div(Sigma^n) to gmres_rhs_v
     do n=1,nlevs
@@ -363,7 +364,7 @@ contains
     end if
 
     ! add div(Psi^n') to rhs_p
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n,weights)
 
     ! add external forcing for rho*c
@@ -696,10 +697,11 @@ contains
     end if
 
     ! fill the stochastic multifabs with a new set of random numbers
-    call fill_stochastic(mla)
+    call fill_m_stochastic(mla)
+    call fill_rhoc_stochastic(mla)
 
     ! create div(Psi^{n+1})
-    call mk_stochastic_s_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
+    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
                                  s_fc,chi_fc,dx,dt,vel_bc_n,weights)
 
     ! add div(Psi^{n+1}) to rhs_p
