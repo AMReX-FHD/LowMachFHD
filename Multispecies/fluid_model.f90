@@ -143,11 +143,23 @@ contains
           n=n+1
           D_MS(row, column) = Dbar_in(n)
           D_MS(column, row) = D_MS(row, column) ! symmetric
-          Gama(row, column) = 0.d0       
+         
+          if(is_ideal_mixture) then 
+             Gama(row, column) = 0.d0      
+          else 
+             Gama(row, column) = 0.d0 ! change here for non-ideality 
+          end if
+
           Gama(column, row) = Gama(row, column) ! symmetric
        end do
        D_MS(row, row) = 0.d0   ! self-diffusion is zero
-       Gama(row, row) = 1.d0   ! set to unit matrix for time being
+       
+       if(is_ideal_mixture) then
+          Gama(row, row) = 1.d0   ! set to unit matrix for time being
+       else 
+          Gama(row, row) = 1.d0   ! change here for non-ideality 
+       end if
+
     end do
 
   end subroutine compute_D_MSGama_local

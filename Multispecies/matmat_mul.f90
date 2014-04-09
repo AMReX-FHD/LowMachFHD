@@ -23,8 +23,8 @@ module matmat_mul_module
     integer                        :: lo(mla%dim), hi(mla%dim), i, dm, nc 
    
     dm = mla%dim 
-    nc = x%nc    
-  
+    nc = x%nc/2    
+ 
     do i=1,nfabs(x)
        xp  => dataptr(x, i)   
        ap  => dataptr(A, i)  
@@ -32,7 +32,7 @@ module matmat_mul_module
        lo(2) = lbound(ap,2)  ! so in the subroutine loop from lo to hi without ng.
        hi(1) = ubound(ap,1)
        hi(2) = ubound(ap,2)
-       !print*, lo(1:2),hi(1:2)
+       !print*, 'matmat', lo(1:2),hi(1:2)
 
        select case (dm)
          case (2)
@@ -66,9 +66,9 @@ module matmat_mul_module
 
         real(kind=dp_t), dimension(nc,nc), intent(inout) :: xp_ij
         real(kind=dp_t), dimension(nc,nc), intent(in)    :: ap_ij  
-        
+        !print*, nc 
         xp_ij = matmul(ap_ij, xp_ij)
- 
+  
     end subroutine matmat_mul_comp 
 
   end subroutine matmat_mul_2d

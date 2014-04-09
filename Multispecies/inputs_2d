@@ -2,8 +2,8 @@
  
  dim_in = 2                      ! problem dimension
  plot_int = 100000               ! plot interval
- max_grid_size(1:2) = 32 32      ! individual box size 
- n_steps_skip = 10              ! when to start analyzing data
+ max_grid_size(1:2) = 16 16      ! individual box size 
+ n_steps_skip = 200              ! when to start analyzing data
  k_B      = 1E-3                 ! Boltzmann constant
 
  ! Grid size
@@ -21,7 +21,7 @@
 &probin_multispecies
  
  nspecies = 2                    ! number of species
- max_step = 20                 ! total number of computational step
+ max_step = 400                 ! total number of computational step
  cfl1     = 0.01                 ! CFL number
  chi      = 1.0                  ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_parameter = 1E-3       ! parameter to set variance (=1/thickness and =1 ideal) 

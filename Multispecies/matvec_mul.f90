@@ -24,7 +24,7 @@ module matvec_mul_module
    
     dm = mla%dim 
     nc = x%nc    
-  
+
     do i=1,nfabs(x)
        xp  => dataptr(x, i)   
        ap  => dataptr(A, i)  
@@ -32,7 +32,7 @@ module matvec_mul_module
        lo(2) = lbound(ap,2)  ! so in the subroutine loop from lo to hi without ng.
        hi(1) = ubound(ap,1)
        hi(2) = ubound(ap,2)
-       !print*, lo(1:2),hi(1:2)
+       !print*, 'matvec', lo(1:2),hi(1:2)
 
        select case (dm)
          case (2)

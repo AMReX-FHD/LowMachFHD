@@ -21,14 +21,15 @@ module diffusive_mass_fluxdiv_module
 
 contains
 
-  subroutine diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchiGama,diff_fluxdiv,dx,the_bc_level)
+  subroutine diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchi,Gama,diff_fluxdiv,dx,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rho_tot(:)
     type(multifab) , intent(in   )  :: molarconc(:)
     real(kind=dp_t), intent(in   )  :: molmass(:) 
-    type(multifab) , intent(in   )  :: rhoWchiGama(:)
+    type(multifab) , intent(in   )  :: rhoWchi(:)
+    type(multifab) , intent(in   )  :: Gama(:)
     type(multifab) , intent(inout)  :: diff_fluxdiv(:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_level) , intent(in   )  :: the_bc_level(:)
@@ -51,7 +52,7 @@ contains
     end do   
     
     ! compute the face-centered flux (each direction: cells+1 faces while cells contain interior+2 ghost cells) 
-    call diffusive_flux(mla,rho,rho_tot,molarconc,rhoWchiGama,flux,dx,the_bc_level)
+    call diffusive_flux(mla,rho,rho_tot,molarconc,rhoWchi,Gama,flux,dx,the_bc_level)
 
     ! compute divergence of determinstic flux 
     call compute_div(mla,flux,diff_fluxdiv,dx,1,1,nspecies)
@@ -93,7 +94,7 @@ contains
 
     ! local variables
     type(multifab)  :: drho(mla%nlevel)  ! correction to rho
-    type(multifab)  :: rhoWchiGama(mla%nlevel)    ! rho*W*chi*Gama
+    type(multifab)  :: rhoWchi(mla%nlevel)    ! rho*W*chi*Gama
 
     integer         :: n,i,dm,nlevs
 
@@ -102,8 +103,8 @@ contains
       
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     do n=1,nlevs
-       call multifab_build(drho(n),mla%la(n),nspecies,rho(n)%ng)
-       call multifab_build(rhoWchiGama(n),     mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(drho(n),    mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(rhoWchi(n), mla%la(n), nspecies**2, rho(n)%ng)
     end do
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
@@ -118,12 +119,11 @@ contains
     ! compute chi 
     call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,the_bc_level)
       
-    ! compute rho*W*chi*Gama
-    call compute_rhoWchiGama(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,&
-                             Gama,rhoWchiGama,the_bc_level)
+    ! compute rho*W*chi
+    call compute_rhoWchi(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,rhoWchi,the_bc_level)
 
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled in init/end of this code
-    call diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchiGama,&
+    call diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchi,Gama,&
                                 diff_fluxdiv,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
@@ -142,7 +142,7 @@ contains
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(drho(n))
-       call multifab_destroy(rhoWchiGama(n))
+       call multifab_destroy(rhoWchi(n))
     end do
 
   end subroutine compute_fluxdiv

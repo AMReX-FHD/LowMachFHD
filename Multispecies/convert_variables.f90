@@ -12,7 +12,7 @@ module convert_variables_module
 
   private
 
-  public :: convert_cons_to_prim,compute_chi,compute_rhoWchiGama,compute_Lonsager, &
+  public :: convert_cons_to_prim,compute_chi,compute_rhoWchi,compute_Lonsager, &
             compute_molconc_rhotot_local,compute_chi_local,compute_Lonsager_local, &
             correct_rho_with_drho,correct_rho_with_drho_local
 
@@ -700,7 +700,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
 
   end subroutine compute_Lonsager_local
 
-  subroutine compute_rhoWchiGama(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama,the_bc_level)
+  subroutine compute_rhoWchi(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,rhoWchi,the_bc_level)
  
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -709,8 +709,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     type(multifab) , intent(in   )  :: molmtot(:) 
     real(kind=dp_t), intent(in   )  :: molmass(nspecies)
     type(multifab) , intent(in   )  :: chi(:) 
-    type(multifab) , intent(in   )  :: Gama(:) 
-    type(multifab) , intent(inout)  :: rhoWchiGama(:) 
+    type(multifab) , intent(inout)  :: rhoWchi(:) 
     type(bc_level) , intent(in   )  :: the_bc_level(:)
 
     ! local variables
@@ -723,8 +722,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for chi
-    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Gama
-    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for rhoWchiGama
+    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for rhoWchi
 
     dm = mla%dim        ! dimensionality
     ng = rho(1)%ng      ! number of ghost cells 
@@ -739,25 +737,24 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
           dp2 => dataptr(molarconc(n),i)
           dp3 => dataptr(molmtot(n),i)
           dp4 => dataptr(chi(n), i)
-          dp5 => dataptr(Gama(n), i)
-          dp6 => dataptr(rhoWchiGama(n), i)
+          dp5 => dataptr(rhoWchi(n), i)
           lo  =  lwb(get_box(rho(n), i))
           hi  =  upb(get_box(rho(n), i))
           
           select case(dm)
           case (2)
-             call compute_rhoWchiGama_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),molmass,&
-                           dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,:),ng,lo,hi) 
+             call compute_rhoWchi_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),molmass,&
+                           dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),ng,lo,hi) 
           case (3)
-             call compute_rhoWchiGama_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),molmass,&
-                           dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,:),ng,lo,hi) 
+             call compute_rhoWchi_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),molmass,&
+                           dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),ng,lo,hi) 
           end select
        end do
     end do
  
-  end subroutine compute_rhoWchiGama
+  end subroutine compute_rhoWchi
   
-  subroutine compute_rhoWchiGama_2d(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama,ng,lo,hi)
+  subroutine compute_rhoWchi_2d(rho,rho_tot,molarconc,molmass,molmtot,chi,rhoWchi,ng,lo,hi)
   
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)         ! density; last dimension for species
@@ -766,26 +763,25 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     real(kind=dp_t)  :: molmass(nspecies)                  ! species molar mass 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)       ! total molar mass 
     real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,:)         ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,:)        ! non-ideality coefficient 
-    real(kind=dp_t)  :: rhoWchiGama(lo(1)-ng:,lo(2)-ng:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  :: rhoWchi(lo(1)-ng:,lo(2)-ng:,:) ! last dimension for nspecies^2
 
     ! local variables
     integer          :: i,j,row,column
-    real(kind=dp_t), dimension(nspecies,nspecies) :: rhoWchiGamaloc 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: rhoWchiloc 
   
     ! for specific box, now start loops over alloted cells 
     do j=lo(2)-ng,hi(2)+ng
        do i=lo(1)-ng,hi(1)+ng
         
-          call compute_rhoWchiGama_local(rho(i,j,:),rho_tot(i,j),molarconc(i,j,:),&
-                          molmass,molmtot(i,j),chi(i,j,:),Gama(i,j,:),rhoWchiGama(i,j,:))
+          call compute_rhoWchi_local(rho(i,j,:),rho_tot(i,j),molarconc(i,j,:),&
+                          molmass,molmtot(i,j),chi(i,j,:),rhoWchi(i,j,:))
 
           if(.false.) then
           if(i.eq.7 .and. j.eq.14) then
-          call set_Xij(rhoWchiGamaloc, rhoWchiGama(i,j,:))
+          call set_Xij(rhoWchiloc, rhoWchi(i,j,:))
              do row=1, nspecies
                 do column=1, nspecies
-                   print*, rhoWchiGamaloc(row,column) 
+                   print*, rhoWchiloc(row,column) 
                 end do
                 print*, '' 
              end do
@@ -795,9 +791,9 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
        end do
     end do
 
-  end subroutine compute_rhoWchiGama_2d
+  end subroutine compute_rhoWchi_2d
 
-  subroutine compute_rhoWchiGama_3d(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama,ng,lo,hi)
+  subroutine compute_rhoWchi_3d(rho,rho_tot,molarconc,molmass,molmtot,chi,rhoWchi,ng,lo,hi)
 
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! density; last dimension for species
@@ -806,8 +802,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     real(kind=dp_t)  :: molmass(nspecies)                            ! species molar mass 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)       ! total molar mass 
     real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! non-ideality coefficient 
-    real(kind=dp_t)  :: rhoWchiGama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  :: rhoWchi(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! last dimension for nspecies^2
     
     ! local variables
     integer          :: i,j,k
@@ -817,16 +812,16 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
        
-             call compute_rhoWchiGama_local(rho(i,j,k,:),rho_tot(i,j,k),molarconc(i,j,k,:),&
-                          molmass,molmtot(i,j,k),chi(i,j,k,:),Gama(i,j,k,:),rhoWchiGama(i,j,k,:))
+             call compute_rhoWchi_local(rho(i,j,k,:),rho_tot(i,j,k),molarconc(i,j,k,:),&
+                          molmass,molmtot(i,j,k),chi(i,j,k,:),rhoWchi(i,j,k,:))
               
          end do
       end do
     end do
    
-  end subroutine compute_rhoWchiGama_3d
+  end subroutine compute_rhoWchi_3d
   
-  subroutine compute_rhoWchiGama_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,rhoWchiGama)
+  subroutine compute_rhoWchi_local(rho,rho_tot,molarconc,molmass,molmtot,chi,rhoWchi)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)            
     real(kind=dp_t), intent(in)   :: rho_tot                  
@@ -834,8 +829,7 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     real(kind=dp_t), intent(in)   :: molmass(nspecies)   ! species molar mass 
     real(kind=dp_t), intent(in)   :: molmtot             ! total molar mass 
     real(kind=dp_t), intent(in)   :: chi(nspecies,nspecies)   ! rank conversion done 
-    real(kind=dp_t), intent(in)   :: Gama(nspecies,nspecies)        
-    real(kind=dp_t), intent(out)  :: rhoWchiGama(nspecies,nspecies) 
+    real(kind=dp_t), intent(out)  :: rhoWchi(nspecies,nspecies) 
  
     ! local variables
     integer                              :: row,column
@@ -846,27 +840,14 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
        W(row) = rho(row)/rho_tot
     end do
 
-    ! check chi*w=0
-    !chiw = matmul(chi, W)
-    !if(.false.) then
-    !if(i.eq.15 .and. j.eq.16) print*, rho, chi, chiw
-    !end if
-
-    ! compute chi*Gamma 
-    if(is_ideal_mixture) then
-       rhoWchiGama = chi
-    else
-       rhoWchiGama = matmul(chi, Gama)
-    end if 
-          
-    ! populate -rho*W*chi*Gama = -rho_i*chi*Gamma
+    ! populate -rho*W*chi = -rho_i*chi
     do row=1, nspecies
        do column=1, nspecies
-          rhoWchiGama(row,column) = -rho(row)*rhoWchiGama(row,column)  
+          rhoWchi(row,column) = -rho(row)*chi(row,column)  
        end do
     end do
     
-  end subroutine compute_rhoWchiGama_local
+  end subroutine compute_rhoWchi_local
 
   subroutine set_Xij(Xout_ij, Xin_ij)
         
