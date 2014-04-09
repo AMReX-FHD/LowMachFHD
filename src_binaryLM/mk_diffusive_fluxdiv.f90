@@ -10,7 +10,7 @@ module mk_diffusive_fluxdiv_module
 
   private
 
-  public :: mk_diffusive_rhoc_fluxdiv, mk_diffusive_m_fluxdiv
+  public :: mk_diffusive_rhoc_fluxdiv
 
 contains
 
@@ -293,59 +293,5 @@ contains
     end subroutine mk_diffusive_rhoc_fluxdiv_3d
 
   end subroutine mk_diffusive_rhoc_fluxdiv
-
-  subroutine mk_diffusive_m_fluxdiv(mla,m_update,umac,eta,eta_ed,kappa,dx,the_bc_level)
-
-    use stag_applyop_module, only: stag_applyop_level
-
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: m_update(:,:)
-    type(multifab) , intent(in   ) ::     umac(:,:)
-    type(multifab) , intent(in   ) ::      eta(:)
-    type(multifab) , intent(in   ) ::   eta_ed(:,:)
-    type(multifab) , intent(in   ) ::    kappa(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:)
-    type(bc_level) , intent(in   ) :: the_bc_level(:)
-
-    ! local variables
-    integer :: nlevs,dm,i,n
-
-    type(multifab) :: Lphi_fc(mla%nlevel,mla%dim)
-    type(multifab) :: alpha_fc(mla%nlevel,mla%dim)
-
-    nlevs = mla%nlevel
-    dm    = mla%dim
-
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_build_edge(Lphi_fc(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(alpha_fc(n,i),mla%la(n),1,0,i)
-          ! set alpha to zero
-          call setval(alpha_fc(n,i),0.d0,all=.true.)
-       end do
-    end do
-
-    do n=1,nlevs
-
-       ! compute -L(phi)
-       ! we could compute +L(phi) but then we'd have to multiply beta and kappa by -1
-       call stag_applyop_level(mla%la(n),the_bc_level(n),umac(n,:),Lphi_fc(n,:), &
-                               alpha_fc(n,:),eta(n),eta_ed(n,:),kappa(n),dx(n,:))
-
-       ! subtract -L(phi) to m_update
-       do i=1,dm
-          call multifab_sub_sub_c(m_update(n,i),1,Lphi_fc(n,i),1,1,0)
-       end do
-
-    end do
-
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_destroy(Lphi_fc(n,i))
-          call multifab_destroy(alpha_fc(n,i))
-       end do
-    end do
-
-  end subroutine mk_diffusive_m_fluxdiv
 
 end module mk_diffusive_fluxdiv_module

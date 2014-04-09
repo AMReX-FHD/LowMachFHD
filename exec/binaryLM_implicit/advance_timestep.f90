@@ -10,6 +10,7 @@ module advance_timestep_module
   use mk_advective_m_fluxdiv_module
   use mk_baro_fluxdiv_module
   use mk_diffusive_fluxdiv_module
+  use diffusive_m_fluxdiv_module
   use mk_grav_force_module
   use mk_external_force_module
   use mk_stochastic_fluxdiv_module
@@ -312,8 +313,8 @@ contains
     end do
 
     ! compute m_d_fluxdiv = A_0^n v^n
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac_old,eta,eta_ed,kappa,dx, &
-                                the_bc_tower%bc_tower_array)
+    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac_old,eta,eta_ed,kappa,dx, &
+                             the_bc_tower%bc_tower_array)
 
     ! add A_0^n v^n to gmres_rhs_v
     do n=1,nlevs
@@ -634,8 +635,8 @@ contains
           call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
-    call mk_diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac_old,eta,eta_ed,kappa,dx, &
-                                the_bc_tower%bc_tower_array)
+    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac_old,eta,eta_ed,kappa,dx, &
+                             the_bc_tower%bc_tower_array)
 
     ! add (1/2) A_0^{n+1} v^n to gmres_rhs_v
     do n=1,nlevs

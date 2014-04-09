@@ -9,6 +9,7 @@ module advance_timestep_overdamped_module
   use mk_advective_s_fluxdiv_module
   use mk_advective_m_fluxdiv_module
   use mk_diffusive_fluxdiv_module
+  use diffusive_m_fluxdiv_module
   use mk_external_force_module
   use mk_grav_force_module
   use mk_stochastic_fluxdiv_module
@@ -191,8 +192,8 @@ contains
     end do
 
     ! add A_0^n v^{n-1/2} to gmres_rhs_v
-    call mk_diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
-                                the_bc_tower%bc_tower_array)
+    call diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
+                             the_bc_tower%bc_tower_array)
 
     ! add div(Sigma^(1)) to gmres_rhs_v
     if (algorithm_type .eq. 1) then
@@ -399,8 +400,8 @@ contains
     end do
 
     ! add A_0^* v^* to gmres_rhs_v
-    call mk_diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
-                                the_bc_tower%bc_tower_array)
+    call diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
+                             the_bc_tower%bc_tower_array)
 
     if (algorithm_type .eq. 2) then
        weights = 1.d0/sqrt(2.d0)
