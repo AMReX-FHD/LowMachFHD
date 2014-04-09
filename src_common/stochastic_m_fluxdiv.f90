@@ -21,8 +21,8 @@ module stochastic_m_fluxdiv_module
 
   private
 
-  public :: stochastic_m_fluxdiv, fill_stochastic, &
-       init_stochastic, destroy_stochastic, add_momentum_fluctuations
+  public :: stochastic_m_fluxdiv, fill_m_stochastic, &
+       init_m_stochastic, destroy_m_stochastic, add_m_fluctuations
 
   ! Stochastic fluxes for momentum are generated on:
   ! -cell-centered grid for diagonal components
@@ -543,7 +543,7 @@ contains
   end subroutine stochastic_m_fluxdiv
 
   ! fill the stochastic multifabs with random numbers
-  subroutine fill_stochastic(mla)
+  subroutine fill_m_stochastic(mla)
 
     type(ml_layout), intent(in   ) :: mla
 
@@ -596,11 +596,11 @@ contains
 
     end do
 
-  end subroutine fill_stochastic
+  end subroutine fill_m_stochastic
 
   ! call this once at the beginning of simulation to allocate multifabs
   ! that will hold random numbers
-  subroutine init_stochastic(mla,n_rngs_in)
+  subroutine init_m_stochastic(mla,n_rngs_in)
 
     type(ml_layout), intent(in   ) :: mla
     integer        , intent(in   ) :: n_rngs_in
@@ -644,10 +644,10 @@ contains
        end do ! end loop over n_rngs
     end do ! end loop over nlevs
 
-  end subroutine init_stochastic
+  end subroutine init_m_stochastic
 
   ! call this once at the end of simulation to deallocate memory
-  subroutine destroy_stochastic(mla)
+  subroutine destroy_m_stochastic(mla)
 
     type(ml_layout), intent(in   ) :: mla
 
@@ -672,10 +672,10 @@ contains
     
     deallocate(mflux_cc,mflux_nd,mflux_ed)
 
-  end subroutine destroy_stochastic
+  end subroutine destroy_m_stochastic
 
  ! Add equilibrium fluctuations to the momentum (valid and ghost regions)
- subroutine add_momentum_fluctuations(mla,dx,variance,s_cc,s_face,temperature_face,m_face,mactemp)
+ subroutine add_m_fluctuations(mla,dx,variance,s_cc,s_face,temperature_face,m_face,mactemp)
 
    type(ml_layout), intent(in   ) :: mla
    real(dp_t)     , intent(in   ) :: variance, dx(:,:)
@@ -720,6 +720,6 @@ contains
       end do
    end if            
 
- end subroutine add_momentum_fluctuations
+ end subroutine add_m_fluctuations
 
 end module stochastic_m_fluxdiv_module
