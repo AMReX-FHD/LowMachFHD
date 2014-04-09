@@ -37,9 +37,9 @@
  print_error_norms = .true.      ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.      ! false=Bdag*Gama, true=Bdag 
  use_lapack  = .false.           ! false=iterative methods, true=inverse/pseudoinverse 
- rho_in(1,1:2) = 0.35 1.25      ! inside the circle
- rho_in(2,1:2) = 0.8 0.5    ! outside the circle  
- molmass_in(1:2) = 1.0 2.0  ! molar mass of n-species
- Dbar_in(1:1) = 1.0       ! SM diffusion constant arranged in lower-triangle
+ rho_in(1,1:2) = 0.35 1.25       ! inside the circle
+ rho_in(2,1:2) = 0.8 0.5         ! outside the circle  
+ molmass_in(1:2) = 1.0 2.0       ! molar mass of n-species
+ Dbar_in(1:1) = 1.0              ! SM diffusion constant arranged in lower-triangle
  
 /

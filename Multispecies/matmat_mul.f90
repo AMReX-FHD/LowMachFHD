@@ -11,19 +11,19 @@ module matmat_mul_module
 
   contains
 
-  subroutine matmat_mul(mla, x, A) ! Computes x=A*x, where A and x are ncXnc matrix 
+  subroutine matmat_mul(mla, x, A, nc) ! Computes x=A*x, where A and x are ncXnc matrix 
    
-    type(ml_layout), intent(in  )  :: mla
+    type(ml_layout), intent(in   ) :: mla
     type(multifab),  intent(inout) :: x
-    type(multifab),  intent(in)    :: A
+    type(multifab),  intent(in   ) :: A
+    integer,         intent(in   ) :: nc
  
     ! local variables
     real(kind=dp_t), pointer       :: xp(:,:,:,:) 
     real(kind=dp_t), pointer       :: ap(:,:,:,:)
-    integer                        :: lo(mla%dim), hi(mla%dim), i, dm, nc 
+    integer                        :: lo(mla%dim), hi(mla%dim), i, dm
    
     dm = mla%dim 
-    nc = x%nc/2    
  
     do i=1,nfabs(x)
        xp  => dataptr(x, i)   

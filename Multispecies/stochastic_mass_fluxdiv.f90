@@ -88,7 +88,7 @@ contains
     ! compute variance X cholesky-Lonsager-face X W(0,1) 
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(mla, stoch_flux_fc(n,i), Lonsager_fc(n,i))
+          call matvec_mul(mla, stoch_flux_fc(n,i), Lonsager_fc(n,i), nspecies)
           call multifab_mult_mult_s(stoch_flux_fc(n,i), variance, 0)
        end do
     end do  

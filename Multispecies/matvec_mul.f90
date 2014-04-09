@@ -11,19 +11,19 @@ module matvec_mul_module
 
   contains
 
-  subroutine matvec_mul(mla, x, A) ! Computes x=A*x, where A is an nxn matrix and x is an nx1 vector  
+  subroutine matvec_mul(mla, x, A, nc) ! Computes x=A*x, where A is an nxn matrix and x is an nx1 vector  
    
     type(ml_layout), intent(in  )  :: mla
     type(multifab),  intent(inout) :: x
     type(multifab),  intent(in)    :: A
+    integer,         intent(in)    :: nc
  
     ! local variables
     real(kind=dp_t), pointer       :: xp(:,:,:,:) 
     real(kind=dp_t), pointer       :: ap(:,:,:,:)
-    integer                        :: lo(mla%dim), hi(mla%dim), i, dm, nc 
+    integer                        :: lo(mla%dim), hi(mla%dim), i, dm
    
     dm = mla%dim 
-    nc = x%nc    
 
     do i=1,nfabs(x)
        xp  => dataptr(x, i)   

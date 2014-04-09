@@ -65,14 +65,14 @@ contains
     ! compute rhoWchi X Gama (face centered) 
     do n=1,nlevs
        do i=1,dm
-          call matmat_mul(mla, Gama_face(n,i), rhoWchi_face(n,i))
+          call matmat_mul(mla, Gama_face(n,i), rhoWchi_face(n,i), nspecies)
        end do
     end do    
     
     ! compute flux as rhoWchi X Gama X grad(molarconc). 
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(mla, flux(n,i), Gama_face(n,i))
+          call matvec_mul(mla, flux(n,i), Gama_face(n,i), nspecies)
        end do
     end do    
 
