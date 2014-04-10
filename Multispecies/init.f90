@@ -24,9 +24,10 @@ module init_module
 
 contains
   
-  subroutine init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_level)
+  subroutine init_rho(rho,Temp,dx,prob_lo,prob_hi,time,the_bc_level)
 
     type(multifab) , intent(inout) :: rho(:)            
+    type(multifab) , intent(inout) :: Temp(:)            
     real(kind=dp_t), intent(in   ) :: dx(:,:)           
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim)
     real(kind=dp_t), intent(in   ) :: prob_hi(rho(1)%dim)
@@ -37,6 +38,7 @@ contains
     integer                        :: lo(rho(1)%dim), hi(rho(1)%dim)
     integer                        :: dm, ng, i, n, nlevs
     real(kind=dp_t), pointer       :: dp(:,:,:,:)   ! pointer for rho (last dim:nspecies)   
+    real(kind=dp_t), pointer       :: dp1(:,:,:,:)  ! pointer for Temp 
 
     dm = rho(1)%dim
     ng = rho(1)%ng
@@ -52,31 +54,36 @@ contains
     do n=1,nlevs
        do i=1,nfabs(rho(n))
           dp  => dataptr(rho(n),i)
+          dp1 => dataptr(Temp(n),i)
           lo  = lwb(get_box(rho(n),i))
           hi  = upb(get_box(rho(n),i))
           !print*, lo, hi 
           
           select case(dm)
           case (2)
-             call init_rho_2d(dp(:,:,1,:),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
+             call init_rho_2d(dp(:,:,1,:),dp1(:,:,1,1),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
           case (3)
-             call init_rho_3d(dp(:,:,:,:),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
+             call init_rho_3d(dp(:,:,:,:),dp1(:,:,:,1),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
           end select
        end do
 
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
        call multifab_fill_boundary(rho(n))
+       call multifab_fill_boundary(Temp(n))
 
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
+       call multifab_physbc(rho(n), 1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
+       call multifab_physbc(Temp(n),1,rho_part_bc_comp,1       ,the_bc_level(n),dx(n,:))
+
     end do
 
   end subroutine init_rho
 
-  subroutine init_rho_2d(rho,ng,lo,hi,prob_lo,prob_hi,dx,time)
+  subroutine init_rho_2d(rho,Temp,ng,lo,hi,prob_lo,prob_hi,dx,time)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)  ! last dimension for species
+    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:)  
     real(kind=dp_t)  :: prob_lo(2),prob_hi(2)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
@@ -86,6 +93,7 @@ contains
     real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2)
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
+    Temp = 1.0d0
     
     ! for specific box, now start loop over alloted cells     
     select case(init_type) 
@@ -98,7 +106,10 @@ contains
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+ 
             rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
+            !Temp(i,j)           = 1.0d0
+
          end do
       end do  
     
@@ -218,10 +229,11 @@ contains
    
   end subroutine init_rho_2d
 
-  subroutine init_rho_3d(rho,ng,lo,hi,prob_lo,prob_hi,dx,time)
+  subroutine init_rho_3d(rho,Temp,ng,lo,hi,prob_lo,prob_hi,dx,time)
     
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! Last dimension for species 
+    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)  
     real(kind=dp_t)  :: prob_lo(3),prob_hi(3)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
@@ -231,6 +243,7 @@ contains
     real(kind=dp_t)  :: x,y,z,rsq,tau,w1,w2,rhot,L(3)
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
+    Temp = 1.0d0
 
     ! for specific box, now start loop over alloted cells     
     select case(init_type) 
@@ -246,7 +259,10 @@ contains
           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0             
+             
              rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
+             Temp(i,j,k) = 1.0d0
+
           end do
        end do
     end do

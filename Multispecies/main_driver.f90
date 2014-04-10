@@ -11,7 +11,7 @@ subroutine main_driver()
   use bc_module
   use analysis_module
   use ParallelRNGs 
-  use convert_variables_module
+  use convert_mass_variables_module
   use probin_common_module
   use probin_multispecies_module
  
@@ -33,6 +33,7 @@ subroutine main_driver()
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
   type(multifab), allocatable  :: rho_exact(:)
+  type(multifab), allocatable  :: Temp(:)   ! Temperature 
   real(kind=dp_t),allocatable  :: molmass(:) 
   real(kind=dp_t),allocatable  :: covW(:,:) 
   real(kind=dp_t),allocatable  :: wiwjt(:,:) 
@@ -56,6 +57,7 @@ subroutine main_driver()
   allocate(dx(nlevs,dm))
   allocate(rho(nlevs))
   allocate(rho_exact(nlevs))
+  allocate(Temp(nlevs))
   allocate(molmass(nspecies))
   allocate(covW(nspecies,nspecies))
   allocate(wiwjt(nspecies,nspecies))
@@ -167,6 +169,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_build(rho(n),      mla%la(n),nspecies,1)
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
+     call multifab_build(Temp(n),     mla%la(n),1,       1)
   end do
 
   ! Initialize random numbers *after* the global (root) seed has been set:
@@ -181,7 +184,7 @@ subroutine main_driver()
   time = start_time    
 
   ! initialize rho
-  call init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
+  call init_rho(rho,Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
 
   !=======================================================
   ! Begin time stepping loop
@@ -219,14 +222,14 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,molmass,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+     call advance(mla,rho,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
      ! print out the total mass to check conservation
      !call sum_mass(rho, istep)
 
      ! compute error norms
      if (print_error_norms) then
-        call print_errors(rho,rho_exact,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
+        call print_errors(rho,rho_exact,Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
      end if
 
      ! compute coavariance and variances (after typical relaxation ~ L^2/D) 
@@ -336,6 +339,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_exact(n))
+     call multifab_destroy(Temp(n))
   end do
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)

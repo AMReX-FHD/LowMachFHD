@@ -10,14 +10,14 @@ module diffusive_mass_fluxdiv_module
   use ml_layout_module
   use F95_LAPACK
   use stochastic_mass_fluxdiv_module
-  use convert_variables_module
+  use convert_mass_variables_module
   use probin_multispecies_module
 
   implicit none
 
   private
 
-  public :: diffusive_mass_fluxdiv, compute_fluxdiv
+  public :: diffusive_mass_fluxdiv, compute_mass_fluxdiv
 
 contains
 
@@ -66,7 +66,7 @@ contains
 
   end subroutine diffusive_mass_fluxdiv
 
-  subroutine compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+  subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                              diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                              stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
        
@@ -114,7 +114,7 @@ contains
     call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       
     ! populate D_MS and Gama 
-    call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,Temp,the_bc_level)
+    call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
 
     ! compute chi 
     call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,the_bc_level)
@@ -145,6 +145,6 @@ contains
        call multifab_destroy(rhoWchi(n))
     end do
 
-  end subroutine compute_fluxdiv
+  end subroutine compute_mass_fluxdiv
   
 end module diffusive_mass_fluxdiv_module

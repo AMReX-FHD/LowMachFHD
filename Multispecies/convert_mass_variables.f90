@@ -1,4 +1,4 @@
-module convert_variables_module
+module convert_mass_variables_module
 
   use multifab_module
   use define_bc_module
@@ -859,4 +859,4 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
   
   end subroutine set_Xij 
   
-end module convert_variables_module
+end module convert_mass_variables_module
