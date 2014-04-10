@@ -288,7 +288,7 @@ contains
       !===========
 
       stage_time = time + dt
-      weights(1) = 0.25d0 
+      weights(1) = 1.0d0 
       weights(2) = (-4*sqrt(2.0d0)+3*sqrt(3.0d0))/5.0d0 
 
       ! compute the total div of flux from rho
@@ -323,7 +323,7 @@ contains
       end do 
 
       stage_time = time + dt/2.0d0
-      weights(1) = 2.0d0/3.0d0 
+      weights(1) = 1.0d0 
       weights(2) = (sqrt(2.0d0)-2*sqrt(3.0d0))/10.0d0
 
       ! compute the total div of flux from rho
