@@ -9,10 +9,11 @@ module probin_multispecies_module
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
   real(kind=dp_t)    :: cfl1,chi,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
-  real(kind=dp_t)    :: rho_in(2,max_species)     ! initial values for concentration, 2 for inside & outside circle
-  real(kind=dp_t)    :: molmass_in(max_species) ! molar masses for nspecies
-  real(kind=dp_t)    :: Dbar_in(max_element)    ! SM diffusion constant  
-  real(kind=dp_t)    :: alpha1,beta,delta,sigma ! manufactured solution parameters populated in init
+  real(kind=dp_t)    :: rho_in(2,max_species)       ! initial values for concentration, 2 for inside & outside circle
+  real(kind=dp_t)    :: molmass_in(max_species)     ! molar masses for nspecies
+  real(kind=dp_t)    :: Dbar_in(max_element)        ! SM diffusion constant  
+  real(kind=dp_t)    :: DT_in(max_element)          ! thermo-diffusion coefficients  
+  real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   real(kind=dp_t)    :: variance_parameter,fraction_tolerance  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp ! not input: populated at main 
   logical            :: correct_flux, use_stoch, print_error_norms, is_ideal_mixture, use_lapack
@@ -37,6 +38,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ rho_in
   namelist /probin_multispecies/ molmass_in 
   namelist /probin_multispecies/ Dbar_in
+  namelist /probin_multispecies/ DT_in
   namelist /probin_multispecies/ c_bc              ! boundary conditions (dir,lohi,species)
 
 contains
@@ -75,6 +77,7 @@ contains
     rho_in             = 1.0d0
     molmass_in         = 1.0d0
     Dbar_in            = 1.0d0
+    DT_in              = 1.0d0
     Press              = 1.0d0
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
@@ -141,6 +144,10 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) Dbar_in
+       case ('--DT_in')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) DT_in
        case ('--Press')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
