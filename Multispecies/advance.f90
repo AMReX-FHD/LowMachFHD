@@ -21,7 +21,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     real(kind=dp_t), intent(in   ) :: molmass(nspecies) 
-    type(multifab) , intent(inout) :: Temp(:)
+    type(multifab) , intent(in   ) :: Temp(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 

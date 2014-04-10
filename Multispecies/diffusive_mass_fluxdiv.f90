@@ -82,7 +82,7 @@ contains
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
-    type(multifab) , intent(inout)   :: Temp(:)
+    type(multifab) , intent(in   )   :: Temp(:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
