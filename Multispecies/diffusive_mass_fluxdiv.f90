@@ -21,7 +21,8 @@ module diffusive_mass_fluxdiv_module
 
 contains
 
-  subroutine diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchi,Gama,diff_fluxdiv,dx,the_bc_level)
+  subroutine diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchi,Gama,&
+                                    diff_fluxdiv,Temp,zeta_by_Temp,dx,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -31,6 +32,8 @@ contains
     type(multifab) , intent(in   )  :: rhoWchi(:)
     type(multifab) , intent(in   )  :: Gama(:)
     type(multifab) , intent(inout)  :: diff_fluxdiv(:)
+    type(multifab) , intent(in   )  :: Temp(:)
+    type(multifab) , intent(in   )  :: zeta_by_Temp(:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_level) , intent(in   )  :: the_bc_level(:)
 
@@ -46,13 +49,16 @@ contains
     ! build the local multifabs
     do n=1,nlevs
        do i=1,dm
-          ! flux(i) is face-centered, has nspecies component, zero ghost cells & nodal in direction i
+          ! flux(i) is face-centered, has nspecies component, zero ghost 
+          ! cells & nodal in direction i
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do   
     
-    ! compute the face-centered flux (each direction: cells+1 faces while cells contain interior+2 ghost cells) 
-    call diffusive_flux(mla,rho,rho_tot,molarconc,rhoWchi,Gama,flux,dx,the_bc_level)
+    ! compute the face-centered flux (each direction: cells+1 faces while 
+    ! cells contain interior+2 ghost cells) 
+    call diffusive_flux(mla,rho,rho_tot,molarconc,rhoWchi,Gama,Temp,&
+                        zeta_by_Temp,flux,dx,the_bc_level)
 
     ! compute divergence of determinstic flux 
     call compute_div(mla,flux,diff_fluxdiv,dx,1,1,nspecies)
@@ -67,7 +73,7 @@ contains
   end subroutine diffusive_mass_fluxdiv
 
   subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                             diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
+                             diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,zeta_by_Temp,dt,&
                              stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
@@ -83,6 +89,7 @@ contains
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
     type(multifab) , intent(in   )   :: Temp(:)
+    type(multifab) , intent(inout)   :: zeta_by_Temp(:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -110,21 +117,23 @@ contains
     ! modify rho with drho to ensure no mass or mole fraction is zero
     call correct_rho_with_drho(mla,rho,drho,the_bc_level)
  
-    ! compute molmtot,molarconc & rho_tot (primitive variables) for each-cell from rho(conserved) 
+    ! compute molmtot,molarconc & rho_tot (primitive variables) for 
+    ! each-cell from rho(conserved) 
     call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       
     ! populate D_MS and Gama 
     call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
 
     ! compute chi 
-    call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,the_bc_level)
+    call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,Temp,zeta_by_Temp,the_bc_level)
       
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,rhoWchi,the_bc_level)
 
-    ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled in init/end of this code
+    ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
+    ! in init/end of this code
     call diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchi,Gama,&
-                                diff_fluxdiv,dx,the_bc_level)
+                                diff_fluxdiv,Temp,zeta_by_Temp,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,prob_lo,prob_hi,dx,stage_time)
