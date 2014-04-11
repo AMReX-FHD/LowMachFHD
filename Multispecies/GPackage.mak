@@ -12,6 +12,6 @@ f90sources += diffusive_flux.f90
 f90sources += diffusive_mass_fluxdiv.f90
 f90sources += stochastic_mass_fluxdiv.f90
 f90sources += advance.f90
-f90sources += convert_variables.f90
+f90sources += convert_mass_variables.f90
 f90sources += write_plotfile.f90
 f90sources += matrix_utilities.f90

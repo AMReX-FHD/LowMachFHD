@@ -16,11 +16,12 @@ module advance_module
 
 contains
 
-  subroutine advance(mla,rho,molmass,dx,dt,time,prob_lo,prob_hi,the_bc_level)
+  subroutine advance(mla,rho,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     real(kind=dp_t), intent(in   ) :: molmass(nspecies) 
+    type(multifab) , intent(in   ) :: Temp(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
     real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 
@@ -39,7 +40,6 @@ contains
     type(multifab)                 :: stoch_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
     type(multifab),  allocatable   :: stoch_W_fc(:,:,:)          ! WA and WB (nlevs,dim,n_rngs) 
     real(kind=dp_t), allocatable   :: weights(:)                 ! weights for stoch-time-integrators       
-    type(multifab)                 :: Temp(mla%nlevel)           ! Temperature 
     real(kind=dp_t)                :: stage_time
     integer                        :: n,nlevs,i,dm,rng,n_rngs
 
@@ -60,7 +60,6 @@ contains
        call multifab_build(D_MS(n),            mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(Gama(n),            mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(stoch_fluxdiv(n),   mla%la(n), nspecies,    0) 
-       call multifab_build(Temp(n),            mla%la(n), 1,           rho(n)%ng)
     end do
 
     !========================================================
@@ -108,7 +107,7 @@ contains
       if(use_stoch) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+      call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
@@ -142,7 +141,7 @@ contains
       if(use_stoch) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+      call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
       
@@ -167,7 +166,7 @@ contains
       stage_time = time + dt  
       
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+      call compute_mass_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
@@ -203,7 +202,7 @@ contains
       weights(2) = 0.0d0 
       
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+      call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
@@ -230,7 +229,7 @@ contains
       weights(2) = sqrt(0.5d0) 
 
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+      call compute_mass_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
@@ -266,7 +265,7 @@ contains
       weights(2) = (2*sqrt(2.0d0)+sqrt(3.0d0))/5.0d0 
       
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+      call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
  
@@ -293,7 +292,7 @@ contains
       weights(2) = (-4*sqrt(2.0d0)+3*sqrt(3.0d0))/5.0d0 
 
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+      call compute_mass_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
@@ -328,7 +327,7 @@ contains
       weights(2) = (sqrt(2.0d0)-2*sqrt(3.0d0))/10.0d0
 
       ! compute the total div of flux from rho
-      call compute_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+      call compute_mass_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                            diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,dt,&
                            stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
 
@@ -364,7 +363,6 @@ contains
        call multifab_destroy(D_MS(n))
        call multifab_destroy(Gama(n))
        call multifab_destroy(stoch_fluxdiv(n))
-       call multifab_destroy(Temp(n))
     end do
     
     if(use_stoch) then

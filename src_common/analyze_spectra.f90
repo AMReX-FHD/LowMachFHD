@@ -15,7 +15,7 @@ module analyze_spectra_module
   use HydroGridCInterface 
   use probin_common_module, only: n_cells, prob_lo, prob_hi, &
        hydro_grid_int, project_dir, max_grid_projection, stats_int, n_steps_save_stats, &
-       analyze_conserved, center_snapshots, variance_coef
+       center_snapshots, variance_coef, analyze_conserved
 
   implicit none
 
@@ -23,48 +23,81 @@ module analyze_spectra_module
   public :: initialize_hydro_grid, analyze_hydro_grid, save_hydro_grid, finalize_hydro_grid, &
        print_stats
 
-  ! Molecular parameters (not used at present since there is no internal energy variable)
-  real(dp_t), save :: k_B_over_m=1.0_dp_t
-
   ! For statistical analysis of fluctuating fields
   type (HydroGrid), target, save :: grid, grid_2D, grid_1D
   
   ! We collect all the data on processor 1 for the analysis stuff due to the FFTs etc:
   integer, save :: nvar, ncells(3), ncells2D(3), ncells1D(3)
+  ! These are ordered so that velocities come first, then densities, then temperature, and lastly scalars
+  ! Any of these can be omitted (not present)
   type(multifab), save ::  s_serial, s_dir, s_projected, s_var ! Only one level here
   ! Must keep the layout around until the end!
   type(layout), save :: la_serial, la_dir, la_projected
 
   ! number of (non-velocity) scalars to be analyzed
-  integer     , save :: nscal_analysis
+  integer, save :: nscal_analysis=0, nspecies_analysis=1 ! Total number of additional scalars and species
+  logical, save :: exclude_last_species=.true. ! Whether to use format 
+      ! true=(rho,rho_1,...,rho_{n-1}) or false=(rho_1,...,rho_{n})
 
+  ! Note: analyze_conserved determines whether we analyze densities rho_k or mass fractions w_k=rho_k/rho
+  ! All other quantities are assumed to be primitive
+  ! but of course you can pass conserved ones and the code won't know you lied!
+   
 contains   
 
-  subroutine initialize_hydro_grid(mla,s_in,m_in,dt,dx,namelist_file,nscal_analysis_in)
+  ! When we call HydroGrid we tall it there an nspecies+1 species so that it analyzes all species instead of omitting the last one
+  ! This is redundant but conventent if one is also interested in the last species
+  ! Pass nspecies_in=0 if there are no compositional variables
+  subroutine initialize_hydro_grid(mla,s_in,dt,dx,namelist_file, &
+                                   nspecies_in, nscal_in, exclude_last_species_in, &
+                                   analyze_velocity, analyze_density, &
+                                   heat_capacity_in)
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: s_in(:)
-    type(multifab) , intent(inout) :: m_in(:,:)
+    type(multifab) , intent(inout) :: s_in(:) ! A cell-centered multifab on the desired grid (to grab layout and grid size from)
     real(dp_t)     , intent(inout) :: dt
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: namelist_file ! Where to read the namelists from
-    integer        , intent(in   ) :: nscal_analysis_in
+    integer        , intent(in   ) :: nspecies_in ! Number of species (number of partial densities)
+       ! Note: Pass nspecies_in=0 if there are no compositional variables
+    integer        , intent(in   ) :: nscal_in
+      ! TOTAL number of scalar fields (e.g., temperature, passive tracers, etc.) in addition to densities
+    logical, intent(in) :: exclude_last_species_in, analyze_velocity, analyze_density
+        ! Pass exclude_last_species=.false. if you want to analyze all nspecies densities/concentrations
+        ! Or pass exclude_last_species=.true. if you want to pass total density rho as the first scalar and 
+        !    then only include only n_species-1 additional partial densities/concentrations
+    real(dp_t), intent(in), optional :: heat_capacity_in(nspecies_in) ! This assumes constant heat capacity (ideal gas mixture)   
 
     ! local
     type(box)  :: bx_serial, bx_dir, bx_projected
     type(boxarray)  :: bxa_serial, bxa_dir, bxa_projected
-    integer, dimension(mla%dim) :: lo, hi
+    integer, dimension(mla%dim) :: lo, hi, ncells_tmp
     integer :: nlevs, dm, pdim, max_grid_dir(3), max_grid_projected(3)
     ! The analysis codes always works in 3D
     real(dp_t) :: grid_dx(3)
+    real(dp_t) :: heat_capacity(nspecies_in)
 
     nlevs = mla%nlevel
     dm = mla%dim
 
-    nscal_analysis = nscal_analysis_in
+    nspecies_analysis = nspecies_in
+    exclude_last_species = exclude_last_species_in
+    nscal_analysis = nscal_in
+    
+    if(present(heat_capacity_in)) then
+      heat_capacity = heat_capacity_in
+    else
+      heat_capacity = 1.0_dp_t ! Default value
+    end if
 
     if(nlevs>1) call parallel_abort("HydroGrid analysis only implemented for a single level!")
 
-    nvar = dm + nscal_analysis ! mx, my, [mz,] rho, rho*c (or ux, uy, [uz,] rho, c if primitive)
+    ! Calculate total number of scalar variables being analyzed to allocate storage
+    nvar=nscal_analysis
+    if(analyze_density)  nvar = nvar + nspecies_analysis + 1 ! We always store total density
+    if(analyze_velocity) nvar = nvar + dm
+    if ( parallel_IOprocessor() ) then
+       write(*,*) "Allocating storage for ", nvar, " variables to analyze using HydroGrid"
+    end if
 
     ncells(1) = n_cells(1)
     ncells(2) = n_cells(2)
@@ -213,43 +246,34 @@ contains
 
        if(parallel_IOProcessor()) then
        
-          if( analyze_conserved .and. (.not.center_snapshots) ) then
-            call bl_warn("If analyze_conserved is set then center_snapshots should also be set")
-          end if
-
           grid_dx=1.0_dp_t ! Default grid spacing
           grid_dx(1:dm)=dx(1,1:dm) 
 
           if(project_dir <= 0) then ! Perform analysis on the full 3D grid
-            call createHydroAnalysis (grid, ncells, nSpecies = 2, &
-               isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars=0, &
-               systemLength = ncells*grid_dx, heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
-               timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-               structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
+            ncells_tmp=nCells
           else ! Create a fake object that will not be used, with grid size 1x1x1
             ! This way the namelist input files do not have to change     
-            call createHydroAnalysis (grid, nCells=(/1,1,1/), nSpecies = 2, &
-               isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars=0, &
-               systemLength = ncells*grid_dx, heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
-               timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-               structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
+            ncells_tmp=(/1,1,1/)
           end if     
+          call createHydroAnalysis (grid, nCells=ncells_tmp, nSpecies = nspecies_analysis+1, &
+             isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_analysis, &
+             systemLength = ncells*grid_dx, heatCapacity = heat_capacity, &
+             timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
+             structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
 
           if(project_dir/=0) then
              ! Also perform analysis on a projected grid (averaged along project_dir axes)
-             call createHydroAnalysis (grid_2D, nCells=ncells2D, nSpecies=2, &
-                  isSingleFluid = .true., nVelocityDimensions = dm, &
-                  systemLength = nCells*grid_dx, &
-                  heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
+             call createHydroAnalysis (grid_2D, nCells=ncells2D, nSpecies = nspecies_analysis+1, &
+                  isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_analysis, &
+                  systemLength = nCells*grid_dx, heatCapacity = heat_capacity, &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
                   structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
           end if
 
           if(project_dir/=0) then ! Also perform analysis on a 1D grid (along project_dir only)
-             call createHydroAnalysis (grid_1D, nCells=ncells1D, nSpecies=2, &
-                  isSingleFluid = .true., nVelocityDimensions = dm, &
-                  systemLength = nCells*grid_dx, &
-                  heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
+             call createHydroAnalysis (grid_1D, nCells=ncells1D, nSpecies = nspecies_analysis+1, &
+                  isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_analysis, &
+                  systemLength = nCells*grid_dx, heatCapacity = heat_capacity, &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
                   structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
           end if
@@ -318,109 +342,41 @@ contains
     end if   
 
   end subroutine
-  
-  !mcai----------start------------------------
-  subroutine analyze_hydro_grid(mla,s_in,m_in,umac,prim,dt,dx,step,custom_analysis)
+
+  subroutine analyze_hydro_grid(mla,dt,dx,step,umac,rho,temperature,scalars)
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: s_in(:)
-    type(multifab) , intent(inout) :: m_in(:,:)
-    type(multifab) , intent(inout) ::    umac(:,:)
-    type(multifab) , intent(inout) ::    prim(:)
     real(dp_t)     , intent(inout) :: dt
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step
-    logical, intent(in) :: custom_analysis
+    type(multifab) , intent(inout), optional :: umac(:,:)
+    type(multifab) , intent(inout), dimension(:), optional :: rho, temperature, scalars
   
     if(project_dir>0) then ! Only do 2D analysis
-      !write(*,*) "Calling analyze_hydro_grid_parallel"
-      call analyze_hydro_grid_parallel(mla,s_in,m_in,umac,prim,dt,dx,step)
+      write(*,*) "Calling analyze_hydro_grid_parallel"
+      !call analyze_hydro_grid_parallel(mla,dt,dx,step,umac,rho,temperature,scalars)
     else ! Analyze the whole grid
-      !write(*,*) "Calling analyze_hydro_grid_serial"
-      call analyze_hydro_grid_serial(mla,s_in,m_in,umac,prim,dt,dx,step,custom_analysis)
+      write(*,*) "Calling analyze_hydro_grid_serial"
+      call analyze_hydro_grid_serial(mla,dt,dx,step,umac,rho,temperature,scalars)
     end if
-
-  !mcai----------end-----------------------
 
   end subroutine
   
-   ! We need to make centered velocities to use FFTs directly
-   ! These have a grid of size (nx,ny,nz) and not (nx+1,ny,nz) etc. like the staggered velocities do
-   subroutine StaggeredToCentered(mac_cc, mla,s_in,m_in,umac,prim)
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in) :: s_in(:)
-    type(multifab) , intent(in) :: m_in(:,:)
-    type(multifab) , intent(in) ::    umac(:,:)
-    type(multifab) , intent(in) ::    prim(:)
-
-    type(multifab), intent(inout) :: mac_cc(mla%nlevel) 
-
-    integer :: i, n, nlevs, dm, pdim
-
-    nlevs = mla%nlevel
-    dm = mla%dim
-    
-    if(analyze_conserved) then    
-       if(center_snapshots) then
-          ! Momentum on a face here is split in half between the two adjacent cells
-          ! This conserves total momentum even if boundaries are present
-          ! But it will also smooth the spectrum of the fluctuations!
-          do i=1,dm
-             call average_face_to_cc(mla,m_in(:,i),1,mac_cc,i,1)
-          end do
-       else
-          ! Pretend that velocities are cell-centered instead of staggered
-          ! This is not right but for periodic should be OK as it preserves the spectrum of fluctuations
-          do i=1,dm
-             call shift_face_to_cc(mla,m_in(:,i),1,mac_cc,i,1)
-          end do       
-       end if  
-   else ! Use primitive variables
-       if(center_snapshots) then
-          ! Momentum on a face here is split in half between the two adjacent cells
-          ! This conserves total momentum even if boundaries are present
-          ! But it will also smooth the spectrum of the fluctuations!
-          do i=1,dm
-             call average_face_to_cc(mla,m_in(:,i),1,mac_cc,i,1)
-          end do
-          ! Now convert momentum to velocity
-          do n=1,nlevs
-             do i=1,dm
-                call multifab_div_div_c(mac_cc(n), i, s_in(n), 1, 1, 0)
-             end do
-          end do
-       else
-          ! Pretend that velocities are cell-centered instead of staggered
-          ! This is not right but for periodic should be OK as it preserves the spectrum of fluctuations
-          do i=1,dm
-             call shift_face_to_cc(mla,umac(:,i),1,mac_cc,i,1)
-          end do       
-       end if
-   end if        
-  
-  end subroutine  
-  
-!mcai----------start----------------------------
   ! This analysis routine is serialized:
   ! All the data from all the boxes is collected onto one processor and then analyzed
-  subroutine analyze_hydro_grid_serial(mla,s_in,m_in,umac,prim,dt,dx, step, custom_analysis)
-
+  ! The advantage of this is that one can do some customized analysis that is hard to do in parallel
+  ! It is also the best one can do when one wants to analyze the whole grid instead of just projections
+  subroutine analyze_hydro_grid_serial(mla,dt,dx,step,umac,rho,temperature,scalars)
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: s_in(:)
-    type(multifab) , intent(inout) :: m_in(:,:)
-    type(multifab) , intent(inout) ::    umac(:,:)
-    type(multifab) , intent(inout) ::    prim(:)
     real(dp_t)     , intent(inout) :: dt
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step
-    logical, intent(in) :: custom_analysis    
+    type(multifab) , intent(inout), optional :: umac(:,:)
+    type(multifab) , intent(inout), dimension(:), optional :: rho, temperature, scalars
 
-    integer :: i, ii, jj, n, nlevs, dm, pdim
+    ! Local
+    integer :: i, ii, jj, n, nlevs, dm, pdim, comp, n_passive_scals, species
     real(kind=dp_t), pointer, dimension(:,:,:,:) :: variables
     real(kind=dp_t), dimension(:,:), allocatable :: variables_1D ! Projection of data along project_dir
-
-    !mcai------also give the file name for snapshot    
-    character(len=25) :: cTemp
-    character(len=1024) :: plot_filenameBase     !local variable, file name for snapshots
 
     type(multifab) :: mac_cc(mla%nlevel)
     
@@ -428,26 +384,76 @@ contains
     dm = mla%dim
     pdim=abs(project_dir)
 
-    ! Do a global gather to collect the full grid into a single box:
-    ! -------------------------
-    do n=1,nlevs
-       call multifab_build(mac_cc(n), mla%la(n), dm, 0)
-    end do    
-    call StaggeredToCentered(mac_cc, mla,s_in,m_in,umac,prim)
-    call copy(s_serial,1,mac_cc(1),1,dm)
-    do n=1,nlevs
-       call multifab_destroy(mac_cc(n))
-    end do
-    
-    ! Now gather density and concentration
-    if(analyze_conserved) then ! Use rho and rho1
-       call copy(s_serial,dm+1,s_in(1),1,nscal_analysis)
-    else ! Use rho and c
-       call copy(s_serial,dm+1,prim(1),1,nscal_analysis)
-    end if   
+    comp=1  
+    if(present(umac)) then
+       ! Do a global gather to collect the full grid into a single box:
+       ! -------------------------
+       do n=1,nlevs
+          call multifab_build(mac_cc(n), mla%la(n), dm, 0)
+       end do    
+       call StaggeredToCentered(mac_cc,mla,umac)
+       call copy(s_serial,1,mac_cc(1),1,dm)
+       do n=1,nlevs
+          call multifab_destroy(mac_cc(n))
+       end do       
 
+       comp=comp+dm
+    end if
+    
+    ! Now all the scalars
+    n_passive_scals=nscal_analysis
+    ! Now gather density
+    if(present(rho)) then
+       if(n_passive_scals<nspecies_analysis+1) then
+         call parallel_abort("Insufficient nscal_analysis to store densities")
+       end if
+       if(nspecies_analysis==0) then ! Only density
+          call copy(s_serial,comp,rho(1),1,1)
+       else if(exclude_last_species) then
+          call copy(s_serial,comp,rho(1),1,nspecies_analysis) ! Copy rho,rho_1,...,rho_{n-1}
+          ! Now compute rho_n as the difference rho-\sum_{i=1}^{n-1} rho_i
+          call setval(s_serial, 0.0d0, nspecies_analysis+comp)
+          do species=1, nspecies_analysis-1
+             call multifab_sub_sub_c(s_serial,nspecies_analysis+comp,s_serial,species+comp,1)
+          end do
+       else
+          call copy(s_serial,comp+1,rho(1),1,nspecies_analysis)
+          ! Compute total density as a sum of densities rho=\sum_{i=1}^{n} rho_i
+          call setval(s_serial, 0.0d0, comp)
+          do species=1, nspecies_analysis
+             call multifab_plus_plus_c(s_serial,comp,s_serial,species+comp,1)
+          end do
+       end if
+       
+       ! Now convert to mass fractions instead of densities (primitive variables)
+       if(.not.analyze_conserved) then
+          do species=1, nspecies_analysis
+             call multifab_div_div_c(s_serial,species+comp,s_serial,comp,1)
+          end do
+       end if
+       
+       comp=comp+nspecies_analysis+1
+       n_passive_scals=n_passive_scals-nspecies_analysis-1
+    end if
+    
+    if(present(temperature)) then
+       if(n_passive_scals<1) then
+         call parallel_abort("Insufficient nscal_analysis to store temperature")
+       end if
+       call copy(s_serial,comp,temperature(1),1,1)
+       comp=comp+1    
+       n_passive_scals=n_passive_scals-1
+    end if
+    
+    if(present(scalars)) then
+       if(n_passive_scals<1) then
+         call parallel_abort("No room left to store passive scalars, nscal_analysis too small")
+       end if
+       call copy(s_serial,comp,scalars(1),1,n_passive_scals)
+    end if
+    
     if(parallel_IOProcessor()) then  
-       !write(*,*) "Calling updateHydroAnalysis on 3D, 2D and 1D grids"
+       write(*,*) "Calling updateHydroAnalysis on 3D, 2D and 1D grids"
 
        ! Get to the actual data
        variables  => dataptr(s_serial,1) ! Gets all of the components
@@ -472,79 +478,24 @@ contains
           
        end if   
 
-       if(custom_analysis) then ! Do some serialized analysis for mixing experiments
-       
-         ! define the name of the statfile that will be written
-         write( cTemp,'(i6.6)' ) step
-         plot_filenameBase="projectedHydroGrid" // trim(adjustl(cTemp))
-         if(project_dir/=0) then
-            call resetHydroAnalysis(grid_2D)
-         end if
-         if(analyze_conserved) then
-            if(nvar>=dm+2) then
-               if(project_dir/=0) then
-                  call projectHydroGridMixture (grid, density=variables(:,:,:,dm+1), &
-                    concentration=variables(:,:,:,dm+2)/variables(:,:,:,dm+1), filename=plot_filenameBase, &
-                    grid_2D=grid_2D )
-               else     
-                  call projectHydroGridMixture (grid, density=variables(:,:,:,dm+1), &
-                    concentration=variables(:,:,:,dm+2)/variables(:,:,:,dm+1), filename=plot_filenameBase )
-               end if     
-               call writeHydroGridMixture (grid, density=variables(:,:,:,dm+1), &
-                    concentration=variables(:,:,:,dm+2)/variables(:,:,:,dm+1), filename=plot_filenameBase )
-            end if
-         else
-            if(project_dir/=0) then
-               call projectHydroGridMixture (grid, density=variables(:,:,:,dm+1), &
-                    concentration=variables(:,:,:,2+dm:nvar), filename=plot_filenameBase, &
-                    grid_2D=grid_2D )
-            else     
-               call projectHydroGridMixture (grid, density=variables(:,:,:,dm+1), &
-                    concentration=variables(:,:,:,2+dm:nvar), filename=plot_filenameBase)
-            end if        
-            call writeHydroGridMixture (grid, density=variables(:,:,:,dm+1), &
-                    concentration=variables(:,:,:,2+dm:nvar), filename= plot_filenameBase)
+       ! UNFINISHED
+       call updateHydroAnalysisPrimitive (grid, velocity=variables(:,:,:,1:dm), &
+           density=variables(:,:,:,dm+1), concentration=variables(:,:,:,2+dm:nvar))
 
-         end if
-         if(project_dir/=0) then
-            call writeToFiles(grid_2D, id=step)
-         end if
-       
-       else if(analyze_conserved) then
-       
-         ! This accepts the species densities as input and calculates 
-         ! concentrations and velocity internally
-	 ! It is not, however, quite right for a staggered grid since the analysis code
-         ! does not use the staggered density for calculating velocities!
-         call updateHydroAnalysisConserved (grid, density=variables(:,:,:,dm+1:nvar), &
-                                           current=variables(:,:,:,1:dm)) 
-         if(project_dir/=0) then ! Use momentum current
-            call updateHydroAnalysisConserved (grid_2D, &
-               density=SUM(variables(:,:,:,dm+1:nvar), DIM=pdim)/grid%nCells(pdim), &
-               current=SUM(variables(:,:,:,1:dm), DIM=pdim)/grid%nCells(pdim))
-            call updateHydroAnalysisConserved (grid_1D, density=variables_1D(:,dm+1:nvar), &
-                                            current=variables_1D(:,1:dm))
-         end if
-       else ! Use concentration instead of density
-         call updateHydroAnalysisPrimitive (grid, velocity=variables(:,:,:,1:dm), &
-             density=variables(:,:,:,dm+1), concentration=variables(:,:,:,2+dm:nvar))
-
-         if(project_dir/=0) then ! Use velocities
-            call updateHydroAnalysisPrimitive (grid_2D, &
-               density=SUM(variables(:,:,:,dm+1), DIM=pdim)/grid%nCells(pdim), &
-               velocity=SUM(variables(:,:,:,1:dm), DIM=pdim)/grid%nCells(pdim), &
-               concentration=SUM(variables(:,:,:,2+dm:nvar), DIM=pdim)/grid%nCells(pdim) )
-            call updateHydroAnalysisPrimitive (grid_1D, velocity=variables_1D(:,1:dm), &
-               density=variables_1D(:,dm+1), concentration=variables_1D(:,2+dm:nvar))
-         end if
+       if(project_dir/=0) then ! Use velocities
+          call updateHydroAnalysisPrimitive (grid_2D, &
+             density=SUM(variables(:,:,:,dm+1), DIM=pdim)/grid%nCells(pdim), &
+             velocity=SUM(variables(:,:,:,1:dm), DIM=pdim)/grid%nCells(pdim), &
+             concentration=SUM(variables(:,:,:,2+dm:nvar), DIM=pdim)/grid%nCells(pdim) )
+          call updateHydroAnalysisPrimitive (grid_1D, velocity=variables_1D(:,1:dm), &
+             density=variables_1D(:,dm+1), concentration=variables_1D(:,2+dm:nvar))
        end if
-               
+
        if(pdim>0) deallocate(variables_1D)                                
     end if   
 
   end subroutine
 
-  !mcai----------start------------------------
   ! This routine first projects onto the project_dir direction and the perpendicular 
   ! hyperpane in parallel.  Then it serializes the analysis of those projections
   subroutine analyze_hydro_grid_parallel(mla,s_in,m_in,umac,prim,dt,dx,step)
@@ -556,8 +507,8 @@ contains
     real(dp_t)     , intent(inout) :: dt
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step     ! at what step?, optional
-   !mcai----------end------------------------
    
+    ! Local
     integer nlevs,dm,pdim,i,n,qdim,qdim1,qdim2
     integer lo(mla%dim),hi(mla%dim)
     integer ii,jj,kk
@@ -590,7 +541,7 @@ contains
     do n=1,nlevs
        call multifab_build(mac_cc(n), mla%la(n), dm, 0)
     end do    
-    call StaggeredToCentered(mac_cc, mla,s_in,m_in,umac,prim)
+    !FIXME: call StaggeredToCentered(mac_cc, mla,s_in,m_in,umac,rho)
     call copy(s_dir,1,mac_cc(1),1,dm)
     do n=1,nlevs
        call multifab_destroy(mac_cc(n))
@@ -702,12 +653,12 @@ contains
 
   end subroutine
 
-  subroutine print_stats(mla,s_in,m_in,umac,prim,dx,step,time)
+  subroutine print_stats(mla,s_in,m_in,umac,rho,dx,step,time)
 
     ! This subroutine writes out the mean and variance of all variables using
     ! different averaging techniques.
     !
-    ! We work with m_in and s_in (if analyze_conserved=T) or umac and prim (=F).
+    ! We work with m_in and s_in (if analyze_conserved=T) or umac and rho (=F).
     !
     ! First, it writes out "vertical" averages, as defined by the
     ! pdim=abs(project_dir) direction.
@@ -722,7 +673,7 @@ contains
     type(multifab) , intent(in   ) :: s_in(:)
     type(multifab) , intent(in   ) :: m_in(:,:)
     type(multifab) , intent(in   ) :: umac(:,:)
-    type(multifab) , intent(in   ) :: prim(:)
+    type(multifab) , intent(in   ) :: rho(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step
     real(kind=dp_t), intent(in   ) :: time
@@ -767,12 +718,12 @@ contains
     ! COMPUTE AND WRITE OUT VERTICAL AVERAGE/VARIANCE
     !!!!!!!!!!!!!!!!!!!!!!!
 
-    ! copy m_in and s_in (if analyze_conserved=T) or umac and prim (=F)
+    ! copy m_in and s_in (if analyze_conserved=T) or umac and rho (=F)
     ! into the tall skinny s_dir
     do n=1,nlevs
        call multifab_build(mac_cc(n), mla%la(n), dm, 0)
     end do    
-    call StaggeredToCentered(mac_cc, mla,s_in,m_in,umac,prim)
+    !FIXME: call StaggeredToCentered(mac_cc, mla,s_in,m_in,umac,rho)
     call copy(s_dir,1,mac_cc(1),1,dm)
     do n=1,nlevs
        call multifab_destroy(mac_cc(n))
@@ -780,7 +731,7 @@ contains
     if(analyze_conserved) then
        call copy(s_dir,dm+1,s_in(1),1,nscal_analysis)
     else
-       call copy(s_dir,dm+1,prim(1),1,nscal_analysis)
+       call copy(s_dir,dm+1,rho(1),1,nscal_analysis)
     end if
 
     ! Compute s_projected (average) and s_var (variance)
@@ -1023,5 +974,30 @@ contains
 
   end subroutine print_stats
 
+   ! We need to make centered velocities to use FFTs directly
+   ! These have a grid of size (nx,ny,nz) and not (nx+1,ny,nz) etc. like the staggered velocities do
+   subroutine StaggeredToCentered(mac_cc,mla,umac)
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(in) ::    umac(:,:)
+    type(multifab), intent(inout) :: mac_cc(mla%nlevel) 
+
+    integer :: i, n, nlevs, dm, pdim
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+    
+    if(center_snapshots) then
+       do i=1,dm
+          call average_face_to_cc(mla,umac(:,i),1,mac_cc,i,1)
+       end do
+    else
+       ! Pretend that velocities are cell-centered instead of staggered
+       ! This is not right but for periodic should be OK as it preserves the spectrum of fluctuations
+       do i=1,dm
+          call shift_face_to_cc(mla,umac(:,i),1,mac_cc,i,1)
+       end do       
+    end if
+  
+  end subroutine  
 
 end module

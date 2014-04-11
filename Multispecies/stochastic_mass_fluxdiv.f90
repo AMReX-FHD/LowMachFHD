@@ -6,7 +6,7 @@ module stochastic_mass_fluxdiv_module
   use ml_layout_module
   use define_bc_module
   use bc_module
-  use convert_variables_module
+  use convert_mass_variables_module
   use multifab_fill_random_module
   use div_and_grad_module
   use convert_stag_module

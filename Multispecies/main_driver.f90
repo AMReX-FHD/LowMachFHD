@@ -10,7 +10,7 @@ subroutine main_driver()
   use define_bc_module
   use bc_module
   use analysis_module
-  use analyze_spectra_module
+  !use analyze_spectra_module
   use ParallelRNGs 
   use convert_mass_variables_module
   use probin_common_module
@@ -205,9 +205,9 @@ subroutine main_driver()
            un = unit_new()
            open(unit=un, file = fname, status = 'old', action = 'read')
            
-           call initialize_hydro_grid(mla,rho,dt,dx, namelist_file=un, &
-                  nspecies_in=nspecies, nscal_in=0, &
-                  exclude_last_species_in=.false., analyze_velocity=.false.)
+           !call initialize_hydro_grid(mla,rho,dt,dx, namelist_file=un, &
+           !       nspecies_in=nspecies, nscal_in=0, &
+           !       exclude_last_species_in=.false., analyze_velocity=.false.)
            
            close(unit=un)
         end if

@@ -13,7 +13,7 @@ module fluid_model_module
   
 contains
   
-  subroutine fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,Temp,the_bc_level)
+  subroutine fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
@@ -22,7 +22,6 @@ contains
     type(multifab),  intent(in   )  :: molmtot(:) 
     type(multifab),  intent(inout)  :: D_MS(:)      ! MS diffusion constants 
     type(multifab),  intent(inout)  :: Gama(:)      ! Non-ideality coefficient 
-    type(multifab),  intent(inout)  :: Temp(:)      ! Temperature 
     type(bc_level),  intent(in   )  :: the_bc_level(:)
  
     ! local variables
@@ -36,7 +35,6 @@ contains
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_MS
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Gama
-    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Temperature
 
     dm    = mla%dim     ! dimensionality
     ng    = rho(1)%ng   ! number of ghost cells 
@@ -51,24 +49,23 @@ contains
           dp3 => dataptr(molmtot(n),i)
           dp4 => dataptr(D_MS(n),i)
           dp5 => dataptr(Gama(n),i)
-          dp6 => dataptr(Temp(n),i)
           lo = lwb(get_box(rho(n),i))
           hi = upb(get_box(rho(n),i))
           
           select case(dm)
           case (2)
              call compute_D_MSGama_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
-                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,1),ng,lo,hi) 
+                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),ng,lo,hi) 
           case (3)
              call compute_D_MSGama_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
-                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,1),ng,lo,hi) 
+                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),ng,lo,hi) 
           end select
        end do
     end do
   
   end subroutine fluid_model
   
-  subroutine compute_D_MSGama_2d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,Temp,ng,lo,hi)
+  subroutine compute_D_MSGama_2d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
@@ -77,7 +74,6 @@ contains
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
     real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
     real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:)         ! temperature in each cell 
 
     ! local varialbes
     integer          :: i,j
@@ -86,16 +82,14 @@ contains
     do j=lo(2)-ng,hi(2)+ng
        do i=lo(1)-ng,hi(1)+ng
        
-          Temp(i,j) = 1.0d0
           call compute_D_MSGama_local(rho(i,j,:),rho_tot(i,j),molarconc(i,j,:),&
                                       molmtot(i,j),D_MS(i,j,:),Gama(i,j,:))
-
        end do
     end do
    
   end subroutine compute_D_MSGama_2d
 
-  subroutine compute_D_MSGama_3d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,Temp,ng,lo,hi)
+  subroutine compute_D_MSGama_3d(rho,rho_tot,molarconc,molmtot,D_MS,Gama,ng,lo,hi)
  
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! density; last dimension for species
@@ -104,7 +98,6 @@ contains
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total molar mass 
     real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
     real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)         ! temperature in each cell 
 
     ! local varialbes
     integer          :: i,j,k
@@ -114,10 +107,8 @@ contains
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
 
-             Temp(i,j,k) = 1.0d0
              call compute_D_MSGama_local(rho(i,j,k,:),rho_tot(i,j,k),molarconc(i,j,k,:),&
                                          molmtot(i,j,k),D_MS(i,j,k,:),Gama(i,j,k,:))
-
           end do
        end do
     end do

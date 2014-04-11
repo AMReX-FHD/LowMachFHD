@@ -3,8 +3,8 @@
 #     UNI-C, Denmark; Univ. of Tennessee, USA; NAG Ltd., UK
 #     August 5, 2000
 #
-FC       = gfortran -ffree-form
-FC1      = gfortran -ffixed-form
+FC       = gfortran48 -ffree-form
+FC1      = gfortran48 -ffixed-form
 
 OPTS0    = -O3
 MODLIB   = -I./lapack95_modules
