@@ -53,7 +53,7 @@ module analysis_module
            norm_inf(i) = multifab_norm_inf_c(rho_exact(n),i,1,all=.false.)
 
            ! L1 norm = 1/n_cell*sum(diff_i) 
-           norm_l1(i) = multifab_norm_l1_c(rho_exact(n),i,1,all=.false.)/dble(n_cell)
+           norm_l1(i) = multifab_sum_c(rho_exact(n),i,1,all=.false.)/dble(n_cell)
 
            ! L2 norm = sqrt{1/n_cell*sum(diff_i^2)} 
            norm_l2(i) = multifab_norm_l2_c(rho_exact(n),i,1,all=.false.)/sqrt(dble(n_cell))
@@ -63,7 +63,7 @@ module analysis_module
      
      ! calculate total norms 
      norm_inf_tot = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
-     norm_l1_tot = multifab_norm_l1_c(rho_exact(1),1,nspecies,all=.false.)/dble(n_cell)
+     norm_l1_tot = multifab_sum_c(rho_exact(1),1,nspecies,all=.false.)/dble(n_cell)
      norm_l2_tot = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
      
      ! print the norms
@@ -95,7 +95,7 @@ module analysis_module
     
     do n=1,nlevs
        do i=1,nspecies
-          mass(i) = multifab_norm_l1_c(rho(n),i,1,all=.false.)
+          mass(i) = multifab_sum_c(rho(n),i,1,all=.false.)
           if (parallel_IOProcessor()) then
              print*, step, ' sum of rho_i for i=',i,mass(i)
           end if
