@@ -441,7 +441,7 @@ contains
           zeta_by_Temp(row) = Sum_knoti/Temp
        end do
     end do
-
+    
     ! compute chi either selecting inverse/pseudoinverse or iterative methods 
     if(use_lapack) then
        call compute_chi_lapack(Lambda(:,:),chi(:,:),W(:))
