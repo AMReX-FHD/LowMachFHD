@@ -10,6 +10,7 @@ subroutine main_driver()
   use define_bc_module
   use bc_module
   use analysis_module
+  use analyze_spectra_module
   use ParallelRNGs 
   use convert_variables_module
   use probin_common_module
@@ -37,6 +38,11 @@ subroutine main_driver()
   real(kind=dp_t),allocatable  :: covW(:,:) 
   real(kind=dp_t),allocatable  :: wiwjt(:,:) 
   real(kind=dp_t),allocatable  :: wit(:) 
+
+  ! For HydroGrid
+  integer :: narg, farg, un
+  character(len=128) :: fname
+  logical :: lexist
   
   !==============================================================
   ! Initialization
@@ -182,6 +188,28 @@ subroutine main_driver()
 
   ! initialize rho
   call init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
+
+  !=====================================================================
+  ! Initialize HydroGrid for analysis
+  !=====================================================================
+  if(abs(hydro_grid_int)>0 .or. stats_int>0) then
+     narg = command_argument_count()
+     farg = 1
+     if (narg >= 1) then
+        call get_command_argument(farg, value = fname)
+        inquire(file = fname, exist = lexist )
+        if ( lexist ) then
+           un = unit_new()
+           open(unit=un, file = fname, status = 'old', action = 'read')
+           
+           call initialize_hydro_grid(mla,rho,dt,dx, namelist_file=un, &
+                  nspecies_in=nspecies, nscal_in=0, &
+                  exclude_last_species_in=.false., analyze_velocity=.false.)
+           
+           close(unit=un)
+        end if
+     end if
+  end if
 
   !=======================================================
   ! Begin time stepping loop
