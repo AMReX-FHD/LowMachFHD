@@ -34,6 +34,7 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
+  type(multifab), allocatable  :: rho_tot(:)
   type(multifab), allocatable  :: rho_exact(:)
   type(multifab), allocatable  :: Temp(:)   ! Temperature 
   real(kind=dp_t),allocatable  :: molmass(:) 
@@ -63,6 +64,7 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
   allocate(rho(nlevs))
+  allocate(rho_tot(nlevs))
   allocate(rho_exact(nlevs))
   allocate(Temp(nlevs))
   allocate(molmass(nspecies))
@@ -175,6 +177,7 @@ subroutine main_driver()
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
      call multifab_build(rho(n),      mla%la(n),nspecies,1)
+     call multifab_build(rho_tot(n),  mla%la(n),1,       1) 
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
      call multifab_build(Temp(n),     mla%la(n),1,       1)
   end do
@@ -252,7 +255,7 @@ subroutine main_driver()
      end if
 
      ! advance the solution by dt
-     call advance(mla,rho,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+     call advance(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
      ! print out the total mass to check conservation
      !call sum_mass(rho, istep)
@@ -271,9 +274,10 @@ subroutine main_driver()
      ! write plotfile at specific intervals
      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
         
-        call write_plotfile(mla,"plt_rho",      rho,istep,dx,time,prob_lo,prob_hi)
-        call write_plotfile(mla,"plt_exa",rho_exact,istep,dx,time,prob_lo,prob_hi)
-        call write_plotfile1(mla,"plt_temp",    Temp,istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time,prob_lo,prob_hi)
 
         ! difference between rho and rho_exact
         do n=1,nlevs
@@ -295,6 +299,8 @@ subroutine main_driver()
  
   ! print out the standard deviation
   if (parallel_IOProcessor()) then
+     if(use_stoch) then
+     
      print*, 'numeric cov of W'
      do i=1,nspecies
         do j=1,nspecies
@@ -355,10 +361,10 @@ subroutine main_driver()
       else  
         write(*,*), 'analytic covariance of W for nspecies > 4 is not coded'
      end if
-
+  
+     end if
   end if
 
- 
   !=======================================================
   ! Destroy multifabs and layouts
   !=======================================================
@@ -369,6 +375,7 @@ subroutine main_driver()
   deallocate(wit)
   do n=1,nlevs
      call multifab_destroy(rho(n))
+     call multifab_destroy(rho_tot(n))
      call multifab_destroy(rho_exact(n))
      call multifab_destroy(Temp(n))
   end do

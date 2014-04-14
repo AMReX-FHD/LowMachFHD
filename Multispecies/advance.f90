@@ -16,10 +16,11 @@ module advance_module
 
 contains
 
-  subroutine advance(mla,rho,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_level)
+  subroutine advance(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
+    type(multifab) , intent(inout) :: rho_tot(:)
     real(kind=dp_t), intent(in   ) :: molmass(nspecies) 
     type(multifab) , intent(in   ) :: Temp(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
@@ -31,7 +32,6 @@ contains
     type(multifab)                 :: rhonew(mla%nlevel)
     type(multifab)                 :: diff_fluxdiv(mla%nlevel)
     type(multifab)                 :: diff_fluxdivnew(mla%nlevel)
-    type(multifab)                 :: rho_tot(mla%nlevel)        ! total density
     type(multifab)                 :: molarconc(mla%nlevel)      ! molar concentration
     type(multifab)                 :: molmtot(mla%nlevel)        ! total molar mass
     type(multifab)                 :: chi(mla%nlevel)            ! Chi-matrix
@@ -49,10 +49,8 @@ contains
 
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     ! fluxdiv needs no ghost cells as all computations will be in box interior. 
-    ! rho_tot is cell-cented with ghost cells that many rho owns.
     do n=1,nlevs
        call multifab_build(rhonew(n),          mla%la(n), nspecies,    rho(n)%ng)
-       call multifab_build(rho_tot(n),         mla%la(n), 1,           rho(n)%ng) 
        call multifab_build(diff_fluxdiv(n),    mla%la(n), nspecies,    0) 
        call multifab_build(diff_fluxdivnew(n), mla%la(n), nspecies,    0)
        call multifab_build(molmtot(n),         mla%la(n), 1,           rho(n)%ng)  
@@ -358,7 +356,6 @@ contains
        call multifab_destroy(rhonew(n))
        call multifab_destroy(diff_fluxdiv(n))
        call multifab_destroy(diff_fluxdivnew(n))
-       call multifab_destroy(rho_tot(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(molmtot(n))
        call multifab_destroy(chi(n))

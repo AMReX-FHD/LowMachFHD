@@ -32,7 +32,7 @@ contains
     allocate(plotdata(nlevs))
  
     ! write density with species index
-    write(plot_names(1),'(a,i0)') "Temp"
+    write(plot_names(1),'(a,i0)') "Scalar"
 
     ! build plotdata for nspecies and 0 ghost cells
     do n=1,nlevs
@@ -46,11 +46,7 @@ contains
     
     ! define the name of the plotfile that will be written
     write(unit=plotfile_name,fmt='(a,i5.5)') name, istep
-    !if ( parallel_IOProcessor() ) then
-    !  write(*,'(2A)') "Saving PLOT FILEs to directory ", trim(plotfile_name)
-    !  write(*,*)
-    !end if
-    
+        
     ! write the plotfile
     call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), trim(plotfile_name), & 
                                    plot_names, mla%mba%pd(1), prob_lo, prob_hi, & 
