@@ -16,7 +16,8 @@ module probin_multispecies_module
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   real(kind=dp_t)    :: variance_parameter,fraction_tolerance  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp ! not input: populated at main 
-  logical            :: correct_flux, use_stoch, print_error_norms, is_ideal_mixture, use_lapack
+  logical            :: correct_flux,use_stoch,print_error_norms
+  logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
   real(kind=dp_t)    :: c_bc(3,2,max_species)
   
   namelist /probin_multispecies/ nspecies
@@ -34,6 +35,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ use_stoch   
   namelist /probin_multispecies/ print_error_norms   
   namelist /probin_multispecies/ is_ideal_mixture   
+  namelist /probin_multispecies/ is_nonisothermal   
   namelist /probin_multispecies/ use_lapack   
   namelist /probin_multispecies/ rho_in
   namelist /probin_multispecies/ molmass_in 
@@ -66,21 +68,22 @@ contains
     cfl1               = 1.0d0
     chi                = 1.0d0
     variance_parameter = 1E-3
-    init_type          = 1
+    Press              = 1.0d0
+    fraction_tolerance = 1e-13 
+    start_time         = 0.0d0 
+    init_type          = 0
     inverse_type       = 1
     timeinteg_type     = 1
     correct_flux       = .true.
     use_stoch          = .true.
     print_error_norms  = .true.
     is_ideal_mixture   = .true.
+    is_nonisothermal   = .true.
     use_lapack         = .true.
     rho_in             = 1.0d0
     molmass_in         = 1.0d0
     Dbar_in            = 1.0d0
     DT_in              = 1.0d0
-    Press              = 1.0d0
-    fraction_tolerance = 1e-13 
-    start_time         = 0.0d0 
     c_bc               = 0.d0
  
     ! read from input file 

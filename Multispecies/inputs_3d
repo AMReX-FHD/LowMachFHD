@@ -36,6 +36,7 @@
  use_stoch = .true.             ! use stochastic flux 
  print_error_norms = .true.     ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.     ! false=Bdag*Gama, true=Bdag 
+ is_nonisothermal  = .true.     ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.          ! false=iterative methods, true=inverse/pseudoinverse
  rho_in(1,1:2) = 0.35 1.25      ! inside the circle 
  rho_in(2,1:2) = 1.25 0.75      ! outside the circle 

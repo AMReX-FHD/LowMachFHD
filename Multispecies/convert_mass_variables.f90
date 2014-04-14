@@ -432,15 +432,17 @@ contains
     end do
 
     ! compute zeta_by_Temp for thermodiffusion
-    do row=1, nspecies
-       Sum_knoti = 0.d0
-       do column=1, nspecies
-          if(column.ne.row) then
-             Sum_knoti = Sum_knoti + Lambda(row,column)*(DT_in(row)-DT_in(column))
-          end if
-          zeta_by_Temp(row) = Sum_knoti/Temp
+    if(is_nonisothermal) then
+       do row=1, nspecies
+          Sum_knoti = 0.d0
+          do column=1, nspecies
+             if(column.ne.row) then
+                Sum_knoti = Sum_knoti + Lambda(row,column)*(DT_in(row)-DT_in(column))
+             end if
+             zeta_by_Temp(row) = Sum_knoti/Temp
+          end do
        end do
-    end do
+    end if
     
     ! compute chi either selecting inverse/pseudoinverse or iterative methods 
     if(use_lapack) then

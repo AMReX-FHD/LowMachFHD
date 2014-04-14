@@ -88,39 +88,43 @@ contains
        end do
     end do    
 
-    !====================================!
-    ! compute flux-piece from Temperature 
-    !====================================! 
-   
-    ! calculate face-centrered grad(Temp) 
-    call compute_grad(mla, Temp, flux_Temp, dx, 1, mol_frac_bc_comp, 1, 1, the_bc_level)
+    if(is_nonisothermal) then
     
-    ! compute face-centered zeta_by_Temp from cell-centered values 
-    call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, diff_coeff_bc_comp, &
-                            nspecies, the_bc_level, .false.) 
+       !====================================!
+       ! compute flux-piece from Temperature 
+       !====================================! 
  
-    ! compute rhoWchi X zeta_by_Temp (on faces) 
-    do n=1,nlevs
-       do i=1,dm
-          call matvec_mul(mla, zeta_by_Temp_face(n,i), rhoWchi_face(n,i), nspecies)
-       end do
-    end do    
-   
-    ! compute rhoWchi X zeta_by_Temp X grad(Temp) 
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult(zeta_by_Temp_face(n,i), flux_Temp(n,i), 0)
-       end do
-    end do  
+       ! calculate face-centrered grad(Temp) 
+       call compute_grad(mla, Temp, flux_Temp, dx, 1, mol_frac_bc_comp, 1, 1, the_bc_level)
     
-    !===============================!
-    ! assemble different flux-pieces 
-    !===============================! 
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_plus_plus(flux(n,i), zeta_by_Temp_face(n,i), 0)
-       end do
-    end do  
+       ! compute face-centered zeta_by_Temp from cell-centered values 
+       call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, diff_coeff_bc_comp, &
+                               nspecies, the_bc_level, .false.) 
+ 
+       ! compute rhoWchi X zeta_by_Temp (on faces) 
+       do n=1,nlevs
+          do i=1,dm
+             call matvec_mul(mla, zeta_by_Temp_face(n,i), rhoWchi_face(n,i), nspecies)
+          end do
+       end do    
+   
+       ! compute rhoWchi X zeta_by_Temp X grad(Temp) 
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult(zeta_by_Temp_face(n,i), flux_Temp(n,i), 0)
+          end do
+       end do  
+    
+       !===============================!
+       ! assemble different flux-pieces 
+       !===============================! 
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_plus_plus(flux(n,i), zeta_by_Temp_face(n,i), 0)
+          end do
+       end do  
+   
+    end if
 
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then

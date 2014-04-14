@@ -93,7 +93,6 @@ contains
     real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2)
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
-    Temp = 1.0d0
     
     ! for specific box, now start loop over alloted cells     
     select case(init_type) 
@@ -108,7 +107,10 @@ contains
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
  
             rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
-            !Temp(i,j)           = 1.0d0
+            !Temp(i,j)           = 1.0d0 
+            Temp(i,j)           = 0.5d0 + cos(2.0d0*M_PI*x/L(1))
+            !Temp(i,j)           = 1.0d0 + sin(2.0d0*M_PI*y/L(1))
+            !print*, x, Temp(i,j)
 
          end do
       end do  
@@ -243,7 +245,6 @@ contains
     real(kind=dp_t)  :: x,y,z,rsq,tau,w1,w2,rhot,L(3)
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
-    Temp = 1.0d0
 
     ! for specific box, now start loop over alloted cells     
     select case(init_type) 
@@ -261,7 +262,7 @@ contains
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0             
              
              rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
-             Temp(i,j,k) = 1.0d0
+             Temp(i,j,k) = cos(2.0d0*M_PI*x)
 
           end do
        end do

@@ -6,6 +6,7 @@ subroutine main_driver()
   use layout_module
   use init_module
   use write_plotfile_module
+  use write_plotfile1_module
   use advance_module
   use define_bc_module
   use bc_module
@@ -221,7 +222,8 @@ subroutine main_driver()
   ! write initial plotfile
   istep = 0
   if (plot_int .gt. 0) then
-     call write_plotfile(mla,"plt_rho",rho,istep,dx,time,prob_lo,prob_hi)
+     call write_plotfile(mla,"plt_rho",  rho,istep,dx,time,prob_lo,prob_hi)
+     call write_plotfile1(mla,"plt_temp",Temp,istep,dx,time,prob_lo,prob_hi)
   end if
 
   ! print out the total masses
@@ -271,6 +273,7 @@ subroutine main_driver()
         
         call write_plotfile(mla,"plt_rho",      rho,istep,dx,time,prob_lo,prob_hi)
         call write_plotfile(mla,"plt_exa",rho_exact,istep,dx,time,prob_lo,prob_hi)
+        call write_plotfile1(mla,"plt_temp",    Temp,istep,dx,time,prob_lo,prob_hi)
 
         ! difference between rho and rho_exact
         do n=1,nlevs
