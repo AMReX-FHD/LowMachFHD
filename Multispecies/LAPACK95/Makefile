@@ -7,7 +7,7 @@ FC       = gfortran48 -ffree-form
 FC1      = gfortran48 -ffixed-form
 
 OPTS0    = -O3
-MODLIB   = -I./lapack95_modules
+#MODLIB   = -I./lapack95_modules
 OPTS1    = -c $(OPTS0)
 OPTS3    = $(OPTS1) $(MODLIB)
 OPTL     = -o 
@@ -168,7 +168,7 @@ ZOBJS = la_zgesv.o la_zgesv1.o la_zgesvx.o la_zgesvx1.o \
 	la_zheevr.o la_zggevx.o la_zhegvx.o la_zggesx.o \
 	la_zgesdd.o
 
-default: single_double
+default: la_auxmod.o single_double
 
 single: $(SOBJSS)
 	rm -f lapack95.a
