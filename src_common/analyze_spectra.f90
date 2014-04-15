@@ -70,7 +70,8 @@ contains
     ! local
     type(box)  :: bx_serial, bx_dir, bx_projected
     type(boxarray)  :: bxa_serial, bxa_dir, bxa_projected
-    integer, dimension(mla%dim) :: lo, hi, ncells_tmp
+    integer, dimension(mla%dim) :: lo, hi
+    integer :: ncells_tmp(nMaxDims)
     integer :: nlevs, dm, pdim, max_grid_dir(3), max_grid_projected(3)
     ! The analysis codes always works in 3D
     real(dp_t) :: grid_dx(3)
@@ -253,7 +254,7 @@ contains
             ncells_tmp=nCells
           else ! Create a fake object that will not be used, with grid size 1x1x1
             ! This way the namelist input files do not have to change     
-            ncells_tmp=(/1,1,1/)
+            ncells_tmp(:) = 1
           end if     
           call createHydroAnalysis (grid, nCells=ncells_tmp, nSpecies = nspecies_analysis+1, &
              isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_analysis, &
