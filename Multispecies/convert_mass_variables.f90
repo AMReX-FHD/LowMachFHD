@@ -437,6 +437,7 @@ contains
           Sum_knoti = 0.d0
           do column=1, nspecies
              if(column.ne.row) then
+                ! Donev: Make DT a multifab and not a constant, just like D_MS is
                 Sum_knoti = Sum_knoti + Lambda(row,column)*(DT_in(row)-DT_in(column))
              end if
              zeta_by_Temp(row) = Sum_knoti/Temp

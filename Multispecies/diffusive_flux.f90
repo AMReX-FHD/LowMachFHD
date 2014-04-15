@@ -74,6 +74,15 @@ contains
     call average_cc_to_face(nlevs, Gama, Gama_face, 1, diff_coeff_bc_comp, &
                             nspecies**2, the_bc_level, .false.)
 
+    ! Donev: NO, this is a bad way of doing this
+    ! You need to compute
+    ! flux = Gamma*grad(X) + zeta_by_temp*grad(T)
+    ! as a face-centered multifab with n_species components
+    ! (later also barodiffusion would be added)
+    ! THEN you call
+    ! call matvec_mul(mla, flux(n,i), rhoWchi_face(n,i), nspecies)
+    ! This takes care now of *all* flues
+
     ! compute rhoWchi X Gama (on faces) 
     do n=1,nlevs
        do i=1,dm
@@ -102,6 +111,9 @@ contains
                                nspecies, the_bc_level, .false.) 
 
        ! compute rhoWchi X zeta_by_Temp (on faces) 
+       ! Donev: NO, you should compute zeta_by_Temp*grad(T) and add it to flux
+       ! call multifab_mult_mult(flux_Temp(n,i), i, zeta_by_Temp(n,i), s, 1)
+       
        do n=1,nlevs
           do i=1,dm
              call matvec_mul(mla, zeta_by_Temp_face(n,i), rhoWchi_face(n,i), nspecies)
@@ -113,7 +125,9 @@ contains
        do n=1,nlevs
           do i=1,dm
              do s=1,nspecies
-                call multifab_mult_mult_c(zeta_by_Temp_face(n,i), s, flux_Temp(n,i), i, 1)
+                ! Donev: No need for _c here -- this routine is generic
+                ! Donev: Last two values should be 1,1 not i,1
+                call multifab_mult_mult(zeta_by_Temp_face(n,i), s, flux_Temp(n,i), 1, 1)
              end do
           end do
        end do  
