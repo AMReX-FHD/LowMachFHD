@@ -3,7 +3,7 @@
   ! Make a copy of all the data on one of the processors and then call the serial routines
   ! Important note: RESTARTS NOT IMPLEMENTED in analysis code!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-module analyze_spectra_module
+module analyze_spectra_binary_module
 
   use fabio_module
   use bl_types
@@ -22,8 +22,8 @@ module analyze_spectra_module
   implicit none
 
   private
-  public :: initialize_hydro_grid, analyze_hydro_grid, save_hydro_grid, finalize_hydro_grid, &
-       print_stats
+  public :: initialize_hydro_grid_bin, analyze_hydro_grid_bin, save_hydro_grid_bin, finalize_hydro_grid_bin, &
+       print_stats_bin
 
   ! Molecular parameters (not used at present since there is no internal energy variable)
   real(dp_t), save :: k_B_over_m=1.0_dp_t
@@ -42,7 +42,7 @@ module analyze_spectra_module
 
 contains   
 
-  subroutine initialize_hydro_grid(mla,s_in,m_in,dt,dx,namelist_file,nscal_analysis_in)
+  subroutine initialize_hydro_grid_bin(mla,s_in,m_in,dt,dx,namelist_file,nscal_analysis_in)
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_in(:)
     type(multifab) , intent(inout) :: m_in(:,:)
@@ -262,7 +262,7 @@ contains
       
   end subroutine
 
-  subroutine save_hydro_grid(id, step) ! This also *resets* all counters
+  subroutine save_hydro_grid_bin(id, step) ! This also *resets* all counters
       integer, intent(in) :: id, step ! We can use either one to number files here
       
       if((.not.parallel_IOProcessor()) .or. (hydro_grid_int<=0)) return
@@ -276,7 +276,7 @@ contains
       end if
   end subroutine
   
-  subroutine finalize_hydro_grid()
+  subroutine finalize_hydro_grid_bin()
 
     if (stats_int > 0 .or. project_dir .gt. 0) then
        call multifab_destroy(s_dir)
@@ -322,7 +322,7 @@ contains
   end subroutine
   
   !mcai----------start------------------------
-  subroutine analyze_hydro_grid(mla,s_in,m_in,umac,prim,dt,dx,step,custom_analysis)
+  subroutine analyze_hydro_grid_bin(mla,s_in,m_in,umac,prim,dt,dx,step,custom_analysis)
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_in(:)
     type(multifab) , intent(inout) :: m_in(:,:)
@@ -704,7 +704,7 @@ contains
 
   end subroutine
 
-  subroutine print_stats(mla,s_in,m_in,umac,prim,dx,step,time)
+  subroutine print_stats_bin(mla,s_in,m_in,umac,prim,dx,step,time)
 
     ! This subroutine writes out the mean and variance of all variables using
     ! different averaging techniques.
@@ -1023,7 +1023,7 @@ contains
 
     end if
 
-  end subroutine print_stats
+  end subroutine print_stats_bin
 
 
 end module
