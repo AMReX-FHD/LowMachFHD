@@ -300,7 +300,6 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
 
    allocate( grid%heatCapacity(nSpecies) )
    grid%heatCapacity = heatCapacity
-   write(*,*) "DEBUG=", nSpecies, heatCapacity
    
    grid%estimateCovariances = estimateCovariances
    grid%subtractMeanFT = subtractMeanFT
