@@ -408,43 +408,43 @@ contains
          write(*,*) "DEBUG nscal_analysis=", nscal_analysis
          call parallel_abort("Insufficient nscal_analysis to store densities")
        end if
-       
-       if(present(variable_names)) then
-         variable_names(comp)="rho"
-       end if
-       if(nspecies_analysis==0) then ! Only density
+
+       if(nspecies_analysis==0) then ! Copy only rho to s_hydro
           call copy(s_hydro,comp,rho(1),1,1)
        else if(exclude_last_species) then
           call copy(s_hydro,comp,rho(1),1,nspecies_analysis) ! Copy rho,rho_1,...,rho_{n-1}
           ! Now compute rho_n as the difference rho-\sum_{i=1}^{n-1} rho_i
-          call setval(s_hydro, 0.0d0, nspecies_analysis+comp)
+          call copy(s_hydro,nspecies_analysis+comp,s_hydro,comp)
           do species=1, nspecies_analysis-1
              call multifab_sub_sub_c(s_hydro,nspecies_analysis+comp,s_hydro,species+comp,1)
           end do
-          if(present(variable_names)) then
-             do species=1, nspecies_analysis
-               write(variable_names(comp+species),"(A,I0)") "rho_", species
-             end do
-          end if
        else
-          call copy(s_hydro,comp+1,rho(1),1,nspecies_analysis)
+          call copy(s_hydro,comp+1,rho(1),1,nspecies_analysis) ! copy rho_1,...,rho_n
           ! Compute total density as a sum of densities rho=\sum_{i=1}^{n} rho_i
           call setval(s_hydro, 0.0d0, comp)
           do species=1, nspecies_analysis
              call multifab_plus_plus_c(s_hydro,comp,s_hydro,species+comp,1)
           end do
-          if(present(variable_names)) then
-             do species=1, nspecies_analysis
-               write(variable_names(comp+species),"(A,I0)") "c_", species
-             end do
-          end if
        end if
        
-       ! Now convert to mass fractions instead of densities (primitive variables)
+       ! convert to mass fractions instead of densities (primitive variables)
        if(.not.analyze_conserved) then
           do species=1, nspecies_analysis
              call multifab_div_div_c(s_hydro,species+comp,s_hydro,comp,1)
           end do
+       end if
+
+       if (present(variable_names)) then
+          variable_names(comp)="rho"
+          if (analyze_conserved) then
+             do species=1, nspecies_analysis
+               write(variable_names(comp+species),"(A,I0)") "rho_", species
+             end do
+          else
+             do species=1, nspecies_analysis
+               write(variable_names(comp+species),"(A,I0)") "c_", species
+             end do
+          end if
        end if
     
        comp=comp+nspecies_analysis+1
