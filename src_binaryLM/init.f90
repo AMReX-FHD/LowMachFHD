@@ -416,65 +416,6 @@ contains
 
   end subroutine init_2d
 
-  subroutine Gresho_vortex(u,v,p,rho,r,theta)
-    real(kind=dp_t), intent(out) :: u,v,p,rho
-    real(kind=dp_t), intent(in) :: r,theta  ! radius  and theta
-    !  Return the starting value of 0-Mach vortex problem
-
-    real(kind=dp_t) :: R1,R2,R6,Rval  !  Scaled radius squared
-    real(kind=dp_t) :: nm(25),dm(25),coeff(25),pcst
-    integer ::  k
-
-    data nm/ 1,  6,15, 74,57,174,269,450,153,1564,510,204,1473,1014,1053,558,783,54,38,222,609,184,9, 12, 1/
-    data dm/72,-35,17,-33,32, 31,-15, 29,  8, -27, 13,  5,- 16,  23,  22, -7, 20,19,-9,-17, 32,-15,2,-13,12/
-
-    !  Compute the constant in pressure polynomial ,i.e. p(R)
-    pcst = 0.0d0
-    do k = 1,25
-       coeff(k) = nm(k) / dm(k)
-       pcst = pcst + coeff(k)
-    end do
-
-    R1=r/(0.4d0)
-    R2=R1*R1
-    R6=R2*R2*R2
-
-    if (R1 > 1.0d0) then
-
-       rho = 0.5d0
-       u = 1.0d0*rho
-       v = 0
-       p = 0
-
-    else
-
-       rho = 0.5d0 + 0.5d0*(1.d0-R2)**6
-       Rval = ((1.0d0-R1)**6)*R6
-
-       u = -1024.0d0*Rval*sin(theta)
-       v =  1024.0d0*Rval*cos(theta)
-
-       !  Return the pressure for the variable density Gresho vortex  problem
-       !  (See Eq. 96 in KKM)
-
-       !  Horners rule
-
-       p = coeff(1) * R1 
-       do k = 2,24
-          p = (p + coeff(k)) * R1
-       end do
-       p = p + coeff(25)
-
-       p = p*R6*R6
-       p = p-pcst
-       p = p*(1024.0d0)*(1024.0d0)
-
-       u=(1.0d0+u)*rho
-       v=v*rho
-    end if
-
-  end subroutine Gresho_vortex
-
   subroutine init_3d(mx,my,mz,s,p,lo,hi,ng_m,ng_s,ng_p,dx,time)
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_m, ng_s, ng_p
