@@ -405,7 +405,6 @@ contains
     if(present(rho)) then
        
        if(n_passive_scals<nspecies_analysis+1) then
-         write(*,*) "DEBUG nscal_analysis=", nscal_analysis
          call parallel_abort("Insufficient nscal_analysis to store densities")
        end if
 
@@ -477,8 +476,9 @@ contains
   
   end subroutine
 
-  subroutine point_to_hydro_grid(variables,p_v, p_rho, p_c, p_T, p_s, &
+  subroutine point_to_hydro_grid(mla,variables,p_v, p_rho, p_c, p_T, p_s, &
                                  umac,rho,temperature,scalars)
+    type(ml_layout), intent(in   ) :: mla
     real(kind=dp_t), dimension(:,:,:,:), target, intent(in)   :: variables
     real(kind=dp_t), pointer, dimension(:,:,:,:), intent(out) :: p_v, p_rho, p_c, p_T, p_s
     type(multifab) , intent(in), optional :: umac(:,:)
@@ -487,10 +487,14 @@ contains
     ! Local
     integer :: i, ii, jj, n, nlevs, dm, pdim, comp, n_passive_scals, species
     
+    nlevs = mla%nlevel
+    dm = mla%dim
+
     comp=1  
     if(present(umac)) then
        p_v=>variables(:,:,:,comp:comp+dm-1)
        write(*,*) "p_v LBOUND=", lbound(p_v), " UBOUND=", ubound(p_v)
+       !write(*,*) "p_v(1,1,1,:)=", p_v(1,1,1,:)
        comp=comp+dm
     else
        p_v=>NULL()   
@@ -503,7 +507,9 @@ contains
        p_rho => variables(:,:,:,comp:comp)
        p_c => variables(:,:,:,comp+1:comp+nspecies_analysis)
        write(*,*) "p_rho LBOUND=", lbound(p_rho), " UBOUND=", ubound(p_rho)
+       !write(*,*) "p_rho(1,1,1,1)=", p_rho(1,1,1,1)
        write(*,*) "p_c LBOUND=", lbound(p_c), " UBOUND=", ubound(p_c)
+       !write(*,*) "p_c(1,1,1,:)=", p_c(1,1,1,:)
        comp=comp+nspecies_analysis+1
        n_passive_scals=n_passive_scals-nspecies_analysis-1
     else
@@ -580,7 +586,7 @@ contains
        end if
        
        ! Point pointers to the right places, if present, NULL otherwise
-       call point_to_hydro_grid(variables,p_v, p_rho, p_c, p_T, p_s, &
+       call point_to_hydro_grid(mla,variables,p_v, p_rho, p_c, p_T, p_s, &
                                 umac,rho,temperature,scalars)
        write(*,*) "associated=", associated(p_v), associated(p_rho), &
                    associated(p_c), associated(p_T), associated(p_s)
@@ -685,7 +691,7 @@ contains
        variables  => dataptr(s_serial,1) ! Gets all of the components
 
        ! Point pointers to the right places, if present, NULL otherwise
-       call point_to_hydro_grid(variables,p_v, p_rho, p_c, p_T, p_s, &
+       call point_to_hydro_grid(mla,variables,p_v, p_rho, p_c, p_T, p_s, &
                                  umac,rho,temperature,scalars)
        write(*,*) "associated=", associated(p_v), associated(p_rho), &
                    associated(p_c), associated(p_T), associated(p_s)
@@ -697,8 +703,8 @@ contains
        write(*,*) "Calling updateHydroAnalysis on 1D grid"
 
        ! Point pointers to the right places, if present, NULL otherwise
-       call point_to_hydro_grid(variables_1D,p_v, p_rho, p_c, p_T, p_s, &
-                                 umac,rho,temperature,scalars)
+       call point_to_hydro_grid(mla,variables_1D,p_v, p_rho, p_c, p_T, p_s, &
+                                umac,rho,temperature,scalars)
        write(*,*) "associated=", associated(p_v), associated(p_rho), &
                    associated(p_c), associated(p_T), associated(p_s)
 
