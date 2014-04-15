@@ -27,7 +27,7 @@ module analyze_spectra_module
   type (HydroGrid), target, save :: grid, grid_2D, grid_1D
   
   ! We collect all the data on processor 1 for the analysis stuff due to the FFTs etc:
-  integer, save :: nvar, ncells(3), ncells2D(3), ncells1D(3)
+  integer, save :: ncells(3), ncells2D(3), ncells1D(3)
   ! These are ordered so that velocities come first, then densities, then temperature, and lastly scalars
   ! Any of these can be omitted (not present)
   type(multifab), save ::  s_serial, s_dir, s_projected, s_var ! Only one level here
@@ -35,7 +35,9 @@ module analyze_spectra_module
   type(layout), save :: la_serial, la_dir, la_projected
 
   ! number of (non-velocity) scalars to be analyzed
-  integer, save :: nscal_analysis=0, nspecies_analysis=1 ! Total number of additional scalars and species
+  integer, save :: nvar=1, nscal_analysis=1, nspecies_analysis=1
+      ! nvar is total number of variables (vector and scalar)
+      ! nscal_analysis is total number of scalar variables to analyze
   logical, save :: exclude_last_species=.true. ! Whether to use format 
       ! true=(rho,rho_1,...,rho_{n-1}) or false=(rho_1,...,rho_{n})
 
@@ -75,17 +77,17 @@ contains
     integer :: nlevs, dm, pdim, max_grid_dir(3), max_grid_projected(3)
     ! The analysis codes always works in 3D
     real(dp_t) :: grid_dx(3)
-    real(dp_t) :: heat_capacity(nspecies_in)
+    real(dp_t) :: heat_capacity(nspecies_in+1)
 
     nlevs = mla%nlevel
     dm = mla%dim
 
-    nspecies_analysis = nspecies_in
+    nspecies_analysis = nspecies_in ! Number of concentration variables
     exclude_last_species = exclude_last_species_in
-    nscal_analysis = nscal_in
     
     if(present(heat_capacity_in)) then
-      heat_capacity = heat_capacity_in
+      heat_capacity(1:nspecies_in) = heat_capacity_in
+      heat_capacity(nspecies_in+1) = 0.0d0
     else
       heat_capacity = 1.0_dp_t ! Default value
     end if
@@ -93,8 +95,9 @@ contains
     if(nlevs>1) call parallel_abort("HydroGrid analysis only implemented for a single level!")
 
     ! Calculate total number of scalar variables being analyzed to allocate storage
-    nvar=nscal_analysis
+    nvar=nscal_in ! nvar holds the total number of variables to analyze (scalar and vector)
     if(analyze_density)  nvar = nvar + nspecies_analysis + 1 ! We always store total density
+    nscal_analysis = nvar ! Total number of scalar variables to analyze
     if(analyze_velocity) nvar = nvar + dm
     if ( parallel_IOprocessor() ) then
        write(*,*) "Allocating storage for ", nvar, " variables to analyze using HydroGrid"
@@ -257,7 +260,7 @@ contains
             ncells_tmp(:) = 1
           end if     
           call createHydroAnalysis (grid, nCells=ncells_tmp, nSpecies = nspecies_analysis+1, &
-             isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_analysis, &
+             isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_in, &
              systemLength = ncells*grid_dx, heatCapacity = heat_capacity, &
              timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
              structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
@@ -265,7 +268,7 @@ contains
           if(project_dir/=0) then
              ! Also perform analysis on a projected grid (averaged along project_dir axes)
              call createHydroAnalysis (grid_2D, nCells=ncells2D, nSpecies = nspecies_analysis+1, &
-                  isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_analysis, &
+                  isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_in, &
                   systemLength = nCells*grid_dx, heatCapacity = heat_capacity, &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
                   structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
@@ -273,7 +276,7 @@ contains
 
           if(project_dir/=0) then ! Also perform analysis on a 1D grid (along project_dir only)
              call createHydroAnalysis (grid_1D, nCells=ncells1D, nSpecies = nspecies_analysis+1, &
-                  isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_analysis, &
+                  isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_in, &
                   systemLength = nCells*grid_dx, heatCapacity = heat_capacity, &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
                   structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
@@ -301,14 +304,14 @@ contains
   
   subroutine finalize_hydro_grid()
 
-    if (stats_int > 0 .or. project_dir .gt. 0) then
+    if ((stats_int > 0) .or. (project_dir > 0)) then
        call multifab_destroy(s_dir)
        call multifab_destroy(s_projected)
-       call destroy(la_dir)
-       call destroy(la_projected)
        if (stats_int > 0) then
           call multifab_destroy(s_var)
        end if
+       call destroy(la_dir)
+       call destroy(la_projected)
     end if
     if (abs(hydro_grid_int)>0) then
        call multifab_destroy(s_serial)
@@ -402,6 +405,7 @@ contains
     if(present(rho)) then
        
        if(n_passive_scals<nspecies_analysis+1) then
+         write(*,*) "DEBUG nscal_analysis=", nscal_analysis
          call parallel_abort("Insufficient nscal_analysis to store densities")
        end if
        

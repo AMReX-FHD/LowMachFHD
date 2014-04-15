@@ -281,11 +281,11 @@ contains
     if (stats_int > 0 .or. project_dir .gt. 0) then
        call multifab_destroy(s_dir)
        call multifab_destroy(s_projected)
-       call destroy(la_dir)
-       call destroy(la_projected)
        if (stats_int > 0) then
           call multifab_destroy(s_var)
        end if
+       call destroy(la_dir)
+       call destroy(la_projected)
     end if
     if (abs(hydro_grid_int)>0) then
        call multifab_destroy(s_serial)
