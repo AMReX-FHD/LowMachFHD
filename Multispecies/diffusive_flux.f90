@@ -19,8 +19,7 @@ module diffusive_flux_module
 
 contains
  
-  subroutine diffusive_flux(mla,rho,rho_tot,molarconc,rhoWchi,Gama,Temp,&
-                            zeta_by_Temp,flux,dx,the_bc_level)
+  subroutine diffusive_flux(mla,rho,rho_tot,molarconc,rhoWchi,Gama,Temp,zeta_by_Temp,flux,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:) 
@@ -74,23 +73,7 @@ contains
     call average_cc_to_face(nlevs, Gama, Gama_face, 1, diff_coeff_bc_comp, &
                             nspecies**2, the_bc_level, .false.)
 
-    ! Donev: NO, this is a bad way of doing this
-    ! You need to compute
-    ! flux = Gamma*grad(X) + zeta_by_temp*grad(T)
-    ! as a face-centered multifab with n_species components
-    ! (later also barodiffusion would be added)
-    ! THEN you call
-    ! call matvec_mul(mla, flux(n,i), rhoWchi_face(n,i), nspecies)
-    ! This takes care now of *all* flues
-
-    ! compute rhoWchi X Gama (on faces) 
-    do n=1,nlevs
-       do i=1,dm
-          call matmat_mul(mla, Gama_face(n,i), rhoWchi_face(n,i), nspecies)
-       end do
-    end do    
-    
-    ! compute flux from molarconc as rhoWchi X Gama X grad(molarconc) 
+    ! compute Gama*grad(molarconc): Gama is nspecies^2 matrix; grad(x) is nspecies component vector 
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, flux(n,i), Gama_face(n,i), nspecies)
@@ -103,35 +86,21 @@ contains
        ! compute flux-piece from Temperature 
        !====================================! 
  
-       ! calculate face-centrered grad(Temp) 
+       ! calculate face-centrered grad(T) 
        call compute_grad(mla, Temp, flux_Temp, dx, 1, mol_frac_bc_comp, 1, 1, the_bc_level)
     
-       ! compute face-centered zeta_by_Temp from cell-centered values 
+       ! compute face-centered zeta_by_T from cell-centered values 
        call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, diff_coeff_bc_comp, &
                                nspecies, the_bc_level, .false.) 
 
-       ! compute rhoWchi X zeta_by_Temp (on faces) 
-       ! Donev: NO, you should compute zeta_by_Temp*grad(T) and add it to flux
-       ! call multifab_mult_mult(flux_Temp(n,i), i, zeta_by_Temp(n,i), s, 1)
-       
-       do n=1,nlevs
-          do i=1,dm
-             call matvec_mul(mla, zeta_by_Temp_face(n,i), rhoWchi_face(n,i), nspecies)
-          end do
-       end do    
-   
-       !if(.false.) then 
-       ! compute rhoWchi X zeta_by_Temp X grad(Temp) 
+       ! compute zeta_by_T*grad(T): zeta_by_T is nspecies component vector; grad(T) is scalar
        do n=1,nlevs
           do i=1,dm
              do s=1,nspecies
-                ! Donev: No need for _c here -- this routine is generic
-                ! Donev: Last two values should be 1,1 not i,1
-                call multifab_mult_mult(zeta_by_Temp_face(n,i), s, flux_Temp(n,i), 1, 1)
+                call mult_mult(zeta_by_Temp_face(n,i), s, flux_Temp(n,i), 1, 1)
              end do
           end do
        end do  
-       !end if
     
        !===============================!
        ! assemble different flux-pieces 
@@ -143,6 +112,13 @@ contains
        end do  
    
     end if
+
+    ! compute rhoWchi * totalflux (on faces) 
+    do n=1,nlevs
+       do i=1,dm
+          call matvec_mul(mla, flux(n,i), rhoWchi_face(n,i), nspecies)
+       end do
+    end do    
 
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then

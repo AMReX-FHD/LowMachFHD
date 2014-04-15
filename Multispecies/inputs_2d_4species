@@ -1,9 +1,9 @@
 &probin_common
  
  dim_in = 2                              ! problem dimension
- plot_int = 100000                       ! plot interval
+ plot_int = 100                       ! plot interval
  max_grid_size(1:2) = 16 16              ! individual box size 
- n_steps_skip = 10                       ! when to start analyzing data
+ n_steps_skip = 1000                       ! when to start analyzing data
  k_B      = 1E-3                         ! Boltzmann constant
 
  ! Grid size
@@ -21,7 +21,7 @@
 &probin_multispecies
  
  nspecies = 4                            ! number of species
- max_step = 20                           ! total number of computational step
+ max_step = 1000                           ! total number of computational step
  cfl1     = 0.01                         ! CFL number
  chi      = 1.0                          ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_parameter = 1E-3               ! parameter to set variance (=1/thickness and =1 ideal) 
@@ -33,7 +33,7 @@
  inverse_type = 1                        ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 1                      ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=RK3
  correct_flux = .true.                   ! correct flux to numeric roundoff
- use_stoch = .true.                      ! use stochastic flux 
+ use_stoch = .false.                      ! use stochastic flux 
  print_error_norms = .true.              ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.              ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.              ! true=include grad(T), false= no grad(T)  
@@ -42,7 +42,6 @@
  rho_in(2,1:4) = 0.8 0.5 0.7 0.9         ! outside the circle  
  molmass_in(1:4) = 1.0 0.75 1.25 2.0     ! molar mass of n-species
  Dbar_in(1:6) = 1.0 2.0 2.0 1.0 1.1 1.2  ! SM diffusion constant arranged in lower-triangle
- DT_in(1:4) = 1.0 -1.0 1.0 -1.0          ! thermo-diffusion constant (sums to zero)
-
+ Dtherm_in(1:4) = 1.0 -1.0 1.0 -1.0      ! thermo-diffusion constant (sums to zero)
  
 /

@@ -73,8 +73,9 @@ contains
   end subroutine diffusive_mass_fluxdiv
 
   subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
-                             diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,zeta_by_Temp,dt,&
-                             stage_time,dx,prob_lo,prob_hi,weights,n_rngs,the_bc_level)
+                                  D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
+                                  zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                  n_rngs,the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -85,6 +86,7 @@ contains
     type(multifab) , intent(inout)   :: chi(:)
     type(multifab) , intent(inout)   :: Gama(:)
     type(multifab) , intent(inout)   :: D_MS(:)
+    type(multifab) , intent(inout)   :: D_therm(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
@@ -122,10 +124,10 @@ contains
     call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
       
     ! populate D_MS and Gama 
-    call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,Gama,the_bc_level)
+    call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,D_therm,Gama,the_bc_level)
 
     ! compute chi 
-    call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,Temp,zeta_by_Temp,the_bc_level)
+    call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,D_therm,Temp,zeta_by_Temp,the_bc_level)
       
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,rhoWchi,the_bc_level)

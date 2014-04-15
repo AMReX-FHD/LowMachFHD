@@ -256,7 +256,7 @@ contains
     
   end subroutine compute_molconc_rhotot_local 
 
-  subroutine compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,Temp,zeta_by_Temp,the_bc_level)
+  subroutine compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,D_therm,Temp,zeta_by_Temp,the_bc_level)
    
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -265,6 +265,7 @@ contains
     real(kind=dp_t), intent(in   )  :: molmass(nspecies)   ! species molar mass  
     type(multifab) , intent(inout)  :: chi(:) 
     type(multifab) , intent(in   )  :: D_MS(:) 
+    type(multifab) , intent(in   )  :: D_therm(:) 
     type(multifab) , intent(in   )  :: Temp(:) 
     type(multifab) , intent(inout)  :: zeta_by_Temp(:) 
     type(bc_level) , intent(in   )  :: the_bc_level(:)
@@ -281,6 +282,7 @@ contains
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for D_MS
     real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Temp
     real(kind=dp_t), pointer        :: dp7(:,:,:,:)  ! for zeta_by_Temp
+    real(kind=dp_t), pointer        :: dp8(:,:,:,:)  ! for D_therm
 
     dm = mla%dim        ! dimensionality
     ng = rho(1)%ng      ! number of ghost cells 
@@ -296,33 +298,35 @@ contains
           dp5 => dataptr(D_MS(n), i)
           dp6 => dataptr(Temp(n), i)
           dp7 => dataptr(zeta_by_Temp(n), i)
+          dp8 => dataptr(D_therm(n), i)
           lo  =  lwb(get_box(rho(n), i))
           hi  =  upb(get_box(rho(n), i))
           
           select case(dm)
           case (2)
              call compute_chi_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),molmass,dp3(:,:,1,:),&
-                  dp5(:,:,1,:),dp6(:,:,1,1),dp7(:,:,1,:),ng,lo,hi) 
+                  dp5(:,:,1,:),dp6(:,:,1,1),dp7(:,:,1,:),dp8(:,:,1,:),ng,lo,hi) 
           case (3)
              call compute_chi_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),molmass,dp3(:,:,:,:),&
-                  dp5(:,:,:,:),dp6(:,:,:,1),dp7(:,:,:,:),ng,lo,hi) 
+                  dp5(:,:,:,:),dp6(:,:,:,1),dp7(:,:,:,:),dp8(:,:,:,:),ng,lo,hi) 
           end select
        end do
     end do
 
   end subroutine compute_chi
  
-  subroutine compute_chi_2d(rho,rho_tot,molarconc,molmass,chi,D_MS,Temp,zeta_by_Temp,ng,lo,hi)
+  subroutine compute_chi_2d(rho,rho_tot,molarconc,molmass,chi,D_MS,Temp,zeta_by_Temp,D_therm,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)         ! density; last dimension for species
-    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:)       ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)   ! molar concentration 
-    real(kind=dp_t)  :: molmass(nspecies)                  ! species molar mass 
-    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,:)         ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,:)        ! MS diff-coeffs 
-    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:)          ! Temperature 
-    real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng:,lo(2)-ng:,:)
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)          ! density; last dimension for species
+    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:)        ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)    ! molar concentration 
+    real(kind=dp_t)  :: molmass(nspecies)                   ! species molar mass 
+    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,:)          ! last dimension for nspecies^2
+    real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,:)         ! MS diff-coeffs 
+    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:)           ! Temperature 
+    real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng:,lo(2)-ng:,:) ! zeta/T
+    real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,:)      ! thermo diff-coeffs 
 
     ! local variables
     integer          :: i,j,row,column
@@ -333,7 +337,8 @@ contains
        do i=lo(1)-ng,hi(1)+ng
     
           call compute_chi_local(rho(i,j,:),rho_tot(i,j),molarconc(i,j,:),molmass,&
-                                 chi(i,j,:),D_MS(i,j,:),Temp(i,j),zeta_by_Temp(i,j,:))
+                                 chi(i,j,:),D_MS(i,j,:),Temp(i,j),zeta_by_Temp(i,j,:),&
+                                 D_therm(i,j,:))
 
           ! print chi for one cell 
           if(.false.) then 
@@ -358,17 +363,18 @@ contains
 
   end subroutine compute_chi_2d
 
-  subroutine compute_chi_3d(rho,rho_tot,molarconc,molmass,chi,D_MS,Temp,zeta_by_Temp,ng,lo,hi)
+  subroutine compute_chi_3d(rho,rho_tot,molarconc,molmass,chi,D_MS,Temp,zeta_by_Temp,D_therm,ng,lo,hi)
    
     integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! density; last dimension for species
-    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)       ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)   ! molar concentration; 
-    real(kind=dp_t)  :: molmass(nspecies)                            ! species molar mass 
-    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! SM diffusion constants 
-    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)          ! Temperature 
-    real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)          ! density; last dimension for species
+    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)        ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)    ! molar concentration; 
+    real(kind=dp_t)  :: molmass(nspecies)                             ! species molar mass 
+    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)          ! last dimension for nspecies^2
+    real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! SM diffusion constants 
+    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)           ! Temperature 
+    real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! zeta/T
+    real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)      ! thermo diffusion constants 
     
     ! local variables
     integer          :: i,j,k
@@ -379,7 +385,8 @@ contains
           do i=lo(1)-ng,hi(1)+ng
        
              call compute_chi_local(rho(i,j,k,:),rho_tot(i,j,k),molarconc(i,j,k,:),molmass,&
-                                    chi(i,j,k,:),D_MS(i,j,k,:),Temp(i,j,k),zeta_by_Temp(i,j,k,:))
+                                    chi(i,j,k,:),D_MS(i,j,k,:),Temp(i,j,k),zeta_by_Temp(i,j,k,:),&
+                                    D_therm(i,j,k,:))
 
           end do
        end do
@@ -387,7 +394,7 @@ contains
    
   end subroutine compute_chi_3d
 
-  subroutine compute_chi_local(rho,rho_tot,molarconc,molmass,chi,D_MS,Temp,zeta_by_Temp)
+  subroutine compute_chi_local(rho,rho_tot,molarconc,molmass,chi,D_MS,Temp,zeta_by_Temp,D_therm)
     
     real(kind=dp_t), intent(inout)  :: rho(nspecies)         
     real(kind=dp_t), intent(in)     :: rho_tot               
@@ -397,6 +404,7 @@ contains
     real(kind=dp_t), intent(in)     :: D_MS(nspecies,nspecies) 
     real(kind=dp_t), intent(in)     :: Temp
     real(kind=dp_t), intent(inout)  :: zeta_by_Temp(nspecies)
+    real(kind=dp_t), intent(in)     :: D_therm(nspecies)
 
     ! local variables
     integer                         :: row,column
@@ -438,7 +446,7 @@ contains
           do column=1, nspecies
              if(column.ne.row) then
                 ! Donev: Make DT a multifab and not a constant, just like D_MS is
-                Sum_knoti = Sum_knoti + Lambda(row,column)*(DT_in(row)-DT_in(column))
+                Sum_knoti = Sum_knoti + Lambda(row,column)*(D_therm(row)-D_therm(column))
              end if
              zeta_by_Temp(row) = Sum_knoti/Temp
           end do
@@ -701,7 +709,6 @@ subroutine compute_Lonsager_local(rho,rho_tot,molarconc,molmass,molmtot,chi,Gama
     ! compute Onsager matrix L
     do column=1, nspecies
        do row=1, nspecies
-          ! Donev: This will need to be modified when we go to variable temperature
           !Lonsager(row, column) = rho_tot*rho_tot*Temp*W(row)*chi(row,column)*W(column)/Press
           Lonsager(row, column) = molmtot*rho_tot*W(row)*chi(row,column)*W(column)/k_B
        end do
