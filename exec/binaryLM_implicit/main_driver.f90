@@ -24,6 +24,7 @@ subroutine main_driver()
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
+  use analyze_spectra_binary_module
   use analyze_spectra_module
   use estdt_module
   use convert_stag_module
@@ -39,6 +40,8 @@ subroutine main_driver()
 
   implicit none
 
+  logical :: analyze_binary=.true. ! Call the older analyze_spectra_binary or the new analyze_spectra ?
+  
   ! will be allocated with dm components
   integer, allocatable :: lo(:), hi(:)
 
@@ -411,7 +414,13 @@ subroutine main_driver()
         if ( lexist ) then
            un = unit_new()
            open(unit=un, file = fname, status = 'old', action = 'read')
-           call initialize_hydro_grid(mla,sold,mold,dt,dx,un,2)
+           if(analyze_binary) then
+              call initialize_hydro_grid_bin(mla,sold,mold,dt,dx,un,2)
+           else
+              call initialize_hydro_grid(mla,sold,dt,dx, &
+                      namelist_file=un, nspecies_in=2, nscal_in=0, exclude_last_species_in=.true., &
+                      analyze_velocity=.true., analyze_density=.true.)
+           end if 
            close(unit=un)
         end if
      end if
@@ -514,9 +523,14 @@ subroutine main_driver()
          ! print out projection (average) and variance
          if ( (stats_int > 0) .and. &
                (mod(istep-n_steps_skip,stats_int) .eq. 0) ) then
-            call print_stats(mla,snew,mnew,umac,prim,dx,istep-n_steps_skip,time)
-            if (hydro_grid_int<0) then
-               call analyze_hydro_grid(mla,snew,mnew,umac,prim,dt,dx, &
+            if(analyze_binary) then   
+               call print_stats_bin(mla,snew,mnew,umac,prim,dx,istep-n_steps_skip,time)
+            else
+               call print_stats(mla,dx,istep-n_steps_skip,time,umac=umac,rho=snew)            
+            end if   
+            if (analyze_binary.and.(hydro_grid_int<0)) then
+               ! Do some specialized analysis for low Mach binary mixing studies
+               call analyze_hydro_grid_bin(mla,snew,mnew,umac,prim,dt,dx, &
                                        istep-n_steps_skip,custom_analysis=.true.)
             end if   
          end if
@@ -524,14 +538,22 @@ subroutine main_driver()
          ! Add this snapshot to the average in HydroGrid
          if ( (hydro_grid_int > 0) .and. &
               ( mod(istep-n_steps_skip,hydro_grid_int) .eq. 0 ) ) then
-            call analyze_hydro_grid(mla,snew,mnew,umac,prim,dt,dx, &
+            if(analyze_binary) then  
+               call analyze_hydro_grid_bin(mla,snew,mnew,umac,prim,dt,dx, &
                                     istep-n_steps_skip,custom_analysis=.false.)
+            else
+               call analyze_hydro_grid(mla,dt,dx,istep-n_steps_skip,umac=umac,rho=snew)           
+            end if                                    
          end if
 
          if ( (hydro_grid_int > 0) .and. &
               (n_steps_save_stats > 0) .and. &
               ( mod(istep-n_steps_skip,n_steps_save_stats) .eq. 0 ) ) then
-            call save_hydro_grid(id=(istep-n_steps_skip)/n_steps_save_stats, step=istep)
+            if(analyze_binary) then  
+               call save_hydro_grid_bin(id=(istep-n_steps_skip)/n_steps_save_stats, step=istep)
+            else
+               call save_hydro_grid(id=(istep-n_steps_skip)/n_steps_save_stats, step=istep)            
+            end if
          end if
 
       end if
@@ -569,7 +591,11 @@ subroutine main_driver()
   call destroy_rhoc_stochastic(mla)
 
   if(abs(hydro_grid_int)>0 .or. stats_int>0) then
-     call finalize_hydro_grid()
+     if(analyze_binary) then
+        call finalize_hydro_grid_bin()
+     else
+        call finalize_hydro_grid()
+     end if
   end if
 
   do n=1,nlevs

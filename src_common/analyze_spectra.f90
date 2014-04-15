@@ -761,9 +761,8 @@ contains
   !
   ! Next, it writes out "horizontal" averages.
   ! Thus, in both 2D and 3D, it writes out a 1D text file called "hstatXXXXXX"
-  subroutine print_stats(mla,dt,dx,step,time,umac,rho,temperature,scalars)
+  subroutine print_stats(mla,dx,step,time,umac,rho,temperature,scalars)
     type(ml_layout), intent(in   ) :: mla
-    real(dp_t)     , intent(in) :: dt
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step
     real(kind=dp_t), intent(in   ) :: time
