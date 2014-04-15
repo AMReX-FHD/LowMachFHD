@@ -17,6 +17,7 @@ module probin_binarylm_module
   integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(2,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
+  logical, save :: analyze_binary
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -53,6 +54,8 @@ module probin_binarylm_module
   namelist /probin_binarylm/ algorithm_type     ! 0 = John's Algorithm
                                                 ! 1 = Overdamped with 1 RNG
                                                 ! 2 = Overdamped with 2 RNGs
+  namelist /probin_binarylm/ analyze_binary
+                             ! Call the older analyze_spectra_binary or the new analyze_spectra?  
 
 contains
 
@@ -105,6 +108,8 @@ contains
 
     barodiffusion_type = 0
     algorithm_type = 0
+    
+    analyze_binary=.true.
 
     farg = 1
     if (narg >= 1) then

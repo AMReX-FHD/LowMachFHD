@@ -29,7 +29,7 @@ subroutine main_driver()
   use estdt_module
   use convert_stag_module
   use probin_binarylm_module, only: probin_binarylm_init, max_step, print_int, &
-                                   project_eos_int, initial_variance, &
+                                   project_eos_int, initial_variance, analyze_binary, &
                                    conc_scal, barodiffusion_type, algorithm_type
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
@@ -39,8 +39,6 @@ subroutine main_driver()
   use probin_gmres_module  , only: probin_gmres_init
 
   implicit none
-
-  logical :: analyze_binary=.true. ! Call the older analyze_spectra_binary or the new analyze_spectra ?
   
   ! will be allocated with dm components
   integer, allocatable :: lo(:), hi(:)
