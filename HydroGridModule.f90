@@ -300,6 +300,7 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
 
    allocate( grid%heatCapacity(nSpecies) )
    grid%heatCapacity = heatCapacity
+   write(*,*) "DEBUG=", nSpecies, heatCapacity
    
    grid%estimateCovariances = estimateCovariances
    grid%subtractMeanFT = subtractMeanFT
@@ -766,6 +767,8 @@ subroutine updateHydroAnalysisPrimitive (grid, velocity, density, temperature, c
    end if   
 
    !if(present(scalars)) write(*,*) sIdx1,sIdx2, " Scalars=", real(scalars(:, :, :, 1:(sIdx2-sIdx1+1)))
+   write(*,*) "HydroGrid present=", present(velocity), present(density), &
+      present(concentration), present(temperature), present(scalars)
 
    ! We need to convert all of the conserved to primitive variables in each cell
    do k = 1, grid%nCells(3)
