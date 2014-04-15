@@ -901,6 +901,8 @@ contains
           do comp=1, nvar
              write(1000,'(I0,3A)', advance="no") comp+1,"=var(",trim(variable_names(comp)), "), "
           end do
+          write(1000,*) ! New line
+
           do i=lo(qdim),hi(qdim)
              write(1000,'(1000(g17.9))') prob_lo(qdim) + (i+0.5d0)*dx(1,qdim), &
                   stats_1d(i,:)
