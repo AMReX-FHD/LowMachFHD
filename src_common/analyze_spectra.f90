@@ -423,7 +423,7 @@ contains
           end do
           if(present(variable_names)) then
              do species=1, nspecies_analysis
-               write(variable_names(comp),"(A,I0)") "rho_", species
+               write(variable_names(comp+species),"(A,I0)") "rho_", species
              end do
           end if
        else
@@ -435,7 +435,7 @@ contains
           end do
           if(present(variable_names)) then
              do species=1, nspecies_analysis
-               write(variable_names(comp),"(A,I0)") "c_", species
+               write(variable_names(comp+species),"(A,I0)") "c_", species
              end do
           end if
        end if
@@ -469,7 +469,7 @@ contains
        end if
        if(present(variable_names)) then
           do species=1, n_passive_scals
-            write(variable_names(comp),"(A,I0)") "s_", species
+            write(variable_names(comp+species-1),"(A,I0)") "s_", species
           end do
        end if
        call copy(s_hydro,comp,scalars(1),1,n_passive_scals)
