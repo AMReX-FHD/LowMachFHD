@@ -108,8 +108,8 @@ contains
  
             rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
             !Temp(i,j)          = 1.0d0 
-            !Temp(i,j)          = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            Temp(i,j)           = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+            Temp(i,j)          = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+            !Temp(i,j)           = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
 
          end do
       end do  
