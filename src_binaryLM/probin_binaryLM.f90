@@ -273,6 +273,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) algorithm_type
 
+       case ('--analyze_binary')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) analyze_binary
+
        case ('--')
           farg = farg + 1
           exit
