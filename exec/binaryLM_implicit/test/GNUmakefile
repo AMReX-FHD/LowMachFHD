@@ -15,9 +15,6 @@ include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
 VPATH_LOCATIONS += ..
 
-# One new source file here, the rest replace existing ones:
-f90sources += analyze_spectra_binary.f90
-
 include $(STAGGERED_HOME)/src_binaryLM/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_binaryLM
 
