@@ -35,7 +35,7 @@ contains
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables
-    integer :: n,i,dm,ng,nlevs
+    integer :: n,i,s,dm,ng,nlevs
  
     ! local face-centered multifabs 
     type(multifab)  :: rhoWchi_face(mla%nlevel,mla%dim)
@@ -100,7 +100,7 @@ contains
        ! compute face-centered zeta_by_Temp from cell-centered values 
        call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, diff_coeff_bc_comp, &
                                nspecies, the_bc_level, .false.) 
- 
+
        ! compute rhoWchi X zeta_by_Temp (on faces) 
        do n=1,nlevs
           do i=1,dm
@@ -108,12 +108,16 @@ contains
           end do
        end do    
    
+       !if(.false.) then 
        ! compute rhoWchi X zeta_by_Temp X grad(Temp) 
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult(zeta_by_Temp_face(n,i), flux_Temp(n,i), 0)
+             do s=1,nspecies
+                call multifab_mult_mult_c(zeta_by_Temp_face(n,i), s, flux_Temp(n,i), i, 1)
+             end do
           end do
        end do  
+       !end if
     
        !===============================!
        ! assemble different flux-pieces 

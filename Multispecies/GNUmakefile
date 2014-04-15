@@ -4,8 +4,8 @@ BOXLIB_HOME = ../../../BoxLib
 HYDROLIB_HOME := ../../HydroGrid
 STAGGERED_HOME := ..
 
-NDEBUG    := t 
-MPI       := t  
+NDEBUG    :=  
+MPI       :=   
 OMP       :=
 PROF      :=
 COMP      := gfortran48

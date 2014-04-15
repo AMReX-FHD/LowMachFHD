@@ -32,7 +32,6 @@ module matvec_mul_module
        lo(2) = lbound(ap,2)  ! so in the subroutine loop from lo to hi without ng.
        hi(1) = ubound(ap,1)
        hi(2) = ubound(ap,2)
-       !print*, 'matvec', lo(1:2),hi(1:2)
 
        select case (dm)
          case (2)
