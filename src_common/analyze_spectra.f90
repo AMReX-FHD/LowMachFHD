@@ -376,6 +376,9 @@ contains
     integer :: i, ii, jj, n, nlevs, dm, pdim, comp, n_passive_scals, species
     type(multifab) :: mac_cc(mla%nlevel)
  
+    nlevs = mla%nlevel
+    dm = mla%dim
+
     comp=1    
     if(present(umac)) then
        do n=1,nlevs
