@@ -345,11 +345,11 @@ contains
 
   subroutine analyze_hydro_grid(mla,dt,dx,step,umac,rho,temperature,scalars)
     type(ml_layout), intent(in   ) :: mla
-    real(dp_t)     , intent(inout) :: dt
+    real(dp_t)     , intent(in) :: dt
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step
-    type(multifab) , intent(inout), optional :: umac(:,:)
-    type(multifab) , intent(inout), dimension(:), optional :: rho, temperature, scalars
+    type(multifab) , intent(in), optional :: umac(:,:)
+    type(multifab) , intent(in), dimension(:), optional :: rho, temperature, scalars
   
     if(project_dir>0) then ! Only do 2D analysis
       write(*,*) "Calling analyze_hydro_grid_parallel"
@@ -360,78 +360,85 @@ contains
     end if
 
   end subroutine
-  
-  ! This analysis routine is serialized:
-  ! All the data from all the boxes is collected onto one processor and then analyzed
-  ! The advantage of this is that one can do some customized analysis that is hard to do in parallel
-  ! It is also the best one can do when one wants to analyze the whole grid instead of just projections
-  subroutine analyze_hydro_grid_serial(mla,dt,dx,step,umac,rho,temperature,scalars)
-    type(ml_layout), intent(in   ) :: mla
-    real(dp_t)     , intent(inout) :: dt
-    real(dp_t)     , intent(in   ) :: dx(:,:)
-    integer        , intent(in   ) :: step
-    type(multifab) , intent(inout), optional :: umac(:,:)
-    type(multifab) , intent(inout), dimension(:), optional :: rho, temperature, scalars
 
+  ! This routines collects a bunch of different variables into a single multifab for easier analysis
+  ! The components are ordered as, whenever present:
+  ! umac, rho, rho_k (analyze_conserved=T) or c_k=rho_k/rho, T, scalars
+  subroutine gather_hydro_grid(mla,s_hydro,umac,rho,temperature,scalars, variable_names)
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: s_hydro ! Output: collected grid data for analysis
+    type(multifab) , intent(in), optional :: umac(:,:)
+    type(multifab) , intent(in), dimension(:), optional :: rho, temperature, scalars
+    character(len=20), intent(out), optional :: variable_names(nvar)
+  
     ! Local
     integer :: i, ii, jj, n, nlevs, dm, pdim, comp, n_passive_scals, species
-    real(kind=dp_t), pointer, dimension(:,:,:,:) :: variables, p_v, p_rho, p_c, p_T, p_s
-    real(kind=dp_t), dimension(:,:), allocatable :: variables_1D ! Projection of data along project_dir
-
     type(multifab) :: mac_cc(mla%nlevel)
-    
-    nlevs = mla%nlevel
-    dm = mla%dim
-    pdim=abs(project_dir)
-
-    comp=1  
+ 
+    comp=1    
     if(present(umac)) then
-       ! Do a global gather to collect the full grid into a single box:
-       ! -------------------------
        do n=1,nlevs
           call multifab_build(mac_cc(n), mla%la(n), dm, 0)
        end do    
-       call StaggeredToCentered(mac_cc,mla,umac)
-       call copy(s_serial,1,mac_cc(1),1,dm)
+       call StaggeredToCentered(mac_cc, mla, umac)
+       call copy(s_hydro,1,mac_cc(1),1,dm)
        do n=1,nlevs
           call multifab_destroy(mac_cc(n))
-       end do       
-
+       end do
+       if(present(variable_names)) then
+         variable_names(comp)="v_x"
+         variable_names(comp+1)="v_y"
+         if(dm>2) variable_names(comp+1)="v_z"
+       end if
        comp=comp+dm
     end if
     
     ! Now all the scalars
     n_passive_scals=nscal_analysis
-    ! Now gather density
     if(present(rho)) then
+       
        if(n_passive_scals<nspecies_analysis+1) then
          call parallel_abort("Insufficient nscal_analysis to store densities")
        end if
+       
+       if(present(variable_names)) then
+         variable_names(comp)="rho"
+       end if
        if(nspecies_analysis==0) then ! Only density
-          call copy(s_serial,comp,rho(1),1,1)
+          call copy(s_hydro,comp,rho(1),1,1)
        else if(exclude_last_species) then
-          call copy(s_serial,comp,rho(1),1,nspecies_analysis) ! Copy rho,rho_1,...,rho_{n-1}
+          call copy(s_hydro,comp,rho(1),1,nspecies_analysis) ! Copy rho,rho_1,...,rho_{n-1}
           ! Now compute rho_n as the difference rho-\sum_{i=1}^{n-1} rho_i
-          call setval(s_serial, 0.0d0, nspecies_analysis+comp)
+          call setval(s_hydro, 0.0d0, nspecies_analysis+comp)
           do species=1, nspecies_analysis-1
-             call multifab_sub_sub_c(s_serial,nspecies_analysis+comp,s_serial,species+comp,1)
+             call multifab_sub_sub_c(s_hydro,nspecies_analysis+comp,s_hydro,species+comp,1)
           end do
+          if(present(variable_names)) then
+             do species=1, nspecies_analysis
+               write(variable_names(comp),"(A,I0)") "rho_", species
+             end do
+          end if
        else
-          call copy(s_serial,comp+1,rho(1),1,nspecies_analysis)
+          call copy(s_hydro,comp+1,rho(1),1,nspecies_analysis)
           ! Compute total density as a sum of densities rho=\sum_{i=1}^{n} rho_i
-          call setval(s_serial, 0.0d0, comp)
+          call setval(s_hydro, 0.0d0, comp)
           do species=1, nspecies_analysis
-             call multifab_plus_plus_c(s_serial,comp,s_serial,species+comp,1)
+             call multifab_plus_plus_c(s_hydro,comp,s_hydro,species+comp,1)
           end do
+          if(present(variable_names)) then
+             do species=1, nspecies_analysis
+               write(variable_names(comp),"(A,I0)") "c_", species
+             end do
+          end if
        end if
        
        ! Now convert to mass fractions instead of densities (primitive variables)
        if(.not.analyze_conserved) then
           do species=1, nspecies_analysis
-             call multifab_div_div_c(s_serial,species+comp,s_serial,comp,1)
+             call multifab_div_div_c(s_hydro,species+comp,s_hydro,comp,1)
           end do
        end if
-       
+    
        comp=comp+nspecies_analysis+1
        n_passive_scals=n_passive_scals-nspecies_analysis-1
     end if
@@ -440,7 +447,10 @@ contains
        if(n_passive_scals<1) then
          call parallel_abort("Insufficient nscal_analysis to store temperature")
        end if
-       call copy(s_serial,comp,temperature(1),1,1)
+       call copy(s_hydro,comp,temperature(1),1,1)
+       if(present(variable_names)) then
+         variable_names(comp)="T"
+       end if
        comp=comp+1    
        n_passive_scals=n_passive_scals-1
     end if
@@ -449,8 +459,91 @@ contains
        if(n_passive_scals<1) then
          call parallel_abort("No room left to store passive scalars, nscal_analysis too small")
        end if
-       call copy(s_serial,comp,scalars(1),1,n_passive_scals)
+       if(present(variable_names)) then
+          do species=1, n_passive_scals
+            write(variable_names(comp),"(A,I0)") "s_", species
+          end do
+       end if
+       call copy(s_hydro,comp,scalars(1),1,n_passive_scals)
     end if
+  
+  end subroutine
+
+  subroutine point_to_hydro_grid(variables,p_v, p_rho, p_c, p_T, p_s, &
+                                 umac,rho,temperature,scalars)
+    real(kind=dp_t), dimension(:,:,:,:), target, intent(in)   :: variables
+    real(kind=dp_t), pointer, dimension(:,:,:,:), intent(out) :: p_v, p_rho, p_c, p_T, p_s
+    type(multifab) , intent(in), optional :: umac(:,:)
+    type(multifab) , intent(in), dimension(:), optional :: rho, temperature, scalars
+  
+    ! Local
+    integer :: i, ii, jj, n, nlevs, dm, pdim, comp, n_passive_scals, species
+    
+    comp=1  
+    if(present(umac)) then
+       p_v=>variables(:,:,:,comp:comp+dm-1)
+       write(*,*) "p_v LBOUND=", lbound(p_v), " UBOUND=", ubound(p_v)
+       comp=comp+dm
+    else
+       p_v=>NULL()   
+    end if
+
+    ! Now all the scalars
+    n_passive_scals=nscal_analysis
+    ! Now gather density
+    if(present(rho)) then
+       p_rho => variables(:,:,:,comp:comp)
+       p_c => variables(:,:,:,comp+1:comp+nspecies_analysis)
+       write(*,*) "p_rho LBOUND=", lbound(p_rho), " UBOUND=", ubound(p_rho)
+       write(*,*) "p_c LBOUND=", lbound(p_c), " UBOUND=", ubound(p_c)
+       comp=comp+nspecies_analysis+1
+       n_passive_scals=n_passive_scals-nspecies_analysis-1
+    else
+       p_rho=>NULL()   
+       p_c=>NULL()             
+    end if
+
+    if(present(temperature)) then
+       p_T => variables(:,:,:,comp:comp)
+       comp=comp+1    
+       n_passive_scals=n_passive_scals-1
+       write(*,*) "p_T LBOUND=", lbound(p_T), " UBOUND=", ubound(p_T)
+    else
+       p_T=>NULL()  
+    end if
+
+    if(present(scalars)) then
+       p_s => variables(:,:,:,comp:nscal_analysis)
+       write(*,*) "p_s LBOUND=", lbound(p_s), " UBOUND=", ubound(p_s)
+    else
+       p_s=>NULL()   
+    end if
+
+  end subroutine
+  
+  ! This analysis routine is serialized:
+  ! All the data from all the boxes is collected onto one processor and then analyzed
+  ! The advantage of this is that one can do some customized analysis that is hard to do in parallel
+  ! It is also the best one can do when one wants to analyze the whole grid instead of just projections
+  subroutine analyze_hydro_grid_serial(mla,dt,dx,step,umac,rho,temperature,scalars)
+    type(ml_layout), intent(in   ) :: mla
+    real(dp_t)     , intent(in) :: dt
+    real(dp_t)     , intent(in   ) :: dx(:,:)
+    integer        , intent(in   ) :: step
+    type(multifab) , intent(in), optional :: umac(:,:)
+    type(multifab) , intent(in), dimension(:), optional :: rho, temperature, scalars
+
+    ! Local
+    integer :: i, ii, jj, n, nlevs, dm, pdim, comp, n_passive_scals, species
+    real(kind=dp_t), pointer, dimension(:,:,:,:) :: variables, p_v, p_rho, p_c, p_T, p_s
+    real(kind=dp_t), dimension(:,:), allocatable :: variables_1D ! Projection of data along project_dir
+    
+    nlevs = mla%nlevel
+    dm = mla%dim
+    pdim=abs(project_dir)
+
+    ! Gather all the hydro data into a single multifab
+    call gather_hydro_grid(mla,s_serial,umac,rho,temperature,scalars)
     
     if(parallel_IOProcessor()) then  
        write(*,*) "Calling updateHydroAnalysis on 3D, 2D and 1D grids"
@@ -479,45 +572,10 @@ contains
        end if
        
        ! Point pointers to the right places, if present, NULL otherwise
-       comp=1  
-       if(present(umac)) then
-          p_v=>variables(:,:,:,comp:comp+dm-1)
-          write(*,*) "p_v LBOUND=", lbound(p_v), " UBOUND=", ubound(p_v)
-          comp=comp+dm
-       else
-          p_v=>NULL()   
-       end if
-
-       ! Now all the scalars
-       n_passive_scals=nscal_analysis
-       ! Now gather density
-       if(present(rho)) then
-          p_rho => variables(:,:,:,comp:comp)
-          p_c => variables(:,:,:,comp+1:comp+nspecies_analysis)
-          write(*,*) "p_rho LBOUND=", lbound(p_rho), " UBOUND=", ubound(p_rho)
-          write(*,*) "p_c LBOUND=", lbound(p_c), " UBOUND=", ubound(p_c)
-          comp=comp+nspecies_analysis+1
-          n_passive_scals=n_passive_scals-nspecies_analysis-1
-       else
-          p_rho=>NULL()   
-          p_c=>NULL()             
-       end if
-
-       if(present(temperature)) then
-          p_T => variables(:,:,:,comp:comp)
-          comp=comp+1    
-          n_passive_scals=n_passive_scals-1
-          write(*,*) "p_T LBOUND=", lbound(p_T), " UBOUND=", ubound(p_T)
-       else
-          p_T=>NULL()  
-       end if
-
-       if(present(scalars)) then
-          p_s => variables(:,:,:,comp:nscal_analysis)
-          write(*,*) "p_s LBOUND=", lbound(p_s), " UBOUND=", ubound(p_s)
-       else
-          p_s=>NULL()   
-       end if
+       call point_to_hydro_grid(variables,p_v, p_rho, p_c, p_T, p_s, &
+                                umac,rho,temperature,scalars)
+       write(*,*) "associated=", associated(p_v), associated(p_rho), &
+                   associated(p_c), associated(p_T), associated(p_s)
 
        call updateHydroAnalysisPrimitive (grid, velocity=p_v, &
            density=p_rho, concentration=p_c, temperature=p_T, scalars=p_s)
@@ -545,11 +603,11 @@ contains
   ! hyperpane in parallel.  Then it serializes the analysis of those projections
   subroutine analyze_hydro_grid_parallel(mla,dt,dx,step,umac,rho,temperature,scalars)
     type(ml_layout), intent(in   ) :: mla
-    real(dp_t)     , intent(inout) :: dt
+    real(dp_t)     , intent(in) :: dt
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step
-    type(multifab) , intent(inout), optional :: umac(:,:)
-    type(multifab) , intent(inout), dimension(:), optional :: rho,temperature,scalars
+    type(multifab) , intent(in), optional :: umac(:,:)
+    type(multifab) , intent(in), dimension(:), optional :: rho,temperature,scalars
    
     ! Local
     integer species, n_passive_scals, comp
@@ -561,8 +619,6 @@ contains
                                                     p_v, p_rho, p_c, p_T, p_s
     real(kind=dp_t), dimension(:,:,:,:), allocatable, target :: variables_1D, variables_1D_proc
       ! Projection of data along project_dir
-
-    type(multifab) :: mac_cc(mla%nlevel)
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -583,72 +639,7 @@ contains
     ! Re-distribute the full grid into a grid of "tall skinny boxes"
     ! These boxes are not distributed along project_dim so we can do local analysis easily
     ! -------------------------
-    comp=1
-    
-    if(present(umac)) then
-       do n=1,nlevs
-          call multifab_build(mac_cc(n), mla%la(n), dm, 0)
-       end do    
-       call StaggeredToCentered(mac_cc, mla, umac)
-       call copy(s_dir,1,mac_cc(1),1,dm)
-       do n=1,nlevs
-          call multifab_destroy(mac_cc(n))
-       end do
-       comp=comp+dm
-    end if
-    
-    ! Now all the scalars
-    n_passive_scals=nscal_analysis
-    if(present(rho)) then
-       
-       if(n_passive_scals<nspecies_analysis+1) then
-         call parallel_abort("Insufficient nscal_analysis to store densities")
-       end if
-       
-       if(nspecies_analysis==0) then ! Only density
-          call copy(s_dir,comp,rho(1),1,1)
-       else if(exclude_last_species) then
-          call copy(s_dir,comp,rho(1),1,nspecies_analysis) ! Copy rho,rho_1,...,rho_{n-1}
-          ! Now compute rho_n as the difference rho-\sum_{i=1}^{n-1} rho_i
-          call setval(s_dir, 0.0d0, nspecies_analysis+comp)
-          do species=1, nspecies_analysis-1
-             call multifab_sub_sub_c(s_dir,nspecies_analysis+comp,s_dir,species+comp,1)
-          end do
-       else
-          call copy(s_dir,comp+1,rho(1),1,nspecies_analysis)
-          ! Compute total density as a sum of densities rho=\sum_{i=1}^{n} rho_i
-          call setval(s_dir, 0.0d0, comp)
-          do species=1, nspecies_analysis
-             call multifab_plus_plus_c(s_dir,comp,s_dir,species+comp,1)
-          end do
-       end if
-       
-       ! Now convert to mass fractions instead of densities (primitive variables)
-       if(.not.analyze_conserved) then
-          do species=1, nspecies_analysis
-             call multifab_div_div_c(s_dir,species+comp,s_dir,comp,1)
-          end do
-       end if
-    
-       comp=comp+nspecies_analysis+1
-       n_passive_scals=n_passive_scals-nspecies_analysis-1
-    end if
-    
-    if(present(temperature)) then
-       if(n_passive_scals<1) then
-         call parallel_abort("Insufficient nscal_analysis to store temperature")
-       end if
-       call copy(s_dir,comp,temperature(1),1,1)
-       comp=comp+1    
-       n_passive_scals=n_passive_scals-1
-    end if
-    
-    if(present(scalars)) then
-       if(n_passive_scals<1) then
-         call parallel_abort("No room left to store passive scalars, nscal_analysis too small")
-       end if
-       call copy(s_dir,comp,scalars(1),1,n_passive_scals)
-    end if
+    call gather_hydro_grid(mla,s_dir,umac,rho,temperature,scalars)
     
     ! Compute s_projected as the average along project_dim
     ! -------------------------
@@ -686,46 +677,11 @@ contains
        variables  => dataptr(s_serial,1) ! Gets all of the components
 
        ! Point pointers to the right places, if present, NULL otherwise
-       comp=1  
-       if(present(umac)) then
-          p_v=>variables(:,:,:,comp:comp+dm-1)
-          write(*,*) "p_v LBOUND=", lbound(p_v), " UBOUND=", ubound(p_v)
-          comp=comp+dm
-       else
-          p_v=>NULL()   
-       end if
-
-       ! Now all the scalars
-       n_passive_scals=nscal_analysis
-       ! Now gather density
-       if(present(rho)) then
-          p_rho => variables(:,:,:,comp:comp)
-          p_c => variables(:,:,:,comp+1:comp+nspecies_analysis)
-          write(*,*) "p_rho LBOUND=", lbound(p_rho), " UBOUND=", ubound(p_rho)
-          write(*,*) "p_c LBOUND=", lbound(p_c), " UBOUND=", ubound(p_c)
-          comp=comp+nspecies_analysis+1
-          n_passive_scals=n_passive_scals-nspecies_analysis-1
-       else
-          p_rho=>NULL()   
-          p_c=>NULL()             
-       end if
-
-       if(present(temperature)) then
-          p_T => variables(:,:,:,comp:comp)
-          comp=comp+1    
-          n_passive_scals=n_passive_scals-1
-          write(*,*) "p_T LBOUND=", lbound(p_T), " UBOUND=", ubound(p_T)
-       else
-          p_T=>NULL()  
-       end if
-
-       if(present(scalars)) then
-          p_s => variables(:,:,:,comp:nscal_analysis)
-          write(*,*) "p_s LBOUND=", lbound(p_s), " UBOUND=", ubound(p_s)
-       else
-          p_s=>NULL()   
-       end if
-
+       call point_to_hydro_grid(variables,p_v, p_rho, p_c, p_T, p_s, &
+                                 umac,rho,temperature,scalars)
+       write(*,*) "associated=", associated(p_v), associated(p_rho), &
+                   associated(p_c), associated(p_T), associated(p_s)
+                                 
        call updateHydroAnalysisPrimitive (grid_2D, velocity=p_v, &
            density=p_rho, concentration=p_c, temperature=p_T, scalars=p_s)
 
@@ -733,45 +689,10 @@ contains
        write(*,*) "Calling updateHydroAnalysis on 1D grid"
 
        ! Point pointers to the right places, if present, NULL otherwise
-       comp=1  
-       if(present(umac)) then
-          p_v=>variables_1D(:,:,:,comp:comp+dm-1)
-          write(*,*) "p_v LBOUND=", lbound(p_v), " UBOUND=", ubound(p_v)
-          comp=comp+dm
-       else
-          p_v=>NULL()   
-       end if
-
-       ! Now all the scalars
-       n_passive_scals=nscal_analysis
-       ! Now gather density
-       if(present(rho)) then
-          p_rho => variables_1D(:,:,:,comp:comp)
-          p_c => variables_1D(:,:,:,comp+1:comp+nspecies_analysis)
-          write(*,*) "p_rho LBOUND=", lbound(p_rho), " UBOUND=", ubound(p_rho)
-          write(*,*) "p_c LBOUND=", lbound(p_c), " UBOUND=", ubound(p_c)
-          comp=comp+nspecies_analysis+1
-          n_passive_scals=n_passive_scals-nspecies_analysis-1
-       else
-          p_rho=>NULL()   
-          p_c=>NULL()             
-       end if
-
-       if(present(temperature)) then
-          p_T => variables_1D(:,:,:,comp:comp)
-          comp=comp+1    
-          n_passive_scals=n_passive_scals-1
-          write(*,*) "p_T LBOUND=", lbound(p_T), " UBOUND=", ubound(p_T)
-       else
-          p_T=>NULL()  
-       end if
-
-       if(present(scalars)) then
-          p_s => variables_1D(:,:,:,comp:nscal_analysis)
-          write(*,*) "p_s LBOUND=", lbound(p_s), " UBOUND=", ubound(p_s)
-       else
-          p_s=>NULL()   
-       end if
+       call point_to_hydro_grid(variables_1D,p_v, p_rho, p_c, p_T, p_s, &
+                                 umac,rho,temperature,scalars)
+       write(*,*) "associated=", associated(p_v), associated(p_rho), &
+                   associated(p_c), associated(p_T), associated(p_s)
 
        call updateHydroAnalysisPrimitive (grid_1D, velocity=p_v, &
            density=p_rho, concentration=p_c, temperature=p_T, scalars=p_s)
@@ -827,35 +748,30 @@ contains
 
   end subroutine
 
-  subroutine print_stats(mla,s_in,m_in,umac,rho,dx,step,time)
-
-    ! This subroutine writes out the mean and variance of all variables using
-    ! different averaging techniques.
-    !
-    ! We work with m_in and s_in (if analyze_conserved=T) or umac and rho (=F).
-    !
-    ! First, it writes out "vertical" averages, as defined by the
-    ! pdim=abs(project_dir) direction.
-    ! Thus, in 3D, it writes out a "2D" plotfile (a 3D plotfile with ncell=1
-    ! in the pdim direction) called "vstatXXXXXX".
-    ! In 2D, it writes out a 1D text file, also called "vstatXXXXX"
-    !
-    ! Next, it writes out "horizontal" averages.
-    ! Thus, in both 2D and 3D, it writes out a 1D text file called "hstatXXXXXX"
-
+  ! This subroutine writes out the mean and variance of all variables using
+  ! different averaging techniques.
+  !
+  ! We work with m_in and s_in (if analyze_conserved=T) or umac and rho (=F).
+  !
+  ! First, it writes out "vertical" averages, as defined by the
+  ! pdim=abs(project_dir) direction.
+  ! Thus, in 3D, it writes out a "2D" plotfile (a 3D plotfile with ncell=1
+  ! in the pdim direction) called "vstatXXXXXX".
+  ! In 2D, it writes out a 1D text file, also called "vstatXXXXX"
+  !
+  ! Next, it writes out "horizontal" averages.
+  ! Thus, in both 2D and 3D, it writes out a 1D text file called "hstatXXXXXX"
+  subroutine print_stats(mla,dt,dx,step,time,umac,rho,temperature,scalars)
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: s_in(:)
-    type(multifab) , intent(in   ) :: m_in(:,:)
-    type(multifab) , intent(in   ) :: umac(:,:)
-    type(multifab) , intent(in   ) :: rho(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    real(dp_t)     , intent(in) :: dt
+    real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: step
     real(kind=dp_t), intent(in   ) :: time
-
-    ! local
-    type(multifab) :: mac_cc(mla%nlevel)
-
-    integer nlevs,dm,pdim,qdim,qdim2,i,n
+    type(multifab) , intent(in), optional :: umac(:,:)
+    type(multifab) , intent(in), dimension(:), optional :: rho,temperature,scalars
+  
+    ! Local
+    integer nlevs,dm,pdim,qdim,qdim2,i,n,comp
     integer lo(3),hi(3)
     integer ii,jj,kk
 
@@ -892,21 +808,10 @@ contains
     ! COMPUTE AND WRITE OUT VERTICAL AVERAGE/VARIANCE
     !!!!!!!!!!!!!!!!!!!!!!!
 
-    ! copy m_in and s_in (if analyze_conserved=T) or umac and rho (=F)
-    ! into the tall skinny s_dir
-    do n=1,nlevs
-       call multifab_build(mac_cc(n), mla%la(n), dm, 0)
-    end do    
-    !FIXME: call StaggeredToCentered(mac_cc, mla,s_in,m_in,umac,rho)
-    call copy(s_dir,1,mac_cc(1),1,dm)
-    do n=1,nlevs
-       call multifab_destroy(mac_cc(n))
-    end do
-    if(analyze_conserved) then
-       call copy(s_dir,dm+1,s_in(1),1,nscal_analysis)
-    else
-       call copy(s_dir,dm+1,rho(1),1,nscal_analysis)
-    end if
+    ! Re-distribute the full grid into a grid of "tall skinny boxes"
+    ! These boxes are not distributed along project_dim so we can do local analysis easily
+    ! -------------------------
+    call gather_hydro_grid(mla,s_dir,umac,rho,temperature,scalars, variable_names(1:nvar))
 
     ! Compute s_projected (average) and s_var (variance)
     ! -------------------------
@@ -982,11 +887,13 @@ contains
           hi(1:dm) = upb(bx)
           open(1000, file=trim(plotfile_name), status = "unknown", action = "write")
 
-          if (analyze_conserved) then
-             write(1000,'(A)') "# mx_avg my_avg rho_avg rho*c_avg mx_var my_var rho_var rho*c_var"
-          else
-             write(1000,'(A)') "# umac_avg vmac_avg rho_avg c_avg umac_var vmac_var rho_var c_var"
-          end if
+          write(1000,'(A)', advance="no") "# 1=x, "
+          do comp=1, nvar
+             write(1000,'(I0,3A)', advance="no") comp+1,"=av(",trim(variable_names(comp)), "), "
+          end do
+          do comp=1, nvar
+             write(1000,'(I0,3A)', advance="no") comp+1,"=var(",trim(variable_names(comp)), "), "
+          end do
           do i=lo(qdim),hi(qdim)
              write(1000,'(1000(g17.9))') prob_lo(qdim) + (i+0.5d0)*dx(1,qdim), &
                   stats_1d(i,:)
@@ -1008,29 +915,9 @@ contains
        call multifab_copy_c(plotdata(1),1     ,s_projected,1,nvar)
        call multifab_copy_c(plotdata(1),nvar+1,s_var      ,1,nvar)
 
-       if (analyze_conserved) then
-          variable_names(1) = "mx_avg"
-          variable_names(2) = "my_avg"
-          variable_names(3) = "mz_avg"
-          variable_names(4) = "rho_avg"
-          variable_names(5) = "rho*c_avg"
-          variable_names(6) = "mx_var"
-          variable_names(7) = "my_var"
-          variable_names(8) = "mz_var"
-          variable_names(9) = "rho_var"
-          variable_names(10) = "rho*c_var"
-       else
-          variable_names(1) = "umac_avg"
-          variable_names(2) = "vmac_avg"
-          variable_names(3) = "wmac_avg"
-          variable_names(4) = "rho_avg"
-          variable_names(5) = "c_avg"
-          variable_names(6) = "umac_var"
-          variable_names(7) = "vmac_var"
-          variable_names(8) = "wmac_var"
-          variable_names(9) = "rho_var"
-          variable_names(10) = "c_var"
-       end if
+       do comp=1, nvar
+          variable_names(nvar+comp)="var-"//trim(variable_names(comp))
+       end do
 
        ! define the name of the plotfile that will be written
        write(unit=plotfile_name,fmt='("vstat",i6.6)') step
@@ -1123,21 +1010,15 @@ contains
        hi(1:dm) = upb(bx)
        open(1000, file=trim(plotfile_name), status = "unknown", action = "write")
 
-       if (analyze_conserved) then
-          if (dm .eq. 2) then
-             write(1000,'(A)') "# mx my rho rho*c mx_var my_var rho_var rho*c_var"
-          else if (dm .eq. 3) then
-             write(1000,'(A)') "# mx my mz rho rho*c mx_var my_var mz_var rho_var rho*c_var"
-          end if
-       else
-          if (dm .eq. 2) then
-             write(1000,'(A)') &
-             "# umac vmac rho c umac_var vmac_var rho_var c_var"
-          else if (dm .eq. 3) then
-             write(1000,'(A)') &
-             "# umac vmac wmac rho c umac_var vmac_var wmac_var rho_var c_var"
-          end if
-       end if
+       write(1000,'(A)', advance="no") "# 1=y, "
+       do comp=1, nvar
+          write(1000,'(I0,3A)', advance="no") comp+1,"=av(",trim(variable_names(comp)), "), "
+       end do
+       do comp=1, nvar
+          write(1000,'(I0,3A)', advance="no") comp+1,"=var(",trim(variable_names(comp)), "), "
+       end do
+       write(1000,*) ! New line
+
        do i=lo(pdim),hi(pdim)
           write(1000,'(1000(g17.9))') prob_lo(pdim) + (i+0.5d0)*dx(1,pdim), stats_1d(i,:)
        end do
