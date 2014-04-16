@@ -3,7 +3,7 @@
  dim_in = 2                       ! problem dimension
  plot_int = 0                  ! plot interval
  max_grid_size(1:2) = 32 32       ! individual box size 
- n_steps_skip = 1000              ! when to start analyzing data
+ n_steps_skip = 2000              ! when to start analyzing data
  k_B      = 1                  ! Boltzmann constant
 
  ! This can be used to select different problem types (in addition to init_type)
@@ -40,8 +40,8 @@
 &probin_multispecies
  
  nspecies = 3                     ! number of species
- max_step = 25000                   ! total number of computational step
- cfl1     = 0.01                   ! CFL number
+ max_step = 20000                   ! total number of computational step
+ cfl1     = 0.025                   ! CFL number
  chi      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_parameter = 1e-6        ! parameter to set variance (=1/thickness and =1 ideal) 
  Press    = 1.0                   ! Pressure
@@ -49,7 +49,7 @@
  start_time  = 0                  ! For manufactured solutions
  init_type = 0                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
- timeinteg_type = 1               ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=RK3
+ timeinteg_type = 3               ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=RK3
  correct_flux = .true.            ! correct flux to numeric roundoff
  use_stoch = .true.               ! use stochastic flux 
  print_error_norms = .false.      ! check L1/L2/Linf norm 
@@ -103,7 +103,7 @@
    structureFactorPairs = "0 5 0 6, 0 5 0 7, 0 6 0 7"
       
    outputFolder = "."
-   filePrefix = "3species_xy-Euler-cfl_0.01"
+   filePrefix = "3species_xy-mid-cfl_0.025"
    axisToPrint = 2 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
 /
