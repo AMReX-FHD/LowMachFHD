@@ -193,8 +193,9 @@ subroutine main_driver()
   ! initialize the time 
   time = start_time    
 
-  ! initialize rho
-  call init_rho(rho,Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
+  ! initialize rho and Temp
+  call init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
+  call init_Temp(Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
 
   !=====================================================================
   ! Initialize HydroGrid for analysis
