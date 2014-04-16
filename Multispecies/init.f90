@@ -17,7 +17,7 @@ module init_module
   ! init_type: 
   ! 0 = everything constant in space (thermodynamic equilibrium)
   ! 1 = rho in concentric circle (two values inside and outside concentric circular region), 
-  ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y), 2-species
+  ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y)
   ! 3 = gaussian spread with total density constant, 2-species
   ! 4 = manufactured solution for 2-species equal/unequal molarmass,gaussian-rho, time-independent-space-varying totaldensity
   ! 5 = manufactured solution for 3-species time-independent-space-varying density
@@ -90,7 +90,7 @@ contains
  
     ! local varables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2)
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,rho_loc,L(2)
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -107,9 +107,8 @@ contains
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
  
             rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
-            !Temp(i,j)          = 1.0d0 
-            Temp(i,j)          = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            !Temp(i,j)           = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+            Temp(i,j)           = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+            !Temp(i,j)          = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
 
          end do
       end do  
@@ -129,6 +128,8 @@ contains
             else
                rho(i,j,1:nspecies) = rho_in(2,1:nspecies)
             end if
+            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
     
          end do
       end do
@@ -141,14 +142,12 @@ contains
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1),hi(1)
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-    
-            rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
-
-            if(.false.) then
-            rho(i,j,1) = rho_in(1,1) + 0.001d0*x - 0.002d0*y
-            rho(i,j,2) = rho_in(1,2) + 0.003d0*x + 0.001d0*y
-            !rho(i,j,3) = rho_in(1,3) + 0.002d0*x - 0.001d0*y
-            end if
+   
+            ! linear gradient in rho
+            rho(i,j,1:nspecies) = rho_in(1,1:nspecies) + (rho_in(2,1:nspecies) - &
+                                  rho_in(1,1:nspecies))*y/L(1)
+            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
 
          end do
       end do
@@ -167,6 +166,8 @@ contains
             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
             rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
             rho(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
+            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
        
          end do
     end do
@@ -187,6 +188,8 @@ contains
             rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
                          beta*time)*rhot
             rho(i,j,2) = rhot - rho(i,j,1)
+            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
 
          end do
     end do
@@ -216,6 +219,8 @@ contains
               write(*,*), i, j, " w1=", w1, " w2=", w2, " rho1=",rho(i,j,1)," rho2=",rho(i,j,2),&
                           " rho3=",rho(i,j,3), " rhot=",rhot
             end if
+            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
  
             !if(i.eq.4 .and. j.eq.5) print*,'w1=',w1,'w2=',w2,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),&
             !                               'rho3=',rho(i,j,3),'rhot=',rhot
@@ -241,7 +246,7 @@ contains
  
     ! local variables
     integer          :: i,j,k
-    real(kind=dp_t)  :: x,y,z,rsq,tau,w1,w2,rhot,L(3)
+    real(kind=dp_t)  :: x,y,z,rsq,tau,w1,w2,rhot,rho_loc,L(3)
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
@@ -252,6 +257,7 @@ contains
     !================================================================================
     ! Thermodynamic equilibrium
     !================================================================================
+ 
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
@@ -261,7 +267,7 @@ contains
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0             
              
              rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
-             Temp(i,j,k) = cos(2.0d0*M_PI*x)
+             Temp(i,j,k) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
 
           end do
        end do
@@ -272,6 +278,7 @@ contains
     !================================================================================
     ! Initializing rho's in concentric circle at (Lx/2,Ly/2,Lz/2) with radius^2=0.001
     !================================================================================
+  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
@@ -286,6 +293,7 @@ contains
              else
                  rho(i,j,k,1:nspecies) = rho_in(2,1:nspecies)
              end if
+             Temp(i,j,k) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
           
           end do
        end do
@@ -296,6 +304,7 @@ contains
     !========================================================
     ! Initializing rho's with constant gradient for 2-species  
     !========================================================
+ 
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
@@ -303,14 +312,10 @@ contains
           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-    
-            rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
-      
-            if(.false.) then      
-               rho(i,j,k,1) = rho_in(1,1) + 0.001d0*x - 0.002d0*y + 0.003d0*z
-               rho(i,j,k,2) = rho_in(1,2) + 0.003d0*x + 0.001d0*y - 0.002d0*z
-               !rho(i,j,k,3) = rho_in(1,3) + 0.002d0*x - 0.001d0*y
-            endif    
+ 
+               rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies) + (rho_in(2,1:nspecies) - &
+                                       rho_in(1,1:nspecies))*y/L(1)
+               Temp(i,j,k)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
 
           end do
        end do
@@ -337,6 +342,7 @@ contains
                              Dbar_in(1)*time)**1.5d0
               rho(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*&
                              M_PI*Dbar_in(1)*time)**1.5d0
+              Temp(i,j,k)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
        
            end do
         end do
@@ -364,6 +370,7 @@ contains
               rho(i,j,k,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0*dexp(-rsq/&
                              (4.0d0*Dbar_in(1)*time) - time*beta)*rhot
               rho(i,j,k,2) = rhot - rho(i,j,k,1) 
+              Temp(i,j,k)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
 
            end do
         end do
@@ -391,6 +398,7 @@ contains
               rho(i,j,k,1) = rhot*w1
               rho(i,j,k,2) = rhot*w2
               rho(i,j,k,3) = rhot-rho(i,j,k,1)-rho(i,j,k,2)
+              Temp(i,j,k)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
            
               if(rho(i,j,k,1).lt.0.d0 .or. rho(i,j,k,2).lt.0.d0 .or. rho(i,j,k,3).lt.0.d0) then 
                  write(*,*), "rho1 / rho2 / rho3 is negative: STOP"

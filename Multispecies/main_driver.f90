@@ -274,6 +274,10 @@ subroutine main_driver()
       ! write plotfile at specific intervals
       if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
 
+         ! print mass conservation and write plotfiles
+         write(*,*), 'ensuring conservation and writing plotfiles at timestep =', istep 
+         call sum_mass(rho, istep)
+
          call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time,prob_lo,prob_hi)
          call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time,prob_lo,prob_hi)
          call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time,prob_lo,prob_hi)
