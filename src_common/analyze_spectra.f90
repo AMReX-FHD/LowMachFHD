@@ -565,7 +565,7 @@ contains
     call gather_hydro_grid(mla,s_serial,umac,rho,temperature,scalars)
     
     if(parallel_IOProcessor()) then  
-       write(*,*) "Calling updateHydroAnalysis on 3D, 2D and 1D grids"
+       !write(*,*) "Calling updateHydroAnalysis on 3D+2D+1D grids (serial)"
 
        ! Get to the actual data
        variables  => dataptr(s_serial,1) ! Gets all of the components
@@ -691,7 +691,7 @@ contains
     end do
 
     if(parallel_IOProcessor()) then  
-       write(*,*) "Calling updateHydroAnalysis on 2D+1D grid"
+       !write(*,*) "Calling updateHydroAnalysis on 2D+1D grid (parallel)"
 
        variables  => dataptr(s_serial,1) ! Gets all of the components
 

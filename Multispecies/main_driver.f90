@@ -321,12 +321,12 @@ subroutine main_driver()
   if (parallel_IOProcessor()) then
      if(use_stoch) then
      
-     print*, 'numeric cov of W'
+     print*, 'Normalized numeric cov of W'
      do i=1,nspecies
         do j=1,nspecies
            covW(i,j) = wiwjt(i,j)/step_count - wit(i)*wit(j)/step_count**2
         end do
-        print*, covW(i,:)
+        print*, covW(i,:)/variance_parameter
      end do
      
      if(nspecies .eq. 2) then 
@@ -334,43 +334,43 @@ subroutine main_driver()
         write(*,*), ''
         write(*,*), (molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)*&
                     variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4), -(molmass(1)*&
-                    rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)*variance_parameter/(&
+                    rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/(&
                     product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4)
         write(*,*), -(molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)*&
                     variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4), (molmass(1)*&
-                    rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)*variance_parameter/(&
+                    rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/(&
                     product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4)
 
      else if(nspecies .eq. 3) then
         write(*,*), 'analyic cov of W for 3-species'
         write(*,*), ''
         write(*,*), (rho_in(1,1)*(molmass(2)*rho_in(1,1)*rho_in(1,2) + molmass(3)*rho_in(1,1)*rho_in(1,3) +& 
-                    molmass(1)*(rho_in(1,2) + rho_in(1,3))**2))*variance_parameter/(product(dx(1,1:dm))*(&
+                    molmass(1)*(rho_in(1,2) + rho_in(1,3))**2))/(product(dx(1,1:dm))*(&
                     rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4), -((rho_in(1,1)*rho_in(1,2)*(-(molmass(3)*&
                     rho_in(1,3)) + molmass(2)*(rho_in(1,1) + rho_in(1,3)) + molmass(1)*(rho_in(1,2) +& 
-                    rho_in(1,3))))*variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) +& 
+                    rho_in(1,3))))/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) +& 
                     rho_in(1,3))**4)), -((rho_in(1,1)*rho_in(1,3)*(-(molmass(2)*rho_in(1,2)) + molmass(3)*(&
-                    rho_in(1,1) + rho_in(1,2)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))*variance_parameter/(&
+                    rho_in(1,1) + rho_in(1,2)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(&
                     product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4))
         write(*,*), -((rho_in(1,1)*rho_in(1,2)*(-(molmass(3)*rho_in(1,3)) + molmass(2)*(rho_in(1,1) +& 
-                    rho_in(1,3)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))*variance_parameter/(&
+                    rho_in(1,3)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(&
                     product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)), (rho_in(1,2)*&
                     (molmass(2)*(rho_in(1,1) + rho_in(1,3))**2 + rho_in(1,2)*(molmass(1)*rho_in(1,1) +&
-                    molmass(3)*rho_in(1,3))))*variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1) +& 
+                    molmass(3)*rho_in(1,3))))/(product(dx(1,1:dm))*(rho_in(1,1) +& 
                     rho_in(1,2) + rho_in(1,3))**4), -((rho_in(1,2)*rho_in(1,3)*(-(molmass(1)*rho_in(1,1)) +& 
                     molmass(3)*(rho_in(1,1) + rho_in(1,2)) + molmass(2)*(rho_in(1,1) + rho_in(1,3))))*&
                     variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)) 
         write(*,*), -((rho_in(1,1)*rho_in(1,3)*(-(molmass(2)*rho_in(1,2)) + molmass(3)*(rho_in(1,1) +& 
-                    rho_in(1,2)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))*variance_parameter/(product(&
+                    rho_in(1,2)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(product(&
                     dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)), -((rho_in(1,2)*rho_in(1,3)*&
                     (-(molmass(1)*rho_in(1,1)) + molmass(3)*(rho_in(1,1) + rho_in(1,2)) + molmass(2)*(&
-                    rho_in(1,1) + rho_in(1,3))))*variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1) +&  
+                    rho_in(1,1) + rho_in(1,3))))/(product(dx(1,1:dm))*(rho_in(1,1) +&  
                     rho_in(1,2) + rho_in(1,3))**4)), (rho_in(1,3)*(molmass(3)*(rho_in(1,1) + rho_in(1,2))**2 +& 
-                    (molmass(1)*rho_in(1,1) + molmass(2)*rho_in(1,2))*rho_in(1,3)))*variance_parameter/(&
+                    (molmass(1)*rho_in(1,1) + molmass(2)*rho_in(1,2))*rho_in(1,3)))/(&
                     product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)
       else if(nspecies .eq. 4) then
         write(*,*), 'analyic cov of W for 4-species'
-        loc_param = variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3) +& 
+        loc_param = 1.0d0/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3) +& 
                     rho_in(1,4)))
         write(*,*), ''
         write(*,*),  0.174d0*loc_param, -0.024d0*loc_param,  -0.018d0*loc_param,  -0.132d0*loc_param 
