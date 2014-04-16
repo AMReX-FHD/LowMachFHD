@@ -11,7 +11,7 @@ subroutine main_driver()
   use define_bc_module
   use bc_module
   use analysis_module
-  !use analyze_spectra_module
+  use analyze_spectra_module
   use ParallelRNGs 
   use convert_mass_variables_module
   use probin_common_module
@@ -199,7 +199,7 @@ subroutine main_driver()
   !=====================================================================
   ! Initialize HydroGrid for analysis
   !=====================================================================
-  if(abs(hydro_grid_int)>0 .or. stats_int>0) then
+  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
      narg = command_argument_count()
      farg = 1
      if (narg >= 1) then
@@ -209,9 +209,10 @@ subroutine main_driver()
            un = unit_new()
            open(unit=un, file = fname, status = 'old', action = 'read')
            
-           !call initialize_hydro_grid(mla,rho,dt,dx, namelist_file=un, &
-           !       nspecies_in=nspecies, nscal_in=0, &
-           !       exclude_last_species_in=.false., analyze_velocity=.false.)
+           ! We will also pass temperature here
+           call initialize_hydro_grid(mla,rho,dt,dx, namelist_file=un, &
+                  nspecies_in=nspecies, nscal_in=1, exclude_last_species_in=.false., &
+                  analyze_density=.true., analyze_velocity=.false.)
            
            close(unit=un)
         end if
@@ -239,7 +240,6 @@ subroutine main_driver()
   if (parallel_IOProcessor()) then
      write(*,*) "Using time step dt =", dt
      if(use_stoch) write(*,*), "Noise variance =", sqrt(2.d0*k_B*variance_parameter/(product(dx(1,1:dm))*dt))
-
   end if
 
   ! free up memory counters for time-average, covariance and <wi>, <wiwj>
@@ -250,47 +250,68 @@ subroutine main_driver()
 
   do istep=1,max_step
 
-     if (parallel_IOProcessor()) then
-        !print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-     end if
+      if (parallel_IOProcessor()) then
+         !print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+      end if
 
-     ! advance the solution by dt
-     call advance(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
+      ! advance the solution by dt
+      call advance(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
-     ! print out the total mass to check conservation
-     !call sum_mass(rho, istep)
+      ! print out the total mass to check conservation
+      !call sum_mass(rho, istep)
 
-     ! compute error norms
-     if (print_error_norms) then
-        call print_errors(rho,rho_exact,Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
-     end if
+      ! compute error norms
+      if (print_error_norms) then
+         call print_errors(rho,rho_exact,Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
+      end if
 
-     ! compute coavariance and variances (after typical relaxation ~ L^2/D) 
-     if(max_step .gt. n_steps_skip) then 
-        call compute_cov(mla,rho,wit,wiwjt)    
-        step_count = step_count + 1 
-     end if 
+      ! compute coavariance and variances (after typical relaxation ~ L^2/D) 
+      if(istep .gt. n_steps_skip) then 
+      end if 
 
-     ! write plotfile at specific intervals
-     if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
-        
-        call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time,prob_lo,prob_hi)
-        call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time,prob_lo,prob_hi)
-        call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time,prob_lo,prob_hi)
-        call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time,prob_lo,prob_hi)
+      ! write plotfile at specific intervals
+      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
 
-        ! difference between rho and rho_exact
-        do n=1,nlevs
-           call saxpy(rho_exact(n),-1.0d0,rho(n))
-        end do
-        
-        ! check error with visit
-        call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time,prob_lo,prob_hi)
- 
-     end if
+         call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time,prob_lo,prob_hi)
+         call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time,prob_lo,prob_hi)
+         call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time,prob_lo,prob_hi)
+         call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time,prob_lo,prob_hi)
+
+         ! difference between rho and rho_exact
+         do n=1,nlevs
+            call saxpy(rho_exact(n),-1.0d0,rho(n))
+         end do
+
+         ! check error with visit
+         call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time,prob_lo,prob_hi)
+
+      end if
      
-     ! increment simulation time
-     time = time + dt
+      if (istep > n_steps_skip) then
+
+         ! print out projection (average) and variance
+         if ( (stats_int > 0) .and. &
+               (mod(istep-n_steps_skip,stats_int) .eq. 0) ) then
+            ! Compute vertical and horizontal averages (hstat and vstat files)   
+            call print_stats(mla,dx,istep-n_steps_skip,time,rho=rho,temperature=Temp)            
+         end if
+
+         ! Add this snapshot to the average in HydroGrid
+         if ( (hydro_grid_int > 0) .and. &
+              ( mod(istep-n_steps_skip,hydro_grid_int) .eq. 0 ) ) then
+            call analyze_hydro_grid(mla,dt,dx,istep-n_steps_skip,rho=rho,temperature=Temp)           
+         end if
+
+         if ( (hydro_grid_int > 0) .and. &
+              (n_steps_save_stats > 0) .and. &
+              ( mod(istep-n_steps_skip,n_steps_save_stats) .eq. 0 ) ) then
+              call save_hydro_grid(id=(istep-n_steps_skip)/n_steps_save_stats, step=istep)            
+         end if
+
+      end if
+     
+      ! increment simulation time
+      time = time + dt
         
   end do
 
@@ -368,6 +389,10 @@ subroutine main_driver()
   !=======================================================
   ! Destroy multifabs and layouts
   !=======================================================
+
+  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
+     call finalize_hydro_grid()
+  end if
 
   deallocate(molmass)
   deallocate(covW)

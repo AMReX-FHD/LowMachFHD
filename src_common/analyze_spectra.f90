@@ -44,6 +44,11 @@ module analyze_spectra_module
   ! Note: analyze_conserved determines whether we analyze densities rho_k or mass fractions w_k=rho_k/rho
   ! All other quantities are assumed to be primitive
   ! but of course you can pass conserved ones and the code won't know you lied!
+  
+  ! project_dir determines a direction for performing projections, if desired
+  ! If positive, it means only analyze projections (in parallel, much more efficient)
+  ! If negative, it does serialized analysis of the whole grid *and* the projections
+  ! If zero, it only does serialized analysis of the whole grid
    
 contains   
 
