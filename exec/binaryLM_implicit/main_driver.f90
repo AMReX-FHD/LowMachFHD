@@ -443,6 +443,14 @@ subroutine main_driver()
   if (plot_int .gt. 0) then
      call write_plotfile(mla,mold,umac,sold,pold,dx,time,0)
   end if
+  ! print out projection (average) and variance)
+  if (stats_int .gt. 0) then
+     if(analyze_binary) then   
+        call print_stats_bin(mla,sold,mold,umac,prim,dx,0,time)
+     else
+        call print_stats(mla,dx,0,time,umac=umac,rho=sold)
+     end if
+  end if
   
   do istep=1,max_step
 
