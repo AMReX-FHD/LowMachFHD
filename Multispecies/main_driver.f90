@@ -266,7 +266,9 @@ subroutine main_driver()
       end if
 
       ! compute coavariance and variances (after typical relaxation ~ L^2/D) 
-      if(istep .gt. n_steps_skip) then 
+      if(istep .gt. n_steps_skip) then
+        call compute_cov(mla,rho,wit,wiwjt)
+        step_count = step_count + 1
       end if 
 
       ! write plotfile at specific intervals
