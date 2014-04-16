@@ -288,6 +288,9 @@ subroutine main_driver()
       end if
      
       if (istep > n_steps_skip) then
+         ! Compute covariances manually for initial testing (HydroGrid now does the same)
+         call compute_cov(mla,rho,wit,wiwjt)    
+         step_count = step_count + 1 
 
          ! print out projection (average) and variance
          if ( (stats_int > 0) .and. &
