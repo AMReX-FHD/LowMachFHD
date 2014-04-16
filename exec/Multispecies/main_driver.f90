@@ -212,8 +212,12 @@ subroutine main_driver()
            
            ! We will also pass temperature here
            call initialize_hydro_grid(mla,rho,dt,dx, namelist_file=un, &
-                  nspecies_in=nspecies, nscal_in=1, exclude_last_species_in=.false., &
-                  analyze_density=.true., analyze_velocity=.false.)
+                                      nspecies_in=nspecies, &
+                                      nscal_in=1, &
+                                      exclude_last_species_in=.false., &
+                                      analyze_velocity=.false., &
+                                      analyze_density=.true., &
+                                      analyze_temperature=.true.)
            
            close(unit=un)
         end if
