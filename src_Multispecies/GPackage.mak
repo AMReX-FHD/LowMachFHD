@@ -1,0 +1,16 @@
+f90sources += advance.f90
+f90sources += analysis.f90
+f90sources += convert_mass_variables.f90
+f90sources += correction_flux.f90
+f90sources += diffusive_flux.f90
+f90sources += diffusive_mass_fluxdiv.f90
+f90sources += external_force.f90 
+f90sources += fluid_model.f90 
+f90sources += init.f90
+f90sources += matmat_mul.f90
+f90sources += matrix_utilities.f90
+f90sources += matvec_mul.f90
+f90sources += probin_multispecies.f90
+f90sources += stochastic_mass_fluxdiv.f90
+f90sources += write_plotfile.f90
+f90sources += write_plotfile1.f90

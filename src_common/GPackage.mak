@@ -9,6 +9,7 @@ f90sources += main.f90
 f90sources += main_driver.f90
 f90sources += mk_advective_m_fluxdiv.f90
 f90sources += mk_advective_s_fluxdiv.f90
+f90sources += multifab_coefbc.f90
 f90sources += multifab_fill_random.f90
 f90sources += multifab_filter.f90
 f90sources += multifab_physbc_stag.f90
