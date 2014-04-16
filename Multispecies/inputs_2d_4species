@@ -1,9 +1,9 @@
 &probin_common
  
  dim_in = 2                              ! problem dimension
- plot_int = 100                       ! plot interval
+ plot_int = 1000                       ! plot interval
  max_grid_size(1:2) = 16 16              ! individual box size 
- n_steps_skip = 1000                       ! when to start analyzing data
+ n_steps_skip = 500                       ! when to start analyzing data
  k_B      = 1E-3                         ! Boltzmann constant
 
  ! Grid size
