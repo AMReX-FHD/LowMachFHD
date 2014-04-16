@@ -258,7 +258,9 @@ subroutine main_driver()
       call advance(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
       ! print out the total mass to check conservation
-      !call sum_mass(rho, istep)
+      if(mod(istep, istep/10)==0) then
+         call sum_mass(rho, istep)
+      end if   
 
       ! compute error norms
       if (print_error_norms) then
@@ -269,9 +271,7 @@ subroutine main_driver()
       if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
 
          ! print mass conservation and write plotfiles
-         write(*,*), 'ensuring conservation and writing plotfiles at timestep =', istep 
-         call sum_mass(rho, istep)
-
+         write(*,*), 'writing plotfiles at timestep =', istep 
          call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time,prob_lo,prob_hi)
          call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time,prob_lo,prob_hi)
          call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time,prob_lo,prob_hi)
