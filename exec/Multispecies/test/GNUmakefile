@@ -28,7 +28,7 @@ VPATH_LOCATIONS += $(HYDROLIB_HOME)
 include $(BOXLIB_HOME)/Src/F_BaseLib/GPackage.mak
 VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/F_BaseLib
 
-LAPACK95_DIR = ./LAPACK95
+LAPACK95_DIR = $(STAGGERED_HOME)/src_Multispecies/LAPACK95
 
 F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
 libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas

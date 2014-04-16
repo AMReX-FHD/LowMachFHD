@@ -338,11 +338,11 @@ subroutine main_driver()
         write(*,*), 'analytic cov of W for 2-species'
         write(*,*), ''
         write(*,*), (molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)*&
-                    variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4), -(molmass(1)*&
+                    1.0d0/(product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4), -(molmass(1)*&
                     rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/(&
                     product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4)
         write(*,*), -(molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)*&
-                    variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4), (molmass(1)*&
+                    1.0d0/(product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4), (molmass(1)*&
                     rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/(&
                     product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4)
 
@@ -364,7 +364,7 @@ subroutine main_driver()
                     molmass(3)*rho_in(1,3))))/(product(dx(1,1:dm))*(rho_in(1,1) +& 
                     rho_in(1,2) + rho_in(1,3))**4), -((rho_in(1,2)*rho_in(1,3)*(-(molmass(1)*rho_in(1,1)) +& 
                     molmass(3)*(rho_in(1,1) + rho_in(1,2)) + molmass(2)*(rho_in(1,1) + rho_in(1,3))))*&
-                    variance_parameter/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)) 
+                    1.0d0/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)) 
         write(*,*), -((rho_in(1,1)*rho_in(1,3)*(-(molmass(2)*rho_in(1,2)) + molmass(3)*(rho_in(1,1) +& 
                     rho_in(1,2)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(product(&
                     dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)), -((rho_in(1,2)*rho_in(1,3)*&

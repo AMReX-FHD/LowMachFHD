@@ -57,7 +57,7 @@ contains
   ! Pass nspecies_in=0 if there are no compositional variables
   subroutine initialize_hydro_grid(mla,s_in,dt,dx,namelist_file, &
                                    nspecies_in, nscal_in, exclude_last_species_in, &
-                                   analyze_velocity, analyze_density, &
+                                   analyze_velocity, analyze_density, analyze_temperature, &
                                    heat_capacity_in)
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_in(:) ! A cell-centered multifab on the desired grid (to grab layout and grid size from)
@@ -67,8 +67,8 @@ contains
     integer        , intent(in   ) :: nspecies_in ! Number of species (number of partial densities)
        ! Note: Pass nspecies_in=0 if there are no compositional variables
     integer        , intent(in   ) :: nscal_in
-      ! TOTAL number of scalar fields (e.g., temperature, passive tracers, etc.) in addition to densities
-    logical, intent(in) :: exclude_last_species_in, analyze_velocity, analyze_density
+      ! Additional number of scalar fields if any
+    logical, intent(in) :: exclude_last_species_in, analyze_velocity, analyze_density, analyze_temperature
         ! Pass exclude_last_species=.false. if you want to analyze all nspecies densities/concentrations
         ! Or pass exclude_last_species=.true. if you want to pass total density rho as the first scalar and 
         !    then only include only n_species-1 additional partial densities/concentrations
@@ -102,6 +102,7 @@ contains
     ! Calculate total number of scalar variables being analyzed to allocate storage
     nvar=nscal_in ! nvar holds the total number of variables to analyze (scalar and vector)
     if(analyze_density)  nvar = nvar + nspecies_analysis + 1 ! We always store total density
+    if(analyze_temperature) nvar = nvar + 1
     nscal_analysis = nvar ! Total number of scalar variables to analyze
     if(analyze_velocity) nvar = nvar + dm
     if ( parallel_IOprocessor() ) then
