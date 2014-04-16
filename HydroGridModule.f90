@@ -766,7 +766,7 @@ subroutine updateHydroAnalysisPrimitive (grid, velocity, density, temperature, c
    end if   
 
    !if(present(scalars)) write(*,*) sIdx1,sIdx2, " Scalars=", real(scalars(:, :, :, 1:(sIdx2-sIdx1+1)))
-   write(*,*) "HydroGrid present=", present(velocity), present(density), &
+   if(.false.) write(*,*) "HydroGrid present=", present(velocity), present(density), &
       present(concentration), present(temperature), present(scalars)
 
    ! We need to convert all of the conserved to primitive variables in each cell
