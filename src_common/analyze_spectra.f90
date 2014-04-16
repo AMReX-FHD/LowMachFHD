@@ -361,10 +361,10 @@ contains
     type(multifab) , intent(in), dimension(:), optional :: rho, temperature, scalars
   
     if(project_dir>0) then ! Only do 2D analysis
-      write(*,*) "Calling analyze_hydro_grid_parallel"
+      !write(*,*) "Calling analyze_hydro_grid_parallel"
       call analyze_hydro_grid_parallel(mla,dt,dx,step,umac,rho)
     else ! Analyze the whole grid
-      write(*,*) "Calling analyze_hydro_grid_serial"
+      !write(*,*) "Calling analyze_hydro_grid_serial"
       call analyze_hydro_grid_serial(mla,dt,dx,step,umac,rho,temperature,scalars)
     end if
 
@@ -498,7 +498,7 @@ contains
     comp=1  
     if(present(umac)) then
        p_v=>variables(:,:,:,comp:comp+dm-1)
-       write(*,*) "p_v LBOUND=", lbound(p_v), " UBOUND=", ubound(p_v)
+       !write(*,*) "p_v LBOUND=", lbound(p_v), " UBOUND=", ubound(p_v)
        !write(*,*) "p_v(1,1,1,:)=", p_v(1,1,1,:)
        comp=comp+dm
     else
@@ -511,9 +511,9 @@ contains
     if(present(rho)) then
        p_rho => variables(:,:,:,comp:comp)
        p_c => variables(:,:,:,comp+1:comp+nspecies_analysis)
-       write(*,*) "p_rho LBOUND=", lbound(p_rho), " UBOUND=", ubound(p_rho)
+       !write(*,*) "p_rho LBOUND=", lbound(p_rho), " UBOUND=", ubound(p_rho)
        !write(*,*) "p_rho(1,1,1,1)=", p_rho(1,1,1,1)
-       write(*,*) "p_c LBOUND=", lbound(p_c), " UBOUND=", ubound(p_c)
+       !write(*,*) "p_c LBOUND=", lbound(p_c), " UBOUND=", ubound(p_c)
        !write(*,*) "p_c(1,1,1,:)=", p_c(1,1,1,:)
        comp=comp+nspecies_analysis+1
        n_passive_scals=n_passive_scals-nspecies_analysis-1
@@ -526,14 +526,14 @@ contains
        p_T => variables(:,:,:,comp:comp)
        comp=comp+1    
        n_passive_scals=n_passive_scals-1
-       write(*,*) "p_T LBOUND=", lbound(p_T), " UBOUND=", ubound(p_T)
+       !write(*,*) "p_T LBOUND=", lbound(p_T), " UBOUND=", ubound(p_T)
     else
        p_T=>NULL()  
     end if
 
     if(present(scalars)) then
        p_s => variables(:,:,:,comp:nscal_analysis)
-       write(*,*) "p_s LBOUND=", lbound(p_s), " UBOUND=", ubound(p_s)
+       !write(*,*) "p_s LBOUND=", lbound(p_s), " UBOUND=", ubound(p_s)
     else
        p_s=>NULL()   
     end if
@@ -593,7 +593,7 @@ contains
        ! Point pointers to the right places, if present, NULL otherwise
        call point_to_hydro_grid(mla,variables,p_v, p_rho, p_c, p_T, p_s, &
                                 umac,rho,temperature,scalars)
-       write(*,*) "associated=", associated(p_v), associated(p_rho), &
+       if(.false.) write(*,*) "associated=", associated(p_v), associated(p_rho), &
                    associated(p_c), associated(p_T), associated(p_s)
 
        call updateHydroAnalysisPrimitive (grid, velocity=p_v, &
@@ -691,27 +691,24 @@ contains
     end do
 
     if(parallel_IOProcessor()) then  
-       write(*,*) "Calling updateHydroAnalysis on 2D grid"
+       write(*,*) "Calling updateHydroAnalysis on 2D+1D grid"
 
        variables  => dataptr(s_serial,1) ! Gets all of the components
 
        ! Point pointers to the right places, if present, NULL otherwise
        call point_to_hydro_grid(mla,variables,p_v, p_rho, p_c, p_T, p_s, &
                                  umac,rho,temperature,scalars)
-       write(*,*) "associated=", associated(p_v), associated(p_rho), &
+       if(.false.) write(*,*) "associated=", associated(p_v), associated(p_rho), &
                    associated(p_c), associated(p_T), associated(p_s)
                                  
        call updateHydroAnalysisPrimitive (grid_2D, velocity=p_v, &
            density=p_rho, concentration=p_c, temperature=p_T, scalars=p_s)
 
        !---------------------------------------------------
-       write(*,*) "Calling updateHydroAnalysis on 1D grid"
 
        ! Point pointers to the right places, if present, NULL otherwise
        call point_to_hydro_grid(mla,variables_1D,p_v, p_rho, p_c, p_T, p_s, &
                                 umac,rho,temperature,scalars)
-       write(*,*) "associated=", associated(p_v), associated(p_rho), &
-                   associated(p_c), associated(p_T), associated(p_s)
 
        call updateHydroAnalysisPrimitive (grid_1D, velocity=p_v, &
            density=p_rho, concentration=p_c, temperature=p_T, scalars=p_s)

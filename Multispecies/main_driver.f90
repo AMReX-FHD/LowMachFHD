@@ -265,12 +265,6 @@ subroutine main_driver()
          call print_errors(rho,rho_exact,Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
       end if
 
-      ! compute coavariance and variances (after typical relaxation ~ L^2/D) 
-      if(istep .gt. n_steps_skip) then
-        call compute_cov(mla,rho,wit,wiwjt)
-        step_count = step_count + 1
-      end if 
-
       ! write plotfile at specific intervals
       if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
 
@@ -294,6 +288,9 @@ subroutine main_driver()
       end if
      
       if (istep > n_steps_skip) then
+         ! Compute covariances manually for initial testing (HydroGrid now does the same)
+         call compute_cov(mla,rho,wit,wiwjt)    
+         step_count = step_count + 1 
 
          ! print out projection (average) and variance
          if ( (stats_int > 0) .and. &
