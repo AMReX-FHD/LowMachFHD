@@ -258,7 +258,7 @@ subroutine main_driver()
       call advance(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
 
       ! print out the total mass to check conservation
-      if(mod(istep, istep/10)==0) then
+      if(mod(istep, max_step/10)==0) then
          call sum_mass(rho, istep)
       end if   
 
