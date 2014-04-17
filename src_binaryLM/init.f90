@@ -642,24 +642,14 @@ contains
 
     else
 
-       select case (prob_type)
-       case (2)
-
-          ! simple test function
-          ! chi = chi0*(1 + a*c + b*c^2)
-          do j=lo(2)-ng_c,hi(2)+ng_c
-          do i=lo(1)-ng_c,hi(1)+ng_c
-             conc = max(min(prim(i,j,2), 1.d0), 0.d0)
-             chi(i,j) = diff_coef*(1.d0 + material_properties(1,1)*conc + &
-                                          material_properties(2,1)*conc**2)
-          end do
-          end do
-
-       case default
-
-          call bl_error('compute_chi_2d: invalid prob_type for diff_type < 0')
-
-       end select
+       ! chi = chi0*(A+B*c) / (1+C*c)
+       do j=lo(2)-ng_c,hi(2)+ng_c
+       do i=lo(1)-ng_c,hi(1)+ng_c
+          conc = max(min(prim(i,j,2), 1.d0), 0.d0)
+          chi(i,j) = diff_coef*(material_properties(1,1) + material_properties(2,1)*conc) / &
+                               (1.d0                     + material_properties(3,1)*conc)
+       end do
+       end do
 
     end if
 
@@ -685,26 +675,16 @@ contains
 
     else
 
-       select case (prob_type)
-       case (2)
-
-          ! simple test function
-          ! chi = chi0*(1 + a*c + b*c^2)
-          do k=lo(3)-ng_c,hi(3)+ng_c
-          do j=lo(2)-ng_c,hi(2)+ng_c
-          do i=lo(1)-ng_c,hi(1)+ng_c
-             conc = max(min(prim(i,j,k,2), 1.0_dp_t), 0.d0)
-             chi(i,j,k) = diff_coef*(1.d0 + material_properties(1,1)*conc + &
-                                            material_properties(2,1)*conc**2)
-          end do
-          end do
-          end do
-
-       case default
-
-          call bl_error('compute_chi_3d: invalid prob_type for diff_type < 0')
-
-       end select
+       ! chi = chi0*(A+B*c) / (1+C*c)
+       do k=lo(3)-ng_c,hi(3)+ng_c
+       do j=lo(2)-ng_c,hi(2)+ng_c
+       do i=lo(1)-ng_c,hi(1)+ng_c
+          conc = max(min(prim(i,j,k,2), 1.d0), 0.d0)
+          chi(i,j,k) = diff_coef*(material_properties(1,1) + material_properties(2,1)*conc) / &
+                                 (1.d0                     + material_properties(3,1)*conc)
+       end do
+       end do
+       end do
 
     end if
 
@@ -778,32 +758,14 @@ contains
 
     else
 
-       select case (prob_type)
-       case (2,3)
-
-          ! simple test function
-          ! eta = eta0*(1+a*c) / (1+b*c)
-          do j=lo(2)-ng_e,hi(2)+ng_e
-          do i=lo(1)-ng_e,hi(1)+ng_e
-             conc = max(min(prim(i,j,2), 1.d0), 0.d0)
-             eta(i,j) = visc_coef*(1.d0 + material_properties(1,2)*conc) / &
-                                  (1.d0 + material_properties(2,2)*conc)
-          end do
-          end do
-
-       case (5)
-
-          do j=lo(2)-ng_e,hi(2)+ng_e
-          do i=lo(1)-ng_e,hi(1)+ng_e
-             eta(i,j) = visc_coef*prim(i,j,1)
-          end do
-          end do
-
-       case default
-
-          call bl_error('compute_eta_2d: invalid prob_type for visc_type < 0')
-
-       end select
+       ! eta = eta0*(A+B*c) / (1+C*c)
+       do j=lo(2)-ng_e,hi(2)+ng_e
+       do i=lo(1)-ng_e,hi(1)+ng_e
+          conc = max(min(prim(i,j,2), 1.d0), 0.d0)
+          eta(i,j) = visc_coef*(material_properties(1,2) + material_properties(2,2)*conc) / &
+                               (1.d0                     + material_properties(3,2)*conc)
+       end do
+       end do
 
     end if
 
@@ -826,27 +788,17 @@ contains
 
     else
 
-       select case (prob_type)
-       case (2)
+       ! eta = eta0*(A+B*c) / (1+C*c)
+       do k=lo(3)-ng_e,hi(3)+ng_e
+       do j=lo(2)-ng_e,hi(2)+ng_e
+       do i=lo(1)-ng_e,hi(1)+ng_e
+          conc = max(min(prim(i,j,k,2), 1.d0), 0.d0)
+          eta(i,j,k) = visc_coef*(material_properties(1,2) + material_properties(2,2)*conc) / &
+                                 (1.d0                     + material_properties(3,2)*conc)
 
-          ! simple test function
-          ! eta = eta0*(1+a*c) / (1+b*c)
-          do k=lo(3)-ng_e,hi(3)+ng_e
-          do j=lo(2)-ng_e,hi(2)+ng_e
-          do i=lo(1)-ng_e,hi(1)+ng_e
-             conc = max(min(prim(i,j,k,2), 1.d0), 0.d0)
-             eta(i,j,k) = visc_coef*(1.d0 + material_properties(1,2)*conc) / &
-                                    (1.d0 + material_properties(2,2)*conc)
-
-          end do
-          end do
-          end do
-
-       case default
-
-          call bl_error('compute_eta_3d: invalid prob_type for visc_type < 0')
-
-       end select
+       end do
+       end do
+       end do
 
     end if
 

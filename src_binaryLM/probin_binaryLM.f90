@@ -15,7 +15,7 @@ module probin_binarylm_module
   real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2),grav(3)
   real(dp_t), save :: mol_mass(2),temperature
   integer   , save :: project_eos_int
-  real(dp_t), save :: material_properties(2,3),c_bc(3,2)
+  real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
   logical, save :: analyze_binary
 
@@ -41,7 +41,7 @@ module probin_binarylm_module
   namelist /probin_binarylm/ diff_coef         ! concentration diffusion coefficient 'chi'
   namelist /probin_binarylm/ mol_mass          ! molar mass of species
   namelist /probin_binarylm/ temperature       ! temperature
-  namelist /probin_binarylm/ material_properties ! a/b for chi/eta/kappa
+  namelist /probin_binarylm/ material_properties ! A/B/C for chi/eta/kappa
 
   ! stochastic properties
   namelist /probin_binarylm/ initial_variance  ! multiplicative factor for initial fluctuations
@@ -101,7 +101,7 @@ contains
     diff_coef = 1.d0
     mol_mass(1:2) = 1.d0
     temperature = 1.d0
-    material_properties(1:2,1:3) = 0.d0
+    material_properties(1:3,1:3) = 0.d0
 
     initial_variance = 0.d0
     conc_scal = 1.d0
@@ -236,6 +236,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) material_properties(2,1)
+       case ('--material_properties_3_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) material_properties(3,1)
+
        case ('--material_properties_1_2')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -244,6 +249,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) material_properties(2,2)
+       case ('--material_properties_3_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) material_properties(3,2)
+
        case ('--material_properties_1_3')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -252,6 +262,10 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) material_properties(2,3)
+       case ('--material_properties_3_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) material_properties(3,3)
 
        case ('--initial_variance')
           farg = farg + 1
