@@ -451,7 +451,7 @@ contains
  
     ! local varables
     integer          :: i,j
-    real(kind=dp_t)  :: x,y,L(2)
+    real(kind=dp_t)  :: x,y,rsq,L(2)
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -467,8 +467,8 @@ contains
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
  
-            Temp(i,j)           = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            !Temp(i,j)          = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+            Temp(i,j)             = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+            if(.false.) Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
 
          end do
       end do  
@@ -481,9 +481,14 @@ contains
          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-       
-            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+      
+              ! temperature distribution follows the density 
+              rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
+              if (rsq .lt. L(1)*L(2)*0.1d0) then
+                 Temp(i,j) = T_in(1,1)
+              else
+                 Temp(i,j) = T_in(2,1)
+              end if
     
          end do
       end do
@@ -497,9 +502,8 @@ contains
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
    
-            ! linear gradient in rho
-            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+            ! linear gradient in temperature
+            Temp(i,j) = T_in(1,1) + (T_in(2,1) - T_in(1,1))*y/L(1)
 
          end do
       end do
@@ -515,8 +519,7 @@ contains
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
-            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+            Temp(i,j)  = 1.0d0 
        
          end do
     end do
@@ -532,8 +535,7 @@ contains
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
-            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+            Temp(i,j)  = 1.0d0 
 
          end do
     end do
@@ -550,8 +552,7 @@ contains
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
-            Temp(i,j)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            !Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+            Temp(i,j)  = 1.0d0 
 
          end do
     end do
@@ -570,7 +571,7 @@ contains
  
     ! local variables
     integer          :: i,j,k
-    real(kind=dp_t)  :: x,y,z,L(3)
+    real(kind=dp_t)  :: x,y,z,rsq,L(3)
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
@@ -591,6 +592,7 @@ contains
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0             
              
              Temp(i,j,k) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+             if(.false.) Temp(i,j,k) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
 
           end do
        end do
@@ -610,7 +612,13 @@ contains
           do i=lo(1)-1,hi(1)+1
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
              
-             Temp(i,j,k) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+               ! temperature distribution follows the density 
+               rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2 
+               if (rsq .lt. L(1)*L(2)*0.1d0) then
+                  Temp(i,j,k) = T_in(1,1)
+               else
+                  Temp(i,j,k) = T_in(2,1)
+               end if
           
           end do
        end do
@@ -629,9 +637,10 @@ contains
           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
           do i=lo(1)-1,hi(1)+1
              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
- 
-               Temp(i,j,k)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
 
+               ! linear gradient in temperature
+               Temp(i,j,k) = T_in(1,1) + (T_in(2,1) - T_in(1,1))*y/L(1)
+ 
           end do
        end do
      end do
@@ -652,7 +661,7 @@ contains
            do i=lo(1)-1,hi(1)+1
               x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
-              Temp(i,j,k)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+              Temp(i,j,k)  = 1.0d0 
        
            end do
         end do
@@ -673,7 +682,7 @@ contains
            do i=lo(1)-1,hi(1)+1
               x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
         
-              Temp(i,j,k)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+              Temp(i,j,k)  = 1.0d0 
 
            end do
         end do
@@ -694,7 +703,7 @@ contains
            do i=lo(1)-1,hi(1)+1
               x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
 
-              Temp(i,j,k)  = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+              Temp(i,j,k)  = 1.0d0 
            
            end do
         end do
