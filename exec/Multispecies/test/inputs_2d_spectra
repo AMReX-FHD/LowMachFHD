@@ -3,7 +3,7 @@
  dim_in = 2                       ! problem dimension
  plot_int = 0                  ! plot interval
  max_grid_size(1:2) = 32 32       ! individual box size 
- n_steps_skip = 100              ! when to start analyzing data
+ n_steps_skip = 1000              ! when to start analyzing data
  k_B      = 1                  ! Boltzmann constant
 
  ! This can be used to select different problem types (in addition to init_type)
@@ -40,8 +40,8 @@
 &probin_multispecies
  
  nspecies = 3                     ! number of species
- max_step = 1000                   ! total number of computational step
- cfl1     = 0.025                   ! CFL number
+ max_step = 10000                   ! total number of computational step
+ cfl1     = 0.05                   ! CFL number
  chi      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_parameter = 1e-6        ! parameter to set variance (=1/thickness and =1 ideal) 
  Press    = 1.0                   ! Pressure
@@ -101,9 +101,15 @@
    writeTheory = -1 ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
    nStructureFactors = 3
    structureFactorPairs = "0 5 0 6, 0 5 0 7, 0 6 0 7"
+
+   ! Dynamic structure factors:
+   nWavenumbers=8
+   ! Shape (2,nWavenumbers):
+   selectedWavenumbers="2 0, 2 2, 4 0, 2 4, 4 4, 8 0, 4 8, 8 8"
+   nSavedSnapshots=32
       
    outputFolder = "."
-   filePrefix = "3species_xy-mid-cfl_0.025"
+   filePrefix = "3species_xy-mid-cfl_0.05"
    axisToPrint = 2 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
 /

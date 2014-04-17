@@ -197,33 +197,6 @@ subroutine main_driver()
   call init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
   call init_Temp(Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
 
-  !=====================================================================
-  ! Initialize HydroGrid for analysis
-  !=====================================================================
-  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
-     narg = command_argument_count()
-     farg = 1
-     if (narg >= 1) then
-        call get_command_argument(farg, value = fname)
-        inquire(file = fname, exist = lexist )
-        if ( lexist ) then
-           un = unit_new()
-           open(unit=un, file = fname, status = 'old', action = 'read')
-           
-           ! We will also pass temperature here
-           call initialize_hydro_grid(mla,rho,dt,dx, namelist_file=un, &
-                                      nspecies_in=nspecies, &
-                                      nscal_in=1, &
-                                      exclude_last_species_in=.false., &
-                                      analyze_velocity=.false., &
-                                      analyze_density=.true., &
-                                      analyze_temperature=.true.)
-           
-           close(unit=un)
-        end if
-     end if
-  end if
-
   !=======================================================
   ! Begin time stepping loop
   !=======================================================
@@ -246,6 +219,34 @@ subroutine main_driver()
      write(*,*) "Using time step dt =", dt
      if(use_stoch) write(*,*), "Noise variance =", sqrt(2.d0*k_B*variance_parameter/(product(dx(1,1:dm))*dt))
   end if
+
+  !=====================================================================
+  ! Initialize HydroGrid for analysis
+  !=====================================================================
+  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
+     narg = command_argument_count()
+     farg = 1
+     if (narg >= 1) then
+        call get_command_argument(farg, value = fname)
+        inquire(file = fname, exist = lexist )
+        if ( lexist ) then
+           un = unit_new()
+           open(unit=un, file = fname, status = 'old', action = 'read')
+           
+           ! We will also pass temperature here but no additional scalars
+           call initialize_hydro_grid(mla,rho,dt,dx, namelist_file=un, &
+                                      nspecies_in=nspecies, &
+                                      nscal_in=0, &
+                                      exclude_last_species_in=.false., &
+                                      analyze_velocity=.false., &
+                                      analyze_density=.true., &
+                                      analyze_temperature=.true.) 
+           
+           close(unit=un)
+        end if
+     end if
+  end if
+  !=====================================================================
 
   ! free up memory counters for time-average, covariance and <wi>, <wiwj>
   step_count = 0
