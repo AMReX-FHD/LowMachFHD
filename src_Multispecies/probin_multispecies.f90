@@ -10,7 +10,7 @@ module probin_multispecies_module
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
   real(kind=dp_t)    :: cfl1,chi,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
   real(kind=dp_t)    :: rho_in(2,max_species)       ! initial values for concentration, 2 for inside & outside circle
-  real(kind=dp_t)    :: T_in(2,1)                   ! initial values for temperature
+  real(kind=dp_t)    :: T_in(2)                     ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   real(kind=dp_t)    :: molmass_in(max_species)     ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)        ! SM diffusion constant  
   real(kind=dp_t)    :: Dtherm_in(max_element)          ! thermo-diffusion coefficients  
