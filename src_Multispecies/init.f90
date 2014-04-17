@@ -435,7 +435,7 @@ contains
        call multifab_fill_boundary(Temp(n))
 
        ! fill non-periodic domain boundary ghost cells
-       call multifab_coefbc(Temp(n),the_bc_level(n))
+       call multifab_coefbc(Temp(n),1,1,the_bc_level(n))
 
     end do
 
