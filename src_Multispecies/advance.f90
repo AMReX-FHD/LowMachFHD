@@ -93,6 +93,9 @@ contains
       ! initialize stochastic flux on every face W(0,1) 
       call generate_random_increments(mla,n_rngs,stoch_W_fc)
 
+      ! apply boundary conditions to stoch_W_fc
+      call stoch_mass_bc(mla,stoch_W_fc,n_rngs,the_bc_level)
+
     endif
 
    !==================================================================================
