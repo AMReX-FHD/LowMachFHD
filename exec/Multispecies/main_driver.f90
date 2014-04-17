@@ -39,6 +39,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: Temp(:)   ! Temperature 
   real(kind=dp_t),allocatable  :: molmass(:) 
   real(kind=dp_t),allocatable  :: covW(:,:) 
+  real(kind=dp_t),allocatable  :: covW_theo(:,:) 
   real(kind=dp_t),allocatable  :: wiwjt(:,:) 
   real(kind=dp_t),allocatable  :: wit(:) 
 
@@ -69,6 +70,7 @@ subroutine main_driver()
   allocate(Temp(nlevs))
   allocate(molmass(nspecies))
   allocate(covW(nspecies,nspecies))
+  allocate(covW_theo(nspecies,nspecies))
   allocate(wiwjt(nspecies,nspecies))
   allocate(wit(nspecies))
 
@@ -251,6 +253,7 @@ subroutine main_driver()
   ! free up memory counters for time-average, covariance and <wi>, <wiwj>
   step_count = 0
   covW       = 0 
+  covW_theo  = 0 
   wit        = 0 
   wiwjt      = 0 
 
@@ -331,67 +334,85 @@ subroutine main_driver()
   if (parallel_IOProcessor()) then
      if(use_stoch) then
      
-     print*, 'Normalized numeric cov of W'
+     write(*,*), ''
+     write(*,*), 'Normalized numeric cov of W'
      do i=1,nspecies
         do j=1,nspecies
-           covW(i,j) = wiwjt(i,j)/step_count - wit(i)*wit(j)/step_count**2
+           covW(i,j) = (wiwjt(i,j)/step_count - wit(i)*wit(j)/step_count**2)/variance_parameter
         end do
-        print*, covW(i,:)/variance_parameter
+        print*, covW(i,:)
      end do
+     write(*,*), ''
      
      if(nspecies .eq. 2) then 
-        write(*,*), 'analytic cov of W for 2-species'
-        write(*,*), ''
-        write(*,*), (molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)*&
-                    1.0d0/(product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4), -(molmass(1)*&
-                    rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/(&
-                    product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4)
-        write(*,*), -(molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)*&
-                    1.0d0/(product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4), (molmass(1)*&
-                    rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/(&
-                    product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4)
+     
+        covW_theo(1,1) = (molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/(&
+                          product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4) 
+        covW_theo(1,2) = -covW_theo(1,1) 
+        covW_theo(2,1) = covW_theo(1,2) 
+        covW_theo(2,2) = covW_theo(1,1) 
 
      else if(nspecies .eq. 3) then
-        write(*,*), 'analyic cov of W for 3-species'
-        write(*,*), ''
-        write(*,*), (rho_in(1,1)*(molmass(2)*rho_in(1,1)*rho_in(1,2) + molmass(3)*rho_in(1,1)*rho_in(1,3) +& 
-                    molmass(1)*(rho_in(1,2) + rho_in(1,3))**2))/(product(dx(1,1:dm))*(&
-                    rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4), -((rho_in(1,1)*rho_in(1,2)*(-(molmass(3)*&
-                    rho_in(1,3)) + molmass(2)*(rho_in(1,1) + rho_in(1,3)) + molmass(1)*(rho_in(1,2) +& 
-                    rho_in(1,3))))/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) +& 
-                    rho_in(1,3))**4)), -((rho_in(1,1)*rho_in(1,3)*(-(molmass(2)*rho_in(1,2)) + molmass(3)*(&
-                    rho_in(1,1) + rho_in(1,2)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(&
-                    product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4))
-        write(*,*), -((rho_in(1,1)*rho_in(1,2)*(-(molmass(3)*rho_in(1,3)) + molmass(2)*(rho_in(1,1) +& 
-                    rho_in(1,3)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(&
-                    product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)), (rho_in(1,2)*&
-                    (molmass(2)*(rho_in(1,1) + rho_in(1,3))**2 + rho_in(1,2)*(molmass(1)*rho_in(1,1) +&
-                    molmass(3)*rho_in(1,3))))/(product(dx(1,1:dm))*(rho_in(1,1) +& 
-                    rho_in(1,2) + rho_in(1,3))**4), -((rho_in(1,2)*rho_in(1,3)*(-(molmass(1)*rho_in(1,1)) +& 
-                    molmass(3)*(rho_in(1,1) + rho_in(1,2)) + molmass(2)*(rho_in(1,1) + rho_in(1,3))))*&
-                    1.0d0/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)) 
-        write(*,*), -((rho_in(1,1)*rho_in(1,3)*(-(molmass(2)*rho_in(1,2)) + molmass(3)*(rho_in(1,1) +& 
-                    rho_in(1,2)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(product(&
-                    dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)), -((rho_in(1,2)*rho_in(1,3)*&
-                    (-(molmass(1)*rho_in(1,1)) + molmass(3)*(rho_in(1,1) + rho_in(1,2)) + molmass(2)*(&
-                    rho_in(1,1) + rho_in(1,3))))/(product(dx(1,1:dm))*(rho_in(1,1) +&  
-                    rho_in(1,2) + rho_in(1,3))**4)), (rho_in(1,3)*(molmass(3)*(rho_in(1,1) + rho_in(1,2))**2 +& 
-                    (molmass(1)*rho_in(1,1) + molmass(2)*rho_in(1,2))*rho_in(1,3)))/(&
-                    product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)
+        
+        covW_theo(1,1) = (rho_in(1,1)*(molmass(2)*rho_in(1,1)*rho_in(1,2) + molmass(3)*rho_in(1,1)*&
+                         rho_in(1,3) + molmass(1)*(rho_in(1,2) + rho_in(1,3))**2))/(product(dx(1,1:dm))*&
+                         (rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4) 
+        covW_theo(1,2) = -((rho_in(1,1)*rho_in(1,2)*(-(molmass(3)*rho_in(1,3)) + molmass(2)*(rho_in(1,1) +& 
+                         rho_in(1,3)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(product(dx(1,1:dm))*(&
+                         rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)) 
+        covW_theo(1,3) = -((rho_in(1,1)*rho_in(1,3)*(-(molmass(2)*rho_in(1,2)) + molmass(3)*(rho_in(1,1) +& 
+                         rho_in(1,2)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(product(dx(1,1:dm))*(&
+                         rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4))
+        covW_theo(2,1) = covW_theo(1,2) 
+        covW_theo(2,2) = (rho_in(1,2)*(molmass(2)*(rho_in(1,1) + rho_in(1,3))**2 + rho_in(1,2)*(molmass(1)*&
+                         rho_in(1,1) + molmass(3)*rho_in(1,3))))/(product(dx(1,1:dm))*(rho_in(1,1) +& 
+                         rho_in(1,2) + rho_in(1,3))**4)
+        covW_theo(2,3) = -((rho_in(1,2)*rho_in(1,3)*(-(molmass(1)*rho_in(1,1)) + molmass(3)*(rho_in(1,1) +& 
+                         rho_in(1,2)) + molmass(2)*(rho_in(1,1) + rho_in(1,3))))/(product(dx(1,1:dm))*(&
+                         rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)) 
+        covW_theo(3,1) = covW_theo(1,3) 
+        covW_theo(3,2) = covW_theo(2,3) 
+        covW_theo(3,3) = (rho_in(1,3)*(molmass(3)*(rho_in(1,1) + rho_in(1,2))**2 + (molmass(1)*rho_in(1,1) +& 
+                         molmass(2)*rho_in(1,2))*rho_in(1,3)))/(product(dx(1,1:dm))*(rho_in(1,1) +& 
+                         rho_in(1,2) + rho_in(1,3))**4)
+ 
       else if(nspecies .eq. 4) then
-        write(*,*), 'analyic cov of W for 4-species'
+        
         loc_param = 1.0d0/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3) +& 
                     rho_in(1,4)))
-        write(*,*), ''
-        write(*,*),  0.174d0*loc_param, -0.024d0*loc_param,  -0.018d0*loc_param,  -0.132d0*loc_param 
-        write(*,*), -0.024d0*loc_param,  0.2115d0*loc_param, -0.0195d0*loc_param, -0.168d0*loc_param
-        write(*,*), -0.018d0*loc_param, -0.0195d0*loc_param,  0.1135d0*loc_param, -0.076d0*loc_param 
-        write(*,*), -0.132d0*loc_param, -0.168d0*loc_param,  -0.076d0*loc_param,   0.376d0*loc_param
+        
+        covW_theo(1,1) = 0.174d0*loc_param 
+        covW_theo(1,2) = -0.024d0*loc_param
+        covW_theo(1,3) = -0.018d0*loc_param
+        covW_theo(1,4) = -0.132d0*loc_param 
  
+        covW_theo(2,1) = covW_theo(1,2) 
+        covW_theo(2,2) = 0.2115d0*loc_param
+        covW_theo(2,3) = -0.0195d0*loc_param
+        covW_theo(2,4) = -0.168d0*loc_param
+
+        covW_theo(3,1) = covW_theo(1,3)
+        covW_theo(3,2) = covW_theo(2,3)
+        covW_theo(3,3) = 0.1135d0*loc_param
+        covW_theo(3,4) = -0.076d0*loc_param 
+
+        covW_theo(4,1) = covW_theo(1,4)
+        covW_theo(4,2) = covW_theo(2,4)
+        covW_theo(4,3) = covW_theo(3,4)
+        covW_theo(4,4) = 0.376d0*loc_param
+
       else  
         write(*,*), 'analytic covariance of W for nspecies > 4 is not coded'
      end if
-  
+
+     write(*,*), 'analytic cov of W' 
+     do i=1,nspecies
+        write(*,*), covW_theo(i,:)
+     end do
+     write(*,*), ''
+
+     write(*,*), 'l1-norm of cov of W for',nspecies,' species is =', abs(sum(covW_theo(:,:)-covW(:,:)))
+ 
      end if
   end if
 
@@ -405,6 +426,7 @@ subroutine main_driver()
 
   deallocate(molmass)
   deallocate(covW)
+  deallocate(covW_theo)
   deallocate(wiwjt)
   deallocate(wit)
   do n=1,nlevs

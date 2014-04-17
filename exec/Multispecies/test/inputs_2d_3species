@@ -3,7 +3,7 @@
  dim_in = 2                       ! problem dimension
  plot_int = 100                  ! plot interval
  max_grid_size(1:2) = 16 16       ! individual box size 
- n_steps_skip = 10              ! when to start analyzing data
+ n_steps_skip = 50              ! when to start analyzing data
  k_B      = 1E-3                  ! Boltzmann constant
 
  ! Grid size
@@ -43,5 +43,6 @@
  molmass_in(1:3) = 1.0 0.75 1.25  ! molar mass of n-species
  Dbar_in(1:3) = 1.0 2.0 2.0       ! SM diffusion constant arranged in lower-triangle
  Dtherm_in(1:3) = 1.0 1.0 -2.0    ! thermo-diffusion constant (sums to zero)
+ T_in(1:2,1) = 1.0 2.0            ! Upper and lower plate temperature
  
 /
