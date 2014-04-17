@@ -12,6 +12,7 @@ module stochastic_mass_fluxdiv_module
   use convert_stag_module
   use matvec_mul_module
   use correction_flux_module
+  use multifab_zero_edgeval_module
   use probin_common_module
   use probin_multispecies_module
 
@@ -100,6 +101,13 @@ contains
           call multifab_fill_boundary(stoch_flux_fc(n,i))  
        end do
     end do
+
+    ! If there are walls with zero-flux boundary conditions
+    if(is_nonisothermal) then
+       do n=1,nlevs
+          call multifab_zero_edgeval(stoch_flux_fc(n,:),1,rho_part_bc_comp,nspecies,the_bc_level(n))
+       end do   
+    end if
 
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then

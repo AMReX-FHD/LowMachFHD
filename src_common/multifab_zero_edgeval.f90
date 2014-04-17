@@ -13,7 +13,7 @@ module multifab_zero_edgeval_module
 
 contains
 
-  subroutine multifab_zero_edgeval(edge,bccomp,start_comp,start_bccomp,num_comp,the_bc_level)
+  subroutine multifab_zero_edgeval(edge,start_comp,start_bccomp,num_comp,the_bc_level)
 
     ! vel_bc_n(nlevs,dm) are the normal velocities
 

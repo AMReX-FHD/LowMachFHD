@@ -21,7 +21,8 @@ contains
 
     if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
 
-       bc_code = FOEXTRAP  ! Pure Neumann
+       bc_code(1:num_scal_bc-1) = FOEXTRAP  ! Pure Neumann for densities / mass fractions
+       bc_code(num_scal_bc) = EXT_DIR ! But temperature is still specified at the boundary (via call to multifab_coefbc)
 
     else if ((phys_bc == NO_SLIP_RESERVOIR) .or. (phys_bc == SLIP_RESERVOIR)) then
 

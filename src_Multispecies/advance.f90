@@ -4,7 +4,7 @@ module advance_module
   use define_bc_module
   use multifab_physbc_module
   use ml_layout_module
-  use diffusive_mass_fluxdiv_module
+  use compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use probin_multispecies_module
 

@@ -16,7 +16,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: Dtherm_in(max_element)          ! thermo-diffusion coefficients  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   real(kind=dp_t)    :: variance_parameter,fraction_tolerance  
-  integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp ! not input: populated at main 
+  integer            :: rho_part_bc_comp, mol_frac_bc_comp, diff_coeff_bc_comp, temp_bc_comp ! not input: populated at main 
   logical            :: correct_flux,use_stoch,print_error_norms
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
   real(kind=dp_t)    :: c_bc(3,2,max_species)

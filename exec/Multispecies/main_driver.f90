@@ -156,9 +156,10 @@ subroutine main_driver()
   ! dm+2 = scal_bc_comp = rho_tot
   ! scal_bc_comp+1 = rho_i
   ! scal_bc_comp+nspecies+1 = mol_frac
-  ! scal_bc_comp+2*nspecies+1 = tran_bc_comp = diff_coef
+  ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
+  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diff_coef
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
-                     num_scal_bc_in=2*nspecies,num_tran_bc_in=1)
+                     num_scal_bc_in=2*nspecies+1,num_tran_bc_in=1)
 
   do n=1,nlevs
      ! define level n of the_bc_tower
@@ -168,6 +169,7 @@ subroutine main_driver()
   ! these quantities are populated here and defined in probin_multispecies 
   rho_part_bc_comp   = scal_bc_comp + 1
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
+  temp_bc_comp       = mol_frac_bc_comp + 1
   diff_coeff_bc_comp = tran_bc_comp
 
   !=======================================================
