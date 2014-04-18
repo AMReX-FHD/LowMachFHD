@@ -158,9 +158,10 @@ subroutine main_driver()
   ! dm+2 = scal_bc_comp = rho_tot
   ! scal_bc_comp+1 = rho_i
   ! scal_bc_comp+nspecies+1 = mol_frac
-  ! scal_bc_comp+2*nspecies+1 = tran_bc_comp = diff_coef
+  ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
+  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diff_coef
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
-                     num_scal_bc_in=2*nspecies,num_tran_bc_in=1)
+                     num_scal_bc_in=2*nspecies+2,num_tran_bc_in=1)
 
   do n=1,nlevs
      ! define level n of the_bc_tower
@@ -170,6 +171,7 @@ subroutine main_driver()
   ! these quantities are populated here and defined in probin_multispecies 
   rho_part_bc_comp   = scal_bc_comp + 1
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
+  temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
   diff_coeff_bc_comp = tran_bc_comp
 
   !=======================================================
@@ -188,7 +190,7 @@ subroutine main_driver()
   if(use_stoch) call SeedParallelRNG(seed)
 
   !=====================================================================
-  ! Read molar mass from input file (constant throughout space and time)
+  ! Initialize values
   !=====================================================================
   molmass(1:nspecies) = molmass_in(1:nspecies)  
 
@@ -198,20 +200,6 @@ subroutine main_driver()
   ! initialize rho and Temp
   call init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
   call init_Temp(Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
-
-  !=======================================================
-  ! Begin time stepping loop
-  !=======================================================
-
-  ! write initial plotfile
-  istep = 0
-  if (plot_int .gt. 0) then
-     call write_plotfile(mla,"plt_rho",  rho,istep,dx,time,prob_lo,prob_hi)
-     call write_plotfile1(mla,"plt_temp",Temp,istep,dx,time,prob_lo,prob_hi)
-  end if
-
-  ! print out the total masses
-  call sum_mass(rho, step=0)
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
@@ -219,7 +207,8 @@ subroutine main_driver()
   
   if (parallel_IOProcessor()) then
      write(*,*) "Using time step dt =", dt
-     if(use_stoch) write(*,*), "Noise variance =", sqrt(2.d0*k_B*variance_parameter/(product(dx(1,1:dm))*dt))
+     if(use_stoch) write(*,*), "Noise variance =", sqrt(2.d0*k_B*&
+                               variance_parameter/(product(dx(1,1:dm))*dt))
   end if
 
   !=====================================================================
@@ -248,7 +237,10 @@ subroutine main_driver()
         end if
      end if
   end if
-  !=====================================================================
+
+  !=======================================================
+  ! Begin time stepping loop
+  !=======================================================
 
   ! free up memory counters 
   step_count = 0.d0
@@ -256,47 +248,16 @@ subroutine main_driver()
   covW_theo  = 0.d0 
   wit        = 0.d0 
   wiwjt      = 0.d0 
+  istep      = 0
 
-  do istep=1,max_step
+  do while(istep<=max_step)
 
       if (parallel_IOProcessor()) then
          !print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
       end if
 
-      ! advance the solution by dt
-      call advance(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)
-
-      ! print out the total mass to check conservation
-      if(mod(istep, max_step/10)==0) then
-         call sum_mass(rho, istep)
-      end if   
-
-      ! compute error norms
-      if (print_error_norms) then
-         call print_errors(rho,rho_exact,Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
-      end if
-
-      ! write plotfile at specific intervals
-      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
-
-         ! print mass conservation and write plotfiles
-         write(*,*), 'writing plotfiles at timestep =', istep 
-         call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time,prob_lo,prob_hi)
-         call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time,prob_lo,prob_hi)
-         call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time,prob_lo,prob_hi)
-         call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time,prob_lo,prob_hi)
-
-         ! difference between rho and rho_exact
-         do n=1,nlevs
-            call saxpy(rho_exact(n),-1.0d0,rho(n))
-         end do
-
-         ! check error with visit
-         call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time,prob_lo,prob_hi)
-
-      end if
-     
-      if (istep > n_steps_skip) then
+      ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
+      if (istep >= n_steps_skip) then
          ! Compute covariances manually for initial testing (HydroGrid now does the same)
          call compute_cov(mla,rho,wit,wiwjt)    
          step_count = step_count + 1 
@@ -321,10 +282,43 @@ subroutine main_driver()
          end if
 
       end if
-     
+
+      ! write plotfile at specific intervals
+      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
+
+         ! print mass conservation and write plotfiles
+         write(*,*), 'writing plotfiles at timestep =', istep 
+         call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time,prob_lo,prob_hi)
+         call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time,prob_lo,prob_hi)
+         call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time,prob_lo,prob_hi)
+         call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time,prob_lo,prob_hi)
+
+         ! difference between rho and rho_exact
+         do n=1,nlevs
+            call saxpy(rho_exact(n),-1.0d0,rho(n))
+         end do
+
+         ! check error with visit
+         call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time,prob_lo,prob_hi)
+
+      end if
+
+      ! advance the solution by dt
+      call advance(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_tower%bc_tower_array)      
       ! increment simulation time
+      istep = istep + 1
       time = time + dt
-        
+
+      ! print out the total mass to check conservation
+      if(mod(istep, max_step/10)==0) then
+         call sum_mass(rho, istep)
+      end if   
+
+      ! compute error norms
+      if (print_error_norms) then
+         call print_errors(rho,rho_exact,Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
+      end if
+                  
   end do
 
   ! print out the total mass to check conservation

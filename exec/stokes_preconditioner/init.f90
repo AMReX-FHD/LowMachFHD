@@ -1416,9 +1416,9 @@ contains
        call multifab_fill_boundary(alpha(n))
        call multifab_fill_boundary(beta(n))
        call multifab_fill_boundary(gamma(n))
-       call multifab_coefbc(alpha(n),the_bc_level(n))
-       call multifab_coefbc( beta(n),the_bc_level(n))
-       call multifab_coefbc(gamma(n),the_bc_level(n))
+       call multifab_coefbc(alpha(n),1,1,the_bc_level(n))
+       call multifab_coefbc( beta(n),1,1,the_bc_level(n))
+       call multifab_coefbc(gamma(n),1,1,the_bc_level(n))
     enddo
 
   contains

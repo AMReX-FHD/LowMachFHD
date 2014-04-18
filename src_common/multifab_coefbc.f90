@@ -12,17 +12,18 @@ module multifab_coefbc_module
 
 contains
 
-  subroutine multifab_coefbc(s,the_bc_level)
+  subroutine multifab_coefbc(s,start_scomp,ncomp,the_bc_level)
 
     ! this fills ghost cells for transport coefficients at walls by
     ! averaging ghost and interior into ghost
 
     type(multifab) , intent(inout) :: s
+    integer        , intent(in   ) :: start_scomp,ncomp
     type(bc_level) , intent(in   ) :: the_bc_level
    
     ! Local
     integer                  :: lo(get_dim(s)),hi(get_dim(s))
-    integer                  :: i,ng,dm
+    integer                  :: i,ng,dm,comp
     real(kind=dp_t), pointer :: sp(:,:,:,:)
 
     ng = nghost(s)
@@ -32,14 +33,16 @@ contains
        sp => dataptr(s,i)
        lo = lwb(get_box(s,i))
        hi = upb(get_box(s,i))
-       select case (dm)
-       case (2)
-          call coefbc_2d(sp(:,:,1,1), lo, hi, ng, &
-                         the_bc_level%phys_bc_level_array(i,:,:))
-       case (3)
-          call coefbc_3d(sp(:,:,:,1), lo, hi, ng, &
-                         the_bc_level%phys_bc_level_array(i,:,:))
-       end select
+       do comp=start_scomp,start_scomp+ncomp-1
+          select case (dm)
+          case (2)
+             call coefbc_2d(sp(:,:,1,comp), lo, hi, ng, &
+                            the_bc_level%phys_bc_level_array(i,:,:))
+          case (3)
+             call coefbc_3d(sp(:,:,:,comp), lo, hi, ng, &
+                            the_bc_level%phys_bc_level_array(i,:,:))
+          end select
+       end do
     end do
  
   end subroutine multifab_coefbc

@@ -4,7 +4,7 @@ module advance_module
   use define_bc_module
   use multifab_physbc_module
   use ml_layout_module
-  use diffusive_mass_fluxdiv_module
+  use compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use probin_multispecies_module
 
@@ -92,6 +92,9 @@ contains
     
       ! initialize stochastic flux on every face W(0,1) 
       call generate_random_increments(mla,n_rngs,stoch_W_fc)
+
+      ! apply boundary conditions to stoch_W_fc
+      call stoch_mass_bc(mla,stoch_W_fc,n_rngs,the_bc_level)
 
     endif
 

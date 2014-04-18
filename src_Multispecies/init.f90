@@ -98,7 +98,9 @@ contains
     ! Thermodynamic equilibrium
     !============================================================
     do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
        do i=lo(1),hi(1)
+          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
  
           rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
 
@@ -126,7 +128,7 @@ contains
   
     case(2) 
     !=========================================================
-    ! Initializing rho's with constant gradient for 2-species  
+    ! Initializing rho's with constant gradient 
     !=========================================================
     do j=lo(2),hi(2)
        y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
@@ -134,9 +136,9 @@ contains
           x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
    
             ! linear gradient in rho
-            rho(i,j,1:nspecies) = rho_in(1,1:nspecies) + (rho_in(2,1:nspecies) - &
-                                  rho_in(1,1:nspecies))*y/L(2)
-
+            rho(i,j,1:nspecies) = rho_in(1,1:nspecies) + & 
+               (rho_in(2,1:nspecies) - rho_in(1,1:nspecies))*(y-prob_lo(2))/L(2)
+   
          end do
       end do
 
@@ -155,7 +157,7 @@ contains
             rho(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
        
          end do
-    end do
+      end do
 
     case(4)
     !==================================================================================
@@ -174,7 +176,7 @@ contains
             rho(i,j,2) = rhot - rho(i,j,1)
 
          end do
-    end do
+      end do
 
     case(5)
     !==================================================================================
@@ -195,18 +197,6 @@ contains
             rho(i,j,2) = rhot*w2 
             rho(i,j,3) = rhot-rho(i,j,1)-rho(i,j,2)
            
-            if(rho(i,j,1).lt.0.d0 .or. rho(i,j,2).lt.0.d0 .or. rho(i,j,3).lt.0.d0) then 
-              write(*,*), "rho1 / rho2 / rho3 is negative: STOP"
-              write(*,*), i, j, " w1=", w1, " w2=", w2, " rho1=",rho(i,j,1)," rho2=",rho(i,j,2),&
-                          " rho3=",rho(i,j,3), " rhot=",rhot
-            end if
- 
-            !if(i.eq.4 .and. j.eq.5) print*,'w1=',w1,'w2=',w2,'rho1=',rho(i,j,1),'rho2=',rho(i,j,2),&
-            !                               'rho3=',rho(i,j,3),'rhot=',rhot
-            
-            !rhot = 1.0d0 + beta*dexp(-rsq/(2.0d0*sigma**2))  ! to benchmark eqn1
-            !rho(i,j,2) = rhot - rho(i,j,1)
-
          end do
     end do
             
@@ -238,10 +228,13 @@ contains
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
+       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
           do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
 
-             rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
+               rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
 
           end do
        end do
@@ -250,7 +243,7 @@ contains
     
     case(1) 
     !================================================================================
-    ! Initializing rho's in concentric circle at (Lx/2,Ly/2,Lz/2) with radius^2=0.001
+    ! Initializing rho's in concentric circle 
     !================================================================================
   
     !$omp parallel private(i,j,k,x,y,z)
@@ -261,12 +254,12 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
 
-             rsq = x**2 + y**2 + z**2
-             if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
-                 rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
-             else
-                 rho(i,j,k,1:nspecies) = rho_in(2,1:nspecies)
-             end if
+               rsq = x**2 + y**2 + z**2
+               if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
+                  rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
+               else
+                  rho(i,j,k,1:nspecies) = rho_in(2,1:nspecies)
+               end if
           
           end do
        end do
@@ -274,9 +267,9 @@ contains
     !$omp end parallel do
 
     case(2) 
-    !================================================================================
-    ! Initializing rho's with constant gradient for 2-species  
-    !================================================================================
+    !========================================================
+    ! Initializing rho's with constant gradient
+    !========================================================
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
@@ -286,8 +279,8 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
 
-             rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies) + (rho_in(2,1:nspecies) - &
-                                     rho_in(1,1:nspecies))*y/L(2)
+               rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies) + &
+                   (rho_in(2,1:nspecies) - rho_in(1,1:nspecies))*(y-prob_lo(2))/L(2)
 
           end do
        end do
@@ -373,11 +366,11 @@ contains
                  write(*,*), i, j, " w1=", w1, " w2=", w2, " rho1=",rho(i,j,k,1)," rho2=",&
                              rho(i,j,k,2), " rho3=",rho(i,j,k,3), " rhot=",rhot
               end if
-
-           end do
-        end do
-     end do
-     !$omp end parallel do
+ 
+          end do
+       end do
+    end do
+    !$omp end parallel do
 
     end select
    
@@ -409,7 +402,6 @@ contains
           dp1 => dataptr(Temp(n),i)
           lo  = lwb(get_box(Temp(n),i))
           hi  = upb(get_box(Temp(n),i))
-          !print*, lo, hi 
           
           select case(dm)
           case (2)
@@ -423,7 +415,7 @@ contains
        call multifab_fill_boundary(Temp(n))
 
        ! fill non-periodic domain boundary ghost cells
-       call multifab_coefbc(Temp(n),the_bc_level(n))
+       call multifab_coefbc(Temp(n),1,1,the_bc_level(n))
 
     end do
 
@@ -455,15 +447,17 @@ contains
        do i=lo(1)-1,hi(1)+1
           x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
  
-            Temp(i,j)             = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(2))
-            if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*sin(2.0d0*M_PI*y/L(2))
+            Temp(i,j) = T_in(1)
+            ! These were used for testing thermodiffusion only
+            if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+            if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*sin(2.0d0*M_PI*y/L(1))
 
        end do
     end do  
     
     case(1) 
     !=========================================================================
-    ! Initializing rho's in concentric circle at (Lx/2,Ly/2) with radius^2=0.1
+    ! Initializing T in concentric circle at (Lx/2,Ly/2) with radius^2=0.1*L(1)*L(2)
     !=========================================================================
     do j=lo(2)-1,hi(2)+1
        y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
@@ -473,9 +467,9 @@ contains
           ! temperature distribution follows the density 
           rsq = x**2 + y**2
           if (rsq .lt. L(1)*L(2)*0.1d0) then
-              Temp(i,j) = T_in(1,1)
+              Temp(i,j) = T_in(1)
           else
-              Temp(i,j) = T_in(2,1)
+              Temp(i,j) = T_in(2)
           end if
     
         end do
@@ -483,7 +477,7 @@ contains
   
     case(2) 
     !========================================================
-    ! Initializing rho's with constant gradient for 2-species  
+    ! Initializing T with constant gradient along y axes
     !========================================================
     do j=lo(2)-1,hi(2)+1
        y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
@@ -491,7 +485,7 @@ contains
           x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
       
           ! linear gradient in y direction
-          Temp(i,j) = T_in(1,1) + (T_in(2,1) - T_in(1,1))*y/L(2)
+          Temp(i,j) = T_in(1) + (T_in(2) - T_in(1))*(y-prob_lo(2))/L(2)
 
        end do
     end do
@@ -506,7 +500,7 @@ contains
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-            Temp(i,j)  = 1.0d0 
+            Temp(i,j)  = T_in(1) 
        
          end do
     end do
@@ -521,8 +515,8 @@ contains
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-            Temp(i,j)  = 1.0d0 
-
+            Temp(i,j)  = T_in(1) 
+  
          end do
     end do
 
@@ -537,12 +531,24 @@ contains
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-            Temp(i,j)  = 1.0d0 
+            Temp(i,j)  = T_in(1) 
 
          end do
     end do
             
-    end select
+    case default
+
+    do j=lo(2)-1,hi(2)+1
+         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
+         do i=lo(1)-1,hi(1)+1
+            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
+        
+            Temp(i,j)  = T_in(1) 
+
+         end do
+    end do
+
+   end select
    
   end subroutine init_Temp_2d
 
@@ -576,8 +582,7 @@ contains
           do i=lo(1)-1,hi(1)+1
              x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
              
-             Temp(i,j,k) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(2))
-             if(.false.) Temp(i,j,k) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(2))
+             Temp(i,j,k) = T_in(1)
 
           end do
        end do
@@ -586,7 +591,7 @@ contains
     
     case(1) 
     !================================================================================
-    ! Initializing rho's in concentric circle at (Lx/2,Ly/2,Lz/2) with radius^2=0.001
+    ! Initializing temperature in concentric circle 
     !================================================================================
   
     !$omp parallel private(i,j,k,x,y,z)
@@ -600,9 +605,9 @@ contains
              !temperature distribution follows the density 
              rsq = x**2 + y**2 + z**2
              if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
-                Temp(i,j,k) = T_in(1,1)
+                Temp(i,j,k) = T_in(1)
              else
-                Temp(i,j,k) = T_in(2,1)
+                Temp(i,j,k) = T_in(2)
              end if
           
           end do
@@ -612,7 +617,7 @@ contains
 
     case(2) 
     !========================================================
-    ! Initializing rho's with constant gradient for 2-species  
+    ! Initializing T with constant gradient along y direction
     !========================================================
  
     !$omp parallel private(i,j,k,x,y,z)
@@ -624,7 +629,7 @@ contains
              x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
 
              ! linear gradient in y direction for temperature 
-             Temp(i,j,k) = T_in(1,1) + (T_in(2,1) - T_in(1,1))*y/L(2)
+             Temp(i,j,k) = T_in(1) + (T_in(2) - T_in(1))*(y-prob_lo(2))/L(2)
  
           end do
        end do
@@ -645,7 +650,7 @@ contains
            do i=lo(1)-1,hi(1)+1
               x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-              Temp(i,j,k)  = 1.0d0 
+              Temp(i,j,k) = T_in(1)
        
            end do
         end do
@@ -666,7 +671,7 @@ contains
            do i=lo(1)-1,hi(1)+1
               x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-              Temp(i,j,k)  = 1.0d0 
+              Temp(i,j,k) = T_in(1)
 
            end do
         end do
@@ -687,14 +692,31 @@ contains
            do i=lo(1)-1,hi(1)+1
               x = prob_lo(1) + (dble(i)+half) * dx(1) - half
 
-              Temp(i,j,k)  = 1.0d0 
+              Temp(i,j,k) = T_in(1)
            
            end do
         end do
      end do
      !$omp end parallel do
 
-    end select
+     case default
+    
+     !$omp parallel private(i,j,k,x,y,z)
+     do k=lo(3)-1,hi(3)+1
+        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
+        do j=lo(2)-1,hi(2)+1
+           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
+           do i=lo(1)-1,hi(1)+1
+              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
+
+              Temp(i,j,k) = T_in(1)
+           
+           end do
+        end do
+     end do
+     !$omp end parallel do
+
+   end select
    
   end subroutine init_Temp_3d
 

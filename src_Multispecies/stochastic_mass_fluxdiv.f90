@@ -12,6 +12,7 @@ module stochastic_mass_fluxdiv_module
   use convert_stag_module
   use matvec_mul_module
   use correction_flux_module
+  use multifab_zero_edgeval_module
   use probin_common_module
   use probin_multispecies_module
 
@@ -19,7 +20,8 @@ module stochastic_mass_fluxdiv_module
 
   private
 
-  public :: stochastic_mass_fluxdiv, generate_random_increments, destroy_random_increments
+  public :: stochastic_mass_fluxdiv, generate_random_increments, destroy_random_increments, &
+       stoch_mass_bc
   
 contains
   
@@ -101,6 +103,13 @@ contains
        end do
     end do
 
+    ! If there are walls with zero-flux boundary conditions
+    if(is_nonisothermal) then
+       do n=1,nlevs
+          call multifab_zero_edgeval(stoch_flux_fc(n,:),1,rho_part_bc_comp,nspecies,the_bc_level(n))
+       end do   
+    end if
+
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then
        !write(*,*) "Checking conservation of stochastic fluxes"
@@ -164,5 +173,161 @@ contains
       end do
 
   end subroutine destroy_random_increments
+
+  subroutine stoch_mass_bc(mla,stoch_W_fc,n_rngs,the_bc_level)
+    
+    type(ml_layout), intent(in   )  :: mla
+    integer,         intent(in   )  :: n_rngs
+    type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:) ! (nlevs,dm,n_rngs)
+    type(bc_level) , intent(in   )  :: the_bc_level(:)
+
+    ! local
+    integer :: n,nlevs,dm,idim,comp,i,ng_f
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: fp(:,:,:,:)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+    
+    ng_f = stoch_W_fc(1,1,1)%ng
+
+    do n=1,nlevs
+       do idim=1,dm
+          do comp=1,n_rngs
+             do i=1,nfabs(stoch_W_fc(n,idim,comp))
+                fp => dataptr(stoch_W_fc(n,idim,comp),i)
+                lo = lwb(get_box(stoch_W_fc(n,idim,comp),i))
+                hi = upb(get_box(stoch_W_fc(n,idim,comp),i))
+                select case (dm)
+                case (2)
+                   call stoch_mass_bc_2d(fp(:,:,1,:),ng_f,idim,lo,hi, &
+                                         the_bc_level(n)%phys_bc_level_array(i,:,:))
+                case (3)
+                   call stoch_mass_bc_3d(fp(:,:,:,:),ng_f,idim,lo,hi, &
+                                         the_bc_level(n)%phys_bc_level_array(i,:,:))
+                end select
+             end do
+          end do
+       end do
+    end do
+
+  end subroutine stoch_mass_bc
+
+  subroutine stoch_mass_bc_2d(sflux,ng_f,idim,lo,hi,phys_bc)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_f,idim
+      integer        , intent(in   ) :: phys_bc(:,:)
+      real(kind=dp_t), intent(inout) :: sflux(lo(1)-ng_f:,lo(2)-ng_f:,:)
+
+      ! local
+      integer :: i,j
+
+      if (idim .eq. 1) then
+
+         if (phys_bc(1,1) .eq. NO_SLIP_WALL .or. phys_bc(1,1) .eq. SLIP_WALL) then
+            sflux(lo(1),lo(2):hi(2),:) = 0.d0
+         end if
+
+         if (phys_bc(1,2) .eq. NO_SLIP_WALL .or. phys_bc(1,2) .eq. SLIP_WALL) then
+            sflux(hi(1)+1,lo(2):hi(2),:) = 0.d0
+         end if
+
+         if (phys_bc(1,1) .eq. NO_SLIP_RESERVOIR) then
+            sflux(lo(1),lo(2):hi(2),:) = sqrt(2.0d0)*sflux(lo(1),lo(2):hi(2),:)
+         end if
+
+         if (phys_bc(1,2) .eq. NO_SLIP_RESERVOIR) then
+            sflux(hi(1)+1,lo(2):hi(2),:) = sqrt(2.0d0)*sflux(hi(1)+1,lo(2):hi(2),:)
+         end if
+
+      else
+
+         if (phys_bc(2,1) .eq. NO_SLIP_WALL .or. phys_bc(2,1) .eq. SLIP_WALL) then
+            sflux(lo(1):hi(1),lo(2),:) = 0.d0
+         end if
+
+         if (phys_bc(2,2) .eq. NO_SLIP_WALL .or. phys_bc(2,2) .eq. SLIP_WALL) then
+            sflux(lo(1):hi(1),hi(2)+1,:) = 0.d0
+         end if
+
+         if (phys_bc(2,1) .eq. NO_SLIP_RESERVOIR) then
+            sflux(lo(1):hi(1),lo(2),:) = sqrt(2.0d0)*sflux(lo(1):hi(1),lo(2),:)
+         end if
+
+         if (phys_bc(2,2) .eq. NO_SLIP_RESERVOIR) then
+            sflux(lo(1):hi(1),hi(2)+1,:) = sqrt(2.0d0)*sflux(lo(1):hi(1),hi(2)+1,:)
+         end if
+
+      end if
+
+  end subroutine stoch_mass_bc_2d
+
+  subroutine stoch_mass_bc_3d(sflux,ng_f,idim,lo,hi,phys_bc)
+
+      integer        , intent(in   ) :: lo(:),hi(:),ng_f,idim
+      integer        , intent(in   ) :: phys_bc(:,:)
+      real(kind=dp_t), intent(inout) :: sflux(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
+
+      ! local
+      integer :: i,j,k
+
+      if (idim .eq. 1) then
+
+         if (phys_bc(1,1) .eq. NO_SLIP_WALL .or. phys_bc(1,1) .eq. SLIP_WALL) then
+            sflux(lo(1),lo(2):hi(2),lo(3):hi(3),:) = 0.d0
+         end if
+
+         if (phys_bc(1,2) .eq. NO_SLIP_WALL .or. phys_bc(1,2) .eq. SLIP_WALL) then
+            sflux(hi(1)+1,lo(2):hi(2),lo(3):hi(3),:) = 0.d0
+         end if
+
+         if (phys_bc(1,1) .eq. NO_SLIP_RESERVOIR) then
+            sflux(lo(1),lo(2):hi(2),lo(3):hi(3),:) = sqrt(2.0d0)*sflux(lo(1),lo(2):hi(2),lo(3):hi(3),:)
+         end if
+
+         if (phys_bc(1,2) .eq. NO_SLIP_RESERVOIR) then
+            sflux(hi(1)+1,lo(2):hi(2),lo(3):hi(3),:) = sqrt(2.0d0)*sflux(hi(1)+1,lo(2):hi(2),lo(3):hi(3),:)
+         end if
+
+      else if (idim .eq. 2) then
+
+         if (phys_bc(2,1) .eq. NO_SLIP_WALL .or. phys_bc(2,1) .eq. SLIP_WALL) then
+            sflux(lo(1):hi(1),lo(2),lo(3):hi(3),:) = 0.d0
+         end if
+
+         if (phys_bc(2,2) .eq. NO_SLIP_WALL .or. phys_bc(2,2) .eq. SLIP_WALL) then
+            sflux(lo(1):hi(1),hi(2)+1,lo(3):hi(3),:) = 0.d0
+         end if
+
+         if (phys_bc(2,1) .eq. NO_SLIP_RESERVOIR) then
+            sflux(lo(1):hi(1),lo(2),lo(3):hi(3),:) = sqrt(2.0d0)*sflux(lo(1):hi(1),lo(2),lo(3):hi(3),:)
+         end if
+
+         if (phys_bc(2,2) .eq. NO_SLIP_RESERVOIR) then
+            sflux(lo(1):hi(1),hi(2)+1,lo(3):hi(3),:) = sqrt(2.0d0)*sflux(lo(1):hi(1),hi(2)+1,lo(3):hi(3),:)
+         end if
+
+      else
+
+         if (phys_bc(3,1) .eq. NO_SLIP_WALL .or. phys_bc(3,1) .eq. SLIP_WALL) then
+            sflux(lo(1):hi(1),lo(2):hi(2),lo(3),:) = 0.d0
+         end if
+
+         if (phys_bc(3,2) .eq. NO_SLIP_WALL .or. phys_bc(3,2) .eq. SLIP_WALL) then
+            sflux(lo(1):hi(1),lo(2):hi(2),hi(3)+1,:) = 0.d0
+         end if
+
+         if (phys_bc(3,1) .eq. NO_SLIP_RESERVOIR) then
+            sflux(lo(1):hi(1),lo(2):hi(2),lo(3),:) = sqrt(2.0d0)*sflux(lo(1):hi(1),lo(2):hi(2),lo(3),:)
+         end if
+
+         if (phys_bc(3,2) .eq. NO_SLIP_RESERVOIR) then
+            sflux(lo(1):hi(1),lo(2):hi(2),hi(3)+1,:) = sqrt(2.0d0)*sflux(lo(1):hi(1),lo(2):hi(2),hi(3)+1,:)
+         end if
+
+      end if
+
+  end subroutine stoch_mass_bc_3d
    
 end module stochastic_mass_fluxdiv_module
