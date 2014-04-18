@@ -98,9 +98,7 @@ contains
     ! Thermodynamic equilibrium
     !============================================================
     do j=lo(2),hi(2)
-       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
        do i=lo(1),hi(1)
-          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
  
           rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
 
@@ -131,9 +129,9 @@ contains
     ! Initializing rho's with constant gradient 
     !=========================================================
     do j=lo(2),hi(2)
-       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       y = prob_lo(2) + (dble(j)+half)*dx(2) 
        do i=lo(1),hi(1)
-          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+          x = prob_lo(1) + (dble(i)+half)*dx(1) 
    
             ! linear gradient in rho
             rho(i,j,1:nspecies) = rho_in(1,1:nspecies) + & 
@@ -148,11 +146,11 @@ contains
     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
     !===========================================================
     do j=lo(2),hi(2)
-         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
+         y = prob_lo(2) + (dble(j)+half) * dx(2) - half*(prob_lo(2)+prob_hi(2))
          do i=lo(1),hi(1)
-            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
+            x = prob_lo(1) + (dble(i)+half) * dx(1) - half*(prob_lo(1)+prob_hi(1))
         
-            rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2
+            rsq = x**2 + y**2
             rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
             rho(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
        
@@ -228,13 +226,10 @@ contains
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
-       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
 
-               rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
+             rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
 
           end do
        end do
@@ -273,11 +268,11 @@ contains
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
-       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
+       z = prob_lo(3) + (dble(k)+half)*dx(3) 
        do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+          y = prob_lo(2) + (dble(j)+half)*dx(2)
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+             x = prob_lo(1) + (dble(i)+half)*dx(1)
 
                rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies) + &
                    (rho_in(2,1:nspecies) - rho_in(1,1:nspecies))*(y-prob_lo(2))/L(2)
@@ -295,13 +290,13 @@ contains
   
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
-        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
+        z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
         do j=lo(2),hi(2)
-           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
+           y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
            do i=lo(1),hi(1)
-              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
+              x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
         
-              rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2 + (z-L(3)*half)**2
+              rsq = x**2 + y**2 + z**2
               rho(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*&
                              Dbar_in(1)*time)**1.5d0
               rho(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*&
@@ -443,9 +438,9 @@ contains
     ! Thermodynamic equilibrium
     !=========================================================================
     do j=lo(2)-1,hi(2)+1
-       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       y = prob_lo(2) + (dble(j)+half)*dx(2) 
        do i=lo(1)-1,hi(1)+1
-          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+          x = prob_lo(1) + (dble(i)+half)*dx(1) 
  
             Temp(i,j) = T_in(1)
             ! These were used for testing thermodiffusion only
@@ -480,9 +475,9 @@ contains
     ! Initializing T with constant gradient along y axes
     !========================================================
     do j=lo(2)-1,hi(2)+1
-       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       y = prob_lo(2) + (dble(j)+half)*dx(2) 
        do i=lo(1)-1,hi(1)+1
-          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+          x = prob_lo(1) + (dble(i)+half)*dx(1) 
       
           ! linear gradient in y direction
           Temp(i,j) = T_in(1) + (T_in(2) - T_in(1))*(y-prob_lo(2))/L(2)
@@ -496,12 +491,10 @@ contains
     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
     !========================================================
     do j=lo(2)-1,hi(2)+1
-         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1)-1,hi(1)+1
-            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
             Temp(i,j)  = T_in(1) 
-       
+ 
          end do
     end do
 
@@ -511,9 +504,7 @@ contains
     ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
     !==================================================================================
     do j=lo(2)-1,hi(2)+1
-         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1)-1,hi(1)+1
-            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
             Temp(i,j)  = T_in(1) 
   
@@ -527,9 +518,7 @@ contains
     ! (to benchmark eqn1) Initializing rho1, rho2=Gaussian and rhototal has no-time dependence.
     !==================================================================================
     do j=lo(2)-1,hi(2)+1
-         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1)-1,hi(1)+1
-            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
             Temp(i,j)  = T_in(1) 
 
@@ -576,11 +565,8 @@ contains
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3)-1,hi(3)+1
-       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2)-1,hi(2)+1
-          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
           do i=lo(1)-1,hi(1)+1
-             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
              
              Temp(i,j,k) = T_in(1)
 
@@ -622,11 +608,11 @@ contains
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3)-1,hi(3)+1
-       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
+       z = prob_lo(3) + (dble(k)+half)*dx(3) 
        do j=lo(2)-1,hi(2)+1
-          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+          y = prob_lo(2) + (dble(j)+half)*dx(2) 
           do i=lo(1)-1,hi(1)+1
-             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+             x = prob_lo(1) + (dble(i)+half)*dx(1) 
 
              ! linear gradient in y direction for temperature 
              Temp(i,j,k) = T_in(1) + (T_in(2) - T_in(1))*(y-prob_lo(2))/L(2)
@@ -644,11 +630,8 @@ contains
   
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3)-1,hi(3)+1
-        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2)-1,hi(2)+1
-           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1)-1,hi(1)+1
-              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
               Temp(i,j,k) = T_in(1)
        
@@ -665,11 +648,8 @@ contains
      
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3)-1,hi(3)+1
-        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2)-1,hi(2)+1
-           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1)-1,hi(1)+1
-              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
               Temp(i,j,k) = T_in(1)
 
@@ -686,11 +666,8 @@ contains
 
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3)-1,hi(3)+1
-        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2)-1,hi(2)+1
-           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1)-1,hi(1)+1
-              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
 
               Temp(i,j,k) = T_in(1)
            
@@ -703,11 +680,8 @@ contains
     
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3)-1,hi(3)+1
-        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2)-1,hi(2)+1
-           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1)-1,hi(1)+1
-              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
 
               Temp(i,j,k) = T_in(1)
            

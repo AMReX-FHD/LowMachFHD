@@ -2,14 +2,14 @@
  
  dim_in = 3                     ! problem dimension
  plot_int = 10              ! plot interval
- max_grid_size(1:3) = 16 16 16  ! individual box size 
+ max_grid_size(1:3) = 32 16 32  ! individual box size 
  n_steps_skip = 5            ! when to start analyzing data
  k_B      = 1E-3                ! Boltzmann constant
  
  ! Grid size
  prob_lo(1:3) = 0  0  0
- prob_hi(1:3) = 32 32 32        ! physical systemsize = (prob_lo-prob_hi)
- n_cells(1:3) = 32 32 32        ! to set dx = systemsize/n_cells
+ prob_hi(1:3) = 32 16 32        ! physical systemsize = (prob_lo-prob_hi)
+ n_cells(1:3) = 32 16 32        ! to set dx = systemsize/n_cells
 
  ! allowable options for this example are
  ! -1 = PERIODIC
