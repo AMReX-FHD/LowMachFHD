@@ -89,7 +89,7 @@ subroutine main_driver()
   end do
 
   ! set grid spacing at each level; presently grid spacing is same in all direction
-  dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
+  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
   
   ! check whether dimensionality & grid spacing passed correct 
   select case (dm) 
@@ -250,12 +250,12 @@ subroutine main_driver()
   end if
   !=====================================================================
 
-  ! free up memory counters for time-average, covariance and <wi>, <wiwj>
-  step_count = 0
-  covW       = 0 
-  covW_theo  = 0 
-  wit        = 0 
-  wiwjt      = 0 
+  ! free up memory counters 
+  step_count = 0.d0
+  covW       = 0.d0 
+  covW_theo  = 0.d0 
+  wit        = 0.d0 
+  wiwjt      = 0.d0 
 
   do istep=1,max_step
 
@@ -411,7 +411,7 @@ subroutine main_driver()
      end do
      write(*,*), ''
 
-     write(*,*), 'l1-norm of cov of W for',nspecies,' species is =', abs(sum(covW_theo(:,:)-covW(:,:)))
+     write(*,*), 'l1-norm of cov of W for',nspecies,' species is =', abs(sum(covW_theo - covW))
  
      end if
   end if
@@ -424,17 +424,22 @@ subroutine main_driver()
      call finalize_hydro_grid()
   end if
 
-  deallocate(molmass)
-  deallocate(covW)
-  deallocate(covW_theo)
-  deallocate(wiwjt)
-  deallocate(wit)
   do n=1,nlevs
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_tot(n))
      call multifab_destroy(rho_exact(n))
      call multifab_destroy(Temp(n))
   end do
+  deallocate(lo,hi)
+  deallocate(dx)
+  deallocate(rho)
+  deallocate(rho_tot)
+  deallocate(Temp)
+  deallocate(molmass)
+  deallocate(covW)
+  deallocate(covW_theo)
+  deallocate(wiwjt)
+  deallocate(wit)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 

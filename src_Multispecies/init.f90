@@ -16,12 +16,13 @@ module init_module
   public :: init_rho, init_Temp
   
   ! init_type: 
-  ! 0 = everything constant in space (thermodynamic equilibrium)
-  ! 1 = rho in concentric circle (two values inside and outside concentric circular region), 
-  ! 2 = constant gradient (constant rho and spatial distortion proportional to x and y)
-  ! 3 = gaussian spread with total density constant, 2-species
-  ! 4 = manufactured solution for 2-species equal/unequal molarmass,gaussian-rho, time-independent-space-varying totaldensity
-  ! 5 = manufactured solution for 3-species time-independent-space-varying density
+  ! 0 = rho constant in space (thermodynamic equilibrium), temperature profile to check thermodiffusion
+  ! 1 = rho in concentric circle (two values inside and outside), temperature is distributed similarly 
+  ! 2 = constant gradient (spatial distortion proportional to y), temperature is distributed similarly
+  ! 3 = gaussian spread with total density constant, 2-species, temperature fixed to 1
+  ! 4 = manufactured solution for 2-species equal/unequal molarmass,gaussian-rho,time-independent-space-varying 
+  !     totaldensity,temperature fixed to 1 
+  ! 5 = manufactured solution for 3-species time-independent-space-varying density,temperature fixed to 1
 
 contains
   
@@ -93,66 +94,63 @@ contains
     select case(init_type) 
 
     case(0) 
-    !=========================================================================
+    !============================================================
     ! Thermodynamic equilibrium
-    !=========================================================================
-      do j=lo(2),hi(2)
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
-         do i=lo(1),hi(1)
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+    !============================================================
+    do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
  
-            rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
+          rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
 
-         end do
-      end do  
+       end do
+    end do  
     
     case(1) 
-    !=========================================================================
-    ! Initializing rho's in concentric circle at (Lx/2,Ly/2) with radius^2=0.1
-    !=========================================================================
-      do j=lo(2),hi(2)
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
-         do i=lo(1),hi(1)
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+    !=============================================================
+    ! Initializing rho's in concentric circle with radius^2 = 0.1
+    !=============================================================
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       do i=lo(1),hi(1)
+          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
        
-            rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
-            if (rsq .lt. L(1)*L(2)*0.1d0) then
-               rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
-            else
-               rho(i,j,1:nspecies) = rho_in(2,1:nspecies)
-            end if
+          rsq = x**2 + y**2
+          if (rsq .lt. L(1)*L(2)*0.1d0) then
+             rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
+          else
+             rho(i,j,1:nspecies) = rho_in(2,1:nspecies)
+          end if
     
-         end do
-      end do
+       end do
+    end do
   
     case(2) 
-    !========================================================
+    !=========================================================
     ! Initializing rho's with constant gradient for 2-species  
-    !========================================================
-      do j=lo(2),hi(2)
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
-         do i=lo(1),hi(1)
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+    !=========================================================
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       do i=lo(1),hi(1)
+          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
    
             ! linear gradient in rho
             rho(i,j,1:nspecies) = rho_in(1,1:nspecies) + (rho_in(2,1:nspecies) - &
-                                  rho_in(1,1:nspecies))*y/L(1)
+                                  rho_in(1,1:nspecies))*y/L(2)
 
          end do
       end do
 
     case(3) 
-    !========================================================
+    !===========================================================
     ! Initializing rho's in Gaussian so as rho_tot=constant=1.0
     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
-    !========================================================
-  
+    !===========================================================
     do j=lo(2),hi(2)
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1),hi(1)
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-            rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
+            rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2
             rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
             rho(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
        
@@ -164,13 +162,12 @@ contains
     ! Initializing rho1,rho2=Gaussian and rhototal=1+alpha*exp(-r^2/4D)/(4piD) (no-time 
     ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
     !==================================================================================
- 
     do j=lo(2),hi(2)
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1),hi(1)
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-            rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
+            rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2
             rhot = 1.0d0 + alpha1/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
             rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
                          beta*time)*rhot
@@ -185,13 +182,12 @@ contains
     ! Dbar_in(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
     ! (to benchmark eqn1) Initializing rho1, rho2=Gaussian and rhototal has no-time dependence.
     !==================================================================================
- 
     do j=lo(2),hi(2)
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1),hi(1)
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-            rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
+            rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2
             w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
             w2  =  delta*dexp(-beta*time)
             rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
@@ -242,12 +238,9 @@ contains
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
-       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
        do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0             
-             
+
              rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
 
           end do
@@ -262,13 +255,13 @@ contains
   
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
-       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-             
-             rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+
+             rsq = x**2 + y**2 + z**2
              if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
                  rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
              else
@@ -281,20 +274,20 @@ contains
     !$omp end parallel do
 
     case(2) 
-    !========================================================
+    !================================================================================
     ! Initializing rho's with constant gradient for 2-species  
-    !========================================================
+    !================================================================================
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
-       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
- 
-               rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies) + (rho_in(2,1:nspecies) - &
-                                       rho_in(1,1:nspecies))*y/L(1)
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+
+             rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies) + (rho_in(2,1:nspecies) - &
+                                     rho_in(1,1:nspecies))*y/L(2)
 
           end do
        end do
@@ -302,21 +295,20 @@ contains
      !$omp end parallel do
 
      case(3) 
-     !===========================================================
-     ! Initializing rho's in Gaussian so as rho_tot=constant=1.0. 
-     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)^3/2, For norm, 
-     ! sigma/dx >2 (at t=0) & L/sigma < 8 (at t=t)
-     !===========================================================
+     !================================================================================
+     ! Initializing rho's in Gaussian so as rho_tot=constant=1.0. Here rho_exact = 
+     ! e^(-r^2/4Dt)/(4piDt)^3/2, For norm, sigma/dx >2 (at t=0) & L/sigma < 8 (at t=t)
+     !================================================================================
   
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
-        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2),hi(2)
-           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1),hi(1)
-              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-              rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
+              rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2 + (z-L(3)*half)**2
               rho(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*&
                              Dbar_in(1)*time)**1.5d0
               rho(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*&
@@ -328,20 +320,20 @@ contains
      !$omp end parallel do
 
      case(4)
-     !=============================================================================
+     !==============================================================================
      ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
      ! in time. Manufactured solution rho1_exact = e^(-r^2/4Dt-t/tau)/(4piDt)^(3/2)
-     !=============================================================================
+     !==============================================================================
      
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
-        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2),hi(2)
-           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1),hi(1)
-              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-              rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
+              rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2 + (z-L(3)*half)**2
               rhot = 1.0d0 + alpha1*dexp(-rsq/(4.0d0*Dbar_in(1)))/(4.0d0*M_PI*&
                      Dbar_in(1))**1.5d0
            
@@ -362,13 +354,13 @@ contains
 
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
-        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2),hi(2)
-           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1),hi(1)
-              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
 
-              rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2
+              rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2 + (z-L(3)*half)**2
               w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
               w2  =  delta*dexp(-beta*time)
               rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
@@ -409,10 +401,6 @@ contains
     ng = Temp(1)%ng
     nlevs = size(Temp,1)
 
-    ! assign values of parameters for the gaussian rho, rhototal
-    alpha1 = 0.5d0 
-    beta   = 0.1d0 
-    delta  = 0.5d0 
     sigma  = (prob_hi(1)-prob_lo(1))/10.0d0  ! variance of gaussian distribution
 
     ! looping over boxes 
@@ -462,62 +450,61 @@ contains
     !=========================================================================
     ! Thermodynamic equilibrium
     !=========================================================================
-      do j=lo(2)-1,hi(2)+1
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
-         do i=lo(1)-1,hi(1)+1
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+    do j=lo(2)-1,hi(2)+1
+       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       do i=lo(1)-1,hi(1)+1
+          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
  
-            Temp(i,j)             = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            if(.false.) Temp(i,j) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+            Temp(i,j)             = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(2))
+            if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*sin(2.0d0*M_PI*y/L(2))
 
-         end do
-      end do  
+       end do
+    end do  
     
     case(1) 
     !=========================================================================
     ! Initializing rho's in concentric circle at (Lx/2,Ly/2) with radius^2=0.1
     !=========================================================================
-      do j=lo(2)-1,hi(2)+1
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
-         do i=lo(1)-1,hi(1)+1
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+    do j=lo(2)-1,hi(2)+1
+       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       do i=lo(1)-1,hi(1)+1
+          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
       
-              ! temperature distribution follows the density 
-              rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2
-              if (rsq .lt. L(1)*L(2)*0.1d0) then
-                 Temp(i,j) = T_in(1,1)
-              else
-                 Temp(i,j) = T_in(2,1)
-              end if
+          ! temperature distribution follows the density 
+          rsq = x**2 + y**2
+          if (rsq .lt. L(1)*L(2)*0.1d0) then
+              Temp(i,j) = T_in(1,1)
+          else
+              Temp(i,j) = T_in(2,1)
+          end if
     
-         end do
-      end do
+        end do
+    end do
   
     case(2) 
     !========================================================
     ! Initializing rho's with constant gradient for 2-species  
     !========================================================
-      do j=lo(2)-1,hi(2)+1
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
-         do i=lo(1)-1,hi(1)+1
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
-   
-            ! linear gradient in temperature
-            Temp(i,j) = T_in(1,1) + (T_in(2,1) - T_in(1,1))*y/L(1)
+    do j=lo(2)-1,hi(2)+1
+       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       do i=lo(1)-1,hi(1)+1
+          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+      
+          ! linear gradient in y direction
+          Temp(i,j) = T_in(1,1) + (T_in(2,1) - T_in(1,1))*y/L(2)
 
-         end do
-      end do
+       end do
+    end do
 
     case(3) 
     !========================================================
     ! Initializing rho's in Gaussian so as rho_tot=constant=1.0
     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
     !========================================================
-  
     do j=lo(2)-1,hi(2)+1
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1)-1,hi(1)+1
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
             Temp(i,j)  = 1.0d0 
        
@@ -529,11 +516,10 @@ contains
     ! Initializing rho1,rho2=Gaussian and rhototal=1+alpha*exp(-r^2/4D)/(4piD) (no-time 
     ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
     !==================================================================================
- 
     do j=lo(2)-1,hi(2)+1
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1)-1,hi(1)+1
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
             Temp(i,j)  = 1.0d0 
 
@@ -546,11 +532,10 @@ contains
     ! Dbar_in(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
     ! (to benchmark eqn1) Initializing rho1, rho2=Gaussian and rhototal has no-time dependence.
     !==================================================================================
- 
     do j=lo(2)-1,hi(2)+1
-         y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1)-1,hi(1)+1
-            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
             Temp(i,j)  = 1.0d0 
 
@@ -585,14 +570,14 @@ contains
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3)-1,hi(3)+1
-       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2)-1,hi(2)+1
-          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
           do i=lo(1)-1,hi(1)+1
-             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0             
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
              
-             Temp(i,j,k) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-             if(.false.) Temp(i,j,k) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(1))
+             Temp(i,j,k) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(2))
+             if(.false.) Temp(i,j,k) = 1.0d0 + beta*sin(2.0d0*M_PI*y/L(2))
 
           end do
        end do
@@ -606,19 +591,19 @@ contains
   
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3)-1,hi(3)+1
-       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2)-1,hi(2)+1
-          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
           do i=lo(1)-1,hi(1)+1
-             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
              
-               ! temperature distribution follows the density 
-               rsq = (x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2 
-               if (rsq .lt. L(1)*L(2)*0.1d0) then
-                  Temp(i,j,k) = T_in(1,1)
-               else
-                  Temp(i,j,k) = T_in(2,1)
-               end if
+             !temperature distribution follows the density 
+             rsq = x**2 + y**2 + z**2
+             if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
+                Temp(i,j,k) = T_in(1,1)
+             else
+                Temp(i,j,k) = T_in(2,1)
+             end if
           
           end do
        end do
@@ -632,14 +617,14 @@ contains
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3)-1,hi(3)+1
-       z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2)-1,hi(2)+1
-          y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
           do i=lo(1)-1,hi(1)+1
-             x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
 
-               ! linear gradient in temperature
-               Temp(i,j,k) = T_in(1,1) + (T_in(2,1) - T_in(1,1))*y/L(1)
+             ! linear gradient in y direction for temperature 
+             Temp(i,j,k) = T_in(1,1) + (T_in(2,1) - T_in(1,1))*y/L(2)
  
           end do
        end do
@@ -647,19 +632,18 @@ contains
      !$omp end parallel do
 
      case(3) 
-     !===========================================================
+     !=================================================================
      ! Initializing rho's in Gaussian so as rho_tot=constant=1.0. 
-     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)^3/2, For norm, 
-     ! sigma/dx >2 (at t=0) & L/sigma < 8 (at t=t)
-     !===========================================================
+     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)^3/2. Manufactured solution 
+     !=================================================================
   
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3)-1,hi(3)+1
-        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2)-1,hi(2)+1
-           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1)-1,hi(1)+1
-              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
               Temp(i,j,k)  = 1.0d0 
        
@@ -671,16 +655,16 @@ contains
      case(4)
      !=============================================================================
      ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
-     ! in time. Manufactured solution rho1_exact = e^(-r^2/4Dt-t/tau)/(4piDt)^(3/2)
+     ! in time. Manufactured solution 
      !=============================================================================
      
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3)-1,hi(3)+1
-        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2)-1,hi(2)+1
-           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1)-1,hi(1)+1
-              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
               Temp(i,j,k)  = 1.0d0 
 
@@ -692,16 +676,16 @@ contains
      case(5)
      !==================================================================================
      ! Initializing m2=m3, D12=D13 where Dbar_in(1)=D12, Dbar_in(2)=D13, Dbar_in(3)=D23, 
-     ! Grad(w2)=0, manufactured solution for rho1 and rho2 
+     ! Grad(w2)=0. Manufactured solution 
      !==================================================================================
 
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3)-1,hi(3)+1
-        z = prob_lo(3) + (dble(k)+0.5d0) * dx(3) - 0.5d0
+        z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2)-1,hi(2)+1
-           y = prob_lo(2) + (dble(j)+0.5d0) * dx(2) - 0.5d0
+           y = prob_lo(2) + (dble(j)+half) * dx(2) - half
            do i=lo(1)-1,hi(1)+1
-              x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
+              x = prob_lo(1) + (dble(i)+half) * dx(1) - half
 
               Temp(i,j,k)  = 1.0d0 
            
