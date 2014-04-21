@@ -1,3 +1,11 @@
+! This is a test of thermodiffusion for 2 species
+! Theory is:
+! c=rho1/rho=1/(1+.1*exp(.15*y))
+! Solution to diff(c(y),y)=-K*c(y)*(1-c(y))
+! Here K=grad(T)*S_T=0.15
+! Height of domain H=32, rho=1
+! And average <rho1>=.4830852506
+
 &probin_common
  
  dim_in = 2                       ! problem dimension
@@ -11,8 +19,8 @@
 
  ! Grid size
  prob_lo(1:2) = 0 0
- prob_hi(1:2) = 2 32             ! physical systemsize = (prob_lo-prob_hi)
- n_cells(1:2) = 4 64             ! to set dx = systemsize/n_cells
+ prob_hi(1:2) = 1 32             ! physical systemsize = (prob_lo-prob_hi)
+ n_cells(1:2) = 1 32             ! to set dx = systemsize/n_cells
 
  ! allowable options for this example are
  !PERIODIC = -1
@@ -42,7 +50,8 @@
 &probin_multispecies
  
  nspecies = 2                     ! number of species
- init_type = 2 ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
+ ! Special init code for this test:
+ init_type = 6 ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
 
  max_step = 10000                   ! total number of computational step
  cfl1     = 0.2                   ! CFL number
@@ -74,6 +83,7 @@
  !rho_in(1,1:2) = 0.4830852506 0.5169147494      ! bottom   
  !rho_in(2,1:2) = 0.4830852506 0.5169147494      ! top
  ! Good initial guess
+ ! This is not used if init_type=6, only for init_type=2
  rho_in(1,1:2) = 0.903 0.097      ! bottom   
  rho_in(2,1:2) = 0.063 0.937      ! top
  

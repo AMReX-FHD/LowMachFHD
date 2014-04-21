@@ -197,7 +197,30 @@ contains
            
          end do
     end do
+
+    case(6) 
+    !=========================================================
+    ! Test of thermodiffusion steady-state for 2 species 
+    !=========================================================
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+half)*dx(2) 
+       do i=lo(1),hi(1)
+          x = prob_lo(1) + (dble(i)+half)*dx(1) 
+   
+            ! Solution to diff(c(y),y)=-K*c(y)*(1-c(y))
+            ! Here K=grad(T)*S_T=0.15
+            ! Height of domain H=32
+            ! And average <rho1>=.4830852506
+            rho(i,j,1) = 1.0d0/(1.0d0+0.1d0*exp(0.15d0*y))
+            rho(i,j,2) = 1.0d0 - rho(i,j,1) 
+   
+         end do
+      end do
             
+    case default
+      
+      call bl_error("Desired init_type not supported in 3D")
+      
     end select
    
   end subroutine init_rho_2d
@@ -367,6 +390,10 @@ contains
     end do
     !$omp end parallel do
 
+    case default
+      
+      call bl_error("Desired init_type not supported in 3D")
+      
     end select
    
   end subroutine init_rho_3d
@@ -470,7 +497,7 @@ contains
         end do
     end do
   
-    case(2) 
+    case(2,6) 
     !========================================================
     ! Initializing T with constant gradient along y axes
     !========================================================
@@ -485,46 +512,6 @@ contains
        end do
     end do
 
-    case(3) 
-    !========================================================
-    ! Initializing rho's in Gaussian so as rho_tot=constant=1.0
-    ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
-    !========================================================
-    do j=lo(2)-1,hi(2)+1
-         do i=lo(1)-1,hi(1)+1
-        
-            Temp(i,j)  = T_in(1) 
- 
-         end do
-    end do
-
-    case(4)
-    !==================================================================================
-    ! Initializing rho1,rho2=Gaussian and rhototal=1+alpha*exp(-r^2/4D)/(4piD) (no-time 
-    ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
-    !==================================================================================
-    do j=lo(2)-1,hi(2)+1
-         do i=lo(1)-1,hi(1)+1
-        
-            Temp(i,j)  = T_in(1) 
-  
-         end do
-    end do
-
-    case(5)
-    !==================================================================================
-    ! Initializing m2=m3, D12=D13 where Dbar_in(1)=D12, Dbar_in(2)=D13, 
-    ! Dbar_in(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
-    ! (to benchmark eqn1) Initializing rho1, rho2=Gaussian and rhototal has no-time dependence.
-    !==================================================================================
-    do j=lo(2)-1,hi(2)+1
-         do i=lo(1)-1,hi(1)+1
-        
-            Temp(i,j)  = T_in(1) 
-
-         end do
-    end do
-            
     case default
 
     do j=lo(2)-1,hi(2)+1
@@ -601,7 +588,7 @@ contains
     end do
     !$omp end parallel do
 
-    case(2) 
+    case(2,6) 
     !========================================================
     ! Initializing T with constant gradient along y direction
     !========================================================
@@ -619,76 +606,22 @@ contains
  
           end do
        end do
-     end do
-     !$omp end parallel do
+    end do
+    !$omp end parallel do
 
-     case(3) 
-     !=================================================================
-     ! Initializing rho's in Gaussian so as rho_tot=constant=1.0. 
-     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)^3/2. Manufactured solution 
-     !=================================================================
-  
-     !$omp parallel private(i,j,k,x,y,z)
-     do k=lo(3)-1,hi(3)+1
-        do j=lo(2)-1,hi(2)+1
-           do i=lo(1)-1,hi(1)+1
-        
-              Temp(i,j,k) = T_in(1)
-       
-           end do
-        end do
-     end do
-     !$omp end parallel do
+    case default
 
-     case(4)
-     !=============================================================================
-     ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
-     ! in time. Manufactured solution 
-     !=============================================================================
-     
-     !$omp parallel private(i,j,k,x,y,z)
-     do k=lo(3)-1,hi(3)+1
-        do j=lo(2)-1,hi(2)+1
-           do i=lo(1)-1,hi(1)+1
-        
-              Temp(i,j,k) = T_in(1)
+    !$omp parallel private(i,j,k,x,y,z)
+    do k=lo(3)-1,hi(3)+1
+       do j=lo(2)-1,hi(2)+1
+          do i=lo(1)-1,hi(1)+1
 
-           end do
-        end do
-     end do
-     !$omp end parallel do
+             Temp(i,j,k) = T_in(1)
 
-     case(5)
-     !==================================================================================
-     ! Initializing m2=m3, D12=D13 where Dbar_in(1)=D12, Dbar_in(2)=D13, Dbar_in(3)=D23, 
-     ! Grad(w2)=0. Manufactured solution 
-     !==================================================================================
-
-     !$omp parallel private(i,j,k,x,y,z)
-     do k=lo(3)-1,hi(3)+1
-        do j=lo(2)-1,hi(2)+1
-           do i=lo(1)-1,hi(1)+1
-
-              Temp(i,j,k) = T_in(1)
-           
-           end do
-        end do
-     end do
-     !$omp end parallel do
-
-     case default
-    
-     !$omp parallel private(i,j,k,x,y,z)
-     do k=lo(3)-1,hi(3)+1
-        do j=lo(2)-1,hi(2)+1
-           do i=lo(1)-1,hi(1)+1
-
-              Temp(i,j,k) = T_in(1)
-           
-           end do
-        end do
-     end do
-     !$omp end parallel do
+          end do
+       end do
+    end do
+    !$omp end parallel do
 
    end select
    
