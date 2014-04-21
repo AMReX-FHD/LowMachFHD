@@ -70,7 +70,7 @@
  ! Fluid parameters:
  molmass_in(1:2) = 1.0 0.75   ! molar mass of n-species
  Dbar_in(1) = 1.0 ! SM diffusion constant arranged in lower-triangle
- Dtherm_in(1:2) = 0.0 4.8    ! thermo-diffusion constant (sums to zero)
+ Dtherm_in(1:2) = 0.0 4800    ! thermo-diffusion constant (sums to zero)
  Press    = 1.0                   ! Pressure
 
  ! BCs:
@@ -78,7 +78,7 @@
  ! Thermodiffusion
  ! BC = -1 100
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
- T_in(1:2) = 1.0 2.0 ! Temperature at bottom and top boundaries
+ T_in(1:2) = 1.0 1.001 ! Temperature at bottom and top boundaries
  ! Bad initial guess
  !rho_in(1,1:2) = 0.4830852506 0.5169147494      ! bottom   
  !rho_in(2,1:2) = 0.4830852506 0.5169147494      ! top
