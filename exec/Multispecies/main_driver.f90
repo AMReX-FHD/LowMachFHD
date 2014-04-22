@@ -54,6 +54,11 @@ subroutine main_driver()
 
   call probin_common_init()
   call probin_multispecies_init() 
+  
+  if(.true.) then ! Confirm that gcc read the input file correctly
+    write(*,*) "rho_in=", rho_in(1:2,1:nspecies)
+    write(*,*) "c_bc=", c_bc(1:dim_in,1:2,1:nspecies)
+  end if
 
   ! for time being, we fix nlevs to be 1. for adaptive simulations where the grids 
   ! change, cells at finer resolution don't necessarily exist depending on your 
