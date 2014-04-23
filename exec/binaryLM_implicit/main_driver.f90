@@ -113,11 +113,14 @@ subroutine main_driver()
 
   dm = dim_in
 
+
+  !!!!!!!!!!!!!!!!!!!!!!!!! STUFF FOR NON-RESTART
+  time = 0.d0
+
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
 
   ! now that we have nlevs and dm, we can allocate these
-  allocate(dx(nlevs,dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm),vel_bc_n(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pold(nlevs),pnew(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
@@ -140,25 +143,6 @@ subroutine main_driver()
   do n=2,nlevs
      mba%rr(n-1,:) = 2
   enddo
-
-  ! set grid spacing at each level
-  ! the grid spacing is the same in each direction
-  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
-  select case (dm) 
-    case(2)
-      if (dx(1,1) .ne. dx(1,2)) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-      end if    
-    case(3)
-      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-      end if    
-    case default
-      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
-  end select
-  do n=2,nlevs
-     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
-  end do
 
   ! create a box from (0,0) to (n_cells-1,n_cells-1)
   lo(1:dm) = 0
@@ -318,7 +302,25 @@ subroutine main_driver()
 
   end do
 
-  time = 0.d0
+  ! set grid spacing at each level
+  ! the grid spacing is the same in each direction
+  allocate(dx(nlevs,dm))
+  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
+  select case (dm) 
+    case(2)
+      if (dx(1,1) .ne. dx(1,2)) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+      end if    
+    case(3)
+      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+      end if    
+    case default
+      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+  end select
+  do n=2,nlevs
+     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
+  end do
 
   ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pold,dx,mla,time)
