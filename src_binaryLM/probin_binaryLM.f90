@@ -10,7 +10,7 @@ module probin_binarylm_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  integer   , save :: max_step,print_int
+  integer   , save :: restart,max_step,print_int
   real(dp_t), save :: rhobar(2),diff_coef,smoothing_width
   real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2),grav(3)
   real(dp_t), save :: mol_mass(2),temperature
@@ -32,6 +32,7 @@ module probin_binarylm_module
   namelist /probin_binarylm/ grav              ! gravity vector (negative is downwards)
 
   ! simulation parameters
+  namelist /probin_binarylm/ restart           ! checkpoint restart number
   namelist /probin_binarylm/ max_step          ! maximum number of time steps
   namelist /probin_binarylm/ print_int         ! how often to output EOS drift and sum of conserved quantities
   namelist /probin_binarylm/ project_eos_int   ! how often to call project_onto_eos
@@ -92,6 +93,7 @@ contains
     c_bc(1:3,1:2) = 0.d0
     grav(1:3) = 0.d0
 
+    restart = -1
     max_step = 1
     print_int = 0
     project_eos_int = 1
@@ -189,6 +191,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) grav(3)
+
+       case ('--restart')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) restart
 
        case ('--max_step')
           farg = farg + 1

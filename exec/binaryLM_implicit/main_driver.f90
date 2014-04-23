@@ -111,16 +111,11 @@ subroutine main_driver()
   ! so max_levs isn't necessary equal to nlevs
   nlevs = 1
 
+  ! dimensionality is set in inputs file
   dm = dim_in
 
-
-  !!!!!!!!!!!!!!!!!!!!!!!!! STUFF FOR NON-RESTART
-  time = 0.d0
-
-  ! now that we have dm, we can allocate these
-  allocate(lo(dm),hi(dm))
-
   ! now that we have nlevs and dm, we can allocate these
+  allocate(lo(dm),hi(dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm),vel_bc_n(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pold(nlevs),pnew(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
@@ -133,6 +128,10 @@ subroutine main_driver()
      allocate(eta_ed(nlevs,3))
      allocate(vel_bc_t(nlevs,6))
   end if
+
+  !!!!!!!!!!!!!!!!!!!!!!!!! STUFF FOR NON-RESTART
+  time = 0.d0
+
 
   ! tell mba how many levels and dmensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -193,28 +192,28 @@ subroutine main_driver()
   do n=1,nlevs
      do i=1,dm
         ! edge-momentum and velocity; 1 ghost cell
-        call multifab_build_edge(mold(n,i),mla%la(n)  ,1,1,i)
-        call multifab_build_edge(mnew(n,i),mla%la(n)  ,1,1,i)
-        call multifab_build_edge(umac(n,i),mla%la(n)  ,1,1,i)
+        call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
+        call multifab_build_edge(mnew(n,i),mla%la(n),1,1,i)
+        call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
      end do
      ! conservative variables; 2 components (rho,rho1)
      ! need 2 ghost cells to average to ghost faces used in 
      ! converting m to umac in m ghost cells
      ! if using advection_type .ge. 1 (bds), need 3 ghost cells
      if (advection_type .ge. 1) then
-        call multifab_build(sold(n) ,mla%la(n),2,3)
-        call multifab_build(snew(n) ,mla%la(n),2,3)
-        call multifab_build(prim(n) ,mla%la(n),2,3)
+        call multifab_build(sold(n),mla%la(n),2,3)
+        call multifab_build(snew(n),mla%la(n),2,3)
+        call multifab_build(prim(n),mla%la(n),2,3)
      else
-        call multifab_build(sold(n) ,mla%la(n),2,2)
-        call multifab_build(snew(n) ,mla%la(n),2,2)
-        call multifab_build(prim(n) ,mla%la(n),2,2)
+        call multifab_build(sold(n),mla%la(n),2,2)
+        call multifab_build(snew(n),mla%la(n),2,2)
+        call multifab_build(prim(n),mla%la(n),2,2)
      end if
 
      ! s on faces, gp on faces
      do i=1,dm
-        call multifab_build_edge(  s_fc(n,i),mla%la(n),2,1,i)
-        call multifab_build_edge(gp_fc(n,i),mla%la(n),1    ,0,i)
+        call multifab_build_edge( s_fc(n,i),mla%la(n),2,1,i)
+        call multifab_build_edge(gp_fc(n,i),mla%la(n),1,0,i)
      end do
 
      ! pressure
@@ -452,8 +451,6 @@ subroutine main_driver()
      runtime1 = parallel_wtime()
 
      if (fixed_dt .le. 0.d0) then
-        call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-        call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
         call estdt(mla,umac,dx,dt)
      end if
 
@@ -462,7 +459,6 @@ subroutine main_driver()
      end if
 
      if (fixed_dt .gt. 0.d0) then
-        call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
         max_vel = 0.d0
         max_vel = max(max_vel,multifab_norm_inf_c(umac(1,1),1,1,all=.false.))
         max_vel = max(max_vel,multifab_norm_inf_c(umac(1,2),1,1,all=.false.))
@@ -562,7 +558,7 @@ subroutine main_driver()
 
      ! set old state to new state
      do n=1,nlevs
-        call multifab_copy_c(pold(n),1,pnew(n),1,    1,pold(n)%ng)
+        call multifab_copy_c(pold(n),1,pnew(n),1,1,pold(n)%ng)
         call multifab_copy_c(sold(n),1,snew(n),1,2,sold(n)%ng)
         do i=1,dm
            call multifab_copy_c(mold(n,i),1,mnew(n,i),1,1,mold(n,i)%ng)
