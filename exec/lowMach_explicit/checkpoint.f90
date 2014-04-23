@@ -23,7 +23,7 @@ contains
     real(kind=dp_t), intent(in   ) :: time,dt
 
     type(multifab), pointer ::  chkdata(:)
-    type(multifab), pointer ::  chkdata_nodal(:,:)
+    type(multifab), pointer ::  chkdata_edge(:,:)
 
     integer :: n,nlevs,dm,i
 
@@ -33,31 +33,31 @@ contains
     dm = mla%dim
 
     allocate(chkdata(nlevs))
-    allocate(chkdata_nodal(nlevs,dm))
+    allocate(chkdata_edge(nlevs,dm))
     do n = 1,nlevs
        call multifab_build(chkdata(n), mla%la(n), nscal, 0)
        call multifab_copy_c(chkdata(n), 1, s_in(n), 1, nscal)
        do i=1,dm
-          call multifab_build_edge(chkdata_nodal(n,i), mla%la(n), 1, 0, i)
-          call multifab_copy_c(chkdata_nodal(n,i), 1, m_in(n,i), 1, 1)
+          call multifab_build_edge(chkdata_edge(n,i), mla%la(n), 1, 0, i)
+          call multifab_copy_c(chkdata_edge(n,i), 1, m_in(n,i), 1, 1)
        end do
     end do
     write(unit=sd_name,fmt='("chk",i6.6)') istep_to_write
 
-    call checkpoint_write(nlevs, sd_name, chkdata, chkdata_nodal, mla%mba%rr, time, dt)
+    call checkpoint_write(nlevs, sd_name, chkdata, chkdata_edge, mla%mba%rr, time, dt)
 
     do n = 1,nlevs
        call multifab_destroy(chkdata(n))
        do i=1,dm
-          call multifab_destroy(chkdata_nodal(n,i))
+          call multifab_destroy(chkdata_edge(n,i))
        end do
     end do
     deallocate(chkdata)
-    deallocate(chkdata_nodal)
+    deallocate(chkdata_edge)
 
   end subroutine write_checkfile
 
-  subroutine checkpoint_write(nlevs_in, dirname, mfs, mfs_nodal, rrs, time_in, dt_in)
+  subroutine checkpoint_write(nlevs_in, dirname, mfs, mfs_edge, rrs, time_in, dt_in)
 
     use bl_IO_module
     use fab_module
@@ -67,7 +67,7 @@ contains
 
     integer         , intent(in) :: nlevs_in
     type(multifab)  , intent(in) :: mfs(:)
-    type(multifab)  , intent(in) :: mfs_nodal(:,:)
+    type(multifab)  , intent(in) :: mfs_edge(:,:)
     integer         , intent(in) :: rrs(:,:)
     character(len=*), intent(in) :: dirname
     real(kind=dp_t) , intent(in) :: time_in, dt_in
@@ -96,15 +96,15 @@ contains
       print *,' '
     end if
 
-    write(unit=sd_name, fmt='(a,"/State_nodalx")') trim(dirname)
-    call fabio_ml_multifab_write_d(mfs_nodal(:,1), rrs(:,1), sd_name)
+    write(unit=sd_name, fmt='(a,"/State_edgex")') trim(dirname)
+    call fabio_ml_multifab_write_d(mfs_edge(:,1), rrs(:,1), sd_name)
 
-    write(unit=sd_name, fmt='(a,"/State_nodaly")') trim(dirname)
-    call fabio_ml_multifab_write_d(mfs_nodal(:,2), rrs(:,1), sd_name)
+    write(unit=sd_name, fmt='(a,"/State_edgey")') trim(dirname)
+    call fabio_ml_multifab_write_d(mfs_edge(:,2), rrs(:,1), sd_name)
 
     if (dm .eq. 3) then
-       write(unit=sd_name, fmt='(a,"/State_nodalz")') trim(dirname)
-       call fabio_ml_multifab_write_d(mfs_nodal(:,3), rrs(:,1), sd_name)
+       write(unit=sd_name, fmt='(a,"/State_edgez")') trim(dirname)
+       call fabio_ml_multifab_write_d(mfs_edge(:,3), rrs(:,1), sd_name)
     end if
 
     time  = time_in
@@ -127,7 +127,7 @@ contains
 
   end subroutine checkpoint_write
 
-  subroutine checkpoint_read(mfs, mfs_nodalx, mfs_nodaly, mfs_nodalz, dirname, &
+  subroutine checkpoint_read(mfs, mfs_edgex, mfs_edgey, mfs_edgez, dirname, &
                              rrs_out, time_out, dt_out, nlevs_out)
 
     use bl_IO_module
@@ -136,9 +136,9 @@ contains
     use parallel
 
     type(multifab)  ,                pointer :: mfs(:)
-    type(multifab)  ,                pointer :: mfs_nodalx(:)
-    type(multifab)  ,                pointer :: mfs_nodaly(:)
-    type(multifab)  ,                pointer :: mfs_nodalz(:)
+    type(multifab)  ,                pointer :: mfs_edgex(:)
+    type(multifab)  ,                pointer :: mfs_edgey(:)
+    type(multifab)  ,                pointer :: mfs_edgez(:)
     character(len=*), intent(in   )          :: dirname
     integer         , intent(  out)          :: nlevs_out
     real(kind=dp_t) , intent(  out)          :: time_out, dt_out
@@ -179,15 +179,15 @@ contains
 
     dm = get_dim(mfs(1))
 
-    write(unit=sd_name, fmt='(a,"/State_nodalx")') trim(dirname)
-    call fabio_ml_multifab_read_d(mfs_nodalx, sd_name)
+    write(unit=sd_name, fmt='(a,"/State_edgex")') trim(dirname)
+    call fabio_ml_multifab_read_d(mfs_edgex, sd_name)
 
-    write(unit=sd_name, fmt='(a,"/State_nodaly")') trim(dirname)
-    call fabio_ml_multifab_read_d(mfs_nodaly, sd_name)
+    write(unit=sd_name, fmt='(a,"/State_edgey")') trim(dirname)
+    call fabio_ml_multifab_read_d(mfs_edgey, sd_name)
 
     if (dm .eq. 3) then
-       write(unit=sd_name, fmt='(a,"/State_nodalz")') trim(dirname)
-       call fabio_ml_multifab_read_d(mfs_nodalz, sd_name)
+       write(unit=sd_name, fmt='(a,"/State_edgez")') trim(dirname)
+       call fabio_ml_multifab_read_d(mfs_edgez, sd_name)
     end if
 
     rrs_out(1:nlevs-1) = rrs(1:nlevs-1)

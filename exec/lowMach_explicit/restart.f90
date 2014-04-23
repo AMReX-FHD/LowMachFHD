@@ -12,8 +12,8 @@ module restart_module
 
 contains
 
-  subroutine fill_restart_data(restart_int,mba,chkdata,chkdata_nodalx, &
-                               chkdata_nodaly,chkdata_nodalz,time,dt)
+  subroutine fill_restart_data(restart_int,mba,chkdata,chkdata_edgex, &
+                               chkdata_edgey,chkdata_edgez,time,dt)
 
     use checkpoint_module
     use probin_module, only : MAX_ALLOWED_LEVS
@@ -23,9 +23,9 @@ contains
     type(ml_boxarray), intent(  out) :: mba
 
     type(multifab)   , pointer        :: chkdata(:)
-    type(multifab)   , pointer        :: chkdata_nodalx(:)
-    type(multifab)   , pointer        :: chkdata_nodaly(:)
-    type(multifab)   , pointer        :: chkdata_nodalz(:)
+    type(multifab)   , pointer        :: chkdata_edgex(:)
+    type(multifab)   , pointer        :: chkdata_edgey(:)
+    type(multifab)   , pointer        :: chkdata_edgez(:)
     character(len=9)                  :: sd_name
     integer                           :: n,nlevs,dm
     integer                           :: rrs(MAX_ALLOWED_LEVS)
@@ -34,7 +34,7 @@ contains
 
     if ( parallel_IOProcessor() ) &
        print *,'Reading ',sd_name,' to get state data for restart'
-    call checkpoint_read(chkdata, chkdata_nodalx, chkdata_nodaly, chkdata_nodalz, &
+    call checkpoint_read(chkdata, chkdata_edgex, chkdata_edgey, chkdata_edgez, &
                          sd_name, rrs, time, dt, nlevs)
 
     dm = get_dim(chkdata(1))
