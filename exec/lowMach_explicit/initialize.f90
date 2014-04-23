@@ -32,17 +32,17 @@ contains
 
      type(ml_boxarray)         :: mba
      type(multifab), pointer   :: chkdata(:)
-     type(multifab), pointer   :: chkdata_nodalx(:)
-     type(multifab), pointer   :: chkdata_nodaly(:)
-     type(multifab), pointer   :: chkdata_nodalz(:)
+     type(multifab), pointer   :: chkdata_edgex(:)
+     type(multifab), pointer   :: chkdata_edgey(:)
+     type(multifab), pointer   :: chkdata_edgez(:)
      type(layout)              :: la
 
      integer :: n,dm,i
 
      dm = dim_in
 
-     call fill_restart_data(restart,mba,chkdata,chkdata_nodalx, &
-                            chkdata_nodaly,chkdata_nodalz,time,dt)
+     call fill_restart_data(restart,mba,chkdata,chkdata_edgex, &
+                            chkdata_edgey,chkdata_edgez,time,dt)
 
      call ml_layout_build(mla,mba,pmask)
 
@@ -59,35 +59,35 @@ contains
      do n = 1,nlevs
 
         call multifab_copy_c(sold(n),1,chkdata(n),1,nscal)
-        call multifab_copy_c(mold(n,1),1,chkdata_nodalx(n),1,1)
-        call multifab_copy_c(mold(n,2),1,chkdata_nodaly(n),1,1)
+        call multifab_copy_c(mold(n,1),1,chkdata_edgex(n),1,1)
+        call multifab_copy_c(mold(n,2),1,chkdata_edgey(n),1,1)
         if (dm .eq. 3) then
-           call multifab_copy_c(mold(n,3),1,chkdata_nodalz(n),1,1)
+           call multifab_copy_c(mold(n,3),1,chkdata_edgez(n),1,1)
         end if
         !
         ! The layout for chkdata is built standalone, level
         ! by level, and need to be destroy()d as such as well.
         !
         la = get_layout(chkdata(n))
-        call destroy(la)
         call multifab_destroy(chkdata(n))
-        la = get_layout(chkdata_nodalx(n))
         call destroy(la)
-        call multifab_destroy(chkdata_nodalx(n))
-        la = get_layout(chkdata_nodaly(n))
+        la = get_layout(chkdata_edgex(n))
+        call multifab_destroy(chkdata_edgex(n))
         call destroy(la)
-        call multifab_destroy(chkdata_nodaly(n))
+        la = get_layout(chkdata_edgey(n))
+        call multifab_destroy(chkdata_edgey(n))
+        call destroy(la)
         if (dm .eq. 3) then
-           la = get_layout(chkdata_nodalz(n))
+           la = get_layout(chkdata_edgez(n))
+           call multifab_destroy(chkdata_edgez(n))
            call destroy(la)
-           call multifab_destroy(chkdata_nodalz(n))
         end if
      end do
      deallocate(chkdata)
-     deallocate(chkdata_nodalx)
-     deallocate(chkdata_nodaly)
+     deallocate(chkdata_edgex)
+     deallocate(chkdata_edgey)
      if (dm .eq. 3) then
-        deallocate(chkdata_nodalz)
+        deallocate(chkdata_edgez)
      end if
 
      call initialize_dx(dx,mba,nlevs)

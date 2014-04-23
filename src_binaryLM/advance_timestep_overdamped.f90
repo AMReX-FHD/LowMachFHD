@@ -38,25 +38,27 @@ contains
 
   subroutine advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
-                                         vel_bc_n,vel_bc_t,weights)
+                                         vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: mnew(:,:)
+    type(multifab) , intent(inout) :: mnew(:,:) ! only a diagnostic for plotfile purposes
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(in   ) :: sold(:)
     type(multifab) , intent(inout) :: snew(:)
+    ! s_fc and prim need to enter consistent with sold and leave consistent with snew
     type(multifab) , intent(inout) :: s_fc(:,:)
     type(multifab) , intent(inout) :: prim(:)
     type(multifab) , intent(in   ) :: pold(:)
     type(multifab) , intent(inout) :: pnew(:)
+    ! chi, eta, and kappa need to enter consistent with sold and leave consistent with snew
     type(multifab) , intent(inout) :: chi(:)
     type(multifab) , intent(inout) :: chi_fc(:,:)
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
-    real(kind=dp_t), intent(inout) :: weights(:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    ! vel_bc is persistent since we need the old bc's to construct delta form bc's
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
 
@@ -79,6 +81,17 @@ contains
     logical :: nodal_temp(mla%dim)
 
     real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs
+
+    real(kind=dp_t), allocatable :: weights(:)
+
+    if (algorithm_type .eq. 1) then
+       allocate(weights(1))
+       weights(1) = 1.d0
+    else if (algorithm_type .eq. 2) then
+       allocate(weights(2))
+       weights(1) = 1.d0
+       weights(2) = 0.d0
+    end if
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -174,6 +187,13 @@ contains
     ! Step 1 - Predictor Stochastic/Diffusive Fluxes
     ! Step 2 - Predictor Stokes Solve
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! fill the stochastic multifabs with a new set of random numbers
+    ! if this is the first step we already have random numbers from the initial projection
+    if (time .ne. 0.d0) then
+       call fill_m_stochastic(mla)
+       call fill_rhoc_stochastic(mla)
+    end if
 
     ! build up rhs_v for gmres solve
     do n=1,nlevs
@@ -441,11 +461,6 @@ contains
     call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n,weights)
 
-    if (algorithm_type .eq. 2) then
-       weights(1) = 1.d0
-       weights(2) = 0.d0
-    end if
-
     ! add external forcing for rho*c
     call mk_external_s_force(mla,gmres_rhs_p,dx,time+0.5d0*dt,1)
 
@@ -586,10 +601,6 @@ contains
     call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa,prim,dx)
 
-    ! fill the stochastic multifabs with a new set of random numbers
-    call fill_m_stochastic(mla)
-    call fill_rhoc_stochastic(mla)
-
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -613,7 +624,7 @@ contains
        end do
     end do
 
-    deallocate(vel_bc_t_old,vel_bc_t_delta)
+    deallocate(vel_bc_t_old,vel_bc_t_delta,weights)
 
   end subroutine advance_timestep_overdamped
 

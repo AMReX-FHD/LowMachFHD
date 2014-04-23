@@ -97,8 +97,6 @@ subroutine main_driver()
   character(len=128) :: fname
   logical :: lexist
 
-  real(kind=dp_t), allocatable :: weights(:)
-
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_binarylm_init()
   call probin_common_init()
@@ -115,11 +113,14 @@ subroutine main_driver()
 
   dm = dim_in
 
+
+  !!!!!!!!!!!!!!!!!!!!!!!!! STUFF FOR NON-RESTART
+  time = 0.d0
+
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
 
   ! now that we have nlevs and dm, we can allocate these
-  allocate(dx(nlevs,dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm),vel_bc_n(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pold(nlevs),pnew(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
@@ -142,25 +143,6 @@ subroutine main_driver()
   do n=2,nlevs
      mba%rr(n-1,:) = 2
   enddo
-
-  ! set grid spacing at each level
-  ! the grid spacing is the same in each direction
-  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
-  select case (dm) 
-    case(2)
-      if (dx(1,1) .ne. dx(1,2)) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-      end if    
-    case(3)
-      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-      end if    
-    case default
-      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
-  end select
-  do n=2,nlevs
-     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
-  end do
 
   ! create a box from (0,0) to (n_cells-1,n_cells-1)
   lo(1:dm) = 0
@@ -320,7 +302,25 @@ subroutine main_driver()
 
   end do
 
-  time = 0.d0
+  ! set grid spacing at each level
+  ! the grid spacing is the same in each direction
+  allocate(dx(nlevs,dm))
+  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
+  select case (dm) 
+    case(2)
+      if (dx(1,1) .ne. dx(1,2)) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+      end if    
+    case(3)
+      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+      end if    
+    case default
+      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+  end select
+  do n=2,nlevs
+     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
+  end do
 
   ! initialize sold = s^0 and mold = m^0
   call init(mold,sold,pold,dx,mla,time)
@@ -380,14 +380,9 @@ subroutine main_driver()
   if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
      call init_m_stochastic(mla,1)
      call init_rhoc_stochastic(mla,1)
-     allocate(weights(1))
-     weights(1) = 1.d0
   else if (algorithm_type .eq. 2) then
      call init_m_stochastic(mla,2)
      call init_rhoc_stochastic(mla,2)
-     allocate(weights(2))
-     weights(1) = 1.d0
-     weights(2) = 0.d0
   end if
 
   ! fill the stochastic multifabs with a new set of random numbers
@@ -427,7 +422,7 @@ subroutine main_driver()
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
                           rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt, &
-                          the_bc_tower,vel_bc_n,vel_bc_t,weights)
+                          the_bc_tower,vel_bc_n,vel_bc_t)
 
   if (print_int .gt. 0) then
      call sum_momenta(mla,mold)
@@ -480,11 +475,11 @@ subroutine main_driver()
      if (algorithm_type .eq. 0) then
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t,weights)
+                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t)
      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
-                                         vel_bc_n,vel_bc_t,weights)
+                                         vel_bc_n,vel_bc_t)
      end if
 
      ! increment simulation time

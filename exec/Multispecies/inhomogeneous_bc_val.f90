@@ -88,8 +88,10 @@ contains
           val = c_bc(1,2,comp-rho_part_bc_comp+1)
        else if (y .eq. prob_lo(2)) then
           val = c_bc(2,1,comp-rho_part_bc_comp+1)
+          !write(*,*) "bottom:", val, comp-rho_part_bc_comp+1
        else if (y .eq. prob_hi(2)) then
           val = c_bc(2,2,comp-rho_part_bc_comp+1)
+          !write(*,*) "top:", val, comp-rho_part_bc_comp+1
        else
           val = 0.d0
        end if
