@@ -175,6 +175,13 @@ contains
     ! Step 2 - Predictor Stokes Solve
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    ! fill the stochastic multifabs with a new set of random numbers
+    ! if this is the first step we already have random numbers from the initial projection
+    if (time .ne. 0.d0) then
+       call fill_m_stochastic(mla)
+       call fill_rhoc_stochastic(mla)
+    end if
+
     ! build up rhs_v for gmres solve
     do n=1,nlevs
        do i=1,dm
@@ -585,10 +592,6 @@ contains
     call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
     call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa,prim,dx)
-
-    ! fill the stochastic multifabs with a new set of random numbers
-    call fill_m_stochastic(mla)
-    call fill_rhoc_stochastic(mla)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement
