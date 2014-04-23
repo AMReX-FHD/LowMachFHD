@@ -69,18 +69,18 @@ contains
         ! by level, and need to be destroy()d as such as well.
         !
         la = get_layout(chkdata(n))
-        call destroy(la)
         call multifab_destroy(chkdata(n))
+        call destroy(la)
         la = get_layout(chkdata_nodalx(n))
-        call destroy(la)
         call multifab_destroy(chkdata_nodalx(n))
-        la = get_layout(chkdata_nodaly(n))
         call destroy(la)
+        la = get_layout(chkdata_nodaly(n))
         call multifab_destroy(chkdata_nodaly(n))
+        call destroy(la)
         if (dm .eq. 3) then
            la = get_layout(chkdata_nodalz(n))
-           call destroy(la)
            call multifab_destroy(chkdata_nodalz(n))
+           call destroy(la)
         end if
      end do
      deallocate(chkdata)

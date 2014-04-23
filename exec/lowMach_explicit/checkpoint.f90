@@ -53,6 +53,7 @@ contains
        end do
     end do
     deallocate(chkdata)
+    deallocate(chkdata_nodal)
 
   end subroutine write_checkfile
 
