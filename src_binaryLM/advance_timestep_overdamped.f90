@@ -41,14 +41,16 @@ contains
                                          vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: mnew(:,:)
+    type(multifab) , intent(inout) :: mnew(:,:) ! only a diagnostic for plotfile purposes
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(in   ) :: sold(:)
     type(multifab) , intent(inout) :: snew(:)
+    ! s_fc and prim need to enter consistent with sold and leave consistent with snew
     type(multifab) , intent(inout) :: s_fc(:,:)
     type(multifab) , intent(inout) :: prim(:)
     type(multifab) , intent(in   ) :: pold(:)
     type(multifab) , intent(inout) :: pnew(:)
+    ! chi, eta, and kappa need to enter consistent with sold and leave consistent with snew
     type(multifab) , intent(inout) :: chi(:)
     type(multifab) , intent(inout) :: chi_fc(:,:)
     type(multifab) , intent(inout) :: eta(:)
@@ -56,6 +58,7 @@ contains
     type(multifab) , intent(inout) :: kappa(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    ! vel_bc is persistent since we need the old bc's to construct delta form bc's
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
 
