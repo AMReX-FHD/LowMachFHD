@@ -67,8 +67,7 @@ subroutine main_driver()
   type(multifab), allocatable :: s_fc(:,:)         ! face-centered
   type(multifab), allocatable :: gp_fc(:,:)       ! face-centered
   type(multifab), allocatable :: prim(:)           ! cell-centered
-  type(multifab), allocatable :: pold(:)           ! cell-centered
-  type(multifab), allocatable :: pnew(:)           ! cell-centered
+  type(multifab), allocatable :: pres(:)           ! cell-centered
   type(multifab), allocatable :: chi(:)            ! cell-centered
   type(multifab), allocatable :: chi_fc(:,:)       ! face-centered
   type(multifab), allocatable :: eta(:)            ! cell-centered
@@ -117,7 +116,7 @@ subroutine main_driver()
   ! now that we have nlevs and dm, we can allocate these
   allocate(lo(dm),hi(dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm),vel_bc_n(nlevs,dm))
-  allocate(sold(nlevs),snew(nlevs),prim(nlevs),pold(nlevs),pnew(nlevs))
+  allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
   allocate(rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs),rhoc_b_fluxdiv(nlevs))
   allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm),gp_fc(nlevs,dm))
@@ -218,8 +217,7 @@ subroutine main_driver()
 
      ! pressure
      ! need 1 ghost cell since we calculate its gradient
-     call multifab_build(pold(n),mla%la(n),1,1)
-     call multifab_build(pnew(n),mla%la(n),1,1)
+     call multifab_build(pres(n),mla%la(n),1,1)
 
      ! transport coefficients
      call multifab_build(chi(n)  ,mla%la(n),1,1)
@@ -322,7 +320,7 @@ subroutine main_driver()
   end do
 
   ! initialize sold = s^0 and mold = m^0
-  call init(mold,sold,pold,dx,mla,time)
+  call init(mold,sold,pres,dx,mla,time)
 
   if (initial_variance .ne. 0.d0) then
      call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
@@ -331,11 +329,11 @@ subroutine main_driver()
 
   if (barodiffusion_type .gt. 0) then
      ! this computes an initial guess at p using HSE
-     call init_pres(mla,sold,pold,dx,the_bc_tower)
+     call init_pres(mla,sold,pres,dx,the_bc_tower)
   end if
 
   ! compute grad p
-  call compute_grad(mla,pold,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+  call compute_grad(mla,pres,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   if (print_int .gt. 0) then
      call eos_check(mla,sold)
@@ -435,7 +433,7 @@ subroutine main_driver()
 
   ! write initial plotfile
   if (plot_int .gt. 0) then
-     call write_plotfile(mla,mold,umac,sold,pold,dx,time,0)
+     call write_plotfile(mla,mold,umac,sold,pres,dx,time,0)
   end if
   ! print out projection (average) and variance)
   if (stats_int .gt. 0) then
@@ -469,11 +467,11 @@ subroutine main_driver()
 
      ! advance the solution by dt
      if (algorithm_type .eq. 0) then
-        call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
+        call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
                               gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t)
      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-        call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
+        call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pres, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
                                          vel_bc_n,vel_bc_t)
      end if
@@ -514,7 +512,7 @@ subroutine main_driver()
          ! write plotfile
          if ( (plot_int > 0) .and. &
               ( mod(istep-n_steps_skip,plot_int) .eq. 0) ) then
-            call write_plotfile(mla,mnew,umac,snew,pnew,dx,time,istep-n_steps_skip)
+            call write_plotfile(mla,mnew,umac,snew,pres,dx,time,istep-n_steps_skip)
          end if
 
          ! print out projection (average) and variance
@@ -555,10 +553,8 @@ subroutine main_driver()
 
       end if
 
-
      ! set old state to new state
      do n=1,nlevs
-        call multifab_copy_c(pold(n),1,pnew(n),1,1,pold(n)%ng)
         call multifab_copy_c(sold(n),1,snew(n),1,2,sold(n)%ng)
         do i=1,dm
            call multifab_copy_c(mold(n,i),1,mnew(n,i),1,1,mold(n,i)%ng)
@@ -568,7 +564,7 @@ subroutine main_driver()
   end do
 
   !!!!!!!!!!!! convergence testing
-!  call init(mold,sold,pold,dx,mla,time)
+!  call init(mold,sold,pres,dx,mla,time)
 !  do n=1,nlevs
 !     call multifab_sub_sub_c(sold(n),1,snew(n),1,2,0)
 !  end do
@@ -599,8 +595,7 @@ subroutine main_driver()
      call multifab_destroy(sold(n))
      call multifab_destroy(snew(n))
      call multifab_destroy(prim(n))
-     call multifab_destroy(pold(n))
-     call multifab_destroy(pnew(n))
+     call multifab_destroy(pres(n))
      call multifab_destroy(chi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))

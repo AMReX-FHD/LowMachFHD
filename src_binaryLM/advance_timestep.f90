@@ -37,7 +37,7 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
+  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
                               gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t)
 
@@ -49,8 +49,7 @@ contains
     type(multifab) , intent(inout) :: snew(:)
     type(multifab) , intent(inout) :: s_fc(:,:)
     type(multifab) , intent(inout) :: prim(:)
-    type(multifab) , intent(in   ) :: pold(:)
-    type(multifab) , intent(inout) :: pnew(:)
+    type(multifab) , intent(inout) :: pres(:)
     type(multifab) , intent(inout) :: chi(:)
     type(multifab) , intent(inout) :: chi_fc(:,:)
     type(multifab) , intent(inout) :: eta(:)
@@ -297,10 +296,10 @@ contains
        end do
     end do
 
-    ! compute grad p
-    call compute_grad(mla,pold,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    ! compute grad p^n
+    call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
-    ! subtract grad p from gmres_rhs_v
+    ! subtract grad p^n from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradp(n,i),1,1,0)
@@ -472,14 +471,13 @@ contains
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
        end do
-       call multifab_copy_c(pnew(n),1,pold(n),1,1,0)
-       call multifab_plus_plus_c(pnew(n),1,dp(n),1,1,0)
+       call multifab_plus_plus_c(pres(n),1,dp(n),1,1,0)
     end do
 
     do n=1,nlevs
        ! presure ghost cells
-       call multifab_fill_boundary(pnew(n))
-       call multifab_physbc(pnew(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_fill_boundary(pres(n))
+       call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
        do i=1,dm
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
@@ -496,7 +494,7 @@ contains
 
     if (barodiffusion_type .eq. 2) then
        ! compute grad p^{n+1,*}
-       call compute_grad(mla,pnew,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+       call compute_grad(mla,pres,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
     end if
 
     ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
@@ -600,8 +598,10 @@ contains
        end do
     end do
 
-    ! gradp already contains grad p
-    ! subtract grad p^n from gmres_rhs_v
+    ! compute grad p^{n+1,*}
+    call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
+    ! subtract grad p^{n+1,*} from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradp(n,i),1,1,0)
@@ -779,20 +779,19 @@ contains
     end do
 
     ! compute v^{n+1} = v^n + dumac
-    ! compute p^{n+1} = p^n + dp
+    ! compute p^{n+1} = p^{n+1,*} + dp
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(umac(n,i),1,umac_old(n,i),1,1,0)
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
        end do
-       call multifab_copy_c(pnew(n),1,pold(n),1,1,0)
-       call multifab_plus_plus_c(pnew(n),1,dp(n),1,1,0)
+       call multifab_plus_plus_c(pres(n),1,dp(n),1,1,0)
     end do
 
     do n=1,nlevs
        ! presure ghost cells
-       call multifab_fill_boundary(pnew(n))
-       call multifab_physbc(pnew(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_fill_boundary(pres(n))
+       call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
        do i=1,dm
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
