@@ -211,8 +211,12 @@ subroutine main_driver()
   dt = cfl1*dx(1,1)**2/chi
   
   if (parallel_IOProcessor()) then
+     if(timeinteg_type .eq. 1) write(*,*) "Using Euler method"
+     if(timeinteg_type .eq. 2) write(*,*) "Using Predictor-corrector method"
+     if(timeinteg_type .eq. 3) write(*,*) "Using Midpoint method"
+     if(timeinteg_type .eq. 4) write(*,*) "Using Runge-Kutta 3 method"
      write(*,*) "Using time step dt =", dt
-     if(use_stoch) write(*,*), "Noise variance =", sqrt(2.d0*k_B*&
+     if(use_stoch) write(*,*), "Using noise variance =", sqrt(2.d0*k_B*&
                                variance_parameter/(product(dx(1,1:dm))*dt))
   end if
 

@@ -45,7 +45,7 @@ contains
     enddo
     
     ! define the name of the plotfile that will be written
-    write(unit=plotfile_name,fmt='(a,i5.5)') name, istep
+    write(unit=plotfile_name,fmt='(a,i6.6)') name, istep
         
     ! write the plotfile
     call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), trim(plotfile_name), & 

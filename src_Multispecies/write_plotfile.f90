@@ -47,7 +47,7 @@ contains
     enddo
     
     ! define the name of the plotfile that will be written
-    write(unit=plotfile_name,fmt='(a,i5.5)') name, istep
+    write(unit=plotfile_name,fmt='(a,i6.6)') name, istep
     !if ( parallel_IOProcessor() ) then
     !  write(*,'(2A)') "Saving PLOT FILEs to directory ", trim(plotfile_name)
     !  write(*,*)
