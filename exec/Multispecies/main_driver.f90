@@ -44,7 +44,7 @@ subroutine main_driver()
   real(kind=dp_t),allocatable  :: wit(:) 
 
   ! For HydroGrid
-  integer :: narg, farg, un
+  integer :: narg, farg, un, n_cell
   character(len=128) :: fname
   logical :: lexist
   
@@ -329,14 +329,13 @@ subroutine main_driver()
      if(use_stoch) then
      
      write(*,*), ''
-     write(*,*), 'Normalized numeric cov of W'
+     write(1,*), 'Normalized numeric cov of W'
      do i=1,nspecies
         do j=1,nspecies
            covW(i,j) = (wiwjt(i,j)/step_count - wit(i)*wit(j)/step_count**2)/variance_parameter
         end do
-        print*, covW(i,:)
+        write(1,*), covW(i,:)
      end do
-     write(*,*), ''
      
      if(nspecies .eq. 2) then 
      
@@ -399,13 +398,18 @@ subroutine main_driver()
         write(*,*), 'analytic covariance of W for nspecies > 4 is not coded'
      end if
 
-     write(*,*), 'analytic cov of W' 
+     ! correction made for infinite to periodic approximation of covariance
+     n_cell = multifab_volume(rho_exact(1))/nspecies
+     covW_theo = (1 - 1/n_cell)*covW_theo
+     
+     write(2,*), 'analytic cov of W' 
      do i=1,nspecies
-        write(*,*), covW_theo(i,:)
+        write(2,*) covW_theo(i,:)
      end do
-     write(*,*), ''
 
-     write(*,*), 'l1-norm of cov of W for',nspecies,' species is =', abs(sum(covW_theo - covW))
+     write(*,*), 'linf-norm of cov of W for',nspecies,' species is =', maxval(abs(covW_theo - covW))
+     write(*,*), 'l1-norm of cov of W for',  nspecies,' species is =', sum(abs(covW_theo - covW))
+     write(*,*), 'l2-norm of cov of W for',  nspecies,' species is =', sqrt(sum((covW_theo - covW)**2))
  
      end if
   end if
