@@ -97,8 +97,6 @@ subroutine main_driver()
   character(len=128) :: fname
   logical :: lexist
 
-  real(kind=dp_t), allocatable :: weights(:)
-
   ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_binarylm_init()
   call probin_common_init()
@@ -380,14 +378,9 @@ subroutine main_driver()
   if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
      call init_m_stochastic(mla,1)
      call init_rhoc_stochastic(mla,1)
-     allocate(weights(1))
-     weights(1) = 1.d0
   else if (algorithm_type .eq. 2) then
      call init_m_stochastic(mla,2)
      call init_rhoc_stochastic(mla,2)
-     allocate(weights(2))
-     weights(1) = 1.d0
-     weights(2) = 0.d0
   end if
 
   ! fill the stochastic multifabs with a new set of random numbers
@@ -427,7 +420,7 @@ subroutine main_driver()
   ! need to do an initial projection to get an initial velocity field
   call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
                           rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt, &
-                          the_bc_tower,vel_bc_n,vel_bc_t,weights)
+                          the_bc_tower,vel_bc_n,vel_bc_t)
 
   if (print_int .gt. 0) then
      call sum_momenta(mla,mold)
@@ -480,11 +473,11 @@ subroutine main_driver()
      if (algorithm_type .eq. 0) then
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t,weights)
+                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t)
      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
-                                         vel_bc_n,vel_bc_t,weights)
+                                         vel_bc_n,vel_bc_t)
      end if
 
      ! increment simulation time

@@ -12,7 +12,7 @@ module initial_projection_module
   use stochastic_rhoc_fluxdiv_module
   use bc_module
   use multifab_physbc_stag_module
-  use probin_binarylm_module, only: rhobar, barodiffusion_type
+  use probin_binarylm_module, only: rhobar, barodiffusion_type, algorithm_type
 
   implicit none
 
@@ -24,7 +24,7 @@ contains
 
   subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
                                 rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt,the_bc_tower, &
-                                vel_bc_n,vel_bc_t,weights)
+                                vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -37,7 +37,7 @@ contains
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,weights(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(in   ) :: vel_bc_t(:,:)
@@ -50,6 +50,17 @@ contains
     type(multifab) ::      divu(mla%nlevel)
     type(multifab) ::       phi(mla%nlevel)
     type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
+
+    real(kind=dp_t), allocatable :: weights(:)
+
+    if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
+       allocate(weights(1))
+       weights(1) = 1.d0
+    else if (algorithm_type .eq. 2) then
+       allocate(weights(2))
+       weights(1) = 1.d0
+       weights(2) = 0.d0
+    end if
 
     dm = mla%dim
     nlevs = mla%nlevel

@@ -39,7 +39,7 @@ contains
 
   subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pold,pnew,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
-                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t,weights)
+                              gp_fc,dx,dt,time,the_bc_tower,vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: mold(:,:)
@@ -60,7 +60,7 @@ contains
     type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
     type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
     type(multifab) , intent(inout) :: gp_fc(:,:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time,weights(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
@@ -92,6 +92,11 @@ contains
     logical :: nodal_temp(mla%dim)
 
     real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs
+
+    real(kind=dp_t), allocatable :: weights(:)
+
+    allocate(weights(1))
+    weights(1) = 1.d0
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -837,7 +842,7 @@ contains
        end do
     end do
 
-    deallocate(vel_bc_t_old,vel_bc_t_delta)
+    deallocate(vel_bc_t_old,vel_bc_t_delta,weights)
 
   end subroutine advance_timestep
 

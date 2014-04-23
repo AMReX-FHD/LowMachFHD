@@ -38,7 +38,7 @@ contains
 
   subroutine advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pold,pnew, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
-                                         vel_bc_n,vel_bc_t,weights)
+                                         vel_bc_n,vel_bc_t)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mnew(:,:)
@@ -55,7 +55,6 @@ contains
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
-    real(kind=dp_t), intent(inout) :: weights(:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(multifab) , intent(inout) :: vel_bc_t(:,:)
@@ -79,6 +78,17 @@ contains
     logical :: nodal_temp(mla%dim)
 
     real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs
+
+    real(kind=dp_t), allocatable :: weights(:)
+
+    if (algorithm_type .eq. 1) then
+       allocate(weights(1))
+       weights(1) = 1.d0
+    else if (algorithm_type .eq. 2) then
+       allocate(weights(2))
+       weights(1) = 1.d0
+       weights(2) = 0.d0
+    end if
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -448,11 +458,6 @@ contains
     call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                  chi_fc,dx,dt,vel_bc_n,weights)
 
-    if (algorithm_type .eq. 2) then
-       weights(1) = 1.d0
-       weights(2) = 0.d0
-    end if
-
     ! add external forcing for rho*c
     call mk_external_s_force(mla,gmres_rhs_p,dx,time+0.5d0*dt,1)
 
@@ -616,7 +621,7 @@ contains
        end do
     end do
 
-    deallocate(vel_bc_t_old,vel_bc_t_delta)
+    deallocate(vel_bc_t_old,vel_bc_t_delta,weights)
 
   end subroutine advance_timestep_overdamped
 
