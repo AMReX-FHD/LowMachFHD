@@ -1,8 +1,6 @@
 subroutine main_driver()
 
-  use bl_types
   use bl_IO_module
-  use ml_boxarray_module
   use ml_layout_module
   use bl_error_module
   use ParallelRNGs
@@ -26,11 +24,12 @@ subroutine main_driver()
   use fill_rho_ghost_cells_module
   use analyze_spectra_binary_module
   use analyze_spectra_module
+  use restart_module
   use estdt_module
   use convert_stag_module
   use probin_binarylm_module, only: probin_binarylm_init, max_step, print_int, &
                                    project_eos_int, initial_variance, analyze_binary, &
-                                   conc_scal, barodiffusion_type, algorithm_type
+                                   conc_scal, barodiffusion_type, algorithm_type, restart
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
@@ -65,7 +64,7 @@ subroutine main_driver()
   type(multifab), allocatable :: sold(:)           ! cell-centered
   type(multifab), allocatable :: snew(:)           ! cell-centered
   type(multifab), allocatable :: s_fc(:,:)         ! face-centered
-  type(multifab), allocatable :: gp_fc(:,:)       ! face-centered
+  type(multifab), allocatable :: gp_fc(:,:)        ! face-centered
   type(multifab), allocatable :: prim(:)           ! cell-centered
   type(multifab), allocatable :: pres(:)           ! cell-centered
   type(multifab), allocatable :: chi(:)            ! cell-centered
@@ -113,7 +112,6 @@ subroutine main_driver()
   ! dimensionality is set in inputs file
   dm = dim_in
 
-  ! now that we have nlevs and dm, we can allocate these
   allocate(lo(dm),hi(dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm),vel_bc_n(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
@@ -128,42 +126,6 @@ subroutine main_driver()
      allocate(vel_bc_t(nlevs,6))
   end if
 
-  !!!!!!!!!!!!!!!!!!!!!!!!! STUFF FOR NON-RESTART
-  time = 0.d0
-
-
-  ! tell mba how many levels and dmensionality of problem
-  call ml_boxarray_build_n(mba,nlevs,dm)
-
-  ! tell mba about the ref_ratio between levels
-  ! mba%rr(n-1,i) is the refinement ratio between levels n-1 and n in direction i
-  ! we use refinement ratio of 2 in every direction between all levels
-  do n=2,nlevs
-     mba%rr(n-1,:) = 2
-  enddo
-
-  ! create a box from (0,0) to (n_cells-1,n_cells-1)
-  lo(1:dm) = 0
-  hi(1:dm) = n_cells(1:dm)-1
-  bx = make_box(lo,hi)
-
-  ! tell mba about the problem domain at each level
-  mba%pd(1) = bx
-  do n=2,nlevs
-     mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
-  enddo
-
-  ! initialize the boxarray at level 1 to be one single box
-  call boxarray_build_bx(mba%bas(1),bx)
-
-  ! overwrite the boxarray at level 1 to respect max_grid_size
-  call boxarray_maxsize(mba%bas(1),max_grid_size)
-
-  ! now build the boxarray at other levels
-  if (nlevs .ge. 2) then
-     call bl_error("Need to build boxarray for n>1")
-  end if
-
   ! build pmask
   allocate(pmask(dm))
   pmask = .false.
@@ -173,13 +135,81 @@ subroutine main_driver()
      end if
   end do
 
-  ! build the ml_layout, mla
-  call ml_layout_build(mla,mba,pmask)
+  if (restart .ge. 0) then
+
+     call initialize_from_restart(mla,time,dt,mold,sold,pres,the_bc_tower,pmask)
+
+  else
+
+     ! non-restart initialization
+
+     time = 0.d0
+
+     ! tell mba how many levels and dmensionality of problem
+     call ml_boxarray_build_n(mba,nlevs,dm)
+
+     ! tell mba about the ref_ratio between levels
+     ! mba%rr(n-1,i) is the refinement ratio between levels n-1 and n in direction i
+     ! we use refinement ratio of 2 in every direction between all levels
+     do n=2,nlevs
+        mba%rr(n-1,:) = 2
+     enddo
+
+     ! create a box from (0,0) to (n_cells-1,n_cells-1)
+     lo(1:dm) = 0
+     hi(1:dm) = n_cells(1:dm)-1
+     bx = make_box(lo,hi)
+     
+     ! tell mba about the problem domain at each level
+     mba%pd(1) = bx
+     do n=2,nlevs
+        mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
+     enddo
+
+     ! initialize the boxarray at level 1 to be one single box
+     call boxarray_build_bx(mba%bas(1),bx)
+
+     ! overwrite the boxarray at level 1 to respect max_grid_size
+     call boxarray_maxsize(mba%bas(1),max_grid_size)
+
+     ! now build the boxarray at other levels
+     if (nlevs .ge. 2) then
+        call bl_error("Need to build boxarray for n>1")
+     end if
+     
+     ! build the ml_layout, mla
+     call ml_layout_build(mla,mba,pmask)
+
+     ! don't need this anymore - free up memory
+     call destroy(mba)
+
+     do n=1,nlevs
+        do i=1,dm
+           ! edge-momentum and velocity; 1 ghost cell
+           call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
+        end do
+     end do
+
+     do n=1,nlevs
+        ! conservative variables; 2 components (rho,rho1)
+        ! need 2 ghost cells to average to ghost faces used in 
+        ! converting m to umac in m ghost cells
+        ! if using advection_type .ge. 1 (bds), need 3 ghost cells
+        if (advection_type .ge. 1) then
+           call multifab_build(sold(n),mla%la(n),2,3)
+        else
+           call multifab_build(sold(n),mla%la(n),2,2)
+        end if
+     end do
+
+     do n=1,nlevs
+        ! pressure - need 1 ghost cell since we calculate its gradient
+        call multifab_build(pres(n),mla%la(n),1,1)
+     end do
+
+  end if
 
   deallocate(pmask)
-
-  ! don't need this anymore - free up memory
-  call destroy(mba)
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,2,1)
@@ -191,7 +221,6 @@ subroutine main_driver()
   do n=1,nlevs
      do i=1,dm
         ! edge-momentum and velocity; 1 ghost cell
-        call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
         call multifab_build_edge(mnew(n,i),mla%la(n),1,1,i)
         call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
      end do
@@ -200,11 +229,9 @@ subroutine main_driver()
      ! converting m to umac in m ghost cells
      ! if using advection_type .ge. 1 (bds), need 3 ghost cells
      if (advection_type .ge. 1) then
-        call multifab_build(sold(n),mla%la(n),2,3)
         call multifab_build(snew(n),mla%la(n),2,3)
         call multifab_build(prim(n),mla%la(n),2,3)
      else
-        call multifab_build(sold(n),mla%la(n),2,2)
         call multifab_build(snew(n),mla%la(n),2,2)
         call multifab_build(prim(n),mla%la(n),2,2)
      end if
@@ -214,10 +241,6 @@ subroutine main_driver()
         call multifab_build_edge( s_fc(n,i),mla%la(n),2,1,i)
         call multifab_build_edge(gp_fc(n,i),mla%la(n),1,0,i)
      end do
-
-     ! pressure
-     ! need 1 ghost cell since we calculate its gradient
-     call multifab_build(pres(n),mla%la(n),1,1)
 
      ! transport coefficients
      call multifab_build(chi(n)  ,mla%la(n),1,1)
@@ -387,12 +410,14 @@ subroutine main_driver()
   call fill_rhoc_stochastic(mla)  
 
   ! set the initial time step
-  if (fixed_dt .gt. 0.d0) then
-     dt = fixed_dt
-  else
-     call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-     call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
-     call estdt(mla,umac,dx,dt)
+  if (restart .lt. 0) then
+     if (fixed_dt .gt. 0.d0) then
+        dt = fixed_dt
+     else
+        call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+        call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
+        call estdt(mla,umac,dx,dt)
+     end if
   end if
 
   if(abs(hydro_grid_int)>0 .or. stats_int>0) then

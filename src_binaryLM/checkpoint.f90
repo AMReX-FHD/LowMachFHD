@@ -17,12 +17,12 @@ module checkpoint_module
 
 contains
 
-  subroutine write_checkfile(mla,s,p,umac,time,dt,istep_to_write)
+  subroutine write_checkfile(mla,sold,mold,pres,time,dt,istep_to_write)
     
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: s(:)           ! cell-centered densities
-    type(multifab) , intent(in   ) :: p(:)           ! cell-centered pressure
-    type(multifab) , intent(in   ) :: umac(:,:)      ! edge-based velocities
+    type(multifab) , intent(in   ) :: sold(:)        ! cell-centered densities
+    type(multifab) , intent(in   ) :: mold(:,:)      ! edge-based velocities
+    type(multifab) , intent(in   ) :: pres(:)        ! cell-centered pressure
     integer        , intent(in   ) :: istep_to_write
     real(kind=dp_t), intent(in   ) :: time,dt
 
@@ -40,13 +40,13 @@ contains
     allocate(chkdata_edge(nlevs,dm))
     do n = 1,nlevs
        call multifab_build(chkdata(n), mla%la(n), 3, 0) ! 2 densities + 1 pressure
-       call multifab_copy_c(chkdata(n), 1, s(n), 1, 2)  ! copy densities
-       call multifab_copy_c(chkdata(n), 3, p(n), 1, 1)  ! copy pressure
+       call multifab_copy_c(chkdata(n), 1, sold(n), 1, 2)  ! copy densities
+       call multifab_copy_c(chkdata(n), 3, pres(n), 1, 1)  ! copy pressure
        do i=1,dm
           ! 1 velocity component and 1 normal bc component for each face
           call multifab_build_edge(chkdata_edge(n,i), mla%la(n), 1, 0, i)
           ! copy velocities
-          call multifab_copy_c(chkdata_edge(n,i), 1, umac(n,i), 1, 1)
+          call multifab_copy_c(chkdata_edge(n,i), 1, mold(n,i), 1, 1)
        end do
     end do
     write(unit=sd_name,fmt='("chk",i6.6)') istep_to_write
