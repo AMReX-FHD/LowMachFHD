@@ -127,6 +127,8 @@ contains
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
                                          the_bc_tower%bc_tower_array(n), &
                                          dx(n,:),vel_bc_n(n,:))
+          ! fill periodic and interior ghost cells
+          call multifab_fill_boundary(umac(n,i))
        end do
     end do
 
