@@ -428,8 +428,8 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(dumac(n,i),0.d0,all=.true.)
-          call multifab_setval(   dp(n)  ,0.d0,all=.true.)
        end do
+       call multifab_setval(dp(n),0.d0,all=.true.)
     end do
 
     ! for inhomogeneous boundary conditions, convert problem to homogeneous by
@@ -466,7 +466,6 @@ contains
 
     ! compute v^{*,n+1} = v^n + delta v
     ! compute p^{*,n+1}= p^n + delta p
-    ! keep both dp and dumac as initial guess for corrector
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
@@ -479,8 +478,6 @@ contains
        call multifab_fill_boundary(pres(n))
        call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
        do i=1,dm
-          ! fill periodic and interior ghost cells
-          call multifab_fill_boundary(umac(n,i))
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
                                          the_bc_tower%bc_tower_array(n), &
@@ -489,6 +486,8 @@ contains
           call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
                                       the_bc_tower%bc_tower_array(n), &
                                       dx(n,:),vel_bc_t(n,:))
+          ! fill periodic and interior ghost cells
+          call multifab_fill_boundary(umac(n,i))
        end do
     end do
 
@@ -583,8 +582,8 @@ contains
        end do
     end do
 
-    ! compute mtemp = rho^{n+1} * v^n
-    call convert_m_to_umac(mla,s_fc,mtemp,umac_old,.false.)
+    ! compute mtemp = rho^{n+1} * v^{n+1,*}
+    call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
 
     do n=1,nlevs
        do i=1,dm
@@ -635,16 +634,16 @@ contains
     call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa,prim,dx)
 
-    ! set m_d_fluxdiv = A_0^{n+1} v^n
+    ! set m_d_fluxdiv = A_0^{n+1} v^{n+1,*}
     do n=1,nlevs
        do i=1,dm
           call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
-    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac_old,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! add (1/2) A_0^{n+1} v^n to gmres_rhs_v
+    ! add (1/2) A_0^{n+1} v^{n+1,*} to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_d_fluxdiv(n,i),1,0.5d0,1,0)
@@ -670,6 +669,16 @@ contains
        call setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
        call setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
        call setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
+    end do
+
+    ! save boundary conditions on v^{n+1,*}
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(vel_bc_n_old(n,i),1,vel_bc_n(n,i),1,1,0)
+       end do
+       do i=1,size(vel_bc_t,dim=2)
+          call multifab_copy_c(vel_bc_t_old(n,i),1,vel_bc_t(n,i),1,1,0)
+       end do
     end do
 
     ! reset inhomogeneous bc condition to deal with reservoirs
@@ -719,9 +728,11 @@ contains
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
 
-    ! divu already contains div(v^n)
-    ! add div(v^n) to gmres_rhs_p
-    ! now gmres_rhs_p = div(v^n) - S^{n+1}
+    ! compute div(v^{n+1,*})
+    call compute_div(mla,umac,divu,dx,1,1,1)
+
+    ! add div(v^{n+1,*}) to gmres_rhs_p
+    ! now gmres_rhs_p = div(v^{n+1,*}) - S^{n+1}
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
@@ -753,6 +764,14 @@ contains
        end do
     end do
 
+    ! set the initial guess to zero
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_setval(dumac(n,i),0.d0,all=.true.)
+       end do
+          call multifab_setval(dp(n),0.d0,all=.true.)
+    end do
+
     ! for inhomogeneous boundary conditions, convert problem to homogeneous by
     ! subtracting from the RHS the result of the operator applied to a solution
     ! vector with zeros everywhere in the problem domain, and ghost cells filled to
@@ -778,11 +797,10 @@ contains
        end if
     end do
 
-    ! compute v^{n+1} = v^n + dumac
+    ! compute v^{n+1} = v^{n+1,*} + dumac
     ! compute p^{n+1} = p^{n+1,*} + dp
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(umac(n,i),1,umac_old(n,i),1,1,0)
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
        end do
        call multifab_plus_plus_c(pres(n),1,dp(n),1,1,0)
@@ -793,8 +811,6 @@ contains
        call multifab_fill_boundary(pres(n))
        call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
        do i=1,dm
-          ! fill periodic and interior ghost cells
-          call multifab_fill_boundary(umac(n,i))
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
                                          the_bc_tower%bc_tower_array(n), &
@@ -803,6 +819,8 @@ contains
           call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
                                       the_bc_tower%bc_tower_array(n), &
                                       dx(n,:),vel_bc_t(n,:))
+          ! fill periodic and interior ghost cells
+          call multifab_fill_boundary(umac(n,i))
        end do
     end do
 
