@@ -16,8 +16,6 @@ contains
 
   subroutine fill_restart_data(restart_int,mba,chkdata, &
                                chkdata_edgex,chkdata_edgey,chkdata_edgez, &
-                               chkdata_vel_bc_t1,chkdata_vel_bc_t2,chkdata_vel_bc_t3, &
-                               chkdata_vel_bc_t4,chkdata_vel_bc_t5,chkdata_vel_bc_t6, &
                                time,dt)
 
 
@@ -29,12 +27,6 @@ contains
     type(multifab)   , pointer        :: chkdata_edgex(:)
     type(multifab)   , pointer        :: chkdata_edgey(:)
     type(multifab)   , pointer        :: chkdata_edgez(:)
-    type(multifab)   , pointer        :: chkdata_vel_bc_t1(:)
-    type(multifab)   , pointer        :: chkdata_vel_bc_t2(:)
-    type(multifab)   , pointer        :: chkdata_vel_bc_t3(:)
-    type(multifab)   , pointer        :: chkdata_vel_bc_t4(:)
-    type(multifab)   , pointer        :: chkdata_vel_bc_t5(:)
-    type(multifab)   , pointer        :: chkdata_vel_bc_t6(:)
     character(len=9)                  :: sd_name
     integer                           :: n,nlevs,dm
     integer                           :: rrs(10)
@@ -47,17 +39,8 @@ contains
        print *,'Reading ',sd_name,' to get state data for restart'
     end if
 
-    if (dm .eq. 2) then
-       call checkpoint_read_2d(chkdata, chkdata_edgex, chkdata_edgey, &
-                               chkdata_vel_bc_t1, chkdata_vel_bc_t2, &
-                               sd_name, rrs, time, dt, nlevs)
-    else if (dm .eq. 3) then
-       call checkpoint_read_3d(chkdata, chkdata_edgex, chkdata_edgey, chkdata_edgez, &
-                               chkdata_vel_bc_t1, chkdata_vel_bc_t2, chkdata_vel_bc_t3, &
-                               chkdata_vel_bc_t4, chkdata_vel_bc_t5, chkdata_vel_bc_t6, &
-                               sd_name, rrs, time, dt, nlevs)
-
-    end if
+    call checkpoint_read(chkdata, chkdata_edgex, chkdata_edgey, chkdata_edgez, &
+                         sd_name, rrs, time, dt, nlevs)
 
     call build(mba,nlevs,dm)
     mba%pd(1) =  bbox(get_boxarray(chkdata(1)))
