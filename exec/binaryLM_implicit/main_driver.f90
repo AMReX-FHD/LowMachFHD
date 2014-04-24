@@ -25,6 +25,7 @@ subroutine main_driver()
   use analyze_spectra_binary_module
   use analyze_spectra_module
   use restart_module
+  use checkpoint_module
   use estdt_module
   use convert_stag_module
   use probin_binarylm_module, only: probin_binarylm_init, max_step, print_int, &
@@ -33,7 +34,7 @@ subroutine main_driver()
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
-                                   stats_int, variance_coef, &
+                                   stats_int, variance_coef, chk_int, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, advection_type
   use probin_gmres_module  , only: probin_gmres_init
 
@@ -91,7 +92,7 @@ subroutine main_driver()
   type(multifab), allocatable :: vel_bc_n(:,:)
   type(multifab), allocatable :: vel_bc_t(:,:)
 
-  integer :: narg, farg, un
+  integer :: narg, farg, un, init_step
   character(len=128) :: fname
   logical :: lexist
 
@@ -137,11 +138,16 @@ subroutine main_driver()
 
   if (restart .ge. 0) then
 
+     init_step = restart + 1
+
      call initialize_from_restart(mla,time,dt,mold,sold,pres,the_bc_tower,pmask)
+
+
 
   else
 
      ! non-restart initialization
+     init_step = 1
 
      time = 0.d0
 
@@ -342,17 +348,31 @@ subroutine main_driver()
      dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
   end do
 
-  ! initialize sold = s^0 and mold = m^0
-  call init(mold,sold,pres,dx,mla,time)
+  if (restart .le. 0) then
 
-  if (initial_variance .ne. 0.d0) then
-     call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-     call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold,umac)
-  end if
+     ! initialize sold = s^0 and mold = m^0
+     call init(mold,sold,pres,dx,mla,time)
 
-  if (barodiffusion_type .gt. 0) then
-     ! this computes an initial guess at p using HSE
-     call init_pres(mla,sold,pres,dx,the_bc_tower)
+     if (initial_variance .ne. 0.d0) then
+        call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+        ! umac is passed in as a temporary
+        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold,umac)
+     end if
+     
+     if (barodiffusion_type .gt. 0) then
+        ! this computes an initial guess at p using HSE
+        call init_pres(mla,sold,pres,dx,the_bc_tower)
+     end if
+
+     ! set the initial time step
+     if (fixed_dt .gt. 0.d0) then
+        dt = fixed_dt
+     else
+        call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+        call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
+        call estdt(mla,umac,dx,dt)
+     end if
+
   end if
 
   ! compute grad p
@@ -409,17 +429,6 @@ subroutine main_driver()
   call fill_m_stochastic(mla)  
   call fill_rhoc_stochastic(mla)  
 
-  ! set the initial time step
-  if (restart .lt. 0) then
-     if (fixed_dt .gt. 0.d0) then
-        dt = fixed_dt
-     else
-        call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-        call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
-        call estdt(mla,umac,dx,dt)
-     end if
-  end if
-
   if(abs(hydro_grid_int)>0 .or. stats_int>0) then
      narg = command_argument_count()
      farg = 1
@@ -441,35 +450,38 @@ subroutine main_driver()
      end if
   end if
 
-  ! need to do an initial projection to get an initial velocity field
-  call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
-                          rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt, &
-                          the_bc_tower,vel_bc_n,vel_bc_t)
+  if (restart .le. 0) then
 
-  if (print_int .gt. 0) then
-     call sum_momenta(mla,mold)
-     do i=1,2
-        av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
-        if (parallel_IOProcessor()) then
-           write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
+     ! need to do an initial projection to get an initial velocity field
+     call initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
+                             rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt, &
+                             the_bc_tower,vel_bc_n,vel_bc_t)
+
+     if (print_int .gt. 0) then
+        call sum_momenta(mla,mold)
+        do i=1,2
+           av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+           if (parallel_IOProcessor()) then
+              write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
+           end if
+        end do
+     end if
+
+     ! write initial plotfile
+     if (plot_int .gt. 0) then
+        call write_plotfile(mla,mold,umac,sold,pres,dx,time,0)
+     end if
+     ! print out projection (average) and variance)
+     if (stats_int .gt. 0) then
+        if(analyze_binary) then   
+           call print_stats_bin(mla,sold,mold,umac,prim,dx,0,time)
+        else
+           call print_stats(mla,dx,0,time,umac=umac,rho=sold)
         end if
-     end do
-  end if
-
-  ! write initial plotfile
-  if (plot_int .gt. 0) then
-     call write_plotfile(mla,mold,umac,sold,pres,dx,time,0)
-  end if
-  ! print out projection (average) and variance)
-  if (stats_int .gt. 0) then
-     if(analyze_binary) then   
-        call print_stats_bin(mla,sold,mold,umac,prim,dx,0,time)
-     else
-        call print_stats(mla,dx,0,time,umac=umac,rho=sold)
      end if
   end if
   
-  do istep=1,max_step
+  do istep=init_step,max_step
 
      runtime1 = parallel_wtime()
 
@@ -538,6 +550,12 @@ subroutine main_driver()
          if ( (plot_int > 0) .and. &
               ( mod(istep-n_steps_skip,plot_int) .eq. 0) ) then
             call write_plotfile(mla,mnew,umac,snew,pres,dx,time,istep-n_steps_skip)
+         end if
+
+         ! write checkpoint
+         if ( (chk_int > 0) .and. &
+              ( mod(istep-n_steps_skip,chk_int) .eq. 0) ) then
+            call write_checkfile(mla,snew,mnew,pres,time,dt,istep-n_steps_skip)
          end if
 
          ! print out projection (average) and variance
