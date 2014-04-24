@@ -349,44 +349,8 @@ subroutine main_driver()
   end do
 
   if (restart .le. 0) then
-
      ! initialize sold = s^0 and mold = m^0
      call init(mold,sold,pres,dx,mla,time)
-
-     if (initial_variance .ne. 0.d0) then
-        call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-        ! umac is passed in as a temporary
-        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold,umac)
-     end if
-     
-     if (barodiffusion_type .gt. 0) then
-        ! this computes an initial guess at p using HSE
-        call init_pres(mla,sold,pres,dx,the_bc_tower)
-     end if
-
-     ! set the initial time step
-     if (fixed_dt .gt. 0.d0) then
-        dt = fixed_dt
-     else
-        call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-        call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
-        call estdt(mla,umac,dx,dt)
-     end if
-
-  end if
-
-  ! compute grad p
-  call compute_grad(mla,pres,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
-
-  if (print_int .gt. 0) then
-     call eos_check(mla,sold)
-     call sum_momenta(mla,mold)
-     do i=1,2
-        av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
-        if (parallel_IOProcessor()) then
-           write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
-        end if
-     end do
   end if
 
   ! convert cons to prim in valid region
@@ -406,6 +370,44 @@ subroutine main_driver()
   ! convert prim to cons in valid and ghost region
   ! now cons has properly filled ghost cells
   call convert_cons_to_prim(mla,sold,prim,.false.)
+
+  call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+  call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
+
+  if (restart .le. 0) then
+
+     if (initial_variance .ne. 0.d0) then
+        ! umac is passed in as a temporary
+        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold,umac)
+     end if
+     
+     if (barodiffusion_type .gt. 0) then
+        ! this computes an initial guess at p using HSE
+        call init_pres(mla,sold,pres,dx,the_bc_tower)
+     end if
+
+     ! set the initial time step
+     if (fixed_dt .gt. 0.d0) then
+        dt = fixed_dt
+     else
+        call estdt(mla,umac,dx,dt)
+     end if
+
+  end if
+
+  ! compute grad p
+  call compute_grad(mla,pres,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
+  if (print_int .gt. 0) then
+     call eos_check(mla,sold)
+     call sum_momenta(mla,mold)
+     do i=1,2
+        av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+        if (parallel_IOProcessor()) then
+           write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
+        end if
+     end do
+  end if
 
   ! initialize chi, eta, and kappa
   call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
