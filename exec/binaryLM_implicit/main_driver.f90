@@ -405,7 +405,7 @@ subroutine main_driver()
   call compute_grad(mla,pres,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   if (print_int .gt. 0) then
-     write(*,*) "Initial conditions before initial projection:"
+     if (parallel_IOProcessor()) write(*,*) "Initial conditions before initial projection:"
      call eos_check(mla,sold)
      call sum_momenta(mla,mold)
      do i=1,2
@@ -467,7 +467,7 @@ subroutine main_driver()
                              the_bc_tower,vel_bc_n,vel_bc_t)
 
      if (print_int .gt. 0) then
-        write(*,*) "After initial projection:"
+        if (parallel_IOProcessor()) write(*,*) "After initial projection:"
         call sum_momenta(mla,mold)
         do i=1,2
            av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
@@ -547,7 +547,7 @@ subroutine main_driver()
      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
-        write(*,*) "At time step ", istep, " t=", time  
+        if (parallel_IOProcessor()) write(*,*) "At time step ", istep, " t=", time  
         call eos_check(mla,snew)
         call sum_momenta(mla,mnew)
         do i=1,2
@@ -563,9 +563,9 @@ subroutine main_driver()
         call project_onto_eos(mla,snew)
      end if
 
-      if (istep > n_steps_skip) then
+      if (istep >= n_steps_skip) then
 
-         ! write plotfile
+         ! write plotfile -- note that this will overwrite initial plotfile if n_steps_skip>0
          if ( (plot_int > 0) .and. &
               ( mod(istep-n_steps_skip,plot_int) .eq. 0) ) then
             call write_plotfile(mla,mnew,umac,snew,pres,dx,time,istep-n_steps_skip)
