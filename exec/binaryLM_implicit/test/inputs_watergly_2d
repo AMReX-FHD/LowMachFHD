@@ -1,37 +1,48 @@
 &probin_binarylm
 
-  ! problem setup
-  c_init(1:2) = 0.39d0 0.d0  ! controls initial concentration range
-  c_bc(2,1:2) = 0.39d0 0.d0
-  grav(1:2) = 0.d0 -2364.d0   ! gravity vector (negative is downwards)
-  grav(1:2) = 0.d0 -236.4d0   ! gravity vector (negative is downwards)
-  grav(1:2) = 0.d0 0.d0       ! gravity vector (negative is downwards)
+  ! simulation parameters:
+  max_step = 10000          ! maximum number of time steps = N_STEPS in IBAMR
+  print_int = 10              ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
+  project_eos_int = 100        ! how often to call project_onto_eos
 
-  ! simulation properties
-  max_step = 10000          ! maximum number of time steps
-  print_int = 10              ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 1        ! how often to call project_onto_eos
+  ! fluid properties:
+  rhobar(1:2) = 1.054d0 1.044d0   ! rho1bar and rho2bar = both equal to RHO in IBAMR
+  diff_coef = 1.d-5               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
+  temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
+  grav(1:2) = 0.d0 -236.4d0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
 
-  ! fluid properties
-  rhobar(1:2) = 1.054d0 1.044d0   ! rho1bar and rho2bar
-  diff_coef = 1.d-5               ! concentration diffusion coefficient 'chi'
-!  diff_coef = 1.d-4               ! concentration diffusion coefficient 'chi'
-  temperature = 4.14d-14                   ! temperature
+  ! Concentration dependence of transport coefficients chi(c) and eta(c)
+  ! These are used in FluctHydro/staggered_grid/src_binaryLM/init.f90
+  ! a/b/c for chi/eta/kappa (default is zero) assuming rational dependence (a+b*concentration)/(1+c*concentration)
+  ! Formula is: indx=1 for chi, indx=2 for eta, indx=3 for kappa (NOT implemented yet)
+  ! coeff=coeff0*(material_properties(1,indx) + material_properties(2,indx)*c) / (1.d0 + material_properties(3,indx)*c)
+  material_properties(1:3,1) = 0 ! chi: OLD: -2.2d0 1.2d0
+  material_properties(1:3,2) = 0 ! eta: OLD 0.66d0 12.d0
 
-  ! a/b for chi/eta/kappa
-!  material_properties(1:2,1) = -2.2d0 1.2d0
-!  material_properties(1:2,2) = 0.66d0 12.d0
-!  material_properties(1:2,3) = 0.d0 0.d0
+  ! Boundary and initial conditions:
+  ! Here concentration is assumed to vary along the y axes only
+  c_init(1:2) = 0.39d0 0.d0  ! controls initial concentration range = [C_TOP C_BOTTOM] in IBAMR
+  c_bc(2,1:2) = 0.39d0 0.d0  ! Specifies boundary conditions at top and bottom y walls (see bc_lo and bc_hi below)
+      ! This is [gcoef_function_2 gcoef_function_3] in IBAMR
+      ! For Dirichlet (RESERVOIR) BCs it is (a=1, b=0) in IBAMR
+      ! For Neumann (WALL) BCs it is (a=0, b=1) in IBAMR
 
-  ! stochastic properties
-  initial_variance = -1.d0   ! multiplicative factor for initial fluctuations
-                             ! (if negative, total momentum is set to zero)
-  conc_scal = 0.d0           ! Scaling for concentration stochastic forcing is variance_coef*conc_scal
-
+  ! Algorithmic control:
   barodiffusion_type = 0  ! 0 = no barodiffusion
                           ! 1 = fixed gradp from initialization
                           ! 2 = update gradp each time step
-  algorithm_type = 1	  ! enable overdamped (infinite Sc) algorithm
+  algorithm_type = 2	  ! enable overdamped (infinite Sc) algorithm
+      ! 0 = Inertial algorithm
+      ! 1 = Overdamped with 1 RNG
+      ! 2 = Overdamped with 2 RNGs  
+  
+  ! stochastic properties
+  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
+  conc_scal = 0.d0          ! Scaling for concentration stochastic forcing is variance_coef*conc_scal = C_VAR in IBAMR
+  
+  ! HydroGrid analysis:
+  analyze_binary = F ! T for old specialized analysis (HDMD/HSMD for explicit low Mach paper) exec/binaryLM/analyze_spectra.f90
+                     ! F for new general analysis code src_common/analyze_spectra.f90
 
 /
 
@@ -40,22 +51,37 @@
   ! Problem specification
   !----------------------
   dim_in = 2                 ! 2D or 3D  
-  prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate
-  prob_hi(1:2) = 1.d0 0.25d0 ! physical hi coordinate
-  n_cells(1:2) = 128 32      ! number of cells in domain
-  max_grid_size(1:2) = 32 32 ! max number of cells in a box
-  fixed_dt = 0.025d0         ! time step
-  plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
-  prob_type = 0              ! sets scalars, m, coefficients (see init.f90)
-
-  ! Algorithm control / selection
-  !----------------------
+  
+  ! Domain shape and size = CartesianGeometry in IBAMR
+  prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate = x_lo in IBAMR
+  prob_hi(1:2) = 1.d0 0.25d0 ! physical hi coordinate = x_up in IBAMR
+  n_cells(1:2) = 128 32      ! number of cells in domain = domain_boxes in IBAMR
+  max_grid_size(1:2) = 32 32 ! max number of cells in a box for parallelization = largest_patch_size in IBAMR
+     ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
+  
+  ! Time stepping
+  fixed_dt = 0.025d0         ! time step = DT in IBAMR
+  plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
+  
+  ! Determines initial conditions and other problem-specific parameters (see init.f90)
+  ! 0 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
+  ! 1 = spherical bubble with c_init(1) in the interior, c_init(2) on the exterior
+  ! 2 = bilayer interface (stripe)
+    ! the lower third and upper third of the domain (in y) has c_init(1)
+    ! the middle third of the domain has c_init(2)
+  ! 3 = one fluid on top of another
+     ! c_init(1), u_init(1) in lower half of domain (in y)
+     ! c_init(2), u_init(2) in upper half  
+  prob_type = 0              ! sets scalars, m, coefficients 
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
-  seed = 1
+  seed = 1 ! SEED in IBAMR
 
+  ! Algorithm control / selection
+  !----------------------
+  
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
@@ -63,8 +89,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 1
-  visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta' 
-!  visc_coef = 1.d-3               ! momentum diffusion coefficient 'eta'     
+  visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta' = MU in IBAMR
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
@@ -72,48 +97,51 @@
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
+  ! Stochastic fluxes:
+  variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
+  k_B = 1.d0                 ! Boltzmann's constant
+  filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
+  stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
   ! Boundary conditions
   !----------------------
   ! BC specifications:
   ! -1  = periodic
-  ! 100 = no-slip (Dirichlet velocity condition for normal; Dirichlet velocity condition for trans)
-  ! 200 = slip    (Dirichlet velocity condition for normal; Dirichlet traction condition for trans)
-  bc_lo(1:2) = -1 101
-  bc_hi(1:2) = -1 101
+  ! no slip: Dirichlet velocity condition for normal; Dirichlet velocity condition for trans
+  ! NO_SLIP_WALL        = 100 ! Neumann condition for concentration - SORET
+  ! NO_SLIP_RESERVOIR   = 101 ! Dirichlet BC for concentration - WaterGlycerol mixing
+  ! slip: Dirichlet velocity condition for normal; Dirichlet traction condition for trans
+  !    SLIP_WALL        = 200 ! Same as no slip but may reduce finite-size effects
+  !    SLIP_RESERVOIR   = 201 ! Same as no slip but may reduce finite-size effects
+  bc_lo(1:2) = -1 101 ! BC for low/bottom walls = (a/b)coef_function_{0,2,4} in IBAMR
+  bc_hi(1:2) = -1 101 ! BC for high/top walls   = (a/b)coef_function_{1,3,5} in IBAMR
 
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions
   ! In 2D:
   ! wallspeed_lo/hi(1,1) - yvel on x-face
   ! wallspeed_lo/hi(1,2) - xvel on y-face
-  wallspeed_lo(1,1) = 0.d0
-  wallspeed_hi(1,1) = 0.d0
-  wallspeed_lo(1,2) = 0.d0
-  wallspeed_hi(1,2) = 0.d0
+  wallspeed_lo(1,2) = 0.d0 ! V_BOTTOM in IBAMR
+  wallspeed_hi(1,2) = 0.d0 ! V_TOP in IBAMR
 
-  hydro_grid_int = 5         ! How often to call updateHydroGrid
+  ! HydroGrid analysis code options:
+  hydro_grid_int = 5         ! How often to call updateHydroGrid = N_STEPS_POST in IBAMR
                              ! 0 if never
-                             ! negative for projectHydroGrid custom analysis
-                             ! positive for updateHydroGrid
-  project_dir = 2	     ! Projection direction (1=x, 2=y, 3=z)
+                             ! negative for projectHydroGrid custom analysis = PROJECT_Y=TRUE in IBAMR
+                             ! positive for updateHydroGrid = PROJECT_Y=FALSE in IBAMR
+  project_dir = 2	     ! Projection direction (1=x, 2=y, 3=z) = Fixed at 2 in IBAMR
   	                     ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   	                     !          but still need projection if stats_int>0)
   	                     ! +dim=project along dim then analyze 2D only,
   	                     ! -dim=analyze 3D and then project along dim so we also analyze 2D data
-  	                     ! It is better to use the conserved variables but it does not quite work for staggered
-  max_grid_projection = 32   ! parallelization parameters
-  stats_int = -1             ! Project grid for analysis
+  max_grid_projection = 32   ! parallelization parameter for analysis
+  stats_int =  10            ! Project grid for analysis and write hstat and vstat files
                              ! If positive, how often to compute mean and 
-                             ! standard deviation over reduced dimensions
-  n_steps_save_stats = 200    ! How often to dump HydroGrid output files
-  n_steps_skip = 0           ! How many steps to skip
+                             ! standard deviation over reduced dimensions = N_STEPS_SNAPSHOT in IBAMR
+  n_steps_save_stats = 200   ! How often to dump HydroGrid output files
+  n_steps_skip = 0           ! How many steps to skip = N_STEPS_SKIP in IBAMR  
   analyze_conserved = F      ! Should we use conserved variables for the analysis (does not work well)
-  center_snapshots = F       ! Should we use cell-centered momenta for the analysis (will smooth fluctuations)
-
-  variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing
-  k_B = 1.d0                 ! Boltzmann's constant
-  filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
-  stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+  center_snapshots = T       ! Should we use cell-centered momenta for the analysis (will smooth fluctuations)
 
 /
 
@@ -128,7 +156,7 @@
   !-3 = upper triangular preconditioner with negative sign
   ! 4 = Block diagonal preconditioner
   !-4 = Block diagonal preconditioner with negative sign
-  precon_type = 1
+  precon_type = 2
 
   ! weighting of pressure when computing norms and inner products
   p_norm_weight = 1.d0
@@ -170,7 +198,7 @@
   stag_mg_rel_tol = 1.d-9      ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.d-9        ! relative tolerance stopping criteria
+  gmres_rel_tol = 1.d-6        ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0         ! absolute tolerance stopping criteria
   gmres_verbose = 1            ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20         ! max number of outer iterations
@@ -180,8 +208,7 @@
 
 /
 
-
-
+! FULL 2D grid = First hydroAnalysisOptions namelist in IBAMR
 &hydroAnalysisOptions
    ! 3D: 1=rho, 2-4=v, 5=T, 6=c
    ! 2D: 1=rho, 2-3=v, 4=T, 5=c
@@ -225,6 +252,7 @@
    periodic = T ! Is the system periodic along the y axes
 /
 
+! PROJECTION along y axes (depends on x only) = Second hydroAnalysisOptions namelist in IBAMR
 &hydroAnalysisOptions ! Projected 2D grid
    staggeredVelocities = 1 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
 
@@ -264,6 +292,7 @@
    periodic = T ! Is the system periodic along the y axes
 /
 
+! PROJECTION along x axes (depends on y only) = not in IBAMR
 &hydroAnalysisOptions ! Projected 2D grid
    staggeredVelocities = 1 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
 

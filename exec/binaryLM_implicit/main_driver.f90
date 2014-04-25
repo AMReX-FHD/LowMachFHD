@@ -405,12 +405,13 @@ subroutine main_driver()
   call compute_grad(mla,pres,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   if (print_int .gt. 0) then
+     write(*,*) "Initial conditions before initial projection:"
      call eos_check(mla,sold)
      call sum_momenta(mla,mold)
      do i=1,2
         av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
         if (parallel_IOProcessor()) then
-           write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
+           write(*,"(A,100G17.9)") "Conservation: rho=", i, av_mass
         end if
      end do
   end if
@@ -466,11 +467,12 @@ subroutine main_driver()
                              the_bc_tower,vel_bc_n,vel_bc_t)
 
      if (print_int .gt. 0) then
+        write(*,*) "After initial projection:"
         call sum_momenta(mla,mold)
         do i=1,2
            av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
            if (parallel_IOProcessor()) then
-              write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
+              write(*,"(A,100G17.9)") "Conservation: rho=", i, av_mass
            end if
         end do
      end if
@@ -497,16 +499,20 @@ subroutine main_driver()
         call estdt(mla,umac,dx,dt)
      end if
 
-     if (parallel_IOProcessor()) then
-        print*,"Begin Advance; istep =",istep,"DT =",dt,"TIME =",time
-     end if
-
-     if (fixed_dt .gt. 0.d0) then
-        max_vel = 0.d0
-        max_vel = max(max_vel,multifab_norm_inf_c(umac(1,1),1,1,all=.false.))
-        max_vel = max(max_vel,multifab_norm_inf_c(umac(1,2),1,1,all=.false.))
+     if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
+          .or. &
+          (istep .eq. max_step) ) then
         if (parallel_IOProcessor()) then
-           print*,'effective advective CFL=',fixed_dt*max_vel/dx(1,1)
+           print*,"Begin Advance; istep =",istep,"DT =",dt,"TIME =",time
+        end if
+      
+        if (fixed_dt .gt. 0.d0) then
+           max_vel = 0.d0
+           max_vel = max(max_vel,multifab_norm_inf_c(umac(1,1),1,1,all=.false.))
+           max_vel = max(max_vel,multifab_norm_inf_c(umac(1,2),1,1,all=.false.))
+           if (parallel_IOProcessor()) then
+              print*,'effective advective CFL=',fixed_dt*max_vel/dx(1,1)
+           end if
         end if
      end if
 
@@ -524,32 +530,37 @@ subroutine main_driver()
      ! increment simulation time
      time = time + dt
 
-    if (parallel_IOProcessor()) then
-        print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
-     end if
-
-     runtime2 = parallel_wtime() - runtime1
-     call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
-     if (parallel_IOProcessor()) then
-        print*,'Time to advance timestep: ',runtime1,' seconds'
-     end if
-
-     ! project rho and rho1 back onto EOS
-     if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
-        call project_onto_eos(mla,snew)
-     end if
-
      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
+       if (parallel_IOProcessor()) then
+           print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
+        end if
+
+        runtime2 = parallel_wtime() - runtime1
+        call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
+        if (parallel_IOProcessor()) then
+           print*,'Time to advance timestep: ',runtime1,' seconds'
+        end if
+     end if
+      
+     if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
+          .or. &
+          (istep .eq. max_step) ) then
+        write(*,*) "At time step ", istep, " t=", time  
         call eos_check(mla,snew)
         call sum_momenta(mla,mnew)
         do i=1,2
            av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
            if (parallel_IOProcessor()) then
-              write(*,"(A,100G17.9)") "CONSERVE: <rho_i>=", av_mass
+              write(*,"(A,100G17.9)") "Conservation: rho=", i, av_mass
            end if
         end do
+     end if
+
+     ! project rho and rho1 back onto EOS
+     if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
+        call project_onto_eos(mla,snew)
      end if
 
       if (istep > n_steps_skip) then

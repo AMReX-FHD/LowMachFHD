@@ -19,6 +19,24 @@ module init_module
 
   public :: init, compute_eta, compute_chi, compute_kappa
 
+ ! prob_type controls the initial condition and selects specific problem to solve
+ ! Positive means transport coefficients depend as rational functions on concentration
+ ! e.g., eta=visc_coeff*(a+b*conc)/(1+c*conc)
+ ! Negative means transport coefficients depend as polynomial functions on concentration (NOT IMPLEMENTED YET)
+ ! e.g., eta=visc_coeff*(1+a*conc+b*conc^2+c*conc^3)
+ ! KEY:
+ ! 0 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
+ ! 1 = spherical bubble with c_init(1) in the interior, c_init(2) on the exterior
+ ! 2 = bilayer interface (stripe)
+   ! the lower third and upper third of the domain (in y) has c_init(1)
+   ! the middle third of the domain has c_init(2)
+ ! 3 = one fluid on top of another
+    ! c_init(1), u_init(1) in lower half of domain (in y)
+    ! c_init(2), u_init(2) in upper half
+ ! 4 = Bell, Colella, Glaz 1989 jet in a doubly period geometry
+ ! 5 = Kelvin-Helmholtz
+ ! 6 = Exact solution for constant coefficient (Taylor vortex travelling wave)
+
 contains
 
   ! Important note: For periodic boundaries, the init routines should fill out

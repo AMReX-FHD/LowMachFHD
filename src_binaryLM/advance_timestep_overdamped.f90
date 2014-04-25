@@ -5,7 +5,6 @@ module advance_timestep_overdamped_module
   use define_bc_module
   use convert_stag_module
   use convert_variables_module
-  use convert_to_homogeneous_module
   use mk_advective_s_fluxdiv_module
   use mk_advective_m_fluxdiv_module
   use diffusive_rhoc_fluxdiv_module

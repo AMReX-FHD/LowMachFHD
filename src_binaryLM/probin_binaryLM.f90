@@ -42,7 +42,9 @@ module probin_binarylm_module
   namelist /probin_binarylm/ diff_coef         ! concentration diffusion coefficient 'chi'
   namelist /probin_binarylm/ mol_mass          ! molar mass of species
   namelist /probin_binarylm/ temperature       ! temperature
-  namelist /probin_binarylm/ material_properties ! A/B/C for chi/eta/kappa
+  namelist /probin_binarylm/ material_properties ! Coefficients A/B/C for chi/eta/kappa
+     ! Formula is: indx=1 for chi, indx=2 for eta, indx=3 for kappa (NOT implemented yet)
+     ! coeff=coeff0*(material_properties(1,indx) + material_properties(2,indx)*c) / (1.d0 + material_properties(3,indx)*c)
 
   ! stochastic properties
   namelist /probin_binarylm/ initial_variance  ! multiplicative factor for initial fluctuations
@@ -52,7 +54,7 @@ module probin_binarylm_module
   namelist /probin_binarylm/ barodiffusion_type ! 0 = no barodiffusion
                                                 ! 1 = fixed gradp from initialization
                                                 ! 2 = update gradp each time step
-  namelist /probin_binarylm/ algorithm_type     ! 0 = John's Algorithm
+  namelist /probin_binarylm/ algorithm_type     ! 0 = Inertial algorithm
                                                 ! 1 = Overdamped with 1 RNG
                                                 ! 2 = Overdamped with 2 RNGs
   namelist /probin_binarylm/ analyze_binary
