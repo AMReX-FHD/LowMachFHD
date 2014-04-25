@@ -374,6 +374,12 @@ subroutine main_driver()
   call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
   call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
 
+  do n=1,nlevs
+     ! presure ghost cells
+     call multifab_fill_boundary(pres(n))
+     call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+  end do
+
   if (restart .le. 0) then
 
      if (initial_variance .ne. 0.d0) then
