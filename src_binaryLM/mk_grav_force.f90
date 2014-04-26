@@ -89,7 +89,8 @@ contains
        end do
     end do
 
-    do j=lo(2),hi(2)+1
+    !do j=lo(2),hi(2)+1
+    do j=lo(2)+1,hi(2) ! Donev: I think we should not be applying a force to the boundaries
        do i=lo(1),hi(1)
           m_forcey(i,j) = m_forcey(i,j) &
                + grav(2)*(rho_oldy(i,j)+rho_newy(i,j))/2.d0

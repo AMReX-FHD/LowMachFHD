@@ -1,15 +1,15 @@
 &probin_binarylm
 
   ! simulation parameters:
-  max_step = 1000          ! maximum number of time steps = N_STEPS in IBAMR
-  print_int = 100 ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
-  project_eos_int = 10        ! how often to call project_onto_eos
+  max_step = 2 ! 1000          ! maximum number of time steps = N_STEPS in IBAMR
+  print_int = 1 ! 10 ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
+  project_eos_int = 1 ! 10        ! how often to call project_onto_eos
 
   ! fluid properties:
   rhobar(1:2) = 1.01 0.99   ! rho1bar and rho2bar = both equal to RHO in IBAMR
   diff_coef = 0.01               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
-  grav(1:2) = 0.0 -0.0  ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
+  grav(1:2) = 0.0 -1.0  ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
 
   ! Boundary and initial conditions:
   ! Here concentration is assumed to vary along the y axes only
@@ -49,14 +49,14 @@
   
   ! Domain shape and size = CartesianGeometry in IBAMR
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate = x_lo in IBAMR
-  prob_hi(1:2) = 32.0 128.0 ! physical hi coordinate = x_up in IBAMR
-  n_cells(1:2) = 32 128      ! number of cells in domain = domain_boxes in IBAMR
+  prob_hi(1:2) = 32.0 32.0  ! physical hi coordinate = x_up in IBAMR
+  n_cells(1:2) = 32 32      ! number of cells in domain = domain_boxes in IBAMR
   max_grid_size(1:2) = 32 32 ! max number of cells in a box for parallelization = largest_patch_size in IBAMR
      ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
   
   ! Time stepping
   fixed_dt = 10.0        ! time step = DT in IBAMR
-  plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
+  plot_int = 0             ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
   
   ! Determines initial conditions and other problem-specific parameters (see init.f90)
   ! 0 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
@@ -120,11 +120,11 @@
   wallspeed_hi(1,2) = 0.d0 ! V_TOP in IBAMR
 
   ! HydroGrid analysis code options:
-  hydro_grid_int = 5         ! How often to call updateHydroGrid = N_STEPS_POST in IBAMR
+  hydro_grid_int = 0 ! 5         ! How often to call updateHydroGrid = N_STEPS_POST in IBAMR
                              ! 0 if never
                              ! negative for projectHydroGrid custom analysis = PROJECT_Y=TRUE in IBAMR
                              ! positive for updateHydroGrid = PROJECT_Y=FALSE in IBAMR
-  project_dir = -2	     ! Projection direction (1=x, 2=y, 3=z) = Fixed at 2 in IBAMR
+  project_dir = 2	     ! Projection direction (1=x, 2=y, 3=z) = Fixed at 2 in IBAMR
   	                     ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   	                     !          but still need projection if stats_int>0)
   	                     ! +dim=project along dim then analyze 2D only,
