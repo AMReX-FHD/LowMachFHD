@@ -6,7 +6,7 @@
   project_eos_int = 10        ! how often to call project_onto_eos
 
   ! fluid properties:
-  diff_coef = 1.d-5               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
+  diff_coef = 1.6e-4 ! true=1.d-5               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
   ! Boussinesq approximation:
   !rhobar(1:2) = 1.054d0 1.044d0   ! rho1bar and rho2bar = both equal to RHO in IBAMR
@@ -22,9 +22,6 @@
   ! coeff=coeff0*(material_properties(1,indx) + material_properties(2,indx)*c) / (1.d0 + material_properties(3,indx)*c)
   material_properties(1:3,1) = -2.2d0 1.2d0 0.0d0 ! chi
   material_properties(1:3,2) = 0.66d0 12.d0 0.0d0 ! eta
-  ! Wrong values from Thomas's input file -- SWAPPED eta and chi
-  !material_properties(1:3,2) = -2.2d0 1.2d0 0.0d0 ! chi
-  !material_properties(1:3,1) = 0.66d0 12.d0 0.0d0 ! eta
 
   ! Boundary and initial conditions:
   ! Here concentration is assumed to vary along the y axes only
@@ -38,7 +35,7 @@
   barodiffusion_type = 0  ! 0 = no barodiffusion
                           ! 1 = fixed gradp from initialization
                           ! 2 = update gradp each time step
-  algorithm_type = 2	  ! enable overdamped (infinite Sc) algorithm
+  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
       ! 0 = Inertial algorithm
       ! 1 = Overdamped with 1 RNG
       ! 2 = Overdamped with 2 RNGs  
@@ -96,7 +93,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = -2
-  visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta' = MU in IBAMR
+  visc_coef = 6.1e-4 ! true=1.d-2               ! momentum diffusion coefficient 'eta' = MU in IBAMR
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients

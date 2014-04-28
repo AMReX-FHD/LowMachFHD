@@ -78,7 +78,7 @@ contains
     integer i,j
     real(kind=dp_t) :: x,y,ucst,vcst,freq,ufac
 
-    select case (prob_type)
+    select case (abs(prob_type))
     case (6) ! Taylor (traveling wave) vortices
 
        ucst = 0.75d0
@@ -167,7 +167,7 @@ contains
     integer :: i,j
     real(kind=dp_t) :: x, pfac, ucst, vcst, freq, pfreq
 
-    select case (prob_type)
+    select case (abs(prob_type))
     case (6) ! Taylor (traveling wave) vortices
 
        ucst = 0.75d0

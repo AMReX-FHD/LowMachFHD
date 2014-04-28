@@ -10,93 +10,53 @@
     ! If negative, the same random increments are used in all stages
     ! Otherwise the random increments are recalculated each stage
 
- !n_cells(1:2) = 32 32
- !n_cells(1:2) = 64 64
  n_cells(1:2) = 128 32
 
  max_grid_size = 32 32
 
- !prob_hi(1:2) = 640.0 640.0
- !prob_hi(1:2) = 0.08 0.02
- !prob_hi(1:2) = 0.1 0.1
- !prob_hi(1:2) = 0.4 0.4
  prob_hi(1:2) = 1.0 0.25
- !prob_hi(1:2) = 0.004 0.004
- !prob_hi(1:2) = 1.6 0.4
 
  max_step = 100000
- n_steps_skip=0 ! How many steps for initial equilibration
- !max_step = 50000
- !n_steps_skip=50000 ! How many steps for initial equilibration
- !n_steps_skip=0 ! How many steps for initial equilibration
+ n_steps_skip=50000 ! How many steps for initial equilibration
 
  print_int = 100
  proj_int = -1 ! How often to project onto div(u)=0
- plot_int  = 100
+ plot_int  = 0
  chk_int   = 0
 
- !fixed_dt = 1.5
- !fixed_dt = 0.00008
- 
- fixed_dt = 0.001 ! max for variable viscosity
- fixed_dt = 0.00002 ! max for variable viscosity
- fixed_dt = 0.0005 ! max for variable viscosity
- fixed_dt = 0.012 ! max for variable viscosity
  fixed_dt = 0.005 ! max for variable viscosity
- !fixed_dt = 0.02 ! max for variable viscosity
- !fixed_dt = 0.02 ! max for variable viscosity
- !fixed_dt = 0.0000005 ! max for variable viscosity
- !fixed_dt = 0.02 ! max for variable viscosity
 
- !fixed_dt = 0.0012 ! max for constant viscosity, RK3, rho_1 = 1.01
- !fixed_dt = 0.0015 ! max for constant viscosity, RK3, rho_1 = 1.29
-
- !visc_coef = -1.0
- !visc_coef = -0.01
- !diff_coef = -0.001
- visc_coef = 1E-3
- diff_coef = 1E-4 
- !visc_coef = -6.13E-4 
- !diff_coef = -1.63E-4 
+ visc_coef = -6.13E-4 
+ diff_coef = -1.63E-4 
  kT = 4.14E-14
 
+ ! Correct values:
+ material_properties(1:2,1) = -2.2d0 1.2d0 ! chi
+ material_properties(1:2,2) = 0.66d0 12.d0 ! eta
+ ! Wrong values from Thomas's runs (eta and chi swapped)
  !material_properties(1,1) = 0.66
  !material_properties(1,2) = -2.2
  !material_properties(2,1) = 12.0
  !material_properties(2,2) = 1.2
 
- !rhobar(1:2) = 0.75 1.5 ! 1.5 0.75
- !rhobar(1:2) =  1.29 1.0 ! 1.5 0.75
- rhobar(1:2) =  1.054 1.044 ! 1.5 0.75
- !rhobar(1:2) =  1.01 1.0 ! 1.5 0.75
- !rhobar(1:2) = 1.5 0.75 ! 1.5 0.75
- !rhobar(1:2) = 1.0 1.0 ! 1.5 0.75
- !grav = 0.001d0
- grav = 23.64E2 
- !grav = 1.0E2
+ rhobar(1:2) =  1.29 1.0
+ grav = 1.0E2
+ !rhobar(1:2) =  1.054 1.044
+ !grav = 2364 
  !grav = 0.0d0 
 
  variance_coeff = 1
- !variance_coeff = 1E-14
- !variance_coeff = 1E-3
- !conc_scal = 4.d0 ! To make the conc. spectrum = 1
  conc_scal = 0.d0 ! To make the conc. spectrum = 1
 
  ! -1=periodic; 11 = reservoir; 15 = no slip; 14 = slip
- !bc_lo(1:2) = -1 -1
- !bc_hi(1:2) = -1 -1
  bc_lo(1:2) = -1 11
  bc_hi(1:2) = -1 11
- !bc_lo(1:2) = 15 15
- !bc_hi(1:2) = 15 15
  wallspeed_lo(1,1:2)=0 0 ! Low side
  wallspeed_hi(1,1:2)=0 0 ! High side
  !u_bc(1:2)=0 0 ! 1 0 ! Background velocity
- !c_wall(2,1:2)=0.1 0.9 ! Concentrations at bottom/top
  c_wall(2,1:2)=0.39 0.0 ! Concentrations at bottom/top
  vel_init(1:2)=0 0 ! Background velocity
  c_init(1:2)=0.39 0.0 ! Concentrations at bottom/top
- !triangle_coeff = 1.0
 
  ! Verbosity level:
  verbose = 0
@@ -115,8 +75,8 @@
  ! For stochastic stuff:
  use_stochastic_forcing = T
  seed= 1
- hydro_grid_int=1 ! How often to take snapshots
- n_steps_save_stats=1000
+ hydro_grid_int=5 ! How often to take snapshots
+ n_steps_save_stats=0
  !n_steps_save_stats=-1
  center_snapshots=F
  !project_2D=1
@@ -175,8 +135,8 @@
    writeMeansVTK = F ! Write the means to a VTK file
 
    ! Variances
-   writeVariancesVTK = T ! Should we save a VTK file
-   nVariances = 2
+   writeVariancesVTK = F ! Should we save a VTK file
+   nVariances = 0
    !correlationCell = 1 1 1 ! Reference cell for correlations (central cell by default)
    ! Variance file:
    ! 1=y, 2=c-c-var, 3=c-c-corr
@@ -184,7 +144,7 @@
       ! species1 variable1 species2 variable2
    
    ! Static structure factors
-   writeSpectrumVTK = T
+   writeSpectrumVTK = F
    writeAbsValue = F ! Only write absolute values of complex values to VTK file?
    writeTheory = -2 ! Write the theoretical prediction (0 or 1) or project discretely (-1)
    nStructureFactors = 2
@@ -198,7 +158,7 @@
    nSavedSnapshots=1000
    
    outputFolder = "."
-   filePrefix="LowMach.2D"
+   filePrefix="LowMach.2D.new"
 
    axisToPrint = 1 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
@@ -214,7 +174,7 @@
 
    ! Variances
    writeVariancesVTK = T ! Should we save a VTK file
-   nVariances = 2
+   nVariances = 0
    !correlationCell = 1 1 1 ! Reference cell for correlations (central cell by default)
    ! Variance file:
    ! 1=y, 2=c-c-var, 3=c-c-corr
@@ -225,7 +185,7 @@
    writeSpectrumVTK = T
    writeAbsValue = F ! Only write absolute values of complex values to VTK file?
    writeTheory = -2 ! Write the theoretical prediction (0 or 1) or project discretely (-1)
-   nStructureFactors = 2
+   nStructureFactors = 0
    ! 1=c-c, 2=c-vy, 3=c-vx, 4=c-vz
    structureFactorPairs = "0 5 0 5, 0 1 0 1"
 

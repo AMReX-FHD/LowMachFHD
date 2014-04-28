@@ -22,7 +22,7 @@ module init_module
  ! prob_type controls the initial condition and selects specific problem to solve
  ! Positive means transport coefficients depend as rational functions on concentration
  ! e.g., eta=visc_coeff*(a+b*conc)/(1+c*conc)
- ! Negative means transport coefficients depend as polynomial functions on concentration (NOT IMPLEMENTED YET)
+ ! Negative means transport coefficients depend as polynomial functions on concentration
  ! e.g., eta=visc_coeff*(1+a*conc+b*conc^2+c*conc^3)
  ! KEY:
  ! 0 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
@@ -36,6 +36,8 @@ module init_module
  ! 4 = Bell, Colella, Glaz 1989 jet in a doubly period geometry
  ! 5 = Kelvin-Helmholtz
  ! 6 = Exact solution for constant coefficient (Taylor vortex travelling wave)
+ ! 7 = Steady state (diff_flux=0 i.e. rho(c(y))*chi(c(y))*dc/dy=const) -- NOT IMPLEMENTED, for now the same as prob_type=0
+       ! See prob_type=13 in lowMach_explicit/exact_solutions.f90 for partial implementation
 
 contains
 
@@ -110,8 +112,8 @@ contains
     real(kind=dp_t) :: cosxt,cosyt,freq,pfac,pfreq
     real(kind=dp_t) :: sinxt,sinyt,ucst,ufac,vcst,xm,xp,ym,yp,rand
 
-    select case (prob_type)
-    case (0)
+    select case (abs(prob_type))
+    case (0,7)
 
        ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
 
@@ -449,8 +451,8 @@ contains
     real(kind=dp_t) :: x,y,y1,y2,z,r,dy,c_loc
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
 
-    select case (prob_type)
-    case (0)
+    select case (abs(prob_type))
+    case (0,7)
 
        ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
 
@@ -596,6 +598,27 @@ contains
 
   end subroutine init_3d
 
+!==============================================================
+! Transport coefficients concentration dependence
+!==============================================================
+
+  ! Here we assume it to be of a simple rational or polynomial form depending on sign of prob_type
+  subroutine compute_coeff_local(indx,conc,coeff)
+    integer, intent(in) :: indx
+    real(kind=dp_t), intent(in) ::  conc
+    real(kind=dp_t), intent(out) :: coeff
+     
+    if(prob_type>=0) then ! Rational dependence
+      coeff = (material_properties(1,indx) + material_properties(2,indx)*conc) / &
+              (1.d0                        + material_properties(3,indx)*conc)
+    else ! Polynomial dependence
+      coeff = (1.0d0 + material_properties(1,indx)*conc    + &
+                       material_properties(2,indx)*conc**2 + &
+                       material_properties(3,indx)*conc**3)
+    end if                                   
+  
+  end subroutine
+  
   subroutine compute_chi(mla,chi,chi_fc,prim,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
@@ -639,7 +662,7 @@ contains
     call average_cc_to_face(nlevs,chi,chi_fc,1,tran_bc_comp,1,the_bc_level)
 
   end subroutine compute_chi
-
+  
   subroutine compute_chi_2d(chi,ng_c,prim,ng_p,lo,hi,dx)
 
     ! compute chi in valid AND ghost regions
@@ -660,12 +683,12 @@ contains
 
     else
 
-       ! chi = chi0*(A+B*c) / (1+C*c)
        do j=lo(2)-ng_c,hi(2)+ng_c
        do i=lo(1)-ng_c,hi(1)+ng_c
           conc = max(min(prim(i,j,2), 1.d0), 0.d0)
-          chi(i,j) = diff_coef*(material_properties(1,1) + material_properties(2,1)*conc) / &
-                               (1.d0                     + material_properties(3,1)*conc)
+          call compute_coeff_local(1, conc, chi(i,j))
+          chi(i,j) = diff_coef*chi(i,j)
+          !write(101,*) j, chi(i,j)
        end do
        end do
 
@@ -693,13 +716,12 @@ contains
 
     else
 
-       ! chi = chi0*(A+B*c) / (1+C*c)
        do k=lo(3)-ng_c,hi(3)+ng_c
        do j=lo(2)-ng_c,hi(2)+ng_c
        do i=lo(1)-ng_c,hi(1)+ng_c
           conc = max(min(prim(i,j,k,2), 1.d0), 0.d0)
-          chi(i,j,k) = diff_coef*(material_properties(1,1) + material_properties(2,1)*conc) / &
-                                 (1.d0                     + material_properties(3,1)*conc)
+          call compute_coeff_local(1, conc, chi(i,j,k))
+          chi(i,j,k) = diff_coef*chi(i,j,k)
        end do
        end do
        end do
@@ -776,12 +798,12 @@ contains
 
     else
 
-       ! eta = eta0*(A+B*c) / (1+C*c)
        do j=lo(2)-ng_e,hi(2)+ng_e
        do i=lo(1)-ng_e,hi(1)+ng_e
           conc = max(min(prim(i,j,2), 1.d0), 0.d0)
-          eta(i,j) = visc_coef*(material_properties(1,2) + material_properties(2,2)*conc) / &
-                               (1.d0                     + material_properties(3,2)*conc)
+          call compute_coeff_local(2, conc, eta(i,j))
+          eta(i,j) = visc_coef*eta(i,j)
+          !write(102,*) j, eta(i,j)
        end do
        end do
 
@@ -806,14 +828,12 @@ contains
 
     else
 
-       ! eta = eta0*(A+B*c) / (1+C*c)
        do k=lo(3)-ng_e,hi(3)+ng_e
        do j=lo(2)-ng_e,hi(2)+ng_e
        do i=lo(1)-ng_e,hi(1)+ng_e
           conc = max(min(prim(i,j,k,2), 1.d0), 0.d0)
-          eta(i,j,k) = visc_coef*(material_properties(1,2) + material_properties(2,2)*conc) / &
-                                 (1.d0                     + material_properties(3,2)*conc)
-
+          call compute_coeff_local(2, conc, eta(i,j,k))
+          eta(i,j,k) = visc_coef*eta(i,j,k)
        end do
        end do
        end do
@@ -872,7 +892,11 @@ contains
     real(kind=dp_t), intent(in   ) ::  prim(lo(1)-ng_p:,lo(2)-ng_p:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
-    kappa = 1.d0
+    if(abs(visc_type)>=3) then
+       call bl_error("Bulk viscosity not supported propertly yet")
+    else
+       kappa=0.0d0
+    end if
 
   end subroutine compute_kappa_2d
 
@@ -883,7 +907,11 @@ contains
     real(kind=dp_t), intent(in   ) ::  prim(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
-    kappa = 1.d0
+    if(abs(visc_type)>=3) then
+       call bl_error("Bulk viscosity not supported propertly yet")
+    else
+       kappa=0.0d0
+    end if
 
   end subroutine compute_kappa_3d
 
