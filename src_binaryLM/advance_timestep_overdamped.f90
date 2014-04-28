@@ -154,11 +154,11 @@ contains
 
     ! add rho^n*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
+       call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc,the_bc_tower)
     end if
 
     ! add external forcing to gmres_rhs_v
-    call mk_external_m_force(mla,gmres_rhs_v,dx,time+0.5d0*dt)
+    call mk_external_m_force(mla,gmres_rhs_v,dx,time+0.5d0*dt,the_bc_tower)
 
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
@@ -358,11 +358,11 @@ contains
 
     ! add rho^{*,n+1/2}*g gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc)
+       call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc,the_bc_tower)
     end if
 
     ! add external forcing to gmres_rhs_v
-    call mk_external_m_force(mla,gmres_rhs_v,dx,time+0.5d0*dt)
+    call mk_external_m_force(mla,gmres_rhs_v,dx,time+0.5d0*dt,the_bc_tower)
 
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &

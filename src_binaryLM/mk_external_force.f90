@@ -4,6 +4,8 @@ module mk_external_force_module
   use multifab_module
   use ml_layout_module
   use bl_constants_module
+  use define_bc_module
+  use multifab_zero_edgeval_module
   use probin_binarylm_module, only: diff_coef
   use probin_common_module, only: prob_type, visc_coef
 
@@ -20,11 +22,12 @@ contains
   ! Important note: For periodic boundaries, the mk_external_m_force routine should fill out
   ! *both* sides of the domain with values, even though this is duplicate information
   ! We ensure the two sides are bitwise identical, but low and/or high sides may win
-  subroutine mk_external_m_force(mla,m_force,dx,time)
+  subroutine mk_external_m_force(mla,m_force,dx,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: m_force(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),time
+    type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
     integer :: i,n,ng_u,dm,nlevs
@@ -55,6 +58,9 @@ contains
                                          lo, hi, dx(n,:), time)
           end select
        end do
+
+       ! zero wall boundary values
+       call multifab_zero_edgeval(m_force(n,:),1,dm+1,1,the_bc_tower%bc_tower_array(n))
 
        ! For periodic boundaries, ensure the low and high side are consistent:
        ! Note: multifab_internal_sync compares the box number of the two boxes 

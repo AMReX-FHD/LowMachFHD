@@ -340,7 +340,7 @@ contains
 
     ! add gravity term
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc)
+       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc,the_bc_tower)
     end if
 
     ! initialize rhs_p for gmres solve to zero
@@ -660,7 +660,7 @@ contains
 
     ! add gravity term
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc)
+       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc,the_bc_tower)
     end if
 
     ! reset to zero since we only add to them

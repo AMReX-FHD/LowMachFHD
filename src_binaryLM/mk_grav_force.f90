@@ -3,6 +3,8 @@ module mk_grav_force_module
   use bl_types
   use multifab_module
   use ml_layout_module
+  use define_bc_module
+  use multifab_zero_edgeval_module
   use probin_binarylm_module, only: grav
 
   implicit none
@@ -13,12 +15,13 @@ module mk_grav_force_module
 
 contains
 
-  subroutine mk_grav_force(mla,m_force,s_fc_old,s_fc_new)
+  subroutine mk_grav_force(mla,m_force,s_fc_old,s_fc_new,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: m_force(:,:)
     type(multifab) , intent(in   ) :: s_fc_old(:,:)
     type(multifab) , intent(in   ) :: s_fc_new(:,:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
     integer :: i,n,ng_s,ng_u,dm,nlevs
@@ -64,6 +67,10 @@ contains
                                    snx(:,:,:,1), sny(:,:,:,1), snz(:,:,:,1), ng_s, lo, hi)
           end select
        end do
+
+       ! zero wall boundary values
+       call multifab_zero_edgeval(m_force(n,:),1,dm+1,1,the_bc_tower%bc_tower_array(n))
+
     enddo
 
   end subroutine mk_grav_force
@@ -89,8 +96,7 @@ contains
        end do
     end do
 
-    !do j=lo(2),hi(2)+1
-    do j=lo(2)+1,hi(2) ! Donev: I think we should not be applying a force to the boundaries
+    do j=lo(2),hi(2)+1
        do i=lo(1),hi(1)
           m_forcey(i,j) = m_forcey(i,j) &
                + grav(2)*(rho_oldy(i,j)+rho_newy(i,j))/2.d0
