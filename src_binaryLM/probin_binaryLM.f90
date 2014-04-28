@@ -17,7 +17,7 @@ module probin_binarylm_module
   integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
-  logical, save :: analyze_binary
+  logical   , save :: analyze_binary,plot_stag
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -57,8 +57,10 @@ module probin_binarylm_module
   namelist /probin_binarylm/ algorithm_type     ! 0 = Inertial algorithm
                                                 ! 1 = Overdamped with 1 RNG
                                                 ! 2 = Overdamped with 2 RNGs
-  namelist /probin_binarylm/ analyze_binary
-                             ! Call the older analyze_spectra_binary or the new analyze_spectra?  
+  namelist /probin_binarylm/ analyze_binary     ! Call the older analyze_spectra_binary or the new analyze_spectra?
+
+  namelist /probin_binarylm/ plot_stag          ! include staggered plotfiles
+                             
 
 contains
 
@@ -114,6 +116,7 @@ contains
     algorithm_type = 0
     
     analyze_binary=.true.
+    plot_stag = .false.
 
     farg = 1
     if (narg >= 1) then
@@ -300,6 +303,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) analyze_binary
+
+       case ('--plot_stag')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_stag
 
        case ('--')
           farg = farg + 1

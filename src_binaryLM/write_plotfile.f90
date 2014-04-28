@@ -3,6 +3,7 @@ module write_plotfile_module
   use ml_layout_module
   use multifab_module
   use probin_common_module , only : prob_lo, prob_hi
+  use probin_binaryLM_module, only: plot_stag
   use fabio_module
   use convert_stag_module
 
@@ -149,21 +150,23 @@ contains
     call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), sd_name, plot_names, &
                                    mla%mba%pd(1), prob_lo, prob_hi, time, dx(1,:))
 
-    ! staggered plotfiles
-    ! the data appears "shifted" in amrvis, but you can post process these and still keep
-    ! all the boundary data
-    call fabio_ml_multifab_write_d(plotdata_stag(:,1), mla%mba%rr(:,1), sd_namex, &
-                                   plot_names_stagx, mla%mba%pd(1), prob_lo, prob_hi, &
-                                   time, dx(1,:))
-
-    call fabio_ml_multifab_write_d(plotdata_stag(:,2), mla%mba%rr(:,1), sd_namey, &
-                                   plot_names_stagy, mla%mba%pd(1), prob_lo, prob_hi, &
-                                   time, dx(1,:))
-
-    if (dm > 2) then
-       call fabio_ml_multifab_write_d(plotdata_stag(:,3), mla%mba%rr(:,1), sd_namez, &
-                                      plot_names_stagz, mla%mba%pd(1), prob_lo, prob_hi, &
+    if (plot_stag) then
+       ! staggered plotfiles
+       ! the data appears "shifted" in amrvis, but you can post process these and still keep
+       ! all the boundary data
+       call fabio_ml_multifab_write_d(plotdata_stag(:,1), mla%mba%rr(:,1), sd_namex, &
+                                      plot_names_stagx, mla%mba%pd(1), prob_lo, prob_hi, &
                                       time, dx(1,:))
+
+       call fabio_ml_multifab_write_d(plotdata_stag(:,2), mla%mba%rr(:,1), sd_namey, &
+                                      plot_names_stagy, mla%mba%pd(1), prob_lo, prob_hi, &
+                                      time, dx(1,:))
+
+       if (dm > 2) then
+          call fabio_ml_multifab_write_d(plotdata_stag(:,3), mla%mba%rr(:,1), sd_namez, &
+                                         plot_names_stagz, mla%mba%pd(1), prob_lo, prob_hi, &
+                                         time, dx(1,:))
+       end if
     end if
 
     do n=1,nlevs
