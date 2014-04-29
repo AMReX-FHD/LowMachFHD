@@ -142,6 +142,10 @@ subroutine main_driver()
         call bl_error("restart not supported for inertial algorithm")
      end if
 
+     ! don't use n_steps_skip on restart;
+     ! assume we have already passed the original n_steps_skip
+     n_steps_skip = 0
+
      init_step = restart + 1
 
      call initialize_from_restart(mla,time,dt,mold,sold,pres,the_bc_tower,pmask)
