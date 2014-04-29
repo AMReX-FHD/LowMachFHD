@@ -138,6 +138,10 @@ subroutine main_driver()
 
   if (restart .ge. 0) then
 
+     if (algorithm_type .eq. 0) then
+        call bl_error("restart not supported for inertial algorithm")
+     end if
+
      init_step = restart + 1
 
      call initialize_from_restart(mla,time,dt,mold,sold,pres,the_bc_tower,pmask)
