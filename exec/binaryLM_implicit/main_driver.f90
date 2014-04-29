@@ -371,7 +371,7 @@ subroutine main_driver()
   ! now cons has properly filled ghost cells
   call convert_cons_to_prim(mla,sold,prim,.false.)
 
-  call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+  call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
   call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
 
   do n=1,nlevs
