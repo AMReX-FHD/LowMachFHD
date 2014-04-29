@@ -328,7 +328,9 @@ amplitude from the predictor,
 \end{equation}
 and then evalute $S^{*,n+1}$ from $\Fb^{*,n+1}$.\\ \\
 {\bf Step 4: Predictor Crank-Nicolson Step:}\\ \\
-Define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb, p^{*,n+1} = p^n + \delta p$ and solve
+Define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb, p^{*,n+1} = p^n + \delta p$ (in these notes the overline
+indicates the the velocity field has been modified to incorporate the boundary conditions on the
+full velocity field after the solve) and solve
 for $\deltab\vb$ and $\delta p$:
 \begin{eqnarray}
 \frac{\rho^{*,n+1}(\overline\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^n+\delta p) &=&\nonumber\\
