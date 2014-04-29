@@ -5,7 +5,7 @@ module mk_grav_force_module
   use ml_layout_module
   use define_bc_module
   use multifab_zero_edgeval_module
-  use probin_binarylm_module, only: grav
+  use probin_binarylm_module, only: grav, use_boussinesq, boussinesq_beta
 
   implicit none
 
@@ -56,15 +56,15 @@ contains
           select case (dm)
           case (2)
              call mk_grav_force_2d(fxp(:,:,1,1), fyp(:,:,1,1), ng_u, &
-                                   sox(:,:,1,1), soy(:,:,1,1), &
-                                   snx(:,:,1,1), sny(:,:,1,1), ng_s, lo, hi)
+                                   sox(:,:,1,:), soy(:,:,1,:), &
+                                   snx(:,:,1,:), sny(:,:,1,:), ng_s, lo, hi)
           case (3)
              fzp => dataptr(m_force(n,3), i)
              soz => dataptr(s_fc_old(n,3), i)
              snz => dataptr(s_fc_new(n,3), i)
              call mk_grav_force_3d(fxp(:,:,:,1), fyp(:,:,:,1), fzp(:,:,:,1), ng_u, &
-                                   sox(:,:,:,1), soy(:,:,:,1), soz(:,:,:,1), &
-                                   snx(:,:,:,1), sny(:,:,:,1), snz(:,:,:,1), ng_s, lo, hi)
+                                   sox(:,:,:,:), soy(:,:,:,:), soz(:,:,:,:), &
+                                   snx(:,:,:,:), sny(:,:,:,:), snz(:,:,:,:), ng_s, lo, hi)
           end select
        end do
 
@@ -81,27 +81,51 @@ contains
     integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_s
     real(kind=dp_t), intent(inout) :: m_forcex(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t), intent(inout) :: m_forcey(lo(1)-ng_u:,lo(2)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: rho_oldx(lo(1)-ng_s:,lo(2)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: rho_oldy(lo(1)-ng_s:,lo(2)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: rho_newx(lo(1)-ng_s:,lo(2)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: rho_newy(lo(1)-ng_s:,lo(2)-ng_s:)
+    real(kind=dp_t), intent(in   ) :: rho_oldx(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: rho_oldy(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: rho_newx(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: rho_newy(lo(1)-ng_s:,lo(2)-ng_s:,:)
 
     ! local
     integer i,j
 
-    do j=lo(2),hi(2)
+    if (use_boussinesq) then
+
+       ! force = beta*rho*c*g
+
+       do j=lo(2),hi(2)
        do i=lo(1),hi(1)+1
           m_forcex(i,j) = m_forcex(i,j) &
-               + grav(1)*(rho_oldx(i,j)+rho_newx(i,j))/2.d0
+               + boussinesq_beta*grav(1)*(rho_oldx(i,j,2)+rho_newx(i,j,2))/2.d0
        end do
-    end do
+       end do
 
-    do j=lo(2),hi(2)+1
+       do j=lo(2),hi(2)+1
        do i=lo(1),hi(1)
           m_forcey(i,j) = m_forcey(i,j) &
-               + grav(2)*(rho_oldy(i,j)+rho_newy(i,j))/2.d0
+               + boussinesq_beta*grav(2)*(rho_oldy(i,j,2)+rho_newy(i,j,2))/2.d0
        end do
-    end do
+       end do
+
+    else
+
+       ! force = rho*g
+
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)+1
+          m_forcex(i,j) = m_forcex(i,j) &
+               + grav(1)*(rho_oldx(i,j,1)+rho_newx(i,j,1))/2.d0
+       end do
+       end do
+
+       do j=lo(2),hi(2)+1
+       do i=lo(1),hi(1)
+          m_forcey(i,j) = m_forcey(i,j) &
+               + grav(2)*(rho_oldy(i,j,1)+rho_newy(i,j,1))/2.d0
+       end do
+       end do
+
+    end if
 
   end subroutine mk_grav_force_2d
 
@@ -113,42 +137,79 @@ contains
     real(kind=dp_t), intent(inout) :: m_forcex(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t), intent(inout) :: m_forcey(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t), intent(inout) :: m_forcez(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t), intent(in   ) :: rho_oldx(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: rho_oldy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: rho_oldz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: rho_newx(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: rho_newy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t), intent(in   ) :: rho_newz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    real(kind=dp_t), intent(in   ) :: rho_oldx(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: rho_oldy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: rho_oldz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: rho_newx(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: rho_newy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: rho_newz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
 
     ! local
     integer i,j,k
 
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)+1
-             m_forcex(i,j,k) = m_forcex(i,j,k) &
-                  + grav(1)*(rho_oldx(i,j,k)+rho_newx(i,j,k))/2.d0
-          end do
-       end do
-    end do
+    if (use_boussinesq) then
 
-    do k=lo(3),hi(3)
+       ! force = beta*rho*c*g
+
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)+1
+          m_forcex(i,j,k) = m_forcex(i,j,k) &
+               + boussinesq_beta*grav(1)*(rho_oldx(i,j,k,2)+rho_newx(i,j,k,2))/2.d0
+       end do
+       end do
+       end do
+
+       do k=lo(3),hi(3)
        do j=lo(2),hi(2)+1
-          do i=lo(1),hi(1)
-             m_forcey(i,j,k) = m_forcey(i,j,k) &
-                  + grav(2)*(rho_oldy(i,j,k)+rho_newy(i,j,k))/2.d0
-          end do
+       do i=lo(1),hi(1)
+          m_forcey(i,j,k) = m_forcey(i,j,k) &
+               + boussinesq_beta*grav(2)*(rho_oldy(i,j,k,2)+rho_newy(i,j,k,2))/2.d0
        end do
-    end do
+       end do
+       end do
 
-    do k=lo(3),hi(3)+1
+       do k=lo(3),hi(3)+1
        do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-             m_forcez(i,j,k) = m_forcez(i,j,k) &
-                  + grav(3)*(rho_oldz(i,j,k)+rho_newz(i,j,k))/2.d0
-          end do
+       do i=lo(1),hi(1)
+          m_forcez(i,j,k) = m_forcez(i,j,k) &
+               + boussinesq_beta*grav(3)*(rho_oldz(i,j,k,2)+rho_newz(i,j,k,2))/2.d0
        end do
-    end do
+       end do
+       end do
+
+    else
+
+       ! force = rho*g
+
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)+1
+          m_forcex(i,j,k) = m_forcex(i,j,k) &
+               + grav(1)*(rho_oldx(i,j,k,1)+rho_newx(i,j,k,1))/2.d0
+       end do
+       end do
+       end do
+
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)+1
+       do i=lo(1),hi(1)
+          m_forcey(i,j,k) = m_forcey(i,j,k) &
+               + grav(2)*(rho_oldy(i,j,k,1)+rho_newy(i,j,k,1))/2.d0
+       end do
+       end do
+       end do
+
+       do k=lo(3),hi(3)+1
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+          m_forcez(i,j,k) = m_forcez(i,j,k) &
+               + grav(3)*(rho_oldz(i,j,k,1)+rho_newz(i,j,k,1))/2.d0
+       end do
+       end do
+       end do
+
+    end if
 
   end subroutine mk_grav_force_3d
 

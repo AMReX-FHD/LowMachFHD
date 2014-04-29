@@ -17,7 +17,8 @@ module probin_binarylm_module
   integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
-  logical   , save :: analyze_binary,plot_stag
+  logical   , save :: analyze_binary,plot_stag,use_boussinesq
+  real(dp_t), save :: boussinesq_beta
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -60,6 +61,9 @@ module probin_binarylm_module
   namelist /probin_binarylm/ analyze_binary     ! Call the older analyze_spectra_binary or the new analyze_spectra?
 
   namelist /probin_binarylm/ plot_stag          ! include staggered plotfiles
+
+  namelist /probin_binarylm/ use_boussinesq     ! make gravity term beta*rho*c*g
+  namelist /probin_binarylm/ boussinesq_beta    ! beta for boussinesq gravity
                              
 
 contains
@@ -117,6 +121,9 @@ contains
     
     analyze_binary=.true.
     plot_stag = .false.
+
+    use_boussinesq = .false.
+    boussinesq_beta = 1.d0
 
     farg = 1
     if (narg >= 1) then
@@ -308,6 +315,16 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_stag
+
+       case ('--use_boussinesq')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) use_boussinesq
+
+       case ('--boussinesq_beta')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) boussinesq_beta
 
        case ('--')
           farg = farg + 1
