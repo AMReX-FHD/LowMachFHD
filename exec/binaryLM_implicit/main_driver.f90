@@ -110,6 +110,26 @@ subroutine main_driver()
      allocate(eta_ed(nlevs,3))
   end if
 
+  ! set grid spacing at each level
+  ! the grid spacing is the same in each direction
+  allocate(dx(nlevs,dm))
+  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
+  select case (dm) 
+    case(2)
+      if (dx(1,1) .ne. dx(1,2)) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+      end if    
+    case(3)
+      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+      end if    
+    case default
+      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+  end select
+  if (nlevs .ge. 2) then
+     call bl_error('ERROR: main_driver.f90, need to define dx for n>1')
+  end if
+
   ! build pmask
   allocate(pmask(dm))
   pmask = .false.
@@ -131,13 +151,18 @@ subroutine main_driver()
 
      init_step = restart + 1
 
-     call initialize_from_restart(mla,time,dt,mold,sold,pres,the_bc_tower,pmask)
+     ! build the ml_layout
+     ! read in time and dt from checkpoint
+     ! build and fill mold, sold, and pres
+     call initialize_from_restart(mla,time,dt,mold,sold,pres,pmask)
 
   else
 
      ! non-restart initialization
+     ! need to build the ml_layout
+     ! set time to zero
+     ! build and fill mold, sold, and pres
      init_step = 1
-
      time = 0.d0
 
      ! tell mba how many levels and dmensionality of problem
@@ -201,6 +226,8 @@ subroutine main_driver()
         ! pressure - need 1 ghost cell since we calculate its gradient
         call multifab_build(pres(n),mla%la(n),1,1)
      end do
+
+     call init(mold,sold,pres,dx,mla,time)
 
   end if
 
@@ -274,31 +301,6 @@ subroutine main_driver()
      call multifab_setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
 
   end do
-
-  ! set grid spacing at each level
-  ! the grid spacing is the same in each direction
-  allocate(dx(nlevs,dm))
-  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
-  select case (dm) 
-    case(2)
-      if (dx(1,1) .ne. dx(1,2)) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-      end if    
-    case(3)
-      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-      end if    
-    case default
-      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
-  end select
-  do n=2,nlevs
-     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
-  end do
-
-  if (restart .le. 0) then
-     ! initialize sold = s^0 and mold = m^0
-     call init(mold,sold,pres,dx,mla,time)
-  end if
 
   ! convert cons to prim in valid region
   call convert_cons_to_prim(mla,sold,prim,.true.)

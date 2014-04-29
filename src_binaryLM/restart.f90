@@ -16,14 +16,13 @@ module restart_module
 
 contains
 
-  subroutine initialize_from_restart(mla,time,dt,mold,sold,pres,the_bc_tower,pmask)
+  subroutine initialize_from_restart(mla,time,dt,mold,sold,pres,pmask)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
      type(multifab), intent(inout) :: sold(:)
      type(multifab), intent(inout) :: mold(:,:)
      type(multifab), intent(inout) :: pres(:)
-     type(bc_tower), intent(  out) :: the_bc_tower
      logical       , intent(in   ) :: pmask(:)
 
      type(ml_boxarray)         :: mba
