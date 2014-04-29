@@ -77,7 +77,6 @@ contains
     type(multifab) ::  m_d_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) ::  m_s_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) ::        dumac(mla%nlevel,mla%dim)
-    type(multifab) ::     umac_old(mla%nlevel,mla%dim)
     type(multifab) ::     umac_tmp(mla%nlevel,mla%dim)
     type(multifab) ::        gradp(mla%nlevel,mla%dim)
     type(multifab) ::     s_fc_old(mla%nlevel,mla%dim)
@@ -120,7 +119,6 @@ contains
           call multifab_build_edge(   m_d_fluxdiv(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(   m_s_fluxdiv(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(         dumac(n,i),mla%la(n),1,1,i)
-          call multifab_build_edge(      umac_old(n,i),mla%la(n),1,1,i)
           call multifab_build_edge(      umac_tmp(n,i),mla%la(n),1,1,i)
           call multifab_build_edge(         gradp(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(      s_fc_old(n,i),mla%la(n),2,1,i)
@@ -191,7 +189,7 @@ contains
     ! make copies of old quantities
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(  umac_old(n,i),1,  umac(n,i),1,1    ,1)
+          call multifab_copy_c(  umac_tmp(n,i),1,  umac(n,i),1,1    ,1)
           call multifab_copy_c(  s_fc_old(n,i),1,  s_fc(n,i),1,2    ,1)
           call multifab_copy_c(chi_fc_old(n,i),1,chi_fc(n,i),1,1    ,0)
           call multifab_copy_c(vel_bc_n_old(n,i),1,vel_bc_n(n,i),1,1,0)
@@ -234,14 +232,14 @@ contains
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac_old,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac_old,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        end if
 
     else
 
-       call mk_advective_s_fluxdiv(mla,umac_old,s_fc,s_update,dx,1,2)
+       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,2)
 
     end if
 
@@ -282,7 +280,7 @@ contains
     end do
 
     ! compute mtemp = rho^{*,n+1} * v^n
-    call convert_m_to_umac(mla,s_fc,mtemp,umac_old,.false.)
+    call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
 
     do n=1,nlevs
        do i=1,dm
@@ -307,7 +305,7 @@ contains
     end do
 
     ! compute m_a_fluxdiv = A^n for momentum
-    call mk_advective_m_fluxdiv(mla,umac_old,mold,m_a_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add A^n for momentum to gmres_rhs_v
@@ -318,7 +316,7 @@ contains
     end do
 
     ! compute m_d_fluxdiv = A_0^n v^n
-    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac_old,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! add A_0^n v^n to gmres_rhs_v
@@ -402,7 +400,7 @@ contains
     end do
 
     ! compute div(v^n)
-    call compute_div(mla,umac_old,divu,dx,1,1,1)
+    call compute_div(mla,umac,divu,dx,1,1,1)
 
     ! add div(v^n) to gmres_rhs_p
     ! now gmres_rhs_p = div(v^n) - S^{*,n+1}
@@ -515,7 +513,6 @@ contains
           call multifab_mult_mult_s_c(bds_force(n),1,0.5d0,2,0)
           call multifab_fill_boundary(bds_force(n))
           do i=1,dm
-             call multifab_copy_c(umac_tmp(n,i),1,umac_old(n,i),1,1,1)
              call multifab_plus_plus_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
              call multifab_mult_mult_s_c(umac_tmp(n,i),1,0.5d0,1,1)
           end do
@@ -845,7 +842,6 @@ contains
           call multifab_destroy(m_d_fluxdiv(n,i))
           call multifab_destroy(m_s_fluxdiv(n,i))
           call multifab_destroy(dumac(n,i))
-          call multifab_destroy(umac_old(n,i))
           call multifab_destroy(umac_tmp(n,i))
           call multifab_destroy(gradp(n,i))
           call multifab_destroy(s_fc_old(n,i))
