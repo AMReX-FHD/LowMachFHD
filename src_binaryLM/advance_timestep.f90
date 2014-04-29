@@ -579,8 +579,15 @@ contains
        end do
     end do
 
-    ! add div(Sigma^n) to gmres_rhs_v
-    ! AJN fixmes - should be div(Sigma^n')
+    ! compute div(Sigma^n') by incrementing existing stochastic flux and dividing by 2
+    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx,dt,weights)
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,0.5d0,1,0)
+       end do
+    end do
+
+    ! add div(Sigma^n') to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
