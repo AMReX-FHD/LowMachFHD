@@ -365,6 +365,10 @@ subroutine main_driver()
   call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
   call compute_kappa(mla,kappa,prim,dx)
 
+  if (restart .gt. 0 .and. algorithm_type .eq. 0) then
+     call fill_umac_trans_ghost_after_inertial_restart(mla,umac,eta_ed,dx,the_bc_tower)
+  end if
+
   ! allocate and build multifabs that will contain random numbers
   if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
      call init_m_stochastic(mla,1)
