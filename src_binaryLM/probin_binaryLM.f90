@@ -17,7 +17,8 @@ module probin_binarylm_module
   integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
-  logical, save :: analyze_binary
+  logical   , save :: analyze_binary,plot_stag
+  real(dp_t), save :: boussinesq_beta
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -42,7 +43,9 @@ module probin_binarylm_module
   namelist /probin_binarylm/ diff_coef         ! concentration diffusion coefficient 'chi'
   namelist /probin_binarylm/ mol_mass          ! molar mass of species
   namelist /probin_binarylm/ temperature       ! temperature
-  namelist /probin_binarylm/ material_properties ! A/B/C for chi/eta/kappa
+  namelist /probin_binarylm/ material_properties ! Coefficients A/B/C for chi/eta/kappa
+     ! Formula is: indx=1 for chi, indx=2 for eta, indx=3 for kappa (NOT implemented yet)
+     ! coeff=coeff0*(material_properties(1,indx) + material_properties(2,indx)*c) / (1.d0 + material_properties(3,indx)*c)
 
   ! stochastic properties
   namelist /probin_binarylm/ initial_variance  ! multiplicative factor for initial fluctuations
@@ -52,11 +55,15 @@ module probin_binarylm_module
   namelist /probin_binarylm/ barodiffusion_type ! 0 = no barodiffusion
                                                 ! 1 = fixed gradp from initialization
                                                 ! 2 = update gradp each time step
-  namelist /probin_binarylm/ algorithm_type     ! 0 = John's Algorithm
+  namelist /probin_binarylm/ algorithm_type     ! 0 = Inertial algorithm
                                                 ! 1 = Overdamped with 1 RNG
                                                 ! 2 = Overdamped with 2 RNGs
-  namelist /probin_binarylm/ analyze_binary
-                             ! Call the older analyze_spectra_binary or the new analyze_spectra?  
+  namelist /probin_binarylm/ analyze_binary     ! Call the older analyze_spectra_binary or the new analyze_spectra?
+
+  namelist /probin_binarylm/ plot_stag          ! include staggered plotfiles
+
+  namelist /probin_binarylm/ boussinesq_beta    ! beta for boussinesq gravity
+                             
 
 contains
 
@@ -112,6 +119,9 @@ contains
     algorithm_type = 0
     
     analyze_binary=.true.
+    plot_stag = .false.
+
+    boussinesq_beta = 0.d0
 
     farg = 1
     if (narg >= 1) then
@@ -298,6 +308,16 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) analyze_binary
+
+       case ('--plot_stag')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_stag
+
+       case ('--boussinesq_beta')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) boussinesq_beta
 
        case ('--')
           farg = farg + 1

@@ -3,6 +3,7 @@ module write_plotfile_module
   use ml_layout_module
   use multifab_module
   use probin_common_module , only : prob_lo, prob_hi
+  use probin_binaryLM_module, only: plot_stag
   use fabio_module
   use convert_stag_module
 
@@ -58,21 +59,21 @@ contains
 
     allocate(plot_names(n_plot_comps))
 
-    plot_names(1) = "velx_averaged"
-    plot_names(2) = "vely_averaged"
-    if (dm > 2) plot_names(3) = "velz_averaged"
+    plot_names(1) = "averaged_velx"
+    plot_names(2) = "averaged_vely"
+    if (dm > 2) plot_names(3) = "averaged_velz"
 
-    plot_names(dm+1) = "velx_shifted"
-    plot_names(dm+2) = "vely_shifted"
-    if (dm > 2) plot_names(dm+3) = "velz_shifted"
+    plot_names(dm+1) = "shifted_velx"
+    plot_names(dm+2) = "shifted_vely"
+    if (dm > 2) plot_names(dm+3) = "shifted_velz"
 
-    plot_names(2*dm+1) = "mx_averaged"
-    plot_names(2*dm+2) = "my_averaged"
-    if (dm > 2) plot_names(2*dm+3) = "mz_averaged"
+    plot_names(2*dm+1) = "averaged_mx"
+    plot_names(2*dm+2) = "averaged_my"
+    if (dm > 2) plot_names(2*dm+3) = "averaged_mz"
 
-    plot_names(3*dm+1) = "mx_shifted"
-    plot_names(3*dm+2) = "my_shifted"
-    if (dm > 2) plot_names(3*dm+3) = "mz_shifted"
+    plot_names(3*dm+1) = "shifted_mx"
+    plot_names(3*dm+2) = "shifted_my"
+    if (dm > 2) plot_names(3*dm+3) = "shifted_mz"
 
     plot_names(4*dm+1) = "rho"
     plot_names(4*dm+2) = "rho*c"
@@ -149,21 +150,23 @@ contains
     call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), sd_name, plot_names, &
                                    mla%mba%pd(1), prob_lo, prob_hi, time, dx(1,:))
 
-    ! staggered plotfiles
-    ! the data appears "shifted" in amrvis, but you can post process these and still keep
-    ! all the boundary data
-    call fabio_ml_multifab_write_d(plotdata_stag(:,1), mla%mba%rr(:,1), sd_namex, &
-                                   plot_names_stagx, mla%mba%pd(1), prob_lo, prob_hi, &
-                                   time, dx(1,:))
-
-    call fabio_ml_multifab_write_d(plotdata_stag(:,2), mla%mba%rr(:,1), sd_namey, &
-                                   plot_names_stagy, mla%mba%pd(1), prob_lo, prob_hi, &
-                                   time, dx(1,:))
-
-    if (dm > 2) then
-       call fabio_ml_multifab_write_d(plotdata_stag(:,3), mla%mba%rr(:,1), sd_namez, &
-                                      plot_names_stagz, mla%mba%pd(1), prob_lo, prob_hi, &
+    if (plot_stag) then
+       ! staggered plotfiles
+       ! the data appears "shifted" in amrvis, but you can post process these and still keep
+       ! all the boundary data
+       call fabio_ml_multifab_write_d(plotdata_stag(:,1), mla%mba%rr(:,1), sd_namex, &
+                                      plot_names_stagx, mla%mba%pd(1), prob_lo, prob_hi, &
                                       time, dx(1,:))
+
+       call fabio_ml_multifab_write_d(plotdata_stag(:,2), mla%mba%rr(:,1), sd_namey, &
+                                      plot_names_stagy, mla%mba%pd(1), prob_lo, prob_hi, &
+                                      time, dx(1,:))
+
+       if (dm > 2) then
+          call fabio_ml_multifab_write_d(plotdata_stag(:,3), mla%mba%rr(:,1), sd_namez, &
+                                         plot_names_stagz, mla%mba%pd(1), prob_lo, prob_hi, &
+                                         time, dx(1,:))
+       end if
     end if
 
     do n=1,nlevs

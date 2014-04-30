@@ -20,11 +20,25 @@ module initial_projection_module
 
   public :: initial_projection
 
+  ! special inhomogeneous boundary condition multifab
+  ! vel_bc_n(nlevs,dm) are the normal velocities
+  ! in 2D, vel_bc_t(nlevs,2) respresents
+  !   1. y-velocity bc on x-faces (nodal)
+  !   2. x-velocity bc on y-faces (nodal)
+  ! in 3D, vel_bc_t(nlevs,6) represents
+  !   1. y-velocity bc on x-faces (nodal in y and x)
+  !   2. z-velocity bc on x-faces (nodal in z and x)
+  !   3. x-velocity bc on y-faces (nodal in x and y)
+  !   4. z-velocity bc on y-faces (nodal in z and y)
+  !   5. x-velocity bc on z-faces (nodal in x and z)
+  !   6. y-velocity bc on z-faces (nodal in y and z)
+  type(multifab), allocatable, save :: vel_bc_n(:,:)
+  type(multifab), allocatable, save :: vel_bc_t(:,:)
+
 contains
 
-  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,chi_fc,gp_fc,rhoc_d_fluxdiv, &
-                                rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt,the_bc_tower, &
-                                vel_bc_n,vel_bc_t)
+  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gp_fc,rhoc_d_fluxdiv, &
+                                rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mold(:,:)
@@ -32,6 +46,7 @@ contains
     type(multifab) , intent(in   ) :: sold(:)
     type(multifab) , intent(inout) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: prim(:)
+    type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: chi_fc(:,:)
     type(multifab) , intent(in   ) :: gp_fc(:,:)
     type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
@@ -39,8 +54,6 @@ contains
     type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(inout) :: vel_bc_n(:,:)
-    type(multifab) , intent(in   ) :: vel_bc_t(:,:)
 
     ! local
     integer :: i,dm,n,nlevs
@@ -66,6 +79,8 @@ contains
     nlevs = mla%nlevel
 
     S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
+    
+    call build_bc_multifabs(mla)
 
     do n=1,nlevs
        call multifab_build(mac_rhs(n),mla%la(n),1,0)
@@ -90,6 +105,10 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! build rhs = div(v^init) - S^0
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! reset inhomogeneous bc condition to deal with reservoirs
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+                                   the_bc_tower%bc_tower_array)
 
     ! set rhoc_d_fluxdiv = div(rho*chi grad c)^0
     call diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
@@ -127,6 +146,8 @@ contains
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
                                          the_bc_tower%bc_tower_array(n), &
                                          dx(n,:),vel_bc_n(n,:))
+          ! fill periodic and interior ghost cells
+          call multifab_fill_boundary(umac(n,i))
        end do
     end do
 
@@ -180,6 +201,8 @@ contains
     ! now mold has properly filled ghost cells
     call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
 
+    call destroy_bc_multifabs(mla)
+
     do n=1,nlevs
        call multifab_destroy(mac_rhs(n))
        call multifab_destroy(divu(n))
@@ -190,5 +213,90 @@ contains
     end do
 
   end subroutine initial_projection
+
+  subroutine build_bc_multifabs(mla)
+
+    type(ml_layout), intent(in   ) :: mla
+
+    integer :: dm,i,n,nlevs
+    logical :: nodal_temp(3)
+
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    allocate(vel_bc_n(nlevs,dm))
+    if (dm .eq. 2) then
+       allocate(vel_bc_t(nlevs,2))
+    else if (dm .eq. 3) then
+       allocate(vel_bc_t(nlevs,6))
+    end if
+
+    do n=1,nlevs
+       ! boundary conditions
+       do i=1,dm
+          call multifab_build_edge(vel_bc_n(n,i),mla%la(n),1,0,i)
+       end do
+       if (dm .eq. 2) then
+          ! y-velocity bc on x-faces (nodal)
+          call multifab_build_nodal(vel_bc_t(n,1),mla%la(n),1,0)
+          ! x-velocity bc on y-faces (nodal)
+          call multifab_build_nodal(vel_bc_t(n,2),mla%la(n),1,0)
+       else
+          ! y-velocity bc on x-faces (nodal in y and x)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .false.
+          call multifab_build(vel_bc_t(n,1),mla%la(n),1,0,nodal_temp)
+          ! z-velocity bc on x-faces (nodal in z and x)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .false.
+          nodal_temp(3) = .true.
+          call multifab_build(vel_bc_t(n,2),mla%la(n),1,0,nodal_temp)
+          ! x-velocity bc on y-faces (nodal in x and y)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .false.
+          call multifab_build(vel_bc_t(n,3),mla%la(n),1,0,nodal_temp)
+          ! z-velocity bc on y-faces (nodal in z and y)
+          nodal_temp(1) = .false.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .true.
+          call multifab_build(vel_bc_t(n,4),mla%la(n),1,0,nodal_temp)
+          ! x-velocity bc on z-faces (nodal in x and z)
+          nodal_temp(1) = .true.
+          nodal_temp(2) = .false.
+          nodal_temp(3) = .true.
+          call multifab_build(vel_bc_t(n,5),mla%la(n),1,0,nodal_temp)
+          ! y-velocity bc on z-faces (nodal in y and z)
+          nodal_temp(1) = .false.
+          nodal_temp(2) = .true.
+          nodal_temp(3) = .true.
+          call multifab_build(vel_bc_t(n,6),mla%la(n),1,0,nodal_temp)
+       end if
+    end do
+
+  end subroutine build_bc_multifabs
+
+  subroutine destroy_bc_multifabs(mla)
+
+    type(ml_layout), intent(in   ) :: mla
+
+    integer :: dm,i,n,nlevs
+
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    do n=1,nlevs
+       do i=1,dm          
+          call multifab_destroy(vel_bc_n(n,i))
+       end do
+       do i=1,size(vel_bc_t,dim=2)
+          call multifab_destroy(vel_bc_t(n,i))
+       end do
+    end do
+
+    deallocate(vel_bc_n,vel_bc_t)
+
+  end subroutine destroy_bc_multifabs
 
 end module initial_projection_module

@@ -10,7 +10,7 @@ module probin_common_module
 
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
-  integer,save    :: dim_in,plot_int,prob_type,advection_type
+  integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt,cfl
   integer,save    :: visc_type,diff_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
@@ -37,6 +37,7 @@ module probin_common_module
   namelist /probin_common/ fixed_dt      ! time step
   namelist /probin_common/ cfl           ! cfl number
   namelist /probin_common/ plot_int      ! Interval for writing a plotfile (for visit/amrvis)
+  namelist /probin_common/ chk_int       ! Interval for writing a checkpoint
   namelist /probin_common/ prob_type     ! sets scalars, m, coefficients (see init.f90)
 
   ! Algorithm control / selection
@@ -163,6 +164,7 @@ contains
     fixed_dt = 1.d0
     cfl = 0.5d0
     plot_int = 0
+    chk_int = 0
     prob_type = 1
 
     seed = 1
@@ -284,6 +286,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_int
+
+       case ('--chk_int')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) chk_int
 
        case ('--prob_type')
           farg = farg + 1

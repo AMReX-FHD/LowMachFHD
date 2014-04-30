@@ -18,7 +18,7 @@ module initialize_module
 
 contains
 
-  subroutine initialize_from_restart(mla,restart,time,dt,dx,mold,sold,the_bc_tower)
+  subroutine initialize_from_restart(mla,restart,time,dt,dx,sold,mold,pold,the_bc_tower)
  
      use probin_module, only : dim_in, nlevs, nscal, ng_scal, ng_mom, pmask
 
@@ -28,6 +28,7 @@ contains
      real(dp_t)    , pointer       :: dx(:,:)
      type(multifab), pointer       :: sold(:)
      type(multifab), pointer       :: mold(:,:)
+     type(multifab), pointer       :: pold(:)
      type(bc_tower), intent(  out) :: the_bc_tower
 
      type(ml_boxarray)         :: mba
