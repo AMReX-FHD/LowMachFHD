@@ -6,7 +6,7 @@ module restart_module
   use checkpoint_module
   use define_bc_module
   use probin_common_module, only: dim_in, advection_type
-  use probin_binarylm_module, only: restart
+  use probin_binarylm_module, only: restart, algorithm_type
 
   implicit none
 
@@ -16,13 +16,17 @@ module restart_module
 
 contains
 
-  subroutine initialize_from_restart(mla,time,dt,mold,sold,pres,pmask)
+  subroutine initialize_from_restart(mla,time,dt,mold,sold,pres, &
+                                     rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv,pmask)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
      type(multifab), intent(inout) :: sold(:)
      type(multifab), intent(inout) :: mold(:,:)
      type(multifab), intent(inout) :: pres(:)
+     type(multifab), intent(inout) :: rhoc_d_fluxdiv(:)
+     type(multifab), intent(inout) :: rhoc_s_fluxdiv(:)
+     type(multifab), intent(inout) :: rhoc_b_fluxdiv(:)
      logical       , intent(in   ) :: pmask(:)
 
      type(ml_boxarray)         :: mba
@@ -50,6 +54,9 @@ contains
            call multifab_build(sold(n), mla%la(n), 2, 2)
         end if
         call multifab_build(pres(n), mla%la(n), 1, 1)
+        call multifab_build(rhoc_d_fluxdiv(n), mla%la(n), 1, 0)
+        call multifab_build(rhoc_s_fluxdiv(n), mla%la(n), 1, 0)
+        call multifab_build(rhoc_b_fluxdiv(n), mla%la(n), 1, 0)
         do i=1,dm
            call multifab_build_edge(mold(n,i), mla%la(n), 1, 1, i)
         end do
@@ -57,6 +64,11 @@ contains
      do n = 1,nlevs
         call multifab_copy_c(sold(n),1,chkdata(n),1,2)
         call multifab_copy_c(pres(n),1,chkdata(n),3,1)
+        if (algorithm_type .eq. 0) then
+           call multifab_copy_c(rhoc_d_fluxdiv(n),1,chkdata(n),4,1)
+           call multifab_copy_c(rhoc_s_fluxdiv(n),1,chkdata(n),5,1)
+           call multifab_copy_c(rhoc_b_fluxdiv(n),1,chkdata(n),6,1)
+        end if        
         call multifab_copy_c(mold(n,1),1,chkdata_edgex(n),1,1)
         call multifab_copy_c(mold(n,2),1,chkdata_edgey(n),1,1)
         if (dm .eq. 3) then
