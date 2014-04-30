@@ -141,10 +141,6 @@ subroutine main_driver()
 
   if (restart .ge. 0) then
 
-     if (algorithm_type .eq. 0) then
-        call bl_error("restart not supported for inertial algorithm")
-     end if
-
      ! don't use n_steps_skip on restart;
      ! assume we have already passed the original n_steps_skip
      n_steps_skip = 0
@@ -154,7 +150,9 @@ subroutine main_driver()
      ! build the ml_layout
      ! read in time and dt from checkpoint
      ! build and fill mold, sold, and pres
-     call initialize_from_restart(mla,time,dt,mold,sold,pres,pmask)
+     ! build the mass flux divergence multifabs, and fill them for the inertial algorithm
+     call initialize_from_restart(mla,time,dt,mold,sold,pres,rhoc_d_fluxdiv, &
+                                  rhoc_s_fluxdiv,rhoc_b_fluxdiv,pmask)
 
   else
 
@@ -208,9 +206,7 @@ subroutine main_driver()
            ! edge-momentum and velocity; 1 ghost cell
            call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
         end do
-     end do
 
-     do n=1,nlevs
         ! conservative variables; 2 components (rho,rho1)
         ! need 2 ghost cells to average to ghost faces used in 
         ! converting m to umac in m ghost cells
@@ -220,11 +216,18 @@ subroutine main_driver()
         else
            call multifab_build(sold(n),mla%la(n),2,2)
         end if
-     end do
 
-     do n=1,nlevs
         ! pressure - need 1 ghost cell since we calculate its gradient
         call multifab_build(pres(n),mla%la(n),1,1)
+
+        ! this stores divergence of stochastic and diffusive fluxes for rhoc
+        call multifab_build(rhoc_d_fluxdiv(n),mla%la(n),1,0)
+        call multifab_build(rhoc_s_fluxdiv(n),mla%la(n),1,0)
+        call multifab_build(rhoc_b_fluxdiv(n),mla%la(n),1,0)
+        call multifab_setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
+        call multifab_setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
+        call multifab_setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
+        
      end do
 
      call init(mold,sold,pres,dx,mla,time)
@@ -291,14 +294,6 @@ subroutine main_driver()
         nodal_temp(3) = .true.
         call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
      end if
-
-     ! this stores divergence of stochastic and diffusive fluxes for rhoc
-     call multifab_build(rhoc_d_fluxdiv(n),mla%la(n),1,0)
-     call multifab_build(rhoc_s_fluxdiv(n),mla%la(n),1,0)
-     call multifab_build(rhoc_b_fluxdiv(n),mla%la(n),1,0)
-     call multifab_setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
-     call multifab_setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
-     call multifab_setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
 
   end do
 
@@ -518,7 +513,8 @@ subroutine main_driver()
          ! write checkpoint
          if ( (chk_int > 0) .and. &
               ( mod(istep-n_steps_skip,chk_int) .eq. 0) ) then
-            call write_checkfile(mla,snew,mnew,pres,time,dt,istep-n_steps_skip)
+            call checkpoint_write(mla,snew,mnew,pres,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
+                                  rhoc_b_fluxdiv,time,dt,istep-n_steps_skip)
          end if
 
          ! print out projection (average) and variance

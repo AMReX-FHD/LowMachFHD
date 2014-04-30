@@ -8,21 +8,26 @@ module checkpoint_module
   use fab_module
   use fabio_module, only: fabio_mkdir, fabio_ml_multifab_write_d
   use probin_common_module, only: dim_in
+  use probin_binarylm_module, only: algorithm_type
 
   implicit none
 
   private
 
-  public :: write_checkfile, checkpoint_read
+  public :: checkpoint_write, checkpoint_read
 
 contains
 
-  subroutine write_checkfile(mla,sold,mold,pres,time,dt,istep_to_write)
+  subroutine checkpoint_write(mla,sold,mold,pres,rhoc_d_fluxdiv, &
+                              rhoc_s_fluxdiv,rhoc_b_fluxdiv,time,dt,istep_to_write)
     
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: sold(:)        ! cell-centered densities
-    type(multifab) , intent(in   ) :: mold(:,:)      ! edge-based velocities
-    type(multifab) , intent(in   ) :: pres(:)        ! cell-centered pressure
+    type(multifab) , intent(in   ) :: sold(:)           ! cell-centered densities
+    type(multifab) , intent(in   ) :: mold(:,:)         ! edge-based velocities
+    type(multifab) , intent(in   ) :: pres(:)           ! cell-centered pressure
+    type(multifab) , intent(in   ) :: rhoc_d_fluxdiv(:) ! cell-centered diffusive mass fluxes
+    type(multifab) , intent(in   ) :: rhoc_s_fluxdiv(:) ! cell-centered stoch mass fluxes
+    type(multifab) , intent(in   ) :: rhoc_b_fluxdiv(:) ! cell-centered barodiff mass fluxes
     integer        , intent(in   ) :: istep_to_write
     real(kind=dp_t), intent(in   ) :: time,dt
 
@@ -39,9 +44,21 @@ contains
     allocate(chkdata(nlevs))
     allocate(chkdata_edge(nlevs,dm))
     do n = 1,nlevs
-       call multifab_build(chkdata(n), mla%la(n), 3, 0) ! 2 densities + 1 pressure
+       if (algorithm_type .eq. 0) then
+          ! 2 densities + 1 pressure + 3 mass fluxes
+          call multifab_build(chkdata(n), mla%la(n), 6, 0)
+       else
+          ! 2 densities + 1 pressure
+          call multifab_build(chkdata(n), mla%la(n), 3, 0)
+       end if
        call multifab_copy_c(chkdata(n), 1, sold(n), 1, 2)  ! copy densities
        call multifab_copy_c(chkdata(n), 3, pres(n), 1, 1)  ! copy pressure
+       if (algorithm_type .eq. 0) then
+          ! copy mass fluxes
+          call multifab_copy_c(chkdata(n), 4, rhoc_d_fluxdiv(n), 1, 1)
+          call multifab_copy_c(chkdata(n), 5, rhoc_s_fluxdiv(n), 1, 1)
+          call multifab_copy_c(chkdata(n), 6, rhoc_b_fluxdiv(n), 1, 1)
+       end if
        do i=1,dm
           ! 1 velocity component and 1 normal bc component for each face
           call multifab_build_edge(chkdata_edge(n,i), mla%la(n), 1, 0, i)
@@ -51,7 +68,7 @@ contains
     end do
     write(unit=sd_name,fmt='("chk",i6.6)') istep_to_write
 
-    call checkpoint_write(nlevs, sd_name, chkdata, chkdata_edge, mla%mba%rr, time, dt)
+    call checkpoint_write_doit(nlevs, sd_name, chkdata, chkdata_edge, mla%mba%rr, time, dt)
 
     do n = 1,nlevs
        call multifab_destroy(chkdata(n))
@@ -64,7 +81,7 @@ contains
 
   contains
 
-    subroutine checkpoint_write(nlevs_in, dirname, mfs, mfs_edge, rrs, time_in, dt_in)
+    subroutine checkpoint_write_doit(nlevs_in, dirname, mfs, mfs_edge, rrs, time_in, dt_in)
       
       integer         , intent(in) :: nlevs_in
       type(multifab)  , intent(in) :: mfs(:)
@@ -126,9 +143,9 @@ contains
          close(un)
       end if
 
-    end subroutine checkpoint_write
+    end subroutine checkpoint_write_doit
 
-  end subroutine write_checkfile
+  end subroutine checkpoint_write
 
   subroutine checkpoint_read(mfs, mfs_edgex, mfs_edgey, mfs_edgez, &
                              dirname, rrs_out, time_out, dt_out, nlevs_out)
