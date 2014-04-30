@@ -341,7 +341,7 @@ subroutine main_driver()
      write(1,*), 'Normalized numeric cov of W'
      do i=1,nspecies
         do j=1,nspecies
-           covW(i,j) = (wiwjt(i,j)/step_count - wit(i)*wit(j)/step_count**2)/variance_parameter
+           covW(i,j) = (wiwjt(i,j)/real(step_count) - wit(i)*wit(j)/real(step_count)**2)/variance_parameter
         end do
         write(1,*), covW(i,:)
      end do
