@@ -1,22 +1,29 @@
-! This input file uses the set up and input parameters from the low Mach explicit CAMCOS paper 
+! This input file uses the set up and input parameters from the low Mach explicit CAMCOS paper
+! except now the real viscosity and diffusion are used to get the real Schmidt number
 ! These are *not* the best available parameters but are reasonable
 
 &probin_binarylm
 
   ! simulation parameters:
-  max_step = 25000          ! maximum number of time steps = N_STEPS in IBAMR
+  restart = -1 ! If positive, restarts simulation from checkpoint file with this index
+  max_step = 5000          ! maximum number of time steps = N_STEPS in IBAMR
   print_int = 250              ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
   project_eos_int = 10        ! how often to call project_onto_eos
 
   ! fluid properties:
-  diff_coef = 1.6e-4 ! true=1.d-5               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
+  diff_coef = 1.d-5               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
-  ! Boussinesq approximation:
+  ! Boussinesq approximation by reducing density (only works for reservoir BCs)
   !rhobar(1:2) = 1.054d0 1.044d0   ! rho1bar and rho2bar = both equal to RHO in IBAMR
   !grav(1:2) = 0.d0 -236.4d0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
   ! True parameters:
-  rhobar(1:2) = 1.29 1.0   ! rho1bar and rho2bar = both equal to RHO in IBAMR
-  grav(1:2) = 0.0 -100.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR  
+  !rhobar(1:2) = 1.29 1.0   ! rho1bar and rho2bar = both equal to RHO in IBAMR
+  !grav(1:2) = 0.0 -100.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR    
+  !boussinesq_beta = 0.0    ! add Boussinesq-type forcing
+  ! Boussinesq approximation proper:
+  rhobar(1:2) = 1.05 1.05   ! rho1bar and rho2bar = both equal to RHO in IBAMR
+  grav(1:2) = 0.0 -100.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR    
+  boussinesq_beta = 0.234    ! add Boussinesq-type forcing = EXPANSION in IBAMR
 
   ! Concentration dependence of transport coefficients chi(c) and eta(c)
   ! These are used in FluctHydro/staggered_grid/src_binaryLM/init.f90
@@ -25,6 +32,9 @@
   ! coeff=coeff0*(material_properties(1,indx) + material_properties(2,indx)*c) / (1.d0 + material_properties(3,indx)*c)
   material_properties(1:3,1) = -2.2d0 1.2d0 0.0d0 ! chi
   material_properties(1:3,2) = 0.66d0 12.d0 0.0d0 ! eta
+  ! Wrong values from Thomas's input file -- SWAPPED eta and chi
+  !material_properties(1:3,2) = -2.2d0 1.2d0 0.0d0 ! chi
+  !material_properties(1:3,1) = 0.66d0 12.d0 0.0d0 ! eta
 
   ! Boundary and initial conditions:
   ! Here concentration is assumed to vary along the y axes only
@@ -38,7 +48,7 @@
   barodiffusion_type = 0  ! 0 = no barodiffusion
                           ! 1 = fixed gradp from initialization
                           ! 2 = update gradp each time step
-  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
+  algorithm_type = 2	  ! enable overdamped (infinite Sc) algorithm
       ! 0 = Inertial algorithm
       ! 1 = Overdamped with 1 RNG
       ! 2 = Overdamped with 2 RNGs  
@@ -69,6 +79,7 @@
   ! Time stepping
   fixed_dt = 0.05        ! time step (old explicit method used 0.005) = DT in IBAMR
   plot_int = 0           ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
+  chk_int = 0 ! If positive, how often to write a checkpoint (restart file)
   
   ! Determines initial conditions and other problem-specific parameters (see init.f90)
   ! 0 or 7 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
@@ -96,7 +107,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = -2
-  visc_coef = 6.1e-4 ! true=1.d-2               ! momentum diffusion coefficient 'eta' = MU in IBAMR
+  visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta' = MU in IBAMR
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
@@ -146,7 +157,7 @@
                              ! If positive, how often to compute mean and 
                              ! standard deviation over reduced dimensions = N_STEPS_SNAPSHOT in IBAMR
   n_steps_save_stats =   0   ! How often to dump HydroGrid output files
-  n_steps_skip = 2500        ! How many steps to skip = N_STEPS_SKIP in IBAMR  
+  n_steps_skip = 1000 ! 2500        ! How many steps to skip = N_STEPS_SKIP in IBAMR  
   analyze_conserved = F      ! Should we use conserved variables for the analysis (does not work well)
   center_snapshots = T       ! Should we use cell-centered momenta for the analysis (will smooth fluctuations)
 
@@ -269,7 +280,7 @@
    staggeredVelocities = 0 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
 
    outputFolder = "./"
-   filePrefix = "WaterGly2DProj"
+   filePrefix = "WaterGly2DProj.bouss"
 
    writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
 

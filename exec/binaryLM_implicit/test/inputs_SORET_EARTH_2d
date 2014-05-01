@@ -1,22 +1,23 @@
 &probin_binarylm
 
   ! simulation parameters:
-  max_step = 2 ! 1000          ! maximum number of time steps = N_STEPS in IBAMR
-  print_int = 1 ! 10 ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
-  project_eos_int = 1 ! 10        ! how often to call project_onto_eos
+  max_step = 2000          ! maximum number of time steps = N_STEPS in IBAMR
+  print_int = 100 ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
+  project_eos_int = 1        ! how often to call project_onto_eos
 
   ! fluid properties:
-  rhobar(1:2) = 1.01 0.99   ! rho1bar and rho2bar = both equal to RHO in IBAMR
+  rhobar(1:2) = 1.0 1.0   ! rho1bar and rho2bar = both equal to RHO in IBAMR
   diff_coef = 0.01               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
-  grav(1:2) = 0.0 -1.0  ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
+  grav(1:2) = 0.0 -10.0  ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
+  boussinesq_beta = 0.02    ! add Boussinesq-type forcing = EXPANSION in IBAMR
 
   ! Boundary and initial conditions:
   ! Here concentration is assumed to vary along the y axes only
   c_init(1:2) = 0.66 0.34  ! controls initial concentration range = [C_TOP C_BOTTOM] in IBAMR
   ! Specifies boundary conditions at top and bottom y walls (see bc_lo and bc_hi below):
-  c_bc(2,1:2) = 0.66 0.34 ! Dirichlet 
-  !c_bc(2,1:2) = -0.01 -0.01 ! Neumann
+  !c_bc(2,1:2) = 0.66 0.34 ! Dirichlet 
+  c_bc(2,1:2) = -0.01 -0.01 ! Neumann
       ! Equivalent to [GRADC,GRADC] in IBAMR for Neumann
       ! This is [gcoef_function_2 gcoef_function_3] in IBAMR
       ! For Dirichlet (RESERVOIR) BCs it is (a=1, b=0) in IBAMR
@@ -49,14 +50,15 @@
   
   ! Domain shape and size = CartesianGeometry in IBAMR
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate = x_lo in IBAMR
-  prob_hi(1:2) = 32.0 32.0  ! physical hi coordinate = x_up in IBAMR
-  n_cells(1:2) = 32 32      ! number of cells in domain = domain_boxes in IBAMR
+  prob_hi(1:2) = 128.0 32.0  ! physical hi coordinate = x_up in IBAMR
+  n_cells(1:2) = 128 32      ! number of cells in domain = domain_boxes in IBAMR
   max_grid_size(1:2) = 32 32 ! max number of cells in a box for parallelization = largest_patch_size in IBAMR
      ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
   
   ! Time stepping
   fixed_dt = 10.0        ! time step = DT in IBAMR
   plot_int = 0             ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
+  chk_int = 0 ! If positive, how often to write a checkpoint (restart file)
   
   ! Determines initial conditions and other problem-specific parameters (see init.f90)
   ! 0 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
@@ -92,7 +94,7 @@
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
-  ! Stochastic fluxes:
+  ! Stochastic fluxes: Here only variance_coef*k_B*temperature matters in the end
   variance_coef = 1.0e-6     ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
   k_B = 1.d0                 ! Boltzmann's constant
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
@@ -108,8 +110,8 @@
   ! slip: Dirichlet velocity condition for normal; Dirichlet traction condition for trans
   !    SLIP_WALL        = 200 ! Same as no slip but may reduce finite-size effects
   !    SLIP_RESERVOIR   = 201 ! Same as no slip but may reduce finite-size effects
-  bc_lo(1:2) = -1 101 ! BC for low/bottom walls = (a/b)coef_function_{0,2,4} in IBAMR
-  bc_hi(1:2) = -1 101 ! BC for high/top walls   = (a/b)coef_function_{1,3,5} in IBAMR
+  bc_lo(1:2) = -1 100 ! BC for low/bottom walls = (a/b)coef_function_{0,2,4} in IBAMR
+  bc_hi(1:2) = -1 100 ! BC for high/top walls   = (a/b)coef_function_{1,3,5} in IBAMR
 
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions
@@ -120,7 +122,7 @@
   wallspeed_hi(1,2) = 0.d0 ! V_TOP in IBAMR
 
   ! HydroGrid analysis code options:
-  hydro_grid_int = 0 ! 5         ! How often to call updateHydroGrid = N_STEPS_POST in IBAMR
+  hydro_grid_int = 5         ! How often to call updateHydroGrid = N_STEPS_POST in IBAMR
                              ! 0 if never
                              ! negative for projectHydroGrid custom analysis = PROJECT_Y=TRUE in IBAMR
                              ! positive for updateHydroGrid = PROJECT_Y=FALSE in IBAMR
@@ -134,7 +136,7 @@
                              ! If positive, how often to compute mean and 
                              ! standard deviation over reduced dimensions = N_STEPS_SNAPSHOT in IBAMR
   n_steps_save_stats = 0  ! How often to dump HydroGrid output files
-  n_steps_skip = 100           ! How many steps to skip = N_STEPS_SKIP in IBAMR  
+  n_steps_skip = 1000           ! How many steps to skip = N_STEPS_SKIP in IBAMR  
   analyze_conserved = F      ! Should we use conserved variables for the analysis (does not work well)
   center_snapshots = T       ! Should we use cell-centered momenta for the analysis (will smooth fluctuations)
 
@@ -257,7 +259,7 @@
    staggeredVelocities = 0 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
 
    outputFolder = "./"
-   filePrefix = "SORET2DProj"
+   filePrefix = "SORET2DProj.bouss"
 
    writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
 

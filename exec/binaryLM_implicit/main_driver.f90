@@ -508,52 +508,51 @@ subroutine main_driver()
 
       if (istep >= n_steps_skip) then
 
-         ! write plotfile -- note that this will overwrite initial plotfile if n_steps_skip>0
          if ( (plot_int > 0) .and. &
-              ( mod(istep-n_steps_skip,plot_int) .eq. 0) ) then
-            call write_plotfile(mla,mnew,umac,snew,pres,dx,time,istep-n_steps_skip)
+              ( mod(istep,plot_int) .eq. 0) ) then
+            call write_plotfile(mla,mnew,umac,snew,pres,dx,time,istep)
          end if
 
          ! write checkpoint
          if ( (chk_int > 0) .and. &
-              ( mod(istep-n_steps_skip,chk_int) .eq. 0) ) then
+              ( mod(istep,chk_int) .eq. 0) ) then
             call checkpoint_write(mla,snew,mnew,pres,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
-                                  rhoc_b_fluxdiv,time,dt,istep-n_steps_skip)
+                                  rhoc_b_fluxdiv,time,dt,istep)
          end if
 
          ! print out projection (average) and variance
          if ( (stats_int > 0) .and. &
-               (mod(istep-n_steps_skip,stats_int) .eq. 0) ) then
+               (mod(istep,stats_int) .eq. 0) ) then
             if(analyze_binary) then   
-               call print_stats_bin(mla,snew,mnew,umac,prim,dx,istep-n_steps_skip,time)
+               call print_stats_bin(mla,snew,mnew,umac,prim,dx,istep,time)
             else
-               call print_stats(mla,dx,istep-n_steps_skip,time,umac=umac,rho=snew)            
+               call print_stats(mla,dx,istep,time,umac=umac,rho=snew)            
             end if   
             if (analyze_binary.and.(hydro_grid_int<0)) then
                ! Do some specialized analysis for low Mach binary mixing studies
                call analyze_hydro_grid_bin(mla,snew,mnew,umac,prim,dt,dx, &
-                                       istep-n_steps_skip,custom_analysis=.true.)
+                                       istep,custom_analysis=.true.)
             end if   
          end if
 
          ! Add this snapshot to the average in HydroGrid
          if ( (hydro_grid_int > 0) .and. &
-              ( mod(istep-n_steps_skip,hydro_grid_int) .eq. 0 ) ) then
+              ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
             if(analyze_binary) then  
                call analyze_hydro_grid_bin(mla,snew,mnew,umac,prim,dt,dx, &
-                                    istep-n_steps_skip,custom_analysis=.false.)
+                                    istep,custom_analysis=.false.)
             else
-               call analyze_hydro_grid(mla,dt,dx,istep-n_steps_skip,umac=umac,rho=snew)           
+               call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=snew)           
             end if                                    
          end if
 
          if ( (hydro_grid_int > 0) .and. &
               (n_steps_save_stats > 0) .and. &
-              ( mod(istep-n_steps_skip,n_steps_save_stats) .eq. 0 ) ) then
+              ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
             if(analyze_binary) then  
-               call save_hydro_grid_bin(id=(istep-n_steps_skip)/n_steps_save_stats, step=istep)
+               call save_hydro_grid_bin(id=(istep)/n_steps_save_stats, step=istep)
             else
-               call save_hydro_grid(id=(istep-n_steps_skip)/n_steps_save_stats, step=istep)            
+               call save_hydro_grid(id=(istep)/n_steps_save_stats, step=istep)            
             end if
          end if
 
