@@ -294,10 +294,13 @@ contains
       
   end subroutine
 
+  ! Files can be numbered either by id or by step, here we use step so restarts work seemlessly
   subroutine save_hydro_grid(id, step) ! This also *resets* all counters
-      integer, intent(in) :: id, step ! We can use either one to number files here
+      integer, intent(in), optional :: id, step ! We can use either one to number files here
       
       if((.not.parallel_IOProcessor()) .or. (hydro_grid_int<=0)) return
+      
+      if(present(step)) write(*,*) "Saving HydroGrid analysis results at time step ", step
       
       if(project_dir<=0) call writeToFiles(grid, id=step)
       if(project_dir/=0) then
@@ -306,6 +309,7 @@ contains
       if(project_dir/=0) then
          call writeToFiles(grid_1D, id=step)
       end if
+      
   end subroutine
   
   subroutine finalize_hydro_grid()

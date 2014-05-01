@@ -6,7 +6,7 @@
 &probin_binarylm
 
   ! simulation parameters:
-  restart = -1 ! If positive, restarts simulation from checkpoint file with this index
+  restart = -1 ! 1000 ! -1 ! If positive, restarts simulation from checkpoint file with this index
   max_step = 1000          ! maximum number of time steps = N_STEPS in IBAMR
   print_int = 100              ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
   project_eos_int = 10        ! how often to call project_onto_eos
@@ -16,11 +16,11 @@
   temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
   ! True parameters:
   rhobar(1:2) = 1.29 1.0   ! rho1bar and rho2bar = both equal to RHO in IBAMR
-  grav(1:2) = 0.0 -100.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR    
+  grav(1:2) = 0.0 -981.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR    
   boussinesq_beta = 0.0    ! add Boussinesq-type forcing
   ! Boussinesq approximation proper:
   !rhobar(1:2) = 1.05 1.05   ! rho1bar and rho2bar = both equal to RHO in IBAMR
-  !grav(1:2) = 0.0 -100.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR    
+  !grav(1:2) = 0.0 -981.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR    
   !boussinesq_beta = 0.234    ! add Boussinesq-type forcing = EXPANSION in IBAMR
 
   ! Concentration dependence of transport coefficients chi(c) and eta(c)
@@ -71,13 +71,16 @@
   
   ! Domain shape and size = CartesianGeometry in IBAMR
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate = x_lo in IBAMR
-  prob_hi(1:2) = 2.0d0 2.0d0 ! physical hi coordinate = x_up in IBAMR
+  prob_hi(1:2) = 0.5d0 0.5d0 ! physical hi coordinate = x_up in IBAMR
   n_cells(1:2) = 64 64       ! number of cells in domain = domain_boxes in IBAMR
   max_grid_size(1:2) = 32 32 ! max number of cells in a box for parallelization = largest_patch_size in IBAMR
      ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
   
   ! Time stepping
-  fixed_dt = 0.05        ! time step (old explicit method used 0.005) = DT in IBAMR
+  ! Due to gravitation-induced instability the time step here needs to be very small, ~0.01s
+  ! This means diffusive CFL for dx=1/64 of ~5e-4, and viscous CFL is ~ 0.5
+  ! Explicit limit = dx^2/(4*nu) ~ 0.0015
+  fixed_dt = 0.02        ! time step (old explicit method used 0.005) = DT in IBAMR
   plot_int = 1000           ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
   chk_int = 1000 ! If positive, how often to write a checkpoint (restart file)
   
@@ -156,8 +159,10 @@
   stats_int =  100           ! Project grid for analysis and write hstat and vstat files
                              ! If positive, how often to compute mean and 
                              ! standard deviation over reduced dimensions = N_STEPS_SNAPSHOT in IBAMR
-  n_steps_save_stats =   0   ! How often to dump HydroGrid output files
-  n_steps_skip = 0           ! How many steps to skip = N_STEPS_SKIP in IBAMR  
+  n_steps_save_stats = 1000  ! How often to dump HydroGrid output files
+      ! If you set n_steps_save_stats=max_step a final output will be saved with name containing max_step
+      ! Otherwise the final output of HydroGrid will be saved without any number in the file names
+  n_steps_skip = 0 ! 2000        ! How many steps to skip = N_STEPS_SKIP in IBAMR  
   analyze_conserved = F      ! Should we use conserved variables for the analysis (does not work well)
   center_snapshots = T       ! Should we use cell-centered momenta for the analysis (will smooth fluctuations)
 
@@ -216,7 +221,7 @@
   stag_mg_rel_tol = 1.d-9      ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.d-6        ! relative tolerance stopping criteria
+  gmres_rel_tol = 1.d-9        ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0         ! absolute tolerance stopping criteria
   gmres_verbose = 0            ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20         ! max number of outer iterations
@@ -280,7 +285,7 @@
    staggeredVelocities = 0 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
 
    outputFolder = "./"
-   filePrefix = "WaterGly2DProj.bouss"
+   filePrefix = "WaterGly2DProj"
 
    writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
 

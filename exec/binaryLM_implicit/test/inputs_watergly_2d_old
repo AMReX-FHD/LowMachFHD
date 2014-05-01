@@ -17,6 +17,10 @@
   ! True parameters:
   rhobar(1:2) = 1.29 1.0   ! rho1bar and rho2bar = both equal to RHO in IBAMR
   grav(1:2) = 0.0 -100.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR  
+  ! Boussinesq approximation proper:
+  !rhobar(1:2) = 1.05 1.05   ! rho1bar and rho2bar = both equal to RHO in IBAMR
+  !grav(1:2) = 0.0 -100.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR    
+  !boussinesq_beta = 0.234    ! add Boussinesq-type forcing = EXPANSION in IBAMR
 
   ! Concentration dependence of transport coefficients chi(c) and eta(c)
   ! These are used in FluctHydro/staggered_grid/src_binaryLM/init.f90
@@ -269,7 +273,7 @@
    staggeredVelocities = 0 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
 
    outputFolder = "./"
-   filePrefix = "WaterGly2DProj"
+   filePrefix = "WaterGly2DProj.inertial"
 
    writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
 

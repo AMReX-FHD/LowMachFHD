@@ -46,9 +46,10 @@ subroutine main_driver()
   ! will be allocated with (nlevs,dm) components
   real(dp_t), allocatable :: dx(:,:)
 
-  integer :: n,nlevs,i,dm,istep
+  integer :: n,nlevs,i,dm,istep,n_cell
 
   real(kind=dp_t) :: dt,time,runtime1,runtime2,max_vel,av_mass
+  real(kind=dp_t) :: l1, l2, linf
 
   type(box)         :: bx
   type(ml_boxarray) :: mba
@@ -140,10 +141,6 @@ subroutine main_driver()
   end do
 
   if (restart .ge. 0) then
-
-     ! don't use n_steps_skip on restart;
-     ! assume we have already passed the original n_steps_skip
-     n_steps_skip = 0
 
      init_step = restart + 1
 
@@ -567,21 +564,23 @@ subroutine main_driver()
      end do
         
   end do
-
+  
   !!!!!!!!!!!! convergence testing
-!  call init(mold,sold,pres,dx,mla,time)
-!  do n=1,nlevs
-!     call multifab_sub_sub_c(sold(n),1,snew(n),1,2,0)
-!  end do
-!  linf = multifab_norm_inf_c(sold(1),2,1,all=.false.)
-!  l1 = multifab_norm_l1_c(sold(1),2,1,all=.false.)
-!  l2 = multifab_norm_l2_c(sold(1),2,1,all=.false.)
-!  n_cell = multifab_volume(sold(1)) / 2
-!  if (parallel_IOProcessor()) then
-!     print*,'linf error in rho*c',linf
-!     print*,'l1   error in rho*c',l1 / dble(n_cell)
-!     print*,'l2   error in rho*c',l2 / sqrt(dble(n_cell))
-!  end if
+  if(.false.) then
+     call init(mold,sold,pres,dx,mla,time)
+     do n=1,nlevs
+        call multifab_sub_sub_c(sold(n),1,snew(n),1,2,0)
+     end do
+     linf = multifab_norm_inf_c(sold(1),2,1,all=.false.)
+     l1 = multifab_norm_l1_c(sold(1),2,1,all=.false.)
+     l2 = multifab_norm_l2_c(sold(1),2,1,all=.false.)
+     n_cell = multifab_volume(sold(1)) / 2
+     if (parallel_IOProcessor()) then
+        print*,'linf error in rho*c',linf
+        print*,'l1   error in rho*c',l1 / dble(n_cell)
+        print*,'l2   error in rho*c',l2 / sqrt(dble(n_cell))
+     end if
+  end if   
   !!!!!!!!!!!! convergence testing
 
   ! destroy and deallocate multifabs that contain random numbers
@@ -589,6 +588,7 @@ subroutine main_driver()
   call destroy_rhoc_stochastic(mla)
 
   if(abs(hydro_grid_int)>0 .or. stats_int>0) then
+     ! Note that these will also write out statistics if n_steps_save_stats<=0
      if(analyze_binary) then
         call finalize_hydro_grid_bin()
      else
