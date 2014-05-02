@@ -345,7 +345,13 @@ contains
          ! subtract rho^{*,n+1} * vbar^n / dt from gmres_rhs_v
          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
 
+      end do
+   end do
 
+   do n=1,nlevs
+      do i=1,dm
+         ! reset mtemp
+         call multifab_setval(mtemp(n,i),0.d0,all=.true.)
       end do
    end do
 
@@ -357,7 +363,7 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(mtemp(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
        end do
     end do
 
