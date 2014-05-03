@@ -61,7 +61,7 @@ contains
 ! lo-x boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP) then
+    if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
        edgex(lo(1),lo(2):hi(2)) = 0.d0
     end if
 
@@ -69,7 +69,7 @@ contains
 ! hi-x boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP) then
+    if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
        edgex(hi(1)+1,lo(2):hi(2)) = 0.d0
     end if
 
@@ -77,7 +77,7 @@ contains
 ! lo-y boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP) then
+    if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
        edgey(lo(1):hi(1),lo(2)) = 0.d0
     end if
 
@@ -85,7 +85,7 @@ contains
 ! hi-y boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP) then
+    if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
        edgey(lo(1):hi(1),hi(2)+1) = 0.d0
     end if
 
@@ -103,7 +103,7 @@ contains
 ! lo-x boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP) then
+    if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
        edgex(lo(1),lo(2):hi(2),lo(3):hi(3)) = 0.d0
     end if
 
@@ -111,7 +111,7 @@ contains
 ! hi-x boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP) then
+    if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
        edgex(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = 0.d0
     end if
 
@@ -119,7 +119,7 @@ contains
 ! lo-y boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP) then
+    if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
        edgey(lo(1):hi(1),lo(2),lo(3):hi(3)) = 0.d0
     end if
 
@@ -127,7 +127,7 @@ contains
 ! hi-y boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP) then
+    if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
        edgey(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = 0.d0
     end if
 
@@ -135,7 +135,7 @@ contains
 ! lo-z boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(3,1) .eq. FOEXTRAP .or. bc(3,1) .eq. HOEXTRAP) then
+    if (bc(3,1) .eq. FOEXTRAP .or. bc(3,1) .eq. HOEXTRAP .or. bc(3,1) .eq. EXT_DIR) then
        edgez(lo(1):hi(1),lo(2):hi(2),lo(3)) = 0.d0
     end if
 
@@ -143,7 +143,7 @@ contains
 ! hi-z boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(3,2) .eq. FOEXTRAP .or. bc(3,2) .eq. HOEXTRAP) then
+    if (bc(3,2) .eq. FOEXTRAP .or. bc(3,2) .eq. HOEXTRAP .or. bc(3,2) .eq. EXT_DIR) then
        edgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = 0.d0
     end if
 
