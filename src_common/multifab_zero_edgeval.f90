@@ -13,17 +13,17 @@ module multifab_zero_edgeval_module
 
 contains
 
-  subroutine multifab_zero_edgeval(edge,start_comp,start_bccomp,num_comp,the_bc_level)
+  subroutine multifab_zero_edgeval(edge,start_comp,num_comp,the_bc_level)
 
     ! vel_bc_n(nlevs,dm) are the normal velocities
 
     type(multifab) , intent(inout) :: edge(:)
-    integer        , intent(in   ) :: start_comp,start_bccomp,num_comp
+    integer        , intent(in   ) :: start_comp,num_comp
     type(bc_level) , intent(in   ) :: the_bc_level
 
     ! Local
     integer                  :: lo(get_dim(edge(1))),hi(get_dim(edge(1)))
-    integer                  :: ng_e,i,dm,comp,bccomp
+    integer                  :: ng_e,i,dm,comp
     real(kind=dp_t), pointer :: epx(:,:,:,:), epy(:,:,:,:), epz(:,:,:,:)
 
     ng_e = nghost(edge(1))
@@ -35,15 +35,14 @@ contains
        lo = lwb(get_box(edge(1),i))
        hi = upb(get_box(edge(2),i))
        do comp=start_comp,start_comp+num_comp-1
-          bccomp = start_bccomp + comp - start_comp
           select case (dm)
           case (2)
              call zero_edgeval_2d(epx(:,:,1,comp), epy(:,:,1,comp), ng_e, lo, hi, &
-                                  the_bc_level%adv_bc_level_array(i,:,:,bccomp))
+                                  the_bc_level%phys_bc_level_array(i,:,:))
           case (3)
              epz => dataptr(edge(3),i)
              call zero_edgeval_3d(epx(:,:,:,comp), epy(:,:,:,comp), epz(:,:,:,comp), ng_e, lo, hi, &
-                                  the_bc_level%adv_bc_level_array(i,:,:,bccomp))
+                                  the_bc_level%phys_bc_level_array(i,:,:))
           end select
        end do
     end do
@@ -61,7 +60,7 @@ contains
 ! lo-x boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
+    if (bc(1,1) .ne. PERIODIC .and. bc(1,1) .ne. INTERIOR) then
        edgex(lo(1),lo(2):hi(2)) = 0.d0
     end if
 
@@ -69,7 +68,7 @@ contains
 ! hi-x boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
+    if (bc(1,2) .ne. PERIODIC .and. bc(1,2) .ne. INTERIOR) then
        edgex(hi(1)+1,lo(2):hi(2)) = 0.d0
     end if
 
@@ -77,7 +76,7 @@ contains
 ! lo-y boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
+    if (bc(2,1) .ne. PERIODIC .and. bc(2,1) .ne. INTERIOR) then
        edgey(lo(1):hi(1),lo(2)) = 0.d0
     end if
 
@@ -85,7 +84,7 @@ contains
 ! hi-y boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
+    if (bc(2,2) .ne. PERIODIC .and. bc(2,2) .ne. INTERIOR) then
        edgey(lo(1):hi(1),hi(2)+1) = 0.d0
     end if
 
@@ -103,7 +102,7 @@ contains
 ! lo-x boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
+    if (bc(1,1) .ne. PERIODIC .and. bc(1,1) .ne. INTERIOR) then
        edgex(lo(1),lo(2):hi(2),lo(3):hi(3)) = 0.d0
     end if
 
@@ -111,7 +110,7 @@ contains
 ! hi-x boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
+    if (bc(1,2) .ne. PERIODIC .and. bc(1,2) .ne. INTERIOR) then
        edgex(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = 0.d0
     end if
 
@@ -119,7 +118,7 @@ contains
 ! lo-y boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
+    if (bc(2,1) .ne. PERIODIC .and. bc(2,1) .ne. INTERIOR) then
        edgey(lo(1):hi(1),lo(2),lo(3):hi(3)) = 0.d0
     end if
 
@@ -127,7 +126,7 @@ contains
 ! hi-y boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
+    if (bc(2,2) .ne. PERIODIC .and. bc(2,2) .ne. INTERIOR) then
        edgey(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = 0.d0
     end if
 
@@ -135,7 +134,7 @@ contains
 ! lo-z boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(3,1) .eq. FOEXTRAP .or. bc(3,1) .eq. HOEXTRAP .or. bc(3,1) .eq. EXT_DIR) then
+    if (bc(3,1) .ne. PERIODIC .and. bc(3,1) .ne. INTERIOR) then
        edgez(lo(1):hi(1),lo(2):hi(2),lo(3)) = 0.d0
     end if
 
@@ -143,7 +142,7 @@ contains
 ! hi-z boundary
 !!!!!!!!!!!!!!!!!!
 
-    if (bc(3,2) .eq. FOEXTRAP .or. bc(3,2) .eq. HOEXTRAP .or. bc(3,2) .eq. EXT_DIR) then
+    if (bc(3,2) .ne. PERIODIC .and. bc(3,2) .ne. INTERIOR) then
        edgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = 0.d0
     end if
 

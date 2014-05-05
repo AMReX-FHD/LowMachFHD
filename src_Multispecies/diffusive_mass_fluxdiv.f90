@@ -175,7 +175,7 @@ contains
     ! If there are walls with zero-flux boundary conditions
     if(is_nonisothermal) then
        do n=1,nlevs
-          call multifab_zero_edgeval(flux(n,:),1,rho_part_bc_comp,nspecies,the_bc_level(n))
+          call multifab_zero_edgeval(flux(n,:),1,nspecies,the_bc_level(n))
        end do   
     end if
 

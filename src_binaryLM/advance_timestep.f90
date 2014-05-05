@@ -414,7 +414,7 @@ contains
     end do
 
     do n=1,nlevs
-       call multifab_zero_edgeval(gmres_rhs_v(n,:),1,dm+1,1,the_bc_tower%bc_tower_array(n))
+       call multifab_zero_edgeval(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
 
     gmres_abs_tol = 0.d0
@@ -758,7 +758,7 @@ contains
     end do
 
     do n=1,nlevs
-       call multifab_zero_edgeval(gmres_rhs_v(n,:),1,dm+1,1,the_bc_tower%bc_tower_array(n))
+       call multifab_zero_edgeval(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
 
     ! call gmres to compute delta v and delta p
