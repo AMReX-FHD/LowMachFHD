@@ -297,7 +297,7 @@ subroutine main_driver()
   ! convert cons to prim in valid region
   call convert_cons_to_prim(mla,sold,prim,.true.)
 
-  if (initial_variance .ne. 0.d0) then
+  if (restart .le. 0 .and. initial_variance .ne. 0.d0) then
      call add_c_fluctuations(mla,dx,initial_variance*variance_coef*conc_scal,prim,sold)
   end if
 
