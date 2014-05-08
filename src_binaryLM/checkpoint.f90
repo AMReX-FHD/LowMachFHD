@@ -18,16 +18,13 @@ module checkpoint_module
 
 contains
 
-  subroutine checkpoint_write(mla,sold,mold,pres,rhoc_d_fluxdiv, &
-                              rhoc_s_fluxdiv,rhoc_b_fluxdiv,time,dt,istep_to_write)
+  subroutine checkpoint_write(mla,sold,mold,pres,rhoc_fluxdiv,time,dt,istep_to_write)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: sold(:)           ! cell-centered densities
     type(multifab) , intent(in   ) :: mold(:,:)         ! edge-based velocities
     type(multifab) , intent(in   ) :: pres(:)           ! cell-centered pressure
-    type(multifab) , intent(in   ) :: rhoc_d_fluxdiv(:) ! cell-centered diffusive mass fluxes
-    type(multifab) , intent(in   ) :: rhoc_s_fluxdiv(:) ! cell-centered stoch mass fluxes
-    type(multifab) , intent(in   ) :: rhoc_b_fluxdiv(:) ! cell-centered barodiff mass fluxes
+    type(multifab) , intent(in   ) :: rhoc_fluxdiv(:)   ! cell-centered diffusive mass fluxes
     integer        , intent(in   ) :: istep_to_write
     real(kind=dp_t), intent(in   ) :: time,dt
 
@@ -45,8 +42,8 @@ contains
     allocate(chkdata_edge(nlevs,dm))
     do n = 1,nlevs
        if (algorithm_type .eq. 0) then
-          ! 2 densities + 1 pressure + 3 mass fluxes
-          call multifab_build(chkdata(n), mla%la(n), 6, 0)
+          ! 2 densities + 1 pressure + rhoc mass fluxes
+          call multifab_build(chkdata(n), mla%la(n), 4, 0)
        else
           ! 2 densities + 1 pressure
           call multifab_build(chkdata(n), mla%la(n), 3, 0)
@@ -55,9 +52,7 @@ contains
        call multifab_copy_c(chkdata(n), 3, pres(n), 1, 1)  ! copy pressure
        if (algorithm_type .eq. 0) then
           ! copy mass fluxes
-          call multifab_copy_c(chkdata(n), 4, rhoc_d_fluxdiv(n), 1, 1)
-          call multifab_copy_c(chkdata(n), 5, rhoc_s_fluxdiv(n), 1, 1)
-          call multifab_copy_c(chkdata(n), 6, rhoc_b_fluxdiv(n), 1, 1)
+          call multifab_copy_c(chkdata(n), 4, rhoc_fluxdiv(n), 1, 1)
        end if
        do i=1,dm
           ! 1 velocity component and 1 normal bc component for each face

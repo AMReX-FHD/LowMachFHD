@@ -54,7 +54,7 @@ module advance_timestep_module
 contains
 
   subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
-                              eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
+                              eta,eta_ed,kappa,rhoc_fluxdiv, &
                               gp_fc,dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -71,9 +71,7 @@ contains
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
-    type(multifab) , intent(inout) :: rhoc_d_fluxdiv(:)
-    type(multifab) , intent(inout) :: rhoc_s_fluxdiv(:)
-    type(multifab) , intent(inout) :: rhoc_b_fluxdiv(:)
+    type(multifab) , intent(inout) :: rhoc_fluxdiv(:)
     type(multifab) , intent(inout) :: gp_fc(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -161,7 +159,7 @@ contains
 
     ! this was already done in Step 0 (initialization) or Step 6
     ! from the previous time step
-    ! rhoc_d_fluxdiv, rhoc_s_fluxdiv, and rhoc_b_fluxdiv contain the fluxes
+    ! rhoc_fluxdiv contains the diffusive, stochastic, and baro-diffusion fluxes
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Predictor Euler Step
@@ -171,9 +169,7 @@ contains
     ! add St^n for rho1 to s_update
     ! add baro-diffusion^n to s_update
     do n=1,nlevs
-       call multifab_plus_plus_c(s_update(n),2,rhoc_d_fluxdiv(n),1,1,0)
-       call multifab_plus_plus_c(s_update(n),2,rhoc_s_fluxdiv(n),1,1,0)
-       call multifab_plus_plus_c(s_update(n),2,rhoc_b_fluxdiv(n),1,1,0)
+       call multifab_plus_plus_c(s_update(n),2,rhoc_fluxdiv(n),1,1,0)
     end do
 
     ! add external forcing for rho*c
@@ -627,29 +623,17 @@ contains
     ! reset to zero since we only add to them
     ! we store these for use at beginning of next time step
     do n=1,nlevs
-       call setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
-       call setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
-       call setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
+       call setval(rhoc_fluxdiv(n),0.d0,all=.true.)
     end do
 
     ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
-    call diffusive_rhoc_fluxdiv(mla,rhoc_d_fluxdiv,1,prim,s_fc,chi_fc,dx, &
+    call diffusive_rhoc_fluxdiv(mla,rhoc_fluxdiv,1,prim,s_fc,chi_fc,dx, &
                                 the_bc_tower%bc_tower_array,vel_bc_n)
-
-    ! add div(rho*chi grad c)^{n+1} to rhs_p
-    do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_d_fluxdiv(n),1,1,0)
-    end do
 
     if (barodiffusion_type .gt. 0) then
        ! compute baro-diffusion flux divergence
-       call mk_baro_fluxdiv(mla,rhoc_b_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
+       call mk_baro_fluxdiv(mla,rhoc_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
                             the_bc_tower%bc_tower_array,vel_bc_n)
-
-       ! add baro-diffusion flux divergence to rhs_p
-       do n=1,nlevs
-          call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_b_fluxdiv(n),1,1,0)
-       end do
     end if
 
     ! fill the stochastic multifabs with a new set of random numbers
@@ -657,12 +641,12 @@ contains
     call fill_rhoc_stochastic(mla)
 
     ! create div(Psi^{n+1})
-    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_s_fluxdiv, &
+    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_fluxdiv, &
                                  s_fc,chi_fc,dx,dt,vel_bc_n,weights)
 
-    ! add div(Psi^{n+1}) to rhs_p
+    ! add diffusive, baro-diffusion, and stochastic rho*c fluxes to rhs_p
     do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_s_fluxdiv(n),1,1,0)
+       call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_fluxdiv(n),1,1,0)
     end do
 
     ! add external forcing for rho*c

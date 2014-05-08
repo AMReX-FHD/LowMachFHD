@@ -74,9 +74,7 @@ subroutine main_driver()
   type(multifab), allocatable :: eta(:)            ! cell-centered
   type(multifab), allocatable :: eta_ed(:,:)       ! nodal (2d); edge-centered (3d)
   type(multifab), allocatable :: kappa(:)          ! cell-centered
-  type(multifab), allocatable :: rhoc_d_fluxdiv(:) ! cell-centered
-  type(multifab), allocatable :: rhoc_s_fluxdiv(:) ! cell-centered
-  type(multifab), allocatable :: rhoc_b_fluxdiv(:) ! cell-centered
+  type(multifab), allocatable :: rhoc_fluxdiv(:)   ! cell-centered
 
   integer :: narg, farg, un, init_step
   character(len=128) :: fname
@@ -103,7 +101,7 @@ subroutine main_driver()
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm))
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
-  allocate(rhoc_d_fluxdiv(nlevs),rhoc_s_fluxdiv(nlevs),rhoc_b_fluxdiv(nlevs))
+  allocate(rhoc_fluxdiv(nlevs))
   allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm),gp_fc(nlevs,dm))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
@@ -148,8 +146,7 @@ subroutine main_driver()
      ! read in time and dt from checkpoint
      ! build and fill mold, sold, and pres
      ! build the mass flux divergence multifabs, and fill them for the inertial algorithm
-     call initialize_from_restart(mla,time,dt,mold,sold,pres,rhoc_d_fluxdiv, &
-                                  rhoc_s_fluxdiv,rhoc_b_fluxdiv,pmask)
+     call initialize_from_restart(mla,time,dt,mold,sold,pres,rhoc_fluxdiv,pmask)
 
   else
 
@@ -218,13 +215,8 @@ subroutine main_driver()
         call multifab_build(pres(n),mla%la(n),1,1)
 
         ! this stores divergence of stochastic and diffusive fluxes for rhoc
-        call multifab_build(rhoc_d_fluxdiv(n),mla%la(n),1,0)
-        call multifab_build(rhoc_s_fluxdiv(n),mla%la(n),1,0)
-        call multifab_build(rhoc_b_fluxdiv(n),mla%la(n),1,0)
-        call multifab_setval(rhoc_d_fluxdiv(n),0.d0,all=.true.)
-        call multifab_setval(rhoc_s_fluxdiv(n),0.d0,all=.true.)
-        call multifab_setval(rhoc_b_fluxdiv(n),0.d0,all=.true.)
-        
+        call multifab_build(rhoc_fluxdiv(n),mla%la(n),1,0)
+        call multifab_setval(rhoc_fluxdiv(n),0.d0,all=.true.)
      end do
 
      call init(mold,sold,pres,dx,mla,time)
@@ -404,7 +396,7 @@ subroutine main_driver()
 
      ! need to do an initial projection to get an initial velocity field
      call initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gp_fc, &
-                             rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv,dx,dt, &
+                             rhoc_fluxdiv,dx,dt, &
                              the_bc_tower)
 
      if (print_int .gt. 0) then
@@ -460,7 +452,7 @@ subroutine main_driver()
      ! advance the solution by dt
      if (algorithm_type .eq. 0) then
         call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
-                              eta,eta_ed,kappa,rhoc_d_fluxdiv,rhoc_s_fluxdiv,rhoc_b_fluxdiv, &
+                              eta,eta_ed,kappa,rhoc_fluxdiv, &
                               gp_fc,dx,dt,time,the_bc_tower)
      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pres, &
@@ -513,8 +505,7 @@ subroutine main_driver()
          ! write checkpoint
          if ( (chk_int > 0) .and. &
               ( mod(istep,chk_int) .eq. 0) ) then
-            call checkpoint_write(mla,snew,mnew,pres,rhoc_d_fluxdiv,rhoc_s_fluxdiv, &
-                                  rhoc_b_fluxdiv,time,dt,istep)
+            call checkpoint_write(mla,snew,mnew,pres,rhoc_fluxdiv,time,dt,istep)
          end if
 
          ! print out projection (average) and variance
@@ -604,9 +595,7 @@ subroutine main_driver()
      call multifab_destroy(chi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
-     call multifab_destroy(rhoc_d_fluxdiv(n))
-     call multifab_destroy(rhoc_s_fluxdiv(n))
-     call multifab_destroy(rhoc_b_fluxdiv(n))
+     call multifab_destroy(rhoc_fluxdiv(n))
      do i=1,dm
         call multifab_destroy(mold(n,i))
         call multifab_destroy(mnew(n,i))
