@@ -356,6 +356,7 @@ subroutine main_driver()
 
   if (restart .gt. 0 .and. algorithm_type .eq. 0) then
      call fill_umac_trans_ghost_after_inertial_restart(mla,umac,eta_ed,dx,the_bc_tower)
+     call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
   end if
 
   ! allocate and build multifabs that will contain random numbers
