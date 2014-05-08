@@ -204,6 +204,9 @@ contains
 
   subroutine fill_ghost_umac(mla,umac,eta_ed,dx,the_bc_tower)
 
+    ! fill the ghost cells for the mac velocity
+    ! does not modify the domain boundary values
+
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)

@@ -57,6 +57,9 @@ contains
                               eta,eta_ed,kappa,rhoc_fluxdiv, &
                               gp_fc,dx,dt,time,the_bc_tower)
 
+    ! rhoc_fluxdiv enters with t^n diffusive, baro-diffusion, and stochastic rho*c
+    ! mass fluxes and exits with t^n+1 fluxes
+
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: mold(:,:)
     type(multifab) , intent(inout) :: mnew(:,:)
@@ -157,9 +160,8 @@ contains
     ! Step 1 - Calculate Predictor Diffusive and Stochastic Fluxes
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! this was already done in Step 0 (initialization) or Step 6
-    ! from the previous time step
     ! rhoc_fluxdiv contains the diffusive, stochastic, and baro-diffusion fluxes
+    ! this was already done in Step 0 (initialization) or Step 6 from the previous time step
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Predictor Euler Step
