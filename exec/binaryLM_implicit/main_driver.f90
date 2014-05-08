@@ -76,7 +76,7 @@ subroutine main_driver()
   type(multifab), allocatable :: kappa(:)          ! cell-centered
   type(multifab), allocatable :: rhoc_fluxdiv(:)   ! cell-centered
 
-  integer :: narg, farg, un, init_step
+  integer :: narg, farg, un, init_step, n_rngs
   character(len=128) :: fname
   logical :: lexist
 
@@ -354,19 +354,14 @@ subroutine main_driver()
   call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
   call compute_kappa(mla,kappa,prim,dx)
 
-  if (restart .gt. 0 .and. algorithm_type .eq. 0) then
-     call fill_umac_trans_ghost_after_inertial_restart(mla,umac,eta_ed,dx,the_bc_tower)
-     call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
-  end if
-
   ! allocate and build multifabs that will contain random numbers
   if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
-     call init_m_stochastic(mla,1)
-     call init_rhoc_stochastic(mla,1)
+     n_rngs = 1
   else if (algorithm_type .eq. 2) then
-     call init_m_stochastic(mla,2)
-     call init_rhoc_stochastic(mla,2)
+     n_rngs = 2
   end if
+  call init_m_stochastic   (mla,n_rngs)
+  call init_rhoc_stochastic(mla,n_rngs)
 
   ! fill the stochastic multifabs with a new set of random numbers
   call fill_m_stochastic(mla)  
@@ -382,7 +377,7 @@ subroutine main_driver()
            un = unit_new()
            open(unit=un, file = fname, status = 'old', action = 'read')
            if(analyze_binary) then
-              call initialize_hydro_grid_bin(mla,sold,mold,dt,dx,un,2)
+              call initialize_hydro_grid_bin(mla,sold,dt,dx,un,2)
            else
               call initialize_hydro_grid(mla,sold,dt,dx, &
                       namelist_file=un, nspecies_in=2, nscal_in=0, exclude_last_species_in=.true., &
@@ -393,7 +388,15 @@ subroutine main_driver()
      end if
   end if
 
-  if (restart .le. 0) then
+  if (restart .gt. 0) then
+
+     ! fill ghost cells for umac (but leave boundary values untouched)
+     call fill_ghost_umac(mla,umac,eta_ed,dx,the_bc_tower)
+
+     ! compute m that has all ghost values properly filled
+     call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
+
+  else
 
      ! need to do an initial projection to get an initial velocity field
      call initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gp_fc, &

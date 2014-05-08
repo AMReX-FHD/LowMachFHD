@@ -42,10 +42,9 @@ module analyze_spectra_binary_module
 
 contains   
 
-  subroutine initialize_hydro_grid_bin(mla,s_in,m_in,dt,dx,namelist_file,nscal_analysis_in)
+  subroutine initialize_hydro_grid_bin(mla,s_in,dt,dx,namelist_file,nscal_analysis_in)
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_in(:)
-    type(multifab) , intent(inout) :: m_in(:,:)
     real(dp_t)     , intent(inout) :: dt
     real(dp_t)     , intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: namelist_file ! Where to read the namelists from

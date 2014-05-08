@@ -18,7 +18,7 @@ module initial_projection_module
 
   private
 
-  public :: initial_projection, fill_umac_trans_ghost_after_inertial_restart
+  public :: initial_projection, fill_ghost_umac
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -202,7 +202,7 @@ contains
 
   end subroutine initial_projection
 
-  subroutine fill_umac_trans_ghost_after_inertial_restart(mla,umac,eta_ed,dx,the_bc_tower)
+  subroutine fill_ghost_umac(mla,umac,eta_ed,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -234,7 +234,7 @@ contains
 
     call destroy_bc_multifabs(mla)
 
-  end subroutine fill_umac_trans_ghost_after_inertial_restart
+  end subroutine fill_ghost_umac
 
   subroutine build_bc_multifabs(mla)
 
