@@ -172,8 +172,6 @@ contains
     ! fill ghost cells
     do n=1,nlevs
        do i=1,dm
-          ! fill periodic and interior ghost cells
-          call multifab_fill_boundary(umac(n,i))
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
                                          the_bc_tower%bc_tower_array(n), &
@@ -182,6 +180,8 @@ contains
           call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
                                       the_bc_tower%bc_tower_array(n), &
                                       dx(n,:),vel_bc_t(n,:))
+          ! fill periodic and interior ghost cells
+          call multifab_fill_boundary(umac(n,i))
        end do
     end do
 
