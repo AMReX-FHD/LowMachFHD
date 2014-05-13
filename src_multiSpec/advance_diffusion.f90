@@ -1,4 +1,4 @@
-module advance_module
+module advance_diffusion_module
 
   use multifab_module
   use define_bc_module
@@ -12,11 +12,11 @@ module advance_module
 
   private
 
-  public :: advance
+  public :: advance_diffusion
 
 contains
 
-  subroutine advance(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_level)
+  subroutine advance_diffusion(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -384,6 +384,6 @@ contains
     deallocate(stoch_W_fc)
     deallocate(weights)
   
-  end subroutine advance
+  end subroutine advance_diffusion
 
-end module advance_module 
+end module advance_diffusion_module
