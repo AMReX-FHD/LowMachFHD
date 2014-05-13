@@ -6,8 +6,7 @@ module analysis_module
   use define_bc_module
   use ml_layout_module
   use init_module
-  use probin_common_module
-  use probin_multispecies_module
+  use probin_multispecies_module, only: nspecies
  
   implicit none
 
@@ -36,8 +35,8 @@ module analysis_module
      nlevs = size(rho,1)
 
      ! calculate rho_exact
-     call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 
-     call init_Temp(Temp,dx,prob_lo,prob_hi,time,the_bc_level) 
+     call init_rho(rho_exact,dx,time,the_bc_level) 
+     call init_Temp(Temp,dx,time,the_bc_level) 
     
      ! substract the values 
      do n=1,nlevs
@@ -79,8 +78,8 @@ module analysis_module
      end if
      
      ! for checking analytic solution with Visit
-     call init_rho(rho_exact,dx,prob_lo,prob_hi,time,the_bc_level) 
-     call init_Temp(Temp,dx,prob_lo,prob_hi,time,the_bc_level) 
+     call init_rho(rho_exact,dx,time,the_bc_level) 
+     call init_Temp(Temp,dx,time,the_bc_level) 
 
   end subroutine print_errors
 

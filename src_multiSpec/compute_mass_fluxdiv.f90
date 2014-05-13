@@ -11,7 +11,7 @@ module compute_mass_fluxdiv_module
   use F95_LAPACK
   use stochastic_mass_fluxdiv_module
   use convert_mass_variables_module
-  use probin_multispecies_module
+  use probin_multispecies_module, only: nspecies, use_stoch
 
   implicit none
 

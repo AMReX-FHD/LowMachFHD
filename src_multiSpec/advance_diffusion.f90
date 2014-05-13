@@ -6,7 +6,7 @@ module advance_diffusion_module
   use ml_layout_module
   use compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
-  use probin_multispecies_module
+  use probin_multispecies_module, only: nspecies, rho_part_bc_comp, timeinteg_type, use_stoch
 
   implicit none
 

@@ -3,7 +3,7 @@ module fluid_model_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
-  use probin_multispecies_module
+  use probin_multispecies_module, only: nspecies, is_ideal_mixture, Dbar_in, Dtherm_in
  
   implicit none
 

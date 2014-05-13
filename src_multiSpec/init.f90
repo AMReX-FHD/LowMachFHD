@@ -6,8 +6,9 @@ module init_module
   use define_bc_module
   use multifab_physbc_module
   use multifab_coefbc_module
-  use probin_common_module
-  use probin_multispecies_module
+  use probin_common_module, only: prob_lo, prob_hi
+  use probin_multispecies_module, only: alpha1, beta, delta, init_type, sigma, Dbar_in, &
+       T_in, rho_in, nspecies, rho_part_bc_comp, molmass_in
  
   implicit none
 
@@ -26,12 +27,10 @@ module init_module
 
 contains
   
-  subroutine init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_level)
+  subroutine init_rho(rho,dx,time,the_bc_level)
 
     type(multifab) , intent(inout) :: rho(:)            
     real(kind=dp_t), intent(in   ) :: dx(:,:)           
-    real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim)
-    real(kind=dp_t), intent(in   ) :: prob_hi(rho(1)%dim)
     real(kind=dp_t), intent(in   ) :: time 
     type(bc_level) , intent(in   ) :: the_bc_level(:)
  
@@ -60,9 +59,9 @@ contains
           
           select case(dm)
           case (2)
-             call init_rho_2d(dp(:,:,1,:),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
+             call init_rho_2d(dp(:,:,1,:),ng,lo,hi,dx(n,:),time)
           case (3)
-             call init_rho_3d(dp(:,:,:,:),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
+             call init_rho_3d(dp(:,:,:,:),ng,lo,hi,dx(n,:),time)
           end select
        end do
 
@@ -76,11 +75,10 @@ contains
 
   end subroutine init_rho
 
-  subroutine init_rho_2d(rho,ng,lo,hi,prob_lo,prob_hi,dx,time)
+  subroutine init_rho_2d(rho,ng,lo,hi,dx,time)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)  ! last dimension for species
-    real(kind=dp_t)  :: prob_lo(2),prob_hi(2)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  
@@ -225,11 +223,10 @@ contains
    
   end subroutine init_rho_2d
 
-  subroutine init_rho_3d(rho,ng,lo,hi,prob_lo,prob_hi,dx,time)
+  subroutine init_rho_3d(rho,ng,lo,hi,dx,time)
     
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! Last dimension for species 
-    real(kind=dp_t)  :: prob_lo(3),prob_hi(3)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  
@@ -398,12 +395,10 @@ contains
    
   end subroutine init_rho_3d
 
-  subroutine init_Temp(Temp,dx,prob_lo,prob_hi,time,the_bc_level)
+  subroutine init_Temp(Temp,dx,time,the_bc_level)
 
     type(multifab) , intent(inout) :: Temp(:)            
     real(kind=dp_t), intent(in   ) :: dx(:,:)           
-    real(kind=dp_t), intent(in   ) :: prob_lo(:)
-    real(kind=dp_t), intent(in   ) :: prob_hi(:)
     real(kind=dp_t), intent(in   ) :: time 
     type(bc_level) , intent(in   ) :: the_bc_level(:)
  
@@ -427,9 +422,9 @@ contains
           
           select case(dm)
           case (2)
-             call init_Temp_2d(dp1(:,:,1,1),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
+             call init_Temp_2d(dp1(:,:,1,1),ng,lo,hi,dx(n,:),time)
           case (3)
-             call init_Temp_3d(dp1(:,:,:,1),ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
+             call init_Temp_3d(dp1(:,:,:,1),ng,lo,hi,dx(n,:),time)
           end select
        end do
 
@@ -443,11 +438,10 @@ contains
 
   end subroutine init_Temp
 
-  subroutine init_Temp_2d(Temp,ng,lo,hi,prob_lo,prob_hi,dx,time)
+  subroutine init_Temp_2d(Temp,ng,lo,hi,dx,time)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:)  
-    real(kind=dp_t)  :: prob_lo(2),prob_hi(2)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  
@@ -528,11 +522,10 @@ contains
    
   end subroutine init_Temp_2d
 
-  subroutine init_Temp_3d(Temp,ng,lo,hi,prob_lo,prob_hi,dx,time)
+  subroutine init_Temp_3d(Temp,ng,lo,hi,dx,time)
     
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)  
-    real(kind=dp_t)  :: prob_lo(3),prob_hi(3)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  

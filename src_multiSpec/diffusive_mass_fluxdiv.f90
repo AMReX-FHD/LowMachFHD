@@ -3,7 +3,8 @@ module diffusive_mass_fluxdiv_module
   use multifab_module
   use define_bc_module
   use div_and_grad_module
-  use probin_multispecies_module
+  use probin_multispecies_module, only: nspecies, is_nonisothermal, mol_frac_bc_comp, &
+       temp_bc_comp, nspecies, correct_flux, diff_coeff_bc_comp
   use ml_layout_module
   use convert_stag_module
   use matvec_mul_module

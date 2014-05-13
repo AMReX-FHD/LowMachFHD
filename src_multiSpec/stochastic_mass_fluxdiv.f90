@@ -13,8 +13,9 @@ module stochastic_mass_fluxdiv_module
   use matvec_mul_module
   use correction_flux_module
   use multifab_zero_edgeval_module
-  use probin_common_module
-  use probin_multispecies_module
+  use probin_common_module, only: k_B
+  use probin_multispecies_module, only: nspecies, correct_flux, diff_coeff_bc_comp, &
+       is_nonisothermal, variance_parameter
 
   implicit none
 

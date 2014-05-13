@@ -14,8 +14,13 @@ subroutine main_driver()
   use analyze_spectra_module
   use ParallelRNGs 
   use convert_mass_variables_module
-  use probin_common_module
-  use probin_multispecies_module
+  use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
+       k_B, max_grid_size, n_steps_save_stats, n_steps_skip, plot_int, seed, stats_int, &
+       bc_lo, bc_hi, probin_common_init
+  use probin_multispecies_module, only: nspecies, rho_in, c_bc, cfl1, chi, &
+       diff_coeff_bc_comp, max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
+       start_time, molmass_in, temp_bc_comp, timeinteg_type, use_stoch, variance_parameter, &
+       probin_multispecies_init
  
   implicit none
 
@@ -203,8 +208,8 @@ subroutine main_driver()
   time = start_time    
 
   ! initialize rho and Temp
-  call init_rho(rho,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
-  call init_Temp(Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
+  call init_rho(rho,dx,time,the_bc_tower%bc_tower_array)
+  call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species

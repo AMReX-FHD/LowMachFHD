@@ -5,8 +5,8 @@ module external_force_module
   use multifab_module
   use ml_layout_module
   use multifab_fill_ghost_module
-  use probin_common_module
-  use probin_multispecies_module
+  use probin_multispecies_module, only: dbar_in, init_type, sigma, beta, alpha1, delta, &
+       molmass_in
 
   implicit none
 

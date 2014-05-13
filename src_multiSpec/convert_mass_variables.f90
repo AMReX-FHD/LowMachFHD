@@ -3,8 +3,9 @@ module convert_mass_variables_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
-  use probin_common_module
-  use probin_multispecies_module
+  use probin_common_module, only: k_B
+  use probin_multispecies_module, only: nspecies, use_lapack, fraction_tolerance, &
+       inverse_type, is_nonisothermal
   use matrix_utilities 
   use F95_LAPACK
 
@@ -457,7 +458,7 @@ contains
     if(use_lapack) then
        call compute_chi_lapack(Lambda(:,:),chi(:,:),W(:))
     else
-       call Dbar2chi_iterative(nspecies,100,D_MS(:,:),molmass(:),molarconc(:),chi(:,:)) 
+       call Dbar2chi_iterative(100,D_MS(:,:),molmass(:),molarconc(:),chi(:,:)) 
     end if
 
   end subroutine compute_chi_local
