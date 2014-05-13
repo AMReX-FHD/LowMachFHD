@@ -204,8 +204,9 @@ contains
 
   subroutine fill_ghost_umac(mla,umac,eta_ed,dx,the_bc_tower)
 
-    ! fill the ghost cells for the mac velocity
-    ! does not modify the domain boundary values
+    ! fill the ghost cells for the mac velocity (used for restarts to restore ghost values)
+    ! does not modify the domain boundary values, i.e., it does not call multifab_physbc_domainvel
+    ! it assumes that normal velocity on physical domain boundaries are properly set (e.g., read from restart)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -221,6 +222,7 @@ contains
 
     call build_bc_multifabs(mla)
 
+    ! vel_bc_n here is never used: the normal velocities are assumed to be set already in umac
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
 
