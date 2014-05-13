@@ -16,8 +16,8 @@ include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
 VPATH_LOCATIONS += ..
 
-include $(STAGGERED_HOME)/src_Multispecies/GPackage.mak
-VPATH_LOCATIONS += $(STAGGERED_HOME)/src_Multispecies
+include $(STAGGERED_HOME)/src_multiSpec/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_multiSpec
 
 include $(STAGGERED_HOME)/src_common/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_common
@@ -28,7 +28,7 @@ VPATH_LOCATIONS += $(HYDROLIB_HOME)
 include $(BOXLIB_HOME)/Src/F_BaseLib/GPackage.mak
 VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/F_BaseLib
 
-LAPACK95_DIR = $(STAGGERED_HOME)/src_Multispecies/LAPACK95
+LAPACK95_DIR = $(STAGGERED_HOME)/src_multiSpec/LAPACK95
 
 F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
 libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
