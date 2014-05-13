@@ -17,9 +17,69 @@ module compute_mass_fluxdiv_module
 
   private
 
-  public :: compute_mass_fluxdiv
+  public :: compute_mass_fluxdiv_wrapper, compute_mass_fluxdiv
 
 contains
+
+  subroutine compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,molmass, &
+                                          diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp, &
+                                          dt,stage_time,dx,weights, &
+                                          n_rngs,the_bc_level)
+       
+    type(ml_layout), intent(in   )   :: mla
+    type(multifab) , intent(inout)   :: rho(:)
+    type(multifab) , intent(inout)   :: rho_tot(:)
+    real(kind=dp_t), intent(in   )   :: molmass(nspecies) 
+    type(multifab) , intent(inout)   :: diff_fluxdiv(:)
+    type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
+    type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
+    type(multifab) , intent(in   )   :: Temp(:)
+    real(kind=dp_t), intent(in   )   :: dt
+    real(kind=dp_t), intent(in   )   :: stage_time 
+    real(kind=dp_t), intent(in   )   :: dx(:,:)
+    real(kind=dp_t), intent(in   )   :: weights(:) 
+    integer,         intent(in   )   :: n_rngs
+    type(bc_level) , intent(in   )   :: the_bc_level(:)
+
+    ! local
+    integer :: n,nlevs
+
+    type(multifab) :: molarconc(mla%nlevel)      ! molar concentration
+    type(multifab) :: molmtot(mla%nlevel)        ! total molar mass
+    type(multifab) :: chi(mla%nlevel)            ! Chi-matrix
+    type(multifab) :: Gama(mla%nlevel)           ! Gama-matrix
+    type(multifab) :: D_MS(mla%nlevel)           ! D_MS-matrix
+    type(multifab) :: D_therm(mla%nlevel)        ! DT-matrix
+    type(multifab) :: zeta_by_Temp(mla%nlevel)   ! for Thermo-diffusion 
+
+    nlevs = mla%nlevel
+
+    do n=1,nlevs
+       call multifab_build(molarconc(n),    mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
+       call multifab_build(chi(n),          mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(Gama(n),         mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(D_MS(n),         mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(D_therm(n),      mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
+    end do
+
+    call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+                              D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
+                              zeta_by_Temp,dt,stage_time,dx,weights,&
+                              n_rngs,the_bc_level)
+
+    do n=1,nlevs
+       call multifab_destroy(molarconc(n))
+       call multifab_destroy(molmtot(n))
+       call multifab_destroy(chi(n))
+       call multifab_destroy(Gama(n))
+       call multifab_destroy(D_MS(n))
+       call multifab_destroy(D_therm(n))
+       call multifab_destroy(zeta_by_Temp(n))
+    end do
+
+  end subroutine compute_mass_fluxdiv_wrapper
 
   subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
