@@ -566,6 +566,7 @@ subroutine createDynamicFactors(grid, wavenumbersString)
    end if
    do iWavenumber = 1, grid%nWavenumbers
       do iDimension = 1, 3
+      if( (iDimension/=2) .or. (grid%periodic)) then
          if ( (grid%selectedWavenumbers(iDimension, iWavenumber) < grid%minWavenumber(iDimension)) .or. &
               (grid%selectedWavenumbers(iDimension, iWavenumber) > grid%maxWavenumber(iDimension)) ) then
               write(*,*) "Error: Selected wavenumber = ", iDimension, iWavenumber , " out of possible range"
@@ -573,6 +574,9 @@ subroutine createDynamicFactors(grid, wavenumbersString)
          end if
          grid%selectedWaveindices(iDimension, iWavenumber) = frequencyToArrayIndex( &
             grid%selectedWavenumbers(iDimension, iWavenumber), grid%nCells(iDimension) )
+      else 
+         grid%selectedWaveindices(iDimension, iWavenumber) = grid%selectedWavenumbers(iDimension, iWavenumber)
+      end if
       end do
    end do
 
@@ -2196,9 +2200,12 @@ subroutine writeDynamicFactors(grid,filenameBase)
       open (file = trim(filename) // ".Im.dat", unit=structureFactorFile(2), status = "unknown", action = "write")
       
       ! This only works if the selected wavenumbers are positive, but this is always the case anyway:
+      wavevector = 2 * pi * (grid%selectedWavenumbers(:, iWavenumber)) / grid%systemLength
+      if(.not.grid%periodic) then ! This is actually y coordinate not k_y
+         wavevector(2) = (grid%selectedWavenumbers(2, iWavenumber)+0.5_wp) * grid%systemLength(dim) / grid%nCells(dim)
+      end if
       do iFile=1,2
-         write(structureFactorFile(iFile), '(A,100G17.9)')  "# k=", &
-            2 * pi * (grid%selectedWavenumbers(:, iWavenumber)) / grid%systemLength
+         write(structureFactorFile(iFile), '(A,100G17.9)')  "# k=", wavevector            
       end do   
 
       ProjectModes: if(any(grid%vectorFactors/=0)) then
