@@ -4,19 +4,19 @@ module write_plotfile_module
   use multifab_module
   use fabio_module
   use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: prob_lo, prob_hi
 
   implicit none
 
 contains
   
-  subroutine write_plotfile(mla,name,rho,istep,dx,time,prob_lo,prob_hi)
+  subroutine write_plotfile(mla,name,rho,istep,dx,time)
 
     type(ml_layout),    intent(in)  :: mla
     character(len=*),   intent(in)  :: name
     type(multifab),     intent(in)  :: rho(:)
     integer,            intent(in)  :: istep
     real(kind=dp_t),    intent(in)  :: dx(:,:),time
-    real(kind=dp_t),    intent(in)  :: prob_lo(rho(1)%dim), prob_hi(rho(1)%dim)
 
     ! local variables
     character(len=20), allocatable  :: plot_names(:)

@@ -7,6 +7,7 @@ module external_force_module
   use multifab_fill_ghost_module
   use probin_multispecies_module, only: dbar_in, init_type, sigma, beta, alpha1, delta, &
        molmass_in
+  use probin_common_module, only: prob_lo, prob_hi
 
   implicit none
 
@@ -16,13 +17,11 @@ module external_force_module
 
 contains
 
-  subroutine external_source(mla,rho,fluxdiv,prob_lo,prob_hi,dx,time)
+  subroutine external_source(mla,rho,fluxdiv,dx,time)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)
     type(multifab) , intent(inout) :: fluxdiv(:)
-    real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim)
-    real(kind=dp_t), intent(in   ) :: prob_hi(rho(1)%dim)
     real(kind=dp_t), intent(in   ) :: dx(:,:),time
 
     ! local variables
@@ -46,22 +45,21 @@ contains
           select case (dm)
           case (2)
              call external_source_2d(dp(:,:,1,:),dp1(:,:,1,:),&
-                                     ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
+                                     ng,lo,hi,dx(n,:),time)
           case (3)
              call external_source_3d(dp(:,:,:,:),dp1(:,:,:,:),&
-                                     ng,lo,hi,prob_lo,prob_hi,dx(n,:),time)
+                                     ng,lo,hi,dx(n,:),time)
           end select
        end do
     end do
 
   end subroutine external_source
 
-  subroutine external_source_2d(rho,fluxdiv,ng,lo,hi,prob_lo,prob_hi,dx,time)
+  subroutine external_source_2d(rho,fluxdiv,ng,lo,hi,dx,time)
 
     integer          :: lo(:),hi(:),ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)
     real(kind=dp_t)  :: fluxdiv(lo(1)-ng:,lo(2)-ng:,:)
-    real(kind=dp_t)  :: prob_lo(2),prob_hi(2)
     real(kind=dp_t)  :: dx(:),time
 
     ! local variables
@@ -133,12 +131,11 @@ contains
 
   end subroutine external_source_2d
 
-  subroutine external_source_3d(rho,fluxdiv,ng,lo,hi,prob_lo,prob_hi,dx,time)
+  subroutine external_source_3d(rho,fluxdiv,ng,lo,hi,dx,time)
 
     integer          :: lo(:),hi(:),ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)
     real(kind=dp_t)  :: fluxdiv(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)
-    real(kind=dp_t)  :: prob_lo(3),prob_hi(3)
     real(kind=dp_t)  :: dx(:),time
 
     ! local variables

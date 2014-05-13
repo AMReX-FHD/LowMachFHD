@@ -16,14 +16,12 @@ module analysis_module
 
   contains
 
-  subroutine print_errors(rho,rho_exact,Temp,dx,prob_lo,prob_hi,time,the_bc_level)
+  subroutine print_errors(rho,rho_exact,Temp,dx,time,the_bc_level)
   
      type(multifab) , intent(in)     :: rho(:)            
      type(multifab) , intent(inout)  :: rho_exact(:)            
      type(multifab) , intent(inout)  :: Temp(:)            
      real(kind=dp_t), intent(in   )  :: dx(:,:)           
-     real(kind=dp_t), intent(in   )  :: prob_lo(rho(1)%dim)
-     real(kind=dp_t), intent(in   )  :: prob_hi(rho(1)%dim)
      real(kind=dp_t), intent(in   )  :: time 
      type(bc_level) , intent(in   )  :: the_bc_level(:)
  

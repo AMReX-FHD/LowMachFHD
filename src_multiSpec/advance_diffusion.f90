@@ -16,7 +16,7 @@ module advance_diffusion_module
 
 contains
 
-  subroutine advance_diffusion(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi,the_bc_level)
+  subroutine advance_diffusion(mla,rho,rho_tot,molmass,Temp,dx,dt,time,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -25,7 +25,6 @@ contains
     type(multifab) , intent(in   ) :: Temp(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
-    real(kind=dp_t), intent(in   ) :: prob_lo(rho(1)%dim),prob_hi(rho(1)%dim) 
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables and array of multifabs
@@ -114,7 +113,7 @@ contains
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                 D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
-                                zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                zeta_by_Temp,dt,stage_time,dx,weights,&
                                 n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior) 
@@ -149,7 +148,7 @@ contains
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                 D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
-                                zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                zeta_by_Temp,dt,stage_time,dx,weights,&
                                 n_rngs,the_bc_level)
       
       ! compute rhonew(t+dt) (only interior) 
@@ -175,7 +174,7 @@ contains
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                 D_therm,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,&
-                                zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                zeta_by_Temp,dt,stage_time,dx,weights,&
                                 n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior)
@@ -212,7 +211,7 @@ contains
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                 D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
-                                zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                zeta_by_Temp,dt,stage_time,dx,weights,&
                                 n_rngs,the_bc_level)
  
       ! compute rhonew(t+dt/2) (only interior) 
@@ -240,7 +239,7 @@ contains
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                 D_therm,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,&
-                                zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                zeta_by_Temp,dt,stage_time,dx,weights,&
                                 n_rngs,the_bc_level)
  
       ! compute rho(t+dt) (only interior) 
@@ -277,7 +276,7 @@ contains
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                 D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
-                                zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                zeta_by_Temp,dt,stage_time,dx,weights,&
                                 n_rngs,the_bc_level)
  
       ! compute rhonew(t+dt) (only interior) 
@@ -305,7 +304,7 @@ contains
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                 D_therm,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,&
-                                zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                zeta_by_Temp,dt,stage_time,dx,weights,&
                                 n_rngs,the_bc_level)
 
       ! compute rhonew(t+dt/2) (only interior) 
@@ -340,7 +339,7 @@ contains
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rhonew,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                 D_therm,diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,&
-                                zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                zeta_by_Temp,dt,stage_time,dx,weights,&
                                 n_rngs,the_bc_level)
 
       ! compute rho(t+dt) (only interior) 

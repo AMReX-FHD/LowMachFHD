@@ -302,10 +302,10 @@ subroutine main_driver()
 
          ! print mass conservation and write plotfiles
          write(*,*), 'writing plotfiles at timestep =', istep 
-         call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time,prob_lo,prob_hi)
-         call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time,prob_lo,prob_hi)
-         call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time,prob_lo,prob_hi)
-         call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time,prob_lo,prob_hi)
+         call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time)
+         call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time)
+         call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time)
+         call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time)
 
          ! difference between rho and rho_exact
          do n=1,nlevs
@@ -313,12 +313,12 @@ subroutine main_driver()
          end do
 
          ! check error with visit
-         call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time,prob_lo,prob_hi)
+         call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time)
 
       end if
 
       ! advance the solution by dt
-      call advance_diffusion(mla,rho,rho_tot,molmass,Temp,dx,dt,time,prob_lo,prob_hi, &
+      call advance_diffusion(mla,rho,rho_tot,molmass,Temp,dx,dt,time, &
                              the_bc_tower%bc_tower_array)
       ! increment simulation time
       istep = istep + 1
@@ -331,7 +331,7 @@ subroutine main_driver()
 
       ! compute error norms
       if (print_error_norms) then
-         call print_errors(rho,rho_exact,Temp,dx,prob_lo,prob_hi,time,the_bc_tower%bc_tower_array)
+         call print_errors(rho,rho_exact,Temp,dx,time,the_bc_tower%bc_tower_array)
       end if
                   
   end do

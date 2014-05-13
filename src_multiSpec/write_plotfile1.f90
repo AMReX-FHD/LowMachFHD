@@ -3,19 +3,19 @@ module write_plotfile1_module
   use ml_layout_module
   use multifab_module
   use fabio_module
+  use probin_common_module, only: prob_lo, prob_hi
 
   implicit none
 
 contains
   
-  subroutine write_plotfile1(mla,name,Temp,istep,dx,time,prob_lo,prob_hi)
+  subroutine write_plotfile1(mla,name,Temp,istep,dx,time)
 
     type(ml_layout),    intent(in)  :: mla
     character(len=*),   intent(in)  :: name
     type(multifab),     intent(in)  :: Temp(:)
     integer,            intent(in)  :: istep
     real(kind=dp_t),    intent(in)  :: dx(:,:),time
-    real(kind=dp_t),    intent(in)  :: prob_lo(Temp(1)%dim), prob_hi(Temp(1)%dim)
 
     ! local variables
     character(len=20), allocatable  :: plot_names(:)

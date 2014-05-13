@@ -23,7 +23,7 @@ contains
 
   subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
-                                  zeta_by_Temp,dt,stage_time,dx,prob_lo,prob_hi,weights,&
+                                  zeta_by_Temp,dt,stage_time,dx,weights,&
                                   n_rngs,the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
@@ -44,8 +44,6 @@ contains
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
-    real(kind=dp_t), intent(in   )   :: prob_lo(rho(1)%dim)
-    real(kind=dp_t), intent(in   )   :: prob_hi(rho(1)%dim) 
     real(kind=dp_t), intent(in   )   :: weights(:) 
     integer,         intent(in   )   :: n_rngs
     type(bc_level) , intent(in   )   :: the_bc_level(:)
@@ -87,7 +85,7 @@ contains
                                 diff_fluxdiv,Temp,zeta_by_Temp,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
-    call external_source(mla,rho,diff_fluxdiv,prob_lo,prob_hi,dx,stage_time)
+    call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
 
     ! compute stochastic fluxdiv 
     if(use_stoch) call stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,&
