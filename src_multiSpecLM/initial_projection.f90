@@ -3,14 +3,12 @@ module initial_projection_module
   use multifab_module
   use ml_layout_module
   use convert_stag_module
-  use convert_m_to_umac_module
   use define_bc_module
   use macproject_module
   use div_and_grad_module
-!  use diffusive_rhoc_fluxdiv_module
-!  use stochastic_rhoc_fluxdiv_module
   use bc_module
   use multifab_physbc_stag_module
+  use compute_mass_fluxdiv_module
 
   implicit none
 
@@ -35,21 +33,22 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,umac,sold,s_fc,prim,eta_ed,chi_fc,gp_fc, &
-                                rhoc_fluxdiv,dx,dt,the_bc_tower,algorithm_type)
+  subroutine initial_projection(mla,umac,rho,rho_tot,molmass,diff_fluxdiv,stoch_fluxdiv, &
+                                stoch_W_fc,Temp,dt,dx,n_rngs,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(in   ) :: sold(:)
-    type(multifab) , intent(inout) :: s_fc(:,:)
-    type(multifab) , intent(in   ) :: prim(:)
-    type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
-    type(multifab) , intent(in   ) :: chi_fc(:,:)
-    type(multifab) , intent(in   ) :: gp_fc(:,:)
-    type(multifab) , intent(inout) :: rhoc_fluxdiv(:)
-    real(kind=dp_t), intent(in   ) :: dx(:,:),dt
+    type(multifab) , intent(in   ) :: rho(:)
+    type(multifab) , intent(inout) :: rho_tot(:)
+    real(kind=dp_t), intent(in   ) :: molmass(:)
+    type(multifab) , intent(inout) :: diff_fluxdiv(:)
+    type(multifab) , intent(inout) :: stoch_fluxdiv(:)
+    type(multifab) , intent(in   ) :: stoch_W_fc(:,:,:)
+    type(multifab) , intent(in   ) :: Temp(:)
+    real(kind=dp_t), intent(in   ) :: dt
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    integer,         intent(in   ) :: n_rngs
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    integer        , intent(in   ) :: algorithm_type ! 1 = 1 RNG; 2 = 2 RNGs
 
     ! local
     integer :: i,dm,n,nlevs
@@ -57,23 +56,20 @@ contains
     type(multifab) ::   mac_rhs(mla%nlevel)
     type(multifab) ::      divu(mla%nlevel)
     type(multifab) ::       phi(mla%nlevel)
-    type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
+    type(multifab) :: rho_tot_fc(mla%nlevel,mla%dim)
+    type(multifab) :: rho_totinv_fc(mla%nlevel,mla%dim)
 
-    real(kind=dp_t), allocatable :: weights(:)
+    real(kind=dp_t) :: weights(n_rngs)
 
-    if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
-       allocate(weights(1))
+    if (n_rngs .eq. 1) then
        weights(1) = 1.d0
-    else if (algorithm_type .eq. 2) then
-       allocate(weights(2))
+    else if (n_rngs .eq. 2) then
        weights(1) = 1.d0
        weights(2) = 0.d0
     end if
 
     dm = mla%dim
     nlevs = mla%nlevel
-
-!    S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
     
     call build_bc_multifabs(mla)
 
@@ -82,7 +78,8 @@ contains
        call multifab_build(divu(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(rhoinv_fc(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(rho_tot_fc(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(rho_totinv_fc(n,i),mla%la(n),1,0,i)
        end do       
     end do
 
@@ -91,16 +88,16 @@ contains
        call setval(phi(n),0.d0)
     end do
 
-    ! average sold to faces
-    call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
+!    ! average rho_tot to faces
+    call average_cc_to_face(nlevs,rho_tot,rho_tot_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! build rhs = div(v^init) - S^0
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
-                                   the_bc_tower%bc_tower_array)
+!    ! reset inhomogeneous bc condition to deal with reservoirs
+!    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+!                                   the_bc_tower%bc_tower_array)
 
 !    ! set rhoc_d_fluxdiv = div(rho*chi grad c)^0
 !    call diffusive_rhoc_fluxdiv(mla,rhoc_fluxdiv,1,prim,s_fc,chi_fc,dx, &
@@ -117,11 +114,11 @@ contains
 
     do n=1,nlevs
        do i=1,dm
-          ! to deal with reservoirs
-          ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_n(n,:))
+!          ! to deal with reservoirs
+!          ! set normal velocity on physical domain boundaries
+!          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+!                                         the_bc_tower%bc_tower_array(n), &
+!                                         dx(n,:),vel_bc_n(n,:))
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
        end do
@@ -145,17 +142,17 @@ contains
     ! compute (1/rho^0)
     do n=1,nlevs
        do i=1,dm
-          call setval(rhoinv_fc(n,i),1.d0,all=.true.)
-          call multifab_div_div_c(rhoinv_fc(n,i),1,s_fc(n,i),1,1,0)
+          call setval(rho_totinv_fc(n,i),1.d0,all=.true.)
+          call multifab_div_div_c(rho_totinv_fc(n,i),1,rho_tot_fc(n,i),1,1,0)
        end do
     end do
 
     ! solve div (1/rho^0) grad phi = div(v^init) - S^0
     ! solve to completion, i.e., use the 'full' solver
-    call macproject(mla,phi,umac,rhoinv_fc,mac_rhs,dx,the_bc_tower,.true.)
+    call macproject(mla,phi,umac,rho_totinv_fc,mac_rhs,dx,the_bc_tower,.true.)
 
     ! v^0 = v^init - (1/rho^0) grad phi
-    call subtract_weighted_gradp(mla,umac,rhoinv_fc,phi,dx,the_bc_tower)
+    call subtract_weighted_gradp(mla,umac,rho_totinv_fc,phi,dx,the_bc_tower)
 
     ! fill ghost cells
     do n=1,nlevs
@@ -180,7 +177,8 @@ contains
        call multifab_destroy(divu(n))
        call multifab_destroy(phi(n))
        do i=1,dm
-          call multifab_destroy(rhoinv_fc(n,i))
+          call multifab_destroy(rho_tot_fc(n,i))
+          call multifab_destroy(rho_totinv_fc(n,i))
        end do
     end do
 
