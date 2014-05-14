@@ -8,10 +8,11 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: cfl1,chi,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
-  real(kind=dp_t)    :: rho_init(2,max_species)       ! initial values for concentration, 2 for inside & outside circle
-  real(kind=dp_t)    :: T_init(2)                     ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  real(kind=dp_t)    :: cfl1,chi,Press,start_time ! chi is maximum eigenvalue of diffusion matrix
+  real(kind=dp_t)    :: rho_init(2,max_species) ! initial values for concentration, 2 for inside & outside circle
+  real(kind=dp_t)    :: T_init(2) ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   real(kind=dp_t)    :: molmass(max_species)     ! molar masses for nspecies
+  real(kind=dp_t)    :: rhobar(max_species)      ! rhobar for nspecies
   real(kind=dp_t)    :: Dbar(max_element)        ! SM diffusion constant  
   real(kind=dp_t)    :: Dtherm(max_element)          ! thermo-diffusion coefficients  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
@@ -40,6 +41,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ use_lapack   
   namelist /probin_multispecies/ rho_init
   namelist /probin_multispecies/ molmass
+  namelist /probin_multispecies/ rhobar
   namelist /probin_multispecies/ Dbar
   namelist /probin_multispecies/ Dtherm
   namelist /probin_multispecies/ T_init
@@ -82,11 +84,12 @@ contains
     is_ideal_mixture   = .true.
     is_nonisothermal   = .true.
     use_lapack         = .true.
-    rho_init             = 1.0d0
+    rho_init           = 1.0d0
     molmass            = 1.0d0
-    Dbar            = 1.0d0
-    Dtherm          = 1.0d0
-    T_init               = 1.0d0
+    rhobar             = 1.d0
+    Dbar               = 1.0d0
+    Dtherm             = 1.0d0
+    T_init             = 1.0d0
     c_bc               = 0.d0
  
     ! read from input file 
@@ -146,6 +149,10 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) molmass
+       case ('--rhobar')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar
        case ('--Dbar')
           farg = farg + 1
           call get_command_argument(farg, value = fname)

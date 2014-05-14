@@ -9,6 +9,7 @@ module initial_projection_module
   use bc_module
   use multifab_physbc_stag_module
   use compute_mass_fluxdiv_module
+  use probin_multispecies_module, only: nspecies, rhobar
 
   implicit none
 
@@ -94,8 +95,13 @@ contains
                                       n_rngs,the_bc_tower%bc_tower_array)
 
     ! set mac_rhs to -S
-    ! -S = -sum (F_i / rhobar_i)
-
+    ! -S = -sum div (F_i / rhobar_i)
+    do n=1,nlevs
+       do i=1,nspecies
+          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), diff_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_fluxdiv(n),i,1)
+       end do
+    end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! build rhs = div(v^init) - S^0
@@ -104,19 +110,6 @@ contains
 !    ! reset inhomogeneous bc condition to deal with reservoirs
 !    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
 !                                   the_bc_tower%bc_tower_array)
-
-!    ! set rhoc_d_fluxdiv = div(rho*chi grad c)^0
-!    call diffusive_rhoc_fluxdiv(mla,rhoc_fluxdiv,1,prim,s_fc,chi_fc,dx, &
-!                                the_bc_tower%bc_tower_array,vel_bc_n)
-
-!    ! set rhoc_s_fluxdiv = div(Psi^0)
-!    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_fluxdiv,s_fc, &
-!                                 chi_fc,dx,dt,vel_bc_n,weights)
-
-!    ! add diffusive and stochastic rhoc fluxes to to mac_rhs
-!    do n=1,nlevs
-!       call multifab_plus_plus_c(mac_rhs(n),1,rhoc_fluxdiv(n),1,1,0)
-!    end do
 
     do n=1,nlevs
        do i=1,dm
@@ -130,17 +123,11 @@ contains
        end do
     end do
 
-!    ! multiply mac_rhs by -S_fac
-!    ! now mac_rhs = -S^0
-!    do n=1,nlevs
-!       call multifab_mult_mult_s_c(mac_rhs(n),1,-S_fac,1,0)
-!    end do
-
     ! set divu = div(v^init)
     call compute_div(mla,umac,divu,dx,1,1,1)
 
     ! add div(v^init) to mac_rhs
-    ! now mac_rhs = div(v^init) - S^0
+    ! now mac_rhs = div(v^init) - S
     do n=1,nlevs
        call multifab_plus_plus_c(mac_rhs(n),1,divu(n),1,1,0)
     end do
