@@ -13,6 +13,7 @@ subroutine main_driver()
   use advance_timestep_module
   use advance_timestep_overdamped_module
   use convert_variables_module
+  use convert_m_to_umac_module
   use div_and_grad_module
   use analysis_module
   use sum_momenta_module

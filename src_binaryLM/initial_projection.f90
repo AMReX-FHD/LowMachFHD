@@ -3,7 +3,7 @@ module initial_projection_module
   use multifab_module
   use ml_layout_module
   use convert_stag_module
-  use convert_variables_module
+  use convert_m_to_umac_module
   use define_bc_module
   use macproject_module
   use div_and_grad_module

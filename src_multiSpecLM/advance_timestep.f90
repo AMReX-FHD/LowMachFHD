@@ -5,6 +5,7 @@ module advance_timestep_module
   use define_bc_module
   use convert_stag_module
 !  use convert_variables_module
+  use convert_m_to_umac_module
   use mk_advective_s_fluxdiv_module
   use mk_advective_m_fluxdiv_module
   use diffusive_m_fluxdiv_module
@@ -309,7 +310,7 @@ contains
     end do
 
    ! compute mtemp = rho^{*,n+1} * vbar^n
-!   call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
+   call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
 
    do n=1,nlevs
       do i=1,dm
@@ -444,7 +445,7 @@ contains
 
     ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
     ! now mnew has properly filled ghost cells
-!    call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
+    call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 5 - Trapezoidal Scalar Corrector
@@ -632,7 +633,7 @@ contains
     end do
 
    ! compute mtemp = rho^{*,n+1} * vbar^{*,n+1}
-!   call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
+   call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
 
    do n=1,nlevs
       do i=1,dm
@@ -751,7 +752,7 @@ contains
 
     ! convert v^{n+1} to m^{n+1} in valid and ghost region
     ! now mnew has properly filled ghost cells
-!    call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
+    call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement
