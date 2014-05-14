@@ -5,6 +5,7 @@ subroutine main_driver()
   use bl_IO_module
   use layout_module
   use init_module
+  use initial_projection_module
   use write_plotfile_module
   use write_plotfile1_module
   use advance_diffusion_module
@@ -12,6 +13,7 @@ subroutine main_driver()
   use bc_module
   use analysis_module
   use analyze_spectra_module
+  use stochastic_mass_fluxdiv_module
   use ParallelRNGs 
   use convert_mass_variables_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
@@ -41,14 +43,18 @@ subroutine main_driver()
   type(multifab), allocatable  :: rho(:)
   type(multifab), allocatable  :: rho_tot(:)
   type(multifab), allocatable  :: rho_exact(:)
-  type(multifab), allocatable  :: Temp(:)   ! Temperature 
+  type(multifab), allocatable  :: Temp(:) ! Temperature 
+  type(multifab), allocatable  :: diff_fluxdiv(:)
+  type(multifab), allocatable  :: stoch_fluxdiv(:)
+  type(multifab), allocatable  :: umac(:,:)
+  type(multifab), allocatable  :: stoch_W_fc(:,:,:) ! WA and WB (nlevs,dim,n_rngs) 
   real(kind=dp_t),allocatable  :: covW(:,:) 
   real(kind=dp_t),allocatable  :: covW_theo(:,:) 
   real(kind=dp_t),allocatable  :: wiwjt(:,:) 
   real(kind=dp_t),allocatable  :: wit(:) 
 
   ! For HydroGrid
-  integer :: narg, farg, un, n_cell
+  integer :: narg, farg, un, n_cell, rng, n_rngs
   character(len=128) :: fname
   logical :: lexist
   
@@ -69,14 +75,16 @@ subroutine main_driver()
   ! tagging criteria, so max_levs isn't necessary equal to nlevs
   nlevs = 1
   dm = dim_in
+
+  n_rngs = 1
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
-  allocate(rho(nlevs))
-  allocate(rho_tot(nlevs))
-  allocate(rho_exact(nlevs))
-  allocate(Temp(nlevs))
+  allocate(rho(nlevs),rho_tot(nlevs),rho_exact(nlevs))
+  allocate(Temp(nlevs),diff_fluxdiv(nlevs),stoch_fluxdiv(nlevs))
+  allocate(umac(nlevs,dm))
+  allocate(stoch_W_fc(nlevs,dm,1:n_rngs))
   allocate(covW(nspecies,nspecies))
   allocate(covW_theo(nspecies,nspecies))
   allocate(wiwjt(nspecies,nspecies))
@@ -187,10 +195,23 @@ subroutine main_driver()
 
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
-     call multifab_build(rho(n),      mla%la(n),nspecies,1)
-     call multifab_build(rho_tot(n),  mla%la(n),1,       1) 
-     call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
-     call multifab_build(Temp(n),     mla%la(n),1,       1)
+     call multifab_build(rho(n),          mla%la(n),nspecies,1)
+     call multifab_build(rho_tot(n),      mla%la(n),1,       1) 
+     call multifab_build(rho_exact(n),    mla%la(n),nspecies,1)
+     call multifab_build(Temp(n),         mla%la(n),1,       1)
+     call multifab_build(diff_fluxdiv(n), mla%la(n),nspecies,0) 
+     call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0) 
+     do i=1,dm
+        call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
+     end do
+  end do
+
+  do n=1,nlevs 
+     do rng=1,n_rngs 
+        do i=1,dm
+           call multifab_build_edge(stoch_W_fc(n,i,rng),mla%la(n),nspecies,0,i)
+        end do
+     end do
   end do
 
   ! Initialize random numbers *after* the global (root) seed has been set:
@@ -206,6 +227,19 @@ subroutine main_driver()
   ! initialize rho and Temp
   call init_rho(rho,dx,time,the_bc_tower%bc_tower_array)
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
+
+  ! initialize velocity here, prefereably with a subroutine
+  do n=1,nlevs
+     do i=1,dm
+        call multifab_setval(umac(n,i), 0.d0, all=.true.)
+     end do
+  end do
+    
+  ! initialize stochastic flux on every face W(0,1) 
+  call generate_random_increments(mla,n_rngs,stoch_W_fc)
+
+  ! apply boundary conditions to stoch_W_fc
+  call stoch_mass_bc(mla,stoch_W_fc,n_rngs,the_bc_tower%bc_tower_array)
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
@@ -247,6 +281,10 @@ subroutine main_driver()
         end if
      end if
   end if
+
+  ! initial projection
+  call initial_projection(mla,umac,rho,rho_tot,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc, &
+                          Temp,dt,dx,n_rngs,the_bc_tower)
 
   !=======================================================
   ! Begin time stepping loop
@@ -438,16 +476,18 @@ subroutine main_driver()
      call multifab_destroy(rho_tot(n))
      call multifab_destroy(rho_exact(n))
      call multifab_destroy(Temp(n))
+     call multifab_destroy(diff_fluxdiv(n))
+     call multifab_destroy(stoch_fluxdiv(n))
+     do i=1,dm
+        call multifab_destroy(umac(n,i))
+        do rng=1,n_rngs
+           call multifab_destroy(stoch_W_fc(n,i,rng))
+        end do
+     end do
   end do
-  deallocate(lo,hi)
-  deallocate(dx)
-  deallocate(rho)
-  deallocate(rho_tot)
-  deallocate(Temp)
-  deallocate(covW)
-  deallocate(covW_theo)
-  deallocate(wiwjt)
-  deallocate(wit)
+  deallocate(lo,hi,dx)
+  deallocate(rho,rho_tot,Temp,diff_fluxdiv,stoch_fluxdiv,umac)
+  deallocate(stoch_W_fc,covW,covW_theo,wiwjt,wit)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 

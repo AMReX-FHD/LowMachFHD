@@ -34,14 +34,13 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,umac,rho,rho_tot,molmass,diff_fluxdiv,stoch_fluxdiv, &
+  subroutine initial_projection(mla,umac,rho,rho_tot,diff_fluxdiv,stoch_fluxdiv, &
                                 stoch_W_fc,Temp,dt,dx,n_rngs,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: rho_tot(:)
-    real(kind=dp_t), intent(in   ) :: molmass(:)
     type(multifab) , intent(inout) :: diff_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_fluxdiv(:)
     type(multifab) , intent(in   ) :: stoch_W_fc(:,:,:)
@@ -61,7 +60,7 @@ contains
     type(multifab) :: rho_totinv_fc(mla%nlevel,mla%dim)
 
     real(kind=dp_t) :: weights(n_rngs)
-
+    
     if (n_rngs .eq. 1) then
        weights(1) = 1.d0
     else if (n_rngs .eq. 2) then
