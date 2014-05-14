@@ -23,6 +23,7 @@ subroutine main_driver()
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
+  use fill_umac_ghost_cells_module
   use analyze_spectra_binary_module
   use analyze_spectra_module
   use restart_module
@@ -392,7 +393,7 @@ subroutine main_driver()
   if (restart .gt. 0) then
 
      ! fill ghost cells for umac (but leave boundary values untouched)
-     call fill_ghost_umac(mla,umac,eta_ed,dx,the_bc_tower)
+     call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
 
      ! compute m that has all ghost values properly filled
      call convert_m_to_umac(mla,s_fc,mold,umac,.false.)

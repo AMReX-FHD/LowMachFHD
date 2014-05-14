@@ -16,7 +16,7 @@ module initial_projection_module
 
   private
 
-  public :: initial_projection, fill_ghost_umac
+  public :: initial_projection
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -35,11 +35,10 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gp_fc, &
+  subroutine initial_projection(mla,umac,sold,s_fc,prim,eta_ed,chi_fc,gp_fc, &
                                 rhoc_fluxdiv,dx,dt,the_bc_tower,algorithm_type)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: mold(:,:)
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(in   ) :: sold(:)
     type(multifab) , intent(inout) :: s_fc(:,:)
@@ -94,9 +93,6 @@ contains
 
     ! average sold to faces
     call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
-
-    ! convert m^init to v^init in valid region
-    call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! build rhs = div(v^init) - S^0
@@ -177,10 +173,6 @@ contains
        end do
     end do
 
-    ! compute mold by converting v^0 to m^0 in valid plus ghost region
-    ! now mold has properly filled ghost cells
-    call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
-
     call destroy_bc_multifabs(mla)
 
     do n=1,nlevs
@@ -193,45 +185,6 @@ contains
     end do
 
   end subroutine initial_projection
-
-  subroutine fill_ghost_umac(mla,umac,eta_ed,dx,the_bc_tower)
-
-    ! fill the ghost cells for the mac velocity (used for restarts to restore ghost values)
-    ! does not modify the domain boundary values, i.e., it does not call multifab_physbc_domainvel
-    ! it assumes that normal velocity on physical domain boundaries are properly set (e.g., read from restart)
-
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
-    real(kind=dp_t), intent(in   ) :: dx(:,:)
-    type(bc_tower) , intent(in   ) :: the_bc_tower
-
-    ! local
-    integer :: n,nlevs,i,dm
-
-    nlevs = mla%nlevel
-    dm = mla%dim
-
-    call build_bc_multifabs(mla)
-
-    ! vel_bc_n here is never used: the normal velocities are assumed to be set already in umac
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
-                                   the_bc_tower%bc_tower_array)
-
-    do n=1,nlevs
-       do i=1,dm
-          ! set transverse velocity behind physical boundaries
-          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-                                      the_bc_tower%bc_tower_array(n), &
-                                      dx(n,:),vel_bc_t(n,:))
-          ! fill periodic and interior ghost cells
-          call multifab_fill_boundary(umac(n,i))
-       end do
-    end do
-
-    call destroy_bc_multifabs(mla)
-
-  end subroutine fill_ghost_umac
 
   subroutine build_bc_multifabs(mla)
 
