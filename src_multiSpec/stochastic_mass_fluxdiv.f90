@@ -20,13 +20,70 @@ module stochastic_mass_fluxdiv_module
 
   private
 
-  public :: stochastic_mass_fluxdiv, generate_random_increments, destroy_random_increments, &
-       stoch_mass_bc
+  public :: stochastic_mass_fluxdiv, fill_mass_stochastic, stoch_mass_bc, &
+       init_mass_stochastic, destroy_mass_stochastic
+
+  ! stochastic fluxes for mass densities are face-centered
+  type(multifab), allocatable, save :: stoch_W_fc(:,:,:)
+
+  integer, save :: n_rngs ! how many random number stages
   
 contains
+
+  ! call this once at the beginning of simulation to allocate multifabs
+  ! that will hold random numbers
+  subroutine init_mass_stochastic(mla,n_rngs_in)
+
+    type(ml_layout), intent(in   ) :: mla
+    integer        , intent(in   ) :: n_rngs_in
+
+    ! local
+    integer :: n,nlevs,i,dm,comp
+    
+    n_rngs = n_rngs_in
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    allocate(stoch_W_fc(mla%nlevel, mla%dim, n_rngs))
+
+    do n=1,nlevs
+       do comp=1,n_rngs
+          do i=1,dm
+             ! we need one face-centered flux for each concentration
+             call multifab_build_edge(stoch_W_fc(n,i,comp),mla%la(n),nspecies,0,i)
+          end do
+       end do ! end loop over n_rngs
+    end do ! end loop over nlevs
+
+  end subroutine init_mass_stochastic
+
+  ! call this once at the end of simulation to deallocate memory
+  subroutine destroy_mass_stochastic(mla)
+
+    type(ml_layout), intent(in   ) :: mla
+
+    ! local
+    integer :: n,nlevs,i,dm,comp
+    
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    do n=1,nlevs
+       do comp=1,n_rngs
+          do i=1,dm
+             call multifab_destroy(stoch_W_fc(n,i,comp))
+          end do
+       end do
+    end do
+    
+    deallocate(stoch_W_fc)
+
+  end subroutine destroy_mass_stochastic
+
   
   subroutine stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,&
-                                     Gama,stoch_W_fc,stoch_fluxdiv,dx,dt,weights,the_bc_level)
+                                     Gama,stoch_fluxdiv,dx,dt,weights,the_bc_level)
 
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
@@ -35,7 +92,6 @@ contains
     type(multifab) , intent(in   )   :: molmtot(:)
     type(multifab) , intent(in   )   :: chi(:)
     type(multifab) , intent(in   )   :: Gama(:)
-    type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:) 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: dt
@@ -129,55 +185,28 @@ contains
 
   end subroutine stochastic_mass_fluxdiv
 
-  subroutine generate_random_increments(mla,n_rngs,stoch_W_fc)
+  subroutine fill_mass_stochastic(mla)
   
-      type(ml_layout), intent(in   )  :: mla
-      integer,         intent(in   )  :: n_rngs   ! how many random numbers to store per time step
-      type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:)  
+    type(ml_layout), intent(in   )  :: mla
 
-      ! Local variables
-      integer :: comp,n,dm,nlevs,box,i,rng
+    ! Local variables
+    integer :: comp,n,dm,nlevs,box,i,rng
     
-      nlevs = mla%nlevel
-      dm    = mla%dim    
+    nlevs = mla%nlevel
+    dm    = mla%dim    
     
-      ! generate and store the stochastic flux (random numbers)
-      do rng=1, n_rngs
-         do i = 1,dm
-            call multifab_fill_random(stoch_W_fc(:,i,rng))
-         end do   
-      end do   
+    ! generate and store the stochastic flux (random numbers)
+    do rng=1, n_rngs
+       do i = 1,dm
+          call multifab_fill_random(stoch_W_fc(:,i,rng))
+       end do
+    end do
   
-  end subroutine generate_random_increments
-  
-  subroutine destroy_random_increments(mla,n_rngs,stoch_W_fc)
-    
-      type(ml_layout), intent(in   )  :: mla
-      integer,         intent(in   )  :: n_rngs
-      type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:)  
+  end subroutine fill_mass_stochastic
 
-      ! Local variables
-      integer :: comp,n,dm,nlevs,box,i,rng
-
-      nlevs = mla%nlevel
-      dm    = mla%dim    
-  
-      ! destroy multifab for stochastic flux
-      do n=1, nlevs 
-         do rng=1, n_rngs 
-            do i = 1,dm
-               call multifab_destroy(stoch_W_fc(n,i,rng))
-            end do
-         end do
-      end do
-
-  end subroutine destroy_random_increments
-
-  subroutine stoch_mass_bc(mla,stoch_W_fc,n_rngs,the_bc_level)
+  subroutine stoch_mass_bc(mla,the_bc_level)
     
     type(ml_layout), intent(in   )  :: mla
-    integer,         intent(in   )  :: n_rngs
-    type(multifab),  intent(inout)  :: stoch_W_fc(:,:,:) ! (nlevs,dm,n_rngs)
     type(bc_level) , intent(in   )  :: the_bc_level(:)
 
     ! local

@@ -22,7 +22,7 @@ module compute_mass_fluxdiv_module
 contains
 
   subroutine compute_mass_fluxdiv_wrapper(mla,rho,rho_tot, &
-                                          diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp, &
+                                          diff_fluxdiv,stoch_fluxdiv,Temp, &
                                           dt,stage_time,dx,weights, &
                                           n_rngs,the_bc_level)
        
@@ -31,7 +31,6 @@ contains
     type(multifab) , intent(inout)   :: rho_tot(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
-    type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
     type(multifab) , intent(in   )   :: Temp(:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
@@ -64,7 +63,7 @@ contains
     end do
 
     call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,Gama,D_MS,&
-                              D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
+                              D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                               zeta_by_Temp,dt,stage_time,dx,weights,&
                               n_rngs,the_bc_level)
 
@@ -81,7 +80,7 @@ contains
   end subroutine compute_mass_fluxdiv_wrapper
 
   subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,Gama,D_MS,&
-                                  D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
+                                  D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                                   zeta_by_Temp,dt,stage_time,dx,weights,&
                                   n_rngs,the_bc_level)
        
@@ -96,7 +95,6 @@ contains
     type(multifab) , intent(inout)   :: D_therm(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
-    type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
     type(multifab) , intent(in   )   :: Temp(:)
     type(multifab) , intent(inout)   :: zeta_by_Temp(:)
     real(kind=dp_t), intent(in   )   :: dt
@@ -147,7 +145,7 @@ contains
 
     ! compute stochastic fluxdiv 
     if(use_stoch) call stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,&
-                                               molmtot,chi,Gama,stoch_W_fc,stoch_fluxdiv,&
+                                               molmtot,chi,Gama,stoch_fluxdiv,&
                                                dx,dt,weights,the_bc_level)
       
     ! revert back rho to it's original form

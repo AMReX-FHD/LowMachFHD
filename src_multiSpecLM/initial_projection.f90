@@ -35,7 +35,7 @@ module initial_projection_module
 contains
 
   subroutine initial_projection(mla,umac,rho,rho_tot,diff_fluxdiv,stoch_fluxdiv, &
-                                stoch_W_fc,Temp,dt,dx,n_rngs,the_bc_tower)
+                                Temp,dt,dx,n_rngs,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -43,7 +43,6 @@ contains
     type(multifab) , intent(inout) :: rho_tot(:)
     type(multifab) , intent(inout) :: diff_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_fluxdiv(:)
-    type(multifab) , intent(in   ) :: stoch_W_fc(:,:,:)
     type(multifab) , intent(in   ) :: Temp(:)
     real(kind=dp_t), intent(in   ) :: dt
     real(kind=dp_t), intent(in   ) :: dx(:,:)
@@ -89,7 +88,7 @@ contains
     end do
 
     call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot, &
-                                      diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp, &
+                                      diff_fluxdiv,stoch_fluxdiv,Temp, &
                                       dt,0.d0,dx,weights, &
                                       n_rngs,the_bc_tower%bc_tower_array)
 

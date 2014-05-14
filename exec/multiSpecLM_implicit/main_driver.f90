@@ -49,7 +49,6 @@ subroutine main_driver()
   type(multifab), allocatable  :: diff_fluxdiv(:)
   type(multifab), allocatable  :: stoch_fluxdiv(:)
   type(multifab), allocatable  :: umac(:,:)
-  type(multifab), allocatable  :: stoch_W_fc(:,:,:) ! WA and WB (nlevs,dim,n_rngs) 
   real(kind=dp_t),allocatable  :: covW(:,:) 
   real(kind=dp_t),allocatable  :: covW_theo(:,:) 
   real(kind=dp_t),allocatable  :: wiwjt(:,:) 
@@ -87,7 +86,6 @@ subroutine main_driver()
   allocate(rho(nlevs),rho_tot(nlevs),rho_exact(nlevs))
   allocate(Temp(nlevs),diff_fluxdiv(nlevs),stoch_fluxdiv(nlevs))
   allocate(umac(nlevs,dm))
-  allocate(stoch_W_fc(nlevs,dm,1:n_rngs))
   allocate(covW(nspecies,nspecies))
   allocate(covW_theo(nspecies,nspecies))
   allocate(wiwjt(nspecies,nspecies))
@@ -209,14 +207,6 @@ subroutine main_driver()
      end do
   end do
 
-  do n=1,nlevs 
-     do rng=1,n_rngs 
-        do i=1,dm
-           call multifab_build_edge(stoch_W_fc(n,i,rng),mla%la(n),nspecies,0,i)
-        end do
-     end do
-  end do
-
   ! Initialize random numbers *after* the global (root) seed has been set:
   if(use_stoch) call SeedParallelRNG(seed)
 
@@ -240,12 +230,14 @@ subroutine main_driver()
         call multifab_setval(umac(n,i), 0.d0, all=.true.)
      end do
   end do
+
+  call init_mass_stochastic(mla,n_rngs)
     
   ! initialize stochastic flux on every face W(0,1) 
-  call generate_random_increments(mla,n_rngs,stoch_W_fc)
+  call fill_mass_stochastic(mla)
 
   ! apply boundary conditions to stoch_W_fc
-  call stoch_mass_bc(mla,stoch_W_fc,n_rngs,the_bc_tower%bc_tower_array)
+  call stoch_mass_bc(mla,the_bc_tower%bc_tower_array)
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
@@ -289,7 +281,7 @@ subroutine main_driver()
   end if
 
   ! initial projection
-  call initial_projection(mla,umac,rho,rho_tot,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc, &
+  call initial_projection(mla,umac,rho,rho_tot,diff_fluxdiv,stoch_fluxdiv, &
                           Temp,dt,dx,n_rngs,the_bc_tower)
 
   !=======================================================
@@ -477,6 +469,8 @@ subroutine main_driver()
      call finalize_hydro_grid()
   end if
 
+  call destroy_mass_stochastic(mla)
+
   do n=1,nlevs
      call multifab_destroy(rho(n))
      call multifab_destroy(rho_tot(n))
@@ -486,14 +480,11 @@ subroutine main_driver()
      call multifab_destroy(stoch_fluxdiv(n))
      do i=1,dm
         call multifab_destroy(umac(n,i))
-        do rng=1,n_rngs
-           call multifab_destroy(stoch_W_fc(n,i,rng))
-        end do
      end do
   end do
   deallocate(lo,hi,dx)
   deallocate(rho,rho_tot,Temp,diff_fluxdiv,stoch_fluxdiv,umac)
-  deallocate(stoch_W_fc,covW,covW_theo,wiwjt,wit)
+  deallocate(covW,covW_theo,wiwjt,wit)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 
