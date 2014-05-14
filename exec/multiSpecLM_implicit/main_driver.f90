@@ -358,8 +358,8 @@ subroutine main_driver()
       end if
 
       ! advance the solution by dt
-      call advance_diffusion(mla,rho,rho_tot,Temp,dx,dt,time, &
-                             the_bc_tower%bc_tower_array)
+!      call advance_timestep_overdamped()      
+
       ! increment simulation time
       istep = istep + 1
       time = time + dt

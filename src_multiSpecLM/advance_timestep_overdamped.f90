@@ -3,23 +3,16 @@ module advance_timestep_overdamped_module
   use ml_layout_module
   use multifab_module
   use define_bc_module
+  use bc_module
   use convert_stag_module
-!  use convert_variables_module
-  use convert_m_to_umac_module
   use mk_advective_s_fluxdiv_module
-  use mk_advective_m_fluxdiv_module
-!  use diffusive_rhoc_fluxdiv_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
-!  use stochastic_rhoc_fluxdiv_module
   use bds_module
   use gmres_module
-  use init_module
   use div_and_grad_module
-  use bc_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-!  use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
 
@@ -48,27 +41,27 @@ module advance_timestep_overdamped_module
 
 contains
 
-  subroutine advance_timestep_overdamped(mla,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
-                                         eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
-                                         algorithm_type)
+  subroutine advance_timestep_overdamped(mla,umac,rho_old,rho_new,rho_tot_old,rho_tot_new, &
+                                         rho_fc,rho_tot_fc,pres,eta,eta_ed,kappa,dx,dt,time, &
+                                         the_bc_tower,n_rngs)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(in   ) :: sold(:)
-    type(multifab) , intent(inout) :: snew(:)
-    ! s_fc and prim need to enter consistent with sold and leave consistent with snew
-    type(multifab) , intent(inout) :: s_fc(:,:)
-    type(multifab) , intent(inout) :: prim(:)
+    type(multifab) , intent(in   ) :: rho_old(:)
+    type(multifab) , intent(inout) :: rho_new(:)
+    type(multifab) , intent(in   ) :: rho_tot_old(:)
+    type(multifab) , intent(inout) :: rho_tot_new(:)
+    ! rho_fc and rho_tot_fc need to enter consistent with old and leave consistent with new
+    type(multifab) , intent(inout) :: rho_fc(:,:)
+    type(multifab) , intent(inout) :: rho_tot_fc(:,:)
     type(multifab) , intent(inout) :: pres(:)
-    ! chi, eta, and kappa need to enter consistent with sold and leave consistent with snew
-    type(multifab) , intent(inout) :: chi(:)
-    type(multifab) , intent(inout) :: chi_fc(:,:)
+    ! eta and kappa need to enter consistent with old and leave consistent with new
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    integer        , intent(in   ) :: algorithm_type ! 1 = 1 RNG; 2 = 2 RNGs
+    integer        , intent(in   ) :: n_rngs
 
     ! local
     type(multifab) ::    s_update(mla%nlevel)
@@ -85,16 +78,10 @@ contains
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs
 
-    real(kind=dp_t), allocatable :: weights(:)
+    real(kind=dp_t) :: weights(n_rngs)
 
-    if (algorithm_type .eq. 1) then
-       allocate(weights(1))
-       weights(1) = 1.d0
-    else if (algorithm_type .eq. 2) then
-       allocate(weights(2))
-       weights(1) = 1.d0
-       weights(2) = 0.d0
-    end if
+    weights(:) = 0.d0
+    weights(1) = 1.d0
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -241,8 +228,8 @@ contains
     gmres_abs_tol = 0.d0
 
     ! call gmres to compute delta v and delta p
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
-               eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
+!    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
+!               eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
 
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
@@ -289,38 +276,38 @@ contains
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+!          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        else
-          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+!          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        end if
     else
-       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,2)
+!       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,2)
     end if
 
     ! compute s^{*,n+1/2} = s^n + (dt/2) * (A^n + F^n)
     ! store result in snew
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(s_update(n),1,0.5d0*dt,2,0)
-       call multifab_copy_c(snew(n),1,sold(n),1,2,0)
-       call multifab_plus_plus_c(snew(n),1,s_update(n),1,2,0)
-    end do
+!    do n=1,nlevs
+!       call multifab_mult_mult_s_c(s_update(n),1,0.5d0*dt,2,0)
+!       call multifab_copy_c(snew(n),1,sold(n),1,2,0)
+!       call multifab_plus_plus_c(snew(n),1,s_update(n),1,2,0)
+!    end do
 
 !    ! convert s^{*,n+1/2} to prim
 !    call convert_cons_to_prim(mla,snew,prim,.true.)
 
     ! fill ghost cells for prim
-    do n=1,nlevs
-       call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+!    do n=1,nlevs
+!       call multifab_fill_boundary(prim(n))
+!       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
 !       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
-    end do
+!    end do
 
     ! convert prim to s^{*,n+1/2} in valid and ghost region
     ! now s^{*,n+1/2} properly filled ghost cells
 !    call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! average s^{*,n+1/2} to faces
-    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
+!    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
 
 !    ! compute (chi,eta,kappa)^{*,n+1/2}
 !    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
@@ -349,8 +336,8 @@ contains
        end do
     end do
 
-    if (algorithm_type .eq. 2) then
-       weights = 1.d0/sqrt(2.d0)
+    if (n_rngs .eq. 2) then
+       weights(:) = 1.d0/sqrt(2.d0)
     end if
 
 !    ! add div(Sigma^(2)) to gmres_rhs_v
@@ -422,8 +409,8 @@ contains
     end do
 
     ! call gmres to compute delta v and delta p
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
-               eta,eta_ed,kappa,theta_alpha)
+!    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
+!               eta,eta_ed,kappa,theta_alpha)
 
     ! compute v^{n+1/2} = v^* + delta v
     ! compute p^{n+1/2} = p^* + delta p
@@ -463,37 +450,37 @@ contains
           call multifab_fill_boundary(bds_force(n))
        end do
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+!          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+!          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
        end if
     else
-       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,2)
+!       call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,2)
     end if
 
     ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(s_update(n),1,dt,2,0)
-       call multifab_copy_c(snew(n),1,sold(n),1,2,0)
-       call multifab_plus_plus_c(snew(n),1,s_update(n),1,2,0)
-    end do
+!    do n=1,nlevs
+!       call multifab_mult_mult_s_c(s_update(n),1,dt,2,0)
+!       call multifab_copy_c(snew(n),1,sold(n),1,2,0)
+!       call multifab_plus_plus_c(snew(n),1,s_update(n),1,2,0)
+!    end do
 
     ! convert s^{n+1} to prim
 !    call convert_cons_to_prim(mla,snew,prim,.true.)
 
     ! fill ghost cells for prim
-    do n=1,nlevs
-       call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+!    do n=1,nlevs
+!       call multifab_fill_boundary(prim(n))
+!       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
 !       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
-    end do
+!    end do
 
     ! convert prim to s^{n+1} in valid and ghost region
     ! now s^{n+1} properly filled ghost cells
 !    call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! compute s^{n+1} to faces
-    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
+!    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Compute stuff for plotfile and next time step
@@ -521,8 +508,6 @@ contains
           call multifab_destroy(gradp(n,i))
        end do
     end do
-
-    deallocate(weights)
 
   end subroutine advance_timestep_overdamped
 
