@@ -38,11 +38,11 @@
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T) 
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
- rho_in(1,1:2) = 0.35 1.25        ! inside the circle
- rho_in(2,1:2) = 0.8 0.5          ! outside the circle  
+ rho_init(1,1:2) = 0.35 1.25        ! inside the circle
+ rho_init(2,1:2) = 0.8 0.5          ! outside the circle  
  molmass(1:2) = 1.0 2.0        ! molar mass of n-species
  Dbar_in(1:1) = 1.0               ! SM diffusion constant arranged in lower-triangle
  Dtherm_in(1:2) = 1.0 -1.0        ! thermo-diffusion constant (sums to zero)
- T_in(1:2) = 1.0 2.0            ! Upper and lower plate temperature
+ T_init(1:2) = 1.0 2.0            ! Upper and lower plate temperature
  
 /

@@ -17,7 +17,7 @@ subroutine main_driver()
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
        k_B, max_grid_size, n_steps_save_stats, n_steps_skip, plot_int, seed, stats_int, &
        bc_lo, bc_hi, probin_common_init
-  use probin_multispecies_module, only: nspecies, rho_in, c_bc, cfl1, chi, &
+  use probin_multispecies_module, only: nspecies, rho_init, c_bc, cfl1, chi, &
        max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
        start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_parameter, &
        probin_multispecies_init
@@ -60,7 +60,7 @@ subroutine main_driver()
   call probin_multispecies_init() 
   
   if(.true.) then ! Confirm that gcc read the input file correctly
-    write(*,*) "rho_in=", rho_in(1:2,1:nspecies)
+    write(*,*) "rho_init=", rho_init(1:2,1:nspecies)
     write(*,*) "c_bc=", c_bc(1:dim_in,1:2,1:nspecies)
   end if
 
@@ -351,40 +351,40 @@ subroutine main_driver()
      
      if(nspecies .eq. 2) then 
      
-        covW_theo(1,1) = (molmass(1)*rho_in(1,2) + molmass(2)*rho_in(1,1))*rho_in(1,1)*rho_in(1,2)/(&
-                          product(dx(1,1:dm))*(rho_in(1,1)+rho_in(1,2))**4) 
+        covW_theo(1,1) = (molmass(1)*rho_init(1,2) + molmass(2)*rho_init(1,1))*rho_init(1,1)*rho_init(1,2)/(&
+                          product(dx(1,1:dm))*(rho_init(1,1)+rho_init(1,2))**4) 
         covW_theo(1,2) = -covW_theo(1,1) 
         covW_theo(2,1) = covW_theo(1,2) 
         covW_theo(2,2) = covW_theo(1,1) 
 
      else if(nspecies .eq. 3) then
         
-        covW_theo(1,1) = (rho_in(1,1)*(molmass(2)*rho_in(1,1)*rho_in(1,2) + molmass(3)*rho_in(1,1)*&
-                         rho_in(1,3) + molmass(1)*(rho_in(1,2) + rho_in(1,3))**2))/(product(dx(1,1:dm))*&
-                         (rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4) 
-        covW_theo(1,2) = -((rho_in(1,1)*rho_in(1,2)*(-(molmass(3)*rho_in(1,3)) + molmass(2)*(rho_in(1,1) +& 
-                         rho_in(1,3)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(product(dx(1,1:dm))*(&
-                         rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)) 
-        covW_theo(1,3) = -((rho_in(1,1)*rho_in(1,3)*(-(molmass(2)*rho_in(1,2)) + molmass(3)*(rho_in(1,1) +& 
-                         rho_in(1,2)) + molmass(1)*(rho_in(1,2) + rho_in(1,3))))/(product(dx(1,1:dm))*(&
-                         rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4))
+        covW_theo(1,1) = (rho_init(1,1)*(molmass(2)*rho_init(1,1)*rho_init(1,2) + molmass(3)*rho_init(1,1)*&
+                         rho_init(1,3) + molmass(1)*(rho_init(1,2) + rho_init(1,3))**2))/(product(dx(1,1:dm))*&
+                         (rho_init(1,1) + rho_init(1,2) + rho_init(1,3))**4) 
+        covW_theo(1,2) = -((rho_init(1,1)*rho_init(1,2)*(-(molmass(3)*rho_init(1,3)) + molmass(2)*(rho_init(1,1) +& 
+                         rho_init(1,3)) + molmass(1)*(rho_init(1,2) + rho_init(1,3))))/(product(dx(1,1:dm))*(&
+                         rho_init(1,1) + rho_init(1,2) + rho_init(1,3))**4)) 
+        covW_theo(1,3) = -((rho_init(1,1)*rho_init(1,3)*(-(molmass(2)*rho_init(1,2)) + molmass(3)*(rho_init(1,1) +& 
+                         rho_init(1,2)) + molmass(1)*(rho_init(1,2) + rho_init(1,3))))/(product(dx(1,1:dm))*(&
+                         rho_init(1,1) + rho_init(1,2) + rho_init(1,3))**4))
         covW_theo(2,1) = covW_theo(1,2) 
-        covW_theo(2,2) = (rho_in(1,2)*(molmass(2)*(rho_in(1,1) + rho_in(1,3))**2 + rho_in(1,2)*(molmass(1)*&
-                         rho_in(1,1) + molmass(3)*rho_in(1,3))))/(product(dx(1,1:dm))*(rho_in(1,1) +& 
-                         rho_in(1,2) + rho_in(1,3))**4)
-        covW_theo(2,3) = -((rho_in(1,2)*rho_in(1,3)*(-(molmass(1)*rho_in(1,1)) + molmass(3)*(rho_in(1,1) +& 
-                         rho_in(1,2)) + molmass(2)*(rho_in(1,1) + rho_in(1,3))))/(product(dx(1,1:dm))*(&
-                         rho_in(1,1) + rho_in(1,2) + rho_in(1,3))**4)) 
+        covW_theo(2,2) = (rho_init(1,2)*(molmass(2)*(rho_init(1,1) + rho_init(1,3))**2 + rho_init(1,2)*(molmass(1)*&
+                         rho_init(1,1) + molmass(3)*rho_init(1,3))))/(product(dx(1,1:dm))*(rho_init(1,1) +& 
+                         rho_init(1,2) + rho_init(1,3))**4)
+        covW_theo(2,3) = -((rho_init(1,2)*rho_init(1,3)*(-(molmass(1)*rho_init(1,1)) + molmass(3)*(rho_init(1,1) +& 
+                         rho_init(1,2)) + molmass(2)*(rho_init(1,1) + rho_init(1,3))))/(product(dx(1,1:dm))*(&
+                         rho_init(1,1) + rho_init(1,2) + rho_init(1,3))**4)) 
         covW_theo(3,1) = covW_theo(1,3) 
         covW_theo(3,2) = covW_theo(2,3) 
-        covW_theo(3,3) = (rho_in(1,3)*(molmass(3)*(rho_in(1,1) + rho_in(1,2))**2 + (molmass(1)*rho_in(1,1) +& 
-                         molmass(2)*rho_in(1,2))*rho_in(1,3)))/(product(dx(1,1:dm))*(rho_in(1,1) +& 
-                         rho_in(1,2) + rho_in(1,3))**4)
+        covW_theo(3,3) = (rho_init(1,3)*(molmass(3)*(rho_init(1,1) + rho_init(1,2))**2 + (molmass(1)*rho_init(1,1) +& 
+                         molmass(2)*rho_init(1,2))*rho_init(1,3)))/(product(dx(1,1:dm))*(rho_init(1,1) +& 
+                         rho_init(1,2) + rho_init(1,3))**4)
  
       else if(nspecies .eq. 4) then
         
-        loc_param = 1.0d0/(product(dx(1,1:dm))*(rho_in(1,1) + rho_in(1,2) + rho_in(1,3) +& 
-                    rho_in(1,4)))
+        loc_param = 1.0d0/(product(dx(1,1:dm))*(rho_init(1,1) + rho_init(1,2) + rho_init(1,3) +& 
+                    rho_init(1,4)))
         
         covW_theo(1,1) = 0.174d0*loc_param 
         covW_theo(1,2) = -0.024d0*loc_param

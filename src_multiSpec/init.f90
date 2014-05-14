@@ -8,7 +8,7 @@ module init_module
   use multifab_coefbc_module
   use probin_common_module, only: prob_lo, prob_hi
   use probin_multispecies_module, only: alpha1, beta, delta, init_type, sigma, Dbar_in, &
-       T_in, rho_in, nspecies, rho_part_bc_comp, molmass
+       T_init, rho_init, nspecies, rho_part_bc_comp, molmass
  
   implicit none
 
@@ -98,7 +98,7 @@ contains
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
  
-          rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
+          rho(i,j,1:nspecies) = rho_init(1,1:nspecies)
 
        end do
     end do  
@@ -114,9 +114,9 @@ contains
        
           rsq = x**2 + y**2
           if (rsq .lt. L(1)*L(2)*0.1d0) then
-             rho(i,j,1:nspecies) = rho_in(1,1:nspecies)
+             rho(i,j,1:nspecies) = rho_init(1,1:nspecies)
           else
-             rho(i,j,1:nspecies) = rho_in(2,1:nspecies)
+             rho(i,j,1:nspecies) = rho_init(2,1:nspecies)
           end if
     
        end do
@@ -132,8 +132,8 @@ contains
           x = prob_lo(1) + (dble(i)+half)*dx(1) 
    
             ! linear gradient in rho
-            rho(i,j,1:nspecies) = rho_in(1,1:nspecies) + & 
-               (rho_in(2,1:nspecies) - rho_in(1,1:nspecies))*(y-prob_lo(2))/L(2)
+            rho(i,j,1:nspecies) = rho_init(1,1:nspecies) + & 
+               (rho_init(2,1:nspecies) - rho_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
    
          end do
       end do
@@ -249,7 +249,7 @@ contains
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
+             rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
 
           end do
        end do
@@ -271,9 +271,9 @@ contains
 
                rsq = x**2 + y**2 + z**2
                if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
-                  rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies)
+                  rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
                else
-                  rho(i,j,k,1:nspecies) = rho_in(2,1:nspecies)
+                  rho(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
                end if
           
           end do
@@ -294,8 +294,8 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+half)*dx(1)
 
-               rho(i,j,k,1:nspecies) = rho_in(1,1:nspecies) + &
-                   (rho_in(2,1:nspecies) - rho_in(1,1:nspecies))*(y-prob_lo(2))/L(2)
+               rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies) + &
+                   (rho_init(2,1:nspecies) - rho_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
 
           end do
        end do
@@ -463,7 +463,7 @@ contains
        do i=lo(1)-1,hi(1)+1
           x = prob_lo(1) + (dble(i)+half)*dx(1) 
  
-            Temp(i,j) = T_in(1)
+            Temp(i,j) = T_init(1)
             ! These were used for testing thermodiffusion only
             if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
             if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*sin(2.0d0*M_PI*y/L(1))
@@ -483,9 +483,9 @@ contains
           ! temperature distribution follows the density 
           rsq = x**2 + y**2
           if (rsq .lt. L(1)*L(2)*0.1d0) then
-              Temp(i,j) = T_in(1)
+              Temp(i,j) = T_init(1)
           else
-              Temp(i,j) = T_in(2)
+              Temp(i,j) = T_init(2)
           end if
     
         end do
@@ -501,7 +501,7 @@ contains
           x = prob_lo(1) + (dble(i)+half)*dx(1) 
       
           ! linear gradient in y direction
-          Temp(i,j) = T_in(1) + (T_in(2) - T_in(1))*(y-prob_lo(2))/L(2)
+          Temp(i,j) = T_init(1) + (T_init(2) - T_init(1))*(y-prob_lo(2))/L(2)
 
        end do
     end do
@@ -513,7 +513,7 @@ contains
          do i=lo(1)-1,hi(1)+1
             x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
-            Temp(i,j)  = T_in(1) 
+            Temp(i,j)  = T_init(1) 
 
          end do
     end do
@@ -548,7 +548,7 @@ contains
        do j=lo(2)-1,hi(2)+1
           do i=lo(1)-1,hi(1)+1
              
-             Temp(i,j,k) = T_in(1)
+             Temp(i,j,k) = T_init(1)
 
           end do
        end do
@@ -571,9 +571,9 @@ contains
              !temperature distribution follows the density 
              rsq = x**2 + y**2 + z**2
              if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
-                Temp(i,j,k) = T_in(1)
+                Temp(i,j,k) = T_init(1)
              else
-                Temp(i,j,k) = T_in(2)
+                Temp(i,j,k) = T_init(2)
              end if
           
           end do
@@ -595,7 +595,7 @@ contains
              x = prob_lo(1) + (dble(i)+half)*dx(1) 
 
              ! linear gradient in y direction for temperature 
-             Temp(i,j,k) = T_in(1) + (T_in(2) - T_in(1))*(y-prob_lo(2))/L(2)
+             Temp(i,j,k) = T_init(1) + (T_init(2) - T_init(1))*(y-prob_lo(2))/L(2)
  
           end do
        end do
@@ -609,7 +609,7 @@ contains
        do j=lo(2)-1,hi(2)+1
           do i=lo(1)-1,hi(1)+1
 
-             Temp(i,j,k) = T_in(1)
+             Temp(i,j,k) = T_init(1)
 
           end do
        end do

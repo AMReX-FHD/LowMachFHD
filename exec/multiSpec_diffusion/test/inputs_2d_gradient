@@ -78,28 +78,28 @@
  ! Thermodiffusion
  ! BC = -1 100
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
- T_in(1:2) = 1.0 1.001 ! Temperature at bottom and top boundaries
+ T_init(1:2) = 1.0 1.001 ! Temperature at bottom and top boundaries
  ! Bad initial guess
- !rho_in(1,1:2) = 0.4830852506 0.5169147494      ! bottom   
- !rho_in(2,1:2) = 0.4830852506 0.5169147494      ! top
+ !rho_init(1,1:2) = 0.4830852506 0.5169147494      ! bottom   
+ !rho_init(2,1:2) = 0.4830852506 0.5169147494      ! top
  ! Good initial guess
  ! This is not used if init_type=6, only for init_type=2
- rho_in(1,1:2) = 0.903 0.097      ! bottom   
- rho_in(2,1:2) = 0.063 0.937      ! top
+ rho_init(1,1:2) = 0.903 0.097      ! bottom   
+ rho_init(2,1:2) = 0.063 0.937      ! top
  
  ! Neumann (is_nonisothermal=F):
  ! BC = -1 100
  !is_nonisothermal  = .false.       ! true=include grad(T), false= no grad(T)  
- !rho_in(1,1:2) = 0.04 0.66       ! bottom
- !rho_in(2,1:2) = 0.36 0.34      ! top
+ !rho_init(1,1:2) = 0.04 0.66       ! bottom
+ !rho_init(2,1:2) = 0.36 0.34      ! top
  !c_bc(2,1,1:2) = 0.01 -0.01 ! Desired slopes at y=0 
  !c_bc(2,2,1:2) = 0.01 -0.01 ! Desired slopes at y=H 
  
  ! Dirichlet:
  ! BC = -1 101
  !is_nonisothermal  = .false.       ! true=include grad(T), false= no grad(T)  
- !rho_in(1,1:2) = 0.2 0.8      ! bottom   
- !rho_in(2,1:2) = 0.8 0.2      ! top
+ !rho_init(1,1:2) = 0.2 0.8      ! bottom   
+ !rho_init(2,1:2) = 0.8 0.2      ! top
  !c_bc(2,1,1:2) = 0.2 0.8 ! Desired densities at y=0 
  !c_bc(2,2,1:2) = 0.8 0.2 ! Desired densities at y=H
 /

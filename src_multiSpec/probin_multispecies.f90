@@ -9,8 +9,8 @@ module probin_multispecies_module
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
   real(kind=dp_t)    :: cfl1,chi,Press,start_time   ! chi is maximum eigenvalue of diffusion matrix
-  real(kind=dp_t)    :: rho_in(2,max_species)       ! initial values for concentration, 2 for inside & outside circle
-  real(kind=dp_t)    :: T_in(2)                     ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  real(kind=dp_t)    :: rho_init(2,max_species)       ! initial values for concentration, 2 for inside & outside circle
+  real(kind=dp_t)    :: T_init(2)                     ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   real(kind=dp_t)    :: molmass(max_species)     ! molar masses for nspecies
   real(kind=dp_t)    :: Dbar_in(max_element)        ! SM diffusion constant  
   real(kind=dp_t)    :: Dtherm_in(max_element)          ! thermo-diffusion coefficients  
@@ -38,11 +38,11 @@ module probin_multispecies_module
   namelist /probin_multispecies/ is_ideal_mixture   
   namelist /probin_multispecies/ is_nonisothermal   
   namelist /probin_multispecies/ use_lapack   
-  namelist /probin_multispecies/ rho_in
+  namelist /probin_multispecies/ rho_init
   namelist /probin_multispecies/ molmass
   namelist /probin_multispecies/ Dbar_in
   namelist /probin_multispecies/ Dtherm_in
-  namelist /probin_multispecies/ T_in
+  namelist /probin_multispecies/ T_init
   namelist /probin_multispecies/ c_bc              ! boundary conditions (dir,lohi,species)
 
 contains
@@ -82,11 +82,11 @@ contains
     is_ideal_mixture   = .true.
     is_nonisothermal   = .true.
     use_lapack         = .true.
-    rho_in             = 1.0d0
+    rho_init             = 1.0d0
     molmass            = 1.0d0
     Dbar_in            = 1.0d0
     Dtherm_in          = 1.0d0
-    T_in               = 1.0d0
+    T_init               = 1.0d0
     c_bc               = 0.d0
  
     ! read from input file 
@@ -138,10 +138,10 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) timeinteg_type
-       case ('--rho_in')
+       case ('--rho_init')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) rho_in
+          read(fname, *) rho_init
        case ('--molmass')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
