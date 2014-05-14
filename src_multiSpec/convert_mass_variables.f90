@@ -13,9 +13,12 @@ module convert_mass_variables_module
 
   private
 
-  public :: convert_cons_to_prim,compute_chi,compute_rhoWchi,compute_Lonsager, &
-            compute_molconc_rhotot_local,compute_chi_local,compute_Lonsager_local, &
-            correct_rho_with_drho,correct_rho_with_drho_local
+  public :: correct_rho_with_drho, &
+            convert_cons_to_prim, &
+            compute_rhotot, &
+            compute_chi, &
+            compute_rhoWchi, &
+            compute_Lonsager
 
 contains
   
@@ -256,6 +259,96 @@ contains
     end do
     
   end subroutine compute_molconc_rhotot_local 
+
+  subroutine compute_rhotot(mla,rho,rho_tot)
+   
+   type(ml_layout), intent(in   )  :: mla
+   type(multifab) , intent(in   )  :: rho(:) 
+   type(multifab) , intent(inout)  :: rho_tot(:) 
+
+   ! local variables
+   integer :: lo(mla%dim), hi(mla%dim)
+   integer :: n,i,ng,dm,nlevs
+ 
+   ! pointer for rho(nspecies), rho_tot(1), molarconc(nspecies) 
+   real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
+   real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rho_tot
+
+   dm    = mla%dim     ! dimensionality
+   ng    = rho(1)%ng   ! number of ghost cells 
+   nlevs = mla%nlevel  ! number of levels 
+ 
+    ! loop over all boxes 
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp => dataptr(rho(n),i)
+          dp1 => dataptr(rho_tot(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          
+          select case(dm)
+          case (2)
+             call compute_rhotot_2d(dp(:,:,1,:),dp1(:,:,1,1),&
+                                    ng,lo,hi) 
+          case (3)
+             call compute_rhotot_3d(dp(:,:,:,:),dp1(:,:,:,1),&
+                                    ng,lo,hi) 
+          end select
+       end do
+    end do
+
+  end subroutine compute_rhotot
+
+  subroutine compute_rhotot_2d(rho,rho_tot,ng,lo,hi)
+ 
+    integer          :: lo(2), hi(2), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density- last dim for #species
+    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:)     ! total density in each cell 
+        
+    ! local variables
+    integer          :: i,j,n
+    
+    ! for specific box, now start loops over alloted cells    
+    do j=lo(2)-ng, hi(2)+ng
+       do i=lo(1)-ng, hi(1)+ng
+
+          ! calculate total density inside each cell
+          rho_tot(i,j)=0.d0
+          do n=1, nspecies  
+             rho_tot(i,j) = rho_tot(i,j) + rho(i,j,n)
+          end do
+
+       end do
+    end do
+ 
+  end subroutine compute_rhotot_2d
+
+  subroutine compute_rhotot_3d(rho,rho_tot,ng,lo,hi)
+ 
+    integer          :: lo(3), hi(3), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! density- last dim for #species
+    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)     ! total density in each cell 
+    
+    ! local variables
+    integer          :: i,j,k,n
+    
+    ! for specific box, now start loops over alloted cells    
+    do k=lo(3)-ng, hi(3)+ng
+       do j=lo(2)-ng, hi(2)+ng
+          do i=lo(1)-ng, hi(1)+ng
+
+             ! calculate total density inside each cell
+             rho_tot(i,j,k)=0.d0
+             do n=1,nspecies  
+                rho_tot(i,j,k) = rho_tot(i,j,k) + rho(i,j,k,n)
+             end do
+
+
+          end do
+       end do
+    end do
+ 
+  end subroutine compute_rhotot_3d
 
   subroutine compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,D_therm,Temp,zeta_by_Temp,the_bc_level)
    

@@ -208,6 +208,7 @@ subroutine main_driver()
 
   ! initialize rho and Temp
   call init_rho(rho,dx,time,the_bc_tower%bc_tower_array)
+  call compute_rhotot(mla,rho,rho_tot)
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
