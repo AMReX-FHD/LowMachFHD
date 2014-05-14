@@ -2,9 +2,10 @@ module diffusive_mass_fluxdiv_module
 
   use multifab_module
   use define_bc_module
+  use bc_module
   use div_and_grad_module
   use probin_multispecies_module, only: nspecies, is_nonisothermal, mol_frac_bc_comp, &
-       temp_bc_comp, nspecies, correct_flux, diff_coeff_bc_comp
+       temp_bc_comp, nspecies, correct_flux
   use ml_layout_module
   use convert_stag_module
   use matvec_mul_module
@@ -111,7 +112,7 @@ contains
     end do 
 
     ! compute face-centered rhoWchi from cell-centered values 
-    call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, diff_coeff_bc_comp, &
+    call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
                             nspecies**2, the_bc_level, .false.) 
 
     !==================================!
@@ -123,7 +124,7 @@ contains
                       the_bc_level)
 
     ! compute face-centered Gama from cell-centered values 
-    call average_cc_to_face(nlevs, Gama, Gama_face, 1, diff_coeff_bc_comp, &
+    call average_cc_to_face(nlevs, Gama, Gama_face, 1, tran_bc_comp, &
                             nspecies**2, the_bc_level, .false.)
 
     ! compute Gama*grad(molarconc): Gama is nspecies^2 matrix; grad(x) is nspecies component vector 
@@ -143,7 +144,7 @@ contains
        call compute_grad(mla, Temp, flux_Temp, dx, 1, temp_bc_comp, 1, 1, the_bc_level)
     
        ! compute face-centered zeta_by_T from cell-centered values 
-       call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, diff_coeff_bc_comp, &
+       call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, tran_bc_comp, &
                                nspecies, the_bc_level, .false.) 
 
        ! compute zeta_by_T*grad(T): zeta_by_T is nspecies component vector; grad(T) is scalar

@@ -18,7 +18,7 @@ subroutine main_driver()
        k_B, max_grid_size, n_steps_save_stats, n_steps_skip, plot_int, seed, stats_int, &
        bc_lo, bc_hi, probin_common_init
   use probin_multispecies_module, only: nspecies, rho_in, c_bc, cfl1, chi, &
-       diff_coeff_bc_comp, max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
+       max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
        start_time, molmass_in, temp_bc_comp, timeinteg_type, use_stoch, variance_parameter, &
        probin_multispecies_init
  
@@ -182,7 +182,6 @@ subroutine main_driver()
   rho_part_bc_comp   = scal_bc_comp + 1
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
   temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
-  diff_coeff_bc_comp = tran_bc_comp
 
   !=======================================================
   ! Build multifabs for all the variables

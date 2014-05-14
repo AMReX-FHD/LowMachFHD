@@ -14,8 +14,7 @@ module stochastic_mass_fluxdiv_module
   use correction_flux_module
   use multifab_zero_edgeval_module
   use probin_common_module, only: k_B
-  use probin_multispecies_module, only: nspecies, correct_flux, diff_coeff_bc_comp, &
-       is_nonisothermal, variance_parameter
+  use probin_multispecies_module, only: nspecies, correct_flux, is_nonisothermal, variance_parameter
 
   implicit none
 
@@ -86,7 +85,7 @@ contains
     call compute_Lonsager(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,Lonsager,the_bc_level)
                   
     ! compute face-centered cholesky factor of cell-centered cholesky factored Lonsager^(1/2)
-    call average_cc_to_face(nlevs,Lonsager,Lonsager_fc,1,diff_coeff_bc_comp,nspecies**2,the_bc_level,.false.)
+    call average_cc_to_face(nlevs,Lonsager,Lonsager_fc,1,tran_bc_comp,nspecies**2,the_bc_level,.false.)
 
     ! compute variance X cholesky-Lonsager-face X W(0,1) 
     do n=1,nlevs
