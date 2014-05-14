@@ -13,6 +13,7 @@ subroutine main_driver()
   use bc_module
   use analysis_module
   use analyze_spectra_module
+  use eos_check_module
   use stochastic_mass_fluxdiv_module
   use ParallelRNGs 
   use convert_mass_variables_module
@@ -224,8 +225,11 @@ subroutine main_driver()
   ! initialize the time 
   time = start_time    
 
-  ! initialize rho and Temp
+  ! initialize rho
   call init_rho(rho,dx,time,the_bc_tower%bc_tower_array)
+  call eos_check(mla,rho)
+
+  ! initialize Temp
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
 
   ! initialize velocity here, prefereably with a subroutine

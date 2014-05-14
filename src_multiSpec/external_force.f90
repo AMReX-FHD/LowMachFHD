@@ -69,7 +69,7 @@ contains
     D12    = Dbar(1)
     D23    = Dbar(3)
    
-    select case(init_type)
+    select case (abs(init_type))
     
     !==== for m1 = m2 = m and also for m1 != m2 != m, 2 species ====!
     case(4) 
@@ -145,7 +145,7 @@ contains
     D12    = Dbar(1)
     D23    = Dbar(3)
     
-    select case(init_type)
+    select case (abs(init_type))
     
     !==== for m1 = m2 = m and m1 != m2 != m, 2 species ====!
     case(4)

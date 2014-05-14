@@ -8,7 +8,7 @@ module init_module
   use multifab_coefbc_module
   use probin_common_module, only: prob_lo, prob_hi
   use probin_multispecies_module, only: alpha1, beta, delta, init_type, sigma, Dbar, &
-       T_init, rho_init, nspecies, rho_part_bc_comp, molmass
+       T_init, rho_init, nspecies, rho_part_bc_comp, molmass, rhobar
  
   implicit none
 
@@ -83,13 +83,13 @@ contains
     real(kind=dp_t)  :: time 
  
     ! local varables
-    integer          :: i,j
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,rho_loc,L(2)
+    integer          :: i,j,n
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,rho_loc,L(2),sum
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
     ! for specific box, now start loop over alloted cells     
-    select case(init_type) 
+    select case (abs(init_type))
 
     case(0) 
     !============================================================
@@ -117,6 +117,23 @@ contains
              rho(i,j,1:nspecies) = rho_init(1,1:nspecies)
           else
              rho(i,j,1:nspecies) = rho_init(2,1:nspecies)
+          end if
+
+          ! enforce low mach constraint by overwriting final rho_i
+          if (init_type .eq. -1) then
+             if (rsq .lt. L(1)*L(2)*0.1d0) then
+                sum = 0
+                do n=1,nspecies-1
+                   sum = sum + rho_init(1,n)/rhobar(n)
+                end do
+                rho(i,j,nspecies) = rhobar(nspecies)*(1.d0 - sum)
+             else
+                sum = 0
+                do n=1,nspecies-1
+                   sum = sum + rho_init(2,n)/rhobar(n)
+                end do
+                rho(i,j,nspecies) = rhobar(nspecies)*(1.d0 - sum)
+             end if
           end if
     
        end do
@@ -237,7 +254,7 @@ contains
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
     ! for specific box, now start loop over alloted cells     
-    select case(init_type) 
+    select case (abs(init_type))
     
     case(0) 
     !================================================================================
@@ -452,7 +469,7 @@ contains
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
     ! for specific box, now start loop over alloted cells     
-    select case(init_type) 
+    select case (abs(init_type)) 
 
     case(0) 
     !=========================================================================
@@ -536,7 +553,7 @@ contains
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
     ! for specific box, now start loop over alloted cells     
-    select case(init_type) 
+    select case (abs(init_type)) 
     
     case(0) 
     !================================================================================
