@@ -1,10 +1,10 @@
 f90sources += advance_timestep.f90
 f90sources += advance_timestep_overdamped.f90
-f90sources += analysis.f90
 f90sources += analyze_spectra_binary.f90
 f90sources += checkpoint.f90
 f90sources += convert_variables.f90
 f90sources += diffusive_rhoc_fluxdiv.f90
+f90sources += eos_check.f90
 f90sources += fill_rho_ghost_cells.f90
 f90sources += fill_umac_ghost_cells.f90
 f90sources += init.f90

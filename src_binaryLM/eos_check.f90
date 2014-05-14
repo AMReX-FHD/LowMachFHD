@@ -1,4 +1,4 @@
-module analysis_module
+module eos_check_module
 
   use multifab_module
   use ml_layout_module
@@ -102,4 +102,4 @@ contains
 
   end subroutine eos_check_3d
 
-end module analysis_module
+end module eos_check_module

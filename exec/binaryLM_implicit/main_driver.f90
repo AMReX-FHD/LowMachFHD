@@ -15,7 +15,7 @@ subroutine main_driver()
   use convert_variables_module
   use convert_m_to_umac_module
   use div_and_grad_module
-  use analysis_module
+  use eos_check_module
   use sum_momenta_module
   use stochastic_m_fluxdiv_module
   use stochastic_rhoc_fluxdiv_module
