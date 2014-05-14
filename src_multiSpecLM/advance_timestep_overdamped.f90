@@ -48,8 +48,9 @@ module advance_timestep_overdamped_module
 
 contains
 
-  subroutine advance_timestep_overdamped(mla,umac,sold,snew,s_fc,prim,pres, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower)
+  subroutine advance_timestep_overdamped(mla,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
+                                         eta,eta_ed,kappa,dx,dt,time,the_bc_tower, &
+                                         algorithm_type)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -67,6 +68,7 @@ contains
     type(multifab) , intent(inout) :: kappa(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    integer        , intent(in   ) :: algorithm_type ! 1 = 1 RNG; 2 = 2 RNGs
 
     ! local
     type(multifab) ::    s_update(mla%nlevel)
@@ -80,13 +82,10 @@ contains
     type(multifab) ::        gradp(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
-    integer :: algorithm_type  ! 1 = 1 RNG; 2 = 2 RNGs
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs
 
     real(kind=dp_t), allocatable :: weights(:)
-
-    algorithm_type = 1
 
     if (algorithm_type .eq. 1) then
        allocate(weights(1))
