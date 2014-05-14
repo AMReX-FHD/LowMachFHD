@@ -1,7 +1,7 @@
 module matrix_utilities
 
   use bl_types
-  use probin_multispecies_module, only: nspecies
+  use probin_multispecies_module, only: nspecies, molmass
 
   implicit none
 
@@ -15,11 +15,10 @@ contains
     ! num_iterations is the number of terms in the sum to use: 3-5 are reasonable values
     ! D_MS is matrix of Maxwell-Stefan binary diffusion coefficient
     ! chi is the multispecies diffusion matrix
-    ! Wk is vector of molecular weights (molecular masses will work as well)
     ! Xk is mole fractions --- MUST NOT BE ZERO
-    subroutine Dbar2chi_iterative(num_iterations,D_MS,Wk,Xk,chi)
+    subroutine Dbar2chi_iterative(num_iterations,D_MS,Xk,chi)
       integer, intent(in) :: num_iterations
-      real(kind=dp_t), intent(in) :: Xk(1:nspecies), Wk(1:nspecies), D_MS(1:nspecies,1:nspecies)
+      real(kind=dp_t), intent(in) :: Xk(1:nspecies), D_MS(1:nspecies,1:nspecies)
       real(kind=dp_t), intent(out) :: chi(1:nspecies,1:nspecies)
       
       ! Local variables
@@ -43,12 +42,12 @@ contains
       ! molecular weight of mixture - EGLIB
       Mwmix = 0.0d0
       do ii = 1, nspecies
-       MWmix = MWmix + Xkp(ii)*Wk(ii)
+       MWmix = MWmix + Xkp(ii)*molmass(ii)
       end do
 
       ! mass fractions correction - EGLIB
       do ii = 1, nspecies
-       Ykp(ii) = Wk(ii)/MWmix*Xkp(ii)
+       Ykp(ii) = molmass(ii)/MWmix*Xkp(ii)
       end do
 
       ! Find Di matrix 

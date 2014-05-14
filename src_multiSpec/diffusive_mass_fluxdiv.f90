@@ -22,14 +22,13 @@ module diffusive_mass_fluxdiv_module
 
 contains
 
-  subroutine diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchi,Gama,&
+  subroutine diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,rhoWchi,Gama,&
                                     diff_fluxdiv,Temp,zeta_by_Temp,dx,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rho_tot(:)
     type(multifab) , intent(in   )  :: molarconc(:)
-    real(kind=dp_t), intent(in   )  :: molmass(:) 
     type(multifab) , intent(in   )  :: rhoWchi(:)
     type(multifab) , intent(in   )  :: Gama(:)
     type(multifab) , intent(inout)  :: diff_fluxdiv(:)

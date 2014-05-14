@@ -40,7 +40,7 @@
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
  rho_in(1,1:2) = 0.35 1.25        ! inside the circle
  rho_in(2,1:2) = 0.8 0.5          ! outside the circle  
- molmass_in(1:2) = 1.0 2.0        ! molar mass of n-species
+ molmass(1:2) = 1.0 2.0        ! molar mass of n-species
  Dbar_in(1:1) = 1.0               ! SM diffusion constant arranged in lower-triangle
  Dtherm_in(1:2) = 1.0 -1.0        ! thermo-diffusion constant (sums to zero)
  T_in(1:2) = 1.0 2.0            ! Upper and lower plate temperature

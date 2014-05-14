@@ -38,7 +38,7 @@ contains
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(in   ) :: rho(:)
+    type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: rho_tot(:)
     real(kind=dp_t), intent(in   ) :: molmass(:)
     type(multifab) , intent(inout) :: diff_fluxdiv(:)
@@ -88,10 +88,10 @@ contains
        call setval(phi(n),0.d0)
     end do
 
-    call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,molmass, &
+    call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot, &
                                       diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp, &
                                       dt,0.d0,dx,weights, &
-                                      n_rngs,the_bc_level)
+                                      n_rngs,the_bc_tower%bc_tower_array)
 
     ! set mac_rhs to -S
     ! -S = -sum (F_i / rhobar_i)

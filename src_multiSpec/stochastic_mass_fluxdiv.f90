@@ -25,14 +25,13 @@ module stochastic_mass_fluxdiv_module
   
 contains
   
-  subroutine stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,&
+  subroutine stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,&
                                      Gama,stoch_W_fc,stoch_fluxdiv,dx,dt,weights,the_bc_level)
 
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
     type(multifab) , intent(in   )   :: rho_tot(:)
     type(multifab) , intent(in   )   :: molarconc(:)
-    real(kind=dp_t), intent(in   )   :: molmass(nspecies) 
     type(multifab) , intent(in   )   :: molmtot(:)
     type(multifab) , intent(in   )   :: chi(:)
     type(multifab) , intent(in   )   :: Gama(:)
@@ -82,7 +81,7 @@ contains
     end do
     
     ! compute cell-centered cholesky-factored Lonsager^(1/2)
-    call compute_Lonsager(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,Gama,Lonsager,the_bc_level)
+    call compute_Lonsager(mla,rho,rho_tot,molarconc,molmtot,chi,Gama,Lonsager,the_bc_level)
                   
     ! compute face-centered cholesky factor of cell-centered cholesky factored Lonsager^(1/2)
     call average_cc_to_face(nlevs,Lonsager,Lonsager_fc,1,tran_bc_comp,nspecies**2,the_bc_level,.false.)

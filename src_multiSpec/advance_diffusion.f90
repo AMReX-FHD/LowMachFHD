@@ -16,12 +16,11 @@ module advance_diffusion_module
 
 contains
 
-  subroutine advance_diffusion(mla,rho,rho_tot,molmass,Temp,dx,dt,time,the_bc_level)
+  subroutine advance_diffusion(mla,rho,rho_tot,Temp,dx,dt,time,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: rho_tot(:)
-    real(kind=dp_t), intent(in   ) :: molmass(nspecies) 
     type(multifab) , intent(in   ) :: Temp(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
@@ -97,7 +96,7 @@ contains
       if(use_stoch) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,molmass,&
+      call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,&
                                         diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
@@ -132,7 +131,7 @@ contains
       if(use_stoch) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,molmass,&
+      call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,&
                                         diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
@@ -158,7 +157,7 @@ contains
       stage_time = time + dt  
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,molmass,&
+      call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,&
                                         diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
@@ -195,7 +194,7 @@ contains
       weights(2) = 0.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,molmass,&
+      call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,&
                                         diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
@@ -223,7 +222,7 @@ contains
       weights(2) = sqrt(0.5d0) 
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,molmass,&
+      call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,&
                                         diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
@@ -260,7 +259,7 @@ contains
       weights(2) = (2*sqrt(2.0d0)+sqrt(3.0d0))/5.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,molmass,&
+      call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,&
                                         diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
@@ -288,7 +287,7 @@ contains
       weights(2) = (-4*sqrt(2.0d0)+3*sqrt(3.0d0))/5.0d0 
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,molmass,&
+      call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,&
                                         diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
@@ -323,7 +322,7 @@ contains
       weights(2) = (sqrt(2.0d0)-2*sqrt(3.0d0))/10.0d0
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,molmass,&
+      call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,&
                                         diff_fluxdivnew,stoch_fluxdiv,stoch_W_fc,Temp,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)

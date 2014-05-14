@@ -5,8 +5,7 @@ module external_force_module
   use multifab_module
   use ml_layout_module
   use multifab_fill_ghost_module
-  use probin_multispecies_module, only: dbar_in, init_type, sigma, beta, alpha1, delta, &
-       molmass_in
+  use probin_multispecies_module, only: dbar_in, init_type, sigma, beta, alpha1, delta, molmass
   use probin_common_module, only: prob_lo, prob_hi
 
   implicit none
@@ -104,14 +103,14 @@ contains
            x = prob_lo(1) + (dble(i)+0.5d0) * dx(1) - 0.5d0
  
              r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2)
-             r_temp  = (alpha1*(2.0d0*alpha1*(D12*molmass_in(1) - D23*molmass_in(2))*(r - sigma)*(r +& 
-                       sigma) - D12*dexp(r**2/(2.0d0*sigma**2))*molmass_in(1)*(r**2 - 2.0d0*sigma**2)))/&
-                       (dexp(r**2/sigma**2)*molmass_in(1)*sigma**4)
+             r_temp  = (alpha1*(2.0d0*alpha1*(D12*molmass(1) - D23*molmass(2))*(r - sigma)*(r +& 
+                       sigma) - D12*dexp(r**2/(2.0d0*sigma**2))*molmass(1)*(r**2 - 2.0d0*sigma**2)))/&
+                       (dexp(r**2/sigma**2)*molmass(1)*sigma**4)
 
              r_temp1 = (dexp(-r**2/(2.0d0*sigma**2) - beta*time)*(-(beta*D12*delta*dexp(r**2/(2.0d0*&
-                       sigma**2))*molmass_in(1)*sigma**4) + alpha1*delta*(D12*(D12 - D23)*molmass_in(1)*&
-                       r**2 + 2.0d0*D12*(-D12 + D23)*molmass_in(1)*sigma**2 + beta*(D12*molmass_in(1) -& 
-                       D23*molmass_in(2))*sigma**4)))/(D12*molmass_in(1)*sigma**4)
+                       sigma**2))*molmass(1)*sigma**4) + alpha1*delta*(D12*(D12 - D23)*molmass(1)*&
+                       r**2 + 2.0d0*D12*(-D12 + D23)*molmass(1)*sigma**2 + beta*(D12*molmass(1) -& 
+                       D23*molmass(2))*sigma**4)))/(D12*molmass(1)*sigma**4)
             
              fluxdiv(i,j,1) = fluxdiv(i,j,1) + r_temp 
              fluxdiv(i,j,2) = fluxdiv(i,j,2) + r_temp1
@@ -185,14 +184,14 @@ contains
    
               r = sqrt((x-L(1)*0.5d0)**2 + (y-L(2)*0.5d0)**2 + (z-L(3)*0.5d0)**2)
               
-               r_temp = (alpha1*(-(D12*dexp(r**2/(2.0d0*sigma**2))*molmass_in(1)*(r**2 - 3.0d0*sigma**2)) +& 
-                        alpha1*(D12*molmass_in(1) - D23*molmass_in(2))*(2.0d0*r**2 - 3.0d0*sigma**2)))/&
-                        (dexp(r**2/sigma**2)*molmass_in(1)*sigma**4) 
+               r_temp = (alpha1*(-(D12*dexp(r**2/(2.0d0*sigma**2))*molmass(1)*(r**2 - 3.0d0*sigma**2)) +& 
+                        alpha1*(D12*molmass(1) - D23*molmass(2))*(2.0d0*r**2 - 3.0d0*sigma**2)))/&
+                        (dexp(r**2/sigma**2)*molmass(1)*sigma**4) 
                        
               r_temp1 = (dexp(-r**2/(2.0d0*sigma**2) - beta*time)*(-(beta*D12*delta*dexp(r**2/(2.0d0*&
-                        sigma**2))*molmass_in(1)*sigma**4) + alpha1*delta*(D12*(D12 - D23)*molmass_in(1)*&
-                        r**2 + 3.0d0*D12*(-D12 + D23)*molmass_in(1)*sigma**2 + beta*(D12*molmass_in(1) -& 
-                        D23*molmass_in(2))*sigma**4)))/(D12*molmass_in(1)*sigma**4)       
+                        sigma**2))*molmass(1)*sigma**4) + alpha1*delta*(D12*(D12 - D23)*molmass(1)*&
+                        r**2 + 3.0d0*D12*(-D12 + D23)*molmass(1)*sigma**2 + beta*(D12*molmass(1) -& 
+                        D23*molmass(2))*sigma**4)))/(D12*molmass(1)*sigma**4)       
  
               fluxdiv(i,j,k,1) = fluxdiv(i,j,k,1) + r_temp 
               fluxdiv(i,j,k,2) = fluxdiv(i,j,k,2) + r_temp1 

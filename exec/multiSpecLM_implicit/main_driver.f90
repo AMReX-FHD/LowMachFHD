@@ -19,7 +19,7 @@ subroutine main_driver()
        bc_lo, bc_hi, probin_common_init
   use probin_multispecies_module, only: nspecies, rho_in, c_bc, cfl1, chi, &
        max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
-       start_time, molmass_in, temp_bc_comp, timeinteg_type, use_stoch, variance_parameter, &
+       start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_parameter, &
        probin_multispecies_init
  
   implicit none
@@ -42,7 +42,6 @@ subroutine main_driver()
   type(multifab), allocatable  :: rho_tot(:)
   type(multifab), allocatable  :: rho_exact(:)
   type(multifab), allocatable  :: Temp(:)   ! Temperature 
-  real(kind=dp_t),allocatable  :: molmass(:) 
   real(kind=dp_t),allocatable  :: covW(:,:) 
   real(kind=dp_t),allocatable  :: covW_theo(:,:) 
   real(kind=dp_t),allocatable  :: wiwjt(:,:) 
@@ -78,7 +77,6 @@ subroutine main_driver()
   allocate(rho_tot(nlevs))
   allocate(rho_exact(nlevs))
   allocate(Temp(nlevs))
-  allocate(molmass(nspecies))
   allocate(covW(nspecies,nspecies))
   allocate(covW_theo(nspecies,nspecies))
   allocate(wiwjt(nspecies,nspecies))
@@ -201,7 +199,6 @@ subroutine main_driver()
   !=====================================================================
   ! Initialize values
   !=====================================================================
-  molmass(1:nspecies) = molmass_in(1:nspecies)  
 
   ! initialize the time 
   time = start_time    
@@ -317,7 +314,7 @@ subroutine main_driver()
       end if
 
       ! advance the solution by dt
-      call advance_diffusion(mla,rho,rho_tot,molmass,Temp,dx,dt,time, &
+      call advance_diffusion(mla,rho,rho_tot,Temp,dx,dt,time, &
                              the_bc_tower%bc_tower_array)
       ! increment simulation time
       istep = istep + 1
@@ -447,7 +444,6 @@ subroutine main_driver()
   deallocate(rho)
   deallocate(rho_tot)
   deallocate(Temp)
-  deallocate(molmass)
   deallocate(covW)
   deallocate(covW_theo)
   deallocate(wiwjt)

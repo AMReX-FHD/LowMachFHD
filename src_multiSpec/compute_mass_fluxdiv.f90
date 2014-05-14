@@ -21,7 +21,7 @@ module compute_mass_fluxdiv_module
 
 contains
 
-  subroutine compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,molmass, &
+  subroutine compute_mass_fluxdiv_wrapper(mla,rho,rho_tot, &
                                           diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp, &
                                           dt,stage_time,dx,weights, &
                                           n_rngs,the_bc_level)
@@ -29,7 +29,6 @@ contains
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
     type(multifab) , intent(inout)   :: rho_tot(:)
-    real(kind=dp_t), intent(in   )   :: molmass(nspecies) 
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: stoch_W_fc(:,:,:)
@@ -64,7 +63,7 @@ contains
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
     end do
 
-    call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+    call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,Gama,D_MS,&
                               D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
                               zeta_by_Temp,dt,stage_time,dx,weights,&
                               n_rngs,the_bc_level)
@@ -81,7 +80,7 @@ contains
 
   end subroutine compute_mass_fluxdiv_wrapper
 
-  subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,molmass,chi,Gama,D_MS,&
+  subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,Gama,D_MS,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,stoch_W_fc,Temp,&
                                   zeta_by_Temp,dt,stage_time,dx,weights,&
                                   n_rngs,the_bc_level)
@@ -91,7 +90,6 @@ contains
     type(multifab) , intent(inout)   :: rho_tot(:)
     type(multifab) , intent(inout)   :: molarconc(:)
     type(multifab) , intent(inout)   :: molmtot(:)
-    real(kind=dp_t), intent(in   )   :: molmass(nspecies) 
     type(multifab) , intent(inout)   :: chi(:)
     type(multifab) , intent(inout)   :: Gama(:)
     type(multifab) , intent(inout)   :: D_MS(:)
@@ -128,27 +126,27 @@ contains
  
     ! compute molmtot,molarconc & rho_tot (primitive variables) for 
     ! each-cell from rho(conserved) 
-    call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,molmass,the_bc_level)
+    call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,the_bc_level)
       
     ! populate D_MS and Gama 
     call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,D_therm,Gama,the_bc_level)
 
     ! compute chi 
-    call compute_chi(mla,rho,rho_tot,molarconc,molmass,chi,D_MS,D_therm,Temp,zeta_by_Temp,the_bc_level)
+    call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,D_therm,Temp,zeta_by_Temp,the_bc_level)
       
     ! compute rho*W*chi
-    call compute_rhoWchi(mla,rho,rho_tot,molarconc,molmass,molmtot,chi,rhoWchi,the_bc_level)
+    call compute_rhoWchi(mla,rho,rho_tot,molarconc,molmtot,chi,rhoWchi,the_bc_level)
 
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
-    call diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,rhoWchi,Gama,&
+    call diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,rhoWchi,Gama,&
                                 diff_fluxdiv,Temp,zeta_by_Temp,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
 
     ! compute stochastic fluxdiv 
-    if(use_stoch) call stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmass,&
+    if(use_stoch) call stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,&
                                                molmtot,chi,Gama,stoch_W_fc,stoch_fluxdiv,&
                                                dx,dt,weights,the_bc_level)
       

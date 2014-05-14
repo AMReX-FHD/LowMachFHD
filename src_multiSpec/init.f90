@@ -8,7 +8,7 @@ module init_module
   use multifab_coefbc_module
   use probin_common_module, only: prob_lo, prob_hi
   use probin_multispecies_module, only: alpha1, beta, delta, init_type, sigma, Dbar_in, &
-       T_in, rho_in, nspecies, rho_part_bc_comp, molmass_in
+       T_in, rho_in, nspecies, rho_part_bc_comp, molmass
  
   implicit none
 
@@ -188,7 +188,7 @@ contains
             rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2
             w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
             w2  =  delta*dexp(-beta*time)
-            rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
+            rhot = 1.0d0 + (molmass(2)*Dbar_in(3)/(molmass(1)*Dbar_in(1))-1.0d0)*w1
             rho(i,j,1) = rhot*w1
             rho(i,j,2) = rhot*w2 
             rho(i,j,3) = rhot-rho(i,j,1)-rho(i,j,2)
@@ -371,7 +371,7 @@ contains
               rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2 + (z-L(3)*half)**2
               w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
               w2  =  delta*dexp(-beta*time)
-              rhot = 1.0d0 + (molmass_in(2)*Dbar_in(3)/(molmass_in(1)*Dbar_in(1))-1.0d0)*w1
+              rhot = 1.0d0 + (molmass(2)*Dbar_in(3)/(molmass(1)*Dbar_in(1))-1.0d0)*w1
               rho(i,j,k,1) = rhot*w1
               rho(i,j,k,2) = rhot*w2
               rho(i,j,k,3) = rhot-rho(i,j,k,1)-rho(i,j,k,2)
