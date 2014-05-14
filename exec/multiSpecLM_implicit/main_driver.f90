@@ -24,6 +24,7 @@ subroutine main_driver()
        max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
        start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_parameter, &
        probin_multispecies_init
+  use probin_gmres_module, only: probin_gmres_init
  
   implicit none
 
@@ -65,6 +66,7 @@ subroutine main_driver()
 
   call probin_common_init()
   call probin_multispecies_init() 
+  call probin_gmres_init()
   
   if(.true.) then ! Confirm that gcc read the input file correctly
     write(*,*) "rho_init=", rho_init(1:2,1:nspecies)

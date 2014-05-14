@@ -48,3 +48,7 @@
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature
  
 /
+
+&probin_gmres
+
+/
