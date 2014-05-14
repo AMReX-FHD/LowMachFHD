@@ -3,7 +3,7 @@ module fluid_model_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
-  use probin_multispecies_module, only: nspecies, is_ideal_mixture, Dbar_in, Dtherm_in
+  use probin_multispecies_module, only: nspecies, is_ideal_mixture, Dbar, Dtherm
  
   implicit none
 
@@ -138,7 +138,7 @@ contains
     do row=1, nspecies  
        do column=1, row-1
           n=n+1
-          D_MS(row, column) = Dbar_in(n)        ! SM-diffcoeff's read from input
+          D_MS(row, column) = Dbar(n)        ! SM-diffcoeff's read from input
           D_MS(column, row) = D_MS(row, column) ! symmetric
          
           if(is_ideal_mixture) then 
@@ -150,7 +150,7 @@ contains
           Gama(column, row) = Gama(row, column) ! symmetric
        end do
        D_MS(row, row) = 0.d0                    ! as self-diffusion is zero
-       D_therm(row)   = Dtherm_in(row)          ! thermal diffcoeff's read from input
+       D_therm(row)   = Dtherm(row)          ! thermal diffcoeff's read from input
 
        if(is_ideal_mixture) then
           Gama(row, row) = 1.d0                 ! set to unit matrix for time being

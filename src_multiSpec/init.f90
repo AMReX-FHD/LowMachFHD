@@ -7,7 +7,7 @@ module init_module
   use multifab_physbc_module
   use multifab_coefbc_module
   use probin_common_module, only: prob_lo, prob_hi
-  use probin_multispecies_module, only: alpha1, beta, delta, init_type, sigma, Dbar_in, &
+  use probin_multispecies_module, only: alpha1, beta, delta, init_type, sigma, Dbar, &
        T_init, rho_init, nspecies, rho_part_bc_comp, molmass
  
   implicit none
@@ -149,8 +149,8 @@ contains
             x = prob_lo(1) + (dble(i)+half) * dx(1) - half*(prob_lo(1)+prob_hi(1))
         
             rsq = x**2 + y**2
-            rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
-            rho(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time))
+            rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time))
+            rho(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time))
        
          end do
       end do
@@ -166,8 +166,8 @@ contains
             x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
             rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2
-            rhot = 1.0d0 + alpha1/(4.0d0*M_PI*Dbar_in(1))*dexp(-rsq/(4.0d0*Dbar_in(1)))
-            rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)*dexp(-rsq/(4.0d0*Dbar_in(1)*time)-&
+            rhot = 1.0d0 + alpha1/(4.0d0*M_PI*Dbar(1))*dexp(-rsq/(4.0d0*Dbar(1)))
+            rho(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time)-&
                          beta*time)*rhot
             rho(i,j,2) = rhot - rho(i,j,1)
 
@@ -176,8 +176,8 @@ contains
 
     case(5)
     !==================================================================================
-    ! Initializing m2=m3, D12=D13 where Dbar_in(1)=D12, Dbar_in(2)=D13, 
-    ! Dbar_in(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
+    ! Initializing m2=m3, D12=D13 where Dbar(1)=D12, Dbar(2)=D13, 
+    ! Dbar(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
     ! (to benchmark eqn1) Initializing rho1, rho2=Gaussian and rhototal has no-time dependence.
     !==================================================================================
     do j=lo(2),hi(2)
@@ -188,7 +188,7 @@ contains
             rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2
             w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
             w2  =  delta*dexp(-beta*time)
-            rhot = 1.0d0 + (molmass(2)*Dbar_in(3)/(molmass(1)*Dbar_in(1))-1.0d0)*w1
+            rhot = 1.0d0 + (molmass(2)*Dbar(3)/(molmass(1)*Dbar(1))-1.0d0)*w1
             rho(i,j,1) = rhot*w1
             rho(i,j,2) = rhot*w2 
             rho(i,j,3) = rhot-rho(i,j,1)-rho(i,j,2)
@@ -317,10 +317,10 @@ contains
               x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
         
               rsq = x**2 + y**2 + z**2
-              rho(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*M_PI*&
-                             Dbar_in(1)*time)**1.5d0
-              rho(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar_in(1)*time))/(4.0d0*&
-                             M_PI*Dbar_in(1)*time)**1.5d0
+              rho(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar(1)*time))/(4.0d0*M_PI*&
+                             Dbar(1)*time)**1.5d0
+              rho(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar(1)*time))/(4.0d0*&
+                             M_PI*Dbar(1)*time)**1.5d0
        
            end do
         end do
@@ -342,11 +342,11 @@ contains
               x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
               rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2 + (z-L(3)*half)**2
-              rhot = 1.0d0 + alpha1*dexp(-rsq/(4.0d0*Dbar_in(1)))/(4.0d0*M_PI*&
-                     Dbar_in(1))**1.5d0
+              rhot = 1.0d0 + alpha1*dexp(-rsq/(4.0d0*Dbar(1)))/(4.0d0*M_PI*&
+                     Dbar(1))**1.5d0
            
-              rho(i,j,k,1) = 1.0d0/(4.0d0*M_PI*Dbar_in(1)*time)**1.5d0*dexp(-rsq/&
-                             (4.0d0*Dbar_in(1)*time) - time*beta)*rhot
+              rho(i,j,k,1) = 1.0d0/(4.0d0*M_PI*Dbar(1)*time)**1.5d0*dexp(-rsq/&
+                             (4.0d0*Dbar(1)*time) - time*beta)*rhot
               rho(i,j,k,2) = rhot - rho(i,j,k,1) 
 
            end do
@@ -356,7 +356,7 @@ contains
 
      case(5)
      !==================================================================================
-     ! Initializing m2=m3, D12=D13 where Dbar_in(1)=D12, Dbar_in(2)=D13, Dbar_in(3)=D23, 
+     ! Initializing m2=m3, D12=D13 where Dbar(1)=D12, Dbar(2)=D13, Dbar(3)=D23, 
      ! Grad(w2)=0, manufactured solution for rho1 and rho2 
      !==================================================================================
 
@@ -371,7 +371,7 @@ contains
               rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2 + (z-L(3)*half)**2
               w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
               w2  =  delta*dexp(-beta*time)
-              rhot = 1.0d0 + (molmass(2)*Dbar_in(3)/(molmass(1)*Dbar_in(1))-1.0d0)*w1
+              rhot = 1.0d0 + (molmass(2)*Dbar(3)/(molmass(1)*Dbar(1))-1.0d0)*w1
               rho(i,j,k,1) = rhot*w1
               rho(i,j,k,2) = rhot*w2
               rho(i,j,k,3) = rhot-rho(i,j,k,1)-rho(i,j,k,2)

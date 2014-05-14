@@ -5,7 +5,7 @@ module external_force_module
   use multifab_module
   use ml_layout_module
   use multifab_fill_ghost_module
-  use probin_multispecies_module, only: dbar_in, init_type, sigma, beta, alpha1, delta, molmass
+  use probin_multispecies_module, only: Dbar, init_type, sigma, beta, alpha1, delta, molmass
   use probin_common_module, only: prob_lo, prob_hi
 
   implicit none
@@ -66,8 +66,8 @@ contains
     real(kind=dp_t)  :: x,y,r,L(2),D12,D23,r_temp,r_temp1
 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
-    D12    = Dbar_in(1)
-    D23    = Dbar_in(3)
+    D12    = Dbar(1)
+    D23    = Dbar(3)
    
     select case(init_type)
     
@@ -142,8 +142,8 @@ contains
     real(kind=dp_t)  :: x,y,z,r,L(3),D12,D23,r_temp,r_temp1
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
-    D12    = Dbar_in(1)
-    D23    = Dbar_in(3)
+    D12    = Dbar(1)
+    D23    = Dbar(3)
     
     select case(init_type)
     

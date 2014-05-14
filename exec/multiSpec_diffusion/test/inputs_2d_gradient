@@ -69,8 +69,8 @@
 
  ! Fluid parameters:
  molmass(1:2) = 1.0 0.75   ! molar mass of n-species
- Dbar_in(1) = 1.0 ! SM diffusion constant arranged in lower-triangle
- Dtherm_in(1:2) = 0.0 4800    ! thermo-diffusion constant (sums to zero)
+ Dbar(1) = 1.0 ! SM diffusion constant arranged in lower-triangle
+ Dtherm(1:2) = 0.0 4800    ! thermo-diffusion constant (sums to zero)
  Press    = 1.0                   ! Pressure
 
  ! BCs:

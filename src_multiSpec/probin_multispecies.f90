@@ -12,8 +12,8 @@ module probin_multispecies_module
   real(kind=dp_t)    :: rho_init(2,max_species)       ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: T_init(2)                     ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   real(kind=dp_t)    :: molmass(max_species)     ! molar masses for nspecies
-  real(kind=dp_t)    :: Dbar_in(max_element)        ! SM diffusion constant  
-  real(kind=dp_t)    :: Dtherm_in(max_element)          ! thermo-diffusion coefficients  
+  real(kind=dp_t)    :: Dbar(max_element)        ! SM diffusion constant  
+  real(kind=dp_t)    :: Dtherm(max_element)          ! thermo-diffusion coefficients  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   real(kind=dp_t)    :: variance_parameter,fraction_tolerance  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, temp_bc_comp ! not input: populated at main 
@@ -40,8 +40,8 @@ module probin_multispecies_module
   namelist /probin_multispecies/ use_lapack   
   namelist /probin_multispecies/ rho_init
   namelist /probin_multispecies/ molmass
-  namelist /probin_multispecies/ Dbar_in
-  namelist /probin_multispecies/ Dtherm_in
+  namelist /probin_multispecies/ Dbar
+  namelist /probin_multispecies/ Dtherm
   namelist /probin_multispecies/ T_init
   namelist /probin_multispecies/ c_bc              ! boundary conditions (dir,lohi,species)
 
@@ -84,8 +84,8 @@ contains
     use_lapack         = .true.
     rho_init             = 1.0d0
     molmass            = 1.0d0
-    Dbar_in            = 1.0d0
-    Dtherm_in          = 1.0d0
+    Dbar            = 1.0d0
+    Dtherm          = 1.0d0
     T_init               = 1.0d0
     c_bc               = 0.d0
  
@@ -146,14 +146,14 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) molmass
-       case ('--Dbar_in')
+       case ('--Dbar')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) Dbar_in
-       case ('--Dtherm_in')
+          read(fname, *) Dbar
+       case ('--Dtherm')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) Dtherm_in
+          read(fname, *) Dtherm
        case ('--Press')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
