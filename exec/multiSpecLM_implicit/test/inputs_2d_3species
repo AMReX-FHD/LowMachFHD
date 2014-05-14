@@ -25,11 +25,12 @@
  cfl1     = 0.1                   ! CFL number
  chi      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_parameter = 1E-6        ! parameter to set variance (=1/thickness and =1 ideal) 
+ variance_parameter = 0
  Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-14       ! to prevent division by zero 
  start_time  = 1.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
  !include_temp = .false.          ! right now no temperature equation
- init_type = 0                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
+ init_type = 1                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 3               ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=RK3
  correct_flux = .true.            ! correct flux to numeric roundoff
@@ -41,6 +42,7 @@
  rho_init(1,1:3) = 0.2 0.5 0.3      ! inside the circle
  rho_init(2,1:3) = 0.8 0.5 0.7      ! outside the circle  
  molmass(1:3) = 1.0 0.75 1.25  ! molar mass of n-species
+ rhobar(1:3) = 0.9 1.0 1.1     ! rhobar
  Dbar(1:3) = 1.0 2.0 2.0       ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:3) = 1.0 1.0 -2.0    ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature
