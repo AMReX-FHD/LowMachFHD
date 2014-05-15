@@ -17,7 +17,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_stag_module
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: nspecies
+  use probin_multispecies_module, only: nspecies, rhobar
 
   use analysis_module
 
@@ -62,6 +62,7 @@ contains
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: Temp(:)
     type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
+    ! diff/stoch_mass_fluxdiv can be built locally for overdamped
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
@@ -75,12 +76,10 @@ contains
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
 
-    type(multifab) ::  gmres_rhs_v(mla%nlevel,mla%dim)
-    type(multifab) ::        dumac(mla%nlevel,mla%dim)
-    type(multifab) ::        gradp(mla%nlevel,mla%dim)
-
-    ! build and fill here as needed
-    type(multifab) :: rho_fc(mla%nlevel,mla%dim)
+    type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
+    type(multifab) ::       dumac(mla%nlevel,mla%dim)
+    type(multifab) ::       gradp(mla%nlevel,mla%dim)
+    type(multifab) ::      rho_fc(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -105,10 +104,10 @@ contains
        call multifab_build(         dp(n),mla%la(n),1,1)
        call multifab_build(       divu(n),mla%la(n),1,0)
        do i=1,dm
-          call multifab_build_edge(    gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(          dumac(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(          gradp(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(         rho_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(      dumac(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(      gradp(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(     rho_fc(n,i),mla%la(n),nspecies,0,i)
        end do
     end do
 
@@ -172,30 +171,25 @@ contains
                                       dt,time,dx,weights, &
                                       n_rngs,the_bc_tower%bc_tower_array)
 
-!    ! add div(rho*chi grad c)^n to rhs_p
-!    call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
-!                                the_bc_tower%bc_tower_array,vel_bc_n)
 
-    ! add div(Psi^(1)) to rhs_p
-!    if (algorithm_type .eq. 1) then
-!       call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
-!                                    chi_fc,dx,dt,vel_bc_n,weights)
-!    else
-!       call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
-!                                    chi_fc,dx,0.5d0*dt,vel_bc_n,weights)  
-!    end if
+    do n=1,nlevs
+       do i=1,nspecies
+          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+       end do
+    end do
 
     ! reset s_update for all scalars to zero
     ! then, set s_update for rho1 to F^n = div(rho*chi grad c)^n + div(Psi^(1))
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
-       call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
-    end do
+       do i=1,nspecies
 
-!    ! multiply gmres_rhs_p by -S_fac, so gmres_rhs_p = -S^n
-!    do n=1,nlevs
-!       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
-!    end do
+          ! add fluxes here
+
+
+       end do
+    end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
     ! thus when we add A_0^n v^{n-1/2} to gmres_rhs_v and add div v^{n-1/2} to gmres_rhs_p

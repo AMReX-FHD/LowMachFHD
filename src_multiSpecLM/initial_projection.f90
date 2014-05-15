@@ -70,7 +70,7 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
  
-!    call build_bc_multifabs(mla)
+    call build_bc_multifabs(mla)
 
     do n=1,nlevs
        call multifab_build(mac_rhs(n),mla%la(n),1,0)
@@ -87,10 +87,14 @@ contains
        call setval(phi(n),0.d0)
     end do
 
+    ! reset inhomogeneous bc condition to deal with reservoirs
+!    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+!                                   the_bc_tower%bc_tower_array)
+
     call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot, &
-                                           diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
-                                           dt,0.d0,dx,weights, &
-                                           n_rngs,the_bc_tower%bc_tower_array)
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
+                                      dt,0.d0,dx,weights, &
+                                      n_rngs,the_bc_tower%bc_tower_array)
 
     ! set mac_rhs to -S
     ! -S = -sum div (F_i / rhobar_i)
@@ -105,17 +109,13 @@ contains
     ! build rhs = div(v^init) - S^0
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!    ! reset inhomogeneous bc condition to deal with reservoirs
-!    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
-!                                   the_bc_tower%bc_tower_array)
-
     do n=1,nlevs
        do i=1,dm
 !          ! to deal with reservoirs
 !          ! set normal velocity on physical domain boundaries
-!          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-!                                         the_bc_tower%bc_tower_array(n), &
-!                                         dx(n,:),vel_bc_n(n,:))
+          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:),vel_bc_n(n,:))
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
        end do
@@ -151,20 +151,20 @@ contains
     ! fill ghost cells
     do n=1,nlevs
        do i=1,dm
-!          ! set normal velocity on physical domain boundaries
-!          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-!                                         the_bc_tower%bc_tower_array(n), &
-!                                         dx(n,:),vel_bc_n(n,:))
-!          ! set transverse velocity behind physical boundaries
-!          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-!                                      the_bc_tower%bc_tower_array(n), &
-!                                      dx(n,:),vel_bc_t(n,:))
+          ! set normal velocity on physical domain boundaries
+          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:),vel_bc_n(n,:))
+          ! set transverse velocity behind physical boundaries
+          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+                                      the_bc_tower%bc_tower_array(n), &
+                                      dx(n,:),vel_bc_t(n,:))
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
        end do
     end do
 
-!    call destroy_bc_multifabs(mla)
+    call destroy_bc_multifabs(mla)
 
     do n=1,nlevs
        call multifab_destroy(mac_rhs(n))
