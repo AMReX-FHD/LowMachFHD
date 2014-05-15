@@ -34,15 +34,15 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,umac,rho,rho_tot,diff_fluxdiv,stoch_fluxdiv, &
+  subroutine initial_projection(mla,umac,rho,rho_tot,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                 Temp,dt,dx,n_rngs,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: rho_tot(:)
-    type(multifab) , intent(inout) :: diff_fluxdiv(:)
-    type(multifab) , intent(inout) :: stoch_fluxdiv(:)
+    type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     type(multifab) , intent(in   ) :: Temp(:)
     real(kind=dp_t), intent(in   ) :: dt
     real(kind=dp_t), intent(in   ) :: dx(:,:)
@@ -52,9 +52,9 @@ contains
     ! local
     integer :: i,dm,n,nlevs
 
-    type(multifab) ::   mac_rhs(mla%nlevel)
-    type(multifab) ::      divu(mla%nlevel)
-    type(multifab) ::       phi(mla%nlevel)
+    type(multifab) ::mac_rhs(mla%nlevel)
+    type(multifab) :: divu(mla%nlevel)
+    type(multifab) :: phi(mla%nlevel)
     type(multifab) :: rho_tot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rho_totinv_fc(mla%nlevel,mla%dim)
 
@@ -88,16 +88,16 @@ contains
     end do
 
     call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot, &
-                                      diff_fluxdiv,stoch_fluxdiv,Temp, &
-                                      dt,0.d0,dx,weights, &
-                                      n_rngs,the_bc_tower%bc_tower_array)
+                                           diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
+                                           dt,0.d0,dx,weights, &
+                                           n_rngs,the_bc_tower%bc_tower_array)
 
     ! set mac_rhs to -S
     ! -S = -sum div (F_i / rhobar_i)
     do n=1,nlevs
        do i=1,nspecies
-          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), diff_fluxdiv(n),i,1)
-          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
        end do
     end do
 

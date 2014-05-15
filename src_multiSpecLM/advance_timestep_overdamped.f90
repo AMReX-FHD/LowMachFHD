@@ -8,6 +8,8 @@ module advance_timestep_overdamped_module
   use mk_advective_s_fluxdiv_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
+  use stochastic_mass_fluxdiv_module
+  use compute_mass_fluxdiv_module
   use bds_module
   use gmres_module
   use div_and_grad_module
@@ -15,6 +17,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_stag_module
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
+  use probin_multispecies_module, only: nspecies
 
   use analysis_module
 
@@ -42,23 +45,25 @@ module advance_timestep_overdamped_module
 contains
 
   subroutine advance_timestep_overdamped(mla,umac,rho_old,rho_new,rho_tot_old,rho_tot_new, &
-                                         rho_fc,rho_tot_fc,pres,eta,eta_ed,kappa,dx,dt,time, &
-                                         the_bc_tower,n_rngs)
+                                         pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         dx,dt,time,the_bc_tower,n_rngs)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(in   ) :: rho_old(:)
+    type(multifab) , intent(inout) :: rho_old(:)
     type(multifab) , intent(inout) :: rho_new(:)
-    type(multifab) , intent(in   ) :: rho_tot_old(:)
+    type(multifab) , intent(inout) :: rho_tot_old(:)
     type(multifab) , intent(inout) :: rho_tot_new(:)
-    ! rho_fc and rho_tot_fc need to enter consistent with old and leave consistent with new
-    type(multifab) , intent(inout) :: rho_fc(:,:)
-    type(multifab) , intent(inout) :: rho_tot_fc(:,:)
     type(multifab) , intent(inout) :: pres(:)
     ! eta and kappa need to enter consistent with old and leave consistent with new
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
+    type(multifab) , intent(inout) :: Temp(:)
+    type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: n_rngs
@@ -74,6 +79,9 @@ contains
     type(multifab) ::        dumac(mla%nlevel,mla%dim)
     type(multifab) ::        gradp(mla%nlevel,mla%dim)
 
+    ! build and fill here as needed
+    type(multifab) :: rho_fc(mla%nlevel,mla%dim)
+
     integer :: i,dm,n,nlevs
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs
@@ -87,21 +95,20 @@ contains
     dm = mla%dim
 
     theta_alpha = 0.d0
-
-!    S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
     
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
-       call multifab_build(   s_update(n),mla%la(n),2    ,0)
-       call multifab_build(  bds_force(n),mla%la(n),2    ,1)
-       call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
-       call multifab_build(         dp(n),mla%la(n),1    ,1)
-       call multifab_build(       divu(n),mla%la(n),1    ,0)
+       call multifab_build(   s_update(n),mla%la(n),2,0)
+       call multifab_build(  bds_force(n),mla%la(n),2,1)
+       call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
+       call multifab_build(         dp(n),mla%la(n),1,1)
+       call multifab_build(       divu(n),mla%la(n),1,0)
        do i=1,dm
-          call multifab_build_edge(    gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
-          call multifab_build_edge(          dumac(n,i),mla%la(n),1    ,1,i)
-          call multifab_build_edge(          gradp(n,i),mla%la(n),1    ,0,i)
+          call multifab_build_edge(    gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(          dumac(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(          gradp(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(         rho_fc(n,i),mla%la(n),nspecies,0,i)
        end do
     end do
 
@@ -121,8 +128,8 @@ contains
     ! fill the stochastic multifabs with a new set of random numbers
     ! if this is the first step we already have random numbers from the initial projection
     if (time .ne. 0.d0) then
-!       call fill_m_stochastic(mla)
-!       call fill_rhoc_stochastic(mla)
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+       call fill_m_stochastic(mla)
     end if
 
     ! build up rhs_v for gmres solve
@@ -142,14 +149,14 @@ contains
        end do
     end do
 
-!    ! add div(Sigma^(1)) to gmres_rhs_v
-!    if (algorithm_type .eq. 1) then
-!       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-!                                 eta,eta_ed,dx,dt,weights)
-!    else if (algorithm_type .eq. 2) then
-!       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-!                                 eta,eta_ed,dx,0.5d0*dt,weights)
-!    end if
+    ! add div(Sigma^(1)) to gmres_rhs_v
+    if (n_rngs .eq. 1) then
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+    else if (n_rngs .eq. 2) then
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
+    end if
 
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
@@ -159,6 +166,11 @@ contains
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
+
+    call compute_mass_fluxdiv_wrapper(mla,rho_old,rho_tot_old, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
+                                      dt,time,dx,weights, &
+                                      n_rngs,the_bc_tower%bc_tower_array)
 
 !    ! add div(rho*chi grad c)^n to rhs_p
 !    call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
@@ -506,6 +518,7 @@ contains
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(gradp(n,i))
+          call multifab_destroy(rho_fc(n,i))
        end do
     end do
 

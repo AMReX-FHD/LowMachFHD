@@ -15,6 +15,7 @@ subroutine main_driver()
   use analyze_spectra_module
   use eos_check_module
   use stochastic_mass_fluxdiv_module
+  use stochastic_m_fluxdiv_module
   use ParallelRNGs 
   use convert_mass_variables_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
@@ -232,9 +233,11 @@ subroutine main_driver()
   end do
 
   call init_mass_stochastic(mla,n_rngs)
-    
+  call init_m_stochastic(mla,n_rngs)
+
   ! initialize stochastic flux on every face W(0,1) 
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+  call fill_m_stochastic(mla)
 
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
@@ -277,9 +280,9 @@ subroutine main_driver()
      end if
   end if
 
-  ! initial projection
-  call initial_projection(mla,umac,rho,rho_tot,diff_fluxdiv,stoch_fluxdiv, &
-                          Temp,dt,dx,n_rngs,the_bc_tower)
+  ! initial projection - only needed for inertial algorithm
+!  call initial_projection(mla,umac,rho,rho_tot,diff_fluxdiv,stoch_fluxdiv, &
+!                          Temp,dt,dx,n_rngs,the_bc_tower)
 
   !=======================================================
   ! Begin time stepping loop
@@ -467,6 +470,7 @@ subroutine main_driver()
   end if
 
   call destroy_mass_stochastic(mla)
+  call destroy_m_stochastic(mla)
 
   do n=1,nlevs
      call multifab_destroy(rho(n))
