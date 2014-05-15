@@ -67,10 +67,7 @@ contains
        call init_mass_stochastic(mla,n_rngs)
     
        ! initialize stochastic flux on every face W(0,1) 
-       call fill_mass_stochastic(mla)
-
-      ! apply boundary conditions to stoch_W_fc
-      call stoch_mass_bc(mla,the_bc_level)
+       call fill_mass_stochastic(mla,the_bc_level)
 
     endif
 

@@ -234,11 +234,8 @@ subroutine main_driver()
   call init_mass_stochastic(mla,n_rngs)
     
   ! initialize stochastic flux on every face W(0,1) 
-  call fill_mass_stochastic(mla)
+  call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
-  ! apply boundary conditions to stoch_W_fc
-  call stoch_mass_bc(mla,the_bc_tower%bc_tower_array)
- 
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
   dt = cfl1*dx(1,1)**2/chi

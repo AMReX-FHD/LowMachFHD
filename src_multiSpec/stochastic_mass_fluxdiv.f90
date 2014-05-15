@@ -20,8 +20,7 @@ module stochastic_mass_fluxdiv_module
 
   private
 
-  public :: stochastic_mass_fluxdiv, fill_mass_stochastic, stoch_mass_bc, &
-       init_mass_stochastic, destroy_mass_stochastic
+  public :: stochastic_mass_fluxdiv, fill_mass_stochastic, init_mass_stochastic, destroy_mass_stochastic
 
   ! stochastic fluxes for mass densities are face-centered
   type(multifab), allocatable, save :: stoch_W_fc(:,:,:)
@@ -80,7 +79,6 @@ contains
     deallocate(stoch_W_fc)
 
   end subroutine destroy_mass_stochastic
-
   
   subroutine stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,&
                                      Gama,stoch_fluxdiv,dx,dt,weights,the_bc_level)
@@ -185,9 +183,10 @@ contains
 
   end subroutine stochastic_mass_fluxdiv
 
-  subroutine fill_mass_stochastic(mla)
+  subroutine fill_mass_stochastic(mla,the_bc_level)
   
     type(ml_layout), intent(in   )  :: mla
+    type(bc_level) , intent(in   )  :: the_bc_level(:)
 
     ! Local variables
     integer :: comp,n,dm,nlevs,box,i,rng
@@ -201,6 +200,9 @@ contains
           call multifab_fill_random(stoch_W_fc(:,i,rng))
        end do
     end do
+
+    ! apply boundary conditions to stochastic fluxes
+    call stoch_mass_bc(mla,the_bc_level)
   
   end subroutine fill_mass_stochastic
 
