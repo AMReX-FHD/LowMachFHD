@@ -13,12 +13,13 @@ module advance_timestep_overdamped_module
   use bds_module
   use gmres_module
   use div_and_grad_module
+  use eos_check_module
+  use convert_mass_variables_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies, rhobar, rho_part_bc_comp
-
   use analysis_module
 
   implicit none
@@ -239,9 +240,6 @@ contains
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
 
-    print*,'here'
-    stop
-
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
     ! for cases where du in the corrector should be small the gmres stalls
@@ -281,49 +279,43 @@ contains
 
     ! add A^n for scalars to rho_update
     if (advection_type .ge. 1) then
-       do n=1,nlevs
-          call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
-          call multifab_fill_boundary(bds_force(n))
-       end do
-
-       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+!      do n=1,nlevs
+!         call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
+!         call multifab_fill_boundary(bds_force(n))
+!      end do
+!
+!      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
 !          call bds(mla,umac,sold,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
-       else
+!      else
 !          call bds_quad(mla,umac,sold,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
-       end if
+!      end if
     else
-!       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
     end if
 
     ! compute s^{*,n+1/2} = s^n + (dt/2) * (A^n + F^n)
     ! store result in snew
-!    do n=1,nlevs
-!       call multifab_mult_mult_s_c(rho_update(n),1,0.5d0*dt,2,0)
-!       call multifab_copy_c(snew(n),1,sold(n),1,2,0)
-!       call multifab_plus_plus_c(snew(n),1,rho_update(n),1,2,0)
-!    end do
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(rho_update(n),1,0.5d0*dt,nspecies,0)
+       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+       call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(rho_new(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+    end do
 
-!    ! convert s^{*,n+1/2} to prim
-!    call convert_cons_to_prim(mla,snew,prim,.true.)
+    call eos_check(mla,rho_new)
+    call compute_rhotot(mla,rho_new,rhotot_new)
 
-    ! fill ghost cells for prim
-!    do n=1,nlevs
-!       call multifab_fill_boundary(prim(n))
-!       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-!       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
-!    end do
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
-    ! convert prim to s^{*,n+1/2} in valid and ghost region
-    ! now s^{*,n+1/2} properly filled ghost cells
-!    call convert_cons_to_prim(mla,snew,prim,.false.)
+    ! AJN - update eta and kappa here (if they are functions of rho)
+    !
+    !
 
-    ! average s^{*,n+1/2} to faces
-!    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
 
-!    ! compute (chi,eta,kappa)^{*,n+1/2}
-!    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-!    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
-!    call compute_kappa(mla,kappa,prim,dx)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 5 - Corrector Stochastic/Diffusive Fluxes
@@ -352,32 +344,38 @@ contains
     end if
 
 !    ! add div(Sigma^(2)) to gmres_rhs_v
-!    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-!                              eta,eta_ed,dx,dt,weights)
+    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                              eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+
+    ! initialize rhs_p for gmres solve to zero
+    do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
+    end do
 
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
 
-!    ! add div(rho*chi grad c)^{*,n+1/2} to rhs_p
-!    call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
-!                                the_bc_tower%bc_tower_array,vel_bc_n)
+    call compute_mass_fluxdiv_wrapper(mla,rho_new,rhotot_new, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
+                                      dt,time,dx,weights, &
+                                      n_rngs,the_bc_tower%bc_tower_array)
 
-!    ! add div(Psi^(2)) to rhs_p
-!    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
-!                                 chi_fc,dx,dt,vel_bc_n,weights)
+    do n=1,nlevs
+       do i=1,nspecies
+          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+       end do
+    end do
 
     ! reset rho_update for all scalars to zero
     ! then, set rho_update for rho1 to F^{*,n+1/2} = div(rho*chi grad c)^{*,n+1/2} + div(Psi^(2))
     do n=1,nlevs
-       call multifab_setval_c(rho_update(n),0.d0,1,1,all=.true.)
-       call multifab_copy_c(rho_update(n),2,gmres_rhs_p(n),1,1,0)
+       call multifab_setval(rho_update(n),0.d0,all=.true.)
+       ! add fluxes
+       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
     end do
-
-!    ! multiply gmres_rhs_p by -S_fac, so gmres_rhs_p = -S^{*,n+1/2}
-!    do n=1,nlevs
-!       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
-!    end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
     ! thus when we add A_0^* v^* to gmres_rhs_v and add div v^* to gmres_rhs_p
@@ -420,8 +418,8 @@ contains
     end do
 
     ! call gmres to compute delta v and delta p
-!    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
-!               eta,eta_ed,kappa,theta_alpha)
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
+               eta,eta_ed,kappa,theta_alpha)
 
     ! compute v^{n+1/2} = v^* + delta v
     ! compute p^{n+1/2} = p^* + delta p
@@ -455,51 +453,41 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^{n+1/2} for scalars to rho_update
-    if (advection_type .ge. 1) then
-       do n=1,nlevs
-          call multifab_copy_c(bds_force(n),1,rho_update(n),1,2,0)
-          call multifab_fill_boundary(bds_force(n))
-       end do
-       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+!   if (advection_type .ge. 1) then
+!      do n=1,nlevs
+!         call multifab_copy_c(bds_force(n),1,rho_update(n),1,2,0)
+!         call multifab_fill_boundary(bds_force(n))
+!      end do
+!      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
 !          call bds(mla,umac,sold,rho_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
-       else if (advection_type .eq. 3) then
+!      else if (advection_type .eq. 3) then
 !          call bds_quad(mla,umac,sold,rho_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
-       end if
-    else
-!       call mk_advective_s_fluxdiv(mla,umac,s_fc,rho_update,dx,1,2)
-    end if
+!      end if
+!   else
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+!   end if
 
     ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})
-!    do n=1,nlevs
-!       call multifab_mult_mult_s_c(rho_update(n),1,dt,2,0)
-!       call multifab_copy_c(snew(n),1,sold(n),1,2,0)
-!       call multifab_plus_plus_c(snew(n),1,rho_update(n),1,2,0)
-!    end do
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(rho_update(n),1,dt,nspecies,0)
+       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+       call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(rho_new(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+    end do
 
-    ! convert s^{n+1} to prim
-!    call convert_cons_to_prim(mla,snew,prim,.true.)
-
-    ! fill ghost cells for prim
-!    do n=1,nlevs
-!       call multifab_fill_boundary(prim(n))
-!       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-!       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
-!    end do
-
-    ! convert prim to s^{n+1} in valid and ghost region
-    ! now s^{n+1} properly filled ghost cells
-!    call convert_cons_to_prim(mla,snew,prim,.false.)
-
-    ! compute s^{n+1} to faces
-!    call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
+    call eos_check(mla,rho_new)
+    call compute_rhotot(mla,rho_new,rhotot_new)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Compute stuff for plotfile and next time step
-    
-!    ! compute (chi,eta,kappa)^{n+1}
-!    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-!    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
-!    call compute_kappa(mla,kappa,prim,dx)
+
+    ! AJN - update eta and kappa here (if they are functions of rho)
+    !
+    !
+
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement

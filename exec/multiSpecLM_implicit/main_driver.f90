@@ -269,6 +269,7 @@ subroutine main_driver()
   ! initialize rho
   call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
   call eos_check(mla,rho_old)
+  call compute_rhotot(mla,rho_old,rhotot_old)
 
   ! initialize Temp
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
