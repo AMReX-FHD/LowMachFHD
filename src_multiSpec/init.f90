@@ -84,7 +84,7 @@ contains
  
     ! local varables
     integer          :: i,j,n
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,rho_loc,L(2),sum
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,rho_loc,L(2),sum,r
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -231,6 +231,31 @@ contains
    
          end do
       end do
+
+   case(7)
+
+    !=============================================================
+    ! smoothed circle
+    !=============================================================
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       do i=lo(1),hi(1)
+          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+       
+          r = sqrt(x**2 + y**2)
+
+          rho(i,j,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
+               0.5d0*(rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
+                  (1.d0 + tanh((r-15.d0)/2.d0))
+
+          sum = 0
+          do n=1,nspecies-1
+             sum = sum + rho(i,j,n)/rhobar(n)
+          end do
+          rho(i,j,nspecies) = rhobar(nspecies)*(1.d0 - sum)
+    
+       end do
+    end do
             
     case default
       

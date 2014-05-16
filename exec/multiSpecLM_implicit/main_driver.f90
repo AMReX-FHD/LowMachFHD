@@ -286,7 +286,7 @@ subroutine main_driver()
 
   ! initialize eta
   do n=1,nlevs
-     call multifab_setval(eta(n), 1.d-4, all=.true.)
+     call multifab_setval(eta(n), 1.d-2, all=.true.)
   end do
   if (dm .eq. 2) then
      call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
