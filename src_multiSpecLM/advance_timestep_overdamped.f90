@@ -22,6 +22,8 @@ module advance_timestep_overdamped_module
   use probin_multispecies_module, only: nspecies, rhobar, rho_part_bc_comp
   use analysis_module
 
+  use fabio_module
+
   implicit none
 
   private
@@ -314,8 +316,6 @@ contains
     ! AJN - update eta and kappa here (if they are functions of rho)
     !
     !
-
-
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 5 - Corrector Stochastic/Diffusive Fluxes
