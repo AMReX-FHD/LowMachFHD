@@ -9,6 +9,7 @@ subroutine main_driver()
   use write_plotfile_module
   use write_plotfile1_module
   use advance_diffusion_module
+  use advance_timestep_overdamped_module
   use define_bc_module
   use bc_module
   use analysis_module
@@ -18,6 +19,7 @@ subroutine main_driver()
   use stochastic_m_fluxdiv_module
   use ParallelRNGs 
   use convert_mass_variables_module
+  use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
        k_B, max_grid_size, n_steps_save_stats, n_steps_skip, plot_int, seed, stats_int, &
        bc_lo, bc_hi, probin_common_init
@@ -43,13 +45,20 @@ subroutine main_driver()
   logical, allocatable         :: pmask(:)
   
   ! will be allocated on nlevels
-  type(multifab), allocatable  :: rho(:)
-  type(multifab), allocatable  :: rho_tot(:)
+  type(multifab), allocatable  :: rho_old(:)
+  type(multifab), allocatable  :: rhotot_old(:)
+  type(multifab), allocatable  :: rho_new(:)
+  type(multifab), allocatable  :: rhotot_new(:)
   type(multifab), allocatable  :: rho_exact(:)
-  type(multifab), allocatable  :: Temp(:) ! Temperature 
-  type(multifab), allocatable  :: diff_fluxdiv(:)
-  type(multifab), allocatable  :: stoch_fluxdiv(:)
+  type(multifab), allocatable  :: Temp(:)
+  type(multifab), allocatable  :: Temp_ed(:,:)
+  type(multifab), allocatable  :: diff_mass_fluxdiv(:)
+  type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
   type(multifab), allocatable  :: umac(:,:)
+  type(multifab), allocatable  :: pres(:)
+  type(multifab), allocatable  :: eta(:)
+  type(multifab), allocatable  :: eta_ed(:,:)
+  type(multifab), allocatable  :: kappa(:)
   real(kind=dp_t),allocatable  :: covW(:,:) 
   real(kind=dp_t),allocatable  :: covW_theo(:,:) 
   real(kind=dp_t),allocatable  :: wiwjt(:,:) 
@@ -59,6 +68,7 @@ subroutine main_driver()
   integer :: narg, farg, un, n_cell, rng, n_rngs
   character(len=128) :: fname
   logical :: lexist
+  logical :: nodal_temp(3)
   
   !==============================================================
   ! Initialization
@@ -84,9 +94,18 @@ subroutine main_driver()
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
-  allocate(rho(nlevs),rho_tot(nlevs),rho_exact(nlevs))
-  allocate(Temp(nlevs),diff_fluxdiv(nlevs),stoch_fluxdiv(nlevs))
-  allocate(umac(nlevs,dm))
+  allocate(rho_old(nlevs),rhotot_old(nlevs),rho_exact(nlevs))
+  allocate(rho_new(nlevs),rhotot_new(nlevs))
+  allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
+  allocate(umac(nlevs,dm),pres(nlevs))
+  allocate(eta(nlevs),kappa(nlevs))
+  if (dm .eq. 2) then
+     allocate(eta_ed(nlevs,1))
+     allocate(Temp_ed(nlevs,1))
+  else if (dm .eq. 3) then
+     allocate(eta_ed(nlevs,3))
+     allocate(Temp_ed(nlevs,3))
+  end if
   allocate(covW(nspecies,nspecies))
   allocate(covW_theo(nspecies,nspecies))
   allocate(wiwjt(nspecies,nspecies))
@@ -173,7 +192,7 @@ subroutine main_driver()
   ! bc_tower structure in memory
   ! 1:dm = velocity
   ! dm+1 = pressure
-  ! dm+2 = scal_bc_comp = rho_tot
+  ! dm+2 = scal_bc_comp = rhotot
   ! scal_bc_comp+1 = rho_i
   ! scal_bc_comp+nspecies+1 = mol_frac
   ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
@@ -197,15 +216,44 @@ subroutine main_driver()
 
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
-     call multifab_build(rho(n),          mla%la(n),nspecies,1)
-     call multifab_build(rho_tot(n),      mla%la(n),1,       1) 
-     call multifab_build(rho_exact(n),    mla%la(n),nspecies,1)
-     call multifab_build(Temp(n),         mla%la(n),1,       1)
-     call multifab_build(diff_fluxdiv(n), mla%la(n),nspecies,0) 
-     call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0) 
+     call multifab_build(rho_old(n),           mla%la(n),nspecies,1)
+     call multifab_build(rhotot_old(n),        mla%la(n),1,       1) 
+     call multifab_build(rho_new(n),           mla%la(n),nspecies,1)
+     call multifab_build(rhotot_new(n),        mla%la(n),1,       1) 
+     call multifab_build(rho_exact(n),         mla%la(n),nspecies,1)
+     call multifab_build(Temp(n),              mla%la(n),1,       1)
+     call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
+     call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+     ! pressure - need 1 ghost cell since we calculate its gradient
+     call multifab_build(pres(n),mla%la(n),1,1)
+     call multifab_build(eta(n)  ,mla%la(n),1,1)
+     call multifab_build(kappa(n),mla%la(n),1,1)
      do i=1,dm
         call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
      end do
+
+     ! eta and Temp on nodes (2d) or edges (3d)
+     if (dm .eq. 2) then
+        call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
+        call multifab_build_nodal(Temp_ed(n,1),mla%la(n),1,0)
+     else
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .false.
+        call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
+        call multifab_build(Temp_ed(n,1),mla%la(n),1,0,nodal_temp)
+        nodal_temp(1) = .true.
+        nodal_temp(2) = .false.
+        nodal_temp(3) = .true.
+        call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
+        call multifab_build(Temp_ed(n,2),mla%la(n),1,0,nodal_temp)
+        nodal_temp(1) = .false.
+        nodal_temp(2) = .true.
+        nodal_temp(3) = .true.
+        call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
+        call multifab_build(Temp_ed(n,3),mla%la(n),1,0,nodal_temp)
+     end if
+
   end do
 
   ! Initialize random numbers *after* the global (root) seed has been set:
@@ -219,23 +267,45 @@ subroutine main_driver()
   time = start_time    
 
   ! initialize rho
-  call init_rho(rho,dx,time,the_bc_tower%bc_tower_array)
-  call eos_check(mla,rho)
+  call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
+  call eos_check(mla,rho_old)
 
   ! initialize Temp
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
+  if (dm .eq. 2) then
+     call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  else if (dm .eq. 3) then
+     call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  end if
 
-  ! initialize velocity here, prefereably with a subroutine
+  ! initialize kappa
   do n=1,nlevs
+     call multifab_setval(kappa(n), 1.d0, all=.true.)
+  end do
+
+  ! initialize eta
+  do n=1,nlevs
+     call multifab_setval(eta(n), 1.d-4, all=.true.)
+  end do
+  if (dm .eq. 2) then
+     call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  else if (dm .eq. 3) then
+     call average_cc_to_edge(nlevs,eta,eta_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  end if
+
+  ! initialize pressure and velocity
+  do n=1,nlevs
+     call multifab_setval(pres(n), 0.d0, all=.true.)
      do i=1,dm
         call multifab_setval(umac(n,i), 0.d0, all=.true.)
      end do
   end do
 
+  ! initialize multifabs that hold random fluxes
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
 
-  ! initialize stochastic flux on every face W(0,1) 
+  ! fill random flux multifabs
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   call fill_m_stochastic(mla)
 
@@ -267,7 +337,7 @@ subroutine main_driver()
            open(unit=un, file = fname, status = 'old', action = 'read')
            
            ! We will also pass temperature here but no additional scalars
-           call initialize_hydro_grid(mla,rho,dt,dx, namelist_file=un, &
+           call initialize_hydro_grid(mla,rho_old,dt,dx, namelist_file=un, &
                                       nspecies_in=nspecies, &
                                       nscal_in=0, &
                                       exclude_last_species_in=.false., &
@@ -281,7 +351,7 @@ subroutine main_driver()
   end if
 
   ! initial projection - only needed for inertial algorithm
-!  call initial_projection(mla,umac,rho,rho_tot,diff_fluxdiv,stoch_fluxdiv, &
+!  call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
 !                          Temp,dt,dx,n_rngs,the_bc_tower)
 
   !=======================================================
@@ -305,20 +375,20 @@ subroutine main_driver()
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then
          ! Compute covariances manually for initial testing (HydroGrid now does the same)
-         call compute_cov(mla,rho,wit,wiwjt)    
+         call compute_cov(mla,rho_old,wit,wiwjt)    
          step_count = step_count + 1 
 
          ! print out projection (average) and variance
          if ( (stats_int > 0) .and. &
                (mod(istep-n_steps_skip,stats_int) .eq. 0) ) then
             ! Compute vertical and horizontal averages (hstat and vstat files)   
-            call print_stats(mla,dx,istep-n_steps_skip,time,rho=rho,temperature=Temp)            
+            call print_stats(mla,dx,istep-n_steps_skip,time,rho=rho_old,temperature=Temp)            
          end if
 
          ! Add this snapshot to the average in HydroGrid
          if ( (hydro_grid_int > 0) .and. &
               ( mod(istep-n_steps_skip,hydro_grid_int) .eq. 0 ) ) then
-            call analyze_hydro_grid(mla,dt,dx,istep-n_steps_skip,rho=rho,temperature=Temp)           
+            call analyze_hydro_grid(mla,dt,dx,istep-n_steps_skip,rho=rho_old,temperature=Temp)           
          end if
 
          if ( (hydro_grid_int > 0) .and. &
@@ -334,14 +404,14 @@ subroutine main_driver()
 
          ! print mass conservation and write plotfiles
          write(*,*), 'writing plotfiles at timestep =', istep 
-         call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time)
-         call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time)
-         call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time)
-         call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time)
+         call write_plotfile(mla,"plt_rho",    rho_old,   istep,dx,time)
+         call write_plotfile1(mla,"plt_rhotot",rhotot_old,istep,dx,time)
+         call write_plotfile(mla,"plt_exa",    rho_exact, istep,dx,time)
+         call write_plotfile1(mla,"plt_temp",  Temp,      istep,dx,time)
 
          ! difference between rho and rho_exact
          do n=1,nlevs
-            call saxpy(rho_exact(n),-1.0d0,rho(n))
+            call saxpy(rho_exact(n),-1.0d0,rho_old(n))
          end do
 
          ! check error with visit
@@ -350,26 +420,35 @@ subroutine main_driver()
       end if
 
       ! advance the solution by dt
-!      call advance_timestep_overdamped()      
+      call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                       pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                       dx,dt,time,the_bc_tower,n_rngs)
 
       ! increment simulation time
       istep = istep + 1
       time = time + dt
 
+      ! set old state to new state
+     do n=1,nlevs
+        call multifab_copy_c(rho_old(n)   ,1,rho_new(n)   ,1,nspecies,rho_old(n)%ng)
+        call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1,1       ,rhotot_old(n)%ng)
+     end do
+
       ! print out the total mass to check conservation
       if(mod(istep, max_step/10)==0) then
-         call sum_mass(rho, istep)
+         call sum_mass(rho_old, istep)
       end if   
 
       ! compute error norms
       if (print_error_norms) then
-         call print_errors(rho,rho_exact,Temp,dx,time,the_bc_tower%bc_tower_array)
+         call print_errors(rho_old,rho_exact,Temp,dx,time,the_bc_tower%bc_tower_array)
       end if
                   
   end do
 
   ! print out the total mass to check conservation
-  call sum_mass(rho, istep)
+  call sum_mass(rho_old, istep)
  
   ! print out the standard deviation
   if (parallel_IOProcessor()) then
@@ -473,18 +552,26 @@ subroutine main_driver()
   call destroy_m_stochastic(mla)
 
   do n=1,nlevs
-     call multifab_destroy(rho(n))
-     call multifab_destroy(rho_tot(n))
+     call multifab_destroy(rho_old(n))
+     call multifab_destroy(rhotot_old(n))
+     call multifab_destroy(rho_new(n))
+     call multifab_destroy(rhotot_new(n))
      call multifab_destroy(rho_exact(n))
      call multifab_destroy(Temp(n))
-     call multifab_destroy(diff_fluxdiv(n))
-     call multifab_destroy(stoch_fluxdiv(n))
+     call multifab_destroy(diff_mass_fluxdiv(n))
+     call multifab_destroy(stoch_mass_fluxdiv(n))
+     call multifab_destroy(pres(n))
+     call multifab_destroy(eta(n))
      do i=1,dm
         call multifab_destroy(umac(n,i))
      end do
+     do i=1,size(eta_ed,dim=2)
+        call multifab_destroy(eta_ed(n,i))
+        call multifab_destroy(Temp_ed(n,i))
+     end do
   end do
   deallocate(lo,hi,dx)
-  deallocate(rho,rho_tot,Temp,diff_fluxdiv,stoch_fluxdiv,umac)
+  deallocate(rho_old,rhotot_old,Temp,diff_mass_fluxdiv,stoch_mass_fluxdiv,umac)
   deallocate(covW,covW_theo,wiwjt,wit)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
