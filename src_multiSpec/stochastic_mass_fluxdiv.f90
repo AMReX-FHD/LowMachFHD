@@ -118,6 +118,13 @@ contains
        !write(*,*) "Checking conservation of stochastic fluxes"
        call correction_flux(mla, rho, rho_tot, flux, the_bc_level)
     end if
+
+    ! add fluxes to flux_total
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_plus_plus_c(flux_total(n,i),1,flux(n,i),1,nspecies,0)
+       end do
+    end do
  
     ! compute divergence of stochastic flux
     call compute_div(mla,flux,stoch_fluxdiv,dx,1,1,nspecies)
