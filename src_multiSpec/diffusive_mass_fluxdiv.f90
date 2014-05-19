@@ -184,7 +184,7 @@ contains
     ! If there are walls with zero-flux boundary conditions
     if(is_nonisothermal) then
        do n=1,nlevs
-          call zero_edgeval_physical(flux(n,:),1,nspecies,the_bc_level(n))
+          call zero_edgeval_walls(flux(n,:),1,nspecies,the_bc_level(n))
        end do   
     end if
 
