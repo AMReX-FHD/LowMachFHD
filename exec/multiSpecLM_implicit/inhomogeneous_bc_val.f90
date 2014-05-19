@@ -4,7 +4,7 @@ module inhomogeneous_bc_val_module
   use bc_module
   use bl_error_module
   use probin_multispecies_module, only: nspecies, c_bc, rho_part_bc_comp
-  use probin_common_module, only: prob_lo, prob_hi
+  use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi
 
   implicit none
 
@@ -73,14 +73,42 @@ contains
     real(kind=dp_t), intent(in   ) :: x,y
     real(kind=dp_t)                :: val
 
-    if (comp .lt. rho_part_bc_comp .or. &
-        comp .gt. rho_part_bc_comp+nspecies-1) then
+    logical :: test
+
+    test = (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) &
+         .or. (comp .ge. vel_bc_comp .and. comp .le. vel_bc_comp+1)
+
+    if (.not. test) then
 
        print*,'comp=',comp
        call bl_error("calling inhomogeneous_bc_val_2d with invalid comp")
 
-    else
-       
+    end if
+
+    if (comp .eq. vel_bc_comp) then
+
+       ! x-vel
+       if (y .eq. prob_lo(2)) then
+          val = wallspeed_lo(1,2)
+       else if (y .eq. prob_hi(2)) then
+          val = wallspeed_hi(1,2)
+       else
+          val = 0.d0
+       end if
+
+    else if (comp .eq. vel_bc_comp+1) then
+
+       ! y-vel
+       if (x .eq. prob_lo(1)) then
+          val = wallspeed_lo(1,1)
+       else if (x .eq. prob_hi(1)) then
+          val = wallspeed_hi(1,1)
+       else
+          val = 0.d0
+       end if
+
+    else if (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) then
+
        ! rho_i boundary condition
        if (x .eq. prob_lo(1)) then
           val = c_bc(1,1,comp-rho_part_bc_comp+1)
@@ -88,15 +116,14 @@ contains
           val = c_bc(1,2,comp-rho_part_bc_comp+1)
        else if (y .eq. prob_lo(2)) then
           val = c_bc(2,1,comp-rho_part_bc_comp+1)
-          !write(*,*) "bottom:", val, comp-rho_part_bc_comp+1
        else if (y .eq. prob_hi(2)) then
           val = c_bc(2,2,comp-rho_part_bc_comp+1)
-          !write(*,*) "top:", val, comp-rho_part_bc_comp+1
        else
           val = 0.d0
        end if
 
     end if
+
 
   end function inhomogeneous_bc_val_2d
 
@@ -106,14 +133,65 @@ contains
     real(kind=dp_t), intent(in   ) :: x,y,z
     real(kind=dp_t)                :: val
 
-    if (comp .lt. rho_part_bc_comp .or. &
-        comp .gt. rho_part_bc_comp+nspecies-1) then
+    logical :: test
+
+    test = (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) &
+         .or. (comp .ge. vel_bc_comp .and. comp .le. vel_bc_comp+2)
+
+    if (.not. test) then
 
        print*,'comp=',comp
        call bl_error("calling inhomogeneous_bc_val_3d with invalid comp")
 
-    else
-       
+    end if
+
+    if (comp .eq. vel_bc_comp) then
+
+       ! x-vel
+       if (y .eq. prob_lo(2)) then
+          val = wallspeed_lo(1,2)
+       else if (y .eq. prob_hi(2)) then
+          val = wallspeed_hi(1,2)
+       else if (z .eq. prob_lo(3)) then
+          val = wallspeed_lo(1,3)
+       else if (z .eq. prob_hi(3)) then
+          val = wallspeed_hi(1,3)
+       else
+          val = 0.d0
+       end if
+
+    else if (comp .eq. vel_bc_comp+1) then
+
+       ! y-vel
+       if (x .eq. prob_lo(1)) then
+          val = wallspeed_lo(1,1)
+       else if (x .eq. prob_hi(1)) then
+          val = wallspeed_hi(1,1)
+       else if (z .eq. prob_lo(3)) then
+          val = wallspeed_lo(2,3)
+       else if (z .eq. prob_hi(3)) then
+          val = wallspeed_hi(2,3)
+       else
+          val = 0.d0
+       end if
+
+    else if (comp .eq. vel_bc_comp+2) then
+
+       ! z-vel
+       if (x .eq. prob_lo(1)) then
+          val = wallspeed_lo(2,1)
+       else if (x .eq. prob_hi(1)) then
+          val = wallspeed_hi(2,1)
+       else if (y .eq. prob_lo(2)) then
+          val = wallspeed_lo(2,2)
+       else if (y .eq. prob_hi(2)) then
+          val = wallspeed_hi(2,2)
+       else
+          val = 0.d0
+       end if
+
+    else if (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) then
+
        ! rho_i boundary condition
        if (x .eq. prob_lo(1)) then
           val = c_bc(1,1,comp-rho_part_bc_comp+1)
