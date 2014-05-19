@@ -27,13 +27,14 @@ contains
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
     ! local variables and array of multifabs
-    type(multifab)                 :: rhonew(mla%nlevel)
-    type(multifab)                 :: diff_fluxdiv(mla%nlevel)
-    type(multifab)                 :: diff_fluxdivnew(mla%nlevel)
-    type(multifab)                 :: stoch_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
-    real(kind=dp_t), allocatable   :: weights(:)                 ! weights for stoch-time-integrators       
-    real(kind=dp_t)                :: stage_time
-    integer                        :: n,nlevs,i,dm,rng,n_rngs
+    type(multifab)               :: rhonew(mla%nlevel)
+    type(multifab)               :: diff_fluxdiv(mla%nlevel)
+    type(multifab)               :: diff_fluxdivnew(mla%nlevel)
+    type(multifab)               :: stoch_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
+    type(multifab)               :: flux_total(mla%nlevel,mla%dim) ! sum of diff/stoch fluxes
+    real(kind=dp_t), allocatable :: weights(:) ! weights for stoch-time-integrators       
+    real(kind=dp_t)              :: stage_time
+    integer                      :: n,nlevs,i,dm,rng,n_rngs
 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! number of dimensions
@@ -45,6 +46,10 @@ contains
        call multifab_build(diff_fluxdiv(n),    mla%la(n), nspecies,    0) 
        call multifab_build(diff_fluxdivnew(n), mla%la(n), nspecies,    0)
        call multifab_build(stoch_fluxdiv(n),   mla%la(n), nspecies,    0) 
+       do i=1,dm
+          call multifab_build_edge(flux_total(n,i), mla%la(n), nspecies, 0, i)
+          call setval(flux_total(n,i), 0.d0)
+       end do
     end do
 
     !========================================================
@@ -86,7 +91,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,&
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,&
+                                        diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
 
@@ -121,7 +126,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,&
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,&
+                                        diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
       
@@ -147,7 +152,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,&
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,&
+                                        diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
 
@@ -184,7 +189,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,&
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,&
+                                        diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
  
@@ -212,7 +217,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,&
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,&
+                                        diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total, &
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
  
@@ -249,7 +254,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot,&
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,&
+                                        diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
  
@@ -277,7 +282,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,&
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,&
+                                        diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
 
@@ -312,7 +317,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rhonew,rho_tot,&
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,&
+                                        diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         n_rngs,the_bc_level)
 
@@ -342,6 +347,9 @@ contains
        call multifab_destroy(diff_fluxdiv(n))
        call multifab_destroy(diff_fluxdivnew(n))
        call multifab_destroy(stoch_fluxdiv(n))
+       do i=1,dm
+          call multifab_destroy(flux_total(n,i))
+       end do
     end do
     
     if(use_stoch) then

@@ -22,7 +22,7 @@ module compute_mass_fluxdiv_module
 contains
 
   subroutine compute_mass_fluxdiv_wrapper(mla,rho,rho_tot, &
-                                          diff_fluxdiv,stoch_fluxdiv,Temp, &
+                                          diff_fluxdiv,stoch_fluxdiv,Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           n_rngs,the_bc_level)
        
@@ -32,6 +32,7 @@ contains
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
+    type(multifab) , intent(inout)   :: flux_total(:,:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -64,7 +65,7 @@ contains
 
     call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,Gama,D_MS,&
                               D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
-                              zeta_by_Temp,dt,stage_time,dx,weights,&
+                              zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                               n_rngs,the_bc_level)
 
     do n=1,nlevs
@@ -81,7 +82,7 @@ contains
 
   subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,Gama,D_MS,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
-                                  zeta_by_Temp,dt,stage_time,dx,weights,&
+                                  zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                                   n_rngs,the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
@@ -97,6 +98,7 @@ contains
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
     type(multifab) , intent(inout)   :: zeta_by_Temp(:)
+    type(multifab) , intent(inout)   :: flux_total(:,:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -138,14 +140,14 @@ contains
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
     call diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,rhoWchi,Gama,&
-                                diff_fluxdiv,Temp,zeta_by_Temp,dx,the_bc_level)
+                                diff_fluxdiv,Temp,zeta_by_Temp,flux_total,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
 
     ! compute stochastic fluxdiv 
     if(use_stoch) call stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,&
-                                               molmtot,chi,Gama,stoch_fluxdiv,&
+                                               molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
                                                dx,dt,weights,the_bc_level)
       
     ! revert back rho to it's original form

@@ -23,7 +23,7 @@ module diffusive_mass_fluxdiv_module
 contains
 
   subroutine diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,rhoWchi,Gama,&
-                                    diff_fluxdiv,Temp,zeta_by_Temp,dx,the_bc_level)
+                                    diff_fluxdiv,Temp,zeta_by_Temp,flux_total,dx,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -34,6 +34,7 @@ contains
     type(multifab) , intent(inout)  :: diff_fluxdiv(:)
     type(multifab) , intent(in   )  :: Temp(:)
     type(multifab) , intent(in   )  :: zeta_by_Temp(:)
+    type(multifab) , intent(inout)  :: flux_total(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_level) , intent(in   )  :: the_bc_level(:)
 

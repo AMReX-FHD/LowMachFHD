@@ -57,6 +57,7 @@ contains
     type(multifab) :: phi(mla%nlevel)
     type(multifab) :: rho_tot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rho_totinv_fc(mla%nlevel,mla%dim)
+    type(multifab) :: flux_total(mla%nlevel,mla%dim)
 
     real(kind=dp_t) :: weights(n_rngs)
     
@@ -79,6 +80,7 @@ contains
        do i=1,dm
           call multifab_build_edge(rho_tot_fc(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(rho_totinv_fc(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(flux_total(n,i), mla%la(n), nspecies, 0, i)
        end do       
     end do
 
@@ -93,7 +95,7 @@ contains
 
     call compute_mass_fluxdiv_wrapper(mla,rho,rho_tot, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
-                                      dt,0.d0,dx,weights, &
+                                      flux_total,dt,0.d0,dx,weights, &
                                       n_rngs,the_bc_tower%bc_tower_array)
 
     ! set mac_rhs to -S
@@ -173,6 +175,7 @@ contains
        do i=1,dm
           call multifab_destroy(rho_tot_fc(n,i))
           call multifab_destroy(rho_totinv_fc(n,i))
+          call multifab_destroy(flux_total(n,i))
        end do
     end do
 

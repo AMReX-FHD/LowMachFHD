@@ -84,6 +84,7 @@ contains
     type(multifab) ::       gradp(mla%nlevel,mla%dim)
     type(multifab) ::      rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::   rhotot_fc(mla%nlevel,mla%dim)
+    type(multifab) :: flux_total(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -113,6 +114,7 @@ contains
           call multifab_build_edge(      gradp(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(  rhotot_fc(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge( flux_total(n,i),mla%la(n),nspecies,0,i)
        end do
     end do
 
@@ -177,7 +179,7 @@ contains
 
     call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
-                                      dt,time,dx,weights, &
+                                      flux_total,dt,time,dx,weights, &
                                       n_rngs,the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
@@ -358,7 +360,7 @@ contains
 
     call compute_mass_fluxdiv_wrapper(mla,rho_new,rhotot_new, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
-                                      dt,time,dx,weights, &
+                                      flux_total,dt,time,dx,weights, &
                                       n_rngs,the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
@@ -507,6 +509,7 @@ contains
           call multifab_destroy(gradp(n,i))
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhotot_fc(n,i))
+          call multifab_destroy(flux_total(n,i))
        end do
     end do
 
