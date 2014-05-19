@@ -6,8 +6,7 @@ subroutine main_driver()
   use layout_module
   use init_module
   use initial_projection_module
-  use write_plotfile_module
-  use write_plotfile1_module
+  use write_plotfileLM_module
   use advance_diffusion_module
   use advance_timestep_overdamped_module
   use define_bc_module
@@ -49,7 +48,6 @@ subroutine main_driver()
   type(multifab), allocatable  :: rhotot_old(:)
   type(multifab), allocatable  :: rho_new(:)
   type(multifab), allocatable  :: rhotot_new(:)
-  type(multifab), allocatable  :: rho_exact(:)
   type(multifab), allocatable  :: Temp(:)
   type(multifab), allocatable  :: Temp_ed(:,:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
@@ -94,7 +92,7 @@ subroutine main_driver()
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
-  allocate(rho_old(nlevs),rhotot_old(nlevs),rho_exact(nlevs))
+  allocate(rho_old(nlevs),rhotot_old(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),pres(nlevs))
@@ -220,7 +218,6 @@ subroutine main_driver()
      call multifab_build(rhotot_old(n),        mla%la(n),1,       1) 
      call multifab_build(rho_new(n),           mla%la(n),nspecies,1)
      call multifab_build(rhotot_new(n),        mla%la(n),1,       1) 
-     call multifab_build(rho_exact(n),         mla%la(n),nspecies,1)
      call multifab_build(Temp(n),              mla%la(n),1,       1)
      call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
      call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
@@ -402,22 +399,8 @@ subroutine main_driver()
 
       ! write plotfile at specific intervals
       if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
-
-         ! print mass conservation and write plotfiles
          write(*,*), 'writing plotfiles at timestep =', istep 
-         call write_plotfile(mla,"plt_rho",    rho_old,   istep,dx,time)
-         call write_plotfile1(mla,"plt_rhotot",rhotot_old,istep,dx,time)
-         call write_plotfile(mla,"plt_exa",    rho_exact, istep,dx,time)
-         call write_plotfile1(mla,"plt_temp",  Temp,      istep,dx,time)
-
-         ! difference between rho and rho_exact
-         do n=1,nlevs
-            call saxpy(rho_exact(n),-1.0d0,rho_old(n))
-         end do
-
-         ! check error with visit
-         call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time)
-
+         call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,istep,dx,time)
       end if
 
       ! advance the solution by dt
@@ -441,11 +424,6 @@ subroutine main_driver()
          call sum_mass(rho_old, istep)
       end if   
 
-      ! compute error norms
-      if (print_error_norms) then
-         call print_errors(rho_old,rho_exact,Temp,dx,time,the_bc_tower%bc_tower_array)
-      end if
-                  
   end do
 
   ! print out the total mass to check conservation
@@ -526,7 +504,7 @@ subroutine main_driver()
      end if
 
      ! correction made for infinite to periodic approximation of covariance
-     n_cell = multifab_volume(rho_exact(1))/nspecies
+     n_cell = multifab_volume(rhotot_old(1))
      covW_theo = (1 - 1/n_cell)*covW_theo
      
      write(2,*), 'analytic cov of W' 
@@ -557,7 +535,6 @@ subroutine main_driver()
      call multifab_destroy(rhotot_old(n))
      call multifab_destroy(rho_new(n))
      call multifab_destroy(rhotot_new(n))
-     call multifab_destroy(rho_exact(n))
      call multifab_destroy(Temp(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      call multifab_destroy(stoch_mass_fluxdiv(n))
