@@ -27,8 +27,8 @@
  max_step = 100                   ! total number of computational step
  cfl1     = 0.01                   ! CFL number
  chi      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
- variance_parameter = 1E-6        ! parameter to set variance (=1/thickness and =1 ideal)
- variance_parameter = 0.d0
+ variance_coef_mass = 1E-6        ! parameter to set variance (=1/thickness and =1 ideal)
+ variance_coef_mass = 0.d0
  Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-14       ! to prevent division by zero 
  start_time  = 1.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0

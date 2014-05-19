@@ -19,7 +19,7 @@ subroutine main_driver()
        bc_lo, bc_hi, probin_common_init
   use probin_multispecies_module, only: nspecies, rho_init, c_bc, cfl1, chi, &
        max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
-       start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_parameter, &
+       start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_coef_mass, &
        probin_multispecies_init
  
   implicit none
@@ -219,7 +219,7 @@ subroutine main_driver()
      if(timeinteg_type .eq. 4) write(*,*) "Using Runge-Kutta 3 method"
      write(*,*) "Using time step dt =", dt
      if(use_stoch) write(*,*), "Using noise variance =", sqrt(2.d0*k_B*&
-                               variance_parameter/(product(dx(1,1:dm))*dt))
+                               variance_coef_mass/(product(dx(1,1:dm))*dt))
   end if
 
   !=====================================================================
@@ -344,7 +344,7 @@ subroutine main_driver()
      write(1,*), 'Normalized numeric cov of W'
      do i=1,nspecies
         do j=1,nspecies
-           covW(i,j) = (wiwjt(i,j)/real(step_count) - wit(i)*wit(j)/real(step_count)**2)/variance_parameter
+           covW(i,j) = (wiwjt(i,j)/real(step_count) - wit(i)*wit(j)/real(step_count)**2)/variance_coef_mass
         end do
         write(1,*), covW(i,:)
      end do

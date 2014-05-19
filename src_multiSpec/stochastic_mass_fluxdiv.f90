@@ -14,7 +14,7 @@ module stochastic_mass_fluxdiv_module
   use correction_flux_module
   use multifab_zero_edgeval_module
   use probin_common_module, only: k_B
-  use probin_multispecies_module, only: nspecies, correct_flux, is_nonisothermal, variance_parameter
+  use probin_multispecies_module, only: nspecies, correct_flux, is_nonisothermal, variance_coef_mass
 
   implicit none
 
@@ -107,7 +107,7 @@ contains
     dm    = mla%dim
  
     ! populate the variance (only first level)
-    variance = sqrt(2.d0*k_B*variance_parameter/(product(dx(1,1:dm))*dt))
+    variance = sqrt(2.d0*k_B*variance_coef_mass/(product(dx(1,1:dm))*dt))
 
     ! build multifabs 
     do n=1,nlevs

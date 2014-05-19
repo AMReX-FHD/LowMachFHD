@@ -16,7 +16,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: Dbar(max_element)        ! SM diffusion constant  
   real(kind=dp_t)    :: Dtherm(max_element)          ! thermo-diffusion coefficients  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
-  real(kind=dp_t)    :: variance_parameter,fraction_tolerance  
+  real(kind=dp_t)    :: variance_coef_mass,fraction_tolerance  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, temp_bc_comp ! not input: populated at main 
   logical            :: correct_flux,use_stoch,print_error_norms
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
@@ -26,7 +26,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ max_step
   namelist /probin_multispecies/ cfl1
   namelist /probin_multispecies/ chi
-  namelist /probin_multispecies/ variance_parameter
+  namelist /probin_multispecies/ variance_coef_mass
   namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ fraction_tolerance
   namelist /probin_multispecies/ start_time
@@ -71,7 +71,7 @@ contains
     max_step           = 10000
     cfl1               = 1.0d0
     chi                = 1.0d0
-    variance_parameter = 1E-3
+    variance_coef_mass = 1E-3
     Press              = 1.0d0
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
