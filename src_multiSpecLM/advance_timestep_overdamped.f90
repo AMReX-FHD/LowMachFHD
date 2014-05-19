@@ -178,6 +178,7 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
 
+    ! compute diffusive and stochastic mass fluxes
     call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,time,dx,weights, &
@@ -286,7 +287,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^n for scalars to rho_update
-    if (advection_type .ge. 1) then
+!    if (advection_type .ge. 1) then
 !      do n=1,nlevs
 !         call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
 !         call multifab_fill_boundary(bds_force(n))
@@ -297,9 +298,9 @@ contains
 !      else
 !          call bds_quad(mla,umac,sold,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
 !      end if
-    else
+!    else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
-    end if
+!    end if
 
     ! compute s^{*,n+1/2} = s^n + (dt/2) * (A^n + F^n)
     ! store result in snew
@@ -362,6 +363,7 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
 
+    ! compute diffusive and stochastic mass fluxes
     call compute_mass_fluxdiv_wrapper(mla,rho_new,rhotot_new, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,time,dx,weights, &
