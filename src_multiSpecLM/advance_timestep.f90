@@ -18,7 +18,7 @@ module advance_timestep_module
   use bc_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-  use multifab_zero_edgeval_module
+  use zero_edgeval_module
 !  use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
@@ -389,7 +389,7 @@ contains
     end do
 
     do n=1,nlevs
-       call multifab_zero_edgeval(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
+       call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
 
     gmres_abs_tol = 0.d0
@@ -703,7 +703,7 @@ contains
     end do
 
     do n=1,nlevs
-       call multifab_zero_edgeval(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
+       call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
 
     ! call gmres to compute delta v and delta p

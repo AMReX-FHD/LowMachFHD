@@ -10,6 +10,7 @@ module advance_timestep_overdamped_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use compute_mass_fluxdiv_module
+  use reservoir_bc_fill_module
   use bds_module
   use gmres_module
   use div_and_grad_module
@@ -182,6 +183,9 @@ contains
                                       flux_total,dt,time,dx,weights, &
                                       n_rngs,the_bc_tower%bc_tower_array)
 
+    ! set the Dirichlet velocity value on reservoir faces
+    call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
+
     do n=1,nlevs
        do i=1,nspecies
           call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
@@ -345,7 +349,7 @@ contains
        weights(:) = 1.d0/sqrt(2.d0)
     end if
 
-!    ! add div(Sigma^(2)) to gmres_rhs_v
+    ! add div(Sigma^(2)) to gmres_rhs_v
     call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
                               eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
 
@@ -362,6 +366,9 @@ contains
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,time,dx,weights, &
                                       n_rngs,the_bc_tower%bc_tower_array)
+
+    ! set the Dirichlet velocity value on reservoir faces
+    call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
        do i=1,nspecies

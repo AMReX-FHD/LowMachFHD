@@ -1,4 +1,4 @@
-module multifab_zero_edgeval_module
+module zero_edgeval_module
 
   use multifab_module
   use define_bc_module
@@ -9,11 +9,11 @@ module multifab_zero_edgeval_module
 
   private
 
-  public :: multifab_zero_edgeval
+  public :: zero_edgeval_physical
 
 contains
 
-  subroutine multifab_zero_edgeval(edge,start_comp,num_comp,the_bc_level)
+  subroutine zero_edgeval_physical(edge,start_comp,num_comp,the_bc_level)
 
     ! vel_bc_n(nlevs,dm) are the normal velocities
 
@@ -37,19 +37,20 @@ contains
        do comp=start_comp,start_comp+num_comp-1
           select case (dm)
           case (2)
-             call zero_edgeval_2d(epx(:,:,1,comp), epy(:,:,1,comp), ng_e, lo, hi, &
-                                  the_bc_level%phys_bc_level_array(i,:,:))
+             call zero_edgeval_physical_2d(epx(:,:,1,comp), epy(:,:,1,comp), ng_e, lo, hi, &
+                                           the_bc_level%phys_bc_level_array(i,:,:))
           case (3)
              epz => dataptr(edge(3),i)
-             call zero_edgeval_3d(epx(:,:,:,comp), epy(:,:,:,comp), epz(:,:,:,comp), ng_e, lo, hi, &
-                                  the_bc_level%phys_bc_level_array(i,:,:))
+             call zero_edgeval_physical_3d(epx(:,:,:,comp), epy(:,:,:,comp), &
+                                           epz(:,:,:,comp), ng_e, lo, hi, &
+                                           the_bc_level%phys_bc_level_array(i,:,:))
           end select
        end do
     end do
  
-  end subroutine multifab_zero_edgeval
+  end subroutine zero_edgeval_physical
 
-  subroutine zero_edgeval_2d(edgex,edgey,ng_e,lo,hi,bc)
+  subroutine zero_edgeval_physical_2d(edgex,edgey,ng_e,lo,hi,bc)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_e
     real(kind=dp_t), intent(inout) :: edgex(lo(1)-ng_e:,lo(2)-ng_e:)
@@ -88,9 +89,9 @@ contains
        edgey(lo(1):hi(1),hi(2)+1) = 0.d0
     end if
 
-  end subroutine zero_edgeval_2d
+  end subroutine zero_edgeval_physical_2d
 
-  subroutine zero_edgeval_3d(edgex,edgey,edgez,ng_e,lo,hi,bc)
+  subroutine zero_edgeval_physical_3d(edgex,edgey,edgez,ng_e,lo,hi,bc)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_e
     real(kind=dp_t), intent(inout) :: edgex(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
@@ -146,6 +147,6 @@ contains
        edgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = 0.d0
     end if
 
-  end subroutine zero_edgeval_3d
+  end subroutine zero_edgeval_physical_3d
 
-end module multifab_zero_edgeval_module
+end module zero_edgeval_module

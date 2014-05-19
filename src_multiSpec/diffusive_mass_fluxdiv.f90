@@ -11,7 +11,7 @@ module diffusive_mass_fluxdiv_module
   use matvec_mul_module
   use matmat_mul_module
   use correction_flux_module
-  use multifab_zero_edgeval_module
+  use zero_edgeval_module
   use F95_LAPACK
   
   implicit none
@@ -184,7 +184,7 @@ contains
     ! If there are walls with zero-flux boundary conditions
     if(is_nonisothermal) then
        do n=1,nlevs
-          call multifab_zero_edgeval(flux(n,:),1,nspecies,the_bc_level(n))
+          call zero_edgeval_physical(flux(n,:),1,nspecies,the_bc_level(n))
        end do   
     end if
 

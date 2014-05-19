@@ -5,7 +5,7 @@ module mk_external_force_module
   use ml_layout_module
   use bl_constants_module
   use define_bc_module
-  use multifab_zero_edgeval_module
+  use zero_edgeval_module
   use probin_binarylm_module, only: diff_coef
   use probin_common_module, only: prob_type, visc_coef
 
@@ -60,7 +60,7 @@ contains
        end do
 
        ! zero wall boundary values
-       call multifab_zero_edgeval(m_force(n,:),1,1,the_bc_tower%bc_tower_array(n))
+       call zero_edgeval_physical(m_force(n,:),1,1,the_bc_tower%bc_tower_array(n))
 
        ! For periodic boundaries, ensure the low and high side are consistent:
        ! Note: multifab_internal_sync compares the box number of the two boxes 

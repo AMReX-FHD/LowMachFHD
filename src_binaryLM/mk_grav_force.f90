@@ -4,7 +4,7 @@ module mk_grav_force_module
   use multifab_module
   use ml_layout_module
   use define_bc_module
-  use multifab_zero_edgeval_module
+  use zero_edgeval_module
   use probin_binarylm_module, only: grav, boussinesq_beta
 
   implicit none
@@ -69,7 +69,7 @@ contains
        end do
 
        ! zero wall boundary values
-       call multifab_zero_edgeval(m_force(n,:),1,1,the_bc_tower%bc_tower_array(n))
+       call zero_edgeval_physical(m_force(n,:),1,1,the_bc_tower%bc_tower_array(n))
 
     enddo
 

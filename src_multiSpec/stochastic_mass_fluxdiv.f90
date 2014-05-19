@@ -12,7 +12,7 @@ module stochastic_mass_fluxdiv_module
   use convert_stag_module
   use matvec_mul_module
   use correction_flux_module
-  use multifab_zero_edgeval_module
+  use zero_edgeval_module
   use probin_common_module, only: k_B
   use probin_multispecies_module, only: nspecies, correct_flux, is_nonisothermal, variance_coef_mass
 
@@ -109,7 +109,7 @@ contains
     ! If there are walls with zero-flux boundary conditions
     if(is_nonisothermal) then
        do n=1,nlevs
-          call multifab_zero_edgeval(flux(n,:),1,nspecies,the_bc_level(n))
+          call zero_edgeval_physical(flux(n,:),1,nspecies,the_bc_level(n))
        end do   
     end if
 
