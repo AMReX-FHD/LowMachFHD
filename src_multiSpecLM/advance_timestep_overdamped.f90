@@ -583,8 +583,15 @@ contains
           nodal_temp(3) = .true.
           call multifab_build(vel_bc_t(n,6),mla%la(n),1,0,nodal_temp)
        end if
-    end do
 
+       do i=1,dm
+          call multifab_setval(vel_bc_n(n,i),0.d0,all=.true.)
+       end do
+       do i=1,size(vel_bc_t,dim=2)
+          call multifab_setval(vel_bc_t(n,i),0.d0,all=.true.)
+       end do
+
+    end do
 
   end subroutine build_bc_multifabs
 
