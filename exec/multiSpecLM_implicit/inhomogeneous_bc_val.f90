@@ -73,18 +73,6 @@ contains
     real(kind=dp_t), intent(in   ) :: x,y
     real(kind=dp_t)                :: val
 
-    logical :: test
-
-    test = (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) &
-         .or. (comp .ge. vel_bc_comp .and. comp .le. vel_bc_comp+1)
-
-    if (.not. test) then
-
-       print*,'comp=',comp
-       call bl_error("calling inhomogeneous_bc_val_2d with invalid comp")
-
-    end if
-
     if (comp .eq. vel_bc_comp) then
 
        ! x-vel
@@ -107,6 +95,11 @@ contains
           val = 0.d0
        end if
 
+    else if (comp .eq. pres_bc_comp) then
+
+       ! pressure
+       val = 0.d0
+
     else if (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) then
 
        ! rho_i boundary condition
@@ -122,6 +115,11 @@ contains
           val = 0.d0
        end if
 
+    else
+
+       print*,'comp=',comp
+       call bl_error("calling inhomogeneous_bc_val_2d with invalid comp")
+
     end if
 
 
@@ -132,18 +130,6 @@ contains
     integer        , intent(in   ) :: comp
     real(kind=dp_t), intent(in   ) :: x,y,z
     real(kind=dp_t)                :: val
-
-    logical :: test
-
-    test = (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) &
-         .or. (comp .ge. vel_bc_comp .and. comp .le. vel_bc_comp+2)
-
-    if (.not. test) then
-
-       print*,'comp=',comp
-       call bl_error("calling inhomogeneous_bc_val_3d with invalid comp")
-
-    end if
 
     if (comp .eq. vel_bc_comp) then
 
@@ -190,6 +176,11 @@ contains
           val = 0.d0
        end if
 
+    else if (comp .eq. pres_bc_comp) then
+
+       ! pressure
+       val = 0.d0
+
     else if (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) then
 
        ! rho_i boundary condition
@@ -208,6 +199,11 @@ contains
        else
           val = 0.d0
        end if
+
+    else
+
+       print*,'comp=',comp
+       call bl_error("calling inhomogeneous_bc_val_3d with invalid comp")
 
     end if
 
