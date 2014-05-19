@@ -44,6 +44,8 @@ contains
           fpy => dataptr(flux_total(n,2), i)
           vpx => dataptr(vel_bc_n(n,1), i)
           vpy => dataptr(vel_bc_n(n,2), i)
+         lo =  lwb(get_box(flux_total(n,1), i))
+         hi =  upb(get_box(flux_total(n,1), i))
           select case (dm)
           case (2)
              call reservoir_bc_fill_2d(fpx(:,:,1,:),fpy(:,:,1,:),ng_f, &
