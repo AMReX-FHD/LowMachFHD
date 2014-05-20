@@ -420,18 +420,16 @@ subroutine main_driver()
      end do
 
       ! print out the total mass to check conservation
-      if(mod(istep, max_step/10)==0) then
-         call sum_mass(rho_old, istep)
-      end if   
+     call sum_mass(rho_old, istep)
 
   end do
 
   ! print out the total mass to check conservation
   call sum_mass(rho_old, istep)
- 
+
   ! print out the standard deviation
   if (parallel_IOProcessor()) then
-     if(use_stoch) then
+     if(use_stoch .and. variance_coef_mass .ne. 0.d0 .and. step_count .ne. 0.d0) then
      
      write(*,*), ''
      write(1,*), 'Normalized numeric cov of W'
@@ -441,7 +439,7 @@ subroutine main_driver()
         end do
         write(1,*), covW(i,:)
      end do
-     
+
      if(nspecies .eq. 2) then 
      
         covW_theo(1,1) = (molmass(1)*rho_init(1,2) + molmass(2)*rho_init(1,1))*rho_init(1,1)*rho_init(1,2)/(&
