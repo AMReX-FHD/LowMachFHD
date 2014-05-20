@@ -185,10 +185,19 @@ contains
     end do
 
     ! compute diffusive and stochastic mass fluxes
+    ! this computes "-F" so we later multiply by -1
     call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,time,dx,weights, &
                                       n_rngs,the_bc_tower%bc_tower_array)
+
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       do i=1,dm
+          call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
+       end do
+    end do
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
@@ -376,10 +385,19 @@ contains
     end do
 
     ! compute diffusive and stochastic mass fluxes
+    ! this computes "-F" so we later multiply by -1
     call compute_mass_fluxdiv_wrapper(mla,rho_new,rhotot_new, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,time,dx,weights, &
                                       n_rngs,the_bc_tower%bc_tower_array)
+
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       do i=1,dm
+          call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
+       end do
+    end do
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
