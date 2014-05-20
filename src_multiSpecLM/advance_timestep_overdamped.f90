@@ -197,7 +197,7 @@ contains
     ! reset rho_update for all scalars to zero
     ! then, set rho_update for rho1 to F^n = div(rho*chi grad c)^n + div(Psi^(1))
     do n=1,nlevs
-       call multifab_setval_c(rho_update(n),0.d0,1,1,all=.true.)
+       call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
        call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
