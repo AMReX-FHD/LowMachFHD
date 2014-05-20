@@ -538,6 +538,7 @@ subroutine main_driver()
      call multifab_destroy(stoch_mass_fluxdiv(n))
      call multifab_destroy(pres(n))
      call multifab_destroy(eta(n))
+     call multifab_destroy(kappa(n))
      do i=1,dm
         call multifab_destroy(umac(n,i))
      end do
