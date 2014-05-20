@@ -45,8 +45,8 @@ contains
     plot_names(nspecies+4) = "averaged_vely"
     if (dm > 2) plot_names(nspecies+5) = "averaged_velz"
     plot_names(nspecies+dm+3) = "shifted_velx"
-    plot_names(nspecies+dm+4) = "shifted_velx"
-    if (dm > 2) plot_names(nspecies+dm+5) = "shifted_velx"
+    plot_names(nspecies+dm+4) = "shifted_vely"
+    if (dm > 2) plot_names(nspecies+dm+5) = "shifted_vely"
 
     ! build plotdata for nspecies+2*dm+2 and 0 ghost cells
     do n=1,nlevs
