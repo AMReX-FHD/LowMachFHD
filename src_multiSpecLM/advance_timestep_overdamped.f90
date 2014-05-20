@@ -239,8 +239,8 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(dumac(n,i),0.d0,all=.true.)
-          call multifab_setval(   dp(n)  ,0.d0,all=.true.)
        end do
+       call multifab_setval(dp(n),0.d0,all=.true.)
     end do
 
     gmres_abs_tol = 0.d0
@@ -424,8 +424,8 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(dumac(n,i),0.d0,all=.true.)
-          call multifab_setval(   dp(n)  ,0.d0,all=.true.)
        end do
+       call multifab_setval(dp(n),0.d0,all=.true.)
     end do
 
     ! call gmres to compute delta v and delta p
