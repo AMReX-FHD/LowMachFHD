@@ -137,7 +137,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! fill the stochastic multifabs with a new set of random numbers
-    ! if this is the first step we already have random numbers from the initial projection
+    ! if this is the first step we already have random numbers from initialization
     if (time .ne. 0.d0) then
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        call fill_m_stochastic(mla)
@@ -297,25 +297,24 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 3 - Forward-Euler Scalar Predictor
-    ! Step 4 - Compute Midpoint Estimates
+    ! Step 3 - Scalar Predictor Midpoint Euler Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^n for scalars to rho_update
-!    if (advection_type .ge. 1) then
-!      do n=1,nlevs
-!         call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
-!         call multifab_fill_boundary(bds_force(n))
-!      end do
-!
-!      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-!          call bds(mla,umac,sold,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
-!      else
-!          call bds_quad(mla,umac,sold,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
-!      end if
-!    else
+    if (advection_type .ge. 1) then
+      do n=1,nlevs
+         call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
+         call multifab_fill_boundary(bds_force(n))
+      end do
+
+      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+      else
+          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+      end if
+    else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
-!    end if
+    end if
 
     ! compute s^{*,n+1/2} = s^n + (dt/2) * (A^n + F^n)
     ! store result in snew
@@ -340,8 +339,8 @@ contains
     !
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 5 - Corrector Stochastic/Diffusive Fluxes
-    ! Step 6 - Corrector Stokes Solve
+    ! Step 4 - Corrector Stochastic/Diffusive Fluxes
+    ! Step 5 - Corrector Stokes Solve
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve
@@ -490,23 +489,23 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 7 - Trapezoidal Scalar Corrector
+    ! Step 6 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^{n+1/2} for scalars to rho_update
-!   if (advection_type .ge. 1) then
-!      do n=1,nlevs
-!         call multifab_copy_c(bds_force(n),1,rho_update(n),1,2,0)
-!         call multifab_fill_boundary(bds_force(n))
-!      end do
-!      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-!          call bds(mla,umac,sold,rho_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
-!      else if (advection_type .eq. 3) then
-!          call bds_quad(mla,umac,sold,rho_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
-!      end if
-!   else
+   if (advection_type .ge. 1) then
+      do n=1,nlevs
+         call multifab_copy_c(bds_force(n),1,rho_update(n),1,2,0)
+         call multifab_fill_boundary(bds_force(n))
+      end do
+      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+      else if (advection_type .eq. 3) then
+          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+      end if
+   else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
-!   end if
+   end if
 
     ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})
     do n=1,nlevs
