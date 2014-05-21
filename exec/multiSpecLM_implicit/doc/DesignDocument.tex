@@ -32,6 +32,15 @@
    \kern-.15em\lower.25ex\hbox{\the\scriptscriptfont0 #2}}
   {#1\!/#2}}
 
+\def\bb {{\bf b}}
+\def\Fb {{\bf F}}
+\def\vb {{\bf v}}
+\def\Wb {{\bf W}}
+\def\xb {{\bf x}}
+
+\def\deltab {\boldsymbol{\delta}}
+\def\Sigmab {\boldsymbol{\Sigma}}
+
 \def\half   {\frac{1}{2}}
 \def\myhalf {\sfrac{1}{2}}
 
@@ -44,6 +53,48 @@
 
 \maketitle
 
+\section{Equations}
+Overdetermined equations for the densities:
+\begin{eqnarray}
+\frac{\partial\rho}{\partial t} &=& -\nabla\cdot(\rho\vb)\\
+\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot\Fb_i,
+\end{eqnarray}
+with $\Fb_i$ containing both the diffusive and stochastic mass fluxes.  The equation of state is:
+\begin{equation}
+\nabla\cdot\vb = \nabla\cdot\left(\sum_i\frac{\Fb_i}{\bar\rho_i}\right) \equiv S\label{eq:S}.
+\end{equation}
 
+\section{Overdamped 1RNG Algorithm}
+Here is the time-advancement scheme.\\ \\
+{\bf Step 0: Initialization:}\\ \\
+Begin with an initial guess for velocity, $\vb^{-\myhalf}$ (note this only used as a reference state for the GMRES
+solve and for computing the right-hand-side for pressure, so it does not have to satisfy any constraint),
+and pressure, $p^{-\myhalf}$.\\ \\
+{\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
+Compute $\Fb_i$ and $\nabla\cdot\Fb_i$ using the supplied {\tt compute\_mass\_fluxdiv} subroutine.
+Construct $S$ using equation (\ref{eq:S}).\\ \\
+{\bf Step 2: Predictor Stokes Solve:}
+Generate a random advection velocity by solving the steady Stokes equation with random forcing.
+Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + \delta\vb$ and solve:
+\begin{equation}
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{(1)}},
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
++ \nabla\cdot\Sigmab^{(1)},\label{eq:Overdamped Pred Stokes}
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
+\end{equation}
+{\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
+Take a midpoint predictor forward Euler step for $\rho_i$:
+\begin{equation}
+\rho_i^{*,n+\myhalf} = \rho_i^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_i^n\vb^* + \Fb_i^n).
+\end{equation}
+Set $\rho = \sum_i\rho_i$.
 
 \end{document}
