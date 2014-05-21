@@ -424,21 +424,20 @@ $\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=0,
 \beta=\eta$, and $\gamma=\kappa/2$.  Make sure to set $\alpha$ to some non-zero to avoid
 divide-by-zero errors.
 Next, define $\vb^* = \overline\vb^{n-\myhalf} + \deltab\vb$ and $p^* = p^{n-\myhalf} + \delta p$.\\ \\
-{\bf Step 3: Forward Euler Scalar Predictor}\\
-{\bf Step 4: Compute Midpoint Estimates}\\ \\
+{\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
 Take a midpoint predictor forward Euler step for $\rho$ and $\rho_1$:
 \begin{eqnarray}
 \rho^{*,n+\myhalf} &=& \rho^n + \frac{\Delta t}{2}\nabla\cdot(-\rho^n\vb^*),\label{eq:alg2_1st_rho_adv}\\
 \rho_1^{*,n+\myhalf} &=& \rho_1^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_1^n\vb^* + \Fb^n).\label{eq:alg2_1st_rho1_adv}
 \end{eqnarray}
-{\bf Step 5: Corrector Stochastic/Diffusive Fluxes:}\\ \\
+{\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
 Calculate corrector diffusive fluxes, and reuse the same random numbers:
 \begin{equation}
 \Fb^{*,n+\myhalf} = (\rho\chi\nabla c)^{*,n+\myhalf}
 + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{*,n+\myhalf}k_B T}{\Delta t\Delta V}}\widetilde\Wb^n}_{\Psib^{(2)}},
 \end{equation}
 and then evaluate $S^{*,n+\myhalf}$ from $\Fb^{*,n+\myhalf}$.\\ \\
-{\bf Step 6: Corrector Stokes Solve:}\\ \\
+{\bf Step 5: Corrector Stokes Solve:}\\ \\
 Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
 \begin{equation}
 \nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{(2)}} + \rho^{*,n+\myhalf}\gb,
@@ -456,7 +455,7 @@ which can be written as
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
 \end{equation}
 Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
-{\bf Step 7: Trapezoidal Scalar Corrector:}\\ \\
+{\bf Step 6: Trapezoidal Scalar Corrector:}\\ \\
 Update the densities and concentrations
 \begin{eqnarray}
 \rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{*,n+\myhalf}\vb^{n+\myhalf}\right),\label{eq:alg2_2nd_rho_adv}\\
@@ -512,7 +511,7 @@ Calculate corrector diffusive fluxes, and reuse the same random numbers:
 + \underbrace{\sqrt{\frac{2\left(\chi\rho\mu_c^{-1}\right)^{*,n+\myhalf}k_B T}{\Delta t\Delta V}}\left(\frac{\widetilde\Wb_A^n+\widetilde\Wb_B^n}{\sqrt{2}}\right)}_{\Psib^{(2)}},
 \end{equation}
 and then evaluate $S^{*,n+\myhalf}$ from $\Fb^{*,n+\myhalf}$.\\ \\
-{\bf Step 6: Corrector Stokes Solve:}\\ \\
+{\bf Step 5: Corrector Stokes Solve:}\\ \\
 Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
 \begin{equation}
 \nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left(\frac{\widehat\Wb_A^n+\widehat\Wb_B^n}{2}\right)}_{\Sigmab^{(2)}} + \rho^{*,n+\myhalf}\gb,
@@ -530,7 +529,7 @@ which can be written as
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
 \end{equation}
 Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
-{\bf Step 7: Trapezoidal Scalar Corrector:}\\ \\
+{\bf Step 6: Trapezoidal Scalar Corrector:}\\ \\
 Update the densities and concentrations
 \begin{eqnarray}
 \rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{*,n+\myhalf}\vb^{n+\myhalf}\right),\\

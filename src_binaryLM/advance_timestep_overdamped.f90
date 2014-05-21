@@ -290,8 +290,7 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 3 - Forward-Euler Scalar Predictor
-    ! Step 4 - Compute Midpoint Estimates
+    ! Step 3 - Scalar Predictor Midpoint Euler Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^n for scalars to s_update
@@ -341,8 +340,8 @@ contains
     call compute_kappa(mla,kappa,prim,dx)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 5 - Corrector Stochastic/Diffusive Fluxes
-    ! Step 6 - Corrector Stokes Solve
+    ! Step 4 - Corrector Stochastic/Diffusive Fluxes
+    ! Step 5 - Corrector Stokes Solve
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve
@@ -477,7 +476,7 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 7 - Trapezoidal Scalar Corrector
+    ! Step 6 - Trapezoidal Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^{n+1/2} for scalars to s_update
