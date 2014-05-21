@@ -87,16 +87,10 @@ contains
 
     real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs
 
-    real(kind=dp_t), allocatable :: weights(:)
+    real(kind=dp_t) :: weights(algorithm_type)
 
-    if (algorithm_type .eq. 1) then
-       allocate(weights(1))
-       weights(1) = 1.d0
-    else if (algorithm_type .eq. 2) then
-       allocate(weights(2))
-       weights(1) = 1.d0
-       weights(2) = 0.d0
-    end if
+    weights(:) = 0.d0
+    weights(1) = 1.d0
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -191,7 +185,7 @@ contains
     if (algorithm_type .eq. 1) then
        call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                     chi_fc,dx,dt,vel_bc_n,weights)
-    else
+    else if (algorithm_type .eq. 2) then
        call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
                                     chi_fc,dx,0.5d0*dt,vel_bc_n,weights)  
     end if
@@ -548,8 +542,6 @@ contains
           call multifab_destroy(gradp(n,i))
        end do
     end do
-
-    deallocate(weights)
 
   end subroutine advance_timestep_overdamped
 

@@ -186,10 +186,17 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
-                                      flux_total,dt,time,dx,weights, &
-                                      n_rngs,the_bc_tower%bc_tower_array)
+    if (n_rngs .eq. 1) then
+       call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
+                                         flux_total,dt,time,dx,weights, &
+                                         n_rngs,the_bc_tower%bc_tower_array)
+    else if (n_rngs .eq. 2) then
+       call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
+                                         flux_total,0.5d0*dt,time,dx,weights, &
+                                         n_rngs,the_bc_tower%bc_tower_array)
+    end if
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
