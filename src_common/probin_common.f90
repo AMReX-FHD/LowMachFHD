@@ -22,7 +22,6 @@ module probin_common_module
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef,k_B,visc_coef
   integer   , save :: stoch_stress_form,filtering_width
-  real(dp_t), save :: boussinesq_beta
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -50,7 +49,6 @@ module probin_common_module
   namelist /probin_common/ seed
 
   namelist /probin_common/ grav               ! gravity vector (negative is downwards)
-  namelist /probin_common/ boussinesq_beta    ! beta for boussinesq gravity
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -174,7 +172,6 @@ contains
     seed = 1
 
     grav(1:3) = 0.d0
-    boussinesq_beta = 0.d0
 
     visc_type = 1
     visc_coef = 1.d0
@@ -322,11 +319,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) grav(3)
-
-       case ('--boussinesq_beta')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) boussinesq_beta
 
        case ('--visc_type')
           farg = farg + 1

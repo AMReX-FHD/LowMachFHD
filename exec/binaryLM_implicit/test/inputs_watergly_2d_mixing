@@ -15,9 +15,11 @@
   diff_coef = 1.d-5               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
   ! True parameters:
-  rhobar(1:2) = 1.29 1.0   ! rho1bar and rho2bar = both equal to RHO in IBAMR
+  rhobar(1:2) = 1.29 1.0   ! rho1bar and rho2bar = both equal to RHO in IBAMR    
+  boussinesq_beta = 0.0    ! add Boussinesq-type forcing
   ! Boussinesq approximation proper:
-  !rhobar(1:2) = 1.05 1.05   ! rho1bar and rho2bar = both equal to RHO in IBAMR
+  !rhobar(1:2) = 1.05 1.05   ! rho1bar and rho2bar = both equal to RHO in IBAMR    
+  !boussinesq_beta = 0.234    ! add Boussinesq-type forcing = EXPANSION in IBAMR
 
   ! Concentration dependence of transport coefficients chi(c) and eta(c)
   ! These are used in FluctHydro/staggered_grid/src_binaryLM/init.f90
@@ -67,11 +69,9 @@
   dim_in = 2                 ! 2D or 3D  
   
   ! True parameters:
-  grav(1:2) = 0.0 -981.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR    
-  boussinesq_beta = 0.0    ! add Boussinesq-type forcing
+  grav(1:2) = 0.0 -981.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
   ! Boussinesq approximation proper:
-  !grav(1:2) = 0.0 -981.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR    
-  !boussinesq_beta = 0.234    ! add Boussinesq-type forcing = EXPANSION in IBAMR
+  !grav(1:2) = 0.0 -981.0   ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
 
   ! Domain shape and size = CartesianGeometry in IBAMR
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate = x_lo in IBAMR

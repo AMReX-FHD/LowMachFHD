@@ -6,6 +6,7 @@ module mk_grav_force_module
   use define_bc_module
   use zero_edgeval_module
   use probin_common_module, only: grav
+  use probin_binarylm_module, only: boussinesq_beta
 
   implicit none
 
@@ -88,18 +89,23 @@ contains
 
     ! local
     integer i,j
+    real(kind=dp_t) :: c_temp
+
+    ! increment force by (1+boussinesq_beta*c)*rho*g
 
     do j=lo(2),hi(2)
     do i=lo(1),hi(1)+1
+       c_temp = 0.5d0*(rho_oldx(i,j,2)/rho_oldx(i,j,1) + rho_newx(i,j,2)/rho_newx(i,j,1))
        m_forcex(i,j) = m_forcex(i,j) + &
-            0.5d0*grav(1)*(rho_oldx(i,j,1)+rho_newx(i,j,1))
+            (1.d0 + boussinesq_beta*c_temp) * 0.5d0*grav(1)*(rho_oldx(i,j,1)+rho_newx(i,j,1))
     end do
     end do
 
     do j=lo(2),hi(2)+1
     do i=lo(1),hi(1)
+       c_temp = 0.5d0*(rho_oldy(i,j,2)/rho_oldy(i,j,1) + rho_newy(i,j,2)/rho_newy(i,j,1))
        m_forcey(i,j) = m_forcey(i,j) + &
-            0.5d0*grav(2)*(rho_oldy(i,j,1)+rho_newy(i,j,1))
+            (1.d0 + boussinesq_beta*c_temp) * 0.5d0*grav(2)*(rho_oldy(i,j,1)+rho_newy(i,j,1))
     end do
     end do
 
@@ -122,12 +128,16 @@ contains
 
     ! local
     integer i,j,k
+    real(kind=dp_t) :: c_temp
+
+    ! increment force by (1+boussinesq_beta*c)*rho*g
 
     do k=lo(3),hi(3)
     do j=lo(2),hi(2)
     do i=lo(1),hi(1)+1
+       c_temp = 0.5d0*(rho_oldx(i,j,k,2)/rho_oldx(i,j,k,1) + rho_newx(i,j,k,2)/rho_newx(i,j,k,1))
        m_forcex(i,j,k) = m_forcex(i,j,k) + &
-            0.5d0*grav(1)*(rho_oldx(i,j,k,1)+rho_newx(i,j,k,1))
+            (1.d0 + boussinesq_beta*c_temp) * 0.5d0*grav(1)*(rho_oldx(i,j,k,1)+rho_newx(i,j,k,1))
     end do
     end do
     end do
@@ -135,8 +145,9 @@ contains
     do k=lo(3),hi(3)
     do j=lo(2),hi(2)+1
     do i=lo(1),hi(1)
+       c_temp = 0.5d0*(rho_oldy(i,j,k,2)/rho_oldy(i,j,k,1) + rho_newy(i,j,k,2)/rho_newy(i,j,k,1))
        m_forcey(i,j,k) = m_forcey(i,j,k) + &
-            0.5d0*grav(2)*(rho_oldy(i,j,k,1)+rho_newy(i,j,k,1))
+            (1.d0 + boussinesq_beta*c_temp) * 0.5d0*grav(2)*(rho_oldy(i,j,k,1)+rho_newy(i,j,k,1))
     end do
     end do
     end do
@@ -144,8 +155,9 @@ contains
     do k=lo(3),hi(3)+1
     do j=lo(2),hi(2)
     do i=lo(1),hi(1)
+       c_temp = 0.5d0*(rho_oldz(i,j,k,2)/rho_oldz(i,j,k,1) + rho_newz(i,j,k,2)/rho_newz(i,j,k,1))
        m_forcez(i,j,k) = m_forcez(i,j,k) + &
-            0.5d0*grav(3)*(rho_oldz(i,j,k,1)+rho_newz(i,j,k,1))
+            (1.d0 + boussinesq_beta*c_temp) * 0.5d0*grav(3)*(rho_oldz(i,j,k,1)+rho_newz(i,j,k,1))
     end do
     end do
     end do

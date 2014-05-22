@@ -18,6 +18,7 @@ module probin_binarylm_module
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
   logical   , save :: analyze_binary,plot_stag
+  real(dp_t), save :: boussinesq_beta
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -44,6 +45,8 @@ module probin_binarylm_module
   namelist /probin_binarylm/ material_properties ! Coefficients A/B/C for chi/eta/kappa
      ! Formula is: indx=1 for chi, indx=2 for eta, indx=3 for kappa (NOT implemented yet)
      ! coeff=coeff0*(material_properties(1,indx) + material_properties(2,indx)*c) / (1.d0 + material_properties(3,indx)*c)
+
+  namelist /probin_binarylm/ boussinesq_beta    ! beta for boussinesq gravity
 
   ! stochastic properties
   namelist /probin_binarylm/ initial_variance  ! multiplicative factor for initial fluctuations
@@ -107,6 +110,8 @@ contains
     mol_mass(1:2) = 1.d0
     temperature = 1.d0
     material_properties(1:3,1:3) = 0.d0
+
+    boussinesq_beta = 0.d0
 
     initial_variance = 0.d0
     conc_scal = 1.d0
@@ -264,6 +269,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) material_properties(3,3)
+
+       case ('--boussinesq_beta')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) boussinesq_beta
 
        case ('--initial_variance')
           farg = farg + 1
