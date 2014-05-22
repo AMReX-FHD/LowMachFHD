@@ -3,6 +3,8 @@
  dim_in = 2                       ! problem dimension
  plot_int = 5                     ! plot interval
  max_grid_size(1:2) = 32 32       ! individual box size 
+ max_grid_size(1:2) = 64 64       ! individual box size 
+ max_grid_size(1:2) = 16 16       ! individual box size 
  n_steps_skip = 50                ! when to start analyzing data
  k_B      = 1E-3                  ! Boltzmann constant
 
@@ -12,8 +14,10 @@
  n_cells(1:2) = 64 64             ! to set dx = systemsize/n_cells
 
  ! 200 = slip wall
- bc_lo(1:2) = 200 200
- bc_hi(1:2) = 200 200
+ bc_lo(1:2) = -1 100
+ bc_hi(1:2) = -1 100
+
+ grav(1:2) = 0.d0 -10.d0
 
  variance_coef = 1.d-6            ! for stochastic momentum forcing
  variance_coef = 0
@@ -22,7 +26,7 @@
 
 &probin_multispecies
  
- nspecies = 5                     ! number of species
+ nspecies = 4                     ! number of species
  max_step = 1000                  ! total number of computational step
  cfl1     = 0.005                  ! CFL number
  chi      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
@@ -42,8 +46,15 @@
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
  rho_init(1,1:4) = 4.0  3.0  2.0  1.0
- molmass(1:4)    = 1.0  1.0  1.0  1.0  ! molar mass of n-species
  rhobar(1:4)     = 4.0  3.0  2.0  1.0
+
+! rho_init(1,1:4) = 1.0  1.0  1.0  1.0
+! rhobar(1:4)     = 4.0  4.0  4.0  4.0
+
+ rho_init(1,1:4) = 1.0  2.0  3.0  4.0
+ rhobar(1:4)     = 1.0  2.0  3.0  4.0
+
+ molmass(1:4)    = 1.0  1.0  1.0  1.0  ! molar mass of n-species
  Dbar(1:4)       = 1.0  1.0  1.0  1.0
  Dtherm(1:4)     = 2.0  1.0 -1.0 -2.0  ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature
@@ -100,7 +111,7 @@
   stag_mg_rel_tol = 1.d-9      ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.d-10        ! relative tolerance stopping criteria
+  gmres_rel_tol = 1.d-12        ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0         ! absolute tolerance stopping criteria
   gmres_verbose = 1            ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20         ! max number of outer iterations
