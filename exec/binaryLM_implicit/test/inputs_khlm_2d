@@ -5,7 +5,6 @@
   c_init(1:2) = 0.9d0 0.1d0  ! controls initial concentration range
   c_bc(2,1:2) = 0.d0 0.d0    ! c boundary conditions (dir,face)
   u_init(1:2) = 0.d0 1.d0    ! controls initial x-velocity
-  grav(1:2) = 0.d0 -0.1d0  ! gravity vector (negative is downwards)
 
   ! simulation properties
   max_step = 2000             ! maximum number of time steps
@@ -44,6 +43,8 @@
   cfl = 0.9d0
   plot_int = 25             ! Interval for writing a plotfile (for visit/amrvis)
   prob_type = 3              ! sets scalars, m, coefficients (see init.f90)
+
+  grav(1:2) = 0.d0 -0.1d0  ! gravity vector (negative is downwards)
 
   ! Algorithm control / selection
   !----------------------

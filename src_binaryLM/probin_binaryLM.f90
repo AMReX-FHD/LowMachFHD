@@ -12,13 +12,12 @@ module probin_binarylm_module
   !------------------------------------------------------------- 
   integer   , save :: restart,max_step,print_int
   real(dp_t), save :: rhobar(2),diff_coef,smoothing_width
-  real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2),grav(3)
+  real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2)
   real(dp_t), save :: mol_mass(2),temperature
   integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
   logical   , save :: analyze_binary,plot_stag
-  real(dp_t), save :: boussinesq_beta
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -30,7 +29,6 @@ module probin_binarylm_module
   namelist /probin_binarylm/ u_init            ! controls initial velocity
   namelist /probin_binarylm/ c_bc              ! c boundary conditions (dir,face).
                                                ! Dirichlet for RESERVOIR; Neumann for WALL
-  namelist /probin_binarylm/ grav              ! gravity vector (negative is downwards)
 
   ! simulation parameters
   namelist /probin_binarylm/ restart           ! checkpoint restart number
@@ -62,7 +60,6 @@ module probin_binarylm_module
 
   namelist /probin_binarylm/ plot_stag          ! include staggered plotfiles
 
-  namelist /probin_binarylm/ boussinesq_beta    ! beta for boussinesq gravity
                              
 
 contains
@@ -98,7 +95,6 @@ contains
     c_init(1:2) = 1.d0
     u_init(1:2) = 0.d0
     c_bc(1:3,1:2) = 0.d0
-    grav(1:3) = 0.d0
 
     restart = -1
     max_step = 1
@@ -120,8 +116,6 @@ contains
     
     analyze_binary=.true.
     plot_stag = .false.
-
-    boussinesq_beta = 0.d0
 
     farg = 1
     if (narg >= 1) then
@@ -188,19 +182,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) c_bc(3,2)
-
-       case ('--grav_x')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) grav(1)
-       case ('--grav_y')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) grav(2)
-       case ('--grav_z')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) grav(3)
 
        case ('--restart')
           farg = farg + 1
@@ -313,11 +294,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_stag
-
-       case ('--boussinesq_beta')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) boussinesq_beta
 
        case ('--')
           farg = farg + 1

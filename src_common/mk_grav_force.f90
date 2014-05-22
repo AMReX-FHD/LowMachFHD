@@ -5,7 +5,7 @@ module mk_grav_force_module
   use ml_layout_module
   use define_bc_module
   use zero_edgeval_module
-  use probin_binarylm_module, only: grav, boussinesq_beta
+  use probin_common_module, only: grav, boussinesq_beta
 
   implicit none
 

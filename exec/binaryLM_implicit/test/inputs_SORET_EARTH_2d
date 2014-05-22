@@ -9,8 +9,6 @@
   rhobar(1:2) = 0.8416 0.8416   ! rho1bar and rho2bar = both equal to RHO in IBAMR
   diff_coef = 6.3d-6               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 298.15           ! temperature = In IBAMR the product k_B*T is input
-  grav(1:2) = 0.0 -981  ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
-  boussinesq_beta = 0.2362    ! add Boussinesq-type forcing = EXPANSION in IBAMR
 
   ! Boundary and initial conditions:
   ! Here concentration is assumed to vary along the y axes only
@@ -48,6 +46,9 @@
   !----------------------
   dim_in = 2                 ! 2D or 3D  
   
+  grav(1:2) = 0.0 -981  ! gravity vector (negative is downwards) = [0,-GRAVITY] in IBAMR
+  boussinesq_beta = 0.2362    ! add Boussinesq-type forcing = EXPANSION in IBAMR
+
   ! Domain shape and size = CartesianGeometry in IBAMR
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate = x_lo in IBAMR
   prob_hi(1:2) = 0.153 0.153  ! physical hi coordinate = x_up in IBAMR

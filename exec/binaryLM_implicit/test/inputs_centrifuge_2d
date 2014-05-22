@@ -7,7 +7,6 @@
   max_step = 10000           ! maximum number of time steps
   print_int = 1              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1        ! how often to call project_onto_eos
-  grav(1:2) = 0.d0 -0.1d0
 
   ! fluid properties
   rhobar(1:2) = 1.d0 2.d0         ! rho1bar and rho2bar
@@ -35,6 +34,8 @@
   fixed_dt = 0.2d0           ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
   prob_type = 0              ! sets scalars, m, coefficients (see init.f90)
+
+  grav(1:2) = 0.d0 -0.1d0
 
   ! Algorithm control / selection
   !----------------------

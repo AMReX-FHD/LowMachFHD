@@ -8,8 +8,8 @@ module init_module
   use bc_module
   use bl_constants_module
   use probin_binarylm_module, only: rhobar, diff_coef, &
-                                   smoothing_width, c_init, material_properties, &
-                                   grav, u_init
+                                    smoothing_width, c_init, material_properties, &
+                                    u_init
   use probin_common_module , only: prob_lo, prob_hi, prob_type, visc_type, visc_coef, &
                                    diff_type, n_cells
 

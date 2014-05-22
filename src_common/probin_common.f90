@@ -11,7 +11,7 @@ module probin_common_module
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
-  real(dp_t),save :: fixed_dt,cfl
+  real(dp_t),save :: fixed_dt,cfl,grav(3)
   integer,save    :: visc_type,diff_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
@@ -22,6 +22,7 @@ module probin_common_module
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef,k_B,visc_coef
   integer   , save :: stoch_stress_form,filtering_width
+  real(dp_t), save :: boussinesq_beta
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -47,6 +48,9 @@ module probin_common_module
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
   namelist /probin_common/ seed
+
+  namelist /probin_common/ grav               ! gravity vector (negative is downwards)
+  namelist /probin_common/ boussinesq_beta    ! beta for boussinesq gravity
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -168,6 +172,10 @@ contains
     prob_type = 1
 
     seed = 1
+
+    grav(1:3) = 0.d0
+    boussinesq_beta = 0.d0
+
     visc_type = 1
     visc_coef = 1.d0
     diff_type = 1
@@ -301,6 +309,24 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) seed
+
+       case ('--grav_x')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) grav(1)
+       case ('--grav_y')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) grav(2)
+       case ('--grav_z')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) grav(3)
+
+       case ('--boussinesq_beta')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) boussinesq_beta
 
        case ('--visc_type')
           farg = farg + 1
