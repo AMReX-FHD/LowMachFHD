@@ -22,7 +22,7 @@
 
 &probin_multispecies
  
- nspecies = 3                     ! number of species
+ nspecies = 5                     ! number of species
  max_step = 1000                  ! total number of computational step
  cfl1     = 0.01                  ! CFL number
  chi      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
@@ -40,18 +40,22 @@
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
- rho_init(1,1:3) = 0.25 0.5 1.5
- molmass(1:3) = 1.0 0.75 1.25  ! molar mass of n-species
- rhobar(1:3) = 1.0 2.0 3.0
- Dbar(1:3) = 1.0 2.0 2.0       ! SM diffusion constant arranged in lower-triangle
- Dtherm(1:3) = 1.0 1.0 -2.0    ! thermo-diffusion constant (sums to zero)
+ rho_init(1,1:5) = 0.1  0.5  0.75 0.8 1.0
+ molmass(1:5)    = 1.0  0.8  1.2 0.6  1.4   ! molar mass of n-species
+ rhobar(1:5)     = 1.0  2.0  3.0 4.0  5.0
+ Dbar(1:5)       = 1.0  1.5  2.0 1.75 1.25  ! SM diffusion constant arranged in lower-triangle
+ Dtherm(1:5)     = 1.0  0.5 -2.0 1.5  -1.0  ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature
- rho_bc(2,1,1) = 0.25
+ rho_bc(2,1,1) = 0.1
  rho_bc(2,1,2) = 0.5
- rho_bc(2,1,3) = 1.5
- rho_bc(2,2,1) = 0.4
- rho_bc(2,2,2) = 0.4
- rho_bc(2,2,3) = 1.2
+ rho_bc(2,1,3) = 0.75
+ rho_bc(2,1,4) = 0.8
+ rho_bc(2,1,5) = 1.0
+ rho_bc(2,2,1) = 0.2
+ rho_bc(2,2,2) = 0.2
+ rho_bc(2,2,3) = 0.6
+ rho_bc(2,2,4) = 0.4
+ rho_bc(2,2,5) = 2.0
 
  
 /
