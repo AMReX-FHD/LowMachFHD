@@ -256,7 +256,30 @@ contains
     
        end do
     end do
-            
+
+    case(8)
+
+    !=============================================================
+    ! 4-species, 4-stripes
+    !=============================================================
+
+       rho = 0.d0
+           
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+half)*dx(2) 
+          do i=lo(1),hi(1)
+             if (y .le. 0.75d0*prob_lo(2)+0.25d0*prob_hi(2)) then
+                rho(i,j,1) = rho_init(1,1)
+             else if (y .le. 0.5d0*prob_lo(2)+0.5d0*prob_hi(2)) then
+                rho(i,j,2) = rho_init(1,2)
+             else if (y .le. 0.25d0*prob_lo(2)+0.75d0*prob_hi(2)) then
+                rho(i,j,3) = rho_init(1,3)
+             else
+                rho(i,j,4) = rho_init(1,4)
+             end if
+          end do
+       end do
+ 
     case default
       
       call bl_error("Desired init_type not supported in 3D")
