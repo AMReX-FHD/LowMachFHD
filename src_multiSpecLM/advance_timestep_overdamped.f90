@@ -15,15 +15,14 @@ module advance_timestep_overdamped_module
   use gmres_module
   use div_and_grad_module
   use eos_check_module
+  use mk_grav_force_module
   use convert_mass_variables_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-  use probin_common_module, only: advection_type
+  use probin_common_module, only: advection_type, grav
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies, rhobar, rho_part_bc_comp
   use analysis_module
-
-  use fabio_module
 
   implicit none
 
@@ -167,6 +166,11 @@ contains
     else if (n_rngs .eq. 2) then
        call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
                                  eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
+    end if
+
+    ! add rho^n*g to gmres_rhs_v
+    if (any(grav(1:dm) .ne. 0.d0)) then
+       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     ! initialize rhs_p for gmres solve to zero
@@ -374,6 +378,11 @@ contains
     ! add div(Sigma^(2)) to gmres_rhs_v
     call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
                               eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+
+    ! add rho^{*,n+1}*g to gmres_rhs_v
+    if (any(grav(1:dm) .ne. 0.d0)) then
+       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc,rhotot_fc,the_bc_tower)
+    end if
 
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
