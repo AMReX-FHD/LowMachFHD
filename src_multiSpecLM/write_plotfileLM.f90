@@ -11,14 +11,15 @@ module write_plotfileLM_module
 
 contains
   
-  subroutine write_plotfileLM(mla,name,rho,rhotot,Temp,umac,istep,dx,time)
+  subroutine write_plotfileLM(mla,name,rho,rhotot,Temp,umac,pres,istep,dx,time)
 
     type(ml_layout),    intent(in)  :: mla
     character(len=*),   intent(in)  :: name
     type(multifab),     intent(in)  :: rho(:)
     type(multifab),     intent(in)  :: rhotot(:)
-    type(multifab),     intent(in)  :: umac(:,:)
     type(multifab),     intent(in)  :: Temp(:)
+    type(multifab),     intent(in)  :: umac(:,:)
+    type(multifab),     intent(in)  :: pres(:)
     integer,            intent(in)  :: istep
     real(kind=dp_t),    intent(in)  :: dx(:,:),time
 
@@ -33,7 +34,8 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
   
-    allocate(plot_names(nspecies+2*dm+2)) ! rho + species + Temp + dm (averaged umac) + dm (shifted umac)
+    ! rho + species + Temp + dm (averaged umac) + dm (shifted umac) + pres
+    allocate(plot_names(nspecies+2*dm+3))
     allocate(plotdata(nlevs))
  
     plot_names(1) = "rho"
@@ -47,10 +49,11 @@ contains
     plot_names(nspecies+dm+3) = "shifted_velx"
     plot_names(nspecies+dm+4) = "shifted_vely"
     if (dm > 2) plot_names(nspecies+dm+5) = "shifted_vely"
+    plot_names(nspecies+2*dm+3) = "pres"
 
     ! build plotdata for nspecies+2*dm+2 and 0 ghost cells
     do n=1,nlevs
-       call multifab_build(plotdata(n),mla%la(n),nspecies+2*dm+2,0)
+       call multifab_build(plotdata(n),mla%la(n),nspecies+2*dm+3,0)
     enddo
     
     ! copy rhotot, rho, and Temp into plotdata
@@ -69,6 +72,11 @@ contains
     do i=1,dm
        call shift_face_to_cc(mla,umac(:,i),1,plotdata,nspecies+dm+2+i,1)
     end do
+
+    ! pressure
+    do n = 1,nlevs
+       call multifab_copy_c(plotdata(n),nspecies+2*dm+3,pres(n),1,1,0)
+    enddo
     
     ! define the name of the plotfile that will be written
     write(unit=plotfile_name,fmt='(a,i6.6)') name, istep

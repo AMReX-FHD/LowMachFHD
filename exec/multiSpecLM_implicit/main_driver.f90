@@ -400,7 +400,7 @@ subroutine main_driver()
       ! write plotfile at specific intervals
       if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
          write(*,*), 'writing plotfiles at timestep =', istep 
-         call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,istep,dx,time)
+         call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pres,istep,dx,time)
       end if
 
       ! advance the solution by dt
