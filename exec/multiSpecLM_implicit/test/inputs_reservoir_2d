@@ -46,12 +46,12 @@
  Dbar(1:3) = 1.0 2.0 2.0       ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:3) = 1.0 1.0 -2.0    ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature
- c_bc(2,1,1) = 0.25
- c_bc(2,1,2) = 0.5
- c_bc(2,1,3) = 1.5
- c_bc(2,2,1) = 0.4
- c_bc(2,2,2) = 0.4
- c_bc(2,2,3) = 1.2
+ rho_bc(2,1,1) = 0.25
+ rho_bc(2,1,2) = 0.5
+ rho_bc(2,1,3) = 1.5
+ rho_bc(2,2,1) = 0.4
+ rho_bc(2,2,2) = 0.4
+ rho_bc(2,2,3) = 1.2
 
  
 /
