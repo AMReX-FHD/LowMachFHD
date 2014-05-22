@@ -17,7 +17,7 @@ subroutine main_driver()
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
        k_B, max_grid_size, n_steps_save_stats, n_steps_skip, plot_int, seed, stats_int, &
        bc_lo, bc_hi, probin_common_init
-  use probin_multispecies_module, only: nspecies, rho_init, c_bc, cfl1, chi, &
+  use probin_multispecies_module, only: nspecies, rho_init, rho_bc, cfl1, chi, &
        max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
        start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_coef_mass, &
        probin_multispecies_init
@@ -61,7 +61,7 @@ subroutine main_driver()
   
   if(.true.) then ! Confirm that gcc read the input file correctly
     write(*,*) "rho_init=", rho_init(1:2,1:nspecies)
-    write(*,*) "c_bc=", c_bc(1:dim_in,1:2,1:nspecies)
+    write(*,*) "rho_bc=", rho_bc(1:dim_in,1:2,1:nspecies)
   end if
 
   ! for time being, we fix nlevs to be 1. for adaptive simulations where the grids 

@@ -20,7 +20,7 @@ module probin_multispecies_module
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, temp_bc_comp ! not input: populated at main 
   logical            :: correct_flux,use_stoch,print_error_norms
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
-  real(kind=dp_t)    :: c_bc(3,2,max_species)
+  real(kind=dp_t)    :: rho_bc(3,2,max_species)
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step
@@ -45,7 +45,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ Dbar
   namelist /probin_multispecies/ Dtherm
   namelist /probin_multispecies/ T_init
-  namelist /probin_multispecies/ c_bc              ! boundary conditions (dir,lohi,species)
+  namelist /probin_multispecies/ rho_bc ! rho_i boundary conditions (dir,lohi,species)
 
 contains
 
@@ -90,7 +90,7 @@ contains
     Dbar               = 1.0d0
     Dtherm             = 1.0d0
     T_init             = 1.0d0
-    c_bc               = 0.d0
+    rho_bc             = 0.d0
  
     ! read from input file 
     need_inputs = .true.
