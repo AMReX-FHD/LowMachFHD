@@ -21,8 +21,8 @@ subroutine main_driver()
   use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
        k_B, max_grid_size, n_steps_save_stats, n_steps_skip, plot_int, seed, stats_int, &
-       bc_lo, bc_hi, probin_common_init
-  use probin_multispecies_module, only: nspecies, rho_init, rho_bc, cfl1, chi, &
+       bc_lo, bc_hi, probin_common_init, advection_type, fixed_dt
+  use probin_multispecies_module, only: nspecies, rho_init, rho_bc, chi, &
        max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
        start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_coef_mass, &
        probin_multispecies_init
@@ -36,7 +36,7 @@ subroutine main_driver()
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time,loc_param
-  integer                      :: n,nlevs,i,j,dm,istep,step_count
+  integer                      :: n,nlevs,i,j,dm,istep,step_count,ng_s
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -212,13 +212,20 @@ subroutine main_driver()
   ! Build multifabs for all the variables
   !=======================================================
 
+  if (advection_type .eq. 0) then
+     ng_s = 1 ! centered advection
+  else
+     ng_s = 3 ! bds advection
+  end if
+
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
-     call multifab_build(rho_old(n),           mla%la(n),nspecies,1)
-     call multifab_build(rhotot_old(n),        mla%la(n),1,       1) 
-     call multifab_build(rho_new(n),           mla%la(n),nspecies,1)
-     call multifab_build(rhotot_new(n),        mla%la(n),1,       1) 
-     call multifab_build(Temp(n),              mla%la(n),1,       1)
+
+     call multifab_build(rho_old(n),           mla%la(n),nspecies,ng_s)
+     call multifab_build(rhotot_old(n),        mla%la(n),1,       ng_s) 
+     call multifab_build(rho_new(n),           mla%la(n),nspecies,ng_s)
+     call multifab_build(rhotot_new(n),        mla%la(n),1,       ng_s) 
+     call multifab_build(Temp(n),              mla%la(n),1,       ng_s)
      call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
      call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
      ! pressure - need 1 ghost cell since we calculate its gradient
@@ -309,7 +316,11 @@ subroutine main_driver()
 
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
   ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
-  dt = cfl1*dx(1,1)**2/chi
+  dt = fixed_dt
+
+  if (dt .gt. dx(1,1)**2/(chi*2.d0*dm)) then
+     call bl_error("time step violates diffusive mass cfl")
+  end if
   
   if (parallel_IOProcessor()) then
      if(timeinteg_type .eq. 1) write(*,*) "Using Euler method"
@@ -367,7 +378,7 @@ subroutine main_driver()
   do while(istep<=max_step)
 
       if (parallel_IOProcessor()) then
-         !print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+         print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
       end if
 
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0

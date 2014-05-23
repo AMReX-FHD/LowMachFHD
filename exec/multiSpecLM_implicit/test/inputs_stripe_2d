@@ -11,11 +11,13 @@
  prob_hi(1:2) = 64 64             ! physical systemsize = (prob_lo-prob_hi)
  n_cells(1:2) = 64 64             ! to set dx = systemsize/n_cells
 
+ fixed_dt = 0.01                  ! fixed_dt
+
  ! 100 = no-slip wall
  bc_lo(1:2) = -1 100
  bc_hi(1:2) = -1 100
 
- grav(1:2) = 0.d0 -1.d0
+ grav(1:2) = 0.d0 -1.d-1
 
  variance_coef = 1.d-6            ! for stochastic momentum forcing
  variance_coef = 0
@@ -25,14 +27,13 @@
 &probin_multispecies
  
  nspecies = 4                     ! number of species
- max_step = 1000                  ! total number of computational step
- cfl1     = 0.005                  ! CFL number
+ max_step = 10000                  ! total number of computational step
  chi      = 1.d0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_coef_mass = 1.d-6       ! parameter to set variance (=1/thickness and =1 ideal)
  variance_coef_mass = 0
  Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-14       ! to prevent division by zero 
- start_time  = 1.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
+ start_time  = 0.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
  !include_temp = .false.          ! right now no temperature equation
  init_type = 8                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
@@ -47,8 +48,8 @@
 ! rho_init(1,1:4) = 1.0  1.0  1.0  1.0
 ! rhobar(1:4)     = 4.0  4.0  4.0  4.0
 
- rho_init(1,1:4) = 4.0  3.0  2.0  1.0
- rhobar(1:4)     = 4.0  3.0  2.0  1.0
+ rho_init(1,1:4) = 4.0  2.0  3.0  1.0
+ rhobar(1:4)     = 4.0  2.0  3.0  1.0
 
  molmass(1:4)    = 1.0  1.0  1.0  1.0  ! molar mass of n-species
  Dbar(1:4)       = 1.0  1.0  1.0  1.0
