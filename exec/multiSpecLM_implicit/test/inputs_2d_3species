@@ -13,8 +13,10 @@
  prob_hi(1:2) = 64 64             ! physical systemsize = (prob_lo-prob_hi)
  n_cells(1:2) = 64 64             ! to set dx = systemsize/n_cells
 
+ visc_coef = 1.d-2                ! eta (viscosity)
+
  ! allowable options for this example are
- ! -1 = PERIODIC
+ ! 100 = no-slip wall
  bc_lo(1:2) = 100 100
  bc_hi(1:2) = 100 100
 

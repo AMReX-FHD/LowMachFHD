@@ -21,7 +21,7 @@ subroutine main_driver()
   use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
        k_B, max_grid_size, n_steps_save_stats, n_steps_skip, plot_int, seed, stats_int, &
-       bc_lo, bc_hi, probin_common_init, advection_type, fixed_dt
+       bc_lo, bc_hi, probin_common_init, advection_type, fixed_dt, visc_coef
   use probin_multispecies_module, only: nspecies, rho_init, rho_bc, chi, &
        max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
        start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_coef_mass, &
@@ -290,7 +290,7 @@ subroutine main_driver()
 
   ! initialize eta
   do n=1,nlevs
-     call multifab_setval(eta(n), 1.d-2, all=.true.)
+     call multifab_setval(eta(n), visc_coef, all=.true.)
   end do
   if (dm .eq. 2) then
      call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)

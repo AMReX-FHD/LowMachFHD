@@ -17,6 +17,8 @@
  bc_lo(1:2) = -1 100
  bc_hi(1:2) = -1 100
 
+ visc_coef = 1.d-2                ! eta (viscosity)
+
  grav(1:2) = 0.d0 -1.d-1
 
  variance_coef = 1.d-6            ! for stochastic momentum forcing
