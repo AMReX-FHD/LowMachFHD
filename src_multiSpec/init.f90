@@ -248,11 +248,23 @@ contains
           do i=lo(1),hi(1)
              if (y .le. 0.75d0*prob_lo(2)+0.25d0*prob_hi(2)) then
                 rho(i,j,1) = rho_init(1,1)
+                rho(i,j,2) = 0.1d0*rhobar(2)
+                rho(i,j,3) = 0.1d0*rhobar(3)
+                rho(i,j,4) = 0.1d0*rhobar(4)
              else if (y .le. 0.5d0*prob_lo(2)+0.5d0*prob_hi(2)) then
+                rho(i,j,1) = 0.1d0*rhobar(1)
                 rho(i,j,2) = rho_init(1,2)
+                rho(i,j,3) = 0.1d0*rhobar(3)
+                rho(i,j,4) = 0.1d0*rhobar(4)
              else if (y .le. 0.25d0*prob_lo(2)+0.75d0*prob_hi(2)) then
+                rho(i,j,1) = 0.1d0*rhobar(1)
+                rho(i,j,2) = 0.1d0*rhobar(2)
                 rho(i,j,3) = rho_init(1,3)
+                rho(i,j,4) = 0.1d0*rhobar(4)
              else
+                rho(i,j,1) = 0.1d0*rhobar(1)
+                rho(i,j,2) = 0.1d0*rhobar(2)
+                rho(i,j,3) = 0.1d0*rhobar(3)
                 rho(i,j,4) = rho_init(1,4)
              end if
           end do
