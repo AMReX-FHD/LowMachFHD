@@ -89,6 +89,7 @@ contains
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
     ! for specific box, now start loop over alloted cells     
+    ! if init_type is negative, we enforce low mach constraint by overwriting final rho_i
     select case (abs(init_type))
 
     case(0) 
@@ -117,23 +118,6 @@ contains
              rho(i,j,1:nspecies) = rho_init(1,1:nspecies)
           else
              rho(i,j,1:nspecies) = rho_init(2,1:nspecies)
-          end if
-
-          ! enforce low mach constraint by overwriting final rho_i
-          if (init_type .eq. -1) then
-             if (rsq .lt. L(1)*L(2)*0.1d0) then
-                sum = 0
-                do n=1,nspecies-1
-                   sum = sum + rho_init(1,n)/rhobar(n)
-                end do
-                rho(i,j,nspecies) = rhobar(nspecies)*(1.d0 - sum)
-             else
-                sum = 0
-                do n=1,nspecies-1
-                   sum = sum + rho_init(2,n)/rhobar(n)
-                end do
-                rho(i,j,nspecies) = rhobar(nspecies)*(1.d0 - sum)
-             end if
           end if
     
        end do
@@ -248,12 +232,6 @@ contains
                0.5d0*(rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
                   (1.d0 + tanh((r-15.d0)/2.d0))
 
-          sum = 0
-          do n=1,nspecies-1
-             sum = sum + rho(i,j,n)/rhobar(n)
-          end do
-          rho(i,j,nspecies) = rhobar(nspecies)*(1.d0 - sum)
-    
        end do
     end do
 
@@ -285,6 +263,23 @@ contains
       call bl_error("Desired init_type not supported in 3D")
       
     end select
+
+    if (init_type .lt. 0) then
+
+       ! enforce low mach constraint by overwriting final rho_i
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+
+          sum = 0
+          do n=1,nspecies-1
+             sum = sum + rho(i,j,n)/rhobar(n)
+          end do
+          rho(i,j,nspecies) = rhobar(nspecies)*(1.d0 - sum)
+
+       end do
+       end do          
+
+    end if
    
   end subroutine init_rho_2d
 
@@ -296,12 +291,13 @@ contains
     real(kind=dp_t)  :: time 
  
     ! local variables
-    integer          :: i,j,k
-    real(kind=dp_t)  :: x,y,z,rsq,tau,w1,w2,rhot,rho_loc,L(3)
+    integer          :: i,j,k,n
+    real(kind=dp_t)  :: x,y,z,rsq,tau,w1,w2,rhot,rho_loc,L(3),sum
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
-    ! for specific box, now start loop over alloted cells     
+    ! for specific box, now start loop over alloted cells
+    ! if init_type is negative, we enforce low mach constraint by overwriting final rho_i
     select case (abs(init_type))
     
     case(0) 
@@ -457,6 +453,25 @@ contains
       call bl_error("Desired init_type not supported in 3D")
       
     end select
+
+    if (init_type .lt. 0) then
+
+       ! enforce low mach constraint by overwriting final rho_i
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+
+          sum = 0
+          do n=1,nspecies-1
+             sum = sum + rho(i,j,k,n)/rhobar(n)
+          end do
+          rho(i,j,k,nspecies) = rhobar(nspecies)*(1.d0 - sum)
+
+       end do
+       end do
+       end do
+
+    end if
    
   end subroutine init_rho_3d
 
