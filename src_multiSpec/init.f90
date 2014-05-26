@@ -9,9 +9,9 @@ module init_module
   use multifab_coefbc_module
   use ml_layout_module
   use convert_stag_module
-  use probin_common_module, only: prob_lo, prob_hi
+  use probin_common_module, only: prob_lo, prob_hi, visc_coef
   use probin_multispecies_module, only: alpha1, beta, delta, init_type, sigma, Dbar, &
-       T_init, rho_init, nspecies, rho_part_bc_comp, molmass, rhobar
+       T_init, rho_init, nspecies, rho_part_bc_comp, molmass, rhobar, diff_coef
  
   implicit none
 
@@ -789,7 +789,7 @@ contains
     ! local
     integer :: i,j
     real(kind=dp_t) :: c_loc, eta_g, eta_w
-    real(kind=dp_t) :: A,B,C,x,T
+    real(kind=dp_t) :: x,T
 
     do j=lo(2)-ng_e,hi(2)+ng_e
        do i=lo(1)-ng_e,hi(1)+ng_e
@@ -806,7 +806,8 @@ contains
 
           x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
 
-          eta(i,j) = exp(-x*(-log(eta_g)+log(eta_w)))*eta_w
+          ! visc_coef should be 1 unless testing different viscosities
+          eta(i,j) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w
 
        end do
     end do
@@ -829,7 +830,7 @@ contains
     ! local
     integer :: i,j,k
     real(kind=dp_t) :: c_loc, eta_g, eta_w
-    real(kind=dp_t) :: A,B,C,x,T
+    real(kind=dp_t) :: x,T
 
     do k=lo(3)-ng_e,hi(3)+ng_e
        do j=lo(2)-ng_e,hi(2)+ng_e
@@ -847,7 +848,8 @@ contains
 
              x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
 
-             eta(i,j,k) = exp(-x*(-log(eta_g)+log(eta_w)))*eta_w
+             ! visc_coef should be 1 unless testing different viscosities
+             eta(i,j,k) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w
 
           end do
        end do
@@ -924,14 +926,15 @@ contains
 
     ! local
     integer :: i,j
-    real(kind=dp_t) :: c_loc, chi_g, chi_w
-    real(kind=dp_t) :: A,B,C,x,T
+    real(kind=dp_t) :: c_loc
 
     do j=lo(2)-ng_c,hi(2)+ng_c
        do i=lo(1)-ng_c,hi(1)+ng_c
 
           ! mass fraction of glycerol
           c_loc = rho(i,j,1)/rhotot(i,j)
+
+          chi(i,j) = diff_coef*(1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
 
        end do
     end do
@@ -953,8 +956,7 @@ contains
 
     ! local
     integer :: i,j,k
-    real(kind=dp_t) :: c_loc, chi_g, chi_w
-    real(kind=dp_t) :: A,B,C,x,T
+    real(kind=dp_t) :: c_loc
 
     do k=lo(3)-ng_c,hi(3)+ng_c
        do j=lo(2)-ng_c,hi(2)+ng_c
@@ -962,6 +964,8 @@ contains
 
              ! mass fraction of glycerol
              c_loc = rho(i,j,k,1)/rhotot(i,j,k)
+
+             chi(i,j,k) = diff_coef*(1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
 
           end do
        end do
