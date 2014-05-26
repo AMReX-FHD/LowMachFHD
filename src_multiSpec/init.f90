@@ -17,7 +17,7 @@ module init_module
 
   private
 
-  public :: init_rho, init_Temp, compute_eta
+  public :: init_rho, init_Temp, compute_eta, compute_chi
   
   ! init_type: 
   ! 0 = rho constant in space (thermodynamic equilibrium), temperature profile to check thermodiffusion
@@ -788,9 +788,25 @@ contains
 
     ! local
     integer :: i,j
+    real(kind=dp_t) :: c_loc, eta_g, eta_w
+    real(kind=dp_t) :: A,B,C,x,T
 
     do j=lo(2)-ng_e,hi(2)+ng_e
        do i=lo(1)-ng_e,hi(1)+ng_e
+
+          ! mass fraction of glycerol
+          c_loc = rho(i,j,1)/rhotot(i,j)
+
+          ! convert temperature to Celsius
+          T = Temp(i,j) - 273.d0 
+
+          ! viscosities of pure glycerol and water
+          eta_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
+          eta_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
+
+          x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
+
+          eta(i,j) = exp(-x*(-log(eta_g)+log(eta_w)))*eta_w
 
        end do
     end do
@@ -812,15 +828,145 @@ contains
 
     ! local
     integer :: i,j,k
+    real(kind=dp_t) :: c_loc, eta_g, eta_w
+    real(kind=dp_t) :: A,B,C,x,T
 
     do k=lo(3)-ng_e,hi(3)+ng_e
        do j=lo(2)-ng_e,hi(2)+ng_e
           do i=lo(1)-ng_e,hi(1)+ng_e
+
+             ! mass fraction of glycerol
+             c_loc = rho(i,j,k,1)/rhotot(i,j,k)
+
+             ! convert temperature to Celsius
+             T = Temp(i,j,k) - 273.d0 
+
+             ! viscosities of pure glycerol and water
+             eta_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
+             eta_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
+
+             x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
+
+             eta(i,j,k) = exp(-x*(-log(eta_g)+log(eta_w)))*eta_w
 
           end do
        end do
     end do
 
   end subroutine compute_eta_3d
+
+  subroutine compute_chi(mla,chi,chi_fc,rho,rhotot,Temp,pres,dx,the_bc_level)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: chi(:)
+    type(multifab) , intent(inout) :: chi_fc(:,:)
+    type(multifab) , intent(in   ) :: rho(:)
+    type(multifab) , intent(in   ) :: rhotot(:)
+    type(multifab) , intent(in   ) :: Temp(:)
+    type(multifab) , intent(in   ) :: pres(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
+
+    integer :: nlevs,dm,i,n,ng_c,ng_r,ng_m,ng_t,ng_p
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: cp(:,:,:,:)
+    real(kind=dp_t), pointer :: rp(:,:,:,:)
+    real(kind=dp_t), pointer :: mp(:,:,:,:)
+    real(kind=dp_t), pointer :: tp(:,:,:,:)
+    real(kind=dp_t), pointer :: pp(:,:,:,:)
+
+    ng_c  = chi(1)%ng
+    ng_r  = rho(1)%ng
+    ng_m = rhotot(1)%ng
+    ng_t  = Temp(1)%ng
+    ng_p  = pres(1)%ng
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    do n=1,nlevs
+       do i=1,nfabs(chi(n))
+          cp  => dataptr(chi(n), i)
+          rp  => dataptr(rho(n), i)
+          mp => dataptr(rhotot(n), i)
+          tp  => dataptr(Temp(n), i)
+          pp  => dataptr(pres(n), i)
+          lo = lwb(get_box(chi(n), i))
+          hi = upb(get_box(chi(n), i))
+          select case (dm)
+          case (2)
+             call compute_chi_2d(cp(:,:,1,1),ng_c,rp(:,:,1,:),ng_r,mp(:,:,1,1),ng_m, &
+                                 tp(:,:,1,1),ng_t,pp(:,:,1,1),ng_p,lo,hi,dx(n,:))
+          case (3)
+             call compute_chi_3d(cp(:,:,:,1),ng_c,rp(:,:,:,:),ng_r,mp(:,:,:,1),ng_m, &
+                                 tp(:,:,:,1),ng_t,pp(:,:,:,1),ng_p,lo,hi,dx(n,:))
+          end select
+       end do
+    end do
+
+    call average_cc_to_face(nlevs,chi,chi_fc,1,tran_bc_comp,1,the_bc_level)
+
+  end subroutine compute_chi
+
+  subroutine compute_chi_2d(chi,ng_c,rho,ng_r,rhotot,ng_m,Temp,ng_t,pres,ng_p,lo,hi,dx)
+
+    ! compute chi in valid AND ghost regions
+    ! the ghost cells for rho, Temp, etc., have already been filled properly
+
+    integer        , intent(in   ) :: lo(:), hi(:), ng_c, ng_r, ng_m, ng_t, ng_p
+    real(kind=dp_t), intent(inout) ::    chi(lo(1)-ng_c:,lo(2)-ng_c:)
+    real(kind=dp_t), intent(inout) ::    rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_m:,lo(2)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   Temp(lo(1)-ng_t:,lo(2)-ng_t:)
+    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_p:,lo(2)-ng_p:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    ! local
+    integer :: i,j
+    real(kind=dp_t) :: c_loc, chi_g, chi_w
+    real(kind=dp_t) :: A,B,C,x,T
+
+    do j=lo(2)-ng_c,hi(2)+ng_c
+       do i=lo(1)-ng_c,hi(1)+ng_c
+
+          ! mass fraction of glycerol
+          c_loc = rho(i,j,1)/rhotot(i,j)
+
+       end do
+    end do
+
+  end subroutine compute_chi_2d
+
+  subroutine compute_chi_3d(chi,ng_c,rho,ng_r,rhotot,ng_m,Temp,ng_t,pres,ng_p,lo,hi,dx)
+
+    ! compute chi in valid AND ghost regions
+    ! the ghost cells for rho, Temp, etc., have already been filled properly
+
+    integer        , intent(in   ) :: lo(:), hi(:), ng_c, ng_r, ng_m, ng_t, ng_p
+    real(kind=dp_t), intent(inout) ::    chi(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
+    real(kind=dp_t), intent(inout) ::    rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   Temp(lo(1)-ng_t:,lo(2)-ng_t:,lo(3)-ng_t:)
+    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    ! local
+    integer :: i,j,k
+    real(kind=dp_t) :: c_loc, chi_g, chi_w
+    real(kind=dp_t) :: A,B,C,x,T
+
+    do k=lo(3)-ng_c,hi(3)+ng_c
+       do j=lo(2)-ng_c,hi(2)+ng_c
+          do i=lo(1)-ng_c,hi(1)+ng_c
+
+             ! mass fraction of glycerol
+             c_loc = rho(i,j,k,1)/rhotot(i,j,k)
+
+          end do
+       end do
+    end do
+
+  end subroutine compute_chi_3d
 
 end module init_module
