@@ -7,7 +7,7 @@
 
   ! simulation parameters:
   restart = -1 ! If positive, restarts simulation from checkpoint file with this index
-  max_step = 1000          ! maximum number of time steps = N_STEPS in IBAMR
+  max_step = 999999         ! maximum number of time steps = N_STEPS in IBAMR
   print_int = 100              ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
   project_eos_int = 10        ! how often to call project_onto_eos
 
@@ -20,6 +20,8 @@
   ! Boussinesq approximation proper:
   !rhobar(1:2) = 1.05 1.05   ! rho1bar and rho2bar = both equal to RHO in IBAMR    
   !boussinesq_beta = 0.234    ! add Boussinesq-type forcing = EXPANSION in IBAMR
+
+  mol_mass(1:2) = 1.1781d-23 1.52923d-22  ! molar mass of water and glycerol, [g/molecule]
 
   ! Concentration dependence of transport coefficients chi(c) and eta(c)
   ! These are used in FluctHydro/staggered_grid/src_binaryLM/init.f90
@@ -82,10 +84,12 @@
   
   ! Time stepping
   ! Due to gravitation-induced instability the time step here needs to be very small, ~0.01s (overdamped)
-  ! This means diffusive CFL for dx=1/64 of ~5e-4, and viscous CFL is ~ 0.5
-  ! Explicit limit = dx^2/(4*nu) ~ 0.0015
+  ! Here dx = 1/128
+  ! maximum velocity ~10^-4, so advective CFL ~ 10^-4
+  ! diffusive CFL for momentum ~1.5 (but momentum diffusion is implicit so that's ok)
+  ! diffusive CFL for mass ~0.005
   fixed_dt = 0.01        ! time step (old explicit method used 0.005) = DT in IBAMR
-  plot_int = 1000           ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
+  plot_int = 1000        ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
   chk_int = 1000 ! If positive, how often to write a checkpoint (restart file)
   
   ! Determines initial conditions and other problem-specific parameters (see init.f90)
@@ -160,13 +164,13 @@
   	                     ! +dim=project along dim then analyze 2D only,
   	                     ! -dim=analyze 3D and then project along dim so we also analyze 2D data
   max_grid_projection = 32   ! parallelization parameter for analysis
-  stats_int =  100           ! Project grid for analysis and write hstat and vstat files
+  stats_int =  1000          ! Project grid for analysis and write hstat and vstat files
                              ! If positive, how often to compute mean and 
                              ! standard deviation over reduced dimensions = N_STEPS_SNAPSHOT in IBAMR
-  n_steps_save_stats = 1000  ! How often to dump HydroGrid output files
+  n_steps_save_stats = 1000   ! How often to dump HydroGrid output files
       ! If you set n_steps_save_stats=max_step a final output will be saved with name containing max_step
       ! Otherwise the final output of HydroGrid will be saved without any number in the file names
-  n_steps_skip = 0 ! 2000        ! How many steps to skip = N_STEPS_SKIP in IBAMR  
+  n_steps_skip = 0         ! How many steps to skip = N_STEPS_SKIP in IBAMR  
   analyze_conserved = F      ! Should we use conserved variables for the analysis (does not work well)
   center_snapshots = T       ! Should we use cell-centered momenta for the analysis (will smooth fluctuations)
 
