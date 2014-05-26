@@ -4,8 +4,11 @@ module init_module
   use bl_constants_module
   use multifab_module
   use define_bc_module
+  use bc_module
   use multifab_physbc_module
   use multifab_coefbc_module
+  use ml_layout_module
+  use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi
   use probin_multispecies_module, only: alpha1, beta, delta, init_type, sigma, Dbar, &
        T_init, rho_init, nspecies, rho_part_bc_comp, molmass, rhobar
@@ -14,7 +17,7 @@ module init_module
 
   private
 
-  public :: init_rho, init_Temp
+  public :: init_rho, init_Temp, compute_eta
   
   ! init_type: 
   ! 0 = rho constant in space (thermodynamic equilibrium), temperature profile to check thermodiffusion
@@ -84,7 +87,7 @@ contains
  
     ! local varables
     integer          :: i,j,n
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,rho_loc,L(2),sum,r
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -141,7 +144,7 @@ contains
 
     case(3) 
     !===========================================================
-    ! Initializing rho's in Gaussian so as rho_tot=constant=1.0
+    ! Initializing rho's in Gaussian so as rhotot=constant=1.0
     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
     !===========================================================
     do j=lo(2),hi(2)
@@ -304,7 +307,7 @@ contains
  
     ! local variables
     integer          :: i,j,k,n
-    real(kind=dp_t)  :: x,y,z,rsq,tau,w1,w2,rhot,rho_loc,L(3),sum
+    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
@@ -377,7 +380,7 @@ contains
 
      case(3) 
      !================================================================================
-     ! Initializing rho's in Gaussian so as rho_tot=constant=1.0. Here rho_exact = 
+     ! Initializing rho's in Gaussian so as rhotot=constant=1.0. Here rho_exact = 
      ! e^(-r^2/4Dt)/(4piDt)^3/2, For norm, sigma/dx >2 (at t=0) & L/sigma < 8 (at t=t)
      !================================================================================
   
@@ -711,5 +714,113 @@ contains
    end select
    
   end subroutine init_Temp_3d
+
+  subroutine compute_eta(mla,eta,eta_ed,rho,rhotot,Temp,pres,dx,the_bc_level)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: eta(:)
+    type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(in   ) :: rho(:)
+    type(multifab) , intent(in   ) :: rhotot(:)
+    type(multifab) , intent(in   ) :: Temp(:)
+    type(multifab) , intent(in   ) :: pres(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
+
+    integer :: nlevs,dm,i,n,ng_e,ng_r,ng_m,ng_t,ng_p
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: ep(:,:,:,:)
+    real(kind=dp_t), pointer :: rp(:,:,:,:)
+    real(kind=dp_t), pointer :: mp(:,:,:,:)
+    real(kind=dp_t), pointer :: tp(:,:,:,:)
+    real(kind=dp_t), pointer :: pp(:,:,:,:)
+
+    ng_e  = eta(1)%ng
+    ng_r  = rho(1)%ng
+    ng_m = rhotot(1)%ng
+    ng_t  = Temp(1)%ng
+    ng_p  = pres(1)%ng
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    do n=1,nlevs
+       do i=1,nfabs(eta(n))
+          ep  => dataptr(eta(n), i)
+          rp  => dataptr(rho(n), i)
+          mp => dataptr(rhotot(n), i)
+          tp  => dataptr(Temp(n), i)
+          pp  => dataptr(pres(n), i)
+          lo = lwb(get_box(eta(n), i))
+          hi = upb(get_box(eta(n), i))
+          select case (dm)
+          case (2)
+             call compute_eta_2d(ep(:,:,1,1),ng_e,rp(:,:,1,:),ng_r,mp(:,:,1,1),ng_m, &
+                                 tp(:,:,1,1),ng_t,pp(:,:,1,1),ng_p,lo,hi,dx(n,:))
+          case (3)
+             call compute_eta_3d(ep(:,:,:,1),ng_e,rp(:,:,:,:),ng_r,mp(:,:,:,1),ng_m, &
+                                 tp(:,:,:,1),ng_t,pp(:,:,:,1),ng_p,lo,hi,dx(n,:))
+          end select
+       end do
+    end do
+
+    if (dm .eq. 2) then
+       call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,tran_bc_comp,1,the_bc_level)
+    else if (dm .eq. 3) then
+       call average_cc_to_edge(nlevs,eta,eta_ed,1,tran_bc_comp,1,the_bc_level)
+    end if
+
+  end subroutine compute_eta
+
+  subroutine compute_eta_2d(eta,ng_e,rho,ng_r,rhotot,ng_m,Temp,ng_t,pres,ng_p,lo,hi,dx)
+
+    ! compute eta in valid AND ghost regions
+    ! the ghost cells for rho, Temp, etc., have already been filled properly
+
+    integer        , intent(in   ) :: lo(:), hi(:), ng_e, ng_r, ng_m, ng_t, ng_p
+    real(kind=dp_t), intent(inout) ::    eta(lo(1)-ng_e:,lo(2)-ng_e:)
+    real(kind=dp_t), intent(inout) ::    rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_m:,lo(2)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   Temp(lo(1)-ng_t:,lo(2)-ng_t:)
+    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_p:,lo(2)-ng_p:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    ! local
+    integer :: i,j
+
+    do j=lo(2)-ng_e,hi(2)+ng_e
+       do i=lo(1)-ng_e,hi(1)+ng_e
+
+       end do
+    end do
+
+  end subroutine compute_eta_2d
+
+  subroutine compute_eta_3d(eta,ng_e,rho,ng_r,rhotot,ng_m,Temp,ng_t,pres,ng_p,lo,hi,dx)
+
+    ! compute eta in valid AND ghost regions
+    ! the ghost cells for rho, Temp, etc., have already been filled properly
+
+    integer        , intent(in   ) :: lo(:), hi(:), ng_e, ng_r, ng_m, ng_t, ng_p
+    real(kind=dp_t), intent(inout) ::    eta(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t), intent(inout) ::    rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   Temp(lo(1)-ng_t:,lo(2)-ng_t:,lo(3)-ng_t:)
+    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    ! local
+    integer :: i,j,k
+
+    do k=lo(3)-ng_e,hi(3)+ng_e
+       do j=lo(2)-ng_e,hi(2)+ng_e
+          do i=lo(1)-ng_e,hi(1)+ng_e
+
+          end do
+       end do
+    end do
+
+  end subroutine compute_eta_3d
 
 end module init_module

@@ -39,7 +39,7 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho(:)
-  type(multifab), allocatable  :: rho_tot(:)
+  type(multifab), allocatable  :: rhotot(:)
   type(multifab), allocatable  :: rho_exact(:)
   type(multifab), allocatable  :: Temp(:)   ! Temperature 
   real(kind=dp_t),allocatable  :: covW(:,:) 
@@ -74,7 +74,7 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
   allocate(rho(nlevs))
-  allocate(rho_tot(nlevs))
+  allocate(rhotot(nlevs))
   allocate(rho_exact(nlevs))
   allocate(Temp(nlevs))
   allocate(covW(nspecies,nspecies))
@@ -163,7 +163,7 @@ subroutine main_driver()
   ! bc_tower structure in memory
   ! 1:dm = velocity
   ! dm+1 = pressure
-  ! dm+2 = scal_bc_comp = rho_tot
+  ! dm+2 = scal_bc_comp = rhotot
   ! scal_bc_comp+1 = rho_i
   ! scal_bc_comp+nspecies+1 = mol_frac
   ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
@@ -188,7 +188,7 @@ subroutine main_driver()
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
      call multifab_build(rho(n),      mla%la(n),nspecies,1)
-     call multifab_build(rho_tot(n),  mla%la(n),1,       1) 
+     call multifab_build(rhotot(n),  mla%la(n),1,       1) 
      call multifab_build(rho_exact(n),mla%la(n),nspecies,1)
      call multifab_build(Temp(n),     mla%la(n),1,       1)
   end do
@@ -205,7 +205,7 @@ subroutine main_driver()
 
   ! initialize rho and Temp
   call init_rho(rho,dx,time,the_bc_tower%bc_tower_array)
-  call compute_rhotot(mla,rho,rho_tot)
+  call compute_rhotot(mla,rho,rhotot)
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
  
   ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
@@ -300,7 +300,7 @@ subroutine main_driver()
          ! print mass conservation and write plotfiles
          write(*,*), 'writing plotfiles at timestep =', istep 
          call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time)
-         call write_plotfile1(mla,"plt_rhotot",rho_tot,  istep,dx,time)
+         call write_plotfile1(mla,"plt_rhotot",rhotot,  istep,dx,time)
          call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time)
          call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time)
 
@@ -315,7 +315,7 @@ subroutine main_driver()
       end if
 
       ! advance the solution by dt
-      call advance_diffusion(mla,rho,rho_tot,Temp,dx,dt,time, &
+      call advance_diffusion(mla,rho,rhotot,Temp,dx,dt,time, &
                              the_bc_tower%bc_tower_array)
       ! increment simulation time
       istep = istep + 1
@@ -436,14 +436,14 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_destroy(rho(n))
-     call multifab_destroy(rho_tot(n))
+     call multifab_destroy(rhotot(n))
      call multifab_destroy(rho_exact(n))
      call multifab_destroy(Temp(n))
   end do
   deallocate(lo,hi)
   deallocate(dx)
   deallocate(rho)
-  deallocate(rho_tot)
+  deallocate(rhotot)
   deallocate(Temp)
   deallocate(covW)
   deallocate(covW_theo)

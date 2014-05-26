@@ -210,18 +210,18 @@ module analysis_module
        ! local variables
        real(kind=dp_t), dimension(nspecies)           :: W
        real(kind=dp_t), dimension(nspecies,nspecies)  :: Wij
-       real(kind=dp_t)                                :: rho_tot             
+       real(kind=dp_t)                                :: rhotot             
        integer                                        :: i,j
 
        ! calculate total density inside each cell
-       rho_tot=0.d0 
+       rhotot=0.d0 
        do i=1, nspecies  
-          rho_tot = rho_tot + rho(i)
+          rhotot = rhotot + rho(i)
        end do         
   
        ! calculate mass fraction and sum over cell for each species
        do i=1, nspecies  
-          W(i)     = rho(i)/rho_tot
+          W(i)     = rho(i)/rhotot
           cellW(i) = cellW(i) + W(i) ! compute this for average
        end do
 

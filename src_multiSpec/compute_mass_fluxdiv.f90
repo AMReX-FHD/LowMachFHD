@@ -21,14 +21,14 @@ module compute_mass_fluxdiv_module
 
 contains
 
-  subroutine compute_mass_fluxdiv_wrapper(mla,rho,rho_tot, &
+  subroutine compute_mass_fluxdiv_wrapper(mla,rho,rhotot, &
                                           diff_fluxdiv,stoch_fluxdiv,Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           n_rngs,the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
-    type(multifab) , intent(inout)   :: rho_tot(:)
+    type(multifab) , intent(inout)   :: rhotot(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
@@ -63,7 +63,7 @@ contains
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
     end do
 
-    call compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,Gama,D_MS,&
+    call compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Gama,D_MS,&
                               D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                               zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                               n_rngs,the_bc_level)
@@ -80,14 +80,14 @@ contains
 
   end subroutine compute_mass_fluxdiv_wrapper
 
-  subroutine compute_mass_fluxdiv(mla,rho,rho_tot,molarconc,molmtot,chi,Gama,D_MS,&
+  subroutine compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Gama,D_MS,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                                   zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                                   n_rngs,the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
-    type(multifab) , intent(inout)   :: rho_tot(:)
+    type(multifab) , intent(inout)   :: rhotot(:)
     type(multifab) , intent(inout)   :: molarconc(:)
     type(multifab) , intent(inout)   :: molmtot(:)
     type(multifab) , intent(inout)   :: chi(:)
@@ -124,29 +124,29 @@ contains
     ! modify rho with drho to ensure no mass or mole fraction is zero
     call correct_rho_with_drho(mla,rho,drho,the_bc_level)
  
-    ! compute molmtot,molarconc & rho_tot (primitive variables) for 
+    ! compute molmtot,molarconc & rhotot (primitive variables) for 
     ! each-cell from rho(conserved) 
-    call convert_cons_to_prim(mla,rho,rho_tot,molarconc,molmtot,the_bc_level)
+    call convert_cons_to_prim(mla,rho,rhotot,molarconc,molmtot,the_bc_level)
       
     ! populate D_MS and Gama 
-    call fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,D_therm,Gama,the_bc_level)
+    call fluid_model(mla,rho,rhotot,molarconc,molmtot,D_MS,D_therm,Gama,the_bc_level)
 
     ! compute chi 
-    call compute_chi(mla,rho,rho_tot,molarconc,chi,D_MS,D_therm,Temp,zeta_by_Temp,the_bc_level)
+    call compute_chi(mla,rho,rhotot,molarconc,chi,D_MS,D_therm,Temp,zeta_by_Temp,the_bc_level)
       
     ! compute rho*W*chi
-    call compute_rhoWchi(mla,rho,rho_tot,molarconc,molmtot,chi,rhoWchi,the_bc_level)
+    call compute_rhoWchi(mla,rho,rhotot,molarconc,molmtot,chi,rhoWchi,the_bc_level)
 
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
-    call diffusive_mass_fluxdiv(mla,rho,rho_tot,molarconc,rhoWchi,Gama,&
+    call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
                                 diff_fluxdiv,Temp,zeta_by_Temp,flux_total,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
 
     ! compute stochastic fluxdiv 
-    if(use_stoch) call stochastic_mass_fluxdiv(mla,rho,rho_tot,molarconc,&
+    if(use_stoch) call stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,&
                                                molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
                                                dx,dt,weights,the_bc_level)
       

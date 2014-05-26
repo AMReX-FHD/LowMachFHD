@@ -19,14 +19,14 @@ subroutine test_chi(nspecies)
   integer, intent(in) :: nspecies
   real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda,chi,D_MS,Gama
   real(kind=dp_t), dimension(nspecies)          :: W,rho,drho,molarconc,molmass_in,molmass,chiw 
-  real(kind=dp_t)                               :: rho_tot,molmtot,Sum_woverm,Sum_knoti
+  real(kind=dp_t)                               :: rhotot,molmtot,Sum_woverm,Sum_knoti
   integer                                       :: i,j,k,n,row,column,loop
 
   ! free up memory 
   D_MS       = 0.d0         
   Lambda     = 0.d0         
   chi        = 0.d0         
-  rho_tot    = 0.d0
+  rhotot    = 0.d0
   molarconc  = 0.d0
   Sum_knoti  = 0.d0
   Sum_woverm = 0.d0
@@ -52,10 +52,10 @@ subroutine test_chi(nspecies)
   W = rho/sum(rho)
 
   ! Compute quantities consistently now
-  call compute_molconc_rhotot_local(rho,rho_tot,molarconc,molmass,molmtot)  
+  call compute_molconc_rhotot_local(rho,rhotot,molarconc,molmass,molmtot)  
   
   ! populate D_MS, Gama 
-  call compute_D_MSGama_local(rho,rho_tot,molarconc,molmtot,D_MS,Gama)
+  call compute_D_MSGama_local(rho,rhotot,molarconc,molmtot,D_MS,Gama)
 
   do loop=1,2
   
@@ -68,7 +68,7 @@ subroutine test_chi(nspecies)
         use_lapack = .false.
      endif
      
-     call compute_chi_local(rho,rho_tot,molarconc,molmass,chi,D_MS)
+     call compute_chi_local(rho,rhotot,molarconc,molmass,chi,D_MS)
      chiw = matmul(chi,W)
 
      print*, 'print chi' 

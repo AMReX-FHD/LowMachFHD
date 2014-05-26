@@ -13,11 +13,11 @@ module fluid_model_module
   
 contains
   
-  subroutine fluid_model(mla,rho,rho_tot,molarconc,molmtot,D_MS,D_therm,Gama,the_bc_level)
+  subroutine fluid_model(mla,rho,rhotot,molarconc,molmtot,D_MS,D_therm,Gama,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
-    type(multifab),  intent(in   )  :: rho_tot(:) 
+    type(multifab),  intent(in   )  :: rhotot(:) 
     type(multifab),  intent(in   )  :: molarconc(:) 
     type(multifab),  intent(in   )  :: molmtot(:) 
     type(multifab),  intent(inout)  :: D_MS(:)      ! MS diffusion constants 
@@ -31,7 +31,7 @@ contains
 
     ! assign pointers for multifabs to be passed
     real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
-    real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rho_tot
+    real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_MS
@@ -46,7 +46,7 @@ contains
     do n=1,nlevs
        do i=1,nfabs(rho(n))
           dp => dataptr(rho(n),i)
-          dp1 => dataptr(rho_tot(n),i)
+          dp1 => dataptr(rhotot(n),i)
           dp2 => dataptr(molarconc(n),i)
           dp3 => dataptr(molmtot(n),i)
           dp4 => dataptr(D_MS(n),i)
@@ -68,11 +68,11 @@ contains
   
   end subroutine fluid_model
   
-  subroutine compute_D_MSGama_2d(rho,rho_tot,molarconc,molmtot,D_MS,D_therm,Gama,ng,lo,hi)
+  subroutine compute_D_MSGama_2d(rho,rhotot,molarconc,molmtot,D_MS,D_therm,Gama,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
-    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:)      ! total density in each cell 
+    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)      ! total density in each cell 
     real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)  ! molar concentration 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
     real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
@@ -86,18 +86,18 @@ contains
     do j=lo(2)-ng,hi(2)+ng
        do i=lo(1)-ng,hi(1)+ng
        
-          call compute_D_MSGama_local(rho(i,j,:),rho_tot(i,j),molarconc(i,j,:),&
+          call compute_D_MSGama_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
                                       molmtot(i,j),D_MS(i,j,:),D_therm(i,j,:),Gama(i,j,:))
        end do
     end do
    
   end subroutine compute_D_MSGama_2d
 
-  subroutine compute_D_MSGama_3d(rho,rho_tot,molarconc,molmtot,D_MS,D_therm,Gama,ng,lo,hi)
+  subroutine compute_D_MSGama_3d(rho,rhotot,molarconc,molmtot,D_MS,D_therm,Gama,ng,lo,hi)
  
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! density; last dimension for species
-    real(kind=dp_t)  :: rho_tot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total density in each cell 
+    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total density in each cell 
     real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! molar concentration; 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total molar mass 
     real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
@@ -112,7 +112,7 @@ contains
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
 
-             call compute_D_MSGama_local(rho(i,j,k,:),rho_tot(i,j,k),molarconc(i,j,k,:),&
+             call compute_D_MSGama_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
                                          molmtot(i,j,k),D_MS(i,j,k,:),D_therm(i,j,k,:),Gama(i,j,k,:))
           end do
        end do
@@ -120,10 +120,10 @@ contains
    
   end subroutine compute_D_MSGama_3d
 
-  subroutine compute_D_MSGama_local(rho,rho_tot,molarconc,molmtot,D_MS,D_therm,Gama)
+  subroutine compute_D_MSGama_local(rho,rhotot,molarconc,molmtot,D_MS,D_therm,Gama)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)        
-    real(kind=dp_t), intent(in)   :: rho_tot
+    real(kind=dp_t), intent(in)   :: rhotot
     real(kind=dp_t), intent(in)   :: molarconc(nspecies)
     real(kind=dp_t), intent(in)   :: molmtot
     real(kind=dp_t), intent(out)  :: D_MS(nspecies,nspecies) 
