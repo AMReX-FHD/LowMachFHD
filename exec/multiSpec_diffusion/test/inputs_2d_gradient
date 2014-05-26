@@ -13,6 +13,7 @@
  max_grid_size(1:2) = 16 16       ! individual box size 
  n_steps_skip = 0              ! when to start analyzing data
  k_B      = 1                  ! Boltzmann constant
+ cfl     = 0.2                   ! CFL number
 
  ! This can be used to select different problem types (in addition to init_type)
  prob_type = 0 ! UNUSED at present
@@ -54,7 +55,6 @@
  init_type = 6 ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
 
  max_step = 10000                   ! total number of computational step
- cfl1     = 0.2                   ! CFL number
  chi      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_coef_mass = 1e-6        ! parameter to set variance (=1/thickness and =1 ideal) 
  fraction_tolerance = 1e-12       ! to prevent division by zero 

@@ -5,6 +5,7 @@
  max_grid_size(1:2) = 32 32       ! individual box size 
  n_steps_skip = 1000              ! when to start analyzing data
  k_B      = 1                  ! Boltzmann constant
+ cfl     = 0.025                   ! CFL number
 
  ! This can be used to select different problem types (in addition to init_type)
  prob_type = 0 ! UNUSED at present
@@ -43,7 +44,6 @@
  
  nspecies = 3                     ! number of species
  max_step = 10000                   ! total number of computational step
- cfl1     = 0.025                   ! CFL number
  chi      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_coef_mass = 1e-6        ! parameter to set variance (=1/thickness and =1 ideal) 
  Press    = 1.0                   ! Pressure
