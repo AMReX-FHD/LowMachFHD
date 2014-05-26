@@ -8,7 +8,7 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
   integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: chi,Press,start_time ! chi is maximum eigenvalue of diffusion matrix
+  real(kind=dp_t)    :: diff_coef,Press,start_time ! diff_coef is maximum eigenvalue of diffusion matrix
   real(kind=dp_t)    :: rho_init(2,max_species) ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: T_init(2) ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   real(kind=dp_t)    :: molmass(max_species)     ! molar masses for nspecies
@@ -24,7 +24,7 @@ module probin_multispecies_module
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ max_step
-  namelist /probin_multispecies/ chi
+  namelist /probin_multispecies/ diff_coef
   namelist /probin_multispecies/ variance_coef_mass
   namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ fraction_tolerance
@@ -68,7 +68,7 @@ contains
     ! here we set some random values to be replaced from the input file
     nspecies           = 2 
     max_step           = 10000
-    chi                = 1.0d0
+    diff_coef                = 1.0d0
     variance_coef_mass = 1E-3
     Press              = 1.0d0
     fraction_tolerance = 1e-13 
@@ -119,7 +119,7 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_step
-       case ('--chi')
+       case ('--diff_coef')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) max_step

@@ -22,7 +22,7 @@ subroutine main_driver()
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
        k_B, max_grid_size, n_steps_save_stats, n_steps_skip, plot_int, seed, stats_int, &
        bc_lo, bc_hi, probin_common_init, advection_type, fixed_dt, visc_coef
-  use probin_multispecies_module, only: nspecies, rho_init, rho_bc, chi, &
+  use probin_multispecies_module, only: nspecies, rho_init, rho_bc, diff_coef, &
        max_step, mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
        start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_coef_mass, &
        probin_multispecies_init
@@ -314,11 +314,11 @@ subroutine main_driver()
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   call fill_m_stochastic(mla)
 
-  ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*chi)]; 
-  ! chi is the largest eigenvalue of diffusion matrix to be input for n-species
+  ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*diff_coef)]; 
+  ! diff_coef is the largest eigenvalue of diffusion matrix to be input for n-species
   dt = fixed_dt
 
-  if (dt .gt. dx(1,1)**2/(chi*2.d0*dm)) then
+  if (dt .gt. dx(1,1)**2/(diff_coef*2.d0*dm)) then
      call bl_error("time step violates diffusive mass cfl")
   end if
   

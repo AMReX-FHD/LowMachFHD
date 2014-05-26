@@ -29,7 +29,7 @@
  
  nspecies = 4                     ! number of species
  max_step = 10000                  ! total number of computational step
- chi      = 1.d0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
+ diff_coef      = 1.d0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_coef_mass = 1.d-4       ! parameter to set variance (=1/thickness and =1 ideal)
  Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-14       ! to prevent division by zero 
