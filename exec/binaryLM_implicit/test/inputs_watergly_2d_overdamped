@@ -5,12 +5,6 @@
 
 &probin_binarylm
 
-  ! simulation parameters:
-  restart = -1 ! 1000 ! -1 ! If positive, restarts simulation from checkpoint file with this index
-  max_step = 1000          ! maximum number of time steps = N_STEPS in IBAMR
-  print_int = 100              ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
-  project_eos_int = 10        ! how often to call project_onto_eos
-
   ! fluid properties:
   diff_coef = 1.d-5               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
@@ -87,6 +81,11 @@
   plot_int = 1000           ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
   chk_int = 1000 ! If positive, how often to write a checkpoint (restart file)
   
+  restart = -1 ! 1000 ! -1 ! If positive, restarts simulation from checkpoint file with this index
+  max_step = 1000          ! maximum number of time steps = N_STEPS in IBAMR
+  print_int = 100              ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
+  project_eos_int = 10        ! how often to call project_onto_eos
+
   ! Determines initial conditions and other problem-specific parameters (see init.f90)
   ! 0 or 7 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
   ! 1 = spherical bubble with c_init(1) in the interior, c_init(2) on the exterior

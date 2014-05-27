@@ -3,11 +3,6 @@
 
 &probin_binarylm
 
-  ! simulation parameters:
-  max_step = 25000          ! maximum number of time steps = N_STEPS in IBAMR
-  print_int = 250              ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
-  project_eos_int = 10        ! how often to call project_onto_eos
-
   ! fluid properties:
   diff_coef = 1.6e-4 ! true=1.d-5               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
@@ -18,8 +13,6 @@
   ! Boussinesq approximation proper:
   !rhobar(1:2) = 1.05 1.05   ! rho1bar and rho2bar = both equal to RHO in IBAMR    
   !boussinesq_beta = 0.234    ! add Boussinesq-type forcing = EXPANSION in IBAMR
-
-
 
   ! Concentration dependence of transport coefficients chi(c) and eta(c)
   ! These are used in FluctHydro/staggered_grid/src_binaryLM/init.f90
@@ -78,6 +71,10 @@
   max_grid_size(1:2) = 32 32 ! max number of cells in a box for parallelization = largest_patch_size in IBAMR
      ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
   
+  max_step = 25000          ! maximum number of time steps = N_STEPS in IBAMR
+  print_int = 250              ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
+  project_eos_int = 10        ! how often to call project_onto_eos
+
   ! Time stepping
   fixed_dt = 0.05        ! time step (old explicit method used 0.005) = DT in IBAMR
   plot_int = 0           ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR

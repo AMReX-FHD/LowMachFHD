@@ -7,11 +7,6 @@
   c_bc(1,1:2) = 0.d0 0.d0    ! c boundary conditions (dir,face); Dirichlet for RESERVOIR; Neumann for WALL
   c_bc(2,1:2) = -.0384d0 -.0384d0
 
-  ! simulation properties
-  max_step = 10000           ! maximum number of time steps
-  print_int = 0              ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 1        ! how often to call project_onto_eos
-
   ! fluid properties
   rhobar(1:2) = .8416d0 .8416d0   ! rho1bar and rho2bar
   diff_coef = 6.3d-6              ! concentration diffusion coefficient 'chi'
@@ -46,6 +41,9 @@
   fixed_dt = 0.05d0           ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
   prob_type = 0              ! sets scalars, m, coefficients (see init.f90)
+  max_step = 10000           ! maximum number of time steps
+  print_int = 0              ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 1        ! how often to call project_onto_eos
 
   grav(1:2) = 0.d0 -981.d0   ! gravity vector (negative is downwards)
 

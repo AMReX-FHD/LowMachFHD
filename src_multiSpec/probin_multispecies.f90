@@ -7,7 +7,7 @@ module probin_multispecies_module
 
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
-  integer, save      :: nspecies,max_step,init_type,inverse_type,timeinteg_type
+  integer, save      :: nspecies,init_type,inverse_type,timeinteg_type
   real(kind=dp_t)    :: diff_coef,Press,start_time ! diff_coef is maximum eigenvalue of diffusion matrix
   real(kind=dp_t)    :: rho_init(2,max_species) ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: T_init(2) ! initial values for temperature (bottom/top, inside/outside circle, etc.)
@@ -23,7 +23,6 @@ module probin_multispecies_module
   real(kind=dp_t)    :: rho_bc(3,2,max_species)
   
   namelist /probin_multispecies/ nspecies
-  namelist /probin_multispecies/ max_step
   namelist /probin_multispecies/ diff_coef
   namelist /probin_multispecies/ variance_coef_mass
   namelist /probin_multispecies/ Press
@@ -67,7 +66,6 @@ contains
 
     ! here we set some random values to be replaced from the input file
     nspecies           = 2 
-    max_step           = 10000
     diff_coef                = 1.0d0
     variance_coef_mass = 1E-3
     Press              = 1.0d0
@@ -115,14 +113,10 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) nspecies
-       case ('--max_step')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) max_step
        case ('--diff_coef')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) max_step
+          read(fname, *) diff_coef
        case ('--init_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)

@@ -21,7 +21,8 @@ module probin_common_module
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef,k_B,visc_coef
-  integer   , save :: stoch_stress_form,filtering_width
+  integer, save   :: stoch_stress_form,filtering_width,max_step
+  integer, save   :: restart,print_int,project_eos_int
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -29,16 +30,20 @@ module probin_common_module
 
   ! Problem specification
   !----------------------
-  namelist /probin_common/ dim_in        ! 2D or 3D  
-  namelist /probin_common/ prob_lo       ! physical lo coordinate
-  namelist /probin_common/ prob_hi       ! physical hi coordinate
-  namelist /probin_common/ n_cells       ! number of cells in domain
-  namelist /probin_common/ max_grid_size ! max number of cells in a box
-  namelist /probin_common/ fixed_dt      ! time step
-  namelist /probin_common/ cfl           ! cfl number
-  namelist /probin_common/ plot_int      ! Interval for writing a plotfile (for visit/amrvis)
-  namelist /probin_common/ chk_int       ! Interval for writing a checkpoint
-  namelist /probin_common/ prob_type     ! sets scalars, m, coefficients (see init.f90)
+  namelist /probin_common/ dim_in          ! 2D or 3D  
+  namelist /probin_common/ prob_lo         ! physical lo coordinate
+  namelist /probin_common/ prob_hi         ! physical hi coordinate
+  namelist /probin_common/ n_cells         ! number of cells in domain
+  namelist /probin_common/ max_grid_size   ! max number of cells in a box
+  namelist /probin_common/ max_step        ! maximum number of time steps
+  namelist /probin_common/ fixed_dt        ! time step
+  namelist /probin_common/ cfl             ! cfl number
+  namelist /probin_common/ plot_int        ! Interval for writing a plotfile (for visit/amrvis)
+  namelist /probin_common/ chk_int         ! Interval for writing a checkpoint
+  namelist /probin_common/ prob_type       ! sets scalars, m, coefficients (see init.f90)
+  namelist /probin_common/ restart         ! checkpoint restart number
+  namelist /probin_common/ print_int       ! how often to output EOS drift and sum of conserved quantities
+  namelist /probin_common/ project_eos_int ! how often to call project_onto_eos
 
   ! Algorithm control / selection
   !----------------------
@@ -163,11 +168,15 @@ contains
     prob_hi(1:MAX_SPACEDIM) = 1.d0
     n_cells(1:MAX_SPACEDIM) = 64
     max_grid_size(1:MAX_SPACEDIM) = 64
+    max_step = 1
     fixed_dt = 1.d0
     cfl = 0.5d0
     plot_int = 0
     chk_int = 0
     prob_type = 1
+    restart = -1
+    print_int = 0
+    project_eos_int = 1
 
     seed = 1
 
@@ -277,6 +286,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) max_grid_size(3)
 
+       case ('--max_step')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) max_step
+
        case ('--fixed_dt')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -301,6 +315,21 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) prob_type
+
+       case ('--restart')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) restart
+
+       case ('--print_int')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) print_int
+
+       case ('--project_eos_int')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) project_eos_int
 
        case ('--seed')
           farg = farg + 1

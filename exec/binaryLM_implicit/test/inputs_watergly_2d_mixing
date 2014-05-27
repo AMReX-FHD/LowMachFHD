@@ -5,12 +5,6 @@
 
 &probin_binarylm
 
-  ! simulation parameters:
-  restart = -1              ! If positive, restarts simulation from checkpoint file with this index
-  max_step = 999999         ! maximum number of time steps = N_STEPS in IBAMR
-  print_int = 100           ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
-  project_eos_int = 10      ! how often to call project_onto_eos
-
   ! fluid properties:
   diff_coef = 1.d-5           ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 1.0           ! temperature = In IBAMR the product k_B*T is input
@@ -83,6 +77,11 @@
   max_grid_size(1:2) = 64 32 ! max number of cells in a box for parallelization = largest_patch_size in IBAMR
                              ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
   
+  restart = -1              ! If positive, restarts simulation from checkpoint file with this index
+  max_step = 999999         ! maximum number of time steps = N_STEPS in IBAMR
+  print_int = 100           ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
+  project_eos_int = 10      ! how often to call project_onto_eos
+
   ! Time stepping
   ! Due to gravitation-induced instability the time step here needs to be very small, ~0.01s (overdamped)
   ! Here dx = 1/128

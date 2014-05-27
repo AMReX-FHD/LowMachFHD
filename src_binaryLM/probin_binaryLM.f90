@@ -10,11 +10,9 @@ module probin_binarylm_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  integer   , save :: restart,max_step,print_int
   real(dp_t), save :: rhobar(2),diff_coef,smoothing_width
   real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2)
   real(dp_t), save :: mol_mass(2),temperature
-  integer   , save :: project_eos_int
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
   logical   , save :: analyze_binary,plot_stag
@@ -30,12 +28,6 @@ module probin_binarylm_module
   namelist /probin_binarylm/ u_init            ! controls initial velocity
   namelist /probin_binarylm/ c_bc              ! c boundary conditions (dir,face).
                                                ! Dirichlet for RESERVOIR; Neumann for WALL
-
-  ! simulation parameters
-  namelist /probin_binarylm/ restart           ! checkpoint restart number
-  namelist /probin_binarylm/ max_step          ! maximum number of time steps
-  namelist /probin_binarylm/ print_int         ! how often to output EOS drift and sum of conserved quantities
-  namelist /probin_binarylm/ project_eos_int   ! how often to call project_onto_eos
 
   ! fluid properties
   namelist /probin_binarylm/ rhobar            ! rho1bar and rho2bar
@@ -98,11 +90,6 @@ contains
     c_init(1:2) = 1.d0
     u_init(1:2) = 0.d0
     c_bc(1:3,1:2) = 0.d0
-
-    restart = -1
-    max_step = 1
-    print_int = 0
-    project_eos_int = 1
 
     rhobar(1) = 1.1d0 
     rhobar(2) = 0.9d0
@@ -187,26 +174,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) c_bc(3,2)
-
-       case ('--restart')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) restart
-
-       case ('--max_step')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) max_step
-
-       case ('--print_int')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) print_int
-
-       case ('--project_eos_int')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) project_eos_int
 
        case ('--rhobar_1')
           farg = farg + 1
