@@ -5,8 +5,8 @@ module external_force_module
   use multifab_module
   use ml_layout_module
   use multifab_fill_ghost_module
-  use probin_multispecies_module, only: Dbar, init_type, sigma, beta, alpha1, delta, molmass
-  use probin_common_module, only: prob_lo, prob_hi
+  use probin_multispecies_module, only: Dbar, sigma, beta, alpha1, delta, molmass
+  use probin_common_module, only: prob_lo, prob_hi, prob_type
 
   implicit none
 
@@ -69,7 +69,7 @@ contains
     D12    = Dbar(1)
     D23    = Dbar(3)
    
-    select case (abs(init_type))
+    select case (abs(prob_type))
     
     !==== for m1 = m2 = m and also for m1 != m2 != m, 2 species ====!
     case(4) 
@@ -145,7 +145,7 @@ contains
     D12    = Dbar(1)
     D23    = Dbar(3)
     
-    select case (abs(init_type))
+    select case (abs(prob_type))
     
     !==== for m1 = m2 = m and m1 != m2 != m, 2 species ====!
     case(4)

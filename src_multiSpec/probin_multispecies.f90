@@ -7,7 +7,7 @@ module probin_multispecies_module
 
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2
-  integer, save      :: nspecies,init_type,inverse_type,timeinteg_type
+  integer, save      :: nspecies,inverse_type,timeinteg_type
   real(kind=dp_t)    :: diff_coef,Press,start_time ! diff_coef is maximum eigenvalue of diffusion matrix
   real(kind=dp_t)    :: rho_init(2,max_species) ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: T_init(2) ! initial values for temperature (bottom/top, inside/outside circle, etc.)
@@ -28,7 +28,6 @@ module probin_multispecies_module
   namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ fraction_tolerance
   namelist /probin_multispecies/ start_time
-  namelist /probin_multispecies/ init_type
   namelist /probin_multispecies/ inverse_type   
   namelist /probin_multispecies/ timeinteg_type   
   namelist /probin_multispecies/ correct_flux   
@@ -71,7 +70,6 @@ contains
     Press              = 1.0d0
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
-    init_type          = 0
     inverse_type       = 1
     timeinteg_type     = 1
     correct_flux       = .true.
@@ -117,10 +115,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) diff_coef
-       case ('--init_type')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) init_type
        case ('--inverse_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)

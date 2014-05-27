@@ -7,9 +7,7 @@
  n_steps_skip = 1000              ! when to start analyzing data
  k_B      = 1                  ! Boltzmann constant
  cfl     = 0.025                   ! CFL number
-
- ! This can be used to select different problem types (in addition to init_type)
- prob_type = 0 ! UNUSED at present
+ prob_type = 0                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
 
  ! Grid size
  prob_lo(1:2) = 0 0
@@ -49,7 +47,6 @@
  Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-12       ! to prevent division by zero 
  start_time  = 0                  ! For manufactured solutions
- init_type = 0                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 3               ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=RK3
  correct_flux = .true.            ! correct flux to numeric roundoff

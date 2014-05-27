@@ -9,8 +9,8 @@ module init_module
   use multifab_coefbc_module
   use ml_layout_module
   use convert_stag_module
-  use probin_common_module, only: prob_lo, prob_hi, visc_coef
-  use probin_multispecies_module, only: alpha1, beta, delta, init_type, sigma, Dbar, &
+  use probin_common_module, only: prob_lo, prob_hi, visc_coef, prob_type
+  use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, &
        T_init, rho_init, nspecies, rho_part_bc_comp, molmass, rhobar, diff_coef
  
   implicit none
@@ -19,7 +19,7 @@ module init_module
 
   public :: init_rho, init_Temp, compute_eta, compute_chi
   
-  ! init_type: 
+  ! prob_type: 
   ! 0 = rho constant in space (thermodynamic equilibrium), temperature profile to check thermodiffusion
   ! 1 = rho in concentric circle (two values inside and outside), temperature is distributed similarly 
   ! 2 = constant gradient (spatial distortion proportional to y), temperature is distributed similarly
@@ -92,8 +92,8 @@ contains
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
     ! for specific box, now start loop over alloted cells     
-    ! if init_type is negative, we enforce low mach constraint by overwriting final rho_i
-    select case (abs(init_type))
+    ! if prob_type is negative, we enforce low mach constraint by overwriting final rho_i
+    select case (abs(prob_type))
 
     case(0) 
     !============================================================
@@ -275,11 +275,11 @@ contains
  
     case default
       
-      call bl_error("Desired init_type not supported in 3D")
+      call bl_error("Desired prob_type not supported in 3D")
       
     end select
 
-    if (init_type .lt. 0) then
+    if (prob_type .lt. 0) then
 
        ! enforce low mach constraint by overwriting final rho_i
        do j=lo(2),hi(2)
@@ -312,8 +312,8 @@ contains
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
     ! for specific box, now start loop over alloted cells
-    ! if init_type is negative, we enforce low mach constraint by overwriting final rho_i
-    select case (abs(init_type))
+    ! if prob_type is negative, we enforce low mach constraint by overwriting final rho_i
+    select case (abs(prob_type))
     
     case(0) 
     !================================================================================
@@ -465,11 +465,11 @@ contains
 
     case default
       
-      call bl_error("Desired init_type not supported in 3D")
+      call bl_error("Desired prob_type not supported in 3D")
       
     end select
 
-    if (init_type .lt. 0) then
+    if (prob_type .lt. 0) then
 
        ! enforce low mach constraint by overwriting final rho_i
        do k=lo(3),hi(3)
@@ -547,7 +547,7 @@ contains
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
     ! for specific box, now start loop over alloted cells     
-    select case (abs(init_type)) 
+    select case (abs(prob_type)) 
 
     case(0) 
     !=========================================================================
@@ -631,7 +631,7 @@ contains
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
     ! for specific box, now start loop over alloted cells     
-    select case (abs(init_type)) 
+    select case (abs(prob_type)) 
     
     case(0) 
     !================================================================================
