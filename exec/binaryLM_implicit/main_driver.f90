@@ -319,7 +319,7 @@ subroutine main_driver()
 
      if (initial_variance .ne. 0.d0) then
         ! umac is passed in as a temporary
-        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold,umac)
+        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold)
      end if
      
      if (barodiffusion_type .gt. 0) then

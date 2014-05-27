@@ -659,22 +659,28 @@ contains
   end subroutine destroy_m_stochastic
 
  ! Add equilibrium fluctuations to the momentum (valid and ghost regions)
- subroutine add_m_fluctuations(mla,dx,variance,s_cc,s_face,m_face,mactemp)
+ subroutine add_m_fluctuations(mla,dx,variance,s_cc,s_face,m_face)
 
    type(ml_layout), intent(in   ) :: mla
    real(dp_t)     , intent(in   ) :: variance, dx(:,:)
    type(multifab) , intent(in   ) :: s_cc(:), s_face(:,:)
-   type(multifab) , intent(inout) :: m_face(:,:)  
-   type(multifab) , intent(inout) :: mactemp(:,:) ! Temporary multifab
+   type(multifab) , intent(inout) :: m_face(:,:)
 
    ! local
+   type(multifab) :: mactemp(mla%nlevel,mla%dim)
    integer :: n,i,dm,nlevs
    real(dp_t) :: av_mom(mla%dim)
 
    dm = mla%dim
    nlevs = mla%nlevel
 
-   ! Generate random numbers first and store them in umac temporarily  
+   do n=1,nlevs
+      do i=1,dm
+         call multifab_build_edge(mactemp(n,i),mla%la(n),1,1,i)
+      end do
+   end do
+
+   ! Generate random numbers first and store them in mactemp
    do n=1,nlevs
       do i=1,dm
          call multifab_fill_random(mactemp(n:n,i), &
@@ -700,7 +706,13 @@ contains
          call setval(mactemp(1,i), -av_mom(i))
          call saxpy(m_face(1,i), 1.0_dp_t, mactemp(1,i))
       end do
-   end if            
+   end if
+
+   do n=1,nlevs
+      do i=1,dm
+         call multifab_destroy(mactemp(n,i))
+      end do
+   end do
 
  end subroutine add_m_fluctuations
 

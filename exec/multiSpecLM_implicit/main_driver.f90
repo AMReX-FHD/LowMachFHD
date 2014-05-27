@@ -268,7 +268,7 @@ subroutine main_driver()
   !=====================================================================
 
   ! initialize the time 
-  time = start_time    
+  time = start_time
 
   ! initialize rho
   call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
@@ -309,6 +309,11 @@ subroutine main_driver()
   ! initialize multifabs that hold random fluxes
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
+
+
+!     if (initial_variance .ne. 0.d0) then
+!        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold)
+!     end if
 
   ! fill random flux multifabs
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
@@ -359,9 +364,11 @@ subroutine main_driver()
      end if
   end if
 
-  ! initial projection - only needed for inertial algorithm
-!  call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-!                          Temp,dt,dx,n_rngs,the_bc_tower)
+  ! initial projection - only truly needed for inertial algorithm
+  ! for the overdamped algorithm, this only changes the reference state for the first
+  ! gmres solve in the first time step
+  call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                          Temp,dt,dx,n_rngs,the_bc_tower)
 
   !=======================================================
   ! Begin time stepping loop
