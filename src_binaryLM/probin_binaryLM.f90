@@ -10,7 +10,7 @@ module probin_binarylm_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  real(dp_t), save :: rhobar(2),diff_coef,smoothing_width
+  real(dp_t), save :: rhobar(2),smoothing_width
   real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2)
   real(dp_t), save :: mol_mass(2),temperature
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
@@ -31,7 +31,6 @@ module probin_binarylm_module
 
   ! fluid properties
   namelist /probin_binarylm/ rhobar            ! rho1bar and rho2bar
-  namelist /probin_binarylm/ diff_coef         ! concentration diffusion coefficient 'chi'
   namelist /probin_binarylm/ mol_mass          ! molar mass of species
   namelist /probin_binarylm/ temperature       ! temperature
   namelist /probin_binarylm/ material_properties ! Coefficients A/B/C for chi/eta/kappa
@@ -93,7 +92,6 @@ contains
 
     rhobar(1) = 1.1d0 
     rhobar(2) = 0.9d0
-    diff_coef = 1.d0
     mol_mass(1:2) = 1.d0
     temperature = 1.d0
     material_properties(1:3,1:3) = 0.d0
@@ -183,11 +181,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) rhobar(2)
-
-       case ('--diff_coef')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) diff_coef
 
        case ('--mol_mass_1')
           farg = farg + 1

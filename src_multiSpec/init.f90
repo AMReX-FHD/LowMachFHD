@@ -9,9 +9,9 @@ module init_module
   use multifab_coefbc_module
   use ml_layout_module
   use convert_stag_module
-  use probin_common_module, only: prob_lo, prob_hi, visc_coef, prob_type
+  use probin_common_module, only: prob_lo, prob_hi, visc_coef, prob_type, diff_coef
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, &
-       T_init, rho_init, nspecies, rho_part_bc_comp, molmass, rhobar, diff_coef
+       T_init, rho_init, nspecies, rho_part_bc_comp, molmass, rhobar
  
   implicit none
 

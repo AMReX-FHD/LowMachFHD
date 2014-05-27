@@ -2,7 +2,6 @@
 
   ! fluid properties:
   rhobar(1:2) = 0.8416 0.8416   ! rho1bar and rho2bar = both equal to RHO in IBAMR
-  diff_coef = 6.3d-6               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
   temperature = 298.15           ! temperature = In IBAMR the product k_B*T is input
 
   boussinesq_beta = 0.2362    ! add Boussinesq-type forcing = EXPANSION in IBAMR
@@ -91,6 +90,7 @@
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
   diff_type = 1
+  diff_coef = 6.3d-6               ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 

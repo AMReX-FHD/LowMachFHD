@@ -14,6 +14,8 @@
  prob_hi(1:2) = 64 32                    ! physical systemsize = (prob_lo-prob_hi)
  n_cells(1:2) = 64 32                    ! to set dx = systemsize/n_cells
 
+ diff_coef      = 1.0                          ! max eigenvalue of diffusionmatrix Dbar_bc 
+
  ! allowable options for this example are
  ! -1 = PERIODIC
  bc_lo(1:2) = -1 -1
@@ -24,7 +26,6 @@
 &probin_multispecies
  
  nspecies = 4                            ! number of species
- diff_coef      = 1.0                          ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_coef_mass = 1E-6               ! parameter to set variance (=1/thickness and =1 ideal) 
  Press    = 1.0                          ! Pressure
  fraction_tolerance = 1e-14              ! to prevent division by zero 

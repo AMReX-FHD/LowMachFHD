@@ -14,8 +14,8 @@ module stochastic_rhoc_fluxdiv_module
   use multifab_fill_random_module
   use multifab_filter_module
   use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef, k_B, &
-                                   filtering_width, stoch_stress_form
-  use probin_binarylm_module, only: rhobar, diff_coef, conc_scal, mol_mass, temperature
+                                   filtering_width, stoch_stress_form, diff_coef
+  use probin_binarylm_module, only: rhobar, conc_scal, mol_mass, temperature
 
   implicit none
 

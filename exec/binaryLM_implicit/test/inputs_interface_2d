@@ -8,7 +8,6 @@
 
   ! fluid properties
   rhobar(1:2) = 1.d0 1.d0         ! rho1bar and rho2bar   
-  diff_coef = 0.00d0             ! concentration diffusion coefficient 'chi'
   mol_mass(1:2) = 1.d0 1.d0       ! molar mass of species
   temperature = 1.d0                       ! temperature
 
@@ -64,6 +63,7 @@
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
   diff_type = 1
+  diff_coef = 0.00d0             ! concentration diffusion coefficient 'chi'
 
   advection_type = 3      ! 0 = centered, 1 = unlimited bds, 2 = limited bds, 3 = unlimited quad bds
 

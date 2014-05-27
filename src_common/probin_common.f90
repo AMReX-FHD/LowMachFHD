@@ -20,7 +20,7 @@ module probin_common_module
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
-  real(dp_t),save :: variance_coef,k_B,visc_coef
+  real(dp_t),save :: variance_coef,k_B,visc_coef,diff_coef
   integer, save   :: stoch_stress_form,filtering_width,max_step
   integer, save   :: restart,print_int,project_eos_int
 
@@ -67,6 +67,8 @@ module probin_common_module
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
   namelist /probin_common/ diff_type
+  namelist /probin_common/ diff_coef      ! for binary, this is diffusion coefficient, chi
+                                          ! for multispecies, this is maximum eigenvalue of diffusion matrix
 
   namelist /probin_common/ advection_type ! 0 = centered explicit
                                           ! 1 = unlimited bilinear bds in space and time
@@ -185,6 +187,7 @@ contains
     visc_type = 1
     visc_coef = 1.d0
     diff_type = 1
+    diff_coef = 1.d0
 
     advection_type = 0
 
@@ -363,6 +366,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) diff_type
+
+       case ('--diff_coef')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) diff_coef
 
        case ('--advection_type')
           farg = farg + 1

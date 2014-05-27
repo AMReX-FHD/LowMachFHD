@@ -13,8 +13,6 @@
   ! fluid properties
   !rhobar(1:2) = 0.8594366925 0.8594366925 ! mass ratio R=1
   rhobar(1:2) = 0.8594366925 3.437746770 ! mass ratio R=4
-  !diff_coef = 0.05284803036 ! R=1
-  diff_coef = 0.04178003645 ! Enskog theory = 0.05284803036 * sqrt ( (1+R) / (2*R) )
   !mol_mass(1:2) = 1.0 1.0 ! R=1
   mol_mass(1:2) = 1.0 4.0 ! Molecular masses of species
   temperature = 1.d0                  ! temperature
@@ -76,6 +74,8 @@
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
   diff_type = -1
+  !diff_coef = 0.05284803036 ! R=1
+  diff_coef = 0.04178003645 ! Enskog theory = 0.05284803036 * sqrt ( (1+R) / (2*R) )
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 

@@ -19,6 +19,8 @@
  bc_lo(1:2) = -1 -1
  bc_hi(1:2) = -1 -1
 
+ diff_coef      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
+
  ! random number seed
  ! 0        = unpredictable seed based on clock
  ! positive = fixed seed
@@ -40,7 +42,6 @@
 &probin_multispecies
  
  nspecies = 3                     ! number of species
- diff_coef      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
  variance_coef_mass = 1e-6        ! parameter to set variance (=1/thickness and =1 ideal) 
  Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-12       ! to prevent division by zero 

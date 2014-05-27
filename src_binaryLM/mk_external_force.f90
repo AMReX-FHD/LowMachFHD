@@ -6,8 +6,7 @@ module mk_external_force_module
   use bl_constants_module
   use define_bc_module
   use zero_edgeval_module
-  use probin_binarylm_module, only: diff_coef
-  use probin_common_module, only: prob_type, visc_coef
+  use probin_common_module, only: prob_type, visc_coef, diff_coef
 
   implicit none
 
