@@ -53,6 +53,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
   type(multifab), allocatable  :: umac(:,:)
+  type(multifab), allocatable  :: mold(:,:)
   type(multifab), allocatable  :: pres(:)
   type(multifab), allocatable  :: eta(:)
   type(multifab), allocatable  :: eta_ed(:,:)
@@ -95,7 +96,7 @@ subroutine main_driver()
   allocate(rho_old(nlevs),rhotot_old(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
-  allocate(umac(nlevs,dm),pres(nlevs))
+  allocate(umac(nlevs,dm),mold(nlevs,dm),pres(nlevs))
   allocate(eta(nlevs),kappa(nlevs))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
@@ -234,6 +235,7 @@ subroutine main_driver()
      call multifab_build(kappa(n),mla%la(n),1,1)
      do i=1,dm
         call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
+        call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
      end do
 
      ! eta and Temp on nodes (2d) or edges (3d)
@@ -259,6 +261,10 @@ subroutine main_driver()
      end if
 
   end do
+
+  ! initialize multifabs that hold random fluxes
+  call init_mass_stochastic(mla,n_rngs)
+  call init_m_stochastic(mla,n_rngs)
 
   ! Initialize random numbers *after* the global (root) seed has been set:
   if(use_stoch) call SeedParallelRNG(seed)
@@ -306,16 +312,15 @@ subroutine main_driver()
      end do
   end do
 
-  ! initialize multifabs that hold random fluxes
-  call init_mass_stochastic(mla,n_rngs)
-  call init_m_stochastic(mla,n_rngs)
+!  ! compute mold
+!  call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
+!
+!  if (initial_variance .ne. 0.d0) then
+!     call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold)
+!     call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
+!  end if
 
-
-!     if (initial_variance .ne. 0.d0) then
-!        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold)
-!     end if
-
-  ! fill random flux multifabs
+  ! fill random flux multifabs with new random numbers
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   call fill_m_stochastic(mla)
 
