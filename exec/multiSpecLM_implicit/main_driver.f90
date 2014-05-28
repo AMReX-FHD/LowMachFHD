@@ -31,7 +31,7 @@ subroutine main_driver()
                                         start_time, temp_bc_comp, timeinteg_type, &
                                         use_stoch, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
- 
+
   implicit none
 
   ! quantities will be allocated with dm components
@@ -303,14 +303,7 @@ subroutine main_driver()
   end do
 
   ! initialize eta
-  do n=1,nlevs
-     call multifab_setval(eta(n), visc_coef, all=.true.)
-  end do
-  if (dm .eq. 2) then
-     call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  else if (dm .eq. 3) then
-     call average_cc_to_edge(nlevs,eta,eta_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  end if
+  call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
 
   ! initialize pressure and velocity
   do n=1,nlevs

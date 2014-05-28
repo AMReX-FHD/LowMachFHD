@@ -57,7 +57,7 @@
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
-!  visc_type = -2
+  visc_type = 2
   visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta' = MU in IBAMR
 
   ! 1 = constant coefficients
@@ -75,9 +75,8 @@
 
   ! Stochastic fluxes: Here only variance_coef*k_B*temperature matters in the end
   variance_coef = 1.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
-!  variance_coef_mass = 0.d0
-!  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
-
+  variance_coef_mass = 0.d0
+  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
 
   k_B = 4.045d-14           ! Boltzmann's constant, exact value irrelevant
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
@@ -132,10 +131,9 @@
  nspecies = 2                     ! number of species
  Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-14       ! to prevent division by zero 
- start_time  = 1.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
+ start_time  = 0.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
  !include_temp = .false.          ! right now no temperature equation
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
- timeinteg_type = 3               ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=RK3
  correct_flux = .true.            ! correct flux to numeric roundoff
  use_stoch = .true.               ! use stochastic flux 
  print_error_norms = .true.       ! check L1/L2/Linf norm 
@@ -145,7 +143,7 @@
  rho_init(1,1:2) = 0.42747897030903d0 0.d0
  Dbar(1:2)       = 1.0  1.0       ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:2)     = 0.0  0.0       ! thermo-diffusion constant (sums to zero)
- T_init(1:2) = 1.0 2.0            ! Upper and lower plate temperature
+ T_init(1) = 293.d0             
 
  
 /

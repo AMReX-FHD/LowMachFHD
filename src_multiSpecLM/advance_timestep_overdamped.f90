@@ -16,6 +16,7 @@ module advance_timestep_overdamped_module
   use div_and_grad_module
   use eos_check_module
   use mk_grav_force_module
+  use init_module
   use convert_mass_variables_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
@@ -346,8 +347,7 @@ contains
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! AJN - update eta and kappa here (if they are functions of rho)
-    !
-    !
+    call compute_eta(mla,eta,eta_ed,rho_new,rhotot_new,Temp,pres,dx,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 4 - Corrector Stochastic/Diffusive Fluxes
