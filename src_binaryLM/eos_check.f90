@@ -2,7 +2,7 @@ module eos_check_module
 
   use multifab_module
   use ml_layout_module
-  use probin_binarylm_module, only: rhobar
+  use probin_common_module, only: rhobar
 
   implicit none
 

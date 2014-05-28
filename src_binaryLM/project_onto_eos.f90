@@ -3,7 +3,7 @@ module project_onto_eos_module
   use bl_types
   use multifab_module
   use ml_layout_module
-  use probin_binarylm_module, only: rhobar
+  use probin_common_module, only: rhobar
   use probin_gmres_module  , only: mg_rel_tol
 
 

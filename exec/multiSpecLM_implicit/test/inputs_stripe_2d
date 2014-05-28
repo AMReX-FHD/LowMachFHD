@@ -22,6 +22,9 @@
  visc_coef = 1.d-2                ! eta (viscosity)
  diff_coef = 1.d0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
 
+ rhobar(1:4)     = 4.0  2.0  3.0  1.0
+ molmass(1:4)    = 1.0  1.0  1.0  1.0  ! molar mass of n-species
+
  grav(1:2) = 0.d0 -1.d-1
 
  variance_coef = 1.d-4            ! for stochastic momentum forcing
@@ -46,9 +49,6 @@
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
 
  rho_init(1,1:4) = 2.0  1.0  1.5  0.5
- rhobar(1:4)     = 4.0  2.0  3.0  1.0
-
- molmass(1:4)    = 1.0  1.0  1.0  1.0  ! molar mass of n-species
  Dbar(1:4)       = 1.0  1.0  1.0  1.0
  Dtherm(1:4)     = 2.0  1.0 -1.0 -2.0  ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature

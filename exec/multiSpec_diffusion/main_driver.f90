@@ -15,12 +15,16 @@ subroutine main_driver()
   use ParallelRNGs 
   use convert_mass_variables_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
-       k_B, max_grid_size, n_steps_save_stats, n_steps_skip, plot_int, seed, stats_int, &
-       bc_lo, bc_hi, probin_common_init, cfl, max_step, diff_coef
+                                  k_B, max_grid_size, n_steps_save_stats, n_steps_skip, &
+                                  plot_int, seed, stats_int, &
+                                  bc_lo, bc_hi, probin_common_init, cfl, max_step, &
+                                  diff_coef, molmass
   use probin_multispecies_module, only: nspecies, rho_init, rho_bc, &
-       mol_frac_bc_comp, print_error_norms, rho_part_bc_comp, &
-       start_time, molmass, temp_bc_comp, timeinteg_type, use_stoch, variance_coef_mass, &
-       probin_multispecies_init
+                                        mol_frac_bc_comp, print_error_norms, &
+                                        rho_part_bc_comp, &
+                                        start_time, temp_bc_comp, timeinteg_type, &
+                                        use_stoch, variance_coef_mass, &
+                                        probin_multispecies_init
  
   implicit none
 

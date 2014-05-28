@@ -1,7 +1,8 @@
 module matrix_utilities
 
   use bl_types
-  use probin_multispecies_module, only: nspecies, molmass
+  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: molmass
 
   implicit none
 

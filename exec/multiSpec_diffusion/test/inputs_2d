@@ -15,6 +15,8 @@
  n_cells(1:2) = 32 64             ! to set dx = systemsize/n_cells
 
  diff_coef      = 1.0                   ! max eigenvalue of diffusionmatrix Dbar_bc 
+  
+ molmass(1:2) = 1.0 2.0        ! molar mass of n-species
 
  ! allowable options for this example are
  ! -1 = PERIODIC
@@ -40,8 +42,7 @@
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T) 
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
  rho_init(1,1:2) = 0.35 1.25        ! inside the circle
- rho_init(2,1:2) = 0.8 0.5          ! outside the circle  
- molmass(1:2) = 1.0 2.0        ! molar mass of n-species
+ rho_init(2,1:2) = 0.8 0.5          ! outside the circle
  Dbar(1:1) = 1.0               ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:2) = 1.0 -1.0        ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0            ! Upper and lower plate temperature

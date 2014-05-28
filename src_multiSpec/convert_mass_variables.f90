@@ -3,9 +3,9 @@ module convert_mass_variables_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
-  use probin_common_module, only: k_B
+  use probin_common_module, only: k_B, molmass
   use probin_multispecies_module, only: nspecies, use_lapack, fraction_tolerance, &
-       inverse_type, is_nonisothermal, molmass
+       inverse_type, is_nonisothermal
   use matrix_utilities 
   use F95_LAPACK
 

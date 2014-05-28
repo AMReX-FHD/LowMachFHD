@@ -19,9 +19,9 @@ module advance_timestep_overdamped_module
   use convert_mass_variables_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-  use probin_common_module, only: advection_type, grav
+  use probin_common_module, only: advection_type, grav, rhobar
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: nspecies, rhobar, rho_part_bc_comp
+  use probin_multispecies_module, only: nspecies, rho_part_bc_comp
   use analysis_module
 
   implicit none

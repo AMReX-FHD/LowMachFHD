@@ -10,9 +10,9 @@ module probin_binarylm_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  real(dp_t), save :: rhobar(2),smoothing_width
+  real(dp_t), save :: smoothing_width
   real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2)
-  real(dp_t), save :: mol_mass(2),temperature
+  real(dp_t), save :: temperature
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
   logical   , save :: analyze_binary,plot_stag
@@ -30,8 +30,6 @@ module probin_binarylm_module
                                                ! Dirichlet for RESERVOIR; Neumann for WALL
 
   ! fluid properties
-  namelist /probin_binarylm/ rhobar            ! rho1bar and rho2bar
-  namelist /probin_binarylm/ mol_mass          ! molar mass of species
   namelist /probin_binarylm/ temperature       ! temperature
   namelist /probin_binarylm/ material_properties ! Coefficients A/B/C for chi/eta/kappa
      ! Formula is: indx=1 for chi, indx=2 for eta, indx=3 for kappa (NOT implemented yet)
@@ -90,9 +88,6 @@ contains
     u_init(1:2) = 0.d0
     c_bc(1:3,1:2) = 0.d0
 
-    rhobar(1) = 1.1d0 
-    rhobar(2) = 0.9d0
-    mol_mass(1:2) = 1.d0
     temperature = 1.d0
     material_properties(1:3,1:3) = 0.d0
 
@@ -172,24 +167,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) c_bc(3,2)
-
-       case ('--rhobar_1')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) rhobar(1)
-       case ('--rhobar_2')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) rhobar(2)
-
-       case ('--mol_mass_1')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mol_mass(1)
-       case ('--mol_mass_2')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) mol_mass(2)
 
        case ('--material_properties_1_1')
           farg = farg + 1

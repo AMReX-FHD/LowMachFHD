@@ -14,8 +14,9 @@ module stochastic_rhoc_fluxdiv_module
   use multifab_fill_random_module
   use multifab_filter_module
   use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef, k_B, &
-                                   filtering_width, stoch_stress_form, diff_coef
-  use probin_binarylm_module, only: rhobar, conc_scal, mol_mass, temperature
+                                   filtering_width, stoch_stress_form, diff_coef, &
+                                   rhobar, molmass
+  use probin_binarylm_module, only: conc_scal, temperature
 
   implicit none
 
@@ -410,7 +411,7 @@ contains
       real(kind=dp_t), intent(out) :: s_fac
       
       ! For ideal mixture use: rho*c*(1-c)*(c*m2+(1-c)*m1)
-      s_fac = rho*fac*(1.0d0-fac)* (fac*mol_mass(2)+(1.0d0-fac)*mol_mass(1))  
+      s_fac = rho*fac*(1.0d0-fac)* (fac*molmass(2)+(1.0d0-fac)*molmass(1))  
     
     end subroutine concentration_amplitude
     
@@ -619,7 +620,7 @@ contains
 
           ! Concentration fluctuations prefactor M*rho^(-1)*c*(1-c)
           fpvar(:,:,:,1) = sqrt( fp(:,:,:,2) * (1.0d0-fp(:,:,:,2)) / fp(:,:,:,1) * &
-            (fp(:,:,:,2)*mol_mass(2)+(1.0d0-fp(:,:,:,2))*mol_mass(1)) ) * fpvar(:,:,:,1)
+            (fp(:,:,:,2)*molmass(2)+(1.0d0-fp(:,:,:,2))*molmass(1)) ) * fpvar(:,:,:,1)
             
           ! Now add the fluctuations to the mean:  
           fp(:,:,:,2) = fp(:,:,:,2) + sqrt(abs(variance)/product(dx(n,1:dm))) * fpvar(:,:,:,1)

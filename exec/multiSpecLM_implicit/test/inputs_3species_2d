@@ -17,6 +17,9 @@
 
  visc_coef = 1.d-2                ! eta (viscosity)
  diff_coef = 1.0                  ! max eigenvalue of diffusionmatrix Dbar_bc 
+  
+ molmass(1:3) = 1.0 0.75 1.25  ! molar mass of n-species
+ rhobar(1:3) = 0.9 1.0 1.1     ! rhobar
 
  ! allowable options for this example are
  ! 100 = no-slip wall
@@ -44,9 +47,7 @@
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
  rho_init(1,1:3) = 0.2 0.5 0.3      ! inside the circle
- rho_init(2,1:3) = 0.3 0.4 0.3      ! outside the circle  
- molmass(1:3) = 1.0 0.75 1.25  ! molar mass of n-species
- rhobar(1:3) = 0.9 1.0 1.1     ! rhobar
+ rho_init(2,1:3) = 0.3 0.4 0.3      ! outside the circle
  Dbar(1:3) = 1.0 2.0 2.0       ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:3) = 1.0 1.0 -2.0    ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature

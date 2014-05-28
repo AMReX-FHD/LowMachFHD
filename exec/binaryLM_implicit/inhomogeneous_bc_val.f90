@@ -3,8 +3,8 @@ module inhomogeneous_bc_val_module
   use bl_types
   use bc_module
   use bl_error_module
-  use probin_common_module,  only: wallspeed_lo, wallspeed_hi, prob_lo, prob_hi
-  use probin_binarylm_module, only: rhobar, c_bc
+  use probin_common_module,  only: wallspeed_lo, wallspeed_hi, prob_lo, prob_hi, rhobar
+  use probin_binarylm_module, only: c_bc
 
   implicit none
 

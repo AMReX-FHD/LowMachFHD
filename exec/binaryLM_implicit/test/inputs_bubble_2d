@@ -4,9 +4,6 @@
   smoothing_width = 5.d0     ! scale factor for smoothing initial profile
   c_init(1:2) = 0.1d0 0.9d0  ! controls initial concentration range
 
-  ! fluid properties
-  rhobar(1:2) = 1.1d0 0.9d0  ! rho1bar and rho2bar
-
   ! stochastic properties
   conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coef*conc_scal
 
@@ -52,6 +49,9 @@
   ! -1 = spatially-varing coefficients
   diff_type = 1
   diff_coef = 1.d0           ! concentration diffusion coefficient 'chi'
+
+  ! fluid properties
+  rhobar(1:2) = 1.1d0 0.9d0  ! rho1bar and rho2bar
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 

@@ -10,6 +10,8 @@ module probin_common_module
 
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
+  integer, parameter :: max_species = 10
+
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt,cfl,grav(3)
   integer,save    :: visc_type,diff_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
@@ -21,8 +23,10 @@ module probin_common_module
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef,k_B,visc_coef,diff_coef
-  integer, save   :: stoch_stress_form,filtering_width,max_step
-  integer, save   :: restart,print_int,project_eos_int
+  integer,save    :: stoch_stress_form,filtering_width,max_step
+  integer,save    :: restart,print_int,project_eos_int
+  real(dp_t),save :: molmass(max_species)
+  real(dp_t),save :: rhobar(max_species)
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -54,6 +58,9 @@ module probin_common_module
   namelist /probin_common/ seed
 
   namelist /probin_common/ grav               ! gravity vector (negative is downwards)
+
+  namelist /probin_common/ molmass            ! molar masses for nspecies
+  namelist /probin_common/ rhobar             ! rhobar for nspecies
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -183,6 +190,9 @@ contains
     seed = 1
 
     grav(1:3) = 0.d0
+
+    molmass(:) = 1.0d0
+    rhobar(:)  = 1.d0
 
     visc_type = 1
     visc_coef = 1.d0
@@ -351,6 +361,40 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) grav(3)
+
+       case ('--rhobar_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(1)
+       case ('--rhobar_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(2)
+       case ('--rhobar_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(3)
+       case ('--rhobar_4')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(4)
+
+       case ('--molmass_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) molmass(1)
+       case ('--molmass_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) molmass(2)
+       case ('--molmass_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) molmass(3)
+       case ('--molmass_4')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) molmass(4)
 
        case ('--visc_type')
           farg = farg + 1

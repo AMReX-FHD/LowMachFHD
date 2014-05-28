@@ -9,7 +9,8 @@ module initial_projection_module
   use bc_module
   use multifab_physbc_stag_module
   use compute_mass_fluxdiv_module
-  use probin_multispecies_module, only: nspecies, rhobar
+  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: rhobar
 
   implicit none
 

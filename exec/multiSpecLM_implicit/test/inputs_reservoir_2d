@@ -18,6 +18,9 @@
  visc_coef = 1.d-2                ! eta (viscosity)
  diff_coef = 1.0                  ! max eigenvalue of diffusionmatrix Dbar_bc 
 
+ molmass(1:5)    = 1.0  0.8  1.2 0.6  1.4   ! molar mass of n-species
+ rhobar(1:5)     = 1.0  2.0  3.0 4.0  5.0
+
  ! 101 = no-slip reservoir
  bc_lo(1:2) = -1 101
  bc_hi(1:2) = -1 101
@@ -43,8 +46,6 @@
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
  rho_init(1,1:5) = 0.1  0.5  0.75 0.8 1.0
- molmass(1:5)    = 1.0  0.8  1.2 0.6  1.4   ! molar mass of n-species
- rhobar(1:5)     = 1.0  2.0  3.0 4.0  5.0
  Dbar(1:5)       = 1.0  1.5  2.0 1.75 1.25  ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:5)     = 1.0  0.5 -2.0 1.5  -1.0  ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature
