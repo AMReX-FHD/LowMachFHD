@@ -319,7 +319,7 @@ subroutine main_driver()
   if (restart .le. 0) then
 
      if (initial_variance .ne. 0.d0) then
-        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold)
+        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,s_fc,mold)
      end if
      
      if (barodiffusion_type .gt. 0) then

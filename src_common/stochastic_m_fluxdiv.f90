@@ -673,11 +673,11 @@ contains
   end subroutine destroy_m_stochastic
 
  ! Add equilibrium fluctuations to the momentum (valid and ghost regions)
- subroutine add_m_fluctuations(mla,dx,variance,s_cc,s_face,temperature_face,m_face)
+ subroutine add_m_fluctuations(mla,dx,variance,s_face,temperature_face,m_face)
 
    type(ml_layout), intent(in   ) :: mla
    real(dp_t)     , intent(in   ) :: variance, dx(:,:)
-   type(multifab) , intent(in   ) :: s_cc(:), s_face(:,:), temperature_face(:,:)
+   type(multifab) , intent(in   ) :: s_face(:,:), temperature_face(:,:)
    type(multifab) , intent(inout) :: m_face(:,:)
 
    ! local
