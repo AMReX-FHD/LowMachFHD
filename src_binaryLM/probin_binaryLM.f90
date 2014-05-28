@@ -10,7 +10,7 @@ module probin_binarylm_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  real(dp_t), save :: initial_variance,conc_scal,c_init(2)
+  real(dp_t), save :: c_init(2)
   real(dp_t), save :: temperature
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
@@ -32,11 +32,6 @@ module probin_binarylm_module
      ! coeff=coeff0*(material_properties(1,indx) + material_properties(2,indx)*c) / (1.d0 + material_properties(3,indx)*c)
 
   namelist /probin_binarylm/ boussinesq_beta    ! beta for boussinesq gravity
-
-  ! stochastic properties
-  namelist /probin_binarylm/ initial_variance  ! multiplicative factor for initial fluctuations
-                                               ! (if negative, total momentum is set to zero)
-  namelist /probin_binarylm/ conc_scal         ! Scaling for concentration stochastic forcing is variance_coeff*conc_scal
 
   namelist /probin_binarylm/ barodiffusion_type ! 0 = no barodiffusion
                                                 ! 1 = fixed gradp from initialization
@@ -86,9 +81,6 @@ contains
     material_properties(1:3,1:3) = 0.d0
 
     boussinesq_beta = 0.d0
-
-    initial_variance = 0.d0
-    conc_scal = 1.d0
 
     barodiffusion_type = 0
     algorithm_type = 0
@@ -191,16 +183,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) boussinesq_beta
-
-       case ('--initial_variance')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) initial_variance
-
-       case ('--conc_scal')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) conc_scal
 
        case ('--barodiffusion_type')
           farg = farg + 1

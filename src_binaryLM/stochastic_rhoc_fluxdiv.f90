@@ -13,10 +13,11 @@ module stochastic_rhoc_fluxdiv_module
   use multifab_physbc_stag_module
   use multifab_fill_random_module
   use multifab_filter_module
-  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef, k_B, &
+  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef, &
+                                   variance_coef_mass, k_B, &
                                    filtering_width, stoch_stress_form, diff_coef, &
                                    rhobar, molmass
-  use probin_binarylm_module, only: conc_scal, temperature
+  use probin_binarylm_module, only: temperature
 
   implicit none
 
@@ -91,10 +92,10 @@ contains
 
        if (diff_type < 0) then
           ! chi varies in space, add its contribution below in an i/j/k loop
-          variance = sqrt(variance_coef*conc_scal*2.d0          /(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef_mass*2.d0          /(product(dx(n,1:dm))*dt))
        else
           ! chi is constant in space, include it here
-          variance = sqrt(variance_coef*conc_scal*2.d0*diff_coef/(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef_mass*2.d0*diff_coef/(product(dx(n,1:dm))*dt))
        end if
 
        do i=1,dm       

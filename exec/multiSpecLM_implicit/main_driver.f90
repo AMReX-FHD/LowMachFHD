@@ -24,13 +24,12 @@ subroutine main_driver()
                                   plot_int, seed, stats_int, &
                                   bc_lo, bc_hi, probin_common_init, advection_type, &
                                   fixed_dt, visc_coef, max_step, &
-                                  diff_coef, molmass
+                                  diff_coef, molmass, variance_coef_mass
   use probin_multispecies_module, only: nspecies, rho_init, rho_bc, &
                                         mol_frac_bc_comp, print_error_norms, &
                                         rho_part_bc_comp, &
                                         start_time, temp_bc_comp, timeinteg_type, &
-                                        use_stoch, variance_coef_mass, &
-                                        probin_multispecies_init
+                                        use_stoch, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
  
   implicit none

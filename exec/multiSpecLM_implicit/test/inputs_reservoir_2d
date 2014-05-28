@@ -26,13 +26,13 @@
  bc_hi(1:2) = -1 101
 
  variance_coef = 1.d-6            ! for stochastic momentum forcing
+ variance_coef_mass = 1.d-6       ! parameter to set variance (=1/thickness and =1 ideal)
   
 /
 
 &probin_multispecies
  
  nspecies = 5                     ! number of species
- variance_coef_mass = 1.d-6       ! parameter to set variance (=1/thickness and =1 ideal)
  Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-14       ! to prevent division by zero 
  start_time  = 1.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0

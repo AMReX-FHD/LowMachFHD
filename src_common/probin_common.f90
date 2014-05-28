@@ -23,7 +23,8 @@ module probin_common_module
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
-  real(dp_t),save :: variance_coef,k_B,visc_coef,diff_coef
+  real(dp_t),save :: variance_coef,variance_coef_mass,initial_variance
+  real(dp_t),save :: k_B,visc_coef,diff_coef
   integer,save    :: stoch_stress_form,filtering_width,max_step
   integer,save    :: restart,print_int,project_eos_int
   real(dp_t),save :: molmass(max_species)
@@ -140,9 +141,13 @@ module probin_common_module
                                                 ! (will smooth fluctuations)
 
   ! stochastic properties
-  namelist /probin_common/ variance_coef     ! global scaling epsilon for stochastic forcing
-  namelist /probin_common/ k_B               ! Boltzmann's constant
-  namelist /probin_common/ filtering_width   ! If positive the random numbers will be filtered to smooth out the fields
+  namelist /probin_common/ variance_coef      ! global scaling epsilon for stochastic momentum forcing
+  namelist /probin_common/ variance_coef_mass ! global scaling epsilon for stochastic mass forcing
+  namelist /probin_common/ initial_variance   ! multiplicative factor for initial fluctuations
+                                              ! (if negative, total momentum is set to zero)
+
+  namelist /probin_common/ k_B                ! Boltzmann's constant
+  namelist /probin_common/ filtering_width    ! If positive the random numbers will be filtered to smooth out the field s
   namelist /probin_common/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
   !------------------------------------------------------------- 
@@ -224,6 +229,9 @@ contains
     center_snapshots = .false.
 
     variance_coef = 1.d0
+    variance_coef_mass = 1.d0
+    initial_variance = 0.d0
+
     k_B = 1.d0
     filtering_width = 0
     stoch_stress_form = 1
@@ -566,6 +574,16 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) variance_coef
+
+       case ('--variance_coef_mass')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) variance_coef_mass
+
+       case ('--initial_variance')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) initial_variance
 
        case ('--k_B')
           farg = farg + 1

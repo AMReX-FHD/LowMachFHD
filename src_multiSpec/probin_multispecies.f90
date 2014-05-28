@@ -14,14 +14,13 @@ module probin_multispecies_module
   real(kind=dp_t)    :: Dbar(max_element)        ! SM diffusion constant  
   real(kind=dp_t)    :: Dtherm(max_element)          ! thermo-diffusion coefficients  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
-  real(kind=dp_t)    :: variance_coef_mass,fraction_tolerance  
+  real(kind=dp_t)    :: fraction_tolerance  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, temp_bc_comp ! not input: populated at main 
   logical            :: correct_flux,use_stoch,print_error_norms
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
   real(kind=dp_t)    :: rho_bc(3,2,max_species)
   
   namelist /probin_multispecies/ nspecies
-  namelist /probin_multispecies/ variance_coef_mass
   namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ fraction_tolerance
   namelist /probin_multispecies/ start_time
@@ -32,11 +31,11 @@ module probin_multispecies_module
   namelist /probin_multispecies/ print_error_norms   
   namelist /probin_multispecies/ is_ideal_mixture   
   namelist /probin_multispecies/ is_nonisothermal   
-  namelist /probin_multispecies/ use_lapack   
-  namelist /probin_multispecies/ rho_init
+  namelist /probin_multispecies/ use_lapack
   namelist /probin_multispecies/ Dbar
   namelist /probin_multispecies/ Dtherm
-  namelist /probin_multispecies/ T_init
+  namelist /probin_multispecies/ T_init   
+  namelist /probin_multispecies/ rho_init
   namelist /probin_multispecies/ rho_bc ! rho_i boundary conditions (dir,lohi,species)
 
 contains
@@ -60,7 +59,6 @@ contains
 
     ! here we set some random values to be replaced from the input file
     nspecies           = 2 
-    variance_coef_mass = 1E-3
     Press              = 1.0d0
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 

@@ -30,12 +30,13 @@ subroutine main_driver()
   use checkpoint_module
   use estdt_module
   use convert_stag_module
-  use probin_binarylm_module, only: probin_binarylm_init, initial_variance, analyze_binary, &
-                                   conc_scal, barodiffusion_type, algorithm_type
+  use probin_binarylm_module, only: probin_binarylm_init, analyze_binary, &
+                                    barodiffusion_type, algorithm_type
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
-                                   stats_int, variance_coef, chk_int, &
+                                   stats_int, variance_coef, variance_coef_mass, &
+                                   initial_variance, chk_int, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, advection_type, &
                                    restart, max_step, print_int, project_eos_int
   use probin_gmres_module  , only: probin_gmres_init
@@ -292,7 +293,7 @@ subroutine main_driver()
   call convert_cons_to_prim(mla,sold,prim,.true.)
 
   if (restart .le. 0 .and. initial_variance .ne. 0.d0) then
-     call add_c_fluctuations(mla,dx,initial_variance*variance_coef*conc_scal,prim,sold)
+     call add_c_fluctuations(mla,dx,initial_variance*variance_coef_mass,prim,sold)
   end if
 
   ! fill ghost cells for prim

@@ -40,10 +40,6 @@
       ! 1 = Overdamped with 1 RNG
       ! 2 = Overdamped with 2 RNGs  
   
-  ! stochastic properties
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
-  conc_scal = 0.d0          ! Scaling for concentration stochastic forcing is variance_coef*conc_scal = C_VAR in IBAMR
-  
   ! HydroGrid analysis:
   analyze_binary = F ! T for old specialized analysis (HDMD/HSMD for explicit low Mach paper) exec/binaryLM/analyze_spectra.f90
                      ! F for new general analysis code src_common/analyze_spectra.f90
@@ -126,6 +122,9 @@
 
   ! Stochastic fluxes: Here only variance_coef*k_B*temperature matters in the end
   variance_coef = 1.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
+  variance_coef_mass = 0.d0
+  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
+
   k_B = 4.14d-14             ! Boltzmann's constant, exact value irrelevant
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
