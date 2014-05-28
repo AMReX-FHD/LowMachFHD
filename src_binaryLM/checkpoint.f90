@@ -7,8 +7,7 @@ module checkpoint_module
   use bl_IO_module
   use fab_module
   use fabio_module, only: fabio_mkdir, fabio_ml_multifab_write_d
-  use probin_common_module, only: dim_in
-  use probin_binarylm_module, only: algorithm_type
+  use probin_common_module, only: dim_in, algorithm_type
 
   implicit none
 

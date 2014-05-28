@@ -24,7 +24,7 @@ subroutine main_driver()
                                   plot_int, seed, stats_int, &
                                   bc_lo, bc_hi, probin_common_init, advection_type, &
                                   fixed_dt, visc_coef, max_step, &
-                                  diff_coef, molmass, variance_coef_mass
+                                  diff_coef, molmass, variance_coef_mass, algorithm_type
   use probin_multispecies_module, only: nspecies, rho_init, rho_bc, &
                                         mol_frac_bc_comp, print_error_norms, &
                                         rho_part_bc_comp, &
@@ -92,7 +92,11 @@ subroutine main_driver()
   nlevs = 1
   dm = dim_in
 
-  n_rngs = 1
+  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
+     n_rngs = 1
+  else if (algorithm_type .eq. 2) then
+     n_rngs = 2
+  end if
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
@@ -431,10 +435,14 @@ subroutine main_driver()
       end if
 
       ! advance the solution by dt
-      call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                       pres,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                       dx,dt,time,the_bc_tower,n_rngs)
+      if (algorithm_type .eq. 0) then
+         call bl_error("main_driver: inertial algorithm not written yet")
+      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
+         call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                          pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                          dx,dt,time,the_bc_tower,n_rngs)
+      end if
 
       ! increment simulation time
       istep = istep + 1
