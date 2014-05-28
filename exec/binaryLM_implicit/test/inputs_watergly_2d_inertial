@@ -30,8 +30,6 @@
       ! This is [gcoef_function_2 gcoef_function_3] in IBAMR
       ! For Dirichlet (RESERVOIR) BCs it is (a=1, b=0) in IBAMR
       ! For Neumann (WALL) BCs it is (a=0, b=1) in IBAMR
-  ! For initial conditions that have a sharp jump:    
-  smoothing_width = 1.0 ! How much to smooth the sharp jump in initial condition (in units of grid cells)
 
   ! Algorithmic control:
   barodiffusion_type = 0  ! 0 = no barodiffusion
@@ -74,6 +72,9 @@
   max_step = 1000          ! maximum number of time steps = N_STEPS in IBAMR
   print_int = 100              ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
   project_eos_int = 10        ! how often to call project_onto_eos
+
+  ! For initial conditions that have a sharp jump:    
+  smoothing_width = 1.0 ! How much to smooth the sharp jump in initial condition (in units of grid cells)
 
   ! Time stepping
   ! Due to gravitation-induced instability the time step here needs to be very small, ~0.01-0.02s

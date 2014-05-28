@@ -10,8 +10,7 @@ module probin_binarylm_module
   ! For comments and instructions on how to set the input parameters see 
   ! namelist section below
   !------------------------------------------------------------- 
-  real(dp_t), save :: smoothing_width
-  real(dp_t), save :: initial_variance,conc_scal,c_init(2),u_init(2)
+  real(dp_t), save :: initial_variance,conc_scal,c_init(2)
   real(dp_t), save :: temperature
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
   integer   , save :: algorithm_type,barodiffusion_type
@@ -23,12 +22,9 @@ module probin_binarylm_module
   !------------------------------------------------------------- 
 
   ! problem setup
-  namelist /probin_binarylm/ smoothing_width   ! scale factor for smoothing initial profile
   namelist /probin_binarylm/ c_init            ! controls initial concentration range
-  namelist /probin_binarylm/ u_init            ! controls initial velocity
   namelist /probin_binarylm/ c_bc              ! c boundary conditions (dir,face).
                                                ! Dirichlet for RESERVOIR; Neumann for WALL
-
   ! fluid properties
   namelist /probin_binarylm/ temperature       ! temperature
   namelist /probin_binarylm/ material_properties ! Coefficients A/B/C for chi/eta/kappa
@@ -83,9 +79,7 @@ contains
 
     ! Defaults
 
-    smoothing_width = 1.d0
     c_init(1:2) = 1.d0
-    u_init(1:2) = 0.d0
     c_bc(1:3,1:2) = 0.d0
 
     temperature = 1.d0
@@ -120,11 +114,6 @@ contains
        call get_command_argument(farg, value = fname)
        select case (fname)
 
-       case ('--smoothing_width')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) smoothing_width
-
        case ('--c_init_1')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -133,15 +122,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) c_init(2)
-
-       case ('--u_init_1')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) u_init(1)
-       case ('--u_init_2')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) u_init(2)
 
        case ('--c_bc_x_lo')
           farg = farg + 1

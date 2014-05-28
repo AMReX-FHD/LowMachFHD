@@ -11,7 +11,6 @@
   ! stochastic properties
   conc_scal = 1.d0           ! Scaling for concentration stochastic forcing is variance_coef*conc_scal
 
-  smoothing_width = .5
 
   barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
   algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
@@ -30,6 +29,8 @@
   fixed_dt = 0.25           ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
   prob_type = 2              ! sets scalars, m, coefficients (see init.f90)
+
+  smoothing_width = .5
 
   ! Algorithm control / selection
   !----------------------

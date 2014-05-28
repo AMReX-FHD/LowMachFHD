@@ -1,7 +1,6 @@
 &probin_binarylm
 
   ! problem setup
-  smoothing_width = 5.d0     ! scale factor for smoothing initial profile
   c_init(1:2) = 0.1d0 0.9d0  ! controls initial concentration range
 
   ! stochastic properties
@@ -27,6 +26,8 @@
   max_step = 100             ! maximum number of time steps
   print_int = 1              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1        ! how often to call project_onto_eos
+
+  smoothing_width = 5.d0     ! scale factor for smoothing initial profile
 
   ! Algorithm control / selection
   !----------------------

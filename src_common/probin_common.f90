@@ -14,6 +14,7 @@ module probin_common_module
 
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt,cfl,grav(3)
+  real(dp_t),save :: smoothing_width,u_init(2)
   integer,save    :: visc_type,diff_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
@@ -48,6 +49,9 @@ module probin_common_module
   namelist /probin_common/ restart         ! checkpoint restart number
   namelist /probin_common/ print_int       ! how often to output EOS drift and sum of conserved quantities
   namelist /probin_common/ project_eos_int ! how often to call project_onto_eos
+
+  namelist /probin_common/ u_init          ! controls initial velocity
+  namelist /probin_common/ smoothing_width ! scale factor for smoothing initial profile
 
   ! Algorithm control / selection
   !----------------------
@@ -186,6 +190,9 @@ contains
     restart = -1
     print_int = 0
     project_eos_int = 1
+
+    smoothing_width = 1.d0
+    u_init(1:2) = 0.d0
 
     seed = 1
 
@@ -343,6 +350,20 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) project_eos_int
+
+       case ('--smoothing_width')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) smoothing_width
+
+       case ('--u_init_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) u_init(1)
+       case ('--u_init_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) u_init(2)
 
        case ('--seed')
           farg = farg + 1
