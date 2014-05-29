@@ -76,9 +76,9 @@ contains
     use_lapack         = .true.
     rho_init           = 1.0d0
     Dbar               = 1.0d0
-    Dtherm             = 1.0d0
-    H_offdiag          = 1.0d0
-    H_diag             = 1.0d0
+    Dtherm             = 0.0d0
+    H_offdiag          = 0.0d0
+    H_diag             = 0.0d0
     T_init             = 1.0d0
     rho_bc             = 0.d0
  
