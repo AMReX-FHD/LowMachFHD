@@ -11,8 +11,9 @@ module probin_multispecies_module
   real(kind=dp_t)    :: Press,start_time
   real(kind=dp_t)    :: rho_init(2,max_species) ! initial values for concentration, 2 for inside & outside circle
   real(kind=dp_t)    :: T_init(2) ! initial values for temperature (bottom/top, inside/outside circle, etc.)
-  real(kind=dp_t)    :: Dbar(max_element)        ! SM diffusion constant  
-  real(kind=dp_t)    :: Dtherm(max_element)          ! thermo-diffusion coefficients  
+  real(kind=dp_t)    :: Dbar(max_element)       ! SM diffusion constant  
+  real(kind=dp_t)    :: Dtherm(max_element)     ! thermo-diffusion coefficients  
+  real(kind=dp_t)    :: H_offdiag(max_element), H_diag(max_element) ! =d^2F/dx^2  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   real(kind=dp_t)    :: fraction_tolerance  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, temp_bc_comp ! not input: populated at main 
@@ -34,6 +35,8 @@ module probin_multispecies_module
   namelist /probin_multispecies/ use_lapack
   namelist /probin_multispecies/ Dbar
   namelist /probin_multispecies/ Dtherm
+  namelist /probin_multispecies/ H_offdiag
+  namelist /probin_multispecies/ H_diag
   namelist /probin_multispecies/ T_init   
   namelist /probin_multispecies/ rho_init
   namelist /probin_multispecies/ rho_bc ! rho_i boundary conditions (dir,lohi,species)
@@ -73,6 +76,8 @@ contains
     rho_init           = 1.0d0
     Dbar               = 1.0d0
     Dtherm             = 1.0d0
+    H_offdiag          = 1.0d0
+    H_diag             = 1.0d0
     T_init             = 1.0d0
     rho_bc             = 0.d0
  

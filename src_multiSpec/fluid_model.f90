@@ -3,7 +3,9 @@ module fluid_model_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
-  use probin_multispecies_module, only: nspecies, is_ideal_mixture, Dbar, Dtherm
+  use probin_common_module, only: molmass
+  use probin_multispecies_module, only: nspecies, is_ideal_mixture, Dbar, &
+      Dtherm, H_offdiag, H_diag
  
   implicit none
 
@@ -130,35 +132,46 @@ contains
     real(kind=dp_t), intent(out)  :: D_therm(nspecies) 
     real(kind=dp_t), intent(out)  :: Gama(nspecies,nspecies)
  
-    ! local varialbes
-    integer                       :: n,row,column
+    ! local variables
+    integer                                       :: n,row,column
+    real(kind=dp_t), dimension(nspecies,nspecies) :: H, I, X_xxT   
 
-    ! populate D_MS,Gama; for initial case doesn't change in each cell. 
+    ! free the memory
+    H=0; I=0; X_xxT=0;
+
+    ! populate D_MS, H, I and X_xxT where  X = molmtot*W*M^(-1) 
     n=0; 
     do row=1, nspecies  
        do column=1, row-1
           n=n+1
-          D_MS(row, column) = Dbar(n)        ! SM-diffcoeff's read from input
-          D_MS(column, row) = D_MS(row, column) ! symmetric
-         
-          if(is_ideal_mixture) then 
-             Gama(row, column) = 0.d0      
-          else 
-             Gama(row, column) = 0.d0           ! change here for non-ideality 
+          D_MS(row, column) = Dbar(n)                              ! SM-diffcoeff's read from input
+          D_MS(column, row) = D_MS(row, column)                    ! symmetric
+          I(row, column)    = 0.d0      
+          I(column, row)    = I(row, column) ! symmetric
+          
+          if(is_ideal_mixture .eqv. .false.) then
+             X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
+             X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
+             H(row, column) = H_offdiag(n)           ! positive semidefinite matrix read from input
+             H(column, row) = H(row,column)          ! H is symmetric 
           end if
-
-          Gama(column, row) = Gama(row, column) ! symmetric
        end do
-       D_MS(row, row) = 0.d0                    ! as self-diffusion is zero
-       D_therm(row)   = Dtherm(row)          ! thermal diffcoeff's read from input
-
-       if(is_ideal_mixture) then
-          Gama(row, row) = 1.d0                 ! set to unit matrix for time being
-       else  
-          Gama(row, row) = 1.d0                 ! change here for non-ideality 
+       
+       ! populate diagonals 
+       D_MS(row, row) = 0.d0           ! as self-diffusion is zero
+       D_therm(row)   = Dtherm(row)    ! thermal diffcoeff's read from input
+       I(row, row) = 1.d0        ! unit matrix for ideal mixture
+       if(is_ideal_mixture .eqv. .false.) then
+          X_xxT(row,row) = molmtot*rho(row)/(rhotot*molmass(row)) - molarconc(row)**2 
+          H(row, row)    = H_diag(n)      
        end if
-
     end do
+
+    if(is_ideal_mixture) then
+       Gama = I
+    else 
+       Gama = I + matmul(X_xxT, H)     ! non-ideal mixture
+    end if
 
   end subroutine compute_D_MSGama_local
 
