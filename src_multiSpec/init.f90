@@ -827,7 +827,7 @@ contains
 
     ! local
     integer :: i,j
-    real(kind=dp_t) :: c_loc, eta_g, eta_w
+    real(kind=dp_t) :: c_loc, nu_g, nu_w
     real(kind=dp_t) :: x,T
 
     select case (abs(prob_type))
@@ -844,13 +844,13 @@ contains
              T = Temp(i,j) - 273.d0 
 
              ! viscosities of pure glycerol and water
-             eta_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
-             eta_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
+             nu_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
+             nu_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
 
              x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
 
              ! visc_coef should be 1 unless testing different viscosities
-             eta(i,j) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w*rhotot(i,j)
+             eta(i,j) = visc_coef*exp(-x*(-log(nu_g)+log(nu_w)))*nu_w*rhotot(i,j)
 
           end do
        end do
@@ -878,7 +878,7 @@ contains
 
     ! local
     integer :: i,j,k
-    real(kind=dp_t) :: c_loc, eta_g, eta_w
+    real(kind=dp_t) :: c_loc, nu_g, nu_w
     real(kind=dp_t) :: x,T
 
     select case (abs(prob_type))
@@ -896,13 +896,13 @@ contains
                 T = Temp(i,j,k) - 273.d0 
 
                 ! viscosities of pure glycerol and water
-                eta_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
-                eta_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
+                nu_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
+                nu_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
 
                 x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
 
                 ! visc_coef should be 1 unless testing different viscosities
-                eta(i,j,k) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w*rhotot(i,j,k)
+                eta(i,j,k) = visc_coef*exp(-x*(-log(nu_g)+log(nu_w)))*nu_w*rhotot(i,j,k)
 
              end do
           end do
