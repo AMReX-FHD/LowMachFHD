@@ -57,12 +57,12 @@
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
-  visc_type = 2
+  visc_type = -2
   visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta' = MU in IBAMR
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
-!  diff_type = -1
+  diff_type = -1
   diff_coef = 1.d-5           ! concentration diffusion coefficient 'chi' = KAPPA in IBAMR
 
   ! True parameters:
@@ -74,7 +74,7 @@
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
   ! Stochastic fluxes: Here only variance_coef*k_B*temperature matters in the end
-  variance_coef = 0.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
+  variance_coef = 1.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
   variance_coef_mass = 0.d0
   initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
 
@@ -139,8 +139,8 @@
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
- Dbar(1:2)       = 1.d-5 1.d-5     ! SM diffusion constant arranged in lower-triangle
- Dtherm(1:2)     = 0.0  0.0       ! thermo-diffusion constant (sums to zero)
+ Dbar(1)         = 1.d-5          ! SM diffusion constant arranged in lower-triangle
+ Dtherm(1:2)     = 0.0 0.0        ! thermo-diffusion constant (sums to zero)
  T_init(1) = 293.d0
  rho_init(1,1:2) = 0.42747897030903d0 0.d0
 
