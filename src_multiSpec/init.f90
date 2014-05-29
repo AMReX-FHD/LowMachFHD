@@ -830,26 +830,36 @@ contains
     real(kind=dp_t) :: c_loc, eta_g, eta_w
     real(kind=dp_t) :: x,T
 
-    do j=lo(2)-ng_e,hi(2)+ng_e
-       do i=lo(1)-ng_e,hi(1)+ng_e
+    select case (abs(prob_type))
 
-          ! mass fraction of glycerol
-          c_loc = rho(i,j,1)/rhotot(i,j)
+    case (9)
+       
+       do j=lo(2)-ng_e,hi(2)+ng_e
+          do i=lo(1)-ng_e,hi(1)+ng_e
 
-          ! convert temperature to Celsius
-          T = Temp(i,j) - 273.d0 
+             ! mass fraction of glycerol
+             c_loc = rho(i,j,1)/rhotot(i,j)
 
-          ! viscosities of pure glycerol and water
-          eta_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
-          eta_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
+             ! convert temperature to Celsius
+             T = Temp(i,j) - 273.d0 
 
-          x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
+             ! viscosities of pure glycerol and water
+             eta_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
+             eta_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
 
-          ! visc_coef should be 1 unless testing different viscosities
-          eta(i,j) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w*rhotot(i,j)
+             x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
 
+             ! visc_coef should be 1 unless testing different viscosities
+             eta(i,j) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w*rhotot(i,j)
+
+          end do
        end do
-    end do
+
+    case default
+
+       eta = visc_coef
+
+    end select
 
   end subroutine compute_eta_2d
 
@@ -871,28 +881,38 @@ contains
     real(kind=dp_t) :: c_loc, eta_g, eta_w
     real(kind=dp_t) :: x,T
 
-    do k=lo(3)-ng_e,hi(3)+ng_e
-       do j=lo(2)-ng_e,hi(2)+ng_e
-          do i=lo(1)-ng_e,hi(1)+ng_e
+    select case (abs(prob_type))
 
-             ! mass fraction of glycerol
-             c_loc = rho(i,j,k,1)/rhotot(i,j,k)
+    case (9)
 
-             ! convert temperature to Celsius
-             T = Temp(i,j,k) - 273.d0 
+       do k=lo(3)-ng_e,hi(3)+ng_e
+          do j=lo(2)-ng_e,hi(2)+ng_e
+             do i=lo(1)-ng_e,hi(1)+ng_e
 
-             ! viscosities of pure glycerol and water
-             eta_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
-             eta_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
+                ! mass fraction of glycerol
+                c_loc = rho(i,j,k,1)/rhotot(i,j,k)
 
-             x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
+                ! convert temperature to Celsius
+                T = Temp(i,j,k) - 273.d0 
 
-             ! visc_coef should be 1 unless testing different viscosities
-             eta(i,j,k) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w*rhotot(i,j,k)
+                ! viscosities of pure glycerol and water
+                eta_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
+                eta_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
 
+                x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
+
+                ! visc_coef should be 1 unless testing different viscosities
+                eta(i,j,k) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w*rhotot(i,j,k)
+
+             end do
           end do
        end do
-    end do
+
+    case default
+
+       eta = visc_coef
+
+    end select
 
   end subroutine compute_eta_3d
 
@@ -967,16 +987,26 @@ contains
     integer :: i,j
     real(kind=dp_t) :: c_loc
 
-    do j=lo(2)-ng_c,hi(2)+ng_c
-       do i=lo(1)-ng_c,hi(1)+ng_c
+    select case (abs(prob_type))
 
-          ! mass fraction of glycerol
-          c_loc = rho(i,j,1)/rhotot(i,j)
+    case (9)
 
-          chi(i,j) = diff_coef*(1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
+       do j=lo(2)-ng_c,hi(2)+ng_c
+          do i=lo(1)-ng_c,hi(1)+ng_c
 
+             ! mass fraction of glycerol
+             c_loc = rho(i,j,1)/rhotot(i,j)
+
+             chi(i,j) = diff_coef*(1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
+
+          end do
        end do
-    end do
+
+    case default
+
+       chi = diff_coef
+
+    end select
 
   end subroutine compute_chi_2d
 
@@ -997,18 +1027,29 @@ contains
     integer :: i,j,k
     real(kind=dp_t) :: c_loc
 
-    do k=lo(3)-ng_c,hi(3)+ng_c
-       do j=lo(2)-ng_c,hi(2)+ng_c
-          do i=lo(1)-ng_c,hi(1)+ng_c
+    select case (abs(prob_type))
 
-             ! mass fraction of glycerol
-             c_loc = rho(i,j,k,1)/rhotot(i,j,k)
+    case (9)
 
-             chi(i,j,k) = diff_coef*(1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
+       do k=lo(3)-ng_c,hi(3)+ng_c
+          do j=lo(2)-ng_c,hi(2)+ng_c
+             do i=lo(1)-ng_c,hi(1)+ng_c
 
+                ! mass fraction of glycerol
+                c_loc = rho(i,j,k,1)/rhotot(i,j,k)
+
+                chi(i,j,k) = diff_coef* &
+                     (1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
+
+             end do
           end do
        end do
-    end do
+
+       case default
+
+          chi = diff_coef
+
+       end select
 
   end subroutine compute_chi_3d
 
