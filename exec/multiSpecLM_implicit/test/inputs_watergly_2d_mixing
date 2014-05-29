@@ -15,7 +15,7 @@
                              ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
   
   restart = -1              ! If positive, restarts simulation from checkpoint file with this index
-  max_step = 999999         ! maximum number of time steps = N_STEPS in IBAMR
+  max_step = 99999          ! maximum number of time steps = N_STEPS in IBAMR
 
 ! AJN - not implemented yet
 !  print_int = 100           ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
@@ -31,7 +31,7 @@
   ! diffusive CFL for momentum ~1.5 (but momentum diffusion is implicit so that's ok)
   ! diffusive CFL for mass ~0.005
   fixed_dt = 0.01        ! time step (old explicit method used 0.005) = DT in IBAMR
-  plot_int = 1000        ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
+  plot_int = 10          ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
   chk_int = 1000         ! If positive, how often to write a checkpoint (restart file)
 
   ! 9 = one fluid on top of another
@@ -74,7 +74,7 @@
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
   ! Stochastic fluxes: Here only variance_coef*k_B*temperature matters in the end
-  variance_coef = 1.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
+  variance_coef = 0.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
   variance_coef_mass = 0.d0
   initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
 
@@ -132,7 +132,6 @@
  Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-14       ! to prevent division by zero 
  start_time  = 0.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
- !include_temp = .false.          ! right now no temperature equation
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  correct_flux = .true.            ! correct flux to numeric roundoff
  use_stoch = .true.               ! use stochastic flux 
@@ -140,10 +139,10 @@
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
- rho_init(1,1:2) = 0.42747897030903d0 0.d0
- Dbar(1:2)       = 1.0  1.0       ! SM diffusion constant arranged in lower-triangle
+ Dbar(1:2)       = 1.d-5 1.d-5     ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:2)     = 0.0  0.0       ! thermo-diffusion constant (sums to zero)
- T_init(1) = 293.d0             
+ T_init(1) = 293.d0
+ rho_init(1,1:2) = 0.42747897030903d0 0.d0
 
  
 /
