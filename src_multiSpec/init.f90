@@ -10,7 +10,7 @@ module init_module
   use ml_layout_module
   use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi, visc_coef, prob_type, diff_coef, &
-                                  molmass, rhobar
+                                  molmass, rhobar, smoothing_width
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, &
                                         T_init, rho_init, nspecies, rho_part_bc_comp
  
@@ -88,7 +88,7 @@ contains
  
     ! local varables
     integer          :: i,j,n
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,rho_loc
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -274,6 +274,44 @@ contains
           end do
        end do
  
+    case(9)
+
+       ! one fluid on top of another
+       ! rho1 = rho_init(1) in lower half of domain (in y)
+       ! rho1 = rho_init(2) in upper half
+       ! use the EOS to compute rho1 by setting prob_type negative
+
+       ! middle of domain
+       y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+       if(abs(smoothing_width)>epsilon(1.d0)) then
+
+          ! smoothed version
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
+
+             rho_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+             rho(lo(1):hi(1),j,1) = rho_loc
+
+          end do
+
+       else
+
+          ! discontinuous version
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + (j+0.5d0)*dx(2)
+
+             if (y .lt. y1) then
+                rho(lo(1):hi(1),j,1) = rho_init(1,1)
+             else
+                rho(lo(1):hi(1),j,1) = rho_init(1,2)
+             end if
+
+
+          end do
+
+       end if
+
     case default
       
       call bl_error("Desired prob_type not supported in 3D")
@@ -808,7 +846,7 @@ contains
           x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
 
           ! visc_coef should be 1 unless testing different viscosities
-          eta(i,j) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w
+          eta(i,j) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w*rhotot(i,j)
 
        end do
     end do
@@ -850,7 +888,7 @@ contains
              x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
 
              ! visc_coef should be 1 unless testing different viscosities
-             eta(i,j,k) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w
+             eta(i,j,k) = visc_coef*exp(-x*(-log(eta_g)+log(eta_w)))*eta_w*rhotot(i,j,k)
 
           end do
        end do

@@ -35,10 +35,6 @@
   barodiffusion_type = 0  ! 0 = no barodiffusion
                           ! 1 = fixed gradp from initialization
                           ! 2 = update gradp each time step
-  algorithm_type = 2	  ! enable overdamped (infinite Sc) algorithm
-      ! 0 = Inertial algorithm
-      ! 1 = Overdamped with 1 RNG
-      ! 2 = Overdamped with 2 RNGs  
   
   ! HydroGrid analysis:
   analyze_binary = F ! T for old specialized analysis (HDMD/HSMD for explicit low Mach paper) exec/binaryLM/analyze_spectra.f90
@@ -94,6 +90,10 @@
 
   ! Algorithm control / selection
   !----------------------
+  algorithm_type = 2	  ! enable overdamped (infinite Sc) algorithm
+      ! 0 = Inertial algorithm
+      ! 1 = Overdamped with 1 RNG
+      ! 2 = Overdamped with 2 RNGs  
   
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad

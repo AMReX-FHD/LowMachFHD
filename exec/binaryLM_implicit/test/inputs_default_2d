@@ -16,7 +16,6 @@
   barodiffusion_type = 0  ! 0 = no barodiffusion
                           ! 1 = fixed gradp from initialization
                           ! 2 = update gradp each time step
-  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
 
 /
 
@@ -43,6 +42,7 @@
 
   ! Algorithm control / selection
   !----------------------
+  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
 
   ! random number seed
   ! 0        = unpredictable seed based on clock

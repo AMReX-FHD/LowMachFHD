@@ -8,6 +8,10 @@
  k_B      = 1E-3                  ! Boltzmann constant
  prob_type = -8                   
 
+ algorithm_type = 1               ! 0 = inertial
+                                  ! 1 = overdamped, 1RNG
+                                  ! 2 = overdamped, 2RNGs
+
  ! Grid size
  prob_lo(1:2) = 0 0
  prob_hi(1:2) = 64 64             ! physical systemsize = (prob_lo-prob_hi)

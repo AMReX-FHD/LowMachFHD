@@ -10,6 +10,10 @@
  fixed_dt = 0.01                  ! fixed_dt
  prob_type = -7                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
 
+ algorithm_type = 1               ! 0 = inertial
+                                  ! 1 = overdamped, 1RNG
+                                  ! 2 = overdamped, 2RNGs
+
  ! Grid size
  prob_lo(1:2) = 0 0
  prob_hi(1:2) = 64 64             ! physical systemsize = (prob_lo-prob_hi)

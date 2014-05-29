@@ -13,6 +13,7 @@ subroutine main_driver()
   use bc_module
   use analysis_module
   use analyze_spectra_module
+  use convert_m_to_umac_module
   use eos_check_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
@@ -24,14 +25,15 @@ subroutine main_driver()
                                   plot_int, seed, stats_int, &
                                   bc_lo, bc_hi, probin_common_init, advection_type, &
                                   fixed_dt, visc_coef, max_step, &
-                                  diff_coef, molmass, variance_coef_mass
+                                  diff_coef, molmass, variance_coef_mass, algorithm_type, &
+                                  variance_coef, initial_variance
   use probin_multispecies_module, only: nspecies, rho_init, rho_bc, &
                                         mol_frac_bc_comp, print_error_norms, &
                                         rho_part_bc_comp, &
                                         start_time, temp_bc_comp, timeinteg_type, &
                                         use_stoch, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
- 
+
   implicit none
 
   ! quantities will be allocated with dm components
@@ -52,7 +54,9 @@ subroutine main_driver()
   type(multifab), allocatable  :: rhotot_old(:)
   type(multifab), allocatable  :: rho_new(:)
   type(multifab), allocatable  :: rhotot_new(:)
+  type(multifab), allocatable  :: rhotot_fc(:,:)
   type(multifab), allocatable  :: Temp(:)
+  type(multifab), allocatable  :: Temp_fc(:,:)
   type(multifab), allocatable  :: Temp_ed(:,:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
@@ -92,13 +96,17 @@ subroutine main_driver()
   nlevs = 1
   dm = dim_in
 
-  n_rngs = 1
+  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
+     n_rngs = 1
+  else if (algorithm_type .eq. 2) then
+     n_rngs = 2
+  end if
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs))
-  allocate(rho_new(nlevs),rhotot_new(nlevs))
+  allocate(rho_new(nlevs),rhotot_new(nlevs),rhotot_fc(nlevs,dm),Temp_fc(nlevs,dm))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),mold(nlevs,dm),pres(nlevs))
   allocate(eta(nlevs),kappa(nlevs))
@@ -239,7 +247,6 @@ subroutine main_driver()
      call multifab_build(kappa(n),mla%la(n),1,1)
      do i=1,dm
         call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
-        call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
      end do
 
      ! eta and Temp on nodes (2d) or edges (3d)
@@ -299,14 +306,7 @@ subroutine main_driver()
   end do
 
   ! initialize eta
-  do n=1,nlevs
-     call multifab_setval(eta(n), visc_coef, all=.true.)
-  end do
-  if (dm .eq. 2) then
-     call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  else if (dm .eq. 3) then
-     call average_cc_to_edge(nlevs,eta,eta_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  end if
+  call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
 
   ! initialize pressure and velocity
   do n=1,nlevs
@@ -316,13 +316,41 @@ subroutine main_driver()
      end do
   end do
 
-!  ! compute mold
-!  call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
-!
-!  if (initial_variance .ne. 0.d0) then
-!     call add_m_fluctuations(mla,dx,initial_variance*variance_coef,sold,s_fc,mold)
-!     call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
-!  end if
+  ! add initial momentum fluctuations
+  if (initial_variance .ne. 0.d0) then
+     
+     ! temporary multifabs
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
+           call multifab_build_edge(rhotot_fc(n,i),mla%la(n),1,0,i)
+           call multifab_build_edge(Temp_fc(n,i),mla%la(n),1,0,i)
+        end do
+     end do
+
+     ! compute rhotot on faces
+     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
+                             the_bc_tower%bc_tower_array)
+
+    ! compute mold
+     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
+
+     ! add fluctuations to mold and convert back to umac
+     call add_m_fluctuations(mla,dx,initial_variance*variance_coef, &
+                             rhotot_fc,Temp_fc,mold)
+
+     ! convert back to umac
+     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.true.)
+
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_destroy(mold(n,i))
+           call multifab_destroy(rhotot_fc(n,i))
+           call multifab_destroy(Temp_fc(n,i))
+        end do
+     end do
+
+  end if
 
   ! fill random flux multifabs with new random numbers
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
@@ -431,10 +459,14 @@ subroutine main_driver()
       end if
 
       ! advance the solution by dt
-      call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                       pres,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                       dx,dt,time,the_bc_tower,n_rngs)
+      if (algorithm_type .eq. 0) then
+         call bl_error("main_driver: inertial algorithm not written yet")
+      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
+         call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                          pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                          dx,dt,time,the_bc_tower,n_rngs)
+      end if
 
       ! increment simulation time
       istep = istep + 1
@@ -575,7 +607,8 @@ subroutine main_driver()
      end do
   end do
   deallocate(lo,hi,dx)
-  deallocate(rho_old,rhotot_old,Temp,diff_mass_fluxdiv,stoch_mass_fluxdiv,umac)
+  deallocate(rho_old,rhotot_old,rhotot_fc,Temp,Temp_fc)
+  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv,umac)
   deallocate(covW,covW_theo,wiwjt,wit)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)

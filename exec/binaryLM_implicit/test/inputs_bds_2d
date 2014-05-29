@@ -9,8 +9,6 @@
   project_eos_int = 1        ! how often to call project_onto_eos
 
   barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
-  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
-
 /
 
 &probin_common
@@ -30,6 +28,7 @@
 
   ! Algorithm control / selection
   !----------------------
+  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
 
   ! random number seed
   ! 0        = unpredictable seed based on clock

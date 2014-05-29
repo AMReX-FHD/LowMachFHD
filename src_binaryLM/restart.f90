@@ -5,8 +5,7 @@ module restart_module
   use ml_layout_module
   use checkpoint_module
   use define_bc_module
-  use probin_common_module, only: dim_in, advection_type, restart
-  use probin_binarylm_module, only: algorithm_type
+  use probin_common_module, only: dim_in, advection_type, restart, algorithm_type
 
   implicit none
 

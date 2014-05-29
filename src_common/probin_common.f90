@@ -26,7 +26,7 @@ module probin_common_module
   real(dp_t),save :: variance_coef,variance_coef_mass,initial_variance
   real(dp_t),save :: k_B,visc_coef,diff_coef
   integer,save    :: stoch_stress_form,filtering_width,max_step
-  integer,save    :: restart,print_int,project_eos_int
+  integer,save    :: restart,print_int,project_eos_int,algorithm_type
   real(dp_t),save :: molmass(max_species)
   real(dp_t),save :: rhobar(max_species)
 
@@ -56,6 +56,10 @@ module probin_common_module
 
   ! Algorithm control / selection
   !----------------------
+  namelist /probin_common/ algorithm_type     ! differs from code to code.  In binary and multispcies code:
+                                              ! 0 = Inertial algorithm
+                                              ! 1 = Overdamped with 1 RNG
+                                              ! 2 = Overdamped with 2 RNGs
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
@@ -198,6 +202,8 @@ contains
 
     smoothing_width = 1.d0
     u_init(1:2) = 0.d0
+
+    algorithm_type = 0
 
     seed = 1
 
@@ -363,6 +369,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) smoothing_width
+
+       case ('--algorithm_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) algorithm_type
 
        case ('--u_init_1')
           farg = farg + 1
