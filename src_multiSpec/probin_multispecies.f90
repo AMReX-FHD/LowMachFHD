@@ -10,7 +10,7 @@ module probin_multispecies_module
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, temp_bc_comp ! not input: populated at main 
 
   integer, save      :: nspecies,inverse_type,timeinteg_type
-  real(kind=dp_t)    :: Press,start_time
+  real(kind=dp_t)    :: start_time
   real(kind=dp_t)    :: T_init(2) ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   real(kind=dp_t)    :: Dbar(max_element)       ! SM diffusion constant  
   real(kind=dp_t)    :: Dtherm(max_element)     ! thermo-diffusion coefficients  
@@ -23,7 +23,6 @@ module probin_multispecies_module
   real(kind=dp_t)    :: rho_bc(3,2,max_species)
   
   namelist /probin_multispecies/ nspecies
-  namelist /probin_multispecies/ Press
   namelist /probin_multispecies/ fraction_tolerance
   namelist /probin_multispecies/ start_time
   namelist /probin_multispecies/ inverse_type   
@@ -63,7 +62,6 @@ contains
 
     ! here we set some random values to be replaced from the input file
     nspecies           = 2 
-    Press              = 1.0d0
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
     inverse_type       = 1
@@ -127,10 +125,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) Dtherm
-       case ('--Press')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) Press
        case ('--')
           farg = farg + 1
           exit

@@ -30,7 +30,6 @@
 &probin_multispecies
  
  nspecies = 3                    ! number of species
- Press    = 1.0                  ! Pressure
  fraction_tolerance = 1e-14      ! to prevent division by zero
  start_time  = 1.0               ! start at t=1 to avoid NAN coming from rho_exact at t=0
  !include_temp = .false.         ! right now no temperature equation
