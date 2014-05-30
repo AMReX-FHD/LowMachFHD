@@ -13,8 +13,25 @@ module fluid_model_module
 
   public :: fluid_model, compute_D_MSGama_local
   
+  ! Donev:
+  ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
+  ! which should change with different problem types and number of species
+  ! depending on the exact physical system being simulated. 
+  ! A lot of the stuff below is general and thus belongs with the other general routines such as compute_chi
+  ! In particular the main piece below computes Gamma (the rest is fluff code) from H
+  ! call H "Hessian" to make it clear it is symmetric
+  ! This code should be separated from here and moved to convert_mass_variables.f90
+  ! (which should be renamed to something more meaningful, like mass_flux_utilities.f90)
+  
 contains
   
+  ! Donev: I suggest that Gama be replaced here by H
+  ! This code should provide a fluid model for H
+  ! Then the code should compute Gamma from this as done below
+  ! This is identical to how we compute chi from the Maxwell-Stefan diffusivities D_MS
+  ! and should be implemented and treated identically
+  ! Just like there is a compute_chi, there should be a compute_Gama routine
+  ! This does require introducing another multifab for H but this seems worth the price to make the code uniform
   subroutine fluid_model(mla,rho,rhotot,molarconc,molmtot,D_MS,D_therm,Gama,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
@@ -122,7 +139,14 @@ contains
    
   end subroutine compute_D_MSGama_3d
 
+  ! Donev: This is the key routine here
+  ! It should have a case statement, in which different things are done depending on prob_type (Andy can organize that part)
+  ! For now the default case should be to simply set D_MS, D_therm and H to constants, read from the input file, as done below
+  ! Rename this routine mixture_properties_mass (for now) to make it clear what this does
   subroutine compute_D_MSGama_local(rho,rhotot,molarconc,molmtot,D_MS,D_therm,Gama)
+    ! Donev: Temperature should be passed in as an argument to this routine since it strongly affects fluid properties
+    ! In general also pressure but in low Mach models pressure is constant anyway
+    ! Gama should be replaced by H
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)        
     real(kind=dp_t), intent(in)   :: rhotot
@@ -139,39 +163,53 @@ contains
     ! free the memory
     H=0; I=0; X_xxT=0;
 
+    ! Donev: Below I indicate which statements should remain here
+    ! The rest should go into compute_Gama in convert_mass_variables.f90
+   
     ! populate D_MS, H, I and X_xxT where  X = molmtot*W*M^(-1) 
     n=0; 
     do row=1, nspecies  
        do column=1, row-1
           n=n+1
+          ! Donev: The following two lines remain here:
           D_MS(row, column) = Dbar(n)                              ! SM-diffcoeff's read from input
           D_MS(column, row) = D_MS(row, column)                    ! symmetric
+          
+          ! Donev: This goes away
           I(row, column)    = 0.d0      
           I(column, row)    = I(row, column) ! symmetric
           
-          if(is_ideal_mixture .eqv. .false.) then
+          if(is_ideal_mixture .eqv. .false.) then ! Donev: Andy, fix this not to use local on top of logical
              X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
              X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
+             
+             ! Donev: These two lines remain here             
              H(row, column) = H_offdiag(n)           ! positive semidefinite matrix read from input
-             H(column, row) = H(row,column)          ! H is symmetric 
+             H(column, row) = H(row,column)          ! H is symmetric
           end if
        end do
        
        ! populate diagonals 
        D_MS(row, row) = 0.d0           ! as self-diffusion is zero
        D_therm(row)   = Dtherm(row)    ! thermal diffcoeff's read from input
+       
+       ! Donev: Move this stuff
        I(row, row) = 1.d0        ! unit matrix for ideal mixture
        if(is_ideal_mixture .eqv. .false.) then
+          ! Donev: Why not replace the first term below simply with molarconc(row) ???
           X_xxT(row,row) = molmtot*rho(row)/(rhotot*molmass(row)) - molarconc(row)**2 
           H(row, row)    = H_diag(n)      
        end if
     end do
-
+   
+    ! Donev: Move this stuff
     if(is_ideal_mixture) then
        Gama = I
     else 
        Gama = I + matmul(X_xxT, H)     ! non-ideal mixture
     end if
+    
+    ! Donev: Amit, confirm this computed Gama correctly by hand in debug mode
 
   end subroutine compute_D_MSGama_local
 
