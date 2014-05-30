@@ -791,7 +791,6 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     ! compute Onsager matrix L
     do column=1, nspecies
        do row=1, nspecies
-          !Lonsager(row, column) = rhotot*rhotot*Temp*W(row)*chi(row,column)*W(column)/Press
           Lonsager(row, column) = molmtot*rhotot*W(row)*chi(row,column)*W(column)/k_B
        end do
     end do
