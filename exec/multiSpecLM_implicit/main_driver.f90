@@ -20,6 +20,12 @@ subroutine main_driver()
   use ParallelRNGs 
   use convert_mass_variables_module
   use convert_stag_module
+  ! Donev: diff_coef is dubious here -- it is not really used anywhere
+  ! The idea behind these was:
+  ! -for constant coefficients they specified the value of transport coeffs
+  ! -for variable coeffs it was a global scaling prefactor in front of formula for concentration dependence
+  ! In the multispecies code this role is played by Dbar in probin_multispecies -- there is more than one diffusion coefficient now
+  ! I suggest removing diff_coef either entirely or at the very least from the multispecies code
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   k_B, max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, &
@@ -117,6 +123,10 @@ subroutine main_driver()
      allocate(eta_ed(nlevs,3))
      allocate(Temp_ed(nlevs,3))
   end if
+  
+  ! Donev: All of this stuff calculating variances covW can be removed
+  ! It was useful for testing in the diffusion-only code
+  ! It is actually subsumed by HydroGrid so it is already included there
   allocate(covW(nspecies,nspecies))
   allocate(covW_theo(nspecies,nspecies))
   allocate(wiwjt(nspecies,nspecies))
@@ -205,9 +215,13 @@ subroutine main_driver()
   ! dm+1 = pressure
   ! dm+2 = scal_bc_comp = rhotot
   ! scal_bc_comp+1 = rho_i
-  ! scal_bc_comp+nspecies+1 = mol_frac
+  ! scal_bc_comp+nspecies+1 = molfrac or massfrac (dimensionless fractions)
   ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
-  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diff_coef
+  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diffusion coefficients (eta,kappa,chi)
+  ! Donev: It may be better if each transport coefficient has its own BC code?
+  ! I think the only place this is used is average_cc_to_node 
+  ! I cannot right now foresee a case where different values would be used in different places
+  ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
                      num_scal_bc_in=2*nspecies+2,num_tran_bc_in=1)
 
@@ -317,6 +331,9 @@ subroutine main_driver()
   end do
 
   ! add initial momentum fluctuations
+  ! Donev: Please make this into a separate routine callable from elsewhere
+  ! taking as an argument the variance coefficient (here initial_variance*variance_coef)
+  ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
   if (initial_variance .ne. 0.d0) then
      
      ! temporary multifabs
@@ -332,7 +349,7 @@ subroutine main_driver()
      call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
                              the_bc_tower%bc_tower_array)
 
-    ! compute mold
+     ! compute mold
      call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
 
      ! add fluctuations to mold and convert back to umac
@@ -360,11 +377,15 @@ subroutine main_driver()
   ! diff_coef is the largest eigenvalue of diffusion matrix to be input for n-species
   dt = fixed_dt
 
+  ! Donev: Remove this stuff, it is not so simple for multispecies
+  ! One just needs to rely on fixed_dt being correct
   if (dt .gt. dx(1,1)**2/(diff_coef*2.d0*dm)) then
      call bl_error("time step violates diffusive mass cfl")
   end if
   
   if (parallel_IOProcessor()) then
+     ! Donev: Remove this stuff, it was for the simple explicit scheme used in testing
+     ! here we are using completely different semi-implicit temporal integrators
      if(timeinteg_type .eq. 1) write(*,*) "Using Euler method"
      if(timeinteg_type .eq. 2) write(*,*) "Using Predictor-corrector method"
      if(timeinteg_type .eq. 3) write(*,*) "Using Midpoint method"
@@ -404,6 +425,12 @@ subroutine main_driver()
   ! initial projection - only truly needed for inertial algorithm
   ! for the overdamped algorithm, this only changes the reference state for the first
   ! gmres solve in the first time step
+  ! Donev: Yes, I think in the purely overdamped version this can be removed
+  ! In either case the first ever solve cannot have a good reference state
+  ! so in general there is the danger it will be less accurate than subsequent solves
+  ! but I do not see how one can avoid that
+  ! From this perspective it may be useful to keep initial_projection even in overdamped
+  ! because different gmres tolerances may be needed in the first step than in the rest
   call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                           Temp,dt,dx,n_rngs,the_bc_tower)
 
@@ -428,7 +455,7 @@ subroutine main_driver()
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then
          ! Compute covariances manually for initial testing (HydroGrid now does the same)
-         call compute_cov(mla,rho_old,wit,wiwjt)    
+         call compute_cov(mla,rho_old,wit,wiwjt) ! Donev: This can be removed
          step_count = step_count + 1 
 
          ! print out projection (average) and variance
@@ -464,6 +491,15 @@ subroutine main_driver()
       if (algorithm_type .eq. 0) then
          call bl_error("main_driver: inertial algorithm not written yet")
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
+         ! Donev: It appears to me there is no need to be passing eta, eta_ed etc. around here
+         ! They are only used locally inside the routine when computing updates
+         ! and do not appear to be needed here
+         ! I think they should be local temps inside advance_timestep_overdamped
+         ! Similar comment applies to diff_mass_fluxdiv,stoch_mass_fluxdiv
+         ! I know they are also passed to initial_projection but it seems to me all this can be done locally with temps
+         ! Also note that for advance_timestep_overdamped it is not necessary to call initial_projection
+         ! In fact, if one makes this main_driver only do overdamped it can be simplified greatly
+         ! One option is do this by converting this main_driver.f90 into overdamped_driver.f90 and simplifying it.
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                           diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -489,6 +525,7 @@ subroutine main_driver()
   call sum_mass(rho_old, istep)
 
   ! print out the standard deviation
+  ! Donev: This can be removed from this code entirely
   if (parallel_IOProcessor()) then
      if(use_stoch .and. variance_coef_mass .ne. 0.d0 .and. step_count .ne. 0.d0) then
      

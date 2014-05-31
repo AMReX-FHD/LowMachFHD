@@ -837,6 +837,8 @@ contains
        do j=lo(2)-ng_e,hi(2)+ng_e
           do i=lo(1)-ng_e,hi(1)+ng_e
 
+             ! Donev: Make this a local routine chi_water_glycerol or some such and call it twice
+             ! instead of repeating this twice, so we can change it consistently more easily
              ! mass fraction of glycerol
              c_loc = rho(i,j,1)/rhotot(i,j)
 
@@ -850,6 +852,7 @@ contains
              x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
 
              ! visc_coef should be 1 unless testing different viscosities
+             ! Donev: It depends on the units used, I think it is 1e-2 for the water-glycerol setup
              eta(i,j) = visc_coef*exp(-x*(-log(nu_g)+log(nu_w)))*nu_w*rhotot(i,j)
 
           end do

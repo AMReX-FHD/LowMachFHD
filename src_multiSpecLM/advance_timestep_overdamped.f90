@@ -48,6 +48,11 @@ module advance_timestep_overdamped_module
 
 contains
 
+  ! Donev: I think eta and kappa should be local temps inside advance_timestep_overdamped
+  ! This is consistent with what is done for mass diffusion coefficients
+  ! They are local to the wrapper and not really needed outside
+  ! Note for future: In general Temp can depend on time so here one should pass
+  ! both temperature at the beginning and at the end of the timestep
   subroutine advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -138,7 +143,7 @@ contains
 
     ! fill the stochastic multifabs with a new set of random numbers
     ! if this is the first step we already have random numbers from initialization
-    if (time .ne. 0.d0) then
+    if (time .ne. 0.d0) then ! Donev: It is safer to make this more robust than to compare time to zero -- we may have tests where we start from some nonzero time
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        call fill_m_stochastic(mla)
     end if
@@ -215,7 +220,7 @@ contains
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
-       do i=1,nspecies
+       do i=1,nspecies ! Donev: Is there a reason not to call the generic multifab_saxpy here?
           call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
        end do
@@ -505,11 +510,11 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 6 - Trapezoidal Scalar Corrector
+    ! Step 6 - Midpoint Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^{n+1/2} for scalars to rho_update
-   if (advection_type .ge. 1) then
+    if (advection_type .ge. 1) then
       do n=1,nlevs
          call multifab_copy_c(bds_force(n),1,rho_update(n),1,2,0)
          call multifab_fill_boundary(bds_force(n))
@@ -519,9 +524,9 @@ contains
       else if (advection_type .eq. 3) then
           call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
       end if
-   else
+    else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
-   end if
+    end if
 
     ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})
     do n=1,nlevs
@@ -542,7 +547,9 @@ contains
 
     ! AJN - update eta and kappa here (if they are functions of rho)
     !
-    !
+    ! Donev: Since this is unfinished it is WRONG as it stands
+    ! compute_eta is only called in the middle but it also needs to be called here
+    ! right now the midpoint values of eta are used in the predictor in the next time step
 
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
