@@ -47,7 +47,7 @@ contains
     type(multifab) :: molmtot(mla%nlevel)        ! total molar mass
     type(multifab) :: chi(mla%nlevel)            ! Chi-matrix
     type(multifab) :: Gama(mla%nlevel)           ! Gama-matrix
-    type(multifab) :: D_MS(mla%nlevel)           ! D_MS-matrix
+    type(multifab) :: D_bar(mla%nlevel)           ! D_bar-matrix
     type(multifab) :: D_therm(mla%nlevel)        ! DT-matrix
     type(multifab) :: zeta_by_Temp(mla%nlevel)   ! for Thermo-diffusion 
 
@@ -58,12 +58,12 @@ contains
        call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
        call multifab_build(chi(n),          mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(Gama(n),         mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(D_MS(n),         mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(D_bar(n),         mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(D_therm(n),      mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
     end do
 
-    call compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Gama,D_MS,&
+    call compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Gama,D_bar,&
                               D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                               zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                               n_rngs,the_bc_level)
@@ -73,14 +73,14 @@ contains
        call multifab_destroy(molmtot(n))
        call multifab_destroy(chi(n))
        call multifab_destroy(Gama(n))
-       call multifab_destroy(D_MS(n))
+       call multifab_destroy(D_bar(n))
        call multifab_destroy(D_therm(n))
        call multifab_destroy(zeta_by_Temp(n))
     end do
 
   end subroutine compute_mass_fluxdiv_wrapper
 
-  subroutine compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Gama,D_MS,&
+  subroutine compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Gama,D_bar,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                                   zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                                   n_rngs,the_bc_level)
@@ -92,7 +92,7 @@ contains
     type(multifab) , intent(inout)   :: molmtot(:)
     type(multifab) , intent(inout)   :: chi(:)
     type(multifab) , intent(inout)   :: Gama(:)
-    type(multifab) , intent(inout)   :: D_MS(:)
+    type(multifab) , intent(inout)   :: D_bar(:)
     type(multifab) , intent(inout)   :: D_therm(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
@@ -128,11 +128,11 @@ contains
     ! each-cell from rho(conserved) 
     call convert_cons_to_prim(mla,rho,rhotot,molarconc,molmtot,the_bc_level)
       
-    ! populate D_MS and Gama 
-    call fluid_model(mla,rho,rhotot,molarconc,molmtot,D_MS,D_therm,Gama,the_bc_level)
+    ! populate D_bar and Gama 
+    call fluid_model(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Gama,the_bc_level)
 
     ! compute chi 
-    call compute_chi(mla,rho,rhotot,molarconc,chi,D_MS,D_therm,Temp,zeta_by_Temp,the_bc_level)
+    call compute_chi(mla,rho,rhotot,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp,the_bc_level)
       
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,rhotot,molarconc,molmtot,chi,rhoWchi,the_bc_level)
