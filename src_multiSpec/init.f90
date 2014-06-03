@@ -18,7 +18,7 @@ module init_module
 
   private
 
-  public :: init_rho, init_Temp, compute_eta, compute_chi
+  public :: init_rho, init_Temp, compute_eta
   
   ! prob_type: 
   ! 0 = rho constant in space (thermodynamic equilibrium), temperature profile to check thermodiffusion
