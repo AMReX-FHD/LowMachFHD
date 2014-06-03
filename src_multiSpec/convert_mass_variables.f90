@@ -5,7 +5,7 @@ module convert_mass_variables_module
   use ml_layout_module
   use probin_common_module, only: k_B, molmass
   use probin_multispecies_module, only: nspecies, use_lapack, fraction_tolerance, &
-       inverse_type, is_nonisothermal
+       is_ideal_mixture, inverse_type, is_nonisothermal
   use matrix_utilities 
   use F95_LAPACK
 
@@ -16,6 +16,7 @@ module convert_mass_variables_module
   public :: correct_rho_with_drho, &
             convert_cons_to_prim, &
             compute_rhotot, &
+            compute_Gama, &
             compute_chi, &
             compute_rhoWchi, &
             compute_Lonsager
@@ -346,14 +347,158 @@ contains
  
   end subroutine compute_rhotot_3d
 
-  subroutine compute_chi(mla,rho,rhotot,molarconc,chi,D_MS,D_therm,Temp,zeta_by_Temp,the_bc_level)
+  subroutine compute_Gama(mla,rho,rhotot,molarconc,molmtot,Hessian,Gama,the_bc_level)
+
+    type(ml_layout), intent(in   )  :: mla
+    type(multifab),  intent(in   )  :: rho(:) 
+    type(multifab),  intent(in   )  :: rhotot(:) 
+    type(multifab),  intent(in   )  :: molarconc(:) 
+    type(multifab),  intent(in   )  :: molmtot(:) 
+    type(multifab),  intent(in   )  :: Hessian(:)    ! Hessian matrix
+    type(multifab),  intent(inout)  :: Gama(:)       ! Non-ideality coefficient 
+    type(bc_level),  intent(in   )  :: the_bc_level(:)
+ 
+    ! local variables
+    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
+    integer :: n,i,ng,dm,nlevs,row,column
+
+    ! assign pointers for multifabs to be passed
+    real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
+    real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
+    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
+    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
+    real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for Hessian 
+    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Gama 
+
+    dm    = mla%dim     ! dimensionality
+    ng    = rho(1)%ng   ! number of ghost cells 
+    nlevs = mla%nlevel  ! number of levels 
+ 
+    ! loop over all boxes 
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp => dataptr(rho(n),i)
+          dp1 => dataptr(rhotot(n),i)
+          dp2 => dataptr(molarconc(n),i)
+          dp3 => dataptr(molmtot(n),i)
+          dp4 => dataptr(Hessian(n),i)
+          dp5 => dataptr(Gama(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          
+          select case(dm)
+          case (2)
+             call compute_Gama_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
+                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),ng,lo,hi) 
+          case (3)
+             call compute_Gama_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
+                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),ng,lo,hi) 
+          end select
+       end do
+    end do
+  
+  end subroutine compute_Gama
+  
+  subroutine compute_Gama_2d(rho,rhotot,molarconc,molmtot,Hessian,Gama,ng,lo,hi)
+
+    integer          :: lo(2), hi(2), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
+    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)       ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)  ! molar concentration 
+    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
+    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,:)    ! last dimension for nspecies^2
+    real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
+
+    ! local varialbes
+    integer          :: i,j
+
+    ! for specific box, now start loops over alloted cells 
+    do j=lo(2)-ng,hi(2)+ng
+       do i=lo(1)-ng,hi(1)+ng
+       
+          call compute_Gama_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
+                                  molmtot(i,j),Hessian(i,j,:),Gama(i,j,:))
+
+       end do
+    end do
+   
+  end subroutine compute_Gama_2d
+
+  subroutine compute_Gama_3d(rho,rhotot,molarconc,molmtot,Hessian,Gama,ng,lo,hi)
+ 
+    integer          :: lo(3), hi(3), ng
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! density; last dimension for species
+    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! molar concentration; 
+    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total molar mass 
+    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
+    real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
+
+    ! local varialbes
+    integer          :: i,j,k
+
+    ! for specific box, now start loops over alloted cells 
+    do k=lo(3)-ng,hi(3)+ng
+       do j=lo(2)-ng,hi(2)+ng
+          do i=lo(1)-ng,hi(1)+ng
+
+             call compute_Gama_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
+                                     molmtot(i,j,k),Hessian(i,j,k,:),Gama(i,j,k,:))
+          end do
+       end do
+    end do
+   
+  end subroutine compute_Gama_3d
+
+  subroutine compute_Gama_local(rho,rhotot,molarconc,molmtot,Hessian,Gama)
+   
+    real(kind=dp_t), intent(in)   :: rho(nspecies)        
+    real(kind=dp_t), intent(in)   :: rhotot
+    real(kind=dp_t), intent(in)   :: molarconc(nspecies)
+    real(kind=dp_t), intent(in)   :: molmtot
+    real(kind=dp_t), intent(in)   :: Hessian(nspecies,nspecies)
+    real(kind=dp_t), intent(out)  :: Gama(nspecies,nspecies)
+ 
+    ! local variables
+    integer                                       :: row,column
+    real(kind=dp_t), dimension(nspecies,nspecies) :: I, X_xxT
+
+    ! free the memory
+    I=0; X_xxT=0;
+
+    ! populate I and X_xxT, where X = molmtot*W*M^(-1) 
+    do row=1, nspecies  
+       do column=1, row-1
+          I(row, column)    = 0.d0      
+          I(column, row)    = I(row, column) ! symmetric
+          
+          if(.not. is_ideal_mixture) then ! Donev: Andy, fix this not to use local on top of logical
+             X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
+             X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
+          end if
+       end do
+       
+       I(row, row) = 1.d0        ! unit matrix for ideal mixture
+       if(.not. is_ideal_mixture) then
+          X_xxT(row,row) = molarconc(row) - molarconc(row)**2 
+       end if
+    end do
+  
+    ! compute Gama 
+    Gama = I + matmul(X_xxT, Hessian)     
+ 
+    ! Donev: Amit, confirm this computed Gama correctly by hand in debug mode
+
+  end subroutine compute_Gama_local
+
+  subroutine compute_chi(mla,rho,rhotot,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp,the_bc_level)
    
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rhotot(:) 
     type(multifab) , intent(in   )  :: molarconc(:)
     type(multifab) , intent(inout)  :: chi(:) 
-    type(multifab) , intent(in   )  :: D_MS(:) 
+    type(multifab) , intent(in   )  :: D_bar(:) 
     type(multifab) , intent(in   )  :: D_therm(:) 
     type(multifab) , intent(in   )  :: Temp(:) 
     type(multifab) , intent(inout)  :: zeta_by_Temp(:) 
@@ -368,7 +513,7 @@ contains
     real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for chi
-    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for D_MS
+    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for D_bar
     real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Temp
     real(kind=dp_t), pointer        :: dp7(:,:,:,:)  ! for zeta_by_Temp
     real(kind=dp_t), pointer        :: dp8(:,:,:,:)  ! for D_therm
@@ -384,7 +529,7 @@ contains
           dp1 => dataptr(rhotot(n), i)
           dp2 => dataptr(molarconc(n), i)
           dp3 => dataptr(chi(n), i)
-          dp5 => dataptr(D_MS(n), i)
+          dp5 => dataptr(D_bar(n), i)
           dp6 => dataptr(Temp(n), i)
           dp7 => dataptr(zeta_by_Temp(n), i)
           dp8 => dataptr(D_therm(n), i)
@@ -404,14 +549,14 @@ contains
 
   end subroutine compute_chi
  
-  subroutine compute_chi_2d(rho,rhotot,molarconc,chi,D_MS,Temp,zeta_by_Temp,D_therm,ng,lo,hi)
+  subroutine compute_chi_2d(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)          ! density; last dimension for species
     real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)        ! total density in each cell 
     real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)    ! molar concentration 
     real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,:)          ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,:)         ! MS diff-coeffs 
+    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,:)         ! MS diff-coeffs 
     real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:)           ! Temperature 
     real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng:,lo(2)-ng:,:) ! zeta/T
     real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,:)      ! thermo diff-coeffs 
@@ -425,7 +570,7 @@ contains
        do i=lo(1)-ng,hi(1)+ng
     
           call compute_chi_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
-                                 chi(i,j,:),D_MS(i,j,:),Temp(i,j),zeta_by_Temp(i,j,:),&
+                                 chi(i,j,:),D_bar(i,j,:),Temp(i,j),zeta_by_Temp(i,j,:),&
                                  D_therm(i,j,:))
 
           ! print chi for one cell 
@@ -451,14 +596,14 @@ contains
 
   end subroutine compute_chi_2d
 
-  subroutine compute_chi_3d(rho,rhotot,molarconc,chi,D_MS,Temp,zeta_by_Temp,D_therm,ng,lo,hi)
+  subroutine compute_chi_3d(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm,ng,lo,hi)
    
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)          ! density; last dimension for species
     real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)        ! total density in each cell 
     real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)    ! molar concentration; 
     real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)          ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_MS(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! SM diffusion constants 
+    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! SM diffusion constants 
     real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)           ! Temperature 
     real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! zeta/T
     real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)      ! thermo diffusion constants 
@@ -472,7 +617,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
        
              call compute_chi_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
-                                    chi(i,j,k,:),D_MS(i,j,k,:),Temp(i,j,k),zeta_by_Temp(i,j,k,:),&
+                                    chi(i,j,k,:),D_bar(i,j,k,:),Temp(i,j,k),zeta_by_Temp(i,j,k,:),&
                                     D_therm(i,j,k,:))
 
           end do
@@ -481,13 +626,13 @@ contains
    
   end subroutine compute_chi_3d
 
-  subroutine compute_chi_local(rho,rhotot,molarconc,chi,D_MS,Temp,zeta_by_Temp,D_therm)
+  subroutine compute_chi_local(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm)
     
     real(kind=dp_t), intent(inout)  :: rho(nspecies)         
     real(kind=dp_t), intent(in)     :: rhotot               
     real(kind=dp_t), intent(inout)  :: molarconc(nspecies) 
     real(kind=dp_t), intent(out)    :: chi(nspecies,nspecies)   
-    real(kind=dp_t), intent(in)     :: D_MS(nspecies,nspecies) 
+    real(kind=dp_t), intent(in)     :: D_bar(nspecies,nspecies) 
     real(kind=dp_t), intent(in)     :: Temp
     real(kind=dp_t), intent(inout)  :: zeta_by_Temp(nspecies)
     real(kind=dp_t), intent(in)     :: D_therm(nspecies)
@@ -508,7 +653,7 @@ contains
     ! expressed in terms of molmtot,mi,rhotot etc. 
     do row=1, nspecies  
        do column=1, row-1
-          Lambda(row, column) = -molarconc(row)*molarconc(column)/D_MS(row,column)
+          Lambda(row, column) = -molarconc(row)*molarconc(column)/D_bar(row,column)
           Lambda(column, row) = Lambda(row, column) 
        end do
        W(row) = rho(row)/rhotot
@@ -531,7 +676,7 @@ contains
           Sum_knoti = 0.d0
           do column=1, nspecies
              if(column.ne.row) then
-                ! Donev: Make DT a multifab and not a constant, just like D_MS is
+                ! Donev: Make DT a multifab and not a constant, just like D_bar is
                 Sum_knoti = Sum_knoti + Lambda(row,column)*(D_therm(row)-D_therm(column))
              end if
              zeta_by_Temp(row) = Sum_knoti/Temp
@@ -543,7 +688,7 @@ contains
     if(use_lapack) then
        call compute_chi_lapack(Lambda(:,:),chi(:,:),W(:))
     else
-       call Dbar2chi_iterative(100,D_MS(:,:),molarconc(:),chi(:,:)) 
+       call Dbar2chi_iterative(100,D_bar(:,:),molarconc(:),chi(:,:)) 
     end if
 
   end subroutine compute_chi_local
