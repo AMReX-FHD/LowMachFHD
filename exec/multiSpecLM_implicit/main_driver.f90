@@ -50,14 +50,11 @@ subroutine main_driver()
   type(multifab), allocatable  :: rhotot_old(:)
   type(multifab), allocatable  :: rho_new(:)
   type(multifab), allocatable  :: rhotot_new(:)
-  type(multifab), allocatable  :: rhotot_fc(:,:)
   type(multifab), allocatable  :: Temp(:)
-  type(multifab), allocatable  :: Temp_fc(:,:)
   type(multifab), allocatable  :: Temp_ed(:,:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
   type(multifab), allocatable  :: umac(:,:)
-  type(multifab), allocatable  :: mold(:,:)
   type(multifab), allocatable  :: pres(:)
   type(multifab), allocatable  :: eta(:)
   type(multifab), allocatable  :: eta_ed(:,:)
@@ -93,9 +90,9 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs))
-  allocate(rho_new(nlevs),rhotot_new(nlevs),rhotot_fc(nlevs,dm),Temp_fc(nlevs,dm))
+  allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
-  allocate(umac(nlevs,dm),mold(nlevs,dm),pres(nlevs))
+  allocate(umac(nlevs,dm),pres(nlevs))
   allocate(eta(nlevs),kappa(nlevs))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
@@ -303,43 +300,12 @@ subroutine main_driver()
      end do
   end do
 
-  ! add initial momentum fluctuations
-  ! Donev: Please make this into a separate routine callable from elsewhere
-  ! taking as an argument the variance coefficient (here initial_variance*variance_coef)
+  ! add initial momentum fluctuations - only call in inertial code for now
   ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
-  if (initial_variance .ne. 0.d0) then
-     
-     ! temporary multifabs
-     do n=1,nlevs
-        do i=1,dm
-           call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
-           call multifab_build_edge(rhotot_fc(n,i),mla%la(n),1,0,i)
-           call multifab_build_edge(Temp_fc(n,i),mla%la(n),1,0,i)
-        end do
-     end do
-
-     ! compute rhotot on faces
-     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
-                             the_bc_tower%bc_tower_array)
-
-     ! compute mold
-     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
-
-     ! add fluctuations to mold and convert back to umac
+  if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
      call add_m_fluctuations(mla,dx,initial_variance*variance_coef, &
-                             rhotot_fc,Temp_fc,mold)
-
-     ! convert back to umac
-     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.true.)
-
-     do n=1,nlevs
-        do i=1,dm
-           call multifab_destroy(mold(n,i))
-           call multifab_destroy(rhotot_fc(n,i))
-           call multifab_destroy(Temp_fc(n,i))
-        end do
-     end do
-
+                             umac,rhotot_old,Temp,the_bc_tower)
+     
   end if
 
   ! fill random flux multifabs with new random numbers
@@ -384,8 +350,10 @@ subroutine main_driver()
   ! but I do not see how one can avoid that
   ! From this perspective it may be useful to keep initial_projection even in overdamped
   ! because different gmres tolerances may be needed in the first step than in the rest
-  call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                          Temp,dt,dx,n_rngs,the_bc_tower)
+  if (algorithm_type .eq. 0) then
+     call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
+                             stoch_mass_fluxdiv,Temp,dt,dx,n_rngs,the_bc_tower)
+  end if
 
   !=======================================================
   ! Begin time stepping loop
@@ -500,7 +468,7 @@ subroutine main_driver()
      end do
   end do
   deallocate(lo,hi,dx)
-  deallocate(rho_old,rhotot_old,rhotot_fc,Temp,Temp_fc)
+  deallocate(rho_old,rhotot_old,Temp)
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv,umac)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)

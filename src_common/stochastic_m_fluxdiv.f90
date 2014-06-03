@@ -7,15 +7,22 @@ module stochastic_m_fluxdiv_module
   use define_bc_module
   use bc_module
   use BoxLibRNGs
-  use bc_module
   use multifab_physbc_stag_module
   use multifab_fill_random_module
   use multifab_filter_module
   use sum_momenta_module
+  use convert_m_to_umac_module
+  use convert_stag_module
   use probin_common_module , only: visc_coef, variance_coef, k_B, &
-                                   stoch_stress_form, filtering_width  
+                                   stoch_stress_form, filtering_width
+  use probin_multispecies_module, only: temp_bc_comp
 
   implicit none
+
+  interface add_m_fluctuations
+     module procedure add_m_fluctuations_1
+     module procedure add_m_fluctuations_2
+  end interface
 
   private
 
@@ -673,7 +680,7 @@ contains
   end subroutine destroy_m_stochastic
 
  ! Add equilibrium fluctuations to the momentum (valid and ghost regions)
- subroutine add_m_fluctuations(mla,dx,variance,s_face,temperature_face,m_face)
+ subroutine add_m_fluctuations_1(mla,dx,variance,s_face,temperature_face,m_face)
 
    type(ml_layout), intent(in   ) :: mla
    real(dp_t)     , intent(in   ) :: variance, dx(:,:)
@@ -730,6 +737,61 @@ contains
       end do
    end do
 
- end subroutine add_m_fluctuations
+ end subroutine add_m_fluctuations_1
+
+ subroutine add_m_fluctuations_2(mla,dx,variance,umac,rhotot,Temp,the_bc_tower)
+
+   type(ml_layout), intent(in   ) :: mla
+   real(dp_t)     , intent(in   ) :: variance, dx(:,:)
+   type(multifab) , intent(inout) :: umac(:,:)
+   type(multifab) , intent(in   ) :: rhotot(:)
+   type(multifab) , intent(in   ) :: Temp(:)
+   type(bc_tower) , intent(in   ) :: the_bc_tower
+
+   ! local
+   type(multifab) ::      mold(mla%nlevel,mla%dim)
+   type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
+   type(multifab) ::   Temp_fc(mla%nlevel,mla%dim)
+
+   integer :: i,dm,n,nlevs
+
+   nlevs = mla%nlevel
+   dm = mla%dim
+      
+   ! temporary multifabs
+   do n=1,nlevs
+      do i=1,dm
+         call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
+         call multifab_build_edge(rhotot_fc(n,i),mla%la(n),1,0,i)
+         call multifab_build_edge(Temp_fc(n,i),mla%la(n),1,0,i)
+      end do
+   end do
+
+   ! compute rhotot on faces
+   call average_cc_to_face(nlevs,rhotot,rhotot_fc,1,scal_bc_comp,1, &
+                           the_bc_tower%bc_tower_array)
+
+   ! compute Temp on faces
+   call average_cc_to_face(nlevs,Temp,Temp_fc,1,temp_bc_comp,1, &
+                           the_bc_tower%bc_tower_array)
+
+   ! compute mold
+   call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
+
+   ! add fluctuations to mold and convert back to umac
+   call add_m_fluctuations(mla,dx,variance,rhotot_fc,Temp_fc,mold)
+
+   ! convert back to umac
+   call convert_m_to_umac(mla,rhotot_fc,mold,umac,.true.)
+
+   do n=1,nlevs
+      do i=1,dm
+         call multifab_destroy(mold(n,i))
+         call multifab_destroy(rhotot_fc(n,i))
+         call multifab_destroy(Temp_fc(n,i))
+      end do
+   end do
+
+ end subroutine add_m_fluctuations_2
 
 end module stochastic_m_fluxdiv_module
