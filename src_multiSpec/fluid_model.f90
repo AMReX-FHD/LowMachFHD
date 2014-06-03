@@ -11,7 +11,7 @@ module fluid_model_module
 
   private
 
-  public :: fluid_model, compute_D_barHessian_local
+  public :: fluid_model, mixture_properties_mass_local
   
   ! Donev:
   ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
@@ -72,10 +72,10 @@ contains
           
           select case(dm)
           case (2)
-             call compute_D_barHessian_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
+             call mixture_properties_mass_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
                   dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,:),dp7(:,:,1,1),ng,lo,hi) 
           case (3)
-             call compute_D_barHessian_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
+             call mixture_properties_mass_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
                   dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,:),dp7(:,:,:,1),ng,lo,hi) 
           end select
        end do
@@ -83,7 +83,7 @@ contains
   
   end subroutine fluid_model
   
-  subroutine compute_D_barHessian_2d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,ng,lo,hi)
+  subroutine mixture_properties_mass_2d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
@@ -102,15 +102,15 @@ contains
     do j=lo(2)-ng,hi(2)+ng
        do i=lo(1)-ng,hi(1)+ng
        
-          call compute_D_barHessian_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
+          call mixture_properties_mass_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
                                       molmtot(i,j),D_bar(i,j,:),D_therm(i,j,:),&
                                       Hessian(i,j,:),Temp(i,j))
        end do
     end do
    
-  end subroutine compute_D_barHessian_2d
+  end subroutine mixture_properties_mass_2d
 
-  subroutine compute_D_barHessian_3d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,ng,lo,hi)
+  subroutine mixture_properties_mass_3d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,ng,lo,hi)
  
     integer          :: lo(3), hi(3), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! density; last dimension for species
@@ -130,20 +130,20 @@ contains
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
 
-             call compute_D_barHessian_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
+             call mixture_properties_mass_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
                                          molmtot(i,j,k),D_bar(i,j,k,:),D_therm(i,j,k,:),&
                                          Hessian(i,j,k,:),Temp(i,j,k))
           end do
        end do
     end do
    
-  end subroutine compute_D_barHessian_3d
+  end subroutine mixture_properties_mass_3d
 
   ! Donev: This is the key routine here
   ! It should have a case statement, in which different things are done depending on prob_type (Andy can organize that part)
   ! For now the default case should be to simply set D_bar, D_therm and H to constants, read from the input file, as done below
   ! Rename this routine mixture_properties_mass (for now) to make it clear what this does
-  subroutine compute_D_barHessian_local(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp)
+  subroutine mixture_properties_mass_local(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)        
     real(kind=dp_t), intent(in)   :: rhotot
@@ -182,6 +182,6 @@ contains
     
     end do
     
-  end subroutine compute_D_barHessian_local
+  end subroutine mixture_properties_mass_local
 
 end module fluid_model_module
