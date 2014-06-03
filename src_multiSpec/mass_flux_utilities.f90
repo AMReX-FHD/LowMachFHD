@@ -1,4 +1,4 @@
-module convert_mass_variables_module
+module mass_flux_utilities_module 
 
   use multifab_module
   use define_bc_module
@@ -1114,4 +1114,4 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
   
   end subroutine set_Xij 
   
-end module convert_mass_variables_module
+end module mass_flux_utilities_module

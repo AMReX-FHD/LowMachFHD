@@ -1,6 +1,6 @@
 f90sources += advance_diffusion.f90
 f90sources += analysis.f90
-f90sources += convert_mass_variables.f90
+f90sources += mass_flux_utilities.f90
 f90sources += correction_flux.f90
 f90sources += diffusive_mass_fluxdiv.f90
 f90sources += compute_mass_fluxdiv.f90

@@ -10,7 +10,7 @@ module compute_mass_fluxdiv_module
   use ml_layout_module
   use F95_LAPACK
   use stochastic_mass_fluxdiv_module
-  use convert_mass_variables_module
+  use mass_flux_utilities_module
   use probin_multispecies_module, only: nspecies, use_stoch
 
   implicit none
@@ -133,7 +133,7 @@ contains
     call convert_cons_to_prim(mla,rho,rhotot,molarconc,molmtot,the_bc_level)
       
     ! populate D_bar and Hessian matrix 
-    call fluid_model(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,the_bc_level)
+    call fluid_model(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,the_bc_level)
 
     ! compute Gama from Hessian
     call compute_Gama(mla,rho,rhotot,molarconc,molmtot,Hessian,Gama,the_bc_level)

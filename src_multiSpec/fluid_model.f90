@@ -25,14 +25,7 @@ module fluid_model_module
   
 contains
   
-  ! Donev: I suggest that Gama be replaced here by H
-  ! This code should provide a fluid model for H
-  ! Then the code should compute Gamma from this as done below
-  ! This is identical to how we compute chi from the Maxwell-Stefan diffusivities D_bar
-  ! and should be implemented and treated identically
-  ! Just like there is a compute_chi, there should be a compute_Gama routine
-  ! This does require introducing another multifab for H but this seems worth the price to make the code uniform
-  subroutine fluid_model(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,the_bc_level)
+  subroutine fluid_model(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
@@ -42,6 +35,7 @@ contains
     type(multifab),  intent(inout)  :: D_bar(:)      ! MS diffusion constants 
     type(multifab),  intent(inout)  :: D_therm(:)    ! thermo diffusion constants 
     type(multifab),  intent(inout)  :: Hessian(:)    ! Non-ideality coefficient 
+    type(multifab) , intent(in   )  :: Temp(:) 
     type(bc_level),  intent(in   )  :: the_bc_level(:)
  
     ! local variables
@@ -55,7 +49,8 @@ contains
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_bar
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for D_therm 
-    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Hessian 
+    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Hessian
+    real(kind=dp_t), pointer        :: dp7(:,:,:,:)  ! for Temp
 
     dm    = mla%dim     ! dimensionality
     ng    = rho(1)%ng   ! number of ghost cells 
@@ -71,32 +66,34 @@ contains
           dp4 => dataptr(D_bar(n),i)
           dp5 => dataptr(D_therm(n),i)
           dp6 => dataptr(Hessian(n),i)
+          dp7 => dataptr(Temp(n),i)
           lo = lwb(get_box(rho(n),i))
           hi = upb(get_box(rho(n),i))
           
           select case(dm)
           case (2)
              call compute_D_barHessian_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
-                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,:),ng,lo,hi) 
+                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,:),dp7(:,:,1,1),ng,lo,hi) 
           case (3)
              call compute_D_barHessian_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
-                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,:),ng,lo,hi) 
+                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,:),dp7(:,:,:,1),ng,lo,hi) 
           end select
        end do
     end do
   
   end subroutine fluid_model
   
-  subroutine compute_D_barHessian_2d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,ng,lo,hi)
+  subroutine compute_D_barHessian_2d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,ng,lo,hi)
 
     integer          :: lo(2), hi(2), ng
     real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)      ! total density in each cell 
+    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)       ! total density in each cell 
     real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)  ! molar concentration 
     real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
-    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
+    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,:)      ! last dimension for nspecies^2
     real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,:)    ! last dimension for nspecies
-    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
+    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,:)    ! last dimension for nspecies^2
+    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:)         ! Temperature 
 
     ! local varialbes
     integer          :: i,j
@@ -106,23 +103,25 @@ contains
        do i=lo(1)-ng,hi(1)+ng
        
           call compute_D_barHessian_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
-                                      molmtot(i,j),D_bar(i,j,:),D_therm(i,j,:),Hessian(i,j,:))
+                                      molmtot(i,j),D_bar(i,j,:),D_therm(i,j,:),&
+                                      Hessian(i,j,:),Temp(i,j))
        end do
     end do
    
   end subroutine compute_D_barHessian_2d
 
-  subroutine compute_D_barHessian_3d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,ng,lo,hi)
+  subroutine compute_D_barHessian_3d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,ng,lo,hi)
  
     integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! density; last dimension for species
+    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! density; last dimension for species
     real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! molar concentration; 
-    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total molar mass 
-    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)    ! last dimension for nspecies
-    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
-
+    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! molar concentration; 
+    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)     ! total molar mass 
+    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)     ! last dimension for nspecies^2
+    real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)   ! last dimension for nspecies
+    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)   ! last dimension for nspecies^2
+    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)        ! Temperature 
+ 
     ! local varialbes
     integer          :: i,j,k
 
@@ -132,7 +131,8 @@ contains
           do i=lo(1)-ng,hi(1)+ng
 
              call compute_D_barHessian_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
-                                         molmtot(i,j,k),D_bar(i,j,k,:),D_therm(i,j,k,:),Hessian(i,j,k,:))
+                                         molmtot(i,j,k),D_bar(i,j,k,:),D_therm(i,j,k,:),&
+                                         Hessian(i,j,k,:),Temp(i,j,k))
           end do
        end do
     end do
@@ -143,10 +143,7 @@ contains
   ! It should have a case statement, in which different things are done depending on prob_type (Andy can organize that part)
   ! For now the default case should be to simply set D_bar, D_therm and H to constants, read from the input file, as done below
   ! Rename this routine mixture_properties_mass (for now) to make it clear what this does
-  subroutine compute_D_barHessian_local(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian)
-    ! Donev: Temperature should be passed in as an argument to this routine since it strongly affects fluid properties
-    ! In general also pressure but in low Mach models pressure is constant anyway
-    ! Gama should be replaced by H
+  subroutine compute_D_barHessian_local(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)        
     real(kind=dp_t), intent(in)   :: rhotot
@@ -155,6 +152,7 @@ contains
     real(kind=dp_t), intent(out)  :: D_bar(nspecies,nspecies) 
     real(kind=dp_t), intent(out)  :: D_therm(nspecies) 
     real(kind=dp_t), intent(out)  :: Hessian(nspecies,nspecies)
+    real(kind=dp_t), intent(in)   :: Temp
  
     ! local variables
     integer                       :: n,row,column
@@ -177,15 +175,13 @@ contains
        D_bar(row, row) = 0.d0           ! as self-diffusion is zero
        D_therm(row)    = Dtherm(row)    ! thermal diffcoeff's read from input
        if(.not. is_ideal_mixture) then 
-          Hessian(row, row) = H_diag(row)      
+          Hessian(row, row) = H_diag(row)     
+       else 
+          Hessian = 0.d0     ! set matrix to zero for ideal-mixture
        end if
     
     end do
     
-    if(is_ideal_mixture) then
-       Hessian = 0.d0      
-    end if
-
   end subroutine compute_D_barHessian_local
 
 end module fluid_model_module

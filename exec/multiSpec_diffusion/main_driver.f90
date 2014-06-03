@@ -13,7 +13,7 @@ subroutine main_driver()
   use analysis_module
   use analyze_spectra_module
   use ParallelRNGs 
-  use convert_mass_variables_module
+  use mass_flux_utilities_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   k_B, max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, &
