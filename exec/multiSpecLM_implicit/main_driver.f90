@@ -18,7 +18,7 @@ subroutine main_driver()
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use ParallelRNGs 
-  use convert_mass_variables_module
+  use mass_flux_utilities_module
   use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
