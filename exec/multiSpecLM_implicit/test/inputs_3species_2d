@@ -20,7 +20,6 @@
  n_cells(1:2) = 64 64             ! to set dx = systemsize/n_cells
 
  visc_coef = 1.d-2                ! eta (viscosity)
- diff_coef = 1.0                  ! max eigenvalue of diffusionmatrix Dbar_bc 
   
  molmass(1:3) = 1.0 0.75 1.25  ! molar mass of n-species
  rhobar(1:3) = 0.9 1.0 1.1     ! rhobar

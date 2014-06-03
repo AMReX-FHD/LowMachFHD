@@ -20,18 +20,12 @@ subroutine main_driver()
   use ParallelRNGs 
   use convert_mass_variables_module
   use convert_stag_module
-  ! Donev: diff_coef is dubious here -- it is not really used anywhere
-  ! The idea behind these was:
-  ! -for constant coefficients they specified the value of transport coeffs
-  ! -for variable coeffs it was a global scaling prefactor in front of formula for concentration dependence
-  ! In the multispecies code this role is played by Dbar in probin_multispecies -- there is more than one diffusion coefficient now
-  ! I suggest removing diff_coef either entirely or at the very least from the multispecies code
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   k_B, max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, &
                                   bc_lo, bc_hi, probin_common_init, advection_type, &
                                   fixed_dt, visc_coef, max_step, &
-                                  diff_coef, molmass, variance_coef_mass, algorithm_type, &
+                                  molmass, variance_coef_mass, algorithm_type, &
                                   variance_coef, initial_variance
   use probin_multispecies_module, only: nspecies, rho_init, rho_bc, &
                                         mol_frac_bc_comp, print_error_norms, &
@@ -373,15 +367,7 @@ subroutine main_driver()
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   call fill_m_stochastic(mla)
 
-  ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*diff_coef)]; 
-  ! diff_coef is the largest eigenvalue of diffusion matrix to be input for n-species
   dt = fixed_dt
-
-  ! Donev: Remove this stuff, it is not so simple for multispecies
-  ! One just needs to rely on fixed_dt being correct
-  if (dt .gt. dx(1,1)**2/(diff_coef*2.d0*dm)) then
-     call bl_error("time step violates diffusive mass cfl")
-  end if
   
   if (parallel_IOProcessor()) then
      ! Donev: Remove this stuff, it was for the simple explicit scheme used in testing

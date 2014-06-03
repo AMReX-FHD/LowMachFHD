@@ -24,7 +24,6 @@
  bc_hi(1:2) = -1 100
 
  visc_coef = 1.d-2                ! eta (viscosity)
- diff_coef = 1.d0                 ! max eigenvalue of diffusionmatrix Dbar_bc 
 
  rhobar(1:4)     = 4.0  2.0  3.0  1.0
  molmass(1:4)    = 1.0  1.0  1.0  1.0  ! molar mass of n-species
