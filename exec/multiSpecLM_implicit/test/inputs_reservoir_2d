@@ -20,7 +20,6 @@
  n_cells(1:2) = 64 64             ! to set dx = systemsize/n_cells
 
  visc_coef = 1.d-2                ! eta (viscosity)
- diff_coef = 1.0                  ! max eigenvalue of diffusionmatrix Dbar_bc 
 
  molmass(1:5)    = 1.0  0.8  1.2 0.6  1.4   ! molar mass of n-species
  rhobar(1:5)     = 1.0  2.0  3.0 4.0  5.0
@@ -37,7 +36,6 @@
 &probin_multispecies
  
  nspecies = 5                     ! number of species
- Press    = 1.0                   ! Pressure
  fraction_tolerance = 1e-14       ! to prevent division by zero 
  start_time  = 1.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
  !include_temp = .false.          ! right now no temperature equation

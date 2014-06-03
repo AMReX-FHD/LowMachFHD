@@ -20,23 +20,13 @@ subroutine main_driver()
   use ParallelRNGs 
   use convert_mass_variables_module
   use convert_stag_module
-  ! Donev: diff_coef is dubious here -- it is not really used anywhere
-  ! The idea behind these was:
-  ! -for constant coefficients they specified the value of transport coeffs
-  ! -for variable coeffs it was a global scaling prefactor in front of formula for concentration dependence
-  ! In the multispecies code this role is played by Dbar in probin_multispecies -- there is more than one diffusion coefficient now
-  ! I suggest removing diff_coef either entirely or at the very least from the multispecies code
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
-                                  k_B, max_grid_size, n_steps_save_stats, n_steps_skip, &
-                                  plot_int, seed, stats_int, &
-                                  bc_lo, bc_hi, probin_common_init, advection_type, &
-                                  fixed_dt, visc_coef, max_step, &
-                                  diff_coef, molmass, variance_coef_mass, algorithm_type, &
-                                  variance_coef, initial_variance
-  use probin_multispecies_module, only: nspecies, rho_init, rho_bc, &
-                                        mol_frac_bc_comp, print_error_norms, &
-                                        rho_part_bc_comp, &
-                                        start_time, temp_bc_comp, timeinteg_type, &
+                                  max_grid_size, n_steps_save_stats, n_steps_skip, &
+                                  plot_int, seed, stats_int, bc_lo, bc_hi, probin_common_init, &
+                                  advection_type, fixed_dt, max_step, &
+                                  algorithm_type, variance_coef, initial_variance
+  use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, &
+                                        rho_part_bc_comp, start_time, temp_bc_comp, &
                                         use_stoch, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
 
@@ -47,8 +37,8 @@ subroutine main_driver()
 
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t)              :: dt,time,loc_param
-  integer                      :: n,nlevs,i,j,dm,istep,step_count,ng_s
+  real(kind=dp_t)              :: dt,time
+  integer                      :: n,nlevs,i,dm,istep,ng_s
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -72,13 +62,9 @@ subroutine main_driver()
   type(multifab), allocatable  :: eta(:)
   type(multifab), allocatable  :: eta_ed(:,:)
   type(multifab), allocatable  :: kappa(:)
-  real(kind=dp_t),allocatable  :: covW(:,:) 
-  real(kind=dp_t),allocatable  :: covW_theo(:,:) 
-  real(kind=dp_t),allocatable  :: wiwjt(:,:) 
-  real(kind=dp_t),allocatable  :: wit(:) 
 
   ! For HydroGrid
-  integer :: narg, farg, un, n_cell, rng, n_rngs
+  integer :: narg, farg, un, n_rngs
   character(len=128) :: fname
   logical :: lexist
   logical :: nodal_temp(3)
@@ -91,11 +77,6 @@ subroutine main_driver()
   call probin_multispecies_init() 
   call probin_gmres_init()
   
-  if(.true.) then ! Confirm that gcc read the input file correctly
-    write(*,*) "rho_init=", rho_init(1:2,1:nspecies)
-    write(*,*) "rho_bc=", rho_bc(1:dim_in,1:2,1:nspecies)
-  end if
-
   ! for time being, we fix nlevs to be 1. for adaptive simulations where the grids 
   ! change, cells at finer resolution don't necessarily exist depending on your 
   ! tagging criteria, so max_levs isn't necessary equal to nlevs
@@ -123,14 +104,6 @@ subroutine main_driver()
      allocate(eta_ed(nlevs,3))
      allocate(Temp_ed(nlevs,3))
   end if
-  
-  ! Donev: All of this stuff calculating variances covW can be removed
-  ! It was useful for testing in the diffusion-only code
-  ! It is actually subsumed by HydroGrid so it is already included there
-  allocate(covW(nspecies,nspecies))
-  allocate(covW_theo(nspecies,nspecies))
-  allocate(wiwjt(nspecies,nspecies))
-  allocate(wit(nspecies))
 
   !==============================================================
   ! Setup parallelization: Create boxes and layouts for multifabs
@@ -373,27 +346,7 @@ subroutine main_driver()
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   call fill_m_stochastic(mla)
 
-  ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*diff_coef)]; 
-  ! diff_coef is the largest eigenvalue of diffusion matrix to be input for n-species
   dt = fixed_dt
-
-  ! Donev: Remove this stuff, it is not so simple for multispecies
-  ! One just needs to rely on fixed_dt being correct
-  if (dt .gt. dx(1,1)**2/(diff_coef*2.d0*dm)) then
-     call bl_error("time step violates diffusive mass cfl")
-  end if
-  
-  if (parallel_IOProcessor()) then
-     ! Donev: Remove this stuff, it was for the simple explicit scheme used in testing
-     ! here we are using completely different semi-implicit temporal integrators
-     if(timeinteg_type .eq. 1) write(*,*) "Using Euler method"
-     if(timeinteg_type .eq. 2) write(*,*) "Using Predictor-corrector method"
-     if(timeinteg_type .eq. 3) write(*,*) "Using Midpoint method"
-     if(timeinteg_type .eq. 4) write(*,*) "Using Runge-Kutta 3 method"
-     write(*,*) "Using time step dt =", dt
-     if(use_stoch) write(*,*), "Using noise variance =", sqrt(2.d0*k_B*&
-                               variance_coef_mass/(product(dx(1,1:dm))*dt))
-  end if
 
   !=====================================================================
   ! Initialize HydroGrid for analysis
@@ -439,11 +392,6 @@ subroutine main_driver()
   !=======================================================
 
   ! free up memory counters 
-  step_count = 0.d0
-  covW       = 0.d0 
-  covW_theo  = 0.d0 
-  wit        = 0.d0 
-  wiwjt      = 0.d0 
   istep      = 0
 
   do while(istep<=max_step)
@@ -454,9 +402,6 @@ subroutine main_driver()
 
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then
-         ! Compute covariances manually for initial testing (HydroGrid now does the same)
-         call compute_cov(mla,rho_old,wit,wiwjt) ! Donev: This can be removed
-         step_count = step_count + 1 
 
          ! print out projection (average) and variance
          if ( (stats_int > 0) .and. &
@@ -524,97 +469,6 @@ subroutine main_driver()
   ! print out the total mass to check conservation
   call sum_mass(rho_old, istep)
 
-  ! print out the standard deviation
-  ! Donev: This can be removed from this code entirely
-  if (parallel_IOProcessor()) then
-     if(use_stoch .and. variance_coef_mass .ne. 0.d0 .and. step_count .ne. 0.d0) then
-     
-     write(*,*), ''
-     write(1,*), 'Normalized numeric cov of W'
-     do i=1,nspecies
-        do j=1,nspecies
-           covW(i,j) = (wiwjt(i,j)/real(step_count) - wit(i)*wit(j)/real(step_count)**2)/variance_coef_mass
-        end do
-        write(1,*), covW(i,:)
-     end do
-
-     if(nspecies .eq. 2) then 
-     
-        covW_theo(1,1) = (molmass(1)*rho_init(1,2) + molmass(2)*rho_init(1,1))*rho_init(1,1)*rho_init(1,2)/(&
-                          product(dx(1,1:dm))*(rho_init(1,1)+rho_init(1,2))**4) 
-        covW_theo(1,2) = -covW_theo(1,1) 
-        covW_theo(2,1) = covW_theo(1,2) 
-        covW_theo(2,2) = covW_theo(1,1) 
-
-     else if(nspecies .eq. 3) then
-        
-        covW_theo(1,1) = (rho_init(1,1)*(molmass(2)*rho_init(1,1)*rho_init(1,2) + molmass(3)*rho_init(1,1)*&
-                         rho_init(1,3) + molmass(1)*(rho_init(1,2) + rho_init(1,3))**2))/(product(dx(1,1:dm))*&
-                         (rho_init(1,1) + rho_init(1,2) + rho_init(1,3))**4) 
-        covW_theo(1,2) = -((rho_init(1,1)*rho_init(1,2)*(-(molmass(3)*rho_init(1,3)) + molmass(2)*(rho_init(1,1) +& 
-                         rho_init(1,3)) + molmass(1)*(rho_init(1,2) + rho_init(1,3))))/(product(dx(1,1:dm))*(&
-                         rho_init(1,1) + rho_init(1,2) + rho_init(1,3))**4)) 
-        covW_theo(1,3) = -((rho_init(1,1)*rho_init(1,3)*(-(molmass(2)*rho_init(1,2)) + molmass(3)*(rho_init(1,1) +& 
-                         rho_init(1,2)) + molmass(1)*(rho_init(1,2) + rho_init(1,3))))/(product(dx(1,1:dm))*(&
-                         rho_init(1,1) + rho_init(1,2) + rho_init(1,3))**4))
-        covW_theo(2,1) = covW_theo(1,2) 
-        covW_theo(2,2) = (rho_init(1,2)*(molmass(2)*(rho_init(1,1) + rho_init(1,3))**2 + rho_init(1,2)*(molmass(1)*&
-                         rho_init(1,1) + molmass(3)*rho_init(1,3))))/(product(dx(1,1:dm))*(rho_init(1,1) +& 
-                         rho_init(1,2) + rho_init(1,3))**4)
-        covW_theo(2,3) = -((rho_init(1,2)*rho_init(1,3)*(-(molmass(1)*rho_init(1,1)) + molmass(3)*(rho_init(1,1) +& 
-                         rho_init(1,2)) + molmass(2)*(rho_init(1,1) + rho_init(1,3))))/(product(dx(1,1:dm))*(&
-                         rho_init(1,1) + rho_init(1,2) + rho_init(1,3))**4)) 
-        covW_theo(3,1) = covW_theo(1,3) 
-        covW_theo(3,2) = covW_theo(2,3) 
-        covW_theo(3,3) = (rho_init(1,3)*(molmass(3)*(rho_init(1,1) + rho_init(1,2))**2 + (molmass(1)*rho_init(1,1) +& 
-                         molmass(2)*rho_init(1,2))*rho_init(1,3)))/(product(dx(1,1:dm))*(rho_init(1,1) +& 
-                         rho_init(1,2) + rho_init(1,3))**4)
- 
-      else if(nspecies .eq. 4) then
-        
-        loc_param = 1.0d0/(product(dx(1,1:dm))*(rho_init(1,1) + rho_init(1,2) + rho_init(1,3) +& 
-                    rho_init(1,4)))
-        
-        covW_theo(1,1) = 0.174d0*loc_param 
-        covW_theo(1,2) = -0.024d0*loc_param
-        covW_theo(1,3) = -0.018d0*loc_param
-        covW_theo(1,4) = -0.132d0*loc_param 
- 
-        covW_theo(2,1) = covW_theo(1,2) 
-        covW_theo(2,2) = 0.2115d0*loc_param
-        covW_theo(2,3) = -0.0195d0*loc_param
-        covW_theo(2,4) = -0.168d0*loc_param
-
-        covW_theo(3,1) = covW_theo(1,3)
-        covW_theo(3,2) = covW_theo(2,3)
-        covW_theo(3,3) = 0.1135d0*loc_param
-        covW_theo(3,4) = -0.076d0*loc_param 
-
-        covW_theo(4,1) = covW_theo(1,4)
-        covW_theo(4,2) = covW_theo(2,4)
-        covW_theo(4,3) = covW_theo(3,4)
-        covW_theo(4,4) = 0.376d0*loc_param
-
-      else  
-        write(*,*), 'analytic covariance of W for nspecies > 4 is not coded'
-     end if
-
-     ! correction made for infinite to periodic approximation of covariance
-     n_cell = multifab_volume(rhotot_old(1))
-     covW_theo = (1 - 1/n_cell)*covW_theo
-     
-     write(2,*), 'analytic cov of W' 
-     do i=1,nspecies
-        write(2,*) covW_theo(i,:)
-     end do
-
-     write(*,*), 'linf-norm of cov of W for',nspecies,' species is =', maxval(abs(covW_theo - covW))
-     write(*,*), 'l1-norm of cov of W for',  nspecies,' species is =', sum(abs(covW_theo - covW))
-     write(*,*), 'l2-norm of cov of W for',  nspecies,' species is =', sqrt(sum((covW_theo - covW)**2))
- 
-     end if
-  end if
-
   !=======================================================
   ! Destroy multifabs and layouts
   !=======================================================
@@ -648,7 +502,6 @@ subroutine main_driver()
   deallocate(lo,hi,dx)
   deallocate(rho_old,rhotot_old,rhotot_fc,Temp,Temp_fc)
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv,umac)
-  deallocate(covW,covW_theo,wiwjt,wit)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 
