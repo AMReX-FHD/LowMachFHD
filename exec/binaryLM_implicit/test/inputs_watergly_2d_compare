@@ -66,7 +66,7 @@
   project_eos_int = 10      ! how often to call project_onto_eos
 
   ! For initial conditions that have a sharp jump:    
-  smoothing_width = 0.5 ! How much to smooth the sharp jump in initial condition (in units of grid cells)
+  smoothing_width = 5 ! How much to smooth the sharp jump in initial condition (in units of grid cells)
 
   ! Time stepping
   ! Due to gravitation-induced instability the time step here needs to be very small, ~0.01s (overdamped)
