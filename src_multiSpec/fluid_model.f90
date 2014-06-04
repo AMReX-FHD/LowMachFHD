@@ -3,9 +3,9 @@ module fluid_model_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
-  use probin_common_module, only: molmass
+  use probin_common_module, only: molmass, prob_type
   use probin_multispecies_module, only: nspecies, is_ideal_mixture, Dbar, &
-      Dtherm, H_offdiag, H_diag
+                                        Dtherm, H_offdiag, H_diag
  
   implicit none
 
@@ -103,8 +103,8 @@ contains
        do i=lo(1)-ng,hi(1)+ng
        
           call mixture_properties_mass_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
-                                      molmtot(i,j),D_bar(i,j,:),D_therm(i,j,:),&
-                                      Hessian(i,j,:),Temp(i,j))
+                                             molmtot(i,j),D_bar(i,j,:),D_therm(i,j,:),&
+                                             Hessian(i,j,:),Temp(i,j))
        end do
     end do
    
@@ -131,8 +131,8 @@ contains
           do i=lo(1)-ng,hi(1)+ng
 
              call mixture_properties_mass_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
-                                         molmtot(i,j,k),D_bar(i,j,k,:),D_therm(i,j,k,:),&
-                                         Hessian(i,j,k,:),Temp(i,j,k))
+                                                molmtot(i,j,k),D_bar(i,j,k,:),D_therm(i,j,k,:),&
+                                                Hessian(i,j,k,:),Temp(i,j,k))
           end do
        end do
     end do
@@ -160,8 +160,8 @@ contains
     real(kind=dp_t) :: massfrac(nspecies)
 
     ! Local values of transport and thermodynamic coefficients (functions of composition!):
-    real(kind=dp_t), dimension(nspecies*(nspecies-1)/2)    :: D_bar_local, H_offdiag      ! off-diagonal components of symmetric matrices
-    real(kind=dp_t), dimension(nspecies)    :: H_diag ! Diagonal component
+    real(kind=dp_t), dimension(nspecies*(nspecies-1)/2) :: D_bar_local, H_offdiag_local ! off-diagonal components of symmetric matrices
+    real(kind=dp_t), dimension(nspecies)    :: H_diag_local ! Diagonal component
     
     massfrac = rho/rhotot;
     
@@ -182,8 +182,8 @@ contains
     end select
     
     ! For now we only encode constant Hessian matrices since we do not have any thermodynamic models coded up (Wilson, NTLR, UNIQUAC, etc.)
-    H_diag_local = H_diag
-    H_offdiag_local = H_offdiag
+    H_diag_local(1:nspecies) = H_diag(1:nspecies)
+    H_offdiag_local(1:nspecies*(nspecies-1)/2) = H_offdiag(1:nspecies*(nspecies-1)/2)
     
     ! Complete the process by filling the matrices using generic formulae -- this part should not change
     ! populate D_bar and Hessian matrix 
