@@ -472,7 +472,7 @@ contains
           I(row, column)    = 0.d0      
           I(column, row)    = I(row, column) ! symmetric
           
-          if(.not. is_ideal_mixture) then ! Donev: Andy, fix this not to use local on top of logical
+          if(.not. is_ideal_mixture) then
              X_xxT(row,column)   = -molarconc(row)*molarconc(column)  ! form x*transpose(x) off diagonals 
              X_xxT(column, row)  = X_xxT(row, column)                 ! symmetric
           end if
