@@ -74,17 +74,18 @@ subroutine main_driver()
   call probin_multispecies_init() 
   call probin_gmres_init()
   
-  ! for time being, we fix nlevs to be 1. for adaptive simulations where the grids 
-  ! change, cells at finer resolution don't necessarily exist depending on your 
-  ! tagging criteria, so max_levs isn't necessary equal to nlevs
-  nlevs = 1
-  dm = dim_in
+  ! Initialize random numbers *after* the global (root) seed has been set:
+  if(use_stoch) call SeedParallelRNG(seed)
 
-  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
-     n_rngs = 1
-  else if (algorithm_type .eq. 2) then
-     n_rngs = 2
-  end if
+
+  ! in this example we fix nlevs to be 1
+  ! for adaptive simulations where the grids change, cells at finer
+  ! resolution don't necessarily exist depending on your tagging criteria,
+  ! so max_levs isn't necessary equal to nlevs
+  nlevs = 1
+
+  ! dimensionality is set in inputs file
+  dm = dim_in
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
@@ -257,12 +258,18 @@ subroutine main_driver()
 
   end do
 
-  ! initialize multifabs that hold random fluxes
+  ! allocate and build multifabs that will contain random numbers
+  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
+     n_rngs = 1
+  else if (algorithm_type .eq. 2) then
+     n_rngs = 2
+  end if
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
 
-  ! Initialize random numbers *after* the global (root) seed has been set:
-  if(use_stoch) call SeedParallelRNG(seed)
+  ! fill random flux multifabs with new random numbers
+  call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+  call fill_m_stochastic(mla)
 
   !=====================================================================
   ! Initialize values
@@ -308,10 +315,6 @@ subroutine main_driver()
      
   end if
 
-  ! fill random flux multifabs with new random numbers
-  call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-  call fill_m_stochastic(mla)
-
   dt = fixed_dt
 
   !=====================================================================
@@ -328,11 +331,11 @@ subroutine main_driver()
            open(unit=un, file = fname, status = 'old', action = 'read')
            
            ! We will also pass temperature here but no additional scalars
-           call initialize_hydro_grid(mla,rho_old,dt,dx, namelist_file=un, &
+           call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, &
                                       nspecies_in=nspecies, &
                                       nscal_in=0, &
                                       exclude_last_species_in=.false., &
-                                      analyze_velocity=.false., &
+                                      analyze_velocity=.true., &
                                       analyze_density=.true., &
                                       analyze_temperature=.true.) 
            
