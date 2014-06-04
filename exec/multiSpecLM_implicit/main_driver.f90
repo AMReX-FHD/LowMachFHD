@@ -5,6 +5,7 @@ subroutine main_driver()
   use bl_IO_module
   use layout_module
   use init_module
+  use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfileLM_module
   use advance_diffusion_module

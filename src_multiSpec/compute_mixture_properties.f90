@@ -3,7 +3,9 @@ module compute_mixture_properties_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
-  use probin_common_module, only: molmass, prob_type
+  use bc_module
+  use convert_stag_module
+  use probin_common_module, only: molmass, prob_type, visc_coef
   use probin_multispecies_module, only: nspecies, is_ideal_mixture, Dbar, &
                                         Dtherm, H_offdiag, H_diag
  
@@ -11,7 +13,7 @@ module compute_mixture_properties_module
 
   private
 
-  public :: compute_mixture_properties ! DONEV: Why would mixture_properties_mass_local be public?
+  public :: compute_mixture_properties, compute_eta
   
   ! Donev:
   ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
@@ -214,5 +216,164 @@ contains
     end do
     
   end subroutine mixture_properties_mass_local
+
+
+
+  subroutine compute_eta(mla,eta,eta_ed,rho,rhotot,Temp,pres,dx,the_bc_level)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: eta(:)
+    type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(in   ) :: rho(:)
+    type(multifab) , intent(in   ) :: rhotot(:)
+    type(multifab) , intent(in   ) :: Temp(:)
+    type(multifab) , intent(in   ) :: pres(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_level) , intent(in   ) :: the_bc_level(:)
+
+    integer :: nlevs,dm,i,n,ng_e,ng_r,ng_m,ng_t,ng_p
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: ep(:,:,:,:)
+    real(kind=dp_t), pointer :: rp(:,:,:,:)
+    real(kind=dp_t), pointer :: mp(:,:,:,:)
+    real(kind=dp_t), pointer :: tp(:,:,:,:)
+    real(kind=dp_t), pointer :: pp(:,:,:,:)
+
+    ng_e  = eta(1)%ng
+    ng_r  = rho(1)%ng
+    ng_m = rhotot(1)%ng
+    ng_t  = Temp(1)%ng
+    ng_p  = pres(1)%ng
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    do n=1,nlevs
+       do i=1,nfabs(eta(n))
+          ep  => dataptr(eta(n), i)
+          rp  => dataptr(rho(n), i)
+          mp => dataptr(rhotot(n), i)
+          tp  => dataptr(Temp(n), i)
+          pp  => dataptr(pres(n), i)
+          lo = lwb(get_box(eta(n), i))
+          hi = upb(get_box(eta(n), i))
+          select case (dm)
+          case (2)
+             call compute_eta_2d(ep(:,:,1,1),ng_e,rp(:,:,1,:),ng_r,mp(:,:,1,1),ng_m, &
+                                 tp(:,:,1,1),ng_t,pp(:,:,1,1),ng_p,lo,hi,dx(n,:))
+          case (3)
+             call compute_eta_3d(ep(:,:,:,1),ng_e,rp(:,:,:,:),ng_r,mp(:,:,:,1),ng_m, &
+                                 tp(:,:,:,1),ng_t,pp(:,:,:,1),ng_p,lo,hi,dx(n,:))
+          end select
+       end do
+    end do
+
+    if (dm .eq. 2) then
+       call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,tran_bc_comp,1,the_bc_level)
+    else if (dm .eq. 3) then
+       call average_cc_to_edge(nlevs,eta,eta_ed,1,tran_bc_comp,1,the_bc_level)
+    end if
+
+  end subroutine compute_eta
+
+  subroutine compute_eta_2d(eta,ng_e,rho,ng_r,rhotot,ng_m,Temp,ng_t,pres,ng_p,lo,hi,dx)
+
+    ! compute eta in valid AND ghost regions
+    ! the ghost cells for rho, Temp, etc., have already been filled properly
+
+    integer        , intent(in   ) :: lo(:), hi(:), ng_e, ng_r, ng_m, ng_t, ng_p
+    real(kind=dp_t), intent(inout) ::    eta(lo(1)-ng_e:,lo(2)-ng_e:)
+    real(kind=dp_t), intent(inout) ::    rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_m:,lo(2)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   Temp(lo(1)-ng_t:,lo(2)-ng_t:)
+    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_p:,lo(2)-ng_p:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    ! local
+    integer :: i,j
+
+    select case (abs(prob_type))
+    case (9)
+       
+       do j=lo(2)-ng_e,hi(2)+ng_e
+          do i=lo(1)-ng_e,hi(1)+ng_e
+
+             call eta_water_glycerol(eta(i,j),rho(i,j,:),rhotot(i,j),Temp(i,j))
+
+          end do
+       end do
+
+    case default
+
+       eta = visc_coef
+
+    end select
+
+  end subroutine compute_eta_2d
+
+  subroutine compute_eta_3d(eta,ng_e,rho,ng_r,rhotot,ng_m,Temp,ng_t,pres,ng_p,lo,hi,dx)
+
+    ! compute eta in valid AND ghost regions
+    ! the ghost cells for rho, Temp, etc., have already been filled properly
+
+    integer        , intent(in   ) :: lo(:), hi(:), ng_e, ng_r, ng_m, ng_t, ng_p
+    real(kind=dp_t), intent(inout) ::    eta(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    real(kind=dp_t), intent(inout) ::    rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
+    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    real(kind=dp_t), intent(inout) ::   Temp(lo(1)-ng_t:,lo(2)-ng_t:,lo(3)-ng_t:)
+    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    ! local
+    integer :: i,j,k
+
+    select case (abs(prob_type))
+    case (9)
+
+       do k=lo(3)-ng_e,hi(3)+ng_e
+          do j=lo(2)-ng_e,hi(2)+ng_e
+             do i=lo(1)-ng_e,hi(1)+ng_e
+
+                call eta_water_glycerol(eta(i,j,k),rho(i,j,k,:),rhotot(i,j,k),Temp(i,j,k))
+
+             end do
+          end do
+       end do
+
+    case default
+
+       eta = visc_coef
+
+    end select
+
+  end subroutine compute_eta_3d
+
+  subroutine eta_water_glycerol(eta,rho,rhotot,Temp)
+
+    real(kind=dp_t), intent(inout) :: eta
+    real(kind=dp_t), intent(in   ) :: rho(:)
+    real(kind=dp_t), intent(in   ) :: rhotot
+    real(kind=dp_t), intent(in   ) :: Temp
+    
+    ! local
+    real(kind=dp_t) :: c_loc, nu_g, nu_w, x, T
+
+    ! mass fraction of glycerol
+    c_loc = rho(1)/rhotot
+
+    ! convert temperature to Celsius
+    T = Temp - 273.d0 
+
+    ! viscosities of pure glycerol and water
+    nu_g = exp(9.09309 - 0.11397*T + 0.00054*T**2)
+    nu_w = exp(0.55908 - 0.03051*T + 0.00015*T**2)
+
+    x = c_loc*(1.d0 + (1.d0-c_loc)*(-0.727770 - 0.04943*c_loc - 1.2038*c_loc**2))
+
+    ! visc_coef is the scaling prefactor (for unit conversion or non-unity scaling)
+    eta = visc_coef*exp(-x*(-log(nu_g)+log(nu_w)))*nu_w*rhotot
+
+  end subroutine eta_water_glycerol
 
 end module compute_mixture_properties_module

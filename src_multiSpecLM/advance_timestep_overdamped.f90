@@ -16,7 +16,7 @@ module advance_timestep_overdamped_module
   use div_and_grad_module
   use eos_check_module
   use mk_grav_force_module
-  use init_module
+  use compute_mixture_properties_module
   use mass_flux_utilities_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
