@@ -42,7 +42,7 @@
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
-  seed = 0 ! SEED in IBAMR (must be kept at zero for restarts!)
+  seed = 1 ! SEED in IBAMR (must be kept at zero for restarts!)
 
   ! Algorithm control / selection
   !----------------------
