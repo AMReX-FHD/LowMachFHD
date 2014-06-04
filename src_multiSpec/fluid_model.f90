@@ -168,16 +168,18 @@ contains
     select case (abs(prob_type))
     case (9)
 
-       ! DONEV:
        ! This is where formula for chi as a function of concentration goes
-       ! We assume nspecies=2 though one may want to check and abort otherwise
+       ! We assume nspecies=2
        ! Dbar(1) = chi0 in the binary notation
+       if (nspecies .ne. 2) then
+          call bl_error("mixture_properties_mass_local assumes nspecies=2")
+       end if
        
        D_bar_local(1) = Dbar(1) ! * function(massfrac(1))
 
     case default
 
-       D_bar_local = Dbar ! Keep it constant
+       D_bar_local(1:nspecies*(nspecies-1)/2) = Dbar(1:nspecies*(nspecies-1)/2) ! Keep it constant
 
     end select
     
