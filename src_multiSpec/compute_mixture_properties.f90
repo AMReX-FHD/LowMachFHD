@@ -42,7 +42,7 @@ contains
  
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: n,i,ng,dm,nlevs,row,column
+    integer :: n,i,ng,dm,nlevs
 
     ! assign pointers for multifabs to be passed
     real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
@@ -158,8 +158,8 @@ contains
     real(kind=dp_t), intent(in)   :: Temp
  
     ! local variables
-    integer                       :: n,row,column
-    real(kind=dp_t) :: massfrac(nspecies)
+    integer :: n,row,column
+    real(kind=dp_t) :: massfrac(nspecies), c_loc
 
     ! Local values of transport and thermodynamic coefficients (functions of composition!):
     real(kind=dp_t), dimension(nspecies*(nspecies-1)/2) :: D_bar_local, H_offdiag_local ! off-diagonal components of symmetric matrices
@@ -177,7 +177,11 @@ contains
           call bl_error("mixture_properties_mass_local assumes nspecies=2")
        end if
        
-       D_bar_local(1) = Dbar(1) ! * function(massfrac(1))
+       ! mass fraction of glycerol
+       c_loc = rho(1)/rhotot
+
+       ! chi = chi0 * rational function
+       D_bar_local(1) = Dbar(1)*(1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
 
     case default
 
@@ -216,8 +220,6 @@ contains
     end do
     
   end subroutine mixture_properties_mass_local
-
-
 
   subroutine compute_eta(mla,eta,eta_ed,rho,rhotot,Temp,pres,dx,the_bc_level)
 
