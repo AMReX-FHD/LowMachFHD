@@ -11,7 +11,7 @@ module fluid_model_module
 
   private
 
-  public :: fluid_model, mixture_properties_mass_local
+  public :: fluid_model ! DONEV: Why would mixture_properties_mass_local be public?
   
   ! Donev:
   ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
@@ -143,6 +143,7 @@ contains
   ! It should have a case statement, in which different things are done depending on prob_type (Andy can organize that part)
   ! For now the default case should be to simply set D_bar, D_therm and H to constants, read from the input file, as done below
   ! Rename this routine mixture_properties_mass (for now) to make it clear what this does
+  
   subroutine mixture_properties_mass_local(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)        
@@ -156,17 +157,45 @@ contains
  
     ! local variables
     integer                       :: n,row,column
+    real(kind=dp_t) :: massfrac(nspecies)
 
+    ! Local values of transport and thermodynamic coefficients (functions of composition!):
+    real(kind=dp_t), dimension(nspecies*(nspecies-1)/2)    :: D_bar_local, H_offdiag      ! off-diagonal components of symmetric matrices
+    real(kind=dp_t), dimension(nspecies)    :: H_diag ! Diagonal component
+    
+    massfrac = rho/rhotot;
+    
+    select case (abs(prob_type))
+    case (9)
+
+       ! DONEV:
+       ! This is where formula for chi as a function of concentration goes
+       ! We assume nspecies=2 though one may want to check and abort otherwise
+       ! Dbar(1) = chi0 in the binary notation
+       
+       D_bar_local(1) = Dbar(1) ! * function(massfrac(1))
+
+    case default
+
+       D_bar_local = Dbar ! Keep it constant
+
+    end select
+    
+    ! For now we only encode constant Hessian matrices since we do not have any thermodynamic models coded up (Wilson, NTLR, UNIQUAC, etc.)
+    H_diag_local = H_diag
+    H_offdiag_local = H_offdiag
+    
+    ! Complete the process by filling the matrices using generic formulae -- this part should not change
     ! populate D_bar and Hessian matrix 
     n=0; 
     do row=1, nspecies  
        do column=1, row-1
           n=n+1
-          D_bar(row, column) = Dbar(n)                ! SM-diffcoeff's read from input
+          D_bar(row, column) = D_bar_local(n)                ! SM-diffcoeff's read from input
           D_bar(column, row) = D_bar(row, column)     ! symmetric
           
           if(.not. is_ideal_mixture) then
-             Hessian(row, column) = H_offdiag(n)         ! positive semidefinite matrix read from input
+             Hessian(row, column) = H_offdiag_local(n)         ! positive semidefinite matrix read from input
              Hessian(column, row) = Hessian(row,column)  ! Hessian is symmetric
           end if
        end do
@@ -175,7 +204,7 @@ contains
        D_bar(row, row) = 0.d0           ! as self-diffusion is zero
        D_therm(row)    = Dtherm(row)    ! thermal diffcoeff's read from input
        if(.not. is_ideal_mixture) then 
-          Hessian(row, row) = H_diag(row)     
+          Hessian(row, row) = H_diag_local(row)     
        else 
           Hessian = 0.d0     ! set matrix to zero for ideal-mixture
        end if
