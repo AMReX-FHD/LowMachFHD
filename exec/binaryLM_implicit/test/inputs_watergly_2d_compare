@@ -61,7 +61,7 @@
                              ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
   
   restart = -1              ! If positive, restarts simulation from checkpoint file with this index
-  max_step = 100      ! maximum number of time steps = N_STEPS in IBAMR
+  max_step = 1000      ! maximum number of time steps = N_STEPS in IBAMR
   print_int = 100           ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
   project_eos_int = 10      ! how often to call project_onto_eos
 
@@ -75,7 +75,7 @@
   ! diffusive CFL for momentum ~1.5 (but momentum diffusion is implicit so that's ok)
   ! diffusive CFL for mass ~0.005
   fixed_dt = 0.01        ! time step (old explicit method used 0.005) = DT in IBAMR
-  plot_int = 10        ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
+  plot_int = 100        ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
   chk_int = 1000         ! If positive, how often to write a checkpoint (restart file)
   
   ! Determines initial conditions and other problem-specific parameters (see src_binaryLM_implicit/init.f90)
@@ -169,7 +169,7 @@
   stats_int =  1000          ! Project grid for analysis and write hstat and vstat files
                              ! If positive, how often to compute mean and 
                              ! standard deviation over reduced dimensions = N_STEPS_SNAPSHOT in IBAMR
-  n_steps_save_stats = 1000  ! How often to dump HydroGrid output files
+  n_steps_save_stats = 100  ! How often to dump HydroGrid output files
                              ! If you set n_steps_save_stats=max_step a final output will be saved with name containing max_step
                              ! Otherwise the final output of HydroGrid will be saved without any number in the file names
   n_steps_skip = 0           ! How many steps to skip = N_STEPS_SKIP in IBAMR  
