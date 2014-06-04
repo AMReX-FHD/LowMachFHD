@@ -5,7 +5,7 @@ module compute_mass_fluxdiv_module
   use bc_module
   use div_and_grad_module
   use diffusive_mass_fluxdiv_module
-  use fluid_model_module
+  use compute_mixture_properties_module
   use external_force_module
   use ml_layout_module
   use F95_LAPACK
@@ -133,7 +133,8 @@ contains
     call convert_cons_to_prim(mla,rho,rhotot,molarconc,molmtot,the_bc_level)
       
     ! populate D_bar and Hessian matrix 
-    call fluid_model(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,the_bc_level)
+    call compute_mixture_properties(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm, &
+                                    Hessian,Temp,the_bc_level)
 
     ! compute Gama from Hessian
     call compute_Gama(mla,rho,rhotot,molarconc,molmtot,Hessian,Gama,the_bc_level)

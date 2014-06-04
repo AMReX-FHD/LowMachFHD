@@ -1,4 +1,4 @@
-module fluid_model_module
+module compute_mixture_properties_module
 
   use multifab_module
   use define_bc_module
@@ -11,7 +11,7 @@ module fluid_model_module
 
   private
 
-  public :: fluid_model ! DONEV: Why would mixture_properties_mass_local be public?
+  public :: compute_mixture_properties ! DONEV: Why would mixture_properties_mass_local be public?
   
   ! Donev:
   ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
@@ -25,7 +25,7 @@ module fluid_model_module
   
 contains
   
-  subroutine fluid_model(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,the_bc_level)
+  subroutine compute_mixture_properties(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
@@ -81,7 +81,7 @@ contains
        end do
     end do
   
-  end subroutine fluid_model
+  end subroutine compute_mixture_properties
   
   subroutine mixture_properties_mass_2d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,ng,lo,hi)
 
@@ -215,4 +215,4 @@ contains
     
   end subroutine mixture_properties_mass_local
 
-end module fluid_model_module
+end module compute_mixture_properties_module
