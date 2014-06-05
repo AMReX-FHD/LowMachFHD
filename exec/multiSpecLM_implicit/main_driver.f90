@@ -25,7 +25,7 @@ subroutine main_driver()
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, bc_lo, bc_hi, probin_common_init, &
                                   advection_type, fixed_dt, max_step, &
-                                  algorithm_type, variance_coef, initial_variance
+                                  algorithm_type, variance_coef_mom, initial_variance
   use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, &
                                         rho_part_bc_comp, start_time, temp_bc_comp, &
                                         probin_multispecies_init
@@ -310,7 +310,7 @@ subroutine main_driver()
   ! add initial momentum fluctuations - only call in inertial code for now
   ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
   if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
-     call add_m_fluctuations(mla,dx,initial_variance*variance_coef, &
+     call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                              umac,rhotot_old,Temp,the_bc_tower)
      
   end if

@@ -47,7 +47,7 @@
  analyze_conserved=T ! Use densities or mass fractions for analysis?
  n_steps_save_stats=0 ! How often to dump HydroGrid statistics (if positive, otherwise at end only)
  max_grid_projection(1) = 32 ! Parallelization distribution for projections
- variance_coef = 1e-6 ! This should be the same as variance_coef_mass below
+ variance_coef_mom = 1e-6 ! This should be the same as variance_coef_mass below
  variance_coef_mass = 1e-6        ! parameter to set variance (=1/thickness and =1 ideal) 
  
 /

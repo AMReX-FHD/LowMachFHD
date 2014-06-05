@@ -13,7 +13,7 @@ module stochastic_m_fluxdiv_module
   use sum_momenta_module
   use convert_m_to_umac_module
   use convert_stag_module
-  use probin_common_module , only: visc_coef, variance_coef, k_B, &
+  use probin_common_module , only: visc_coef, variance_coef_mom, k_B, &
                                    stoch_stress_form, filtering_width
   use probin_multispecies_module, only: temp_bc_comp
 
@@ -133,7 +133,7 @@ contains
     do n=1,nlevs
 
        ! include eta and temperature contribution in an ijk loop
-       variance = sqrt(variance_coef*2.d0*k_B/(product(dx(n,1:dm))*dt))
+       variance = sqrt(variance_coef_mom*2.d0*k_B/(product(dx(n,1:dm))*dt))
 
        if (dm .eq. 2) then
 

@@ -67,7 +67,7 @@
   bc_lo(1:2) = 200 101
   bc_hi(1:2) = 200 101
 
-  variance_coef = 1.d-3      ! global scaling epsilon for stochastic forcing
+  variance_coef_mom = 1.d-3      ! global scaling epsilon for stochastic forcing
   variance_coef_mass = 1.d-3
 
   k_B = 1.d0                 ! Boltzmann's constant

@@ -35,7 +35,7 @@ subroutine main_driver()
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
-                                   stats_int, variance_coef, variance_coef_mass, &
+                                   stats_int, variance_coef_mom, variance_coef_mass, &
                                    initial_variance, chk_int, algorithm_type, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, advection_type, &
                                    restart, max_step, print_int, project_eos_int
@@ -319,7 +319,7 @@ subroutine main_driver()
   if (restart .le. 0) then
 
      if (initial_variance .ne. 0.d0) then
-        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,s_fc,mold)
+        call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom,s_fc,mold)
      end if
      
      if (barodiffusion_type .gt. 0) then

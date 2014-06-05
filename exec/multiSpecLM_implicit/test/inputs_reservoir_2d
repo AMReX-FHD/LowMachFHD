@@ -28,7 +28,7 @@
  bc_lo(1:2) = -1 101
  bc_hi(1:2) = -1 101
 
- variance_coef = 1.d-6            ! for stochastic momentum forcing
+ variance_coef_mom = 1.d-6            ! for stochastic momentum forcing
  variance_coef_mass = 1.d-6       ! parameter to set variance (=1/thickness and =1 ideal)
   
 /

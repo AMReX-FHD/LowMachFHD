@@ -12,7 +12,7 @@ module stochastic_m_fluxdiv_module
   use multifab_fill_random_module
   use multifab_filter_module
   use sum_momenta_module
-  use probin_common_module , only: visc_type, visc_coef, variance_coef, k_B, &
+  use probin_common_module , only: visc_type, visc_coef, variance_coef_mom, k_B, &
                                    stoch_stress_form, filtering_width
   use probin_binarylm_module, only: temperature
 
@@ -123,10 +123,10 @@ contains
 
        if (visc_type < 0) then
           ! eta varies in space, add its contribution below in an i/j/k loop
-          variance = sqrt(variance_coef*2.d0*k_B*temperature          /(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef_mom*2.d0*k_B*temperature          /(product(dx(n,1:dm))*dt))
        else
           ! eta is constant in space, include it here
-          variance = sqrt(variance_coef*2.d0*k_B*temperature*visc_coef/(product(dx(n,1:dm))*dt))
+          variance = sqrt(variance_coef_mom*2.d0*k_B*temperature*visc_coef/(product(dx(n,1:dm))*dt))
        end if
 
 
