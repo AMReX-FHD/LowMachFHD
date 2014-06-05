@@ -128,7 +128,6 @@
  start_time  = 0.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  correct_flux = .true.            ! correct flux to numeric roundoff
- use_stoch = .true.               ! use stochastic flux 
  print_error_norms = .true.       ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  

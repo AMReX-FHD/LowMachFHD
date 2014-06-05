@@ -17,7 +17,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: H_offdiag(max_element), H_diag(max_element) ! =d^2F/dx^2  
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   real(kind=dp_t)    :: fraction_tolerance
-  logical            :: correct_flux,use_stoch,print_error_norms
+  logical            :: correct_flux,print_error_norms
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
   real(kind=dp_t)    :: rho_init(2,max_species)
   real(kind=dp_t)    :: rho_bc(3,2,max_species)
@@ -28,7 +28,6 @@ module probin_multispecies_module
   namelist /probin_multispecies/ inverse_type   
   namelist /probin_multispecies/ timeinteg_type   
   namelist /probin_multispecies/ correct_flux   
-  namelist /probin_multispecies/ use_stoch   
   namelist /probin_multispecies/ print_error_norms   
   namelist /probin_multispecies/ is_ideal_mixture   
   namelist /probin_multispecies/ is_nonisothermal   
@@ -67,7 +66,6 @@ contains
     inverse_type       = 1
     timeinteg_type     = 1
     correct_flux       = .true.
-    use_stoch          = .true.
     print_error_norms  = .true.
     is_ideal_mixture   = .true.
     is_nonisothermal   = .true.

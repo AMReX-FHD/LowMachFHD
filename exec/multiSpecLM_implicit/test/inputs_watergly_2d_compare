@@ -15,7 +15,7 @@
                              ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
   
   restart = -1              ! If positive, restarts simulation from checkpoint file with this index
-  max_step = 1000            ! maximum number of time steps = N_STEPS in IBAMR
+  max_step = 10000            ! maximum number of time steps = N_STEPS in IBAMR
 
 ! AJN - not implemented yet
 !  print_int = 100           ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
@@ -112,7 +112,7 @@
   stats_int =  1000          ! Project grid for analysis and write hstat and vstat files
                              ! If positive, how often to compute mean and 
                              ! standard deviation over reduced dimensions = N_STEPS_SNAPSHOT in IBAMR
-  n_steps_save_stats = 100  ! How often to dump HydroGrid output files
+  n_steps_save_stats = 1000  ! How often to dump HydroGrid output files
                              ! If you set n_steps_save_stats=max_step a final output will be saved with name containing max_step
                              ! Otherwise the final output of HydroGrid will be saved without any number in the file names
   n_steps_skip = 0           ! How many steps to skip = N_STEPS_SKIP in IBAMR  
@@ -128,7 +128,6 @@
  start_time  = 0.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  correct_flux = .true.            ! correct flux to numeric roundoff
- use_stoch = .true.               ! use stochastic flux 
  print_error_norms = .true.       ! check L1/L2/Linf norm 
  is_ideal_mixture  = .false.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .false.       ! true=include grad(T), false= no grad(T)  

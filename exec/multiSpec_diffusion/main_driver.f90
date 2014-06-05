@@ -23,7 +23,7 @@ subroutine main_driver()
                                         mol_frac_bc_comp, print_error_norms, &
                                         rho_part_bc_comp, &
                                         start_time, temp_bc_comp, timeinteg_type, &
-                                        use_stoch, probin_multispecies_init
+                                        probin_multispecies_init
  
   implicit none
 
@@ -197,7 +197,7 @@ subroutine main_driver()
   end do
 
   ! Initialize random numbers *after* the global (root) seed has been set:
-  if(use_stoch) call SeedParallelRNG(seed)
+  if(variance_coef_mass .ne. 0.d0) call SeedParallelRNG(seed)
 
   !=====================================================================
   ! Initialize values
@@ -221,8 +221,8 @@ subroutine main_driver()
      if(timeinteg_type .eq. 3) write(*,*) "Using Midpoint method"
      if(timeinteg_type .eq. 4) write(*,*) "Using Runge-Kutta 3 method"
      write(*,*) "Using time step dt =", dt
-     if(use_stoch) write(*,*), "Using noise variance =", sqrt(2.d0*k_B*&
-                               variance_coef_mass/(product(dx(1,1:dm))*dt))
+     write(*,*), "Using noise variance =", &
+          sqrt(2.d0*k_B*variance_coef_mass/(product(dx(1,1:dm))*dt))
   end if
 
   !=====================================================================
@@ -341,7 +341,7 @@ subroutine main_driver()
  
   ! print out the standard deviation
   if (parallel_IOProcessor()) then
-     if(use_stoch) then
+     if (variance_coef_mass .ne. 0.d0) then
      
      write(*,*), ''
      write(1,*), 'Normalized numeric cov of W'

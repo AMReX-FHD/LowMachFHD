@@ -11,7 +11,8 @@ module compute_mass_fluxdiv_module
   use F95_LAPACK
   use stochastic_mass_fluxdiv_module
   use mass_flux_utilities_module
-  use probin_multispecies_module, only: nspecies, use_stoch
+  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: variance_coef_mass
 
   implicit none
 
@@ -154,9 +155,11 @@ contains
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
 
     ! compute stochastic fluxdiv 
-    if(use_stoch) call stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,&
-                                               molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
-                                               dx,dt,weights,the_bc_level)
+    if (variance_coef_mass .ne. 0.d0) then
+       call stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,&
+                                    molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
+                                    dx,dt,weights,the_bc_level)
+    end if
       
     ! revert back rho to it's original form
     do n=1,nlevs

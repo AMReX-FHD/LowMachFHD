@@ -6,7 +6,8 @@ module advance_diffusion_module
   use ml_layout_module
   use compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
-  use probin_multispecies_module, only: nspecies, rho_part_bc_comp, timeinteg_type, use_stoch
+  use probin_multispecies_module, only: nspecies, rho_part_bc_comp, timeinteg_type
+  use probin_common_module, only: variance_coef_mass
 
   implicit none
 
@@ -67,7 +68,7 @@ contains
     ! allocate the multifabs
     allocate(weights(n_rngs))
     
-    if(use_stoch) then
+    if(variance_coef_mass .ne. 0.d0) then
 
        call init_mass_stochastic(mla,n_rngs)
     
@@ -87,7 +88,7 @@ contains
       !==================================================
       
       stage_time = time  
-      if(use_stoch) weights(1) = 1.0d0 
+      if(variance_coef_mass .ne. 0.d0) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,rhotot,&
@@ -97,8 +98,8 @@ contains
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-                       call saxpy(rho(n),-dt,diff_fluxdiv(n))
-         if(use_stoch) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
+                                          call saxpy(rho(n),-dt,diff_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
       end do 
   
       case(2)
@@ -122,7 +123,7 @@ contains
       !===================== 
       
       stage_time = time 
-      if(use_stoch) weights(1) = 1.0d0 
+      if(variance_coef_mass .ne. 0.d0) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,rhotot,&
@@ -132,8 +133,8 @@ contains
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
-         call saxpy(rhonew(n),-dt,diff_fluxdiv(n))
-         if(use_stoch) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
+                                          call saxpy(rhonew(n),-dt,diff_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
       end do 
    
       ! update values of the ghost cells of rhonew
@@ -158,9 +159,9 @@ contains
 
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
-                       call saxpy(rho(n),-0.5d0*dt,diff_fluxdiv(n))
-                       call saxpy(rho(n),-0.5d0*dt,diff_fluxdivnew(n))
-         if(use_stoch) call saxpy(rho(n),      -dt,stoch_fluxdiv(n))
+                                          call saxpy(rho(n),-0.5d0*dt,diff_fluxdiv(n))
+                                          call saxpy(rho(n),-0.5d0*dt,diff_fluxdivnew(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),      -dt,stoch_fluxdiv(n))
       end do
  
       case(3)
@@ -195,8 +196,8 @@ contains
  
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
-                       call saxpy(rhonew(n),-0.5d0*dt,diff_fluxdiv(n))
-         if(use_stoch) call saxpy(rhonew(n),      -dt,stoch_fluxdiv(n))
+                                          call saxpy(rhonew(n),-0.5d0*dt,diff_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),      -dt,stoch_fluxdiv(n))
       end do 
 
       ! update values of the ghost cells of rhonew
@@ -223,8 +224,8 @@ contains
  
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-                       call saxpy(rho(n), -dt, diff_fluxdivnew(n))
-         if(use_stoch) call saxpy(rho(n), -dt, stoch_fluxdiv(n))
+                                          call saxpy(rho(n), -dt, diff_fluxdivnew(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n), -dt, stoch_fluxdiv(n))
       end do 
       
       case(4)
@@ -260,8 +261,8 @@ contains
  
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
-                       call saxpy(rhonew(n), -dt, diff_fluxdiv(n))
-         if(use_stoch) call saxpy(rhonew(n), -dt, stoch_fluxdiv(n))
+                                          call saxpy(rhonew(n), -dt, diff_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n), -dt, stoch_fluxdiv(n))
       end do 
    
       ! update values of the ghost cells of rhonew
@@ -288,10 +289,10 @@ contains
 
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
-                       call multifab_mult_mult_s(rhonew(n),0.25d0)
-                       call saxpy(rhonew(n),  0.75d0   , rho(n))
-                       call saxpy(rhonew(n), -0.25d0*dt, diff_fluxdivnew(n))
-         if(use_stoch) call saxpy(rhonew(n), -0.25d0*dt, stoch_fluxdiv(n))
+                                          call multifab_mult_mult_s(rhonew(n),0.25d0)
+                                          call saxpy(rhonew(n),  0.75d0   , rho(n))
+                                          call saxpy(rhonew(n), -0.25d0*dt, diff_fluxdivnew(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n), -0.25d0*dt, stoch_fluxdiv(n))
       end do 
 
       ! update values of the ghost cells of rho_star
@@ -323,10 +324,10 @@ contains
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-                       call multifab_mult_mult_s(rho(n),(1.0d0/3.0d0))
-                       call saxpy(rho(n),  (2.0d0/3.0d0)   , rhonew(n))
-                       call saxpy(rho(n), -(2.0d0/3.0d0)*dt, diff_fluxdivnew(n))
-         if(use_stoch) call saxpy(rho(n), -(2.0d0/3.0d0)*dt, stoch_fluxdiv(n))
+                                          call multifab_mult_mult_s(rho(n),(1.0d0/3.0d0))
+                                          call saxpy(rho(n),  (2.0d0/3.0d0)   , rhonew(n))
+                                          call saxpy(rho(n), -(2.0d0/3.0d0)*dt, diff_fluxdivnew(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n), -(2.0d0/3.0d0)*dt, stoch_fluxdiv(n))
       end do 
 
     !=============================================================================================
@@ -352,7 +353,7 @@ contains
        end do
     end do
     
-    if(use_stoch) then
+    if(variance_coef_mass .ne. 0.d0) then
        call destroy_mass_stochastic(mla)
     endif
     deallocate(weights)

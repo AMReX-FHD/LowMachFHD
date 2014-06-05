@@ -28,7 +28,7 @@ subroutine main_driver()
                                   algorithm_type, variance_coef, initial_variance
   use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, &
                                         rho_part_bc_comp, start_time, temp_bc_comp, &
-                                        use_stoch, probin_multispecies_init
+                                        probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
 
   implicit none
@@ -76,8 +76,7 @@ subroutine main_driver()
   call probin_gmres_init()
   
   ! Initialize random numbers *after* the global (root) seed has been set:
-  if(use_stoch) call SeedParallelRNG(seed)
-
+  call SeedParallelRNG(seed)
 
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
