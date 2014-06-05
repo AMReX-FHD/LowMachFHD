@@ -381,9 +381,13 @@ subroutine main_driver()
            if(analyze_binary) then
               call initialize_hydro_grid_bin(mla,sold,dt,dx,un,2)
            else
-              call initialize_hydro_grid(mla,sold,dt,dx, &
-                      namelist_file=un, nspecies_in=2, nscal_in=0, exclude_last_species_in=.true., &
-                      analyze_velocity=.true., analyze_density=.true., analyze_temperature=.false.)
+              call initialize_hydro_grid(mla,sold,dt,dx,namelist_file=un, &
+                                         nspecies_in=2, &
+                                         nscal_in=0, &
+                                         exclude_last_species_in=.true., &
+                                         analyze_velocity=.true., &
+                                         analyze_density=.true., &
+                                         analyze_temperature=.false.)
            end if 
            close(unit=un)
         end if

@@ -5,6 +5,7 @@ subroutine main_driver()
   use bl_IO_module
   use layout_module
   use init_module
+  use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfileLM_module
   use advance_diffusion_module
@@ -18,7 +19,7 @@ subroutine main_driver()
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use ParallelRNGs 
-  use convert_mass_variables_module
+  use mass_flux_utilities_module
   use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
@@ -50,14 +51,11 @@ subroutine main_driver()
   type(multifab), allocatable  :: rhotot_old(:)
   type(multifab), allocatable  :: rho_new(:)
   type(multifab), allocatable  :: rhotot_new(:)
-  type(multifab), allocatable  :: rhotot_fc(:,:)
   type(multifab), allocatable  :: Temp(:)
-  type(multifab), allocatable  :: Temp_fc(:,:)
   type(multifab), allocatable  :: Temp_ed(:,:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
   type(multifab), allocatable  :: umac(:,:)
-  type(multifab), allocatable  :: mold(:,:)
   type(multifab), allocatable  :: pres(:)
   type(multifab), allocatable  :: eta(:)
   type(multifab), allocatable  :: eta_ed(:,:)
@@ -77,25 +75,26 @@ subroutine main_driver()
   call probin_multispecies_init() 
   call probin_gmres_init()
   
-  ! for time being, we fix nlevs to be 1. for adaptive simulations where the grids 
-  ! change, cells at finer resolution don't necessarily exist depending on your 
-  ! tagging criteria, so max_levs isn't necessary equal to nlevs
-  nlevs = 1
-  dm = dim_in
+  ! Initialize random numbers *after* the global (root) seed has been set:
+  if(use_stoch) call SeedParallelRNG(seed)
 
-  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
-     n_rngs = 1
-  else if (algorithm_type .eq. 2) then
-     n_rngs = 2
-  end if
+
+  ! in this example we fix nlevs to be 1
+  ! for adaptive simulations where the grids change, cells at finer
+  ! resolution don't necessarily exist depending on your tagging criteria,
+  ! so max_levs isn't necessary equal to nlevs
+  nlevs = 1
+
+  ! dimensionality is set in inputs file
+  dm = dim_in
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
   allocate(dx(nlevs,dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs))
-  allocate(rho_new(nlevs),rhotot_new(nlevs),rhotot_fc(nlevs,dm),Temp_fc(nlevs,dm))
+  allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
-  allocate(umac(nlevs,dm),mold(nlevs,dm),pres(nlevs))
+  allocate(umac(nlevs,dm),pres(nlevs))
   allocate(eta(nlevs),kappa(nlevs))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
@@ -260,12 +259,18 @@ subroutine main_driver()
 
   end do
 
-  ! initialize multifabs that hold random fluxes
+  ! allocate and build multifabs that will contain random numbers
+  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
+     n_rngs = 1
+  else if (algorithm_type .eq. 2) then
+     n_rngs = 2
+  end if
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
 
-  ! Initialize random numbers *after* the global (root) seed has been set:
-  if(use_stoch) call SeedParallelRNG(seed)
+  ! fill random flux multifabs with new random numbers
+  call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+  call fill_m_stochastic(mla)
 
   !=====================================================================
   ! Initialize values
@@ -303,48 +308,13 @@ subroutine main_driver()
      end do
   end do
 
-  ! add initial momentum fluctuations
-  ! Donev: Please make this into a separate routine callable from elsewhere
-  ! taking as an argument the variance coefficient (here initial_variance*variance_coef)
+  ! add initial momentum fluctuations - only call in inertial code for now
   ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
-  if (initial_variance .ne. 0.d0) then
-     
-     ! temporary multifabs
-     do n=1,nlevs
-        do i=1,dm
-           call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
-           call multifab_build_edge(rhotot_fc(n,i),mla%la(n),1,0,i)
-           call multifab_build_edge(Temp_fc(n,i),mla%la(n),1,0,i)
-        end do
-     end do
-
-     ! compute rhotot on faces
-     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
-                             the_bc_tower%bc_tower_array)
-
-     ! compute mold
-     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
-
-     ! add fluctuations to mold and convert back to umac
+  if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
      call add_m_fluctuations(mla,dx,initial_variance*variance_coef, &
-                             rhotot_fc,Temp_fc,mold)
-
-     ! convert back to umac
-     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.true.)
-
-     do n=1,nlevs
-        do i=1,dm
-           call multifab_destroy(mold(n,i))
-           call multifab_destroy(rhotot_fc(n,i))
-           call multifab_destroy(Temp_fc(n,i))
-        end do
-     end do
-
+                             umac,rhotot_old,Temp,the_bc_tower)
+     
   end if
-
-  ! fill random flux multifabs with new random numbers
-  call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-  call fill_m_stochastic(mla)
 
   dt = fixed_dt
 
@@ -362,11 +332,11 @@ subroutine main_driver()
            open(unit=un, file = fname, status = 'old', action = 'read')
            
            ! We will also pass temperature here but no additional scalars
-           call initialize_hydro_grid(mla,rho_old,dt,dx, namelist_file=un, &
+           call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, &
                                       nspecies_in=nspecies, &
                                       nscal_in=0, &
                                       exclude_last_species_in=.false., &
-                                      analyze_velocity=.false., &
+                                      analyze_velocity=.true., &
                                       analyze_density=.true., &
                                       analyze_temperature=.true.) 
            
@@ -384,8 +354,10 @@ subroutine main_driver()
   ! but I do not see how one can avoid that
   ! From this perspective it may be useful to keep initial_projection even in overdamped
   ! because different gmres tolerances may be needed in the first step than in the rest
-  call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                          Temp,dt,dx,n_rngs,the_bc_tower)
+  if (algorithm_type .eq. 0) then
+     call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
+                             stoch_mass_fluxdiv,Temp,dt,dx,n_rngs,the_bc_tower)
+  end if
 
   !=======================================================
   ! Begin time stepping loop
@@ -500,7 +472,7 @@ subroutine main_driver()
      end do
   end do
   deallocate(lo,hi,dx)
-  deallocate(rho_old,rhotot_old,rhotot_fc,Temp,Temp_fc)
+  deallocate(rho_old,rhotot_old,Temp)
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv,umac)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
