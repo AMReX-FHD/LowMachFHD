@@ -1,4 +1,6 @@
-f90sources += advance_diffusion.f90
+f90sources += advance_timestep_diffusion.f90
+f90sources += advance_timestep_inertial.f90
+f90sources += advance_timestep_overdamped.f90
 f90sources += analysis.f90
 f90sources += compute_mixture_properties.f90
 f90sources += correction_flux.f90
@@ -7,6 +9,7 @@ f90sources += compute_mass_fluxdiv.f90
 f90sources += eos_check.f90
 f90sources += external_force.f90 
 f90sources += init.f90
+f90sources += initial_projection.f90
 f90sources += mass_flux_utilities.f90
 f90sources += matmat_mul.f90
 f90sources += matrix_utilities.f90

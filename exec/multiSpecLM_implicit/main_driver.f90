@@ -8,7 +8,7 @@ subroutine main_driver()
   use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfileLM_module
-  use advance_diffusion_module
+  use advance_timestep_diffusion_module
   use advance_timestep_overdamped_module
   use define_bc_module
   use bc_module

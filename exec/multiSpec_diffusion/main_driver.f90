@@ -7,7 +7,7 @@ subroutine main_driver()
   use init_module
   use write_plotfile_module
   use write_plotfile1_module
-  use advance_diffusion_module
+  use advance_timestep_diffusion_module
   use define_bc_module
   use bc_module
   use analysis_module
@@ -318,8 +318,8 @@ subroutine main_driver()
       end if
 
       ! advance the solution by dt
-      call advance_diffusion(mla,rho,rhotot,Temp,dx,dt,time, &
-                             the_bc_tower%bc_tower_array)
+      call advance_timestep_diffusion(mla,rho,rhotot,Temp,dx,dt,time, &
+                                      the_bc_tower%bc_tower_array)
       ! increment simulation time
       istep = istep + 1
       time = time + dt

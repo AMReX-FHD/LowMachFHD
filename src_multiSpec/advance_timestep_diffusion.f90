@@ -1,4 +1,4 @@
-module advance_diffusion_module
+module advance_timestep_diffusion_module
 
   use multifab_module
   use define_bc_module
@@ -13,11 +13,11 @@ module advance_diffusion_module
 
   private
 
-  public :: advance_diffusion
+  public :: advance_timestep_diffusion
 
 contains
 
-  subroutine advance_diffusion(mla,rho,rhotot,Temp,dx,dt,time,the_bc_level)
+  subroutine advance_timestep_diffusion(mla,rho,rhotot,Temp,dx,dt,time,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -358,6 +358,6 @@ contains
     endif
     deallocate(weights)
   
-  end subroutine advance_diffusion
+  end subroutine advance_timestep_diffusion
 
-end module advance_diffusion_module
+end module advance_timestep_diffusion_module

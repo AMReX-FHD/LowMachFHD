@@ -19,6 +19,9 @@ VPATH_LOCATIONS += ..
 include $(STAGGERED_HOME)/src_multiSpec/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_multiSpec
 
+include $(STAGGERED_HOME)/src_gmres/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_gmres
+
 include $(STAGGERED_HOME)/src_common/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_common
 
@@ -27,6 +30,9 @@ VPATH_LOCATIONS += $(HYDROLIB_HOME)
 
 include $(BOXLIB_HOME)/Src/F_BaseLib/GPackage.mak
 VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/F_BaseLib
+
+include $(BOXLIB_HOME)/Src/LinearSolvers/F_MG/GPackage.mak
+VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/LinearSolvers/F_MG
 
 LAPACK95_DIR = $(STAGGERED_HOME)/src_multiSpec/LAPACK95
 

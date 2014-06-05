@@ -1,4 +1,4 @@
-module advance_timestep_module
+module advance_timestep_inertial_module
 
   use ml_layout_module
   use multifab_module
@@ -29,7 +29,7 @@ module advance_timestep_module
 
   private
 
-  public :: advance_timestep
+  public :: advance_timestep_inertial
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -48,7 +48,7 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
+  subroutine advance_timestep_inertial(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_fluxdiv, &
                               gp_fc,dx,dt,time,the_bc_tower)
 
@@ -782,7 +782,7 @@ contains
 
     deallocate(weights)
 
-  end subroutine advance_timestep
+  end subroutine advance_timestep_inertial
 
   subroutine build_bc_multifabs(mla)
 
@@ -877,4 +877,4 @@ contains
 
   end subroutine destroy_bc_multifabs
 
-end module advance_timestep_module
+end module advance_timestep_inertial_module
