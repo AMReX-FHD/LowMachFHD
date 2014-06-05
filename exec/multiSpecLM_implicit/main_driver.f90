@@ -189,8 +189,8 @@ subroutine main_driver()
   ! scal_bc_comp+nspecies+1 = molfrac or massfrac (dimensionless fractions)
   ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
   ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diffusion coefficients (eta,kappa,chi)
-  ! Donev: It may be better if each transport coefficient has its own BC code?
-  ! I think the only place this is used is average_cc_to_node 
+  ! It may be better if each transport coefficient has its own BC code?
+  ! I think the only place this is used is average_cc_to_node/face/edge
   ! I cannot right now foresee a case where different values would be used in different places
   ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
@@ -347,7 +347,7 @@ subroutine main_driver()
   ! initial projection - only truly needed for inertial algorithm
   ! for the overdamped algorithm, this only changes the reference state for the first
   ! gmres solve in the first time step
-  ! Donev: Yes, I think in the purely overdamped version this can be removed
+  ! Yes, I think in the purely overdamped version this can be removed
   ! In either case the first ever solve cannot have a good reference state
   ! so in general there is the danger it will be less accurate than subsequent solves
   ! but I do not see how one can avoid that
@@ -407,7 +407,7 @@ subroutine main_driver()
       if (algorithm_type .eq. 0) then
          call bl_error("main_driver: inertial algorithm not written yet")
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-         ! Donev: It appears to me there is no need to be passing eta, eta_ed etc. around here
+         ! It appears to me there is no need to be passing eta, eta_ed etc. around here
          ! They are only used locally inside the routine when computing updates
          ! and do not appear to be needed here
          ! I think they should be local temps inside advance_timestep_overdamped
