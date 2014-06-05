@@ -17,11 +17,6 @@ module fluid_model_module
   ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
   ! which should change with different problem types and number of species
   ! depending on the exact physical system being simulated. 
-  ! A lot of the stuff below is general and thus belongs with the other general routines such as compute_chi
-  ! In particular the main piece below computes Gamma (the rest is fluff code) from H
-  ! call H "Hessian" to make it clear it is symmetric
-  ! This code should be separated from here and moved to convert_mass_variables.f90
-  ! (which should be renamed to something more meaningful, like mass_flux_utilities.f90)
   
 contains
   
