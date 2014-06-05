@@ -2,6 +2,7 @@ f90sources += advance_timestep_diffusion.f90
 f90sources += advance_timestep_inertial.f90
 f90sources += advance_timestep_overdamped.f90
 f90sources += analysis.f90
+f90sources += checkpoint.f90
 f90sources += compute_mixture_properties.f90
 f90sources += correction_flux.f90
 f90sources += diffusive_mass_fluxdiv.f90
