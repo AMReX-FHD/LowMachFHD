@@ -79,7 +79,7 @@ subroutine main_driver()
   type(multifab), allocatable :: kappa(:)          ! cell-centered
   type(multifab), allocatable :: rhoc_fluxdiv(:)   ! cell-centered
 
-  integer :: narg, farg, un, init_step, n_rngs
+  integer :: narg, farg, un, init_step, n_rngs, ng_s
   character(len=128) :: fname
   logical :: lexist
 
@@ -140,6 +140,16 @@ subroutine main_driver()
         pmask(i) = .true.
      end if
   end do
+
+  if (advection_type .eq. 0) then
+     if (algorithm_type .eq. 0) then
+        ng_s = 2 ! centered advection, inertial
+     else
+        ng_s = 1 ! centered advection, overdamped
+     end if
+  else
+     ng_s = 3 ! bds advection
+  end if
 
   if (restart .ge. 0) then
 
@@ -208,11 +218,7 @@ subroutine main_driver()
         ! need 2 ghost cells to average to ghost faces used in 
         ! converting m to umac in m ghost cells
         ! if using advection_type .ge. 1 (bds), need 3 ghost cells
-        if (advection_type .ge. 1) then
-           call multifab_build(sold(n),mla%la(n),2,3)
-        else
-           call multifab_build(sold(n),mla%la(n),2,2)
-        end if
+        call multifab_build(sold(n),mla%la(n),2,ng_s)
 
         ! pressure - need 1 ghost cell since we calculate its gradient
         call multifab_build(pres(n),mla%la(n),1,1)
@@ -245,13 +251,8 @@ subroutine main_driver()
      ! need 2 ghost cells to average to ghost faces used in 
      ! converting m to umac in m ghost cells
      ! if using advection_type .ge. 1 (bds), need 3 ghost cells
-     if (advection_type .ge. 1) then
-        call multifab_build(snew(n),mla%la(n),2,3)
-        call multifab_build(prim(n),mla%la(n),2,3)
-     else
-        call multifab_build(snew(n),mla%la(n),2,2)
-        call multifab_build(prim(n),mla%la(n),2,2)
-     end if
+     call multifab_build(snew(n),mla%la(n),2,ng_s)
+     call multifab_build(prim(n),mla%la(n),2,ng_s)
 
      ! s on faces, gp on faces
      do i=1,dm
