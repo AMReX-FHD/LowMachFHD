@@ -10,7 +10,7 @@ subroutine main_driver()
   use init_pres_module
   use initial_projection_module
   use write_plotfile_module
-  use advance_timestep_module
+  use advance_timestep_inertial_module
   use advance_timestep_overdamped_module
   use convert_variables_module
   use convert_m_to_umac_module
@@ -461,9 +461,9 @@ subroutine main_driver()
 
      ! advance the solution by dt
      if (algorithm_type .eq. 0) then
-        call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
-                              eta,eta_ed,kappa,rhoc_fluxdiv, &
-                              gp_fc,dx,dt,time,the_bc_tower)
+        call advance_timestep_inertial(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres, &
+                                       chi,chi_fc,eta,eta_ed,kappa,rhoc_fluxdiv, &
+                                       gp_fc,dx,dt,time,the_bc_tower)
      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pres, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower)
