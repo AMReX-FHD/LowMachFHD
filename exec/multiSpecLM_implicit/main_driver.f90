@@ -295,13 +295,9 @@ subroutine main_driver()
      call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
   end if
 
-  ! initialize kappa
-  do n=1,nlevs
-     call multifab_setval(kappa(n), 1.d0, all=.true.)
-  end do
-
-  ! initialize eta
+  ! compute eta and kappa
   call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
+  call compute_kappa(mla,kappa)
 
   ! initialize pressure and velocity
   do n=1,nlevs
