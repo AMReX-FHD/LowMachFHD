@@ -23,7 +23,8 @@ subroutine main_driver()
   use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
-                                  plot_int, seed, stats_int, bc_lo, bc_hi, probin_common_init, &
+                                  plot_int, seed, stats_int, bc_lo, bc_hi, restart, &
+                                  probin_common_init, &
                                   advection_type, fixed_dt, max_step, &
                                   algorithm_type, variance_coef_mom, initial_variance
   use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, &
@@ -39,7 +40,7 @@ subroutine main_driver()
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time
-  integer                      :: n,nlevs,i,dm,istep,ng_s
+  integer                      :: n,nlevs,i,dm,istep,ng_s,init_step
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -89,7 +90,6 @@ subroutine main_driver()
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
-  allocate(dx(nlevs,dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
@@ -103,9 +103,55 @@ subroutine main_driver()
      allocate(Temp_ed(nlevs,3))
   end if
 
-  !==============================================================
-  ! Setup parallelization: Create boxes and layouts for multifabs
-  !==============================================================
+  ! set grid spacing at each level
+  ! the grid spacing is the same in each direction
+  allocate(dx(nlevs,dm))
+  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
+  select case (dm) 
+  case(2)
+     if (dx(1,1) .ne. dx(1,2)) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+     end if
+  case(3)
+     if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+     end if
+  case default
+     call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+  end select
+
+  ! use refined dx for next level
+  do n=2,nlevs
+     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
+  end do
+
+  ! build pmask
+  allocate(pmask(dm))
+  pmask = .false.
+  do i=1,dm
+     if (bc_lo(i) .eq. PERIODIC .and. bc_hi(i) .eq. PERIODIC) then
+        pmask(i) = .true.
+     end if
+  end do
+
+  if (advection_type .eq. 0) then
+     ng_s = 2 ! centered advection
+  else
+     ng_s = 3 ! bds advection
+  end if
+
+  if (restart .ge. 0) then
+
+     init_step = restart + 1
+
+
+
+  else
+
+     init_step = 1
+     time = start_time
+
+  end if
   
   ! tell mba how many levels and dimensionality of problem
   call ml_boxarray_build_n(mba,nlevs,dm)
@@ -115,28 +161,6 @@ subroutine main_driver()
   ! we use refinement ratio of 2 in every direction between all levels
   do n=2,nlevs
      mba%rr(n-1,:) = 2
-  end do
-
-  ! set grid spacing at each level; presently grid spacing is same in all direction
-  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
-  
-  ! check whether dimensionality & grid spacing passed correct 
-  select case (dm) 
-    case(2)
-      if (dx(1,1) .ne. dx(1,2)) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-      end if    
-    case(3)
-      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-      end if    
-    case default
-      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
-  end select
-
-  ! use refined dx for next level
-  do n=2,nlevs
-     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
   end do
 
   ! create a box from (0,0) to (n_cells-1,n_cells-1)
@@ -160,15 +184,6 @@ subroutine main_driver()
   if (nlevs .ge. 2) then
      call bl_error("Need to build boxarray for n>1")
   end if
-
-  ! build pmask
-  allocate(pmask(dm))
-  pmask = .false.
-  do i=1,dm
-     if (bc_lo(i) .eq. PERIODIC .and. bc_hi(i) .eq. PERIODIC) then
-        pmask(i) = .true.
-     end if
-  end do
 
   ! build the ml_layout, mla
   call ml_layout_build(mla,mba,pmask)
@@ -209,12 +224,6 @@ subroutine main_driver()
   !=======================================================
   ! Build multifabs for all the variables
   !=======================================================
-
-  if (advection_type .eq. 0) then
-     ng_s = 1 ! centered advection
-  else
-     ng_s = 3 ! bds advection
-  end if
 
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
@@ -274,9 +283,6 @@ subroutine main_driver()
   !=====================================================================
   ! Initialize values
   !=====================================================================
-
-  ! initialize the time 
-  time = start_time
 
   ! initialize rho
   call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
@@ -362,17 +368,51 @@ subroutine main_driver()
   ! Begin time stepping loop
   !=======================================================
 
-  ! free up memory counters 
-  istep      = 0
+  ! write initial plotfile
+  if (plot_int.gt.0) then
+     if (parallel_IOProcessor()) then
+        write(*,*), 'writing initial plotfile 0'
+     end if
+     call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pres,0,dx,time)
+  end if
 
-  do while(istep<=max_step)
+  do istep=init_step,max_step
 
       if (parallel_IOProcessor()) then
          print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
       end if
 
+      ! advance the solution by dt
+      if (algorithm_type .eq. 0) then
+         call bl_error("main_driver: inertial algorithm not written yet")
+      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
+         ! It appears to me there is no need to be passing eta, eta_ed etc. around here
+         ! They are only used locally inside the routine when computing updates
+         ! and do not appear to be needed here
+         ! I think they should be local temps inside advance_timestep_overdamped
+         ! Similar comment applies to diff_mass_fluxdiv,stoch_mass_fluxdiv
+         ! I know they are also passed to initial_projection but it seems to me all this can be done locally with temps
+         ! Also note that for advance_timestep_overdamped it is not necessary to call initial_projection
+         ! In fact, if one makes this main_driver only do overdamped it can be simplified greatly
+         ! One option is do this by converting this main_driver.f90 into overdamped_driver.f90 and simplifying it.
+         call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                          pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                          dx,dt,time,the_bc_tower,n_rngs)
+      end if
+
+      time = time + dt
+
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then
+
+         ! write plotfile at specific intervals
+         if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
+            if (parallel_IOProcessor()) then
+               write(*,*), 'writing plotfiles at timestep =', istep 
+            end if
+            call write_plotfileLM(mla,"plt",rho_new,rhotot_new,Temp,umac,pres,istep,dx,time)
+         end if
 
          ! print out projection (average) and variance
          if ( (stats_int > 0) .and. &
@@ -395,37 +435,6 @@ subroutine main_driver()
 
       end if
 
-      ! write plotfile at specific intervals
-      if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
-         if (parallel_IOProcessor()) then
-            write(*,*), 'writing plotfiles at timestep =', istep 
-         end if
-         call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pres,istep,dx,time)
-      end if
-
-      ! advance the solution by dt
-      if (algorithm_type .eq. 0) then
-         call bl_error("main_driver: inertial algorithm not written yet")
-      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-         ! It appears to me there is no need to be passing eta, eta_ed etc. around here
-         ! They are only used locally inside the routine when computing updates
-         ! and do not appear to be needed here
-         ! I think they should be local temps inside advance_timestep_overdamped
-         ! Similar comment applies to diff_mass_fluxdiv,stoch_mass_fluxdiv
-         ! I know they are also passed to initial_projection but it seems to me all this can be done locally with temps
-         ! Also note that for advance_timestep_overdamped it is not necessary to call initial_projection
-         ! In fact, if one makes this main_driver only do overdamped it can be simplified greatly
-         ! One option is do this by converting this main_driver.f90 into overdamped_driver.f90 and simplifying it.
-         call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                          pres,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                          dx,dt,time,the_bc_tower,n_rngs)
-      end if
-
-      ! increment simulation time
-      istep = istep + 1
-      time = time + dt
-
       ! set old state to new state
      do n=1,nlevs
         call multifab_copy_c(rho_old(n)   ,1,rho_new(n)   ,1,nspecies,rho_old(n)%ng)
@@ -436,9 +445,6 @@ subroutine main_driver()
      call sum_mass(rho_old, istep)
 
   end do
-
-  ! print out the total mass to check conservation
-  call sum_mass(rho_old, istep)
 
   !=======================================================
   ! Destroy multifabs and layouts
