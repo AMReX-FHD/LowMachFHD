@@ -300,7 +300,7 @@ subroutine main_driver()
   ! convert cons to prim in valid region
   call convert_cons_to_prim(mla,sold,prim,.true.)
 
-  if (restart .le. 0 .and. initial_variance .ne. 0.d0) then
+  if (restart .lt. 0 .and. initial_variance .ne. 0.d0) then
      call add_c_fluctuations(mla,dx,initial_variance*variance_coef_mass,prim,sold)
   end if
 
@@ -324,7 +324,7 @@ subroutine main_driver()
      call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
   end do
 
-  if (restart .le. 0) then
+  if (restart .lt. 0) then
 
      if (initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom,s_fc,mold)

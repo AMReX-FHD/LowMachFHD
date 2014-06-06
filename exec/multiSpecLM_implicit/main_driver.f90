@@ -206,29 +206,6 @@ subroutine main_driver()
      ! don't need this anymore - free up memory
      call destroy(mba)
 
-     do n=1,nlevs
-        do i=1,dm
-           call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
-        end do
-        call multifab_build(   rho_old(n), mla%la(n),nspecies,ng_s)
-        call multifab_build(rhotot_old(n), mla%la(n),       1,ng_s) 
-        ! pressure - need 1 ghost cell since we calculate its gradient
-        call multifab_build(pres(n),mla%la(n),1,1)
-     end do
-
-     ! initialize rho
-     call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
-     call eos_check(mla,rho_old)
-     call compute_rhotot(mla,rho_old,rhotot_old)
-
-     ! initialize pressure and velocity
-     do n=1,nlevs
-        call multifab_setval(pres(n), 0.d0, all=.true.)
-        do i=1,dm
-           call multifab_setval(umac(n,i), 0.d0, all=.true.)
-        end do
-     end do
-
   end if
 
   deallocate(pmask)
@@ -263,8 +240,36 @@ subroutine main_driver()
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
   temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
 
+  
+  if (restart .lt. 0) then
+
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
+        end do
+        call multifab_build(   rho_old(n), mla%la(n),nspecies,ng_s)
+        call multifab_build(rhotot_old(n), mla%la(n),       1,ng_s) 
+        ! pressure - need 1 ghost cell since we calculate its gradient
+        call multifab_build(pres(n),mla%la(n),1,1)
+     end do
+
+     ! initialize rho
+     call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
+     call eos_check(mla,rho_old)
+     call compute_rhotot(mla,rho_old,rhotot_old)
+
+     ! initialize pressure and velocity
+     do n=1,nlevs
+        call multifab_setval(pres(n), 0.d0, all=.true.)
+        do i=1,dm
+           call multifab_setval(umac(n,i), 0.d0, all=.true.)
+        end do
+     end do
+
+  end if
+
   !=======================================================
-  ! Build multifabs for all the variables
+  ! Build remaining multifabs
   !=======================================================
 
   do n=1,nlevs
@@ -313,9 +318,7 @@ subroutine main_driver()
      call multifab_physbc(pres(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
   end do
 
-
-
-  if (restart .le. 0) then
+  if (restart .lt. 0) then
      
      ! add initial momentum fluctuations - only call in inertial code for now
      ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
