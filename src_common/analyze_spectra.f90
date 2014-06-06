@@ -15,7 +15,7 @@ module analyze_spectra_module
   use HydroGridCInterface 
   use probin_common_module, only: n_cells, prob_lo, prob_hi, &
        hydro_grid_int, project_dir, max_grid_projection, stats_int, n_steps_save_stats, &
-       center_snapshots, variance_coef, analyze_conserved
+       center_snapshots, variance_coef_mom, analyze_conserved
 
   implicit none
 
@@ -269,7 +269,7 @@ contains
              isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_in, &
              systemLength = ncells*grid_dx, heatCapacity = heat_capacity, &
              timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-             structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
+             structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
 
           if(project_dir/=0) then
              ! Also perform analysis on a projected grid (averaged along project_dir axes)
@@ -277,7 +277,7 @@ contains
                   isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_in, &
                   systemLength = nCells*grid_dx, heatCapacity = heat_capacity, &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-                  structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
+                  structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
           end if
 
           if(project_dir/=0) then ! Also perform analysis on a 1D grid (along project_dir only)
@@ -285,7 +285,7 @@ contains
                   isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_in, &
                   systemLength = nCells*grid_dx, heatCapacity = heat_capacity, &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-                  structFactMultiplier = 1.0_dp_t/max(variance_coef, epsilon(1.0_dp_t)) )
+                  structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
           end if
 
        end if

@@ -1,16 +1,21 @@
-module advance_timestep_module
+module advance_timestep_inertial_module
 
   use ml_layout_module
   use multifab_module
   use define_bc_module
   use convert_stag_module
-!  use convert_variables_module
+  use convert_variables_module
   use convert_m_to_umac_module
+  use convert_to_homogeneous_module
   use mk_advective_s_fluxdiv_module
   use mk_advective_m_fluxdiv_module
+  use mk_baro_fluxdiv_module
   use diffusive_m_fluxdiv_module
+  use diffusive_rhoc_fluxdiv_module
+  use mk_grav_force_module
+  use mk_external_force_module
   use stochastic_m_fluxdiv_module
-!  use stochastic_rhoc_fluxdiv_module
+  use stochastic_rhoc_fluxdiv_module
   use gmres_module
   use init_module
   use div_and_grad_module
@@ -19,17 +24,16 @@ module advance_timestep_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
-!  use fill_rho_ghost_cells_module
-  use probin_common_module, only: advection_type
+  use fill_rho_ghost_cells_module
+  use probin_binarylm_module, only: barodiffusion_type
+  use probin_common_module, only: advection_type, grav, rhobar
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-
-  use analysis_module
 
   implicit none
 
   private
 
-  public :: advance_timestep
+  public :: advance_timestep_inertial
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -48,7 +52,7 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
+  subroutine advance_timestep_inertial(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_fluxdiv, &
                               gp_fc,dx,dt,time,the_bc_tower)
 
@@ -94,7 +98,7 @@ contains
 
     integer :: i,dm,n,nlevs
 
-    real(kind=dp_t) :: theta_alpha, norm_pre_rhs
+    real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs
 
     real(kind=dp_t), allocatable :: weights(:)
 
@@ -106,6 +110,8 @@ contains
 
     theta_alpha = 1.d0/dt
 
+    S_fac = (1.d0/rhobar(1) - 1.d0/rhobar(2))
+    
     call build_bc_multifabs(mla)
 
     do n=1,nlevs
@@ -167,6 +173,9 @@ contains
        call multifab_plus_plus_c(s_update(n),2,rhoc_fluxdiv(n),1,1,0)
     end do
 
+    ! add external forcing for rho*c
+    call mk_external_s_force(mla,s_update,dx,time,2)
+
     ! add A^n for scalars to s_update
     if (advection_type .ge. 1) then
 
@@ -195,18 +204,18 @@ contains
     end do
 
     ! compute prim^{*,n+1} from s^{*,n+1} in valid region
-!    call convert_cons_to_prim(mla,snew,prim,.true.)
+    call convert_cons_to_prim(mla,snew,prim,.true.)
 
     ! fill ghost cells for prim^{*,n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
        call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-!       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
+       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! convert prim^{*,n+1} to s^{*,n+1} in valid and ghost region
     ! now snew = s^{*,n+1} has properly filled ghost cells
-!    call convert_cons_to_prim(mla,snew,prim,.false.)
+    call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! compute s^{*,n+1} to faces
     call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
@@ -258,8 +267,7 @@ contains
     end do
 
     ! compute m_s_fluxdiv = div(Sigma^n)
-!    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv, &
-!                              eta,eta_ed,dx,dt,weights)
+    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx,dt,weights)
 
     ! add div(Sigma^n) to gmres_rhs_v
     do n=1,nlevs
@@ -268,27 +276,41 @@ contains
        end do
     end do
 
+    ! add gravity term
+    if (any(grav(1:dm) .ne. 0.d0)) then
+       call mk_grav_force(mla,gmres_rhs_v,s_fc,s_fc,the_bc_tower)
+    end if
+
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
     ! compute (chi,eta,kappa)^{*,n+1}
-!    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-!    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
-!    call compute_kappa(mla,kappa,prim,dx)
+    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
+    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
+    call compute_kappa(mla,kappa,prim,dx)
 
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
 
     ! add div(rho*chi grad c)^{*,n+1} to rhs_p
-!    call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
-!                                the_bc_tower%bc_tower_array,vel_bc_n)
+    call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
+                                the_bc_tower%bc_tower_array,vel_bc_n)
 
-!    ! add div(Psi^n') to rhs_p
-!    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
-!                                 chi_fc,dx,dt,vel_bc_n,weights)
+    if (barodiffusion_type .gt. 0) then
+       ! add baro-diffusion flux diveregnce to rhs_p
+       call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp_fc,dx, &
+                            the_bc_tower%bc_tower_array,vel_bc_n)
+    end if
+
+    ! add div(Psi^n') to rhs_p
+    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
+                                 chi_fc,dx,dt,vel_bc_n,weights)
+
+    ! add external forcing for rho*c
+    call mk_external_s_force(mla,gmres_rhs_p,dx,time+dt,1)
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
     ! thus when we add (1/2) A_0^n vbar^n and -rho^{*,n+1}*vbar^n/dt to gmres_rhs_v 
@@ -353,9 +375,9 @@ contains
 
     ! multiply gmres_rhs_p by -S_fac
     ! now gmres_rhs_p = -S^{*,n+1}
-!    do n=1,nlevs
-!       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
-!    end do
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
+    end do
 
     ! compute div(vbar^n)
     call compute_div(mla,umac,divu,dx,1,1,1)
@@ -443,6 +465,11 @@ contains
        end do
     end do
 
+    if (barodiffusion_type .eq. 2) then
+       ! compute grad p^{n+1,*}
+       call compute_grad(mla,pres,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    end if
+
     ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
     ! now mnew has properly filled ghost cells
     call convert_m_to_umac(mla,s_fc,mnew,umac,.false.)
@@ -500,18 +527,18 @@ contains
     end if
 
     ! compute prim^{n+1} from s^{n+1} in valid region
-!    call convert_cons_to_prim(mla,snew,prim,.true.)
+    call convert_cons_to_prim(mla,snew,prim,.true.)
 
     ! fill ghost cells for prim^{n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
        call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-!       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
+       call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! convert prim^{n+1} to s^{n+1} in valid and ghost region
     ! now snew = s^{n+1} has properly filled ghost cells
-!    call convert_cons_to_prim(mla,snew,prim,.false.)
+    call convert_cons_to_prim(mla,snew,prim,.false.)
 
     ! compute s^{n+1} to faces
     call average_cc_to_face(nlevs,snew,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
@@ -561,8 +588,7 @@ contains
     end do
 
     ! compute div(Sigma^n') by incrementing existing stochastic flux and dividing by 2
-!    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv, &
-!                              eta,eta_ed,dx,dt,weights)
+    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed,dx,dt,weights)
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,0.5d0,1,0)
@@ -576,15 +602,20 @@ contains
        end do
     end do
 
+    ! add gravity term
+    if (any(grav(1:dm) .ne. 0.d0)) then
+       call mk_grav_force(mla,gmres_rhs_v,s_fc_old,s_fc,the_bc_tower)
+    end if
+
     ! initialize rhs_p for gmres solve to zero
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
     end do
 
     ! compute (chi,eta,kappa)^{n+1}
-!    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
-!    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
-!    call compute_kappa(mla,kappa,prim,dx)
+    call compute_chi(mla,chi,chi_fc,prim,dx,the_bc_tower%bc_tower_array)
+    call compute_eta(mla,eta,eta_ed,prim,dx,the_bc_tower%bc_tower_array)
+    call compute_kappa(mla,kappa,prim,dx)
 
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
@@ -597,21 +628,30 @@ contains
     end do
 
     ! set rhoc_d_fluxdiv to div(rho*chi grad c)^{n+1}
-!    call diffusive_rhoc_fluxdiv(mla,rhoc_fluxdiv,1,prim,s_fc,chi_fc,dx, &
-!                                the_bc_tower%bc_tower_array,vel_bc_n)
+    call diffusive_rhoc_fluxdiv(mla,rhoc_fluxdiv,1,prim,s_fc,chi_fc,dx, &
+                                the_bc_tower%bc_tower_array,vel_bc_n)
+
+    if (barodiffusion_type .gt. 0) then
+       ! compute baro-diffusion flux divergence
+       call mk_baro_fluxdiv(mla,rhoc_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
+                            the_bc_tower%bc_tower_array,vel_bc_n)
+    end if
 
     ! fill the stochastic multifabs with a new set of random numbers
-!    call fill_m_stochastic(mla)
-!    call fill_rhoc_stochastic(mla)
+    call fill_m_stochastic(mla)
+    call fill_rhoc_stochastic(mla)
 
-!    ! create div(Psi^{n+1})
-!    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_fluxdiv, &
-!                                 s_fc,chi_fc,dx,dt,vel_bc_n,weights)
+    ! create div(Psi^{n+1})
+    call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,rhoc_fluxdiv, &
+                                 s_fc,chi_fc,dx,dt,vel_bc_n,weights)
 
     ! add diffusive, baro-diffusion, and stochastic rho*c fluxes to rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,rhoc_fluxdiv(n),1,1,0)
     end do
+
+    ! add external forcing for rho*c
+    call mk_external_s_force(mla,gmres_rhs_p,dx,time+dt,1)
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
     ! thus when we add (1/2) A_0^{n+1} vbar^{*,n+1} and -rho^{n+1}*vbar^{*,n+1}/dt to gmres_rhs_v and 
@@ -670,9 +710,9 @@ contains
 
 
     ! multiply gmres_rhs_p -S_fac
-!    do n=1,nlevs
-!       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
-!    end do
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
+    end do
 
     ! add div(v^{n+1,*}) to gmres_rhs_p
     ! now gmres_rhs_p = div(v^{n+1,*}) - S^{n+1}
@@ -782,7 +822,7 @@ contains
 
     deallocate(weights)
 
-  end subroutine advance_timestep
+  end subroutine advance_timestep_inertial
 
   subroutine build_bc_multifabs(mla)
 
@@ -877,4 +917,4 @@ contains
 
   end subroutine destroy_bc_multifabs
 
-end module advance_timestep_module
+end module advance_timestep_inertial_module 

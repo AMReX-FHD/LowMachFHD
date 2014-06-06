@@ -1,4 +1,4 @@
-f90sources += advance_timestep.f90
+f90sources += advance_timestep_inertial.f90
 f90sources += advance_timestep_overdamped.f90
 f90sources += analyze_spectra_binary.f90
 f90sources += checkpoint.f90

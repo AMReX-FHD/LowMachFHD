@@ -10,7 +10,7 @@ subroutine main_driver()
   use init_pres_module
   use initial_projection_module
   use write_plotfile_module
-  use advance_timestep_module
+  use advance_timestep_inertial_module
   use advance_timestep_overdamped_module
   use convert_variables_module
   use convert_m_to_umac_module
@@ -35,7 +35,7 @@ subroutine main_driver()
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
-                                   stats_int, variance_coef, variance_coef_mass, &
+                                   stats_int, variance_coef_mom, variance_coef_mass, &
                                    initial_variance, chk_int, algorithm_type, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, advection_type, &
                                    restart, max_step, print_int, project_eos_int
@@ -79,7 +79,7 @@ subroutine main_driver()
   type(multifab), allocatable :: kappa(:)          ! cell-centered
   type(multifab), allocatable :: rhoc_fluxdiv(:)   ! cell-centered
 
-  integer :: narg, farg, un, init_step, n_rngs
+  integer :: narg, farg, un, init_step, n_rngs, ng_s
   character(len=128) :: fname
   logical :: lexist
 
@@ -140,6 +140,16 @@ subroutine main_driver()
         pmask(i) = .true.
      end if
   end do
+
+  if (advection_type .eq. 0) then
+     if (algorithm_type .eq. 0) then
+        ng_s = 2 ! centered advection, inertial
+     else
+        ng_s = 1 ! centered advection, overdamped
+     end if
+  else
+     ng_s = 3 ! bds advection
+  end if
 
   if (restart .ge. 0) then
 
@@ -208,11 +218,7 @@ subroutine main_driver()
         ! need 2 ghost cells to average to ghost faces used in 
         ! converting m to umac in m ghost cells
         ! if using advection_type .ge. 1 (bds), need 3 ghost cells
-        if (advection_type .ge. 1) then
-           call multifab_build(sold(n),mla%la(n),2,3)
-        else
-           call multifab_build(sold(n),mla%la(n),2,2)
-        end if
+        call multifab_build(sold(n),mla%la(n),2,ng_s)
 
         ! pressure - need 1 ghost cell since we calculate its gradient
         call multifab_build(pres(n),mla%la(n),1,1)
@@ -245,13 +251,8 @@ subroutine main_driver()
      ! need 2 ghost cells to average to ghost faces used in 
      ! converting m to umac in m ghost cells
      ! if using advection_type .ge. 1 (bds), need 3 ghost cells
-     if (advection_type .ge. 1) then
-        call multifab_build(snew(n),mla%la(n),2,3)
-        call multifab_build(prim(n),mla%la(n),2,3)
-     else
-        call multifab_build(snew(n),mla%la(n),2,2)
-        call multifab_build(prim(n),mla%la(n),2,2)
-     end if
+     call multifab_build(snew(n),mla%la(n),2,ng_s)
+     call multifab_build(prim(n),mla%la(n),2,ng_s)
 
      ! s on faces, gp on faces
      do i=1,dm
@@ -319,7 +320,7 @@ subroutine main_driver()
   if (restart .le. 0) then
 
      if (initial_variance .ne. 0.d0) then
-        call add_m_fluctuations(mla,dx,initial_variance*variance_coef,s_fc,mold)
+        call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom,s_fc,mold)
      end if
      
      if (barodiffusion_type .gt. 0) then
@@ -461,9 +462,9 @@ subroutine main_driver()
 
      ! advance the solution by dt
      if (algorithm_type .eq. 0) then
-        call advance_timestep(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
-                              eta,eta_ed,kappa,rhoc_fluxdiv, &
-                              gp_fc,dx,dt,time,the_bc_tower)
+        call advance_timestep_inertial(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres, &
+                                       chi,chi_fc,eta,eta_ed,kappa,rhoc_fluxdiv, &
+                                       gp_fc,dx,dt,time,the_bc_tower)
      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pres, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower)

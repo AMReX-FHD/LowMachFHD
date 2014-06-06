@@ -106,7 +106,7 @@
   analyze_conserved = F      ! Should we use conserved variables for the analysis (does not work well)
   center_snapshots = F       ! Should we use cell-centered momenta for the analysis (will smooth fluctuations)
 
-  variance_coef = 1.d0       ! global scaling epsilon for stochastic forcing
+  variance_coef_mom = 1.d0       ! global scaling epsilon for stochastic forcing
   variance_coef_mass = 0.d0
   initial_variance = 0.d0    ! multiplicative factor for initial fluctuations
 

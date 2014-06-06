@@ -30,7 +30,7 @@
 
  grav(1:2) = 0.d0 -1.d-1
 
- variance_coef = 1.d-4            ! for stochastic momentum forcing
+ variance_coef_mom = 1.d-4            ! for stochastic momentum forcing
  variance_coef_mass = 1.d-4       ! parameter to set variance (=1/thickness and =1 ideal)
   
 /
@@ -44,7 +44,6 @@
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 3               ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=RK3
  correct_flux = .true.            ! correct flux to numeric roundoff
- use_stoch = .true.               ! use stochastic flux 
  print_error_norms = .true.       ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  

@@ -98,7 +98,7 @@
  max_grid_projection(1) = 32
  n_steps_skip = 0 ! How many steps to skip
 
-  variance_coef = 1.d-8      ! global scaling epsilon for stochastic forcing
+  variance_coef_mom = 1.d-8      ! global scaling epsilon for stochastic forcing
   variance_coef_mass = 1.d-8
 
   k_B = 1.d0                 ! Boltzmann's constant

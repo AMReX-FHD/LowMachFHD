@@ -8,7 +8,7 @@ subroutine main_driver()
   use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfileLM_module
-  use advance_diffusion_module
+  use advance_timestep_diffusion_module
   use advance_timestep_overdamped_module
   use define_bc_module
   use bc_module
@@ -25,10 +25,10 @@ subroutine main_driver()
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, bc_lo, bc_hi, probin_common_init, &
                                   advection_type, fixed_dt, max_step, &
-                                  algorithm_type, variance_coef, initial_variance
+                                  algorithm_type, variance_coef_mom, initial_variance
   use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, &
                                         rho_part_bc_comp, start_time, temp_bc_comp, &
-                                        use_stoch, probin_multispecies_init
+                                        probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
 
   implicit none
@@ -76,8 +76,7 @@ subroutine main_driver()
   call probin_gmres_init()
   
   ! Initialize random numbers *after* the global (root) seed has been set:
-  if(use_stoch) call SeedParallelRNG(seed)
-
+  call SeedParallelRNG(seed)
 
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
@@ -190,8 +189,8 @@ subroutine main_driver()
   ! scal_bc_comp+nspecies+1 = molfrac or massfrac (dimensionless fractions)
   ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
   ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diffusion coefficients (eta,kappa,chi)
-  ! Donev: It may be better if each transport coefficient has its own BC code?
-  ! I think the only place this is used is average_cc_to_node 
+  ! It may be better if each transport coefficient has its own BC code?
+  ! I think the only place this is used is average_cc_to_node/face/edge
   ! I cannot right now foresee a case where different values would be used in different places
   ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
@@ -212,7 +211,11 @@ subroutine main_driver()
   !=======================================================
 
   if (advection_type .eq. 0) then
-     ng_s = 1 ! centered advection
+     if (algorithm_type .eq. 0) then
+        ng_s = 2 ! centered advection, inertial
+     else
+        ng_s = 1 ! centered advection, overdamped
+     end if
   else
      ng_s = 3 ! bds advection
   end if
@@ -311,7 +314,7 @@ subroutine main_driver()
   ! add initial momentum fluctuations - only call in inertial code for now
   ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
   if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
-     call add_m_fluctuations(mla,dx,initial_variance*variance_coef, &
+     call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                              umac,rhotot_old,Temp,the_bc_tower)
      
   end if
@@ -348,7 +351,7 @@ subroutine main_driver()
   ! initial projection - only truly needed for inertial algorithm
   ! for the overdamped algorithm, this only changes the reference state for the first
   ! gmres solve in the first time step
-  ! Donev: Yes, I think in the purely overdamped version this can be removed
+  ! Yes, I think in the purely overdamped version this can be removed
   ! In either case the first ever solve cannot have a good reference state
   ! so in general there is the danger it will be less accurate than subsequent solves
   ! but I do not see how one can avoid that
@@ -408,7 +411,7 @@ subroutine main_driver()
       if (algorithm_type .eq. 0) then
          call bl_error("main_driver: inertial algorithm not written yet")
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-         ! Donev: It appears to me there is no need to be passing eta, eta_ed etc. around here
+         ! It appears to me there is no need to be passing eta, eta_ed etc. around here
          ! They are only used locally inside the routine when computing updates
          ! and do not appear to be needed here
          ! I think they should be local temps inside advance_timestep_overdamped

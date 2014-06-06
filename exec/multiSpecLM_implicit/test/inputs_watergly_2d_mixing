@@ -68,8 +68,8 @@
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
-  ! Stochastic fluxes: Here only variance_coef*k_B*temperature matters in the end
-  variance_coef = 1.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
+  ! Stochastic fluxes: Here only variance_coef_mom*k_B*temperature matters in the end
+  variance_coef_mom = 1.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
   variance_coef_mass = 0.d0
   initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
 
@@ -128,7 +128,6 @@
  start_time  = 0.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  correct_flux = .true.            ! correct flux to numeric roundoff
- use_stoch = .true.               ! use stochastic flux 
  print_error_norms = .true.       ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  

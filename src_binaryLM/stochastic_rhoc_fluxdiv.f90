@@ -13,7 +13,7 @@ module stochastic_rhoc_fluxdiv_module
   use multifab_physbc_stag_module
   use multifab_fill_random_module
   use multifab_filter_module
-  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef, &
+  use probin_common_module , only: visc_type, visc_coef, diff_type, variance_coef_mom, &
                                    variance_coef_mass, k_B, &
                                    filtering_width, stoch_stress_form, diff_coef, &
                                    rhobar, molmass

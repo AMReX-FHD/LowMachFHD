@@ -37,7 +37,7 @@
  analyze_conserved=F ! Use densities or mass fractions for analysis?
  n_steps_save_stats=0 ! How often to dump HydroGrid statistics (if positive, otherwise at end only)
  max_grid_projection(1) = 32 ! Parallelization distribution for projections
- variance_coef = 1e-6 ! This should be the same as variance_coef_mass below
+ variance_coef_mom = 1e-6 ! This should be the same as variance_coef_mass below
  variance_coef_mass = 1e-6        ! parameter to set variance (=1/thickness and =1 ideal) 
  
 /
@@ -50,7 +50,6 @@
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 3               ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=RK3
  correct_flux = .true.            ! correct flux to numeric roundoff
- use_stoch = .true.               ! use stochastic flux 
  print_error_norms = .false.      ! check L1/L2/Linf norm 
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .false.       ! true=include grad(T), false= no grad(T)  

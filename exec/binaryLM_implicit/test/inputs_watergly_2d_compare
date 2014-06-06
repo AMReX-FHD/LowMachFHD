@@ -61,7 +61,7 @@
                              ! Unlike IBAMR there is no automatic parallelization here -- user must specify box/patch shape manually
   
   restart = -1              ! If positive, restarts simulation from checkpoint file with this index
-  max_step = 1000      ! maximum number of time steps = N_STEPS in IBAMR
+  max_step = 10000      ! maximum number of time steps = N_STEPS in IBAMR
   print_int = 100           ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
   project_eos_int = 10      ! how often to call project_onto_eos
 
@@ -125,8 +125,8 @@
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
-  ! Stochastic fluxes: Here only variance_coef*k_B*temperature matters in the end
-  variance_coef = 1.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
+  ! Stochastic fluxes: Here only variance_coef_mom*k_B*temperature matters in the end
+  variance_coef_mom = 1.0       ! global scaling epsilon for stochastic forcing = 1/DZ = 1/THICKNESS in IBAMR
   variance_coef_mass = 0.d0
   initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
 
@@ -169,7 +169,7 @@
   stats_int =  1000          ! Project grid for analysis and write hstat and vstat files
                              ! If positive, how often to compute mean and 
                              ! standard deviation over reduced dimensions = N_STEPS_SNAPSHOT in IBAMR
-  n_steps_save_stats = 100  ! How often to dump HydroGrid output files
+  n_steps_save_stats = 1000  ! How often to dump HydroGrid output files
                              ! If you set n_steps_save_stats=max_step a final output will be saved with name containing max_step
                              ! Otherwise the final output of HydroGrid will be saved without any number in the file names
   n_steps_skip = 0           ! How many steps to skip = N_STEPS_SKIP in IBAMR  
