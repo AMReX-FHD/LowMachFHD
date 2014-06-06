@@ -22,6 +22,8 @@ subroutine main_driver()
   use mass_flux_utilities_module
   use convert_stag_module
   use restart_module
+  use multifab_physbc_module
+  use fill_umac_ghost_cells_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, bc_lo, bc_hi, probin_common_init, &
@@ -144,36 +146,6 @@ subroutine main_driver()
      ng_s = 3 ! bds advection
   end if
 
-  !=======================================================
-  ! Setup boundary condition bc_tower
-  !=======================================================
- 
-  ! bc_tower structure in memory
-  ! 1:dm = velocity
-  ! dm+1 = pressure
-  ! dm+2 = scal_bc_comp = rhotot
-  ! scal_bc_comp+1 = rho_i
-  ! scal_bc_comp+nspecies+1 = molfrac or massfrac (dimensionless fractions)
-  ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
-  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diffusion coefficients (eta,kappa,chi)
-  ! It may be better if each transport coefficient has its own BC code?
-  ! I think the only place this is used is average_cc_to_node/face/edge
-  ! I cannot right now foresee a case where different values would be used in different places
-  ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
-                     num_scal_bc_in=2*nspecies+2, &
-                     num_tran_bc_in=1)
-
-  do n=1,nlevs
-     ! define level n of the_bc_tower
-     call bc_tower_level_build(the_bc_tower,n,mla%la(n))
-  end do
-
-  ! these quantities are populated here and defined in probin_multispecies 
-  rho_part_bc_comp   = scal_bc_comp + 1
-  mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
-  temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
-
   if (restart .ge. 0) then
 
      init_step = restart + 1
@@ -183,9 +155,7 @@ subroutine main_driver()
      ! build and fill rho_old, rhotot_old, pres, and umac
      call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres,umac,pmask)
 
-     ! fill ghost cells for rho_old, rhotot_old, pres, and umac
-
-
+     ! AJN FIXME
 
 
 
@@ -264,6 +234,36 @@ subroutine main_driver()
   deallocate(pmask)
 
   !=======================================================
+  ! Setup boundary condition bc_tower
+  !=======================================================
+ 
+  ! bc_tower structure in memory
+  ! 1:dm = velocity
+  ! dm+1 = pressure
+  ! dm+2 = scal_bc_comp = rhotot
+  ! scal_bc_comp+1 = rho_i
+  ! scal_bc_comp+nspecies+1 = molfrac or massfrac (dimensionless fractions)
+  ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
+  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diffusion coefficients (eta,kappa,chi)
+  ! It may be better if each transport coefficient has its own BC code?
+  ! I think the only place this is used is average_cc_to_node/face/edge
+  ! I cannot right now foresee a case where different values would be used in different places
+  ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
+                     num_scal_bc_in=2*nspecies+2, &
+                     num_tran_bc_in=1)
+
+  do n=1,nlevs
+     ! define level n of the_bc_tower
+     call bc_tower_level_build(the_bc_tower,n,mla%la(n))
+  end do
+
+  ! these quantities are populated here and defined in probin_multispecies 
+  rho_part_bc_comp   = scal_bc_comp + 1
+  mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
+  temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
+
+  !=======================================================
   ! Build multifabs for all the variables
   !=======================================================
 
@@ -301,34 +301,19 @@ subroutine main_driver()
 
   end do
 
-  ! allocate and build multifabs that will contain random numbers
-  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
-     n_rngs = 1
-  else if (algorithm_type .eq. 2) then
-     n_rngs = 2
-  end if
-  call init_mass_stochastic(mla,n_rngs)
-  call init_m_stochastic(mla,n_rngs)
+  ! fill ghost cells for rho_old, rhotot_old, pres
+  do n=1,nlevs
+     call multifab_fill_boundary(rho_old(n))
+     call multifab_physbc(rhotot_old(n),1,scal_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
 
-  ! fill random flux multifabs with new random numbers
-  call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-  call fill_m_stochastic(mla)
+     call multifab_fill_boundary(rhotot_old(n))
+     call multifab_physbc(rho_old(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
 
-  !=====================================================================
-  ! Initialize values
-  !=====================================================================
+     call multifab_fill_boundary(pres(n))
+     call multifab_physbc(pres(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+  end do
 
-  ! compute Temp
-  call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
-  if (dm .eq. 2) then
-     call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  else if (dm .eq. 3) then
-     call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  end if
 
-  ! compute eta and kappa
-  call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
-  call compute_kappa(mla,kappa)
 
   if (restart .le. 0) then
      
@@ -342,6 +327,31 @@ subroutine main_driver()
      dt = fixed_dt
 
   end if
+
+  ! compute Temp
+  call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
+  if (dm .eq. 2) then
+     call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  else if (dm .eq. 3) then
+     call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  end if
+
+  ! compute eta and kappa
+  call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
+  call compute_kappa(mla,kappa)
+
+  ! allocate and build multifabs that will contain random numbers
+  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
+     n_rngs = 1
+  else if (algorithm_type .eq. 2) then
+     n_rngs = 2
+  end if
+  call init_mass_stochastic(mla,n_rngs)
+  call init_m_stochastic(mla,n_rngs)
+
+  ! fill random flux multifabs with new random numbers
+  call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+  call fill_m_stochastic(mla)
 
   !=====================================================================
   ! Initialize HydroGrid for analysis
@@ -370,18 +380,27 @@ subroutine main_driver()
      end if
   end if
 
-  ! initial projection - only truly needed for inertial algorithm
-  ! for the overdamped algorithm, this only changes the reference state for the first
-  ! gmres solve in the first time step
-  ! Yes, I think in the purely overdamped version this can be removed
-  ! In either case the first ever solve cannot have a good reference state
-  ! so in general there is the danger it will be less accurate than subsequent solves
-  ! but I do not see how one can avoid that
-  ! From this perspective it may be useful to keep initial_projection even in overdamped
-  ! because different gmres tolerances may be needed in the first step than in the rest
-  if (algorithm_type .eq. 0) then
-     call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
-                             stoch_mass_fluxdiv,Temp,dt,dx,n_rngs,the_bc_tower)
+  if (restart .gt. 0) then
+
+     ! fill ghost cells for umac (but leave boundary values untouched)
+     call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
+
+  else
+
+     ! initial projection - only truly needed for inertial algorithm
+     ! for the overdamped algorithm, this only changes the reference state for the first
+     ! gmres solve in the first time step
+     ! Yes, I think in the purely overdamped version this can be removed
+     ! In either case the first ever solve cannot have a good reference state
+     ! so in general there is the danger it will be less accurate than subsequent solves
+     ! but I do not see how one can avoid that
+     ! From this perspective it may be useful to keep initial_projection even in overdamped
+     ! because different gmres tolerances may be needed in the first step than in the rest
+     if (algorithm_type .eq. 0) then
+        call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
+                                stoch_mass_fluxdiv,Temp,dt,dx,n_rngs,the_bc_tower)
+     end if
+
   end if
 
   !=======================================================

@@ -156,20 +156,6 @@ subroutine main_driver()
      ng_s = 3 ! bds advection
   end if
 
-  !=======================================================
-  ! Setup boundary condition bc_tower
-  !=======================================================
-
-  ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
-                     num_scal_bc_in=2, &
-                     num_tran_bc_in=1)
-
-  do n=1,nlevs
-     ! define level n of the_bc_tower
-     call bc_tower_level_build(the_bc_tower,n,mla%la(n))
-  end do
-
   if (restart .ge. 0) then
 
      init_step = restart + 1
@@ -253,9 +239,14 @@ subroutine main_driver()
 
   deallocate(pmask)
 
-  !=======================================================
-  ! Build multifabs for all the variables
-  !=======================================================
+  ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
+                     num_scal_bc_in=2, &
+                     num_tran_bc_in=1)
+  do n=1,nlevs
+     ! define level n of the_bc_tower
+     call bc_tower_level_build(the_bc_tower,n,mla%la(n))
+  end do
 
   do n=1,nlevs
      do i=1,dm
@@ -386,6 +377,9 @@ subroutine main_driver()
   call fill_m_stochastic(mla)  
   call fill_rhoc_stochastic(mla)  
 
+  !=====================================================================
+  ! Initialize HydroGrid for analysis
+  !=====================================================================
   if(abs(hydro_grid_int)>0 .or. stats_int>0) then
      narg = command_argument_count()
      farg = 1

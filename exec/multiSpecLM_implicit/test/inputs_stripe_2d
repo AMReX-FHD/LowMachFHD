@@ -1,8 +1,8 @@
 &probin_common
  
  dim_in = 2                       ! problem dimension
- plot_int = 10                     ! plot interval
- max_step = 10000                  ! total number of computational step
+ plot_int = 1                      ! plot interval
+ max_step = 5                      ! total number of computational step
  max_grid_size(1:2) = 32 32       ! individual box size 
  n_steps_skip = 50                ! when to start analyzing data
  k_B      = 1E-3                  ! Boltzmann constant
@@ -31,7 +31,9 @@
  grav(1:2) = 0.d0 -1.d-1
 
  variance_coef_mom = 1.d-4            ! for stochastic momentum forcing
+ variance_coef_mom = 0
  variance_coef_mass = 1.d-4       ! parameter to set variance (=1/thickness and =1 ideal)
+ variance_coef_mass = 0
   
 /
 
