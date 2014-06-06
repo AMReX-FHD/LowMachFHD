@@ -21,13 +21,10 @@ subroutine main_driver()
   use ParallelRNGs 
   use mass_flux_utilities_module
   use convert_stag_module
-  use restart_module
-  use multifab_physbc_module
-  use fill_umac_ghost_cells_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, bc_lo, bc_hi, probin_common_init, &
-                                  advection_type, fixed_dt, max_step, restart, &
+                                  advection_type, fixed_dt, max_step, &
                                   algorithm_type, variance_coef_mom, initial_variance
   use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, &
                                         rho_part_bc_comp, start_time, temp_bc_comp, &
@@ -42,7 +39,7 @@ subroutine main_driver()
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time
-  integer                      :: n,nlevs,i,dm,istep,ng_s,init_step
+  integer                      :: n,nlevs,i,dm,istep,ng_s
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -92,6 +89,7 @@ subroutine main_driver()
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
+  allocate(dx(nlevs,dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
@@ -105,27 +103,63 @@ subroutine main_driver()
      allocate(Temp_ed(nlevs,3))
   end if
 
-  ! set grid spacing at each level
-  ! the grid spacing is the same in each direction
-  allocate(dx(nlevs,dm))
+  !==============================================================
+  ! Setup parallelization: Create boxes and layouts for multifabs
+  !==============================================================
+  
+  ! tell mba how many levels and dimensionality of problem
+  call ml_boxarray_build_n(mba,nlevs,dm)
+
+  ! tell mba about the ref_ratio between levels
+  ! mba%rr(n-1,i) is the refinement ratio between levels n-1 and n in direction i
+  ! we use refinement ratio of 2 in every direction between all levels
+  do n=2,nlevs
+     mba%rr(n-1,:) = 2
+  end do
+
+  ! set grid spacing at each level; presently grid spacing is same in all direction
   dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
+  
+  ! check whether dimensionality & grid spacing passed correct 
   select case (dm) 
-  case(2)
-     if (dx(1,1) .ne. dx(1,2)) then
+    case(2)
+      if (dx(1,1) .ne. dx(1,2)) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-     end if
-  case(3)
-     if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+      end if    
+    case(3)
+      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-     end if
-  case default
-     call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+      end if    
+    case default
+      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
   end select
 
   ! use refined dx for next level
   do n=2,nlevs
      dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
   end do
+
+  ! create a box from (0,0) to (n_cells-1,n_cells-1)
+  lo(1:dm) = 0
+  hi(1:dm) = n_cells(1:dm)-1
+  bx = make_box(lo,hi)
+
+  ! tell mba about the problem domain at every level
+  mba%pd(1) = bx
+  do n=2,nlevs
+     mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
+  end do
+
+  ! initialize the boxarray at level 1 to be one single box
+  call boxarray_build_bx(mba%bas(1),bx)
+
+  ! overwrite the boxarray at level 1 to respect max_grid_size
+  call boxarray_maxsize(mba%bas(1),max_grid_size)
+
+  ! now build the boxarray at other levels
+  if (nlevs .ge. 2) then
+     call bl_error("Need to build boxarray for n>1")
+  end if
 
   ! build pmask
   allocate(pmask(dm))
@@ -136,75 +170,12 @@ subroutine main_driver()
      end if
   end do
 
-  if (advection_type .eq. 0) then
-     ng_s = 2 ! centered advection
-  else
-     ng_s = 3 ! bds advection
-  end if
-
-  if (restart .ge. 0) then
-
-     init_step = restart + 1
-
-     ! build the ml_layout
-     ! read in time and dt from checkpoint
-     ! build and fill rho_old, rhotot_old, pres, and umac
-     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres,umac,pmask)
-
-     ! AJN FIXME
-
-
-
-  else
-
-     ! non-restart initialization
-     ! need to build the ml_layout
-     ! set time to zero
-     ! build and fill mold, sold, and pres
-     init_step = 1
-     time = start_time
-  
-     ! tell mba how many levels and dimensionality of problem
-     call ml_boxarray_build_n(mba,nlevs,dm)
-
-     ! tell mba about the ref_ratio between levels
-     ! mba%rr(n-1,i) is the refinement ratio between levels n-1 and n in direction i
-     ! we use refinement ratio of 2 in every direction between all levels
-     do n=2,nlevs
-        mba%rr(n-1,:) = 2
-     end do
-     
-     ! create a box from (0,0) to (n_cells-1,n_cells-1)
-     lo(1:dm) = 0
-     hi(1:dm) = n_cells(1:dm)-1
-     bx = make_box(lo,hi)
-
-     ! tell mba about the problem domain at every level
-     mba%pd(1) = bx
-     do n=2,nlevs
-        mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
-     end do
-
-     ! initialize the boxarray at level 1 to be one single box
-     call boxarray_build_bx(mba%bas(1),bx)
-
-     ! overwrite the boxarray at level 1 to respect max_grid_size
-     call boxarray_maxsize(mba%bas(1),max_grid_size)
-
-     ! now build the boxarray at other levels
-     if (nlevs .ge. 2) then
-        call bl_error("Need to build boxarray for n>1")
-     end if
-
-     ! build the ml_layout, mla
-     call ml_layout_build(mla,mba,pmask)
-
-     ! don't need this anymore - free up memory
-     call destroy(mba)
-
-  end if
-
+  ! build the ml_layout, mla
+  call ml_layout_build(mla,mba,pmask)
   deallocate(pmask)
+
+  ! don't need this anymore - free up memory
+  call destroy(mba)
 
   !=======================================================
   ! Setup boundary condition bc_tower
@@ -223,8 +194,7 @@ subroutine main_driver()
   ! I cannot right now foresee a case where different values would be used in different places
   ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
-                     num_scal_bc_in=2*nspecies+2, &
-                     num_tran_bc_in=1)
+                     num_scal_bc_in=2*nspecies+2,num_tran_bc_in=1)
 
   do n=1,nlevs
      ! define level n of the_bc_tower
@@ -236,47 +206,33 @@ subroutine main_driver()
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
   temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
 
-  
-  if (restart .lt. 0) then
+  !=======================================================
+  ! Build multifabs for all the variables
+  !=======================================================
 
-     do n=1,nlevs
-        do i=1,dm
-           call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
-        end do
-        call multifab_build(   rho_old(n), mla%la(n),nspecies,ng_s)
-        call multifab_build(rhotot_old(n), mla%la(n),       1,ng_s) 
-        ! pressure - need 1 ghost cell since we calculate its gradient
-        call multifab_build(pres(n),mla%la(n),1,1)
-     end do
-
-     ! initialize rho
-     call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
-     call eos_check(mla,rho_old)
-     call compute_rhotot(mla,rho_old,rhotot_old)
-
-     ! initialize pressure and velocity
-     do n=1,nlevs
-        call multifab_setval(pres(n), 0.d0, all=.true.)
-        do i=1,dm
-           call multifab_setval(umac(n,i), 0.d0, all=.true.)
-        end do
-     end do
-
+  if (advection_type .eq. 0) then
+     ng_s = 1 ! centered advection
+  else
+     ng_s = 3 ! bds advection
   end if
 
-  !=======================================================
-  ! Build remaining multifabs
-  !=======================================================
-
+  ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs
 
+     call multifab_build(rho_old(n),           mla%la(n),nspecies,ng_s)
+     call multifab_build(rhotot_old(n),        mla%la(n),1,       ng_s) 
      call multifab_build(rho_new(n),           mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n),        mla%la(n),1,       ng_s) 
      call multifab_build(Temp(n),              mla%la(n),1,       ng_s)
      call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
      call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
-     call multifab_build(eta(n),               mla%la(n),1,1)
-     call multifab_build(kappa(n),             mla%la(n),1,1)
+     ! pressure - need 1 ghost cell since we calculate its gradient
+     call multifab_build(pres(n),mla%la(n),1,1)
+     call multifab_build(eta(n)  ,mla%la(n),1,1)
+     call multifab_build(kappa(n),mla%la(n),1,1)
+     do i=1,dm
+        call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
+     end do
 
      ! eta and Temp on nodes (2d) or edges (3d)
      if (dm .eq. 2) then
@@ -302,42 +258,6 @@ subroutine main_driver()
 
   end do
 
-  ! fill ghost cells for rho_old, rhotot_old, pres
-  do n=1,nlevs
-     call multifab_fill_boundary(rho_old(n))
-     call multifab_physbc(rho_old(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
-
-     call compute_rhotot(mla,rho_old,rhotot_old)
-
-     call multifab_fill_boundary(pres(n))
-     call multifab_physbc(pres(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-  end do
-
-  if (restart .lt. 0) then
-     
-     ! add initial momentum fluctuations - only call in inertial code for now
-     ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
-     if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
-        call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
-                                umac,rhotot_old,Temp,the_bc_tower)
-     end if
-
-     dt = fixed_dt
-
-  end if
-
-  ! compute Temp
-  call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
-  if (dm .eq. 2) then
-     call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  else if (dm .eq. 3) then
-     call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  end if
-
-  ! compute eta and kappa
-  call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
-  call compute_kappa(mla,kappa)
-
   ! allocate and build multifabs that will contain random numbers
   if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
      n_rngs = 1
@@ -350,6 +270,52 @@ subroutine main_driver()
   ! fill random flux multifabs with new random numbers
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   call fill_m_stochastic(mla)
+
+  !=====================================================================
+  ! Initialize values
+  !=====================================================================
+
+  ! initialize the time 
+  time = start_time
+
+  ! initialize rho
+  call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
+  call eos_check(mla,rho_old)
+  call compute_rhotot(mla,rho_old,rhotot_old)
+
+  ! initialize Temp
+  call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
+  if (dm .eq. 2) then
+     call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  else if (dm .eq. 3) then
+     call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  end if
+
+  ! initialize kappa
+  do n=1,nlevs
+     call multifab_setval(kappa(n), 1.d0, all=.true.)
+  end do
+
+  ! initialize eta
+  call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
+
+  ! initialize pressure and velocity
+  do n=1,nlevs
+     call multifab_setval(pres(n), 0.d0, all=.true.)
+     do i=1,dm
+        call multifab_setval(umac(n,i), 0.d0, all=.true.)
+     end do
+  end do
+
+  ! add initial momentum fluctuations - only call in inertial code for now
+  ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
+  if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
+     call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
+                             umac,rhotot_old,Temp,the_bc_tower)
+     
+  end if
+
+  dt = fixed_dt
 
   !=====================================================================
   ! Initialize HydroGrid for analysis
@@ -378,34 +344,28 @@ subroutine main_driver()
      end if
   end if
 
-  if (restart .gt. 0) then
-
-     ! fill ghost cells for umac (but leave boundary values untouched)
-     call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
-
-  else
-
-     ! initial projection - only truly needed for inertial algorithm
-     ! for the overdamped algorithm, this only changes the reference state for the first
-     ! gmres solve in the first time step
-     ! Yes, I think in the purely overdamped version this can be removed
-     ! In either case the first ever solve cannot have a good reference state
-     ! so in general there is the danger it will be less accurate than subsequent solves
-     ! but I do not see how one can avoid that
-     ! From this perspective it may be useful to keep initial_projection even in overdamped
-     ! because different gmres tolerances may be needed in the first step than in the rest
-     if (algorithm_type .eq. 0) then
-        call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
-                                stoch_mass_fluxdiv,Temp,dt,dx,n_rngs,the_bc_tower)
-     end if
-
+  ! initial projection - only truly needed for inertial algorithm
+  ! for the overdamped algorithm, this only changes the reference state for the first
+  ! gmres solve in the first time step
+  ! Yes, I think in the purely overdamped version this can be removed
+  ! In either case the first ever solve cannot have a good reference state
+  ! so in general there is the danger it will be less accurate than subsequent solves
+  ! but I do not see how one can avoid that
+  ! From this perspective it may be useful to keep initial_projection even in overdamped
+  ! because different gmres tolerances may be needed in the first step than in the rest
+  if (algorithm_type .eq. 0) then
+     call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
+                             stoch_mass_fluxdiv,Temp,dt,dx,n_rngs,the_bc_tower)
   end if
 
   !=======================================================
   ! Begin time stepping loop
   !=======================================================
 
-  do istep=init_step,max_step
+  ! free up memory counters 
+  istep      = 0
+
+  do while(istep<=max_step)
 
       if (parallel_IOProcessor()) then
          print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
@@ -463,6 +423,7 @@ subroutine main_driver()
       end if
 
       ! increment simulation time
+      istep = istep + 1
       time = time + dt
 
       ! set old state to new state
@@ -475,6 +436,9 @@ subroutine main_driver()
      call sum_mass(rho_old, istep)
 
   end do
+
+  ! print out the total mass to check conservation
+  call sum_mass(rho_old, istep)
 
   !=======================================================
   ! Destroy multifabs and layouts
