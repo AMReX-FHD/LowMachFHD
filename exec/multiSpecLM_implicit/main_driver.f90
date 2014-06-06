@@ -21,6 +21,7 @@ subroutine main_driver()
   use ParallelRNGs 
   use mass_flux_utilities_module
   use convert_stag_module
+  use restart_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -31,6 +32,8 @@ subroutine main_driver()
                                         rho_part_bc_comp, start_time, temp_bc_comp, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
+
+  use fabio_module
 
   implicit none
 
@@ -144,53 +147,67 @@ subroutine main_driver()
 
      init_step = restart + 1
 
-
+     ! build the ml_layout
+     ! read in time and dt from checkpoint
+     ! build and fill rho, rhotot, pres, and umac
+     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres,umac,pmask)
 
   else
 
      init_step = 1
      time = start_time
+     
+     ! tell mba how many levels and dimensionality of problem
+     call ml_boxarray_build_n(mba,nlevs,dm)
+
+     ! tell mba about the ref_ratio between levels
+     ! mba%rr(n-1,i) is the refinement ratio between levels n-1 and n in direction i
+     ! we use refinement ratio of 2 in every direction between all levels
+     do n=2,nlevs
+        mba%rr(n-1,:) = 2
+     end do
+
+     ! create a box from (0,0) to (n_cells-1,n_cells-1)
+     lo(1:dm) = 0
+     hi(1:dm) = n_cells(1:dm)-1
+     bx = make_box(lo,hi)
+
+     ! tell mba about the problem domain at every level
+     mba%pd(1) = bx
+     do n=2,nlevs
+        mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
+     end do
+
+     ! initialize the boxarray at level 1 to be one single box
+     call boxarray_build_bx(mba%bas(1),bx)
+
+     ! overwrite the boxarray at level 1 to respect max_grid_size
+     call boxarray_maxsize(mba%bas(1),max_grid_size)
+
+     ! now build the boxarray at other levels
+     if (nlevs .ge. 2) then
+        call bl_error("Need to build boxarray for n>1")
+     end if
+
+     ! build the ml_layout, mla
+     call ml_layout_build(mla,mba,pmask)
+
+     ! don't need this anymore - free up memory
+     call destroy(mba)
+
+     do n=1,nlevs
+        call multifab_build(rho_old(n),           mla%la(n),nspecies,ng_s)
+        call multifab_build(rhotot_old(n),        mla%la(n),1,       ng_s)
+        ! pressure - need 1 ghost cell since we calculate its gradient
+        call multifab_build(pres(n),mla%la(n),1,1)
+        do i=1,dm
+           call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
+        end do
+     end do
 
   end if
-  
-  ! tell mba how many levels and dimensionality of problem
-  call ml_boxarray_build_n(mba,nlevs,dm)
 
-  ! tell mba about the ref_ratio between levels
-  ! mba%rr(n-1,i) is the refinement ratio between levels n-1 and n in direction i
-  ! we use refinement ratio of 2 in every direction between all levels
-  do n=2,nlevs
-     mba%rr(n-1,:) = 2
-  end do
-
-  ! create a box from (0,0) to (n_cells-1,n_cells-1)
-  lo(1:dm) = 0
-  hi(1:dm) = n_cells(1:dm)-1
-  bx = make_box(lo,hi)
-
-  ! tell mba about the problem domain at every level
-  mba%pd(1) = bx
-  do n=2,nlevs
-     mba%pd(n) = refine(mba%pd(n-1),mba%rr((n-1),:))
-  end do
-
-  ! initialize the boxarray at level 1 to be one single box
-  call boxarray_build_bx(mba%bas(1),bx)
-
-  ! overwrite the boxarray at level 1 to respect max_grid_size
-  call boxarray_maxsize(mba%bas(1),max_grid_size)
-
-  ! now build the boxarray at other levels
-  if (nlevs .ge. 2) then
-     call bl_error("Need to build boxarray for n>1")
-  end if
-
-  ! build the ml_layout, mla
-  call ml_layout_build(mla,mba,pmask)
   deallocate(pmask)
-
-  ! don't need this anymore - free up memory
-  call destroy(mba)
 
   !=======================================================
   ! Setup boundary condition bc_tower
@@ -209,7 +226,8 @@ subroutine main_driver()
   ! I cannot right now foresee a case where different values would be used in different places
   ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
-                     num_scal_bc_in=2*nspecies+2,num_tran_bc_in=1)
+                     num_scal_bc_in=2*nspecies+2, &
+                     num_tran_bc_in=1)
 
   do n=1,nlevs
      ! define level n of the_bc_tower
@@ -226,22 +244,14 @@ subroutine main_driver()
   !=======================================================
 
   ! build multifab with nspecies component and one ghost cell
-  do n=1,nlevs
-
-     call multifab_build(rho_old(n),           mla%la(n),nspecies,ng_s)
-     call multifab_build(rhotot_old(n),        mla%la(n),1,       ng_s) 
+  do n=1,nlevs 
      call multifab_build(rho_new(n),           mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n),        mla%la(n),1,       ng_s) 
      call multifab_build(Temp(n),              mla%la(n),1,       ng_s)
      call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
      call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
-     ! pressure - need 1 ghost cell since we calculate its gradient
-     call multifab_build(pres(n),mla%la(n),1,1)
      call multifab_build(eta(n)  ,mla%la(n),1,1)
      call multifab_build(kappa(n),mla%la(n),1,1)
-     do i=1,dm
-        call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
-     end do
 
      ! eta and Temp on nodes (2d) or edges (3d)
      if (dm .eq. 2) then
