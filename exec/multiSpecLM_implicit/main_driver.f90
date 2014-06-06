@@ -305,10 +305,9 @@ subroutine main_driver()
   ! fill ghost cells for rho_old, rhotot_old, pres
   do n=1,nlevs
      call multifab_fill_boundary(rho_old(n))
-     call multifab_physbc(rhotot_old(n),1,scal_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
-
-     call multifab_fill_boundary(rhotot_old(n))
      call multifab_physbc(rho_old(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+
+     call compute_rhotot(mla,rho_old,rhotot_old)
 
      call multifab_fill_boundary(pres(n))
      call multifab_physbc(pres(n),1,dm+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
