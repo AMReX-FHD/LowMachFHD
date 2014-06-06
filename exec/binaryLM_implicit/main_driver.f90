@@ -82,8 +82,11 @@ subroutine main_driver()
   integer :: narg, farg, un, init_step, n_rngs, ng_s
   character(len=128) :: fname
   logical :: lexist
+  
+  !==============================================================
+  ! Initialization
+  !==============================================================
 
-  ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_binarylm_init()
   call probin_common_init()
   call probin_gmres_init()
@@ -117,20 +120,22 @@ subroutine main_driver()
   allocate(dx(nlevs,dm))
   dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
   select case (dm) 
-    case(2)
-      if (dx(1,1) .ne. dx(1,2)) then
+  case(2)
+     if (dx(1,1) .ne. dx(1,2)) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-      end if    
-    case(3)
-      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+     end if
+  case(3)
+     if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-      end if    
-    case default
-      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+     end if
+  case default
+     call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
   end select
-  if (nlevs .ge. 2) then
-     call bl_error('ERROR: main_driver.f90, need to define dx for n>1')
-  end if
+
+  ! use refined dx for next level
+  do n=2,nlevs
+     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
+  end do
 
   ! build pmask
   allocate(pmask(dm))
@@ -150,6 +155,20 @@ subroutine main_driver()
   else
      ng_s = 3 ! bds advection
   end if
+
+  !=======================================================
+  ! Setup boundary condition bc_tower
+  !=======================================================
+
+  ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
+                     num_scal_bc_in=2, &
+                     num_tran_bc_in=1)
+
+  do n=1,nlevs
+     ! define level n of the_bc_tower
+     call bc_tower_level_build(the_bc_tower,n,mla%la(n))
+  end do
 
   if (restart .ge. 0) then
 
@@ -234,12 +253,9 @@ subroutine main_driver()
 
   deallocate(pmask)
 
-  ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,2,1)
-  do n=1,nlevs
-     ! define level n of the_bc_tower
-     call bc_tower_level_build(the_bc_tower,n,mla%la(n))
-  end do
+  !=======================================================
+  ! Build multifabs for all the variables
+  !=======================================================
 
   do n=1,nlevs
      do i=1,dm
