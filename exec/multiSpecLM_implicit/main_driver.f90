@@ -137,11 +137,7 @@ subroutine main_driver()
   end do
 
   if (advection_type .eq. 0) then
-     if (algorithm_type .eq. 0) then
-        ng_s = 2 ! centered advection, inertial
-     else
-        ng_s = 1 ! centered advection, overdamped
-     end if
+     ng_s = 2 ! centered advection
   else
      ng_s = 3 ! bds advection
   end if
