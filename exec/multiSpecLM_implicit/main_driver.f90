@@ -19,6 +19,7 @@ subroutine main_driver()
   use eos_check_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
+  use fill_umac_ghost_cells_module
   use ParallelRNGs 
   use mass_flux_utilities_module
   use convert_stag_module
@@ -265,18 +266,12 @@ subroutine main_driver()
      do n=1,nlevs
         ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
         call multifab_fill_boundary(rho_old(n))
+        call multifab_fill_boundary(pres(n))
         ! fill non-periodic domain boundary ghost cells
         call multifab_physbc(rho_old(n),1,rho_part_bc_comp,nspecies, &
                              the_bc_tower%bc_tower_array(n),dx(n,:))
-
-        ! AJN fixme
-        call multifab_fill_boundary(pres(n))
         call multifab_physbc(pres(n),1,pres_bc_comp,1, &
                              the_bc_tower%bc_tower_array(n),dx(n,:))
-        do i=1,dm
-           call multifab_fill_boundary(umac(n,i))
-        end do
-
      end do
 
   end if
@@ -350,6 +345,10 @@ subroutine main_driver()
   ! initialize eta and kappa
   call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
   call compute_kappa(mla,kappa)
+
+  if (restart .ge. 0) then
+     call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
+  end if
 
   if (restart .lt. 0) then
 
