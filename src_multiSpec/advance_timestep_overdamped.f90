@@ -353,6 +353,7 @@ contains
 
     ! update eta and kappa here
     call compute_eta(mla,eta,eta_ed,rho_new,rhotot_new,Temp,pres,dx,the_bc_tower%bc_tower_array)
+    call compute_kappa(mla,kappa)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 4 - Corrector Stochastic/Diffusive Fluxes
@@ -547,6 +548,7 @@ contains
 
     ! update eta and kappa here
     call compute_eta(mla,eta,eta_ed,rho_new,rhotot_new,Temp,pres,dx,the_bc_tower%bc_tower_array)
+    call compute_kappa(mla,kappa)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement

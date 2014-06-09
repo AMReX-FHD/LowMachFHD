@@ -5,7 +5,7 @@ module restart_module
   use ml_layout_module
   use checkpoint_module
   use define_bc_module
-  use probin_common_module, only: dim_in, advection_type, restart
+  use probin_common_module, only: dim_in, advection_type, restart, advection_type, algorithm_type
   use probin_multispecies_module, only: nspecies
 
   implicit none
@@ -16,13 +16,14 @@ module restart_module
 
 contains
 
-  subroutine initialize_from_restart(mla,time,dt,umac,rho,pres,pmask)
+  subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pres,umac,pmask)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
      type(multifab), intent(inout) :: rho(:)
-     type(multifab), intent(inout) :: umac(:,:)
+     type(multifab), intent(inout) :: rhotot(:)
      type(multifab), intent(inout) :: pres(:)
+     type(multifab), intent(inout) :: umac(:,:)
      logical       , intent(in   ) :: pmask(:)
 
      type(ml_boxarray)         :: mba
@@ -32,9 +33,15 @@ contains
      type(multifab), pointer   :: chkdata_edgez(:)
      type(layout)              :: la
 
-     integer :: n,nlevs,i,dm
+     integer :: n,nlevs,i,dm,ng_s
 
      dm = dim_in
+
+     if (advection_type .eq. 0) then
+        ng_s = 2 ! centered advection
+     else
+        ng_s = 3 ! bds advection
+     end if
 
      call fill_restart_data(mba,chkdata,chkdata_edgex,chkdata_edgey,chkdata_edgez, &
                             time,dt)
@@ -44,21 +51,19 @@ contains
      nlevs = mba%nlevel
 
      do n = 1,nlevs
-        if (advection_type .ge. 1) then
-           call multifab_build(rho(n), mla%la(n), 2, 3)
-        else
-           call multifab_build(rho(n), mla%la(n), 2, 2)
-        end if
-        call multifab_build(pres(n), mla%la(n), 1, 1)
+        call multifab_build(rho(n)   , mla%la(n), nspecies, ng_s)
+        call multifab_build(rhotot(n), mla%la(n),        1, ng_s)
+        call multifab_build(pres(n)  , mla%la(n),        1, 1)
         do i=1,dm
            call multifab_build_edge(umac(n,i), mla%la(n), 1, 1, i)
         end do
      end do
      do n = 1,nlevs
-        call multifab_copy_c(rho(n),1,chkdata(n),1,2)
-        call multifab_copy_c(pres(n),1,chkdata(n),3,1)
-        call multifab_copy_c(umac(n,1),1,chkdata_edgex(n),1,1)
-        call multifab_copy_c(umac(n,2),1,chkdata_edgey(n),1,1)
+        call multifab_copy_c(rho(n)   ,1,chkdata(n)      ,1         ,nspecies)
+        call multifab_copy_c(rhotot(n),1,chkdata(n)      ,nspecies+1,1)
+        call multifab_copy_c(pres(n)  ,1,chkdata(n)      ,nspecies+2,1)
+        call multifab_copy_c(umac(n,1),1,chkdata_edgex(n),1         ,1)
+        call multifab_copy_c(umac(n,2),1,chkdata_edgey(n),1         ,1)
         if (dm .eq. 3) then
            call multifab_copy_c(umac(n,3),1,chkdata_edgez(n),1,1)
         end if

@@ -5,6 +5,7 @@ f90sources += convert_stag.f90
 f90sources += div_and_grad.f90
 f90sources += diffusive_m_fluxdiv.f90
 f90sources += estdt.f90
+f90sources += fill_umac_ghost_cells.f90
 f90sources += inhomogeneous_bc_val.f90
 f90sources += main.f90
 f90sources += main_driver.f90

@@ -13,7 +13,7 @@ module compute_mixture_properties_module
 
   private
 
-  public :: compute_mixture_properties, compute_eta
+  public :: compute_mixture_properties, compute_eta, compute_kappa
   
   ! Donev:
   ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
@@ -377,5 +377,20 @@ contains
     eta = visc_coef*exp(-x*(-log(nu_g)+log(nu_w)))*nu_w*rhotot
 
   end subroutine eta_water_glycerol
+
+  subroutine compute_kappa(mla,kappa)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: kappa(:)
+
+    integer :: n,nlevs
+
+    nlevs = mla%nlevel
+
+    do n=1,nlevs
+       call multifab_setval(kappa(n), 1.d0, all=.true.)
+    end do
+
+  end subroutine compute_kappa
 
 end module compute_mixture_properties_module

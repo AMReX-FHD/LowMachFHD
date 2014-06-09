@@ -6,7 +6,6 @@ f90sources += convert_variables.f90
 f90sources += diffusive_rhoc_fluxdiv.f90
 f90sources += eos_check.f90
 f90sources += fill_rho_ghost_cells.f90
-f90sources += fill_umac_ghost_cells.f90
 f90sources += init.f90
 f90sources += init_pres.f90
 f90sources += initial_projection.f90

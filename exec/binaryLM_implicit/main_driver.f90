@@ -82,8 +82,11 @@ subroutine main_driver()
   integer :: narg, farg, un, init_step, n_rngs, ng_s
   character(len=128) :: fname
   logical :: lexist
+  
+  !==============================================================
+  ! Initialization
+  !==============================================================
 
-  ! uncomment this once lowMach_implicit/probin.f90 is written
   call probin_binarylm_init()
   call probin_common_init()
   call probin_gmres_init()
@@ -117,20 +120,22 @@ subroutine main_driver()
   allocate(dx(nlevs,dm))
   dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
   select case (dm) 
-    case(2)
-      if (dx(1,1) .ne. dx(1,2)) then
+  case(2)
+     if (dx(1,1) .ne. dx(1,2)) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-      end if    
-    case(3)
-      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+     end if
+  case(3)
+     if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
         call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-      end if    
-    case default
-      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+     end if
+  case default
+     call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
   end select
-  if (nlevs .ge. 2) then
-     call bl_error('ERROR: main_driver.f90, need to define dx for n>1')
-  end if
+
+  ! use refined dx for next level
+  do n=2,nlevs
+     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
+  end do
 
   ! build pmask
   allocate(pmask(dm))
@@ -142,11 +147,7 @@ subroutine main_driver()
   end do
 
   if (advection_type .eq. 0) then
-     if (algorithm_type .eq. 0) then
-        ng_s = 2 ! centered advection, inertial
-     else
-        ng_s = 1 ! centered advection, overdamped
-     end if
+     ng_s = 2 ! centered advection
   else
      ng_s = 3 ! bds advection
   end if
@@ -235,7 +236,9 @@ subroutine main_driver()
   deallocate(pmask)
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
-  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask,2,1)
+  call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
+                     num_scal_bc_in=2, &
+                     num_tran_bc_in=1)
   do n=1,nlevs
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
@@ -293,7 +296,7 @@ subroutine main_driver()
   ! convert cons to prim in valid region
   call convert_cons_to_prim(mla,sold,prim,.true.)
 
-  if (restart .le. 0 .and. initial_variance .ne. 0.d0) then
+  if (restart .lt. 0 .and. initial_variance .ne. 0.d0) then
      call add_c_fluctuations(mla,dx,initial_variance*variance_coef_mass,prim,sold)
   end if
 
@@ -307,7 +310,6 @@ subroutine main_driver()
   ! convert prim to cons in valid and ghost region
   ! now cons has properly filled ghost cells
   call convert_cons_to_prim(mla,sold,prim,.false.)
-
   call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
   call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
 
@@ -317,7 +319,7 @@ subroutine main_driver()
      call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
   end do
 
-  if (restart .le. 0) then
+  if (restart .lt. 0) then
 
      if (initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom,s_fc,mold)
@@ -370,6 +372,9 @@ subroutine main_driver()
   call fill_m_stochastic(mla)  
   call fill_rhoc_stochastic(mla)  
 
+  !=====================================================================
+  ! Initialize HydroGrid for analysis
+  !=====================================================================
   if(abs(hydro_grid_int)>0 .or. stats_int>0) then
      narg = command_argument_count()
      farg = 1
