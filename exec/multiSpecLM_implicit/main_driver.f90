@@ -12,6 +12,7 @@ subroutine main_driver()
   use advance_timestep_overdamped_module
   use define_bc_module
   use bc_module
+  use multifab_physbc_module
   use analysis_module
   use analyze_spectra_module
   use convert_m_to_umac_module
@@ -22,9 +23,10 @@ subroutine main_driver()
   use mass_flux_utilities_module
   use convert_stag_module
   use restart_module
+  use checkpoint_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
-                                  plot_int, seed, stats_int, bc_lo, bc_hi, restart, &
+                                  plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
                                   probin_common_init, &
                                   advection_type, fixed_dt, max_step, &
                                   algorithm_type, variance_coef_mom, initial_variance
@@ -248,8 +250,6 @@ subroutine main_driver()
 
      ! initialize rho
      call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
-     call eos_check(mla,rho_old)
-     call compute_rhotot(mla,rho_old,rhotot_old)
 
      ! initialize pressure and velocity
      do n=1,nlevs
@@ -259,7 +259,30 @@ subroutine main_driver()
         end do
      end do
 
+  else
+
+     ! fill ghost cells
+     do n=1,nlevs
+        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+        call multifab_fill_boundary(rho_old(n))
+        ! fill non-periodic domain boundary ghost cells
+        call multifab_physbc(rho_old(n),1,rho_part_bc_comp,nspecies, &
+                             the_bc_tower%bc_tower_array(n),dx(n,:))
+
+        ! AJN fixme
+        call multifab_fill_boundary(pres(n))
+        call multifab_physbc(pres(n),1,pres_bc_comp,1, &
+                             the_bc_tower%bc_tower_array(n),dx(n,:))
+        do i=1,dm
+           call multifab_fill_boundary(umac(n,i))
+        end do
+
+     end do
+
   end if
+
+  call eos_check(mla,rho_old)
+  call compute_rhotot(mla,rho_old,rhotot_old)
 
   !=======================================================
   ! Build multifabs for all the variables
@@ -428,6 +451,14 @@ subroutine main_driver()
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
             call write_plotfileLM(mla,"plt",rho_new,rhotot_new,Temp,umac,pres,istep,dx,time)
+         end if
+
+         ! write checkpoint at specific intervals
+         if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
+            if (parallel_IOProcessor()) then
+               write(*,*), 'writing checkpoint at timestep =', istep 
+            end if
+            call checkpoint_write(mla,rho_new,rhotot_new,pres,umac,time,dt,istep)
          end if
 
          ! print out projection (average) and variance
