@@ -12,19 +12,22 @@ subroutine main_driver()
   use advance_timestep_overdamped_module
   use define_bc_module
   use bc_module
+  use multifab_physbc_module
   use analysis_module
   use analyze_spectra_module
   use convert_m_to_umac_module
   use eos_check_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
+  use fill_umac_ghost_cells_module
   use ParallelRNGs 
   use mass_flux_utilities_module
   use convert_stag_module
   use restart_module
+  use checkpoint_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
-                                  plot_int, seed, stats_int, bc_lo, bc_hi, restart, &
+                                  plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
                                   probin_common_init, &
                                   advection_type, fixed_dt, max_step, &
                                   algorithm_type, variance_coef_mom, initial_variance
@@ -152,10 +155,15 @@ subroutine main_driver()
      ! build and fill rho, rhotot, pres, and umac
      call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres,umac,pmask)
 
+     if (dt .ne. fixed_dt) then
+        call bl_error("restart dt not equal to fixed_dt")
+     end if
+
   else
 
      init_step = 1
      time = start_time
+     dt = fixed_dt
      
      ! tell mba how many levels and dimensionality of problem
      call ml_boxarray_build_n(mba,nlevs,dm)
@@ -196,10 +204,10 @@ subroutine main_driver()
      call destroy(mba)
 
      do n=1,nlevs
-        call multifab_build(rho_old(n),           mla%la(n),nspecies,ng_s)
-        call multifab_build(rhotot_old(n),        mla%la(n),1,       ng_s)
+        call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
+        call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
         ! pressure - need 1 ghost cell since we calculate its gradient
-        call multifab_build(pres(n),mla%la(n),1,1)
+        call multifab_build(pres(n)      ,mla%la(n),1       ,1)
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
@@ -238,6 +246,38 @@ subroutine main_driver()
   rho_part_bc_comp   = scal_bc_comp + 1
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
   temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
+
+  if (restart .lt. 0) then
+
+     ! initialize rho
+     call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
+
+     ! initialize pressure and velocity
+     do n=1,nlevs
+        call multifab_setval(pres(n), 0.d0, all=.true.)
+        do i=1,dm
+           call multifab_setval(umac(n,i), 0.d0, all=.true.)
+        end do
+     end do
+
+  else
+
+     ! fill ghost cells
+     do n=1,nlevs
+        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+        call multifab_fill_boundary(rho_old(n))
+        call multifab_fill_boundary(pres(n))
+        ! fill non-periodic domain boundary ghost cells
+        call multifab_physbc(rho_old(n),1,rho_part_bc_comp,nspecies, &
+                             the_bc_tower%bc_tower_array(n),dx(n,:))
+        call multifab_physbc(pres(n),1,pres_bc_comp,1, &
+                             the_bc_tower%bc_tower_array(n),dx(n,:))
+     end do
+
+  end if
+
+  call eos_check(mla,rho_old)
+  call compute_rhotot(mla,rho_old,rhotot_old)
 
   !=======================================================
   ! Build multifabs for all the variables
@@ -294,11 +334,6 @@ subroutine main_driver()
   ! Initialize values
   !=====================================================================
 
-  ! initialize rho
-  call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
-  call eos_check(mla,rho_old)
-  call compute_rhotot(mla,rho_old,rhotot_old)
-
   ! initialize Temp
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
   if (dm .eq. 2) then
@@ -307,31 +342,46 @@ subroutine main_driver()
      call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
   end if
 
-  ! initialize kappa
-  do n=1,nlevs
-     call multifab_setval(kappa(n), 1.d0, all=.true.)
-  end do
-
-  ! initialize eta
+  ! initialize eta and kappa
   call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
+  call compute_kappa(mla,kappa)
 
-  ! initialize pressure and velocity
-  do n=1,nlevs
-     call multifab_setval(pres(n), 0.d0, all=.true.)
-     do i=1,dm
-        call multifab_setval(umac(n,i), 0.d0, all=.true.)
-     end do
-  end do
-
-  ! add initial momentum fluctuations - only call in inertial code for now
-  ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
-  if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
-     call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
-                             umac,rhotot_old,Temp,the_bc_tower)
-     
+  if (restart .ge. 0) then
+     call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
   end if
 
-  dt = fixed_dt
+  if (restart .lt. 0) then
+
+     ! add initial momentum fluctuations - only call in inertial code for now
+     ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
+     if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
+        call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
+                                umac,rhotot_old,Temp,the_bc_tower)
+     end if
+     
+     ! initial projection - only truly needed for inertial algorithm
+     ! for the overdamped algorithm, this only changes the reference state for the first
+     ! gmres solve in the first time step
+     ! Yes, I think in the purely overdamped version this can be removed
+     ! In either case the first ever solve cannot have a good reference state
+     ! so in general there is the danger it will be less accurate than subsequent solves
+     ! but I do not see how one can avoid that
+     ! From this perspective it may be useful to keep initial_projection even in overdamped
+     ! because different gmres tolerances may be needed in the first step than in the rest
+     if (algorithm_type .eq. 0) then
+        call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
+                                stoch_mass_fluxdiv,Temp,dt,dx,n_rngs,the_bc_tower)
+     end if
+
+     ! write initial plotfile
+     if (plot_int .gt. 0) then
+        if (parallel_IOProcessor()) then
+           write(*,*), 'writing initial plotfile 0'
+        end if
+        call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pres,0,dx,time)
+     end if
+
+  end if
 
   !=====================================================================
   ! Initialize HydroGrid for analysis
@@ -360,31 +410,9 @@ subroutine main_driver()
      end if
   end if
 
-  ! initial projection - only truly needed for inertial algorithm
-  ! for the overdamped algorithm, this only changes the reference state for the first
-  ! gmres solve in the first time step
-  ! Yes, I think in the purely overdamped version this can be removed
-  ! In either case the first ever solve cannot have a good reference state
-  ! so in general there is the danger it will be less accurate than subsequent solves
-  ! but I do not see how one can avoid that
-  ! From this perspective it may be useful to keep initial_projection even in overdamped
-  ! because different gmres tolerances may be needed in the first step than in the rest
-  if (algorithm_type .eq. 0) then
-     call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
-                             stoch_mass_fluxdiv,Temp,dt,dx,n_rngs,the_bc_tower)
-  end if
-
   !=======================================================
   ! Begin time stepping loop
   !=======================================================
-
-  ! write initial plotfile
-  if (plot_int.gt.0) then
-     if (parallel_IOProcessor()) then
-        write(*,*), 'writing initial plotfile 0'
-     end if
-     call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pres,0,dx,time)
-  end if
 
   do istep=init_step,max_step
 
@@ -422,6 +450,14 @@ subroutine main_driver()
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
             call write_plotfileLM(mla,"plt",rho_new,rhotot_new,Temp,umac,pres,istep,dx,time)
+         end if
+
+         ! write checkpoint at specific intervals
+         if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
+            if (parallel_IOProcessor()) then
+               write(*,*), 'writing checkpoint at timestep =', istep 
+            end if
+            call checkpoint_write(mla,rho_new,rhotot_new,pres,umac,time,dt,istep)
          end if
 
          ! print out projection (average) and variance

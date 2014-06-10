@@ -20,7 +20,7 @@ module advance_timestep_overdamped_module
   use mass_flux_utilities_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-  use probin_common_module, only: advection_type, grav, rhobar
+  use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, variance_coef_mom
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies, rho_part_bc_comp
   use analysis_module
@@ -166,12 +166,14 @@ contains
     end do
 
     ! add div(Sigma^(1)) to gmres_rhs_v
-    if (n_rngs .eq. 1) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                 eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
-    else if (n_rngs .eq. 2) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                 eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
+    if (variance_coef_mom .ne. 0.d0) then
+       if (n_rngs .eq. 1) then
+          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                    eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+       else if (n_rngs .eq. 2) then
+          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                    eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
+       end if
     end if
 
     ! add rho^n*g to gmres_rhs_v
@@ -210,7 +212,9 @@ contains
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       if (variance_coef_mass .ne. 0) then
+          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
        do i=1,dm
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
        end do
@@ -222,7 +226,9 @@ contains
     do n=1,nlevs
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          if (variance_coef_mass .ne. 0.d0) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
        end do
     end do
 
@@ -232,7 +238,9 @@ contains
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
-       call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
@@ -382,8 +390,10 @@ contains
     end if
 
     ! add div(Sigma^(2)) to gmres_rhs_v
-    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                              eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+    if (variance_coef_mom .ne. 0.d0) then
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+    end if
 
     ! add rho^{*,n+1}*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
@@ -414,7 +424,9 @@ contains
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
        do i=1,dm
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
        end do
@@ -426,7 +438,9 @@ contains
     do n=1,nlevs
        do i=1,nspecies
           call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
        end do
     end do
 
@@ -436,7 +450,9 @@ contains
        call multifab_setval(rho_update(n),0.d0,all=.true.)
        ! add fluxes
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
-       call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
