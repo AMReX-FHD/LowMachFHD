@@ -15,7 +15,6 @@ module compute_mixture_properties_module
 
   public :: compute_mixture_properties, compute_eta, compute_kappa
   
-  ! Donev:
   ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
   ! which should change with different problem types and number of species
   ! depending on the exact physical system being simulated. 
@@ -141,7 +140,7 @@ contains
    
   end subroutine mixture_properties_mass_3d
 
-  ! Donev: This is the key routine here
+  ! This is the key routine here
   ! It should have a case statement, in which different things are done depending on prob_type (Andy can organize that part)
   ! For now the default case should be to simply set D_bar, D_therm and H to constants, read from the input file, as done below
   ! Rename this routine mixture_properties_mass (for now) to make it clear what this does

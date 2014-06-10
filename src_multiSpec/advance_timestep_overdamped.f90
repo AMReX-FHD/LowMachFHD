@@ -20,7 +20,8 @@ module advance_timestep_overdamped_module
   use mass_flux_utilities_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-  use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, variance_coef_mom
+  use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
+                                  variance_coef_mom, restart
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies, rho_part_bc_comp
   use analysis_module
@@ -48,7 +49,7 @@ module advance_timestep_overdamped_module
 
 contains
 
-  ! Donev: I think eta and kappa should be local temps inside advance_timestep_overdamped
+  ! eta and kappa can be local temps inside advance_timestep_overdamped
   ! This is consistent with what is done for mass diffusion coefficients
   ! They are local to the wrapper and not really needed outside
   ! Note for future: In general Temp can depend on time so here one should pass
@@ -56,7 +57,7 @@ contains
   subroutine advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         dx,dt,time,the_bc_tower,n_rngs)
+                                         dx,dt,time,the_bc_tower,n_rngs,istep)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -76,7 +77,7 @@ contains
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    integer        , intent(in   ) :: n_rngs
+    integer        , intent(in   ) :: n_rngs,istep
 
     ! local
     type(multifab) ::  rho_update(mla%nlevel)
@@ -142,8 +143,9 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! fill the stochastic multifabs with a new set of random numbers
-    ! if this is the first step we already have random numbers from initialization
-    if (time .ne. 0.d0) then ! Donev: It is safer to make this more robust than to compare time to zero -- we may have tests where we start from some nonzero time
+    ! if this is the first step after initialization or restart then
+    ! we already have random numbers from initialization
+    if (istep .ne. 1 .and. istep .ne. restart+1) then
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        call fill_m_stochastic(mla)
     end if

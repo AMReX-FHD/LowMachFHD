@@ -436,7 +436,7 @@ subroutine main_driver()
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                           diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                          dx,dt,time,the_bc_tower,n_rngs)
+                                          dx,dt,time,the_bc_tower,n_rngs,istep)
       end if
 
       time = time + dt
