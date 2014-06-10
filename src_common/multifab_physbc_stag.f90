@@ -101,7 +101,9 @@ contains
     if (bccomp .eq. 1) then
        if (bc(1,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          s(lo(1),lo(2):hi(2)) = 0.d0
+          ! need to set ghost cells behind to avoid propagating NaNs in the bds scheme
+          ! that should be wiped out (but don't since zero times a NaN is a Nan)
+          s(lo(1)-ng_s:lo(1),lo(2):hi(2)) = 0.d0
        else if (bc(1,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -118,7 +120,7 @@ contains
     if (bccomp .eq. 1) then
        if (bc(1,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          s(hi(1)+1,lo(2):hi(2)) = 0.d0
+          s(hi(1)+1:hi(1)+1+ng_s,lo(2):hi(2)) = 0.d0
        else if (bc(1,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -135,7 +137,7 @@ contains
     if (bccomp .eq. 2) then
        if (bc(2,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          s(lo(1):hi(1),lo(2)) = 0.d0
+          s(lo(1):hi(1),lo(2)-ng_s:lo(2)) = 0.d0
        else if (bc(2,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -152,7 +154,7 @@ contains
     if (bccomp .eq. 2) then
        if (bc(2,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          s(lo(1):hi(1),hi(2)+1) = 0.d0
+          s(lo(1):hi(1),hi(2)+1:hi(2)+1+ng_s) = 0.d0
        else if (bc(2,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -187,8 +189,10 @@ contains
     if (bccomp .eq. 1) then
        if (bc(1,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
+          ! need to set ghost cells behind to avoid propagating NaNs in the bds scheme
+          ! that should be wiped out (but don't since zero times a NaN is a Nan)
           do j=lo(2),hi(2)
-             s(lo(1),j) = vel_bc_n(lo(1),j)
+             s(lo(1)-ng_s:lo(1),j) = vel_bc_n(lo(1),j)
           end do
        else if (bc(1,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
@@ -207,7 +211,7 @@ contains
        if (bc(1,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           do j=lo(2),hi(2)
-             s(hi(1)+1,j) = vel_bc_n(hi(1)+1,j)
+             s(hi(1)+1:hi(1)+1+ng_s,j) = vel_bc_n(hi(1)+1,j)
           end do
        else if (bc(1,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
@@ -226,7 +230,7 @@ contains
        if (bc(2,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           do i=lo(1),hi(1)
-             s(i,lo(2)) = vel_bc_n(i,lo(2))
+             s(i,lo(2)-ng_s:lo(2)) = vel_bc_n(i,lo(2))
           end do
        else if (bc(2,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
@@ -245,7 +249,7 @@ contains
        if (bc(2,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           do i=lo(1),hi(1)
-             s(i,hi(2)+1) = vel_bc_n(i,hi(2)+1)
+             s(i,hi(2)+1:hi(2)+1+ng_s) = vel_bc_n(i,hi(2)+1)
           end do
        else if (bc(2,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
@@ -277,7 +281,9 @@ contains
     if (bccomp .eq. 1) then
        if (bc(1,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          s(lo(1),lo(2):hi(2),lo(3):hi(3)) = 0.d0
+          ! need to set ghost cells behind to avoid propagating NaNs in the bds scheme
+          ! that should be wiped out (but don't since zero times a NaN is a Nan)
+          s(lo(1)-ng_s:lo(1),lo(2):hi(2),lo(3):hi(3)) = 0.d0
        else if (bc(1,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -294,7 +300,7 @@ contains
     if (bccomp .eq. 1) then
        if (bc(1,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          s(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = 0.d0
+          s(hi(1)+1:hi(1)+1+ng_s,lo(2):hi(2),lo(3):hi(3)) = 0.d0
        else if (bc(1,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -311,7 +317,7 @@ contains
     if (bccomp .eq. 2) then
        if (bc(2,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          s(lo(1):hi(1),lo(2),lo(3):hi(3)) = 0.d0
+          s(lo(1):hi(1),lo(2)-ng_s:lo(2),lo(3):hi(3)) = 0.d0
        else if (bc(2,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -328,7 +334,7 @@ contains
     if (bccomp .eq. 2) then
        if (bc(2,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          s(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = 0.d0
+          s(lo(1):hi(1),hi(2)+1:hi(2)+1+ng_s,lo(3):hi(3)) = 0.d0
        else if (bc(2,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -345,7 +351,7 @@ contains
     if (bccomp .eq. 3) then
        if (bc(3,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          s(lo(1):hi(1),lo(2):hi(2),lo(3)) = 0.d0
+          s(lo(1):hi(1),lo(2):hi(2),lo(3)-ng_s:lo(3)) = 0.d0
        else if (bc(3,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -362,7 +368,7 @@ contains
    if (bccomp .eq. 3) then
       if (bc(3,2) .eq. DIR_VEL) then
          ! set domain face value to Dirichlet value
-         s(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = 0.d0
+         s(lo(1):hi(1),lo(2):hi(2),hi(3)+1:hi(3)+1+ng_s) = 0.d0
       else if (bc(3,2) .eq. INTERIOR) then
          ! either periodic or interior; do nothing
       else
@@ -384,7 +390,6 @@ contains
 
     ! local
     integer :: i,j,k
-    real(kind=dp_t) :: x,y,z
 
     if (bccomp .ne. 1 .and. bccomp .ne. 2 .and. bccomp .ne. 3) then
        call bl_error('physbc_domainvel_3d_inhomogeneous requires bccomp = 1, 2, or 3')
@@ -398,12 +403,11 @@ contains
     if (bccomp .eq. 1) then
        if (bc(1,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          x = prob_lo(1)
+          ! need to set ghost cells behind to avoid propagating NaNs in the bds scheme
+          ! that should be wiped out (but don't since zero times a NaN is a Nan)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)
-                y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-                s(lo(1),j,k) = vel_bc_n(lo(1),j,k)
+                s(lo(1)-ng_s:lo(1),j,k) = vel_bc_n(lo(1),j,k)
              end do
           end do
        else if (bc(1,1) .eq. INTERIOR) then
@@ -422,12 +426,9 @@ contains
     if (bccomp .eq. 1) then
        if (bc(1,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          x = prob_hi(1)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)
-                y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-                s(hi(1)+1,j,k) = vel_bc_n(hi(1)+1,j,k)
+                s(hi(1)+1:hi(1)+1+ng_s,j,k) = vel_bc_n(hi(1)+1,j,k)
              end do
           end do
        else if (bc(1,2) .eq. INTERIOR) then
@@ -446,12 +447,9 @@ contains
     if (bccomp .eq. 2) then
        if (bc(2,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          y = prob_lo(2)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,lo(2),k) = vel_bc_n(i,lo(2),k)
+                s(i,lo(2)-ng_s:lo(2),k) = vel_bc_n(i,lo(2),k)
              end do
           end do
        else if (bc(2,1) .eq. INTERIOR) then
@@ -470,12 +468,9 @@ contains
     if (bccomp .eq. 2) then
        if (bc(2,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          y = prob_hi(2)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,hi(2)+1,k) = vel_bc_n(i,hi(2)+1,k)
+                s(i,hi(2)+1:hi(2)+1+ng_s,k) = vel_bc_n(i,hi(2)+1,k)
              end do
           end do
        else if (bc(2,2) .eq. INTERIOR) then
@@ -494,12 +489,9 @@ contains
     if (bccomp .eq. 3) then
        if (bc(3,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          z = prob_lo(3)
           do j=lo(2),hi(2)
-             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,j,lo(3)) = vel_bc_n(i,j,lo(3))
+                s(i,j,lo(3)-ng_s:lo(3)) = vel_bc_n(i,j,lo(3))
              end do
           end do
        else if (bc(3,1) .eq. INTERIOR) then
@@ -518,12 +510,9 @@ contains
    if (bccomp .eq. 3) then
       if (bc(3,2) .eq. DIR_VEL) then
          ! set domain face value to Dirichlet value
-          z = prob_hi(3)
           do j=lo(2),hi(2)
-             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                s(i,j,hi(3)+1) = vel_bc_n(i,j,hi(3)+1)
+                s(i,j,hi(3)+1:hi(3)+1+ng_s) = vel_bc_n(i,j,hi(3)+1)
              end do
           end do
       else if (bc(3,2) .eq. INTERIOR) then
@@ -1291,7 +1280,6 @@ contains
 
     ! Local variables
     integer :: i,j,k
-    real(kind=dp_t) :: x,y,z
 
     if (bccomp .ne. 1 .and. bccomp .ne. 2 .and. bccomp .ne. 3) then
        call bl_error('physbc_macvel_3d_inhomogeneous requires bccomp = 1, 2 or 3')
@@ -1308,22 +1296,16 @@ contains
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          x = prob_lo(1)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)+1
-                y = prob_lo(3) + dble(j)*dx(2)
                 s(lo(1)-ng_s:lo(1)-1,j,k) = 2.d0*v_bc1(lo(1),j,k) - s(lo(1),j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          x = prob_lo(1)
           do k=lo(3),hi(3)+1
-             z = prob_lo(3) + dble(k)*dx(3)
              do j=lo(2),hi(2)
-                y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
                 s(lo(1)-ng_s:lo(1)-1,j,k) = 2.d0*v_bc1(lo(1),j,k) - s(lo(1),j,k)
              end do
           end do
@@ -1335,22 +1317,16 @@ contains
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          x = prob_lo(1)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)+1
-                y = prob_lo(3) + dble(j)*dx(2)
                 s(lo(1)-ng_s:lo(1)-1,j,k) = s(lo(1),j,k) - dx(1)*v_bc1(lo(1),j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          x = prob_lo(1)
           do k=lo(3),hi(3)+1
-             z = prob_lo(3) + dble(k)*dx(3)
              do j=lo(2),hi(2)
-                y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
                 s(lo(1)-ng_s:lo(1)-1,j,k) = s(lo(1),j,k) - dx(1)*v_bc1(lo(1),j,k)
              end do
           end do
@@ -1373,22 +1349,16 @@ contains
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          x = prob_hi(1)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)+1
-                y = prob_lo(3) + dble(j)*dx(2)
                 s(hi(1)+1:hi(1)+ng_s,j,k) = 2.d0*v_bc1(hi(1)+1,j,k) - s(hi(1),j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          x = prob_hi(1)
           do k=lo(3),hi(3)+1
-             z = prob_lo(3) + dble(k)*dx(3)
              do j=lo(2),hi(2)
-                y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
                 s(hi(1)+1:hi(1)+ng_s,j,k) = 2.d0*v_bc1(hi(1)+1,j,k) - s(hi(1),j,k)
              end do
           end do
@@ -1400,22 +1370,16 @@ contains
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          x = prob_hi(1)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do j=lo(2),hi(2)+1
-                y = prob_lo(3) + dble(j)*dx(2)
                 s(hi(1)+1:hi(1)+ng_s,j,k) = s(hi(1),j,k) + dx(1)*v_bc1(hi(1)+1,j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          x = prob_hi(1)
           do k=lo(3),hi(3)+1
-             z = prob_lo(3) + dble(k)*dx(3)
              do j=lo(2),hi(2)
-                y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
                 s(hi(1)+1:hi(1)+ng_s,j,k) = s(hi(1),j,k) + dx(1)*v_bc1(hi(1)+1,j,k)
              end do
           end do
@@ -1435,11 +1399,8 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          y = prob_lo(2)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)+1
-                x = prob_lo(1) + dble(i)*dx(1)
                 s(i,lo(2)-ng_s:lo(2)-1,k) = 2.d0*v_bc1(i,lo(2),k) - s(i,lo(2),k)
              end do
           end do
@@ -1449,11 +1410,8 @@ contains
        else if (bccomp .eq. 3) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          y = prob_lo(2)
           do k=lo(3),hi(3)+1
-             z = prob_lo(3) + dble(k)*dx(3)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                 s(i,lo(2)-ng_s:lo(2)-1,k) = 2.d0*v_bc2(i,lo(2),k) - s(i,lo(2),k)
              end do
           end do
@@ -1462,11 +1420,8 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          y = prob_lo(2)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)+1
-                x = prob_lo(1) + dble(i)*dx(1)
                 s(i,lo(2)-ng_s:lo(2)-1,k) = s(i,lo(2),k) - dx(2)*v_bc1(i,lo(2),k)
              end do
           end do
@@ -1476,11 +1431,8 @@ contains
        else if (bccomp .eq. 3) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          y = prob_lo(2)
           do k=lo(3),hi(3)+1
-             z = prob_lo(3) + dble(k)*dx(3)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                 s(i,lo(2)-ng_s:lo(2)-1,k) = s(i,lo(2),k) - dx(2)*v_bc2(i,lo(2),k)
              end do
           end do
@@ -1500,11 +1452,8 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          y = prob_hi(2)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)+1
-                x = prob_lo(1) + dble(i)*dx(1)
                 s(i,hi(2)+1:hi(2)+ng_s,k) = 2.d0*v_bc1(i,hi(2)+1,k) - s(i,hi(2),k)
              end do
           end do
@@ -1514,11 +1463,8 @@ contains
        else if (bccomp .eq. 3) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          y = prob_hi(2)
           do k=lo(3),hi(3)+1
-             z = prob_lo(3) + dble(k)*dx(3)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                 s(i,hi(2)+1:hi(2)+ng_s,k) = 2.d0*v_bc2(i,hi(2)+1,k) - s(i,hi(2),k)
              end do
           end do
@@ -1527,11 +1473,8 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          y = prob_hi(2)
           do k=lo(3),hi(3)
-             z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
              do i=lo(1),hi(1)+1
-                x = prob_lo(1) + dble(i)*dx(1)
                 s(i,hi(2)+1:hi(2)+ng_s,k) = s(i,hi(2),k) + dx(2)*v_bc1(i,hi(2)+1,k)
              end do
           end do
@@ -1541,11 +1484,8 @@ contains
        else if (bccomp .eq. 3) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          y = prob_hi(2)
           do k=lo(3),hi(3)+1
-             z = prob_lo(3) + dble(k)*dx(3)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                 s(i,hi(2)+1:hi(2)+ng_s,k) = s(i,hi(2),k) + dx(2)*v_bc2(i,hi(2)+1,k)
              end do
           end do
@@ -1565,22 +1505,16 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          z = prob_lo(3)
           do j=lo(2),hi(2)
-             y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)+1
-                x = prob_lo(1) + dble(i)*dx(1)
                 s(i,j,lo(3)-ng_s:lo(3)-1) = 2.d0*v_bc2(i,j,lo(3)) - s(i,j,lo(3))
              end do
           end do
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          z = prob_lo(3)
           do j=lo(2),hi(2)+1
-             y = prob_lo(3) + dble(j)*dx(2)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                 s(i,j,lo(3)-ng_s:lo(3)-1) = 2.d0*v_bc2(i,j,lo(3)) - s(i,j,lo(3))
              end do
           end do
@@ -1592,22 +1526,16 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          z = prob_lo(3)
           do j=lo(2),hi(2)
-             y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)+1
-                x = prob_lo(1) + dble(i)*dx(1)
                 s(i,j,lo(3)-ng_s:lo(3)-1) = s(i,j,lo(3)) - dx(3)*v_bc2(i,j,lo(3))
              end do
           end do
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          z = prob_lo(3)
           do j=lo(2),hi(2)+1
-             y = prob_lo(3) + dble(j)*dx(2)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                 s(i,j,lo(3)-ng_s:lo(3)-1) = s(i,j,lo(3)) - dx(3)*v_bc2(i,j,lo(3))
              end do
           end do
@@ -1630,22 +1558,16 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          z = prob_hi(3)
           do j=lo(2),hi(2)
-             y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)+1
-                x = prob_lo(1) + dble(i)*dx(1)
                 s(i,j,hi(3)+1:hi(3)+ng_s) = 2.d0*v_bc2(i,j,hi(3)+1) - s(i,j,hi(3))
              end do
           end do
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
-          z = prob_hi(3)
           do j=lo(2),hi(2)+1
-             y = prob_lo(3) + dble(j)*dx(2)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                 s(i,j,hi(3)+1:hi(3)+ng_s) = 2.d0*v_bc2(i,j,hi(3)+1) - s(i,j,hi(3))
              end do
           end do
@@ -1657,22 +1579,16 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          z = prob_hi(3)
           do j=lo(2),hi(2)
-             y = prob_lo(3) + (dble(j)+0.5d0)*dx(2)
              do i=lo(1),hi(1)+1
-                x = prob_lo(1) + dble(i)*dx(1)
                 s(i,j,hi(3)+1:hi(3)+ng_s) = s(i,j,hi(3)) + dx(3)*v_bc2(i,j,hi(3)+1)
              end do
           end do
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! two point stencil using homogeneous dirichlet traction condition at boundary
-          z = prob_hi(3)
           do j=lo(2),hi(2)+1
-             y = prob_lo(3) + dble(j)*dx(2)
              do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                 s(i,j,hi(3)+1:hi(3)+ng_s) = s(i,j,hi(3)) + dx(3)*v_bc2(i,j,hi(3)+1)
              end do
           end do
@@ -2345,7 +2261,6 @@ contains
 
     ! local
     integer :: i,j
-    real(kind=dp_t) :: x,y
 
     !!!!!!!!!!!!!!!!!!!!!!!!
     ! transverse velocities
@@ -2354,9 +2269,7 @@ contains
     ! yvel, lo x-faces
     ! subtract dvx/dy
     if (bc(1,1,2) .eq. DIR_TRACT) then
-       x = prob_lo(1)
        do j=lo(2),hi(2)+1
-          y = prob_lo(2) + dble(j)*dx(2)
           vel_bc_tyx(lo(1),j) = vel_bc_tyx(lo(1),j) &
                - (vel_bc_nx(lo(1),j)-vel_bc_nx(lo(1),j-1)) / dx(2)
        end do
@@ -2365,9 +2278,7 @@ contains
     ! yvel, hi x-faces
     ! subtract dvx/dy
     if (bc(1,2,2) .eq. DIR_TRACT) then
-       x = prob_hi(1)
        do j=lo(2),hi(2)+1
-          y = prob_lo(2) + dble(j)*dx(2)
           vel_bc_tyx(hi(1)+1,j) = vel_bc_tyx(hi(1)+1,j) &
                - (vel_bc_nx(hi(1)+1,j)-vel_bc_nx(hi(1)+1,j-1)) / dx(2)
        end do
@@ -2376,9 +2287,7 @@ contains
     ! xvel, lo y-faces
     ! subtract dvy/dx
     if (bc(2,1,1) .eq. DIR_TRACT) then
-       y = prob_lo(2)
        do i=lo(1),hi(1)+1
-          x = prob_lo(1) + dble(i)*dx(1)
           vel_bc_txy(i,lo(2)) = vel_bc_txy(i,lo(2)) &
                - (vel_bc_ny(i,lo(2))-vel_bc_ny(i-1,lo(2))) / dx(1)
 
@@ -2388,9 +2297,7 @@ contains
     ! xvel, hi y-faces
     ! subtract dvy/dx
     if (bc(2,2,1) .eq. DIR_TRACT) then
-       y = prob_hi(2)
        do i=lo(1),hi(1)+1
-          x = prob_lo(1) + dble(i)*dx(1)
           vel_bc_txy(i,hi(2)+1) = vel_bc_txy(i,hi(2)+1) &
                - (vel_bc_ny(i,hi(2)+1)-vel_bc_ny(i-1,hi(2)+1)) / dx(1)
        end do
@@ -2417,7 +2324,6 @@ contains
 
     ! local
     integer :: i,j,k
-    real(kind=dp_t) :: x,y,z
 
     !!!!!!!!!!!!!!!!!!!!!!!!
     ! transverse velocities
@@ -2426,11 +2332,8 @@ contains
     ! yvel, lo x-faces
     ! subtract dvx/dy
     if (bc(1,1,2) .eq. DIR_TRACT) then
-       x = prob_lo(1)
        do k=lo(3),hi(3)
-          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2),hi(2)+1
-             y = prob_lo(2) + dble(j)*dx(2)
              vel_bc_tyx(lo(1),j,k) = vel_bc_tyx(lo(1),j,k) &
                   - (vel_bc_nx(lo(1),j,k)-vel_bc_nx(lo(1),j-1,k)) / dx(2)
           end do
@@ -2441,11 +2344,8 @@ contains
     ! yvel, hi x-faces
     ! subtract dvx/dy
     if (bc(1,2,2) .eq. DIR_TRACT) then
-       x = prob_hi(1)
        do k=lo(3),hi(3)
-          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2),hi(2)+1
-             y = prob_lo(2) + dble(j)*dx(2)
              vel_bc_tyx(hi(1)+1,j,k) = vel_bc_tyx(hi(1)+1,j,k) &
                   - (vel_bc_nx(hi(1)+1,j,k)-vel_bc_nx(hi(1)+1,j-1,k)) / dx(2)
           end do
@@ -2456,11 +2356,8 @@ contains
     ! zvel, lo x-faces
     ! subtract dvx/dz
     if (bc(1,1,3) .eq. DIR_TRACT) then
-       x = prob_lo(1)
        do k=lo(3),hi(3)+1
-          z = prob_lo(3) + dble(k)*dx(3)
           do j=lo(2),hi(2)
-             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              vel_bc_tzx(lo(1),j,k) = vel_bc_tzx(lo(1),j,k) &
                   - (vel_bc_nx(lo(1),j,k)-vel_bc_nx(lo(1),j,k-1)) / dx(3)
           end do
@@ -2471,11 +2368,8 @@ contains
     ! zvel, hi x-faces
     ! subtract dvx/dz
     if (bc(1,2,3) .eq. DIR_TRACT) then
-       x = prob_hi(1)
        do k=lo(3),hi(3)+1
-          z = prob_lo(3) + dble(k)*dx(3)
           do j=lo(2),hi(2)
-             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              vel_bc_tzx(hi(1)+1,j,k) = vel_bc_tzx(hi(1)+1,j,k) &
                   - (vel_bc_nx(hi(1)+1,j,k)-vel_bc_nx(hi(1)+1,j,k-1)) / dx(3)
           end do
@@ -2486,11 +2380,8 @@ contains
     ! xvel, lo y-faces
     ! subtract dvy/dx
     if (bc(2,1,1) .eq. DIR_TRACT) then
-       y = prob_lo(2)
        do k=lo(3),hi(3)
-          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1),hi(1)+1
-             x = prob_lo(1) + dble(i)*dx(1)
              vel_bc_txy(i,lo(2),k) = vel_bc_txy(i,lo(2),k) &
                   - (vel_bc_ny(i,lo(2),k)-vel_bc_ny(i-1,lo(2),k)) / dx(1)
           end do
@@ -2501,11 +2392,8 @@ contains
     ! xvel, hi y-faces
     ! subtract dvy/dx
     if (bc(2,2,1) .eq. DIR_TRACT) then
-       y = prob_hi(2)
        do k=lo(3),hi(3)
-          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1),hi(1)+1
-             x = prob_lo(1) + dble(i)*dx(1)
              vel_bc_txy(i,hi(2)+1,k) = vel_bc_txy(i,hi(2)+1,k) &
                   - (vel_bc_ny(i,hi(2)+1,k)-vel_bc_ny(i-1,hi(2)+1,k)) / dx(1)
           end do
@@ -2516,11 +2404,8 @@ contains
     ! zvel, lo y-faces
     ! subtract dvy/dz
     if (bc(2,1,3) .eq. DIR_TRACT) then
-       y = prob_lo(2)
        do k=lo(3),hi(3)+1
-          z = prob_lo(3) + dble(k)*dx(3)
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              vel_bc_tzy(i,lo(2),k) = vel_bc_tzy(i,lo(2),k) &
                   - (vel_bc_ny(i,lo(2),k)-vel_bc_ny(i,lo(2),k-1)) / dx(3)
           end do
@@ -2531,11 +2416,8 @@ contains
     ! zvel, hi y-faces
     ! subtract dvy/dz
     if (bc(2,2,3) .eq. DIR_TRACT) then
-       y = prob_hi(2)
        do k=lo(3),hi(3)+1
-          z = prob_lo(3) + dble(k)*dx(3)
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              vel_bc_tzy(i,hi(2)+1,k) = vel_bc_tzy(i,hi(2)+1,k) &
                   - (vel_bc_ny(i,hi(2)+1,k)-vel_bc_ny(i,hi(2)+1,k-1)) / dx(3)
           end do
@@ -2546,11 +2428,8 @@ contains
     ! xvel, lo z-faces
     ! subtract dvz/dx
     if (bc(3,1,1) .eq. DIR_TRACT) then
-       z = prob_lo(3)
        do i=lo(1),hi(1)+1
-          x = prob_lo(1) + dble(i)*dx(1)
           do j=lo(2),hi(2)
-             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              vel_bc_txz(i,j,lo(3)) = vel_bc_txz(i,j,lo(3)) &
                   - (vel_bc_nz(i,j,lo(3))-vel_bc_nz(i-1,j,lo(3))) / dx(1)
           end do
@@ -2561,11 +2440,8 @@ contains
     ! xvel, hi z-faces
     ! subtract dvz/dx
     if (bc(3,2,1) .eq. DIR_TRACT) then
-       z = prob_hi(3)
        do i=lo(1),hi(1)+1
-          x = prob_lo(1) + dble(i)*dx(1)
           do j=lo(2),hi(2)
-             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              vel_bc_txz(i,j,hi(3)+1) = vel_bc_txz(i,j,hi(3)+1) &
                   - (vel_bc_nz(i,j,hi(3)+1)-vel_bc_nz(i-1,j,hi(3)+1)) / dx(1)
           end do
@@ -2576,11 +2452,8 @@ contains
     ! yvel, lo z-faces
     ! subtract dvz/dy
     if (bc(3,1,2) .eq. DIR_TRACT) then
-       z = prob_lo(3)
        do j=lo(2),hi(2)+1
-          y = prob_lo(2) + dble(j)*dx(2)
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              vel_bc_tyz(i,j,lo(3)) = vel_bc_tyz(i,j,lo(3)) &
                   - (vel_bc_nz(i,j,lo(3))-vel_bc_nz(i,j-1,lo(3))) / dx(2)
           end do
@@ -2591,11 +2464,8 @@ contains
     ! yvel, hi z-faces
     ! subtract dvz/dy
     if (bc(3,2,2) .eq. DIR_TRACT) then
-       z = prob_hi(3)
        do j=lo(2),hi(2)+1
-          y = prob_lo(2) + dble(j)*dx(2)
           do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              vel_bc_tyz(i,j,hi(3)+1) = vel_bc_tyz(i,j,hi(3)+1) &
                   - (vel_bc_nz(i,j,hi(3)+1)-vel_bc_nz(i,j-1,hi(3)+1)) / dx(2)
           end do
