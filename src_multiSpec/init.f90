@@ -20,7 +20,7 @@ module init_module
 
   public :: init_rho, init_Temp
   
-  ! prob_type: 
+  ! prob_type: If negative the density of the last species is overwritten to enforce low Mach EOS
   ! 0 = rho constant in space (thermodynamic equilibrium), temperature profile to check thermodiffusion
   ! 1 = rho in concentric circle (two values inside and outside), temperature is distributed similarly 
   ! 2 = constant gradient (spatial distortion proportional to y), temperature is distributed similarly
@@ -28,6 +28,7 @@ module init_module
   ! 4 = manufactured solution for 2-species equal/unequal molarmass,gaussian-rho,time-independent-space-varying 
   !     totaldensity,temperature fixed to 1 
   ! 5 = manufactured solution for 3-species time-independent-space-varying density,temperature fixed to 1
+  ! and more in 2D only, see below
 
 contains
   
@@ -279,7 +280,7 @@ contains
        ! one fluid on top of another
        ! rho1 = rho_init(1) in lower half of domain (in y)
        ! rho1 = rho_init(2) in upper half
-       ! use the EOS to compute rho1 by setting prob_type negative
+       ! use the EOS to compute rho2 by setting prob_type negative
 
        ! middle of domain
        y1 = (prob_lo(2)+prob_hi(2)) / 2.d0

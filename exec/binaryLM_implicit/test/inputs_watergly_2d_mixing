@@ -1,7 +1,7 @@
 ! This is an initial step toward an input file for free mixing of water and glycerol
 ! This input file uses similar parameters from the low Mach explicit CAMCOS paper
-! These are *not* the best available parameters but are reasonable
-! In the future better parameters will be entered
+! but here the proper dependence of viscosity and diffusion coefficient on concentration has been implemented
+! using the best available literature values
 
 &probin_binarylm
 

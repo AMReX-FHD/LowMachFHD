@@ -73,7 +73,7 @@
   variance_coef_mass = 0.d0
   initial_variance = 0.d0   ! multiplicative factor for initial fluctuations (if negative, total momentum is set to zero)
 
-  k_B = 4.045d-14           ! Boltzmann's constant, exact value irrelevant
+  k_B = 1.38E-16 ! kT=4.045d-14  ! Boltzmann's constant
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
@@ -99,10 +99,10 @@
   wallspeed_hi(1,2) = 0.d0 ! V_TOP in IBAMR
 
   ! HydroGrid analysis code options:
-!  hydro_grid_int = 5         ! How often to call updateHydroGrid = N_STEPS_POST in IBAMR
-!                             ! 0 if never
-!                             ! negative for projectHydroGrid custom analysis = PROJECT_Y=TRUE in IBAMR
-!                             ! positive for updateHydroGrid = PROJECT_Y=FALSE in IBAMR
+  hydro_grid_int = 5         ! How often to call updateHydroGrid = N_STEPS_POST in IBAMR
+                             ! 0 if never
+                             ! negative for projectHydroGrid custom analysis = PROJECT_Y=TRUE in IBAMR
+                             ! positive for updateHydroGrid = PROJECT_Y=FALSE in IBAMR
   project_dir = 2	     ! Projection direction (1=x, 2=y, 3=z) = Fixed at 2 in IBAMR
   	                     ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   	                     !          but still need projection if stats_int>0)
@@ -202,3 +202,139 @@
   gmres_min_iter = 1           ! min number of gmres iterations
 
 /
+
+!----------------------------------------
+! HydroGrid analysis
+!----------------------------------------
+! Variables: 1=rho, 2=v_x, 3=v_y, 4=T, 5=c=rho1/rho, 6=1-c=rho2/rho
+
+! FULL 2D grid = First hydroAnalysisOptions namelist in IBAMR
+! This one will be ignored if project_dir>0 (useful in 3D)
+!----------------------------------------
+&hydroAnalysisOptions
+! 2D full grid data
+
+   staggeredVelocities = 0 ! Are velocities on a staggered grid or not
+
+   outputFolder = "./"
+   filePrefix = "WaterGly2DFull"
+
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+   periodic = F ! Is the system periodic along the y axes
+   
+   writeSnapshotVTK=F ! Save snapshots of the instantaneous fields
+
+   ! Means file: column 1=y, 2=rho, 3=v_x, 4=v_y, 5=T, 6=c
+   storeConserved = F ! Leave at F
+   writeMeansVTK = F ! Write the means to a VTK file
+
+   ! Variances
+   writeVariancesVTK = F ! Should we save a VTK file
+   nVariances = 0 ! How many co-variances to calculate and save
+   variancePairs = ""
+      ! species1 variable1 species2 variable2
+   
+   ! Static structure factors
+   writeSpectrumVTK = F
+   subtractMeanFT = F ! The means are trivial here so no need to estimate them
+   writeAbsValue = F ! Only write absolute values of complex values to VTK file?
+   writeTheory = -1 ! Also write: -1=Projections onto discrete modes, 0=Continuum theory, 1=MAC theory
+   nStructureFactors = 0
+   structureFactorPairs = ""
+
+   ! Dynamic structure factors:
+   nWavenumbers=0
+   ! Shape (3,nWavenumbers):
+   selectedWavenumbers=""
+   nSavedSnapshots=1000
+   
+/
+
+!----------------------------------------
+! PROJECTION along y axes (depends on x only) = Second hydroAnalysisOptions namelist in IBAMR
+&hydroAnalysisOptions
+! 1D projection onto direction perpendicular to y axes
+
+   staggeredVelocities = 0 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
+
+   outputFolder = "./"
+   filePrefix = "WaterGly2DProj"
+
+   writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
+
+   ! Means file:
+   ! 1=y, 2=rho, 3-5=v, 6=T, 7=c in 3D
+   ! 1=y, 2=rho, 3-4=v, 5=T, 6=c in 2D
+
+   ! Save the flow to a VTK file:
+   storeConserved = F ! We are not using conserved variables here due to staggering
+   writeMeansVTK = F ! Save the means over the averaging interval
+
+   ! Variances
+   writeVariancesVTK = F ! Should we save a VTK file
+   nVariances = 1
+   ! Variance file:
+   ! 1=y, 2=c-c
+   variancePairs = "0 5 0 5"
+      ! species1 variable1 species2 variable2
+   
+   ! Static structure factors
+   writeSpectrumVTK = F
+   subtractMeanFT = F ! The means are trivial here so no need to estimate them
+   writeAbsValue = T ! Only write absolute values of complex values to VTK file?
+   writeTheory = -1 ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
+   nStructureFactors = 1
+   ! 1=c-c
+   structureFactorPairs = "0 5 0 5"
+
+   ! Dynamic structure factors:
+   nWavenumbers=6
+   ! Shape (2,nWavenumbers):
+   selectedWavenumbers="1 0, 2 0, 4 0, 6 0, 8 0, 10 0"
+   nSavedSnapshots=100
+      
+   axisToPrint = 1 ! 1=x, 2=y, 3=z axis
+   periodic = T ! Is the system periodic along the y axes
+/
+
+! PROJECTION along x axes (depends on y only) = not in IBAMR
+!----------------------------------------
+&hydroAnalysisOptions
+! 1D projection onto y axes, not really useful here
+
+   staggeredVelocities = 0 ! Are velocities on a staggered grid or not
+
+   outputFolder = "./"
+   filePrefix = "WaterGly2DVert"
+
+   axisToPrint = 1 ! 1=x, 2=y, 3=z axis
+   periodic = T ! Is the system periodic along the y axes
+   
+   writeSnapshotVTK=F ! Save snapshots of the instantaneous fields
+
+   ! Means file: column 1=y, 2=rho, 3=v_x, 4=v_y, 5=T, 6=c
+   storeConserved = F ! Leave at F
+   writeMeansVTK = F ! Write the means to a VTK file
+
+   ! Variances
+   writeVariancesVTK = F ! Should we save a VTK file
+   nVariances = 0 ! How many co-variances to calculate and save
+   variancePairs = ""
+      ! species1 variable1 species2 variable2
+   
+   ! Static structure factors
+   writeSpectrumVTK = F
+   subtractMeanFT = F ! The means are trivial here so no need to estimate them
+   writeAbsValue = F ! Only write absolute values of complex values to VTK file?
+   writeTheory = -1 ! Also write: -1=Projections onto discrete modes, 0=Continuum theory, 1=MAC theory
+   nStructureFactors = 0
+   structureFactorPairs = ""
+
+   ! Dynamic structure factors:
+   nWavenumbers=0
+   ! Shape (3,nWavenumbers):
+   selectedWavenumbers=""
+   nSavedSnapshots=1000
+   
+/
+

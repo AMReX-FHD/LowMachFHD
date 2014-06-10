@@ -226,14 +226,14 @@ contains
                isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars=0, &
                systemLength = ncells*grid_dx, heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
                timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-               structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
+               structFactMultiplier = 1.0_dp_t )
           else ! Create a fake object that will not be used, with grid size 1x1x1
             ! This way the namelist input files do not have to change     
             call createHydroAnalysis (grid, nCells=(/1,1,1/), nSpecies = 2, &
                isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars=0, &
                systemLength = ncells*grid_dx, heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
                timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-               structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
+               structFactMultiplier = 1.0_dp_t )
           end if     
 
           if(project_dir/=0) then
@@ -243,7 +243,7 @@ contains
                   systemLength = nCells*grid_dx, &
                   heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-                  structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
+                  structFactMultiplier = 1.0_dp_t )
           end if
 
           if(project_dir/=0) then ! Also perform analysis on a 1D grid (along project_dir only)
@@ -252,7 +252,7 @@ contains
                   systemLength = nCells*grid_dx, &
                   heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-                  structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
+                  structFactMultiplier = 1.0_dp_t )
           end if
 
        end if
