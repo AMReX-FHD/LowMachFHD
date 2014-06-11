@@ -859,9 +859,9 @@ contains
           open(1000, file=trim(plotfile_name), status = "unknown", action = "write")
 
           if (analyze_conserved) then
-             write(1000,'(A)') "# mx_avg my_avg rho_avg rho*c_avg mx_var my_var rho_var rho*c_var"
+             write(1000,'(A)') "x mx_avg my_avg rho_avg rho*c_avg mx_var my_var rho_var rho*c_var"
           else
-             write(1000,'(A)') "# umac_avg vmac_avg rho_avg c_avg umac_var vmac_var rho_var c_var"
+             write(1000,'(A)') "x umac_avg vmac_avg rho_avg c_avg umac_var vmac_var rho_var c_var"
           end if
           do i=lo(qdim),hi(qdim)
              write(1000,'(1000(g17.9))') prob_lo(qdim) + (i+0.5d0)*dx(1,qdim), &
@@ -1001,17 +1001,17 @@ contains
 
        if (analyze_conserved) then
           if (dm .eq. 2) then
-             write(1000,'(A)') "# mx my rho rho*c mx_var my_var rho_var rho*c_var"
+             write(1000,'(A)') "y mx my rho rho*c mx_var my_var rho_var rho*c_var"
           else if (dm .eq. 3) then
-             write(1000,'(A)') "# mx my mz rho rho*c mx_var my_var mz_var rho_var rho*c_var"
+             write(1000,'(A)') "y mx my mz rho rho*c mx_var my_var mz_var rho_var rho*c_var"
           end if
        else
           if (dm .eq. 2) then
              write(1000,'(A)') &
-             "# umac vmac rho c umac_var vmac_var rho_var c_var"
+             "y umac vmac rho c umac_var vmac_var rho_var c_var"
           else if (dm .eq. 3) then
              write(1000,'(A)') &
-             "# umac vmac wmac rho c umac_var vmac_var wmac_var rho_var c_var"
+             "y umac vmac wmac rho c umac_var vmac_var wmac_var rho_var c_var"
           end if
        end if
        do i=lo(pdim),hi(pdim)
