@@ -487,9 +487,6 @@ contains
     ! compute Gama 
     Gama = I + matmul(X_xxT, Hessian)     
  
-    ! Donev: Amit, confirm this computed Gama correctly by hand in debug mode
-    ! Amit : For given x, I had calculated in matlab and compared to get same Gama. 
-
   end subroutine compute_Gama_local
 
   subroutine compute_chi(mla,rho,rhotot,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp,the_bc_level)
@@ -677,7 +674,6 @@ contains
           Sum_knoti = 0.d0
           do column=1, nspecies
              if(column.ne.row) then
-                ! Donev: Make DT a multifab and not a constant, just like D_bar is
                 Sum_knoti = Sum_knoti + Lambda(row,column)*(D_therm(row)-D_therm(column))
              end if
              zeta_by_Temp(row) = Sum_knoti/Temp

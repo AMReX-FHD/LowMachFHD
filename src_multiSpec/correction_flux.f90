@@ -97,7 +97,7 @@ contains
               
             ! correct x-flux for last species  
             flux_x(i,j,nspecies) = -sumx     
-            total_corr = total_corr + abs(corr) ! Donev: Add diagnostics    
+            total_corr = total_corr + abs(corr)
 
          end do
       end do
@@ -126,7 +126,7 @@ contains
               
             ! correct y-flux for last species  
             flux_y(i,j,nspecies) = -sumy             
-            total_corr = total_corr + abs(corr) ! Donev: Add diagnostics    
+            total_corr = total_corr + abs(corr)
  
          end do
       end do
