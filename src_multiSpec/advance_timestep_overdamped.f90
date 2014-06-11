@@ -95,7 +95,7 @@ contains
 
     integer :: i,dm,n,nlevs
 
-    real(kind=dp_t) :: theta_alpha, norm_pre_rhs
+    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
     real(kind=dp_t) :: weights(n_rngs)
 
@@ -285,7 +285,9 @@ contains
        call multifab_setval(dp(n),0.d0,all=.true.)
     end do
 
-    gmres_abs_tol = 0.d0
+    gmres_abs_tol_in = gmres_abs_tol ! Save this  
+    ! This relies entirely on relative tolerance and can fail if the rhs is roundoff error only:
+    !gmres_abs_tol = 0.d0 ! It is better to set gmres_abs_tol in namelist to a sensible value
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
@@ -294,7 +296,7 @@ contains
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
     ! for cases where du in the corrector should be small the gmres stalls
-    gmres_abs_tol = norm_pre_rhs*gmres_rel_tol
+    gmres_abs_tol = max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol)
 
     ! compute v^* = v^{n-1/2} + delta v
     ! compute p^* = p^{n-1/2} + delta p
@@ -355,7 +357,7 @@ contains
        call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    call eos_check(mla,rho_new)
+    !call eos_check(mla,rho_new)
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -500,6 +502,8 @@ contains
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha)
+                              
+    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance         
 
     ! compute v^{n+1/2} = v^* + delta v
     ! compute p^{n+1/2} = p^* + delta p
@@ -558,7 +562,7 @@ contains
        call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    call eos_check(mla,rho_new)
+    !call eos_check(mla,rho_new)
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

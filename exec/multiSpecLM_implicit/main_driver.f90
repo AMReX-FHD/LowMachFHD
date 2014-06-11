@@ -28,7 +28,7 @@ subroutine main_driver()
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
-                                  probin_common_init, &
+                                  probin_common_init, print_int, &
                                   advection_type, fixed_dt, max_step, &
                                   algorithm_type, variance_coef_mom, initial_variance
   use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, &
@@ -45,7 +45,7 @@ subroutine main_driver()
 
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t)              :: dt,time
+  real(kind=dp_t)              :: dt,time,runtime1,runtime2
   integer                      :: n,nlevs,i,dm,istep,ng_s,init_step
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
@@ -276,7 +276,11 @@ subroutine main_driver()
 
   end if
 
-  call eos_check(mla,rho_old)
+  if (print_int .gt. 0) then
+     if (parallel_IOProcessor()) write(*,*) "Initial state:"  
+     call sum_mass(rho_old, istep) ! print out the total mass to check conservation
+     call eos_check(mla,rho_old)
+  end if   
   call compute_rhotot(mla,rho_old,rhotot_old)
 
   !=======================================================
@@ -331,6 +335,33 @@ subroutine main_driver()
   call fill_m_stochastic(mla)
 
   !=====================================================================
+  ! Initialize HydroGrid for analysis
+  !=====================================================================
+  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
+     narg = command_argument_count()
+     farg = 1
+     if (narg >= 1) then
+        call get_command_argument(farg, value = fname)
+        inquire(file = fname, exist = lexist )
+        if ( lexist ) then
+           un = unit_new()
+           open(unit=un, file = fname, status = 'old', action = 'read')
+           
+           ! We will also pass temperature here but no additional scalars
+           call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, &
+                                      nspecies_in=nspecies, &
+                                      nscal_in=0, &
+                                      exclude_last_species_in=.false., &
+                                      analyze_velocity=.true., &
+                                      analyze_density=.true., &
+                                      analyze_temperature=.true.) 
+           
+           close(unit=un)
+        end if
+     end if
+  end if
+
+  !=====================================================================
   ! Initialize values
   !=====================================================================
 
@@ -373,6 +404,12 @@ subroutine main_driver()
                                 stoch_mass_fluxdiv,Temp,dt,dx,n_rngs,the_bc_tower)
      end if
 
+     if (print_int .gt. 0) then
+        if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
+        call sum_mass(rho_old, istep) ! print out the total mass to check conservation
+        call eos_check(mla,rho_old)
+     end if   
+
      ! write initial plotfile
      if (plot_int .gt. 0) then
         if (parallel_IOProcessor()) then
@@ -380,34 +417,12 @@ subroutine main_driver()
         end if
         call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pres,0,dx,time)
      end if
-
-  end if
-
-  !=====================================================================
-  ! Initialize HydroGrid for analysis
-  !=====================================================================
-  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
-     narg = command_argument_count()
-     farg = 1
-     if (narg >= 1) then
-        call get_command_argument(farg, value = fname)
-        inquire(file = fname, exist = lexist )
-        if ( lexist ) then
-           un = unit_new()
-           open(unit=un, file = fname, status = 'old', action = 'read')
-           
-           ! We will also pass temperature here but no additional scalars
-           call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, &
-                                      nspecies_in=nspecies, &
-                                      nscal_in=0, &
-                                      exclude_last_species_in=.false., &
-                                      analyze_velocity=.true., &
-                                      analyze_density=.true., &
-                                      analyze_temperature=.true.) 
-           
-           close(unit=un)
-        end if
+     
+     ! print out projection (average) and variance)
+     if (stats_int .gt. 0) then
+        call print_stats(mla,dx,0,time,rho=rho_old,temperature=Temp)
      end if
+
   end if
 
   !=======================================================
@@ -416,9 +431,15 @@ subroutine main_driver()
 
   do istep=init_step,max_step
 
-      if (parallel_IOProcessor()) then
-         print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-      end if
+      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
+           .or. &
+          (istep .eq. max_step) ) then
+         if (parallel_IOProcessor()) then
+            print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+         end if
+
+         runtime1 = parallel_wtime()
+      end if   
 
       ! advance the solution by dt
       if (algorithm_type .eq. 0) then
@@ -441,6 +462,28 @@ subroutine main_driver()
 
       time = time + dt
 
+      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
+          .or. &
+          (istep .eq. max_step) ) then
+       if (parallel_IOProcessor()) then
+           print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
+        end if
+
+        runtime2 = parallel_wtime() - runtime1
+        call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
+        if (parallel_IOProcessor()) then
+           print*,'Time to advance timestep: ',runtime1,' seconds'
+        end if
+      end if
+      
+      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
+          .or. &
+          (istep .eq. max_step) ) then
+          if (parallel_IOProcessor()) write(*,*) "At time step ", istep, " t=", time           
+          call sum_mass(rho_new, istep) ! print out the total mass to check conservation
+          call eos_check(mla,rho_new)
+      end if
+
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then
 
@@ -462,33 +505,30 @@ subroutine main_driver()
 
          ! print out projection (average) and variance
          if ( (stats_int > 0) .and. &
-               (mod(istep-n_steps_skip,stats_int) .eq. 0) ) then
+               (mod(istep,stats_int) .eq. 0) ) then
             ! Compute vertical and horizontal averages (hstat and vstat files)   
-            call print_stats(mla,dx,istep-n_steps_skip,time,rho=rho_old,temperature=Temp)            
+            call print_stats(mla,dx,istep,time,rho=rho_new,temperature=Temp)            
          end if
 
          ! Add this snapshot to the average in HydroGrid
          if ( (hydro_grid_int > 0) .and. &
-              ( mod(istep-n_steps_skip,hydro_grid_int) .eq. 0 ) ) then
-            call analyze_hydro_grid(mla,dt,dx,istep-n_steps_skip,rho=rho_old,temperature=Temp)           
+              ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
+            call analyze_hydro_grid(mla,dt,dx,istep,rho=rho_new,temperature=Temp)           
          end if
 
          if ( (hydro_grid_int > 0) .and. &
               (n_steps_save_stats > 0) .and. &
-              ( mod(istep-n_steps_skip,n_steps_save_stats) .eq. 0 ) ) then
-              call save_hydro_grid(id=(istep-n_steps_skip)/n_steps_save_stats, step=istep)            
+              ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
+              call save_hydro_grid(id=istep/n_steps_save_stats, step=istep)            
          end if
 
       end if
 
       ! set old state to new state
-     do n=1,nlevs
-        call multifab_copy_c(rho_old(n)   ,1,rho_new(n)   ,1,nspecies,rho_old(n)%ng)
-        call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1,1       ,rhotot_old(n)%ng)
-     end do
-
-      ! print out the total mass to check conservation
-     call sum_mass(rho_old, istep)
+      do n=1,nlevs
+         call multifab_copy_c(rho_old(n)   ,1,rho_new(n)   ,1,nspecies,rho_old(n)%ng)
+         call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1,1       ,rhotot_old(n)%ng)
+      end do
 
   end do
 
