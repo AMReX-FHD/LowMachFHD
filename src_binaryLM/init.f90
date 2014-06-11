@@ -456,7 +456,7 @@ contains
           s(lo(1):hi(1),j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
           s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*c_loc
 
-          ! add random perturbation
+          ! add random perturbation above centerline
           if (j .eq. n_cells(2)/2) then
              do i=lo(1),hi(1)+1
                 call random_number(rand)
@@ -468,22 +468,17 @@ contains
           
        end do
        
-       ! velocity = u_init(1) below centerline
-       !            u_init(2) above centerline
-       ! set momentum = velocity * rho
+       ! momentum = rhobar(1)*u_init(1) below centerline
+       !            rhobar(2)*u_init(2) above centerline
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
           
           if (y .lt. y1) then
-             u_loc = u_init(1)
+             mx(:,j) = rhobar(1)*u_init(1)
           else
-             u_loc = u_init(2)
+             mx(:,j) = rhobar(2)*u_init(2)
           end if
 
-          do i=lo(1),hi(1)+1
-             mx(i,j) = u_loc*s(i,j,1)
-          end do
-          
        end do
 
 
