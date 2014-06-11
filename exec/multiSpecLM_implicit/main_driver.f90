@@ -420,7 +420,7 @@ subroutine main_driver()
      
      ! print out projection (average) and variance)
      if (stats_int .gt. 0) then
-        call print_stats(mla,dx,0,time,rho=rho_old,temperature=Temp)
+        call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp)
      end if
 
   end if
@@ -507,13 +507,13 @@ subroutine main_driver()
          if ( (stats_int > 0) .and. &
                (mod(istep,stats_int) .eq. 0) ) then
             ! Compute vertical and horizontal averages (hstat and vstat files)   
-            call print_stats(mla,dx,istep,time,rho=rho_new,temperature=Temp)            
+            call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)            
          end if
 
          ! Add this snapshot to the average in HydroGrid
          if ( (hydro_grid_int > 0) .and. &
               ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
-            call analyze_hydro_grid(mla,dt,dx,istep,rho=rho_new,temperature=Temp)           
+            call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)           
          end if
 
          if ( (hydro_grid_int > 0) .and. &

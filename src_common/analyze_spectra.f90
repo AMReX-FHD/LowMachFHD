@@ -391,7 +391,7 @@ contains
  
     nlevs = mla%nlevel
     dm = mla%dim
-
+    
     comp=1    
     if(present(umac)) then
        do n=1,nlevs
@@ -912,7 +912,7 @@ contains
              write(1000,'(I0,3A)', advance="no") comp+1,"=av(",trim(variable_names(comp)), "), "
           end do
           do comp=1, nvar
-             write(1000,'(I0,3A)', advance="no") comp+1,"=var(",trim(variable_names(comp)), "), "
+             write(1000,'(I0,3A)', advance="no") nvar+comp+1,"=var(",trim(variable_names(comp)), "), "
           end do
           write(1000,*) ! New line
 
@@ -1037,7 +1037,7 @@ contains
           write(1000,'(I0,3A)', advance="no") comp+1,"=av(",trim(variable_names(comp)), "), "
        end do
        do comp=1, nvar
-          write(1000,'(I0,3A)', advance="no") comp+1,"=var(",trim(variable_names(comp)), "), "
+          write(1000,'(I0,3A)', advance="no") nvar+comp+1,"=var(",trim(variable_names(comp)), "), "
        end do
        write(1000,*) ! New line
 
