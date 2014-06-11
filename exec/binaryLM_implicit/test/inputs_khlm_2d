@@ -54,7 +54,7 @@
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
-  visc_type = -1
+  visc_type = -2
   visc_coef = 1.d-4               ! momentum diffusion coefficient 'eta'   
 
   ! 1 = constant coefficients
