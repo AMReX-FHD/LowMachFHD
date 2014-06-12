@@ -427,6 +427,61 @@ contains
           enddo
        enddo
 
+    case (8)
+
+       ! low Mach Kelvin-Helmholtz for binary paper
+       ! one fluid on top of another
+       ! discontinuous interface, but with random density perturbation added 
+       ! in a 1-cell thick transition region
+
+       my = 0.d0
+       p = 0.d0
+
+       ! middle of domain
+       y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+       ! c_init(1) in lower half of domain (in y)
+       ! c_init(2) in upper half
+       ! random perturbation below centerline
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+          if (y .lt. y1) then
+             c_loc = c_init(1)
+          else
+             c_loc = c_init(2)
+          end if
+          
+          s(lo(1):hi(1),j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+          s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*c_loc
+
+          ! add random perturbation above centerline
+          if (j .eq. n_cells(2)/2) then
+             do i=lo(1),hi(1)+1
+                call random_number(rand)
+                c_loc = rand*c_init(1) + (1.d0-rand)*c_init(2)
+                s(i,j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+                s(i,j,2) = s(i,j,1)*c_loc
+             end do
+          end if
+          
+       end do
+       
+       ! momentum = rhobar(1)*u_init(1) below centerline
+       !            rhobar(2)*u_init(2) above centerline
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+          if (y .lt. y1) then
+             mx(:,j) = rhobar(1)*u_init(1)
+          else
+             mx(:,j) = rhobar(2)*u_init(2)
+          end if
+
+       end do
+
+
     case default
 
        call bl_error("init_2d: invalid prob_type")

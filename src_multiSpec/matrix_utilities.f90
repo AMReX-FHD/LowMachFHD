@@ -35,7 +35,7 @@ contains
       integer :: i, j, k, ii, jj
 
       ! mole fractions correction
-      ! Donev: Turned this off since it should be done in the caller
+      ! Turned this off since it should be done in the caller
       do ii = 1, nspecies
        Xkp(ii) = Xk(ii) ! + fraction_tolerance*(sum(Xk(:))/dble(nspecies)-Xk(ii))
       end do

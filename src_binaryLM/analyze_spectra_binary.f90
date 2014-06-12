@@ -226,14 +226,14 @@ contains
                isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars=0, &
                systemLength = ncells*grid_dx, heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
                timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-               structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
+               structFactMultiplier = 1.0_dp_t )
           else ! Create a fake object that will not be used, with grid size 1x1x1
             ! This way the namelist input files do not have to change     
             call createHydroAnalysis (grid, nCells=(/1,1,1/), nSpecies = 2, &
                isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars=0, &
                systemLength = ncells*grid_dx, heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
                timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-               structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
+               structFactMultiplier = 1.0_dp_t )
           end if     
 
           if(project_dir/=0) then
@@ -243,7 +243,7 @@ contains
                   systemLength = nCells*grid_dx, &
                   heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-                  structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
+                  structFactMultiplier = 1.0_dp_t )
           end if
 
           if(project_dir/=0) then ! Also perform analysis on a 1D grid (along project_dir only)
@@ -252,7 +252,7 @@ contains
                   systemLength = nCells*grid_dx, &
                   heatCapacity = (/1.5_dp_t*k_B_over_m, 1.5_dp_t*k_B_over_m /), &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-                  structFactMultiplier = 1.0_dp_t/max(variance_coef_mom, epsilon(1.0_dp_t)) )
+                  structFactMultiplier = 1.0_dp_t )
           end if
 
        end if
@@ -859,9 +859,9 @@ contains
           open(1000, file=trim(plotfile_name), status = "unknown", action = "write")
 
           if (analyze_conserved) then
-             write(1000,'(A)') "# mx_avg my_avg rho_avg rho*c_avg mx_var my_var rho_var rho*c_var"
+             write(1000,'(A)') "x mx_avg my_avg rho_avg rho*c_avg mx_var my_var rho_var rho*c_var"
           else
-             write(1000,'(A)') "# umac_avg vmac_avg rho_avg c_avg umac_var vmac_var rho_var c_var"
+             write(1000,'(A)') "x umac_avg vmac_avg rho_avg c_avg umac_var vmac_var rho_var c_var"
           end if
           do i=lo(qdim),hi(qdim)
              write(1000,'(1000(g17.9))') prob_lo(qdim) + (i+0.5d0)*dx(1,qdim), &
@@ -1001,17 +1001,17 @@ contains
 
        if (analyze_conserved) then
           if (dm .eq. 2) then
-             write(1000,'(A)') "# mx my rho rho*c mx_var my_var rho_var rho*c_var"
+             write(1000,'(A)') "y mx my rho rho*c mx_var my_var rho_var rho*c_var"
           else if (dm .eq. 3) then
-             write(1000,'(A)') "# mx my mz rho rho*c mx_var my_var mz_var rho_var rho*c_var"
+             write(1000,'(A)') "y mx my mz rho rho*c mx_var my_var mz_var rho_var rho*c_var"
           end if
        else
           if (dm .eq. 2) then
              write(1000,'(A)') &
-             "# umac vmac rho c umac_var vmac_var rho_var c_var"
+             "y umac vmac rho c umac_var vmac_var rho_var c_var"
           else if (dm .eq. 3) then
              write(1000,'(A)') &
-             "# umac vmac wmac rho c umac_var vmac_var wmac_var rho_var c_var"
+             "y umac vmac wmac rho c umac_var vmac_var wmac_var rho_var c_var"
           end if
        end if
        do i=lo(pdim),hi(pdim)

@@ -15,7 +15,6 @@ module compute_mixture_properties_module
 
   public :: compute_mixture_properties, compute_eta, compute_kappa
   
-  ! Donev:
   ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
   ! which should change with different problem types and number of species
   ! depending on the exact physical system being simulated. 
@@ -141,7 +140,7 @@ contains
    
   end subroutine mixture_properties_mass_3d
 
-  ! Donev: This is the key routine here
+  ! This is the key routine here
   ! It should have a case statement, in which different things are done depending on prob_type (Andy can organize that part)
   ! For now the default case should be to simply set D_bar, D_therm and H to constants, read from the input file, as done below
   ! Rename this routine mixture_properties_mass (for now) to make it clear what this does
@@ -174,15 +173,11 @@ contains
        ! We assume nspecies=2
        ! Dbar(1) = chi0 in the binary notation
        if (nspecies .ne. 2) then
-          call bl_error("mixture_properties_mass_local assumes nspecies=2")
+          call bl_error("mixture_properties_mass_local assumes nspecies=2 if prob_type=9 (water-glycerol)")
        end if
        
-       ! mass fraction of glycerol
-       c_loc = rho(1)/rhotot
-
-       ! chi = chi0 * rational function
-       D_bar_local(1) = Dbar(1)*(1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
-
+       call chi_water_glycerol(D_bar_local(1), rho, rhotot, Temp)
+       
     case default
 
        D_bar_local(1:nspecies*(nspecies-1)/2) = Dbar(1:nspecies*(nspecies-1)/2) ! Keep it constant
@@ -350,6 +345,28 @@ contains
     end select
 
   end subroutine compute_eta_3d
+
+  !=================================================
+  ! Water-glycerol mixtures near room temperature
+  !=================================================
+  
+  subroutine chi_water_glycerol(chi,rho,rhotot,Temp) ! This only works for room temperature for now
+
+    real(kind=dp_t), intent(inout) :: chi
+    real(kind=dp_t), intent(in   ) :: rho(:)
+    real(kind=dp_t), intent(in   ) :: rhotot
+    real(kind=dp_t), intent(in   ) :: Temp
+
+    ! local
+    real(kind=dp_t) :: c_loc
+    
+    ! mass fraction of glycerol
+    c_loc = rho(1)/rhotot
+
+    ! chi = chi0 * rational function
+    chi = Dbar(1)*(1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
+        
+  end subroutine chi_water_glycerol
 
   subroutine eta_water_glycerol(eta,rho,rhotot,Temp)
 

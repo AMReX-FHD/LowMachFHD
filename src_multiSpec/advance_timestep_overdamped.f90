@@ -20,7 +20,8 @@ module advance_timestep_overdamped_module
   use mass_flux_utilities_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-  use probin_common_module, only: advection_type, grav, rhobar
+  use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
+                                  variance_coef_mom, restart, algorithm_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies, rho_part_bc_comp
   use analysis_module
@@ -48,7 +49,7 @@ module advance_timestep_overdamped_module
 
 contains
 
-  ! Donev: I think eta and kappa should be local temps inside advance_timestep_overdamped
+  ! eta and kappa can be local temps inside advance_timestep_overdamped
   ! This is consistent with what is done for mass diffusion coefficients
   ! They are local to the wrapper and not really needed outside
   ! Note for future: In general Temp can depend on time so here one should pass
@@ -56,7 +57,7 @@ contains
   subroutine advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         dx,dt,time,the_bc_tower,n_rngs)
+                                         dx,dt,time,the_bc_tower,istep)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -76,7 +77,7 @@ contains
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    integer        , intent(in   ) :: n_rngs
+    integer        , intent(in   ) :: istep
 
     ! local
     type(multifab) ::  rho_update(mla%nlevel)
@@ -94,9 +95,9 @@ contains
 
     integer :: i,dm,n,nlevs
 
-    real(kind=dp_t) :: theta_alpha, norm_pre_rhs
+    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
-    real(kind=dp_t) :: weights(n_rngs)
+    real(kind=dp_t) :: weights(algorithm_type)
 
     weights(:) = 0.d0
     weights(1) = 1.d0
@@ -142,8 +143,9 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! fill the stochastic multifabs with a new set of random numbers
-    ! if this is the first step we already have random numbers from initialization
-    if (time .ne. 0.d0) then ! Donev: It is safer to make this more robust than to compare time to zero -- we may have tests where we start from some nonzero time
+    ! if this is the first step after initialization or restart then
+    ! we already have random numbers from initialization
+    if (istep .ne. 1 .and. istep .ne. restart+1) then
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        call fill_m_stochastic(mla)
     end if
@@ -166,12 +168,14 @@ contains
     end do
 
     ! add div(Sigma^(1)) to gmres_rhs_v
-    if (n_rngs .eq. 1) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                 eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
-    else if (n_rngs .eq. 2) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                 eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
+    if (variance_coef_mom .ne. 0.d0) then
+       if (algorithm_type .eq. 1) then
+          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                    eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+       else if (algorithm_type .eq. 2) then
+          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                    eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
+       end if
     end if
 
     ! add rho^n*g to gmres_rhs_v
@@ -196,21 +200,23 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    if (n_rngs .eq. 1) then
+    if (algorithm_type .eq. 1) then
        call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                          flux_total,dt,time,dx,weights, &
-                                         n_rngs,the_bc_tower%bc_tower_array)
-    else if (n_rngs .eq. 2) then
+                                         the_bc_tower%bc_tower_array)
+    else if (algorithm_type .eq. 2) then
        call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                          flux_total,0.5d0*dt,time,dx,weights, &
-                                         n_rngs,the_bc_tower%bc_tower_array)
+                                         the_bc_tower%bc_tower_array)
     end if
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       if (variance_coef_mass .ne. 0) then
+          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
        do i=1,dm
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
        end do
@@ -222,7 +228,9 @@ contains
     do n=1,nlevs
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          if (variance_coef_mass .ne. 0.d0) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
        end do
     end do
 
@@ -232,7 +240,9 @@ contains
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
-       call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
@@ -275,7 +285,9 @@ contains
        call multifab_setval(dp(n),0.d0,all=.true.)
     end do
 
-    gmres_abs_tol = 0.d0
+    gmres_abs_tol_in = gmres_abs_tol ! Save this  
+    ! This relies entirely on relative tolerance and can fail if the rhs is roundoff error only:
+    !gmres_abs_tol = 0.d0 ! It is better to set gmres_abs_tol in namelist to a sensible value
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
@@ -284,7 +296,7 @@ contains
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
     ! for cases where du in the corrector should be small the gmres stalls
-    gmres_abs_tol = norm_pre_rhs*gmres_rel_tol
+    gmres_abs_tol = max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol)
 
     ! compute v^* = v^{n-1/2} + delta v
     ! compute p^* = p^{n-1/2} + delta p
@@ -345,7 +357,7 @@ contains
        call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    call eos_check(mla,rho_new)
+    !call eos_check(mla,rho_new)
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -377,13 +389,15 @@ contains
        end do
     end do
 
-    if (n_rngs .eq. 2) then
+    if (algorithm_type .eq. 2) then
        weights(:) = 1.d0/sqrt(2.d0)
     end if
 
     ! add div(Sigma^(2)) to gmres_rhs_v
-    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                              eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+    if (variance_coef_mom .ne. 0.d0) then
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+    end if
 
     ! add rho^{*,n+1}*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
@@ -410,11 +424,13 @@ contains
     call compute_mass_fluxdiv_wrapper(mla,rho_new,rhotot_new, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,time,dx,weights, &
-                                      n_rngs,the_bc_tower%bc_tower_array)
+                                      the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
        do i=1,dm
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
        end do
@@ -425,8 +441,10 @@ contains
 
     do n=1,nlevs
        do i=1,nspecies
-          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          if (variance_coef_mass .ne. 0.d0) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
        end do
     end do
 
@@ -436,7 +454,9 @@ contains
        call multifab_setval(rho_update(n),0.d0,all=.true.)
        ! add fluxes
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
-       call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
@@ -482,6 +502,8 @@ contains
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha)
+                              
+    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance         
 
     ! compute v^{n+1/2} = v^* + delta v
     ! compute p^{n+1/2} = p^* + delta p
@@ -540,7 +562,7 @@ contains
        call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    call eos_check(mla,rho_new)
+    !call eos_check(mla,rho_new)
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

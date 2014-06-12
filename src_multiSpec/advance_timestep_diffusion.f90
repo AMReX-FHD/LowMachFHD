@@ -94,7 +94,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rho,rhotot,&
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        n_rngs,the_bc_level)
+                                        the_bc_level)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
@@ -129,7 +129,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rho,rhotot,&
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        n_rngs,the_bc_level)
+                                        the_bc_level)
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
@@ -155,7 +155,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rhonew,rhotot,&
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        n_rngs,the_bc_level)
+                                        the_bc_level)
 
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
@@ -192,7 +192,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rho,rhotot,&
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        n_rngs,the_bc_level)
+                                        the_bc_level)
  
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
@@ -220,7 +220,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rhonew,rhotot,&
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total, &
                                         dt,stage_time,dx,weights,&
-                                        n_rngs,the_bc_level)
+                                        the_bc_level)
  
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
@@ -257,7 +257,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rho,rhotot,&
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        n_rngs,the_bc_level)
+                                        the_bc_level)
  
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
@@ -285,7 +285,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rhonew,rhotot,&
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        n_rngs,the_bc_level)
+                                        the_bc_level)
 
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
@@ -320,7 +320,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rhonew,rhotot,&
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        n_rngs,the_bc_level)
+                                        the_bc_level)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
