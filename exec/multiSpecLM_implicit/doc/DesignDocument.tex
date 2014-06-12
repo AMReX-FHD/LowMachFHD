@@ -64,8 +64,13 @@ with $\Fb_i$ containing both the diffusive and stochastic mass fluxes.  The equa
 \nabla\cdot\vb = \nabla\cdot\left(\sum_i\frac{\Fb_i}{\bar\rho_i}\right) \equiv S\label{eq:S}.
 \end{equation}
 
+\clearpage
+
 \section{Overdamped 1RNG Algorithm}
-Here is the time-advancement scheme.\\ \\
+This algorithm is of limited use since it is not formally second-order accurate.  It was
+an early test algorithm, and it so happens that the second Stokes solve is a null-op
+for the constant-coefficient, incompressible, no gravity case.  But anyway, here it
+is for the record.\\ \\
 {\bf Step 0: Initialization:}\\ \\
 Begin with an initial guess for velocity, $\vb^{-\myhalf}$ (note this only used as a reference state for the GMRES
 solve and for computing the right-hand-side for pressure, so it does not have to satisfy any constraint),
@@ -73,6 +78,7 @@ and pressure, $p^{-\myhalf}$.\\ \\
 {\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
 Compute $\Fb_i$ and $\nabla\cdot\Fb_i^n$ from $(\rho_i^n,T^n)$
 using the supplied {\tt compute\_mass\_fluxdiv} subroutine.
+Pass in $\Delta t$ as the scaling factor for the random fluxes.
 Construct $S^n$ using equation (\ref{eq:S}).\\ \\
 {\bf Step 2: Predictor Stokes Solve:}
 Generate a random advection velocity by solving the steady Stokes equation with random forcing.
@@ -80,7 +86,7 @@ Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + 
 (in these notes the overline indicates the the velocity field has been modified to incorporate
 the boundary conditions on the full velocity field after the solve) and solve:
 \begin{equation}
-\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{(1)}},
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^{(1)}},
 \end{equation}
 \begin{equation}
 \nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
@@ -88,7 +94,7 @@ the boundary conditions on the full velocity field after the solve) and solve:
 which can be written as
 \begin{equation}
 -\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
-+ \nabla\cdot\Sigmab^{(1)},\label{eq:Overdamped Pred Stokes}
++ \nabla\cdot\Sigmab^{(1)},
 \end{equation}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
@@ -103,11 +109,12 @@ Set $\rho^{*,n+\myhalf} = \sum_i\rho_i^{*,n+\myhalf}$.\\ \\
 Compute $\Fb_i^{*,n+\myhalf}$ and 
 $\nabla\cdot\Fb_i^{*,n+\myhalf}$ from $(\rho_i^{*,n+\myhalf},T^{*,n+\myhalf})$ using the supplied 
 {\tt compute\_mass\_fluxdiv} subroutine.
+Pass in $\Delta t/2$ as the scaling factor for the random fluxes.
 Construct $S^{*,n+\myhalf}$ using equation (\ref{eq:S}).\\ \\
 {\bf Step 5: Corrector Stokes Solve:}\\ \\
 Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
 \begin{equation}
-\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^{(2)}},
+\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^{(2)}},
 \end{equation}
 \begin{equation}
 \nabla\cdot(\overline\vb^* + \delta\vb) = S^{*,n+\myhalf},
@@ -121,7 +128,76 @@ which can be written as
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
 \end{equation}
 Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
-{\bf Step 6: Trapezoidal Scalar Corrector:}\\ \\
+{\bf Step 6: Midpoint Scalar Corrector:}\\ \\
+Update the densities and concentrations
+\begin{eqnarray}
+\rho_i^{n+1} &=& \rho_i^n + \Delta t\left(-\rho_i^{*,n+\myhalf}\vb^{n+\myhalf} + \Fb_i^{*,n+\myhalf}\right).
+\end{eqnarray}
+Set $\rho^{n+1} = \sum_i\rho_i^{n+1}$.
+
+\clearpage
+
+\section{Overdamped 2RNG Algorithm}
+This is our preferred algorithm.\\ \\
+{\bf Step 0: Initialization:}\\ \\
+Begin with an initial guess for velocity, $\vb^{-\myhalf}$ (note this only used as a reference state for the GMRES
+solve and for computing the right-hand-side for pressure, so it does not have to satisfy any constraint),
+and pressure, $p^{-\myhalf}$.\\ \\
+{\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
+Compute $\Fb_i$ and $\nabla\cdot\Fb_i^n$ from $(\rho_i^n,T^n)$ using the supplied {\tt compute\_mass\_fluxdiv} subroutine.
+Pass in $\Delta t/2$ as the scaling factor for the random fluxes.
+Construct $S^n$ using equation (\ref{eq:S}).\\ \\
+{\bf Step 2: Predictor Stokes Solve:}
+Generate a random advection velocity by solving the steady Stokes equation with random forcing.
+Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + \delta\vb$ 
+(in these notes the overline indicates the the velocity field has been modified to incorporate
+the boundary conditions on the full velocity field after the solve) and solve:
+\begin{equation}
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) 
++ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb_A^n}_{\Sigmab^{(1)}},
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
++ \nabla\cdot\Sigmab^{(1)},
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
+\end{equation}
+{\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
+Take a midpoint predictor forward Euler step for $\rho_i$:
+\begin{equation}
+\rho_i^{*,n+\myhalf} = \rho_i^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_i^n\vb^* + \Fb_i^n).
+\end{equation}
+Set $\rho^{*,n+\myhalf} = \sum_i\rho_i^{*,n+\myhalf}$.\\ \\
+{\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
+Compute $\Fb_i^{*,n+\myhalf}$ and 
+$\nabla\cdot\Fb_i^{*,n+\myhalf}$ from $(\rho_i^{*,n+\myhalf},T^{*,n+\myhalf})$ using the supplied 
+{\tt compute\_mass\_fluxdiv} subroutine.
+Pass in $\Delta t/2$ as the scaling factor for the random fluxes.
+Construct $S^{*,n+\myhalf}$ using equation (\ref{eq:S}).\\ \\
+{\bf Step 5: Corrector Stokes Solve:}\\ \\
+Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
+\begin{equation}
+\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) 
++ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left(\frac{\overline\Wb_A^n + \overline\Wb_B^n}{\sqrt{2}}\right)}_{\Sigmab^{(2)}},
+\end{equation}
+\begin{equation}
+\nabla\cdot(\overline\vb^* + \delta\vb) = S^{*,n+\myhalf},
+\end{equation}
+which can be written as
+\begin{equation}
+-\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\overline\vb^*
++ \nabla\cdot\Sigmab^{(2)},
+\end{equation}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
+\end{equation}
+Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
+{\bf Step 6: Midpoint Scalar Corrector:}\\ \\
 Update the densities and concentrations
 \begin{eqnarray}
 \rho_i^{n+1} &=& \rho_i^n + \Delta t\left(-\rho_i^{*,n+\myhalf}\vb^{n+\myhalf} + \Fb_i^{*,n+\myhalf}\right).
