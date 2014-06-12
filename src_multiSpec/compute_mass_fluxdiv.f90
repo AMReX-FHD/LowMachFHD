@@ -25,7 +25,7 @@ contains
   subroutine compute_mass_fluxdiv_wrapper(mla,rho,rhotot, &
                                           diff_fluxdiv,stoch_fluxdiv,Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
-                                          n_rngs,the_bc_level)
+                                          the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -38,7 +38,6 @@ contains
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
-    integer,         intent(in   )   :: n_rngs
     type(bc_level) , intent(in   )   :: the_bc_level(:)
 
     ! local
@@ -69,7 +68,7 @@ contains
     call compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
                               D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                               zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
-                              n_rngs,the_bc_level)
+                              the_bc_level)
 
     do n=1,nlevs
        call multifab_destroy(molarconc(n))
@@ -87,7 +86,7 @@ contains
   subroutine compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                                   zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
-                                  n_rngs,the_bc_level)
+                                  the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -108,7 +107,6 @@ contains
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
-    integer,         intent(in   )   :: n_rngs
     type(bc_level) , intent(in   )   :: the_bc_level(:)
 
     ! local variables
