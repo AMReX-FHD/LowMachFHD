@@ -34,6 +34,7 @@
 
 \def\bb {{\bf b}}
 \def\Fb {{\bf F}}
+\def\gb {{\bf g}}
 \def\vb {{\bf v}}
 \def\Wb {{\bf W}}
 \def\xb {{\bf x}}
@@ -87,7 +88,7 @@ Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + 
 (in these notes the overline indicates the the velocity field has been modified to incorporate
 the boundary conditions on the full velocity field after the solve) and solve:
 \begin{equation}
-\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^{(1)}},
+\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^{(1)}} + \rho^n\gb,
 \end{equation}
 \begin{equation}
 \nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
@@ -95,7 +96,7 @@ the boundary conditions on the full velocity field after the solve) and solve:
 which can be written as
 \begin{equation}
 -\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
-+ \nabla\cdot\Sigmab^{(1)},
++ \nabla\cdot\Sigmab^{(1)}  + \rho^n\gb,
 \end{equation}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
@@ -115,7 +116,7 @@ Construct $S^{*,n+\myhalf}$ using equation (\ref{eq:S}).\\ \\
 {\bf Step 5: Corrector Stokes Solve:}\\ \\
 Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
 \begin{equation}
-\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^{(2)}},
+\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^{(2)}} + \rho^{*,n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
 \nabla\cdot(\overline\vb^* + \delta\vb) = S^{*,n+\myhalf},
@@ -123,7 +124,7 @@ Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\
 which can be written as
 \begin{equation}
 -\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\overline\vb^*
-+ \nabla\cdot\Sigmab^{(2)},
++ \nabla\cdot\Sigmab^{(2)} + \rho^{*,n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
@@ -155,7 +156,7 @@ Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + 
 the boundary conditions on the full velocity field after the solve) and solve:
 \begin{equation}
 \nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) 
-+ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb_A^n}_{\Sigmab^{(1)}},
++ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb_A^n}_{\Sigmab^{(1)}} + \rho^n\gb,
 \end{equation}
 \begin{equation}
 \nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
@@ -163,7 +164,7 @@ the boundary conditions on the full velocity field after the solve) and solve:
 which can be written as
 \begin{equation}
 -\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
-+ \nabla\cdot\Sigmab^{(1)},
++ \nabla\cdot\Sigmab^{(1)} + \rho^n\gb,
 \end{equation}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
@@ -184,7 +185,7 @@ Construct $S^{*,n+\myhalf}$ using equation (\ref{eq:S}).\\ \\
 Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
 \begin{equation}
 \nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) 
-+ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left(\frac{\overline\Wb_A^n + \overline\Wb_B^n}{\sqrt{2}}\right)}_{\Sigmab^{(2)}},
++ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left(\frac{\overline\Wb_A^n + \overline\Wb_B^n}{\sqrt{2}}\right)}_{\Sigmab^{(2)}} + \rho^{*,n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
 \nabla\cdot(\overline\vb^* + \delta\vb) = S^{*,n+\myhalf},
@@ -192,7 +193,7 @@ Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\
 which can be written as
 \begin{equation}
 -\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\overline\vb^*
-+ \nabla\cdot\Sigmab^{(2)},
++ \nabla\cdot\Sigmab^{(2)} + \rho^{*,n+\myhalf}\gb,
 \end{equation}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
@@ -228,72 +229,70 @@ For the projection, we solve for $\phi$ and update $\vb^{\rm init}$ as follows:
 Compute $\Fb_i^n$ and $\nabla\cdot\Fb_i^n$ from $(\rho_i^n,T^n)$ using the supplied 
 {\tt compute\_mass\_fluxdiv} subroutine.  Construct $S^n$ using equation (\ref{eq:S}).
 Note this step is functionally a null-op since we reuse the result from 
-either {\bf Step 0} or {\bf Step 6} from the previous time step\\ \\
+either {\bf Step 0} or {\bf Step 6} from the previous time step.\\ \\
 {\bf Step 2: Predictor Euler Step}\\ \\
+Using the velocity field from either {\bf Step 0} or {\bf Step 7} from the previous
+time step, take a predictor forward Euler step for $\rho_i$:
+\begin{equation}
+\rho_i^{*,n+1} = \rho_i^n + \Delta t\nabla\cdot\left(-\rho_i^n\vb^n + \Fb^n\right).
+\end{equation}
 {\bf Step 3: Calculate Corrector Diffusive and Stochastic Fluxes}\\ \\
+We reuse the same random numbers, but evaluate the diffusive fluxes and the noise amplitude from the predictor
+to compute $\Fb^{*,n+1}$ and $S^{*,n+1}$.
 {\bf Step 4: Predictor Crank-Nicolson Step}\\ \\
-{\bf Step 5: Trapezoidal Scalar Corrector}\\ \\
-{\bf Step 6: Calculate Diffusive and Stochastic Fluxes}\\ \\
-{\bf Step 7: Corrector Crank-Nicolson Step}\\ \\
-
-
-\clearpage
-
-{\bf Step 1: Predictor Stochastic/Diffusive Fluxes:}\\ \\
-{\bf Step 2: Predictor Stokes Solve:}
-Generate a random advection velocity by solving the steady Stokes equation with random forcing.
-Define $p^* = p^{n-\myhalf} + \delta p$ and $\vb^* = \overline\vb^{n-\myhalf} + \delta\vb$ 
-(in these notes the overline indicates the the velocity field has been modified to incorporate
-the boundary conditions on the full velocity field after the solve) and solve:
-\begin{equation}
-\nabla(p^{n-\myhalf} + \delta p) = \mathcal A_0^n(\overline\vb^{n-\myhalf} + \deltab\vb) 
-+ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb_A^n}_{\Sigmab^{(1)}},
-\end{equation}
-\begin{equation}
-\nabla\cdot(\overline\vb^{n-\myhalf} + \delta\vb) = S^n,
-\end{equation}
-which can be written as
-\begin{equation}
--\mathcal{A}_0^n\deltab\vb + \nabla\delta p = -\nabla p^{n-\myhalf} + \mathcal{A}_0^n\overline\vb^{n-\myhalf}
-+ \nabla\cdot\Sigmab^{(1)},
-\end{equation}
-\begin{equation}
--\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n-\myhalf} - S^n.
-\end{equation}
-{\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
-Take a midpoint predictor forward Euler step for $\rho_i$:
-\begin{equation}
-\rho_i^{*,n+\myhalf} = \rho_i^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_i^n\vb^* + \Fb_i^n).
-\end{equation}
-Set $\rho^{*,n+\myhalf} = \sum_i\rho_i^{*,n+\myhalf}$.\\ \\
-{\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
-Compute $\Fb_i^{*,n+\myhalf}$ and 
-$\nabla\cdot\Fb_i^{*,n+\myhalf}$ from $(\rho_i^{*,n+\myhalf},T^{*,n+\myhalf})$ using the supplied 
-{\tt compute\_mass\_fluxdiv} subroutine.
-Pass in $\Delta t/2$ as the scaling factor for the random fluxes.
-Construct $S^{*,n+\myhalf}$ using equation (\ref{eq:S}).\\ \\
-{\bf Step 5: Corrector Stokes Solve:}\\ \\
-Solve a steady Stokes system with $p^{n+\myhalf} = p^* + \delta p$ and $\vb^{n+\myhalf} = \overline\vb^* + \delta\vb$:
-\begin{equation}
-\nabla(p^* + \delta p) = \mathcal A_0^{*,n+\myhalf}(\overline\vb^* + \deltab\vb) 
-+ \nabla\cdot\underbrace{\sqrt{\frac{2\eta^{*,n+\myhalf} k_B T}{\Delta t\Delta V}}\left(\frac{\overline\Wb_A^n + \overline\Wb_B^n}{\sqrt{2}}\right)}_{\Sigmab^{(2)}},
-\end{equation}
-\begin{equation}
-\nabla\cdot(\overline\vb^* + \delta\vb) = S^{*,n+\myhalf},
-\end{equation}
-which can be written as
-\begin{equation}
--\mathcal{A}_0^{*,n+\myhalf}\deltab\vb + \nabla\delta p = -\nabla p^* + \mathcal{A}_0^{*,n+\myhalf}\overline\vb^*
-+ \nabla\cdot\Sigmab^{(2)},
-\end{equation}
-\begin{equation}
--\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^* - S^{*,n+\myhalf}.
-\end{equation}
-Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} = p^* + \delta p$.\\ \\
-{\bf Step 6: Midpoint Scalar Corrector:}\\ \\
-Update the densities and concentrations
+Define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb, p^{*,n+1} = p^n + \delta p$ (in these notes the overline
+indicates the the velocity field has been modified to incorporate the boundary conditions on the
+full velocity field after the solve) and solve
+for $\deltab\vb$ and $\delta p$:
 \begin{eqnarray}
-\rho_i^{n+1} &=& \rho_i^n + \Delta t\left(-\rho_i^{*,n+\myhalf}\vb^{n+\myhalf} + \Fb_i^{*,n+\myhalf}\right).
+\frac{\rho^{*,n+1}(\overline\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^n+\delta p) &=&\nonumber\\
+&&\hspace{-1in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^n(\overline\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^n} + \rho^n\gb,\nonumber\\
 \end{eqnarray}
-Set $\rho^{n+1} = \sum_i\rho_i^{n+1}$.
+\begin{equation}
+\nabla\cdot(\overline\vb^n+\deltab\vb) = S^{*,n+1}.
+\end{equation}
+We rewrite this system as
+\begin{eqnarray}
+\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{*,n+1}\overline\vb^n}{\Delta t} -\nabla p^n\nonumber\\
+&&\hspace{-0.5in}+ \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\mathcal{A}_0^n\vb^n + \half\mathcal{A}_0^n\overline\vb^n + \nabla\cdot\Sigmab^n + \rho^n\gb,\label{eq:CN Vel Pred}
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^n - S^{*,n+1}.
+\end{equation}
+Relating this to the GMRES solver, we can see that we are solving for 
+$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\overline\vb^n-S^{*,n+1}$ (note the change in sign!) 
+and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:CN Vel Pred}).  For the Helmholtz-like operator, 
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t, \alpha=\rho^{*,n+1}, 
+\beta=\eta/2$, and $\gamma=\kappa/2$.
+Next, define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb$ and $p^{*,n+1} = p^n + \delta p$.\\ \\
+{\bf Step 5: Trapezoidal Scalar Corrector}\\ \\
+Update the densities:
+\begin{equation}
+\rho_i^{n+1} = \half\rho_i^n + \half\left[\rho_i^{*,n+1} + \Delta t\nabla\cdot(-\rho_i^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right].
+\end{equation}
+{\bf Step 6: Calculate Diffusive and Stochastic Fluxes}\\ \\
+Calculate the fluxes for the next time level using a new set of random numbers to obtain $\Fb^{n+1}$ and $S^{n+1}$.
+{\bf Step 7: Corrector Crank-Nicolson Step}\\ \\
+Take a corrector step for velocity, using the same random numbers as for the predictor
+stage, but average the amplitude of the stochastic flux between time $n$ and $n+1$:
+Define $\vb^{n+1} = \overline\vb^{*,n+1} + \deltab\vb$ and $p^{n+1} = p^{*,n+1} + \delta p$ and
+solve the following system for $(\deltab\vb,\delta p)$:
+\begin{eqnarray}
+\frac{\rho^{n+1}(\overline\vb^{*,n+1} + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^{*,n+1}+\delta p) &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1})\nonumber\\
+&&\hspace{-1.5in}+ \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}(\overline\vb^{*,n+1} + \deltab\vb)\right]\nonumber\\
+&&\hspace{-1.5in}+ \nabla\cdot\underbrace{\half\left(\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}} + \sqrt{\frac{2\eta^{n+1} k_B T}{\Delta t\Delta V}}\right)\overline\Wb^n}_{\Sigmab^{n'}} + \half\left(\rho^n+\rho^{n+1}\right)\gb,
+\end{eqnarray}
+\begin{equation}
+\nabla\cdot(\overline\vb^{*,n+1} + \deltab\vb) = S^{n+1}.
+\end{equation}
+We rewrite this system as:
+\begin{eqnarray}
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{n+1}\overline\vb^{*,n+1}}{\Delta t} -\nabla p^n\nonumber\\
+&&+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}\overline\vb^{*,n+1} )\nonumber\\
+&&+ \nabla\cdot\Sigmab^{n'} + \half\left(\rho^n+\rho^{n+1}\right)\gb,
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S^{n+1}.
+\end{equation}
+
 \end{document}
