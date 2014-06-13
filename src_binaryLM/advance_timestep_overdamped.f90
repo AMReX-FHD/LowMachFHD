@@ -467,7 +467,7 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 6 - Trapezoidal Scalar Corrector
+    ! Step 6 - Midpoint Scalar Corrector
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! add A^{n+1/2} for scalars to s_update
