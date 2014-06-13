@@ -276,7 +276,7 @@ subroutine main_driver()
 
   if (print_int .gt. 0) then
      if (parallel_IOProcessor()) write(*,*) "Initial state:"  
-     call sum_mass(rho_old, istep) ! print out the total mass to check conservation
+     call sum_mass(rho_old, 0) ! print out the total mass to check conservation
      call eos_check(mla,rho_old)
   end if   
   call compute_rhotot(mla,rho_old,rhotot_old)
@@ -404,7 +404,7 @@ subroutine main_driver()
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
-        call sum_mass(rho_old, istep) ! print out the total mass to check conservation
+        call sum_mass(rho_old,0) ! print out the total mass to check conservation
         call eos_check(mla,rho_old)
      end if   
 
