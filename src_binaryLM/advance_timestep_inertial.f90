@@ -697,14 +697,13 @@ contains
     ! compute div(vbar^{n+1,*})
     call compute_div(mla,umac,divu,dx,1,1,1)
 
-
     ! multiply gmres_rhs_p -S_fac
     do n=1,nlevs
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
 
-    ! add div(v^{n+1,*}) to gmres_rhs_p
-    ! now gmres_rhs_p = div(v^{n+1,*}) - S^{n+1}
+    ! add div(vbar^{n+1,*}) to gmres_rhs_p
+    ! now gmres_rhs_p = div(vbar^{n+1,*}) - S^{n+1}
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)

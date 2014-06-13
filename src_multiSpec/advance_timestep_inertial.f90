@@ -112,7 +112,7 @@ contains
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
-       call multifab_build(   rho_update(n),mla%la(n),nspecies,0)
+       call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
        call multifab_build(         dp(n),mla%la(n),1,1)
@@ -531,6 +531,10 @@ contains
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
+    ! compute (eta,kappa)^{n+1}
+    call compute_eta(mla,eta,eta_ed,rho_new,rhotot_new,Temp,pres,dx,the_bc_tower%bc_tower_array)
+    call compute_kappa(mla,kappa)
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 6 - Calculate Diffusive and Stochastic Fluxes
     ! Step 7 - Corrector Crank-Nicolson Step
@@ -595,10 +599,6 @@ contains
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc,the_bc_tower)
     end if
-
-    ! compute (eta,kappa)^{n+1}
-    call compute_eta(mla,eta,eta_ed,rho_new,rhotot_new,Temp,pres,dx,the_bc_tower%bc_tower_array)
-    call compute_kappa(mla,kappa)
 
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
