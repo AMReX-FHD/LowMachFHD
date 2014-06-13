@@ -94,7 +94,6 @@ contains
     type(multifab) ::     umac_tmp(mla%nlevel,mla%dim)
     type(multifab) ::        gradp(mla%nlevel,mla%dim)
     type(multifab) ::     s_fc_old(mla%nlevel,mla%dim)
-    type(multifab) ::   chi_fc_old(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -121,16 +120,15 @@ contains
        call multifab_build(         dp(n),mla%la(n),1,1)
        call multifab_build(       divu(n),mla%la(n),1,0)
        do i=1,dm
-          call multifab_build_edge(         mtemp(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   gmres_rhs_v(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   m_a_fluxdiv(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   m_d_fluxdiv(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   m_s_fluxdiv(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(         dumac(n,i),mla%la(n),1,1,i)
-          call multifab_build_edge(      umac_tmp(n,i),mla%la(n),1,1,i)
-          call multifab_build_edge(         gradp(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(      s_fc_old(n,i),mla%la(n),2,1,i)
-          call multifab_build_edge(    chi_fc_old(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(      mtemp(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(m_a_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(m_d_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(m_s_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(      dumac(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(   umac_tmp(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(      gradp(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(   s_fc_old(n,i),mla%la(n),2,1,i)
        end do
 
     end do
@@ -149,9 +147,8 @@ contains
     ! make copies of old quantities
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(  umac_tmp(n,i),1,  umac(n,i),1,1    ,1)
-          call multifab_copy_c(  s_fc_old(n,i),1,  s_fc(n,i),1,2    ,1)
-          call multifab_copy_c(chi_fc_old(n,i),1,chi_fc(n,i),1,1    ,0)
+          call multifab_copy_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
+          call multifab_copy_c(s_fc_old(n,i),1,s_fc(n,i),1,2,1)
        end do
     end do
 
@@ -802,7 +799,6 @@ contains
           call multifab_destroy(umac_tmp(n,i))
           call multifab_destroy(gradp(n,i))
           call multifab_destroy(s_fc_old(n,i))
-          call multifab_destroy(chi_fc_old(n,i))
        end do
     end do
 
