@@ -393,13 +393,9 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,1.d0/2.d0,1,eta(n)%ng)
        call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,kappa(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,1.d0/2.d0,1,eta_ed(n,2)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,1.d0/2.d0,1,eta_ed(n,3)%ng)
-       end if
+       do i=1,size(eta_ed,dim=2)
+          call multifab_mult_mult_s_c(eta_ed(n,i),1,1.d0/2.d0,1,eta_ed(n,i)%ng)
+       end do
     end do
 
     ! set the initial guess to zero
@@ -429,13 +425,9 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,eta(n)%ng)
        call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,2.d0,1,eta_ed(n,2)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,2.d0,1,eta_ed(n,3)%ng)
-       end if
+       do i=1,size(eta_ed,dim=2)
+          call multifab_mult_mult_s_c(eta_ed(n,i),1,2.d0,1,eta_ed(n,i)%ng)
+       end do
     end do
 
     ! compute v^{*,n+1} = v^n + delta v
@@ -725,13 +717,9 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,1.d0/2.d0,1,eta(n)%ng)
        call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,eta(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,1.d0/2.d0,1,eta_ed(n,2)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,1.d0/2.d0,1,eta_ed(n,3)%ng)
-       end if
+       do i=1,size(eta_ed,dim=2)
+          call multifab_mult_mult_s_c(eta_ed(n,i),1,1.d0/2.d0,1,eta_ed(n,i)%ng)
+       end do
     end do
 
     ! set the initial guess to zero
@@ -754,13 +742,9 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,eta(n)%ng)
        call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,2.d0,1,eta_ed(n,1)%ng)
-       end if
+       do i=1,size(eta_ed,dim=2)
+          call multifab_mult_mult_s_c(eta_ed(n,i),1,2.d0,1,eta_ed(n,i)%ng)
+       end do
     end do
 
     ! compute v^{n+1} = v^{n+1,*} + dumac
