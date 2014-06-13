@@ -93,10 +93,22 @@ contains
 !    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
 !                                   the_bc_tower%bc_tower_array)
 
+    ! compute diffusive and stochastic mass fluxes
+    ! this computes "-F" so we later multiply by -1
     call compute_mass_fluxdiv_wrapper(mla,rho,rhotot, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,0.d0,dx,weights, &
                                       the_bc_tower%bc_tower_array)
+
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
+       do i=1,dm
+          call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
+       end do
+    end do
 
     ! set mac_rhs to -S
     ! -S = -sum div (F_i / rhobar_i)

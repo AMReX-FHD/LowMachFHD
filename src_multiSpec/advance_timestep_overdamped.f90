@@ -224,6 +224,7 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
+    ! put "-S" into gmres_rhs_p (we will later add divu)
     do n=1,nlevs
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
@@ -430,14 +431,12 @@ contains
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
-       do i=1,dm
-          call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
-       end do
     end do
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
+    ! put "-S" into gmres_rhs_p (we will later add divu)
     do n=1,nlevs
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
