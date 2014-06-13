@@ -410,7 +410,7 @@ contains
        call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
 
-    gmres_abs_tol = 0.d0
+    gmres_abs_tol_in = gmres_abs_tol ! Save this 
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
@@ -419,7 +419,7 @@ contains
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
     ! for cases where du in the corrector should be small the gmres stalls
-    gmres_abs_tol = norm_pre_rhs*gmres_rel_tol
+    gmres_abs_tol = max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol)
 
     ! restore eta and kappa
     do n=1,nlevs
@@ -737,6 +737,8 @@ contains
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
                eta,eta_ed,kappa,theta_alpha)
+                              
+    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
 
     ! restore eta and kappa
     do n=1,nlevs
