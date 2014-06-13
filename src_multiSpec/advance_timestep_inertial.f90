@@ -20,7 +20,7 @@ module advance_timestep_inertial_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, restart, algorithm_type
+                                  variance_coef_mom, restart
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies, rho_part_bc_comp
   use analysis_module
@@ -90,15 +90,14 @@ contains
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
-    real(kind=dp_t) :: weights(algorithm_type)
+    real(kind=dp_t) :: weights(1)
 
-    weights(:) = 0.d0
     weights(1) = 1.d0
 
     nlevs = mla%nlevel
     dm = mla%dim
 
-    theta_alpha = 0.d0
+    theta_alpha = 1.d0/dt
     
     call build_bc_multifabs(mla)
     
@@ -125,6 +124,74 @@ contains
           call setval(dumac(n,i),0.d0,all=.true.)
        end do
     end do
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 1 - Calculate Predictor Diffusive and Stochastic Fluxes
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! diff_mass_fluxdiv and stoch_mass_fluxdiv already contain F_i
+    ! this was already done in Step 0 (initialization) or Step 6 from the previous time step
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 2 - Predictor Euler Step
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! average rho and rhotot to faces
+    call average_cc_to_face(nlevs,   rho_old,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+
+    ! add D^n and St^n to rho_update
+    do n=1,nlevs
+       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+    end do
+
+    ! add A^n to rho_update
+    if (advection_type .ge. 1) then
+      do n=1,nlevs
+         call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
+         call multifab_fill_boundary(bds_force(n))
+      end do
+
+      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+      else
+          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+      end if
+    else
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+    end if
+
+    ! set rho_new = rho_old + dt * (A^n + D^n + St^n)
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(rho_update(n),1,dt,nspecies,0)
+       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+       call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(rho_new(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+    end do
+
+    call eos_check(mla,rho_new)
+    call compute_rhotot(mla,rho_new,rhotot_new)
+
+    stop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     ! average rho and rhotot to faces
     call average_cc_to_face(nlevs,   rho_old,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -162,13 +229,8 @@ contains
 
     ! add div(Sigma^(1)) to gmres_rhs_v
     if (variance_coef_mom .ne. 0.d0) then
-       if (algorithm_type .eq. 1) then
-          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                    eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
-       else if (algorithm_type .eq. 2) then
-          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                    eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
-       end if
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
     ! add rho^n*g to gmres_rhs_v
@@ -193,17 +255,10 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    if (algorithm_type .eq. 1) then
-       call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
-                                         flux_total,dt,time,dx,weights, &
-                                         the_bc_tower%bc_tower_array)
-    else if (algorithm_type .eq. 2) then
-       call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
-                                         flux_total,0.5d0*dt,time,dx,weights, &
-                                         the_bc_tower%bc_tower_array)
-    end if
+    call compute_mass_fluxdiv_wrapper(mla,rho_old,rhotot_old, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
+                                      flux_total,dt,time,dx,weights, &
+                                      the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
@@ -381,10 +436,6 @@ contains
           call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradp(n,i),1,1,0)
        end do
     end do
-
-    if (algorithm_type .eq. 2) then
-       weights(:) = 1.d0/sqrt(2.d0)
-    end if
 
     ! add div(Sigma^(2)) to gmres_rhs_v
     if (variance_coef_mom .ne. 0.d0) then
