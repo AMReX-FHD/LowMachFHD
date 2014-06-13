@@ -1,21 +1,19 @@
 subroutine main_driver()
 
   use boxlib
-  use multifab_module
   use bl_IO_module
-  use layout_module
+  use ml_layout_module
   use init_module
   use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfileLM_module
-  use advance_timestep_diffusion_module
   use advance_timestep_overdamped_module
+  use advance_timestep_inertial_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
   use analysis_module
   use analyze_spectra_module
-  use convert_m_to_umac_module
   use eos_check_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
@@ -441,19 +439,20 @@ subroutine main_driver()
          runtime1 = parallel_wtime()
       end if   
 
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! advance the solution by dt
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      ! notes: eta, eta_ed, and kappa could be built and initialized within the advance routines
+      ! but for now we pass them around (it does save a few flops)
+      ! diff_mass_fluxdiv and stoch_mass_fluxdiv could be built locally within the overdamped
+      ! routine, but since we have them around anyway for inertial we pass them in
       if (algorithm_type .eq. 0) then
-         call bl_error("main_driver: inertial algorithm not written yet")
+         call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                        pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                        dx,dt,time,the_bc_tower,istep)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-         ! It appears to me there is no need to be passing eta, eta_ed etc. around here
-         ! They are only used locally inside the routine when computing updates
-         ! and do not appear to be needed here
-         ! I think they should be local temps inside advance_timestep_overdamped
-         ! Similar comment applies to diff_mass_fluxdiv,stoch_mass_fluxdiv
-         ! I know they are also passed to initial_projection but it seems to me all this can be done locally with temps
-         ! Also note that for advance_timestep_overdamped it is not necessary to call initial_projection
-         ! In fact, if one makes this main_driver only do overdamped it can be simplified greatly
-         ! One option is do this by converting this main_driver.f90 into overdamped_driver.f90 and simplifying it.
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                           diff_mass_fluxdiv,stoch_mass_fluxdiv, &
