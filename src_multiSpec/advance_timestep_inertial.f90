@@ -52,9 +52,9 @@ module advance_timestep_inertial_module
 contains
 
   subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                         pres,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         dx,dt,time,the_bc_tower,istep)
+                                       pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                       dx,dt,time,the_bc_tower,istep)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -214,7 +214,9 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve: first set gmres_rhs_v to mold/dt
-    call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
+
+    ! compute mold
+    call convert_m_to_umac(mla,rhotot_fc_old,mold,umac,.false.)
 
     do n=1,nlevs
        do i=1,dm
@@ -284,6 +286,12 @@ contains
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
+
+    do n=1,nlevs
+       do i=1,dm
+          call setval(flux_total(n,i),0.d0,all=.true.)
+       end do
+    end do
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
@@ -508,6 +516,10 @@ contains
           call multifab_mult_mult_s_c(rho_new(n),1,0.5d0,nspecies,0)
           call multifab_mult_mult_s_c(rho_update(n),1,dt/2.d0,nspecies,0)
           call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+          ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+          call multifab_fill_boundary(rho_new(n))
+          ! fill non-periodic domain boundary ghost cells
+          call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
 
     end if
@@ -649,7 +661,7 @@ contains
        end do
     end do
 
-   ! compute mtemp = rho^{*,n+1} * vbar^{*,n+1}
+   ! compute mtemp = rho^{n+1} * vbar^{*,n+1}
    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
    do n=1,nlevs
@@ -658,7 +670,7 @@ contains
          ! multiply mtemp by 1/dt
          call multifab_mult_mult_s_c(mtemp(n,i),1,1.d0/dt,1,0)
 
-         ! subtract rho^{*,n+1} * vbar^{*,n+1} / dt from gmres_rhs_v
+         ! subtract rho^{n+1} * vbar^{*,n+1} / dt from gmres_rhs_v
          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
 
       end do
@@ -681,11 +693,11 @@ contains
        end do
     end do
 
-    ! compute div(v^{n+1,*})
+    ! compute div(vbar^{n+1,*})
     call compute_div(mla,umac,divu,dx,1,1,1)
 
-    ! add div(v^{n+1,*}) to gmres_rhs_p
-    ! now gmres_rhs_p = div(v^{n+1,*}) - S^{n+1}
+    ! add div(vbar^{n+1,*}) to gmres_rhs_p
+    ! now gmres_rhs_p = div(vbar^{n+1,*}) - S^{n+1}
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)

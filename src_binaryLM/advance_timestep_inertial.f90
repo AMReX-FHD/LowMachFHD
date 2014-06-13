@@ -661,7 +661,7 @@ contains
        end do
     end do
 
-   ! compute mtemp = rho^{*,n+1} * vbar^{*,n+1}
+   ! compute mtemp = rho^{n+1} * vbar^{*,n+1}
    call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
 
    do n=1,nlevs
@@ -670,7 +670,7 @@ contains
          ! multiply mtemp by 1/dt
          call multifab_mult_mult_s_c(mtemp(n,i),1,1.d0/dt,1,0)
 
-         ! subtract rho^{*,n+1} * vbar^{*,n+1} / dt from gmres_rhs_v
+         ! subtract rho^{n+1} * vbar^{*,n+1} / dt from gmres_rhs_v
          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
 
 
@@ -694,7 +694,7 @@ contains
        end do
     end do
 
-    ! compute div(v^{n+1,*})
+    ! compute div(vbar^{n+1,*})
     call compute_div(mla,umac,divu,dx,1,1,1)
 
 
