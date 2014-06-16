@@ -1239,7 +1239,7 @@ subroutine writeToFiles(grid, id)
    filenameBase = trim(grid%outputFolder) // "/" // trim(grid%filePrefix)
 
    if(present(id)) then
-      write(id_string,"(I6.6)") id
+      write(id_string,"(I8.8)") id
       filenameBase = trim(filenameBase) // "." // trim(ADJUSTL(id_string))
    end if   
 
