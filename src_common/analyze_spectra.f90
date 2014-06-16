@@ -899,7 +899,7 @@ contains
        if ( parallel_IOProcessor() ) then
 
           ! define the name of the statfile that will be written
-          write(unit=plotfile_name,fmt='("vstat",i6.6)') step
+          write(unit=plotfile_name,fmt='("vstat",i8.8)') step
           write(*,'(2A)') "Saving vSTAT FILEs to file ", trim(plotfile_name)
           write(*,*)
 
@@ -942,7 +942,7 @@ contains
        end do
 
        ! define the name of the plotfile that will be written
-       write(unit=plotfile_name,fmt='("vstat",i6.6)') step
+       write(unit=plotfile_name,fmt='("vstat",i8.8)') step
        if ( parallel_IOProcessor() ) then
           write(*,'(2A)') "Saving vSTAT FILEs to directory ", trim(plotfile_name)
           write(*,*)
@@ -1024,7 +1024,7 @@ contains
        stats_1d(:,nvar+1:2*nvar) = stats_1d(:,nvar+1:2*nvar) - stats_1d(:,1:nvar)**2
 
        ! define the name of the statfile that will be written
-       write(unit=plotfile_name,fmt='("hstat",i6.6)') step
+       write(unit=plotfile_name,fmt='("hstat",i8.8)') step
        write(*,'(2A)') "Saving hSTAT FILEs to file ", trim(plotfile_name)
        write(*,*)
 

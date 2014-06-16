@@ -107,13 +107,13 @@ contains
     type(multifab)   , pointer        :: chkdata_edgex(:)
     type(multifab)   , pointer        :: chkdata_edgey(:)
     type(multifab)   , pointer        :: chkdata_edgez(:)
-    character(len=9)                  :: sd_name
+    character(len=11)                 :: sd_name
     integer                           :: n,nlevs,dm
     integer                           :: rrs(10)
 
     dm = dim_in
 
-    write(unit=sd_name,fmt='("chk",i6.6)') restart
+    write(unit=sd_name,fmt='("chk",i8.8)') restart
 
     if ( parallel_IOProcessor() ) then
        print *,'Reading ',sd_name,' to get state data for restart'

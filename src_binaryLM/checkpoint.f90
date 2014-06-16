@@ -32,7 +32,7 @@ contains
 
     integer :: n,nlevs,dm,i
 
-    character(len=9) :: sd_name
+    character(len=11) :: sd_name
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -60,7 +60,7 @@ contains
           call multifab_copy_c(chkdata_edge(n,i), 1, mold(n,i), 1, 1)
        end do
     end do
-    write(unit=sd_name,fmt='("chk",i6.6)') istep_to_write
+    write(unit=sd_name,fmt='("chk",i8.8)') istep_to_write
 
     call checkpoint_write_doit(nlevs, sd_name, chkdata, chkdata_edge, mla%mba%rr, time, dt)
 
