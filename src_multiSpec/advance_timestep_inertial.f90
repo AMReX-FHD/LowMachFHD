@@ -282,11 +282,6 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
     end if
 
-    ! initialize rhs_p for gmres solve to zero
-    do n=1,nlevs
-       call setval(gmres_rhs_p(n),0.d0,all=.true.)
-    end do
-
     ! compute (eta,kappa)^{*,n+1}
     call compute_eta(mla,eta,eta_ed,rho_new,rhotot_new,Temp,pres,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa)
@@ -315,7 +310,9 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
+    ! compute gmres_rhs_p
     do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
@@ -325,7 +322,7 @@ contains
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
-    ! thus when we add A_0^* v^* to gmres_rhs_v and add div v^* to gmres_rhs_p
+    ! thus when we add A_0^n vbar^n to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
     ! are automatically putting the system in delta form WITH homogeneous boundary conditions
     do n=1,nlevs
        do i=1,dm
@@ -632,7 +629,9 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
+    ! compute gmres_rhs_p
     do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
@@ -642,7 +641,7 @@ contains
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
-    ! thus when we add A_0^n v^{n-1/2} to gmres_rhs_v and add div v^{n-1/2} to gmres_rhs_p
+    ! thus when we add A_0^{n+1} vbar^{*,n+1} to gmres_rhs_v and add div vbar^{*,n+1} to gmres_rhs_p we
     ! are automatically putting the system in delta form WITH homogeneous boundary conditions
     do n=1,nlevs
        do i=1,dm
