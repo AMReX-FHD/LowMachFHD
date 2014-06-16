@@ -144,6 +144,13 @@ contains
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,rhotot,molarconc,molmtot,chi,rhoWchi,the_bc_level)
 
+    ! reset total flux
+    do n=1,nlevs
+       do i=1,dm
+          call setval(flux_total(n,i),0.d0,all=.true.)
+       end do
+    end do
+
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&

@@ -9,6 +9,7 @@ module initial_projection_module
   use bc_module
   use multifab_physbc_stag_module
   use compute_mass_fluxdiv_module
+  use reservoir_bc_fill_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type
 
@@ -36,7 +37,7 @@ module initial_projection_module
 contains
 
   subroutine initial_projection(mla,umac,rho,rhotot,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                Temp,dt,dx,the_bc_tower)
+                                Temp,eta,eta_ed,dt,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -45,6 +46,8 @@ contains
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     type(multifab) , intent(in   ) :: Temp(:)
+    type(multifab) , intent(in   ) :: eta(:)
+    type(multifab) , intent(in   ) :: eta_ed(:,:)  ! nodal (2d); edge-centered (3d)
     real(kind=dp_t), intent(in   ) :: dt
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -78,9 +81,9 @@ contains
        call multifab_build(divu(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(rhotot_fc(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(rhototinv_fc(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(flux_total(n,i), mla%la(n), nspecies, 0, i)
+          call multifab_build_edge(   rhotot_fc(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(rhototinv_fc(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(  flux_total(n,i),mla%la(n),nspecies,0,i)
        end do       
     end do
 
@@ -90,8 +93,8 @@ contains
     end do
 
     ! reset inhomogeneous bc condition to deal with reservoirs
-!    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
-!                                   the_bc_tower%bc_tower_array)
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+                                   the_bc_tower%bc_tower_array)
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
@@ -109,6 +112,9 @@ contains
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
        end do
     end do
+
+    ! set the Dirichlet velocity value on reservoir faces
+    call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     ! set mac_rhs to -S
     ! -S = -sum div (F_i / rhobar_i)

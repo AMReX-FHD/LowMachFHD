@@ -97,7 +97,7 @@ contains
 
     integer :: i,dm,n,nlevs
 
-    real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs
+    real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
     real(kind=dp_t), allocatable :: weights(:)
 

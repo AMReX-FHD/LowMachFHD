@@ -399,7 +399,7 @@ subroutine main_driver()
      ! because different gmres tolerances may be needed in the first step than in the rest
      if (algorithm_type .eq. 0) then
         call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
-                                stoch_mass_fluxdiv,Temp,dt,dx,the_bc_tower)
+                                stoch_mass_fluxdiv,Temp,eta,eta_ed,dt,dx,the_bc_tower)
      end if
 
      if (print_int .gt. 0) then

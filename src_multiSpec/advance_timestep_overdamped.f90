@@ -191,12 +191,6 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
 
-    do n=1,nlevs
-       do i=1,dm
-          call setval(flux_total(n,i),0.d0,all=.true.)
-       end do
-    end do
-
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
     if (algorithm_type .eq. 1) then
@@ -412,12 +406,6 @@ contains
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
                                    the_bc_tower%bc_tower_array)
-
-    do n=1,nlevs
-       do i=1,dm
-          call setval(flux_total(n,i),0.d0,all=.true.)
-       end do
-    end do
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
