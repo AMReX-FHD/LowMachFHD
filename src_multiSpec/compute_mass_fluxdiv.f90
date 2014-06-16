@@ -164,6 +164,10 @@ contains
        call stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,&
                                     molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
                                     dx,dt,weights,the_bc_level)
+    else
+       do n=1,nlevs
+          call multifab_setval(stoch_fluxdiv(n),0.d0,all=.true.)
+       end do
     end if
       
     ! revert back rho to it's original form
