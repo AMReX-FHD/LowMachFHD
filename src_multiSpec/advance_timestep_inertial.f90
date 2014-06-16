@@ -134,22 +134,10 @@ contains
        end do
     end do
 
-    do n=1,nlevs
-       call setval(rho_update(n),0.d0,all=.true.)
-       call setval(bds_force(n),0.d0,all=.true.)
-       do i=1,dm
-          call setval(dumac(n,i),0.d0,all=.true.)
-          call setval(m_a_fluxdiv(n,i),0.d0,all=.true.)
-          call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
-          call setval(m_s_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-
     ! make copies of old quantities
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(     umac_tmp(n,i),1,     umac(n,i),1,1,1)
-          call multifab_copy_c(rhotot_fc_old(n,i),1,rhotot_fc(n,i),1,1,1)
+          call multifab_copy_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
        end do
     end do
 
@@ -170,8 +158,11 @@ contains
 
     ! add D^n and St^n to rho_update
     do n=1,nlevs
+       call setval(rho_update(n),0.d0,all=.true.)
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
-       call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+       end if
     end do
 
     ! add A^n to rho_update
@@ -236,6 +227,11 @@ contains
     end do
 
     ! compute m_a_fluxdiv = A^n for momentum
+    do n=1,nlevs
+       do i=1,dm
+          call setval(m_a_fluxdiv(n,i),0.d0,all=.true.)
+       end do
+    end do
     call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv,dx, &
                                 the_bc_tower%bc_tower_array)
 
@@ -247,6 +243,11 @@ contains
     end do
 
     ! compute m_d_fluxdiv = A_0^n v^n
+    do n=1,nlevs
+       do i=1,dm
+          call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
+       end do
+    end do
     call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
@@ -259,8 +260,15 @@ contains
     end do
 
     ! compute m_s_fluxdiv = div(Sigma^n)
-    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
-                              Temp,Temp_ed,dx,dt,weights)
+    do n=1,nlevs
+       do i=1,dm
+          call setval(m_s_fluxdiv(n,i),0.d0,all=.true.)
+       end do
+    end do
+    if (variance_coef_mom .ne. 0.d0) then
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
+                                 Temp,Temp_ed,dx,dt,weights)
+    end if
 
     ! add div(Sigma^n) to gmres_rhs_v
     do n=1,nlevs
@@ -380,11 +388,11 @@ contains
        end if
     end do
 
-    ! compute div v^*
+    ! compute div vbar^n
     call compute_div(mla,umac,divu,dx,1,1,1)
 
-    ! add div v^* to gmres_rhs_p
-    ! now gmres_rhs_p = div v^* - S^{*,n+1/2}
+    ! add div vbar^n to gmres_rhs_p
+    ! now gmres_rhs_p = div vbar^n - S^{*,n+1}
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
@@ -574,13 +582,15 @@ contains
     end do
 
     ! compute div(Sigma^n') by incrementing existing stochastic flux and dividing by 2
-    call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
-                              Temp,Temp_ed,dx,dt,weights)
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,0.5d0,1,0)
+    if (variance_coef_mom .ne. 0.d0) then
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
+                                 Temp,Temp_ed,dx,dt,weights)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,0.5d0,1,0)
+          end do
        end do
-    end do
+    end if
 
     ! add div(Sigma^n') to gmres_rhs_v
     do n=1,nlevs
