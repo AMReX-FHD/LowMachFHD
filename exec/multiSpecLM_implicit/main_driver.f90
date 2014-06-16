@@ -276,7 +276,7 @@ subroutine main_driver()
 
   if (print_int .gt. 0) then
      if (parallel_IOProcessor()) write(*,*) "Initial state:"  
-     call sum_mass(rho_old, istep) ! print out the total mass to check conservation
+     call sum_mass(rho_old, 0) ! print out the total mass to check conservation
      call eos_check(mla,rho_old)
   end if   
   call compute_rhotot(mla,rho_old,rhotot_old)
@@ -399,12 +399,12 @@ subroutine main_driver()
      ! because different gmres tolerances may be needed in the first step than in the rest
      if (algorithm_type .eq. 0) then
         call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
-                                stoch_mass_fluxdiv,Temp,dt,dx,the_bc_tower)
+                                stoch_mass_fluxdiv,Temp,eta,eta_ed,dt,dx,the_bc_tower)
      end if
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
-        call sum_mass(rho_old, istep) ! print out the total mass to check conservation
+        call sum_mass(rho_old,0) ! print out the total mass to check conservation
         call eos_check(mla,rho_old)
      end if   
 

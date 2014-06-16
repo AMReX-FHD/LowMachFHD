@@ -27,10 +27,10 @@ contains
 
     integer                 :: i,n,n_plot_comps
 
-    character(len=9 ) :: sd_name
-    character(len=11) :: sd_namex
-    character(len=11) :: sd_namey
-    character(len=11) :: sd_namez
+    character(len=11) :: sd_name
+    character(len=13) :: sd_namex
+    character(len=13) :: sd_namey
+    character(len=13) :: sd_namez
 
     character(len=20), allocatable :: plot_names(:)
     character(len=20)              :: plot_names_stagx(2)
@@ -135,15 +135,15 @@ contains
        end do
     end do
     
-    write(unit=sd_name,fmt='("plt",i6.6)') istep_to_write
+    write(unit=sd_name,fmt='("plt",i8.8)') istep_to_write
     if ( parallel_IOProcessor() ) then
       write(*,'(2A)') "Saving PLOT FILEs to directory ", trim(sd_name)
       write(*,*)
     end if
-    write(unit=sd_namex,fmt='("stagx",i6.6)') istep_to_write
-    write(unit=sd_namey,fmt='("stagy",i6.6)') istep_to_write
+    write(unit=sd_namex,fmt='("stagx",i8.8)') istep_to_write
+    write(unit=sd_namey,fmt='("stagy",i8.8)') istep_to_write
     if (dm > 2) then
-       write(unit=sd_namez,fmt='("stagz",i6.6)') istep_to_write
+       write(unit=sd_namez,fmt='("stagz",i8.8)') istep_to_write
     end if
 
     ! cell-centered plotfile

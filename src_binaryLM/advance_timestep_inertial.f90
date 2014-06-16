@@ -94,11 +94,10 @@ contains
     type(multifab) ::     umac_tmp(mla%nlevel,mla%dim)
     type(multifab) ::        gradp(mla%nlevel,mla%dim)
     type(multifab) ::     s_fc_old(mla%nlevel,mla%dim)
-    type(multifab) ::   chi_fc_old(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
-    real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs
+    real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
     real(kind=dp_t), allocatable :: weights(:)
 
@@ -121,16 +120,15 @@ contains
        call multifab_build(         dp(n),mla%la(n),1,1)
        call multifab_build(       divu(n),mla%la(n),1,0)
        do i=1,dm
-          call multifab_build_edge(         mtemp(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   gmres_rhs_v(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   m_a_fluxdiv(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   m_d_fluxdiv(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(   m_s_fluxdiv(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(         dumac(n,i),mla%la(n),1,1,i)
-          call multifab_build_edge(      umac_tmp(n,i),mla%la(n),1,1,i)
-          call multifab_build_edge(         gradp(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(      s_fc_old(n,i),mla%la(n),2,1,i)
-          call multifab_build_edge(    chi_fc_old(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(      mtemp(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(m_a_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(m_d_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(m_s_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(      dumac(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(   umac_tmp(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(      gradp(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(   s_fc_old(n,i),mla%la(n),2,1,i)
        end do
 
     end do
@@ -149,9 +147,8 @@ contains
     ! make copies of old quantities
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(  umac_tmp(n,i),1,  umac(n,i),1,1    ,1)
-          call multifab_copy_c(  s_fc_old(n,i),1,  s_fc(n,i),1,2    ,1)
-          call multifab_copy_c(chi_fc_old(n,i),1,chi_fc(n,i),1,1    ,0)
+          call multifab_copy_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
+          call multifab_copy_c(s_fc_old(n,i),1,s_fc(n,i),1,2,1)
        end do
     end do
 
@@ -393,13 +390,9 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,1.d0/2.d0,1,eta(n)%ng)
        call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,kappa(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,1.d0/2.d0,1,eta_ed(n,2)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,1.d0/2.d0,1,eta_ed(n,3)%ng)
-       end if
+       do i=1,size(eta_ed,dim=2)
+          call multifab_mult_mult_s_c(eta_ed(n,i),1,1.d0/2.d0,1,eta_ed(n,i)%ng)
+       end do
     end do
 
     ! set the initial guess to zero
@@ -414,7 +407,7 @@ contains
        call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
 
-    gmres_abs_tol = 0.d0
+    gmres_abs_tol_in = gmres_abs_tol ! Save this 
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
@@ -423,19 +416,15 @@ contains
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
     ! for cases where du in the corrector should be small the gmres stalls
-    gmres_abs_tol = norm_pre_rhs*gmres_rel_tol
+    gmres_abs_tol = max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol)
 
     ! restore eta and kappa
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,eta(n)%ng)
        call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,2.d0,1,eta_ed(n,2)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,2.d0,1,eta_ed(n,3)%ng)
-       end if
+       do i=1,size(eta_ed,dim=2)
+          call multifab_mult_mult_s_c(eta_ed(n,i),1,2.d0,1,eta_ed(n,i)%ng)
+       end do
     end do
 
     ! compute v^{*,n+1} = v^n + delta v
@@ -672,7 +661,7 @@ contains
        end do
     end do
 
-   ! compute mtemp = rho^{*,n+1} * vbar^{*,n+1}
+   ! compute mtemp = rho^{n+1} * vbar^{*,n+1}
    call convert_m_to_umac(mla,s_fc,mtemp,umac,.false.)
 
    do n=1,nlevs
@@ -681,7 +670,7 @@ contains
          ! multiply mtemp by 1/dt
          call multifab_mult_mult_s_c(mtemp(n,i),1,1.d0/dt,1,0)
 
-         ! subtract rho^{*,n+1} * vbar^{*,n+1} / dt from gmres_rhs_v
+         ! subtract rho^{n+1} * vbar^{*,n+1} / dt from gmres_rhs_v
          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
 
 
@@ -705,17 +694,16 @@ contains
        end do
     end do
 
-    ! compute div(v^{n+1,*})
+    ! compute div(vbar^{n+1,*})
     call compute_div(mla,umac,divu,dx,1,1,1)
-
 
     ! multiply gmres_rhs_p -S_fac
     do n=1,nlevs
        call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-S_fac,1,0)
     end do
 
-    ! add div(v^{n+1,*}) to gmres_rhs_p
-    ! now gmres_rhs_p = div(v^{n+1,*}) - S^{n+1}
+    ! add div(vbar^{n+1,*}) to gmres_rhs_p
+    ! now gmres_rhs_p = div(vbar^{n+1,*}) - S^{n+1}
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
     do n=1,nlevs
        call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
@@ -725,13 +713,9 @@ contains
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,1.d0/2.d0,1,eta(n)%ng)
        call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,eta(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,1.d0/2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,1.d0/2.d0,1,eta_ed(n,2)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,1.d0/2.d0,1,eta_ed(n,3)%ng)
-       end if
+       do i=1,size(eta_ed,dim=2)
+          call multifab_mult_mult_s_c(eta_ed(n,i),1,1.d0/2.d0,1,eta_ed(n,i)%ng)
+       end do
     end do
 
     ! set the initial guess to zero
@@ -749,18 +733,16 @@ contains
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
                eta,eta_ed,kappa,theta_alpha)
+                              
+    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
 
     ! restore eta and kappa
     do n=1,nlevs
        call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,eta(n)%ng)
        call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
-       if (dm .eq. 2) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-       else if (dm .eq. 3) then
-          call multifab_mult_mult_s_c(eta_ed(n,1),1,2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,2),1,2.d0,1,eta_ed(n,1)%ng)
-          call multifab_mult_mult_s_c(eta_ed(n,3),1,2.d0,1,eta_ed(n,1)%ng)
-       end if
+       do i=1,size(eta_ed,dim=2)
+          call multifab_mult_mult_s_c(eta_ed(n,i),1,2.d0,1,eta_ed(n,i)%ng)
+       end do
     end do
 
     ! compute v^{n+1} = v^{n+1,*} + dumac
@@ -816,7 +798,6 @@ contains
           call multifab_destroy(umac_tmp(n,i))
           call multifab_destroy(gradp(n,i))
           call multifab_destroy(s_fc_old(n,i))
-          call multifab_destroy(chi_fc_old(n,i))
        end do
     end do
 
