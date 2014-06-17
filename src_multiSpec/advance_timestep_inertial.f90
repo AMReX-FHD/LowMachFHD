@@ -175,9 +175,11 @@ contains
       end do
 
       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                   rho_part_bc_comp,the_bc_tower)
       else
-          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                        rho_part_bc_comp,the_bc_tower)
       end if
     else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
@@ -491,9 +493,11 @@ contains
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                   rho_part_bc_comp,the_bc_tower)
        else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                        rho_part_bc_comp,the_bc_tower)
        end if    
 
        ! snew = s^n + dt * A^{n+1/2} + (dt/2) * (D^n + D^{n+1,*} + S^n + S^{n+1,*})

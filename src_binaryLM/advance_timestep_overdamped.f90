@@ -292,9 +292,9 @@ contains
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp,the_bc_tower)
        else
-          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp,the_bc_tower)
        end if
     else
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,2)
@@ -477,9 +477,9 @@ contains
           call multifab_fill_boundary(bds_force(n))
        end do
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp,the_bc_tower)
        else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp,the_bc_tower)
        end if
     else
        call mk_advective_s_fluxdiv(mla,umac,s_fc,s_update,dx,1,2)
