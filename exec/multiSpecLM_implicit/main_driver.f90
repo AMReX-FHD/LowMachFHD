@@ -248,14 +248,11 @@ subroutine main_driver()
   if (restart .lt. 0) then
 
      ! initialize rho
-     call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
+     call init_rho_and_umac(rho_old,umac,dx,time,the_bc_tower%bc_tower_array)
 
-     ! initialize pressure and velocity
+     ! initialize pressure
      do n=1,nlevs
-        call multifab_setval(pres(n), 0.d0, all=.true.)
-        do i=1,dm
-           call multifab_setval(umac(n,i), 0.d0, all=.true.)
-        end do
+        call multifab_setval(pres(n),0.d0,all=.true.)
      end do
 
   else
@@ -375,9 +372,7 @@ subroutine main_driver()
   call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
   call compute_kappa(mla,kappa)
 
-  if (restart .ge. 0) then
-     call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
-  end if
+  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
 
   if (restart .lt. 0) then
 
