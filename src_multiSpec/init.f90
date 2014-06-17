@@ -593,9 +593,9 @@ contains
     !=========================================================================
     ! Thermodynamic equilibrium
     !=========================================================================
-    do j=lo(2)-1,hi(2)+1
+    do j=lo(2)-ng,hi(2)+ng
        y = prob_lo(2) + (dble(j)+half)*dx(2) 
-       do i=lo(1)-1,hi(1)+1
+       do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+half)*dx(1) 
  
             Temp(i,j) = T_init(1)
@@ -610,9 +610,9 @@ contains
     !=========================================================================
     ! Initializing T in concentric circle at (Lx/2,Ly/2) with radius^2=0.1*L(1)*L(2)
     !=========================================================================
-    do j=lo(2)-1,hi(2)+1
+    do j=lo(2)-ng,hi(2)+ng
        y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
-       do i=lo(1)-1,hi(1)+1
+       do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
       
           ! temperature distribution follows the density 
@@ -630,9 +630,9 @@ contains
     !========================================================
     ! Initializing T with constant gradient along y axes
     !========================================================
-    do j=lo(2)-1,hi(2)+1
+    do j=lo(2)-ng,hi(2)+ng
        y = prob_lo(2) + (dble(j)+half)*dx(2) 
-       do i=lo(1)-1,hi(1)+1
+       do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+half)*dx(1) 
       
           ! linear gradient in y direction
@@ -643,9 +643,9 @@ contains
 
     case default
 
-    do j=lo(2)-1,hi(2)+1
+    do j=lo(2)-ng,hi(2)+ng
          y = prob_lo(2) + (dble(j)+half) * dx(2) - half
-         do i=lo(1)-1,hi(1)+1
+         do i=lo(1)-ng,hi(1)+ng
             x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
             Temp(i,j)  = T_init(1) 
@@ -679,9 +679,9 @@ contains
     !================================================================================
  
     !$omp parallel private(i,j,k,x,y,z)
-    do k=lo(3)-1,hi(3)+1
-       do j=lo(2)-1,hi(2)+1
-          do i=lo(1)-1,hi(1)+1
+    do k=lo(3)-ng,hi(3)+ng
+       do j=lo(2)-ng,hi(2)+ng
+          do i=lo(1)-ng,hi(1)+ng
              
              Temp(i,j,k) = T_init(1)
 
@@ -696,11 +696,11 @@ contains
     !================================================================================
   
     !$omp parallel private(i,j,k,x,y,z)
-    do k=lo(3)-1,hi(3)+1
+    do k=lo(3)-ng,hi(3)+ng
        z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
-       do j=lo(2)-1,hi(2)+1
+       do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
-          do i=lo(1)-1,hi(1)+1
+          do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
              
              !temperature distribution follows the density 
@@ -722,11 +722,11 @@ contains
     !========================================================
  
     !$omp parallel private(i,j,k,x,y,z)
-    do k=lo(3)-1,hi(3)+1
+    do k=lo(3)-ng,hi(3)+ng
        z = prob_lo(3) + (dble(k)+half)*dx(3) 
-       do j=lo(2)-1,hi(2)+1
+       do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+half)*dx(2) 
-          do i=lo(1)-1,hi(1)+1
+          do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+half)*dx(1) 
 
              ! linear gradient in y direction for temperature 
@@ -740,9 +740,9 @@ contains
     case default
 
     !$omp parallel private(i,j,k,x,y,z)
-    do k=lo(3)-1,hi(3)+1
-       do j=lo(2)-1,hi(2)+1
-          do i=lo(1)-1,hi(1)+1
+    do k=lo(3)-ng,hi(3)+ng
+       do j=lo(2)-ng,hi(2)+ng
+          do i=lo(1)-ng,hi(1)+ng
 
              Temp(i,j,k) = T_init(1)
 
