@@ -126,7 +126,6 @@ contains
 
     do n=1,nlevs
        call setval(rho_update(n),0.d0,all=.true.)
-       call setval(bds_force(n),0.d0,all=.true.)
        do i=1,dm
           call setval(dumac(n,i),0.d0,all=.true.)
        end do
@@ -326,6 +325,8 @@ contains
     ! add A^n for scalars to rho_update
     if (advection_type .ge. 1) then
       do n=1,nlevs
+         ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
+         call setval(bds_force(n),0.d0,all=.true.)
          call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
          call multifab_fill_boundary(bds_force(n))
       end do
