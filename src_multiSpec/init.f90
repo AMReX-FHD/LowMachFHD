@@ -10,9 +10,9 @@ module init_module
   use ml_layout_module
   use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi, visc_coef, prob_type, &
-                                  molmass, rhobar, smoothing_width
+                                  molmass, rhobar, smoothing_width, u_init, n_cells
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, &
-                                        T_init, rho_init, nspecies, rho_part_bc_comp
+                                        T_init, rho_init, nspecies, rho_part_bc_comp, rho_init
  
   implicit none
 
@@ -100,7 +100,7 @@ contains
  
     ! local varables
     integer          :: i,j,n
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,rho_loc
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,rho_loc,rand
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -360,6 +360,61 @@ contains
        end do
 
     end if
+
+    case (10)
+
+    ! low Mach Kelvin-Helmholtz comparison to binary version
+    ! one fluid on top of another
+    ! discontinuous interface, but with random density perturbation added 
+    ! in a 1-cell thick transition region
+
+    v = 0.d0
+
+    ! middle of domain
+    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+       ! rho1 = rho_init(1,1) in lower half of domain (in y)
+       ! rho1 = rho_init(2,1) in upper half
+       ! random perturbation below centerline
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+          if (y .lt. y1) then
+             rho_loc = rho_init(1,1)
+          else
+             rho_loc = rho_init(1,2)
+          end if
+          
+          print*,j,rho_loc
+
+          rho(lo(1):hi(1),j,1) = rho_loc
+          rho(lo(1):hi(1),j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+
+          ! add random perturbation above centerline
+          if (j .eq. n_cells(2)/2) then
+             do i=lo(1),hi(1)+1
+                call random_number(rand)
+                rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+                rho(i,j,1) = rho_loc
+                rho(i,j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+             end do
+          end if
+          
+       end do
+       
+       ! velocity = u_init(1) below centerline
+       !            u_init(2) above centerline
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+          if (y .lt. y1) then
+             u(:,j) = u_init(1)
+          else
+             u(:,j) = u_init(2)
+          end if
+
+       end do
 
     case default
       
