@@ -50,6 +50,7 @@ contains
 
     dm = rho(1)%dim
     ng_r = rho(1)%ng
+    ng_u = umac(1,1)%ng
     nlevs = size(rho,1)
 
     ! assign values of parameters for the gaussian rho, rhototal
