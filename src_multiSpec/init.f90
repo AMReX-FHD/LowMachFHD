@@ -390,8 +390,8 @@ contains
        rho(lo(1):hi(1),j,1) = rho_loc
        rho(lo(1):hi(1),j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
 
-       ! add random perturbation above centerline
-       if (j .eq. n_cells(2)/2) then
+       ! add random perturbation below centerline
+       if (j .eq. n_cells(2)/2-1) then
           do i=lo(1),hi(1)
              call random_number(rand)
              rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
@@ -406,7 +406,7 @@ contains
     !            u_init(2) above centerline
     do j=lo(2),hi(2)
        y = prob_lo(2) + (j+0.5d0)*dx(2)
-          
+
        if (y .lt. y1) then
           u(:,j) = u_init(1)
        else
