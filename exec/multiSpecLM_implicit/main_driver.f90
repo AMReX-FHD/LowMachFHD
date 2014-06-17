@@ -15,6 +15,7 @@ subroutine main_driver()
   use analysis_module
   use analyze_spectra_module
   use eos_check_module
+  use estdt_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use fill_umac_ghost_cells_module
@@ -153,15 +154,10 @@ subroutine main_driver()
      ! build and fill rho, rhotot, pres, and umac
      call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres,umac,pmask)
 
-     if (dt .ne. fixed_dt) then
-        call bl_error("restart dt not equal to fixed_dt")
-     end if
-
   else
 
      init_step = 1
      time = start_time
-     dt = fixed_dt
      
      ! tell mba how many levels and dimensionality of problem
      call ml_boxarray_build_n(mba,nlevs,dm)
@@ -382,6 +378,12 @@ subroutine main_driver()
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
      end if
+
+     if (fixed_dt .gt. 0.d0) then
+        dt = fixed_dt
+     else
+        call estdt(mla,umac,dx,dt)
+     end if
      
      ! initial projection - only truly needed for inertial algorithm
      ! for the overdamped algorithm, this only changes the reference state for the first
@@ -423,6 +425,10 @@ subroutine main_driver()
   !=======================================================
 
   do istep=init_step,max_step
+
+     if (fixed_dt .le. 0.d0) then
+        call estdt(mla,umac,dx,dt)
+     end if
 
       if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
            .or. &

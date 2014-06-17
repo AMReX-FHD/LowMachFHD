@@ -8,8 +8,8 @@
   n_cells(1:2) = 128 64            ! number of cells in domain
   max_grid_size(1:2) = 32 32       ! max number of cells in a box
   max_step = 2000                  ! maximum number of time steps
-  fixed_dt = 5.d-3                 ! time step
-!  cfl = 0.5d0                     ! cfl number 
+  fixed_dt = -1                    ! time step
+  cfl = 0.9d0                     ! cfl number 
   plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 100                    ! Interval for writing a checkpoint
   prob_type = 10                   ! sets scalars, m, coefficients (see init.f90)
