@@ -385,8 +385,6 @@ contains
           else
              rho_loc = rho_init(1,2)
           end if
-          
-          print*,j,rho_loc
 
           rho(lo(1):hi(1),j,1) = rho_loc
           rho(lo(1):hi(1),j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
