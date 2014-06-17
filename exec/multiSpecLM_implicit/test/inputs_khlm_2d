@@ -136,7 +136,7 @@
   is_ideal_mixture = T
   is_nonisothermal = T
   use_lapack = T
-  Dbar(1:1) = 1.d0         ! SM diffusion constant  
+  Dbar(1:1) = 1.d-6         ! SM diffusion constant  
   Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients
   H_offdiag(1:1) = 0.d0
   H_diag(1:1) = 0.d0       ! =d^2F/dx^2  
