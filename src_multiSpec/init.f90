@@ -373,46 +373,46 @@ contains
     ! middle of domain
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
-       ! rho1 = rho_init(1,1) in lower half of domain (in y)
-       ! rho1 = rho_init(2,1) in upper half
-       ! random perturbation below centerline
+    ! rho1 = rho_init(1,1) in lower half of domain (in y)
+    ! rho1 = rho_init(2,1) in upper half
+    ! random perturbation below centerline
 
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (j+0.5d0)*dx(2)
           
-          if (y .lt. y1) then
-             rho_loc = rho_init(1,1)
-          else
-             rho_loc = rho_init(1,2)
-          end if
+       if (y .lt. y1) then
+          rho_loc = rho_init(1,1)
+       else
+          rho_loc = rho_init(1,2)
+       end if
 
-          rho(lo(1):hi(1),j,1) = rho_loc
-          rho(lo(1):hi(1),j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+       rho(lo(1):hi(1),j,1) = rho_loc
+       rho(lo(1):hi(1),j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
 
-          ! add random perturbation above centerline
-          if (j .eq. n_cells(2)/2) then
-             do i=lo(1),hi(1)+1
-                call random_number(rand)
-                rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
-                rho(i,j,1) = rho_loc
-                rho(i,j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
-             end do
-          end if
+       ! add random perturbation above centerline
+       if (j .eq. n_cells(2)/2) then
+          do i=lo(1),hi(1)
+             call random_number(rand)
+             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+             rho(i,j,1) = rho_loc
+             rho(i,j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+          end do
+       end if
           
-       end do
+    end do
        
-       ! velocity = u_init(1) below centerline
-       !            u_init(2) above centerline
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
+    ! velocity = u_init(1) below centerline
+    !            u_init(2) above centerline
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (j+0.5d0)*dx(2)
           
-          if (y .lt. y1) then
-             u(:,j) = u_init(1)
-          else
-             u(:,j) = u_init(2)
-          end if
+       if (y .lt. y1) then
+          u(:,j) = u_init(1)
+       else
+          u(:,j) = u_init(2)
+       end if
 
-       end do
+    end do
 
     case default
       
