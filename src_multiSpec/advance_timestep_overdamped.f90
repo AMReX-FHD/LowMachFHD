@@ -419,6 +419,9 @@ contains
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
+       do i=1,dm
+          call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
+       end do
     end do
 
     ! set the Dirichlet velocity value on reservoir faces
