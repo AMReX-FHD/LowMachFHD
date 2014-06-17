@@ -521,13 +521,16 @@ contains
           call multifab_mult_mult_s_c(rho_new(n),1,0.5d0,nspecies,0)
           call multifab_mult_mult_s_c(rho_update(n),1,dt/2.d0,nspecies,0)
           call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
-          ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-          call multifab_fill_boundary(rho_new(n))
-          ! fill non-periodic domain boundary ghost cells
-          call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
 
     end if
+
+    do n=1,nlevs
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(rho_new(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+    end do
 
     call eos_check(mla,rho_new)
     call compute_rhotot(mla,rho_new,rhotot_new)
