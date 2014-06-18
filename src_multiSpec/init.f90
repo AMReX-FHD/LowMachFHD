@@ -377,7 +377,7 @@ contains
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
     ! rho1 = rho_init(1,1) in lower half of domain (in y)
-    ! rho1 = rho_init(2,1) in upper half
+    ! rho1 = rho_init(1,2) in upper half
     ! random perturbation below centerline
 
     do j=lo(2),hi(2)
@@ -732,7 +732,7 @@ contains
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
     ! rho1 = rho_init(1,1) in lower half of domain (in y)
-    ! rho1 = rho_init(2,1) in upper half
+    ! rho1 = rho_init(1,2) in upper half
     ! random perturbation below centerline
 
     do j=lo(2),hi(2)
