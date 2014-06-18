@@ -467,8 +467,9 @@ contains
  
     u = 0.d0
     v = 0.d0
-    w = 0.d0 
-    !$omp parallel private(i,j,k,x,y,z)
+    w = 0.d0
+
+    !$omp parallel do private(i,j,k)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -489,7 +490,7 @@ contains
     v = 0.d0
     w = 0.d0
   
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z,rsq)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2),hi(2)
@@ -518,7 +519,7 @@ contains
     v = 0.d0
     w = 0.d0
  
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+half)*dx(3) 
        do j=lo(2),hi(2)
@@ -544,7 +545,7 @@ contains
      v = 0.d0
      w = 0.d0
   
-     !$omp parallel private(i,j,k,x,y,z)
+     !$omp parallel do private(i,j,k,x,y,z,rsq)
      do k=lo(3),hi(3)
         z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
         do j=lo(2),hi(2)
@@ -573,7 +574,7 @@ contains
      v = 0.d0
      w = 0.d0
      
-     !$omp parallel private(i,j,k,x,y,z)
+     !$omp parallel do private(i,j,k,x,y,z,rsq,rhot)
      do k=lo(3),hi(3)
         z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2),hi(2)
@@ -604,7 +605,7 @@ contains
      v = 0.d0
      w = 0.d0
 
-     !$omp parallel private(i,j,k,x,y,z)
+     !$omp parallel do private(i,j,k,x,y,z,rsq,w1,w2,rhot)
      do k=lo(3),hi(3)
         z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2),hi(2)
@@ -847,7 +848,7 @@ contains
     ! Thermodynamic equilibrium
     !================================================================================
  
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z)
     do k=lo(3)-ng,hi(3)+ng
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
@@ -864,7 +865,7 @@ contains
     ! Initializing temperature in concentric circle 
     !================================================================================
   
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z,rsq)
     do k=lo(3)-ng,hi(3)+ng
        z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2)-ng,hi(2)+ng
@@ -890,7 +891,7 @@ contains
     ! Initializing T with constant gradient along y direction
     !========================================================
  
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z)
     do k=lo(3)-ng,hi(3)+ng
        z = prob_lo(3) + (dble(k)+half)*dx(3) 
        do j=lo(2)-ng,hi(2)+ng
@@ -908,7 +909,7 @@ contains
 
     case default
 
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k)
     do k=lo(3)-ng,hi(3)+ng
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
