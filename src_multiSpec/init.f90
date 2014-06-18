@@ -467,7 +467,7 @@ contains
  
     u = 0.d0
     v = 0.d0
- 
+    w = 0.d0 
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
@@ -487,6 +487,7 @@ contains
  
     u = 0.d0
     v = 0.d0
+    w = 0.d0
   
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
@@ -515,6 +516,7 @@ contains
  
     u = 0.d0
     v = 0.d0
+    w = 0.d0
  
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
@@ -540,6 +542,7 @@ contains
  
      u = 0.d0
      v = 0.d0
+     w = 0.d0
   
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
@@ -568,6 +571,7 @@ contains
  
      u = 0.d0
      v = 0.d0
+     w = 0.d0
      
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
@@ -598,6 +602,7 @@ contains
  
      u = 0.d0
      v = 0.d0
+     w = 0.d0
 
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
@@ -625,6 +630,47 @@ contains
        end do
     end do
     !$omp end parallel do
+
+    case(8)
+
+    !=============================================================
+    ! 4-species, 4-stripes
+    !=============================================================
+ 
+    u = 0.d0
+    v = 0.d0
+    w = 0.d0
+
+    rho = 0.d0
+       
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+half)*dx(2) 
+       do i=lo(1),hi(1)
+          if (y .le. 0.75d0*prob_lo(2)+0.25d0*prob_hi(2)) then
+             rho(i,j,k,1) = rho_init(1,1)
+             rho(i,j,k,2) = 0.1d0*rhobar(2)
+             rho(i,j,k,3) = 0.1d0*rhobar(3)
+             rho(i,j,k,4) = 0.1d0*rhobar(4)
+          else if (y .le. 0.5d0*prob_lo(2)+0.5d0*prob_hi(2)) then
+             rho(i,j,k,1) = 0.1d0*rhobar(1)
+             rho(i,j,k,2) = rho_init(1,2)
+             rho(i,j,k,3) = 0.1d0*rhobar(3)
+             rho(i,j,k,4) = 0.1d0*rhobar(4)
+          else if (y .le. 0.25d0*prob_lo(2)+0.75d0*prob_hi(2)) then
+             rho(i,j,k,1) = 0.1d0*rhobar(1)
+             rho(i,j,k,2) = 0.1d0*rhobar(2)
+             rho(i,j,k,3) = rho_init(1,3)
+             rho(i,j,k,4) = 0.1d0*rhobar(4)
+          else
+             rho(i,j,k,1) = 0.1d0*rhobar(1)
+             rho(i,j,k,2) = 0.1d0*rhobar(2)
+             rho(i,j,k,3) = 0.1d0*rhobar(3)
+             rho(i,j,k,4) = rho_init(1,4)
+          end if
+       end do
+    end do
+    end do
 
     case default
       
