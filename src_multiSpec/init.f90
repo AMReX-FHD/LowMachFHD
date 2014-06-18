@@ -752,7 +752,7 @@ contains
           do k=lo(3),hi(3)
           do i=lo(1),hi(1)
              call random_number(rand)
-             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(1,2)
              rho(i,j,k,1) = rho_loc
              rho(i,j,k,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
           end do
