@@ -396,7 +396,7 @@ contains
        if (j .eq. n_cells(2)/2-1) then
           do i=lo(1),hi(1)
              call random_number(rand)
-             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(1,2)
              rho(i,j,1) = rho_loc
              rho(i,j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
           end do
