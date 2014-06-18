@@ -377,7 +377,7 @@ contains
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
     ! rho1 = rho_init(1,1) in lower half of domain (in y)
-    ! rho1 = rho_init(1,2) in upper half
+    ! rho1 = rho_init(2,1) in upper half
     ! random perturbation below centerline
 
     do j=lo(2),hi(2)
@@ -386,7 +386,7 @@ contains
        if (y .lt. y1) then
           rho_loc = rho_init(1,1)
        else
-          rho_loc = rho_init(1,2)
+          rho_loc = rho_init(2,1)
        end if
 
        rho(lo(1):hi(1),j,1) = rho_loc
@@ -396,7 +396,7 @@ contains
        if (j .eq. n_cells(2)/2-1) then
           do i=lo(1),hi(1)
              call random_number(rand)
-             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(1,2)
+             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
              rho(i,j,1) = rho_loc
              rho(i,j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
           end do
@@ -732,7 +732,7 @@ contains
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
     ! rho1 = rho_init(1,1) in lower half of domain (in y)
-    ! rho1 = rho_init(1,2) in upper half
+    ! rho1 = rho_init(2,1) in upper half
     ! random perturbation below centerline
 
     do j=lo(2),hi(2)
@@ -741,7 +741,7 @@ contains
        if (y .lt. y1) then
           rho_loc = rho_init(1,1)
        else
-          rho_loc = rho_init(1,2)
+          rho_loc = rho_init(2,1)
        end if
 
        rho(lo(1):hi(1),j,lo(3):hi(3),1) = rho_loc
@@ -752,7 +752,7 @@ contains
           do k=lo(3),hi(3)
           do i=lo(1),hi(1)
              call random_number(rand)
-             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(1,2)
+             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
              rho(i,j,k,1) = rho_loc
              rho(i,j,k,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
           end do
