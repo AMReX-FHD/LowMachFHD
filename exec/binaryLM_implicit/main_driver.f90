@@ -311,6 +311,14 @@ subroutine main_driver()
   ! now cons has properly filled ghost cells
   call convert_cons_to_prim(mla,sold,prim,.false.)
   call average_cc_to_face(nlevs,sold,s_fc,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
+
+  ! convert m to umac in valid region
+  do n=1,nlevs
+     do i=1,dm
+        ! quiet valgrind warnings, no other way to set normal ghost values behind walls
+        call multifab_setval(umac(n,i),0.d0,all=.true.)
+     end do
+  end do
   call convert_m_to_umac(mla,s_fc,mold,umac,.true.)
 
   do n=1,nlevs
@@ -405,7 +413,7 @@ subroutine main_driver()
      ! fill ghost cells for umac (but leave boundary values untouched)
      call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
 
-     ! compute m that has all ghost values properly filled
+     ! convert umac to m in valid and ghost region
      call convert_m_to_umac(mla,s_fc,mold,umac,.false.)
 
   else

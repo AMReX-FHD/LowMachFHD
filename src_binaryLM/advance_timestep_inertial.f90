@@ -182,9 +182,9 @@ contains
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp,the_bc_tower)
        else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp,the_bc_tower)
        end if
 
     else
@@ -485,9 +485,9 @@ contains
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp,the_bc_tower)
        else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,2,the_bc_tower)
+          call bds_quad(mla,umac_tmp,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp,the_bc_tower)
        end if    
 
        ! snew = s^n + dt * A^{n+1/2} + (dt/2) * (D^n + D^{n+1,*} + S^n + S^{n+1,*})

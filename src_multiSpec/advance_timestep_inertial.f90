@@ -168,14 +168,18 @@ contains
     ! add A^n to rho_update
     if (advection_type .ge. 1) then
       do n=1,nlevs
+         ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
+         call setval(bds_force(n),0.d0,all=.true.)
          call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
          call multifab_fill_boundary(bds_force(n))
       end do
 
       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                   rho_part_bc_comp,the_bc_tower)
       else
-          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                        rho_part_bc_comp,the_bc_tower)
       end if
     else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
@@ -282,11 +286,6 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
     end if
 
-    ! initialize rhs_p for gmres solve to zero
-    do n=1,nlevs
-       call setval(gmres_rhs_p(n),0.d0,all=.true.)
-    end do
-
     ! compute (eta,kappa)^{*,n+1}
     call compute_eta(mla,eta,eta_ed,rho_new,rhotot_new,Temp,pres,dx,the_bc_tower%bc_tower_array)
     call compute_kappa(mla,kappa)
@@ -315,7 +314,9 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
+    ! compute gmres_rhs_p
     do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
@@ -325,7 +326,7 @@ contains
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
-    ! thus when we add A_0^* v^* to gmres_rhs_v and add div v^* to gmres_rhs_p
+    ! thus when we add A_0^n vbar^n to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
     ! are automatically putting the system in delta form WITH homogeneous boundary conditions
     do n=1,nlevs
        do i=1,dm
@@ -492,9 +493,11 @@ contains
        end do
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                   rho_part_bc_comp,the_bc_tower)
        else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                        rho_part_bc_comp,the_bc_tower)
        end if    
 
        ! snew = s^n + dt * A^{n+1/2} + (dt/2) * (D^n + D^{n+1,*} + S^n + S^{n+1,*})
@@ -518,13 +521,16 @@ contains
           call multifab_mult_mult_s_c(rho_new(n),1,0.5d0,nspecies,0)
           call multifab_mult_mult_s_c(rho_update(n),1,dt/2.d0,nspecies,0)
           call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
-          ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-          call multifab_fill_boundary(rho_new(n))
-          ! fill non-periodic domain boundary ghost cells
-          call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
        end do
 
     end if
+
+    do n=1,nlevs
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(rho_new(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+    end do
 
     call eos_check(mla,rho_new)
     call compute_rhotot(mla,rho_new,rhotot_new)
@@ -632,7 +638,9 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
+    ! compute gmres_rhs_p
     do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
@@ -642,7 +650,7 @@ contains
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
-    ! thus when we add A_0^n v^{n-1/2} to gmres_rhs_v and add div v^{n-1/2} to gmres_rhs_p
+    ! thus when we add A_0^{n+1} vbar^{*,n+1} to gmres_rhs_v and add div vbar^{*,n+1} to gmres_rhs_p we
     ! are automatically putting the system in delta form WITH homogeneous boundary conditions
     do n=1,nlevs
        do i=1,dm

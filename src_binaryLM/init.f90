@@ -458,7 +458,7 @@ contains
 
           ! add random perturbation above centerline
           if (j .eq. n_cells(2)/2) then
-             do i=lo(1),hi(1)+1
+             do i=lo(1),hi(1)
                 call random_number(rand)
                 c_loc = rand*c_init(1) + (1.d0-rand)*c_init(2)
                 s(i,j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))

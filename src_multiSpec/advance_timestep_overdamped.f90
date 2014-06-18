@@ -126,7 +126,6 @@ contains
 
     do n=1,nlevs
        call setval(rho_update(n),0.d0,all=.true.)
-       call setval(bds_force(n),0.d0,all=.true.)
        do i=1,dm
           call setval(dumac(n,i),0.d0,all=.true.)
        end do
@@ -326,14 +325,18 @@ contains
     ! add A^n for scalars to rho_update
     if (advection_type .ge. 1) then
       do n=1,nlevs
+         ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
+         call setval(bds_force(n),0.d0,all=.true.)
          call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
          call multifab_fill_boundary(bds_force(n))
       end do
 
       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                   rho_part_bc_comp,the_bc_tower)
       else
-          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                        rho_part_bc_comp,the_bc_tower)
       end if
     else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
@@ -419,6 +422,9 @@ contains
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
+       do i=1,dm
+          call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
+       end do
     end do
 
     ! set the Dirichlet velocity value on reservoir faces
@@ -529,9 +535,11 @@ contains
          call multifab_fill_boundary(bds_force(n))
       end do
       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                   rho_part_bc_comp,the_bc_tower)
       else if (advection_type .eq. 3) then
-          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies,the_bc_tower)
+          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+                        rho_part_bc_comp,the_bc_tower)
       end if
     else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)

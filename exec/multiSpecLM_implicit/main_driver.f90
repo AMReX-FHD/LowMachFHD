@@ -15,6 +15,7 @@ subroutine main_driver()
   use analysis_module
   use analyze_spectra_module
   use eos_check_module
+  use estdt_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use fill_umac_ghost_cells_module
@@ -153,15 +154,10 @@ subroutine main_driver()
      ! build and fill rho, rhotot, pres, and umac
      call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres,umac,pmask)
 
-     if (dt .ne. fixed_dt) then
-        call bl_error("restart dt not equal to fixed_dt")
-     end if
-
   else
 
      init_step = 1
      time = start_time
-     dt = fixed_dt
      
      ! tell mba how many levels and dimensionality of problem
      call ml_boxarray_build_n(mba,nlevs,dm)
@@ -248,14 +244,11 @@ subroutine main_driver()
   if (restart .lt. 0) then
 
      ! initialize rho
-     call init_rho(rho_old,dx,time,the_bc_tower%bc_tower_array)
+     call init_rho_and_umac(rho_old,umac,dx,time,the_bc_tower%bc_tower_array)
 
-     ! initialize pressure and velocity
+     ! initialize pressure
      do n=1,nlevs
-        call multifab_setval(pres(n), 0.d0, all=.true.)
-        do i=1,dm
-           call multifab_setval(umac(n,i), 0.d0, all=.true.)
-        end do
+        call multifab_setval(pres(n),0.d0,all=.true.)
      end do
 
   else
@@ -375,9 +368,7 @@ subroutine main_driver()
   call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
   call compute_kappa(mla,kappa)
 
-  if (restart .ge. 0) then
-     call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
-  end if
+  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
 
   if (restart .lt. 0) then
 
@@ -386,6 +377,12 @@ subroutine main_driver()
      if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
+     end if
+
+     if (fixed_dt .gt. 0.d0) then
+        dt = fixed_dt
+     else
+        call estdt(mla,umac,dx,dt)
      end if
      
      ! initial projection - only truly needed for inertial algorithm
@@ -428,6 +425,10 @@ subroutine main_driver()
   !=======================================================
 
   do istep=init_step,max_step
+
+     if (fixed_dt .le. 0.d0) then
+        call estdt(mla,umac,dx,dt)
+     end if
 
       if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
            .or. &

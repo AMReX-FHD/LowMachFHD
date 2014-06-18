@@ -15,7 +15,8 @@ module bds_module
 
 contains
 
-  subroutine bds(mla,umac,s,s_update,force,s_fc,dx,dt,start_comp,num_comp,the_bc_tower)
+  subroutine bds(mla,umac,s,s_update,force,s_fc,dx,dt,start_comp,num_comp, &
+                 bc_comp,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: umac(:,:)
@@ -24,7 +25,7 @@ contains
     type(multifab) , intent(in   ) :: force(:)
     type(multifab) , intent(in   ) :: s_fc(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
-    integer        , intent(in   ) :: start_comp,num_comp
+    integer        , intent(in   ) :: start_comp,num_comp,bc_comp
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! this will hold slx, sly, and slxy
@@ -89,7 +90,7 @@ contains
           lo =  lwb(get_box(s(n), i))
           hi =  upb(get_box(s(n), i))
           do comp=start_comp,start_comp+num_comp-1
-             bccomp = scal_bc_comp+comp-start_comp
+             bccomp = bc_comp+comp-start_comp
              select case (dm)
              case (2)
                 ! only advancing the tracer
@@ -3543,7 +3544,8 @@ contains
 
   end subroutine eval
 
-  subroutine bds_quad(mla,umac,s,s_update,force,s_fc,dx,dt,start_comp,num_comp,the_bc_tower)
+  subroutine bds_quad(mla,umac,s,s_update,force,s_fc,dx,dt,start_comp,num_comp, &
+                      bc_comp,the_bc_tower)
     ! modified for having the quadratic terms as well
     ! slxx and slyy are 2nd derivatives
     ! ave is the new constant for the polynomial
@@ -3555,7 +3557,7 @@ contains
     type(multifab) , intent(in   ) :: s_fc(:,:)
     type(multifab) , intent(in   ) :: umac(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
-    integer        , intent(in   ) :: start_comp, num_comp
+    integer        , intent(in   ) :: start_comp, num_comp, bc_comp
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     type(multifab) :: ave,slx,sly,slxy,slxx,slyy,sint,sc
@@ -3621,7 +3623,7 @@ contains
        lo =  lwb(get_box(s(lev), i))
        hi =  upb(get_box(s(lev), i))
        do comp = start_comp, start_comp+num_comp-1
-          bccomp = scal_bc_comp+comp-start_comp
+          bccomp = bc_comp+comp-start_comp
           select case (dm)
           case (2)
              call bdsslope_quad_2d(lo, hi, sop(:,:,1,comp), ng, &

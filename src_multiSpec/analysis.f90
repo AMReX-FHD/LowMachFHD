@@ -16,8 +16,9 @@ module analysis_module
 
   contains
 
-  subroutine print_errors(rho,rho_exact,Temp,dx,time,the_bc_level)
-  
+  subroutine print_errors(mla,rho,rho_exact,Temp,dx,time,the_bc_level)
+
+    type(ml_layout) , intent(in)     :: mla
      type(multifab) , intent(in)     :: rho(:)            
      type(multifab) , intent(inout)  :: rho_exact(:)            
      type(multifab) , intent(inout)  :: Temp(:)            
@@ -28,12 +29,20 @@ module analysis_module
      ! local variables
      real(kind=dp_t), dimension(nspecies) :: norm_inf,norm_l1,norm_l2
      real(kind=dp_t)                      :: norm_inf_tot,norm_l1_tot,norm_l2_tot
-     integer                              :: i,n,nlevs,n_cell
-     
-     nlevs = size(rho,1)
+     integer                              :: i,n,nlevs,n_cell,dm
+     type(multifab)                       :: umac_tmp(mla%nlevel,mla%dim)
+
+     nlevs = mla%nlevel
+     dm = mla%dim
+
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_build_edge(umac_tmp(n,i),mla%la(n),1,1,i)
+        end do
+     end do
 
      ! calculate rho_exact
-     call init_rho(rho_exact,dx,time,the_bc_level) 
+     call init_rho_and_umac(rho_exact,umac_tmp,dx,time,the_bc_level) 
      call init_Temp(Temp,dx,time,the_bc_level) 
     
      ! substract the values 
@@ -76,8 +85,14 @@ module analysis_module
      end if
      
      ! for checking analytic solution with Visit
-     call init_rho(rho_exact,dx,time,the_bc_level) 
+     call init_rho_and_umac(rho_exact,umac_tmp,dx,time,the_bc_level) 
      call init_Temp(Temp,dx,time,the_bc_level) 
+
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_destroy(umac_tmp(n,i))
+        end do
+     end do
 
   end subroutine print_errors
 

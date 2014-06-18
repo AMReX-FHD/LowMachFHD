@@ -11,16 +11,16 @@ module probin_multispecies_module
 
   integer, save      :: nspecies,inverse_type,timeinteg_type
   real(kind=dp_t)    :: start_time
-  real(kind=dp_t)    :: T_init(2) ! initial values for temperature (bottom/top, inside/outside circle, etc.)
-  real(kind=dp_t)    :: Dbar(max_element)       ! SM diffusion constant  
-  real(kind=dp_t)    :: Dtherm(max_element)     ! thermo-diffusion coefficients  
-  real(kind=dp_t)    :: H_offdiag(max_element), H_diag(max_element) ! =d^2F/dx^2  
-  real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
+  real(kind=dp_t)    :: T_init(2) 
+  real(kind=dp_t)    :: Dbar(max_element)
+  real(kind=dp_t)    :: Dtherm(max_element)  
+  real(kind=dp_t)    :: H_offdiag(max_element), H_diag(max_element)
   real(kind=dp_t)    :: fraction_tolerance
   logical            :: correct_flux,print_error_norms
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
   real(kind=dp_t)    :: rho_init(2,max_species)
   real(kind=dp_t)    :: rho_bc(3,2,max_species)
+  real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ fraction_tolerance
@@ -32,11 +32,11 @@ module probin_multispecies_module
   namelist /probin_multispecies/ is_ideal_mixture   
   namelist /probin_multispecies/ is_nonisothermal   
   namelist /probin_multispecies/ use_lapack
-  namelist /probin_multispecies/ Dbar
-  namelist /probin_multispecies/ Dtherm
+  namelist /probin_multispecies/ Dbar       ! SM diffusion constant  
+  namelist /probin_multispecies/ Dtherm     ! thermo-diffusion coefficients
   namelist /probin_multispecies/ H_offdiag
-  namelist /probin_multispecies/ H_diag
-  namelist /probin_multispecies/ T_init   
+  namelist /probin_multispecies/ H_diag ! =d^2F/dx^2  
+  namelist /probin_multispecies/ T_init   ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   namelist /probin_multispecies/ rho_init  ! initial values for rho
   namelist /probin_multispecies/ rho_bc ! rho_i boundary conditions (dir,lohi,species)
 

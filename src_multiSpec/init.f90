@@ -10,15 +10,15 @@ module init_module
   use ml_layout_module
   use convert_stag_module
   use probin_common_module, only: prob_lo, prob_hi, visc_coef, prob_type, &
-                                  molmass, rhobar, smoothing_width
+                                  molmass, rhobar, smoothing_width, u_init, n_cells
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, &
-                                        T_init, rho_init, nspecies, rho_part_bc_comp
+                                        T_init, rho_init, nspecies, rho_part_bc_comp, rho_init
  
   implicit none
 
   private
 
-  public :: init_rho, init_Temp
+  public :: init_rho_and_umac, init_Temp
   
   ! prob_type: If negative the density of the last species is overwritten to enforce low Mach EOS
   ! 0 = rho constant in space (thermodynamic equilibrium), temperature profile to check thermodiffusion
@@ -32,20 +32,25 @@ module init_module
 
 contains
   
-  subroutine init_rho(rho,dx,time,the_bc_level)
+  subroutine init_rho_and_umac(rho,umac,dx,time,the_bc_level)
 
-    type(multifab) , intent(inout) :: rho(:)            
-    real(kind=dp_t), intent(in   ) :: dx(:,:)           
-    real(kind=dp_t), intent(in   ) :: time 
+    type(multifab) , intent(inout) :: rho(:)
+    type(multifab) , intent(inout) :: umac(:,:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    real(kind=dp_t), intent(in   ) :: time
     type(bc_level) , intent(in   ) :: the_bc_level(:)
  
     ! local variables
     integer                        :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer                        :: dm, ng, i, n, nlevs
+    integer                        :: dm, ng_r, ng_u, i, n, nlevs
     real(kind=dp_t), pointer       :: dp(:,:,:,:)   ! pointer for rho (last dim:nspecies)   
+    real(kind=dp_t), pointer       :: up(:,:,:,:)   ! pointers for mac velocities
+    real(kind=dp_t), pointer       :: vp(:,:,:,:)
+    real(kind=dp_t), pointer       :: wp(:,:,:,:)
 
     dm = rho(1)%dim
-    ng = rho(1)%ng
+    ng_r = rho(1)%ng
+    ng_u = umac(1,1)%ng
     nlevs = size(rho,1)
 
     ! assign values of parameters for the gaussian rho, rhototal
@@ -57,16 +62,19 @@ contains
     ! looping over boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
-          dp  => dataptr(rho(n),i)
-          lo  = lwb(get_box(rho(n),i))
-          hi  = upb(get_box(rho(n),i))
-          !print*, lo, hi 
-          
+          dp => dataptr(rho(n),i)
+          up => dataptr(umac(n,1),i)
+          vp => dataptr(umac(n,2),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
           select case(dm)
           case (2)
-             call init_rho_2d(dp(:,:,1,:),ng,lo,hi,dx(n,:),time)
+             call init_rho_and_umac_2d(dp(:,:,1,:),ng_r,up(:,:,1,1),vp(:,:,1,1),ng_u, &
+                                       lo,hi,dx(n,:),time)
           case (3)
-             call init_rho_3d(dp(:,:,:,:),ng,lo,hi,dx(n,:),time)
+             wp => dataptr(umac(n,3),i)
+             call init_rho_and_umac_3d(dp(:,:,:,:),ng_r,up(:,:,:,1),vp(:,:,:,1),wp(:,:,:,1),ng_u, &
+                                       lo,hi,dx(n,:),time)
           end select
        end do
 
@@ -76,20 +84,24 @@ contains
        ! fill non-periodic domain boundary ghost cells
        call multifab_physbc(rho(n), 1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
 
+       ! Note: not filling umac ghost cells here.
+
     end do
 
-  end subroutine init_rho
+  end subroutine init_rho_and_umac
 
-  subroutine init_rho_2d(rho,ng,lo,hi,dx,time)
+  subroutine init_rho_and_umac_2d(rho,ng_r,u,v,ng_u,lo,hi,dx,time)
 
-    integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)  ! last dimension for species
+    integer          :: lo(2), hi(2), ng_r, ng_u
+    real(kind=dp_t)  :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)  ! last dimension for species
+    real(kind=dp_t)  ::   u(lo(1)-ng_u:,lo(2)-ng_u:)
+    real(kind=dp_t)  ::   v(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  
     ! local varables
     integer          :: i,j,n
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,rho_loc
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,rho_loc,rand
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -101,6 +113,10 @@ contains
     !============================================================
     ! Thermodynamic equilibrium
     !============================================================
+ 
+    u = 0.d0
+    v = 0.d0
+
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
  
@@ -113,6 +129,10 @@ contains
     !=============================================================
     ! Initializing rho's in concentric circle with radius^2 = 0.1
     !=============================================================
+ 
+    u = 0.d0
+    v = 0.d0
+
     do j=lo(2),hi(2)
        y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
        do i=lo(1),hi(1)
@@ -132,6 +152,10 @@ contains
     !=========================================================
     ! Initializing rho's with constant gradient 
     !=========================================================
+ 
+    u = 0.d0
+    v = 0.d0
+
     do j=lo(2),hi(2)
        y = prob_lo(2) + (dble(j)+half)*dx(2) 
        do i=lo(1),hi(1)
@@ -149,6 +173,10 @@ contains
     ! Initializing rho's in Gaussian so as rhotot=constant=1.0
     ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
     !===========================================================
+ 
+    u = 0.d0
+    v = 0.d0
+
     do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+half) * dx(2) - half*(prob_lo(2)+prob_hi(2))
          do i=lo(1),hi(1)
@@ -166,6 +194,10 @@ contains
     ! Initializing rho1,rho2=Gaussian and rhototal=1+alpha*exp(-r^2/4D)/(4piD) (no-time 
     ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
     !==================================================================================
+ 
+    u = 0.d0
+    v = 0.d0
+
     do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1),hi(1)
@@ -186,6 +218,10 @@ contains
     ! Dbar(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
     ! (to benchmark eqn1) Initializing rho1, rho2=Gaussian and rhototal has no-time dependence.
     !==================================================================================
+ 
+    u = 0.d0
+    v = 0.d0
+
     do j=lo(2),hi(2)
          y = prob_lo(2) + (dble(j)+half) * dx(2) - half
          do i=lo(1),hi(1)
@@ -206,6 +242,10 @@ contains
     !=========================================================
     ! Test of thermodiffusion steady-state for 2 species 
     !=========================================================
+ 
+    u = 0.d0
+    v = 0.d0
+
     do j=lo(2),hi(2)
        y = prob_lo(2) + (dble(j)+half)*dx(2) 
        do i=lo(1),hi(1)
@@ -226,6 +266,10 @@ contains
     !=============================================================
     ! smoothed circle
     !=============================================================
+ 
+    u = 0.d0
+    v = 0.d0
+
     do j=lo(2),hi(2)
        y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
        do i=lo(1),hi(1)
@@ -245,73 +289,131 @@ contains
     !=============================================================
     ! 4-species, 4-stripes
     !=============================================================
-
-       rho = 0.d0
-           
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+half)*dx(2) 
-          do i=lo(1),hi(1)
-             if (y .le. 0.75d0*prob_lo(2)+0.25d0*prob_hi(2)) then
-                rho(i,j,1) = rho_init(1,1)
-                rho(i,j,2) = 0.1d0*rhobar(2)
-                rho(i,j,3) = 0.1d0*rhobar(3)
-                rho(i,j,4) = 0.1d0*rhobar(4)
-             else if (y .le. 0.5d0*prob_lo(2)+0.5d0*prob_hi(2)) then
-                rho(i,j,1) = 0.1d0*rhobar(1)
-                rho(i,j,2) = rho_init(1,2)
-                rho(i,j,3) = 0.1d0*rhobar(3)
-                rho(i,j,4) = 0.1d0*rhobar(4)
-             else if (y .le. 0.25d0*prob_lo(2)+0.75d0*prob_hi(2)) then
-                rho(i,j,1) = 0.1d0*rhobar(1)
-                rho(i,j,2) = 0.1d0*rhobar(2)
-                rho(i,j,3) = rho_init(1,3)
-                rho(i,j,4) = 0.1d0*rhobar(4)
-             else
-                rho(i,j,1) = 0.1d0*rhobar(1)
-                rho(i,j,2) = 0.1d0*rhobar(2)
-                rho(i,j,3) = 0.1d0*rhobar(3)
-                rho(i,j,4) = rho_init(1,4)
-             end if
-          end do
-       end do
  
+    u = 0.d0
+    v = 0.d0
+
+    rho = 0.d0
+           
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+half)*dx(2) 
+       do i=lo(1),hi(1)
+          if (y .le. 0.75d0*prob_lo(2)+0.25d0*prob_hi(2)) then
+             rho(i,j,1) = rho_init(1,1)
+             rho(i,j,2) = 0.1d0*rhobar(2)
+             rho(i,j,3) = 0.1d0*rhobar(3)
+             rho(i,j,4) = 0.1d0*rhobar(4)
+          else if (y .le. 0.5d0*prob_lo(2)+0.5d0*prob_hi(2)) then
+             rho(i,j,1) = 0.1d0*rhobar(1)
+             rho(i,j,2) = rho_init(1,2)
+             rho(i,j,3) = 0.1d0*rhobar(3)
+             rho(i,j,4) = 0.1d0*rhobar(4)
+          else if (y .le. 0.25d0*prob_lo(2)+0.75d0*prob_hi(2)) then
+             rho(i,j,1) = 0.1d0*rhobar(1)
+             rho(i,j,2) = 0.1d0*rhobar(2)
+             rho(i,j,3) = rho_init(1,3)
+             rho(i,j,4) = 0.1d0*rhobar(4)
+          else
+             rho(i,j,1) = 0.1d0*rhobar(1)
+             rho(i,j,2) = 0.1d0*rhobar(2)
+             rho(i,j,3) = 0.1d0*rhobar(3)
+             rho(i,j,4) = rho_init(1,4)
+          end if
+       end do
+    end do
+
     case(9)
 
-       ! one fluid on top of another
-       ! rho1 = rho_init(1) in lower half of domain (in y)
-       ! rho1 = rho_init(2) in upper half
-       ! use the EOS to compute rho2 by setting prob_type negative
+    !=============================================================
+    ! one fluid on top of another
+    ! rho1 = rho_init(1) in lower half of domain (in y)
+    ! rho1 = rho_init(2) in upper half
+    ! use the EOS to compute rho2 by setting prob_type negative
+    !=============================================================
+ 
+    u = 0.d0
+    v = 0.d0
 
-       ! middle of domain
-       y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+    ! middle of domain
+    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
-       if(abs(smoothing_width)>epsilon(1.d0)) then
+    if(abs(smoothing_width)>epsilon(1.d0)) then
 
-          ! smoothed version
-          do j=lo(2),hi(2)
-             y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
+       ! smoothed version
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
+          
+          rho_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+          rho(lo(1):hi(1),j,1) = rho_loc
 
-             rho_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
-             rho(lo(1):hi(1),j,1) = rho_loc
+       end do
 
-          end do
+    else
 
+       ! discontinuous version
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y1) then
+             rho(lo(1):hi(1),j,1) = rho_init(1,1)
+          else
+             rho(lo(1):hi(1),j,1) = rho_init(1,2)
+          end if
+       end do
+
+    end if
+
+    case (10)
+
+    ! low Mach Kelvin-Helmholtz comparison to binary version
+    ! one fluid on top of another
+    ! discontinuous interface, but with random density perturbation added 
+    ! in a 1-cell thick transition region
+
+    v = 0.d0
+
+    ! middle of domain
+    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+    ! rho1 = rho_init(1,1) in lower half of domain (in y)
+    ! rho1 = rho_init(2,1) in upper half
+    ! random perturbation below centerline
+
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+       if (y .lt. y1) then
+          rho_loc = rho_init(1,1)
        else
-
-          ! discontinuous version
-          do j=lo(2),hi(2)
-             y = prob_lo(2) + (j+0.5d0)*dx(2)
-
-             if (y .lt. y1) then
-                rho(lo(1):hi(1),j,1) = rho_init(1,1)
-             else
-                rho(lo(1):hi(1),j,1) = rho_init(1,2)
-             end if
-
-
-          end do
-
+          rho_loc = rho_init(1,2)
        end if
+
+       rho(lo(1):hi(1),j,1) = rho_loc
+       rho(lo(1):hi(1),j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+
+       ! add random perturbation below centerline
+       if (j .eq. n_cells(2)/2-1) then
+          do i=lo(1),hi(1)
+             call random_number(rand)
+             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+             rho(i,j,1) = rho_loc
+             rho(i,j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+          end do
+       end if
+          
+    end do
+       
+    ! velocity = u_init(1) below centerline
+    !            u_init(2) above centerline
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (j+0.5d0)*dx(2)
+
+       if (y .lt. y1) then
+          u(:,j) = u_init(1)
+       else
+          u(:,j) = u_init(2)
+       end if
+
+    end do
 
     case default
       
@@ -336,12 +438,15 @@ contains
 
     end if
    
-  end subroutine init_rho_2d
+  end subroutine init_rho_and_umac_2d
 
-  subroutine init_rho_3d(rho,ng,lo,hi,dx,time)
+  subroutine init_rho_and_umac_3d(rho,ng_r,u,v,w,ng_u,lo,hi,dx,time)
     
-    integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! Last dimension for species 
+    integer          :: lo(3), hi(3), ng_r, ng_u
+    real(kind=dp_t)  :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:) ! Last dimension for species 
+    real(kind=dp_t)  ::   u(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+    real(kind=dp_t)  ::   v(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+    real(kind=dp_t)  ::   w(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  
@@ -360,6 +465,9 @@ contains
     ! Thermodynamic equilibrium
     !================================================================================
  
+    u = 0.d0
+    v = 0.d0
+ 
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
@@ -376,6 +484,9 @@ contains
     !================================================================================
     ! Initializing rho's in concentric circle 
     !================================================================================
+ 
+    u = 0.d0
+    v = 0.d0
   
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
@@ -402,6 +513,9 @@ contains
     ! Initializing rho's with constant gradient
     !========================================================
  
+    u = 0.d0
+    v = 0.d0
+ 
     !$omp parallel private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+half)*dx(3) 
@@ -423,6 +537,9 @@ contains
      ! Initializing rho's in Gaussian so as rhotot=constant=1.0. Here rho_exact = 
      ! e^(-r^2/4Dt)/(4piDt)^3/2, For norm, sigma/dx >2 (at t=0) & L/sigma < 8 (at t=t)
      !================================================================================
+ 
+     u = 0.d0
+     v = 0.d0
   
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
@@ -448,6 +565,9 @@ contains
      ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
      ! in time. Manufactured solution rho1_exact = e^(-r^2/4Dt-t/tau)/(4piDt)^(3/2)
      !==============================================================================
+ 
+     u = 0.d0
+     v = 0.d0
      
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
@@ -475,6 +595,9 @@ contains
      ! Initializing m2=m3, D12=D13 where Dbar(1)=D12, Dbar(2)=D13, Dbar(3)=D23, 
      ! Grad(w2)=0, manufactured solution for rho1 and rho2 
      !==================================================================================
+ 
+     u = 0.d0
+     v = 0.d0
 
      !$omp parallel private(i,j,k,x,y,z)
      do k=lo(3),hi(3)
@@ -528,7 +651,7 @@ contains
 
     end if
    
-  end subroutine init_rho_3d
+  end subroutine init_rho_and_umac_3d
 
   subroutine init_Temp(Temp,dx,time,the_bc_level)
 
@@ -593,9 +716,9 @@ contains
     !=========================================================================
     ! Thermodynamic equilibrium
     !=========================================================================
-    do j=lo(2)-1,hi(2)+1
+    do j=lo(2)-ng,hi(2)+ng
        y = prob_lo(2) + (dble(j)+half)*dx(2) 
-       do i=lo(1)-1,hi(1)+1
+       do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+half)*dx(1) 
  
             Temp(i,j) = T_init(1)
@@ -610,9 +733,9 @@ contains
     !=========================================================================
     ! Initializing T in concentric circle at (Lx/2,Ly/2) with radius^2=0.1*L(1)*L(2)
     !=========================================================================
-    do j=lo(2)-1,hi(2)+1
+    do j=lo(2)-ng,hi(2)+ng
        y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
-       do i=lo(1)-1,hi(1)+1
+       do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
       
           ! temperature distribution follows the density 
@@ -630,9 +753,9 @@ contains
     !========================================================
     ! Initializing T with constant gradient along y axes
     !========================================================
-    do j=lo(2)-1,hi(2)+1
+    do j=lo(2)-ng,hi(2)+ng
        y = prob_lo(2) + (dble(j)+half)*dx(2) 
-       do i=lo(1)-1,hi(1)+1
+       do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+half)*dx(1) 
       
           ! linear gradient in y direction
@@ -643,9 +766,9 @@ contains
 
     case default
 
-    do j=lo(2)-1,hi(2)+1
+    do j=lo(2)-ng,hi(2)+ng
          y = prob_lo(2) + (dble(j)+half) * dx(2) - half
-         do i=lo(1)-1,hi(1)+1
+         do i=lo(1)-ng,hi(1)+ng
             x = prob_lo(1) + (dble(i)+half) * dx(1) - half
         
             Temp(i,j)  = T_init(1) 
@@ -679,9 +802,9 @@ contains
     !================================================================================
  
     !$omp parallel private(i,j,k,x,y,z)
-    do k=lo(3)-1,hi(3)+1
-       do j=lo(2)-1,hi(2)+1
-          do i=lo(1)-1,hi(1)+1
+    do k=lo(3)-ng,hi(3)+ng
+       do j=lo(2)-ng,hi(2)+ng
+          do i=lo(1)-ng,hi(1)+ng
              
              Temp(i,j,k) = T_init(1)
 
@@ -696,11 +819,11 @@ contains
     !================================================================================
   
     !$omp parallel private(i,j,k,x,y,z)
-    do k=lo(3)-1,hi(3)+1
+    do k=lo(3)-ng,hi(3)+ng
        z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
-       do j=lo(2)-1,hi(2)+1
+       do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
-          do i=lo(1)-1,hi(1)+1
+          do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
              
              !temperature distribution follows the density 
@@ -722,11 +845,11 @@ contains
     !========================================================
  
     !$omp parallel private(i,j,k,x,y,z)
-    do k=lo(3)-1,hi(3)+1
+    do k=lo(3)-ng,hi(3)+ng
        z = prob_lo(3) + (dble(k)+half)*dx(3) 
-       do j=lo(2)-1,hi(2)+1
+       do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+half)*dx(2) 
-          do i=lo(1)-1,hi(1)+1
+          do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+half)*dx(1) 
 
              ! linear gradient in y direction for temperature 
@@ -740,9 +863,9 @@ contains
     case default
 
     !$omp parallel private(i,j,k,x,y,z)
-    do k=lo(3)-1,hi(3)+1
-       do j=lo(2)-1,hi(2)+1
-          do i=lo(1)-1,hi(1)+1
+    do k=lo(3)-ng,hi(3)+ng
+       do j=lo(2)-ng,hi(2)+ng
+          do i=lo(1)-ng,hi(1)+ng
 
              Temp(i,j,k) = T_init(1)
 
