@@ -364,10 +364,12 @@ contains
 
     case (10)
 
+    !=============================================================
     ! low Mach Kelvin-Helmholtz comparison to binary version
     ! one fluid on top of another
     ! discontinuous interface, but with random density perturbation added 
     ! in a 1-cell thick transition region
+    !=============================================================
 
     v = 0.d0
 
@@ -452,7 +454,7 @@ contains
  
     ! local variables
     integer          :: i,j,k,n
-    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum
+    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum,rand,rho_loc,y1
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
@@ -467,8 +469,9 @@ contains
  
     u = 0.d0
     v = 0.d0
- 
-    !$omp parallel private(i,j,k,x,y,z)
+    w = 0.d0
+
+    !$omp parallel do private(i,j,k)
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -487,8 +490,9 @@ contains
  
     u = 0.d0
     v = 0.d0
+    w = 0.d0
   
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z,rsq)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2),hi(2)
@@ -515,8 +519,9 @@ contains
  
     u = 0.d0
     v = 0.d0
+    w = 0.d0
  
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z)
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+half)*dx(3) 
        do j=lo(2),hi(2)
@@ -540,8 +545,9 @@ contains
  
      u = 0.d0
      v = 0.d0
+     w = 0.d0
   
-     !$omp parallel private(i,j,k,x,y,z)
+     !$omp parallel do private(i,j,k,x,y,z,rsq)
      do k=lo(3),hi(3)
         z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
         do j=lo(2),hi(2)
@@ -568,8 +574,9 @@ contains
  
      u = 0.d0
      v = 0.d0
+     w = 0.d0
      
-     !$omp parallel private(i,j,k,x,y,z)
+     !$omp parallel do private(i,j,k,x,y,z,rsq,rhot)
      do k=lo(3),hi(3)
         z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2),hi(2)
@@ -598,8 +605,9 @@ contains
  
      u = 0.d0
      v = 0.d0
+     w = 0.d0
 
-     !$omp parallel private(i,j,k,x,y,z)
+     !$omp parallel do private(i,j,k,x,y,z,rsq,w1,w2,rhot)
      do k=lo(3),hi(3)
         z = prob_lo(3) + (dble(k)+half) * dx(3) - half
         do j=lo(2),hi(2)
@@ -625,6 +633,146 @@ contains
        end do
     end do
     !$omp end parallel do
+
+    case(8)
+
+    !=============================================================
+    ! 4-species, 4-stripes
+    !=============================================================
+ 
+    u = 0.d0
+    v = 0.d0
+    w = 0.d0
+
+    rho = 0.d0
+       
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+half)*dx(2) 
+       do i=lo(1),hi(1)
+          if (y .le. 0.75d0*prob_lo(2)+0.25d0*prob_hi(2)) then
+             rho(i,j,k,1) = rho_init(1,1)
+             rho(i,j,k,2) = 0.1d0*rhobar(2)
+             rho(i,j,k,3) = 0.1d0*rhobar(3)
+             rho(i,j,k,4) = 0.1d0*rhobar(4)
+          else if (y .le. 0.5d0*prob_lo(2)+0.5d0*prob_hi(2)) then
+             rho(i,j,k,1) = 0.1d0*rhobar(1)
+             rho(i,j,k,2) = rho_init(1,2)
+             rho(i,j,k,3) = 0.1d0*rhobar(3)
+             rho(i,j,k,4) = 0.1d0*rhobar(4)
+          else if (y .le. 0.25d0*prob_lo(2)+0.75d0*prob_hi(2)) then
+             rho(i,j,k,1) = 0.1d0*rhobar(1)
+             rho(i,j,k,2) = 0.1d0*rhobar(2)
+             rho(i,j,k,3) = rho_init(1,3)
+             rho(i,j,k,4) = 0.1d0*rhobar(4)
+          else
+             rho(i,j,k,1) = 0.1d0*rhobar(1)
+             rho(i,j,k,2) = 0.1d0*rhobar(2)
+             rho(i,j,k,3) = 0.1d0*rhobar(3)
+             rho(i,j,k,4) = rho_init(1,4)
+          end if
+       end do
+    end do
+    end do
+
+    case(9)
+
+    !=============================================================
+    ! one fluid on top of another
+    ! rho1 = rho_init(1) in lower half of domain (in y)
+    ! rho1 = rho_init(2) in upper half
+    ! use the EOS to compute rho2 by setting prob_type negative
+    !=============================================================
+ 
+    u = 0.d0
+    v = 0.d0
+    w = 0.d0
+
+    ! middle of domain
+    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+    if(abs(smoothing_width)>epsilon(1.d0)) then
+
+       ! smoothed version
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
+          
+          rho_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+          rho(lo(1):hi(1),j,lo(3):hi(3),1) = rho_loc
+
+       end do
+
+    else
+
+       ! discontinuous version
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y1) then
+             rho(lo(1):hi(1),j,lo(3):hi(3),1) = rho_init(1,1)
+          else
+             rho(lo(1):hi(1),j,lo(3):hi(3),1) = rho_init(1,2)
+          end if
+       end do
+
+    end if
+
+    case (10)
+
+    !=============================================================
+    ! low Mach Kelvin-Helmholtz comparison to binary version
+    ! one fluid on top of another
+    ! discontinuous interface, but with random density perturbation added 
+    ! in a 1-cell thick transition region
+    !=============================================================
+
+    v = 0.d0
+    w = 0.d0
+
+    ! middle of domain
+    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+    ! rho1 = rho_init(1,1) in lower half of domain (in y)
+    ! rho1 = rho_init(2,1) in upper half
+    ! random perturbation below centerline
+
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+       if (y .lt. y1) then
+          rho_loc = rho_init(1,1)
+       else
+          rho_loc = rho_init(1,2)
+       end if
+
+       rho(lo(1):hi(1),j,lo(3):hi(3),1) = rho_loc
+       rho(lo(1):hi(1),j,lo(3):hi(3),2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+
+       ! add random perturbation below centerline
+       if (j .eq. n_cells(2)/2-1) then
+          do k=lo(3),hi(3)
+          do i=lo(1),hi(1)
+             call random_number(rand)
+             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+             rho(i,j,k,1) = rho_loc
+             rho(i,j,k,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+          end do
+          end do
+       end if
+          
+    end do
+       
+    ! velocity = u_init(1) below centerline
+    !            u_init(2) above centerline
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (j+0.5d0)*dx(2)
+
+       if (y .lt. y1) then
+          u(:,j,:) = u_init(1)
+       else
+          u(:,j,:) = u_init(2)
+       end if
+
+    end do
 
     case default
       
@@ -801,7 +949,7 @@ contains
     ! Thermodynamic equilibrium
     !================================================================================
  
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z)
     do k=lo(3)-ng,hi(3)+ng
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng
@@ -818,7 +966,7 @@ contains
     ! Initializing temperature in concentric circle 
     !================================================================================
   
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z,rsq)
     do k=lo(3)-ng,hi(3)+ng
        z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
        do j=lo(2)-ng,hi(2)+ng
@@ -844,7 +992,7 @@ contains
     ! Initializing T with constant gradient along y direction
     !========================================================
  
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k,x,y,z)
     do k=lo(3)-ng,hi(3)+ng
        z = prob_lo(3) + (dble(k)+half)*dx(3) 
        do j=lo(2)-ng,hi(2)+ng
@@ -862,7 +1010,7 @@ contains
 
     case default
 
-    !$omp parallel private(i,j,k,x,y,z)
+    !$omp parallel do private(i,j,k)
     do k=lo(3)-ng,hi(3)+ng
        do j=lo(2)-ng,hi(2)+ng
           do i=lo(1)-ng,hi(1)+ng

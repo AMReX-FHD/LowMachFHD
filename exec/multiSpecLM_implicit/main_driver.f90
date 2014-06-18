@@ -152,7 +152,8 @@ subroutine main_driver()
      ! build the ml_layout
      ! read in time and dt from checkpoint
      ! build and fill rho, rhotot, pres, and umac
-     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres,umac,pmask)
+     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres, &
+                                  diff_mass_fluxdiv,stoch_mass_fluxdiv,umac,pmask)
 
   else
 
@@ -202,6 +203,8 @@ subroutine main_driver()
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
         ! pressure - need 1 ghost cell since we calculate its gradient
         call multifab_build(pres(n)      ,mla%la(n),1       ,1)
+        call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
+        call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
@@ -283,8 +286,6 @@ subroutine main_driver()
      call multifab_build(rho_new(n),           mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n),        mla%la(n),1,       ng_s) 
      call multifab_build(Temp(n),              mla%la(n),1,       ng_s)
-     call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
-     call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
      call multifab_build(eta(n)  ,mla%la(n),1,1)
      call multifab_build(kappa(n),mla%la(n),1,1)
 
@@ -500,7 +501,8 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing checkpoint at timestep =', istep 
             end if
-            call checkpoint_write(mla,rho_new,rhotot_new,pres,umac,time,dt,istep)
+            call checkpoint_write(mla,rho_new,rhotot_new,pres,diff_mass_fluxdiv, &
+                                  stoch_mass_fluxdiv,umac,time,dt,istep)
          end if
 
          ! print out projection (average) and variance

@@ -43,7 +43,7 @@ contains
              call estdt_2d(ump(:,:,1,1), vmp(:,:,1,1), ng, &
                            lo, hi, dx(n,:), dt_grid)
           case (3)
-             vmp => dataptr(umac(n,3), i)
+             wmp => dataptr(umac(n,3), i)
              call estdt_3d(ump(:,:,:,1), vmp(:,:,:,1), wmp(:,:,:,1), ng, &
                            lo, hi, dx(n,:), dt_grid)
           end select
