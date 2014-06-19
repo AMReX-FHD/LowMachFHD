@@ -454,7 +454,7 @@ contains
  
     ! local variables
     integer          :: i,j,k,n
-    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum,rand,rho_loc,y1
+    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum,rand,rho_loc,y1,r
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
@@ -633,6 +633,33 @@ contains
        end do
     end do
     !$omp end parallel do
+
+   case(7)
+
+    !=============================================================
+    ! smoothed circle
+    !=============================================================
+ 
+    u = 0.d0
+    v = 0.d0
+    w = 0.d0
+
+    do k=lo(3),hi(3)
+       z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+       
+             r = sqrt(x**2 + y**2 + z**2)
+
+             rho(i,j,k,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
+                  0.5d0*(rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
+                  (1.d0 + tanh((r-15.d0)/2.d0))
+
+          end do
+       end do
+    end do
 
     case(8)
 
