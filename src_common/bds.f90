@@ -227,7 +227,7 @@ contains
              enddo
 
              ! iterative loop
-             do ll = 1,3 
+             do ll = 1,3
                 sumloc = 0.25d0*(sc(4) + sc(3) + sc(2) + sc(1))
                 sumdif = (sumloc - s(i,j))*4.d0
                 sgndif = sign(1.d0,sumdif)
@@ -502,7 +502,7 @@ contains
                 enddo
 
                 ! iterative loop
-                do ll = 1,3 
+                do ll = 1,4
                    sumloc = 0.125d0*(sc(1)+sc(2)+sc(3)+sc(4)+sc(5)+sc(6)+sc(7)+sc(8))
                    sumdif = (sumloc - s(i,j,k))*8.d0
                    sgndif = sign(1.d0,sumdif)
