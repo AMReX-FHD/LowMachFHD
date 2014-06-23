@@ -16,6 +16,7 @@ f90sources += matmat_mul.f90
 f90sources += matrix_utilities.f90
 f90sources += matvec_mul.f90
 f90sources += probin_multispecies.f90
+f90sources += project_onto_eos.f90
 f90sources += reservoir_bc_fill.f90
 f90sources += restart.f90
 f90sources += stochastic_mass_fluxdiv.f90
