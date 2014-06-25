@@ -24,10 +24,11 @@ subroutine main_driver()
   use convert_stag_module
   use restart_module
   use checkpoint_module
+  use project_onto_eos_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
-                                  probin_common_init, print_int, &
+                                  probin_common_init, print_int, project_eos_int, &
                                   advection_type, fixed_dt, max_step, &
                                   algorithm_type, variance_coef_mom, initial_variance
   use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, &
@@ -484,6 +485,11 @@ subroutine main_driver()
           call sum_mass(rho_new, istep) ! print out the total mass to check conservation
           call eos_check(mla,rho_new)
       end if
+
+     ! project rho and rho1 back onto EOS
+     if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
+        call project_onto_eos(mla,rho_new)
+     end if
 
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then

@@ -7,8 +7,6 @@ module project_onto_eos_module
   use probin_gmres_module, only: mg_rel_tol
   use probin_multispecies_module, only: nspecies
 
-
-
   implicit none
 
   private
@@ -56,106 +54,66 @@ contains
     integer        , intent(in   ) :: lo(:),hi(:),ng_r
     real(kind=dp_t), intent(inout) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
 
-    real(kind=dp_t) :: sum,sum2,sum_sq,A(nspecies),r_tmp(3),tmp1
-
-    integer i,j,l,m,ncell
+    real(kind=dp_t) :: rho_tilde(lo(1):hi(1),lo(2):hi(2),nspecies)
+    real(kind=dp_t) :: rhobar_sq,delta_eos,sum_spec(nspecies)
+    real(kind=dp_t) :: rho_tmp,sum_change(nspecies)
+    integer i,j,l,ncell
 
     ! number of cells on the grid
     ncell = (hi(1)-lo(1)+1)*(hi(2)-lo(2)+1)
 
-    sum_sq = 0.d0
+    ! rhobar_sq = (sum_i (1/rhobar_i^2))^-1
+    rhobar_sq = 0.d0
     do l=1,nspecies
-       sum_sq = sum_sq + rhobar(l)**2
+       rhobar_sq = rhobar_sq + 1.d0/rhobar(l)**2
+    end do
+    rhobar_sq = 1.d0/rhobar_sq
+
+    sum_spec(:) = 0.d0
+    sum_change(:) = 0.d0
+
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+          
+       ! delta_eos = sum_l (rho_l/rhobar_l) - 1
+       delta_eos = -1.d0
+       do l=1,nspecies
+          delta_eos = delta_eos + rho(i,j,l)/rhobar(l)
+       end do
+       
+       do l=1,nspecies
+          ! rho_tilde_i = rho - (rhobar_sq/rhobar_i) * delta_eos
+          rho_tilde(i,j,l) = rho(i,j,l) - (rhobar_sq/rhobar(l))*delta_eos
+          ! sum_spec_i = sum (rho_i - rho_tilde_i)
+          sum_spec(l) = sum_spec(l) + rho(i,j,l) - rho_tilde(i,j,l)
+       end do
+
+    end do
     end do
 
+    sum_spec(:) = sum_spec(:) / dble(ncell)
+
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
     do l=1,nspecies
-       do m=1,nspecies
-          A(m) = rhobar(l)*rhobar(m) / sum_sq
-       end do
+       rho_tmp = rho(i,j,l)
+       rho(i,j,l) = rho_tilde(i,j,l) + sum_spec(l)
+       sum_change(l) = sum_change(l) + (rho(i,j,l)-rho_tmp)**2
+    end do
+    end do
+    end do
 
-       sum = 0.d0
-
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-
-             ! sum = sum_ij (A(i)*rhol - sum_{m!=l} A(m)*rhom) - sum_ij (rhol)
-             !     = sum_ij (A(1)-1.0)*rhol - sum_{m!=l} A(m)*rhom
-             sum2 = 0.d0
-             do m=1,nspecies
-                if (m .ne. l) then
-                   sum2 = sum2 + A(m)*rho(i,j,m)
-                end if
-             end do
-             sum = sum + (A(l)-1.d0)*rho(i,j,l) - sum2
-
-          end do
-       end do
-
-       sum = sum / dble(ncell)
-
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-
-             if (l .ne. nspecies) then
-
-                sum2 = 0.d0
-                do m=1,nspecies
-                   if (m .ne. l) then
-                      sum2 = sum2 + A(m)*rho(i,j,m)
-                   end if
-                end do
-                tmp1 = rho(i,j,l)
-                rho(i,j,l) = A(l)*rho(i,j,l) - sum2 - sum
-
-                if (abs(rho(i,j,l)-tmp1) .gt. 1.d-9) then
-                   print*,'eos big adjustment',i,j,abs(rho(i,j,l)-tmp1)
-                end if
-
-             else
-
-                sum2 = 0
-                do m=1,nspecies-1
-                   sum2 = sum2 + rho(i,j,m)/rhobar(m)
-                end do
-                tmp1 = rho(i,j,l)
-                rho(i,j,l) = (1.d0 - sum2)*rhobar(l)
-
-                if (abs(rho(i,j,l)-tmp1) .gt. 1.d-9) then
-                   print*,'eos big adjustment',i,j,abs(rho(i,j,l)-tmp1)
-                end if
-
-             end if
-
-          end do
-       end do
-
-    end do ! end loop over species
-
-!    r_tmp(1:2)=0.0d0 ! Check the L2 norm of the change
-!    do j=lo(2),hi(2)
-!       do i=lo(1),hi(1)
-
-          ! rho1 = A*rho1 - B*rho2 - sum
-          !      = A*rho1 - B*(rho-rho1) - sum
-!          r_tmp(3) = rho(i,j,2)
-!          rho(i,j,2) = A*rho(i,j,2) - B*(rho(i,j,1)-rho(i,j,2)) - sum
-!          r_tmp(1) = r_tmp(1) + (r_tmp(3)-rho(i,j,2))**2
-
-          ! rho = rho1 + rho2 
-          !     = rho1 + (1-rho1/rhobar1)*rhobar2
-!          r_tmp(3) = rho(i,j,1)
-!          rho(i,j,1) = rho(i,j,2) + (1.d0-rho(i,j,2)/rhobar(1))*rhobar(2)
-!          r_tmp(2) = r_tmp(2) + (r_tmp(3)-rho(i,j,1))**2
-
-!       end do
-!    end do
-    
-!    r_tmp(1:2) = sqrt(r_tmp(1:2)/dble(ncell))
-!    r_tmp(1:2) = r_tmp(1:2) / sqrt(rhobar(1)**2 + rhobar(2)**2) ! Relative change
-!    if(any( r_tmp(1:2) > 1000*mg_rel_tol)) then      
-!       call bl_warn('EOS adjustment exceeded Poisson solver tolerance')
-!       print*,r_tmp(1:2),mg_rel_tol
-!    end if
+    ! redefine rhobar_sq = sum(rhobar_i^2)
+    rhobar_sq = 0.d0
+    do l=1,nspecies
+       rhobar_sq = rhobar_sq + rhobar(l)**2
+    end do
+    sum_change(:) = sqrt(sum_change(:)/dble(ncell))
+    sum_change(:) = sum_change(:) / sqrt(rhobar_sq)
+    if(any( sum_change(1:nspecies) > 1000*mg_rel_tol)) then      
+       call bl_warn('EOS adjustment exceeded Poisson solver tolerance')
+       print*,sum_change(1:nspecies),mg_rel_tol
+    end if
 
   end subroutine project_onto_eos_2d
 
@@ -165,6 +123,72 @@ contains
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_r
     real(kind=dp_t), intent(inout) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
+
+    real(kind=dp_t) :: rho_tilde(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),nspecies)
+    real(kind=dp_t) :: rhobar_sq,delta_eos,sum_spec(nspecies)
+    real(kind=dp_t) :: rho_tmp,sum_change(nspecies)
+    integer i,j,k,l,ncell
+
+    ! number of cells on the grid
+    ncell = (hi(1)-lo(1)+1)*(hi(2)-lo(2)+1)*(hi(3)-lo(3)+1)
+
+    ! rhobar_sq = (sum_i (1/rhobar_i^2))^-1
+    rhobar_sq = 0.d0
+    do l=1,nspecies
+       rhobar_sq = rhobar_sq + 1.d0/rhobar(l)**2
+    end do
+    rhobar_sq = 1.d0/rhobar_sq
+
+    sum_spec(:) = 0.d0
+    sum_change(:) = 0.d0
+
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+          
+       ! delta_eos = sum_l (rho_l/rhobar_l) - 1
+       delta_eos = -1.d0
+       do l=1,nspecies
+          delta_eos = delta_eos + rho(i,j,k,l)/rhobar(l)
+       end do
+
+       do l=1,nspecies
+          ! rho_tilde_i = rho - (rhobar_sq/rhobar_i) * delta_eos
+          rho_tilde(i,j,k,l) = rho(i,j,k,l) - (rhobar_sq/rhobar(l))*delta_eos
+          ! sum_spec_i = sum (rho_i - rho_tilde_i)
+          sum_spec(l) = sum_spec(l) + rho(i,j,k,l) - rho_tilde(i,j,k,l)
+       end do
+
+    end do
+    end do
+    end do
+
+    sum_spec(:) = sum_spec(:) / dble(ncell)
+
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+       do l=1,nspecies
+          rho_tmp = rho(i,j,k,l)
+          rho(i,j,k,l) = rho_tilde(i,j,k,l) + sum_spec(l)
+          sum_change(l) = sum_change(l) + (rho(i,j,k,l)-rho_tmp)**2
+       end do
+    end do
+    end do
+    end do
+
+    ! redefine rhobar_sq = sum(rhobar_i^2)
+    rhobar_sq = 0.d0
+    do l=1,nspecies
+       rhobar_sq = rhobar_sq + rhobar(l)**2
+    end do
+    sum_change(:) = sqrt(sum_change(:)/dble(ncell))
+    sum_change(:) = sum_change(:) / sqrt(rhobar_sq)
+    if(any( sum_change(1:nspecies) > 1000*mg_rel_tol)) then      
+       call bl_warn('EOS adjustment exceeded Poisson solver tolerance')
+       print*,sum_change(1:nspecies),mg_rel_tol
+    end if
+
 
   end subroutine project_onto_eos_3d
 
