@@ -2,11 +2,11 @@
  
   ! Problem specification
   !----------------------
-  dim_in = 2                       ! 2D or 3D  
+  dim_in = 3                       ! 2D or 3D  
   prob_lo(1:3) = 0.d0 0.d0 0.d0    ! physical lo coordinate
   prob_hi(1:3) = 1.d0 1.d0 0.25d0  ! physical hi coordinate
   n_cells(1:3) = 128 128 32        ! number of cells in domain
-  max_grid_size(1:3) = 128 128 32  ! max number of cells in a box
+  max_grid_size(1:3) = 64 64 64    ! max number of cells in a box
   max_step = 10                    ! maximum number of time steps
   fixed_dt = -1.d0                 ! time step
   cfl = 0.5d0                      ! cfl number
@@ -136,9 +136,9 @@
   is_ideal_mixture = T
   is_nonisothermal = T
   use_lapack = T
-  Dbar(1:3) = 1.91d-5 0.52d-5 2.3d-5 ! SM diffusion constant  
-  Dtherm(1:3) = 1.d0 1.d0 1.d0       ! thermo-diffusion coefficients
-  H_offdiag(1:3) = 1.d0 1.d0 1.d0
+  Dbar(1:3) = 4.31826d-6 1.91d-5 0.52d-5 ! SM diffusion constant  
+  Dtherm(1:3) = 0.d0 0.d0 0.d0       ! thermo-diffusion coefficients
+  H_offdiag(1:3) = 0.d0 0.d0 0.d0
   H_diag(1:3) = 0.d0 0.d0 0.d0       ! =d^2F/dx^2  
 
   T_init(1:2) = 1.d0 1.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
@@ -150,8 +150,8 @@
   ! rho_i boundary conditions (dir,lohi,species)
   rho_bc(1,1,1:3) = 0.d0 0.d0 0.d0
   rho_bc(1,2,1:3) = 0.d0 0.d0 0.d0
-  rho_bc(2,1,1:3) = 0.d0 0.d0 0.d0
-  rho_bc(2,2,1:3) = 0.d0 0.d0 0.d0
+  rho_bc(2,1,1:3) = 1.075d0 0.d0 0.5d0
+  rho_bc(2,2,1:3) = 0.d0 0.775d0 0.5d0
   rho_bc(3,1,1:3) = 0.d0 0.d0 0.d0
   rho_bc(3,2,1:3) = 0.d0 0.d0 0.d0
  
