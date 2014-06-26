@@ -417,6 +417,39 @@ contains
 
     end do
 
+    case (11)
+
+    !=============================================================
+    ! 1 fluid on top of another
+    ! rho(:) = rho_init(1,:) on bottom
+    ! rho(:) = rho_init(2,:) on top
+    !=============================================================
+
+    u = 0.d0
+    v = 0.d0
+
+    ! middle of domain
+    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+    ! rho1 = rho_init(1,1) in lower half of domain (in y)
+    ! rho1 = rho_init(2,1) in upper half
+    ! random perturbation below centerline
+
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+       if (y .lt. y1) then
+          do i=lo(1),hi(1)
+             rho(i,j,1:nspecies) = rho_init(1,1:nspecies)
+          end do
+       else
+          do i=lo(1),hi(1)
+             rho(i,j,1:nspecies) = rho_init(2,1:nspecies)
+          end do
+       end if
+
+    end do
+
     case default
       
       call bl_error("Desired prob_type not supported in 3D")
@@ -797,6 +830,44 @@ contains
           u(:,j,:) = u_init(1)
        else
           u(:,j,:) = u_init(2)
+       end if
+
+    end do
+
+    case (11)
+
+    !=============================================================
+    ! 1 fluid on top of another
+    ! rho(:) = rho_init(1,:) on bottom
+    ! rho(:) = rho_init(2,:) on top
+    !=============================================================
+
+    u = 0.d0
+    v = 0.d0
+    w = 0.d0
+
+    ! middle of domain
+    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+    ! rho1 = rho_init(1,1) in lower half of domain (in y)
+    ! rho1 = rho_init(2,1) in upper half
+    ! random perturbation below centerline
+
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+       if (y .lt. y1) then
+          do k=lo(3),hi(3)
+          do i=lo(1),hi(1)
+             rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
+          end do
+          end do
+       else
+          do k=lo(3),hi(3)
+          do i=lo(1),hi(1)
+             rho(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
+          end do
+          end do
        end if
 
     end do
