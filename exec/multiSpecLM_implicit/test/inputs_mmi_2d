@@ -1,28 +1,41 @@
+! Units used here are: length=cm, mass=g, time=s
 &probin_common
  
   ! Problem specification
   !----------------------
   dim_in = 2                       ! 2D or 3D  
+  prob_type = -11                  ! sets scalars, m, coefficients (see init.f90)
+                                   ! Negative to enforce LM constraint in initial conditions by force
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
-  n_cells(1:2) = 128 128           ! number of cells in domain
+  prob_hi(1:2) = 3.125e-2 0.125 ! 1.d0 1.d0         ! physical hi coordinate
+  n_cells(1:2) = 8 32 ! 128 128           ! number of cells in domain
   max_grid_size(1:2) = 64 64       ! max number of cells in a box
-  max_step = 1000                  ! maximum number of time steps
-  fixed_dt = -1.d0                 ! time step
+
+  fixed_dt = 0.125d0                 ! time step
   cfl = 0.5d0                      ! cfl number
+
+  max_step = 100                   ! maximum number of time steps
   plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
-  prob_type = 11                   ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
-  print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 100            ! how often to call project_onto_eos
+  print_int = 10                   ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 10             ! how often to call project_onto_eos
 
-  u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 1.d0   ! scale factor for smoothing initial profile
+  ! Physical properties
+  !----------------------
+  grav(1:2) = 0.d0 0.0d0 ! -981.d0            ! gravity vector (negative is downwards)
 
+  molmass(1:3) = 0.1238e-21    0.5684e-21    0.0299e-21 ! molecular masses for nspecies
+  rhobar(1:3) =   2.15d0  1.55d0    1.d0 ! rhobar for nspecies
+  k_B = 1.3806488d-23       ! Boltzmann's constant
+  
+  ! stochastic properties
+  variance_coef_mom = 0.d0  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
+  
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
+  algorithm_type = 2     ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
@@ -31,11 +44,6 @@
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
   seed = 1
-
-  grav(1:2) = 0.d0 -981.d0            ! gravity vector (negative is downwards)
-
-  molmass(1:3) = 74.55d0 342.3d0 18.02d0 ! molar masses for nspecies
-  rhobar(1:3) =   2.15d0  1.55d0    1.d0 ! rhobar for nspecies
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -46,16 +54,21 @@
   visc_type = 1
   visc_coef = 0.01002d0         ! momentum diffusion coefficient 'eta'   
 
-  ! 1 = constant coefficients
-  ! -1 = spatially-varing coefficients
-  diff_type = 1
-  diff_coef = 1.d0      ! for binary, this is diffusion coefficient, chi
-                        ! for multispecies, this is maximum eigenvalue of diffusion matrix
-
   advection_type = 2 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
                      ! 2 = limited bliniear bds in space and time
                      ! 3 = unlimited quadratic bds in space and time
+
+  filtering_width = 0   ! If positive the random numbers will be filtered to smooth out the field s
+  stoch_stress_form = 1 ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
+  ! Initial conditions
+  !----------------------
+  u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
+  smoothing_width = 0.25d0   ! scale factor for smoothing initial profile
+
+  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
+                            ! (if negative, total momentum is set to zero)
 
   ! Boundary conditions
   !----------------------
@@ -66,8 +79,8 @@
   ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
-  bc_lo(1:2) = -1 101    
-  bc_hi(1:2) = -1 101    
+  bc_lo(1:2) = -1 100 ! 101    
+  bc_hi(1:2) = -1 100 ! 101    
 
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions
@@ -94,15 +107,15 @@
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = 0         ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = 2         ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
   ! -dim=analyze 3D and then project along dim so we also analyze 2D data
   ! It is better to use the conserved variables but it does not quite work for staggered
 
-  max_grid_projection(1:2) = 128 128 ! parallelization parameters
-  stats_int = -1                     ! Project grid for analysis
+  max_grid_projection(1:1) = 32      ! parallelization parameters
+  stats_int = 10                     ! Project grid for analysis
                                      ! If positive, how often to compute mean and 
                                      ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
@@ -111,47 +124,51 @@
                           ! (does not work well)
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
                           ! (will smooth fluctuations)
-
-  ! stochastic properties
-  variance_coef_mom = 0.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
-                            ! (if negative, total momentum is set to zero)
-
-  k_B = 1.d0            ! Boltzmann's constant
-  filtering_width = 0   ! If positive the random numbers will be filtered to smooth out the field s
-  stoch_stress_form = 1 ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
-
+                          
 /
 
 &probin_multispecies
 
+  ! Physical properties:
+  !----------------------
   nspecies = 3
-  fraction_tolerance = 1.d-13
-  start_time = 0.d0
-  inverse_type = 1
-  timeinteg_type = 1
-  correct_flux = T
-  print_error_norms = T
-  is_ideal_mixture = T
-  is_nonisothermal = T
-  use_lapack = T
-  Dbar(1:3) = 4.31826d-6 1.91d-5 0.52d-5 ! SM diffusion constant  
-  Dtherm(1:3) = 0.d0 0.d0 0.d0       ! thermo-diffusion coefficients
-  H_offdiag(1:3) = 0.d0 0.d0 0.d0
-  H_diag(1:3) = 0.d0 0.d0 0.d0       ! =d^2F/dx^2  
+  is_ideal_mixture = T ! If T assume Gamma=I (H=0) and simplify
+  is_nonisothermal = F ! If T Soret effect will be included
+  
+  ! Thermodynamic and transport properties:
+  !----------------------
+  
+  ! These are lower-triangules of symmetric matrices represented as vectors
+  ! Number of elements is (nspecies*(nspecies-1)/2)
+  ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
+  ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
+  !Dbar(1:3) = 0.431826d-5 1.91d-5 0.52d-5  ! Maxwell-Stefan diffusion constant  
+  Dbar(1:3) = 0.431826d-5 1.91d-5 0.52d-5  ! Maxwell-Stefan diffusion constant  
+  H_offdiag(1:1) = 0.d0    ! Off diagonal elements of H=d^2F/dx^2  
 
+  ! These are vectors of length nspecies
+  Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients, only differences among elements matter
+  H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2  
+  
+  ! Algorithmic options:
+  !----------------------
+  fraction_tolerance = 1.d-12 ! For roundoff errors in mass and mole fractions
+  use_lapack = F ! Use LAPACK or iterative method for diffusion matrix (recommend False)
+  inverse_type = 1 ! Only for LAPACK:  1=inverse, 2=pseudo inverse
+  correct_flux = T ! Manually ensure mass is conserved to roundoff 
+  
+  ! Initial and boundary conditions 
+  !----------------------
   T_init(1:2) = 1.d0 1.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
 
   ! initial values for rho
-  rho_init(1,1:3) = 1.075d0 0.d0 0.5d0
-  rho_init(2,1:3) = 0.d0 0.775d0 0.5d0
+  ! The last value for water will be overwritten to enforce the EOS
+  rho_init(1,1:3) = 4e-4  0.0      1.0
+  rho_init(2,1:3) = 0.0   3.54e-4  1.0
 
   ! rho_i boundary conditions (dir,lohi,species)
-  rho_bc(1,1,1:3) = 0.d0 0.d0 0.d0
-  rho_bc(1,2,1:3) = 0.d0 0.d0 0.d0
-  rho_bc(2,1,1:3) = 1.075d0 0.d0 0.5d0
-  rho_bc(2,2,1:3) = 0.d0 0.775d0 0.5d0
+  rho_bc(2,1,1:3) = 4e-4  0.0      1.0
+  rho_bc(2,2,1:3) = 0.0   3.54e-4  1.0
  
 /
 
@@ -209,7 +226,7 @@
   ! GMRES solver parameters
   gmres_rel_tol = 1.d-9 ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
-  gmres_verbose = 1     ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_verbose = 0     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20  ! max number of outer iterations
   gmres_max_inner = 5   ! max number of inner iterations, or restart number
   gmres_max_iter = 100  ! max number of gmres iterations
