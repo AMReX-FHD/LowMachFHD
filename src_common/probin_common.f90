@@ -15,7 +15,7 @@ module probin_common_module
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt,cfl,grav(3)
   real(dp_t),save :: smoothing_width,u_init(2)
-  integer,save    :: visc_type,diff_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
+  integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
@@ -24,7 +24,7 @@ module probin_common_module
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance
-  real(dp_t),save :: k_B,visc_coef,diff_coef
+  real(dp_t),save :: k_B,visc_coef
   integer,save    :: stoch_stress_form,filtering_width,max_step
   integer,save    :: restart,print_int,project_eos_int,algorithm_type
   real(dp_t),save :: molmass(max_species)
@@ -41,9 +41,16 @@ module probin_common_module
   namelist /probin_common/ prob_hi         ! physical hi coordinate
   namelist /probin_common/ n_cells         ! number of cells in domain
   namelist /probin_common/ max_grid_size   ! max number of cells in a box
+
+  ! Time-step control
+  !----------------------
+  namelist /probin_common/ fixed_dt        ! time step (if positive, fixed)
+  namelist /probin_common/ cfl             ! advective cfl number (used if fixed_dt<0) to determine time step
+
+
+  ! Controls for number of steps between actions (for HydroGrid see below)
+  !----------------------
   namelist /probin_common/ max_step        ! maximum number of time steps
-  namelist /probin_common/ fixed_dt        ! time step
-  namelist /probin_common/ cfl             ! cfl number
   namelist /probin_common/ plot_int        ! Interval for writing a plotfile (for visit/amrvis)
   namelist /probin_common/ chk_int         ! Interval for writing a checkpoint
   namelist /probin_common/ prob_type       ! sets scalars, m, coefficients (see init.f90)
@@ -51,8 +58,16 @@ module probin_common_module
   namelist /probin_common/ print_int       ! how often to output EOS drift and sum of conserved quantities
   namelist /probin_common/ project_eos_int ! how often to call project_onto_eos
 
-  namelist /probin_common/ u_init          ! controls initial velocity
-  namelist /probin_common/ smoothing_width ! scale factor for smoothing initial profile
+  ! Physical parameters
+  !--------------------
+  namelist /probin_common/ grav            ! gravity vector (negative is downwards)
+  namelist /probin_common/ molmass         ! molecular masses for nspecies (mass per molecule, *not* molar mass)
+  namelist /probin_common/ rhobar          ! pure component densities for all species
+
+  ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
+  namelist /probin_common/ variance_coef_mom  ! global scaling epsilon for stochastic momentum forcing
+  namelist /probin_common/ variance_coef_mass ! global scaling epsilon for stochastic mass forcing
+  namelist /probin_common/ k_B                ! Boltzmann's constant
 
   ! Algorithm control / selection
   !----------------------
@@ -66,30 +81,32 @@ module probin_common_module
   ! positive = fixed seed
   namelist /probin_common/ seed
 
-  namelist /probin_common/ grav               ! gravity vector (negative is downwards)
-
-  namelist /probin_common/ molmass            ! molar masses for nspecies
-  namelist /probin_common/ rhobar             ! rhobar for nspecies
-
-  ! L phi operator
+  ! Viscous friction L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   namelist /probin_common/ visc_type
-  namelist /probin_common/ visc_coef         ! momentum diffusion coefficient 'eta'   
-
-  ! 1 = constant coefficients
-  ! -1 = spatially-varing coefficients
-  namelist /probin_common/ diff_type
-  namelist /probin_common/ diff_coef      ! for binary, this is diffusion coefficient, chi
-                                          ! for multispecies, this is maximum eigenvalue of diffusion matrix
+  namelist /probin_common/ visc_coef         ! momentum diffusion coefficient 'eta'
 
   namelist /probin_common/ advection_type ! 0 = centered explicit
                                           ! 1 = unlimited bilinear bds in space and time
                                           ! 2 = limited bliniear bds in space and time
-                                          ! 3 = unlimited quadratic bds in space and time
+                                          ! 3 = unlimited quadratic bds in space and time   
+
+  ! Stochastic momentum flux controls:
+  namelist /probin_common/ filtering_width   ! If positive the *momentum* stochastic fluxes will be filtered (smoothed)
+                                             ! Stochastic *mass* fluxes are not filtered
+  namelist /probin_common/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
+
+  ! Initial conditions
+  !----------------------
+  namelist /probin_common/ u_init             ! controls initial velocity
+  namelist /probin_common/ smoothing_width    ! scale factor for smoothing initial profile
+  namelist /probin_common/ initial_variance   ! multiplicative factor for initial fluctuations
+                                              ! (if negative, total momentum is set to zero)
 
   ! Boundary conditions
   !----------------------
@@ -118,13 +135,12 @@ module probin_common_module
   namelist /probin_common/ wallspeed_lo
   namelist /probin_common/ wallspeed_hi
 
-  ! Control for analyze_spectra.90
+  ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-
   namelist /probin_common/ hydro_grid_int     ! How often to call updateHydroGrid
-                                               ! 0 if never
-                                               ! negative for projectHydroGrid custom analysis
-                                               ! positive for updateHydroGrid
+                                              ! 0 if never
+                                              ! negative for projectHydroGrid custom analysis
+                                              ! positive for updateHydroGrid
 
   namelist /probin_common/ project_dir         ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
@@ -135,24 +151,14 @@ module probin_common_module
 
   namelist /probin_common/ max_grid_projection ! parallelization parameters
   namelist /probin_common/ stats_int           ! Project grid for analysis
-                                                ! If positive, how often to compute mean and 
-                                                ! standard deviation over reduced dimensions
+                                               ! If positive, how often to compute mean and 
+                                               ! standard deviation over reduced dimensions
   namelist /probin_common/ n_steps_save_stats  ! How often to dump HydroGrid output files
   namelist /probin_common/ n_steps_skip        ! How many steps to skip
   namelist /probin_common/ analyze_conserved   ! Should we use conserved variables for the analysis
-                                                ! (does not work well)
+                                               ! (does not work well)
   namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
-                                                ! (will smooth fluctuations)
-
-  ! stochastic properties
-  namelist /probin_common/ variance_coef_mom      ! global scaling epsilon for stochastic momentum forcing
-  namelist /probin_common/ variance_coef_mass ! global scaling epsilon for stochastic mass forcing
-  namelist /probin_common/ initial_variance   ! multiplicative factor for initial fluctuations
-                                              ! (if negative, total momentum is set to zero)
-
-  namelist /probin_common/ k_B                ! Boltzmann's constant
-  namelist /probin_common/ filtering_width    ! If positive the random numbers will be filtered to smooth out the field s
-  namelist /probin_common/ stoch_stress_form ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+                                               ! (will smooth fluctuations)
 
   !------------------------------------------------------------- 
 
@@ -185,14 +191,15 @@ contains
     ! Defaults
 
     dim_in = 2
-
     prob_lo(1:MAX_SPACEDIM) = 0.d0
     prob_hi(1:MAX_SPACEDIM) = 1.d0
     n_cells(1:MAX_SPACEDIM) = 64
     max_grid_size(1:MAX_SPACEDIM) = 64
-    max_step = 1
+
     fixed_dt = 1.d0
     cfl = 0.5d0
+
+    max_step = 1
     plot_int = 0
     chk_int = 0
     prob_type = 1
@@ -200,24 +207,29 @@ contains
     print_int = 0
     project_eos_int = 1
 
-    smoothing_width = 1.d0
-    u_init(1:2) = 0.d0
+    grav(1:3) = 0.d0
+    molmass(:) = 1.0d0
+    rhobar(:)  = 1.d0
+
+    variance_coef_mom = 1.d0
+    variance_coef_mass = 1.d0
+    k_B = 1.d0
 
     algorithm_type = 0
 
     seed = 1
 
-    grav(1:3) = 0.d0
-
-    molmass(:) = 1.0d0
-    rhobar(:)  = 1.d0
-
     visc_type = 1
     visc_coef = 1.d0
-    diff_type = 1
-    diff_coef = 1.d0
 
     advection_type = 0
+
+    filtering_width = 0
+    stoch_stress_form = 1
+
+    u_init(1:2) = 0.d0
+    smoothing_width = 1.d0
+    initial_variance = 0.d0
 
     bc_lo(1:MAX_SPACEDIM) = PERIODIC
     bc_hi(1:MAX_SPACEDIM) = PERIODIC
@@ -227,20 +239,13 @@ contains
 
     hydro_grid_int = 0
     project_dir = 0
+
     max_grid_projection = 128
     stats_int = -1
     n_steps_save_stats = -1
     n_steps_skip = 0
     analyze_conserved = .false.
     center_snapshots = .false.
-
-    variance_coef_mom = 1.d0
-    variance_coef_mass = 1.d0
-    initial_variance = 0.d0
-
-    k_B = 1.d0
-    filtering_width = 0
-    stoch_stress_form = 1
 
     need_inputs = .true.
 
@@ -445,16 +450,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) visc_coef
-
-       case ('--diff_type')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) diff_type
-
-       case ('--diff_coef')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) diff_coef
 
        case ('--advection_type')
           farg = farg + 1
