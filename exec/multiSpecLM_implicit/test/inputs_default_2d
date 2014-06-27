@@ -1,3 +1,7 @@
+! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
+! be careful and check values are read correctly (e.g., rho_bc)
+
+! Options for low Mach equations
 &probin_common
  
   ! Problem specification
@@ -7,9 +11,15 @@
   prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
   n_cells(1:2) = 64 64             ! number of cells in domain
   max_grid_size(1:2) = 64 64       ! max number of cells in a box
+
+  ! Time-step control
+  !----------------------
+  fixed_dt = 1.d0                  ! time step (if positive, fixed)
+  cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
+
+  ! Controls for number of steps between actions (for HydroGrid see below)
+  !----------------------
   max_step = 1                     ! maximum number of time steps
-  fixed_dt = 1.d0                  ! time step
-  cfl = 0.5d0                      ! cfl number
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 1                    ! sets scalars, m, coefficients (see init.f90)
@@ -17,8 +27,16 @@
   print_int = 0                    ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1              ! how often to call project_onto_eos
 
-  u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 1.d0   ! scale factor for smoothing initial profile
+  ! Physical parameters
+  !--------------------
+  grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
+  molmass(1:2) = 1.d0 1.d0            ! molecular masses for nspecies (mass per molecule, *not* molar mass)
+  rhobar(1:2) = 1.d0 1.d0             ! pure component densities for all species
+
+  ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
+  variance_coef_mom = 1.d0  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
+  k_B = 1.d0            ! Boltzmann's constant
 
   ! Algorithm control / selection
   !----------------------
@@ -32,12 +50,7 @@
   ! positive = fixed seed
   seed = 1
 
-  grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
-
-  molmass(1:2) = 1.d0 1.d0            ! molar masses for nspecies
-  rhobar(1:2) = 1.d0 1.d0             ! rhobar for nspecies
-
-  ! L phi operator
+  ! Viscous friction L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
@@ -46,16 +59,23 @@
   visc_type = 1
   visc_coef = 1.d0         ! momentum diffusion coefficient 'eta'   
 
-  ! 1 = constant coefficients
-  ! -1 = spatially-varing coefficients
-  diff_type = 1
-  diff_coef = 1.d0      ! for binary, this is diffusion coefficient, chi
-                        ! for multispecies, this is maximum eigenvalue of diffusion matrix
-
   advection_type = 0 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
                      ! 2 = limited bliniear bds in space and time
                      ! 3 = unlimited quadratic bds in space and time
+
+  ! Stochastic momentum flux controls:
+  filtering_width = 0   ! If positive the *momentum* stochastic fluxes will be filtered (smoothed)
+                        ! Stochastic *mass* fluxes are not filtered
+  stoch_stress_form = 1 ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
+  ! Initial conditions
+  !----------------------
+  u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
+  smoothing_width = 1.d0   ! scale factor for smoothing initial profile
+
+  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
+                            ! (if negative, total momentum is set to zero)
 
   ! Boundary conditions
   !----------------------
@@ -84,9 +104,8 @@
   wallspeed_lo(1,1:2) = 0.d0 0.d0
   wallspeed_hi(1,1:2) = 0.d0 0.d0
 
-  ! Control for analyze_spectra.90
+  ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-
   hydro_grid_int = 0    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
@@ -110,37 +129,40 @@
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
                           ! (will smooth fluctuations)
 
-  ! stochastic properties
-  variance_coef_mom = 1.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
-                            ! (if negative, total momentum is set to zero)
-
-  k_B = 1.d0            ! Boltzmann's constant
-  filtering_width = 0   ! If positive the random numbers will be filtered to smooth out the field s
-  stoch_stress_form = 1 ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
-
 /
 
 &probin_multispecies
 
+  ! Physical properties:
+  !----------------------
   nspecies = 2
-  fraction_tolerance = 1.d-13
-  start_time = 0.d0
-  inverse_type = 1
-  timeinteg_type = 1
-  correct_flux = T
-  print_error_norms = T
-  is_ideal_mixture = T
-  is_nonisothermal = T
-  use_lapack = T
-  Dbar(1:1) = 1.d0         ! SM diffusion constant  
-  Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients
-  H_offdiag(1:1) = 0.d0
-  H_diag(1:1) = 0.d0       ! =d^2F/dx^2  
+  is_ideal_mixture = T ! If T assume Gamma=I (H=0) and simplify
+  is_nonisothermal = T ! If T Soret effect will be included
+  
+  ! Thermodynamic and transport properties:
+  !----------------------
+  
+  ! These are lower-triangules of symmetric matrices represented as vectors
+  ! Number of elements is (nspecies*(nspecies-1)/2)
+  ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
+  ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
+  Dbar(1:1) = 1.d0         ! Maxwell-Stefan diffusion constant  
+  H_offdiag(1:1) = 0.d0    ! Off diagonal elements of H=d^2F/dx^2  
 
+  ! These are vectors of length nspecies
+  Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients, only differences among elements matter
+  H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2  
+  
+  ! Algorithmic options:
+  !----------------------
+  fraction_tolerance = 1.d-12 ! For roundoff errors in mass and mole fractions
+  use_lapack = F ! Use LAPACK or iterative method for diffusion matrix (recommend False)
+  inverse_type = 1 ! Only for LAPACK:  1=inverse, 2=pseudo inverse
+  correct_flux = T ! Manually ensure mass is conserved to roundoff 
+  
+  ! Initial and boundary conditions 
+  !----------------------
   T_init(1:2) = 1.d0 1.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
-
   ! initial values for rho
   rho_init(1,1:2) = 1.d0 1.d0
   rho_init(2,1:2) = 1.d0 1.d0
@@ -153,6 +175,7 @@
  
 /
 
+! Stokes solver for velocity
 &probin_gmres
 
   ! preconditioner type
@@ -189,7 +212,7 @@
   mg_rel_tol = 1.d-9         ! relative tolerance stopping criteria
 
   ! Staggered multigrid solver parameters
-  stag_mg_verbosity = 0       ! verbosity
+  stag_mg_verbosity = 0       ! verbosity (set to 1 for debugging the gmres solver!)
   stag_mg_max_vcycles = 1     ! max number of v-cycles
   stag_mg_minwidth = 2        ! length of box at coarsest multigrid level
   stag_mg_bottom_solver = 0   ! bottom solver type
