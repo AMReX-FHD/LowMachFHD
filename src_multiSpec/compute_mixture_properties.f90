@@ -1,4 +1,7 @@
 module compute_mixture_properties_module
+  ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
+  ! which should change with different problem types and number of species
+  ! depending on the exact physical system being simulated. 
 
   use multifab_module
   use define_bc_module
@@ -14,16 +17,7 @@ module compute_mixture_properties_module
   private
 
   public :: compute_mixture_properties, compute_eta, compute_kappa
-  
-  ! The purpose of the fluid model is to provide concentration-dependent transport coefficients
-  ! which should change with different problem types and number of species
-  ! depending on the exact physical system being simulated. 
-  ! A lot of the stuff below is general and thus belongs with the other general routines such as compute_chi
-  ! In particular the main piece below computes Gamma (the rest is fluff code) from H
-  ! call H "Hessian" to make it clear it is symmetric
-  ! This code should be separated from here and moved to convert_mass_variables.f90
-  ! (which should be renamed to something more meaningful, like mass_flux_utilities.f90)
-  
+    
 contains
   
   subroutine compute_mixture_properties(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,the_bc_level)
@@ -140,11 +134,7 @@ contains
    
   end subroutine mixture_properties_mass_3d
 
-  ! This is the key routine here
-  ! It should have a case statement, in which different things are done depending on prob_type (Andy can organize that part)
-  ! For now the default case should be to simply set D_bar, D_therm and H to constants, read from the input file, as done below
-  ! Rename this routine mixture_properties_mass (for now) to make it clear what this does
-  
+  ! The default case should be to simply set D_bar, D_therm and H to constants, read from the input file
   subroutine mixture_properties_mass_local(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)        
