@@ -13,9 +13,9 @@ module probin_binarylm_module
   real(dp_t), save :: c_init(2)
   real(dp_t), save :: temperature
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
-  integer   , save :: barodiffusion_type
+  integer   , save :: barodiffusion_type,diff_type
   logical   , save :: analyze_binary,plot_stag
-  real(dp_t), save :: boussinesq_beta
+  real(dp_t), save :: boussinesq_beta,diff_coef
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -40,7 +40,8 @@ module probin_binarylm_module
 
   namelist /probin_binarylm/ plot_stag          ! include staggered plotfiles
 
-                             
+  namelist /probin_binarylm/ diff_type          ! 1 = constant coefficients, -1 = spatially-varing coefficients
+  namelist /probin_binarylm/ diff_coef          ! Diffusion coefficient, chi
 
 contains
 
@@ -83,6 +84,9 @@ contains
     
     analyze_binary=.true.
     plot_stag = .false.
+
+    diff_type = 1
+    diff_coef = 1.d0
 
     farg = 1
     if (narg >= 1) then
@@ -194,6 +198,16 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_stag
+
+       case ('--diff_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) diff_type
+
+       case ('--diff_coef')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) diff_coef
 
        case ('--')
           farg = farg + 1

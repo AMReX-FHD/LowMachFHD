@@ -15,7 +15,7 @@ module probin_common_module
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt,cfl,grav(3)
   real(dp_t),save :: smoothing_width,u_init(2)
-  integer,save    :: visc_type,diff_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
+  integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
@@ -24,7 +24,7 @@ module probin_common_module
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance
-  real(dp_t),save :: k_B,visc_coef,diff_coef
+  real(dp_t),save :: k_B,visc_coef
   integer,save    :: stoch_stress_form,filtering_width,max_step
   integer,save    :: restart,print_int,project_eos_int,algorithm_type
   real(dp_t),save :: molmass(max_species)
@@ -160,12 +160,6 @@ module probin_common_module
   namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
                                                ! (will smooth fluctuations)
 
-  ! 1 = constant coefficients
-  ! -1 = spatially-varing coefficients
-  namelist /probin_common/ diff_type
-  namelist /probin_common/ diff_coef      ! for binary, this is diffusion coefficient, chi
-                                          ! for multispecies, this is maximum eigenvalue of diffusion matrix
-
   !------------------------------------------------------------- 
 
 contains
@@ -252,9 +246,6 @@ contains
     n_steps_skip = 0
     analyze_conserved = .false.
     center_snapshots = .false.
-
-    diff_type = 1
-    diff_coef = 1.d0
 
     need_inputs = .true.
 
@@ -459,16 +450,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) visc_coef
-
-       case ('--diff_type')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) diff_type
-
-       case ('--diff_coef')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) diff_coef
 
        case ('--advection_type')
           farg = farg + 1

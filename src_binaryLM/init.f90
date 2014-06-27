@@ -7,9 +7,9 @@ module init_module
   use convert_stag_module
   use bc_module
   use bl_constants_module
-  use probin_binarylm_module, only: material_properties, c_init
+  use probin_binarylm_module, only: material_properties, c_init, diff_type, diff_coef
   use probin_common_module , only: prob_lo, prob_hi, prob_type, visc_type, visc_coef, &
-                                   diff_type, n_cells, diff_coef, rhobar, &
+                                   n_cells, rhobar, &
                                    smoothing_width, u_init
 
   implicit none

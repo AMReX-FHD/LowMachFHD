@@ -11,7 +11,12 @@
   material_properties(1:2,2) = 0.d0 0.d0
   material_properties(1:2,3) = 0.d0 0.d0
 
-  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
+  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep   
+
+  ! 1 = constant coefficients
+  ! -1 = spatially-varing coefficients
+  diff_type = 1
+  diff_coef = 1.d-6               ! concentration diffusion coefficient 'chi'
 
 /
 
@@ -53,12 +58,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = -1
-  visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta'   
-
-  ! 1 = constant coefficients
-  ! -1 = spatially-varing coefficients
-  diff_type = 1
-  diff_coef = 1.d-6               ! concentration diffusion coefficient 'chi'
+  visc_coef = 1.d-2               ! momentum diffusion coefficient 'eta'
 
   rhobar(1:2) = 1.d0 1.d0         ! rho1bar and rho2bar
   molmass(1:2) = 1.d0 1.d0       ! molar mass of species
