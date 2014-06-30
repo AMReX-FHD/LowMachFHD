@@ -6,7 +6,6 @@
 \usepackage{geometry}
 \geometry{verbose,tmargin=1in,bmargin=1in,lmargin=1in,rmargin=1in}
 \usepackage{xcolor}
-\usepackage{pdfcolmk}
 \usepackage{babel}
 \usepackage{amstext}
 \PassOptionsToPackage{normalem}{ulem}
@@ -15,6 +14,7 @@
  bookmarks=true,bookmarksnumbered=false,bookmarksopen=false,
  breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
  {hyperref}
+\usepackage{breakurl}
 
 \makeatletter
 
@@ -142,10 +142,15 @@ Z_{2}^{0}=2.9\cdot10^{-3}\text{ and }Z_{1}^{0}=10^{-2}\, mol/l,
 \]
 which gives initial densities 
 \begin{eqnarray}
-\rho_{\text{top}} & = & \rho_{0}\left(1+\alpha_{1}Z_{1}\right)=\left(1.0+4\cdot10^{-2}\times10^{-2}\right)\, g/cm^{3}=\left(1.0+4\cdot10^{-4}\right)\, g/cm^{3},\label{eq:ics}\\
-\rho_{\text{bottom}} & = & \rho_{0}\left(1+\alpha_{2}Z_{2}\right)=\left(1.0+12.2\cdot10^{-2}\times2.9\cdot10^{-3}\right)\, g/cm^{3}=\left(1+3.54\cdot10^{-4}\right)\, g/cm^{3}.\nonumber 
+\rho_{\text{top}} & = & \rho_{0}\left(1+\alpha_{1}Z_{1}^{0}\right)=\left(1.0+4\cdot10^{-2}\times10^{-2}\right)\, g/cm^{3}=\left(1.0+4\cdot10^{-4}\right)\, g/cm^{3},\label{eq:ics}\\
+\rho_{\text{bottom}} & = & \rho_{0}\left(1+\alpha_{2}Z_{2}^{0}\right)=\left(1.0+12.2\cdot10^{-2}\times2.9\cdot10^{-3}\right)\, g/cm^{3}=\left(1+3.54\cdot10^{-4}\right)\, g/cm^{3}.\nonumber 
 \end{eqnarray}
-
+In terms of the partial densities we have
+\[
+\rho_{1}^{0}=Z_{1}^{0}M_{1}=7.46\cdot10^{-4}\, g/cm^{3},\quad\rho_{2}^{0}=Z_{2}^{0}M_{2}=9.93\cdot10^{-4}\, g/cm^{3},
+\]
+which are also very close to the initial mass fractions since the
+total density is very close to $1\, g/cm^{3}$.
 
 The plots in the bottom panel of Fig. 1 are for times $40,50,60\, s,$
 so we hope to be able to run the simulation up to $100\, s$. The
