@@ -28,6 +28,7 @@ contains
     real(kind=dp_t), pointer :: cp(:,:,:,:)
 
     nlevs = mla%nlevel
+    dm = mla%dim
 
     ng_r = rho(1)%ng
     ng_c =   c(1)%ng

@@ -451,7 +451,9 @@ contains
                                      lo,hi,dx(n,:),time)
           end select
        end do
+    end do
 
+    do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
        call multifab_fill_boundary(conc(n))
 
@@ -843,9 +845,9 @@ contains
 
           sum = 0
           do n=1,nspecies-1
-             sum = sum + c(i,j,n)/rhobar(n)
+             sum = sum + c(i,j,n)
           end do
-          c(i,j,nspecies) = rhobar(nspecies)*(1.d0 - sum)
+          c(i,j,nspecies) = 1.d0 - sum
 
        end do
        end do          
@@ -854,13 +856,13 @@ contains
    
   end subroutine init_c_and_umac_2d
 
-  subroutine init_c_and_umac_3d(rho,ng_r,u,v,w,ng_u,lo,hi,dx,time)
+  subroutine init_c_and_umac_3d(c,ng_c,u,v,w,ng_u,lo,hi,dx,time)
     
-    integer          :: lo(3), hi(3), ng_r, ng_u
-    real(kind=dp_t)  :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:) ! Last dimension for species 
-    real(kind=dp_t)  ::   u(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t)  ::   v(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t)  ::   w(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+    integer          :: lo(3), hi(3), ng_c, ng_u
+    real(kind=dp_t)  :: c(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:) ! Last dimension for species 
+    real(kind=dp_t)  :: u(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+    real(kind=dp_t)  :: v(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+    real(kind=dp_t)  :: w(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  
@@ -888,7 +890,7 @@ contains
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
+             c(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
 
           end do
        end do
@@ -914,9 +916,9 @@ contains
 
                rsq = x**2 + y**2 + z**2
                if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
-                  rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
+                  c(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
                else
-                  rho(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
+                  c(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
                end if
           
           end do
@@ -941,7 +943,7 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+half)*dx(1)
 
-               rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies) + &
+               c(i,j,k,1:nspecies) = rho_init(1,1:nspecies) + &
                    (rho_init(2,1:nspecies) - rho_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
 
           end do
@@ -968,9 +970,9 @@ contains
               x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
         
               rsq = x**2 + y**2 + z**2
-              rho(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar(1)*time))/(4.0d0*M_PI*&
+              c(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar(1)*time))/(4.0d0*M_PI*&
                              Dbar(1)*time)**1.5d0
-              rho(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar(1)*time))/(4.0d0*&
+              c(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar(1)*time))/(4.0d0*&
                              M_PI*Dbar(1)*time)**1.5d0
        
            end do
@@ -1000,9 +1002,9 @@ contains
               rhot = 1.0d0 + alpha1*dexp(-rsq/(4.0d0*Dbar(1)))/(4.0d0*M_PI*&
                      Dbar(1))**1.5d0
            
-              rho(i,j,k,1) = 1.0d0/(4.0d0*M_PI*Dbar(1)*time)**1.5d0*dexp(-rsq/&
+              c(i,j,k,1) = 1.0d0/(4.0d0*M_PI*Dbar(1)*time)**1.5d0*dexp(-rsq/&
                              (4.0d0*Dbar(1)*time) - time*beta)*rhot
-              rho(i,j,k,2) = rhot - rho(i,j,k,1) 
+              c(i,j,k,2) = rhot - c(i,j,k,1) 
 
            end do
         end do
@@ -1031,14 +1033,14 @@ contains
               w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
               w2  =  delta*dexp(-beta*time)
               rhot = 1.0d0 + (molmass(2)*Dbar(3)/(molmass(1)*Dbar(1))-1.0d0)*w1
-              rho(i,j,k,1) = rhot*w1
-              rho(i,j,k,2) = rhot*w2
-              rho(i,j,k,3) = rhot-rho(i,j,k,1)-rho(i,j,k,2)
+              c(i,j,k,1) = rhot*w1
+              c(i,j,k,2) = rhot*w2
+              c(i,j,k,3) = rhot-c(i,j,k,1)-c(i,j,k,2)
            
-              if(rho(i,j,k,1).lt.0.d0 .or. rho(i,j,k,2).lt.0.d0 .or. rho(i,j,k,3).lt.0.d0) then 
+              if(c(i,j,k,1).lt.0.d0 .or. c(i,j,k,2).lt.0.d0 .or. c(i,j,k,3).lt.0.d0) then 
                  write(*,*), "rho1 / rho2 / rho3 is negative: STOP"
-                 write(*,*), i, j, " w1=", w1, " w2=", w2, " rho1=",rho(i,j,k,1)," rho2=",&
-                             rho(i,j,k,2), " rho3=",rho(i,j,k,3), " rhot=",rhot
+                 write(*,*), i, j, " w1=", w1, " w2=", w2, " rho1=",c(i,j,k,1)," rho2=",&
+                             c(i,j,k,2), " rho3=",c(i,j,k,3), " rhot=",rhot
               end if
  
           end do
@@ -1065,7 +1067,7 @@ contains
        
              r = sqrt(x**2 + y**2 + z**2)
 
-             rho(i,j,k,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
+             c(i,j,k,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
                   0.5d0*(rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
                   (1.d0 + tanh((r-15.d0)/2.d0))
 
@@ -1083,32 +1085,30 @@ contains
     v = 0.d0
     w = 0.d0
 
-    rho = 0.d0
-       
     do k=lo(3),hi(3)
     do j=lo(2),hi(2)
        y = prob_lo(2) + (dble(j)+half)*dx(2) 
        do i=lo(1),hi(1)
           if (y .le. 0.75d0*prob_lo(2)+0.25d0*prob_hi(2)) then
-             rho(i,j,k,1) = rho_init(1,1)
-             rho(i,j,k,2) = 0.1d0*rhobar(2)
-             rho(i,j,k,3) = 0.1d0*rhobar(3)
-             rho(i,j,k,4) = 0.1d0*rhobar(4)
+             c(i,j,k,1) = rho_init(1,1)
+             c(i,j,k,2) = 0.1d0*rhobar(2)
+             c(i,j,k,3) = 0.1d0*rhobar(3)
+             c(i,j,k,4) = 0.1d0*rhobar(4)
           else if (y .le. 0.5d0*prob_lo(2)+0.5d0*prob_hi(2)) then
-             rho(i,j,k,1) = 0.1d0*rhobar(1)
-             rho(i,j,k,2) = rho_init(1,2)
-             rho(i,j,k,3) = 0.1d0*rhobar(3)
-             rho(i,j,k,4) = 0.1d0*rhobar(4)
+             c(i,j,k,1) = 0.1d0*rhobar(1)
+             c(i,j,k,2) = rho_init(1,2)
+             c(i,j,k,3) = 0.1d0*rhobar(3)
+             c(i,j,k,4) = 0.1d0*rhobar(4)
           else if (y .le. 0.25d0*prob_lo(2)+0.75d0*prob_hi(2)) then
-             rho(i,j,k,1) = 0.1d0*rhobar(1)
-             rho(i,j,k,2) = 0.1d0*rhobar(2)
-             rho(i,j,k,3) = rho_init(1,3)
-             rho(i,j,k,4) = 0.1d0*rhobar(4)
+             c(i,j,k,1) = 0.1d0*rhobar(1)
+             c(i,j,k,2) = 0.1d0*rhobar(2)
+             c(i,j,k,3) = rho_init(1,3)
+             c(i,j,k,4) = 0.1d0*rhobar(4)
           else
-             rho(i,j,k,1) = 0.1d0*rhobar(1)
-             rho(i,j,k,2) = 0.1d0*rhobar(2)
-             rho(i,j,k,3) = 0.1d0*rhobar(3)
-             rho(i,j,k,4) = rho_init(1,4)
+             c(i,j,k,1) = 0.1d0*rhobar(1)
+             c(i,j,k,2) = 0.1d0*rhobar(2)
+             c(i,j,k,3) = 0.1d0*rhobar(3)
+             c(i,j,k,4) = rho_init(1,4)
           end if
        end do
     end do
@@ -1137,7 +1137,7 @@ contains
           y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
           
           rho_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
-          rho(lo(1):hi(1),j,lo(3):hi(3),1) = rho_loc
+          c(lo(1):hi(1),j,lo(3):hi(3),1) = rho_loc
 
        end do
 
@@ -1147,9 +1147,9 @@ contains
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
           if (y .lt. y1) then
-             rho(lo(1):hi(1),j,lo(3):hi(3),1) = rho_init(1,1)
+             c(lo(1):hi(1),j,lo(3):hi(3),1) = rho_init(1,1)
           else
-             rho(lo(1):hi(1),j,lo(3):hi(3),1) = rho_init(1,2)
+             c(lo(1):hi(1),j,lo(3):hi(3),1) = rho_init(1,2)
           end if
        end do
 
@@ -1183,8 +1183,8 @@ contains
           rho_loc = rho_init(2,1)
        end if
 
-       rho(lo(1):hi(1),j,lo(3):hi(3),1) = rho_loc
-       rho(lo(1):hi(1),j,lo(3):hi(3),2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+       c(lo(1):hi(1),j,lo(3):hi(3),1) = rho_loc
+       c(lo(1):hi(1),j,lo(3):hi(3),2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
 
        ! add random perturbation below centerline
        if (j .eq. n_cells(2)/2-1) then
@@ -1192,8 +1192,8 @@ contains
           do i=lo(1),hi(1)
              call random_number(rand)
              rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
-             rho(i,j,k,1) = rho_loc
-             rho(i,j,k,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+             c(i,j,k,1) = rho_loc
+             c(i,j,k,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
           end do
           end do
        end if
@@ -1217,8 +1217,8 @@ contains
 
     !=============================================================
     ! 1 fluid on top of another
-    ! rho(:) = rho_init(1,:) on bottom
-    ! rho(:) = rho_init(2,:) on top
+    ! c(:) = rho_init(1,:) on bottom
+    ! c(:) = rho_init(2,:) on top
     !=============================================================
 
     u = 0.d0
@@ -1238,13 +1238,13 @@ contains
        if (y .lt. y1) then
           do k=lo(3),hi(3)
           do i=lo(1),hi(1)
-             rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
+             c(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
           end do
           end do
        else
           do k=lo(3),hi(3)
           do i=lo(1),hi(1)
-             rho(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
+             c(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
           end do
           end do
        end if
@@ -1266,9 +1266,9 @@ contains
 
           sum = 0
           do n=1,nspecies-1
-             sum = sum + rho(i,j,k,n)/rhobar(n)
+             sum = sum + c(i,j,k,n)
           end do
-          rho(i,j,k,nspecies) = rhobar(nspecies)*(1.d0 - sum)
+          c(i,j,k,nspecies) = 1.d0 - sum
 
        end do
        end do
