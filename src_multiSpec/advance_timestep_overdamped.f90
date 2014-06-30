@@ -4,6 +4,7 @@ module advance_timestep_overdamped_module
   use define_bc_module
   use bc_module
   use convert_stag_module
+  use convert_variables_module
   use mk_advective_s_fluxdiv_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
@@ -84,6 +85,7 @@ contains
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
+    type(multifab) ::        conc(mla%nlevel)
 
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::       dumac(mla%nlevel,mla%dim)
@@ -109,11 +111,12 @@ contains
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
-       call multifab_build(   rho_update(n),mla%la(n),nspecies,0)
+       call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
-       call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
-       call multifab_build(         dp(n),mla%la(n),1,1)
-       call multifab_build(       divu(n),mla%la(n),1,0)
+       call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
+       call multifab_build(         dp(n),mla%la(n),1       ,1)
+       call multifab_build(       divu(n),mla%la(n),1       ,0)
+       call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        do i=1,dm
           call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(      dumac(n,i),mla%la(n),1       ,1,i)
@@ -348,13 +351,22 @@ contains
        call multifab_mult_mult_s_c(rho_update(n),1,0.5d0*dt,nspecies,0)
        call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
        call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
-       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(rho_new(n))
-       ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    !call eos_check(mla,rho_new)
+    ! rho to c - NO GHOST CELLS
+    call convert_rho_to_c(mla,rho_new,conc,.true.)
+
+    do n=1,nlevs
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(conc(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+    end do
+
+    ! c to rho - INCLUDING GHOST CELLS
+    call convert_rho_to_c(mla,rho_new,conc,.false.)
+
+    ! compute rhotot from rho
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -550,13 +562,22 @@ contains
        call multifab_mult_mult_s_c(rho_update(n),1,dt,nspecies,0)
        call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
        call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
-       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(rho_new(n))
-       ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    !call eos_check(mla,rho_new)
+    ! rho to c - NO GHOST CELLS
+    call convert_rho_to_c(mla,rho_new,conc,.true.)
+
+    do n=1,nlevs
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(conc(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+    end do
+
+    ! c to rho - INCLUDING GHOST CELLS
+    call convert_rho_to_c(mla,rho_new,conc,.false.)
+
+    ! compute rhotot from rho
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -578,6 +599,7 @@ contains
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dp(n))
        call multifab_destroy(divu(n))
+       call multifab_destroy(conc(n))
        do i=1,dm
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))

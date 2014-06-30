@@ -18,8 +18,8 @@ subroutine main_driver()
                                   k_B, max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, &
                                   bc_lo, bc_hi, probin_common_init, cfl, max_step, &
-                                  diff_coef, molmass, variance_coef_mass
-  use probin_multispecies_module, only: nspecies, rho_init, rho_bc, &
+                                  molmass, variance_coef_mass
+  use probin_multispecies_module, only: nspecies, Dbar, rho_init, rho_bc, &
                                         mol_frac_bc_comp, print_error_norms, &
                                         rho_part_bc_comp, &
                                         start_time, temp_bc_comp, timeinteg_type, &
@@ -51,7 +51,7 @@ subroutine main_driver()
   real(kind=dp_t),allocatable  :: wit(:) 
 
   ! For HydroGrid
-  integer :: narg, farg, un, n_cell
+  integer :: narg, farg, un, n_cell, n_Dbar
   character(len=128) :: fname
   logical :: lexist
   
@@ -170,7 +170,7 @@ subroutine main_driver()
   ! scal_bc_comp+1 = rho_i
   ! scal_bc_comp+nspecies+1 = mol_frac
   ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
-  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diff_coef
+  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
                      num_scal_bc_in=2*nspecies+2,num_tran_bc_in=1)
 
@@ -211,9 +211,10 @@ subroutine main_driver()
   call compute_rhotot(mla,rho,rhotot)
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
  
-  ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*diff_coef)]; 
-  ! diff_coef is the largest eigenvalue of diffusion matrix to be input for n-species
-  dt = cfl*dx(1,1)**2/diff_coef
+  ! choice of time step with a diffusive CFL of 0.1; CFL=minimum[dx^2/(2*Dbar_max)]; 
+  ! Dbar_max is the largest eigenvalue of diffusion matrix to be input for n-species
+  n_Dbar = nspecies*(nspecies-1)/2
+  dt = cfl*dx(1,1)**2/maxval(Dbar(1:n_Dbar),dim=1)
   
   if (parallel_IOProcessor()) then
      if(timeinteg_type .eq. 1) write(*,*) "Using Euler method"
@@ -331,7 +332,7 @@ subroutine main_driver()
 
       ! compute error norms
       if (print_error_norms) then
-         call print_errors(rho,rho_exact,Temp,dx,time,the_bc_tower%bc_tower_array)
+         call print_errors(mla,rho,rho_exact,Temp,dx,time,the_bc_tower%bc_tower_array)
       end if
                   
   end do
