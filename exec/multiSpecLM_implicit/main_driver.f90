@@ -67,6 +67,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: eta(:)
   type(multifab), allocatable  :: eta_ed(:,:)
   type(multifab), allocatable  :: kappa(:)
+  type(multifab), allocatable  :: conc(:)
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs
