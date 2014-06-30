@@ -133,7 +133,9 @@
  Dbar(1)         = 1.d-5          ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:2)     = 0.0 0.0        ! thermo-diffusion constant (sums to zero)
  T_init(1) = 293.d0
- rho_init(1,1:2) = 0.42747897030903d0 0.d0
+
+ ! there are CONCENTRATIONS
+ rho_init(1,1:2) = 0.331379046751d0 0.d0
 
  
 /
