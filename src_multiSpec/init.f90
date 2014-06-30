@@ -484,7 +484,7 @@ contains
  
     ! local varables
     integer          :: i,j,n
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,rho_loc,rand
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,c_loc,rand
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -724,8 +724,8 @@ contains
        do j=lo(2),hi(2)
           y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
           
-          rho_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
-          c(lo(1):hi(1),j,1) = rho_loc
+          c_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+          c(lo(1):hi(1),j,1) = c_loc
 
        end do
 
@@ -757,29 +757,29 @@ contains
     ! middle of domain
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
-    ! rho1 = rho_init(1,1) in lower half of domain (in y)
-    ! rho1 = rho_init(2,1) in upper half
+    ! c1 = rho_init(1,1) in lower half of domain (in y)
+    ! c1 = rho_init(2,1) in upper half
     ! random perturbation below centerline
 
     do j=lo(2),hi(2)
        y = prob_lo(2) + (j+0.5d0)*dx(2)
           
        if (y .lt. y1) then
-          rho_loc = rho_init(1,1)
+          c_loc = rho_init(1,1)
        else
-          rho_loc = rho_init(2,1)
+          c_loc = rho_init(2,1)
        end if
 
-       c(lo(1):hi(1),j,1) = rho_loc
-       c(lo(1):hi(1),j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+       c(lo(1):hi(1),j,1) = c_loc
+       c(lo(1):hi(1),j,2) = 1.d0 - c_loc
 
        ! add random perturbation below centerline
        if (j .eq. n_cells(2)/2-1) then
           do i=lo(1),hi(1)
              call random_number(rand)
-             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
-             c(i,j,1) = rho_loc
-             c(i,j,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+             c_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+             c(i,j,1) = c_loc
+             c(i,j,2) = 1.d0 - c_loc
           end do
        end if
           
@@ -868,7 +868,7 @@ contains
  
     ! local variables
     integer          :: i,j,k,n
-    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum,rand,rho_loc,y1,r
+    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum,rand,c_loc,y1,r
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
@@ -1136,8 +1136,8 @@ contains
        do j=lo(2),hi(2)
           y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
           
-          rho_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
-          c(lo(1):hi(1),j,lo(3):hi(3),1) = rho_loc
+          c_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+          c(lo(1):hi(1),j,lo(3):hi(3),1) = c_loc
 
        end do
 
@@ -1170,30 +1170,30 @@ contains
     ! middle of domain
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
-    ! rho1 = rho_init(1,1) in lower half of domain (in y)
-    ! rho1 = rho_init(2,1) in upper half
+    ! c1 = rho_init(1,1) in lower half of domain (in y)
+    ! c1 = rho_init(2,1) in upper half
     ! random perturbation below centerline
 
     do j=lo(2),hi(2)
        y = prob_lo(2) + (j+0.5d0)*dx(2)
           
        if (y .lt. y1) then
-          rho_loc = rho_init(1,1)
+          c_loc = rho_init(1,1)
        else
-          rho_loc = rho_init(2,1)
+          c_loc = rho_init(2,1)
        end if
 
-       c(lo(1):hi(1),j,lo(3):hi(3),1) = rho_loc
-       c(lo(1):hi(1),j,lo(3):hi(3),2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+       c(lo(1):hi(1),j,lo(3):hi(3),1) = c_loc
+       c(lo(1):hi(1),j,lo(3):hi(3),2) = 1.d0 - c_loc
 
        ! add random perturbation below centerline
        if (j .eq. n_cells(2)/2-1) then
           do k=lo(3),hi(3)
           do i=lo(1),hi(1)
              call random_number(rand)
-             rho_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
-             c(i,j,k,1) = rho_loc
-             c(i,j,k,2) = (1.d0 - rho_loc/rhobar(1))*rhobar(2)
+             c_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+             c(i,j,k,1) = c_loc
+             c(i,j,k,2) = 1.d0 - c_loc
           end do
           end do
        end if
