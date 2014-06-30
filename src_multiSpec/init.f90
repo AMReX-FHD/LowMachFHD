@@ -680,25 +680,25 @@ contains
        y = prob_lo(2) + (dble(j)+half)*dx(2) 
        do i=lo(1),hi(1)
           if (y .le. 0.75d0*prob_lo(2)+0.25d0*prob_hi(2)) then
-             c(i,j,1) = rho_init(1,1)
-             c(i,j,2) = 0.1d0*rhobar(2)
-             c(i,j,3) = 0.1d0*rhobar(3)
-             c(i,j,4) = 0.1d0*rhobar(4)
+             c(i,j,1) = 0.7d0
+             c(i,j,2) = 0.1d0
+             c(i,j,3) = 0.1d0
+             c(i,j,4) = 0.1d0
           else if (y .le. 0.5d0*prob_lo(2)+0.5d0*prob_hi(2)) then
-             c(i,j,1) = 0.1d0*rhobar(1)
-             c(i,j,2) = rho_init(1,2)
-             c(i,j,3) = 0.1d0*rhobar(3)
-             c(i,j,4) = 0.1d0*rhobar(4)
+             c(i,j,1) = 0.1d0
+             c(i,j,2) = 0.7d0
+             c(i,j,3) = 0.1d0
+             c(i,j,4) = 0.1d0
           else if (y .le. 0.25d0*prob_lo(2)+0.75d0*prob_hi(2)) then
-             c(i,j,1) = 0.1d0*rhobar(1)
-             c(i,j,2) = 0.1d0*rhobar(2)
-             c(i,j,3) = rho_init(1,3)
-             c(i,j,4) = 0.1d0*rhobar(4)
+             c(i,j,1) = 0.1d0
+             c(i,j,2) = 0.1d0
+             c(i,j,3) = 0.7d0
+             c(i,j,4) = 0.1d0
           else
-             c(i,j,1) = 0.1d0*rhobar(1)
-             c(i,j,2) = 0.1d0*rhobar(2)
-             c(i,j,3) = 0.1d0*rhobar(3)
-             c(i,j,4) = rho_init(1,4)
+             c(i,j,1) = 0.1d0
+             c(i,j,2) = 0.1d0
+             c(i,j,3) = 0.1d0
+             c(i,j,4) = 0.7d0
           end if
        end do
     end do
