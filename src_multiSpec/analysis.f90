@@ -42,7 +42,7 @@ module analysis_module
      end do
 
      ! calculate rho_exact
-     call init_rho_and_umac(rho_exact,umac_tmp,dx,time,the_bc_level) 
+     call init_rho_and_umac(mla,rho_exact,umac_tmp,dx,time,the_bc_level) 
      call init_Temp(Temp,dx,time,the_bc_level) 
     
      ! substract the values 
@@ -85,7 +85,7 @@ module analysis_module
      end if
      
      ! for checking analytic solution with Visit
-     call init_rho_and_umac(rho_exact,umac_tmp,dx,time,the_bc_level) 
+     call init_rho_and_umac(mla,rho_exact,umac_tmp,dx,time,the_bc_level) 
      call init_Temp(Temp,dx,time,the_bc_level) 
 
      do n=1,nlevs
