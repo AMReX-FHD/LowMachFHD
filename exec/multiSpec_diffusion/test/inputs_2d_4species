@@ -14,7 +14,6 @@
  prob_hi(1:2) = 64 32                    ! physical systemsize = (prob_lo-prob_hi)
  n_cells(1:2) = 64 32                    ! to set dx = systemsize/n_cells
 
- diff_coef      = 1.0                          ! max eigenvalue of diffusionmatrix Dbar_bc 
   
  molmass(1:4) = 1.0 0.75 1.25 2.0     ! molar mass of n-species
 
