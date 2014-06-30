@@ -331,7 +331,7 @@ subroutine main_driver()
 
       ! compute error norms
       if (print_error_norms) then
-         call print_errors(rho,rho_exact,Temp,dx,time,the_bc_tower%bc_tower_array)
+         call print_errors(mla,rho,rho_exact,Temp,dx,time,the_bc_tower%bc_tower_array)
       end if
                   
   end do
