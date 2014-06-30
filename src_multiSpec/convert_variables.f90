@@ -9,16 +9,16 @@ module convert_variables_module
 
   private
 
-  public :: convert_cons_to_prim
+  public :: convert_rho_to_c
   
 contains
 
-  subroutine convert_cons_to_prim(mla,rho,c,cons_to_prim)
+  subroutine convert_rho_to_c(mla,rho,c,rho_to_c)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) ::   c(:)
-    logical        , intent(in   ) :: cons_to_prim
+    logical        , intent(in   ) :: rho_to_c
 
     ! local
     integer :: nlevs,n,i,dm,ng_r,ng_c
@@ -32,7 +32,7 @@ contains
     ng_r = rho(1)%ng
     ng_c =   c(1)%ng
 
-    if (.not.(cons_to_prim)) then
+    if (.not.(rho_to_c)) then
        if (ng_c .lt. ng_c) then
           call bl_error('convert_variables, not enough ghost cells in prim')
        end if
@@ -46,30 +46,30 @@ contains
           hi =  upb(get_box(rho(n), i))
           select case (dm)
           case (2)
-             if (cons_to_prim) then
-                ! cons to prim - NO GHOST CELLS
-
+             if (rho_to_c) then
+                ! rho to c - NO GHOST CELLS
+                call rho_to_c_2d(rp(:,:,1,:),ng_r,cp(:,:,1,:),ng_c,lo,hi)
              else
-                ! prim to cons - INCLUDING GHOST CELLS
-
+                ! c to rho - INCLUDING GHOST CELLS
+                call c_to_rho_2d(rp(:,:,1,:),ng_r,cp(:,:,1,:),ng_c,lo,hi)
              end if
           case (3)
-             if (cons_to_prim) then
-                ! cons to prim - NO GHOST CELLS
-
+             if (rho_to_c) then
+                ! rho to c - NO GHOST CELLS
+                call rho_to_c_3d(rp(:,:,:,:),ng_r,cp(:,:,:,:),ng_c,lo,hi)
              else
-                ! prim to cons - INCLUDING GHOST CELLS
-
+                ! c to rho - INCLUDING GHOST CELLS
+                call c_to_rho_3d(rp(:,:,:,:),ng_r,cp(:,:,:,:),ng_c,lo,hi)
              end if
           end select
        end do
     end do
     
-  end subroutine convert_cons_to_prim
+  end subroutine convert_rho_to_c
 
-  subroutine cons_to_prim_2d(rho,ng_r,c,ng_c,lo,hi)
+  subroutine rho_to_c_2d(rho,ng_r,c,ng_c,lo,hi)
 
-    ! cons to prim - NO GHOST CELLS
+    ! rho to c - NO GHOST CELLS
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_c
     real(kind=dp_t), intent(in   ) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
@@ -86,11 +86,11 @@ contains
        end do
     end do
 
-  end subroutine cons_to_prim_2d
+  end subroutine rho_to_c_2d
 
-  subroutine cons_to_prim_3d(rho,ng_r,c,ng_c,lo,hi)
+  subroutine rho_to_c_3d(rho,ng_r,c,ng_c,lo,hi)
 
-    ! cons to prim - NO GHOST CELLS
+    ! rho to c - NO GHOST CELLS
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_c
     real(kind=dp_t), intent(in   ) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
@@ -109,11 +109,11 @@ contains
        end do
     end do
 
-  end subroutine cons_to_prim_3d
+  end subroutine rho_to_c_3d
 
-  subroutine prim_to_cons_2d(rho,ng_r,c,ng_c,lo,hi)
+  subroutine c_to_rho_2d(rho,ng_r,c,ng_c,lo,hi)
 
-    ! prim to cons - INCLUDING GHOST CELLS
+    ! c to rho - INCLUDING GHOST CELLS
     
     integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_c
     real(kind=dp_t), intent(inout) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
@@ -122,19 +122,19 @@ contains
     ! local
     integer :: i,j,n
 
-    do j=lo(2)-ng_c,hi(2)+ng_c
-       do i=lo(1)-ng_c,hi(1)+ng_c
+    do j=lo(2)-ng_r,hi(2)+ng_r
+       do i=lo(1)-ng_r,hi(1)+ng_r
           do n=1,nspecies
              rho(i,j,n) = c(i,j,n)*rhobar(n)
           end do
        end do
     end do
 
-  end subroutine prim_to_cons_2d
+  end subroutine c_to_rho_2d
 
-  subroutine prim_to_cons_3d(rho,ng_r,c,ng_c,lo,hi)
+  subroutine c_to_rho_3d(rho,ng_r,c,ng_c,lo,hi)
 
-    ! prim to cons - INCLUDING GHOST CELLS
+    ! c to rho - INCLUDING GHOST CELLS
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_c
     real(kind=dp_t), intent(inout) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
@@ -143,9 +143,9 @@ contains
     ! local
     integer :: i,j,k,n
 
-    do k=lo(3)-ng_c,hi(3)+ng_c
-       do j=lo(2)-ng_c,hi(2)+ng_c
-          do i=lo(1)-ng_c,hi(1)+ng_c
+    do k=lo(3)-ng_r,hi(3)+ng_r
+       do j=lo(2)-ng_r,hi(2)+ng_r
+          do i=lo(1)-ng_r,hi(1)+ng_r
              do n=1,nspecies
                 rho(i,j,k,n) = c(i,j,k,n)*rhobar(n)
              end do
@@ -153,6 +153,6 @@ contains
        end do
     end do
 
-  end subroutine prim_to_cons_3d
+  end subroutine c_to_rho_3d
 
 end module convert_variables_module
