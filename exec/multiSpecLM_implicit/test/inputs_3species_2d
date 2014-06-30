@@ -1,10 +1,11 @@
 &probin_common
  
  dim_in = 2                       ! problem dimension
- plot_int = 10                  ! plot interval
+ plot_int = 10                    ! plot interval
+ print_int = 1
  max_step = 1000                  ! total number of computational step
  max_grid_size(1:2) = 32 32       ! individual box size 
- n_steps_skip = 50              ! when to start analyzing data
+ n_steps_skip = 0                 ! when to start analyzing data
  k_B      = 1E-3                  ! Boltzmann constant
 
  fixed_dt = 0.01                  ! fixed_dt
@@ -47,8 +48,11 @@
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
+
+ ! these are CONCENTRATIONS
  rho_init(1,1:3) = 0.2 0.5 0.3      ! inside the circle
- rho_init(2,1:3) = 0.3 0.4 0.3      ! outside the circle
+ rho_init(2,1:3) = 0.3 0.2 0.5      ! outside the circle
+
  Dbar(1:3) = 1.0 2.0 2.0       ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:3) = 1.0 1.0 -2.0    ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature
