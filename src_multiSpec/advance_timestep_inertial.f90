@@ -10,6 +10,7 @@ module advance_timestep_inertial_module
   use stochastic_mass_fluxdiv_module
   use compute_mass_fluxdiv_module
   use convert_m_to_umac_module
+  use convert_variables_module
   use mk_advective_m_fluxdiv_module
   use reservoir_bc_fill_module
   use bds_module
@@ -81,6 +82,7 @@ contains
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
+    type(multifab) ::        conc(mla%nlevel)
 
     type(multifab) ::          mold(mla%nlevel,mla%dim)
     type(multifab) ::         mtemp(mla%nlevel,mla%dim)
@@ -114,9 +116,10 @@ contains
     do n=1,nlevs
        call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
-       call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
-       call multifab_build(         dp(n),mla%la(n),1,1)
-       call multifab_build(       divu(n),mla%la(n),1,0)
+       call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
+       call multifab_build(         dp(n),mla%la(n),1       ,1)
+       call multifab_build(       divu(n),mla%la(n),1       ,0)
+       call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        do i=1,dm
           call multifab_build_edge(         mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(        mtemp(n,i),mla%la(n),1       ,1,i)
@@ -190,13 +193,22 @@ contains
        call multifab_mult_mult_s_c(rho_update(n),1,dt,nspecies,0)
        call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
        call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
-       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(rho_new(n))
-       ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    call eos_check(mla,rho_new)
+    ! rho to c - NO GHOST CELLS
+    call convert_rho_to_c(mla,rho_new,conc,.true.)
+
+    do n=1,nlevs
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(conc(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+    end do
+
+    ! c to rho - INCLUDING GHOST CELLS
+    call convert_rho_to_c(mla,rho_new,conc,.false.)
+
+    ! compute rhotot from rho
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     ! average rho_new and rhotot_new to faces
@@ -525,14 +537,20 @@ contains
 
     end if
 
+    ! rho to c - NO GHOST CELLS
+    call convert_rho_to_c(mla,rho_new,conc,.true.)
+
     do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(rho_new(n))
+       call multifab_fill_boundary(conc(n))
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho_new(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    call eos_check(mla,rho_new)
+    ! c to rho - INCLUDING GHOST CELLS
+    call convert_rho_to_c(mla,rho_new,conc,.false.)
+
+    ! compute rhotot from rho
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     ! average rho_new and rhotot_new to faces

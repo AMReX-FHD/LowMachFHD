@@ -22,6 +22,7 @@ subroutine main_driver()
   use ParallelRNGs 
   use mass_flux_utilities_module
   use convert_stag_module
+  use convert_variables_module
   use restart_module
   use checkpoint_module
   use project_onto_eos_module
@@ -101,7 +102,7 @@ subroutine main_driver()
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),pres(nlevs))
-  allocate(eta(nlevs),kappa(nlevs))
+  allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
      allocate(Temp_ed(nlevs,1))
@@ -258,16 +259,30 @@ subroutine main_driver()
 
   else
 
+     do n=1,nlevs
+        call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
+     end do
+
+     ! rho to c - NO GHOST CELLS
+     call convert_rho_to_c(mla,rho_old,conc,.true.)
+
      ! fill ghost cells
      do n=1,nlevs
         ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-        call multifab_fill_boundary(rho_old(n))
+        call multifab_fill_boundary(conc(n))
         call multifab_fill_boundary(pres(n))
         ! fill non-periodic domain boundary ghost cells
-        call multifab_physbc(rho_old(n),1,rho_part_bc_comp,nspecies, &
+        call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies, &
                              the_bc_tower%bc_tower_array(n),dx(n,:))
         call multifab_physbc(pres(n),1,pres_bc_comp,1, &
                              the_bc_tower%bc_tower_array(n),dx(n,:))
+     end do
+
+     ! c to rho - INCLUDING GHOST CELLS
+     call convert_rho_to_c(mla,rho_old,conc,.false.)
+
+     do n=1,nlevs
+        call multifab_destroy(conc(n))
      end do
 
   end if
