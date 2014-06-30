@@ -802,6 +802,7 @@ contains
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dp(n))
        call multifab_destroy(divu(n))
+       call multifab_destroy(conc(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
