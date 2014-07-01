@@ -23,6 +23,20 @@ module init_module
             init_rho_and_umac, &  ! used in low Mach code; initialize c first then convert to rho
             init_Temp
 
+  ! IMPORTANT: In the diffusion only code (init_rho), rho_init specifies initial values for DENSITY
+  ! In the low-Mach code (init_rho_and_umac), rho_init specifies initial MASS FRACTIONS (should sum to unity!)
+  ! The density follows from the EOS in the LM case so it cannot be specified
+  ! Same applies to boundary conditions
+
+  ! prob_type codes for LowMach:
+  ! 0=thermodynamic equilibrium, v=0, rho/c=rho_init(1,1:nspecies)
+  ! 1=bubble test, v=0, rho/c=rho_init(1,1:nspecies) inside and rho_init(2,1:nspecies) outside the bubble
+  ! 2=gradient along y, v=0, rho/c=rho_init(1,1:nspecies) on bottom (y=0) and rho_init(2,1:nspecies) on top (y=Ly)
+  ! 3=one fluid on top of another: v=0, rho/c=rho_init(1,1:nspecies) on bottom (y<Ly/2) and rho_init(2,1:nspecies) on top (y=L_y)
+  ! 4=reserved for future use generic case (any nspecies)
+  ! 5-onward=manufactured solutions for testing, limited to specific setups and nspecies
+
+  
 contains
 
   subroutine init_rho(rho,dx,time,the_bc_level)
@@ -494,7 +508,7 @@ contains
 
     case(0) 
     !============================================================
-    ! Thermodynamic equilibrium
+    ! Thermodynamic equilibrium (everything constant)
     !============================================================
  
     u = 0.d0
@@ -510,7 +524,7 @@ contains
     
     case(1) 
     !=============================================================
-    ! Initializing rho's in concentric circle with radius^2 = 0.1
+    ! Initializing rho's in concentric circle with radius^2 = 0.1*L(1)*L(2)
     !=============================================================
  
     u = 0.d0
@@ -530,10 +544,33 @@ contains
     
        end do
     end do
+
+    ! Donev: Please merge this with prob_type=1 just like done for case=9: if smoothing_width>0 use a smooth transition
+
+    !=============================================================
+    ! smoothed circle
+    !=============================================================
+ 
+    u = 0.d0
+    v = 0.d0
+
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+       do i=lo(1),hi(1)
+          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+       
+          r = sqrt(x**2 + y**2)
+
+          c(i,j,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
+               0.5d0*(rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
+                  (1.d0 + tanh((r-15.d0)/2.d0))
+
+       end do
+    end do
   
     case(2) 
     !=========================================================
-    ! Initializing rho's with constant gradient 
+    ! Initializing with constant gradient along y
     !=========================================================
  
     u = 0.d0
@@ -544,35 +581,53 @@ contains
        do i=lo(1),hi(1)
           x = prob_lo(1) + (dble(i)+half)*dx(1) 
    
-            ! linear gradient in rho
+            ! linear gradient in mass fractions
             c(i,j,1:nspecies) = rho_init(1,1:nspecies) + & 
                (rho_init(2,1:nspecies) - rho_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
    
          end do
       end do
 
-    case(3) 
-    !===========================================================
-    ! Initializing rho's in Gaussian so as rhotot=constant=1.0
-    ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
-    !===========================================================
- 
+    case (3) ! Donev: Why do we have both this and prob_type=9 (there should be one and it should work for any nspecies)
+
+    !=============================================================
+    ! 1 fluid on top of another
+    ! c(:) = rho_init(1,:) on bottom
+    ! c(:) = rho_init(2,:) on top
+    !=============================================================
+
     u = 0.d0
     v = 0.d0
 
-    do j=lo(2),hi(2)
-         y = prob_lo(2) + (dble(j)+half) * dx(2) - half*(prob_lo(2)+prob_hi(2))
-         do i=lo(1),hi(1)
-            x = prob_lo(1) + (dble(i)+half) * dx(1) - half*(prob_lo(1)+prob_hi(1))
-        
-            rsq = x**2 + y**2
-            c(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time))
-            c(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time))
-       
-         end do
-      end do
+    ! middle of domain
+    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
-    case(4)
+    ! rho1 = rho_init(1,1) in lower half of domain (in y)
+    ! rho1 = rho_init(2,1) in upper half
+    ! random perturbation below centerline
+
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+       if (y .lt. y1) then
+          do i=lo(1),hi(1)
+             c(i,j,1:nspecies) = rho_init(1,1:nspecies)
+          end do
+       else
+          do i=lo(1),hi(1)
+             c(i,j,1:nspecies) = rho_init(2,1:nspecies)
+          end do
+       end if
+
+    end do
+
+    ! Donev: Reserve case 4 for future (abort now) and make this be prob_type=9 or some such
+    case(4) ! two species only
+    
+    if(nspecies\=2) then
+      call bl_error("prob_type=4 requires nspecies=2")
+    end if
+  
     !==================================================================================
     ! Initializing rho1,rho2=Gaussian and rhototal=1+alpha*exp(-r^2/4D)/(4piD) (no-time 
     ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
@@ -595,7 +650,12 @@ contains
          end do
       end do
 
-    case(5)
+    case(5) ! two species only
+    
+    if(nspecies\=2) then
+      call bl_error("prob_type=5 requires nspecies=2")
+    end if
+  
     !==================================================================================
     ! Initializing m2=m3, D12=D13 where Dbar(1)=D12, Dbar(2)=D13, 
     ! Dbar(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
@@ -621,7 +681,12 @@ contains
          end do
     end do
 
-    case(6) 
+    case(6) ! two species only
+    
+    if(nspecies\=2) then
+      call bl_error("prob_type=6 requires nspecies=2")
+    end if
+   
     !=========================================================
     ! Test of thermodiffusion steady-state for 2 species 
     !=========================================================
@@ -644,30 +709,37 @@ contains
          end do
       end do
 
-   case(7)
-
-    !=============================================================
-    ! smoothed circle
-    !=============================================================
+    case(7) ! two species only
+    
+    if(nspecies\=2) then
+      call bl_error("prob_type=7 requires nspecies=2")
+    end if
+    
+    !===========================================================
+    ! Initializing rho's in Gaussian so as rhotot=constant=1.0
+    ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
+    !===========================================================
  
     u = 0.d0
     v = 0.d0
 
     do j=lo(2),hi(2)
-       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
-       do i=lo(1),hi(1)
-          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+         y = prob_lo(2) + (dble(j)+half) * dx(2) - half*(prob_lo(2)+prob_hi(2))
+         do i=lo(1),hi(1)
+            x = prob_lo(1) + (dble(i)+half) * dx(1) - half*(prob_lo(1)+prob_hi(1))
+        
+            rsq = x**2 + y**2
+            c(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time))
+            c(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time))
        
-          r = sqrt(x**2 + y**2)
+         end do
+      end do
 
-          c(i,j,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
-               0.5d0*(rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
-                  (1.d0 + tanh((r-15.d0)/2.d0))
-
-       end do
-    end do
-
-    case(8)
+    case(8) ! four species only
+    
+    if(nspecies\=2) then
+      call bl_error("prob_type=8 requires nspecies=4")
+    end if
 
     !=============================================================
     ! 4-species, 4-stripes
@@ -703,7 +775,7 @@ contains
        end do
     end do
 
-    case(9)
+    case(9) ! Donev: Please merge with prob_type=3, why do we need 2 cases?
 
     !=============================================================
     ! one fluid on top of another
@@ -794,39 +866,6 @@ contains
           u(:,j) = u_init(1)
        else
           u(:,j) = u_init(2)
-       end if
-
-    end do
-
-    case (11)
-
-    !=============================================================
-    ! 1 fluid on top of another
-    ! c(:) = rho_init(1,:) on bottom
-    ! c(:) = rho_init(2,:) on top
-    !=============================================================
-
-    u = 0.d0
-    v = 0.d0
-
-    ! middle of domain
-    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
-
-    ! rho1 = rho_init(1,1) in lower half of domain (in y)
-    ! rho1 = rho_init(2,1) in upper half
-    ! random perturbation below centerline
-
-    do j=lo(2),hi(2)
-       y = prob_lo(2) + (j+0.5d0)*dx(2)
-          
-       if (y .lt. y1) then
-          do i=lo(1),hi(1)
-             c(i,j,1:nspecies) = rho_init(1,1:nspecies)
-          end do
-       else
-          do i=lo(1),hi(1)
-             c(i,j,1:nspecies) = rho_init(2,1:nspecies)
-          end do
        end if
 
     end do
