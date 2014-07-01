@@ -5,7 +5,7 @@ module analysis_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
-  use init_module
+  use init_lowmach_module
   use init_temp_module
   use probin_multispecies_module, only: nspecies
  

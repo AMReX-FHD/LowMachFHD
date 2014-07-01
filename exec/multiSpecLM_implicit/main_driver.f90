@@ -3,7 +3,7 @@ subroutine main_driver()
   use boxlib
   use bl_IO_module
   use ml_layout_module
-  use init_module
+  use init_lowmach_module
   use init_temp_module
   use compute_mixture_properties_module
   use initial_projection_module
