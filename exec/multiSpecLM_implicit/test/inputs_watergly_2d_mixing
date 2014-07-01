@@ -35,7 +35,7 @@
   ! 9 = one fluid on top of another
      ! rho_init(1) in lower half of domain (in y)
      ! rho_init(2) in upper half  
-  prob_type = -9  ! negative since we enforce low mach constraint by overwriting final rho_i
+  prob_type = -3  ! negative since we enforce low mach constraint by overwriting final rho_i
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
@@ -135,7 +135,7 @@
  T_init(1) = 293.d0
 
  ! there are CONCENTRATIONS
- rho_init(1,1:2) = 0.331379046751d0 0.d0
+ rho_init(1:2,1) = 0.331379046751d0 0.d0
 
  
 /

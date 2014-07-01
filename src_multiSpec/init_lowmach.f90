@@ -213,7 +213,7 @@ contains
          end do
       end do
 
-    case (3) ! Donev: Why do we have both this and prob_type=9 (there should be one and it should work for any nspecies)
+    case (3)
 
     !=============================================================
     ! 1 fluid on top of another
@@ -227,24 +227,34 @@ contains
     ! middle of domain
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
-    ! rho1 = rho_init(1,1) in lower half of domain (in y)
-    ! rho1 = rho_init(2,1) in upper half
-    ! random perturbation below centerline
+    if(abs(smoothing_width)>epsilon(1.d0)) then
 
-    do j=lo(2),hi(2)
-       y = prob_lo(2) + (j+0.5d0)*dx(2)
-          
-       if (y .lt. y1) then
-          do i=lo(1),hi(1)
-             c(i,j,1:nspecies) = rho_init(1,1:nspecies)
+       ! smoothed version
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
+          do n=1,nspecies
+             c_loc = rho_init(1,n) + (rho_init(2,n)-rho_init(1,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+             c(lo(1):hi(1),j,n) = c_loc
           end do
-       else
-          do i=lo(1),hi(1)
-             c(i,j,1:nspecies) = rho_init(2,1:nspecies)
-          end do
-       end if
+       end do
 
-    end do
+    else
+
+       ! discontinuous version
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y1) then
+             do n=1,nspecies
+                c(lo(1):hi(1),j,n) = rho_init(1,n)
+             end do
+          else
+             do n=1,nspecies
+                c(lo(1):hi(1),j,n) = rho_init(2,n)
+             end do
+          end if
+       end do
+
+    end if
 
     ! Donev: Reserve case 4 for future (abort now) and make this be prob_type=9 or some such
     case(4) ! two species only
@@ -399,46 +409,6 @@ contains
           end if
        end do
     end do
-
-    case(9) ! Donev: Please merge with prob_type=3, why do we need 2 cases?
-
-    !=============================================================
-    ! one fluid on top of another
-    ! rho1 = rho_init(1) in lower half of domain (in y)
-    ! rho1 = rho_init(2) in upper half
-    ! use the EOS to compute rho2 by setting prob_type negative
-    !=============================================================
- 
-    u = 0.d0
-    v = 0.d0
-
-    ! middle of domain
-    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
-
-    if(abs(smoothing_width)>epsilon(1.d0)) then
-
-       ! smoothed version
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
-          
-          c_loc = rho_init(1,1) + (rho_init(1,2)-rho_init(1,1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
-          c(lo(1):hi(1),j,1) = c_loc
-
-       end do
-
-    else
-
-       ! discontinuous version
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
-          if (y .lt. y1) then
-             c(lo(1):hi(1),j,1) = rho_init(1,1)
-          else
-             c(lo(1):hi(1),j,1) = rho_init(1,2)
-          end if
-       end do
-
-    end if
 
     case (10)
 
