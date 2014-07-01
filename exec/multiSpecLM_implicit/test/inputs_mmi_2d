@@ -4,7 +4,7 @@
   ! Problem specification
   !----------------------
   dim_in = 2                       ! 2D or 3D  
-  prob_type = -11                  ! sets scalars, m, coefficients (see init.f90)
+  prob_type = -3                  ! sets scalars, m, coefficients (see init.f90)
                                    ! Negative to enforce LM constraint in initial conditions by force
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
@@ -67,7 +67,7 @@
   ! Initial conditions
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 0.50d0   ! scale factor for smoothing initial profile (NOT IMPLEMENTED for this prob_type)
+  smoothing_width = 0.50d0   ! scale factor for smoothing initial profile
 
   initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero)
