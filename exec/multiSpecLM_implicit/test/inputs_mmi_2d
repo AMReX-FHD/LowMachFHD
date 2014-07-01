@@ -4,8 +4,7 @@
   ! Problem specification
   !----------------------
   dim_in = 2                       ! 2D or 3D  
-  prob_type = -3                  ! sets scalars, m, coefficients (see init.f90)
-                                   ! Negative to enforce LM constraint in initial conditions by force
+  prob_type =  3                   ! sets scalars, m, coefficients (see init.f90)
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
   n_cells(1:2) = 128 128           ! number of cells in domain
@@ -16,11 +15,11 @@
      ! For inertial you should not exceed 0.05 = viscous CFL dt*nu/dx^2=10 for dx=1/128
   cfl = 0.5d0                      ! cfl number
 
-  max_step = 100                   ! maximum number of time steps
+  max_step = 1000                   ! maximum number of time steps
   plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 1                   ! how often to output EOS drift and sum of conserved quantities
+  print_int = 10                   ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10             ! how often to call project_onto_eos
 
   ! Physical properties
@@ -32,12 +31,13 @@
   k_B = 1.3806488d-23       ! Boltzmann's constant
   
   ! stochastic properties
-  variance_coef_mom = 0.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
+  ! these correspond to a "thin film" of thickness 1 micron = 1e-4 cm
+  variance_coef_mom = 1.0d9  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 1.0d9 ! global scaling epsilon for stochastic mass forcing
   
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 2     ! differs from code to code.  In binary and multispcies code:
+  algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
@@ -67,7 +67,7 @@
   ! Initial conditions
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 0.50d0   ! scale factor for smoothing initial profile
+  smoothing_width = 0.0d0   ! scale factor for smoothing initial profile
 
   initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero)
