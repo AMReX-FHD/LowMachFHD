@@ -78,12 +78,15 @@ contains
 
     ! local
     integer :: i,j,n
+    real(kind=dp_t) :: rhotot
 
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
+          rhotot = 0.d0
           do n=1,nspecies
-             c(i,j,n) = rho(i,j,n)/rhobar(n)
+             rhotot = rhotot + rho(i,j,n)
           end do
+          c(i,j,1:nspecies) = rho(i,j,1:nspecies)/rhotot
        end do
     end do
 
@@ -99,13 +102,16 @@ contains
 
     ! local
     integer :: i,j,k,n
+    real(kind=dp_t) :: rhotot
 
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
+             rhotot = 0.d0
              do n=1,nspecies
-                c(i,j,k,n) = rho(i,j,k,n)/rhobar(n)
+                rhotot = rhotot + rho(i,j,k,n)
              end do
+             c(i,j,k,1:nspecies) = rho(i,j,k,1:nspecies)/rhotot
           end do
        end do
     end do
@@ -122,12 +128,15 @@ contains
 
     ! local
     integer :: i,j,n
+    real(kind=dp_t) :: rhoinv
 
     do j=lo(2)-ng_r,hi(2)+ng_r
        do i=lo(1)-ng_r,hi(1)+ng_r
+          rhoinv = 0.d0
           do n=1,nspecies
-             rho(i,j,n) = c(i,j,n)*rhobar(n)
+             rhoinv = rhoinv + c(i,j,n)/rhobar(n)
           end do
+          rho(i,j,1:nspecies) = c(i,j,1:nspecies)/rhoinv
        end do
     end do
 
@@ -143,13 +152,16 @@ contains
 
     ! local
     integer :: i,j,k,n
+    real(kind=dp_t) :: rhoinv
 
     do k=lo(3)-ng_r,hi(3)+ng_r
        do j=lo(2)-ng_r,hi(2)+ng_r
           do i=lo(1)-ng_r,hi(1)+ng_r
+             rhoinv = 0.d0
              do n=1,nspecies
-                rho(i,j,k,n) = c(i,j,k,n)*rhobar(n)
+                rhoinv = rhoinv + c(i,j,k,n)/rhobar(n)
              end do
+             rho(i,j,k,1:nspecies) = c(i,j,k,1:nspecies)/rhoinv
           end do
        end do
     end do
