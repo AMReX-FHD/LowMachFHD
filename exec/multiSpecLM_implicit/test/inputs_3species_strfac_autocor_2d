@@ -31,7 +31,7 @@
   !--------------------
   grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
   molmass(1:3) = 1.d0 2.d0 3.d0       ! molecular masses for nspecies (mass per molecule, *not* molar mass)
-  rhobar(1:3) = 1.d0 1.d0 1.d0        ! pure component densities for all species
+  rhobar(1:3) = 2.0d0 3.0d0 3.85714d0   ! pure component densities for all species (chosen from EOS)
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mom = 1e-6  ! global scaling epsilon for stochastic momentum forcing
@@ -106,12 +106,12 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 1    ! How often to call updateHydroGrid
+  hydro_grid_int = 0    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = 0         ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = 2         ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze full grid data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
@@ -119,7 +119,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 32  ! parallelization parameters
-  stats_int = -1                 ! Project grid for analysis (writes hstat and vstat files)
+  stats_int = 5                 ! Project grid for analysis (writes hstat and vstat files)
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
@@ -163,10 +163,13 @@
   ! Initial and boundary conditions 
   !----------------------
   T_init(1:2) = 1.d0 1.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
-  ! initial values for rho
-  rho_init(1,1:3) = 0.6d0 1.05d0 1.35d0 
 
-  ! rho_i boundary conditions (dir,lohi,species)
+  ! initial values for w
+  ! These are MASS FRACTIONS (concentrations), not partial densities
+  rho_init(1,1:3) = 0.2 0.35 0.45 ! Should give rho_i = 0.6d0 1.05d0 1.35d0 
+
+  ! w_i boundary conditions (dir,lohi,species)
+  ! These are MASS FRACTIONS (concentrations), not partial densities
   rho_bc(1,1,1:3) = 0.d0 0.d0
   rho_bc(1,2,1:3) = 0.d0 0.d0
   rho_bc(2,1,1:3) = 0.d0 0.d0

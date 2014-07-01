@@ -127,8 +127,6 @@ contains
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
-    ! for specific box, now start loop over alloted cells     
-    ! if prob_type is negative, we enforce low mach constraint by overwriting final rho_i
     select case (abs(prob_type))
 
     case(0) 
@@ -471,22 +469,18 @@ contains
       
     end select
 
-    if (prob_type .lt. 0) then
+    ! set final c_i such that sum(c_i) = 1 to within roundoff
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
 
-       ! set final c_i such that sum(c_i) = 1
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-
-          sum = 0
-          do n=1,nspecies-1
-             sum = sum + c(i,j,n)
-          end do
-          c(i,j,nspecies) = 1.d0 - sum
-
+       sum = 0
+       do n=1,nspecies-1
+          sum = sum + c(i,j,n)
        end do
-       end do          
+       c(i,j,nspecies) = 1.d0 - sum
 
-    end if
+    end do
+    end do          
    
   end subroutine init_c_and_umac_2d
 
@@ -506,8 +500,6 @@ contains
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
 
-    ! for specific box, now start loop over alloted cells
-    ! if prob_type is negative, we enforce low mach constraint by overwriting final rho_i
     select case (abs(prob_type))
     
     case(0) 
@@ -891,24 +883,20 @@ contains
       
     end select
 
-    if (prob_type .lt. 0) then
+    ! set final c_i such that sum(c_i) = 1
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
 
-       ! set final c_i such that sum(c_i) = 1
-       do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-
-          sum = 0
-          do n=1,nspecies-1
-             sum = sum + c(i,j,k,n)
-          end do
-          c(i,j,k,nspecies) = 1.d0 - sum
-
+       sum = 0
+       do n=1,nspecies-1
+          sum = sum + c(i,j,k,n)
        end do
-       end do
-       end do
+       c(i,j,k,nspecies) = 1.d0 - sum
 
-    end if
+    end do
+    end do
+    end do
    
   end subroutine init_c_and_umac_3d
 
