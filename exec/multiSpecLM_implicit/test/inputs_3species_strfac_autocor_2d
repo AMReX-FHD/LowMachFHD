@@ -11,7 +11,7 @@
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 32.d0 32.d0       ! physical hi coordinate
   n_cells(1:2) = 32 32             ! number of cells in domain
-  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+  max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
@@ -24,7 +24,7 @@
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 5                    ! how often to output EOS drift and sum of conserved quantities
+  print_int = 10                    ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1              ! how often to call project_onto_eos
 
   ! Physical parameters
@@ -267,7 +267,7 @@
    ! Variances
    writeVariancesVTK = T ! Should we save a VTK file
    nVariances = 7
-   ! 1=rho-rho, 2=w1-w1, ...
+   ! 1=rho-rho, 2=w1-w1, 3=w2-w2, 4=w3-w3, 5=w1-w2, 6=w1-w3, 7=w2-w3
    variancePairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 7 0 7, 0 5 0 6, 0 5 0 7, 0 6 0 7"
       ! species1 variable1 species2 variable2
 

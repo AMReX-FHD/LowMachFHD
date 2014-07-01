@@ -225,6 +225,7 @@ subroutine main_driver()
      write(*,*) "Using time step dt =", dt
      write(*,*), "Using noise variance =", &
           sqrt(2.d0*k_B*variance_coef_mass/(product(dx(1,1:dm))*dt))
+     write(*,*), "product dx =", product(dx(1,1:dm))
   end if
 
   !=====================================================================
