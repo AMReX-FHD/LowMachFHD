@@ -11,6 +11,7 @@ f90sources += compute_mass_fluxdiv.f90
 f90sources += eos_check.f90
 f90sources += external_force.f90 
 f90sources += init.f90
+f90sources += init_temp.f90
 f90sources += initial_projection.f90
 f90sources += mass_flux_utilities.f90
 f90sources += matmat_mul.f90

@@ -9,7 +9,7 @@ module probin_multispecies_module
   integer, parameter :: max_element=max_species*(max_species-1)/2  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp, temp_bc_comp ! not input: populated at main 
 
-  integer, save      :: nspecies,inverse_type,timeinteg_type
+  integer, save      :: nspecies,inverse_type,timeinteg_type,temp_type
   real(kind=dp_t)    :: start_time
   real(kind=dp_t)    :: T_init(2) 
   real(kind=dp_t)    :: Dbar(max_element)
@@ -36,6 +36,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ Dtherm     ! thermo-diffusion coefficients
   namelist /probin_multispecies/ H_offdiag
   namelist /probin_multispecies/ H_diag ! =d^2F/dx^2  
+  namelist /probin_multispecies/ temp_type
   namelist /probin_multispecies/ T_init   ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   namelist /probin_multispecies/ rho_init  ! initial values for rho
   namelist /probin_multispecies/ rho_bc ! rho_i boundary conditions (dir,lohi,species)
@@ -75,6 +76,7 @@ contains
     Dtherm             = 0.0d0
     H_offdiag          = 0.0d0
     H_diag             = 0.0d0
+    temp_type          = 0
     T_init             = 1.0d0
     rho_bc             = 0.d0
  
@@ -103,26 +105,57 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) nspecies
+
+       case ('--fraction_tolerance')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) fraction_tolerance
+
+       case ('--start_time')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) start_time
+
        case ('--inverse_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) inverse_type
+
        case ('--timeinteg_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) timeinteg_type
-       case ('--rho_init')
+
+       case ('--correct_flux')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) rho_init
-       case ('--Dbar')
+          read(fname, *) correct_flux
+
+       case ('--print_error_norms')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) Dbar
-       case ('--Dtherm')
+          read(fname, *) print_error_norms
+
+       case ('--is_ideal_mixture')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) Dtherm
+          read(fname, *) is_ideal_mixture
+
+       case ('--is_nonisothermal')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) is_nonisothermal
+
+       case ('--use_lapack')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) use_lapack
+
+       case ('--temp_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) temp_type
+
        case ('--')
           farg = farg + 1
           exit
