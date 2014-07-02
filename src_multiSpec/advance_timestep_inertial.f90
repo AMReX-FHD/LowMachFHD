@@ -436,7 +436,7 @@ contains
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
-               eta,eta_ed,kappa,theta_alpha)
+               eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
 
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
