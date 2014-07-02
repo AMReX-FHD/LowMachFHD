@@ -762,8 +762,8 @@ contains
    do n=1,nlevs
       do i=1,dm
          call multifab_build_edge(mold(n,i),mla%la(n),1,1,i)
-         call multifab_build_edge(rhotot_fc(n,i),mla%la(n),1,0,i)
-         call multifab_build_edge(Temp_fc(n,i),mla%la(n),1,0,i)
+         call multifab_build_edge(rhotot_fc(n,i),mla%la(n),1,1,i)
+         call multifab_build_edge(Temp_fc(n,i),mla%la(n),1,1,i)
       end do
    end do
 
