@@ -345,33 +345,6 @@ subroutine main_driver()
   call fill_m_stochastic(mla)
 
   !=====================================================================
-  ! Initialize HydroGrid for analysis
-  !=====================================================================
-  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
-     narg = command_argument_count()
-     farg = 1
-     if (narg >= 1) then
-        call get_command_argument(farg, value = fname)
-        inquire(file = fname, exist = lexist )
-        if ( lexist ) then
-           un = unit_new()
-           open(unit=un, file = fname, status = 'old', action = 'read')
-           
-           ! We will also pass temperature here but no additional scalars
-           call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, &
-                                      nspecies_in=nspecies, &
-                                      nscal_in=0, &
-                                      exclude_last_species_in=.false., &
-                                      analyze_velocity=.true., &
-                                      analyze_density=.true., &
-                                      analyze_temperature=.true.) 
-           
-           close(unit=un)
-        end if
-     end if
-  end if
-
-  !=====================================================================
   ! Initialize values
   !=====================================================================
 
@@ -403,6 +376,41 @@ subroutine main_driver()
      else
         call estdt(mla,umac,dx,dt)
      end if
+     
+  end if
+
+  !=====================================================================
+  ! Initialize HydroGrid for analysis
+  !=====================================================================
+  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
+     narg = command_argument_count()
+     farg = 1
+     if (narg >= 1) then
+        call get_command_argument(farg, value = fname)
+        inquire(file = fname, exist = lexist )
+        if ( lexist ) then
+           un = unit_new()
+           open(unit=un, file = fname, status = 'old', action = 'read')
+           
+           ! We will also pass temperature here but no additional scalars
+           call initialize_hydro_grid(mla,rho_old,dt,dx,namelist_file=un, &
+                                      nspecies_in=nspecies, &
+                                      nscal_in=0, &
+                                      exclude_last_species_in=.false., &
+                                      analyze_velocity=.true., &
+                                      analyze_density=.true., &
+                                      analyze_temperature=.true.) 
+           
+           close(unit=un)
+        end if
+     end if
+  end if
+
+  !=====================================================================
+  ! Process initial conditions
+  !=====================================================================
+
+  if (restart .lt. 0) then
      
      ! initial projection - only truly needed for inertial algorithm
      ! for the overdamped algorithm, this only changes the reference state for the first
