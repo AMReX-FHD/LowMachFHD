@@ -578,33 +578,48 @@ contains
      !$omp end parallel do
 
      case(3) 
-     !================================================================================
-     ! Initializing rho's in Gaussian so as rhotot=constant=1.0. Here rho_exact = 
-     ! e^(-r^2/4Dt)/(4piDt)^3/2, For norm, sigma/dx >2 (at t=0) & L/sigma < 8 (at t=t)
-     !================================================================================
- 
-     u = 0.d0
-     v = 0.d0
-     w = 0.d0
-  
-     !$omp parallel do private(i,j,k,x,y,z,rsq)
-     do k=lo(3),hi(3)
-        z = prob_lo(3) + (dble(k)+half)*dx(3) - half*(prob_lo(3)+prob_hi(3))
-        do j=lo(2),hi(2)
-           y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
-           do i=lo(1),hi(1)
-              x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
-        
-              rsq = x**2 + y**2 + z**2
-              c(i,j,k,1) = dexp(-rsq/(4.0d0*Dbar(1)*time))/(4.0d0*M_PI*&
-                             Dbar(1)*time)**1.5d0
-              c(i,j,k,2) = 1.0d0 - dexp(-rsq/(4.0d0*Dbar(1)*time))/(4.0d0*&
-                             M_PI*Dbar(1)*time)**1.5d0
-       
-           end do
-        end do
-     end do
-     !$omp end parallel do
+
+    !=============================================================
+    ! 1 fluid on top of another
+    ! c(:) = rho_init(1,:) on bottom
+    ! c(:) = rho_init(2,:) on top
+    !=============================================================
+
+    u = 0.d0
+    v = 0.d0
+    w = 0.d0
+
+    ! middle of domain
+    y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+    if(abs(smoothing_width)>epsilon(1.d0)) then
+
+       ! smoothed version
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
+          do n=1,nspecies
+             c_loc = rho_init(1,n) + (rho_init(2,n)-rho_init(1,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+             c(lo(1):hi(1),j,lo(3):hi(3),n) = c_loc
+          end do
+       end do
+
+    else
+
+       ! discontinuous version
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y1) then
+             do n=1,nspecies
+                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(1,n)
+             end do
+          else
+             do n=1,nspecies
+                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(2,n)
+             end do
+          end if
+       end do
+
+    end if
 
      case(4)
      !==============================================================================
