@@ -6,9 +6,9 @@
   dim_in = 3                       ! 2D or 3D  
   prob_type =  3                   ! sets scalars, m, coefficients (see init.f90)
   prob_lo(1:3) = 0.d0 0.d0 0.d0    ! physical lo coordinate
-  prob_hi(1:3) = 2.d0 2.d0 0.25d0  ! physical hi coordinate
-  n_cells(1:3) = 128 128 16        ! number of cells in domain
-  max_grid_size(1:3) = 16 16 16    ! max number of cells in a box
+  prob_hi(1:3) = 1.d0 1.d0 0.025d0 ! physical hi coordinate
+  n_cells(1:3) = 640 640 16        ! number of cells in domain
+  max_grid_size(1:3) = 32 32 16    ! max number of cells in a box
 
   fixed_dt = 0.25d0                ! time step
   cfl = 0.5d0                      ! cfl number
@@ -25,7 +25,7 @@
   grav(1:3) = 0.d0 -981.d0 0.d0    ! gravity vector (negative is downwards)
 
   molmass(1:3) = 0.1238e-21    0.5684e-21    0.0299e-21 ! molecular masses for nspecies
-  rhobar(1:3) =   2.15d0  1.55d0    1.d0 ! rhobar for nspecies
+  rhobar(1:3) =   2.81d0  1.55d0    1.d0 ! rhobar for nspecies
   k_B = 1.3806488d-16       ! Boltzmann's constant
   
   ! stochastic properties
@@ -171,14 +171,14 @@
   ! initial values for rho
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  rho_init(1,1:3) = 0.0     9.93d-4    0.999007
+  rho_init(1,1:3) = 0.0     1.2d-3     0.9988  
   rho_init(2,1:3) = 7.46d-4   0.0      0.999254
 
   ! rho_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
 
   ! use this set for reservoir (Dirichlet Values)
-!  rho_bc(2,1,1:3) = 0.0     9.93d-4    0.999007
+!  rho_bc(2,1,1:3) = 0.0     1.2d-3     0.9988
 !  rho_bc(2,2,1:3) = 7.46d-4   0.0      0.999254
 
   ! use this set for walls (Neumann Values)
