@@ -122,11 +122,14 @@ contains
     real(kind=dp_t)  :: time 
  
     ! local varables
-    integer          :: i,j,n
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,c_loc,rand
+    integer          :: i,j,n,seed
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,c_loc,random
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
-    
+
+    seed = n_cells(1)*lo(2) + lo(1)
+    call srand(seed)
+
     select case (abs(prob_type))
 
     case(0) 
@@ -441,8 +444,8 @@ contains
        ! add random perturbation below centerline
        if (j .eq. n_cells(2)/2-1) then
           do i=lo(1),hi(1)
-             call random_number(rand)
-             c_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+             random = rand()
+             c_loc = random*rho_init(1,1) + (1.d0-random)*rho_init(2,1)
              c(i,j,1) = c_loc
              c(i,j,2) = 1.d0 - c_loc
           end do
@@ -465,7 +468,7 @@ contains
 
     case default
       
-      call bl_error("Desired prob_type not supported in 3D")
+      call bl_error("Desired prob_type not supported in 2D")
       
     end select
 
@@ -495,10 +498,13 @@ contains
     real(kind=dp_t)  :: time 
  
     ! local variables
-    integer          :: i,j,k,n
-    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum,rand,c_loc,y1,r
+    integer          :: i,j,k,n,seed
+    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum,random,c_loc,y1,r
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
+    
+    seed = n_cells(1)*n_cells(2)*lo(3) + n_cells(1)*lo(2) + lo(1)
+    call srand(seed)
 
     select case (abs(prob_type))
     
@@ -831,8 +837,8 @@ contains
        if (j .eq. n_cells(2)/2-1) then
           do k=lo(3),hi(3)
           do i=lo(1),hi(1)
-             call random_number(rand)
-             c_loc = rand*rho_init(1,1) + (1.d0-rand)*rho_init(2,1)
+             random = rand()
+             c_loc = random*rho_init(1,1) + (1.d0-random)*rho_init(2,1)
              c(i,j,k,1) = c_loc
              c(i,j,k,2) = 1.d0 - c_loc
           end do

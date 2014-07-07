@@ -105,11 +105,14 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
-    integer :: i,j,mid
+    integer :: i,j,mid,seed
     real(kind=dp_t) :: x,y,y1,y2,r,dy,c_loc,u_loc
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
     real(kind=dp_t) :: cosxt,cosyt,freq,pfac,pfreq
-    real(kind=dp_t) :: sinxt,sinyt,ucst,ufac,vcst,xm,xp,ym,yp,rand
+    real(kind=dp_t) :: sinxt,sinyt,ucst,ufac,vcst,xm,xp,ym,yp,random
+
+    seed = n_cells(1)*lo(2) + lo(1)
+    call srand(seed)
 
     select case (abs(prob_type))
     case (0,7)
@@ -326,8 +329,8 @@ contains
 
        if (lo(2) .le. mid .and. hi(2) .ge. mid) then
           do i=lo(1),hi(1)
-             call random_number(rand)
-             s(i,mid,1) = s(i,mid,1)*(1.d0+0.01d0*rand)
+             random = rand()
+             s(i,mid,1) = s(i,mid,1)*(1.d0+0.01d0*random)
           end do
        end if
 
@@ -457,8 +460,8 @@ contains
           ! add random perturbation above centerline
           if (j .eq. n_cells(2)/2) then
              do i=lo(1),hi(1)
-                call random_number(rand)
-                c_loc = rand*c_init(1) + (1.d0-rand)*c_init(2)
+                random = rand()
+                c_loc = random*c_init(1) + (1.d0-random)*c_init(2)
                 s(i,j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
                 s(i,j,2) = s(i,j,1)*c_loc
              end do
@@ -499,9 +502,12 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:),time
 
     ! local
-    integer :: i,j,k
+    integer :: i,j,k,seed
     real(kind=dp_t) :: x,y,y1,y2,z,r,dy,c_loc
-    real(kind=dp_t) :: one_third_domain1,one_third_domain2,rand
+    real(kind=dp_t) :: one_third_domain1,one_third_domain2,random
+
+    seed = n_cells(1)*n_cells(2)*lo(3) + n_cells(1)*lo(2) + lo(1)
+    call srand(seed)
 
     select case (abs(prob_type))
     case (0,7)
@@ -674,8 +680,8 @@ contains
           if (j .eq. n_cells(2)/2) then
              do k=lo(3),hi(3)
              do i=lo(1),hi(1)
-                call random_number(rand)
-                c_loc = rand*c_init(1) + (1.d0-rand)*c_init(2)
+                random = rand()
+                c_loc = random*c_init(1) + (1.d0-random)*c_init(2)
                 s(i,j,k,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
                 s(i,j,k,2) = s(i,j,k,1)*c_loc
              end do
