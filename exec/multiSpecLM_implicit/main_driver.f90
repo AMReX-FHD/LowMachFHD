@@ -31,9 +31,9 @@ subroutine main_driver()
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
                                   probin_common_init, print_int, project_eos_int, &
-                                  advection_type, fixed_dt, max_step, &
+                                  advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance
-  use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, &
+  use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, Dbar, &
                                         rho_part_bc_comp, start_time, temp_bc_comp, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
@@ -47,8 +47,8 @@ subroutine main_driver()
 
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t)              :: dt,time,runtime1,runtime2
-  integer                      :: n,nlevs,i,dm,istep,ng_s,init_step
+  real(kind=dp_t)              :: dt,time,runtime1,runtime2,Dbar_max,dt_diffusive,rho_min
+  integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,n_Dbar
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -375,6 +375,11 @@ subroutine main_driver()
         dt = fixed_dt
      else
         call estdt(mla,umac,dx,dt)
+        n_Dbar = nspecies*(nspecies-1)/2
+        Dbar_max = maxval(Dbar(1:n_Dbar))
+        rho_min = multifab_min_c(rhotot_old(1),1,1,all=.false.)
+        dt_diffusive = cfl*dx(1,1)**2*rho_min/(2*dm*Dbar_max)
+        dt = min(dt,dt_diffusive)
      end if
      
   end if
@@ -455,6 +460,11 @@ subroutine main_driver()
 
      if (fixed_dt .le. 0.d0) then
         call estdt(mla,umac,dx,dt)
+        n_Dbar = nspecies*(nspecies-1)/2
+        Dbar_max = maxval(Dbar(1:n_Dbar))
+        rho_min = multifab_min_c(rhotot_old(1),1,1,all=.false.)
+        dt_diffusive = cfl*dx(1,1)**2*rho_min/(2*dm*Dbar_max)
+        dt = min(dt,dt_diffusive)
      end if
 
       if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
