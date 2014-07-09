@@ -3,7 +3,6 @@ module fill_rho_ghost_cells_module
   use multifab_module
   use define_bc_module
   use bc_module
-  use probin_binarylm_module, only: c_bc
   use probin_common_module, only: rhobar
 
   implicit none
