@@ -573,7 +573,7 @@ contains
 
           ! print chi for one cell 
           if(.false.) then 
-          if(i.eq.7 .and. j.eq.14) then
+          if(i.eq.32 .and. j.eq.16) then
             if(use_lapack) then 
               print*, 'print chi via inverse/p-inverse'
             else 
@@ -581,10 +581,7 @@ contains
             end if
             call set_Xij(chilocal, chi(i,j,:)) 
             do row=1, nspecies
-               do column=1, nspecies
-                  print*, chilocal(row, column)
-               end do
-               print*, ''
+               print*, chilocal(row, :)
             end do
           end if
           end if
