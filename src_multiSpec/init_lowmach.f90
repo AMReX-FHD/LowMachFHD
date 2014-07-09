@@ -214,7 +214,7 @@ contains
          end do
       end do
 
-    case (3)
+    case(3)
 
     !=============================================================
     ! 1 fluid on top of another
@@ -239,7 +239,7 @@ contains
           end do
        end do
 
-    else if (smoothing_width < -epsilon(1.d0)) then
+    else if (smoothing_width .eq. -1.d0) then
 
        ! discontinuous version with sinusoidal perturbation
        do j=lo(2),hi(2)
@@ -253,6 +253,44 @@ contains
                 c(lo(1):hi(1),j,n) = rho_init(2,n)
              end do
           end if
+
+          if (j .eq. n_cells(2)/2) then
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+                c_loc = 0.5d0*(cos(4.d0*M_PI*x/L(1))+1.d0)
+                do n=1,nspecies
+                   c(i,j,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
+                end do
+             end do
+          end if
+
+       end do
+
+    else if (smoothing_width .eq. -2.d0) then
+
+       ! discontinuous version with random perturbation
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y1) then
+             do n=1,nspecies
+                c(lo(1):hi(1),j,n) = rho_init(1,n)
+             end do
+          else
+             do n=1,nspecies
+                c(lo(1):hi(1),j,n) = rho_init(2,n)
+             end do
+          end if
+
+          if (j .eq. n_cells(2)/2) then
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+                c_loc = rand()
+                do n=1,nspecies
+                   c(i,j,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
+                end do
+             end do
+          end if
+
        end do
 
     else
@@ -515,7 +553,7 @@ contains
  
     ! local variables
     integer          :: i,j,k,n,seed
-    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum,random,c_loc,y1,r,c1
+    real(kind=dp_t)  :: x,y,z,rsq,w1,w2,rhot,L(3),sum,random,c_loc,y1,r
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
@@ -625,7 +663,7 @@ contains
           end do
        end do
 
-    else if (smoothing_width < -epsilon(1.d0)) then
+    else if (smoothing_width .eq. -1.d0) then
 
        ! discontinuous version with sinusoidal perturbation
        do j=lo(2),hi(2)
@@ -642,14 +680,42 @@ contains
 
           if (j .eq. n_cells(2)/2) then
              do k=lo(3),hi(3)
-                z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
-                do i=lo(1),hi(1)
-                   x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                   c1 = 0.5d0*(cos(4.d0*M_PI*x/L(1))+1.d0)
-                   do n=1,nspecies
-                      c(i,j,k,n) = c1*(rho_init(1,n)) + (1.d0-c1)*rho_init(2,n)
-                   end do
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+                c_loc = 0.5d0*(cos(4.d0*M_PI*x/L(1))+1.d0)
+                do n=1,nspecies
+                   c(i,j,k,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
                 end do
+             end do
+             end do
+          end if
+
+       end do
+
+    else if (smoothing_width .eq. -2.d0) then
+
+
+       ! discontinuous version with random perturbation
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y1) then
+             do n=1,nspecies
+                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(1,n)
+             end do
+          else
+             do n=1,nspecies
+                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(2,n)
+             end do
+          end if
+
+          if (j .eq. n_cells(2)/2) then
+             do k=lo(3),hi(3)
+             do i=lo(1),hi(1)
+                c_loc = rand()
+                do n=1,nspecies
+                   c(i,j,k,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
+                end do
+             end do
              end do
           end if
 
