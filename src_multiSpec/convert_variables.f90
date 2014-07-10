@@ -13,159 +13,41 @@ module convert_variables_module
   
 contains
 
-  subroutine convert_rho_to_c(mla,rho,c,rho_to_c)
+  subroutine convert_rho_to_c(mla,rho,rho_tot,c,rho_to_c)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
+    type(multifab) , intent(in   ) :: rho_tot(:)
     type(multifab) , intent(inout) ::   c(:)
     logical        , intent(in   ) :: rho_to_c
 
     ! local
-    integer :: nlevs,n,i,dm,ng_r,ng_c
-    integer :: lo(mla%dim),hi(mla%dim)
-
-    real(kind=dp_t), pointer :: rp(:,:,:,:)
-    real(kind=dp_t), pointer :: cp(:,:,:,:)
+    integer :: n,nlevs,i
 
     nlevs = mla%nlevel
-    dm = mla%dim
 
-    ng_r = rho(1)%ng
-    ng_c =   c(1)%ng
+    if (rho_to_c) then
 
-    if (.not.(rho_to_c)) then
-       if (ng_c .lt. ng_c) then
-          call bl_error('convert_variables, not enough ghost cells in prim')
-       end if
+       ! rho to c - NO GHOST CELLS
+       do n=1,nlevs
+          call multifab_copy_c(c(n),1,rho(n),1,nspecies,0)
+          do i=1,nspecies
+             call multifab_div_div_c(c(n),i,rho_tot(n),1,1,0)
+          end do
+       end do
+
+    else
+
+       ! c to rho - VALID + GHOST (CAN CHANGE TO DO ONLY GHOST TO SAVE COMPUTATION)
+       do n=1,nlevs
+          call multifab_copy_c(rho(n),1,c(n),1,nspecies,rho(n)%ng)
+          do i=1,nspecies
+             call multifab_mult_mult_c(rho(n),i,rho_tot(n),1,1,rho(n)%ng)
+          end do
+       end do
+
     end if
-    
-    do n=1,nlevs
-       do i=1,nfabs(rho(n))
-          rp => dataptr(rho(n), i)
-          cp => dataptr(  c(n), i)
-          lo =  lwb(get_box(rho(n), i))
-          hi =  upb(get_box(rho(n), i))
-          select case (dm)
-          case (2)
-             if (rho_to_c) then
-                ! rho to c - NO GHOST CELLS
-                call rho_to_c_2d(rp(:,:,1,:),ng_r,cp(:,:,1,:),ng_c,lo,hi)
-             else
-                ! c to rho - INCLUDING GHOST CELLS
-                call c_to_rho_2d(rp(:,:,1,:),ng_r,cp(:,:,1,:),ng_c,lo,hi)
-             end if
-          case (3)
-             if (rho_to_c) then
-                ! rho to c - NO GHOST CELLS
-                call rho_to_c_3d(rp(:,:,:,:),ng_r,cp(:,:,:,:),ng_c,lo,hi)
-             else
-                ! c to rho - INCLUDING GHOST CELLS
-                call c_to_rho_3d(rp(:,:,:,:),ng_r,cp(:,:,:,:),ng_c,lo,hi)
-             end if
-          end select
-       end do
-    end do
-    
+
   end subroutine convert_rho_to_c
-
-  subroutine rho_to_c_2d(rho,ng_r,c,ng_c,lo,hi)
-
-    ! rho to c - NO GHOST CELLS
-
-    integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_c
-    real(kind=dp_t), intent(in   ) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
-    real(kind=dp_t), intent(inout) ::   c(lo(1)-ng_c:,lo(2)-ng_c:,:)
-
-    ! local
-    integer :: i,j,n
-    real(kind=dp_t) :: rhotot
-
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-          rhotot = 0.d0
-          do n=1,nspecies
-             rhotot = rhotot + rho(i,j,n)
-          end do
-          c(i,j,1:nspecies) = rho(i,j,1:nspecies)/rhotot
-       end do
-    end do
-
-  end subroutine rho_to_c_2d
-
-  subroutine rho_to_c_3d(rho,ng_r,c,ng_c,lo,hi)
-
-    ! rho to c - NO GHOST CELLS
-
-    integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_c
-    real(kind=dp_t), intent(in   ) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
-    real(kind=dp_t), intent(inout) ::   c(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
-
-    ! local
-    integer :: i,j,k,n
-    real(kind=dp_t) :: rhotot
-
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-             rhotot = 0.d0
-             do n=1,nspecies
-                rhotot = rhotot + rho(i,j,k,n)
-             end do
-             c(i,j,k,1:nspecies) = rho(i,j,k,1:nspecies)/rhotot
-          end do
-       end do
-    end do
-
-  end subroutine rho_to_c_3d
-
-  subroutine c_to_rho_2d(rho,ng_r,c,ng_c,lo,hi)
-
-    ! c to rho - INCLUDING GHOST CELLS
-    
-    integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_c
-    real(kind=dp_t), intent(inout) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
-    real(kind=dp_t), intent(in   ) ::   c(lo(1)-ng_c:,lo(2)-ng_c:,:)
-
-    ! local
-    integer :: i,j,n
-    real(kind=dp_t) :: rhoinv
-
-    do j=lo(2)-ng_r,hi(2)+ng_r
-       do i=lo(1)-ng_r,hi(1)+ng_r
-          rhoinv = 0.d0
-          do n=1,nspecies
-             rhoinv = rhoinv + c(i,j,n)/rhobar(n)
-          end do
-          rho(i,j,1:nspecies) = c(i,j,1:nspecies)/rhoinv
-       end do
-    end do
-
-  end subroutine c_to_rho_2d
-
-  subroutine c_to_rho_3d(rho,ng_r,c,ng_c,lo,hi)
-
-    ! c to rho - INCLUDING GHOST CELLS
-
-    integer        , intent(in   ) :: lo(:), hi(:), ng_r, ng_c
-    real(kind=dp_t), intent(inout) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
-    real(kind=dp_t), intent(in   ) ::   c(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
-
-    ! local
-    integer :: i,j,k,n
-    real(kind=dp_t) :: rhoinv
-
-    do k=lo(3)-ng_r,hi(3)+ng_r
-       do j=lo(2)-ng_r,hi(2)+ng_r
-          do i=lo(1)-ng_r,hi(1)+ng_r
-             rhoinv = 0.d0
-             do n=1,nspecies
-                rhoinv = rhoinv + c(i,j,k,n)/rhobar(n)
-             end do
-             rho(i,j,k,1:nspecies) = c(i,j,k,1:nspecies)/rhoinv
-          end do
-       end do
-    end do
-
-  end subroutine c_to_rho_3d
 
 end module convert_variables_module

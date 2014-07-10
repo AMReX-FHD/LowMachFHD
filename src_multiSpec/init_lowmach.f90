@@ -39,6 +39,9 @@ contains
 
   subroutine init_rho_and_umac(mla,rho,umac,dx,time,the_bc_level)
 
+    ! initialize rho_i and umac in the valid region
+    ! we first initialize c_i in the valid region and use the EOS to compute rho_i
+
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: umac(:,:)
@@ -48,11 +51,12 @@ contains
  
     ! local variables
     integer                        :: lo(mla%dim), hi(mla%dim)
-    integer                        :: dm, ng_c, ng_u, i, n, nlevs
+    integer                        :: dm, ng_c, ng_u, ng_r, i, n, nlevs
     real(kind=dp_t), pointer       :: dp(:,:,:,:)   ! pointer for rho (last dim:nspecies)   
     real(kind=dp_t), pointer       :: up(:,:,:,:)   ! pointers for mac velocities
     real(kind=dp_t), pointer       :: vp(:,:,:,:)
     real(kind=dp_t), pointer       :: wp(:,:,:,:)
+    real(kind=dp_t), pointer       :: rp(:,:,:,:)
 
     type(multifab) :: conc(mla%dim)
 
@@ -65,6 +69,7 @@ contains
 
     ng_u = umac(1,1)%ng
     ng_c = conc(1)%ng
+    ng_r = rho(1)%ng
 
     ! assign values of parameters for the gaussian rho, rhototal
     alpha1 = 0.5d0 
@@ -76,35 +81,22 @@ contains
     do n=1,nlevs
        do i=1,nfabs(rho(n))
           dp => dataptr(conc(n),i)
+          rp => dataptr(rho(n),i)
           up => dataptr(umac(n,1),i)
           vp => dataptr(umac(n,2),i)
           lo = lwb(get_box(rho(n),i))
           hi = upb(get_box(rho(n),i))
           select case(dm)
           case (2)
-             call init_c_and_umac_2d(dp(:,:,1,:),ng_c,up(:,:,1,1),vp(:,:,1,1),ng_u, &
+             call init_rho_and_umac_2d(dp(:,:,1,:),ng_c,rp(:,:,1,:),ng_r,up(:,:,1,1),vp(:,:,1,1),ng_u, &
                                      lo,hi,dx(n,:),time)
           case (3)
              wp => dataptr(umac(n,3),i)
-             call init_c_and_umac_3d(dp(:,:,:,:),ng_c,up(:,:,:,1),vp(:,:,:,1),wp(:,:,:,1),ng_u, &
+             call init_rho_and_umac_3d(dp(:,:,:,:),ng_c,rp(:,:,:,:),ng_r,up(:,:,:,1),vp(:,:,:,1),wp(:,:,:,1),ng_u, &
                                      lo,hi,dx(n,:),time)
           end select
        end do
     end do
-
-    do n=1,nlevs
-       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(conc(n))
-
-       ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
-
-       ! Note: not filling umac ghost cells here.
-
-    end do
-
-    ! c to rho - INCLUDING GHOST CELLS
-    call convert_rho_to_c(mla,rho,conc,.false.)
 
     do n=1,nlevs
        call multifab_destroy(conc(n))
@@ -112,12 +104,13 @@ contains
 
   end subroutine init_rho_and_umac
 
-  subroutine init_c_and_umac_2d(c,ng_c,u,v,ng_u,lo,hi,dx,time)
+  subroutine init_rho_and_umac_2d(c,ng_c,rho,ng_r,u,v,ng_u,lo,hi,dx,time)
 
-    integer          :: lo(2), hi(2), ng_c, ng_u
-    real(kind=dp_t)  :: c(lo(1)-ng_c:,lo(2)-ng_c:,:)  ! last dimension for species
-    real(kind=dp_t)  :: u(lo(1)-ng_u:,lo(2)-ng_u:)
-    real(kind=dp_t)  :: v(lo(1)-ng_u:,lo(2)-ng_u:)
+    integer          :: lo(2), hi(2), ng_c, ng_u, ng_r
+    real(kind=dp_t)  ::   c(lo(1)-ng_c:,lo(2)-ng_c:,:)
+    real(kind=dp_t)  :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
+    real(kind=dp_t)  ::   u(lo(1)-ng_u:,lo(2)-ng_u:)
+    real(kind=dp_t)  ::   v(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  
@@ -537,17 +530,33 @@ contains
        c(i,j,nspecies) = 1.d0 - sum
 
     end do
-    end do          
-   
-  end subroutine init_c_and_umac_2d
+    end do
 
-  subroutine init_c_and_umac_3d(c,ng_c,u,v,w,ng_u,lo,hi,dx,time)
+    ! compute rho using the eos
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+
+       sum = 0.d0
+       do n=1,nspecies
+          ! sum represents rhoinv
+          sum = sum + c(i,j,n)/rhobar(n)
+       end do
+       rho(i,j,1:nspecies) = c(i,j,1:nspecies)/sum
+
+    end do
+    end do    
     
-    integer          :: lo(3), hi(3), ng_c, ng_u
-    real(kind=dp_t)  :: c(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:) ! Last dimension for species 
-    real(kind=dp_t)  :: u(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t)  :: v(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t)  :: w(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+   
+  end subroutine init_rho_and_umac_2d
+
+  subroutine init_rho_and_umac_3d(c,ng_c,rho,ng_r,u,v,w,ng_u,lo,hi,dx,time)
+    
+    integer          :: lo(3), hi(3), ng_c, ng_u, ng_r
+    real(kind=dp_t)  ::   c(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
+    real(kind=dp_t)  :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
+    real(kind=dp_t)  ::   u(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+    real(kind=dp_t)  ::   v(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
+    real(kind=dp_t)  ::   w(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t)  :: dx(:)
     real(kind=dp_t)  :: time 
  
@@ -1030,7 +1039,23 @@ contains
     end do
     end do
     end do
+
+    ! compute rho using the eos
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+
+       sum = 0.d0
+       do n=1,nspecies
+          ! sum represents rhoinv
+          sum = sum + c(i,j,k,n)/rhobar(n)
+       end do
+       rho(i,j,k,1:nspecies) = c(i,j,k,1:nspecies)/sum
+
+    end do
+    end do
+    end do
    
-  end subroutine init_c_and_umac_3d
+  end subroutine init_rho_and_umac_3d
 
 end module init_lowmach_module

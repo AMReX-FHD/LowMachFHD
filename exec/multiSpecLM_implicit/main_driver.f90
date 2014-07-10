@@ -20,6 +20,7 @@ subroutine main_driver()
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use fill_umac_ghost_cells_module
+  use fill_rho_ghost_cells_module
   use ParallelRNGs 
   use mass_flux_utilities_module
   use convert_stag_module
@@ -258,42 +259,47 @@ subroutine main_driver()
         call multifab_setval(pres(n),0.d0,all=.true.)
      end do
 
-  else
-
-     do n=1,nlevs
-        call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
-     end do
-
-     ! rho to c - NO GHOST CELLS
-     call convert_rho_to_c(mla,rho_old,conc,.true.)
-
-     ! fill ghost cells
-     do n=1,nlevs
-        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-        call multifab_fill_boundary(conc(n))
-        call multifab_fill_boundary(pres(n))
-        ! fill non-periodic domain boundary ghost cells
-        call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies, &
-                             the_bc_tower%bc_tower_array(n),dx(n,:))
-        call multifab_physbc(pres(n),1,pres_bc_comp,1, &
-                             the_bc_tower%bc_tower_array(n),dx(n,:))
-     end do
-
-     ! c to rho - INCLUDING GHOST CELLS
-     call convert_rho_to_c(mla,rho_old,conc,.false.)
-
-     do n=1,nlevs
-        call multifab_destroy(conc(n))
-     end do
-
   end if
 
-  if (print_int .gt. 0) then
+  do n=1,nlevs
+     call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
+  end do
+
+  ! compute rhotot from rho in VALID REGION
+  call compute_rhotot(mla,rho_old,rhotot_old)
+
+  ! rho to c - NO GHOST CELLS
+  call convert_rho_to_c(mla,rho_old,rhotot_old,conc,.true.)
+
+  ! fill ghost cells
+  do n=1,nlevs
+     ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+     call multifab_fill_boundary(conc(n))
+     call multifab_fill_boundary(pres(n))
+     ! fill non-periodic domain boundary ghost cells
+     call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies, &
+                          the_bc_tower%bc_tower_array(n),dx(n,:))
+     call multifab_physbc(pres(n),1,pres_bc_comp,1, &
+                          the_bc_tower%bc_tower_array(n),dx(n,:))
+  end do
+
+  do n=1,nlevs
+     call multifab_fill_boundary(rhotot_old(n))
+     call fill_rho_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
+  end do
+
+  ! c to rho - INCLUDING GHOST CELLS
+  call convert_rho_to_c(mla,rho_old,rhotot_old,conc,.false.)
+
+  do n=1,nlevs
+     call multifab_destroy(conc(n))
+  end do
+
+    if (print_int .gt. 0) then
      if (parallel_IOProcessor()) write(*,*) "Initial state:"  
      call sum_mass(rho_old, 0) ! print out the total mass to check conservation
      call eos_check(mla,rho_old)
-  end if   
-  call compute_rhotot(mla,rho_old,rhotot_old)
+  end if
 
   !=======================================================
   ! Build multifabs for all the variables

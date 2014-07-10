@@ -23,6 +23,7 @@ module advance_timestep_inertial_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
+  use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, restart
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
@@ -195,8 +196,11 @@ contains
        call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
     end do
 
+    ! compute rhotot from rho in VALID REGION
+    call compute_rhotot(mla,rho_new,rhotot_new)
+
     ! rho to c - NO GHOST CELLS
-    call convert_rho_to_c(mla,rho_new,conc,.true.)
+    call convert_rho_to_c(mla,rho_new,rhotot_new,conc,.true.)
 
     do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
@@ -204,12 +208,14 @@ contains
        ! fill non-periodic domain boundary ghost cells
        call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
+    
+    do n=1,nlevs
+       call multifab_fill_boundary(rhotot_new(n))
+       call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
+    end do
 
     ! c to rho - INCLUDING GHOST CELLS
-    call convert_rho_to_c(mla,rho_new,conc,.false.)
-
-    ! compute rhotot from rho
-    call compute_rhotot(mla,rho_new,rhotot_new)
+    call convert_rho_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -537,8 +543,11 @@ contains
 
     end if
 
+    ! compute rhotot from rho in VALID REGION
+    call compute_rhotot(mla,rho_new,rhotot_new)
+
     ! rho to c - NO GHOST CELLS
-    call convert_rho_to_c(mla,rho_new,conc,.true.)
+    call convert_rho_to_c(mla,rho_new,rhotot_new,conc,.true.)
 
     do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
@@ -547,11 +556,13 @@ contains
        call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n),dx(n,:))
     end do
 
-    ! c to rho - INCLUDING GHOST CELLS
-    call convert_rho_to_c(mla,rho_new,conc,.false.)
+    do n=1,nlevs
+       call multifab_fill_boundary(rhotot_new(n))
+       call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
+    end do
 
-    ! compute rhotot from rho
-    call compute_rhotot(mla,rho_new,rhotot_new)
+    ! c to rho - INCLUDING GHOST CELLS
+    call convert_rho_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
