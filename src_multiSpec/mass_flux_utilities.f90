@@ -306,8 +306,8 @@ contains
     integer          :: i,j,n
     
     ! for specific box, now start loops over alloted cells    
-    do j=lo(2)-ng, hi(2)+ng
-       do i=lo(1)-ng, hi(1)+ng
+    do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
 
           ! calculate total density inside each cell
           rhotot(i,j)=0.d0
@@ -330,9 +330,9 @@ contains
     integer          :: i,j,k,n
     
     ! for specific box, now start loops over alloted cells    
-    do k=lo(3)-ng, hi(3)+ng
-       do j=lo(2)-ng, hi(2)+ng
-          do i=lo(1)-ng, hi(1)+ng
+    do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
 
              ! calculate total density inside each cell
              rhotot(i,j,k)=0.d0
