@@ -20,11 +20,11 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 100                  ! maximum number of time steps
+  max_step = 1000                  ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 20                  ! how often to output EOS drift and sum of conserved quantities
+  print_int = 200                  ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10             ! how often to call project_onto_eos
 
   ! Physical parameters
@@ -119,7 +119,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 32  ! parallelization parameters
-  stats_int = 20               ! Project grid for analysis (writes hstat and vstat files)
+  stats_int = 200               ! Project grid for analysis (writes hstat and vstat files)
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
@@ -166,14 +166,15 @@
 
   ! initial values for w
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  rho_init(1,1:3) = 0.25 0.25 0.50 ! Should give rho_i = 0.6d0 1.05d0 1.35d0 ! should always add to 1 
+  rho_init(1,1:3) = 0.24   0.24 0.52    ! should always add to 1 
+  rho_init(2,1:3) = 0.2414 0.25 0.5086  ! should always add to 1 
 
   ! w_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
   
   ! RESERVOIR (Dirichlet BC for concentrations) bc=101
-  rho_bc(2,1,1:3) = 0.25 0.25 0.50  ! bottom
-  rho_bc(2,2,1:3) = 0.26 0.32 0.42 ! top
+  rho_bc(2,1,1:3) = 0.24   0.24 0.52   ! bottom
+  rho_bc(2,2,1:3) = 0.2414 0.25 0.5086 ! top
   
   ! WALL (Neumann or no-flux condition for concentration) bc=100
   !rho_bc(2,1,1:3) = 0 0 0 ! bottom

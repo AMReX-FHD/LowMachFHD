@@ -98,7 +98,7 @@ contains
             ! correct x-flux for last species  
             flux_x(i,j,nspecies) = -sumx     
             total_corr = total_corr + abs(corr)
-            if(i .eq. 32 .and. j.gt.13 .and. j.lt.19) print*, 'x-flux=', flux_x(i,j,:)
+            !if(i .eq. 32 .and. j.gt.13 .and. j.lt.19) print*, 'x-flux=', flux_x(i,j,:)
 
          end do
       end do
@@ -128,7 +128,7 @@ contains
             ! correct y-flux for last species  
             flux_y(i,j,nspecies) = -sumy             
             total_corr = total_corr + abs(corr)
-            if(i .eq. 32 .and. j.gt.13 .and. j.lt.19) print*, j, 'y-flux=', flux_y(i,j,:)
+            !if(i .eq. 32 .and. j.gt.13 .and. j.lt.19) print*, j, 'y-flux=', flux_y(i,j,:)
  
          end do
       end do
