@@ -368,24 +368,24 @@ contains
       ! y-mom fluxes that live on x-domain boundaries
       if (phys_bc(1,1) .eq. NO_SLIP_WALL .or. phys_bc(1,1) .eq. NO_SLIP_RESERVOIR) then
          mflux_nd(lo(1),lo(2):hi(2)+1,:) = sqrt(2.d0)*mflux_nd(lo(1),lo(2):hi(2)+1,:)
-      else if (phys_bc(1,1) .eq. SLIP_WALL) then
+      else if (phys_bc(1,1) .eq. SLIP_WALL .or. phys_bc(1,1) .eq. SLIP_RESERVOIR) then
          mflux_nd(lo(1),lo(2):hi(2)+1,:) = 0.d0
       end if
       if (phys_bc(1,2) .eq. NO_SLIP_WALL .or. phys_bc(1,2) .eq. NO_SLIP_RESERVOIR) then
          mflux_nd(hi(1)+1,lo(2):hi(2)+1,:) = sqrt(2.d0)*mflux_nd(hi(1)+1,lo(2):hi(2)+1,:)
-      else if (phys_bc(1,2) .eq. SLIP_WALL) then
+      else if (phys_bc(1,2) .eq. SLIP_WALL .or. phys_bc(1,2) .eq. SLIP_RESERVOIR) then
          mflux_nd(hi(1)+1,lo(2):hi(2)+1,:) = 0.d0
       end if
 
       ! x-mom fluxes that live on y-domain boundaries
       if (phys_bc(2,1) .eq. NO_SLIP_WALL .or. phys_bc(2,1) .eq. NO_SLIP_RESERVOIR) then
          mflux_nd(lo(1):hi(1)+1,lo(2),:) = sqrt(2.d0)*mflux_nd(lo(1):hi(1)+1,lo(2),:)
-      else if (phys_bc(2,1) .eq. SLIP_WALL) then
+      else if (phys_bc(2,1) .eq. SLIP_WALL .or. phys_bc(2,1) .eq. SLIP_RESERVOIR) then
          mflux_nd(lo(1):hi(1)+1,lo(2),:) = 0.d0
       end if
       if (phys_bc(2,2) .eq. NO_SLIP_WALL .or. phys_bc(2,2) .eq. NO_SLIP_RESERVOIR) then
          mflux_nd(lo(1):hi(1)+1,hi(2)+1,:) = sqrt(2.d0)*mflux_nd(lo(1):hi(1)+1,hi(2)+1,:)
-      else if (phys_bc(2,2) .eq. SLIP_WALL) then
+      else if (phys_bc(2,2) .eq. SLIP_WALL .or. phys_bc(2,2) .eq. SLIP_RESERVOIR) then
          mflux_nd(lo(1):hi(1)+1,hi(2)+1,:) = 0.d0
       end if
 
@@ -403,14 +403,14 @@ contains
       if (phys_bc(1,1) .eq. NO_SLIP_WALL .or. phys_bc(1,1) .eq. NO_SLIP_RESERVOIR) then
          mflux_xy(lo(1),lo(2):hi(2)+1,lo(3):hi(3),:) = sqrt(2.d0)*mflux_xy(lo(1),lo(2):hi(2)+1,lo(3):hi(3),:)
          mflux_xz(lo(1),lo(2):hi(2),lo(3):hi(3)+1,:) = sqrt(2.d0)*mflux_xz(lo(1),lo(2):hi(2),lo(3):hi(3)+1,:)
-      else if (phys_bc(1,1) .eq. SLIP_WALL) then
+      else if (phys_bc(1,1) .eq. SLIP_WALL .or. phys_bc(1,1) .eq. SLIP_RESERVOIR) then
          mflux_xy(lo(1),lo(2):hi(2)+1,lo(3):hi(3),:) = 0.d0
          mflux_xz(lo(1),lo(2):hi(2),lo(3):hi(3)+1,:) = 0.d0
       end if
       if (phys_bc(1,2) .eq. NO_SLIP_WALL .or. phys_bc(1,2) .eq. NO_SLIP_RESERVOIR) then
          mflux_xy(hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3),:) = sqrt(2.d0)*mflux_xy(hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3),:)
          mflux_xz(hi(1)+1,lo(2):hi(2),lo(3):hi(3)+1,:) = sqrt(2.d0)*mflux_xz(hi(1)+1,lo(2):hi(2),lo(3):hi(3)+1,:)
-      else if (phys_bc(1,2) .eq. SLIP_WALL) then
+      else if (phys_bc(1,2) .eq. SLIP_WALL .or. phys_bc(1,2) .eq. SLIP_RESERVOIR) then
          mflux_xy(hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3),:) = 0.d0
          mflux_xz(hi(1)+1,lo(2):hi(2),lo(3):hi(3)+1,:) = 0.d0
       end if
@@ -419,14 +419,14 @@ contains
       if (phys_bc(2,1) .eq. NO_SLIP_WALL .or. phys_bc(2,1) .eq. NO_SLIP_RESERVOIR) then
          mflux_xy(lo(1):hi(1)+1,lo(2),lo(3):hi(3),:) = sqrt(2.d0)*mflux_xy(lo(1):hi(1)+1,lo(2),lo(3):hi(3),:)
          mflux_yz(lo(1):hi(1),lo(2),lo(3):hi(3)+1,:) = sqrt(2.d0)*mflux_yz(lo(1):hi(1),lo(2),lo(3):hi(3)+1,:)
-      else if (phys_bc(2,1) .eq. SLIP_WALL) then
+      else if (phys_bc(2,1) .eq. SLIP_WALL .or. phys_bc(2,1) .eq. SLIP_RESERVOIR) then
          mflux_xy(lo(1):hi(1)+1,lo(2),lo(3):hi(3),:) = 0.d0
          mflux_yz(lo(1):hi(1),lo(2),lo(3):hi(3)+1,:) = 0.d0
       end if
       if (phys_bc(2,2) .eq. NO_SLIP_WALL .or. phys_bc(2,2) .eq. NO_SLIP_RESERVOIR) then
          mflux_xy(lo(1):hi(1)+1,hi(2)+1,lo(3):hi(3),:) = sqrt(2.d0)*mflux_xy(lo(1):hi(1)+1,hi(2)+1,lo(3):hi(3),:)
          mflux_yz(lo(1):hi(1),hi(2)+1,lo(3):hi(3)+1,:) = sqrt(2.d0)*mflux_yz(lo(1):hi(1),hi(2)+1,lo(3):hi(3)+1,:)
-      else if (phys_bc(2,2) .eq. SLIP_WALL) then
+      else if (phys_bc(2,2) .eq. SLIP_WALL .or. phys_bc(2,2) .eq. SLIP_RESERVOIR) then
          mflux_xy(lo(1):hi(1)+1,hi(2)+1,lo(3):hi(3),:) = 0.d0
          mflux_yz(lo(1):hi(1),hi(2)+1,lo(3):hi(3)+1,:) = 0.d0
       end if
@@ -435,14 +435,14 @@ contains
       if (phys_bc(3,1) .eq. NO_SLIP_WALL .or. phys_bc(3,1) .eq. NO_SLIP_RESERVOIR) then
          mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),lo(3),:) = sqrt(2.d0)*mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),lo(3),:)
          mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,lo(3),:) = sqrt(2.d0)*mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,lo(3),:)
-      else if (phys_bc(3,1) .eq. SLIP_WALL) then
+      else if (phys_bc(3,1) .eq. SLIP_WALL .or. phys_bc(3,1) .eq. SLIP_RESERVOIR) then
          mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),lo(3),:) = 0.d0
          mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,lo(3),:) = 0.d0
       end if
       if (phys_bc(3,2) .eq. NO_SLIP_WALL .or. phys_bc(3,2) .eq. NO_SLIP_RESERVOIR) then
          mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),hi(3)+1,:) = sqrt(2.d0)*mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),hi(3)+1,:)
          mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,hi(3)+1,:) = sqrt(2.d0)*mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,hi(3)+1,:)
-      else if (phys_bc(3,2) .eq. SLIP_WALL) then
+      else if (phys_bc(3,2) .eq. SLIP_WALL .or. phys_bc(3,2) .eq. SLIP_RESERVOIR) then
          mflux_xz(lo(1):hi(1)+1,lo(2):hi(2),hi(3)+1,:) = 0.d0
          mflux_yz(lo(1):hi(1),lo(2):hi(2)+1,hi(3)+1,:) = 0.d0
       end if
