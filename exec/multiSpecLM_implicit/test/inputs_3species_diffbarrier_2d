@@ -9,26 +9,25 @@
   dim_in = 2                       ! 2D or 3D  
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 64.d0 32.d0       ! physical hi coordinate
-  n_cells(1:2) = 64 32             ! number of cells in domain
-  max_grid_size(1:2) = 32 16       ! max number of cells in a box
+  prob_hi(1:2) = 32.d0 32.d0       ! physical hi coordinate
+  n_cells(1:2) = 64 64             ! number of cells in domain
+  max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
   ! The eigenvalues of the diffusion matrix here are 1 and 1.333
-  ! so diffusive CFL stability limit is dx=0.25*1.0^2/1.333=0.2 or so
-  ! empirically the stability limit is around dt<=0.25 or so
-  fixed_dt = 0.15d0                  ! time step (if positive, fixed)
+  ! so diffusive CFL stability limit is dx=0.25*1.0^2/1.333=0.19 or so
+  fixed_dt = 0.0375 ! 0.15d0 ! factor ~0.8 of stability limit ! time step (if positive, fixed)
   cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 11000                  ! maximum number of time steps
+  max_step = 5500                  ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 100                  ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 100             ! how often to call project_onto_eos
+  print_int = 100                   ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 100            ! how often to call project_onto_eos
 
   ! Physical parameters
   !--------------------
@@ -109,7 +108,7 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 1    ! How often to call updateHydroGrid
+  hydro_grid_int = 2    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
@@ -126,7 +125,7 @@
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 1000    ! How many steps to skip > L^2/(chi*dt)
+  n_steps_skip = 500    ! How many steps to skip > L^2/(chi*dt)
   analyze_conserved = F   ! Should we use conserved variables for the analysis
                           ! (does not work well)
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
@@ -149,10 +148,10 @@
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
-  ! Here these are not used so commented out
-  !Dbar(1:3) = 2.0d0 1.d0 1.0d0        ! Maxwell-Stefan diffusion constant  
+  Dbar(1:3) = 2.0d0 1.d0 1.0d0        ! Maxwell-Stefan diffusion constant  
+  
+  ! Here these are NOT USED so commented out:
   !H_offdiag(1:3) = 1.5d0 2.5d0 0.5d0  ! Off diagonal elements of H=d^2F/dx^2  
-
   ! These are vectors of length nspecies
   !Dtherm(1:3) = 1.d0 1.d0 -2.d0      ! thermo-diffusion coefficients, only differences among elements matter
   !H_diag(1:3) = 4.d0 3.d0 2.d0       ! Diagonal of H=d^2F/dx^2  
@@ -334,7 +333,7 @@
    nWavenumbers=8
    ! Shape (2,nWavenumbers):
    selectedWavenumbers="2 0, 4 0, 6 0, 8 0, 10 0, 12 0, 14 0, 16 0"
-   nSavedSnapshots=100
+   nSavedSnapshots=200
       
    outputFolder = "."
    filePrefix = "diffbarrier_2d_vstat"
@@ -376,6 +375,6 @@
       
    outputFolder = "."
    filePrefix = "diffbarrier_2d_hstat"
-   axisToPrint = 1 ! 1=x, 2=y, 3=z axis
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
 /
