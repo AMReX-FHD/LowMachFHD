@@ -405,7 +405,7 @@ contains
        if(present(variable_names)) then
          variable_names(comp)="v_x"
          variable_names(comp+1)="v_y"
-         if(dm>2) variable_names(comp+1)="v_z"
+         if(dm>2) variable_names(comp+2)="v_z"
        end if
        comp=comp+dm
     end if
