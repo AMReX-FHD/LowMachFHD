@@ -25,6 +25,8 @@ subroutine main_driver()
   use mass_flux_utilities_module
   use convert_stag_module
   use convert_variables_module
+  use convert_m_to_umac_module
+  use sum_momenta_module
   use restart_module
   use checkpoint_module
   use project_onto_eos_module
@@ -66,6 +68,8 @@ subroutine main_driver()
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
   type(multifab), allocatable  :: umac(:,:)
+  type(multifab), allocatable  :: mtemp(:,:)
+  type(multifab), allocatable  :: rhotot_fc(:,:)
   type(multifab), allocatable  :: pres(:)
   type(multifab), allocatable  :: eta(:)
   type(multifab), allocatable  :: eta_ed(:,:)
@@ -103,7 +107,7 @@ subroutine main_driver()
   allocate(rho_old(nlevs),rhotot_old(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
-  allocate(umac(nlevs,dm),pres(nlevs))
+  allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),pres(nlevs))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
@@ -295,9 +299,22 @@ subroutine main_driver()
      call multifab_destroy(conc(n))
   end do
 
-    if (print_int .gt. 0) then
+  do n=1,nlevs
+     do i=1,dm
+        call multifab_build_edge(mtemp(n,i)    ,mla%la(n),1,0,i)
+        call multifab_build_edge(rhotot_fc(n,i),mla%la(n),1,0,i)
+     end do
+  end do
+
+  if (print_int .gt. 0) then
      if (parallel_IOProcessor()) write(*,*) "Initial state:"  
      call sum_mass(rho_old, 0) ! print out the total mass to check conservation
+     ! compute rhotot on faces
+     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
+                             the_bc_tower%bc_tower_array)
+     ! compute momentum
+     call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+     call sum_momenta(mla,mtemp)
      call eos_check(mla,rho_old)
   end if
 
@@ -440,6 +457,12 @@ subroutine main_driver()
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
         call sum_mass(rho_old,0) ! print out the total mass to check conservation
+        ! compute rhotot on faces
+        call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
+                                the_bc_tower%bc_tower_array)
+        ! compute momentum
+        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+        call sum_momenta(mla,mtemp)
         call eos_check(mla,rho_old)
      end if   
 
@@ -524,6 +547,12 @@ subroutine main_driver()
           (istep .eq. max_step) ) then
           if (parallel_IOProcessor()) write(*,*) "At time step ", istep, " t=", time           
           call sum_mass(rho_new, istep) ! print out the total mass to check conservation
+          ! compute rhotot on faces
+          call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,1, &
+                                  the_bc_tower%bc_tower_array)
+          ! compute momentum
+          call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+          call sum_momenta(mla,mtemp)
           call eos_check(mla,rho_new)
       end if
 
@@ -605,6 +634,8 @@ subroutine main_driver()
      call multifab_destroy(kappa(n))
      do i=1,dm
         call multifab_destroy(umac(n,i))
+        call multifab_destroy(mtemp(n,i))
+        call multifab_destroy(rhotot_fc(n,i))
      end do
      do i=1,size(eta_ed,dim=2)
         call multifab_destroy(eta_ed(n,i))
