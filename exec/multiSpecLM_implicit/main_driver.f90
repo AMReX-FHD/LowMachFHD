@@ -50,7 +50,7 @@ subroutine main_driver()
 
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t)              :: dt,time,runtime1,runtime2,Dbar_max,dt_diffusive,rho_min
+  real(kind=dp_t)              :: dt,time,runtime1,runtime2,Dbar_max,dt_diffusive
   integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,n_Dbar
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
@@ -400,8 +400,7 @@ subroutine main_driver()
         call estdt(mla,umac,dx,dt)
         n_Dbar = nspecies*(nspecies-1)/2
         Dbar_max = maxval(Dbar(1:n_Dbar))
-        rho_min = multifab_min_c(rhotot_old(1),1,1,all=.false.)
-        dt_diffusive = cfl*dx(1,1)**2*rho_min/(2*dm*Dbar_max)
+        dt_diffusive = cfl*dx(1,1)**2/(2*dm*Dbar_max)
         dt = min(dt,dt_diffusive)
      end if
      
@@ -491,8 +490,7 @@ subroutine main_driver()
         call estdt(mla,umac,dx,dt)
         n_Dbar = nspecies*(nspecies-1)/2
         Dbar_max = maxval(Dbar(1:n_Dbar))
-        rho_min = multifab_min_c(rhotot_old(1),1,1,all=.false.)
-        dt_diffusive = cfl*dx(1,1)**2*rho_min/(2*dm*Dbar_max)
+        dt_diffusive = cfl*dx(1,1)**2/(2*dm*Dbar_max)
         dt = min(dt,dt_diffusive)
      end if
 
