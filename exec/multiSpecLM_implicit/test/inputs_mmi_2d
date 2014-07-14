@@ -7,19 +7,17 @@
   prob_type =  3                   ! sets scalars, m, coefficients (see init.f90)
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
-  n_cells(1:2) = 128 128           ! number of cells in domain
-  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+  n_cells(1:2) = 320 320           ! number of cells in domain
+  max_grid_size(1:2) = 160 160     ! max number of cells in a box
 
-  fixed_dt = 0.05d0                ! time step
-     ! For overdamped you can try up to diffusive CFL stability ~ 0.5 for dx=1/128
-     ! For inertial you should not exceed 0.05 = viscous CFL dt*nu/dx^2=10 for dx=1/128
-  cfl = 0.5d0                      ! cfl number
+  fixed_dt = -1.d0                 ! time step
+  cfl = 0.75d0                     ! cfl number
 
-  max_step = 100                   ! maximum number of time steps
-  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = 1000                      ! Interval for writing a checkpoint
+  max_step = 10000                 ! maximum number of time steps
+  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
+  chk_int = 100                    ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 10                   ! how often to output EOS drift and sum of conserved quantities
+  print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10             ! how often to call project_onto_eos
 
   ! Physical properties
@@ -27,14 +25,14 @@
   grav(1:2) = 0.d0 -981.d0         ! gravity vector (negative is downwards)
 
   molmass(1:3) = 0.1238e-21    0.5684e-21    0.0299e-21 ! molecular masses for nspecies
-  rhobar(1:3) =   2.15d0  1.55d0    1.d0 ! rhobar for nspecies
+  rhobar(1:3) =   2.81d0  1.55d0    1.d0 ! rhobar for nspecies
   k_B = 1.3806488d-16       ! Boltzmann's constant
   
   ! stochastic properties
   ! the physical value here is 1/dz, where dz is the thickness of the film in cm
-  ! Let's take here dz=1/128 as the "thin film" thickness
-  variance_coef_mom = 128.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 128.d0 ! global scaling epsilon for stochastic mass forcing
+  ! Let's take here dz=1/40=0.025cm=0.25mm as the "thin film" thickness
+  variance_coef_mom = 40.d0  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 40.d0 ! global scaling epsilon for stochastic mass forcing
   
   ! Algorithm control / selection
   !----------------------
@@ -84,30 +82,12 @@
   ! For a complete list see bc.f90
 
 ! reservoir
-!  bc_lo(1:2) = -1 101
-!  bc_hi(1:2) = -1 101
+  bc_lo(1:2) = -1 201
+  bc_hi(1:2) = -1 201
 
 ! wall
-  bc_lo(1:2) = -1 100
-  bc_hi(1:2) = -1 100
-
-
-  ! Each no-slip wall may be moving with a specified tangential 
-  ! velocity along the tangential directions
-  ! In 2D:
-  ! wallspeed_lo/hi(1,1) - yvel on x-face
-  ! wallspeed_lo/hi(1,2) - xvel on y-face
-  ! In 3D:
-  ! wallspeed_lo/hi(1,1) - yvel on x-face
-  ! wallspeed_lo/hi(2,1) - zvel on x-face
-  ! wallspeed_lo/hi(1,2) - xvel on y-face
-  ! wallspeed_lo/hi(2,2) - zvel on y-face
-  ! wallspeed_lo/hi(1,3) - xvel on z-face
-  ! wallspeed_lo/hi(2,3) - yvel on z-face
-  wallspeed_lo(1,1:2) = 0.d0 0.d0
-  wallspeed_hi(1,1:2) = 0.d0 0.d0
-  wallspeed_lo(2,1:2) = 0.d0 0.d0
-  wallspeed_hi(2,1:2) = 0.d0 0.d0
+!  bc_lo(1:2) = -1 100
+!  bc_hi(1:2) = -1 100
 
   ! Control for analyze_spectra.90
   !----------------------
@@ -125,7 +105,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 32      ! parallelization parameters
-  stats_int = 10                     ! Project grid for analysis
+  stats_int = 100                    ! Project grid for analysis
                                      ! If positive, how often to compute mean and 
                                      ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
@@ -173,19 +153,19 @@
   ! initial values for rho
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  rho_init(1,1:3) = 0.0     9.93d-4    0.999007
-  rho_init(2,1:3) = 7.46d-4   0.0      0.999254
+  rho_init(1,1:3) = 0.0     0.0342     0.9658
+  rho_init(2,1:3) = 0.0216   0.0       0.9784
 
   ! rho_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
 
   ! use this set for reservoir (Dirichlet Values)
-!  rho_bc(2,1,1:3) = 0.0     9.93d-4    0.999007
-!  rho_bc(2,2,1:3) = 7.46d-4   0.0      0.999254
+  rho_bc(2,1,1:3) = 0.0     0.0342    0.9658
+  rho_bc(2,2,1:3) = 0.0216   0.0      0.9784
 
   ! use this set for walls (Neumann Values)
-  rho_bc(2,1,1:3) = 0.d0 0.d0 0.d0
-  rho_bc(2,2,1:3) = 0.d0 0.d0 0.d0
+!  rho_bc(2,1,1:3) = 0.d0 0.d0 0.d0
+!  rho_bc(2,2,1:3) = 0.d0 0.d0 0.d0
  
 /
 
@@ -213,7 +193,7 @@
   cg_verbose = 0        ! BiCGStab (mg_bottom_solver=1) verbosity
   mg_max_vcycles = 1    ! maximum number of V-cycles
   mg_minwidth = 2       ! length of box at coarsest multigrid level
-  mg_bottom_solver = 0  ! bottom solver type
+  mg_bottom_solver = 4  ! bottom solver type
                         ! 0 = smooths only, controlled by mg_nsmooths_bottom
                         ! 1 = BiCGStab
                         ! 4 = Fancy bottom solve that coarsens down additionally
@@ -228,7 +208,7 @@
   stag_mg_verbosity = 0       ! verbosity
   stag_mg_max_vcycles = 1     ! max number of v-cycles
   stag_mg_minwidth = 2        ! length of box at coarsest multigrid level
-  stag_mg_bottom_solver = 0   ! bottom solver type
+  stag_mg_bottom_solver = 4   ! bottom solver type
                               ! 0 = smooths only, controlled by mg_nsmooths_bottom
                               ! 4 = Fancy bottom solve that coarsens additionally
                               !     and then applies stag_mg_nsmooths_bottom smooths
@@ -243,7 +223,7 @@
   ! GMRES solver parameters
   gmres_rel_tol = 1.d-9 ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
-  gmres_verbose = 0     ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_verbose = 1     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20  ! max number of outer iterations
   gmres_max_inner = 5   ! max number of inner iterations, or restart number
   gmres_max_iter = 100  ! max number of gmres iterations
