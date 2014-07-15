@@ -858,6 +858,8 @@ contains
           hi(1:dm) = upb(bx)
           open(1000, file=trim(plotfile_name), status = "unknown", action = "write")
 
+          write(1000,*) 'time',time
+
           if (analyze_conserved) then
              write(1000,'(A)') "x mx_avg my_avg rho_avg rho*c_avg mx_var my_var rho_var rho*c_var"
           else
@@ -998,6 +1000,8 @@ contains
        lo(1:dm) = lwb(bx)
        hi(1:dm) = upb(bx)
        open(1000, file=trim(plotfile_name), status = "unknown", action = "write")
+
+       write(1000,*) 'time',time
 
        if (analyze_conserved) then
           if (dm .eq. 2) then

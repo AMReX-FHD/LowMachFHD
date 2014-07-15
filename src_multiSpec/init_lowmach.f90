@@ -420,7 +420,7 @@ contains
 
     case(8) ! four species only
     
-    if (nspecies .ne. 2) then
+    if (nspecies .ne. 4) then
       call bl_error("prob_type=8 requires nspecies=4")
     end if
 
