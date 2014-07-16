@@ -40,7 +40,7 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
-    integer :: n,nlevs,i,dm
+    integer :: n,nlevs,i,lohi,dm
     real(kind=dp_t) :: mean_val_pres, mean_val_umac(mla%dim)
 
     type(multifab) ::         phi(mla%nlevel)
@@ -50,6 +50,8 @@ contains
     type(multifab) :: alphainv_fc(mla%nlevel,mla%dim)
     type(multifab) ::     b_u_tmp(mla%nlevel,mla%dim)
     type(multifab) ::  one_fab_fc(mla%nlevel,mla%dim)
+
+    logical :: no_wall_is_no_slip
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -447,12 +449,28 @@ contains
     ! The pressure Poisson problem is always singular:
     call multifab_sub_sub_s_c(x_p(1),1,mean_val_pres,1,0)
     
-    ! The velocity problem is also singular for periodic systems with no identity piece
-    if(all(mla%pmask(1:dm)) .and. (theta_alpha==0.0d0)) then
+    ! The velocity problem is also singular under these cases
+    if (theta_alpha .eq. 0.d0) then
+
+       no_wall_is_no_slip = .true.
        do i=1,dm
-          call multifab_sub_sub_s_c(x_u(1,i),1,mean_val_umac(i),1,0)
+          do lohi=1,2
+             if (the_bc_tower%domain_bc(i,lohi) .ge. NO_SLIP_START .and. &
+                 the_bc_tower%domain_bc(i,lohi) .le. NO_SLIP_END) then
+                 no_wall_is_no_slip = .false.
+              end if
+          end do
        end do
-    end if 
+
+       if (no_wall_is_no_slip) then
+          do i=1,dm
+             if (mla%pmask(i)) then
+                call multifab_sub_sub_s_c(x_u(1,i),1,mean_val_umac(i),1,0)
+             end if
+          end do
+       end if
+
+    end if
 
     do n=1,nlevs
        call multifab_destroy(phi(n))
