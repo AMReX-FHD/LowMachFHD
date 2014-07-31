@@ -167,14 +167,18 @@ which from the EOS gives
 \rho_{\text{bottom}} & = & \left(\frac{0.1368}{1.55}+\frac{0.8632}{1.0}\right)^{-1}=1.0510\, g/cm^{3}
 \end{eqnarray*}
 for a density difference of about 0.8\%.The plots in the bottom panel
-of Fig. 1 are for times $40,50,60\, s,$ so we hope to be able to
-run the simulation up to $100\, s$. The geometry is a cell that it
-should be at least $1cm^{2}$ in the $x-y$ plane (gravity along $y$
-here), since this is the size of the snapshots in Fig. 1. The thickness
-in the $z$ direction is $0.25mm$ (so \emph{very} thin). Based on
-these length and timescales I estimate that we can use the inertial
-code (but the overdamped may good a give approximation also) -- the
-momentum diffusion time across $1cm$ length is $\tau_{\nu}\sim1cm^{2}/2\cdot10^{-2}\left(cm^{2}/s\right)\sim50s$.
+of Fig. 1 are for times $40,50,60\, s,$ so we run our simulations out to
+$60\, s.$  We use a geometry of $0.8cm^{2}$ in the $x-y$ plane (gravity along $y$
+here), to nearly match the size of the snapshots in Fig. 1. The thickness
+in the $z$ direction is $0.25mm$ (so \emph{very} thin).
+Our computational domain is $256\times 256\times 8$ zones and we use a time
+step limited by a diffusive mass CFL of 0.75, i.e.,
+$\Delta t = 0.75 \Delta x^2 / (6 * D_{\rm max}) = 0.75 * .003125^2 / (6 * 1.91\times 10^{-5}) = 6.39\times 10^{-2}s$.
+We are using the inertial code, as the overdamped code has trouble converging
+at this aspect ratio.
+Note that the
+momentum diffusion time across $1cm$ length is 
+$\tau_{\nu}\sim1cm^{2}/2\cdot10^{-2}\left(cm^{2}/s\right)\sim50s$.
 We can use periodic BCs along $x$, and reservoir along $y$ (with
 reservoir values set equal to the initial values), and no-slip along
 $z$. They use some special experimental procedure to get a very flat
@@ -184,6 +188,8 @@ of the Y-shaped instability fingers they get is on the order of $1.3mm$,
 which is an important number to observe. To start off the instability
 in deterministic simulations we can make the concentrations random
 in the middle layer of cells like we did for the Kevin-Helmholtz instability.
+The alternative is to use a flat interface and allow for thermal fluctuations
+to set off initial perturbations.
 
 %\bibliographystyle{unsrt}
 %\bibliography{References,GarciaGeneralBibFile,MScaleProp}
