@@ -5,26 +5,15 @@
 \usepackage[latin9]{inputenc}
 \usepackage{geometry}
 \geometry{verbose,tmargin=1in,bmargin=1in,lmargin=1in,rmargin=1in}
-\usepackage{xcolor}
 \usepackage{babel}
 \usepackage{amstext}
-\PassOptionsToPackage{normalem}{ulem}
-\usepackage{ulem}
+\usepackage{graphicx}
 \usepackage[unicode=true,pdfusetitle,
  bookmarks=true,bookmarksnumbered=false,bookmarksopen=false,
  breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
  {hyperref}
-\usepackage{breakurl}
 
 \makeatletter
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
-\providecolor{lyxadded}{rgb}{1,0,0}
-\providecolor{lyxdeleted}{rgb}{0,0,1}
-%% Change tracking with ulem
-\newcommand{\lyxadded}[3]{{\texorpdfstring{\color{lyxadded}{}}{}#3}}
-\newcommand{\lyxdeleted}[3]{{\texorpdfstring{\color{lyxdeleted}\sout{#3}}{}}}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
 \usepackage{ae,aecompl}
 
@@ -77,9 +66,19 @@ the simpler DLC instability (we did this in the PRE for compressible
 flow) or the classical salt-fingering DD instability, but the mixed-mode
 one seems most interesting and complex.
 
+\begin{figure}
+\begin{centering}
+\includegraphics[width=1\textwidth]{mmi}
+\par\end{centering}
+
+\caption{MMI}
+\end{figure}
+
+
 We consider a ternary mixture of salt (KCl, species 1, molar mass
-$74.55\, g\text{·}mol^{-1}$), sugar (sucrose, species 2, molar mass
-$342.3\, g\text{·}mol^{-1}$) and water (species 3, molar mass $18.02\, g\text{·}mol^{-1}$).
+$74.55\, g\text{·}mol^{-1}$, denoted by A in paper), sugar (sucrose,
+species 2, molar mass $342.3\, g\text{·}mol^{-1}$, denoted by B in
+paper) and water (species 3, molar mass $18.02\, g\text{·}mol^{-1}$).
 The initial configuration is salt solution on top of sugar solution.
 
 Our equation of state is defined as
@@ -87,8 +86,9 @@ Our equation of state is defined as
 \begin{equation}
 \sum_{i}\frac{\rho_{i}}{\bar{\rho}_{i}}=\rho\sum_{i}\frac{w_{i}}{\bar{\rho}_{i}}=1,\label{eq:EOS}
 \end{equation}
-where $w_{i}=\rho_{i}/\rho$ is the mass fraction. We can write this
-in the form
+where $w_{i}=\rho_{i}/\rho$ is the mass fraction and $\bar{\rho}_{i}$
+are the (potentially ficticious) pure component densities. We can
+write this in the form
 \begin{equation}
 \frac{\rho-\rho_{1}-\rho_{2}}{\bar{\rho}_{3}}+\frac{\rho_{1}}{\bar{\rho}_{1}}+\frac{\rho_{2}}{\bar{\rho}_{2}}=1.\label{eq:eos_1}
 \end{equation}
@@ -107,13 +107,14 @@ via $\rho_{k}=Z_{k}M_{k},$ where $M_{k}$ is the molar mass. By comparing
 \]
 which now gives us the value of 
 \[
-\bar{\rho}_{1}=2.15\text{ and }\bar{\rho}_{2}=1.55
+\bar{\rho}_{1}=2.81\text{ and }\bar{\rho}_{2}=1.55
 \]
-from the values of $\alpha$ tabulated in table I of the paper, $\alpha=4\cdot10^{-2}\, l/mol$
-for KCl and $\alpha=12.2\cdot10^{-2}\, l/mol$ for sucrose. BTW, when
-used for glycerol ($\alpha=2.3$ from Table I and molar mass $92.2$),
-this gives $\bar{\rho}=1.33$, which is close to the correct value
-of 1.26.
+from the values of $\alpha$ tabulated in table I of the paper, $\alpha_{1}=4.8\cdot10^{-2}\, l/mol$
+for KCl and $\alpha_{2}=12.2\cdot10^{-2}\, l/mol$ for sucrose. BTW,
+when used for glycerol ($\alpha=2.3$ from Table I and molar mass
+$92.2$), this gives $\bar{\rho}=1.33$, which is close to the correct
+value of 1.26, as it should since glycerol exists as an actual liquid
+pure phase.
 
 For the diffusion coefficients, these mixtures are at what can be
 considered ``infinite dilution'' so there is essentially no coupling
@@ -133,33 +134,47 @@ the dimensionless number
 \[
 R=\frac{\alpha_{2}Z_{2}}{\alpha_{1}Z_{1}}=0.89.
 \]
-The actual values of the concentrations are not stated but can be
-calculated as follows. They start from stock solutions of $10^{-2}\, mol/l$
-and then dilute one of the solutions to reach the desired $R$. In
-our case this gives
+The initial values of the concentrations were reported to us to be
 \[
-Z_{2}^{0}=2.9\cdot10^{-3}\text{ and }Z_{1}^{0}=10^{-2}\, mol/l,
+Z_{1}^{0}=0.29\text{ and }Z_{2}^{0}=0.1\, mol/l,
 \]
-which gives initial densities 
+which gives initial densities differing by about $0.17\%$, 
 \begin{eqnarray}
-\rho_{\text{top}} & = & \rho_{0}\left(1+\alpha_{1}Z_{1}^{0}\right)=\left(1.0+4\cdot10^{-2}\times10^{-2}\right)\, g/cm^{3}=\left(1.0+4\cdot10^{-4}\right)\, g/cm^{3},\label{eq:ics}\\
-\rho_{\text{bottom}} & = & \rho_{0}\left(1+\alpha_{2}Z_{2}^{0}\right)=\left(1.0+12.2\cdot10^{-2}\times2.9\cdot10^{-3}\right)\, g/cm^{3}=\left(1+3.54\cdot10^{-4}\right)\, g/cm^{3}.\nonumber 
+\rho_{\text{top}} & = & \rho_{0}\left(1+\alpha_{1}Z_{1}^{0}\right)=\left(1.0+4.8\cdot10^{-2}\times0.29\right)\, g/cm^{3}=1.0139\, g/cm^{3},\label{eq:ics}\\
+\rho_{\text{bottom}} & = & \rho_{0}\left(1+\alpha_{2}Z_{2}^{0}\right)=\left(1.0+12.2\cdot10^{-2}\times0.1\right)\, g/cm^{3}=1.0122\, g/cm^{3},\nonumber 
 \end{eqnarray}
-In terms of the partial densities we have
+which are not quite consistent with the the densities reported to
+us, $\rho_{\text{top}}=1.0125\, g/cm^{3}$ and $\rho_{\text{bottom}}=1.0119\, g/cm^{3}$,
+which differ by about $0.06\%$. In terms of the partial densities
+of the two components we have
 \[
-\rho_{1}^{0}=Z_{1}^{0}M_{1}=7.46\cdot10^{-4}\, g/cm^{3},\quad\rho_{2}^{0}=Z_{2}^{0}M_{2}=9.93\cdot10^{-4}\, g/cm^{3},
+\rho_{1}^{0}=Z_{1}^{0}M_{1}=0.0216\, g/cm^{3},\quad\rho_{2}^{0}=Z_{2}^{0}M_{2}=0.0342\, g/cm^{3},
 \]
 which are also very close to the initial mass fractions since the
 total density is very close to $1\, g/cm^{3}$.
 
-The plots in the bottom panel of Fig. 1 are for times $40,50,60\, s,$
-so we hope to be able to run the simulation up to $100\, s$. The
-geometry is a cell that it should be at least $1cm^{2}$ in the $x-y$
-plane (gravity along $y$ here), since this is the size of the snapshots
-in Fig. 1. The thickness in the $z$ direction is $0.25cm$ (so not
-so thin). Based on these length and timescales I estimate that we
-can use the inertial code (but the overdamped may good a give approximation
-also) -- the momentum diffusion time across $1cm$ length is $\tau_{\nu}\sim1cm^{2}/2\cdot10^{-2}\left(cm^{2}/s\right)\sim50s$.
+Lacking better experimental data and more consistent response from
+the experimentalists, for the final simulations reported in the paper
+we use four times larger concentrations; this preserves the dimensionless
+number $R$ which is presumed to be the most important number. Specifically,
+we set the initial mass fractions to
+\[
+w_{1}^{0}=0.0864,\quad w_{2}^{0}=0.1368,
+\]
+which from the EOS gives
+\begin{eqnarray*}
+\rho_{\text{top}} & = & \left(\frac{0.0864}{2.81}+\frac{0.9136}{1.0}\right)^{-1}=1.0596\, g/cm^{3}\\
+\rho_{\text{bottom}} & = & \left(\frac{0.1368}{1.55}+\frac{0.8632}{1.0}\right)^{-1}=1.0510\, g/cm^{3}
+\end{eqnarray*}
+for a density difference of about 0.8\%.The plots in the bottom panel
+of Fig. 1 are for times $40,50,60\, s,$ so we hope to be able to
+run the simulation up to $100\, s$. The geometry is a cell that it
+should be at least $1cm^{2}$ in the $x-y$ plane (gravity along $y$
+here), since this is the size of the snapshots in Fig. 1. The thickness
+in the $z$ direction is $0.25mm$ (so \emph{very} thin). Based on
+these length and timescales I estimate that we can use the inertial
+code (but the overdamped may good a give approximation also) -- the
+momentum diffusion time across $1cm$ length is $\tau_{\nu}\sim1cm^{2}/2\cdot10^{-2}\left(cm^{2}/s\right)\sim50s$.
 We can use periodic BCs along $x$, and reservoir along $y$ (with
 reservoir values set equal to the initial values), and no-slip along
 $z$. They use some special experimental procedure to get a very flat
@@ -170,7 +185,23 @@ which is an important number to observe. To start off the instability
 in deterministic simulations we can make the concentrations random
 in the middle layer of cells like we did for the Kevin-Helmholtz instability.
 
-\bibliographystyle{unsrt}
-\bibliography{References,GarciaGeneralBibFile,MScaleProp}
+%\bibliographystyle{unsrt}
+%\bibliography{References,GarciaGeneralBibFile,MScaleProp}
+\begin{thebibliography}{1}
+
+\bibitem{MixedDiffusiveInstability}
+Jorge Carballido-Landeira, Philip~MJ Trevelyan, Christophe Almarcha, and Anne
+  De~Wit.
+\newblock Mixed-mode instability of a miscible interface due to coupling
+  between rayleigh-taylor and double-diffusive convective modes.
+\newblock {\em Physics of Fluids}, 25(2):024107, 2013.
+
+\bibitem{Diffusion_InfiniteDilution}
+Xin Liu, Andre\u0301 Bardow, and Thijs~JH Vlugt.
+\newblock Multicomponent maxwell- stefan diffusivities at infinite dilution.
+\newblock {\em Industrial \& Engineering Chemistry Research}, 50(8):4776--4782,
+  2011.
+
+\end{thebibliography}
 
 \end{document}
