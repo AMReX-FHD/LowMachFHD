@@ -838,6 +838,7 @@ the boundary condition at $t^n$, rather than the final velocity boundary
 condition itself.
 
 \section{Results}
+\subsection{2D Kelvin-Helmholtz}
 We perform a simulation of a Kelvin-Helmholtz instability in order to demonstrate
 the robustness of our inertial time-advancement scheme in a deterministic setting.
 Our simulation uses $128\times 64$ computational cells with grid spacing
@@ -855,12 +856,11 @@ The initial momentum is set to $\rho\vb=(1,0)$ in the upper-half of
 the domain and $\rho\vb=0$ in the lower-half of the domain.
 Gravity has a magnitude of 0.1 acting in the downward direction.
 We employ a bilinear BDS advection scheme, which is more accurate than centered
-advection while preserving min/max boundar on $c$ to $\mathcal O(10^{-11})$
+advection while preserving min/max bounds on $c$ to $\mathcal O(10^{-11})$.
 Viscosity depends linearly on concentration, such that $\eta=10^{-4}$ for $c=0$ 
 and $\eta=10^{-3}$ for $c=1$ in the stress tensor,
 $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
 The mass diffusion coefficient is fixed at $\chi=10^{-6}$.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}
 \begin{center}
@@ -877,6 +877,49 @@ The mass diffusion coefficient is fixed at $\chi=10^{-6}$.
 \caption{Kelvin-Helmholtz simulation of density at time
          $t=0, 1.3, 2.3, 3.3, 4.3, 5.2, 6.1, 7.2, 8.6$, and $10.0$ [s].
          Density ranges from 1 (blue) to 10 (red).}\label{fig:KHLM}
+\end{center}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\subsection{3D Kelvin-Helmholtz}
+We perform a simulation of a Kelvin-Helmholtz instability in order to demonstrate
+the robustness of our inertial time-advancement scheme in a deterministic setting.
+Our simulation uses $256\times 128\times 256$ computational cells with grid spacing
+$\Delta x=1/256$.  We use periodic boundary conditions on the x- and z-side walls, a 
+stationary no-slip condition on the lo-y, and a no-slip condition on hi-y wall
+but with a prescribed wall velocity of $\vb=(1,0,0)$.
+Each time step, $\Delta t$ changes in accordance with an
+advective CFL number of 0.9.  The binary mixture has a 10:1 density contrast with
+$\bar\rho_1=10$ and $\bar\rho_2=1$.  The initial condition is $c=1$ in the lower-half
+of the domain, and $c=0$ in the upper-half of the domain, so that light fluid
+sits on top of heavy fluid with a discontinuous interface.
+In order to set off the instability, 
+in a row of cells at the centerline, $c$ is initialized to a random value between 0 and 1.
+The initial momentum is set to $\rho\vb=(1,0)$ in the upper-half of
+the domain and $\rho\vb=0$ in the lower-half of the domain.
+Gravity has a magnitude of 0.1 acting in the downward y-direction.
+We employ a bilinear BDS advection scheme, which is more accurate than centered
+advection while preserving min/max bounds on $c$ to $\mathcal O(10^{-11})$.
+Viscosity depends linearly on concentration, such that $\eta=10^{-4}$ for $c=0$ 
+and $\eta=10^{-3}$ for $c=1$ in the stress tensor,
+$\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
+The mass diffusion coefficient is fixed at $\chi=10^{-6}$.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{center}
+\includegraphics[width=1.9in]{KHLM_3d0}
+\includegraphics[width=1.9in]{KHLM_3d1}
+\includegraphics[width=1.9in]{KHLM_3d2}
+\includegraphics[width=1.9in]{KHLM_3d3}
+\includegraphics[width=1.9in]{KHLM_3d4}
+\includegraphics[width=1.9in]{KHLM_3d5}
+\includegraphics[width=1.9in]{KHLM_3d6}
+\includegraphics[width=1.9in]{KHLM_3d7}
+\includegraphics[width=1.9in]{KHLM_3d8}
+\caption{Kelvin-Helmholtz simulation of density at time
+         $t=0, 0.87, 1.72, 2.46, 3.16, 3.86, 4.53, 5.20$, and $5.85$ [s].
+         Density ranges from 1 (red) to 10 (blue).}\label{fig:KHLM_3D}
 \end{center}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
