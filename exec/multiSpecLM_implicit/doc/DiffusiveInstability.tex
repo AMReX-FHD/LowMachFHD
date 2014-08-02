@@ -55,8 +55,8 @@
 
 This is a summary of the experimental setup from \cite{MixedDiffusiveInstability}
 for getting a nice diffusion-driven gravitational instability in a
-simple ternary mixture: a solution of sugar on top of a solution of
-salt (in the beginning the density should be higher on the bottom
+simple ternary mixture: a solution of salt on top of a solution of
+sugar (in the beginning the density should be higher on the bottom
 so it starts off stable). I suggest our target to be to reproduce
 some aspects (at least the pretty picture) in Fig. 4 of \cite{MixedDiffusiveInstability}
 -- this is the mixed-mode instability. This is when one starts with
@@ -132,7 +132,7 @@ coefficient of pure water, $D_{3}=2.3\cdot10^{-5}\, cm^{2}/s$.
 The initial concentrations on the top and bottom are determined from
 the dimensionless number
 \[
-R=\frac{\alpha_{2}Z_{2}}{\alpha_{1}Z_{1}}=0.89.
+R=\frac{\alpha_{2}Z_{2}^{0}}{\alpha_{1}Z_{1}^{0}}=0.89.
 \]
 The initial values of the concentrations were reported to us to be
 \[
@@ -166,7 +166,31 @@ which from the EOS gives
 \rho_{\text{top}} & = & \left(\frac{0.0864}{2.81}+\frac{0.9136}{1.0}\right)^{-1}=1.0596\, g/cm^{3}\\
 \rho_{\text{bottom}} & = & \left(\frac{0.1368}{1.55}+\frac{0.8632}{1.0}\right)^{-1}=1.0510\, g/cm^{3}
 \end{eqnarray*}
-for a density difference of about 0.8\%.The plots in the bottom panel
+for a density difference of about 0.8\%.
+
+If we change the concentrations but keep the same two fluids, KCl
+on top of sucrose, but start from a stable configuration, i.e., put
+the denser solution on the bottom, we can still get a diffusive layer
+convection (DLC) instability. The parameter used for Fig. 1(c) in
+\cite{MixedDiffusiveInstability} is $R=1.25$, giving
+\[
+\frac{\rho_{1}^{0}}{\rho_{2}^{0}}=\frac{\alpha_{1}Z_{1}^{0}}{\alpha_{2}Z_{2}^{0}}\cdot\frac{\alpha_{2}M_{1}}{\alpha_{1}M_{2}}=\frac{1}{R}\cdot\frac{12.2\cdot74.55}{4.8\cdot342.3}=\frac{0.554}{R}=0.44.
+\]
+Since we do not know actual values I suggest we simply try
+\[
+w_{1}^{0}=0.044,\quad w_{2}^{0}=0.1,
+\]
+which gives about the right densities
+\begin{eqnarray*}
+\rho_{\text{top}} & = & \left(\frac{0.044}{2.81}+\frac{0.956}{1.0}\right)^{-1}=1.029\, g/cm^{3}\\
+\rho_{\text{bottom}} & = & \left(\frac{0.1}{1.55}+\frac{0.9}{1.0}\right)^{-1}=1.036\, g/cm^{3}.
+\end{eqnarray*}
+Note that this instability is expected to develop slower because it
+requires diffusion to take place first -- the snapshot in the paper
+is at $t=300s$. We should try it also, especially in a shadowgraph
+rather than a Hele-Shaw cell.
+
+The plots in the bottom panel
 of Fig. 1 are for times $40,50,60\, s,$ so we run our simulations out to
 $60\, s.$  We use a geometry of $0.8cm^{2}$ in the $x-y$ plane (gravity along $y$
 here), to nearly match the size of the snapshots in Fig. 1. The thickness

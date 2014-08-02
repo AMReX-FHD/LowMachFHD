@@ -1032,7 +1032,7 @@ contains
        hi(1:dm) = upb(bx)
        open(1000, file=trim(plotfile_name), status = "unknown", action = "write")
 
-       write(1000,*) 'time',time
+       write(1000,*) '# time',time
 
        write(1000,'(A)', advance="no") "# 1=y, "
        do comp=1, nvar

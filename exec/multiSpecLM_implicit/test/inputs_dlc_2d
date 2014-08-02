@@ -6,18 +6,18 @@
   dim_in = 2                       ! 2D or 3D  
   prob_type =  3                   ! sets scalars, m, coefficients (see init.f90)
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
-  n_cells(1:2) = 320 320 ! 256 256 ! 128 128 ! 320 320           ! number of cells in domain
-  !max_grid_size(1:2) = 160 160     ! max number of cells in a box
+  prob_hi(1:2) = 1.0 1.0 ! 1.d0 1.d0         ! physical hi coordinate
+  n_cells(1:2) = 128 128 ! 128 128 ! 320 320           ! number of cells in domain
+  max_grid_size(1:2) = 64 64     ! max number of cells in a box
 
-  fixed_dt = -1 ! 0.05 ! -1.d0                 ! time step
+  fixed_dt = 0.05 ! -1.d0                 ! time step
   cfl = 0.75d0                     ! cfl number
 
-  max_step = 1 ! 10000                 ! maximum number of time steps
+  max_step = 1000 ! 10000                 ! maximum number of time steps
   plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = 100                    ! Interval for writing a checkpoint
+  chk_int = 0                    ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
+  print_int = 10                    ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10             ! how often to call project_onto_eos
 
   ! Physical properties
@@ -31,12 +31,12 @@
   ! stochastic properties
   ! the physical value here is 1/dz, where dz is the thickness of the film in cm
   ! Let's take here dz=1/40=0.025cm=0.25mm as the "thin film" thickness
-  variance_coef_mom = 40.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 40.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mom = 0 ! 40.d0  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 0 ! 40.d0 ! global scaling epsilon for stochastic mass forcing
   
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
+  algorithm_type = 2     ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
@@ -55,7 +55,7 @@
   visc_type = 2
   visc_coef = 0.01002d0         ! momentum diffusion coefficient 'eta'   
 
-  advection_type = 2 ! 0 = centered explicit
+  advection_type = 1 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
                      ! 2 = limited bliniear bds in space and time
                      ! 3 = unlimited quadratic bds in space and time
@@ -66,7 +66,7 @@
   ! Initial conditions
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 0.0d0   ! scale factor for smoothing initial profile
+  smoothing_width = -2   ! scale factor for smoothing initial profile
 
   initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero -- relevant for periodic)
@@ -105,7 +105,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 32      ! parallelization parameters
-  stats_int = 100                    ! Project grid for analysis
+  stats_int = 10                     ! Project grid for analysis
                                      ! If positive, how often to compute mean and 
                                      ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
@@ -153,15 +153,15 @@
   ! initial values for rho
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  rho_init(1,1:3) = 0.0     0.0342     0.9658
-  rho_init(2,1:3) = 0.0216   0.0       0.9784
+  rho_init(1,1:3) = 0.0     0.1      0.9
+  rho_init(2,1:3) = 0.044   0.0      0.956
 
   ! rho_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
 
   ! use this set for reservoir (Dirichlet Values)
-  rho_bc(2,1,1:3) = 0.0     0.0342    0.9658
-  rho_bc(2,2,1:3) = 0.0216   0.0      0.9784
+  rho_bc(2,1,1:3) = 0.0     0.1      0.9
+  rho_bc(2,2,1:3) = 0.044   0.0      0.956
 
   ! use this set for walls (Neumann Values)
 !  rho_bc(2,1,1:3) = 0.d0 0.d0 0.d0
@@ -223,7 +223,7 @@
   ! GMRES solver parameters
   gmres_rel_tol = 1.d-9 ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
-  gmres_verbose = 1     ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_verbose = 0     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20  ! max number of outer iterations
   gmres_max_inner = 5   ! max number of inner iterations, or restart number
   gmres_max_iter = 100  ! max number of gmres iterations
