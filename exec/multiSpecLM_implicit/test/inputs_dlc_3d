@@ -104,7 +104,7 @@
   ! -dim=analyze 3D and then project along dim so we also analyze 2D data
   ! It is better to use the conserved variables but it does not quite work for staggered
 
-  max_grid_projection(1:1) = 32      ! parallelization parameters
+  max_grid_projection(1:2) = 32 32   ! parallelization parameters
   stats_int = 10                     ! Project grid for analysis
                                      ! If positive, how often to compute mean and 
                                      ! standard deviation over reduced dimensions
