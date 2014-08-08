@@ -6,16 +6,16 @@
   dim_in = 3                       ! 2D or 3D  
   prob_type =  3                   ! sets scalars, m, coefficients (see init.f90)
   prob_lo(1:3) = 0.d0 0.d0 0.d0    ! physical lo coordinate
-  prob_hi(1:3) = 1.0 1.0 0.025d0   ! physical hi coordinate
-  n_cells(1:3) = 320 320 8         ! number of cells in domain
-  max_grid_size(1:3) = 32 32 8     ! max number of cells in a box
+  prob_hi(1:3) = 1.0 0.25d0 1.d0   ! physical hi coordinate
+  n_cells(1:3) = 256 64 256        ! number of cells in domain
+  max_grid_size(1:3) = 32 32 32    ! max number of cells in a box
 
   fixed_dt = -1.d0                 ! time step
   cfl = 0.75d0                     ! cfl number
 
   max_step = 1000                  ! maximum number of time steps
-  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = 0                      ! Interval for writing a checkpoint
+  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
+  chk_int = 10                     ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
   print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10             ! how often to call project_onto_eos
@@ -31,8 +31,8 @@
   ! stochastic properties
   ! the physical value here is 1/dz, where dz is the thickness of the film in cm
   ! Let's take here dz=1/40=0.025cm=0.25mm as the "thin film" thickness
-  variance_coef_mom = 0 ! 40.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 0 ! 40.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mom = 1.0 ! 40.d0  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 1.0 ! 40.d0 ! global scaling epsilon for stochastic mass forcing
   
   ! Algorithm control / selection
   !----------------------
@@ -66,7 +66,7 @@
   ! Initial conditions
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = -2   ! scale factor for smoothing initial profile
+  smoothing_width = 0.d0   ! scale factor for smoothing initial profile
 
   initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero -- relevant for periodic)
@@ -82,8 +82,8 @@
   ! For a complete list see bc.f90
 
 ! reservoir
-  bc_lo(1:3) = -1 201 100
-  bc_hi(1:3) = -1 201 100
+  bc_lo(1:3) = -1 201 -1
+  bc_hi(1:3) = -1 201 -1
 
 ! wall
 !  bc_lo(1:3) = -1 100 100
