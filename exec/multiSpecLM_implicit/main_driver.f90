@@ -480,6 +480,19 @@ subroutine main_driver()
 
   end if
 
+  !=====================================================================
+  ! Hydrogrid analysis and output for initial data
+  !=====================================================================
+
+  ! Add this snapshot to the average in HydroGrid
+  if (hydro_grid_int > 0) then
+     call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_old,temperature=Temp)           
+  end if
+
+  if (hydro_grid_int > 0 .and. n_steps_save_stats > 0) then
+     call save_hydro_grid(id=0, step=0)
+  end if
+
   !=======================================================
   ! Begin time stepping loop
   !=======================================================
