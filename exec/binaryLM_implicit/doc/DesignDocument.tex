@@ -815,27 +815,25 @@ looping over valid {\it and} ghost regions.
 \end{enumerate}
 
 \subsection{GMRES Boundary Conditions}
-The GMRES solver assumes homogeneous boundary conditions,
-so we use a residual correction technique to convert the problem to one
-with homogeneous boundary conditions of the same type (Neumann or Dirichlet):
+We want to solve a system of the form:
 \begin{equation}
-\Ab_H\xb = \bb - \Ab\xb_H.
+\Ab\xb^{\rm new} = {\rm RHS},
 \end{equation}
-Here, $\Ab_H$ is the same operator as $\Ab$, but with homogeneous boundary conditions
-of the same type.
-The vector $\xb_H$ is a vector with zeros in all valid cells (but possibly
-non-zero values on the boundary and in the ghost cells, depending on the 
-boundary conditions).
-By solving this system for $\xb$, we arrive at the same answer as solving the
-inhomogeneous problem, $\Ab\xb=\bb$.\\
-
-It is also important to note that we are solving a ``delta'' formulation for
-$(\deltab\vb,\delta p)$.  This means we have to be careful when supplying
-a boundary condition to the subroutine that converts the problem to a homogeneous
-problem, in that for time-dependent boundary conditions (such as reservoirs), we
-must supply the {\it change} in the velocity boundary condition as compared to
-the boundary condition at $t^n$, rather than the final velocity boundary 
-condition itself.
+given $\xb^{\rm old}$ as an initial guess.  The GMRES solver can only solve
+systems with homogeneous boundary conditions (either Dirichlet or Neumann) of the
+form:
+\begin{equation}
+\Ab^H\xb = \bb.
+\end{equation}
+We define $\xb^{\rm new} = \overline\xb^{\rm old} + \deltab\xb$, where 
+$\overline\xb^{\rm old} = \xb^{\rm old}$ but with normal velocities on physical boundaries
+and transverse velocities in ghost cells behind physical boundaries overwritten
+to respect the boundary conditions for $\xb^{\rm new}$.
+Then, we use the GMRES solver to compute the solution to
+\begin{equation}
+\Ab^H\deltab\xb = {\rm RHS} - \Ab\overline\xb^{\rm old}.
+\end{equation}
+Then, $\xb^{\rm new} = \overline\xb^{\rm old} + \deltab\xb$.
 
 \section{Results}
 \subsection{2D Kelvin-Helmholtz}
