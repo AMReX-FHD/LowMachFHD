@@ -295,4 +295,42 @@ We rewrite this system as:
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S^{n+1}.
 \end{equation}
 
+\section{Mixed-Mode Instability}
+We test our model by performing mixed mode instability (MMI) simulations to compare to experiments 
+(Figures 1(d)-(f) in Carballido-Landieira et al., Physics of Fluids, 2013).  In this ternary mixture
+setup we have a heavier solution consisting of a salt solute (KCl) and water sitting upon
+a lighter solution consisting of a sucrose solute and water
+with an initially flat interface (with optionally a slight random perturbation) in between two glass plates separated
+by 0.25mm.  The rate at which the salt solute diffuses into water is approximately 4 times greater than
+the rate at which the sugar solute diffuses into water.
+
+Parameters
+-all units in cgs.
+-Domain: 0.8cm $\times$ 0.8cm $\times$ 0.25mm.  Simulation uses 256 $\times$ 256 $\times$ 8 grid cells.
+-Periodic in $x$, slip-reservoir in $y$, no-slip walls (glass plates) in $z$.
+-Gravity of 981cm/s$^2$ in the downward $y$ direction.
+-uses inertial algorithm.  overdamped gives qualitatively similar results but takes gmres a factor of $\sim$4 more
+ iterations to converge
+-Diffusive CFL more restrictive.  $\Delta t = 6.39 \times 10^{-2}$s $\sigma\Delta x^2/(2*d*D_{\rm max}$, with $\sigma=0.75$ 
+ and dimensionality $d=3$.  Run to 1000 time steps ($t\approx 63.9$s).
+-Fluid 1 is salt solute, fluid 2 is sucrose solute, and fluid 3 is water with $\overline\rho = (2.81, 1.55, 1.0)$.
+ KCl solution on top of sucrose solution, i.e., heavy on top of light.
+-molecular masses $1.238\times 10^{-22}, 5.684\times 10^{-22}, 2.99\times 10^{-23}$ g/molecule.
+-Maxwell-Stefan diffusion constants, $D_{12} = 4.31826\times 10^{-6}, D_{13} = 1.91\times 10^{-5}, D_{23} = 5.2\times 10^{-6}$.
+-viscosity $\eta = 0.01002$ Poise
+-limited bilinear BDS advection
+-viscous stress tensor formulation ignores bulk viscosity term
+-choice of enabling thermal fluctuations (both mass and momentum, even though mass fluctuations 
+ don't seem to have any measureable effect)
+-Temperature of 293 K.
+-Initial conditions: 
+ The initial mass fractions (concentrations) in the lower half of the domain are $c_{\rm lo} = (0, 0.1368, 0.8632)$.
+ The initial mass fractions (concentrations) in the upper half of the domain are $c_{\rm hi} = (0.0864, 0, 0.9136)$.
+ This gives an initial density of 1.058932 g/cm$^3$ on top and 1.051018 g/cm$^3$ on bottom
+ Reservoir values set to match these initial conditions.
+-choice of discontinuous initial interface or a randomly perturbed initial interface with one $xz$ plane 
+ of cells at the centerline randomly perturbed using:
+ $c = r c_{\rm lo} + (1-r) c_{\rm hi}$, with $r$ being a random number between 0.9 and 1.0.  This range of random numbers was chosen
+ so that the timescales of the pattern/spectra development match a flat initial interface with thermal fluctuations.
+
 \end{document}
