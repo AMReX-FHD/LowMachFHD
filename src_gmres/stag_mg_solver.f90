@@ -469,7 +469,8 @@ contains
           
           ! create a box containing number of cells of current bottom solve
           lo(1:dm) = 0
-          hi(1:dm) = stag_mg_minwidth * (n_cells(1:dm) / max_grid_size(1:dm)) - 1
+          hi(1:dm) = n_cells(1:dm) / 2**(nlevs_mg-1) - 1
+
           bx = make_box(lo,hi)
 
           ! tell mba about the problem domain
