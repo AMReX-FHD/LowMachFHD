@@ -322,13 +322,14 @@ images shown over a 1.1 cm $\times$ 0.9 cm $\times$ 0.25mm domain).  We divide o
 a slip-reservoir boundary condition to match the initial configuration in $y$, and no-slip walls in $z$.
 Gravity has a magnitude of 981cm/s$^2$ in the downward $y$ direction.  The characteristic velocities in
 this simulation are sufficiently small that a diffusive CFL time step restriction needs to be imposed, i.e.,
-$\Delta t = 6.39 \times 10^{-2}$s $= \sigma\Delta x^2/(2*d*D_{\rm max}$, with $\sigma=0.75$, 
+$\Delta t = 6.39 \times 10^{-2}$s $= \sigma\Delta x^2/(2*d*D_{\rm max})$, with $\sigma=0.75$, 
 dimensionality $d=3$, and $D_{\rm max}$ the maximum Maxwell-Stefan diffusion coefficient between any two pure
 fluids.  We note that using this time step, the overdamped algorithm gives qualitatively
 similar results by takes a factor of $\sim$4 more GMRES iterations to converge.  We use a limited trilinear
-BDS advection scheme (citation) and a viscous stress tensor formulation that ignores bulk viscosity effects.
+BDS advection scheme (Nonaka et al., J. Sci. Comput, 2011) and a viscous stress tensor formulation that 
+ignores bulk viscosity effects.
 
-The fluid parameters are $(\overline\rho_1, \overline\rho_2, \overline\rho_c) = (2.81, 1.55, 1.0)$ g/cm$^3$
+The fluid parameters are $(\overline\rho_1, \overline\rho_2, \overline\rho_3) = (2.81, 1.55, 1.0)$ g/cm$^3$
 with molecular masses of $(1.238\times 10^{-22}, 5.684\times 10^{-22}, 2.99\times 10^{-23})$ g/molecule.
 The Maxwell-Stefan diffusion coefficients are
 $D_{12} = 4.31826\times 10^{-6}, D_{13} = 1.91\times 10^{-5}$, and $D_{23} = 5.2\times 10^{-6}$.
