@@ -221,7 +221,34 @@ contains
     ! middle of domain
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
-    if (smoothing_width > epsilon(1.d0)) then
+    if (smoothing_width .le. 0.d0 .and. smoothing_width .ge. -1.d0) then
+
+       ! discontinuous version with random perturbation
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y1) then
+             do n=1,nspecies
+                c(lo(1):hi(1),j,n) = rho_init(1,n)
+             end do
+          else
+             do n=1,nspecies
+                c(lo(1):hi(1),j,n) = rho_init(2,n)
+             end do
+          end if
+
+          if (j .eq. n_cells(2)/2) then
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+                c_loc = abs(smoothing_width)*rand()
+                do n=1,nspecies
+                   c(i,j,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
+                end do
+             end do
+          end if
+
+       end do
+
+    else if (smoothing_width .gt. 0.d0) then
 
        ! smoothed version
        do j=lo(2),hi(2)
@@ -232,7 +259,7 @@ contains
           end do
        end do
 
-    else if (smoothing_width .eq. -1.d0) then
+    else if (smoothing_width .eq. -2.d0) then
 
        ! discontinuous version with sinusoidal perturbation
        do j=lo(2),hi(2)
@@ -259,48 +286,9 @@ contains
 
        end do
 
-    else if (smoothing_width .eq. -2.d0) then
-
-       ! discontinuous version with random perturbation
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
-          if (y .lt. y1) then
-             do n=1,nspecies
-                c(lo(1):hi(1),j,n) = rho_init(1,n)
-             end do
-          else
-             do n=1,nspecies
-                c(lo(1):hi(1),j,n) = rho_init(2,n)
-             end do
-          end if
-
-          if (j .eq. n_cells(2)/2) then
-             do i=lo(1),hi(1)
-                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                c_loc = rand()
-                do n=1,nspecies
-                   c(i,j,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
-                end do
-             end do
-          end if
-
-       end do
-
     else
 
-       ! discontinuous version
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
-          if (y .lt. y1) then
-             do n=1,nspecies
-                c(lo(1):hi(1),j,n) = rho_init(1,n)
-             end do
-          else
-             do n=1,nspecies
-                c(lo(1):hi(1),j,n) = rho_init(2,n)
-             end do
-          end if
-       end do
+       call bl_error("init_rho_and_umac_2d: smoothing_width not compatible with prob_type")
 
     end if
 
@@ -661,7 +649,37 @@ contains
     ! middle of domain
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
-    if (smoothing_width > epsilon(1.d0)) then
+    if (smoothing_width .le. 0.d0 .and. smoothing_width .ge. -1.d0) then
+
+       ! discontinuous version with random perturbation
+       do j=lo(2),hi(2)
+
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          
+          if (y .lt. y1) then
+             do n=1,nspecies
+                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(1,n)
+             end do
+          else
+             do n=1,nspecies
+                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(2,n)
+             end do
+          end if
+
+          if (j .eq. n_cells(2)/2) then
+             do k=lo(3),hi(3)
+             do i=lo(1),hi(1)
+                c_loc = abs(smoothing_width)*rand()
+                do n=1,nspecies
+                   c(i,j,k,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
+                end do
+             end do
+             end do
+          end if
+
+       end do
+
+    else if (smoothing_width .gt. 0.d0) then
 
        ! smoothed version
        do j=lo(2),hi(2)
@@ -672,11 +690,13 @@ contains
           end do
        end do
 
-    else if (smoothing_width .eq. -1.d0) then
+    else if (smoothing_width .eq. -2.d0) then
 
        ! discontinuous version with sinusoidal perturbation
        do j=lo(2),hi(2)
+
           y = prob_lo(2) + (j+0.5d0)*dx(2)
+
           if (y .lt. y1) then
              do n=1,nspecies
                 c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(1,n)
@@ -701,58 +721,17 @@ contains
 
        end do
 
-    else if (smoothing_width .eq. -2.d0) then
-
-
-       ! discontinuous version with random perturbation
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
-          if (y .lt. y1) then
-             do n=1,nspecies
-                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(1,n)
-             end do
-          else
-             do n=1,nspecies
-                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(2,n)
-             end do
-          end if
-
-          if (j .eq. n_cells(2)/2) then
-             do k=lo(3),hi(3)
-             do i=lo(1),hi(1)
-                c_loc = rand()
-                do n=1,nspecies
-                   c(i,j,k,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
-                end do
-             end do
-             end do
-          end if
-
-       end do
-
     else
 
-       ! discontinuous version
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
-          if (y .lt. y1) then
-             do n=1,nspecies
-                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(1,n)
-             end do
-          else
-             do n=1,nspecies
-                c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(2,n)
-             end do
-          end if
-       end do
+       call bl_error("init_rho_and_umac_3d: smoothing_width not compatible with prob_type")
 
     end if
 
-     case(4)
-     !==============================================================================
-     ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
-     ! in time. Manufactured solution rho1_exact = e^(-r^2/4Dt-t/tau)/(4piDt)^(3/2)
-     !==============================================================================
+    case(4)
+    !==============================================================================
+    ! Initializing rho1,rho2=Gaussian and rhot=space varying-constant 
+    ! in time. Manufactured solution rho1_exact = e^(-r^2/4Dt-t/tau)/(4piDt)^(3/2)
+    !==============================================================================
  
      u = 0.d0
      v = 0.d0
