@@ -300,13 +300,13 @@ We validate our model and algorithm by performing mixed mode instability (MMI) s
 (Figures 1(d)-(f) in Carballido-Landieira et al., Physics of Fluids, 2013).  In this ternary mixture
 we initially have a heavier solution ``A'' consisting of a salt solute (KCl) diluted with water sitting upon
 a lighter solution ``B'' consisting of a sucrose solute diluated with water.  
-Thus, fluid ``1'' is salt solute, fluid ``2'' is sugar solute, and fluid ``3'' is water.
+Thus, fluid ``1'' is salt solute, fluid ``2'' is sucrose solute, and fluid ``3'' is water.
 The mixture sits between two glass plates separated by 0.25 mm (refer to Figure \ref{fig:mmi}).
 The initial interface is either flat or slightly perturbed (depending
 on the simulation).  The buoyancy ratio between the two solutions combined with 
 differential diffusion effects characterize this instability to be in the mixed mode
-regime.  In this case the rate at which the salt solute diffusive into pure water is $\sim$4 times greater 
-than the rate at which the sugar solute diffuses into water.
+regime.  In this case the rate at which the salt solute diffusives into pure water is $\sim$4 times greater 
+than the rate at which the sucrose solute diffuses into water.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[hb]
 \centering
@@ -338,7 +338,7 @@ lower half of the domain are $c_{\rm lo} = (0, 0.1368, 0.8632)$ and in the upper
 are $c_{\rm hi} = (0.0864, 0, 0.9136)$.  This gives an initial density of 1.058932 g/cm$^3$ on top 
 and 1.051018 g/cm$^3$ on bottom.  The ambient temperature is 293 K.
 
-We perform two different simulations, both to $t\approx 63.9$ (1000 time steps).
+We perform two different simulations, both to $t\approx 63.9$ s (1000 time steps).
 The first simulation uses a flat initial interface, but allows for thermal fluctuations in the mass
 and momentum equations (we note that mass fluctuations are very small and do not cause any measureable
 changes in any results).  The second simulation uses a randomly perturbed initial interface with one $xz$ plane 
@@ -353,17 +353,23 @@ so that the timescales of the pattern/spectra development match a flat initial i
 
 
 \section{Diffusive Layer Convection}
-We modify the initial configuration of the MMI problem slightly so we instead model
-diffusive layer convection (DLC).
-We analyze the spectra of the vertically-averaged density, as is done in shadowgraph
-experiments.  The setup remains similar to the MMI setup, but the 
-concentrations of salt salute and sucrose solutes are modified so that we initially have
-a {\it light} solution ``A'' consisting of a salt solute (KCl) diluted with water sitting upon
-a {\it heavier} solution ``B'' consisting of a sucrose solute diluated with water.  
-As before, fluid ``1'' is salt solute, fluid ``2'' is sugar solute, and fluid ``3'' is water.
+We modify the initial configuration of the MMI problem so we instead model
+diffusive layer convection (DLC; see  Carballido-Landieira et al., Physics of Fluids, 2013).  
+The setup remains similar to the MMI setup in that a salt-water solution sits on top
+of a sucrose-water solution, but the concentrations of salt and sucrose solutes are modified 
+so that we initially have a {\it light} salt-water solution ``A'' sitting upon a {\it heavier} 
+sucrose-water solution ``B''.  We analyze the spectra of the vertically-averaged density, as 
+is done in shadowgraph experiments.
+
+As before, fluid ``1'' is salt solute, fluid ``2'' is sucrose solute, and fluid ``3'' is water.
 The dimensions of the experiement are now 1 cm $\times$ 0.5 cm $\times$ 1 cm, with
 periodic boundary conditions in $x$ and $z$, and a slip-reservoir boundary condition to match 
 the initial configuration in $y$ (refer to Figure \ref{fig:dlc}).
+The initial interface is either flat or slightly perturbed (depending on the simulation).
+The buoyancy ratio between the two solutions combined with 
+differential diffusion effects characterize this instability to be in the diffusive layer convection regime.
+As in the MMI experiment, the rate at which the salt solute diffusives into pure water is $\sim$4 times greater 
+than the rate at which the sucrose solute diffuses into water.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[hb]
 \centering
@@ -373,7 +379,24 @@ the initial configuration in $y$ (refer to Figure \ref{fig:dlc}).
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+We divide our domain into 256 $\times$ 128 $\times$ 256 grid cells.  Gravity has a magnitude of 
+981cm/s$^2$ in the downward $y$ direction.  We used a fixed time step of $\Delta t = 0.025$ s which
+corresponds to an advective CFL of $\sigma\sim 0.5$.  We use an unlimited trilinear
+BDS advection scheme (Nonaka et al., J. Sci. Comput, 2011) and a viscous stress tensor formulation that 
+ignores bulk viscosity effects.  The fluid parameters are the same as the MMI experiement.
+The initial mass fractions (concentrations) in the 
+lower half of the domain are $c_{\rm lo} = (0, 0.05, 0.95)$ and in the upper half of the domain
+are $c_{\rm hi} = (0.022, 0, 0.978)$.  This gives an initial density of 1.014375 g/cm$^3$ on top 
+and 1.018062 g/cm$^3$ on bottom.  The ambient temperature is 293 K.
 
+We perform two different simulations, both to $t=19$ s (760 time steps).
+The first simulation uses a flat initial interface, but allows for thermal fluctuations in the mass
+and momentum equations.  The second simulation uses a randomly perturbed initial interface with one $xz$ plane 
+of cells at the centerline randomly perturbed using $c = r c_{\rm lo} + (1-r) c_{\rm hi}$, with $r$ being a 
+random number between 0 and 1.0 in each cell.  The scaling of this perturbation was chosen
+so that the timescales of the pattern/spectra development match a flat initial interface with thermal fluctuations.
+
+Figures, spectra.
 
 
 \end{document}
