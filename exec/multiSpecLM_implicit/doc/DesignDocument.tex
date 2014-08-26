@@ -312,7 +312,7 @@ than the rate at which the sugar solute diffuses into water.
 \centering
 \includegraphics[width=2in]{mmi}
 \label{fig:mmi}
-\caption{Initial configuration of two diffusively mixing solutions.}
+\caption{Initial configuration of the MMI experiment for diffusively mixing solutions.}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -350,5 +350,30 @@ so that the timescales of the pattern/spectra development match a flat initial i
  as also reported by expterimentalists.
 
 -Show images of structure development.
+
+
+\section{Diffusive Layer Convection}
+We modify the initial configuration of the MMI problem slightly so we instead model
+diffusive layer convection (DLC).
+We analyze the spectra of the vertically-averaged density, as is done in shadowgraph
+experiments.  The setup remains similar to the MMI setup, but the 
+concentrations of salt salute and sucrose solutes are modified so that we initially have
+a {\it light} solution ``A'' consisting of a salt solute (KCl) diluted with water sitting upon
+a {\it heavier} solution ``B'' consisting of a sucrose solute diluated with water.  
+As before, fluid ``1'' is salt solute, fluid ``2'' is sugar solute, and fluid ``3'' is water.
+The dimensions of the experiement are now 1 cm $\times$ 0.5 cm $\times$ 1 cm, with
+periodic boundary conditions in $x$ and $z$, and a slip-reservoir boundary condition to match 
+the initial configuration in $y$ (refer to Figure \ref{fig:dlc}).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[hb]
+\centering
+\includegraphics[width=2in]{dlc}
+\label{fig:dlc}
+\caption{Initial configuration of the DLC experiment for diffusively mixing solutions.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 
 \end{document}
