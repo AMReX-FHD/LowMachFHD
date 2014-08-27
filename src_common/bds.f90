@@ -670,8 +670,8 @@ contains
     integer        ,intent(in   ) :: bc(:,:)
 
     ! local variables
-    real(kind=dp_t),allocatable ::   siphj(:,:)
-    real(kind=dp_t),allocatable ::   sijph(:,:)
+    real(kind=dp_t),allocatable ::   sedgex(:,:)
+    real(kind=dp_t),allocatable ::   sedgey(:,:)
 
     real(kind=dp_t) :: hx,hy,hxs,hys,gamp,gamm
     real(kind=dp_t) :: vtrans,stem,vaddif,vdif
@@ -680,8 +680,8 @@ contains
 
     integer i,j,iup,jup
 
-    allocate(siphj(lo(1):hi(1)+1,lo(2):hi(2)  ))
-    allocate(sijph(lo(1):hi(1)  ,lo(2):hi(2)+1))
+    allocate(sedgex(lo(1):hi(1)+1,lo(2):hi(2)  ))
+    allocate(sedgey(lo(1):hi(1)  ,lo(2):hi(2)+1))
 
     hx = dx(1)
     hy = dx(2)
@@ -770,7 +770,7 @@ contains
           ! ****************************************
 
           ! *********************************
-          ! calculate siphj
+          ! calculate sedgex
 
           if (uadv(i+1,j) .gt. 0) then 
              iup   = i
@@ -785,20 +785,20 @@ contains
           stem = s(iup,j) + (isign*hx - uadv(i+1,j)*dt)*0.5d0*slope(iup,j,1)
           vaddif = stem*0.5d0*dt*( &
                uadv(iup+1,j) - uadv(iup,j))/hx
-          siphj(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*force(iup,j)
+          sedgex(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*force(iup,j)
 
-          ! end of calculation of siphj
+          ! end of calculation of sedgex
           ! *************************************
 
        enddo
     enddo
 
     if (bc(1,1) .eq. EXT_DIR) then
-       siphj(lo(1),lo(2):hi(2)) = sx(lo(1),lo(2):hi(2))
+       sedgex(lo(1),lo(2):hi(2)) = sx(lo(1),lo(2):hi(2))
     end if
 
     if (bc(1,2) .eq. EXT_DIR) then
-       siphj(hi(1)+1,lo(2):hi(2)) = sx(hi(1)+1,lo(2):hi(2))
+       sedgex(hi(1)+1,lo(2):hi(2)) = sx(hi(1)+1,lo(2):hi(2))
     end if
 
     do j = lo(2)-1,hi(2) 
@@ -885,7 +885,7 @@ contains
           ! ****************************************
 
           ! *********************************
-          ! calculate sijph
+          ! calculate sedgey
 
           if (vadv(i,j+1) .gt. 0) then 
              jup   = j
@@ -899,20 +899,20 @@ contains
                (uadv(i+1,jup)*gamp-uadv(i,jup)*gamm)/hx
           stem = s(i,jup) + (jsign*hy - vadv(i,j+1)*dt)*0.5d0*slope(i,jup,2)
           vaddif = stem*0.5d0*dt*(vadv(i,jup+1) - vadv(i,jup))/hy
-          sijph(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*force(i,jup)
+          sedgey(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*force(i,jup)
 
-          ! end of calculation of sijph
+          ! end of calculation of sedgey
           ! *************************************
 
        enddo
     enddo
 
     if (bc(2,1) .eq. EXT_DIR) then
-       sijph(lo(1):hi(1),lo(2)) = sy(lo(1):hi(1),lo(2))
+       sedgey(lo(1):hi(1),lo(2)) = sy(lo(1):hi(1),lo(2))
     end if
 
     if (bc(2,2) .eq. EXT_DIR) then
-       sijph(lo(1):hi(1),hi(2)+1) = sy(lo(1):hi(1),hi(2)+1)
+       sedgey(lo(1):hi(1),hi(2)+1) = sy(lo(1):hi(1),hi(2)+1)
     end if
 
     ! advance solution
@@ -920,12 +920,12 @@ contains
     do j = lo(2),hi(2) 
        do i = lo(1),hi(1) 
           s_update(i,j) = s_update(i,j) - (  &
-               (siphj(i+1,j)*uadv(i+1,j)-siphj(i,j)*uadv(i,j))/hx +  &
-               (sijph(i,j+1)*vadv(i,j+1)-sijph(i,j)*vadv(i,j))/hy)
+               (sedgex(i+1,j)*uadv(i+1,j)-sedgex(i,j)*uadv(i,j))/hx +  &
+               (sedgey(i,j+1)*vadv(i,j+1)-sedgey(i,j)*vadv(i,j))/hy)
        enddo
     enddo
 
-    deallocate(siphj,sijph)
+    deallocate(sedgex,sedgey)
 
   end subroutine bdsconc_2d
 
@@ -3603,7 +3603,7 @@ contains
     real(kind=dp_t) :: rhotemp(ncomp)
     real(kind=dp_t) :: temp, alpha
 
-    if (proj_type .eq. 2) then
+    if (proj_type .eq. 1 .or. proj_type .eq. 2) then
 
        ! define A_i = 1/rhobar_i
 
@@ -3624,6 +3624,13 @@ contains
        do j = lo(2),hi(2) 
        do i = lo(1),hi(1)+1 
           
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
+             temp = sedgex(i,j,k,1)
+             sedgex(i,j,k,1) = sedgex(i,j,k,2)
+             sedgex(i,j,k,2) = temp - sedgex(i,j,k,1)
+          end if
+
           ! rhotemp = rho
           rhotemp(1:ncomp) = sedgex(i,j,k,1:ncomp)
 
@@ -3650,6 +3657,13 @@ contains
              sedgex(i,j,k,comp) = sedgex(i,j,k,comp) - temp*nA(comp)
           end do
 
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
+             temp = sedgex(i,j,k,1)
+             sedgex(i,j,k,1) = sedgex(i,j,k,1) + sedgex(i,j,k,2)
+             sedgex(i,j,k,2) = temp
+          end if
+          
        enddo
        enddo
        enddo
@@ -3658,7 +3672,14 @@ contains
        do k = lo(3),hi(3)
        do j = lo(2),hi(2)+1 
        do i = lo(1),hi(1) 
-          
+
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
+             temp = sedgey(i,j,k,1)
+             sedgey(i,j,k,1) = sedgey(i,j,k,2)
+             sedgey(i,j,k,2) = temp - sedgey(i,j,k,1)
+          end if
+
           ! rhotemp = rho
           rhotemp(1:ncomp) = sedgey(i,j,k,1:ncomp)
 
@@ -3685,6 +3706,13 @@ contains
              sedgey(i,j,k,comp) = sedgey(i,j,k,comp) - temp*nA(comp)
           end do
 
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
+             temp = sedgey(i,j,k,1)
+             sedgey(i,j,k,1) = sedgey(i,j,k,1) + sedgey(i,j,k,2)
+             sedgey(i,j,k,2) = temp
+          end if
+
        enddo
        enddo
        enddo
@@ -3694,6 +3722,13 @@ contains
        do j = lo(2),hi(2) 
        do i = lo(1),hi(1) 
           
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
+             temp = sedgez(i,j,k,1)
+             sedgez(i,j,k,1) = sedgez(i,j,k,2)
+             sedgez(i,j,k,2) = temp - sedgez(i,j,k,1)
+          end if
+
           ! rhotemp = rho
           rhotemp(1:ncomp) = sedgez(i,j,k,1:ncomp)
 
@@ -3719,6 +3754,13 @@ contains
           do comp=1,ncomp
              sedgez(i,j,k,comp) = sedgez(i,j,k,comp) - temp*nA(comp)
           end do
+
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
+             temp = sedgez(i,j,k,1)
+             sedgez(i,j,k,1) = sedgez(i,j,k,1) + sedgez(i,j,k,2)
+             sedgez(i,j,k,2) = temp
+          end if
 
        enddo
        enddo
@@ -4089,8 +4131,8 @@ contains
     integer        ,intent(in   ) :: bc(:,:)
 
 
-    real(kind=dp_t),allocatable ::   siphj(:,:)
-    real(kind=dp_t),allocatable ::   sijph(:,:)
+    real(kind=dp_t),allocatable ::   sedgex(:,:)
+    real(kind=dp_t),allocatable ::   sedgey(:,:)
     real(kind=dp_t),allocatable ::    gamp(:)
     real(kind=dp_t),allocatable ::    gamm(:)
     real(kind=dp_t),allocatable ::      xm(:)
@@ -4108,8 +4150,8 @@ contains
     real(kind=dp_t) :: eps
     real(kind=dp_t), parameter :: two3rd = 2.d0/3.d0
 
-    allocate(siphj(lo(1)  :hi(1)+1,lo(2):hi(2)  ))
-    allocate(sijph(lo(1)  :hi(1)  ,lo(2):hi(2)+1))
+    allocate(sedgex(lo(1)  :hi(1)+1,lo(2):hi(2)  ))
+    allocate(sedgey(lo(1)  :hi(1)  ,lo(2):hi(2)+1))
 
     allocate( gamp(lo(1)-1:hi(1)+1))
     allocate( gamm(lo(1)-1:hi(1)+1))
@@ -4235,7 +4277,7 @@ contains
 
 
        ! *********************************
-       ! calculate siphj
+       ! calculate sedgex
 
        do i = is-1, ie 
 
@@ -4262,20 +4304,20 @@ contains
                (hxs/2. + uadv(i+1,j)*dt*(1.-sqrt(3.))/(2.*sqrt(3.)))**2   ) + &
                slyy(iup,j)*hy*hy/12.d0
           vaddif = stem*0.5d0*dt*(uadv(iup+1,j) - uadv(iup,j))/hx
-          siphj(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*force_local
+          sedgex(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*force_local
 
        enddo
     enddo
 
     if (bc(1,1) .eq. EXT_DIR) then
-       siphj(lo(1),lo(2):hi(2)) = sx(lo(1),lo(2):hi(2))
+       sedgex(lo(1),lo(2):hi(2)) = sx(lo(1),lo(2):hi(2))
     end if
 
     if (bc(1,2) .eq. EXT_DIR) then
-       siphj(hi(1)+1,lo(2):hi(2)) = sx(hi(1)+1,lo(2):hi(2))
+       sedgex(hi(1)+1,lo(2):hi(2)) = sx(hi(1)+1,lo(2):hi(2))
     end if
 
-    ! end of calculation of siphj
+    ! end of calculation of sedgex
     ! *************************************
 
     do j = js-1,je 
@@ -4378,7 +4420,7 @@ contains
 
 
        ! *********************************
-       ! calculate sijph
+       ! calculate sedgey
 
        do i = is,ie 
 
@@ -4401,33 +4443,33 @@ contains
                (hys/2. + vadv(i,j+1)*dt*(1.-sqrt(3.))/(2.*sqrt(3.)))**2   ) + &
                slxx(i,jup)*hx*hx/12.d0
           vaddif = stem*0.5d0*dt*(vadv(i,jup+1) - vadv(i,jup))/hy
-          sijph(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*force_local
+          sedgey(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*force_local
 
        enddo
     enddo
 
     if (bc(2,1) .eq. EXT_DIR) then
-       sijph(lo(1):hi(1),lo(2)) = sy(lo(1):hi(1),lo(2))
+       sedgey(lo(1):hi(1),lo(2)) = sy(lo(1):hi(1),lo(2))
     end if
 
     if (bc(2,2) .eq. EXT_DIR) then
-       sijph(lo(1):hi(1),hi(2)+1) = sy(lo(1):hi(1),hi(2)+1)
+       sedgey(lo(1):hi(1),hi(2)+1) = sy(lo(1):hi(1),hi(2)+1)
     end if
 
-    ! end of calculation of sijph
+    ! end of calculation of sedgey
     ! *************************************
 
     do j = js,je 
        do i = is,ie 
 
           s_update(i,j) = s_update(i,j) -(  &
-               (siphj(i+1,j)*uadv(i+1,j)-siphj(i,j)*uadv(i,j))/hx +  &
-               (sijph(i,j+1)*vadv(i,j+1)-sijph(i,j)*vadv(i,j))/hy)
+               (sedgex(i+1,j)*uadv(i+1,j)-sedgex(i,j)*uadv(i,j))/hx +  &
+               (sedgey(i,j+1)*vadv(i,j+1)-sedgey(i,j)*vadv(i,j))/hy)
 
        enddo
     enddo
 
-    deallocate(siphj,sijph,gamp,gamm,xm,ym,c)
+    deallocate(sedgex,sedgey,gamp,gamm,xm,ym,c)
 
   end subroutine bdsconc_quad_2d
 
