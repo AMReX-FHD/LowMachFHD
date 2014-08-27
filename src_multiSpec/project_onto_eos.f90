@@ -56,24 +56,33 @@ contains
 
     real(kind=dp_t) :: rho_tilde(lo(1):hi(1),lo(2):hi(2),nspecies)
     real(kind=dp_t) :: rhobar_sq,delta_eos,sum_spec(nspecies)
-    real(kind=dp_t) :: rho_tmp,sum_change(nspecies)
+    real(kind=dp_t) :: rho_tmp,sum_change(nspecies),w(nspecies)
     integer i,j,l,ncell
 
     ! number of cells on the grid
     ncell = (hi(1)-lo(1)+1)*(hi(2)-lo(2)+1)
-
-    ! rhobar_sq = (sum_i (1/rhobar_i^2))^-1
-    rhobar_sq = 0.d0
-    do l=1,nspecies
-       rhobar_sq = rhobar_sq + 1.d0/rhobar(l)**2
-    end do
-    rhobar_sq = 1.d0/rhobar_sq
 
     sum_spec(:) = 0.d0
     sum_change(:) = 0.d0
 
     do j=lo(2),hi(2)
     do i=lo(1),hi(1)
+
+       ! compute mass fractions, w_i = rho_i/rho
+       rho_tmp = 0.d0
+       do l=1,nspecies
+          rho_tmp = rho_tmp + rho(i,j,l)
+       end do
+       do l=1,nspecies
+          w(l) = rho(i,j,l)/rho_tmp
+       end do
+
+       ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
+       rhobar_sq = 0.d0
+       do l=1,nspecies
+          rhobar_sq = rhobar_sq + w(l)/rhobar(l)**2
+       end do
+       rhobar_sq = 1.d0/rhobar_sq
           
        ! delta_eos = sum_l (rho_l/rhobar_l) - 1
        delta_eos = -1.d0
@@ -82,8 +91,8 @@ contains
        end do
        
        do l=1,nspecies
-          ! rho_tilde_i = rho - (rhobar_sq/rhobar_i) * delta_eos
-          rho_tilde(i,j,l) = rho(i,j,l) - (rhobar_sq/rhobar(l))*delta_eos
+          ! rho_tilde_i = rho - w_i*(rhobar_sq/rhobar_i) * delta_eos
+          rho_tilde(i,j,l) = rho(i,j,l) - w(l)*(rhobar_sq/rhobar(l))*delta_eos
           ! sum_spec_i = sum (rho_i - rho_tilde_i)
           sum_spec(l) = sum_spec(l) + rho(i,j,l) - rho_tilde(i,j,l)
        end do
@@ -126,18 +135,11 @@ contains
 
     real(kind=dp_t) :: rho_tilde(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),nspecies)
     real(kind=dp_t) :: rhobar_sq,delta_eos,sum_spec(nspecies)
-    real(kind=dp_t) :: rho_tmp,sum_change(nspecies)
+    real(kind=dp_t) :: rho_tmp,sum_change(nspecies),w(nspecies)
     integer i,j,k,l,ncell
 
     ! number of cells on the grid
     ncell = (hi(1)-lo(1)+1)*(hi(2)-lo(2)+1)*(hi(3)-lo(3)+1)
-
-    ! rhobar_sq = (sum_i (1/rhobar_i^2))^-1
-    rhobar_sq = 0.d0
-    do l=1,nspecies
-       rhobar_sq = rhobar_sq + 1.d0/rhobar(l)**2
-    end do
-    rhobar_sq = 1.d0/rhobar_sq
 
     sum_spec(:) = 0.d0
     sum_change(:) = 0.d0
@@ -145,7 +147,23 @@ contains
     do k=lo(3),hi(3)
     do j=lo(2),hi(2)
     do i=lo(1),hi(1)
+
+       ! compute mass fractions, w_i = rho_i/rho
+       rho_tmp = 0.d0
+       do l=1,nspecies
+          rho_tmp = rho_tmp + rho(i,j,k,l)
+       end do
+       do l=1,nspecies
+          w(l) = rho(i,j,k,l)/rho_tmp
+       end do
           
+       ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
+       rhobar_sq = 0.d0
+       do l=1,nspecies
+          rhobar_sq = rhobar_sq + w(l)/rhobar(l)**2
+       end do
+       rhobar_sq = 1.d0/rhobar_sq
+
        ! delta_eos = sum_l (rho_l/rhobar_l) - 1
        delta_eos = -1.d0
        do l=1,nspecies
@@ -153,8 +171,8 @@ contains
        end do
 
        do l=1,nspecies
-          ! rho_tilde_i = rho - (rhobar_sq/rhobar_i) * delta_eos
-          rho_tilde(i,j,k,l) = rho(i,j,k,l) - (rhobar_sq/rhobar(l))*delta_eos
+          ! rho_tilde_i = rho - w_i*(rhobar_sq/rhobar_i) * delta_eos
+          rho_tilde(i,j,k,l) = rho(i,j,k,l) - w(l)*(rhobar_sq/rhobar(l))*delta_eos
           ! sum_spec_i = sum (rho_i - rho_tilde_i)
           sum_spec(l) = sum_spec(l) + rho(i,j,k,l) - rho_tilde(i,j,k,l)
        end do
