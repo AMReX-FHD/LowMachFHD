@@ -6,15 +6,15 @@
   dim_in = 3                       ! 2D or 3D  
   prob_type =  3                   ! sets scalars, m, coefficients (see init.f90)
   prob_lo(1:3) = 0.d0 0.d0 0.d0    ! physical lo coordinate
-  prob_hi(1:3) = 1.d0 1.d0 0.025d0 ! physical hi coordinate
-  n_cells(1:3) = 320 320 8         ! number of cells in domain
+  prob_hi(1:3) = 0.8d0 0.8d0 0.025d0 ! physical hi coordinate
+  n_cells(1:3) = 256 256 8         ! number of cells in domain
   max_grid_size(1:3) = 32 32 8     ! max number of cells in a box
 
   fixed_dt = -1.d0                 ! time step
   cfl = 0.75d0                     ! cfl number
 
-  max_step = 10000                 ! maximum number of time steps
-  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 1000                  ! maximum number of time steps
+  plot_int = 20                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 100                    ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
   print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
@@ -29,8 +29,8 @@
   k_B = 1.3806488d-16       ! Boltzmann's constant
   
   ! stochastic properties
-  variance_coef_mom = 1.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mom = 0.d0  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
   
   ! Algorithm control / selection
   !----------------------
@@ -64,7 +64,7 @@
   ! Initial conditions
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 0.0d0   ! scale factor for smoothing initial profile
+  smoothing_width = -0.1d0 ! scale factor for smoothing initial profile
 
   initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero -- relevant for periodic)
@@ -151,15 +151,15 @@
   ! initial values for rho
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  rho_init(1,1:3) = 0.0     0.0342     0.9658
-  rho_init(2,1:3) = 0.0216   0.0       0.9784
+  rho_init(1,1:3) = 0.0     0.1368     0.8632
+  rho_init(2,1:3) = 0.0864   0.0       0.9136
 
   ! rho_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
 
   ! use this set for reservoir (Dirichlet Values)
-  rho_bc(2,1,1:3) = 0.0     0.0342    0.9658
-  rho_bc(2,2,1:3) = 0.0216   0.0      0.9784
+  rho_bc(2,1,1:3) = 0.0     0.1368    0.8632
+  rho_bc(2,2,1:3) = 0.0864   0.0      0.9136
 
   ! use this set for walls (Neumann Values)
 !  rho_bc(2,1,1:3) = 0.d0 0.d0 0.d0
