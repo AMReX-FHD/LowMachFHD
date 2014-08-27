@@ -46,7 +46,7 @@ contains
     real(kind=dp_t), pointer :: syp(:,:,:,:)
     real(kind=dp_t), pointer :: szp(:,:,:,:)
 
-    integer :: dm,ng_s,ng_c,ng_u,ng_v,ng_o,ng_f,ng_e,n,i,comp,nlevs,bccomp
+    integer :: dm,ng_s,ng_l,ng_u,ng_v,ng_o,ng_f,ng_e,n,i,comp,nlevs,bccomp
     integer :: lo(mla%dim),hi(mla%dim),proj_type
 
     type(multifab) :: sedge(mla%nlevel,mla%dim)
@@ -94,7 +94,7 @@ contains
 
     ng_s = s(1)%ng
     ng_u = s_update(1)%ng
-    ng_c = slope(1)%ng
+    ng_l = slope(1)%ng
     ng_v = umac(1,1)%ng
     ng_o = force(1)%ng
     ng_f = s_fc(1,1)%ng
@@ -121,16 +121,18 @@ contains
                 ! only advancing the tracer
                 call bdsslope_2d(lo, hi, &
                                  sop(:,:,1,comp), ng_s, &
-                                 slopep(:,:,1,:), ng_c, &
+                                 slopep(:,:,1,:), ng_l, &
                                  dx(n,:)) 
 
                 call bdsconc_2d(lo, hi, &
                                 sop(:,:,1,comp), ng_s, sup(:,:,1,comp), ng_u, &
                                 fp(:,:,1,comp), ng_o, &
-                                slopep(:,:,1,:), ng_c, &
+                                slopep(:,:,1,:), ng_l, &
                                 uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
                                 dx(n,:), dt, &
                                 spx(:,:,1,comp), spy(:,:,1,comp), ng_f, &
+                                sxp(:,:,1,comp-scomp+1), &
+                                syp(:,:,1,comp-scomp+1), ng_e, &
                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
              case (3)
                 wadvp  => dataptr(umac(n,3), i)
@@ -139,13 +141,13 @@ contains
                 ! only advancing the tracer
                 call bdsslope_3d(lo, hi, &
                                  sop(:,:,:,comp), ng_s, &
-                                 slopep(:,:,:,:), ng_c, &
+                                 slopep(:,:,:,:), ng_l, &
                                  dx(n,:))
 
                 call bdsconc_3d(lo, hi, &
                                 sop(:,:,:,comp), ng_s, sup(:,:,:,comp), ng_u, &
                                 fp(:,:,:,comp), ng_o, &
-                                slopep(:,:,:,:), ng_c, &
+                                slopep(:,:,:,:), ng_l, &
                                 uadvp(:,:,:,1), vadvp(:,:,:,1), wadvp(:,:,:,1), ng_v, &
                                 dx(n,:), dt, &
                                 spx(:,:,:,comp), spy(:,:,:,comp), spz(:,:,:,comp), ng_f, &
@@ -170,7 +172,11 @@ contains
           hi =  upb(get_box(s(n), i))
           select case (dm)
           case (2)
-
+             call bdsupdate_2d(lo, hi, &
+                               sup(:,:,1,scomp:), ng_u, &
+                               uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
+                               sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
+                               dx(n,:), ncomp, proj_type)
           case (3)
              wadvp  => dataptr(umac(n,3), i)
              szp => dataptr(sedge(n,3), i)
@@ -192,11 +198,11 @@ contains
 
   end subroutine bds
 
-  subroutine bdsslope_2d(lo,hi,s,ng_s,slope,ng_c,dx)
+  subroutine bdsslope_2d(lo,hi,s,ng_s,slope,ng_l,dx)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_c
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_l
     real(kind=dp_t), intent(in   ) ::     s(lo(1)-ng_s:,lo(2)-ng_s:)
-    real(kind=dp_t), intent(inout) :: slope(lo(1)-ng_c:,lo(2)-ng_c:,:)
+    real(kind=dp_t), intent(inout) :: slope(lo(1)-ng_l:,lo(2)-ng_l:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! local variables
@@ -350,11 +356,11 @@ contains
 
   end subroutine bdsslope_2d
 
-  subroutine bdsslope_3d(lo,hi,s,ng_s,slope,ng_c,dx)
+  subroutine bdsslope_3d(lo,hi,s,ng_s,slope,ng_l,dx)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_c
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_l
     real(kind=dp_t), intent(in   ) ::     s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t), intent(inout) :: slope(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
+    real(kind=dp_t), intent(inout) :: slope(lo(1)-ng_l:,lo(2)-ng_l:,lo(3)-ng_l:,:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! local variables
@@ -655,33 +661,30 @@ contains
   end subroutine bdsslope_3d
 
   subroutine bdsconc_2d(lo,hi,s,ng_s,s_update,ng_u,force,ng_o, &
-                        slope,ng_c,uadv,vadv,ng_v,dx,dt,sx,sy,ng_f,bc)
+                        slope,ng_l,uadv,vadv,ng_v,dx,dt,sx,sy,ng_f, &
+                        sedgex,sedgey,ng_e,bc)
 
-    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_u,ng_c,ng_v,ng_o,ng_f
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_u,ng_l,ng_v,ng_o,ng_f,ng_e
     real(kind=dp_t),intent(in   ) ::        s(lo(1)-ng_s:,lo(2)-ng_s:)
     real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t),intent(in   ) ::    force(lo(1)-ng_o:,lo(2)-ng_o:)
-    real(kind=dp_t),intent(in   ) ::    slope(lo(1)-ng_c:,lo(2)-ng_c:,:)
+    real(kind=dp_t),intent(in   ) ::    slope(lo(1)-ng_l:,lo(2)-ng_l:,:)
     real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:)
     real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:)
     real(kind=dp_t),intent(in   ) ::       sx(lo(1)-ng_f:,lo(2)-ng_f:)
     real(kind=dp_t),intent(in   ) ::       sy(lo(1)-ng_f:,lo(2)-ng_f:)
+    real(kind=dp_t),intent(inout) ::   sedgex(lo(1)-ng_e:,lo(2)-ng_e:)
+    real(kind=dp_t),intent(inout) ::   sedgey(lo(1)-ng_e:,lo(2)-ng_e:)
     real(kind=dp_t),intent(in   ) :: dx(:),dt
     integer        ,intent(in   ) :: bc(:,:)
 
     ! local variables
-    real(kind=dp_t),allocatable ::   sedgex(:,:)
-    real(kind=dp_t),allocatable ::   sedgey(:,:)
-
     real(kind=dp_t) :: hx,hy,hxs,hys,gamp,gamm
     real(kind=dp_t) :: vtrans,stem,vaddif,vdif
     real(kind=dp_t) :: isign, jsign
     real(kind=dp_t) :: u1,u2,v1,v2,uu,vv
 
     integer i,j,iup,jup
-
-    allocate(sedgex(lo(1):hi(1)+1,lo(2):hi(2)  ))
-    allocate(sedgey(lo(1):hi(1)  ,lo(2):hi(2)+1))
 
     hx = dx(1)
     hy = dx(2)
@@ -915,29 +918,145 @@ contains
        sedgey(lo(1):hi(1),hi(2)+1) = sy(lo(1):hi(1),hi(2)+1)
     end if
 
+  end subroutine bdsconc_2d
+
+  subroutine bdsupdate_2d(lo,hi,s_update,ng_u,uadv,vadv,ng_v, &
+                          sedgex,sedgey,ng_e,dx,ncomp,proj_type)
+
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_u,ng_v,ng_e,ncomp,proj_type
+    real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,:)
+    real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:)
+    real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:)
+    real(kind=dp_t),intent(inout) ::   sedgex(lo(1)-ng_e:,lo(2)-ng_e:,:)
+    real(kind=dp_t),intent(inout) ::   sedgey(lo(1)-ng_e:,lo(2)-ng_e:,:)
+    real(kind=dp_t),intent(in   ) :: dx(:)
+
+    ! local variables
+    integer comp,i,j
+
+    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
+
+    if (proj_type .eq. 1 .or. proj_type .eq. 2) then
+
+       ! L2 projection: x-faces
+       do j = lo(2),hi(2) 
+       do i = lo(1),hi(1)+1 
+          
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
+             temp = sedgex(i,j,1)
+             sedgex(i,j,1) = sedgex(i,j,2)
+             sedgex(i,j,2) = temp - sedgex(i,j,1)
+          end if
+
+          ! compute mass fractions, w_i = rho_i / rho
+          temp = 0.d0
+          do comp=1,ncomp
+             temp = temp + sedgex(i,j,comp)
+          end do
+          do comp=1,ncomp
+             w(comp) = sedgex(i,j,comp)/temp
+          end do
+
+          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
+          rhobar_sq = 0.d0
+          do comp=1,ncomp
+             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
+          end do
+          rhobar_sq = 1.d0/rhobar_sq
+
+          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
+          delta_eos = -1.d0
+          do comp=1,ncomp
+             delta_eos = delta_eos + sedgex(i,j,comp)/rhobar(comp)
+          end do
+
+          do comp=1,ncomp
+             sedgex(i,j,comp) = sedgex(i,j,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
+          end do
+
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
+             temp = sedgex(i,j,1)
+             sedgex(i,j,1) = sedgex(i,j,1) + sedgex(i,j,2)
+             sedgex(i,j,2) = temp
+          end if
+          
+       enddo
+       enddo
+
+       ! L2 projection: y-faces
+       do j = lo(2),hi(2)+1 
+       do i = lo(1),hi(1) 
+          
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
+             temp = sedgey(i,j,1)
+             sedgey(i,j,1) = sedgey(i,j,2)
+             sedgey(i,j,2) = temp - sedgey(i,j,1)
+          end if
+
+          ! compute mass fractions, w_i = rho_i / rho
+          temp = 0.d0
+          do comp=1,ncomp
+             temp = temp + sedgey(i,j,comp)
+          end do
+          do comp=1,ncomp
+             w(comp) = sedgey(i,j,comp)/temp
+          end do
+
+          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
+          rhobar_sq = 0.d0
+          do comp=1,ncomp
+             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
+          end do
+          rhobar_sq = 1.d0/rhobar_sq
+
+          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
+          delta_eos = -1.d0
+          do comp=1,ncomp
+             delta_eos = delta_eos + sedgey(i,j,comp)/rhobar(comp)
+          end do
+
+          do comp=1,ncomp
+             sedgey(i,j,comp) = sedgey(i,j,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
+          end do
+
+          if (proj_type .eq. 1) then
+             ! overwrite sedge so it contains (rho,rho_1) instead of rho_i
+             temp = sedgey(i,j,1)
+             sedgey(i,j,1) = sedgey(i,j,1) + sedgey(i,j,2)
+             sedgey(i,j,2) = temp
+          end if
+          
+       enddo
+       enddo
+
+    end if
+
     ! advance solution
     ! conservative update
-    do j = lo(2),hi(2) 
+    do comp=1,ncomp
+       do j = lo(2),hi(2) 
        do i = lo(1),hi(1) 
-          s_update(i,j) = s_update(i,j) - (  &
-               (sedgex(i+1,j)*uadv(i+1,j)-sedgex(i,j)*uadv(i,j))/hx +  &
-               (sedgey(i,j+1)*vadv(i,j+1)-sedgey(i,j)*vadv(i,j))/hy)
+          s_update(i,j,comp) = s_update(i,j,comp) - (  &
+               (sedgex(i+1,j,comp)*uadv(i+1,j)-sedgex(i,j,comp)*uadv(i,j))/dx(1) +  &
+               (sedgey(i,j+1,comp)*vadv(i,j+1)-sedgey(i,j,comp)*vadv(i,j))/dx(2) )
+       enddo
        enddo
     enddo
 
-    deallocate(sedgex,sedgey)
-
-  end subroutine bdsconc_2d
+  end subroutine bdsupdate_2d
 
   subroutine bdsconc_3d(lo,hi,s,ng_s,s_update,ng_u,force,ng_o, &
-                        slope,ng_c,uadv,vadv,wadv,ng_v,dx,dt,sx,sy,sz,ng_f, &
+                        slope,ng_l,uadv,vadv,wadv,ng_v,dx,dt,sx,sy,sz,ng_f, &
                         sedgex,sedgey,sedgez,ng_e,bc)
 
-    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_c,ng_v,ng_u,ng_o,ng_f,ng_e
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_l,ng_v,ng_u,ng_o,ng_f,ng_e
     real(kind=dp_t),intent(in   ) ::        s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
     real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
     real(kind=dp_t),intent(in   ) ::    force(lo(1)-ng_o:,lo(2)-ng_o:,lo(3)-ng_o:)
-    real(kind=dp_t),intent(in   ) ::    slope(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
+    real(kind=dp_t),intent(in   ) ::    slope(lo(1)-ng_l:,lo(2)-ng_l:,lo(3)-ng_l:,:)
     real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
     real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
     real(kind=dp_t),intent(in   ) ::     wadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
