@@ -3566,19 +3566,6 @@ contains
        sedgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = sz(lo(1):hi(1),lo(2):hi(2),hi(3)+1)
     end if
 
-    ! advance solution
-    ! conservative update
-!    do k = lo(3),hi(3)
-!       do j = lo(2),hi(2) 
-!          do i = lo(1),hi(1) 
-!             s_update(i,j,k) = s_update(i,j,k) - (  &
-!                  (sedgex(i+1,j,k)*uadv(i+1,j,k)-sedgex(i,j,k)*uadv(i,j,k))/hx +  &
-!                  (sedgey(i,j+1,k)*vadv(i,j+1,k)-sedgey(i,j,k)*vadv(i,j,k))/hy + &
-!                  (sedgez(i,j,k+1)*wadv(i,j,k+1)-sedgez(i,j,k)*wadv(i,j,k))/hz )
-!          enddo
-!       enddo
-!    enddo
-
     deallocate(ux,vy,wz)
 
   end subroutine bdsconc_3d
@@ -3599,25 +3586,9 @@ contains
     ! local variables
     integer comp,i,j,k
 
-    real(kind=dp_t) :: nA(ncomp)
-    real(kind=dp_t) :: rhotemp(ncomp)
-    real(kind=dp_t) :: temp, alpha
+    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
 
     if (proj_type .eq. 1 .or. proj_type .eq. 2) then
-
-       ! define A_i = 1/rhobar_i
-
-       ! temp holds L2 norm of A, ||A||
-       temp = 0.d0
-       do comp=1,ncomp
-          temp = temp + 1.d0/rhobar(comp)**2
-       end do
-       temp = sqrt(temp)
-
-       ! nA = A / ||A||
-       do comp=1,ncomp
-          nA(comp) = (1.d0/rhobar(comp)) / temp
-       end do
 
        ! L2 projection: x-faces
        do k = lo(3),hi(3)
@@ -3631,30 +3602,30 @@ contains
              sedgex(i,j,k,2) = temp - sedgex(i,j,k,1)
           end if
 
-          ! rhotemp = rho
-          rhotemp(1:ncomp) = sedgex(i,j,k,1:ncomp)
-
-          ! temp = rho dot A
-          ! alpha = 1 / (rho dot A)
+          ! compute mass fractions, w_i = rho_i / rho
           temp = 0.d0
           do comp=1,ncomp
-             temp = temp + rhotemp(comp)/rhobar(comp)
+             temp = temp + sedgex(i,j,k,comp)
           end do
-          alpha = 1.d0 / temp
-
-          ! rhotemp = rho - alpha*rho
-          rhotemp(1:ncomp) = rhotemp(1:ncomp) - alpha*rhotemp(1:ncomp)
-
-          ! temp = rhotemp dot nA
-          temp = 0.d0
           do comp=1,ncomp
-             temp = temp + rhotemp(comp)*nA(comp)
+             w(comp) = sedgex(i,j,k,comp)/temp
           end do
 
-          ! rho = rho - temp*nA
-          !     = rho - [(rho - alpha*rho) dot nA] nA
+          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
+          rhobar_sq = 0.d0
           do comp=1,ncomp
-             sedgex(i,j,k,comp) = sedgex(i,j,k,comp) - temp*nA(comp)
+             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
+          end do
+          rhobar_sq = 1.d0/rhobar_sq
+
+          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
+          delta_eos = -1.d0
+          do comp=1,ncomp
+             delta_eos = delta_eos + sedgex(i,j,k,comp)/rhobar(comp)
+          end do
+
+          do comp=1,ncomp
+             sedgex(i,j,k,comp) = sedgex(i,j,k,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
           end do
 
           if (proj_type .eq. 1) then
@@ -3672,7 +3643,7 @@ contains
        do k = lo(3),hi(3)
        do j = lo(2),hi(2)+1 
        do i = lo(1),hi(1) 
-
+          
           if (proj_type .eq. 1) then
              ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
              temp = sedgey(i,j,k,1)
@@ -3680,30 +3651,30 @@ contains
              sedgey(i,j,k,2) = temp - sedgey(i,j,k,1)
           end if
 
-          ! rhotemp = rho
-          rhotemp(1:ncomp) = sedgey(i,j,k,1:ncomp)
-
-          ! temp = rho dot A
-          ! alpha = 1 / (rho dot A)
+          ! compute mass fractions, w_i = rho_i / rho
           temp = 0.d0
           do comp=1,ncomp
-             temp = temp + rhotemp(comp)/rhobar(comp)
+             temp = temp + sedgey(i,j,k,comp)
           end do
-          alpha = 1.d0 / temp
-
-          ! rhotemp = rho - alpha*rho
-          rhotemp(1:ncomp) = rhotemp(1:ncomp) - alpha*rhotemp(1:ncomp)
-
-          ! temp = rhotemp dot nA
-          temp = 0.d0
           do comp=1,ncomp
-             temp = temp + rhotemp(comp)*nA(comp)
+             w(comp) = sedgey(i,j,k,comp)/temp
           end do
 
-          ! rho = rho - temp*nA
-          !     = rho - [(rho - alpha*rho) dot nA] nA
+          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
+          rhobar_sq = 0.d0
           do comp=1,ncomp
-             sedgey(i,j,k,comp) = sedgey(i,j,k,comp) - temp*nA(comp)
+             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
+          end do
+          rhobar_sq = 1.d0/rhobar_sq
+
+          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
+          delta_eos = -1.d0
+          do comp=1,ncomp
+             delta_eos = delta_eos + sedgey(i,j,k,comp)/rhobar(comp)
+          end do
+
+          do comp=1,ncomp
+             sedgey(i,j,k,comp) = sedgey(i,j,k,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
           end do
 
           if (proj_type .eq. 1) then
@@ -3712,7 +3683,7 @@ contains
              sedgey(i,j,k,1) = sedgey(i,j,k,1) + sedgey(i,j,k,2)
              sedgey(i,j,k,2) = temp
           end if
-
+          
        enddo
        enddo
        enddo
@@ -3729,30 +3700,30 @@ contains
              sedgez(i,j,k,2) = temp - sedgez(i,j,k,1)
           end if
 
-          ! rhotemp = rho
-          rhotemp(1:ncomp) = sedgez(i,j,k,1:ncomp)
-
-          ! temp = rho dot A
-          ! alpha = 1 / (rho dot A)
+          ! compute mass fractions, w_i = rho_i / rho
           temp = 0.d0
           do comp=1,ncomp
-             temp = temp + rhotemp(comp)/rhobar(comp)
+             temp = temp + sedgez(i,j,k,comp)
           end do
-          alpha = 1.d0 / temp
-
-          ! rhotemp = rho - alpha*rho
-          rhotemp(1:ncomp) = rhotemp(1:ncomp) - alpha*rhotemp(1:ncomp)
-
-          ! temp = rhotemp dot nA
-          temp = 0.d0
           do comp=1,ncomp
-             temp = temp + rhotemp(comp)*nA(comp)
+             w(comp) = sedgez(i,j,k,comp)/temp
           end do
 
-          ! rho = rho - temp*nA
-          !     = rho - [(rho - alpha*rho) dot nA] nA
+          ! rhobar_sq = (sum_i (w_i/rhobar_i^2))^-1
+          rhobar_sq = 0.d0
           do comp=1,ncomp
-             sedgez(i,j,k,comp) = sedgez(i,j,k,comp) - temp*nA(comp)
+             rhobar_sq = rhobar_sq + w(comp)/rhobar(comp)**2
+          end do
+          rhobar_sq = 1.d0/rhobar_sq
+
+          ! delta_eos = sum_l (rho_l/rhobar_l) - 1
+          delta_eos = -1.d0
+          do comp=1,ncomp
+             delta_eos = delta_eos + sedgez(i,j,k,comp)/rhobar(comp)
+          end do
+
+          do comp=1,ncomp
+             sedgez(i,j,k,comp) = sedgez(i,j,k,comp) - w(comp)*(rhobar_sq/rhobar(comp))*delta_eos
           end do
 
           if (proj_type .eq. 1) then
@@ -3761,7 +3732,7 @@ contains
              sedgez(i,j,k,1) = sedgez(i,j,k,1) + sedgez(i,j,k,2)
              sedgez(i,j,k,2) = temp
           end if
-
+          
        enddo
        enddo
        enddo
