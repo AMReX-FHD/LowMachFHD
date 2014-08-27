@@ -3889,7 +3889,7 @@ contains
   end subroutine eval
 
   subroutine bds_quad(mla,umac,s,s_update,force,s_fc,dx,dt,scomp,ncomp, &
-                      bc_comp,the_bc_tower)
+                      bc_comp,the_bc_tower,proj_type_in)
     ! modified for having the quadratic terms as well
     ! slxx and slyy are 2nd derivatives
     ! ave is the new constant for the polynomial
@@ -3903,13 +3903,14 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     integer        , intent(in   ) :: scomp, ncomp, bc_comp
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    integer        , intent(in   ), optional :: proj_type_in
 
     type(multifab) :: ave,slx,sly,slxy,slxx,slyy,sint,sc
 
     real(kind=dp_t), pointer :: uadvp(:,:,:,:)
     real(kind=dp_t), pointer :: vadvp(:,:,:,:)
     real(kind=dp_t), pointer ::   sop(:,:,:,:)
-    real(kind=dp_t), pointer ::   snp(:,:,:,:)
+    real(kind=dp_t), pointer ::   sup(:,:,:,:)
     real(kind=dp_t), pointer ::    fp(:,:,:,:)
     real(kind=dp_t), pointer ::  avep(:,:,:,:)
     real(kind=dp_t), pointer ::  slxp(:,:,:,:)
@@ -3921,12 +3922,31 @@ contains
     real(kind=dp_t), pointer ::   scp(:,:,:,:)
     real(kind=dp_t), pointer :: spx(:,:,:,:)
     real(kind=dp_t), pointer :: spy(:,:,:,:)
+    real(kind=dp_t), pointer :: sxp(:,:,:,:)
+    real(kind=dp_t), pointer :: syp(:,:,:,:)
 
-    integer :: dm,ng,ng_u,ng_o,ng_f,comp,bccomp,lev,i
-    integer :: lo(2),hi(2)
+    integer :: dm,ng_s,ng_u,ng_o,ng_f,ng_e,ng_v,comp,bccomp,lev,i
+    integer :: lo(2),hi(2),proj_type
+
+    type(multifab) :: sedge(mla%dim)
+
+    ! L2 projection onto EOS?
+    ! 0 = do nothing
+    ! 1 = assume s holds rho and rho*c
+    ! 2 = assume s holds all rho_i's
+    if (present(proj_type_in)) then
+       proj_type = proj_type_in
+    else
+       proj_type = 0
+    end if
 
     ! Only worry about one level
     lev = 1
+    dm = mla%dim
+
+    do i=1,dm
+       call multifab_build_edge(sedge(i),mla%la(1),ncomp,0,i)
+    end do
 
     ! These all have one ghost cell and one component
     call multifab_build( ave,mla%la(lev),1,1)
@@ -3942,17 +3962,18 @@ contains
     ! This has one ghost cell and four components
     call multifab_build(  sc,mla%la(lev),4,1)
 
-    ng = s(1)%ng 
+    ng_s = s(1)%ng 
     ng_u = s_update(1)%ng
     ng_o = force(1)%ng
     ng_f = s_fc(1,1)%ng
-    dm = mla%dim
+    ng_e = sedge(1)%ng
+    ng_v = umac(1,1)%ng
 
     do i = 1, nfabs(s(lev))
        uadvp => dataptr(umac(lev,1), i)
        vadvp => dataptr(umac(lev,2), i)
        sop   => dataptr(s(lev) , i)
-       snp   => dataptr(s_update(lev), i)
+       sup   => dataptr(s_update(lev), i)
        fp    => dataptr(force(lev), i)
        spx => dataptr(s_fc(lev,1), i)
        spy => dataptr(s_fc(lev,2), i)
@@ -3964,29 +3985,54 @@ contains
        slyyp  => dataptr(slyy , i)
        sip   => dataptr(sint, i)
        scp   => dataptr(sc  , i)
+       sxp => dataptr(sedge(1), i)
+       syp => dataptr(sedge(2), i)
        lo =  lwb(get_box(s(lev), i))
        hi =  upb(get_box(s(lev), i))
        do comp = scomp, scomp+ncomp-1
           bccomp = bc_comp+comp-scomp
           select case (dm)
           case (2)
-             call bdsslope_quad_2d(lo, hi, sop(:,:,1,comp), ng, &
+             call bdsslope_quad_2d(lo, hi, sop(:,:,1,comp), ng_s, &
                                    avep(:,:,1,1), slxp(:,:,1,1), slyp(:,:,1,1), &
                                    slxyp(:,:,1,1), slxxp(:,:,1,1), slyyp(:,:,1,1), &
                                    sip(:,:,1,1), scp(:,:,1,:), dx(lev,:)) 
 
-             call  bdsconc_quad_2d(lo, hi, snp(:,:,1,comp), ng_u, &
+             call  bdsconc_quad_2d(lo, hi, sup(:,:,1,comp), ng_u, &
                                    fp(:,:,1,comp), ng_o, &
                                    avep(:,:,1,1), slxp(:,:,1,1), slyp(:,:,1,1), slxyp(:,:,1,1), &
                                    slxxp(:,:,1,1), slyyp(:,:,1,1), &
-                                   uadvp(:,:,1,1), vadvp(:,:,1,1), dx(lev,:), dt, &
+                                   uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, dx(lev,:), dt, &
                                    spx(:,:,1,comp), spy(:,:,1,comp), ng_f, &
+                                   sxp(:,:,1,comp-scomp+1), &
+                                   syp(:,:,1,comp-scomp+1), ng_e, &
                                    the_bc_tower%bc_tower_array(1)%adv_bc_level_array(i,:,:,bccomp))
           case (3)
              call parallel_abort("quadratic BDS advection not supported in 3D")  
           end select
        end do
     end do
+
+    ! do L2 projection and increment s_update
+    do i = 1, nfabs(s(lev))
+       sup => dataptr(s_update(lev), i)
+       sxp => dataptr(sedge(1), i)
+       syp => dataptr(sedge(2), i)
+       uadvp  => dataptr(umac(lev,1), i)
+       vadvp  => dataptr(umac(lev,2), i)
+       lo =  lwb(get_box(s(lev), i))
+       hi =  upb(get_box(s(lev), i))
+       select case (dm)
+       case (2)
+          call bdsupdate_2d(lo, hi, &
+                            sup(:,:,1,scomp:), ng_u, &
+                            uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
+                            sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
+                            dx(lev,:), ncomp, proj_type)
+       case (3)
+          call parallel_abort("quadratic BDS advection not supported in 3D")  
+       end select
+    end do ! end loop over fabs
 
     call multifab_destroy(ave)
     call multifab_destroy(slx)
@@ -3996,13 +4042,16 @@ contains
     call multifab_destroy(slyy)
     call multifab_destroy(sint)
     call multifab_destroy(sc)
+    do i=1,dm
+       call multifab_destroy(sedge(i))
+    end do
 
   end subroutine bds_quad
 
-  subroutine bdsslope_quad_2d(lo,hi,s,ng,ave,slx,sly,slxy,slxx,slyy,sint,sc,dx)
+  subroutine bdsslope_quad_2d(lo,hi,s,ng_s,ave,slx,sly,slxy,slxx,slyy,sint,sc,dx)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng
-    real(kind=dp_t), intent(in   ) ::    s(lo(1)-ng:,lo(2)-ng:)
+    integer        , intent(in   ) :: lo(:), hi(:), ng_s
+    real(kind=dp_t), intent(in   ) ::    s(lo(1)-ng_s:,lo(2)-ng_s:)
     real(kind=dp_t), intent(inout) ::  ave(lo(1)-1:,lo(2)-1:)
     real(kind=dp_t), intent(inout) ::  slx(lo(1)-1:,lo(2)-1:)
     real(kind=dp_t), intent(inout) ::  sly(lo(1)-1:,lo(2)-1:)
@@ -4202,9 +4251,9 @@ contains
   ! ***********************************************
 
   subroutine bdsconc_quad_2d(lo,hi,s_update,ng_u,force,ng_o,ave,slx,sly, &
-                             slxy,slxx,slyy,uadv,vadv,dx,dt,sx,sy,ng_f,bc)
+                             slxy,slxx,slyy,uadv,vadv,ng_v,dx,dt,sx,sy,ng_f,sedgex,sedgey,ng_e,bc)
 
-    integer        ,intent(in   ) :: lo(:), hi(:), ng_u, ng_o, ng_f
+    integer        ,intent(in   ) :: lo(:), hi(:), ng_u, ng_o, ng_f, ng_e, ng_v
     real(kind=dp_t),intent(inout) ::   s_update(lo(1)-ng_u:,lo(2)-ng_u:)
     real(kind=dp_t),intent(in   ) ::      force(lo(1)-ng_o:,lo(2)-ng_o:)
     real(kind=dp_t),intent(in   ) ::  ave(lo(1)- 1:,lo(2)- 1:)
@@ -4213,16 +4262,15 @@ contains
     real(kind=dp_t),intent(in   ) :: slxy(lo(1)- 1:,lo(2)- 1:)
     real(kind=dp_t),intent(in   ) :: slxx(lo(1)- 1:,lo(2)- 1:)
     real(kind=dp_t),intent(in   ) :: slyy(lo(1)- 1:,lo(2)- 1:)
-    real(kind=dp_t),intent(in   ) :: uadv(lo(1)- 1:,lo(2)- 1:)
-    real(kind=dp_t),intent(in   ) :: vadv(lo(1)- 1:,lo(2)- 1:)
+    real(kind=dp_t),intent(in   ) :: uadv(lo(1)-ng_v:,lo(2)-ng_v:)
+    real(kind=dp_t),intent(in   ) :: vadv(lo(1)-ng_v:,lo(2)-ng_v:)
     real(kind=dp_t),intent(in   ) :: sx(lo(1)-ng_f:,lo(2)-ng_f:)
     real(kind=dp_t),intent(in   ) :: sy(lo(1)-ng_f:,lo(2)-ng_f:)
+    real(kind=dp_t),intent(inout) :: sedgex(lo(1)-ng_e:,lo(2)-ng_e:)
+    real(kind=dp_t),intent(inout) :: sedgey(lo(1)-ng_e:,lo(2)-ng_e:)
     real(kind=dp_t),intent(in   ) ::   dx(:),dt
     integer        ,intent(in   ) :: bc(:,:)
 
-
-    real(kind=dp_t),allocatable ::   sedgex(:,:)
-    real(kind=dp_t),allocatable ::   sedgey(:,:)
     real(kind=dp_t),allocatable ::    gamp(:)
     real(kind=dp_t),allocatable ::    gamm(:)
     real(kind=dp_t),allocatable ::      xm(:)
@@ -4239,9 +4287,6 @@ contains
     real(kind=dp_t) :: u1,u2,v1,v2,uu,vv
     real(kind=dp_t) :: eps
     real(kind=dp_t), parameter :: two3rd = 2.d0/3.d0
-
-    allocate(sedgex(lo(1)  :hi(1)+1,lo(2):hi(2)  ))
-    allocate(sedgey(lo(1)  :hi(1)  ,lo(2):hi(2)+1))
 
     allocate( gamp(lo(1)-1:hi(1)+1))
     allocate( gamm(lo(1)-1:hi(1)+1))
@@ -4549,17 +4594,7 @@ contains
     ! end of calculation of sedgey
     ! *************************************
 
-    do j = js,je 
-       do i = is,ie 
-
-          s_update(i,j) = s_update(i,j) -(  &
-               (sedgex(i+1,j)*uadv(i+1,j)-sedgex(i,j)*uadv(i,j))/hx +  &
-               (sedgey(i,j+1)*vadv(i,j+1)-sedgey(i,j)*vadv(i,j))/hy)
-
-       enddo
-    enddo
-
-    deallocate(sedgex,sedgey,gamp,gamm,xm,ym,c)
+    deallocate(gamp,gamm,xm,ym,c)
 
   end subroutine bdsconc_quad_2d
 
