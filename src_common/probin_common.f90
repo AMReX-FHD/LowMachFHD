@@ -205,7 +205,7 @@ contains
     prob_type = 1
     restart = -1
     print_int = 0
-    project_eos_int = 1
+    project_eos_int = -1
 
     grav(1:3) = 0.d0
     molmass(:) = 1.0d0
