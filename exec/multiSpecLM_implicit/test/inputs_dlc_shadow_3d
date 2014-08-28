@@ -272,7 +272,7 @@
    outputFolder = "."
    filePrefix = "dlc_3d_full"
    axisToPrint = 1 ! 1=x, 2=y, 3=z axis
-   periodic = T ! Is the system periodic along the y axes
+   periodic = T ! Is the system periodic along the y axes, which is the z axes in the original 3d setup
 
 /
 
@@ -350,5 +350,5 @@
    outputFolder = "."
    filePrefix = "dlc_3d_hstat"
    axisToPrint = 2 ! 1=x, 2=y, 3=z axis
-   periodic = T ! Is the system periodic along the y axes
+   periodic = T ! Is the system periodic along the y axes, makes no sense since this is 1d
 /
