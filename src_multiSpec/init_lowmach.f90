@@ -214,12 +214,19 @@ contains
     ! c(:) = rho_init(1,:) on bottom
     ! c(:) = rho_init(2,:) on top
     !=============================================================
-
+  
+    ! for prob_type=3, smoothing_width is interpreted as:
+    ! positive is a tanh smoothed interface where smoothing width is approx the # of grid cells
+    ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
+    !  c = rand*rho_init(1,:) + (1-rand)*rho_init(2,:)
+    ! -2 is sinusoidal
     u = 0.d0
     v = 0.d0
 
     ! middle of domain
     y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
+
+    
 
     if (smoothing_width .le. 0.d0 .and. smoothing_width .ge. -1.d0) then
 
@@ -641,6 +648,12 @@ contains
     ! c(:) = rho_init(1,:) on bottom
     ! c(:) = rho_init(2,:) on top
     !=============================================================
+
+    ! for prob_type=3, smoothing_width is interpreted as:
+    ! positive is a tanh smoothed interface where smoothing width is approx the # of grid cells
+    ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
+    !  c = rand*rho_init(1,:) + (1-rand)*rho_init(2,:)
+    ! -2 is sinusoidal
 
     u = 0.d0
     v = 0.d0
