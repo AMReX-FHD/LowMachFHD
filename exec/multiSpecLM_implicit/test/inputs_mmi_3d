@@ -64,6 +64,10 @@
   ! Initial conditions
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
+  ! for prob_type=3, smoothing_width is interpreted as:
+  ! positive is sinh, 0 is discontinuous, -2 is sinusoidal    
+  ! between 0 and -1 is random perturbation
+  ! where the number is the scaling of the random number between 0 and abs(smoothing_width)      
   smoothing_width = -0.1d0 ! scale factor for smoothing initial profile
 
   initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
@@ -95,7 +99,7 @@
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = 2         ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = 1         ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
@@ -348,6 +352,6 @@
       
    outputFolder = "."
    filePrefix = "mmi_3d_hstat"
-   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+   axisToPrint = 1 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes, makes no sense since this is 1d
 /
