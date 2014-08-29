@@ -65,9 +65,10 @@
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
   ! for prob_type=3, smoothing_width is interpreted as:
-  ! positive is sinh, 0 is discontinuous, -2 is sinusoidal    
-  ! between 0 and -1 is random perturbation
-  ! where the number is the scaling of the random number between 0 and abs(smoothing_width)      
+  ! positive is a tanh smoothed interface where smoothing width is approx the # of grid cells
+  ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
+  !  c = rand*rho_init(1,:) + (1-rand)*rho_init(2,:)
+  ! -2 is sinusoidal
   smoothing_width = -0.1d0 ! scale factor for smoothing initial profile
 
   initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
