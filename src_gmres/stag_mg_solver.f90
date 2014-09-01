@@ -551,7 +551,22 @@ contains
           vcycle_counter = vcycle_counter_temp
 
           do i=1,dm
+             ! copy phi from the fancy bottom solver finest-level to the regular bottom
+             ! solver coarsest level
              call multifab_copy_c(phi_fc_mg(nlevs_mg,i),1,phi_fc_fancy(1,i),1,1,0)
+
+             ! set values on physical boundaries
+             call multifab_physbc_domainvel(phi_fc_mg(nlevs_mg,i),vel_bc_comp+i-1, &
+                                            the_bc_tower_mg%bc_tower_array(nlevs_mg), &
+                                            dx_mg(nlevs_mg,:))
+                   
+             ! fill periodic ghost cells
+             call multifab_fill_boundary(phi_fc_mg(nlevs_mg,i))
+
+             ! fill physical ghost cells
+             call multifab_physbc_macvel(phi_fc_mg(nlevs_mg,i),vel_bc_comp+i-1, &
+                                         the_bc_tower_mg%bc_tower_array(nlevs_mg), &
+                                         dx_mg(nlevs_mg,:))
           end do
 
           call multifab_destroy(beta_cc_fancy(1))
