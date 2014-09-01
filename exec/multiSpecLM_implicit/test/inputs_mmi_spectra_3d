@@ -111,12 +111,12 @@
   stats_int = 10                    ! Project grid for analysis
                                      ! If positive, how often to compute mean and 
                                      ! standard deviation over reduced dimensions
-  n_steps_save_stats = 10 ! How often to dump HydroGrid output files
-  n_steps_skip = 0        ! How many steps to skip
-  analyze_conserved = F   ! Should we use conserved variables for the analysis
-                          ! (does not work well)
-  center_snapshots = F    ! Should we use cell-centered momenta for the analysis
-                          ! (will smooth fluctuations)
+  n_steps_save_stats = 10  ! How often to dump HydroGrid output files
+  n_steps_skip = 0         ! How many steps to skip
+  analyze_conserved = F    ! Should we use conserved variables for the analysis
+                           ! (does not work well)
+  center_snapshots = F     ! Should we use cell-centered momenta for the analysis
+                           ! (will smooth fluctuations)
                           
 /
 
@@ -302,7 +302,7 @@
    subtractMeanFT = F ! Important not to do this for only one sample since mean is not reliable
    writeAbsValue = T ! Only write absolute values of complex values to VTK file?
    writeTheory = -1 ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
-   nStructureFactors = 1
+   nStructureFactors = 0
    ! numbering: 1=rho-rho
    structureFactorPairs = "0 1 0 1"
 
@@ -314,8 +314,8 @@
       
    outputFolder = "."
    filePrefix = "mmi_3d_vstat"
-   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
-   periodic = F ! Is the system periodic along the y axes, which is the z axes in the original 3d setup
+   axisToPrint = 3 ! 1=x, 2=y, 3=z axis
+   periodic = F ! Is the system fully periodic?
 /
 
 &hydroAnalysisOptions
@@ -354,5 +354,5 @@
    outputFolder = "."
    filePrefix = "mmi_3d_hstat"
    axisToPrint = 1 ! 1=x, 2=y, 3=z axis
-   periodic = T ! Is the system periodic along the y axes, makes no sense since this is 1d
+   periodic = T ! Is the system fully periodic?
 /

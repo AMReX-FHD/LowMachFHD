@@ -95,7 +95,7 @@
   ! Control for analyze_spectra.90
   !----------------------
 
-  hydro_grid_int = 5    ! How often to call updateHydroGrid
+  hydro_grid_int = 10   ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
@@ -112,11 +112,11 @@
                                      ! If positive, how often to compute mean and 
                                      ! standard deviation over reduced dimensions
   n_steps_save_stats = 100 ! How often to dump HydroGrid output files
-  n_steps_skip = 0        ! How many steps to skip
-  analyze_conserved = F   ! Should we use conserved variables for the analysis
-                          ! (does not work well)
-  center_snapshots = F    ! Should we use cell-centered momenta for the analysis
-                          ! (will smooth fluctuations)
+  n_steps_skip = 0         ! How many steps to skip
+  analyze_conserved = F    ! Should we use conserved variables for the analysis
+                           ! (does not work well)
+  center_snapshots = F     ! Should we use cell-centered momenta for the analysis
+                           ! (will smooth fluctuations)
                           
 /
 
