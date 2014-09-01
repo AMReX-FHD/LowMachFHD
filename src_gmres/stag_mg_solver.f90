@@ -545,7 +545,7 @@ contains
           vcycle_counter_temp = vcycle_counter
 
           call stag_mg_solver(mla_fancy,alpha_fc_fancy,beta_cc_fancy,beta_ed_fancy, &
-                              gamma_cc_fancy,theta_alpha,phi_fc_fancy,rhs_fc_fancy,dx_fancy, &
+                              gamma_cc_fancy,1.d0,phi_fc_fancy,rhs_fc_fancy,dx_fancy, &
                               the_bc_tower_fancy,.false.)
 
           vcycle_counter = vcycle_counter_temp
