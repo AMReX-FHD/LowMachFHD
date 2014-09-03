@@ -15,6 +15,8 @@
   material_properties(1:2,2) = 0.d0 0.d0
   material_properties(1:2,3) = 0.d0 0.d0
 
+  boussinesq_beta = 0.d0 ! beta for boussinesq gravity
+
   barodiffusion_type = 0 ! 0 = no barodiffusion
                          ! 1 = fixed gradp from initialization
                          ! 2 = update gradp each time step
@@ -22,9 +24,7 @@
 
   plot_stag = F          ! include staggered plotfiles   
 
-  ! 1 = constant coefficients
-  ! -1 = spatially-varing coefficients
-  diff_type = 1
+  diff_type = 1         ! 1 = constant coefficients, -1 = spatially-varing coefficients
   diff_coef = 1.d0      ! for binary, this is diffusion coefficient, chi
                         ! for multispecies, this is maximum eigenvalue of diffusion matrix
 
@@ -39,18 +39,33 @@
   prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
   n_cells(1:2) = 64 64             ! number of cells in domain
   max_grid_size(1:2) = 64 64       ! max number of cells in a box
-  max_step = 1                     ! maximum number of time steps
+
+  ! Time-step control
+  !----------------------
   fixed_dt = 1.d0                  ! time step
   cfl = 0.5d0                      ! cfl number
+
+
+  ! Controls for number of steps between actions (for HydroGrid see below)
+  !----------------------
+  max_step = 1                     ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 1                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
   print_int = 0                    ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 1              ! how often to call project_onto_eos
+  project_eos_int = -1             ! how often to call project_onto_eos
 
-  u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 1.d0   ! scale factor for smoothing initial profile
+  ! Physical parameters
+  !--------------------
+  grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
+  molmass(1:2) = 1.d0 1.d0            ! molar masses for nspecies
+  rhobar(1:2) = 1.d0 1.d0             ! rhobar for nspecies
+
+  ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
+  variance_coef_mom = 1.d0  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
+  k_B = 1.d0                ! Boltzmann's constant
 
   ! Algorithm control / selection
   !----------------------
@@ -63,11 +78,6 @@
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
   seed = 1
-
-  grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
-
-  molmass(1:2) = 1.d0 1.d0            ! molar masses for nspecies
-  rhobar(1:2) = 1.d0 1.d0             ! rhobar for nspecies
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -82,6 +92,19 @@
                      ! 1 = unlimited bilinear bds in space and time
                      ! 2 = limited bliniear bds in space and time
                      ! 3 = unlimited quadratic bds in space and time
+
+  ! Stochastic momentum flux controls:
+  filtering_width = 0   ! If positive the *momentum* stochastic fluxes will be filtered (smoothed)
+                        ! Stochastic *mass* fluxes are not filtered
+  stoch_stress_form = 1 ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+
+
+  ! Initial conditions
+  !----------------------
+  u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
+  smoothing_width = 1.d0   ! scale factor for smoothing initial profile
+  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
+                            ! (if negative, total momentum is set to zero)
 
   ! Boundary conditions
   !----------------------
@@ -110,9 +133,8 @@
   wallspeed_lo(1,1:2) = 0.d0 0.d0
   wallspeed_hi(1,1:2) = 0.d0 0.d0
 
-  ! Control for analyze_spectra.90
+  ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-
   hydro_grid_int = 0    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
@@ -129,22 +151,12 @@
   stats_int = -1                 ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
-  n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 0        ! How many steps to skip
-  analyze_conserved = F   ! Should we use conserved variables for the analysis
-                          ! (does not work well)
-  center_snapshots = F    ! Should we use cell-centered momenta for the analysis
-                          ! (will smooth fluctuations)
-
-  ! stochastic properties
-  variance_coef_mom = 1.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
-                            ! (if negative, total momentum is set to zero)
-
-  k_B = 1.d0            ! Boltzmann's constant
-  filtering_width = 0   ! If positive the random numbers will be filtered to smooth out the field s
-  stoch_stress_form = 1 ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+  n_steps_save_stats = -1        ! How often to dump HydroGrid output files
+  n_steps_skip = 0               ! How many steps to skip
+  analyze_conserved = F          ! Should we use conserved variables for the analysis
+                                 ! (does not work well)
+  center_snapshots = F           ! Should we use cell-centered momenta for the analysis
+                                 ! (will smooth fluctuations)
 
 /
 
