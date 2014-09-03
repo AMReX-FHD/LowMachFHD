@@ -522,7 +522,7 @@ subroutine main_driver()
       if (istep >= n_steps_skip) then
 
          if ( (plot_int > 0) .and. &
-              ( mod(istep,plot_int) .eq. 0) ) then
+              ( mod(istep,plot_int) .eq. 0) .or. istep .eq. max_step ) then
             call write_plotfile(mla,mnew,umac,snew,pres,dx,time,istep)
          end if
 
