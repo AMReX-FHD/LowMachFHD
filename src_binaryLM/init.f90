@@ -482,6 +482,29 @@ contains
 
        end do
 
+    case (9)
+
+       ! Almgren, Bell, Smymczak
+       ! Vortex with homogeneous Dirichlet boundary conditions in a unit square
+       ! constant density
+       s(:,:,1) = 1.d0
+       s(:,:,2) = 0.d0
+
+       do j=lo(2),hi(2)
+          y = dx(2) * (dble(j) + half)
+          do i=lo(1),hi(1)+1
+             x = dx(1) * dble(i)
+             mx(i,j) = -sin(M_PI*x)**2 * sin(2.d0*M_PI*y)
+          enddo
+       enddo
+
+       do j=lo(2),hi(2)+1
+          y = dx(2) * dble(j)
+          do i=lo(1),hi(1)
+             x = dx(1) * (dble(i) + half)
+             my(i,j) = sin(M_PI*y)**2 * sin(2.d0*M_PI*x)
+          enddo
+       enddo
 
     case default
 
