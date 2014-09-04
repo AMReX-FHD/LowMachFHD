@@ -490,6 +490,8 @@ contains
        s(:,:,1) = 1.d0
        s(:,:,2) = 0.d0
 
+       p = 0.d0
+
        do j=lo(2),hi(2)
           y = dx(2) * (dble(j) + half)
           do i=lo(1),hi(1)+1
