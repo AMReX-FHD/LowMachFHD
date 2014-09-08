@@ -7,7 +7,7 @@ module probin_multispecies_module
 
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2  
-  integer            :: rho_part_bc_comp, mol_frac_bc_comp, temp_bc_comp ! not input: populated at main 
+  integer            :: rho_part_bc_comp, mol_frac_bc_comp ! not input: populated at main 
 
   integer, save      :: nspecies,inverse_type,timeinteg_type,temp_type
   real(kind=dp_t)    :: start_time

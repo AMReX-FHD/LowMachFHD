@@ -11,6 +11,7 @@ module probin_common_module
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
   integer, parameter :: max_species = 10
+  integer            :: temp_bc_comp ! not input: populated at main
 
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt,cfl,grav(3)

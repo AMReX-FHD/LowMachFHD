@@ -5,7 +5,8 @@ module diffusive_mass_fluxdiv_module
   use bc_module
   use div_and_grad_module
   use probin_multispecies_module, only: nspecies, is_nonisothermal, mol_frac_bc_comp, &
-       temp_bc_comp, nspecies, correct_flux
+                                        nspecies, correct_flux
+  use probin_common_module, only: temp_bc_comp
   use ml_layout_module
   use convert_stag_module
   use matvec_mul_module
