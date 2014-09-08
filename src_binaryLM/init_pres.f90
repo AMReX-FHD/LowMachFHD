@@ -103,7 +103,8 @@ contains
     ! presure ghost cells
     do n=1,nlevs
        call multifab_fill_boundary(pold(n))
-       call multifab_physbc(pold(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(pold(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
     end do
 
     deallocate(rhoavg,p0)

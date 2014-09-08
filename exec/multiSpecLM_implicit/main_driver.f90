@@ -282,9 +282,9 @@ subroutine main_driver()
      call multifab_fill_boundary(pres(n))
      ! fill non-periodic domain boundary ghost cells
      call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies, &
-                          the_bc_tower%bc_tower_array(n),dx(n,:))
+                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
      call multifab_physbc(pres(n),1,pres_bc_comp,1, &
-                          the_bc_tower%bc_tower_array(n),dx(n,:))
+                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
   end do
 
   do n=1,nlevs

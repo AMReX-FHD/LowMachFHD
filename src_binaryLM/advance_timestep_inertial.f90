@@ -208,7 +208,8 @@ contains
     ! fill ghost cells for prim^{*,n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
        call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
     end do
 
@@ -441,7 +442,8 @@ contains
     do n=1,nlevs
        ! presure ghost cells
        call multifab_fill_boundary(pres(n))
-       call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
        do i=1,dm
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
@@ -525,7 +527,8 @@ contains
     ! fill ghost cells for prim^{n+1}
     do n=1,nlevs
        call multifab_fill_boundary(prim(n))
-       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
        call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
     end do
 
@@ -761,7 +764,8 @@ contains
     do n=1,nlevs
        ! presure ghost cells
        call multifab_fill_boundary(pres(n))
-       call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+       call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
        do i=1,dm
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &

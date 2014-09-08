@@ -129,7 +129,7 @@ contains
 
     subroutine divumac(nlevs,umac,rh,dx,ref_ratio,before,divu_rhs)
 
-      use ml_restriction_module, only: ml_cc_restriction
+      use ml_cc_restriction_module
       use probin_module, only: verbose
 
       integer        , intent(in   ) :: nlevs
@@ -364,7 +364,7 @@ contains
 
     subroutine mkumac(umac,phi,beta,fine_flx,dx,the_bc_tower,press_comp,ref_ratio)
 
-      use ml_restriction_module, only: ml_edge_restriction
+      use ml_edge_restriction_module
 
       type(multifab), intent(inout) :: umac(:,:)
       type(multifab), intent(in   ) ::  phi(:)

@@ -303,7 +303,8 @@ subroutine main_driver()
   ! fill ghost cells for prim
   do n=1,nlevs
      call multifab_fill_boundary(prim(n))
-     call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+     call multifab_physbc(prim(n),2,scal_bc_comp+1,1,the_bc_tower%bc_tower_array(n), &
+                          dx_in=dx(n,:))
      call fill_rho_ghost_cells(prim(n),the_bc_tower%bc_tower_array(n))
   end do
 
@@ -324,7 +325,8 @@ subroutine main_driver()
   do n=1,nlevs
      ! presure ghost cells
      call multifab_fill_boundary(pres(n))
-     call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n),dx(n,:))
+     call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                          dx_in=dx(n,:))
   end do
 
   if (restart .lt. 0) then

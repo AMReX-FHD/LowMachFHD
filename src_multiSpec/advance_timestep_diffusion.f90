@@ -35,7 +35,7 @@ contains
     type(multifab)               :: flux_total(mla%nlevel,mla%dim) ! sum of diff/stoch fluxes
     real(kind=dp_t), allocatable :: weights(:) ! weights for stoch-time-integrators       
     real(kind=dp_t)              :: stage_time
-    integer                      :: n,nlevs,i,dm,rng,n_rngs
+    integer                      :: n,nlevs,i,dm,n_rngs
 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! number of dimensions
@@ -142,7 +142,8 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+                              dx_in=dx(n,:))
       end do
 
       !=========================== 
@@ -205,7 +206,8 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+                              dx_in=dx(n,:))
       end do
 
       !===========
@@ -270,7 +272,8 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+                              dx_in=dx(n,:))
       end do
 
       !===========
@@ -300,7 +303,8 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+                              dx_in=dx(n,:))
       end do
       
       !===========
@@ -339,7 +343,8 @@ contains
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n),dx(n,:))
+       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+                            dx_in=dx(n,:))
     end do   
 
     ! free the multifab allocated memory

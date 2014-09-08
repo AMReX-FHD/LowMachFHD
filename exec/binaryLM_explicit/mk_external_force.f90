@@ -3,7 +3,6 @@ module mk_external_force_module
   use bl_types
   use multifab_module
   use ml_layout_module
-  use ml_restriction_module
   use multifab_fill_ghost_module
 
   implicit none

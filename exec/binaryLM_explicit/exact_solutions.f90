@@ -24,7 +24,6 @@ module exact_solutions_module
   use define_bc_module
   use multifab_module
   use multifab_fill_ghost_module
-  use ml_restriction_module
   use ml_layout_module
   use bl_error_module
   use multifab_physbc_module

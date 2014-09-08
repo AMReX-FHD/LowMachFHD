@@ -17,7 +17,7 @@ module multifab_physbc_module
 contains
 
   subroutine multifab_physbc(s,start_scomp,start_bccomp,num_comp,the_bc_level, &
-                             dx_in,increment_bccomp_in)
+                             time_in,dx_in,prob_lo_in,prob_hi_in,increment_bccomp_in)
 
     ! this fills ghost cells for rho and pressure/phi.
     ! as well as for transport coefficients (alpha/beta/gamma)
@@ -25,8 +25,8 @@ contains
     type(multifab) , intent(inout) :: s
     integer        , intent(in   ) :: start_scomp,start_bccomp,num_comp
     type(bc_level) , intent(in   ) :: the_bc_level
-    real(kind=dp_t), intent(in), optional :: dx_in(:)
-    logical,  intent(in), optional :: increment_bccomp_in
+    real(kind=dp_t), intent(in   ), optional :: time_in,dx_in(:),prob_lo_in(:),prob_hi_in(:)
+    logical        ,  intent(in  ), optional :: increment_bccomp_in
    
     ! Local
     integer :: lo(get_dim(s)),hi(get_dim(s))

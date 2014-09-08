@@ -4,7 +4,6 @@ module mk_stochastic_fluxdiv_module
   use bl_constants_module
   use multifab_module
   use ml_layout_module
-  use ml_restriction_module
   use define_bc_module
   use bc_module
   
