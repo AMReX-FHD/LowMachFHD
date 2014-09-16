@@ -68,6 +68,9 @@ contains
 
   function inhomogeneous_bc_val_2d(comp,x,y) result(val)
 
+    use bl_constants_module
+    use probin_common_module, only: prob_type
+
     integer        , intent(in   ) :: comp
     real(kind=dp_t), intent(in   ) :: x,y
     real(kind=dp_t)                :: val
@@ -76,9 +79,17 @@ contains
        ! x-vel
 
        if (y .eq. prob_lo(2)) then
-          val = wallspeed_lo(1,2)
+          if (prob_type .eq. 1) then
+             val = sin(M_PI*x)*wallspeed_lo(1,2)
+          else
+             val = wallspeed_lo(1,2)
+          end if
        else if (y .eq. prob_hi(2)) then
-          val = wallspeed_hi(1,2)
+          if (prob_type .eq. 1) then
+             val = sin(M_PI*x)*wallspeed_hi(1,2)
+          else
+             val = wallspeed_hi(1,2)
+          end if
        else
           val = 0.d0
        end if

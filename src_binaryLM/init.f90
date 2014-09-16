@@ -150,8 +150,10 @@ contains
 
        p = 0.d0
 
+       y1 = 0.25d0*prob_lo(2) + 0.75d0*prob_hi(2)
+
        do j=lo(2),hi(2)
-          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.5d0*(prob_lo(2)+prob_hi(2))
+          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.25d0*prob_lo(2) - 0.75d0*prob_hi(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + dx(1) * (dble(i)+0.5d0) - 0.5d0*(prob_lo(1)+prob_hi(1))
 

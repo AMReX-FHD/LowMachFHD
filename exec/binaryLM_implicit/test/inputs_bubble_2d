@@ -8,7 +8,7 @@
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
   diff_type = 1
-  diff_coef = 1.d0           ! concentration diffusion coefficient 'chi'
+  diff_coef = 1.d-3           ! concentration diffusion coefficient 'chi'
 
 /
 
@@ -18,21 +18,21 @@
   !----------------------
   dim_in = 2                 ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate
-  prob_hi(1:2) = 64.d0 64.d0 ! physical hi coordinate
+  prob_hi(1:2) = 1.d0 1.d0   ! physical hi coordinate
   n_cells(1:2) = 64 64       ! number of cells in domain
   max_grid_size(1:2) = 32 32 ! max number of cells in a box
-  fixed_dt = 0.1d0           ! time step
-  plot_int = 10              ! Interval for writing a plotfile (for visit/amrvis)
+  fixed_dt = 0.01d0           ! time step
+  plot_int = 10             ! Interval for writing a plotfile (for visit/amrvis)
   prob_type = 1              ! sets scalars, m, coefficients (see init.f90)
-  max_step = 100             ! maximum number of time steps
+  max_step = 250               ! maximum number of time steps
   print_int = 1              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1        ! how often to call project_onto_eos
 
-  smoothing_width = 5.d0     ! scale factor for smoothing initial profile
+  smoothing_width = 2.d0     ! scale factor for smoothing initial profile
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
+  algorithm_type = 1	  ! enable overdamped (infinite Sc) algorithm
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
@@ -46,10 +46,10 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 1
-  visc_coef = 1.d0           ! momentum diffusion coefficient 'eta'
+  visc_coef = 100.d0           ! momentum diffusion coefficient 'eta'
 
   ! fluid properties
-  rhobar(1:2) = 1.1d0 0.9d0  ! rho1bar and rho2bar
+  rhobar(1:2) = 1.d0 2.d0  ! rho1bar and rho2bar
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
@@ -63,10 +63,11 @@
   bc_hi(1:2) = 100 100
 
   ! set the x-vel on the hi-y face
-  wallspeed_hi(1,2) = 0.01d0
+  wallspeed_lo(1,2) = -1.d0
+  wallspeed_hi(1,2) = 1.d0
 
-  variance_coef_mom = 1.d-5      ! global scaling epsilon for stochastic forcing
-  variance_coef_mass = 1.d-5
+  variance_coef_mom = 0.d0
+  variance_coef_mass = 0.d0
   k_B = 1.d0                 ! Boltzmann's constant
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
