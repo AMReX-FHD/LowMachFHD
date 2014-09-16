@@ -79,13 +79,13 @@ contains
        ! x-vel
 
        if (y .eq. prob_lo(2)) then
-          if (prob_type .eq. 1) then
+          if (abs(prob_type) .eq. 1) then
              val = sin(M_PI*x)*wallspeed_lo(1,2)
           else
              val = wallspeed_lo(1,2)
           end if
        else if (y .eq. prob_hi(2)) then
-          if (prob_type .eq. 1) then
+          if (abs(prob_type) .eq. 1) then
              val = sin(M_PI*x)*wallspeed_hi(1,2)
           else
              val = wallspeed_hi(1,2)
