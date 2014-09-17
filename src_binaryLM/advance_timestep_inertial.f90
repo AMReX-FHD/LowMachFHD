@@ -292,7 +292,7 @@ contains
     call compute_kappa(mla,kappa,prim,dx)
 
     ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
                                    the_bc_tower%bc_tower_array)
 
     ! add div(rho*chi grad c)^{*,n+1} to rhs_p
@@ -614,7 +614,7 @@ contains
     call compute_kappa(mla,kappa,prim,dx)
 
     ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
                                    the_bc_tower%bc_tower_array)
 
     ! reset to zero since we only add to them

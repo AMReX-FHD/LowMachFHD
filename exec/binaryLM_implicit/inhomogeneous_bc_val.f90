@@ -66,27 +66,38 @@ contains
 
   end subroutine transport_bc
 
-  function inhomogeneous_bc_val_2d(comp,x,y) result(val)
+  function inhomogeneous_bc_val_2d(comp,x,y,time_in) result(val)
 
     use bl_constants_module
     use probin_common_module, only: prob_type
 
     integer        , intent(in   ) :: comp
     real(kind=dp_t), intent(in   ) :: x,y
+    real(kind=dp_t), intent(in), optional :: time_in
     real(kind=dp_t)                :: val
+
+    real(kind=dp_t) :: time
+
+    if (present(time_in)) then
+       time = time_in
+    else
+       time = 0.d0
+    end if
 
     if (comp .eq. vel_bc_comp) then
        ! x-vel
 
        if (y .eq. prob_lo(2)) then
           if (abs(prob_type) .eq. 1) then
-             val = wallspeed_lo(1,2)*0.5d0*(tanh(20.d0*(x-.25d0))-tanh(20.d0*(x-.75d0)))
+             val = wallspeed_lo(1,2)*0.5d0*(tanh(20.d0*(x-.25d0))-tanh(20.d0*(x-.75d0))) &
+                  * 0.5d0*(1.d0 + tanh(5.d0*(time-0.5d0)))
           else
              val = wallspeed_lo(1,2)
           end if
        else if (y .eq. prob_hi(2)) then
           if (abs(prob_type) .eq. 1) then
-             val = wallspeed_hi(1,2)*0.5d0*(tanh(20.d0*(x-.25d0))-tanh(20.d0*(x-.75d0)))
+             val = wallspeed_hi(1,2)*0.5d0*(tanh(20.d0*(x-.25d0))-tanh(20.d0*(x-.75d0))) &
+                  * 0.5d0*(1.d0 + tanh(5.d0*(time-0.5d0)))
           else
              val = wallspeed_hi(1,2)
           end if
@@ -133,11 +144,20 @@ contains
 
   end function inhomogeneous_bc_val_2d
 
-  function inhomogeneous_bc_val_3d(comp,x,y,z) result(val)
+  function inhomogeneous_bc_val_3d(comp,x,y,z,time_in) result(val)
 
     integer        , intent(in   ) :: comp
     real(kind=dp_t), intent(in   ) :: x,y,z
+    real(kind=dp_t), intent(in), optional :: time_in
     real(kind=dp_t)                :: val
+
+    real(kind=dp_t) :: time
+
+    if (present(time_in)) then
+       time = time_in
+    else
+       time = 0.d0
+    end if
 
     if (comp .eq. vel_bc_comp) then
        ! x-vel

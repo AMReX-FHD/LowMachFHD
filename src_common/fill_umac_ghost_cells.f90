@@ -29,7 +29,7 @@ module fill_umac_ghost_cells_module
 
 contains
 
-  subroutine fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
+  subroutine fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
 
     ! fill the ghost cells for the mac velocity (used for restarts to restore ghost values)
     ! does not modify the domain boundary values, i.e., it does not call multifab_physbc_domainvel
@@ -38,7 +38,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
-    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:),time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
@@ -50,7 +50,7 @@ contains
     call build_bc_multifabs(mla)
 
     ! vel_bc_n here is never used: the normal velocities are assumed to be set already in umac
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time, &
                                    the_bc_tower%bc_tower_array)
 
     do n=1,nlevs

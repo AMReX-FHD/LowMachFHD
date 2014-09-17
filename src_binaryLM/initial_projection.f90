@@ -106,7 +106,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx, &
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,0.d0, &
                                    the_bc_tower%bc_tower_array)
 
     ! set rhoc_d_fluxdiv = div(rho*chi grad c)^0

@@ -413,7 +413,7 @@ subroutine main_driver()
   if (restart .gt. 0) then
 
      ! fill ghost cells for umac (but leave boundary values untouched)
-     call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
+     call fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
 
      ! convert umac to m in valid and ghost region
      call convert_m_to_umac(mla,s_fc,mold,umac,.false.)

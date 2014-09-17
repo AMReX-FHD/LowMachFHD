@@ -383,7 +383,7 @@ subroutine main_driver()
   call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
   call compute_kappa(mla,kappa)
 
-  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,the_bc_tower)
+  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
 
   if (restart .lt. 0) then
 
