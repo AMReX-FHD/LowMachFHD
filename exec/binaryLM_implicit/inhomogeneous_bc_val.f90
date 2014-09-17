@@ -80,13 +80,13 @@ contains
 
        if (y .eq. prob_lo(2)) then
           if (abs(prob_type) .eq. 1) then
-             val = sin(M_PI*x)*wallspeed_lo(1,2)
+             val = wallspeed_lo(1,2)*0.5d0*(tanh(20.d0*(x-.25d0))-tanh(20.d0*(x-.75d0)))
           else
              val = wallspeed_lo(1,2)
           end if
        else if (y .eq. prob_hi(2)) then
           if (abs(prob_type) .eq. 1) then
-             val = sin(M_PI*x)*wallspeed_hi(1,2)
+             val = wallspeed_hi(1,2)*0.5d0*(tanh(20.d0*(x-.25d0))-tanh(20.d0*(x-.75d0)))
           else
              val = wallspeed_hi(1,2)
           end if
