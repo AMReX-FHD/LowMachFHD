@@ -31,29 +31,29 @@
   print_int = 1              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10       ! how often to call project_onto_eos
 
-!  n_cells(1:2) = 256 256     ! number of cells in domain
-!  fixed_dt = 0.002d0           ! time step
-!  plot_int = 1000           ! Interval for writing a plotfile (for visit/amrvis)
-!  max_step = 1000              ! maximum number of time steps
-!  smoothing_width = 8.d0     ! scale factor for smoothing initial profile
+  n_cells(1:2) = 256 256   ! number of cells in domain
+  fixed_dt = 0.002d0           ! time step
+  plot_int = 400             ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 400                ! maximum number of time steps
+  smoothing_width = 8.d0     ! scale factor for smoothing initial profile
 
-!  n_cells(1:2) = 128 128   ! number of cells in domain
-!  fixed_dt = 0.004d0           ! time step
-!  plot_int = 500            ! Interval for writing a plotfile (for visit/amrvis)
-!  max_step = 500               ! maximum number of time steps
-!  smoothing_width = 4.d0     ! scale factor for smoothing initial profile
+  n_cells(1:2) = 128 128   ! number of cells in domain
+  fixed_dt = 0.004d0           ! time step
+  plot_int = 200             ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 200                ! maximum number of time steps
+  smoothing_width = 4.d0     ! scale factor for smoothing initial profile
 
 !  n_cells(1:2) = 64 64     ! number of cells in domain
 !  fixed_dt = 0.008d0           ! time step
-!  plot_int = 250            ! Interval for writing a plotfile (for visit/amrvis)
-!  max_step = 250               ! maximum number of time steps
+!  plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
+!  max_step = 100                ! maximum number of time steps
 !  smoothing_width = 2.d0     ! scale factor for smoothing initial profile
 
-  n_cells(1:2) = 32 32     ! number of cells in domain
-  fixed_dt = 0.016d0           ! time step
-  plot_int = 125            ! Interval for writing a plotfile (for visit/amrvis)
-  max_step = 125               ! maximum number of time steps
-  smoothing_width = 1.d0     ! scale factor for smoothing initial profile
+!  n_cells(1:2) = 32 32     ! number of cells in domain
+!  fixed_dt = 0.016d0           ! time step
+!  plot_int = 50             ! Interval for writing a plotfile (for visit/amrvis)
+!  max_step = 50                ! maximum number of time steps
+!  smoothing_width = 1.d0     ! scale factor for smoothing initial profile
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -62,21 +62,14 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = -1
+  visc_coef = 1.d-1           ! momentum diffusion coefficient 'eta'
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 0	  ! inertial algorithm
-!  algorithm_type = 1	  ! overdamped algorithm
+!  algorithm_type = 0	  ! inertial algorithm
+  algorithm_type = 1	  ! overdamped algorithm
 
-! use this for inertial
-  visc_coef = 1.d-3           ! momentum diffusion coefficient 'eta'
-! use this for overdamped
-!  visc_coef = 1.d-1           ! momentum diffusion coefficient 'eta'
-
-! use this for inertial
-  grav(1:2) = 0.d0 -0.1d0
-! use this for overdamped
-!  grav(1:2) = 0.d0 -1.d0
+ grav(1:2) = 0.d0 -10.d0
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
@@ -84,7 +77,7 @@
   seed = 1
 
   ! fluid properties
-  rhobar(1:2) = 10.d0 1.d0  ! rho1bar and rho2bar
+  rhobar(1:2) = 2.d0 1.d0  ! rho1bar and rho2bar
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
