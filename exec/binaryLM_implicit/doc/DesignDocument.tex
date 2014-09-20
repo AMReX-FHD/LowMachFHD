@@ -922,6 +922,38 @@ The mass diffusion coefficient is fixed at $\chi=10^{-6}$.
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\subsection{Lid-Driven Cavity Convergence Testing}
+The problem is a deterministic lid-driven cavity problem in two dimensions with 
+both the lo-y and hi-y wall moving in opposite directions to set up a circular 
+flow pattern.  All units are cgs.
+The domain is 1 $\times$ 1 divided into $32^2, 64^2, 128^2$, and $256^2$
+grid cells.  The lo-y and hi-y walls are no-slip walls moving with speeds:
+\begin{equation}
+u = \pm\half\left[1 + \sin{(2\pi x - \half\pi)}\right].
+\end{equation}
+The x-walls are stationary no-slip.  The time step for the coarsest simulation is
+$\Delta t = 1.6\times 10^{-2}$ and is reduced by a factor of 2 as the grid spacing
+decreases by a factor of 2.  We run each simulation to 0.8 seconds.
+We use $\bar\rho_1 = 2, \bar\rho_2 = 1$.  The initial conditions are $\vb=0$ 
+and $p=0$ with
+a Gaussian bump of high density centered at $(x,y) = (0.5, 0.75)$ such that
+\begin{equation}
+c = 1 - \half\left[1 + \tanh\left(32r-2.5\right)\right]; \quad r = \sqrt{x^2 + (y-0.75)^2}
+\end{equation}
+The viscosity varies linearly as a function of concentration, such that $\mu=0.1$
+when $c=0$ and $\mu=1$ when $c=1$.  Similarly, the mass diffusion coefficient
+varies lienarly as a function of concentration, such that $\chi=10^{-4}$ when $c=0$ and
+$\chi=10^{-3}$ when $c=1$.  Gravity acts downward such that $\gb=(0,-10)$.
+
+Viscous operator form $\nabla + \nabla^T$
+
+Test 1: centered advection, inertial algorithm
+Test 2: centered advection, overdamped algorithm
+Test 3: BDS advection, inertial algorithm
+Test 4: BDS advection, overdamped algorithm
+Test 5: BDS advection, inertial algorithm, $\chi=0$
+Test 6: BDS advection, overdamped algorithm, $\chi=0$
+
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
 
