@@ -89,17 +89,25 @@ contains
 
        if (y .eq. prob_lo(2)) then
           if (abs(prob_type) .eq. 1) then
-             val = wallspeed_lo(1,2)* &
-                   0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
-                   *0.5d0*(1.d0 + sin(M_PI*time - 0.5d0*M_PI))
+             if (time .le. 0.5d0) then
+                val = wallspeed_lo(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
+             else
+                val = wallspeed_lo(1,2)
+             end if
           else
              val = wallspeed_lo(1,2)
           end if
        else if (y .eq. prob_hi(2)) then
           if (abs(prob_type) .eq. 1) then
-             val = wallspeed_hi(1,2)* &
-                   0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
-                   *0.5d0*(1.d0 + sin(M_PI*time - 0.5d0*M_PI))
+             if (time .le. 0.5d0) then
+                val = wallspeed_hi(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
+             else
+                val = wallspeed_hi(1,2)
+             end if
           else
              val = wallspeed_hi(1,2)
           end if
