@@ -150,18 +150,20 @@ contains
 
        p = 0.d0
 
-       y1 = 0.25d0*prob_lo(2) + 0.75d0*prob_hi(2)
-
        do j=lo(2),hi(2)
-          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.25d0*prob_lo(2) - 0.75d0*prob_hi(2)
+          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.5d0*prob_lo(2) - 0.5d0*prob_hi(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + dx(1) * (dble(i)+0.5d0) - 0.5d0*(prob_lo(1)+prob_hi(1))
 
              r = sqrt (x**2 + y**2)
 
-             ! set c using tanh smoothing
-             s(i,j,2) = c_init(1) + 0.5d0*(c_init(2)-c_init(1))* &
-                  (1.d0 + tanh((r-2.5d0*smoothing_width*dx(1))/(smoothing_width*dx(1))))
+             ! set c using sinusoidal smoothing
+             if (r .lt. 0.25d0) then
+                s(i,j,2) = c_init(1) + 0.5d0*(c_init(2)-c_init(1))* &
+                     (1.d0 + sin(4.d0*M_PI*r - 0.5d0*M_PI))
+             else
+                s(i,j,2) = c_init(2)
+             end if
 
              ! compute rho using eos
              s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
