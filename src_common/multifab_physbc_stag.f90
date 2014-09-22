@@ -639,6 +639,8 @@ contains
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do j=lo(2),hi(2)+1
              s(lo(1)-ng_s:lo(1)-1,j) = -s(lo(1),j)
+             ! higher-order stencil
+             ! s(lo(1)-ng_s:lo(1)-1,j) = -2.d0*s(lo(1),j) + (1.d0/3.d0)*s(lo(1)+1,j)
           end do
        end if
     else if (bc(1,1) .eq. DIR_TRACT) then
@@ -673,6 +675,8 @@ contains
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do j=lo(2),hi(2)+1
              s(hi(1)+1:hi(1)+ng_s,j) = -s(hi(1),j)
+             ! higher-order stencil
+             ! s(hi(1)+1:hi(1)+ng_s,j) = -2.d0*s(hi(1),j) + (1.d0/3.d0)*s(hi(1)-1,j)
           end do
        end if
     else if (bc(1,2) .eq. DIR_TRACT) then
@@ -704,6 +708,8 @@ contains
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do i=lo(1),hi(1)+1
              s(i,lo(2)-ng_s:lo(2)-1) = -s(i,lo(2))
+             ! higher-order stencil
+             ! s(i,lo(2)-ng_s:lo(2)-1) = -2.d0*s(i,lo(2)) + (1.d0/3.d0)*s(i,lo(2)+1)
           end do
        else if (bccomp .eq. 2) then
           ! normal velocity
@@ -738,6 +744,8 @@ contains
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do i=lo(1),hi(1)+1
              s(i,hi(2)+1:hi(2)+ng_s) = -s(i,hi(2))
+             ! higher-order stencil
+             ! s(i,hi(2)+1:hi(2)+ng_s) = -2.d0*s(i,hi(2)) + (1.d0/3.d0)*s(i,hi(2)-1)
           end do
        else if (bccomp .eq. 2) then
           ! normal velocity
@@ -793,6 +801,8 @@ contains
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do j=lo(2),hi(2)+1
              s(lo(1)-ng_s:lo(1)-1,j) = 2.d0*v_bc(lo(1),j) - s(lo(1),j)
+             ! higher-order stencil
+             ! s(lo(1)-ng_s:lo(1)-1,j) = (8.d0/3.d0)*v_bc(lo(1),j) - 2.d0*s(lo(1),j) + (1.d0/3.d0)*s(lo(1)+1,j)
           end do
        end if
     else if (bc(1,1) .eq. DIR_TRACT) then
@@ -826,6 +836,8 @@ contains
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do j=lo(2),hi(2)+1
              s(hi(1)+1:hi(1)+ng_s,j) = 2.d0*v_bc(hi(1)+1,j) - s(hi(1),j)
+             ! higher-order stencil
+             ! s(hi(1)+1:hi(1)+ng_s,j) = (8.d0/3.d0)*v_bc(hi(1)+1,j) - 2.d0*s(hi(1),j) + (1.d0/3.d0)*s(hi(1)-1,j)
           end do
        end if
     else if (bc(1,2) .eq. DIR_TRACT) then
@@ -856,6 +868,8 @@ contains
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do i=lo(1),hi(1)+1
              s(i,lo(2)-ng_s:lo(2)-1) = 2.d0*v_bc(i,lo(2)) - s(i,lo(2))
+             ! higher-order stencil
+             ! s(i,lo(2)-ng_s:lo(2)-1) = (8.d0/3.d0)*v_bc(i,lo(2)) - 2.d0*s(i,lo(2)) + (1.d0/3.d0)*s(i,lo(2)+1)
           end do
        else if (bccomp .eq. 2) then
           ! normal velocity
@@ -889,6 +903,8 @@ contains
           ! two point stencil using homogeneous dirichlet velocity condition at boundary
           do i=lo(1),hi(1)+1
              s(i,hi(2)+1:hi(2)+ng_s) = 2.d0*v_bc(i,hi(2)+1) - s(i,hi(2))
+             ! higher-order stencil
+             ! s(i,hi(2)+1:hi(2)+ng_s) = (8.d0/3.d0)*v_bc(i,hi(2)+1) - 2.d0*s(i,hi(2)) + (1.d0/3.d0)*s(i,hi(2)-1)
           end do
        else if (bccomp .eq. 2) then
           ! normal velocity
