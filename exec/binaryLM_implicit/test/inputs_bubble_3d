@@ -1,14 +1,21 @@
 &probin_binarylm
 
   ! problem setup
-  c_init(1:2) = 0.1d0 0.9d0  ! controls initial concentration range
+  c_init(1:2) = 1.d0 0.d0  ! controls initial concentration range
 
-  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep  
+  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep   
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
-  diff_type = 1
-  diff_coef = 1.d0           ! concentration diffusion coefficient 'chi'
+  diff_type = -1
+  diff_coef = 1.d-4           ! concentration diffusion coefficient 'chi'
+
+  plot_stag = T
+
+  ! chi
+  material_properties(1:3,1) = 9.d0 0.d0 0.d0
+  ! eta
+  material_properties(1:3,2) = 9.d0 0.d0 0.d0
 
 /
 
@@ -17,27 +24,27 @@
   ! Problem specification
   !----------------------
   dim_in = 3                    ! 2D or 3D  
+  max_grid_size(1:3) = 32 32 32 ! max number of cells in a box
   prob_lo(1:3) = 0.d0 0.d0 0.d0 ! physical lo coordinate
-  prob_hi(1:3) = 64.d0 64.d0 64.d0 ! physical hi coordinate
-  n_cells(1:3) = 32 32 32       ! number of cells in domain
-  max_grid_size(1:3) = 16 16 16 ! max number of cells in a box
-  fixed_dt = 0.2d0              ! time step
-  plot_int = 10                 ! Interval for writing a plotfile (for visit/amrvis)
-  prob_type = 1                 ! sets scalars, m, coefficients (see init.f90)
-  max_step = 100             ! maximum number of time steps
-  print_int = 1              ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 1        ! how often to call project_onto_eos
+  prob_hi(1:3) = 1.d0 1.d0 1.d0 ! physical hi coordinate
+  prob_type = -1                ! sets scalars, m, coefficients (see init.f90)
+  print_int = 1                 ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 10          ! how often to call project_onto_eos
 
-  smoothing_width = 2.5d0    ! scale factor for smoothing initial profile
+  n_cells(1:3) = 128 128 128    ! number of cells in domain
+  fixed_dt = 0.004d0              ! time step
+  plot_int = 50                 ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 50             ! maximum number of time steps
 
-  ! Algorithm control / selection
-  !----------------------
-  algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
+!  n_cells(1:3) = 64 64 64       ! number of cells in domain
+!  fixed_dt = 0.008d0              ! time step
+!  plot_int = 50                 ! Interval for writing a plotfile (for visit/amrvis)
+!  max_step = 50             ! maximum number of time steps
 
-  ! random number seed
-  ! 0        = unpredictable seed based on clock
-  ! positive = fixed seed
-  seed = 1
+!  n_cells(1:3) = 32 32 32       ! number of cells in domain
+!  fixed_dt = 0.016d0              ! time step
+!  plot_int = 50                 ! Interval for writing a plotfile (for visit/amrvis)
+!  max_step = 50             ! maximum number of time steps
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -45,15 +52,27 @@
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
-  visc_type = 1
-  visc_coef = 1.d0           ! momentum diffusion coefficient 'eta'
+  visc_type = -2
+  visc_coef = 1.d-1           ! momentum diffusion coefficient 'eta'
+
+  ! Algorithm control / selection
+  !----------------------
+  algorithm_type = 0	  ! inertial algorithm
+!  algorithm_type = 1	  ! overdamped algorithm
+
+  grav(1:3) = 0.d0 -10.d0 0.d0
+
+  ! random number seed
+  ! 0        = unpredictable seed based on clock
+  ! positive = fixed seed
+  seed = 1
 
   ! fluid properties
-  rhobar(1:2) = 1.1d0 0.9d0  ! rho1bar and rho2bar 
+  rhobar(1:2) = 2.d0 1.d0  ! rho1bar and rho2bar
 
   advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
- ! Boundary conditions
+  ! Boundary conditions
   !----------------------
   ! BC specifications:
   ! -1  = periodic
@@ -62,8 +81,12 @@
   bc_lo(1:3) = 100 100 100
   bc_hi(1:3) = 100 100 100
 
-  variance_coef_mom = 1.d-3      ! global scaling epsilon for stochastic forcing
-  variance_coef_mass = 1.d-3
+  ! set the x-vel and z-vel on the lo and hi-y faces
+  wallspeed_lo(1:2,2) = -1.d0 -1.d0
+  wallspeed_hi(1:2,2) = 1.d0 1.d0
+
+  variance_coef_mom = 0.d0
+  variance_coef_mass = 0.d0
   k_B = 1.d0                 ! Boltzmann's constant
   filtering_width = 0        ! If positive the random numbers will be filtered to smooth out the fields
   stoch_stress_form = 1      ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
