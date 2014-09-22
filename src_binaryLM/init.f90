@@ -167,7 +167,7 @@ contains
                 end if
              else
                 ! set c using Gaussian bump
-                s(i,j,2) = c_init(2) + (c_init(1)-c_init(2))*exp(-100.d0*r**2)
+                s(i,j,2) = c_init(2) + (c_init(1)-c_init(2))*exp(-75.d0*r**2)
              end if
 
              ! compute rho using eos
