@@ -94,7 +94,8 @@ contains
                      0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
                      *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
              else
-                val = wallspeed_lo(1,2)
+                val = wallspeed_lo(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI))
              end if
           else
              val = wallspeed_lo(1,2)
@@ -106,7 +107,8 @@ contains
                      0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
                      *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
              else
-                val = wallspeed_hi(1,2)
+                val = wallspeed_hi(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI))
              end if
           else
              val = wallspeed_hi(1,2)
