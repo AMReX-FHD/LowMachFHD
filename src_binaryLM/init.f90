@@ -142,8 +142,9 @@ contains
 
     case (1)
 
-       ! spherical bubble with c_init(1) in the interior, c_init(2) on the exterior
-       ! centered in domain where smoothing_width has units of GRID CELLS
+       ! Gaussian bubble with c_init(1) in the middle and c_init(2) far away
+       ! centered in domain
+       ! if smoothing_width = 0, this is a discontinuous circle advecting with radius 0.25
 
        mx = 0.d0
        my = 0.d0
@@ -151,14 +152,23 @@ contains
        p = 0.d0
 
        do j=lo(2),hi(2)
-          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.25d0*prob_lo(2) - 0.75d0*prob_hi(2)
+          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.5d0*prob_lo(2) - 0.5d0*prob_hi(2)
           do i=lo(1),hi(1)
              x = prob_lo(1) + dx(1) * (dble(i)+0.5d0) - 0.5d0*(prob_lo(1)+prob_hi(1))
 
              r = sqrt (x**2 + y**2)
 
-             ! set c using Gaussian bump
-             s(i,j,2) = c_init(2) + (c_init(1)-c_init(2))*exp(-200.d0*r**2)
+             if (smoothing_width .eq. 0.d0) then
+                ! set c using circle with radius 0.25
+                if (r .le. 0.25d0) then
+                   s(i,j,2) = c_init(1)
+                else
+                   s(i,j,2) = c_init(2)
+                end if
+             else
+                ! set c using Gaussian bump
+                s(i,j,2) = c_init(2) + (c_init(1)-c_init(2))*exp(-100.d0*r**2)
+             end if
 
              ! compute rho using eos
              s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
