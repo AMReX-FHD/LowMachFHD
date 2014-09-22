@@ -157,13 +157,8 @@ contains
 
              r = sqrt (x**2 + y**2)
 
-             ! set c using sinusoidal smoothing
-             if (r .lt. 0.25d0) then
-                s(i,j,2) = c_init(1) + 0.5d0*(c_init(2)-c_init(1))* &
-                     (1.d0 + sin(4.d0*M_PI*r - 0.5d0*M_PI))
-             else
-                s(i,j,2) = c_init(2)
-             end if
+             ! set c using Gaussian bump
+             s(i,j,2) = c_init(2) + (c_init(1)-c_init(2))*exp(-75.d0*r**2)
 
              ! compute rho using eos
              s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
