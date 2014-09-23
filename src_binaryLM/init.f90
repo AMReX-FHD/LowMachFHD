@@ -159,12 +159,22 @@ contains
              r = sqrt (x**2 + y**2)
 
              if (smoothing_width .eq. 0.d0) then
-                ! set c using circle with radius 0.25
-                if (r .le. 0.25d0) then
+
+                ! initialize c to a square region
+                if (i .ge. n_cells(1)/4 .and. i .le. 3*n_cells(1)/4-1 .and. &
+                    j .ge. n_cells(2)/4 .and. j .le. 3*n_cells(2)/4-1) then
                    s(i,j,2) = c_init(1)
                 else
                    s(i,j,2) = c_init(2)
-                end if
+                end if                    
+
+!                ! set c using circle with radius 0.25
+!                if (r .le. 0.25d0) then
+!                   s(i,j,2) = c_init(1)
+!                else
+!                   s(i,j,2) = c_init(2)
+!                end if
+
              else
                 ! set c using Gaussian bump
                 s(i,j,2) = c_init(2) + (c_init(1)-c_init(2))*exp(-75.d0*r**2)
