@@ -166,14 +166,7 @@ contains
                    s(i,j,2) = c_init(1)
                 else
                    s(i,j,2) = c_init(2)
-                end if                    
-
-!                ! set c using circle with radius 0.25
-!                if (r .le. 0.25d0) then
-!                   s(i,j,2) = c_init(1)
-!                else
-!                   s(i,j,2) = c_init(2)
-!                end if
+                end if
 
              else
                 ! set c using Gaussian bump
@@ -582,8 +575,9 @@ contains
 
     case (1)
 
-       ! spherical bubble with c_init(1) in the interior, c_init(2) on the exterior
-       ! centered in domain where smoothing_width has units of GRID CELLS
+       ! Gaussian bubble with c_init(1) in the middle and c_init(2) far away
+       ! centered in domain
+       ! if smoothing_width = 0, this is a discontinuous circle advecting with radius 0.25
 
        mx = 0.d0
        my = 0.d0
@@ -600,9 +594,21 @@ contains
                 
                 r = sqrt (x**2 + y**2 + z**2)
 
-                ! set c using tanh smoothing
-                s(i,j,k,2) = c_init(1) + 0.5d0*(c_init(2)-c_init(1))* &
-                     (1.d0 + tanh((r-2.0d0*smoothing_width*dx(1))/(smoothing_width*dx(1))))
+                if (smoothing_width .eq. 0.d0) then
+
+                   ! initialize c to a square region
+                   if (i .ge. n_cells(1)/4 .and. i .le. 3*n_cells(1)/4-1 .and. &
+                       j .ge. n_cells(2)/4 .and. j .le. 3*n_cells(2)/4-1 .and. &
+                       k .ge. n_cells(3)/4 .and. k .le. 3*n_cells(3)/4-1) then
+                      s(i,j,k,2) = c_init(1)
+                   else
+                      s(i,j,k,2) = c_init(2)
+                   end if
+
+                else
+                   ! set c using Gaussian bump
+                   s(i,j,k,2) = c_init(2) + (c_init(1)-c_init(2))*exp(-75.d0*r**2)
+                end if
                 
                 ! compute rho using eos
                 s(i,j,k,1) = 1.0d0/(s(i,j,k,2)/rhobar(1)+(1.0d0-s(i,j,k,2))/rhobar(2))
