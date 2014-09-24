@@ -595,8 +595,8 @@ $\rho_1^{\rm BDS} = {\rm BDS}(\rho_1^n,\vb^{n+\myhalf},\nabla\cdot\Fb^{n+\myhalf
 To modify the original algorithm, we replace equations (\ref{eq:alg2_1st_rho_adv}) and 
 (\ref{eq:alg2_1st_rho1_adv}) in {\bf Step 3} with
 \begin{eqnarray}
-\rho^{*,n+1} &=& \rho^n + \frac{\Delta t}{2}\nabla\cdot(-\rho^{{\rm BDS},*}\vb^*),\\
-\rho_1^{*,n+1} &=& \rho_1^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^* + \Fb^n),
+\rho^{*,n+\myhalf} &=& \rho^n + \frac{\Delta t}{2}\nabla\cdot(-\rho^{{\rm BDS},*}\vb^*),\\
+\rho_1^{*,n+\myhalf} &=& \rho_1^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_1^{{\rm BDS},*}\vb^* + \Fb^n),
 \end{eqnarray}
 where $\rho^{{\rm BDS},*} = {\rm BDS}(\rho^n,\vb^*,0)$ and 
 $\rho_1^{{\rm BDS},*} = {\rm BDS}(\rho_1^n,\vb^*,\nabla\cdot\Fb^n)$.
@@ -605,10 +605,10 @@ Nothing else changes until {\bf Step 7}, where we replace equations
 (\ref{eq:alg2_2nd_rho_adv}) and (\ref{eq:alg2_2nd_rho1_adv}) with
 \begin{eqnarray}
 \rho^{n+1} &=& \rho^n + \Delta t\left(-\rho^{\rm BDS}\vb^{n+\myhalf}\right),\\
-\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{\rm BDS}\vb^{n+\myhalf} + \Fb^{n+\myhalf}\right),
+\rho_1^{n+1} &=& \rho_1^n + \Delta t\left(-\rho_1^{\rm BDS}\vb^{n+\myhalf} + \Fb^{*,n+\myhalf}\right),
 \end{eqnarray}
 where $\rho^{\rm BDS} = {\rm BDS}(\rho^n,\vb^{n+\myhalf},0)$ and 
-$\rho_1^{\rm BDS} = {\rm BDS}(\rho_1^n,\vb^{n+\myhalf},\nabla\cdot\Fb^{n+\myhalf})$.
+$\rho_1^{\rm BDS} = {\rm BDS}(\rho_1^n,\vb^{n+\myhalf},\nabla\cdot\Fb^{*,n+\myhalf})$.
 
 \section{Boundary Conditions}
 The types of non-periodic, ``physical'' boundary conditions we consider are 
