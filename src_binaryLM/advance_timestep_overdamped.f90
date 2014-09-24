@@ -190,10 +190,9 @@ contains
     ! add external forcing for rho*c
     call mk_external_s_force(mla,gmres_rhs_p,dx,time,1)
 
-    ! reset s_update for all scalars to zero
-    ! then, set s_update for rho1 to F^n = div(rho*chi grad c)^n + div(Psi^(1))
+    ! s_update is zero
+    ! set s_update for rho1 to F^n = div(rho*chi grad c)^n + div(Psi^(1))
     do n=1,nlevs
-       call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
     end do
 
@@ -392,8 +391,8 @@ contains
     ! add external forcing for rho*c
     call mk_external_s_force(mla,gmres_rhs_p,dx,time+0.5d0*dt,1)
 
-    ! reset s_update for all scalars to zero
-    ! then, set s_update for rho1 to F^{*,n+1/2} = div(rho*chi grad c)^{*,n+1/2} + div(Psi^(2))
+    ! set s_update for rho to zero
+    ! set s_update for rho1 to F^{*,n+1/2} = div(rho*chi grad c)^{*,n+1/2} + div(Psi^(2))
     do n=1,nlevs
        call multifab_setval_c(s_update(n),0.d0,1,1,all=.true.)
        call multifab_copy_c(s_update(n),2,gmres_rhs_p(n),1,1,0)
