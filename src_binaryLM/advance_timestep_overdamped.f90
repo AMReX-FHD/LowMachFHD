@@ -171,7 +171,7 @@ contains
     end do
 
     ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+0.5d0*dt, &
                                    the_bc_tower%bc_tower_array)
 
     ! add div(rho*chi grad c)^n to rhs_p
@@ -372,7 +372,7 @@ contains
     call mk_external_m_force(mla,gmres_rhs_v,dx,time+0.5d0*dt,the_bc_tower)
 
     ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
+    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+0.5d0*dt, &
                                    the_bc_tower%bc_tower_array)
 
     ! initialize rhs_p for gmres solve to zero
