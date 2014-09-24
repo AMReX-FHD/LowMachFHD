@@ -376,6 +376,11 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
                                    the_bc_tower%bc_tower_array)
 
+    ! initialize rhs_p for gmres solve to zero
+    do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
+    end do
+
     ! add div(rho*chi grad c)^{*,n+1/2} to rhs_p
     call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                 the_bc_tower%bc_tower_array,vel_bc_n)
