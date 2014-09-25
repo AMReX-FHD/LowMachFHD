@@ -29,7 +29,7 @@
   prob_hi(1:2) = 1.d0 1.d0   ! physical hi coordinate
   prob_type = -1             ! sets scalars, m, coefficients (see init.f90)
   print_int = 1              ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 10       ! how often to call project_onto_eos
+  project_eos_int = 1000     ! how often to call project_onto_eos
 
   n_cells(1:2) = 256 256   ! number of cells in domain
   fixed_dt = 0.0025d0       ! time step
