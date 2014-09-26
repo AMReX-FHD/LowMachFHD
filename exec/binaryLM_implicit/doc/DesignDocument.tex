@@ -949,64 +949,61 @@ The viscosity varies linearly as a function of concentration, such that $\mu=0.1
 when $c=0$ and $\mu=1$ when $c=1$.  Similarly, the mass diffusion coefficient
 varies lienarly as a function of concentration, such that $\chi=10^{-4}$ when $c=0$ and
 $\chi=10^{-3}$ when $c=1$.  Gravity acts downward such that $\gb=(0,-1)$.
-
-Viscous operator form $\nabla + \nabla^T$
-
-Test 1: Inertial algorithm, centered scalar advection
-Test 2: Inertial algorithm, unlimited BDS scalar advection, $\chi=0$.
-Test 3: Overdamped algorithm, centered scalar advection
-Test 4: Overdamped algorithm, unlimited BDS scalar advection, $\chi=0$.
-
-Tests 5-8 are the same tests with higher-order transverse velocity ghost cell
-extrapolation, which is suitable for deterministic problems where we seek second-order
-in $L^{\rm inf}$, but not for stochastic simulations since the discretization does
-not satify fluctuation-dissipation balance.
+Viscous operator form $\nabla\cdot\mu(\nabla + \nabla^T)$
+\begin{itemize}
+\item Test 1: Inertial algorithm, centered scalar advection
+\item Test 2: Inertial algorithm, unlimited BDS scalar advection, $\chi=0$.
+\item Test 3: Overdamped algorithm, centered scalar advection
+\item Test 4: Overdamped algorithm, unlimited BDS scalar advection, $\chi=0$.
+\end{itemize}
+For refining in time only, we use $64^2$ zones with coarse time step $\Delta t = 0.01$, refining
+by factors of 2.  The final simulation time is 2 seconds.
 
 \begin{table}[h]
 \begin{center}
-\caption{Errors and convergence rates in $L^\infty$.}
+\caption{Refining in space and time.  Errors and convergence rates in $L^\infty$.}
 \begin{tabular}{ccccccc}
 & & 32-64 & Rate & 64-128 & Rate & 128-256 \\
 \hline
 Test 1:             & $u$ & 6.72e-03 & 1.80 & 1.93e-03 & 1.91 & 5.12e-04 \\
                     & $v$ & 3.23e-03 & 1.90 & 8.68e-04 & 1.99 & 2.19e-04 \\
-                    & $c$ & 1.25e-02 & 2.05 & 3.02e-03 & 1.95 & 7.81e-04 \\
+                    & $c$ & 1.25e-02 & 2.05 & 3.02e-03 & 1.99 & 7.61e-04 \\
 \hline
-Test 2:             & $u$ & 6.74e-03 & 1.82 & 1.91e-03 & x.xx & x.xxe-xx \\
-                    & $v$ & 3.36e-03 & 1.87 & 9.21e-03 & x.xx & x.xxe-xx \\
-                    & $c$ & 1.22e-02 & 2.15 & 2.75e-03 & x.xx & x.xxe-xx \\
+Test 2:             & $u$ & 6.74e-03 & 1.82 & 1.91e-03 & 1.91 & 5.07e-04 \\
+                    & $v$ & 3.36e-03 & 1.87 & 9.21e-03 & 2.00 & 2.31e-04 \\
+                    & $c$ & 1.22e-02 & 2.15 & 2.75e-03 & 1.96 & 7.08e-04 \\
 \hline
-Test 3:             & $c$ & 1.42e-02 & 2.00 & 3.56e-03 & x.xx & x.xxe-xx \\
+Test 3:             & $c$ & 1.42e-02 & 2.00 & 3.56e-03 & 2.00 & 8.89e-04 \\
 \hline
-Test 4:             & $c$ & 1.23e-02 & 2.16 & 2.75e-03 & x.xx & x.xxe-xx
+Test 4:             & $c$ & 1.23e-02 & 2.16 & 2.75e-03 & 1.95 & 7.13e-04
 \end{tabular}
 \end{center}
 \end{table}
 
 \begin{table}[h]
 \begin{center}
-\caption{Errors and convergence rates in $L^1$.}
+\caption{Refining in space and time.  Errors and convergence rates in $L^1$.}
 \begin{tabular}{ccccccc}
 & & 32-64 & Rate & 64-128 & Rate & 128-256 \\
 \hline
 Test 1:             & $u$ & 8.86e-04 & 1.96 & 2.28e-04 & 1.99 & 5.73e-05 \\
                     & $v$ & 1.03e-03 & 1.92 & 2.73e-04 & 1.97 & 6.96e-05 \\
-                    & $c$ & 8.85e-04 & 1.98 & 2.24e-05 & 1.99 & 5.63e-05 \\
+                    & $c$ & 8.85e-04 & 1.98 & 2.24e-04 & 1.99 & 5.63e-05 \\
 \hline
-Test 2:             & $u$ & 8.00e-04 & 1.94 & 2.08e-04 & x.xx & x.xxe-xx \\
-                    & $v$ & 1.14e-03 & 1.92 & 3.02e-04 & x.xx & x.xxe-xx \\
-                    & $c$ & 6.08e-04 & 2.27 & 1.26e-04 & x.xx & x.xxe-xx \\
+Test 2:             & $u$ & 8.00e-04 & 1.94 & 2.08e-04 & 1.98 & 5.28e-05 \\
+                    & $v$ & 1.14e-03 & 1.92 & 3.02e-04 & 1.98 & 7.68e-05 \\
+                    & $c$ & 6.08e-04 & 2.27 & 1.26e-04 & 2.05 & 3.05e-05 \\
 \hline
-Test 3:             & $c$ & 8.38e-04 & 1.99 & 2.11e-04 & x.xx & x.xxe-xx \\
+Test 3:             & $c$ & 8.38e-04 & 1.99 & 2.11e-04 & 2.00 & 5.29e-05 \\
 \hline
-Test 4:             & $c$ & 6.36e-04 & 2.28 & 1.31e-04 & x.xx & x.xxe-xx
+Test 4:             & $c$ & 6.36e-04 & 2.28 & 1.31e-04 & 2.05 & 3.16e-05
 \end{tabular}
 \end{center}
 \end{table}
 
 \begin{table}[h]
 \begin{center}
-\caption{Errors and convergence rates in $L^2$.}
+\caption{Refining in space and time.  Errors and convergence rates in $L^2$.}
 \begin{tabular}{ccccccc}
 & & 32-64 & Rate & 64-128 & Rate & 128-256 \\
 \hline
@@ -1014,13 +1011,36 @@ Test 1:             & $u$ & 1.38e-03 & 1.98 & 3.50e-04 & 1.99 & 8.82e-05 \\
                     & $v$ & 1.21e-03 & 1.92 & 3.19e-04 & 1.98 & 8.09e-05 \\
                     & $c$ & 2.15e-03 & 1.99 & 5.41e-04 & 2.00 & 1.35e-04 \\
 \hline
-Test 2:             & $u$ & 1.32e-03 & 1.97 & 3.36e-04 & x.xx & x.xxe-xx \\
-                    & $v$ & 1.33e-03 & 1.93 & 3.50e-04 & x.xx & x.xxe-xx \\
-                    & $c$ & 1.63e-03 & 2.18 & 3.60e-04 & x.xx & x.xxe-xx \\
+Test 2:             & $u$ & 1.32e-03 & 1.97 & 3.36e-04 & 1.98 & 8.51e-05 \\
+                    & $v$ & 1.33e-03 & 1.93 & 3.50e-04 & 1.98 & 8.89e-05 \\
+                    & $c$ & 1.63e-03 & 2.18 & 3.60e-04 & 2.02 & 8.86e-05 \\
 \hline
-Test 3:             & $c$ & 2.11e-03 & 2.02 & 5.21e-04 & x.xx & x.xxe-xx \\
+Test 3:             & $c$ & 2.11e-03 & 2.02 & 5.21e-04 & 2.00 & 1.30e-04 \\
 \hline
-Test 4:             & $c$ & 1.68e-03 & 2.19 & 3.69e-04 & x.xx & x.xxe-xx
+Test 4:             & $c$ & 1.68e-03 & 2.19 & 3.69e-04 & 2.02 & 9.12e-05
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+\caption{Refining in time only.  Errors and convergence rates in $L^\infty$.}
+\begin{tabular}{ccccccc}
+& & 32-64 & Rate & 64-128 & Rate & 128-256 \\
+\hline
+Test 1:             & $u$ & 1.57e-06 & 1.97 & 4.02e-07 & 1.98 & 1.02e-07 \\
+                    & $v$ & 1.80e-06 & 2.00 & 4.51e-07 & 2.00 & 1.13e-07 \\
+                    & $c$ & 1.06e-05 & 1.99 & 2.67e-06 & 1.99 & 6.70e-07 \\
+\hline
+Test 2:             & $u$ & 3.28e-06 & 0.89 & 1.77e-06 & 0.94 & 9.22e-07 \\
+                    & $v$ & 4.79e-06 & 0.95 & 2.48e-06 & 0.97 & 1.27e-06 \\
+                    & $c$ & 4.67e-05 & 0.95 & 2.42e-05 & 0.95 & 1.25e-05 \\
+\hline
+Test 3:             & $u$ & 5.36e-05 & 0.98 & 2.72e-05 & 0.99 & 1.37e-05 \\
+                    & $c$ & 1.14e-05 & 2.00 & 2.85e-06 & 2.00 & 7.12e-07 \\
+\hline
+Test 4:             & $u$ & 4.71e-05 & 1.01 & 2.34e-05 & 1.00 & 1.17e-05 \\
+                    & $c$ & 5.78e-05 & 0.99 & 2.91e-05 & 1.00 & 1.46e-05
 \end{tabular}
 \end{center}
 \end{table}
