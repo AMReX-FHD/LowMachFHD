@@ -472,9 +472,9 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
     ! s_update already contains D^{*,n+1} + St^{*,n+1} for rho1 from above
-    ! add A^{*,n+1} for s to s_update
     if (advection_type .ge. 1) then
 
+       ! compute A^{n+1/2}
        do n=1,nlevs
           ! bds force currently contains D^n + St^n
           ! add D^{*,n+1} + St^{*,n+1} and then multiply by 1/2
