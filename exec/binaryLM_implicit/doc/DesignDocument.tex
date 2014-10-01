@@ -926,18 +926,19 @@ The mass diffusion coefficient is fixed at $\chi=10^{-6}$.
 The problem is a deterministic lid-driven cavity problem in two dimensions with 
 both the lo-y and hi-y wall moving in opposite directions to set up a circular 
 flow pattern.  All units are cgs.
-The domain is 1 $\times$ 1 divided into $32^2, 64^2, 128^2$, and $256^2$
-grid cells.  The lo-y and hi-y walls are no-slip walls moving with speeds:
+The domain is 1 $\times$ 1 divided into $64^2, 128^2, 256^2$, and $512^2$
+grid cells.  The lo-y and hi-y walls are no-slip walls moving in opposite directions
+with speed:
 \begin{equation}
 u(x,t) =
 \begin{cases}
 \frac{1}{4}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right]
            \left[1 + \sin{(2\pi t - \frac{\pi}{2}})\right], & t < 1\\
-1, & t \ge 1
+\frac{1}{2}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right], & t \ge 1
 \end{cases}.
 \end{equation}
 The x-walls are stationary no-slip.  The time step for the coarsest simulation is
-$\Delta t = 0.02$ and is reduced by a factor of 2 as the grid spacing
+$\Delta t = 0.005$ and is reduced by a factor of 2 as the grid spacing
 decreases by a factor of 2.  We run each simulation to 2 seconds.
 We use $\bar\rho_1 = 2, \bar\rho_2 = 1$.  The initial conditions are $\vb=0$ 
 and $p=0$ with
@@ -949,7 +950,9 @@ The viscosity varies linearly as a function of concentration, such that $\mu=0.1
 when $c=0$ and $\mu=1$ when $c=1$.  Similarly, the mass diffusion coefficient
 varies lienarly as a function of concentration, such that $\chi=10^{-4}$ when $c=0$ and
 $\chi=10^{-3}$ when $c=1$.  Gravity acts downward such that $\gb=(0,-1)$.
-Viscous operator form $\nabla\cdot\mu(\nabla + \nabla^T)$
+Viscous operator form $\nabla\cdot\mu(\nabla + \nabla^T)$.
+
+The tests are (WILL RENUMBER TESTS AND DIRECTORES ONCE SIMULATIONS ARE COMPLETE)
 \begin{itemize}
 \item Test 1: Inertial algorithm, centered scalar advection
 \item Test 2: Inertial algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
@@ -960,253 +963,109 @@ Viscous operator form $\nabla\cdot\mu(\nabla + \nabla^T)$
 \item Test 4 (with $\chi$): Overdamped algorithm, unlimited bilinear BDS scalar advection.
 \item Test 4 (with $\chi$, quad): Overdamped algorithm, unlimited quadratic BDS scalar advection.
 \end{itemize}
-For refining in time only, we use $64^2$ zones with coarse time step $\Delta t = 0.01$, refining
-by factors of 2.  The final simulation time is 2 seconds.
 
 \begin{table}[h]
 \begin{center}
 \caption{Refining in space and time.  Errors and convergence rates in $L^\infty$.}
 \begin{tabular}{ccccccc}
-& & 32-64 & Rate & 64-128 & Rate & 128-256 \\
+& & 64-128 & Rate & 128-256 & Rate & 256-512 \\
 \hline
-Test 1:             & $u$ & 6.72e-03 & 1.80 & 1.93e-03 & 1.91 & 5.12e-04 \\
-                    & $v$ & 3.23e-03 & 1.90 & 8.68e-04 & 1.99 & 2.19e-04 \\
-                    & $c$ & 1.25e-02 & 2.05 & 3.02e-03 & 1.99 & 7.61e-04 \\
+Test 1:             & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 2:             & $u$ & 6.74e-03 & 1.82 & 1.91e-03 & 1.91 & 5.07e-04 \\
-                    & $v$ & 3.36e-03 & 1.87 & 9.21e-03 & 2.00 & 2.31e-04 \\
-                    & $c$ & 1.22e-02 & 2.15 & 2.75e-03 & 1.96 & 7.08e-04 \\
+Test 2:             & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 2:             & $u$ & 6.75e-03 & 1.81 & 1.92e-03 & 1.91 & 5.11e-04 \\
-with $\chi$         & $v$ & 3.17e-03 & 1.88 & 8.60e-04 & 1.95 & 2.23e-04 \\
-                    & $c$ & 7.69e-03 & 1.97 & 1.96e-03 & 2.08 & 4.63e-04 \\
+Test 2: ($\chi$, b) & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 2:             & $u$ & 6.77e-03 & 1.82 & 1.92e-03 & 1.91 & 5.11e-04 \\
-with $\chi$         & $v$ & 3.36e-03 & 1.89 & 9.05e-04 & 1.96 & 2.33e-04 \\
-bilinear BDS        & $c$ & 6.94e-03 & 1.44 & 2.56e-03 & 1.72 & 7.77e-04 \\
+Test 2: ($\chi$, q) & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 3:             & $c$ & 1.42e-02 & 2.00 & 3.56e-03 & 2.00 & 8.89e-04 \\
+Test 3:             & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 4:             & $c$ & 1.23e-02 & 2.16 & 2.75e-03 & 1.95 & 7.13e-04
+Test 4:             & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 4: ($\chi$, b) & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 4: ($\chi$, q) & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx
 \end{tabular}
 \end{center}
 \end{table}
+
 
 \begin{table}[h]
 \begin{center}
 \caption{Refining in space and time.  Errors and convergence rates in $L^1$.}
 \begin{tabular}{ccccccc}
-& & 32-64 & Rate & 64-128 & Rate & 128-256 \\
+& & 64-128 & Rate & 128-256 & Rate & 256-512 \\
 \hline
-Test 1:             & $u$ & 8.86e-04 & 1.96 & 2.28e-04 & 1.99 & 5.73e-05 \\
-                    & $v$ & 1.03e-03 & 1.92 & 2.73e-04 & 1.97 & 6.96e-05 \\
-                    & $c$ & 8.85e-04 & 1.98 & 2.24e-04 & 1.99 & 5.63e-05 \\
+Test 1:             & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 2:             & $u$ & 8.00e-04 & 1.94 & 2.08e-04 & 1.98 & 5.28e-05 \\
-                    & $v$ & 1.14e-03 & 1.92 & 3.02e-04 & 1.98 & 7.68e-05 \\
-                    & $c$ & 6.08e-04 & 2.27 & 1.26e-04 & 2.05 & 3.05e-05 \\
+Test 2:             & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 2:             & $u$ & 7.66e-04 & 1.94 & 2.00e-04 & 1.97 & 5.11e-05 \\
-with $\chi$         & $v$ & 1.09e-03 & 1.91 & 2.90e-04 & 1.97 & 7.42e-05 \\
-                    & $c$ & 5.09e-04 & 2.06 & 1.22e-04 & 1.99 & 3.08e-05 \\
+Test 2: ($\chi$, b) & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 2:             & $u$ & 7.37e-04 & 1.89 & 1.93e-04 & 1.97 & 4.93e-05 \\
-with $\chi$         & $v$ & 1.14e-03 & 1.92 & 3.01e-04 & 1.97 & 7.67e-05 \\
-bilinear BDS        & $c$ & 6.21e-04 & 1.97 & 1.59e-04 & 1.96 & 4.09e-05 \\
+Test 2: ($\chi$, q) & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 3:             & $c$ & 8.38e-04 & 1.99 & 2.11e-04 & 2.00 & 5.29e-05 \\
+Test 3:             & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 4:             & $c$ & 6.36e-04 & 2.28 & 1.31e-04 & 2.05 & 3.16e-05
+Test 4:             & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 4: ($\chi$, b) & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 4: ($\chi$, q) & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx
 \end{tabular}
 \end{center}
 \end{table}
+
+
 
 \begin{table}[h]
 \begin{center}
 \caption{Refining in space and time.  Errors and convergence rates in $L^2$.}
 \begin{tabular}{ccccccc}
-& & 32-64 & Rate & 64-128 & Rate & 128-256 \\
+& & 64-128 & Rate & 128-256 & Rate & 256-512 \\
 \hline
-Test 1:             & $u$ & 1.38e-03 & 1.98 & 3.50e-04 & 1.99 & 8.82e-05 \\
-                    & $v$ & 1.21e-03 & 1.92 & 3.19e-04 & 1.98 & 8.09e-05 \\
-                    & $c$ & 2.15e-03 & 1.99 & 5.41e-04 & 2.00 & 1.35e-04 \\
+Test 1:             & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 2:             & $u$ & 1.32e-03 & 1.97 & 3.36e-04 & 1.98 & 8.51e-05 \\
-                    & $v$ & 1.33e-03 & 1.93 & 3.50e-04 & 1.98 & 8.89e-05 \\
-                    & $c$ & 1.63e-03 & 2.18 & 3.60e-04 & 2.02 & 8.86e-05 \\
+Test 2:             & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 2:             & $u$ & 1.29e-03 & 1.97 & 3.30e-04 & 1.98 & 8.38e-05 \\
-with $\chi$         & $v$ & 1.29e-03 & 1.92 & 3.40e-04 & 1.97 & 8.68e-05 \\
-                    & $c$ & 1.30e-03 & 1.97 & 3.31e-04 & 1.93 & 8.66e-05 \\
+Test 2: ($\chi$, b) & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 2:             & $u$ & 1.28e-03 & 1.97 & 3.27e-04 & 1.98 & 8.29e-05 \\
-with $\chi$         & $v$ & 1.35e-03 & 1.94 & 3.53e-04 & 1.97 & 9.00e-05 \\
-bilinear BDS        & $c$ & 1.41e-03 & 1.83 & 3.97e-04 & 1.88 & 1.08e-04 \\
+Test 2: ($\chi$, q) & $u$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 3:             & $c$ & 2.11e-03 & 2.02 & 5.21e-04 & 2.00 & 1.30e-04 \\
+Test 3:             & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
 \hline
-Test 4:             & $c$ & 1.68e-03 & 2.19 & 3.69e-04 & 2.02 & 9.12e-05
+Test 4:             & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 4: ($\chi$, b) & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 4: ($\chi$, q) & $c$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx
 \end{tabular}
 \end{center}
 \end{table}
 
-\begin{table}[h]
-\begin{center}
-\caption{Refining in time only.  Errors and convergence rates in $L^\infty$.}
-\begin{tabular}{ccccccc}
-& & 32-64 & Rate & 64-128 & Rate & 128-256 \\
-\hline
-Test 1:             & $u$ & 1.57e-06 & 1.97 & 4.02e-07 & 1.98 & 1.02e-07 \\
-                    & $v$ & 1.80e-06 & 2.00 & 4.51e-07 & 2.00 & 1.13e-07 \\
-                    & $c$ & 1.06e-05 & 1.99 & 2.67e-06 & 1.99 & 6.70e-07 \\
-\hline
-Test 2:             & $u$ & 3.28e-06 & 0.89 & 1.77e-06 & 0.94 & 9.22e-07 \\
-                    & $v$ & 4.79e-06 & 0.95 & 2.48e-06 & 0.97 & 1.27e-06 \\
-                    & $c$ & 4.67e-05 & 0.95 & 2.42e-05 & 0.95 & 1.25e-05 \\
-\hline
-Test 3:             & $c$ & 1.14e-05 & 2.00 & 2.85e-06 & 2.00 & 7.12e-07 \\
-\hline
-Test 4:             & $c$ & 5.78e-05 & 0.99 & 2.91e-05 & 1.00 & 1.46e-05
-\end{tabular}
-\end{center}
-\end{table}
-
-% \begin{table}[h]
-% \begin{center}
-% \caption{Errors and convergence rates in $L^\infty$.}
-% \begin{tabular}{ccccccc}
-% & & 32-64 & Rate & 64-128 & Rate & 128-256 \\
-% \hline
-% Test 1:             & $u$ & 6.72e-03 & 1.80 & 1.93e-03 & 1.91 & 5.12e-04 \\
-%                     & $v$ & 3.23e-03 & 1.90 & 8.68e-04 & 1.99 & 2.19e-04 \\
-%                     & $c$ & 1.25e-02 & 2.05 & 3.02e-03 & 1.95 & 7.81e-04 \\
-% \hline
-% Test 2:             & $u$ & 6.76e-03 & 1.82 & 1.91e-03 & 1.91 & 5.07e-04 \\
-%                     & $v$ & 3.56e-03 & 1.87 & 9.76e-04 & 2.01 & 2.43e-04 \\
-%                     & $c$ & 1.42e-02 & 1.74 & 4.26e-03 & 1.91 & 1.13e-03 \\
-% \hline
-% Test 2 with $\chi$  & $u$ & 6.77e-03 & 1.81 & 1.92e-03 & 1.91 & 5.11e-04 \\
-%                     & $v$ & 3.36e-03 & 1.89 & 9.05e-04 & 1.96 & 2.33e-04 \\
-%                     & $c$ & 6.94e-03 & 1.44 & 2.56e-03 & 1.72 & 7.77e-04 \\
-% \hline
-% Test 3:             & $c$ & 1.44e-02 & 1.94 & 3.74e-03 & 1.94 & 9.76e-04 \\
-% \hline
-% Test 4:             & $c$ & 1.40e-02 & 1.69 & 4.34e-03 & 1.89 & 1.17e-03 \\
-% \hline
-% Test 4: with $\chi$ & $c$ & 6.75e-03 & 1.17 & 3.01e-03 & 1.64 & 9.68e-04 \\
-% \hline
-% Test 4: with $\chi$, $\bar\rho_1=\bar\rho_2$
-%                     & $c$ & 7.42e-03 & 1.83 & 2.09e-03 & 1.77 & 6.13e-04 \\
-% \hline
-% Test 4: no $\gb$    & $c$ & 1.07e-02 & 1.78 & 3.10e-03 & 1.80 & 8.93e-04 \\
-% \hline
-% Test 5:             & $u$ & 2.28e-03 & 1.97 & 5.82e-04 & 2.04 & 1.42e-04 \\
-%                     & $v$ & 2.21e-03 & 1.86 & 6.09e-04 & 1.99 & 1.53e-04 \\
-%                     & $c$ & 1.40e-02 & 1.99 & 3.52e-03 & 2.00 & 8.79e-04 \\
-% \hline
-% Test 6:             & $u$ & 2.36e-03 & 2.04 & 5.75e-04 & 2.04 & 1.40e-04 \\
-%                     & $v$ & 2.71e-03 & 1.88 & 7.36e-04 & 2.04 & 1.79e-04 \\
-%                     & $c$ & 1.35e-02 & 1.67 & 4.23e-03 & 1.90 & 1.13e-03 \\
-% \hline
-% Test 7:             & $c$ & 1.58e-02 & 1.91 & 4.19e-03 & 1.94 & 1.09e-03 \\
-% \hline
-% Test 8:             & $c$ & 1.48e-02 & 1.75 & 4.40e-03 & 1.87 & 1.20e-03 \\
-% \hline
-% \end{tabular}
-% \end{center}
-% \end{table}
-
-
-% \begin{table}[h]
-% \begin{center}
-% \caption{Errors and convergence rates in $L^1$.}
-% \begin{tabular}{ccccccc}
-% & & 32-64 & Rate & 64-128 & Rate & 128-256 \\
-% \hline
-% Test 1:             & $u$ & 8.86e-04 & 1.96 & 2.28e-04 & 1.99 & 5.73e-05 \\
-%                     & $v$ & 1.03e-03 & 1.92 & 2.73e-04 & 1.97 & 6.96e-05 \\
-%                     & $c$ & 8.85e-04 & 1.98 & 2.24e-05 & 1.99 & 5.63e-05 \\
-% \hline
-% Test 2:             & $u$ & 7.86e-04 & 1.95 & 2.03e-04 & 1.97 & 5.18e-05 \\
-%                     & $v$ & 1.18e-03 & 1.92 & 3.12e-04 & 1.98 & 7.92e-05 \\
-%                     & $c$ & 6.52e-04 & 2.07 & 1.55e-04 & 1.98 & 3.94e-05 \\
-% \hline
-% Test 2 with $\chi$  & $u$ & 7.37e-04 & 1.93 & 1.93e-04 & 1.96 & 4.96e-05 \\
-%                     & $v$ & 1.14e-03 & 1.92 & 3.01e-04 & 1.97 & 7.67e-05 \\
-%                     & $c$ & 6.21e-04 & 1.96 & 1.59e-04 & 1.96 & 4.09e-05 \\
-% \hline
-% Test 3:             & $c$ & 8.32e-04 & 1.99 & 2.09e-04 & 1.95 & 5.41e-05 \\
-% \hline
-% Test 4:             & $c$ & 6.84e-04 & 1.99 & 1.72e-04 & 1.81 & 4.91e-05 \\
-% \hline
-% Test 4: with $\chi$ & $c$ & 6.36e-04 & 1.96 & 1.63e-04 & 1.86 & 4.50e-05 \\
-% \hline
-% Test 4: with $\chi$, $\bar\rho_1=\bar\rho_2$ 
-%                     & $c$ & 5.82e-04 & 1.93 & 1.53e-04 & 1.95 & 3.95e-05 \\
-% \hline
-% Test 4: no $\gb$    & $c$ & 6.71e-04 & 1.99 & 1.69e-04 & 1.80 & 4.86e-05 \\
-% \hline
-% Test 5:             & $u$ & 5.59e-04 & 1.97 & 1.43e-04 & 1.99 & 3.60e-05 \\
-%                     & $v$ & 4.51e-04 & 2.01 & 1.12e-04 & 2.02 & 2.77e-05 \\
-%                     & $c$ & 8.90e-04 & 1.98 & 2.25e-04 & 1.99 & 5.67e-05 \\
-% \hline
-% Test 6:             & $u$ & 4.33e-04 & 1.95 & 1.12e-04 & 1.97 & 2.85e-05 \\
-%                     & $v$ & 5.18e-04 & 2.02 & 1.26e-04 & 2.02 & 3.11e-05 \\
-%                     & $c$ & 6.53e-04 & 2.07 & 1.56e-04 & 1.95 & 4.05e-05 \\
-% \hline
-% Test 7:             & $c$ & 8.49e-04 & 1.97 & 2.17e-04 & 1.91 & 5.77e-05 \\
-% \hline
-% Test 8:             & $c$ & 6.77e-04 & 1.91 & 1.80e-04 & 1.72 & 5.45e-05 \\
-% \hline
-% \end{tabular}
-% \end{center}
-% \end{table}
-
-
-% \begin{table}[h]
-% \begin{center}
-% \caption{Errors and convergence rates in $L^2$.}
-% \begin{tabular}{ccccccc}
-% & & 32-64 & Rate & 64-128 & Rate & 128-256 \\
-% \hline
-% Test 1:             & $u$ & 1.38e-03 & 1.98 & 3.50e-04 & 1.99 & 8.82e-05 \\
-%                     & $v$ & 1.21e-03 & 1.92 & 3.19e-04 & 1.98 & 8.09e-05 \\
-%                     & $c$ & 2.15e-03 & 1.99 & 5.41e-04 & 2.00 & 1.35e-04 \\
-% \hline
-% Test 2:             & $u$ & 1.32e-03 & 1.98 & 3.34e-04 & 1.98 & 8.47e-05 \\
-%                     & $v$ & 1.39e-03 & 1.94 & 3.63e-04 & 1.98 & 9.20e-05 \\
-%                     & $c$ & 1.74e-03 & 1.97 & 4.45e-04 & 1.93 & 1.17e-04 \\
-% \hline
-% Test 2 with $\chi$  & $u$ & 1.28e-03 & 1.96 & 3.27e-04 & 1.98 & 8.29e-05 \\
-%                     & $v$ & 1.35e-03 & 1.93 & 3.53e-04 & 1.97 & 9.00e-05 \\
-%                     & $c$ & 1.41e-03 & 1.83 & 3.97e-04 & 1.88 & 1.08e-04 \\
-% \hline
-% Test 3:             & $c$ & 2.09e-03 & 2.02 & 5.16e-04 & 1.98 & 1.31e-04 \\
-% \hline
-% Test 4:             & $c$ & 1.80e-03 & 1.88 & 4.89e-04 & 1.74 & 1.46e-04 \\
-% \hline
-% Test 4: with $\chi$ & $c$ & 1.46e-03 & 1.77 & 4.27e-04 & 1.74 & 1.28e-04 \\
-% \hline
-% Test 4: with $\chi$, $\bar\rho_1=\bar\rho_2$
-%                     & $c$ & 1.36e-03 & 1.80 & 3.88e-04 & 1.89 & 1.04e-04 \\
-% \hline
-% Test 4: no $\gb$    & $c$ & 1.71e-03 & 1.86 & 4.70e-04 & 1.73 & 1.42e-04 \\
-% \hline
-% Test 5:             & $u$ & 7.22e-04 & 2.00 & 1.80e-04 & 1.99 & 4.52e-05 \\
-%                     & $v$ & 5.56e-04 & 1.99 & 1.40e-04 & 2.00 & 3.50e-05 \\
-%                     & $c$ & 2.16e-03 & 1.99 & 5.42e-04 & 1.96 & 1.39e-04 \\
-% \hline
-% Test 6:             & $u$ & 5.96e-04 & 2.01 & 1.48e-04 & 2.00 & 3.70e-05 \\
-%                     & $v$ & 6.51e-04 & 2.02 & 1.61e-04 & 2.03 & 3.95e-05 \\
-%                     & $c$ & 1.72e-03 & 1.89 & 4.65e-04 & 1.91 & 1.24e-04 \\
-% \hline
-% Test 7:             & $c$ & 2.15e-03 & 2.00 & 5.39e-04 & 1.93 & 1.41e-04 \\
-% \hline
-% Test 8:             & $c$ & 1.82e-03 & 1.78 & 5.28e-04 & 1.71 & 1.61e-04 \\
-% \hline
-% \end{tabular}
-% \end{center}
-% \end{table}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
