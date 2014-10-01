@@ -294,7 +294,7 @@ contains
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
           call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp, &
                    the_bc_tower,proj_type_in=1)
-       else if (advection_type .eq. 3) then
+       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp, &
                         the_bc_tower,proj_type_in=1)
        end if
@@ -488,7 +488,7 @@ contains
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
           call bds(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp, &
                    the_bc_tower,proj_type_in=1)
-       else if (advection_type .eq. 3) then
+       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bds_quad(mla,umac,sold,s_update,bds_force,s_fc,dx,dt,1,2,scal_bc_comp, &
                         the_bc_tower,proj_type_in=1)
        end if

@@ -3993,10 +3993,22 @@ contains
           bccomp = bc_comp+comp-scomp
           select case (dm)
           case (2)
-             call bdsslope_quad_2d(lo, hi, sop(:,:,1,comp), ng_s, &
-                                   avep(:,:,1,1), slxp(:,:,1,1), slyp(:,:,1,1), &
-                                   slxyp(:,:,1,1), slxxp(:,:,1,1), slyyp(:,:,1,1), &
-                                   sip(:,:,1,1), scp(:,:,1,:), dx(lev,:)) 
+
+             if (advection_type .eq. 3) then
+
+                call bdsslope_quad_2d(lo, hi, sop(:,:,1,comp), ng_s, &
+                                      avep(:,:,1,1), slxp(:,:,1,1), slyp(:,:,1,1), &
+                                      slxyp(:,:,1,1), slxxp(:,:,1,1), slyyp(:,:,1,1), &
+                                      sip(:,:,1,1), scp(:,:,1,:), dx(lev,:)) 
+
+             else if (advection_type .eq. 4) then
+
+                call bdsslope_quad_lim_2d(lo, hi, sop(:,:,1,comp), ng_s, &
+                                          avep(:,:,1,1), slxp(:,:,1,1), slyp(:,:,1,1), &
+                                          slxyp(:,:,1,1), slxxp(:,:,1,1), slyyp(:,:,1,1), &
+                                          sip(:,:,1,1), scp(:,:,1,:), dx(lev,:)) 
+
+             end if
 
              call  bdsconc_quad_2d(lo, hi, sup(:,:,1,comp), ng_u, &
                                    fp(:,:,1,comp), ng_o, &
@@ -4131,120 +4143,614 @@ contains
     enddo
       
     deallocate(diff,smin,smax,sumdif,sgndif,kdp)
-    return
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! comment out these two lines to add in basic limiting
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  end subroutine bdsslope_quad_2d
+
+  subroutine bdsslope_quad_lim_2d(lo,hi,s,ng,ave,slx,sly,slxy,slxx,slyy,sint,sc,dx)
+
+    integer        , intent(in   ) :: lo(:), hi(:), ng
+    real(kind=dp_t), intent(in   ) ::    s(lo(1)-ng:,lo(2)-ng:)
+    real(kind=dp_t), intent(inout) ::  ave(lo(1)-1:,lo(2)-1:)
+    real(kind=dp_t), intent(inout) ::  slx(lo(1)-1:,lo(2)-1:)
+    real(kind=dp_t), intent(inout) ::  sly(lo(1)-1:,lo(2)-1:)
+    real(kind=dp_t), intent(inout) :: slxy(lo(1)-1:,lo(2)-1:)
+    real(kind=dp_t), intent(inout) :: slxx(lo(1)-1:,lo(2)-1:)
+    real(kind=dp_t), intent(inout) :: slyy(lo(1)-1:,lo(2)-1:)
+    real(kind=dp_t), intent(inout) :: sint(lo(1)-2:,lo(2)-2:)
+    real(kind=dp_t), intent(inout) ::   sc(lo(1)-1:,lo(2)-1:,:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+
+    real(kind=dp_t), allocatable :: diff(:,:)
+    real(kind=dp_t), allocatable :: smin(:,:)
+    real(kind=dp_t), allocatable :: smax(:,:)
+    real(kind=dp_t), allocatable :: sumdif(:)
+    real(kind=dp_t), allocatable :: sgndif(:)
+    integer        , allocatable :: kdp(:)
+    logical        , allocatable :: test_free(:,:)
+    real(kind=dp_t), allocatable :: adjust_goal(:,:)
+    real(kind=dp_t), allocatable :: slxx_extr(:,:)
+    real(kind=dp_t), allocatable :: slyy_extr(:,:)
+
+
+    real(kind=dp_t) :: hx,hy,sumloc,redfac,redmax,div,cmp,cmp_x,cmp_y,my_sn,min_x,min_y
+    real(kind=dp_t) :: eps, pos, my_val,my_min,my_max
+    integer         :: inc1, inc2, inc3, inc4, ind_x1, ind_y1,ind_x2, ind_y2, limit_x, limit_y 
+    integer         :: edge_xh, edge_xl, edge_yh, edge_yl, test_corners
+    integer         :: i,j,k,ll,is,ie,js,je
+
+    allocate(  diff(lo(1)-1:hi(1)+1,4))
+    allocate(  smin(lo(1)-1:hi(1)+1,4))
+    allocate(  smax(lo(1)-1:hi(1)+1,4))
+    allocate(sumdif(lo(1)-1:hi(1)+1  ))
+    allocate(sgndif(lo(1)-1:hi(1)+1  ))
+    allocate(   kdp(lo(1)-1:hi(1)+1  ))
+    allocate(  test_free(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1))
+    allocate(  adjust_goal(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1))
+    allocate(  slxx_extr(lo(1)-2:hi(1)+2,lo(2)-2:hi(2)+2))
+    allocate(  slyy_extr(lo(1)-2:hi(1)+2,lo(2)-2:hi(2)+2))
+
+
+    hx = dx(1)
+    hy = dx(2)
+    is = lo(1)
+    ie = hi(1)
+    js = lo(2)
+    je = hi(2)
+
+    eps = 1.d-11
+
+    ! extrapolate corner values and second deriavtives
+
+    do i = is-2,ie+1
+       do j = js-2,je+1
+          sint(i,j) = (s(i-1,j-1) + s(i-1,j+2) + s(i+2,j-1) + s(i+2,j+2) &
+               - 7.d0*(s(i-1,j  ) + s(i-1,j+1) + s(i  ,j-1) + s(i+1,j-1) + & 
+               s(i  ,j+2) + s(i+1,j+2) + s(i+2,j  ) + s(i+2,j+1)) +  &
+               49.d0*(s(i  ,j  ) + s(i+1,j  ) + s(i  ,j+1) + s(i+1,j+1)) ) / 144.d0
+       end do
+    end do
+
+    do j = js-2,je+2
+       do i = is-2,ie+2 
+          slxx_extr(i,j) = 0.5d0*( - s(i-2,j) + 12.d0*s(i-1,j) - 22.d0*s(i,j)  &
+               + 12.d0*s(i+1,j) - s(i+2,j) ) / (8.d0*hx**2)
+          slyy_extr(i,j) = 0.5d0*( - s(i,j-2) + 12.d0*s(i,j-1) - 22.d0*s(i,j)  &
+               + 12.d0*s(i,j+1) - s(i,j+2) ) / (8.d0*hy**2)
+       enddo
+    enddo
+
+
+    ! if all extrapolated values are on one side of s(i,j), construct a constant on that cell
+    ! set test_free to false so that the polynomial is not changed in what follows
     do j = js-1,je+1
        do i = is-1,ie+1
-          smin(i,4) = min(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
-          smax(i,4) = max(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
-          smin(i,3) = min(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
-          smax(i,3) = max(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
-          smin(i,2) = min(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
-          smax(i,2) = max(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
-          smin(i,1) = min(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
-          smax(i,1) = max(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
+          if (  min((sint(i,j)- s(i,j))*(sint(i-1,j)-s(i,j)) , &
+               (sint(i,j)- s(i,j))*(sint(i,j-1)-s(i,j)), &
+               (sint(i,j)- s(i,j))*(sint(i-1,j-1)-s(i,j)) ) .ge. 0.d0  ) then
+             test_free(i,j) = .false.
+             slx(i,j) = 0.d0
+             sly(i,j) = 0.d0
+             slxy(i,j) = 0.d0
+             slxx(i,j) = 0.d0
+             slyy(i,j) = 0.d0
+             ave(i,j) = s(i,j)
+          else
+             test_free(i,j) = .true.
+          end if
+       end do
+    end do
 
-          sc(i,j,4) = s(i,j) + 0.5d0*(hx*slx(i,j) + hy*sly(i,j))  &
-               + 0.25d0*hx*hy*slxy(i,j)
-          sc(i,j,3) = s(i,j) + 0.5d0*(hx*slx(i,j) - hy*sly(i,j))  &
-               - 0.25d0*hx*hy*slxy(i,j)
-          sc(i,j,2) = s(i,j) - 0.5d0*(hx*slx(i,j) - hy*sly(i,j)) &
-               - 0.25d0*hx*hy*slxy(i,j)
-          sc(i,j,1) = s(i,j) - 0.5d0*(hx*slx(i,j) + hy*sly(i,j)) &
-               + 0.25d0*hx*hy*slxy(i,j)
 
-          sc(i,j,4) = max(min(sc(i,j,4), smax(i,4)), smin(i,4))
-          sc(i,j,3) = max(min(sc(i,j,3), smax(i,3)), smin(i,3))
-          sc(i,j,2) = max(min(sc(i,j,2), smax(i,2)), smin(i,2))
-          sc(i,j,1) = max(min(sc(i,j,1), smax(i,1)), smin(i,1))
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! first round: try if unlimited polynomial passes the test
+    ! 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+    do j = js-1,je+1
+       do i = is-1,ie+1 
+
+          if (test_free(i,j) ) then
+
+             ! calculate slopes out of sint
+
+             slx(i,j) = 0.5d0*(sint(i  ,j) + sint(i  ,j-1) - &
+                  sint(i-1,j) - sint(i-1,j-1) ) / hx
+             sly(i,j) = 0.5d0*(sint(i  ,j) - sint(i  ,j-1) + &
+                  sint(i-1,j) - sint(i-1,j-1) ) / hy
+             slxy(i,j) = (sint(i,j  ) - sint(i  ,j-1) - &
+                  sint(i-1,j) + sint(i-1,j-1) ) / (hx*hy)
+
+             ! limit slxx, slyy such that no true interior min/max
+
+             slxx(i,j) = slxx_extr(i,j)
+
+             slyy(i,j) = slyy_extr(i,j)
+
+             ! make sure that there is no interior min/max
+             ind_x1=0;
+             ind_x2=0;
+             ind_y1=0;
+             ind_y2=0;
+             if (sign(1.d0,-slxy(i,j)*hy/2.-slx(i,j)) * sign(1.d0,slxy(i,j)*hy/2.-slx(i,j)) .lt. 0.d0 ) then
+                ind_x1 = 1;
+             else
+                cmp_x = min(abs(slxy(i,j)*hy/2.+slx(i,j)) , abs(slxy(i,j)*hy/2.-slx(i,j)) )
+                if (cmp_x .lt. abs(slxx(i,j))*hx) then ! ie would create interior extrema
+                   ind_x2 = 1;
+                end if
+             end if
+
+             if (sign(1.d0,-slxy(i,j)*hx/2.-sly(i,j)) * sign(1.d0,slxy(i,j)*hx/2.-sly(i,j)) .lt. 0.d0 ) then
+                ind_y1 = 1;
+             else
+                cmp_y = min(abs(slxy(i,j)*hx/2.+sly(i,j)) , abs(slxy(i,j)*hx/2.-sly(i,j)) )
+                if (cmp_y .lt. abs(slyy(i,j))*hy) then ! ie would create interior extrema
+                   ind_y2 = 1;
+                end if
+             end if
+
+             ! set slxx, slyy=0 if real interior min/max (ie both x-der and y-der are 0)
+             if (ind_x1 .eq. 1 .and. ind_y1 .eq. 1) then
+                slxx(i,j) = 0.d0;
+                slyy(i,j) = 0.d0;
+                !             print *,'set slxx,slyy=0,i,j',i,j
+             end if
+             if (ind_x1 .eq. 1 .and. ind_y2 .eq. 1) then
+                slxx(i,j) = 0.d0;
+                slyy(i,j) = sign(1.0d0,slyy_extr(i,j)) * cmp_y / hy;
+             end if
+             if (ind_x2 .eq. 1 .and. ind_y1 .eq. 1) then
+                slxx(i,j) =  sign(1.0d0,slxx_extr(i,j)) * cmp_x / hx;
+                slyy(i,j) = 0.d0;
+             end if
+             if (ind_x2 .eq. 1 .and. ind_y2 .eq. 1) then
+                slxx(i,j) =  sign(1.0d0,slxx_extr(i,j)) * cmp_x / hx;
+                slyy(i,j) =  sign(1.0d0,slyy_extr(i,j)) * cmp_y / hy;
+             end if
+
+
+             ! Then adjust constant
+             ave(i,j) = s(i,j) - ( slxx(i,j)*hx**2 + slyy(i,j)*hy**2 ) / 12.d0
+
+!!!!!!!!!!!!!!!!!!!!!!!!
+             ! still have to check for extrema on the boundary
+!!!!!!!!!!!!!!!!!!!!!!!!
+
+             smin(i,4) = min(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
+             smax(i,4) = max(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
+             smin(i,3) = min(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
+             smax(i,3) = max(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
+             smin(i,2) = min(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
+             smax(i,2) = max(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
+             smin(i,1) = min(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
+             smax(i,1) = max(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
+
+             sc(i,j,4) = s(i,j) + 0.5d0*(hx*slx(i,j) + hy*sly(i,j))  &
+                  + 0.25d0*hx*hy*slxy(i,j) &
+                  + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+             sc(i,j,3) = s(i,j) + 0.5d0*(hx*slx(i,j) - hy*sly(i,j))  &
+                  - 0.25d0*hx*hy*slxy(i,j) &
+                  + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+             sc(i,j,2) = s(i,j) - 0.5d0*(hx*slx(i,j) - hy*sly(i,j)) &
+                  - 0.25d0*hx*hy*slxy(i,j) &
+                  + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+             sc(i,j,1) = s(i,j) - 0.5d0*(hx*slx(i,j) + hy*sly(i,j)) &
+                  + 0.25d0*hx*hy*slxy(i,j) &
+                  + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+
+             if (sc(i,j,4) .le. smax(i,4) .and. sc(i,j,4) .ge. smin(i,4)  .and. &
+                  sc(i,j,3) .le. smax(i,3) .and. sc(i,j,3) .ge. smin(i,3) .and. &
+                  sc(i,j,2) .le. smax(i,2) .and. sc(i,j,2) .ge. smin(i,2)  .and. &
+                  sc(i,j,1) .le. smax(i,1) .and. sc(i,j,1) .ge. smin(i,1)) then
+                ! keep that polynomial (if it passes the edge tests as well)
+                test_corners = 1
+             else
+                test_corners = 0;
+                if (j .ge. js .and. j .le. je .and. i .ge. is .and. i .le. ie) then
+                   !                print *,'corners dont pass test,i,j',i,j
+                end if
+             end if
+
+             ! upper y-edge
+             if (abs(slxy(i,j)*hy/2.+slx(i,j)) .lt. abs(hx*slxx(i,j)) ) then
+                ! have interior min/max
+                pos = - (slxy(i,j)*hy/2.+slx(i,j))/(2*slxx(i,j))
+                my_val = ave(i,j) + pos*slx(i,j) + 0.5d0*hy*sly(i,j)  &
+                     + 0.5d0*pos*hy*slxy(i,j) &
+                     + pos**2*slxx(i,j) + hy**2*slyy(i,j)/4.
+                if (pos .ge. 0.d0) then
+                   my_min = min(s(i,j),s(i,j+1),s(i+1,j),s(i+1,j+1))
+                   my_max = max(s(i,j),s(i,j+1),s(i+1,j),s(i+1,j+1))
+                else
+                   my_min = min(s(i,j),s(i,j+1),s(i-1,j),s(i-1,j+1))
+                   my_max = max(s(i,j),s(i,j+1),s(i-1,j),s(i-1,j+1))
+                end if
+                if (my_val .ge. my_min .and. my_val .le. my_max) then
+                   edge_yh = 1;
+                   limit_x = 0;
+                else
+                   edge_yh = 0;
+                   limit_x = 1;
+                   if (j .ge. js .and. j .le. je .and. i .ge. is .and. i .le. ie) then
+                      !                   print *,'edge_yh doesnt pass test,i,j',i,j
+                   end if
+                end if
+             else 
+                edge_yh = 1;
+             end if
+
+             ! lower y-edge
+             if (abs(-slxy(i,j)*hy/2.+slx(i,j)) .lt. abs(hx*slxx(i,j)) ) then
+                ! have interior min/max
+                pos = - (-slxy(i,j)*hy/2.+slx(i,j))/(2*slxx(i,j))
+                my_val = ave(i,j) + pos*slx(i,j) - 0.5d0*hy*sly(i,j)  &
+                     - 0.5d0*pos*hy*slxy(i,j) &
+                     + pos**2*slxx(i,j) + hy**2*slyy(i,j)/4.
+                if (pos .gt. 0.d0) then
+                   my_min = min(s(i,j),s(i,j-1),s(i+1,j),s(i+1,j-1))
+                   my_max = max(s(i,j),s(i,j-1),s(i+1,j),s(i+1,j-1))
+                else
+                   my_min = min(s(i,j),s(i,j-1),s(i-1,j),s(i-1,j-1))
+                   my_max = max(s(i,j),s(i,j-1),s(i-1,j),s(i-1,j-1))
+                end if
+                if (my_val .ge. my_min .and. my_val .le. my_max) then
+                   edge_yl = 1;
+                else
+                   edge_yl = 0;
+                   limit_x = 1;
+                   if (j .ge. js .and. j .le. je .and. i .ge. is .and. i .le. ie) then
+                      !                   print *,'edge_yl doesnt pass test,i,j',i,j
+                   end if
+                end if
+             else 
+                edge_yl = 1;
+             end if
+
+             ! upper x-edge
+             if (abs(slxy(i,j)*hx/2.+sly(i,j)) .lt. abs(hy*slyy(i,j)) ) then
+                ! have interior min/max
+                pos = - (slxy(i,j)*hx/2.+sly(i,j))/(2*slyy(i,j))
+                my_val = ave(i,j) + 0.5*hx*slx(i,j) + pos*sly(i,j)  &
+                     + 0.5d0*hx*pos*slxy(i,j) &
+                     + hx**2*slxx(i,j)/4. + pos**2*slyy(i,j)
+                if (pos .ge. 0.d0) then
+                   my_min = min(s(i,j),s(i+1,j),s(i,j+1),s(i+1,j+1))
+                   my_max = max(s(i,j),s(i+1,j),s(i,j+1),s(i+1,j+1))
+                else
+                   my_min = min(s(i,j),s(i+1,j),s(i,j-1),s(i+1,j-1))
+                   my_max = max(s(i,j),s(i+1,j),s(i,j-1),s(i+1,j-1))
+                end if
+                if (my_val .ge. my_min .and. my_val .le. my_max) then
+                   edge_xh = 1;
+                   limit_y = 0;
+                else
+                   edge_xh = 0;
+                   limit_y = 1;
+                   if (j .ge. js .and. j .le. je .and. i .ge. is .and. i .le. ie) then
+                      !                   print *,'edge_xh doesnt pass test,i,j',i,j
+                   end if
+                end if
+             else 
+                edge_xh = 1;
+             end if
+
+             ! lower x-edge
+             if (abs(-slxy(i,j)*hx/2.+sly(i,j)) .lt. abs(hy*slyy(i,j)) ) then
+                ! have interior min/max
+                pos = - (-slxy(i,j)*hx/2.+sly(i,j))/(2*slyy(i,j))
+                my_val = ave(i,j) - 0.5*hx*slx(i,j) + pos*sly(i,j)  &
+                     - 0.5d0*hx*pos*slxy(i,j) &
+                     + hx**2*slxx(i,j)/4. + pos**2*slyy(i,j)
+                if (pos .ge. 0.d0) then
+                   my_min = min(s(i,j),s(i-1,j),s(i,j+1),s(i-1,j+1))
+                   my_max = max(s(i,j),s(i-1,j),s(i,j+1),s(i-1,j+1))
+                else
+                   my_min = min(s(i,j),s(i-1,j),s(i,j-1),s(i-1,j-1))
+                   my_max = max(s(i,j),s(i-1,j),s(i,j-1),s(i-1,j-1))
+                end if
+                if (my_val .ge. my_min .and. my_val .le. my_max) then
+                   edge_xl = 1;
+                else
+                   edge_xl = 0;
+                   limit_y = 1;
+                   if (j .ge. js .and. j .le. je .and. i .ge. is .and. i .le. ie) then
+                      !                   print *,'edge_xl doesnt pass test,i,j',i,j
+                   end if
+                end if
+             else 
+                edge_xl = 1;
+             end if
+
+             if (test_corners .eq. 1 .and. edge_yh .eq. 1 .and. edge_yl .eq. 1 &
+                  .and. edge_xh .eq. 1 .and. edge_xl .eq. 1) then
+                ! keep that polynomial
+                test_free(i,j) = .false.
+                !             print *,'success in first round,i,j',i,j
+
+             else ! limit slxx and/or slyy and check again
+
+!!!!!!!! begin else
+
+                if (sign(1.d0,-slxy(i,j)*hy/2.-slx(i,j)) * sign(1.d0,slxy(i,j)*hy/2.-slx(i,j)) .lt. 0.d0 ) then
+                   slxx(i,j) = 0.d0
+                else
+                   cmp = min(abs(slxy(i,j)*hy/2.+slx(i,j)) , abs(slxy(i,j)*hy/2.-slx(i,j)) )
+                   if (cmp .lt. abs(slxx(i,j))*hx) then ! ie would create interior extrema
+                      slxx(i,j) = sign(1.0d0,slxx_extr(i,j)) * cmp / hx
+                   end if
+                end if
+
+                if (sign(1.d0,-slxy(i,j)*hx/2.-sly(i,j)) * sign(1.d0,slxy(i,j)*hx/2.-sly(i,j)) .lt. 0.d0 ) then
+                   slyy(i,j) = 0.d0
+                else
+                   cmp = min(abs(slxy(i,j)*hx/2.+sly(i,j)) , abs(slxy(i,j)*hx/2.-sly(i,j)) )
+                   if (cmp .lt. abs(slyy(i,j))*hy) then ! ie would create interior extrema
+                      slyy(i,j) = sign(1.0d0,slyy_extr(i,j)) * cmp / hy
+                   end if
+                end if
+
+                ave(i,j) = s(i,j) - ( slxx(i,j)*hx**2 + slyy(i,j)*hy**2 ) / 12.d0
+
+                ! Test again
+
+                sc(i,j,4) = s(i,j) + 0.5d0*(hx*slx(i,j) + hy*sly(i,j))  &
+                     + 0.25d0*hx*hy*slxy(i,j) &
+                     + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+                sc(i,j,3) = s(i,j) + 0.5d0*(hx*slx(i,j) - hy*sly(i,j))  &
+                     - 0.25d0*hx*hy*slxy(i,j) &
+                     + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+                sc(i,j,2) = s(i,j) - 0.5d0*(hx*slx(i,j) - hy*sly(i,j)) &
+                     - 0.25d0*hx*hy*slxy(i,j) &
+                     + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+                sc(i,j,1) = s(i,j) - 0.5d0*(hx*slx(i,j) + hy*sly(i,j)) &
+                     + 0.25d0*hx*hy*slxy(i,j) &
+                     + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+
+                if (sc(i,j,4) .le. smax(i,4) .and. sc(i,j,4) .ge. smin(i,4)  .and. &
+                     sc(i,j,3) .le. smax(i,3) .and. sc(i,j,3) .ge. smin(i,3) .and. &
+                     sc(i,j,2) .le. smax(i,2) .and. sc(i,j,2) .ge. smin(i,2)  .and. &
+                     sc(i,j,1) .le. smax(i,1) .and. sc(i,j,1) .ge. smin(i,1)) then
+                   ! keep that polynomial 
+                   test_free(i,j) = .false.
+                end if
+!!!!! end else 
+
+             end if
+
+          end if
+
+       enddo
+    enddo
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! if unlimited slopes not successful: go back to routine bds_quadr_monotonelimiting
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! NOTE: in the following we only work on cells for which test_free .eq. .true.
+
+    ! we already extrapolated corner values
+    ! and calculated slopes
+
+
+    do j = js-1,je+1
+
+       ! make sure we are in min/max bounds
+       do i = is-1,ie+1
+          if (test_free(i,j) ) then
+             smin(i,4) = min(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
+             smax(i,4) = max(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
+             smin(i,3) = min(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
+             smax(i,3) = max(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
+             smin(i,2) = min(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
+             smax(i,2) = max(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
+             smin(i,1) = min(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
+             smax(i,1) = max(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
+
+             sc(i,j,4) = s(i,j) + 0.5d0*(hx*slx(i,j) + hy*sly(i,j))  &
+                  + 0.25d0*hx*hy*slxy(i,j)
+             sc(i,j,3) = s(i,j) + 0.5d0*(hx*slx(i,j) - hy*sly(i,j))  &
+                  - 0.25d0*hx*hy*slxy(i,j)
+             sc(i,j,2) = s(i,j) - 0.5d0*(hx*slx(i,j) - hy*sly(i,j)) &
+                  - 0.25d0*hx*hy*slxy(i,j)
+             sc(i,j,1) = s(i,j) - 0.5d0*(hx*slx(i,j) + hy*sly(i,j)) &
+                  + 0.25d0*hx*hy*slxy(i,j)
+
+             sc(i,j,4) = max(min(sc(i,j,4), smax(i,4)), smin(i,4))
+             sc(i,j,3) = max(min(sc(i,j,3), smax(i,3)), smin(i,3))
+             sc(i,j,2) = max(min(sc(i,j,2), smax(i,2)), smin(i,2))
+             sc(i,j,1) = max(min(sc(i,j,1), smax(i,1)), smin(i,1))
+          end if
        end do
 
+       ! make average of corner values fit the cell average 
        do ll = 1,3 
           do i = is-1,ie+1 
-             sumloc = 0.25d0*(sc(i,j,4) + sc(i,j,3) +  &
-                  sc(i,j,2) + sc(i,j,1))
-             sumdif(i) = (sumloc - s(i,j))*4.d0
-             sgndif(i) = sign(1.d0,sumdif(i))
+             if (test_free(i,j) ) then
+                sumloc = 0.25d0*(sc(i,j,4) + sc(i,j,3) +  &
+                     sc(i,j,2) + sc(i,j,1))
+                sumdif(i) = (sumloc - s(i,j))*4.d0
+                sgndif(i) = sign(1.d0,sumdif(i))
 
-             diff(i,4) = (sc(i,j,4) - s(i,j))*sgndif(i)
-             diff(i,3) = (sc(i,j,3) - s(i,j))*sgndif(i)
-             diff(i,2) = (sc(i,j,2) - s(i,j))*sgndif(i)
-             diff(i,1) = (sc(i,j,1) - s(i,j))*sgndif(i)
+                diff(i,4) = (sc(i,j,4) - s(i,j))*sgndif(i)
+                diff(i,3) = (sc(i,j,3) - s(i,j))*sgndif(i)
+                diff(i,2) = (sc(i,j,2) - s(i,j))*sgndif(i)
+                diff(i,1) = (sc(i,j,1) - s(i,j))*sgndif(i)
 
-             if (diff(i,1) .gt. eps) then
-                inc1 = 1
-             else
-                inc1 = 0
+                if (diff(i,1) .gt. eps) then
+                   inc1 = 1
+                else
+                   inc1 = 0
+                end if
+
+                if (diff(i,2) .gt. eps) then
+                   inc2 = 1
+                else
+                   inc2 = 0
+                end if
+
+                if (diff(i,3) .gt. eps) then
+                   inc3 = 1
+                else
+                   inc3 = 0
+                end if
+
+                if (diff(i,4) .gt. eps) then
+                   inc4 = 1
+                else
+                   inc4 = 0
+                end if
+
+                kdp(i) = inc1 + inc2 + inc3 + inc4
              end if
-
-             if (diff(i,2) .gt. eps) then
-                inc2 = 1
-             else
-                inc2 = 0
-             end if
-
-             if (diff(i,3) .gt. eps) then
-                inc3 = 1
-             else
-                inc3 = 0
-             end if
-
-             if (diff(i,4) .gt. eps) then
-                inc4 = 1
-             else
-                inc4 = 0
-             end if
-
-             kdp(i) = inc1 + inc2 + inc3 + inc4
-
           enddo
 
           do k = 1,4 
              do i = is-1,ie+1 
-                if (kdp(i).lt.1) then 
-                   div = 1.d0
-                else
-                   div = dble(kdp(i))
-                end if
+                if (test_free(i,j) ) then
+                   if (kdp(i).lt.1) then 
+                      div = 1.d0
+                   else
+                      div = dble(kdp(i))
+                   end if
 
-                if (diff(i,k).gt.eps) then
-                   redfac = sumdif(i)*sgndif(i)/div
-                   kdp(i) = kdp(i)-1
-                else
-                   redfac = 0.d0
-                end if
+                   if (diff(i,k).gt.eps) then
+                      redfac = sumdif(i)*sgndif(i)/div
+                      kdp(i) = kdp(i)-1
+                   else
+                      redfac = 0.d0
+                   end if
 
-                if (sgndif(i) .gt. 0.d0) then
-                   redmax = sc(i,j,k) - smin(i,k)
-                else
-                   redmax = smax(i,k) - sc(i,j,k)
-                end if
+                   if (sgndif(i) .gt. 0.d0) then
+                      redmax = sc(i,j,k) - smin(i,k)
+                   else
+                      redmax = smax(i,k) - sc(i,j,k)
+                   end if
 
-                redfac = min(redfac,redmax)
-                sumdif(i) = sumdif(i) - redfac*sgndif(i)
-                sc(i,j,k) = sc(i,j,k) - redfac*sgndif(i)
+                   redfac = min(redfac,redmax)
+                   sumdif(i) = sumdif(i) - redfac*sgndif(i)
+                   sc(i,j,k) = sc(i,j,k) - redfac*sgndif(i)
+                end if
              enddo
           enddo
 
        enddo
 
+       ! recalculate slopes
        do i = is-1,ie+1 
-          slx(i,j) = 0.5d0*(sc(i,j,4) + sc(i,j,3) -  &
-               sc(i,j,1) - sc(i,j,2))/hx
-          sly(i,j) = 0.5d0*(sc(i,j,4) + sc(i,j,2) -  &
-               sc(i,j,1) - sc(i,j,3))/hy
-          slxy(i,j) = ( sc(i,j,1) + sc(i,j,4) &
-               -sc(i,j,2) - sc(i,j,3) ) / (hx*hy)
+          if (test_free(i,j) ) then
+             slx(i,j) = 0.5d0*(sc(i,j,4) + sc(i,j,3) -  &
+                  sc(i,j,1) - sc(i,j,2))/hx
+             sly(i,j) = 0.5d0*(sc(i,j,4) + sc(i,j,2) -  &
+                  sc(i,j,1) - sc(i,j,3))/hy
+             slxy(i,j) = ( sc(i,j,1) + sc(i,j,4) &
+                  -sc(i,j,2) - sc(i,j,3) ) / (hx*hy)
+
+          end if
+       enddo
+
+    end do  ! end of j-loop
+
+
+    ! now add quadratic terms
+
+    ! limit the second derivatives
+
+    do j = js-1,je+1
+       do i = is-1,ie+1 
+
+          if (test_free(i,j)) then
+             slxx(i,j) = slxx_extr(i,j)   
+
+             ! make sure that reconstructed function is monotone
+
+             if (sign(1.d0,-slxy(i,j)*hy/2.-slx(i,j)) * sign(1.d0,slxy(i,j)*hy/2.-slx(i,j)) .lt. 0.d0 ) then
+                slxx(i,j) = 0.d0
+             else
+                cmp = min(abs(slxy(i,j)*hy/2.+slx(i,j)) , abs(slxy(i,j)*hy/2.-slx(i,j)) )
+                if (cmp .lt. abs(slxx(i,j))*hx) then ! ie would create interior extrema
+                   slxx(i,j) = sign(1.0d0,slxx_extr(i,j)) * cmp / hx
+                end if
+             end if
+
+             ! do the same for slyy
+
+             slyy(i,j) = slyy_extr(i,j)
+
+             if (sign(1.d0,-slxy(i,j)*hx/2.-sly(i,j)) * sign(1.d0,slxy(i,j)*hx/2.-sly(i,j)) .lt. 0.d0 ) then
+                slyy(i,j) = 0.d0
+             else
+                cmp = min(abs(slxy(i,j)*hx/2.+sly(i,j)) , abs(slxy(i,j)*hx/2.-sly(i,j)) )
+                if (cmp .lt. abs(slyy(i,j))*hy) then ! ie would create interior extrema
+                   slyy(i,j) = sign(1.0d0,slyy_extr(i,j)) * cmp / hy
+                end if
+             end if
+
+             ! Then adjust constant
+
+             ave(i,j) = s(i,j) - ( slxx(i,j)*hx**2 + slyy(i,j)*hy**2 ) / 12.d0
+
+             ! Check whether we are still in max/min bounds:
+             ! if not set slxx, slyy to 0
+             smin(i,4) = min(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
+             smax(i,4) = max(s(i,j), s(i+1,j), s(i,j+1), s(i+1,j+1))
+             smin(i,3) = min(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
+             smax(i,3) = max(s(i,j), s(i+1,j), s(i,j-1), s(i+1,j-1))
+             smin(i,2) = min(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
+             smax(i,2) = max(s(i,j), s(i-1,j), s(i,j+1), s(i-1,j+1))
+             smin(i,1) = min(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
+             smax(i,1) = max(s(i,j), s(i-1,j), s(i,j-1), s(i-1,j-1))
+
+             sc(i,j,4) = s(i,j) + 0.5d0*(hx*slx(i,j) + hy*sly(i,j))  &
+                  + 0.25d0*hx*hy*slxy(i,j) &
+                  + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+             sc(i,j,3) = s(i,j) + 0.5d0*(hx*slx(i,j) - hy*sly(i,j))  &
+                  - 0.25d0*hx*hy*slxy(i,j) &
+                  + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+             sc(i,j,2) = s(i,j) - 0.5d0*(hx*slx(i,j) - hy*sly(i,j)) &
+                  - 0.25d0*hx*hy*slxy(i,j) &
+                  + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+             sc(i,j,1) = s(i,j) - 0.5d0*(hx*slx(i,j) + hy*sly(i,j)) &
+                  + 0.25d0*hx*hy*slxy(i,j) &
+                  + hx**2*slxx(i,j)/6. + hy**2*slyy(i,j)/6.
+
+             if (sc(i,j,4) .gt. smax(i,4)+1.e-10 .or. sc(i,j,4) .lt. smin(i,4)-1.e-10) then
+                slxx(i,j) = 0
+                slyy(i,j) = 0
+                ave(i,j) = s(i,j)
+                !            print *,'dropped order to ensure max/min,i,j',i,j
+             end if
+             if (sc(i,j,3) .gt. smax(i,3)+1.e-10 .or. sc(i,j,3) .lt. smin(i,3)-1.e-10) then
+                slxx(i,j) = 0
+                slyy(i,j) = 0
+                ave(i,j) = s(i,j)
+                !            print *,'dropped order to ensure max/min,i,j',i,j
+             end if
+             if (sc(i,j,2) .gt. smax(i,2)+1.e-10 .or. sc(i,j,2) .lt. smin(i,2)-1.e-10) then
+                slxx(i,j) = 0
+                slyy(i,j) = 0
+                ave(i,j) = s(i,j)
+                !            print *,'dropped order to ensure max/min,i,j',i,j
+             end if
+             if (sc(i,j,1) .gt. smax(i,1)+1.e-10 .or. sc(i,j,1) .lt. smin(i,1)-1.e-10) then
+                slxx(i,j) = 0
+                slyy(i,j) = 0
+                ave(i,j) = s(i,j)
+                !            print *,'dropped order to ensure max/min,i,j',i,j
+             end if
+
+          end if
+
        enddo
     enddo
 
-    deallocate(diff,smin,smax,sumdif,sgndif,kdp)
+    deallocate(diff,smin,smax,sumdif,sgndif,kdp,test_free,adjust_goal)
 
-  end subroutine bdsslope_quad_2d
+  end subroutine bdsslope_quad_lim_2d
 
   ! ***********************************************
   ! start of routine bdsconc_2d
