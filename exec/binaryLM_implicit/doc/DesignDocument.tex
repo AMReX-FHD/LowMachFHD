@@ -852,8 +852,11 @@ u(x,t) =
 \end{cases}.
 \end{equation}
 The x-walls are stationary no-slip.  The time step for the coarsest simulation is
-$\Delta t = 0.005$ and is reduced by a factor of 2 as the grid spacing
-decreases by a factor of 2.  We run each simulation to 2 seconds.
+$\Delta t=5\times 10^{-3}$ and is reduced by a factor of 2 as the grid spacing
+decreases by a factor of 2.
+This corresponds to an advective CFL number of $\sim 0.3$ for each simulation, and
+a mass diffusive CFL of $\sim 0.67$ for the finest simulation.
+We run each simulation to $t=2$.
 We use $\bar\rho_1 = 2, \bar\rho_2 = 1$.  The initial conditions are $\vb=0$ 
 and $p=0$ with
 a Gaussian bump of high density centered at $(x,y) = (0.5, 0.5)$ such that
@@ -991,7 +994,21 @@ Test 4: ($\chi$, q) & $c$ & 3.35e-04 & 1.94 & 8.76e-05 & x.xx & x.xxe-xx
 \end{table}
 
 \subsection{Square Profile Advection}
-
+Here we compare the performance of four different advections schemes in the
+infinite Schmidt number in the presence of sharp discontinuities.  The problem setup
+remains the same as the lid-driven cavity convergence testing with only the following differences.
+First, the initial conditions are a constant background of $c=0$ with a square region covering
+the central 20\% of the domain initialized to $c=1$ 
+(see the top-left panel of Figure \ref{fig:square}).  The mass diffusion is set to zero ($\chi=0$),
+and gravity acts downward with a larger magnitude, $\gb=(0,-5)$.
+We use the inertial algorithm and test the following advection schemes: (1) centered,
+(2) unlimited bilinear BDS, (3) limited bilinear BDS, (4) unlimited quadratic BDS.
+Each simulation uses $256^2$ grid cells and a fixed $\Delta t=2.5\times 10^{-3}$.  
+This corresponds to an advective CFL number of $\sim 0.6$.
+We run each simulation to $t=2$.  As seen in Figure \ref{fig:square},
+the limited BDS scheme does not overshoot or undershoot.  Centered advection
+severely overshoots, leaving numerical ringing.  The unlimited BDS
+schemes slightly overshoot, but do not suffer from Gibbs ringing.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}
 \begin{center}
@@ -1001,6 +1018,7 @@ Test 4: ($\chi$, q) & $c$ & 3.35e-04 & 1.94 & 8.76e-05 & x.xx & x.xxe-xx
 \includegraphics[width=2.9in]{square_lim_b_bds}
 \includegraphics[width=2.9in]{square_unl_q_bds}
 \caption{Infinite Schmidt number test problem.}
+\label{fig:square}
 \end{center}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
