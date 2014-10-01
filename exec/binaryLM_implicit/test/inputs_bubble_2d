@@ -31,25 +31,29 @@
   print_int = 1              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1000     ! how often to call project_onto_eos
 
+  max_grid_size(1:2) = 128 128
+  n_cells(1:2) = 512 512   ! number of cells in domain
+  fixed_dt = 0.000625d0    ! time step
+  plot_int = 3200          ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 3200          ! maximum number of time steps
+
+  max_grid_size(1:2) = 128 128
   n_cells(1:2) = 256 256   ! number of cells in domain
-  fixed_dt = 0.0025d0       ! time step
+  fixed_dt = 0.00125d0     ! time step
+  plot_int = 1600          ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 1600          ! maximum number of time steps
+
+  max_grid_size(1:2) = 64 64  
+  n_cells(1:2) = 128 128   ! number of cells in domain
+  fixed_dt = 0.0025d0      ! time step
   plot_int = 800           ! Interval for writing a plotfile (for visit/amrvis)
   max_step = 800           ! maximum number of time steps
 
-!  n_cells(1:2) = 128 128  ! number of cells in domain
-!  fixed_dt = 0.005d0      ! time step
-!  plot_int = 400          ! Interval for writing a plotfile (for visit/amrvis)
-!  max_step = 400          ! maximum number of time steps
-
-!  n_cells(1:2) = 64 64    ! number of cells in domain
-!  fixed_dt = 0.01d0      ! time step
-!  plot_int = 200          ! Interval for writing a plotfile (for visit/amrvis)
-!  max_step = 200          ! maximum number of time steps
-
-!  n_cells(1:2) = 32 32    ! number of cells in domain
-!  fixed_dt = 0.02d0      ! time step
-!  plot_int = 100          ! Interval for writing a plotfile (for visit/amrvis)
-!  max_step = 100          ! maximum number of time steps
+  max_grid_size(1:2) = 32 32  
+  n_cells(1:2) = 64 64     ! number of cells in domain
+  fixed_dt = 0.005d0       ! time step
+  plot_int = 400           ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 400           ! maximum number of time steps
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad

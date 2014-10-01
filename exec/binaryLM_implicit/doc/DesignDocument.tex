@@ -952,9 +952,13 @@ $\chi=10^{-3}$ when $c=1$.  Gravity acts downward such that $\gb=(0,-1)$.
 Viscous operator form $\nabla\cdot\mu(\nabla + \nabla^T)$
 \begin{itemize}
 \item Test 1: Inertial algorithm, centered scalar advection
-\item Test 2: Inertial algorithm, unlimited BDS scalar advection, $\chi=0$.
+\item Test 2: Inertial algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
+\item Test 2 (with $\chi$): Inertial algorithm, unlimited bilinear BDS scalar advection.
+\item Test 2 (with $\chi$, quad): Inertial algorithm, unlimited quadratic BDS scalar advection.
 \item Test 3: Overdamped algorithm, centered scalar advection
-\item Test 4: Overdamped algorithm, unlimited BDS scalar advection, $\chi=0$.
+\item Test 4: Overdamped algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
+\item Test 4 (with $\chi$): Overdamped algorithm, unlimited bilinear BDS scalar advection.
+\item Test 4 (with $\chi$, quad): Overdamped algorithm, unlimited quadratic BDS scalar advection.
 \end{itemize}
 For refining in time only, we use $64^2$ zones with coarse time step $\Delta t = 0.01$, refining
 by factors of 2.  The final simulation time is 2 seconds.
