@@ -1,6 +1,6 @@
 EPStoPDF = epstopdf
 
-ALL: DesignDocument.ps DesignDocument.pdf
+ALL: DesignDocument.pdf
 
 eps_source = $(wildcard *.eps)
 
