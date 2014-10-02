@@ -837,7 +837,7 @@ Then, $\xb^{\rm new} = \overline\xb^{\rm old} + \deltab\xb$.
 
 \section{Results}
 \subsection{Lid-Driven Cavity Convergence Testing}
-The problem is a deterministic lid-driven cavity problem in two dimensions with 
+The problem is a deterministic lid-driven cavity in two dimensions with 
 both the lo-y and hi-y wall moving in opposite directions to set up a circular 
 flow pattern.  All units are cgs.
 The domain is 1 $\times$ 1 divided into $64^2, 128^2, 256^2$, and $512^2$
@@ -867,7 +867,7 @@ The viscosity varies linearly as a function of concentration, such that $\mu=0.1
 when $c=0$ and $\mu=1$ when $c=1$.  Similarly, the mass diffusion coefficient
 varies lienarly as a function of concentration, such that $\chi=10^{-4}$ when $c=0$ and
 $\chi=10^{-3}$ when $c=1$.  Gravity acts downward such that $\gb=(0,-1)$.
-Viscous operator form $\nabla\cdot\mu(\nabla + \nabla^T)$.
+Viscous stress tensor $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
 \begin{itemize}
 \item Test 1: Inertial algorithm, centered scalar advection
 \item Test 2: Inertial algorithm, unlimited bilinear BDS scalar advection.
@@ -1010,18 +1010,20 @@ schemes slightly overshoot, but do not suffer from Gibbs ringing.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}
 \begin{center}
-\includegraphics[width=2.9in]{square_init}\\
-\includegraphics[width=2.9in]{square_cen}
-\includegraphics[width=2.9in]{square_unl_b_bds}\\
-\includegraphics[width=2.9in]{square_lim_b_bds}
-\includegraphics[width=2.9in]{square_unl_q_bds}
+\includegraphics[width=2.25in]{square_init}
+\includegraphics[width=2.25in]{square_cen}\\
+\includegraphics[width=2.25in]{square_unl_b_bds}
+\includegraphics[width=2.25in]{square_lim_b_bds}\\
+\includegraphics[width=2.25in]{square_unl_q_bds}
+\includegraphics[width=2.25in]{square_lim_q_bds}
 \caption{Square profile advection with infinite Schmidt number and sharp discontinuities.
 Colorbars indicate the concentration.
-(Top) Initial condition,
-(Middle-Left) centered advection,
-(Middle-Right) unlimited bilinear BDS,
-(Bottom-Left) limited bilinear BDS,
-(Bottom-Right) unlimited quadratic BDS}
+(Top-Left) Initial condition,
+(Top-Right) centered advection,
+(Middle-Left) unlimited bilinear BDS,
+(Middle-Right) limited bilinear BDS,
+(Bottom-Left) unlimited quadratic BDS
+(Bottom-Right) limited quadratic BDS}
 \label{fig:square}
 \end{center}
 \end{figure}
