@@ -837,12 +837,11 @@ Then, $\xb^{\rm new} = \overline\xb^{\rm old} + \deltab\xb$.
 
 \section{Results}
 \subsection{Lid-Driven Cavity Convergence Testing}
-The problem is a deterministic lid-driven cavity in two dimensions with 
-both the lo-y and hi-y wall moving in opposite directions to set up a circular 
-flow pattern.  All units are cgs.
-The domain is 1 $\times$ 1 divided into $64^2, 128^2, 256^2$, and $512^2$
-grid cells.  The lo-y and hi-y walls are no-slip walls moving in opposite directions
-with speed:
+The problem is a deterministic lid-driven cavity in two dimensions.
+All units are cgs.
+The domain is 1 $\times$ 1 divided into $64^2, 128^2, 256^2$, and $512^2$ grid cells.
+The lo-y and hi-y walls are no-slip walls moving in equal and opposite directions,
+setting up a circular flow pattern.  The hi-y wall speed is given by:
 \begin{equation}
 u(x,t) =
 \begin{cases}
@@ -851,14 +850,14 @@ u(x,t) =
 \frac{1}{2}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right], & t \ge 1
 \end{cases}.
 \end{equation}
-The x-walls are stationary no-slip.  The time step for the coarsest simulation is
-$\Delta t=5\times 10^{-3}$ and is reduced by a factor of 2 as the grid spacing
-decreases by a factor of 2.
+The x-boundaries are stationary no-slip walls.
+The time step for the coarsest simulation is $\Delta t=5\times 10^{-3}$ 
+and is reduced by a factor of 2 as the resolution increases by a factor of 2.
 This corresponds to an advective CFL number of $\sim 0.3$ for each simulation, and
-a mass diffusive CFL of $\sim 0.67$ for the finest simulation.
+a mass diffusion CFL of $\sim 0.67$ for the finest simulation.
 We run each simulation to $t=2$.
-We use $\bar\rho_1 = 2, \bar\rho_2 = 1$.  The initial conditions are $\vb=0$ 
-and $p=0$ with
+We use $\bar\rho_1 = 2, \bar\rho_2 = 1$.
+The initial conditions are $\vb=0$ and $p=0$ with
 a Gaussian bump of high density centered at $(x,y) = (0.5, 0.5)$ such that
 \begin{equation}
 c = e^{-75r^2}; \quad r = \sqrt{(x-0.5)^2 + (y-0.5)^2}
@@ -866,8 +865,14 @@ c = e^{-75r^2}; \quad r = \sqrt{(x-0.5)^2 + (y-0.5)^2}
 The viscosity varies linearly as a function of concentration, such that $\mu=0.1$
 when $c=0$ and $\mu=1$ when $c=1$.  Similarly, the mass diffusion coefficient
 varies lienarly as a function of concentration, such that $\chi=10^{-4}$ when $c=0$ and
-$\chi=10^{-3}$ when $c=1$.  Gravity acts downward such that $\gb=(0,-1)$.
-Viscous stress tensor $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
+$\chi=10^{-3}$ when $c=1$.  Gravity acts downward with $\gb=(0,-1)$, and we use
+the viscous stress tensor formulation, $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
+Figure \ref{fig:convergence} illustrates the initial and final ($t=2$) configurations
+of concentration and velocity.
+
+In Tables \ref{tab:Linf}, \ref{tab:L1}, and \ref{tab:L2},
+we present convergence results in $L^\infty, L^1$, and $L^2$ for the following
+test problems:
 \begin{itemize}
 \item Test 1: Inertial algorithm, centered scalar advection
 \item Test 2: Inertial algorithm, unlimited bilinear BDS scalar advection.
@@ -884,14 +889,17 @@ Viscous stress tensor $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
 \begin{center}
 \includegraphics[width=2.9in]{gaussian_1}
 \includegraphics[width=2.9in]{gaussian_2}
-\caption{Convergence test problem initial and final conditions.}
+\caption{Initial and final ($t=2$) concentration and velocities for the convergence
+test problems.}
+\label{fig:convergence}
 \end{center}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{table}[h]
 \begin{center}
 \caption{Refining in space and time.  Errors and convergence rates in $L^\infty$.}
+\label{tab:Linf}
 \begin{tabular}{ccccccc}
 & & 64-128 & Rate & 128-256 & Rate & 256-512 \\
 \hline
@@ -921,11 +929,12 @@ Test 8:             & $c$ & 4.23e-03 & 1.93 & 1.11e-03 & 1.96 & 2.86e-04
 \end{tabular}
 \end{center}
 \end{table}
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{table}[h]
 \begin{center}
-\caption{Refining in space and time.  Errors and convergence rates in $L^1$.}
+\caption{Errors and convergence rates in $L^1$.}
+\label{tab:L1}
 \begin{tabular}{ccccccc}
 & & 64-128 & Rate & 128-256 & Rate & 256-512 \\
 \hline
@@ -955,12 +964,12 @@ Test 8:             & $c$ & 1.63e-04 & 1.97 & 4.16e-05 & 1.97 & 1.06e-05
 \end{tabular}
 \end{center}
 \end{table}
-
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{table}[h]
 \begin{center}
-\caption{Refining in space and time.  Errors and convergence rates in $L^2$.}
+\caption{Errors and convergence rates in $L^2$.}
+\label{tab:L2}
 \begin{tabular}{ccccccc}
 & & 64-128 & Rate & 128-256 & Rate & 256-512 \\
 \hline
@@ -990,23 +999,31 @@ Test 8:             & $c$ & 4.57e-04 & 1.92 & 1.21e-04 & 1.96 & 3.12e-05
 \end{tabular}
 \end{center}
 \end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{Square Profile Advection}
 Here we compare the performance of four different advections schemes in the
-infinite Schmidt number in the presence of sharp discontinuities.  The problem setup
+infinite Schmidt number limit in the presence of sharp discontinuities.  The problem setup
 remains the same as the lid-driven cavity convergence testing with only the following differences.
 First, the initial conditions are a constant background of $c=0$ with a square region covering
-the central 20\% of the domain initialized to $c=1$ 
-(see the top-left panel of Figure \ref{fig:square}).  The mass diffusion is set to zero ($\chi=0$),
-and gravity acts downward with a larger magnitude, $\gb=(0,-5)$.
+the central 25\% of the domain initialized to $c=1$ 
+(see the top-left panel of Figure \ref{fig:square}).
+The mass diffusion is set to zero ($\chi=0$),
+and gravity acts downward with a larger magnitude, $\gb=(0,-5)$ so that the higher density
+region falls downward with time.
 We use the inertial algorithm and test the following advection schemes: (1) centered,
-(2) unlimited bilinear BDS, (3) limited bilinear BDS, (4) unlimited quadratic BDS.
+(2) unlimited bilinear BDS, (3) limited bilinear BDS, (4) unlimited quadratic BDS,
+and (5) limited quadratic BDS.
 Each simulation uses $256^2$ grid cells and a fixed $\Delta t=2.5\times 10^{-3}$.  
 This corresponds to an advective CFL number of $\sim 0.6$.
-We run each simulation to $t=2$.  As seen in Figure \ref{fig:square},
-the limited BDS scheme does not overshoot or undershoot.  Centered advection
+In Figure \ref{fig:square}, we show the concentration at $t=2$.
+Centered advection
 severely overshoots, leaving numerical ringing.  The unlimited BDS
 schemes slightly overshoot, but do not suffer from Gibbs ringing.
+The limited BDS schemes do not overshoot or undershoot.
+In fact, we run the limited quadratic BDS scheme to a longer time ($t=???$)
+and show the results in Figure ???, noting that the method does a good job in preserving
+the interface without overshoot.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}
 \begin{center}
@@ -1017,8 +1034,8 @@ schemes slightly overshoot, but do not suffer from Gibbs ringing.
 \includegraphics[width=2.25in]{square_unl_q_bds}
 \includegraphics[width=2.25in]{square_lim_q_bds}
 \caption{Square profile advection with infinite Schmidt number and sharp discontinuities.
-Colorbars indicate the concentration.
-(Top-Left) Initial condition,
+Colorbars indicate the concentration.  The initial condition is in the top-left; the
+other images represent the final ($t=2$) condition:
 (Top-Right) centered advection,
 (Middle-Left) unlimited bilinear BDS,
 (Middle-Right) limited bilinear BDS,
@@ -1027,6 +1044,22 @@ Colorbars indicate the concentration.
 \label{fig:square}
 \end{center}
 \end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{center}
+\includegraphics[width=1.9in]{square_movie1}
+\includegraphics[width=1.9in]{square_movie2}
+\includegraphics[width=1.9in]{square_movie3} \\
+\includegraphics[width=1.9in]{square_movie4}
+\includegraphics[width=1.9in]{square_movie5}
+\includegraphics[width=1.9in]{square_movie6}
+\caption{Square profile advection using the limited quadratic BDS scheme 
+at $t=0,0.8,1.6,2.4,3.2$, and $4.0$.}
+\label{fig:square2}
+\end{center}
+\end{figure}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsection{3D Kelvin-Helmholtz}
@@ -1046,12 +1079,13 @@ in a row of cells at the centerline, $c$ is initialized to a random value betwee
 The initial momentum is set to $\rho\vb=(1,0)$ in the upper-half of
 the domain and $\rho\vb=0$ in the lower-half of the domain.
 Gravity has a magnitude of 0.1 acting in the downward y-direction.
-We employ a bilinear BDS advection scheme, which is more accurate than centered
-advection while preserving min/max bounds on $c$ to $\mathcal O(10^{-11})$.
+The mass diffusion coefficient is fixed at $\chi=10^{-6}$.
+We employ the limited bilinear BDS advection scheme to
+preserving min/max bounds on $c$ to $\mathcal O(10^{-11})$.
 Viscosity depends linearly on concentration, such that $\eta=10^{-4}$ for $c=0$ 
 and $\eta=10^{-3}$ for $c=1$ in the stress tensor,
 $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
-The mass diffusion coefficient is fixed at $\chi=10^{-6}$.
+Figure \ref{fig:KHLM_3D} shows a time lapse rendering of the resulting rollup.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}
 \begin{center}
