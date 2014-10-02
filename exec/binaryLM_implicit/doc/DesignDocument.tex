@@ -868,17 +868,15 @@ when $c=0$ and $\mu=1$ when $c=1$.  Similarly, the mass diffusion coefficient
 varies lienarly as a function of concentration, such that $\chi=10^{-4}$ when $c=0$ and
 $\chi=10^{-3}$ when $c=1$.  Gravity acts downward such that $\gb=(0,-1)$.
 Viscous operator form $\nabla\cdot\mu(\nabla + \nabla^T)$.
-
-The tests are (WILL RENUMBER TESTS AND DIRECTORES ONCE SIMULATIONS ARE COMPLETE)
 \begin{itemize}
 \item Test 1: Inertial algorithm, centered scalar advection
-\item Test 2: Inertial algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
-\item Test 2 (with $\chi$): Inertial algorithm, unlimited bilinear BDS scalar advection.
-\item Test 2 (with $\chi$, quad): Inertial algorithm, unlimited quadratic BDS scalar advection.
-\item Test 3: Overdamped algorithm, centered scalar advection
-\item Test 4: Overdamped algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
-\item Test 4 (with $\chi$): Overdamped algorithm, unlimited bilinear BDS scalar advection.
-\item Test 4 (with $\chi$, quad): Overdamped algorithm, unlimited quadratic BDS scalar advection.
+\item Test 2: Inertial algorithm, unlimited bilinear BDS scalar advection.
+\item Test 3: Inertial algorithm, unlimited quadratic BDS scalar advection.
+\item Test 4: Inertial algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
+\item Test 5: Overdamped algorithm, centered scalar advection
+\item Test 6: Overdamped algorithm, unlimited bilinear BDS scalar advection.
+\item Test 7: Overdamped algorithm, unlimited quadratic BDS scalar advection.
+\item Test 8: Overdamped algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -901,25 +899,25 @@ Test 1:             & $u$ & 1.93e-03 & 1.91 & 5.12e-04 & 1.96 & 1.32e-04 \\
                     & $v$ & 8.69e-04 & 1.99 & 2.19e-04 & 2.00 & 5.49e-05 \\
                     & $c$ & 3.02e-04 & 1.99 & 7.60e-04 & 2.00 & 1.90e-04 \\
 \hline
-Test 2:             & $u$ & 1.91e-03 & 1.92 & 5.06e-04 & 1.96 & 1.30e-04 \\
-                    & $v$ & 9.78e-04 & 2.01 & 2.43e-04 & 2.02 & 6.00e-05 \\
-                    & $c$ & 4.29e-03 & 1.90 & 1.15e-03 & 1.97 & 2.93e-04 \\
-\hline
-Test 2: ($\chi$, b) & $u$ & 1.92e-03 & 1.91 & 5.11e-04 & 1.95 & 1.32e-04 \\
+Test 2:             & $u$ & 1.92e-03 & 1.91 & 5.11e-04 & 1.95 & 1.32e-04 \\
                     & $v$ & 9.08e-04 & 1.96 & 2.34e-04 & 1.99 & 5.91e-05 \\
                     & $c$ & 2.63e-03 & 1.72 & 7.99e-04 & 1.92 & 2.11e-04 \\
 \hline
-Test 2: ($\chi$, q) & $u$ & 1.92e-03 & 1.91 & 5.11e-04 & 1.95 & 1.32e-04 \\
+Test 3:             & $u$ & 1.92e-03 & 1.91 & 5.11e-04 & 1.95 & 1.32e-04 \\
                     & $v$ & 8.62e-04 & 1.95 & 2.23e-04 & 1.98 & 5.64e-05 \\
                     & $c$ & 1.95e-03 & 1.99 & 4.91e-04 & 2.00 & 1.23e-04 \\
 \hline
-Test 3:             & $c$ & 3.57e-03 & 2.01 & 8.89e-04 & 2.00 & 2.22e-04 \\
+Test 4:             & $u$ & 1.91e-03 & 1.92 & 5.06e-04 & 1.96 & 1.30e-04 \\
+                    & $v$ & 9.78e-04 & 2.01 & 2.43e-04 & 2.02 & 6.00e-05 \\
+                    & $c$ & 4.29e-03 & 1.90 & 1.15e-03 & 1.97 & 2.93e-04 \\
 \hline
-Test 4:             & $c$ & 4.23e-03 & 1.93 & 1.11e-03 & 1.96 & 2.86e-04 \\
+Test 5:             & $c$ & 3.57e-03 & 2.01 & 8.89e-04 & 2.00 & 2.22e-04 \\
 \hline
-Test 4: ($\chi$, b) & $c$ & 2.70e-03 & 1.78 & 7.87e-04 & 1.92 & 2.08e-04 \\
+Test 6:             & $c$ & 2.70e-03 & 1.78 & 7.87e-04 & 1.92 & 2.08e-04 \\
 \hline
-Test 4: ($\chi$, q) & $c$ & 1.95e-03 & 1.99 & 4.91e-04 & 1.94 & 1.28e-04
+Test 7:             & $c$ & 1.95e-03 & 1.99 & 4.91e-04 & 1.94 & 1.28e-04 \\
+\hline
+Test 8:             & $c$ & 4.23e-03 & 1.93 & 1.11e-03 & 1.96 & 2.86e-04
 \end{tabular}
 \end{center}
 \end{table}
@@ -935,25 +933,25 @@ Test 1:             & $u$ & 2.22e-04 & 2.02 & 5.49e-05 & 1.95 & 1.42e-05 \\
                     & $v$ & 2.64e-04 & 1.99 & 6.63e-05 & 1.99 & 1.67e-05 \\
                     & $c$ & 2.24e-04 & 1.99 & 5.64e-05 & 2.00 & 1.41e-05 \\
 \hline
-Test 2:             & $u$ & 1.98e-04 & 2.00 & 4.96e-05 & 1.99 & 1.25e-05 \\
-                    & $v$ & 3.02e-04 & 2.00 & 7.57e-05 & 1.99 & 1.90e-05 \\
-                    & $c$ & 1.57e-04 & 1.97 & 4.01e-05 & 1.98 & 1.02e-05 \\
-\hline
-Test 2:($\chi$, b)  & $u$ & 1.87e-04 & 1.99 & 4.72e-05 & 1.99 & 1.19e-05 \\
+Test 2:             & $u$ & 1.87e-04 & 1.99 & 4.72e-05 & 1.99 & 1.19e-05 \\
                     & $v$ & 2.91e-04 & 1.99 & 7.33e-05 & 1.99 & 1.84e-05 \\
                     & $c$ & 1.62e-04 & 1.96 & 4.16e-05 & 1.96 & 1.07e-05 \\
 \hline
-Test 2: ($\chi$, q) & $u$ & 1.94e-04 & 1.99 & 4.90e-05 & 1.97 & 1.25e-05 \\
+Test 3:             & $u$ & 1.94e-04 & 1.99 & 4.90e-05 & 1.97 & 1.25e-05 \\
                     & $v$ & 2.81e-04 & 1.99 & 7.07e-05 & 1.97 & 1.81e-05 \\
                     & $c$ & 1.22e-04 & 1.99 & 3.08e-05 & 1.99 & 7.75e-06 \\
 \hline
-Test 3:             & $c$ & 2.11e-04 & 1.99 & 5.30e-05 & 1.99 & 1.33e-05 \\
+Test 4:             & $u$ & 1.98e-04 & 2.00 & 4.96e-05 & 1.99 & 1.25e-05 \\
+                    & $v$ & 3.02e-04 & 2.00 & 7.57e-05 & 1.99 & 1.90e-05 \\
+                    & $c$ & 1.57e-04 & 1.97 & 4.01e-05 & 1.98 & 1.02e-05 \\
 \hline
-Test 4:             & $c$ & 1.63e-04 & 1.97 & 4.16e-05 & 1.97 & 1.06e-05 \\
+Test 5:             & $c$ & 2.11e-04 & 1.99 & 5.30e-05 & 1.99 & 1.33e-05 \\
 \hline
-Test 4: ($\chi$, b) & $c$ & 1.59e-04 & 1.97 & 4.05e-05 & 1.98 & 1.03e-05 \\
+Test 6:             & $c$ & 1.59e-04 & 1.97 & 4.05e-05 & 1.98 & 1.03e-05 \\
 \hline
-Test 4: ($\chi$, q) & $c$ & 1.25e-04 & 1.99 & 3.14e-05 & 1.99 & 7.89e-06
+Test 7:             & $c$ & 1.25e-04 & 1.99 & 3.14e-05 & 1.99 & 7.89e-06 \\
+\hline
+Test 8:             & $c$ & 1.63e-04 & 1.97 & 4.16e-05 & 1.97 & 1.06e-05
 \end{tabular}
 \end{center}
 \end{table}
@@ -970,25 +968,25 @@ Test 1:             & $u$ & 3.47e-04 & 2.00 & 8.66e-05 & 2.00 & 2.16e-05 \\
                     & $v$ & 3.13e-04 & 1.99 & 7.89e-05 & 1.99 & 1.98e-05 \\
                     & $c$ & 5.41e-04 & 1.99 & 1.36e-04 & 2.00 & 3.39e-05 \\
 \hline
-Test 2:             & $u$ & 3.32e-04 & 2.00 & 8.32e-05 & 2.00 & 2.08e-05 \\
-                    & $v$ & 3.58e-04 & 1.99 & 9.00e-05 & 1.99 & 2.26e-05 \\
-                    & $c$ & 4.52e-04 & 1.93 & 1.19e-04 & 1.96 & 3.06e-05 \\
-\hline
-Test 2: ($\chi$, b) & $u$ & 3.24e-04 & 1.99 & 8.14e-05 & 1.99 & 2.03e-05 \\
+Test 2:             & $u$ & 3.24e-04 & 1.99 & 8.14e-05 & 1.99 & 2.03e-05 \\
                     & $v$ & 3.48e-04 & 1.98 & 8.81e-05 & 2.00 & 2.21e-05 \\
                     & $c$ & 4.01e-04 & 1.88 & 1.09e-04 & 1.94 & 2.85e-05 \\
 \hline
-Test 2: ($\chi$, q) & $u$ & 3.28e-04 & 1.99 & 8.23e-05 & 1.99 & 2.07e-05 \\
+Test 3:             & $u$ & 3.28e-04 & 1.99 & 8.23e-05 & 1.99 & 2.07e-05 \\
                     & $v$ & 3.34e-04 & 1.98 & 8.46e-05 & 1.98 & 2.15e-05 \\
                     & $c$ & 3.30e-04 & 1.94 & 8.60e-05 & 1.96 & 2.21e-05 \\
 \hline
-Test 3:             & $c$ & 5.22e-04 & 2.01 & 1.30e-04 & 2.00 & 3.26e-05 \\
+Test 4:             & $u$ & 3.32e-04 & 2.00 & 8.32e-05 & 2.00 & 2.08e-05 \\
+                    & $v$ & 3.58e-04 & 1.99 & 9.00e-05 & 1.99 & 2.26e-05 \\
+                    & $c$ & 4.52e-04 & 1.93 & 1.19e-04 & 1.96 & 3.06e-05 \\
 \hline
-Test 4:             & $c$ & 4.57e-04 & 1.92 & 1.21e-04 & 1.96 & 3.12e-05 \\
+Test 5:             & $c$ & 5.22e-04 & 2.01 & 1.30e-04 & 2.00 & 3.26e-05 \\
 \hline
-Test 4: ($\chi$, b) & $c$ & 3.97e-04 & 1.89 & 1.07e-04 & 1.93 & 2.81e-05 \\
+Test 6:             & $c$ & 3.97e-04 & 1.89 & 1.07e-04 & 1.93 & 2.81e-05 \\
 \hline
-Test 4: ($\chi$, q) & $c$ & 3.35e-04 & 1.94 & 8.76e-05 & 1.96 & 2.25e-05
+Test 7:             & $c$ & 3.35e-04 & 1.94 & 8.76e-05 & 1.96 & 2.25e-05 \\
+\hline
+Test 8:             & $c$ & 4.57e-04 & 1.92 & 1.21e-04 & 1.96 & 3.12e-05
 \end{tabular}
 \end{center}
 \end{table}
