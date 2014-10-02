@@ -224,6 +224,12 @@ contains
 
     ! coarsen coefficients
     do n=2,nlevs_mg
+
+       ! need ghost cells set to zero to prevent intermediate NaN states
+       ! that cause some compilers to fail
+       call setval(beta_cc_mg(n),0.d0,all=.true.)
+       call setval(gamma_cc_mg(n),0.d0,all=.true.)
+
        call cc_restriction(la_mg(n), beta_cc_mg(n), beta_cc_mg(n-1),the_bc_tower_mg%bc_tower_array(n-1))
        call cc_restriction(la_mg(n),gamma_cc_mg(n),gamma_cc_mg(n-1),the_bc_tower_mg%bc_tower_array(n-1))
        call stag_restriction(la_mg(n),alpha_fc_mg(n-1,:),alpha_fc_mg(n,:),.true.)
@@ -504,6 +510,12 @@ contains
           
           call multifab_build(beta_cc_fancy(1),mla_fancy%la(1),1,1)
           call multifab_build(gamma_cc_fancy(1),mla_fancy%la(1),1,1)
+
+          ! need ghost cells set to zero to prevent intermediate NaN states
+          ! that cause some compilers to fail
+          call setval(beta_cc_fancy(1),0.d0,all=.true.)
+          call setval(gamma_cc_fancy(1),0.d0,all=.true.)
+
           call multifab_copy_c(beta_cc_fancy(1),1,beta_cc_mg(nlevs_mg),1,1,0)
           call multifab_copy_c(gamma_cc_fancy(1),1,gamma_cc_mg(nlevs_mg),1,1,0)
           call multifab_fill_boundary(beta_cc_fancy(1))
