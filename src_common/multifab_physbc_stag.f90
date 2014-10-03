@@ -1088,7 +1088,7 @@ contains
              do i=lo(1)-ng_s,hi(1)+ng_s
                 s(i,lo(2)-ng_s:lo(2)-1,k) = -s(i,lo(2),k)
                 ! higher-order stencil
-                ! s(i,lo(2)-ng_s:lo(2)-1,k) = -2.d0*s(i,lo(2),k) - (1.d0/3.d0)*s(i,lo(2)+1,k)
+                ! s(i,lo(2)-ng_s:lo(2)-1,k) = -2.d0*s(i,lo(2),k) + (1.d0/3.d0)*s(i,lo(2)+1,k)
              end do
           end do
        end if
@@ -1340,7 +1340,7 @@ contains
              do j=lo(2),hi(2)+1
                 s(lo(1)-ng_s:lo(1)-1,j,k) = 2.d0*v_bc1(lo(1),j,k) - s(lo(1),j,k)
                 ! higher-order stencil
-                ! s(lo(1)-ng_s:lo(1)-1,j,k) = (8.d0/3.d0)*v_bc1(lo(1),j,k) - 2.d0*s(lo(1),j,k) + (1.d0/3.d0)*2.d0*s(lo(1)+1,j,k)
+                ! s(lo(1)-ng_s:lo(1)-1,j,k) = (8.d0/3.d0)*v_bc1(lo(1),j,k) - 2.d0*s(lo(1),j,k) + (1.d0/3.d0)*s(lo(1)+1,j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
