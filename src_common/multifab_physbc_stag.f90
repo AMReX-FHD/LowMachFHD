@@ -970,7 +970,7 @@ contains
              do j=lo(2)-ng_s,hi(2)+ng_s
                 s(lo(1)-ng_s:lo(1)-1,j,k) = -s(lo(1),j,k)
                 ! higher-order stencil
-                ! s(lo(1)-ng_s:lo(1)-1,j,k) = -2.d0*s(lo(1),j,k) + (1.d0/3.d0)*(lo(1)+1,j,k)
+                ! s(lo(1)-ng_s:lo(1)-1,j,k) = -2.d0*s(lo(1),j,k) + (1.d0/3.d0)*s(lo(1)+1,j,k)
              end do
           end do
        end if
