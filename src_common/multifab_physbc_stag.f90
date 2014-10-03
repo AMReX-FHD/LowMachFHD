@@ -959,6 +959,8 @@ contains
           do k=lo(3)-ng_s,hi(3)+ng_s
              do j=lo(2),hi(2)+1
                 s(lo(1)-ng_s:lo(1)-1,j,k) = -s(lo(1),j,k)
+                ! higher-order stencil
+                ! s(lo(1)-ng_s:lo(1)-1,j,k) = -2.d0*s(lo(1),j,k) + (1.d0/3.d0)*s(lo(1)+1,j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -967,6 +969,8 @@ contains
           do k=lo(3),hi(3)+1
              do j=lo(2)-ng_s,hi(2)+ng_s
                 s(lo(1)-ng_s:lo(1)-1,j,k) = -s(lo(1),j,k)
+                ! higher-order stencil
+                ! s(lo(1)-ng_s:lo(1)-1,j,k) = -2.d0*s(lo(1),j,k) + (1.d0/3.d0)*(lo(1)+1,j,k)
              end do
           end do
        end if
@@ -1014,6 +1018,8 @@ contains
           do k=lo(3)-ng_s,hi(3)+ng_s
              do j=lo(2),hi(2)+1
                 s(hi(1)+1:hi(1)+ng_s,j,k) = -s(hi(1),j,k)
+                ! higher-order stencil
+                ! s(hi(1)+1:hi(1)+ng_s,j,k) = -2.d0*s(hi(1),j,k) + (1.d0/3.d0)*s(hi(1)-1,j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -1022,6 +1028,8 @@ contains
           do k=lo(3),hi(3)+1
              do j=lo(2)-ng_s,hi(2)+ng_s
                 s(hi(1)+1:hi(1)+ng_s,j,k) = -s(hi(1),j,k)
+                ! higher-order stencil
+                ! s(hi(1)+1:hi(1)+ng_s,j,k) = -2.d0*s(hi(1),j,k) + (1.d0/3.d0)*s(hi(1)-1,j,k)
              end do
           end do
        end if
@@ -1066,6 +1074,8 @@ contains
           do k=lo(3)-ng_s,hi(3)+ng_s
              do i=lo(1),hi(1)+1
                 s(i,lo(2)-ng_s:lo(2)-1,k) = -s(i,lo(2),k)
+                ! higher-order stencil
+                ! s(i,lo(2)-ng_s:lo(2)-1,k) = -2.d0*s(i,lo(2),k) + (1.d0/3.d0)*s(i,lo(2)+1,k)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1077,6 +1087,8 @@ contains
           do k=lo(3),hi(3)+1
              do i=lo(1)-ng_s,hi(1)+ng_s
                 s(i,lo(2)-ng_s:lo(2)-1,k) = -s(i,lo(2),k)
+                ! higher-order stencil
+                ! s(i,lo(2)-ng_s:lo(2)-1,k) = -2.d0*s(i,lo(2),k) - (1.d0/3.d0)*s(i,lo(2)+1,k)
              end do
           end do
        end if
@@ -1121,6 +1133,8 @@ contains
           do k=lo(3)-ng_s,hi(3)+ng_s
              do i=lo(1),hi(1)+1
                 s(i,hi(2)+1:hi(2)+ng_s,k) = -s(i,hi(2),k)
+                ! higher-order stencil
+                ! s(i,hi(2)+1:hi(2)+ng_s,k) = -2.d0*s(i,hi(2),k) + (1.d0/3.d0)*s(i,hi(2)-1,k)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1132,6 +1146,8 @@ contains
           do k=lo(3),hi(3)+1
              do i=lo(1)-ng_s,hi(1)+ng_s
                 s(i,hi(2)+1:hi(2)+ng_s,k) = -s(i,hi(2),k)
+                ! higher-order stencil
+                ! s(i,hi(2)+1:hi(2)+ng_s,k) = -2.d0*s(i,hi(2),k) + (1.d0/3.d0)*s(i,hi(2)-1,k)
              end do
           end do
        end if
@@ -1176,6 +1192,8 @@ contains
           do i=lo(1),hi(1)+1
              do j=lo(2)-ng_s,hi(2)+ng_s
                 s(i,j,lo(3)-ng_s:lo(3)-1) = -s(i,j,lo(3))
+                ! higher-order stencil
+                ! s(i,j,lo(3)-ng_s:lo(3)-1) = -2.d0*s(i,j,lo(3)) + (1.d0/3.d0)*s(i,j,lo(3)+1)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1184,6 +1202,8 @@ contains
           do i=lo(1)-ng_s,hi(1)+ng_s
              do j=lo(2),hi(2)+1
                 s(i,j,lo(3)-ng_s:lo(3)-1) = -s(i,j,lo(3))
+                ! higher-order stencil
+                ! s(i,j,lo(3)-ng_s:lo(3)-1) = -2.d0*s(i,j,lo(3)) + (1.d0/3.d0)*s(i,j,lo(3)+1)
              end do
           end do
        else if (bccomp .eq. 3) then 
@@ -1231,6 +1251,8 @@ contains
           do i=lo(1),hi(1)+1
              do j=lo(2)-ng_s,hi(2)+ng_s
                 s(i,j,hi(3)+1:hi(3)+ng_s) = -s(i,j,hi(3))
+                ! higher-order stencil
+                ! s(i,j,hi(3)+1:hi(3)+ng_s) = -2.d0*s(i,j,hi(3)) + (1.d0/3.d0)*s(i,j,hi(3)-1)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1239,6 +1261,8 @@ contains
           do i=lo(1)-ng_s,hi(1)+ng_s
              do j=lo(2),hi(2)+1
                 s(i,j,hi(3)+1:hi(3)+ng_s) = -s(i,j,hi(3))
+                ! higher-order stencil
+                ! s(i,j,hi(3)+1:hi(3)+ng_s) = -2.d0*s(i,j,hi(3)) + (1.d0/3.d0)*s(i,j,hi(3)-1)
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -1315,6 +1339,8 @@ contains
           do k=lo(3),hi(3)
              do j=lo(2),hi(2)+1
                 s(lo(1)-ng_s:lo(1)-1,j,k) = 2.d0*v_bc1(lo(1),j,k) - s(lo(1),j,k)
+                ! higher-order stencil
+                ! s(lo(1)-ng_s:lo(1)-1,j,k) = (8.d0/3.d0)*v_bc1(lo(1),j,k) - 2.d0*s(lo(1),j,k) + (1.d0/3.d0)*2.d0*s(lo(1)+1,j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -1323,6 +1349,8 @@ contains
           do k=lo(3),hi(3)+1
              do j=lo(2),hi(2)
                 s(lo(1)-ng_s:lo(1)-1,j,k) = 2.d0*v_bc1(lo(1),j,k) - s(lo(1),j,k)
+                ! higher-order stencil
+                ! s(lo(1)-ng_s:lo(1)-1,j,k) = (8.d0/3.d0)*v_bc1(lo(1),j,k) - 2.d0*s(lo(1),j,k) + (1.d0/3.d0)*s(lo(1)+1,j,k)
              end do
           end do
        end if
@@ -1368,6 +1396,8 @@ contains
           do k=lo(3),hi(3)
              do j=lo(2),hi(2)+1
                 s(hi(1)+1:hi(1)+ng_s,j,k) = 2.d0*v_bc1(hi(1)+1,j,k) - s(hi(1),j,k)
+                ! higher-order stencil
+                ! s(hi(1)+1:hi(1)+ng_s,j,k) = (8.d0/3.d0)*v_bc1(hi(1)+1,j,k) - 2.d0*s(hi(1),j,k) + (1.d0/3.d0)*s(hi(1)-1,j,k)
              end do
           end do
        else if (bccomp .eq. 3) then
@@ -1376,6 +1406,8 @@ contains
           do k=lo(3),hi(3)+1
              do j=lo(2),hi(2)
                 s(hi(1)+1:hi(1)+ng_s,j,k) = 2.d0*v_bc1(hi(1)+1,j,k) - s(hi(1),j,k)
+                ! higher-order stencil
+                ! s(hi(1)+1:hi(1)+ng_s,j,k) = (8.d0/3.d0)*v_bc1(hi(1)+1,j,k) - 2.d0*s(hi(1),j,k) + (1.d0/3.d0)*s(hi(1)-1,j,k)
              end do
           end do
        end if
@@ -1418,6 +1450,8 @@ contains
           do k=lo(3),hi(3)
              do i=lo(1),hi(1)+1
                 s(i,lo(2)-ng_s:lo(2)-1,k) = 2.d0*v_bc1(i,lo(2),k) - s(i,lo(2),k)
+                ! higher-order stencil
+                ! s(i,lo(2)-ng_s:lo(2)-1,k) = (8.d0/3.d0)*v_bc1(i,lo(2),k) - 2.d0*s(i,lo(2),k) + (1.d0/3.d0)*s(i,lo(2)+1,k)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1429,6 +1463,8 @@ contains
           do k=lo(3),hi(3)+1
              do i=lo(1),hi(1)
                 s(i,lo(2)-ng_s:lo(2)-1,k) = 2.d0*v_bc2(i,lo(2),k) - s(i,lo(2),k)
+                ! higher-order stencil
+                ! s(i,lo(2)-ng_s:lo(2)-1,k) = (8.d0/3.d0)*v_bc2(i,lo(2),k) - 2.d0*s(i,lo(2),k) + (1.d0/3.d0)*s(i,lo(2)+1,k)
              end do
           end do
        end if
@@ -1471,6 +1507,8 @@ contains
           do k=lo(3),hi(3)
              do i=lo(1),hi(1)+1
                 s(i,hi(2)+1:hi(2)+ng_s,k) = 2.d0*v_bc1(i,hi(2)+1,k) - s(i,hi(2),k)
+                ! higher-order stencil
+                ! s(i,hi(2)+1:hi(2)+ng_s,k) = (8.d0/3.d0)*v_bc1(i,hi(2)+1,k) - 2.d0*s(i,hi(2),k) + (1.d0/3.d0)*s(i,hi(2)-1,k)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1482,6 +1520,8 @@ contains
           do k=lo(3),hi(3)+1
              do i=lo(1),hi(1)
                 s(i,hi(2)+1:hi(2)+ng_s,k) = 2.d0*v_bc2(i,hi(2)+1,k) - s(i,hi(2),k)
+                ! higher-order stencil
+                ! s(i,hi(2)+1:hi(2)+ng_s,k) = (8.d0/3.d0)*v_bc2(i,hi(2)+1,k) - 2.d0*s(i,hi(2),k) + (1.d0/3.d0)*s(i,hi(2)-1,k)
              end do
           end do
        end if
@@ -1524,6 +1564,8 @@ contains
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)+1
                 s(i,j,lo(3)-ng_s:lo(3)-1) = 2.d0*v_bc2(i,j,lo(3)) - s(i,j,lo(3))
+                ! higher-order stencil
+                ! s(i,j,lo(3)-ng_s:lo(3)-1) = (8.d0/3.d0)*v_bc2(i,j,lo(3)) - 2.d0*s(i,j,lo(3)) + (1.d0/3.d0)*s(i,j,lo(3)+1)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1532,6 +1574,8 @@ contains
           do j=lo(2),hi(2)+1
              do i=lo(1),hi(1)
                 s(i,j,lo(3)-ng_s:lo(3)-1) = 2.d0*v_bc2(i,j,lo(3)) - s(i,j,lo(3))
+                ! higher-order stencil
+                ! s(i,j,lo(3)-ng_s:lo(3)-1) = (8.d0/3.d0)*v_bc2(i,j,lo(3)) - 2.d0*s(i,j,lo(3)) + (1.d0/3.d0)*s(i,j,lo(3)+1)
              end do
           end do
        else if (bccomp .eq. 3) then 
@@ -1577,6 +1621,8 @@ contains
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)+1
                 s(i,j,hi(3)+1:hi(3)+ng_s) = 2.d0*v_bc2(i,j,hi(3)+1) - s(i,j,hi(3))
+                ! higher-order stencil
+                ! s(i,j,hi(3)+1:hi(3)+ng_s) = (8.d0/3.d0)*v_bc2(i,j,hi(3)+1) - 2.d0*s(i,j,hi(3)) + (1.d0/3.d0)*s(i,j,hi(3)-1)
              end do
           end do
        else if (bccomp .eq. 2) then
@@ -1585,6 +1631,8 @@ contains
           do j=lo(2),hi(2)+1
              do i=lo(1),hi(1)
                 s(i,j,hi(3)+1:hi(3)+ng_s) = 2.d0*v_bc2(i,j,hi(3)+1) - s(i,j,hi(3))
+                ! higher-order stencil
+                ! s(i,j,hi(3)+1:hi(3)+ng_s) = (8.d0/3.d0)*v_bc2(i,j,hi(3)+1) - 2.d0*s(i,j,hi(3)) + (1.d0/3.d0)*s(i,j,hi(3)-1)
              end do
           end do
        else if (bccomp .eq. 3) then
