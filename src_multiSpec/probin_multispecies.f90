@@ -23,23 +23,27 @@ module probin_multispecies_module
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   
   namelist /probin_multispecies/ nspecies
-  namelist /probin_multispecies/ fraction_tolerance
+  namelist /probin_multispecies/ fraction_tolerance ! For roundoff errors in mass and mole fractions
   namelist /probin_multispecies/ start_time
-  namelist /probin_multispecies/ inverse_type   
+  namelist /probin_multispecies/ inverse_type       ! Only for LAPACK:  1=inverse, 2=pseudo inverse
   namelist /probin_multispecies/ timeinteg_type   
-  namelist /probin_multispecies/ correct_flux   
+  namelist /probin_multispecies/ correct_flux       ! Manually ensure mass is conserved to roundoff 
   namelist /probin_multispecies/ print_error_norms   
-  namelist /probin_multispecies/ is_ideal_mixture   
-  namelist /probin_multispecies/ is_nonisothermal   
-  namelist /probin_multispecies/ use_lapack
-  namelist /probin_multispecies/ Dbar       ! SM diffusion constant  
-  namelist /probin_multispecies/ Dtherm     ! thermo-diffusion coefficients
+  namelist /probin_multispecies/ is_ideal_mixture   ! If T assume Gamma=I (H=0) and simplify
+  namelist /probin_multispecies/ is_nonisothermal   ! If T Soret effect will be included
+  namelist /probin_multispecies/ use_lapack         ! Use LAPACK or iterative method for diffusion matrix (recommend False)
+  namelist /probin_multispecies/ T_init     ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  namelist /probin_multispecies/ temp_type  ! for initializing temperature
+  namelist /probin_multispecies/ rho_init   ! initial values for rho
+  namelist /probin_multispecies/ rho_bc     ! rho_i boundary conditions (dir,lohi,species)
+  ! These are lower-triangules of symmetric matrices represented as vectors
+  ! Number of elements is (nspecies*(nspecies-1)/2)
+  ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
+  ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
+  namelist /probin_multispecies/ Dbar       ! Maxwell-Stefan diffusion constant  
+  namelist /probin_multispecies/ Dtherm     ! thermo-diffusion coefficients, only differences among elements matter
   namelist /probin_multispecies/ H_offdiag
-  namelist /probin_multispecies/ H_diag ! =d^2F/dx^2  
-  namelist /probin_multispecies/ temp_type
-  namelist /probin_multispecies/ T_init   ! initial values for temperature (bottom/top, inside/outside circle, etc.)
-  namelist /probin_multispecies/ rho_init  ! initial values for rho
-  namelist /probin_multispecies/ rho_bc ! rho_i boundary conditions (dir,lohi,species)
+  namelist /probin_multispecies/ H_diag     ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
 
 contains
 
@@ -70,15 +74,15 @@ contains
     print_error_norms  = .true.
     is_ideal_mixture   = .true.
     is_nonisothermal   = .true.
-    use_lapack         = .true.
+    use_lapack         = .false.
     rho_init           = 1.0d0
+    rho_bc             = 0.d0
     Dbar               = 1.0d0
     Dtherm             = 0.0d0
     H_offdiag          = 0.0d0
     H_diag             = 0.0d0
-    temp_type          = 0
     T_init             = 1.0d0
-    rho_bc             = 0.d0
+    temp_type          = 0
  
     ! read from input file 
     need_inputs = .true.

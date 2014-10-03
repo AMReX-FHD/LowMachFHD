@@ -7,7 +7,6 @@
   ! Problem specification
   !----------------------
   dim_in = 2                       ! 2D or 3D  
-  prob_type = 1                    ! sets scalars, m, coefficients (see init.f90)
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
   n_cells(1:2) = 64 64             ! number of cells in domain
@@ -23,6 +22,7 @@
   max_step = 1                     ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
+  prob_type = 1                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
   print_int = 0                    ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1              ! how often to call project_onto_eos
@@ -63,6 +63,7 @@
                      ! 1 = unlimited bilinear bds in space and time
                      ! 2 = limited bliniear bds in space and time
                      ! 3 = unlimited quadratic bds in space and time
+                     ! 4 = unlimited quadratic bds in space and time
 
   ! Stochastic momentum flux controls:
   filtering_width = 0   ! If positive the *momentum* stochastic fluxes will be filtered (smoothed)
@@ -73,7 +74,6 @@
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
   smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-
   initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero)
 
@@ -136,33 +136,22 @@
   ! Physical properties:
   !----------------------
   nspecies = 2
-  is_ideal_mixture = T ! If T assume Gamma=I (H=0) and simplify
-  is_nonisothermal = T ! If T Soret effect will be included
-  
-  ! Thermodynamic and transport properties:
-  !----------------------
-  
-  ! These are lower-triangules of symmetric matrices represented as vectors
-  ! Number of elements is (nspecies*(nspecies-1)/2)
-  ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
-  ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
-  Dbar(1:1) = 1.d0         ! Maxwell-Stefan diffusion constant  
-  H_offdiag(1:1) = 0.d0    ! Off diagonal elements of H=d^2F/dx^2  
-
-  ! These are vectors of length nspecies
-  Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients, only differences among elements matter
-  H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2  
-  
-  ! Algorithmic options:
-  !----------------------
   fraction_tolerance = 1.d-12 ! For roundoff errors in mass and mole fractions
-  use_lapack = F ! Use LAPACK or iterative method for diffusion matrix (recommend False)
-  inverse_type = 1 ! Only for LAPACK:  1=inverse, 2=pseudo inverse
-  correct_flux = T ! Manually ensure mass is conserved to roundoff 
+  start_time = 0.d0
+
+  inverse_type = 1       ! Only for LAPACK:  1=inverse, 2=pseudo inverse
+  timeinteg_type = 1
+  correct_flux = T       ! Manually ensure mass is conserved to roundoff 
+  print_error_norms = T
+  is_ideal_mixture = T   ! If T assume Gamma=I (H=0) and simplify
+  is_nonisothermal = T   ! If T Soret effect will be included
+  use_lapack = F         ! Use LAPACK or iterative method for diffusion matrix (recommend False)
   
   ! Initial and boundary conditions 
   !----------------------
   T_init(1:2) = 1.d0 1.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  temp_type = 0 ! for initializing temperature
+
   ! initial values for rho
   rho_init(1,1:2) = 1.d0 1.d0
   rho_init(2,1:2) = 1.d0 1.d0
@@ -172,6 +161,19 @@
   rho_bc(1,2,1:2) = 0.d0 0.d0
   rho_bc(2,1,1:2) = 0.d0 0.d0
   rho_bc(2,2,1:2) = 0.d0 0.d0
+  
+  ! Thermodynamic and transport properties:
+  !----------------------
+
+  ! These are lower-triangules of symmetric matrices represented as vectors
+  ! Number of elements is (nspecies*(nspecies-1)/2)
+  ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
+  ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
+  Dbar(1:1) = 1.d0         ! Maxwell-Stefan diffusion constant  
+  Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients, only differences among elements matter
+  H_offdiag(1:1) = 0.d0    ! Off diagonal elements of H=d^2F/dx^2  
+  H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
+  
  
 /
 

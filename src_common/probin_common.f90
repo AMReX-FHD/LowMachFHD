@@ -94,7 +94,8 @@ module probin_common_module
   namelist /probin_common/ advection_type ! 0 = centered explicit
                                           ! 1 = unlimited bilinear bds in space and time
                                           ! 2 = limited bliniear bds in space and time
-                                          ! 3 = unlimited quadratic bds in space and time   
+                                          ! 3 = unlimited quadratic bds in space and time  
+                                          ! 4 = limited quadratic bds in space and time   
 
   ! Stochastic momentum flux controls:
   namelist /probin_common/ filtering_width   ! If positive the *momentum* stochastic fluxes will be filtered (smoothed)
