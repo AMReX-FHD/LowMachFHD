@@ -1016,13 +1016,13 @@ We use the inertial algorithm and test the following advection schemes: (1) cent
 and (5) limited quadratic BDS.
 Each simulation uses $256^2$ grid cells and a fixed $\Delta t=2.5\times 10^{-3}$.  
 This corresponds to an advective CFL number of $\sim 0.6$.
-In Figure \ref{fig:square}, we show the concentration at $t=2$.
+In Figure \ref{fig:square}, we show the concentration at $t=1.25$.
 Centered advection
 severely overshoots, leaving numerical ringing.  The unlimited BDS
 schemes slightly overshoot, but do not suffer from Gibbs ringing.
 The limited BDS schemes do not overshoot or undershoot.
-In fact, we run the limited quadratic BDS scheme to a longer time ($t=???$)
-and show the results in Figure ???, noting that the method does a good job in preserving
+In fact, we run the limited quadratic BDS scheme to a longer time ($t=5$)
+and show the results in Figure \ref{fig:square2}, noting that the method does a good job in preserving
 the interface without overshoot.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}
@@ -1035,7 +1035,7 @@ the interface without overshoot.
 \includegraphics[width=2.25in]{square_lim_q_bds}
 \caption{Square profile advection with infinite Schmidt number and sharp discontinuities.
 Colorbars indicate the concentration.  The initial condition is in the top-left; the
-other images represent the final ($t=2$) condition:
+other images represent the final ($t=1.25$) condition:
 (Top-Right) centered advection,
 (Middle-Left) unlimited bilinear BDS,
 (Middle-Right) limited bilinear BDS,
@@ -1055,7 +1055,7 @@ other images represent the final ($t=2$) condition:
 \includegraphics[width=1.9in]{square_movie5}
 \includegraphics[width=1.9in]{square_movie6}
 \caption{Square profile advection using the limited quadratic BDS scheme 
-at $t=0,0.8,1.6,2.4,3.2$, and $4.0$.}
+at $t=0,1,2,3,4$, and $50$.}
 \label{fig:square2}
 \end{center}
 \end{figure}
