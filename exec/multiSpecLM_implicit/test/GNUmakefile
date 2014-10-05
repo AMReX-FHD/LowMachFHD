@@ -5,11 +5,11 @@ HYDROLIB_HOME := ../../../../HydroGrid
 STAGGERED_HOME := ../../..
 
 NDEBUG    :=
-MPI       := t  
+MPI       :=
 OMP       :=
 PROF      :=
-COMP      := gfortran48
-CCOMP     := gcc48
+COMP      := gfortran
+CCOMP     := gcc
 MKVERBOSE := t
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak

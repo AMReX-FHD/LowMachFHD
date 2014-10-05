@@ -836,7 +836,7 @@ Then, we use the GMRES solver to compute the solution to
 Then, $\xb^{\rm new} = \overline\xb^{\rm old} + \deltab\xb$.
 
 \section{Results}
-\subsection{Lid-Driven Cavity Convergence Testing}
+\subsection{2D Lid-Driven Cavity Convergence Testing}
 The problem is a deterministic lid-driven cavity in two dimensions.
 All units are cgs.
 The domain is 1 $\times$ 1 divided into $64^2, 128^2, 256^2$, and $512^2$ grid cells.
@@ -996,6 +996,62 @@ Test 6:             & $c$ & 3.97e-04 & 1.89 & 1.07e-04 & 1.93 & 2.81e-05 \\
 Test 7:             & $c$ & 3.35e-04 & 1.94 & 8.76e-05 & 1.96 & 2.25e-05 \\
 \hline
 Test 8:             & $c$ & 4.57e-04 & 1.92 & 1.21e-04 & 1.96 & 3.12e-05
+\end{tabular}
+\end{center}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{3D Lid-Driven Cavity Convergence Testing}
+The problem setup is exactly the same as the 2D case except that we use spatial
+resolutions of $32^3$ up to $256^3$ with coarse time step $\Delta t=1.25\times 10^{-2}$
+that still decreases by a factor of two with spatial refinement.  This corresponds
+to an advective CFL of $\sim 0.4$ at all levels and a mass diffusion CFL of
+$\sim 0.6$ for the finest resolution simulation.  We run to $t=1$ (80 coarse time steps).
+The lo-y and hi-y walls move with
+a equal an opposite diagonal velocities, such that the $x$- and $z-$ velocities on
+the hi-y walls have speeds:
+\begin{equation}
+u(x,z,t) = w(x,z,t) = 
+\begin{cases}
+\frac{1}{8}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right]
+           \left[1 + \sin{(2\pi z - \frac{\pi}{2}})\right]
+           \left[1 + \sin{(2\pi t - \frac{\pi}{2}})\right], & t < 1\\
+\frac{1}{4}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right]
+           \left[1 + \sin{(2\pi z - \frac{\pi}{2}})\right], & t \ge 1
+\end{cases}.
+\end{equation}
+We run Test 1 and Test 2 again.  We also run Test 1 and Test 2 with higher-order transverse
+velocity ghost cell extrapolation, since for these coarser runs (relative to the 2D runs),
+they seem to help us reach the asymptotic regime at lower resolutions.
+See Table \ref{tab:Linf_3d} for results.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\begin{center}
+\caption{Three-dimensional convergence testing refining in space and time.
+Errors and convergence rates in $L^\infty$.}
+\label{tab:Linf_3d}
+\begin{tabular}{ccccccc}
+& & 32-64 & Rate & 64-128 & Rate & 128-256 \\
+\hline
+Test 1:             & $u$ & 7.66e-03 & 1.75 & 2.27e-03 & 1.88 & 6.16e-04 \\
+                    & $v$ & 3.12e-03 & 1.96 & 8.02e-04 & 1.99 & 2.02e-04 \\
+                    & $w$ & 7.66e-03 & 1.75 & 2.27e-03 & 1.88 & 6.16e-04 \\
+                    & $c$ & 1.22e-02 & 2.00 & 3.06e-03 & 2.00 & 7.64e-04 \\
+\hline
+Test 1:             & $u$ & 2.30e-03 & 1.97 & 5.88e-04 & 2.02 & 1.45e-04 \\
+H-O Boundary Fix    & $v$ & 9.01e-04 & 2.23 & 1.92e-04 & 1.99 & 4.82e-05 \\
+                    & $w$ & 2.30e-03 & 1.97 & 5.88e-04 & 2.02 & 1.45e-04 \\
+                    & $c$ & 1.21e-02 & 1.99 & 3.05e-03 & 2.00 & 7.62e-04 \\
+\hline
+Test 2:             & $u$ & 7.67e-03 & 1.75 & 2.28e-03 & 1.89 & 6.16e-04 \\
+                    & $v$ & 3.11e-03 & 1.96 & 8.01e-04 & 1.99 & 2.02e-04 \\
+                    & $w$ & 7.67e-03 & 1.75 & 2.28e-03 & 1.89 & 6.16e-04 \\
+                    & $c$ & 9.79e-03 & 1.91 & 2.61e-03 & 1.97 & 6.68e-04 \\
+\hline
+Test 2:             & $u$ & 2.30e-03 & 1.96 & 5.89e-04 & 2.01 & 1.46e-04 \\
+H-O Boundary Fix    & $v$ & 8.90e-04 & 2.21 & 1.92e-04 & 1.99 & 4.82e-05 \\
+                    & $w$ & 2.30e-03 & 1.96 & 5.89e-04 & 2.01 & 1.46e-04 \\
+                    & $c$ & 9.70e-03 & 1.91 & 2.59e-03 & 1.96 & 6.67e-04
 \end{tabular}
 \end{center}
 \end{table}
