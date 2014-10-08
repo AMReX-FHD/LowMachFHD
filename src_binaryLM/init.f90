@@ -144,7 +144,7 @@ contains
 
        ! Gaussian bubble with c_init(1) in the middle and c_init(2) far away
        ! centered in domain
-       ! if smoothing_width = 0, this is a discontinuous circle advecting with radius 0.25
+       ! if smoothing_width = 0, this is a discontinuous square in the central 25% of domain
 
        mx = 0.d0
        my = 0.d0
