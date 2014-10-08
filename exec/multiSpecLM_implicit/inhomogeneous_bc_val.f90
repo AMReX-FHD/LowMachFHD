@@ -3,8 +3,9 @@ module inhomogeneous_bc_val_module
   use bl_types
   use bc_module
   use bl_error_module
+  use bl_constants_module
   use probin_multispecies_module, only: nspecies, rho_bc, rho_part_bc_comp
-  use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi
+  use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type
 
   implicit none
 
@@ -86,9 +87,31 @@ contains
 
        ! x-vel
        if (y .eq. prob_lo(2)) then
-          val = wallspeed_lo(1,2)
+          if (abs(prob_type) .eq. 12) then
+             if (time .le. 0.5d0) then
+                val = wallspeed_lo(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
+             else
+                val = wallspeed_lo(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI))
+             end if
+          else
+             val = wallspeed_lo(1,2)
+          end if
        else if (y .eq. prob_hi(2)) then
-          val = wallspeed_hi(1,2)
+          if (abs(prob_type) .eq. 12) then
+             if (time .le. 0.5d0) then
+                val = wallspeed_hi(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
+             else
+                val = wallspeed_hi(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI))
+             end if
+          else
+             val = wallspeed_hi(1,2)
+          end if
        else
           val = 0.d0
        end if
@@ -153,9 +176,35 @@ contains
 
        ! x-vel
        if (y .eq. prob_lo(2)) then
-          val = wallspeed_lo(1,2)
+          if (abs(prob_type) .eq. 12) then
+             if (time .le. 0.5d0) then
+                val = wallspeed_lo(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*z - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
+             else
+                val = wallspeed_lo(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*z - 0.5d0*M_PI))
+             end if
+          else
+             val = wallspeed_lo(1,2)
+          end if
        else if (y .eq. prob_hi(2)) then
-          val = wallspeed_hi(1,2)
+          if (abs(prob_type) .eq. 12) then
+             if (time .le. 0.5d0) then
+                val = wallspeed_hi(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*z - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
+             else
+                val = wallspeed_hi(1,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*z - 0.5d0*M_PI))
+             end if
+          else
+             val = wallspeed_hi(1,2)
+          end if
        else if (z .eq. prob_lo(3)) then
           val = wallspeed_lo(1,3)
        else if (z .eq. prob_hi(3)) then
@@ -187,9 +236,35 @@ contains
        else if (x .eq. prob_hi(1)) then
           val = wallspeed_hi(2,1)
        else if (y .eq. prob_lo(2)) then
-          val = wallspeed_lo(2,2)
+          if (abs(prob_type) .eq. 12) then
+             if (time .le. 0.5d0) then
+                val = wallspeed_lo(2,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*z - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
+             else
+                val = wallspeed_lo(2,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*z - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI))
+             end if
+          else
+             val = wallspeed_lo(2,2)
+          end if
        else if (y .eq. prob_hi(2)) then
-          val = wallspeed_hi(2,2)
+          if (abs(prob_type) .eq. 12) then
+             if (time .le. 0.5d0) then
+                val = wallspeed_hi(2,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*z - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*time - 0.5d0*M_PI))
+             else
+                val = wallspeed_hi(2,2)* &
+                     0.5d0*(1.d0 + sin(2.d0*M_PI*z - 0.5d0*M_PI)) &
+                     *0.5d0*(1.d0 + sin(2.d0*M_PI*x - 0.5d0*M_PI))
+             end if
+          else
+             val = wallspeed_hi(2,2)
+          end if
        else
           val = 0.d0
        end if
