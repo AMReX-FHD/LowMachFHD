@@ -337,10 +337,10 @@ contains
       end do
 
       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,0.5d0*dt,1,nspecies, &
                    rho_part_bc_comp,the_bc_tower,proj_type_in=2)
       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
-          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,0.5d0*dt,1,nspecies, &
                         rho_part_bc_comp,the_bc_tower,proj_type_in=2)
       end if
     else
