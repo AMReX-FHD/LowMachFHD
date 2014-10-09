@@ -63,7 +63,7 @@
                      ! 1 = unlimited bilinear bds in space and time
                      ! 2 = limited bliniear bds in space and time
                      ! 3 = unlimited quadratic bds in space and time
-                     ! 4 = unlimited quadratic bds in space and time
+                     ! 4 = limited quadratic bds in space and time
 
   ! Stochastic momentum flux controls:
   filtering_width = 0   ! If positive the *momentum* stochastic fluxes will be filtered (smoothed)
