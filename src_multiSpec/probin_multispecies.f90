@@ -16,7 +16,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: Dtherm(max_element)  
   real(kind=dp_t)    :: H_offdiag(max_element), H_diag(max_element)
   real(kind=dp_t)    :: fraction_tolerance
-  logical            :: correct_flux,print_error_norms
+  logical            :: correct_flux,print_error_norms,plot_stag
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
   real(kind=dp_t)    :: rho_init(2,max_species)
   real(kind=dp_t)    :: rho_bc(3,2,max_species)
@@ -44,6 +44,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ Dtherm     ! thermo-diffusion coefficients, only differences among elements matter
   namelist /probin_multispecies/ H_offdiag
   namelist /probin_multispecies/ H_diag     ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
+  namelist /probin_multispecies/ plot_stag  ! plot staggered velocities in separate plotfile
 
 contains
 
@@ -75,14 +76,15 @@ contains
     is_ideal_mixture   = .true.
     is_nonisothermal   = .true.
     use_lapack         = .false.
+    T_init             = 1.0d0
+    temp_type          = 0
     rho_init           = 1.0d0
     rho_bc             = 0.d0
     Dbar               = 1.0d0
     Dtherm             = 0.0d0
     H_offdiag          = 0.0d0
     H_diag             = 0.0d0
-    T_init             = 1.0d0
-    temp_type          = 0
+    plot_stag          = .false.
  
     ! read from input file 
     need_inputs = .true.
@@ -159,6 +161,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) temp_type
+
+       case ('--plot_stag')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_stag
 
        case ('--')
           farg = farg + 1
