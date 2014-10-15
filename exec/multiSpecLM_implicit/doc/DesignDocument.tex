@@ -42,6 +42,7 @@
 \def\deltab {\boldsymbol{\delta}}
 \def\Psib   {\boldsymbol{\Psi}}
 \def\Sigmab {\boldsymbol{\Sigma}}
+\def\taub   {\boldsymbol{\tau}}
 
 \def\half   {\frac{1}{2}}
 \def\myhalf {\sfrac{1}{2}}
@@ -417,5 +418,102 @@ from a simulation with a flat initial interface with thermal fluctuations.}
 \end{figure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\section{2D Lid-Driven Cavity Convergence Testing}
+The problem is a deterministic lid-driven cavity in two dimensions.
+All units are cgs.
+The domain is 1 $\times$ 1 divided into $64^2, 128^2, 256^2$, and $512^2$ grid cells.
+The lo-y and hi-y walls are no-slip walls moving in equal and opposite directions,
+setting up a circular flow pattern.  The hi-y wall speed is given by:
+\begin{equation}
+u(x,t) =
+\begin{cases}
+\frac{1}{4}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right]
+           \left[1 + \sin{(2\pi t - \frac{\pi}{2}})\right], & t < 0.5\\
+\frac{1}{2}\left[1 + \sin{(2\pi x - \frac{\pi}{2}})\right], & t \ge 0.5
+\end{cases}.
+\end{equation}
+The x-boundaries are stationary no-slip walls.
+The time step for the coarsest simulation is $\Delta t=5\times 10^{-3}$ 
+and is reduced by a factor of 2 as the resolution increases by a factor of 2.
+This corresponds to an advective CFL number of $\sim 0.3$ for each simulation, and
+a mass diffusion CFL of $\sim 0.67$ for the finest simulation.
+We run each simulation to $t=2$.
+We use $\bar\rho = (3,2,1)$.
+The initial conditions are $\vb=0$ and $p=0$ with
+a Gaussian bump of high density centered at $(x,y) = (0.5, 0.5)$ such that
+\begin{eqnarray}
+c_1 &=& 0.5e^{-75r^2}; \quad r = \sqrt{(x-0.5)^2 + (y-0.5)^2}, \\
+c_2 &=& 0.5e^{-75r^2}, \\
+c_3 &=& 1 - c_1 - c_2.
+\end{eqnarray}
+The viscosity varies linearly as a function of concentration, such that $\mu=0.1$
+when $\rho=1$ and $\mu=1$ when $\rho=2.5$.  We use mass diffusion coefficients
+$(D_{12},D_{13},D_{32}) = (10^{-4},5\times 10^{-4},10^{-3})$.
+Gravity acts downward with $\gb=(0,-1)$, and we use
+the viscous stress tensor formulation, $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$.
+
+In Table \ref{tab:Linf} we present convergence results in $L^\infty$ for the 
+following test problems:
+\begin{itemize}
+\item Test 1: Inertial algorithm, centered scalar advection
+\item Test 2: Inertial algorithm, unlimited bilinear BDS scalar advection.
+\item Test 3: Inertial algorithm, unlimited quadratic BDS scalar advection.
+\item Test 4: Inertial algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
+\item Test 5: Overdamped algorithm, centered scalar advection
+\item Test 6: Overdamped algorithm, unlimited bilinear BDS scalar advection.
+\item Test 7: Overdamped algorithm, unlimited quadratic BDS scalar advection.
+\item Test 8: Overdamped algorithm, unlimited bilinear BDS scalar advection, $\chi=0$.
+\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\begin{center}
+\caption{Refining in space and time.  Errors and convergence rates in $L^\infty$.}
+\label{tab:Linf}
+\begin{tabular}{ccccccc}
+& & 64-128 & Rate & 128-256 & Rate & 256-512 \\
+\hline
+Test 1:             & $u$      & 1.83e-03 & 1.91 & 4.88e-04 & x.xx & x.xxe-xx \\
+                    & $v$      & 7.01e-04 & 1.88 & 1.90e-04 & x.xx & x.xxe-xx \\
+                    & $\rho_1$ & 4.04e-03 & 2.00 & 1.01e-03 & x.xx & x.xxe-xx \\
+                    & $\rho_2$ & 3.97e-03 & 2.00 & 9.94e-04 & x.xx & x.xxe-xx \\
+                    & $\rho_3$ & 3.33e-03 & 2.00 & 8.34e-04 & x.xx & x.xxe-xx \\
+\hline
+Test 2:             & $u$      & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$      & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_1$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_2$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_3$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 3:             & $u$      & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$      & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_1$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_2$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_3$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 4:             & $u$      & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $v$      & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_1$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_2$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_3$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 5:             & $\rho_1$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_2$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_3$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 6:             & $\rho_1$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_2$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_3$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 7:             & $\rho_1$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_2$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_3$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+\hline
+Test 8:             & $\rho_1$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_2$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx \\
+                    & $\rho_3$ & x.xxe-xx & x.xx & x.xxe-xx & x.xx & x.xxe-xx
+\end{tabular}
+\end{center}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \end{document}
