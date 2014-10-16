@@ -98,7 +98,7 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho,rhotot, &
+    call compute_mass_fluxdiv_wrapper(mla,rho, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,0.d0,dx,weights, &
                                       the_bc_tower%bc_tower_array)

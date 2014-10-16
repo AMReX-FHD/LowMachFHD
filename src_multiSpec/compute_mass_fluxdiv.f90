@@ -22,14 +22,13 @@ module compute_mass_fluxdiv_module
 
 contains
 
-  subroutine compute_mass_fluxdiv_wrapper(mla,rho,rhotot, &
+  subroutine compute_mass_fluxdiv_wrapper(mla,rho, &
                                           diff_fluxdiv,stoch_fluxdiv,Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
-    type(multifab) , intent(inout)   :: rhotot(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
@@ -65,7 +64,7 @@ contains
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
     end do
 
-    call compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
+    call compute_mass_fluxdiv(mla,rho,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
                               D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                               zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                               the_bc_level)
@@ -83,14 +82,13 @@ contains
 
   end subroutine compute_mass_fluxdiv_wrapper
 
-  subroutine compute_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
+  subroutine compute_mass_fluxdiv(mla,rho,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                                   zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                                   the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
-    type(multifab) , intent(inout)   :: rhotot(:)
     type(multifab) , intent(inout)   :: molarconc(:)
     type(multifab) , intent(inout)   :: molmtot(:)
     type(multifab) , intent(inout)   :: chi(:)
@@ -112,6 +110,7 @@ contains
     ! local variables
     type(multifab)  :: drho(mla%nlevel)  ! correction to rho
     type(multifab)  :: rhoWchi(mla%nlevel)    ! rho*W*chi*Gama
+    type(multifab)  :: rhotot_temp(mla%nlevel)
 
     integer         :: n,i,dm,nlevs
 
@@ -120,29 +119,30 @@ contains
       
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     do n=1,nlevs
-       call multifab_build(drho(n),    mla%la(n), nspecies,    rho(n)%ng)
-       call multifab_build(rhoWchi(n), mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(drho(n),       mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(rhoWchi(n),    mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(rhotot_temp(n),mla%la(n), 1          , rho(n)%ng)
     end do
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
     call correct_rho_with_drho(mla,rho,drho,the_bc_level)
  
-    ! compute molmtot,molarconc & rhotot (primitive variables) for 
+    ! compute molmtot,molarconc & rhotot_temp (primitive variables) for 
     ! each-cell from rho(conserved) 
-    call convert_cons_to_prim(mla,rho,rhotot,molarconc,molmtot,the_bc_level)
+    call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot,the_bc_level)
       
     ! populate D_bar and Hessian matrix 
-    call compute_mixture_properties(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm, &
+    call compute_mixture_properties(mla,rho,rhotot_temp,molarconc,molmtot,D_bar,D_therm, &
                                     Hessian,Temp,the_bc_level)
 
     ! compute Gama from Hessian
-    call compute_Gama(mla,rho,rhotot,molarconc,molmtot,Hessian,Gama,the_bc_level)
+    call compute_Gama(mla,rho,rhotot_temp,molarconc,molmtot,Hessian,Gama,the_bc_level)
    
     ! compute chi 
-    call compute_chi(mla,rho,rhotot,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp,the_bc_level)
+    call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp,the_bc_level)
       
     ! compute rho*W*chi
-    call compute_rhoWchi(mla,rho,rhotot,molarconc,molmtot,chi,rhoWchi,the_bc_level)
+    call compute_rhoWchi(mla,rho,rhotot_temp,molarconc,molmtot,chi,rhoWchi,the_bc_level)
 
     ! reset total flux
     do n=1,nlevs
@@ -153,7 +153,7 @@ contains
 
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
-    call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
+    call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
                                 diff_fluxdiv,Temp,zeta_by_Temp,flux_total,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
@@ -161,7 +161,7 @@ contains
 
     ! compute stochastic fluxdiv 
     if (variance_coef_mass .ne. 0.d0) then
-       call stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,&
+       call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
                                     molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
                                     dx,dt,weights,the_bc_level)
     else
@@ -179,6 +179,7 @@ contains
     do n=1,nlevs
        call multifab_destroy(drho(n))
        call multifab_destroy(rhoWchi(n))
+       call multifab_destroy(rhotot_temp(n))
     end do
 
   end subroutine compute_mass_fluxdiv

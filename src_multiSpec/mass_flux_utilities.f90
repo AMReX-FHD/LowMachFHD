@@ -109,23 +109,22 @@ contains
     real(kind=dp_t), intent(out)   :: drho(nspecies)   ! total density in each cell 
     
     ! local variables
-    integer          :: row
     real(kind=dp_t)  :: rhotot_local
+    real(kind=dp_t)  :: rho_old(nspecies)
 
-    rhotot_local = sum(rho)  ! total rho in the cell
-   
-    ! change 0 with tolerance to prevent division by zero in case species
+    ! make a copy of the input rho's
+    rho_old = rho
+    
+    ! total rho in the cell
+    rhotot_local = sum(rho)
+
+    ! make sure each rho is greater than +epsilon 
+    ! to prevent division by zero in case species
     ! density, molar concentration or total density = 0.
-    do row=1, nspecies
-       if(rho(row) .lt. fraction_tolerance*rhotot_local) then
-           drho(row) = fraction_tolerance*rhotot_local
-       else
-           drho(row) = 0.0d0
-       end if
-    end do
- 
-    ! modify rho  
-    rho = rho + drho 
+    rho(1:nspecies) = max(rho(1:nspecies), fraction_tolerance*rhotot_local) 
+
+    ! keep track of how much rho changed so we can reset it back later
+    drho = rho - rho_old
 
   end subroutine correct_rho_with_drho_local 
 
