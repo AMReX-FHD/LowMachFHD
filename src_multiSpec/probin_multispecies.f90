@@ -9,7 +9,7 @@ module probin_multispecies_module
   integer, parameter :: max_element=max_species*(max_species-1)/2  
   integer            :: rho_part_bc_comp, mol_frac_bc_comp ! not input: populated at main 
 
-  integer, save      :: nspecies,inverse_type,timeinteg_type,temp_type
+  integer, save      :: nspecies,inverse_type,timeinteg_type,temp_type,chi_iterations
   real(kind=dp_t)    :: start_time
   real(kind=dp_t)    :: T_init(2) 
   real(kind=dp_t)    :: Dbar(max_element)
@@ -32,6 +32,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ is_ideal_mixture   ! If T assume Gamma=I (H=0) and simplify
   namelist /probin_multispecies/ is_nonisothermal   ! If T Soret effect will be included
   namelist /probin_multispecies/ use_lapack         ! Use LAPACK or iterative method for diffusion matrix (recommend False)
+  namelist /probin_multispecies/ chi_iterations     ! number of iterations used in Dbar2chi_iterative
   namelist /probin_multispecies/ T_init     ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   namelist /probin_multispecies/ temp_type  ! for initializing temperature
   namelist /probin_multispecies/ rho_init   ! initial values for rho
@@ -76,6 +77,7 @@ contains
     is_ideal_mixture   = .true.
     is_nonisothermal   = .true.
     use_lapack         = .false.
+    chi_iterations     = 10
     T_init             = 1.0d0
     temp_type          = 0
     rho_init           = 1.0d0
@@ -156,6 +158,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) use_lapack
+
+       case ('--chi_iterations')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) chi_iterations
 
        case ('--temp_type')
           farg = farg + 1

@@ -5,7 +5,7 @@ module mass_flux_utilities_module
   use ml_layout_module
   use probin_common_module, only: k_B, molmass
   use probin_multispecies_module, only: nspecies, use_lapack, fraction_tolerance, &
-       is_ideal_mixture, inverse_type, is_nonisothermal
+       is_ideal_mixture, inverse_type, is_nonisothermal, chi_iterations
   use matrix_utilities 
   use F95_LAPACK
 
@@ -682,7 +682,7 @@ contains
     if(use_lapack) then
        call compute_chi_lapack(Lambda(:,:),chi(:,:),W(:))
     else
-       call Dbar2chi_iterative(100,D_bar(:,:),molarconc(:),chi(:,:)) 
+       call Dbar2chi_iterative(chi_iterations,D_bar(:,:),molarconc(:),chi(:,:)) 
     end if
 
   end subroutine compute_chi_local
@@ -761,7 +761,7 @@ contains
           Sdag(row,column) = 0.0d0
        end do
        
-       if(S(row).gt.fraction_tolerance) then 
+       if(S(row).gt.fraction_tolerance*sum(S)) then 
           Sdag(row,row) = 1.0d0/S(row)
        else
           Sdag(row,row) = 0.0d0
