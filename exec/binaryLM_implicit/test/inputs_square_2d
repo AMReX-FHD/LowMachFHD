@@ -24,7 +24,6 @@
   ! Problem specification
   !----------------------
   dim_in = 2                 ! 2D or 3D  
-  max_grid_size(1:2) = 32 32 ! max number of cells in a box
   prob_lo(1:2) = 0.d0 0.d0   ! physical lo coordinate
   prob_hi(1:2) = 1.d0 1.d0   ! physical hi coordinate
   prob_type = -1             ! sets scalars, m, coefficients (see init.f90)
@@ -37,7 +36,7 @@
   n_cells(1:2) = 256 256   ! number of cells in domain
   fixed_dt = 0.0025d0      ! time step
   plot_int = 100           ! Interval for writing a plotfile (for visit/amrvis)
-  max_step = 500          ! maximum number of time steps
+  max_step = 2000          ! maximum number of time steps
 
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -63,7 +62,11 @@
   ! fluid properties
   rhobar(1:2) = 2.d0 1.d0  ! rho1bar and rho2bar
 
-  advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
+  advection_type = 4 ! 0 = centered explicit
+                     ! 1 = unlimited bilinear bds in space and time
+                     ! 2 = limited bliniear bds in space and time
+                     ! 3 = unlimited quadratic bds in space and time
+                     ! 4 = limited quadratic bds in space and time
 
   ! Boundary conditions
   !----------------------

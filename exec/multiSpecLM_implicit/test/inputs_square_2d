@@ -12,7 +12,7 @@
 
   smoothing_width = 0.d0
 
-  max_grid_size(1:2) = 64 64  
+  max_grid_size(1:2) = 32 32
   n_cells(1:2) = 256 256   ! number of cells in domain
   fixed_dt = 0.00125d0     ! time step
   plot_int = 100           ! Interval for writing a plotfile (for visit/amrvis)
@@ -51,7 +51,7 @@
   visc_type = -2
   visc_coef = 1.d-1        ! momentum diffusion coefficient 'eta'   
 
-  advection_type = 0 ! 0 = centered explicit
+  advection_type = 4 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
                      ! 2 = limited bliniear bds in space and time
                      ! 3 = unlimited quadratic bds in space and time
