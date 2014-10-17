@@ -44,10 +44,13 @@ contains
      nlevs = mba%nlevel
 
      do n = 1,nlevs
-        if (advection_type .ge. 1) then
-           call multifab_build(sold(n), mla%la(n), 2, 3)
+        if (advection_type .eq. 0) then
+           call multifab_build(sold(n), mla%la(n), 2, 2) ! centered advection
+        else if (advection_type .le. 3) then
+           call multifab_build(sold(n), mla%la(n), 2, 3) ! bilinear bds or unlimited quad bds
+        else if (advection_type .eq. 4) then
+           call multifab_build(sold(n), mla%la(n), 2, 4) ! limited quad bds
         else
-           call multifab_build(sold(n), mla%la(n), 2, 2)
         end if
         call multifab_build(pres(n), mla%la(n), 1, 1)
         call multifab_build(rhoc_fluxdiv(n), mla%la(n), 1, 0)

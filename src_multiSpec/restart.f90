@@ -42,8 +42,10 @@ contains
 
      if (advection_type .eq. 0) then
         ng_s = 2 ! centered advection
-     else
-        ng_s = 3 ! bds advection
+     else if (advection_type .le. 3) then
+        ng_s = 3 ! bilinear bds or unlimited quadratic bds
+     else if (advection_type .eq. 4) then
+        ng_s = 4 ! limited quadratic bds
      end if
 
      call fill_restart_data(mba,chkdata,chkdata_edgex,chkdata_edgey,chkdata_edgez, &
