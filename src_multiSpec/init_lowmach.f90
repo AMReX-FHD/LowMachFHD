@@ -519,7 +519,7 @@ contains
        v = 0.d0
 
        do j=lo(2),hi(2)
-          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) - 0.5d0*prob_lo(2) - 0.5d0*prob_hi(2)
+          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) -  0.5d0*(prob_lo(2)+prob_hi(2))
           do i=lo(1),hi(1)
              x = prob_lo(1) + dx(1) * (dble(i)+0.5d0) - 0.5d0*(prob_lo(1)+prob_hi(1))
 
@@ -529,7 +529,7 @@ contains
 
                 ! initialize c to a square region
                 if (i .ge. n_cells(1)/4 .and. i .le. 3*n_cells(1)/4-1 .and. &
-                     j .ge. n_cells(2)/4 .and. j .le. 3*n_cells(2)/4-1) then
+                    j .ge. n_cells(2)/4 .and. j .le. 3*n_cells(2)/4-1) then
                    c(i,j,1:nspecies) = rho_init(1,1:nspecies)
                 else
                    c(i,j,1:nspecies) = rho_init(2,1:nspecies)
@@ -1045,6 +1045,46 @@ contains
           end if
 
        end do
+
+    case (12)
+
+       ! Gaussian bubble
+       ! centered in domain
+       ! if smoothing_width = 0, this is a discontinuous square in the central 25% of domain
+
+       u = 0.d0
+       v = 0.d0
+       w = 0.d0
+
+       do k=lo(3),hi(3)
+          z = prob_lo(3) + dx(3) * (dble(k)+0.5d0) -  0.5d0*(prob_lo(3)+prob_hi(3))
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) -  0.5d0*(prob_lo(2)+prob_hi(2))
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + dx(1) * (dble(i)+0.5d0) - 0.5d0*(prob_lo(1)+prob_hi(1))
+
+                r = sqrt (x**2 + y**2 + z**2)
+
+                if (smoothing_width .eq. 0.d0) then
+
+                   ! initialize c to a square region
+                   if (i .ge. n_cells(1)/4 .and. i .le. 3*n_cells(1)/4-1 .and. &
+                       j .ge. n_cells(2)/4 .and. j .le. 3*n_cells(2)/4-1 .and. &
+                       k .ge. n_cells(3)/4 .and. k .le. 3*n_cells(3)/4-1) then
+                      c(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
+                   else
+                      c(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
+                   end if
+
+                else
+                   ! set c using Gaussian bump
+                   c(i,j,k,1) = rho_init(1,1)*exp(-75.d0*r**2)
+                   c(i,j,k,2) = rho_init(1,2)*exp(-75.d0*r**2)
+                end if
+
+             enddo
+          enddo
+       enddo
 
     case default
 

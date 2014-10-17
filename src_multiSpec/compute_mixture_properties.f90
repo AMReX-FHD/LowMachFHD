@@ -309,7 +309,6 @@ contains
 
        end if
 
-
     case default
 
        eta = visc_coef
@@ -346,6 +345,26 @@ contains
              end do
           end do
        end do
+
+    case (12)
+
+       if (prob_type .eq. 12) then
+
+          eta = visc_coef
+
+       else if (prob_type .eq. -12) then
+
+          do k=lo(3)-ng_e,hi(3)+ng_e
+             do j=lo(2)-ng_e,hi(2)+ng_e
+                do i=lo(1)-ng_e,hi(1)+ng_e
+
+                   eta(i,j,k) = visc_coef*(-5.d0 + 6.d0*rhotot(i,j,k))
+                
+                end do
+             end do
+          end do
+
+       end if
 
     case default
 
