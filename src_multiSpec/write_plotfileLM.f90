@@ -4,6 +4,7 @@ module write_plotfileLM_module
   use multifab_module
   use fabio_module
   use convert_stag_module
+  use convert_variables_module
   use probin_multispecies_module, only: nspecies, plot_stag
   use probin_common_module, only: prob_lo, prob_hi
 
@@ -13,15 +14,15 @@ contains
   
   subroutine write_plotfileLM(mla,name,rho,rhotot,Temp,umac,pres,istep,dx,time)
 
-    type(ml_layout),    intent(in)  :: mla
-    character(len=*),   intent(in)  :: name
-    type(multifab),     intent(in)  :: rho(:)
-    type(multifab),     intent(in)  :: rhotot(:)
-    type(multifab),     intent(in)  :: Temp(:)
-    type(multifab),     intent(in)  :: umac(:,:)
-    type(multifab),     intent(in)  :: pres(:)
-    integer,            intent(in)  :: istep
-    real(kind=dp_t),    intent(in)  :: dx(:,:),time
+    type(ml_layout),    intent(in)    :: mla
+    character(len=*),   intent(in)    :: name
+    type(multifab),     intent(inout) :: rho(:)
+    type(multifab),     intent(in)    :: rhotot(:)
+    type(multifab),     intent(in)    :: Temp(:)
+    type(multifab),     intent(in)    :: umac(:,:)
+    type(multifab),     intent(in)    :: pres(:)
+    integer,            intent(in)    :: istep
+    real(kind=dp_t),    intent(in)    :: dx(:,:),time
 
     ! local variables
     character(len=20), allocatable  :: plot_names(:)
@@ -38,11 +39,13 @@ contains
     type(multifab), allocatable     :: plotdata(:)
     type(multifab), allocatable     :: plotdata_stag(:,:)
 
+    type(multifab) :: c(mla%nlevel)
+
     nlevs = mla%nlevel
     dm = mla%dim
   
-    ! rho + species + Temp + dm (averaged umac) + dm (shifted umac) + pres
-    allocate(plot_names(nspecies+2*dm+3))
+    ! rho + species (rho) + nspeces (conc) + Temp + dm (averaged umac) + dm (shifted umac) + pres
+    allocate(plot_names(2*nspecies+2*dm+3))
     allocate(plotdata(nlevs))
     allocate(plotdata_stag(nlevs,dm))
  
@@ -50,47 +53,57 @@ contains
     do n=1,nspecies
        write(plot_names(n+1),'(a,i0)') "rho", n
     enddo
-    plot_names(nspecies+2) = "Temp"
-    plot_names(nspecies+3) = "averaged_velx"
-    plot_names(nspecies+4) = "averaged_vely"
-    if (dm > 2) plot_names(nspecies+5) = "averaged_velz"
-    plot_names(nspecies+dm+3) = "shifted_velx"
-    plot_names(nspecies+dm+4) = "shifted_vely"
-    if (dm > 2) plot_names(nspecies+dm+5) = "shifted_velz"
-    plot_names(nspecies+2*dm+3) = "pres"
+    do n=1,nspecies
+       write(plot_names(nspecies+n+1),'(a,i0)') "c", n
+    enddo
+    plot_names(2*nspecies+2) = "Temp"
+    plot_names(2*nspecies+3) = "averaged_velx"
+    plot_names(2*nspecies+4) = "averaged_vely"
+    if (dm > 2) plot_names(2*nspecies+5) = "averaged_velz"
+    plot_names(2*nspecies+dm+3) = "shifted_velx"
+    plot_names(2*nspecies+dm+4) = "shifted_vely"
+    if (dm > 2) plot_names(2*nspecies+dm+5) = "shifted_velz"
+    plot_names(2*nspecies+2*dm+3) = "pres"
 
     plot_names_stagx(1) = "velx"
     plot_names_stagy(1) = "vely"
     plot_names_stagz(1) = "velz"
 
-    ! build plotdata for nspecies+2*dm+2 and 0 ghost cells
+    ! compute concentrations
     do n=1,nlevs
-       call multifab_build(plotdata(n),mla%la(n),nspecies+2*dm+3,0)
+       call multifab_build(c(n),mla%la(n),nspecies,0)
+    end do
+    call convert_rho_to_c(mla,rho,rhotot,c,.true.)
+
+    ! build plotdata for 2*nspecies+2*dm+2 and 0 ghost cells
+    do n=1,nlevs
+       call multifab_build(plotdata(n),mla%la(n),2*nspecies+2*dm+3,0)
        do i=1,dm
           call multifab_build_edge(plotdata_stag(n,i), mla%la(n), 1, 0, i)
        end do
     enddo
     
-    ! copy rhotot, rho, and Temp into plotdata
+    ! copy rhotot, rho, c, and Temp into plotdata
     do n = 1,nlevs
-       call multifab_copy_c(plotdata(n),1         ,rhotot(n),1,       1,0)
-       call multifab_copy_c(plotdata(n),2         ,rho(n)   ,1,nspecies,0)
-       call multifab_copy_c(plotdata(n),nspecies+2,Temp(n)  ,1,1       ,0)
+       call multifab_copy_c(plotdata(n),1           ,rhotot(n),1,       1,0)
+       call multifab_copy_c(plotdata(n),2           ,rho(n)   ,1,nspecies,0)
+       call multifab_copy_c(plotdata(n),nspecies+2  ,c(n)     ,1,nspecies,0)
+       call multifab_copy_c(plotdata(n),2*nspecies+2,Temp(n)  ,1,1       ,0)
     enddo
 
     ! vel averaged
     do i=1,dm
-       call average_face_to_cc(mla,umac(:,i),1,plotdata,nspecies+2+i,1)
+       call average_face_to_cc(mla,umac(:,i),1,plotdata,2*nspecies+2+i,1)
     end do
 
     ! vel shifted
     do i=1,dm
-       call shift_face_to_cc(mla,umac(:,i),1,plotdata,nspecies+dm+2+i,1)
+       call shift_face_to_cc(mla,umac(:,i),1,plotdata,2*nspecies+dm+2+i,1)
     end do
 
     ! pressure
     do n = 1,nlevs
-       call multifab_copy_c(plotdata(n),nspecies+2*dm+3,pres(n),1,1,0)
+       call multifab_copy_c(plotdata(n),2*nspecies+2*dm+3,pres(n),1,1,0)
     enddo
 
     ! copy staggered velocity and momentum into plotdata_stag
@@ -138,6 +151,7 @@ contains
 
     ! make sure to destroy the multifab or you'll leak memory
     do n=1,nlevs
+       call multifab_destroy(c(n))
        call multifab_destroy(plotdata(n))
       do i=1,dm
          call multifab_destroy(plotdata_stag(n,i))
