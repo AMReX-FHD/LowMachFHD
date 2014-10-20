@@ -11,16 +11,16 @@
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 32.d0 32.d0       ! physical hi coordinate
   n_cells(1:2) = 32 32             ! number of cells in domain
-  max_grid_size(1:2) = 16 16         ! max number of cells in a box
+  max_grid_size(1:2) = 8 8       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 0.05d0                ! time step (if positive, fixed)
+  fixed_dt = 0.1d0                  ! time step (if positive, fixed)
   cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 110000                ! maximum number of time steps
+  max_step = 100000                  ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
@@ -40,7 +40,7 @@
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 2     ! differs from code to code.  In binary and multispcies code:
+  algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
@@ -86,8 +86,8 @@
   ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
-  bc_lo(1:2) = 101 101    ! -1 -1
-  bc_hi(1:2) = 101 101    ! -1 -1
+  bc_lo(1:2) = -1 -1
+  bc_hi(1:2) = -1 -1
 
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions
@@ -123,7 +123,7 @@
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 20000    ! How many steps to skip > L^2/(chi*dt)
+  n_steps_skip = 10000    ! How many steps to skip > L^2/(chi*dt)
   analyze_conserved = F   ! Should we use conserved variables for the analysis
                           ! (does not work well)
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
@@ -167,16 +167,13 @@
   ! initial values for w
   ! These are MASS FRACTIONS (concentrations), not partial densities
   rho_init(1,1:3) = 0.2 0.35 0.45 ! Should give rho_i = 0.6d0 1.05d0 1.35d0 
-  rho_init(2,1:3) = 0.2 0.35 0.45 ! Should give rho_i = 0.6d0 1.05d0 1.35d0 
 
   ! w_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
   
   ! RESERVOIR (Dirichlet BC for concentrations) bc=101
-  rho_bc(1,1,1:3) = 0.2 0.35 0.45 ! bottom
-  rho_bc(1,2,1:3) = 0.2 0.35 0.45 ! top
-  rho_bc(2,1,1:3) = 0.2 0.35 0.45 ! bottom
-  rho_bc(2,2,1:3) = 0.2 0.35 0.45 ! top
+  !rho_bc(2,1,1:3) = 0.2 0.35 0.45 ! bottom
+  !rho_bc(2,2,1:3) = 0.2 0.35 0.45 ! top
   
   ! WALL (Neumann or no-flux condition for concentration) bc=100
   !rho_bc(2,1,1:3) = 0 0 0 ! bottom
@@ -209,7 +206,7 @@
   cg_verbose = 0        ! BiCGStab (mg_bottom_solver=1) verbosity
   mg_max_vcycles = 1    ! maximum number of V-cycles
   mg_minwidth = 2       ! length of box at coarsest multigrid level
-  mg_bottom_solver = 4  ! bottom solver type
+  mg_bottom_solver = 0  ! bottom solver type
                         ! 0 = smooths only, controlled by mg_nsmooths_bottom
                         ! 1 = BiCGStab
                         ! 4 = Fancy bottom solve that coarsens down additionally
@@ -224,7 +221,7 @@
   stag_mg_verbosity = 0       ! verbosity (set to 1 for debugging the gmres solver!)
   stag_mg_max_vcycles = 1     ! max number of v-cycles
   stag_mg_minwidth = 2        ! length of box at coarsest multigrid level
-  stag_mg_bottom_solver = 4   ! bottom solver type
+  stag_mg_bottom_solver = 0   ! bottom solver type
                               ! 0 = smooths only, controlled by mg_nsmooths_bottom
                               ! 4 = Fancy bottom solve that coarsens additionally
                               !     and then applies stag_mg_nsmooths_bottom smooths
@@ -288,9 +285,10 @@
 
    ! Dynamic structure factors:
    nWavenumbers=10
+   ! numbering of coloumns: 1=time, 2=rho-rho, 3=w1-w1, 4=w2-w2, 5=w3-w3, 6=w1-w2, 7=w1-w3, 8=w2-w3
    ! Shape (2,nWavenumbers):
    selectedWavenumbers="0 1, 0 2, 2 2, 0 4, 2 4, 4 4, 0 8, 2 8, 4 8, 8 8"
-   nSavedSnapshots=1000 ! Maximum time in S(k,t) will be (nSavedSnapshots/2)*dt*hydro_grid_int
+   nSavedSnapshots=500 ! Maximum time in S(k,t) will be (nSavedSnapshots/2)*dt*hydro_grid_int
       
    outputFolder = "."
    filePrefix = "3species_dynamic"
