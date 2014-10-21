@@ -14,7 +14,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: T_init(2) 
   real(kind=dp_t)    :: Dbar(max_element)
   real(kind=dp_t)    :: Dtherm(max_element)  
-  real(kind=dp_t)    :: H_offdiag(max_element), H_diag(max_element)
+  real(kind=dp_t)    :: H_offdiag(max_element), H_diag(max_species)
   real(kind=dp_t)    :: fraction_tolerance
   logical            :: correct_flux,print_error_norms,plot_stag
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
