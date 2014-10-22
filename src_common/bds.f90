@@ -4,6 +4,7 @@ module bds_module
   use multifab_module
   use ml_layout_module
   use define_bc_module
+  use convert_stag_module
   use bc_module
   use probin_common_module, only: advection_type, rhobar
 
@@ -46,11 +47,13 @@ contains
     real(kind=dp_t), pointer :: sxp(:,:,:,:)
     real(kind=dp_t), pointer :: syp(:,:,:,:)
     real(kind=dp_t), pointer :: szp(:,:,:,:)
+    real(kind=dp_t), pointer :: snp(:,:,:,:)
 
-    integer :: dm,ng_s,ng_l,ng_u,ng_v,ng_o,ng_f,ng_e,n,i,comp,nlevs,bccomp
+    integer :: dm,ng_s,ng_l,ng_u,ng_v,ng_o,ng_f,ng_e,ng_n,n,i,comp,nlevs,bccomp
     integer :: lo(mla%dim),hi(mla%dim),proj_type
 
     type(multifab) :: sedge(mla%nlevel,mla%dim)
+    type(multifab) :: s_nd(mla%nlevel)
     type(multifab) :: prim(mla%nlevel)
 
     ! L2 projection onto EOS?
@@ -67,13 +70,21 @@ contains
     dm = mla%dim
 
     do n=1,nlevs
+       ! make a temporary copy of s, but with ghost cells filled with values extrapolated
+       ! to ghost cell-centers
        call multifab_build(s_tmp(n),mla%la(n),scomp+ncomp-1,s(n)%ng)
        call multifab_copy(s_tmp(n),s(n),s_tmp(n)%ng)
-       call multifab_physbc_bds(s_tmp(n),scomp,bccomp,ncomp,the_bc_tower%bc_tower_array(n))
+       call multifab_physbc_bds(s_tmp(n),scomp,bc_comp,ncomp,the_bc_tower%bc_tower_array(n))
+    end do
+
+    do n=1,nlevs
        do i=1,dm
           call multifab_build_edge(sedge(n,i),mla%la(n),ncomp,0,i)
        end do
-    end do   
+       call multifab_build_nodal(s_nd(n),mla%la(n),scomp+ncomp-1,1)
+    end do
+
+    call average_cc_to_node(nlevs,s,s_nd,scomp,bccomp,ncomp,the_bc_tower%bc_tower_array)
 
     if (dm .eq. 2) then
        ! 3 components and 1 ghost cell
@@ -104,21 +115,23 @@ contains
     ng_o = force(1)%ng
     ng_f = s_fc(1,1)%ng
     ng_e = sedge(1,1)%ng
+    ng_n = s_nd(1)%ng
 
     do n=1,nlevs
-       do i = 1, nfabs(s(n))
-          sop    => dataptr(s(n) , i)
+       do i = 1, nfabs(s_update(n))
+          sop    => dataptr(s_tmp(n) , i)
           sup    => dataptr(s_update(n), i)
           fp     => dataptr(force(n), i)
           spx => dataptr(s_fc(n,1), i)
           spy => dataptr(s_fc(n,2), i)
           sxp => dataptr(sedge(n,1), i)
           syp => dataptr(sedge(n,2), i)
+          snp    => dataptr(s_nd(n) , i)
           slopep => dataptr(slope(n), i)
           uadvp  => dataptr(umac(n,1), i)
           vadvp  => dataptr(umac(n,2), i)
-          lo =  lwb(get_box(s(n), i))
-          hi =  upb(get_box(s(n), i))
+          lo =  lwb(get_box(s_update(n), i))
+          hi =  upb(get_box(s_update(n), i))
           do comp=scomp,scomp+ncomp-1
              bccomp = bc_comp+comp-scomp
              select case (dm)
@@ -127,7 +140,9 @@ contains
                 call bdsslope_2d(lo, hi, &
                                  sop(:,:,1,comp), ng_s, &
                                  slopep(:,:,1,:), ng_l, &
-                                 dx(n,:)) 
+                                 snp(:,:,1,comp), ng_n, &
+                                 dx(n,:), &
+                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp)) 
 
                 call bdsconc_2d(lo, hi, &
                                 sop(:,:,1,comp), ng_s, sup(:,:,1,comp), ng_u, &
@@ -147,7 +162,9 @@ contains
                 call bdsslope_3d(lo, hi, &
                                  sop(:,:,:,comp), ng_s, &
                                  slopep(:,:,:,:), ng_l, &
-                                 dx(n,:))
+                                 snp(:,:,:,comp), ng_n, &
+                                 dx(n,:), &
+                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
 
                 call bdsconc_3d(lo, hi, &
                                 sop(:,:,:,comp), ng_s, sup(:,:,:,comp), ng_u, &
@@ -167,14 +184,14 @@ contains
 
     ! do L2 projection and increment s_update
     do n=1,nlevs
-       do i = 1, nfabs(s(n))
+       do i = 1, nfabs(s_update(n))
           sup => dataptr(s_update(n), i)
           sxp => dataptr(sedge(n,1), i)
           syp => dataptr(sedge(n,2), i)
           uadvp  => dataptr(umac(n,1), i)
           vadvp  => dataptr(umac(n,2), i)
-          lo =  lwb(get_box(s(n), i))
-          hi =  upb(get_box(s(n), i))
+          lo =  lwb(get_box(s_update(n), i))
+          hi =  upb(get_box(s_update(n), i))
           select case (dm)
           case (2)
              call bdsupdate_2d(lo, hi, &
@@ -200,16 +217,19 @@ contains
        do i=1,dm
           call multifab_destroy(sedge(n,i))
        end do
+       call multifab_destroy(s_nd(n))
     end do
 
   end subroutine bds
 
-  subroutine bdsslope_2d(lo,hi,s,ng_s,slope,ng_l,dx)
+  subroutine bdsslope_2d(lo,hi,s,ng_s,slope,ng_l,s_nd,ng_n,dx,bc)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_l
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_l,ng_n
     real(kind=dp_t), intent(in   ) ::     s(lo(1)-ng_s:,lo(2)-ng_s:)
     real(kind=dp_t), intent(inout) :: slope(lo(1)-ng_l:,lo(2)-ng_l:,:)
+    real(kind=dp_t), intent(in   ) ::  s_nd(lo(1)-ng_n:,lo(2)-ng_n:)
     real(kind=dp_t), intent(in   ) :: dx(:)
+    integer        , intent(in   ) :: bc(:,:)
 
     ! local variables
     real(kind=dp_t), allocatable :: sint(:,:)
@@ -243,7 +263,29 @@ contains
     enddo
 
     ! for reservoirs, overwrite boundary nodes and ghost nodes to rho at boundary nodes
+    if (bc(1,1) .eq. EXT_DIR) then
+       do j=lo(2)-ng_n,hi(2)+1+ng_n
+          sint(lo(1)-1:lo(1),j) = s_nd(lo(1),j)
+       end do
+    end if
 
+    if (bc(1,2) .eq. EXT_DIR) then
+       do j=lo(2)-ng_n,hi(2)+1+ng_n
+          sint(hi(1)+1:hi(1)+2,j) = s_nd(hi(1)+1,j)
+       end do
+    end if
+
+    if (bc(2,1) .eq. EXT_DIR) then
+       do i=lo(1)-ng_n,hi(1)+1+ng_n
+          sint(i,lo(2)-1:lo(2)) = s_nd(i,lo(2))
+       end do
+    end if
+
+    if (bc(2,2) .eq. EXT_DIR) then
+       do j=lo(1)-ng_n,hi(1)+1+ng_n
+          sint(i,hi(2)+1:hi(2)+2) = s_nd(i,hi(2)+1)
+       end do
+    end if
 
     do j = lo(2)-1,hi(2)+1
        do i = lo(1)-1,hi(1)+1 
@@ -365,12 +407,14 @@ contains
 
   end subroutine bdsslope_2d
 
-  subroutine bdsslope_3d(lo,hi,s,ng_s,slope,ng_l,dx)
+  subroutine bdsslope_3d(lo,hi,s,ng_s,slope,ng_l,s_nd,ng_n,dx,bc)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_l
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_l,ng_n
     real(kind=dp_t), intent(in   ) ::     s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
     real(kind=dp_t), intent(inout) :: slope(lo(1)-ng_l:,lo(2)-ng_l:,lo(3)-ng_l:,:)
+    real(kind=dp_t), intent(in   ) ::  s_nd(lo(1)-ng_n:,lo(2)-ng_n:,lo(3)-ng_n:)
     real(kind=dp_t), intent(in   ) :: dx(:)
+    integer        , intent(in   ) :: bc(:,:)
 
     ! local variables
     real(kind=dp_t), allocatable :: sint(:,:,:)
@@ -429,6 +473,56 @@ contains
           enddo
        enddo
     enddo
+
+    ! AJN FIXME
+    ! for reservoirs, overwrite boundary nodes and ghost nodes to rho at boundary nodes
+    if (bc(1,1) .eq. EXT_DIR) then
+       do k=lo(3)-ng_n,hi(3)+1+ng_n
+       do j=lo(2)-ng_n,hi(2)+1+ng_n
+          sint(lo(1)-1:lo(1),j,k) = s_nd(lo(1),j,k)
+       end do
+       end do
+    end if
+
+    if (bc(1,2) .eq. EXT_DIR) then
+       do k=lo(3)-ng_n,hi(3)+1+ng_n
+       do j=lo(2)-ng_n,hi(2)+1+ng_n
+          sint(hi(1)+1:hi(1)+2,j,k) = s_nd(hi(1)+1,j,k)
+       end do
+       end do
+    end if
+
+    if (bc(2,1) .eq. EXT_DIR) then
+       do k=lo(3)-ng_n,hi(3)+1+ng_n
+       do i=lo(1)-ng_n,hi(1)+1+ng_n
+          sint(i,lo(2)-1:lo(2),k) = s_nd(i,lo(2),k)
+       end do
+       end do
+    end if
+
+    if (bc(2,2) .eq. EXT_DIR) then
+       do k=lo(3)-ng_n,hi(3)+1+ng_n
+       do i=lo(1)-ng_n,hi(1)+1+ng_n
+          sint(i,hi(2)+1:hi(2)+2,k) = s_nd(i,hi(2)+1,k)
+       end do
+       end do
+    end if
+
+    if (bc(3,1) .eq. EXT_DIR) then
+       do j=lo(2)-ng_n,hi(2)+1+ng_n
+       do i=lo(1)-ng_n,hi(1)+1+ng_n
+          sint(i,j,lo(3)-1:lo(3)) = s_nd(i,j,lo(3))
+       end do
+       end do
+    end if
+
+    if (bc(3,2) .eq. EXT_DIR) then
+       do j=lo(2)-ng_n,hi(2)+1+ng_n
+       do i=lo(1)-ng_n,hi(1)+1+ng_n
+          sint(i,j,hi(3)+1:hi(3)+2) = s_nd(i,j,hi(3)+1)
+       end do
+       end do
+    end if
 
     do k = lo(3)-1,hi(3)+1
        do j = lo(2)-1,hi(2)+1
