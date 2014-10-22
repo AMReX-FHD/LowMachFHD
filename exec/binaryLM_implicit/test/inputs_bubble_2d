@@ -53,7 +53,7 @@
   max_grid_size(1:2) = 32 32  
   n_cells(1:2) = 64 64     ! number of cells in domain
   fixed_dt = 0.005d0       ! time step
-  plot_int = 400           ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 10            ! Interval for writing a plotfile (for visit/amrvis)
   max_step = 400           ! maximum number of time steps
 
   ! L phi operator
@@ -80,7 +80,7 @@
   ! fluid properties
   rhobar(1:2) = 2.d0 1.d0  ! rho1bar and rho2bar
 
-  advection_type = 0      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
+  advection_type = 1      ! 0 = centered, 1 = unlimited bds, 2 = limited bds
 
   ! Boundary conditions
   !----------------------
