@@ -16,6 +16,16 @@ module multifab_physbc_module
 
 contains
 
+  ! multifab_physbc:        Fills in all ghost cells to the same value, which is the value AT the boundary.
+  !                         HOEXTRAP/FOEXTRAP uses boundary conditions (Neumann) and 1/2 interior points.
+  !                         EXT_DIR copies the supplied Dirichlet condition into the ghost cells.
+
+  ! multifab_physbc_extrap: Fills in two cell-centered ghost cells by using cubic extrapolation using the
+  !                         boundary condition and three interior points.  We are computing the values 
+  !                         extrapolated to the ghost cell-centers.  For FOEXTRAP/HOEXTRAP for now
+  !                         we assume homogeneous Neumann.  For EXT_DIR, we assume the ghost cell on input
+  !                         contains the Dirichlet value.
+
   subroutine multifab_physbc(s,start_scomp,start_bccomp,num_comp,the_bc_level, &
                              time_in,dx_in,prob_lo_in,prob_hi_in,increment_bccomp_in)
 
