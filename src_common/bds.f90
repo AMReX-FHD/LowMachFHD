@@ -17,8 +17,12 @@ module bds_module
 
 contains
 
-  subroutine bds(mla,umac,s,s_update,force,s_fc,dx,dt,scomp,ncomp, &
+  subroutine bds(mla,umac,s,s_update,force,s_fc,s_nd,dx,dt,scomp,ncomp, &
                  bc_comp,the_bc_tower,proj_type_in)
+
+    ! s_fc and s_nd are used to set boundary conditions
+    ! the input s needs to have ghost cells filled with multifab_physbc_extrap
+    ! instead of multifab_physbc
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: umac(:,:)
@@ -26,6 +30,7 @@ contains
     type(multifab) , intent(inout) :: s_update(:)
     type(multifab) , intent(in   ) :: force(:)
     type(multifab) , intent(in   ) :: s_fc(:,:)
+    type(multifab) , intent(in   ) :: s_nd(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     integer        , intent(in   ) :: scomp,ncomp,bc_comp
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -33,7 +38,6 @@ contains
 
     ! this will hold slx, sly, and slxy
     type(multifab) :: slope(mla%nlevel)
-    type(multifab) :: s_tmp(mla%nlevel)
 
     real(kind=dp_t), pointer ::    sop(:,:,:,:)
     real(kind=dp_t), pointer ::    sup(:,:,:,:)
@@ -54,8 +58,6 @@ contains
     integer :: lo(mla%dim),hi(mla%dim),proj_type
 
     type(multifab) :: sedge(mla%nlevel,mla%dim)
-    type(multifab) :: s_nd(mla%nlevel)
-    type(multifab) :: prim(mla%nlevel)
 
     ! L2 projection onto EOS?
     ! 0 = do nothing
@@ -71,22 +73,11 @@ contains
     dm = mla%dim
 
     do n=1,nlevs
-       ! make a temporary copy of s, but with ghost cells filled with values extrapolated
-       ! to ghost cell-centers
-       call multifab_build(s_tmp(n),mla%la(n),scomp+ncomp-1,s(n)%ng)
-       call multifab_copy(s_tmp(n),s(n),s_tmp(n)%ng)
-       call multifab_physbc_extrap(s_tmp(n),scomp,bc_comp,ncomp, &
-                                   the_bc_tower%bc_tower_array(n))
-    end do
-
-    do n=1,nlevs
        do i=1,dm
           call multifab_build_edge(sedge(n,i),mla%la(n),ncomp,0,i)
        end do
-       call multifab_build_nodal(s_nd(n),mla%la(n),scomp+ncomp-1,1)
     end do
 
-    call average_cc_to_node(nlevs,s,s_nd,scomp,bccomp,ncomp,the_bc_tower%bc_tower_array)
 
     if (dm .eq. 2) then
        ! 3 components and 1 ghost cell
@@ -121,7 +112,7 @@ contains
 
     do n=1,nlevs
        do i = 1, nfabs(s_update(n))
-          sop    => dataptr(s_tmp(n) , i)
+          sop    => dataptr(s(n) , i)
           sup    => dataptr(s_update(n), i)
           fp     => dataptr(force(n), i)
           spx => dataptr(s_fc(n,1), i)
@@ -214,12 +205,10 @@ contains
     end do ! end loop over levels
 
     do n=1,nlevs
-       call multifab_destroy(s_tmp(n))
        call multifab_destroy(slope(n))
        do i=1,dm
           call multifab_destroy(sedge(n,i))
        end do
-       call multifab_destroy(s_nd(n))
     end do
 
   end subroutine bds

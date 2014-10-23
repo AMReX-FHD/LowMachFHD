@@ -19,6 +19,7 @@ module advance_timestep_overdamped_module
   use compute_mixture_properties_module
   use mass_flux_utilities_module
   use multifab_physbc_module
+  use multifab_physbc_extrap_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
@@ -87,6 +88,8 @@ contains
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
     type(multifab) ::        conc(mla%nlevel)
+    type(multifab) ::      rho_nd(mla%nlevel)
+    type(multifab) ::     rho_tmp(mla%nlevel)
 
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::       dumac(mla%nlevel,mla%dim)
@@ -337,8 +340,25 @@ contains
       end do
 
       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,0.5d0*dt,1,nspecies, &
+
+          ! s_fc (computed above) and s_nd (computed here) are used to set boundary conditions
+          do n=1,nlevs
+             call multifab_build_nodal(rho_nd(n),mla%la(n),nspecies,1)
+          end do
+          call average_cc_to_node(nlevs,rho_old,rho_nd,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+
+          ! the input s_tmp needs to have ghost cells filled with multifab_physbc_extrap
+          ! instead of multifab_physbc
+          do n=1,nlevs
+             call multifab_build(rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
+             call multifab_copy(rho_tmp(n),rho_old(n),rho_tmp(n)%ng)
+             call multifab_physbc_extrap(rho_tmp(n),1,rho_part_bc_comp,nspecies, &
+                                         the_bc_tower%bc_tower_array(n))
+          end do
+
+          call bds(mla,umac,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,0.5d0*dt,1,nspecies, &
                    rho_part_bc_comp,the_bc_tower,proj_type_in=2)
+
       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,0.5d0*dt,1,nspecies, &
                         rho_part_bc_comp,the_bc_tower,proj_type_in=2)
@@ -556,8 +576,15 @@ contains
          call multifab_fill_boundary(bds_force(n))
       end do
       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-          call bds(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
+
+          call bds(mla,umac,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,dt,1,nspecies, &
                    rho_part_bc_comp,the_bc_tower,proj_type_in=2)
+
+          do n=1,nlevs
+             call multifab_destroy(rho_nd(n))
+             call multifab_destroy(rho_tmp(n))
+          end do
+
       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
                         rho_part_bc_comp,the_bc_tower,proj_type_in=2)
