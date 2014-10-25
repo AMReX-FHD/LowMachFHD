@@ -96,7 +96,7 @@ contains
     type(multifab) ::     umac_tmp(mla%nlevel,mla%dim)
     type(multifab) ::        gradp(mla%nlevel,mla%dim)
     type(multifab) ::     s_fc_old(mla%nlevel,mla%dim)
-    type(multifab) ::         s_nd(mla%nlevel)
+    type(multifab) ::     s_nd_old(mla%nlevel)
     type(multifab) ::        s_tmp(mla%nlevel)
 
     integer :: i,dm,n,nlevs
@@ -187,11 +187,11 @@ contains
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
 
-          ! s_fc (computed above) and s_nd (computed here) are used to set boundary conditions
+          ! s_fc (computed above) and s_nd_old (computed here) are used to set boundary conditions
           do n=1,nlevs
-             call multifab_build_nodal(s_nd(n),mla%la(n),2,1)
+             call multifab_build_nodal(s_nd_old(n),mla%la(n),2,1)
           end do
-          call average_cc_to_node(nlevs,sold,s_nd,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
+          call average_cc_to_node(nlevs,sold,s_nd_old,1,scal_bc_comp,2,the_bc_tower%bc_tower_array)
 
           ! the input s_tmp needs to have ghost cells filled with multifab_physbc_extrap
           ! instead of multifab_physbc
@@ -202,7 +202,7 @@ contains
                                          the_bc_tower%bc_tower_array(n))
           end do
 
-          call bds(mla,umac,s_tmp,s_update,bds_force,s_fc,s_nd,dx,dt,1,2,scal_bc_comp, &
+          call bds(mla,umac,s_tmp,s_update,bds_force,s_fc,s_nd_old,dx,dt,1,2,scal_bc_comp, &
                    the_bc_tower,proj_type_in=1)
 
        else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
@@ -511,11 +511,11 @@ contains
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
 
-          call bds(mla,umac_tmp,s_tmp,s_update,bds_force,s_fc,s_nd,dx,dt,1,2,scal_bc_comp, &
+          call bds(mla,umac_tmp,s_tmp,s_update,bds_force,s_fc,s_nd_old,dx,dt,1,2,scal_bc_comp, &
                    the_bc_tower,proj_type_in=1)
 
           do n=1,nlevs
-             call multifab_destroy(s_nd(n))
+             call multifab_destroy(s_nd_old(n))
              call multifab_destroy(s_tmp(n))
           end do
 

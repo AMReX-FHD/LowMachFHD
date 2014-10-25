@@ -85,7 +85,7 @@ contains
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
     type(multifab) ::        conc(mla%nlevel)
-    type(multifab) ::      rho_nd(mla%nlevel)
+    type(multifab) ::  rho_nd_old(mla%nlevel)
     type(multifab) ::     rho_tmp(mla%nlevel)
 
     type(multifab) ::          mold(mla%nlevel,mla%dim)
@@ -183,11 +183,11 @@ contains
 
       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
 
-          ! s_fc (computed above) and s_nd (computed here) are used to set boundary conditions
+          ! rho_fc (computed above) and rho_nd_old (computed here) are used to set boundary conditions
           do n=1,nlevs
-             call multifab_build_nodal(rho_nd(n),mla%la(n),nspecies,1)
+             call multifab_build_nodal(rho_nd_old(n),mla%la(n),nspecies,1)
           end do
-          call average_cc_to_node(nlevs,rho_old,rho_nd,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+          call average_cc_to_node(nlevs,rho_old,rho_nd_old,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
 
           ! the input s_tmp needs to have ghost cells filled with multifab_physbc_extrap
           ! instead of multifab_physbc
@@ -198,7 +198,7 @@ contains
                                          the_bc_tower%bc_tower_array(n))
           end do
 
-          call bds(mla,umac,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,dt,1,nspecies, &
+          call bds(mla,umac,rho_tmp,rho_update,bds_force,rho_fc,rho_nd_old,dx,dt,1,nspecies, &
                    rho_part_bc_comp,the_bc_tower,proj_type_in=2)
 
       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
@@ -534,11 +534,11 @@ contains
 
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
 
-          call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd,dx,dt,1,nspecies, &
+          call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd_old,dx,dt,1,nspecies, &
                    rho_part_bc_comp,the_bc_tower,proj_type_in=2)
 
           do n=1,nlevs
-             call multifab_destroy(rho_nd(n))
+             call multifab_destroy(rho_nd_old(n))
              call multifab_destroy(rho_tmp(n))
           end do
 
