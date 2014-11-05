@@ -1,0 +1,41 @@
+BOXLIB_HOME := ${HPC_SRC}/FluctHydro/BoxLib
+HYDROLIB_HOME := ${HPC_SRC}/FluctHydro/HydroGrid
+STAGGERED_HOME := ${HPC_SRC}/FluctHydro/FluctHydro/staggered_grid
+LOW_MACH_HOME := $(STAGGERED_HOME)/exec/binaryLM_implicit
+
+NDEBUG := t
+MPI    := t
+OMP    :=
+MKVERBOSE := t
+
+COMP := gfortran48
+CCOMP     := gcc48
+
+include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
+
+xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/4.8.2/lib64
+
+VPATH_LOCATIONS += $(LOW_MACH_HOME)
+
+include $(STAGGERED_HOME)/src_binaryLM/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_binaryLM
+
+include $(STAGGERED_HOME)/src_gmres/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_gmres
+
+include $(STAGGERED_HOME)/src_common/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_common
+
+include $(HYDROLIB_HOME)/GPackage.mak
+VPATH_LOCATIONS += $(HYDROLIB_HOME)
+
+include $(BOXLIB_HOME)/Src/F_BaseLib/GPackage.mak
+VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/F_BaseLib
+
+include $(BOXLIB_HOME)/Src/LinearSolvers/F_MG/GPackage.mak
+VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/LinearSolvers/F_MG
+
+main.$(suf).exe: $(objects)
+	$(LINK.f90) -o main.$(suf).exe $(objects) $(libraries)
+
+include $(BOXLIB_HOME)/Tools/F_mk/GMakerules.mak
