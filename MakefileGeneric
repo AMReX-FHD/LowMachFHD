@@ -81,7 +81,7 @@ TestHydroStaggered.exe: TestHydroStaggered.o $(OBJECTS)
 # You can use either C++ (TestRNGs.cpp) or C (TestRNGs.c) here
 TestRNGs.exe: TestRNGs.cpp RNGs.o SeedRNGs.o
 	$(CPPC) -I $(MPIINC) -o $@ $< RNGs.o SeedRNGs.o \
-                $(LIBRARIES) -L $(MPIDIR)/lib -lmpi_cxx -lmpi_f90 -lmpi_f77 -lmpi
+                $(LIBRARIES) -L $(MPIDIR)/lib -lmpi_cxx -lmpi -lmpi_mpifh #-lmpi_f90 -lmpi_f77 -lmpi
 
 # Train model real hydro code:
 TrainModel.exe: TrainModel.f90 $(OBJECTS)
