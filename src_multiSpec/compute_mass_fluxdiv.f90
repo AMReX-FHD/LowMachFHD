@@ -22,13 +22,14 @@ module compute_mass_fluxdiv_module
 
 contains
 
-  subroutine compute_mass_fluxdiv_wrapper(mla,rho, &
+  subroutine compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                           diff_fluxdiv,stoch_fluxdiv,Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
+    type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)

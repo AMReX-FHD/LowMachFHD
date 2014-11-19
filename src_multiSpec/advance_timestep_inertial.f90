@@ -55,7 +55,7 @@ module advance_timestep_inertial_module
 contains
 
   subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                       pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                       gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep)
 
@@ -65,6 +65,7 @@ contains
     type(multifab) , intent(inout) :: rho_new(:)
     type(multifab) , intent(inout) :: rhotot_old(:)
     type(multifab) , intent(inout) :: rhotot_new(:)
+    type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: pres(:)
     ! eta and kappa need to enter consistent with old and leave consistent with new
     type(multifab) , intent(inout) :: eta(:)
@@ -335,7 +336,7 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho_new, &
+    call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,time,dx,weights, &
                                       the_bc_tower%bc_tower_array)
@@ -679,7 +680,7 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho_new, &
+    call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,time,dx,weights, &
                                       the_bc_tower%bc_tower_array)

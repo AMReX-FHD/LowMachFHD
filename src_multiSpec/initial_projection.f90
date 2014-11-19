@@ -36,13 +36,15 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,umac,rho,rhotot,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+  subroutine initial_projection(mla,umac,rho,rhotot,gradp_baro, &
+                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                 Temp,eta,eta_ed,dt,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: rhotot(:)
+    type(multifab) , intent(in   ) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     type(multifab) , intent(in   ) :: Temp(:)
@@ -98,7 +100,7 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho, &
+    call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,0.d0,dx,weights, &
                                       the_bc_tower%bc_tower_array)

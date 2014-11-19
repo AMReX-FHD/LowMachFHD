@@ -464,7 +464,7 @@ subroutine main_driver()
      ! From this perspective it may be useful to keep initial_projection even in overdamped
      ! because different gmres tolerances may be needed in the first step than in the rest
      if (algorithm_type .eq. 0) then
-        call initial_projection(mla,umac,rho_old,rhotot_old,diff_mass_fluxdiv, &
+        call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro,diff_mass_fluxdiv, &
                                 stoch_mass_fluxdiv,Temp,eta,eta_ed,dt,dx,the_bc_tower)
      end if
 
@@ -546,12 +546,12 @@ subroutine main_driver()
       ! routine, but since we have them around anyway for inertial we pass them in
       if (algorithm_type .eq. 0) then
          call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                        pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                        gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                          pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                          gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                           diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                           dx,dt,time,the_bc_tower,istep)
       end if

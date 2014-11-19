@@ -57,7 +57,7 @@ contains
   ! Note for future: In general Temp can depend on time so here one should pass
   ! both temperature at the beginning and at the end of the timestep
   subroutine advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                         pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                         gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          dx,dt,time,the_bc_tower,istep)
 
@@ -67,6 +67,7 @@ contains
     type(multifab) , intent(inout) :: rho_new(:)
     type(multifab) , intent(inout) :: rhotot_old(:)
     type(multifab) , intent(inout) :: rhotot_new(:)
+    type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: pres(:)
     ! eta and kappa need to enter consistent with old and leave consistent with new
     type(multifab) , intent(inout) :: eta(:)
@@ -200,12 +201,12 @@ contains
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
     if (algorithm_type .eq. 1) then
-       call compute_mass_fluxdiv_wrapper(mla,rho_old, &
+       call compute_mass_fluxdiv_wrapper(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                          flux_total,dt,time,dx,weights, &
                                          the_bc_tower%bc_tower_array)
     else if (algorithm_type .eq. 2) then
-       call compute_mass_fluxdiv_wrapper(mla,rho_old, &
+       call compute_mass_fluxdiv_wrapper(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                          flux_total,0.5d0*dt,time,dx,weights, &
                                          the_bc_tower%bc_tower_array)
@@ -452,7 +453,7 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho_new, &
+    call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,time,dx,weights, &
                                       the_bc_tower%bc_tower_array)

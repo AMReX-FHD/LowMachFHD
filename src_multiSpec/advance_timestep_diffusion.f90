@@ -29,6 +29,7 @@ contains
 
     ! local variables and array of multifabs
     type(multifab)               :: rhonew(mla%nlevel)
+    type(multifab)               :: gradp_baro(mla%nlevel,mla%dim)
     type(multifab)               :: diff_fluxdiv(mla%nlevel)
     type(multifab)               :: diff_fluxdivnew(mla%nlevel)
     type(multifab)               :: stoch_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
@@ -48,6 +49,8 @@ contains
        call multifab_build(diff_fluxdivnew(n), mla%la(n), nspecies,    0)
        call multifab_build(stoch_fluxdiv(n),   mla%la(n), nspecies,    0) 
        do i=1,dm
+          call multifab_build_edge(gradp_baro(n,i), mla%la(n),        1, 0, i)
+          call multifab_setval(gradp_baro(n,i),0.d0,all=.true.)
           call multifab_build_edge(flux_total(n,i), mla%la(n), nspecies, 0, i)
           call setval(flux_total(n,i), 0.d0)
        end do
@@ -91,7 +94,7 @@ contains
       if(variance_coef_mass .ne. 0.d0) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,&
+      call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
@@ -126,7 +129,7 @@ contains
       if(variance_coef_mass .ne. 0.d0) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,&
+      call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
@@ -153,7 +156,7 @@ contains
       stage_time = time + dt  
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,&
+      call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
@@ -190,7 +193,7 @@ contains
       weights(2) = 0.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,&
+      call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
@@ -219,7 +222,7 @@ contains
       weights(2) = sqrt(0.5d0) 
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,&
+      call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total, &
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
@@ -256,7 +259,7 @@ contains
       weights(2) = (2*sqrt(2.0d0)+sqrt(3.0d0))/5.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,&
+      call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
@@ -285,7 +288,7 @@ contains
       weights(2) = (-4*sqrt(2.0d0)+3*sqrt(3.0d0))/5.0d0 
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,&
+      call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
@@ -321,7 +324,7 @@ contains
       weights(2) = (sqrt(2.0d0)-2*sqrt(3.0d0))/10.0d0
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,&
+      call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
@@ -354,6 +357,7 @@ contains
        call multifab_destroy(diff_fluxdivnew(n))
        call multifab_destroy(stoch_fluxdiv(n))
        do i=1,dm
+          call multifab_destroy(gradp_baro(n,i))
           call multifab_destroy(flux_total(n,i))
        end do
     end do
