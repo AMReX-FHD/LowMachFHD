@@ -15,6 +15,9 @@ module init_pres_module
 
 contains
 
+  ! initialize pressure using hydrostatic equilibrium
+  ! assumes gravity is in the y-direction in 2D and 3D
+
   subroutine init_pres(mla,sold,pold,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -35,7 +38,8 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ncell_hi = n_cells(dm)
+    ! assumes gravity is in y-direction in 2D and 3D
+    ncell_hi = n_cells(2)
 
     allocate(     rhoavg(0:ncell_hi-1))
     allocate(         p0(0:ncell_hi-1))
@@ -47,7 +51,7 @@ contains
     if (dm .eq. 2) then
        ncell_wide = n_cells(1)
     else
-       ncell_wide = n_cells(1)*n_cells(2)
+       ncell_wide = n_cells(1)*n_cells(3)
     end if
 
     ng_s = sold(1)%ng
@@ -65,14 +69,14 @@ contains
           case (2)
              call sum_rho_2d(sp(:,:,1,1),rhosum_proc,lo,hi,ng_s)
           case (3)
-
+             call sum_rho_3d(sp(:,:,:,1),rhosum_proc,lo,hi,ng_s)
           end select
        end do
 
        call parallel_reduce(rhosum(:),rhosum_proc(:),MPI_SUM)
 
        ! compute rhobar by normalizing rhosum
-       do i=0,n_cells(dm)-1
+       do i=0,n_cells(2)-1
           rhoavg(i) = rhosum(i)/dble(ncell_wide)
        end do
 
@@ -82,7 +86,7 @@ contains
     ! and integrating dp/dz = rhoavg*g
     p0(0) = 0.d0
     do i=1,ncell_hi-1
-       p0(i) = p0(i-1) + 0.5d0*dx(1,dm)*(rhoavg(i)+rhoavg(i-1))*grav(dm)
+       p0(i) = p0(i-1) + 0.5d0*dx(1,2)*(rhoavg(i)+rhoavg(i-1))*grav(2)
     end do
 
     ! copy the 1D array into the full pressure multifab
@@ -95,7 +99,7 @@ contains
           case (2)
              call copy_p0_2d(pp(:,:,1,1),p0,lo,hi,ng_p)
           case (3)
-
+             call copy_p0_3d(pp(:,:,:,1),p0,lo,hi,ng_p)
           end select
        end do
     end do
@@ -127,6 +131,25 @@ contains
       end do
       
     end subroutine sum_rho_2d
+    
+    subroutine sum_rho_3d(rho,rhosum,lo,hi,ng_s)
+
+      integer         , intent(in   ) :: lo(:), hi(:), ng_s
+      real (kind=dp_t), intent(in   ) :: rho(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+      real (kind=dp_t), intent(inout) :: rhosum(0:)
+      
+      ! local
+      integer :: i,j,k
+
+      do j=lo(2),hi(2)
+         do k=lo(3),hi(3)
+         do i=lo(1),hi(1)
+            rhosum(j) = rhosum(j) + rho(i,j,k)
+         end do
+         end do
+      end do
+      
+    end subroutine sum_rho_3d
 
     subroutine copy_p0_2d(pres,p0,lo,hi,ng_p)
 
@@ -144,6 +167,25 @@ contains
       end do
       
     end subroutine copy_p0_2d
+
+    subroutine copy_p0_3d(pres,p0,lo,hi,ng_p)
+
+      integer         , intent(in   ) :: lo(:), hi(:), ng_p
+      real (kind=dp_t), intent(inout) :: pres(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real (kind=dp_t), intent(in   ) :: p0(0:)
+      
+      ! local
+      integer :: i,j,k
+
+      do j=lo(2),hi(2)
+         do k=lo(3),hi(3)
+         do i=lo(1),hi(1)
+            pres(i,j,k) = p0(j)
+         end do
+         end do
+      end do
+      
+    end subroutine copy_p0_3d
 
   end subroutine init_pres
 
