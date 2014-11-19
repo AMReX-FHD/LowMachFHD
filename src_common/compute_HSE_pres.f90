@@ -1,4 +1,4 @@
-module init_pres_module
+module compute_HSE_pres_module
 
   use multifab_module
   use ml_layout_module
@@ -11,14 +11,14 @@ module init_pres_module
 
   private
 
-  public :: init_pres
+  public :: compute_HSE_pres
 
 contains
 
   ! initialize pressure using hydrostatic equilibrium
   ! assumes gravity is in the y-direction in 2D and 3D
 
-  subroutine init_pres(mla,sold,pold,dx,the_bc_tower)
+  subroutine compute_HSE_pres(mla,sold,pold,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: sold(:)
@@ -187,6 +187,6 @@ contains
       
     end subroutine copy_p0_3d
 
-  end subroutine init_pres
+  end subroutine compute_HSE_pres
 
-end module init_pres_module
+end module compute_HSE_pres_module

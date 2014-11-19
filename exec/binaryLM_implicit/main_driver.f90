@@ -7,7 +7,7 @@ subroutine main_driver()
   use bc_module
   use define_bc_module
   use init_module
-  use init_pres_module
+  use compute_HSE_pres_module
   use initial_projection_module
   use write_plotfile_module
   use advance_timestep_inertial_module
@@ -339,7 +339,7 @@ subroutine main_driver()
      
      if (barodiffusion_type .gt. 0) then
         ! this computes an initial guess at p using HSE
-        call init_pres(mla,sold,pres,dx,the_bc_tower)
+        call compute_HSE_pres(mla,sold,pres,dx,the_bc_tower)
      end if
 
      ! set the initial time step
