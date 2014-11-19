@@ -56,7 +56,7 @@ contains
 
   subroutine advance_timestep_inertial(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres,chi,chi_fc, &
                               eta,eta_ed,kappa,rhoc_fluxdiv, &
-                              gp_fc,dx,dt,time,the_bc_tower)
+                              gradp_baro,dx,dt,time,the_bc_tower)
 
     ! rhoc_fluxdiv enters with t^n diffusive, baro-diffusion, and stochastic rho*c
     ! mass fluxes and exits with t^n+1 fluxes
@@ -76,7 +76,7 @@ contains
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: rhoc_fluxdiv(:)
-    type(multifab) , intent(inout) :: gp_fc(:,:)
+    type(multifab) , intent(inout) :: gradp_baro(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -322,7 +322,7 @@ contains
 
     if (barodiffusion_type .gt. 0) then
        ! add baro-diffusion flux diveregnce to rhs_p
-       call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gp_fc,dx, &
+       call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gradp_baro,dx, &
                             the_bc_tower%bc_tower_array,vel_bc_n)
     end if
 
@@ -481,7 +481,7 @@ contains
 
     if (barodiffusion_type .eq. 2) then
        ! compute grad p^{n+1,*}
-       call compute_grad(mla,pres,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+       call compute_grad(mla,pres,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
     end if
 
     ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
@@ -657,7 +657,7 @@ contains
 
     if (barodiffusion_type .gt. 0) then
        ! compute baro-diffusion flux divergence
-       call mk_baro_fluxdiv(mla,rhoc_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
+       call mk_baro_fluxdiv(mla,rhoc_fluxdiv,1,s_fc,chi_fc,gradp_baro,dx, &
                             the_bc_tower%bc_tower_array,vel_bc_n)
     end if
 

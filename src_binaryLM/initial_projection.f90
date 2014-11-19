@@ -38,7 +38,7 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gp_fc, &
+  subroutine initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gradp_baro, &
                                 rhoc_fluxdiv,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -49,7 +49,7 @@ contains
     type(multifab) , intent(in   ) :: prim(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(in   ) :: chi_fc(:,:)
-    type(multifab) , intent(in   ) :: gp_fc(:,:)
+    type(multifab) , intent(in   ) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: rhoc_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -115,7 +115,7 @@ contains
 
     if (barodiffusion_type .gt. 0) then
        ! compute baro-diffusion flux divergence
-       call mk_baro_fluxdiv(mla,rhoc_fluxdiv,1,s_fc,chi_fc,gp_fc,dx, &
+       call mk_baro_fluxdiv(mla,rhoc_fluxdiv,1,s_fc,chi_fc,gradp_baro,dx, &
                             the_bc_tower%bc_tower_array,vel_bc_n)
     end if
 

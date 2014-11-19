@@ -69,7 +69,7 @@ subroutine main_driver()
   type(multifab), allocatable :: sold(:)           ! cell-centered
   type(multifab), allocatable :: snew(:)           ! cell-centered
   type(multifab), allocatable :: s_fc(:,:)         ! face-centered
-  type(multifab), allocatable :: gp_fc(:,:)        ! face-centered
+  type(multifab), allocatable :: gradp_baro(:,:)   ! face-centered
   type(multifab), allocatable :: prim(:)           ! cell-centered
   type(multifab), allocatable :: pres(:)           ! cell-centered
   type(multifab), allocatable :: chi(:)            ! cell-centered
@@ -108,7 +108,7 @@ subroutine main_driver()
   allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
   allocate(rhoc_fluxdiv(nlevs))
-  allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm),gp_fc(nlevs,dm))
+  allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm),gradp_baro(nlevs,dm))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
   else if (dm .eq. 3) then
@@ -262,7 +262,7 @@ subroutine main_driver()
      ! s on faces, gp on faces
      do i=1,dm
         call multifab_build_edge( s_fc(n,i),mla%la(n),2,1,i)
-        call multifab_build_edge(gp_fc(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
      end do
 
      ! transport coefficients
@@ -352,7 +352,7 @@ subroutine main_driver()
   end if
 
   ! compute grad p
-  call compute_grad(mla,pres,gp_fc,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+  call compute_grad(mla,pres,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   if (print_int .gt. 0) then
      if (parallel_IOProcessor()) write(*,*) "Initial conditions before initial projection:"
@@ -423,7 +423,7 @@ subroutine main_driver()
   else
 
      ! need to do an initial projection to get an initial velocity field
-     call initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gp_fc, &
+     call initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gradp_baro, &
                              rhoc_fluxdiv,dx,dt, &
                              the_bc_tower)
 
@@ -481,7 +481,7 @@ subroutine main_driver()
      if (algorithm_type .eq. 0) then
         call advance_timestep_inertial(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres, &
                                        chi,chi_fc,eta,eta_ed,kappa,rhoc_fluxdiv, &
-                                       gp_fc,dx,dt,time,the_bc_tower)
+                                       gradp_baro,dx,dt,time,the_bc_tower)
      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pres, &
                                          chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower)
@@ -630,7 +630,7 @@ subroutine main_driver()
         call multifab_destroy(umac(n,i))
         call multifab_destroy(chi_fc(n,i))
         call multifab_destroy(s_fc(n,i))
-        call multifab_destroy(gp_fc(n,i))
+        call multifab_destroy(gradp_baro(n,i))
      end do
      do i=1,size(eta_ed,dim=2)
         call multifab_destroy(eta_ed(n,i))

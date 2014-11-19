@@ -14,7 +14,7 @@ module mk_baro_fluxdiv_module
 
 contains
 
-  subroutine mk_baro_fluxdiv(mla,s_update,out_comp,s_fc,chi_fc,gp0_fc, &
+  subroutine mk_baro_fluxdiv(mla,s_update,out_comp,s_fc,chi_fc,gradp_baro, &
                              dx,the_bc_level,vel_bc_n)
 
     type(ml_layout), intent(in   ) :: mla
@@ -22,7 +22,7 @@ contains
     integer        , intent(in   ) :: out_comp    ! which component of s_update
     type(multifab) , intent(in   ) :: s_fc(:,:)   ! rho and rho*c on faces
     type(multifab) , intent(in   ) :: chi_fc(:,:) ! chi on faces
-    type(multifab) , intent(in   ) :: gp0_fc(:,:) ! grad p0 on faces
+    type(multifab) , intent(in   ) :: gradp_baro(:,:) ! grad p0 on faces
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: vel_bc_n(:,:) ! inhomogeneous normal vel value
@@ -52,14 +52,14 @@ contains
     ng_s = s_fc(1,1)%ng
     ng_c = chi_fc(1,1)%ng
     ng_b = vel_bc_n(1,1)%ng
-    ng_g = gp0_fc(1,1)%ng
+    ng_g = gradp_baro(1,1)%ng
 
     ! compute del dot (rhoD grad c) and add it to s_update
     do n=1,nlevs
        do i=1,nfabs(s_update(n))
           sup => dataptr(s_update(n), i)
-          gpx => dataptr(gp0_fc(n,1), i)
-          gpy => dataptr(gp0_fc(n,2), i)
+          gpx => dataptr(gradp_baro(n,1), i)
+          gpy => dataptr(gradp_baro(n,2), i)
           spx => dataptr(s_fc(n,1), i)
           spy => dataptr(s_fc(n,2), i)
           cpx => dataptr(chi_fc(n,1), i)
@@ -78,7 +78,7 @@ contains
                                      lo, hi, dx(n,:), &
                                      the_bc_level(n)%phys_bc_level_array(i,:,:))
           case (3)
-             gpz => dataptr(gp0_fc(n,3), i)
+             gpz => dataptr(gradp_baro(n,3), i)
              spz => dataptr(s_fc(n,3), i)
              cpz => dataptr(chi_fc(n,3), i)
              vpz => dataptr(vel_bc_n(n,3), i)
@@ -96,8 +96,8 @@ contains
   contains
 
     subroutine mk_baro_fluxdiv_2d(s_update,ng_u,gpx,gpy,ng_g,sx,sy,ng_s, &
-                                            chix,chiy,ng_c,vel_bc_nx,vel_bc_ny,ng_b, &
-                                            lo,hi,dx,bc)
+                                  chix,chiy,ng_c,vel_bc_nx,vel_bc_ny,ng_b, &
+                                  lo,hi,dx,bc)
 
       integer        , intent(in   ) :: lo(:), hi(:), ng_u, ng_g, ng_s, ng_c, ng_b
       real(kind=dp_t), intent(inout) ::  s_update(lo(1)-ng_u:,lo(2)-ng_u:)
