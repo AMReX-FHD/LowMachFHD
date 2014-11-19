@@ -30,13 +30,13 @@ subroutine main_driver()
   use checkpoint_module
   use estdt_module
   use convert_stag_module
-  use probin_binarylm_module, only: probin_binarylm_init, analyze_binary, &
-                                    barodiffusion_type
+  use probin_binarylm_module, only: probin_binarylm_init, analyze_binary
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
                                    stats_int, variance_coef_mom, variance_coef_mass, &
                                    initial_variance, chk_int, algorithm_type, &
+                                   barodiffusion_type, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, advection_type, &
                                    restart, max_step, print_int, project_eos_int
   use probin_gmres_module  , only: probin_gmres_init
@@ -351,7 +351,7 @@ subroutine main_driver()
 
   end if
 
-  ! compute grad p
+  ! compute grad p for barodiffusion
   call compute_grad(mla,pres,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   if (print_int .gt. 0) then
@@ -424,8 +424,7 @@ subroutine main_driver()
 
      ! need to do an initial projection to get an initial velocity field
      call initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gradp_baro, &
-                             rhoc_fluxdiv,dx,dt, &
-                             the_bc_tower)
+                             rhoc_fluxdiv,dx,dt,the_bc_tower)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"

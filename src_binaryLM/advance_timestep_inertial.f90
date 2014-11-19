@@ -27,8 +27,7 @@ module advance_timestep_inertial_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
   use convert_stag_module
-  use probin_binarylm_module, only: barodiffusion_type
-  use probin_common_module, only: advection_type, grav, rhobar
+  use probin_common_module, only: advection_type, grav, rhobar, barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
 
   implicit none

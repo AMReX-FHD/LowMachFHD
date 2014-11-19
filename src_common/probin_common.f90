@@ -17,7 +17,7 @@ module probin_common_module
   real(dp_t),save :: fixed_dt,cfl,grav(3)
   real(dp_t),save :: smoothing_width,u_init(2)
   integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
-  integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)
+  integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)  
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_hi(MAX_SPACEDIM-1,MAX_SPACEDIM)
@@ -28,6 +28,7 @@ module probin_common_module
   real(dp_t),save :: k_B,visc_coef
   integer,save    :: stoch_stress_form,filtering_width,max_step
   integer,save    :: restart,print_int,project_eos_int,algorithm_type
+  integer,save    :: barodiffusion_type
   real(dp_t),save :: molmass(max_species)
   real(dp_t),save :: rhobar(max_species)
 
@@ -76,6 +77,10 @@ module probin_common_module
                                               ! 0 = Inertial algorithm
                                               ! 1 = Overdamped with 1 RNG
                                               ! 2 = Overdamped with 2 RNGs
+
+  namelist /probin_common/ barodiffusion_type ! 0 = no barodiffusion
+                                              ! 1 = fixed gradp from initialization
+                                              ! 2 = update gradp each time step
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
@@ -218,6 +223,8 @@ contains
     k_B = 1.d0
 
     algorithm_type = 0
+
+    barodiffusion_type = 0
 
     seed = 1
 
@@ -381,6 +388,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) algorithm_type
+
+       case ('--barodiffusion_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) barodiffusion_type
 
        case ('--u_init_1')
           farg = farg + 1

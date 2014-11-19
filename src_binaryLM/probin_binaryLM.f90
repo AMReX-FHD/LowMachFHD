@@ -13,7 +13,7 @@ module probin_binarylm_module
   real(dp_t), save :: c_init(2)
   real(dp_t), save :: temperature
   real(dp_t), save :: material_properties(3,3),c_bc(3,2)
-  integer   , save :: barodiffusion_type,diff_type
+  integer   , save :: diff_type
   logical   , save :: analyze_binary,plot_stag
   real(dp_t), save :: boussinesq_beta,diff_coef
 
@@ -33,9 +33,6 @@ module probin_binarylm_module
 
   namelist /probin_binarylm/ boussinesq_beta    ! beta for boussinesq gravity
 
-  namelist /probin_binarylm/ barodiffusion_type ! 0 = no barodiffusion
-                                                ! 1 = fixed gradp from initialization
-                                                ! 2 = update gradp each time step
   namelist /probin_binarylm/ analyze_binary     ! Call the older analyze_spectra_binary or the new analyze_spectra?
 
   namelist /probin_binarylm/ plot_stag          ! include staggered plotfiles
@@ -79,8 +76,6 @@ contains
     material_properties(1:3,1:3) = 0.d0
 
     boussinesq_beta = 0.d0
-
-    barodiffusion_type = 0
     
     analyze_binary=.true.
     plot_stag = .false.
@@ -183,11 +178,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) boussinesq_beta
-
-       case ('--barodiffusion_type')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) barodiffusion_type
 
        case ('--analyze_binary')
           farg = farg + 1

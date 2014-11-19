@@ -15,6 +15,7 @@ subroutine main_driver()
   use multifab_physbc_module
   use analysis_module
   use analyze_spectra_module
+  use div_and_grad_module
   use eos_check_module
   use estdt_module
   use stochastic_mass_fluxdiv_module
@@ -23,6 +24,7 @@ subroutine main_driver()
   use fill_rho_ghost_cells_module
   use ParallelRNGs 
   use mass_flux_utilities_module
+  use compute_HSE_pres_module
   use convert_stag_module
   use convert_variables_module
   use convert_m_to_umac_module
@@ -35,7 +37,8 @@ subroutine main_driver()
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
                                   probin_common_init, print_int, project_eos_int, &
                                   advection_type, fixed_dt, max_step, cfl, temp_bc_comp, &
-                                  algorithm_type, variance_coef_mom, initial_variance
+                                  algorithm_type, variance_coef_mom, initial_variance, &
+                                  barodiffusion_type
   use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, Dbar, &
                                         rho_part_bc_comp, start_time, &
                                         probin_multispecies_init
@@ -70,6 +73,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: umac(:,:)
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
+  type(multifab), allocatable  :: gradp_baro(:,:)
   type(multifab), allocatable  :: pres(:)
   type(multifab), allocatable  :: eta(:)
   type(multifab), allocatable  :: eta_ed(:,:)
@@ -104,10 +108,10 @@ subroutine main_driver()
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
-  allocate(rho_old(nlevs),rhotot_old(nlevs))
+  allocate(rho_old(nlevs),rhotot_old(nlevs),pres(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
-  allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),pres(nlevs))
+  allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
@@ -303,8 +307,9 @@ subroutine main_driver()
 
   do n=1,nlevs
      do i=1,dm
-        call multifab_build_edge(mtemp(n,i)    ,mla%la(n),1,0,i)
-        call multifab_build_edge(rhotot_fc(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge     (mtemp(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
      end do
   end do
 
@@ -380,6 +385,14 @@ subroutine main_driver()
   else if (dm .eq. 3) then
      call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
   end if
+     
+  if (barodiffusion_type .gt. 0) then
+     ! this computes an initial guess at p using HSE
+     call compute_HSE_pres(mla,rhotot_old,pres,dx,the_bc_tower)
+  end if
+
+  ! compute grad p for barodiffusion
+  call compute_grad(mla,pres,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   ! initialize eta and kappa
   call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
@@ -653,6 +666,7 @@ subroutine main_driver()
         call multifab_destroy(umac(n,i))
         call multifab_destroy(mtemp(n,i))
         call multifab_destroy(rhotot_fc(n,i))
+        call multifab_destroy(gradp_baro(n,i))
      end do
      do i=1,size(eta_ed,dim=2)
         call multifab_destroy(eta_ed(n,i))
