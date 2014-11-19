@@ -143,7 +143,7 @@ contains
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp,the_bc_level)
       
     ! compute rho*W*chi
-    call compute_rhoWchi(mla,rho,rhotot_temp,molarconc,molmtot,chi,rhoWchi,the_bc_level)
+    call compute_rhoWchi(mla,rho,rhotot_temp,chi,rhoWchi,the_bc_level)
 
     ! reset total flux
     do n=1,nlevs

@@ -197,7 +197,7 @@ contains
     type(bc_level) , intent(in   )  :: the_bc_level(:)
 
     ! Local variables
-    integer :: comp,n,dm,nlevs,box,i,rng
+    integer :: dm,nlevs,box,i,rng
     
     nlevs = mla%nlevel
     dm    = mla%dim    
@@ -258,9 +258,6 @@ contains
       integer        , intent(in   ) :: phys_bc(:,:)
       real(kind=dp_t), intent(inout) :: sflux(lo(1)-ng_f:,lo(2)-ng_f:,:)
 
-      ! local
-      integer :: i,j
-
       if (idim .eq. 1) then
 
          if (phys_bc(1,1) .eq. NO_SLIP_WALL .or. phys_bc(1,1) .eq. SLIP_WALL) then
@@ -306,9 +303,6 @@ contains
       integer        , intent(in   ) :: lo(:),hi(:),ng_f,idim
       integer        , intent(in   ) :: phys_bc(:,:)
       real(kind=dp_t), intent(inout) :: sflux(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
-
-      ! local
-      integer :: i,j,k
 
       if (idim .eq. 1) then
 
