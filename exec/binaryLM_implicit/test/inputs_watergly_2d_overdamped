@@ -30,11 +30,6 @@
       ! This is [gcoef_function_2 gcoef_function_3] in IBAMR
       ! For Dirichlet (RESERVOIR) BCs it is (a=1, b=0) in IBAMR
       ! For Neumann (WALL) BCs it is (a=0, b=1) in IBAMR
-
-  ! Algorithmic control:
-  barodiffusion_type = 0  ! 0 = no barodiffusion
-                          ! 1 = fixed gradp from initialization
-                          ! 2 = update gradp each time step
   
   ! HydroGrid analysis:
   analyze_binary = F ! T for old specialized analysis (HDMD/HSMD for explicit low Mach paper) exec/binaryLM/analyze_spectra.f90
@@ -104,6 +99,11 @@
       ! 1 = Overdamped with 1 RNG
       ! 2 = Overdamped with 2 RNGs  
   
+  ! Algorithmic control:
+  barodiffusion_type = 0  ! 0 = no barodiffusion
+                          ! 1 = fixed gradp from initialization
+                          ! 2 = update gradp each time step
+
   ! L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
   ! if abs(visc_type) = 2, L = div [ beta (grad + grad^T) ]

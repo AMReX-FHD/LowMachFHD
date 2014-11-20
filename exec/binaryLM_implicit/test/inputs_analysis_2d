@@ -11,8 +11,6 @@
   material_properties(1:2,1) = 0.d0 0.d0 
   material_properties(1:2,2) = 0.d0 0.d0
   material_properties(1:2,3) = 0.d0 0.d0
-
-  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
   
   ! spectral analysis
   analyze_binary = T ! Analyze using old binary or new generic code
@@ -49,6 +47,8 @@
   ! Algorithm control / selection
   !----------------------
   algorithm_type = 1	  ! enable overdamped (infinite Sc) algorithm
+
+  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep
 
   ! random number seed
   ! 0        = unpredictable seed based on clock

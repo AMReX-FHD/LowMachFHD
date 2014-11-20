@@ -8,8 +8,6 @@
   print_int = 1              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1        ! how often to call project_onto_eos
 
-  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep   
-
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
   diff_type = 1
@@ -34,6 +32,8 @@
   ! Algorithm control / selection
   !----------------------
   algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
+
+  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep   
 
   ! random number seed
   ! 0        = unpredictable seed based on clock

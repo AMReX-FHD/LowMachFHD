@@ -17,9 +17,6 @@
 
   boussinesq_beta = 0.d0 ! beta for boussinesq gravity
 
-  barodiffusion_type = 0 ! 0 = no barodiffusion
-                         ! 1 = fixed gradp from initialization
-                         ! 2 = update gradp each time step
   analyze_binary = T     ! Call the older analyze_spectra_binary or the new analyze_spectra?
 
   plot_stag = F          ! include staggered plotfiles   
@@ -90,6 +87,10 @@
                          ! 0 = Inertial algorithm
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
+
+  barodiffusion_type = 0 ! 0 = no barodiffusion
+                         ! 1 = fixed gradp from initialization
+                         ! 2 = update gradp each time step
 
   ! random number seed
   ! 0        = unpredictable seed based on clock

@@ -1,9 +1,7 @@
 &probin_binarylm
 
   ! problem setup
-  c_init(1:2) = 0.5d0 0.5d0  ! controls initial concentration
-
-  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep   
+  c_init(1:2) = 0.5d0 0.5d0  ! controls initial concentration  
 
   ! 1 = constant coefficients
   ! -1 = spatially-varing coefficients
@@ -31,6 +29,8 @@
   ! Algorithm control / selection
   !----------------------
   algorithm_type = 0	  ! enable overdamped (infinite Sc) algorithm
+
+  barodiffusion_type = 0  ! 0=none, 1=fixed from init, 2=update each timestep 
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
