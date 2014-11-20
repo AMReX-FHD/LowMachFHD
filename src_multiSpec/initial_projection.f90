@@ -11,7 +11,8 @@ module initial_projection_module
   use compute_mass_fluxdiv_module
   use reservoir_bc_fill_module
   use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type
+  use probin_common_module, only: rhobar, variance_coef_mass, &
+                                  algorithm_type, barodiffusion_type
 
   implicit none
 
@@ -37,7 +38,7 @@ module initial_projection_module
 contains
 
   subroutine initial_projection(mla,umac,rho,rhotot,gradp_baro, &
-                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                diff_mass_fluxdiv,stoch_mass_fluxdiv,baro_mass_fluxdiv, &
                                 Temp,eta,eta_ed,dt,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -47,6 +48,7 @@ contains
     type(multifab) , intent(in   ) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: baro_mass_fluxdiv(:)
     type(multifab) , intent(in   ) :: Temp(:)
     type(multifab) , intent(in   ) :: eta(:)
     type(multifab) , intent(in   ) :: eta_ed(:,:)  ! nodal (2d); edge-centered (3d)
@@ -98,10 +100,11 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,0.d0, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute diffusive and stochastic mass fluxes
+    ! compute diff/stoch/baro mass fluxes
     ! this computes "-F" so we later multiply by -1
     call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                      baro_mass_fluxdiv,Temp, &
                                       flux_total,dt,0.d0,dx,weights, &
                                       the_bc_tower%bc_tower_array)
 
@@ -109,6 +112,9 @@ contains
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
+       if (barodiffusion_type .gt. 0) then
+          call multifab_mult_mult_s_c(baro_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
        do i=1,dm
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
@@ -125,6 +131,9 @@ contains
           call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
+          if (barodiffusion_type .gt. 0) then
+             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),baro_mass_fluxdiv(n),i,1)
           end if
        end do
     end do

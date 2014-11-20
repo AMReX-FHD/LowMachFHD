@@ -19,7 +19,8 @@ module mass_flux_utilities_module
             compute_Gama, &
             compute_chi, &
             compute_rhoWchi, &
-            compute_Lonsager
+            compute_Lonsager, &
+            compute_baro_coeff
 
 contains
   
@@ -1089,6 +1090,18 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     ! reshape array into matrix without doing index algebra
     Xout_ij = Xin_ij
   
-  end subroutine set_Xij 
+  end subroutine set_Xij
+
+  subroutine compute_baro_coeff(mla,baro_coef,rho,rhotot,Temp,the_bc_level)
+ 
+    type(ml_layout), intent(in   )  :: mla
+    type(multifab) , intent(inout)  :: baro_coef(:)
+    type(multifab) , intent(in   )  :: rho(:)
+    type(multifab) , intent(in   )  :: rhotot(:) 
+    type(multifab) , intent(in   )  :: Temp(:) 
+    type(bc_level) , intent(in   )  :: the_bc_level(:)
+
+
+  end subroutine compute_baro_coeff
   
 end module mass_flux_utilities_module

@@ -19,7 +19,7 @@ module checkpoint_module
 contains
 
   subroutine checkpoint_write(mla,rho,rhotot,pres,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              umac,time,dt,istep_to_write)
+                              baro_mass_fluxdiv,umac,time,dt,istep_to_write)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)                ! cell-centered partial densities
@@ -27,6 +27,7 @@ contains
     type(multifab) , intent(in   ) :: pres(:)               ! cell-centered pressure
     type(multifab) , intent(in   ) :: diff_mass_fluxdiv(:)  ! diffusive mass fluxes
     type(multifab) , intent(in   ) :: stoch_mass_fluxdiv(:) ! stochastic mass fluxes
+    type(multifab) , intent(in   ) :: baro_mass_fluxdiv(:)  ! barodiffusion mass fluxes
     type(multifab) , intent(in   ) :: umac(:,:)             ! edge-based velocities
     integer        , intent(in   ) :: istep_to_write
     real(kind=dp_t), intent(in   ) :: time,dt
@@ -45,8 +46,8 @@ contains
     allocate(chkdata_edge(nlevs,dm))
     do n = 1,nlevs
        if (algorithm_type .eq. 0) then
-          ! nspecies densities + 1 total density + 1 pressure + diff/stoch_mass_fluxdiv
-          call multifab_build(chkdata(n), mla%la(n), 3*nspecies+2, 0)
+          ! nspecies densities + 1 total density + 1 pressure + diff/stoch/baro_mass_fluxdiv
+          call multifab_build(chkdata(n), mla%la(n), 4*nspecies+2, 0)
        else
           ! nspecies densities + 1 total density + 1 pressure
           call multifab_build(chkdata(n), mla%la(n), nspecies+2, 0)
@@ -58,6 +59,7 @@ contains
        if (algorithm_type .eq. 0) then
           call multifab_copy_c(chkdata(n), nspecies+3, diff_mass_fluxdiv(n), 1, nspecies)
           call multifab_copy_c(chkdata(n), 2*nspecies+3, stoch_mass_fluxdiv(n), 1, nspecies)
+          call multifab_copy_c(chkdata(n), 3*nspecies+3,  baro_mass_fluxdiv(n), 1, nspecies)
        end if
        do i=1,dm
           ! 1 velocity component and 1 normal bc component for each face

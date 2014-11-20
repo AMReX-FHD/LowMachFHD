@@ -26,7 +26,7 @@ module advance_timestep_inertial_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, restart
+                                  variance_coef_mom, restart, barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies, rho_part_bc_comp
   use analysis_module
@@ -56,7 +56,7 @@ contains
 
   subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,baro_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep)
 
     type(ml_layout), intent(in   ) :: mla
@@ -75,6 +75,7 @@ contains
     type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: baro_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
@@ -153,7 +154,7 @@ contains
     ! Step 1 - Calculate Predictor Diffusive and Stochastic Fluxes
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! diff_mass_fluxdiv and stoch_mass_fluxdiv already contain F_i
+    ! diff/stoch/baro_mass_fluxdiv already contain F_i
     ! this was already done in Step 0 (initialization) or Step 6 from the previous time step
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -170,6 +171,9 @@ contains
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+       end if
+       if (barodiffusion_type .gt. 0) then
+          call multifab_plus_plus_c(rho_update(n),1,baro_mass_fluxdiv(n),1,nspecies,0)
        end if
     end do
 
@@ -337,14 +341,17 @@ contains
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
     call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
-                                      flux_total,dt,time,dx,weights, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,baro_mass_fluxdiv, &
+                                      Temp,flux_total,dt,time,dx,weights, &
                                       the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
+       if (barodiffusion_type .gt. 0) then
+          call multifab_mult_mult_s_c(baro_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
        do i=1,dm
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
@@ -361,6 +368,9 @@ contains
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
+          if (barodiffusion_type .gt. 0) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),baro_mass_fluxdiv(n),i,1)
           end if
        end do
     end do
@@ -426,6 +436,9 @@ contains
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
+       if (barodiffusion_type .gt. 0) then
+          call multifab_plus_plus_c(rho_update(n),1,baro_mass_fluxdiv(n),1,nspecies)
        end if
     end do
 
@@ -681,14 +694,17 @@ contains
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
     call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp, &
-                                      flux_total,dt,time,dx,weights, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv,baro_mass_fluxdiv, &
+                                      Temp,flux_total,dt,time,dx,weights, &
                                       the_bc_tower%bc_tower_array)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
+       if (barodiffusion_type .gt. 0) then
+          call multifab_mult_mult_s_c(baro_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
        do i=1,dm
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
@@ -705,6 +721,9 @@ contains
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
+          if (barodiffusion_type .gt. 0) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),baro_mass_fluxdiv(n),i,1)             
           end if
        end do
     end do

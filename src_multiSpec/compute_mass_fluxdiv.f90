@@ -12,7 +12,7 @@ module compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use mass_flux_utilities_module
   use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: variance_coef_mass
+  use probin_common_module, only: variance_coef_mass, barodiffusion_type
 
   implicit none
 
@@ -23,7 +23,8 @@ module compute_mass_fluxdiv_module
 contains
 
   subroutine compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
-                                          diff_fluxdiv,stoch_fluxdiv,Temp,flux_total, &
+                                          diff_fluxdiv,stoch_fluxdiv,baro_fluxdiv, &
+                                          Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_level)
        
@@ -32,6 +33,7 @@ contains
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
+    type(multifab) , intent(inout)   :: baro_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
     type(multifab) , intent(inout)   :: flux_total(:,:)
     real(kind=dp_t), intent(in   )   :: dt
@@ -66,7 +68,7 @@ contains
     end do
 
     call compute_mass_fluxdiv(mla,rho,gradp_baro,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
-                              D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
+                              D_therm,diff_fluxdiv,stoch_fluxdiv,baro_fluxdiv,Temp,&
                               zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                               the_bc_level)
 
@@ -84,7 +86,7 @@ contains
   end subroutine compute_mass_fluxdiv_wrapper
 
   subroutine compute_mass_fluxdiv(mla,rho,gradp_baro,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
-                                  D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
+                                  D_therm,diff_fluxdiv,stoch_fluxdiv,baro_fluxdiv,Temp,&
                                   zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                                   the_bc_level)
        
@@ -100,6 +102,7 @@ contains
     type(multifab) , intent(inout)   :: D_therm(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
+    type(multifab) , intent(inout)   :: baro_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
     type(multifab) , intent(inout)   :: zeta_by_Temp(:)
     type(multifab) , intent(inout)   :: flux_total(:,:)
@@ -146,6 +149,14 @@ contains
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,rhotot_temp,chi,rhoWchi,the_bc_level)
 
+    ! compute cell-centered barodiffusion coefficient, (phi-w) / (n kB T)
+    if (barodiffusion_type .gt. 0) then
+
+
+
+
+    end if
+
     ! reset total flux
     do n=1,nlevs
        do i=1,dm
@@ -169,6 +180,17 @@ contains
     else
        do n=1,nlevs
           call multifab_setval(stoch_fluxdiv(n),0.d0,all=.true.)
+       end do
+    end if
+
+    ! compute barodiffusion fluxdiv
+    if (barodiffusion_type .gt. 0) then
+
+
+
+    else
+       do n=1,nlevs
+          call multifab_setval(baro_fluxdiv(n),0.d0,all=.true.)
        end do
     end if
       

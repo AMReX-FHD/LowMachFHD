@@ -17,7 +17,7 @@ module restart_module
 contains
 
   subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pres,diff_mass_fluxdiv, &
-                                     stoch_mass_fluxdiv,umac,pmask)
+                                     stoch_mass_fluxdiv,baro_mass_fluxdiv,umac,pmask)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
@@ -26,6 +26,7 @@ contains
      type(multifab), intent(inout) :: pres(:)
      type(multifab), intent(inout) :: diff_mass_fluxdiv(:)
      type(multifab), intent(inout) :: stoch_mass_fluxdiv(:)
+     type(multifab), intent(inout) :: baro_mass_fluxdiv(:)
      type(multifab), intent(inout) :: umac(:,:)
      logical       , intent(in   ) :: pmask(:)
 
@@ -61,6 +62,7 @@ contains
         call multifab_build(pres(n)  , mla%la(n),        1, 1)
         call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+        call multifab_build(baro_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         do i=1,dm
            call multifab_build_edge(umac(n,i), mla%la(n), 1, 1, i)
         end do
@@ -72,6 +74,7 @@ contains
         if (algorithm_type .eq. 0) then
            call multifab_copy_c( diff_mass_fluxdiv(n),1,chkdata(n),  nspecies+3,nspecies)
            call multifab_copy_c(stoch_mass_fluxdiv(n),1,chkdata(n),2*nspecies+3,nspecies)
+           call multifab_copy_c( baro_mass_fluxdiv(n),1,chkdata(n),3*nspecies+3,nspecies)
         end if
         call multifab_copy_c(umac(n,1),1,chkdata_edgex(n),1         ,1)
         call multifab_copy_c(umac(n,2),1,chkdata_edgey(n),1         ,1)

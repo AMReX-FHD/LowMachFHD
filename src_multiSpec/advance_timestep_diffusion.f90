@@ -7,7 +7,7 @@ module advance_timestep_diffusion_module
   use compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use probin_multispecies_module, only: nspecies, rho_part_bc_comp, timeinteg_type
-  use probin_common_module, only: variance_coef_mass
+  use probin_common_module, only: variance_coef_mass, barodiffusion_type
 
   implicit none
 
@@ -33,6 +33,7 @@ contains
     type(multifab)               :: diff_fluxdiv(mla%nlevel)
     type(multifab)               :: diff_fluxdivnew(mla%nlevel)
     type(multifab)               :: stoch_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
+    type(multifab)               :: baro_fluxdiv(mla%nlevel)  ! barodiffusion fluxdiv
     type(multifab)               :: flux_total(mla%nlevel,mla%dim) ! sum of diff/stoch fluxes
     real(kind=dp_t), allocatable :: weights(:) ! weights for stoch-time-integrators       
     real(kind=dp_t)              :: stage_time
@@ -48,6 +49,7 @@ contains
        call multifab_build(diff_fluxdiv(n),    mla%la(n), nspecies,    0) 
        call multifab_build(diff_fluxdivnew(n), mla%la(n), nspecies,    0)
        call multifab_build(stoch_fluxdiv(n),   mla%la(n), nspecies,    0) 
+       call multifab_build(baro_fluxdiv(n),    mla%la(n), nspecies,    0) 
        do i=1,dm
           call multifab_build_edge(gradp_baro(n,i), mla%la(n),        1, 0, i)
           call multifab_setval(gradp_baro(n,i),0.d0,all=.true.)
@@ -95,7 +97,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
+                                        diff_fluxdiv,stoch_fluxdiv,baro_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
 
@@ -103,6 +105,7 @@ contains
       do n=1,nlevs
                                           call saxpy(rho(n),-dt,diff_fluxdiv(n))
          if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
+         if(barodiffusion_type .gt. 0)    call saxpy(rho(n),-dt,baro_fluxdiv(n))
       end do 
   
       case(2)
@@ -130,7 +133,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
+                                        diff_fluxdiv,stoch_fluxdiv,baro_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
       
@@ -138,6 +141,7 @@ contains
       do n=1,nlevs
                                           call saxpy(rhonew(n),-dt,diff_fluxdiv(n))
          if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
+         if(barodiffusion_type .gt. 0)    call saxpy(rhonew(n),-dt,baro_fluxdiv(n))
       end do 
    
       ! update values of the ghost cells of rhonew
@@ -157,7 +161,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
+                                        diff_fluxdivnew,stoch_fluxdiv,baro_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
 
@@ -166,6 +170,7 @@ contains
                                           call saxpy(rho(n),-0.5d0*dt,diff_fluxdiv(n))
                                           call saxpy(rho(n),-0.5d0*dt,diff_fluxdivnew(n))
          if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),      -dt,stoch_fluxdiv(n))
+         if(barodiffusion_type .gt. 0)    call saxpy(rho(n),      -dt,baro_fluxdiv(n))
       end do
  
       case(3)
@@ -194,7 +199,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
+                                        diff_fluxdiv,stoch_fluxdiv,baro_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
  
@@ -202,6 +207,7 @@ contains
       do n=1,nlevs
                                           call saxpy(rhonew(n),-0.5d0*dt,diff_fluxdiv(n))
          if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),      -dt,stoch_fluxdiv(n))
+         if(barodiffusion_type .gt. 0)    call saxpy(rhonew(n),      -dt,baro_fluxdiv(n))
       end do 
 
       ! update values of the ghost cells of rhonew
@@ -223,7 +229,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total, &
+                                        diff_fluxdivnew,stoch_fluxdiv,baro_fluxdiv,Temp,flux_total, &
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
  
@@ -231,6 +237,7 @@ contains
       do n=1,nlevs
                                           call saxpy(rho(n), -dt, diff_fluxdivnew(n))
          if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n), -dt, stoch_fluxdiv(n))
+         if(barodiffusion_type .gt. 0)    call saxpy(rho(n), -dt, baro_fluxdiv(n))
       end do 
       
       case(4)
@@ -260,7 +267,7 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
+                                        diff_fluxdiv,stoch_fluxdiv,baro_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
  
@@ -268,6 +275,7 @@ contains
       do n=1,nlevs
                                           call saxpy(rhonew(n), -dt, diff_fluxdiv(n))
          if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n), -dt, stoch_fluxdiv(n))
+         if(barodiffusion_type .gt. 0)    call saxpy(rhonew(n), -dt, baro_fluxdiv(n))
       end do 
    
       ! update values of the ghost cells of rhonew
@@ -289,7 +297,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
+                                        diff_fluxdivnew,stoch_fluxdiv,baro_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
 
@@ -299,6 +307,7 @@ contains
                                           call saxpy(rhonew(n),  0.75d0   , rho(n))
                                           call saxpy(rhonew(n), -0.25d0*dt, diff_fluxdivnew(n))
          if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n), -0.25d0*dt, stoch_fluxdiv(n))
+         if(barodiffusion_type .gt. 0)    call saxpy(rhonew(n), -0.25d0*dt, baro_fluxdiv(n))
       end do 
 
       ! update values of the ghost cells of rho_star
@@ -325,7 +334,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
+                                        diff_fluxdivnew,stoch_fluxdiv,baro_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_level)
 
@@ -335,6 +344,7 @@ contains
                                           call saxpy(rho(n),  (2.0d0/3.0d0)   , rhonew(n))
                                           call saxpy(rho(n), -(2.0d0/3.0d0)*dt, diff_fluxdivnew(n))
          if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n), -(2.0d0/3.0d0)*dt, stoch_fluxdiv(n))
+         if(barodiffusion_type .gt. 0)    call saxpy(rho(n), -(2.0d0/3.0d0)*dt, baro_fluxdiv(n))
       end do 
 
     !=============================================================================================
@@ -356,6 +366,7 @@ contains
        call multifab_destroy(diff_fluxdiv(n))
        call multifab_destroy(diff_fluxdivnew(n))
        call multifab_destroy(stoch_fluxdiv(n))
+       call multifab_destroy(baro_fluxdiv(n))
        do i=1,dm
           call multifab_destroy(gradp_baro(n,i))
           call multifab_destroy(flux_total(n,i))
