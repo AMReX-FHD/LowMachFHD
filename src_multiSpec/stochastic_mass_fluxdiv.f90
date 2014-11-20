@@ -85,7 +85,7 @@ contains
     end do
     
     ! compute cell-centered cholesky-factored Lonsager^(1/2)
-    call compute_Lonsager(mla,rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager,the_bc_level)
+    call compute_Lonsager(mla,rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager)
                   
     ! compute face-centered cholesky factor of cell-centered cholesky factored Lonsager^(1/2)
     call average_cc_to_face(nlevs,Lonsager,Lonsager_fc,1,tran_bc_comp,nspecies**2,the_bc_level,.false.)

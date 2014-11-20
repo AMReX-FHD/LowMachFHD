@@ -33,47 +33,48 @@ contains
 
    ! local variables
    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-   integer :: n,i,ng,dm,nlevs
+   integer :: n,i,ng_1,ng_2,dm,nlevs
  
    ! pointer for rho(nspecies), rhotot(1), molarconc(nspecies) 
-   real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
-   real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for drho
+   real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rho    
+   real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for drho
 
    dm    = mla%dim     ! dimensionality
-   ng    = rho(1)%ng   ! number of ghost cells 
+   ng_1  = rho(1)%ng   ! number of ghost cells 
+   ng_2  = drho(1)%ng
    nlevs = mla%nlevel  ! number of levels 
  
     ! loop over all boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
-          dp => dataptr(rho(n),i)
-          dp1 => dataptr(drho(n),i)
+          dp1 => dataptr(rho(n),i)
+          dp2 => dataptr(drho(n),i)
           lo = lwb(get_box(rho(n),i))
           hi = upb(get_box(rho(n),i))
           
           select case(dm)
           case (2)
-             call correct_rho_with_drho_2d(dp(:,:,1,:),dp1(:,:,1,:),ng,lo,hi) 
+             call correct_rho_with_drho_2d(dp1(:,:,1,:),dp2(:,:,1,:),ng_1,ng_2,lo,hi) 
           case (3)
-             call correct_rho_with_drho_3d(dp(:,:,:,:),dp1(:,:,:,:),ng,lo,hi) 
+             call correct_rho_with_drho_3d(dp1(:,:,:,:),dp2(:,:,:,:),ng_1,ng_2,lo,hi) 
           end select
        end do
     end do
 
   end subroutine correct_rho_with_drho
 
-  subroutine correct_rho_with_drho_2d(rho,drho,ng,lo,hi)
+  subroutine correct_rho_with_drho_2d(rho,drho,ng_1,ng_2,lo,hi)
  
-    integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density- last dim for #species
-    real(kind=dp_t)  :: drho(lo(1)-ng:,lo(2)-ng:,:)      ! total density in each cell 
+    integer          :: lo(2), hi(2), ng_1, ng_2
+    real(kind=dp_t)  ::  rho(lo(1)-ng_1:,lo(2)-ng_1:,:) ! density- last dim for #species
+    real(kind=dp_t)  :: drho(lo(1)-ng_2:,lo(2)-ng_2:,:) ! total density in each cell 
         
     ! local variables
     integer          :: i,j
     
     ! for specific box, now start loops over alloted cells    
-    do j=lo(2)-ng, hi(2)+ng
-       do i=lo(1)-ng, hi(1)+ng
+    do j=lo(2)-ng_1, hi(2)+ng_1
+       do i=lo(1)-ng_1, hi(1)+ng_1
          
          call correct_rho_with_drho_local(rho(i,j,:),drho(i,j,:))
 
@@ -82,19 +83,19 @@ contains
  
   end subroutine correct_rho_with_drho_2d
 
-  subroutine correct_rho_with_drho_3d(rho,drho,ng,lo,hi)
+  subroutine correct_rho_with_drho_3d(rho,drho,ng_1,ng_2,lo,hi)
  
-    integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! density- last dim for #species
-    real(kind=dp_t)  :: drho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)     ! total density in each cell 
+    integer          :: lo(3), hi(3), ng_1, ng_2
+    real(kind=dp_t)  ::  rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:) ! density- last dim for #species
+    real(kind=dp_t)  :: drho(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:) ! total density in each cell 
     
     ! local variables
     integer          :: i,j,k
     
     ! for specific box, now start loops over alloted cells    
-    do k=lo(3)-ng, hi(3)+ng
-       do j=lo(2)-ng, hi(2)+ng
-          do i=lo(1)-ng, hi(1)+ng
+    do k=lo(3)-ng_1, hi(3)+ng_1
+       do j=lo(2)-ng_1, hi(2)+ng_1
+          do i=lo(1)-ng_1, hi(1)+ng_1
 
              call correct_rho_with_drho_local(rho(i,j,k,:),drho(i,j,k,:))
 
@@ -140,82 +141,92 @@ contains
 
    ! local variables
    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-   integer :: n,i,ng,dm,nlevs
+   integer :: n,i,dm,nlevs,ng_1,ng_2,ng_3,ng_4
  
    ! pointer for rho(nspecies), rhotot(1), molarconc(nspecies) 
-   real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
-   real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
-   real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molar concentrations
-   real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for total molar concentrations
+   real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rho    
+   real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
+   real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molar concentrations
+   real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for total molar concentrations
 
    dm    = mla%dim     ! dimensionality
-   ng    = rho(1)%ng   ! number of ghost cells 
+   ng_1  = rho(1)%ng   ! number of ghost cells 
+   ng_2  = rhotot(1)%ng
+   ng_3  = molarconc(1)%ng
+   ng_4  = molmtot(1)%ng
    nlevs = mla%nlevel  ! number of levels 
+
+   if (ng_3 .ne. ng_4) then
+      call bl_error('convert_cons_to_prim: ng for molarconc and molmass differ')
+   end if
  
     ! loop over all boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
-          dp => dataptr(rho(n),i)
-          dp1 => dataptr(rhotot(n),i)
-          dp2 => dataptr(molarconc(n),i)
-          dp3 => dataptr(molmtot(n),i)
+          dp1 => dataptr(rho(n),i)
+          dp2 => dataptr(rhotot(n),i)
+          dp3 => dataptr(molarconc(n),i)
+          dp4 => dataptr(molmtot(n),i)
           lo = lwb(get_box(rho(n),i))
           hi = upb(get_box(rho(n),i))
-          
           select case(dm)
           case (2)
-             call compute_molconc_rhotot_2d(dp(:,:,1,:),dp1(:,:,1,1),&
-                           dp2(:,:,1,:),dp3(:,:,1,1),ng,lo,hi) 
+             call compute_molconc_rhotot_2d(dp1(:,:,1,:),dp2(:,:,1,1), &
+                                            dp3(:,:,1,:),dp4(:,:,1,1), &
+                                            ng_1,ng_2,ng_3,ng_4,lo,hi) 
           case (3)
-             call compute_molconc_rhotot_3d(dp(:,:,:,:),dp1(:,:,:,1),&
-                           dp2(:,:,:,:),dp3(:,:,:,1),ng,lo,hi) 
+             call compute_molconc_rhotot_3d(dp1(:,:,:,:),dp2(:,:,:,1), &
+                                            dp3(:,:,:,:),dp4(:,:,:,1), &
+                                            ng_1,ng_2,ng_3,ng_4,lo,hi) 
           end select
        end do
     end do
 
   end subroutine convert_cons_to_prim
 
-  subroutine compute_molconc_rhotot_2d(rho,rhotot,molarconc,molmtot,ng,lo,hi)
+  subroutine compute_molconc_rhotot_2d(rho,rhotot,molarconc,molmtot, &
+                                       ng_1,ng_2,ng_3,ng_4,lo,hi)
  
-    integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density- last dim for #species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)     ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:) ! molar concentration
-    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)     ! total molar mass 
+    integer          :: lo(2), hi(2), ng_1, ng_2, ng_3, ng_4
+    real(kind=dp_t)  ::       rho(lo(1)-ng_1:,lo(2)-ng_1:,:)       ! density- last dim for #species
+    real(kind=dp_t)  ::    rhotot(lo(1)-ng_2:,lo(2)-ng_2:)     ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng_3:,lo(2)-ng_3:,:) ! molar concentration
+    real(kind=dp_t)  ::   molmtot(lo(1)-ng_4:,lo(2)-ng_4:)     ! total molar mass 
         
     ! local variables
     integer          :: i,j
     
     ! for specific box, now start loops over alloted cells    
-    do j=lo(2)-ng, hi(2)+ng
-       do i=lo(1)-ng, hi(1)+ng
+    do j=lo(2)-ng_3, hi(2)+ng_3
+       do i=lo(1)-ng_3, hi(1)+ng_3
          
-         call compute_molconc_rhotot_local(rho(i,j,:),rhotot(i,j),&
-              molarconc(i,j,:),molmtot(i,j))
+         call compute_molconc_rhotot_local(rho(i,j,:),rhotot(i,j), &
+                                           molarconc(i,j,:),molmtot(i,j))
 
        end do
     end do
  
   end subroutine compute_molconc_rhotot_2d
 
-  subroutine compute_molconc_rhotot_3d(rho,rhotot,molarconc,molmtot,ng,lo,hi)
+  subroutine compute_molconc_rhotot_3d(rho,rhotot,molarconc,molmtot, &
+                                       ng_1,ng_2,ng_3,ng_4,lo,hi)
  
-    integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! density- last dim for #species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)     ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! molar concentration
-    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)     ! total molar mass 
+    integer          :: lo(3), hi(3), ng_1, ng_2, ng_3, ng_4
+    real(kind=dp_t)  ::       rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:) ! density- last dim for #species
+    real(kind=dp_t)  ::    rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)   ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:) ! molar concentration
+    real(kind=dp_t)  ::   molmtot(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:)   ! total molar mass 
     
     ! local variables
     integer          :: i,j,k
     
     ! for specific box, now start loops over alloted cells    
-    do k=lo(3)-ng, hi(3)+ng
-       do j=lo(2)-ng, hi(2)+ng
-          do i=lo(1)-ng, hi(1)+ng
+    do k=lo(3)-ng_3, hi(3)+ng_3
+       do j=lo(2)-ng_3, hi(2)+ng_3
+          do i=lo(1)-ng_3, hi(1)+ng_3
 
              call compute_molconc_rhotot_local(rho(i,j,k,:),rhotot(i,j,k),&
-                  molarconc(i,j,k,:),molmtot(i,j,k))
+                                               molarconc(i,j,k,:),molmtot(i,j,k))
 
           end do
        end do
@@ -265,42 +276,43 @@ contains
 
    ! local variables
    integer :: lo(mla%dim), hi(mla%dim)
-   integer :: n,i,ng,dm,nlevs
+   integer :: n,i,dm,nlevs,ng_1,ng_2
  
    ! pointer for rho(nspecies), rhotot(1), molarconc(nspecies) 
-   real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
-   real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
+   real(kind=dp_t), pointer        :: dp1(:,:,:,:)   ! for rho    
+   real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
 
    dm    = mla%dim     ! dimensionality
-   ng    = rho(1)%ng   ! number of ghost cells 
+   ng_1  = rho(1)%ng   ! number of ghost cells 
+   ng_2  = rhotot(1)%ng
    nlevs = mla%nlevel  ! number of levels 
  
     ! loop over all boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
-          dp => dataptr(rho(n),i)
-          dp1 => dataptr(rhotot(n),i)
+          dp1 => dataptr(rho(n),i)
+          dp2 => dataptr(rhotot(n),i)
           lo = lwb(get_box(rho(n),i))
           hi = upb(get_box(rho(n),i))
           
           select case(dm)
           case (2)
-             call compute_rhotot_2d(dp(:,:,1,:),dp1(:,:,1,1),&
-                                    ng,lo,hi) 
+             call compute_rhotot_2d(dp1(:,:,1,:),dp2(:,:,1,1),&
+                                    ng_1,ng_2,lo,hi) 
           case (3)
-             call compute_rhotot_3d(dp(:,:,:,:),dp1(:,:,:,1),&
-                                    ng,lo,hi) 
+             call compute_rhotot_3d(dp1(:,:,:,:),dp2(:,:,:,1),&
+                                    ng_1,ng_2,lo,hi) 
           end select
        end do
     end do
 
   end subroutine compute_rhotot
 
-  subroutine compute_rhotot_2d(rho,rhotot,ng,lo,hi)
+  subroutine compute_rhotot_2d(rho,rhotot,ng_1,ng_2,lo,hi)
  
-    integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)       ! density- last dim for #species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)     ! total density in each cell 
+    integer          :: lo(2), hi(2), ng_1, ng_2
+    real(kind=dp_t)  ::    rho(lo(1)-ng_1:,lo(2)-ng_1:,:) ! density- last dim for #species
+    real(kind=dp_t)  :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:)   ! total density in each cell 
         
     ! local variables
     integer          :: i,j,n
@@ -320,11 +332,11 @@ contains
  
   end subroutine compute_rhotot_2d
 
-  subroutine compute_rhotot_3d(rho,rhotot,ng,lo,hi)
+  subroutine compute_rhotot_3d(rho,rhotot,ng_1,ng_2,lo,hi)
  
-    integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! density- last dim for #species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)     ! total density in each cell 
+    integer          :: lo(3), hi(3), ng_1, ng_2
+    real(kind=dp_t)  ::    rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:) ! density- last dim for #species
+    real(kind=dp_t)  :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)   ! total density in each cell 
     
     ! local variables
     integer          :: i,j,k,n
@@ -360,10 +372,10 @@ contains
  
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: n,i,ng,dm,nlevs
+    integer :: n,i,dm,nlevs,ng_0,ng_1,ng_2,ng_3,ng_4,ng_5
 
     ! assign pointers for multifabs to be passed
-    real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
+    real(kind=dp_t), pointer        :: dp0(:,:,:,:)  ! for rho    
     real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
@@ -371,50 +383,57 @@ contains
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Gama 
 
     dm    = mla%dim     ! dimensionality
-    ng    = rho(1)%ng   ! number of ghost cells 
+    ng_0  = rho(1)%ng   ! number of ghost cells 
+    ng_1  = rhotot(1)%ng
+    ng_2  = molarconc(1)%ng
+    ng_3  = molmtot(1)%ng
+    ng_4  = Hessian(1)%ng
+    ng_5  = Gama(1)%ng
     nlevs = mla%nlevel  ! number of levels 
  
     ! loop over all boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
-          dp => dataptr(rho(n),i)
+          dp0 => dataptr(rho(n),i)
           dp1 => dataptr(rhotot(n),i)
           dp2 => dataptr(molarconc(n),i)
           dp3 => dataptr(molmtot(n),i)
           dp4 => dataptr(Hessian(n),i)
           dp5 => dataptr(Gama(n),i)
           lo = lwb(get_box(rho(n),i))
-          hi = upb(get_box(rho(n),i))
-          
+          hi = upb(get_box(rho(n),i))          
           select case(dm)
           case (2)
-             call compute_Gama_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
-                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),ng,lo,hi) 
+             call compute_Gama_2d(dp0(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
+                                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:), &
+                                  ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi) 
           case (3)
-             call compute_Gama_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
-                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),ng,lo,hi) 
+             call compute_Gama_3d(dp0(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
+                                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:), &
+                                  ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi) 
           end select
        end do
     end do
   
   end subroutine compute_Gama
   
-  subroutine compute_Gama_2d(rho,rhotot,molarconc,molmtot,Hessian,Gama,ng,lo,hi)
+  subroutine compute_Gama_2d(rho,rhotot,molarconc,molmtot,Hessian,Gama, &
+                             ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi)
 
-    integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)       ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)  ! molar concentration 
-    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
-    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,:)    ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,:)       ! last dimension for nspecies^2
+    integer          :: lo(2), hi(2), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5
+    real(kind=dp_t)  ::       rho(lo(1)-ng_0:,lo(2)-ng_0:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::    rhotot(lo(1)-ng_1:,lo(2)-ng_1:)   ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng_2:,lo(2)-ng_2:,:) ! molar concentration 
+    real(kind=dp_t)  ::   molmtot(lo(1)-ng_3:,lo(2)-ng_3:)   ! total molar mass 
+    real(kind=dp_t)  ::   Hessian(lo(1)-ng_4:,lo(2)-ng_4:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::      Gama(lo(1)-ng_5:,lo(2)-ng_5:,:) ! last dimension for nspecies^2
 
     ! local varialbes
     integer          :: i,j
 
     ! for specific box, now start loops over alloted cells 
-    do j=lo(2)-ng,hi(2)+ng
-       do i=lo(1)-ng,hi(1)+ng
+    do j=lo(2)-ng_5,hi(2)+ng_5
+       do i=lo(1)-ng_5,hi(1)+ng_5
        
           call compute_Gama_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
                                   molmtot(i,j),Hessian(i,j,:),Gama(i,j,:))
@@ -424,23 +443,24 @@ contains
    
   end subroutine compute_Gama_2d
 
-  subroutine compute_Gama_3d(rho,rhotot,molarconc,molmtot,Hessian,Gama,ng,lo,hi)
+  subroutine compute_Gama_3d(rho,rhotot,molarconc,molmtot,Hessian,Gama, &
+                             ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi)
  
-    integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! density; last dimension for species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)  ! molar concentration; 
-    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total molar mass 
-    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! last dimension for nspecies^2
+    integer          :: lo(3), hi(3), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5
+    real(kind=dp_t)  ::       rho(lo(1)-ng_0:,lo(2)-ng_0:,lo(3)-ng_0:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::    rhotot(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)   ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:) ! molar concentration; 
+    real(kind=dp_t)  ::   molmtot(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)   ! total molar mass 
+    real(kind=dp_t)  ::   Hessian(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::      Gama(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:) ! last dimension for nspecies^2
 
     ! local varialbes
     integer          :: i,j,k
 
     ! for specific box, now start loops over alloted cells 
-    do k=lo(3)-ng,hi(3)+ng
-       do j=lo(2)-ng,hi(2)+ng
-          do i=lo(1)-ng,hi(1)+ng
+    do k=lo(3)-ng_5,hi(3)+ng_5
+       do j=lo(2)-ng_5,hi(2)+ng_5
+          do i=lo(1)-ng_5,hi(1)+ng_5
 
              call compute_Gama_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
                                      molmtot(i,j,k),Hessian(i,j,k,:),Gama(i,j,k,:))
@@ -489,7 +509,7 @@ contains
  
   end subroutine compute_Gama_local
 
-  subroutine compute_chi(mla,rho,rhotot,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp,the_bc_level)
+  subroutine compute_chi(mla,rho,rhotot,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
    
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -500,72 +520,80 @@ contains
     type(multifab) , intent(in   )  :: D_therm(:) 
     type(multifab) , intent(in   )  :: Temp(:) 
     type(multifab) , intent(inout)  :: zeta_by_Temp(:) 
-    type(bc_level) , intent(in   )  :: the_bc_level(:)
 
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: n,i,ng,dm,nlevs
+    integer :: n,i,dm,nlevs,ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
  
     ! pointer for rho(nspecies), molarconc(nspecies) 
-    real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
+    real(kind=dp_t), pointer        :: dp0(:,:,:,:)  ! for rho    
     real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for chi
-    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for D_bar
-    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Temp
-    real(kind=dp_t), pointer        :: dp7(:,:,:,:)  ! for zeta_by_Temp
-    real(kind=dp_t), pointer        :: dp8(:,:,:,:)  ! for D_therm
+    real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_bar
+    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Temp
+    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for zeta_by_Temp
+    real(kind=dp_t), pointer        :: dp7(:,:,:,:)  ! for D_therm
 
     dm = mla%dim        ! dimensionality
-    ng = rho(1)%ng      ! number of ghost cells 
+    ng_0 = rho(1)%ng    ! number of ghost cells 
+    ng_1 = rhotot(1)%ng
+    ng_2 = molarconc(1)%ng
+    ng_3 = chi(1)%ng
+    ng_4 = D_bar(1)%ng
+    ng_5 = Temp(1)%ng
+    ng_6 = zeta_by_Temp(1)%ng
+    ng_7 = D_therm(1)%ng
     nlevs = mla%nlevel  ! number of levels 
  
     ! loop over all boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
-          dp  => dataptr(rho(n), i)
+          dp0  => dataptr(rho(n), i)
           dp1 => dataptr(rhotot(n), i)
           dp2 => dataptr(molarconc(n), i)
           dp3 => dataptr(chi(n), i)
-          dp5 => dataptr(D_bar(n), i)
-          dp6 => dataptr(Temp(n), i)
-          dp7 => dataptr(zeta_by_Temp(n), i)
-          dp8 => dataptr(D_therm(n), i)
+          dp4 => dataptr(D_bar(n), i)
+          dp5 => dataptr(Temp(n), i)
+          dp6 => dataptr(zeta_by_Temp(n), i)
+          dp7 => dataptr(D_therm(n), i)
           lo  =  lwb(get_box(rho(n), i))
-          hi  =  upb(get_box(rho(n), i))
-          
+          hi  =  upb(get_box(rho(n), i))          
           select case(dm)
           case (2)
-             call compute_chi_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),dp3(:,:,1,:),&
-                  dp5(:,:,1,:),dp6(:,:,1,1),dp7(:,:,1,:),dp8(:,:,1,:),ng,lo,hi) 
+             call compute_chi_2d(dp0(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),dp3(:,:,1,:),&
+                                 dp4(:,:,1,:),dp5(:,:,1,1),dp6(:,:,1,:),dp7(:,:,1,:),&
+                                 ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo,hi) 
           case (3)
-             call compute_chi_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),dp3(:,:,:,:),&
-                  dp5(:,:,:,:),dp6(:,:,:,1),dp7(:,:,:,:),dp8(:,:,:,:),ng,lo,hi) 
+             call compute_chi_3d(dp0(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),dp3(:,:,:,:),&
+                                 dp4(:,:,:,:),dp5(:,:,:,1),dp6(:,:,:,:),dp7(:,:,:,:),&
+                                 ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo,hi) 
           end select
        end do
     end do
 
   end subroutine compute_chi
  
-  subroutine compute_chi_2d(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm,ng,lo,hi)
+  subroutine compute_chi_2d(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm, &
+                            ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo,hi)
 
-    integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)          ! density; last dimension for species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)        ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)    ! molar concentration 
-    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,:)          ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,:)         ! MS diff-coeffs 
-    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:)           ! Temperature 
-    real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng:,lo(2)-ng:,:) ! zeta/T
-    real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,:)      ! thermo diff-coeffs 
+    integer          :: lo(2), hi(2), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
+    real(kind=dp_t)  ::          rho(lo(1)-ng_0:,lo(2)-ng_0:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::       rhotot(lo(1)-ng_1:,lo(2)-ng_1:)   ! total density in each cell 
+    real(kind=dp_t)  ::    molarconc(lo(1)-ng_2:,lo(2)-ng_2:,:) ! molar concentration 
+    real(kind=dp_t)  ::          chi(lo(1)-ng_3:,lo(2)-ng_3:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::        D_bar(lo(1)-ng_4:,lo(2)-ng_4:,:) ! MS diff-coeffs 
+    real(kind=dp_t)  ::         Temp(lo(1)-ng_5:,lo(2)-ng_5:)   ! Temperature 
+    real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng_6:,lo(2)-ng_6:,:) ! zeta/T
+    real(kind=dp_t)  ::      D_therm(lo(1)-ng_7:,lo(2)-ng_7:,:) ! thermo diff-coeffs 
 
     ! local variables
     integer          :: i,j,row
     real(kind=dp_t), dimension(nspecies,nspecies) :: chilocal
 
     ! for specific box, now start loops over alloted cells 
-    do j=lo(2)-ng,hi(2)+ng
-       do i=lo(1)-ng,hi(1)+ng
+    do j=lo(2)-ng_3,hi(2)+ng_3
+       do i=lo(1)-ng_3,hi(1)+ng_3
     
           call compute_chi_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
                                  chi(i,j,:),D_bar(i,j,:),Temp(i,j),zeta_by_Temp(i,j,:),&
@@ -591,25 +619,26 @@ contains
 
   end subroutine compute_chi_2d
 
-  subroutine compute_chi_3d(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm,ng,lo,hi)
+  subroutine compute_chi_3d(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm, &
+                            ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo,hi)
    
-    integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)          ! density; last dimension for species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)        ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)    ! molar concentration; 
-    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)          ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! SM diffusion constants 
-    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)           ! Temperature 
-    real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! zeta/T
-    real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)      ! thermo diffusion constants 
+    integer          :: lo(3), hi(3), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
+    real(kind=dp_t)  ::          rho(lo(1)-ng_0:,lo(2)-ng_0:,lo(3)-ng_0:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::       rhotot(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)   ! total density in each cell 
+    real(kind=dp_t)  ::    molarconc(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:) ! molar concentration; 
+    real(kind=dp_t)  ::          chi(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::        D_bar(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:) ! SM diffusion constants 
+    real(kind=dp_t)  ::         Temp(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:)   ! Temperature 
+    real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng_6:,lo(2)-ng_6:,lo(3)-ng_6:,:) ! zeta/T
+    real(kind=dp_t)  ::      D_therm(lo(1)-ng_7:,lo(2)-ng_7:,lo(3)-ng_7:,:) ! thermo diffusion constants 
     
     ! local variables
     integer          :: i,j,k
 
     ! for specific box, now start loops over alloted cells 
-    do k=lo(3)-ng,hi(3)+ng
-       do j=lo(2)-ng,hi(2)+ng
-          do i=lo(1)-ng,hi(1)+ng
+    do k=lo(3)-ng_3,hi(3)+ng_3
+       do j=lo(2)-ng_3,hi(2)+ng_3
+          do i=lo(1)-ng_3,hi(1)+ng_3
        
              call compute_chi_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
                                     chi(i,j,k,:),D_bar(i,j,k,:),Temp(i,j,k),zeta_by_Temp(i,j,k,:),&
@@ -783,7 +812,7 @@ contains
           
   end subroutine compute_chi_lapack
 
-  subroutine compute_Lonsager(mla,rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager,the_bc_level)
+  subroutine compute_Lonsager(mla,rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager)
  
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -793,14 +822,13 @@ contains
     type(multifab) , intent(in   )  :: chi(:) 
     type(multifab) , intent(in   )  :: Gama(:) 
     type(multifab) , intent(inout)  :: Lonsager(:)
-    type(bc_level) , intent(in   )  :: the_bc_level(:)
 
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: n,i,ng,dm,nlevs
+    integer :: n,i,dm,nlevs,ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
  
     ! pointer for rho(nspecies), molarconc(nspecies) 
-    real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
+    real(kind=dp_t), pointer        :: dp0(:,:,:,:)  ! for rho    
     real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
@@ -809,13 +837,19 @@ contains
     real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Lonsager 
 
     dm = mla%dim        ! dimensionality
-    ng = rho(1)%ng      ! number of ghost cells 
+    ng_0 = rho(1)%ng    ! number of ghost cells 
+    ng_1 = rhotot(1)%ng
+    ng_2 = molarconc(1)%ng
+    ng_3 = molmtot(1)%ng
+    ng_4 = chi(1)%ng
+    ng_5 = Gama(1)%ng
+    ng_6 = Lonsager(1)%ng
     nlevs = mla%nlevel  ! number of levels 
  
     ! loop over all boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
-          dp => dataptr(rho(n), i)
+          dp0 => dataptr(rho(n), i)
           dp1 => dataptr(rhotot(n), i)
           dp2 => dataptr(molarconc(n),i)
           dp3 => dataptr(molmtot(n),i)
@@ -827,38 +861,41 @@ contains
           
           select case(dm)
           case (2)
-             call compute_Lonsager_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
-                           dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,:),ng,lo,hi) 
+             call compute_Lonsager_2d(dp0(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
+                                      dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,:),&
+                                      ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi) 
           case (3)
-             call compute_Lonsager_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
-                           dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,:),ng,lo,hi) 
+             call compute_Lonsager_3d(dp0(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
+                                      dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,:),&
+                                      ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi) 
           end select
        end do
     end do
  
   end subroutine compute_Lonsager
   
-  subroutine compute_Lonsager_2d(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager,ng,lo,hi)
+  subroutine compute_Lonsager_2d(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager, &
+                                 ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi)
   
-    integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)         ! density; last dimension for species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)       ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)   ! molar concentration
-    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)       ! total molar mass 
-    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,:)         ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,:)        ! non-ideality coefficient 
-    real(kind=dp_t)  :: Lonsager(lo(1)-ng:,lo(2)-ng:,:) ! last dimension for nspecies^2
+    integer          :: lo(2), hi(2), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
+    real(kind=dp_t)  ::       rho(lo(1)-ng_0:,lo(2)-ng_0:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::    rhotot(lo(1)-ng_1:,lo(2)-ng_1:)   ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng_2:,lo(2)-ng_2:,:) ! molar concentration
+    real(kind=dp_t)  ::   molmtot(lo(1)-ng_3:,lo(2)-ng_3:)   ! total molar mass 
+    real(kind=dp_t)  ::       chi(lo(1)-ng_4:,lo(2)-ng_4:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::      Gama(lo(1)-ng_5:,lo(2)-ng_5:,:) ! non-ideality coefficient 
+    real(kind=dp_t)  ::  Lonsager(lo(1)-ng_6:,lo(2)-ng_6:,:) ! last dimension for nspecies^2
 
     ! local variables
     integer          :: i,j,row
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager_local 
  
     ! for specific box, now start loops over alloted cells 
-    do j=lo(2)-ng,hi(2)+ng
-       do i=lo(1)-ng,hi(1)+ng
+    do j=lo(2)-ng_6,hi(2)+ng_6
+       do i=lo(1)-ng_6,hi(1)+ng_6
         
           call compute_Lonsager_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
-                          molmtot(i,j),chi(i,j,:),Gama(i,j,:),Lonsager(i,j,:))
+                                      molmtot(i,j),chi(i,j,:),Gama(i,j,:),Lonsager(i,j,:))
 
           if(.false.) then
           if(i.eq.7 .and. j.eq.14) then
@@ -879,27 +916,28 @@ contains
 
   end subroutine compute_Lonsager_2d
 
-  subroutine compute_Lonsager_3d(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager,ng,lo,hi)
+  subroutine compute_Lonsager_3d(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager, &
+                                 ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi)
 
-    integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! density; last dimension for species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)       ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! molar concentration
-    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)     ! total molar mass 
-    real(kind=dp_t)  :: chi(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Gama(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)        ! non-ideality coefficient 
-    real(kind=dp_t)  :: Lonsager(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! last dimension for nspecies^2
+    integer          :: lo(3), hi(3), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
+    real(kind=dp_t)  ::       rho(lo(1)-ng_0:,lo(2)-ng_0:,lo(3)-ng_0:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::    rhotot(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)   ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:) ! molar concentration
+    real(kind=dp_t)  ::   molmtot(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)   ! total molar mass 
+    real(kind=dp_t)  ::       chi(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::      Gama(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:) ! non-ideality coefficient 
+    real(kind=dp_t)  ::  Lonsager(lo(1)-ng_6:,lo(2)-ng_6:,lo(3)-ng_6:,:) ! last dimension for nspecies^2
     
     ! local variables
     integer          :: i,j,k
 
     ! for specific box, now start loops over alloted cells 
-    do k=lo(3)-ng,hi(3)+ng
-       do j=lo(2)-ng,hi(2)+ng
-          do i=lo(1)-ng,hi(1)+ng
+    do k=lo(3)-ng_6,hi(3)+ng_6
+       do j=lo(2)-ng_6,hi(2)+ng_6
+          do i=lo(1)-ng_6,hi(1)+ng_6
        
              call compute_Lonsager_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
-                          molmtot(i,j,k),chi(i,j,k,:),Gama(i,j,k,:),Lonsager(i,j,k,:))
+                                         molmtot(i,j,k),chi(i,j,k,:),Gama(i,j,k,:),Lonsager(i,j,k,:))
               
          end do
       end do
@@ -953,29 +991,30 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
 
   end subroutine compute_Lonsager_local
 
-  subroutine compute_rhoWchi(mla,rho,rhotot,chi,rhoWchi,the_bc_level)
+  subroutine compute_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
  
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rhotot(:) 
     type(multifab) , intent(in   )  :: chi(:) 
     type(multifab) , intent(inout)  :: rhoWchi(:) 
-    type(bc_level) , intent(in   )  :: the_bc_level(:)
 
     ! local variables
-    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: n,i,ng,dm,nlevs
+    integer :: lo(mla%dim), hi(mla%dim)
+    integer :: n,i,dm,nlevs,ng_1,ng_2,ng_3,ng_4
  
     ! pointer for rho(nspecies), molarconc(nspecies) 
-    real(kind=dp_t), pointer        :: dp1(:,:,:,:)   ! for rho    
+    real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rho    
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for chi
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for rhoWchi
 
     dm = mla%dim        ! dimensionality
-    ng = rho(1)%ng      ! number of ghost cells 
+    ng_1 = rho(1)%ng    ! number of ghost cells 
+    ng_2 = rhotot(1)%ng
+    ng_3 = chi(1)%ng
+    ng_4 = rhoWchi(1)%ng
     nlevs = mla%nlevel  ! number of levels 
-
  
     ! loop over all boxes 
     do n=1,nlevs
@@ -989,30 +1028,32 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
           
           select case(dm)
           case (2)
-             call compute_rhoWchi_2d(dp1(:,:,1,:),dp2(:,:,1,1),dp3(:,:,1,:),dp4(:,:,1,:),ng,lo,hi) 
+             call compute_rhoWchi_2d(dp1(:,:,1,:),dp2(:,:,1,1),dp3(:,:,1,:),dp4(:,:,1,:), &
+                                     ng_1,ng_2,ng_3,ng_4,lo,hi) 
           case (3)
-             call compute_rhoWchi_3d(dp1(:,:,:,:),dp2(:,:,:,1),dp3(:,:,:,:),dp4(:,:,:,:),ng,lo,hi) 
+             call compute_rhoWchi_3d(dp1(:,:,:,:),dp2(:,:,:,1),dp3(:,:,:,:),dp4(:,:,:,:), &
+                                     ng_1,ng_2,ng_3,ng_4,lo,hi) 
           end select
        end do
     end do
  
   end subroutine compute_rhoWchi
   
-  subroutine compute_rhoWchi_2d(rho,rhotot,chi,rhoWchi,ng,lo,hi)
+  subroutine compute_rhoWchi_2d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,lo,hi)
   
-    integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  ::     rho(lo(1)-ng:,lo(2)-ng:,:)         ! density; last dimension for species
-    real(kind=dp_t)  ::  rhotot(lo(1)-ng:,lo(2)-ng:)       ! total density in each cell
-    real(kind=dp_t)  ::     chi(lo(1)-ng:,lo(2)-ng:,:)         ! last dimension for nspecies^2
-    real(kind=dp_t)  :: rhoWchi(lo(1)-ng:,lo(2)-ng:,:) ! last dimension for nspecies^2
+    integer          :: lo(2), hi(2), ng_1,ng_2,ng_3,ng_4
+    real(kind=dp_t)  ::     rho(lo(1)-ng_1:,lo(2)-ng_1:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::  rhotot(lo(1)-ng_2:,lo(2)-ng_2:)   ! total density in each cell
+    real(kind=dp_t)  ::     chi(lo(1)-ng_3:,lo(2)-ng_3:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  :: rhoWchi(lo(1)-ng_4:,lo(2)-ng_4:,:) ! last dimension for nspecies^2
 
     ! local variables
     integer          :: i,j,row,column
     real(kind=dp_t), dimension(nspecies,nspecies) :: rhoWchiloc 
   
     ! for specific box, now start loops over alloted cells 
-    do j=lo(2)-ng,hi(2)+ng
-       do i=lo(1)-ng,hi(1)+ng
+    do j=lo(2)-ng_4,hi(2)+ng_4
+       do i=lo(1)-ng_4,hi(1)+ng_4
         
           call compute_rhoWchi_local(rho(i,j,:),rhotot(i,j),chi(i,j,:),rhoWchi(i,j,:))
 
@@ -1033,21 +1074,21 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
 
   end subroutine compute_rhoWchi_2d
 
-  subroutine compute_rhoWchi_3d(rho,rhotot,chi,rhoWchi,ng,lo,hi)
+  subroutine compute_rhoWchi_3d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,lo,hi)
 
-    integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  ::     rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! density; last dimension for species
-    real(kind=dp_t)  ::  rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)       ! total density in each cell 
-    real(kind=dp_t)  ::     chi(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)         ! last dimension for nspecies^2
-    real(kind=dp_t)  :: rhoWchi(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! last dimension for nspecies^2
+    integer          :: lo(3), hi(3), ng_1,ng_2,ng_3,ng_4
+    real(kind=dp_t)  ::     rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::  rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)   ! total density in each cell 
+    real(kind=dp_t)  ::     chi(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  :: rhoWchi(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:) ! last dimension for nspecies^2
     
     ! local variables
     integer          :: i,j,k
 
     ! for specific box, now start loops over alloted cells 
-    do k=lo(3)-ng,hi(3)+ng
-       do j=lo(2)-ng,hi(2)+ng
-          do i=lo(1)-ng,hi(1)+ng
+    do k=lo(3)-ng_4,hi(3)+ng_4
+       do j=lo(2)-ng_4,hi(2)+ng_4
+          do i=lo(1)-ng_4,hi(1)+ng_4
        
              call compute_rhoWchi_local(rho(i,j,k,:),rhotot(i,j,k),chi(i,j,k,:),rhoWchi(i,j,k,:))
               
@@ -1092,14 +1133,18 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
   
   end subroutine set_Xij
 
-  subroutine compute_baro_coeff(mla,baro_coef,rho,rhotot,Temp,the_bc_level)
+  subroutine compute_baro_coeff(mla,baro_coef,rho,rhotot,Temp)
  
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(inout)  :: baro_coef(:)
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rhotot(:) 
     type(multifab) , intent(in   )  :: Temp(:) 
-    type(bc_level) , intent(in   )  :: the_bc_level(:)
+
+    ! local
+    integer :: lo(mla%dim), hi(mla%dim)
+    integer :: n,i,dm,nlevs
+
 
 
   end subroutine compute_baro_coeff

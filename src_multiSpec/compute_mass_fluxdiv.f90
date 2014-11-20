@@ -144,10 +144,10 @@ contains
     call compute_Gama(mla,rho,rhotot_temp,molarconc,molmtot,Hessian,Gama,the_bc_level)
    
     ! compute chi 
-    call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp,the_bc_level)
+    call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
       
     ! compute rho*W*chi
-    call compute_rhoWchi(mla,rho,rhotot_temp,chi,rhoWchi,the_bc_level)
+    call compute_rhoWchi(mla,rho,rhotot_temp,chi,rhoWchi)
 
     ! compute cell-centered barodiffusion coefficient, (phi-w) / (n kB T)
     if (barodiffusion_type .gt. 0) then
