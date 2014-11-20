@@ -65,7 +65,7 @@ contains
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
     end do
 
-    call compute_mass_fluxdiv(mla,rho,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
+    call compute_mass_fluxdiv(mla,rho,gradp_baro,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
                               D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                               zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                               the_bc_level)
@@ -83,13 +83,14 @@ contains
 
   end subroutine compute_mass_fluxdiv_wrapper
 
-  subroutine compute_mass_fluxdiv(mla,rho,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
+  subroutine compute_mass_fluxdiv(mla,rho,gradp_baro,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                                   zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
                                   the_bc_level)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
+    type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(inout)   :: molarconc(:)
     type(multifab) , intent(inout)   :: molmtot(:)
     type(multifab) , intent(inout)   :: chi(:)
@@ -154,7 +155,7 @@ contains
 
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
-    call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
+    call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,gradp_baro,molarconc,rhoWchi,Gama,&
                                 diff_fluxdiv,Temp,zeta_by_Temp,flux_total,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv

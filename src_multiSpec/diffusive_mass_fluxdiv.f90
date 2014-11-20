@@ -23,12 +23,13 @@ module diffusive_mass_fluxdiv_module
 
 contains
 
-  subroutine diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
+  subroutine diffusive_mass_fluxdiv(mla,rho,rhotot,gradp_baro,molarconc,rhoWchi,Gama,&
                                     diff_fluxdiv,Temp,zeta_by_Temp,flux_total,dx,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rhotot(:)
+    type(multifab) , intent(in   )  :: gradp_baro(:,:)
     type(multifab) , intent(in   )  :: molarconc(:)
     type(multifab) , intent(in   )  :: rhoWchi(:)
     type(multifab) , intent(in   )  :: Gama(:)
@@ -59,8 +60,8 @@ contains
     
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
-    call diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,&
-                        zeta_by_Temp,flux,dx,the_bc_level)
+    call diffusive_mass_flux(mla,rho,rhotot,gradp_baro,molarconc,rhoWchi,Gama,Temp,&
+                             zeta_by_Temp,flux,dx,the_bc_level)
     
     ! add fluxes to flux_total
     do n=1,nlevs
@@ -81,11 +82,13 @@ contains
 
   end subroutine diffusive_mass_fluxdiv
  
-  subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,zeta_by_Temp,flux,dx,the_bc_level)
+  subroutine diffusive_mass_flux(mla,rho,rhotot,gradp_baro,molarconc,rhoWchi,Gama, &
+                                 Temp,zeta_by_Temp,flux,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:) 
     type(multifab) , intent(in   ) :: rhotot(:) 
+    type(multifab) , intent(in   ) :: gradp_baro(:,:)
     type(multifab) , intent(in   ) :: molarconc(:) 
     type(multifab) , intent(in   ) :: rhoWchi(:)  
     type(multifab) , intent(in   ) :: Gama(:)  
