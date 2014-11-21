@@ -3,7 +3,7 @@ module mass_flux_utilities_module
   use multifab_module
   use define_bc_module
   use ml_layout_module
-  use probin_common_module, only: k_B, molmass
+  use probin_common_module, only: k_B, molmass, rhobar
   use probin_multispecies_module, only: nspecies, use_lapack, fraction_tolerance, &
        is_ideal_mixture, inverse_type, is_nonisothermal, chi_iterations
   use matrix_utilities 
@@ -20,7 +20,7 @@ module mass_flux_utilities_module
             compute_chi, &
             compute_rhoWchi, &
             compute_Lonsager, &
-            compute_baro_coeff
+            compute_baro_coef
 
 contains
   
@@ -50,8 +50,7 @@ contains
           dp1 => dataptr(rho(n),i)
           dp2 => dataptr(drho(n),i)
           lo = lwb(get_box(rho(n),i))
-          hi = upb(get_box(rho(n),i))
-          
+          hi = upb(get_box(rho(n),i))          
           select case(dm)
           case (2)
              call correct_rho_with_drho_2d(dp1(:,:,1,:),dp2(:,:,1,:),ng_1,ng_2,lo,hi) 
@@ -367,7 +366,7 @@ contains
     type(multifab),  intent(in   )  :: molarconc(:) 
     type(multifab),  intent(in   )  :: molmtot(:) 
     type(multifab),  intent(in   )  :: Hessian(:)    ! Hessian matrix
-    type(multifab),  intent(inout)  :: Gama(:)       ! Non-ideality coefficient 
+    type(multifab),  intent(inout)  :: Gama(:)       ! Non-ideality coeficient 
     type(bc_level),  intent(in   )  :: the_bc_level(:)
  
     ! local variables
@@ -582,10 +581,10 @@ contains
     real(kind=dp_t)  ::       rhotot(lo(1)-ng_1:,lo(2)-ng_1:)   ! total density in each cell 
     real(kind=dp_t)  ::    molarconc(lo(1)-ng_2:,lo(2)-ng_2:,:) ! molar concentration 
     real(kind=dp_t)  ::          chi(lo(1)-ng_3:,lo(2)-ng_3:,:) ! last dimension for nspecies^2
-    real(kind=dp_t)  ::        D_bar(lo(1)-ng_4:,lo(2)-ng_4:,:) ! MS diff-coeffs 
+    real(kind=dp_t)  ::        D_bar(lo(1)-ng_4:,lo(2)-ng_4:,:) ! MS diff-coefs 
     real(kind=dp_t)  ::         Temp(lo(1)-ng_5:,lo(2)-ng_5:)   ! Temperature 
     real(kind=dp_t)  :: zeta_by_Temp(lo(1)-ng_6:,lo(2)-ng_6:,:) ! zeta/T
-    real(kind=dp_t)  ::      D_therm(lo(1)-ng_7:,lo(2)-ng_7:,:) ! thermo diff-coeffs 
+    real(kind=dp_t)  ::      D_therm(lo(1)-ng_7:,lo(2)-ng_7:,:) ! thermo diff-coefs 
 
     ! local variables
     integer          :: i,j,row
@@ -883,7 +882,7 @@ contains
     real(kind=dp_t)  :: molarconc(lo(1)-ng_2:,lo(2)-ng_2:,:) ! molar concentration
     real(kind=dp_t)  ::   molmtot(lo(1)-ng_3:,lo(2)-ng_3:)   ! total molar mass 
     real(kind=dp_t)  ::       chi(lo(1)-ng_4:,lo(2)-ng_4:,:) ! last dimension for nspecies^2
-    real(kind=dp_t)  ::      Gama(lo(1)-ng_5:,lo(2)-ng_5:,:) ! non-ideality coefficient 
+    real(kind=dp_t)  ::      Gama(lo(1)-ng_5:,lo(2)-ng_5:,:) ! non-ideality coeficient 
     real(kind=dp_t)  ::  Lonsager(lo(1)-ng_6:,lo(2)-ng_6:,:) ! last dimension for nspecies^2
 
     ! local variables
@@ -925,7 +924,7 @@ contains
     real(kind=dp_t)  :: molarconc(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:) ! molar concentration
     real(kind=dp_t)  ::   molmtot(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)   ! total molar mass 
     real(kind=dp_t)  ::       chi(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:) ! last dimension for nspecies^2
-    real(kind=dp_t)  ::      Gama(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:) ! non-ideality coefficient 
+    real(kind=dp_t)  ::      Gama(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:) ! non-ideality coeficient 
     real(kind=dp_t)  ::  Lonsager(lo(1)-ng_6:,lo(2)-ng_6:,lo(3)-ng_6:,:) ! last dimension for nspecies^2
     
     ! local variables
@@ -1133,7 +1132,7 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
   
   end subroutine set_Xij
 
-  subroutine compute_baro_coeff(mla,baro_coef,rho,rhotot,Temp)
+  subroutine compute_baro_coef(mla,baro_coef,rho,rhotot,Temp)
  
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(inout)  :: baro_coef(:)
@@ -1143,10 +1142,68 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
 
     ! local
     integer :: lo(mla%dim), hi(mla%dim)
-    integer :: n,i,dm,nlevs
+    integer :: n,i,dm,nlevs,ng_1,ng_2,ng_3,ng_4
 
+    real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for baro_coef
+    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rho
+    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for rhotot
+    real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for Temp
 
+    dm = mla%dim
+    nlevs = mla%nlevel
 
-  end subroutine compute_baro_coeff
+    ng_1 = baro_coef(1)%ng
+    ng_2 = rho(1)%ng
+    ng_3 = rhotot(1)%ng
+    ng_4 = Temp(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp1 => dataptr(baro_coef(n),i)
+          dp2 => dataptr(rho(n),i)
+          dp3 => dataptr(rhotot(n),i)
+          dp4 => dataptr(Temp(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          select case(dm)
+          case (2)
+             call compute_baro_coef_2d(dp1(:,:,1,:),dp2(:,:,1,:),dp3(:,:,1,1),dp4(:,:,1,1), &
+                                        ng_1,ng_2,ng_3,ng_4,lo,hi) 
+          case (3)
+             call bl_error("compute_baro_coef_3d not written yet")
+          end select
+       end do
+    end do
+
+  end subroutine compute_baro_coef
+
+  subroutine compute_baro_coef_2d(baro_coef,rho,rhotot,Temp,ng_1,ng_2,ng_3,ng_4,lo,hi)
+ 
+    integer        , intent(in   ) :: lo(2), hi(2), ng_1, ng_2, ng_3, ng_4
+    real(kind=dp_t), intent(inout) :: baro_coef(lo(1)-ng_1:,lo(2)-ng_1:,:)
+    real(kind=dp_t), intent(in   ) ::       rho(lo(1)-ng_2:,lo(2)-ng_2:,:)
+    real(kind=dp_t), intent(in   ) ::    rhotot(lo(1)-ng_3:,lo(2)-ng_3:)
+    real(kind=dp_t), intent(in   ) ::      Temp(lo(1)-ng_4:,lo(2)-ng_4:)
+    
+    ! local variables
+    integer :: i,j,comp
+    real(kind=dp_t) :: n
+
+    do j=lo(2)-ng_1,hi(2)+ng_1
+       do i=lo(1)-ng_1,hi(1)+ng_1
+
+          n = 0.d0
+          do comp=1,nspecies
+             n = n + rho(i,j,comp)/molmass(comp)
+          end do
+
+          do comp=1,nspecies
+             baro_coef(i,j,comp) = (rho(i,j,comp)/rhobar(comp) - rho(i,j,comp)/rhotot(i,j)) / (n*k_B*Temp(i,j))
+          end do
+
+       end do
+    end do
+
+  end subroutine compute_baro_coef_2d
   
 end module mass_flux_utilities_module

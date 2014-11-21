@@ -5,11 +5,12 @@ module compute_mass_fluxdiv_module
   use bc_module
   use div_and_grad_module
   use diffusive_mass_fluxdiv_module
+  use stochastic_mass_fluxdiv_module
+  use baro_mass_fluxdiv_module
   use compute_mixture_properties_module
   use external_force_module
   use ml_layout_module
   use F95_LAPACK
-  use stochastic_mass_fluxdiv_module
   use mass_flux_utilities_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: variance_coef_mass, barodiffusion_type
@@ -113,9 +114,10 @@ contains
     type(bc_level) , intent(in   )   :: the_bc_level(:)
 
     ! local variables
-    type(multifab)  :: drho(mla%nlevel)  ! correction to rho
-    type(multifab)  :: rhoWchi(mla%nlevel)    ! rho*W*chi*Gama
-    type(multifab)  :: rhotot_temp(mla%nlevel)
+    type(multifab) :: drho(mla%nlevel)        ! correction to rho
+    type(multifab) :: rhoWchi(mla%nlevel)     ! rho*W*chi*Gama
+    type(multifab) :: rhotot_temp(mla%nlevel)
+    type(multifab) :: baro_coef(mla%nlevel)
 
     integer         :: n,i,dm,nlevs
 
@@ -127,6 +129,7 @@ contains
        call multifab_build(drho(n),       mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(rhoWchi(n),    mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(rhotot_temp(n),mla%la(n), 1          , rho(n)%ng)
+       call multifab_build(baro_coef(n)  ,mla%la(n), nspecies   , rho(n)%ng)
     end do
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
@@ -151,10 +154,7 @@ contains
 
     ! compute cell-centered barodiffusion coefficient, (phi-w) / (n kB T)
     if (barodiffusion_type .gt. 0) then
-
-
-
-
+       call compute_baro_coef(mla,baro_coef,rho,rhotot_temp,Temp)
     end if
 
     ! reset total flux
@@ -185,9 +185,8 @@ contains
 
     ! compute barodiffusion fluxdiv
     if (barodiffusion_type .gt. 0) then
-
-
-
+       call baro_mass_fluxdiv(mla,baro_coef,gradp_baro,baro_fluxdiv, &
+                              flux_total,dx,the_bc_level)
     else
        do n=1,nlevs
           call multifab_setval(baro_fluxdiv(n),0.d0,all=.true.)
