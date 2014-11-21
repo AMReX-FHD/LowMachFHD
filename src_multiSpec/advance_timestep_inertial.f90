@@ -267,6 +267,15 @@ contains
     ! compute grad p^n
     call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
+    ! barodiffusion uses lagged pressure
+    if (barodiffusion_type .eq. 2) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(gradp_baro(n,i),1,gradp(n,i),1,1,0)
+          end do
+       end do
+    end if
+
     ! subtract grad p^n from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
@@ -631,6 +640,15 @@ contains
 
     ! compute grad p^{*,n+1}
     call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
+    ! barodiffusion uses predicted pressure
+    if (barodiffusion_type .eq. 2) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(gradp_baro(n,i),1,gradp(n,i),1,1,0)
+          end do
+       end do
+    end if
 
     ! subtract grad p^{*,n+1} from gmres_rhs_v
     do n=1,nlevs

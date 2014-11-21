@@ -186,7 +186,7 @@ contains
     ! compute barodiffusion fluxdiv
     if (barodiffusion_type .gt. 0) then
        call baro_mass_fluxdiv(mla,baro_coef,gradp_baro,baro_fluxdiv, &
-                              flux_total,dx,the_bc_level)
+                              flux_total,rhoWchi,dx,the_bc_level)
     else
        do n=1,nlevs
           call multifab_setval(baro_fluxdiv(n),0.d0,all=.true.)
