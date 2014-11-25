@@ -389,15 +389,15 @@ subroutine main_driver()
   else if (dm .eq. 3) then
      call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
   end if
-     
-  if (barodiffusion_type .eq. 1) then
-     ! this computes an initial guess at p using HSE
-     call compute_HSE_pres(mla,rhotot_old,pres,dx,the_bc_tower)
-  end if
 
   if (barodiffusion_type .gt. 0) then
+
+     ! this computes an initial guess at p using HSE
+     call compute_HSE_pres(mla,rhotot_old,pres,dx,the_bc_tower)
+
      ! compute grad p for barodiffusion
      call compute_grad(mla,pres,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
   end if
 
   ! initialize eta and kappa

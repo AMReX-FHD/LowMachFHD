@@ -203,6 +203,7 @@ contains
        call multifab_destroy(drho(n))
        call multifab_destroy(rhoWchi(n))
        call multifab_destroy(rhotot_temp(n))
+       call multifab_destroy(baro_coef(n))
     end do
 
   end subroutine compute_mass_fluxdiv
