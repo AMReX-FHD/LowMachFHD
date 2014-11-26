@@ -1198,7 +1198,7 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
           end do
 
           do comp=1,nspecies
-             baro_coef(i,j,comp) = (rho(i,j,comp)/rhobar(comp) - rho(i,j,comp)/rhotot(i,j)) / (n*k_B*Temp(i,j))
+             baro_coef(i,j,comp) = rho(i,j,comp)/rhobar(comp) / (n*k_B*Temp(i,j))
           end do
 
        end do
