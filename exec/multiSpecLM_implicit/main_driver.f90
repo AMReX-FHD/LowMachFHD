@@ -533,15 +533,11 @@ subroutine main_driver()
         dt = min(dt,dt_diffusive)
      end if
 
-      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
-           .or. &
-          (istep .eq. max_step) ) then
-         if (parallel_IOProcessor()) then
-            print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-         end if
+     if (parallel_IOProcessor()) then
+        print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+     end if
 
-         runtime1 = parallel_wtime()
-      end if   
+     runtime1 = parallel_wtime()
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! advance the solution by dt
@@ -567,18 +563,14 @@ subroutine main_driver()
 
       time = time + dt
 
-      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
-          .or. &
-          (istep .eq. max_step) ) then
-       if (parallel_IOProcessor()) then
-           print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
-        end if
+      if (parallel_IOProcessor()) then
+         print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
+      end if
 
-        runtime2 = parallel_wtime() - runtime1
-        call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
-        if (parallel_IOProcessor()) then
-           print*,'Time to advance timestep: ',runtime1,' seconds'
-        end if
+      runtime2 = parallel_wtime() - runtime1
+      call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
+      if (parallel_IOProcessor()) then
+         print*,'Time to advance timestep: ',runtime1,' seconds'
       end if
       
       if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
