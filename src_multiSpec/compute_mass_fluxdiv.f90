@@ -166,7 +166,7 @@ contains
 
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
-    call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,gradp_baro,molarconc,rhoWchi,Gama,&
+    call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
                                 diff_fluxdiv,Temp,zeta_by_Temp,flux_total,dx,the_bc_level)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
