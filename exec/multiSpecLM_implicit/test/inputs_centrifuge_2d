@@ -8,18 +8,18 @@
   !----------------------
   dim_in = 2                       ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
-  n_cells(1:2) = 64 64             ! number of cells in domain
+  prob_hi(1:2) = 0.125d0 1.d0      ! physical hi coordinate
+  n_cells(1:2) = 8 64              ! number of cells in domain
   max_grid_size(1:2) = 64 64       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 1.d-4                 ! time step (if positive, fixed)
+  fixed_dt = 5.d-5                 ! time step (if positive, fixed)
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 100                   ! maximum number of time steps
-  plot_int = 1                     ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 10                     ! maximum number of time steps
+  plot_int = 1                      ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 0                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
@@ -28,8 +28,8 @@
 
   ! Physical parameters
   !--------------------
-  grav(1:2) = 0.d0 -1.d0               ! gravity vector (negative is downwards)
-  molmass(1:2) = 1.d0 1.d0            ! molecular masses for nspecies (mass per molecule, *not* molar mass)
+  grav(1:2) = 0.d0 -1.d0              ! gravity vector (negative is downwards)
+  molmass(1:2) = 2.d0 1.d0            ! molecular masses for nspecies (mass per molecule, *not* molar mass)
   rhobar(1:2) = 2.d0 1.d0             ! pure component densities for all species
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
@@ -39,7 +39,7 @@
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
+  algorithm_type = 1     ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
@@ -60,7 +60,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 2
-  visc_coef = 1.d-5        ! momentum diffusion coefficient 'eta'   
+  visc_coef = 1.d-5        ! momentum diffusion coefficient 'eta'
 
   advection_type = 0 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
