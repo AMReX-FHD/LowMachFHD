@@ -4,7 +4,8 @@ module mk_baro_fluxdiv_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use probin_common_module, only: rhobar
+  use probin_common_module, only: rhobar, k_B, molmass
+  use probin_binarylm_module, only: temperature
 
   implicit none
 
@@ -118,16 +119,16 @@ contains
       real(kind=dp_t) :: fluxx(lo(1):hi(1)+1,lo(2):hi(2))
       real(kind=dp_t) :: fluxy(lo(1):hi(1),lo(2):hi(2)+1)
 
-      real(kind=dp_t) :: S_fac, c_fc, kp
+      real(kind=dp_t) :: S_fac, c1_fc, c2_fc, kp
 
       S_fac = 1.d0/rhobar(1)-1.d0/rhobar(2)
 
       ! x-faces
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
-            ! fluxx = rho*chi*kp*gpx
-            c_fc = sx(i,j,2)/sx(i,j,1)
-            kp = S_fac*c_fc*(1.d0-c_fc)
+            c1_fc = sx(i,j,2)/sx(i,j,1)
+            c2_fc = 1.d0 - c1_fc
+            kp = S_fac*c1_fc*c2_fc*(c1_fc*molmass(2)+c2_fc*molmass(1))/(k_B*temperature)
             fluxx(i,j) = sx(i,j,1)*chix(i,j)*kp*gpx(i,j)
          end do
       end do
@@ -145,9 +146,9 @@ contains
       ! y-faces
       do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)
-            ! fluxy = rho*chi*kp*gpy
-            c_fc = sy(i,j,2)/sy(i,j,1)
-            kp = S_fac*c_fc*(1.d0-c_fc)
+            c1_fc = sy(i,j,2)/sy(i,j,1)
+            c2_fc = 1.d0 - c1_fc
+            kp = S_fac*c1_fc*c2_fc*(c1_fc*molmass(2)+c2_fc*molmass(1))/(k_B*temperature)
             fluxy(i,j) = sy(i,j,1)*chiy(i,j)*kp*gpy(i,j)
          end do
       end do
@@ -201,7 +202,7 @@ contains
       real(kind=dp_t) :: fluxy(lo(1):hi(1),lo(2):hi(2)+1,lo(3):hi(3))
       real(kind=dp_t) :: fluxz(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)+1)
 
-      real(kind=dp_t) :: S_fac, c_fc, kp
+      real(kind=dp_t) :: S_fac, c1_fc, c2_fc, kp
 
       S_fac = 1.d0/rhobar(1)-1.d0/rhobar(2)
 
@@ -209,9 +210,9 @@ contains
       do k=lo(3),hi(3)
       do j=lo(2),hi(2)
       do i=lo(1),hi(1)+1
-         ! fluxx = rho*chi*kp*gpx
-         c_fc = sx(i,j,k,2)/sx(i,j,k,1)
-         kp = S_fac*c_fc*(1.d0-c_fc)
+         c1_fc = sx(i,j,k,2)/sx(i,j,k,1)
+         c2_fc = 1.d0 - c1_fc
+         kp = S_fac*c1_fc*c2_fc*(c1_fc*molmass(2)+c2_fc*molmass(1))/(k_B*temperature)
          fluxx(i,j,k) = sx(i,j,k,1)*chix(i,j,k)*kp*gpx(i,j,k)
       end do
       end do
@@ -231,9 +232,9 @@ contains
       do k=lo(3),hi(3)
       do j=lo(2),hi(2)+1
       do i=lo(1),hi(1)
-         ! fluxy = rho*chi*kp*gpy
-         c_fc = sy(i,j,k,2)/sy(i,j,k,1)
-         kp = S_fac*c_fc*(1.d0-c_fc)
+         c1_fc = sy(i,j,k,2)/sy(i,j,k,1)
+         c2_fc = 1.d0 - c1_fc
+         kp = S_fac*c1_fc*c2_fc*(c1_fc*molmass(2)+c2_fc*molmass(1))/(k_B*temperature)
          fluxy(i,j,k) = sy(i,j,k,1)*chiy(i,j,k)*kp*gpy(i,j,k)
       end do
       end do
@@ -253,9 +254,9 @@ contains
       do k=lo(3),hi(3)+1
       do j=lo(2),hi(2)
       do i=lo(1),hi(1)
-         ! fluxz = rho*chi*kp*gpz
-         c_fc = sz(i,j,k,2)/sz(i,j,k,1)
-         kp = S_fac*c_fc*(1.d0-c_fc)
+         c1_fc = sz(i,j,k,2)/sz(i,j,k,1)
+         c2_fc = 1.d0 - c1_fc
+         kp = S_fac*c1_fc*c2_fc*(c1_fc*molmass(2)+c2_fc*molmass(1))/(k_B*temperature)
          fluxz(i,j,k) = sz(i,j,k,1)*chiz(i,j,k)*kp*gpz(i,j,k)
       end do
       end do
