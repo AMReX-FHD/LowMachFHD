@@ -14,6 +14,7 @@ module advance_timestep_overdamped_module
   use mk_grav_force_module
   use stochastic_m_fluxdiv_module
   use stochastic_rhoc_fluxdiv_module
+  use mk_baro_fluxdiv_module
   use bds_module
   use gmres_module
   use init_module
@@ -23,7 +24,8 @@ module advance_timestep_overdamped_module
   use multifab_physbc_extrap_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
-  use probin_common_module, only: advection_type, grav, rhobar, algorithm_type
+  use probin_common_module, only: advection_type, grav, rhobar, algorithm_type, &
+                                  barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
 
   implicit none
@@ -50,7 +52,8 @@ module advance_timestep_overdamped_module
 contains
 
   subroutine advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pres, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower)
+                                         chi,chi_fc,eta,eta_ed,kappa,gradp_baro, &
+                                         dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: mnew(:,:) ! only a diagnostic for plotfile purposes
@@ -67,6 +70,7 @@ contains
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
+    type(multifab) , intent(inout) :: gradp_baro(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -144,6 +148,15 @@ contains
     ! compute grad p^{n-1/2}
     call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
+    ! barodiffusion uses lagged pressure
+    if (barodiffusion_type .eq. 2) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(gradp_baro(n,i),1,gradp(n,i),1,1,0)
+          end do
+       end do
+    end if
+
     ! subtract grad p^{n-1/2} from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
@@ -180,6 +193,12 @@ contains
     ! add div(rho*chi grad c)^n to rhs_p
     call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                 the_bc_tower%bc_tower_array,vel_bc_n)
+
+    if (barodiffusion_type .gt. 0) then
+       ! add baro-diffusion flux diveregnce to rhs_p
+       call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gradp_baro,dx, &
+                            the_bc_tower%bc_tower_array,vel_bc_n)
+    end if
 
     ! add div(Psi^(1)) to rhs_p
     if (algorithm_type .eq. 1) then
@@ -370,6 +389,15 @@ contains
     ! compute grad p^*
     call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
+    ! barodiffusion
+    if (barodiffusion_type .eq. 2) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(gradp_baro(n,i),1,gradp(n,i),1,1,0)
+          end do
+       end do
+    end if
+
     ! subtract grad p^* from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
@@ -405,6 +433,12 @@ contains
     ! add div(rho*chi grad c)^{*,n+1/2} to rhs_p
     call diffusive_rhoc_fluxdiv(mla,gmres_rhs_p,1,prim,s_fc,chi_fc,dx, &
                                 the_bc_tower%bc_tower_array,vel_bc_n)
+
+    if (barodiffusion_type .gt. 0) then
+       ! compute baro-diffusion flux divergence
+       call mk_baro_fluxdiv(mla,gmres_rhs_p,1,s_fc,chi_fc,gradp_baro,dx, &
+                            the_bc_tower%bc_tower_array,vel_bc_n)
+    end if
 
     ! add div(Psi^(2)) to rhs_p
     call stochastic_rhoc_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_p,s_fc, &
