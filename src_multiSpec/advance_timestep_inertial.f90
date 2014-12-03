@@ -484,6 +484,9 @@ contains
 
     gmres_abs_tol_in = gmres_abs_tol ! Save this 
 
+    ! This relies entirely on relative tolerance and can fail if the rhs is roundoff error only:
+    ! gmres_abs_tol = 0.d0 ! It is better to set gmres_abs_tol in namelist to a sensible value
+
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)

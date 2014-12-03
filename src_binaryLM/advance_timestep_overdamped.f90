@@ -89,7 +89,7 @@ contains
 
     integer :: i,dm,n,nlevs
 
-    real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs
+    real(kind=dp_t) :: S_fac, theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
     real(kind=dp_t) :: weights(algorithm_type)
 
@@ -263,11 +263,19 @@ contains
        end do
     end do
 
-    gmres_abs_tol = 0.d0
+    gmres_abs_tol_in = gmres_abs_tol ! Save this  
+
+    ! This relies entirely on relative tolerance and can fail if the rhs is roundoff error only:
+    ! gmres_abs_tol = 0.d0 ! It is better to set gmres_abs_tol in namelist to a sensible value
 
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
+
+    ! for the corrector gmres solve we want the stopping criteria based on the
+    ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
+    ! for cases where du in the corrector should be small the gmres stalls
+    gmres_abs_tol = max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol)
 
     ! for the corrector gmres solve we want the stopping criteria based on the
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
@@ -502,6 +510,8 @@ contains
     ! call gmres to compute delta v and delta p
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,s_fc, &
                eta,eta_ed,kappa,theta_alpha)
+                              
+    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance      
 
     ! compute v^{n+1/2} = v^* + delta v
     ! compute p^{n+1/2} = p^* + delta p
