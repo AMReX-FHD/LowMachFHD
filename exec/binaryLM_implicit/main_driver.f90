@@ -340,6 +340,10 @@ subroutine main_driver()
      if (barodiffusion_type .gt. 0) then
         ! this computes an initial guess at p using HSE
         call compute_HSE_pres(mla,sold,pres,dx,the_bc_tower)
+
+        ! compute grad p for barodiffusion
+        call compute_grad(mla,pres,gradp_baro,dx,1,pres_bc_comp,1,1, &
+                          the_bc_tower%bc_tower_array)
      end if
 
      ! set the initial time step
@@ -350,9 +354,6 @@ subroutine main_driver()
      end if
 
   end if
-
-  ! compute grad p for barodiffusion
-  call compute_grad(mla,pres,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   if (print_int .gt. 0) then
      if (parallel_IOProcessor()) write(*,*) "Initial conditions before initial projection:"
@@ -422,9 +423,11 @@ subroutine main_driver()
 
   else
 
-     ! need to do an initial projection to get an initial velocity field
-     call initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gradp_baro, &
-                             rhoc_fluxdiv,dx,dt,the_bc_tower)
+     if (algorithm_type .eq. 0) then
+        ! need to do an initial projection to get an initial velocity field
+        call initial_projection(mla,mold,umac,sold,s_fc,prim,eta_ed,chi_fc,gradp_baro, &
+                                rhoc_fluxdiv,dx,dt,the_bc_tower)
+     end if
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"
@@ -483,7 +486,8 @@ subroutine main_driver()
                                        gradp_baro,dx,dt,time,the_bc_tower)
      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
         call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pres, &
-                                         chi,chi_fc,eta,eta_ed,kappa,dx,dt,time,the_bc_tower)
+                                         chi,chi_fc,eta,eta_ed,kappa,gradp_baro, &
+                                         dx,dt,time,the_bc_tower)
      end if
 
      ! increment simulation time
