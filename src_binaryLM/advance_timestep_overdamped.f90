@@ -6,6 +6,7 @@ module advance_timestep_overdamped_module
   use convert_stag_module
   use convert_variables_module
   use convert_m_to_umac_module
+  use compute_HSE_pres_module
   use mk_advective_s_fluxdiv_module
   use mk_advective_m_fluxdiv_module
   use diffusive_rhoc_fluxdiv_module
@@ -80,6 +81,7 @@ contains
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::          dp(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
+    type(multifab) ::      p_baro(mla%nlevel)
 
     type(multifab) ::  gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::        dumac(mla%nlevel,mla%dim)
@@ -111,6 +113,7 @@ contains
        call multifab_build(gmres_rhs_p(n),mla%la(n),1    ,0)
        call multifab_build(         dp(n),mla%la(n),1    ,1)
        call multifab_build(       divu(n),mla%la(n),1    ,0)
+       call multifab_build(     p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
           call multifab_build_edge(    gmres_rhs_v(n,i),mla%la(n),1    ,0,i)
           call multifab_build_edge(          dumac(n,i),mla%la(n),1    ,1,i)
@@ -155,6 +158,11 @@ contains
              call multifab_copy_c(gradp_baro(n,i),1,gradp(n,i),1,1,0)
           end do
        end do
+    else if (barodiffusion_type .eq. 3) then
+       ! compute p0 from rho0*g
+       call compute_HSE_pres(mla,sold,p_baro,dx,the_bc_tower)
+       call compute_grad(mla,p_baro,gradp_baro,dx,1,pres_bc_comp,1,1, &
+                         the_bc_tower%bc_tower_array)
     end if
 
     ! subtract grad p^{n-1/2} from gmres_rhs_v
@@ -404,6 +412,11 @@ contains
              call multifab_copy_c(gradp_baro(n,i),1,gradp(n,i),1,1,0)
           end do
        end do
+    else if (barodiffusion_type .eq. 3) then
+       ! compute p0 from rho0*g
+       call compute_HSE_pres(mla,snew,p_baro,dx,the_bc_tower)
+       call compute_grad(mla,p_baro,gradp_baro,dx,1,pres_bc_comp,1,1, &
+                         the_bc_tower%bc_tower_array)
     end if
 
     ! subtract grad p^* from gmres_rhs_v
@@ -618,6 +631,7 @@ contains
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dp(n))
        call multifab_destroy(divu(n))
+       call multifab_destroy(p_baro(n))
        do i=1,dm
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))

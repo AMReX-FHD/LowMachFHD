@@ -80,7 +80,8 @@ module probin_common_module
 
   namelist /probin_common/ barodiffusion_type ! 0 = no barodiffusion
                                               ! 1 = fixed gradp from initialization
-                                              ! 2 = update gradp each time step
+                                              ! 2 = update gradp each time step from solver pi
+                                              ! 3 = update gradp each time step from HSE
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
