@@ -10,10 +10,11 @@ module init_lowmach_module
   use ml_layout_module
   use convert_stag_module
   use convert_variables_module
-  use probin_common_module, only: prob_lo, prob_hi, prob_type, &
+  use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
                                   molmass, rhobar, smoothing_width, u_init, n_cells
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, &
-                                        rho_init, nspecies, rho_part_bc_comp
+                                        rho_init, nspecies, rho_part_bc_comp, &
+                                        T_init
  
   implicit none
 
@@ -116,7 +117,7 @@ contains
  
     ! local varables
     integer          :: i,j,n,seed
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,c_loc,random
+    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,c_loc,random,m_e
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
 
@@ -543,6 +544,27 @@ contains
 
           enddo
        enddo
+
+    case (13)
+
+       ! stratified multispecies
+       ! assumes the final species is the light solvent
+
+       u = 0.d0
+       v = 0.d0
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0) -  0.5d0*(prob_lo(2)+prob_hi(2))
+          do i=lo(1),hi(1)
+             
+             do n=1,nspecies-1
+                m_e = (rhobar(n)/rhobar(nspecies) - 1.d0)*molmass(nspecies)
+                c(i,j,n) = rho_init(1,n)*exp(m_e*grav(2)*y/(k_B*T_init(1)))
+             end do
+
+          enddo
+       enddo
+
 
     case default
 
