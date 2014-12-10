@@ -558,8 +558,8 @@ contains
           do i=lo(1),hi(1)
              
              do n=1,nspecies-1
-                m_e = (rhobar(n)/rhobar(nspecies) - 1.d0)*molmass(nspecies)
-                c(i,j,n) = rho_init(1,n)*exp(m_e*grav(2)*y/(k_B*T_init(1)))
+                m_e = (rhobar(nspecies)/rhobar(n) - 1.d0)*molmass(n)
+                c(i,j,n) = rho_init(1,n)*exp(-m_e*grav(2)*y/(k_B*T_init(1)))
              end do
 
           enddo
