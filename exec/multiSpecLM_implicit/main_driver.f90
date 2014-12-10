@@ -70,7 +70,6 @@ subroutine main_driver()
   type(multifab), allocatable  :: Temp_ed(:,:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
-  type(multifab), allocatable  :: baro_mass_fluxdiv(:)
   type(multifab), allocatable  :: umac(:,:)
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
@@ -112,7 +111,6 @@ subroutine main_driver()
   allocate(rho_old(nlevs),rhotot_old(nlevs),pres(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
-  allocate(baro_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
@@ -170,7 +168,7 @@ subroutine main_driver()
      ! read in time and dt from checkpoint
      ! build and fill rho, rhotot, pres, and umac
      call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres, &
-                                  diff_mass_fluxdiv,stoch_mass_fluxdiv,baro_mass_fluxdiv, &
+                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                   umac,pmask)
 
   else
@@ -223,7 +221,6 @@ subroutine main_driver()
         call multifab_build(pres(n)      ,mla%la(n),1       ,1)
         call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
-        call multifab_build( baro_mass_fluxdiv(n),mla%la(n),nspecies,0) 
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
@@ -471,7 +468,7 @@ subroutine main_driver()
      ! because different gmres tolerances may be needed in the first step than in the rest
      if (algorithm_type .eq. 0) then
         call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro,diff_mass_fluxdiv, &
-                                stoch_mass_fluxdiv,baro_mass_fluxdiv, &
+                                stoch_mass_fluxdiv, &
                                 Temp,eta,eta_ed,dt,dx,the_bc_tower)
      end if
 
@@ -545,19 +542,17 @@ subroutine main_driver()
 
       ! notes: eta, eta_ed, and kappa could be built and initialized within the advance routines
       ! but for now we pass them around (it does save a few flops)
-      ! diff/stoch/baro_mass_fluxdiv could be built locally within the overdamped
+      ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
       ! routine, but since we have them around anyway for inertial we pass them in
       if (algorithm_type .eq. 0) then
          call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                        baro_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                           diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                          baro_mass_fluxdiv, &
                                           dx,dt,time,the_bc_tower,istep)
       end if
 
@@ -609,7 +604,7 @@ subroutine main_driver()
                write(*,*), 'writing checkpoint at timestep =', istep 
             end if
             call checkpoint_write(mla,rho_new,rhotot_new,pres,diff_mass_fluxdiv, &
-                                  stoch_mass_fluxdiv,baro_mass_fluxdiv,umac,time,dt,istep)
+                                  stoch_mass_fluxdiv,umac,time,dt,istep)
          end if
 
          ! print out projection (average) and variance
@@ -660,7 +655,6 @@ subroutine main_driver()
      call multifab_destroy(Temp(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      call multifab_destroy(stoch_mass_fluxdiv(n))
-     call multifab_destroy(baro_mass_fluxdiv(n))
      call multifab_destroy(pres(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
@@ -677,7 +671,7 @@ subroutine main_driver()
   end do
   deallocate(lo,hi,dx)
   deallocate(rho_old,rhotot_old,Temp,umac)
-  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv,baro_mass_fluxdiv)
+  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 

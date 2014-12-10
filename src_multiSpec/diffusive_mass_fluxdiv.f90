@@ -6,7 +6,8 @@ module diffusive_mass_fluxdiv_module
   use div_and_grad_module
   use probin_multispecies_module, only: nspecies, is_nonisothermal, mol_frac_bc_comp, &
                                         nspecies, correct_flux
-  use probin_common_module, only: temp_bc_comp
+  use probin_common_module, only: temp_bc_comp, barodiffusion_type
+  use mass_flux_utilities_module
   use ml_layout_module
   use convert_stag_module
   use matvec_mul_module
@@ -24,7 +25,8 @@ module diffusive_mass_fluxdiv_module
 contains
 
   subroutine diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
-                                    diff_fluxdiv,Temp,zeta_by_Temp,flux_total,dx,the_bc_level)
+                                    diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
+                                    flux_total,dx,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -35,6 +37,7 @@ contains
     type(multifab) , intent(inout)  :: diff_fluxdiv(:)
     type(multifab) , intent(in   )  :: Temp(:)
     type(multifab) , intent(in   )  :: zeta_by_Temp(:)
+    type(multifab) , intent(in   )  :: gradp_baro(:,:)
     type(multifab) , intent(inout)  :: flux_total(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_level) , intent(in   )  :: the_bc_level(:)
@@ -60,7 +63,7 @@ contains
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
     call diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,&
-                             zeta_by_Temp,flux,dx,the_bc_level)
+                             zeta_by_Temp,gradp_baro,flux,dx,the_bc_level)
     
     ! add fluxes to flux_total
     do n=1,nlevs
@@ -82,7 +85,7 @@ contains
   end subroutine diffusive_mass_fluxdiv
  
   subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
-                                 Temp,zeta_by_Temp,flux,dx,the_bc_level)
+                                 Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:) 
@@ -92,6 +95,7 @@ contains
     type(multifab) , intent(in   ) :: Gama(:)  
     type(multifab) , intent(in   ) :: Temp(:)  
     type(multifab) , intent(in   ) :: zeta_by_Temp(:)  
+    type(multifab) , intent(in   ) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
@@ -104,6 +108,8 @@ contains
     type(multifab)  :: Gama_face(mla%nlevel,mla%dim)
     type(multifab)  :: zeta_by_Temp_face(mla%nlevel,mla%dim)
     type(multifab)  :: flux_Temp(mla%nlevel,mla%dim)
+    type(multifab)  :: baro_coef(mla%nlevel)
+    type(multifab)  :: baro_coef_face(mla%nlevel,mla%dim)
   
  
     dm    = mla%dim     ! dimensionality
@@ -112,10 +118,12 @@ contains
     ! build local face-centered multifab with nspecies^2 component, zero ghost cells 
     ! and nodal in direction i
     do n=1,nlevs
+       call multifab_build(baro_coef(n),mla%la(n),nspecies,rho(n)%ng)
        do i=1,dm
           call multifab_build_edge(rhoWchi_face(n,i),     mla%la(n),nspecies**2,0,i)
           call multifab_build_edge(Gama_face(n,i),        mla%la(n),nspecies**2,0,i)
           call multifab_build_edge(zeta_by_Temp_face(n,i),mla%la(n),nspecies,   0,i)
+          call multifab_build_edge(baro_coef_face(n,i),mla%la(n),nspecies,   0,i)
           call multifab_build_edge(flux_Temp(n,i),        mla%la(n),1,          0,i)
        end do
     end do 
@@ -160,7 +168,7 @@ contains
        do n=1,nlevs
           do i=1,dm
              do s=1,nspecies
-                call mult_mult(zeta_by_Temp_face(n,i), s, flux_Temp(n,i), 1, 1)
+                call multifab_mult_mult_c(zeta_by_Temp_face(n,i), s, flux_Temp(n,i), 1, 1)
              end do
           end do
        end do  
@@ -174,6 +182,39 @@ contains
           end do
        end do  
    
+    end if
+
+    if (barodiffusion_type .gt. 0) then
+    
+       !====================================!
+       ! compute flux-piece from barodiffusion
+       !====================================! 
+
+       ! compute cell-centered barodiffusion coefficient, (phi-w) / (n kB T)
+       call compute_baro_coef(mla,baro_coef,rho,rhotot,Temp)
+
+       ! average baro_coef to faces
+       call average_cc_to_face(nlevs, baro_coef, baro_coef_face, 1, scal_bc_comp, &
+                               nspecies, the_bc_level, .false.)
+
+       ! store the fluxes, baro_coef(1:nspecies) * gradp_baro, in baro_coef_face
+       do n=1,nlevs
+          do i=1,dm
+             do s=1,nspecies
+                call multifab_mult_mult_c(baro_coef_face(n,i), s, gradp_baro(n,i), 1, 1)
+             end do
+          end do
+       end do
+    
+       !===============================!
+       ! assemble different flux-pieces 
+       !===============================! 
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_plus_plus(flux(n,i), baro_coef_face(n,i), 0)
+          end do
+       end do  
+
     end if
 
     ! compute rhoWchi * totalflux (on faces) 
@@ -198,11 +239,13 @@ contains
     
     ! destroy B^(-1)*Gama multifab to prevent leakage in memory
     do n=1,nlevs
+       call multifab_destroy(baro_coef(n))
        do i=1,dm
           call multifab_destroy(rhoWchi_face(n,i))
           call multifab_destroy(Gama_face(n,i))
           call multifab_destroy(zeta_by_Temp_face(n,i))
           call multifab_destroy(flux_Temp(n,i))
+          call multifab_destroy(baro_coef_face(n,i))
        end do
     end do
 
