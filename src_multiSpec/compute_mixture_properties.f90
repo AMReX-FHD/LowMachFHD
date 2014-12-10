@@ -16,7 +16,7 @@ module compute_mixture_properties_module
 
   private
 
-  public :: compute_mixture_properties, compute_eta, compute_kappa
+  public :: compute_mixture_properties, compute_eta_kappa
     
 contains
   
@@ -148,7 +148,7 @@ contains
  
     ! local variables
     integer :: n,row,column
-    real(kind=dp_t) :: massfrac(nspecies), c_loc
+    real(kind=dp_t) :: massfrac(nspecies)
 
     ! Local values of transport and thermodynamic coefficients (functions of composition!):
     real(kind=dp_t), dimension(nspecies*(nspecies-1)/2) :: D_bar_local, H_offdiag_local ! off-diagonal components of symmetric matrices
@@ -206,35 +206,37 @@ contains
     
   end subroutine mixture_properties_mass_local
 
-  subroutine compute_eta(mla,eta,eta_ed,rho,rhotot,Temp,pres,dx,the_bc_level)
+  subroutine compute_eta_kappa(mla,eta,eta_ed,kappa,rho,rhotot,Temp,dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(in   ) :: rho(:)
     type(multifab) , intent(in   ) :: rhotot(:)
     type(multifab) , intent(in   ) :: Temp(:)
-    type(multifab) , intent(in   ) :: pres(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
-    integer :: nlevs,dm,i,n,ng_e,ng_r,ng_m,ng_t,ng_p
+    integer :: nlevs,dm,i,n,ng_e,ng_r,ng_m,ng_t
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t), pointer :: ep(:,:,:,:)
     real(kind=dp_t), pointer :: rp(:,:,:,:)
     real(kind=dp_t), pointer :: mp(:,:,:,:)
     real(kind=dp_t), pointer :: tp(:,:,:,:)
-    real(kind=dp_t), pointer :: pp(:,:,:,:)
 
     ng_e  = eta(1)%ng
     ng_r  = rho(1)%ng
     ng_m = rhotot(1)%ng
     ng_t  = Temp(1)%ng
-    ng_p  = pres(1)%ng
 
     nlevs = mla%nlevel
     dm = mla%dim
+
+    do n=1,nlevs
+       call multifab_setval(kappa(n), 1.d0, all=.true.)
+    end do
 
     do n=1,nlevs
        do i=1,nfabs(eta(n))
@@ -242,16 +244,15 @@ contains
           rp  => dataptr(rho(n), i)
           mp => dataptr(rhotot(n), i)
           tp  => dataptr(Temp(n), i)
-          pp  => dataptr(pres(n), i)
           lo = lwb(get_box(eta(n), i))
           hi = upb(get_box(eta(n), i))
           select case (dm)
           case (2)
              call compute_eta_2d(ep(:,:,1,1),ng_e,rp(:,:,1,:),ng_r,mp(:,:,1,1),ng_m, &
-                                 tp(:,:,1,1),ng_t,pp(:,:,1,1),ng_p,lo,hi,dx(n,:))
+                                 tp(:,:,1,1),ng_t,lo,hi,dx(n,:))
           case (3)
              call compute_eta_3d(ep(:,:,:,1),ng_e,rp(:,:,:,:),ng_r,mp(:,:,:,1),ng_m, &
-                                 tp(:,:,:,1),ng_t,pp(:,:,:,1),ng_p,lo,hi,dx(n,:))
+                                 tp(:,:,:,1),ng_t,lo,hi,dx(n,:))
           end select
        end do
     end do
@@ -262,19 +263,18 @@ contains
        call average_cc_to_edge(nlevs,eta,eta_ed,1,tran_bc_comp,1,the_bc_level)
     end if
 
-  end subroutine compute_eta
+  end subroutine compute_eta_kappa
 
-  subroutine compute_eta_2d(eta,ng_e,rho,ng_r,rhotot,ng_m,Temp,ng_t,pres,ng_p,lo,hi,dx)
+  subroutine compute_eta_2d(eta,ng_e,rho,ng_r,rhotot,ng_m,Temp,ng_t,lo,hi,dx)
 
     ! compute eta in valid AND ghost regions
     ! the ghost cells for rho, Temp, etc., have already been filled properly
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_e, ng_r, ng_m, ng_t, ng_p
+    integer        , intent(in   ) :: lo(:), hi(:), ng_e, ng_r, ng_m, ng_t
     real(kind=dp_t), intent(inout) ::    eta(lo(1)-ng_e:,lo(2)-ng_e:)
     real(kind=dp_t), intent(inout) ::    rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
     real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_m:,lo(2)-ng_m:)
     real(kind=dp_t), intent(inout) ::   Temp(lo(1)-ng_t:,lo(2)-ng_t:)
-    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_p:,lo(2)-ng_p:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! local
@@ -317,17 +317,16 @@ contains
 
   end subroutine compute_eta_2d
 
-  subroutine compute_eta_3d(eta,ng_e,rho,ng_r,rhotot,ng_m,Temp,ng_t,pres,ng_p,lo,hi,dx)
+  subroutine compute_eta_3d(eta,ng_e,rho,ng_r,rhotot,ng_m,Temp,ng_t,lo,hi,dx)
 
     ! compute eta in valid AND ghost regions
     ! the ghost cells for rho, Temp, etc., have already been filled properly
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_e, ng_r, ng_m, ng_t, ng_p
+    integer        , intent(in   ) :: lo(:), hi(:), ng_e, ng_r, ng_m, ng_t
     real(kind=dp_t), intent(inout) ::    eta(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
     real(kind=dp_t), intent(inout) ::    rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
     real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
     real(kind=dp_t), intent(inout) ::   Temp(lo(1)-ng_t:,lo(2)-ng_t:,lo(3)-ng_t:)
-    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! local
@@ -422,20 +421,5 @@ contains
     eta = visc_coef*exp(-x*(-log(nu_g)+log(nu_w)))*nu_w*rhotot
 
   end subroutine eta_water_glycerol
-
-  subroutine compute_kappa(mla,kappa)
-
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: kappa(:)
-
-    integer :: n,nlevs
-
-    nlevs = mla%nlevel
-
-    do n=1,nlevs
-       call multifab_setval(kappa(n), 1.d0, all=.true.)
-    end do
-
-  end subroutine compute_kappa
 
 end module compute_mixture_properties_module

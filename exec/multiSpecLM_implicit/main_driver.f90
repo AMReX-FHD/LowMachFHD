@@ -398,8 +398,8 @@ subroutine main_driver()
   end if
 
   ! initialize eta and kappa
-  call compute_eta(mla,eta,eta_ed,rho_old,rhotot_old,Temp,pres,dx,the_bc_tower%bc_tower_array)
-  call compute_kappa(mla,kappa)
+  call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp,dx, &
+                         the_bc_tower%bc_tower_array)
 
   call fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
 
