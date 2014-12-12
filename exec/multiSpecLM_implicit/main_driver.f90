@@ -531,7 +531,8 @@ subroutine main_driver()
      end if
 
      if (parallel_IOProcessor()) then
-        print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+           print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
      end if
 
      runtime1 = parallel_wtime()
@@ -559,13 +560,15 @@ subroutine main_driver()
       time = time + dt
 
       if (parallel_IOProcessor()) then
-         print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
+        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+           print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
       end if
 
       runtime2 = parallel_wtime() - runtime1
       call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
       if (parallel_IOProcessor()) then
-         print*,'Time to advance timestep: ',runtime1,' seconds'
+        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+           print*,'Time to advance timestep: ',runtime1,' seconds'
       end if
       
       if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
