@@ -28,7 +28,6 @@ module init_lowmach_module
   ! Same applies to boundary conditions
 
   ! prob_type codes for LowMach:
-  ! 0=thermodynamic equilibrium, v=0, rho/c=rho_init(1,1:nspecies)
   ! 1=bubble test, v=0, rho/c=rho_init(1,1:nspecies) inside and rho_init(2,1:nspecies) outside the bubble
   ! 2=gradient along y, v=0, rho/c=rho_init(1,1:nspecies) on bottom (y=0) and rho_init(2,1:nspecies) on top (y=Ly)
   ! 3=one fluid on top of another: v=0, rho/c=rho_init(1,1:nspecies) on bottom (y<Ly/2) and rho_init(2,1:nspecies) on top (y=L_y)
@@ -126,21 +125,6 @@ contains
     call srand(seed)
 
     select case (abs(prob_type))
-
-    case (0) 
-
-       !============================================================
-       ! Thermodynamic equilibrium (everything constant)
-       !============================================================
- 
-       u = 0.d0
-       v = 0.d0
-
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-             c(i,j,1:nspecies) = rho_init(1,1:nspecies)
-          end do
-       end do
     
     case (1)
 
@@ -191,6 +175,7 @@ contains
        end do
 
     case (2) 
+
        !=========================================================
        ! Initializing with constant gradient along y
        !=========================================================
@@ -646,27 +631,6 @@ contains
     call srand(seed)
 
     select case (abs(prob_type))
-    
-    case (0) 
-       !================================================================================
-       ! Thermodynamic equilibrium
-       !================================================================================
-
-       u = 0.d0
-       v = 0.d0
-       w = 0.d0
-
-       !$omp parallel do private(i,j,k)
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)
-
-                c(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
-
-             end do
-          end do
-       end do
-       !$omp end parallel do
 
     case (1) 
        !================================================================================
