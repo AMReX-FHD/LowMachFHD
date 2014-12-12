@@ -9,7 +9,7 @@
  k_B      = 1E-3                  ! Boltzmann constant
 
  fixed_dt = 0.01                  ! fixed_dt
- prob_type = -7                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
+ prob_type = -1                   
 
  algorithm_type = 1               ! 0 = inertial
                                   ! 1 = overdamped, 1RNG

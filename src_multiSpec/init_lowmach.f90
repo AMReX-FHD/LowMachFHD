@@ -23,24 +23,84 @@ module init_lowmach_module
   public :: init_rho_and_umac  ! used in low Mach code; initialize c first then convert to rho
 
   ! IMPORTANT: In the diffusion only code (init_rho), rho_init specifies initial values for DENSITY
-  ! In the low-Mach code (init_rho_and_umac), rho_init specifies initial MASS FRACTIONS (should sum to unity!)
+  ! In the low-Mach code (init_rho_and_umac), rho_init specifies initial MASS FRACTIONS
+  ! (should sum to unity!... but we overwrite the final concentration so sum(c_i)=1 before computing rho)
   ! The density follows from the EOS in the LM case so it cannot be specified
   ! Same applies to boundary conditions
 
-  ! prob_type codes for LowMach:
-  ! 1=bubble test, v=0, rho/c=rho_init(1,1:nspecies) inside and rho_init(2,1:nspecies) outside the bubble
-  ! 2=gradient along y, v=0, rho/c=rho_init(1,1:nspecies) on bottom (y=0) and rho_init(2,1:nspecies) on top (y=Ly)
-  ! 3=one fluid on top of another: v=0, rho/c=rho_init(1,1:nspecies) on bottom (y<Ly/2) and rho_init(2,1:nspecies) on top (y=L_y)
-  ! 4=reserved for future use generic case (any nspecies)
-  ! 5-onward=manufactured solutions for testing, limited to specific setups and nspecies
+  ! prob_types codes for init_lowmach:
 
-  
+  !=============================================================
+  ! case 1:
+  ! bubble with radius = 1/4 of domain in x
+  ! c=rho_init(1,:) inside, c=rho_init(2,:) outside
+  ! can be discontinous or smooth depending on smoothing_width
+
+  !=========================================================
+  ! case 2:
+  ! constant concentration gradient along y
+  ! c=rho_init(1,:) on bottom, c=rho_init(2,:) on top
+
+  !=========================================================
+  ! case 3:
+  ! 1 fluid on top of another
+  ! c = rho_init(1,:) on bottom; c = rho_init(2,:) on top
+  ! smoothing_width > 0 is a tanh smoothed interface where smoothing width is approx the # of grid 
+  !   cells and then c = rand*rho_init(1,:) + (1-rand)*rho_init(2,:)
+  ! smoothing_width between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand()
+  ! smoothing width of -2 is a sinusoidal perturbation
+  ! x-vel = u_init(1) below centerline, u_init(2) above centerline
+
+  !=========================================================
+  ! case 4:
+  ! not defined
+
+  !=========================================================
+  ! case 5:
+  ! not defined
+
+  !=========================================================
+  ! case 6:
+  ! not defined
+
+  !=========================================================
+  ! case 7:
+  ! not defined
+
+  !=========================================================
+  ! case 8:
+  ! not defined
+
+  !=========================================================
+  ! case 9:
+  ! not defined
+
+  !=========================================================
+  ! case 10:
+  ! not defined
+
+  !=========================================================
+  ! case 11:
+  ! not defined
+
+  !=========================================================
+  ! case 12:
+
+  !=========================================================
+  ! case 13:
+
+  !=========================================================
+  ! case 14:
+
+
 contains
 
   subroutine init_rho_and_umac(mla,rho,umac,dx,time,the_bc_level)
 
     ! initialize rho_i and umac in the valid region
-    ! we first initialize c_i in the valid region and use the EOS to compute rho_i
+    ! we first initialize c_i in the valid region
+    ! then enforce that sum(c_i)=1 by overwriting the final concentration,
+    ! and then use the EOS to compute rho_i
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -116,7 +176,7 @@ contains
  
     ! local varables
     integer          :: i,j,n,seed
-    real(kind=dp_t)  :: x,y,w1,w2,rsq,rhot,L(2),sum,r,y1,c_loc,random
+    real(kind=dp_t)  :: x,y,w1,w2,rad,rsq,rhot,L(2),sum,r,y1,c_loc,random
     real(kind=dp_t)  :: gradToverT,m_e
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
@@ -129,55 +189,49 @@ contains
     case (1)
 
        !=============================================================
-       ! Initializing rho's in concentric circle with radius^2 = 0.1*L(1)*L(2)
+       ! bubble with radius = 1/4 of domain in x
+       ! c=rho_init(1,:) inside, c=rho_init(2,:) outside
+       ! can be discontinous or smooth depending on smoothing_width
        !=============================================================
  
        u = 0.d0
        v = 0.d0
+
+       rad = L(1)/4.d0
 
        do j=lo(2),hi(2)
           y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
        
-             rsq = x**2 + y**2
-             if (rsq .lt. L(1)*L(2)*0.1d0) then
-                c(i,j,1:nspecies) = rho_init(1,1:nspecies)
-             else
-                c(i,j,1:nspecies) = rho_init(2,1:nspecies)
-             end if
-    
-          end do
-       end do
-
-       ! Donev: Please merge this with prob_type=1 just like done for case=9: 
-       !        if smoothing_width>0 use a smooth transition
-
-       !=============================================================
-       ! smoothed circle
-       !=============================================================
- 
-       u = 0.d0
-       v = 0.d0
-
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
-          do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
-
              r = sqrt(x**2 + y**2)
 
-             c(i,j,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
-                  0.5d0*(rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
-                  (1.d0 + tanh((r-15.d0)/2.d0))
+             if (smoothing_width .eq. 0) then
 
+                ! discontinuous interface
+                if (r .lt. rad) then
+                   c(i,j,1:nspecies) = rho_init(1,1:nspecies)
+                else
+                   c(i,j,1:nspecies) = rho_init(2,1:nspecies)
+                end if
+
+             else
+
+                ! smooth interface
+                c(i,j,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
+                     (rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
+                     0.5d0*(1.d0 + tanh((r-rad)/(smoothing_width*dx(1))))
+
+             end if
+    
           end do
        end do
 
     case (2) 
 
        !=========================================================
-       ! Initializing with constant gradient along y
+       ! constant concentration gradient along y
+       ! c=rho_init(1,:) on bottom, c=rho_init(2,:) on top
        !=========================================================
 
        u = 0.d0
@@ -199,22 +253,29 @@ contains
 
        !=============================================================
        ! 1 fluid on top of another
-       ! c(:) = rho_init(1,:) on bottom
-       ! c(:) = rho_init(2,:) on top
+       ! c = rho_init(1,:) on bottom; c = rho_init(2,:) on top
+       ! smoothing_width > 0 is a tanh smoothed interface where smoothing width is approx the # of grid 
+       !   cells and then c = rand*rho_init(1,:) + (1-rand)*rho_init(2,:)
+       ! smoothing_width between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand()
+       ! smoothing width of -2 is a sinusoidal perturbation
+       ! x-vel = u_init(1) below centerline, u_init(2) above centerline
        !=============================================================
 
-       ! for prob_type=3, smoothing_width is interpreted as:
-       ! positive is a tanh smoothed interface where smoothing width is approx the # of grid cells
-       ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
-       !  c = rand*rho_init(1,:) + (1-rand)*rho_init(2,:)
-       ! -2 is sinusoidal
-       u = 0.d0
        v = 0.d0
+
+       ! x-velocity = u_init(1) below centerline
+       !              u_init(2) above centerline
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y1) then
+             u(:,j) = u_init(1)
+          else
+             u(:,j) = u_init(2)
+          end if
+       end do
 
        ! middle of domain
        y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
-
-
 
        if (smoothing_width .le. 0.d0 .and. smoothing_width .ge. -1.d0) then
 
@@ -286,215 +347,6 @@ contains
           call bl_error("init_rho_and_umac_2d: smoothing_width not compatible with prob_type")
 
        end if
-
-       ! Donev: Reserve case 4 for future (abort now) and make this be prob_type=9 or some such
-    case (4) ! two species only
-
-       if (nspecies .ne. 2) then
-          call bl_error("prob_type=4 requires nspecies=2")
-       end if
-
-       !==================================================================================
-       ! Initializing rho1,rho2=Gaussian and rhototal=1+alpha*exp(-r^2/4D)/(4piD) (no-time 
-       ! dependence). Manufactured solution rho1_exact = exp(-r^2/4Dt-beta*t)/(4piDt)
-       !==================================================================================
-
-       u = 0.d0
-       v = 0.d0
-
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+half) * dx(2) - half
-          do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+half) * dx(1) - half
-
-             rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2
-             rhot = 1.0d0 + alpha1/(4.0d0*M_PI*Dbar(1))*dexp(-rsq/(4.0d0*Dbar(1)))
-             c(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time)-&
-                  beta*time)*rhot
-             c(i,j,2) = rhot - c(i,j,1)
-
-          end do
-       end do
-
-    case (5) ! two species only
-
-       if (nspecies .ne. 2) then
-          call bl_error("prob_type=5 requires nspecies=2")
-       end if
-
-       !==================================================================================
-       ! Initializing m2=m3, D12=D13 where Dbar(1)=D12, Dbar(2)=D13, 
-       ! Dbar(3)=D23, Grad(w2)=0, manufactured solution for rho1 and rho2 
-       ! (to benchmark eqn1) Initializing rho1, rho2=Gaussian and rhototal has no-time dependence.
-       !==================================================================================
-
-       u = 0.d0
-       v = 0.d0
-
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+half) * dx(2) - half
-          do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+half) * dx(1) - half
-
-             rsq = (x-L(1)*half)**2 + (y-L(2)*half)**2
-             w1  = alpha1*dexp(-rsq/(2.0d0*sigma**2))
-             w2  =  delta*dexp(-beta*time)
-             rhot = 1.0d0 + (molmass(2)*Dbar(3)/(molmass(1)*Dbar(1))-1.0d0)*w1
-             c(i,j,1) = rhot*w1
-             c(i,j,2) = rhot*w2 
-             c(i,j,3) = rhot-c(i,j,1)-c(i,j,2)
-
-          end do
-       end do
-
-    case (6) ! two species only
-
-       if (nspecies .ne. 2) then
-          call bl_error("prob_type=6 requires nspecies=2")
-       end if
-
-       !=========================================================
-       ! Test of thermodiffusion steady-state for 2 species 
-       !=========================================================
-
-       u = 0.d0
-       v = 0.d0
-
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+half)*dx(2) 
-          do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+half)*dx(1) 
-
-             ! Solution to diff(c(y),y)=-K*c(y)*(1-c(y))
-             ! Here K=grad(T)*S_T=0.15
-             ! Height of domain H=32
-             ! And average <rho1>=.4830852506
-             c(i,j,1) = 1.0d0/(1.0d0+0.1d0*exp(0.15d0*y))
-             c(i,j,2) = 1.0d0 - c(i,j,1) 
-
-          end do
-       end do
-
-    case (7) ! two species only
-
-       if (nspecies .ne. 2) then
-          call bl_error("prob_type=7 requires nspecies=2")
-       end if
-
-       !===========================================================
-       ! Initializing rho's in Gaussian so as rhotot=constant=1.0
-       ! Here rho_exact = e^(-r^2/4Dt)/(4piDt)
-       !===========================================================
-
-       u = 0.d0
-       v = 0.d0
-
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+half) * dx(2) - half*(prob_lo(2)+prob_hi(2))
-          do i=lo(1),hi(1)
-             x = prob_lo(1) + (dble(i)+half) * dx(1) - half*(prob_lo(1)+prob_hi(1))
-
-             rsq = x**2 + y**2
-             c(i,j,1) = 1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time))
-             c(i,j,2) = 1.0d0-1.0d0/(4.0d0*M_PI*Dbar(1)*time)*dexp(-rsq/(4.0d0*Dbar(1)*time))
-
-          end do
-       end do
-
-    case (8) ! four species only
-
-       if (nspecies .ne. 4) then
-          call bl_error("prob_type=8 requires nspecies=4")
-       end if
-
-       !=============================================================
-       ! 4-species, 4-stripes
-       !=============================================================
-
-       u = 0.d0
-       v = 0.d0
-
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (dble(j)+half)*dx(2) 
-          do i=lo(1),hi(1)
-             if (y .le. 0.75d0*prob_lo(2)+0.25d0*prob_hi(2)) then
-                c(i,j,1) = 0.7d0
-                c(i,j,2) = 0.1d0
-                c(i,j,3) = 0.1d0
-                c(i,j,4) = 0.1d0
-             else if (y .le. 0.5d0*prob_lo(2)+0.5d0*prob_hi(2)) then
-                c(i,j,1) = 0.1d0
-                c(i,j,2) = 0.7d0
-                c(i,j,3) = 0.1d0
-                c(i,j,4) = 0.1d0
-             else if (y .le. 0.25d0*prob_lo(2)+0.75d0*prob_hi(2)) then
-                c(i,j,1) = 0.1d0
-                c(i,j,2) = 0.1d0
-                c(i,j,3) = 0.7d0
-                c(i,j,4) = 0.1d0
-             else
-                c(i,j,1) = 0.1d0
-                c(i,j,2) = 0.1d0
-                c(i,j,3) = 0.1d0
-                c(i,j,4) = 0.7d0
-             end if
-          end do
-       end do
-
-    case (10)
-
-       !=============================================================
-       ! low Mach Kelvin-Helmholtz comparison to binary version
-       ! one fluid on top of another
-       ! discontinuous interface, but with random density perturbation added 
-       ! in a 1-cell thick transition region
-       !=============================================================
-
-       v = 0.d0
-
-       ! middle of domain
-       y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
-
-       ! c1 = rho_init(1,1) in lower half of domain (in y)
-       ! c1 = rho_init(2,1) in upper half
-       ! random perturbation below centerline
-
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
-
-          if (y .lt. y1) then
-             c_loc = rho_init(1,1)
-          else
-             c_loc = rho_init(2,1)
-          end if
-
-          c(lo(1):hi(1),j,1) = c_loc
-          c(lo(1):hi(1),j,2) = 1.d0 - c_loc
-
-          ! add random perturbation below centerline
-          if (j .eq. n_cells(2)/2-1) then
-             do i=lo(1),hi(1)
-                random = rand()
-                c_loc = random*rho_init(1,1) + (1.d0-random)*rho_init(2,1)
-                c(i,j,1) = c_loc
-                c(i,j,2) = 1.d0 - c_loc
-             end do
-          end if
-
-       end do
-
-       ! velocity = u_init(1) below centerline
-       !            u_init(2) above centerline
-       do j=lo(2),hi(2)
-          y = prob_lo(2) + (j+0.5d0)*dx(2)
-
-          if (y .lt. y1) then
-             u(:,j) = u_init(1)
-          else
-             u(:,j) = u_init(2)
-          end if
-
-       end do
 
     case (12)
 
