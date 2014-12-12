@@ -571,6 +571,10 @@ contains
        ! assumes the final species is the light solvent
        ! assume ternary for now
 
+       if (nspecies .ne. 3) then
+          call bl_error("prob_type=14 requires nspecies=3")
+       end if
+
        gradToverT = (T_init(2)-T_init(1))/(T_init(1)*(prob_hi(2)-prob_lo(2)))
 
        u = 0.d0

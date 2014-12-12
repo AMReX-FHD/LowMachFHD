@@ -9,7 +9,7 @@
  k_B      = 1E-3                  ! Boltzmann constant
 
  fixed_dt = 0.01                  ! fixed_dt
- prob_type = 0                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
+ prob_type = 2                    ! initprob:0=equilibrium,1=bubble,2=constgrad,3=gaussian,4=2specie-mansol,5=3specie-mansol
 
  algorithm_type = 1               ! 0 = inertial
                                   ! 1 = overdamped, 1RNG
@@ -48,6 +48,7 @@
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
  rho_init(1,1:5) = 0.1  0.25  0.25 0.2 0.2  ! there are CONCENTRATIONS
+ rho_init(2,1:5) = 0.1  0.25  0.25 0.2 0.2  ! there are CONCENTRATIONS
  Dbar(1:5)       = 1.0  1.5  2.0 1.75 1.25  ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:5)     = 1.0  0.5 -2.0 1.5  -1.0  ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature

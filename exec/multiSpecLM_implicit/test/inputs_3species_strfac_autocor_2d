@@ -7,7 +7,7 @@
   ! Problem specification
   !----------------------
   dim_in = 2                       ! 2D or 3D  
-  prob_type = 0                    ! sets scalars, m, coefficients (see init.f90)
+  prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 32.d0 32.d0       ! physical hi coordinate
   n_cells(1:2) = 32 32             ! number of cells in domain
@@ -167,6 +167,7 @@
   ! initial values for w
   ! These are MASS FRACTIONS (concentrations), not partial densities
   rho_init(1,1:3) = 0.2 0.35 0.45 ! Should give rho_i = 0.6d0 1.05d0 1.35d0 
+  rho_init(2,1:3) = 0.2 0.35 0.45 ! Should give rho_i = 0.6d0 1.05d0 1.35d0 
 
   ! w_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
