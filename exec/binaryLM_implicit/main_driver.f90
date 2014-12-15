@@ -30,13 +30,13 @@ subroutine main_driver()
   use checkpoint_module
   use estdt_module
   use convert_stag_module
-  use probin_binarylm_module, only: probin_binarylm_init, analyze_binary
+  use probin_binarylm_module, only: probin_binarylm_init, analyze_binary, diff_coef
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
                                    stats_int, variance_coef_mom, variance_coef_mass, &
                                    initial_variance, chk_int, algorithm_type, &
-                                   barodiffusion_type, &
+                                   barodiffusion_type, cfl, &
                                    bc_lo, bc_hi, fixed_dt, plot_int, advection_type, &
                                    restart, max_step, print_int, project_eos_int
   use probin_gmres_module  , only: probin_gmres_init
@@ -51,7 +51,7 @@ subroutine main_driver()
 
   integer :: n,nlevs,i,dm,istep,n_cell
 
-  real(kind=dp_t) :: dt,time,runtime1,runtime2,max_vel,av_mass
+  real(kind=dp_t) :: dt,dt_diffusive,time,runtime1,runtime2,max_vel,av_mass
   real(kind=dp_t) :: l1, l2, linf
 
   type(box)         :: bx
@@ -351,6 +351,8 @@ subroutine main_driver()
         dt = fixed_dt
      else
         call estdt(mla,umac,dx,dt)
+        dt_diffusive = cfl*dx(1,1)**2/(2*dm*diff_coef)
+        dt = min(dt,dt_diffusive)
      end if
 
   end if
@@ -460,6 +462,8 @@ subroutine main_driver()
 
      if (fixed_dt .le. 0.d0) then
         call estdt(mla,umac,dx,dt)
+        dt_diffusive = cfl*dx(1,1)**2/(2*dm*diff_coef)
+        dt = min(dt,dt_diffusive)
      end if
 
      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
