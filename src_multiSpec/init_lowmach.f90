@@ -54,6 +54,7 @@ module init_lowmach_module
   !=========================================================
   ! case 4:
   ! not defined
+  ! external_source has an analytic solution, not sure what it was for
 
   !=========================================================
   ! case 5:
@@ -74,6 +75,8 @@ module init_lowmach_module
   !=========================================================
   ! case 9:
   ! not defined
+  ! mixture_properties_mass_local computes Dbar's using water/glycerol
+  ! compute_eta uses water/glycerol
 
   !=========================================================
   ! case 10:
@@ -82,11 +85,15 @@ module init_lowmach_module
   !=========================================================
   ! case 11:
   ! Discontinuous square in the central 25% of domain
+  ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
 
   !=========================================================
   ! case 12:
   ! Gaussian bubble centered in domain
   ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
+  ! lo- and hi-y walls move with prescribed velocity,
+  ! see inhomogeneous_bc_val.f90
+  ! compute_eta uses linear profile in rho if prob_type < 0
 
   !=========================================================
   ! case 13:
@@ -387,6 +394,9 @@ contains
 
        !=============================================================
        ! Gaussian bubble centered in domain
+       ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
+       ! lo- and hi-y walls move with prescribed velocity,
+       ! see inhomogeneous_bc_val.f90
        !=============================================================
 
        u = 0.d0
@@ -409,6 +419,7 @@ contains
 
        !=============================================================
        ! stratified multispecies due to barodiffusion
+       ! approximate analytical steady solution
        ! assumes the final species is the dominant component
        !=============================================================
 
@@ -430,6 +441,7 @@ contains
 
        !=============================================================
        ! stratified multispecies due to thermodiffusion
+       ! approximate analytical steady solution
        ! assumes nspecies=3
        ! assumes the final species is the dominant component
        !=============================================================
@@ -720,6 +732,9 @@ contains
 
        !=============================================================
        ! Gaussian bubble centered in domain
+       ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
+       ! lo- and hi-y walls move with prescribed velocity,
+       ! see inhomogeneous_bc_val.f90
        !=============================================================
 
        u = 0.d0
@@ -746,6 +761,7 @@ contains
 
        !=============================================================
        ! stratified multispecies due to barodiffusion
+       ! approximate analytical steady solution
        ! assumes the final species is the dominant component
        !=============================================================
 
@@ -769,6 +785,7 @@ contains
 
        !=============================================================
        ! stratified multispecies due to thermodiffusion
+       ! approximate analytical steady solution
        ! assumes nspecies=3
        ! assumes the final species is the dominant component
        !=============================================================
