@@ -25,7 +25,7 @@
   plot_stag = F          ! include staggered plotfiles   
 
   diff_type = 1         ! 1 = constant coefficients, -1 = spatially-varing coefficients
-  diff_coef = 1.d-2     ! for binary, this is diffusion coefficient, chi
+  diff_coef = 1.d-5     ! for binary, this is diffusion coefficient, chi
                         ! for multispecies, this is maximum eigenvalue of diffusion matrix
 
 /
@@ -42,7 +42,7 @@
 
   ! Time-step control
   !----------------------
-  fixed_dt = 1.d0                  ! time step
+  fixed_dt = -1.d0                  ! time step
   cfl = 0.5d0                      ! cfl number
 
 
@@ -89,7 +89,7 @@
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
-  visc_type = 1
+  visc_type = -2
   visc_coef = 1.d0         ! momentum diffusion coefficient 'eta'
 
   advection_type = 0 ! 0 = centered explicit
