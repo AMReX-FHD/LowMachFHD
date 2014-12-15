@@ -18,25 +18,70 @@ module init_module
 
   public :: init, compute_eta, compute_chi, compute_kappa
 
- ! prob_type controls the initial condition and selects specific problem to solve
- ! Positive means transport coefficients depend as rational functions on concentration
- ! e.g., eta=visc_coeff*(a+b*conc)/(1+c*conc)
- ! Negative means transport coefficients depend as polynomial functions on concentration
- ! e.g., eta=visc_coeff*(1+a*conc+b*conc^2+c*conc^3)
- ! KEY:
- ! 0 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
- ! 1 = spherical bubble with c_init(1) in the interior, c_init(2) on the exterior
- ! 2 = bilayer interface (stripe)
-   ! the lower third and upper third of the domain (in y) has c_init(1)
-   ! the middle third of the domain has c_init(2)
- ! 3 = one fluid on top of another
-    ! c_init(1), u_init(1) in lower half of domain (in y)
-    ! c_init(2), u_init(2) in upper half
- ! 4 = Bell, Colella, Glaz 1989 jet in a doubly period geometry
- ! 5 = Kelvin-Helmholtz
- ! 6 = Exact solution for constant coefficient (Taylor vortex travelling wave)
- ! 7 = Steady state (diff_flux=0 i.e. rho(c(y))*chi(c(y))*dc/dy=const) -- NOT IMPLEMENTED, for now the same as prob_type=0
-       ! See prob_type=13 in lowMach_explicit/exact_solutions.f90 for partial implementation
+  ! prob_type controls the initial condition and selects specific problem to solve
+  ! Positive means transport coefficients depend as rational functions on concentration
+  ! e.g., eta=visc_coeff*(a+b*conc)/(1+c*conc)
+  ! Negative means transport coefficients depend as polynomial functions on concentration
+  ! e.g., eta=visc_coeff*(1+a*conc+b*conc^2+c*conc^3)
+
+  ! KEY:
+
+  !=============================================================
+  ! case 1:
+  ! Gaussian bubble with c_init(1) in the middle and c_init(2) far away
+  ! centered in domain
+  ! if smoothing_width = 0, this is a discontinuous square in the central 25% of domain
+  ! lo- and hi-y walls move with prescribed velocity,
+  ! see inhomogeneous_bc_val.f90
+
+  !=============================================================
+  ! case 2:
+  ! bilayer interface (stripe)
+  ! the lower third and upper third of the domain (in y) has c_init(1)
+  ! the middle third of the domain has c_init(2)
+  ! smoothing_width has units of GRID CELLS
+  ! if smoothing width is 0, use finite-volume averaging of sharp interface
+
+  !=============================================================
+  ! case 3:
+  ! one fluid on top of another
+  ! c_init(1), u_init(1) in lower half of domain (in y)
+  ! c_init(2), u_init(2) in upper half
+  ! can be smooth or discontinous (smoothing_width)
+  ! u_init(1) and u_init(2) control x-momentum in lower/upper domain
+
+  !=============================================================
+  ! case 4:
+  ! Bell, Colella, Glaz 1989
+  ! jet in a doubly period geometry
+
+  !=============================================================
+  ! case 5:
+  ! Kelvin-Helmholtz
+
+  !=============================================================
+  ! case 6:
+  ! Exact solution for constant coefficient (Taylor vortex travelling wave)
+  ! mk_external_force has analytic function
+
+  !=============================================================
+  ! case 7:
+  ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
+
+  !=============================================================
+  ! case 8:
+  ! low Mach Kelvin-Helmholtz for binary paper
+  ! one fluid on top of another
+  ! discontinuous interface, but with random density perturbation added 
+  ! in a 1-cell thick transition region
+
+  !=============================================================
+  ! case 9:
+  ! (2D only) Almgren, Bell, Smymczak
+  ! Vortex with homogeneous Dirichlet boundary conditions in a unit square
+  ! constant density
+
+
 
 contains
 
@@ -207,6 +252,8 @@ contains
        ! one fluid on top of another
        ! c_init(1), u_init(1) in lower half of domain (in y)
        ! c_init(2), u_init(2) in upper half
+       ! can be smooth or discontinous (smoothing_width)
+       ! u_init(1) and u_init(2) control x-momentum in lower/upper domain
 
        my = 0.d0
 
@@ -346,7 +393,7 @@ contains
 
     case (6)
 
-       ! traveling wave with exact solution
+       ! Exact solution for constant coefficient (Taylor vortex travelling wave)
 
        s(:,:,1) = 1.d0
 
@@ -540,7 +587,7 @@ contains
 
     ! local
     integer :: i,j,k,seed
-    real(kind=dp_t) :: x,y,y1,y2,z,r,dy,c_loc
+    real(kind=dp_t) :: x,y,y1,y2,z,r,dy,c_loc,u_loc
     real(kind=dp_t) :: one_third_domain1,one_third_domain2,random
 
     seed = n_cells(1)*n_cells(2)*lo(3) + n_cells(1)*lo(2) + lo(1)
@@ -551,7 +598,7 @@ contains
 
        ! Gaussian bubble with c_init(1) in the middle and c_init(2) far away
        ! centered in domain
-       ! if smoothing_width = 0, this is a discontinuous circle advecting with radius 0.25
+       ! if smoothing_width = 0, this is a discontinuous square in the central 25% of domain
 
        mx = 0.d0
        my = 0.d0
@@ -644,10 +691,11 @@ contains
     case (3)
 
        ! one fluid on top of another
-       ! c_init(1) in lower half of domain (in y)
-       ! c_init(2) in upper half
+       ! c_init(1), u_init(1) in lower half of domain (in y)
+       ! c_init(2), u_init(2) in upper half
+       ! can be smooth or discontinous (smoothing_width)
+       ! u_init(1) and u_init(2) control x-momentum in lower/upper domain
 
-       mx = 0.d0
        my = 0.d0
        mz = 0.d0
 
@@ -656,18 +704,58 @@ contains
        ! middle of domain
        y1 = (prob_lo(2)+prob_hi(2)) / 2.d0
 
+       if(abs(smoothing_width)>epsilon(1.d0)) then
+
+          do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
+
+             ! smoothed version
+             ! c_init(1) in lower half of domain (in y)
+             ! c_init(2) in upper half
+             c_loc = c_init(1) + (c_init(2)-c_init(1))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+             s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+             s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*c_loc
+
+          end do
+          end do
+
+       else
+
+          ! c_init(1) in lower half of domain (in y)
+          ! c_init(2) in upper half
+
+          do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + (j+0.5d0)*dx(2)
+
+             if (y .lt. y1) then
+                c_loc = c_init(1)
+             else
+                c_loc = c_init(2)
+             end if
+
+             s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+             s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*c_loc
+          
+          end do
+          end do
+
+       end if
+
+       do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           y = prob_lo(2) + (j+0.5d0)*dx(2)
-
-          if (y .lt. y1) then
-             s(lo(1):hi(1),j,lo(3):hi(3),2) = c_init(1)
-             s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_init(1)/rhobar(1)+(1.0d0-c_init(1))/rhobar(2))
-          else
-             s(lo(1):hi(1),j,lo(3):hi(3),2) = c_init(2)
-             s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_init(2)/rhobar(1)+(1.0d0-c_init(2))/rhobar(2))   
-          end if
-          s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*s(lo(1):hi(1),j,lo(3):hi(3),2)
           
+          if (y .lt. y1) then
+             u_loc = u_init(1)
+          else
+             u_loc = u_init(2)
+          end if
+
+          mx(lo(1):hi(1)+1,j,lo(3):hi(3)) = u_loc*s(lo(1),j,k,1)
+          
+       end do
        end do
 
     case (7)
@@ -752,6 +840,10 @@ contains
           end if
 
        end do
+
+    case (9)
+       
+       call bl_error("init_3d: ABS Vortex (prob_type=9) not written")
 
     case default
 
