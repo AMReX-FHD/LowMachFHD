@@ -81,6 +81,11 @@ module init_module
   ! Vortex with homogeneous Dirichlet boundary conditions in a unit square
   ! constant density
 
+  !=============================================================
+  ! case 10:
+  ! bubble with radius = 1/4 of domain in x
+  ! c=c_init(1,:) inside, c=c_init(2,:) outside
+  ! can be discontinous or smooth depending on smoothing_width
 
 
 contains
@@ -151,7 +156,7 @@ contains
 
     ! local
     integer :: i,j,mid,seed
-    real(kind=dp_t) :: x,y,y1,y2,r,dy,c_loc,u_loc
+    real(kind=dp_t) :: x,y,y1,y2,r,dy,c_loc,u_loc,rad
     real(kind=dp_t) :: one_third_domain1,one_third_domain2
     real(kind=dp_t) :: cosxt,cosyt,freq,pfac,pfreq
     real(kind=dp_t) :: sinxt,sinyt,ucst,ufac,vcst,xm,xp,ym,yp,random
@@ -566,6 +571,52 @@ contains
              my(i,j) = sin(M_PI*y)**2 * sin(2.d0*M_PI*x)
           enddo
        enddo
+
+    case (10)
+
+       !=============================================================
+       ! bubble with radius = 1/4 of domain in x
+       ! c=c_init(1,:) inside, c=c_init(2,:) outside
+       ! can be discontinous or smooth depending on smoothing_width
+       !=============================================================
+ 
+       mx = 0.d0
+       my = 0.d0
+
+       rad = (prob_hi(1)-prob_lo(1))/4.d0
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+       
+             r = sqrt(x**2 + y**2)
+
+             if (smoothing_width .eq. 0) then
+
+                ! discontinuous interface
+                if (r .lt. rad) then
+                   s(i,j,2) = c_init(1)
+                else
+                   s(i,j,2) = c_init(2)
+                end if
+
+             else
+
+                ! smooth interface
+                s(i,j,2) = c_init(1) + (c_init(2) - c_init(1))* &
+                     0.5d0*(1.d0 + tanh((r-rad)/(smoothing_width*dx(1))))
+
+             end if
+
+             ! compute rho using eos
+             s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))
+
+             ! compute rho*c
+             s(i,j,2) = s(i,j,1)*s(i,j,2)
+    
+          end do
+       end do
 
     case default
 

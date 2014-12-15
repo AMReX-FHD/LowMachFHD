@@ -29,7 +29,10 @@ module probin_binarylm_module
   namelist /probin_binarylm/ temperature       ! temperature
   namelist /probin_binarylm/ material_properties ! Coefficients A/B/C for chi/eta/kappa
      ! Formula is: indx=1 for chi, indx=2 for eta, indx=3 for kappa (NOT implemented yet)
+     ! for prob_type > 0
      ! coeff=coeff0*(material_properties(1,indx) + material_properties(2,indx)*c) / (1.d0 + material_properties(3,indx)*c)
+     ! for prob_type < 0
+     ! coeff=coeff0*(1 + material_properties(1,indx)*c + material_properties(2,indx)*c^2 + material_properties(3,indx)*c^3)
 
   namelist /probin_binarylm/ boussinesq_beta    ! beta for boussinesq gravity
 
