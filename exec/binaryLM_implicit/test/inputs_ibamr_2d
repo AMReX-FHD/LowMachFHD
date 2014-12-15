@@ -31,7 +31,7 @@
   max_grid_size(1:2) = 32 32 ! max number of cells in a box
   fixed_dt = 0.05d0           ! time step
   plot_int = 100             ! Interval for writing a plotfile (for visit/amrvis)
-  prob_type = 0              ! sets scalars, m, coefficients (see init.f90)
+  prob_type = 7              ! sets scalars, m, coefficients (see init.f90)
   max_step = 10000           ! maximum number of time steps
   print_int = 0              ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1        ! how often to call project_onto_eos

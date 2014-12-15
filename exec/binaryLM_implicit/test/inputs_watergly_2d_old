@@ -67,14 +67,6 @@
   plot_int = 0           ! Interval for writing a plotfile (for visit/amrvis) = N_STEPS_DUMP in IBAMR
   
   ! Determines initial conditions and other problem-specific parameters (see init.f90)
-  ! 0 or 7 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
-  ! 1 = spherical bubble with c_init(1) in the interior, c_init(2) on the exterior
-  ! 2 = bilayer interface (stripe)
-    ! the lower third and upper third of the domain (in y) has c_init(1)
-    ! the middle third of the domain has c_init(2)
-  ! 3 = one fluid on top of another
-     ! c_init(1), u_init(1) in lower half of domain (in y)
-     ! c_init(2), u_init(2) in upper half  
   prob_type = -7  ! Negative because we want polynomial dependence as in lowMach_explicit paper
 
   ! random number seed

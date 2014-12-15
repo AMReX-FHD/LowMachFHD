@@ -49,17 +49,8 @@
   max_step = 1250000          ! maximum number of time steps = N_STEPS in IBAMR
   print_int = 25000 ! how often to output EOS drift and sum of conserved quantities = N_STEPS_CHECK in IBAMR
   project_eos_int = 1        ! how often to call project_onto_eos
-  
-  ! Determines initial conditions and other problem-specific parameters (see init.f90)
-  ! 0 - linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
-  ! 1 = spherical bubble with c_init(1) in the interior, c_init(2) on the exterior
-  ! 2 = bilayer interface (stripe)
-    ! the lower third and upper third of the domain (in y) has c_init(1)
-    ! the middle third of the domain has c_init(2)
-  ! 3 = one fluid on top of another
-     ! c_init(1), u_init(1) in lower half of domain (in y)
-     ! c_init(2), u_init(2) in upper half  
-  prob_type = 0              ! sets scalars, m, coefficients 
+
+  prob_type = 7              ! sets scalars, m, coefficients, see init.f90
 
   ! random number seed
   ! 0        = unpredictable seed based on clock

@@ -115,31 +115,6 @@ contains
     call srand(seed)
 
     select case (abs(prob_type))
-    case (0,7)
-
-       ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
-
-       mx = 0.d0
-       my = 0.d0
-
-       p = 0.d0
-
-       do j=lo(2),hi(2)
-
-          ! compute distance from bottom of domain
-          dy = dx(2)*(j+0.5d0)
-
-          ! linear gradient in c
-          c_loc = c_init(1) + (c_init(2)-c_init(1))*dy/(prob_hi(2)-prob_lo(2))
-
-          ! compute rho with the eos
-          s(lo(1):hi(1),j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
-
-          ! compute rho*c
-          s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*c_loc
-
-       end do
-
     case (1)
 
        ! Gaussian bubble with c_init(1) in the middle and c_init(2) far away
@@ -440,6 +415,31 @@ contains
           enddo
        enddo
 
+    case (7)
+
+       ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
+
+       mx = 0.d0
+       my = 0.d0
+
+       p = 0.d0
+
+       do j=lo(2),hi(2)
+
+          ! compute distance from bottom of domain
+          dy = dx(2)*(j+0.5d0)
+
+          ! linear gradient in c
+          c_loc = c_init(1) + (c_init(2)-c_init(1))*dy/(prob_hi(2)-prob_lo(2))
+
+          ! compute rho with the eos
+          s(lo(1):hi(1),j,1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+
+          ! compute rho*c
+          s(lo(1):hi(1),j,2) = s(lo(1):hi(1),j,1)*c_loc
+
+       end do
+
     case (8)
 
        ! low Mach Kelvin-Helmholtz for binary paper
@@ -547,32 +547,6 @@ contains
     call srand(seed)
 
     select case (abs(prob_type))
-    case (0,7)
-
-       ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
-
-       mx = 0.d0
-       my = 0.d0
-       mz = 0.d0
-
-       p = 0.d0
-
-       do j=lo(2),hi(2)
-
-          ! compute distance from bottom of domain
-          dy = dx(2)*(j+0.5d0)
-
-          ! linear gradient in c
-          c_loc = c_init(1) + (c_init(2)-c_init(1))*dy/(prob_hi(2)-prob_lo(2))
-
-          ! compute rho with the eos
-          s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
-
-          ! compute rho*c
-          s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*c_loc
-
-       end do
-
     case (1)
 
        ! Gaussian bubble with c_init(1) in the middle and c_init(2) far away
@@ -694,6 +668,32 @@ contains
           end if
           s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*s(lo(1):hi(1),j,lo(3):hi(3),2)
           
+       end do
+
+    case (7)
+
+       ! linear gradient in c; c_init(1) at lo-y wall, c_init(2) at hi-y wall
+
+       mx = 0.d0
+       my = 0.d0
+       mz = 0.d0
+
+       p = 0.d0
+
+       do j=lo(2),hi(2)
+
+          ! compute distance from bottom of domain
+          dy = dx(2)*(j+0.5d0)
+
+          ! linear gradient in c
+          c_loc = c_init(1) + (c_init(2)-c_init(1))*dy/(prob_hi(2)-prob_lo(2))
+
+          ! compute rho with the eos
+          s(lo(1):hi(1),j,lo(3):hi(3),1) = 1.0d0/(c_loc/rhobar(1)+(1.0d0-c_loc)/rhobar(2))
+
+          ! compute rho*c
+          s(lo(1):hi(1),j,lo(3):hi(3),2) = s(lo(1):hi(1),j,lo(3):hi(3),1)*c_loc
+
        end do
 
     case (8)
