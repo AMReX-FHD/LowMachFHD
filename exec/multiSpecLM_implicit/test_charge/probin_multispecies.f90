@@ -24,6 +24,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
 
   ! for charged fluid
+  logical            :: use_charged_fluid
   real(kind=dp_t)    :: dielectric_const,charge_per_mass(max_species)
   
   namelist /probin_multispecies/ nspecies
@@ -52,6 +53,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ plot_stag  ! plot staggered velocities in separate plotfile
 
   ! for charged fluid
+  namelist /probin_multispecies/ use_charged_fluid
   namelist /probin_multispecies/ dielectric_const
   namelist /probin_multispecies/ charge_per_mass
 
@@ -97,6 +99,7 @@ contains
     plot_stag          = .false.
 
     ! for charged fluid
+    use_charged_fluid = .false.
     dielectric_const = 1.d0
     charge_per_mass = 0.d0
  
