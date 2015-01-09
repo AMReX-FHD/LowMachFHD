@@ -58,7 +58,8 @@ contains
   subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                       dx,dt,time,the_bc_tower,istep)
+                                       dx,dt,time,the_bc_tower,istep, &
+                                       grad_Epot_old,grad_Epot_new)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -79,6 +80,8 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
+    type(multifab) , intent(inout) :: grad_Epot_old(:,:)
+    type(multifab) , intent(inout) :: grad_Epot_new(:,:)
 
     ! local
     type(multifab) ::  rho_update(mla%nlevel)
