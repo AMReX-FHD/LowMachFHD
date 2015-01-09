@@ -8,6 +8,7 @@ module diffusive_mass_fluxdiv_module
                                         nspecies, correct_flux, use_charged_fluid, dielectric_const, &
                                         rho_part_bc_comp
   use probin_common_module, only: temp_bc_comp, barodiffusion_type
+  use probin_gmres_module, only: mg_verbose
   use mass_flux_utilities_module
   use ml_layout_module
   use convert_stag_module
@@ -252,6 +253,7 @@ contains
        do n=1,nlevs
 
           call multifab_build(Epot(n),mla%la(n),1,1)
+          call setval(Epot(n),0.d0,all=.true.)
 
           ! set alpha=0
           call multifab_build(alpha(n),mla%la(n),1,0)
@@ -271,7 +273,8 @@ contains
        end do
 
        ! solve (alpha - del dot beta grad) Epot = charge
-       call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp)
+       call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
+                        verbose=mg_verbose)
           
        do n=1,nlevs
           call multifab_destroy(alpha(n))
