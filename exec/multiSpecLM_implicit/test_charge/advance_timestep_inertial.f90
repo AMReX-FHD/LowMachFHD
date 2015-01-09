@@ -29,7 +29,7 @@ module advance_timestep_inertial_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, restart, barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: nspecies, rho_part_bc_comp
+  use probin_multispecies_module, only: nspecies, rho_part_bc_comp, use_charged_fluid
   use analysis_module
 
   implicit none
@@ -110,6 +110,9 @@ contains
     type(multifab) ::     rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::    flux_total(mla%nlevel,mla%dim)
 
+    type(multifab) :: mom_charge_force_old(mla%nlevel,mla%dim)
+    type(multifab) :: mom_charge_force_new(mla%nlevel,mla%dim)
+    
     integer :: i,dm,n,nlevs
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
@@ -147,6 +150,8 @@ contains
           call multifab_build_edge(       rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(    rhotot_fc(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(   flux_total(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(mom_charge_force_old(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(mom_charge_force_new(n,i),mla%la(n),1,0,i)
        end do
     end do
 
@@ -376,6 +381,30 @@ contains
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
+
+    if (use_charged_fluid) then
+
+       ! compute (1/2) old and new momentum charge force
+       call average_cc_to_face(nlevs,charge_old,mom_charge_force_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,charge_new,mom_charge_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_c(mom_charge_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
+             call multifab_mult_mult_c(mom_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_mult_mult_s_c(mom_charge_force_old(n,i),1,0.5d0,1,0)
+             call multifab_mult_mult_s_c(mom_charge_force_new(n,i),1,0.5d0,1,0)
+          end do
+       end do
+
+       ! subtract (1/2) old and (1/2) new from gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_old(n,i),1,1,0)
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_new(n,i),1,1,0)
+          end do
+       end do
+
+    end if
 
     ! compute gmres_rhs_p
     do n=1,nlevs
@@ -739,6 +768,28 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
+
+    if (use_charged_fluid) then
+
+       ! compute (1/2) new momentum charge force
+       call average_cc_to_face(nlevs,charge_new,mom_charge_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_c(mom_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_mult_mult_s_c(mom_charge_force_new(n,i),1,0.5d0,1,0)
+          end do
+       end do
+
+       ! subtract (1/2) old and (1/2) new from gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_old(n,i),1,1,0)
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_new(n,i),1,1,0)
+          end do
+       end do
+
+    end if
+
     ! compute gmres_rhs_p
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
@@ -902,6 +953,8 @@ contains
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(flux_total(n,i))
+          call multifab_destroy(mom_charge_force_old(n,i))
+          call multifab_destroy(mom_charge_force_new(n,i))
        end do
     end do
 
