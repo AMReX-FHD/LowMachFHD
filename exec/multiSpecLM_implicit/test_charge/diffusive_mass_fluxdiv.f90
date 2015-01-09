@@ -5,7 +5,8 @@ module diffusive_mass_fluxdiv_module
   use bc_module
   use div_and_grad_module
   use probin_multispecies_module, only: nspecies, is_nonisothermal, mol_frac_bc_comp, &
-                                        nspecies, correct_flux, use_charged_fluid, dielectric_const
+                                        nspecies, correct_flux, use_charged_fluid, dielectric_const, &
+                                        rho_part_bc_comp
   use probin_common_module, only: temp_bc_comp, barodiffusion_type
   use mass_flux_utilities_module
   use ml_layout_module
@@ -127,7 +128,14 @@ contains
     type(multifab)  :: alpha(mla%nlevel)
     type(multifab)  :: beta(mla%nlevel,mla%dim)
     type(multifab)  :: Epot(mla%nlevel)
+    type(multifab)  :: charge_coef(mla%nlevel)
+    type(multifab)  :: charge_coef_face(mla%nlevel,mla%dim)
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
+
+    integer :: Epot_bc_comp
+
+    ! NOTE THE BOUNDARY CONDITION COMPONENT ISN'T RIGHT
+    Epot_bc_comp = scal_bc_comp
  
     dm    = mla%dim     ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
@@ -263,8 +271,7 @@ contains
        end do
 
        ! solve (alpha - del dot beta grad) Epot = charge
-       ! NOTE THE BOUNDARY CONDITION COMPONENT ISN'T RIGHT
-       call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,scal_bc_comp)
+       call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp)
           
        do n=1,nlevs
           call multifab_destroy(alpha(n))
@@ -274,24 +281,48 @@ contains
        end do
           
        ! compute the gradient of the electric potential
-
-
+       call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           call multifab_destroy(Epot(n))
        end do
 
-
        ! compute the charge flux coefficient
-
+       do n=1,nlevs
+          call multifab_build(charge_coef(n),mla%la(n),nspecies,1)
+       end do
+       call compute_charge_coef(mla,rho,rhotot,Temp,charge,charge_coef)
 
        ! average charge flux coefficient to faces
-
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_build_edge(charge_coef_face(n,i),mla%la(n),nspecies,0,i)
+          end do
+       end do
+       call average_cc_to_face(nlevs,charge_coef,charge_coef_face,1,rho_part_bc_comp,nspecies, &
+                               the_bc_tower%bc_tower_array,.true.)
 
        ! multiply flux coefficient by gradient of electric potential
-
+       do n=1,nlevs
+          do i=1,dm
+             do s=1,nspecies
+                call multifab_mult_mult_c(charge_coef_face(n,i), s, grad_Epot(n,i), 1, 1)
+             end do
+          end do
+       end do
 
        ! add charge flux to the running total
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_plus_plus(flux(n,i), charge_coef_face(n,i), 0)
+          end do
+       end do  
 
+       do n=1,nlevs
+          call multifab_destroy(charge_coef(n))
+          do i=1,dm
+             call multifab_destroy(charge_coef_face(n,i))
+          end do
+       end do       
 
     end if
 
