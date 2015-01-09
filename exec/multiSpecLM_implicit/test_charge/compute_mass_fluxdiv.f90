@@ -26,7 +26,7 @@ contains
                                           diff_fluxdiv,stoch_fluxdiv, &
                                           Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
-                                          the_bc_level)
+                                          the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -39,7 +39,7 @@ contains
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
-    type(bc_level) , intent(in   )   :: the_bc_level(:)
+    type(bc_tower) , intent(in   )   :: the_bc_tower
 
     ! local
     integer :: n,nlevs
@@ -71,7 +71,7 @@ contains
     call compute_mass_fluxdiv(mla,rho,gradp_baro,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
                               D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                               zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
-                              the_bc_level, &
+                              the_bc_tower, &
                               charge,grad_Epot)
 
     do n=1,nlevs
@@ -91,7 +91,7 @@ contains
                                            diff_fluxdiv,stoch_fluxdiv, &
                                            Temp,flux_total, &
                                            dt,stage_time,dx,weights, &
-                                           the_bc_level, &
+                                           the_bc_tower, &
                                            charge,grad_Epot)
        
     type(ml_layout), intent(in   )   :: mla
@@ -105,7 +105,7 @@ contains
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
-    type(bc_level) , intent(in   )   :: the_bc_level(:)
+    type(bc_tower) , intent(in   )   :: the_bc_tower
     type(multifab) , intent(inout)   :: charge(:)
     type(multifab) , intent(inout)   :: grad_Epot(:,:)
 
@@ -137,7 +137,7 @@ contains
     call compute_mass_fluxdiv(mla,rho,gradp_baro,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
                               D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                               zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
-                              the_bc_level, &
+                              the_bc_tower, &
                               charge,grad_Epot)
 
     do n=1,nlevs
@@ -156,7 +156,7 @@ contains
   subroutine compute_mass_fluxdiv(mla,rho,gradp_baro,molarconc,molmtot,chi,Hessian,Gama,D_bar,&
                                   D_therm,diff_fluxdiv,stoch_fluxdiv,Temp,&
                                   zeta_by_Temp,flux_total,dt,stage_time,dx,weights,&
-                                  the_bc_level, &
+                                  the_bc_tower, &
                                   charge,grad_Epot)
        
     type(ml_layout), intent(in   )   :: mla
@@ -178,7 +178,7 @@ contains
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
-    type(bc_level) , intent(in   )   :: the_bc_level(:)
+    type(bc_tower) , intent(in   )   :: the_bc_tower
     type(multifab) , intent(inout)   :: charge(:)
     type(multifab) , intent(inout)   :: grad_Epot(:,:)
 
@@ -200,18 +200,18 @@ contains
     end do
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
-    call correct_rho_with_drho(mla,rho,drho,the_bc_level)
+    call correct_rho_with_drho(mla,rho,drho,the_bc_tower%bc_tower_array)
  
     ! compute molmtot,molarconc & rhotot_temp (primitive variables) for 
     ! each-cell from rho(conserved) 
-    call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot,the_bc_level)
+    call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot,the_bc_tower%bc_tower_array)
       
     ! populate D_bar and Hessian matrix 
     call compute_mixture_properties(mla,rho,rhotot_temp,molarconc,molmtot,D_bar,D_therm, &
-                                    Hessian,Temp,the_bc_level)
+                                    Hessian,Temp,the_bc_tower%bc_tower_array)
 
     ! compute Gama from Hessian
-    call compute_Gama(mla,rho,rhotot_temp,molarconc,molmtot,Hessian,Gama,the_bc_level)
+    call compute_Gama(mla,rho,rhotot_temp,molarconc,molmtot,Hessian,Gama,the_bc_tower%bc_tower_array)
    
     ! compute chi 
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
@@ -229,7 +229,8 @@ contains
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
     call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
-                                diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro,flux_total,dx,the_bc_level)
+                                diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro,flux_total,dx,the_bc_tower, &
+                                charge,grad_Epot)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
@@ -238,7 +239,7 @@ contains
     if (variance_coef_mass .ne. 0.d0) then
        call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
                                     molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
-                                    dx,dt,weights,the_bc_level)
+                                    dx,dt,weights,the_bc_tower%bc_tower_array)
     else
        do n=1,nlevs
           call multifab_setval(stoch_fluxdiv(n),0.d0,all=.true.)

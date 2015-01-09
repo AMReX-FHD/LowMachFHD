@@ -17,7 +17,7 @@ module advance_timestep_diffusion_module
 
 contains
 
-  subroutine advance_timestep_diffusion(mla,rho,rhotot,Temp,dx,dt,time,the_bc_level)
+  subroutine advance_timestep_diffusion(mla,rho,rhotot,Temp,dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -25,7 +25,7 @@ contains
     type(multifab) , intent(in   ) :: Temp(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     real(kind=dp_t), intent(in   ) :: dt,time
-    type(bc_level) , intent(in   ) :: the_bc_level(:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables and array of multifabs
     type(multifab)               :: rhonew(mla%nlevel)
@@ -76,7 +76,7 @@ contains
        call init_mass_stochastic(mla,n_rngs)
     
        ! initialize stochastic flux on every face W(0,1) 
-       call fill_mass_stochastic(mla,the_bc_level)
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
     endif
 
@@ -97,7 +97,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        the_bc_level)
+                                        the_bc_tower)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
@@ -132,7 +132,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        the_bc_level)
+                                        the_bc_tower)
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
@@ -145,7 +145,7 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                               dx_in=dx(n,:))
       end do
 
@@ -159,7 +159,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        the_bc_level)
+                                        the_bc_tower)
 
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
@@ -196,7 +196,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        the_bc_level)
+                                        the_bc_tower)
  
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
@@ -209,7 +209,7 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                               dx_in=dx(n,:))
       end do
 
@@ -225,7 +225,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total, &
                                         dt,stage_time,dx,weights,&
-                                        the_bc_level)
+                                        the_bc_tower)
  
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
@@ -262,7 +262,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        the_bc_level)
+                                        the_bc_tower)
  
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
@@ -275,7 +275,7 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                               dx_in=dx(n,:))
       end do
 
@@ -291,7 +291,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        the_bc_level)
+                                        the_bc_tower)
 
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
@@ -306,7 +306,7 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                               dx_in=dx(n,:))
       end do
       
@@ -327,7 +327,7 @@ contains
       call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        the_bc_level)
+                                        the_bc_tower)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
@@ -346,7 +346,7 @@ contains
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_level(n), &
+       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
     end do   
 

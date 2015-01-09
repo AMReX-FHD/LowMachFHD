@@ -107,7 +107,7 @@ contains
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        Temp, &
                                        flux_total,dt,0.d0,dx,weights, &
-                                       the_bc_tower%bc_tower_array, &
+                                       the_bc_tower, &
                                        charge_old,grad_Epot_old)
 
     do n=1,nlevs

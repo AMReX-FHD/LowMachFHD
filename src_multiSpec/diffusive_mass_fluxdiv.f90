@@ -26,7 +26,7 @@ contains
 
   subroutine diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
                                     diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
-                                    flux_total,dx,the_bc_level)
+                                    flux_total,dx,the_bc_tower)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -40,7 +40,7 @@ contains
     type(multifab) , intent(in   )  :: gradp_baro(:,:)
     type(multifab) , intent(inout)  :: flux_total(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
-    type(bc_level) , intent(in   )  :: the_bc_level(:)
+    type(bc_tower) , intent(in   )  :: the_bc_tower
 
     ! local variables
     integer i,dm,n,nlevs
@@ -63,7 +63,7 @@ contains
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
     call diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,&
-                             zeta_by_Temp,gradp_baro,flux,dx,the_bc_level)
+                             zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower)
     
     ! add fluxes to flux_total
     do n=1,nlevs
@@ -85,7 +85,7 @@ contains
   end subroutine diffusive_mass_fluxdiv
  
   subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
-                                 Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_level)
+                                 Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:) 
@@ -98,7 +98,7 @@ contains
     type(multifab) , intent(in   ) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
-    type(bc_level) , intent(in   ) :: the_bc_level(:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables
     integer :: n,i,s,dm,nlevs
@@ -130,7 +130,7 @@ contains
 
     ! compute face-centered rhoWchi from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
-                            nspecies**2, the_bc_level, .false.) 
+                            nspecies**2, the_bc_tower%bc_tower_array, .false.) 
 
     !==================================!
     ! compute flux-piece from molarconc
@@ -138,11 +138,11 @@ contains
 
     ! calculate face-centrered grad(molarconc) 
     call compute_grad(mla, molarconc, flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
-                      the_bc_level)
+                      the_bc_tower%bc_tower_array)
 
     ! compute face-centered Gama from cell-centered values 
     call average_cc_to_face(nlevs, Gama, Gama_face, 1, tran_bc_comp, &
-                            nspecies**2, the_bc_level, .false.)
+                            nspecies**2, the_bc_tower%bc_tower_array, .false.)
 
     ! compute Gama*grad(molarconc): Gama is nspecies^2 matrix; grad(x) is nspecies component vector 
     do n=1,nlevs
@@ -158,11 +158,11 @@ contains
        !====================================! 
  
        ! calculate face-centrered grad(T) 
-       call compute_grad(mla, Temp, flux_Temp, dx, 1, temp_bc_comp, 1, 1, the_bc_level)
+       call compute_grad(mla, Temp, flux_Temp, dx, 1, temp_bc_comp, 1, 1, the_bc_tower%bc_tower_array)
     
        ! compute face-centered zeta_by_T from cell-centered values 
        call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, tran_bc_comp, &
-                               nspecies, the_bc_level, .false.) 
+                               nspecies, the_bc_tower%bc_tower_array, .false.) 
 
        ! compute zeta_by_T*grad(T): zeta_by_T is nspecies component vector; grad(T) is scalar
        do n=1,nlevs
@@ -195,7 +195,7 @@ contains
 
        ! average baro_coef to faces
        call average_cc_to_face(nlevs, baro_coef, baro_coef_face, 1, scal_bc_comp, &
-                               nspecies, the_bc_level, .false.)
+                               nspecies, the_bc_tower%bc_tower_array, .false.)
 
        ! store the fluxes, baro_coef(1:nspecies) * gradp_baro, in baro_coef_face
        do n=1,nlevs
@@ -227,14 +227,14 @@ contains
     ! If there are walls with zero-flux boundary conditions
     if(is_nonisothermal) then
        do n=1,nlevs
-          call zero_edgeval_walls(flux(n,:),1,nspecies,the_bc_level(n))
+          call zero_edgeval_walls(flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
        end do   
     end if
 
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then
        !write(*,*) "Checking conservation of deterministic fluxes"
-       call correction_flux(mla, rho, rhotot, flux, the_bc_level)
+       call correction_flux(mla, rho, rhotot, flux, the_bc_tower%bc_tower_array)
     end if
     
     ! destroy B^(-1)*Gama multifab to prevent leakage in memory

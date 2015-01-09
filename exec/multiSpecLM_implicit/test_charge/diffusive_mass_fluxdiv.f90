@@ -5,7 +5,7 @@ module diffusive_mass_fluxdiv_module
   use bc_module
   use div_and_grad_module
   use probin_multispecies_module, only: nspecies, is_nonisothermal, mol_frac_bc_comp, &
-                                        nspecies, correct_flux
+                                        nspecies, correct_flux, use_charged_fluid, dielectric_const
   use probin_common_module, only: temp_bc_comp, barodiffusion_type
   use mass_flux_utilities_module
   use ml_layout_module
@@ -15,6 +15,11 @@ module diffusive_mass_fluxdiv_module
   use correction_flux_module
   use zero_edgeval_module
   use F95_LAPACK
+
+  ! for charged fluid
+  use fluid_charge_module
+  use bndry_reg_module
+  use ml_solve_module
   
   implicit none
 
@@ -26,7 +31,8 @@ contains
 
   subroutine diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
                                     diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
-                                    flux_total,dx,the_bc_level)
+                                    flux_total,dx,the_bc_tower, &
+                                    charge,grad_Epot)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -40,7 +46,9 @@ contains
     type(multifab) , intent(in   )  :: gradp_baro(:,:)
     type(multifab) , intent(inout)  :: flux_total(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
-    type(bc_level) , intent(in   )  :: the_bc_level(:)
+    type(bc_tower) , intent(in   )  :: the_bc_tower
+    type(multifab) , intent(inout)  :: charge(:)
+    type(multifab) , intent(inout)  :: grad_Epot(:,:)
 
     ! local variables
     integer i,dm,n,nlevs
@@ -63,7 +71,8 @@ contains
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
     call diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,&
-                             zeta_by_Temp,gradp_baro,flux,dx,the_bc_level)
+                             zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower, &
+                             charge,grad_Epot)
     
     ! add fluxes to flux_total
     do n=1,nlevs
@@ -85,7 +94,8 @@ contains
   end subroutine diffusive_mass_fluxdiv
  
   subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
-                                 Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_level)
+                                 Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower, &
+                                 charge,grad_Epot)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:) 
@@ -98,7 +108,9 @@ contains
     type(multifab) , intent(in   ) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
-    type(bc_level) , intent(in   ) :: the_bc_level(:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+    type(multifab) , intent(inout) :: charge(:)
+    type(multifab) , intent(inout) :: grad_Epot(:,:)
 
     ! local variables
     integer :: n,i,s,dm,nlevs
@@ -111,6 +123,11 @@ contains
     type(multifab)  :: baro_coef(mla%nlevel)
     type(multifab)  :: baro_coef_face(mla%nlevel,mla%dim)
   
+    ! for electric potential Poisson solve
+    type(multifab)  :: alpha(mla%nlevel)
+    type(multifab)  :: beta(mla%nlevel,mla%dim)
+    type(multifab)  :: Epot(mla%nlevel)
+    type(bndry_reg) :: fine_flx(2:mla%nlevel)
  
     dm    = mla%dim     ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
@@ -130,7 +147,7 @@ contains
 
     ! compute face-centered rhoWchi from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
-                            nspecies**2, the_bc_level, .false.) 
+                            nspecies**2, the_bc_tower%bc_tower_array, .false.) 
 
     !==================================!
     ! compute flux-piece from molarconc
@@ -138,11 +155,11 @@ contains
 
     ! calculate face-centrered grad(molarconc) 
     call compute_grad(mla, molarconc, flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
-                      the_bc_level)
+                      the_bc_tower%bc_tower_array)
 
     ! compute face-centered Gama from cell-centered values 
     call average_cc_to_face(nlevs, Gama, Gama_face, 1, tran_bc_comp, &
-                            nspecies**2, the_bc_level, .false.)
+                            nspecies**2, the_bc_tower%bc_tower_array, .false.)
 
     ! compute Gama*grad(molarconc): Gama is nspecies^2 matrix; grad(x) is nspecies component vector 
     do n=1,nlevs
@@ -158,11 +175,11 @@ contains
        !====================================! 
  
        ! calculate face-centrered grad(T) 
-       call compute_grad(mla, Temp, flux_Temp, dx, 1, temp_bc_comp, 1, 1, the_bc_level)
+       call compute_grad(mla, Temp, flux_Temp, dx, 1, temp_bc_comp, 1, 1, the_bc_tower%bc_tower_array)
     
        ! compute face-centered zeta_by_T from cell-centered values 
        call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, tran_bc_comp, &
-                               nspecies, the_bc_level, .false.) 
+                               nspecies, the_bc_tower%bc_tower_array, .false.) 
 
        ! compute zeta_by_T*grad(T): zeta_by_T is nspecies component vector; grad(T) is scalar
        do n=1,nlevs
@@ -195,7 +212,7 @@ contains
 
        ! average baro_coef to faces
        call average_cc_to_face(nlevs, baro_coef, baro_coef_face, 1, scal_bc_comp, &
-                               nspecies, the_bc_level, .false.)
+                               nspecies, the_bc_tower%bc_tower_array, .false.)
 
        ! store the fluxes, baro_coef(1:nspecies) * gradp_baro, in baro_coef_face
        do n=1,nlevs
@@ -217,6 +234,67 @@ contains
 
     end if
 
+    if (use_charged_fluid) then
+
+       ! compute total charge
+       call compute_total_charge(mla,rho,charge)
+
+       ! solve poisson equation for phi (the electric potential)
+       ! -del dot epsilon grad Phi = charge
+       do n=1,nlevs
+
+          call multifab_build(Epot(n),mla%la(n),1,1)
+
+          ! set alpha=0
+          call multifab_build(alpha(n),mla%la(n),1,0)
+          call setval(alpha(n),0.d0,all=.true.)
+
+          ! set beta=dielectric_const
+          do i=1,dm
+             call multifab_build_edge(beta(n,i),mla%la(n),1,0,i)
+             call setval(beta(n,i),dielectric_const,all=.true.)
+          end do
+
+       end do
+
+       ! build the boundary flux register
+       do n=2,nlevs
+          call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
+       end do
+
+       ! solve (alpha - del dot beta grad) Epot = charge
+       ! NOTE THE BOUNDARY CONDITION COMPONENT ISN'T RIGHT
+       call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,scal_bc_comp)
+          
+       do n=1,nlevs
+          call multifab_destroy(alpha(n))
+          do i=1,dm
+             call multifab_destroy(beta(n,i))
+          end do
+       end do
+          
+       ! compute the gradient of the electric potential
+
+
+       do n=1,nlevs
+          call multifab_destroy(Epot(n))
+       end do
+
+
+       ! compute the charge flux coefficient
+
+
+       ! average charge flux coefficient to faces
+
+
+       ! multiply flux coefficient by gradient of electric potential
+
+
+       ! add charge flux to the running total
+
+
+    end if
+
     ! compute rhoWchi * totalflux (on faces) 
     do n=1,nlevs
        do i=1,dm
@@ -227,14 +305,14 @@ contains
     ! If there are walls with zero-flux boundary conditions
     if(is_nonisothermal) then
        do n=1,nlevs
-          call zero_edgeval_walls(flux(n,:),1,nspecies,the_bc_level(n))
+          call zero_edgeval_walls(flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
        end do   
     end if
 
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then
        !write(*,*) "Checking conservation of deterministic fluxes"
-       call correction_flux(mla, rho, rhotot, flux, the_bc_level)
+       call correction_flux(mla, rho, rhotot, flux, the_bc_tower%bc_tower_array)
     end if
     
     ! destroy B^(-1)*Gama multifab to prevent leakage in memory

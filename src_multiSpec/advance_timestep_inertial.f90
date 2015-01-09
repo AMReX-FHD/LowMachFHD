@@ -356,7 +356,7 @@ contains
     call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower%bc_tower_array)
+                                      the_bc_tower)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
@@ -717,7 +717,7 @@ contains
     call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower%bc_tower_array)
+                                      the_bc_tower)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
