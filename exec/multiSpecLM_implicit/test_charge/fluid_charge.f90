@@ -10,7 +10,7 @@ module fluid_charge_module
 
   private
 
-  public :: compute_total_charge, compute_charge_coef
+  public :: compute_total_charge, compute_charge_coef, momentum_charge_force
   
 contains
 

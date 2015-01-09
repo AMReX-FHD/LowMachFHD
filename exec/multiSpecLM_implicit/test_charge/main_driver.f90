@@ -80,6 +80,8 @@ subroutine main_driver()
   type(multifab), allocatable  :: kappa(:)
   type(multifab), allocatable  :: conc(:)
 
+  type(multifab), allocatable  :: charge_old(:)
+  type(multifab), allocatable  :: charge_new(:)
   type(multifab), allocatable  :: grad_Epot_old(:,:)
   type(multifab), allocatable  :: grad_Epot_new(:,:)
 
@@ -124,6 +126,8 @@ subroutine main_driver()
      allocate(Temp_ed(nlevs,3))
   end if
 
+  allocate(charge_old(nlevs))
+  allocate(charge_new(nlevs))
   allocate(grad_Epot_old(nlevs,dm))
   allocate(grad_Epot_new(nlevs,dm))
 
@@ -233,6 +237,8 @@ subroutine main_driver()
      end do
 
      do n=1,nlevs
+        call multifab_build(charge_old(n),mla%la(n),1,1)
+        call multifab_build(charge_new(n),mla%la(n),1,1)
         do i=1,dm
            call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,0,i)
            call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,0,i)
@@ -482,7 +488,8 @@ subroutine main_driver()
      if (algorithm_type .eq. 0) then
         call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro,diff_mass_fluxdiv, &
                                 stoch_mass_fluxdiv, &
-                                Temp,eta,eta_ed,dt,dx,the_bc_tower)
+                                Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+                                charge_old,grad_Epot_old)
      end if
 
      if (print_int .gt. 0) then
@@ -563,7 +570,8 @@ subroutine main_driver()
                                         gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep, &
-                                        grad_Epot_old,grad_Epot_new)
+                                        grad_Epot_old,grad_Epot_new, &
+                                        charge_old,charge_new)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -649,6 +657,13 @@ subroutine main_driver()
       do n=1,nlevs
          call multifab_copy_c(rho_old(n)   ,1,rho_new(n)   ,1,nspecies,rho_old(n)%ng)
          call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1,1       ,rhotot_old(n)%ng)
+
+         call multifab_copy_c(charge_old(n),1,charge_new(n),1,1       ,charge_old(n)%ng)
+         do i=1,dm
+            call multifab_copy_c(grad_Epot_old(n,i),1,grad_Epot_new(n,i),1,1, &
+                                 grad_Epot_old(n,i)%ng)
+         end do
+
       end do
 
   end do
@@ -688,6 +703,8 @@ subroutine main_driver()
   end do
 
   do n=1,nlevs
+     call multifab_destroy(charge_old(n))
+     call multifab_destroy(charge_new(n))
      do i=1,dm
         call multifab_destroy(grad_Epot_old(n,i))
         call multifab_destroy(grad_Epot_new(n,i))

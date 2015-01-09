@@ -59,7 +59,7 @@ contains
                                        gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep, &
-                                       grad_Epot_old,grad_Epot_new)
+                                       grad_Epot_old,grad_Epot_new,charge_old,charge_new)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -82,6 +82,8 @@ contains
     integer        , intent(in   ) :: istep
     type(multifab) , intent(inout) :: grad_Epot_old(:,:)
     type(multifab) , intent(inout) :: grad_Epot_new(:,:)
+    type(multifab) , intent(inout) :: charge_old(:)
+    type(multifab) , intent(inout) :: charge_new(:)
 
     ! local
     type(multifab) ::  rho_update(mla%nlevel)
@@ -356,10 +358,11 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower%bc_tower_array)
+    call compute_mass_fluxdiv_wrapper2(mla,rho_new,gradp_baro, &
+                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                       Temp,flux_total,dt,time,dx,weights, &
+                                       the_bc_tower%bc_tower_array, &
+                                       charge_new,grad_Epot_new)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
@@ -717,10 +720,11 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower%bc_tower_array)
+    call compute_mass_fluxdiv_wrapper2(mla,rho_new,gradp_baro, &
+                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                       Temp,flux_total,dt,time,dx,weights, &
+                                       the_bc_tower%bc_tower_array, &
+                                       charge_new,grad_Epot_new)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
