@@ -273,7 +273,7 @@ contains
     end if
 
     if (bc(2,2) .eq. EXT_DIR) then
-       do j=lo(1)-ng_n,hi(1)+1+ng_n
+       do i=lo(1)-ng_n,hi(1)+1+ng_n
           sint(i,hi(2)+1:hi(2)+2) = s_nd(i,hi(2)+1)
        end do
     end if
