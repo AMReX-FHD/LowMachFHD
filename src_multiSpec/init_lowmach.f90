@@ -58,7 +58,9 @@ module init_lowmach_module
 
   !=========================================================
   ! case 5:
-  ! not defined
+  ! Two Gaussian bubbles with different centers
+  ! c(1) peak is rho_init(1,1) in bottom left corner of domain
+  ! c(2) peak is rho_init(2,2) in upper right corner of domain
 
   !=========================================================
   ! case 6:
@@ -194,7 +196,7 @@ contains
  
     ! local varables
     integer          :: i,j,n,seed
-    real(kind=dp_t)  :: x,y,rad,L(2),sum,r,y1,c_loc
+    real(kind=dp_t)  :: x,y,rad,L(2),sum,r,r1,r2,y1,c_loc
     real(kind=dp_t)  :: gradToverT,m_e
  
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
@@ -366,6 +368,33 @@ contains
 
        end if
 
+    case (5)
+
+       !=============================================================
+       ! Two Gaussian bubbles with different centers
+       ! c(1) peak is rho_init(1,1) in bottom left corner of domain
+       ! c(2) peak is rho_init(2,2) in upper right corner of domain
+       !=============================================================
+
+       u = 0.d0
+       v = 0.d0
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0)
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + dx(1) * (dble(i)+0.5d0)
+
+             r1 = sqrt ((x-(0.75d0*prob_lo(1)+0.25d0*prob_hi(1)))**2 + (y-(0.75d0*prob_lo(2)+0.25d0*prob_hi(2)))**2)
+             r2 = sqrt ((x-(0.25d0*prob_lo(1)+0.75d0*prob_hi(1)))**2 + (y-(0.25d0*prob_lo(2)+0.75d0*prob_hi(2)))**2)
+             
+
+             ! set c using Gaussian bump
+             c(i,j,1) = rho_init(1,1)*exp(-75.d0*r1**2)
+             c(i,j,2) = rho_init(2,2)*exp(-75.d0*r2**2)
+
+          enddo
+       enddo
+
     case (11)
 
        !=============================================================
@@ -513,7 +542,7 @@ contains
  
     ! local variables
     integer          :: i,j,k,n,seed
-    real(kind=dp_t)  :: x,y,z,rad,L(3),sum,c_loc,y1,r,m_e,gradToverT
+    real(kind=dp_t)  :: x,y,z,rad,L(3),sum,c_loc,y1,r,r1,r2,m_e,gradToverT
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
@@ -699,6 +728,40 @@ contains
           call bl_error("init_rho_and_umac_3d: smoothing_width not compatible with prob_type")
 
        end if
+
+    case (5)
+
+       !=============================================================
+       ! Two Gaussian bubbles with different centers
+       ! c(1) peak is rho_init(1,1) in bottom left corner of domain
+       ! c(2) peak is rho_init(2,2) in upper right corner of domain
+       !=============================================================
+
+       u = 0.d0
+       v = 0.d0
+       w = 0.d0
+       
+       do k=lo(3),hi(3)
+          z = prob_lo(3) + dx(3) * (dble(k)+0.5d0)
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + dx(2) * (dble(j)+0.5d0)
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + dx(1) * (dble(i)+0.5d0)
+                
+                r1 = sqrt (   (x-(0.75d0*prob_lo(1)+0.25d0*prob_hi(1)))**2 &
+                            + (y-(0.75d0*prob_lo(2)+0.25d0*prob_hi(2)))**2 &
+                            + (z-(0.75d0*prob_lo(3)+0.25d0*prob_hi(3)))**2)
+                r2 = sqrt (   (x-(0.25d0*prob_lo(1)+0.75d0*prob_hi(1)))**2 &
+                            + (y-(0.25d0*prob_lo(2)+0.75d0*prob_hi(2)))**2 &
+                            + (z-(0.25d0*prob_lo(3)+0.75d0*prob_hi(3)))**2)
+                
+                ! set c using Gaussian bump
+                c(i,j,k,1) = rho_init(1,1)*exp(-75.d0*r1**2)
+                c(i,j,k,2) = rho_init(2,2)*exp(-75.d0*r2**2)
+                
+             enddo
+          enddo
+       enddo
 
     case (11)
 
