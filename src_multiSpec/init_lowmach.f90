@@ -55,16 +55,19 @@ module init_lowmach_module
   ! case 4:
   ! not defined
   ! external_source has an analytic solution, not sure what it was for
+  ! I think it's a remnant from test_diffusion
 
   !=========================================================
   ! case 5:
-  ! Two Gaussian bubbles with different centers
-  ! c(1) peak is rho_init(1,1) in bottom left corner of domain
-  ! c(2) peak is rho_init(2,2) in upper right corner of domain
+  ! not defined
+  ! external_source has an analytic solution, not sure what it was for
+  ! I think it's a remnant from test_diffusion
 
   !=========================================================
   ! case 6:
-  ! not defined
+  ! Two Gaussian bubbles with different centers
+  ! c(1) peak is rho_init(1,1) 
+  ! c(2) peak is rho_init(2,2) 
 
   !=========================================================
   ! case 7:
@@ -368,12 +371,12 @@ contains
 
        end if
 
-    case (5)
+    case (6)
 
        !=============================================================
        ! Two Gaussian bubbles with different centers
-       ! c(1) peak is rho_init(1,1) in bottom left corner of domain
-       ! c(2) peak is rho_init(2,2) in upper right corner of domain
+       ! c(1) peak is rho_init(1,1) 
+       ! c(2) peak is rho_init(2,2) 
        !=============================================================
 
        u = 0.d0
@@ -384,8 +387,8 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + dx(1) * (dble(i)+0.5d0)
 
-             r1 = sqrt ((x-(0.75d0*prob_lo(1)+0.25d0*prob_hi(1)))**2 + (y-(0.75d0*prob_lo(2)+0.25d0*prob_hi(2)))**2)
-             r2 = sqrt ((x-(0.25d0*prob_lo(1)+0.75d0*prob_hi(1)))**2 + (y-(0.25d0*prob_lo(2)+0.75d0*prob_hi(2)))**2)
+             r1 = sqrt ((x-(0.5d0*prob_lo(1)+0.5d0*prob_hi(1)))**2 + (y-(0.6d0*prob_lo(2)+0.4d0*prob_hi(2)))**2)
+             r2 = sqrt ((x-(0.5d0*prob_lo(1)+0.5d0*prob_hi(1)))**2 + (y-(0.4d0*prob_lo(2)+0.6d0*prob_hi(2)))**2)
              
 
              ! set c using Gaussian bump
@@ -729,12 +732,12 @@ contains
 
        end if
 
-    case (5)
+    case (6)
 
        !=============================================================
        ! Two Gaussian bubbles with different centers
-       ! c(1) peak is rho_init(1,1) in bottom left corner of domain
-       ! c(2) peak is rho_init(2,2) in upper right corner of domain
+       ! c(1) peak is rho_init(1,1)
+       ! c(2) peak is rho_init(2,2)
        !=============================================================
 
        u = 0.d0
@@ -748,12 +751,12 @@ contains
              do i=lo(1),hi(1)
                 x = prob_lo(1) + dx(1) * (dble(i)+0.5d0)
                 
-                r1 = sqrt (   (x-(0.75d0*prob_lo(1)+0.25d0*prob_hi(1)))**2 &
-                            + (y-(0.75d0*prob_lo(2)+0.25d0*prob_hi(2)))**2 &
-                            + (z-(0.75d0*prob_lo(3)+0.25d0*prob_hi(3)))**2)
-                r2 = sqrt (   (x-(0.25d0*prob_lo(1)+0.75d0*prob_hi(1)))**2 &
-                            + (y-(0.25d0*prob_lo(2)+0.75d0*prob_hi(2)))**2 &
-                            + (z-(0.25d0*prob_lo(3)+0.75d0*prob_hi(3)))**2)
+                r1 = sqrt (   (x-(0.5d0*prob_lo(1)+0.5d0*prob_hi(1)))**2 &
+                            + (y-(0.6d0*prob_lo(2)+0.4d0*prob_hi(2)))**2 &
+                            + (z-(0.5d0*prob_lo(3)+0.5d0*prob_hi(3)))**2)
+                r2 = sqrt (   (x-(0.5d0*prob_lo(1)+0.5d0*prob_hi(1)))**2 &
+                            + (y-(0.4d0*prob_lo(2)+0.6d0*prob_hi(2)))**2 &
+                            + (z-(0.5d0*prob_lo(3)+0.5d0*prob_hi(3)))**2)
                 
                 ! set c using Gaussian bump
                 c(i,j,k,1) = rho_init(1,1)*exp(-75.d0*r1**2)
