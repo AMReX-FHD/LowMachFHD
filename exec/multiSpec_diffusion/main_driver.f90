@@ -6,8 +6,7 @@ subroutine main_driver()
   use layout_module
   use init_diffusion_module
   use init_temp_module
-  use write_plotfile_module
-  use write_plotfile1_module
+  use write_plotfilediff_module
   use advance_timestep_diffusion_module
   use define_bc_module
   use bc_module
@@ -304,10 +303,10 @@ subroutine main_driver()
 
          ! print mass conservation and write plotfiles
          write(*,*), 'writing plotfiles at timestep =', istep 
-         call write_plotfile(mla,"plt_rho",    rho,      istep,dx,time)
-         call write_plotfile1(mla,"plt_rhotot",rhotot,  istep,dx,time)
-         call write_plotfile(mla,"plt_exa",    rho_exact,istep,dx,time)
-         call write_plotfile1(mla,"plt_temp",  Temp,     istep,dx,time)
+         call write_plotfilediff(mla,"plt_rho",    rho,      istep,dx,time)
+         call write_plotfile_onecomp(mla,"plt_rhotot",rhotot,  istep,dx,time)
+         call write_plotfilediff(mla,"plt_exa",    rho_exact,istep,dx,time)
+         call write_plotfile_onecomp(mla,"plt_temp",  Temp,     istep,dx,time)
 
          ! difference between rho and rho_exact
          do n=1,nlevs
@@ -315,13 +314,12 @@ subroutine main_driver()
          end do
 
          ! check error with visit
-         call write_plotfile(mla,"plt_err",rho_exact,istep,dx,time)
+         call write_plotfilediff(mla,"plt_err",rho_exact,istep,dx,time)
 
       end if
 
       ! advance the solution by dt
-      call advance_timestep_diffusion(mla,rho,rhotot,Temp,dx,dt,time, &
-                                      the_bc_tower%bc_tower_array)
+      call advance_timestep_diffusion(mla,rho,rhotot,Temp,dx,dt,time,the_bc_tower)
       ! increment simulation time
       istep = istep + 1
       time = time + dt

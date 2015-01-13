@@ -67,10 +67,11 @@ contains
 
   end subroutine transport_bc
 
-  function inhomogeneous_bc_val_2d(comp,x,y) result(val)
+  function inhomogeneous_bc_val_2d(comp,x,y,time_in) result(val)
 
     integer        , intent(in   ) :: comp
     real(kind=dp_t), intent(in   ) :: x,y
+    real(kind=dp_t), intent(in), optional :: time_in
     real(kind=dp_t)                :: val
 
     if (comp .lt. rho_part_bc_comp .or. &
@@ -100,10 +101,11 @@ contains
 
   end function inhomogeneous_bc_val_2d
 
-  function inhomogeneous_bc_val_3d(comp,x,y,z) result(val)
+  function inhomogeneous_bc_val_3d(comp,x,y,z,time_in) result(val)
 
     integer        , intent(in   ) :: comp
     real(kind=dp_t), intent(in   ) :: x,y,z
+    real(kind=dp_t), intent(in), optional :: time_in
     real(kind=dp_t)                :: val
 
     if (comp .lt. rho_part_bc_comp .or. &
