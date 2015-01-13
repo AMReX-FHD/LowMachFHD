@@ -62,8 +62,8 @@ contains
       ! local variables
       integer :: i,j,comp
 
-      do j=lo(2)-1,hi(2)+1
-         do i=lo(1)-1,hi(1)+1
+      do j=lo(2)-ng_2,hi(2)+ng_2
+         do i=lo(1)-ng_2,hi(1)+ng_2
 
             charge(i,j) = 0.d0
             do comp=1,nspecies
@@ -84,9 +84,9 @@ contains
       ! local variables
       integer :: i,j,k,n
 
-      do k=lo(3)-1,hi(3)+1
-         do j=lo(2)-1,hi(2)+1
-            do i=lo(1)-1,hi(1)+1
+      do k=lo(3)-ng_2,hi(3)+ng_2
+         do j=lo(2)-ng_2,hi(2)+ng_2
+            do i=lo(1)-ng_2,hi(1)+ng_2
 
                charge(i,j,k) = 0.d0
                do n=1,nspecies
