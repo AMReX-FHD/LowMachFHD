@@ -491,8 +491,14 @@ contains
         end do
 
         ! solve for a new Phi with inverse-viscosity weighted Poisson solve
+        ! first reset initial guess for phi to zero
+        do n=1,nlevs
+           call multifab_setval(phi(n),0.d0,all=.true.)
+        end do
+        
+        ! compute coefficients on edges using the diagnoal of the viscous operator
         call inverse_diag_lap(mla,beta,beta_ed,muinv_fc)
-
+           
         ! x_u^star is only passed in to get a norm for absolute residual criteria
         call macproject(mla,phi,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
 
@@ -534,7 +540,7 @@ contains
         end do
 
      case default
-        call bl_error('apply_precon.f90: unsupposed precon_type')
+        call bl_error('apply_precon.f90: unsupported precon_type')
      end select
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
