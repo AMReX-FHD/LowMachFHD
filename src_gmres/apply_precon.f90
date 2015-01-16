@@ -6,6 +6,7 @@ module apply_precon_module
   use probin_gmres_module , only: precon_type
   use probin_common_module, only: visc_type
   use stag_mg_solver_module
+  use stag_applyop_module
   use macproject_module
   use div_and_grad_module
   use cc_applyop_module
@@ -13,6 +14,7 @@ module apply_precon_module
   use norm_inner_product_module
   use multifab_physbc_module
   use bc_module
+  use inverse_diag_lap_module
 
   implicit none
 
@@ -47,9 +49,13 @@ contains
     type(multifab) ::     mac_rhs(mla%nlevel)
     type(multifab) ::    zero_fab(mla%nlevel)
     type(multifab) ::     x_p_tmp(mla%nlevel)
+    type(multifab) ::        gphi(mla%nlevel,mla%dim)
+    type(multifab) ::       Lgphi(mla%nlevel,mla%dim)
     type(multifab) :: alphainv_fc(mla%nlevel,mla%dim)
+    type(multifab) ::    muinv_fc(mla%nlevel,mla%dim)
     type(multifab) ::     b_u_tmp(mla%nlevel,mla%dim)
     type(multifab) ::  one_fab_fc(mla%nlevel,mla%dim)
+    type(multifab) :: zero_fab_fc(mla%nlevel,mla%dim)
 
     logical :: no_wall_is_no_slip
 
@@ -66,9 +72,14 @@ contains
           call multifab_build_edge(alphainv_fc(n,i),mla%la(n),1,0,i)
           call setval(alphainv_fc(n,i),1.d0,all=.true.)
           call multifab_div_div_c(alphainv_fc(n,i),1,alpha_fc(n,i),1,1,0)
+          call multifab_build_edge(muinv_fc(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(gphi(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(Lgphi(n,i),mla%la(n),1,1,i)
           call multifab_build_edge(b_u_tmp(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(one_fab_fc(n,i),mla%la(n),1,0,i)
           call setval(one_fab_fc(n,i),1.d0,all=.true.)
+          call multifab_build_edge(zero_fab_fc(n,i),mla%la(n),1,0,i)
+          call setval(zero_fab_fc(n,i),0.d0,all=.true.)
        end do
     end do
 
@@ -102,7 +113,7 @@ contains
         ! STEP 2: Construct RHS for pressure Poisson problem
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        ! add set mac_rhs = D(x_u^star) to mac_rhs
+        ! set mac_rhs = D(x_u^star)
         call compute_div(mla,x_u,mac_rhs,dx,1,1,1)
 
         ! add b_p to mac_rhs
@@ -122,7 +133,7 @@ contains
         call subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx,the_bc_tower)
 
         ! if precon_type = +1, or theta_alpha=0 then x_p = theta_alpha*Phi - c*beta*(mac_rhs)
-        ! if precon_type = -1             then x_p = theta_alpha*Phi - c*beta*L_alpha Phi
+        ! if precon_type = -1                   then x_p = theta_alpha*Phi - c*beta*L_alpha Phi
 
         if ((precon_type .eq. 1) .or. (theta_alpha .eq. 0.d0)) then
           ! first set x_p = -mac_rhs 
@@ -185,7 +196,7 @@ contains
         !         L_alpha Phi = D x_u + b_p
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        ! add set mac_rhs = D(x_u) to mac_rhs
+        ! set mac_rhs = D(x_u)
         call compute_div(mla,x_u,mac_rhs,dx,1,1,1)
 
         ! add b_p to mac_rhs
@@ -436,10 +447,95 @@ contains
 
         end do
 
-     case default
-        call bl_error('ERROR: Only precond_type 1 2 3 4 -2 -3 -4 supported')
-     end select
+     case(6)  ! Stadler large viscosity contrast BFBt preconditioner
 
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       ! STEP 1: Solve for an intermediate state, x_u^star, using an implicit viscous solve
+       !         x_u^star = A^{-1} b_u
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        ! x_u^star = A^{-1} b_u
+        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! STEP 2: Construct RHS for pressure Poisson problem
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        ! set mac_rhs = D(x_u^star)
+        call compute_div(mla,x_u,mac_rhs,dx,1,1,1)
+
+        ! add b_p to mac_rhs
+        do n=1,nlevs
+          call multifab_plus_plus_c(mac_rhs(n),1,b_p(n),1,1,0)
+        end do
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! STEP 3: Compute x_u and x_p
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        ! use multigrid to solve for Phi
+        ! x_u^star is only passed in to get a norm for absolute residual criteria
+        call macproject(mla,phi,x_u,alphainv_fc,mac_rhs,dx,the_bc_tower)
+
+        ! x_u = x_u^star - (alpha I)^-1 grad Phi
+        call subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx,the_bc_tower)
+
+        ! multiply Phi by theta_alpha
+        do n=1,nlevs
+           call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
+        end do
+
+        ! set x_p = theta_alpha*Phi
+        do n=1, nlevs
+           call multifab_copy_c(x_p(n),1,phi(n),1,1,0)
+        end do
+
+        ! solve for a new Phi with inverse-viscosity weighted Poisson solve
+        call inverse_diag_lap(mla,beta,beta_ed,muinv_fc)
+
+        ! x_u^star is only passed in to get a norm for absolute residual criteria
+        call macproject(mla,phi,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
+
+        ! take gradient of new Phi
+        call compute_grad(mla,phi,gphi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
+        ! multiply gradient by face-centered inverse diagonal coefficient
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_mult_mult_c(gphi(n,i),1,muinv_fc(n,i),1,1,0)
+              call multifab_fill_boundary(gphi(n,i))
+           end do
+        end do
+
+        ! apply the inverse-viscosity weighted viscous operator
+        call stag_applyop(mla,the_bc_tower,gphi,Lgphi,zero_fab_fc, &
+                          beta,beta_ed,zero_fab,theta_alpha,dx)
+
+        ! multiply gradient by face-centered inverse diagonal coefficient
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_mult_mult_c(Lgphi(n,i),1,muinv_fc(n,i),1,1,0)
+              call multifab_fill_boundary(Lgphi(n,i))
+           end do
+        end do
+
+        ! take divergence
+        call compute_div(mla,Lgphi,mac_rhs,dx,1,1,1)
+
+        ! solve for a new Phi with inverse-viscosity weighted Poisson solve
+        ! x_u^star is only passed in to get a norm for absolute residual criteria
+        call macproject(mla,phi,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
+
+        ! add new Phi to x_p
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
+           end do
+        end do
+
+     case default
+        call bl_error('apply_precon.f90: unsupposed precon_type')
+     end select
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! STEP 4: Handle null-space issues in MG solvers
@@ -481,7 +577,11 @@ contains
        call multifab_destroy(x_p_tmp(n))
        do i=1,dm
           call multifab_destroy(alphainv_fc(n,i))
+          call multifab_destroy(muinv_fc(n,i))
+          call multifab_destroy(gphi(n,i))
+          call multifab_destroy(Lgphi(n,i))
           call multifab_destroy(one_fab_fc(n,i))
+          call multifab_destroy(zero_fab_fc(n,i))
           call multifab_destroy(b_u_tmp(n,i))
        end do
     end do
