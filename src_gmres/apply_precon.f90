@@ -96,6 +96,8 @@ contains
     ! 2 = lower triangular preconditioner
     ! 3 = upper triangular preconditioner
     ! 4 = block diagonal preconditioner
+    ! 5 = Uzawa-type approximation (see paper)
+    ! 6 = upper triangular + viscosity-based BFBt Schur complement (from Georg Stadler)
 
     select case (abs(precon_type))
 
@@ -122,7 +124,7 @@ contains
         end do
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 3: Compute x_u and x_p
+        ! STEP 3: Compute x_u and part of x_p
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! use multigrid to solve for Phi
@@ -147,6 +149,10 @@ contains
                           the_bc_tower,pres_bc_comp,stencil_order_in=2)
         end if
 
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! STEP 4: Update x_p by applying the Schur complement approximation
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
         do n=1,nlevs
 
           if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then  
@@ -213,7 +219,7 @@ contains
         end if 
     
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 3: Update x_p 
+        ! STEP 3: Update x_p by applying the Schur complement approximation
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_p = theta_alpha*I *Phi - beta*mac_rhs 
@@ -267,6 +273,9 @@ contains
           end if 
         end do
 
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! STEP 5: Additional steps for P_5
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if (abs(precon_type) .eq. 5) then
 
            ! compute = A^(-1)*(b_u-grad(x_p)) 
@@ -318,6 +327,10 @@ contains
 
         end if
         
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! STEP 2: Update x_p by applying the Schur complement approximation
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
         do n=1,nlevs
 
           if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then
@@ -356,7 +369,7 @@ contains
         end do
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 2: Compute the RHS for the viscous solve
+        ! STEP 3: Compute the RHS for the viscous solve
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! we need gradients of x_p, and x_p doesn't necessarily have 
@@ -377,7 +390,7 @@ contains
         call subtract_weighted_gradp(mla,b_u_tmp,one_fab_fc,x_p_tmp,dx,the_bc_tower)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 3: Solve for x_u using an implicit viscous term
+        ! STEP 4: Solve for x_u using an implicit viscous term
         !         A x_u = (b_u-G x_p)
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -408,6 +421,10 @@ contains
           call macproject(mla,phi,x_u,alphainv_fc,mac_rhs,dx,the_bc_tower)
 
         end if
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! STEP 2: Update x_p by applying the Schur complement approximation
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         do n=1,nlevs
 
@@ -447,6 +464,7 @@ contains
 
         end do
 
+     ! Donev: Suggest merging this into a contained routine and calling from within P_2 or P_3 
      case(6)  ! Stadler large viscosity contrast BFBt preconditioner
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
