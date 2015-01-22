@@ -46,6 +46,7 @@ contains
     real(kind=dp_t) :: mean_val_pres, mean_val_umac(mla%dim)
 
     type(multifab) ::         phi(mla%nlevel)
+    type(multifab) ::      phitmp(mla%nlevel)
     type(multifab) ::     mac_rhs(mla%nlevel)
     type(multifab) ::    zero_fab(mla%nlevel)
     type(multifab) ::     x_p_tmp(mla%nlevel)
@@ -488,7 +489,7 @@ contains
         end do
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 3: Compute x_u and x_p
+        ! STEP 3: Compute x_u and part of x_p
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! use multigrid to solve for Phi
@@ -498,30 +499,24 @@ contains
         ! x_u = x_u^star - (alpha I)^-1 grad Phi
         call subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx,the_bc_tower)
 
-        ! multiply Phi by theta_alpha
-        do n=1,nlevs
-           call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
-        end do
-
-        ! set x_p = theta_alpha*Phi
-        do n=1, nlevs
-           call multifab_copy_c(x_p(n),1,phi(n),1,1,0)
-        end do
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! STEP 4: Update x_p by applying the Schur complement approximation
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! solve for a new Phi with inverse-viscosity weighted Poisson solve
         ! first reset initial guess for phi to zero
         do n=1,nlevs
-           call multifab_setval(phi(n),0.d0,all=.true.)
+           call multifab_setval(phitmp(n),0.d0,all=.true.)
         end do
         
         ! compute coefficients on edges using the diagnoal of the viscous operator
         call inverse_diag_lap(mla,beta,beta_ed,muinv_fc)
            
         ! x_u^star is only passed in to get a norm for absolute residual criteria
-        call macproject(mla,phi,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
+        call macproject(mla,phitmp,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
 
         ! take gradient of new Phi
-        call compute_grad(mla,phi,gphi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+        call compute_grad(mla,phitmp,gphi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
         ! multiply gradient by face-centered inverse diagonal coefficient
         do n=1,nlevs
@@ -546,15 +541,18 @@ contains
         ! take divergence
         call compute_div(mla,Lgphi,mac_rhs,dx,1,1,1)
 
-        ! solve for a new Phi with inverse-viscosity weighted Poisson solve
+        ! solve an inverse-viscosity weighted Poisson solve
         ! x_u^star is only passed in to get a norm for absolute residual criteria
-        call macproject(mla,phi,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
+        call macproject(mla,x_p,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
 
-        ! add new Phi to x_p
+        ! multiply Phi by theta_alpha
         do n=1,nlevs
-           do i=1,dm
-              call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
-           end do
+           call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
+        end do
+
+        ! add theta_alpha*Phi to x_p
+        do n=1,nlevs
+           call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
         end do
 
      case default
@@ -611,5 +609,11 @@ contains
     end do
 
   end subroutine apply_precon
+
+  subroutine visc_schur_complement(rhs)
+
+    type(multifab) , intent(in   ) :: rhs(:)
+
+  end subroutine visc_schur_complement
 
 end module apply_precon_module
