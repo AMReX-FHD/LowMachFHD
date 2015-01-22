@@ -46,14 +46,10 @@ contains
     real(kind=dp_t) :: mean_val_pres, mean_val_umac(mla%dim)
 
     type(multifab) ::         phi(mla%nlevel)
-    type(multifab) ::      phitmp(mla%nlevel)
     type(multifab) ::     mac_rhs(mla%nlevel)
     type(multifab) ::    zero_fab(mla%nlevel)
     type(multifab) ::     x_p_tmp(mla%nlevel)
-    type(multifab) ::        gphi(mla%nlevel,mla%dim)
-    type(multifab) ::       Lgphi(mla%nlevel,mla%dim)
     type(multifab) :: alphainv_fc(mla%nlevel,mla%dim)
-    type(multifab) ::    muinv_fc(mla%nlevel,mla%dim)
     type(multifab) ::     b_u_tmp(mla%nlevel,mla%dim)
     type(multifab) ::  one_fab_fc(mla%nlevel,mla%dim)
     type(multifab) :: zero_fab_fc(mla%nlevel,mla%dim)
@@ -65,7 +61,6 @@ contains
 
     do n=1,nlevs
        call multifab_build(phi(n)     ,mla%la(n),1,1)
-       call multifab_build(phitmp(n)  ,mla%la(n),1,1)
        call multifab_build(mac_rhs(n) ,mla%la(n),1,0)
        call multifab_build(zero_fab(n),mla%la(n),1,0)
        call setval(zero_fab(n),0.d0,all=.true.)
@@ -74,9 +69,6 @@ contains
           call multifab_build_edge(alphainv_fc(n,i),mla%la(n),1,0,i)
           call setval(alphainv_fc(n,i),1.d0,all=.true.)
           call multifab_div_div_c(alphainv_fc(n,i),1,alpha_fc(n,i),1,1,0)
-          call multifab_build_edge(muinv_fc(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(gphi(n,i),mla%la(n),1,1,i)
-          call multifab_build_edge(Lgphi(n,i),mla%la(n),1,1,i)
           call multifab_build_edge(b_u_tmp(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(one_fab_fc(n,i),mla%la(n),1,0,i)
           call setval(one_fab_fc(n,i),1.d0,all=.true.)
@@ -503,67 +495,9 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 4: Update x_p by applying the Schur complement approximation
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
-        ! compute coefficients on edges using the diagnoal of the viscous operator
-        call inverse_diag_lap(mla,beta,beta_ed,muinv_fc)
 
-        ! solve for a new Phi with inverse-viscosity weighted Poisson solve
-        ! first reset initial guess for phi to zero
-        do n=1,nlevs
-           call multifab_setval(phitmp(n),0.d0,all=.true.)
-        end do
-
-        ! x_u^star is only passed in to get a norm for absolute residual criteria
-        call macproject(mla,phitmp,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
-
-        ! take gradient of new Phi
-        call compute_grad(mla,phitmp,gphi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
-
-        ! multiply gradient by face-centered inverse diagonal coefficient
-        do n=1,nlevs
-           do i=1,dm
-              call multifab_mult_mult_c(gphi(n,i),1,muinv_fc(n,i),1,1,0)
-              call multifab_fill_boundary(gphi(n,i))
-           end do
-        end do
-
-        ! apply the inverse-viscosity weighted viscous operator
-        call stag_applyop(mla,the_bc_tower,gphi,Lgphi,zero_fab_fc, &
-                          beta,beta_ed,zero_fab,theta_alpha,dx)
-        ! multiply gradient by face-centered inverse diagonal coefficient
-        do n=1,nlevs
-           do i=1,dm
-              call multifab_mult_mult_c(Lgphi(n,i),1,muinv_fc(n,i),1,1,0)
-              call multifab_fill_boundary(Lgphi(n,i))
-           end do
-        end do
-
-        ! take divergence
-        call compute_div(mla,Lgphi,mac_rhs,dx,1,1,1)
-
-        ! solve an inverse-viscosity weighted Poisson solve
-        ! first reset initial guess for phi to zero
-        do n=1,nlevs
-           call multifab_setval(phitmp(n),0.d0,all=.true.)
-        end do
-
-        ! x_u^star is only passed in to get a norm for absolute residual criteria
-        call macproject(mla,phitmp,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
-
-        ! copy solution of Poisson equation into x_p
-        do n=1,nlevs
-           call multifab_copy_c(x_p(n),1,phitmp(n),1,1,0)
-        end do
-
-        ! multiply Phi by theta_alpha
-        do n=1,nlevs
-           call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
-        end do
-
-        ! add theta_alpha*Phi to x_p
-        do n=1,nlevs
-           call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
-        end do
+        call visc_schur_complement(mla,mac_rhs,x_p,x_u,beta,beta_ed,theta_alpha, &
+                                   dx,the_bc_tower,phi)
 
      case default
         call bl_error('apply_precon.f90: unsupported precon_type')
@@ -604,15 +538,11 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(phi(n))
-       call multifab_destroy(phitmp(n))
        call multifab_destroy(mac_rhs(n))
        call multifab_destroy(zero_fab(n))
        call multifab_destroy(x_p_tmp(n))
        do i=1,dm
           call multifab_destroy(alphainv_fc(n,i))
-          call multifab_destroy(muinv_fc(n,i))
-          call multifab_destroy(gphi(n,i))
-          call multifab_destroy(Lgphi(n,i))
           call multifab_destroy(one_fab_fc(n,i))
           call multifab_destroy(zero_fab_fc(n,i))
           call multifab_destroy(b_u_tmp(n,i))
@@ -621,9 +551,130 @@ contains
 
   end subroutine apply_precon
 
-  subroutine visc_schur_complement(rhs)
+  subroutine visc_schur_complement(mla,rhs,x_out,x_u,beta,beta_ed,theta_alpha,dx,the_bc_tower,phi)
+    
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: rhs(:)
+    type(multifab) , intent(inout) :: x_out(:)
+    type(multifab) , intent(in   ) :: x_u(:,:)
+    type(multifab) , intent(in   ) :: beta(:)
+    type(multifab) , intent(in   ) :: beta_ed(:,:)
+    real(kind=dp_t), intent(in   ) :: theta_alpha
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+    type(multifab) , intent(in   ), optional :: phi(:)
 
-    type(multifab) , intent(in   ) :: rhs(:)
+    ! local
+    integer:: i,dm,n,nlevs
+
+    type(multifab) ::      phi_mu(mla%nlevel)
+    type(multifab) ::     phi_rho(mla%nlevel)
+    type(multifab) ::    zero_fab(mla%nlevel)
+    type(multifab) ::        gphi(mla%nlevel,mla%dim)
+    type(multifab) ::       Lgphi(mla%nlevel,mla%dim)
+    type(multifab) ::    muinv_fc(mla%nlevel,mla%dim)
+    type(multifab) :: zero_fab_fc(mla%nlevel,mla%dim)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    do n=1,nlevs
+       call multifab_build(phi_mu(n),mla%la(n),1,1)
+       call multifab_build(phi_rho(n),mla%la(n),1,1)
+       call multifab_build(zero_fab(n),mla%la(n),1,0)
+       call setval(zero_fab(n),0.d0,all=.true.)
+       do i=1,dm
+          call multifab_build_edge(gphi(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(Lgphi(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(muinv_fc(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(zero_fab_fc(n,i),mla%la(n),1,0,i)
+          call setval(zero_fab_fc(n,i),0.d0,all=.true.)
+       end do
+    end do
+
+    if (present(phi)) then
+       ! we have already computed Ltilde_rho^inv (precon_type=1)
+       do n=1,nlevs
+          call multifab_copy_c(phi_rho(n),1,phi(n),1,1,0)
+       end do
+    else
+       ! we need to compute Ltilde_rho^inv(rhs) (precon_type=2,3,4,5)
+
+    end if
+
+        ! compute coefficients on edges using the diagnoal of the viscous operator
+        call inverse_diag_lap(mla,beta,beta_ed,muinv_fc)
+
+        ! solve for a new Phi with inverse-viscosity weighted Poisson solve
+        ! first reset initial guess for phi to zero
+        do n=1,nlevs
+           call multifab_setval(phi_mu(n),0.d0,all=.true.)
+        end do
+
+        ! x_u^star is only passed in to get a norm for absolute residual criteria
+        call macproject(mla,phi_mu,x_u,muinv_fc,rhs,dx,the_bc_tower)
+
+        ! take gradient of new Phi
+        call compute_grad(mla,phi_mu,gphi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
+        ! multiply gradient by face-centered inverse diagonal coefficient
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_mult_mult_c(gphi(n,i),1,muinv_fc(n,i),1,1,0)
+              call multifab_fill_boundary(gphi(n,i))
+           end do
+        end do
+
+        ! apply the inverse-viscosity weighted viscous operator
+        call stag_applyop(mla,the_bc_tower,gphi,Lgphi,zero_fab_fc, &
+                          beta,beta_ed,zero_fab,theta_alpha,dx)
+
+        ! multiply gradient by face-centered inverse diagonal coefficient
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_mult_mult_c(Lgphi(n,i),1,muinv_fc(n,i),1,1,0)
+              call multifab_fill_boundary(Lgphi(n,i))
+           end do
+        end do
+
+        ! take divergence and store in rhs
+        call compute_div(mla,Lgphi,rhs,dx,1,1,1)
+
+        ! solve an inverse-viscosity weighted Poisson solve
+        ! first reset initial guess for phi to zero
+        do n=1,nlevs
+           call multifab_setval(phi_mu(n),0.d0,all=.true.)
+        end do
+
+        ! x_u^star is only passed in to get a norm for absolute residual criteria
+        call macproject(mla,phi_mu,x_u,muinv_fc,rhs,dx,the_bc_tower)
+
+        ! copy solution of Poisson equation into x_out
+        do n=1,nlevs
+           call multifab_copy_c(x_out(n),1,phi_mu(n),1,1,0)
+        end do
+
+        ! multiply phi_rho by theta_alpha
+        do n=1,nlevs
+           call multifab_mult_mult_s_c(phi_rho(n),1,theta_alpha,1,0)
+        end do
+
+        ! add theta_alpha*phi_rho to x_out
+        do n=1,nlevs
+           call multifab_plus_plus_c(x_out(n),1,phi_rho(n),1,1,0)
+        end do
+
+        do n=1,nlevs
+           call multifab_destroy(phi_mu(n))
+           call multifab_destroy(phi_rho(n))
+           call multifab_destroy(zero_fab(n))
+           do i=1,dm
+              call multifab_destroy(gphi(n,i))
+              call multifab_destroy(Lgphi(n,i))
+              call multifab_destroy(muinv_fc(n,i))
+              call multifab_destroy(zero_fab_fc(n,i))
+           end do
+        end do
 
   end subroutine visc_schur_complement
 
