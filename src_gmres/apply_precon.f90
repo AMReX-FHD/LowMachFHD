@@ -65,6 +65,7 @@ contains
 
     do n=1,nlevs
        call multifab_build(phi(n)     ,mla%la(n),1,1)
+       call multifab_build(phitmp(n)  ,mla%la(n),1,1)
        call multifab_build(mac_rhs(n) ,mla%la(n),1,0)
        call multifab_build(zero_fab(n),mla%la(n),1,0)
        call setval(zero_fab(n),0.d0,all=.true.)
@@ -502,16 +503,16 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 4: Update x_p by applying the Schur complement approximation
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
+        ! compute coefficients on edges using the diagnoal of the viscous operator
+        call inverse_diag_lap(mla,beta,beta_ed,muinv_fc)
 
         ! solve for a new Phi with inverse-viscosity weighted Poisson solve
         ! first reset initial guess for phi to zero
         do n=1,nlevs
            call multifab_setval(phitmp(n),0.d0,all=.true.)
         end do
-        
-        ! compute coefficients on edges using the diagnoal of the viscous operator
-        call inverse_diag_lap(mla,beta,beta_ed,muinv_fc)
-           
+
         ! x_u^star is only passed in to get a norm for absolute residual criteria
         call macproject(mla,phitmp,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
 
@@ -529,7 +530,6 @@ contains
         ! apply the inverse-viscosity weighted viscous operator
         call stag_applyop(mla,the_bc_tower,gphi,Lgphi,zero_fab_fc, &
                           beta,beta_ed,zero_fab,theta_alpha,dx)
-
         ! multiply gradient by face-centered inverse diagonal coefficient
         do n=1,nlevs
            do i=1,dm
@@ -542,8 +542,18 @@ contains
         call compute_div(mla,Lgphi,mac_rhs,dx,1,1,1)
 
         ! solve an inverse-viscosity weighted Poisson solve
+        ! first reset initial guess for phi to zero
+        do n=1,nlevs
+           call multifab_setval(phitmp(n),0.d0,all=.true.)
+        end do
+
         ! x_u^star is only passed in to get a norm for absolute residual criteria
-        call macproject(mla,x_p,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
+        call macproject(mla,phitmp,x_u,muinv_fc,mac_rhs,dx,the_bc_tower)
+
+        ! copy solution of Poisson equation into x_p
+        do n=1,nlevs
+           call multifab_copy_c(x_p(n),1,phitmp(n),1,1,0)
+        end do
 
         ! multiply Phi by theta_alpha
         do n=1,nlevs
@@ -594,6 +604,7 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(phi(n))
+       call multifab_destroy(phitmp(n))
        call multifab_destroy(mac_rhs(n))
        call multifab_destroy(zero_fab(n))
        call multifab_destroy(x_p_tmp(n))
