@@ -226,53 +226,8 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         if (visc_schur_approx .eq. 0) then
-
-           ! x_p = theta_alpha*I *Phi - beta*mac_rhs 
-           do n=1,nlevs
-              ! beta part
-              if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then 
-                 call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
-
-                 ! multiply x_p by -1
-                 call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
-
-                 ! multiply x_p by beta; x_p = -beta L_alpha Phi
-                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
-
-                 if (abs(visc_type) .eq. 2) then
-                    ! multiply by c=2 for |viscous_type| = 2
-                    call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
-                 end if
-
-              elseif (abs(visc_type) .eq. 3) then   
-                 ! beta part 
-                 call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
-
-                 ! multiply x_p by -4/3
-                 call multifab_mult_mult_s_c(x_p(n),1,-4.d0/3.d0,1,0)
-
-                 ! multiply x_p by beta; x_p = -beta L_alpha Phi
-                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
-
-                 ! gamma part
-                 ! x_p = theta_alpha*I *Phi - 4/3*beta*mac_rhs - gamma*mac_rhs 
-                 call multifab_mult_mult_s_c(mac_rhs(n),1,-1.d0,1,0)
-                 call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
-
-                 ! x_p = x_p + mac_rhs 
-                 call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
-
-              end if
-
-              if (abs(theta_alpha) .gt. 0.d0) then         
-                 ! multiply Phi by theta_alpha
-                 call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)   
-
-                 ! add theta_alpha*Phi to x_p
-                 call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
-              end if
-
-           end do
+         
+           call simple_schur_complement()
 
         else
 
@@ -281,7 +236,6 @@ contains
 
         end if
 
-        ! Donev: Andy, this seems to belong out here?
         do n=1,nlevs 
            if (precon_type .eq. -2 .or. precon_type .eq. -5) then
               ! multiply x_p by -1, if precon_type=-2
@@ -349,42 +303,7 @@ contains
 
         if (visc_schur_approx .eq. 0) then
            
-           do n=1,nlevs
-
-              if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then
-                 ! x_p = beta*mac_rhs
-                 call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)      
-                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
-
-                 ! multiply by -c=-1 for |viscous_type| = 1
-                 call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
-                 if (abs(visc_type) .eq. 2) then
-                    ! multiply by -c=-2 for |viscous_type| = 2
-                    call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
-                 end if
-
-              elseif (abs(visc_type) .eq. 3) then
-                 ! x_p = 4/3*beta*mac_rhs
-                 call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)      
-                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
-
-                 ! multiply by -c=-4/3 for |viscous_type| = 3
-                 call multifab_mult_mult_s_c(x_p(n),1,-4.d0/3.d0,1,0)
-
-                 ! gamma part 
-                 call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
-                 call multifab_mult_mult_s_c(mac_rhs(n),1,-1.d0,1,0)
-                 ! x_p = x_p + gamma*mac_rhs
-                 call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
-              end if
-
-              if (abs(theta_alpha) .gt. 0) then 
-                 ! multiply phi by theta_alpha 
-                 call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
-                 ! add phi to x_p                                           
-                 call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
-              end if
-           end do
+           call simple_schur_complement()
 
         else
 
@@ -547,7 +466,60 @@ contains
           call multifab_destroy(b_u_tmp(n,i))
        end do
     end do
+    
+  contains
+  
+    subroutine simple_schur_complement()
+  
+       ! x_p = theta_alpha*I *Phi - beta*mac_rhs 
+       do n=1,nlevs
+          ! beta part
+          if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then 
+             call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
 
+             ! multiply x_p by -1
+             call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
+
+             ! multiply x_p by beta; x_p = -beta L_alpha Phi
+             call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
+
+             if (abs(visc_type) .eq. 2) then
+                ! multiply by c=2 for |viscous_type| = 2
+                call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
+             end if
+
+          elseif (abs(visc_type) .eq. 3) then   
+             ! beta part 
+             call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
+
+             ! multiply x_p by -4/3
+             call multifab_mult_mult_s_c(x_p(n),1,-4.d0/3.d0,1,0)
+
+             ! multiply x_p by beta; x_p = -beta L_alpha Phi
+             call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
+
+             ! gamma part
+             ! x_p = theta_alpha*I *Phi - 4/3*beta*mac_rhs - gamma*mac_rhs 
+             call multifab_mult_mult_s_c(mac_rhs(n),1,-1.d0,1,0)
+             call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
+
+             ! x_p = x_p + mac_rhs 
+             call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
+
+          end if
+
+          if (abs(theta_alpha) .gt. 0.d0) then         
+             ! multiply Phi by theta_alpha
+             call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)   
+
+             ! add theta_alpha*Phi to x_p
+             call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
+          end if
+
+       end do
+    
+      end subroutine simple_schur_complement
+      
   end subroutine apply_precon
 
   subroutine visc_schur_complement(mla,rhs,x_out,x_u,beta,beta_ed, &
