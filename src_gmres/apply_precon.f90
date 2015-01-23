@@ -95,7 +95,7 @@ contains
 
     select case (abs(precon_type))
 
-    case(1)  ! projection preconditioner
+    case(1) ! projection preconditioner
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! STEP 1: Solve for an intermediate state, x_u^star, using an implicit viscous solve
@@ -147,7 +147,7 @@ contains
            else
               ! first set x_p = -L_alpha Phi
               call cc_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx, &
-                   the_bc_tower,pres_bc_comp,stencil_order_in=2)
+                              the_bc_tower,pres_bc_comp,stencil_order_in=2)
            end if
 
            do n=1,nlevs
@@ -185,8 +185,8 @@ contains
 
         else
 
-           call visc_schur_complement(mla,mac_rhs,x_p,x_u,beta,beta_ed,theta_alpha, &
-                                      dx,the_bc_tower,phi)
+           call visc_schur_complement(mla,mac_rhs,x_p,x_u,beta,beta_ed, &
+                                      theta_alpha,dx,the_bc_tower,phi)
            
         end if
 
@@ -223,59 +223,68 @@ contains
         end if 
     
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 3: Update x_p by applying the Schur complement approximation
+        ! STEP 3: Compute x_p by applying the Schur complement approximation
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        ! x_p = theta_alpha*I *Phi - beta*mac_rhs 
-        do n=1,nlevs
-          ! beta part
-          if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then 
-             call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
-       
-             ! multiply x_p by -1
-             call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
-      
-             ! multiply x_p by beta; x_p = -beta L_alpha Phi
-             call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
- 
-             if (abs(visc_type) .eq. 2) then
-               ! multiply by c=2 for |viscous_type| = 2
-               call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
-             end if
- 
-          elseif (abs(visc_type) .eq. 3) then   
-             ! beta part 
-             call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
-        
-             ! multiply x_p by -4/3
-             call multifab_mult_mult_s_c(x_p(n),1,-4.d0/3.d0,1,0)
-       
-             ! multiply x_p by beta; x_p = -beta L_alpha Phi
-             call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
+        if (visc_schur_approx .eq. 0) then
 
-             ! gamma part
-             ! x_p = theta_alpha*I *Phi - 4/3*beta*mac_rhs - gamma*mac_rhs 
-             call multifab_mult_mult_s_c(mac_rhs(n),1,-1.d0,1,0)
-             call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
+           ! x_p = theta_alpha*I *Phi - beta*mac_rhs 
+           do n=1,nlevs
+              ! beta part
+              if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then 
+                 call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
 
-             ! x_p = x_p + mac_rhs 
-             call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
+                 ! multiply x_p by -1
+                 call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
 
-          end if
+                 ! multiply x_p by beta; x_p = -beta L_alpha Phi
+                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
 
-          if (abs(theta_alpha) .gt. 0.d0) then         
-             ! multiply Phi by theta_alpha
-             call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)   
+                 if (abs(visc_type) .eq. 2) then
+                    ! multiply by c=2 for |viscous_type| = 2
+                    call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
+                 end if
 
-             ! add theta_alpha*Phi to x_p
-             call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
-          end if   
+              elseif (abs(visc_type) .eq. 3) then   
+                 ! beta part 
+                 call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
 
-          if (precon_type .eq. -2 .or. precon_type .eq. -5) then
-            ! multiply x_p by -1, if precon_type=-2
-            call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
-          end if 
-        end do
+                 ! multiply x_p by -4/3
+                 call multifab_mult_mult_s_c(x_p(n),1,-4.d0/3.d0,1,0)
+
+                 ! multiply x_p by beta; x_p = -beta L_alpha Phi
+                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
+
+                 ! gamma part
+                 ! x_p = theta_alpha*I *Phi - 4/3*beta*mac_rhs - gamma*mac_rhs 
+                 call multifab_mult_mult_s_c(mac_rhs(n),1,-1.d0,1,0)
+                 call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
+
+                 ! x_p = x_p + mac_rhs 
+                 call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
+
+              end if
+
+              if (abs(theta_alpha) .gt. 0.d0) then         
+                 ! multiply Phi by theta_alpha
+                 call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)   
+
+                 ! add theta_alpha*Phi to x_p
+                 call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
+              end if
+
+              if (precon_type .eq. -2 .or. precon_type .eq. -5) then
+                 ! multiply x_p by -1, if precon_type=-2
+                 call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
+              end if
+           end do
+
+        else
+
+           call visc_schur_complement(mla,mac_rhs,x_p,x_u,beta,beta_ed, &
+                                      theta_alpha,dx,the_bc_tower,phi)
+
+        end if
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 5: Additional steps for P_5
@@ -332,45 +341,54 @@ contains
         end if
         
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 2: Update x_p by applying the Schur complement approximation
+        ! STEP 2: Compute x_p by applying the Schur complement approximation
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        do n=1,nlevs
+        if (visc_schur_approx .eq. 0) then
+           
+           do n=1,nlevs
 
-          if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then
-            ! x_p = beta*mac_rhs
-            call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)      
-            call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
-          
-            ! multiply by -c=-1 for |viscous_type| = 1
-            call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
-            if (abs(visc_type) .eq. 2) then
-              ! multiply by -c=-2 for |viscous_type| = 2
-              call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
-            end if 
+              if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then
+                 ! x_p = beta*mac_rhs
+                 call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)      
+                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
 
-          elseif (abs(visc_type) .eq. 3) then
-            ! x_p = 4/3*beta*mac_rhs
-            call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)      
-            call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
-          
-            ! multiply by -c=-4/3 for |viscous_type| = 3
-            call multifab_mult_mult_s_c(x_p(n),1,-4.d0/3.d0,1,0)
+                 ! multiply by -c=-1 for |viscous_type| = 1
+                 call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
+                 if (abs(visc_type) .eq. 2) then
+                    ! multiply by -c=-2 for |viscous_type| = 2
+                    call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
+                 end if
 
-            ! gamma part 
-            call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
-            call multifab_mult_mult_s_c(mac_rhs(n),1,-1.d0,1,0)
-            ! x_p = x_p + gamma*mac_rhs
-            call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
-          end if
-          
-          if (abs(theta_alpha) .gt. 0) then 
-             ! multiply phi by theta_alpha 
-             call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
-             ! add phi to x_p                                           
-             call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
-          end if
-        end do
+              elseif (abs(visc_type) .eq. 3) then
+                 ! x_p = 4/3*beta*mac_rhs
+                 call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)      
+                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
+
+                 ! multiply by -c=-4/3 for |viscous_type| = 3
+                 call multifab_mult_mult_s_c(x_p(n),1,-4.d0/3.d0,1,0)
+
+                 ! gamma part 
+                 call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
+                 call multifab_mult_mult_s_c(mac_rhs(n),1,-1.d0,1,0)
+                 ! x_p = x_p + gamma*mac_rhs
+                 call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
+              end if
+
+              if (abs(theta_alpha) .gt. 0) then 
+                 ! multiply phi by theta_alpha 
+                 call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
+                 ! add phi to x_p                                           
+                 call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
+              end if
+           end do
+
+        else
+
+           call visc_schur_complement(mla,mac_rhs,x_p,x_u,beta,beta_ed, &
+                                      theta_alpha,dx,the_bc_tower,phi)
+
+        end if
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 3: Compute the RHS for the viscous solve
@@ -427,46 +445,55 @@ contains
         end if
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 2: Update x_p by applying the Schur complement approximation
+        ! STEP 2: Compute x_p by applying the Schur complement approximation
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        do n=1,nlevs
+        if (visc_schur_approx .eq. 0) then
+           
+           do n=1,nlevs
 
-          if (abs(theta_alpha) .gt. 0) then
-            call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
-          end if 
-          ! x_p = theta_alpha*Phi-beta*bp
-          call multifab_copy_c(x_p(n),1,b_p(n),1,1,0)
-          call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
-          call multifab_sub_sub_c(x_p(n),1,phi(n),1,1,0) 
+              if (abs(theta_alpha) .gt. 0) then
+                 call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
+              end if
+              ! x_p = theta_alpha*Phi-beta*bp
+              call multifab_copy_c(x_p(n),1,b_p(n),1,1,0)
+              call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
+              call multifab_sub_sub_c(x_p(n),1,phi(n),1,1,0) 
 
-          if ((abs(visc_type) .eq. 1) .and. (precon_type .eq. 4)) then
-             ! multiply by -c=-1 for |viscous_type| = 1
-             call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
-          else if ((abs(visc_type) .eq. 2) .and. (precon_type .eq. 4)) then
-             ! multiply by -c=-2 for |viscous_type| = 2
-             call multifab_mult_mult_s_c(x_p(n),1,-2.d0,1,0)
-          else if ((abs(visc_type) .eq. 2) .and. (precon_type .eq. -4)) then
-             ! multiply by c=2 for precon_type = -4
-             call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
-          else if ((abs(visc_type) .eq. 3) .and. (precon_type .eq. 4)) then
-             ! multiply by -c=-4/3 for |viscous_type| = 3
-             call multifab_mult_mult_s_c(x_p(n),1,-4.d0/3.d0,1,0)
-             ! gamma part: the sign is same as beta, use x_p_tmp as an immediate variable  
-             call multifab_copy_c(x_p_tmp(n),1,b_p(n),1,1,0)
-             call multifab_mult_mult_c(x_p_tmp(n),1,gamma(n),1,1,0)
-             call multifab_mult_mult_s_c(x_p_tmp(n),1,-1.d0,1,0)
-             call multifab_plus_plus_c(x_p(n),1,x_p_tmp(n),1,1,0)
-          else if ((abs(visc_type) .eq. 3) .and. (precon_type .eq. -4)) then
-             ! multiply by c=4/3 for precon_type = -4
-             call multifab_mult_mult_s_c(x_p(n),1,4.d0/3.d0,1,0)
-             ! gamma part: the sign is same as beta, use x_p_tmp as an immediate variable   
-             call multifab_copy_c(x_p_tmp(n),1,b_p(n),1,1,0)
-             call multifab_mult_mult_c(x_p_tmp(n),1,gamma(n),1,1,0)
-             call multifab_plus_plus_c(x_p(n),1,x_p_tmp(n),1,1,0)             
-          end if
+              if ((abs(visc_type) .eq. 1) .and. (precon_type .eq. 4)) then
+                 ! multiply by -c=-1 for |viscous_type| = 1
+                 call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
+              else if ((abs(visc_type) .eq. 2) .and. (precon_type .eq. 4)) then
+                 ! multiply by -c=-2 for |viscous_type| = 2
+                 call multifab_mult_mult_s_c(x_p(n),1,-2.d0,1,0)
+              else if ((abs(visc_type) .eq. 2) .and. (precon_type .eq. -4)) then
+                 ! multiply by c=2 for precon_type = -4
+                 call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
+              else if ((abs(visc_type) .eq. 3) .and. (precon_type .eq. 4)) then
+                 ! multiply by -c=-4/3 for |viscous_type| = 3
+                 call multifab_mult_mult_s_c(x_p(n),1,-4.d0/3.d0,1,0)
+                 ! gamma part: the sign is same as beta, use x_p_tmp as an immediate variable  
+                 call multifab_copy_c(x_p_tmp(n),1,b_p(n),1,1,0)
+                 call multifab_mult_mult_c(x_p_tmp(n),1,gamma(n),1,1,0)
+                 call multifab_mult_mult_s_c(x_p_tmp(n),1,-1.d0,1,0)
+                 call multifab_plus_plus_c(x_p(n),1,x_p_tmp(n),1,1,0)
+              else if ((abs(visc_type) .eq. 3) .and. (precon_type .eq. -4)) then
+                 ! multiply by c=4/3 for precon_type = -4
+                 call multifab_mult_mult_s_c(x_p(n),1,4.d0/3.d0,1,0)
+                 ! gamma part: the sign is same as beta, use x_p_tmp as an immediate variable   
+                 call multifab_copy_c(x_p_tmp(n),1,b_p(n),1,1,0)
+                 call multifab_mult_mult_c(x_p_tmp(n),1,gamma(n),1,1,0)
+                 call multifab_plus_plus_c(x_p(n),1,x_p_tmp(n),1,1,0)             
+              end if
 
-        end do
+           end do
+
+        else
+
+           call visc_schur_complement(mla,mac_rhs,x_p,x_u,beta,beta_ed, &
+                                      theta_alpha,dx,the_bc_tower,phi)
+
+        end if
 
      case default
         call bl_error('apply_precon.f90: unsupported precon_type')
@@ -520,7 +547,8 @@ contains
 
   end subroutine apply_precon
 
-  subroutine visc_schur_complement(mla,rhs,x_out,x_u,beta,beta_ed,theta_alpha,dx,the_bc_tower,phi)
+  subroutine visc_schur_complement(mla,rhs,x_out,x_u,beta,beta_ed, &
+                                   theta_alpha,dx,the_bc_tower,phi)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rhs(:)
@@ -531,7 +559,7 @@ contains
     real(kind=dp_t), intent(in   ) :: theta_alpha
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(in   ), optional :: phi(:)
+    type(multifab) , intent(in   ) :: phi(:)
 
     ! local
     integer:: i,dm,n,nlevs
@@ -561,15 +589,10 @@ contains
        end do
     end do
 
-    if (present(phi)) then
        ! we have already computed Ltilde_rho^inv (precon_type=1)
        do n=1,nlevs
           call multifab_copy_c(phi_rho(n),1,phi(n),1,1,0)
        end do
-    else
-       ! we need to compute Ltilde_rho^inv(rhs) (precon_type=2,3,4,5)
-
-    end if
 
         ! compute coefficients on edges using the diagnoal of the viscous operator
         call inverse_diag_lap(mla,beta,beta_ed,muinv_fc)
