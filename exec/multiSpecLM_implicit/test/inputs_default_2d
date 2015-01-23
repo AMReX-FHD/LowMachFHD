@@ -197,6 +197,9 @@
   !-4 = Block diagonal preconditioner with negative sign
   precon_type = 1
 
+  ! use the viscosity-based BFBt Schur complement (from Georg Stadler)
+  visc_schur_approx = 0
+
   ! weighting of pressure when computing norms and inner products
   p_norm_weight = 1.d0
 

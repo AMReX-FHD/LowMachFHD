@@ -10,7 +10,8 @@ module probin_gmres_module
 
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
-  integer   , save :: precon_type,mg_verbose,cg_verbose,mg_max_vcycles,mg_minwidth
+  integer   , save :: precon_type,visc_schur_approx
+  integer   , save :: mg_verbose,cg_verbose,mg_max_vcycles,mg_minwidth
   integer   , save :: mg_bottom_solver,mg_nsmooths_down,mg_nsmooths_up,mg_nsmooths_bottom
   integer   , save :: mg_max_bottom_nlevels,stag_mg_verbosity,stag_mg_max_vcycles
   integer   , save :: stag_mg_minwidth,stag_mg_bottom_solver,stag_mg_nsmooths_down
@@ -34,6 +35,9 @@ module probin_gmres_module
   ! 4 = Block diagonal preconditioner
   !-4 = Block diagonal preconditioner with negative sign
   namelist /probin_gmres/ precon_type
+
+  ! use the viscosity-based BFBt Schur complement (from Georg Stadler)
+  namelist /probin_gmres/ visc_schur_approx
 
   ! weighting of pressure when computing norms and inner products
   namelist /probin_gmres/ p_norm_weight
@@ -115,6 +119,8 @@ contains
     ! Defaults
     precon_type = 1
 
+    visc_schur_approx = 0
+
     p_norm_weight = 1.d0
 
     scale_factor = 1.d0
@@ -175,6 +181,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) precon_type
+
+       case ('--visc_schur_approx')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) visc_schur_approx
 
        case ('--p_norm_weight')
           farg = farg + 1

@@ -3,7 +3,7 @@ module apply_precon_module
   use ml_layout_module
   use multifab_module
   use define_bc_module
-  use probin_gmres_module , only: precon_type
+  use probin_gmres_module , only: precon_type, visc_schur_approx
   use probin_common_module, only: visc_type
   use stag_mg_solver_module
   use stag_applyop_module
@@ -118,7 +118,7 @@ contains
         end do
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 3: Compute x_u and part of x_p
+        ! STEP 3: Compute x_u
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! use multigrid to solve for Phi
@@ -128,57 +128,67 @@ contains
         ! x_u = x_u^star - (alpha I)^-1 grad Phi
         call subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx,the_bc_tower)
 
-        ! if precon_type = +1, or theta_alpha=0 then x_p = theta_alpha*Phi - c*beta*(mac_rhs)
-        ! if precon_type = -1                   then x_p = theta_alpha*Phi - c*beta*L_alpha Phi
 
-        if ((precon_type .eq. 1) .or. (theta_alpha .eq. 0.d0)) then
-          ! first set x_p = -mac_rhs 
-          do n=1,nlevs
-             call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
-             call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
-          end do
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! STEP 4: Compute x_p by applying the Schur complement approximation
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        if (visc_schur_approx .eq. 0) then
+           
+           ! if precon_type = +1, or theta_alpha=0 then x_p = theta_alpha*Phi - c*beta*(mac_rhs)
+           ! if precon_type = -1                   then x_p = theta_alpha*Phi - c*beta*L_alpha Phi
+           
+           if ((precon_type .eq. 1) .or. (theta_alpha .eq. 0.d0)) then
+              ! first set x_p = -mac_rhs 
+              do n=1,nlevs
+                 call multifab_copy_c(x_p(n),1,mac_rhs(n),1,1,0)
+                 call multifab_mult_mult_s_c(x_p(n),1,-1.d0,1,0)
+              end do
+           else
+              ! first set x_p = -L_alpha Phi
+              call cc_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx, &
+                   the_bc_tower,pres_bc_comp,stencil_order_in=2)
+           end if
+
+           do n=1,nlevs
+
+              if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then  
+                 ! multiply x_p by beta; x_p = -beta L_alpha Phi
+                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
+
+                 if (abs(visc_type) .eq. 2) then
+                    ! multiply by c=2; x_p = -2*beta L_alpha Phi
+                    call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
+                 end if
+
+              else if (abs(visc_type) .eq. 3) then
+
+                 ! multiply x_p by gamma, use mac_rhs a temparary to save x_p 
+                 call multifab_copy_c(mac_rhs(n),1,x_p(n),1,1,0)
+                 call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
+                 ! multiply x_p by beta; x_p = -beta L_alpha Phi
+                 call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
+                 ! multiply by c=4/3; x_p = -(4/3) beta L_alpha Phi
+                 call multifab_mult_mult_s_c(x_p(n),1,4.d0/3.d0,1,0)
+                 ! x_p = -(4/3) beta L_alpha Phi - gamma L_alpha Phi
+                 call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
+
+              end if
+
+              ! multiply Phi by theta_alpha
+              call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
+
+              ! add theta_alpha*Phi to x_p
+              call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
+
+           end do
+
         else
-          ! first set x_p = -L_alpha Phi
-          call cc_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx, &
-                          the_bc_tower,pres_bc_comp,stencil_order_in=2)
+
+           call visc_schur_complement(mla,mac_rhs,x_p,x_u,beta,beta_ed,theta_alpha, &
+                                      dx,the_bc_tower,phi)
+           
         end if
-
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 4: Update x_p by applying the Schur complement approximation
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
-        do n=1,nlevs
-
-          if ( (abs(visc_type) .eq. 1) .or. (abs(visc_type) .eq. 2) ) then  
-            ! multiply x_p by beta; x_p = -beta L_alpha Phi
-            call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
-
-            if (abs(visc_type) .eq. 2) then
-               ! multiply by c=2; x_p = -2*beta L_alpha Phi
-               call multifab_mult_mult_s_c(x_p(n),1,2.d0,1,0)
-            end if
- 
-          else if (abs(visc_type) .eq. 3) then
-
-            ! multiply x_p by gamma, use mac_rhs a temparary to save x_p 
-            call multifab_copy_c(mac_rhs(n),1,x_p(n),1,1,0)
-            call multifab_mult_mult_c(mac_rhs(n),1,gamma(n),1,1,0)
-            ! multiply x_p by beta; x_p = -beta L_alpha Phi
-            call multifab_mult_mult_c(x_p(n),1,beta(n),1,1,0)
-            ! multiply by c=4/3; x_p = -(4/3) beta L_alpha Phi
-            call multifab_mult_mult_s_c(x_p(n),1,4.d0/3.d0,1,0)
-            ! x_p = -(4/3) beta L_alpha Phi - gamma L_alpha Phi
-            call multifab_plus_plus_c(x_p(n),1,mac_rhs(n),1,1,0)
-
-          end if
-
-          ! multiply Phi by theta_alpha
-          call multifab_mult_mult_s_c(phi(n),1,theta_alpha,1,0)
-
-          ! add theta_alpha*Phi to x_p
-          call multifab_plus_plus_c(x_p(n),1,phi(n),1,1,0)
-
-        end do
 
       case(2,5)  
         ! lower triangular, precon_type=-2 means using negative sign for Schur complement app
@@ -457,47 +467,6 @@ contains
           end if
 
         end do
-
-     ! Donev: Suggest merging this into a contained routine and calling from within P_2 or P_3 
-     case(6)  ! Stadler large viscosity contrast BFBt preconditioner
-
-       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! STEP 1: Solve for an intermediate state, x_u^star, using an implicit viscous solve
-       !         x_u^star = A^{-1} b_u
-       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        ! x_u^star = A^{-1} b_u
-        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
-
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 2: Construct RHS for pressure Poisson problem
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        ! set mac_rhs = D(x_u^star)
-        call compute_div(mla,x_u,mac_rhs,dx,1,1,1)
-
-        ! add b_p to mac_rhs
-        do n=1,nlevs
-          call multifab_plus_plus_c(mac_rhs(n),1,b_p(n),1,1,0)
-        end do
-
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 3: Compute x_u and part of x_p
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        ! use multigrid to solve for Phi
-        ! x_u^star is only passed in to get a norm for absolute residual criteria
-        call macproject(mla,phi,x_u,alphainv_fc,mac_rhs,dx,the_bc_tower)
-
-        ! x_u = x_u^star - (alpha I)^-1 grad Phi
-        call subtract_weighted_gradp(mla,x_u,alphainv_fc,phi,dx,the_bc_tower)
-
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! STEP 4: Update x_p by applying the Schur complement approximation
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        call visc_schur_complement(mla,mac_rhs,x_p,x_u,beta,beta_ed,theta_alpha, &
-                                   dx,the_bc_tower,phi)
 
      case default
         call bl_error('apply_precon.f90: unsupported precon_type')
