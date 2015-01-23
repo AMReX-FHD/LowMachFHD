@@ -589,7 +589,7 @@ contains
        end do
     end do
 
-       ! we have already computed Ltilde_rho^inv (precon_type=1)
+       ! we have already computed Ltilde_rho^inv
        do n=1,nlevs
           call multifab_copy_c(phi_rho(n),1,phi(n),1,1,0)
        end do
