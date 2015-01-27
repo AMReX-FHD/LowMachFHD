@@ -19,12 +19,12 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 10                    ! maximum number of time steps
+  max_step = 1000                  ! maximum number of time steps
   plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
-  print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
+  print_int = 100                  ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 1              ! how often to call project_onto_eos
 
   ! Physical parameters
@@ -125,11 +125,11 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 128 ! parallelization parameters
-  stats_int = -1                 ! Project grid for analysis
+  stats_int = 10                 ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 0      ! How many steps to skip
+  n_steps_skip = 50       ! How many steps to skip
   analyze_conserved = F   ! Should we use conserved variables for the analysis
                           ! (does not work well)
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
