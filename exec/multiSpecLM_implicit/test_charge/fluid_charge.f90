@@ -4,13 +4,14 @@ module fluid_charge_module
   use convert_stag_module
   use define_bc_module
   use probin_multispecies_module, only: charge_per_mass, nspecies, charge_per_mass, rho_part_bc_comp
-  use probin_common_module, only: molmass, k_B
+  use probin_common_module, only: molmass, k_B, n_cells
 
   implicit none
 
   private
 
-  public :: compute_total_charge, compute_charge_coef, momentum_charge_force
+  public :: compute_total_charge, compute_charge_coef, momentum_charge_force, &
+            enforce_charge_neutrality
   
 contains
 
@@ -288,6 +289,155 @@ contains
     end do
 
   end subroutine momentum_charge_force
+
+  subroutine enforce_charge_neutrality(mla,rho)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: rho(:)
+
+    ! local
+    type(multifab) :: charge(mla%nlevel)
+
+    integer :: i,dm,nlevs,n,n_cell,ng_r
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t) :: charge_temp
+
+    ! pointers into multifab
+    real(kind=dp_t), pointer :: rp(:,:,:,:)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    ng_r = rho(1)%ng
+
+    if (nlevs .ne. 1) then
+       call bl_error("enforce_charge_neutrality only works with nlevs=1")
+    end if
+
+    if (dm .eq. 2) then
+       n_cell = n_cells(1)*n_cells(2)
+    else if (dm .eq. 3) then
+       n_cell = n_cells(1)*n_cells(2)*n_cells(3)
+    end if
+
+    do n=1,nlevs
+       call multifab_build(charge(n),mla%la(n),1,0)
+    end do
+
+    ! compute total charge in each cell
+    call compute_total_charge(mla,rho,charge)
+
+    ! integrate charge over domain
+    charge_temp = multifab_sum_c(charge(1),1,1)
+
+    ! divide total charge by # of zones
+    charge_temp = charge_temp / n_cell
+
+    print*,'charge before',charge_temp
+    
+    ! for positively charged zones, pick the positive species with the largest rho and
+    ! subtract density.  Pick the negative species with the largest rho_i and add density
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          rp => dataptr(rho(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          select case (dm)
+          case (2)
+             call enforce_charge_neutrality_2d(rp(:,:,1,:),ng_r,lo,hi,charge_temp)
+          case (3)
+          end select
+       end do
+    end do
+
+    ! compute total charge in each cell
+    call compute_total_charge(mla,rho,charge)
+
+    ! integrate charge over domain
+    charge_temp = multifab_sum_c(charge(1),1,1)
+
+    ! divide total charge by # of zones
+    charge_temp = charge_temp / n_cell
+
+    print*,'charge after',charge_temp
+
+    do n=1,nlevs
+       call multifab_destroy(charge(n))
+    end do
+
+  contains
+
+    subroutine enforce_charge_neutrality_2d(rho,ng_r,lo,hi,net_charge)
+      
+      integer         :: lo(:),hi(:),ng_r
+      real(kind=dp_t) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,:)
+      real(kind=dp_t) :: net_charge
+
+      ! local variables
+      integer :: i,j,comp,negative_comp,positive_comp
+      logical :: is_positive(nspecies),is_negative(nspecies)
+      real(kind=dp_t) :: rho_temp
+
+      is_positive = .false.
+      is_negative = .false.
+      do comp=1,nspecies
+         if (charge_per_mass(comp) .gt. 0.d0) then
+            is_positive(comp) = .true.
+         end if
+         if (charge_per_mass(comp) .lt. 0.d0) then
+            is_negative(comp) = .true.
+         end if
+      end do
+
+      do j=lo(2),hi(2)
+         do i=lo(1),hi(1)
+
+            ! find the negatively charged species with largest rho_i
+            rho_temp = -1.d0
+            negative_comp = -1
+            do comp=1,nspecies
+               if (is_negative(comp)) then
+                  if (rho(i,j,comp) .gt. rho_temp) then
+                     rho_temp = rho(i,j,comp)
+                     negative_comp = comp
+                  end if
+               end if
+            end do
+
+            ! find the positively charged species with largest rho_i
+            rho_temp = -1.d0
+            positive_comp = -1
+            do comp=1,nspecies
+               if (is_positive(comp)) then
+                  if (rho(i,j,comp) .gt. rho_temp) then
+                     rho_temp = rho(i,j,comp)
+                     positive_comp = comp
+                  end if
+               end if
+            end do
+
+            if (net_charge .lt. 0.d0) then
+               rho(i,j,negative_comp) = rho(i,j,negative_comp) &
+                    - abs(0.5d0*net_charge/charge_per_mass(negative_comp))
+               rho(i,j,positive_comp) = rho(i,j,positive_comp) &
+                    + abs(0.5d0*net_charge/charge_per_mass(positive_comp))
+            else
+               rho(i,j,positive_comp) = rho(i,j,positive_comp) &
+                    - abs(0.5d0*net_charge/charge_per_mass(positive_comp))
+               rho(i,j,negative_comp) = rho(i,j,negative_comp) &
+                    + abs(0.5d0*net_charge/charge_per_mass(negative_comp))
+            end if
+
+         end do
+      end do
+
+    end subroutine enforce_charge_neutrality_2d
+
+  end subroutine enforce_charge_neutrality
+
+
+
 
 
 end module fluid_charge_module
