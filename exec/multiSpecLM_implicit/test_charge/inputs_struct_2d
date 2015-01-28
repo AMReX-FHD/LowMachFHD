@@ -24,7 +24,7 @@
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
-  print_int = 100                  ! how often to output EOS drift and sum of conserved quantities
+  print_int = 10                   ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10             ! how often to call project_onto_eos
 
   ! Physical parameters
@@ -244,7 +244,7 @@
   ! GMRES solver parameters
   gmres_rel_tol = 1.d-10 ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
-  gmres_verbose = 1     ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_verbose = 0     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20  ! max number of outer iterations
   gmres_max_inner = 5   ! max number of inner iterations, or restart number
   gmres_max_iter = 100  ! max number of gmres iterations
