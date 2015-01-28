@@ -42,7 +42,7 @@ subroutine main_driver()
                                   barodiffusion_type
   use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, Dbar, &
                                         rho_part_bc_comp, start_time, &
-                                        probin_multispecies_init
+                                        probin_multispecies_init, use_charged_fluid
   use probin_gmres_module, only: probin_gmres_init
 
   implicit none
