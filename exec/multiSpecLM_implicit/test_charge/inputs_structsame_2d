@@ -299,7 +299,83 @@
    nSavedSnapshots=5 ! Maximum time in S(k,t) will be (nSavedSnapshots/2)*dt*hydro_grid_int
       
    outputFolder = "."
-   filePrefix = "3species"
+   filePrefix = "charge"
    axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+   periodic = T ! Is the system periodic along the y axes
+/
+
+&hydroAnalysisOptions
+! 1D grid after vertical projection (corresponds to vstat files)
+! NOTE: This namelist will be ignored if project_dir=0
+
+   staggeredVelocities = 0 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
+   storeConserved = F ! We are not using conserved variables here due to staggering
+
+   ! Save the flow to a VTK file:
+   writeMeansVTK = F ! Save the means over the averaging interval
+   writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
+
+   ! Variances
+   writeVariancesVTK = F ! Should we save a VTK file
+   nVariances = 0
+   ! 1=rho-rho, 2=w1-w1, 3=w2-w2, 4=w3-w3, 5=w1-w2, 6=w1-w3, 7=w2-w3
+   variancePairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 7 0 7, 0 5 0 6, 0 5 0 7, 0 6 0 7"
+      ! species1 variable1 species2 variable2
+
+   ! Static structure factors
+   writeSpectrumVTK = F
+   subtractMeanFT = F ! The means are trivial here so no need to estimate them
+   writeAbsValue = T ! Only write absolute values of complex values to VTK file?
+   writeTheory = -1 ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
+   nStructureFactors = 0
+   structureFactorPairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 7 0 7, 0 5 0 6, 0 5 0 7, 0 6 0 7"
+
+   ! Dynamic structure factors:
+   nWavenumbers=0
+   ! Shape (2,nWavenumbers):
+   selectedWavenumbers=""
+   nSavedSnapshots=200
+      
+   outputFolder = "."
+   filePrefix = "charge_vstat"
+   axisToPrint = 1 ! 1=x, 2=y, 3=z axis
+   periodic = T ! Is the system periodic along the y axes
+/
+
+&hydroAnalysisOptions
+! 1D grid after horizontal projection (corresponds to hstat files)
+! NOTE: This namelist will be ignored if project_dir=0
+
+   staggeredVelocities = 0 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
+   storeConserved = F ! We are not using conserved variables here due to staggering
+
+   ! Save the flow to a VTK file:
+   writeMeansVTK = F ! Save the means over the averaging interval
+   writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
+
+   ! Variances
+   writeVariancesVTK = F ! Should we save a VTK file
+   nVariances = 0
+   ! 1=rho-rho, 2=w1-w1, 3=w2-w2, 4=w3-w3, 5=w1-w2, 6=w1-w3, 7=w2-w3
+   variancePairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 7 0 7, 0 5 0 6, 0 5 0 7, 0 6 0 7"
+      ! species1 variable1 species2 variable2
+
+   ! Static structure factors
+   writeSpectrumVTK = F
+   subtractMeanFT = F ! The means are trivial here so no need to estimate them
+   writeAbsValue = T ! Only write absolute values of complex values to VTK file?
+   writeTheory = -1 ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
+   nStructureFactors = 0
+   structureFactorPairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 7 0 7, 0 5 0 6, 0 5 0 7, 0 6 0 7"
+
+   ! Dynamic structure factors:
+   nWavenumbers=0
+   ! Shape (2,nWavenumbers):
+   selectedWavenumbers=""
+   nSavedSnapshots=100
+      
+   outputFolder = "."
+   filePrefix = "charge_hstat"
+   axisToPrint = 1 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
 /
