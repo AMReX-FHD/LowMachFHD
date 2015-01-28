@@ -332,7 +332,7 @@ contains
     charge_temp = multifab_sum_c(charge(1),1,1)
 
     ! divide total charge by # of zones
-    charge_temp = charge_temp / n_cell
+!    charge_temp = charge_temp / n_cell
 
     print*,'charge before',charge_temp
     
@@ -358,7 +358,7 @@ contains
     charge_temp = multifab_sum_c(charge(1),1,1)
 
     ! divide total charge by # of zones
-    charge_temp = charge_temp / n_cell
+!    charge_temp = charge_temp / n_cell
 
     print*,'charge after',charge_temp
 
@@ -392,6 +392,8 @@ contains
 
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)
+
+            if (i .eq. 0 .and. j .eq. 0) then
 
             ! find the negatively charged species with largest rho_i
             rho_temp = -1.d0
@@ -427,6 +429,8 @@ contains
                     - abs(0.5d0*net_charge/charge_per_mass(positive_comp))
                rho(i,j,negative_comp) = rho(i,j,negative_comp) &
                     + abs(0.5d0*net_charge/charge_per_mass(negative_comp))
+            end if
+
             end if
 
          end do

@@ -32,6 +32,7 @@ subroutine main_driver()
   use restart_module
   use checkpoint_module
   use project_onto_eos_module
+  use fluid_charge_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -43,8 +44,6 @@ subroutine main_driver()
                                         rho_part_bc_comp, start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
-
-  use fabio_module
 
   implicit none
 
@@ -610,6 +609,9 @@ subroutine main_driver()
      ! project rho and rho1 back onto EOS
      if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
         call project_onto_eos(mla,rho_new)
+        if (use_charged_fluid) then
+           call enforce_charge_neutrality(mla,rho_new)
+        end if
      end if
 
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
