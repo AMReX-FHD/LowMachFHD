@@ -151,10 +151,10 @@ contains
     else if (comp .eq. Epot_bc_comp) then
 
        ! test setting the electric potential on walls to be 0 and 1
-       if (y .eq. prob_lo(2)) then
+       if (y .eq. prob_hi(2)) then
+          val = 1.d7
+       else
           val = 0.d0
-       else if (y .eq. prob_hi(2)) then
-          val = 1.d0
        end if
 
     else
