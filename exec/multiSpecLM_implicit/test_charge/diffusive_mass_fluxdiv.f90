@@ -4,9 +4,10 @@ module diffusive_mass_fluxdiv_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
+  use multifab_physbc_module
   use probin_multispecies_module, only: nspecies, is_nonisothermal, mol_frac_bc_comp, &
-                                        nspecies, correct_flux, use_charged_fluid, dielectric_const, &
-                                        rho_part_bc_comp
+                                        nspecies, correct_flux, use_charged_fluid, &
+                                        dielectric_const, rho_part_bc_comp, Epot_bc_comp
   use probin_common_module, only: temp_bc_comp, barodiffusion_type
   use probin_gmres_module, only: mg_verbose
   use mass_flux_utilities_module
@@ -133,11 +134,6 @@ contains
     type(multifab)  :: charge_coef_face(mla%nlevel,mla%dim)
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
-    integer :: Epot_bc_comp
-
-    ! NOTE THE BOUNDARY CONDITION COMPONENT ISN'T RIGHT
-    Epot_bc_comp = scal_bc_comp
- 
     dm    = mla%dim     ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
 
@@ -254,6 +250,10 @@ contains
 
           call multifab_build(Epot(n),mla%la(n),1,1)
           call setval(Epot(n),0.d0,all=.true.)
+         
+          ! fill ghost cells for Epot at walls using Dirichlet value
+          call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                               dx_in=dx(n,:))
 
           ! set alpha=0
           call multifab_build(alpha(n),mla%la(n),1,0)
