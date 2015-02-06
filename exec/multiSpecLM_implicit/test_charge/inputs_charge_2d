@@ -9,34 +9,33 @@
   dim_in = 2                       ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
-  n_cells(1:2) = 64 64             ! number of cells in domain
-  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+  n_cells(1:2) = 32 32             ! number of cells in domain
+  max_grid_size(1:2) = 16 16       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = -1.d0                 ! time step (if positive, fixed)
+  fixed_dt = 1.d0                  ! time step (if positive, fixed)
   cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 500                   ! maximum number of time steps
-  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 1000                  ! maximum number of time steps
+  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
-  prob_type = 6                    ! sets scalars, m, coefficients (see init.f90)
+  prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
-  print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 1              ! how often to call project_onto_eos
+  print_int = 10                   ! how often to output EOS drift and sum of conserved quantities
+  project_eos_int = 10             ! how often to call project_onto_eos
 
   ! Physical parameters
   !--------------------
   grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
-  molmass(1:3) = 1.d0 1.d0 1.d0
   molmass(1:3) = 1.d-22 1.d-22 1.d-22
   rhobar(1:3) =   1.d0 1.d0 1.d0 ! rhobar for nspecies
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mom = 5.d4
-  variance_coef_mass = 5.d4
+  variance_coef_mom = 5.d8
+  variance_coef_mass = 5.d8
   k_B = 1.d0            ! Boltzmann's constant
   k_B = 1.3806488d-16       ! Boltzmann's constant
   
@@ -63,7 +62,7 @@
   ! if abs(visc_type) = 3, L = div [ beta (grad + grad^T) + I (gamma - (2/3)*beta) div ]
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
-  visc_type = 1
+  visc_type = 2
   visc_coef = 1.d-5         ! momentum diffusion coefficient 'eta'   
 
   advection_type = 0 ! 0 = centered explicit
@@ -118,7 +117,7 @@
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = 0         ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = -2        ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
@@ -126,7 +125,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 128 ! parallelization parameters
-  stats_int = -1                 ! Project grid for analysis
+  stats_int = 100                ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
@@ -161,8 +160,8 @@
   temp_type = 0 ! for initializing temperature
 
   ! initial values for CONCENTRATIONS
-  rho_init(1,1:3) = 0.1d0 0.0d0 0.9d0
-  rho_init(2,1:3) = 0.0d0 0.1d0 0.9d0
+  rho_init(1,1:3) = 0.05d0 0.05d0 0.9d0
+  rho_init(2,1:3) = 0.05d0 0.05d0 0.9d0
 
   ! rho_i boundary conditions (dir,lohi,species)
   rho_bc(1,1,1:2) = 0.d0 0.d0
@@ -186,7 +185,7 @@
  
   use_charged_fluid = T
   dielectric_const = 8.854d-21
-  charge_per_mass(1:3) = 1.d-10 -1.d-10 0.d0
+  charge_per_mass(1:3) = 1.d-5 -1.d-5 0.d0
 
 /
 
@@ -224,7 +223,7 @@
   mg_nsmooths_up = 2         ! number of smooths at each level on the way up
   mg_nsmooths_bottom = 8     ! number of smooths at the bottom (only if mg_bottom_solver=0)
   mg_max_bottom_nlevels = 10 ! for mg_bottom_solver=4, number of additional levels of multigrid
-  mg_rel_tol = 1.d-9         ! relative tolerance stopping criteria
+  mg_rel_tol = 1.d-10        ! relative tolerance stopping criteria
 
   ! Staggered multigrid solver parameters
   stag_mg_verbosity = 0       ! verbosity (set to 1 for debugging the gmres solver!)
@@ -240,12 +239,12 @@
   stag_mg_max_bottom_nlevels = 10 ! for stag_mg_bottom_solver=4, number of additional levels of multigrid
   stag_mg_omega = 1.d0        ! weighted-jacobi omega coefficient
   stag_mg_smoother = 1        ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
-  stag_mg_rel_tol = 1.d-9     ! relative tolerance stopping criteria
+  stag_mg_rel_tol = 1.d-10    ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.d-9 ! relative tolerance stopping criteria
+  gmres_rel_tol = 1.d-10 ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
-  gmres_verbose = 1     ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_verbose = 0     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20  ! max number of outer iterations
   gmres_max_inner = 5   ! max number of inner iterations, or restart number
   gmres_max_iter = 100  ! max number of gmres iterations
