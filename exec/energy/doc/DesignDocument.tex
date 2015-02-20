@@ -37,6 +37,7 @@
 \def\Fb {{\bf F}}
 \def\gb {{\bf g}}
 \def\mb {{\bf m}}
+\def\Qb {{\bf Q}}
 \def\vb {{\bf v}}
 \def\wb {{\bf w}}
 \def\Wb {{\bf W}}
@@ -67,17 +68,54 @@
 \section{Equations}
 The equations for the momentum and densities:
 \begin{eqnarray}
-\frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb\\
-\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot\Fb_i,
+\frac{\partial\rho\vb}{\partial t} + &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot(\overline\taub + \tilde\taub) + \rho\gb,\label{eq:momentum}\\
+\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot(\overline\Fb_i + \tilde\Fb_i),\label{eq:mass}\\
+\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho\vb h) + \frac{DP}{Dt} + \nabla\cdot(\overline\Qb_i + \tilde\Qb_i),\label{eq:enthalpy}
 \end{eqnarray}
-with $\Fb_i$ containing both the diffusive and stochastic mass fluxes.  The equation of state is:
-\begin{equation}
-\nabla\cdot\vb = S\label{eq:S}.
-\end{equation}
+\MarginPar{No differential diffusion terms included yet.}
+where $\taub$, $\Fb$, and $\Qb$ are the stress tensors, mass fluxes, and heat fluxes respectively, divided into deterministic and stochastic components.
+
 The deterministic part of the mass fluxes, $\overline{F}$, contains contributions from compositional
 gradients, barodiffusion, and temperature gradients,
 \begin{equation}
 \overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib-\wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right].
 \end{equation}
+
+To derive a constraint on the velocity, we begin by writing the pressure as a function of $\rho, T$, and $w$ and differentiate along particle paths,
+\begin{equation}
+\frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
+\end{equation}
+We now impose the constraint that $P$ is constant in space but varies in time, $P=P_0(t)$.  In this way we allow for pressure changes in closed containers, but are not allowing for pressure stratification due to a gravitational density stratification.  Thus, we replace the $DP/Dt$ with $\partial P_0/\partial t$ in both the enthalpy equation (\ref{eq:enthalpy}) and the constraint equation (\ref{eq:particle paths}).  Furthermore, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, we can rewrite (\ref{eq:particle paths}) as
+\begin{equation}
+\nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{\partial P_o}{\partial t} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
+\end{equation}
+To obtain an expression for $DT/Dt$, we apply differentiate the enthalpy, $h=h(P,T,w_k)$, along particle paths to obtain
+\begin{equation}
+\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{\partial P_0}{\partial t} - \sum_kh_{w_k}\frac{Dw_k}{Dt}\right),\label{eq:DTDt1}
+\end{equation}
+where $c_p = \partial h/\partial T$.  Note that we have also replace $DP/Dt$ with $\partial P_0/\partial t$ in this equation.  From equation (\ref{eq:mass}) and continuity we have,
+\begin{equation}
+\frac{Dw_k}{Dt} = \frac{1}{\rho}\nabla\cdot\Fb_k,\label{eq:DwDt}
+\end{equation}
+and from equation (\ref{eq:enthalpy}) we have,
+\begin{equation}
+\frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{\partial P_0}{\partial t} + \nabla\cdot\Qb\right).\label{eq:DhDt}
+\end{equation}
+Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
+\begin{equation}
+\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{\partial P_0}{\partial t} + \nabla\cdot\Qb - \sum_kh_{w_k}\nabla\cdot\Fb_k\right].\label{eq:DTDt}
+\end{equation}
+Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
+\footnote{These are the same equations in MAESTRO Paper III, Almgren et al., ApJ, 2008, except that paper includes a convective derivative of $P_0$ due to stratification}
+\begin{equation}
+\nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = \sum_k \beta_k \nabla\cdot\Fb_k + \gamma \nabla\cdot\Qb \equiv S,
+\end{equation}
+\begin{equation}
+\alpha = -\left[\frac{(1-\rho h_p)P_T - \rho c_p}{\rho^2 c_p P_\rho}\right], \qquad
+\beta_k = \frac{P_{w_k}}{\rho^2 P_\rho} - \frac{P_T h_{w_k}}{\rho^2 P_\rho c_p}, \qquad
+\gamma = \frac{P_T}{\rho^2 P_\rho c_P}.
+\end{equation}
+
+
 
 \end{document}
