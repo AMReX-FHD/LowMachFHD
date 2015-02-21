@@ -5,10 +5,9 @@
 
 % for \boldsymbol
 \usepackage{amsmath}
-\usepackage{latexsym}
-\usepackage{graphicx}
-\usepackage{geometry}
-\usepackage{hyperref}
+
+% for \mathfrak
+\usepackage{amsfonts}
 
 % total number of floats allowed on a page
 \setcounter{totalnumber}{100}
@@ -68,32 +67,50 @@
 \section{Equations}
 The equations for the momentum and densities:
 \begin{eqnarray}
-\frac{\partial\rho\vb}{\partial t} + &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot(\overline\taub + \tilde\taub) + \rho\gb,\label{eq:momentum}\\
+\frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot(\overline\taub + \tilde\taub) + \rho\gb,\label{eq:momentum}\\
 \frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot(\overline\Fb_i + \tilde\Fb_i),\label{eq:mass}\\
-\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho\vb h) + \frac{DP}{Dt} + \nabla\cdot(\overline\Qb_i + \tilde\Qb_i),\label{eq:enthalpy}
+\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho\vb h) + \frac{DP}{Dt} + \nabla\cdot(\overline\Qb + \tilde\Qb),\label{eq:enthalpy}
 \end{eqnarray}
-\MarginPar{No differential diffusion terms included yet.}
-where $\taub$, $\Fb$, and $\Qb$ are the stress tensors, mass fluxes, and heat fluxes respectively, divided into deterministic and stochastic components.
-
-The deterministic part of the mass fluxes, $\overline{F}$, contains contributions from compositional
-gradients, barodiffusion, and temperature gradients,
+where $\taub$, $\Fb$, and $\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
+respectively, divided into deterministic and stochastic components.
+The deterministic part of the mass fluxes, $\overline{F}$, contains contributions from 
+compositional gradients and temperature gradients (we do not consider barodiffusion here),
 \begin{equation}
-\overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib-\wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right].
+\overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + \zetab\frac{\nabla T}{T}\right].
+\end{equation}
+The deterministic heat fluxes have the form $\overline\Qb = (\lambda/c_p)\nabla h$,
+where the specific heat at constant pressure is $c_p = \partial h/\partial T$.
+If we wish to include differential diffusion effects, following 
+Day and Bell, Combust.~Theor.~Model., 2000, one possible formulation is to add
+the following term to the right-hand-side of equation (\ref{eq:enthalpy}):
+\begin{equation}
+\mathfrak{D} = \sum_k \nabla\cdot h_k\left(\rho\mathcal{D}_m - \frac{\lambda}{c_p}\right)\nabla w_k.
 \end{equation}
 
-To derive a constraint on the velocity, we begin by writing the pressure as a function of $\rho, T$, and $w$ and differentiate along particle paths,
+\subsection{Velocity Constraint}
+To derive a constraint on the velocity, we begin by writing the pressure as a function 
+of $\rho, T$, and $w$ and differentiate along particle paths,
 \begin{equation}
 \frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
 \end{equation}
-We now impose the constraint that $P$ is constant in space but varies in time, $P=P_0(t)$.  In this way we allow for pressure changes in closed containers, but are not allowing for pressure stratification due to a gravitational density stratification.  Thus, we replace the $DP/Dt$ with $\partial P_0/\partial t$ in both the enthalpy equation (\ref{eq:enthalpy}) and the constraint equation (\ref{eq:particle paths}).  Furthermore, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, we can rewrite (\ref{eq:particle paths}) as
+We now impose the constraint that $P$ is constant in space but varies in time, $P=P_0(t)$.
+In this way we allow for pressure changes in closed containers, but are not allowing for 
+pressure stratification due to a gravitational density stratification.  Thus, we replace 
+the $DP/Dt$ with $\partial P_0/\partial t$ in both the enthalpy equation 
+(\ref{eq:enthalpy}) and the constraint equation (\ref{eq:particle paths}).  Furthermore, 
+by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, we can rewrite 
+(\ref{eq:particle paths}) as
 \begin{equation}
 \nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{\partial P_o}{\partial t} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
-To obtain an expression for $DT/Dt$, we apply differentiate the enthalpy, $h=h(P,T,w_k)$, along particle paths to obtain
+To obtain an expression for $DT/Dt$, we apply differentiate the enthalpy, $h=h(P,T,w_k)$, 
+along particle paths to obtain
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{\partial P_0}{\partial t} - \sum_kh_{w_k}\frac{Dw_k}{Dt}\right),\label{eq:DTDt1}
+\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{\partial P_0}{\partial t} - \sum_kh_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
 \end{equation}
-where $c_p = \partial h/\partial T$.  Note that we have also replace $DP/Dt$ with $\partial P_0/\partial t$ in this equation.  From equation (\ref{eq:mass}) and continuity we have,
+Note that we have also replace $DP/Dt$ with 
+$\partial P_0/\partial t$ in this equation.  From equation (\ref{eq:mass}) and 
+continuity we have,
 \begin{equation}
 \frac{Dw_k}{Dt} = \frac{1}{\rho}\nabla\cdot\Fb_k,\label{eq:DwDt}
 \end{equation}
@@ -108,7 +125,7 @@ Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \footnote{These are the same equations in MAESTRO Paper III, Almgren et al., ApJ, 2008, except that paper includes a convective derivative of $P_0$ due to stratification}
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = \sum_k \beta_k \nabla\cdot\Fb_k + \gamma \nabla\cdot\Qb \equiv S,
+\nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = \sum_k \beta_k \nabla\cdot\Fb_k + \gamma \nabla\cdot\Qb \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
 \alpha = -\left[\frac{(1-\rho h_p)P_T - \rho c_p}{\rho^2 c_p P_\rho}\right], \qquad
@@ -116,6 +133,83 @@ Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \gamma = \frac{P_T}{\rho^2 P_\rho c_P}.
 \end{equation}
 
+\section{Maintaining the Equation of State}
+There are two issues with maintaining the equation of state.  First, equation 
+(\ref{eq:constraint}) represents a linearized, tangent-plane approximation to the 
+velocity field required to advect the thermodynamic variables so that they are 
+thermodynamically consistent with $P_0$.  For a general, non-linear EOS, the 
+variables will fall out of thermodynamic equilibrium, requiring an iterative volume 
+discrepancy approach to correct the drift.
 
+Second, for closed system (e.g., solid wall boundary conditions on all sides), if one 
+assumes that $P_0$ is constant, then equation (\ref{eq:constraint}) is only solvable 
+if $S$ integrates to zero over the entire domain, i.e.,
+\begin{equation}
+S_{\rm int} \equiv \int_\Omega S d\Omega = 0.
+\end{equation}
+Physically, if $S_{\rm int} \ne 0$, then $P_0$ will adjust accordingly.  How to deal with
+this numerically is an open problem.  One possibility is to split up $S$ into an average
+and a perturbational component,
+\begin{equation}
+S = \bar{S} + \delta S,
+\end{equation}
+where $\bar{S}$ is the average value over the domain, and $\delta S$ are local 
+perturbations off the average.  By definition, $(\delta S)_{\rm int}=0$ and we can
+simultaneously solve $\nabla\cdot\vb = \delta S$ and a pressure update equation,
+\begin{equation}
+\alpha\frac{\partial P_0}{\partial t} = \bar{S}.
+\end{equation}
+After the thermodynamic variable update, we need to correct for the fact that the 
+thermodynamic variables will not in general be thermodynamically consistent with the 
+updated $P_0$.  While the argument above still applies for why the variables drift, there 
+is now another effect in play in that $\delta S$ is linearized about the original $P_0$.  
+In some sense we are chasing a moving target $P_0$, but it is our hope that a volume 
+discrepancy type iteration will bring the thermodynamic variables into equilibrium in 
+a small number of iterations.
+
+\section{Algorithm}
+An inertial algorithm might look like this.\\ \\
+Initialization:\\
+\begin{enumerate}
+\item Compute $\Fb$ and $\Qb$ at the initial time and project.
+\item Loop over the following:
+\begin{enumerate}
+\item Predictor forward Euler step for thermodynamic variables.
+\item Advance $P_0$.
+\item If satisfied with thermodynamic drift, exit this loop.
+\item Determine the volume discrepancy correction and redefine $S$.
+\item Project to obtain an updated velocity field.
+\end{enumerate}
+\item Proceed to Corrector.\\
+\end{enumerate}
+Corrector:\\
+\begin{enumerate}
+\item Compute preliminary time-advanced $\Fb$ and $\Qb$.
+\item Loop over the following
+\begin{enumerate}
+\item GMRES solve for preliminary time-advanced velocity.
+\item Trapezoidal scalar corrector step for thermodynamic variables.
+I'm not sure how the volume discrepancy correction from the predictor comes into play here.
+\item Advance $P_0$.
+\item If satisfied with thermodynamic drift, exit this loop.
+\item Determine the volume discrepancy correction and redefine $S$.  The weighting of the
+correction may have to change since this velocity field is used in a trapezoidal corrector.
+I'm also not sure if/how to relate this correction to the predictor correction.
+\end{enumerate}
+\item Proceed to New-Time Predictor.\\
+\end{enumerate}
+New-Time Predictor:\\
+\begin{enumerate}
+\item Compute updated time-advanced $\Fb$ and $\Qb$.
+\item Loop over the following:
+\begin{enumerate}
+\item GMRES solve for updated time-advanced velocity.
+\item Predictor forward Euler step for thermodynamic variables.
+\item Advance $P_0$.
+\item If satisfied with thermodynamic drift, exit this loop.
+\item Determine the volume discrepancy correction and redefine $S$.
+\end{enumerate}
+\item Return to Corrector.
+\end{enumerate}
 
 \end{document}
