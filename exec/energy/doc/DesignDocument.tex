@@ -78,6 +78,8 @@ compositional gradients and temperature gradients (we do not consider barodiffus
 \begin{equation}
 \overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + \zetab\frac{\nabla T}{T}\right].
 \end{equation}
+The deterministic stress tensor ignores the effect of bulk viscosity, 
+$\overline\taub = \eta\bar\nabla\vb = \eta[\nabla\vb + (\nabla\vb)^T]$.
 The deterministic heat fluxes have the form $\overline\Qb = (\lambda/c_p)\nabla h$,
 where the specific heat at constant pressure is $c_p = \partial h/\partial T$.
 If we wish to include differential diffusion effects, following 
@@ -108,7 +110,7 @@ along particle paths to obtain
 \begin{equation}
 \frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{\partial P_0}{\partial t} - \sum_kh_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
 \end{equation}
-Note that we have also replace $DP/Dt$ with 
+Note that we have also replaced $DP/Dt$ with 
 $\partial P_0/\partial t$ in this equation.  From equation (\ref{eq:mass}) and 
 continuity we have,
 \begin{equation}
@@ -211,5 +213,29 @@ New-Time Predictor:\\
 \end{enumerate}
 \item Return to Corrector.
 \end{enumerate}
+
+\subsection{Volume Discrepancy}
+No matter what kind of temporal integrator you are using, any time you compute a
+complete set of time-advance thermodynamic variables (whether they be preliminary
+or final), they will not be consistent with the ambient pressure.  The strategy
+is to wrap the entire time-advancement routine in an iterative loop that uses
+volume discrepancy corrections to drive the time-advanced state onto the
+equation of state.  We assume isentropic expansion/contraction of fluid elements
+and relate this back to the pressure we wish to obtain.
+
+We add a correction term that looks something like
+\begin{equation}
+\nabla\cdot\vb = S + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm eos}^{\rm new} - P_0^{\rm new}}{\Delta t} + \vb\cdot\nabla P\right) \equiv S + S_{\rm corr}.
+\end{equation}
+However, $S_{\rm corr}$ doesn't necessarily sum to zero either, so in the corrector solve 
+we have to split the update again,
+\begin{equation}
+\nabla\cdot\vb = \delta S + \delta S_{\rm corr},
+\end{equation}
+\begin{equation}
+\alpha\frac{\partial P_0}{\partial t} = \bar{S} + \bar{S}_{\rm corr}.
+\end{equation}
+There needs to be some kind of iteration to make sure $P_{\rm eos}$ is sufficiently
+close to $P_0^{\rm new}$.
 
 \end{document}
