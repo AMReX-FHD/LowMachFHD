@@ -69,7 +69,7 @@ The equations for the momentum and densities:
 \begin{eqnarray}
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot(\overline\taub + \tilde\taub) + \rho\gb,\label{eq:momentum}\\
 \frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot(\overline\Fb_i + \tilde\Fb_i),\label{eq:mass}\\
-\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho\vb h) + \frac{DP}{Dt} + \nabla\cdot(\overline\Qb + \tilde\Qb),\label{eq:enthalpy}
+\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot(\overline\Qb + \tilde\Qb),\label{eq:enthalpy}
 \end{eqnarray}
 where $\taub$, $\Fb$, and $\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
 respectively, divided into deterministic and stochastic components.
@@ -169,7 +169,7 @@ In some sense we are chasing a moving target $P_0$, but it is our hope that a vo
 discrepancy type iteration will bring the thermodynamic variables into equilibrium in 
 a small number of iterations.
 
-\section{Algorithm}
+\section{Algorithm Summary}
 An inertial algorithm might look like this.\\ \\
 Initialization:\\
 \begin{enumerate}
@@ -227,8 +227,9 @@ We add a correction term that looks something like
 \begin{equation}
 \nabla\cdot\vb = S + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm eos}^{\rm new} - P_0^{\rm new}}{\Delta t} + \vb\cdot\nabla P\right) \equiv S + S_{\rm corr}.
 \end{equation}
-However, $S_{\rm corr}$ doesn't necessarily sum to zero either, so in the corrector solve 
-we have to split the update again,
+Normally we omit the convective part, as it doesn't seem to have much effect with or
+without it.  Since $S_{\rm corr}$ doesn't necessarily sum to zero, so in the 
+corrector solve we have to split the update again,
 \begin{equation}
 \nabla\cdot\vb = \delta S + \delta S_{\rm corr},
 \end{equation}
@@ -237,5 +238,71 @@ we have to split the update again,
 \end{equation}
 There needs to be some kind of iteration to make sure $P_{\rm eos}$ is sufficiently
 close to $P_0^{\rm new}$.
+
+\section{Algorithm Details}
+Assume we are given initial $\rho_i$ and $h$ that are thermodynamically consistent with 
+$P_0$.  If they are not, compute e.g., $h = h(\rho,P_0,w_i)$.  Initialize the velocity
+to zero.\\ \\
+{\bf Initialization.}\\ \\
+During the initialization step we wish to compute a thermodynamically consistent
+velocity field and pressure update for use in the subsequent time-advancement step.
+For time step $n=0$, first set the initial volume discrepancy correction to zero, 
+$S_{\rm corr}^{n,1} = 0$, as well as the individual terms in the decomposition,
+$S_{\rm corr}^{n,1} = \bar{S}_{\rm corr}^{n,1} + \delta S_{\rm corr}^{n,1}$.
+Then, loop over the following beginning with $k=1$:\\
+\begin{itemize}
+\item {\bf Step 0a:} Compute a pressure update:
+\begin{equation}
+P_0^{*,n+1,k} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^{n,k})}{\alpha^n}
+\end{equation}
+\item {\bf Step 0b:} Compute the velocity field using
+\begin{equation}
+\nabla\cdot\vb^{n,k} = \delta S^n + \delta S_{\rm corr}^{n,k}
+\end{equation}
+\item {\bf Step 0c:} Advect-diffuse the thermodynamic variables using explicit mass 
+diffusion and implicit energy diffusion:
+\begin{eqnarray}
+\rho_i^{*,n+1,k} &=& \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i^n\vb^{n,k}) + \Fb^n\right], \\
+(\rho h)^{*,n+1,k} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb) + \frac{\bar{S}^n}{\alpha^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1,k})\right].
+\end{eqnarray}
+\item {\bf Step 0d:} If the thermodynamic drift is unacceptable, compute a volume 
+discrepancy correction,
+\begin{equation}
+S_{\rm corr}^{n,k+1} = S_{\rm corr}^{n,k} + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{*,n+1,k} - P_0^{*,n+1,k}}{\Delta t}\right)
+\end{equation}
+and return to {\bf Step 0a}.  Otherwise, define 
+$(\rho_i,h)^{*,n+1} = (\rho_i,h)^{*,n+1,k}$ and $\vb^n = \vb^{n,k}$ and proceed to 
+the {\bf Corrector Step}.\\
+\end{itemize}
+{\bf Corrector Step.}\\ \\
+Begin by computing time-advanced fluxes, $\Fb^{*,n+1}, \Qb^{*,n+1}$ and loop over
+the following in order to obtain a time-advanced velocity that will ultimately
+allow for thermodynamic balance.  We set the volume discrepancy correction to zero,
+$S_{\rm corr}^{*,n+1,1} = 0$, as well as the individual terms in the decomposition
+$S_{\rm corr}^{*,n+1,1} = \bar{S}_{\rm corr}^{*,n+1,1} + \delta S_{\rm corr}^{*,n+1,1}$
+Then, loop over the following beginning with $k=1$:\\
+\begin{itemize}
+\item {\bf Step 1a:} Pressure update.
+\begin{equation}
+P_0^{*,n+1,k} = P_0^n + \frac{\Delta t}{2}\frac{(\bar{S}^n + \bar{S}_{\rm corr}^{n,k})}{\alpha^n} + \frac{\Delta t}{2}\frac{(\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1,k})}{\alpha^{*,n+1}}
+\end{equation}
+\item {\bf Step 1b:} GMRES solve.
+\begin{equation}
+\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi^{*,n+1} = \nabla\cdot(-\rho\vb\vb)^n + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{*,n+1})
+\end{equation}
+\begin{equation}
+\nabla\cdot\vb^{*,n+1} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1,k}
+\end{equation}
+\item {\bf Step 1c:} Trapezoidal scalar corrector.
+\begin{eqnarray}
+\rho_i^{n+1,k} &=& \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i^n\vb^{n,k}) -\nabla\cdot(\rho_i^{*,n+1}\vb^{*,n+1}) + \Fb^n + \Fb^{*,n+1}\right],\nonumber \\
+\\
+(\rho h)^{n+1,k} &=& (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n}{\alpha^n} + \frac{\bar{S}^{*,n+1}}{\alpha^{*,n+1}} + \Qb^n + \Qb^{n+1,k}\right].\nonumber\\
+\end{eqnarray}
+\item {\bf Step 1d:} Check thermodynamics and exit if satisfied.  The weighting of the
+correction may have to change since this velocity field is used in a trapezoidal corrector.
+I'm also not sure if/how to relate this correction to the predictor correction.
+\end{itemize}
+
 
 \end{document}
