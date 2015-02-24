@@ -255,30 +255,28 @@ We set the initial volume discrepancy correction to zero,
 $S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
 $S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
 Begin by computing fluxes, $\Fb^n, \Qb^n$ and then
-loop over the following beginning with $k=1$:\\
+loop over the following until the convergence criteria in {\bf Step 0d} is met:\\
 \begin{itemize}
 \item {\bf Step 0a:} Compute a pressure update:
 \begin{equation}
-P_0^{*,n+1,k} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n}
+P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n}
 \end{equation}
 \item {\bf Step 0b:} Compute the velocity field using
 \begin{equation}
-\nabla\cdot\vb^{n,k} = \delta S^n + \delta S_{\rm corr}^n
+\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n
 \end{equation}
 \item {\bf Step 0c:} Advect-diffuse the thermodynamic variables using forward-Euler advective fluxes,
 explicit mass diffusion, and implicit energy diffusion:
 \begin{eqnarray}
-\rho_i^{*,n+1,k} &=& \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i^n\vb^{n,k}) + \Fb^n\right], \\
-(\rho h)^{*,n+1,k} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot((\rho h)^n\vb^{n,k}) + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\alpha^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1,k})\right].\nonumber\\
+\rho_i^{*,n+1} &=& \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i^n\vb^n) + \Fb^n\right], \\
+(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot((\rho h)^n\vb^n) + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\alpha^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right].\nonumber\\
 \end{eqnarray}
 \item {\bf Step 0d:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
 \begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{*,n+1,k} - P_0^{*,n+1,k}}{\Delta t}\right)
+S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
 \end{equation}
-and return to {\bf Step 0a}.  Otherwise, define 
-$(\rho_i,h)^{*,n+1} = (\rho_i,h)^{*,n+1,k}$ and $\vb^n = \vb^{n,k}$ and proceed to 
-the {\bf Scalar Corrector Step}.\\
+and return to {\bf Step 0a}.  Otherwise, proceed to the {\bf Scalar Corrector Step}.\\
 \end{itemize}
 {\bf Scalar Corrector Step}.\\ \\
 The goal of this step is to compute updated time-advanced thermodynamically consistent 
@@ -288,35 +286,34 @@ We set the volume discrepancy correction to zero,
 $S_{\rm corr}^{*,n+1} = 0$, as well as the individual terms in the decomposition
 $S_{\rm corr}^{*,n+1} = \bar{S}_{\rm corr}^{*,n+1} + \delta S_{\rm corr}^{*,n+1}$
 Begin by computing preliminary time-advanced fluxes, $\Fb^{*,n+1}, \Qb^{*,n+1}$,
-and then loop over the following beginning with $k=1$ :\\
+and then loop over the following until the convergence criteria in {\bf Step 1d} is met:\\
 \begin{itemize}
 \item {\bf Step 1a:} Pressure update.
 \begin{equation}
-P_0^{n+1,k} = P_0^n + \frac{\Delta t}{2}\frac{(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n} + \frac{\Delta t}{2}\frac{(\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1})}{\alpha^{*,n+1}}
+P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\frac{(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n} + \frac{\Delta t}{2}\frac{(\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1})}{\alpha^{*,n+1}}
 \end{equation}
 \item {\bf Step 1b:} GMRES solve.
 \begin{equation}
-\frac{\rho^{*,n+1}\vb^{*,n+1,k} - \rho^n\vb^n}{\Delta t} + \nabla\pi^{*,n+1,k} = \nabla\cdot(-\rho\vb\vb)^n + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{*,n+1,k}) + \frac{1}{2}(\rho^n + \rho^{*,n+1})\gb,
+\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi^{*,n+1} = \nabla\cdot(-\rho\vb\vb)^n + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{*,n+1}) + \frac{1}{2}(\rho^n + \rho^{*,n+1})\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{*,n+1,k} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1}
+\nabla\cdot\vb^{*,n+1} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1}
 \end{equation}
 \item {\bf Step 1c:} Advect-diffuse the thermodynamic variables using trapezoidal corrector advective fluxes,
 trapezoidal corrector mass diffusion, and implicit energy diffusion:
 \begin{eqnarray}
-\rho_i^{n+1,k} &=& \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i^n\vb^{n,k}) -\nabla\cdot(\rho_i^{*,n+1}\vb^{*,n+1,k}) + \Fb^n + \Fb^{*,n+1}\right],\nonumber \\
+\rho_i^{n+1} &=& \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i^n\vb^n) -\nabla\cdot(\rho_i^{*,n+1}\vb^{*,n+1}) + \Fb^n + \Fb^{*,n+1}\right],\nonumber \\
 \\
-(\rho h)^{n+1,k} &=& (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot((\rho h)^{*,n+1}\vb^{*,n+1,k}) + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\alpha^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\alpha^{*,n+1}} + \Qb^n + \Qb^{n+1,k}\right].\nonumber\\
+(\rho h)^{n+1} &=& (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot((\rho h)^{*,n+1}\vb^{*,n+1}) + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\alpha^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\alpha^{*,n+1}} + \Qb^n + \Qb^{n+1}\right].\nonumber\\
 \end{eqnarray}
 \item {\bf Step 1d:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
 \begin{equation}
-S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + \frac{2}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{n+1,k} - P_0^{n+1,k}}{\Delta t}\right)
+S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + \frac{2}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right)
 \end{equation}
 and return to {\bf Step 1a}.  I think the factor of 2 is required here since the new-time
-velocity is used in a trapezoidal corrector.  Otherwise, define 
-$(\rho_i,h)^{n+1} = (\rho_i,h)^{n+1,k}, \vb^{n+1} = \vb^{*,n+1,k}$, and 
-$P_0^{n+1} = P_0^{n+1,k}$ and proceed to the {\bf Scalar Predictor Step}.\\
+velocity is used in a trapezoidal corrector.  Otherwise, 
+proceed to the {\bf Scalar Predictor Step}.\\
 \end{itemize}
 {\bf Scalar Predictor Step.}\\ \\
 We are now in the next time step, so we increment $n$.
@@ -330,33 +327,31 @@ field to second order by including a trapezoidal discretization of the advective
 We set the initial volume discrepancy correction to zero, 
 $S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
 $S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
-Begin by computing fluxes, $\Fb^n, \Qb^n$ and then
-loop over the following beginning with $k=1$:\\
+Begin by computing fluxes, $\Fb^n, \Qb^n$ and then loop over the following until 
+the convergence criteria in {\bf Step 2d} is met:\\
 \begin{itemize}
 \item {\bf Step 2a:} Compute a pressure update:
 \begin{equation}
-P_0^{*,n+1,k} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n}
+P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n}
 \end{equation}
-\item {\bf Step 2b:} Compute the velocity field using a GMRES solve.
+\item {\bf Step 2b:} Compute the velocity field, $\vb^n$, using a GMRES solve.
 \begin{equation}
-\frac{\rho^n\vb^{n,k} - \rho^{n-1}\vb^{n-1}}{\Delta t} + \nabla\pi^{n,k} = \half\nabla\cdot(-(\rho\vb\vb)^{n-1} - \rho^n\vb^{*,n}\vb^{*,n}) + \frac{1}{2}\nabla\cdot(\taub^{n-1} + \taub^{n,k}) + \frac{1}{2}(\rho^{n-1} + \rho^n)\gb,
+\frac{\rho^n\vb^n - \rho^{n-1}\vb^{n-1}}{\Delta t} + \nabla\pi^n = \half\nabla\cdot(-(\rho\vb\vb)^{n-1} - \rho^n\vb^{*,n}\vb^{*,n}) + \frac{1}{2}\nabla\cdot(\taub^{n-1} + \taub^n) + \frac{1}{2}(\rho^{n-1} + \rho^n)\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{n,k} = \delta S^{*,n} + \delta S_{\rm corr}^n
+\nabla\cdot\vb^n = \delta S^{*,n} + \delta S_{\rm corr}^n
 \end{equation}
 \item {\bf Step 2c:} Advect-diffuse the thermodynamic variables using forward-Euler advective fluxes,
 explicit mass diffusion, and implicit energy diffusion:
 \begin{eqnarray}
-\rho_i^{*,n+1,k} &=& \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i^n\vb^{n,k}) + \Fb^n\right], \\
-(\rho h)^{*,n+1,k} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb) + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\alpha^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1,k})\right].\nonumber\\
+\rho_i^{*,n+1} &=& \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i^n\vb^n) + \Fb^n\right], \\
+(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb) + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\alpha^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right].\nonumber\\
 \end{eqnarray}
 \item {\bf Step 2d:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
 \begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{*,n+1,k} - P_0^{*,n+1,k}}{\Delta t}\right)
+S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
 \end{equation}
-and return to {\bf Step 2a}.  Otherwise, define 
-$(\rho_i,h)^{*,n+1} = (\rho_i,h)^{*,n+1,k}$ and $\vb^n = \vb^{n,k}$ and proceed to 
-the {\bf Scalar Corrector Step}.\\
+and return to {\bf Step 2a}.  Otherwise, proceed to the {\bf Scalar Corrector Step}.\\
 \end{itemize}
 \end{document}
