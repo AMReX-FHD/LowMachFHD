@@ -123,9 +123,9 @@ contains
     call phys_bc_level_build(bct%bc_tower_array(n)%phys_bc_level_array,la, &
                              bct%domain_bc,default_value)
 
-    ! Here we allocate dm components for x_u
-    !                  1 component for x_p
+    ! Here we allocate (dm+1)=pres_bc_comp components for x_u and x_p
     !                  num_scal_bc components for scalars
+    !                  num_tran_bc components for transport coefficients
     allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc+num_tran_bc))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
@@ -133,9 +133,9 @@ contains
 
     ! This is only used for the cell-centered Poisson solver
     ! We need to keep x_u so indexing is consistent for x_p
-    !                  dm components for x_u
-    !                  1 component for x_p
+    !                  pres_bc_comp for x_p
     !                  1 component for Epot
+    ! (due to ordering of Epot_bc_comp this is indexed much larger than it has to be)
     allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp:pres_bc_comp+num_scal_bc))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
