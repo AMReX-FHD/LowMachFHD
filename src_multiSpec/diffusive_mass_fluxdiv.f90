@@ -4,9 +4,9 @@ module diffusive_mass_fluxdiv_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use probin_multispecies_module, only: nspecies, is_nonisothermal, mol_frac_bc_comp, &
+  use probin_multispecies_module, only: nspecies, is_nonisothermal, &
                                         nspecies, correct_flux
-  use probin_common_module, only: temp_bc_comp, barodiffusion_type
+  use probin_common_module, only: barodiffusion_type
   use mass_flux_utilities_module
   use ml_layout_module
   use convert_stag_module

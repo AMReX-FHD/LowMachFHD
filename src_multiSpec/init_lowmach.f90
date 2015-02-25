@@ -13,8 +13,7 @@ module init_lowmach_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
                                   molmass, rhobar, smoothing_width, u_init, n_cells
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
-                                        rho_init, nspecies, rho_part_bc_comp, &
-                                        T_init
+                                        rho_init, nspecies, T_init
  
   implicit none
 

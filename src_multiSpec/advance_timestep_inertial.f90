@@ -29,7 +29,7 @@ module advance_timestep_inertial_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, restart, barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: nspecies, rho_part_bc_comp
+  use probin_multispecies_module, only: nspecies
   use analysis_module
 
   implicit none

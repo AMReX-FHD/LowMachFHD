@@ -2,7 +2,12 @@ module bc_module
 
   implicit none
 
-  integer, save :: vel_bc_comp, pres_bc_comp, scal_bc_comp, num_scal_bc, tran_bc_comp, num_tran_bc
+  ! depending on the code, a subset of the bc components will be used
+  integer, save :: vel_bc_comp, pres_bc_comp
+  integer, save :: scal_bc_comp, num_scal_bc
+  integer, save :: tran_bc_comp, num_tran_bc
+  integer, save :: temp_bc_comp, Epot_bc_comp
+  integer, save :: rho_part_bc_comp, mol_frac_bc_comp
   
   ! These are physical boundary condition types
   ! We set these in the inputs file and they get translated

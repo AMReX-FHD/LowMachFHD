@@ -289,7 +289,7 @@ subroutine main_driver()
   end do
 
   ! set inhomogeneous bc condition
-  call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,beta_ed,dx,the_bc_tower%bc_tower_array)
+  call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,beta_ed,dx,0.d0,the_bc_tower%bc_tower_array)
 
   ! provide an initial value (or guess) for umac and pres 
   call init_solution(mla,umac_exact,pres_exact,dx,time,the_bc_tower%bc_tower_array, &

@@ -36,11 +36,11 @@ subroutine main_driver()
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
                                   probin_common_init, print_int, project_eos_int, &
-                                  advection_type, fixed_dt, max_step, cfl, temp_bc_comp, &
+                                  advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
                                   barodiffusion_type
-  use probin_multispecies_module, only: nspecies, mol_frac_bc_comp, Dbar, &
-                                        rho_part_bc_comp, start_time, &
+  use probin_multispecies_module, only: nspecies, Dbar, &
+                                        start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
 

@@ -49,7 +49,7 @@ subroutine main_driver()
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   if (restart >= 0) then
 
-     call initialize_from_restart(mla,restart,time,dt,dx,mold,sold,the_bc_tower)
+     call initialize_from_restart(mla,restart,time,dt,dx,sold,mold,the_bc_tower)
      init_step = restart+1
 
   else if (fixed_grids /= '') then

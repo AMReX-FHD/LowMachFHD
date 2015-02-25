@@ -364,7 +364,7 @@ contains
 
     subroutine mkumac(umac,phi,beta,fine_flx,dx,the_bc_tower,press_comp,ref_ratio)
 
-      use ml_edge_restriction_module
+      use ml_cc_restriction_module
 
       type(multifab), intent(inout) :: umac(:,:)
       type(multifab), intent(in   ) ::  phi(:)

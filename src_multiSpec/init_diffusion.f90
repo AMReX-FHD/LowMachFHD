@@ -12,7 +12,7 @@ module init_diffusion_module
   use convert_variables_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, molmass
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, &
-                                        rho_init, nspecies, rho_part_bc_comp
+                                        rho_init, nspecies
  
   implicit none
 

@@ -18,10 +18,9 @@ subroutine main_driver()
                                   k_B, max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, &
                                   bc_lo, bc_hi, probin_common_init, cfl, max_step, &
-                                  molmass, variance_coef_mass, temp_bc_comp
+                                  molmass, variance_coef_mass
   use probin_multispecies_module, only: nspecies, Dbar, rho_init, rho_bc, &
-                                        mol_frac_bc_comp, print_error_norms, &
-                                        rho_part_bc_comp, &
+                                        print_error_norms, &
                                         start_time, timeinteg_type, &
                                         probin_multispecies_init
  

@@ -3,7 +3,8 @@ module fluid_charge_module
   use ml_layout_module
   use convert_stag_module
   use define_bc_module
-  use probin_multispecies_module, only: charge_per_mass, nspecies, charge_per_mass, rho_part_bc_comp
+  use bc_module
+  use probin_multispecies_module, only: charge_per_mass, nspecies, charge_per_mass
   use probin_common_module, only: molmass, k_B, n_cells
 
   implicit none

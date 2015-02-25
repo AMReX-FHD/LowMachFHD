@@ -27,7 +27,7 @@ module advance_timestep_overdamped_module
                                   variance_coef_mom, restart, algorithm_type, &
                                   barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: nspecies, rho_part_bc_comp
+  use probin_multispecies_module, only: nspecies
   use analysis_module
 
   implicit none
