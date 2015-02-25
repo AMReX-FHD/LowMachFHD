@@ -255,7 +255,7 @@ subroutine main_driver()
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
   end do
 
-  ! these quantities are populated here and defined in probin_multispecies 
+  ! these quantities are populated here and defined in bc.f90
   rho_part_bc_comp   = scal_bc_comp + 1
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
   temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
