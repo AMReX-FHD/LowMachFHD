@@ -1,5 +1,5 @@
 ! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
-! be careful and check values are read correctly (e.g., rho_bc)
+! be careful and check values are read correctly (e.g., c_bc)
 
 ! Options for low Mach equations
 &probin_common
@@ -163,11 +163,11 @@
   rho_init(1,1:3) = 0.05d0 0.2d0 0.75d0
   rho_init(2,1:3) = 0.05d0 0.2d0 0.75d0
 
-  ! rho_i boundary conditions (dir,lohi,species)
-  rho_bc(1,1,1:2) = 0.d0 0.d0
-  rho_bc(1,2,1:2) = 0.d0 0.d0
-  rho_bc(2,1,1:2) = 0.d0 0.d0
-  rho_bc(2,2,1:2) = 0.d0 0.d0
+  ! c_i boundary conditions (dir,lohi,species)
+  c_bc(1,1,1:2) = 0.d0 0.d0
+  c_bc(1,2,1:2) = 0.d0 0.d0
+  c_bc(2,1,1:2) = 0.d0 0.d0
+  c_bc(2,2,1:2) = 0.d0 0.d0
   
   ! Thermodynamic and transport properties:
   !----------------------

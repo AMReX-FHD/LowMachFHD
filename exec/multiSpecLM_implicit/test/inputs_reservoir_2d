@@ -54,16 +54,16 @@
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature
 
  ! there are CONCENTRATIONS
- rho_bc(2,1,1) = 0.1
- rho_bc(2,1,2) = 0.25
- rho_bc(2,1,3) = 0.25
- rho_bc(2,1,4) = 0.2
- rho_bc(2,1,5) = 0.2
- rho_bc(2,2,1) = 0.2
- rho_bc(2,2,2) = 0.1
- rho_bc(2,2,3) = 0.2
- rho_bc(2,2,4) = 0.1
- rho_bc(2,2,5) = 0.4
+ c_bc(2,1,1) = 0.1
+ c_bc(2,1,2) = 0.25
+ c_bc(2,1,3) = 0.25
+ c_bc(2,1,4) = 0.2
+ c_bc(2,1,5) = 0.2
+ c_bc(2,2,1) = 0.2
+ c_bc(2,2,2) = 0.1
+ c_bc(2,2,3) = 0.2
+ c_bc(2,2,4) = 0.1
+ c_bc(2,2,5) = 0.4
 
  
 /

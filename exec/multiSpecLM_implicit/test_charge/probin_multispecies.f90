@@ -19,7 +19,7 @@ module probin_multispecies_module
   logical            :: correct_flux,print_error_norms,plot_stag
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
   real(kind=dp_t)    :: rho_init(2,max_species)
-  real(kind=dp_t)    :: rho_bc(3,2,max_species)
+  real(kind=dp_t)    :: c_bc(3,2,max_species)
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
 
   ! for charged fluid
@@ -40,7 +40,7 @@ module probin_multispecies_module
   namelist /probin_multispecies/ T_init     ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   namelist /probin_multispecies/ temp_type  ! for initializing temperature
   namelist /probin_multispecies/ rho_init   ! initial values for rho
-  namelist /probin_multispecies/ rho_bc     ! rho_i boundary conditions (dir,lohi,species)
+  namelist /probin_multispecies/ c_bc     ! c_i boundary conditions (dir,lohi,species)
   ! These are lower-triangules of symmetric matrices represented as vectors
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
@@ -90,7 +90,7 @@ contains
     T_init             = 1.0d0
     temp_type          = 0
     rho_init           = 1.0d0
-    rho_bc             = 0.d0
+    c_bc             = 0.d0
     Dbar               = 1.0d0
     Dtherm             = 0.0d0
     H_offdiag          = 0.0d0

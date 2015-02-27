@@ -258,7 +258,7 @@ contains
     end do
 
     ! put charge^old on faces
-    call average_cc_to_face(nlevs,charge_old,charge_edge,1,rho_part_bc_comp,1, &
+    call average_cc_to_face(nlevs,charge_old,charge_edge,1,c_bc_comp,1, &
                             the_bc_tower%bc_tower_array)
 
     ! increment mom_charge_force by -(charge * grad Epot)^old
@@ -271,7 +271,7 @@ contains
     end do
 
     ! put charge^new on faces
-    call average_cc_to_face(nlevs,charge_new,charge_edge,1,rho_part_bc_comp,1, &
+    call average_cc_to_face(nlevs,charge_new,charge_edge,1,c_bc_comp,1, &
                             the_bc_tower%bc_tower_array)
 
     ! increment mom_charge_force by -(charge * grad Epot)^new

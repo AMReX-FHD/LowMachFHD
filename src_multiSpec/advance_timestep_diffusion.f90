@@ -146,7 +146,7 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+         call multifab_physbc(rhonew(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                               dx_in=dx(n,:))
       end do
 
@@ -210,7 +210,7 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+         call multifab_physbc(rhonew(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                               dx_in=dx(n,:))
       end do
 
@@ -276,7 +276,7 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+         call multifab_physbc(rhonew(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                               dx_in=dx(n,:))
       end do
 
@@ -307,7 +307,7 @@ contains
          call multifab_fill_boundary(rhonew(n))
         
          ! fill non-periodic domain boundary ghost cells
-         call multifab_physbc(rhonew(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+         call multifab_physbc(rhonew(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                               dx_in=dx(n,:))
       end do
       
@@ -347,7 +347,7 @@ contains
        call multifab_fill_boundary(rho(n))
 
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(rho(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+       call multifab_physbc(rho(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
     end do   
 

@@ -159,16 +159,16 @@
   rho_init(1,1:3) = 0.0     0.1368     0.8632
   rho_init(2,1:3) = 0.0864   0.0       0.9136
 
-  ! rho_i boundary conditions (dir,lohi,species)
+  ! c_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
 
   ! use this set for reservoir (Dirichlet Values)
-  rho_bc(2,1,1:3) = 0.0     0.1368    0.8632
-  rho_bc(2,2,1:3) = 0.0864   0.0      0.9136
+  c_bc(2,1,1:3) = 0.0     0.1368    0.8632
+  c_bc(2,2,1:3) = 0.0864   0.0      0.9136
 
   ! use this set for walls (Neumann Values)
-!  rho_bc(2,1,1:3) = 0.d0 0.d0 0.d0
-!  rho_bc(2,2,1:3) = 0.d0 0.d0 0.d0
+!  c_bc(2,1,1:3) = 0.d0 0.d0 0.d0
+!  c_bc(2,2,1:3) = 0.d0 0.d0 0.d0
  
 /
 

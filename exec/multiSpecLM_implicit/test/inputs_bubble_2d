@@ -1,5 +1,5 @@
 ! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
-! be careful and check values are read correctly (e.g., rho_bc)
+! be careful and check values are read correctly (e.g., c_bc)
 
 ! Options for low Mach equations
 &probin_common

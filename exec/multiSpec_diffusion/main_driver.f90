@@ -19,7 +19,7 @@ subroutine main_driver()
                                   plot_int, seed, stats_int, &
                                   bc_lo, bc_hi, probin_common_init, cfl, max_step, &
                                   molmass, variance_coef_mass
-  use probin_multispecies_module, only: nspecies, Dbar, rho_init, rho_bc, &
+  use probin_multispecies_module, only: nspecies, Dbar, rho_init, c_bc, &
                                         print_error_norms, &
                                         start_time, timeinteg_type, &
                                         probin_multispecies_init
@@ -63,7 +63,7 @@ subroutine main_driver()
   
   if(.true.) then ! Confirm that gcc read the input file correctly
     write(*,*) "rho_init=", rho_init(1:2,1:nspecies)
-    write(*,*) "rho_bc=", rho_bc(1:dim_in,1:2,1:nspecies)
+    write(*,*) "c_bc=", c_bc(1:dim_in,1:2,1:nspecies)
   end if
 
   ! for time being, we fix nlevs to be 1. for adaptive simulations where the grids 
@@ -179,7 +179,7 @@ subroutine main_driver()
   end do
 
   ! these quantities are populated here and defined in bc.f90
-  rho_part_bc_comp   = scal_bc_comp + 1
+  c_bc_comp   = scal_bc_comp + 1
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
   temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
 

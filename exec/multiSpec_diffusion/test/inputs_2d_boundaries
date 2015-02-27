@@ -66,23 +66,23 @@
  ! WARNING: gcc48 has some bug with reading this matrix from namelist using array syntax
  ! So for now we list all of these explicitly
  ! species=1
- rho_bc(2,1,1) = 0.2 ! Desired densities at boundaries
- rho_bc(1,2,1) = 0.2 ! Desired densities at boundaries
- rho_bc(1,1,1) = 0.2 ! Desired densities at boundaries
- rho_bc(2,2,1) = 0.2 ! Desired densities at boundaries
+ c_bc(2,1,1) = 0.2 ! Desired densities at boundaries
+ c_bc(1,2,1) = 0.2 ! Desired densities at boundaries
+ c_bc(1,1,1) = 0.2 ! Desired densities at boundaries
+ c_bc(2,2,1) = 0.2 ! Desired densities at boundaries
  ! species=2
- rho_bc(2,1,2) = 0.5 ! Desired densities at boundaries
- rho_bc(1,2,2) = 0.5 ! Desired densities at boundaries
- rho_bc(1,1,2) = 0.5 ! Desired densities at boundaries
- rho_bc(2,2,2) = 0.5 ! Desired densities at boundaries
+ c_bc(2,1,2) = 0.5 ! Desired densities at boundaries
+ c_bc(1,2,2) = 0.5 ! Desired densities at boundaries
+ c_bc(1,1,2) = 0.5 ! Desired densities at boundaries
+ c_bc(2,2,2) = 0.5 ! Desired densities at boundaries
  ! species=3
- rho_bc(2,1,3) = 0.3 ! Desired densities at boundaries
- rho_bc(1,2,3) = 0.3 ! Desired densities at boundaries
- rho_bc(1,1,3) = 0.3 ! Desired densities at boundaries
- rho_bc(2,2,3) = 0.3 ! Desired densities at boundaries
+ c_bc(2,1,3) = 0.3 ! Desired densities at boundaries
+ c_bc(1,2,3) = 0.3 ! Desired densities at boundaries
+ c_bc(1,1,3) = 0.3 ! Desired densities at boundaries
+ c_bc(2,2,3) = 0.3 ! Desired densities at boundaries
  ! For BC=100 (Neumann)
  ! WARNING: gcc48 does not parse this correctly so rely on default value=0
- !rho_bc = 0 0 0 ! Desired normal slopes at boundaries (drho/dn=0) 
+ !c_bc = 0 0 0 ! Desired normal slopes at boundaries (drho/dn=0) 
  
 /
 

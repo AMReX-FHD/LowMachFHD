@@ -174,7 +174,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! average rho_old and rhotot_old to faces
-    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! add D^n and St^n to rho_update
@@ -201,23 +201,23 @@ contains
           do n=1,nlevs
              call multifab_build_nodal(rho_nd_old(n),mla%la(n),nspecies,1)
           end do
-          call average_cc_to_node(nlevs,rho_old,rho_nd_old,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+          call average_cc_to_node(nlevs,rho_old,rho_nd_old,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
 
           ! the input s_tmp needs to have ghost cells filled with multifab_physbc_extrap
           ! instead of multifab_physbc
           do n=1,nlevs
              call multifab_build(rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
              call multifab_copy(rho_tmp(n),rho_old(n),rho_tmp(n)%ng)
-             call multifab_physbc_extrap(rho_tmp(n),1,rho_part_bc_comp,nspecies, &
+             call multifab_physbc_extrap(rho_tmp(n),1,c_bc_comp,nspecies, &
                                          the_bc_tower%bc_tower_array(n))
           end do
 
           call bds(mla,umac,rho_tmp,rho_update,bds_force,rho_fc,rho_nd_old,dx,dt,1,nspecies, &
-                   rho_part_bc_comp,the_bc_tower,proj_type_in=2)
+                   c_bc_comp,the_bc_tower,proj_type_in=2)
 
       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
-                        rho_part_bc_comp,the_bc_tower,proj_type_in=2)
+                        c_bc_comp,the_bc_tower,proj_type_in=2)
       end if
     else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
@@ -240,7 +240,7 @@ contains
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
        call multifab_fill_boundary(conc(n))
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+       call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
     end do
     
@@ -253,7 +253,7 @@ contains
     call convert_rho_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -591,7 +591,7 @@ contains
        if (advection_type .eq. 1 .or. advection_type .eq. 2) then
 
           call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd_old,dx,dt,1,nspecies, &
-                   rho_part_bc_comp,the_bc_tower,proj_type_in=2)
+                   c_bc_comp,the_bc_tower,proj_type_in=2)
 
           do n=1,nlevs
              call multifab_destroy(rho_nd_old(n))
@@ -600,7 +600,7 @@ contains
 
        else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
           call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
-                        rho_part_bc_comp,the_bc_tower,proj_type_in=2)
+                        c_bc_comp,the_bc_tower,proj_type_in=2)
        end if    
 
        ! snew = s^n + dt * A^{n+1/2} + (dt/2) * (D^n + D^{n+1,*} + S^n + S^{n+1,*})
@@ -638,7 +638,7 @@ contains
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
        call multifab_fill_boundary(conc(n))
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(conc(n),1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+       call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
     end do
 
@@ -651,7 +651,7 @@ contains
     call convert_rho_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,rho_part_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute (eta,kappa)^{n+1}

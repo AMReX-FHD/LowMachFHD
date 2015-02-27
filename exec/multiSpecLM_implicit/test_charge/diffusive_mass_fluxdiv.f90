@@ -301,7 +301,7 @@ contains
              call multifab_build_edge(charge_coef_face(n,i),mla%la(n),nspecies,0,i)
           end do
        end do
-       call average_cc_to_face(nlevs,charge_coef,charge_coef_face,1,rho_part_bc_comp,nspecies, &
+       call average_cc_to_face(nlevs,charge_coef,charge_coef_face,1,c_bc_comp,nspecies, &
                                the_bc_tower%bc_tower_array,.true.)
 
        ! multiply flux coefficient by gradient of electric potential

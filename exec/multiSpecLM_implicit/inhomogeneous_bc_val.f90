@@ -4,7 +4,7 @@ module inhomogeneous_bc_val_module
   use bc_module
   use bl_error_module
   use bl_constants_module
-  use probin_multispecies_module, only: nspecies, rho_bc
+  use probin_multispecies_module, only: nspecies, c_bc
   use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type
 
   implicit none
@@ -132,17 +132,17 @@ contains
        ! pressure
        val = 0.d0
 
-    else if (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) then
+    else if (comp .ge. c_bc_comp .and. comp .le. c_bc_comp+nspecies-1) then
 
-       ! rho_i boundary condition
+       ! c_i boundary condition
        if (x .eq. prob_lo(1)) then
-          val = rho_bc(1,1,comp-rho_part_bc_comp+1)
+          val = c_bc(1,1,comp-c_bc_comp+1)
        else if (x .eq. prob_hi(1)) then
-          val = rho_bc(1,2,comp-rho_part_bc_comp+1)
+          val = c_bc(1,2,comp-c_bc_comp+1)
        else if (y .eq. prob_lo(2)) then
-          val = rho_bc(2,1,comp-rho_part_bc_comp+1)
+          val = c_bc(2,1,comp-c_bc_comp+1)
        else if (y .eq. prob_hi(2)) then
-          val = rho_bc(2,2,comp-rho_part_bc_comp+1)
+          val = c_bc(2,2,comp-c_bc_comp+1)
        else
           val = 0.d0
        end if
@@ -274,21 +274,21 @@ contains
        ! pressure
        val = 0.d0
 
-    else if (comp .ge. rho_part_bc_comp .and. comp .le. rho_part_bc_comp+nspecies-1) then
+    else if (comp .ge. c_bc_comp .and. comp .le. c_bc_comp+nspecies-1) then
 
-       ! rho_i boundary condition
+       ! c_i boundary condition
        if (x .eq. prob_lo(1)) then
-          val = rho_bc(1,1,comp-rho_part_bc_comp+1)
+          val = c_bc(1,1,comp-c_bc_comp+1)
        else if (x .eq. prob_hi(1)) then
-          val = rho_bc(1,2,comp-rho_part_bc_comp+1)
+          val = c_bc(1,2,comp-c_bc_comp+1)
        else if (y .eq. prob_lo(2)) then
-          val = rho_bc(2,1,comp-rho_part_bc_comp+1)
+          val = c_bc(2,1,comp-c_bc_comp+1)
        else if (y .eq. prob_hi(2)) then
-          val = rho_bc(2,2,comp-rho_part_bc_comp+1)
+          val = c_bc(2,2,comp-c_bc_comp+1)
        else if (z .eq. prob_lo(3)) then
-          val = rho_bc(3,1,comp-rho_part_bc_comp+1)
+          val = c_bc(3,1,comp-c_bc_comp+1)
        else if (z .eq. prob_hi(3)) then
-          val = rho_bc(3,2,comp-rho_part_bc_comp+1)
+          val = c_bc(3,2,comp-c_bc_comp+1)
        else
           val = 0.d0
        end if

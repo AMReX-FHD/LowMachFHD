@@ -3,7 +3,7 @@ module inhomogeneous_bc_val_module
   use bl_types
   use bc_module
   use bl_error_module
-  use probin_multispecies_module, only: nspecies, rho_bc
+  use probin_multispecies_module, only: nspecies, c_bc
   use probin_common_module, only: prob_lo, prob_hi
 
   implicit none
@@ -74,25 +74,25 @@ contains
     real(kind=dp_t), intent(in), optional :: time_in
     real(kind=dp_t)                :: val
 
-    if (comp .lt. rho_part_bc_comp .or. &
-        comp .gt. rho_part_bc_comp+nspecies-1) then
+    if (comp .lt. c_bc_comp .or. &
+        comp .gt. c_bc_comp+nspecies-1) then
 
        print*,'comp=',comp
        call bl_error("calling inhomogeneous_bc_val_2d with invalid comp")
 
     else
        
-       ! rho_i boundary condition
+       ! c_i boundary condition
        if (x .eq. prob_lo(1)) then
-          val = rho_bc(1,1,comp-rho_part_bc_comp+1)
+          val = c_bc(1,1,comp-c_bc_comp+1)
        else if (x .eq. prob_hi(1)) then
-          val = rho_bc(1,2,comp-rho_part_bc_comp+1)
+          val = c_bc(1,2,comp-c_bc_comp+1)
        else if (y .eq. prob_lo(2)) then
-          val = rho_bc(2,1,comp-rho_part_bc_comp+1)
-          !write(*,*) "bottom:", val, comp-rho_part_bc_comp+1
+          val = c_bc(2,1,comp-c_bc_comp+1)
+          !write(*,*) "bottom:", val, comp-c_bc_comp+1
        else if (y .eq. prob_hi(2)) then
-          val = rho_bc(2,2,comp-rho_part_bc_comp+1)
-          !write(*,*) "top:", val, comp-rho_part_bc_comp+1
+          val = c_bc(2,2,comp-c_bc_comp+1)
+          !write(*,*) "top:", val, comp-c_bc_comp+1
        else
           val = 0.d0
        end if
@@ -108,27 +108,27 @@ contains
     real(kind=dp_t), intent(in), optional :: time_in
     real(kind=dp_t)                :: val
 
-    if (comp .lt. rho_part_bc_comp .or. &
-        comp .gt. rho_part_bc_comp+nspecies-1) then
+    if (comp .lt. c_bc_comp .or. &
+        comp .gt. c_bc_comp+nspecies-1) then
 
        print*,'comp=',comp
        call bl_error("calling inhomogeneous_bc_val_3d with invalid comp")
 
     else
        
-       ! rho_i boundary condition
+       ! c_i boundary condition
        if (x .eq. prob_lo(1)) then
-          val = rho_bc(1,1,comp-rho_part_bc_comp+1)
+          val = c_bc(1,1,comp-c_bc_comp+1)
        else if (x .eq. prob_hi(1)) then
-          val = rho_bc(1,2,comp-rho_part_bc_comp+1)
+          val = c_bc(1,2,comp-c_bc_comp+1)
        else if (y .eq. prob_lo(2)) then
-          val = rho_bc(2,1,comp-rho_part_bc_comp+1)
+          val = c_bc(2,1,comp-c_bc_comp+1)
        else if (y .eq. prob_hi(2)) then
-          val = rho_bc(2,2,comp-rho_part_bc_comp+1)
+          val = c_bc(2,2,comp-c_bc_comp+1)
        else if (z .eq. prob_lo(3)) then
-          val = rho_bc(3,1,comp-rho_part_bc_comp+1)
+          val = c_bc(3,1,comp-c_bc_comp+1)
        else if (z .eq. prob_hi(3)) then
-          val = rho_bc(3,2,comp-rho_part_bc_comp+1)
+          val = c_bc(3,2,comp-c_bc_comp+1)
        else
           val = 0.d0
        end if
