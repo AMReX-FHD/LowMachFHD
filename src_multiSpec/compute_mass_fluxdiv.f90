@@ -135,7 +135,7 @@ contains
     call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot,the_bc_tower%bc_tower_array)
       
     ! populate D_bar and Hessian matrix 
-    call compute_mixture_properties(mla,rho,rhotot_temp,molarconc,molmtot,D_bar,D_therm, &
+    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm, &
                                     Hessian,Temp,the_bc_tower%bc_tower_array)
 
     ! compute Gama from Hessian

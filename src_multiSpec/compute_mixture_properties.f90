@@ -20,13 +20,11 @@ module compute_mixture_properties_module
     
 contains
   
-  subroutine compute_mixture_properties(mla,rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,the_bc_level)
+  subroutine compute_mixture_properties(mla,rho,rhotot,D_bar,D_therm,Hessian,Temp,the_bc_level)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
     type(multifab),  intent(in   )  :: rhotot(:) 
-    type(multifab),  intent(in   )  :: molarconc(:) 
-    type(multifab),  intent(in   )  :: molmtot(:) 
     type(multifab),  intent(inout)  :: D_bar(:)      ! MS diffusion constants 
     type(multifab),  intent(inout)  :: D_therm(:)    ! thermo diffusion constants 
     type(multifab),  intent(inout)  :: Hessian(:)    ! Non-ideality coefficient 
@@ -35,98 +33,106 @@ contains
  
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: n,i,ng,dm,nlevs
+    integer :: n,i,dm,nlevs,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
 
     ! assign pointers for multifabs to be passed
-    real(kind=dp_t), pointer        :: dp(:,:,:,:)   ! for rho    
-    real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
-    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
-    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
-    real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_bar
-    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for D_therm 
-    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Hessian
-    real(kind=dp_t), pointer        :: dp7(:,:,:,:)  ! for Temp
+    real(kind=dp_t), pointer        :: dp1(:,:,:,:)   ! for rho    
+    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
+    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for D_bar
+    real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_therm 
+    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Hessian
+    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Temp
 
     dm    = mla%dim     ! dimensionality
-    ng    = rho(1)%ng   ! number of ghost cells 
     nlevs = mla%nlevel  ! number of levels 
+
+    ng_1 = rho(1)%ng
+    ng_2 = rhotot(1)%ng
+    ng_3 = D_bar(1)%ng
+    ng_4 = D_therm(1)%ng
+    ng_5 = Hessian(1)%ng
+    ng_6 = Temp(1)%ng
  
     ! loop over all boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
-          dp => dataptr(rho(n),i)
-          dp1 => dataptr(rhotot(n),i)
-          dp2 => dataptr(molarconc(n),i)
-          dp3 => dataptr(molmtot(n),i)
-          dp4 => dataptr(D_bar(n),i)
-          dp5 => dataptr(D_therm(n),i)
-          dp6 => dataptr(Hessian(n),i)
-          dp7 => dataptr(Temp(n),i)
+          dp1 => dataptr(rho(n),i)
+          dp2 => dataptr(rhotot(n),i)
+          dp3 => dataptr(D_bar(n),i)
+          dp4 => dataptr(D_therm(n),i)
+          dp5 => dataptr(Hessian(n),i)
+          dp6 => dataptr(Temp(n),i)
           lo = lwb(get_box(rho(n),i))
           hi = upb(get_box(rho(n),i))
-          
           select case(dm)
           case (2)
-             call mixture_properties_mass_2d(dp(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
-                  dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,:),dp7(:,:,1,1),ng,lo,hi) 
+             call mixture_properties_mass_2d(dp1(:,:,1,:),dp2(:,:,1,1),dp3(:,:,1,:), &
+                                             dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,1), &
+                                             ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi) 
           case (3)
-             call mixture_properties_mass_3d(dp(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
-                  dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,:),dp7(:,:,:,1),ng,lo,hi) 
+             call mixture_properties_mass_3d(dp1(:,:,:,:),dp2(:,:,:,1),dp3(:,:,:,:), &
+                                             dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,1), &
+                                             ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi) 
           end select
        end do
     end do
   
   end subroutine compute_mixture_properties
   
-  subroutine mixture_properties_mass_2d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,ng,lo,hi)
+  subroutine mixture_properties_mass_2d(rho,rhotot,D_bar,D_therm,Hessian,Temp, &
+                                        ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi)
 
-    integer          :: lo(2), hi(2), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,:)        ! density; last dimension for species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:)       ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,:)  ! molar concentration 
-    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:)      ! total molar mass 
-    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,:)      ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,:)    ! last dimension for nspecies
-    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,:)    ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:)         ! Temperature 
+    integer          :: lo(2), hi(2), ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
+    real(kind=dp_t)  ::     rho(lo(1)-ng_1:,lo(2)-ng_1:,:)     ! density; last dimension for species
+    real(kind=dp_t)  ::  rhotot(lo(1)-ng_2:,lo(2)-ng_2:)       ! total density in each cell 
+    real(kind=dp_t)  ::   D_bar(lo(1)-ng_3:,lo(2)-ng_3:,:)     ! last dimension for nspecies^2
+    real(kind=dp_t)  :: D_therm(lo(1)-ng_4:,lo(2)-ng_4:,:)     ! last dimension for nspecies
+    real(kind=dp_t)  :: Hessian(lo(1)-ng_5:,lo(2)-ng_5:,:)     ! last dimension for nspecies^2
+    real(kind=dp_t)  ::    Temp(lo(1)-ng_6:,lo(2)-ng_6:)       ! Temperature 
 
     ! local varialbes
     integer          :: i,j
 
+    if (ng_3 .ne. ng_4 .or. ng_3 .ne. ng_5) then
+       call bl_error('mixture_properties_mass, D_bar, D_therm, and Hessian need same # of ghost cells')
+    end if
+
     ! for specific box, now start loops over alloted cells 
-    do j=lo(2)-ng,hi(2)+ng
-       do i=lo(1)-ng,hi(1)+ng
+    do j=lo(2)-ng_3,hi(2)+ng_3
+       do i=lo(1)-ng_3,hi(1)+ng_3
        
-          call mixture_properties_mass_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
-                                             molmtot(i,j),D_bar(i,j,:),D_therm(i,j,:),&
+          call mixture_properties_mass_local(rho(i,j,:),rhotot(i,j),D_bar(i,j,:),D_therm(i,j,:),&
                                              Hessian(i,j,:),Temp(i,j))
        end do
     end do
    
   end subroutine mixture_properties_mass_2d
 
-  subroutine mixture_properties_mass_3d(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp,ng,lo,hi)
+  subroutine mixture_properties_mass_3d(rho,rhotot,D_bar,D_therm,Hessian,Temp, &
+                                        ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi)
  
-    integer          :: lo(3), hi(3), ng
-    real(kind=dp_t)  :: rho(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)       ! density; last dimension for species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)      ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:) ! molar concentration; 
-    real(kind=dp_t)  :: molmtot(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)     ! total molar mass 
-    real(kind=dp_t)  :: D_bar(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)     ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_therm(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)   ! last dimension for nspecies
-    real(kind=dp_t)  :: Hessian(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:,:)   ! last dimension for nspecies^2
-    real(kind=dp_t)  :: Temp(lo(1)-ng:,lo(2)-ng:,lo(3)-ng:)        ! Temperature 
+    integer          :: lo(3), hi(3), ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
+    real(kind=dp_t)  ::     rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:)   ! density; last dimension for species
+    real(kind=dp_t)  ::  rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)     ! total density in each cell 
+    real(kind=dp_t)  ::   D_bar(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:)   ! last dimension for nspecies^2
+    real(kind=dp_t)  :: D_therm(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:)   ! last dimension for nspecies
+    real(kind=dp_t)  :: Hessian(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:)   ! last dimension for nspecies^2
+    real(kind=dp_t)  ::    Temp(lo(1)-ng_6:,lo(2)-ng_6:,lo(3)-ng_6:)     ! Temperature 
  
     ! local varialbes
     integer          :: i,j,k
 
-    ! for specific box, now start loops over alloted cells 
-    do k=lo(3)-ng,hi(3)+ng
-       do j=lo(2)-ng,hi(2)+ng
-          do i=lo(1)-ng,hi(1)+ng
+    if (ng_3 .ne. ng_4 .or. ng_3 .ne. ng_5) then
+       call bl_error('mixture_properties_mass, D_bar, D_therm, and Hessian need same # of ghost cells')
+    end if
 
-             call mixture_properties_mass_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
-                                                molmtot(i,j,k),D_bar(i,j,k,:),D_therm(i,j,k,:),&
+    ! for specific box, now start loops over alloted cells 
+    do k=lo(3)-ng_3,hi(3)+ng_3
+       do j=lo(2)-ng_3,hi(2)+ng_3
+          do i=lo(1)-ng_3,hi(1)+ng_3
+
+             call mixture_properties_mass_local(rho(i,j,k,:),rhotot(i,j,k), &
+                                                D_bar(i,j,k,:),D_therm(i,j,k,:),&
                                                 Hessian(i,j,k,:),Temp(i,j,k))
           end do
        end do
@@ -135,12 +141,10 @@ contains
   end subroutine mixture_properties_mass_3d
 
   ! The default case should be to simply set D_bar, D_therm and H to constants, read from the input file
-  subroutine mixture_properties_mass_local(rho,rhotot,molarconc,molmtot,D_bar,D_therm,Hessian,Temp)
+  subroutine mixture_properties_mass_local(rho,rhotot,D_bar,D_therm,Hessian,Temp)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)        
     real(kind=dp_t), intent(in)   :: rhotot
-    real(kind=dp_t), intent(in)   :: molarconc(nspecies)
-    real(kind=dp_t), intent(in)   :: molmtot
     real(kind=dp_t), intent(out)  :: D_bar(nspecies,nspecies) 
     real(kind=dp_t), intent(out)  :: D_therm(nspecies) 
     real(kind=dp_t), intent(out)  :: Hessian(nspecies,nspecies)
