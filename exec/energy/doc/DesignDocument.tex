@@ -69,9 +69,9 @@ The governing conservation equations for momentum, mass, and energy for our syst
 \begin{eqnarray}
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb,\label{eq:momentum}\\
 \frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot F_i,\label{eq:mass}\\
-\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb,\label{eq:enthalpy}
+\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb + \sum_k h_k F_k,\label{eq:enthalpy}
 \end{eqnarray}
-where
+where $h_i = \partial h/\partial w_i$, $h = \sum_k h_k$, and
 $\taub = \overline\taub + \tilde\taub$,
 $\Fb = \overline\Fb + \tilde\Fb$, and 
 $\Qb = \overline\Qb + \tilde\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
@@ -79,40 +79,54 @@ respectively, divided into deterministic and stochastic components.
 These equations are closed by the following relation derived from low Mach number asymptotics,
 which states that the thermodynamic pressure must remain spatially constant,
 \begin{equation}
-P_0 = P(\rho,\wb,T),\label{eq:EOS}
-\end{equation}
-with
-\begin{equation}
-T = T(\rho,\wb,h)
+P_0 = P(\rho,\wb,T).\label{eq:EOS}
 \end{equation}
 The deterministic stress tensor ignores the effect of bulk viscosity, 
 $\overline\taub = \eta\bar\nabla\vb = \eta[\nabla\vb + (\nabla\vb)^T]$.
 The deterministic heat fluxes have the form 
-$\overline\Qb = \lambda\nabla T + \sum_k\nabla\cdot h_k F_k$.
+$\overline\Qb = \lambda\nabla T$.
 The deterministic part of the mass fluxes, $\overline{\Fb}$, contains contributions from 
 compositional gradients, barodiffusion, and temperature gradients,
 \begin{equation}
 \overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right].
 \end{equation}
 
+Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy}), and (\ref{eq:EOS})
+form the actual system that we would like to solve.  We use an iterative 
+``volume discrepancy'' scheme described below to solve 
+(\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
+while enforcing condition (\ref{eq:EOS}) to a specified tolerance.\\
+
+We also note that $\rho, h, T, P_0$ are linked by the equation of state
+in a sense that given
+$\wb$, and any two of these variables, the equation of state uniquely defines the other
+two variables.  Thus, e.g., we can compute the temperature using
+the equation of state, $T = T(\rho,\wb,h)$, or the enthalpy using $h = h(\rho,P_0,\wb)$.
+
 \subsection{Velocity Constraint and Thermodynamic Pressure Update}
-To derive a constraint on the velocity, we begin by differentiating equation (\ref{eq:EOS})
-along particle paths,
+To derive a constraint on the velocity, we begin by differentiating the 
+right-hand side of equation (\ref{eq:EOS}) along particle paths,
 \begin{equation}
-\frac{DP_0}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
+\frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
 \end{equation}
-Since $P_0$ is constant in space but varies in time, we make the substitution
-$DP/Dt = \partial P_0(t)/\partial t$ in both the enthalpy equation 
-(\ref{eq:enthalpy}) and the constraint equation (\ref{eq:particle paths}).
-This will allow for pressure changes in closed containers, but not allow for
-pressure stratification due to a gravitational density stratification.
+What we would like to do is enforce that the thermodynamic pressure remain equal
+to $P_0$.  Since we know that $P_0$ is spatially constant (and temporally constant as well
+for open containers), we can enforce that the thermodynamic pressure remain equal
+to $P_0$ by saying
+\begin{equation}
+\frac{\partial P_0}{\partial t} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
+\end{equation}
+Note that in the enthalpy equation (\ref{eq:enthalpy}) we are also make the
+substitution $DP/Dt = \partial P_0(t)/\partial t$.  Also note that since we
+are currently assuming $P_0$ is constant in space that we are now allowing
+for density stratification due to gravity.\\
 
 Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, we can rewrite 
 (\ref{eq:particle paths}) as
 \begin{equation}
 \nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{\partial P_o}{\partial t} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
-To obtain an expression for $DT/Dt$, we apply differentiate the enthalpy, $h=h(P,T,w_k)$, 
+To obtain an expression for $DT/Dt$, we apply differentiate the enthalpy, $h=h(P_0,T,w_k)$, 
 along particle paths to obtain
 \begin{equation}
 \frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{\partial P_0}{\partial t} - \sum_kh_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
@@ -142,7 +156,7 @@ Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \gamma = \frac{P_T}{\rho^2 P_\rho c_P}.
 \end{equation}
 The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $\partial P_0/\partial t$.
-For open containers where $\vb$ is allowed to be non-zero on one or more wallsm $P_0$
+For open containers where $\vb$ is allowed to be non-zero on one or more walls $P_0$
 is constant and the constraint equation reduces to
 \begin{equation}
 \nabla\cdot\vb = S.
@@ -170,12 +184,12 @@ So equation (\ref{eq:constraint}) can be rewritten as,
 \nabla\cdot\vb = \bar{S} + \delta S - \bar{\alpha}\frac{\partial P_0}{\partial t} - \delta\alpha\frac{\partial P_0}{\partial t}.\label{eq:constraint2}
 \end{equation}
 Recall that the right-hand-side of equation (\ref{eq:constraint2}) must integrate to zero.
-The second and fourth terms integrate to zero by equation (\ref{eq:zero int}) and the fact that
-$\partial P_0/\partial t$ is a constant.
+The second and fourth terms integrate to zero by equation (\ref{eq:zero int}) and 
+the fact that $\partial P_0/\partial t$ is a constant.
 The first and third terms are non-zero constants,
 so in order for the entire RHS to integrate to zero we must have
 \begin{equation}
-\bar{S} - \bar{\alpha}\frac{\partial P_0}{\partial t} = 0.\label{eq:P0}
+\bar{\alpha}\frac{\partial P_0}{\partial t} = \bar{S}.\label{eq:P0}
 \end{equation}
 Thus, equation (\ref{eq:P0}) is the evolution equation for $P_0$ and the constraint equation reduces to
 \begin{equation}
@@ -184,20 +198,85 @@ Thus, equation (\ref{eq:P0}) is the evolution equation for $P_0$ and the constra
 Altogether, the system we are solving consists of equations (\ref{eq:momentum}),  (\ref{eq:mass}), and (\ref{eq:enthalpy})
 subject to (\ref{eq:P0}), (\ref{eq:constraint3}).
 
+\section{Basic Time Stepping Strategy}
+At it's most basic level, the time-stepping strategy looks like this:\\
+\begin{itemize}
+\item {\bf Step A}: Compute a velocity field with a GMRES solve and update $P_0$.\\
+\item {\bf Step B}: Update thermodynamic variables with advective and diffusive terms.\\
+\item {\bf Step C}: Check to see how $P(\rho,\wb,T)$ compares to $P_0$.  If the drift 
+is unacceptable, add a correction to the right-hand-side of the constraint equation 
+so that the thermodynamic variables will most closely be in thermodynamic 
+equilirbium with $P_0$ and return to {\bf Step A}.  Details on the form of this 
+correction are given below.\\
+\end{itemize}
+The actual time-advancement algorithm will be a bit more complicated, as we 
+incorporate a predictor-corrector formulism to obtain second-order advective 
+fluxes, and also incorporate implicit energy diffusion, etc.
+
 \section{Equation of State Drift}
+Recall equation (\ref{eq:particle paths}), which analytically states that the 
+thermodynamic pressure will evolve to be consistent with the evolution of $P_0$:
+\begin{equation}
+\frac{\partial P_0}{\partial t} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
+\end{equation}
+This equation was shown to be analytically equivalent to equation (\ref{eq:constraint}):
+\begin{equation}
+\nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = S.
+\end{equation}
+
+This divergence constraint represents a linearized approximation for the velocity 
+field required to ensure that the thermodynamic variables remain on the equation 
+of state in a sense that the updated $P(\rho,\wb,T)$ is consistent with $P_0$.
+Since in general the EOS is non-linear, the thermodynamic variables will not
+satisfy this condition.  We propose an iterative strategy that is already
+used in our low Mach number terrestrial and astrophysical combustion codes, that
+uses a modified divergence constraint designed to drive the updated 
+thermodynamic variables closer to the equation of state with each iteration.
+Again, note that for closed chambers, $P_0$ also evolves with time; our iterative
+scheme also incorporates updates to the evolution of $P_0$.\\
+
+After computing a velocity field with the GMRES solve, and updating the thermodynamic
+variables with advective and diffusive fluxes, the EOS will no longer be satisfied.
+The amount by which the EOS is not satisfied can be easily quantified by defining
+the drift, $\Delta P = P(\rho,\wb,T)^{n+1} - P_0^{n+1}$.\\
+
+The amount by which we want the pressure to change in each cell is now given by:
+\begin{equation}
+\frac{DP}{Dt} = \frac{\partial P_0}{\partial t} - \frac{\Delta P}{\Delta t}
+\end{equation}
+
+Carrying this through, we see that
+\begin{equation}
+\nabla\cdot\vb + \alpha\left(\frac{\partial P_0}{\partial t} - \frac{\Delta P}{\Delta t}\right) = S.
+\end{equation}
+or
+\begin{equation}
+\nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = S + \underbrace{\alpha\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
+\end{equation}
+Since $S_{\rm corr}$ doesn't necessarily sum to zero, so in the 
+corrector solve we have to split the update again,
+\begin{equation}
+\nabla\cdot\vb = \delta S - \delta\alpha\frac{\partial P_0}{\partial t} + \delta S_{\rm corr},
+\end{equation}
+\begin{equation}
+\bar{\alpha}\frac{\partial P_0}{\partial t} = \bar{S} + \bar{S}_{\rm corr}.
+\end{equation}
+As we iterate, we increment $\delta S_{\rm corr}$ based on how much the current solution
+drifts.
 
 \section{Heat Flux Formulation}
+\MarginPar{Note done yet, probably notational typos.}
 Here's the basic idea.  Recall (\ref{eq:enthalpy}):
 \begin{equation}
-\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_kFb_k.
+\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{\partial P_0}{\partial t} + \nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_kF_k.
 \end{equation}
 We want to handle the thermal diffusion semi-implicitly.  We use an iterative method that
 linearizes the relationship between how $h$ changes with respect to changes in $T$.\\ \\
 Let's assume we want to form an iterative update to $h$ using
 \begin{eqnarray}
 \frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf}\nonumber\\
-&&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}T^{n+1,l+1}\nonumber\\
-&& + \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}\Fb^{n+1}.\label{eq:temp form}
+&&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l+1}\nonumber\\
+&& + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}F_k^{n+1}.\label{eq:temp form}
 \end{eqnarray}
 \\
 We start with initial guesses $(T,h)^{n+1,0} = (T,h)^n$.\\ \\
@@ -223,7 +302,7 @@ using (\ref{eq:delta T}) and (\ref{eq:delta h}).\\
 FIXME: One consequence of using this formulation is that we can use a slightly different, 
 analytically equivalent formulation for the constraint:
 \begin{eqnarray}
-\nabla\cdot\vb &=& \frac{1}{\rho c_p T}\left(\nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_k\Fb_k\right)\nonumber\\
+\nabla\cdot\vb &=& \frac{1}{\rho c_p T}\left(\nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_k F_k\right)\nonumber\\
 && + \frac{1}{\rho}\sum_k\left(\frac{\overline{W}}{W_k} - \frac{h_k}{c_p T}\right)\left(\nabla\cdot\Fb_k + \dot\omega_k\right) \equiv S.
 \end{eqnarray}
 
@@ -271,31 +350,6 @@ New-Time Predictor:\\
 \item Return to Corrector.
 \end{enumerate}
 
-\subsection{Volume Discrepancy}
-No matter what kind of temporal integrator you are using, any time you compute a
-complete set of time-advance thermodynamic variables (whether they be preliminary
-or final), they will not be consistent with the ambient pressure.  The strategy
-is to wrap the entire time-advancement routine in an iterative loop that uses
-volume discrepancy corrections to drive the time-advanced state onto the
-equation of state.  We assume isentropic expansion/contraction of fluid elements
-and relate this back to the pressure we wish to obtain.
-
-We add a correction term that looks something like
-\begin{equation}
-\nabla\cdot\vb = S + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm eos}^{\rm new} - P_0^{\rm new}}{\Delta t} + \vb\cdot\nabla P\right) \equiv S + S_{\rm corr}.
-\end{equation}
-Normally we omit the convective part, as it doesn't seem to have much effect with or
-without it.  Since $S_{\rm corr}$ doesn't necessarily sum to zero, so in the 
-corrector solve we have to split the update again,
-\begin{equation}
-\nabla\cdot\vb = \delta S + \delta S_{\rm corr},
-\end{equation}
-\begin{equation}
-\alpha\frac{\partial P_0}{\partial t} = \bar{S} + \bar{S}_{\rm corr}.
-\end{equation}
-There needs to be some kind of iteration to make sure $P_{\rm eos}$ is sufficiently
-close to $P_0^{\rm new}$.
-
 \section{Algorithm Details}
 Assume we are given initial $\rho_i$ and $h$ that are thermodynamically consistent with 
 $P_0$.  If they are not, compute e.g., $h = h(\rho,P_0,\wb)$.  Initialize the velocity
@@ -315,7 +369,7 @@ loop over the following until the convergence criteria in {\bf Step 0d} is met:\
 \begin{itemize}
 \item {\bf Step 0a:} Compute a pressure update:
 \begin{equation}
-P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n}
+P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\bar{\alpha}^n}
 \end{equation}
 \item {\bf Step 0b:} Compute the velocity field using
 \begin{equation}
@@ -325,7 +379,7 @@ P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n
 explicit mass diffusion, and implicit energy diffusion:
 \begin{eqnarray}
 \rho_i^{*,n+1} &=& \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i\vb)^n + \Fb^n\right], \\
-(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\alpha^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right].\nonumber\\
+(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right].\nonumber\\
 \end{eqnarray}
 \item {\bf Step 0d:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
@@ -346,7 +400,7 @@ and then loop over the following until the convergence criteria in {\bf Step 1d}
 \begin{itemize}
 \item {\bf Step 1a:} Pressure update.
 \begin{equation}
-P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\frac{(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n} + \frac{\Delta t}{2}\frac{(\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1})}{\alpha^{*,n+1}}
+P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\frac{(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\bar{\alpha}^n} + \frac{\Delta t}{2}\frac{(\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1})}{\bar{\alpha}^{*,n+1}}
 \end{equation}
 \item {\bf Step 1b:} GMRES solve for the velocity, $\vb^{*,n+1}$, and perturbational
 pressure, $\pi^{*,n+1}$.
@@ -362,7 +416,7 @@ diffusion:
 \begin{eqnarray}
 \rho_i^{n+1} &=& \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \Fb^n + \Fb^{*,n+1}\right],\nonumber \\
 \\
-(\rho h)^{n+1} &=& (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\alpha^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\alpha^{*,n+1}} + \Qb^n + \Qb^{n+1}\right].\nonumber\\
+(\rho h)^{n+1} &=& (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}} + \Qb^n + \Qb^{n+1}\right].\nonumber\\
 \end{eqnarray}
 \item {\bf Step 1d:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
@@ -390,7 +444,7 @@ the convergence criteria in {\bf Step 2d} is met:\\
 \begin{itemize}
 \item {\bf Step 2a:} Compute a pressure update:
 \begin{equation}
-P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\alpha^n}
+P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\bar{\alpha}^n}
 \end{equation}
 \item {\bf Step 2b:} GMRES solve for the velocity, $\vb^n$, and perturbational
 pressure, $\pi^n$.
@@ -404,7 +458,7 @@ pressure, $\pi^n$.
 explicit mass diffusion, and implicit energy diffusion:
 \begin{eqnarray}
 \rho_i^{*,n+1} &=& \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i\vb)^n + \Fb^n\right], \\
-(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\alpha^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right].\nonumber\\
+(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right].\nonumber\\
 \end{eqnarray}
 \item {\bf Step 2d:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
