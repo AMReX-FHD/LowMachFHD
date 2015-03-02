@@ -141,9 +141,13 @@ Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \beta_k = \frac{P_{w_k}}{\rho^2 P_\rho} - \frac{P_T h_{w_k}}{\rho^2 P_\rho c_p}, \qquad
 \gamma = \frac{P_T}{\rho^2 P_\rho c_P}.
 \end{equation}
-
 The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $\partial P_0/\partial t$.
-For closed systems with no-flow walls, this system only has a solution if
+For open containers where $\vb$ is allowed to be non-zero on one or more wallsm $P_0$
+is constant and the constraint equation reduces to
+\begin{equation}
+\nabla\cdot\vb = S.
+\end{equation}
+For closed chambers with no-flow walls, this system only has a solution if
 \begin{equation}
 \int_{\Omega} \left(S - \alpha\frac{\partial P_0}{\partial t}\right)\partial\Omega = 0.
 \end{equation}
