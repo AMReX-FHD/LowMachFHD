@@ -75,7 +75,7 @@ where $h_i = \partial h/\partial w_i$, $h = \sum_k h_k$, and
 $\taub = \overline\taub + \tilde\taub$,
 $\Fb = \overline\Fb + \tilde\Fb$, and 
 $\Qb = \overline\Qb + \tilde\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
-respectively, divided into deterministic and stochastic components.
+respectively, separated into deterministic and stochastic components.
 These equations are closed by the following relation derived from low Mach number asymptotics,
 which states that the thermodynamic pressure must remain spatially constant,
 \begin{equation}
@@ -97,11 +97,10 @@ form the actual system that we would like to solve.  We use an iterative
 (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
 while enforcing condition (\ref{eq:EOS}) to a specified tolerance.\\
 
-We also note that $\rho, h, T, P_0$ are linked by the equation of state
-in a sense that given
-$\wb$, and any two of these variables, the equation of state uniquely defines the other
+We also note that $\rho, h, T, P$ are linked by the equation of state in a sense that given
+$\wb$ and any two of these variables, the equation of state uniquely specifies the other
 two variables.  Thus, e.g., we can compute the temperature using
-the equation of state, $T = T(\rho,\wb,h)$, or the enthalpy using $h = h(\rho,P_0,\wb)$.
+the equation of state, $T = T(\rho,\wb,h)$, or the enthalpy using $h = h(\rho,P,\wb)$.
 
 \subsection{Velocity Constraint and Thermodynamic Pressure Update}
 To derive a constraint on the velocity, we begin by differentiating the 
@@ -110,23 +109,24 @@ right-hand side of equation (\ref{eq:EOS}) along particle paths,
 \frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
 \end{equation}
 What we would like to do is enforce that the thermodynamic pressure remain equal
-to $P_0$.  Since we know that $P_0$ is spatially constant (and temporally constant as well
-for open containers), we can enforce that the thermodynamic pressure remain equal
-to $P_0$ by saying
+to $P_0$.  Since in our low Mach number mode $P_0$ is spatially constant (and 
+temporally constant as well for open containers), we can enforce that the 
+thermodynamic pressure remain equal to $P_0$ by replacing $DP/Dt$ 
+with $\partial P_0/\partial t$:
 \begin{equation}
 \frac{\partial P_0}{\partial t} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
 \end{equation}
 Note that in the enthalpy equation (\ref{eq:enthalpy}) we are also make the
-substitution $DP/Dt = \partial P_0(t)/\partial t$.  Also note that since we
-are currently assuming $P_0$ is constant in space that we are now allowing
-for density stratification due to gravity.\\
+substitution $DP/Dt = \partial P_0/\partial t$.  Also, since we
+are currently assuming $P_0$ is constant in space, we are not allowing
+for pressure stratification due to gravity.\\
 
 Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, we can rewrite 
 (\ref{eq:particle paths}) as
 \begin{equation}
 \nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{\partial P_o}{\partial t} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
-To obtain an expression for $DT/Dt$, we apply differentiate the enthalpy, $h=h(P_0,T,w_k)$, 
+To obtain an expression for $DT/Dt$, we differentiate the enthalpy, $h=h(P,T,\wb)$, 
 along particle paths to obtain
 \begin{equation}
 \frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{\partial P_0}{\partial t} - \sum_kh_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
@@ -151,9 +151,9 @@ Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = \sum_k \beta_k \nabla\cdot\Fb_k + \gamma \nabla\cdot\Qb \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
-\alpha = -\left[\frac{(1-\rho h_p)P_T - \rho c_p}{\rho^2 c_p P_\rho}\right], \qquad
-\beta_k = \frac{P_{w_k}}{\rho^2 P_\rho} - \frac{P_T h_{w_k}}{\rho^2 P_\rho c_p}, \qquad
-\gamma = \frac{P_T}{\rho^2 P_\rho c_P}.
+\alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
+\beta_k = \frac{1}{\rho^2 P_\rho}\left(P_{w_k} - \frac{P_T h_{w_k}}{c_p}\right), \quad
+\gamma = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.
 \end{equation}
 The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $\partial P_0/\partial t$.
 For open containers where $\vb$ is allowed to be non-zero on one or more walls $P_0$
@@ -195,26 +195,32 @@ Thus, equation (\ref{eq:P0}) is the evolution equation for $P_0$ and the constra
 \begin{equation}
 \nabla\cdot\vb = \delta S - \delta\alpha\frac{\partial P_0}{\partial t}.\label{eq:constraint3}
 \end{equation}
-Altogether, the system we are solving consists of equations (\ref{eq:momentum}),  (\ref{eq:mass}), and (\ref{eq:enthalpy})
-subject to (\ref{eq:P0}), (\ref{eq:constraint3}).
+Altogether, the system we are solving consists of equations (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
+subject to (\ref{eq:P0}) and (\ref{eq:constraint3}).
 
 \section{Basic Time Stepping Strategy}
 At it's most basic level, the time-stepping strategy looks like this:\\
 \begin{itemize}
-\item {\bf Step A}: Compute a velocity field with a GMRES solve and update $P_0$.\\
-\item {\bf Step B}: Update thermodynamic variables with advective and diffusive terms.\\
-\item {\bf Step C}: Check to see how $P(\rho,\wb,T)$ compares to $P_0$.  If the drift 
-is unacceptable, add a correction to the right-hand-side of the constraint equation 
-so that the thermodynamic variables will most closely be in thermodynamic 
-equilirbium with $P_0$ and return to {\bf Step A}.  Details on the form of this 
+\item {\bf Step A}: Compute $\partial P_0/\partial t$ with equation (\ref{eq:P0}) and 
+then solve for velocity using the Stokes system GMRES solver coupling equations 
+(\ref{eq:momentum}) and (\ref{eq:constraint3}).\\
+\item {\bf Step B}: Update thermodynamic variables using equations (\ref{eq:mass}), 
+and (\ref{eq:enthalpy}).  This involves the explicit computation of advective fluxes,
+explicit computation of mass diffusion, and implicit treatment of heat fluxes.\\
+\item {\bf Step C}: Check to see how the updated $P(\rho,\wb,T)$ compares to the 
+updated $P_0$.  If the drift 
+is unacceptable, add a correction to the right-hand-side of equations
+(\ref{eq:P0}) and (\ref{eq:constraint3})
+designed to drive the thermodynamic variables into equilibrium with 
+$P_0$ and then return to {\bf Step A}.  Details on the form of this 
 correction are given below.\\
 \end{itemize}
 The actual time-advancement algorithm will be a bit more complicated, as we 
 incorporate a predictor-corrector formulism to obtain second-order advective 
-fluxes, and also incorporate implicit energy diffusion, etc.
+fluxes, and also incorporate an iterative scheme for heat fluxes, etc.
 
 \section{Equation of State Drift}
-Recall equation (\ref{eq:particle paths}), which analytically states that the 
+Recall equation (\ref{eq:particle paths}), where we analytically enforce that
 thermodynamic pressure will evolve to be consistent with the evolution of $P_0$:
 \begin{equation}
 \frac{\partial P_0}{\partial t} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
@@ -225,27 +231,31 @@ This equation was shown to be analytically equivalent to equation (\ref{eq:const
 \end{equation}
 
 This divergence constraint represents a linearized approximation for the velocity 
-field required to ensure that the thermodynamic variables remain on the equation 
-of state in a sense that the updated $P(\rho,\wb,T)$ is consistent with $P_0$.
-Since in general the EOS is non-linear, the thermodynamic variables will not
+field required to ensure that the thermodynamic variables remain thermodnamically
+consistent with $P_0$.  Since in general the EOS is non-linear, the updated 
+thermodynamic variables will not
 satisfy this condition.  We propose an iterative strategy that is already
 used in our low Mach number terrestrial and astrophysical combustion codes, that
 uses a modified divergence constraint designed to drive the updated 
-thermodynamic variables closer to the equation of state with each iteration.
-Again, note that for closed chambers, $P_0$ also evolves with time; our iterative
-scheme also incorporates updates to the evolution of $P_0$.\\
+thermodynamic variables closer to thermodynamic equilibrium with $P_0$ with each iteration.
+For closed chambers, we also iteratively update $P_0$ as well.\\
 
-After computing a velocity field with the GMRES solve, and updating the thermodynamic
+After computing a velocity field with the GMRES solver, and updating the thermodynamic
 variables with advective and diffusive fluxes, the EOS will no longer be satisfied.
 The amount by which the EOS is not satisfied can be easily quantified by defining
 the drift, $\Delta P = P(\rho,\wb,T)^{n+1} - P_0^{n+1}$.\\
 
-The amount by which we want the pressure to change in each cell is now given by:
+If we were able to ``redo'' the velocity computation, the rate at which we want the 
+pressure to change in each cell is no longer given
+by simply $\partial P_0/\partial t$, but is now given by:
 \begin{equation}
-\frac{DP}{Dt} = \frac{\partial P_0}{\partial t} - \frac{\Delta P}{\Delta t}
+\frac{DP}{Dt} = \frac{\partial P_0}{\partial t} - \frac{\Delta P}{\Delta t}.
 \end{equation}
-
-Carrying this through, we see that
+We include the $\Delta p/\Delta t$ ``volume discrepancy'' correction term here because 
+now we have a sense for what the numerics does to the local thermodynamic pressure in 
+each cell without such a correction.  Physically, by including this term, we are enforce 
+an additional amount of expansion or contraction within each cell in order to modify 
+the pressure.  Now, equation (\ref{eq:constraint}) is replaced by
 \begin{equation}
 \nabla\cdot\vb + \alpha\left(\frac{\partial P_0}{\partial t} - \frac{\Delta P}{\Delta t}\right) = S.
 \end{equation}
@@ -253,30 +263,35 @@ or
 \begin{equation}
 \nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = S + \underbrace{\alpha\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
 \end{equation}
-Since $S_{\rm corr}$ doesn't necessarily sum to zero, so in the 
-corrector solve we have to split the update again,
+Similar to above, in order for this sytem to be solvable we split the update into a
+equations for $P_0$ and $\vb$,
 \begin{equation}
 \nabla\cdot\vb = \delta S - \delta\alpha\frac{\partial P_0}{\partial t} + \delta S_{\rm corr},
 \end{equation}
 \begin{equation}
 \bar{\alpha}\frac{\partial P_0}{\partial t} = \bar{S} + \bar{S}_{\rm corr}.
 \end{equation}
-As we iterate, we increment $\delta S_{\rm corr}$ based on how much the current solution
-drifts.
+As we iterate, we increment (rather than reset) $\delta S_{\rm corr}$ based on how much 
+the current solution drifts using $\delta S_{\rm corr}$ the previous iteration.
 
 \section{Heat Flux Formulation}
-\MarginPar{Note done yet, probably notational typos.}
 Here's the basic idea.  Recall (\ref{eq:enthalpy}):
 \begin{equation}
 \frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{\partial P_0}{\partial t} + \nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_kF_k.
 \end{equation}
 We want to handle the thermal diffusion semi-implicitly.  We use an iterative method that
-linearizes the relationship between how $h$ changes with respect to changes in $T$.\\ \\
+linearizes the relationship between how $h$ changes with respect to changes in $T$.
+Note that we have already updated the densities, but unfortunately the time-advanced
+mass fluxes also depend on the enthalpy.  In the full time-advancement algorithm,
+the idea shall be to iterate these fluxes as well, with an initial guess coming from
+an earlier step in the algorithm.  The notation here is just used to give a general
+idea of the iterative scheme.  Also, the details of the treatment for 
+$\partial P_0/\partial t$ will be given below.\\ \\
 Let's assume we want to form an iterative update to $h$ using
 \begin{eqnarray}
-\frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf}\nonumber\\
+\frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf} + \frac{\partial P_0}{\partial t}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l+1}\nonumber\\
-&& + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}F_k^{n+1}.\label{eq:temp form}
+&& + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}F_k^{n+1,l}.\label{eq:temp form}
 \end{eqnarray}
 \\
 We start with initial guesses $(T,h)^{n+1,0} = (T,h)^n$.\\ \\
@@ -291,20 +306,14 @@ h^{n+1,l+1} = h^{n+1,l} + c_p^{n+1,l}\delta T\label{eq:delta h}
 \\
 Substituting (\ref{eq:delta T}) and (\ref{eq:delta h}) into (\ref{eq:temp form}) gives:
 \begin{eqnarray}
-\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\vb\rho h)^{n+\myhalf}\nonumber\\
-&&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}(T^{n+1,l} + \delta T)\nonumber\\
-&& + \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}\Fb_k^{n+1}.
+\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf} + \frac{\partial P_0}{\partial t}\nonumber\\
+&&\hspace{-0.5in}+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}(T^{n+1,l} + \delta T)\nonumber\\
+&&\hspace{-0.5in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l}.
 \end{eqnarray}
 \\
 We solve this implicitly for $\delta T$, then compute $(T,h)^{n+1,l+1}$
-using (\ref{eq:delta T}) and (\ref{eq:delta h}).\\
-
-FIXME: One consequence of using this formulation is that we can use a slightly different, 
-analytically equivalent formulation for the constraint:
-\begin{eqnarray}
-\nabla\cdot\vb &=& \frac{1}{\rho c_p T}\left(\nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_k F_k\right)\nonumber\\
-&& + \frac{1}{\rho}\sum_k\left(\frac{\overline{W}}{W_k} - \frac{h_k}{c_p T}\right)\left(\nabla\cdot\Fb_k + \dot\omega_k\right) \equiv S.
-\end{eqnarray}
+using (\ref{eq:delta T}) and (\ref{eq:delta h}).  Or should we compute $h^{n+1,l+1}$ from
+the EOS?
 
 \section{Algorithm Summary}
 An inertial algorithm might look like this.\\ \\
@@ -355,7 +364,7 @@ Assume we are given initial $\rho_i$ and $h$ that are thermodynamically consiste
 $P_0$.  If they are not, compute e.g., $h = h(\rho,P_0,\wb)$.  Initialize the velocity
 to zero, although this shouldn't matter beyond solver tolerance as it will get 
 overwritten during the initialization step.\\ \\
-{\bf Initialization}.\\ \\
+{\bf Step 0: Initialization}.\\ \\
 This step is only performed once at the beginning of the simulation, so here $n=0$.
 The goal of this step is to compute preliminary time-advanced thermodynamically
 consistent pressure and scalars, $(P_0,\rho_i,(\rho h))^{*,n+1}$.  This will
@@ -388,7 +397,7 @@ S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{
 \end{equation}
 and return to {\bf Step 0a}.  Otherwise, proceed to the {\bf Scalar Corrector Step}.\\
 \end{itemize}
-{\bf Scalar Corrector Step}.\\ \\
+{\bf Step 1: Scalar Corrector Step}.\\ \\
 The goal of this step is to compute updated time-advanced thermodynamically consistent 
 pressure and scalars, $(P_0,\rho_i,(\rho h))^{n+1}$.  This will require the computation
 of a velocity field, $\vb^{*,n+1}$, that preserves this thermodynamic balance.
@@ -427,7 +436,7 @@ and return to {\bf Step 1a}.  I think the factor of 2 is required here since the
 velocity is used in a trapezoidal corrector with only a half-weighting.  Otherwise, 
 proceed to the {\bf Scalar Predictor Step}.\\
 \end{itemize}
-{\bf Scalar Predictor Step.}\\ \\
+{\bf Step 2: Scalar Predictor Step.}\\ \\
 We are now in the next time step, so we increment $n$.
 The goal of this step is to compute preliminary time-advanced thermodynamically
 consistent pressure and scalars, $(P_0,\rho_i,(\rho h))^{*,n+1}$.  This will
