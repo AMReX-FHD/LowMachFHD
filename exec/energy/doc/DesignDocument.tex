@@ -199,7 +199,7 @@ Altogether, the system we are solving consists of equations (\ref{eq:momentum}),
 subject to (\ref{eq:P0}) and (\ref{eq:constraint3}).
 
 \section{Basic Time Stepping Strategy}
-At it's most basic level, the time-stepping strategy looks like this:\\
+At the most basic level, the time-stepping strategy looks like this:\\
 \begin{itemize}
 \item {\bf Step A}: Compute $\partial P_0/\partial t$ with equation (\ref{eq:P0}) and 
 then solve for velocity using the Stokes system GMRES solver coupling equations 
@@ -243,7 +243,7 @@ For closed chambers, we also iteratively update $P_0$ as well.\\
 After computing a velocity field with the GMRES solver, and updating the thermodynamic
 variables with advective and diffusive fluxes, the EOS will no longer be satisfied.
 The amount by which the EOS is not satisfied can be easily quantified by defining
-the drift, $\Delta P = P(\rho,\wb,T)^{n+1} - P_0^{n+1}$.\\
+the drift, $\Delta P = P_{\rm EOS}^{n+1} - P_0^{n+1}$ with $P_{\rm EOS} = P(\rho,\wb,T)$.\\
 
 If we were able to ``redo'' the velocity computation, the rate at which we want the 
 pressure to change in each cell is no longer given
@@ -266,7 +266,7 @@ or
 Similar to above, in order for this sytem to be solvable we split the update into a
 equations for $P_0$ and $\vb$,
 \begin{equation}
-\nabla\cdot\vb = \delta S - \delta\alpha\frac{\partial P_0}{\partial t} + \delta S_{\rm corr},
+\nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\alpha\frac{\partial P_0}{\partial t},
 \end{equation}
 \begin{equation}
 \bar{\alpha}\frac{\partial P_0}{\partial t} = \bar{S} + \bar{S}_{\rm corr}.
@@ -382,18 +382,26 @@ P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\bar{\al
 \end{equation}
 \item {\bf Step 0b:} Compute the velocity field using
 \begin{equation}
-\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n
+\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\underbrace{\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}}_{\partial P_0/\partial t}.
 \end{equation}
-\item {\bf Step 0c:} Advect-diffuse the thermodynamic variables using forward-Euler advective fluxes,
-explicit mass diffusion, and implicit energy diffusion:
-\begin{eqnarray}
-\rho_i^{*,n+1} &=& \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i\vb)^n + \Fb^n\right], \\
-(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right].\nonumber\\
-\end{eqnarray}
-\item {\bf Step 0d:} If the thermodynamic drift is unacceptable, update the volume 
-discrepancy correction,
+\item {\bf Step 0c:} Advance the densities using forward-Euler advective fluxes
+and explicit mass diffusion:
 \begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
+\rho_i^{*,n+1} = \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i\vb)^n + \Fb^n\right].
+\end{equation}
+\item {\bf Step 0d:} Advance the enthalpy by iteratively looping over an energy solve.
+The fundamental formulation is given by,
+\begin{equation}
+(\rho h)^{*,n+1} = (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right],
+\end{equation}
+but since we express $\Qb$ in terms of temperature gradients, we need an iterative
+solve that linearizes the depences of $h$ on $T$ (summarized above, still need to
+write this out here).\\
+\item {\bf Step 0e:} If the thermodynamic drift is unacceptable, update the volume 
+discrepancy correction,
+\MarginPar{Temporal discretization of $\alpha$ may not be the best choice here.}
+\begin{equation}
+S_{\rm corr}^n = S_{\rm corr}^n + \alpha^n\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
 \end{equation}
 and return to {\bf Step 0a}.  Otherwise, proceed to the {\bf Scalar Corrector Step}.\\
 \end{itemize}
