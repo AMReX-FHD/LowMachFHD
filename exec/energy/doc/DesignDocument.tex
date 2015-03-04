@@ -228,14 +228,15 @@ So equation (\ref{eq:constraint}) can be rewritten as,
 \delta\alpha\frac{d P_0}{d t}.\label{eq:constraint2}
 \end{equation}
 Since $\nabla \cdot \vb$ must integrate to zero and $P_0$ must be only a function of time,
-equation (\ref{eq:constraint2}) can be uniquely composed to give
+equation (\ref{eq:constraint2}) can be uniquely decomposed to give
 \begin{equation}
-\bar{\alpha}\frac{d P_0}{d t} = \bar{S}.\label{eq:P0}
+\frac{dP_0}{dt} = \frac{\bar{S}}{\bar{\alpha}}.\label{eq:P0}
 \end{equation}
 and
-\begin{equation}
-\nabla\cdot\vb = \delta S - \delta\alpha\frac{dP_0}{dt}.\label{eq:constraint3}
-\end{equation}
+\begin{eqnarray}
+\nabla\cdot\vb &=& \delta S - \delta\alpha\frac{dP_0}{dt} \nonumber\\
+&=& \delta S - \delta\alpha\frac{\bar{S}}{\bar{\alpha}}.\label{eq:constraint3}
+\end{eqnarray}
 Thus, the original system is analytically equivalent to solving the system (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
 subject to (\ref{eq:P0}) and (\ref{eq:constraint3}).
 
@@ -317,10 +318,10 @@ or
 Similar to above, in order for this sytem to be solvable we split the update into a
 equations for $P_0$ and $\vb$,
 \begin{equation}
-\nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\alpha\frac{dP_0}{dt},
+\frac{dP_0}{dt} = \frac{\bar{S} + \bar{S}_{\rm corr}}{\alpha}
 \end{equation}
 \begin{equation}
-\bar{\alpha}\frac{dP_0}{dt} = \bar{S} + \bar{S}_{\rm corr}.
+\nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\alpha\left(\frac{\bar{S} + \bar{S}_{\rm corr}}{\alpha}\right).
 \end{equation}
 As we iterate, we increment (rather than reset) $\delta S_{\rm corr}$ based on how much 
 the current solution drifts using $\delta S_{\rm corr}$ the previous iteration.
@@ -340,12 +341,12 @@ idea of the iterative scheme.  Also, the details of the treatment for
 $\partial P_0/\partial t$ will be given below.\\ \\
 Let's assume we want to form an iterative update to $h$ using
 \begin{eqnarray}
-\frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf} + \frac{dP_0}{dt}\nonumber\\
+\frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l+1}\nonumber\\
 && + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}F_k^{n+1,l}.\label{eq:temp form}
 \end{eqnarray}
 \\
-We start with initial guesses $(T,h)^{n+1,0} = (T,h)^n$.\\ \\
+We start with initial guesses $(T,h)^{n+1,l=1} = (T,h)^n$.\\ \\
 We say that
 \begin{equation}
 T^{n+1,l+1} = T^{n+1,l} + \delta T\label{eq:delta T}
@@ -354,17 +355,14 @@ Linearization gives
 \begin{equation}
 h^{n+1,l+1} = h^{n+1,l} + c_p^{n+1,l}\delta T\label{eq:delta h}
 \end{equation}
-\\
 Substituting (\ref{eq:delta T}) and (\ref{eq:delta h}) into (\ref{eq:temp form}) gives:
 \begin{eqnarray}
-\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf} + \frac{dP_0}{dt}\nonumber\\
+\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt}\nonumber\\
 &&\hspace{-0.5in}+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}(T^{n+1,l} + \delta T)\nonumber\\
 &&\hspace{-0.5in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l}.
 \end{eqnarray}
-\\
-We solve this implicitly for $\delta T$, then compute $(T,h)^{n+1,l+1}$
-using (\ref{eq:delta T}) and (\ref{eq:delta h}).  Or should we compute $h^{n+1,l+1}$ from
-the EOS?
+We solve this implicitly for $\delta T$, then compute $T^{n+1,l+1}$
+using (\ref{eq:delta T}) and compute $h^{n+1,l+1}$ from the EOS.
 
 \section{Algorithm Summary}
 An inertial algorithm might look like this.\\ \\
@@ -429,11 +427,11 @@ loop over the following until the convergence criteria in {\bf Step 0d} is met:\
 \begin{itemize}
 \item {\bf Step 0a:} Compute a pressure update:
 \begin{equation}
-P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\bar{\alpha}^n}
+P_0^{*,n+1} = P_0^n + \Delta t\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right)
 \end{equation}
 \item {\bf Step 0b:} Compute the velocity field using
 \begin{equation}
-\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\underbrace{\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}}_{dP_0/dt}.
+\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right).
 \end{equation}
 \item {\bf Step 0c:} Advance the densities using forward-Euler advective fluxes
 and explicit mass diffusion:
@@ -446,13 +444,29 @@ The fundamental formulation is given by,
 (\rho h)^{*,n+1} = (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right],
 \end{equation}
 but since we express $\Qb$ in terms of temperature gradients, we need an iterative
-solve that linearizes the depences of $h$ on $T$ (summarized above, still need to
-write this out here).\\
+solve that linearizes the dependence of $h$ on $T$.  First we initialize
+$(h,T)^{*,n+1,l=1} = (h,T)^n$.
+Loop from $l=1$ to $l_{\rm max}$:\\ \\
+{\bf Step 0d-1:} Define
+\begin{equation}
+(\lambda,c_p)^{*,n+1,l} = \lambda,c_P(\rho^{*,n+1},\wb^{*,n+1},T^{*,n+1,l}).
+\end{equation}
+{\bf Step 0d-2:} Solve for $\delta T$ implicitly:
+\begin{eqnarray}
+\frac{\rho^{*,n+1}(h^{*,n+1,l} + c_p^{*,n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=&
+-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} \nonumber\\
+&&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla(T^{*,n+1,l} + \delta T)\nonumber\\
+&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} F_k^{*,n+1,l}.
+\end{eqnarray}
+{\bf Step 0d-3:} Update the temperature and enthalpy using
+\begin{equation}
+T^{*,n+1,l+1} = T^{*,n+1,l} + \delta T, \quad h^{*,n+1,l+1} = h(\rho^{*,n+1},\wb^{*,n+1},T^{*,n+1,l+1}).
+\end{equation}
+If $l=l_{\rm max}$, set $(h,T)^{*,n+1} = (h,T)^{*,n+1,l+1}$ and proceed to {\bf Step 0e}.\\
 \item {\bf Step 0e:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
-\MarginPar{Temporal discretization of $\alpha$ may not be the best choice here.}
 \begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \alpha^n\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
+S_{\rm corr}^n = S_{\rm corr}^n + \alpha^{*,n+1}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
 \end{equation}
 and return to {\bf Step 0a}.  Otherwise, proceed to the {\bf Scalar Corrector Step}.\\
 \end{itemize}
@@ -461,8 +475,7 @@ The goal of this step is to compute updated time-advanced thermodynamically cons
 pressure and scalars, $(P_0,\rho_i,(\rho h))^{n+1}$.  This will require the computation
 of a velocity field, $\vb^{*,n+1}$, that preserves this thermodynamic balance.
 We set the volume discrepancy correction to zero,
-$S_{\rm corr}^{*,n+1} = 0$, as well as the individual terms in the decomposition
-$S_{\rm corr}^{*,n+1} = \bar{S}_{\rm corr}^{*,n+1} + \delta S_{\rm corr}^{*,n+1}$
+$S_{\rm corr}^{*,n+1} = S_{\rm corr}^n$.
 Begin by computing preliminary time-advanced fluxes, $\Fb^{*,n+1}, \Qb^{*,n+1}$,
 and then loop over the following until the convergence criteria in {\bf Step 1d} is met:\\
 \begin{itemize}
@@ -489,7 +502,7 @@ diffusion:
 \item {\bf Step 1d:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
 \begin{equation}
-S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + \frac{2}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right)
+S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + 2\alpha^{n+1}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right)
 \end{equation}
 and return to {\bf Step 1a}.  I think the factor of 2 is required here since the new-time
 velocity is used in a trapezoidal corrector with only a half-weighting.  Otherwise, 
