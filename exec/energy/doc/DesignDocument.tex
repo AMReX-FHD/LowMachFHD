@@ -71,18 +71,25 @@ The governing conservation equations for momentum, mass, and energy for our syst
 \frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot F_i,\label{eq:mass}\\
 \frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb + \sum_k h_k F_k,\label{eq:enthalpy}
 \end{eqnarray}
-where $h_i = \partial h/\partial w_i$, $h = \sum_k h_k$, and
+where $h_k = \partial h/\partial w_k$, and
 $\taub = \overline\taub + \tilde\taub$,
 $\Fb = \overline\Fb + \tilde\Fb$, and 
 $\Qb = \overline\Qb + \tilde\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
 respectively, separated into deterministic and stochastic components.
-These equations are closed by the following relation derived from low Mach number asymptotics,
-which states that the thermodynamic pressure must remain spatially constant,
+Starting from the full compressible equations and expanding in Mach number shows that the leading
+order pressure terms in Mach number must be constant in space. Thus, the perturbational pressure $\pi$ is
+$O(M^2)$.
+The low Mach number system is then obtained by ignoring the effect of terms of order $M^2$ or higher in pressure 
+on the thermodynamic state of the system.
+The equation of state then becomes a constraint on the evolution; namely,
+the evolution of the system is constrained so that
 \begin{equation}
-P_0 = P(\rho,\wb,T).\label{eq:EOS}
+P_0 (t) = P(\rho,\wb,T).\label{eq:EOS}
 \end{equation}
+
 The deterministic stress tensor ignores the effect of bulk viscosity, 
-$\overline\taub = \eta\bar\nabla\vb = \eta[\nabla\vb + (\nabla\vb)^T]$.
+$\overline\taub = \eta\bar\nabla\vb = \eta[\nabla\vb + (\nabla\vb)^T]$, which 
+can be aborbed into $\pi$.
 The deterministic heat fluxes have the form 
 $\overline\Qb = \lambda\nabla T$.
 The deterministic part of the mass fluxes, $\overline{\Fb}$, contains contributions from 
@@ -91,48 +98,75 @@ compositional gradients, barodiffusion, and temperature gradients,
 \overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right].
 \end{equation}
 
-Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy}), and (\ref{eq:EOS})
-form the actual system that we would like to solve.  We use an iterative 
-``volume discrepancy'' scheme described below to solve 
-(\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
-while enforcing condition (\ref{eq:EOS}) to a specified tolerance.\\
+Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy})
+with $DP/dt$ in the enthalpy equation replaced by $dP_0/dt$, and (\ref{eq:EOS})
+form the actual system that we would like to solve.
+This corresponds to evolution subject to a constraint.  From the analysis below it will become
+apparent that this system is an index 3 differential algebraic system.  Before looking in detail
+at the structure of the system, it is, perhaps, helpful to consider a physical interpretation of the
+system.  The perturbational pressure $\pi$ constrains velocity field so that
+the evolution so that the evolution of $h$ and $\rho_k$
+preserves a thermodynamic pressure that is a function of $t$ only.
+When the system is open, the pressure
+equilibrates to the ambient pressure and $P_0$ is independent of time and known.
+When the system is closed
+$P_0$ represents the global pressure
+required force the fluid to occupy the available volume.
 
 We also note that $\rho, h, T, P$ are linked by the equation of state in a sense that given
 $\wb$ and any two of these variables, the equation of state uniquely specifies the other
-two variables.  Thus, e.g., we can compute the temperature using
-the equation of state, $T = T(\rho,\wb,h)$, or the enthalpy using $h = h(\rho,P,\wb)$.
+two variables.  In particular, we will thing of enthalpy as either
+$h = h(\rho,\wb,T)$, or the enthalpy $h = h(P,\wb,T)$.
+\MarginPar{need to think about this one for general case . . .may not need the first version}
+We view these relations as defining temperature in terms of enthalpy.
 
 \subsection{Velocity Constraint and Thermodynamic Pressure Update}
-To derive a constraint on the velocity, we begin by differentiating the 
+
+Directly attacking the evolution of the constrained system is not tractable.
+For DAE's the standard approach to understanding the structure is to differentiate the constraint.
+If we start on the constraint and recast the evolution in terms of the derivative of the constraint
+being satisfied, the resulting evolution of the system is analytically equivalent.  In the theory
+of DAE's the number of times the system needs to be differentiated to recast it as a pure initial
+value problem is referred to as the index.
+The derivative of the constraint can also be cast as a characterization of the tangent plane to the
+constraint manifold but it is not clear what to do with that observation.
+
+The key things we want to get a handle on are how the two different elements that go into the
+constraint interact to control the evolution and whether they are, in some sense, uniquely specified.
+
+We begin by differentiating the 
 right-hand side of equation (\ref{eq:EOS}) along particle paths,
 \begin{equation}
 \frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
 \end{equation}
-What we would like to do is enforce that the thermodynamic pressure remain equal
-to $P_0$.  Since in our low Mach number mode $P_0$ is spatially constant (and 
-temporally constant as well for open containers), we can enforce that the 
-thermodynamic pressure remain equal to $P_0$ by replacing $DP/Dt$ 
-with $\partial P_0/\partial t$:
+$P_0$ is spatially constant
+so we can replace $DP/Dt$ 
+with $d P_0/ dt$:
 \begin{equation}
-\frac{\partial P_0}{\partial t} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
+\frac{d P_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
 \end{equation}
-Note that in the enthalpy equation (\ref{eq:enthalpy}) we are also make the
-substitution $DP/Dt = \partial P_0/\partial t$.  Also, since we
+As noted above we are also make the
+substitution $DP/Dt = d P_0/ d t$ in the enthalpy equation.  (Since we
 are currently assuming $P_0$ is constant in space, we are not allowing
-for pressure stratification due to gravity.\\
+for pressure stratification due to gravity.)\\
 
 Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, we can rewrite 
 (\ref{eq:particle paths}) as
 \begin{equation}
 \nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{\partial P_o}{\partial t} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
-To obtain an expression for $DT/Dt$, we differentiate the enthalpy, $h=h(P,T,\wb)$, 
+To obtain an expression for $DT/Dt$, we differentiate the enthalpy, $h=h(P,\wb,T)$, 
 along particle paths to obtain
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{\partial P_0}{\partial t} - \sum_kh_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
+\frac{Dh}{Dt} = 
+c_p \frac{DT}{Dt} 
++ h_P\frac{d P_0}{d t} + \sum_k h_{k}\frac{Dw_k}{Dt}  \;\;  ,
 \end{equation}
-Note that we have also replaced $DP/Dt$ with 
-$\partial P_0/\partial t$ in this equation.  From equation (\ref{eq:mass}) and 
+which then gives
+\begin{equation}
+\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{d P_0}{d t} - \sum_kh_{k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
+\end{equation}
+From equation (\ref{eq:mass}) and 
 continuity we have,
 \begin{equation}
 \frac{Dw_k}{Dt} = \frac{1}{\rho}\nabla\cdot\Fb_k,\label{eq:DwDt}
@@ -155,23 +189,31 @@ Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \beta_k = \frac{1}{\rho^2 P_\rho}\left(P_{w_k} - \frac{P_T h_{w_k}}{c_p}\right), \quad
 \gamma = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.
 \end{equation}
-The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $\partial P_0/\partial t$.
+
+The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $d P_0/d t$.
 For open containers where $\vb$ is allowed to be non-zero on one or more walls $P_0$
 is constant and the constraint equation reduces to
 \begin{equation}
 \nabla\cdot\vb = S.
 \end{equation}
-For closed chambers with no-flow walls, this system only has a solution if
-\begin{equation}
-\int_{\Omega} \left(S - \alpha\frac{\partial P_0}{\partial t}\right)\partial\Omega = 0.
-\end{equation}
+This is a generalization of standard low Mach number approaches (at least our version) and fits into
+a framework we have dealt with deterministically before.
+
+For closed chambers with no-flow walls the constraint is somewhat more complex.
+The equation \ref{eq:constraint} then represents the derivative of the original
+constraint.  We now want to see how
+decomposition of this equation into mean and fluctuating (not in the stochastic sense)
+components allows us to recover the evolution of $P_0$ and $\pi$.
+
+For a closed system, $\nabla \cdot \vb = g$ only has a solution if $\int g dx = 0$
 We can use this fact to simultaneously solve for the unknowns
 $\vb$ and $\partial P_0/\partial t$.
 To do this, we split up $S$ into an average and a perturbational component,
 \begin{equation}
-S = \bar{S} + \delta S,
+S = \bar{S} + \delta S.
 \end{equation}
-as well as split up $\alpha$ into an average and a perturbational component,
+We also
+split $\alpha$ into an average and a perturbational component,
 \begin{equation}
 \alpha = \bar{\alpha} + \delta\alpha.
 \end{equation}
@@ -181,25 +223,34 @@ By definition,
 \end{equation}
 So equation (\ref{eq:constraint}) can be rewritten as,
 \begin{equation}
-\nabla\cdot\vb = \bar{S} + \delta S - \bar{\alpha}\frac{\partial P_0}{\partial t} - \delta\alpha\frac{\partial P_0}{\partial t}.\label{eq:constraint2}
+\nabla\cdot\vb + \bar{\alpha}\frac{d P_0}{d t} 
+= \bar{S} + \delta S -
+\delta\alpha\frac{d P_0}{d t}.\label{eq:constraint2}
 \end{equation}
-Recall that the right-hand-side of equation (\ref{eq:constraint2}) must integrate to zero.
-The second and fourth terms integrate to zero by equation (\ref{eq:zero int}) and 
-the fact that $\partial P_0/\partial t$ is a constant.
-The first and third terms are non-zero constants,
-so in order for the entire RHS to integrate to zero we must have
+Since $\nabla \cdot \vb$ must integrate to zero and $P_0$ must be only a function of time,
+equation \ref{eq:constraint2} can be uniquely composed to give
 \begin{equation}
-\bar{\alpha}\frac{\partial P_0}{\partial t} = \bar{S}.\label{eq:P0}
+\bar{\alpha}\frac{d P_0}{d t} = \bar{S}.\label{eq:P0}
 \end{equation}
-Thus, equation (\ref{eq:P0}) is the evolution equation for $P_0$ and the constraint equation reduces to
+and
 \begin{equation}
 \nabla\cdot\vb = \delta S - \delta\alpha\frac{\partial P_0}{\partial t}.\label{eq:constraint3}
 \end{equation}
-Altogether, the system we are solving consists of equations (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
+Thus, the original system is analytically equivalent to solving the system (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
 subject to (\ref{eq:P0}) and (\ref{eq:constraint3}).
 
 \section{Basic Time Stepping Strategy}
-At the most basic level, the time-stepping strategy looks like this:\\
+
+The form of the system given above can be fit into the framework of low Mach number algorithms we have
+developed based on the generalized Stokes solver. 
+The additional issue that arises is that since the core numerical algorithm is based on the derivative
+of the constraint, we can numerically drift off of the actual algebraic constraint. Thus, we augment the
+basic algorithm with iterative 
+``volume discrepancy'' scheme described below to solve 
+(\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
+while enforcing condition (\ref{eq:EOS}) to a specified tolerance.
+
+At the most basic level, the time-stepping strategy looks like this:
 \begin{itemize}
 \item {\bf Step A}: Compute $\partial P_0/\partial t$ with equation (\ref{eq:P0}) and 
 then solve for velocity using the Stokes system GMRES solver coupling equations 
