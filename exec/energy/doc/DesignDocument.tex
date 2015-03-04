@@ -76,7 +76,7 @@ $\taub = \overline\taub + \tilde\taub$,
 $\Fb = \overline\Fb + \tilde\Fb$, and 
 $\Qb = \overline\Qb + \tilde\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
 respectively, separated into deterministic and stochastic components.
-Starting from the full compressible equations and expanding in Mach number shows that the leading
+Starting from the fully compressible equations and expanding in Mach number shows that the leading
 order pressure terms in Mach number must be constant in space. Thus, the perturbational pressure $\pi$ is
 $O(M^2)$.
 The low Mach number system is then obtained by ignoring the effect of terms of order $M^2$ or higher in pressure 
@@ -84,8 +84,9 @@ on the thermodynamic state of the system.
 The equation of state then becomes a constraint on the evolution; namely,
 the evolution of the system is constrained so that
 \begin{equation}
-P_0 (t) = P(\rho,\wb,T).\label{eq:EOS}
+P_0(t) = P(\rho,\wb,T),\label{eq:EOS}
 \end{equation}
+where $T=T(\rho,\wb,h)$ is specified by the equation of state.\\
 
 The deterministic stress tensor ignores the effect of bulk viscosity, 
 $\overline\taub = \eta\bar\nabla\vb = \eta[\nabla\vb + (\nabla\vb)^T]$, which 
@@ -99,7 +100,7 @@ compositional gradients, barodiffusion, and temperature gradients,
 \end{equation}
 
 Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy})
-with $DP/dt$ in the enthalpy equation replaced by $dP_0/dt$, and (\ref{eq:EOS})
+with $DP/Dt$ in the enthalpy equation replaced by $dP_0/dt$, and (\ref{eq:EOS})
 form the actual system that we would like to solve.
 This corresponds to evolution subject to a constraint.  From the analysis below it will become
 apparent that this system is an index 3 differential algebraic system.  Before looking in detail
@@ -115,9 +116,8 @@ required force the fluid to occupy the available volume.
 
 We also note that $\rho, h, T, P$ are linked by the equation of state in a sense that given
 $\wb$ and any two of these variables, the equation of state uniquely specifies the other
-two variables.  In particular, we will thing of enthalpy as either
-$h = h(\rho,\wb,T)$, or the enthalpy $h = h(P,\wb,T)$.
-\MarginPar{need to think about this one for general case . . .may not need the first version}
+two variables.  In particular, we will think of enthalpy as $h = h(P,\wb,T)$ when deriving
+the divergence constraint from the equation of state.
 We view these relations as defining temperature in terms of enthalpy.
 
 \subsection{Velocity Constraint and Thermodynamic Pressure Update}
@@ -156,13 +156,13 @@ Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, we can rewr
 \nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{\partial P_o}{\partial t} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
 To obtain an expression for $DT/Dt$, we differentiate the enthalpy, $h=h(P,\wb,T)$, 
-along particle paths to obtain
+along particle paths and replace $DP/Dt$ with $dP_0/dt$ to obtain
 \begin{equation}
 \frac{Dh}{Dt} = 
 c_p \frac{DT}{Dt} 
 + h_P\frac{d P_0}{d t} + \sum_k h_{k}\frac{Dw_k}{Dt}  \;\;  ,
 \end{equation}
-which then gives
+where $c_p = \partial h/\partial T$.  This gives
 \begin{equation}
 \frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{d P_0}{d t} - \sum_kh_{k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
 \end{equation}
@@ -173,16 +173,16 @@ continuity we have,
 \end{equation}
 and from equation (\ref{eq:enthalpy}) we have,
 \begin{equation}
-\frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{\partial P_0}{\partial t} + \nabla\cdot\Qb\right).\label{eq:DhDt}
+\frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{dP_0}{dt} + \nabla\cdot\Qb\right).\label{eq:DhDt}
 \end{equation}
 Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{\partial P_0}{\partial t} + \nabla\cdot\Qb - \sum_kh_{w_k}\nabla\cdot\Fb_k\right].\label{eq:DTDt}
+\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb - \sum_kh_{w_k}\nabla\cdot\Fb_k\right].\label{eq:DTDt}
 \end{equation}
 Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \footnote{These are the same equations in MAESTRO Paper III, Almgren et al., ApJ, 2008, except that paper includes a convective derivative of $P_0$ due to stratification}
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = \sum_k \beta_k \nabla\cdot\Fb_k + \gamma \nabla\cdot\Qb \equiv S,\label{eq:constraint}
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \gamma \nabla\cdot\Qb \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
 \alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
@@ -200,12 +200,12 @@ This is a generalization of standard low Mach number approaches (at least our ve
 a framework we have dealt with deterministically before.
 
 For closed chambers with no-flow walls the constraint is somewhat more complex.
-The equation \ref{eq:constraint} then represents the derivative of the original
+Equation (\ref{eq:constraint}) then represents the derivative of the original
 constraint.  We now want to see how
 decomposition of this equation into mean and fluctuating (not in the stochastic sense)
 components allows us to recover the evolution of $P_0$ and $\pi$.
 
-For a closed system, $\nabla \cdot \vb = g$ only has a solution if $\int g dx = 0$
+For a closed system, $\nabla \cdot \vb = g$ only has a solution if $\int_\Omega g~d\Omega = 0$
 We can use this fact to simultaneously solve for the unknowns
 $\vb$ and $\partial P_0/\partial t$.
 To do this, we split up $S$ into an average and a perturbational component,
@@ -228,20 +228,20 @@ So equation (\ref{eq:constraint}) can be rewritten as,
 \delta\alpha\frac{d P_0}{d t}.\label{eq:constraint2}
 \end{equation}
 Since $\nabla \cdot \vb$ must integrate to zero and $P_0$ must be only a function of time,
-equation \ref{eq:constraint2} can be uniquely composed to give
+equation (\ref{eq:constraint2}) can be uniquely composed to give
 \begin{equation}
 \bar{\alpha}\frac{d P_0}{d t} = \bar{S}.\label{eq:P0}
 \end{equation}
 and
 \begin{equation}
-\nabla\cdot\vb = \delta S - \delta\alpha\frac{\partial P_0}{\partial t}.\label{eq:constraint3}
+\nabla\cdot\vb = \delta S - \delta\alpha\frac{dP_0}{dt}.\label{eq:constraint3}
 \end{equation}
 Thus, the original system is analytically equivalent to solving the system (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
 subject to (\ref{eq:P0}) and (\ref{eq:constraint3}).
 
 \section{Basic Time Stepping Strategy}
 
-The form of the system given above can be fit into the framework of low Mach number algorithms we have
+The form of the system given above can fit into the framework of low Mach number algorithms we have
 developed based on the generalized Stokes solver. 
 The additional issue that arises is that since the core numerical algorithm is based on the derivative
 of the constraint, we can numerically drift off of the actual algebraic constraint. Thus, we augment the
@@ -250,9 +250,9 @@ basic algorithm with iterative
 (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
 while enforcing condition (\ref{eq:EOS}) to a specified tolerance.
 
-At the most basic level, the time-stepping strategy looks like this:
+At the most basic level, the time-stepping strategy looks like this:\\
 \begin{itemize}
-\item {\bf Step A}: Compute $\partial P_0/\partial t$ with equation (\ref{eq:P0}) and 
+\item {\bf Step A}: Advance $P_0$ with equation (\ref{eq:P0}) and 
 then solve for velocity using the Stokes system GMRES solver coupling equations 
 (\ref{eq:momentum}) and (\ref{eq:constraint3}).\\
 \item {\bf Step B}: Update thermodynamic variables using equations (\ref{eq:mass}), 
@@ -274,11 +274,11 @@ fluxes, and also incorporate an iterative scheme for heat fluxes, etc.
 Recall equation (\ref{eq:particle paths}), where we analytically enforce that
 thermodynamic pressure will evolve to be consistent with the evolution of $P_0$:
 \begin{equation}
-\frac{\partial P_0}{\partial t} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
+\frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
 \end{equation}
 This equation was shown to be analytically equivalent to equation (\ref{eq:constraint}):
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = S.
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = S.
 \end{equation}
 
 This divergence constraint represents a linearized approximation for the velocity 
@@ -300,7 +300,7 @@ If we were able to ``redo'' the velocity computation, the rate at which we want 
 pressure to change in each cell is no longer given
 by simply $\partial P_0/\partial t$, but is now given by:
 \begin{equation}
-\frac{DP}{Dt} = \frac{\partial P_0}{\partial t} - \frac{\Delta P}{\Delta t}.
+\frac{DP}{Dt} = \frac{dP_0}{dt} - \frac{\Delta P}{\Delta t}.
 \end{equation}
 We include the $\Delta p/\Delta t$ ``volume discrepancy'' correction term here because 
 now we have a sense for what the numerics does to the local thermodynamic pressure in 
@@ -308,19 +308,19 @@ each cell without such a correction.  Physically, by including this term, we are
 an additional amount of expansion or contraction within each cell in order to modify 
 the pressure.  Now, equation (\ref{eq:constraint}) is replaced by
 \begin{equation}
-\nabla\cdot\vb + \alpha\left(\frac{\partial P_0}{\partial t} - \frac{\Delta P}{\Delta t}\right) = S.
+\nabla\cdot\vb + \alpha\left(\frac{dP_0}{dt} - \frac{\Delta P}{\Delta t}\right) = S.
 \end{equation}
 or
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{\partial P_0}{\partial t} = S + \underbrace{\alpha\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = S + \underbrace{\alpha\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
 \end{equation}
 Similar to above, in order for this sytem to be solvable we split the update into a
 equations for $P_0$ and $\vb$,
 \begin{equation}
-\nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\alpha\frac{\partial P_0}{\partial t},
+\nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\alpha\frac{dP_0}{dt},
 \end{equation}
 \begin{equation}
-\bar{\alpha}\frac{\partial P_0}{\partial t} = \bar{S} + \bar{S}_{\rm corr}.
+\bar{\alpha}\frac{dP_0}{dt} = \bar{S} + \bar{S}_{\rm corr}.
 \end{equation}
 As we iterate, we increment (rather than reset) $\delta S_{\rm corr}$ based on how much 
 the current solution drifts using $\delta S_{\rm corr}$ the previous iteration.
@@ -328,7 +328,7 @@ the current solution drifts using $\delta S_{\rm corr}$ the previous iteration.
 \section{Heat Flux Formulation}
 Here's the basic idea.  Recall (\ref{eq:enthalpy}):
 \begin{equation}
-\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{\partial P_0}{\partial t} + \nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_kF_k.
+\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt} + \nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_kF_k.
 \end{equation}
 We want to handle the thermal diffusion semi-implicitly.  We use an iterative method that
 linearizes the relationship between how $h$ changes with respect to changes in $T$.
@@ -340,7 +340,7 @@ idea of the iterative scheme.  Also, the details of the treatment for
 $\partial P_0/\partial t$ will be given below.\\ \\
 Let's assume we want to form an iterative update to $h$ using
 \begin{eqnarray}
-\frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf} + \frac{\partial P_0}{\partial t}\nonumber\\
+\frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf} + \frac{dP_0}{dt}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l+1}\nonumber\\
 && + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}F_k^{n+1,l}.\label{eq:temp form}
 \end{eqnarray}
@@ -357,7 +357,7 @@ h^{n+1,l+1} = h^{n+1,l} + c_p^{n+1,l}\delta T\label{eq:delta h}
 \\
 Substituting (\ref{eq:delta T}) and (\ref{eq:delta h}) into (\ref{eq:temp form}) gives:
 \begin{eqnarray}
-\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf} + \frac{\partial P_0}{\partial t}\nonumber\\
+\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^{n+\myhalf} + \frac{dP_0}{dt}\nonumber\\
 &&\hspace{-0.5in}+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}(T^{n+1,l} + \delta T)\nonumber\\
 &&\hspace{-0.5in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l}.
 \end{eqnarray}
@@ -433,7 +433,7 @@ P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\bar{\al
 \end{equation}
 \item {\bf Step 0b:} Compute the velocity field using
 \begin{equation}
-\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\underbrace{\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}}_{\partial P_0/\partial t}.
+\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\underbrace{\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}}_{dP_0/dt}.
 \end{equation}
 \item {\bf Step 0c:} Advance the densities using forward-Euler advective fluxes
 and explicit mass diffusion:
