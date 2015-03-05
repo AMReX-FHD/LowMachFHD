@@ -10,7 +10,7 @@ module bc_module
   integer, save :: num_scal_bc, num_tran_bc
 
   ! each application uses a subset of these
-  integer, save :: temp_bc_comp, Epot_bc_comp, c_bc_comp, mol_frac_bc_comp
+  integer, save :: temp_bc_comp, Epot_bc_comp, c_bc_comp, mol_frac_bc_comp, h_bc_comp
   
   ! These are physical boundary condition types
   ! We set these in the inputs file and they get translated
