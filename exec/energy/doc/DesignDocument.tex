@@ -368,44 +368,24 @@ using (\ref{eq:delta T}) and compute $h^{n+1,l+1}$ from the EOS.
 An inertial algorithm might look like this.\\ \\
 Initialization:\\
 \begin{enumerate}
-\item Compute $\Fb$ and $\Qb$ at the initial time and project.
-\item Loop over the following:
-\begin{enumerate}
-\item Predictor forward Euler step for thermodynamic variables.
-\item Advance $P_0$.
-\item If satisfied with thermodynamic drift, exit this loop.
-\item Determine the volume discrepancy correction and redefine $S$.
-\item Project to obtain an updated velocity field.
+\item Update $P_0$ and compute $\vb^n$ with a projection.
+\item Advance densities and enthalpy.
+\item If satisfied with thermodynamic drift, proceed to the Scalar Corrector Step.
+Otherwise correct constraint equation and return to the beginning of this step.\\
 \end{enumerate}
-\item Proceed to Corrector.\\
-\end{enumerate}
-Corrector:\\
+Scalar Corrector Step:\\
 \begin{enumerate}
-\item Compute preliminary time-advanced $\Fb$ and $\Qb$.
-\item Loop over the following
-\begin{enumerate}
-\item GMRES solve for preliminary time-advanced velocity.
-\item Trapezoidal scalar corrector step for thermodynamic variables.
-\item Advance $P_0$.
-\item If satisfied with thermodynamic drift, exit this loop.
-\item Determine the volume discrepancy correction and redefine $S$.  The weighting of the
-correction may have to change since this velocity field is used in a trapezoidal corrector.
-I'm also not sure if/how to relate this correction to the predictor correction.
+\item Update $P_0$ and compute $\vb^{*,n+1}$ with a GMRES solver for the Stokes system.
+\item Advance densities and enthalpy.
+\item If satisfied with thermodynamic drift, proceed to the Scalar Predictor Step.
+Otherwise correct constraint equation and return to beginning of this step.\\
 \end{enumerate}
-\item Proceed to New-Time Predictor.\\
-\end{enumerate}
-New-Time Predictor:\\
+Scalar Predictor Step:\\
 \begin{enumerate}
-\item Compute updated time-advanced $\Fb$ and $\Qb$.
-\item Loop over the following:
-\begin{enumerate}
-\item GMRES solve for updated time-advanced velocity.
-\item Predictor forward Euler step for thermodynamic variables.
-\item Advance $P_0$.
-\item If satisfied with thermodynamic drift, exit this loop.
-\item Determine the volume discrepancy correction and redefine $S$.
-\end{enumerate}
-\item Return to Corrector.
+\item Increment $n$, update $P_0$ and compute $\vb^n$ with a GMRES solver for the stokes system.
+\item Advance densities and enthalpy.
+\item If satisfied with thermodynamic drift, proceed to the Scalar Corrector Step.
+Otherwise correct constraint equation and return to the beginning of this step.
 \end{enumerate}
 
 \section{Algorithm Details}
@@ -422,7 +402,7 @@ thermodynamic balance.
 We set the initial volume discrepancy correction to zero, 
 $S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
 $S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
-We loop over the following until the convergence criteria in {\bf Step 0d} is met:\\
+We loop over the following until the convergence criteria in {\bf Step 0e} is met:\\
 \begin{itemize}
 \item {\bf Step 0a:} Compute a pressure update:
 \begin{equation}
@@ -475,14 +455,13 @@ that are consistent with $P_0$..  This will require the computation
 of a velocity field, $\vb^{*,n+1}$, that preserves this thermodynamic balance.
 We set the volume discrepancy correction to the value
 $S_{\rm corr}^{*,n+1} = S_{\rm corr}^n$.
-We loop over the following until the convergence criteria in {\bf Step 1d} is met:\\
+We loop over the following until the convergence criteria in {\bf Step 1e} is met:\\
 \begin{itemize}
 \item {\bf Step 1a:} Compute a pressure update.
 \begin{equation}
 P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right) + \frac{\Delta t}{2}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right).
 \end{equation}
-\item {\bf Step 1b:} Compute the velocity field and the dynamic pressure by using a GMRES solver for the Stokes system,
-pressure, $\pi^{*,n+1}$.
+\item {\bf Step 1b:} Compute the velocity and the dynamic pressure using a GMRES solver for the Stokes system:
 \begin{equation}
 \frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi^{*,n+1} = \nabla\cdot(-\rho\vb\vb)^n + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{*,n+1}) + \frac{1}{2}(\rho^n + \rho^{*,n+1})\gb,
 \end{equation}
@@ -527,42 +506,31 @@ proceed to the {\bf Step 2}.\\
 \end{itemize}
 {\bf Step 2: Scalar Predictor Step.}\\ \\
 We are now in the next time step, so we increment $n$.
-The goal of this step is to compute preliminary time-advanced thermodynamically
-consistent pressure and scalars, $(P_0,\rho_i,(\rho h))^{*,n+1}$.  This will
+The goal of this step is to compute preliminary time-advanced densities
+and enthalpy that are consistent with $P_0$.  This will
 require the computation of a velocity field, $\vb^n$, that preserves this
 thermodynamic balance.  Note that this step is essentially the same as
 {\bf Step 0}, except that in the computation of $\vb^n$ we use a GMRES
 solver rather than a projection, since in essence we are correcting the velocity
-field to second order by including a trapezoidal discretization of the advective fluxes.
+field computed in {\bf Step 1} by including a trapezoidal discretization of the 
+advective fluxes.
 We set the initial volume discrepancy correction to zero, 
 $S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
 $S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
-Begin by computing fluxes, $\Fb^n, \Qb^n$ and then loop over the following until 
-the convergence criteria in {\bf Step 2d} is met:\\
+We loop over the following until the convergence criteria in {\bf Step 2e} is met:\\
 \begin{itemize}
-\item {\bf Step 2a:} Compute a pressure update:
-\begin{equation}
-P_0^{*,n+1} = P_0^n + \frac{\Delta t(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\bar{\alpha}^n}
-\end{equation}
-\item {\bf Step 2b:} GMRES solve for the velocity, $\vb^n$, and perturbational
+\item {\bf Step 2a:} Same as {\bf Step 0a}.
+\item {\bf Step 2b:} Compute the velocity and dynamic pressure using a GMRES solver for the Stokes system:
 pressure, $\pi^n$.
-\begin{equation}
-\frac{\rho^n\vb^n - \rho^{n-1}\vb^{n-1}}{\Delta t} + \nabla\pi^n = \half\nabla\cdot(-(\rho\vb\vb)^{n-1} - (\rho\vb\vb)^{*,n}) + \frac{1}{2}\nabla\cdot(\taub^{n-1} + \taub^n) + \frac{1}{2}(\rho^{n-1} + \rho^n)\gb,
-\end{equation}
-\begin{equation}
-\nabla\cdot\vb^n = \delta S^{*,n} + \delta S_{\rm corr}^n
-\end{equation}
-\item {\bf Step 2c:} Advect-diffuse the thermodynamic variables using forward-Euler advective fluxes,
-explicit mass diffusion, and implicit energy diffusion:
 \begin{eqnarray}
-\rho_i^{*,n+1} &=& \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i\vb)^n + \Fb^n\right], \\
-(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right].\nonumber\\
+\frac{\rho^n\vb^n - \rho^{n-1}\vb^{n-1}}{\Delta t} + \nabla\pi^n &=& \half\nabla\cdot(-(\rho\vb\vb)^{n-1} - (\rho\vb\vb)^{*,n})\nonumber\\
+&&\hspace{-0.5in} + \frac{1}{2}\nabla\cdot(\taub^{n-1} + \taub^n) + \frac{1}{2}(\rho^{n-1} + \rho^n)\gb,
 \end{eqnarray}
-\item {\bf Step 2d:} If the thermodynamic drift is unacceptable, update the volume 
-discrepancy correction,
 \begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{\rho P_\rho}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
+\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right).
 \end{equation}
-and return to {\bf Step 2a}.  Otherwise, proceed to the {\bf Scalar Corrector Step}.\\
+\item {\bf Step 2c:} Same as {\bf Step 0c}.
+\item {\bf Step 2d:} Same as {\bf Step 0d}.
+\item {\bf Step 2e:} Same as {\bf Step 0e}, except that the loop returns to {\bf Step 2a}.
 \end{itemize}
 \end{document}
