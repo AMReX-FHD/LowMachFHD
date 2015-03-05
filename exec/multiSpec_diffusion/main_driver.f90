@@ -166,7 +166,7 @@ subroutine main_driver()
   ! 1:dm = velocity
   ! dm+1 = pressure
   ! dm+2 = scal_bc_comp = rhotot
-  ! scal_bc_comp+1 = rho_i
+  ! scal_bc_comp+1 = c_i
   ! scal_bc_comp+nspecies+1 = mol_frac
   ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
   ! scal_bc_comp+2*nspecies+2 = tran_bc_comp
