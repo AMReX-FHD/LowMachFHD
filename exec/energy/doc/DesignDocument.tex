@@ -415,15 +415,14 @@ to zero, although this shouldn't matter beyond solver tolerance as it will get
 overwritten during the initialization step.\\ \\
 {\bf Step 0: Initialization}.\\ \\
 This step is only performed once at the beginning of the simulation, so here $n=0$.
-The goal of this step is to compute preliminary time-advanced thermodynamically
-consistent pressure and scalars, $(P_0,\rho_i,(\rho h))^{*,n+1}$.  This will
+The goal of this step is to compute preliminary time-advanced densities and enthalpy
+that are consistent with $P_0$.  This will
 require the computation of a velocity field, $\vb^n$, that preserves this
 thermodynamic balance.  
 We set the initial volume discrepancy correction to zero, 
 $S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
 $S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
-Begin by computing fluxes, $\Fb^n, \Qb^n$ and then
-loop over the following until the convergence criteria in {\bf Step 0d} is met:\\
+We loop over the following until the convergence criteria in {\bf Step 0d} is met:\\
 \begin{itemize}
 \item {\bf Step 0a:} Compute a pressure update:
 \begin{equation}
@@ -449,7 +448,7 @@ $(h,T)^{*,n+1,l=1} = (h,T)^n$.
 Loop from $l=1$ to $l_{\rm max}$:\\ \\
 {\bf Step 0d-1:} Define
 \begin{equation}
-(\lambda,c_p)^{*,n+1,l} = \lambda,c_P(\rho^{*,n+1},\wb^{*,n+1},T^{*,n+1,l}).
+(\lambda,c_p,\Fb)^{*,n+1,l} = \lambda,c_P,\Fb(\rho^{*,n+1},\wb^{*,n+1},T^{*,n+1,l}).
 \end{equation}
 {\bf Step 0d-2:} Solve for $\delta T$ implicitly:
 \begin{eqnarray}
@@ -468,45 +467,63 @@ discrepancy correction,
 \begin{equation}
 S_{\rm corr}^n = S_{\rm corr}^n + \alpha^{*,n+1}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
 \end{equation}
-and return to {\bf Step 0a}.  Otherwise, proceed to the {\bf Scalar Corrector Step}.\\
+and return to {\bf Step 0a}.  Otherwise, proceed to the {\bf Step 1}.\\
 \end{itemize}
 {\bf Step 1: Scalar Corrector Step}.\\ \\
-The goal of this step is to compute updated time-advanced thermodynamically consistent 
-pressure and scalars, $(P_0,\rho_i,(\rho h))^{n+1}$.  This will require the computation
+The goal of this step is to compute updated time-advanced densities and enthalpy 
+that are consistent with $P_0$..  This will require the computation
 of a velocity field, $\vb^{*,n+1}$, that preserves this thermodynamic balance.
-We set the volume discrepancy correction to zero,
+We set the volume discrepancy correction to the value
 $S_{\rm corr}^{*,n+1} = S_{\rm corr}^n$.
-Begin by computing preliminary time-advanced fluxes, $\Fb^{*,n+1}, \Qb^{*,n+1}$,
-and then loop over the following until the convergence criteria in {\bf Step 1d} is met:\\
+We loop over the following until the convergence criteria in {\bf Step 1d} is met:\\
 \begin{itemize}
-\item {\bf Step 1a:} Pressure update.
+\item {\bf Step 1a:} Compute a pressure update.
 \begin{equation}
-P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\frac{(\bar{S}^n + \bar{S}_{\rm corr}^n)}{\bar{\alpha}^n} + \frac{\Delta t}{2}\frac{(\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1})}{\bar{\alpha}^{*,n+1}}
+P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right) + \frac{\Delta t}{2}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right).
 \end{equation}
-\item {\bf Step 1b:} GMRES solve for the velocity, $\vb^{*,n+1}$, and perturbational
+\item {\bf Step 1b:} Compute the velocity field and the dynamic pressure by using a GMRES solver for the Stokes system,
 pressure, $\pi^{*,n+1}$.
 \begin{equation}
 \frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi^{*,n+1} = \nabla\cdot(-\rho\vb\vb)^n + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{*,n+1}) + \frac{1}{2}(\rho^n + \rho^{*,n+1})\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{*,n+1} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1}
+\nabla\cdot\vb^{*,n+1} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1} - \delta\alpha^{*,n+1}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right)
 \end{equation}
-\item {\bf Step 1c:} Advect-diffuse the thermodynamic variables using trapezoidal 
-corrector advective fluxes, trapezoidal corrector mass diffusion, and implicit energy 
-diffusion:
+\item {\bf Step 1c:} Advance the densities using trapezoidal advective and diffusive fluxes:
+\begin{equation}
+\rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \Fb^n + \Fb^{*,n+1}\right]
+\end{equation}
+\item {\bf Step 1d:} Advance the enthalpy by iteratively looping over an energy solve.  The fundamental formulation is given by,
+\begin{equation}
+(\rho h)^{n+1} = (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}} + \Qb^n + \Qb^{n+1}\right],
+\end{equation}
+but since we express $\Qb$ in terms of temperature gradients, we need an iterative solve that linearizes
+the dependence of $h$ on $T$.  First we initialize $(h,T)^{n+1,l=1} = (h,T)^{*,n+1}$.
+Loop from $l=1$ to $l_{\rm max}$:\\ \\
+{\bf Step 1d-1:} Define
+\begin{equation}
+(\lambda,c_p,\Fb)^{n+1,l} = \lambda,c_p,\Fb(\rho^{n+1},\wb^{n+1},T^{n+1,l}).
+\end{equation}
+{\bf Step 1d-2:} Solve for $\delta T$ implicitly:
 \begin{eqnarray}
-\rho_i^{n+1} &=& \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \Fb^n + \Fb^{*,n+1}\right],\nonumber \\
-\\
-(\rho h)^{n+1} &=& (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}} + \Qb^n + \Qb^{n+1}\right].\nonumber\\
+\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \nonumber\\
+&&\hspace{-1in}\half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right] \nonumber\\
+&&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
+&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l}.
 \end{eqnarray}
-\item {\bf Step 1d:} If the thermodynamic drift is unacceptable, update the volume 
+{\bf Step 1d-3:} Update the temperature and enthalpy using
+\begin{equation}
+T^{n+1,l+1} = T^{n+1,l} + \delta T, \quad h^{n+1,l+1} = h(\rho^{n+1},\wb^{n+1},T^{n+1,l+1}).
+\end{equation}
+If $l=l_{\rm max}$, set $(h,T)^{n+1} = (h,T)^{n+1,l+1}$ and proceed to {\bf Step 1e}.\\
+\item {\bf Step 1e:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
 \begin{equation}
 S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + 2\alpha^{n+1}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right)
 \end{equation}
 and return to {\bf Step 1a}.  I think the factor of 2 is required here since the new-time
 velocity is used in a trapezoidal corrector with only a half-weighting.  Otherwise, 
-proceed to the {\bf Scalar Predictor Step}.\\
+proceed to the {\bf Step 2}.\\
 \end{itemize}
 {\bf Step 2: Scalar Predictor Step.}\\ \\
 We are now in the next time step, so we increment $n$.
