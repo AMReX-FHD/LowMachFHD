@@ -4,7 +4,7 @@ module eos_utilities_module
 
   private
 
-  public :: eos_utilities
+  public :: make_P_from_rho_h_w
 
 contains
 
