@@ -16,6 +16,9 @@ include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
 VPATH_LOCATIONS += ..
 
+include $(STAGGERED_HOME)/src_energy/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy
+
 include $(STAGGERED_HOME)/src_multiSpec/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_multiSpec
 
