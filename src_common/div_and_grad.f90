@@ -240,13 +240,14 @@ contains
 
   end subroutine compute_grad
 
-  subroutine compute_div(mla,phi_fc,div,dx,start_incomp,start_outcomp,num_comp)
+  subroutine compute_div(mla,phi_fc,div,dx,start_incomp,start_outcomp,num_comp,increment_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: phi_fc(:,:)
     type(multifab) , intent(inout) :: div(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     integer        , intent(in   ) :: start_incomp, start_outcomp, num_comp
+    logical,  intent(in), optional :: increment_in
 
     real(kind=dp_t), pointer :: pxp(:,:,:,:) 
     real(kind=dp_t), pointer :: pyp(:,:,:,:) 
@@ -254,6 +255,11 @@ contains
     real(kind=dp_t), pointer :: dp(:,:,:,:) 
     integer :: i,n,nlevs,dm,ng_p,ng_d,comp,outcomp
     integer :: lo(mla%dim),hi(mla%dim)
+    logical :: increment
+
+    ! do we increment or overwrite div?
+    increment = .false.
+    if (present(increment_in)) increment = increment_in
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -273,11 +279,11 @@ contains
              select case (dm)
              case (2)
                 call compute_div_2d(pxp(:,:,1,comp), pyp(:,:,1,comp), ng_p, &
-                                    dp(:,:,1,outcomp), ng_d, dx(n,:),lo,hi)
+                                    dp(:,:,1,outcomp), ng_d, dx(n,:),lo, hi, increment)
              case (3) 
                 pzp => dataptr(phi_fc(n,3), i)
                 call compute_div_3d(pxp(:,:,:,comp), pyp(:,:,:,comp), pzp(:,:,:,comp), ng_p, &
-                                    dp(:,:,:,outcomp), ng_d, dx(n,:),lo,hi)
+                                    dp(:,:,:,outcomp), ng_d, dx(n,:),lo, hi, increment)
              end select
           end do
        end do
@@ -285,27 +291,42 @@ contains
 
   contains
 
-    subroutine compute_div_2d(phix,phiy,ng_p,div,ng_d,dx,lo,hi)
+    subroutine compute_div_2d(phix,phiy,ng_p,div,ng_d,dx,lo,hi,increment)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d
       real(kind=dp_t), intent(in   ) :: phix(lo(1)-ng_p:,lo(2)-ng_p:)
       real(kind=dp_t), intent(in   ) :: phiy(lo(1)-ng_p:,lo(2)-ng_p:)
       real(kind=dp_t), intent(inout) ::  div(lo(1)-ng_d:,lo(2)-ng_d:)
       real(kind=dp_t), intent(in   ) ::   dx(:)
+      logical        , intent(in   ) :: increment
 
       integer :: i,j
 
-      do j = lo(2),hi(2)
+      if (increment) then
+
+         do j = lo(2),hi(2)
+         do i = lo(1),hi(1)
+            div(i,j) = div(i,j) + &
+                 (phix(i+1,j) - phix(i,j)) / dx(1) + &
+                 (phiy(i,j+1) - phiy(i,j)) / dx(2)
+         end do
+         end do
+
+      else
+
+         do j = lo(2),hi(2)
          do i = lo(1),hi(1)
             div(i,j) = &
                  (phix(i+1,j) - phix(i,j)) / dx(1) + &
                  (phiy(i,j+1) - phiy(i,j)) / dx(2)
          end do
-      end do
+         end do
+         
+      end if
 
     end subroutine compute_div_2d
 
-    subroutine compute_div_3d(phix,phiy,phiz,ng_p,div,ng_d,dx,lo,hi)
+    subroutine compute_div_3d(phix,phiy,phiz,ng_p,div,ng_d,dx,lo,hi,increment)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d
       real(kind=dp_t), intent(in   ) :: phix(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
@@ -313,19 +334,37 @@ contains
       real(kind=dp_t), intent(in   ) :: phiz(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
       real(kind=dp_t), intent(inout) ::  div(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:)
       real(kind=dp_t), intent(in   ) :: dx(:)
+      logical        , intent(in   ) :: increment
 
       integer :: i,j,k
 
-      do k = lo(3),hi(3)
+      if (increment) then
+
+         do k = lo(3),hi(3)
          do j = lo(2),hi(2)
-            do i = lo(1),hi(1)
-               div(i,j,k) = &
-                    (phix(i+1,j,k) - phix(i,j,k)) / dx(1) + &
-                    (phiy(i,j+1,k) - phiy(i,j,k)) / dx(2) + &
-                    (phiz(i,j,k+1) - phiz(i,j,k)) / dx(3)
-            end do
+         do i = lo(1),hi(1)
+            div(i,j,k) = div(i,j,k) + &
+                 (phix(i+1,j,k) - phix(i,j,k)) / dx(1) + &
+                 (phiy(i,j+1,k) - phiy(i,j,k)) / dx(2) + &
+                 (phiz(i,j,k+1) - phiz(i,j,k)) / dx(3)
          end do
-      end do
+         end do
+         end do
+
+      else
+
+         do k = lo(3),hi(3)
+         do j = lo(2),hi(2)
+         do i = lo(1),hi(1)
+            div(i,j,k) = &
+                 (phix(i+1,j,k) - phix(i,j,k)) / dx(1) + &
+                 (phiy(i,j+1,k) - phiy(i,j,k)) / dx(2) + &
+                 (phiz(i,j,k+1) - phiz(i,j,k)) / dx(3)
+         end do
+         end do
+         end do
+
+      end if
 
     end subroutine compute_div_3d
 
