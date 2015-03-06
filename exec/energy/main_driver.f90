@@ -235,19 +235,20 @@ subroutine main_driver()
   !=======================================================
  
   ! bc_tower structure in memory
-  ! 1:dm = velocity
-  ! dm+1 = pressure
-  ! dm+2 = scal_bc_comp = rhotot
-  ! scal_bc_comp+1 = c_i
-  ! scal_bc_comp+nspecies+1 = molfrac or massfrac (dimensionless fractions)
-  ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
-  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diffusion coefficients (eta,kappa,chi)
+  ! 1:dm                      = velocity
+  ! dm+1                      = pressure
+  ! dm+2                      = scal_bc_comp AND rhotot
+  ! scal_bc_comp+1            = c_i
+  ! scal_bc_comp+nspecies+1   = molfrac or massfrac (dimensionless fractions)
+  ! scal_bc_comp+2*nspecies+1 = h_bc_comp = enthalpy
+  ! scal_bc_comp+2*nspecies+2 = temp_bc_comp = temperature
+  ! scal_bc_comp+2*nspecies+3 = tran_bc_comp = diffusion coefficients (eta,kappa,chi)
   ! It may be better if each transport coefficient has its own BC code?
   ! I think the only place this is used is average_cc_to_node/face/edge
   ! I cannot right now foresee a case where different values would be used in different places
   ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
-                     num_scal_bc_in=2*nspecies+2, &
+                     num_scal_bc_in=2*nspecies+3, &
                      num_tran_bc_in=1)
 
   do n=1,nlevs
@@ -256,9 +257,10 @@ subroutine main_driver()
   end do
 
   ! these quantities are populated here and defined bc.f90
-  c_bc_comp   = scal_bc_comp + 1
-  mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
-  temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
+  c_bc_comp        = scal_bc_comp + 1
+  mol_frac_bc_comp = scal_bc_comp + nspecies + 1
+  h_bc_comp        = scal_bc_comp + 2*nspecies + 1
+  temp_bc_comp     = scal_bc_comp + 2*nspecies + 2
 
   if (restart .lt. 0) then
 
