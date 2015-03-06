@@ -72,9 +72,9 @@ The governing conservation equations for momentum, mass, and energy for our syst
 \frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb + \sum_k h_k F_k,\label{eq:enthalpy}
 \end{eqnarray}
 where $h_k = \partial h/\partial w_k$, and
-$\taub = \overline\taub + \tilde\taub$,
-$\Fb = \overline\Fb + \tilde\Fb$, and 
-$\Qb = \overline\Qb + \tilde\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
+$\taub = \bar\taub + \tilde\taub$,
+$\Fb = \bar\Fb + \tilde\Fb$, and 
+$\Qb = \bar\Qb + \tilde\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
 respectively, separated into deterministic and stochastic components.
 Starting from the fully compressible equations and expanding in Mach number shows that the leading
 order pressure terms in Mach number must be constant in space. Thus, the perturbational pressure $\pi$ is
@@ -89,14 +89,14 @@ P_0(t) = P(\rho,\wb,T),\label{eq:EOS}
 where $T=T(\rho,\wb,h)$ is specified by the equation of state.\\
 
 The deterministic stress tensor ignores the effect of bulk viscosity, 
-$\overline\taub = \eta\bar\nabla\vb = \eta[\nabla\vb + (\nabla\vb)^T]$, which 
+$\bar\taub = \eta\bar\nabla\vb = \eta[\nabla\vb + (\nabla\vb)^T]$, which 
 can be aborbed into $\pi$.
 The deterministic heat fluxes have the form 
-$\overline\Qb = \lambda\nabla T$.
-The deterministic part of the mass fluxes, $\overline{\Fb}$, contains contributions from 
+$\bar\Qb = \lambda\nabla T$.
+The deterministic part of the mass fluxes, $\bar{\Fb}$, contains contributions from 
 compositional gradients, barodiffusion, and temperature gradients,
 \begin{equation}
-\overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right].
+\bar{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right].
 \end{equation}
 
 Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy})
@@ -435,8 +435,15 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 \frac{\rho^{*,n+1}(h^{*,n+1,l} + c_p^{*,n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=&
 -\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} \nonumber\\
 &&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla(T^{*,n+1,l} + \delta T)\nonumber\\
-&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} F_k^{*,n+1,l}.
+&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} F_k^{*,n+1,l},
 \end{eqnarray}
+\begin{eqnarray}
+\left(\frac{\rho^{*,n+1}c_p^{*,n+1,l}}{\Delta t} - \frac{1}{2}\lambda^{*,n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{*,n+1}h^{*,n+1,l}}{\Delta t}\nonumber\\
+&&\hspace{-1.25in} - \nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\nonumber\\
+&&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla T^{*,n+1,l}\nonumber\\
+&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} F_k^{*,n+1,l}.
+\end{eqnarray}
+
 {\bf Step 0d-3:} Update the temperature and enthalpy using
 \begin{equation}
 T^{*,n+1,l+1} = T^{*,n+1,l} + \delta T, \quad h^{*,n+1,l+1} = h(\rho^{*,n+1},\wb^{*,n+1},T^{*,n+1,l+1}).
@@ -463,14 +470,28 @@ P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}
 \end{equation}
 \item {\bf Step 1b:} Compute the velocity and the dynamic pressure using a GMRES solver for the Stokes system:
 \begin{equation}
-\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi^{*,n+1} = \nabla\cdot(-\rho\vb\vb)^n + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{*,n+1}) + \frac{1}{2}(\rho^n + \rho^{*,n+1})\gb,
+\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi^{*,n+1} = -\nabla\cdot(\rho\vb\vb)^n + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{*,n+1}) + \frac{1}{2}(\rho^n + \rho^{*,n+1})\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{*,n+1} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1} - \delta\alpha^{*,n+1}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right)
+\nabla\cdot\vb^{*,n+1} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1} - \delta\alpha^{*,n+1}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right).
+\end{equation}
+In practice, we solve for a modified increment to the velocity field, $\deltab\vb$.  In particular,
+we split the updated velocity into
+$\vb^{*,n+1} = \bar{\vb}^n + \deltab\vb$, where $\bar{\vb}^n$ is the velocity at $t^n$, but with modified boundary
+conditions consistent with $\vb^{*,n+1}$, and $\deltab\vb$ has homogeneous boundary conditions of the same type (Dirichlet or Neumann).
+We also express the viscous stress tensor in operator form, e.g., 
+$\mathcal{A}_0^n\vb = \nabla\cdot[\eta(\nabla\vb + (\nabla\vb)^T)]$.  
+We also split $\pi^{*,n+1} = \pi^n + \delta\pi$ in the same way.  Rewriting the Stokes system above we have:
+\begin{eqnarray}
+\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^n\vb^n - \rho^{*,n+1}\bar{\vb}^n}{\Delta t} - \nabla\pi^n\nonumber\\
+&&\hspace{-1.5in} - \nabla\cdot(\rho\vb\vb)^n + \half\mathcal{A}_0^n(\vb^n+\bar{\vb}^n) + \half(\rho^n + \rho^{*,n+1})\gb,
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1} - \delta\alpha^{*,n+1}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right)\right].
 \end{equation}
 \item {\bf Step 1c:} Advance the densities using trapezoidal advective and diffusive fluxes:
 \begin{equation}
-\rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \Fb^n + \Fb^{*,n+1}\right]
+\rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \Fb^n + \Fb^{*,n+1}\right].
 \end{equation}
 \item {\bf Step 1d:} Advance the enthalpy by iteratively looping over an energy solve.  The fundamental formulation is given by,
 \begin{equation}
@@ -488,7 +509,13 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 \frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \nonumber\\
 &&\hspace{-1in}\half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right] \nonumber\\
 &&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
-&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l}.
+&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l},
+\end{eqnarray}
+\begin{eqnarray}
+\left(\frac{\rho^{n+1}c_p^{n+1,l}}{\Delta t} - \frac{1}{2}\lambda^{n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1}h^{n+1,l}}{\Delta t}\nonumber\\
+&&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right]\nonumber\\
+&&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l}\nonumber\\
+&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l}.
 \end{eqnarray}
 {\bf Step 1d-3:} Update the temperature and enthalpy using
 \begin{equation}
@@ -527,7 +554,15 @@ pressure, $\pi^n$.
 &&\hspace{-0.5in} + \frac{1}{2}\nabla\cdot(\taub^{n-1} + \taub^n) + \frac{1}{2}(\rho^{n-1} + \rho^n)\gb,
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right).
+\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right),
+\end{equation}
+which we recast using $\vb^n = \bar{\vb}^{n-1} + \deltab\vb, \pi^n = \pi^{n-1} + \delta\pi$ (see explanation in {\bf Step 1b}):
+\begin{eqnarray}
+\left(\frac{\rho^n}{\Delta t} - \half\mathcal{A}_0^n\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^{n-1}\vb^{n-1} - \rho^n\bar{\vb}^{n-1}}{\Delta t} - \nabla\pi^{n-1}\nonumber\\
+&&\hspace{-1.5in} - \half\nabla\cdot(\rho\vb\vb)^{n-1} -\half\nabla\cdot(\rho\vb\vb)^{*,n} + \half\mathcal{A}_0^{n-1}(\vb^{n-1}+\bar{\vb}^{n-1}) + \half(\rho^{n-1} + \rho^n)\gb,\nonumber\\
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^{n-1} - \left[\delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right)\right].
 \end{equation}
 \item {\bf Step 2c:} Same as {\bf Step 0c}.
 \item {\bf Step 2d:} Same as {\bf Step 0d}.
