@@ -219,12 +219,12 @@ contains
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
     if (algorithm_type .eq. 1) then
-       call compute_mass_fluxdiv_wrapper(mla,rho_old,gradp_baro, &
+       call compute_mass_fluxdiv(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,dt,time,dx,weights, &
                                          the_bc_tower)
     else if (algorithm_type .eq. 2) then
-       call compute_mass_fluxdiv_wrapper(mla,rho_old,gradp_baro, &
+       call compute_mass_fluxdiv(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,0.5d0*dt,time,dx,weights, &
                                          the_bc_tower)
@@ -486,7 +486,7 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho_new,gradp_baro, &
+    call compute_mass_fluxdiv(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
                                       the_bc_tower)

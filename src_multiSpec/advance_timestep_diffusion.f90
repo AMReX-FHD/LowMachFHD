@@ -95,7 +95,7 @@ contains
       if(variance_coef_mass .ne. 0.d0) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
+      call compute_mass_fluxdiv(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
@@ -130,7 +130,7 @@ contains
       if(variance_coef_mass .ne. 0.d0) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
+      call compute_mass_fluxdiv(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
@@ -157,7 +157,7 @@ contains
       stage_time = time + dt  
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
+      call compute_mass_fluxdiv(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
@@ -194,7 +194,7 @@ contains
       weights(2) = 0.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
+      call compute_mass_fluxdiv(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
@@ -223,7 +223,7 @@ contains
       weights(2) = sqrt(0.5d0) 
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
+      call compute_mass_fluxdiv(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total, &
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
@@ -260,7 +260,7 @@ contains
       weights(2) = (2*sqrt(2.0d0)+sqrt(3.0d0))/5.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
+      call compute_mass_fluxdiv(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
@@ -289,7 +289,7 @@ contains
       weights(2) = (-4*sqrt(2.0d0)+3*sqrt(3.0d0))/5.0d0 
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
+      call compute_mass_fluxdiv(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
@@ -325,7 +325,7 @@ contains
       weights(2) = (sqrt(2.0d0)-2*sqrt(3.0d0))/10.0d0
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv_wrapper(mla,rhonew,gradp_baro, &
+      call compute_mass_fluxdiv(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)

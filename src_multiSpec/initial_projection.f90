@@ -100,7 +100,7 @@ contains
 
     ! compute diff/stoch/baro mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv_wrapper(mla,rho,gradp_baro, &
+    call compute_mass_fluxdiv(mla,rho,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp, &
                                       flux_total,dt,0.d0,dx,weights, &
