@@ -20,7 +20,8 @@ module stochastic_mass_fluxdiv_module
 
   private
 
-  public :: stochastic_mass_fluxdiv, fill_mass_stochastic, init_mass_stochastic, destroy_mass_stochastic
+  public :: stochastic_mass_fluxdiv, fill_mass_stochastic, init_mass_stochastic, &
+       destroy_mass_stochastic
 
   ! stochastic fluxes for mass densities are face-centered
   type(multifab), allocatable, save :: stoch_W_fc(:,:,:)
@@ -30,7 +31,8 @@ module stochastic_mass_fluxdiv_module
 contains
   
   subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,&
-                                     Gama,stoch_fluxdiv,flux_total,dx,dt,weights,the_bc_level)
+                                     Gama,stoch_fluxdiv,flux_total,dx,dt,weights, &
+                                     the_bc_level,stoch_scale_factor)
 
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
@@ -45,6 +47,7 @@ contains
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: weights(:)         
     type(bc_level) , intent(in   )   :: the_bc_level(:)
+    real(kind=dp_t), intent(in   )   :: stoch_scale_factor
 
     ! Local variables
     type(multifab)   :: Lonsager(mla%nlevel)            ! cholesky factored Lonsager 
@@ -117,6 +120,17 @@ contains
     if (correct_flux .and. (nspecies .gt. 1)) then
        !write(*,*) "Checking conservation of stochastic fluxes"
        call correction_flux(mla, rho, rhotot, flux, the_bc_level)
+    end if
+
+    ! multiply fluxes by a scale factor
+    ! this is used in the multispecies diffusion code, where the diffusive and
+    ! stochastic fluxes have different weightings in different stages
+    if (stoch_scale_factor .ne. 1.d0) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_s_c(flux(n,i),1,stoch_scale_factor,nspecies,0)
+          end do
+       end do
     end if
 
     ! add fluxes to flux_total

@@ -160,13 +160,13 @@ contains
       call compute_mass_fluxdiv(mla,rhonew,gradp_baro, &
                                         diff_fluxdivnew,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+                                        the_bc_tower,stoch_scale_factor_in=2.d0)
 
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
                                           call saxpy(rho(n),-0.5d0*dt,diff_fluxdiv(n))
                                           call saxpy(rho(n),-0.5d0*dt,diff_fluxdivnew(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),      -dt,stoch_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),-0.5d0*dt,stoch_fluxdiv(n))
       end do
  
       case(3)
@@ -197,12 +197,12 @@ contains
       call compute_mass_fluxdiv(mla,rho,gradp_baro, &
                                         diff_fluxdiv,stoch_fluxdiv,Temp,flux_total,&
                                         dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+                                        the_bc_tower,stoch_scale_factor_in=2.d0)
  
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
                                           call saxpy(rhonew(n),-0.5d0*dt,diff_fluxdiv(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),      -dt,stoch_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),-0.5d0*dt,stoch_fluxdiv(n))
       end do 
 
       ! update values of the ghost cells of rhonew
