@@ -568,4 +568,40 @@ which we recast using $\vb^n = \bar{\vb}^{n-1} + \deltab\vb, \pi^n = \pi^{n-1} +
 \item {\bf Step 2d:} Same as {\bf Step 0d}.
 \item {\bf Step 2e:} Same as {\bf Step 0e}, except that the loop returns to {\bf Step 2a}.
 \end{itemize}
+
+\section{Ideal Gas Equation of State}
+An ideal multi-component gas has an equation of state,
+\begin{equation}
+P = \rho\mathcal{R}T\sum_k\frac{w_k}{W_k},
+\end{equation}
+with universal gas constant $\mathcal{R} = 8.31451\times 10^7$ [erg/(K-mol)] 
+(all units are CGS) and $W_k$ is the molecular weight of species $k$ in [g/mol].
+The enthalpy, mass fractions, and temperature are related by:
+\begin{equation}
+h = \sum_k Y_k h_k(T).
+\end{equation}
+The thermodynamic derivatives
+\begin{eqnarray}
+P_\rho = \mathcal{R} T\sum_k\frac{w_k}{W_k}, \quad
+P_T = \rho\mathcal{R}\sum_k\frac{w_k}{W_k}, \quad
+P_{w_k} = \frac{\rho\mathcal{R}T}{W_k}, \quad
+h_{w_k} = h_k,
+\end{eqnarray}
+give rise to
+\begin{equation}
+\beta_k = \frac{1}{\rho}\left(\frac{W}{W_k} - \frac{h_k}{c_pT}\right), \quad
+\gamma = \frac{1}{\rho c_p T}.
+\end{equation}
+In Appendix A of Almgren et al., {\it Astrophys.~J.}, 637, 2006, it was shown that
+\begin{equation}
+\alpha = \frac{1}{\gamma\rho P_\rho} = \frac{1}{\gamma P},
+\end{equation}
+with $\gamma = c_p/c_V$ the ratio of specific heats.\\ \\
+
+The EOS we will test is an inert ternary mixture of $O_2, CH_4$, and $N_2$ available in
+the git repository, {\tt Combustion/Chemistry/data/inert/inert30.c}.  The functions of
+interest are:
+
+
+
 \end{document}
