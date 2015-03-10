@@ -27,7 +27,7 @@ contains
                                   diff_fluxdiv,stoch_fluxdiv, &
                                   Temp,flux_total, &
                                   dt,stage_time,dx,weights, &
-                                  the_bc_tower,stoch_scale_factor_in)
+                                  the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -41,7 +41,6 @@ contains
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
     type(bc_tower) , intent(in   )   :: the_bc_tower
-    real(kind=dp_t), intent(in   ), optional :: stoch_scale_factor_in
 
   end subroutine compute_mass_fluxdiv
 
@@ -50,7 +49,7 @@ contains
                                    Temp,flux_total, &
                                    dt,stage_time,dx,weights, &
                                    the_bc_tower, &
-                                   charge,grad_Epot,stoch_scale_factor_in)
+                                   charge,grad_Epot)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -66,7 +65,6 @@ contains
     type(bc_tower) , intent(in   )   :: the_bc_tower
     type(multifab) , intent(inout)   :: charge(:)
     type(multifab) , intent(inout)   :: grad_Epot(:,:)
-    real(kind=dp_t), intent(in   ), optional :: stoch_scale_factor_in
        
     ! local variables
     type(multifab) :: drho(mla%nlevel)           ! correction to rho
@@ -82,10 +80,6 @@ contains
     type(multifab) :: zeta_by_Temp(mla%nlevel)   ! for Thermo-diffusion 
 
     integer         :: n,i,dm,nlevs
-    real(kind=dp_t) :: stoch_scale_factor
-
-    stoch_scale_factor = 1.d0
-    if (present(stoch_scale_factor_in)) stoch_scale_factor = stoch_scale_factor_in
 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
@@ -145,8 +139,7 @@ contains
     if (variance_coef_mass .ne. 0.d0) then
        call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
                                     molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
-                                    dx,dt,weights,the_bc_tower%bc_tower_array, &
-                                    stoch_scale_factor)
+                                    dx,dt,weights,the_bc_tower%bc_tower_array)
     else
        do n=1,nlevs
           call multifab_setval(stoch_fluxdiv(n),0.d0,all=.true.)
