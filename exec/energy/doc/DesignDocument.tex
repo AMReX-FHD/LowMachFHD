@@ -187,7 +187,7 @@ Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \begin{equation}
 \alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
 \beta_k = \frac{1}{\rho^2 P_\rho}\left(P_{w_k} - \frac{P_T h_{w_k}}{c_p}\right), \quad
-\gamma = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.
+\epsilon = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.
 \end{equation}
 
 The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $d P_0/d t$.
@@ -575,7 +575,8 @@ An ideal multi-component gas has an equation of state,
 P = \rho\mathcal{R}T\sum_k\frac{w_k}{W_k},
 \end{equation}
 with universal gas constant $\mathcal{R} = 8.31451\times 10^7$ [erg/(K-mol)] 
-(all units are CGS) and $W_k$ is the molecular weight of species $k$ in [g/mol].
+(all units are CGS) and $W_k$ is the molecular mass of species $k$ in [g/mol]
+(denoted $m_k$ in our multispecies paper; in these notes we use the conventions in Day/Bell 2000).
 The enthalpy, mass fractions, and temperature are related by:
 \begin{equation}
 h = \sum_k Y_k h_k(T).
@@ -590,8 +591,10 @@ h_{w_k} = h_k,
 give rise to
 \begin{equation}
 \beta_k = \frac{1}{\rho}\left(\frac{W}{W_k} - \frac{h_k}{c_pT}\right), \quad
-\gamma = \frac{1}{\rho c_p T}.
+\epsilon = \frac{1}{\rho c_p T},
 \end{equation}
+where $W = (\sum_k w_k/W_k)^{-1}$ is the mixture-averaged (mean) molecular mass
+(denoted $\bar{m}$ in our multispecies paper).
 In Appendix A of Almgren et al., {\it Astrophys.~J.}, 637, 2006, it was shown that
 \begin{equation}
 \alpha = \frac{1}{\gamma\rho P_\rho} = \frac{1}{\gamma P},
@@ -602,6 +605,23 @@ The EOS we will test is an inert ternary mixture of $O_2, CH_4$, and $N_2$ avail
 the git repository, {\tt Combustion/Chemistry/data/inert/inert30.c}.  The functions of
 interest are:
 
+\begin{itemize}
+\item {\tt CKPY} computes $P(\rho,\wb,T)$.
 
+\item {\tt CKCPBS} computes $c_p(\wb,T)$
+
+\item {\tt CKCVBS} computes $c_v(\wb,T)$
+
+\item {\tt CKWT} returns the molecular masses.
+
+\item {\tt CKMMWY} computes the mixture-averaged molecular mass given $\wb$.
+
+\item {\tt CKHBMS} computes $h(\wb,T)$
+
+\item {\tt CKHMS} computes $h_m(\wb,T)$
+
+\item The average of {\tt EGSL1} with {\tt ALPHA=1} and {\tt ALPHA=-1} computes $\lambda(T,\xb)$.
+
+\end{itemize}
 
 \end{document}
