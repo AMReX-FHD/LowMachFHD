@@ -64,35 +64,6 @@ endif
 
 
 #-----------------------------------------------------------------------------
-# runtime parameter stuff (probin.f90)
-
-# template used by write_probin.py to build probin.f90
-PROBIN_TEMPLATE := $(SMC_TOP_DIR)/probin.template
-
-# list of the directories to search for _parameters files
-PROBIN_PARAMETER_DIRS = ./
-
-PROBIN_PARAMETER_DIRS += $(SMC_TOP_DIR)
-
-# list of all valid _parameters files for probin
-PROBIN_PARAMETERS := $(shell $(BOXLIB_HOME)/Tools/F_scripts/findparams.py $(PROBIN_PARAMETER_DIRS))
-
-probin.f90: $(PROBIN_PARAMETERS) $(PROBIN_TEMPLATE)
-	@echo " "
-	@echo "${bold}WRITING probin.f90${normal}"
-ifdef MKVERBOSE
-	$(BOXLIB_HOME)/Tools/F_scripts/write_probin.py \
-           -t $(PROBIN_TEMPLATE) -o probin.f90 -n probin \
-           --pa "$(PROBIN_PARAMETERS)"
-else
-	@$(BOXLIB_HOME)/Tools/F_scripts/write_probin.py \
-           -t $(PROBIN_TEMPLATE) -o probin.f90 -n probin \
-           --pa "$(PROBIN_PARAMETERS)"
-endif
-	@echo " "
-
-
-#-----------------------------------------------------------------------------
 # build_info stuff
 deppairs: build_info.f90
 
@@ -105,14 +76,14 @@ ifdef MKVERBOSE
             "$(COMPILE.f90)" "$(COMPILE.f)" \
             "$(COMPILE.c)" "$(LINK.f90)" \
             "AUX=$(CHEMISTRY_MODEL)" \
-            "GIT=$(BOXLIB_HOME)" "GIT=$(SMC_TOP_DIR)"
+            "GIT=$(BOXLIB_HOME)"
 else
 	@$(BOXLIB_HOME)/Tools/F_scripts/make_build_info2 \
             "$(Fmdirs)" "$(COMP)" "$(FCOMP_VERSION)" \
             "$(COMPILE.f90)" "$(COMPILE.f)" \
             "$(COMPILE.c)" "$(LINK.f90)" \
             "AUX=$(CHEMISTRY_MODEL)" \
-            "GIT=$(BOXLIB_HOME)" "GIT=$(SMC_TOP_DIR)"
+            "GIT=$(BOXLIB_HOME)"
 endif
 	@echo " "
 
@@ -125,11 +96,6 @@ else
 	@$(COMPILE.f90) $(OUTPUT_OPTION) build_info.f90
 	@rm -f build_info.f90
 endif
-
-
-#-----------------------------------------------------------------------------
-# include the BoxLib Fortran Makefile rules
-include $(BOXLIB_HOME)/Tools/F_mk/GMakerules.mak
 
 
 #-----------------------------------------------------------------------------
