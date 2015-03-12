@@ -603,8 +603,7 @@ with $\gamma = c_p/c_V$ the ratio of specific heats.\\ \\
 
 The EOS we will test is an inert ternary mixture of $O_2, CH_4$, and $N_2$ available in
 the git repository, {\tt Combustion/Chemistry/data/inert/inert30.c}.  The functions of
-interest are:
-
+interest are:\\
 \begin{itemize}
 \item {\tt CKPY} computes $P(\rho,\wb,T)$.
 
@@ -612,7 +611,7 @@ interest are:
 
 \item {\tt CKCVBS} computes $c_v(\wb,T)$
 
-\item {\tt CKWT} returns the molecular masses.
+\item {\tt CKWT} returns the molecular masses, $\mb$.
 
 \item {\tt CKMMWY} computes the mixture-averaged molecular mass given $\wb$.
 
@@ -620,7 +619,19 @@ interest are:
 
 \item {\tt CKHMS} computes $h_m(\wb,T)$
 
+\item {\tt CKYTX} computes mole fractions, $\xb$, from mass fractions, $\wb$.\\
+
+\end{itemize}
+
+For these, first call {\tt EGSPAR} to initialize thermodynamics.\\
+\begin{itemize}
+
 \item The average of {\tt EGSL1} with {\tt ALPHA=1} and {\tt ALPHA=-1} computes $\lambda(T,\xb)$.
+
+\item {\tt EGSV1} computes mass diffusion coefficients (in the form used by LMC, 
+not our multispecies diffusion formulation).
+
+\item {\tt EGSE3} computes shear viscosity.
 
 \end{itemize}
 
