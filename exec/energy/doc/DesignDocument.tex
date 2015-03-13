@@ -329,7 +329,7 @@ the current solution drifts using $\delta S_{\rm corr}$ the previous iteration.
 \section{Heat Flux Formulation}
 Here's the basic idea.  Recall (\ref{eq:enthalpy}):
 \begin{equation}
-\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt} + \nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_kF_k.
+\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt} + \nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_k\Fb_k.
 \end{equation}
 We want to handle the thermal diffusion semi-implicitly.  We use an iterative method that
 linearizes the relationship between how $h$ changes with respect to changes in $T$.
@@ -343,7 +343,7 @@ Let's assume we want to form an iterative update to $h$ using
 \begin{eqnarray}
 \frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l+1}\nonumber\\
-&& + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}F_k^{n+1,l}.\label{eq:temp form}
+&& + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}\Fb_k^{n+1,l}.\label{eq:temp form}
 \end{eqnarray}
 \\
 We start with initial guesses $(T,h)^{n+1,l=1} = (T,h)^n$.\\ \\
@@ -358,8 +358,8 @@ h^{n+1,l+1} = h^{n+1,l} + c_p^{n+1,l}\delta T\label{eq:delta h}
 Substituting (\ref{eq:delta T}) and (\ref{eq:delta h}) into (\ref{eq:temp form}) gives:
 \begin{eqnarray}
 \frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt}\nonumber\\
-&&\hspace{-0.5in}+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}(T^{n+1,l} + \delta T)\nonumber\\
-&&\hspace{-0.5in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l}.
+&&\hspace{-0.5in}+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
+&&\hspace{-0.5in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}.
 \end{eqnarray}
 We solve this implicitly for $\delta T$, then compute $T^{n+1,l+1}$
 using (\ref{eq:delta T}) and compute $h^{n+1,l+1}$ from the EOS.
@@ -435,13 +435,13 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 \frac{\rho^{*,n+1}(h^{*,n+1,l} + c_p^{*,n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=&
 -\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} \nonumber\\
 &&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla(T^{*,n+1,l} + \delta T)\nonumber\\
-&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} F_k^{*,n+1,l},
+&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} \Fb_k^{*,n+1,l},
 \end{eqnarray}
 \begin{eqnarray}
 \left(\frac{\rho^{*,n+1}c_p^{*,n+1,l}}{\Delta t} - \frac{1}{2}\lambda^{*,n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{*,n+1}h^{*,n+1,l}}{\Delta t}\nonumber\\
 &&\hspace{-1.25in} - \nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla T^{*,n+1,l}\nonumber\\
-&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} F_k^{*,n+1,l}.
+&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} \Fb_k^{*,n+1,l}.
 \end{eqnarray}
 
 {\bf Step 0d-3:} Update the temperature and enthalpy using
@@ -509,13 +509,13 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 \frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \nonumber\\
 &&\hspace{-1in}\half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right] \nonumber\\
 &&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
-&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l},
+&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l},
 \end{eqnarray}
 \begin{eqnarray}
 \left(\frac{\rho^{n+1}c_p^{n+1,l}}{\Delta t} - \frac{1}{2}\lambda^{n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1}h^{n+1,l}}{\Delta t}\nonumber\\
 &&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right]\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l}\nonumber\\
-&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n F_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} F_k^{n+1,l}.
+&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}.
 \end{eqnarray}
 {\bf Step 1d-3:} Update the temperature and enthalpy using
 \begin{equation}
