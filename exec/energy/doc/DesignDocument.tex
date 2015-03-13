@@ -68,8 +68,8 @@
 The governing conservation equations for momentum, mass, and energy for our system are:
 \begin{eqnarray}
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb,\label{eq:momentum}\\
-\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot F_i,\label{eq:mass}\\
-\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb + \sum_k h_k F_k,\label{eq:enthalpy}
+\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot \Fb_i,\label{eq:mass}\\
+\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb + \sum_k \nabla\cdot h_k \Fb_k,\label{eq:enthalpy}
 \end{eqnarray}
 where $h_k = \partial h/\partial w_k$, and
 $\taub = \bar\taub + \tilde\taub$,
