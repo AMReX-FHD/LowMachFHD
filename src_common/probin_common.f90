@@ -24,7 +24,7 @@ module probin_common_module
   integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance
-  real(dp_t),save :: k_B,visc_coef
+  real(dp_t),save :: k_B,Runiv,visc_coef
   integer,save    :: stoch_stress_form,filtering_width,max_step
   integer,save    :: restart,print_int,project_eos_int,algorithm_type
   integer,save    :: barodiffusion_type
@@ -69,6 +69,7 @@ module probin_common_module
   namelist /probin_common/ variance_coef_mom  ! global scaling epsilon for stochastic momentum forcing
   namelist /probin_common/ variance_coef_mass ! global scaling epsilon for stochastic mass forcing
   namelist /probin_common/ k_B                ! Boltzmann's constant
+  namelist /probin_common/ Runiv              ! Universal gas constant in ergs/mol/K
 
   ! Algorithm control / selection
   !----------------------
@@ -221,6 +222,7 @@ contains
     variance_coef_mom = 1.d0
     variance_coef_mass = 1.d0
     k_B = 1.d0
+    Runiv = 8.314462175d7
 
     algorithm_type = 0
 
@@ -609,6 +611,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) k_B
+
+       case ('--Runiv')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) Runiv
 
        case ('--filtering_width')
           farg = farg + 1

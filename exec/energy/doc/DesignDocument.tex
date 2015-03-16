@@ -601,37 +601,63 @@ In Appendix A of Almgren et al., {\it Astrophys.~J.}, 637, 2006, it was shown th
 \end{equation}
 with $\gamma = c_p/c_V$ the ratio of specific heats.\\ \\
 
-The EOS we will test is an inert ternary mixture of $O_2, CH_4$, and $N_2$ available in
-the git repository, {\tt Combustion/Chemistry/data/inert/inert30.c}.  The functions of
-interest are:\\
+The EOS we will test is a mixture of four noble gases, He, Ne, Ar, and Kr.
+We use ideal gas EOS assuming hard sphere dynamics found in
+{\tt chemistry\_module\_HS.f90}.
+To initialize the EOS, we need the following:\\
 \begin{itemize}
-\item {\tt CKPY} computes $P(\rho,\wb,T)$.
 
-\item {\tt CKCPBS} computes $c_p(\wb,T)$
-
-\item {\tt CKCVBS} computes $c_v(\wb,T)$
-
-\item {\tt CKWT} returns the molecular masses, $\mb$.
-
-\item {\tt CKMMWY} computes the mixture-averaged molecular mass given $\wb$.
-
-\item {\tt CKHBMS} computes $h(\wb,T)$
-
-\item {\tt CKHMS} computes $h_m(\wb,T)$
-
-\item {\tt CKYTX} computes mole fractions, $\xb$, from mass fractions, $\wb$.\\
+\item 
 
 \end{itemize}
 
-For these, first call {\tt EGSPAR} to initialize thermodynamics.\\
+
+The functions of interest are:\\
 \begin{itemize}
 
-\item The average of {\tt EGSL1} with {\tt ALPHA=1} and {\tt ALPHA=-1} computes $\lambda(T,\xb)$.
+\item {\tt CKCPBS} computes $c_p(\wb,T)$.  For now this is not actually a function
+of temperature.\\
 
-\item {\tt EGSV1} computes mass diffusion coefficients (in the form used by LMC, 
-not our multispecies diffusion formulation).
+\item {\tt CKCVBS} computes $c_v(\wb,T)$.  For now this is not actually a function
+of temperature.\\
 
-\item {\tt EGSE3} computes shear viscosity.
+\item {\tt CKUBMS} computes the mean internal energy, $e(\wb,T)$.\\
+
+\item {\tt get\_t\_given\_ey} computes $T(e,\wb,T)$.\\
+
+\item {\tt CKPY} computes $P(\rho,\wb,T)$.\\
+
+\item {\tt CKHMS} computes $h_m(\wb,T)$.  Note $h = \sum_k w_k h_k$.\\
+
+\item {\tt CKYTX} computes mole fractions, $\xb$, from mass fractions, $\wb$.\\
+
+\item {\tt CKYTCR} computes molar concentrations from $\rho,\wb$.\\
+
+\item {\tt CKXTY} mass fractions, $\wb$, from mole fractions, $\xb$.\\
+
+\item {\tt CKMMWY} computes the mixture-averaged molecular mass, $\bar{m}$, given $\wb$.\\
+
+\item {\tt CKRHOY} computes $\rho(P,\Wb,T)$.\\
+
+\item {\tt CKCPMS} computes the individual specific heats for each component,
+$c_p(T)$.  For now this is not actually a function of temperature.\\
+
+\end{itemize}
+
+The subroutine {\tt ideal\_mixture\_transport} takes $\rho,T,P,\wb$, and $\xb$ 
+as inputs and computes the following:\\
+\begin{itemize}
+
+\item {\tt eta} is the dynamic viscosity, $\eta$.\\
+
+\item {\tt zeta} is the bulk viscosity, $\kappa$, which we will not use for now.\\
+
+\item {\tt diff\_ij} is the diffusion matrix, $\chi$.\\
+
+\item {\tt kappa} is the thermal conductivity, $\lambda$.\\
+
+\item {\tt chitil} is related to the thermodiffusion coefficients, 
+such that $\zeta_i = x_i\tilde{\chi}_i$\\
 
 \end{itemize}
 

@@ -3,39 +3,21 @@ module chemistry_module
   USE, INTRINSIC :: ISO_C_BINDING ! Fortran 2003 intrinsic module
 
   use bl_types
-  USE BoxLibRNGs
-  USE Random_Numbers
+  use bl_constants_module
+  use probin_common_module, only: k_B, Runiv
+  use probin_multispecies_module, only: nspecies
 
 
   implicit none
 
-  integer, save :: nspecies    ! number of species
-  integer, save :: nreactions  ! number of reactions
-  integer, save :: nrandoms  ! number of random numbers
-  integer, save :: nelem  ! number of elements
   integer, parameter  :: MAXSPECIES = 20
-  integer, parameter  :: MAXREACTS = 20
-  integer, parameter  :: fastRNGchem = 0   !  0=use normal RNG, 1=use uniform RNG (much faster)
 
-  REAL*8, SAVE :: kboltz=1.380648813d-16 ! Boltzmann's constant
-  REAL*8, SAVE :: Runiv = 8.314462175d7 ! UNIVERSAL GAS CONSTANT IN ERGS/MOL/K
-! REAL*8, SAVE :: kboltz=1.d0 ! Boltzmann's constant
-! REAL*8, SAVE :: Runiv = 1d0 ! UNIVERSAL GAS CONSTANT IN ERGS/MOL/K
   REAL*8, SAVE :: AVOGADRO ! UNIVERSAL GAS CONSTANT IN ERGS/MOL/K
 
-  REAL*8, PARAMETER :: pi= 3.1415926535897932d0
-  REAL*8, PARAMETER :: sqrt_pi= 1.77245385090551602d0
+  REAL*8, SAVE :: fake_diff_coeff = -1.d0   ! Adjust transport coefficients artificially
+  REAL*8, SAVE :: fake_soret_factor = 1.0d0 ! Adjust transport coefficients artificially
 
-  REAL*8, SAVE :: cross_enhancement=1.0d0 ! Cross-collision frequency prefactor
-  REAL*8, SAVE :: enskog_coeffs(4), Kfactor0(4), Kfactor1(4)
-  REAL*8, SAVE :: tcoeffs(1:4) = (/-1.15, -1.06, -1.02, -1.00/) ! Correction to Enskog coefficients for DSMC
-  REAL*8, SAVE :: fake_diff_coeff = -1.d0, fake_soret_factor = 1.0d0 ! Adjust transport coefficients artificially
-  integer, public, parameter :: ENSKOG_HS= 0, HS = 1, RS = 2 !Type of particle- controls BASE transport coefficients 
-  integer, public :: ptype = 0 !Type of particle- this controls what the BASE transport coefficients 
-  integer, public :: probtype  !  type of problem 1 equil, 2 diffusion barrier, 3 Rayleigh Taylor
   integer, SAVE :: use_fake_diff = 0
-  integer, SAVE :: set_rate = 1   !  if 1 set forwad rate in inputs; if not compute from equilibrium
-  LOGICAL, SAVE :: histogram_fractions = .FALSE., do_arrhenius=.false.
 
 !  kludge to get around input 
 
@@ -43,18 +25,9 @@ module chemistry_module
   REAL*8 :: Ywall_top_in(MAXSPECIES), Xwall_top_in(MAXSPECIES)
   REAL*8 :: Ywall_bot_in(MAXSPECIES), Xwall_bot_in(MAXSPECIES)
 
-   ! Donev added these for Schlogl
-   REAL*8, PUBLIC, SAVE :: initial_values(MAXSPECIES)=0.0d0 ! This is a vector of parameters to be used for initial conditions in problem setup   
-   INTEGER, PUBLIC, SAVE :: chemical_noise=1 !  1=GENERIC, 2=CLE, 3=Hanggi (Schlogl only)
-  ! Reaction rates
-  real*8, save :: chemical_rates(2*MAXREACTS)=1.0d0, rate_multiplier=1.0d0 ! All rates can be multiplied by a number      
-
-  NAMELIST /HS_Parameters/ nspecies,  dia_in, molecular_weight_in, int_deg_free_in, &
-          Ywall_top_in, Ywall_bot_in, Xwall_top_in, Xwall_bot_in, probtype, kboltz, Runiv, &
-          use_fake_diff, fake_diff_coeff, initial_values, chemical_noise, chemical_rates, &
-          histogram_fractions, fake_soret_factor, do_arrhenius, set_rate, rate_multiplier
-
-  LOGICAL, SAVE :: use_bulk_viscosity = .false.
+  NAMELIST /HS_Parameters/ dia_in, molecular_weight_in, int_deg_free_in, &
+          Ywall_top_in, Ywall_bot_in, Xwall_top_in, Xwall_bot_in, Runiv, &
+          use_fake_diff, fake_diff_coeff, fake_soret_factor
 
   REAL*8, SAVE, allocatable :: dia(:)
   REAL*8, SAVE, allocatable :: molecular_weight(:)
@@ -70,7 +43,6 @@ module chemistry_module
 !  these are built duruing initialization and saved for efficiency
   REAL*8, save, allocatable :: Dbinbar(:,:),omega11bar(:,:),sigma11bar(:,:),diamat(:,:)
   REAL*8, save, allocatable :: amat1bar(:,:),amat2bar(:,:),alphabar(:,:)
-! REAL*8, save, allocatable :: randchem(:,:,:,:,:)
   REAL*8, save, allocatable :: chem_noise(:,:,:,:)
 
   logical, save :: chemistry_initialized = .false.
@@ -82,13 +54,13 @@ module chemistry_module
 
 contains
 
-  subroutine chemistry_init(nspec,nreac,nrng,nmlname)
+  subroutine chemistry_init(nmlname)
 
 !    use problem_setup
 
     character(LEN=1024) ::  nmlname
     integer :: iwrk, nfit, i, ic, ii, j
-    integer :: nspec, nreac, dochem, dostrang, nrng
+    integer :: dochem, dostrang
     double precision :: rwrk,sumxb,sumyb,sumxt,sumyt
     integer, allocatable :: names(:)
     integer :: unit=100
@@ -152,16 +124,11 @@ contains
        call CKYTX(Ywall_bot, iwrk, rwrk, Xwall_bot)
     endif
 
-!    call CKINDX(iwrk,rwrk, nelem, nspec, nreactions, nfit)
-    ! AJN HACK - hard code for 4 noble gases
-    nspec = 4
-    nreactions = 0
+    ! AJN HACK - commented this out;
+    !            set nspecies in probin_multispeices to 4 for noble gas problem
+    ! call CKINDX(iwrk,rwrk, nelem, nspec, nreactions, nfit)
 
-    nspec = nspecies
-    nreac = nreactions
-    nrandoms = nrng
-
-    AVOGADRO = Runiv / kboltz
+    AVOGADRO = Runiv / k_B
 
     do ns =  1,nspecies
        e0ref(ns) = 0.d0
@@ -194,31 +161,31 @@ contains
    allocate(alphabar(1:nspecies,1:nspecies))
 
 
-   do i = 1, nspec
-    do j = 1, nspec
+   do i = 1, nspecies
+    do j = 1, nspecies
 
          diamat(i,j) = 0.5d0*(dia(i) + dia(j))
 
-         Dbinbar(i,j) = 3.0d0/16.0d0*sqrt(2.0d0*pi*kboltz**3.d00    &   
-           *(molecular_mass(i)+molecular_mass(j))/molecular_mass(i)/molecular_mass(j))/(pi*diamat(i,j)**2.0d0)
+         Dbinbar(i,j) = 3.0d0/16.0d0*sqrt(2.0d0*M_PI*k_B**3.d00    &   
+           *(molecular_mass(i)+molecular_mass(j))/molecular_mass(i)/molecular_mass(j))/(M_PI*diamat(i,j)**2.0d0)
 
          mu = molecular_mass(i)*molecular_mass(j)/(molecular_mass(i) + molecular_mass(j))
-         omega11bar(i,j) = sqrt(pi*kboltz/(2.0d0*mu))*diamat(i,j)**2.0d0
+         omega11bar(i,j) = sqrt(M_PI*k_B/(2.0d0*mu))*diamat(i,j)**2.0d0
 
-         sigma11bar(i,j) = sqrt( kboltz/(2.0d0*pi*molecular_mass(i)*molecular_mass(j)/  &
-               (molecular_mass(i)+molecular_mass(j))) )*pi*(diamat(i,j)**2.0d0)
+         sigma11bar(i,j) = sqrt( k_B/(2.0d0*M_PI*molecular_mass(i)*molecular_mass(j)/  &
+               (molecular_mass(i)+molecular_mass(j))) )*M_PI*(diamat(i,j)**2.0d0)
 
          Fij = (6.0d0*molecular_mass(i)*molecular_mass(i) + 13.0d0/5.0d0*molecular_mass(j)*molecular_mass(j) +   &
            16.0d0/5.0d0*molecular_mass(i)*molecular_mass(j))/((molecular_mass(i)+molecular_mass(j))**2.0d0)
          Fijstar = -27.0d0/5.0d0
 
-         amat1bar(i,j) = 5.0d0/(kboltz)*molecular_mass(i)*molecular_mass(j)/    &
+         amat1bar(i,j) = 5.0d0/(k_B)*molecular_mass(i)*molecular_mass(j)/    &
                (molecular_mass(i)+molecular_mass(j))*Fij*sigma11bar(i,j)
-         amat2bar(i,j) = 5.0d0/(kboltz)*molecular_mass(i)*molecular_mass(j)*molecular_mass(i)*molecular_mass(j)/    &
+         amat2bar(i,j) = 5.0d0/(k_B)*molecular_mass(i)*molecular_mass(j)*molecular_mass(i)*molecular_mass(j)/    &
                ((molecular_mass(i)+molecular_mass(j))**3.0d0)*Fijstar*sigma11bar(i,j)
         fact1 = molecular_mass(i)*molecular_mass(j)/(molecular_mass(i)+molecular_mass(j))
 
-        alphabar(i,j) = 8.0d0/(3.0d0*kboltz)*fact1*fact1*   &
+        alphabar(i,j) = 8.0d0/(3.0d0*k_B)*fact1*fact1*   &
                  (-.5d0*sigma11bar(i,j))
 
      enddo
@@ -521,7 +488,6 @@ contains
       real*8 cu0, cu1,cuy,cuz, conc,temp 
       real*8 diamx,mx,omc,ctemp,Ix,Kx,K0,K1,Kb
       real*8 s0, s1
-      real*8 Kfactorx(4)
       real*8 prom,ratm,difm,summ,omcsq,comc,csq 
 
 
@@ -591,12 +557,12 @@ contains
 
 !      if(old .eq.1)then
 
-!      call viscosityM(xxtr,temperature,molecular_mass,kboltz,dd,eta,nspec) 
+!      call viscosityM(xxtr,temperature,molecular_mass,k_B,dd,eta,nspec) 
 
 !   not bulk viscosity
 !      zeta = 0.d0
 
-!      call lambdaM(xxtr,temperature,molecular_mass,kboltz,dd,Cv,kappa,nspec)
+!      call lambdaM(xxtr,temperature,molecular_mass,k_B,dd,Cv,kappa,nspec)
 
 
 
@@ -612,8 +578,8 @@ contains
 !            endif
 
 
-!      call diffusivityM(xxtr,yytr,temperature,molecular_mass,kboltz,dd,pressure,diff_ij,nspec)
-!      call thermalDiffM(xxtr,temperature,molecular_mass,kboltz,dd,chitil,nspec)
+!      call diffusivityM(xxtr,yytr,temperature,molecular_mass,k_B,dd,pressure,diff_ij,nspec)
+!      call thermalDiffM(xxtr,temperature,molecular_mass,k_B,dd,chitil,nspec)
 
 !      else
 
@@ -623,9 +589,9 @@ contains
           do i = 1, nspec
             do j = 1, nspec
 
-!            Dbin(i,j) = 3.0d0/16.0d0*sqrt(2.0d0*pi*kboltz**3.d00*temperature**3.0d0    &
+!            Dbin(i,j) = 3.0d0/16.0d0*sqrt(2.0d0*M_PI*k_B**3.d00*temperature**3.0d0    &
 !              *(molecular_mass(i)+molecular_mass(j))/molecular_mass(i)/molecular_mass(j))  &
-!              /(pressure*pi*dd(i,j)**2.0d0)
+!              /(pressure*M_PI*dd(i,j)**2.0d0)
 
              Dbin(i,j) = Dbinbar(i,j)*temperature*sqrtT/pressure
              omega11(i,j) = omega11bar(i,j)*sqrtT
@@ -636,10 +602,10 @@ contains
             enddo
           enddo
 
-         call visc_lin(nspec,kboltz,omega11,yytr,temperature,density,molecular_mass,eta)
+         call visc_lin(nspec,k_B,omega11,yytr,temperature,density,molecular_mass,eta)
          zeta = 0.d0
 
-         call lambda_lin(nspec,kboltz,Dbin,omega11,yytr,temperature,density,molecular_mass,kappa)
+         call lambda_lin(nspec,k_B,Dbin,omega11,yytr,temperature,density,molecular_mass,kappa)
 
 !  jmax = 3
          call D_GIOVANGIGLI(nspec,Dbin,yytr,xxtr,diff_ij)
@@ -1087,7 +1053,7 @@ end module chemistry_module
 
 !-------------------------------------------------
 
-          subroutine visc_lin(nspec,kboltz,omega11,Ykp,T,rho,mk,etaMix)
+          subroutine visc_lin(nspec,k_B,omega11,Ykp,T,rho,mk,etaMix)
 
            implicit none 
 
@@ -1097,7 +1063,7 @@ end module chemistry_module
 
          real(kind=8) :: T, rho, etaMix, sum1
          integer :: ii, jj, kk
-         real*8 :: kboltz
+         real*8 :: k_B
          real(kind=8), dimension(1:nspec,1:nspec) :: omega11, QoR
          real(kind=8) :: rhs(1:nspec), bSonine(1:nspec), diag(1:nspec)
          integer :: ip(1:nspec)
@@ -1147,7 +1113,7 @@ end module chemistry_module
         enddo
 
 
-          etaMix = 0.5d0*kboltz*T*sum1
+          etaMix = 0.5d0*k_B*T*sum1
 
 
 
@@ -1157,12 +1123,12 @@ end module chemistry_module
 
 !-------------------------------------------------------------------------
 
-         subroutine lambda_lin(nspec,kboltz,Dbin,omega11,Ykp,T,rho,mk,lammix)
+         subroutine lambda_lin(nspec,k_B,Dbin,omega11,Ykp,T,rho,mk,lammix)
 
            implicit none 
 
          integer :: nspec   
-         real(kind=8) :: kboltz
+         real(kind=8) :: k_B
          real(kind=8) :: mw, T, rho, mk(1:nspec),  lammix
          real(kind=8), dimension(1:nspec) :: Ykp,  nk ,beta
          integer :: i, j, k
@@ -1241,7 +1207,7 @@ end module chemistry_module
            ! Build vector rhs ; see HCB 7.4-54
            do i = 1, nspec
             aSonine(i) = 0.0d0
-            beta(i)= sqrt(2.0d0*kboltz*T/mk(i))
+            beta(i)= sqrt(2.0d0*k_B*T/mk(i))
             aSonine(i+nspec) = -(15.0d0/4.0d0)*nk(i)*beta(i)
            enddo
 
@@ -1262,7 +1228,7 @@ end module chemistry_module
            do i = 1, nspec
             sum1 = sum1 + nk(i)*beta(i)* aSonine(nspec+i)
            enddo
-           lamdaprime = -5.0d0/4.0d0 * kboltz * sum1
+           lamdaprime = -5.0d0/4.0d0 * k_B * sum1
 
 
            sum1 = 0
@@ -1277,7 +1243,7 @@ end module chemistry_module
            ntotal = sum(nk(:))
 
 
-           lammix = lamdaprime - 0.5d0*kboltz/nTotal * sum1  ! HCB 7.4-65
+           lammix = lamdaprime - 0.5d0*k_B/nTotal * sum1  ! HCB 7.4-65
 
 
 
@@ -1294,8 +1260,7 @@ end module chemistry_module
          real(kind=8), dimension(1:nspec,1:nspec) :: alphabar 
          real(kind=8) :: sqrtT,  kT(1:nspec)
          integer :: i, j, k
-         real(kind=8) :: pi
-         real*8 :: kboltz
+         real*8 :: k_B
          real(kind=8), dimension(1:nspec,1:nspec) :: a_ij1, a_ij2,sigma11
          real(kind=8), dimension(1:nspec,1:nspec) :: Aij
          real(kind=8), dimension(1:nspec) :: AA
@@ -1351,7 +1316,7 @@ end module chemistry_module
 
 !-------------------------------------------------
 
-          subroutine viscosityM(xoriginal,T,m,kboltz,d,etaMix,nspeci)
+          subroutine viscosityM(xoriginal,T,m,k_B,d,etaMix,nspeci)
 
          integer :: nspeci
          real(kind=8), dimension(1:nspeci) :: x, xoriginal, m
@@ -1363,8 +1328,8 @@ end module chemistry_module
          real(kind=8) :: T,  sumTemp, etaMix
          integer :: ii, jj, kk
          real(kind=8) :: numerator, denominator
-         real(kind=8) :: eps, pi, sumx
-         real*8 :: kboltz, avo
+         real(kind=8) :: eps, sumx
+         real*8 :: k_B, avo
 
          real*8 :: DMGT
 
@@ -1386,11 +1351,9 @@ end module chemistry_module
            sumx = sum(x(:))  
            x(:) = x(:)/sumx
 
-      pi = 4.d0*atan2(1.d0,1.d0)
-
       do ii=1,nspeci
         ! page 528 HCB
-       eta1(ii) = 5.0d0/(16.0d0*d(ii,ii)**2.0d0)*sqrt(m(ii)*kboltz*T/pi)
+       eta1(ii) = 5.0d0/(16.0d0*d(ii,ii)**2.0d0)*sqrt(m(ii)*k_B*T/M_PI)
 
       enddo
 
@@ -1399,7 +1362,7 @@ end module chemistry_module
        do jj=1,ii
         ! page 529 HCB
          eta2(ii,jj) = 5.0d0/(16.0d0*d(ii,jj)**2.0d0)*   &
-             sqrt(2.0d0*m(ii)*m(jj)/(m(ii)+m(jj))*kboltz*T/pi)
+             sqrt(2.0d0*m(ii)*m(jj)/(m(ii)+m(jj))*k_B*T/M_PI)
         eta2(jj,ii) = eta2(ii,jj)
        enddo
       enddo
@@ -1442,7 +1405,7 @@ end module chemistry_module
 
 !-------------------------------------------------
 
-          subroutine lambdaM(xoriginal,T,m,kboltz,d,Cv,lamMix,nspeci)
+          subroutine lambdaM(xoriginal,T,m,k_B,d,Cv,lamMix,nspeci)
 
          integer :: nspeci
          real(kind=8), dimension(1:nspeci) :: x, xoriginal, m, Cv
@@ -1456,12 +1419,10 @@ end module chemistry_module
          real(kind=8) :: T, sumTemp, lamMix
          integer :: ii, jj, kk
          real(kind=8) :: numerator, denominator
-         real(kind=8) :: eps, pi, sumx
-         real*8 :: kboltz, avo, matscale
+         real(kind=8) :: eps, sumx
+         real*8 :: k_B, avo, matscale
 
          real*8 :: DMGT
-
-         pi = acos(-1.0d0)
 
          ! clear variables
          L00(1:nspeci,1:nspeci) = 0.0d0
@@ -1492,8 +1453,8 @@ end module chemistry_module
       matscale = 0.d0
       do ii=1,nspeci
          ! p 534, HC!
-        lam1(ii) = 75.0d0/(64.0d0*d(ii,ii)**2.0d0)* kboltz*  &
-             sqrt(kboltz*T/m(ii)/pi)
+        lam1(ii) = 75.0d0/(64.0d0*d(ii,ii)**2.0d0)* k_B*  &
+             sqrt(k_B*T/m(ii)/M_PI)
         matscale = max(matscale,lam1(ii))
       enddo
 
@@ -1501,8 +1462,8 @@ end module chemistry_module
            ! p 535, HCB
       do ii=1,nspeci
        do jj=1,nspeci
-         lam2(ii,jj) = 75.0d0/(64.0d0*d(ii,jj)**2.0d0)*kboltz*   &
-             sqrt((m(ii)+m(jj))/(2.0d0*m(ii)*m(jj))*kboltz*T/pi)
+         lam2(ii,jj) = 75.0d0/(64.0d0*d(ii,jj)**2.0d0)*k_B*   &
+             sqrt((m(ii)+m(jj))/(2.0d0*m(ii)*m(jj))*k_B*T/M_PI)
        enddo
       enddo
 
@@ -1601,7 +1562,7 @@ end module chemistry_module
 !-------------------------------------------------
 
 
-        subroutine diffusivityM(x,y,T,m,kboltz,d,pres,Diff,nspeci)
+        subroutine diffusivityM(x,y,T,m,k_B,d,pres,Diff,nspeci)
 
         integer :: nspeci
          real(kind=8), dimension(1:nspeci) :: x, y, m
@@ -1614,9 +1575,9 @@ end module chemistry_module
          real(kind=8) :: T, pres,  sumTemp, MWmix, sumy
          integer :: ii, jj, kk, ll, nn
          real(kind=8) :: deter
-         real(kind=8) :: eps, pi
+         real(kind=8) :: eps
          real(kind=8), dimension(1:nspeci) :: Dimix, FDV
-         real*8 :: kboltz
+         real*8 :: k_B
 
 
          ! clear variables
@@ -1624,15 +1585,13 @@ end module chemistry_module
          Pmat(1:nspeci,1:nspeci) = 0.0d0
          Pmatt(1:nspeci,1:nspeci) = 0.0d0
 
-         pi = 4.d0*atan2(1.d0,1.d0)
-
            ! Binary diffusivity
          do ii = 1, nspeci
           do jj = 1, nspeci
            ! p 539, HCB
-             D1(ii,jj) = (3.0d0/16.0d0)*sqrt(2*pi*(kboltz**3.0d0)*   &
+             D1(ii,jj) = (3.0d0/16.0d0)*sqrt(2*M_PI*(k_B**3.0d0)*   &
                       (T**3.0d0)*(m(ii)+m(jj))/m(ii)/m(jj))         &
-                     /(pres*pi*(d(ii,jj)**2.0d0))
+                     /(pres*M_PI*(d(ii,jj)**2.0d0))
           enddo
          enddo
 
@@ -1720,17 +1679,17 @@ end module chemistry_module
 
 !-------------------------------------------------
 
-        subroutine thermalDiffM(x,T,m,kboltz,d,kT,nspeci)
+        subroutine thermalDiffM(x,T,m,k_B,d,kT,nspeci)
 
          integer :: nspeci
          real(kind=8), dimension(1:nspeci) :: x, m
          real(kind=8), dimension(1:nspeci) :: kT
          real(kind=8), dimension(1:nspeci,1:nspeci) :: d
-         real*8 :: kboltz
+         real*8 :: k_B
 
          real(kind=8) :: T,  sumTemp
          integer :: ii, jj, kk
-         real(kind=8) :: eps, pi, Runiv, sigma11, sigma12, Fij, Fijstar
+         real(kind=8) :: eps, Runiv, sigma11, sigma12, Fij, Fijstar
 
          real(kind=8), dimension(1:nspeci,1:nspeci) :: a_ij1, a_ij2
          real(kind=8), dimension(1:nspeci,1:nspeci) :: Aij, Aij_U
@@ -1743,21 +1702,19 @@ end module chemistry_module
 
          ! Based on Valk 1963 (Waldmann)
          
-         pi = 4.d0*atan2(1.d0,1.d0)
-
          a_ij1(1:nspeci,1:nspeci) = 0.0d0
          a_ij2(1:nspeci,1:nspeci) = 0.0d0
          do ii = 1, nspeci
           do jj = 1, nspeci
-           sigma11 = sqrt( kboltz*T/(2.0d0*pi*m(ii)*m(jj)/  &
-                      (m(ii)+m(jj))) )*pi*(d(ii,jj)**2.0d0)
+           sigma11 = sqrt( k_B*T/(2.0d0*M_PI*m(ii)*m(jj)/  &
+                      (m(ii)+m(jj))) )*M_PI*(d(ii,jj)**2.0d0)
            Fij = (6.0d0*m(ii)*m(ii) + 13.0d0/5.0d0*m(jj)*m(jj) +   &
                   16.0d0/5.0d0*m(ii)*m(jj))/((m(ii)+m(jj))**2.0d0)
            Fijstar = -27.0d0/5.0d0
 
-           a_ij1(ii,jj) = 5.0d0/(kboltz*T)*m(ii)*m(jj)/    &
+           a_ij1(ii,jj) = 5.0d0/(k_B*T)*m(ii)*m(jj)/    &
                       (m(ii)+m(jj))*sigma11*Fij
-           a_ij2(ii,jj) = 5.0d0/(kboltz*T)*m(ii)*m(jj)*m(ii)*m(jj)/    &
+           a_ij2(ii,jj) = 5.0d0/(k_B*T)*m(ii)*m(jj)*m(ii)*m(jj)/    &
                       ((m(ii)+m(jj))**3.0d0)*sigma11*Fijstar
           enddo
          enddo
@@ -1805,11 +1762,11 @@ end module chemistry_module
           do ii = 1, nspeci
            do jj = 1, nspeci
             fact1 = m(ii)*m(jj)/(m(ii)+m(jj))
-           sigma11 = sqrt( kboltz*T/(2.0d0*pi*m(ii)*m(jj)/   &
-                      (m(ii)+m(jj))) )*pi*(d(ii,jj)**2.0d0)
+           sigma11 = sqrt( k_B*T/(2.0d0*M_PI*m(ii)*m(jj)/   &
+                      (m(ii)+m(jj))) )*M_PI*(d(ii,jj)**2.0d0)
             sigma12 = 3.0d0*sigma11
 
-            alphaij(ii,jj) = 8.0d0/(3.0d0*kboltz*T)*fact1*fact1*   &
+            alphaij(ii,jj) = 8.0d0/(3.0d0*k_B*T)*fact1*fact1*   &
         (5.0d0/2.0d0*sigma11 - sigma12)*(AA(ii)/m(ii) - AA(jj)/m(jj))
            enddo
           enddo
