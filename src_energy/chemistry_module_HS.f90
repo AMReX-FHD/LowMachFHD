@@ -1,12 +1,9 @@
 module chemistry_module
 
-  USE, INTRINSIC :: ISO_C_BINDING ! Fortran 2003 intrinsic module
-
   use bl_types
   use bl_constants_module
-  use probin_common_module, only: k_B, Runiv
+  use probin_common_module, only: k_B, Runiv, molmass
   use probin_multispecies_module, only: nspecies
-
 
   implicit none
 
@@ -21,12 +18,9 @@ module chemistry_module
 
 !  kludge to get around input 
 
-  REAL*8 :: dia_in(MAXSPECIES), molecular_weight_in(MAXSPECIES), int_deg_free_in(MAXSPECIES)
-  REAL*8 :: Ywall_top_in(MAXSPECIES), Xwall_top_in(MAXSPECIES)
-  REAL*8 :: Ywall_bot_in(MAXSPECIES), Xwall_bot_in(MAXSPECIES)
+  REAL*8 :: dia_in(MAXSPECIES), int_deg_free_in(MAXSPECIES)
 
-  NAMELIST /HS_Parameters/ dia_in, molecular_weight_in, int_deg_free_in, &
-          Ywall_top_in, Ywall_bot_in, Xwall_top_in, Xwall_bot_in, Runiv, &
+  NAMELIST /probin_energy/ dia_in, int_deg_free_in, &
           use_fake_diff, fake_diff_coeff, fake_soret_factor
 
   REAL*8, SAVE, allocatable :: dia(:)
@@ -36,8 +30,6 @@ module chemistry_module
   REAL*8, save, allocatable :: cpgas(:)
   REAL*8, save, allocatable :: e0ref(:)
   REAL*8, save, allocatable :: molecular_mass(:)
-  REAL*8, save, allocatable :: Ywall_top(:),Xwall_top(:)
-  REAL*8, save, allocatable :: Ywall_bot(:),Xwall_bot(:)
 
 !  matrix components for computation of diffusion that are independent of state
 !  these are built duruing initialization and saved for efficiency
@@ -61,20 +53,16 @@ contains
     character(LEN=1024) ::  nmlname
     integer :: iwrk, nfit, i, ic, ii, j
     integer :: dochem, dostrang
-    double precision :: rwrk,sumxb,sumyb,sumxt,sumyt
+    double precision :: rwrk
     integer, allocatable :: names(:)
     integer :: unit=100
     integer ns
     real*8 :: mu,Fij,Fijstar,fact1
 
     int_deg_free_in = 0  
-    Xwall_top_in=0
-    Ywall_top_in=0
-    Xwall_bot_in=0
-    Ywall_bot_in=0
 
     open(file=TRIM(nmlname), unit=unit, action="read", status="old")
-    read(UNIT=unit,NML=HS_Parameters) ! Read the namelist
+    read(UNIT=unit,NML=probin_energy) ! Read the namelist
     close(unit)
 
 
@@ -85,50 +73,19 @@ contains
    allocate(cpgas(nspecies))
    allocate(e0ref(nspecies))
    allocate(molecular_mass(nspecies))
-   allocate(Xwall_top(nspecies))
-   allocate(Ywall_top(nspecies))
-   allocate(Xwall_bot(nspecies))
-   allocate(Ywall_bot(nspecies))
 
-   sumxt = 0
-   sumyt = 0
-   sumxb = 0
-   sumyb = 0
+   AVOGADRO = Runiv / k_B
 
    do ns=1,nspecies
 
      dia(ns) = dia_in(ns)
-     molecular_weight(ns) = molecular_weight_in(ns)
+
+     ! molmass from namelist is in g/molecule.  Converting to g/mole
+     molecular_weight(ns) = molmass(ns)*AVOGADRO
+
      int_deg_free(ns) = int_deg_free_in(ns)
 
-     Xwall_top(ns) = Xwall_top_in(ns)
-     Ywall_top(ns) = Ywall_top_in(ns)
-     Xwall_bot(ns) = Xwall_bot_in(ns)
-     Ywall_bot(ns) = Ywall_bot_in(ns)
-     sumxb = sumxb + Xwall_bot(ns)
-     sumyb = sumyb + Ywall_bot(ns)
-     sumxt = sumxt + Xwall_top(ns)
-     sumyt = sumyt + Ywall_top(ns)
-
    enddo
-
-    if(abs(sumxt-1).lt.1.d-10)then
-       call CKXTY(Xwall_top, iwrk, rwrk, Ywall_top)
-    elseif(abs(sumyt-1).lt.1d-10)then
-       call CKYTX(Ywall_top, iwrk, rwrk, Xwall_top)
-    endif
-
-    if(abs(sumxb-1).lt.1.d-10)then
-       call CKXTY(Xwall_bot, iwrk, rwrk, Ywall_bot)
-    elseif(abs(sumyb-1).lt.1d-10)then
-       call CKYTX(Ywall_bot, iwrk, rwrk, Xwall_bot)
-    endif
-
-    ! AJN HACK - commented this out;
-    !            set nspecies in probin_multispeices to 4 for noble gas problem
-    ! call CKINDX(iwrk,rwrk, nelem, nspec, nreactions, nfit)
-
-    AVOGADRO = Runiv / k_B
 
     do ns =  1,nspecies
        e0ref(ns) = 0.d0
@@ -146,10 +103,6 @@ contains
     write(6,*)"int_deg_free",int_deg_free
     write(6,*)"cvgas",cvgas
     write(6,*)"cpgas",cpgas
-    write(6,*)"sumxt ",sumxt," Xwall top ",Xwall_top
-    write(6,*)"sumyt ",sumyt," Ywall top ",Ywall_top
-    write(6,*)"sumxb ",sumxb," Xwall bot ",Xwall_bot
-    write(6,*)"sumyb ",sumyb," Ywall bot ",Ywall_bot
 
 !    build matrices for computing diffusion
    allocate(diamat(1:nspecies,1:nspecies))
