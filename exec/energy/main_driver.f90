@@ -6,7 +6,6 @@ subroutine main_driver()
   use init_lowmach_module
   use init_temp_module
   use compute_mixture_properties_module
-  use initial_projection_module
   use write_plotfileLM_module
   use advance_timestep_overdamped_module
   use advance_timestep_inertial_module
@@ -16,7 +15,6 @@ subroutine main_driver()
   use analysis_module
   use analyze_spectra_module
   use div_and_grad_module
-  use eos_check_module
   use estdt_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
@@ -31,13 +29,12 @@ subroutine main_driver()
   use sum_momenta_module
   use restart_module
   use checkpoint_module
-  use project_onto_eos_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
-                                  probin_common_init, print_int, project_eos_int, &
+                                  probin_common_init, print_int, &
                                   advection_type, fixed_dt, max_step, cfl, &
-                                  algorithm_type, variance_coef_mom, initial_variance, &
+                                  variance_coef_mom, initial_variance, &
                                   barodiffusion_type
   use probin_multispecies_module, only: nspecies, Dbar, &
                                         start_time, &
@@ -325,7 +322,6 @@ subroutine main_driver()
      ! compute momentum
      call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
      call sum_momenta(mla,mtemp)
-     call eos_check(mla,rho_old)
   end if
 
   !=======================================================
@@ -365,11 +361,7 @@ subroutine main_driver()
   end do
 
   ! allocate and build multifabs that will contain random numbers
-  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
-     n_rngs = 1
-  else if (algorithm_type .eq. 2) then
-     n_rngs = 2
-  end if
+  n_rngs = 1
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
 
@@ -409,7 +401,7 @@ subroutine main_driver()
 
      ! add initial momentum fluctuations - only call in inertial code for now
      ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
-     if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
+     if (initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
      end if
@@ -459,20 +451,13 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
      
-     ! initial projection - only truly needed for inertial algorithm
-     ! for the overdamped algorithm, this only changes the reference state for the first
-     ! gmres solve in the first time step
-     ! Yes, I think in the purely overdamped version this can be removed
-     ! In either case the first ever solve cannot have a good reference state
-     ! so in general there is the danger it will be less accurate than subsequent solves
-     ! but I do not see how one can avoid that
-     ! From this perspective it may be useful to keep initial_projection even in overdamped
-     ! because different gmres tolerances may be needed in the first step than in the rest
-     if (algorithm_type .eq. 0) then
-        call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro,diff_mass_fluxdiv, &
-                                stoch_mass_fluxdiv, &
-                                Temp,eta,eta_ed,dt,dx,the_bc_tower)
-     end if
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     ! Here is where we put Step 0
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!     call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro,diff_mass_fluxdiv, &
+!                             stoch_mass_fluxdiv, &
+!                             Temp,eta,eta_ed,dt,dx,the_bc_tower)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -483,7 +468,6 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
         call sum_momenta(mla,mtemp)
-        call eos_check(mla,rho_old)
      end if   
 
      ! write initial plotfile
@@ -547,17 +531,11 @@ subroutine main_driver()
       ! but for now we pass them around (it does save a few flops)
       ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
       ! routine, but since we have them around anyway for inertial we pass them in
-      if (algorithm_type .eq. 0) then
-         call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                        gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                        dx,dt,time,the_bc_tower,istep)
-      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-         call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                          gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                          dx,dt,time,the_bc_tower,istep)
-      end if
+
+!     call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+!                                    gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+!                                    diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+!                                    dx,dt,time,the_bc_tower,istep)
 
       time = time + dt
 
@@ -584,13 +562,7 @@ subroutine main_driver()
           ! compute momentum
           call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
           call sum_momenta(mla,mtemp)
-          call eos_check(mla,rho_new)
       end if
-
-     ! project rho and rho1 back onto EOS
-     if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
-        call project_onto_eos(mla,rho_new)
-     end if
 
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then
