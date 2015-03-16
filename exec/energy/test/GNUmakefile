@@ -45,10 +45,4 @@ libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
 main.$(suf).exe: $(objects) 
 	$(LINK.f90) -o main.$(suf).exe $(objects) $(libraries)
 
-CHEMISTRY_DIR := ../../../../../Combustion/Chemistry
-CHEMISTRY_MODEL := INERT
-
-include MECHANISM.mak
-
 include $(BOXLIB_HOME)/Tools/F_mk/GMakerules.mak
-
