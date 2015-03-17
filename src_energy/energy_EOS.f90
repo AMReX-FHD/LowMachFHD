@@ -12,11 +12,11 @@ module energy_EOS_module
 
   REAL*8, SAVE :: AVOGADRO
 
-  REAL*8, SAVE  :: dia_in(MAXSPECIES)
-  REAL*8, SAVE  :: int_deg_free_in(MAXSPECIES)
-  integer, SAVE :: use_fake_diff = 0
-  REAL*8, SAVE  :: fake_diff_coeff = -1.d0   ! Adjust transport coefficients artificially
-  REAL*8, SAVE  :: fake_soret_factor = 1.0d0 ! Adjust transport coefficients artificially
+  REAL*8, SAVE  :: dia_in(MAXSPECIES)          ! diameters of molecules
+  REAL*8, SAVE  :: int_deg_free_in(MAXSPECIES) ! internal degrees of freedom
+  integer, SAVE :: use_fake_diff = 0           ! force diffusion coefficients to constant
+  REAL*8, SAVE  :: fake_diff_coeff = -1.d0     ! Adjust transport coefficients artificially
+  REAL*8, SAVE  :: fake_soret_factor = 1.0d0   ! Adjust transport coefficients artificially
 
   NAMELIST /probin_energy_EOS/ dia_in
   NAMELIST /probin_energy_EOS/ int_deg_free_in
@@ -36,24 +36,25 @@ module energy_EOS_module
 !  these are built duruing initialization and saved for efficiency
   REAL*8, save, allocatable :: Dbinbar(:,:),omega11bar(:,:),sigma11bar(:,:),diamat(:,:)
   REAL*8, save, allocatable :: amat1bar(:,:),amat2bar(:,:),alphabar(:,:)
-    
-  integer            :: narg, farg
-  character(len=128) :: fname
-  integer            :: un
-  logical            :: lexist,need_inputs
 
 contains
 
-  subroutine energy_EOS_init(nmlname)
+  subroutine energy_EOS_init()
 
 !    use problem_setup
 
-    character(LEN=1024) ::  nmlname
     integer :: iwrk, nfit, i, ic, ii, j
     integer :: dochem, dostrang
     double precision :: rwrk
     integer ns
     real*8 :: mu,Fij,Fijstar,fact1
+    
+    integer            :: narg, farg
+    character(len=128) :: fname
+    integer            :: un
+    logical            :: lexist,need_inputs
+
+    narg = command_argument_count()
 
     ! default values to be replace from inputs file or command line
     dia_in = 0.d0
