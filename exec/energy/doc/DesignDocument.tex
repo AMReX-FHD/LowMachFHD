@@ -418,12 +418,12 @@ P_0^{*,n+1} = P_0^n + \Delta t\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar
 \item {\bf Step 0c:} Advance the densities using forward-Euler advective fluxes
 and explicit mass diffusion:
 \begin{equation}
-\rho_i^{*,n+1} = \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i\vb)^n + \Fb^n\right].
+\rho_i^{*,n+1} = \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i\vb)^n + \nabla\cdot\Fb^n\right].
 \end{equation}
 \item {\bf Step 0d:} Advance the enthalpy by iteratively looping over an energy solve.
 The fundamental formulation is given by,
 \begin{equation}
-(\rho h)^{*,n+1} = (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{1}{2}(\Qb^n + \Qb^{*,n+1})\right],
+(\rho h)^{*,n+1} = (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{1}{2}(\nabla\cdot\Qb^n + \nabla\cdot\Qb^{*,n+1})\right],
 \end{equation}
 but since we express $\Qb$ in terms of temperature gradients, we need an iterative
 solve that linearizes the dependence of $h$ on $T$.  First we initialize
@@ -494,11 +494,11 @@ We also split $\pi^{*,n+1} = \pi^n + \delta\pi$ in the same way.  Rewriting the 
 \end{equation}
 \item {\bf Step 1c:} Advance the densities using trapezoidal advective and diffusive fluxes:
 \begin{equation}
-\rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \Fb^n + \Fb^{*,n+1}\right].
+\rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{*,n+1}\right].
 \end{equation}
 \item {\bf Step 1d:} Advance the enthalpy by iteratively looping over an energy solve.  The fundamental formulation is given by,
 \begin{equation}
-(\rho h)^{n+1} = (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}} + \Qb^n + \Qb^{n+1}\right],
+(\rho h)^{n+1} = (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}} + \nabla\cdot\Qb^n + \nabla\cdot\Qb^{n+1}\right],
 \end{equation}
 but since we express $\Qb$ in terms of temperature gradients, we need an iterative solve that linearizes
 the dependence of $h$ on $T$.  First we initialize $(h,T)^{n+1,l=1} = (h,T)^{*,n+1}$.
