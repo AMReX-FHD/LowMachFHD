@@ -608,12 +608,16 @@ where $W = (\sum_k w_k/W_k)^{-1}$ is the mixture-averaged (mean) molecular mass
 (denoted $\bar{m}$ in our multispecies paper).
 In Appendix A of Almgren et al., {\it Astrophys.~J.}, 637, 2006, it was shown that
 \begin{equation}
-\alpha = \frac{1}{\gamma\rho P_\rho} = \frac{1}{\gamma P},
+\alpha = \frac{1}{\Gamma_1 p}, \quad \Gamma_1 = \left(\frac{d\ln{p}}{d\ln{\rho}}\right)_{\rm ad},
 \end{equation}
-with $\gamma = c_p/c_V$ the ratio of specific heats.\\ \\
-
-The EOS we will test is a mixture of four noble gases, He, Ne, Ar, and Kr.
-We use ideal gas EOS assuming hard sphere dynamics found in
+which for an ideal gas simplifies to
+\begin{equation}
+\alpha = \frac{1}{\gamma P}.
+\end{equation}
+The EOS we will test is an ideal mixture of four noble gases, 
+He, Ne, Ar, and Kr.
+The molecular weights, diameters, and assumption of hard sphere dynamics
+ are all that is needed to specify the thermodynamics in
 {\tt energy\_EOS\_module\_HS.f90}.  The functions of interest are:\\
 \begin{itemize}
 
