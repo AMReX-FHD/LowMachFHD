@@ -1,4 +1,4 @@
-module chemistry_module
+module energy_EOS_module
 
   use bl_types
   use bl_constants_module
@@ -9,27 +9,23 @@ module chemistry_module
 
   integer, parameter  :: MAXSPECIES = 20
 
-  REAL*8, SAVE :: AVOGADRO ! UNIVERSAL GAS CONSTANT IN ERGS/MOL/K
+  REAL*8, SAVE :: AVOGADRO
 
-  REAL*8, SAVE :: fake_diff_coeff = -1.d0   ! Adjust transport coefficients artificially
-  REAL*8, SAVE :: fake_soret_factor = 1.0d0 ! Adjust transport coefficients artificially
-
+  REAL*8, SAVE  :: dia_in(MAXSPECIES)
+  REAL*8, SAVE  :: int_deg_free_in(MAXSPECIES)
   integer, SAVE :: use_fake_diff = 0
+  REAL*8, SAVE  :: fake_diff_coeff = -1.d0   ! Adjust transport coefficients artificially
+  REAL*8, SAVE  :: fake_soret_factor = 1.0d0 ! Adjust transport coefficients artificially
 
-!  kludge to get around input 
-
-  REAL*8 :: dia_in(MAXSPECIES), int_deg_free_in(MAXSPECIES)
-
-  NAMELIST /probin_energy/ dia_in, int_deg_free_in, &
+  NAMELIST /probin_energy_EOS/ dia_in, int_deg_free_in, &
           use_fake_diff, fake_diff_coeff, fake_soret_factor
 
   REAL*8, SAVE, allocatable :: dia(:)
-  REAL*8, SAVE, allocatable :: molecular_weight(:)
+  REAL*8, SAVE, allocatable :: molecular_weight(:) ! molmass from namelist is in g/molecule.  This holds g/mole
   REAL*8, SAVE, allocatable :: int_deg_free(:)
   REAL*8, save, allocatable :: cvgas(:)
   REAL*8, save, allocatable :: cpgas(:)
   REAL*8, save, allocatable :: e0ref(:)
-  REAL*8, save, allocatable :: molecular_mass(:)
 
 !  matrix components for computation of diffusion that are independent of state
 !  these are built duruing initialization and saved for efficiency
@@ -37,16 +33,9 @@ module chemistry_module
   REAL*8, save, allocatable :: amat1bar(:,:),amat2bar(:,:),alphabar(:,:)
   REAL*8, save, allocatable :: chem_noise(:,:,:,:)
 
-  logical, save :: chemistry_initialized = .false.
-! integer :: ns
-
-  character*2, allocatable, save :: elem_names(:)
-  character*10, allocatable, save :: spec_names(:)
-
-
 contains
 
-  subroutine chemistry_init(nmlname)
+  subroutine energy_EOS_init(nmlname)
 
 !    use problem_setup
 
@@ -62,7 +51,7 @@ contains
     int_deg_free_in = 0  
 
     open(file=TRIM(nmlname), unit=unit, action="read", status="old")
-    read(UNIT=unit,NML=probin_energy) ! Read the namelist
+    read(UNIT=unit,NML=probin_energy_EOS) ! Read the namelist
     close(unit)
 
 
@@ -72,7 +61,6 @@ contains
    allocate(cvgas(nspecies))
    allocate(cpgas(nspecies))
    allocate(e0ref(nspecies))
-   allocate(molecular_mass(nspecies))
 
    AVOGADRO = Runiv / k_B
 
@@ -90,7 +78,6 @@ contains
     do ns =  1,nspecies
        e0ref(ns) = 0.d0
 !      R_g(ns) = Runiv / molecular_weight(ns)
-       molecular_mass(ns) = molecular_weight(ns) / AVOGADRO
        cvgas(ns) = 0.5d0*(3+int_deg_free(ns))*Runiv/molecular_weight(ns)
        cpgas(ns) = 0.5d0*(5+int_deg_free(ns))*Runiv/molecular_weight(ns)
 
@@ -99,7 +86,7 @@ contains
     write(6,*)"e0fref",e0ref
     write(6,*)"dia",dia
     write(6,*)"molecular_weight",molecular_weight
-    write(6,*)"molecular_mass",molecular_mass
+    write(6,*)"molecular_mass",molmass
     write(6,*)"int_deg_free",int_deg_free
     write(6,*)"cvgas",cvgas
     write(6,*)"cpgas",cpgas
@@ -120,23 +107,23 @@ contains
          diamat(i,j) = 0.5d0*(dia(i) + dia(j))
 
          Dbinbar(i,j) = 3.0d0/16.0d0*sqrt(2.0d0*M_PI*k_B**3.d00    &   
-           *(molecular_mass(i)+molecular_mass(j))/molecular_mass(i)/molecular_mass(j))/(M_PI*diamat(i,j)**2.0d0)
+           *(molmass(i)+molmass(j))/molmass(i)/molmass(j))/(M_PI*diamat(i,j)**2.0d0)
 
-         mu = molecular_mass(i)*molecular_mass(j)/(molecular_mass(i) + molecular_mass(j))
+         mu = molmass(i)*molmass(j)/(molmass(i) + molmass(j))
          omega11bar(i,j) = sqrt(M_PI*k_B/(2.0d0*mu))*diamat(i,j)**2.0d0
 
-         sigma11bar(i,j) = sqrt( k_B/(2.0d0*M_PI*molecular_mass(i)*molecular_mass(j)/  &
-               (molecular_mass(i)+molecular_mass(j))) )*M_PI*(diamat(i,j)**2.0d0)
+         sigma11bar(i,j) = sqrt( k_B/(2.0d0*M_PI*molmass(i)*molmass(j)/  &
+               (molmass(i)+molmass(j))) )*M_PI*(diamat(i,j)**2.0d0)
 
-         Fij = (6.0d0*molecular_mass(i)*molecular_mass(i) + 13.0d0/5.0d0*molecular_mass(j)*molecular_mass(j) +   &
-           16.0d0/5.0d0*molecular_mass(i)*molecular_mass(j))/((molecular_mass(i)+molecular_mass(j))**2.0d0)
+         Fij = (6.0d0*molmass(i)*molmass(i) + 13.0d0/5.0d0*molmass(j)*molmass(j) +   &
+           16.0d0/5.0d0*molmass(i)*molmass(j))/((molmass(i)+molmass(j))**2.0d0)
          Fijstar = -27.0d0/5.0d0
 
-         amat1bar(i,j) = 5.0d0/(k_B)*molecular_mass(i)*molecular_mass(j)/    &
-               (molecular_mass(i)+molecular_mass(j))*Fij*sigma11bar(i,j)
-         amat2bar(i,j) = 5.0d0/(k_B)*molecular_mass(i)*molecular_mass(j)*molecular_mass(i)*molecular_mass(j)/    &
-               ((molecular_mass(i)+molecular_mass(j))**3.0d0)*Fijstar*sigma11bar(i,j)
-        fact1 = molecular_mass(i)*molecular_mass(j)/(molecular_mass(i)+molecular_mass(j))
+         amat1bar(i,j) = 5.0d0/(k_B)*molmass(i)*molmass(j)/    &
+               (molmass(i)+molmass(j))*Fij*sigma11bar(i,j)
+         amat2bar(i,j) = 5.0d0/(k_B)*molmass(i)*molmass(j)*molmass(i)*molmass(j)/    &
+               ((molmass(i)+molmass(j))**3.0d0)*Fijstar*sigma11bar(i,j)
+        fact1 = molmass(i)*molmass(j)/(molmass(i)+molmass(j))
 
         alphabar(i,j) = 8.0d0/(3.0d0*k_B)*fact1*fact1*   &
                  (-.5d0*sigma11bar(i,j))
@@ -174,15 +161,7 @@ contains
 
 
 
-    chemistry_initialized = .true.
-
-  end subroutine chemistry_init
-
-  subroutine chemistry_close()
-
-    deallocate(elem_names,spec_names)
-
-  end subroutine chemistry_close
+  end subroutine energy_EOS_init
 
   subroutine CKCPBS(temp,Yk,IWRK,RWRK,cpmix)
 
@@ -510,12 +489,12 @@ contains
 
 !      if(old .eq.1)then
 
-!      call viscosityM(xxtr,temperature,molecular_mass,k_B,dd,eta,nspec) 
+!      call viscosityM(xxtr,temperature,molmass,k_B,dd,eta,nspec) 
 
 !   not bulk viscosity
 !      zeta = 0.d0
 
-!      call lambdaM(xxtr,temperature,molecular_mass,k_B,dd,Cv,kappa,nspec)
+!      call lambdaM(xxtr,temperature,molmass,k_B,dd,Cv,kappa,nspec)
 
 
 
@@ -531,8 +510,8 @@ contains
 !            endif
 
 
-!      call diffusivityM(xxtr,yytr,temperature,molecular_mass,k_B,dd,pressure,diff_ij,nspec)
-!      call thermalDiffM(xxtr,temperature,molecular_mass,k_B,dd,chitil,nspec)
+!      call diffusivityM(xxtr,yytr,temperature,molmass,k_B,dd,pressure,diff_ij,nspec)
+!      call thermalDiffM(xxtr,temperature,molmass,k_B,dd,chitil,nspec)
 
 !      else
 
@@ -543,7 +522,7 @@ contains
             do j = 1, nspec
 
 !            Dbin(i,j) = 3.0d0/16.0d0*sqrt(2.0d0*M_PI*k_B**3.d00*temperature**3.0d0    &
-!              *(molecular_mass(i)+molecular_mass(j))/molecular_mass(i)/molecular_mass(j))  &
+!              *(molmass(i)+molmass(j))/molmass(i)/molmass(j))  &
 !              /(pressure*M_PI*dd(i,j)**2.0d0)
 
              Dbin(i,j) = Dbinbar(i,j)*temperature*sqrtT/pressure
@@ -555,10 +534,10 @@ contains
             enddo
           enddo
 
-         call visc_lin(nspec,k_B,omega11,yytr,temperature,density,molecular_mass,eta)
+         call visc_lin(nspec,k_B,omega11,yytr,temperature,density,molmass,eta)
          zeta = 0.d0
 
-         call lambda_lin(nspec,k_B,Dbin,omega11,yytr,temperature,density,molecular_mass,kappa)
+         call lambda_lin(nspec,k_B,Dbin,omega11,yytr,temperature,density,molmass,kappa)
 
 !  jmax = 3
          call D_GIOVANGIGLI(nspec,Dbin,yytr,xxtr,diff_ij)
@@ -566,7 +545,7 @@ contains
 !  jmax = 0
 !        call PGAMMAP(nspec,yytr,xxtr,Dbin,diff_ij,molecular_weight,wbar)
 
-         call thermalDiff(nspec,sigma11,a_ij1,a_ij2,alphabar,xxtr,sqrtT,molecular_mass,chitil)
+         call thermalDiff(nspec,sigma11,a_ij1,a_ij2,alphabar,xxtr,sqrtT,molmass,chitil)
          chitil = chitil*fake_soret_factor
 
 
@@ -592,7 +571,7 @@ contains
    end subroutine
 
 
-end module chemistry_module
+end module energy_EOS_module
    
 !----------------------------------------------------------------------
 
@@ -1737,8 +1716,6 @@ end module chemistry_module
             
       return
           end subroutine
-
-! end module chemistry_module
 
 !-------------------------------------------------
         Subroutine TSRGT(eps, nn, AA, it, CCC, Kp1, Lp)
