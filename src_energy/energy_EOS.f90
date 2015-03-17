@@ -1,6 +1,7 @@
 module energy_EOS_module
 
   use bl_types
+  use bl_IO_module
   use bl_constants_module
   use probin_common_module, only: k_B, Runiv, molmass
   use probin_multispecies_module, only: nspecies
@@ -17,11 +18,15 @@ module energy_EOS_module
   REAL*8, SAVE  :: fake_diff_coeff = -1.d0   ! Adjust transport coefficients artificially
   REAL*8, SAVE  :: fake_soret_factor = 1.0d0 ! Adjust transport coefficients artificially
 
-  NAMELIST /probin_energy_EOS/ dia_in, int_deg_free_in, &
-          use_fake_diff, fake_diff_coeff, fake_soret_factor
+  NAMELIST /probin_energy_EOS/ dia_in
+  NAMELIST /probin_energy_EOS/ int_deg_free_in
+  NAMELIST /probin_energy_EOS/ use_fake_diff
+  NAMELIST /probin_energy_EOS/ fake_diff_coeff
+  NAMELIST /probin_energy_EOS/ fake_soret_factor
 
+  ! molmass from namelist is in g/molecule.  molecular_weight is in g/mole
+  REAL*8, SAVE, allocatable :: molecular_weight(:) 
   REAL*8, SAVE, allocatable :: dia(:)
-  REAL*8, SAVE, allocatable :: molecular_weight(:) ! molmass from namelist is in g/molecule.  This holds g/mole
   REAL*8, SAVE, allocatable :: int_deg_free(:)
   REAL*8, save, allocatable :: cvgas(:)
   REAL*8, save, allocatable :: cpgas(:)
@@ -31,7 +36,11 @@ module energy_EOS_module
 !  these are built duruing initialization and saved for efficiency
   REAL*8, save, allocatable :: Dbinbar(:,:),omega11bar(:,:),sigma11bar(:,:),diamat(:,:)
   REAL*8, save, allocatable :: amat1bar(:,:),amat2bar(:,:),alphabar(:,:)
-  REAL*8, save, allocatable :: chem_noise(:,:,:,:)
+    
+  integer            :: narg, farg
+  character(len=128) :: fname
+  integer            :: un
+  logical            :: lexist,need_inputs
 
 contains
 
@@ -43,17 +52,61 @@ contains
     integer :: iwrk, nfit, i, ic, ii, j
     integer :: dochem, dostrang
     double precision :: rwrk
-    integer, allocatable :: names(:)
-    integer :: unit=100
     integer ns
     real*8 :: mu,Fij,Fijstar,fact1
 
-    int_deg_free_in = 0  
+    ! default values to be replace from inputs file or command line
+    dia_in = 0.d0
+    int_deg_free_in = 0
+    use_fake_diff = 0
+    fake_diff_coeff = -1.d0
+    fake_soret_factor = 1.d0
 
-    open(file=TRIM(nmlname), unit=unit, action="read", status="old")
-    read(UNIT=unit,NML=probin_energy_EOS) ! Read the namelist
-    close(unit)
+    ! read from input file 
+    need_inputs = .true.
+    farg = 1
+    if ( need_inputs .AND. narg >= 1 ) then
+       call get_command_argument(farg, value = fname)
+       inquire(file = fname, exist = lexist )
+       if ( lexist ) then
+          farg = farg + 1
+          un = unit_new()
+          open(unit=un, file = fname, status = 'old', action = 'read')
+          read(unit=un, nml = probin_energy_EOS)
+          close(unit=un)
+          need_inputs = .false.
+       end if
+    end if
 
+    ! also can be read in from the command line by appending 
+    do while ( farg <= narg )
+       call get_command_argument(farg, value = fname)
+       select case (fname)
+
+       case ('--use_fake_diff')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) use_fake_diff
+
+       case ('--fake_diff_coeff')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) fake_diff_coeff
+
+       case ('--fake_soret_factor')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) fake_soret_factor
+
+       case ('--')
+          farg = farg + 1
+          exit
+
+       case default
+
+       end select
+       farg = farg + 1
+    end do
 
    allocate(dia(nspecies))
    allocate(molecular_weight(nspecies))
@@ -130,36 +183,6 @@ contains
 
      enddo
    enddo
-
-
-
-    allocate(names(nspecies*10))  ! Each species name has at most 4 characters
-
-!  consider setting names for hard spheres
-
-!   call cksyme(names, 2)  ! Two chars for element names
-
-!   ic = 1
-!   do i = 1, nelements
-!      do ii=1, 2
-!         elem_names(i)(ii:ii) = char(names(ic))
-!         ic = ic + 1
-!      end do
-!   end do
-
-!   call cksyms(names, 10) ! Four chars for species names
-
-!   ic = 1
-!   do i = 1, nspecies
-!      do ii=1, 4
-!         spec_names(i)(ii:ii) = char(names(ic))
-!         ic = ic+1
-!      end do
-!   end do
-
-!   deallocate(names)
-
-
 
   end subroutine energy_EOS_init
 
@@ -1183,13 +1206,13 @@ end module energy_EOS_module
          end subroutine
 !-------------------------------------------------------------------------
 
-         subroutine thermalDiff(nspec,sigma11,a_ij1,a_ij2,alphabar,Xkp,sqrtT,mk,kT)
+         subroutine thermalDiff(nspec,sigma11,a_ij1,a_ij2,alphabar_in,Xkp,sqrtT,mk,kT)
 
           implicit none
 
          integer :: nspec
          real(kind=8), dimension(1:nspec) :: mk,  Xkp
-         real(kind=8), dimension(1:nspec,1:nspec) :: alphabar 
+         real(kind=8), dimension(1:nspec,1:nspec) :: alphabar_in
          real(kind=8) :: sqrtT,  kT(1:nspec)
          integer :: i, j, k
          real*8 :: k_B
@@ -1228,7 +1251,7 @@ end module energy_EOS_module
           do i = 1, nspec
            do j = 1, nspec
 
-           alphaij(i,j) = alphabar(i,j)*(AA(i)/mk(i) - AA(j)/mk(j))/sqrtT
+           alphaij(i,j) = alphabar_in(i,j)*(AA(i)/mk(i) - AA(j)/mk(j))/sqrtT
 
            enddo
           enddo
@@ -1249,6 +1272,8 @@ end module energy_EOS_module
 !-------------------------------------------------
 
           subroutine viscosityM(xoriginal,T,m,k_B,d,etaMix,nspeci)
+
+            use bl_constants_module
 
          integer :: nspeci
          real(kind=8), dimension(1:nspeci) :: x, xoriginal, m
@@ -1338,6 +1363,8 @@ end module energy_EOS_module
 !-------------------------------------------------
 
           subroutine lambdaM(xoriginal,T,m,k_B,d,Cv,lamMix,nspeci)
+
+           use bl_constants_module
 
          integer :: nspeci
          real(kind=8), dimension(1:nspeci) :: x, xoriginal, m, Cv
@@ -1496,6 +1523,8 @@ end module energy_EOS_module
 
         subroutine diffusivityM(x,y,T,m,k_B,d,pres,Diff,nspeci)
 
+           use bl_constants_module
+
         integer :: nspeci
          real(kind=8), dimension(1:nspeci) :: x, y, m
          real(kind=8), dimension(1:nspeci,1:nspeci) :: d
@@ -1612,6 +1641,8 @@ end module energy_EOS_module
 !-------------------------------------------------
 
         subroutine thermalDiffM(x,T,m,k_B,d,kT,nspeci)
+
+           use bl_constants_module
 
          integer :: nspeci
          real(kind=8), dimension(1:nspeci) :: x, m
