@@ -183,14 +183,14 @@ Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 &=& \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\Fb_k\cdot\nabla h_k + \rho\Hext\right].\label{eq:DTDt}
 \end{eqnarray}
 Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
-\footnote{These are the same equations in MAESTRO Paper III, Almgren et al., ApJ, 2008, except that paper includes a convective derivative of $P_0$ due to stratification}
+\footnote{This is the same model used in Day/Bell, {\it Combust.~Theor.~Model.}, 2000, except now there is a time-derivative of $p_0$.  The coefficient in front of the pressure derivative matches that in MAESTRO Paper III (Almgren et al., {\it Astrophys. J.}, 2008) except that paper includes a convective derivative of $P_0$ due to stratification.}
 \begin{equation}
 \nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left(\nabla\cdot\Qb + \sum_k\Fb_k\cdot\nabla h_k + \rho\Hext\right) \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
 \alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
 \beta_k = \frac{P_{w_k}}{\rho^2 P_\rho}, \quad
-\theta = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.
+\theta = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.\label{eq:thermo deriv}
 \end{equation}
 
 The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $d P_0/d t$.
@@ -579,12 +579,12 @@ P = \rho\mathcal{R}T\sum_k\frac{w_k}{W_k},
 \end{equation}
 with universal gas constant $\mathcal{R} = 8.31451\times 10^7$ [erg/(K-mol)] 
 (all units are CGS) and $W_k$ is the molecular mass of species $k$ in [g/mol]
-(denoted $m_k$ in our multispecies paper; in these notes we use the conventions in Day/Bell 2000).
+(denoted $m_k$ in our multispecies paper; in these notes we use the conventions in Day/Bell, {\it Combust.~Theor.~Model.}, 2000).
 The enthalpy, mass fractions, and temperature are related by:
 \begin{equation}
 h = \sum_k Y_k h_k(T).
 \end{equation}
-Recall equation (\ref{eq:constraint}):
+Recall equations (\ref{eq:constraint}) and (\ref{eq:thermo deriv}):
 \begin{equation}
 \nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left(\nabla\cdot\Qb + \sum_k\Fb_k\cdot\nabla h_k + \rho\Hext\right) \equiv S,
 \end{equation}
@@ -593,13 +593,13 @@ Recall equation (\ref{eq:constraint}):
 \beta_k = \frac{P_{w_k}}{\rho^2 P_\rho}, \quad
 \theta = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.
 \end{equation}
-The thermodynamic derivatives
+For an ideal gas, the thermodynamic derivatives reduce to,
 \begin{eqnarray}
 P_\rho = \mathcal{R} T\sum_k\frac{w_k}{W_k}, \quad
 P_T = \rho\mathcal{R}\sum_k\frac{w_k}{W_k}, \quad
 P_{w_k} = \frac{\rho\mathcal{R}T}{W_k},
 \end{eqnarray}
-give rise to
+and simply the coefficients in the constraint equation,
 \begin{equation}
 \beta_k = \frac{1}{\rho}\frac{W}{W_k}, \quad
 \theta = \frac{1}{\rho c_p T},
@@ -614,16 +614,7 @@ with $\gamma = c_p/c_V$ the ratio of specific heats.\\ \\
 
 The EOS we will test is a mixture of four noble gases, He, Ne, Ar, and Kr.
 We use ideal gas EOS assuming hard sphere dynamics found in
-{\tt chemistry\_module\_HS.f90}.
-To initialize the EOS, we need the following:\\
-\begin{itemize}
-
-\item 
-
-\end{itemize}
-
-
-The functions of interest are:\\
+{\tt energy\_EOS\_module\_HS.f90}.  The functions of interest are:\\
 \begin{itemize}
 
 \item {\tt CKCPBS} computes $c_p(\wb,T)$.  For now this is not actually a function
