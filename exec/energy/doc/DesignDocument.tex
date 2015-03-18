@@ -178,20 +178,29 @@ and from equation (\ref{eq:enthalpy}) we have,
 \frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right).\label{eq:DhDt}
 \end{equation}
 Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
-\begin{eqnarray}
-\frac{DT}{Dt} &=& \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext - \sum_kh_k\nabla\cdot\Fb_k\right]\nonumber\\
-&=& \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\Fb_k\cdot\nabla h_k + \rho\Hext\right].\label{eq:DTDt}
-\end{eqnarray}
-Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
-\footnote{This is the same model used in Day/Bell, {\it Combust.~Theor.~Model.}, 2000, except now there is a time-derivative of $p_0$.  The coefficient in front of the pressure derivative matches that in MAESTRO Paper III (Almgren et al., {\it Astrophys. J.}, 2008) except that paper includes a convective derivative of $P_0$ due to stratification.}
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left(\nabla\cdot\Qb + \sum_k\Fb_k\cdot\nabla h_k + \rho\Hext\right) \equiv S,\label{eq:constraint}
+\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext - \sum_kh_k\nabla\cdot\Fb_k\right].\label{eq:DTDt}
+\end{equation}
+Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
+\begin{equation}
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left(\nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right) \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
 \alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
-\beta_k = \frac{P_{w_k}}{\rho^2 P_\rho}, \quad
+\beta_k = \frac{P_{w_k}}{\rho^2 P_\rho} - \frac{h_k P_T}{\rho^2 c_p P_\rho}, \quad
 \theta = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.\label{eq:thermo deriv}
 \end{equation}
+It is worth comparing this formulation to other low Mach number constraints.
+This model is equivalent to equation (7) in \cite{DayBell:2000},
+but with three exceptions.  First,
+we are not accounting for reactions, so $\dot\omega=0$.  Second, here we have 
+{\it not} made the substitution, 
+$\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k = \Fb\cdot\nabla h_k$, so the coefficients
+$\beta_k$ and $\theta$ are slightly different (although the overall expression is
+analytically equivalent).  Third, the time-derivative of $P_0$ is no longer zero,
+so we gain an additional term.  Notably, the coefficient in front of the pressure 
+derivative matches that in the MAESTRO algorithm \cite{MAESTROIII},
+except that paper includes a convective derivative of $P_0$ due to stratification.
 
 The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $d P_0/d t$.
 For open containers where $\vb$ is allowed to be non-zero on one or more walls $P_0$
@@ -579,18 +588,19 @@ P = \rho\mathcal{R}T\sum_k\frac{w_k}{W_k},
 \end{equation}
 with universal gas constant $\mathcal{R} = 8.31451\times 10^7$ [erg/(K-mol)] 
 (all units are CGS) and $W_k$ is the molecular mass of species $k$ in [g/mol]
-(denoted $m_k$ in our multispecies paper; in these notes we use the conventions in Day/Bell, {\it Combust.~Theor.~Model.}, 2000).
+(denoted $m_k$ in our multispecies paper; in these notes we use the conventions in 
+\cite{DayBell:2000}.
 The enthalpy, mass fractions, and temperature are related by:
 \begin{equation}
 h = \sum_k Y_k h_k(T).
 \end{equation}
 Recall equations (\ref{eq:constraint}) and (\ref{eq:thermo deriv}):
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left(\nabla\cdot\Qb + \sum_k\Fb_k\cdot\nabla h_k + \rho\Hext\right) \equiv S,
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left(\nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right) \equiv S,
 \end{equation}
 \begin{equation}
 \alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
-\beta_k = \frac{P_{w_k}}{\rho^2 P_\rho}, \quad
+\beta_k = \beta_k = \frac{P_{w_k}}{\rho^2 P_\rho} - \frac{h_k P_T}{\rho^2 c_p P_\rho}, \quad
 \theta = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.
 \end{equation}
 For an ideal gas, the thermodynamic derivatives reduce to,
@@ -601,12 +611,12 @@ P_{w_k} = \frac{\rho\mathcal{R}T}{W_k},
 \end{eqnarray}
 and simply the coefficients in the constraint equation,
 \begin{equation}
-\beta_k = \frac{1}{\rho}\frac{W}{W_k}, \quad
+\beta_k = \frac{1}{\rho}\left(\frac{W}{W_k} - \frac{h_m}{c_p T}\right), \quad
 \theta = \frac{1}{\rho c_p T},
 \end{equation}
 where $W = (\sum_k w_k/W_k)^{-1}$ is the mixture-averaged (mean) molecular mass
 (denoted $\bar{m}$ in our multispecies paper).
-In Appendix A of Almgren et al., {\it Astrophys.~J.}, 637, 2006, it was shown that
+In \cite{MAESTROI}, it was shown that
 \begin{equation}
 \alpha = \frac{1}{\Gamma_1 p}, \quad \Gamma_1 = \left(\frac{d\ln{p}}{d\ln{\rho}}\right)_{\rm ad},
 \end{equation}
@@ -666,5 +676,8 @@ as inputs and computes the following:\\
 such that $\zeta_i = x_i\tilde{\chi}_i$\\
 
 \end{itemize}
+
+\bibliographystyle{unsrt}
+\bibliography{DesignDocument}
 
 \end{document}
