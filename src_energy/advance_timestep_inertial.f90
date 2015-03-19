@@ -55,7 +55,7 @@ module advance_timestep_inertial_module
 contains
 
   subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                       gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                       gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep)
 
@@ -66,7 +66,7 @@ contains
     type(multifab) , intent(inout) :: rhotot_old(:)
     type(multifab) , intent(inout) :: rhotot_new(:)
     type(multifab) , intent(inout) :: gradp_baro(:,:)
-    type(multifab) , intent(inout) :: pres(:)
+    type(multifab) , intent(inout) :: pi(:)
     ! eta and kappa need to enter consistent with old and leave consistent with new
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
@@ -83,7 +83,7 @@ contains
     type(multifab) ::  rho_update(mla%nlevel)
     type(multifab) ::   bds_force(mla%nlevel)
     type(multifab) :: gmres_rhs_p(mla%nlevel)
-    type(multifab) ::          dp(mla%nlevel)
+    type(multifab) ::         dpi(mla%nlevel)
     type(multifab) ::        divu(mla%nlevel)
     type(multifab) ::        conc(mla%nlevel)
     type(multifab) ::  rho_nd_old(mla%nlevel)
@@ -99,7 +99,7 @@ contains
     type(multifab) ::         dumac(mla%nlevel,mla%dim)
     type(multifab) ::      umac_tmp(mla%nlevel,mla%dim)
     type(multifab) :: rhotot_fc_old(mla%nlevel,mla%dim)
-    type(multifab) ::         gradp(mla%nlevel,mla%dim)
+    type(multifab) ::        gradpi(mla%nlevel,mla%dim)
     type(multifab) ::        rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::     rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::    flux_total(mla%nlevel,mla%dim)
@@ -123,7 +123,7 @@ contains
        call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
-       call multifab_build(         dp(n),mla%la(n),1       ,1)
+       call multifab_build(        dpi(n),mla%la(n),1       ,1)
        call multifab_build(       divu(n),mla%la(n),1       ,0)
        call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(     p_baro(n),mla%la(n),1       ,1)
@@ -136,7 +136,7 @@ contains
           call multifab_build_edge(  gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(        dumac(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(     umac_tmp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(        gradp(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(       gradpi(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(       rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(    rhotot_fc(n,i),mla%la(n),1       ,1,i)
@@ -262,14 +262,14 @@ contains
        end do
     end do
 
-    ! compute grad p^n
-    call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    ! compute grad pi^n
+    call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
     if (barodiffusion_type .eq. 2) then
-       ! barodiffusion uses lagged pressure
+       ! barodiffusion uses lagged grad(pi)
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(gradp_baro(n,i),1,gradp(n,i),1,1,0)
+             call multifab_copy_c(gradp_baro(n,i),1,gradpi(n,i),1,1,0)
           end do
        end do
     else if (barodiffusion_type .eq. 3) then
@@ -279,10 +279,10 @@ contains
                          the_bc_tower%bc_tower_array)
     end if
 
-    ! subtract grad p^n from gmres_rhs_v
+    ! subtract grad pi^n from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradp(n,i),1,1,0)
+          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradpi(n,i),1,1,0)
        end do
     end do
 
@@ -469,7 +469,7 @@ contains
        do i=1,dm
           call multifab_setval(dumac(n,i),0.d0,all=.true.)
        end do
-       call multifab_setval(dp(n),0.d0,all=.true.)
+       call multifab_setval(dpi(n),0.d0,all=.true.)
     end do
 
     do n=1,nlevs
@@ -482,7 +482,7 @@ contains
     ! gmres_abs_tol = 0.d0 ! It is better to set gmres_abs_tol in namelist to a sensible value
 
     ! call gmres to compute delta v and delta p
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
 
     ! for the corrector gmres solve we want the stopping criteria based on the
@@ -505,13 +505,13 @@ contains
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
        end do
-       call multifab_plus_plus_c(pres(n),1,dp(n),1,1,0)
+       call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0)
     end do
 
     do n=1,nlevs
        ! presure ghost cells
-       call multifab_fill_boundary(pres(n))
-       call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+       call multifab_fill_boundary(pi(n))
+       call multifab_physbc(pi(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
        do i=1,dm
           ! set normal velocity on physical domain boundaries
@@ -635,14 +635,14 @@ contains
        end do
     end do
 
-    ! compute grad p^{*,n+1}
-    call compute_grad(mla,pres,gradp,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    ! compute grad pi^{*,n+1}
+    call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
-    ! barodiffusion uses predicted pressure
+    ! barodiffusion uses predicted grad(pi)
     if (barodiffusion_type .eq. 2) then
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(gradp_baro(n,i),1,gradp(n,i),1,1,0)
+             call multifab_copy_c(gradp_baro(n,i),1,gradpi(n,i),1,1,0)
           end do
        end do
     else if (barodiffusion_type .eq. 3) then
@@ -652,10 +652,10 @@ contains
                          the_bc_tower%bc_tower_array)
     end if
 
-    ! subtract grad p^{*,n+1} from gmres_rhs_v
+    ! subtract grad pi^{*,n+1} from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradp(n,i),1,1,0)
+          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradpi(n,i),1,1,0)
        end do
     end do
 
@@ -816,7 +816,7 @@ contains
        do i=1,dm
           call multifab_setval(dumac(n,i),0.d0,all=.true.)
        end do
-          call multifab_setval(dp(n),0.d0,all=.true.)
+          call multifab_setval(dpi(n),0.d0,all=.true.)
     end do
 
     do n=1,nlevs
@@ -824,7 +824,7 @@ contains
     end do
 
     ! call gmres to compute delta v and delta p
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dp,rhotot_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha)
                               
     gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
@@ -844,13 +844,13 @@ contains
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
        end do
-       call multifab_plus_plus_c(pres(n),1,dp(n),1,1,0)
+       call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0)
     end do
 
     do n=1,nlevs
        ! presure ghost cells
-       call multifab_fill_boundary(pres(n))
-       call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+       call multifab_fill_boundary(pi(n))
+       call multifab_physbc(pi(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
        do i=1,dm
           ! set normal velocity on physical domain boundaries
@@ -876,7 +876,7 @@ contains
        call multifab_destroy(rho_update(n))
        call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
-       call multifab_destroy(dp(n))
+       call multifab_destroy(dpi(n))
        call multifab_destroy(divu(n))
        call multifab_destroy(conc(n))
        call multifab_destroy(p_baro(n))
@@ -890,7 +890,7 @@ contains
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(umac_tmp(n,i))
           call multifab_destroy(rhotot_fc_old(n,i))
-          call multifab_destroy(gradp(n,i))
+          call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(flux_total(n,i))
