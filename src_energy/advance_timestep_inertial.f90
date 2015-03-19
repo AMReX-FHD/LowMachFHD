@@ -17,7 +17,6 @@ module advance_timestep_inertial_module
   use bds_module
   use gmres_module
   use div_and_grad_module
-  use eos_check_module
   use mk_grav_force_module
   use compute_mixture_properties_module
   use mass_flux_utilities_module
@@ -26,8 +25,8 @@ module advance_timestep_inertial_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
-  use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, restart, barodiffusion_type
+  use probin_common_module, only: advection_type, grav, variance_coef_mass, &
+                                  variance_coef_mom, barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
   use analysis_module
@@ -375,9 +374,9 @@ contains
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+!          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
-             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+!             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
        end do
     end do
@@ -736,9 +735,9 @@ contains
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+!          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
-             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+!             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
        end do
     end do

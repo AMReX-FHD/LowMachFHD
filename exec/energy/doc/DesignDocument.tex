@@ -78,6 +78,7 @@ $\taub = \bar\taub + \tilde\taub$,
 $\Fb = \bar\Fb + \tilde\Fb$, and 
 $\Qb = \bar\Qb + \tilde\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
 respectively, separated into deterministic and stochastic components.
+The densities are $\rho_i = \rho w_i$, with $w_i$ the concentrations (mass fractions).
 Starting from the fully compressible equations and expanding in Mach number shows that the leading
 order pressure terms in Mach number must be constant in space. Thus, the perturbational pressure $\pi$ is
 $O(M^2)$.
@@ -98,8 +99,9 @@ $\bar\Qb = \lambda\nabla T$.
 The deterministic part of the mass fluxes, $\bar{\Fb}$, contains contributions from 
 compositional gradients, barodiffusion, and temperature gradients,
 \begin{equation}
-\bar{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right].
+\bar{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right],
 \end{equation}
+where $\xb$ are the mole fractions.
 
 Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy})
 with $DP/Dt$ in the enthalpy equation replaced by $dP_0/dt$, and (\ref{eq:EOS})
@@ -150,14 +152,14 @@ with $d P_0/ dt$:
 As noted above we are also make the
 substitution $DP/Dt = d P_0/ d t$ in the enthalpy equation.  (Since we
 are currently assuming $P_0$ is constant in space, we are not allowing
-for pressure stratification due to gravity.)\\
-
-Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, we can rewrite 
+for pressure stratification due to gravity.)
+Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, 
+we can rewrite 
 (\ref{eq:particle paths}) as
 \begin{equation}
-\nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{\partial P_o}{\partial t} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
+\nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{dP_o}{dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
-To obtain an expression for $DT/Dt$, we differentiate the enthalpy, $h=h(P,\wb,T)$, 
+To obtain an expression for $DT/Dt$, we differentiate the enthalpy, $h=h(T,P,\wb)$, 
 along particle paths and replace $DP/Dt$ with $dP_0/dt$ to obtain
 \begin{equation}
 \frac{Dh}{Dt} = 
@@ -219,7 +221,7 @@ components allows us to recover the evolution of $P_0$ and $\pi$.
 
 For a closed system, $\nabla \cdot \vb = g$ only has a solution if $\int_\Omega g~d\Omega = 0$
 We can use this fact to simultaneously solve for the unknowns
-$\vb$ and $\partial P_0/\partial t$.
+$\vb$ and $dP_0/dt$.
 To do this, we split up $S$ into an average and a perturbational component,
 \begin{equation}
 S = \bar{S} + \delta S.
@@ -311,7 +313,7 @@ the drift, $\Delta P = P_{\rm EOS}^{n+1} - P_0^{n+1}$ with $P_{\rm EOS} = P(\rho
 
 If we were able to ``redo'' the velocity computation, the rate at which we want the 
 pressure to change in each cell is no longer given
-by simply $\partial P_0/\partial t$, but is now given by:
+by simply $dP_0/dt$, but is now given by:
 \begin{equation}
 \frac{DP}{Dt} = \frac{dP_0}{dt} - \frac{\Delta P}{\Delta t}.
 \end{equation}
@@ -350,7 +352,7 @@ mass fluxes also depend on the enthalpy.  In the full time-advancement algorithm
 the idea shall be to iterate these fluxes as well, with an initial guess coming from
 an earlier step in the algorithm.  The notation here is just used to give a general
 idea of the iterative scheme.  Also, the details of the treatment for 
-$\partial P_0/\partial t$ will be given below.\\ \\
+$dP_0/dt$ will be given below.\\ \\
 Let's assume we want to form an iterative update to $h$ using
 \begin{eqnarray}
 \frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt}\nonumber\\
@@ -401,10 +403,10 @@ Otherwise correct constraint equation and return to the beginning of this step.
 \end{enumerate}
 
 \section{Algorithm Details}
-Assume we are given initial $\rho_i$ and $h$ that are thermodynamically consistent with 
-$P_0$.  If they are not, compute e.g., $h = h(\rho,P_0,\wb)$.  Initialize the velocity
-to zero, although this shouldn't matter beyond solver tolerance as it will get 
-overwritten during the initialization step.\\ \\
+I suggest we specify $\rho,\rho_i$, and $P_0$ and then use the EOS to compute a consistent
+$T$ and $h$.  The velocity can be initialized to zero, noting that the
+initialization step will dictate what the velocity must be for the system to stay
+on the constraint.\\ \\
 {\bf Step 0: Initialization}.\\ \\
 This step is only performed once at the beginning of the simulation, so here $n=0$.
 The goal of this step is to compute preliminary time-advanced densities and enthalpy
@@ -458,7 +460,7 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 
 {\bf Step 0d-3:} Update the temperature and enthalpy using
 \begin{equation}
-T^{*,n+1,l+1} = T^{*,n+1,l} + \delta T, \quad h^{*,n+1,l+1} = h(\rho^{*,n+1},\wb^{*,n+1},T^{*,n+1,l+1}).
+T^{*,n+1,l+1} = T^{*,n+1,l} + \delta T, \quad h^{*,n+1,l+1} = h(\wb^{*,n+1},T^{*,n+1,l+1}).
 \end{equation}
 If $l=l_{\rm max}$, set $(h,T)^{*,n+1} = (h,T)^{*,n+1,l+1}$ and proceed to {\bf Step 0e}.\\
 \item {\bf Step 0e:} If the thermodynamic drift is unacceptable, update the volume 
@@ -531,7 +533,7 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 \end{eqnarray}
 {\bf Step 1d-3:} Update the temperature and enthalpy using
 \begin{equation}
-T^{n+1,l+1} = T^{n+1,l} + \delta T, \quad h^{n+1,l+1} = h(\rho^{n+1},\wb^{n+1},T^{n+1,l+1}).
+T^{n+1,l+1} = T^{n+1,l} + \delta T, \quad h^{n+1,l+1} = h(\wb^{n+1},T^{n+1,l+1}).
 \end{equation}
 If $l=l_{\rm max}$, set $(h,T)^{n+1} = (h,T)^{n+1,l+1}$ and proceed to {\bf Step 1e}.\\
 \item {\bf Step 1e:} If the thermodynamic drift is unacceptable, update the volume 
@@ -592,7 +594,7 @@ with universal gas constant $\mathcal{R} = 8.31451\times 10^7$ [erg/(K-mol)]
 \cite{DayBell:2000}.
 The enthalpy, mass fractions, and temperature are related by:
 \begin{equation}
-h = \sum_k Y_k h_k(T).
+h = \sum_k w_k h_k(T).
 \end{equation}
 Recall equations (\ref{eq:constraint}) and (\ref{eq:thermo deriv}):
 \begin{equation}
@@ -631,11 +633,9 @@ The molecular weights, diameters, and assumption of hard sphere dynamics
 {\tt energy\_EOS\_module\_HS.f90}.  The functions of interest are:\\
 \begin{itemize}
 
-\item {\tt CKCPBS} computes $c_p(\wb,T)$.  For now this is not actually a function
-of temperature.\\
+\item {\tt CKCPBS} computes $c_p(\wb,T)$.  In this EOS this is not dependent on temperature.\\
 
-\item {\tt CKCVBS} computes $c_v(\wb,T)$.  For now this is not actually a function
-of temperature.\\
+\item {\tt CKCVBS} computes $c_v(\wb,T)$.  In this EOS this is not dependent on temperature.\\
 
 \item {\tt CKUBMS} computes the mean internal energy, $e(\wb,T)$.\\
 
@@ -643,11 +643,12 @@ of temperature.\\
 
 \item {\tt CKPY} computes $P(\rho,\wb,T)$.\\
 
-\item {\tt CKHMS} computes $h_m(\wb,T)$.  Note $h = \sum_k w_k h_k$.\\
+\item {\tt CKHMS} computes $h_m(T)$.  Note $h = \sum_k w_k h_k$.\\
 
 \item {\tt CKYTX} computes mole fractions, $\xb$, from mass fractions, $\wb$.\\
 
-\item {\tt CKYTCR} computes molar concentrations from $\rho,\wb$.\\
+\item {\tt CKYTCR} computes molar concentrations from $\rho,T$ and $\wb$.
+In this EOS this is not dependent on  temperature.\\
 
 \item {\tt CKXTY} mass fractions, $\wb$, from mole fractions, $\xb$.\\
 
@@ -656,7 +657,7 @@ of temperature.\\
 \item {\tt CKRHOY} computes $\rho(P,\wb,T)$.\\
 
 \item {\tt CKCPMS} computes the individual specific heats for each component,
-$c_p(T)$.  For now this is not actually a function of temperature.\\
+$c_p(T)$.  In this EOS this is not dependent on temperature.\\
 
 \end{itemize}
 
@@ -666,7 +667,7 @@ as inputs and computes the following:\\
 
 \item {\tt eta} is the dynamic viscosity, $\eta$.\\
 
-\item {\tt zeta} is the bulk viscosity, $\kappa$, which we will not use for now.\\
+\item {\tt zeta} is the bulk viscosity, which we will not use for now.\\
 
 \item {\tt diff\_ij} is the diffusion matrix, $\chi$.\\
 
