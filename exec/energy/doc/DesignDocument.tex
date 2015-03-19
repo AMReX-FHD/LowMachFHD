@@ -35,11 +35,11 @@
 \def\bb {{\bf b}}
 \def\Fb {{\bf F}}
 \def\gb {{\bf g}}
+\def\Ib {{\bf I}}
 \def\mb {{\bf m}}
 \def\Qb {{\bf Q}}
 \def\vb {{\bf v}}
 \def\wb {{\bf w}}
-\def\Wb {{\bf W}}
 \def\xb {{\bf x}}
 
 \def\chib   {\boldsymbol{\chi}}
@@ -73,17 +73,21 @@ The governing conservation equations for momentum, mass, and energy for our syst
 \frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot \Fb_i,\label{eq:mass}\\
 \frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb + \sum_k \nabla\cdot h_k \Fb_k + \rho\Hext,\label{eq:enthalpy}
 \end{eqnarray}
-where $h_k = \partial h/\partial w_k$, and
+where $\rho$ is the density, $\vb$ is the velocity, $\pi$ is the dynamic 
+(or perturbational) pressure, $\gb$ is the gravitational vector, $\rho_i=\rho w_i$ is
+the density of fluid component $i$ with $\rho = \sum_i\rho_i$ and $w_i$ the 
+concentrations (mass fractions), $P$ is the total
+pressure, $h$ is the enthalpy, $h_k = \partial h/\partial w_k$,
+$\Hext$ is an external heating term, and
 $\taub = \bar\taub + \tilde\taub$,
 $\Fb = \bar\Fb + \tilde\Fb$, and 
 $\Qb = \bar\Qb + \tilde\Qb$ are the stress tensors, mass fluxes, and heat fluxes 
 respectively, separated into deterministic and stochastic components.
-The densities are $\rho_i = \rho w_i$, with $w_i$ the concentrations (mass fractions).
-Starting from the fully compressible equations and expanding in Mach number shows that the leading
-order pressure terms in Mach number must be constant in space. Thus, the perturbational pressure $\pi$ is
-$O(M^2)$.
-The low Mach number system is then obtained by ignoring the effect of terms of order $M^2$ or higher in pressure 
-on the thermodynamic state of the system.
+Starting from the fully compressible equations and expanding in Mach number shows 
+that the leading order pressure terms in Mach number must be constant in space. 
+Thus, the perturbational pressure $\pi$ is $O(M^2)$.
+The low Mach number system is then obtained by ignoring the effect of terms of 
+order $M^2$ or higher in pressure  on the thermodynamic state of the system.
 The equation of state then becomes a constraint on the evolution; namely,
 the evolution of the system is constrained so that
 \begin{equation}
@@ -91,17 +95,23 @@ P_0(t) = P(\rho,\wb,T),\label{eq:EOS}
 \end{equation}
 where $T=T(\rho,\wb,h)$ is specified by the equation of state.\\
 
-The deterministic stress tensor ignores the effect of bulk viscosity, 
-$\bar\taub = \eta\bar\nabla\vb = \eta[\nabla\vb + (\nabla\vb)^T]$, which 
-can be aborbed into $\pi$.
+The deterministic stress tensor,
+$\bar\taub = \eta\bar\nabla\vb = \eta[\nabla\vb + (\nabla\vb)^T]$,
+ignores the effect of bulk viscosity, which can be aborbed into $\pi$.
 The deterministic heat fluxes have the form 
 $\bar\Qb = \lambda\nabla T$.
 The deterministic part of the mass fluxes, $\bar{\Fb}$, contains contributions from 
 compositional gradients, barodiffusion, and temperature gradients,
 \begin{equation}
-\bar{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right],
+\bar{F} = -\rho\Ib\wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right],
 \end{equation}
-where $\xb$ are the mole fractions.
+where $\Ib$ is the identity matrix, $\wb$ is the vector of concentrations,
+$\chib$ is the diffusion matrix, $\xb$ are the mole fractions,
+$\phib$ are the volume fractions (which for an ideal gas is equivalent to mole fractions),
+$k_B$ is Boltzmann's constant,
+$T$ is the temperature, and $\zetab$ are thermodiffusion coefficients.  The total
+number density is the sum of the partial number densities, $n=\sum_i n_i$ with
+$n_i=\rho_i/W_i$ and $W_i$ the molecular mass of species $i$.
 
 Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy})
 with $DP/Dt$ in the enthalpy equation replaced by $dP_0/dt$, and (\ref{eq:EOS})
