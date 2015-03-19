@@ -71,7 +71,7 @@ subroutine main_driver()
   type(multifab), allocatable :: s_fc(:,:)         ! face-centered
   type(multifab), allocatable :: gradp_baro(:,:)   ! face-centered
   type(multifab), allocatable :: prim(:)           ! cell-centered
-  type(multifab), allocatable :: pres(:)           ! cell-centered
+  type(multifab), allocatable :: pi(:)           ! cell-centered
   type(multifab), allocatable :: chi(:)            ! cell-centered
   type(multifab), allocatable :: chi_fc(:,:)       ! face-centered
   type(multifab), allocatable :: eta(:)            ! cell-centered
@@ -105,7 +105,7 @@ subroutine main_driver()
 
   allocate(lo(dm),hi(dm))
   allocate(mold(nlevs,dm),mnew(nlevs,dm),umac(nlevs,dm))
-  allocate(sold(nlevs),snew(nlevs),prim(nlevs),pres(nlevs))
+  allocate(sold(nlevs),snew(nlevs),prim(nlevs),pi(nlevs))
   allocate(chi(nlevs),eta(nlevs),kappa(nlevs))
   allocate(rhoc_fluxdiv(nlevs))
   allocate(chi_fc(nlevs,dm),s_fc(nlevs,dm),gradp_baro(nlevs,dm))
@@ -162,7 +162,7 @@ subroutine main_driver()
      ! read in time and dt from checkpoint
      ! build and fill mold, sold, and pres
      ! build the mass flux divergence multifabs, and fill them for the inertial algorithm
-     call initialize_from_restart(mla,time,dt,mold,sold,pres,rhoc_fluxdiv,pmask)
+     call initialize_from_restart(mla,time,dt,mold,sold,pi,rhoc_fluxdiv,pmask)
 
   else
 
@@ -223,15 +223,15 @@ subroutine main_driver()
         ! if using advection_type .ge. 1 (bds), need 3 ghost cells
         call multifab_build(sold(n),mla%la(n),2,ng_s)
 
-        ! pressure - need 1 ghost cell since we calculate its gradient
-        call multifab_build(pres(n),mla%la(n),1,1)
+        ! pi - need 1 ghost cell since we calculate its gradient
+        call multifab_build(pi(n),mla%la(n),1,1)
 
         ! this stores divergence of stochastic and diffusive fluxes for rhoc
         call multifab_build(rhoc_fluxdiv(n),mla%la(n),1,0)
         call multifab_setval(rhoc_fluxdiv(n),0.d0,all=.true.)
      end do
 
-     call init(mold,sold,pres,dx,mla,time)
+     call init(mold,sold,pi,dx,mla,time)
 
   end if
 
@@ -326,8 +326,8 @@ subroutine main_driver()
 
   do n=1,nlevs
      ! presure ghost cells
-     call multifab_fill_boundary(pres(n))
-     call multifab_physbc(pres(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+     call multifab_fill_boundary(pi(n))
+     call multifab_physbc(pi(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                           dx_in=dx(n,:))
   end do
 
@@ -339,10 +339,10 @@ subroutine main_driver()
      
      if (barodiffusion_type .gt. 0) then
         ! this computes an initial guess at p using HSE
-        call compute_HSE_pres(mla,sold,pres,dx,the_bc_tower)
+        call compute_HSE_pres(mla,sold,pi,dx,the_bc_tower)
 
         ! compute grad p for barodiffusion
-        call compute_grad(mla,pres,gradp_baro,dx,1,pres_bc_comp,1,1, &
+        call compute_grad(mla,pi,gradp_baro,dx,1,pres_bc_comp,1,1, &
                           the_bc_tower%bc_tower_array)
      end if
 
@@ -444,7 +444,7 @@ subroutine main_driver()
 
      ! write initial plotfile
      if (plot_int .gt. 0) then
-        call write_plotfile(mla,mold,umac,sold,pres,dx,time,0)
+        call write_plotfile(mla,mold,umac,sold,pi,dx,time,0)
      end if
      ! print out projection (average) and variance)
      if (stats_int .gt. 0) then
@@ -485,11 +485,11 @@ subroutine main_driver()
 
      ! advance the solution by dt
      if (algorithm_type .eq. 0) then
-        call advance_timestep_inertial(mla,mold,mnew,umac,sold,snew,s_fc,prim,pres, &
+        call advance_timestep_inertial(mla,mold,mnew,umac,sold,snew,s_fc,prim,pi, &
                                        chi,chi_fc,eta,eta_ed,kappa,rhoc_fluxdiv, &
                                        gradp_baro,dx,dt,time,the_bc_tower)
      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-        call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pres, &
+        call advance_timestep_overdamped(mla,mnew,umac,sold,snew,s_fc,prim,pi, &
                                          chi,chi_fc,eta,eta_ed,kappa,gradp_baro, &
                                          dx,dt,time,the_bc_tower)
      end if
@@ -534,13 +534,13 @@ subroutine main_driver()
 
          if ( (plot_int > 0) .and. &
               ( mod(istep,plot_int) .eq. 0) .or. istep .eq. max_step ) then
-            call write_plotfile(mla,mnew,umac,snew,pres,dx,time,istep)
+            call write_plotfile(mla,mnew,umac,snew,pi,dx,time,istep)
          end if
 
          ! write checkpoint
          if ( (chk_int > 0) .and. &
               ( mod(istep,chk_int) .eq. 0) ) then
-            call checkpoint_write(mla,snew,mnew,pres,rhoc_fluxdiv,time,dt,istep)
+            call checkpoint_write(mla,snew,mnew,pi,rhoc_fluxdiv,time,dt,istep)
          end if
 
          ! print out projection (average) and variance
@@ -593,7 +593,7 @@ subroutine main_driver()
   
   !!!!!!!!!!!! convergence testing
   if(.false.) then
-     call init(mold,sold,pres,dx,mla,time)
+     call init(mold,sold,pi,dx,mla,time)
      do n=1,nlevs
         call multifab_sub_sub_c(sold(n),1,snew(n),1,2,0)
      end do
@@ -626,7 +626,7 @@ subroutine main_driver()
      call multifab_destroy(sold(n))
      call multifab_destroy(snew(n))
      call multifab_destroy(prim(n))
-     call multifab_destroy(pres(n))
+     call multifab_destroy(pi(n))
      call multifab_destroy(chi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))

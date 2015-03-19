@@ -74,7 +74,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
   type(multifab), allocatable  :: gradp_baro(:,:)
-  type(multifab), allocatable  :: pres(:)
+  type(multifab), allocatable  :: pi(:)
   type(multifab), allocatable  :: eta(:)
   type(multifab), allocatable  :: eta_ed(:,:)
   type(multifab), allocatable  :: kappa(:)
@@ -108,7 +108,7 @@ subroutine main_driver()
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
-  allocate(rho_old(nlevs),rhotot_old(nlevs),pres(nlevs))
+  allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
@@ -166,8 +166,8 @@ subroutine main_driver()
 
      ! build the ml_layout
      ! read in time and dt from checkpoint
-     ! build and fill rho, rhotot, pres, and umac
-     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pres, &
+     ! build and fill rho, rhotot, pi, and umac
+     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi, &
                                   diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                   umac,pmask)
 
@@ -217,8 +217,8 @@ subroutine main_driver()
      do n=1,nlevs
         call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
-        ! pressure - need 1 ghost cell since we calculate its gradient
-        call multifab_build(pres(n)      ,mla%la(n),1       ,1)
+        ! pi - need 1 ghost cell since we calculate its gradient
+        call multifab_build(pi(n)      ,mla%la(n),1       ,1)
         call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
         do i=1,dm
@@ -267,7 +267,7 @@ subroutine main_driver()
 
      ! initialize pressure
      do n=1,nlevs
-        call multifab_setval(pres(n),0.d0,all=.true.)
+        call multifab_setval(pi(n),0.d0,all=.true.)
      end do
 
   end if
@@ -286,11 +286,11 @@ subroutine main_driver()
   do n=1,nlevs
      ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
      call multifab_fill_boundary(conc(n))
-     call multifab_fill_boundary(pres(n))
+     call multifab_fill_boundary(pi(n))
      ! fill non-periodic domain boundary ghost cells
      call multifab_physbc(conc(n),1,c_bc_comp,nspecies, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-     call multifab_physbc(pres(n),1,pres_bc_comp,1, &
+     call multifab_physbc(pi(n),1,pres_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
   end do
 
@@ -390,10 +390,10 @@ subroutine main_driver()
   if (barodiffusion_type .gt. 0) then
 
      ! this computes an initial guess at p using HSE
-     call compute_HSE_pres(mla,rhotot_old,pres,dx,the_bc_tower)
+     call compute_HSE_pres(mla,rhotot_old,pi,dx,the_bc_tower)
 
      ! compute grad p for barodiffusion
-     call compute_grad(mla,pres,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+     call compute_grad(mla,pi,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   end if
 
@@ -489,7 +489,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pres,0,dx,time)
+        call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,0,dx,time)
      end if
      
      ! print out projection (average) and variance)
@@ -547,12 +547,12 @@ subroutine main_driver()
       ! routine, but since we have them around anyway for inertial we pass them in
       if (algorithm_type .eq. 0) then
          call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                        gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                          gradp_baro,pres,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                           diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                           dx,dt,time,the_bc_tower,istep)
       end if
@@ -598,7 +598,7 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
-            call write_plotfileLM(mla,"plt",rho_new,rhotot_new,Temp,umac,pres,istep,dx,time)
+            call write_plotfileLM(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,istep,dx,time)
          end if
 
          ! write checkpoint at specific intervals
@@ -606,7 +606,7 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing checkpoint at timestep =', istep 
             end if
-            call checkpoint_write(mla,rho_new,rhotot_new,pres,diff_mass_fluxdiv, &
+            call checkpoint_write(mla,rho_new,rhotot_new,pi,diff_mass_fluxdiv, &
                                   stoch_mass_fluxdiv,umac,time,dt,istep)
          end if
 
@@ -658,7 +658,7 @@ subroutine main_driver()
      call multifab_destroy(Temp(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      call multifab_destroy(stoch_mass_fluxdiv(n))
-     call multifab_destroy(pres(n))
+     call multifab_destroy(pi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
      do i=1,dm

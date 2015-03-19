@@ -481,7 +481,7 @@ contains
     ! This relies entirely on relative tolerance and can fail if the rhs is roundoff error only:
     ! gmres_abs_tol = 0.d0 ! It is better to set gmres_abs_tol in namelist to a sensible value
 
-    ! call gmres to compute delta v and delta p
+    ! call gmres to compute delta v and delta pi
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
 
@@ -499,8 +499,8 @@ contains
        end do
     end do
 
-    ! compute v^{*,n+1} = v^n + delta v
-    ! compute p^{*,n+1}= p^n + delta p
+    ! compute v^{*,n+1} = v^n + dumac
+    ! compute pi^{*,n+1}= pi^n + dpi
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
@@ -823,7 +823,7 @@ contains
        call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
 
-    ! call gmres to compute delta v and delta p
+    ! call gmres to compute delta v and delta pi
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
                eta,eta_ed,kappa,theta_alpha)
                               
@@ -839,7 +839,7 @@ contains
     end do
 
     ! compute v^{n+1} = v^{n+1,*} + dumac
-    ! compute p^{n+1} = p^{n+1,*} + dp
+    ! compute pi^{n+1} = pi^{n+1,*} + dp
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
