@@ -5,6 +5,7 @@ module mass_fluxdiv_energy_module
   use diffusive_mass_fluxdiv_module
   use mass_flux_utilities_module
   use convert_variables_module
+  use energy_EOS_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: variance_coef_mass
 
@@ -16,21 +17,20 @@ module mass_fluxdiv_energy_module
 
 contains
 
-  subroutine mass_fluxdiv_energy(mla,rho,gradp_baro, &
-                                  mass_fluxdiv, &
-                                  Temp, &
-                                  dt,stage_time,dx,weights, &
-                                  the_bc_tower)
+  subroutine mass_fluxdiv_energy(mla,rho,gradp_baro,mass_fluxdiv, &
+                                 Temp,p0,eta,kappa,lambda,dt,time,dx,the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(inout)   :: mass_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
-    real(kind=dp_t), intent(in   )   :: dt
-    real(kind=dp_t), intent(in   )   :: stage_time 
+    type(multifab) , intent(inout)   :: eta(:)           ! viscosity
+    type(multifab) , intent(inout)   :: kappa(:)         ! bulk viscosity
+    type(multifab) , intent(inout)   :: lambda(:)        ! thermal conductivity
+    real(kind=dp_t), intent(in   )   :: p0
+    real(kind=dp_t), intent(in   )   :: dt, time
     real(kind=dp_t), intent(in   )   :: dx(:,:)
-    real(kind=dp_t), intent(in   )   :: weights(:) 
     type(bc_tower) , intent(in   )   :: the_bc_tower
 
     ! local variables
@@ -45,7 +45,7 @@ contains
     type(multifab) :: zeta_by_Temp(mla%nlevel)   ! for Thermo-diffusion 
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
 
-    integer         :: n,i,dm,nlevs
+    integer         :: n,i,j,dm,nlevs
 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
@@ -83,11 +83,20 @@ contains
     ! inputs are rho, Temp, P, Y, X
     ! outputs are viscosity (eta), bulk viscosity (kappa), diffusion matrix (chi), 
     ! thermal conductivity (lambda), scaled thermodiffusion coefficients
+!    call ideal_mixture_transport_mf(rhotot_temp,Temp,p0,massfrac,molarconc,eta,lambda,kappa,chi,zeta_by_Temp)
 
-      
+    ! multiply zeta_by_Temp by x_i/T
+
 
     ! set Gama to the identity matrix
-
+    do n=1,nlevs
+       call multifab_setval(Gama(n),0.d0,all=.true.)
+       j=1
+       do i=1,dm
+          call multifab_setval_c(Gama(n),1.d0,j,1,all=.true.)
+          j=j+dm+1
+       end do
+    end do
 
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,rhotot_temp,chi,rhoWchi)
