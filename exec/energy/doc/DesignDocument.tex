@@ -465,7 +465,7 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 &&\hspace{-1in} + (\rho\Hext)^n + (\rho\Hext)^{*,n+1}
 \end{eqnarray}
 \begin{eqnarray}
-\left(\frac{\rho^{*,n+1}c_p^{*,n+1,l}}{\Delta t} - \frac{1}{2}\lambda^{*,n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{*,n+1}h^{*,n+1,l}}{\Delta t}\nonumber\\
+\left(\frac{\rho^{*,n+1}c_p^{*,n+1,l}}{\Delta t} - \nabla\cdot\frac{1}{2}\lambda^{*,n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{*,n+1}h^{*,n+1,l}}{\Delta t}\nonumber\\
 &&\hspace{-1.25in} - \nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla T^{*,n+1,l}\nonumber\\
 &&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} \Fb_k^{*,n+1,l},\nonumber\\
@@ -541,7 +541,7 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 &&\hspace{-1in} + (\rho\Hext)^n + (\rho\Hext)^{n+1},
 \end{eqnarray}
 \begin{eqnarray}
-\left(\frac{\rho^{n+1}c_p^{n+1,l}}{\Delta t} - \frac{1}{2}\lambda^{n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1}h^{n+1,l}}{\Delta t}\nonumber\\
+\left(\frac{\rho^{n+1}c_p^{n+1,l}}{\Delta t} - \nabla\cdot\frac{1}{2}\lambda^{n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1}h^{n+1,l}}{\Delta t}\nonumber\\
 &&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right]\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l}\nonumber\\
 &&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}\nonumber\\
