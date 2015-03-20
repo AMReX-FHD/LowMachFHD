@@ -45,10 +45,49 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
+    ! local variables
+
+    ! this will hold -div(rho*v)^n + div(F^n)
+    type(multifab) :: rho_update(mla%nlevel)
+
+    ! This will hold (rhoh)^n/dt - div(rhoh*v)^n + Sbar^n/alphabar^n 
+    !                + (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n)
+    ! for the RHS of the temperature diffusion solve.
+    ! Each of these terms stays fixed over all l iterations.
+    type(multifab) :: rhoh_update1(mla%nlevel)
+
+    ! This will hold -(rho^{*,n+1}h^{*,n+1,l})/dt + Sbarcorr^n/alphabar^n
+    !                + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l})
+    !                + (rho Hext)^(*,n+1)
+    ! for the RHS of the temperature diffusion solve.
+    ! Each of these terms may change for each l iteration.
+    type(multifab) :: rhoh_update2(mla%nlevel)
+
+    type(multifab) :: deltaT(mla%nlevel)
+
+    type(multifab) :: solver_alpha(mla%nlevel)
+    type(multifab) :: solver_beta (mla%nlevel,mla%dim)
+
+    type(multifab) :: lambda_old(mla%nlevel)
+    type(multifab) :: lambda_new(mla%nlevel)
+
+    type(multifab) :: S(mla%nlevel)
+    type(multifab) :: deltaS(mla%nlevel)
+
+    type(multifab) :: Scorr(mla%nlevel)
+    type(multifab) :: deltaScorr(mla%nlevel)
+
+    type(multifab) :: alpha(mla%nlevel)
+    type(multifab) :: deltaalpha(mla%nlevel)
+
+    integer :: Sbar, Scorrbar, alphabar
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 0a: Compute a pressure update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! Construct S.  Many pieces of S are used in later parts of the algorithm,
+    ! e.g., density update or enthalpy solve, but with different scalings
 
     ! compute mass flux
 
