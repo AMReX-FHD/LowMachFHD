@@ -20,7 +20,7 @@ module compute_mixture_properties_module
     
 contains
   
-  subroutine compute_mixture_properties(mla,rho,rhotot,D_bar,D_therm,Hessian,Temp,the_bc_level)
+  subroutine compute_mixture_properties(mla,rho,rhotot,D_bar,D_therm,Hessian,Temp)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
@@ -29,7 +29,6 @@ contains
     type(multifab),  intent(inout)  :: D_therm(:)    ! thermo diffusion constants 
     type(multifab),  intent(inout)  :: Hessian(:)    ! Non-ideality coefficient 
     type(multifab) , intent(in   )  :: Temp(:) 
-    type(bc_level),  intent(in   )  :: the_bc_level(:)
  
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)

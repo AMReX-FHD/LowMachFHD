@@ -4,6 +4,7 @@ module mass_fluxdiv_energy_module
   use define_bc_module
   use diffusive_mass_fluxdiv_module
   use mass_flux_utilities_module
+  use convert_variables_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: variance_coef_mass
 
@@ -36,7 +37,9 @@ contains
     type(multifab) :: drho(mla%nlevel)           ! correction to rho
     type(multifab) :: rhoWchi(mla%nlevel)        ! rho*W*chi*Gama
     type(multifab) :: rhotot_temp(mla%nlevel)    ! temp storage for rho with drho correction
+    type(multifab) :: massfrac(mla%nlevel)       ! mass fractions (concentrations)
     type(multifab) :: molarconc(mla%nlevel)      ! molar concentration
+    type(multifab) :: molmtot(mla%nlevel)        ! total molar mass
     type(multifab) :: chi(mla%nlevel)            ! Chi-matrix
     type(multifab) :: Gama(mla%nlevel)           ! Gama-matrix
     type(multifab) :: zeta_by_Temp(mla%nlevel)   ! for Thermo-diffusion 
@@ -52,7 +55,9 @@ contains
        call multifab_build(drho(n),         mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(rhotot_temp(n),  mla%la(n), 1          , rho(n)%ng)
+       call multifab_build(massfrac(n),     mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(molarconc(n),    mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
        call multifab_build(chi(n),          mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(Gama(n),         mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
@@ -63,12 +68,16 @@ contains
     end do
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
-    call correct_rho_with_drho(mla,rho,drho,the_bc_tower%bc_tower_array)
+    call correct_rho_with_drho(mla,rho,drho)
 
     ! compute rhotot_temp from corrected rho
     call compute_rhotot(mla,rho,rhotot_temp)
 
-    ! compute mass fractions and mole fractions
+    ! compute mass fractions 
+    call convert_rho_to_c(mla,rho,rhotot_temp,massfrac,.true.)
+
+    ! compute mole fractions and molar mass
+    call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot)
  
     ! use ideal_mixture_transport()
     ! inputs are rho, Temp, P, Y, X
@@ -106,7 +115,9 @@ contains
        call multifab_destroy(drho(n))
        call multifab_destroy(rhoWchi(n))
        call multifab_destroy(rhotot_temp(n))
+       call multifab_destroy(massfrac(n))
        call multifab_destroy(molarconc(n))
+       call multifab_destroy(molmtot(n))
        call multifab_destroy(chi(n))
        call multifab_destroy(Gama(n))
        call multifab_destroy(zeta_by_Temp(n))

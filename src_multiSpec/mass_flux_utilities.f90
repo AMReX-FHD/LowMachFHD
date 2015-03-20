@@ -1,7 +1,6 @@
 module mass_flux_utilities_module 
 
   use multifab_module
-  use define_bc_module
   use ml_layout_module
   use probin_common_module, only: k_B, molmass, rhobar
   use probin_multispecies_module, only: nspecies, use_lapack, fraction_tolerance, &
@@ -24,12 +23,11 @@ module mass_flux_utilities_module
 
 contains
   
-  subroutine correct_rho_with_drho(mla,rho,drho,the_bc_level)
+  subroutine correct_rho_with_drho(mla,rho,drho)
 
    type(ml_layout), intent(in   )  :: mla
    type(multifab) , intent(inout)  :: rho(:) 
    type(multifab) , intent(inout)  :: drho(:) 
-   type(bc_level) , intent(in   )  :: the_bc_level(:)
 
    ! local variables
    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
@@ -129,14 +127,13 @@ contains
 
   end subroutine correct_rho_with_drho_local 
 
-  subroutine convert_cons_to_prim(mla,rho,rhotot,molarconc,molmtot,the_bc_level)
+  subroutine convert_cons_to_prim(mla,rho,rhotot,molarconc,molmtot)
    
    type(ml_layout), intent(in   )  :: mla
    type(multifab) , intent(in   )  :: rho(:) 
    type(multifab) , intent(inout)  :: rhotot(:) 
    type(multifab) , intent(inout)  :: molarconc(:) 
    type(multifab) , intent(inout)  :: molmtot(:) 
-   type(bc_level) , intent(in   )  :: the_bc_level(:)
 
    ! local variables
    integer :: lo(rho(1)%dim), hi(rho(1)%dim)
@@ -358,7 +355,7 @@ contains
  
   end subroutine compute_rhotot_3d
 
-  subroutine compute_Gama(mla,rho,rhotot,molarconc,molmtot,Hessian,Gama,the_bc_level)
+  subroutine compute_Gama(mla,rho,rhotot,molarconc,molmtot,Hessian,Gama)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
@@ -367,7 +364,6 @@ contains
     type(multifab),  intent(in   )  :: molmtot(:) 
     type(multifab),  intent(in   )  :: Hessian(:)    ! Hessian matrix
     type(multifab),  intent(inout)  :: Gama(:)       ! Non-ideality coeficient 
-    type(bc_level),  intent(in   )  :: the_bc_level(:)
  
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)

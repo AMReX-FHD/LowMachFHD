@@ -75,18 +75,17 @@ contains
     end do
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
-    call correct_rho_with_drho(mla,rho,drho,the_bc_tower%bc_tower_array)
+    call correct_rho_with_drho(mla,rho,drho)
  
     ! compute molmtot,molarconc & rhotot_temp (primitive variables) for 
     ! each-cell from rho(conserved) 
-    call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot,the_bc_tower%bc_tower_array)
+    call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot)
       
     ! populate D_bar and Hessian matrix 
-    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm, &
-                                    Hessian,Temp,the_bc_tower%bc_tower_array)
+    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian,Temp)
 
     ! compute Gama from Hessian
-    call compute_Gama(mla,rho,rhotot_temp,molarconc,molmtot,Hessian,Gama,the_bc_tower%bc_tower_array)
+    call compute_Gama(mla,rho,rhotot_temp,molarconc,molmtot,Hessian,Gama)
    
     ! compute chi 
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
