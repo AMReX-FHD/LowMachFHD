@@ -9,16 +9,16 @@ module convert_variables_module
 
   private
 
-  public :: convert_rho_to_c, convert_rhoh_to_h
+  public :: convert_rho_to_conc, convert_rhoh_to_h
   
 contains
 
-  subroutine convert_rho_to_c(mla,rho,rho_tot,c,rho_to_c)
+  subroutine convert_rho_to_conc(mla,rho,rhotot,conc,rho_to_c)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
-    type(multifab) , intent(in   ) :: rho_tot(:)
-    type(multifab) , intent(inout) ::   c(:)
+    type(multifab) , intent(in   ) :: rhotot(:)
+    type(multifab) , intent(inout) :: conc(:)
     logical        , intent(in   ) :: rho_to_c
 
     ! local
@@ -30,9 +30,9 @@ contains
 
        ! rho to c - NO GHOST CELLS
        do n=1,nlevs
-          call multifab_copy_c(c(n),1,rho(n),1,nspecies,0)
+          call multifab_copy_c(conc(n),1,rho(n),1,nspecies,0)
           do i=1,nspecies
-             call multifab_div_div_c(c(n),i,rho_tot(n),1,1,0)
+             call multifab_div_div_c(conc(n),i,rhotot(n),1,1,0)
           end do
        end do
 
@@ -40,21 +40,21 @@ contains
 
        ! c to rho - VALID + GHOST (CAN CHANGE TO DO ONLY GHOST TO SAVE COMPUTATION)
        do n=1,nlevs
-          call multifab_copy_c(rho(n),1,c(n),1,nspecies,rho(n)%ng)
+          call multifab_copy_c(rho(n),1,conc(n),1,nspecies,rho(n)%ng)
           do i=1,nspecies
-             call multifab_mult_mult_c(rho(n),i,rho_tot(n),1,1,rho(n)%ng)
+             call multifab_mult_mult_c(rho(n),i,rhotot(n),1,1,rho(n)%ng)
           end do
        end do
 
     end if
 
-  end subroutine convert_rho_to_c
+  end subroutine convert_rho_to_conc
 
-  subroutine convert_rhoh_to_h(mla,rhoh,rho_tot,h,rhoh_to_h)
+  subroutine convert_rhoh_to_h(mla,rhoh,rhotot,h,rhoh_to_h)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rhoh(:)
-    type(multifab) , intent(in   ) :: rho_tot(:)
+    type(multifab) , intent(in   ) :: rhotot(:)
     type(multifab) , intent(inout) :: h(:)
     logical        , intent(in   ) :: rhoh_to_h
 
@@ -68,7 +68,7 @@ contains
        ! rhoh to h - NO GHOST CELLS
        do n=1,nlevs
           call multifab_copy_c(h(n),1,rhoh(n),1,1,0)
-          call multifab_div_div_c(h(n),1,rho_tot(n),1,1,0)
+          call multifab_div_div_c(h(n),1,rhotot(n),1,1,0)
        end do
 
     else
@@ -76,7 +76,7 @@ contains
        ! h to rhoh- VALID + GHOST (CAN CHANGE TO DO ONLY GHOST TO SAVE COMPUTATION)
        do n=1,nlevs
           call multifab_copy_c(rhoh(n),1,h(n),1,1,rhoh(n)%ng)
-          call multifab_mult_mult_c(rhoh(n),1,rho_tot(n),1,1,rhoh(n)%ng)
+          call multifab_mult_mult_c(rhoh(n),1,rhotot(n),1,1,rhoh(n)%ng)
        end do
 
     end if

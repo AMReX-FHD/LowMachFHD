@@ -99,7 +99,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! compute mass fractions in valid region and then fill ghost cells
-    call convert_rho_to_c(mla,rho_old,rhotot_old,w_old,.true.)
+    call convert_rho_to_conc(mla,rho_old,rhotot_old,w_old,.true.)
     do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
        call multifab_fill_boundary(w_old(n))

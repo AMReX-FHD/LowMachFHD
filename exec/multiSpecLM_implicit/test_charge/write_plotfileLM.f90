@@ -40,7 +40,7 @@ contains
     type(multifab), allocatable     :: plotdata(:)
     type(multifab), allocatable     :: plotdata_stag(:,:)
 
-    type(multifab) :: c(mla%nlevel)
+    type(multifab) :: conc(mla%nlevel)
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -74,9 +74,9 @@ contains
 
     ! compute concentrations
     do n=1,nlevs
-       call multifab_build(c(n),mla%la(n),nspecies,0)
+       call multifab_build(conc(n),mla%la(n),nspecies,0)
     end do
-    call convert_rho_to_c(mla,rho,rhotot,c,.true.)
+    call convert_rho_to_conc(mla,rho,rhotot,conc,.true.)
 
     ! build plotdata for 2*nspecies+2*dm+4 and 0 ghost cells
     do n=1,nlevs
@@ -92,11 +92,11 @@ contains
        call multifab_copy_c(plotdata(n),2*nspecies+2*dm+4,plotdata(n),1,1,0)
     end do
     
-    ! copy rhotot, rho, c, and Temp into plotdata
+    ! copy rhotot, rho, conc, and Temp into plotdata
     do n = 1,nlevs
        call multifab_copy_c(plotdata(n),1           ,rhotot(n),1,       1,0)
        call multifab_copy_c(plotdata(n),2           ,rho(n)   ,1,nspecies,0)
-       call multifab_copy_c(plotdata(n),nspecies+2  ,c(n)     ,1,nspecies,0)
+       call multifab_copy_c(plotdata(n),nspecies+2  ,conc(n)  ,1,nspecies,0)
        call multifab_copy_c(plotdata(n),2*nspecies+2,Temp(n)  ,1,1       ,0)
     enddo
 
@@ -160,7 +160,7 @@ contains
 
     ! make sure to destroy the multifab or you'll leak memory
     do n=1,nlevs
-       call multifab_destroy(c(n))
+       call multifab_destroy(conc(n))
        call multifab_destroy(plotdata(n))
       do i=1,dm
          call multifab_destroy(plotdata_stag(n,i))

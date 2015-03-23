@@ -74,7 +74,7 @@ contains
     call compute_rhotot(mla,rho,rhotot_temp)
 
     ! compute mass fractions 
-    call convert_rho_to_c(mla,rho,rhotot_temp,massfrac,.true.)
+    call convert_rho_to_conc(mla,rho,rhotot_temp,massfrac,.true.)
 
     ! compute mole fractions and molar mass
     call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot)
