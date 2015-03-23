@@ -398,7 +398,7 @@ contains
     ! compute rhotot from rho in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
 
-    ! rho to c - NO GHOST CELLS
+    ! rho to conc - NO GHOST CELLS
     call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.true.)
 
     do n=1,nlevs
@@ -414,7 +414,7 @@ contains
        call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
     end do
 
-    ! c to rho - INCLUDING GHOST CELLS
+    ! conc to rho - INCLUDING GHOST CELLS
     call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.false.)
 
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -637,7 +637,7 @@ contains
     ! compute rhotot from rho in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
 
-    ! rho to c - NO GHOST CELLS
+    ! rho to conc - NO GHOST CELLS
     call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.true.)
 
     do n=1,nlevs
@@ -653,7 +653,7 @@ contains
        call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
     end do
 
-    ! c to rho - INCLUDING GHOST CELLS
+    ! conc to rho - INCLUDING GHOST CELLS
     call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

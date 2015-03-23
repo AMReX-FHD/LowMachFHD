@@ -217,8 +217,8 @@ subroutine main_driver()
         call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
         ! pi - need 1 ghost cell since we calculate its gradient
-        call multifab_build(pi(n)      ,mla%la(n),1       ,1)
-        call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
+        call multifab_build(pi(n)                ,mla%la(n),1       ,1)
+        call multifab_build(diff_mass_fluxdiv(n) ,mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
@@ -274,33 +274,31 @@ subroutine main_driver()
   end if
 
   do n=1,nlevs
-     call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
+     call multifab_build(conc(n),mla%la(n),nspecies,rho_old(n)%ng)
   end do
 
   ! compute rhotot from rho in VALID REGION
   call compute_rhotot(mla,rho_old,rhotot_old)
 
-  ! rho to c - NO GHOST CELLS
+  ! rho to conc - NO GHOST CELLS
   call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.true.)
 
   ! fill ghost cells
   do n=1,nlevs
      ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+     call multifab_fill_boundary(rhotot_old(n))
      call multifab_fill_boundary(conc(n))
      call multifab_fill_boundary(pi(n))
      ! fill non-periodic domain boundary ghost cells
+     call multifab_physbc(rhotot_old(n),1,scal_bc_comp,1, &
+                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
      call multifab_physbc(conc(n),1,c_bc_comp,nspecies, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
      call multifab_physbc(pi(n),1,pres_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
   end do
 
-  do n=1,nlevs
-     call multifab_fill_boundary(rhotot_old(n))
-     call fill_rho_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
-  end do
-
-  ! c to rho - INCLUDING GHOST CELLS
+  ! conc to rho - INCLUDING GHOST CELLS
   call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.false.)
 
   do n=1,nlevs
@@ -309,7 +307,7 @@ subroutine main_driver()
 
   do n=1,nlevs
      do i=1,dm
-        call multifab_build_edge     (mtemp(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(     mtemp(n,i),mla%la(n),1,0,i)
         call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
         call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
      end do
@@ -332,11 +330,11 @@ subroutine main_driver()
 
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs 
-     call multifab_build(rho_new(n),           mla%la(n),nspecies,ng_s)
-     call multifab_build(rhotot_new(n),        mla%la(n),1,       ng_s) 
-     call multifab_build(Temp(n),              mla%la(n),1,       ng_s)
-     call multifab_build(eta(n)  ,mla%la(n),1,1)
-     call multifab_build(kappa(n),mla%la(n),1,1)
+     call multifab_build(rho_new(n),   mla%la(n),nspecies,ng_s)
+     call multifab_build(rhotot_new(n),mla%la(n),1,       ng_s) 
+     call multifab_build(Temp(n),      mla%la(n),1,       ng_s)
+     call multifab_build(eta(n)  ,     mla%la(n),1,1)
+     call multifab_build(kappa(n),     mla%la(n),1,1)
 
      ! eta and Temp on nodes (2d) or edges (3d)
      if (dm .eq. 2) then

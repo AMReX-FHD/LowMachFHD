@@ -645,7 +645,7 @@ contains
 !          enddo
 !       enddo
              
-       ! convert c to rho and rho*c
+       ! convert conc to rho and rho*c
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
              s(i,j,1) = 1.0d0/(s(i,j,2)/rhobar(1)+(1.0d0-s(i,j,2))/rhobar(2))

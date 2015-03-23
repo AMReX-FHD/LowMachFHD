@@ -5,7 +5,9 @@ module initialize_module
   use bc_module
   use define_bc_module
   use energy_eos_module
+  use energy_eos_wrapper_module
   use convert_variables_module
+  use probin_multispecies_module, only: nspecies
 
   implicit none
 
@@ -67,8 +69,8 @@ contains
     ! Each of these terms may change for each l iteration.
     type(multifab) :: rhoh_update2(mla%nlevel)
 
-    type(multifab) :: w_old(mla%nlevel)
-    type(multifab) :: x_old(mla%nlevel)
+    type(multifab) :: conc_old(mla%nlevel)
+    type(multifab) :: molefrac_old(mla%nlevel)
 
     type(multifab) :: deltaT(mla%nlevel)
 
@@ -94,23 +96,27 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
+    do n=1,nlevs
+       call multifab_build(    conc_old(n),mla%la(n),nspecies,rho_old(n)%ng)
+       call multifab_build(molefrac_old(n),mla%la(n),nspecies,rho_old(n)%ng)
+    end do
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 0a: Compute a pressure update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! compute mass fractions in valid region and then fill ghost cells
-    call convert_rho_to_conc(mla,rho_old,rhotot_old,w_old,.true.)
+    call convert_rho_to_conc(mla,rho_old,rhotot_old,conc_old,.true.)
     do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(w_old(n))
+       call multifab_fill_boundary(conc_old(n))
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(w_old(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+       call multifab_physbc(conc_old(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
     end do
 
-
-
     ! compute mole fractions
+    call convert_conc_to_molefrac(mla,conc_old,molefrac_old,.true.)
 
     ! compute initial transport properties
 !    call ideal_mixture_transport(rhotot_old,Temp,p0_old,)

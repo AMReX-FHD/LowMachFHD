@@ -279,7 +279,7 @@ subroutine main_driver()
   ! compute rhotot from rho in VALID REGION
   call compute_rhotot(mla,rho_old,rhotot_old)
 
-  ! rho to c - NO GHOST CELLS
+  ! rho to conc - NO GHOST CELLS
   call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.true.)
 
   ! fill ghost cells
@@ -299,7 +299,7 @@ subroutine main_driver()
      call fill_rho_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
   end do
 
-  ! c to rho - INCLUDING GHOST CELLS
+  ! conc to rho - INCLUDING GHOST CELLS
   call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.false.)
 
   do n=1,nlevs

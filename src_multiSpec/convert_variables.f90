@@ -28,7 +28,7 @@ contains
 
     if (rho_to_c) then
 
-       ! rho to c - NO GHOST CELLS
+       ! rho to conc - NO GHOST CELLS
        do n=1,nlevs
           call multifab_copy_c(conc(n),1,rho(n),1,nspecies,0)
           do i=1,nspecies
@@ -38,7 +38,7 @@ contains
 
     else
 
-       ! c to rho - VALID + GHOST (CAN CHANGE TO DO ONLY GHOST TO SAVE COMPUTATION)
+       ! conc to rho - VALID + GHOST (CAN CHANGE TO DO ONLY GHOST TO SAVE COMPUTATION)
        do n=1,nlevs
           call multifab_copy_c(rho(n),1,conc(n),1,nspecies,rho(n)%ng)
           do i=1,nspecies
