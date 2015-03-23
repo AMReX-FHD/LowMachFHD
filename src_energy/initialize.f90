@@ -1,8 +1,11 @@
 module initialize_module
 
   use ml_layout_module
+  use multifab_physbc_module
+  use bc_module
   use define_bc_module
   use energy_eos_module
+  use convert_variables_module
 
   implicit none
 
@@ -25,7 +28,7 @@ contains
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(in   ) :: rho_old(:)
+    type(multifab) , intent(inout) :: rho_old(:)
     type(multifab) , intent(inout) :: rho_new(:)
     type(multifab) , intent(in   ) :: rhotot_old(:)
     type(multifab) , intent(inout) :: rhotot_new(:)
@@ -64,6 +67,9 @@ contains
     ! Each of these terms may change for each l iteration.
     type(multifab) :: rhoh_update2(mla%nlevel)
 
+    type(multifab) :: w_old(mla%nlevel)
+    type(multifab) :: x_old(mla%nlevel)
+
     type(multifab) :: deltaT(mla%nlevel)
 
     type(multifab) :: solver_alpha(mla%nlevel)
@@ -83,11 +89,28 @@ contains
 
     integer :: Sbar, Scorrbar, alphabar
 
+    integer :: n,nlevs,i,dm
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 0a: Compute a pressure update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! compute mass and mole fractions
+    ! compute mass fractions in valid region and then fill ghost cells
+    call convert_rho_to_c(mla,rho_old,rhotot_old,w_old,.true.)
+    do n=1,nlevs
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(w_old(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(w_old(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
+    end do
+
+
+
+    ! compute mole fractions
 
     ! compute initial transport properties
 !    call ideal_mixture_transport(rhotot_old,Temp,p0_old,)
