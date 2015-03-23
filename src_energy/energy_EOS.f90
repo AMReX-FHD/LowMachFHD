@@ -14,12 +14,14 @@ module energy_EOS_module
 
   REAL*8 , SAVE :: dia_in(MAXSPECIES)          ! diameters of molecules
   REAL*8 , SAVE :: int_deg_free_in(MAXSPECIES) ! internal degrees of freedom
+  REAL*8 , SAVE :: p0_in                       ! initial background pressure, p0
   integer, SAVE :: use_fake_diff = 0           ! force diffusion coefficients to constant
   REAL*8 , SAVE :: fake_diff_coeff = -1.d0     ! Adjust transport coefficients artificially
   REAL*8 , SAVE :: fake_soret_factor = 1.0d0   ! Adjust transport coefficients artificially
 
   NAMELIST /probin_energy_EOS/ dia_in
   NAMELIST /probin_energy_EOS/ int_deg_free_in
+  NAMELIST /probin_energy_EOS/ p0_in
   NAMELIST /probin_energy_EOS/ use_fake_diff
   NAMELIST /probin_energy_EOS/ fake_diff_coeff
   NAMELIST /probin_energy_EOS/ fake_soret_factor
@@ -56,6 +58,7 @@ contains
 
     ! default values to be replace from inputs file or command line
     dia_in = 0.d0
+    p0_in = 1013250.d0
     int_deg_free_in = 0
     use_fake_diff = 0
     fake_diff_coeff = -1.d0
@@ -81,6 +84,11 @@ contains
     do while ( farg <= narg )
        call get_command_argument(farg, value = fname)
        select case (fname)
+
+       case ('--p0_in')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) p0_in
 
        case ('--use_fake_diff')
           farg = farg + 1
@@ -138,6 +146,7 @@ contains
     write(6,*)"dia",dia
     write(6,*)"molecular_weight",molecular_weight
     write(6,*)"molecular_mass",molmass
+    write(6,*)"p0_in",p0_in
     write(6,*)"int_deg_free",int_deg_free
     write(6,*)"cvgas",cvgas
     write(6,*)"cpgas",cpgas

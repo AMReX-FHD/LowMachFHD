@@ -255,6 +255,7 @@
 
  dia_in(1:1) = 0.d0          ! diameters of molecules
  int_deg_free_in(1:1) = 0    ! internal degrees of freedom
+ p0_in = 1013250.d0          ! initial background pressure, p0
  use_fake_diff = 0           ! force diffusion coefficients to constant
  fake_diff_coeff = -1.d0     ! Adjust transport coefficients artificially
  fake_soret_factor = 1.0d0   ! Adjust transport coefficients artificially

@@ -166,9 +166,9 @@ subroutine main_driver()
      ! build the ml_layout
      ! read in time and dt from checkpoint
      ! build and fill rho, rhotot, pi, and umac
-     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi, &
-                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                  umac,pmask)
+!     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi, &
+!                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+!                                  umac,pmask)
 
   else
 
