@@ -664,7 +664,7 @@ The molecular weights, diameters, and assumption of hard sphere dynamics
 \item {\tt CKYTX} computes mole fractions, $\xb$, from mass fractions, $\wb$.\\
 
 \item {\tt CKYTCR} computes molar concentrations from $\rho,T$ and $\wb$.
-In this EOS this is not dependent on  temperature.\\
+In this EOS this is not dependent on temperature.\\
 
 \item {\tt CKXTY} mass fractions, $\wb$, from mole fractions, $\xb$.\\
 
@@ -683,14 +683,14 @@ as inputs and computes the following:\\
 
 \item {\tt eta} is the dynamic viscosity, $\eta$.\\
 
-\item {\tt zeta} is the bulk viscosity, which we will not use for now.\\
+\item {\tt zeta} is the bulk viscosity, $\kappa$.\\
 
 \item {\tt diff\_ij} is the diffusion matrix, $\chi$.\\
 
 \item {\tt kappa} is the thermal conductivity, $\lambda$.\\
 
-\item {\tt chitil} is related to the thermodiffusion coefficients, 
-such that $\zeta_i = x_i\tilde{\chi}_i$\\
+\item {\tt chitil} are the thermodiffusion coefficients, $\zeta$.
+                   (I modified the routine to make this so).\\
 
 \end{itemize}
 

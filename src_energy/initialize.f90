@@ -2,6 +2,7 @@ module initialize_module
 
   use ml_layout_module
   use define_bc_module
+  use energy_eos_module
 
   implicit none
 
@@ -85,6 +86,11 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 0a: Compute a pressure update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! compute mass and mole fractions
+
+    ! compute initial transport properties
+!    call ideal_mixture_transport(rhotot_old,Temp,p0_old,)
 
     ! Construct S.  Many pieces of S are used in later parts of the algorithm,
     ! e.g., density update or enthalpy solve, but with different scalings

@@ -25,8 +25,7 @@ module advance_timestep_inertial_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
-  use probin_common_module, only: advection_type, grav, variance_coef_mass, &
-                                  variance_coef_mom, barodiffusion_type
+  use probin_common_module, only: advection_type, grav, barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
   use analysis_module
@@ -36,21 +35,6 @@ module advance_timestep_inertial_module
   private
 
   public :: advance_timestep_inertial
-
-  ! special inhomogeneous boundary condition multifab
-  ! vel_bc_n(nlevs,dm) are the normal velocities
-  ! in 2D, vel_bc_t(nlevs,2) respresents
-  !   1. y-velocity bc on x-faces (nodal)
-  !   2. x-velocity bc on y-faces (nodal)
-  ! in 3D, vel_bc_t(nlevs,6) represents
-  !   1. y-velocity bc on x-faces (nodal in y and x)
-  !   2. z-velocity bc on x-faces (nodal in z and x)
-  !   3. x-velocity bc on y-faces (nodal in x and y)
-  !   4. z-velocity bc on y-faces (nodal in z and y)
-  !   5. x-velocity bc on z-faces (nodal in x and z)
-  !   6. y-velocity bc on z-faces (nodal in y and z)
-  type(multifab), allocatable, save :: vel_bc_n(:,:)
-  type(multifab), allocatable, save :: vel_bc_t(:,:)
 
 contains
 
@@ -117,8 +101,6 @@ contains
 
     theta_alpha = 1.d0/dt
     
-    call build_bc_multifabs(mla)
-    
     do n=1,nlevs
        call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
@@ -163,16 +145,16 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! average rho_old and rhotot_old to faces
-    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! add D^n and St^n to rho_update
     do n=1,nlevs
        call setval(rho_update(n),0.d0,all=.true.)
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
-       end if
+!       if (variance_coef_mass .ne. 0.d0) then
+!          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+!       end if
     end do
 
     ! add A^n to rho_update
@@ -325,10 +307,10 @@ contains
           call setval(m_s_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
-    if (variance_coef_mom .ne. 0.d0) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
-                                 Temp,Temp_ed,dx,dt,weights)
-    end if
+!    if (variance_coef_mom .ne. 0.d0) then
+!       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
+!                                 Temp,Temp_ed,dx,dt,weights)
+!    end if
 
     ! add div(Sigma^n) to gmres_rhs_v
     do n=1,nlevs
@@ -346,10 +328,6 @@ contains
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
-    ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
-                                   the_bc_tower%bc_tower_array)
-
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
     call compute_mass_fluxdiv(mla,rho_new,gradp_baro, &
@@ -359,26 +337,19 @@ contains
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
+!       if (variance_coef_mass .ne. 0.d0) then
+!          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+!       end if
        do i=1,dm
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
        end do
     end do
 
-    ! set the Dirichlet velocity value on reservoir faces
-    call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
-
     ! compute gmres_rhs_p
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
-       do i=1,nspecies
-!          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          if (variance_coef_mass .ne. 0.d0) then
-!             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
-          end if
-       end do
+
+
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
@@ -388,12 +359,10 @@ contains
        do i=1,dm
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_n(n,:))
+                                         the_bc_tower%bc_tower_array(n),dx(n,:))
           ! set transverse velocity behind physical boundaries
           call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-                                      the_bc_tower%bc_tower_array(n), &
-                                      dx(n,:),vel_bc_t(n,:))
+                                      the_bc_tower%bc_tower_array(n),dx(n,:))
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
        end do
@@ -440,9 +409,9 @@ contains
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
-       end if
+!       if (variance_coef_mass .ne. 0.d0) then
+!          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+!       end if
     end do
 
     ! compute div vbar^n
@@ -516,12 +485,10 @@ contains
        do i=1,dm
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_n(n,:))
+                                         the_bc_tower%bc_tower_array(n),dx(n,:))
           ! set transverse velocity behind physical boundaries
           call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-                                      the_bc_tower%bc_tower_array(n), &
-                                      dx(n,:),vel_bc_t(n,:))
+                                      the_bc_tower%bc_tower_array(n),dx(n,:))
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
        end do
@@ -615,8 +582,8 @@ contains
     call convert_rho_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute (eta,kappa)^{n+1}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
@@ -681,15 +648,15 @@ contains
     end do
 
     ! compute div(Sigma^n') by incrementing existing stochastic flux and dividing by 2
-    if (variance_coef_mom .ne. 0.d0) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
-                                 Temp,Temp_ed,dx,dt,weights)
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,0.5d0,1,0)
-          end do
-       end do
-    end if
+!    if (variance_coef_mom .ne. 0.d0) then
+!       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
+!                                 Temp,Temp_ed,dx,dt,weights)
+!       do n=1,nlevs
+!          do i=1,dm
+!             call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,0.5d0,1,0)
+!          end do
+!       end do
+!    end if
 
     ! add div(Sigma^n') to gmres_rhs_v
     do n=1,nlevs
@@ -702,10 +669,6 @@ contains
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc,the_bc_tower)
     end if
-
-    ! reset inhomogeneous bc condition to deal with reservoirs
-    call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
-                                   the_bc_tower%bc_tower_array)
 
     ! fill the stochastic multifabs with a new set of random numbers
     call fill_m_stochastic(mla)
@@ -720,26 +683,19 @@ contains
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       if (variance_coef_mass .ne. 0) then
-          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
+!       if (variance_coef_mass .ne. 0) then
+!          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+!       end if
        do i=1,dm
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
        end do
     end do
 
-    ! set the Dirichlet velocity value on reservoir faces
-    call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
-
     ! compute gmres_rhs_p
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
-       do i=1,nspecies
-!          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          if (variance_coef_mass .ne. 0.d0) then
-!             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
-          end if
-       end do
+
+
     end do
 
     ! modify umac to respect the boundary conditions we want after the next gmres solve
@@ -749,12 +705,10 @@ contains
        do i=1,dm
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_n(n,:))
+                                         the_bc_tower%bc_tower_array(n),dx(n,:))
           ! set transverse velocity behind physical boundaries
           call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-                                      the_bc_tower%bc_tower_array(n), &
-                                      dx(n,:),vel_bc_t(n,:))
+                                      the_bc_tower%bc_tower_array(n),dx(n,:))
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
        end do
@@ -855,12 +809,10 @@ contains
        do i=1,dm
           ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_n(n,:))
+                                         the_bc_tower%bc_tower_array(n),dx(n,:))
           ! set transverse velocity behind physical boundaries
           call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-                                      the_bc_tower%bc_tower_array(n), &
-                                      dx(n,:),vel_bc_t(n,:))
+                                      the_bc_tower%bc_tower_array(n),dx(n,:))
           ! fill periodic and interior ghost cells
           call multifab_fill_boundary(umac(n,i))
        end do
@@ -869,8 +821,6 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    call destroy_bc_multifabs(mla)
 
     do n=1,nlevs
        call multifab_destroy(rho_update(n))
@@ -898,98 +848,5 @@ contains
     end do
 
   end subroutine advance_timestep_inertial
-
-  subroutine build_bc_multifabs(mla)
-
-    type(ml_layout), intent(in   ) :: mla
-
-    integer :: dm,i,n,nlevs
-    logical :: nodal_temp(3)
-
-    dm = mla%dim
-    nlevs = mla%nlevel
-
-    allocate(vel_bc_n(nlevs,dm))
-    if (dm .eq. 2) then
-       allocate(vel_bc_t(nlevs,2))
-    else if (dm .eq. 3) then
-       allocate(vel_bc_t(nlevs,6))
-    end if
-
-    do n=1,nlevs
-       ! boundary conditions
-       do i=1,dm
-          call multifab_build_edge(vel_bc_n(n,i),mla%la(n),1,0,i)
-       end do
-       if (dm .eq. 2) then
-          ! y-velocity bc on x-faces (nodal)
-          call multifab_build_nodal(vel_bc_t(n,1),mla%la(n),1,0)
-          ! x-velocity bc on y-faces (nodal)
-          call multifab_build_nodal(vel_bc_t(n,2),mla%la(n),1,0)
-       else
-          ! y-velocity bc on x-faces (nodal in y and x)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .false.
-          call multifab_build(vel_bc_t(n,1),mla%la(n),1,0,nodal_temp)
-          ! z-velocity bc on x-faces (nodal in z and x)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .false.
-          nodal_temp(3) = .true.
-          call multifab_build(vel_bc_t(n,2),mla%la(n),1,0,nodal_temp)
-          ! x-velocity bc on y-faces (nodal in x and y)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .false.
-          call multifab_build(vel_bc_t(n,3),mla%la(n),1,0,nodal_temp)
-          ! z-velocity bc on y-faces (nodal in z and y)
-          nodal_temp(1) = .false.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .true.
-          call multifab_build(vel_bc_t(n,4),mla%la(n),1,0,nodal_temp)
-          ! x-velocity bc on z-faces (nodal in x and z)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .false.
-          nodal_temp(3) = .true.
-          call multifab_build(vel_bc_t(n,5),mla%la(n),1,0,nodal_temp)
-          ! y-velocity bc on z-faces (nodal in y and z)
-          nodal_temp(1) = .false.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .true.
-          call multifab_build(vel_bc_t(n,6),mla%la(n),1,0,nodal_temp)
-       end if
-
-       do i=1,dm
-          call multifab_setval(vel_bc_n(n,i),0.d0,all=.true.)
-       end do
-       do i=1,size(vel_bc_t,dim=2)
-          call multifab_setval(vel_bc_t(n,i),0.d0,all=.true.)
-       end do
-
-    end do
-
-  end subroutine build_bc_multifabs
-
-  subroutine destroy_bc_multifabs(mla)
-
-    type(ml_layout), intent(in   ) :: mla
-
-    integer :: dm,i,n,nlevs
-
-    dm = mla%dim
-    nlevs = mla%nlevel
-
-    do n=1,nlevs
-       do i=1,dm          
-          call multifab_destroy(vel_bc_n(n,i))
-       end do
-       do i=1,size(vel_bc_t,dim=2)
-          call multifab_destroy(vel_bc_t(n,i))
-       end do
-    end do
-
-    deallocate(vel_bc_n,vel_bc_t)
-
-  end subroutine destroy_bc_multifabs
 
 end module advance_timestep_inertial_module
