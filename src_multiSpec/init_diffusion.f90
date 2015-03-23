@@ -12,7 +12,7 @@ module init_diffusion_module
   use convert_variables_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, molmass
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, &
-                                        rho_init, nspecies
+                                        c_init, nspecies
  
   implicit none
 
@@ -20,16 +20,16 @@ module init_diffusion_module
 
   public :: init_rho  ! used in diffusion code
 
-  ! IMPORTANT: In the diffusion only code (init_rho), rho_init specifies initial values for DENSITY
-  ! In the low-Mach code (init_rho_and_umac), rho_init specifies initial MASS FRACTIONS (should sum to unity!)
+  ! IMPORTANT: In the diffusion only code (init_rho), c_init specifies initial values for DENSITY
+  ! In the low-Mach code (init_rho_and_umac), c_init specifies initial MASS FRACTIONS (should sum to unity!)
   ! The density follows from the EOS in the LM case so it cannot be specified
   ! Same applies to boundary conditions
 
   ! prob_type codes for LowMach:
-  ! 0=thermodynamic equilibrium, v=0, rho/c=rho_init(1,1:nspecies)
-  ! 1=bubble test, v=0, rho/c=rho_init(1,1:nspecies) inside and rho_init(2,1:nspecies) outside the bubble
-  ! 2=gradient along y, v=0, rho/c=rho_init(1,1:nspecies) on bottom (y=0) and rho_init(2,1:nspecies) on top (y=Ly)
-  ! 3=one fluid on top of another: v=0, rho/c=rho_init(1,1:nspecies) on bottom (y<Ly/2) and rho_init(2,1:nspecies) on top (y=L_y)
+  ! 0=thermodynamic equilibrium, v=0, rho/c=c_init(1,1:nspecies)
+  ! 1=bubble test, v=0, rho/c=c_init(1,1:nspecies) inside and c_init(2,1:nspecies) outside the bubble
+  ! 2=gradient along y, v=0, rho/c=c_init(1,1:nspecies) on bottom (y=0) and c_init(2,1:nspecies) on top (y=Ly)
+  ! 3=one fluid on top of another: v=0, rho/c=c_init(1,1:nspecies) on bottom (y<Ly/2) and c_init(2,1:nspecies) on top (y=L_y)
   ! 4=reserved for future use generic case (any nspecies)
   ! 5-onward=manufactured solutions for testing, limited to specific setups and nspecies
 
@@ -107,7 +107,7 @@ contains
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
  
-          rho(i,j,1:nspecies) = rho_init(1,1:nspecies)
+          rho(i,j,1:nspecies) = c_init(1,1:nspecies)
 
        end do
     end do  
@@ -124,9 +124,9 @@ contains
        
           rsq = x**2 + y**2
           if (rsq .lt. L(1)*L(2)*0.1d0) then
-             rho(i,j,1:nspecies) = rho_init(1,1:nspecies)
+             rho(i,j,1:nspecies) = c_init(1,1:nspecies)
           else
-             rho(i,j,1:nspecies) = rho_init(2,1:nspecies)
+             rho(i,j,1:nspecies) = c_init(2,1:nspecies)
           end if
     
        end do
@@ -143,8 +143,8 @@ contains
           x = prob_lo(1) + (dble(i)+half)*dx(1) 
    
             ! linear gradient in rho
-            rho(i,j,1:nspecies) = rho_init(1,1:nspecies) + & 
-               (rho_init(2,1:nspecies) - rho_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
+            rho(i,j,1:nspecies) = c_init(1,1:nspecies) + & 
+               (c_init(2,1:nspecies) - c_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
    
          end do
       end do
@@ -264,7 +264,7 @@ contains
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
+             rho(i,j,k,1:nspecies) = c_init(1,1:nspecies)
 
           end do
        end do
@@ -286,9 +286,9 @@ contains
 
                rsq = x**2 + y**2 + z**2
                if (rsq .lt. L(1)*L(2)*L(3)*0.001d0) then
-                  rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
+                  rho(i,j,k,1:nspecies) = c_init(1,1:nspecies)
                else
-                  rho(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
+                  rho(i,j,k,1:nspecies) = c_init(2,1:nspecies)
                end if
           
           end do
@@ -309,8 +309,8 @@ contains
           do i=lo(1),hi(1)
              x = prob_lo(1) + (dble(i)+half)*dx(1)
 
-               rho(i,j,k,1:nspecies) = rho_init(1,1:nspecies) + &
-                   (rho_init(2,1:nspecies) - rho_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
+               rho(i,j,k,1:nspecies) = c_init(1,1:nspecies) + &
+                   (c_init(2,1:nspecies) - c_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
 
           end do
        end do

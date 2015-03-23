@@ -158,10 +158,10 @@
   T_init(1:2) = 293.d0 293.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   temp_type = 0 ! for initializing temperature
 
-  ! initial values for rho
+  ! initial values for c
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  rho_init(1,1:3) = 0.1 0.1 0.8
+  c_init(1,1:3) = 0.1 0.1 0.8
 
   ! c_i boundary conditions (dir,lohi,species)
   c_bc(1,1,1:2) = 0.d0 0.d0

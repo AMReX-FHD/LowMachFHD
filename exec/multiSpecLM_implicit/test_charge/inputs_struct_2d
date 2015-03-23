@@ -160,8 +160,8 @@
   temp_type = 0 ! for initializing temperature
 
   ! initial values for CONCENTRATIONS
-  rho_init(1,1:3) = 0.05d0 0.2d0 0.75d0
-  rho_init(2,1:3) = 0.05d0 0.2d0 0.75d0
+  c_init(1,1:3) = 0.05d0 0.2d0 0.75d0
+  c_init(2,1:3) = 0.05d0 0.2d0 0.75d0
 
   ! c_i boundary conditions (dir,lohi,species)
   c_bc(1,1,1:2) = 0.d0 0.d0

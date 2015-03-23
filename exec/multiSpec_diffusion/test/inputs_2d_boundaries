@@ -55,8 +55,8 @@
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .false.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
- rho_init(1,1:3) = 0.2 0.5 0.3      ! Initial densities
- rho_init(2,1:3) = 0.8 0.5 0.7      ! outside the circle
+ c_init(1,1:3) = 0.2 0.5 0.3      ! Initial densities
+ c_init(2,1:3) = 0.8 0.5 0.7      ! outside the circle
  Dbar(1:3) = 1.0 2.0 3.0       ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:3) = 0 0 0 ! 1.0 2.0 0.5     ! thermo-diffusion constant (sums to zero)
 

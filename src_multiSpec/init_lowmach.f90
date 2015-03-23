@@ -13,7 +13,7 @@ module init_lowmach_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
                                   molmass, rhobar, smoothing_width, u_init, n_cells
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
-                                        rho_init, nspecies, T_init
+                                        c_init, nspecies, T_init
  
   implicit none
 
@@ -21,8 +21,8 @@ module init_lowmach_module
 
   public :: init_rho_and_umac  ! used in low Mach code; initialize c first then convert to rho
 
-  ! IMPORTANT: In the diffusion only code (init_rho), rho_init specifies initial values for DENSITY
-  ! In the low-Mach code (init_rho_and_umac), rho_init specifies initial MASS FRACTIONS
+  ! IMPORTANT: In the diffusion only code (init_rho), c_init specifies initial values for DENSITY
+  ! In the low-Mach code (init_rho_and_umac), c_init specifies initial MASS FRACTIONS
   ! (should sum to unity!... but we overwrite the final concentration so sum(c_i)=1 before computing rho)
   ! The density follows from the EOS in the LM case so it cannot be specified
   ! Same applies to boundary conditions
@@ -32,20 +32,20 @@ module init_lowmach_module
   !=============================================================
   ! case 1:
   ! bubble with radius = 1/4 of domain in x
-  ! c=rho_init(1,:) inside, c=rho_init(2,:) outside
+  ! c=c_init(1,:) inside, c=c_init(2,:) outside
   ! can be discontinous or smooth depending on smoothing_width
 
   !=========================================================
   ! case 2:
   ! constant concentration gradient along y
-  ! c=rho_init(1,:) on bottom, c=rho_init(2,:) on top
+  ! c=c_init(1,:) on bottom, c=c_init(2,:) on top
 
   !=========================================================
   ! case 3:
   ! 1 fluid on top of another
-  ! c = rho_init(1,:) on bottom; c = rho_init(2,:) on top
+  ! c = c_init(1,:) on bottom; c = c_init(2,:) on top
   ! smoothing_width > 0 is a tanh smoothed interface where smoothing width is approx the # of grid 
-  !   cells and then c = rand*rho_init(1,:) + (1-rand)*rho_init(2,:)
+  !   cells and then c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
   ! smoothing_width between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand()
   ! smoothing width of -2 is a sinusoidal perturbation
   ! x-vel = u_init(1) below centerline, u_init(2) above centerline
@@ -65,8 +65,8 @@ module init_lowmach_module
   !=========================================================
   ! case 6:
   ! Two Gaussian bubbles with different centers
-  ! c(1) peak is rho_init(1,1) 
-  ! c(2) peak is rho_init(2,2) 
+  ! c(1) peak is c_init(1,1) 
+  ! c(2) peak is c_init(2,2) 
 
   !=========================================================
   ! case 7:
@@ -89,12 +89,12 @@ module init_lowmach_module
   !=========================================================
   ! case 11:
   ! Discontinuous square in the central 25% of domain
-  ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
+  ! c=c_init(1,:) inside; c=c_init(2,:) outside
 
   !=========================================================
   ! case 12:
   ! Gaussian bubble centered in domain
-  ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
+  ! c=c_init(1,:) inside; c=c_init(2,:) outside
   ! lo- and hi-y walls move with prescribed velocity,
   ! see inhomogeneous_bc_val.f90
   ! compute_eta uses linear profile in rho if prob_type < 0
@@ -212,7 +212,7 @@ contains
 
        !=============================================================
        ! bubble with radius = 1/4 of domain in x
-       ! c=rho_init(1,:) inside, c=rho_init(2,:) outside
+       ! c=c_init(1,:) inside, c=c_init(2,:) outside
        ! can be discontinous or smooth depending on smoothing_width
        !=============================================================
  
@@ -232,16 +232,16 @@ contains
 
                 ! discontinuous interface
                 if (r .lt. rad) then
-                   c(i,j,1:nspecies) = rho_init(1,1:nspecies)
+                   c(i,j,1:nspecies) = c_init(1,1:nspecies)
                 else
-                   c(i,j,1:nspecies) = rho_init(2,1:nspecies)
+                   c(i,j,1:nspecies) = c_init(2,1:nspecies)
                 end if
 
              else
 
                 ! smooth interface
-                c(i,j,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
-                     (rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
+                c(i,j,1:nspecies-1) = c_init(1,1:nspecies-1) + &
+                     (c_init(2,1:nspecies-1) - c_init(1,1:nspecies-1))* &
                      0.5d0*(1.d0 + tanh((r-rad)/(smoothing_width*dx(1))))
 
              end if
@@ -253,7 +253,7 @@ contains
 
        !=========================================================
        ! constant concentration gradient along y
-       ! c=rho_init(1,:) on bottom, c=rho_init(2,:) on top
+       ! c=c_init(1,:) on bottom, c=c_init(2,:) on top
        !=========================================================
 
        u = 0.d0
@@ -265,8 +265,8 @@ contains
              x = prob_lo(1) + (dble(i)+half)*dx(1) 
 
              ! linear gradient in mass fractions
-             c(i,j,1:nspecies) = rho_init(1,1:nspecies) + & 
-                  (rho_init(2,1:nspecies) - rho_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
+             c(i,j,1:nspecies) = c_init(1,1:nspecies) + & 
+                  (c_init(2,1:nspecies) - c_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
 
           end do
        end do
@@ -275,9 +275,9 @@ contains
 
        !=============================================================
        ! 1 fluid on top of another
-       ! c = rho_init(1,:) on bottom; c = rho_init(2,:) on top
+       ! c = c_init(1,:) on bottom; c = c_init(2,:) on top
        ! smoothing_width > 0 is a tanh smoothed interface where smoothing width is approx the # of grid 
-       !   cells and then c = rand*rho_init(1,:) + (1-rand)*rho_init(2,:)
+       !   cells and then c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
        ! smoothing_width between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand()
        ! smoothing width of -2 is a sinusoidal perturbation
        ! x-vel = u_init(1) below centerline, u_init(2) above centerline
@@ -306,11 +306,11 @@ contains
              y = prob_lo(2) + (j+0.5d0)*dx(2)
              if (y .lt. y1) then
                 do n=1,nspecies
-                   c(lo(1):hi(1),j,n) = rho_init(1,n)
+                   c(lo(1):hi(1),j,n) = c_init(1,n)
                 end do
              else
                 do n=1,nspecies
-                   c(lo(1):hi(1),j,n) = rho_init(2,n)
+                   c(lo(1):hi(1),j,n) = c_init(2,n)
                 end do
              end if
 
@@ -319,7 +319,7 @@ contains
                    x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                    c_loc = abs(smoothing_width)*rand()
                    do n=1,nspecies
-                      c(i,j,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
+                      c(i,j,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
                    end do
                 end do
              end if
@@ -332,7 +332,7 @@ contains
           do j=lo(2),hi(2)
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
              do n=1,nspecies
-                c_loc = rho_init(1,n) + (rho_init(2,n)-rho_init(1,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+                c_loc = c_init(1,n) + (c_init(2,n)-c_init(1,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
                 c(lo(1):hi(1),j,n) = c_loc
              end do
           end do
@@ -344,11 +344,11 @@ contains
              y = prob_lo(2) + (j+0.5d0)*dx(2)
              if (y .lt. y1) then
                 do n=1,nspecies
-                   c(lo(1):hi(1),j,n) = rho_init(1,n)
+                   c(lo(1):hi(1),j,n) = c_init(1,n)
                 end do
              else
                 do n=1,nspecies
-                   c(lo(1):hi(1),j,n) = rho_init(2,n)
+                   c(lo(1):hi(1),j,n) = c_init(2,n)
                 end do
              end if
 
@@ -357,7 +357,7 @@ contains
                    x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                    c_loc = 0.5d0*(cos(4.d0*M_PI*x/L(1))+1.d0)
                    do n=1,nspecies
-                      c(i,j,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
+                      c(i,j,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
                    end do
                 end do
              end if
@@ -374,8 +374,8 @@ contains
 
        !=============================================================
        ! Two Gaussian bubbles with different centers
-       ! c(1) peak is rho_init(1,1) 
-       ! c(2) peak is rho_init(2,2) 
+       ! c(1) peak is c_init(1,1) 
+       ! c(2) peak is c_init(2,2) 
        !=============================================================
 
        u = 0.d0
@@ -391,8 +391,8 @@ contains
              
 
              ! set c using Gaussian bump
-             c(i,j,1) = rho_init(1,1)*exp(-75.d0*r1**2)
-             c(i,j,2) = rho_init(2,2)*exp(-75.d0*r2**2)
+             c(i,j,1) = c_init(1,1)*exp(-75.d0*r1**2)
+             c(i,j,2) = c_init(2,2)*exp(-75.d0*r2**2)
 
           enddo
        enddo
@@ -401,7 +401,7 @@ contains
 
        !=============================================================
        ! Discontinuous square in the central 25% of domain
-       ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
+       ! c=c_init(1,:) inside; c=c_init(2,:) outside
        !=============================================================
 
        u = 0.d0
@@ -413,9 +413,9 @@ contains
              ! initialize c to a square region
              if (i .ge. n_cells(1)/4 .and. i .le. 3*n_cells(1)/4-1 .and. &
                  j .ge. n_cells(2)/4 .and. j .le. 3*n_cells(2)/4-1) then
-                c(i,j,1:nspecies) = rho_init(1,1:nspecies)
+                c(i,j,1:nspecies) = c_init(1,1:nspecies)
              else
-                c(i,j,1:nspecies) = rho_init(2,1:nspecies)
+                c(i,j,1:nspecies) = c_init(2,1:nspecies)
              end if
 
           enddo
@@ -425,7 +425,7 @@ contains
 
        !=============================================================
        ! Gaussian bubble centered in domain
-       ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
+       ! c=c_init(1,:) inside; c=c_init(2,:) outside
        ! lo- and hi-y walls move with prescribed velocity,
        ! see inhomogeneous_bc_val.f90
        !=============================================================
@@ -441,7 +441,7 @@ contains
              r = sqrt (x**2 + y**2)
 
              ! set c using Gaussian bump
-             c(i,j,1:nspecies-1) = rho_init(1,1:nspecies-1)*exp(-75.d0*r**2)
+             c(i,j,1:nspecies-1) = c_init(1,1:nspecies-1)*exp(-75.d0*r**2)
 
           enddo
        enddo
@@ -463,7 +463,7 @@ contains
           do j=lo(2),hi(2)
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0)
              do i=lo(1),hi(1)
-                c(i,j,n) = rho_init(1,n)*exp(-m_e*grav(2)*y/(k_B*T_init(1)))
+                c(i,j,n) = c_init(1,n)*exp(-m_e*grav(2)*y/(k_B*T_init(1)))
              enddo
           enddo
        enddo
@@ -490,8 +490,8 @@ contains
           y = prob_lo(2) + dx(2)*(dble(j)+0.5d0)
           do i=lo(1),hi(1)
              
-             c(i,j,1) = rho_init(1,1)*exp((Dtherm(1)-Dtherm(3))*gradToverT*y/Dbar(2))
-             c(i,j,2) = rho_init(1,2)*exp((Dtherm(2)-Dtherm(3))*gradToverT*y/Dbar(3))
+             c(i,j,1) = c_init(1,1)*exp((Dtherm(1)-Dtherm(3))*gradToverT*y/Dbar(2))
+             c(i,j,2) = c_init(1,2)*exp((Dtherm(2)-Dtherm(3))*gradToverT*y/Dbar(3))
 
           enddo
        enddo
@@ -557,7 +557,7 @@ contains
 
        !=============================================================
        ! bubble with radius = 1/4 of domain in x
-       ! c=rho_init(1,:) inside, c=rho_init(2,:) outside
+       ! c=c_init(1,:) inside, c=c_init(2,:) outside
        ! can be discontinous or smooth depending on smoothing_width
        !=============================================================
 
@@ -581,16 +581,16 @@ contains
 
                    ! discontinuous interface
                    if (r .lt. rad) then
-                      c(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
+                      c(i,j,k,1:nspecies) = c_init(1,1:nspecies)
                    else
-                      c(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
+                      c(i,j,k,1:nspecies) = c_init(2,1:nspecies)
                    end if
 
                 else
 
                    ! smooth interface
-                   c(i,j,k,1:nspecies-1) = rho_init(1,1:nspecies-1) + &
-                        (rho_init(2,1:nspecies-1) - rho_init(1,1:nspecies-1))* &
+                   c(i,j,k,1:nspecies-1) = c_init(1,1:nspecies-1) + &
+                        (c_init(2,1:nspecies-1) - c_init(1,1:nspecies-1))* &
                         0.5d0*(1.d0 + tanh((r-rad)/(smoothing_width*dx(1))))
 
                 end if
@@ -604,7 +604,7 @@ contains
 
        !=========================================================
        ! constant concentration gradient along y
-       ! c=rho_init(1,:) on bottom, c=rho_init(2,:) on top
+       ! c=c_init(1,:) on bottom, c=c_init(2,:) on top
        !=========================================================
 
        u = 0.d0
@@ -619,8 +619,8 @@ contains
              do i=lo(1),hi(1)
                 x = prob_lo(1) + (dble(i)+half)*dx(1)
 
-                c(i,j,k,1:nspecies) = rho_init(1,1:nspecies) + &
-                     (rho_init(2,1:nspecies) - rho_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
+                c(i,j,k,1:nspecies) = c_init(1,1:nspecies) + &
+                     (c_init(2,1:nspecies) - c_init(1,1:nspecies))*(y-prob_lo(2))/L(2)
 
              end do
           end do
@@ -631,9 +631,9 @@ contains
 
        !=============================================================
        ! 1 fluid on top of another
-       ! c = rho_init(1,:) on bottom; c = rho_init(2,:) on top
+       ! c = c_init(1,:) on bottom; c = c_init(2,:) on top
        ! smoothing_width > 0 is a tanh smoothed interface where smoothing width is approx the # of grid 
-       !   cells and then c = rand*rho_init(1,:) + (1-rand)*rho_init(2,:)
+       !   cells and then c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
        ! smoothing_width between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand()
        ! smoothing width of -2 is a sinusoidal perturbation
        ! x-vel = u_init(1) below centerline, u_init(2) above centerline
@@ -665,11 +665,11 @@ contains
              y = prob_lo(2) + (j+0.5d0)*dx(2)
              if (y .lt. y1) then
                 do n=1,nspecies
-                   c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(1,n)
+                   c(lo(1):hi(1),j,lo(3):hi(3),n) = c_init(1,n)
                 end do
              else
                 do n=1,nspecies
-                   c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(2,n)
+                   c(lo(1):hi(1),j,lo(3):hi(3),n) = c_init(2,n)
                 end do
              end if
 
@@ -678,7 +678,7 @@ contains
                    do i=lo(1),hi(1)
                       c_loc = abs(smoothing_width)*rand()
                       do n=1,nspecies
-                         c(i,j,k,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
+                         c(i,j,k,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
                       end do
                    end do
                 end do
@@ -692,7 +692,7 @@ contains
           do j=lo(2),hi(2)
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
              do n=1,nspecies
-                c_loc = rho_init(1,n) + (rho_init(2,n)-rho_init(1,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
+                c_loc = c_init(1,n) + (c_init(2,n)-c_init(1,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
                 c(lo(1):hi(1),j,lo(3):hi(3),n) = c_loc
              end do
           end do
@@ -704,11 +704,11 @@ contains
              y = prob_lo(2) + (j+0.5d0)*dx(2)
              if (y .lt. y1) then
                 do n=1,nspecies
-                   c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(1,n)
+                   c(lo(1):hi(1),j,lo(3):hi(3),n) = c_init(1,n)
                 end do
              else
                 do n=1,nspecies
-                   c(lo(1):hi(1),j,lo(3):hi(3),n) = rho_init(2,n)
+                   c(lo(1):hi(1),j,lo(3):hi(3),n) = c_init(2,n)
                 end do
              end if
              if (j .eq. n_cells(2)/2) then
@@ -717,7 +717,7 @@ contains
                       x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
                       c_loc = 0.5d0*(cos(4.d0*M_PI*x/L(1))+1.d0)
                       do n=1,nspecies
-                         c(i,j,k,n) = c_loc*(rho_init(1,n)) + (1.d0-c_loc)*rho_init(2,n)
+                         c(i,j,k,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
                       end do
                    end do
                 end do
@@ -735,8 +735,8 @@ contains
 
        !=============================================================
        ! Two Gaussian bubbles with different centers
-       ! c(1) peak is rho_init(1,1)
-       ! c(2) peak is rho_init(2,2)
+       ! c(1) peak is c_init(1,1)
+       ! c(2) peak is c_init(2,2)
        !=============================================================
 
        u = 0.d0
@@ -758,8 +758,8 @@ contains
                             + (z-(0.5d0*prob_lo(3)+0.5d0*prob_hi(3)))**2)
                 
                 ! set c using Gaussian bump
-                c(i,j,k,1) = rho_init(1,1)*exp(-75.d0*r1**2)
-                c(i,j,k,2) = rho_init(2,2)*exp(-75.d0*r2**2)
+                c(i,j,k,1) = c_init(1,1)*exp(-75.d0*r1**2)
+                c(i,j,k,2) = c_init(2,2)*exp(-75.d0*r2**2)
                 
              enddo
           enddo
@@ -769,7 +769,7 @@ contains
 
        !=============================================================
        ! Discontinuous square in the central 25% of domain
-       ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
+       ! c=c_init(1,:) inside; c=c_init(2,:) outside
        !=============================================================
 
        u = 0.d0
@@ -784,9 +784,9 @@ contains
                 if (i .ge. n_cells(1)/4 .and. i .le. 3*n_cells(1)/4-1 .and. &
                     j .ge. n_cells(2)/4 .and. j .le. 3*n_cells(2)/4-1 .and. &
                     k .ge. n_cells(3)/4 .and. k .le. 3*n_cells(3)/4-1) then
-                   c(i,j,k,1:nspecies) = rho_init(1,1:nspecies)
+                   c(i,j,k,1:nspecies) = c_init(1,1:nspecies)
                 else
-                   c(i,j,k,1:nspecies) = rho_init(2,1:nspecies)
+                   c(i,j,k,1:nspecies) = c_init(2,1:nspecies)
                 end if
 
              enddo
@@ -797,7 +797,7 @@ contains
 
        !=============================================================
        ! Gaussian bubble centered in domain
-       ! c=rho_init(1,:) inside; c=rho_init(2,:) outside
+       ! c=c_init(1,:) inside; c=c_init(2,:) outside
        ! lo- and hi-y walls move with prescribed velocity,
        ! see inhomogeneous_bc_val.f90
        !=============================================================
@@ -816,7 +816,7 @@ contains
                 r = sqrt (x**2 + y**2 + z**2)
 
                 ! set c using Gaussian bump
-                c(i,j,k,1:nspecies-1) = rho_init(1,1:nspecies-1)*exp(-75.d0*r**2)
+                c(i,j,k,1:nspecies-1) = c_init(1,1:nspecies-1)*exp(-75.d0*r**2)
 
              enddo
           enddo
@@ -840,7 +840,7 @@ contains
              do j=lo(2),hi(2)
                 y = prob_lo(2) + dx(2)*(dble(j)+0.5d0)
                 do i=lo(1),hi(1)
-                   c(i,j,k,n) = rho_init(1,n)*exp(-m_e*grav(2)*y/(k_B*T_init(1)))
+                   c(i,j,k,n) = c_init(1,n)*exp(-m_e*grav(2)*y/(k_B*T_init(1)))
                 enddo
              enddo
           enddo
@@ -870,8 +870,8 @@ contains
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0)
              do i=lo(1),hi(1)
              
-                c(i,j,k,1) = rho_init(1,1)*exp((Dtherm(1)-Dtherm(3))*gradToverT*y/Dbar(2))
-                c(i,j,k,2) = rho_init(1,2)*exp((Dtherm(2)-Dtherm(3))*gradToverT*y/Dbar(3))
+                c(i,j,k,1) = c_init(1,1)*exp((Dtherm(1)-Dtherm(3))*gradToverT*y/Dbar(2))
+                c(i,j,k,2) = c_init(1,2)*exp((Dtherm(2)-Dtherm(3))*gradToverT*y/Dbar(3))
 
              enddo
           enddo

@@ -415,7 +415,8 @@ Otherwise correct constraint equation and return to the beginning of this step.
 \end{enumerate}
 
 \section{Algorithm Details}
-I suggest we specify $\rho,\rho_i$, and $P_0$ and then use the EOS to compute a consistent
+I suggest we specify $\rho,\wb$, and $P_0$, compute $\rho_i = \rho w_i$,
+and then use the EOS to compute a consistent
 $T$ and $h$.  The velocity can be initialized to zero, noting that the
 initialization step will dictate what the velocity must be for the system to stay
 on the constraint.\\ \\

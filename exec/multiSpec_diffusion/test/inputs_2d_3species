@@ -39,8 +39,8 @@
  is_ideal_mixture  = .false.      ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
- rho_init(1,1:3) = 0.2 0.5 0.3      ! inside the circle
- rho_init(2,1:3) = 0.8 0.5 0.7      ! outside the circle
+ c_init(1,1:3) = 0.2 0.5 0.3      ! inside the circle
+ c_init(2,1:3) = 0.8 0.5 0.7      ! outside the circle
  Dbar(1:3) = 1.0 2.0 2.0       ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:3) = 1.0 1.0 -2.0    ! thermo-diffusion constant (sums to zero)
  H_offdiag(1:3) = -0.003431571 0.111944511 -0.032711064    ! H-matrix SPD off diagonal element

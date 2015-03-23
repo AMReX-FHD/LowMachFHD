@@ -47,8 +47,8 @@
  is_ideal_mixture  = .true.       ! false=Bdag*Gama, true=Bdag 
  is_nonisothermal  = .true.       ! true=include grad(T), false= no grad(T)  
  use_lapack  = .false.            ! false=iterative methods, true=inverse/pseudoinverse 
- rho_init(1,1:5) = 0.1  0.25  0.25 0.2 0.2  ! there are CONCENTRATIONS
- rho_init(2,1:5) = 0.1  0.25  0.25 0.2 0.2  ! there are CONCENTRATIONS
+ c_init(1,1:5) = 0.1  0.25  0.25 0.2 0.2  ! there are CONCENTRATIONS
+ c_init(2,1:5) = 0.1  0.25  0.25 0.2 0.2  ! there are CONCENTRATIONS
  Dbar(1:5)       = 1.0  1.5  2.0 1.75 1.25  ! SM diffusion constant arranged in lower-triangle
  Dtherm(1:5)     = 1.0  0.5 -2.0 1.5  -1.0  ! thermo-diffusion constant (sums to zero)
  T_init(1:2) = 1.0 2.0              ! Upper and lower plate temperature
