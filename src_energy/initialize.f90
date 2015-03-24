@@ -24,8 +24,7 @@ contains
   !  projection part of this step
   subroutine initialize(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                         rhoh_old,rhoh_new,p0_old,p0_new, &
-                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                        gradp_baro,pi,Temp, &
                         dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -40,14 +39,7 @@ contains
     real(kind=dp_t), intent(inout) :: p0_new
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: pi(:)
-    ! eta and kappa need to enter consistent with old and leave consistent with new
-    type(multifab) , intent(inout) :: eta(:)
-    type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
-    type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: Temp(:)
-    type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
-    type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
-    type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -69,27 +61,53 @@ contains
     ! Each of these terms may change for each l iteration.
     type(multifab) :: rhoh_update2(mla%nlevel)
 
-    type(multifab) :: conc_old(mla%nlevel)
-    type(multifab) :: molefrac_old(mla%nlevel)
+    ! temporary storage for concentrations and mole fractions
+    type(multifab) :: conc(mla%nlevel)
+    type(multifab) :: molefrac(mla%nlevel)
 
+    ! the implicit energy solve computes deltaT
     type(multifab) :: deltaT(mla%nlevel)
 
     type(multifab) :: solver_alpha(mla%nlevel)
     type(multifab) :: solver_beta (mla%nlevel,mla%dim)
 
+    ! shear viscosity
+    type(multifab) :: eta_old(mla%nlevel)
+    type(multifab) :: eta_new(mla%nlevel)
+
+    ! bulk viscosity
+    type(multifab) :: kappa_old(mla%nlevel)
+    type(multifab) :: kappa_new(mla%nlevel)
+
+    ! thermal diffusivity
     type(multifab) :: lambda_old(mla%nlevel)
     type(multifab) :: lambda_new(mla%nlevel)
 
-    type(multifab) :: S(mla%nlevel)
-    type(multifab) :: deltaS(mla%nlevel)
+    ! diffusion matrix
+    type(multifab) :: chi_old(mla%nlevel)
+    type(multifab) :: chi_new(mla%nlevel)
 
-    type(multifab) :: Scorr(mla%nlevel)
-    type(multifab) :: deltaScorr(mla%nlevel)
+    ! thermodiffusion coefficients
+    type(multifab) :: zeta_old(mla%nlevel)
+    type(multifab) :: zeta_new(mla%nlevel)
 
-    type(multifab) :: alpha(mla%nlevel)
-    type(multifab) :: deltaalpha(mla%nlevel)
+    ! this is the div(u)=S
+    ! S = Sbar + deltaS
+    type(multifab)  :: S(mla%nlevel)
+    type(multifab)  :: deltaS(mla%nlevel)
+    real(kind=dp_t) :: Sbar
 
-    integer :: Sbar, Scorrbar, alphabar
+    ! volume discrepancy correction
+    ! Scorr = Scorrbar + deltaScorr
+    type(multifab)  :: Scorr(mla%nlevel)
+    type(multifab)  :: deltaScorr(mla%nlevel)
+    real(kind=dp_t) :: Scorrbar
+
+    ! coefficient multiplying dP_0/dt in constraint
+    ! alpha = alphabar + deltaalpha
+    type(multifab)  :: alpha(mla%nlevel)
+    type(multifab)  :: deltaalpha(mla%nlevel)
+    real(kind=dp_t) :: alphabar
 
     integer :: n,nlevs,i,dm
 
@@ -97,8 +115,8 @@ contains
     dm = mla%dim
 
     do n=1,nlevs
-       call multifab_build(    conc_old(n),mla%la(n),nspecies,rho_old(n)%ng)
-       call multifab_build(molefrac_old(n),mla%la(n),nspecies,rho_old(n)%ng)
+       call multifab_build(    conc(n),mla%la(n),nspecies,rho_old(n)%ng)
+       call multifab_build(molefrac(n),mla%la(n),nspecies,rho_old(n)%ng)
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -106,17 +124,17 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! compute mass fractions in valid region and then fill ghost cells
-    call convert_rho_to_conc(mla,rho_old,rhotot_old,conc_old,.true.)
+    call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.true.)
     do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(conc_old(n))
+       call multifab_fill_boundary(conc(n))
        ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(conc_old(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+       call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
     end do
 
     ! compute mole fractions
-    call convert_conc_to_molefrac(mla,conc_old,molefrac_old,.true.)
+    call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
 
     ! compute initial transport properties
 !    call ideal_mixture_transport(rhotot_old,Temp,p0_old,)
@@ -169,6 +187,11 @@ contains
     ! Step 0e: If the thermodynamic drift is unacceptable, update the volume
     !          discrepancy correction
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    do n=1,nlevs
+       call multifab_destroy(conc(n))
+       call multifab_destroy(molefrac(n))
+    end do
 
   end subroutine initialize
 

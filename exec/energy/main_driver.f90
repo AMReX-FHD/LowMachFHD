@@ -1,12 +1,10 @@
 subroutine main_driver()
 
   use boxlib
-  use bl_IO_module
   use ml_layout_module
   use init_lowmach_module
   use init_temp_module
   use write_plotfileenergy_module
-  use advance_timestep_overdamped_module
   use advance_timestep_inertial_module
   use define_bc_module
   use bc_module
@@ -15,20 +13,13 @@ subroutine main_driver()
   use analysis_module
   use analyze_spectra_module
   use div_and_grad_module
-  use estdt_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
-  use fill_umac_ghost_cells_module
-  use fill_rho_ghost_cells_module
   use ParallelRNGs 
-  use mass_flux_utilities_module
   use compute_HSE_pres_module
   use convert_stag_module
-  use convert_variables_module
   use convert_m_to_umac_module
   use sum_momenta_module
-  use restart_module
-  use checkpoint_module
   use energy_EOS_module
   use init_energy_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
@@ -68,17 +59,11 @@ subroutine main_driver()
   type(multifab), allocatable  :: rhotot_new(:)
   type(multifab), allocatable  :: rhoh_new(:)
   type(multifab), allocatable  :: Temp(:)
-  type(multifab), allocatable  :: Temp_ed(:,:)
-  type(multifab), allocatable  :: diff_mass_fluxdiv(:)
-  type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
   type(multifab), allocatable  :: umac(:,:)
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
   type(multifab), allocatable  :: gradp_baro(:,:)
   type(multifab), allocatable  :: pi(:)
-  type(multifab), allocatable  :: eta(:)
-  type(multifab), allocatable  :: eta_ed(:,:)
-  type(multifab), allocatable  :: kappa(:)
   type(multifab), allocatable  :: conc(:)
   type(multifab), allocatable  :: enth(:)
 
@@ -115,16 +100,9 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs),rhoh_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs),rhoh_new(nlevs))
-  allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
+  allocate(Temp(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
-  allocate(eta(nlevs),kappa(nlevs),conc(nlevs),enth(nlevs))
-  if (dm .eq. 2) then
-     allocate(eta_ed(nlevs,1))
-     allocate(Temp_ed(nlevs,1))
-  else if (dm .eq. 3) then
-     allocate(eta_ed(nlevs,3))
-     allocate(Temp_ed(nlevs,3))
-  end if
+  allocate(conc(nlevs),enth(nlevs))
 
   ! set grid spacing at each level
   ! the grid spacing is the same in each direction
@@ -226,8 +204,6 @@ subroutine main_driver()
         call multifab_build(Temp(n),      mla%la(n),1       ,ng_s)
         ! pi - need 1 ghost cell since we calculate its gradient
         call multifab_build(pi(n)                ,mla%la(n),1       ,1)
-        call multifab_build(diff_mass_fluxdiv(n) ,mla%la(n),nspecies,0) 
-        call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
@@ -354,31 +330,6 @@ subroutine main_driver()
      call multifab_build(rho_new(n),   mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n),mla%la(n),1,       ng_s) 
      call multifab_build(rhoh_new(n)  ,mla%la(n),1,       ng_s) 
-     call multifab_build(eta(n)  ,     mla%la(n),1,1)
-     call multifab_build(kappa(n),     mla%la(n),1,1)
-
-     ! eta and Temp on nodes (2d) or edges (3d)
-     if (dm .eq. 2) then
-        call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
-        call multifab_build_nodal(Temp_ed(n,1),mla%la(n),1,0)
-     else
-        nodal_temp(1) = .true.
-        nodal_temp(2) = .true.
-        nodal_temp(3) = .false.
-        call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
-        call multifab_build(Temp_ed(n,1),mla%la(n),1,0,nodal_temp)
-        nodal_temp(1) = .true.
-        nodal_temp(2) = .false.
-        nodal_temp(3) = .true.
-        call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
-        call multifab_build(Temp_ed(n,2),mla%la(n),1,0,nodal_temp)
-        nodal_temp(1) = .false.
-        nodal_temp(2) = .true.
-        nodal_temp(3) = .true.
-        call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
-        call multifab_build(Temp_ed(n,3),mla%la(n),1,0,nodal_temp)
-     end if
-
   end do
 
   ! allocate and build multifabs that will contain random numbers
@@ -389,13 +340,6 @@ subroutine main_driver()
   ! fill random flux multifabs with new random numbers
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   call fill_m_stochastic(mla)
-
-  ! initialize temperatures on edges (2d) or nodes (3d)
-  if (dm .eq. 2) then
-     call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  else if (dm .eq. 3) then
-     call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  end if
 
   if (barodiffusion_type .gt. 0) then
 
@@ -419,11 +363,11 @@ subroutine main_driver()
      if (fixed_dt .gt. 0.d0) then
         dt = fixed_dt
      else
-        call estdt(mla,umac,dx,dt)
-        n_Dbar = nspecies*(nspecies-1)/2
-        Dbar_max = maxval(Dbar(1:n_Dbar))
-        dt_diffusive = cfl*dx(1,1)**2/(2*dm*Dbar_max)
-        dt = min(dt,dt_diffusive)
+!        call estdt(mla,umac,dx,dt)
+!        n_Dbar = nspecies*(nspecies-1)/2
+!        Dbar_max = maxval(Dbar(1:n_Dbar))
+!        dt_diffusive = cfl*dx(1,1)**2/(2*dm*Dbar_max)
+!        dt = min(dt,dt_diffusive)
      end if
      
   end if
@@ -521,11 +465,11 @@ subroutine main_driver()
   do istep=init_step,max_step
 
      if (fixed_dt .le. 0.d0) then
-        call estdt(mla,umac,dx,dt)
-        n_Dbar = nspecies*(nspecies-1)/2
-        Dbar_max = maxval(Dbar(1:n_Dbar))
-        dt_diffusive = cfl*dx(1,1)**2/(2*dm*Dbar_max)
-        dt = min(dt,dt_diffusive)
+!        call estdt(mla,umac,dx,dt)
+!        n_Dbar = nspecies*(nspecies-1)/2
+!        Dbar_max = maxval(Dbar(1:n_Dbar))
+!        dt_diffusive = cfl*dx(1,1)**2/(2*dm*Dbar_max)
+!        dt = min(dt,dt_diffusive)
      end if
 
      if (parallel_IOProcessor()) then
@@ -588,13 +532,13 @@ subroutine main_driver()
          end if
 
          ! write checkpoint at specific intervals
-         if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
-            if (parallel_IOProcessor()) then
-               write(*,*), 'writing checkpoint at timestep =', istep 
-            end if
-            call checkpoint_write(mla,rho_new,rhotot_new,pi,diff_mass_fluxdiv, &
-                                  stoch_mass_fluxdiv,umac,time,dt,istep)
-         end if
+!         if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
+!            if (parallel_IOProcessor()) then
+!               write(*,*), 'writing checkpoint at timestep =', istep 
+!            end if
+!            call checkpoint_write(mla,rho_new,rhotot_new,pi,diff_mass_fluxdiv, &
+!                                  stoch_mass_fluxdiv,umac,time,dt,istep)
+!         end if
 
          ! print out projection (average) and variance
          if ( (stats_int > 0) .and. &
@@ -644,25 +588,16 @@ subroutine main_driver()
      call multifab_destroy(rhotot_new(n))
      call multifab_destroy(rhoh_new(n))
      call multifab_destroy(Temp(n))
-     call multifab_destroy(diff_mass_fluxdiv(n))
-     call multifab_destroy(stoch_mass_fluxdiv(n))
      call multifab_destroy(pi(n))
-     call multifab_destroy(eta(n))
-     call multifab_destroy(kappa(n))
      do i=1,dm
         call multifab_destroy(umac(n,i))
         call multifab_destroy(mtemp(n,i))
         call multifab_destroy(rhotot_fc(n,i))
         call multifab_destroy(gradp_baro(n,i))
      end do
-     do i=1,size(eta_ed,dim=2)
-        call multifab_destroy(eta_ed(n,i))
-        call multifab_destroy(Temp_ed(n,i))
-     end do
   end do
   deallocate(lo,hi,dx)
   deallocate(rho_old,rhotot_old,Temp,umac)
-  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 
