@@ -404,9 +404,9 @@ contains
 
   ! takes $\rho,T,P,\wb$, and $\xb$ as inputs and computes the following:
   ! eta     is the dynamic viscosity, $\eta$
+  ! kappa   is the thermal conductivity, $\lambda$
   ! zeta    is the bulk viscosity, $\kappa$
   ! diff_ij is the diffusion matrix, $\chi$
-  ! kappa   is the thermal conductivity, $\lambda$
   ! chitil are the thermodiffusion coefficients, $\zeta$.
   !                (I modified the routine to make this so)
   subroutine ideal_mixture_transport(density,temperature,pressure,Yk,Xk,eta,kappa, &
