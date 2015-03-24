@@ -30,7 +30,8 @@ module stochastic_mass_fluxdiv_module
 contains
   
   subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,&
-                                     Gama,stoch_fluxdiv,flux_total,dx,dt,weights,the_bc_level)
+                                     Gama,stoch_fluxdiv,flux_total,dx,dt,weights, &
+                                     the_bc_level,increment_in)
 
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
@@ -45,6 +46,7 @@ contains
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: weights(:)         
     type(bc_level) , intent(in   )   :: the_bc_level(:)
+    logical  ,  intent(in), optional :: increment_in
 
     ! Local variables
     type(multifab)   :: Lonsager(mla%nlevel)            ! cholesky factored Lonsager 
@@ -52,6 +54,11 @@ contains
     type(multifab)   :: flux(mla%nlevel,mla%dim)        ! face-centered stochastic flux
     integer          :: n,nlevs,i,dm,rng
     real(kind=dp_t)  :: variance
+    logical :: increment
+
+    ! do we increment or overwrite div?
+    increment = .false.
+    if (present(increment_in)) increment = increment_in
 
     nlevs = mla%nlevel
     dm    = mla%dim
@@ -127,7 +134,7 @@ contains
     end do
  
     ! compute divergence of stochastic flux
-    call compute_div(mla,flux,stoch_fluxdiv,dx,1,1,nspecies)
+    call compute_div(mla,flux,stoch_fluxdiv,dx,1,1,nspecies,increment)
 
     ! free the multifab allocated memory
     do n=1,nlevs
