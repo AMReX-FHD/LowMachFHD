@@ -334,7 +334,7 @@ full velocity field after the solve) and solve
 for $\deltab\vb$ and $\delta p$:
 \begin{eqnarray}
 \frac{\rho^{*,n+1}(\overline\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^n+\delta p) &=&\nonumber\\
-&&\hspace{-1in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^n(\overline\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n} + \rho^n\gb,\nonumber\\
+&&\hspace{-1in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}(\overline\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\widehat\Wb^n}_{\Sigmab^n} + \rho^n\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot(\overline\vb^n+\deltab\vb) = S^{*,n+1}.
@@ -342,7 +342,7 @@ for $\deltab\vb$ and $\delta p$:
 We rewrite this system as
 \begin{eqnarray}
 \left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{*,n+1}\overline\vb^n}{\Delta t} -\nabla p^n\nonumber\\
-&&\hspace{-0.5in}+ \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\mathcal{A}_0^n\vb^n + \half\mathcal{A}_0^n\overline\vb^n + \nabla\cdot\Sigmab^n + \rho^n\gb,\label{eq:CN Vel Pred}
+&&\hspace{-0.5in}+ \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\mathcal{A}_0^n\vb^n + \half\mathcal{A}_0^{*,n+1}\overline\vb^n + \nabla\cdot\Sigmab^n + \rho^n\gb,\label{eq:CN Vel Pred}
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^n - S^{*,n+1}.
