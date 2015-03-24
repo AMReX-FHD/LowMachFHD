@@ -420,7 +420,7 @@ contains
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
-    ! update eta and kappa here
+    ! compute (eta,kappa)^{*,n+1/2}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
@@ -659,7 +659,7 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Compute stuff for plotfile and next time step
 
-    ! update eta and kappa here
+    ! compute (eta,kappa)^{n+1}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
