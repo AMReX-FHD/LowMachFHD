@@ -145,7 +145,7 @@ contains
     write(6,*)"e0fref",e0ref
     write(6,*)"dia",dia
     write(6,*)"molecular_weight",molecular_weight
-    write(6,*)"molecular_mass",molmass
+    write(6,*)"molecular_mass",molmass(1:nspecies)
     write(6,*)"p0_in",p0_in
     write(6,*)"int_deg_free",int_deg_free
     write(6,*)"cvgas",cvgas

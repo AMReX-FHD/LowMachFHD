@@ -31,7 +31,7 @@
   !--------------------
   grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
   ! molecular masses for nspecies (mass per molecule, *not* molar mass)
-  molmass(1:2) = 6.6464731243d-24 3.35091774613d-23 6.63352092064d-23 1.39153162399d-22
+  molmass(1:4) = 6.6464731243d-24 3.35091774613d-23 6.63352092064d-23 1.39153162399d-22
 !  rhobar(1:2) = 1.d0 1.d0             ! pure component densities for all species
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)

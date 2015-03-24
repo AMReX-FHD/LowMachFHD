@@ -30,6 +30,7 @@ subroutine main_driver()
   use restart_module
   use checkpoint_module
   use energy_EOS_module
+  use init_energy_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -62,8 +63,10 @@ subroutine main_driver()
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho_old(:)
   type(multifab), allocatable  :: rhotot_old(:)
+  type(multifab), allocatable  :: rhoh_old(:)
   type(multifab), allocatable  :: rho_new(:)
   type(multifab), allocatable  :: rhotot_new(:)
+  type(multifab), allocatable  :: rhoh_new(:)
   type(multifab), allocatable  :: Temp(:)
   type(multifab), allocatable  :: Temp_ed(:,:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
@@ -77,6 +80,9 @@ subroutine main_driver()
   type(multifab), allocatable  :: eta_ed(:,:)
   type(multifab), allocatable  :: kappa(:)
   type(multifab), allocatable  :: conc(:)
+  type(multifab), allocatable  :: enth(:)
+
+  real(kind=dp_t) :: p0_old, p0_new
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs
@@ -107,11 +113,11 @@ subroutine main_driver()
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
-  allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
-  allocate(rho_new(nlevs),rhotot_new(nlevs))
+  allocate(rho_old(nlevs),rhotot_old(nlevs),rhoh_old(nlevs),pi(nlevs))
+  allocate(rho_new(nlevs),rhotot_new(nlevs),rhoh_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
-  allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
+  allocate(eta(nlevs),kappa(nlevs),conc(nlevs),enth(nlevs))
   if (dm .eq. 2) then
      allocate(eta_ed(nlevs,1))
      allocate(Temp_ed(nlevs,1))
@@ -216,6 +222,8 @@ subroutine main_driver()
      do n=1,nlevs
         call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
+        call multifab_build(rhoh_old(n),  mla%la(n),1       ,ng_s)
+        call multifab_build(Temp(n),      mla%la(n),1       ,ng_s)
         ! pi - need 1 ghost cell since we calculate its gradient
         call multifab_build(pi(n)                ,mla%la(n),1       ,1)
         call multifab_build(diff_mass_fluxdiv(n) ,mla%la(n),nspecies,0) 
@@ -263,8 +271,8 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
 
-     ! initialize rho
-     call init_rho_and_umac(mla,rho_old,umac,dx,time,the_bc_tower%bc_tower_array)
+     ! initialize umac, rhotot, rho, rhoh, Temp, and p0 in valid region
+     call init_energy(mla,umac,rhotot_old,rho_old,rhoh_old,Temp,p0_old)
 
      ! initialize pi
      do n=1,nlevs
@@ -275,34 +283,38 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_build(conc(n),mla%la(n),nspecies,rho_old(n)%ng)
+     call multifab_build(enth(n),mla%la(n),1       ,rhoh_old(n)%ng)
   end do
 
-  ! compute rhotot from rho in VALID REGION
-  call compute_rhotot(mla,rho_old,rhotot_old)
-
-  ! rho to conc - NO GHOST CELLS
+  ! rho to conc and rhoh to enth - NO GHOST CELLS
   call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.true.)
+  call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
 
   ! fill ghost cells
   do n=1,nlevs
      ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
      call multifab_fill_boundary(rhotot_old(n))
      call multifab_fill_boundary(conc(n))
+     call multifab_fill_boundary(enth(n))
      call multifab_fill_boundary(pi(n))
      ! fill non-periodic domain boundary ghost cells
      call multifab_physbc(rhotot_old(n),1,scal_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
      call multifab_physbc(conc(n),1,c_bc_comp,nspecies, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+     call multifab_physbc(enth(n),1,h_bc_comp,1, &
+                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
      call multifab_physbc(pi(n),1,pres_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
   end do
 
-  ! conc to rho - INCLUDING GHOST CELLS
+  ! conc to rho and enth to rhoh - INCLUDING GHOST CELLS
   call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.false.)
+  call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.false.)
 
   do n=1,nlevs
      call multifab_destroy(conc(n))
+     call multifab_destroy(enth(n))
   end do
 
   do n=1,nlevs
@@ -332,7 +344,7 @@ subroutine main_driver()
   do n=1,nlevs 
      call multifab_build(rho_new(n),   mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n),mla%la(n),1,       ng_s) 
-     call multifab_build(Temp(n),      mla%la(n),1,       ng_s)
+     call multifab_build(rhoh_new(n)  ,mla%la(n),1,       ng_s) 
      call multifab_build(eta(n)  ,     mla%la(n),1,1)
      call multifab_build(kappa(n),     mla%la(n),1,1)
 
@@ -373,8 +385,7 @@ subroutine main_driver()
   ! Initialize values
   !=====================================================================
 
-  ! initialize Temp
-  call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
+  ! initialize temperatures on edges (2d) or nodes (3d)
   if (dm .eq. 2) then
      call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
   else if (dm .eq. 3) then
@@ -627,8 +638,10 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(rho_old(n))
      call multifab_destroy(rhotot_old(n))
+     call multifab_destroy(rhoh_old(n))
      call multifab_destroy(rho_new(n))
      call multifab_destroy(rhotot_new(n))
+     call multifab_destroy(rhoh_new(n))
      call multifab_destroy(Temp(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      call multifab_destroy(stoch_mass_fluxdiv(n))
