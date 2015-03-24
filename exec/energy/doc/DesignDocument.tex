@@ -446,9 +446,10 @@ and explicit mass diffusion:
 \end{equation}
 \item {\bf Step 0d:} Advance the enthalpy by iteratively looping over an energy solve.
 The fundamental formulation is given by,
-\begin{equation}
-(\rho h)^{*,n+1} = (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{1}{2}(\nabla\cdot\Qb^n + \nabla\cdot\Qb^{*,n+1})\right],
-\end{equation}
+\begin{eqnarray}
+(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \right.\nonumber\\
+&&\hspace{-0.5in}\left.\frac{1}{2}\left(\nabla\cdot\Qb^n + \nabla\cdot\Qb^{*,n+1} + \sum_k\nabla\cdot h_k^n\Fb_k^n + \sum_k\nabla\cdot h_k^{*,n+1}\Fb_k^{*,n+1} + (\rho\Hext)^n + (\rho\Hext)^{*,n+1}\right)\right],\nonumber\\
+\end{eqnarray}
 but since we express $\Qb$ in terms of temperature gradients, we need an iterative
 solve that linearizes the dependence of $h$ on $T$.  First we initialize
 $(h,T)^{*,n+1,l=1} = (h,T)^n$.
@@ -463,14 +464,14 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 -\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} \nonumber\\
 &&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla(T^{*,n+1,l} + \delta T)\nonumber\\
 &&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} \Fb_k^{*,n+1,l},\nonumber\\
-&&\hspace{-1in} + (\rho\Hext)^n + (\rho\Hext)^{*,n+1}
+&&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{*,n+1}
 \end{eqnarray}
 \begin{eqnarray}
 \left(\frac{\rho^{*,n+1}c_p^{*,n+1,l}}{\Delta t} - \nabla\cdot\frac{1}{2}\lambda^{*,n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{*,n+1}h^{*,n+1,l}}{\Delta t}\nonumber\\
 &&\hspace{-1.25in} - \nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla T^{*,n+1,l}\nonumber\\
 &&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} \Fb_k^{*,n+1,l},\nonumber\\
-&&\hspace{-1.25in} + (\rho\Hext)^n + (\rho\Hext)^{*,n+1}
+&&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{*,n+1}
 \end{eqnarray}
 
 {\bf Step 0d-3:} Update the temperature and enthalpy using
@@ -523,9 +524,10 @@ We also split $\pi^{*,n+1} = \pi^n + \delta\pi$ in the same way.  Rewriting the 
 \rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{*,n+1}\right].
 \end{equation}
 \item {\bf Step 1d:} Advance the enthalpy by iteratively looping over an energy solve.  The fundamental formulation is given by,
-\begin{equation}
-(\rho h)^{n+1} = (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}} + \nabla\cdot\Qb^n + \nabla\cdot\Qb^{n+1}\right],
-\end{equation}
+\begin{eqnarray}
+(\rho h)^{n+1} &=& (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right.\nonumber\\
+&&\left.+ \nabla\cdot\Qb^n + \nabla\cdot\Qb^{n+1} + \sum_k\nabla\cdot h_k^n\Fb_k^n + \sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1} + (\rho\Hext)^n + (\rho\Hext)^{n+1}\right],\nonumber\\
+\end{eqnarray}
 but since we express $\Qb$ in terms of temperature gradients, we need an iterative solve that linearizes
 the dependence of $h$ on $T$.  First we initialize $(h,T)^{n+1,l=1} = (h,T)^{*,n+1}$.
 Loop from $l=1$ to $l_{\rm max}$:\\ \\
@@ -539,14 +541,14 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 &&\hspace{-1in}\half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right] \nonumber\\
 &&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
 &&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}\nonumber\\
-&&\hspace{-1in} + (\rho\Hext)^n + (\rho\Hext)^{n+1},
+&&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
 \end{eqnarray}
 \begin{eqnarray}
 \left(\frac{\rho^{n+1}c_p^{n+1,l}}{\Delta t} - \nabla\cdot\frac{1}{2}\lambda^{n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1}h^{n+1,l}}{\Delta t}\nonumber\\
 &&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right]\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l}\nonumber\\
 &&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}\nonumber\\
-&&\hspace{-1.25in} + (\rho\Hext)^n + (\rho\Hext)^{n+1}.
+&&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1}.
 \end{eqnarray}
 {\bf Step 1d-3:} Update the temperature and enthalpy using
 \begin{equation}
