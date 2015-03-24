@@ -5,13 +5,13 @@ subroutine main_driver()
   use ml_layout_module
   use init_lowmach_module
   use init_temp_module
-  use compute_mixture_properties_module
-  use write_plotfileLM_module
+  use write_plotfileenergy_module
   use advance_timestep_overdamped_module
   use advance_timestep_inertial_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
+  use multifab_physbc_stag_module
   use analysis_module
   use analyze_spectra_module
   use div_and_grad_module
@@ -297,6 +297,9 @@ subroutine main_driver()
      call multifab_fill_boundary(conc(n))
      call multifab_fill_boundary(enth(n))
      call multifab_fill_boundary(pi(n))
+     do i=1,dm
+        call multifab_fill_boundary(umac(n,i))
+     end do
      ! fill non-periodic domain boundary ghost cells
      call multifab_physbc(rhotot_old(n),1,scal_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
@@ -306,6 +309,12 @@ subroutine main_driver()
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
      call multifab_physbc(pi(n),1,pres_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+     do i=1,dm
+        ! set transverse velocity behind physical boundaries 
+        call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+                                    the_bc_tower%bc_tower_array(n), &
+                                    dx(n,:))
+     end do
   end do
 
   ! conc to rho and enth to rhoh - INCLUDING GHOST CELLS
@@ -381,10 +390,6 @@ subroutine main_driver()
   call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   call fill_m_stochastic(mla)
 
-  !=====================================================================
-  ! Initialize values
-  !=====================================================================
-
   ! initialize temperatures on edges (2d) or nodes (3d)
   if (dm .eq. 2) then
      call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
@@ -401,12 +406,6 @@ subroutine main_driver()
      call compute_grad(mla,pi,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
   end if
-
-  ! initialize eta and kappa
-  call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp,dx, &
-                         the_bc_tower%bc_tower_array)
-
-  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
 
   if (restart .lt. 0) then
 
@@ -466,9 +465,11 @@ subroutine main_driver()
      ! Here is where we put Step 0
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!     call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro,diff_mass_fluxdiv, &
-!                             stoch_mass_fluxdiv, &
-!                             Temp,eta,eta_ed,dt,dx,the_bc_tower)
+!     call initialize(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+!                     rhoh_old,rhoh_new,p0_old,p0_new, &
+!                     gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+!                     diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+!                     dx,dt,time,the_bc_tower)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -486,7 +487,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,0,dx,time)
+        call write_plotfileenergy(mla,"plt",rho_old,rhotot_old,rhoh_old,Temp,umac,pi,0,dx,time)
      end if
      
      ! print out projection (average) and variance)
@@ -583,7 +584,7 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
-            call write_plotfileLM(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,istep,dx,time)
+            call write_plotfileenergy(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp,umac,pi,0,dx,time)
          end if
 
          ! write checkpoint at specific intervals
