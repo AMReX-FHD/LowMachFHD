@@ -10,6 +10,7 @@ module initialize_module
   use mass_fluxdiv_energy_module
   use rhoh_fluxdiv_energy_module
   use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: n_cells
 
   use fabio_module
 
@@ -126,10 +127,16 @@ contains
     ! coefficient for projection
     type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
 
-    integer :: n,nlevs,i,dm
+    integer :: n,nlevs,i,dm,n_cell
 
     nlevs = mla%nlevel
     dm = mla%dim
+
+    if (dm .eq. 2) then
+       n_cell = n_cells(1)*n_cells(2)
+    else
+       n_cell = n_cells(1)*n_cells(2)*n_cells(3)
+    end if
 
     do n=1,nlevs
        call multifab_build(rho_update(n),mla%la(n),nspecies,0)
@@ -212,26 +219,24 @@ contains
     call rhoh_fluxdiv_energy(mla,lambda_old,Temp,mass_flux,rhotot_old,rhoh_fluxdiv, &
                              dx,time,the_bc_tower)
 
-    stop
-
-    ! Construct S.  Many pieces of S are used in later parts of the algorithm,
-    ! e.g., density update or enthalpy solve, but with different scalings
-
-    ! compute mass flux
-
-    ! set enthalpy_update to div(Q)
-
-    ! increment enthalpy_update by sum_k div (h_k F_k)
-
-    ! increment enthalpy_update by rho*H_ext
-
-    ! set rho_update to div(F_i) - deterministic part
-
-    ! compute S
-
-    ! compute alpha
+    ! compute S and alpha (store them in deltaS and deltaalpha)
+    call compute_S_alpha(mla,deltaS,deltaalpha,mass_fluxdiv,rhoh_fluxdiv,conc, &
+                         Temp,rhotot_old,p0_old)
 
     ! split S and alpha into average and perturbational pieces, e.g., (Sbar + deltaS)
+    do n=1,nlevs
+       Sbar     = multifab_sum_c(deltaS(n)    ,1,1)
+       alphabar = multifab_sum_c(deltaalpha(n),1,1)
+       call multifab_sub_sub_s_c(deltaS(n)    ,1,Sbar    ,1,0)
+       call multifab_sub_sub_s_c(deltaalpha(n),1,alphabar,1,0)
+    end do
+
+    ! zero out volume discrepancy correction
+    Scorrbar = 0.d0
+    do n=1,nlevs
+       call multifab_setval(Scorr(n)     ,0.d0,all=.true.)
+       call multifab_setval(deltaScorr(n),0.d0,all=.true.)
+    end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 0b: Compute the velocity field using a projection
