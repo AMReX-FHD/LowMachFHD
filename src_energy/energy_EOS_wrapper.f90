@@ -8,7 +8,7 @@ module energy_eos_wrapper_module
   private
 
   public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper, &
-            add_external_heating, compute_S_alpha
+            add_external_heating, compute_S_alpha, compute_hk
 
 contains
 
@@ -518,6 +518,85 @@ contains
     end do
        
   end subroutine compute_S_alpha_3d
+
+
+
+  subroutine compute_hk(mla,Temp,hk)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(in   ) :: Temp(:)
+    type(multifab) , intent(inout) :: hk(:)
+
+    ! local
+    integer :: n,nlevs,i,dm
+    integer :: ng_1,ng_2
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: dp1(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2(:,:,:,:)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    ng_1 = Temp(1)%ng
+    ng_2 = hk(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(Temp(n))
+          dp1 => dataptr(Temp(n), i)
+          dp2 => dataptr(hk(n), i)
+          lo = lwb(get_box(Temp(n), i))
+          hi = upb(get_box(Temp(n), i))
+          select case (dm)
+          case (2)
+             call compute_hk_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2,lo,hi)
+          case (3)
+             call compute_hk_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2,lo,hi)
+          end select
+       end do
+    end do
+
+  end subroutine compute_hk
+  
+  subroutine compute_hk_2d(Temp,ng_1,hk,ng_2,lo,hi)
+
+    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
+    real(kind=dp_t), intent(in   ) :: Temp(lo(1)-ng_1:,lo(2)-ng_1:)
+    real(kind=dp_t), intent(inout) ::   hk(lo(1)-ng_2:,lo(2)-ng_2:,:)
+
+    ! local
+    integer :: i,j
+    integer :: iwrk
+    real(kind=dp_t) :: rwrk
+
+    do j=lo(2)-ng_2,hi(2)+ng_2
+       do i=lo(1)-ng_2,hi(1)+ng_2
+          call CKHMS(Temp(i,j),iwrk,rwrk,hk(i,j,:))
+       end do
+    end do
+
+  end subroutine compute_hk_2d
+  
+  subroutine compute_hk_3d(Temp,ng_1,hk,ng_2,lo,hi)
+
+    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
+    real(kind=dp_t), intent(in   ) :: Temp(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
+    real(kind=dp_t), intent(inout) ::   hk(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_1:,:)
+
+    ! local
+    integer :: i,j,k
+    integer :: iwrk
+    real(kind=dp_t) :: rwrk
+
+    do k=lo(3)-ng_2,hi(3)+ng_2
+       do j=lo(2)-ng_2,hi(2)+ng_2
+          do i=lo(1)-ng_2,hi(1)+ng_2
+             call CKHMS(Temp(i,j,k),iwrk,rwrk,hk(i,j,k,:))
+          end do
+       end do
+    end do
+
+  end subroutine compute_hk_3d
   
 end module energy_eos_wrapper_module
 
