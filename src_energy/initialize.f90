@@ -9,6 +9,9 @@ module initialize_module
   use convert_variables_module
   use mass_fluxdiv_energy_module
   use rhoh_fluxdiv_energy_module
+  use macproject_module
+  use convert_stag_module
+  use div_and_grad_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: n_cells
 
@@ -125,7 +128,8 @@ contains
     ! solution of the pressure-projection solve
     type(multifab) :: phi(mla%nlevel)
     ! coefficient for projection
-    type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
+    type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
+    type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
 
     integer :: n,nlevs,i,dm,n_cell
 
@@ -185,7 +189,8 @@ contains
        call multifab_build(Sproj(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(rhoinv_fc(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(   rhotot_fc(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(rhototinv_fc(n,i),mla%la(n),1,0,i)
        end do
     end do
 
@@ -238,9 +243,50 @@ contains
        call multifab_setval(deltaScorr(n),0.d0,all=.true.)
     end do
 
+    ! update pressure
+    p0_new = p0_old + dt*(Sbar + Scorrbar)/alphabar
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 0b: Compute the velocity field using a projection
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! compute Sproj = deltaS + deltaScorr - deltaalpha(Sbar + Sbarcorr)/alphabar
+    do n=1,nlevs
+       call multifab_copy_c(Sproj(n),1,deltaalpha(n),1,1,0)
+       call multifab_mult_mult_s_c(Sproj(n),1,-(Sbar+Scorrbar)/alphabar,1,0)
+       call multifab_plus_plus_c(Sproj(n),1,deltaS(n),1,1,0)
+       call multifab_plus_plus_c(Sproj(n),1,deltaScorr(n),1,1,0)
+    end do
+
+    ! build rhs for projection, div(v^init) - Sproj
+    ! first multiply Sproj by -1
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(Sproj(n),1,-1.d0,1,0)
+    end do
+
+    ! add div(v^init) to Sproj
+    call compute_div(mla,umac,Sproj,dx,1,1,1,increment_in=.true.)
+
+    ! average rhotot to faces
+    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
+                            the_bc_tower%bc_tower_array)
+
+    ! compute (1/rhotot) on faces)
+    do n=1,nlevs
+       do i=1,dm
+          call setval(rhototinv_fc(n,i),1.d0,all=.true.)
+          call multifab_div_div_c(rhototinv_fc(n,i),1,rhotot_fc(n,i),1,1,0)
+       end do
+    end do
+
+    ! solve div (1/rhotot) grad phi = div(v^init) - S^0
+    ! solve to completion, i.e., use the 'full' solver
+    call macproject(mla,phi,umac,rhototinv_fc,Sproj,dx,the_bc_tower,.true.)
+
+    ! v^0 = v^init - (1/rho^0) grad phi
+    call subtract_weighted_gradp(mla,umac,rhototinv_fc,phi,dx,the_bc_tower)
+
+    stop
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 0c: Advance the densities using forward-Euler advective fluxes and 
@@ -303,7 +349,8 @@ contains
        call multifab_destroy(Sproj(n))
        call multifab_destroy(phi(n))
        do i=1,dm
-          call multifab_destroy(rhoinv_fc(n,i))
+          call multifab_destroy(rhotot_fc(n,i))
+          call multifab_destroy(rhototinv_fc(n,i))
        end do
     end do
 
