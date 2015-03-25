@@ -77,11 +77,18 @@ contains
        end do
     end do
 
-    ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
-    ! in init/end of this code
+    ! compute mass fluxes
+    ! this computes "-F" so we later multiply by -1
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molefrac,rhoWchi,Gama, &
                                 mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro,mass_flux,dx, &
                                 the_bc_tower)
+
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       do i=1,dm
+          call multifab_mult_mult_s_c(mass_flux(n,i),1,-1.d0,nspecies,0)
+       end do
+    end do
       
     ! free the multifab allocated memory
     do n=1,nlevs
