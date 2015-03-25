@@ -17,8 +17,8 @@ module mass_fluxdiv_energy_module
 
 contains
 
-  subroutine mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta,gradp_baro,mass_fluxdiv, &
-                                 Temp,dx,the_bc_tower)
+  subroutine mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta,gradp_baro,Temp, &
+                                 mass_fluxdiv,mass_flux,dx,the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
@@ -27,8 +27,9 @@ contains
     type(multifab) , intent(in   )   :: chi(:)
     type(multifab) , intent(in   )   :: zeta(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
-    type(multifab) , intent(inout)   :: mass_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
+    type(multifab) , intent(inout)   :: mass_fluxdiv(:)
+    type(multifab) , intent(inout)   :: mass_flux(:,:)
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     type(bc_tower) , intent(in   )   :: the_bc_tower
 
@@ -49,7 +50,6 @@ contains
        call multifab_build(Gama(n),         mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
        do i=1,dm
-          call multifab_build_edge(flux_total(n,i),mla%la(n),nspecies,0,i)
           call setval(flux_total(n,i),0.d0,all=.true.)
        end do
     end do
@@ -86,9 +86,6 @@ contains
        call multifab_destroy(rhoWchi(n))
        call multifab_destroy(Gama(n))
        call multifab_destroy(zeta_by_Temp(n))
-       do i=1,dm
-          call multifab_destroy(flux_total(n,i))
-       end do
     end do
 
   end subroutine mass_fluxdiv_energy

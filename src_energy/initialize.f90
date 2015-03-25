@@ -51,7 +51,8 @@ contains
     ! this will hold -div(rho*v)^n + div(F^n)
     type(multifab) :: rho_update(mla%nlevel)
 
-    ! this will hold div(F)
+    ! this will hold F_k and div(F_k)
+    type(multifab) :: mass_flux(mla%nlevel,mla%dim)
     type(multifab) :: mass_fluxdiv(mla%nlevel)
 
     ! this will hold div(Q) + sum(div(hk*Fk)) + rho*Hext
@@ -132,6 +133,9 @@ contains
     do n=1,nlevs
        call multifab_build(rho_update(n),mla%la(n),nspecies,0)
 
+       do i=1,dm
+          call multifab_build_edge(mass_flux(n,i),mla%la(n),nspecies,0,i)
+       end do
        call multifab_build(mass_fluxdiv(n),mla%la(n),nspecies,0)
        call multifab_build(rhoh_fluxdiv(n),mla%la(n),1,0)
 
@@ -199,11 +203,12 @@ contains
     call ideal_mixture_transport_wrapper(mla,rhotot_old,Temp,p0_old,conc,molefrac, &
                                          eta_old,lambda_old,kappa_old,chi_old,zeta_old)
 
-    ! compute div(F^n)
+    ! compute mass_fluxdiv = div(F^n)
     call mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac,chi_old,zeta_old, &
-                             gradp_baro,mass_fluxdiv,Temp,dx,the_bc_tower)
+                             gradp_baro,Temp,mass_fluxdiv,mass_flux,dx,the_bc_tower)
 
-    stop
+    ! compute rhoh_fluxdiv = div(Q) + sum(div(hk*Fk)) + rho*Hext
+
 
     ! Construct S.  Many pieces of S are used in later parts of the algorithm,
     ! e.g., density update or enthalpy solve, but with different scalings
@@ -258,6 +263,9 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(rho_update(n))
+       do i=1,dm
+          call multifab_destroy(mass_flux(n,i))
+       end do
        call multifab_destroy(mass_fluxdiv(n))
        call multifab_destroy(rhoh_fluxdiv(n))
        call multifab_destroy(deltaT_rhs1(n))
