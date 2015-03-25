@@ -22,6 +22,7 @@ subroutine main_driver()
   use sum_momenta_module
   use energy_EOS_module
   use init_energy_module
+  use initialize_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -409,11 +410,10 @@ subroutine main_driver()
      ! Here is where we put Step 0
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!     call initialize(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-!                     rhoh_old,rhoh_new,p0_old,p0_new, &
-!                     gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-!                     diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-!                     dx,dt,time,the_bc_tower)
+     call initialize(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                        rhoh_old,rhoh_new,p0_old,p0_new, &
+                        gradp_baro,pi,Temp, &
+                        dx,dt,time,the_bc_tower)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  

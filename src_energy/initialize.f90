@@ -62,7 +62,7 @@ contains
     type(multifab) :: rhoh_update2(mla%nlevel)
 
     ! temporary storage for concentrations and mole fractions
-    type(multifab) :: conc(mla%nlevel)
+    type(multifab) :: conc    (mla%nlevel)
     type(multifab) :: molefrac(mla%nlevel)
 
     ! the implicit energy solve computes deltaT
@@ -99,7 +99,7 @@ contains
 
     ! volume discrepancy correction
     ! Scorr = Scorrbar + deltaScorr
-    type(multifab)  ::      Scorr(mla%nlevel)
+    type(multifab)  :: Scorr     (mla%nlevel)
     type(multifab)  :: deltaScorr(mla%nlevel)
     real(kind=dp_t) :: Scorrbar
 
@@ -109,9 +109,9 @@ contains
     real(kind=dp_t) :: alphabar
 
     ! the RHS for the projection
-    type(multifab) ::     Sproj(mla%nlevel)
+    type(multifab) :: Sproj(mla%nlevel)
     ! solution of the pressure-projection solve
-    type(multifab) ::       phi(mla%nlevel)
+    type(multifab) :: phi(mla%nlevel)
     ! coefficient for projection
     type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
 
@@ -121,8 +121,48 @@ contains
     dm = mla%dim
 
     do n=1,nlevs
+       call multifab_build(rho_update(n),mla%la(n),nspecies,0)
+
+       call multifab_build(rhoh_update1(n),mla%la(n),1,0)
+       call multifab_build(rhoh_update2(n),mla%la(n),1,0)
+
        call multifab_build(    conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(molefrac(n),mla%la(n),nspecies,rho_old(n)%ng)
+
+       call multifab_build(deltaT(n),mla%la(n),1,1)
+
+       call multifab_build(cc_solver_alpha(n),mla%la(n),1,1)
+       do i=1,dm
+          call multifab_build_edge(cc_solver_beta(n,i),mla%la(n),1,1,i)
+       end do
+
+       call multifab_build(eta_old(n),mla%la(n),1,1)
+       call multifab_build(eta_new(n),mla%la(n),1,1)
+
+       call multifab_build(kappa_old(n),mla%la(n),1,1)
+       call multifab_build(kappa_new(n),mla%la(n),1,1)
+
+       call multifab_build(lambda_old(n),mla%la(n),1,1)
+       call multifab_build(lambda_new(n),mla%la(n),1,1)
+
+       call multifab_build(chi_old(n),mla%la(n),nspecies**2,1)
+       call multifab_build(chi_new(n),mla%la(n),nspecies**2,1)
+
+       call multifab_build(zeta_old(n),mla%la(n),nspecies,1)
+       call multifab_build(zeta_new(n),mla%la(n),nspecies,1)
+
+       call multifab_build(deltaS(n),mla%la(n),1,0)
+
+       call multifab_build(     Scorr(n),mla%la(n),1,0)
+       call multifab_build(deltaScorr(n),mla%la(n),1,0)
+
+       call multifab_build(deltaalpha(n),mla%la(n),1,0)
+
+       call multifab_build(Sproj(n),mla%la(n),1,0)
+       call multifab_build(phi(n),mla%la(n),1,1)
+       do i=1,dm
+          call multifab_build_edge(rhoinv_fc(n,i),mla%la(n),1,1,i)
+       end do
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -195,9 +235,51 @@ contains
     !          discrepancy correction
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+
+
     do n=1,nlevs
-       call multifab_destroy(conc(n))
+       call multifab_destroy(rho_update(n))
+
+       call multifab_destroy(rhoh_update1(n))
+       call multifab_destroy(rhoh_update2(n))
+
+       call multifab_destroy(    conc(n))
        call multifab_destroy(molefrac(n))
+
+       call multifab_destroy(deltaT(n))
+
+       call multifab_destroy(cc_solver_alpha(n))
+       do i=1,dm
+          call multifab_destroy(cc_solver_beta(n,i))
+       end do
+
+       call multifab_destroy(eta_old(n))
+       call multifab_destroy(eta_new(n))
+
+       call multifab_destroy(kappa_old(n))
+       call multifab_destroy(kappa_new(n))
+
+       call multifab_destroy(lambda_old(n))
+       call multifab_destroy(lambda_new(n))
+
+       call multifab_destroy(chi_old(n))
+       call multifab_destroy(chi_new(n))
+
+       call multifab_destroy(zeta_old(n))
+       call multifab_destroy(zeta_new(n))
+
+       call multifab_destroy(deltaS(n))
+
+       call multifab_destroy(     Scorr(n))
+       call multifab_destroy(deltaScorr(n))
+
+       call multifab_destroy(deltaalpha(n))
+
+       call multifab_destroy(Sproj(n))
+       call multifab_destroy(phi(n))
+       do i=1,dm
+          call multifab_destroy(rhoinv_fc(n,i))
+       end do
     end do
 
   end subroutine initialize
