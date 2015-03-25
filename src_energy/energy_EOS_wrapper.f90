@@ -8,7 +8,7 @@ module energy_eos_wrapper_module
   private
 
   public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper, &
-            add_external_heating
+            add_external_heating, compute_S_alpha
 
 contains
 
@@ -363,6 +363,161 @@ contains
        
 
   end subroutine add_external_heating_3d
+
+  subroutine compute_S_alpha(mla,S,alpha,mass_fluxdiv,rhoh_fluxdiv,conc,Temp,rhotot,p0)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: S(:)
+    type(multifab) , intent(inout) :: alpha(:)
+    type(multifab) , intent(in   ) :: mass_fluxdiv(:)
+    type(multifab) , intent(in   ) :: rhoh_fluxdiv(:)
+    type(multifab) , intent(in   ) :: conc(:)
+    type(multifab) , intent(in   ) :: Temp(:)
+    type(multifab) , intent(in   ) :: rhotot(:)
+    real(kind=dp_t), intent(in   ) :: p0
+
+    ! local
+    integer :: n,nlevs,i,dm
+    integer :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: dp1(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2(:,:,:,:)
+    real(kind=dp_t), pointer :: dp3(:,:,:,:)
+    real(kind=dp_t), pointer :: dp4(:,:,:,:)
+    real(kind=dp_t), pointer :: dp5(:,:,:,:)
+    real(kind=dp_t), pointer :: dp6(:,:,:,:)
+    real(kind=dp_t), pointer :: dp7(:,:,:,:)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    ng_1 = S(1)%ng
+    ng_2 = alpha(1)%ng
+    ng_3 = mass_fluxdiv(1)%ng
+    ng_4 = rhoh_fluxdiv(1)%ng
+    ng_5 = conc(1)%ng
+    ng_6 = Temp(1)%ng
+    ng_7 = rhotot(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(S(n))
+          dp1 => dataptr(S(n), i)
+          dp2 => dataptr(alpha(n), i)
+          dp3 => dataptr(mass_fluxdiv(n), i)
+          dp4 => dataptr(rhoh_fluxdiv(n), i)
+          dp5 => dataptr(conc(n), i)
+          dp6 => dataptr(Temp(n), i)
+          dp7 => dataptr(rhotot(n), i)
+          lo = lwb(get_box(S(n), i))
+          hi = upb(get_box(S(n), i))
+          select case (dm)
+          case (2)
+             call compute_S_alpha_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
+                                     dp3(:,:,1,:),ng_3,dp4(:,:,1,1),ng_4, &
+                                     dp5(:,:,1,:),ng_5,dp6(:,:,1,1),ng_6, &
+                                     dp7(:,:,1,1),ng_7,p0,lo,hi)
+          case (3)
+             call compute_S_alpha_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
+                                     dp3(:,:,:,:),ng_3,dp4(:,:,:,1),ng_4, &
+                                     dp5(:,:,:,:),ng_5,dp6(:,:,:,1),ng_6, &
+                                     dp7(:,:,:,1),ng_7,p0,lo,hi)
+          end select
+       end do
+    end do
+
+  end subroutine compute_S_alpha
+  
+  subroutine compute_S_alpha_2d(S,ng_1,alpha,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
+                                conc,ng_5,Temp,ng_6,rhotot,ng_7,p0,lo,hi)
+
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo(:),hi(:)
+    real(kind=dp_t), intent(inout) ::            S(lo(1)-ng_1:,lo(2)-ng_1:)
+    real(kind=dp_t), intent(inout) ::        alpha(lo(1)-ng_2:,lo(2)-ng_2:)
+    real(kind=dp_t), intent(in   ) :: mass_fluxdiv(lo(1)-ng_3:,lo(2)-ng_3:,:)
+    real(kind=dp_t), intent(in   ) :: rhoh_fluxdiv(lo(1)-ng_4:,lo(2)-ng_4:)
+    real(kind=dp_t), intent(in   ) ::         conc(lo(1)-ng_5:,lo(2)-ng_5:,:)
+    real(kind=dp_t), intent(in   ) ::         Temp(lo(1)-ng_6:,lo(2)-ng_6:)
+    real(kind=dp_t), intent(in   ) ::       rhotot(lo(1)-ng_7:,lo(2)-ng_7:)
+    real(kind=dp_t), intent(in   ) :: p0
+
+    ! local
+    integer :: i,j,n
+    real(kind=dp_t) :: W,beta,cpmix,cvmix
+    real(kind=dp_t) :: hk(nspecies)
+
+    integer :: iwrk
+    real(kind=dp_t) :: rwrk
+
+    S = 0.d0
+
+    do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+
+          ! mixture-averaged molecular mass, W = (sum (w_k/W_k) )^-1
+          call CKMMWY(conc(i,j,:),iwrk,rwrk,W)
+          ! h_k, c_p, and c_v
+          call CKHMS(Temp(i,j),iwrk,rwrk,hk)
+          call CKCPBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cpmix)
+          call CKCVBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cvmix)
+          do n=1,nspecies
+             beta = (1.d0/rhotot(i,j))*(W/conc(i,j,n) - hk(n)/(cpmix*Temp(i,j)))
+             S(i,j) = S(i,j) + beta*mass_fluxdiv(i,j,n)
+          end do
+          S(i,j) = S(i,j) + rhoh_fluxdiv(i,j) / (rhotot(i,j)*cpmix*Temp(i,j))
+          alpha(i,j) = cvmix/(cpmix*p0)
+
+       end do
+    end do
+       
+
+  end subroutine compute_S_alpha_2d
+  
+  subroutine compute_S_alpha_3d(S,ng_1,alpha,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
+                                conc,ng_5,Temp,ng_6,rhotot,ng_7,p0,lo,hi)
+
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo(:),hi(:)
+    real(kind=dp_t), intent(inout) ::            S(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
+    real(kind=dp_t), intent(inout) ::        alpha(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+    real(kind=dp_t), intent(in   ) :: mass_fluxdiv(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:)
+    real(kind=dp_t), intent(in   ) :: rhoh_fluxdiv(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:)
+    real(kind=dp_t), intent(in   ) ::         conc(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:)
+    real(kind=dp_t), intent(in   ) ::         Temp(lo(1)-ng_6:,lo(2)-ng_6:,lo(3)-ng_6:)
+    real(kind=dp_t), intent(in   ) ::       rhotot(lo(1)-ng_7:,lo(2)-ng_7:,lo(3)-ng_7:)
+    real(kind=dp_t), intent(in   ) :: p0
+
+    ! local
+    integer :: i,j,k,n
+    real(kind=dp_t) :: W,beta,cpmix,cvmix
+    real(kind=dp_t) :: hk(nspecies)
+
+    integer :: iwrk
+    real(kind=dp_t) :: rwrk
+
+    S = 0.d0
+
+    do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+
+             ! mixture-averaged molecular mass, W = (sum (w_k/W_k) )^-1
+             call CKMMWY(conc(i,j,k,:),iwrk,rwrk,W)
+             ! h_k, c_p, and c_v
+             call CKHMS(Temp(i,j,k),iwrk,rwrk,hk)
+             call CKCPBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cpmix)
+             call CKCVBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cvmix)
+             do n=1,nspecies
+                beta = (1.d0/rhotot(i,j,k))*(W/conc(i,j,k,n) - hk(n)/(cpmix*Temp(i,j,k)))
+                S(i,j,k) = S(i,j,k) + beta*mass_fluxdiv(i,j,k,n)
+             end do
+             S(i,j,k) = S(i,j,k) + rhoh_fluxdiv(i,j,k) / (rhotot(i,j,k)*cpmix*Temp(i,j,k))
+             alpha(i,j,k) = cvmix/(cpmix*p0)
+
+          end do
+       end do
+    end do
+       
+  end subroutine compute_S_alpha_3d
   
 end module energy_eos_wrapper_module
 
