@@ -7,7 +7,10 @@ module initialize_module
   use energy_eos_module
   use energy_eos_wrapper_module
   use convert_variables_module
+  use mass_fluxdiv_energy_module
   use probin_multispecies_module, only: nspecies
+
+  use fabio_module
 
   implicit none
 
@@ -48,18 +51,24 @@ contains
     ! this will hold -div(rho*v)^n + div(F^n)
     type(multifab) :: rho_update(mla%nlevel)
 
+    ! this will hold div(F)
+    type(multifab) :: mass_fluxdiv(mla%nlevel)
+
+    ! this will hold div(Q) + sum(div(hk*Fk)) + rho*Hext
+    type(multifab) :: rhoh_fluxdiv(mla%nlevel)
+
     ! This will hold (rhoh)^n/dt - div(rhoh*v)^n + Sbar^n/alphabar^n 
     !                + (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n)
     ! for the RHS of the temperature diffusion solve.
     ! Each of these terms stays fixed over all l iterations.
-    type(multifab) :: rhoh_update1(mla%nlevel)
+    type(multifab) :: deltaT_rhs1(mla%nlevel)
 
     ! This will hold -(rho^{*,n+1}h^{*,n+1,l})/dt + Sbarcorr^n/alphabar^n
     !                + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l})
     !                + (rho Hext)^(*,n+1)
     ! for the RHS of the temperature diffusion solve.
     ! Each of these terms may change for each l iteration.
-    type(multifab) :: rhoh_update2(mla%nlevel)
+    type(multifab) :: deltaT_rhs2(mla%nlevel)
 
     ! temporary storage for concentrations and mole fractions
     type(multifab) :: conc    (mla%nlevel)
@@ -123,8 +132,11 @@ contains
     do n=1,nlevs
        call multifab_build(rho_update(n),mla%la(n),nspecies,0)
 
-       call multifab_build(rhoh_update1(n),mla%la(n),1,0)
-       call multifab_build(rhoh_update2(n),mla%la(n),1,0)
+       call multifab_build(mass_fluxdiv(n),mla%la(n),nspecies,0)
+       call multifab_build(rhoh_fluxdiv(n),mla%la(n),1,0)
+
+       call multifab_build(deltaT_rhs1(n),mla%la(n),1,0)
+       call multifab_build(deltaT_rhs2(n),mla%la(n),1,0)
 
        call multifab_build(    conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(molefrac(n),mla%la(n),nspecies,rho_old(n)%ng)
@@ -166,7 +178,8 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 0a: Compute a pressure update
+    ! Step 0a: Compute (S,alpha)^n, decompose (S,alpha,Scorr)^n, and 
+    !          compute a pressure update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! compute mass fractions in valid region and then fill ghost cells
@@ -185,6 +198,10 @@ contains
     ! compute initial transport properties
     call ideal_mixture_transport_wrapper(mla,rhotot_old,Temp,p0_old,conc,molefrac, &
                                          eta_old,lambda_old,kappa_old,chi_old,zeta_old)
+
+    ! compute div(F^n)
+    call mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac,chi_old,zeta_old, &
+                             gradp_baro,mass_fluxdiv,Temp,dx,the_bc_tower)
 
     stop
 
@@ -241,42 +258,31 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(rho_update(n))
-
-       call multifab_destroy(rhoh_update1(n))
-       call multifab_destroy(rhoh_update2(n))
-
+       call multifab_destroy(mass_fluxdiv(n))
+       call multifab_destroy(rhoh_fluxdiv(n))
+       call multifab_destroy(deltaT_rhs1(n))
+       call multifab_destroy(deltaT_rhs2(n))
        call multifab_destroy(    conc(n))
        call multifab_destroy(molefrac(n))
-
        call multifab_destroy(deltaT(n))
-
        call multifab_destroy(cc_solver_alpha(n))
        do i=1,dm
           call multifab_destroy(cc_solver_beta(n,i))
        end do
-
        call multifab_destroy(eta_old(n))
        call multifab_destroy(eta_new(n))
-
        call multifab_destroy(kappa_old(n))
        call multifab_destroy(kappa_new(n))
-
        call multifab_destroy(lambda_old(n))
        call multifab_destroy(lambda_new(n))
-
        call multifab_destroy(chi_old(n))
        call multifab_destroy(chi_new(n))
-
        call multifab_destroy(zeta_old(n))
        call multifab_destroy(zeta_new(n))
-
        call multifab_destroy(deltaS(n))
-
        call multifab_destroy(     Scorr(n))
        call multifab_destroy(deltaScorr(n))
-
        call multifab_destroy(deltaalpha(n))
-
        call multifab_destroy(Sproj(n))
        call multifab_destroy(phi(n))
        do i=1,dm

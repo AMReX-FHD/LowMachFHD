@@ -430,7 +430,8 @@ $S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
 $S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
 We loop over the following until the convergence criteria in {\bf Step 0e} is met:\\
 \begin{itemize}
-\item {\bf Step 0a:} Compute a pressure update:
+\item {\bf Step 0a:} Compute $(S,\alpha)^n$ decompose $(S,\alpha,S_{\rm corr})^n$ 
+into average and perturbational components, and then compute a pressure update:
 \begin{equation}
 P_0^{*,n+1} = P_0^n + \Delta t\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right)
 \end{equation}
@@ -502,7 +503,8 @@ We set the volume discrepancy correction to the value
 $S_{\rm corr}^{*,n+1} = S_{\rm corr}^n$.
 We loop over the following until the convergence criteria in {\bf Step 1e} is met:\\
 \begin{itemize}
-\item {\bf Step 1a:} Compute a pressure update.
+\item {\bf Step 1a:} Compute $(S,\alpha)^{*,n+1}$ decompose $(S,\alpha,S_{\rm corr})^{*,n+1}$ 
+into average and perturbational components, and then compute a pressure update:
 \begin{equation}
 P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right) + \frac{\Delta t}{2}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right).
 \end{equation}

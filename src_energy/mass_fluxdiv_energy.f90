@@ -17,30 +17,23 @@ module mass_fluxdiv_energy_module
 
 contains
 
-  subroutine mass_fluxdiv_energy(mla,rho,gradp_baro,mass_fluxdiv, &
-                                 Temp,p0,eta,kappa,lambda,dt,time,dx,the_bc_tower)
+  subroutine mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta,gradp_baro,mass_fluxdiv, &
+                                 Temp,dx,the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
-    type(multifab) , intent(inout)   :: rho(:)
+    type(multifab) , intent(in   )   :: rho(:)
+    type(multifab) , intent(in   )   :: rhotot(:)
+    type(multifab) , intent(in   )   :: molefrac(:)
+    type(multifab) , intent(in   )   :: chi(:)
+    type(multifab) , intent(in   )   :: zeta(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(inout)   :: mass_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
-    type(multifab) , intent(inout)   :: eta(:)           ! viscosity
-    type(multifab) , intent(inout)   :: kappa(:)         ! bulk viscosity
-    type(multifab) , intent(inout)   :: lambda(:)        ! thermal conductivity
-    real(kind=dp_t), intent(in   )   :: p0
-    real(kind=dp_t), intent(in   )   :: dt, time
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     type(bc_tower) , intent(in   )   :: the_bc_tower
 
     ! local variables
-    type(multifab) :: drho(mla%nlevel)           ! correction to rho
     type(multifab) :: rhoWchi(mla%nlevel)        ! rho*W*chi*Gama
-    type(multifab) :: rhotot_temp(mla%nlevel)    ! temp storage for rho with drho correction
-    type(multifab) :: massfrac(mla%nlevel)       ! mass fractions (concentrations)
-    type(multifab) :: molarconc(mla%nlevel)      ! molar concentration
-    type(multifab) :: molmtot(mla%nlevel)        ! total molar mass
-    type(multifab) :: chi(mla%nlevel)            ! Chi-matrix
     type(multifab) :: Gama(mla%nlevel)           ! Gama-matrix
     type(multifab) :: zeta_by_Temp(mla%nlevel)   ! for Thermo-diffusion 
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
@@ -52,13 +45,7 @@ contains
       
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     do n=1,nlevs
-       call multifab_build(drho(n),         mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(rhotot_temp(n),  mla%la(n), 1          , rho(n)%ng)
-       call multifab_build(massfrac(n),     mla%la(n), nspecies,    rho(n)%ng)
-       call multifab_build(molarconc(n),    mla%la(n), nspecies,    rho(n)%ng)
-       call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
-       call multifab_build(chi(n),          mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(Gama(n),         mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
        do i=1,dm
@@ -66,27 +53,14 @@ contains
           call setval(flux_total(n,i),0.d0,all=.true.)
        end do
     end do
- 
-    ! modify rho with drho to ensure no mass or mole fraction is zero
-    call correct_rho_with_drho(mla,rho,drho)
 
-    ! compute rhotot_temp from corrected rho
-    call compute_rhotot(mla,rho,rhotot_temp)
-
-    ! compute mass fractions 
-    call convert_rho_to_conc(mla,rho,rhotot_temp,massfrac,.true.)
-
-    ! compute mole fractions and molar mass
-    call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot)
- 
-    ! use ideal_mixture_transport()
-    ! inputs are rho, Temp, P, Y, X
-    ! outputs are viscosity (eta), bulk viscosity (kappa), diffusion matrix (chi), 
-    ! thermal conductivity (lambda), scaled thermodiffusion coefficients
-!    call ideal_mixture_transport_mf(rhotot_temp,Temp,p0,massfrac,molarconc,eta,lambda,kappa,chi,zeta_by_Temp)
-
-    ! multiply zeta_by_Temp by x_i/T
-
+    ! set zeta_by_Temp to zeta/Temp
+    do n=1,nlevs
+       call multifab_copy_c(zeta_by_Temp(n),1,zeta(n),1,nspecies,1)
+       do i=1,nspecies
+          call multifab_div_div_c(zeta_by_Temp(n),i,Temp(n),1,1,1)
+       end do
+    end do
 
     ! set Gama to the identity matrix
     do n=1,nlevs
@@ -99,35 +73,17 @@ contains
     end do
 
     ! compute rho*W*chi
-    call compute_rhoWchi(mla,rho,rhotot_temp,chi,rhoWchi)
-
-    ! reset total flux
-    do n=1,nlevs
-       do i=1,dm
-          call setval(flux_total(n,i),0.d0,all=.true.)
-       end do
-    end do
+    call compute_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
 
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
-    call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama, &
+    call diffusive_mass_fluxdiv(mla,rho,rhotot,molefrac,rhoWchi,Gama, &
                                 mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro,flux_total,dx, &
                                 the_bc_tower)
-
-    ! revert back rho to it's original form
-    do n=1,nlevs
-       call saxpy(rho(n),-1.0d0,drho(n))
-    end do 
       
     ! free the multifab allocated memory
     do n=1,nlevs
-       call multifab_destroy(drho(n))
        call multifab_destroy(rhoWchi(n))
-       call multifab_destroy(rhotot_temp(n))
-       call multifab_destroy(massfrac(n))
-       call multifab_destroy(molarconc(n))
-       call multifab_destroy(molmtot(n))
-       call multifab_destroy(chi(n))
        call multifab_destroy(Gama(n))
        call multifab_destroy(zeta_by_Temp(n))
        do i=1,dm
