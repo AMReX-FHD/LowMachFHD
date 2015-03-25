@@ -37,7 +37,6 @@ contains
     type(multifab) :: rhoWchi(mla%nlevel)        ! rho*W*chi*Gama
     type(multifab) :: Gama(mla%nlevel)           ! Gama-matrix
     type(multifab) :: zeta_by_Temp(mla%nlevel)   ! for Thermo-diffusion 
-    type(multifab) :: flux_total(mla%nlevel,mla%dim)
 
     integer         :: n,i,j,dm,nlevs
 
@@ -49,9 +48,6 @@ contains
        call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(Gama(n),         mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
-       do i=1,dm
-          call setval(flux_total(n,i),0.d0,all=.true.)
-       end do
     end do
 
     ! set zeta_by_Temp to zeta/Temp
@@ -75,10 +71,16 @@ contains
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
 
+    do n=1,nlevs
+       do i=1,dm
+          call setval(mass_flux(n,i),0.d0,all=.true.)
+       end do
+    end do
+
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molefrac,rhoWchi,Gama, &
-                                mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro,flux_total,dx, &
+                                mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro,mass_flux,dx, &
                                 the_bc_tower)
       
     ! free the multifab allocated memory

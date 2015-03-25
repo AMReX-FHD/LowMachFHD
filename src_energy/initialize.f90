@@ -8,6 +8,7 @@ module initialize_module
   use energy_eos_wrapper_module
   use convert_variables_module
   use mass_fluxdiv_energy_module
+  use rhoh_fluxdiv_energy_module
   use probin_multispecies_module, only: nspecies
 
   use fabio_module
@@ -207,8 +208,11 @@ contains
     call mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac,chi_old,zeta_old, &
                              gradp_baro,Temp,mass_fluxdiv,mass_flux,dx,the_bc_tower)
 
-    ! compute rhoh_fluxdiv = div(Q) + sum(div(hk*Fk)) + rho*Hext
+    ! compute rhoh_fluxdiv = div(Q)^n + sum(div(hk*Fk))^n + rho*Hext^n
+    call rhoh_fluxdiv_energy(mla,lambda_old,Temp,mass_flux,rhotot_old,rhoh_fluxdiv, &
+                             dx,time,the_bc_tower)
 
+    stop
 
     ! Construct S.  Many pieces of S are used in later parts of the algorithm,
     ! e.g., density update or enthalpy solve, but with different scalings

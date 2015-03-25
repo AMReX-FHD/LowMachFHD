@@ -273,11 +273,12 @@ contains
 
   end subroutine ideal_mixture_transport_3d
 
-  subroutine add_external_heating(mla,rhotot,rhoHext)
+  subroutine add_external_heating(mla,rhotot,rhoHext,time)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rhotot(:)
     type(multifab) , intent(inout) :: rhoHext(:)
+    real(kind=dp_t), intent(in   ) :: time
 
     ! local
     integer :: n,nlevs,i,dm
