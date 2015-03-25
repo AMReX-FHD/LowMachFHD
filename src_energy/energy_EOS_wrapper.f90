@@ -7,7 +7,8 @@ module energy_eos_wrapper_module
 
   private
 
-  public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper
+  public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper, &
+            add_external_heating
 
 contains
 
@@ -45,7 +46,6 @@ contains
           case (3)
              call convert_conc_to_molefrac_3d(dp1(:,:,:,:),ng_1,dp2(:,:,:,:),ng_2, &
                                               lo,hi,conc_to_molefrac)
-
           end select
        end do
     end do
@@ -272,6 +272,97 @@ contains
     end do
 
   end subroutine ideal_mixture_transport_3d
+
+  subroutine add_external_heating(mla,rhotot,rhoHext)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(in   ) :: rhotot(:)
+    type(multifab) , intent(inout) :: rhoHext(:)
+
+    ! local
+    integer :: n,nlevs,i,dm
+    integer :: ng_1,ng_2
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: dp1(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2(:,:,:,:)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    ng_1 = rhotot(1)%ng
+    ng_2 = rhoHext(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(rhotot(n))
+          dp1 => dataptr(rhotot(n), i)
+          dp2 => dataptr(rhoHext(n), i)
+          lo = lwb(get_box(rhotot(n), i))
+          hi = upb(get_box(rhotot(n), i))
+          select case (dm)
+          case (2)
+             call add_external_heating_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2,lo,hi)
+          case (3)
+             call add_external_heating_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2,lo,hi)
+          end select
+       end do
+    end do
+
+  end subroutine add_external_heating
+  
+  subroutine add_external_heating_2d(rhotot,ng_1,rhoHext,ng_2,lo,hi)
+
+    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
+    real(kind=dp_t), intent(in   ) ::  rhotot(lo(1)-ng_1:,lo(2)-ng_1:)
+    real(kind=dp_t), intent(inout) :: rhoHext(lo(1)-ng_2:,lo(2)-ng_2:)
+
+    ! local
+    integer :: i,j
+
+    select case (heating_type)
+
+    case (1)
+
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+
+          end do
+       end do
+
+    case default
+       ! no external heating
+    end select
+       
+
+  end subroutine add_external_heating_2d
+  
+  subroutine add_external_heating_3d(rhotot,ng_1,rhoHext,ng_2,lo,hi)
+
+    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
+    real(kind=dp_t), intent(in   ) ::  rhotot(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
+    real(kind=dp_t), intent(inout) :: rhoHext(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+
+    ! local
+    integer :: i,j,k
+
+    select case (heating_type)
+
+    case (1)
+
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)
+
+             end do
+          end do
+       end do
+
+    case default
+       ! no external heating
+    end select
+       
+
+  end subroutine add_external_heating_3d
   
 end module energy_eos_wrapper_module
 
