@@ -46,7 +46,6 @@
 \def\deltab {\boldsymbol{\delta}}
 \def\Gammab {\boldsymbol{\Gamma}}
 \def\phib   {\boldsymbol{\phi}}
-\def\Phib   {\boldsymbol{\Phi}}
 \def\Psib   {\boldsymbol{\Psi}}
 \def\Sigmab {\boldsymbol{\Sigma}}
 \def\taub   {\boldsymbol{\tau}}
@@ -437,8 +436,17 @@ P_0^{*,n+1} = P_0^n + \Delta t\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar
 \end{equation}
 \item {\bf Step 0b:} Compute the velocity field using
 \begin{equation}
-\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right).
+\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right) \equiv S_{\rm proj}.
 \end{equation}
+This involves solving the ellptic equation,
+\begin{equation}
+\nabla\cdot\frac{1}{\rho}\nabla\Phi = \nabla\cdot\vb^n - S_{\rm proj},
+\end{equation}
+and velocity update,
+\begin{equation}
+\vb^n = \vb^n - \frac{1}{\rho}\nabla\Phi.
+\end{equation}
+
 \item {\bf Step 0c:} Advance the densities using forward-Euler advective fluxes
 and explicit mass diffusion:
 \begin{equation}

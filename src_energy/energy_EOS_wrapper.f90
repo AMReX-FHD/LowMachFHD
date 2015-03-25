@@ -7,7 +7,7 @@ module energy_eos_wrapper_module
 
   private
 
-  public :: convert_conc_to_molefrac
+  public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper
 
 contains
 
@@ -185,17 +185,17 @@ contains
           hi = upb(get_box(rhotot(n), i))
           select case (dm)
           case (2)
-             call convert_ideal_mixture_transport_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
-                                                     dp3(:,:,1,:),ng_3,dp4(:,:,1,:),ng_2, &
-                                                     dp5(:,:,1,1),ng_5,dp6(:,:,1,1),ng_2, &
-                                                     dp7(:,:,1,1),ng_7,dp8(:,:,1,:),ng_2, &
-                                                     dp9(:,:,1,:),ng_9,p0,lo,hi)
+             call ideal_mixture_transport_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
+                                             dp3(:,:,1,:),ng_3,dp4(:,:,1,:),ng_2, &
+                                             dp5(:,:,1,1),ng_5,dp6(:,:,1,1),ng_2, &
+                                             dp7(:,:,1,1),ng_7,dp8(:,:,1,:),ng_2, &
+                                             dp9(:,:,1,:),ng_9,p0,lo,hi)
           case (3)
-             call convert_ideal_mixture_transport_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
-                                                     dp3(:,:,:,:),ng_3,dp4(:,:,:,:),ng_2, &
-                                                     dp5(:,:,:,1),ng_5,dp6(:,:,:,1),ng_2, &
-                                                     dp7(:,:,:,1),ng_7,dp8(:,:,:,:),ng_2, &
-                                                     dp9(:,:,:,:),ng_9,p0,lo,hi)
+             call ideal_mixture_transport_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
+                                             dp3(:,:,:,:),ng_3,dp4(:,:,:,:),ng_2, &
+                                             dp5(:,:,:,1),ng_5,dp6(:,:,:,1),ng_2, &
+                                             dp7(:,:,:,1),ng_7,dp8(:,:,:,:),ng_2, &
+                                             dp9(:,:,:,:),ng_9,p0,lo,hi)
           end select
        end do
     end do

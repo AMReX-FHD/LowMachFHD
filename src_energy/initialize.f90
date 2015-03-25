@@ -68,8 +68,9 @@ contains
     ! the implicit energy solve computes deltaT
     type(multifab) :: deltaT(mla%nlevel)
 
-    type(multifab) :: solver_alpha(mla%nlevel)
-    type(multifab) :: solver_beta (mla%nlevel,mla%dim)
+    ! coefficients for deltaT (energy) solve
+    type(multifab) :: cc_solver_alpha(mla%nlevel)
+    type(multifab) :: cc_solver_beta (mla%nlevel,mla%dim)
 
     ! shear viscosity
     type(multifab) :: eta_old(mla%nlevel)
@@ -93,21 +94,26 @@ contains
 
     ! this is the div(u)=S
     ! S = Sbar + deltaS
-    type(multifab)  :: S(mla%nlevel)
     type(multifab)  :: deltaS(mla%nlevel)
     real(kind=dp_t) :: Sbar
 
     ! volume discrepancy correction
     ! Scorr = Scorrbar + deltaScorr
-    type(multifab)  :: Scorr(mla%nlevel)
+    type(multifab)  ::      Scorr(mla%nlevel)
     type(multifab)  :: deltaScorr(mla%nlevel)
     real(kind=dp_t) :: Scorrbar
 
     ! coefficient multiplying dP_0/dt in constraint
     ! alpha = alphabar + deltaalpha
-    type(multifab)  :: alpha(mla%nlevel)
     type(multifab)  :: deltaalpha(mla%nlevel)
     real(kind=dp_t) :: alphabar
+
+    ! the RHS for the projection
+    type(multifab) ::     Sproj(mla%nlevel)
+    ! solution of the pressure-projection solve
+    type(multifab) ::       phi(mla%nlevel)
+    ! coefficient for projection
+    type(multifab) :: rhoinv_fc(mla%nlevel,mla%dim)
 
     integer :: n,nlevs,i,dm
 
@@ -137,7 +143,8 @@ contains
     call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
 
     ! compute initial transport properties
-!    call ideal_mixture_transport(rhotot_old,Temp,p0_old,)
+    call ideal_mixture_transport_wrapper(mla,rhotot_old,Temp,p0_old,conc,molefrac, &
+                                         eta_old,lambda_old,kappa_old,chi_old,zeta_old)
 
     ! Construct S.  Many pieces of S are used in later parts of the algorithm,
     ! e.g., density update or enthalpy solve, but with different scalings
