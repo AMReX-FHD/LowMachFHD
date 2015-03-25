@@ -186,6 +186,8 @@ contains
     call ideal_mixture_transport_wrapper(mla,rhotot_old,Temp,p0_old,conc,molefrac, &
                                          eta_old,lambda_old,kappa_old,chi_old,zeta_old)
 
+    stop
+
     ! Construct S.  Many pieces of S are used in later parts of the algorithm,
     ! e.g., density update or enthalpy solve, but with different scalings
 
