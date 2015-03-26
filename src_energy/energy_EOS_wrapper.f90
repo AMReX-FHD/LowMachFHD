@@ -8,7 +8,7 @@ module energy_eos_wrapper_module
   private
 
   public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper, &
-            add_external_heating, compute_S_alpha, compute_hk
+            add_external_heating, compute_S_alpha, compute_h, compute_hk
 
 contains
 
@@ -520,7 +520,37 @@ contains
        
   end subroutine compute_S_alpha_3d
 
+  subroutine compute_h(mla,Temp,h)
 
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(in   ) :: Temp(:)
+    type(multifab) , intent(inout) :: h(:)
+
+    ! local
+    integer :: n,nlevs,comp
+
+    type(multifab) :: hk(mla%nlevel)
+
+    nlevs = mla%nlevel
+
+    do n=1,nlevs
+       call multifab_build(hk(n),mla%la(n),nspecies,h(n)%ng)
+    end do
+
+    call compute_hk(mla,Temp,hk)
+
+    do n=1,nlevs
+       call multifab_setval(h(n),0.d0,all=.true.)
+       do comp=1,nspecies
+          call multifab_plus_plus_c(h(n),1,hk(n),comp,1,h(n)%ng)
+       end do
+    end do
+
+    do n=1,nlevs
+       call multifab_destroy(hk(n))
+    end do
+
+  end subroutine compute_h
 
   subroutine compute_hk(mla,Temp,hk)
 

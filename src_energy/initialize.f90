@@ -13,6 +13,7 @@ module initialize_module
   use convert_stag_module
   use div_and_grad_module
   use mk_advective_s_fluxdiv_module
+  use mass_flux_utilities_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: n_cells
 
@@ -40,7 +41,7 @@ contains
     type(multifab) , intent(inout) :: umac(:,:)
     type(multifab) , intent(inout) :: rho_old(:)
     type(multifab) , intent(inout) :: rho_new(:)
-    type(multifab) , intent(in   ) :: rhotot_old(:)
+    type(multifab) , intent(inout) :: rhotot_old(:)
     type(multifab) , intent(inout) :: rhotot_new(:)
     type(multifab) , intent(inout) :: rhoh_old(:)
     type(multifab) , intent(inout) :: rhoh_new(:)
@@ -64,6 +65,7 @@ contains
 
     ! this will hold div(Q) + sum(div(hk*Fk)) + rho*Hext
     type(multifab) :: rhoh_fluxdiv_old(mla%nlevel)
+    type(multifab) :: rhoh_fluxdiv_new(mla%nlevel)
 
     ! this holds h
     type(multifab) :: h(mla%nlevel)
@@ -78,8 +80,8 @@ contains
     type(multifab) :: deltaT_rhs1(mla%nlevel)
 
     ! This will hold -(rho^{*,n+1}h^{*,n+1,l})/dt
-    !                + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l})
-    !                + (rho Hext)^(*,n+1)
+    !                + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l}))
+    !                + (rho Hext)^(*,n+1))
     ! for the RHS of the temperature diffusion solve.
     ! Each of these terms may change for each l iteration.
     type(multifab) :: deltaT_rhs2(mla%nlevel)
@@ -169,6 +171,7 @@ contains
        end do
 
        call multifab_build(rhoh_fluxdiv_old(n),mla%la(n),1,0)
+       call multifab_build(rhoh_fluxdiv_new(n),mla%la(n),1,0)
 
        call multifab_build(deltaT_rhs1(n),mla%la(n),1,0)
        call multifab_build(deltaT_rhs2(n),mla%la(n),1,0)
@@ -223,7 +226,7 @@ contains
                             dx_in=dx(n,:))
     end do
 
-    ! compute mole fractions
+    ! compute mole fractions in VALID + GHOST regions
     call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
 
     ! compute initial transport properties
@@ -329,6 +332,29 @@ contains
           call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
        end do
 
+       ! compute rhotot_new = sum(rho_new)
+       call compute_rhotot(mla,rho_new,rhotot_new)
+
+       ! fill ghost cells
+       do n=1,nlevs
+          call multifab_fill_boundary(rhotot_new(n))
+       end do
+       call multifab_physbc(rhotot_old(n),1,scal_bc_comp,1, &
+                            the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+
+       ! compute mass fractions in valid region and then fill ghost cells
+       call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.true.)
+       do n=1,nlevs
+          ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+          call multifab_fill_boundary(conc(n))
+          ! fill non-periodic domain boundary ghost cells
+          call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+                               dx_in=dx(n,:))
+       end do
+
+       ! compute mole fractions in VALID + GHOST regions
+       call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
+
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 0d: Advance the enthalpy by iteratively looping over an energy solve
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -347,6 +373,13 @@ contains
 
        ! compute h
        call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,h,.true.)
+
+       ! fill h ghost cells
+       do n=1,nlevs
+          call multifab_fill_boundary(h(n))
+          call multifab_physbc(h(n),1,h_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                               dx_in=dx(n,:))
+       end do
 
        ! average h to faces
        call average_cc_to_face(nlevs,h,rhoh_fc,1,h_bc_comp,1, &
@@ -367,25 +400,76 @@ contains
           call multifab_saxpy_3(deltaT_rhs1(n),0.5d0,rhoh_fluxdiv_old(n))
        end do
 
+       ! set (rhoh)^{*,n+1,l} = rho^{*,n+1} * h^n
+       do n=1,nlevs
+          call multifab_copy_c(rhoh_new(n),1,h(n),1,1,rhoh_new(n)%ng)
+          call multifab_mult_mult_c(rhoh_new(n),1,rhotot_new(n),1,1,rhoh_new(n)%ng)
+       end do
+
        do l=1,lmax
 
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           ! Step 0d-1: Compute (lambda,cp,F)^{*,n+1,l}
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+          ! compute time-advanced transport properties
+          call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp,p0_new,conc,molefrac, &
+                                         eta_new,lambda_new,kappa_new,chi_new,zeta_new)
+
+          ! compute mass_fluxdiv = div(F^{*,n+1,l}))
+          call mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac,chi_new,zeta_new, &
+                                   gradp_baro,Temp,mass_fluxdiv,mass_flux,dx,the_bc_tower)
+
+          ! compute rhoh_fluxdiv_new = div(Q)^{*,n+1,l} + sum(div(hk*Fk))^{*,n+1,l} + rho*Hext^{*,n+1,l}
+          call rhoh_fluxdiv_energy(mla,lambda_new,Temp,mass_flux,rhotot_new,rhoh_fluxdiv_new, &
+                                   dx,time,the_bc_tower)
 
           ! The portion of the RHS that changes for each l iteration is:
           !  -(rho^{*,n+1}h^{*,n+1,l})/dt 
-          !               + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l}) + (rho Hext)^(*,n+1)
+          !               + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l})) + (rho Hext)^(*,n+1))
           ! store this in deltaT_rhs2
+
+          ! set deltaT_rhs1 = -(rho^{*,n+1}h^{*,n+1,l})/dt 
+          do n=1,nlevs
+             call multifab_copy_c(deltaT_rhs2(n),1,rhoh_new(n),1,1,0)
+             call multifab_mult_mult_s_c(deltaT_rhs2(n),1,-1.d0/dt,1,0)
+          end do
+
+          ! add (1/2)(div(Q) + sum(div(h_k F_k)) + (rho Hext))^{*,n+1,l} to deltaT_rhs2
+          do n=1,nlevs
+             call multifab_saxpy_3(deltaT_rhs1(n),0.5d0,rhoh_fluxdiv_new(n))
+          end do
           
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           ! Step 0d-2: Solve for deltaT implicitly
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+          ! cc_solver_alpha = rho^{*,n+1} c_p^{*,n+1,l} / dt
+
+
+          ! cc_solver_beta = (1/2) lambda^{*,n+1,l}
+
+
+          ! cc_solver_rhs = deltaT_rhs1 + deltaT_rhs2 (store this in deltaT_rhs2)
+
+
+          ! solve for deltaT
+
+
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           ! Step 0d-3: Update the temperature and enthalpy
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+          ! T^{*,n+1,l+1} = T^{*,n+1,l} + deltaT
+
+
+          ! fill T ghost cells
+
+
+          ! h^{*,n+1,l+1} = h(rho^{*,n+1},T^{*,n+1,l+1})
+
+
+
 
        end do ! end loop l over deltaT iterations
 
@@ -411,6 +495,7 @@ contains
           call multifab_destroy(rhoh_fc(n,i))
        end do
        call multifab_destroy(rhoh_fluxdiv_old(n))
+       call multifab_destroy(rhoh_fluxdiv_new(n))
        call multifab_destroy(deltaT_rhs1(n))
        call multifab_destroy(deltaT_rhs2(n))
        call multifab_destroy(    conc(n))
