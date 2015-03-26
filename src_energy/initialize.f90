@@ -478,7 +478,11 @@ contains
        !          discrepancy correction
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+       ! compute thermodynamic pressure
 
+       ! compute alpha
+
+       ! Scorr = Scorr 
 
 
     end do  ! end loop k over dpdt iterations
