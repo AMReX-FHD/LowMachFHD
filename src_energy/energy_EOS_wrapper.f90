@@ -815,13 +815,12 @@ contains
 
   end subroutine compute_p_3d
 
-  subroutine compute_cp(mla,cp,conc,Temp,p0)
+  subroutine compute_cp(mla,cp,conc,Temp)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: cp(:)
     type(multifab) , intent(in   ) :: conc(:)
     type(multifab) , intent(in   ) :: Temp(:)
-    real(kind=dp_t), intent(in   ) :: p0
 
     ! local
     integer :: n,nlevs,i,dm
@@ -849,23 +848,22 @@ contains
           select case (dm)
           case (2)
              call compute_cp_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2, &
-                                dp3(:,:,1,1),ng_3,p0,lo,hi)
+                                dp3(:,:,1,1),ng_3,lo,hi)
           case (3)
              call compute_cp_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2, &
-                                dp3(:,:,:,1),ng_3,p0,lo,hi)
+                                dp3(:,:,:,1),ng_3,lo,hi)
           end select
        end do
     end do
 
   end subroutine compute_cp
   
-  subroutine compute_cp_2d(cp,ng_1,conc,ng_2,Temp,ng_3,p0,lo,hi)
+  subroutine compute_cp_2d(cp,ng_1,conc,ng_2,Temp,ng_3,lo,hi)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,lo(:),hi(:)
     real(kind=dp_t), intent(inout) ::   cp(lo(1)-ng_1:,lo(2)-ng_1:)
     real(kind=dp_t), intent(in   ) :: conc(lo(1)-ng_2:,lo(2)-ng_2:,:)
     real(kind=dp_t), intent(in   ) :: Temp(lo(1)-ng_3:,lo(2)-ng_3:)
-    real(kind=dp_t), intent(in   ) :: p0
 
     ! local
     integer :: i,j
@@ -881,13 +879,12 @@ contains
 
   end subroutine compute_cp_2d
   
-  subroutine compute_cp_3d(cp,ng_1,conc,ng_2,Temp,ng_3,p0,lo,hi)
+  subroutine compute_cp_3d(cp,ng_1,conc,ng_2,Temp,ng_3,lo,hi)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,lo(:),hi(:)
     real(kind=dp_t), intent(inout) ::   cp(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
     real(kind=dp_t), intent(in   ) :: conc(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_1:,:)
     real(kind=dp_t), intent(in   ) :: Temp(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(in   ) :: p0
 
     ! local
     integer :: i,j,k

@@ -1,6 +1,8 @@
 module initialize_module
 
   use ml_layout_module
+  use bndry_reg_module
+  use ml_solve_module
   use multifab_physbc_module
   use bc_module
   use define_bc_module
@@ -144,6 +146,10 @@ contains
 
     ! this holds the thermodynamic pressure
     type(multifab) :: Peos(mla%nlevel)
+
+    ! for energy implicit solve
+    ! doesn't actually do anything for single-level solves
+    type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
     integer :: n,nlevs,i,dm,n_cell,k,l
     integer :: kmax,lmax
@@ -453,16 +459,42 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
           ! cc_solver_alpha = rho^{*,n+1} c_p^{*,n+1,l} / dt
-
+          call compute_cp(mla,cc_solver_alpha,conc,Temp)
+          do n=1,nlevs
+             call multifab_mult_mult_c(cc_solver_alpha(n),1,rhotot_new(n),1,1,1)
+             call multifab_mult_mult_s_c(cc_solver_alpha(n),1,1.d0/dt,1,1)
+          end do
 
           ! cc_solver_beta = (1/2) lambda^{*,n+1,l}
-
+          call average_cc_to_face(nlevs,lambda_new,cc_solver_beta,1,tran_bc_comp,1, &
+                                  the_bc_tower%bc_tower_array)
+          
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_mult_mult_s_c(cc_solver_beta(n,i),1,0.5d0,1,1)
+             end do
+          end do
 
           ! cc_solver_rhs = deltaT_rhs1 + deltaT_rhs2 (store this in deltaT_rhs2)
-
+          do n=1,nlevs
+             call multifab_plus_plus_c(deltaT_rhs2(n),1,deltaT_rhs1(n),1,1,0)
+          end do
 
           ! solve for deltaT
+          do n = 2,nlevs
+             call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
+          end do
 
+          do n=1,nlevs
+             call setval(deltaT(n),0.d0,all=.true.)
+          end do
+
+          call ml_cc_solve(mla,deltaT_rhs2,deltaT,fine_flx,cc_solver_alpha,cc_solver_beta,dx, &
+                           the_bc_tower,temp_bc_comp)
+
+          do n = 2,nlevs
+             call bndry_reg_destroy(fine_flx(n))
+          end do
 
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           ! Step 0d-3: Update the temperature and enthalpy
