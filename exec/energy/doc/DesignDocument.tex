@@ -424,14 +424,15 @@ This step is only performed once at the beginning of the simulation, so here $n=
 The goal of this step is to compute preliminary time-advanced densities and enthalpy
 that are consistent with $P_0$.  This will
 require the computation of a velocity field, $\vb^n$, that preserves this
-thermodynamic balance.  
+thermodynamic balance.
+We compute $(S,\alpha)^n$ and decompose them
+into average and perturbational components.
 We set the initial volume discrepancy correction to zero, 
 $S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
 $S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
 We loop over the following until the convergence criteria in {\bf Step 0e} is met:\\
 \begin{itemize}
-\item {\bf Step 0a:} Compute $(S,\alpha)^n$ decompose $(S,\alpha,S_{\rm corr})^n$ 
-into average and perturbational components, and then compute a pressure update:
+\item {\bf Step 0a:} Compute a pressure update:
 \begin{equation}
 P_0^{*,n+1} = P_0^n + \Delta t\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right)
 \end{equation}
@@ -480,7 +481,7 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 &&\hspace{-1.25in} - \nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla T^{*,n+1,l}\nonumber\\
 &&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} \Fb_k^{*,n+1,l},\nonumber\\
-&&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{*,n+1}
+&&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{*,n+1}.
 \end{eqnarray}
 
 {\bf Step 0d-3:} Update the temperature and enthalpy using
@@ -493,18 +494,20 @@ discrepancy correction,
 \begin{equation}
 S_{\rm corr}^n = S_{\rm corr}^n + \alpha^{*,n+1}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
 \end{equation}
-and return to {\bf Step 0a}.  Otherwise, proceed to the {\bf Step 1}.\\
+split this into average and perturbational components and then return to {\bf Step 0a}.
+Otherwise, proceed to the {\bf Step 1}.\\
 \end{itemize}
 {\bf Step 1: Scalar Corrector Step}.\\ \\
 The goal of this step is to compute updated time-advanced densities and enthalpy 
 that are consistent with $P_0$..  This will require the computation
 of a velocity field, $\vb^{*,n+1}$, that preserves this thermodynamic balance.
+We compute $(S,\alpha)^{*,n+1}$ and decompose them
+into average and perturbational components.
 We set the volume discrepancy correction to the value
-$S_{\rm corr}^{*,n+1} = S_{\rm corr}^n$.
+$S_{\rm corr}^{*,n+1} = S_{\rm corr}^n$ and compute its decomposition.
 We loop over the following until the convergence criteria in {\bf Step 1e} is met:\\
 \begin{itemize}
-\item {\bf Step 1a:} Compute $(S,\alpha)^{*,n+1}$ decompose $(S,\alpha,S_{\rm corr})^{*,n+1}$ 
-into average and perturbational components, and then compute a pressure update:
+\item {\bf Step 1a:} Compute a pressure update:
 \begin{equation}
 P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right) + \frac{\Delta t}{2}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right).
 \end{equation}
@@ -568,9 +571,10 @@ If $l=l_{\rm max}$, set $(h,T)^{n+1} = (h,T)^{n+1,l+1}$ and proceed to {\bf Step
 \item {\bf Step 1e:} If the thermodynamic drift is unacceptable, update the volume 
 discrepancy correction,
 \begin{equation}
-S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + 2\alpha^{n+1}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right)
+S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + 2\alpha^{n+1}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right),
 \end{equation}
-and return to {\bf Step 1a}.  I think the factor of 2 is required here since the new-time
+split this into average and perturbational components and then
+return to {\bf Step 1a}.  I think the factor of 2 is required here since the new-time
 velocity is used in a trapezoidal corrector with only a half-weighting.  Otherwise, 
 proceed to the {\bf Step 2}.\\
 \end{itemize}
@@ -584,6 +588,8 @@ thermodynamic balance.  Note that this step is essentially the same as
 solver rather than a projection, since in essence we are correcting the velocity
 field computed in {\bf Step 1} by including a trapezoidal discretization of the 
 advective fluxes.
+We compute $(S,\alpha)^n$ and decompose them
+into average and perturbational components.
 We set the initial volume discrepancy correction to zero, 
 $S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
 $S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
