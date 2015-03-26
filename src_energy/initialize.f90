@@ -130,6 +130,7 @@ contains
 
     ! coefficient multiplying dP_0/dt in constraint
     ! alpha = alphabar + deltaalpha
+    type(multifab)  :: alpha(mla%nlevel)
     type(multifab)  :: deltaalpha(mla%nlevel)
     real(kind=dp_t) :: alphabar
 
@@ -140,6 +141,9 @@ contains
     ! coefficient for projection
     type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
+
+    ! this holds the thermodynamic pressure
+    type(multifab) :: Peos(mla%nlevel)
 
     integer :: n,nlevs,i,dm,n_cell,k,l
     integer :: kmax,lmax
@@ -206,6 +210,7 @@ contains
        call multifab_build(     Scorr(n),mla%la(n),1,0)
        call multifab_build(deltaScorr(n),mla%la(n),1,0)
 
+       call multifab_build(     alpha(n),mla%la(n),1,0)
        call multifab_build(deltaalpha(n),mla%la(n),1,0)
 
        call multifab_build(Sproj(n),mla%la(n),1,0)
@@ -214,6 +219,9 @@ contains
           call multifab_build_edge(   rhotot_fc(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(rhototinv_fc(n,i),mla%la(n),1,0,i)
        end do
+
+       call multifab_build(Peos(n),mla%la(n),1,0)
+
     end do
 
     ! compute mass fractions in valid region and then fill ghost cells
@@ -247,8 +255,8 @@ contains
 
     ! split S and alpha into average and perturbational pieces, e.g., (Sbar + deltaS)
     do n=1,nlevs
-       Sbar     = multifab_sum_c(deltaS(n)    ,1,1)
-       alphabar = multifab_sum_c(deltaalpha(n),1,1)
+       Sbar     = multifab_sum_c(deltaS(n)    ,1,1) / dble(n_cell)
+       alphabar = multifab_sum_c(deltaalpha(n),1,1) / dble(n_cell)
        call multifab_sub_sub_s_c(deltaS(n)    ,1,Sbar    ,1,0)
        call multifab_sub_sub_s_c(deltaalpha(n),1,alphabar,1,0)
     end do
@@ -339,11 +347,11 @@ contains
        do n=1,nlevs
           call multifab_fill_boundary(rhotot_new(n))
        end do
-       call multifab_physbc(rhotot_old(n),1,scal_bc_comp,1, &
+       call multifab_physbc(rhotot_new(n),1,scal_bc_comp,1, &
                             the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
 
        ! compute mass fractions in valid region and then fill ghost cells
-       call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.true.)
+       call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.true.)
        do n=1,nlevs
           ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
           call multifab_fill_boundary(conc(n))
@@ -479,11 +487,25 @@ contains
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
        ! compute thermodynamic pressure
+       call compute_p(mla,rhotot_new,Temp,conc,Peos)
 
        ! compute alpha
+       call compute_alpha(mla,alpha,conc,Temp,p0_new)
 
-       ! Scorr = Scorr 
+       ! Scorr = Scorr + alpha^{*,n+1} * [(Peos^{*,n+1} - P0^{*,n+1})/dt]
+       do n=1,nlevs
+          call multifab_sub_sub_s_c(Peos(n),1,p0_new,1,0)
+          call multifab_mult_mult_s_c(Peos(n),1,1.d0/dt,1,0)
+          call multifab_mult_mult_c(Peos(n),1,alpha(n),1,1,0)
+          call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
+       end do
 
+       ! split Scorr into average and perturbational components
+       do n=1,nlevs
+          Scorrbar = multifab_sum_c(Scorr(n),1,1) / dble(n_cell)
+          call multifab_copy_c(deltaScorr(n),1,Scorr(n),1,1,0)
+          call multifab_sub_sub_s_c(deltaScorr(n),1,Scorrbar,1,0)
+       end do
 
     end do  ! end loop k over dpdt iterations
 
@@ -502,7 +524,7 @@ contains
        call multifab_destroy(rhoh_fluxdiv_new(n))
        call multifab_destroy(deltaT_rhs1(n))
        call multifab_destroy(deltaT_rhs2(n))
-       call multifab_destroy(    conc(n))
+       call multifab_destroy(conc(n))
        call multifab_destroy(molefrac(n))
        call multifab_destroy(deltaT(n))
        call multifab_destroy(cc_solver_alpha(n))
@@ -520,8 +542,9 @@ contains
        call multifab_destroy(zeta_old(n))
        call multifab_destroy(zeta_new(n))
        call multifab_destroy(deltaS(n))
-       call multifab_destroy(     Scorr(n))
+       call multifab_destroy(Scorr(n))
        call multifab_destroy(deltaScorr(n))
+       call multifab_destroy(alpha(n))
        call multifab_destroy(deltaalpha(n))
        call multifab_destroy(Sproj(n))
        call multifab_destroy(phi(n))
@@ -529,6 +552,7 @@ contains
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(rhototinv_fc(n,i))
        end do
+       call multifab_destroy(Peos(n))
     end do
 
   end subroutine initialize

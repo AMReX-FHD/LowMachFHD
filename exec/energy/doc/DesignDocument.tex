@@ -489,12 +489,12 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 T^{*,n+1,l+1} = T^{*,n+1,l} + \delta T, \quad h^{*,n+1,l+1} = h(\wb^{*,n+1},T^{*,n+1,l+1}).
 \end{equation}
 If $l=l_{\rm max}$, set $(h,T)^{*,n+1} = (h,T)^{*,n+1,l+1}$ and proceed to {\bf Step 0e}.\\
-\item {\bf Step 0e:} If the thermodynamic drift is unacceptable, update the volume 
-discrepancy correction,
+\item {\bf Step 0e:} Update the volume discrepancy correction,
 \begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \alpha^{*,n+1}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right)
+S_{\rm corr}^n = S_{\rm corr}^n + \alpha^{*,n+1}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right),
 \end{equation}
-split this into average and perturbational components and then return to {\bf Step 0a}.
+and split this into average and perturbational components.
+If the thermodynamic drift is unacceptable, return to {\bf Step 0a}.
 Otherwise, proceed to the {\bf Step 1}.\\
 \end{itemize}
 {\bf Step 1: Scalar Corrector Step}.\\ \\
@@ -568,15 +568,15 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 T^{n+1,l+1} = T^{n+1,l} + \delta T, \quad h^{n+1,l+1} = h(\wb^{n+1},T^{n+1,l+1}).
 \end{equation}
 If $l=l_{\rm max}$, set $(h,T)^{n+1} = (h,T)^{n+1,l+1}$ and proceed to {\bf Step 1e}.\\
-\item {\bf Step 1e:} If the thermodynamic drift is unacceptable, update the volume 
-discrepancy correction,
+\item {\bf Step 1e:} Update the volume discrepancy correction,
 \begin{equation}
 S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + 2\alpha^{n+1}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right),
 \end{equation}
-split this into average and perturbational components and then
-return to {\bf Step 1a}.  I think the factor of 2 is required here since the new-time
-velocity is used in a trapezoidal corrector with only a half-weighting.  Otherwise, 
-proceed to the {\bf Step 2}.\\
+and split this into average and perturbational components.
+I think the factor of 2 is required here since the new-time
+velocity is used in a trapezoidal corrector with only a half-weighting.
+If the thermodynamic drift is unacceptable, return to {\bf Step 1a}.
+Otherwise, proceed to the {\bf Step 2}.\\
 \end{itemize}
 {\bf Step 2: Scalar Predictor Step.}\\ \\
 We are now in the next time step, so we increment $n$.
