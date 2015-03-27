@@ -352,9 +352,9 @@ contains
        ! fill ghost cells
        do n=1,nlevs
           call multifab_fill_boundary(rhotot_new(n))
+          call multifab_physbc(rhotot_new(n),1,scal_bc_comp,1, &
+                               the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
        end do
-       call multifab_physbc(rhotot_new(n),1,scal_bc_comp,1, &
-                            the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
 
        ! compute mass fractions in valid region and then fill ghost cells
        call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.true.)
@@ -501,15 +501,24 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
           ! T^{*,n+1,l+1} = T^{*,n+1,l} + deltaT
+          do n=1,nlevs
+             call multifab_plus_plus_c(Temp(n),1,deltaT(n),1,1,0)
+          end do
 
 
           ! fill T ghost cells
-
+          do n=1,nlevs
+             call multifab_fill_boundary(Temp(n))
+             call multifab_physbc(Temp(n),1,temp_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                                  dx_in=dx(n,:))
+          end do
 
           ! h^{*,n+1,l+1} = h(rho^{*,n+1},T^{*,n+1,l+1})
-
-
-
+          call compute_h(mla,Temp,rhoh_new)
+          
+          do n=1,nlevs
+             call multifab_mult_mult_c(rhoh_new(n),1,rho_new(n),1,1,1)
+          end do
 
        end do ! end loop l over deltaT iterations
 
@@ -540,6 +549,8 @@ contains
        end do
 
     end do  ! end loop k over dpdt iterations
+
+    stop
 
     do n=1,nlevs
        call multifab_destroy(rho_update(n))
