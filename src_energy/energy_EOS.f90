@@ -16,9 +16,11 @@ module energy_EOS_module
   REAL*8 , SAVE :: int_deg_free_in(MAXSPECIES) ! internal degrees of freedom
   REAL*8 , SAVE :: p0_in                       ! initial background pressure, p0
   integer, SAVE :: heating_type                ! form of external heating
-  integer, SAVE :: use_fake_diff = 0           ! force diffusion coefficients to constant
-  REAL*8 , SAVE :: fake_diff_coeff = -1.d0     ! Adjust transport coefficients artificially
-  REAL*8 , SAVE :: fake_soret_factor = 1.0d0   ! Adjust transport coefficients artificially
+  integer, SAVE :: use_fake_diff               ! force diffusion coefficients to constant
+  REAL*8 , SAVE :: fake_diff_coeff             ! Adjust transport coefficients artificially
+  REAL*8 , SAVE :: fake_soret_factor           ! Adjust transport coefficients artificially
+  integer, SAVE :: dpdt_iters                  ! Loops over volume discrepancy correction
+  integer, SAVE :: deltaT_iters                ! Loops over deltaT iterative solve
 
   NAMELIST /probin_energy_EOS/ dia_in
   NAMELIST /probin_energy_EOS/ int_deg_free_in
@@ -27,6 +29,8 @@ module energy_EOS_module
   NAMELIST /probin_energy_EOS/ use_fake_diff
   NAMELIST /probin_energy_EOS/ fake_diff_coeff
   NAMELIST /probin_energy_EOS/ fake_soret_factor
+  NAMELIST /probin_energy_EOS/ dpdt_iters
+  NAMELIST /probin_energy_EOS/ deltaT_iters
 
   ! molmass from namelist is in g/molecule.  molecular_weight is in g/mole
   REAL*8, SAVE, allocatable :: molecular_weight(:) 
@@ -66,6 +70,8 @@ contains
     use_fake_diff = 0
     fake_diff_coeff = -1.d0
     fake_soret_factor = 1.d0
+    dpdt_iters = 3
+    deltaT_iters = 3
 
     ! read from input file 
     need_inputs = .true.
@@ -112,6 +118,16 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) fake_soret_factor
+
+       case ('--dpdt_iters')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) dpdt_iters
+
+       case ('--deltaT_iters')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) deltaT_iters
 
        case ('--')
           farg = farg + 1

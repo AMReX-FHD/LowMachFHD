@@ -152,13 +152,9 @@ contains
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
     integer :: n,nlevs,i,dm,n_cell,k,l
-    integer :: kmax,lmax
 
     nlevs = mla%nlevel
     dm = mla%dim
-
-    kmax = 4
-    lmax = 4
 
     if (dm .eq. 2) then
        n_cell = n_cells(1)*n_cells(2)
@@ -275,7 +271,7 @@ contains
     end do
 
     ! begin loop here over Steps 0a-0e
-    do k=1,kmax
+    do k=1,dpdt_iters
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 0a: Compute a pressure update
@@ -420,7 +416,7 @@ contains
           call multifab_mult_mult_c(rhoh_new(n),1,rhotot_new(n),1,1,rhoh_new(n)%ng)
        end do
 
-       do l=1,lmax
+       do l=1,deltaT_iters
 
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           ! Step 0d-1: Compute (lambda,cp,F)^{*,n+1,l}
