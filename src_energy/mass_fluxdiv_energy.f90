@@ -45,9 +45,9 @@ contains
       
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     do n=1,nlevs
-       call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(Gama(n),         mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, 1)
+       call multifab_build(Gama(n),         mla%la(n), nspecies**2, 1)
+       call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    1)
     end do
 
     ! set zeta_by_Temp to zeta/Temp

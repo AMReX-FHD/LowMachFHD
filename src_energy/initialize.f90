@@ -191,9 +191,9 @@ contains
 
        call multifab_build(deltaT(n),mla%la(n),1,1)
 
-       call multifab_build(cc_solver_alpha(n),mla%la(n),1,1)
+       call multifab_build(cc_solver_alpha(n),mla%la(n),1,0)
        do i=1,dm
-          call multifab_build_edge(cc_solver_beta(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(cc_solver_beta(n,i),mla%la(n),1,0,i)
        end do
 
        call multifab_build(eta_old(n),mla%la(n),1,1)
@@ -202,8 +202,8 @@ contains
        call multifab_build(kappa_old(n),mla%la(n),1,1)
        call multifab_build(kappa_new(n),mla%la(n),1,1)
 
-       call multifab_build(lambda_old(n),mla%la(n),1,1)
-       call multifab_build(lambda_new(n),mla%la(n),1,1)
+       call multifab_build(lambda_old(n),mla%la(n),1,2)
+       call multifab_build(lambda_new(n),mla%la(n),1,2)
 
        call multifab_build(chi_old(n),mla%la(n),nspecies**2,1)
        call multifab_build(chi_new(n),mla%la(n),nspecies**2,1)
@@ -461,8 +461,8 @@ contains
           ! cc_solver_alpha = rho^{*,n+1} c_p^{*,n+1,l} / dt
           call compute_cp(mla,cc_solver_alpha,conc,Temp)
           do n=1,nlevs
-             call multifab_mult_mult_c(cc_solver_alpha(n),1,rhotot_new(n),1,1,1)
-             call multifab_mult_mult_s_c(cc_solver_alpha(n),1,1.d0/dt,1,1)
+             call multifab_mult_mult_c(cc_solver_alpha(n),1,rhotot_new(n),1,1,0)
+             call multifab_mult_mult_s_c(cc_solver_alpha(n),1,1.d0/dt,1,0)
           end do
 
           ! cc_solver_beta = (1/2) lambda^{*,n+1,l}
@@ -471,7 +471,7 @@ contains
           
           do n=1,nlevs
              do i=1,dm
-                call multifab_mult_mult_s_c(cc_solver_beta(n,i),1,0.5d0,1,1)
+                call multifab_mult_mult_s_c(cc_solver_beta(n,i),1,0.5d0,1,0)
              end do
           end do
 

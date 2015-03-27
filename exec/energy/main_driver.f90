@@ -235,16 +235,16 @@ subroutine main_driver()
                      num_scal_bc_in=2*nspecies+3, &
                      num_tran_bc_in=1)
 
-  do n=1,nlevs
-     ! define level n of the_bc_tower
-     call bc_tower_level_build(the_bc_tower,n,mla%la(n))
-  end do
-
   ! these quantities are populated here and defined bc.f90
   c_bc_comp        = scal_bc_comp + 1
   mol_frac_bc_comp = scal_bc_comp + nspecies + 1
   h_bc_comp        = scal_bc_comp + 2*nspecies + 1
   temp_bc_comp     = scal_bc_comp + 2*nspecies + 2
+
+  do n=1,nlevs
+     ! define level n of the_bc_tower
+     call bc_tower_level_build(the_bc_tower,n,mla%la(n))
+  end do
 
   if (restart .lt. 0) then
 

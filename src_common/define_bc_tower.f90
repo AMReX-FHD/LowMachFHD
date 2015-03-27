@@ -131,9 +131,10 @@ contains
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
 
-    ! This is only used for the cell-centered Poisson solver
-    !                  pres_bc_comp for x_p
-    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp:pres_bc_comp))
+    ! Here we allocate (dm+1)=pres_bc_comp components for x_u and x_p
+    !                  num_scal_bc components for scalars
+    !                  num_tran_bc components for transport coefficients
+    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc+num_tran_bc))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -262,7 +263,7 @@ contains
 
   subroutine ell_bc_level_build(ell_bc_level,phys_bc_level,default_value)
 
-    integer  , intent(inout) ::  ell_bc_level(0:,:,:,pres_bc_comp:)
+    integer  , intent(inout) ::  ell_bc_level(0:,:,:,:)
     integer  , intent(in   ) :: phys_bc_level(0:,:,:)
     integer  , intent(in   ) :: default_value
 
@@ -285,11 +286,13 @@ contains
 
           ! pressure is periodic
           ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_PER
+          ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_PER
 
        else
 
-          ! pressure is homogeneous neumann
+          ! pressure and temperature are homogeneous neumann
           ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_NEU
+          ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_NEU
 
        end if
 
