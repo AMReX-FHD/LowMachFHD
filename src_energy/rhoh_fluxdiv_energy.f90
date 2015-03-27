@@ -86,7 +86,7 @@ contains
     end do
 
     ! add external heating
-    call add_external_heating(mla,rhotot,rhoh_fluxdiv,time)
+    call add_external_heating(mla,rhotot,rhoh_fluxdiv,dx,time)
 
     do n=1,nlevs
        call multifab_destroy(hk(n))

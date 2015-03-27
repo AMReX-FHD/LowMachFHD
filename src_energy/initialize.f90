@@ -550,6 +550,11 @@ contains
 
     end do  ! end loop k over dpdt iterations
 
+!    call fabio_ml_multifab_write_d(umac(:,1),mla%mba%rr(:,1),"a_umac")
+!    call fabio_ml_multifab_write_d(rho_new,mla%mba%rr(:,1),"a_rho_new")
+!    call fabio_ml_multifab_write_d(Temp,mla%mba%rr(:,1),"a_Temp")
+!    print*,"old, new p0:",p0_old,p0_new
+
     stop
 
     do n=1,nlevs

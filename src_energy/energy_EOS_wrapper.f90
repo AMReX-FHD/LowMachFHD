@@ -3,6 +3,7 @@ module energy_eos_wrapper_module
   use ml_layout_module
   use energy_EOS_module
   use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: prob_lo, prob_hi
   implicit none
 
   private
@@ -274,12 +275,13 @@ contains
 
   end subroutine ideal_mixture_transport_3d
 
-  subroutine add_external_heating(mla,rhotot,rhoHext,time)
+  subroutine add_external_heating(mla,rhotot,rhoHext,dx,time)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rhotot(:)
     type(multifab) , intent(inout) :: rhoHext(:)
     real(kind=dp_t), intent(in   ) :: time
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
 
     ! local
     integer :: n,nlevs,i,dm
@@ -303,30 +305,41 @@ contains
           hi = upb(get_box(rhotot(n), i))
           select case (dm)
           case (2)
-             call add_external_heating_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2,lo,hi)
+             call add_external_heating_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2,dx(n,:),lo,hi)
           case (3)
-             call add_external_heating_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2,lo,hi)
+             call add_external_heating_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2,dx(n,:),lo,hi)
           end select
        end do
     end do
 
   end subroutine add_external_heating
   
-  subroutine add_external_heating_2d(rhotot,ng_1,rhoHext,ng_2,lo,hi)
+  subroutine add_external_heating_2d(rhotot,ng_1,rhoHext,ng_2,dx,lo,hi)
 
     integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
     real(kind=dp_t), intent(in   ) ::  rhotot(lo(1)-ng_1:,lo(2)-ng_1:)
     real(kind=dp_t), intent(inout) :: rhoHext(lo(1)-ng_2:,lo(2)-ng_2:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! local
     integer :: i,j
+    real(kind=dp_t) :: x,y,xcen,ycen,r
 
     select case (heating_type)
 
     case (1)
 
+       xcen = 0.5d0*(prob_lo(1)+prob_hi(1))
+       ycen = 0.5d0*(prob_lo(2)+prob_hi(2))
+
        do j=lo(2),hi(2)
+          y = prob_lo(2) + dx(2)*(dble(j)+0.5d0)
           do i=lo(1),hi(1)
+             x = prob_lo(1) + dx(1)*(dble(i)+0.5d0)
+
+             r = sqrt((x-xcen)**2 + (y-ycen)**2)
+             
+             rhoHext(i,j) = rhoHext(i,j) + 1.d6*rhotot(i,j)*exp(-100*r**2)
 
           end do
        end do
@@ -338,11 +351,12 @@ contains
 
   end subroutine add_external_heating_2d
   
-  subroutine add_external_heating_3d(rhotot,ng_1,rhoHext,ng_2,lo,hi)
+  subroutine add_external_heating_3d(rhotot,ng_1,rhoHext,ng_2,dx,lo,hi)
 
     integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
     real(kind=dp_t), intent(in   ) ::  rhotot(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
     real(kind=dp_t), intent(inout) :: rhoHext(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+    real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! local
     integer :: i,j,k
