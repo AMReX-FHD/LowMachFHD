@@ -291,6 +291,12 @@ contains
           call multifab_plus_plus_c(Sproj(n),1,deltaS(n),1,1,0)
           call multifab_plus_plus_c(Sproj(n),1,deltaScorr(n),1,1,0)
        end do
+
+!       if (k .eq. 1) then
+!          call fabio_ml_multifab_write_d(Sproj,mla%mba%rr(:,1),"a_Sproj1")
+!       else if (k .eq. 2) then
+!          call fabio_ml_multifab_write_d(Sproj,mla%mba%rr(:,1),"a_Sproj2")
+!       end if
        
        ! build rhs for projection, div(v^init) - Sproj
        ! first multiply Sproj by -1
@@ -439,7 +445,7 @@ contains
           !               + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l})) + (rho Hext)^(*,n+1))
           ! store this in deltaT_rhs2
 
-          ! set deltaT_rhs1 = -(rho^{*,n+1}h^{*,n+1,l})/dt 
+          ! set deltaT_rhs2 = -(rho^{*,n+1}h^{*,n+1,l})/dt 
           do n=1,nlevs
              call multifab_copy_c(deltaT_rhs2(n),1,rhoh_new(n),1,1,0)
              call multifab_mult_mult_s_c(deltaT_rhs2(n),1,-1.d0/dt,1,0)
@@ -447,7 +453,7 @@ contains
 
           ! add (1/2)(div(Q) + sum(div(h_k F_k)) + (rho Hext))^{*,n+1,l} to deltaT_rhs2
           do n=1,nlevs
-             call multifab_saxpy_3(deltaT_rhs1(n),0.5d0,rhoh_fluxdiv_new(n))
+             call multifab_saxpy_3(deltaT_rhs2(n),0.5d0,rhoh_fluxdiv_new(n))
           end do
           
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -518,6 +524,14 @@ contains
 
        end do ! end loop l over deltaT iterations
 
+
+
+!       if (k .eq. 1) then
+!          call fabio_ml_multifab_write_d(Temp,mla%mba%rr(:,1),"a_Temp1")
+!       else if (k .eq. 2) then
+!          call fabio_ml_multifab_write_d(Temp,mla%mba%rr(:,1),"a_Temp2")
+!       end if
+
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 0e: If the thermodynamic drift is unacceptable, update the volume
        !          discrepancy correction
@@ -525,6 +539,12 @@ contains
 
        ! compute thermodynamic pressure
        call compute_p(mla,rhotot_new,Temp,conc,Peos)
+
+!       if (k .eq. 1) then
+!          call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_Peos1")
+!       else if (k .eq. 2) then
+!          call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_Peos2")
+!       end if
 
        ! compute alpha
        call compute_alpha(mla,alpha,conc,Temp,p0_new)
@@ -537,12 +557,26 @@ contains
           call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
        end do
 
+!       if (k .eq. 1) then
+!          call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_deltaPeos1")
+!          print*,'p0_new 1',p0_new
+!       else if (k .eq. 2) then
+!          call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_deltaPeos2")
+!          print*,'p0_new 2',p0_new
+!       end if
+!       print*,p0_new
+
        ! split Scorr into average and perturbational components
        do n=1,nlevs
           Scorrbar = multifab_sum_c(Scorr(n),1,1) / dble(n_cell)
           call multifab_copy_c(deltaScorr(n),1,Scorr(n),1,1,0)
           call multifab_sub_sub_s_c(deltaScorr(n),1,Scorrbar,1,0)
        end do
+
+!       print*,'Scorrbar',Scorrbar
+!       print*,'Sbar',Sbar
+!       call fabio_ml_multifab_write_d(deltaScorr,mla%mba%rr(:,1),"a_deltaScorr")
+!       call fabio_ml_multifab_write_d(deltaS,mla%mba%rr(:,1),"a_deltaS")
 
     end do  ! end loop k over dpdt iterations
 
