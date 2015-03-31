@@ -378,10 +378,10 @@ or
 Similar to above, in order for this sytem to be solvable we split the update into a
 equations for $P_0$ and $\vb$,
 \begin{equation}
-\frac{dP_0}{dt} = \frac{\bar{S} + \bar{S}_{\rm corr}}{\alpha}
+\frac{dP_0}{dt} = \frac{\bar{S} + \bar{S}_{\rm corr}}{\bar{\alpha}}
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\alpha\left(\frac{\bar{S} + \bar{S}_{\rm corr}}{\alpha}\right).
+\nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\alpha\left(\frac{\bar{S} + \bar{S}_{\rm corr}}{\bar{\alpha}}\right).
 \end{equation}
 As we iterate, we increment (rather than reset) $\delta S_{\rm corr}$ based on how much 
 the current solution drifts using $\delta S_{\rm corr}$ the previous iteration.
