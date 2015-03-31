@@ -3,7 +3,7 @@ module energy_eos_wrapper_module
   use ml_layout_module
   use energy_EOS_module
   use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: prob_lo, prob_hi
+  use probin_common_module, only: prob_lo, prob_hi, molmass
   implicit none
 
   private
@@ -468,7 +468,7 @@ contains
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)
 
-          ! mixture-averaged molecular mass, W = (sum (w_k/W_k) )^-1
+          ! mixture-averaged molecular mass, W = (sum (w_k/m_k) )^-1
           call CKMMWY(conc(i,j,:),iwrk,rwrk,W)
           ! h_k, c_p, and c_v
           call CKHMS(Temp(i,j),iwrk,rwrk,hk)
@@ -476,7 +476,7 @@ contains
           call CKCVBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cvmix)
           S(i,j) = 0.d0
           do n=1,nspecies
-             beta = (1.d0/rhotot(i,j))*(W/conc(i,j,n) - hk(n)/(cpmix*Temp(i,j)))
+             beta = (1.d0/rhotot(i,j))*(W/molmass(n) - hk(n)/(cpmix*Temp(i,j)))
              S(i,j) = S(i,j) + beta*mass_fluxdiv(i,j,n)
           end do
           S(i,j) = S(i,j) + rhoh_fluxdiv(i,j) / (rhotot(i,j)*cpmix*Temp(i,j))
@@ -513,7 +513,7 @@ contains
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             ! mixture-averaged molecular mass, W = (sum (w_k/W_k) )^-1
+             ! mixture-averaged molecular mass, W = (sum (w_k/m_k) )^-1
              call CKMMWY(conc(i,j,k,:),iwrk,rwrk,W)
              ! h_k, c_p, and c_v
              call CKHMS(Temp(i,j,k),iwrk,rwrk,hk)
@@ -521,7 +521,7 @@ contains
              call CKCVBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cvmix)
              S(i,j,k) = 0.d0
              do n=1,nspecies
-                beta = (1.d0/rhotot(i,j,k))*(W/conc(i,j,k,n) - hk(n)/(cpmix*Temp(i,j,k)))
+                beta = (1.d0/rhotot(i,j,k))*(W/molmass(n) - hk(n)/(cpmix*Temp(i,j,k)))
                 S(i,j,k) = S(i,j,k) + beta*mass_fluxdiv(i,j,k,n)
              end do
              S(i,j,k) = S(i,j,k) + rhoh_fluxdiv(i,j,k) / (rhotot(i,j,k)*cpmix*Temp(i,j,k))
