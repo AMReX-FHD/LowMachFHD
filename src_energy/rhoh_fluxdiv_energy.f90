@@ -51,7 +51,7 @@ contains
                             the_bc_tower%bc_tower_array)
 
     ! compute grad(T)
-    call compute_grad(mla,Temp,gradT,dx,1,tran_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    call compute_grad(mla,Temp,gradT,dx,1,temp_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
     ! set misc_fc = lambda*grad(T)
     do n=1,nlevs
