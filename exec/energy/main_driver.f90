@@ -267,7 +267,7 @@ subroutine main_driver()
   end do
 
   ! rho to conc and rhoh to enth - NO GHOST CELLS
-  call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.true.)
+  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
   call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
 
   ! fill ghost cells
@@ -301,7 +301,7 @@ subroutine main_driver()
   end do
 
   ! conc to rho and enth to rhoh - INCLUDING GHOST CELLS
-  call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.false.)
+  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
   call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.false.)
 
   do n=1,nlevs

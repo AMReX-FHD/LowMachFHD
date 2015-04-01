@@ -224,7 +224,7 @@ contains
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     ! rho to conc - NO GHOST CELLS
-    call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.true.)
+    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
 
     do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
@@ -240,7 +240,7 @@ contains
     end do
 
     ! conc to rho - INCLUDING GHOST CELLS
-    call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.false.)
+    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -597,7 +597,7 @@ contains
     call compute_rhotot(mla,rho_new,rhotot_new)
 
     ! rho to conc - NO GHOST CELLS
-    call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.true.)
+    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
 
     do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
@@ -613,7 +613,7 @@ contains
     end do
 
     ! conc to rho - INCLUDING GHOST CELLS
-    call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.false.)
+    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)

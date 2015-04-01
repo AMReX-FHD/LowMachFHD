@@ -9,11 +9,11 @@ module convert_variables_module
 
   private
 
-  public :: convert_rho_to_conc, convert_rhoh_to_h
+  public :: convert_rhoc_to_c, convert_rhoh_to_h
   
 contains
 
-  subroutine convert_rho_to_conc(mla,rho,rhotot,conc,rho_to_c)
+  subroutine convert_rhoc_to_c(mla,rho,rhotot,conc,rho_to_c)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: rho(:)
@@ -48,7 +48,7 @@ contains
 
     end if
 
-  end subroutine convert_rho_to_conc
+  end subroutine convert_rhoc_to_c
 
   subroutine convert_rhoh_to_h(mla,rhoh,rhotot,h,rhoh_to_h)
     

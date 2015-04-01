@@ -239,7 +239,7 @@ contains
     end do
 
     ! compute mass fractions in valid region and then fill ghost cells
-    call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.true.)
+    call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
     do n=1,nlevs
        ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
        call multifab_fill_boundary(conc(n))
@@ -368,7 +368,7 @@ contains
        end do
 
        ! compute mass fractions in valid region and then fill ghost cells
-       call convert_rho_to_conc(mla,rho_new,rhotot_new,conc,.true.)
+       call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
        do n=1,nlevs
           ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
           call multifab_fill_boundary(conc(n))

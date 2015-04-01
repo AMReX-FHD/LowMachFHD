@@ -286,13 +286,11 @@ contains
 
           ! pressure is periodic
           ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_PER
-          ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_PER
 
        else
 
           ! pressure and temperature are homogeneous neumann
           ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_NEU
-          ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_NEU
 
        end if
 

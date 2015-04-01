@@ -300,7 +300,7 @@ subroutine main_driver()
   call compute_rhotot(mla,rho_old,rhotot_old)
 
   ! rho to conc - NO GHOST CELLS
-  call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.true.)
+  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
 
   ! fill ghost cells
   do n=1,nlevs
@@ -320,7 +320,7 @@ subroutine main_driver()
   end do
 
   ! conc to rho - INCLUDING GHOST CELLS
-  call convert_rho_to_conc(mla,rho_old,rhotot_old,conc,.false.)
+  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
 
   do n=1,nlevs
      call multifab_destroy(conc(n))

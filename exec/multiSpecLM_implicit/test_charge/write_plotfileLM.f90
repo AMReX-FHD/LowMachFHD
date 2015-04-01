@@ -76,7 +76,7 @@ contains
     do n=1,nlevs
        call multifab_build(conc(n),mla%la(n),nspecies,0)
     end do
-    call convert_rho_to_conc(mla,rho,rhotot,conc,.true.)
+    call convert_rhoc_to_c(mla,rho,rhotot,conc,.true.)
 
     ! build plotdata for 2*nspecies+2*dm+4 and 0 ghost cells
     do n=1,nlevs

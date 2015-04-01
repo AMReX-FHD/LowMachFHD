@@ -77,7 +77,7 @@ contains
     do n=1,nlevs
        call multifab_build(conc(n),mla%la(n),nspecies,0)
     end do
-    call convert_rho_to_conc(mla,rho,rhotot,conc,.true.)
+    call convert_rhoc_to_c(mla,rho,rhotot,conc,.true.)
 
     ! compute h
     do n=1,nlevs
