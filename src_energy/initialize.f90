@@ -9,6 +9,7 @@ module initialize_module
   use energy_eos_module
   use energy_eos_wrapper_module
   use convert_rhoc_to_c_module
+  use convert_rhoh_to_h_module
   use mass_fluxdiv_energy_module
   use rhoh_fluxdiv_energy_module
   use macproject_module

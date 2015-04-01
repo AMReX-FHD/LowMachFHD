@@ -1,3 +1,4 @@
+f90sources += convert_rhoh_to_h.f90
 f90sources += energy_EOS.f90
 f90sources += energy_EOS_wrapper.f90
 f90sources += initialize.f90
