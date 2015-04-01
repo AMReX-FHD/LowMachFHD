@@ -26,7 +26,7 @@ subroutine main_driver()
   use mass_flux_utilities_module
   use compute_HSE_pres_module
   use convert_stag_module
-  use convert_variables_module
+  use convert_rhoc_to_c_module
   use convert_m_to_umac_module
   use sum_momenta_module
   use restart_module

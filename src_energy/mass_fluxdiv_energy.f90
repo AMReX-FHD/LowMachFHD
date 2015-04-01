@@ -4,7 +4,7 @@ module mass_fluxdiv_energy_module
   use define_bc_module
   use diffusive_mass_fluxdiv_module
   use mass_flux_utilities_module
-  use convert_variables_module
+  use convert_rhoc_to_c_module
   use energy_EOS_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: variance_coef_mass

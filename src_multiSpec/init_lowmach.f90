@@ -9,7 +9,7 @@ module init_lowmach_module
   use multifab_coefbc_module
   use ml_layout_module
   use convert_stag_module
-  use convert_variables_module
+  use convert_rhoc_to_c_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
                                   molmass, rhobar, smoothing_width, u_init, n_cells
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &

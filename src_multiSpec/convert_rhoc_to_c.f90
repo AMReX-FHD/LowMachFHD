@@ -1,4 +1,4 @@
-module convert_variables_module
+module convert_rhoc_to_c_module
 
   use multifab_module
   use ml_layout_module
@@ -83,4 +83,4 @@ contains
 
   end subroutine convert_rhoh_to_h
 
-end module convert_variables_module
+end module convert_rhoc_to_c_module

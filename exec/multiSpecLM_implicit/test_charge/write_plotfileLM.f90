@@ -4,7 +4,7 @@ module write_plotfileLM_module
   use multifab_module
   use fabio_module
   use convert_stag_module
-  use convert_variables_module
+  use convert_rhoc_to_c_module
   use fluid_charge_module
   use probin_multispecies_module, only: nspecies, plot_stag
   use probin_common_module, only: prob_lo, prob_hi

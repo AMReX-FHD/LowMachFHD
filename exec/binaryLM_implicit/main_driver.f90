@@ -12,7 +12,7 @@ subroutine main_driver()
   use write_plotfile_module
   use advance_timestep_inertial_module
   use advance_timestep_overdamped_module
-  use convert_variables_module
+  use convert_rhoc_to_c_module
   use convert_m_to_umac_module
   use div_and_grad_module
   use eos_check_module

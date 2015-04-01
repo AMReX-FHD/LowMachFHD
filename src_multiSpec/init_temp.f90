@@ -9,7 +9,7 @@ module init_temp_module
   use multifab_coefbc_module
   use ml_layout_module
   use convert_stag_module
-  use convert_variables_module
+  use convert_rhoc_to_c_module
   use probin_common_module, only: prob_lo, prob_hi
   use probin_multispecies_module, only: T_init, nspecies, sigma, temp_type
  
