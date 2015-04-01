@@ -59,7 +59,8 @@ subroutine main_driver()
   type(multifab), allocatable  :: rho_new(:)
   type(multifab), allocatable  :: rhotot_new(:)
   type(multifab), allocatable  :: rhoh_new(:)
-  type(multifab), allocatable  :: Temp(:)
+  type(multifab), allocatable  :: Temp_old(:)
+  type(multifab), allocatable  :: Temp_new(:)
   type(multifab), allocatable  :: umac(:,:)
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
@@ -101,7 +102,7 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs),rhoh_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs),rhoh_new(nlevs))
-  allocate(Temp(nlevs))
+  allocate(Temp_old(nlevs),Temp_new(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(conc(nlevs),enth(nlevs))
 
@@ -202,7 +203,7 @@ subroutine main_driver()
         call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
         call multifab_build(rhoh_old(n),  mla%la(n),1       ,ng_s)
-        call multifab_build(Temp(n),      mla%la(n),1       ,ng_s)
+        call multifab_build(Temp_old(n),  mla%la(n),1       ,ng_s)
         ! pi - need 1 ghost cell since we calculate its gradient
         call multifab_build(pi(n)                ,mla%la(n),1       ,1)
         do i=1,dm
@@ -249,7 +250,7 @@ subroutine main_driver()
   if (restart .lt. 0) then
 
      ! initialize umac, rhotot, rho, rhoh, Temp, and p0 in valid region
-     call init_energy(mla,umac,rhotot_old,rho_old,rhoh_old,Temp,p0_old)
+     call init_energy(mla,umac,rhotot_old,rho_old,rhoh_old,Temp_old,p0_old)
 
      ! initialize pi
      do n=1,nlevs
@@ -274,7 +275,7 @@ subroutine main_driver()
      call multifab_fill_boundary(conc(n))
      call multifab_fill_boundary(enth(n))
      call multifab_fill_boundary(pi(n))
-     call multifab_fill_boundary(Temp(n))
+     call multifab_fill_boundary(Temp_old(n))
      do i=1,dm
         call multifab_fill_boundary(umac(n,i))
      end do
@@ -287,7 +288,7 @@ subroutine main_driver()
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
      call multifab_physbc(pi(n),1,pres_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-     call multifab_physbc(Temp(n),1,temp_bc_comp,1, &
+     call multifab_physbc(Temp_old(n),1,temp_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
      do i=1,dm
         ! set transverse velocity behind physical boundaries 
@@ -334,6 +335,7 @@ subroutine main_driver()
      call multifab_build(rho_new(n),   mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n),mla%la(n),1,       ng_s) 
      call multifab_build(rhoh_new(n)  ,mla%la(n),1,       ng_s) 
+     call multifab_build(Temp_new(n)  ,mla%la(n),1,       ng_s) 
   end do
 
   ! allocate and build multifabs that will contain random numbers
@@ -361,7 +363,7 @@ subroutine main_driver()
      ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
      if (initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
-                                umac,rhotot_old,Temp,the_bc_tower)
+                                umac,rhotot_old,Temp_old,the_bc_tower)
      end if
 
      if (fixed_dt .gt. 0.d0) then
@@ -415,7 +417,7 @@ subroutine main_driver()
 
      call initialize(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                         rhoh_old,rhoh_new,p0_old,p0_new, &
-                        gradp_baro,pi,Temp, &
+                        gradp_baro,pi,Temp_old,Temp_new, &
                         dx,dt,time,the_bc_tower)
 
      if (print_int .gt. 0) then
@@ -434,12 +436,12 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfileenergy(mla,"plt",rho_old,rhotot_old,rhoh_old,Temp,umac,pi,0,dx,time)
+        call write_plotfileenergy(mla,"plt",rho_old,rhotot_old,rhoh_old,Temp_old,umac,pi,0,dx,time)
      end if
      
      ! print out projection (average) and variance)
      if (stats_int .gt. 0) then
-        call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp)
+        call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp_old)
      end if
 
   end if
@@ -452,7 +454,7 @@ subroutine main_driver()
 
      ! Add this snapshot to the average in HydroGrid
      if (hydro_grid_int > 0) then
-        call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_old,temperature=Temp)
+        call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_old,temperature=Temp_old)
      end if
 
      if (hydro_grid_int > 0 .and. n_steps_save_stats > 0) then
@@ -531,7 +533,7 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
-            call write_plotfileenergy(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp,umac,pi,0,dx,time)
+            call write_plotfileenergy(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp_new,umac,pi,0,dx,time)
          end if
 
          ! write checkpoint at specific intervals
@@ -547,13 +549,13 @@ subroutine main_driver()
          if ( (stats_int > 0) .and. &
                (mod(istep,stats_int) .eq. 0) ) then
             ! Compute vertical and horizontal averages (hstat and vstat files)   
-            call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)            
+            call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp_new)    
          end if
 
          ! Add this snapshot to the average in HydroGrid
          if ( (hydro_grid_int > 0) .and. &
               ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
-            call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)           
+            call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp_new)
          end if
 
          if ( (hydro_grid_int > 0) .and. &
@@ -590,7 +592,8 @@ subroutine main_driver()
      call multifab_destroy(rho_new(n))
      call multifab_destroy(rhotot_new(n))
      call multifab_destroy(rhoh_new(n))
-     call multifab_destroy(Temp(n))
+     call multifab_destroy(Temp_old(n))
+     call multifab_destroy(Temp_new(n))
      call multifab_destroy(pi(n))
      do i=1,dm
         call multifab_destroy(umac(n,i))
@@ -600,7 +603,11 @@ subroutine main_driver()
      end do
   end do
   deallocate(lo,hi,dx)
-  deallocate(rho_old,rhotot_old,Temp,umac)
+  deallocate(rho_old,rhotot_old,rhoh_old,pi)
+  deallocate(rho_new,rhotot_new,rhoh_new)
+  deallocate(Temp_old,Temp_new)
+  deallocate(umac,mtemp,rhotot_fc,gradp_baro)
+  deallocate(conc,enth)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
 
