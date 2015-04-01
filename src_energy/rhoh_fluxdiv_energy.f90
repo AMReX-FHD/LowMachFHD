@@ -66,22 +66,22 @@ contains
     ! compute a multifab holding h_k
     call compute_hk(mla,Temp,hk)
 
+    ! average h_k to faces and store in misc_fc
+    call average_cc_to_face(nlevs,hk,misc_fc,1,c_bc_comp,nspecies, &
+                            the_bc_tower%bc_tower_array)
+
+    ! set misc_fc = h_k F_k
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_c(misc_fc(n,i),1,mass_flux(n,i),1,nspecies,0)
+       end do
+    end do
+
     ! add sum (div (h_k F_k)) to rhoh_fluxdiv
     do comp=1,nspecies
 
-       ! average h_k to faces and store in misc_fc
-       call average_cc_to_face(nlevs,hk,misc_fc,1,c_bc_comp,nspecies, &
-                               the_bc_tower%bc_tower_array)
-
-       ! set misc_fc = h_k F_k
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_c(misc_fc(n,i),1,mass_flux(n,i),1,nspecies,0)
-          end do
-       end do
-
        ! add divergence
-       call compute_div(mla,misc_fc,rhoh_fluxdiv,dx,1,1,1,increment_in=.true.)
+       call compute_div(mla,misc_fc,rhoh_fluxdiv,dx,comp,1,1,increment_in=.true.)
 
     end do
 
