@@ -2,6 +2,9 @@ module convert_rhoc_to_c_module
 
   use multifab_module
   use ml_layout_module
+  use define_bc_module
+  use bc_module
+  use multifab_physbc_module
   use probin_common_module, only: rhobar
   use probin_multispecies_module, only: nspecies
 
@@ -9,7 +12,7 @@ module convert_rhoc_to_c_module
 
   private
 
-  public :: convert_rhoc_to_c
+  public :: convert_rhoc_to_c, fill_c_ghost_cells
   
 contains
 
@@ -49,5 +52,27 @@ contains
     end if
 
   end subroutine convert_rhoc_to_c
+
+  subroutine fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+    
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: conc(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+
+    ! local
+    integer :: n,nlevs
+
+    nlevs = mla%nlevel
+
+    do n=1,nlevs
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(conc(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
+    end do
+
+  end subroutine fill_c_ghost_cells
 
 end module convert_rhoc_to_c_module

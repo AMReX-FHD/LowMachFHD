@@ -400,14 +400,7 @@ contains
 
     ! rho to conc - NO GHOST CELLS
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
-
-    do n=1,nlevs
-       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(conc(n))
-       ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
-                            dx_in=dx(n,:))
-    end do
+    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
     do n=1,nlevs
        call multifab_fill_boundary(rhotot_new(n))
@@ -639,14 +632,7 @@ contains
 
     ! rho to conc - NO GHOST CELLS
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
-
-    do n=1,nlevs
-       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(conc(n))
-       ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
-                            dx_in=dx(n,:))
-    end do
+    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
     do n=1,nlevs
        call multifab_fill_boundary(rhotot_new(n))

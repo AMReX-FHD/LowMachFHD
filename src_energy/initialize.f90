@@ -241,13 +241,7 @@ contains
 
     ! compute mass fractions in valid region and then fill ghost cells
     call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
-    do n=1,nlevs
-       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-       call multifab_fill_boundary(conc(n))
-       ! fill non-periodic domain boundary ghost cells
-       call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
-                            dx_in=dx(n,:))
-    end do
+    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
     ! compute mole fractions in VALID + GHOST regions
     call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
@@ -370,13 +364,7 @@ contains
 
        ! compute mass fractions in valid region and then fill ghost cells
        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
-       do n=1,nlevs
-          ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-          call multifab_fill_boundary(conc(n))
-          ! fill non-periodic domain boundary ghost cells
-          call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
-                               dx_in=dx(n,:))
-       end do
+       call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
        ! compute mole fractions in VALID + GHOST regions
        call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
@@ -399,13 +387,7 @@ contains
 
        ! compute h
        call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
-
-       ! fill h ghost cells
-       do n=1,nlevs
-          call multifab_fill_boundary(enth(n))
-          call multifab_physbc(enth(n),1,h_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                               dx_in=dx(n,:))
-       end do
+       call fill_h_ghost_cells(mla,enth,dx,the_bc_tower)
 
        ! average h to faces
        call average_cc_to_face(nlevs,enth,rhoh_fc,1,h_bc_comp,1, &

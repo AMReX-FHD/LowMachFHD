@@ -266,16 +266,18 @@ subroutine main_driver()
      call multifab_build(enth(n),mla%la(n),1       ,rhoh_old(n)%ng)
   end do
 
-  ! rho to conc and rhoh to enth - NO GHOST CELLS
+  ! rho to conc
   call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
+  call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+
+  ! rhoh to enth
   call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
+  call fill_h_ghost_cells(mla,enth,dx,the_bc_tower)
 
   ! fill ghost cells
   do n=1,nlevs
      ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
      call multifab_fill_boundary(rhotot_old(n))
-     call multifab_fill_boundary(conc(n))
-     call multifab_fill_boundary(enth(n))
      call multifab_fill_boundary(pi(n))
      call multifab_fill_boundary(Temp_old(n))
      do i=1,dm
@@ -283,10 +285,6 @@ subroutine main_driver()
      end do
      ! fill non-periodic domain boundary ghost cells
      call multifab_physbc(rhotot_old(n),1,scal_bc_comp,1, &
-                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-     call multifab_physbc(conc(n),1,c_bc_comp,nspecies, &
-                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-     call multifab_physbc(enth(n),1,h_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
      call multifab_physbc(pi(n),1,pres_bc_comp,1, &
                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))

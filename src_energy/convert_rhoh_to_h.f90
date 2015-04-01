@@ -2,12 +2,15 @@ module convert_rhoh_to_h_module
 
   use multifab_module
   use ml_layout_module
+  use define_bc_module
+  use bc_module
+  use multifab_physbc_module
 
   implicit none
 
   private
 
-  public :: convert_rhoh_to_h
+  public :: convert_rhoh_to_h, fill_h_ghost_cells
   
 contains
 
@@ -20,7 +23,7 @@ contains
     logical        , intent(in   ) :: rhoh_to_h
 
     ! local
-    integer :: n,nlevs,i
+    integer :: n,nlevs
 
     nlevs = mla%nlevel
 
@@ -43,5 +46,27 @@ contains
     end if
 
   end subroutine convert_rhoh_to_h
+
+  subroutine fill_h_ghost_cells(mla,h,dx,the_bc_tower)
+    
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: h(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+
+    ! local
+    integer :: n,nlevs
+
+    nlevs = mla%nlevel
+
+    do n=1,nlevs
+       ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+       call multifab_fill_boundary(h(n))
+       ! fill non-periodic domain boundary ghost cells
+       call multifab_physbc(h(n),1,h_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
+    end do
+
+  end subroutine fill_h_ghost_cells
 
 end module convert_rhoh_to_h_module
