@@ -29,7 +29,7 @@ module initialize_module
 
 contains
 
-  ! this routine performs "Step 0" of the algorithm:
+  ! this routine performs "Step 0" of the algorithm (see exec/energy/doc/)
   ! -Update P_0 and compute v^n with a projection
   ! -Advance rho_i and (rho h).
   ! -If necessary, compute volume discrepancy correction and return to 
@@ -58,9 +58,8 @@ contains
 
     ! local variables
 
-    ! this will hold -div(rho*v)^n
-    type(multifab) :: rho_update(mla%nlevel)
-    type(multifab) :: rho_fc(mla%nlevel,mla%dim)
+    ! temporary copy of incoming umac
+    type(multifab) :: umac_tmp(mla%nlevel,mla%dim)
 
     ! this will hold F_k and div(F_k)
     type(multifab) :: mass_flux_old(mla%nlevel,mla%dim)
@@ -73,9 +72,10 @@ contains
     type(multifab) :: rhoh_fluxdiv_new(mla%nlevel)
 
     ! this holds h
-    type(multifab) :: h(mla%nlevel)
+    type(multifab) :: enth(mla%nlevel)
 
-    ! this will hold rhoh on faces
+    ! this will hold rho and rhoh on faces
+    type(multifab) :: rho_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhoh_fc(mla%nlevel,mla%dim)
 
     ! This will hold (rhoh)^n/dt - div(rhoh*v)^n + (Sbar^n+Sbarcorr^n)/alphabar^n 
@@ -166,18 +166,18 @@ contains
     end if
 
     do n=1,nlevs
-       call multifab_build(rho_update(n),mla%la(n),nspecies,0)
        do i=1,dm
-          call multifab_build_edge(rho_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(umac_tmp(n,i),mla%la(n),1,1,i)
           call multifab_build_edge(mass_flux_old(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(mass_flux_new(n,i),mla%la(n),nspecies,0,i)
        end do
        call multifab_build(mass_fluxdiv_old(n),mla%la(n),nspecies,0)
        call multifab_build(mass_fluxdiv_new(n),mla%la(n),nspecies,0)
 
-       call multifab_build(h(n),mla%la(n),1,rho_old(n)%ng)
+       call multifab_build(enth(n),mla%la(n),1,rho_old(n)%ng)
 
        do i=1,dm
+          call multifab_build_edge(rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(rhoh_fc(n,i),mla%la(n),1,0,i)
        end do
 
@@ -229,6 +229,13 @@ contains
 
        call multifab_build(Peos(n),mla%la(n),1,0)
 
+    end do
+
+    ! make a copy of the initial velocity
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
+       end do
     end do
 
     ! compute mass fractions in valid region and then fill ghost cells
@@ -290,10 +297,10 @@ contains
     ! begin loop here over Steps 0a-0e
     do k=1,dpdt_iters
 
-       ! hack - need to set umac back to umac_old
+       ! hack - need to set umac back to umac_tmp
        do n=1,nlevs
           do i=1,dm
-             call multifab_setval(umac(n,i),0.d0,all=.true.)
+             call multifab_copy_c(umac(n,i),1,umac_tmp(n,i),1,1,1)
           end do
        end do
 
@@ -340,15 +347,11 @@ contains
        call average_cc_to_face(nlevs,rho_old,rho_fc,1,c_bc_comp,nspecies, &
                                the_bc_tower%bc_tower_array)
 
-       do n=1,nlevs
-          call setval(rho_update(n),0.d0,all=.true.)
-       end do
-
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       ! compute -div(rho*v) and store it in rho_new
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_new,dx,1,nspecies)
 
        ! rho_new = rho_old + dt(-div(rho*v) + div(F))
        do n=1,nlevs
-          call multifab_copy_c(rho_new(n),1,rho_update(n),1,nspecies,0)
           call multifab_plus_plus_c(rho_new(n),1,mass_fluxdiv_old(n),1,nspecies,0)
           call multifab_mult_mult_s_c(rho_new(n),1,dt,nspecies,0)
           call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
@@ -394,17 +397,17 @@ contains
        end do
 
        ! compute h
-       call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,h,.true.)
+       call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
 
        ! fill h ghost cells
        do n=1,nlevs
-          call multifab_fill_boundary(h(n))
-          call multifab_physbc(h(n),1,h_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+          call multifab_fill_boundary(enth(n))
+          call multifab_physbc(enth(n),1,h_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                                dx_in=dx(n,:))
        end do
 
        ! average h to faces
-       call average_cc_to_face(nlevs,h,rhoh_fc,1,h_bc_comp,1, &
+       call average_cc_to_face(nlevs,enth,rhoh_fc,1,h_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
 
        ! multiply h on faces by rho on faces
@@ -424,7 +427,7 @@ contains
 
        ! set (rhoh)^{*,n+1,l} = rho^{*,n+1} * h^n
        do n=1,nlevs
-          call multifab_copy_c(rhoh_new(n),1,h(n),1,1,rhoh_new(n)%ng)
+          call multifab_copy_c(rhoh_new(n),1,enth(n),1,1,rhoh_new(n)%ng)
           call multifab_mult_mult_c(rhoh_new(n),1,rhotot_new(n),1,1,rhoh_new(n)%ng)
        end do
 
@@ -583,19 +586,17 @@ contains
 
     end do  ! end loop k over dpdt iterations
 
-    stop
-
     do n=1,nlevs
-       call multifab_destroy(rho_update(n))
        do i=1,dm
-          call multifab_destroy(rho_fc(n,i))
+          call multifab_destroy(umac_tmp(n,i))
           call multifab_destroy(mass_flux_old(n,i))
           call multifab_destroy(mass_flux_new(n,i))
        end do
        call multifab_destroy(mass_fluxdiv_old(n))
        call multifab_destroy(mass_fluxdiv_new(n))
-       call multifab_destroy(h(n))
+       call multifab_destroy(enth(n))
        do i=1,dm
+          call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhoh_fc(n,i))
        end do
        call multifab_destroy(rhoh_fluxdiv_old(n))
@@ -632,6 +633,8 @@ contains
        end do
        call multifab_destroy(Peos(n))
     end do
+
+    stop
 
   end subroutine initialize
 
