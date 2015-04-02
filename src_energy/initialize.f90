@@ -31,10 +31,11 @@ module initialize_module
 contains
 
   ! this routine performs "Step 0" of the algorithm (see exec/energy/doc/)
-  ! -Update P_0 and compute v^n with a projection
-  ! -Advance rho_i and (rho h).
-  ! -If necessary, compute volume discrepancy correction and return to 
-  !  projection part of this step
+  ! -Compute P_0^{*,n+1}
+  ! -Compute v^n with a projection
+  ! -Compute rho_i^{*,n+1} explicitly
+  ! -Compute (rho h)^{*,n+1} implicitly
+  ! -If necessary, compute volume discrepancy correction and return to beginning of step
   subroutine initialize(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
                         rhoh_old,rhoh_new,p0_old,p0_new, &
                         gradp_baro,Temp_old,Temp_new, &
