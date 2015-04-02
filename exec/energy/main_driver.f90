@@ -54,21 +54,35 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho_old(:)
-  type(multifab), allocatable  :: rhotot_old(:)
-  type(multifab), allocatable  :: rhoh_old(:)
   type(multifab), allocatable  :: rho_new(:)
+
+  type(multifab), allocatable  :: rhotot_old(:)
   type(multifab), allocatable  :: rhotot_new(:)
+
+  type(multifab), allocatable  :: rhoh_old(:)
   type(multifab), allocatable  :: rhoh_new(:)
+
   type(multifab), allocatable  :: Temp_old(:)
   type(multifab), allocatable  :: Temp_new(:)
+
+  type(multifab), allocatable  :: pi(:)
+
   type(multifab), allocatable  :: umac_old(:,:)
   type(multifab), allocatable  :: umac_new(:,:)
+
+  ! temporaries for summing momentum
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
+
   type(multifab), allocatable  :: gradp_baro(:,:)
-  type(multifab), allocatable  :: pi(:)
+
+  ! temporaries for filling ghost cells
   type(multifab), allocatable  :: conc(:)
   type(multifab), allocatable  :: enth(:)
+
+  ! these must persist between steps
+
+
 
   real(kind=dp_t) :: p0_old, p0_new
 
@@ -203,14 +217,32 @@ subroutine main_driver()
 
      do n=1,nlevs
         call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
+        call multifab_build(rho_new(n),   mla%la(n),nspecies,ng_s)
+
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
+        call multifab_build(rhotot_new(n),mla%la(n),1,       ng_s) 
+
         call multifab_build(rhoh_old(n),  mla%la(n),1       ,ng_s)
+        call multifab_build(rhoh_new(n)  ,mla%la(n),1,       ng_s) 
+
         call multifab_build(Temp_old(n),  mla%la(n),1       ,ng_s)
+        call multifab_build(Temp_new(n)  ,mla%la(n),1,       ng_s) 
+
         ! pi - need 1 ghost cell since we calculate its gradient
         call multifab_build(pi(n),        mla%la(n),1       ,1)
         do i=1,dm
-           call multifab_build_edge(umac_old(n,i),mla%la(n),1,1,i)
+           call multifab_build_edge(  umac_old(n,i),mla%la(n),1,1,i)
+           call multifab_build_edge(  umac_new(n,i),mla%la(n),1,1,i)
+
+           call multifab_build_edge(     mtemp(n,i),mla%la(n),1,0,i)
+           call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
+
+           call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
         end do
+
+        call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
+        call multifab_build(enth(n),mla%la(n),1       ,ng_s)
+
      end do
 
   end if
@@ -261,18 +293,17 @@ subroutine main_driver()
 
   end if
 
-  do n=1,nlevs
-     call multifab_build(conc(n),mla%la(n),nspecies,rho_old(n)%ng)
-     call multifab_build(enth(n),mla%la(n),1       ,rhoh_old(n)%ng)
-  end do
-
-  ! rho to conc
+  ! rho to conc, and fill ghost cells
   call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
   call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
-  ! rhoh to enth
+  ! rhoh to enth, and fill ghost cells
   call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
   call fill_h_ghost_cells(mla,enth,dx,the_bc_tower)
+
+  ! conc to rho and enth to rhoh - INCLUDING GHOST CELLS
+  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
+  call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.false.)
 
   ! fill ghost cells
   do n=1,nlevs
@@ -298,23 +329,6 @@ subroutine main_driver()
      end do
   end do
 
-  ! conc to rho and enth to rhoh - INCLUDING GHOST CELLS
-  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
-  call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.false.)
-
-  do n=1,nlevs
-     call multifab_destroy(conc(n))
-     call multifab_destroy(enth(n))
-  end do
-
-  do n=1,nlevs
-     do i=1,dm
-        call multifab_build_edge(     mtemp(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
-     end do
-  end do
-
   if (print_int .gt. 0) then
      if (parallel_IOProcessor()) write(*,*) "Initial state:"  
      call sum_mass(rho_old, 0) ! print out the total mass to check conservation
@@ -325,17 +339,6 @@ subroutine main_driver()
      call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_old,.false.)
      call sum_momenta(mla,mtemp)
   end if
-
-  !=======================================================
-  ! Build multifabs for all the variables
-  !=======================================================
-
-  do n=1,nlevs 
-     call multifab_build(rho_new(n),   mla%la(n),nspecies,ng_s)
-     call multifab_build(rhotot_new(n),mla%la(n),1,       ng_s) 
-     call multifab_build(rhoh_new(n)  ,mla%la(n),1,       ng_s) 
-     call multifab_build(Temp_new(n)  ,mla%la(n),1,       ng_s) 
-  end do
 
   ! allocate and build multifabs that will contain random numbers
   n_rngs = 1
@@ -416,7 +419,7 @@ subroutine main_driver()
      call initialize(mla,umac_old,rho_old,rho_new, &
                      rhotot_old,rhotot_new, &
                      rhoh_old,rhoh_new,p0_old,p0_new, &
-                     gradp_baro,pi,Temp_old,Temp_new, &
+                     gradp_baro,Temp_old,Temp_new, &
                      dx,dt,time,the_bc_tower)
 
      if (print_int .gt. 0) then
@@ -492,10 +495,7 @@ subroutine main_driver()
       ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
       ! routine, but since we have them around anyway for inertial we pass them in
 
-!     call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-!                                    gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-!                                    diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-!                                    dx,dt,time,the_bc_tower,istep)
+!     call scalar_corrector()
 
       time = time + dt
 
@@ -594,6 +594,8 @@ subroutine main_driver()
      call multifab_destroy(Temp_old(n))
      call multifab_destroy(Temp_new(n))
      call multifab_destroy(pi(n))
+     call multifab_destroy(conc(n))
+     call multifab_destroy(enth(n))
      do i=1,dm
         call multifab_destroy(umac_old(n,i))
         call multifab_destroy(umac_new(n,i))

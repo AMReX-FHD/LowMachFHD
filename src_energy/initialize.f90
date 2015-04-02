@@ -35,13 +35,13 @@ contains
   ! -Advance rho_i and (rho h).
   ! -If necessary, compute volume discrepancy correction and return to 
   !  projection part of this step
-  subroutine initialize(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+  subroutine initialize(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
                         rhoh_old,rhoh_new,p0_old,p0_new, &
-                        gradp_baro,pi,Temp_old,Temp_new, &
+                        gradp_baro,Temp_old,Temp_new, &
                         dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: umac(:,:)
+    type(multifab) , intent(inout) :: umac_old(:,:)
     type(multifab) , intent(inout) :: rho_old(:)
     type(multifab) , intent(inout) :: rho_new(:)
     type(multifab) , intent(inout) :: rhotot_old(:)
@@ -51,7 +51,6 @@ contains
     real(kind=dp_t), intent(in   ) :: p0_old
     real(kind=dp_t), intent(inout) :: p0_new
     type(multifab) , intent(inout) :: gradp_baro(:,:)
-    type(multifab) , intent(inout) :: pi(:)
     type(multifab) , intent(inout) :: Temp_old(:)
     type(multifab) , intent(inout) :: Temp_new(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
@@ -59,7 +58,7 @@ contains
 
     ! local variables
 
-    ! temporary copy of incoming umac
+    ! temporary copy of initial umac
     type(multifab) :: umac_tmp(mla%nlevel,mla%dim)
 
     ! this will hold F_k and div(F_k)
@@ -235,7 +234,7 @@ contains
     ! make a copy of the initial velocity
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
+          call multifab_copy_c(umac_tmp(n,i),1,umac_old(n,i),1,1,1)
        end do
     end do
 
@@ -292,10 +291,10 @@ contains
     ! begin loop here over Steps 0a-0e
     do k=1,dpdt_iters
 
-       ! hack - need to set umac back to umac_tmp
+       ! hack - need to set umac_old back to its initial value
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(umac(n,i),1,umac_tmp(n,i),1,1,1)
+             call multifab_copy_c(umac_old(n,i),1,umac_tmp(n,i),1,1,1)
           end do
        end do
 
@@ -325,14 +324,14 @@ contains
        end do
 
        ! add div(v^init) to Sproj
-       call compute_div(mla,umac,Sproj,dx,1,1,1,increment_in=.true.)
+       call compute_div(mla,umac_old,Sproj,dx,1,1,1,increment_in=.true.)
 
        ! solve div (1/rhotot) grad phi = div(v^init) - S^0
        ! solve to completion, i.e., use the 'full' solver
-       call macproject(mla,phi,umac,rhototinv_fc,Sproj,dx,the_bc_tower,.true.)
+       call macproject(mla,phi,umac_old,rhototinv_fc,Sproj,dx,the_bc_tower,.true.)
 
        ! v^0 = v^init - (1/rho^0) grad phi
-       call subtract_weighted_gradp(mla,umac,rhototinv_fc,phi,dx,the_bc_tower)
+       call subtract_weighted_gradp(mla,umac_old,rhototinv_fc,phi,dx,the_bc_tower)
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 0c: Advance the densities using forward-Euler advective fluxes and 
@@ -343,7 +342,7 @@ contains
                                the_bc_tower%bc_tower_array)
 
        ! compute -div(rho*v) and store it in rho_new
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_new,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,rho_new,dx,1,nspecies)
 
        ! rho_new = rho_old + dt(-div(rho*v) + div(F))
        do n=1,nlevs
@@ -401,7 +400,7 @@ contains
        end do
 
        ! add -div(rhoh*v)^n to deltaT_rhs1
-       call mk_advective_s_fluxdiv(mla,umac,rhoh_fc,deltaT_rhs1,dx,1,1)
+       call mk_advective_s_fluxdiv(mla,umac_old,rhoh_fc,deltaT_rhs1,dx,1,1)
 
        ! add (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n) to deltaT_rhs1
        do n=1,nlevs
@@ -535,25 +534,25 @@ contains
        do n=1,nlevs
           call multifab_sub_sub_s_c(Peos(n),1,p0_new,1,0)
 
-          if (k .eq. 1) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift1")
-          else if (k .eq. 2) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift2")
-          else if (k .eq. 3) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift3")
-          else if (k .eq. 4) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift4")
-          else if (k .eq. 5) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift5")
-          else if (k .eq. 6) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift6")
-          else if (k .eq. 7) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift7")
-          else if (k .eq. 8) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift8")
-          else if (k .eq. 9) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift9")
-          end if
+!          if (k .eq. 1) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift1")
+!          else if (k .eq. 2) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift2")
+!          else if (k .eq. 3) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift3")
+!          else if (k .eq. 4) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift4")
+!          else if (k .eq. 5) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift5")
+!          else if (k .eq. 6) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift6")
+!          else if (k .eq. 7) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift7")
+!          else if (k .eq. 8) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift8")
+!          else if (k .eq. 9) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift9")
+!          end if
 
           call multifab_mult_mult_s_c(Peos(n),1,1.d0/dt,1,0)
           call multifab_mult_mult_c(Peos(n),1,alpha(n),1,1,0)
