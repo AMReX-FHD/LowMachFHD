@@ -39,6 +39,7 @@ contains
   subroutine scalar_corrector(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
                               rhoh_old,rhoh_new,p0_old,p0_new, &
                               gradp_baro,Temp_old,Temp_new, &
+                              Sbar_old,Scorrbar_old,alphabar_old, &
                               dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -54,6 +55,9 @@ contains
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: Temp_old(:)
     type(multifab) , intent(inout) :: Temp_new(:)
+    real(kind=dp_t), intent(inout) :: Sbar_old
+    real(kind=dp_t), intent(inout) :: Scorrbar_old
+    real(kind=dp_t), intent(inout) :: alphabar_old
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -126,18 +130,15 @@ contains
     ! div(u) + alpha dP_0/dt = S_old, where
     ! S_old = Sbar_old + deltaS_old
     type(multifab)  :: deltaS_old(mla%nlevel)
-    real(kind=dp_t) :: Sbar_old
 
     ! volume discrepancy correction
-    ! Scorr = Scorrbar + deltaScorr
+    ! Scorr_old = Scorrbar_old + deltaScorr_old
     type(multifab)  :: Scorr_old(mla%nlevel)
     type(multifab)  :: deltaScorr_old(mla%nlevel)
-    real(kind=dp_t) :: Scorrbar_old
 
     ! coefficient multiplying dP_0/dt in constraint at old-time
-    ! alpha = alphabar + deltaalpha
+    ! alpha_old = alphabar_old + deltaalpha_old
     type(multifab)  :: deltaalpha_old(mla%nlevel)
-    real(kind=dp_t) :: alphabar_old
 
     ! coefficient multiplying dP_0/dt in volume discrepancy correction at new-time
     type(multifab)  :: alpha_new(mla%nlevel)

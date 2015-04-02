@@ -80,17 +80,15 @@ subroutine main_driver()
   type(multifab), allocatable  :: conc(:)
   type(multifab), allocatable  :: enth(:)
 
-  ! these must persist between steps
-
-
-
   real(kind=dp_t) :: p0_old, p0_new
+
+  ! these must persist between steps
+  real(kind=dp_t) :: Sbar_old, Scorrbar_old, alphabar_old
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs
   character(len=128) :: fname
   logical :: lexist
-  logical :: nodal_temp(3)
   
   !==============================================================
   ! Initialization
@@ -420,6 +418,7 @@ subroutine main_driver()
                      rhotot_old,rhotot_new, &
                      rhoh_old,rhoh_new,p0_old,p0_new, &
                      gradp_baro,Temp_old,Temp_new, &
+                     Sbar_old,Scorrbar_old,alphabar_old, &                     
                      dx,dt,time,the_bc_tower)
 
      if (print_int .gt. 0) then
