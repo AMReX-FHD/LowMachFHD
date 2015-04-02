@@ -123,22 +123,24 @@ contains
     type(multifab) :: zeta_old(mla%nlevel)
     type(multifab) :: zeta_new(mla%nlevel)
 
-    ! this is the div(u)=S
-    ! S = Sbar + deltaS
-    type(multifab)  :: deltaS(mla%nlevel)
-    real(kind=dp_t) :: Sbar
+    ! div(u) + alpha dP_0/dt = S_old, where
+    ! S_old = Sbar_old + deltaS_old
+    type(multifab)  :: deltaS_old(mla%nlevel)
+    real(kind=dp_t) :: Sbar_old
 
     ! volume discrepancy correction
     ! Scorr = Scorrbar + deltaScorr
-    type(multifab)  :: Scorr     (mla%nlevel)
-    type(multifab)  :: deltaScorr(mla%nlevel)
-    real(kind=dp_t) :: Scorrbar
+    type(multifab)  :: Scorr_old(mla%nlevel)
+    type(multifab)  :: deltaScorr_old(mla%nlevel)
+    real(kind=dp_t) :: Scorrbar_old
 
-    ! coefficient multiplying dP_0/dt in constraint
+    ! coefficient multiplying dP_0/dt in constraint at old-time
     ! alpha = alphabar + deltaalpha
-    type(multifab)  :: alpha(mla%nlevel)
-    type(multifab)  :: deltaalpha(mla%nlevel)
-    real(kind=dp_t) :: alphabar
+    type(multifab)  :: deltaalpha_old(mla%nlevel)
+    real(kind=dp_t) :: alphabar_old
+
+    ! coefficient multiplying dP_0/dt in volume discrepancy correction at new-time
+    type(multifab)  :: alpha_new(mla%nlevel)
 
     ! the RHS for the projection
     type(multifab) :: Sproj(mla%nlevel)
@@ -213,13 +215,13 @@ contains
        call multifab_build(zeta_old(n),mla%la(n),nspecies,1)
        call multifab_build(zeta_new(n),mla%la(n),nspecies,1)
 
-       call multifab_build(deltaS(n),mla%la(n),1,0)
+       call multifab_build(deltaS_old(n),mla%la(n),1,0)
 
-       call multifab_build(     Scorr(n),mla%la(n),1,0)
-       call multifab_build(deltaScorr(n),mla%la(n),1,0)
+       call multifab_build(     Scorr_old(n),mla%la(n),1,0)
+       call multifab_build(deltaScorr_old(n),mla%la(n),1,0)
 
-       call multifab_build(     alpha(n),mla%la(n),1,0)
-       call multifab_build(deltaalpha(n),mla%la(n),1,0)
+       call multifab_build(     alpha_new(n),mla%la(n),1,0)
+       call multifab_build(deltaalpha_old(n),mla%la(n),1,0)
 
        call multifab_build(Sproj(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
@@ -258,23 +260,25 @@ contains
     call rhoh_fluxdiv_energy(mla,lambda_old,Temp_old,mass_flux_old,rhotot_old,rhoh_fluxdiv_old, &
                              dx,time,the_bc_tower)
 
-    ! compute S and alpha (store them in deltaS and deltaalpha)
-    call compute_S_alpha(mla,deltaS,deltaalpha,mass_fluxdiv_old,rhoh_fluxdiv_old,conc, &
+    ! compute S_old and alpha_old (store them in deltaS_old and deltaalpha_old)
+    call compute_S_alpha(mla,deltaS_old,deltaalpha_old,mass_fluxdiv_old,rhoh_fluxdiv_old,conc, &
                          Temp_old,rhotot_old,p0_old)
 
-    ! split S and alpha into average and perturbational pieces, e.g., (Sbar + deltaS)
+    ! split S_old and alpha_old into average and perturbational pieces
+    ! S_old = Sbar_old + deltaS_old
+    ! alpha_old = alphabar_old + deltaalpha_old
     do n=1,nlevs
-       Sbar     = multifab_sum_c(deltaS(n)    ,1,1) / dble(n_cell)
-       alphabar = multifab_sum_c(deltaalpha(n),1,1) / dble(n_cell)
-       call multifab_sub_sub_s_c(deltaS(n)    ,1,Sbar    ,1,0)
-       call multifab_sub_sub_s_c(deltaalpha(n),1,alphabar,1,0)
+       Sbar_old     = multifab_sum_c(deltaS_old(n)    ,1,1) / dble(n_cell)
+       alphabar_old = multifab_sum_c(deltaalpha_old(n),1,1) / dble(n_cell)
+       call multifab_sub_sub_s_c(deltaS_old(n)    ,1,Sbar_old    ,1,0)
+       call multifab_sub_sub_s_c(deltaalpha_old(n),1,alphabar_old,1,0)
     end do
 
     ! zero out volume discrepancy correction and its decomposition
-    Scorrbar = 0.d0
+    Scorrbar_old = 0.d0
     do n=1,nlevs
-       call multifab_setval(Scorr(n)     ,0.d0,all=.true.)
-       call multifab_setval(deltaScorr(n),0.d0,all=.true.)
+       call multifab_setval(Scorr_old(n)     ,0.d0,all=.true.)
+       call multifab_setval(deltaScorr_old(n),0.d0,all=.true.)
     end do
 
     ! average rhotot to faces
@@ -304,18 +308,19 @@ contains
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
        ! update pressure
-       p0_new = p0_old + dt*(Sbar + Scorrbar)/alphabar
+       p0_new = p0_old + dt*(Sbar_old + Scorrbar_old)/alphabar_old
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 0b: Compute the velocity field using a projection
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-       ! compute Sproj = deltaS + deltaScorr - deltaalpha(Sbar + Scorrbar)/alphabar
+       ! compute Sproj = deltaS_old + deltaScorr_old 
+       !                 - deltaalpha_old * (Sbar_old + Scorrbar_old)/alphabar_old
        do n=1,nlevs
-          call multifab_copy_c(Sproj(n),1,deltaalpha(n),1,1,0)
-          call multifab_mult_mult_s_c(Sproj(n),1,-(Sbar+Scorrbar)/alphabar,1,0)
-          call multifab_plus_plus_c(Sproj(n),1,deltaS(n),1,1,0)
-          call multifab_plus_plus_c(Sproj(n),1,deltaScorr(n),1,1,0)
+          call multifab_copy_c(Sproj(n),1,deltaalpha_old(n),1,1,0)
+          call multifab_mult_mult_s_c(Sproj(n),1,-(Sbar_old+Scorrbar_old)/alphabar_old,1,0)
+          call multifab_plus_plus_c(Sproj(n),1,deltaS_old(n),1,1,0)
+          call multifab_plus_plus_c(Sproj(n),1,deltaScorr_old(n),1,1,0)
        end do
 
        ! build rhs for projection, div(v^init) - Sproj
@@ -382,7 +387,7 @@ contains
        do n=1,nlevs
           call multifab_copy_c(deltaT_rhs1(n),1,rhoh_old(n),1,1,0)
           call multifab_mult_mult_s_c(deltaT_rhs1(n),1,1.d0/dt,1,0)
-          call multifab_plus_plus_s_c(deltaT_rhs1(n),1,(Sbar+Scorrbar)/alphabar,1,0)
+          call multifab_plus_plus_s_c(deltaT_rhs1(n),1,(Sbar_old+Scorrbar_old)/alphabar_old,1,0)
        end do
 
        ! compute h
@@ -528,8 +533,8 @@ contains
        ! compute thermodynamic pressure
        call compute_p(mla,rhotot_new,Temp_new,conc,Peos)
 
-       ! compute alpha
-       call compute_alpha(mla,alpha,conc,Temp_new,p0_new)
+       ! compute alpha^{*,n+1}
+       call compute_alpha(mla,alpha_new,conc,Temp_new,p0_new)
 
        ! Scorr = Scorr + alpha^{*,n+1} * [(Peos^{*,n+1} - P0^{*,n+1})/dt]
        do n=1,nlevs
@@ -556,15 +561,15 @@ contains
 !          end if
 
           call multifab_mult_mult_s_c(Peos(n),1,1.d0/dt,1,0)
-          call multifab_mult_mult_c(Peos(n),1,alpha(n),1,1,0)
-          call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
+          call multifab_mult_mult_c(Peos(n),1,alpha_new(n),1,1,0)
+          call multifab_plus_plus_c(Scorr_old(n),1,Peos(n),1,1,0)
        end do
 
        ! split Scorr into average and perturbational components
        do n=1,nlevs
-          Scorrbar = multifab_sum_c(Scorr(n),1,1) / dble(n_cell)
-          call multifab_copy_c(deltaScorr(n),1,Scorr(n),1,1,0)
-          call multifab_sub_sub_s_c(deltaScorr(n),1,Scorrbar,1,0)
+          Scorrbar_old = multifab_sum_c(Scorr_old(n),1,1) / dble(n_cell)
+          call multifab_copy_c(deltaScorr_old(n),1,Scorr_old(n),1,1,0)
+          call multifab_sub_sub_s_c(deltaScorr_old(n),1,Scorrbar_old,1,0)
        end do
 
     end do  ! end loop k over dpdt iterations
@@ -603,11 +608,11 @@ contains
        call multifab_destroy(chi_new(n))
        call multifab_destroy(zeta_old(n))
        call multifab_destroy(zeta_new(n))
-       call multifab_destroy(deltaS(n))
-       call multifab_destroy(Scorr(n))
-       call multifab_destroy(deltaScorr(n))
-       call multifab_destroy(alpha(n))
-       call multifab_destroy(deltaalpha(n))
+       call multifab_destroy(deltaS_old(n))
+       call multifab_destroy(Scorr_old(n))
+       call multifab_destroy(deltaScorr_old(n))
+       call multifab_destroy(alpha_new(n))
+       call multifab_destroy(deltaalpha_old(n))
        call multifab_destroy(Sproj(n))
        call multifab_destroy(phi(n))
        do i=1,dm
