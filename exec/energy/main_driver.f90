@@ -53,37 +53,47 @@ subroutine main_driver()
   logical, allocatable         :: pmask(:)
   
   ! will be allocated on nlevels
-  type(multifab), allocatable  :: rho_old(:)
-  type(multifab), allocatable  :: rho_new(:)
+  type(multifab), allocatable :: rho_old(:)
+  type(multifab), allocatable :: rho_new(:)
 
-  type(multifab), allocatable  :: rhotot_old(:)
-  type(multifab), allocatable  :: rhotot_new(:)
+  type(multifab), allocatable :: rhotot_old(:)
+  type(multifab), allocatable :: rhotot_new(:)
 
-  type(multifab), allocatable  :: rhoh_old(:)
-  type(multifab), allocatable  :: rhoh_new(:)
+  type(multifab), allocatable :: rhoh_old(:)
+  type(multifab), allocatable :: rhoh_new(:)
 
-  type(multifab), allocatable  :: Temp_old(:)
-  type(multifab), allocatable  :: Temp_new(:)
+  type(multifab), allocatable :: Temp_old(:)
+  type(multifab), allocatable :: Temp_new(:)
 
-  type(multifab), allocatable  :: pi(:)
+  type(multifab), allocatable :: pi(:)
 
-  type(multifab), allocatable  :: umac_old(:,:)
-  type(multifab), allocatable  :: umac_new(:,:)
+  type(multifab), allocatable :: umac_old(:,:)
+  type(multifab), allocatable :: umac_new(:,:)
 
   ! temporaries for summing momentum
-  type(multifab), allocatable  :: mtemp(:,:)
-  type(multifab), allocatable  :: rhotot_fc(:,:)
+  type(multifab), allocatable :: mtemp(:,:)
+  type(multifab), allocatable :: rhotot_fc(:,:)
 
-  type(multifab), allocatable  :: gradp_baro(:,:)
+  type(multifab), allocatable :: gradp_baro(:,:)
 
   ! temporaries for filling ghost cells
-  type(multifab), allocatable  :: conc(:)
-  type(multifab), allocatable  :: enth(:)
+  type(multifab), allocatable :: conc(:)
+  type(multifab), allocatable :: enth(:)
 
   real(kind=dp_t) :: p0_old, p0_new
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! these must persist between steps
+
+  ! holds Sbar^n, Scorrbar^n, alphabar^n
   real(kind=dp_t) :: Sbar_old, Scorrbar_old, alphabar_old
+
+  ! holds -div(rho*v)^n + div(F^n)
+  type(multifab), allocatable :: mass_update(:)
+
+  ! holds -div(rhoh*v)^n + div(Q^n) + sum(div(h_k F_k))^n + (rho Hext)^n
+  type(multifab), allocatable :: rhoh_update(:)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs
@@ -119,6 +129,7 @@ subroutine main_driver()
   allocate(umac_old(nlevs,dm),umac_new(nlevs,dm),mtemp(nlevs,dm))
   allocate(rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(conc(nlevs),enth(nlevs))
+  allocate(mass_update(nlevs),rhoh_update(nlevs))
 
   ! set grid spacing at each level
   ! the grid spacing is the same in each direction
@@ -241,6 +252,8 @@ subroutine main_driver()
         call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
         call multifab_build(enth(n),mla%la(n),1       ,ng_s)
 
+        call multifab_build(mass_update(n),mla%la(n),nspecies,0)
+        call multifab_build(rhoh_update(n),mla%la(n),1       ,0)
      end do
 
   end if
@@ -418,7 +431,8 @@ subroutine main_driver()
                      rhotot_old,rhotot_new, &
                      rhoh_old,rhoh_new,p0_old,p0_new, &
                      gradp_baro,Temp_old,Temp_new, &
-                     Sbar_old,Scorrbar_old,alphabar_old, &                     
+                     mass_update,rhoh_update, &
+                     Sbar_old,Scorrbar_old,alphabar_old, &
                      dx,dt,time,the_bc_tower)
 
      if (print_int .gt. 0) then
@@ -595,6 +609,8 @@ subroutine main_driver()
      call multifab_destroy(pi(n))
      call multifab_destroy(conc(n))
      call multifab_destroy(enth(n))
+     call multifab_destroy(mass_update(n))
+     call multifab_destroy(rhoh_update(n))
      do i=1,dm
         call multifab_destroy(umac_old(n,i))
         call multifab_destroy(umac_new(n,i))

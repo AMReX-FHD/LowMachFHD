@@ -39,6 +39,7 @@ contains
   subroutine initialize(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
                         rhoh_old,rhoh_new,p0_old,p0_new, &
                         gradp_baro,Temp_old,Temp_new, &
+                        mass_update,rhoh_update, &
                         Sbar_old,Scorrbar_old,alphabar_old, &
                         dx,dt,time,the_bc_tower)
 
@@ -55,6 +56,8 @@ contains
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: Temp_old(:)
     type(multifab) , intent(inout) :: Temp_new(:)
+    type(multifab) , intent(inout) :: mass_update(:)
+    type(multifab) , intent(inout) :: rhoh_update(:)
     real(kind=dp_t), intent(inout) :: Sbar_old
     real(kind=dp_t), intent(inout) :: Scorrbar_old
     real(kind=dp_t), intent(inout) :: alphabar_old
@@ -66,9 +69,11 @@ contains
     ! temporary copy of initial umac
     type(multifab) :: umac_tmp(mla%nlevel,mla%dim)
 
-    ! this will hold F_k and div(F_k)
+    ! this will hold F_k
     type(multifab) :: mass_flux_old(mla%nlevel,mla%dim)
     type(multifab) :: mass_flux_new(mla%nlevel,mla%dim)
+
+    ! this will hold div(F_k)
     type(multifab) :: mass_fluxdiv_old(mla%nlevel)
     type(multifab) :: mass_fluxdiv_new(mla%nlevel)
 
@@ -345,17 +350,26 @@ contains
        !          explicit mass diffusion
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+       ! average densities to faces
        call average_cc_to_face(nlevs,rho_old,rho_fc,1,c_bc_comp,nspecies, &
                                the_bc_tower%bc_tower_array)
 
-       ! compute -div(rho*v) and store it in rho_new
-       call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,rho_new,dx,1,nspecies)
+       ! zero out mass update so we can increment it
+       do n=1,nlevs
+          call multifab_setval(mass_update(n),0.d0,all=.true.)
+       end do
+
+       ! compute -div(rho*v) and store it in mass_update
+       call mk_advective_s_fluxdiv(mla,umac_old,rho_fc,mass_update,dx,1,nspecies)
+
+       ! add div(F) to mass_update
+       do n=1,nlevs
+          call multifab_plus_plus_c(mass_update(n),1,mass_fluxdiv_old(n),1,nspecies,0)
+       end do
 
        ! rho_new = rho_old + dt(-div(rho*v) + div(F))
        do n=1,nlevs
-          call multifab_plus_plus_c(rho_new(n),1,mass_fluxdiv_old(n),1,nspecies,0)
-          call multifab_mult_mult_s_c(rho_new(n),1,dt,nspecies,0)
-          call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+          call multifab_saxpy_5(rho_new(n),1.d0,rho_old(n),dt,mass_update(n))
        end do
 
        ! compute rhotot_new = sum(rho_new)
@@ -622,8 +636,6 @@ contains
        end do
        call multifab_destroy(Peos(n))
     end do
-
-    stop
 
   end subroutine initialize
 
