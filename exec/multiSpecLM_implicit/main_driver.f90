@@ -293,7 +293,6 @@ subroutine main_driver()
   end do
 
   do n=1,nlevs
-     call multifab_fill_boundary(rhotot_old(n))
      call fill_rho_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
   end do
 

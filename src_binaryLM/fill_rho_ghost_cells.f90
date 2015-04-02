@@ -26,6 +26,8 @@ contains
     dm = get_dim(prim)
     ng = prim%ng
 
+    call multifab_fill_boundary_c(prim,1,1)
+
     do i=1,nfabs(prim)
        pp => dataptr(prim,i)
        lo = lwb(get_box(prim,i))

@@ -228,7 +228,6 @@ contains
     call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
     
     do n=1,nlevs
-       call multifab_fill_boundary(rhotot_new(n))
        call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
     end do
 
@@ -594,7 +593,6 @@ contains
     call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
     do n=1,nlevs
-       call multifab_fill_boundary(rhotot_new(n))
        call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
     end do
 

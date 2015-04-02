@@ -30,6 +30,8 @@ contains
     ng_c = conc%ng
     ng_r = rhotot%ng
 
+    call multifab_fill_boundary(rhotot)
+
     do i=1,nfabs(conc)
        pp => dataptr(conc,i)
        rp => dataptr(rhotot,i)
