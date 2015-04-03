@@ -61,9 +61,59 @@
 %==========================================================================
 % Title
 %==========================================================================
-\title{Notes for Adding Energy Equation to the Implicit Low Mach Number Multispecies Code}
+\title{Low Mach Number Multicomponent Hydrodynamics for Confined Domains}
+
+\author{A. Nonaka\footnotemark[1],
+        J. B. Bell\footnotemark[1], and
+        A. Donev\footnotemark[2]}
+
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+\footnotetext[1]{Center for Computational Sciences and Engineering,
+                 Lawrence Berkeley National Laboratory, 
+                 Berkeley, CA 94720, USA}
+\footnotetext[2]{Courant Institute of Mathematical Sciences,
+                 New York University,
+                 New York, NY 10012, USA}
 
 \maketitle
+
+\begin{abstract}
+We present a projection method for modeling unsteady, low Mach number multicomponent
+flow in confined regions.  Our method introduces a new iterative scheme which
+allows the thermodynamic variables to remain in thermodynamic equilibrium
+with a time-varying, spatially constant background pressure for a
+generalized equation of state.
+The methods in this paper are compatible with any finite-volume frameworks.
+Here, we choose to extend our recently-developed staggered grid framework,
+which uses a Stokes solver for the projection-diffusion step and carefully
+constructed diffusion operators that allow for the relatively straightforward
+inclusion of thermal fluctuations.
+\end{abstract}
+
+\section{Introduction}
+We extend our staggered grid, low Mach number, multicomponent hydrodynamics code
+\cite{LowMachExplicit,LowMachImplicit,LowMachMulti} to include an energy
+equation and a generalized equation of state.
+Our staggered grid formulation allows for the including of thermal fluctuations
+in a way that satisfies discrete fluctuation-dissipation balance through an
+exact projection as well as matching stochastic and diffusive operators.
+The inclusion of thermal fluctuations is straightforward, following in our previous work.
+We defer the inclusion of fluctuations to a future paper, as
+the methodology here is applicable to low Mach number models regardless of framework.
+The basic model is a system of advection-diffusion equations
+subject to a constraint on the velocity field that arises due to the assumption
+of instantaneous acoustic equilibration, or equivalently, a constant thermodynamic
+pressure.  We treat the viscosity implicitly without splitting the pressure
+update, relying on a recently-developed variable-coefficient multigrid-preconditioned
+Stokes solver \cite{StokesPreconditioners}.
+For now, mass diffusion in treated explicitly making our
+approach suitable for large Schmidt numbers.  Implicit mass diffusion is a subject
+of future work.  The primary focus on this paper is the inclusion of an energy equation,
+generalized EOS, and an iterative framework where the thermodynamic variables
+remain in thermodynamic equilibrium with a constant background pressure (for open
+containers), or a time-varying, spatially constnat thermodynamic pressure (for 
+closed chambers).
 
 \section{Equations}
 The governing conservation equations for momentum, mass, and energy for our system are:
