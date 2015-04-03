@@ -531,12 +531,9 @@ contains
                                   dx_in=dx(n,:))
           end do
 
-          ! h^{*,n+1,l+1} = h(rho^{*,n+1},T^{*,n+1,l+1})
-          call compute_h(mla,Temp_new,rhoh_new)
-          
-          do n=1,nlevs
-             call multifab_mult_mult_c(rhoh_new(n),1,rho_new(n),1,1,1)
-          end do
+          ! h^{*,n+1,l+1} = h(rho^{*,n+1},w^{*,n+1},T^{*,n+1,l+1})
+          call compute_h(mla,Temp_new,enth,conc)
+          call convert_rhoh_to_h(mla,rhoh_new,rhotot_new,enth,.false.)
 
        end do ! end loop l over deltaT iterations
 

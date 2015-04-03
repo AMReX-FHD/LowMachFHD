@@ -629,11 +629,12 @@ contains
 
   end subroutine compute_alpha_3d
 
-  subroutine compute_h(mla,Temp,h)
+  subroutine compute_h(mla,Temp,h,conc)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: Temp(:)
     type(multifab) , intent(inout) :: h(:)
+    type(multifab) , intent(in   ) :: conc(:)
 
     ! local
     integer :: n,nlevs,comp
@@ -646,11 +647,16 @@ contains
        call multifab_build(hk(n),mla%la(n),nspecies,h(n)%ng)
     end do
 
+    ! compute w_k h_k
     call compute_hk(mla,Temp,hk)
+    do n=1,nlevs
+       call multifab_mult_mult_c(hk(n),1,conc(n),1,nspecies,hk(n)%ng)
+    end do
 
     do n=1,nlevs
        call multifab_setval(h(n),0.d0,all=.true.)
        do comp=1,nspecies
+          ! sum (w_k h_k)
           call multifab_plus_plus_c(h(n),1,hk(n),comp,1,h(n)%ng)
        end do
     end do
