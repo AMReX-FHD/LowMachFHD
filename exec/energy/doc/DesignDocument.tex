@@ -80,40 +80,37 @@
 
 \begin{abstract}
 We present a projection method for modeling unsteady, low Mach number multicomponent
-flow in confined regions.  Our method introduces a new iterative scheme which
-allows the thermodynamic variables to remain in thermodynamic equilibrium
-with a time-varying, spatially constant background pressure for a
-generalized equation of state.
-The methods in this paper are compatible with any finite-volume frameworks.
-Here, we choose to extend our recently-developed staggered grid framework,
-which uses a Stokes solver for the projection-diffusion step and carefully
-constructed diffusion operators that allow for the relatively straightforward
-inclusion of thermal fluctuations.
+flow in open and confined regions.  Our method is fully conservative
+and introduces a new iterative scheme that forces the thermodynamic variables 
+to remain in equilbrium with a spatially-constant background pressure to a desired 
+tolerance.
 \end{abstract}
 
 \section{Introduction}
-We extend our staggered grid, low Mach number, multicomponent hydrodynamics code
-\cite{LowMachExplicit,LowMachImplicit,LowMachMulti} to include an energy
-equation and a generalized equation of state.
-Our staggered grid formulation allows for the including of thermal fluctuations
-in a way that satisfies discrete fluctuation-dissipation balance through an
-exact projection as well as matching stochastic and diffusive operators.
-The inclusion of thermal fluctuations is straightforward, following in our previous work.
-We defer the inclusion of fluctuations to a future paper, as
-the methodology here is applicable to low Mach number models regardless of framework.
+We present a projection method for modeling unsteady, low Mach number multicomponent
+flow in open and confined regions.  Our method is fully conservative
+and introduces a new iterative scheme that forces the thermodynamic variables 
+to remain in equilbrium with a spatially-constant background pressure to a desired 
+tolerance.  This work is based low Mach number formulations proposed in
+\cite{RehmBaum,MajdaSethian}, but here our numerical approach is
+fully conservative, and allows for a generalized equation of state.
 The basic model is a system of advection-diffusion equations
-subject to a constraint on the velocity field that arises due to the assumption
-of instantaneous acoustic equilibration, or equivalently, a constant thermodynamic
-pressure.  We treat the viscosity implicitly without splitting the pressure
+subject to a constraint on the velocity field that arises by differentiating
+the equation of state along particle paths under to the assumption
+that the thermodynamic pressure remain spatially constant.  Physically, this
+manifests itself as an instananeous acoustic equilibration, thus eliminating
+pressure waves.  Numerically, this allows for an advective, rather than acoustic,
+time step constraint.
+
+Our numerical framework is the staggered grid, finite volume approach first
+introduced in \cite{LowMachExplicit,LowMachImplicit,LowMachMulti} for
+multicomponent miscible liquids with incompressible components.
+We treat the viscosity implicitly without splitting the pressure
 update, relying on a recently-developed variable-coefficient multigrid-preconditioned
 Stokes solver \cite{StokesPreconditioners}.
 For now, mass diffusion in treated explicitly making our
 approach suitable for large Schmidt numbers.  Implicit mass diffusion is a subject
-of future work.  The primary focus on this paper is the inclusion of an energy equation,
-generalized EOS, and an iterative framework where the thermodynamic variables
-remain in thermodynamic equilibrium with a constant background pressure (for open
-containers), or a time-varying, spatially constnat thermodynamic pressure (for 
-closed chambers).
+of future work.
 
 \section{Equations}
 The governing conservation equations for momentum, mass, and energy for our system are:
@@ -165,9 +162,10 @@ $n_i=\rho_i/W_i$ and $W_i$ the molecular mass of species $i$.
 Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy})
 with $DP/Dt$ in the enthalpy equation replaced by $dP_0/dt$, and (\ref{eq:EOS})
 form the actual system that we would like to solve.
-This corresponds to evolution subject to a constraint.  From the analysis below it will become
-apparent that this system is an index 3 differential algebraic system.  Before looking in detail
-at the structure of the system, it is, perhaps, helpful to consider a physical interpretation of the
+This corresponds to evolution subject to a constraint.  From the analysis below it 
+will become apparent that this system is an index 3 differential algebraic system.
+Before looking in detail at the structure of the system, it is, perhaps, helpful to 
+consider a physical interpretation of the
 system.  The perturbational pressure $\pi$ constrains velocity field so that
 the evolution so that the evolution of $h$ and $\rho_k$
 preserves a thermodynamic pressure that is a function of $t$ only.
@@ -758,6 +756,15 @@ as inputs and computes the following:\\
                    (I modified the routine to make this so).\\
 
 \end{itemize}
+
+\section{Conclusions}
+
+Our staggered grid formulation allows for the including of thermal fluctuations
+in a way that satisfies discrete fluctuation-dissipation balance through an
+exact projection as well as matching stochastic and diffusive operators.
+The inclusion of thermal fluctuations is straightforward, following in our previous work.
+We defer the inclusion of fluctuations to a future paper, as
+the methodology here is applicable to low Mach number models regardless of framework.
 
 \bibliographystyle{unsrt}
 \bibliography{DesignDocument}
