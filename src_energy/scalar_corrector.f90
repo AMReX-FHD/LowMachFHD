@@ -30,18 +30,18 @@ module scalar_corrector_module
 
 contains
 
-  ! this routine performs "Step 0" of the algorithm (see exec/energy/doc/)
-  ! -Compute P_0^{*,n+1}
-  ! -Compute v^n with a projection
-  ! -Compute rho_i^{*,n+1} explicitly
-  ! -Compute (rho h)^{*,n+1} implicitly
+  ! this routine performs "Step 1" of the algorithm (see exec/energy/doc/)
+  ! -Compute P_0^{n+1}
+  ! -Compute v^{*,n+1} with a Stokes solver
+  ! -Compute rho_i^{n+1} explicitly
+  ! -Compute (rho h)^{n+1} implicitly
   ! -If necessary, compute volume discrepancy correction and return to beginning of step
   subroutine scalar_corrector(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
-                        rhoh_old,rhoh_new,p0_old,p0_new, &
-                        gradp_baro,Temp_old,Temp_new, &
-                        mass_update,rhoh_update, &
-                        Sbar_old,Scorrbar_old,alphabar_old, &
-                        dx,dt,time,the_bc_tower)
+                              rhoh_old,rhoh_new,p0_old,p0_new, &
+                              gradp_baro,Temp_old,Temp_new, &
+                              mass_update,rhoh_update, &
+                              Sbar_old,Scorrbar_old,alphabar_old, &
+                              dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac_old(:,:)
