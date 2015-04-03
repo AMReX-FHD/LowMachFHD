@@ -170,7 +170,7 @@ When the system is open, the pressure
 equilibrates to the ambient pressure and $P_0$ is independent of time and known.
 When the system is closed
 $P_0$ represents the global pressure
-required force the fluid to occupy the available volume.
+required force the fluid to occupy the available volume.\\
 
 We also note that $\rho, h, T, P$ are linked by the equation of state in a sense that given
 $\wb$ and any two of these variables, the equation of state uniquely specifies the other
@@ -187,10 +187,10 @@ being satisfied, the resulting evolution of the system is analytically equivalen
 of DAE's the number of times the system needs to be differentiated to recast it as a pure initial
 value problem is referred to as the index.
 The derivative of the constraint can also be cast as a characterization of the tangent plane to the
-constraint manifold but it is not clear what to do with that observation.
+constraint manifold but it is not clear what to do with that observation.\\
 
 The key things we want to get a handle on are how the two different elements that go into the
-constraint interact to control the evolution and whether they are, in some sense, uniquely specified.
+constraint interact to control the evolution and whether they are, in some sense, uniquely specified.\\
 
 We begin by differentiating the 
 right-hand side of equation (\ref{eq:EOS}) along particle paths,
@@ -293,9 +293,9 @@ so we gain an additional term.  Notably, the coefficient in front of the pressur
 derivative matches that in the MAESTRO algorithm \cite{MAESTROIII},
 except that paper includes a convective derivative of $P_0$ due to stratification.
 
-\subsection{Closed Chambers}
+\subsection{Confined Domains}
 The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $d P_0/d t$.
-For open containers where $\vb$ is allowed to be non-zero on one or more walls $P_0$
+For open domains where $\vb$ is allowed to be non-zero on one or more walls $P_0$
 is constant and the constraint equation reduces to
 \begin{equation}
 \nabla\cdot\vb = S.
@@ -304,7 +304,7 @@ This is a generalization of standard low Mach number approaches (at least our ve
 and fits into
 a framework we have dealt with before.\\
 
-For closed chambers with no-flow walls the constraint is somewhat more complex.
+For confined domains with no-flow walls the constraint is somewhat more complex.
 Equation (\ref{eq:constraint}) then represents the derivative of the original
 constraint.  We now want to see how
 decomposition of this equation into mean and fluctuating (not in the stochastic sense)
@@ -394,11 +394,14 @@ This divergence constraint represents a linearized approximation for the velocit
 field required to ensure that the thermodynamic variables remain thermodnamically
 consistent with $P_0$.  Since in general the EOS is non-linear, the updated 
 thermodynamic variables will not
-satisfy this condition.  We propose an iterative strategy that is already
-used in our low Mach number terrestrial and astrophysical combustion codes, that
+satisfy this condition.  We propose an iterative strategy based on
+volume discrepancy schemes used
+in other conservative, finite-volume low Mach number algorithms
+\cite{Pember:1998,XRB}, that
 uses a modified divergence constraint designed to drive the updated 
 thermodynamic variables closer to thermodynamic equilibrium with $P_0$ with each iteration.
-For closed chambers, we also iteratively update $P_0$ as well.\\
+For confined domains, we also iteratively update $P_0$ as well.  To our knowledge,
+such approaches have only been used for open domains.\\
 
 After computing a velocity field with the GMRES solver, and updating the thermodynamic
 variables with advective and diffusive fluxes, the EOS will no longer be satisfied.
