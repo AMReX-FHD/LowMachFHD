@@ -86,14 +86,14 @@ subroutine main_driver()
   ! these must persist between steps
 
   ! holds (Sbar^n + Scorrbar^n) / alphabar^n
-  real(kind=dp_t) :: pres_update
+  real(kind=dp_t) :: pres_update_old
 
   ! holds -div(rho*v)^n + div(F^n)
-  type(multifab), allocatable :: mass_update(:)
+  type(multifab), allocatable :: mass_update_old(:)
 
   ! holds -div(rhoh*v)^n + (Sbar+Scorrbar)/alphabar + div(Q^n) 
   !                      + sum(div(h_k F_k))^n + (rho Hext)^n
-  type(multifab), allocatable :: rhoh_update(:)
+  type(multifab), allocatable :: rhoh_update_old(:)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! For HydroGrid
@@ -130,7 +130,7 @@ subroutine main_driver()
   allocate(umac_old(nlevs,dm),umac_new(nlevs,dm),mtemp(nlevs,dm))
   allocate(rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(conc(nlevs),enth(nlevs))
-  allocate(mass_update(nlevs),rhoh_update(nlevs))
+  allocate(mass_update_old(nlevs),rhoh_update_old(nlevs))
 
   ! set grid spacing at each level
   ! the grid spacing is the same in each direction
@@ -253,8 +253,8 @@ subroutine main_driver()
         call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
         call multifab_build(enth(n),mla%la(n),1       ,ng_s)
 
-        call multifab_build(mass_update(n),mla%la(n),nspecies,0)
-        call multifab_build(rhoh_update(n),mla%la(n),1       ,0)
+        call multifab_build(mass_update_old(n),mla%la(n),nspecies,0)
+        call multifab_build(rhoh_update_old(n),mla%la(n),1       ,0)
      end do
 
   end if
@@ -432,7 +432,7 @@ subroutine main_driver()
                      rhotot_old,rhotot_new, &
                      rhoh_old,rhoh_new,p0_old,p0_new, &
                      gradp_baro,Temp_old,Temp_new, &
-                     mass_update,rhoh_update,pres_update, &
+                     mass_update_old,rhoh_update_old,pres_update_old, &
                      dx,dt,time,the_bc_tower)
 
      if (print_int .gt. 0) then
@@ -609,8 +609,8 @@ subroutine main_driver()
      call multifab_destroy(pi(n))
      call multifab_destroy(conc(n))
      call multifab_destroy(enth(n))
-     call multifab_destroy(mass_update(n))
-     call multifab_destroy(rhoh_update(n))
+     call multifab_destroy(mass_update_old(n))
+     call multifab_destroy(rhoh_update_old(n))
      do i=1,dm
         call multifab_destroy(umac_old(n,i))
         call multifab_destroy(umac_new(n,i))
