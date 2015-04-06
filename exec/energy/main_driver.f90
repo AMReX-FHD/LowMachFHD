@@ -85,13 +85,14 @@ subroutine main_driver()
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! these must persist between steps
 
-  ! holds Sbar^n, Scorrbar^n, alphabar^n
-  real(kind=dp_t) :: Sbar_old, Scorrbar_old, alphabar_old
+  ! holds (Sbar^n + Scorrbar^n) / alphabar^n
+  real(kind=dp_t) :: pres_update
 
   ! holds -div(rho*v)^n + div(F^n)
   type(multifab), allocatable :: mass_update(:)
 
-  ! holds -div(rhoh*v)^n + div(Q^n) + sum(div(h_k F_k))^n + (rho Hext)^n
+  ! holds -div(rhoh*v)^n + (Sbar+Scorrbar)/alphabar + div(Q^n) 
+  !                      + sum(div(h_k F_k))^n + (rho Hext)^n
   type(multifab), allocatable :: rhoh_update(:)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -431,8 +432,7 @@ subroutine main_driver()
                      rhotot_old,rhotot_new, &
                      rhoh_old,rhoh_new,p0_old,p0_new, &
                      gradp_baro,Temp_old,Temp_new, &
-                     mass_update,rhoh_update, &
-                     Sbar_old,Scorrbar_old,alphabar_old, &
+                     mass_update,rhoh_update,pres_update, &
                      dx,dt,time,the_bc_tower)
 
      if (print_int .gt. 0) then

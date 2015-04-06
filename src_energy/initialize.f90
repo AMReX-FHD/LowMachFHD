@@ -39,8 +39,7 @@ contains
   subroutine initialize(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
                         rhoh_old,rhoh_new,p0_old,p0_new, &
                         gradp_baro,Temp_old,Temp_new, &
-                        mass_update,rhoh_update, &
-                        Sbar_old,Scorrbar_old,alphabar_old, &
+                        mass_update,rhoh_update,pres_update, &
                         dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -56,15 +55,19 @@ contains
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: Temp_old(:)
     type(multifab) , intent(inout) :: Temp_new(:)
-    type(multifab) , intent(inout) :: mass_update(:)
+    ! leaves with div(F^n) - div(rho*v)^n
+    type(multifab) , intent(inout) :: mass_update(:)   
+    ! leaves with [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
     type(multifab) , intent(inout) :: rhoh_update(:)
-    real(kind=dp_t), intent(inout) :: Sbar_old
-    real(kind=dp_t), intent(inout) :: Scorrbar_old
-    real(kind=dp_t), intent(inout) :: alphabar_old
+    ! leaves with (Sbar^n + Scorrbar^n) / alphabar^n
+    real(kind=dp_t), intent(inout) :: pres_update
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables
+
+    ! holds Sbar^n, Scorrbar^n, alphabar^n
+    real(kind=dp_t) :: Sbar_old, Scorrbar_old, alphabar_old
 
     ! temporary copy of initial umac
     type(multifab) :: umac_tmp(mla%nlevel,mla%dim)
@@ -314,7 +317,8 @@ contains
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
        ! update pressure
-       p0_new = p0_old + dt*(Sbar_old + Scorrbar_old)/alphabar_old
+       pres_update = (Sbar_old + Scorrbar_old)/alphabar_old
+       p0_new = p0_old + dt*pres_update
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 0b: Compute the velocity field using a projection
@@ -324,7 +328,7 @@ contains
        !                 - deltaalpha_old * (Sbar_old + Scorrbar_old)/alphabar_old
        do n=1,nlevs
           call multifab_copy_c(Sproj(n),1,deltaalpha_old(n),1,1,0)
-          call multifab_mult_mult_s_c(Sproj(n),1,-(Sbar_old+Scorrbar_old)/alphabar_old,1,0)
+          call multifab_mult_mult_s_c(Sproj(n),1,-pres_update,1,0)
           call multifab_plus_plus_c(Sproj(n),1,deltaS_old(n),1,1,0)
           call multifab_plus_plus_c(Sproj(n),1,deltaScorr_old(n),1,1,0)
        end do
@@ -402,7 +406,7 @@ contains
        do n=1,nlevs
           call multifab_copy_c(deltaT_rhs1(n),1,rhoh_old(n),1,1,0)
           call multifab_mult_mult_s_c(deltaT_rhs1(n),1,1.d0/dt,1,0)
-          call multifab_plus_plus_s_c(deltaT_rhs1(n),1,(Sbar_old+Scorrbar_old)/alphabar_old,1,0)
+          call multifab_plus_plus_s_c(deltaT_rhs1(n),1,pres_update,1,0)
        end do
 
        ! compute h

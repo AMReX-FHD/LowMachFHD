@@ -39,8 +39,7 @@ contains
   subroutine scalar_corrector(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
                               rhoh_old,rhoh_new,p0_old,p0_new, &
                               gradp_baro,Temp_old,Temp_new, &
-                              mass_update,rhoh_update, &
-                              Sbar_old,Scorrbar_old,alphabar_old, &
+                              mass_update,rhoh_update,pres_update, &
                               dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -56,15 +55,19 @@ contains
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: Temp_old(:)
     type(multifab) , intent(inout) :: Temp_new(:)
+    ! enters with div(F^n) - div(rho*v)^n
     type(multifab) , intent(inout) :: mass_update(:)
+    ! enters with [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
     type(multifab) , intent(inout) :: rhoh_update(:)
-    real(kind=dp_t), intent(inout) :: Sbar_old
-    real(kind=dp_t), intent(inout) :: Scorrbar_old
-    real(kind=dp_t), intent(inout) :: alphabar_old
+    ! enters with (Sbar^n + Scorrbar^n) / alphabar^n
+    real(kind=dp_t), intent(in   ) :: pres_update
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables
+
+    ! holds Sbar^n, Scorrbar^n, alphabar^n
+    real(kind=dp_t) :: Sbar_old, Scorrbar_old, alphabar_old
 
     ! temporary copy of initial umac
     type(multifab) :: umac_tmp(mla%nlevel,mla%dim)
@@ -88,7 +91,9 @@ contains
     type(multifab) :: rho_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhoh_fc(mla%nlevel,mla%dim)
 
-    ! This will hold (rhoh)^n/dt - div(rhoh*v)^n + (Sbar^n+Sbarcorr^n)/alphabar^n 
+    ! This will hold (rhoh)^n/dt - (1/2)div(rhoh*v)^n - (1/2)div(rhoh*v)^{*,n+1}
+    !                + (Sbar^n+Sbarcorr^n)/alphabar^n 
+    !                + (Sbar^{*,n+1}+Sbarcorr^{*,n+1})/alphabar^{*,n+1}
     !                + (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n)
     ! for the RHS of the temperature diffusion solve.
     ! Each of these terms stays fixed over all l iterations.
