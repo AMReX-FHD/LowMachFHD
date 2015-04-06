@@ -538,9 +538,9 @@ They are more to help me with implementation.
 We could mention that we do it, and just cite the binary paper.}
 In practice, we solve for a modified increment to the velocity field, $\deltab\vb$.  In particular,
 we split the updated velocity into
-$\vb^{*,n+1} = \bar{\vb}^n + \deltab\vb$, where $\bar{\vb}^n$ is the velocity at $t^n$, but with modified boundary
-conditions consistent with $\vb^{*,n+1}$, and $\deltab\vb$ has homogeneous boundary conditions of the same type (Dirichlet or Neumann).
-We also split $\pi^{*,n+1} = \pi^n + \delta\pi$ in the same way.  Rewriting the Stokes system above we have:
+$\vb^n = \bar{\vb}^{n-1} + \deltab\vb$, where $\bar{\vb}^{n-1}$ is the velocity at $t^{n-1}$, but with modified boundary
+conditions consistent with $\vb^n$, and $\deltab\vb$ has homogeneous boundary conditions of the same type (Dirichlet or Neumann).
+We also split $\pi^n = \pi^{n-1} + \delta\pi$ in the same way.  Rewriting the Stokes system above we have:
 \begin{eqnarray}
 \left(\frac{\rho^n}{\Delta t} - \half\mathcal{A}_0^n\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^{n-1}\vb^{n-1} - \rho^n\bar{\vb}^{n-1}}{\Delta t} - \nabla\pi^{n-1}\nonumber\\
 &&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^{n-1} + \nabla\cdot(\rho\vb\vb)^{*,n}\right] + \half(\mathcal{A}_0^{n-1}\vb^{n-1}+\mathcal{A}_0^n\bar{\vb}^{n-1}) + \half(\rho^{n-1} + \rho^n)\gb,\nonumber\\
@@ -622,7 +622,7 @@ P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}
 \nabla\cdot\vb^{*,n+1} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1} - \delta\alpha^{*,n+1}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right).
 \end{equation}
 \MarginPar{More notes for implementation that do not need to go into paper.}
-We recast the Stokes system using $\vb^n = \bar{\vb}^{n-1} + \deltab\vb, \pi^n = \pi^{n-1} + \delta\pi$
+We recast the Stokes system using $\vb^{*,n+1} = \bar{\vb}^n + \deltab\vb, \pi^{*,n+1} = \pi^n + \delta\pi$
 (see explanation in {\bf Step 1b}):
 \begin{eqnarray}
 \left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^n\vb^n - \rho^{*,n+1}\bar{\vb}^n}{\Delta t} - \nabla\pi^n\nonumber\\
