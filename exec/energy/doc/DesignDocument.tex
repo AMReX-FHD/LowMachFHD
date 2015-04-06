@@ -61,8 +61,7 @@
 %==========================================================================
 % Title
 %==========================================================================
-\title{A Conservative, Thermodynamically Consistent Low Mach Number Multicomponent Hydrodynamics 
-       Algorithm for Open and Confined Domains}
+\title{A Conservative, Thermodynamically Consistent Low Mach Number Hydrodynamics Algorithm}
 
 \author{A. Nonaka\footnotemark[1],
         J. B. Bell\footnotemark[1], and
@@ -81,20 +80,25 @@
 
 \begin{abstract}
 We present a projection method for modeling unsteady, low Mach number multicomponent
-flow in open and confined regions.  Our method is fully conservative
-and introduces a new iterative scheme that forces the thermodynamic variables 
-to remain in equilbrium with a spatially-constant background pressure to a desired 
-tolerance.
+flow.  Due to the linearization of the equation of state used when deriving
+constraint manifolds, previously it has
+not been possible to simultaneously conserve mass and energy while remaining in 
+thermodynamic equilibrium with the spatially-constant ambient pressure.
+Our method is fully conservative and introduces a new iterative scheme that 
+corrects thermodynamic drift to a desired tolerance.  For confined regions, our
+iterative scheme also allows for thermodynamically consistent evolution in the presence
+of time-varying ambient pressure.
+Our method is suitable for a generlized equation of state, and offers a development
+path for low Mach number reacting flow and stochastic flow described by fluctuating
+hydrodynamics equations.  We present results for mixtures of noble gases with external
+heating.
 \end{abstract}
 
 \section{Introduction}
-We present a projection method for modeling unsteady, low Mach number multicomponent
-flow in open and confined regions.  Our method is fully conservative
-and introduces a new iterative scheme that forces the thermodynamic variables 
-to remain in equilbrium with a spatially-constant background pressure to a desired 
-tolerance.  This work is based low Mach number formulations proposed in
-\cite{RehmBaum,MajdaSethian}, but here our numerical approach is
-fully conservative, and allows for a generalized equation of state.
+ This work is based low Mach number formulations proposed in
+\cite{RehmBaum,MajdaSethian}, but here our equation set is suitable for a
+generalized equation of state, is fully conservative, and includes an iterative
+scheme to correct thermodynamic drift.
 The basic model is a system of advection-diffusion equations
 subject to a constraint on the velocity field that arises by differentiating
 the equation of state along particle paths under to the assumption
