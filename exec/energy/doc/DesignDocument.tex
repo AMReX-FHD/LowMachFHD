@@ -143,7 +143,7 @@ P_0(t) = P(\rho,\wb,T),\label{eq:EOS}
 \end{equation}
 where $T=T(\rho,\wb,h)$ is specified by the equation of state.\\
 
-The stress tensor,
+The viscous stress tensor,
 $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$,
 ignores the effect of bulk viscosity, which can be aborbed into $\pi$.
 The heat flux has the form $\Qb = \lambda\nabla T$.
@@ -517,39 +517,49 @@ We loop over the following until the convergence criteria in {\bf Step 1e} is me
 \begin{equation}
 P_0^{*,n+1} = P_0^n + \Delta t\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right)
 \end{equation}
-\item {\bf Step 1b:} Compute the velocity and dynamic pressure using a GMRES solver for the Stokes system:
-pressure, $\pi^n$.
+\item {\bf Step 1b:} Compute the velocity, $\vb^n$, and dynamic pressure, $\pi^n$,
+using a GMRES solver for the Stokes system:
 \begin{eqnarray}
-\frac{\rho^n\vb^n - \rho^{n-1}\vb^{n-1}}{\Delta t} + \nabla\pi^n &=& \half\nabla\cdot(-(\rho\vb\vb)^{n-1} - (\rho\vb\vb)^{*,n})\nonumber\\
-&&\hspace{-0.5in} + \frac{1}{2}\nabla\cdot(\taub^{n-1} + \taub^n) + \frac{1}{2}(\rho^{n-1} + \rho^n)\gb,
+\frac{\rho^n\vb^n - \rho^{n-1}\vb^{n-1}}{\Delta t} + \nabla\pi^n &=& -\half\nabla\cdot\left[(\rho\vb\vb)^{n-1} + (\rho\vb\vb)^{*,n}\right]\nonumber\\
+&& + \frac{1}{2}\nabla\cdot(\taub^{n-1} + \taub^n) + \frac{1}{2}(\rho^{n-1} + \rho^n)\gb,\label{eq:Stokes}
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right),
+\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right).
 \end{equation}
+If we express the viscous stress tensor in operator form, e.g., 
+$\mathcal{A}_0^n\vb = \nabla\cdot[\eta^n(\nabla\vb + (\nabla\vb)^T)]$. , then (\ref{eq:Stokes}) can be 
+expressed in a familiar Stokes operator form,
+\begin{eqnarray}
+\left(\frac{\rho^n}{\Delta t} - \half\mathcal{A}_0^n\right)\vb^n + \nabla\pi^n &=& \frac{\rho^{n-1}\vb^{n-1}}{\Delta t} - \half\nabla\cdot\left[(\rho\vb\vb)^{n-1} + (\rho\vb\vb)^{*,n}\right]\nonumber\\
+&& + \half\mathcal{A}_0^{n-1}\vb^{n-1} + \half(\rho^{n-1} + \rho^n)\gb.
+\end{eqnarray}
+\MarginPar{These notes about solving in homogeneous delta form don't really have to make it into the paper.
+They are more to help me with implementation.
+We could mention that we do it, and just cite the binary paper.}
 In practice, we solve for a modified increment to the velocity field, $\deltab\vb$.  In particular,
 we split the updated velocity into
 $\vb^{*,n+1} = \bar{\vb}^n + \deltab\vb$, where $\bar{\vb}^n$ is the velocity at $t^n$, but with modified boundary
 conditions consistent with $\vb^{*,n+1}$, and $\deltab\vb$ has homogeneous boundary conditions of the same type (Dirichlet or Neumann).
-We also express the viscous stress tensor in operator form, e.g., 
-$\mathcal{A}_0^n\vb = \nabla\cdot[\eta^n(\nabla\vb + (\nabla\vb)^T)]$.  
 We also split $\pi^{*,n+1} = \pi^n + \delta\pi$ in the same way.  Rewriting the Stokes system above we have:
 \begin{eqnarray}
 \left(\frac{\rho^n}{\Delta t} - \half\mathcal{A}_0^n\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^{n-1}\vb^{n-1} - \rho^n\bar{\vb}^{n-1}}{\Delta t} - \nabla\pi^{n-1}\nonumber\\
-&&\hspace{-1.5in} - \half\nabla\cdot(\rho\vb\vb)^{n-1} -\half\nabla\cdot(\rho\vb\vb)^{*,n} + \half(\mathcal{A}_0^{n-1}\vb^{n-1}+\mathcal{A}_0^n\bar{\vb}^{n-1}) + \half(\rho^{n-1} + \rho^n)\gb,\nonumber\\
+&&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^{n-1} + \nabla\cdot(\rho\vb\vb)^{*,n}\right] + \half(\mathcal{A}_0^{n-1}\vb^{n-1}+\mathcal{A}_0^n\bar{\vb}^{n-1}) + \half(\rho^{n-1} + \rho^n)\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^{n-1} - \left[\delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right)\right].
 \end{equation}
-\item {\bf Step 1c:} Advance the densities using forward-Euler advective fluxes
+\item {\bf Step 1c:} Compute preliminary, time-advanced densities using forward-Euler advective fluxes
 and explicit mass diffusion:
 \begin{equation}
 \rho_i^{*,n+1} = \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i\vb)^n + \nabla\cdot\Fb^n\right].
 \end{equation}
-\item {\bf Step 1d:} Advance the enthalpy by iteratively looping over an energy solve.
+\item {\bf Step 1d:} Compute preliminary time-advanced enthalpy by iteratively looping over an energy solve.
 The fundamental formulation is given by,
 \begin{eqnarray}
-(\rho h)^{*,n+1} &=& (\rho h)^n + \Delta t\left[-\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \right.\nonumber\\
-&&\hspace{-0.5in}\left.\frac{1}{2}\left(\nabla\cdot\Qb^n + \nabla\cdot\Qb^{*,n+1} + \sum_k\nabla\cdot h_k^n\Fb_k^n + \sum_k\nabla\cdot h_k^{*,n+1}\Fb_k^{*,n+1} + (\rho\Hext)^n + (\rho\Hext)^{*,n+1}\right)\right],\nonumber\\
+\frac{(\rho h)^{*,n+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\nonumber\\
+&&+ \half\nabla\cdot\Qb^n + \half\nabla\cdot\Qb^{*,n+1}\nonumber\\
+&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1}\Fb_k^{*,n+1}\nonumber\\
+&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{*,n+1},
 \end{eqnarray}
 but since we express $\Qb$ in terms of temperature gradients, we need an iterative
 solve that linearizes the dependence of $h$ on $T$.  First we initialize
@@ -610,22 +620,27 @@ P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}
 \begin{equation}
 \nabla\cdot\vb^{*,n+1} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1} - \delta\alpha^{*,n+1}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right).
 \end{equation}
-which we recast using $\vb^n = \bar{\vb}^{n-1} + \deltab\vb, \pi^n = \pi^{n-1} + \delta\pi$ (see explanation in {\bf Step 1b}):
+\MarginPar{More notes for implementation that do not need to go into paper.}
+We recast the Stokes system using $\vb^n = \bar{\vb}^{n-1} + \deltab\vb, \pi^n = \pi^{n-1} + \delta\pi$
+(see explanation in {\bf Step 1b}):
 \begin{eqnarray}
 \left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^n\vb^n - \rho^{*,n+1}\bar{\vb}^n}{\Delta t} - \nabla\pi^n\nonumber\\
-&&\hspace{-1.5in} - \nabla\cdot(\rho\vb\vb)^n + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^{*,n+1}\bar{\vb}^n) + \half(\rho^n + \rho^{*,n+1})\gb,
+&&\hspace{-1in}- \nabla\cdot(\rho\vb\vb)^n + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^{*,n+1}\bar{\vb}^n) + \half(\rho^n + \rho^{*,n+1})\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1} - \delta\alpha^{*,n+1}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right)\right].
 \end{equation}
-\item {\bf Step 2c:} Advance the densities using trapezoidal advective and diffusive fluxes:
+\item {\bf Step 2c:} Compute time-advanced densities using trapezoidal advective and diffusive fluxes:
 \begin{equation}
 \rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{*,n+1}\right].
 \end{equation}
-\item {\bf Step 2d:} Advance the enthalpy by iteratively looping over an energy solve.  The fundamental formulation is given by,
+\item {\bf Step 2d:} Compute time-advanced enthalpy by iteratively looping over an energy solve.
+The fundamental formulation is given by,
 \begin{eqnarray}
-(\rho h)^{n+1} &=& (\rho h)^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right.\nonumber\\
-&&\left.+ \nabla\cdot\Qb^n + \nabla\cdot\Qb^{n+1} + \sum_k\nabla\cdot h_k^n\Fb_k^n + \sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1} + (\rho\Hext)^n + (\rho\Hext)^{n+1}\right],\nonumber\\
+\frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right]\nonumber\\
+&&+ \half\nabla\cdot\Qb^n + \half\nabla\cdot\Qb^{n+1}\nonumber\\
+&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
+&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
 \end{eqnarray}
 but since we express $\Qb$ in terms of temperature gradients, we need an iterative solve that linearizes
 the dependence of $h$ on $T$.  First we initialize $(h,T)^{n+1,l=1} = (h,T)^{*,n+1}$.
