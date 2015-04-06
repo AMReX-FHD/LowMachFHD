@@ -590,13 +590,14 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 T^{*,n+1,l+1} = T^{*,n+1,l} + \delta T, \quad h^{*,n+1,l+1} = h(\wb^{*,n+1},T^{*,n+1,l+1}).
 \end{equation}
 If $l=l_{\rm max}$, set $(h,T)^{*,n+1} = (h,T)^{*,n+1,l+1}$ and proceed to {\bf Step 1e}.\\
-\item {\bf Step 1e:} Update the volume discrepancy correction,
+\item {\bf Step 1e:} Compute the thermodynamic drift, $P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}$.
+If the drift is acceptable, proceed to {\bf Step 2}.  Otherwise,
+update the volume discrepancy correction,
 \begin{equation}
 S_{\rm corr}^n = S_{\rm corr}^n + \alpha^{*,n+1}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right),
 \end{equation}
-and split this into average and perturbational components.
-If the thermodynamic drift is unacceptable, return to {\bf Step 1a}.
-Otherwise, proceed to the {\bf Step 2}.\\
+split this into average and perturbational components.
+and return to {\bf Step 1a}.\\
 \end{itemize}
 
 {\bf Step 2: Scalar Corrector}.\\ \\
@@ -669,15 +670,15 @@ Loop from $l=1$ to $l_{\rm max}$:\\ \\
 T^{n+1,l+1} = T^{n+1,l} + \delta T, \quad h^{n+1,l+1} = h(\wb^{n+1},T^{n+1,l+1}).
 \end{equation}
 If $l=l_{\rm max}$, set $(h,T)^{n+1} = (h,T)^{n+1,l+1}$ and proceed to {\bf Step 2e}.\\
-\item {\bf Step 2e:} Update the volume discrepancy correction,
+\item {\bf Step 2e:} Compute the thermodynamic drift, $P_{\rm EOS}^{n+1} - P_0^{n+1}$.
+If the drift is acceptable, return to {\bf Step 1}.  Otherwise,
+update the volume discrepancy correction,
 \begin{equation}
 S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + 2\alpha^{n+1}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right),
 \end{equation}
-and split this into average and perturbational components.
-I think the factor of 2 is required here since the new-time
-velocity is used in a trapezoidal corrector with only a half-weighting.
-If the thermodynamic drift is unacceptable, return to {\bf Step 2a}.
-Otherwise, return to {\bf Step 1}.\\
+split this into average and perturbational components, and return to {\bf Step 2a}.
+Note there is a factor of two scaling the drift, since the advective term
+only carries a half-weighting due to the trapezoidal temporal integration.\\
 \end{itemize}
 
 {\bf Step 0: Initialization}.\\ \\
@@ -718,7 +719,7 @@ and velocity update,
 
 \item {\bf Step 0c:} Same as {\bf Step 1c}.
 \item {\bf Step 0d:} Same as {\bf Step 1d}.
-\item {\bf Step 0e:} Same as {\bf Step 0e}, except that the loop returns to {\bf Step 0a}.
+\item {\bf Step 0e:} Same as {\bf Step 1e}, except that the loop returns to {\bf Step 0a}.
 \end{itemize}
 
 
