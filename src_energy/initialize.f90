@@ -401,25 +401,41 @@ contains
           call multifab_plus_plus_s_c(deltaT_rhs1(n),1,pres_update_old,1,0)
        end do
 
-       ! compute h
+       ! compute h^n and fill ghost cells
        call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
        call fill_h_ghost_cells(mla,enth,dx,the_bc_tower)
 
-       ! average h to faces
+       ! average h^n to faces
        call average_cc_to_face(nlevs,enth,rhoh_fc,1,h_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
 
-       ! multiply h on faces by rho on faces
+       ! multiply h^n on faces by rhotot^n on faces
        do n=1,nlevs
           do i=1,dm
              call multifab_mult_mult_c(rhoh_fc(n,i),1,rhotot_fc(n,i),1,1,0)
           end do
        end do
 
-       ! add -div(rhoh*v)^n to deltaT_rhs1
-       call mk_advective_s_fluxdiv(mla,umac_old,rhoh_fc,deltaT_rhs1,dx,1,1)
+       ! set rhoh_update_old to (Sbar+Scorrbar)/alphabar
+       do n=1,nlevs
+          call multifab_setval(rhoh_update_old(n),pres_update_old,all=.true.)
+       end do
 
-       ! add (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n) to deltaT_rhs1
+       ! add -div(rhoh*v)^n to rhoh_update_old
+       call mk_advective_s_fluxdiv(mla,umac_old,rhoh_fc,rhoh_update_old,dx,1,1)
+
+       ! add -div(rhoh*v)^n to deltaT_rhs1
+       do n=1,nlevs
+          call multifab_plus_plus_c(deltaT_rhs1(n),1,rhoh_update_old(n),1,1,0)
+       end do
+
+       ! add (div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n) to rhoh_update_old
+       ! we need to preserve this for the scalar corrector
+       do n=1,nlevs
+          call multifab_plus_plus_c(rhoh_update_old(n),1,rhoh_fluxdiv_old(n),1,1,0)
+       end do
+
+       ! add (1/2)(div(Q^n) + sum(div(h_k^n F_k^n) + (rho Hext)^n)) to deltaT_rhs1
        do n=1,nlevs
           call multifab_saxpy_3(deltaT_rhs1(n),0.5d0,rhoh_fluxdiv_old(n))
        end do
