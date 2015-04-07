@@ -80,6 +80,8 @@ contains
     type(multifab) :: rhoh_fluxdiv_new(mla%nlevel)
 
     type(multifab) :: mass_update_new(mla%nlevel)
+
+    ! 
     type(multifab) :: rhoh_update_new(mla%nlevel)
 
     ! this holds h
@@ -270,6 +272,10 @@ contains
     call average_cc_to_face(nlevs,rho_new,rho_fc,1,c_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array)
 
+    ! average rhotot^{*,n+1} to faces
+    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,1, &
+                            the_bc_tower%bc_tower_array)
+
     ! begin loop here over Steps 1a-1e
     do k=1,dpdt_iters
 
@@ -369,53 +375,64 @@ contains
        !               + (1/2)(Sbar^n+Sbarcorr^n)/alphabar^n 
        !               + (1/2)(Sbar^{*,n+1}+Sbarcorr^{*,n+1})/alphabar^{*,n+1}
        !               + (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n)
+       ! store this in deltaT_rhs1
 
-       ! set deltaT_rhs1 = (rhoh)^n/dt + (1/2)(Sbar^n+Scorrbar^n)/alphabar^n  
-       !                               + (1/2)(Sbar^{*,n+1}+Sbarcorr^{*,n+1})/alphabar^{*,n+1}
-       do n=1,nlevs
-          call multifab_copy_c(deltaT_rhs1(n),1,rhoh_old(n),1,1,0)
-          call multifab_mult_mult_s_c(deltaT_rhs1(n),1,1.d0/dt,1,0)
-          call multifab_plus_plus_s_c(deltaT_rhs1(n),1,pres_update_avg,1,0)
-       end do
+       ! rhoh_update_old already contains
+       !   [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
 
+       ! rhoh_update_new is a temporary that will hold 
+       !   -(1/2)[div(rhoh*v) + (Sbar+Scorrbar)/alphabar]^{*,n+1}
 
-
-
-
-
-       ! compute h
-       call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
+       ! compute h^{*,n+1} and fill ghost cells
+       call convert_rhoh_to_h(mla,rhoh_new,rhotot_old,enth,.true.)
        call fill_h_ghost_cells(mla,enth,dx,the_bc_tower)
 
-       ! average h to faces
+       ! average h^{*,n+1} to faces
        call average_cc_to_face(nlevs,enth,rhoh_fc,1,h_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
 
-       ! multiply h on faces by rho on faces
+       ! multiply h^{*,n+1} on faces by rhotot^{*,n+1} on faces
        do n=1,nlevs
           do i=1,dm
              call multifab_mult_mult_c(rhoh_fc(n,i),1,rhotot_fc(n,i),1,1,0)
           end do
        end do
 
-       ! add -div(rhoh*v)^n to deltaT_rhs1
-       call mk_advective_s_fluxdiv(mla,umac_old,rhoh_fc,deltaT_rhs1,dx,1,1)
-
-       ! add (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n) to deltaT_rhs1
+       ! set rhoh_update_new to [Sbar+Scorrbar)/alphabar]^{*,n+1}
        do n=1,nlevs
-          call multifab_saxpy_3(deltaT_rhs1(n),0.5d0,rhoh_fluxdiv_old(n))
+          call multifab_setval(rhoh_update_new(n),pres_update_new,all=.true.)
        end do
 
-       ! set (rhoh)^{*,n+1,l} = rho^{*,n+1} * h^n
+       ! add -div(rhoh*v)^{*,n+1} to rhoh_update_new
+       call mk_advective_s_fluxdiv(mla,umac_new,rhoh_fc,rhoh_update_new,dx,1,1)
+
+       ! deltaT_rhs1 = (rhoh)^n/dt
+       do n=1,nlevs
+          call multifab_copy_c(deltaT_rhs1(n),1,rhoh_old(n),1,1,0)
+          call multifab_mult_mult_s_c(deltaT_rhs1(n),1,1.d0/dt,1,0)
+       end do
+
+       ! add (1/2)[-div(rhoh*v) + [Sbar+Scorrbar)/alphabar]^{*,n+1} to deltaT_rhs1
+       do n=1,nlevs
+          call multifab_saxpy_3(deltaT_rhs1(n),0.5d0,rhoh_update_new(n))
+       end do
+
+       ! add (1/2)[-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
+       ! to deltaT_rhs1
+       do n=1,nlevs
+          call multifab_saxpy_3(deltaT_rhs1(n),0.5d0,rhoh_update_old(n))
+       end do
+
+       ! set (rhoh)^{n+1,l} = rho^{n+1} h^{*,n+1}
+       ! Note: Temp_new already contains T^{*,n+1}
        do n=1,nlevs
           call multifab_copy_c(rhoh_new(n),1,enth(n),1,1,rhoh_new(n)%ng)
           call multifab_mult_mult_c(rhoh_new(n),1,rhotot_new(n),1,1,rhoh_new(n)%ng)
        end do
 
-       ! set Temp^{*,n+1,l} = T^n
-       do n=1,nlevs
-          call multifab_copy_c(Temp_new(n),1,Temp_old(n),1,1,Temp_new(n)%ng)
-       end do
+
+
+
 
        do l=1,deltaT_iters
 
@@ -436,7 +453,7 @@ contains
                                    dx,time,the_bc_tower)
 
           ! The portion of the RHS that changes for each l iteration is:
-          !  -(rho^{*,n+1}h^{*,n+1,l})/dt 
+          !  -(rho^{n+1}h^{n+1,l})/dt 
           !               + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l})) + (rho Hext)^(*,n+1))
           ! store this in deltaT_rhs2
 
@@ -576,7 +593,6 @@ contains
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhoh_fc(n,i))
        end do
-       call multifab_destroy(rhoh_fluxdiv_old(n))
        call multifab_destroy(rhoh_fluxdiv_new(n))
        call multifab_destroy(deltaT_rhs1(n))
        call multifab_destroy(deltaT_rhs2(n))

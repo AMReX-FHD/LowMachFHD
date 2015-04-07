@@ -394,12 +394,8 @@ contains
        !               + (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n)
        ! store this in deltaT_rhs1
 
-       ! set deltaT_rhs1 = (rhoh)^n/dt + (Sbar^n+Scorrbar^n)/alphabar^n  
-       do n=1,nlevs
-          call multifab_copy_c(deltaT_rhs1(n),1,rhoh_old(n),1,1,0)
-          call multifab_mult_mult_s_c(deltaT_rhs1(n),1,1.d0/dt,1,0)
-          call multifab_plus_plus_s_c(deltaT_rhs1(n),1,pres_update_old,1,0)
-       end do
+       ! rhoh_update old needs to be preserved for scalar corrector and will hold
+       !   [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
 
        ! compute h^n and fill ghost cells
        call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
@@ -416,7 +412,7 @@ contains
           end do
        end do
 
-       ! set rhoh_update_old to (Sbar+Scorrbar)/alphabar
+       ! set rhoh_update_old to [(Sbar+Scorrbar)/alphabar]^n
        do n=1,nlevs
           call multifab_setval(rhoh_update_old(n),pres_update_old,all=.true.)
        end do
@@ -424,20 +420,25 @@ contains
        ! add -div(rhoh*v)^n to rhoh_update_old
        call mk_advective_s_fluxdiv(mla,umac_old,rhoh_fc,rhoh_update_old,dx,1,1)
 
-       ! add -div(rhoh*v)^n to deltaT_rhs1
+       ! set deltaT_rhs1 = (rhoh)^n/dt
        do n=1,nlevs
-          call multifab_plus_plus_c(deltaT_rhs1(n),1,rhoh_update_old(n),1,1,0)
+          call multifab_copy_c(deltaT_rhs1(n),1,rhoh_old(n),1,1,0)
+          call multifab_mult_mult_s_c(deltaT_rhs1(n),1,1.d0/dt,1,0)
        end do
 
-       ! add (div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n) to rhoh_update_old
-       ! we need to preserve this for the scalar corrector
+       ! add -div(rhoh*v)^n + (Sbar+Scorrbar)/alphabar to deltaT_rhs1
        do n=1,nlevs
-          call multifab_plus_plus_c(rhoh_update_old(n),1,rhoh_fluxdiv_old(n),1,1,0)
+          call multifab_plus_plus_c(deltaT_rhs1(n),1,rhoh_update_old(n),1,1,0)
        end do
 
        ! add (1/2)(div(Q^n) + sum(div(h_k^n F_k^n) + (rho Hext)^n)) to deltaT_rhs1
        do n=1,nlevs
           call multifab_saxpy_3(deltaT_rhs1(n),0.5d0,rhoh_fluxdiv_old(n))
+       end do
+
+       ! add (div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n) to rhoh_update_old
+       do n=1,nlevs
+          call multifab_plus_plus_c(rhoh_update_old(n),1,rhoh_fluxdiv_old(n),1,1,0)
        end do
 
        ! set (rhoh)^{*,n+1,l} = rho^{*,n+1} * h^n
