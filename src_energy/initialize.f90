@@ -94,9 +94,9 @@ contains
     ! Each of these terms stays fixed over all l iterations.
     type(multifab) :: deltaT_rhs1(mla%nlevel)
 
-    ! This will hold -(rho^{*,n+1}h^{*,n+1,l})/dt
-    !                + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l}))
-    !                + (rho Hext)^(*,n+1))
+    ! This will hold -(rho^{n+1}h^{n+1,l})/dt
+    !                + (1/2)(div(Q^{n+1,l}) + sum(div(h_k^{n+1,l}F_k^{*,n+1,l}))
+    !                + (rho Hext)^(n+1))
     ! for the RHS of the temperature diffusion solve.
     ! Each of these terms may change for each l iteration.
     type(multifab) :: deltaT_rhs2(mla%nlevel)
@@ -150,7 +150,7 @@ contains
     type(multifab) :: Sproj(mla%nlevel)
     ! solution of the pressure-projection solve
     type(multifab) :: phi(mla%nlevel)
-    ! coefficient for projection
+    ! coefficient for projection, also used to average rho*h to faces
     type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
 
@@ -462,7 +462,8 @@ contains
           call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp_new,p0_new,conc,molefrac, &
                                          eta,lambda,kappa,chi,zeta)
 
-          ! compute mass_fluxdiv = div(F^{*,n+1,l}))
+          ! compute mass_flux_new = F^{*,n+1,l}
+          ! compute mass_fluxdiv_new= div(F^{*,n+1,l})) (not actually needed)
           call mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac,chi,zeta, &
                                    gradp_baro,Temp_new,mass_fluxdiv_new,mass_flux_new,dx,the_bc_tower)
 
