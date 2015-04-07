@@ -90,8 +90,8 @@ contains
     type(multifab) :: rhoh_fc(mla%nlevel,mla%dim)
 
     ! This will hold (rhoh)^n/dt - (1/2)div(rhoh*v)^n - (1/2)div(rhoh*v)^{*,n+1}
-    !                + (Sbar^n+Sbarcorr^n)/alphabar^n 
-    !                + (Sbar^{*,n+1}+Sbarcorr^{*,n+1})/alphabar^{*,n+1}
+    !                + (1/2)(Sbar^n+Sbarcorr^n)/alphabar^n 
+    !                + (1/2)(Sbar^{*,n+1}+Sbarcorr^{*,n+1})/alphabar^{*,n+1}
     !                + (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n)
     ! for the RHS of the temperature diffusion solve.
     ! Each of these terms stays fixed over all l iterations.
@@ -99,7 +99,7 @@ contains
 
     ! This will hold -(rho^{*,n+1}h^{*,n+1,l})/dt
     !                + (1/2)(div(Q^{*,n+1,l}) + sum(div(h_k^{*,n+1,l}F_k^{*,n+1,l}))
-    !                + (rho Hext)^(*,n+1))
+    !                + (1/2)(rho Hext)^(*,n+1))
     ! for the RHS of the temperature diffusion solve.
     ! Each of these terms may change for each l iteration.
     type(multifab) :: deltaT_rhs2(mla%nlevel)
@@ -165,6 +165,8 @@ contains
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
     integer :: n,nlevs,i,dm,n_cell,k,l
+
+    real(kind=dp_t) :: pres_update_new, pres_update_avg
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -276,8 +278,9 @@ contains
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
        ! update pressure
-       pres_update_old_new = (Sbar_new + Scorrbar_new)/alphabar_new
-       p0_new = p0_old + 0.5d0*dt*(pres_update_old + pres_update_old_new)
+       pres_update_new = (Sbar_new + Scorrbar_new)/alphabar_new
+       pres_update_avg = 0.5d0*(pres_update_old+pres_update_new)
+       p0_new = p0_old + 0.5d0*dt*pres_update_avg
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 2b: Compute the velocity and dynamic pressure using a Stokes solver
@@ -287,7 +290,7 @@ contains
        !                       - deltaalpha_new * (Sbar_new + Scorrbar_new)/alphabar_new
        do n=1,nlevs
           call multifab_copy_c(gmres_rhs_p(n),1,deltaalpha_old(n),1,1,0)
-          call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-pres_update_old_new,1,0)
+          call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-pres_update_new,1,0)
           call multifab_plus_plus_c(gmres_rhs_p(n),1,deltaS_old(n),1,1,0)
           call multifab_plus_plus_c(gmres_rhs_p(n),1,deltaScorr_old(n),1,1,0)
        end do
@@ -338,7 +341,7 @@ contains
           call multifab_saxpy_3(rho_new(n),0.5d0*dt,mass_update_new(n))
        end do
 
-       ! compute rhotot_new = sum(rho_new)
+       ! compute rhotot_new = sum(rho_new) in VALID REGION ONLY
        call compute_rhotot(mla,rho_new,rhotot_new)
 
        ! fill ghost cells
@@ -349,34 +352,36 @@ contains
        end do
 
        ! compute mass fractions in valid region and then fill ghost cells
+       ! then convert back to densities to fill ghost cells
        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
        call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+       call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
        ! compute mole fractions in VALID + GHOST regions
        call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
 
-
-
-
-
-
-
-
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! Step 0d: Advance the enthalpy by iteratively looping over an energy solve
+       ! Step 2d: Advance the enthalpy by iteratively looping over an energy solve
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
        ! The portion of the RHS that stays fixed over all l iterations is:
-       !   (rhoh)^n/dt - div(rhoh*v)^n + (Sbar^n+Scorrbar^n)/alphabar^n  
+       !   (rhoh)^n/dt - (1/2)div(rhoh*v)^n - (1/2)div(rhoh*v)^{*,n+1}
+       !               + (1/2)(Sbar^n+Sbarcorr^n)/alphabar^n 
+       !               + (1/2)(Sbar^{*,n+1}+Sbarcorr^{*,n+1})/alphabar^{*,n+1}
        !               + (1/2)(div(Q^n) + sum(div(h_k^n F_k^n)) + (rho Hext)^n)
-       ! store this in deltaT_rhs1
 
-       ! set deltaT_rhs1 = (rhoh)^n/dt + (Sbar^n+Scorrbar^n)/alphabar^n  
+       ! set deltaT_rhs1 = (rhoh)^n/dt + (1/2)(Sbar^n+Scorrbar^n)/alphabar^n  
+       !                               + (1/2)(Sbar^{*,n+1}+Sbarcorr^{*,n+1})/alphabar^{*,n+1}
        do n=1,nlevs
           call multifab_copy_c(deltaT_rhs1(n),1,rhoh_old(n),1,1,0)
           call multifab_mult_mult_s_c(deltaT_rhs1(n),1,1.d0/dt,1,0)
-          call multifab_plus_plus_s_c(deltaT_rhs1(n),1,(Sbar_old+Scorrbar_old)/alphabar_old,1,0)
+          call multifab_plus_plus_s_c(deltaT_rhs1(n),1,pres_update_avg,1,0)
        end do
+
+
+
+
+
 
        ! compute h
        call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)

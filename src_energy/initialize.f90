@@ -366,7 +366,7 @@ contains
           call multifab_saxpy_5(rho_new(n),1.d0,rho_old(n),dt,mass_update_old(n))
        end do
 
-       ! compute rhotot_new = sum(rho_new)
+       ! compute rhotot_new = sum(rho_new) in VALID REGION ONLY
        call compute_rhotot(mla,rho_new,rhotot_new)
 
        ! fill ghost cells
@@ -377,8 +377,10 @@ contains
        end do
 
        ! compute mass fractions in valid region and then fill ghost cells
+       ! then convert back to densities to fill ghost cells
        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
        call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+       call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
        ! compute mole fractions in VALID + GHOST regions
        call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
