@@ -38,7 +38,7 @@ contains
   ! -If necessary, compute volume discrepancy correction and return to beginning of step
   subroutine initialize(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
                         rhoh_old,rhoh_new,p0_old,p0_new, &
-                        gradp_baro,Temp_old,Temp_new,eta, &
+                        gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
                         mass_update_old,rhoh_update_old,pres_update_old, &
                         dx,dt,time,the_bc_tower)
 
@@ -55,7 +55,8 @@ contains
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: Temp_old(:)
     type(multifab) , intent(inout) :: Temp_new(:)
-    type(multifab) , intent(inout) :: eta(:)
+    type(multifab) , intent(inout) :: eta_old(:)
+    type(multifab) , intent(inout) :: eta_old_ed(:,:) ! nodal (2d); edge-centered (3d)
     ! leaves with div(F^n) - div(rho*v)^n
     type(multifab) , intent(inout) :: mass_update_old(:)   
     ! leaves with [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
@@ -155,6 +156,9 @@ contains
     ! this holds the thermodynamic pressure
     type(multifab) :: Peos(mla%nlevel)
 
+    ! temporary storage for eta so we won't overwrite eta_old
+    type(multifab) :: eta_new(mla%nlevel)
+
     ! for energy implicit solve
     ! doesn't actually do anything for single-level solves
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
@@ -227,6 +231,8 @@ contains
 
        call multifab_build(Peos(n),mla%la(n),1,0)
 
+       call multifab_build(eta_new(n),mla%la(n),1,1)
+
     end do
 
     ! make a copy of the initial velocity
@@ -245,7 +251,14 @@ contains
 
     ! compute initial transport properties
     call ideal_mixture_transport_wrapper(mla,rhotot_old,Temp_old,p0_old,conc,molefrac, &
-                                         eta,lambda,kappa,chi,zeta)
+                                         eta_old,lambda,kappa,chi,zeta)
+
+    ! eta_old on nodes (2d) or edges (3d)
+    if (dm .eq. 2) then
+       call average_cc_to_node(nlevs,eta_old,eta_old_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+    else if (dm .eq. 3) then
+       call average_cc_to_edge(nlevs,eta_old,eta_old_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+    end if
 
     ! compute mass_fluxdiv_old = div(F^n)
     call mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac,chi,zeta, &
@@ -456,7 +469,7 @@ contains
 
           ! compute time-advanced transport properties
           call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp_new,p0_new,conc,molefrac, &
-                                         eta,lambda,kappa,chi,zeta)
+                                               eta_new,lambda,kappa,chi,zeta)
 
           ! compute mass_flux_new = F^{*,n+1,l}
           ! compute mass_fluxdiv_new= div(F^{*,n+1,l})) (not actually needed)
@@ -636,6 +649,7 @@ contains
           call multifab_destroy(rhototinv_fc(n,i))
        end do
        call multifab_destroy(Peos(n))
+       call multifab_destroy(eta_new(n))
     end do
 
   end subroutine initialize
