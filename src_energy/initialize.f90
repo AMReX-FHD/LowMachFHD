@@ -38,7 +38,7 @@ contains
   ! -If necessary, compute volume discrepancy correction and return to beginning of step
   subroutine initialize(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
                         rhoh_old,rhoh_new,p0_old,p0_new, &
-                        gradp_baro,Temp_old,Temp_new, &
+                        gradp_baro,Temp_old,Temp_new,eta, &
                         mass_update_old,rhoh_update_old,pres_update_old, &
                         dx,dt,time,the_bc_tower)
 
@@ -55,6 +55,7 @@ contains
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: Temp_old(:)
     type(multifab) , intent(inout) :: Temp_new(:)
+    type(multifab) , intent(inout) :: eta(:)
     ! leaves with div(F^n) - div(rho*v)^n
     type(multifab) , intent(inout) :: mass_update_old(:)   
     ! leaves with [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
@@ -111,9 +112,6 @@ contains
     ! coefficients for deltaT (energy) solve
     type(multifab) :: cc_solver_alpha(mla%nlevel)
     type(multifab) :: cc_solver_beta (mla%nlevel,mla%dim)
-
-    ! shear viscosity
-    type(multifab) :: eta(mla%nlevel)
 
     ! bulk viscosity
     type(multifab) :: kappa(mla%nlevel)
@@ -203,8 +201,6 @@ contains
        do i=1,dm
           call multifab_build_edge(cc_solver_beta(n,i),mla%la(n),1,0,i)
        end do
-
-       call multifab_build(eta(n),mla%la(n),1,1)
 
        call multifab_build(kappa(n),mla%la(n),1,1)
 
@@ -624,7 +620,6 @@ contains
        do i=1,dm
           call multifab_destroy(cc_solver_beta(n,i))
        end do
-       call multifab_destroy(eta(n))
        call multifab_destroy(kappa(n))
        call multifab_destroy(lambda(n))
        call multifab_destroy(chi(n))
