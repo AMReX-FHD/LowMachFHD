@@ -256,8 +256,10 @@ contains
        call multifab_build(Peos(n),mla%la(n),1,0)
 
        do i=1,dm
-          call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(rhotot_fc_new(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1,1,i)
+          call multifab_build_edge(rhotot_fc_new(n,i),mla%la(n),1,1,i)
+
+          call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
        end do
 
        call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
@@ -377,7 +379,12 @@ contains
 
        ! construct gmres_rhs_v
        ! set gmres_rhs_v to rho^n v^n
-       call convert_m_to_umac(mla,rhotot_fc_old,gmres_rhs_v,umac_old,.false.)
+       call convert_m_to_umac(mla,rhotot_fc_old,mtemp,umac_old,.false.)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
+          end do
+       end do
 
        ! subtract mtemp = rho^{*,n+1} vbar^n from gmres_rhs_v and then multiply by 1/dt
        call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac_new,.false.)
@@ -396,7 +403,7 @@ contains
           end do
        end do
 
-       if (barodiffusion_type .ne. 1) then
+       if (barodiffusion_type .ne. 0) then
           call bl_error("scalar_corrector: barodiffusion not implemented yet")
        end if
 
@@ -477,7 +484,7 @@ contains
           end do
           call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0)
        end do
-       
+
        do n=1,nlevs
           ! presure ghost cells
           call multifab_fill_boundary(pi(n))
@@ -788,6 +795,7 @@ contains
        do i=1,dm
           call multifab_destroy(rhotot_fc_old(n,i))
           call multifab_destroy(rhotot_fc_new(n,i))
+          call multifab_destroy(gmres_rhs_v(n,i))
        end do
        call multifab_destroy(gmres_rhs_p(n))
        do i=1,dm

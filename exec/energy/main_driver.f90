@@ -469,12 +469,17 @@ subroutine main_driver()
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      ! Step 0
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+     print*,'begin initialize'
+
      call initialize(mla,umac_old,rho_old,rho_new, &
                      rhotot_old,rhotot_new, &
                      rhoh_old,rhoh_new,p0_old,p0_new, &
                      gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
                      mass_update_old,rhoh_update_old,pres_update_old, &
                      dx,dt,time,the_bc_tower)
+
+     print*,'end initialize'
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -543,6 +548,8 @@ subroutine main_driver()
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! advance the solution by dt
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+     print*,'start of scalar_corrector'
 
      call scalar_corrector(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
                            rhoh_old,rhoh_new,p0_old,p0_new,pi, &
