@@ -23,6 +23,7 @@ subroutine main_driver()
   use energy_EOS_module
   use init_energy_module
   use initialize_module
+  use scalar_corrector_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -83,6 +84,8 @@ subroutine main_driver()
   ! viscosity needs to persist between predictor/corrector
   type(multifab), allocatable :: eta_old(:)
   type(multifab), allocatable :: eta_old_ed(:,:)
+  type(multifab), allocatable :: eta_new(:)
+  type(multifab), allocatable :: eta_new_ed(:,:)
   logical :: nodal_temp(3)
 
   real(kind=dp_t) :: p0_old, p0_new
@@ -134,12 +137,14 @@ subroutine main_driver()
   allocate(Temp_old(nlevs),Temp_new(nlevs))
   allocate(umac_old(nlevs,dm),umac_new(nlevs,dm),mtemp(nlevs,dm))
   allocate(rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
-  allocate(conc(nlevs),enth(nlevs),eta_old(nlevs))
+  allocate(conc(nlevs),enth(nlevs),eta_old(nlevs),eta_new(nlevs))
   allocate(mass_update_old(nlevs),rhoh_update_old(nlevs))
   if (dm .eq. 2) then
      allocate(eta_old_ed(nlevs,1))
+     allocate(eta_new_ed(nlevs,1))
   else if (dm .eq. 3) then
      allocate(eta_old_ed(nlevs,3))
+     allocate(eta_new_ed(nlevs,3))
   end if
 
   ! set grid spacing at each level
@@ -264,6 +269,7 @@ subroutine main_driver()
         call multifab_build(enth(n),mla%la(n),1       ,ng_s)
 
         call multifab_build(eta_old(n),mla%la(n),1,1)
+        call multifab_build(eta_new(n),mla%la(n),1,1)
 
         call multifab_build(mass_update_old(n),mla%la(n),nspecies,0)
         call multifab_build(rhoh_update_old(n),mla%la(n),1       ,0)
@@ -271,19 +277,23 @@ subroutine main_driver()
         ! eta_old on nodes (2d) or edges (3d)
         if (dm .eq. 2) then
            call multifab_build_nodal(eta_old_ed(n,1),mla%la(n),1,0)
+           call multifab_build_nodal(eta_new_ed(n,1),mla%la(n),1,0)
         else
            nodal_temp(1) = .true.
            nodal_temp(2) = .true.
            nodal_temp(3) = .false.
            call multifab_build(eta_old_ed(n,1),mla%la(n),1,0,nodal_temp)
+           call multifab_build(eta_new_ed(n,1),mla%la(n),1,0,nodal_temp)
            nodal_temp(1) = .true.
            nodal_temp(2) = .false.
            nodal_temp(3) = .true.
            call multifab_build(eta_old_ed(n,2),mla%la(n),1,0,nodal_temp)
+           call multifab_build(eta_new_ed(n,2),mla%la(n),1,0,nodal_temp)
            nodal_temp(1) = .false.
            nodal_temp(2) = .true.
            nodal_temp(3) = .true.
            call multifab_build(eta_old_ed(n,3),mla%la(n),1,0,nodal_temp)
+           call multifab_build(eta_new_ed(n,3),mla%la(n),1,0,nodal_temp)
         end if
      
      end do
@@ -534,7 +544,15 @@ subroutine main_driver()
       ! advance the solution by dt
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!     call scalar_corrector()
+     call scalar_corrector(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
+                           rhoh_old,rhoh_new,p0_old,p0_new,pi, &
+                           gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
+                           eta_new,eta_new_ed, &
+                           mass_update_old,rhoh_update_old,pres_update_old, &
+                           dx,dt,time,the_bc_tower)
+
+     print*,'end of scalar_corrector'
+     stop
 
       time = time + dt
 
@@ -636,6 +654,7 @@ subroutine main_driver()
      call multifab_destroy(conc(n))
      call multifab_destroy(enth(n))
      call multifab_destroy(eta_old(n))
+     call multifab_destroy(eta_new(n))
      call multifab_destroy(mass_update_old(n))
      call multifab_destroy(rhoh_update_old(n))
      do i=1,dm
@@ -647,6 +666,7 @@ subroutine main_driver()
      end do
      do i=1,size(eta_old_ed,dim=2)
         call multifab_destroy(eta_old_ed(n,i))
+        call multifab_destroy(eta_new_ed(n,i))
      end do
   end do
   deallocate(lo,hi,dx)
@@ -656,6 +676,7 @@ subroutine main_driver()
   deallocate(umac_old,umac_new,mtemp)
   deallocate(rhotot_fc,gradp_baro)
   deallocate(conc,enth,eta_old,eta_old_ed)
+  deallocate(eta_new,eta_new_ed)
   deallocate(mass_update_old,rhoh_update_old)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)

@@ -21,6 +21,8 @@ module scalar_corrector_module
   use mk_grav_force_module
   use mass_flux_utilities_module
   use multifab_physbc_stag_module
+  use gmres_module
+  use diffusive_m_fluxdiv_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: n_cells, grav, barodiffusion_type
 
@@ -43,6 +45,7 @@ contains
   subroutine scalar_corrector(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
                               rhoh_old,rhoh_new,p0_old,p0_new,pi, &
                               gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
+                              eta_new,eta_new_ed, &
                               mass_update_old,rhoh_update_old,pres_update_old, &
                               dx,dt,time,the_bc_tower)
 
@@ -64,6 +67,8 @@ contains
     ! enters with eta^n
     type(multifab) , intent(inout) :: eta_old(:)
     type(multifab) , intent(inout) :: eta_old_ed(:,:) ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(inout) :: eta_new(:)
+    type(multifab) , intent(inout) :: eta_new_ed(:,:) ! nodal (2d); edge-centered (3d)
     ! enters with div(F^n) - div(rho*v)^n
     type(multifab) , intent(inout) :: mass_update_old(:)
     ! enters with [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
@@ -164,9 +169,6 @@ contains
     ! this holds the thermodynamic pressure
     type(multifab) :: Peos(mla%nlevel)
 
-    ! temporary storage for eta so we won't overwrite eta_old
-    type(multifab) :: eta_new(mla%nlevel)
-
     ! coefficient for projection, also used to average rho*h to faces
     type(multifab) :: rhotot_fc_old(mla%nlevel,mla%dim)
     type(multifab) :: rhotot_fc_new(mla%nlevel,mla%dim)
@@ -179,12 +181,11 @@ contains
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
 
-    ! coefficients for Stokes solver
-    type(multifab) :: gmres_alpha(mla%nlevel,mla%dim)
-    type(multifab) :: gmres_beta(mla%nlevel,mla%dim)
-
     ! stores grad(pi)
     type(multifab) :: gradpi(mla%nlevel,mla%dim)
+
+    ! temporary storage for A_0(u)
+    type(multifab) :: m_d_fluxdiv(mla%nlevel,mla%dim)
 
     ! for stokes solver - will/can be passed in
     type(multifab) :: dumac(mla%nlevel,mla%dim)
@@ -192,7 +193,6 @@ contains
 
     integer :: n,nlevs,i,dm,n_cell,k,l
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs
-    logical :: nodal_temp(3)
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -255,8 +255,6 @@ contains
 
        call multifab_build(Peos(n),mla%la(n),1,0)
 
-       call multifab_build(eta_new(n),mla%la(n),1,1)
-
        do i=1,dm
           call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(rhotot_fc_new(n,i),mla%la(n),1,0,i)
@@ -264,8 +262,8 @@ contains
 
        call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
        do i=1,dm
-          call multifab_build_edge(gmres_beta(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(gradpi(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(m_d_fluxdiv(n,i),mla%la(n),1,0,i)
        end do
 
        call multifab_build(dpi(n),mla%la(n),1,1)
@@ -288,10 +286,10 @@ contains
 
     ! eta^{*,n+1} on nodes (2d) or edges (3d)
     if (dm .eq. 2) then
-       call average_cc_to_node(nlevs,eta_old,eta_old_ed(:,1),1,tran_bc_comp,1, &
+       call average_cc_to_node(nlevs,eta_new,eta_new_ed(:,1),1,tran_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
     else if (dm .eq. 3) then
-       call average_cc_to_edge(nlevs,eta_old,eta_old_ed,1,tran_bc_comp,1, &
+       call average_cc_to_edge(nlevs,eta_new,eta_new_ed,1,tran_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
     end if
 
@@ -408,12 +406,32 @@ contains
                                 the_bc_tower%bc_tower_array)
 
        ! add (1/2) A_0^n v^n to gmres_rhs_v
-
-
+       do n=1,nlevs
+          do i=1,dm
+             call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
+          end do
+       end do
+       call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac_old,eta_old,eta_old_ed,kappa,dx, &
+                                the_bc_tower%bc_tower_array)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,m_d_fluxdiv(n,i))
+          end do
+       end do
 
        ! add (1/2) A_0^{*,n+1} vbar^n to gmres_rhs_v
-
-
+       do n=1,nlevs
+          do i=1,dm
+             call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
+          end do
+       end do
+       call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac_new,eta_new,eta_new_ed,kappa,dx, &
+                                the_bc_tower%bc_tower_array)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,m_d_fluxdiv(n,i))
+          end do
+       end do
 
        ! add (1/2)(rho^n + rho^{*,n+1})g to gmres_rhs_v
        if (any(grav(1:dm) .ne. 0.d0)) then
@@ -429,27 +447,26 @@ contains
        end do
 
        ! multiply eta^{*,n+1} and kappa by 1/2 to put in proper form for gmres solve
-!       do n=1,nlevs
-!          call multifab_mult_mult_s_c(eta_new(n)  ,1,1.d0/2.d0,1,eta(n)%ng)
-!          call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,kappa(n)%ng)
-!          do i=1,size(eta_ed,dim=2)
-!             call multifab_mult_mult_s_c(eta_new_ed(n,i),1,1.d0/2.d0,1,eta_new_ed(n,i)%ng)
-!          end do
-!       end do
-
+       do n=1,nlevs
+          call multifab_mult_mult_s_c(eta_new(n),1,1.d0/2.d0,1,eta_new(n)%ng)
+          call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,kappa(n)%ng)
+          do i=1,size(eta_new_ed,dim=2)
+             call multifab_mult_mult_s_c(eta_new_ed(n,i),1,1.d0/2.d0,1,eta_new_ed(n,i)%ng)
+          end do
+       end do
 
        ! call the Stokes solver
-!       call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
-!                  eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
+       call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
+                  eta_new,eta_new_ed,kappa,theta_alpha,norm_pre_rhs)
 
        ! restore eta and kappa
-!       do n=1,nlevs
-!          call multifab_mult_mult_s_c(eta_new(n),1,2.d0,1,eta(n)%ng)
-!          call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
-!          do i=1,size(eta_ed,dim=2)
-!             call multifab_mult_mult_s_c(eta_new_ed(n,i),1,2.d0,1,eta_new_ed(n,i)%ng)
-!          end do
-!       end do
+       do n=1,nlevs
+          call multifab_mult_mult_s_c(eta_new(n),1,2.d0,1,eta_new(n)%ng)
+          call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
+          do i=1,size(eta_new_ed,dim=2)
+             call multifab_mult_mult_s_c(eta_new_ed(n,i),1,2.d0,1,eta_new_ed(n,i)%ng)
+          end do
+       end do
 
        ! increment velocity and dynamic pressure
        ! compute v^{*,n+1} = v^n + dumac
@@ -768,15 +785,14 @@ contains
        call multifab_destroy(alpha_new(n))
        call multifab_destroy(deltaalpha_new(n))
        call multifab_destroy(Peos(n))
-       call multifab_destroy(eta_new(n))
        do i=1,dm
           call multifab_destroy(rhotot_fc_old(n,i))
           call multifab_destroy(rhotot_fc_new(n,i))
        end do
        call multifab_destroy(gmres_rhs_p(n))
        do i=1,dm
-          call multifab_destroy(gmres_beta(n,i))
           call multifab_destroy(gradpi(n,i))
+          call multifab_destroy(m_d_fluxdiv(n,i))
        end do
        call multifab_destroy(dpi(n))
        do i=1,dm

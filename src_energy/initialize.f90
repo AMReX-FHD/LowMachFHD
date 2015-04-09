@@ -577,25 +577,25 @@ contains
        do n=1,nlevs
           call multifab_sub_sub_s_c(Peos(n),1,p0_new,1,0)
 
-          if (k .eq. 1) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift1")
-          else if (k .eq. 2) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift2")
-          else if (k .eq. 3) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift3")
-          else if (k .eq. 4) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift4")
-          else if (k .eq. 5) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift5")
-          else if (k .eq. 6) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift6")
-          else if (k .eq. 7) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift7")
-          else if (k .eq. 8) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift8")
-          else if (k .eq. 9) then
-             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift9")
-          end if
+!          if (k .eq. 1) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift1")
+!          else if (k .eq. 2) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift2")
+!          else if (k .eq. 3) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift3")
+!          else if (k .eq. 4) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift4")
+!          else if (k .eq. 5) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift5")
+!          else if (k .eq. 6) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift6")
+!          else if (k .eq. 7) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift7")
+!          else if (k .eq. 8) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift8")
+!          else if (k .eq. 9) then
+!             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift9")
+!          end if
 
           call multifab_mult_mult_s_c(Peos(n),1,1.d0/dt,1,0)
           call multifab_mult_mult_c(Peos(n),1,alpha_new(n),1,1,0)
