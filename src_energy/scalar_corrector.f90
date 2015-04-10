@@ -408,7 +408,7 @@ contains
        ! FIXME: umac_old will need vbar boundary conditions
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(umac_new(n,i),1,umac_old(n,i),1,1,0)
+             call multifab_copy_c(umac_new(n,i),1,umac_old(n,i),1,1,umac_new(n,i)%ng)
           end do
        end do
 
