@@ -91,6 +91,7 @@ contains
 
     ! this will hold div(F_k)
     type(multifab) :: mass_fluxdiv_new(mla%nlevel)
+    type(multifab) :: mass_fluxdiv_tmp(mla%nlevel)
 
     ! this will hold div(Q) + sum(div(hk*Fk)) + rho*Hext
     type(multifab) :: rhoh_fluxdiv_new(mla%nlevel)
@@ -220,6 +221,7 @@ contains
           call multifab_build_edge(mass_flux_new(n,i),mla%la(n),nspecies,0,i)
        end do
        call multifab_build(mass_fluxdiv_new(n),mla%la(n),nspecies,0)
+       call multifab_build(mass_fluxdiv_tmp(n),mla%la(n),nspecies,0)
        call multifab_build(rhoh_fluxdiv_new(n),mla%la(n),1,0)
 
        call multifab_build(mass_update_new(n),mla%la(n),nspecies,0)
@@ -569,7 +571,6 @@ contains
           call multifab_saxpy_5(rho_new(n),1.d0,rho_old(n),0.5d0*dt,mass_update_old(n))
           call multifab_saxpy_3(rho_new(n),0.5d0*dt,mass_update_new(n))
        end do
-
        ! compute rhotot_new = sum(rho_new) in VALID REGION ONLY
        call compute_rhotot(mla,rho_new,rhotot_new)
 
@@ -654,9 +655,9 @@ contains
                                                eta,lambda,kappa,chi,zeta)
 
           ! compute mass_flux_new = F^{n+1,l}
-          ! compute mass_fluxdiv_new = div(F^{n+1,l}) (not actually needed)
+          ! compute mass_fluxdiv_tmp = div(F^{n+1,l}) (not actually needed)
           call mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac,chi,zeta, &
-                                   gradp_baro,Temp_new,mass_fluxdiv_new,mass_flux_new,dx,the_bc_tower)
+                                   gradp_baro,Temp_new,mass_fluxdiv_tmp,mass_flux_new,dx,the_bc_tower)
 
           ! compute rhoh_fluxdiv_new = div(Q)^{n+1,l} + sum(div(hk*Fk))^{n+1,l} + rho*Hext^{n+1,l}
           call rhoh_fluxdiv_energy(mla,lambda,Temp_new,mass_flux_new,rhotot_new,rhoh_fluxdiv_new, &
@@ -796,6 +797,7 @@ contains
           call multifab_destroy(mass_flux_new(n,i))
        end do
        call multifab_destroy(mass_fluxdiv_new(n))
+       call multifab_destroy(mass_fluxdiv_tmp(n))
        call multifab_destroy(rhoh_fluxdiv_new(n))
        call multifab_destroy(mass_update_new(n))
        call multifab_destroy(rhoh_update_new(n))
