@@ -108,6 +108,10 @@ contains
     type(multifab) :: rho_fc_new(mla%nlevel,mla%dim)
     type(multifab) :: rhoh_fc_new(mla%nlevel,mla%dim)
 
+    ! temporary storage for enthalpy and temprature
+    type(multifab) :: enth_tmp(mla%nlevel)
+    type(multifab) :: Temp_tmp(mla%nlevel)
+
     ! temporary storage for momentum
     type(multifab) :: mtemp(mla%nlevel,mla%dim)
 
@@ -136,6 +140,9 @@ contains
     ! coefficients for deltaT (energy) solve
     type(multifab) :: cc_solver_alpha(mla%nlevel)
     type(multifab) :: cc_solver_beta (mla%nlevel,mla%dim)
+
+    ! temporary storage for viscosity
+    type(multifab) :: eta(mla%nlevel)
 
     ! bulk viscosity
     type(multifab) :: kappa(mla%nlevel)
@@ -181,6 +188,9 @@ contains
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
 
+    ! temporary copy of incomping pi
+    type(multifab) :: pi_tmp(mla%nlevel)
+    
     ! stores grad(pi)
     type(multifab) :: gradpi(mla%nlevel,mla%dim)
 
@@ -224,6 +234,9 @@ contains
           call multifab_build_edge(mtemp(n,i),mla%la(n),1,1,i)
        end do
 
+       call multifab_build(enth_tmp(n),mla%la(n),1,rhoh_new(n)%ng)
+       call multifab_build(Temp_tmp(n),mla%la(n),1,Temp_new(n)%ng)
+
        call multifab_build(deltaT_rhs1(n),mla%la(n),1,0)
        call multifab_build(deltaT_rhs2(n),mla%la(n),1,0)
 
@@ -236,6 +249,8 @@ contains
        do i=1,dm
           call multifab_build_edge(cc_solver_beta(n,i),mla%la(n),1,0,i)
        end do
+
+       call multifab_build(eta(n),mla%la(n),1,1)
 
        call multifab_build(kappa(n),mla%la(n),1,1)
 
@@ -262,6 +277,8 @@ contains
           call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
        end do
 
+       call multifab_build(pi_tmp(n),mla%la(n),1,1)
+
        call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(gradpi(n,i),mla%la(n),1,0,i)
@@ -273,6 +290,12 @@ contains
           call multifab_build_edge(dumac(n,i),mla%la(n),1,1,i)
        end do
 
+    end do
+
+    ! temporary copies
+    do n=1,nlevs
+       call multifab_copy_c(pi_tmp(n),1,pi(n),1,1,1)
+       call multifab_copy_c(Temp_tmp(n),1,Temp_new(n),1,1,Temp_tmp(n)%ng)
     end do
 
     ! compute mass fractions in valid region and then fill ghost cells
@@ -336,6 +359,21 @@ contains
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,1, &
                             the_bc_tower%bc_tower_array)
 
+    ! compute h^{*,n+1} and fill ghost cells
+    call convert_rhoh_to_h(mla,rhoh_new,rhotot_new,enth,.true.)
+    call fill_h_ghost_cells(mla,enth,dx,the_bc_tower)
+
+    ! average h^{*,n+1} to faces
+    call average_cc_to_face(nlevs,enth,rhoh_fc_new,1,h_bc_comp,1, &
+                            the_bc_tower%bc_tower_array)
+
+    ! multiply h^{*,n+1} on faces by rhotot^{*,n+1} on faces
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_c(rhoh_fc_new(n,i),1,rhotot_fc_new(n,i),1,1,0)
+       end do
+    end do
+
     ! begin loop here over Steps 1a-1e
     do k=1,dpdt_iters
 
@@ -393,6 +431,11 @@ contains
              call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
              call multifab_mult_mult_s_c(gmres_rhs_v(n,i),1,1.d0/dt,1,0)
           end do
+       end do
+
+       ! reset pi back to pi^n
+       do n=1,nlevs
+          call multifab_copy_c(pi(n),1,pi_tmp(n),1,1,1)
        end do
 
        ! subtract grad(pi^n) from gmres_rhs_v
@@ -504,7 +547,6 @@ contains
           end do
        end do
 
-
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 2c: Advance the densities using trapezoidal advective and diffusive fluxes
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -564,21 +606,6 @@ contains
        ! rhoh_update_new is a temporary that will hold 
        !   -(1/2)[div(rhoh*v) + (Sbar+Scorrbar)/alphabar]^{*,n+1}
 
-       ! compute h^{*,n+1} and fill ghost cells
-       call convert_rhoh_to_h(mla,rhoh_new,rhotot_old,enth,.true.)
-       call fill_h_ghost_cells(mla,enth,dx,the_bc_tower)
-
-       ! average h^{*,n+1} to faces
-       call average_cc_to_face(nlevs,enth,rhoh_fc_new,1,h_bc_comp,1, &
-                               the_bc_tower%bc_tower_array)
-
-       ! multiply h^{*,n+1} on faces by rhotot^{*,n+1} on faces
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_c(rhoh_fc_new(n,i),1,rhotot_fc_new(n,i),1,1,0)
-          end do
-       end do
-
        ! set rhoh_update_new to [Sbar+Scorrbar)/alphabar]^{*,n+1}
        do n=1,nlevs
           call multifab_setval(rhoh_update_new(n),pres_update_new,all=.true.)
@@ -604,8 +631,12 @@ contains
           call multifab_saxpy_3(deltaT_rhs1(n),0.5d0,rhoh_update_old(n))
        end do
 
+       ! reset Temp_new back to T^{*,n+1}
+       do n=1,nlevs
+          call multifab_copy_c(Temp_new(n),1,Temp_tmp(n),1,1,Temp_tmp(n)%ng)
+       end do
+
        ! set rhoh_new = rho^{n+1} h^{n+1,l} = rho^{n+1} h^{*,n+1}
-       ! Note: Temp_new already contains T^{*,n+1}
        do n=1,nlevs
           call multifab_copy_c(rhoh_new(n),1,enth(n),1,1,rhoh_new(n)%ng)
           call multifab_mult_mult_c(rhoh_new(n),1,rhotot_new(n),1,1,rhoh_new(n)%ng)
@@ -618,8 +649,9 @@ contains
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
           ! compute t^{n+1,l} transport properties
+          ! don't overwrite eta_new since that is needed at the beginning of the next dpdt_iter
           call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp_new,p0_new,conc,molefrac, &
-                                               eta_new,lambda,kappa,chi,zeta)
+                                               eta,lambda,kappa,chi,zeta)
 
           ! compute mass_flux_new = F^{n+1,l}
           ! compute mass_fluxdiv_new = div(F^{n+1,l}) (not actually needed)
@@ -705,8 +737,8 @@ contains
           end do
 
           ! h^{n+1,l+1} = h(rho^{n+1},w^{n+1},T^{n+1,l+1})
-          call compute_h(mla,Temp_new,enth,conc)
-          call convert_rhoh_to_h(mla,rhoh_new,rhotot_new,enth,.false.)
+          call compute_h(mla,Temp_new,enth_tmp,conc)
+          call convert_rhoh_to_h(mla,rhoh_new,rhotot_new,enth_tmp,.false.)
 
        end do ! end loop l over deltaT iterations
 
@@ -773,6 +805,7 @@ contains
           call multifab_destroy(rhoh_fc_new(n,i))
           call multifab_destroy(mtemp(n,i))
        end do
+       call multifab_destroy(enth_tmp(n))
        call multifab_destroy(deltaT_rhs1(n))
        call multifab_destroy(deltaT_rhs2(n))
        call multifab_destroy(conc(n))
@@ -782,6 +815,7 @@ contains
        do i=1,dm
           call multifab_destroy(cc_solver_beta(n,i))
        end do
+       call multifab_destroy(eta(n))
        call multifab_destroy(kappa(n))
        call multifab_destroy(lambda(n))
        call multifab_destroy(chi(n))
@@ -797,6 +831,7 @@ contains
           call multifab_destroy(rhotot_fc_new(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
        end do
+       call multifab_destroy(pi_tmp(n))
        call multifab_destroy(gmres_rhs_p(n))
        do i=1,dm
           call multifab_destroy(gradpi(n,i))
