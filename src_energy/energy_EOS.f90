@@ -388,7 +388,9 @@ contains
 
     molmix = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       ! AJN HACK - CHANGING UNITS TO BE COMPATIBLE WITH compute_S
+!       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       molmix = molmix + Yk(ns)/molmass(ns)
     enddo
     molmix = 1.0d0/molmix
 
