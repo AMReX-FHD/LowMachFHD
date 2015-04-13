@@ -421,6 +421,14 @@ subroutine main_driver()
      ! compute grad p for barodiffusion
      call compute_grad(mla,pi,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
+  else
+
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_setval(gradp_baro(n,i),0.d0,all=.true.)
+        end do
+     end do
+
   end if
 
   if (restart .lt. 0) then
