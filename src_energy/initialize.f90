@@ -40,6 +40,7 @@ contains
                         rhoh_old,rhoh_new,p0_old,p0_new, &
                         gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
                         mass_update_old,rhoh_update_old,pres_update_old, &
+                        Scorr_old,Scorrbar_old,deltaScorr_old, &
                         dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -63,6 +64,13 @@ contains
     type(multifab) , intent(inout) :: rhoh_update_old(:)
     ! leaves with (Sbar^n + Scorrbar^n) / alphabar^n
     real(kind=dp_t), intent(inout) :: pres_update_old
+    ! volume discrepancy correction
+    ! Scorr_old = Scorrbar_old + deltaScorr_old
+    type(multifab) , intent(inout) :: Scorr_old(mla%nlevel)
+    real(kind=dp_t), intent(inout) :: Scorrbar_old
+    type(multifab) , intent(inout) :: deltaScorr_old(mla%nlevel)
+
+
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -130,12 +138,6 @@ contains
     ! S_old = Sbar_old + deltaS_old
     real(kind=dp_t) :: Sbar_old
     type(multifab)  :: deltaS_old(mla%nlevel)
-
-    ! volume discrepancy correction
-    ! Scorr_old = Scorrbar_old + deltaScorr_old
-    type(multifab)  :: Scorr_old(mla%nlevel)
-    real(kind=dp_t) :: Scorrbar_old
-    type(multifab)  :: deltaScorr_old(mla%nlevel)
 
     ! coefficient multiplying dP_0/dt in constraint at old-time
     ! alpha_old = alphabar_old + deltaalpha_old
@@ -215,9 +217,6 @@ contains
        call multifab_build(zeta(n),mla%la(n),nspecies,1)
 
        call multifab_build(deltaS_old(n),mla%la(n),1,0)
-
-       call multifab_build(     Scorr_old(n),mla%la(n),1,0)
-       call multifab_build(deltaScorr_old(n),mla%la(n),1,0)
 
        call multifab_build(     alpha_new(n),mla%la(n),1,0)
        call multifab_build(deltaalpha_old(n),mla%la(n),1,0)
@@ -640,8 +639,6 @@ contains
        call multifab_destroy(chi(n))
        call multifab_destroy(zeta(n))
        call multifab_destroy(deltaS_old(n))
-       call multifab_destroy(Scorr_old(n))
-       call multifab_destroy(deltaScorr_old(n))
        call multifab_destroy(alpha_new(n))
        call multifab_destroy(deltaalpha_old(n))
        call multifab_destroy(Sproj(n))

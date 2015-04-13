@@ -81,6 +81,12 @@ subroutine main_driver()
   type(multifab), allocatable :: conc(:)
   type(multifab), allocatable :: enth(:)
 
+  ! volume discrepancy correction
+  ! Scorr_old = Scorrbar_old + deltaScorr_old
+  type(multifab), allocatable :: Scorr_old(:)
+  real(kind=dp_t)             :: Scorrbar_old
+  type(multifab), allocatable :: deltaScorr_old(:)
+
   ! viscosity needs to persist between predictor/corrector
   type(multifab), allocatable :: eta_old(:)
   type(multifab), allocatable :: eta_old_ed(:,:)
@@ -138,6 +144,7 @@ subroutine main_driver()
   allocate(umac_old(nlevs,dm),umac_new(nlevs,dm),mtemp(nlevs,dm))
   allocate(rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(conc(nlevs),enth(nlevs),eta_old(nlevs),eta_new(nlevs))
+  allocate(Scorr_old(nlevs),deltaScorr_old(nlevs))
   allocate(mass_update_old(nlevs),rhoh_update_old(nlevs))
   if (dm .eq. 2) then
      allocate(eta_old_ed(nlevs,1))
@@ -267,6 +274,9 @@ subroutine main_driver()
 
         call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
         call multifab_build(enth(n),mla%la(n),1       ,ng_s)
+
+        call multifab_build(     Scorr_old(n),mla%la(n),1,0)
+        call multifab_build(deltaScorr_old(n),mla%la(n),1,0)
 
         call multifab_build(eta_old(n),mla%la(n),1,1)
         call multifab_build(eta_new(n),mla%la(n),1,1)
@@ -477,6 +487,7 @@ subroutine main_driver()
                      rhoh_old,rhoh_new,p0_old,p0_new, &
                      gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
                      mass_update_old,rhoh_update_old,pres_update_old, &
+                     Scorr_old,Scorrbar_old,deltaScorr_old, &
                      dx,dt,time,the_bc_tower)
 
      print*,'end initialize'
@@ -556,6 +567,7 @@ subroutine main_driver()
                            gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
                            eta_new,eta_new_ed, &
                            mass_update_old,rhoh_update_old,pres_update_old, &
+                           Scorr_old,Scorrbar_old,deltaScorr_old, &
                            dx,dt,time,the_bc_tower)
 
      print*,'end of scalar_corrector'
@@ -660,6 +672,8 @@ subroutine main_driver()
      call multifab_destroy(pi(n))
      call multifab_destroy(conc(n))
      call multifab_destroy(enth(n))
+     call multifab_destroy(Scorr_old(n))
+     call multifab_destroy(deltaScorr_old(n))
      call multifab_destroy(eta_old(n))
      call multifab_destroy(eta_new(n))
      call multifab_destroy(mass_update_old(n))
@@ -683,6 +697,7 @@ subroutine main_driver()
   deallocate(umac_old,umac_new,mtemp)
   deallocate(rhotot_fc,gradp_baro)
   deallocate(conc,enth,eta_old,eta_old_ed)
+  deallocate(Scorr_old,deltaScorr_old)
   deallocate(eta_new,eta_new_ed)
   deallocate(mass_update_old,rhoh_update_old)
   call destroy(mla)

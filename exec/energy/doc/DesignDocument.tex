@@ -513,9 +513,14 @@ $S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
 $S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
 We loop over the following until the convergence criteria in {\bf Step 1e} is met:\\
 \begin{itemize}
-\item {\bf Step 1a:} Compute a pressure update:
+\item {\bf Step 1a:} Compute a pressure update.  First,
+compute a volume discrepancy correction,
 \begin{equation}
-P_0^{*,n+1} = P_0^n + \Delta t\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right)
+S_{\rm corr}^n = S_{\rm corr}^n + \alpha^{n}\left(\frac{P_{\rm EOS}^n - P_0^n}{\Delta t}\right),
+\end{equation}
+and split this into average and perturbational components.  Then, update the pressure:
+\begin{equation}
+P_0^{*,n+1} = P_0^n + \Delta t\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right).
 \end{equation}
 \item {\bf Step 1b:} Compute the velocity, $\vb^n$, and dynamic pressure, $\pi^n$,
 using a GMRES solver for the Stokes system:
@@ -607,7 +612,8 @@ of a velocity field, $\vb^{*,n+1}$, that preserves this thermodynamic balance.
 We compute $(S,\alpha)^{*,n+1}$ and decompose them
 into average and perturbational components.
 We set the volume discrepancy correction to the value
-$S_{\rm corr}^{*,n+1} = S_{\rm corr}^n$ and compute its decomposition.
+$S_{\rm corr}^{*,n+1} = S_{\rm corr}^n$ and compute its decomposition
+(Note: I observe less drift using $S_{\rm corr}^{*,n+1} = 0$, keep a watch on this).
 We loop over the following until the convergence criteria in {\bf Step 2e} is met:\\
 \begin{itemize}
 \item {\bf Step 2a:} Compute a pressure update:

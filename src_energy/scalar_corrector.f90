@@ -47,6 +47,7 @@ contains
                               gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
                               eta_new,eta_new_ed, &
                               mass_update_old,rhoh_update_old,pres_update_old, &
+                              Scorr_old,Scorrbar_old,deltaScorr_old, &
                               dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -75,6 +76,11 @@ contains
     type(multifab) , intent(inout) :: rhoh_update_old(:)
     ! enters with (Sbar^n + Scorrbar^n) / alphabar^n
     real(kind=dp_t), intent(in   ) :: pres_update_old
+    ! volume discrepancy correction
+    ! Scorr_old = Scorrbar_old + deltaScorr_old
+    type(multifab) , intent(in   ) :: Scorr_old(mla%nlevel)
+    real(kind=dp_t), intent(in   ) :: Scorrbar_old
+    type(multifab) , intent(in   ) :: deltaScorr_old(mla%nlevel)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -342,11 +348,11 @@ contains
        call multifab_sub_sub_s_c(deltaalpha_new(n),1,alphabar_new,1,0)
     end do
 
-    ! zero out volume discrepancy correction and its decomposition
-    Scorrbar_new = 0.d0
+    ! set S_corr^{*,n+1} = S_corr^n
+    Scorrbar_new = Scorrbar_old
     do n=1,nlevs
-       call multifab_setval(Scorr_new(n)     ,0.d0,all=.true.)
-       call multifab_setval(deltaScorr_new(n),0.d0,all=.true.)
+       call multifab_copy_c(Scorr_new(n),1,Scorr_old(n),1,1,0)
+       call multifab_copy_c(deltaScorr_new(n),1,deltaScorr_old(n),1,1,0)
     end do
 
     ! set rho_fc_new to rho^{*,n+1} on faces
@@ -776,6 +782,7 @@ contains
 !             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift8")
 !          else if (k .eq. 9) then
 !             call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift9")
+!             stop
 !          end if
 
           call multifab_mult_mult_s_c(Peos(n),1,2.d0/dt,1,0)
