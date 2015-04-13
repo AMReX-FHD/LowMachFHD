@@ -244,8 +244,9 @@ contains
        call multifab_build(dpi(n),mla%la(n),1,1)
     end do
 
-    ! make a copy of the initial velocity
+    ! temporary copies
     do n=1,nlevs
+       call multifab_copy_c(pi_tmp(n),1,pi(n),1,1,1)
        do i=1,dm
           call multifab_copy_c(umac_tmp(n,i),1,umac_old(n,i),1,1,1)
        end do
@@ -327,6 +328,9 @@ contains
        end do
     end do
 
+    ! compute grad(pi^{n-1})
+    call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
     ! begin loop here over Steps 0a-0e
     do k=1,dpdt_iters
 
@@ -348,6 +352,25 @@ contains
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 1b: Compute the velocity field and dynamic pressure using a Stokes solver
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+       ! reset pi back to pi^{n-1}
+       do n=1,nlevs
+          call multifab_copy_c(pi(n),1,pi_tmp(n),1,1,1)
+       end do
+
+       ! subtract grad(pi^{n-1}) from gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradpi(n,i),1,1,0)
+          end do
+       end do
+
+       if (barodiffusion_type .ne. 0) then
+          call bl_error("scalar_corrector: barodiffusion not implemented yet")
+       end if
 
 
 

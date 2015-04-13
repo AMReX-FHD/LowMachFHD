@@ -361,6 +361,9 @@ contains
        end do
     end do
 
+    ! compute grad(pi^n)
+    call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
     ! begin loop here over Steps 1a-1e
     do k=1,dpdt_iters
 
@@ -426,7 +429,6 @@ contains
        end do
 
        ! subtract grad(pi^n) from gmres_rhs_v
-       call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
              call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradpi(n,i),1,1,0)
