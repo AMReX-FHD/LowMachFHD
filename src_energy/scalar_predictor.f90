@@ -152,10 +152,6 @@ contains
     ! coefficient multiplying dP_0/dt in volume discrepancy correction at new-time
     type(multifab)  :: alpha_new(mla%nlevel)
 
-    ! the RHS for the projection
-    type(multifab) :: Sproj(mla%nlevel)
-    ! solution of the pressure-projection solve
-    type(multifab) :: phi(mla%nlevel)
     ! coefficient for projection, also used to average rho*h to faces
     type(multifab) :: rhotot_fc_old(mla%nlevel,mla%dim)
     type(multifab) :: rhototinv_fc_old(mla%nlevel,mla%dim)
@@ -169,6 +165,23 @@ contains
     ! for energy implicit solve
     ! doesn't actually do anything for single-level solves
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
+
+    ! RHS for the Stokes solver
+    type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
+    type(multifab) :: gmres_rhs_p(mla%nlevel)
+
+    ! temporary copy of incomping pi
+    type(multifab) :: pi_tmp(mla%nlevel)
+    
+    ! stores grad(pi)
+    type(multifab) :: gradpi(mla%nlevel,mla%dim)
+
+    ! temporary storage for A_0(u)
+    type(multifab) :: m_d_fluxdiv(mla%nlevel,mla%dim)
+
+    ! for stokes solver - will/can be passed in
+    type(multifab) :: dumac(mla%nlevel,mla%dim)
+    type(multifab) :: dpi(mla%nlevel)
 
     integer :: n,nlevs,i,dm,n_cell,k,l
 
@@ -189,54 +202,46 @@ contains
        end do
        call multifab_build(mass_fluxdiv_old(n),mla%la(n),nspecies,0)
        call multifab_build(mass_fluxdiv_new(n),mla%la(n),nspecies,0)
-
        call multifab_build(rhoh_fluxdiv_old(n),mla%la(n),1,0)
        call multifab_build(rhoh_fluxdiv_new(n),mla%la(n),1,0)
-
        call multifab_build(enth(n),mla%la(n),1,rho_old(n)%ng)
-
        do i=1,dm
           call multifab_build_edge(rho_fc_old(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(rhoh_fc_old(n,i),mla%la(n),1,0,i)
        end do
-
        call multifab_build(deltaT_rhs1(n),mla%la(n),1,0)
        call multifab_build(deltaT_rhs2(n),mla%la(n),1,0)
-
        call multifab_build(    conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(molefrac(n),mla%la(n),nspecies,rho_old(n)%ng)
-
        call multifab_build(deltaT(n),mla%la(n),1,1)
-
        call multifab_build(cc_solver_alpha(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(cc_solver_beta(n,i),mla%la(n),1,0,i)
        end do
-
        call multifab_build(kappa(n),mla%la(n),1,1)
-
        call multifab_build(lambda(n),mla%la(n),1,2)
-
        call multifab_build(chi(n),mla%la(n),nspecies**2,1)
-
        call multifab_build(zeta(n),mla%la(n),nspecies,1)
-
        call multifab_build(deltaS_old(n),mla%la(n),1,0)
-
-       call multifab_build(     alpha_new(n),mla%la(n),1,0)
        call multifab_build(deltaalpha_old(n),mla%la(n),1,0)
-
-       call multifab_build(Sproj(n),mla%la(n),1,0)
-       call multifab_build(phi(n),mla%la(n),1,1)
+       call multifab_build(     alpha_new(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(   rhotot_fc_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(rhototinv_fc_old(n,i),mla%la(n),1,0,i)
        end do
-
        call multifab_build(Peos(n),mla%la(n),1,0)
-
        call multifab_build(eta_new(n),mla%la(n),1,1)
-
+       do i=1,dm
+          call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
+       end do
+       call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
+       call multifab_build(pi_tmp(n),mla%la(n),1,1)
+       do i=1,dm
+          call multifab_build_edge(gradpi(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(m_d_fluxdiv(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(dumac(n,i),mla%la(n),1,1,i)
+       end do
+       call multifab_build(dpi(n),mla%la(n),1,1)
     end do
 
     ! make a copy of the initial velocity
@@ -613,13 +618,13 @@ contains
        end do
        call multifab_destroy(mass_fluxdiv_old(n))
        call multifab_destroy(mass_fluxdiv_new(n))
+       call multifab_destroy(rhoh_fluxdiv_old(n))
+       call multifab_destroy(rhoh_fluxdiv_new(n))
        call multifab_destroy(enth(n))
        do i=1,dm
           call multifab_destroy(rho_fc_old(n,i))
           call multifab_destroy(rhoh_fc_old(n,i))
        end do
-       call multifab_destroy(rhoh_fluxdiv_old(n))
-       call multifab_destroy(rhoh_fluxdiv_new(n))
        call multifab_destroy(deltaT_rhs1(n))
        call multifab_destroy(deltaT_rhs2(n))
        call multifab_destroy(conc(n))
@@ -636,14 +641,23 @@ contains
        call multifab_destroy(deltaS_old(n))
        call multifab_destroy(alpha_new(n))
        call multifab_destroy(deltaalpha_old(n))
-       call multifab_destroy(Sproj(n))
-       call multifab_destroy(phi(n))
        do i=1,dm
           call multifab_destroy(rhotot_fc_old(n,i))
           call multifab_destroy(rhototinv_fc_old(n,i))
        end do
        call multifab_destroy(Peos(n))
        call multifab_destroy(eta_new(n))
+       do i=1,dm
+          call multifab_destroy(gmres_rhs_v(n,i))
+       end do
+       call multifab_destroy(gmres_rhs_p(n))
+       call multifab_destroy(pi_tmp(n))
+       do i=1,dm
+          call multifab_destroy(gradpi(n,i))
+          call multifab_destroy(m_d_fluxdiv(n,i))
+          call multifab_destroy(dumac(n,i))
+       end do
+       call multifab_destroy(dpi(n))
     end do
 
   end subroutine scalar_predictor

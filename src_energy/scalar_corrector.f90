@@ -195,8 +195,8 @@ contains
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
     ! RHS for the Stokes solver
-    type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
+    type(multifab) :: gmres_rhs_p(mla%nlevel)
 
     ! temporary copy of incomping pi
     type(multifab) :: pi_tmp(mla%nlevel)
@@ -232,75 +232,51 @@ contains
        call multifab_build(mass_fluxdiv_new(n),mla%la(n),nspecies,0)
        call multifab_build(mass_fluxdiv_tmp(n),mla%la(n),nspecies,0)
        call multifab_build(rhoh_fluxdiv_new(n),mla%la(n),1,0)
-
        call multifab_build(mass_update_new(n),mla%la(n),nspecies,0)
        call multifab_build(rhoh_update_new(n),mla%la(n),1       ,0)
-
        call multifab_build(enth(n),mla%la(n),1,rho_old(n)%ng)
-
        do i=1,dm
           call multifab_build_edge(rho_fc_new(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(rhoh_fc_new(n,i),mla%la(n),1,0,i)
-
-          call multifab_build_edge(mtemp(n,i),mla%la(n),1,1,i)
        end do
-
        call multifab_build(enth_tmp(n),mla%la(n),1,rhoh_new(n)%ng)
        call multifab_build(Temp_tmp(n),mla%la(n),1,Temp_new(n)%ng)
-
+       do i=1,dm
+          call multifab_build_edge(mtemp(n,i),mla%la(n),1,1,i)
+       end do
        call multifab_build(deltaT_rhs1(n),mla%la(n),1,0)
        call multifab_build(deltaT_rhs2(n),mla%la(n),1,0)
-
        call multifab_build(    conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(molefrac(n),mla%la(n),nspecies,rho_old(n)%ng)
-
        call multifab_build(deltaT(n),mla%la(n),1,1)
-
        call multifab_build(cc_solver_alpha(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(cc_solver_beta(n,i),mla%la(n),1,0,i)
        end do
-
        call multifab_build(eta(n),mla%la(n),1,1)
-
        call multifab_build(kappa(n),mla%la(n),1,1)
-
        call multifab_build(lambda(n),mla%la(n),1,2)
-
        call multifab_build(chi(n),mla%la(n),nspecies**2,1)
-
        call multifab_build(zeta(n),mla%la(n),nspecies,1)
-
        call multifab_build(deltaS_new(n),mla%la(n),1,0)
-
        call multifab_build(     Scorr_new(n),mla%la(n),1,0)
        call multifab_build(deltaScorr_new(n),mla%la(n),1,0)
-
        call multifab_build(     alpha_new(n),mla%la(n),1,0)
        call multifab_build(deltaalpha_new(n),mla%la(n),1,0)
-
        call multifab_build(Peos(n),mla%la(n),1,0)
-
        do i=1,dm
           call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1,1,i)
           call multifab_build_edge(rhotot_fc_new(n,i),mla%la(n),1,1,i)
-
           call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1,0,i)
        end do
-
-       call multifab_build(pi_tmp(n),mla%la(n),1,1)
-
        call multifab_build(gmres_rhs_p(n),mla%la(n),1,0)
+       call multifab_build(pi_tmp(n),mla%la(n),1,1)
        do i=1,dm
           call multifab_build_edge(gradpi(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(m_d_fluxdiv(n,i),mla%la(n),1,0,i)
-       end do
-
-       call multifab_build(dpi(n),mla%la(n),1,1)
-       do i=1,dm
           call multifab_build_edge(dumac(n,i),mla%la(n),1,1,i)
        end do
-
+       call multifab_build(dpi(n),mla%la(n),1,1)
     end do
 
     ! temporary copies
@@ -815,9 +791,12 @@ contains
        do i=1,dm
           call multifab_destroy(rho_fc_new(n,i))
           call multifab_destroy(rhoh_fc_new(n,i))
-          call multifab_destroy(mtemp(n,i))
        end do
        call multifab_destroy(enth_tmp(n))
+       call multifab_destroy(Temp_tmp(n))
+       do i=1,dm
+          call multifab_destroy(mtemp(n,i))
+       end do
        call multifab_destroy(deltaT_rhs1(n))
        call multifab_destroy(deltaT_rhs2(n))
        call multifab_destroy(conc(n))
@@ -843,16 +822,14 @@ contains
           call multifab_destroy(rhotot_fc_new(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
        end do
-       call multifab_destroy(pi_tmp(n))
        call multifab_destroy(gmres_rhs_p(n))
+       call multifab_destroy(pi_tmp(n))
        do i=1,dm
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(m_d_fluxdiv(n,i))
-       end do
-       call multifab_destroy(dpi(n))
-       do i=1,dm
           call multifab_destroy(dumac(n,i))
        end do
+       call multifab_destroy(dpi(n))
     end do
 
   end subroutine scalar_corrector

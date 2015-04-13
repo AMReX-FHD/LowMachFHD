@@ -481,7 +481,9 @@ subroutine main_driver()
      ! Step 0
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-     print*,'begin initialize'
+     if (parallel_IOProcessor()) then
+        print*,'begin initialize'
+     end if
 
      if (parallel_IOProcessor()) then
         if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
@@ -496,7 +498,9 @@ subroutine main_driver()
                      Scorr_old,Scorrbar_old,deltaScorr_old, &
                      dx,dt,time,the_bc_tower)
 
-     print*,'end initialize'
+     if (parallel_IOProcessor()) then
+        print*,'end initialize'
+     end if
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -568,6 +572,10 @@ subroutine main_driver()
                 print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
         end if
 
+        if (parallel_IOProcessor()) then
+           print*,'start of scalar_predictor'
+        end if
+
         call scalar_predictor(mla,umac_old,umac_new,rho_old,rho_new, &
                               rhotot_old,rhotot_new, &
                               rhoh_old,rhoh_new,p0_old,p0_new,pi, &
@@ -575,6 +583,10 @@ subroutine main_driver()
                               mass_update_old,rhoh_update_old,pres_update_old, &
                               Scorr_old,Scorrbar_old,deltaScorr_old, &
                               dx,dt,time,the_bc_tower)
+
+        if (parallel_IOProcessor()) then
+           print*,'end of scalar_predictor'
+        end if
 
         ! copy umac^n from output of scalar_predictor into umac_old since scalar_corrector
         ! expects umac_old to hold t^n state
@@ -586,7 +598,9 @@ subroutine main_driver()
 
      end if
 
-     print*,'start of scalar_corrector'
+     if (parallel_IOProcessor()) then
+        print*,'start of scalar_corrector'
+     end if
 
      call scalar_corrector(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
                            rhoh_old,rhoh_new,p0_old,p0_new,pi, &
@@ -596,7 +610,9 @@ subroutine main_driver()
                            Scorr_old,Scorrbar_old,deltaScorr_old, &
                            dx,dt,time,the_bc_tower)
 
-     print*,'end of scalar_corrector'
+     if (parallel_IOProcessor()) then
+        print*,'end of scalar_corrector'
+     end if
 
      time = time + dt
 
