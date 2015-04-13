@@ -16,6 +16,7 @@ module scalar_predictor_module
   use convert_stag_module
   use div_and_grad_module
   use mk_advective_s_fluxdiv_module
+  use diffusive_m_fluxdiv_module
   use mass_flux_utilities_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: n_cells
@@ -81,7 +82,7 @@ contains
 
     ! local variables
 
-    ! temporary copy of initial umac
+    ! temporary copy of umac^* (incoming umac_new)
     type(multifab) :: umac_tmp(mla%nlevel,mla%dim)
 
     ! this will hold F_k
@@ -246,24 +247,26 @@ contains
 
     ! temporary copies
     do n=1,nlevs
+       ! pi^{*,n}
        call multifab_copy_c(pi_tmp(n),1,pi(n),1,1,1)
+       ! umac^{*,n}
        do i=1,dm
-          call multifab_copy_c(umac_tmp(n,i),1,umac_old(n,i),1,1,1)
+          call multifab_copy_c(umac_tmp(n,i),1,umac_new(n,i),1,1,1)
        end do
     end do
 
-    ! compute mass fractions in valid region and then fill ghost cells
+    ! compute mass fractions at t^{n-1} in valid region and then fill ghost cells
     call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
     call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
-    ! compute mole fractions in VALID + GHOST regions
+    ! compute mole fractions at t^{n-1} in VALID + GHOST regions
     call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
 
-    ! compute t^n transport properties
+    ! compute t^{n-1} transport properties
     call ideal_mixture_transport_wrapper(mla,rhotot_old,Temp_old,p0_old,conc,molefrac, &
                                          eta_old,lambda,kappa,chi,zeta)
 
-    ! eta^n on nodes (2d) or edges (3d)
+    ! eta^{n-1} on nodes (2d) or edges (3d)
     if (dm .eq. 2) then
        call average_cc_to_node(nlevs,eta_old,eta_old_ed(:,1),1,tran_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
@@ -271,6 +274,29 @@ contains
        call average_cc_to_edge(nlevs,eta_old,eta_old_ed,1,tran_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
     end if
+
+    ! compute A_0^{n-1} v^{n-1}
+    do n=1,nlevs
+       do i=1,dm
+          call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
+       end do
+    end do
+    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac_old,eta_old,eta_old_ed,kappa,dx, &
+                             the_bc_tower%bc_tower_array)
+
+    ! compute mass fractions at t^n in valid region and then fill ghost cells
+    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
+    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+
+    ! compute mole fractions at t^n in VALID + GHOST regions
+    call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
+
+    ! compute t^n transport properties
+    call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp_new,p0_new,conc,molefrac, &
+                                         eta_new,lambda,kappa,chi,zeta)
+
+
+
 
     ! compute mass_fluxdiv_old = div(F^n)
     call mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac,chi,zeta, &
@@ -334,13 +360,6 @@ contains
     ! begin loop here over Steps 0a-0e
     do k=1,dpdt_iters
 
-       ! hack - need to set umac_old back to its initial value
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_copy_c(umac_old(n,i),1,umac_tmp(n,i),1,1,1)
-          end do
-       end do
-
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 1a: Compute a pressure update
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -352,6 +371,35 @@ contains
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 1b: Compute the velocity field and dynamic pressure using a Stokes solver
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+       ! compute gmres_rhs_p = deltaS_old + deltaScorr_old 
+       !                       - deltaalpha_old * (Sbar_old + Scorrbar_old)/alphabar_old
+       do n=1,nlevs
+          call multifab_copy_c(gmres_rhs_p(n),1,deltaalpha_old(n),1,1,0)
+          call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-pres_update_old,1,0)
+          call multifab_plus_plus_c(gmres_rhs_p(n),1,deltaS_old(n),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_p(n),1,deltaScorr_old(n),1,1,0)
+       end do
+
+       ! construct gmres_rhs_p = div(vbar^{n-1}) - gmres_rhs_p
+       ! first multiply gmres_rhs_p by -1
+       do n=1,nlevs
+          call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-1.d0,1,0)
+       end do
+
+       ! stores vbar^{n-1} in umac_new
+       ! FIXME: vbar will need boundary conditions for t^n
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(umac_new(n,i),1,umac_old(n,i),1,1,umac_new(n,i)%ng)
+          end do
+       end do
+
+       ! add div(vbar) to gmres_rhs_p
+       call compute_div(mla,umac_new,gmres_rhs_p,dx,1,1,1,increment_in=.true.)
+
+
+
 
 
 
@@ -368,10 +416,18 @@ contains
           end do
        end do
 
-       if (barodiffusion_type .ne. 0) then
-          call bl_error("scalar_corrector: barodiffusion not implemented yet")
-       end if
 
+
+
+       ! increment velocity and dynamic pressure
+       ! compute v^n = v^{n-1} + dumac
+       ! compute pi^n = pi^{*,n+1} + dpi
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_plus_plus_c(umac_new(n,i),1,dumac(n,i),1,1,0)
+          end do
+          call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0)
+       end do
 
 
 

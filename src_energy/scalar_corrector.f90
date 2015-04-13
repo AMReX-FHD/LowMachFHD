@@ -41,10 +41,7 @@ contains
   ! -Compute v^{*,n+1} with a Stokes solver
   ! -Compute rho_i^{n+1} explicitly
   ! -Compute (rho h)^{n+1} implicitly
-  ! -If necessary, compute volume discrepancy correction and return to beginning of step
-  ! NOTE: Incoming "old" refers to t^n state for scalars and umac
-  !       Incoming "new" refers to t^{*,n+1} state for scalars and is uninitizliaed for umac
-  !       Outgoing "new" refers to t^{n+1} state for scalars and t^{*,n+1} state for umac
+  ! -Update volume discrepancy correction and, if necessary, return to beginning of step
   subroutine scalar_corrector(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
                               rhoh_old,rhoh_new,p0_old,p0_new,pi, &
                               gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
@@ -54,36 +51,30 @@ contains
                               dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: umac_old(:,:)
-    type(multifab) , intent(inout) :: umac_new(:,:)
-    type(multifab) , intent(inout) :: rho_old(:)
-    type(multifab) , intent(inout) :: rho_new(:)
-    type(multifab) , intent(inout) :: rhotot_old(:)
-    type(multifab) , intent(inout) :: rhotot_new(:)
-    type(multifab) , intent(inout) :: rhoh_old(:)
-    type(multifab) , intent(inout) :: rhoh_new(:)
-    real(kind=dp_t), intent(in   ) :: p0_old
-    real(kind=dp_t), intent(inout) :: p0_new
-    type(multifab) , intent(inout) :: pi(:)
-    type(multifab) , intent(inout) :: gradp_baro(:,:)
-    type(multifab) , intent(inout) :: Temp_old(:)
-    type(multifab) , intent(inout) :: Temp_new(:)
-    ! enters with eta^n
-    type(multifab) , intent(inout) :: eta_old(:)
-    type(multifab) , intent(inout) :: eta_old_ed(:,:) ! nodal (2d); edge-centered (3d)
-    type(multifab) , intent(inout) :: eta_new(:)
-    type(multifab) , intent(inout) :: eta_new_ed(:,:) ! nodal (2d); edge-centered (3d)
-    ! enters with div(F^n) - div(rho*v)^n
-    type(multifab) , intent(inout) :: mass_update_old(:)
-    ! enters with [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
-    type(multifab) , intent(inout) :: rhoh_update_old(:)
-    ! enters with (Sbar^n + Scorrbar^n) / alphabar^n
-    real(kind=dp_t), intent(in   ) :: pres_update_old
-    ! volume discrepancy correction
-    ! Scorr_old = Scorrbar_old + deltaScorr_old
-    type(multifab) , intent(in   ) :: Scorr_old(mla%nlevel)
-    real(kind=dp_t), intent(in   ) :: Scorrbar_old
-    type(multifab) , intent(in   ) :: deltaScorr_old(mla%nlevel)
+    type(multifab) , intent(inout) :: umac_old(:,:)      ! enters and leaves with v^n
+    type(multifab) , intent(inout) :: umac_new(:,:)      ! enters uninitizlied, leaves with v^{*,n+1}
+    type(multifab) , intent(inout) :: rho_old(:)         ! enters and leaves with rho_i^n
+    type(multifab) , intent(inout) :: rho_new(:)         ! enters with rho_i^{*,n+1}, leaves with rho_i^{n+1}
+    type(multifab) , intent(inout) :: rhotot_old(:)      ! enters and leaves with rho^n
+    type(multifab) , intent(inout) :: rhotot_new(:)      ! enters with rho^{*,n+1}, leave
+    type(multifab) , intent(inout) :: rhoh_old(:)        ! enters and leaves with (rhoh)^n
+    type(multifab) , intent(inout) :: rhoh_new(:)        !
+    real(kind=dp_t), intent(in   ) :: p0_old             ! enters and leaves with P_0^n
+    real(kind=dp_t), intent(inout) :: p0_new             !
+    type(multifab) , intent(inout) :: pi(:)              !
+    type(multifab) , intent(inout) :: gradp_baro(:,:)    ! not implemented yet
+    type(multifab) , intent(inout) :: Temp_old(:)        !
+    type(multifab) , intent(inout) :: Temp_new(:)        !
+    type(multifab) , intent(inout) :: eta_old(:)         ! enters with eta^n
+    type(multifab) , intent(inout) :: eta_old_ed(:,:)    ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(inout) :: eta_new(:)         !
+    type(multifab) , intent(inout) :: eta_new_ed(:,:)    ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(inout) :: mass_update_old(:) ! enters and leaves with div(F^n) - div(rho*v)^n
+    type(multifab) , intent(inout) :: rhoh_update_old(:) ! enters and leaves with [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
+    real(kind=dp_t), intent(in   ) :: pres_update_old    ! enters and leaves with (Sbar^n + Scorrbar^n) / alphabar^n
+    type(multifab) , intent(in   ) :: Scorr_old(:)       !
+    real(kind=dp_t), intent(in   ) :: Scorrbar_old       !
+    type(multifab) , intent(in   ) :: deltaScorr_old(:)  !
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -281,7 +272,9 @@ contains
 
     ! temporary copies
     do n=1,nlevs
+       ! pi^n
        call multifab_copy_c(pi_tmp(n),1,pi(n),1,1,1)
+       ! Temp^{*,n+1}
        call multifab_copy_c(Temp_tmp(n),1,Temp_new(n),1,1,Temp_tmp(n)%ng)
     end do
 
@@ -395,7 +388,8 @@ contains
           call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-1.d0,1,0)
        end do
 
-       ! FIXME: umac_old will need vbar boundary conditions
+       ! stores vbar^n in umac_new
+       ! FIXME: vbar will need boundary conditions at t^{*,n+1}
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(umac_new(n,i),1,umac_old(n,i),1,1,umac_new(n,i)%ng)

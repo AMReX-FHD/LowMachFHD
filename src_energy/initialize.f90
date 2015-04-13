@@ -35,11 +35,7 @@ contains
   ! -Compute v^n with a projection
   ! -Compute rho_i^{*,n+1} explicitly
   ! -Compute (rho h)^{*,n+1} implicitly
-  ! -If necessary, compute volume discrepancy correction and return to beginning of step
-  ! NOTE: Incoming "old" refers to t^n state for scalars and umac
-  !       Incoming "new" is uninitizlied
-  !       Outgoing "old" for umac is the t^n state
-  !       Outgoing "new" refers to t^{*,n+1} state for scalars
+  ! -Update volume discrepancy correction and, if necessary, return to beginning of step
   subroutine initialize(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
                         rhoh_old,rhoh_new,p0_old,p0_new, &
                         gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
@@ -48,33 +44,26 @@ contains
                         dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: umac_old(:,:)
-    type(multifab) , intent(inout) :: rho_old(:)
-    type(multifab) , intent(inout) :: rho_new(:)
-    type(multifab) , intent(inout) :: rhotot_old(:)
-    type(multifab) , intent(inout) :: rhotot_new(:)
-    type(multifab) , intent(inout) :: rhoh_old(:)
-    type(multifab) , intent(inout) :: rhoh_new(:)
-    real(kind=dp_t), intent(in   ) :: p0_old
-    real(kind=dp_t), intent(inout) :: p0_new
-    type(multifab) , intent(inout) :: gradp_baro(:,:)
-    type(multifab) , intent(inout) :: Temp_old(:)
-    type(multifab) , intent(inout) :: Temp_new(:)
-    type(multifab) , intent(inout) :: eta_old(:)
-    type(multifab) , intent(inout) :: eta_old_ed(:,:) ! nodal (2d); edge-centered (3d)
-    ! leaves with div(F^n) - div(rho*v)^n
-    type(multifab) , intent(inout) :: mass_update_old(:)   
-    ! leaves with [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
-    type(multifab) , intent(inout) :: rhoh_update_old(:)
-    ! leaves with (Sbar^n + Scorrbar^n) / alphabar^n
-    real(kind=dp_t), intent(inout) :: pres_update_old
-    ! volume discrepancy correction
-    ! Scorr_old = Scorrbar_old + deltaScorr_old
-    type(multifab) , intent(inout) :: Scorr_old(mla%nlevel)
-    real(kind=dp_t), intent(inout) :: Scorrbar_old
-    type(multifab) , intent(inout) :: deltaScorr_old(mla%nlevel)
-
-
+    type(multifab) , intent(inout) :: umac_old(:,:)      ! enters with initial v, leaves with v^n
+    type(multifab) , intent(inout) :: rho_old(:)         ! enters and leaves with rho_i^n
+    type(multifab) , intent(inout) :: rho_new(:)         ! enters uninitialized, leaves with rho_i^{*,n+1}
+    type(multifab) , intent(inout) :: rhotot_old(:)      ! enters and leaves with rho^n
+    type(multifab) , intent(inout) :: rhotot_new(:)      ! enters uninitialized, leaves with rho^{*,n+1}
+    type(multifab) , intent(inout) :: rhoh_old(:)        ! enters and leaves with (rhoh)^n
+    type(multifab) , intent(inout) :: rhoh_new(:)        ! enters uninitialized, leaves with (rhoh)^{*,n+1}
+    real(kind=dp_t), intent(in   ) :: p0_old             ! enters and leaves with P_0^n
+    real(kind=dp_t), intent(inout) :: p0_new             ! enters uninitialized, leaves with P_0^{*,n+1}
+    type(multifab) , intent(inout) :: gradp_baro(:,:)    ! not implemented yet
+    type(multifab) , intent(inout) :: Temp_old(:)        ! enters and leaves with T^n
+    type(multifab) , intent(inout) :: Temp_new(:)        ! enters uninitialized, leaves with T^{*,n+1}
+    type(multifab) , intent(inout) :: eta_old(:)         ! enters uninitialized, leaves with eta^n
+    type(multifab) , intent(inout) :: eta_old_ed(:,:)    ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(inout) :: mass_update_old(:) ! enters uninitialized, leaves with div(F^n) - div(rho*v)^n
+    type(multifab) , intent(inout) :: rhoh_update_old(:) ! enters uninitialized, leaves with [-div(rhoh*v) + (Sbar+Scorrbar)/alphabar + div(Q) + div(h*F) + (rhoHext)]^n
+    real(kind=dp_t), intent(inout) :: pres_update_old    ! enters uninitialized, leaves with (Sbar^n + Scorrbar^n) / alphabar^n
+    type(multifab) , intent(inout) :: Scorr_old(:)       ! enters uninitialized, leaves with S_corr^n
+    real(kind=dp_t), intent(inout) :: Scorrbar_old       ! enters uninitialized, leaves with S_corrbar^n
+    type(multifab) , intent(inout) :: deltaScorr_old(:)  ! enters uninitialized, leaves with deltaScorr^n
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
