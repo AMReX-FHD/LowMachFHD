@@ -42,6 +42,9 @@ contains
   ! -Compute rho_i^{n+1} explicitly
   ! -Compute (rho h)^{n+1} implicitly
   ! -If necessary, compute volume discrepancy correction and return to beginning of step
+  ! NOTE: Incoming "old" refers to t^n state for scalars and umac
+  !       Incoming "new" refers to t^{*,n+1} state for scalars and is uninitizliaed for umac
+  !       Outgoing "new" refers to t^{n+1} state for scalars and t^{*,n+1} state for umac
   subroutine scalar_corrector(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
                               rhoh_old,rhoh_new,p0_old,p0_new,pi, &
                               gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &

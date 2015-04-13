@@ -23,6 +23,7 @@ subroutine main_driver()
   use energy_EOS_module
   use init_energy_module
   use initialize_module
+  use scalar_predictor_module
   use scalar_corrector_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
@@ -482,6 +483,11 @@ subroutine main_driver()
 
      print*,'begin initialize'
 
+     if (parallel_IOProcessor()) then
+        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+           print*,"Begin Advance; istep =",1,"dt =",dt,"time =",time
+     end if
+
      call initialize(mla,umac_old,rho_old,rho_new, &
                      rhotot_old,rhotot_new, &
                      rhoh_old,rhoh_new,p0_old,p0_new, &
@@ -549,16 +555,36 @@ subroutine main_driver()
 !        dt = min(dt,dt_diffusive)
      end if
 
-     if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-           print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-     end if
-
-     runtime1 = parallel_wtime()
-
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! advance the solution by dt
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+     runtime1 = parallel_wtime()
+
+     if (istep .ne. init_step) then
+
+        if (parallel_IOProcessor()) then
+           if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+                print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+        end if
+
+        call scalar_predictor(mla,umac_old,umac_new,rho_old,rho_new, &
+                              rhotot_old,rhotot_new, &
+                              rhoh_old,rhoh_new,p0_old,p0_new,pi, &
+                              gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
+                              mass_update_old,rhoh_update_old,pres_update_old, &
+                              Scorr_old,Scorrbar_old,deltaScorr_old, &
+                              dx,dt,time,the_bc_tower)
+
+        ! copy umac^n from output of scalar_predictor into umac_old since scalar_corrector
+        ! expects umac_old to hold t^n state
+        do n=1,nlevs
+           do i=1,dm
+              call multifab_copy_c(umac_old(n,i),1,umac_new(n,i),1,1,umac_old(n,i)%ng)
+           end do
+        end do
+
+     end if
 
      print*,'start of scalar_corrector'
 
@@ -571,14 +597,13 @@ subroutine main_driver()
                            dx,dt,time,the_bc_tower)
 
      print*,'end of scalar_corrector'
-     stop
 
-      time = time + dt
+     time = time + dt
 
-      if (parallel_IOProcessor()) then
+     if (parallel_IOProcessor()) then
         if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-           print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
-      end if
+             print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
+     end if
 
       runtime2 = parallel_wtime() - runtime1
       call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())

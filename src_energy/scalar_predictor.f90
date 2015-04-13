@@ -1,4 +1,4 @@
-module initialize_module
+module scalar_predictor_module
 
   use ml_layout_module
   use bndry_reg_module
@@ -26,29 +26,29 @@ module initialize_module
 
   private
 
-  public :: initialize
+  public :: scalar_predictor
 
 contains
 
-  ! this routine performs "Step 0" of the algorithm (see exec/energy/doc/)
+  ! this routine performs "Step 1" of the algorithm (see exec/energy/doc/)
   ! -Compute P_0^{*,n+1}
-  ! -Compute v^n with a projection
+  ! -Compute v^n with a Stokes solver
   ! -Compute rho_i^{*,n+1} explicitly
   ! -Compute (rho h)^{*,n+1} implicitly
   ! -If necessary, compute volume discrepancy correction and return to beginning of step
-  ! NOTE: Incoming "old" refers to t^n state for scalars and umac
-  !       Incoming "new" is uninitizlied
-  !       Outgoing "old" for umac is the t^n state
-  !       Outgoing "new" refers to t^{*,n+1} state for scalars
-  subroutine initialize(mla,umac_old,rho_old,rho_new,rhotot_old,rhotot_new, &
-                        rhoh_old,rhoh_new,p0_old,p0_new, &
-                        gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
-                        mass_update_old,rhoh_update_old,pres_update_old, &
-                        Scorr_old,Scorrbar_old,deltaScorr_old, &
-                        dx,dt,time,the_bc_tower)
+  ! NOTE: Incoming "old" refers to t^{n-1} state for scalars and umac
+  !       Incoming "new" refers to t^n state for scalars and t^{*,n} state for umac
+  !       Outgoing "new" refers to t^{*,n+1} state for scalars and t^n state for umac
+  subroutine scalar_predictor(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
+                              rhoh_old,rhoh_new,p0_old,p0_new,pi, &
+                              gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
+                              mass_update_old,rhoh_update_old,pres_update_old, &
+                              Scorr_old,Scorrbar_old,deltaScorr_old, &
+                              dx,dt,time,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac_old(:,:)
+    type(multifab) , intent(inout) :: umac_new(:,:)
     type(multifab) , intent(inout) :: rho_old(:)
     type(multifab) , intent(inout) :: rho_new(:)
     type(multifab) , intent(inout) :: rhotot_old(:)
@@ -57,6 +57,7 @@ contains
     type(multifab) , intent(inout) :: rhoh_new(:)
     real(kind=dp_t), intent(in   ) :: p0_old
     real(kind=dp_t), intent(inout) :: p0_new
+    type(multifab) , intent(inout) :: pi(:)
     type(multifab) , intent(inout) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: Temp_old(:)
     type(multifab) , intent(inout) :: Temp_new(:)
@@ -80,7 +81,7 @@ contains
 
     ! local variables
 
-    ! temporary copy of umac_old
+    ! temporary copy of initial umac
     type(multifab) :: umac_tmp(mla%nlevel,mla%dim)
 
     ! this will hold F_k
@@ -332,7 +333,7 @@ contains
        end do
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! Step 0a: Compute a pressure update
+       ! Step 1a: Compute a pressure update
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
        ! update pressure
@@ -340,36 +341,15 @@ contains
        p0_new = p0_old + dt*pres_update_old
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! Step 0b: Compute the velocity field using a projection
+       ! Step 1b: Compute the velocity field and dynamic pressure using a Stokes solver
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-       ! compute Sproj = deltaS_old + deltaScorr_old 
-       !                 - deltaalpha_old * (Sbar_old + Scorrbar_old)/alphabar_old
-       do n=1,nlevs
-          call multifab_copy_c(Sproj(n),1,deltaalpha_old(n),1,1,0)
-          call multifab_mult_mult_s_c(Sproj(n),1,-pres_update_old,1,0)
-          call multifab_plus_plus_c(Sproj(n),1,deltaS_old(n),1,1,0)
-          call multifab_plus_plus_c(Sproj(n),1,deltaScorr_old(n),1,1,0)
-       end do
 
-       ! build rhs for projection, div(v^init) - Sproj
-       ! first multiply Sproj by -1
-       do n=1,nlevs
-          call multifab_mult_mult_s_c(Sproj(n),1,-1.d0,1,0)
-       end do
 
-       ! add div(v^init) to Sproj
-       call compute_div(mla,umac_old,Sproj,dx,1,1,1,increment_in=.true.)
 
-       ! solve div (1/rhotot) grad phi = div(v^init) - S^0
-       ! solve to completion, i.e., use the 'full' solver
-       call macproject(mla,phi,umac_old,rhototinv_fc_old,Sproj,dx,the_bc_tower,.true.)
-
-       ! v^0 = v^init - (1/rho^0) grad phi
-       call subtract_weighted_gradp(mla,umac_old,rhototinv_fc_old,phi,dx,the_bc_tower)
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! Step 0c: Advance the densities using forward-Euler advective fluxes and 
+       ! Step 1c: Advance the densities using forward-Euler advective fluxes and 
        !          explicit mass diffusion
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -411,7 +391,7 @@ contains
        call convert_conc_to_molefrac(mla,conc,molefrac,.true.)
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! Step 0d: Advance the enthalpy by iteratively looping over an energy solve
+       ! Step 1d: Advance the enthalpy by iteratively looping over an energy solve
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
        ! The portion of the RHS that stays fixed over all l iterations is:
@@ -480,7 +460,7 @@ contains
        do l=1,deltaT_iters
 
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          ! Step 0d-1: Compute (lambda,cp,F)^{*,n+1,l}
+          ! Step 1d-1: Compute (lambda,cp,F)^{*,n+1,l}
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
           ! compute t^{*,n+1,l} transport properties
@@ -513,7 +493,7 @@ contains
           end do
 
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          ! Step 0d-2: Solve for deltaT implicitly
+          ! Step 1d-2: Solve for deltaT implicitly
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
           ! cc_solver_alpha = rho^{*,n+1} c_p^{*,n+1,l} / dt
@@ -555,7 +535,7 @@ contains
           end do
 
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          ! Step 0d-3: Update the temperature and enthalpy
+          ! Step 1d-3: Update the temperature and enthalpy
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
           ! T^{*,n+1,l+1} = T^{*,n+1,l} + deltaT
@@ -577,7 +557,7 @@ contains
        end do ! end loop l over deltaT iterations
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! Step 0e: If the thermodynamic drift is unacceptable, update the volume
+       ! Step 1e: If the thermodynamic drift is unacceptable, update the volume
        !          discrepancy correction
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -666,6 +646,6 @@ contains
        call multifab_destroy(eta_new(n))
     end do
 
-  end subroutine initialize
+  end subroutine scalar_predictor
 
-end module initialize_module
+end module scalar_predictor_module
