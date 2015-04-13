@@ -783,6 +783,103 @@ as inputs and computes the following:\\
 
 \end{itemize}
 
+\clearpage
+
+\section{New Algorithm}
+
+\subsection{Initialization}
+We are given $(\vb,\rho,\wb,h,P_0)^{\rm init}$.
+Compute a volume discrepancy correction:
+\begin{equation}
+S_{\rm corr} = \alpha^n \left(\frac{P(\rho,\wb,T)^n - P_0^n}{\Delta t}\right),
+\end{equation}
+Project:
+\begin{equation}
+\nabla\cdot\vb^0 = S^{\rm init} + S_{\rm corr}.
+\end{equation}
+Set $\pi^0=0$.
+
+\subsection{Time-Advancement Scheme}
+We are given $(\vb,\rho,\wb,h,P_0,\pi)^n$.
+Note in general that these variables are not in exact thermodynamic equilibrium.
+Compute $T^n = T(\rho,\wb,h)^n$.
+Initialize $(\vb,\rho,\wb,h)^{n+1} = (\vb,\rho,\wb,h)^n$.
+The time-advancement consists of:\\ \\
+{\bf Step 1:}\\ \\
+Compute $(S,\alpha,\Fb,\eta,\lambda,h_k)^n$ from $(\rho,\wb,h,P_0,T)^n$.
+\MarginPar{The routines in the code take in all these variables and mix the usage.  More details need to be given here.}
+Split $(S,\alpha)^n$ into average and perturbational components:
+\begin{equation}
+S^n = \bar{S}^n + \delta S^n,
+\end{equation}
+\begin{equation}
+\alpha^n = \bar{\alpha}^n + \delta\alpha^n,
+\end{equation}
+{\bf Step 2:}\\ \\
+Compute a volume discrepancy correction:
+\begin{equation}
+S_{\rm corr} = \alpha^n \left(\frac{P(\rho,\wb,T)^n - P_0^n}{\Delta t}\right),
+\end{equation}
+and split this into average and perturbational components,
+\begin{equation}
+S_{\rm corr} = \bar{S}_{\rm corr} + \delta S_{\rm corr}.
+\end{equation}
+Note: it's possible that setting $S_{\rm corr}=0$ here may cause the iterations to converge more
+quickly, and that will be easily testable.
+Note that if the thermodynamic variables are in equilibrium, then $S_{\rm corr}=0$ regardless.\\ \\
+Loop over {\bf Step 3}-{\bf Step 8}:\\ \\
+{\bf Step 3}\\ \\
+Compute $(S,\alpha,\Fb,\eta,\lambda,h_k)^{n+1}$ from $(\rho,\wb,h,P_0,T)^{n+1}$.
+Split $(S,\alpha)^{n+1}$ into average and perturbational components:
+\begin{equation}
+S^{n+1} = \bar{S}^{n+1} + \delta S^{n+1},
+\end{equation}
+\begin{equation}
+\alpha^{n+1} = \bar{\alpha}^{n+1} + \delta\alpha^{n+1},
+\end{equation}
+
+{\bf Step 4}\\ \\
+Pressure update:
+\begin{equation}
+P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).
+\end{equation}
+{\bf Step 5}\\ \\
+Recompute densities with trapezoidal-rule advective and diffusive fluxes.
+\begin{equation}
+\rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1}\right],
+\end{equation}
+\begin{equation}
+\rho^{n+1} = \sum_k\rho_k^{n+1}.
+\end{equation}
+{\bf Step 6}\\ \\
+Recompute enthalpy semi-implicitly.  This involves a linearized iteration for $\delta T$ (details coming).
+But the fundamental discretization is
+\begin{eqnarray}
+\frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right]\nonumber\\
+&&+ \half\nabla\cdot\lambda\nabla T^n + \half\nabla\cdot\lambda\nabla^{n+1}\nonumber\\
+&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
+&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
+\end{eqnarray}
+{\bf Step 7}\\ \\
+GMRES Solve for $\vb^{n+1}$ and $\pi^{n+1}$.  Question for John: should we recompute
+$\rho^{n+1} = \rho^n - \Delta t\nabla\cdot(\rho\vb)^n$ here if this is the first time through the iteration?
+\begin{equation}
+\frac{(\rho\vb)^{n+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1}) + \frac{1}{2}(\rho^n + \rho^{n+1})\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr}^{n+1} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).
+\end{equation}
+{\bf Step 8}\\ \\
+Update volume discrepancy
+\begin{equation}
+S_{\rm corr} = S_{\rm corr} + 2\alpha^{n+1}\left(\frac{P(\rho,\wb,T)^{n+1} - P_0^{n+1}}{\Delta t}\right)
+\end{equation}
+Note: I've found this factor of two to be more effective at reducing the drift
+since we are using trapezoidal advective fluxes.  If the drift is unacceptable,
+return to {\bf Step 2}.
+
+\clearpage
+
 \section{Conclusions}
 
 Our staggered grid formulation allows for the including of thermal fluctuations
