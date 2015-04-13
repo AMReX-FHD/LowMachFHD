@@ -273,6 +273,24 @@ contains
     call compute_S_alpha(mla,deltaS_old,deltaalpha_old,mass_fluxdiv_old,rhoh_fluxdiv_old,conc, &
                          Temp_old,rhotot_old,p0_old)
 
+    ! compute thermodynamic pressure
+    call compute_p(mla,rhotot_old,Temp_old,conc,Peos)
+
+    ! Scorr = Scorr + alpha^n * (Peos^n - P0^n)/dt
+    do n=1,nlevs
+       call multifab_sub_sub_s_c(Peos(n),1,p0_old,1,0)
+       call multifab_mult_mult_s_c(Peos(n),1,1.d0/dt,1,0)
+       call multifab_mult_mult_c(Peos(n),1,deltaalpha_old(n),1,1,0)
+       call multifab_copy_c(Scorr_old(n),1,Peos(n),1,1,0)
+    end do
+
+    ! split Scorr into average and perturbational components
+    do n=1,nlevs
+       Scorrbar_old = multifab_sum_c(Scorr_old(n),1,1) / dble(n_cell)
+       call multifab_copy_c(deltaScorr_old(n),1,Scorr_old(n),1,1,0)
+       call multifab_sub_sub_s_c(deltaScorr_old(n),1,Scorrbar_old,1,0)
+    end do
+
     ! split S_old and alpha_old into average and perturbational pieces
     ! S_old = Sbar_old + deltaS_old
     ! alpha_old = alphabar_old + deltaalpha_old
@@ -281,13 +299,6 @@ contains
        alphabar_old = multifab_sum_c(deltaalpha_old(n),1,1) / dble(n_cell)
        call multifab_sub_sub_s_c(deltaS_old(n)    ,1,Sbar_old    ,1,0)
        call multifab_sub_sub_s_c(deltaalpha_old(n),1,alphabar_old,1,0)
-    end do
-
-    ! zero out volume discrepancy correction and its decomposition
-    Scorrbar_old = 0.d0
-    do n=1,nlevs
-       call multifab_setval(Scorr_old(n)     ,0.d0,all=.true.)
-       call multifab_setval(deltaScorr_old(n),0.d0,all=.true.)
     end do
 
     ! set rho_fc_old to rho^n on faces
