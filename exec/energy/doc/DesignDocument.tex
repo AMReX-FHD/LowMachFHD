@@ -788,22 +788,26 @@ as inputs and computes the following:\\
 \section{New Algorithm}
 
 \subsection{Initialization}
-We are given $(\vb,\rho,\wb,h,P_0)^{\rm init}$.
-Compute a volume discrepancy correction:
+We are given $\vb^{\rm init}$ and $(\rho,\wb,h,T,P_0,\pi)^0$,
+where the thermodynamic variables are in equilibrium
+and $\pi^0=0$.  We compute $\vb^0$ by enforcing,
 \begin{equation}
-S_{\rm corr} = \alpha^n \left(\frac{P(\rho,\wb,T)^n - P_0^n}{\Delta t}\right),
+\nabla\cdot\vb^0 = S^0.
 \end{equation}
-Project:
+This involves solving the ellptic equation,
 \begin{equation}
-\nabla\cdot\vb^0 = S^{\rm init} + S_{\rm corr}.
+\nabla\cdot\frac{1}{\rho^0}\nabla\Phi = \nabla\cdot\vb^{\rm init} - S^0,
 \end{equation}
-Set $\pi^0=0$.
+and velocity update,
+\begin{equation}
+\vb^0 = \vb^{\rm init} - \frac{1}{\rho^0}\nabla\Phi.
+\end{equation}
 
 \subsection{Time-Advancement Scheme}
-We are given $(\vb,\rho,\wb,h,P_0,\pi)^n$.
-Note in general that these variables are not in exact thermodynamic equilibrium.
-Compute $T^n = T(\rho,\wb,h)^n$.
-Initialize $(\vb,\rho,\wb,h)^{n+1} = (\vb,\rho,\wb,h)^n$.
+We are given $(\vb,\rho,\wb,h,T,P_0,\pi)^n$.
+Note that in general that the thermodynamic variables are not in 
+equilibrium.
+Initialize $(\vb,\rho,\wb,h,T)^{n+1} = (\vb,\rho,\wb,h,T)^n$.
 The time-advancement consists of:\\ \\
 {\bf Step 1:}\\ \\
 Compute $(S,\alpha,\Fb,\eta,\lambda,h_k)^n$ from $(\rho,\wb,h,P_0,T)^n$.
