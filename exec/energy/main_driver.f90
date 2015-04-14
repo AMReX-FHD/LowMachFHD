@@ -22,7 +22,7 @@ subroutine main_driver()
   use sum_momenta_module
   use energy_EOS_module
   use init_energy_module
-  use initialize_module
+  use initial_projection_module
   use scalar_predictor_module
   use scalar_corrector_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
@@ -490,24 +490,14 @@ subroutine main_driver()
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
      if (parallel_IOProcessor()) then
-        print*,'begin initialize'
+        print*,'begin initial projection'
      end if
 
-     if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-           print*,"Begin Advance; istep =",1,"dt =",dt,"time =",time
-     end if
-
-     call initialize(mla,umac_old,rho_old,rho_new, &
-                     rhotot_old,rhotot_new, &
-                     rhoh_old,rhoh_new,p0_old,p0_new, &
-                     gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
-                     mass_update_old,rhoh_update_old,pres_update_old, &
-                     Scorr_old,Scorrbar_old,deltaScorr_old, &
-                     dx,dt,time,the_bc_tower)
+     call initial_projection(mla,umac_old,rho_old,rhotot_old,rhoh_old,p0_old, &
+                             gradp_baro,Temp_old,dx,dt,the_bc_tower)
 
      if (parallel_IOProcessor()) then
-        print*,'end initialize'
+        print*,'end initial projection'
      end if
 
      if (print_int .gt. 0) then

@@ -792,11 +792,11 @@ We are given $\vb^{\rm init}$ and $(\rho,\wb,h,T,P_0,\pi)^0$,
 where the thermodynamic variables are in equilibrium
 and $\pi^0=0$.  We compute $\vb^0$ by enforcing,
 \begin{equation}
-\nabla\cdot\vb^0 = S^0.
+\nabla\cdot\vb^0 = \delta S^0 - \delta\alpha^0\frac{\bar{S}^0}{\bar{\alpha}^0} \equiv S_{\rm proj}^0
 \end{equation}
 This involves solving the ellptic equation,
 \begin{equation}
-\nabla\cdot\frac{1}{\rho^0}\nabla\Phi = \nabla\cdot\vb^{\rm init} - S^0,
+\nabla\cdot\frac{1}{\rho^0}\nabla\Phi = \nabla\cdot\vb^{\rm init} - S_{\rm proj}^0,
 \end{equation}
 and velocity update,
 \begin{equation}
