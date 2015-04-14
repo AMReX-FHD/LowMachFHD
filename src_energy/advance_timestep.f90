@@ -39,7 +39,7 @@ contains
     integer :: n,nlevs,i,dm
     integer :: n_cell
 
-    ! temporary storage for concentrations and mole fractions
+    ! concentrations and mole fractions
     type(multifab) :: conc(mla%nlevel)
     type(multifab) :: molefrac(mla%nlevel)
 
@@ -63,16 +63,22 @@ contains
     type(multifab) :: mass_fluxdiv_old(mla%nlevel)
     type(multifab) :: rhoh_fluxdiv_old(mla%nlevel)
 
-    ! delta_S_old^n and delta_alpha_old^n
+    ! (delta_S,delta_alpha)^n
     type(multifab) :: delta_S_old(mla%nlevel)
     type(multifab) :: delta_alpha_old(mla%nlevel)
 
-    ! rhotot_old^n and 1/rhotot_old^n on faces
+    ! (rhotot,rho,rhoh)^n on faces
     type(multifab) :: rhotot_old_fc(mla%nlevel,mla%dim)
-    type(multifab) :: rhotot_oldinv_fc(mla%nlevel,mla%dim)
+    type(multifab) :: rho_old_fc(mla%nlevel,mla%dim)
+    type(multifab) :: rhoh_old_fc(mla%nlevel,mla%dim)
 
-    real(kind=dp_t) :: Sbar_old
-    real(kind=dp_t) :: alphabar_old
+    ! Scorr and delta_Scorr
+    type(multifab) :: Scorr(mla%nlevel)
+    type(multifab) :: delta_Scorr(mla%nlevel)
+
+    real(kind=dp_t) :: Sbar_old, Sbar_new
+    real(kind=dp_t) :: alphabar_old, alphabar_new
+    real(kind=dp_t) :: Scorrbar
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -100,7 +106,6 @@ contains
        call multifab_build(delta_alpha_old(n) ,mla%la(n),1       ,0)
        do i=1,dm
           call multifab_build_edge(rhotot_old_fc(n,i)   ,mla%la(n),1,0,i)
-          call multifab_build_edge(rhotot_oldinv_fc(n,i),mla%la(n),1,0,i)
        end do
     end do
 
@@ -108,13 +113,8 @@ contains
     call average_cc_to_face(nlevs,rhotot_old,rhotot_old_fc,1,scal_bc_comp,1, &
                             the_bc_tower%bc_tower_array)
 
-    ! compute (1/rhotot_old)^n on faces
-    do n=1,nlevs
-       do i=1,dm
-          call setval(rhotot_oldinv_fc(n,i),1.d0,all=.true.)
-          call multifab_div_div_c(rhotot_oldinv_fc(n,i),1,rhotot_old_fc(n,i),1,1,0)
-       end do
-    end do
+    ! compute rhoh^n on faces
+
 
     ! compute mass fractions in valid region and then fill ghost cells
     call convert_rho_oldc_to_c(mla,rho_old,rhotot_old,conc,.true.)
@@ -168,7 +168,6 @@ contains
        call multifab_destroy(delta_alpha_old(n))
        do i=1,dm
           call multifab_destroy(rhotot_old_fc(n,i))
-          call multifab_destroy(rhototinv_old_fc(n,i))
        end do
     end do
 
