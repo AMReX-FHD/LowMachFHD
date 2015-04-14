@@ -23,9 +23,7 @@ subroutine main_driver()
   use energy_EOS_module
   use init_energy_module
   use initial_projection_module
-  use scalar_predictor_module
-  use scalar_corrector_module
-  use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
+    use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
                                   probin_common_init, print_int, &
@@ -563,55 +561,12 @@ subroutine main_driver()
 
      runtime1 = parallel_wtime()
 
-     if (istep .ne. init_step) then
-
-        if (parallel_IOProcessor()) then
-           if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-                print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-        end if
-
-        if (parallel_IOProcessor()) then
-           print*,'start of scalar_predictor'
-        end if
-
-        call scalar_predictor(mla,umac_old,umac_new,rho_old,rho_new, &
-                              rhotot_old,rhotot_new, &
-                              rhoh_old,rhoh_new,p0_old,p0_new,pi, &
-                              gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
-                              mass_update_old,rhoh_update_old,pres_update_old, &
-                              Scorr_old,Scorrbar_old,deltaScorr_old, &
-                              dx,dt,time,the_bc_tower)
-
-        if (parallel_IOProcessor()) then
-           print*,'end of scalar_predictor'
-        end if
-
-        ! copy umac^n from output of scalar_predictor into umac_old since scalar_corrector
-        ! expects umac_old to hold t^n state
-        do n=1,nlevs
-           do i=1,dm
-              call multifab_copy_c(umac_old(n,i),1,umac_new(n,i),1,1,umac_old(n,i)%ng)
-           end do
-        end do
-
-     end if
-
      if (parallel_IOProcessor()) then
-        print*,'start of scalar_corrector'
+        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+             print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
      end if
 
-     call scalar_corrector(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
-                           rhoh_old,rhoh_new,p0_old,p0_new,pi, &
-                           gradp_baro,Temp_old,Temp_new,eta_old,eta_old_ed, &
-                           eta_new,eta_new_ed, &
-                           mass_update_old,rhoh_update_old,pres_update_old, &
-                           Scorr_old,Scorrbar_old,deltaScorr_old, &
-                           dx,dt,time,the_bc_tower)
-
-     if (parallel_IOProcessor()) then
-        print*,'end of scalar_corrector'
-     end if
-
+     ! call advance_timestep()
      time = time + dt
 
      if (parallel_IOProcessor()) then
