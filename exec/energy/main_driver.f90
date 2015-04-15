@@ -185,7 +185,7 @@ subroutine main_driver()
   end do
 
   if (advection_type .eq. 0) then
-     ng_s = 2 ! centered advection
+     ng_s = 1 ! centered advection
   else if (advection_type .le. 3) then
      ng_s = 3 ! bilinear bds or unlimited quadratic bds
   else if (advection_type .eq. 4) then

@@ -328,15 +328,21 @@ contains
        call multifab_sub_sub_s_c(deltaScorr_old(n),1,Scorrbar_old,1,0)
     end do
 
-    ! split S_old and alpha_old into average and perturbational pieces
-    ! S_old = Sbar_old + deltaS_old
-    ! alpha_old = alphabar_old + deltaalpha_old
+    ! split S_old, alpha_old, and Scorr into average and perturbational pieces
     do n=1,nlevs
        Sbar_old     = multifab_sum_c(deltaS_old(n)    ,1,1) / dble(n_cell)
        alphabar_old = multifab_sum_c(deltaalpha_old(n),1,1) / dble(n_cell)
+       Scorrbar     = multifab_sum_c(Scorr(n),1,1) / dble(n_cell)
        call multifab_sub_sub_s_c(deltaS_old(n)    ,1,Sbar_old    ,1,0)
        call multifab_sub_sub_s_c(deltaalpha_old(n),1,alphabar_old,1,0)
+       call multifab_copy_c(deltaScorr(n),1,Scorr(n),1,1,0)
+       call multifab_sub_sub_s_c(deltaScorr(n),1,Scorrbar,1,0)
     end do
+
+    ! split Scorr into average and perturbational components
+    do n=1,nlevs
+    end do
+
 
     ! set rho_fc_old to rho^n on faces
     call average_cc_to_face(nlevs,rho_old,rho_fc_old,1,c_bc_comp,nspecies, &
