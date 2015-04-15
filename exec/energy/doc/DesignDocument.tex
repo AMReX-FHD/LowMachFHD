@@ -833,10 +833,13 @@ Note that if the thermodynamic variables are in equilibrium, then $S_{\rm corr}=
 Set $(\vb,\rho,\wb,h,T)^{n+1} = (\vb,\rho,\wb,h,T)^n$ and
 iterate over an outer loop over {\bf Steps 3-8}:\\ \\
 {\bf Step 3}\\ \\
-Compute $(S,\alpha,\Fb,\eta,\lambda,h_k)^{n+1}$ from $(\rho,\wb,h,P_0,T)^{n+1}$.
-We hold these quantites fixed through this iteration, whereas 
-$\rho, \wb, h, T$, and $\vb$ are updated sequentially and the updated values 
-are used as needed.
+Compute $(S,\alpha,\Fb,\eta,c_p,\lambda,h_k)^{n+1}$ 
+from $(\rho,\wb,h,T,P_0)^{n+1}$.
+We note that $(S,\alpha,\Fb,\eta)^{n+1}$ will stay fixed through the
+current iteration over {\bf Steps 3-8}, whereas $(c_p,\lambda,h_k)$ are
+recomputed as part of the iterative enthalpy solve ({\bf Step 6}).
+Also, $\rho, \wb, h, T$, and $\vb$ are updated sequentially and the 
+updated values are used as needed.
 Split $(S,\alpha)^{n+1}$ into average and perturbational components:
 \begin{equation}
 S^{n+1} = \bar{S}^{n+1} + \delta S^{n+1},
@@ -869,32 +872,32 @@ for $\delta T$.  The fundamental formulation is
 but since the heat fluxes are expressed in terms of temperature gradients, we
 need an iterative approach that linearizes the dependence of $h$ on $T$,
 \begin{eqnarray}
-\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1}\delta T) - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right]\nonumber\\
-&&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1}\nabla(T^{n+1,l} + \delta T)\nonumber\\
-&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1} \Fb_k^{n+1},\nonumber\\
+\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right]\nonumber\\
+&&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
+&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1},\nonumber\\
 &&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
 \end{eqnarray}
 which can be rearranged to solve for $\delta T$,
 \begin{eqnarray}
-\left(\frac{\rho^{n+1}c_p^{n+1}}{\Delta t} - \half\nabla\cdot\lambda^{n+1}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1}h^{n+1,l}}{\Delta t}\nonumber\\
+\left(\frac{\rho^{n+1}c_p^{n+1,l}}{\Delta t} - \half\nabla\cdot\lambda^{n+1}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1}h^{n+1,l}}{\Delta t}\nonumber\\
 &&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}^{n+1}}{\bar{\alpha}^{n+1}}\right]\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1}\nabla T^{n+1,l}\nonumber\\
-&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1} \Fb_k^{n+1}\nonumber\\
+&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1}\nonumber\\
 &&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1}.\label{eq:deltaT}
 \end{eqnarray}
-To proceede, we set $(h,T)^{n+1,l=1} = (h,T)^{n+1}$ and iterate over an inner 
-loop from $l=1$ over {\bf Steps 6a-b}:\\ \\
+To proceed, we set $(h,T)^{n+1,l=1} = (h,T)^{n+1}$ and iterate over an inner 
+loop from $l=1$ over {\bf Steps 6a-c}:\\ \\
 {\bf Step 6a}\\ \\
-Solve equation (\ref{eq:deltaT}) implicitly for $\delta T$.  Again,
-note that the only terms that change from iteration to iteration are the
-$(h,T)^{n+1,l}$ terms on the right-hand-side; all other terms are fixed over
-each outer iteration.\\ \\
+Compute $(c_p,\lambda,h_k)^{n+1,l}$ from $(\rho^{n+1},\wb^{n+1},T^{n+1,l})$.\\ \\
 {\bf Step 6b}\\ \\
+Solve equation (\ref{eq:deltaT}) implicitly for $\delta T$.\\ \\
+{\bf Step 6c}\\ \\
 Set $T^{n+1,l+1} = T^{n+1,l} + \delta T$ and compute 
 $h^{n+1,l+1} = h(\rho^{n+1},\wb^{n+1},T^{n+1,l}$).  If this is the last iteration, 
 set $(T,h)^{n+1} = (T,h)^{n+1,l+1}$.\\ \\
 {\bf Step 7}\\ \\
 GMRES Solve for $\vb^{n+1}$ and $\pi^{n+1}$.
+\MarginPar{What do we use to compute $\eta^{n+1}$?}
 \begin{equation}
 \frac{(\rho\vb)^{n+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1}) + \frac{1}{2}(\rho^n + \rho^{n+1})\gb,
 \end{equation}
