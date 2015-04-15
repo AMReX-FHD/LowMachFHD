@@ -216,6 +216,7 @@ contains
        call multifab_copy_c(rho_new(n)   ,1,rho_old(n)   ,1,nspecies,rho_new(n)%ng)
        call multifab_copy_c(rhotot_new(n),1,rhotot_old(n),1,1       ,rhotot_new(n)%ng)
        call multifab_copy_c(rhoh_new(n)  ,1,rhoh_old(n)  ,1,1       ,rhoh_new(n)%ng)
+       call multifab_copy_c(Temp_new(n)  ,1,Temp_old(n)  ,1,1       ,Temp_new(n)%ng)
 
        do i=1,dm
           call multifab_copy_c(umac_new(n,i),1,umac_old(n,i),1,1,umac_new(n,i)%ng)
