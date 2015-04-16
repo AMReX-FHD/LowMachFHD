@@ -180,7 +180,7 @@ subroutine main_driver()
   end do
 
   if (advection_type .eq. 0) then
-     ng_s = 1 ! centered advection
+     ng_s = 2 ! centered advection
   else if (advection_type .le. 3) then
      ng_s = 3 ! bilinear bds or unlimited quadratic bds
   else if (advection_type .eq. 4) then
@@ -564,7 +564,7 @@ subroutine main_driver()
      call advance_timestep(mla,umac_old,umac_new,rho_old,rho_new, &
                            rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
                            p0_old,p0_new,gradp_baro,Temp_old,Temp_new, &
-                           dx,dt,the_bc_tower)
+                           pi,dx,dt,the_bc_tower)
 
      time = time + dt
 

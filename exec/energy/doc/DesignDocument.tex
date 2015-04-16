@@ -902,7 +902,7 @@ GMRES Solve for $\vb^{n+1}$ and $\pi^{n+1}$.
 \frac{(\rho\vb)^{n+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1}) + \frac{1}{2}(\rho^n + \rho^{n+1})\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr}^{n+1} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).
+\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).
 \end{equation}
 If we express the viscous stress tensor in operator form, e.g., 
 $\mathcal{A}_0^n\vb = \nabla\cdot[\eta^n(\nabla\vb + (\nabla\vb)^T)]$, 
@@ -924,11 +924,11 @@ and $\deltab\vb$ has homogeneous boundary conditions of the same type
 We also split $\pi^n = \pi^n + \delta\pi$ in the same way.
 Rewriting the Stokes system above we have:
 \begin{eqnarray}
-\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^n\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^n\vb^n - \rho^n\bar{\vb}^n}{\Delta t} - \nabla\pi^n\nonumber\\
-&&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^n + \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^n\bar{\vb}^n) + \half(\rho^n + \rho^{n+1})\gb,\nonumber\\
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^n\vb^n - \rho^{n+1}\bar{\vb}^n}{\Delta t} - \nabla\pi^n\nonumber\\
+&&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^n + \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^{n+1}\bar{\vb}^n) + \half(\rho^n + \rho^{n+1})\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right)\right].
+-\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right)\right].
 \end{equation}
 {\bf Step 8}\\ \\
 Update volume discrepancy
