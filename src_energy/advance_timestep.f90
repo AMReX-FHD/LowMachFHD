@@ -20,6 +20,8 @@ module advance_timestep_module
   use probin_multispecies_module, only: nspecies
   use energy_EOS_module, only: dpdt_iters, deltaT_iters
 
+  use fabio_module
+
   implicit none
 
   private
@@ -345,7 +347,7 @@ contains
           call compute_S_alpha(mla,delta_S_new,delta_alpha_new,mass_fluxdiv_new, &
                                rhoh_fluxdiv_new,conc_new,Temp_new,rhotot_new,p0_new)
 
-          ! compute P_eos^n
+          ! compute P_eos^{n+1}
           call compute_p(mla,rhotot_new,Temp_new,conc_new,Peos)
 
           ! Scorr = Scorr + 2 * alpha^{n+1} * (Peos^{n+1} - P0^{n+1})/dt
@@ -475,7 +477,31 @@ contains
           call ml_cc_solve(mla,deltaT_rhs,deltaT,fine_flx,cc_solver_alpha,cc_solver_beta,dx, &
                            the_bc_tower,temp_bc_comp)
 
-          print*,'deltaT norm',multifab_norm_inf_c(deltaT(1),1,1)
+          ! debugging statements
+          if (.false.) then
+
+             print*,'deltaT norm',multifab_norm_inf_c(deltaT(1),1,1)
+             if (l .eq. 1) then
+                call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT1")
+             else if (l .eq. 2) then
+                call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT2")
+             else if (l .eq. 3) then
+                call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT3")
+             else if (l .eq. 4) then
+                call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT4")
+             else if (l .eq. 5) then
+                call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT5")
+             else if (l .eq. 6) then
+                call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT6")
+             else if (l .eq. 7) then
+                call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT7")
+             else if (l .eq. 8) then
+                call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT8")
+             else if (l .eq. 9) then
+                call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT9")
+             end if
+
+          end if
 
           do n = 2,nlevs
              call bndry_reg_destroy(fine_flx(n))
@@ -501,6 +527,18 @@ contains
           call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp_new,p0_new,conc_new, &
                                                molefrac_new,eta_new,lambda_new,kappa_new, &
                                                chi_new,zeta_new)
+
+          ! rhoh_fluxdiv_new = div(Q)^{n+1,l} + sum(div(hk*Fk))^{n+1,l} + rho_new*Hext^{n+1,l}
+          call rhoh_fluxdiv_energy(mla,lambda_new,Temp_new,mass_flux_new,rhotot_new, &
+                                   rhoh_fluxdiv_new,dx,0.d0,the_bc_tower)
+
+          ! rhoh_update_new = [-div(rhoh*v) + p0_update + div(Q) + sum(div(hk*Fk)) + rho*Hext]^{n+1}
+          do n=1,nlevs
+             call multifab_copy_c(rhoh_update_new(n),1,rhoh_fluxdiv_new(n),1,1,0)
+             call multifab_plus_plus_s_c(rhoh_update_new(n),1,p0_update_new,1,0)
+          end do
+          ! FIXME, shouldn't have to recompute this
+          call mk_advective_s_fluxdiv(mla,umac_new,rhoh_fc_new,rhoh_update_new,dx,1,1)
 
 
 
