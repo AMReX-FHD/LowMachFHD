@@ -620,28 +620,26 @@ contains
 
           ! debugging statements
           if (.false.) then
-
              print*,'deltaT norm',multifab_norm_inf_c(deltaT(1),1,1)
-             if (l .eq. 1) then
+             if (l .eq. 1 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT1")
-             else if (l .eq. 2) then
+             else if (l .eq. 2 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT2")
-             else if (l .eq. 3) then
+             else if (l .eq. 3 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT3")
-             else if (l .eq. 4) then
+             else if (l .eq. 4 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT4")
-             else if (l .eq. 5) then
+             else if (l .eq. 5 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT5")
-             else if (l .eq. 6) then
+             else if (l .eq. 6 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT6")
-             else if (l .eq. 7) then
+             else if (l .eq. 7 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT7")
-             else if (l .eq. 8) then
+             else if (l .eq. 8 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT8")
-             else if (l .eq. 9) then
+             else if (l .eq. 9 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT9")
              end if
-
           end if
 
           do n = 2,nlevs
@@ -669,7 +667,7 @@ contains
                                                molefrac_new,eta_new,lambda_new,kappa_new, &
                                                chi_new,zeta_new)
 
-          ! eta^{*,n+1} on nodes (2d) or edges (3d)
+          ! eta^{n+1} on nodes (2d) or edges (3d)
           if (dm .eq. 2) then
              call average_cc_to_node(nlevs,eta_new,eta_ed_new(:,1),1,tran_bc_comp,1, &
                                      the_bc_tower%bc_tower_array)
@@ -708,7 +706,7 @@ contains
        end do
 
        ! stores vbar^n in umac_new
-       ! FIXME: vbar will need boundary conditions at t^{*,n+1}
+       ! FIXME: vbar will need boundary conditions at t^{n+1}
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(umac_new(n,i),1,umac_old(n,i),1,1,umac_new(n,i)%ng)
@@ -717,7 +715,6 @@ contains
 
        ! add div(vbar) to gmres_rhs_p
        call compute_div(mla,umac_new,gmres_rhs_p,dx,1,1,1,increment_in=.true.)
-
 
        ! construct gmres_rhs_v
        ! set gmres_rhs_v to rho^n v^n
@@ -781,7 +778,7 @@ contains
           end do
        end do
 
-       ! add (1/2) A_0^{*,n+1} vbar^n to gmres_rhs_v
+       ! add (1/2) A_0^{n+1} vbar^n to gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
              call setval(mtemp(n,i),0.d0,all=.true.)
@@ -795,7 +792,7 @@ contains
           end do
        end do
 
-       ! add (1/2)(rho^n + rho^{*,n+1})g to gmres_rhs_v
+       ! add (1/2)(rho^n + rho^{n+1})g to gmres_rhs_v
        if (any(grav(1:dm) .ne. 0.d0)) then
           call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
        end if
@@ -821,6 +818,29 @@ contains
        call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
                   eta_new,eta_ed_new,kappa_new,theta_alpha,norm_pre_rhs)
 
+          if (.false.) then
+             print*,'dumac norm',multifab_norm_inf_c(dumac(1,1),1,1)
+             if (k .eq. 1) then
+                call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dumac1")
+             else if (k .eq. 2) then
+                call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dumac2")
+             else if (k .eq. 3) then
+                call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dumac3")
+             else if (k .eq. 4) then
+                call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dumac4")
+             else if (k .eq. 5) then
+                call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dumac5")
+             else if (k .eq. 6) then
+                call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dumac6")
+             else if (k .eq. 7) then
+                call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dumac7")
+             else if (k .eq. 8) then
+                call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dumac8")
+             else if (k .eq. 9) then
+                call fabio_ml_multifab_write_d(dumac(:,1),mla%mba%rr(:,1),"a_dumac9")
+             end if
+          end if
+
        ! restore eta and kappa_new
        do n=1,nlevs
           call multifab_mult_mult_s_c(eta_new(n),1,2.d0,1,eta_new(n)%ng)
@@ -830,18 +850,40 @@ contains
           end do
        end do
 
-       ! increment velocity and dynamic pressure
+       ! increment velocity
        ! compute v^{n+1} = v^n + dumac
-       ! compute pi^{n+1}= pi^n + dpi
        do n=1,nlevs
           do i=1,dm
              call multifab_plus_plus_c(umac_new(n,i),1,dumac(n,i),1,1,0)
           end do
        end do
 
+          if (.false.) then
+             if (k .eq. 1) then
+                call fabio_ml_multifab_write_d(umac_new(:,1),mla%mba%rr(:,1),"a_umac_new1")
+             else if (k .eq. 2) then
+                call fabio_ml_multifab_write_d(umac_new(:,1),mla%mba%rr(:,1),"a_umac_new2")
+             else if (k .eq. 3) then
+                call fabio_ml_multifab_write_d(umac_new(:,1),mla%mba%rr(:,1),"a_umac_new3")
+             else if (k .eq. 4) then
+                call fabio_ml_multifab_write_d(umac_new(:,1),mla%mba%rr(:,1),"a_umac_new4")
+             else if (k .eq. 5) then
+                call fabio_ml_multifab_write_d(umac_new(:,1),mla%mba%rr(:,1),"a_umac_new5")
+             else if (k .eq. 6) then
+                call fabio_ml_multifab_write_d(umac_new(:,1),mla%mba%rr(:,1),"a_umac_new6")
+             else if (k .eq. 7) then
+                call fabio_ml_multifab_write_d(umac_new(:,1),mla%mba%rr(:,1),"a_umac_new7")
+             else if (k .eq. 8) then
+                call fabio_ml_multifab_write_d(umac_new(:,1),mla%mba%rr(:,1),"a_umac_new8")
+             else if (k .eq. 9) then
+                call fabio_ml_multifab_write_d(umac_new(:,1),mla%mba%rr(:,1),"a_umac_new9")
+             end if
+          end if
+
     end do  ! end loop k over dpdt_iters
 
     do n=1,nlevs
+       ! compute pi^{n+1}= pi^n + dpi
        call multifab_plus_plus_c(pi(n),1,dpi(n),1,1,0)
 
        ! presure ghost cells
