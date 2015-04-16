@@ -1,6 +1,7 @@
 module advance_timestep_module
 
   use ml_layout_module
+  use bndry_reg_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
@@ -14,6 +15,7 @@ module advance_timestep_module
   use div_and_grad_module
   use macproject_module
   use mk_advective_s_fluxdiv_module
+  use ml_solve_module
   use probin_common_module, only: n_cells
   use probin_multispecies_module, only: nspecies
   use energy_EOS_module, only: dpdt_iters, deltaT_iters
@@ -132,6 +134,18 @@ contains
     ! pressure from the EOS
     type(multifab) :: Peos(mla%nlevel)
 
+    ! solution and RHS for deltaT solve
+    type(multifab) :: deltaT(mla%nlevel)
+    type(multifab) :: deltaT_rhs(mla%nlevel)
+
+    ! coefficients for deltaT (energy) solve
+    type(multifab) :: cc_solver_alpha(mla%nlevel)
+    type(multifab) :: cc_solver_beta(mla%nlevel,mla%dim)
+
+    ! for energy implicit solve
+    ! doesn't actually do anything for single-level solves
+    type(bndry_reg) :: fine_flx(2:mla%nlevel)
+
     real(kind=dp_t) :: Sbar_old, Sbar_new
     real(kind=dp_t) :: alphabar_old, alphabar_new
     real(kind=dp_t) :: Scorrbar
@@ -189,9 +203,15 @@ contains
           call multifab_build_edge(rhoh_fc_old(n,i)  ,mla%la(n),1       ,0,i)
           call multifab_build_edge(rhoh_fc_new(n,i)  ,mla%la(n),1       ,0,i)
        end do
-       call multifab_build(Scorr(n)      ,mla%la(n),1,0)
-       call multifab_build(delta_Scorr(n),mla%la(n),1,0)
-       call multifab_build(Peos(n)       ,mla%la(n),1,0)
+       call multifab_build(Scorr(n)          ,mla%la(n),1,0)
+       call multifab_build(delta_Scorr(n)    ,mla%la(n),1,0)
+       call multifab_build(Peos(n)           ,mla%la(n),1,0)
+       call multifab_build(deltaT(n)         ,mla%la(n),1,1)
+       call multifab_build(deltaT_rhs(n)     ,mla%la(n),1,0)
+       call multifab_build(cc_solver_alpha(n),mla%la(n),1,0)
+       do i=1,dm
+          call multifab_build_edge(cc_solver_beta(n,i),mla%la(n),1,0,i)
+       end do
     end do
 
     ! compute rhotot^n on faces
@@ -418,9 +438,76 @@ contains
 
        do l=1,deltaT_iters
 
+          ! build RHS for deltaT solve
+          do n=1,nlevs
+             call multifab_copy_c(deltaT_rhs(n),1,rhoh_old(n),1,1,0)
+             call multifab_sub_sub_c(deltaT_rhs(n),1,rhoh_new(n),1,1,0)
+             call multifab_mult_mult_s_c(deltaT_rhs(n),1,1.d0/dt,1,0)
+             call multifab_saxpy_3(deltaT_rhs(n),0.5d0,rhoh_update_old(n))
+             call multifab_saxpy_3(deltaT_rhs(n),0.5d0,rhoh_update_new(n))
+          end do
+
+          ! cc_solver_alpha = rho^{n+1} c_p^{n+1,l} / dt
+          call compute_cp(mla,cc_solver_alpha,conc_new,Temp_new)
+          do n=1,nlevs
+             call multifab_mult_mult_c(cc_solver_alpha(n),1,rhotot_new(n),1,1,0)
+             call multifab_mult_mult_s_c(cc_solver_alpha(n),1,1.d0/dt,1,0)
+          end do
+
+          ! cc_solver_beta = (1/2) lambda^{n+1,l}
+          call average_cc_to_face(nlevs,lambda_new,cc_solver_beta,1,tran_bc_comp,1, &
+                                  the_bc_tower%bc_tower_array)          
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_mult_mult_s_c(cc_solver_beta(n,i),1,0.5d0,1,0)
+             end do
+          end do
+
+          ! solve for deltaT
+          do n = 2,nlevs
+             call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
+          end do
+
+          do n=1,nlevs
+             call setval(deltaT(n),0.d0,all=.true.)
+          end do
+
+          call ml_cc_solve(mla,deltaT_rhs,deltaT,fine_flx,cc_solver_alpha,cc_solver_beta,dx, &
+                           the_bc_tower,temp_bc_comp)
+
+          print*,'deltaT norm',multifab_norm_inf_c(deltaT(1),1,1)
+
+          do n = 2,nlevs
+             call bndry_reg_destroy(fine_flx(n))
+          end do
+
+          ! T^{n+1,l+1} = T^{n+1,l} + deltaT
+          do n=1,nlevs
+             call multifab_plus_plus_c(Temp_new(n),1,deltaT(n),1,1,0)
+          end do
+
+          ! fill T ghost cells
+          do n=1,nlevs
+             call multifab_fill_boundary(Temp_new(n))
+             call multifab_physbc(Temp_new(n),1,temp_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                                  dx_in=dx(n,:))
+          end do
+
+          ! h^{n+1,l+1} = h(rho^{n+1},w^{n+1},T^{n+1,l+1})
+          call compute_h(mla,Temp_new,enth_new,conc_new)
+          call convert_rhoh_to_h(mla,rhoh_new,rhotot_new,enth_new,.false.)
+
+          ! compute t^{n+1,l} transport properties
+          call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp_new,p0_new,conc_new, &
+                                               molefrac_new,eta_new,lambda_new,kappa_new, &
+                                               chi_new,zeta_new)
+
 
 
        end do  ! end loop l over deltaT_iters
+
+
+       stop
 
     end do  ! end loop k over dpdt_iters
 
@@ -466,6 +553,12 @@ contains
        call multifab_destroy(Scorr(n))
        call multifab_destroy(delta_Scorr(n))
        call multifab_destroy(Peos(n))
+       call multifab_destroy(deltaT(n))
+       call multifab_destroy(deltaT_rhs(n))
+       call multifab_destroy(cc_solver_alpha(n))
+       do i=1,dm
+          call multifab_destroy(cc_solver_beta(n,i))
+       end do
     end do
 
   end subroutine advance_timestep
