@@ -216,8 +216,8 @@ contains
        call multifab_build(chi_new(n)     ,mla%la(n),nspecies**2,1)
        call multifab_build(zeta_old(n)    ,mla%la(n),nspecies   ,1)
        call multifab_build(zeta_new(n)    ,mla%la(n),nspecies   ,1)
-       call multifab_build(enth_old(n)    ,mla%la(n),1          ,1)
-       call multifab_build(enth_new(n)    ,mla%la(n),1          ,1)
+       call multifab_build(enth_old(n)    ,mla%la(n),1          ,rho_old(n)%ng)
+       call multifab_build(enth_new(n)    ,mla%la(n),1          ,rho_old(n)%ng)
        do i=1,dm
           call multifab_build_edge(mass_flux_old(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(mass_flux_new(n,i),mla%la(n),nspecies,0,i)
@@ -235,8 +235,8 @@ contains
        call multifab_build(delta_alpha_old(n) ,mla%la(n),1       ,0)
        call multifab_build(delta_alpha_new(n) ,mla%la(n),1       ,0)
        do i=1,dm
-          call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(rhotot_fc_new(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(rho_fc_old(n,i)   ,mla%la(n),nspecies,0,i)
           call multifab_build_edge(rho_fc_new(n,i)   ,mla%la(n),nspecies,0,i)
           call multifab_build_edge(rhoh_fc_old(n,i)  ,mla%la(n),1       ,0,i)
@@ -396,7 +396,10 @@ contains
        call multifab_copy_c(rhoh_new(n)  ,1,rhoh_old(n)  ,1,1       ,rhoh_new(n)%ng)
        call multifab_copy_c(Temp_new(n)  ,1,Temp_old(n)  ,1,1       ,Temp_new(n)%ng)
        do i=1,dm
-          call multifab_copy_c(umac_new(n,i),1,umac_old(n,i),1,1,umac_new(n,i)%ng)
+          call multifab_copy_c(umac_new(n,i)     ,1,umac_old(n,i)     ,1,1       ,umac_new(n,i)%ng)
+          call multifab_copy_c(rhotot_fc_new(n,i),1,rhotot_fc_old(n,i),1,1       ,rhotot_fc_new(n,i)%ng)
+          call multifab_copy_c(rho_fc_new(n,i)   ,1,rho_fc_old(n,i)   ,1,nspecies,rho_fc_new(n,i)%ng)
+          call multifab_copy_c(rhoh_fc_new(n,i)  ,1,rhoh_fc_old(n,i)  ,1,1       ,rhoh_fc_new(n,i)%ng)
        end do
     end do
 
@@ -408,6 +411,44 @@ contains
     do k=1,dpdt_iters
        
        if (k .ne. 1) then
+
+          ! compute rhotot^{n+1} on faces
+          call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,1, &
+                                  the_bc_tower%bc_tower_array)
+
+          ! compute rho_i^{n+1} on faces
+          ! first compute c^{n+1} and fill ghost cells
+          call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc_new,.true.)
+          call fill_c_ghost_cells(mla,conc_new,dx,the_bc_tower)
+
+          ! average c^{n+1} to faces
+          call average_cc_to_face(nlevs,conc_new,rho_fc_new,1,c_bc_comp,nspecies, &
+                                  the_bc_tower%bc_tower_array)
+
+          ! multiply c^{n+1} on faces by rhotot^{n+1} on faces
+          do n=1,nlevs
+             do i=1,dm
+                do comp=1,nspecies
+                   call multifab_mult_mult_c(rho_fc_new(n,i),comp,rhotot_fc_new(n,i),1,1,0)
+                end do
+             end do
+          end do
+
+          ! compute rhoh^{n+1} on faces
+          ! first compute h^{n+1} and fill ghost cells
+          call convert_rhoh_to_h(mla,rhoh_new,rhotot_new,enth_new,.true.)
+          call fill_h_ghost_cells(mla,enth_new,dx,the_bc_tower)
+
+          ! average h^{n+1} to faces
+          call average_cc_to_face(nlevs,enth_new,rhoh_fc_new,1,h_bc_comp,1, &
+                                  the_bc_tower%bc_tower_array)
+
+          ! multiply h^{n+1} on faces by rhotot^{n+1} on faces
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_mult_mult_c(rhoh_fc_new(n,i),1,rhotot_fc_new(n,i),1,1,0)
+             end do
+          end do
 
           ! compute mass_flux_new = F^{n+1} and mass_fluxdiv_new = div(F^{n+1})
           call mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac_new,chi_new,zeta_new, &
@@ -428,6 +469,29 @@ contains
           ! Scorr = Scorr + 2 * alpha^{n+1} * (Peos^{n+1} - P0^{n+1})/dt
           do n=1,nlevs
              call multifab_sub_sub_s_c(Peos(n),1,p0_new,1,0)
+
+             if (.false.) then
+                if (k .eq. 1) then
+                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift1")
+                else if (k .eq. 2) then
+                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift2")
+                else if (k .eq. 3) then
+                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift3")
+                else if (k .eq. 4) then
+                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift4")
+                else if (k .eq. 5) then
+                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift5")
+                else if (k .eq. 6) then
+                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift6")
+                else if (k .eq. 7) then
+                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift7")
+                else if (k .eq. 8) then
+                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift8")
+                else if (k .eq. 9) then
+                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift9")
+                end if
+             end if
+
              call multifab_mult_mult_s_c(Peos(n),1,2.d0/dt,1,0)
              call multifab_mult_mult_c(Peos(n),1,delta_alpha_new(n),1,1,0)
              call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
@@ -754,8 +818,6 @@ contains
              call multifab_plus_plus_c(umac_new(n,i),1,dumac(n,i),1,1,0)
           end do
        end do
-
-       stop
 
     end do  ! end loop k over dpdt_iters
 
