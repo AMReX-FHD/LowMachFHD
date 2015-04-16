@@ -157,8 +157,9 @@ contains
     ! stores grad(pi)
     type(multifab) :: gradpi(mla%nlevel,mla%dim)
 
-    ! temporary storage for momentum
+    ! temporary storage for momentum-like quantities
     type(multifab) :: mtemp(mla%nlevel,mla%dim)
+    type(multifab) :: mtemp2(mla%nlevel,mla%dim)
 
     ! for stokes solver - will/can be passed in
     type(multifab) :: dumac(mla%nlevel,mla%dim)
@@ -256,6 +257,7 @@ contains
        do i=1,dm
           call multifab_build_edge(gradpi(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(mtemp(n,i) ,mla%la(n),1,1,i)
+          call multifab_build_edge(mtemp2(n,i),mla%la(n),1,1,i)
           call multifab_build_edge(dumac(n,i) ,mla%la(n),1,1,i)
        end do
        call multifab_build(dpi(n),mla%la(n),1,1)
@@ -742,10 +744,28 @@ contains
           end do
        end do
 
-       ! add -div(rho*v*v)^n to gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_setval(mtemp2(n,i),0.d0,all=.true.)
+          end do
+       end do
+
+       ! add -div(rho*v*v)^n to mtemp2
        call convert_m_to_umac(mla,rhotot_fc_old,mtemp,umac_old,.false.)
-       call mk_advective_m_fluxdiv(mla,umac_old,mtemp,gmres_rhs_v,dx, &
+       call mk_advective_m_fluxdiv(mla,umac_old,mtemp,mtemp2,dx, &
                                    the_bc_tower%bc_tower_array)
+
+       ! add -div(rho*v*v)^{n+1} to mtemp2
+       call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac_new,.false.)
+       call mk_advective_m_fluxdiv(mla,umac_new,mtemp,mtemp2,dx, &
+                                   the_bc_tower%bc_tower_array)
+
+       ! add (1/2)[-div(rho*v*v)^n - div(rho*v*v)^{n+1}] to gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,mtemp2(n,i))
+          end do
+       end do
 
        ! add (1/2) A_0^n v^n to gmres_rhs_v
        do n=1,nlevs
@@ -883,6 +903,7 @@ contains
        do i=1,dm
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(mtemp(n,i))
+          call multifab_destroy(mtemp2(n,i))
           call multifab_destroy(dumac(n,i))
        end do
        call multifab_destroy(dpi(n))
