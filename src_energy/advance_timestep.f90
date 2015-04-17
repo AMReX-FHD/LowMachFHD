@@ -484,7 +484,7 @@ contains
           do n=1,nlevs
              call multifab_sub_sub_s_c(Peos(n),1,p0_new,1,0)
 
-             if (.false.) then
+             if (.true.) then
                 if (k .eq. 1) then
                    call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift1")
                 else if (k .eq. 2) then
@@ -693,8 +693,19 @@ contains
           call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-1.d0,1,0)
        end do
 
-       ! stores vbar^n in umac_new
-       ! FIXME: vbar will need boundary conditions at t^{n+1}
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_setval(mtemp2(n,i),0.d0,all=.true.)
+          end do
+       end do
+
+       ! add -div(rho*v*v)^{n+1} to mtemp2
+       call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac_new,.false.)
+       call mk_advective_m_fluxdiv(mla,umac_new,mtemp,mtemp2,dx, &
+                                   the_bc_tower%bc_tower_array)
+
+       ! overwrite umac_new with vbar^n
+       ! FIXME: vbar will need boundary conditions at t^{n+1} but for now this is fine
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(umac_new(n,i),1,umac_old(n,i),1,1,umac_new(n,i)%ng)
@@ -728,21 +739,9 @@ contains
              call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradpi(n,i),1,1,0)
           end do
        end do
-
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(mtemp2(n,i),0.d0,all=.true.)
-          end do
-       end do
-
        ! add -div(rho*v*v)^n to mtemp2
        call convert_m_to_umac(mla,rhotot_fc_old,mtemp,umac_old,.false.)
        call mk_advective_m_fluxdiv(mla,umac_old,mtemp,mtemp2,dx, &
-                                   the_bc_tower%bc_tower_array)
-
-       ! add -div(rho*v*v)^{n+1} to mtemp2
-       call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac_new,.false.)
-       call mk_advective_m_fluxdiv(mla,umac_new,mtemp,mtemp2,dx, &
                                    the_bc_tower%bc_tower_array)
 
        ! add (1/2)[-div(rho*v*v)^n - div(rho*v*v)^{n+1}] to gmres_rhs_v
