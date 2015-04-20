@@ -909,7 +909,9 @@ contains
        call multifab_destroy(rhoh_update_old(n))
        call multifab_destroy(rhoh_update_new(n))
        call multifab_destroy(delta_S_old(n))
+       call multifab_destroy(delta_S_new(n))
        call multifab_destroy(delta_alpha_old(n))
+       call multifab_destroy(delta_alpha_new(n))
        do i=1,dm
           call multifab_destroy(rhotot_fc_old(n,i))
           call multifab_destroy(rhotot_fc_new(n,i))
