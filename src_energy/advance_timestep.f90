@@ -404,15 +404,15 @@ contains
           call multifab_copy_c(rhoh_fc_new(n,i)  ,1,rhoh_fc_old(n,i)  ,1,1       ,rhoh_fc_new(n,i)%ng)
           call multifab_copy_c(mass_flux_new(n,i),1,mass_flux_old(n,i),1,nspecies,0)
        end do
-       call multifab_copy_c(eta_new(n)         ,1,eta_old(n)         ,1,1       ,1)
-       call multifab_copy_c(lambda_new(n)      ,1,lambda_old(n)      ,1,1       ,1)
-       call multifab_copy_c(kappa_new(n)       ,1,kappa_old(n)       ,1,1       ,1)
-       call multifab_copy_c(chi_new(n)         ,1,chi_old(n)         ,1,1       ,1)
-       call multifab_copy_c(zeta_new(n)        ,1,zeta_old(n)        ,1,1       ,1)
-       call multifab_copy_c(mass_fluxdiv_new(n),1,mass_fluxdiv_old(n),1,nspecies,0)
-       call multifab_copy_c(rhoh_fluxdiv_new(n),1,rhoh_fluxdiv_old(n),1,1       ,0)
-       call multifab_copy_c(delta_S_new(n)     ,1,delta_S_old(n)     ,1,1       ,0)
-       call multifab_copy_c(delta_alpha_new(n) ,1,delta_alpha_old(n) ,1,1       ,0)
+       call multifab_copy_c(eta_new(n)         ,1,eta_old(n)         ,1,1          ,1)
+       call multifab_copy_c(lambda_new(n)      ,1,lambda_old(n)      ,1,1          ,1)
+       call multifab_copy_c(kappa_new(n)       ,1,kappa_old(n)       ,1,1          ,1)
+       call multifab_copy_c(chi_new(n)         ,1,chi_old(n)         ,1,nspecies**2,1)
+       call multifab_copy_c(zeta_new(n)        ,1,zeta_old(n)        ,1,nspecies   ,1)
+       call multifab_copy_c(mass_fluxdiv_new(n),1,mass_fluxdiv_old(n),1,nspecies   ,0)
+       call multifab_copy_c(rhoh_fluxdiv_new(n),1,rhoh_fluxdiv_old(n),1,1          ,0)
+       call multifab_copy_c(delta_S_new(n)     ,1,delta_S_old(n)     ,1,1          ,0)
+       call multifab_copy_c(delta_alpha_new(n) ,1,delta_alpha_old(n) ,1,1          ,0)
     end do
 
     p0_new = p0_old
