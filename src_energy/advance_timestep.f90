@@ -179,7 +179,7 @@ contains
     real(kind=dp_t) :: p0_update_old
     real(kind=dp_t) :: p0_update_new
 
-    real(kind=dp_t) :: theta_alpha, norm_pre_rhs
+    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, deltaT_norm
 
     logical :: nodal_temp(3)
 
@@ -363,9 +363,6 @@ contains
        call multifab_mult_mult_s_c(Peos(n),1,1.d0/dt,1,0)
        call multifab_mult_mult_c(Peos(n),1,delta_alpha_old(n),1,1,0)
        call multifab_copy_c(Scorr(n),1,Peos(n),1,1,0)
-
-       ! hack
-       call multifab_setval(Scorr(n),0.d0,all=.true.)
     end do
 
     ! split S^n, alpha^n, and Scorr into average and perturbational pieces
@@ -489,6 +486,7 @@ contains
 
              call multifab_mult_mult_s_c(Peos(n),1,2.d0/dt,1,0)
              call multifab_mult_mult_c(Peos(n),1,delta_alpha_new(n),1,1,0)
+             ! hack disable volume discrepancy correction
 !             call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
           end do
 
@@ -588,9 +586,14 @@ contains
           call ml_cc_solve(mla,deltaT_rhs,deltaT,fine_flx,cc_solver_alpha,cc_solver_beta,dx, &
                            the_bc_tower,temp_bc_comp)
 
+          deltaT_norm = multifab_norm_inf_c(deltaT(1),1,1)
+
+          if (parallel_IOProcessor()) then
+             print*,'deltaT_norm',deltaT_norm
+          end if
+
           ! debugging statements
           if (.false.) then
-             print*,'deltaT norm',multifab_norm_inf_c(deltaT(1),1,1)
              if (l .eq. 1 .and. k .eq. 1) then
                 call fabio_ml_multifab_write_d(deltaT,mla%mba%rr(:,1),"a_deltaT1")
              else if (l .eq. 2 .and. k .eq. 1) then

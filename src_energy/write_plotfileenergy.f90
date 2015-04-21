@@ -6,6 +6,7 @@ module write_plotfileenergy_module
   use convert_stag_module
   use convert_rhoc_to_c_module
   use convert_rhoh_to_h_module
+  use energy_eos_wrapper_module
   use probin_multispecies_module, only: nspecies, plot_stag
   use probin_common_module, only: prob_lo, prob_hi
 
@@ -13,7 +14,7 @@ module write_plotfileenergy_module
 
 contains
   
-  subroutine write_plotfileenergy(mla,name,rho,rhotot,rhoh,Temp,umac,pres,istep,dx,time)
+  subroutine write_plotfileenergy(mla,name,rho,rhotot,rhoh,Temp,umac,pi,p0,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     character(len=*),   intent(in)    :: name
@@ -22,9 +23,9 @@ contains
     type(multifab),     intent(inout) :: rhoh(:)
     type(multifab),     intent(in)    :: Temp(:)
     type(multifab),     intent(in)    :: umac(:,:)
-    type(multifab),     intent(in)    :: pres(:)
+    type(multifab),     intent(in)    :: pi(:)
     integer,            intent(in)    :: istep
-    real(kind=dp_t),    intent(in)    :: dx(:,:),time
+    real(kind=dp_t),    intent(in)    :: p0,dx(:,:),time
 
     ! local variables
     character(len=20), allocatable  :: plot_names(:)
@@ -44,11 +45,14 @@ contains
     type(multifab) :: conc(mla%nlevel)
     type(multifab) :: h(mla%nlevel)
 
+    ! pressure from the EOS
+    type(multifab) :: Peos(mla%nlevel)
+
     nlevs = mla%nlevel
     dm = mla%dim
   
-    ! rho + rho_i (nspecies) + c_i (nspecies) + rhoh + h + Temp + averaged_umac (dm) + shifted umac (dm) + pres
-    allocate(plot_names(2*nspecies+2*dm+5))
+    ! rho + rho_i (nspecies) + c_i (nspecies) + rhoh + h + Temp + averaged_umac (dm) + shifted umac (dm) + pi + p0, Peos + (Peos-p0)
+    allocate(plot_names(2*nspecies+2*dm+8))
     allocate(plotdata(nlevs))
     allocate(plotdata_stag(nlevs,dm))
  
@@ -68,11 +72,19 @@ contains
     plot_names(2*nspecies+dm+5) = "shifted_velx"
     plot_names(2*nspecies+dm+6) = "shifted_vely"
     if (dm > 2) plot_names(2*nspecies+dm+7) = "shifted_velz"
-    plot_names(2*nspecies+2*dm+5) = "pres"
+    plot_names(2*nspecies+2*dm+5) = "pi"
+    plot_names(2*nspecies+2*dm+6) = "p0"
+    plot_names(2*nspecies+2*dm+7) = "Peos"
+    plot_names(2*nspecies+2*dm+8) = "Peos_minus_p0"
 
     plot_names_stagx(1) = "velx"
     plot_names_stagy(1) = "vely"
     plot_names_stagz(1) = "velz"
+
+    ! for Peos
+    do n=1,nlevs
+       call multifab_build(Peos(n),mla%la(n),1,0)
+    end do
 
     ! compute concentrations
     do n=1,nlevs
@@ -86,9 +98,9 @@ contains
     end do
     call convert_rhoh_to_h(mla,rhoh,rhotot,h,.true.)
 
-    ! build plotdata for 2*nspecies+2*dm+5 and 0 ghost cells
+    ! build plotdata for 2*nspecies+2*dm+8 and 0 ghost cells
     do n=1,nlevs
-       call multifab_build(plotdata(n),mla%la(n),2*nspecies+2*dm+5,0)
+       call multifab_build(plotdata(n),mla%la(n),2*nspecies+2*dm+8,0)
        do i=1,dm
           call multifab_build_edge(plotdata_stag(n,i), mla%la(n), 1, 0, i)
        end do
@@ -114,9 +126,24 @@ contains
        call shift_face_to_cc(mla,umac(:,i),1,plotdata,2*nspecies+dm+4+i,1)
     end do
 
-    ! pressure
+    ! pi
     do n = 1,nlevs
-       call multifab_copy_c(plotdata(n),2*nspecies+2*dm+5,pres(n),1,1,0)
+       call multifab_copy_c(plotdata(n),2*nspecies+2*dm+5,pi(n),1,1,0)
+    enddo
+
+    ! p0
+    do n=1,nlevs
+       call multifab_setval_c(plotdata(n),p0,2*nspecies+2*dm+6,1)
+    end do
+
+    ! compute P_eos
+    call compute_p(mla,rhotot,Temp,conc,Peos)
+    do n = 1,nlevs
+       ! Peos
+       call multifab_copy_c(plotdata(n),2*nspecies+2*dm+7,Peos(n),1,1,0)
+       call multifab_sub_sub_s_c(Peos(n),1,p0,1,0)
+       ! Peos - p0
+       call multifab_copy_c(plotdata(n),2*nspecies+2*dm+8,Peos(n),1,1,0)
     enddo
 
     ! copy staggered velocity and momentum into plotdata_stag
@@ -164,6 +191,7 @@ contains
 
     ! make sure to destroy the multifab or you'll leak memory
     do n=1,nlevs
+       call multifab_destroy(Peos(n))
        call multifab_destroy(conc(n))
        call multifab_destroy(h(n))
        call multifab_destroy(plotdata(n))

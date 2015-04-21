@@ -514,7 +514,8 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfileenergy(mla,"plt",rho_old,rhotot_old,rhoh_old,Temp_old,umac_old,pi,0,dx,time)
+        call write_plotfileenergy(mla,"plt",rho_old,rhotot_old,rhoh_old,Temp_old, &
+                                  umac_old,pi,p0_old,0,dx,time)
      end if
 
   end if
@@ -601,7 +602,8 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
-            call write_plotfileenergy(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp_new,umac_new,pi,istep,dx,time)
+            call write_plotfileenergy(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp_new, &
+                                      umac_new,pi,p0_new,istep,dx,time)
          end if
 
          ! write checkpoint at specific intervals

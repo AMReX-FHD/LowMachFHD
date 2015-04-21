@@ -261,7 +261,7 @@
  use_fake_diff = 0           ! force diffusion coefficients to constant
  fake_diff_coeff = -1.d0     ! Adjust transport coefficients artificially
  fake_soret_factor = 1.0d0   ! Adjust transport coefficients artificially
- dpdt_iters = 10              ! Loops over volume discrepancy correction
- deltaT_iters = 10            ! Loops over deltaT iterative solve
+ dpdt_iters = 5              ! Loops over volume discrepancy correction
+ deltaT_iters = 5            ! Loops over deltaT iterative solve
 
 /
