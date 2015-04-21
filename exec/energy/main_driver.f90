@@ -601,7 +601,7 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
-            call write_plotfileenergy(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp_new,umac_new,pi,0,dx,time)
+            call write_plotfileenergy(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp_new,umac_new,pi,istep,dx,time)
          end if
 
          ! write checkpoint at specific intervals
@@ -635,9 +635,16 @@ subroutine main_driver()
       end if
 
       ! set old state to new state
+
+      p0_old = p0_new
       do n=1,nlevs
          call multifab_copy_c(rho_old(n)   ,1,rho_new(n)   ,1,nspecies,rho_old(n)%ng)
          call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1,1       ,rhotot_old(n)%ng)
+         call multifab_copy_c(rhoh_old(n)  ,1,rhoh_new(n)  ,1,1       ,rhoh_old(n)%ng)
+         call multifab_copy_c(Temp_old(n)  ,1,Temp_new(n)  ,1,1       ,Temp_old(n)%ng)
+         do i=1,dm
+            call multifab_copy_c(umac_old(n,i),1,umac_new(n,i),1,1,umac_old(n,i)%ng)
+         end do
       end do
 
   end do

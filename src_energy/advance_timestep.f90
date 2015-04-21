@@ -363,6 +363,9 @@ contains
        call multifab_mult_mult_s_c(Peos(n),1,1.d0/dt,1,0)
        call multifab_mult_mult_c(Peos(n),1,delta_alpha_old(n),1,1,0)
        call multifab_copy_c(Scorr(n),1,Peos(n),1,1,0)
+
+       ! hack
+       call multifab_setval(Scorr(n),0.d0,all=.true.)
     end do
 
     ! split S^n, alpha^n, and Scorr into average and perturbational pieces
@@ -484,32 +487,9 @@ contains
           do n=1,nlevs
              call multifab_sub_sub_s_c(Peos(n),1,p0_new,1,0)
 
-             if (.true.) then
-                if (k .eq. 1) then
-                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift1")
-                else if (k .eq. 2) then
-                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift2")
-                else if (k .eq. 3) then
-                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift3")
-                else if (k .eq. 4) then
-                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift4")
-                else if (k .eq. 5) then
-                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift5")
-                else if (k .eq. 6) then
-                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift6")
-                else if (k .eq. 7) then
-                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift7")
-                else if (k .eq. 8) then
-                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift8")
-                else if (k .eq. 9) then
-                   call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift9")
-                   stop
-                end if
-             end if
-
              call multifab_mult_mult_s_c(Peos(n),1,2.d0/dt,1,0)
              call multifab_mult_mult_c(Peos(n),1,delta_alpha_new(n),1,1,0)
-             call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
+!             call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
           end do
 
           ! split S^{n+1}, alpha^{n+1}, and Scorr into average and perturbational pieces
@@ -529,6 +509,8 @@ contains
 
        ! update pressure
        p0_new = p0_old + 0.5d0*dt*(p0_update_old + p0_update_new)
+
+       print*,'p0_old,new',p0_old,p0_new
 
        ! mass_update_new = [-div(rho_i*v) + div(F)]^{n+1}
        do n=1,nlevs
@@ -677,6 +659,30 @@ contains
           call mk_advective_s_fluxdiv(mla,umac_new,rhoh_fc_new,rhoh_update_new,dx,1,1)
 
        end do  ! end loop l over deltaT_iters
+
+
+             if (.false.) then
+                if (k .eq. 1) then
+                   call fabio_ml_multifab_write_d(Temp_new,mla%mba%rr(:,1),"a_Temp_new1")
+                else if (k .eq. 2) then
+                   call fabio_ml_multifab_write_d(Temp_new,mla%mba%rr(:,1),"a_Temp_new2")
+                else if (k .eq. 3) then
+                   call fabio_ml_multifab_write_d(Temp_new,mla%mba%rr(:,1),"a_Temp_new3")
+                else if (k .eq. 4) then
+                   call fabio_ml_multifab_write_d(Temp_new,mla%mba%rr(:,1),"a_Temp_new4")
+                else if (k .eq. 5) then
+                   call fabio_ml_multifab_write_d(Temp_new,mla%mba%rr(:,1),"a_Temp_new5")
+                else if (k .eq. 6) then
+                   call fabio_ml_multifab_write_d(Temp_new,mla%mba%rr(:,1),"a_Temp_new6")
+                else if (k .eq. 7) then
+                   call fabio_ml_multifab_write_d(Temp_new,mla%mba%rr(:,1),"a_Temp_new7")
+                else if (k .eq. 8) then
+                   call fabio_ml_multifab_write_d(Temp_new,mla%mba%rr(:,1),"a_Temp_new8")
+                else if (k .eq. 9) then
+                   call fabio_ml_multifab_write_d(Temp_new,mla%mba%rr(:,1),"a_Temp_new9")
+                   stop
+                end if
+             end if
 
        ! compute gmres_rhs_p = delta_S_new + delta_Scorr
        !                       - delta_alpha_new * (Sbar_new + Scorrbar)/alphabar_new

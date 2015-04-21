@@ -339,7 +339,7 @@ contains
 
              r = sqrt((x-xcen)**2 + (y-ycen)**2)
              
-             rhoHext(i,j) = rhoHext(i,j) + 1.d6*rhotot(i,j)*exp(-100*r**2)
+             rhoHext(i,j) = rhoHext(i,j) + 1.d10*rhotot(i,j)*exp(-100*r**2)
 
           end do
        end do
