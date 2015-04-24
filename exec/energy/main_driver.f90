@@ -383,6 +383,10 @@ subroutine main_driver()
         call multifab_physbc_macvel(umac_old(n,i),vel_bc_comp+i-1, &
                                     the_bc_tower%bc_tower_array(n), &
                                     dx(n,:))
+        ! set normal velocity on physical domain boundaries
+        call multifab_physbc_domainvel(umac_old(n,i),vel_bc_comp+i-1, &
+                                       the_bc_tower%bc_tower_array(n), &
+                                       dx(n,:))
      end do
   end do
 

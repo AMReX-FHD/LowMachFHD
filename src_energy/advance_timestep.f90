@@ -21,6 +21,7 @@ module advance_timestep_module
   use ml_solve_module
   use gmres_module
   use convert_m_to_umac_module
+  use multifab_physbc_stag_module
   use probin_common_module, only: n_cells, grav
   use probin_multispecies_module, only: nspecies
   use energy_EOS_module, only: dpdt_iters, deltaT_iters
@@ -179,7 +180,7 @@ contains
     real(kind=dp_t) :: p0_update_old
     real(kind=dp_t) :: p0_update_new
 
-    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, deltaT_norm
+    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, norm
 
     logical :: nodal_temp(3)
 
@@ -507,10 +508,9 @@ contains
           call ml_cc_solve(mla,deltaT_rhs,deltaT,fine_flx,cc_solver_alpha,cc_solver_beta,dx, &
                            the_bc_tower,temp_bc_comp)
 
-          deltaT_norm = multifab_norm_inf_c(deltaT(1),1,1)
-
+          norm = multifab_norm_inf_c(deltaT(1),1,1)
           if (parallel_IOProcessor()) then
-             print*,'deltaT_norm',deltaT_norm
+             print*,'deltaT_norm',norm
           end if
 
           do n = 2,nlevs
@@ -729,6 +729,21 @@ contains
           end do
        end do
 
+       do n=1,nlevs
+          do i=1,dm
+             ! set normal velocity on physical domain boundaries
+             call multifab_physbc_domainvel(umac_new(n,i),vel_bc_comp+i-1, &
+                                            the_bc_tower%bc_tower_array(n), &
+                                            dx(n,:))
+             ! set transverse velocity behind physical boundaries
+             call multifab_physbc_macvel(umac_new(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:))
+             ! fill periodic and interior ghost cells
+             call multifab_fill_boundary(umac_new(n,i))
+          end do
+       end do
+
        ! exit the loop if this is the last dpdt_iter
        if (k .eq. dpdt_iters) exit
 
@@ -753,10 +768,6 @@ contains
        end do
 
        ! compute rhoh^{n+1} on faces
-       ! first compute h^{n+1} and fill ghost cells
-!       call convert_rhoh_to_h(mla,rhoh_new,rhotot_new,enth_new,.true.)
-!       call fill_h_ghost_cells(mla,enth_new,dx,the_bc_tower)
-
        ! average h^{n+1} to faces
        call average_cc_to_face(nlevs,enth_new,rhoh_fc_new,1,h_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
@@ -792,6 +803,16 @@ contains
           ! hack - comment this out to disable volume discrepancy correction
           call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
        end do
+
+       norm = multifab_norm_inf_c(Peos(1),1,1)
+       if (parallel_IOProcessor()) then
+          print*,'drift_norm',norm
+       end if
+
+       norm = multifab_norm_inf_c(Scorr(1),1,1)
+       if (parallel_IOProcessor()) then
+          print*,'Scorr_norm',norm
+       end if
 
        ! split S^{n+1}, alpha^{n+1}, and Scorr into average and perturbational pieces
        do n=1,nlevs
