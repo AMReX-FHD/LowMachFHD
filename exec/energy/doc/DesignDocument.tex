@@ -126,7 +126,7 @@ The governing conservation equations for momentum, mass, and energy for our syst
 \end{eqnarray}
 where $\rho$ is the density, $\vb$ is the velocity, $\pi$ is the dynamic 
 (or perturbational) pressure, $\gb$ is the gravitational vector, $\rho_i=\rho w_i$ is
-the density of fluid component $i$ with $\rho = \sum_i\rho_i$ and $w_i$ the 
+the density of fluid component $i$ with $\rho = \sum_k\rho_k$ and $w_i$ the 
 concentrations (mass fractions), $P$ is the total
 pressure, $h$ is the enthalpy, $h_k = \partial h/\partial w_k$,
 $\Hext$ is an external heating term, $\taub$ is the stress tensor,
@@ -157,7 +157,7 @@ $\chib$ is the diffusion matrix, $\xb$ are the mole fractions,
 $\phib$ are the volume fractions (which for an ideal gas is equivalent to mole fractions),
 $k_B$ is Boltzmann's constant,
 $T$ is the temperature, and $\zetab$ are thermodiffusion coefficients.  The total
-number density is the sum of the partial number densities, $n=\sum_i n_i$ with
+number density is the sum of the partial number densities, $n=\sum_kn_k$ with
 $n_i=\rho_i/W_i$ and $W_i$ the molecular mass of species $i$.
 
 Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy})
@@ -830,86 +830,91 @@ S_{\rm corr} = \bar{S}_{\rm corr} + \delta S_{\rm corr}.
 Note: it's possible that setting $S_{\rm corr}=0$ here may cause the iterations to converge more
 quickly, and that will be easily testable.
 Note that if the thermodynamic variables are in equilibrium, then $S_{\rm corr}=0$ regardless.\\ \\
-Set $(\vb,\rho,\wb,h,T,P_0)^{n+1} = (\vb,\rho,\wb,h,T,P_0)^n$ and
-iterate over an outer loop over {\bf Steps 3-8}:\\ \\
+Set $(\vb,\rho,\wb,h,T,P_0)^{n+1,m=1} = (\vb,\rho,\wb,h,T,P_0)^n$, 
+and  $(S,\alpha,\Fb,\eta,c_p,\lambda,h_k)^{n+1,m=1} = (S,\alpha,\Fb,\eta,c_p,\lambda,h_k)^n$.\\ \\
 {\bf Step 3}\\ \\
-Compute $(S,\alpha,\Fb,\eta,c_p,\lambda,h_k)^{n+1}$ 
-from $(\rho,\wb,h,T,P_0)^{n+1}$.
-We note that $(S,\alpha,\Fb,\eta)^{n+1}$ will stay fixed through the
-current iteration over {\bf Steps 3-8}, whereas $(c_p,\lambda,h_k)$ are
-recomputed as part of the iterative enthalpy solve ({\bf Step 6}).
-Also, $\rho, \wb, h, T$, and $\vb$ are updated sequentially and the 
-updated values are used as needed.
-Split $(S,\alpha)^{n+1}$ into average and perturbational components:
+Split $(S,\alpha)^{n+1,1}$ into average and perturbational components:
 \begin{equation}
-S^{n+1} = \bar{S}^{n+1} + \delta S^{n+1},
+S^{n+1,1} = \bar{S}^{n+1,1} + \delta S^{n+1,1},
 \end{equation}
 \begin{equation}
-\alpha^{n+1} = \bar{\alpha}^{n+1} + \delta\alpha^{n+1},
+\alpha^{n+1,1} = \bar{\alpha}^{n+1,1} + \delta\alpha^{n+1,1}.
 \end{equation}
+Iterate over an outer loop from $m=1$ over {\bf Steps 4-8}:\\ \\
 {\bf Step 4}\\ \\
 Pressure update:
 \begin{equation}
-P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).
+P_0^{n+1,m+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right).
 \end{equation}
 {\bf Step 5}\\ \\
 Recompute densities with trapezoidal-rule advective and diffusive fluxes.
 \begin{equation}
-\rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1}\right],
+\rho_i^{n+1,m+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1,m} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1,m}\right],
 \end{equation}
 \begin{equation}
-\rho^{n+1} = \sum_k\rho_k^{n+1}.
+\rho^{n+1,m+1} = \sum_k\rho_k^{n+1,m+1}.
 \end{equation}
 {\bf Step 6}\\ \\
 Recompute enthalpy semi-implicitly.  This involves a linearized iteration 
-for $\delta T$.  The fundamental formulation is
+for $\delta T$.  In this fundamental formulation, the unknowns 
+are $h^{n+1,m+1}$ and $T^{n+1,m+1}$:
 \begin{eqnarray}
-\frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right]\nonumber\\
-&&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1}\nabla T^{n+1}\nonumber\\
-&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
-&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
+\frac{(\rho h)^{n+1,m+1} - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right]\nonumber\\
+&&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1}\nabla T^{n+1,m+1}\nonumber\\
+&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,m+1}\Fb_k^{n+1,m}\nonumber\\
+&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1},
 \end{eqnarray}
 but since the heat fluxes are expressed in terms of temperature gradients, we
 need an iterative approach that linearizes the dependence of $h$ on $T$,
 \begin{eqnarray}
-\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right]\nonumber\\
-&&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
-&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1},\nonumber\\
-&&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
+\frac{\rho^{n+1,m+1}(h^{n+1,m+1,l} + c_p^{n+1,m+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right]\nonumber\\
+&&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla(T^{n+1,m+1,l} + \delta T)\nonumber\\
+&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m},\nonumber\\
+&&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1},
 \end{eqnarray}
 which can be rearranged to solve for $\delta T$,
 \begin{eqnarray}
-\left(\frac{\rho^{n+1}c_p^{n+1,l}}{\Delta t} - \half\nabla\cdot\lambda^{n+1}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1}h^{n+1,l}}{\Delta t}\nonumber\\
-&&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}^{n+1}}{\bar{\alpha}^{n+1}}\right]\nonumber\\
-&&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1}\nabla T^{n+1,l}\nonumber\\
-&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1}\nonumber\\
-&&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1}.\label{eq:deltaT}
+\left(\frac{\rho^{n+1,m+1}c_p^{n+1,m+1,l}}{\Delta t} - \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1,m+1}h^{n+1,m+1,l}}{\Delta t}\nonumber\\
+&&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right]\nonumber\\
+&&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla T^{n+1,m+1,l}\nonumber\\
+&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m}\nonumber\\
+&&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1}.\label{eq:deltaT}
 \end{eqnarray}
-To proceed, we set $(h,T)^{n+1,l=1} = (h,T)^{n+1}$ and iterate over an inner 
-loop from $l=1$ over {\bf Steps 6a-c}:\\ \\
+To proceed, we set $(h,T,\lambda,c_p,h_k)^{n+1,m+1,l=1} = (h,T,\lambda,c_p,h_k)^{n+1,m}$
+and iterate over an inner loop from $l=1$ over {\bf Steps 6a-c}:\\ \\
 {\bf Step 6a}\\ \\
-Compute $(c_p,\lambda,h_k)^{n+1,l}$ from $(\rho^{n+1},\wb^{n+1},T^{n+1,l})$.\\ \\
-{\bf Step 6b}\\ \\
 Solve equation (\ref{eq:deltaT}) implicitly for $\delta T$.\\ \\
+{\bf Step 6b}\\ \\
+Set $T^{n+1,m+1,l+1} = T^{n+1,m+1,l} + \delta T$ and compute 
+$h^{n+1,m+1,l+1} = h(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1,l+1}$).
 {\bf Step 6c}\\ \\
-Set $T^{n+1,l+1} = T^{n+1,l} + \delta T$ and compute 
-$h^{n+1,l+1} = h(\rho^{n+1},\wb^{n+1},T^{n+1,l}$).  If this is the last iteration, 
-set $(T,h)^{n+1} = (T,h)^{n+1,l+1}$.\\ \\
+If this is the last iteration, set $(T,h)^{n+1,m+1} = (T,h)^{n+1,m+1,l+1}$.
+Otherwise,
+compute $(\lambda,c_p,h_k)^{n+1,m+1,l+1}$ from $(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1,l+1})$
+and return to {\bf Step 6a}.\\ \\
 {\bf Step 7}\\ \\
-GMRES Solve for $\vb^{n+1,k+1}$ and $\pi^{n+1}$.
-\MarginPar{What do we use to compute $\eta^{n+1}$?}
+Compute $(S,\alpha)^{n+1,m+1}$ from the ``$n+1,m+1$'' state and split them 
+into average and perturbational components:
 \begin{equation}
-\frac{(\rho\vb)^{n+1,k+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1,k}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1,k+1}) + \frac{1}{2}(\rho^n + \rho^{n+1})\gb,
+S^{n+1,m+1} = \bar{S}^{n+1,m+1} + \delta S^{n+1,m+1},
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{n+1,k+1} = \delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).
+\alpha^{n+1,m+1} = \bar{\alpha}^{n+1,m+1} + \delta\alpha^{n+1,m+1},
+\end{equation}
+The perform a GMRES solve for $(\vb,\pi)^{n+1,m+1}$.
+\MarginPar{What do we use to compute $\eta^{n+1}$?}
+\begin{equation}
+\frac{(\rho\vb)^{n+1,m+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1,m+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1,m+1}) + \frac{1}{2}(\rho^n + \rho^{n+1,m+1})\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot\vb^{n+1,m+1} = \delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).
 \end{equation}
 If we express the viscous stress tensor in operator form, e.g., 
 $\mathcal{A}_0^n\vb = \nabla\cdot[\eta^n(\nabla\vb + (\nabla\vb)^T)]$, 
 then (\ref{eq:Stokes}) can be 
 expressed in a familiar Stokes operator form,
 \begin{eqnarray}
-\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\vb^{n+1,k+1} + \nabla\pi^{n+1} &=& \frac{\rho^n\vb^n}{\Delta t} - \half\nabla\cdot\left[(\rho\vb\vb)^n + (\rho\vb\vb)^{n+1,k}\right]\nonumber\\
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\vb^{n+1,m+1} + \nabla\pi^{n+1,m+1} &=& \frac{\rho^n\vb^n}{\Delta t} - \half\nabla\cdot\left[(\rho\vb\vb)^n + (\rho\vb\vb)^{n+1,m}\right]\nonumber\\
 && + \half\mathcal{A}_0^n\vb^n + \half(\rho^n + \rho^{n+1})\gb.
 \end{eqnarray}
 \MarginPar{These notes about solving in homogeneous delta form don't really have to make it into the paper.
@@ -917,15 +922,15 @@ They are more to help me with implementation.
 We could mention that we do it, and just cite the binary paper.}
 In practice, we solve for a modified increment to the velocity field, $\deltab\vb$.  In particular,
 we split the updated velocity into
-$\vb^{n+1,k+1} = \bar{\vb}^n + \deltab\vb$, where $\bar{\vb}^n$ is the velocity at $t^n$, but with modified boundary
+$\vb^{n+1,m+1} = \bar{\vb}^n + \deltab\vb$, where $\bar{\vb}^n$ is the velocity at $t^n$, but with modified boundary
 conditions consistent with $\vb^{n+1}$, 
 and $\deltab\vb$ has homogeneous boundary conditions of the same type 
 (Dirichlet or Neumann).
-We also split $\pi^n = \pi^n + \delta\pi$ in the same way.
+We also split $\pi^{n+1,m+1} = \pi^n + \delta\pi$ in the same way.
 Rewriting the Stokes system above we have:
 \begin{eqnarray}
 \left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^n\vb^n - \rho^{n+1}\bar{\vb}^n}{\Delta t} - \nabla\pi^n\nonumber\\
-&&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^n + \nabla\cdot(\rho\vb\vb)^{n+1,k}\right] + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^{n+1}\bar{\vb}^n) + \half(\rho^n + \rho^{n+1})\gb,\nonumber\\
+&&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^n + \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^{n+1}\bar{\vb}^n) + \half(\rho^n + \rho^{n+1})\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right)\right].
