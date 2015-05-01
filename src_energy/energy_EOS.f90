@@ -20,6 +20,7 @@ module energy_EOS_module
   REAL*8 , SAVE :: fake_diff_coeff             ! Adjust transport coefficients artificially
   REAL*8 , SAVE :: fake_soret_factor           ! Adjust transport coefficients artificially
   integer, SAVE :: dpdt_iters                  ! Loops over volume discrepancy correction
+  REAL*8 , SAVE :: dpdt_factor                 ! scaling factor for volume discrepancy correction
   integer, SAVE :: deltaT_iters                ! Loops over deltaT iterative solve
 
   NAMELIST /probin_energy_EOS/ dia_in
@@ -30,6 +31,7 @@ module energy_EOS_module
   NAMELIST /probin_energy_EOS/ fake_diff_coeff
   NAMELIST /probin_energy_EOS/ fake_soret_factor
   NAMELIST /probin_energy_EOS/ dpdt_iters
+  NAMELIST /probin_energy_EOS/ dpdt_factor
   NAMELIST /probin_energy_EOS/ deltaT_iters
 
   ! molmass from namelist is in g/molecule.  molecular_weight is in g/mole
@@ -71,6 +73,7 @@ contains
     fake_diff_coeff = -1.d0
     fake_soret_factor = 1.d0
     dpdt_iters = 3
+    dpdt_factor = 2.d0
     deltaT_iters = 3
 
     ! read from input file 
@@ -123,6 +126,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) dpdt_iters
+
+       case ('--dpdt_factor')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) dpdt_factor
 
        case ('--deltaT_iters')
           farg = farg + 1

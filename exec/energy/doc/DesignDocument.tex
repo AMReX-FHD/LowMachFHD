@@ -888,10 +888,12 @@ Solve equation (\ref{eq:deltaT}) implicitly for $\delta T$.\\ \\
 Set $T^{n+1,m+1,l+1} = T^{n+1,m+1,l} + \delta T$ and compute 
 $h^{n+1,m+1,l+1} = h(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1,l+1}$).
 {\bf Step 6c}\\ \\
-If this is the last iteration, set $(T,h)^{n+1,m+1} = (T,h)^{n+1,m+1,l+1}$.
+If this is the last iteration, set $(T,h)^{n+1,m+1} = (T,h)^{n+1,m+1,l+1}$
+and compute $\eta^{n+1,m+1}$ from $(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1,l+1})$.
 Otherwise,
-compute $(\lambda,c_p,h_k)^{n+1,m+1,l+1}$ from $(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1,l+1})$
-and return to {\bf Step 6a}.\\ \\
+compute $(\lambda,c_p,h_k)^{n+1,m+1,l+1}$ from 
+$(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1,l+1})$,
+increment $l$, and return to {\bf Step 6a}.\\ \\
 {\bf Step 7}\\ \\
 Compute $(S,\alpha)^{n+1,m+1}$ from the ``$n+1,m+1$'' state and split them 
 into average and perturbational components:
@@ -901,21 +903,21 @@ S^{n+1,m+1} = \bar{S}^{n+1,m+1} + \delta S^{n+1,m+1},
 \begin{equation}
 \alpha^{n+1,m+1} = \bar{\alpha}^{n+1,m+1} + \delta\alpha^{n+1,m+1},
 \end{equation}
-The perform a GMRES solve for $(\vb,\pi)^{n+1,m+1}$.
-\MarginPar{What do we use to compute $\eta^{n+1}$?}
+Then perform a GMRES solve for $(\vb,\pi)^{n+1,m+1}$.
+\MarginPar{What do we use to compute $\eta^{n+1}$?  And can the advective term mix $m$ and $m+1$ states?}
 \begin{equation}
 \frac{(\rho\vb)^{n+1,m+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1,m+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1,m+1}) + \frac{1}{2}(\rho^n + \rho^{n+1,m+1})\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{n+1,m+1} = \delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).
+\nabla\cdot\vb^{n+1,m+1} = \delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\alpha^{n+1,m+1}\left(\frac{\bar{S}^{n+1,m+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m+1}}\right).
 \end{equation}
 If we express the viscous stress tensor in operator form, e.g., 
 $\mathcal{A}_0^n\vb = \nabla\cdot[\eta^n(\nabla\vb + (\nabla\vb)^T)]$, 
 then (\ref{eq:Stokes}) can be 
 expressed in a familiar Stokes operator form,
 \begin{eqnarray}
-\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\vb^{n+1,m+1} + \nabla\pi^{n+1,m+1} &=& \frac{\rho^n\vb^n}{\Delta t} - \half\nabla\cdot\left[(\rho\vb\vb)^n + (\rho\vb\vb)^{n+1,m}\right]\nonumber\\
-&& + \half\mathcal{A}_0^n\vb^n + \half(\rho^n + \rho^{n+1})\gb.
+\left(\frac{\rho^{n+1,m+1}}{\Delta t} - \half\mathcal{A}_0^{n+1,m+1}\right)\vb^{n+1,m+1} + \nabla\pi^{n+1,m+1} &=& \frac{\rho^n\vb^n}{\Delta t} - \half\nabla\cdot\left[(\rho\vb\vb)^n + (\rho\vb\vb)^{n+1,m}\right]\nonumber\\
+&& + \half\mathcal{A}_0^n\vb^n + \half(\rho^n + \rho^{n+1,m+1})\gb.
 \end{eqnarray}
 \MarginPar{These notes about solving in homogeneous delta form don't really have to make it into the paper.
 They are more to help me with implementation.
@@ -929,20 +931,20 @@ and $\deltab\vb$ has homogeneous boundary conditions of the same type
 We also split $\pi^{n+1,m+1} = \pi^n + \delta\pi$ in the same way.
 Rewriting the Stokes system above we have:
 \begin{eqnarray}
-\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^n\vb^n - \rho^{n+1}\bar{\vb}^n}{\Delta t} - \nabla\pi^n\nonumber\\
-&&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^n + \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^{n+1}\bar{\vb}^n) + \half(\rho^n + \rho^{n+1})\gb,\nonumber\\
+\left(\frac{\rho^{n+1,m+1}}{\Delta t} - \half\mathcal{A}_0^{n+1,m+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^n\vb^n - \rho^{n+1,m+1}\bar{\vb}^n}{\Delta t} - \nabla\pi^n\nonumber\\
+&&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^n + \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^{n+1,m+1}\bar{\vb}^n) + \half(\rho^n + \rho^{n+1,m+1})\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right)\right].
+-\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\alpha^{n+1,m+1}\left(\frac{\bar{S}^{n+1,m+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m+1}}\right)\right].
 \end{equation}
 {\bf Step 8}\\ \\
 Update volume discrepancy
 \begin{equation}
-S_{\rm corr} = S_{\rm corr} + 2\alpha^{n+1}\left(\frac{P(\rho,\wb,T)^{n+1} - P_0^{n+1}}{\Delta t}\right)
+S_{\rm corr} = S_{\rm corr} + 2\alpha^{n+1,m+1}\left(\frac{P(\rho,\wb,T)^{n+1,m+1} - P_0^{n+1,m+1}}{\Delta t}\right)
 \end{equation}
 Note: I've found this factor of two to be more effective at reducing the drift
 since we are using trapezoidal advective fluxes.  If the drift is unacceptable,
-return to {\bf Step 2}.
+increment $m$ and return to {\bf Step 4}.
 
 \clearpage
 
