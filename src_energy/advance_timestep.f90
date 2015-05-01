@@ -363,11 +363,10 @@ contains
     ! compute P_eos^n
     call compute_p(mla,rhotot_old,Temp_old,conc_old,Peos)
 
-    ! Scorr = Scorr + alpha^n * (Peos^n - P0^n)/dt
+    ! Scorr = Scorr + (1 / p0^n) * (Peos^n - P0^n)/dt
     do n=1,nlevs
        call multifab_sub_sub_s_c(Peos(n),1,p0_old,1,0)
-       call multifab_mult_mult_s_c(Peos(n),1,1.d0/dt,1,0)
-       call multifab_mult_mult_c(Peos(n),1,delta_alpha_old(n),1,1,0)
+       call multifab_mult_mult_s_c(Peos(n),1,1.d0/(p0_old*dt),1,0)
        call multifab_copy_c(Scorr(n),1,Peos(n),1,1,0)
     end do
 
@@ -615,12 +614,12 @@ contains
        ! compute P_eos^{n+1,m+1}
        call compute_p(mla,rhotot_new,Temp_new,conc_new,Peos)
 
-       ! Scorr = Scorr + 2 * alpha^{n+1,m+1} * (Peos^{n+1,m+1} - P0^{n+1,m+1})/dt
+       ! Scorr = Scorr + (dpdt_factor / p0^{n+1,m+1}) * (Peos^{n+1,m+1} - P0^{n+1,m+1})/dt
        do n=1,nlevs
           call multifab_sub_sub_s_c(Peos(n),1,p0_new,1,0)
 
           ! debugging statements
-          if (.true.) then
+          if (.false.) then
              if (k .eq. 1) then
                 call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift1")
              else if (k .eq. 2) then
@@ -647,10 +646,11 @@ contains
              print*,'drift_norm',norm
           end if
 
-          call multifab_mult_mult_s_c(Peos(n),1,dpdt_factor/dt,1,0)
-          call multifab_mult_mult_c(Peos(n),1,delta_alpha_new(n),1,1,0)
-          ! hack - comment this out to disable volume discrepancy correction
-          call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
+          call multifab_mult_mult_s_c(Peos(n),1,dpdt_factor/(p0_new*dt),1,0)
+
+          if (k .ge. 2) then
+             call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
+          end if
        end do
 
        ! split S^{n+1,m+1}, alpha^{n+1,m+1}, and Scorr into average and perturbational pieces

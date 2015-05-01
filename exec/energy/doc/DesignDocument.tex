@@ -422,13 +422,11 @@ We include the $\Delta p/\Delta t$ ``volume discrepancy'' correction term here b
 now we have a sense for what the numerics does to the local thermodynamic pressure in 
 each cell without such a correction.  Physically, by including this term, we are enforce 
 an additional amount of expansion or contraction within each cell in order to modify 
-the pressure.  Now, equation (\ref{eq:constraint}) is replaced by
+the pressure.  
+
+NEED TO ADD TEXT HERE
 \begin{equation}
-\nabla\cdot\vb + \alpha\left(\frac{dP_0}{dt} - \frac{\Delta P}{\Delta t}\right) = S.
-\end{equation}
-or
-\begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = S + \underbrace{\alpha\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = S + \underbrace{\frac{1}{P}\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
 \end{equation}
 Similar to above, in order for this sytem to be solvable we split the update into a
 equations for $P_0$ and $\vb$,
@@ -516,7 +514,7 @@ We loop over the following until the convergence criteria in {\bf Step 1e} is me
 \item {\bf Step 1a:} Compute a pressure update.  First,
 compute a volume discrepancy correction,
 \begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \alpha^{n}\left(\frac{P_{\rm EOS}^n - P_0^n}{\Delta t}\right),
+S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{P_0^n}\left(\frac{P_{\rm EOS}^n - P_0^n}{\Delta t}\right),
 \end{equation}
 and split this into average and perturbational components.  Then, update the pressure:
 \begin{equation}
@@ -599,7 +597,7 @@ If $l=l_{\rm max}$, set $(h,T)^{*,n+1} = (h,T)^{*,n+1,l+1}$ and proceed to {\bf 
 If the drift is acceptable, proceed to {\bf Step 2}.  Otherwise,
 update the volume discrepancy correction,
 \begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \alpha^{*,n+1}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right),
+S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{P_0^{*,n+1}}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right),
 \end{equation}
 split this into average and perturbational components.
 and return to {\bf Step 1a}.\\
@@ -680,7 +678,7 @@ If $l=l_{\rm max}$, set $(h,T)^{n+1} = (h,T)^{n+1,l+1}$ and proceed to {\bf Step
 If the drift is acceptable, return to {\bf Step 1}.  Otherwise,
 update the volume discrepancy correction,
 \begin{equation}
-S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + 2\alpha^{n+1}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right),
+S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + \frac{2}{P_0^{n+1}}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right),
 \end{equation}
 split this into average and perturbational components, and return to {\bf Step 2a}.
 Note there is a factor of two scaling the drift, since the advective term
@@ -821,7 +819,7 @@ S^n = \bar{S}^n + \delta S^n,
 {\bf Step 2:}\\ \\
 Compute a volume discrepancy correction:
 \begin{equation}
-S_{\rm corr} = \alpha^n \left(\frac{P(\rho,\wb,T)^n - P_0^n}{\Delta t}\right),
+S_{\rm corr} = \frac{1}{P_0^n}\left(\frac{P(\rho,\wb,T)^n - P_0^n}{\Delta t}\right),
 \end{equation}
 and split this into average and perturbational components,
 \begin{equation}
@@ -940,7 +938,7 @@ Rewriting the Stokes system above we have:
 {\bf Step 8}\\ \\
 Update volume discrepancy
 \begin{equation}
-S_{\rm corr} = S_{\rm corr} + 2\alpha^{n+1,m+1}\left(\frac{P(\rho,\wb,T)^{n+1,m+1} - P_0^{n+1,m+1}}{\Delta t}\right)
+S_{\rm corr} = S_{\rm corr} + \frac{2}{P_0^{n+1,m+1}}\left(\frac{P(\rho,\wb,T)^{n+1,m+1} - P_0^{n+1,m+1}}{\Delta t}\right)
 \end{equation}
 Note: I've found this factor of two to be more effective at reducing the drift
 since we are using trapezoidal advective fluxes.  If the drift is unacceptable,
