@@ -199,21 +199,21 @@ constraint interact to control the evolution and whether they are, in some sense
 We begin by differentiating the 
 right-hand side of equation (\ref{eq:EOS}) along particle paths,
 \begin{equation}
-\frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
+\frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
 \end{equation}
-$P_0$ is spatially constant
-so we can replace $DP/Dt$ 
-with $d P_0/ dt$:
+This statement is always true, but in our low Mach number model we wish to enforce
+that the pressure is spatially constant, yet can vary in time.  Thus, we
+replace $DP/Dt$ with $dP_0/ dt$:
 \begin{equation}
-\frac{d P_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
+\frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths2}
 \end{equation}
-As noted above we are also make the
-substitution $DP/Dt = d P_0/ d t$ in the enthalpy equation.  (Since we
+As noted above we also make the
+substitution $DP/Dt = dP_0/ d t$ in the enthalpy equation.  (Since we
 are currently assuming $P_0$ is constant in space, we are not allowing
 for pressure stratification due to gravity.)
 Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, 
 we can rewrite 
-(\ref{eq:particle paths}) as
+(\ref{eq:particle paths2}) as
 \begin{equation}
 \nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{dP_o}{dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
@@ -222,11 +222,11 @@ along particle paths and replace $DP/Dt$ with $dP_0/dt$ to obtain
 \begin{equation}
 \frac{Dh}{Dt} = 
 c_p \frac{DT}{Dt} 
-+ h_P\frac{d P_0}{d t} + \sum_k h_{k}\frac{Dw_k}{Dt}  \;\;  ,
++ h_P\frac{dP_0}{d t} + \sum_k h_{k}\frac{Dw_k}{Dt}  \;\;  ,
 \end{equation}
 where $c_p = \partial h/\partial T$.  This gives
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{d P_0}{d t} - \sum_kh_{k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
+\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{dP_0}{d t} - \sum_kh_{k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
 \end{equation}
 From equation (\ref{eq:mass}) and 
 continuity we have,
@@ -298,7 +298,7 @@ derivative matches that in the MAESTRO algorithm \cite{MAESTROIII},
 except that paper includes a convective derivative of $P_0$ due to stratification.
 
 \subsection{Confined Domains}
-The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $d P_0/d t$.
+The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $dP_0/d t$.
 For open domains where $\vb$ is allowed to be non-zero on one or more walls $P_0$
 is constant and the constraint equation reduces to
 \begin{equation}
@@ -332,9 +332,9 @@ By definition,
 \end{equation}
 So equation (\ref{eq:constraint}) can be rewritten as,
 \begin{equation}
-\nabla\cdot\vb + \bar{\alpha}\frac{d P_0}{d t} 
+\nabla\cdot\vb + \bar{\alpha}\frac{dP_0}{d t} 
 = \bar{S} + \delta S -
-\delta\alpha\frac{d P_0}{d t}.\label{eq:constraint2}
+\delta\alpha\frac{dP_0}{d t}.\label{eq:constraint2}
 \end{equation}
 Since $\nabla \cdot \vb$ must integrate to zero and $P_0$ must be only a function of time,
 equation (\ref{eq:constraint2}) can be uniquely decomposed to give
@@ -349,43 +349,9 @@ and
 Thus, the original system is analytically equivalent to solving the system (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
 subject to (\ref{eq:P0}) and (\ref{eq:constraint3}).
 
-\section{Overview of Time Stepping Strategy}
-
-The form of the system given above can fit into the framework of low Mach number algorithms we have
-developed based on the generalized Stokes solver. 
-The additional issue that arises is that since the core numerical algorithm is based on the derivative
-of the constraint, we can numerically drift off of the actual algebraic constraint. Thus, we augment the
-basic algorithm with iterative 
-``volume discrepancy'' scheme described below to solve 
-(\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
-while enforcing condition (\ref{eq:EOS}) to a specified tolerance.\\
-
-At the most basic level, the time-stepping strategy looks like this:\\
-\begin{itemize}
-\item {\bf Step 1}
-
-
-\item {\bf Step A}: Advance $P_0$ with equation (\ref{eq:P0}) and 
-then solve for velocity using the Stokes system GMRES solver coupling equations 
-(\ref{eq:momentum}) and (\ref{eq:constraint3}).\\
-\item {\bf Step B}: Update thermodynamic variables using equations (\ref{eq:mass}), 
-and (\ref{eq:enthalpy}).  This involves the explicit computation of advective fluxes,
-explicit computation of mass diffusion, and implicit treatment of heat fluxes.\\
-\item {\bf Step C}: Check to see how the updated $P(\rho,\wb,T)$ compares to the 
-updated $P_0$.  If the drift 
-is unacceptable, add a correction to the right-hand-side of equations
-(\ref{eq:P0}) and (\ref{eq:constraint3})
-designed to drive the thermodynamic variables into equilibrium with 
-$P_0$ and then return to {\bf Step A}.  Details on the form of this 
-correction are given below.\\
-\end{itemize}
-The actual time-advancement algorithm will be a bit more complicated, as we 
-incorporate a predictor-corrector formulism to obtain second-order advective 
-fluxes, and also incorporate an iterative scheme for heat fluxes, etc.
-
 \section{Equation of State Drift}
-Recall equation (\ref{eq:particle paths}), where we analytically enforce that
-thermodynamic pressure will evolve to be consistent with the evolution of $P_0$:
+Recall equation (\ref{eq:particle paths2}), where we analytically enforce that
+thermodynamic pressure will evolve to be consistent with the evolution of $P_0$,
 \begin{equation}
 \frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
 \end{equation}
@@ -416,19 +382,20 @@ If we were able to ``redo'' the velocity computation, the rate at which we want 
 pressure to change in each cell is no longer given
 by simply $dP_0/dt$, but is now given by:
 \begin{equation}
-\frac{DP}{Dt} = \frac{dP_0}{dt} - \frac{\Delta P}{\Delta t}.
+\frac{DP}{Dt} = \frac{dP_0}{dt} - \frac{\Delta P}{\Delta t}.\label{eq:DPDt}
 \end{equation}
-We include the $\Delta p/\Delta t$ ``volume discrepancy'' correction term here because 
-now we have a sense for what the numerics does to the local thermodynamic pressure in 
-each cell without such a correction.  Physically, by including this term, we are enforce 
+We include the $\Delta P/\Delta t$ ``volume discrepancy'' correction term here because 
+now we have a sense for how numerical truncation error causes the local thermodynamic pressure in 
+each cell to drift without such a correction.  Physically, by including this term, we are enforce 
 an additional amount of expansion or contraction within each cell in order to modify 
 the pressure.  
 
-NEED TO ADD TEXT HERE
+By starting with (\ref{eq:particle paths}) and substituting (\ref{eq:DPDt}) into (\ref{eq:particle paths2})
+and otherwise follow the same derivation, we end up with,
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = S + \underbrace{\frac{1}{P}\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = S + \underbrace{\frac{1}{\rho P_\rho}\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
 \end{equation}
-Similar to above, in order for this sytem to be solvable we split the update into a
+Similar to above, in order for this sytem to be solvable we split the update into
 equations for $P_0$ and $\vb$,
 \begin{equation}
 \frac{dP_0}{dt} = \frac{\bar{S} + \bar{S}_{\rm corr}}{\bar{\alpha}}
@@ -436,6 +403,7 @@ equations for $P_0$ and $\vb$,
 \begin{equation}
 \nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\alpha\left(\frac{\bar{S} + \bar{S}_{\rm corr}}{\bar{\alpha}}\right).
 \end{equation}
+At the beginning of each time step, we initialize $S_{\rm corr}$ based on the current drift of the data at $t^n$.
 As we iterate, we increment (rather than reset) $\delta S_{\rm corr}$ based on how much 
 the current solution drifts using $\delta S_{\rm corr}$ the previous iteration.
 
@@ -482,308 +450,27 @@ Substituting (\ref{eq:delta T}) and (\ref{eq:delta h}) into (\ref{eq:temp form})
 We solve this implicitly for $\delta T$, then compute $T^{n+1,l+1}$
 using (\ref{eq:delta T}) and compute $h^{n+1,l+1}$ using the EOS.
 
+\section{Overview of Time Stepping Strategy}
+
+The form of the system given above can fit into the framework of low Mach number algorithms we have
+developed based on the generalized Stokes solver. 
+The additional issue that arises is that since the core numerical algorithm is based on the derivative
+of the constraint, we can numerically drift off of the actual algebraic constraint. Thus, we augment the
+basic algorithm with iterative 
+``volume discrepancy'' scheme described below to solve 
+(\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
+while enforcing condition (\ref{eq:EOS}) to a specified tolerance.\\
+
+At the most basic level, the time-stepping strategy is an iterative loop over the following:\\
+\begin{itemize}
+\item Advance $P_0$.
+\item Advance densities using trapezoidal-rule fluxes.
+\item Advance enthalpy semi-implicitly.
+\item Advance velocity using a Stokes solver.
+\item Compute a volume discrepancy correction.
+\end{itemize}
+
 \section{Time-Advancement Strategy}\label{Sec:Time-Advancement Strategy}
-The full time-advancement strategy is divided into two major steps, the Scalar Predcitor
-and the Scalar Corrector.\\ \\
-{\bf Step 1: Scalar Predictor.}\\ \\
-The goal of the Scalar Predictor is to compute a velocity field at $t^n$, $\vb^n$,
-as well as preliminary time-advanced thermodynamic variables and pressure,
-$(\rho_i,\rho h)^{*,n+1}$ and $P_0^{*,n+1}$.  The advective fluxes will be computed
-with $\vb^n$ and thus the Scalar Predictor is formally first-order in time.
-In the Scalar Corrector, we increase the order of accuracy by using a trapezoidal
-rule discretization of the advective fluxes.\\
-
-At the beginning of the Scalar Predictor, we know the thermodynamic variables and 
-velocity from the previous time step, $(\rho_i,\rho h)^{n-1}$ and $\vb^{n-1}$, the 
-thermodynamic variables at the beginning of the time step, $(\rho_i,\rho h)^n$, the
-thermodynamic pressure at the beginning of the time step, $P_0^n$, and a preliminary
-guess of the velocity at the beginning of the time step, $\vb^{*,n}$.  These quantities
-are all available after completing the Scalar Corrector from the previous time step.\\
-
-The constraint equation will be iteratively modified using a volume discrepancy
-correction in order to adjust the velocity field
-so that $(\rho_i,\rho h,P_0)$ evolve in a thermodynamically consistent manner.\\
-
-To begin, we compute $S^n = S(\rho,\wb,T)^n$ and $\alpha^n = \alpha(\wb,T,P_0)^n$
-into average and perturbational components.
-We set the initial volume discrepancy correction to zero, 
-$S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
-$S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
-We loop over the following until the convergence criteria in {\bf Step 1e} is met:\\
-\begin{itemize}
-\item {\bf Step 1a:} Compute a pressure update.  First,
-compute a volume discrepancy correction,
-\begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{P_0^n}\left(\frac{P_{\rm EOS}^n - P_0^n}{\Delta t}\right),
-\end{equation}
-and split this into average and perturbational components.  Then, update the pressure:
-\begin{equation}
-P_0^{*,n+1} = P_0^n + \Delta t\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right).
-\end{equation}
-\item {\bf Step 1b:} Compute the velocity, $\vb^n$, and dynamic pressure, $\pi^n$,
-using a GMRES solver for the Stokes system:
-\begin{eqnarray}
-\frac{\rho^n\vb^n - \rho^{n-1}\vb^{n-1}}{\Delta t} + \nabla\pi^n &=& -\half\nabla\cdot\left[(\rho\vb\vb)^{n-1} + (\rho\vb\vb)^{*,n}\right]\nonumber\\
-&& + \frac{1}{2}\nabla\cdot(\taub^{n-1} + \taub^n) + \frac{1}{2}(\rho^{n-1} + \rho^n)\gb,\label{eq:Stokes}
-\end{eqnarray}
-\begin{equation}
-\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right).
-\end{equation}
-If we express the viscous stress tensor in operator form, e.g., 
-$\mathcal{A}_0^n\vb = \nabla\cdot[\eta^n(\nabla\vb + (\nabla\vb)^T)]$. , then (\ref{eq:Stokes}) can be 
-expressed in a familiar Stokes operator form,
-\begin{eqnarray}
-\left(\frac{\rho^n}{\Delta t} - \half\mathcal{A}_0^n\right)\vb^n + \nabla\pi^n &=& \frac{\rho^{n-1}\vb^{n-1}}{\Delta t} - \half\nabla\cdot\left[(\rho\vb\vb)^{n-1} + (\rho\vb\vb)^{*,n}\right]\nonumber\\
-&& + \half\mathcal{A}_0^{n-1}\vb^{n-1} + \half(\rho^{n-1} + \rho^n)\gb.
-\end{eqnarray}
-\MarginPar{These notes about solving in homogeneous delta form don't really have to make it into the paper.
-They are more to help me with implementation.
-We could mention that we do it, and just cite the binary paper.}
-In practice, we solve for a modified increment to the velocity field, $\deltab\vb$.  In particular,
-we split the updated velocity into
-$\vb^n = \bar{\vb}^{n-1} + \deltab\vb$, where $\bar{\vb}^{n-1}$ is the velocity at $t^{n-1}$, but with modified boundary
-conditions consistent with $\vb^n$, and $\deltab\vb$ has homogeneous boundary conditions of the same type (Dirichlet or Neumann).
-We also split $\pi^n = \pi^{*,n} + \delta\pi$ in the same way.  Rewriting the Stokes system above we have:
-\begin{eqnarray}
-\left(\frac{\rho^n}{\Delta t} - \half\mathcal{A}_0^n\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^{n-1}\vb^{n-1} - \rho^n\bar{\vb}^{n-1}}{\Delta t} - \nabla\pi^{*,n}\nonumber\\
-&&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^{n-1} + \nabla\cdot(\rho\vb\vb)^{*,n}\right] + \half(\mathcal{A}_0^{n-1}\vb^{n-1}+\mathcal{A}_0^n\bar{\vb}^{n-1}) + \half(\rho^{n-1} + \rho^n)\gb,\nonumber\\
-\end{eqnarray}
-\begin{equation}
--\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^{n-1} - \left[\delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right)\right].
-\end{equation}
-\item {\bf Step 1c:} Compute preliminary, time-advanced densities using forward-Euler advective fluxes
-and explicit mass diffusion:
-\begin{equation}
-\rho_i^{*,n+1} = \rho_i^n + \Delta t\left[-\nabla\cdot(\rho_i\vb)^n + \nabla\cdot\Fb^n\right].
-\end{equation}
-\item {\bf Step 1d:} Compute preliminary time-advanced enthalpy by iteratively looping over an energy solve.
-The fundamental formulation is given by,
-\begin{eqnarray}
-\frac{(\rho h)^{*,n+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\nonumber\\
-&&+ \half\nabla\cdot\Qb^n + \half\nabla\cdot\Qb^{*,n+1}\nonumber\\
-&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1}\Fb_k^{*,n+1}\nonumber\\
-&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{*,n+1},
-\end{eqnarray}
-but since we express $\Qb$ in terms of temperature gradients, we need an iterative
-solve that linearizes the dependence of $h$ on $T$.  First we initialize
-$(h,T)^{*,n+1,l=1} = (h,T)^n$.
-Loop from $l=1$ to $l_{\rm max}$:\\ \\
-{\bf Step 1d-1:} Define
-\begin{equation}
-(\lambda,c_p,\Fb)^{*,n+1,l} = \lambda,c_P,\Fb(\rho^{*,n+1},\wb^{*,n+1},T^{*,n+1,l}).
-\end{equation}
-{\bf Step 1d-2:} Solve for $\delta T$ implicitly:
-\begin{eqnarray}
-\frac{\rho^{*,n+1}(h^{*,n+1,l} + c_p^{*,n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=&
--\nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} \nonumber\\
-&&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla(T^{*,n+1,l} + \delta T)\nonumber\\
-&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} \Fb_k^{*,n+1,l},\nonumber\\
-&&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{*,n+1}
-\end{eqnarray}
-\begin{eqnarray}
-\left(\frac{\rho^{*,n+1}c_p^{*,n+1,l}}{\Delta t} - \nabla\cdot\frac{1}{2}\lambda^{*,n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{*,n+1}h^{*,n+1,l}}{\Delta t}\nonumber\\
-&&\hspace{-1.25in} - \nabla\cdot(\rho h\vb)^n + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\nonumber\\
-&&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{*,n+1,l}\nabla T^{*,n+1,l}\nonumber\\
-&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{*,n+1,l} \Fb_k^{*,n+1,l},\nonumber\\
-&&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{*,n+1}.
-\end{eqnarray}
-
-{\bf Step 1d-3:} Update the temperature and enthalpy using
-\begin{equation}
-T^{*,n+1,l+1} = T^{*,n+1,l} + \delta T, \quad h^{*,n+1,l+1} = h(\wb^{*,n+1},T^{*,n+1,l+1}).
-\end{equation}
-If $l=l_{\rm max}$, set $(h,T)^{*,n+1} = (h,T)^{*,n+1,l+1}$ and proceed to {\bf Step 1e}.\\
-\item {\bf Step 1e:} Compute the thermodynamic drift, $P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}$.
-If the drift is acceptable, proceed to {\bf Step 2}.  Otherwise,
-update the volume discrepancy correction,
-\begin{equation}
-S_{\rm corr}^n = S_{\rm corr}^n + \frac{1}{P_0^{*,n+1}}\left(\frac{P_{\rm EOS}^{*,n+1} - P_0^{*,n+1}}{\Delta t}\right),
-\end{equation}
-split this into average and perturbational components.
-and return to {\bf Step 1a}.\\
-\end{itemize}
-
-{\bf Step 2: Scalar Corrector}.\\ \\
-The goal of this step is to compute updated time-advanced densities and enthalpy 
-that are consistent with $P_0$.  This will require the computation
-of a velocity field, $\vb^{*,n+1}$, that preserves this thermodynamic balance.
-We compute $(S,\alpha)^{*,n+1}$ and decompose them
-into average and perturbational components.
-We set the volume discrepancy correction to the value
-$S_{\rm corr}^{*,n+1} = S_{\rm corr}^n$ and compute its decomposition
-(Note: I observe less drift using $S_{\rm corr}^{*,n+1} = 0$, keep a watch on this).
-We loop over the following until the convergence criteria in {\bf Step 2e} is met:\\
-\begin{itemize}
-\item {\bf Step 2a:} Compute a pressure update:
-\begin{equation}
-P_0^{n+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right) + \frac{\Delta t}{2}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right).
-\end{equation}
-\item {\bf Step 2b:} Compute the velocity and the dynamic pressure using a GMRES solver for the Stokes system:
-\begin{equation}
-\frac{\rho^{*,n+1}\vb^{*,n+1} - \rho^n\vb^n}{\Delta t} + \nabla\pi^{*,n+1} = -\nabla\cdot(\rho\vb\vb)^n + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{*,n+1}) + \frac{1}{2}(\rho^n + \rho^{*,n+1})\gb,
-\end{equation}
-\begin{equation}
-\nabla\cdot\vb^{*,n+1} = \delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1} - \delta\alpha^{*,n+1}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right).
-\end{equation}
-\MarginPar{More notes for implementation that do not need to go into paper.}
-We recast the Stokes system using $\vb^{*,n+1} = \bar{\vb}^n + \deltab\vb, \pi^{*,n+1} = \pi^n + \delta\pi$
-(see explanation in {\bf Step 1b}):
-\begin{eqnarray}
-\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta\pi &=& \frac{\rho^n\vb^n - \rho^{*,n+1}\bar{\vb}^n}{\Delta t} - \nabla\pi^n\nonumber\\
-&&\hspace{-1in}- \nabla\cdot(\rho\vb\vb)^n + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^{*,n+1}\bar{\vb}^n) + \half(\rho^n + \rho^{*,n+1})\gb,\nonumber\\
-\end{eqnarray}
-\begin{equation}
--\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{*,n+1} + \delta S_{\rm corr}^{*,n+1} - \delta\alpha^{*,n+1}\left(\frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right)\right].
-\end{equation}
-\item {\bf Step 2c:} Compute time-advanced densities using trapezoidal advective and diffusive fluxes:
-\begin{equation}
-\rho_i^{n+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{*,n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{*,n+1}\right].
-\end{equation}
-\item {\bf Step 2d:} Compute time-advanced enthalpy by iteratively looping over an energy solve.
-The fundamental formulation is given by,
-\begin{eqnarray}
-\frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right]\nonumber\\
-&&+ \half\nabla\cdot\Qb^n + \half\nabla\cdot\Qb^{n+1}\nonumber\\
-&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
-&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
-\end{eqnarray}
-but since we express $\Qb$ in terms of temperature gradients, we need an iterative solve that linearizes
-the dependence of $h$ on $T$.  First we initialize $(h,T)^{n+1,l=1} = (h,T)^{*,n+1}$.
-Loop from $l=1$ to $l_{\rm max}$:\\ \\
-{\bf Step 2d-1:} Define
-\begin{equation}
-(\lambda,c_p,\Fb)^{n+1,l} = \lambda,c_p,\Fb(\rho^{n+1},\wb^{n+1},T^{n+1,l}).
-\end{equation}
-{\bf Step 2d-2:} Solve for $\delta T$ implicitly:
-\begin{eqnarray}
-\frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \nonumber\\
-&&\hspace{-1in}\half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1}+ \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right] \nonumber\\
-&&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
-&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}\nonumber\\
-&&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
-\end{eqnarray}
-\begin{eqnarray}
-\left(\frac{\rho^{n+1}c_p^{n+1,l}}{\Delta t} - \nabla\cdot\frac{1}{2}\lambda^{n+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1}h^{n+1,l}}{\Delta t}\nonumber\\
-&&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{*,n+1} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{*,n+1} + \bar{S}_{\rm corr}^{*,n+1}}{\bar{\alpha}^{*,n+1}}\right]\nonumber\\
-&&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l}\nonumber\\
-&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}\nonumber\\
-&&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1}.
-\end{eqnarray}
-{\bf Step 2d-3:} Update the temperature and enthalpy using
-\begin{equation}
-T^{n+1,l+1} = T^{n+1,l} + \delta T, \quad h^{n+1,l+1} = h(\wb^{n+1},T^{n+1,l+1}).
-\end{equation}
-If $l=l_{\rm max}$, set $(h,T)^{n+1} = (h,T)^{n+1,l+1}$ and proceed to {\bf Step 2e}.\\
-\item {\bf Step 2e:} Compute the thermodynamic drift, $P_{\rm EOS}^{n+1} - P_0^{n+1}$.
-If the drift is acceptable, return to {\bf Step 1}.  Otherwise,
-update the volume discrepancy correction,
-\begin{equation}
-S_{\rm corr}^{*,n+1} = S_{\rm corr}^{*,n+1} + \frac{2}{P_0^{n+1}}\left(\frac{P_{\rm EOS}^{n+1} - P_0^{n+1}}{\Delta t}\right),
-\end{equation}
-split this into average and perturbational components, and return to {\bf Step 2a}.
-Note there is a factor of two scaling the drift, since the advective term
-only carries a half-weighting due to the trapezoidal temporal integration.\\
-\end{itemize}
-
-{\bf Step 0: Initialization}.\\ \\
-At the beginning of the simulation, we replace {\bf Step 1} with this initialization step.
-This step is only performed once at the beginning of the simulation, so here $n=0$.
-Note that this step is essentially the same as
-{\bf Step 1}, except that in the computation of $\vb^n$ we use a projection rather
-than a Stokes solver.
-I suggest we specify $\rho,\wb$, and $P_0$, compute $\rho_i = \rho w_i$,
-and then use the EOS to compute a consistent
-$T$ and $h$.  The velocity can be initialized to zero, noting that the
-initialization step will dictate what the velocity must be for the system to stay
-on the constraint.
-The goal of this step is to compute preliminary time-advanced densities and enthalpy
-that are consistent with $P_0$.  This will
-require the computation of a velocity field, $\vb^n$, that preserves this
-thermodynamic balance.
-We compute $(S,\alpha)^n$ and decompose them
-into average and perturbational components.
-We set the initial volume discrepancy correction to zero, 
-$S_{\rm corr}^n = 0$, as well as the individual terms in the decomposition,
-$S_{\rm corr}^n = \bar{S}_{\rm corr}^n + \delta S_{\rm corr}^n$.
-We loop over the following until the convergence criteria in {\bf Step 0e} is met:\\
-\begin{itemize}
-\item {\bf Step 0a:} Same as {\bf Step 1a}.
-\item {\bf Step 0b:} Compute the velocity field using
-\begin{equation}
-\nabla\cdot\vb^n = \delta S^n + \delta S_{\rm corr}^n - \delta\alpha^n\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n}\right) \equiv S_{\rm proj}.
-\end{equation}
-This involves solving the ellptic equation,
-\begin{equation}
-\nabla\cdot\frac{1}{\rho}\nabla\Phi = \nabla\cdot\vb^n - S_{\rm proj},
-\end{equation}
-and velocity update,
-\begin{equation}
-\vb^n = \vb^n - \frac{1}{\rho}\nabla\Phi.
-\end{equation}
-
-\item {\bf Step 0c:} Same as {\bf Step 1c}.
-\item {\bf Step 0d:} Same as {\bf Step 1d}.
-\item {\bf Step 0e:} Same as {\bf Step 1e}, except that the loop returns to {\bf Step 0a}.
-\end{itemize}
-
-
-\section{Noble Gas Test Problem}
-
-The EOS we will test is an ideal mixture of four noble gases, 
-He, Ne, Ar, and Kr.
-The molecular weights, diameters, and assumption of hard sphere dynamics
- are all that is needed to specify the thermodynamics in
-{\tt energy\_EOS\_module\_HS.f90}.  The functions of interest are:\\
-\begin{itemize}
-
-\item {\tt CKCPBS} computes $c_p(\wb,T)$.  In this EOS this is not dependent on temperature.\\
-
-\item {\tt CKCVBS} computes $c_v(\wb,T)$.  In this EOS this is not dependent on temperature.\\
-
-\item {\tt CKUBMS} computes the mean internal energy, $e(\wb,T)$.\\
-
-\item {\tt get\_t\_given\_ey} computes $T(e,\wb)$.\\
-
-\item {\tt CKPY} computes $P(\rho,\wb,T)$.\\
-
-\item {\tt CKHMS} computes $h_m(T)$.  Note $h = \sum_k w_k h_k$.\\
-
-\item {\tt CKYTX} computes mole fractions, $\xb$, from mass fractions, $\wb$.\\
-
-\item {\tt CKYTCR} computes molar concentrations from $\rho,T$ and $\wb$.
-In this EOS this is not dependent on temperature.\\
-
-\item {\tt CKXTY} mass fractions, $\wb$, from mole fractions, $\xb$.\\
-
-\item {\tt CKMMWY} computes the mixture-averaged molecular mass, $\bar{m}$, given $\wb$.\\
-
-\item {\tt CKRHOY} computes $\rho(P,\wb,T)$.\\
-
-\item {\tt CKCPMS} computes the individual specific heats for each component,
-$c_p(T)$.  In this EOS this is not dependent on temperature.\\
-
-\end{itemize}
-
-The subroutine {\tt ideal\_mixture\_transport} takes $\rho,T,P,\wb$, and $\xb$ 
-as inputs and computes the following:\\
-\begin{itemize}
-
-\item {\tt eta} is the dynamic viscosity, $\eta$.\\
-
-\item {\tt zeta} is the bulk viscosity, $\kappa$.\\
-
-\item {\tt diff\_ij} is the diffusion matrix, $\chi$.\\
-
-\item {\tt kappa} is the thermal conductivity, $\lambda$.\\
-
-\item {\tt chitil} are the thermodiffusion coefficients, $\zeta$.
-                   (I modified the routine to make this so).\\
-
-\end{itemize}
-
-\clearpage
-
-\section{New Algorithm}
 
 \subsection{Initialization}
 We are given $\vb^{\rm init}$ and $(\rho,\wb,h,T,P_0,\pi)^0$,
@@ -902,7 +589,6 @@ S^{n+1,m+1} = \bar{S}^{n+1,m+1} + \delta S^{n+1,m+1},
 \alpha^{n+1,m+1} = \bar{\alpha}^{n+1,m+1} + \delta\alpha^{n+1,m+1},
 \end{equation}
 Then perform a GMRES solve for $(\vb,\pi)^{n+1,m+1}$.
-\MarginPar{What do we use to compute $\eta^{n+1}$?  And can the advective term mix $m$ and $m+1$ states?}
 \begin{equation}
 \frac{(\rho\vb)^{n+1,m+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1,m+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1,m+1}) + \frac{1}{2}(\rho^n + \rho^{n+1,m+1})\gb,
 \end{equation}
@@ -943,6 +629,60 @@ S_{\rm corr} = S_{\rm corr} + \frac{2}{P_0^{n+1,m+1}}\left(\frac{P(\rho,\wb,T)^{
 Note: I've found this factor of two to be more effective at reducing the drift
 since we are using trapezoidal advective fluxes.  If the drift is unacceptable,
 increment $m$ and return to {\bf Step 4}.
+
+\section{Noble Gas Test Problem}
+
+The EOS we will test is an ideal mixture of four noble gases, 
+He, Ne, Ar, and Kr.
+The molecular weights, diameters, and assumption of hard sphere dynamics
+ are all that is needed to specify the thermodynamics in
+{\tt energy\_EOS\_module\_HS.f90}.  The functions of interest are:\\
+\begin{itemize}
+
+\item {\tt CKCPBS} computes $c_p(\wb,T)$.  In this EOS this is not dependent on temperature.\\
+
+\item {\tt CKCVBS} computes $c_v(\wb,T)$.  In this EOS this is not dependent on temperature.\\
+
+\item {\tt CKUBMS} computes the mean internal energy, $e(\wb,T)$.\\
+
+\item {\tt get\_t\_given\_ey} computes $T(e,\wb)$.\\
+
+\item {\tt CKPY} computes $P(\rho,\wb,T)$.\\
+
+\item {\tt CKHMS} computes $h_m(T)$.  Note $h = \sum_k w_k h_k$.\\
+
+\item {\tt CKYTX} computes mole fractions, $\xb$, from mass fractions, $\wb$.\\
+
+\item {\tt CKYTCR} computes molar concentrations from $\rho,T$ and $\wb$.
+In this EOS this is not dependent on temperature.\\
+
+\item {\tt CKXTY} mass fractions, $\wb$, from mole fractions, $\xb$.\\
+
+\item {\tt CKMMWY} computes the mixture-averaged molecular mass, $\bar{m}$, given $\wb$.\\
+
+\item {\tt CKRHOY} computes $\rho(P,\wb,T)$.\\
+
+\item {\tt CKCPMS} computes the individual specific heats for each component,
+$c_p(T)$.  In this EOS this is not dependent on temperature.\\
+
+\end{itemize}
+
+The subroutine {\tt ideal\_mixture\_transport} takes $\rho,T,P,\wb$, and $\xb$ 
+as inputs and computes the following:\\
+\begin{itemize}
+
+\item {\tt eta} is the dynamic viscosity, $\eta$.\\
+
+\item {\tt zeta} is the bulk viscosity, $\kappa$.\\
+
+\item {\tt diff\_ij} is the diffusion matrix, $\chi$.\\
+
+\item {\tt kappa} is the thermal conductivity, $\lambda$.\\
+
+\item {\tt chitil} are the thermodiffusion coefficients, $\zeta$.
+                   (I modified the routine to make this so).\\
+
+\end{itemize}
 
 \clearpage
 
