@@ -7,7 +7,6 @@ module mass_fluxdiv_energy_module
   use convert_rhoc_to_c_module
   use energy_EOS_module
   use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: variance_coef_mass
 
   implicit none
 

@@ -16,8 +16,7 @@ module analyze_spectra_binary_module
 
   use probin_common_module, only: n_cells, prob_lo, prob_hi, &
        hydro_grid_int, analyze_conserved, project_dir, &
-       center_snapshots, max_grid_projection, stats_int, n_steps_save_stats, &
-       variance_coef_mom
+       center_snapshots, max_grid_projection, stats_int, n_steps_save_stats
 
   implicit none
 
