@@ -169,7 +169,6 @@ contains
 
     do ns =  1,nspecies
        e0ref(ns) = 0.d0
-       !      R_g(ns) = Runiv / molecular_weight(ns)
        cvgas(ns) = 0.5d0*(3+int_deg_free(ns))*Runiv/molecular_weight(ns)
        cpgas(ns) = 0.5d0*(5+int_deg_free(ns))*Runiv/molecular_weight(ns)
     enddo
@@ -226,7 +225,9 @@ contains
 
   end subroutine energy_EOS_init
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes $c_p(\wb,T)$.  In this EOS this is not dependent on temperature
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine CKCPBS(temp,Yk,IWRK,RWRK,cpmix)
     
     real(kind=8) :: temp,Yk(1:nspecies),RWRK,cpmix
@@ -240,7 +241,9 @@ contains
     return
   end subroutine CKCPBS
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes $c_v(\wb,T)$.  In this EOS this is not dependent on temperature.
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine CKCVBS(temp,Yk,IWRK,RWRK,cvmix)
 
     real(kind=8) :: temp,Yk(1:nspecies),RWRK,cvmix
@@ -254,53 +257,58 @@ contains
     return
   end subroutine CKCVBS
 
-  ! computes the mean internal energy, $e(\wb,T)$
-  subroutine CKUBMS(temp,Yk,IWRK,RWRK,eintmix)
+!  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  ! computes the mean internal energy, $e(\wb,T)$
+!  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  subroutine CKUBMS(temp,Yk,IWRK,RWRK,eintmix)
+!
+!    real(kind=8) :: temp,Yk(1:nspecies),RWRK,eintmix
+!    integer :: IWRK, ns
+!    real(kind=8) :: cvmix, e0                                  
+!    
+!    cvmix = 0.0d0; e0 = 0.0d0
+!    do ns = 1, nspecies
+!       cvmix = cvmix + Yk(ns)*cvgas(ns)
+!       e0 = e0 + Yk(ns)*e0ref(ns)
+!    enddo
+!    
+!    eintmix = e0 + cvmix*temp 
+!    
+!    if(temp.ge.6000.0d0) then
+!       print*, 'BUG IN CKUBMS ', temp,Yk  
+!    endif
+! 
+!    return
+!  end subroutine CKUBMS
 
-    real(kind=8) :: temp,Yk(1:nspecies),RWRK,eintmix
-    integer :: IWRK, ns
-    real(kind=8) :: cvmix, e0                                  
-    
-    cvmix = 0.0d0; e0 = 0.0d0
-    do ns = 1, nspecies
-       cvmix = cvmix + Yk(ns)*cvgas(ns)
-       e0 = e0 + Yk(ns)*e0ref(ns)
-    enddo
-    
-    eintmix = e0 + cvmix*temp 
-    
-    if(temp.ge.6000.0d0) then
-       print*, 'BUG IN CKUBMS ', temp,Yk  
-    endif
- 
-    return
-  end subroutine CKUBMS
+!  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  ! computes $T(e,\wb)$
+!  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  subroutine get_t_given_ey(eintmix, Yk, IWRK, RWRK, temp,ierr)     
+!
+!    real(kind=8) :: temp,Yk(1:nspecies),RWRK,eintmix
+!    integer :: IWRK, ns , ierr
+!    real(kind=8) :: cvmix, e0                                  
+!
+!    cvmix = 0.0d0; e0 = 0.0d0
+!    do ns = 1, nspecies
+!       cvmix = cvmix + Yk(ns)*cvgas(ns)
+!       e0 = e0 + Yk(ns)*e0ref(ns)
+!    enddo
+! 
+!    temp = (eintmix-e0)/cvmix 
+!    
+!    if(temp.ge.6000.0d0) then
+!       print*, 'BUG IN feeytt ', eintmix, Yk, cvmix  
+!       stop
+!    endif
+! 
+!    return
+!  end subroutine get_t_given_ey
 
-
-  ! computes $T(e,\wb)$
-  subroutine get_t_given_ey(eintmix, Yk, IWRK, RWRK, temp,ierr)     
-
-    real(kind=8) :: temp,Yk(1:nspecies),RWRK,eintmix
-    integer :: IWRK, ns , ierr
-    real(kind=8) :: cvmix, e0                                  
-
-    cvmix = 0.0d0; e0 = 0.0d0
-    do ns = 1, nspecies
-       cvmix = cvmix + Yk(ns)*cvgas(ns)
-       e0 = e0 + Yk(ns)*e0ref(ns)
-    enddo
- 
-    temp = (eintmix-e0)/cvmix 
-    
-    if(temp.ge.6000.0d0) then
-       print*, 'BUG IN feeytt ', eintmix, Yk, cvmix  
-       stop
-    endif
- 
-    return
-  end subroutine get_t_given_ey
-
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes $P(\rho,\wb,T)$
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine CKPY(rho, temp, Yk, iwrk, rwrk, pt) 
 
     real(kind=8) :: rho, temp, Yk(1:nspecies), rwrk, pt
@@ -323,7 +331,9 @@ contains
     return
   end subroutine CKPY
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !  computes $h_m(T)$.  Note $h = \sum_k w_k h_k$
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine ckhms(T, iwrk, rwrk, hk) 
     
     real(kind=8) :: T, rwrk, hk(1:nspecies)
@@ -336,7 +346,9 @@ contains
     return
   end subroutine ckhms
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes mole fractions, $\xb$, from mass fractions, $\wb$
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine CKYTX(Yk, iwrk, rwrk, Xk)
 
     real(kind=8) :: Yk(1:nspecies), Xk(1:nspecies), rwrk
@@ -354,23 +366,27 @@ contains
     return
   end subroutine CKYTX
 
-  ! computes molar concentrations from $\rho,T$ and $\wb$.
-  ! in this EOS this is not dependent on temperature
-  subroutine CKYTCR(rho,T,Yk, iwrk, rwrk, Ck)
-    
-    real(kind=8) :: Yk(1:nspecies), Ck(1:nspecies), rwrk
-    real(kind=8) :: rho,T
-    integer :: iwrk, ns
-    real*8 :: molmix
+!  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  ! computes molar concentrations from $\rho,T$ and $\wb$.
+!  ! in this EOS this is not dependent on temperature
+!  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  subroutine CKYTCR(rho,T,Yk, iwrk, rwrk, Ck)
+!    
+!    real(kind=8) :: Yk(1:nspecies), Ck(1:nspecies), rwrk
+!    real(kind=8) :: rho,T
+!    integer :: iwrk, ns
+!    real*8 :: molmix
+!
+!    do ns = 1, nspecies
+!       Ck(ns) = rho*Yk(ns)/molecular_weight(ns)
+!    enddo
+!
+!    return
+!  end subroutine CKYTCR
 
-    do ns = 1, nspecies
-       Ck(ns) = rho*Yk(ns)/molecular_weight(ns)
-    enddo
-
-    return
-  end subroutine CKYTCR
-
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! mass fractions, $\wb$, from mole fractions, $\xb$
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine CKXTY(Xk, iwrk, rwrk, Yk)
     
     real(kind=8) :: Yk(1:nspecies), Xk(1:nspecies), rwrk
@@ -388,7 +404,9 @@ contains
     return
   end subroutine CKXTY
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes the mixture-averaged molecular mass, $\bar{m}$, given $\wb$
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine CKMMWY(Yk, iwrk, rwrk, molmix)
 
     real(kind=8) :: Yk(1:nspecies), rwrk, molmix
@@ -396,7 +414,7 @@ contains
 
     molmix = 0.0d0
     do ns = 1, nspecies
-       ! AJN HACK - CHANGING UNITS TO BE COMPATIBLE WITH compute_S
+       ! CHANGING UNITS TO BE COMPATIBLE WITH compute_S
 !       molmix = molmix + Yk(ns)/molecular_weight(ns)
        molmix = molmix + Yk(ns)/molmass(ns)
     enddo
@@ -405,7 +423,9 @@ contains
     return
   end subroutine CKMMWY
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes $\rho(P,\wb,T)$
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine CKRHOY(pt,temp,Yk,IWRK,RWRK,rho)
 
     real(kind=8) :: pt, temp, Yk(1:nspecies), rwrk, rho
@@ -423,20 +443,23 @@ contains
     return
   end subroutine CKRHOY
 
-  ! computes the individual specific heats for each component,
-  ! $c_p(T)$.  In this EOS this is not dependent on temperature
-  subroutine CKCPMS(T, iwrk, rwrk, cp) 
+!  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  ! computes the individual specific heats for each component,
+!  ! $c_p(T)$.  In this EOS this is not dependent on temperature
+!  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  subroutine CKCPMS(T, iwrk, rwrk, cp) 
+!
+!    real(kind=8) :: T, rwrk, cp(1:nspecies)
+!    integer :: iwrk, ns
+!                            
+!    do ns = 1, nspecies
+!       cp(ns) = cpgas(ns)
+!    enddo
+! 
+!    return
+!  end subroutine CKCPMS
 
-    real(kind=8) :: T, rwrk, cp(1:nspecies)
-    integer :: iwrk, ns
-                            
-    do ns = 1, nspecies
-       cp(ns) = cpgas(ns)
-    enddo
- 
-    return
-  end subroutine CKCPMS
-
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! takes $\rho,T,P,\wb$, and $\xb$ as inputs and computes the following:
   ! eta     is the dynamic viscosity, $\eta$
   ! kappa   is the thermal conductivity, $\lambda$
@@ -444,6 +467,7 @@ contains
   ! diff_ij is the diffusion matrix, $\chi$
   ! chitil are the thermodiffusion coefficients, $\zeta$.
   !                (I modified the routine to make this so)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine ideal_mixture_transport(density,temperature,pressure,Yk,Xk,eta,kappa, &
                                      zeta,diff_ij,chitil,nspec)
     
@@ -634,77 +658,6 @@ end module energy_EOS_module
 ! These are local routines needed above
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine PGAMMAP(nspec,Ykp,Xkp,Dbin,D_tilde,wk,wbar)
-
-  implicit none 
-
-  integer :: nspec, i, j, k
-  real(kind=8) :: wk(1:nspec),wbar
-  real(kind=8) :: Ykp(1:nspec), Xkp(1:nspec)
-  real(kind=8) :: Dbin(1:nspec,1:nspec), term1, term2
-  real(kind=8) :: D_tilde(1:nspec,1:nspec), Di(1:nspec), GAM(1:nspec,1:nspec)
-  real(kind=8), dimension(1:nspec,1:nspec) :: Pmat, Pmat1
-
-
-  ! Find Di matrix 
-  do i = 1, nspec
-     term1 = 0.0d0 
-     term2 = 0.0d0
-     do j = 1, nspec
-        if(j.ne.i) then
-           term1 = term1 + Ykp(j)
-           term2 = term2 + Xkp(j)/Dbin(i,j)
-        endif
-     enddo
-     Di(i) = term1/term2 
-  enddo
-
-
-  ! Compute GAMMA
-  GAM = 0.0d0
-  do i = 1, nspec
-     GAM(i,i) = wk(i)/wbar*Di(i)           
-  enddo
-
-
-  ! Compute P matrix
-  Pmat = 0.0d0
-  do i = 1, nspec
-     do j = 1, nspec
-        Pmat(i,j) = - Ykp(i) 
-        if(i.eq.j) then
-           Pmat(i,j) =  Pmat(i,j) + 1.0d0  
-        endif
-     enddo
-  enddo
-
-
-  ! Compute Pmat*GAM and store it in Pmat1
-  Pmat1 = 0.0d0
-  do i = 1, nspec
-     do j = 1, nspec
-        do k = 1, nspec
-           Pmat1(i,j) = Pmat1(i,j) + Pmat(i,k)*GAM(k,j)
-        enddo
-     enddo
-  enddo
-
-  ! Compute Pmat1*P and store it in D_tilde
-  D_tilde = 0.0d0
-  do i = 1, nspec
-     do j = 1, nspec
-        do k = 1, nspec
-           D_tilde(i,j) = D_tilde(i,j) + Pmat1(i,k)*Pmat(k,j)
-        enddo
-     enddo
-  enddo
-
-
-
-
-  return
-end subroutine PGAMMAP
-
 !----------------------------------------------------------------------
 
 subroutine D_GIOVANGIGLI(nspec,Dbin,Ykp,Xkp,D_tilde)
@@ -849,197 +802,6 @@ subroutine D_GIOVANGIGLI(nspec,Dbin,Ykp,Xkp,D_tilde)
 
   return
 end subroutine D_GIOVANGIGLI
-
-
-
-!----------------------------------------------------------------------
-
-subroutine D_GIOVANGIGLI_old(nspec,Dbin,Ykp,Xkp,D_tilde)
-
-  implicit none 
-
-  integer :: nspec, i, j, k, jj
-  real(kind=8) :: mk(1:nspec), dk(1:nspec), wk(1:nspec)
-  real(kind=8) :: Yk(1:nspec), Xk(1:nspec), Ykp(1:nspec), Xkp(1:nspec)
-  real(kind=8) :: dij(1:nspec,1:nspec), T, rho, pres, mw, eps1
-  real(kind=8) :: Dbin(1:nspec,1:nspec), term1, term2
-  real(kind=8) :: D_tilde(1:nspec,1:nspec), Di(1:nspec), Diff_ij(1:nspec,1:nspec)
-  real(kind=8) :: Deltamat(1:nspec,1:nspec), Zmat(1:nspec,1:nspec)
-  real(kind=8), dimension(1:nspec,1:nspec) :: Pmat, Jmat, Minv, Mmat
-  real(kind=8), dimension(1:nspec,1:nspec) :: PJ, matrix1, matrix2, matrix3, PJJ
-  integer :: jmax
-
-
-  jmax = 3 
-
-
-  eps1 = 1.0d-16
-
-  ! Find Di matrix 
-  do i = 1, nspec
-     term1 = 0.0d0 
-     term2 = 0.0d0
-     do j = 1, nspec
-        if(j.ne.i) then
-           term1 = term1 + Ykp(j)
-           term2 = term2 + Xkp(j)/Dbin(i,j)
-        endif
-     enddo
-     Di(i) = term1/term2 
-  enddo
-
-
-  ! Compute Mmat and Minv
-  Mmat = 0.0d0
-  Minv = 0.0d0
-  do i = 1, nspec
-     Mmat(i,i) = Xkp(i)/Di(i)
-     Minv(i,i) = Di(i)/Xkp(i)
-  enddo
-
-
-  ! Compute P matrix
-  Pmat = 0.0d0
-  do i = 1, nspec
-     do j = 1, nspec
-        Pmat(i,j) = - Ykp(j) 
-        if(i.eq.j) then
-           Pmat(i,j) =  Pmat(i,j) + 1.0d0  
-        endif
-     enddo
-  enddo
-
-
-  ! Compute Deltamat
-  Deltamat = 0.0d0 
-  do i = 1, nspec
-     do j = 1, nspec
-        if(i.eq.j) then
-           term1 = 0.0d0
-           do k = 1, nspec
-              if(k.ne.i) then
-                 term1 = term1 + Xkp(i)*Xkp(k)/Dbin(i,k)
-              endif
-           enddo
-           Deltamat(i,i) = term1
-        else
-           Deltamat(i,j) = -Xkp(i)*Xkp(j)/Dbin(i,j) 
-        endif
-     enddo
-  enddo
-
-
-  ! Compute Zmat
-  do i = 1, nspec
-     do j = 1, nspec
-        Zmat(i,j) = Mmat(i,j) - Deltamat(i,j) 
-     enddo
-  enddo
-
-
-  ! Compute Jmat
-  Jmat = 0.0d0
-  do i = 1, nspec
-     do j = 1, nspec
-        do k = 1, nspec
-           Jmat(i,j) = Jmat(i,j) + Minv(i,k)*Zmat(k,j)
-        enddo
-     enddo
-  enddo
-
-  ! Compute PJ
-  PJ = 0.0d0
-  do i = 1, nspec
-     do j = 1, nspec
-        do k = 1, nspec
-           PJ(i,j) = PJ(i,j) + Pmat(i,k)*Jmat(k,j)
-        enddo
-     enddo
-  enddo
-
-
-  ! Compute P M^-1 Pt; store it in matrix2
-  matrix1 = 0.0d0
-  matrix2 = 0.0d0
-  do i = 1, nspec
-     do j = 1, nspec
-        do k = 1, nspec
-           matrix1(i,j) = matrix1(i,j) + Pmat(i,k)*Minv(k,j)
-        enddo
-     enddo
-  enddo
-  do i = 1, nspec
-     do j = 1, nspec
-        do k = 1, nspec
-           matrix2(i,j) = matrix2(i,j) + matrix1(i,k)*Pmat(j,k) 
-           ! notice the change in indices for Pmat to represent Pmat^t
-        enddo
-     enddo
-  enddo
-
-
-  ! Initialize PJJ with the identity matrix
-  PJJ = 0.0d0
-  do i = 1, nspec
-     PJJ(i,i) = 1.0d0
-  enddo
-
-  jj = 0
-
-  ! matrix3 is the summation of the matrix multiplications
-  matrix3 = 0.0d0
-
-701 continue 
-  matrix1 = 0.0d0 
-
-  ! Compute PJJ*matrix2; sore it in matrix1
-  do i = 1, nspec
-     do j = 1, nspec
-        do k = 1, nspec
-           matrix1(i,j) = matrix1(i,j) + PJJ(i,k)*matrix2(k,j)
-        enddo
-     enddo
-  enddo
-
-
-  matrix3 = matrix3 + matrix1
-
-  jj = jj + 1 
-
-  if(jj.le.jmax) then
-
-     ! Re-evaluate PJJ; matrix1 is a scratch array 
-     matrix1 = 0.0d0 
-     do i = 1, nspec
-        do j = 1, nspec
-           do k = 1, nspec
-              matrix1(i,j) = matrix1(i,j) + PJJ(i,k)*PJ(k,j)
-           enddo
-        enddo
-     enddo
-     PJJ = matrix1
-
-     goto 701
-  endif
-
-
-
-
-  ! Compute Diff_ij
-  Diff_ij = matrix3
-
-
-  ! Compute D_tilde
-  D_tilde = 0.0d0
-  do i = 1, nspec
-     do j = 1, nspec
-        D_tilde(i,j) = Diff_ij(i,j)*Ykp(i)
-     enddo
-  enddo
-
-
-  return
-end subroutine D_GIOVANGIGLI_old
 
 
 !-------------------------------------------------
@@ -1303,565 +1065,4 @@ subroutine thermalDiff(nspec,sigma11,a_ij1,a_ij2,alphabar_in,Xkp,sqrtT,mk,kT)
 
   return
 end subroutine thermalDiff
-
-
 !-------------------------------------------------
-
-subroutine viscosityM(xoriginal,T,m,k_B,d,etaMix,nspeci)
-
-  use bl_constants_module
-
-  integer :: nspeci
-  real(kind=8), dimension(1:nspeci) :: x, xoriginal, m
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: d
-
-  real(kind=8), dimension(1:nspeci) :: eta1
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: eta2,H
-  real(kind=8), dimension(1:nspeci+1,1:nspeci+1) :: N
-  real(kind=8) :: T,  sumTemp, etaMix
-  integer :: ii, jj, kk
-  real(kind=8) :: numerator, denominator
-  real(kind=8) :: eps, sumx
-  real*8 :: k_B, avo
-
-  real*8 :: DMGT
-
-  avo = 6.0246d23
-  ! clear variables
-  H(1:nspeci,1:nspeci) = 0.0d0
-  N(1:nspeci+1,1:nspeci+1) = 0.0d0
-  eta1(1:nspeci) = 0.0d0
-  eta2(1:nspeci,1:nspeci) = 0.0d0
-
-
-  x = xoriginal
-  ! DANGER
-  do ii = 1, nspeci
-     if(x(ii).lt.1.0d-6) then
-        x(ii) = x(ii) + 1.0d-6 
-     endif
-  enddo
-  sumx = sum(x(:))  
-  x(:) = x(:)/sumx
-
-  do ii=1,nspeci
-     ! page 528 HCB
-     eta1(ii) = 5.0d0/(16.0d0*d(ii,ii)**2.0d0)*sqrt(m(ii)*k_B*T/M_PI)
-
-  enddo
-
-
-  do ii=1,nspeci
-     do jj=1,ii
-        ! page 529 HCB
-        eta2(ii,jj) = 5.0d0/(16.0d0*d(ii,jj)**2.0d0)*   &
-             sqrt(2.0d0*m(ii)*m(jj)/(m(ii)+m(jj))*k_B*T/M_PI)
-        eta2(jj,ii) = eta2(ii,jj)
-     enddo
-  enddo
-
-
-  do ii=1,nspeci
-     do jj=1,nspeci
-        if( ii .eq. jj ) then
-           sumTemp = 0.0d0
-           do kk=1,nspeci
-              if( kk .ne. ii ) then
-                 sumTemp = sumTemp + 2.0d0*x(ii)*x(kk)/eta2(ii,kk)    &
-                      * (m(ii)*m(kk)/(m(ii)+m(kk))**2.0d0)                &
-                      * (5.0d0/3.0d0 + m(kk)/m(ii))
-              endif
-           enddo
-           H(ii,ii) = (x(ii)**2.0d0)/eta1(ii) + sumTemp
-        else
-           H(ii,jj) = -2.0d0*x(ii)*x(jj)/eta2(ii,jj)                  &
-                * (m(ii)*m(jj)/(m(ii)+m(jj))**2.0d0) * (2.0d0/3.0d0)
-        endif
-     enddo
-  enddo
-
-
-  N(1:nspeci,1:nspeci) = H(1:nspeci,1:nspeci)
-  N(1:nspeci,nspeci+1) = x(1:nspeci)
-  N(nspeci+1,1:nspeci) = x(1:nspeci)
-  N(nspeci+1,nspeci+1) = 0.0d0
-
-  eps = 1.0d-200 ! PRECISION 
-  numerator = DMGT(eps,nspeci+1,N)
-  denominator = DMGT(eps,nspeci,H)
-
-  etaMix = -numerator/denominator
-
-
-  return
-end subroutine viscosityM
-
-!-------------------------------------------------
-
-subroutine lambdaM(xoriginal,T,m,k_B,d,Cv,lamMix,nspeci)
-
-  use bl_constants_module
-
-  integer :: nspeci
-  real(kind=8), dimension(1:nspeci) :: x, xoriginal, m, Cv
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: d
-
-  real(kind=8), dimension(1:nspeci) :: lam1
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: lam2
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: L00,L01,L10,L11
-  real(kind=8), dimension(1:2*nspeci,1:2*nspeci) :: L
-  real(kind=8), dimension(1:2*nspeci+1,1:2*nspeci+1) :: N
-  real(kind=8) :: T, sumTemp, lamMix
-  integer :: ii, jj, kk
-  real(kind=8) :: numerator, denominator
-  real(kind=8) :: eps, sumx
-  real*8 :: k_B, avo, matscale
-
-  real*8 :: DMGT
-
-  ! clear variables
-  L00(1:nspeci,1:nspeci) = 0.0d0
-  L01(1:nspeci,1:nspeci) = 0.0d0
-  L10(1:nspeci,1:nspeci) = 0.0d0
-  L11(1:nspeci,1:nspeci) = 0.0d0
-  L(1:2*nspeci,1:2*nspeci) = 0.0d0
-  N(1:2*nspeci+1,1:2*nspeci+1) = 0.0d0
-
-  lam1(1:nspeci) = 0.0d0
-  lam2(1:nspeci,1:nspeci) = 0.0d0
-
-  avo = 6.0246d23
-
-  x = xoriginal 
-  ! DANGER
-  do ii = 1, nspeci
-     if(x(ii).lt.1.0d-6) then
-        x(ii) = x(ii) + 1.0d-6 
-     endif
-  enddo
-  sumx = sum(x(:))  
-  x(:) = x(:)/sumx
-
-
-
-
-  matscale = 0.d0
-  do ii=1,nspeci
-     ! p 534, HC!
-     lam1(ii) = 75.0d0/(64.0d0*d(ii,ii)**2.0d0)* k_B*  &
-          sqrt(k_B*T/m(ii)/M_PI)
-     matscale = max(matscale,lam1(ii))
-  enddo
-
-
-  ! p 535, HCB
-  do ii=1,nspeci
-     do jj=1,nspeci
-        lam2(ii,jj) = 75.0d0/(64.0d0*d(ii,jj)**2.0d0)*k_B*   &
-             sqrt((m(ii)+m(jj))/(2.0d0*m(ii)*m(jj))*k_B*T/M_PI)
-     enddo
-  enddo
-
-  ! p 538, HCB
-  do ii=1,nspeci
-     do jj=1,nspeci
-        if( ii .eq. jj ) then
-           L00(ii,ii) = 0.0d0
-        else
-           sumTemp = 0.0d0
-           do kk=1,nspeci
-              if( kk .ne. ii ) then
-                 sumTemp = sumTemp + 2.0d0*x(ii)*x(kk)/lam2(ii,kk)   &
-                      * m(jj)/m(ii)
-              endif
-           enddo
-           L00(ii,jj) = 2.0d0*x(ii)*x(jj)/lam2(ii,jj) + sumTemp
-        endif
-     enddo
-  enddo
-
-
-  do ii=1,nspeci
-     do jj=1,nspeci
-        if( ii .eq. jj ) then
-           sumTemp = 0.0d0
-           do kk=1,nspeci
-              if( kk .ne. ii ) then
-                 sumTemp = sumTemp + x(ii)*x(kk)*m(kk)*(1.0d0/5.0d0)    &
-                      /(m(ii)+m(kk))/lam2(ii,kk)
-              endif
-           enddo
-           L01(ii,ii) = 5.0d0*sumTemp
-        else
-           L01(ii,jj) = -5.0d0*x(ii)*x(jj)*m(ii)*(1.0d0/5.0d0)   &
-                /(m(ii)+m(jj))/lam2(ii,jj)
-        endif
-     enddo
-  enddo
-
-
-  do ii=1,nspeci
-     do jj=1,nspeci
-        L10(ii,jj) = m(jj)/m(ii)*L01(ii,jj)
-     enddo
-  enddo
-
-
-  do ii=1,nspeci
-     do jj=1,nspeci
-        if( ii .eq. jj ) then
-           sumTemp = 0.0d0
-           do kk=1,nspeci
-              if( kk .ne. ii ) then
-                 sumTemp = sumTemp + 2.0d0*x(ii)*x(kk)*(15.0d0/2.0d0*m(ii)**2.0d0   &
-                      + 13.0d0/4.0d0*m(kk)**2.0d0 + 4.0d0*m(ii)*m(kk))             &
-                      /((m(ii)+m(kk))**2.0d0)/lam2(ii,kk)
-              endif
-           enddo
-           L11(ii,jj) = -4.0d0*x(ii)*x(ii)/lam1(ii) - sumTemp
-        else
-           L11(ii,jj) = 2.0d0*x(ii)*x(jj)*m(ii)*m(jj)     &
-                /((m(ii)+m(jj))**2.0d0)/lam2(ii,jj)*(27.0d0/4.0d0)
-        endif
-     enddo
-  enddo
-
-
-  L(1:nspeci,1:nspeci) = L00(1:nspeci,1:nspeci)
-  L(1:nspeci,nspeci+1:2*nspeci) = L01(1:nspeci,1:nspeci)
-  L(nspeci+1:2*nspeci,1:nspeci) = L10(1:nspeci,1:nspeci)
-  L(nspeci+1:2*nspeci,nspeci+1:2*nspeci) = L11(1:nspeci,1:nspeci)
-
-
-  N(1:2*nspeci,1:2*nspeci) = L(1:2*nspeci,1:2*nspeci)
-  N(1:nspeci,2*nspeci+1) = 0.0d0
-  N(nspeci+1:2*nspeci,2*nspeci+1) = x(1:nspeci)
-  N(2*nspeci+1,1:nspeci) = 0.0d0
-  N(2*nspeci+1,nspeci+1:2*nspeci) = x(1:nspeci)
-  N(2*nspeci+1,2*nspeci+1) = 0.0d0
-
-  L = L*matscale
-  N = N*matscale
-
-  eps = 1.0d-200 ! PRECISION 
-  numerator = DMGT(eps,2*nspeci+1,N)
-  denominator = DMGT(eps,2*nspeci,L)
-
-  lamMix = 4.0d0*numerator/(denominator*matscale)
-
-
-  return
-end subroutine lambdaM
-
-
-!-------------------------------------------------
-
-
-subroutine diffusivityM(x,y,T,m,k_B,d,pres,Diff,nspeci)
-
-  use bl_constants_module
-
-  integer :: nspeci
-  real(kind=8), dimension(1:nspeci) :: x, y, m
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: d
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: Diff    &
-       , Pmat, Pmatt, Mmat, D2, D3
-
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: D1
-
-  real(kind=8) :: T, pres,  sumTemp, MWmix, sumy
-  integer :: ii, jj, kk, ll, nn
-  real(kind=8) :: deter
-  real(kind=8) :: eps
-  real(kind=8), dimension(1:nspeci) :: Dimix, FDV
-  real*8 :: k_B
-
-
-  ! clear variables
-  D1(1:nspeci,1:nspeci) = 0.0d0
-  Pmat(1:nspeci,1:nspeci) = 0.0d0
-  Pmatt(1:nspeci,1:nspeci) = 0.0d0
-
-  ! Binary diffusivity
-  do ii = 1, nspeci
-     do jj = 1, nspeci
-        ! p 539, HCB
-        D1(ii,jj) = (3.0d0/16.0d0)*sqrt(2*M_PI*(k_B**3.0d0)*   &
-             (T**3.0d0)*(m(ii)+m(jj))/m(ii)/m(jj))         &
-             /(pres*M_PI*(d(ii,jj)**2.0d0))
-     enddo
-  enddo
-
-
-  MWmix = 0.0d0
-  do ii = 1, nspeci
-     MWmix = MWmix + y(ii)/m(ii)
-  enddo
-  MWmix = 1.0d0/MWmix
-
-
-  Dimix(1:nspeci) = 0.0d0
-  do ii = 1, nspeci
-     sumTemp = 0.0d0
-     sumy = 0.0d0
-     do jj = 1, nspeci
-        if(jj.ne.ii) then
-           sumy = sumy + y(jj)
-           sumTemp = sumTemp + x(jj)/D1(ii,jj)
-        endif
-     enddo
-     Dimix(ii) = sumy/sumTemp
-  enddo
-
-  FDV(1:nspeci) = 0.0d0
-  do ii = 1, nspeci
-     FDV(ii) = m(ii)/MWmix*Dimix(ii)
-  enddo
-
-  Pmat(1:nspeci,1:nspeci) = 0.0d0
-  do ii = 1, nspeci
-     do jj = 1, nspeci
-        Pmat(ii,jj) = -y(ii)/sum(y(:))
-        if(jj.eq.ii) then
-           Pmat(ii,jj) = Pmat(ii,jj) + 1.0d0
-        endif
-     enddo
-  enddo
-
-
-  Pmatt(1:nspeci,1:nspeci) = 0.0d0
-  do ii = 1, nspeci
-     do jj = 1, nspeci
-        Pmatt(ii,jj) = Pmat(jj,ii)
-     enddo
-  enddo
-
-
-  Mmat(1:nspeci,1:nspeci) = 0.0d0
-  do ii = 1, nspeci
-     Mmat(ii,ii) = FDV(ii)
-  enddo
-
-
-  D2(1:nspeci,1:nspeci) = 0.0d0
-  ! multiply Pmat and Mmat and store it in D2
-  do ii = 1, nspeci
-     do jj = 1, nspeci
-        do ll = 1, nspeci
-           D2(ii,jj) = D2(ii,jj) + Pmat(ii,ll)*Mmat(ll,jj)
-        enddo
-     enddo
-  enddo
-
-  D3(1:nspeci,1:nspeci) = 0.0d0
-  ! multiply current D2 and Pmatt and store it in D3
-  do ii = 1, nspeci
-     do jj = 1, nspeci
-        do ll = 1, nspeci
-           !D3(ii,jj) = D3(ii,jj) + D2(ii,ll)*Pmatt(ll,jj)
-           D3(ii,jj) = D3(ii,jj) + D2(ii,ll)*Pmat(ll,jj)
-        enddo
-     enddo
-  enddo
-  ! D3 is Dtilde in EGLIB
-
-
-  Diff(1:nspeci,1:nspeci) = D3(1:nspeci,1:nspeci)
-  ! Diff is Dtilde in EGLIB 
-
-
-  return
-end subroutine diffusivityM
-
-
-!-------------------------------------------------
-
-subroutine thermalDiffM(x,T,m,k_B,d,kT,nspeci)
-
-  use bl_constants_module
-
-  integer :: nspeci
-  real(kind=8), dimension(1:nspeci) :: x, m
-  real(kind=8), dimension(1:nspeci) :: kT
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: d
-  real*8 :: k_B
-
-  real(kind=8) :: T,  sumTemp
-  integer :: ii, jj, kk
-  real(kind=8) :: eps, Runiv, sigma11, sigma12, Fij, Fijstar
-
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: a_ij1, a_ij2
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: Aij, Aij_U
-  real(kind=8), dimension(1:nspeci) :: Bi
-  real(kind=8), dimension(1:nspeci) :: AA
-  real(kind=8) :: fact1, sum1
-  real(kind=8), dimension(1:nspeci,1:nspeci) :: alphaij
-
-
-
-  ! Based on Valk 1963 (Waldmann)
-
-  a_ij1(1:nspeci,1:nspeci) = 0.0d0
-  a_ij2(1:nspeci,1:nspeci) = 0.0d0
-  do ii = 1, nspeci
-     do jj = 1, nspeci
-        sigma11 = sqrt( k_B*T/(2.0d0*M_PI*m(ii)*m(jj)/  &
-             (m(ii)+m(jj))) )*M_PI*(d(ii,jj)**2.0d0)
-        Fij = (6.0d0*m(ii)*m(ii) + 13.0d0/5.0d0*m(jj)*m(jj) +   &
-             16.0d0/5.0d0*m(ii)*m(jj))/((m(ii)+m(jj))**2.0d0)
-        Fijstar = -27.0d0/5.0d0
-
-        a_ij1(ii,jj) = 5.0d0/(k_B*T)*m(ii)*m(jj)/    &
-             (m(ii)+m(jj))*sigma11*Fij
-        a_ij2(ii,jj) = 5.0d0/(k_B*T)*m(ii)*m(jj)*m(ii)*m(jj)/    &
-             ((m(ii)+m(jj))**3.0d0)*sigma11*Fijstar
-     enddo
-  enddo
-
-
-  Aij(1:nspeci,1:nspeci) = 0.0d0
-  do ii = 1, nspeci
-     do jj = 1, nspeci
-        Aij(ii,jj) = x(jj)*a_ij2(ii,jj)
-     enddo
-     Bi(ii) = 15.0d0/4.0d0
-  enddo
-
-  do ii = 1, nspeci
-     sumTemp = 0.0d0
-     do kk = 1, nspeci
-        sumTemp = sumTemp + x(kk)*a_ij1(ii,kk)
-     enddo
-     Aij(ii,ii) = Aij(ii,ii) + sumTemp
-  enddo
-
-
-
-  Aij_U = Aij
-  do jj = 1, nspeci-1
-     do ii = jj+1, nspeci
-        fact1 = Aij_U(ii,jj)/Aij_U(jj,jj)
-        do kk = 1, nspeci
-           Aij_U(ii,kk) = Aij_U(ii,kk) - fact1*Aij_U(jj,kk)
-        enddo
-        Bi(ii) = Bi(ii) - fact1*Bi(jj)
-     enddo
-  enddo
-
-  AA(1:nspeci) = 0.0d0
-  do ii = nspeci, 1, -1
-     sum1 = 0
-     do jj = nspeci, ii+1, -1
-        sum1 = sum1 + Aij_U(ii,jj)*AA(jj)
-     enddo
-     AA(ii) = (Bi(ii)-sum1)/Aij_U(ii,ii)
-  enddo
-
-
-  do ii = 1, nspeci
-     do jj = 1, nspeci
-        fact1 = m(ii)*m(jj)/(m(ii)+m(jj))
-        sigma11 = sqrt( k_B*T/(2.0d0*M_PI*m(ii)*m(jj)/   &
-             (m(ii)+m(jj))) )*M_PI*(d(ii,jj)**2.0d0)
-        sigma12 = 3.0d0*sigma11
-
-        alphaij(ii,jj) = 8.0d0/(3.0d0*k_B*T)*fact1*fact1*   &
-             (5.0d0/2.0d0*sigma11 - sigma12)*(AA(ii)/m(ii) - AA(jj)/m(jj))
-     enddo
-  enddo
-
-  do kk = 1, nspeci
-     sumTemp = 0.0d0
-     do jj = 1, nspeci
-        sumTemp = sumTemp + x(jj)*alphaij(kk,jj)
-     enddo
-     !          kT(kk) = x(kk)*sumTemp
-     ! jbb want to return chi_tilde
-     kT(kk) = sumTemp
-  enddo
-
-
-  return
-end subroutine thermalDiffM
-
-!-------------------------------------------------
-Subroutine TSRGT(eps, nn, AA, it, CCC, Kp1, Lp)
-  real(kind=8) :: eps
-  integer :: nn,it
-  real(kind=8) :: AA(nn,nn), CCC(nn,nn)
-  integer :: Kp1(nn),Lp(nn)
-  real(kind=8)  :: po,t0
-  integer :: ii,jj, kk
-
-  CCC=AA; it=1; kk=1
-  do while (it==1.and.kk<nn)
-     po=CCC(kk,kk); lo=kk; ko=kk
-     do ii=kk, nn
-        do jj=kk, nn
-           if (dabs(CCC(ii,jj))>dabs(po)) then
-              po=CCC(ii,jj); lo=ii; ko=jj
-           end if
-        end do
-     end do
-     Lp(kk)=lo; Kp1(kk)=ko
-     if (dabs(po)<eps) then
-        it=0
-     else
-        if (lo.ne.kk) then
-           do jj=kk, nn
-              t0=CCC(kk,jj); CCC(kk,jj)=CCC(lo,jj); CCC(lo,jj)=t0
-           end do
-        end if
-        if (ko.ne.kk) then
-           do ii=1, nn
-              t0=CCC(ii,kk); CCC(ii,kk)=CCC(ii,ko); CCC(ii,ko)=t0
-           end do
-        end if
-        do ii=kk+1, nn
-           CCC(ii,kk)=CCC(ii,kk)/po
-           do jj=kk+1, nn
-              CCC(ii,jj)=CCC(ii,jj)-CCC(ii,kk)*CCC(kk,jj)
-           end do
-        end do
-        kk=kk+1
-     end if
-  end do
-  if (it==1.and.dabs(CCC(nn,nn))<eps)  it=0
-  return
-End Subroutine TSRGT !TSRGT
-
-
-double precision Function DMGT(eps, nn, AA)
-  real(kind=8) :: eps, AA(nn,nn)
-  real(kind=8) :: d0
-
-  real(kind=8), pointer :: CCC(:,:)
-  integer,pointer :: Kp1(:), Lp(:)
-
-  !allocate local matrix C and vectors Kp, Lp
-  allocate(CCC(nn,nn),STAT=ialloc)
-  allocate(Kp1(nn),STAT=ialloc)
-  allocate(Lp(nn),STAT=ialloc)
-
-  call TSRGT(eps,nn,AA,it,CCC,Kp1,Lp)  !call triangularization subroutine
-  if (it==0) then
-     d0=0.d0  !matrix singular, det=0
-  else       !matrix regular, det<>0
-     d0=1.d0
-     do kk=1, nn
-        d0=d0*CCC(kk,kk)
-     end do
-     ll=0
-     do kk=1, nn-1
-        if (Lp(kk).ne.kk)  ll=ll+1
-        if (Kp1(kk).ne.kk)  ll=ll+1
-     end do
-     if (MOD(ll,2).ne.0) d0=-d0  !l is odd
-  end if
-  DMGT=d0   !return determinant
-
-  deallocate(CCC,Kp1,Lp) 
-
-  return
-End Function DMGT
-

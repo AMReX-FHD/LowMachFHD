@@ -9,7 +9,7 @@ module energy_eos_wrapper_module
   private
 
   public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper, &
-            add_external_heating, compute_S_alpha, compute_alpha, &
+            add_external_heating, compute_S_alpha, &
             compute_h, compute_hk, compute_p, compute_cp
 
 contains
@@ -532,102 +532,6 @@ contains
     end do
        
   end subroutine compute_S_alpha_3d
-
-  subroutine compute_alpha(mla,alpha,conc,Temp,p0)
-
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: alpha(:)
-    type(multifab) , intent(in   ) :: conc(:)
-    type(multifab) , intent(in   ) :: Temp(:)
-    real(kind=dp_t), intent(in   ) :: p0
-
-    ! local
-    integer :: n,nlevs,i,dm
-    integer :: ng_1,ng_2,ng_3
-    integer :: lo(mla%dim),hi(mla%dim)
-
-    real(kind=dp_t), pointer :: dp1(:,:,:,:)
-    real(kind=dp_t), pointer :: dp2(:,:,:,:)
-    real(kind=dp_t), pointer :: dp3(:,:,:,:)
-
-    nlevs = mla%nlevel
-    dm = mla%dim
-
-    ng_1 = alpha(1)%ng
-    ng_2 = conc(1)%ng
-    ng_3 = Temp(1)%ng
-
-    do n=1,nlevs
-       do i=1,nfabs(alpha(n))
-          dp1 => dataptr(alpha(n), i)
-          dp2 => dataptr(conc(n), i)
-          dp3 => dataptr(Temp(n), i)
-          lo = lwb(get_box(alpha(n), i))
-          hi = upb(get_box(alpha(n), i))
-          select case (dm)
-          case (2)
-             call compute_alpha_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2, &
-                                   dp3(:,:,1,1),ng_3,p0,lo,hi)
-          case (3)
-             call compute_alpha_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2, &
-                                   dp3(:,:,:,1),ng_3,p0,lo,hi)
-          end select
-       end do
-    end do
-
-  end subroutine compute_alpha
-  
-  subroutine compute_alpha_2d(alpha,ng_1,conc,ng_2,Temp,ng_3,p0,lo,hi)
-
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) ::        alpha(lo(1)-ng_1:,lo(2)-ng_1:)
-    real(kind=dp_t), intent(in   ) ::         conc(lo(1)-ng_2:,lo(2)-ng_2:,:)
-    real(kind=dp_t), intent(in   ) ::         Temp(lo(1)-ng_3:,lo(2)-ng_3:)
-    real(kind=dp_t), intent(in   ) :: p0
-
-    ! local
-    integer :: i,j
-    real(kind=dp_t) :: cpmix,cvmix
-
-    integer :: iwrk
-    real(kind=dp_t) :: rwrk
-
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-          call CKCPBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cpmix)
-          call CKCVBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cvmix)
-          alpha(i,j) = cvmix/(cpmix*p0)
-       end do
-    end do       
-
-  end subroutine compute_alpha_2d
-  
-  subroutine compute_alpha_3d(alpha,ng_1,conc,ng_2,Temp,ng_3,p0,lo,hi)
-
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) ::        alpha(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(in   ) ::         conc(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:)
-    real(kind=dp_t), intent(in   ) ::         Temp(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)
-    real(kind=dp_t), intent(in   ) :: p0
-
-    ! local
-    integer :: i,j,k
-    real(kind=dp_t) :: cpmix,cvmix
-
-    integer :: iwrk
-    real(kind=dp_t) :: rwrk
-
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-             call CKCPBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cpmix)
-             call CKCVBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cvmix)
-             alpha(i,j,k) = cvmix/(cpmix*p0)
-          end do
-       end do
-    end do
-
-  end subroutine compute_alpha_3d
 
   subroutine compute_h(mla,Temp,h,conc)
 
