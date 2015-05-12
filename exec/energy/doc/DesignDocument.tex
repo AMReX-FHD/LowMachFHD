@@ -61,7 +61,7 @@
 %==========================================================================
 % Title
 %==========================================================================
-\title{A Conservative, Thermodynamically Consistent Low Mach Number Hydrodynamics Algorithm}
+\title{A New Low Mach Number Hydrodynamics Algorithm}
 
 \author{A. Nonaka\footnotemark[1],
         J. B. Bell\footnotemark[1], and
@@ -80,18 +80,22 @@
 
 \begin{abstract}
 We present a projection method for modeling unsteady, low Mach number multicomponent
-flow.  Due to the linearization of the equation of state used when deriving
+flow for a generalized equation of state.
+Due to the linearization of the equation of state used when deriving
 constraint manifolds, previously it has
 not been possible to simultaneously conserve mass and energy while remaining in 
 thermodynamic equilibrium with the spatially-constant ambient pressure.
 Our method is fully conservative and introduces a new iterative scheme that 
-corrects thermodynamic drift to a desired tolerance.  For confined regions, our
-iterative scheme also allows for thermodynamically consistent evolution in the presence
-of time-varying ambient pressure.
-Our method is suitable for a generlized equation of state, and offers a development
-path for low Mach number reacting flow and stochastic flow described by fluctuating
-hydrodynamics equations.  We present results for mixtures of noble gases with external
-heating.
+corrects thermodynamic drift to a desired tolerance.  
+We use a staggered grid formulation for momentum and a GMRES algorithm to
+solve the viscous-projection Stokes system without splitting artifacts.
+For confined regions, our iterative scheme also allows for thermodynamically 
+consistent evolution in the presence of time-varying ambient pressure.
+Our method provides a development path for low Mach number reacting flow and 
+stochastic flow described by fluctuating hydrodynamics equations.
+We present results for mixtures of ideal noble gases with external heating
+as well as high-pressure and temperature ternary mixture using the 
+Soave-Redlich-Kwong equation of state.
 \end{abstract}
 
 \section{Introduction}
@@ -599,7 +603,7 @@ increment $m$ and return to {\bf Step 4}.
 
 \section{Noble Gas Test Problem}
 Our first test will be a mixture of four noble gases, He-Ne-Ar-Kr,
-using an ideal gas equation of state and a hard sphere model for transport.\\ \\
+using an ideal gas equation of state and a hard sphere model for transport.
 An ideal multi-component gas has an equation of state,
 \begin{equation}
 P = \rho\mathcal{R}T\sum_k\frac{w_k}{m_k},
@@ -628,11 +632,19 @@ In \cite{MAESTROI}, it was shown that
 \alpha = \frac{1}{\Gamma_1 P},
 \end{equation}
 where $\Gamma_1 = \left(d\ln{p}/d\ln{\rho}\right)_{\rm ad}$ is the first adiabatic exponent
-at constant entropy and composition.  Note that in general, $\Gamma_1 P/\rho = c^2$ and
-therefore $\alpha = 1/(\rho c^2)$.
+at constant entropy and composition.  Note that in general, $\Gamma_1 P/\rho = c^2$,
+with $c$ the sound speed, and therefore $\alpha = 1/(\rho c^2)$.
 Note that for an ideal gas, $\Gamma_1 = \gamma = c_p/c_v$.
 
-Hard sphere model for transport... see Kaushik's compressible paper for references.
+In this hard sphere model, we use $c_p = c_v = \sum_k 3k_b/2m_k$.
+The transport coefficients $\eta,\lambda$ and $\chi$ are evaluated using the 
+dilute gas formulation in \cite{Hirschfelder54}, with the latter found numerically
+using an efficient iterative method from \cite{Giovangigli99}.
+Thermodiffusion coefficients $\zeta$ are evaluated using the formulation in \cite{Valk}.
+Refer to Table I in \cite{LLNS} for the molecular diameters used to compute
+the transport coefficients.
+
+The problem setup is 
 
 \subsection{Implementation Notes}
 The molecular weights, diameters, and assumption of hard sphere dynamics
