@@ -446,7 +446,9 @@ contains
        ! update pressure
        p0_new = p0_old + 0.5d0*dt*(p0_update_old + p0_update_new)
 
-       print*,'p0_old,new',p0_old,p0_new
+       if (parallel_IOProcessor()) then
+          print*,'p0_old,new',p0_old,p0_new
+       end if
 
        ! mass_update_new = [-div(rho_i*v) + div(F)]^{n+1,m}
        do n=1,nlevs
