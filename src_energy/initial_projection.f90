@@ -10,6 +10,7 @@ module initial_projection_module
   use rhoh_fluxdiv_energy_module
   use div_and_grad_module
   use macproject_module
+  use multifab_physbc_stag_module
   use probin_common_module, only: n_cells
   use probin_multispecies_module, only: nspecies
 
@@ -180,6 +181,21 @@ contains
 
     ! v^0 = v^init - (1/rho^0) grad phi
     call subtract_weighted_gradp(mla,umac,rhototinv_fc,phi,dx,the_bc_tower)
+    
+    do n=1,nlevs
+       do i=1,dm
+          ! set normal velocity on physical domain boundaries
+          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:))
+          ! set transverse velocity behind physical boundaries
+          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+                                      the_bc_tower%bc_tower_array(n), &
+                                      dx(n,:))
+          ! fill periodic and interior ghost cells
+          call multifab_fill_boundary(umac(n,i))
+       end do
+    end do
 
     do n=1,nlevs
        call multifab_destroy(conc(n))
