@@ -346,8 +346,7 @@ contains
 
     case default
        ! no external heating
-    end select
-       
+    end select       
 
   end subroutine add_external_heating_2d
   
@@ -360,14 +359,26 @@ contains
 
     ! local
     integer :: i,j,k
+    real(kind=dp_t) :: x,y,z,xcen,ycen,zcen,r
 
     select case (heating_type)
 
     case (1)
 
+       xcen = 0.5d0*(prob_lo(1)+prob_hi(1))
+       ycen = 0.5d0*(prob_lo(2)+prob_hi(2))
+       zcen = 0.5d0*(prob_lo(3)+prob_hi(3))
+
        do k=lo(3),hi(3)
+          z = prob_lo(3) + dx(3)*(dble(k)+0.5d0)
           do j=lo(2),hi(2)
+             y = prob_lo(2) + dx(2)*(dble(j)+0.5d0)
              do i=lo(1),hi(1)
+                x = prob_lo(1) + dx(1)*(dble(i)+0.5d0)
+
+                r = sqrt((x-xcen)**2 + (y-ycen)**2 + (z-zcen)**2)
+             
+                rhoHext(i,j,k) = rhoHext(i,j,k) + 1.d10*rhotot(i,j,k)*exp(-100*r**2)
 
              end do
           end do
@@ -375,7 +386,8 @@ contains
 
     case default
        ! no external heating
-    end select
+    end select    
+
        
 
   end subroutine add_external_heating_3d
@@ -631,7 +643,7 @@ contains
 
     integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
     real(kind=dp_t), intent(in   ) :: Temp(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(inout) ::   hk(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_1:,:)
+    real(kind=dp_t), intent(inout) ::   hk(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:)
 
     ! local
     integer :: i,j,k

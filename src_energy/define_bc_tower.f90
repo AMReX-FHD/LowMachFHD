@@ -284,15 +284,23 @@ contains
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
-          ! pressure is periodic
+          ! pressure and temperature are periodic
           ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_PER
-          ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_PER
+
+          ! protect against the temporary bc tower object used in the fancy bottom solver
+          if (size(ell_bc_level,dim=4) .ge. temp_bc_comp) then
+             ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_PER
+          end if
 
        else
 
           ! pressure and temperature are homogeneous neumann
           ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_NEU
-          ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_NEU
+
+          ! protect against the temporary bc tower object used in the fancy bottom solver
+          if (size(ell_bc_level,dim=4) .ge. temp_bc_comp) then
+             ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_NEU
+          end if
 
        end if
 
