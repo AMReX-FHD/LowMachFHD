@@ -251,39 +251,6 @@ Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \theta = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.\label{eq:thermo deriv}
 \end{equation}
 
-\subsection{Ideal Gas Equation of State}
-An ideal multi-component gas has an equation of state,
-\begin{equation}
-P = \rho\mathcal{R}T\sum_k\frac{w_k}{m_k},
-\end{equation}
-with universal gas constant $\mathcal{R} = 8.31451\times 10^7$ [erg/(K-mol)] 
-(all units are CGS) and $m_k$ is the molecular mass of species $k$ in [g/mol].
-The enthalpy, mass fractions, and temperature are related by:
-\begin{equation}
-h = \sum_k w_k h_k(T).
-\end{equation}
-For an ideal gas, the thermodynamic derivatives in (\ref{eq:thermo deriv})
-reduce to,
-\begin{eqnarray}
-P_\rho = \mathcal{R} T\sum_k\frac{w_k}{m_k}, \quad
-P_T = \rho\mathcal{R}\sum_k\frac{w_k}{m_k}, \quad
-P_{w_k} = \frac{\rho\mathcal{R}T}{m_k},
-\end{eqnarray}
-and simply the coefficients in the constraint equation,
-\begin{equation}
-\beta_k = \frac{1}{\rho}\left(\frac{\bar{m}}{m_k} - \frac{h_m}{c_p T}\right), \quad
-\theta = \frac{1}{\rho c_p T},
-\end{equation}
-where $\bar{m} = (\sum_k w_k/m_k)^{-1}$ is the mixture-averaged (mean) molecular mass.
-In \cite{MAESTROI}, it was shown that
-\begin{equation}
-\alpha = \frac{1}{\Gamma_1 P},
-\end{equation}
-where $\Gamma_1 = \left(d\ln{p}/d\ln{\rho}\right)_{\rm ad}$ is the first adiabatic exponent
-at constant entropy and composition.  Note that in general, $\Gamma_1 P/\rho = c^2$ and
-therefore $\alpha = 1/(\rho c^2)$.
-Note that for an ideal gas, $\Gamma_1 = \gamma = c_p/c_v$.
-
 \subsection{Comparison to LMC and MAESTRO}
 It is worth comparing this formulation to other low Mach number constraints.
 This model is equivalent to equation (7) in \cite{DayBell:2000},
@@ -631,12 +598,47 @@ since we are using trapezoidal advective fluxes.  If the drift is unacceptable,
 increment $m$ and return to {\bf Step 4}.
 
 \section{Noble Gas Test Problem}
+Our first test will be a mixture of four noble gases, He-Ne-Ar-Kr,
+using an ideal gas equation of state and a hard sphere model for transport.\\ \\
+An ideal multi-component gas has an equation of state,
+\begin{equation}
+P = \rho\mathcal{R}T\sum_k\frac{w_k}{m_k},
+\end{equation}
+with universal gas constant $\mathcal{R} = 8.31451\times 10^7$ [erg/(K-mol)] 
+(all units are CGS) and $m_k$ is the molecular mass of species $k$ in [g/mol].
+The enthalpy, mass fractions, and temperature are related by:
+\begin{equation}
+h = \sum_k w_k h_k(T).
+\end{equation}
+For an ideal gas, the thermodynamic derivatives in (\ref{eq:thermo deriv})
+reduce to,
+\begin{eqnarray}
+P_\rho = \mathcal{R} T\sum_k\frac{w_k}{m_k}, \quad
+P_T = \rho\mathcal{R}\sum_k\frac{w_k}{m_k}, \quad
+P_{w_k} = \frac{\rho\mathcal{R}T}{m_k},
+\end{eqnarray}
+and simply the coefficients in the constraint equation,
+\begin{equation}
+\beta_k = \frac{1}{\rho}\left(\frac{\bar{m}}{m_k} - \frac{h_m}{c_p T}\right), \quad
+\theta = \frac{1}{\rho c_p T},
+\end{equation}
+where $\bar{m} = (\sum_k w_k/m_k)^{-1}$ is the mixture-averaged (mean) molecular mass.
+In \cite{MAESTROI}, it was shown that
+\begin{equation}
+\alpha = \frac{1}{\Gamma_1 P},
+\end{equation}
+where $\Gamma_1 = \left(d\ln{p}/d\ln{\rho}\right)_{\rm ad}$ is the first adiabatic exponent
+at constant entropy and composition.  Note that in general, $\Gamma_1 P/\rho = c^2$ and
+therefore $\alpha = 1/(\rho c^2)$.
+Note that for an ideal gas, $\Gamma_1 = \gamma = c_p/c_v$.
 
-The EOS we will test is an ideal mixture of four noble gases, 
-He, Ne, Ar, and Kr.
+Hard sphere model for transport... see Kaushik's compressible paper for references.
+
+\subsection{Implementation Notes}
 The molecular weights, diameters, and assumption of hard sphere dynamics
- are all that is needed to specify the thermodynamics in
-{\tt energy\_EOS\_module\_HS.f90}.  The functions of interest are:\\
+ are all that is needed to specify the transport in
+{\tt energy\_EOS\_module\_HS.f90}.  The functions of interest are
+(not all of these are actually being used at the moment):\\
 \begin{itemize}
 
 \item {\tt CKCPBS} computes $c_p(\wb,T)$.  In this EOS this is not dependent on temperature.\\
@@ -684,7 +686,10 @@ as inputs and computes the following:\\
 
 \end{itemize}
 
-\clearpage
+\section{Soave-Redlich-Kwong Equation of State}
+
+Nonreacting mixture of H$_2$-O$_2$-N$_2$ at high temperature and pressure
+using a Soave-Redlich-Kwong equation of state.
 
 \section{Conclusions}
 
