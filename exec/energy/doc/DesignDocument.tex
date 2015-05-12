@@ -35,11 +35,11 @@
 \def\bb {{\bf b}}
 \def\Fb {{\bf F}}
 \def\gb {{\bf g}}
-\def\Ib {{\bf I}}
 \def\mb {{\bf m}}
 \def\Qb {{\bf Q}}
 \def\vb {{\bf v}}
 \def\wb {{\bf w}}
+\def\Wb {{\bf W}}
 \def\xb {{\bf x}}
 
 \def\chib   {\boldsymbol{\chi}}
@@ -132,7 +132,7 @@ where $\rho$ is the density, $\vb$ is the velocity, $\pi$ is the dynamic
 (or perturbational) pressure, $\gb$ is the gravitational vector, $\rho_i=\rho w_i$ is
 the density of fluid component $i$ with $\rho = \sum_k\rho_k$ and $w_i$ the 
 concentrations (mass fractions), $P$ is the total
-pressure, $h$ is the enthalpy, $h_k = \partial h/\partial w_k$,
+pressure, $h$ is the specific enthalpy, $h_k = \partial h/\partial w_k$,
 $\Hext$ is an external heating term, $\taub$ is the stress tensor,
 $\Fb$ are the mass fluxes, and $\Qb$ is the heat flux.
 Starting from the fully compressible equations and expanding in Mach number shows 
@@ -152,11 +152,11 @@ $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$,
 ignores the effect of bulk viscosity, which can be aborbed into $\pi$.
 The heat flux has the form $\Qb = \lambda\nabla T$.
 The mass fluxes contains contributions from 
-compositional gradients, barodiffusion, and temperature gradients,
+compositional and temperature gradients,
 \begin{equation}
-\Fb = -\rho\Ib\wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right],
+\Fb = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib - \wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T}\right],
 \end{equation}
-where $\Ib$ is the identity matrix, $\wb$ is the vector of concentrations,
+where $\Wb$ is the diagonal matrix of concentrations,
 $\chib$ is the diffusion matrix, $\xb$ are the mole fractions,
 $\phib$ are the volume fractions (which for an ideal gas is equivalent to mole fractions),
 $k_B$ is Boltzmann's constant,
@@ -601,7 +601,7 @@ Note: I've found this factor of two to be more effective at reducing the drift
 since we are using trapezoidal advective fluxes.  If the drift is unacceptable,
 increment $m$ and return to {\bf Step 4}.
 
-\section{Noble Gas Test Problem}
+\section{Ideal Gas Test Problem}
 Our first test will be a mixture of four noble gases, He-Ne-Ar-Kr,
 using an ideal gas equation of state and a hard sphere model for transport.
 An ideal multi-component gas has an equation of state,
@@ -644,7 +644,26 @@ Thermodiffusion coefficients $\zeta$ are evaluated using the formulation in \cit
 Refer to Table I in \cite{LLNS} for the molecular diameters used to compute
 the transport coefficients.
 
-The problem setup is 
+The problem setup is a three-dimensional enclosed domain (solid impermeable 
+walls on each side) of 1~cm$^3$ initially at room temperature and pressure
+($T=273$~K, $P=1.01325\times 10^6$~ba).  The initial mass fraction of each component
+is $w_k = 0.25$.  There is an external heating of $\Hext=10^{10}e^{-100r^2}$~erg/(g-s),
+where $r$ is the distance to the center of the domain.  We perform a convergence
+study using three different resolutions, with spatial and temporal refinement
+factors of 2 between simulations.  For the finest simulation, we use a grid
+spacing of $\Delta x = 1/128$ and a fixed time step
+of (check)~s, which corresponds to a mass diffusion CFL of (check), and
+a maximum advective CFL of (check) over the simulation.
+We run each simulation to a total time of (check).
+We note that the ambient pressure has increased to (check; may need to increase heating
+to get some kind of change).  Maybe show plots of final state, particularly temperature.
+
+Show convergence for $\rho$, $h$, $w_i$, $P$, $\vb$.
+
+\section{Soave-Redlich-Kwong Test Problem}
+
+Nonreacting mixture of H$_2$-O$_2$-N$_2$ at high temperature and pressure
+using a Soave-Redlich-Kwong equation of state.
 
 \subsection{Implementation Notes}
 The molecular weights, diameters, and assumption of hard sphere dynamics
@@ -697,11 +716,6 @@ as inputs and computes the following:\\
                    (I modified the routine to make this so).\\
 
 \end{itemize}
-
-\section{Soave-Redlich-Kwong Equation of State}
-
-Nonreacting mixture of H$_2$-O$_2$-N$_2$ at high temperature and pressure
-using a Soave-Redlich-Kwong equation of state.
 
 \section{Conclusions}
 
