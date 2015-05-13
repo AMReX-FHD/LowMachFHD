@@ -663,7 +663,27 @@ Show convergence for $\rho$, $h$, $w_i$, $P$, $\vb$.
 \section{Soave-Redlich-Kwong Test Problem}
 
 Nonreacting mixture of H$_2$-O$_2$-N$_2$ at high temperature and pressure
-using a Soave-Redlich-Kwong equation of state.
+using a Soave-Redlich-Kwong equation of state \cite{RedlichKwong,Soave}
+for multicomponent flow \cite{GMD11}.
+\begin{equation}
+P = \frac{\mathcal{R}T}{v-b}\sum_k\frac{w_k}{m_k} - \frac{a}{v(v+b)},
+\end{equation}
+with specific volume $v=1/\rho$.  We will denote $T_{c,i}$ and $P_{c,i}$ as the critical
+temperature and pressure for component $i$.
+\begin{equation}
+a = \sum_i\sum_j w_iw_j\sqrt{a_i a_j}
+\end{equation}
+\begin{equation}
+a_i(T) = 0.42748\frac{R^2T_{c,i}^2}{m_i^2 P_{c,i}}\alpha_i(T_i^*),
+\end{equation}
+with $T_i^* = T/T_{c,i}$.
+\begin{equation}
+\alpha_i(T_i^*) = \left[1 + \left(0.48508 + 1.5517\bar\omega_i - 0.151613\bar\omega_i^2\right)\left(1-\sqrt{T_i^*}\right)\right]^2,
+\end{equation}
+with $\bar\omega$ the acentric factor for component $i$.
+\begin{equation}
+b = \sum_i w_i b_i, \quad b_i = 0.08664\frac{RT_{c,i}}{m_i P_{c,i}}
+\end{equation}
 
 \subsection{Implementation Notes}
 The molecular weights, diameters, and assumption of hard sphere dynamics
