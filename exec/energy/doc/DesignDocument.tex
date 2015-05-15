@@ -696,7 +696,11 @@ P_T = \frac{\mathcal{R}}{v-b}\sum_k\frac{w_k}{m_k} - \frac{\frac{\partial a(T,\w
 \end{equation}
 with
 \begin{equation}
-\frac{\partial a(T,\wb)}{\partial T} = -0.42748\frac{R^2T_{c,i}^2}{m_i^2 P_{c,i}}\sqrt{\alpha_i(T)}\frac{s_i}{\sqrt{T_{c,i}T}}
+\frac{\partial a(T,\wb)}{\partial T} = \sum_i w_i^2 \frac{\partial a_i(T)}{\partial T}
++ \sum_{i=1}^{{\rm nspec}-1}\sum_{j=i+1}^{\rm nspec} w_i w_j\left(\sqrt{\frac{a_i(T)}{a_j(T)}}\frac{\partial a_i(T)}{\partial T} + \sqrt{\frac{a_j(T)}{a_i(T)}}\frac{\partial a_j(T)}{\partial T}\right)
+\end{equation}
+\begin{equation}
+\frac{\partial a_i(T)}{\partial T} = -0.42748\frac{R^2T_{c,i}^2s_i}{m_i^2 P_{c,i}}\sqrt{\frac{\alpha_i(T)}{T_{c,i}T}}
 \end{equation}
 \begin{equation}
 P_{w_k} = \left(\frac{\mathcal{R}T}{v-b}\right)\frac{1}{m_k}
