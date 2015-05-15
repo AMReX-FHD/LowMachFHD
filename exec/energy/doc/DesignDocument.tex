@@ -664,9 +664,11 @@ Show convergence for $\rho$, $h$, $w_i$, $P$, $\vb$.
 
 Nonreacting mixture of H$_2$-O$_2$-N$_2$ at high temperature and pressure
 using a Soave-Redlich-Kwong equation of state \cite{RedlichKwong,Soave}
-for multicomponent flow \cite{GMD11}.
+for multicomponent flow \cite{GMD11}.  These equations are valid without
+additional coefficient truncation for temperatures below the lowest component 
+crossing temperature (roughly 1000~K for N$_2$) \cite{GMD11}.
 \begin{equation}
-P = \frac{\mathcal{R}T}{v-b}\sum_k\frac{w_k}{m_k} - \frac{a(T,\wb)}{v(v+b(\wb))},
+P = \frac{\mathcal{R}T}{v-b(\wb)}\sum_k\frac{w_k}{m_k} - \frac{a(T,\wb)}{v(v+b(\wb))},
 \end{equation}
 with specific volume $v=1/\rho$.  We will denote $T_{c,i}$ and $P_{c,i}$ as the critical
 temperature and pressure for component $i$.
@@ -674,36 +676,37 @@ temperature and pressure for component $i$.
 a(T,\wb) = \sum_i\sum_j w_iw_j\sqrt{a_i(T)a_j(T)}
 \end{equation}
 \begin{equation}
-a_i(T) = 0.42748\frac{R^2T_{c,i}^2}{m_i^2 P_{c,i}}\underbrace{\left[1 + \underbrace{\left(0.48508 + 1.5517\bar\omega_i - 0.151613\bar\omega_i^2\right)}_{s_i}\left(1-\sqrt{T_i^*}\right)\right]^2}_{\alpha_i(T)},
+a_i(T) = 0.42748\frac{R^2T_{c,i}^2}{m_i^2 P_{c,i}}\underbrace{\left[1 + \underbrace{\left(0.48508 + 1.5517\bar\omega_i - 0.151613\bar\omega_i^2\right)}_{s_i}\left(1-\sqrt{\frac{T}{T_{c,i}}}\right)\right]^2}_{\alpha_i(T)},
 \end{equation}
-with $T_i^* = T/T_{c,i}$ and $\bar\omega_i$ the acentric factor for component $i$.
+with $\bar\omega_i$ the acentric factor for component $i$.
 \begin{equation}
 b(\wb) = \sum_i w_i b_i, \quad b_i = 0.08664\frac{RT_{c,i}}{m_i P_{c,i}}
 \end{equation}
 
 The acentric factors, $\bar\omega$, for H$_2$, O$_2$, and N$_2$, respectively, 
-are -0.220, 0.022, and 0.040.  The critical temperatures, $T_{c}$, are
-33.20~K, 154.6~K, and 126.2~K.  The critical pressures are $1.3\times 10^7$~Ba,
-$5.05\times 10^7$~Ba, and $3.35\times 10^7$~Ba.
+are (-0.220,0.022,0.040.)  Thus, $s_i=$(0.13637,0.51914,0.54691),
+the critical temperatures are $T_{c}=$ (33.20,154.6,126.2)~K, 
+and the critical pressures are ($1.3\times 10^7,5.05\times 10^7,3.35\times 10^7$~Ba.
 
 \subsection{Thermodynamic Derivatives}
-Use the chain rule for $P_\rho = P_v v_\rho$ with $v_\rho = -1/\rho^2 = -v^2$.
+To evaluate $P_\rho$, use the chain rule, $P_\rho = P_v v_\rho = -v^2 P_v$:
 \begin{equation}
-P_\rho = \frac{v^2}{(v-b)^2}\mathcal{R}T\sum_k\frac{w_k}{m_k} + \left(\frac{v^2}{v^2 + vb}\right)a(T,\wb)(2v+b(\wb))
+P_\rho = \frac{v^2}{(v-b(\wb))^2}\mathcal{R}T\sum_k\frac{w_k}{m_k} - \frac{a(T,\wb)v^2(2v+b(\wb))}{[v(v+b(\wb))]^2}
 \end{equation}
 \begin{equation}
-P_T = \frac{\mathcal{R}}{v-b}\sum_k\frac{w_k}{m_k} - \frac{\frac{\partial a(T,\wb)}{\partial T}}{v(v+b(\wb))}
+P_T = \frac{\mathcal{R}}{v-b(\wb)}\sum_k\frac{w_k}{m_k} - \frac{\frac{\partial a(T,\wb)}{\partial T}}{v(v+b(\wb))}
 \end{equation}
 with
 \begin{equation}
 \frac{\partial a(T,\wb)}{\partial T} = \sum_i w_i^2 \frac{\partial a_i(T)}{\partial T}
-+ \sum_{i=1}^{{\rm nspec}-1}\sum_{j=i+1}^{\rm nspec} w_i w_j\left(\sqrt{\frac{a_i(T)}{a_j(T)}}\frac{\partial a_i(T)}{\partial T} + \sqrt{\frac{a_j(T)}{a_i(T)}}\frac{\partial a_j(T)}{\partial T}\right)
++ \sum_{i=1}^{N-1}\sum_{j=i+1}^N w_i w_j\left(\sqrt{\frac{a_i(T)}{a_j(T)}}\frac{\partial a_i(T)}{\partial T} + \sqrt{\frac{a_j(T)}{a_i(T)}}\frac{\partial a_j(T)}{\partial T}\right)
 \end{equation}
 \begin{equation}
 \frac{\partial a_i(T)}{\partial T} = -0.42748\frac{R^2T_{c,i}^2s_i}{m_i^2 P_{c,i}}\sqrt{\frac{\alpha_i(T)}{T_{c,i}T}}
 \end{equation}
 \begin{equation}
-P_{w_k} = \left(\frac{\mathcal{R}T}{v-b}\right)\frac{1}{m_k}
+P_{w_k} = \left(\frac{\mathcal{R}T}{v-b(\wb)}\right)\frac{1}{m_k}
++\frac{\mathcal{R}Tb_k\sum_i\frac{w_i}{m_i}}{[v-b(\wb)]^2}
 - \frac{v(v+b(\wb))\frac{\partial a(T,\wb)}{\partial w_k} - a(T,\wb)v\frac{\partial b(\wb)}{\partial w_k}}{[v(v+b(\wb))]^2},
 \end{equation}
 with
