@@ -198,7 +198,7 @@ contains
 
     do n=1,nspecies
 
-       P_w(n) = (Runiv*Temp / (rhoinv - b)) / molecluar_weight(n) &
+       P_w(n) = (Runiv*Temp / (rhoinv - b)) / molecular_weight(n) &
             + Runiv*Temp*b_i(n)*sum / (rhoinv - b)**2 &
             - (rhoinv*(rhoinv + b)*dadw(n) - a*rhoinv*b_i(n)) / (rhoinv*(rhoinv+b))**2
 
