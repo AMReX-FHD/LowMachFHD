@@ -144,7 +144,7 @@ contains
     call compute_b(b,Yk)
     sum = 0.d0
     do n=1,nspecies
-       sum = sum + Yk(n)/molmass(n)
+       sum = sum + Yk(n)/molecular_weight(n)
     end do
 
     P_rho = (rhoinv**2 * Runiv * Temp * sum / (rhoinv - b)**2) &
@@ -167,7 +167,7 @@ contains
     call compute_dadt(dadt,Yk,Temp)
     sum = 0.d0
     do n=1,nspecies
-       sum = sum + Yk(n)/molmass(n)
+       sum = sum + Yk(n)/molecular_weight(n)
     end do
 
     P_T = Runiv*sum / (rhoinv - b) - dadt/(rhoinv*(rhoinv+b))
@@ -189,7 +189,7 @@ contains
 
     sum = 0.d0
     do n=1,nspecies
-       sum = sum + Yk(n)/molmass(n)
+       sum = sum + Yk(n)/molecular_weight(n)
     end do
 
     call compute_b(b,Yk)
@@ -198,7 +198,7 @@ contains
 
     do n=1,nspecies
 
-       P_w(n) = (Runiv*Temp / (rhoinv - b)) / molmass(n) &
+       P_w(n) = (Runiv*Temp / (rhoinv - b)) / molecluar_weight(n) &
             + Runiv*Temp*b_i(n)*sum / (rhoinv - b)**2 &
             - (rhoinv*(rhoinv + b)*dadw(n) - a*rhoinv*b_i(n)) / (rhoinv*(rhoinv+b))**2
 
@@ -236,7 +236,7 @@ contains
 
     call compute_alpha_i(alpha_i,Temp)
     do n=1,nspecies
-       a_i(n) = 0.42748d0*Runiv**2*Tcrit(n)**2 / (molmass(n)**2 * Pcrit(n)) * alpha_i(n)
+       a_i(n) = 0.42748d0*Runiv**2*Tcrit(n)**2 / (molecular_weight(n)**2 * Pcrit(n)) * alpha_i(n)
     end do
 
   end subroutine compute_a_i
@@ -273,7 +273,7 @@ contains
 
     call compute_alpha_i(alpha_i,Temp)
     do n=1,nspecies
-       da_idt(n) = -0.42748d0*Runiv**2*Tcrit(n)**2*s_i(n)/(molmass(n)**2*Pcrit(n)) & 
+       da_idt(n) = -0.42748d0*Runiv**2*Tcrit(n)**2*s_i(n)/(molecular_weight(n)**2*Pcrit(n)) & 
             * sqrt(alpha_i(n)/(Tcrit(n)*Temp))
     end do
 
@@ -368,18 +368,22 @@ contains
 
     real(kind=8) :: rho, temp, Yk(1:nspecies), rwrk, pt
     integer :: iwrk, ns
-    real(kind=8) :: molmix
+    real(kind=8) :: sum, rhoinv, b, a
 
-    molmix = 0.0d0
+    rhoinv = 1.d0/rho
+
+    call compute_a(a,Temp,Yk)
+    call compute_b(b,Yk)
+
+    sum = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       sum = sum + Yk(ns)/molecular_weight(ns)
     enddo
-    molmix = 1.0d0/molmix
 
-    pt = rho*(Runiv/molmix)*temp  
+    pt = Runiv*temp*sum / (rhoinv - b) - a / (rhoinv*(rhoinv + b))
 
     if(temp.ge.6000.0d0) then
-       print*, 'BUG IN CKPY ', rho, temp,Yk, molmix  
+       print*, 'BUG IN CKPY ', rho, temp,Yk, sum  
        stop
     endif
  

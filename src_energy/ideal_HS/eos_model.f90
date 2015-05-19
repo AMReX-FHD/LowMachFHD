@@ -159,15 +159,14 @@ contains
 
     real(kind=8) :: rho, temp, Yk(1:nspecies), rwrk, pt
     integer :: iwrk, ns
-    real(kind=8) :: molmix
+    real(kind=8) :: sum
 
-    molmix = 0.0d0
+    sum = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       sum = sum + Yk(ns)/molecular_weight(ns)
     enddo
-    molmix = 1.0d0/molmix
 
-    pt = rho*(Runiv/molmix)*temp  
+    pt = rho*Runiv*sum*temp  
 
     if(temp.ge.6000.0d0) then
        print*, 'BUG IN CKPY ', rho, temp,Yk, molmix  
