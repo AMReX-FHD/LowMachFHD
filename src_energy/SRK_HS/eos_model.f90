@@ -6,7 +6,8 @@ module eos_model_module
   use probin_common_module, only: k_B, Runiv, molmass
   use probin_multispecies_module, only: nspecies
   use probin_energy_module, only: use_fake_diff, fake_diff_coeff, fake_soret_factor, &
-                                  heating_type, p0_in, dia_in, int_deg_free_in
+                                  heating_type, p0_in, dia_in, int_deg_free_in, &
+                                  acentric_factor
 
   implicit none
 
@@ -21,6 +22,7 @@ module eos_model_module
   REAL*8, save, allocatable :: cvgas(:)
   REAL*8, save, allocatable :: cpgas(:)
   REAL*8, save, allocatable :: e0ref(:)
+  REAL*8, save, allocatable :: s_i(:)
 
 !  matrix components for computation of diffusion that are independent of state
 !  these are built duruing initialization and saved for efficiency
@@ -48,6 +50,7 @@ contains
     allocate(cvgas(nspecies))
     allocate(cpgas(nspecies))
     allocate(e0ref(nspecies))
+    allocate(s_i(nspecies))
 
     AVOGADRO = Runiv / k_B
 
@@ -59,6 +62,8 @@ contains
        molecular_weight(ns) = molmass(ns)*AVOGADRO
 
        int_deg_free(ns) = int_deg_free_in(ns)
+
+       s_i(ns) = 0.48508d0 + 1.5517d0*acentric_factor(ns) - 0.151613d0*acentric_factor(n)**2
 
     enddo
 
