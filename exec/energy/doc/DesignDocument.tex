@@ -254,6 +254,22 @@ Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \beta_k = \frac{P_{w_k}}{\rho^2 P_\rho} - \frac{h_k P_T}{\rho^2 c_p P_\rho}, \quad
 \theta = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.\label{eq:thermo deriv}
 \end{equation}
+In \cite{MAESTROI}, it was shown that
+\begin{equation}
+\alpha = \frac{1}{\Gamma_1 P},
+\end{equation}
+where $\Gamma_1 = \left(d\ln{p}/d\ln{\rho}\right)_{\rm ad}$ is the first 
+adiabatic exponent.  This is related to the ratio of specific heats, 
+$\gamma$, via
+\begin{equation}
+\gamma = \frac{c_p}{c_v} = \frac{\Gamma_1}{\chi_\rho},
+\end{equation}
+where
+\begin{equation}
+\chi_\rho \equiv \left(\frac{\partial\ln{P}}{\partial\ln{\rho}}\right)_T = \frac{\rho}{P}P_\rho
+\end{equation}
+is the ``density exponent in the pressure equation of state.''
+Note that for ideal gases, $\chi_\rho=1$ and $\Gamma_1=\gamma$.
 
 \subsection{Comparison to LMC and MAESTRO}
 It is worth comparing this formulation to other low Mach number constraints.
@@ -361,8 +377,8 @@ each cell to drift without such a correction.  Physically, by including this ter
 an additional amount of expansion or contraction within each cell in order to modify 
 the pressure.  
 
-By starting with (\ref{eq:particle paths}) and substituting (\ref{eq:DPDt}) into (\ref{eq:particle paths2})
-and otherwise follow the same derivation, we end up with,
+By substituting (\ref{eq:DPDt}) into (\ref{eq:particle paths}),
+and following the same derivation, we end up with,
 \begin{equation}
 \nabla\cdot\vb + \alpha\frac{dP_0}{dt} = S + \underbrace{\frac{1}{\rho P_\rho}\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
 \end{equation}
@@ -561,7 +577,7 @@ S^{n+1,m+1} = \bar{S}^{n+1,m+1} + \delta S^{n+1,m+1},
 \end{equation}
 Then perform a GMRES solve for $(\vb,\pi)^{n+1,m+1}$.
 \begin{equation}
-\frac{(\rho\vb)^{n+1,m+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1,m+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1,m+1}) + \frac{1}{2}(\rho^n + \rho^{n+1,m+1})\gb,
+\frac{(\rho\vb)^{n+1,m+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1,m+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1,m+1}) + \frac{1}{2}(\rho^n + \rho^{n+1,m+1})\gb,\label{eq:Stokes}
 \end{equation}
 \begin{equation}
 \nabla\cdot\vb^{n+1,m+1} = \delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\alpha^{n+1,m+1}\left(\frac{\bar{S}^{n+1,m+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m+1}}\right).
@@ -572,11 +588,12 @@ then (\ref{eq:Stokes}) can be
 expressed in a familiar Stokes operator form,
 \begin{eqnarray}
 \left(\frac{\rho^{n+1,m+1}}{\Delta t} - \half\mathcal{A}_0^{n+1,m+1}\right)\vb^{n+1,m+1} + \nabla\pi^{n+1,m+1} &=& \frac{\rho^n\vb^n}{\Delta t} - \half\nabla\cdot\left[(\rho\vb\vb)^n + (\rho\vb\vb)^{n+1,m}\right]\nonumber\\
-&& + \half\mathcal{A}_0^n\vb^n + \half(\rho^n + \rho^{n+1,m+1})\gb.
+&&\hspace{-0.25in} + \half\mathcal{A}_0^n\vb^n + \half(\rho^n + \rho^{n+1,m+1})\gb.
 \end{eqnarray}
 \MarginPar{These notes about solving in homogeneous delta form don't really have to make it into the paper.
 They are more to help me with implementation.
 We could mention that we do it, and just cite the binary paper.}
+{\color{red}
 In practice, we solve for a modified increment to the velocity field, $\deltab\vb$.  In particular,
 we split the updated velocity into
 $\vb^{n+1,m+1} = \bar{\vb}^n + \deltab\vb$, where $\bar{\vb}^n$ is the velocity at $t^n$, but with modified boundary
@@ -592,6 +609,7 @@ Rewriting the Stokes system above we have:
 \begin{equation}
 -\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\alpha^{n+1,m+1}\left(\frac{\bar{S}^{n+1,m+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m+1}}\right)\right].
 \end{equation}
+}% end red color block
 {\bf Step 8}\\ \\
 Update volume discrepancy
 \begin{equation}
@@ -626,15 +644,8 @@ and simply the coefficients in the constraint equation,
 \beta_k = \frac{1}{\rho}\left(\frac{\bar{m}}{m_k} - \frac{h_m}{c_p T}\right), \quad
 \theta = \frac{1}{\rho c_p T},
 \end{equation}
-where $\bar{m} = (\sum_k w_k/m_k)^{-1}$ is the mixture-averaged (mean) molecular mass.
-In \cite{MAESTROI}, it was shown that
-\begin{equation}
-\alpha = \frac{1}{\Gamma_1 P},
-\end{equation}
-where $\Gamma_1 = \left(d\ln{p}/d\ln{\rho}\right)_{\rm ad}$ is the first adiabatic exponent
-at constant entropy and composition.  Note that in general, $\Gamma_1 P/\rho = c^2$,
-with $c$ the sound speed, and therefore $\alpha = 1/(\rho c^2)$.
-Note that for an ideal gas, $\Gamma_1 = \gamma = c_p/c_v$.
+where $\bar{m} = (\sum_k w_k/m_k)^{-1}$ is the mixture-averaged (mean) molecular mass.  Since for an ideal gas, $\Gamma_1 = \gamma = c_p/c_v$, we have
+$\alpha = 1/(\gamma P)$.
 
 In this hard sphere model, we use $c_p = c_v = \sum_k 3k_b/2m_k$.
 The transport coefficients $\eta,\lambda$ and $\chi$ are evaluated using the 
