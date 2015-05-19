@@ -1,4 +1,4 @@
-module energy_EOS_module
+module probin_energy_module
 
   use bl_types
   use bl_IO_module
@@ -23,16 +23,16 @@ module energy_EOS_module
   REAL*8 , SAVE :: dpdt_factor                 ! scaling factor for volume discrepancy correction
   integer, SAVE :: deltaT_iters                ! Loops over deltaT iterative solve
 
-  NAMELIST /probin_energy_EOS/ dia_in
-  NAMELIST /probin_energy_EOS/ int_deg_free_in
-  NAMELIST /probin_energy_EOS/ p0_in
-  NAMELIST /probin_energy_EOS/ heating_type
-  NAMELIST /probin_energy_EOS/ use_fake_diff
-  NAMELIST /probin_energy_EOS/ fake_diff_coeff
-  NAMELIST /probin_energy_EOS/ fake_soret_factor
-  NAMELIST /probin_energy_EOS/ dpdt_iters
-  NAMELIST /probin_energy_EOS/ dpdt_factor
-  NAMELIST /probin_energy_EOS/ deltaT_iters
+  NAMELIST /probin_energy/ dia_in
+  NAMELIST /probin_energy/ int_deg_free_in
+  NAMELIST /probin_energy/ p0_in
+  NAMELIST /probin_energy/ heating_type
+  NAMELIST /probin_energy/ use_fake_diff
+  NAMELIST /probin_energy/ fake_diff_coeff
+  NAMELIST /probin_energy/ fake_soret_factor
+  NAMELIST /probin_energy/ dpdt_iters
+  NAMELIST /probin_energy/ dpdt_factor
+  NAMELIST /probin_energy/ deltaT_iters
 
   ! molmass from namelist is in g/molecule.  molecular_weight is in g/mole
   REAL*8, SAVE, allocatable :: molecular_weight(:) 
@@ -49,7 +49,7 @@ module energy_EOS_module
 
 contains
 
-  subroutine energy_EOS_init()
+  subroutine probin_energy_init()
 
     integer :: iwrk, nfit, i, ic, ii, j
     integer :: dochem, dostrang
@@ -86,7 +86,7 @@ contains
           farg = farg + 1
           un = unit_new()
           open(unit=un, file = fname, status = 'old', action = 'read')
-          read(unit=un, nml = probin_energy_EOS)
+          read(unit=un, nml = probin_energy)
           close(unit=un)
           need_inputs = .false.
        end if
@@ -223,7 +223,7 @@ contains
        enddo
     enddo
 
-  end subroutine energy_EOS_init
+  end subroutine probin_energy_init
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes $c_p(\wb,T)$.  In this EOS this is not dependent on temperature
@@ -652,7 +652,7 @@ contains
 
   end subroutine ideal_mixture_transport
 
-end module energy_EOS_module
+end module probin_energy_module
    
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! These are local routines needed above

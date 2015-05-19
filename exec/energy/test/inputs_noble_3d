@@ -258,7 +258,7 @@
 /
 
 ! Stokes solver for velocity
-&probin_energy_EOS
+&probin_energy
 
  dia_in(1:4) = 2.18d-8, 2.58d-8, 3.63d-8, 4.16d-8  ! diameters of molecules
  int_deg_free_in(1:4) = 0 0 0 0                    ! internal degrees of freedom

@@ -1,7 +1,7 @@
 module energy_eos_wrapper_module
 
   use ml_layout_module
-  use energy_EOS_module
+  use probin_energy_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: prob_lo, prob_hi, molmass
   implicit none
