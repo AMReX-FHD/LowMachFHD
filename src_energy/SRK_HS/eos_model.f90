@@ -7,7 +7,7 @@ module eos_model_module
   use probin_multispecies_module, only: nspecies
   use probin_energy_module, only: use_fake_diff, fake_diff_coeff, fake_soret_factor, &
                                   heating_type, p0_in, dia_in, int_deg_free_in, &
-                                  acentric_factor
+                                  acentric_factor, Tcrit, Pcrit
 
   implicit none
 
@@ -23,6 +23,7 @@ module eos_model_module
   REAL*8, save, allocatable :: cpgas(:)
   REAL*8, save, allocatable :: e0ref(:)
   REAL*8, save, allocatable :: s_i(:)
+  REAL*8, save, allocatable :: b_i(:)
 
 !  matrix components for computation of diffusion that are independent of state
 !  these are built duruing initialization and saved for efficiency
@@ -33,7 +34,7 @@ contains
 
   subroutine eos_model_init()
 
-    integer :: iwrk, nfit, i, ic, ii, j
+    integer :: iwrk, nfit, i, ic, ii, j, n
     integer :: dochem, dostrang
     double precision :: rwrk
     integer ns
@@ -51,6 +52,7 @@ contains
     allocate(cpgas(nspecies))
     allocate(e0ref(nspecies))
     allocate(s_i(nspecies))
+    allocate(b_i(nspecies))
 
     AVOGADRO = Runiv / k_B
 
@@ -63,7 +65,9 @@ contains
 
        int_deg_free(ns) = int_deg_free_in(ns)
 
-       s_i(ns) = 0.48508d0 + 1.5517d0*acentric_factor(ns) - 0.151613d0*acentric_factor(n)**2
+       s_i(ns) = 0.48508d0 + 1.5517d0*acentric_factor(ns) - 0.151613d0*acentric_factor(ns)**2
+       
+       b_i(ns) = 0.08664d0*Runiv*Tcrit(ns)/(molmass(ns)*Pcrit(ns))
 
     enddo
 
@@ -125,53 +129,204 @@ contains
 
   end subroutine eos_model_init
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine compute_P_rho(P_rho,rho,Yk,temp)
 
-    real(kind=8) :: P_rho,rho,Yk,temp
+    real(kind=8) :: P_rho,rho,Yk(1:nspecies),temp
 
     ! local
-    real(kind=8) :: rhoinv
+    integer :: n
+    real(kind=8) :: rhoinv,a,b,sum
 
     rhoinv = 1.d0/rho
 
+    call compute_a(a,Temp,Yk)
+    call compute_b(b,Yk)
+    sum = 0.d0
+    do n=1,nspecies
+       sum = sum + Yk(n)/molmass(n)
+    end do
 
-
+    P_rho = (rhoinv**2 * Runiv * Temp * sum / (rhoinv - b)**2) &
+         - a*rhoinv**2*(2.d0*rhoinv + b) / (rhoinv*(rhoinv+b))**2
 
   end subroutine compute_P_rho
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine compute_P_T(P_T,rho,Yk,temp)
 
-    real(kind=8) :: P_T,rho,Yk,temp
+    real(kind=8) :: P_T,rho,Yk(1:nspecies),temp
 
     ! local
-    real(kind=8) :: rhoinv
+    integer :: n
+    real(kind=8) :: rhoinv,b,dadt,sum
 
     rhoinv = 1.d0/rho
 
+    call compute_b(b,Yk)
+    call compute_dadt(dadt,Yk,Temp)
+    sum = 0.d0
+    do n=1,nspecies
+       sum = sum + Yk(n)/molmass(n)
+    end do
 
-
+    P_T = Runiv*sum / (rhoinv - b) - dadt/(rhoinv*(rhoinv+b))
 
   end subroutine compute_P_T
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine compute_P_w(P_w,rho,Yk,temp)
 
-    real(kind=8) :: P_w(1:nspecies),rho,Yk,temp
+    real(kind=8) :: P_w(1:nspecies),rho,Yk(1:nspecies),temp
 
     ! local
     real(kind=8) :: rhoinv
 
+    integer :: n
+    real(kind=8) :: sum,b,dadw(1:nspecies),a
+
     rhoinv = 1.d0/rho
 
+    sum = 0.d0
+    do n=1,nspecies
+       sum = sum + Yk(n)/molmass(n)
+    end do
 
+    call compute_b(b,Yk)
+    call compute_a(a,Temp,Yk)
+    call compute_dadw(dadw,Yk,Temp)
 
+    do n=1,nspecies
+
+       P_w(n) = (Runiv*Temp / (rhoinv - b)) / molmass(n) &
+            + Runiv*Temp*b_i(n)*sum / (rhoinv - b)**2 &
+            - (rhoinv*(rhoinv + b)*dadw(n) - a*rhoinv*b_i(n)) / (rhoinv*(rhoinv+b))**2
+
+    end do
 
   end subroutine compute_P_w
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! scalar a
+  subroutine compute_a(a,Temp,Yk)
+
+    real(kind=8) :: a,Temp,Yk(1:nspecies)
+
+    integer :: i,j
+    real(kind=8) :: a_i(1:nspecies)
+    
+    call compute_a_i(a_i,Temp)
+    a = 0.d0
+    do j=1,nspecies
+       do i=1,nspecies
+          a = a + Yk(i)*Yk(j)*sqrt(a_i(i)*a_i(j))
+       end do
+    end do
+
+  end subroutine compute_a
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! vector a_i
+  subroutine compute_a_i(a_i,Temp)
+
+    real(kind=8) :: a_i(1:nspecies),Temp
+
+    integer :: n
+    real(kind=8) :: alpha_i(1:nspecies)
+
+    call compute_alpha_i(alpha_i,Temp)
+    do n=1,nspecies
+       a_i(n) = 0.42748d0*Runiv**2*Tcrit(n)**2 / (molmass(n)**2 * Pcrit(n)) * alpha_i(n)
+    end do
+
+  end subroutine compute_a_i
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! scalar \partial a / \partial T
+  subroutine compute_dadt(dadt,Yk,Temp)
+
+    real(kind=8) :: dadt,Yk(1:nspecies),Temp
+
+    integer :: i,j
+    real(kind=8) :: da_idt(1:nspecies),a_i(1:nspecies)
+
+    call compute_da_idt(da_idt,Temp)
+    call compute_a_i(a_i,Temp)
+    dadt = 0.d0
+    do j=1,nspecies
+       do i=1,nspecies
+          dadt = dadt + 0.5d0*Yk(i)*Yk(j)* &
+               (sqrt(a_i(i)/a_i(j))*da_idt(i) + sqrt(a_i(j)/a_i(i))*da_idt(j))
+       end do
+    end do
+
+  end subroutine compute_dadt
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! vector \partial a_i / \partial T
+  subroutine compute_da_idt(da_idt,Temp)
+
+    real(kind=8) :: da_idt(1:nspecies),Temp
+
+    integer :: n
+    real(kind=8) :: alpha_i(1:nspecies)
+
+    call compute_alpha_i(alpha_i,Temp)
+    do n=1,nspecies
+       da_idt(n) = -0.42748d0*Runiv**2*Tcrit(n)**2*s_i(n)/(molmass(n)**2*Pcrit(n)) & 
+            * sqrt(alpha_i(n)/(Tcrit(n)*Temp))
+    end do
+
+  end subroutine compute_da_idt
 
 
-  subroutine compute_alpha_i()
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! vector \partial a / \partial w_k
+  subroutine compute_dadw(dadw,Yk,Temp)
+
+    real(kind=8) :: dadw(1:nspecies),Yk(1:nspecies),Temp
+
+    integer :: i,n
+    real(kind=8) :: a_i(1:nspecies),sum
+
+    call compute_a_i(a_i,Temp)
+    dadw(1:nspecies) = 0.d0
+    do n=1,nspecies
+       do i=1,nspecies
+          dadw(n) = dadw(n) + 2.d0*Yk(i)*sqrt(a_i(i)*a_i(n))
+       end do
+    end do
+
+  end subroutine compute_dadw
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! vector \alpha_i
+  subroutine compute_alpha_i(alpha_i,Temp)
+
+    real(kind=8) :: alpha_i(1:nspecies),Temp
+
+    integer :: n
+
+    do n=1,nspecies
+       alpha_i(n) = (1.d0 + s_i(n)*(1.d0 - sqrt(Temp/Tcrit(n))))**2
+    end do
 
   end subroutine compute_alpha_i
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! scalar b
+  subroutine compute_b(b,Yk)
+
+    real(kind=8) :: b,Yk(1:nspecies)
+    
+    integer :: n
+
+    b = 0.d0
+    do n=1,nspecies
+       b = b + Yk(n)*b_i(n)
+    end do
+
+  end subroutine compute_b
 
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
