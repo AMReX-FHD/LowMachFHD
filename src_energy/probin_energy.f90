@@ -18,6 +18,9 @@ module probin_energy_module
   integer, SAVE :: dpdt_iters                  ! Loops over volume discrepancy correction
   REAL*8 , SAVE :: dpdt_factor                 ! scaling factor for volume discrepancy correction
   integer, SAVE :: deltaT_iters                ! Loops over deltaT iterative solve
+  REAL*8 , SAVE :: Tcrit(MAXSPECIES)           ! critical temperatures
+  REAL*8 , SAVE :: Pcrit(MAXSPECIES)           ! critical pressures
+  REAL*8 , SAVE :: acentric_factor(MAXSPECIES) ! acentric factors
 
   NAMELIST /probin_energy/ dia_in
   NAMELIST /probin_energy/ int_deg_free_in
@@ -29,6 +32,9 @@ module probin_energy_module
   NAMELIST /probin_energy/ dpdt_iters
   NAMELIST /probin_energy/ dpdt_factor
   NAMELIST /probin_energy/ deltaT_iters
+  NAMELIST /probin_energy/ Tcrit
+  NAMELIST /probin_energy/ Pcrit
+  NAMELIST /probin_energy/ acentric_factor
 
 contains
 
@@ -58,6 +64,9 @@ contains
     dpdt_iters = 3
     dpdt_factor = 2.d0
     deltaT_iters = 3
+    Tcrit = 0.d0
+    Pcrit = 0.d0
+    acentric_factor = 0.d0
 
     ! read from input file 
     need_inputs = .true.
