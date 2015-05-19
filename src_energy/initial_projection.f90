@@ -5,7 +5,7 @@ module initial_projection_module
   use bc_module
   use convert_stag_module
   use convert_rhoc_to_c_module
-  use energy_eos_wrapper_module
+  use eos_model_wrapper_module
   use mass_fluxdiv_energy_module
   use rhoh_fluxdiv_energy_module
   use div_and_grad_module

@@ -17,7 +17,7 @@ subroutine main_driver()
   use init_energy_module
   use initial_projection_module
   use advance_timestep_module
-  use probin_energy_module
+  use eos_model_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -29,6 +29,7 @@ subroutine main_driver()
                                         start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
+  use probin_energy_module, only: probin_energy_init
 
   use fabio_module
 
@@ -117,6 +118,7 @@ subroutine main_driver()
   call probin_multispecies_init() 
   call probin_gmres_init()
   call probin_energy_init()
+  call eos_model_init()
   
   ! Initialize random numbers *after* the global (root) seed has been set:
   call SeedParallelRNG(seed)

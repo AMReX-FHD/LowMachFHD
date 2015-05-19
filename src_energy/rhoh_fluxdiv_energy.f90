@@ -2,7 +2,7 @@ module rhoh_fluxdiv_energy_module
 
   use ml_layout_module
   use define_bc_module
-  use energy_EOS_wrapper_module
+  use eos_model_wrapper_module
   use convert_stag_module
   use div_and_grad_module
   use bc_module

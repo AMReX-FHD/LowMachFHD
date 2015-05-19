@@ -1,9 +1,10 @@
-module energy_eos_wrapper_module
+module eos_model_wrapper_module
 
   use ml_layout_module
-  use probin_energy_module
+  use eos_model_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: prob_lo, prob_hi, molmass
+  use probin_energy_module, only: heating_type
   implicit none
 
   private
@@ -838,5 +839,5 @@ contains
 
   end subroutine compute_cp_3d
   
-end module energy_eos_wrapper_module
+end module eos_model_wrapper_module
 

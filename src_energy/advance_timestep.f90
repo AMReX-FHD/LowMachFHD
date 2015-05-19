@@ -8,7 +8,7 @@ module advance_timestep_module
   use convert_stag_module
   use convert_rhoc_to_c_module
   use convert_rhoh_to_h_module
-  use energy_eos_wrapper_module
+  use eos_model_wrapper_module
   use mass_flux_utilities_module
   use mass_fluxdiv_energy_module
   use rhoh_fluxdiv_energy_module
@@ -522,7 +522,7 @@ contains
           call ml_cc_solve(mla,deltaT_rhs,deltaT,fine_flx,cc_solver_alpha,cc_solver_beta,dx, &
                            the_bc_tower,temp_bc_comp)
 
-          norm = multifab_norm_l1_c(deltaT(1),1,1)
+          norm = multifab_norm_l1_c(deltaT(1),1,1)/n_cell
           if (parallel_IOProcessor()) then
              print*,'deltaT_norm',norm
           end if
@@ -643,7 +643,7 @@ contains
              end if
           end if
 
-          norm = multifab_norm_l1_c(Peos(n),1,1)
+          norm = multifab_norm_l1_c(Peos(n),1,1)/n_cell
           if (parallel_IOProcessor()) then
              print*,'drift_norm',norm
           end if

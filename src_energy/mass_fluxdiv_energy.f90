@@ -5,7 +5,6 @@ module mass_fluxdiv_energy_module
   use diffusive_mass_fluxdiv_module
   use mass_flux_utilities_module
   use convert_rhoc_to_c_module
-  use probin_energy_module
   use probin_multispecies_module, only: nspecies
 
   implicit none
