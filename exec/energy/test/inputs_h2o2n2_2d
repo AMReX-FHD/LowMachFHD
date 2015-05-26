@@ -264,7 +264,8 @@
  dpdt_iters = 10             ! Loops over volume discrepancy correction
  dpdt_factor = 2.d0          ! scaling factor for volume discrepancy correction
  deltaT_iters = 5            ! Loops over deltaT iterative solve
- Tcrit(1:3) = 33.20d0 154.6d0 126.2d0 ! critical temperatures
- Pcrit(1:3) = 1.3d7 5.05d7 3.35d7     ! critical pressures
+ Tcrit(1:3) = 33.20d0 154.6d0 126.2d0            ! critical temperatures
+ Pcrit(1:3) = 1.3d7 5.05d7 3.35d7                ! critical pressures
+ acentric_factor(1:3) = -0.220d0 0.022d0 0.040d0 ! acentric factors
 
 /
