@@ -168,9 +168,6 @@ contains
 
     pt = rho*Runiv*sum*temp  
 
-    print*,pt,Runiv,temp,sum
-    stop
-
     if(temp.ge.6000.0d0) then
        print*, 'BUG IN CKPY ', rho, temp,Yk, 1.d0/sum
        stop
@@ -244,9 +241,7 @@ contains
 
     molmix = 0.0d0
     do ns = 1, nspecies
-       ! CHANGING UNITS TO BE COMPATIBLE WITH compute_S
-!       molmix = molmix + Yk(ns)/molecular_weight(ns)
-       molmix = molmix + Yk(ns)/molmass(ns)
+       molmix = molmix + Yk(ns)/molecular_weight(ns)
     enddo
     molmix = 1.0d0/molmix
 

@@ -363,10 +363,6 @@ contains
     ! compute P_eos^n
     call compute_p(mla,rhotot_old,Temp_old,conc_old,Peos)
 
-
-          call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_Peos")
-          stop
-
     ! Scorr = Scorr + (1 / p0^n) * (Peos^n - P0^n)/dt
     do n=1,nlevs
        call multifab_sub_sub_s_c(Peos(n),1,p0_old,1,0)
@@ -386,11 +382,6 @@ contains
     end do
 
     p0_update_old = (Sbar_old + Scorrbar)/alphabar_old
-
-    print*,Sbar_old
-    print*,Scorrbar
-    print*,alphabar_old
-    stop
 
     ! mass_update_old = [-div(rho_i*v) + div(F)]^n
     do n=1,nlevs
