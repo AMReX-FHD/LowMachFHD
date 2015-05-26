@@ -67,7 +67,7 @@ contains
 
        s_i(ns) = 0.48508d0 + 1.5517d0*acentric_factor(ns) - 0.151613d0*acentric_factor(ns)**2
        
-       b_i(ns) = 0.08664d0*Runiv*Tcrit(ns)/(molmass(ns)*Pcrit(ns))
+       b_i(ns) = 0.08664d0*Runiv*Tcrit(ns)/(molecular_weight(ns)*Pcrit(ns))
 
     enddo
 
