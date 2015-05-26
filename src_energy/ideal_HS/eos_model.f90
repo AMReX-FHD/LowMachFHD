@@ -169,7 +169,7 @@ contains
     pt = rho*Runiv*sum*temp  
 
     if(temp.ge.6000.0d0) then
-       print*, 'BUG IN CKPY ', rho, temp,Yk, molmix  
+       print*, 'BUG IN CKPY ', rho, temp,Yk, 1.d0/sum
        stop
     endif
  
