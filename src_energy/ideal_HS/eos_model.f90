@@ -168,6 +168,9 @@ contains
 
     pt = rho*Runiv*sum*temp  
 
+    print*,pt,Runiv,temp,sum
+    stop
+
     if(temp.ge.6000.0d0) then
        print*, 'BUG IN CKPY ', rho, temp,Yk, 1.d0/sum
        stop
