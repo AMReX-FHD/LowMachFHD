@@ -3,7 +3,7 @@ module eos_model_wrapper_module
   use ml_layout_module
   use eos_model_module
   use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: prob_lo, prob_hi, molmass
+  use probin_common_module, only: prob_lo, prob_hi
   use probin_energy_module, only: heating_type
   implicit none
 
@@ -489,7 +489,7 @@ contains
           call CKCVBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cvmix)
           S(i,j) = 0.d0
           do n=1,nspecies
-             beta = (1.d0/rhotot(i,j))*(W/molmass(n) - hk(n)/(cpmix*Temp(i,j)))
+             beta = (1.d0/rhotot(i,j))*(W/molecular_weight(n) - hk(n)/(cpmix*Temp(i,j)))
              S(i,j) = S(i,j) + beta*mass_fluxdiv(i,j,n)
           end do
           S(i,j) = S(i,j) + rhoh_fluxdiv(i,j) / (rhotot(i,j)*cpmix*Temp(i,j))
@@ -534,7 +534,7 @@ contains
              call CKCVBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cvmix)
              S(i,j,k) = 0.d0
              do n=1,nspecies
-                beta = (1.d0/rhotot(i,j,k))*(W/molmass(n) - hk(n)/(cpmix*Temp(i,j,k)))
+                beta = (1.d0/rhotot(i,j,k))*(W/molecular_weight(n) - hk(n)/(cpmix*Temp(i,j,k)))
                 S(i,j,k) = S(i,j,k) + beta*mass_fluxdiv(i,j,k,n)
              end do
              S(i,j,k) = S(i,j,k) + rhoh_fluxdiv(i,j,k) / (rhotot(i,j,k)*cpmix*Temp(i,j,k))
