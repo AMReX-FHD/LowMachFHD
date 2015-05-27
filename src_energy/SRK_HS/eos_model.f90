@@ -368,22 +368,23 @@ contains
 
     real(kind=8) :: rho, temp, Yk(1:nspecies), rwrk, pt
     integer :: iwrk, ns
-    real(kind=8) :: sum, rhoinv, b, a
+    real(kind=8) :: molmix, rhoinv, b, a
 
     rhoinv = 1.d0/rho
 
     call compute_a(a,Temp,Yk)
     call compute_b(b,Yk)
 
-    sum = 0.0d0
+    molmix = 0.0d0
     do ns = 1, nspecies
-       sum = sum + Yk(ns)/molecular_weight(ns)
+       molmix = molmix + Yk(ns)/molecular_weight(ns)
     enddo
+    molmix = 1.d0/molmix
 
-    pt = Runiv*temp*sum / (rhoinv - b) - a / (rhoinv*(rhoinv + b))
+    pt = (Runiv*temp/molmix) / (rhoinv - b) - a / (rhoinv*(rhoinv + b))
 
     if(temp.ge.6000.0d0) then
-       print*, 'BUG IN CKPY ', rho, temp,Yk, sum  
+       print*, 'BUG IN CKPY ', rho, temp,Yk, molmix  
        stop
     endif
  
@@ -468,8 +469,8 @@ contains
   subroutine CKRHOY(pt,temp,Yk,IWRK,RWRK,rho)
 
     real(kind=8) :: pt, temp, Yk(1:nspecies), rwrk, rho
-    integer :: iwrk, ns     
-    real(kind=8) :: molmix
+    integer :: iwrk, ns, i
+    real(kind=8) :: molmix,a,b,c,f,fprime
 
     molmix = 0.0d0
     do ns = 1, nspecies
@@ -477,7 +478,21 @@ contains
     enddo
     molmix = 1.0d0/molmix
 
+    ! initial guess using ideal gas law
     rho = pt/(Runiv/molmix)/temp
+
+    call compute_a(a,Temp,Yk)
+    call compute_b(b,Yk)
+
+    c = Runiv*Temp/molmix
+
+    ! newton iteration to find rho
+    do i=1,10
+       f = a*b*rho**3 + (b*c-a+pt*b**2)*rho**2 + c*rho - pt
+       fprime = 3.d0*a*b*rho**2 + 2.d0*(b*c-a+pt*b**2)*rho + c
+       rho = rho - f/fprime
+    end do
+
 
     return
   end subroutine CKRHOY
