@@ -51,6 +51,10 @@ contains
     integer         :: dm,i,n,nlevs
     logical         :: full_solve
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "macproject")
+
     if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
        print*,"Begin call to macproject"
     end if
@@ -122,6 +126,8 @@ contains
     if (parallel_IOProcessor() .and. mg_verbose .ge. 1) then
        print*,"End call to macproject"
     end if
+
+    call destroy(bpt)
 
   contains
 
@@ -311,6 +317,10 @@ contains
 
     type(multifab) :: gradp(mla%nlevel,mla%dim)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "subtract_weighted_gradp")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -334,6 +344,8 @@ contains
           call multifab_destroy(gradp(n,i))
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine subtract_weighted_gradp
   
