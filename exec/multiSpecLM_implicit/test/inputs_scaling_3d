@@ -10,7 +10,7 @@
   max_step = 5                     ! maximum number of time steps
   fixed_dt = -1                    ! time step
   cfl = 0.9d0                      ! cfl number 
-  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 100                    ! Interval for writing a checkpoint
   prob_type = 3                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
