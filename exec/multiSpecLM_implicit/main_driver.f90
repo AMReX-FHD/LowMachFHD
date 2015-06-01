@@ -591,7 +591,7 @@ subroutine main_driver()
       if (istep >= n_steps_skip) then
 
          ! write plotfile at specific intervals
-         if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
+         if (plot_int.gt.0 .and. (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
