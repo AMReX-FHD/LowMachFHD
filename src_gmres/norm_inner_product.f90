@@ -28,6 +28,10 @@ contains
     real(kind=dp_t), pointer :: m1xp(:,:,:,:),m1yp(:,:,:,:),m1zp(:,:,:,:)
     real(kind=dp_t), pointer :: m2xp(:,:,:,:),m2yp(:,:,:,:),m2zp(:,:,:,:)
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"stag_inner_prod")
+
     inner_prod_proc = 0.d0
     nlevs = mla%nlevel
     dm = mla%dim
@@ -69,6 +73,8 @@ contains
     do comp=1,dm
        call parallel_reduce(prod_val(comp), inner_prod_proc(comp), MPI_SUM)
     end do
+
+    call destroy(bpt)
 
   end subroutine stag_inner_prod
 
@@ -195,6 +201,10 @@ contains
     real(kind=dp_t), pointer :: m1p(:,:,:,:)
     real(kind=dp_t), pointer :: m2p(:,:,:,:)
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"cc_inner_prod")
+
     inner_prod_proc = 0.d0
     nlevs = mla%nlevel
     dm = mla%dim
@@ -227,6 +237,8 @@ contains
     end do
 
     call parallel_reduce(prod_val, inner_prod_proc, MPI_SUM)
+
+    call destroy(bpt)
 
   end subroutine cc_inner_prod
 
@@ -278,11 +290,17 @@ contains
     real(kind=dp_t) :: inner_prod(1:mla%dim)
     integer :: dm
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"stag_l2_norm")
+
     dm = mla%dim
 
     call stag_inner_prod(mla,m,1,m,1,inner_prod)
     norm = sqrt(sum(inner_prod(1:dm)))
     
+    call destroy(bpt)
+
   end subroutine stag_l2_norm
 
   subroutine cc_l2_norm(mla, m, norm)
@@ -294,9 +312,15 @@ contains
     ! local 
     real(kind=dp_t) :: inner_prod
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"cc_l2_norm")
+
     call cc_inner_prod(mla,m,1,m,1,inner_prod)
     norm = sqrt(inner_prod)
     
+    call destroy(bpt)
+
   end subroutine cc_l2_norm
 
   subroutine stag_l1_norm(mla,m,norm)
@@ -314,6 +338,10 @@ contains
     real(kind=dp_t), pointer :: mxp(:,:,:,:)
     real(kind=dp_t), pointer :: myp(:,:,:,:)
     real(kind=dp_t), pointer :: mzp(:,:,:,:)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"stag_l1_norm")
 
     norm_proc = 0.d0
 
@@ -348,6 +376,8 @@ contains
 
     call parallel_reduce(norm(1:dm), norm_proc(1:dm), MPI_SUM)
     
+    call destroy(bpt)
+
   end subroutine stag_l1_norm
 
   subroutine stag_l1_norm_2d(mx,my,ng_m,lo,hi,norm)
@@ -471,6 +501,10 @@ contains
     real(kind=dp_t), pointer :: myp(:,:,:,:)
     real(kind=dp_t), pointer :: mzp(:,:,:,:)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"sum_umac_press")
+
     sumu_lev = 0.d0
     sumu_proc = 0.d0
 
@@ -523,6 +557,8 @@ contains
     if(present(av_sump)) av_sump=sump_lev/n_cell
     if(present(av_sumu)) av_sumu(1:dm)=sumu_lev(1:dm)/n_cell
     
+    call destroy(bpt)
+
   end subroutine sum_umac_press
 
   subroutine sum_umac_2d(umac,vmac,ng_m,lo,hi,sumu)
