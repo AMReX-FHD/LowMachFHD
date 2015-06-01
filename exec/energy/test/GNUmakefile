@@ -20,8 +20,12 @@ VPATH_LOCATIONS += ..
 # choose the EOS and model here
 
 # ideal gas EOS, hard sphere transport
-include $(STAGGERED_HOME)/src_energy/ideal_HS/GPackage.mak
-VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/ideal_HS
+#include $(STAGGERED_HOME)/src_energy/ideal_HS/GPackage.mak
+#VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/ideal_HS
+
+
+include $(STAGGERED_HOME)/src_energy/SRK_HS/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/SRK_HS
 
 #######################################
 
@@ -49,7 +53,13 @@ VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/LinearSolvers/F_MG
 LAPACK95_DIR = $(STAGGERED_HOME)/src_multiSpec/LAPACK95
 
 F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
-libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
+ifeq ($(findstring hopper, $(HOST)), hopper)
+  libraries += $(LAPACK95_DIR)/lapack95.a
+else ifeq ($(findstring edison, $(HOST)), edison)
+  libraries += $(LAPACK95_DIR)/lapack95.a
+else
+  libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
+endif
 
 main.$(suf).exe: $(objects) 
 	$(LINK.f90) -o main.$(suf).exe $(objects) $(libraries)
