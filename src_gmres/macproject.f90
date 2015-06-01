@@ -291,6 +291,8 @@ contains
          call mg_tower_destroy(mgt(n))
       end do
 
+      call destroy(bpt)
+
     end subroutine mac_multigrid
 
   end subroutine macproject
