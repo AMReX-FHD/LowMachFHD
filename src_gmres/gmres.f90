@@ -58,6 +58,8 @@ contains
     real(kind=dp_t) ::  s(gmres_max_inner+1)
     real(kind=dp_t) ::  H(gmres_max_inner+1,gmres_max_inner) ! for storing Hessenberg mat
 
+    type(bl_prof_timer), save :: bpt
+
     ! Krylov space vectors
     type(multifab) :: V_u(mla%nlevel,mla%dim)
     type(multifab) :: V_p(mla%nlevel)
@@ -70,6 +72,8 @@ contains
     real(kind=dp_t) :: norm_init_u, norm_init_p, norm_u_noprecon
     real(kind=dp_t) :: norm_p_noprecon, norm_resid_est
     real(kind=dp_t) :: inner_prod_vel(mla%dim), inner_prod_pres
+
+    call build(bpt, "gmres")
 
     if (gmres_verbose .ge. 3) then 
       if (parallel_IOProcessor()) then 
@@ -468,6 +472,8 @@ contains
       end if
     end if
 
+    call destroy(bpt)
+
   contains 
 
     !------------------------------------------
@@ -486,6 +492,10 @@ contains
       ! local variables
       integer :: dm,d,iter
 
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"udate_sol")
+
       dm = mla%dim
 
       ! set V(i) = V(i)*y(i)
@@ -498,6 +508,8 @@ contains
             call multifab_plus_plus_c(x_u(d),1,V_u(d),iter,1,0)
          end do
       end do
+      
+      call destroy(bpt)
 
     end subroutine update_sol
 
@@ -512,6 +524,10 @@ contains
       ! local variable       
       integer :: k
       real(kind=dp_t) :: temp
+
+      type(bl_prof_timer), save :: bpt      
+
+      call build(bpt,"least_squares")
 
       ! apply Givens rotation
       do k = 1,i-1
@@ -530,6 +546,8 @@ contains
       H(i,i) = cs(i)*H(i,i) + sn(i)*H(i+1,i)
       H(i+1,i) = 0.0d0
 
+      call destroy(bpt)
+
     end subroutine least_squares
 
     subroutine rotmat(a, b, cs, sn)
@@ -541,6 +559,10 @@ contains
 
       ! local
       real(kind=dp_t) :: temp
+
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"rotmat")
 
       if ( b .eq. 0.0d0 ) then
          cs = 1.0d0
@@ -555,6 +577,8 @@ contains
          sn = temp * cs
       end if
 
+      call destroy(bpt)
+
     end subroutine rotmat
 
     subroutine SolveUTriangular(k, H, s, y)
@@ -566,10 +590,16 @@ contains
       !local 
       integer :: i
 
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"SolveUTriangular")
+
       y(k+1) = s(k+1)/H(k+1,k+1)
       do i = k, 1, -1
          y(i) = (s(i)-dot_product(H(i,i+1:k+1), y(i+1:k+1)))/H(i,i)
       end do
+
+      call destroy(bpt)
 
     end subroutine SolveUTriangular
 
