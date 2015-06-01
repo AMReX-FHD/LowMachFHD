@@ -52,6 +52,8 @@ contains
     integer :: color,color_start,color_end,nsmooths
     integer :: vcycle_counter_temp
 
+    type(bl_prof_timer), save :: bpt
+
     ! stores initial residual and current residual
     real(kind=dp_t) :: resid0(mla%dim),resid(mla%dim),resid_temp,resid0_l2(mla%dim),resid_l2(mla%dim),temp
 
@@ -94,6 +96,8 @@ contains
     type(bc_tower) :: the_bc_tower_fancy
     integer :: lo(mla%dim), hi(mla%dim), bottom_box_size
     type(box) :: bx
+
+    call build(bpt,"stag_mg_solver")
 
     if (present(do_fancy_bottom_in)) then
        do_fancy_bottom = do_fancy_bottom_in
@@ -911,6 +915,8 @@ contains
        print*,"End call to stag_mg_solver"
     end if
 
+    call destroy(bpt)
+
   contains
 
     ! compute the number of multigrid levels assuming minwidth is the length of the
@@ -923,6 +929,10 @@ contains
       ! local
       integer :: i,d,dm,rdir,temp
       integer :: lo(get_dim(ba)),hi(get_dim(ba)),length(get_dim(ba))
+
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"compute_nlevs_mg")
 
       dm = get_dim(ba)
 
@@ -952,6 +962,8 @@ contains
 
       end do
 
+      call destroy(bpt)
+
     end subroutine compute_nlevs_mg
 
     ! coarsen a cell-centered quantity
@@ -972,6 +984,10 @@ contains
 
       real(kind=dp_t), pointer :: acp(:,:,:,:)
       real(kind=dp_t), pointer :: afp(:,:,:,:)
+
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"cc_restriction")
 
       dm = get_dim(la)
 
@@ -997,6 +1013,8 @@ contains
       end do
 
       call multifab_fill_boundary(phi_c)
+
+      call destroy(bpt)
 
     end subroutine cc_restriction
 
@@ -1068,6 +1086,10 @@ contains
       real(kind=dp_t), pointer :: cpy(:,:,:,:)
       real(kind=dp_t), pointer :: cpz(:,:,:,:)
 
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"stag_restriction")
+
       simple_stencil = .false.
       if (present(simple_stencil_in)) then
          simple_stencil = simple_stencil_in
@@ -1100,6 +1122,8 @@ contains
                                      lo_c, hi_c, lo_f, hi_f, simple_stencil)
          end select
       end do
+
+      call destroy(bpt)
 
     end subroutine stag_restriction
 
@@ -1262,6 +1286,10 @@ contains
       real(kind=dp_t), pointer :: fp(:,:,:,:)
       real(kind=dp_t), pointer :: cp(:,:,:,:)
 
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"nodal_restriction")
+
       dm = get_dim(la)
 
       ng_f = phi_f%ng
@@ -1290,6 +1318,8 @@ contains
       end do
 
       call multifab_internal_sync(phi_c)
+
+      call destroy(bpt)
 
     end subroutine nodal_restriction
 
@@ -1348,6 +1378,10 @@ contains
       real(kind=dp_t), pointer :: cp2(:,:,:,:)
       real(kind=dp_t), pointer :: cp3(:,:,:,:)
 
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"edge_restriction")
+
       dm = get_dim(la)
 
       ng_f = phi_f(1)%ng
@@ -1381,6 +1415,8 @@ contains
       do i=1,3
          call multifab_internal_sync(phi_c(i))
       end do
+
+      call destroy(bpt)
 
     end subroutine edge_restriction
 
@@ -1446,6 +1482,10 @@ contains
       real(kind=dp_t), pointer :: cpy(:,:,:,:)
       real(kind=dp_t), pointer :: cpz(:,:,:,:)
 
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"stag_prolongation")
+
       dm = get_dim(la)
 
       ng_f = phi_f(1)%ng
@@ -1473,6 +1513,8 @@ contains
                                       lo_c, hi_c, lo_f, hi_f)
          end select
       end do
+
+      call destroy(bpt)
 
     end subroutine stag_prolongation
 
@@ -1728,6 +1770,10 @@ contains
       real(kind=dp_t), pointer :: bnp(:,:,:,:)
       real(kind=dp_t), pointer ::  kp(:,:,:,:)
 
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"stag_mg_update")
+
       dm = get_dim(la)
 
       if (present(color_in)) then
@@ -1785,6 +1831,8 @@ contains
 
          end select
       end do
+
+      call destroy(bpt)
 
     end subroutine stag_mg_update
 
