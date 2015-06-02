@@ -169,6 +169,8 @@ contains
        call multifab_physbc_domainvel(Lphi_fc(i),vel_bc_comp+i-1,the_bc_level,dx)
     end do
 
+    call destroy(bpt)
+
   end subroutine stag_applyop_level
 
   subroutine stag_applyop_2d(phix,phiy,ng_p,Lpx,Lpy,ng_l, &
