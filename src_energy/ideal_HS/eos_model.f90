@@ -269,6 +269,62 @@ contains
   end subroutine CKRHOY
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! computes $P_\rho
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine compute_P_rho(P_rho,rho,temp,Yk)
+
+    real(kind=8) :: P_rho, rho, temp, Yk(1:nspecies)
+
+    real(kind=8) :: molmix
+    integer :: ns
+
+    molmix = 0.0d0
+    do ns = 1, nspecies
+       molmix = molmix + Yk(ns)/molecular_weight(ns)
+    enddo
+    molmix = 1.0d0/molmix
+
+    P_rho = Runiv*temp/molmix
+
+  end subroutine compute_P_rho
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! computes $P_T
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine compute_P_T(P_T,rho,temp,Yk)
+
+    real(kind=8) :: P_T, rho, temp, Yk(1:nspecies)
+
+    real(kind=8) :: molmix
+    integer :: ns
+
+    molmix = 0.0d0
+    do ns = 1, nspecies
+       molmix = molmix + Yk(ns)/molecular_weight(ns)
+    enddo
+    molmix = 1.0d0/molmix
+
+    P_T = rho*Runiv/molmix
+
+  end subroutine compute_P_T
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! computes $P_w
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine compute_P_w(P_w,rho,temp,Yk)
+
+    real(kind=8) :: P_w(1:nspecies), rho, temp, Yk(1:nspecies)
+
+    real(kind=8) :: molmix
+    integer :: ns
+
+    do ns = 1, nspecies
+       P_w(ns) = rho*Runiv*temp / molecular_weight(ns)
+    end do
+
+  end subroutine compute_P_w
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! takes $\rho,T,P,\wb$, and $\xb$ as inputs and computes the following:
   ! eta     is the dynamic viscosity, $\eta$
   ! kappa   is the thermal conductivity, $\lambda$
