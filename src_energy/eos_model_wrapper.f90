@@ -472,8 +472,8 @@ contains
 
     ! local
     integer :: i,j,n
-    real(kind=dp_t) :: W,beta,cpmix,cvmix
-    real(kind=dp_t) :: hk(nspecies)
+    real(kind=dp_t) :: W,beta,theta,cpmix,cvmix
+    real(kind=dp_t) :: hk(nspecies),P_rho,P_T,P_w(nspecies)
 
     integer :: iwrk
     real(kind=dp_t) :: rwrk
@@ -487,12 +487,18 @@ contains
           call CKHMS(Temp(i,j),iwrk,rwrk,hk)
           call CKCPBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cpmix)
           call CKCVBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cvmix)
+          ! P_rho, P_T, P_w
+          call compute_P_rho(P_rho,rhotot(i,j),conc(i,j,:),Temp(i,j))
+          call compute_P_T(P_T,rhotot(i,j),conc(i,j,:),Temp(i,j))
+          call compute_P_w(P_w,rhotot(i,j),conc(i,j,:),Temp(i,j))
+
           S(i,j) = 0.d0
           do n=1,nspecies
-             beta = (1.d0/rhotot(i,j))*(W/molecular_weight(n) - hk(n)/(cpmix*Temp(i,j)))
+             beta = P_w(n) / (rhotot(i,j)**2*P_rho) - hk(n)*P_T/(rhotot(i,j)**2*cpmix*P_rho)
              S(i,j) = S(i,j) + beta*mass_fluxdiv(i,j,n)
           end do
-          S(i,j) = S(i,j) + rhoh_fluxdiv(i,j) / (rhotot(i,j)*cpmix*Temp(i,j))
+          theta = P_T / (rhotot(i,j)**2*P_rho*cpmix)
+          S(i,j) = S(i,j) + theta*rhoh_fluxdiv(i,j)
           alpha(i,j) = cvmix/(cpmix*p0)
 
        end do
@@ -516,8 +522,8 @@ contains
 
     ! local
     integer :: i,j,k,n
-    real(kind=dp_t) :: W,beta,cpmix,cvmix
-    real(kind=dp_t) :: hk(nspecies)
+    real(kind=dp_t) :: W,beta,theta,cpmix,cvmix
+    real(kind=dp_t) :: hk(nspecies),P_rho,P_T,P_w(nspecies)
 
     integer :: iwrk
     real(kind=dp_t) :: rwrk
@@ -532,12 +538,18 @@ contains
              call CKHMS(Temp(i,j,k),iwrk,rwrk,hk)
              call CKCPBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cpmix)
              call CKCVBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cvmix)
+             ! P_rho, P_T, P_w
+             call compute_P_rho(P_rho,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
+             call compute_P_T(P_T,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
+             call compute_P_w(P_w,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
+
              S(i,j,k) = 0.d0
              do n=1,nspecies
-                beta = (1.d0/rhotot(i,j,k))*(W/molecular_weight(n) - hk(n)/(cpmix*Temp(i,j,k)))
+                beta = P_w(n) / (rhotot(i,j,k)**2*P_rho) - hk(n)*P_T/(rhotot(i,j,k)**2*cpmix*P_rho)
                 S(i,j,k) = S(i,j,k) + beta*mass_fluxdiv(i,j,k,n)
              end do
-             S(i,j,k) = S(i,j,k) + rhoh_fluxdiv(i,j,k) / (rhotot(i,j,k)*cpmix*Temp(i,j,k))
+             theta = P_T / (rhotot(i,j,k)**2*P_rho*cpmix)
+             S(i,j,k) = S(i,j,k) + theta * rhoh_fluxdiv(i,j,k)
              alpha(i,j,k) = cvmix/(cpmix*p0)
 
           end do

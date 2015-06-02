@@ -20,12 +20,11 @@ VPATH_LOCATIONS += ..
 # choose the EOS and model here
 
 # ideal gas EOS, hard sphere transport
-#include $(STAGGERED_HOME)/src_energy/ideal_HS/GPackage.mak
-#VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/ideal_HS
+include $(STAGGERED_HOME)/src_energy/ideal_HS/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/ideal_HS
 
-
-include $(STAGGERED_HOME)/src_energy/SRK_HS/GPackage.mak
-VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/SRK_HS
+#include $(STAGGERED_HOME)/src_energy/SRK_HS/GPackage.mak
+#VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/SRK_HS
 
 #######################################
 

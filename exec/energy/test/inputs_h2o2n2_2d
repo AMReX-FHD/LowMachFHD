@@ -19,7 +19,7 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1                     ! maximum number of time steps
+  max_step = 10                     ! maximum number of time steps
   plot_int = 1                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 1                    ! sets scalars, m, coefficients (see init.f90)
@@ -156,7 +156,7 @@
   
   ! Initial and boundary conditions 
   !----------------------
-  T_init(1:2) = 293.d0 293.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  T_init(1:2) = 80.d0 80.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   temp_type = 0 ! for initializing temperature
 
   ! initial values for c
@@ -256,7 +256,7 @@
 
  dia_in(1:3) = 2.18d-8, 2.58d-8, 3.63d-8           ! diameters of molecules
  int_deg_free_in(1:3) = 0 0 0                      ! internal degrees of freedom
- p0_in = 1013250.d0                                ! initial background pressure, p0
+ p0_in = 101325000.d0                                ! initial background pressure, p0
  heating_type = 1            ! form of external heating
  use_fake_diff = 0           ! force diffusion coefficients to constant
  fake_diff_coeff = -1.d0     ! Adjust transport coefficients artificially
