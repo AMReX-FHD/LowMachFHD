@@ -271,7 +271,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes $P_\rho
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine compute_P_rho(P_rho,rho,temp,Yk)
+  subroutine compute_P_rho(P_rho,rho,Yk,temp)
 
     real(kind=8) :: P_rho, rho, temp, Yk(1:nspecies)
 
@@ -291,7 +291,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes $P_T
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine compute_P_T(P_T,rho,temp,Yk)
+  subroutine compute_P_T(P_T,rho,Yk,temp)
 
     real(kind=8) :: P_T, rho, temp, Yk(1:nspecies)
 
@@ -311,7 +311,7 @@ contains
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! computes $P_w
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine compute_P_w(P_w,rho,temp,Yk)
+  subroutine compute_P_w(P_w,rho,Yk,temp)
 
     real(kind=8) :: P_w(1:nspecies), rho, temp, Yk(1:nspecies)
 

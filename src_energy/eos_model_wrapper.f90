@@ -488,9 +488,9 @@ contains
           call CKCPBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cpmix)
           call CKCVBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cvmix)
           ! P_rho, P_T, P_w
-          call compute_P_rho(P_rho,rhotot(i,j),Temp(i,j),conc(i,j,:))
-          call compute_P_T(P_T,rhotot(i,j),Temp(i,j),conc(i,j,:))
-          call compute_P_w(P_w,rhotot(i,j),Temp(i,j),conc(i,j,:))
+          call compute_P_rho(P_rho,rhotot(i,j),conc(i,j,:),Temp(i,j))
+          call compute_P_T(P_T,rhotot(i,j),conc(i,j,:),Temp(i,j))
+          call compute_P_w(P_w,rhotot(i,j),conc(i,j,:),Temp(i,j))
 
           S(i,j) = 0.d0
           do n=1,nspecies
@@ -539,9 +539,9 @@ contains
              call CKCPBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cpmix)
              call CKCVBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cvmix)
              ! P_rho, P_T, P_w
-             call compute_P_rho(P_rho,rhotot(i,j,k),Temp(i,j,k),conc(i,j,k,:))
-             call compute_P_T(P_T,rhotot(i,j,k),Temp(i,j,k),conc(i,j,k,:))
-             call compute_P_w(P_w,rhotot(i,j,k),Temp(i,j,k),conc(i,j,k,:))
+             call compute_P_rho(P_rho,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
+             call compute_P_T(P_T,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
+             call compute_P_w(P_w,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
 
              S(i,j,k) = 0.d0
              do n=1,nspecies
