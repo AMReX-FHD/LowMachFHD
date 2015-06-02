@@ -29,6 +29,10 @@ contains
     real(kind=dp_t), pointer :: ep(:,:,:,:)
     real(kind=dp_t), pointer :: cp(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"average_face_to_cc")
+
     dm = mla%dim
     nlevs = mla%nlevel
 
@@ -64,6 +68,8 @@ contains
           end do
        end do
     end do
+
+    call destroy(bpt)
 
   contains
 
@@ -142,6 +148,10 @@ contains
     real(kind=dp_t), pointer :: epy(:,:,:,:)
     real(kind=dp_t), pointer :: epz(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"average_cc_to_face")
+
     dm = cc(1)%dim
 
     ng_c = cc(1)%ng
@@ -185,6 +195,8 @@ contains
           end do
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine average_cc_to_face
     
@@ -348,6 +360,10 @@ contains
     real(kind=dp_t), pointer :: cp(:,:,:,:)
     real(kind=dp_t), pointer :: np(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"average_cc_to_node")
+
     dm = cc(1)%dim
 
     ng_c = cc(1)%ng
@@ -389,6 +405,8 @@ contains
           end do
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine average_cc_to_node
  
@@ -561,6 +579,10 @@ contains
     real(kind=dp_t), pointer :: ep2(:,:,:,:)
     real(kind=dp_t), pointer :: ep3(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"average_cc_to_edge")
+
     dm = cc(1)%dim
 
     ng_c = cc(1)%ng
@@ -602,6 +624,8 @@ contains
           end do
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine average_cc_to_edge
 
@@ -804,6 +828,10 @@ contains
     real(kind=dp_t), pointer :: ep(:,:,:,:)
     real(kind=dp_t), pointer :: cp(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"shift_face_to_cc")
+
     dm = mla%dim
     nlevs = mla%nlevel
 
@@ -830,6 +858,8 @@ contains
        end do
     end do
 
+    call destroy(bpt)
+    
   contains
     
     subroutine shift_face_to_cc_2d(face,ng_f,cc,ng_c,lo,hi)

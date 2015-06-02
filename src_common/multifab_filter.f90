@@ -26,6 +26,10 @@ contains
 
     integer :: lo(3), hi(3), lo_g(3), hi_g(3)
     
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"multifab_filter")
+
     lo=1
     hi=1
     lo_g=1
@@ -177,6 +181,8 @@ contains
 
     end do FilterZ
     !--------------------------------------
+
+    call destroy(bpt)
 
   end subroutine multifab_filter
 

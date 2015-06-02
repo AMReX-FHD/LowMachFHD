@@ -38,6 +38,10 @@ contains
     real(kind=dp_t), pointer :: ayp(:,:,:,:)
     real(kind=dp_t), pointer :: azp(:,:,:,:)
     
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"mk_advective_m_fluxdiv")
+
     nlevs = mla%nlevel
     dm    = mla%dim
 
@@ -79,6 +83,8 @@ contains
        end do
 
     end do
+
+    call destroy(bpt)
 
   contains
 

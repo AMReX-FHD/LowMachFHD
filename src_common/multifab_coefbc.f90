@@ -26,6 +26,10 @@ contains
     integer                  :: i,ng,dm,comp
     real(kind=dp_t), pointer :: sp(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"multifab_coefbc")
+
     ng = nghost(s)
     dm = get_dim(s)
     
@@ -45,6 +49,8 @@ contains
        end do
     end do
  
+    call destroy(bpt)
+
   end subroutine multifab_coefbc
 
   subroutine coefbc_2d(s,lo,hi,ng,bc)

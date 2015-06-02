@@ -33,6 +33,10 @@ contains
     real(kind=dp_t), pointer :: sp(:,:,:,:), vp(:,:,:,:)
     logical                  :: use_inhomogeneous
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"multifab_physbc_domainvel")
+
     use_inhomogeneous = .false.
     if (present(vel_bc_n)) then
        use_inhomogeneous = .true.
@@ -79,6 +83,8 @@ contains
        end select
     end do
  
+    call destroy(bpt)
+
   end subroutine multifab_physbc_domainvel
 
   subroutine physbc_domainvel_2d(s,ng_s,lo,hi,bc,bccomp,dx)
@@ -550,6 +556,10 @@ contains
     real(kind=dp_t), pointer :: sp(:,:,:,:), vp1(:,:,:,:), vp2(:,:,:,:)
     logical                  :: use_inhomogeneous
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"multifab_physbc_macvel")
+
     use_inhomogeneous = .false.
     if (present(vel_bc_t)) then
        use_inhomogeneous = .true.
@@ -609,6 +619,8 @@ contains
        end select
     end do
  
+    call destroy(bpt)
+
   end subroutine multifab_physbc_macvel
 
   subroutine physbc_macvel_2d(s,ng_s,lo,hi,bc,bccomp,dx)
@@ -1707,6 +1719,10 @@ contains
     real(kind=dp_t), pointer :: ep2(:,:,:,:)
     real(kind=dp_t), pointer :: ep3(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"set_inhomogeneous_vel_bcs")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -1750,6 +1766,8 @@ contains
        end do
     end do
     
+    call destroy(bpt)
+
   end subroutine set_inhomogeneous_vel_bcs
 
   subroutine set_inhomogeneous_vel_bcs_2d(vel_bc_nx,vel_bc_ny,ng_n, &
@@ -2274,6 +2292,10 @@ contains
     real(kind=dp_t), pointer :: t5p(:,:,:,:)
     real(kind=dp_t), pointer :: t6p(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"modify_traction_bcs")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -2310,6 +2332,8 @@ contains
        end do
     end do
     
+    call destroy(bpt)
+
   end subroutine modify_traction_bcs
 
   subroutine modify_traction_bcs_2d(vel_bc_nx,vel_bc_ny,ng_n, &

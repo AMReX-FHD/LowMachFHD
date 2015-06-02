@@ -37,6 +37,10 @@ contains
     real(kind=dp_t), pointer :: sny(:,:,:,:)
     real(kind=dp_t), pointer :: snz(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"mk_grav_force")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -72,6 +76,8 @@ contains
        call zero_edgeval_physical(m_force(n,:),1,1,the_bc_tower%bc_tower_array(n))
 
     enddo
+
+    call destroy(bpt)
 
   end subroutine mk_grav_force
 

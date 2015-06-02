@@ -37,6 +37,10 @@ contains
     real(kind=dp_t), pointer :: gpy(:,:,:,:)
     real(kind=dp_t), pointer :: gpz(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"compute_grad")
+
     dm = mla%dim
     nlevs = mla%nlevel
 
@@ -79,6 +83,8 @@ contains
           end do
        end do
     end do
+
+    call destroy(bpt)
 
   contains
     
@@ -257,6 +263,10 @@ contains
     integer :: lo(mla%dim),hi(mla%dim)
     logical :: increment
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"compute_div")
+
     ! do we increment or overwrite div?
     increment = .false.
     if (present(increment_in)) increment = increment_in
@@ -288,6 +298,8 @@ contains
           end do
        end do
     end do
+
+    call destroy(bpt)
 
   contains
 

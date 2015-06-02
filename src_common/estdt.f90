@@ -25,6 +25,10 @@ contains
     integer lo(mla%dim), hi(mla%dim), ng, i, n, nlevs, dm
     real(kind=dp_t) :: dt_proc, dt_grid
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"estdt")
+
     ng = umac(1,1)%ng
     dm = mla%dim
     nlevs = mla%nlevel
@@ -55,6 +59,8 @@ contains
     call parallel_reduce(dt, dt_proc, MPI_MIN)
 
     dt = dt * cfl
+
+    call destroy(bpt)
 
   end subroutine estdt
 

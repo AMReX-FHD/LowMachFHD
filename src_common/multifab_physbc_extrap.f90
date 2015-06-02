@@ -47,6 +47,10 @@ contains
     real(kind=dp_t), allocatable :: dx(:)
     real(kind=dp_t), pointer :: sp(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"multifab_physbc_extrap")
+
     ng = nghost(s)
     dm = get_dim(s)
 
@@ -86,6 +90,8 @@ contains
 
     deallocate(dx)
  
+    call destroy(bpt)
+
   end subroutine multifab_physbc_extrap
 
   subroutine physbc_extrap_2d(s,lo,hi,ng,bc,bccomp,dx)

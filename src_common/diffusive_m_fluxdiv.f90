@@ -31,6 +31,10 @@ contains
     type(multifab) :: Lphi_fc(mla%nlevel,mla%dim)
     type(multifab) :: alpha_fc(mla%nlevel,mla%dim)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"diffusive_m_fluxdiv")
+
     nlevs = mla%nlevel
     dm    = mla%dim
 
@@ -63,6 +67,8 @@ contains
           call multifab_destroy(alpha_fc(n,i))
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine diffusive_m_fluxdiv
 

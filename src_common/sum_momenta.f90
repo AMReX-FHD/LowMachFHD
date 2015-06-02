@@ -28,6 +28,10 @@ contains
     real(kind=dp_t), pointer :: myp(:,:,:,:)
     real(kind=dp_t), pointer :: mzp(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"sum_momenta")
+
     mom_tot = 0.d0
     mom_lev = 0.d0
     mom_proc = 0.d0
@@ -72,6 +76,8 @@ contains
         
     if(present(av_m)) av_m=mom_lev(1:dm)/n_cell
     
+    call destroy(bpt)
+
   end subroutine sum_momenta
 
   subroutine sum_momenta_2d(mx,my,ng_m,lo,hi,mom)

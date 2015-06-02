@@ -36,6 +36,10 @@ contains
     real(kind=dp_t), pointer :: spy(:,:,:,:)
     real(kind=dp_t), pointer :: spz(:,:,:,:)
     
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"mk_advective_s_fluxdiv")
+
     nlevs = mla%nlevel
     dm    = mla%dim
 
@@ -68,6 +72,8 @@ contains
           end do
        end do
     end do
+
+    call destroy(bpt)
 
   contains
 

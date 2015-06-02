@@ -35,6 +35,10 @@ contains
     real(kind=dp_t), pointer :: sp(:,:,:,:)
     real(kind=dp_t), pointer :: pp(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+    
+    call build(bpt,"compute_HSE_pres")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -112,6 +116,8 @@ contains
     end do
 
     deallocate(rhoavg,p0)
+
+    call destroy(bpt)
 
   contains
     

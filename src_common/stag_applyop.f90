@@ -34,6 +34,10 @@ contains
     integer :: i,n,dm,nlevs
     type(multifab) :: alpha_fc_temp(mla%nlevel,mla%dim)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"stag_applyop")
+
     dm = mla%dim
     nlevs = mla%nlevel
 
@@ -58,6 +62,7 @@ contains
        end do
     end do
        
+    call destroy(bpt)
 
   end subroutine stag_applyop
 
@@ -96,6 +101,10 @@ contains
     real(kind=dp_t), pointer :: bp3(:,:,:,:)
     real(kind=dp_t), pointer :: bnp(:,:,:,:)
     real(kind=dp_t), pointer :: kp(:,:,:,:)
+
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"stag_applyop_level")
 
     if (dx(1) .ne. dx(2)) then
        call bl_error("stag_applyop_2d requires the same dx in all directions")

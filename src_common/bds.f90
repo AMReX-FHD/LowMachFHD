@@ -59,6 +59,10 @@ contains
 
     type(multifab) :: sedge(mla%nlevel,mla%dim)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"bds")
+
     ! L2 projection onto EOS?
     ! 0 = do nothing
     ! 1 = assume s holds rho and rho*c
@@ -210,6 +214,8 @@ contains
           call multifab_destroy(sedge(n,i))
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine bds
 
@@ -4023,6 +4029,10 @@ contains
 
     type(multifab) :: sedge(mla%dim)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"bds_quad")
+
     ! L2 projection onto EOS?
     ! 0 = do nothing
     ! 1 = assume s holds rho and rho*c
@@ -4150,6 +4160,8 @@ contains
     do i=1,dm
        call multifab_destroy(sedge(i))
     end do
+
+    call destroy(bpt)
 
   end subroutine bds_quad
 

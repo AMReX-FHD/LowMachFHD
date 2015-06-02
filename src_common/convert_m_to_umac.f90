@@ -22,6 +22,10 @@ contains
     ! local
     integer :: n,i,dm,nlevs
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"convert_m_to_umac")
+
     dm = mla%dim
     nlevs = mla%nlevel
 
@@ -46,6 +50,8 @@ contains
        end do
 
     end if
+
+    call destroy(bpt)
 
   end subroutine convert_m_to_umac
 

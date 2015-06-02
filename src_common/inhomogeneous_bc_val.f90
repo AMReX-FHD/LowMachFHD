@@ -17,6 +17,10 @@ contains
     integer, intent(in   ) :: phys_bc
     integer, intent(inout) :: bc_code(1:num_scal_bc)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"scalar_bc")
+
     if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
 
        bc_code = FOEXTRAP  ! Pure Neumann
@@ -35,6 +39,8 @@ contains
        bc_code = -999
 
     end if
+
+    call destroy(bpt)
 
   end subroutine scalar_bc
 
@@ -43,6 +49,10 @@ contains
     integer, intent(in   ) :: phys_bc
     integer, intent(inout) :: bc_code(1:num_tran_bc)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"transport_bc")
+
     if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
 
        bc_code = FOEXTRAP  ! Pure Neumann
@@ -61,6 +71,8 @@ contains
        bc_code = -999
 
     end if
+
+    call destroy(bpt)
 
   end subroutine transport_bc
 
