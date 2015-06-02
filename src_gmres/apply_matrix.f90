@@ -42,6 +42,10 @@ contains
     integer :: n,nlevs,i,dm
     type(multifab) ::  gx_p(mla%nlevel,mla%dim)
 
+    type(bl_prof_timer), save :: bpt
+    
+    call build(bpt, "apply_matrix")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -98,6 +102,8 @@ contains
           call multifab_destroy(gx_p(n,i))
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine apply_matrix
 

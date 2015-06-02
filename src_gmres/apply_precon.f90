@@ -56,6 +56,10 @@ contains
 
     logical :: no_wall_is_no_slip
 
+    type(bl_prof_timer), save :: bpt
+    
+    call build(bpt, "apply_precon")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -466,11 +470,17 @@ contains
           call multifab_destroy(b_u_tmp(n,i))
        end do
     end do
-    
+
+    call destroy(bpt)
+
   contains
   
     subroutine simple_schur_complement()
   
+      type(bl_prof_timer), save :: bpt2
+    
+      call build(bpt2, "simple_schur_complement")
+
        ! x_p = theta_alpha*I *Phi - beta*mac_rhs 
        do n=1,nlevs
           ! beta part
@@ -518,6 +528,8 @@ contains
 
        end do
     
+       call destroy(bpt2)
+
       end subroutine simple_schur_complement
       
   end subroutine apply_precon
@@ -546,6 +558,10 @@ contains
     type(multifab) ::       Lgphi(mla%nlevel,mla%dim)
     type(multifab) ::    muinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: zero_fab_fc(mla%nlevel,mla%dim)
+
+    type(bl_prof_timer), save :: bpt
+    
+    call build(bpt, "visc_schur_complement")
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -662,6 +678,8 @@ contains
           call multifab_destroy(zero_fab_fc(n,i))
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine visc_schur_complement
 

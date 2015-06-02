@@ -38,6 +38,10 @@ contains
     type(multifab) :: Lphi(mla%nlevel,mla%dim)
     type(multifab) :: Dphi(mla%nlevel)
 
+    type(bl_prof_timer), save :: bpt
+    
+    call build(bpt, "convert_to_homogeneous")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -96,6 +100,8 @@ contains
           call destroy(Lphi(n,i))
        end do
     end do
+    
+    call destroy(bpt)
 
   end subroutine convert_to_homogeneous
 

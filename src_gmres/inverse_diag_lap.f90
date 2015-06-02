@@ -34,6 +34,10 @@ contains
     real(kind=dp_t), pointer :: Mpy(:,:,:,:)
     real(kind=dp_t), pointer :: Mpz(:,:,:,:)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"inverse_diag_lap")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -65,6 +69,8 @@ contains
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine inverse_diag_lap
 
