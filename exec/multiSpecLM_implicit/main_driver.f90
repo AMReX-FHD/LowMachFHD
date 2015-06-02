@@ -18,6 +18,7 @@ subroutine main_driver()
   use div_and_grad_module
   use eos_check_module
   use estdt_module
+  use stag_mg_solver_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use fill_umac_ghost_cells_module
@@ -674,5 +675,6 @@ subroutine main_driver()
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
+  call destroy_stag_mg_layout()
 
 end subroutine main_driver

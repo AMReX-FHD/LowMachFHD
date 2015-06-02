@@ -19,9 +19,24 @@ module stag_mg_solver_module
 
   private
 
-  public :: stag_mg_solver
+  public :: stag_mg_solver, destroy_stag_mg_layout
+
+  ! the layout at each level of multigrid
+  type(layout), save, allocatable :: la_mg(:)
+  logical     , save              :: first_call = .true.
 
 contains
+
+  subroutine destroy_stag_mg_layout()
+
+    integer :: n
+
+    do n=2,size(la_mg)
+       call destroy(la_mg(n))
+    end do
+    deallocate(la_mg)
+
+  end subroutine destroy_stag_mg_layout
 
   ! solve "(alpha*I - L) phi = rhs" using multigrid with Jacobi relaxation
   ! if abs(visc_type) = 1, L = div beta grad
@@ -70,9 +85,6 @@ contains
 
     ! edge multifab
     type(multifab), allocatable :: beta_ed_mg(:,:)
-
-    ! the layout at each level of multigrid
-    type(layout)   , allocatable :: la_mg(:)
 
     ! grid spacing at each level of multigrid
     real(kind=dp_t), allocatable :: dx_mg(:,:)
@@ -143,7 +155,12 @@ contains
     end if
 
     allocate(dx_mg(nlevs_mg,dm))
-    allocate(la_mg(nlevs_mg))
+
+    if (allocated(la_mg)) then
+       first_call = .false.
+    else
+       allocate(la_mg(nlevs_mg))
+    end if
 
     call bc_tower_init(the_bc_tower_mg,nlevs_mg,dm,the_bc_tower%domain_bc)
 
@@ -169,10 +186,12 @@ contains
        ! build the layout, la
        ! force the same processor assignments as mla%la(1).  We can do this since there
        ! are the same number of boxes in the same order in physical space
-       if (n .eq. 1) then
-          la_mg(1) = mla%la(1)
-       else
-          call layout_build_ba(la_mg(n),ba,pd,mla%pmask,explicit_mapping=get_proc(mla%la(1)))
+       if (first_call) then
+          if (n .eq. 1) then
+             la_mg(1) = mla%la(1)
+          else
+             call layout_build_ba(la_mg(n),ba,pd,mla%pmask,explicit_mapping=get_proc(mla%la(1)))
+          end if
        end if
 
        ! don't need this anymore - free up memory
@@ -313,12 +332,9 @@ contains
              call multifab_destroy(beta_ed_mg(n,2))
              call multifab_destroy(beta_ed_mg(n,3))
           end if
-          if (n .ne. 1) then
-             call destroy(la_mg(n))
-          end if
        end do
        deallocate(beta_cc_mg,gamma_cc_mg,alpha_fc_mg,rhs_fc_mg)
-       deallocate(phi_fc_mg,Lphi_fc_mg,resid_fc_mg,beta_ed_mg,la_mg,dx_mg)
+       deallocate(phi_fc_mg,Lphi_fc_mg,resid_fc_mg,beta_ed_mg,dx_mg)
 
        return
     end if
@@ -903,12 +919,9 @@ contains
           call multifab_destroy(beta_ed_mg(n,2))
           call multifab_destroy(beta_ed_mg(n,3))
        end if
-       if (n .ne. 1) then
-          call destroy(la_mg(n))
-       end if
     end do
     deallocate(beta_cc_mg,gamma_cc_mg,alpha_fc_mg,rhs_fc_mg)
-    deallocate(phi_fc_mg,Lphi_fc_mg,resid_fc_mg,beta_ed_mg,la_mg,dx_mg)
+    deallocate(phi_fc_mg,Lphi_fc_mg,resid_fc_mg,beta_ed_mg,dx_mg)
 
     if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
        print*,""
