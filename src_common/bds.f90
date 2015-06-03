@@ -442,6 +442,7 @@ contains
 
     ! tricubic interpolation to corner points
     ! (i,j,k) refers to lower corner of cell
+    !$omp parallel do private(k,j,i)
     do k = lo(3)-1,hi(3)+2
        do j = lo(2)-1,hi(2)+2
           do i = lo(1)-1,hi(1)+2
@@ -470,56 +471,70 @@ contains
           enddo
        enddo
     enddo
+    !$omp end parallel do
 
     ! for reservoirs, overwrite boundary nodes and ghost nodes to rho at boundary nodes
     if (bc(1,1) .eq. EXT_DIR) then
+       !$omp parallel do private(k,j)
        do k=lo(3)-ng_n,hi(3)+1+ng_n
        do j=lo(2)-ng_n,hi(2)+1+ng_n
           sint(lo(1)-1:lo(1),j,k) = s_nd(lo(1),j,k)
        end do
        end do
+       !$omp end parallel do
     end if
 
     if (bc(1,2) .eq. EXT_DIR) then
+       !$omp parallel do private(k,j)
        do k=lo(3)-ng_n,hi(3)+1+ng_n
        do j=lo(2)-ng_n,hi(2)+1+ng_n
           sint(hi(1)+1:hi(1)+2,j,k) = s_nd(hi(1)+1,j,k)
        end do
        end do
+       !$omp end parallel do
     end if
 
     if (bc(2,1) .eq. EXT_DIR) then
+       !$omp parallel do private(k,i)
        do k=lo(3)-ng_n,hi(3)+1+ng_n
        do i=lo(1)-ng_n,hi(1)+1+ng_n
           sint(i,lo(2)-1:lo(2),k) = s_nd(i,lo(2),k)
        end do
        end do
+       !$omp end parallel do
     end if
 
     if (bc(2,2) .eq. EXT_DIR) then
+       !$omp parallel do private(k,i)
        do k=lo(3)-ng_n,hi(3)+1+ng_n
        do i=lo(1)-ng_n,hi(1)+1+ng_n
           sint(i,hi(2)+1:hi(2)+2,k) = s_nd(i,hi(2)+1,k)
        end do
        end do
+       !$omp end parallel do
     end if
 
     if (bc(3,1) .eq. EXT_DIR) then
+       !$omp parallel do private(j,i)
        do j=lo(2)-ng_n,hi(2)+1+ng_n
        do i=lo(1)-ng_n,hi(1)+1+ng_n
           sint(i,j,lo(3)-1:lo(3)) = s_nd(i,j,lo(3))
        end do
        end do
+       !$omp end parallel do
     end if
 
     if (bc(3,2) .eq. EXT_DIR) then
+       !$omp parallel do private(j,i)
        do j=lo(2)-ng_n,hi(2)+1+ng_n
        do i=lo(1)-ng_n,hi(1)+1+ng_n
           sint(i,j,hi(3)+1:hi(3)+2) = s_nd(i,j,hi(3)+1)
        end do
        end do
+       !$omp end parallel do
     end if
 
+    !$omp parallel do private(k,j,i,sc,smin,smax,mm,ll,sumloc,sumdif,sgndif,diff,kdp,div,redfac,redmax)
     do k = lo(3)-1,hi(3)+1
        do j = lo(2)-1,hi(2)+1
           do i = lo(1)-1,hi(1)+1 
@@ -755,7 +770,7 @@ contains
           enddo
        enddo
     enddo
-
+    !$omp end parallel do
 
   end subroutine bdsslope_3d
 
@@ -1197,6 +1212,7 @@ contains
     sixth = 1.d0/6.d0
 
     ! compute cell-centered ux, vy, and wz
+    !$omp parallel do private(k,j,i)
     do k=lo(3)-1,hi(3)+1
        do j=lo(2)-1,hi(2)+1
           do i=lo(1)-1,hi(1)+1
@@ -1206,8 +1222,10 @@ contains
           end do
        end do
     end do
+    !$omp end parallel do
 
     ! compute sedgex on x-faces
+!openmp
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)+1
@@ -2058,6 +2076,9 @@ contains
        enddo
     enddo
 
+!
+
+!rewrite as double do loop over k j
     if (bc(1,1) .eq. EXT_DIR) then
        sedgex(lo(1),lo(2):hi(2),lo(3):hi(3)) = sx(lo(1),lo(2):hi(2),lo(3):hi(3))
     end if
