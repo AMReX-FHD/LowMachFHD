@@ -616,8 +616,10 @@ contains
        ! compute P_eos^{n+1,m+1}
        call compute_p(mla,rhotot_new,Temp_new,conc_new,Peos)
 
-       ! Scorr = Scorr + (dpdt_factor / p0^{n+1,m+1}) * (Peos^{n+1,m+1} - P0^{n+1,m+1})/dt
+       ! Scorr = Scorr + (dpdt_factor / (rho P_rho ) ) * (Peos^{n+1,m+1} - P0^{n+1,m+1})/dt
        do n=1,nlevs
+
+          ! compute deltaP and store in Peos
           call multifab_sub_sub_s_c(Peos(n),1,p0_new,1,0)
 
           ! debugging statements
@@ -645,10 +647,11 @@ contains
 
           norm = multifab_norm_l1_c(Peos(n),1,1)/n_cell
           if (parallel_IOProcessor()) then
-             print*,'drift_norm',norm
+             print*,'Peos-p0 drift_norm',norm
           end if
 
-          call multifab_mult_mult_s_c(Peos(n),1,dpdt_factor/(p0_new*dt),1,0)
+          ! multiply deltaP by (dpdt_factor/(rho*P_rho*dt))
+          call scale_deltaP(mla,Peos,rhotot_new,Temp_new,conc_new,p0_new,dt)
 
           if (k .ge. 2) then
              call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)

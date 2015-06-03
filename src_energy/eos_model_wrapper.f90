@@ -4,13 +4,13 @@ module eos_model_wrapper_module
   use eos_model_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: prob_lo, prob_hi
-  use probin_energy_module, only: heating_type
+  use probin_energy_module, only: heating_type, dpdt_factor
   implicit none
 
   private
 
   public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper, &
-            add_external_heating, compute_S_alpha, &
+            add_external_heating, compute_S_alpha, scale_deltaP, &
             compute_h, compute_hk, compute_p, compute_cp
 
 contains
@@ -504,7 +504,6 @@ contains
        end do
     end do
        
-
   end subroutine compute_S_alpha_2d
   
   subroutine compute_S_alpha_3d(S,ng_1,alpha,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
@@ -557,6 +556,81 @@ contains
     end do
        
   end subroutine compute_S_alpha_3d
+
+
+
+  subroutine scale_deltaP(mla,deltaP,rhotot,Temp,conc,p0,dt)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: deltaP(:)
+    type(multifab) , intent(in   ) :: rhotot(:)
+    type(multifab) , intent(in   ) :: Temp(:)
+    type(multifab) , intent(in   ) :: conc(:)
+    real(kind=dp_t), intent(in   ) :: p0,dt
+
+    ! local
+    integer :: n,nlevs,i,dm
+    integer :: ng_1,ng_2,ng_3,ng_4
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    real(kind=dp_t), pointer :: dp1(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2(:,:,:,:)
+    real(kind=dp_t), pointer :: dp3(:,:,:,:)
+    real(kind=dp_t), pointer :: dp4(:,:,:,:)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    ng_1 = deltaP(1)%ng
+    ng_2 = rhotot(1)%ng
+    ng_3 = Temp(1)%ng
+    ng_4 = conc(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(deltaP(n))
+          dp1 => dataptr(deltaP(n), i)
+          dp2 => dataptr(rhotot(n), i)
+          dp3 => dataptr(Temp(n), i)
+          dp4 => dataptr(conc(n), i)
+          lo = lwb(get_box(deltaP(n), i))
+          hi = upb(get_box(deltaP(n), i))
+          select case (dm)
+          case (2)
+             call scale_deltaP_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
+                                  dp3(:,:,1,1),ng_3,dp4(:,:,1,:),ng_4, &
+                                  p0,dt,lo,hi)
+          case (3)
+          end select
+       end do
+    end do
+
+  end subroutine scale_deltaP
+  
+  subroutine scale_deltaP_2d(deltaP,ng_1,rhotot,ng_2,Temp,ng_3,conc,ng_4, &
+                             p0,dt,lo,hi)
+
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,lo(:),hi(:)
+    real(kind=dp_t), intent(inout) :: deltaP(lo(1)-ng_1:,lo(2)-ng_1:)
+    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:)
+    real(kind=dp_t), intent(in   ) ::   Temp(lo(1)-ng_3:,lo(2)-ng_3:)
+    real(kind=dp_t), intent(in   ) ::   conc(lo(1)-ng_4:,lo(2)-ng_4:,:)
+    real(kind=dp_t), intent(in   ) :: p0,dt
+
+    ! local
+    integer :: i,j
+    real(kind=dp_t) :: P_rho
+
+    do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+
+          call compute_P_rho(P_rho,rhotot(i,j),conc(i,j,:),Temp(i,j))
+
+          deltaP(i,j) = dpdt_factor * deltaP(i,j) / (rhotot(i,j)*P_rho*dt)
+
+       end do
+    end do
+       
+  end subroutine scale_deltaP_2d
 
   subroutine compute_h(mla,Temp,h,conc)
 
