@@ -158,6 +158,20 @@ contains
 
   subroutine stag_mg_layout_destroy()
 
+    integer :: n
+
+    do n=2,size(la_mg_normal)
+       call destroy(la_mg_normal(n))
+    end do
+
+    call destroy(mla_fancy)
+    do n=2,size(la_mg_fancy)
+       call destroy(la_mg_fancy(n))
+    end do
+
+    deallocate(la_mg_normal)
+    deallocate(la_mg_fancy)
+
   end subroutine stag_mg_layout_destroy
 
   ! compute the number of multigrid levels assuming minwidth is the length of the

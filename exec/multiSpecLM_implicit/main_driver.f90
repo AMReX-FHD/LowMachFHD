@@ -678,5 +678,6 @@ subroutine main_driver()
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
+  call stag_mg_layout_destroy()
 
 end subroutine main_driver
