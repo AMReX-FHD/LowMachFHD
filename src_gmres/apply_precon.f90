@@ -15,6 +15,7 @@ module apply_precon_module
   use multifab_physbc_module
   use bc_module
   use inverse_diag_lap_module
+  use stag_mg_layout_module
 
   implicit none
 
@@ -107,7 +108,7 @@ contains
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_u^star = A^{-1} b_u
-        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
+        call stag_mg_solver(mla,la_mg_normal,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 2: Construct RHS for pressure Poisson problem
@@ -202,7 +203,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_u = A^{-1} b_u
-        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
+        call stag_mg_solver(mla,la_mg_normal,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! STEP 2: Solve a pressure Poisson problem for Phi
@@ -272,7 +273,7 @@ contains
            call subtract_weighted_gradp(mla,b_u_tmp,one_fab_fc,x_p_tmp,dx,the_bc_tower)
 
            ! compute = A^(-1)*(b_u-grad(x_p)) 
-           call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u_tmp, &
+           call stag_mg_solver(mla,la_mg_normal,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u_tmp, &
                                dx,the_bc_tower)
 
         end if
@@ -343,7 +344,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! compute = A^(-1)*(b_u-grad(x_p)) 
-        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u_tmp, &
+        call stag_mg_solver(mla,la_mg_normal,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u_tmp, &
                             dx,the_bc_tower)
 
       case(4) 
@@ -355,7 +356,7 @@ contains
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! x_u = A^{-1} b_u
-        call stag_mg_solver(mla,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
+        call stag_mg_solver(mla,la_mg_normal,alpha_fc,beta,beta_ed,gamma,theta_alpha,x_u,b_u,dx,the_bc_tower)
 
         if (abs(theta_alpha) .gt. 0) then  
 

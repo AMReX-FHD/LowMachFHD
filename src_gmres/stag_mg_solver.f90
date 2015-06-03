@@ -6,6 +6,8 @@ module stag_mg_solver_module
   use define_bc_module
   use bc_module
   use multifab_physbc_stag_module
+  use vcycle_counter_module
+  use stag_mg_layout_module
   use probin_gmres_module , only: stag_mg_omega, stag_mg_max_vcycles, &
                                   stag_mg_nsmooths_bottom, stag_mg_nsmooths_down, &
                                   stag_mg_nsmooths_up, stag_mg_rel_tol, &
@@ -13,30 +15,14 @@ module stag_mg_solver_module
                                   stag_mg_minwidth, stag_mg_bottom_solver, &
                                   stag_mg_max_bottom_nlevels
   use probin_common_module, only: visc_type, n_cells, max_grid_size
-  use vcycle_counter_module
 
   implicit none
 
   private
 
-  public :: stag_mg_solver, destroy_stag_mg_layout
-
-  ! the layout at each level of multigrid
-  type(layout), save, allocatable :: la_mg(:)
-  logical     , save              :: first_call = .true.
+  public :: stag_mg_solver
 
 contains
-
-  subroutine destroy_stag_mg_layout()
-
-    integer :: n
-
-    do n=2,size(la_mg)
-       call destroy(la_mg(n))
-    end do
-    deallocate(la_mg)
-
-  end subroutine destroy_stag_mg_layout
 
   ! solve "(alpha*I - L) phi = rhs" using multigrid with Jacobi relaxation
   ! if abs(visc_type) = 1, L = div beta grad
@@ -48,10 +34,11 @@ contains
   ! alpha_fc, phi_fc, and rhs_fc are face-centered
   ! beta_ed is nodal (2d) or edge-centered (3d)
   ! phi_fc must come in initialized to some value, preferably a reasonable guess
-  recursive subroutine stag_mg_solver(mla,alpha_fc,beta_cc,beta_ed,gamma_cc,theta_alpha, &
+  recursive subroutine stag_mg_solver(mla,la_mg,alpha_fc,beta_cc,beta_ed,gamma_cc,theta_alpha, &
                                       phi_fc,rhs_fc,dx,the_bc_tower,do_fancy_bottom_in)
 
     type(ml_layout), intent(in   ) :: mla
+    type(layout)   , intent(in   ) :: la_mg(:)
     type(multifab) , intent(in   ) :: alpha_fc(:,:) ! face-centered
     type(multifab) , intent(in   ) ::  beta_cc(:)   ! cell-centered
     type(multifab) , intent(in   ) ::  beta_ed(:,:) ! nodal (2d); edge-centered (3d)
@@ -97,7 +84,6 @@ contains
     ! fancy bottom solver stuff
     logical :: do_fancy_bottom
     type(ml_boxarray) :: mba_fancy
-    type(ml_layout) :: mla_fancy
     type(multifab) :: alpha_fc_fancy(1,mla%dim)
     type(multifab) :: beta_cc_fancy(1)
     type(multifab), allocatable :: beta_ed_fancy(:,:)
@@ -156,12 +142,6 @@ contains
 
     allocate(dx_mg(nlevs_mg,dm))
 
-    if (allocated(la_mg)) then
-       first_call = .false.
-    else
-       allocate(la_mg(nlevs_mg))
-    end if
-
     call bc_tower_init(the_bc_tower_mg,nlevs_mg,dm,the_bc_tower%domain_bc)
 
     do n=1,nlevs_mg
@@ -181,17 +161,6 @@ contains
           call print(ba)
           call print(mla%mba%bas(1))
           call bl_error("Finest multigrid level boxarray and coarsest problem boxarrays do not match")
-       end if
-
-       ! build the layout, la
-       ! force the same processor assignments as mla%la(1).  We can do this since there
-       ! are the same number of boxes in the same order in physical space
-       if (first_call) then
-          if (n .eq. 1) then
-             la_mg(1) = mla%la(1)
-          else
-             call layout_build_ba(la_mg(n),ba,pd,mla%pmask,explicit_mapping=get_proc(mla%la(1)))
-          end if
        end if
 
        ! don't need this anymore - free up memory
@@ -510,8 +479,8 @@ contains
           bottom_box_size = min(bottom_box_size,stag_mg_minwidth*2**(stag_mg_max_bottom_nlevels-1))
           call boxarray_maxsize(mba_fancy%bas(1),bottom_box_size)
 
-          ! build the ml_layout, mla_fancy
-          call ml_layout_build(mla_fancy,mba_fancy,mla%pmask)
+!          ! build the ml_layout, mla_fancy
+!          call ml_layout_build(mla_fancy,mba_fancy,mla%pmask)
 
           if (parallel_IOProcessor() .and. stag_mg_verbosity .ge. 1) then
              print*,'Invoking Fancy Bottom Solver'
@@ -576,12 +545,11 @@ contains
 
           vcycle_counter_temp = vcycle_counter
 
-          call stag_mg_solver(mla_fancy,alpha_fc_fancy,beta_cc_fancy,beta_ed_fancy, &
+          call stag_mg_solver(mla_fancy,la_mg_fancy,alpha_fc_fancy,beta_cc_fancy,beta_ed_fancy, &
                               gamma_cc_fancy,1.d0,phi_fc_fancy,rhs_fc_fancy,dx_fancy, &
                               the_bc_tower_fancy,.false.)
 
           vcycle_counter = vcycle_counter_temp
-
           do i=1,dm
              ! copy phi from the fancy bottom solver finest-level to the regular bottom
              ! solver coarsest level
@@ -600,7 +568,6 @@ contains
                                          the_bc_tower_mg%bc_tower_array(nlevs_mg), &
                                          dx_mg(nlevs_mg,:))
           end do
-
           call multifab_destroy(beta_cc_fancy(1))
           call multifab_destroy(gamma_cc_fancy(1))
           do i=1,dm
@@ -616,7 +583,7 @@ contains
              call multifab_destroy(beta_ed_fancy(1,3))
           end if
 
-          call destroy(mla_fancy)
+!          call destroy(mla_fancy)
           call bc_tower_destroy(the_bc_tower_fancy)
 
        else
@@ -931,53 +898,6 @@ contains
     call destroy(bpt)
 
   contains
-
-    ! compute the number of multigrid levels assuming minwidth is the length of the
-    ! smallest dimension of the smallest grid at the coarsest multigrid level
-    subroutine compute_nlevs_mg(nlevs_mg,ba)
-      
-      integer       , intent(inout) :: nlevs_mg
-      type(boxarray), intent(in   ) :: ba
-
-      ! local
-      integer :: i,d,dm,rdir,temp
-      integer :: lo(get_dim(ba)),hi(get_dim(ba)),length(get_dim(ba))
-
-      type(bl_prof_timer), save :: bpt
-
-      call build(bpt,"compute_nlevs_mg")
-
-      dm = get_dim(ba)
-
-      nlevs_mg = -1
-
-      do i=1,nboxes(ba)
-
-         lo = lwb(get_box(ba,i))
-         hi = upb(get_box(ba,i))
-         length = hi-lo+1
-
-         do d=1,dm
-            temp = length(d)
-            rdir = 1
-            do while (mod(temp,2) .eq. 0 .and. temp/stag_mg_minwidth .ne. 1)
-               temp = temp/2
-               rdir = rdir+1
-            end do
-
-            if (nlevs_mg .eq. -1) then
-               nlevs_mg = rdir
-            else          
-               nlevs_mg = min(rdir,nlevs_mg)
-            end if
-
-         end do
-
-      end do
-
-      call destroy(bpt)
-
-    end subroutine compute_nlevs_mg
 
     ! coarsen a cell-centered quantity
     subroutine cc_restriction(la,phi_c,phi_f,the_bc_level)
