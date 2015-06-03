@@ -104,7 +104,7 @@ contains
     call ml_layout_build(mla_fancy,mba_fancy,mla%pmask)
 
     if (parallel_IOProcessor()) then
-       print*,'Fancy Bottom Solver'
+       print*,'Building layouts for Fancy Bottom Solver'
        print*,'# of grids of old bottom solve:',nboxes(mla%la(1))
        print*,'# of grids of new bottom solve:',nboxes(mla_fancy%la(1))
     end if

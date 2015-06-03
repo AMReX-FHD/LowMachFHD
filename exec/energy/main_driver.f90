@@ -18,6 +18,7 @@ subroutine main_driver()
   use initial_projection_module
   use advance_timestep_module
   use eos_model_module
+  use stag_mg_layout_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -305,6 +306,9 @@ subroutine main_driver()
      end do
 
   end if
+
+  ! build layouts for staggered multigrid solver
+  call stag_mg_layout_build(mla)
 
   deallocate(pmask)
 
@@ -710,5 +714,6 @@ subroutine main_driver()
   deallocate(mass_update_old,rhoh_update_old)
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
+  call stag_mg_layout_destroy()
 
 end subroutine main_driver

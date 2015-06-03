@@ -29,6 +29,7 @@ subroutine main_driver()
   use restart_module
   use checkpoint_module
   use estdt_module
+  use stag_mg_layout_module
   use convert_stag_module
   use probin_binarylm_module, only: probin_binarylm_init, analyze_binary, diff_coef
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
@@ -234,6 +235,9 @@ subroutine main_driver()
      call init(mold,sold,pi,dx,mla,time)
 
   end if
+
+  ! build layouts for staggered multigrid solver
+  call stag_mg_layout_build(mla)
 
   deallocate(pmask)
 
@@ -647,5 +651,6 @@ subroutine main_driver()
 
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
+  call stag_mg_layout_destroy()
 
 end subroutine main_driver

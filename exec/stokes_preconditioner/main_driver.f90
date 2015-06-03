@@ -24,6 +24,7 @@ subroutine main_driver()
   use ParallelRNGs
   use bc_module
   use stag_applyop_module
+  use stag_mg_layout_module
   use gmres_module
   use probin_module       , only: probin_init, test_type, theta_alpha_fac
   use probin_common_module, only: probin_common_init, n_cells, dim_in, fixed_dt, &
@@ -287,6 +288,9 @@ subroutine main_driver()
      end if
 
   end do
+
+  ! build layouts for staggered multigrid solver
+  call stag_mg_layout_build(mla)
 
   ! set inhomogeneous bc condition
   call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,beta_ed,dx,0.d0,the_bc_tower%bc_tower_array)
@@ -563,6 +567,7 @@ end if TestType
   end do
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
+  call stag_mg_layout_destroy()
   deallocate(lo,hi,norm_stag,dx)
   deallocate(umac_exact,umac,umac_tmp,rhs_u,grad_pres)
   deallocate(pres_exact,pres,pres_tmp,alpha,beta,gamma)
