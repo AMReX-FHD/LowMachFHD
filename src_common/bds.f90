@@ -4066,8 +4066,9 @@ contains
 
     ! advance solution
     ! conservative update
-    !$omp do
+    
     do comp=1,ncomp
+       !$omp do
        do k = lo(3),hi(3)
        do j = lo(2),hi(2) 
        do i = lo(1),hi(1) 
@@ -4078,8 +4079,8 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
     enddo
-    !$omp end do
     
     !$omp end parallel
 
