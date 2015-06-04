@@ -1215,10 +1215,11 @@ contains
     half = 0.5d0
     sixth = 1.d0/6.d0
 
-    ! compute cell-centered ux, vy, and wz
+    !$omp parallel private(del,i,isign,ioff,j,jsign,joff,k,ksign,koff,ll) &
+    !$omp private(p1,p2,p3,p4,u,uu,v,vv,w,ww,val1,val2,val3,val4,val5,gamma,gamma2)
 
-!parallel for next loop cannot be used here because it lists vadv as private
-    !$omp parallel do private(k,j,i)
+    ! compute cell-centered ux, vy, and wz
+    !$omp do
     do k=lo(3)-1,hi(3)+1
        do j=lo(2)-1,hi(2)+1
           do i=lo(1)-1,hi(1)+1
@@ -1228,11 +1229,7 @@ contains
           end do
        end do
     end do
-    !$omp end parallel do
-
-
-    !$omp parallel private(del,i,isign,ioff,j,jsign,joff,k,ksign,koff,ll) &
-    !$omp private(p1,p2,p3,p4,u,uu,vv,ww,val1,val2,val3,val4,val5,gamma,gamma2)
+    !$omp end do
 
     ! compute sedgex on x-faces
     !$omp do
@@ -2116,10 +2113,9 @@ contains
        !$omp end do
     end if 
 
-    !$omp end parallel
 
     ! compute sedgey on y-faces    
-!openmp
+    !$omp do
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)+1
           do i=lo(1),hi(1)
@@ -2969,18 +2965,39 @@ contains
           enddo
        enddo
     enddo
-!end openmp
+    !$omp end do
 
-    if (bc(2,1) .eq. EXT_DIR) then
-       sedgey(lo(1):hi(1),lo(2),lo(3):hi(3)) = sy(lo(1):hi(1),lo(2),lo(3):hi(3))
-    end if
 
-    if (bc(2,2) .eq. EXT_DIR) then
-       sedgey(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = sy(lo(1):hi(1),hi(2)+1,lo(3):hi(3))
-    end if
+!    if (bc(2,1) .eq. EXT_DIR) then
+!       sedgey(lo(1):hi(1),lo(2),lo(3):hi(3)) = sy(lo(1):hi(1),lo(2),lo(3):hi(3))
+!    end if
+
+!    if (bc(2,2) .eq. EXT_DIR) then
+!       sedgey(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = sy(lo(1):hi(1),hi(2)+1,lo(3):hi(3))
+!    end if
+
+     if (bc(2,1) .eq. EXT_DIR) then
+        !$omp do
+        do k=lo(3),hi(3)
+           do i=lo(1),hi(1)
+              sedgey(i,lo(2),k) = sy(i,lo(2),k)
+           end do
+        end do
+        !$omp end do
+     end if
+
+     if (bc(2,2) .eq. EXT_DIR) then
+        !$omp do
+        do k=lo(3),hi(3)
+           do i=lo(1),hi(1)
+              sedgey(i,hi(2)+1,k) = sy(i,hi(2)+1,k)
+           end do
+        end do
+        !$omp end do
+     end if
 
     ! compute sedgez on z-faces
-!openmp
+    !$omp do
     do k=lo(3),hi(3)+1
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -3830,15 +3847,37 @@ contains
           enddo
        enddo
     enddo
-!end openmp
+    !$omp end do
+
+!    if (bc(3,1) .eq. EXT_DIR) then
+!       sedgez(lo(1):hi(1),lo(2):hi(2),lo(3)) = sz(lo(1):hi(1),lo(2):hi(2),lo(3))
+!    end if
+
+!    if (bc(3,2) .eq. EXT_DIR) then
+!       sedgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = sz(lo(1):hi(1),lo(2):hi(2),hi(3)+1)
+!    end if
 
     if (bc(3,1) .eq. EXT_DIR) then
-       sedgez(lo(1):hi(1),lo(2):hi(2),lo(3)) = sz(lo(1):hi(1),lo(2):hi(2),lo(3))
+       !$omp do
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+             sedgez(i,j,lo(3)) = sz(i,j,lo(3))
+          end do
+       end do
+       !$omp end do
     end if
 
     if (bc(3,2) .eq. EXT_DIR) then
-       sedgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = sz(lo(1):hi(1),lo(2):hi(2),hi(3)+1)
+       !$omp do
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+             sedgez(i,j,hi(3)+1) = sz(i,j,hi(3)+1)
+          end do
+       end do
+       !$omp end do
     end if
+
+    !$omp end parallel
 
     deallocate(ux,vy,wz)
 
@@ -3865,9 +3904,12 @@ contains
 
     real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
 
+    !$omp parallel private(i,j,k,temp,comp,w,rhobar_sq,delta_eos)
+
     if (proj_type .eq. 1 .or. proj_type .eq. 2) then
 
        ! L2 projection: x-faces
+       !$omp do
        do k = lo(3),hi(3)
        do j = lo(2),hi(2) 
        do i = lo(1),hi(1)+1 
@@ -3915,8 +3957,10 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
 
        ! L2 projection: y-faces
+       !$omp do
        do k = lo(3),hi(3)
        do j = lo(2),hi(2)+1 
        do i = lo(1),hi(1) 
@@ -3964,8 +4008,10 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
 
        ! L2 projection: z-faces
+       !$omp do
        do k = lo(3),hi(3)+1
        do j = lo(2),hi(2) 
        do i = lo(1),hi(1) 
@@ -4013,11 +4059,14 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
 
     end if
 
+
     ! advance solution
     ! conservative update
+    !$omp do
     do comp=1,ncomp
        do k = lo(3),hi(3)
        do j = lo(2),hi(2) 
@@ -4030,6 +4079,9 @@ contains
        enddo
        enddo
     enddo
+    !$omp end do
+    
+    !$omp end parallel
 
   end subroutine bdsupdate_3d
 
