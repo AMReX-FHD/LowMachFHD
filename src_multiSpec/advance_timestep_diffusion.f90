@@ -39,6 +39,10 @@ contains
     real(kind=dp_t)              :: stage_time
     integer                      :: n,nlevs,i,dm,n_rngs
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"advance_timestep_diffusion")
+
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! number of dimensions
 
@@ -368,6 +372,8 @@ contains
     endif
     deallocate(weights)
   
+    call destroy(bpt)
+
   end subroutine advance_timestep_diffusion
 
 end module advance_timestep_diffusion_module

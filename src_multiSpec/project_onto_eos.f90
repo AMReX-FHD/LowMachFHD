@@ -26,6 +26,10 @@ contains
 
     real(kind=dp_t), pointer :: sp(:,:,:,:)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"project_onto_eos")
+
     nlevs = mla%nlevel
     dm    = mla%dim
 
@@ -44,6 +48,8 @@ contains
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine project_onto_eos
 

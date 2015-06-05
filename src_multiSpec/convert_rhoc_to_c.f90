@@ -27,6 +27,10 @@ contains
     ! local
     integer :: n,nlevs,i
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "convert_rhoc_to_c")
+
     nlevs = mla%nlevel
 
     if (rho_to_c) then
@@ -51,6 +55,8 @@ contains
 
     end if
 
+    call destroy(bpt)
+
   end subroutine convert_rhoc_to_c
 
   subroutine fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
@@ -63,6 +69,10 @@ contains
     ! local
     integer :: n,nlevs
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"fill_c_ghost_cells")
+
     nlevs = mla%nlevel
 
     do n=1,nlevs
@@ -72,6 +82,8 @@ contains
        call multifab_physbc(conc(n),1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
     end do
+
+    call destroy(bpt)
 
   end subroutine fill_c_ghost_cells
 

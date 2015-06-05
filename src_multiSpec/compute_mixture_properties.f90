@@ -42,6 +42,10 @@ contains
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Hessian
     real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Temp
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_mixture_properties")
+
     dm    = mla%dim     ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
 
@@ -76,6 +80,8 @@ contains
        end do
     end do
   
+    call destroy(bpt)
+
   end subroutine compute_mixture_properties
   
   subroutine mixture_properties_mass_2d(rho,rhotot,D_bar,D_therm,Hessian,Temp, &
@@ -157,6 +163,10 @@ contains
     real(kind=dp_t), dimension(nspecies*(nspecies-1)/2) :: D_bar_local, H_offdiag_local ! off-diagonal components of symmetric matrices
     real(kind=dp_t), dimension(nspecies)    :: H_diag_local ! Diagonal component
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "mixture_properties_mass_local")
+
     massfrac = rho/rhotot;
     
     select case (abs(prob_type))
@@ -207,6 +217,8 @@ contains
     
     end do
     
+    call destroy(bpt)
+
   end subroutine mixture_properties_mass_local
 
   subroutine compute_eta_kappa(mla,eta,eta_ed,kappa,rho,rhotot,Temp,dx,the_bc_level)
@@ -228,6 +240,10 @@ contains
     real(kind=dp_t), pointer :: rp(:,:,:,:)
     real(kind=dp_t), pointer :: mp(:,:,:,:)
     real(kind=dp_t), pointer :: tp(:,:,:,:)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_eta_kappa")
 
     ng_e  = eta(1)%ng
     ng_r  = rho(1)%ng
@@ -265,6 +281,8 @@ contains
     else if (dm .eq. 3) then
        call average_cc_to_edge(nlevs,eta,eta_ed,1,tran_bc_comp,1,the_bc_level)
     end if
+
+    call destroy(bpt)
 
   end subroutine compute_eta_kappa
 
@@ -390,12 +408,18 @@ contains
     ! local
     real(kind=dp_t) :: c_loc
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"chi_water_glycerol")
+
     ! mass fraction of glycerol
     c_loc = rho(1)/rhotot
 
     ! chi = chi0 * rational function
     chi = Dbar(1)*(1.024d0-1.001692692d0*c_loc)/(1.d0+0.6632641981d0*c_loc)
         
+    call destroy(bpt)
+
   end subroutine chi_water_glycerol
 
   subroutine eta_water_glycerol(eta,rho,rhotot,Temp)
@@ -407,6 +431,10 @@ contains
     
     ! local
     real(kind=dp_t) :: c_loc, nu_g, nu_w, x, T
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"eta_water_glycerol")
 
     ! mass fraction of glycerol
     c_loc = rho(1)/rhotot
@@ -422,6 +450,8 @@ contains
 
     ! visc_coef is the scaling prefactor (for unit conversion or non-unity scaling)
     eta = visc_coef*exp(-x*(-log(nu_g)+log(nu_w)))*nu_w*rhotot
+
+    call destroy(bpt)
 
   end subroutine eta_water_glycerol
 

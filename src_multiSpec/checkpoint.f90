@@ -38,6 +38,10 @@ contains
 
     character(len=11) :: sd_name
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "checkpoint_write")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -79,6 +83,8 @@ contains
     deallocate(chkdata)
     deallocate(chkdata_edge)
 
+    call destroy(bpt)
+
   contains
 
     subroutine checkpoint_write_doit(nlevs_in, dirname, mfs, mfs_edge, rrs, time_in, dt_in)
@@ -97,9 +103,13 @@ contains
       integer         :: nlevs
       real(kind=dp_t) :: time, dt
 
+      type(bl_prof_timer), save :: bpt
+
       namelist /chkpoint/ time
       namelist /chkpoint/ dt
       namelist /chkpoint/ nlevs
+
+      call build(bpt,"checkpoint_write_doit")
 
       dm = dim_in
       if ( parallel_IOProcessor() ) call fabio_mkdir(dirname)
@@ -143,6 +153,8 @@ contains
          close(un)
       end if
 
+      call destroy(bpt)
+
     end subroutine checkpoint_write_doit
 
   end subroutine checkpoint_write
@@ -171,9 +183,13 @@ contains
 
     real(kind=dp_t) :: time, dt
 
+    type(bl_prof_timer), save :: bpt
+
     namelist /chkpoint/ nlevs
     namelist /chkpoint/ time
     namelist /chkpoint/ dt
+
+    call build(bpt,"checkpoint_read")
 
 !   First read the header information
     header = "Header"
@@ -213,6 +229,8 @@ contains
     rrs_out(1:nlevs-1) = rrs(1:nlevs-1)
 
     deallocate(rrs)
+
+    call destroy(bpt)
 
   end subroutine checkpoint_read
 

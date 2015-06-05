@@ -33,6 +33,10 @@ contains
     real(kind=dp_t), pointer :: flux_y(:,:,:,:)
     real(kind=dp_t), pointer :: flux_z(:,:,:,:)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "correction_flux")
+
     dm    = mla%dim       ! dimensionality
     nlevs = mla%nlevel    ! number of levels 
     ng_p  = rho(1)%ng     ! number of ghost cells for rho
@@ -59,6 +63,8 @@ contains
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   contains
     

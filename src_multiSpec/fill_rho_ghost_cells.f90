@@ -26,6 +26,10 @@ contains
     real(kind=dp_t), pointer :: pp(:,:,:,:)
     real(kind=dp_t), pointer :: rp(:,:,:,:)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"fill_rho_ghost_cells")
+
     dm = get_dim(conc)
     ng_c = conc%ng
     ng_r = rhotot%ng
@@ -46,6 +50,8 @@ contains
                                        the_bc_level%adv_bc_level_array(i,:,:,scal_bc_comp))
        end select
     end do
+
+    call destroy(bpt)
 
   end subroutine fill_rho_ghost_cells
 
@@ -132,6 +138,7 @@ contains
     ! local
     integer :: i,j,k,n
     real(kind=dp_t) :: rhoinv
+
 
     if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
        do k=lo(3)-ng_r,hi(3)+ng_r

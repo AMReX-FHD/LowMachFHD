@@ -33,6 +33,10 @@ contains
     real(kind=dp_t), pointer :: vpy(:,:,:,:)
     real(kind=dp_t), pointer :: vpz(:,:,:,:)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "reservoir_bc_fill")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -61,6 +65,8 @@ contains
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine reservoir_bc_fill
 

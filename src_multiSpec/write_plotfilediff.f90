@@ -26,6 +26,10 @@ contains
     ! multifab of size nlevs  
     type(multifab), allocatable     :: plotdata(:)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"write_plotfilediff")
+
     nlevs = mla%nlevel
   
     allocate(plot_names(nspecies))
@@ -66,6 +70,8 @@ contains
     deallocate(plotdata)
     deallocate(plot_names)
 
+    call destroy(bpt)
+
   end subroutine write_plotfilediff
   
   subroutine write_plotfile_onecomp(mla,name,Temp,istep,dx,time)
@@ -83,6 +89,10 @@ contains
 
     ! multifab of size nlevs  
     type(multifab), allocatable     :: plotdata(:)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"write_plotfile_onecomp")
 
     nlevs = mla%nlevel
   
@@ -117,6 +127,8 @@ contains
     
     deallocate(plotdata)
     deallocate(plot_names)
+
+    call destroy(bpt)
 
   end subroutine write_plotfile_onecomp
 

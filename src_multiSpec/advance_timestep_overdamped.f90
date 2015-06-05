@@ -108,6 +108,10 @@ contains
 
     real(kind=dp_t) :: weights(algorithm_type)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "advance_timestep_overdamped")
+
     weights(:) = 0.d0
     weights(1) = 1.d0
 
@@ -117,7 +121,7 @@ contains
     theta_alpha = 0.d0
     
     call build_bc_multifabs(mla)
-    
+
     do n=1,nlevs
        call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
@@ -671,6 +675,8 @@ contains
        end do
     end do
 
+    call destroy(bpt)
+
   end subroutine advance_timestep_overdamped
 
   subroutine build_bc_multifabs(mla)
@@ -679,6 +685,10 @@ contains
 
     integer :: dm,i,n,nlevs
     logical :: nodal_temp(3)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"advance_timestep_inertial/build_bc_multifabs")
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -742,6 +752,8 @@ contains
 
     end do
 
+    call destroy(bpt)
+
   end subroutine build_bc_multifabs
 
   subroutine destroy_bc_multifabs(mla)
@@ -749,6 +761,10 @@ contains
     type(ml_layout), intent(in   ) :: mla
 
     integer :: dm,i,n,nlevs
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "advance_timestep_overdamped/destroy_bc_multifabs")
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -763,6 +779,8 @@ contains
     end do
 
     deallocate(vel_bc_n,vel_bc_t)
+
+    call destroy(bpt)
 
   end subroutine destroy_bc_multifabs
 

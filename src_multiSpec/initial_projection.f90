@@ -66,6 +66,10 @@ contains
 
     real(kind=dp_t) :: weights(algorithm_type)
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"initial_projection")
+
     if (algorithm_type .eq. 1) then
        weights(1) = 1.d0
     else if (algorithm_type .eq. 2) then
@@ -202,6 +206,8 @@ contains
        end do
     end do
 
+    call destroy(bpt)
+
   end subroutine initial_projection
 
   subroutine build_bc_multifabs(mla)
@@ -210,6 +216,10 @@ contains
 
     integer :: dm,i,n,nlevs
     logical :: nodal_temp(3)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"initial_projection/build_bc_multifabs")
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -273,6 +283,8 @@ contains
 
     end do
 
+    call destroy(bpt)
+
   end subroutine build_bc_multifabs
 
   subroutine destroy_bc_multifabs(mla)
@@ -280,6 +292,10 @@ contains
     type(ml_layout), intent(in   ) :: mla
 
     integer :: dm,i,n,nlevs
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"initial_projection/destroy_bc_multifabs")
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -294,6 +310,8 @@ contains
     end do
 
     deallocate(vel_bc_n,vel_bc_t)
+
+    call destroy(bpt)
 
   end subroutine destroy_bc_multifabs
 

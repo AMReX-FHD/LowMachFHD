@@ -1,6 +1,7 @@
 module matrix_utilities
 
   use bl_types
+  use bl_prof_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: molmass
 
@@ -33,6 +34,10 @@ contains
       real(kind=dp_t) :: Ykp(1:nspecies), Xkp(1:nspecies)
 
       integer :: i, j, k, ii, jj
+
+      type(bl_prof_timer), save :: bpt
+
+      call build(bpt,"Dbar2chi_iterative")
 
       ! mole fractions correction
       ! Turned this off since it should be done in the caller
@@ -146,6 +151,8 @@ contains
        chi=matrix1
       end do
 
+      call destroy(bpt)
+
   end subroutine
 
    ! a is input matrix.  
@@ -163,6 +170,10 @@ contains
        real(kind=dp_t) :: small_number = 0.0d0 ! Some tolerance
 
        integer :: idiag,ising
+
+       type(bl_prof_timer), save :: bpt
+
+       call build(bpt,"choldc")
 
        do i = 1, np
 
@@ -222,6 +233,8 @@ contains
           a(i,i) = p(i)
 
        end do
+
+       call destroy(bpt)
 
     end subroutine
 
