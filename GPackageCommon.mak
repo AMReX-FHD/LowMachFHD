@@ -5,6 +5,7 @@ INCLUDE_LOCATIONS += $(HYDROLIB_HOME)
 
 myf90sources += Precision.f90
 myf90sources += Random.f90
+myf90sources += NURNGs.f90
 myf90sources += RNG.f90
 myf90sources += FFTW.f90
 myf90sources += VisitWriter.f90

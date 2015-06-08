@@ -1,6 +1,7 @@
 module BoxLibRNGs
    ! These are written in C and part of BoxLib
    use Random_Numbers ! Used to generate unpredictable seeds or initial seeds for Marsenne twister
+   use NonUniformRNGs ! Generates samples from several nonuniform distributions (we use our own for Guassian)
    implicit none
    public
    
@@ -139,5 +140,13 @@ contains ! It is likely that vectorized versions will do better here
   p = f*(u-0.5_dp)
 
   end subroutine NormalRNGFast
+
+    SUBROUTINE PoissonNumber(number,mean)
+       INTEGER, INTENT(OUT) :: number
+       REAL(dp), INTENT(IN) :: mean
+
+       number=random_Poisson(mu=real(mean), first=.false.)
+
+    END SUBROUTINE
   
 end module
