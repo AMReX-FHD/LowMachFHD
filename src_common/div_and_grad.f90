@@ -37,6 +37,12 @@ contains
     real(kind=dp_t), pointer :: gpy(:,:,:,:)
     real(kind=dp_t), pointer :: gpz(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: xnodalbox, ynodalbox, znodalbox
+    integer :: xlo(mla%dim), xhi(mla%dim)
+    integer :: ylo(mla%dim), yhi(mla%dim)
+    integer :: zlo(mla%dim), zhi(mla%dim)
+
     type(bl_prof_timer),save :: bpt
 
     call build(bpt,"compute_grad")
@@ -51,9 +57,26 @@ contains
     if (present(increment_bccomp_in)) then
        increment_bccomp = increment_bccomp_in
     end if
-
+    
+    !$omp parallel private(mfi,n,i,xnodalbox,ynodalbox,znodalbox,xlo,ylo,zlo) &
+    !$omp private(xhi,yhi,zhi,pp,gpx,gpy,gpz,lo,hi,comp,bccomp,outcomp)
     do n=1,nlevs
-       do i=1,nfabs(phi(n))
+       call mfiter_build(mfi, phi(n), tiling=.true.)
+
+     do while (more_tile(mfi))
+        i = get_fab_index(mfi)
+
+        xnodalbox = get_nodaltilebox(mfi,1)
+        xlo = lwb(xnodalbox)
+        xhi = upb(xnodalbox)
+        ynodalbox = get_nodaltilebox(mfi,2)
+        ylo = lwb(ynodalbox)
+        yhi = upb(ynodalbox)
+        znodalbox = get_nodaltilebox(mfi,3)
+        zlo = lwb(znodalbox)
+        zhi = upb(znodalbox)
+
+ !      do i=1,nfabs(phi(n))
           pp  => dataptr(phi(n), i)
           gpx => dataptr(gradp(n,1), i)
           gpy => dataptr(gradp(n,2), i)
@@ -78,11 +101,12 @@ contains
                 call compute_grad_3d(pp(:,:,:,comp), ng_p, &
                                      gpx(:,:,:,outcomp), gpy(:,:,:,outcomp), gpz(:,:,:,outcomp), ng_g, &
                                      lo, hi, dx(n,:), &
-                                     the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
+                                     the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp),xlo,xhi,ylo,yhi,zlo,zhi)
              end select
           end do
        end do
     end do
+    !$omp end parallel
 
     call destroy(bpt)
 
@@ -146,9 +170,10 @@ contains
 
     end subroutine compute_grad_2d
 
-    subroutine compute_grad_3d(phi,ng_p,gpx,gpy,gpz,ng_g,lo,hi,dx,bc)
+    subroutine compute_grad_3d(phi,ng_p,gpx,gpy,gpz,ng_g,lo,hi,dx,bc,xlo,xhi,ylo,yhi,zlo,zhi)
 
       integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
+      integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
       real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
       real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
       real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:,lo(3)-ng_g:)
@@ -159,87 +184,100 @@ contains
       ! local
       integer :: i,j,k
       
+
       ! x-faces
-      do k=lo(3),hi(3)
-         do j=lo(2),hi(2)
-            do i=lo(1),hi(1)+1
+      do k=xlo(3),xhi(3)
+         do j=xlo(2),xhi(2)
+            do i=xlo(1),xhi(1)
                gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) / dx(1)
             end do
          end do
       end do
 
       ! alter stencil at boundary since ghost value represents value at boundary
+      if (xlo(1) .eq. lo(1)) then 
       if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
-         i=lo(1)
-         do k=lo(3),hi(3)
-            do j=lo(2),hi(2)
+         i=xlo(1)
+         do k=xlo(3),xhi(3)
+            do j=xlo(2),xhi(2)
                gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) / (0.5d0*dx(1))
             end do
          end do
       end if
+      end if
+      if (xhi(1) .eq. hi(1)+1) then
       if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
-         i=hi(1)+1
-         do k=lo(3),hi(3)
-            do j=lo(2),hi(2)
+         i=xhi(1)
+         do k=xlo(3),xhi(3)
+            do j=xlo(2),xhi(2)
                gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) / (0.5d0*dx(1))
             end do
          end do
+      end if
       end if
 
       ! y-faces
-      do k=lo(3),hi(3)
-         do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)
+      do k=ylo(3),yhi(3)
+         do j=ylo(2),yhi(2)
+            do i=ylo(1),yhi(1)
                gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) / dx(2)
             end do
          end do
       end do
 
       ! alter stencil at boundary since ghost value represents value at boundary
+      if (ylo(2) .eq. lo(2)) then
       if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
-         j=lo(2)
-         do k=lo(3),hi(3)
-            do i=lo(1),hi(1)
+         j=ylo(2)
+         do k=ylo(3),yhi(3)
+            do i=ylo(1),yhi(1)
                gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) / (0.5d0*dx(2))
             end do
          end do
       end if
+      end if
+      if (yhi(2) .eq. hi(2)+1) then
       if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
-         j=hi(2)+1
-         do k=lo(3),hi(3)
-            do i=lo(1),hi(1)
+         j=yhi(2)
+         do k=ylo(3),yhi(3)
+            do i=ylo(1),yhi(1)
                gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) / (0.5d0*dx(2))
             end do
          end do
+      end if
       end if
 
       ! z-faces
-      do k=lo(3),hi(3)+1
-         do j=lo(2),hi(2)
-            do i=lo(1),hi(1)
+      do k=zlo(3),zhi(3)
+         do j=zlo(2),zhi(2)
+            do i=zlo(1),zhi(1)
                gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) / dx(3)
             end do
          end do
       end do
 
       ! alter stencil at boundary since ghost value represents value at boundary
+      if (zlo(3) .eq. lo(3)) then
       if (bc(3,1) .eq. FOEXTRAP .or. bc(3,1) .eq. HOEXTRAP .or. bc(3,1) .eq. EXT_DIR) then
-         k=lo(3)
-         do j=lo(2),hi(2)
-            do i=lo(1),hi(1)
+         k=zlo(3)
+         do j=zlo(2),zhi(2)
+            do i=zlo(1),zhi(1)
                gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) / (0.5d0*dx(3))
             end do
          end do
       end if
+      end if
 
       ! alter stencil at boundary since ghost value represents value at boundary
+      if (zhi(3) .eq. hi(3)+1) then
       if (bc(3,2) .eq. FOEXTRAP .or. bc(3,2) .eq. HOEXTRAP .or. bc(3,2) .eq. EXT_DIR) then
-         k=hi(3)+1
-         do j=lo(2),hi(2)
-            do i=lo(1),hi(1)
+         k=zhi(3)
+         do j=zlo(2),zhi(2)
+            do i=zlo(1),zhi(1)
                gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) / (0.5d0*dx(3))
             end do
          end do
+      end if
       end if
 
     end subroutine compute_grad_3d
@@ -263,6 +301,10 @@ contains
     integer :: lo(mla%dim),hi(mla%dim)
     logical :: increment
 
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     type(bl_prof_timer),save :: bpt
 
     call build(bpt,"compute_div")
@@ -277,8 +319,18 @@ contains
     ng_p = phi_fc(1,1)%ng
     ng_d = div(1)%ng
 
+    !$omp parallel private(mfi,n,i,tilebox,tlo,thi,pxp,pyp,pzp,dp,lo,hi,comp,outcomp)
     do n = 1,nlevs
-       do i = 1, nfabs(div(n))
+       call mfiter_build(mfi, div(n), tiling=.true.)
+
+     do while (more_tile(mfi))
+       i = get_fab_index(mfi)
+
+       tilebox = get_tilebox(mfi)
+       tlo = lwb(tilebox)
+       thi = upb(tilebox)
+
+!       do i = 1, nfabs(div(n))
           pxp => dataptr(phi_fc(n,1), i)
           pyp => dataptr(phi_fc(n,2), i)
           dp => dataptr(div(n), i)
@@ -293,11 +345,12 @@ contains
              case (3) 
                 pzp => dataptr(phi_fc(n,3), i)
                 call compute_div_3d(pxp(:,:,:,comp), pyp(:,:,:,comp), pzp(:,:,:,comp), ng_p, &
-                                    dp(:,:,:,outcomp), ng_d, dx(n,:),lo, hi, increment)
+                                    dp(:,:,:,outcomp), ng_d, dx(n,:),lo, hi, increment,tlo,thi)
              end select
           end do
        end do
     end do
+    !$omp end parallel
 
     call destroy(bpt)
 
@@ -338,20 +391,19 @@ contains
 
     end subroutine compute_div_2d
 
-    subroutine compute_div_3d(phix,phiy,phiz,ng_p,div,ng_d,dx,lo,hi,increment)
+    subroutine compute_div_3d(phix,phiy,phiz,ng_p,div,ng_d,dx,glo,ghi,increment,lo,hi)
 
-      integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d
-      real(kind=dp_t), intent(in   ) :: phix(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-      real(kind=dp_t), intent(in   ) :: phiy(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-      real(kind=dp_t), intent(in   ) :: phiz(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
-      real(kind=dp_t), intent(inout) ::  div(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:)
+      integer        , intent(in   ) :: glo(:),ghi(:),ng_p,ng_d,lo(:),hi(:)
+      real(kind=dp_t), intent(in   ) :: phix(glo(1)-ng_p:,glo(2)-ng_p:,glo(3)-ng_p:)
+      real(kind=dp_t), intent(in   ) :: phiy(glo(1)-ng_p:,glo(2)-ng_p:,glo(3)-ng_p:)
+      real(kind=dp_t), intent(in   ) :: phiz(glo(1)-ng_p:,glo(2)-ng_p:,glo(3)-ng_p:)
+      real(kind=dp_t), intent(inout) ::  div(glo(1)-ng_d:,glo(2)-ng_d:,glo(3)-ng_d:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       logical        , intent(in   ) :: increment
 
       integer :: i,j,k
 
       if (increment) then
-
          do k = lo(3),hi(3)
          do j = lo(2),hi(2)
          do i = lo(1),hi(1)
@@ -362,9 +414,7 @@ contains
          end do
          end do
          end do
-
       else
-
          do k = lo(3),hi(3)
          do j = lo(2),hi(2)
          do i = lo(1),hi(1)
@@ -375,7 +425,6 @@ contains
          end do
          end do
          end do
-
       end if
 
     end subroutine compute_div_3d
