@@ -24,7 +24,7 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use probin_common_module, only: n_cells, grav
   use probin_multispecies_module, only: nspecies
-  use probin_energy_module, only: dpdt_iters, dpdt_factor, deltaT_iters
+  use probin_energy_module, only: dpdt_iters, deltaT_iters
 
   use fabio_module
 
