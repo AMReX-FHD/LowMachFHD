@@ -48,6 +48,10 @@ contains
     ! local array of multifabs for grad and div; one for each direction
     type(multifab) :: flux(mla%nlevel,mla%dim)
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "diffusive_mass_fluxdiv")
+
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
  
@@ -82,6 +86,8 @@ contains
        end do
     end do
 
+    call destroy(bpt)
+
   end subroutine diffusive_mass_fluxdiv
  
   subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
@@ -111,7 +117,10 @@ contains
     type(multifab)  :: baro_coef(mla%nlevel)
     type(multifab)  :: baro_coef_face(mla%nlevel,mla%dim)
   
- 
+    type(bl_prof_timer), save :: bpt
+    
+    call build(bpt,"diffusive_mass_flux")
+
     dm    = mla%dim     ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
 
@@ -248,6 +257,8 @@ contains
           call multifab_destroy(baro_coef_face(n,i))
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine diffusive_mass_flux
 

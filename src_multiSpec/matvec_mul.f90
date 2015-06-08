@@ -23,6 +23,10 @@ module matvec_mul_module
     real(kind=dp_t), pointer       :: ap(:,:,:,:)
     integer                        :: lo(mla%dim), hi(mla%dim), i, dm
    
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"matvec_mul")
+
     dm = mla%dim 
 
     do i=1,nfabs(x)
@@ -42,6 +46,8 @@ module matvec_mul_module
              call matvec_mul_3d(xp(:,:,:,:), ap(:,:,:,:), lo, hi, nc)
        end select
     end do
+
+    call destroy(bpt)
 
   end subroutine matvec_mul
 

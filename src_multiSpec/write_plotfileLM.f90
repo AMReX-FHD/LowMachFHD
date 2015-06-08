@@ -41,6 +41,10 @@ contains
 
     type(multifab) :: conc(mla%nlevel)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"write_plotfileLM")
+
     nlevs = mla%nlevel
     dm = mla%dim
   
@@ -161,6 +165,8 @@ contains
     deallocate(plotdata)
     deallocate(plotdata_stag)
     deallocate(plot_names)
+
+    call destroy(bpt)
 
   end subroutine write_plotfileLM
 

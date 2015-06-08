@@ -442,7 +442,10 @@ contains
 
     ! tricubic interpolation to corner points
     ! (i,j,k) refers to lower corner of cell
-    !$omp parallel do private(k,j,i)
+    !$omp parallel private(k,j,i,sc,smin,smax,mm,ll) &
+    !$omp private(sumloc,sumdif,sgndif,diff,kdp,div,redfac,redmax)
+
+    !$omp do
     do k = lo(3)-1,hi(3)+2
        do j = lo(2)-1,hi(2)+2
           do i = lo(1)-1,hi(1)+2
@@ -471,70 +474,70 @@ contains
           enddo
        enddo
     enddo
-    !$omp end parallel do
+    !$omp end do
 
     ! for reservoirs, overwrite boundary nodes and ghost nodes to rho at boundary nodes
     if (bc(1,1) .eq. EXT_DIR) then
-       !$omp parallel do private(k,j)
+       !$omp do
        do k=lo(3)-ng_n,hi(3)+1+ng_n
        do j=lo(2)-ng_n,hi(2)+1+ng_n
           sint(lo(1)-1:lo(1),j,k) = s_nd(lo(1),j,k)
        end do
        end do
-       !$omp end parallel do
+       !$omp end do
     end if
 
     if (bc(1,2) .eq. EXT_DIR) then
-       !$omp parallel do private(k,j)
+       !$omp do
        do k=lo(3)-ng_n,hi(3)+1+ng_n
        do j=lo(2)-ng_n,hi(2)+1+ng_n
           sint(hi(1)+1:hi(1)+2,j,k) = s_nd(hi(1)+1,j,k)
        end do
        end do
-       !$omp end parallel do
+       !$omp end do
     end if
 
     if (bc(2,1) .eq. EXT_DIR) then
-       !$omp parallel do private(k,i)
+       !$omp do
        do k=lo(3)-ng_n,hi(3)+1+ng_n
        do i=lo(1)-ng_n,hi(1)+1+ng_n
           sint(i,lo(2)-1:lo(2),k) = s_nd(i,lo(2),k)
        end do
        end do
-       !$omp end parallel do
+       !$omp end do
     end if
 
     if (bc(2,2) .eq. EXT_DIR) then
-       !$omp parallel do private(k,i)
+       !$omp do
        do k=lo(3)-ng_n,hi(3)+1+ng_n
        do i=lo(1)-ng_n,hi(1)+1+ng_n
           sint(i,hi(2)+1:hi(2)+2,k) = s_nd(i,hi(2)+1,k)
        end do
        end do
-       !$omp end parallel do
+       !$omp end  do
     end if
 
     if (bc(3,1) .eq. EXT_DIR) then
-       !$omp parallel do private(j,i)
+       !$omp do
        do j=lo(2)-ng_n,hi(2)+1+ng_n
        do i=lo(1)-ng_n,hi(1)+1+ng_n
           sint(i,j,lo(3)-1:lo(3)) = s_nd(i,j,lo(3))
        end do
        end do
-       !$omp end parallel do
+       !$omp end do
     end if
 
     if (bc(3,2) .eq. EXT_DIR) then
-       !$omp parallel do private(j,i)
+       !$omp do
        do j=lo(2)-ng_n,hi(2)+1+ng_n
        do i=lo(1)-ng_n,hi(1)+1+ng_n
           sint(i,j,hi(3)+1:hi(3)+2) = s_nd(i,j,hi(3)+1)
        end do
        end do
-       !$omp end parallel do
+       !$omp end do
     end if
 
-    !$omp parallel do private(k,j,i,sc,smin,smax,mm,ll,sumloc,sumdif,sgndif,diff,kdp,div,redfac,redmax)
+    !$omp do 
     do k = lo(3)-1,hi(3)+1
        do j = lo(2)-1,hi(2)+1
           do i = lo(1)-1,hi(1)+1 
@@ -770,7 +773,8 @@ contains
           enddo
        enddo
     enddo
-    !$omp end parallel do
+    !$omp end do
+    !$omp end parallel
 
   end subroutine bdsslope_3d
 
@@ -1211,8 +1215,11 @@ contains
     half = 0.5d0
     sixth = 1.d0/6.d0
 
+    !$omp parallel private(del,i,isign,ioff,j,jsign,joff,k,ksign,koff,ll) &
+    !$omp private(p1,p2,p3,p4,u,uu,v,vv,w,ww,val1,val2,val3,val4,val5,gamma,gamma2)
+
     ! compute cell-centered ux, vy, and wz
-    !$omp parallel do private(k,j,i)
+    !$omp do
     do k=lo(3)-1,hi(3)+1
        do j=lo(2)-1,hi(2)+1
           do i=lo(1)-1,hi(1)+1
@@ -1222,10 +1229,10 @@ contains
           end do
        end do
     end do
-    !$omp end parallel do
+    !$omp end do
 
     ! compute sedgex on x-faces
-!openmp
+    !$omp do
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)+1
@@ -2075,19 +2082,40 @@ contains
           enddo
        enddo
     enddo
-
-!
+    !$omp end do
 
 !rewrite as double do loop over k j
+!    if (bc(1,1) .eq. EXT_DIR) then
+!       sedgex(lo(1),lo(2):hi(2),lo(3):hi(3)) = sx(lo(1),lo(2):hi(2),lo(3):hi(3))
+!    end if
+
+!    if (bc(1,2) .eq. EXT_DIR) then
+!       sedgex(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = sx(hi(1)+1,lo(2):hi(2),lo(3):hi(3))
+!    end if
+
     if (bc(1,1) .eq. EXT_DIR) then
-       sedgex(lo(1),lo(2):hi(2),lo(3):hi(3)) = sx(lo(1),lo(2):hi(2),lo(3):hi(3))
+       !$omp do
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             sedgex(lo(1),j,k) = sx(lo(1),j,k)
+          end do
+       end do
+       !$omp end do
     end if
 
     if (bc(1,2) .eq. EXT_DIR) then
-       sedgex(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = sx(hi(1)+1,lo(2):hi(2),lo(3):hi(3))
-    end if
+      !$omp do
+      do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             sedgex(hi(1)+1,j,k) = sx(hi(1)+1,j,k)
+          end do
+       end do
+       !$omp end do
+    end if 
+
 
     ! compute sedgey on y-faces    
+    !$omp do
     do k=lo(3),hi(3)
        do j=lo(2),hi(2)+1
           do i=lo(1),hi(1)
@@ -2937,16 +2965,39 @@ contains
           enddo
        enddo
     enddo
+    !$omp end do
 
-    if (bc(2,1) .eq. EXT_DIR) then
-       sedgey(lo(1):hi(1),lo(2),lo(3):hi(3)) = sy(lo(1):hi(1),lo(2),lo(3):hi(3))
-    end if
 
-    if (bc(2,2) .eq. EXT_DIR) then
-       sedgey(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = sy(lo(1):hi(1),hi(2)+1,lo(3):hi(3))
-    end if
+!    if (bc(2,1) .eq. EXT_DIR) then
+!       sedgey(lo(1):hi(1),lo(2),lo(3):hi(3)) = sy(lo(1):hi(1),lo(2),lo(3):hi(3))
+!    end if
+
+!    if (bc(2,2) .eq. EXT_DIR) then
+!       sedgey(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = sy(lo(1):hi(1),hi(2)+1,lo(3):hi(3))
+!    end if
+
+     if (bc(2,1) .eq. EXT_DIR) then
+        !$omp do
+        do k=lo(3),hi(3)
+           do i=lo(1),hi(1)
+              sedgey(i,lo(2),k) = sy(i,lo(2),k)
+           end do
+        end do
+        !$omp end do
+     end if
+
+     if (bc(2,2) .eq. EXT_DIR) then
+        !$omp do
+        do k=lo(3),hi(3)
+           do i=lo(1),hi(1)
+              sedgey(i,hi(2)+1,k) = sy(i,hi(2)+1,k)
+           end do
+        end do
+        !$omp end do
+     end if
 
     ! compute sedgez on z-faces
+    !$omp do
     do k=lo(3),hi(3)+1
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
@@ -3796,16 +3847,42 @@ contains
           enddo
        enddo
     enddo
+    !$omp end do
+
+!    if (bc(3,1) .eq. EXT_DIR) then
+!       sedgez(lo(1):hi(1),lo(2):hi(2),lo(3)) = sz(lo(1):hi(1),lo(2):hi(2),lo(3))
+!    end if
+
+!    if (bc(3,2) .eq. EXT_DIR) then
+!       sedgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = sz(lo(1):hi(1),lo(2):hi(2),hi(3)+1)
+!    end if
 
     if (bc(3,1) .eq. EXT_DIR) then
-       sedgez(lo(1):hi(1),lo(2):hi(2),lo(3)) = sz(lo(1):hi(1),lo(2):hi(2),lo(3))
+       !$omp do
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+             sedgez(i,j,lo(3)) = sz(i,j,lo(3))
+          end do
+       end do
+       !$omp end do
     end if
 
     if (bc(3,2) .eq. EXT_DIR) then
-       sedgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = sz(lo(1):hi(1),lo(2):hi(2),hi(3)+1)
+       !$omp do
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+             sedgez(i,j,hi(3)+1) = sz(i,j,hi(3)+1)
+          end do
+       end do
+       !$omp end do
     end if
 
+    !$omp end parallel
+
     deallocate(ux,vy,wz)
+
+
+
 
   end subroutine bdsconc_3d
 
@@ -3827,9 +3904,12 @@ contains
 
     real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
 
+    !$omp parallel private(i,j,k,temp,comp,w,rhobar_sq,delta_eos)
+
     if (proj_type .eq. 1 .or. proj_type .eq. 2) then
 
        ! L2 projection: x-faces
+       !$omp do
        do k = lo(3),hi(3)
        do j = lo(2),hi(2) 
        do i = lo(1),hi(1)+1 
@@ -3877,8 +3957,10 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
 
        ! L2 projection: y-faces
+       !$omp do
        do k = lo(3),hi(3)
        do j = lo(2),hi(2)+1 
        do i = lo(1),hi(1) 
@@ -3926,8 +4008,10 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
 
        ! L2 projection: z-faces
+       !$omp do
        do k = lo(3),hi(3)+1
        do j = lo(2),hi(2) 
        do i = lo(1),hi(1) 
@@ -3975,12 +4059,16 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
 
     end if
 
+
     ! advance solution
     ! conservative update
+    
     do comp=1,ncomp
+       !$omp do
        do k = lo(3),hi(3)
        do j = lo(2),hi(2) 
        do i = lo(1),hi(1) 
@@ -3991,7 +4079,10 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
     enddo
+    
+    !$omp end parallel
 
   end subroutine bdsupdate_3d
 

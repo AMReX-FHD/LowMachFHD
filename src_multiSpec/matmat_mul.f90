@@ -23,6 +23,10 @@ module matmat_mul_module
     real(kind=dp_t), pointer       :: ap(:,:,:,:)
     integer                        :: lo(mla%dim), hi(mla%dim), i, dm
    
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"matmat_mul")
+
     dm = mla%dim 
  
     do i=1,nfabs(x)
@@ -43,6 +47,8 @@ module matmat_mul_module
              call matmat_mul_3d(xp(:,:,:,:), ap(:,:,:,:), lo, hi, nc)
        end select
     end do
+
+    call destroy(bpt)
 
   end subroutine matmat_mul
 
@@ -97,8 +103,14 @@ module matmat_mul_module
         real(kind=dp_t), dimension(nc,nc), intent(inout) :: xp_ij
         real(kind=dp_t), dimension(nc,nc), intent(in)    :: ap_ij  
         
+        type(bl_prof_timer), save :: bpt
+
+        call build(bpt,"matmat_mul_comp")
+
         xp_ij = matmul(ap_ij, xp_ij)
  
+        call destroy(bpt)
+
     end subroutine matmat_mul_comp 
 
   end subroutine matmat_mul_3d

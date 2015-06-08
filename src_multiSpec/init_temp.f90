@@ -33,6 +33,10 @@ contains
     integer                        :: dm, ng, i, n, nlevs
     real(kind=dp_t), pointer       :: dp1(:,:,:,:)  ! pointer for Temp 
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"init_Temp")
+
     dm = Temp(1)%dim
     ng = Temp(1)%ng
     nlevs = size(Temp,1)
@@ -61,6 +65,8 @@ contains
        call multifab_coefbc(Temp(n),1,1,the_bc_level(n))
 
     end do
+
+    call destroy(bpt)
 
   end subroutine init_Temp
 

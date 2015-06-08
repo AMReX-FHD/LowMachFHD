@@ -140,6 +140,10 @@ contains
 
     type(multifab) :: conc(mla%dim)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "init_rho_and_umac")
+
     dm = mla%dim
     nlevs = mla%nlevel
 
@@ -183,6 +187,8 @@ contains
     do n=1,nlevs
        call multifab_destroy(conc(n))
     end do
+
+    call destroy(bpt)
 
   end subroutine init_rho_and_umac
 

@@ -26,6 +26,10 @@ contains
 
     real(kind=dp_t) :: eos_error, eos_error_grid, eos_error_proc
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "eos_check")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -55,6 +59,8 @@ contains
       print*,"EOS ERROR in L1 norm: ",eos_error
       print*,""
    end if
+
+   call destroy(bpt)
 
   end subroutine eos_check
 

@@ -37,6 +37,10 @@ contains
    real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rho    
    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for drho
 
+   type(bl_prof_timer), save :: bpt
+
+   call build(bpt,"correct_rho_with_drho")
+
    dm    = mla%dim     ! dimensionality
    ng_1  = rho(1)%ng   ! number of ghost cells 
    ng_2  = drho(1)%ng
@@ -57,6 +61,8 @@ contains
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine correct_rho_with_drho
 
@@ -111,6 +117,10 @@ contains
     real(kind=dp_t)  :: rhotot_local
     real(kind=dp_t)  :: rho_old(nspecies)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "correct_rho_with_drho_local")
+
     ! make a copy of the input rho's
     rho_old = rho
     
@@ -124,6 +134,8 @@ contains
 
     ! keep track of how much rho changed so we can reset it back later
     drho = rho - rho_old
+
+    call destroy(bpt)
 
   end subroutine correct_rho_with_drho_local 
 
@@ -144,6 +156,10 @@ contains
    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molar concentrations
    real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for total molar concentrations
+
+   type(bl_prof_timer), save :: bpt
+
+   call build(bpt,"convert_cons_to_prim")
 
    dm    = mla%dim     ! dimensionality
    ng_1  = rho(1)%ng   ! number of ghost cells 
@@ -177,6 +193,8 @@ contains
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine convert_cons_to_prim
 
@@ -242,6 +260,10 @@ contains
     real(kind=dp_t), dimension(nspecies) :: W            ! mass fraction w_i = rho_i/rho 
     real(kind=dp_t)  :: Sum_woverm, rhotot_local
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_molconc_rhotot_local")
+
     ! calculate total density inside each cell
     rhotot_local=0.d0 
     do n=1, nspecies  
@@ -262,6 +284,8 @@ contains
        molarconc(n) = molmtot*W(n)/molmass(n)
     end do
     
+    call destroy(bpt)
+
   end subroutine compute_molconc_rhotot_local 
 
   subroutine compute_rhotot(mla,rho,rhotot)
@@ -277,6 +301,10 @@ contains
    ! pointer for rho(nspecies), rhotot(1), molarconc(nspecies) 
    real(kind=dp_t), pointer        :: dp1(:,:,:,:)   ! for rho    
    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
+
+   type(bl_prof_timer), save :: bpt
+
+   call build(bpt, "compute_rhotot")
 
    dm    = mla%dim     ! dimensionality
    ng_1  = rho(1)%ng   ! number of ghost cells 
@@ -301,6 +329,8 @@ contains
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine compute_rhotot
 
@@ -377,6 +407,10 @@ contains
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for Hessian 
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Gama 
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "compute_Gama")
+
     dm    = mla%dim     ! dimensionality
     ng_0  = rho(1)%ng   ! number of ghost cells 
     ng_1  = rhotot(1)%ng
@@ -410,6 +444,8 @@ contains
        end do
     end do
   
+    call destroy(bpt)
+
   end subroutine compute_Gama
   
   subroutine compute_Gama_2d(rho,rhotot,molarconc,molmtot,Hessian,Gama, &
@@ -478,6 +514,10 @@ contains
     integer                                       :: row,column
     real(kind=dp_t), dimension(nspecies,nspecies) :: I, X_xxT
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_Gama_local")
+
     ! free the memory
     I=0; X_xxT=0;
 
@@ -502,6 +542,8 @@ contains
     ! compute Gama 
     Gama = I + matmul(X_xxT, Hessian)     
  
+    call destroy(bpt)
+
   end subroutine compute_Gama_local
 
   subroutine compute_chi(mla,rho,rhotot,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
@@ -529,6 +571,10 @@ contains
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Temp
     real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for zeta_by_Temp
     real(kind=dp_t), pointer        :: dp7(:,:,:,:)  ! for D_therm
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_chi")
 
     dm = mla%dim        ! dimensionality
     ng_0 = rho(1)%ng    ! number of ghost cells 
@@ -566,6 +612,8 @@ contains
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine compute_chi
  
@@ -664,6 +712,10 @@ contains
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda
     real(kind=dp_t), dimension(nspecies)          :: W
       
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_chi_local")
+
     ! free up memory  
     Lambda        = 0.d0         
     W             = 0.d0
@@ -709,6 +761,8 @@ contains
        call Dbar2chi_iterative(chi_iterations,D_bar(:,:),molarconc(:),chi(:,:)) 
     end if
 
+    call destroy(bpt)
+
   end subroutine compute_chi_local
 
   subroutine compute_chi_lapack(Lambda,chi,W)
@@ -726,6 +780,10 @@ contains
     real(kind=dp_t), dimension(nspecies,nspecies) :: U, UT, V, VT
     real(kind=dp_t), dimension(nspecies)          :: S, work 
     integer,         dimension(nspecies)          :: ipiv
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_chi_lapack")
 
     ! free up the memory  
     Sdag     = 0.d0
@@ -804,6 +862,8 @@ contains
           chi(row,column) = chi(row,column) - 1.0d0/alpha
        end do
     end do
+
+    call destroy(bpt)
           
   end subroutine compute_chi_lapack
 
@@ -830,6 +890,10 @@ contains
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for chi
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Gama
     real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Lonsager 
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "compute_Lonsager")
 
     dm = mla%dim        ! dimensionality
     ng_0 = rho(1)%ng    ! number of ghost cells 
@@ -867,6 +931,8 @@ contains
        end do
     end do
  
+    call destroy(bpt)
+
   end subroutine compute_Lonsager
   
   subroutine compute_Lonsager_2d(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager, &
@@ -955,6 +1021,10 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     real(kind=dp_t), dimension(nspecies) :: W 
     real(kind=dp_t)                      :: rcond 
   
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_Lonsager_local")
+
     ! compute massfraction W_i = rho_i/rho; 
     do row=1, nspecies  
        W(row) = rho(row)/rhotot
@@ -984,6 +1054,8 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
        call choldc(Lonsager,nspecies)   
     end if
 
+    call destroy(bpt)
+
   end subroutine compute_Lonsager_local
 
   subroutine compute_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
@@ -1003,6 +1075,10 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for chi
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for rhoWchi
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_rhoWchi")
 
     dm = mla%dim        ! dimensionality
     ng_1 = rho(1)%ng    ! number of ghost cells 
@@ -1032,6 +1108,8 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
        end do
     end do
  
+    call destroy(bpt)
+
   end subroutine compute_rhoWchi
   
   subroutine compute_rhoWchi_2d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,lo,hi)
@@ -1104,6 +1182,10 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     integer                              :: row,column
     real(kind=dp_t), dimension(nspecies) :: W !,chiw 
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_rhoWchi_local")
+
     ! compute massfraction W_i = rho_i/rho; 
     do row=1, nspecies  
        W(row) = rho(row)/rhotot
@@ -1116,6 +1198,8 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
        end do
     end do
     
+    call destroy(bpt)
+
   end subroutine compute_rhoWchi_local
 
   subroutine set_Xij(Xout_ij, Xin_ij)
@@ -1123,9 +1207,15 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: Xin_ij
     real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: Xout_ij  
    
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "set_Xij")
+
     ! reshape array into matrix without doing index algebra
     Xout_ij = Xin_ij
   
+    call destroy(bpt)
+
   end subroutine set_Xij
 
   subroutine compute_baro_coef(mla,baro_coef,rho,rhotot,Temp)
@@ -1144,6 +1234,10 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rho
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for Temp
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_baro_coef")
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -1170,6 +1264,8 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine compute_baro_coef
 

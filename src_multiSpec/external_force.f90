@@ -31,6 +31,10 @@ contains
     real(kind=dp_t), pointer :: dp(:,:,:,:)
     real(kind=dp_t), pointer :: dp1(:,:,:,:)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"external_source")
+
     dm    = mla%dim         ! dimensionality
     ng    = fluxdiv(1)%ng   ! number of ghost cells
     nlevs = mla%nlevel      ! number of levels
@@ -51,6 +55,8 @@ contains
           end select
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine external_source
 

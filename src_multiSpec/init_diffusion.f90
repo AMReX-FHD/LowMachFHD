@@ -48,6 +48,10 @@ contains
     integer                        :: dm, ng_r, i, n, nlevs
     real(kind=dp_t), pointer       :: dp(:,:,:,:)   ! pointer for rho (last dim:nspecies)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"init_rho")
+
     dm = rho(1)%dim
     ng_r = rho(1)%ng
     nlevs = size(rho,1)
@@ -80,6 +84,8 @@ contains
                             dx_in=dx(n,:))
 
     end do
+
+    call destroy(bpt)
 
   end subroutine init_rho
 

@@ -56,6 +56,10 @@ contains
 
     integer         :: n,i,dm,nlevs
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_mass_fluxdiv")
+
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
       
@@ -138,6 +142,8 @@ contains
        call multifab_destroy(D_therm(n))
        call multifab_destroy(zeta_by_Temp(n))
     end do
+
+    call destroy(bpt)
 
   end subroutine compute_mass_fluxdiv
   

@@ -33,6 +33,10 @@ module analysis_module
      integer                              :: i,n,nlevs,n_cell,dm
      type(multifab)                       :: umac_tmp(mla%nlevel,mla%dim)
 
+     type(bl_prof_timer), save :: bpt
+
+     call build(bpt,"print_errors")
+
      nlevs = mla%nlevel
      dm = mla%dim
 
@@ -95,6 +99,8 @@ module analysis_module
         end do
      end do
 
+     call destroy(bpt)
+
   end subroutine print_errors
 
   subroutine sum_mass(rho, step)
@@ -105,6 +111,10 @@ module analysis_module
     ! local variables
     real(kind=dp_t) :: mass(nspecies)
     integer         :: i,n,nlevs
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"sum_mass")
 
     nlevs = size(rho,1)
     
@@ -119,6 +129,8 @@ module analysis_module
           print*, step, ' sum of rho=',sum(mass(1:nspecies))
        end if
     end do
+
+    call destroy(bpt)
 
   end subroutine sum_mass
 
@@ -137,6 +149,10 @@ module analysis_module
  
     ! pointer for rho 
     real(kind=dp_t), pointer  :: dp(:,:,:,:)  
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "compute_cov")
 
     dm     = mla%dim     ! dimensionality
     nlevs  = mla%nlevel 
@@ -175,6 +191,8 @@ module analysis_module
     wit   = wit   + cellW_procavg/dble(n_cell)
     wiwjt = wiwjt + cellWij_procavg/dble(n_cell) 
  
+    call destroy(bpt)
+
     end subroutine compute_cov
      
     subroutine compute_cov_2d(rho,n_cell,cellW,cellWij,lo,hi)
@@ -229,6 +247,10 @@ module analysis_module
        real(kind=dp_t)                                :: rhotot             
        integer                                        :: i,j
 
+       type(bl_prof_timer), save :: bpt
+
+       call build(bpt, "compute_cov_local")
+
        ! calculate total density inside each cell
        rhotot=0.d0 
        do i=1, nspecies  
@@ -253,6 +275,8 @@ module analysis_module
           cellWij(i,i) = cellWij(i,i) + Wij(i,i) 
        end do 
 
+       call destroy(bpt)
+       
      end subroutine compute_cov_local 
  
 end module analysis_module

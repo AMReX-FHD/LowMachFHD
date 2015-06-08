@@ -56,6 +56,10 @@ contains
     real(kind=dp_t)  :: variance
     logical :: increment
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"stochastic_mass_fluxdiv")
+
     ! do we increment or overwrite div?
     increment = .false.
     if (present(increment_in)) increment = increment_in
@@ -145,6 +149,8 @@ contains
        end do
     end do
 
+    call destroy(bpt)
+
   end subroutine stochastic_mass_fluxdiv
 
   ! call this once at the beginning of simulation to allocate multifabs
@@ -157,6 +163,10 @@ contains
     ! local
     integer :: n,nlevs,i,dm,comp
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"init_mass_stochastic")
+
     n_rngs = n_rngs_in
 
     nlevs = mla%nlevel
@@ -173,6 +183,8 @@ contains
        end do ! end loop over n_rngs
     end do ! end loop over nlevs
 
+    call destroy(bpt)
+
   end subroutine init_mass_stochastic
 
   ! call this once at the end of simulation to deallocate memory
@@ -183,6 +195,10 @@ contains
     ! local
     integer :: n,nlevs,i,dm,comp
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"destroy_mass_stochastic")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -196,6 +212,8 @@ contains
     
     deallocate(stoch_W_fc)
 
+    call destroy(bpt)
+
   end subroutine destroy_mass_stochastic
 
   subroutine fill_mass_stochastic(mla,the_bc_level)
@@ -206,6 +224,10 @@ contains
     ! Local variables
     integer :: dm,nlevs,box,i,rng
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"fill_mass_stochastic")
+
     nlevs = mla%nlevel
     dm    = mla%dim    
     
@@ -219,6 +241,8 @@ contains
     ! apply boundary conditions to stochastic fluxes
     call stoch_mass_bc(mla,the_bc_level)
   
+    call destroy(bpt)
+
   end subroutine fill_mass_stochastic
 
   subroutine stoch_mass_bc(mla,the_bc_level)
@@ -231,6 +255,10 @@ contains
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t), pointer :: fp(:,:,:,:)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"stoch_mass_bc")
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -256,6 +284,8 @@ contains
           end do
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine stoch_mass_bc
 

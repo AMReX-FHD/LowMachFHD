@@ -38,6 +38,10 @@ contains
 
      integer :: n,nlevs,i,dm,ng_s
 
+     type(bl_prof_timer), save :: bpt
+
+     call build(bpt,"initialize_from_restart")
+
      dm = dim_in
 
      if (advection_type .eq. 0) then
@@ -105,6 +109,8 @@ contains
      end if
      call destroy(mba)
 
+     call destroy(bpt)
+
   end subroutine initialize_from_restart
 
   subroutine fill_restart_data(mba,chkdata, &
@@ -122,6 +128,10 @@ contains
     character(len=11)                 :: sd_name
     integer                           :: n,nlevs,dm
     integer                           :: rrs(10)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"fill_restart_data")
 
     dm = dim_in
 
@@ -143,6 +153,8 @@ contains
     do n = 1,nlevs
       call boxarray_build_copy(mba%bas(n), get_boxarray(chkdata(n))) 
     end do
+
+    call destroy(bpt)
 
   end subroutine fill_restart_data
 
