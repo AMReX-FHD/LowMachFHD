@@ -59,6 +59,14 @@ contains
 
     type(multifab) :: sedge(mla%nlevel,mla%dim)
 
+    type(mfiter) :: mfi
+    type(box) :: xnodalbox, ynodalbox, znodalbox
+    integer :: xlo(mla%dim), xhi(mla%dim)
+    integer :: ylo(mla%dim), yhi(mla%dim)
+    integer :: zlo(mla%dim), zhi(mla%dim)
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     type(bl_prof_timer),save :: bpt
 
     call build(bpt,"bds")
@@ -180,9 +188,25 @@ contains
     end do ! end loop over levels
 
     ! do L2 projection and increment s_update
+    !$omp parallel private(mfi,n,i,xnodalbox,xlo,xhi) &
+    !$omp private(ynodalbox,ylo,yhi,znodalbox,zlo,zhi,sxp,syp,szp) &
+    !$omp private(uadvp,vadvp,wadvp,lo,hi)
     do n=1,nlevs
-       do i = 1, nfabs(s_update(n))
-          sup => dataptr(s_update(n), i)
+       call mfiter_build(mfi, s_update(n), tiling=.true.)
+       do while (more_tile(mfi))
+       i = get_fab_index(mfi)
+
+       xnodalbox = get_nodaltilebox(mfi,1)
+       xlo = lwb(xnodalbox)
+       xhi = upb(xnodalbox)
+       ynodalbox = get_nodaltilebox(mfi,2)
+       ylo = lwb(ynodalbox)
+       yhi = upb(ynodalbox)
+       znodalbox = get_nodaltilebox(mfi,3)
+       zlo = lwb(znodalbox)
+       zhi = upb(znodalbox)
+
+!       do i = 1, nfabs(s_update(n))
           sxp => dataptr(sedge(n,1), i)
           syp => dataptr(sedge(n,2), i)
           uadvp  => dataptr(umac(n,1), i)
@@ -192,7 +216,6 @@ contains
           select case (dm)
           case (2)
              call bdsupdate_2d(lo, hi, &
-                               sup(:,:,1,scomp:), ng_u, &
                                uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
                                sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
                                dx(n,:), ncomp, proj_type)
@@ -200,13 +223,53 @@ contains
              wadvp  => dataptr(umac(n,3), i)
              szp => dataptr(sedge(n,3), i)
              call bdsupdate_3d(lo, hi, &
-                               sup(:,:,:,scomp:), ng_u, &
                                uadvp(:,:,:,1), vadvp(:,:,:,1), wadvp(:,:,:,1), ng_v, &
                                sxp(:,:,:,:), syp(:,:,:,:), szp(:,:,:,:), ng_e, &
-                               dx(n,:), ncomp, proj_type)
+                               dx(n,:), ncomp, proj_type,xlo,xhi,ylo,yhi,zlo,zhi)
           end select
        end do ! end loop over fabs
     end do ! end loop over levels
+    !$omp end parallel
+
+    !$omp parallel private(mfi,n,i,tilebox,tlo,thi) &
+    !$omp private(sup,sxp,syp,szp) &
+    !$omp private(uadvp,vadvp,wadvp,lo,hi)
+    do n=1,nlevs
+       call mfiter_build(mfi, s_update(n), tiling=.true.)
+       do while (more_tile(mfi))
+       i = get_fab_index(mfi)
+
+       tilebox = get_tilebox(mfi)
+       tlo = lwb(tilebox)
+       thi = upb(tilebox)
+
+!       do i = 1, nfabs(s_update(n))
+          sup => dataptr(s_update(n), i)
+          sxp => dataptr(sedge(n,1), i)
+          syp => dataptr(sedge(n,2), i)
+          uadvp  => dataptr(umac(n,1), i)
+          vadvp  => dataptr(umac(n,2), i)
+          lo =  lwb(get_box(s_update(n), i))
+          hi =  upb(get_box(s_update(n), i))
+          select case (dm)
+          case (2)
+             call bdsfluxdiv_2d(lo, hi, &
+                               sup(:,:,1,scomp:), ng_u, &
+                               uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
+                               sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
+                               dx(n,:), ncomp)
+          case (3)
+             wadvp  => dataptr(umac(n,3), i)
+             szp => dataptr(sedge(n,3), i)
+             call bdsfluxdiv_3d(lo, hi, &
+                               sup(:,:,:,scomp:), ng_u, &
+                               uadvp(:,:,:,1), vadvp(:,:,:,1), wadvp(:,:,:,1), ng_v, &
+                               sxp(:,:,:,:), syp(:,:,:,:), szp(:,:,:,:), ng_e, &
+                               dx(n,:), ncomp, tlo,thi)
+          end select
+       end do ! end loop over fabs
+    end do ! end loop over levels
+    !$omp end parallel
 
     do n=1,nlevs
        call multifab_destroy(slope(n))
@@ -1038,11 +1101,10 @@ contains
 
   end subroutine bdsconc_2d
 
-  subroutine bdsupdate_2d(lo,hi,s_update,ng_u,uadv,vadv,ng_v, &
+  subroutine bdsupdate_2d(lo,hi,uadv,vadv,ng_v, &
                           sedgex,sedgey,ng_e,dx,ncomp,proj_type)
 
-    integer        ,intent(in   ) :: lo(:),hi(:),ng_u,ng_v,ng_e,ncomp,proj_type
-    real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,:)
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_v,ng_e,ncomp,proj_type
     real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:)
     real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:)
     real(kind=dp_t),intent(inout) ::   sedgex(lo(1)-ng_e:,lo(2)-ng_e:,:)
@@ -1152,6 +1214,26 @@ contains
 
     end if
 
+
+
+  end subroutine bdsupdate_2d
+
+  subroutine bdsfluxdiv_2d(lo,hi,s_update,ng_u,uadv,vadv,ng_v, &
+                          sedgex,sedgey,ng_e,dx,ncomp)
+
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_u,ng_v,ng_e,ncomp
+    real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,:)
+    real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:)
+    real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:)
+    real(kind=dp_t),intent(inout) ::   sedgex(lo(1)-ng_e:,lo(2)-ng_e:,:)
+    real(kind=dp_t),intent(inout) ::   sedgey(lo(1)-ng_e:,lo(2)-ng_e:,:)
+    real(kind=dp_t),intent(in   ) :: dx(:)
+
+    ! local variables
+    integer comp,i,j
+
+    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
+
     ! advance solution
     ! conservative update
     do comp=1,ncomp
@@ -1163,8 +1245,8 @@ contains
        enddo
        enddo
     enddo
+  end subroutine bdsfluxdiv_2d
 
-  end subroutine bdsupdate_2d
 
   subroutine bdsconc_3d(lo,hi,s,ng_s,s_update,ng_u,force,ng_o, &
                         slope,ng_l,uadv,vadv,wadv,ng_v,dx,dt,sx,sy,sz,ng_f, &
@@ -3886,11 +3968,12 @@ contains
 
   end subroutine bdsconc_3d
 
-  subroutine bdsupdate_3d(lo,hi,s_update,ng_u,uadv,vadv,wadv,ng_v, &
-                          sedgex,sedgey,sedgez,ng_e,dx,ncomp,proj_type)
+  subroutine bdsupdate_3d(lo,hi,uadv,vadv,wadv,ng_v, &
+                          sedgex,sedgey,sedgez,ng_e,dx,ncomp,proj_type, &
+                          xlo,xhi,ylo,yhi,zlo,zhi)
 
-    integer        ,intent(in   ) :: lo(:),hi(:),ng_u,ng_v,ng_e,ncomp,proj_type
-    real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:,:)
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_v,ng_e,ncomp,proj_type
+    integer        ,intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
     real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
     real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
     real(kind=dp_t),intent(in   ) ::     wadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
@@ -3904,15 +3987,12 @@ contains
 
     real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
 
-    !$omp parallel private(i,j,k,temp,comp,w,rhobar_sq,delta_eos)
-
     if (proj_type .eq. 1 .or. proj_type .eq. 2) then
 
        ! L2 projection: x-faces
-       !$omp do
-       do k = lo(3),hi(3)
-       do j = lo(2),hi(2) 
-       do i = lo(1),hi(1)+1 
+       do k = xlo(3),xhi(3)
+       do j = xlo(2),xhi(2) 
+       do i = xlo(1),xhi(1) 
           
           if (proj_type .eq. 1) then
              ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
@@ -3957,13 +4037,11 @@ contains
        enddo
        enddo
        enddo
-       !$omp end do
 
        ! L2 projection: y-faces
-       !$omp do
-       do k = lo(3),hi(3)
-       do j = lo(2),hi(2)+1 
-       do i = lo(1),hi(1) 
+       do k = ylo(3),yhi(3)
+       do j = ylo(2),yhi(2) 
+       do i = ylo(1),yhi(1) 
           
           if (proj_type .eq. 1) then
              ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
@@ -4008,13 +4086,11 @@ contains
        enddo
        enddo
        enddo
-       !$omp end do
 
        ! L2 projection: z-faces
-       !$omp do
-       do k = lo(3),hi(3)+1
-       do j = lo(2),hi(2) 
-       do i = lo(1),hi(1) 
+       do k = zlo(3),zhi(3)
+       do j = zlo(2),zhi(2) 
+       do i = zlo(1),zhi(1) 
           
           if (proj_type .eq. 1) then
              ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
@@ -4059,19 +4135,38 @@ contains
        enddo
        enddo
        enddo
-       !$omp end do
 
     end if
 
+  end subroutine bdsupdate_3d
+
+  subroutine bdsfluxdiv_3d(lo,hi,s_update,ng_u,uadv,vadv,wadv,ng_v, &
+                          sedgex,sedgey,sedgez,ng_e,dx,ncomp, &
+                          tlo,thi)
+
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_u,ng_v,ng_e,ncomp
+    integer        ,intent(in   ) :: tlo(:),thi(:)
+    real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:,:)
+    real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
+    real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
+    real(kind=dp_t),intent(in   ) ::     wadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
+    real(kind=dp_t),intent(inout) ::   sedgex(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+    real(kind=dp_t),intent(inout) ::   sedgey(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+    real(kind=dp_t),intent(inout) ::   sedgez(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:,:)
+    real(kind=dp_t),intent(in   ) :: dx(:)
+
+    ! local variables
+    integer comp,i,j,k
+
+    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
 
     ! advance solution
     ! conservative update
-    
+
     do comp=1,ncomp
-       !$omp do
-       do k = lo(3),hi(3)
-       do j = lo(2),hi(2) 
-       do i = lo(1),hi(1) 
+       do k = tlo(3),thi(3)
+       do j = tlo(2),thi(2) 
+       do i = tlo(1),thi(1) 
           s_update(i,j,k,comp) = s_update(i,j,k,comp) - (  &
                (sedgex(i+1,j,k,comp)*uadv(i+1,j,k)-sedgex(i,j,k,comp)*uadv(i,j,k))/dx(1) +  &
                (sedgey(i,j+1,k,comp)*vadv(i,j+1,k)-sedgey(i,j,k,comp)*vadv(i,j,k))/dx(2) + &
@@ -4079,12 +4174,9 @@ contains
        enddo
        enddo
        enddo
-       !$omp end do
     enddo
-    
-    !$omp end parallel
 
-  end subroutine bdsupdate_3d
+    end subroutine bdsfluxdiv_3d
 
   subroutine eval(s,slope,del,val)
 
@@ -4252,10 +4344,30 @@ contains
        select case (dm)
        case (2)
           call bdsupdate_2d(lo, hi, &
-                            sup(:,:,1,scomp:), ng_u, &
                             uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
                             sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
                             dx(lev,:), ncomp, proj_type)
+       case (3)
+          call parallel_abort("quadratic BDS advection not supported in 3D")  
+       end select
+    end do ! end loop over fabs
+
+    ! do L2 projection and increment s_update
+    do i = 1, nfabs(s(lev))
+       sup => dataptr(s_update(lev), i)
+       sxp => dataptr(sedge(1), i)
+       syp => dataptr(sedge(2), i)
+       uadvp  => dataptr(umac(lev,1), i)
+       vadvp  => dataptr(umac(lev,2), i)
+       lo =  lwb(get_box(s(lev), i))
+       hi =  upb(get_box(s(lev), i))
+       select case (dm)
+       case (2)
+          call bdsfluxdiv_2d(lo, hi, &
+                            sup(:,:,1,scomp:), ng_u, &
+                            uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
+                            sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
+                            dx(lev,:), ncomp)
        case (3)
           call parallel_abort("quadratic BDS advection not supported in 3D")  
        end select
