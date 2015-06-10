@@ -171,7 +171,7 @@ contains
                                bp(:,:,1,1),ng_b, &
                                bnp(:,:,1,1),ng_e, &
                                kp(:,:,1,1),ng_g, &
-                               lo,hi,dx,color)
+                               lo,hi,dx,color,xlo,xhi,ylo,yhi)
        case (3)
        ppz => dataptr(phi_fc(3), i)
        lpz => dataptr(Lphi_fc(3), i)
@@ -203,18 +203,19 @@ contains
 
   subroutine stag_applyop_2d(phix,phiy,ng_p,Lpx,Lpy,ng_l, &
                              alphax,alphay,ng_a,beta,ng_b,beta_ed,ng_n, &
-                             gamma,ng_g,lo,hi,dx,color)
+                             gamma,ng_g,glo,ghi,dx,color,xlo,xhi,ylo,yhi)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_l,ng_a,ng_b,ng_n,ng_g
-    real(kind=dp_t), intent(in   ) ::    phix(lo(1)-ng_p:,lo(2)-ng_p:)
-    real(kind=dp_t), intent(in   ) ::    phiy(lo(1)-ng_p:,lo(2)-ng_p:)
-    real(kind=dp_t), intent(inout) ::     Lpx(lo(1)-ng_l:,lo(2)-ng_l:)
-    real(kind=dp_t), intent(inout) ::     Lpy(lo(1)-ng_l:,lo(2)-ng_l:)
-    real(kind=dp_t), intent(in   ) ::  alphax(lo(1)-ng_a:,lo(2)-ng_a:)
-    real(kind=dp_t), intent(in   ) ::  alphay(lo(1)-ng_a:,lo(2)-ng_a:)
-    real(kind=dp_t), intent(in   ) ::    beta(lo(1)-ng_b:,lo(2)-ng_b:)
-    real(kind=dp_t), intent(in   ) :: beta_ed(lo(1)-ng_n:,lo(2)-ng_n:)
-    real(kind=dp_t), intent(in   ) ::   gamma(lo(1)-ng_g:,lo(2)-ng_g:)
+    integer        , intent(in   ) :: glo(:),ghi(:),ng_p,ng_l,ng_a,ng_b,ng_n,ng_g
+    integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:)
+    real(kind=dp_t), intent(in   ) ::    phix(glo(1)-ng_p:,glo(2)-ng_p:)
+    real(kind=dp_t), intent(in   ) ::    phiy(glo(1)-ng_p:,glo(2)-ng_p:)
+    real(kind=dp_t), intent(inout) ::     Lpx(glo(1)-ng_l:,glo(2)-ng_l:)
+    real(kind=dp_t), intent(inout) ::     Lpy(glo(1)-ng_l:,glo(2)-ng_l:)
+    real(kind=dp_t), intent(in   ) ::  alphax(glo(1)-ng_a:,glo(2)-ng_a:)
+    real(kind=dp_t), intent(in   ) ::  alphay(glo(1)-ng_a:,glo(2)-ng_a:)
+    real(kind=dp_t), intent(in   ) ::    beta(glo(1)-ng_b:,glo(2)-ng_b:)
+    real(kind=dp_t), intent(in   ) :: beta_ed(glo(1)-ng_n:,glo(2)-ng_n:)
+    real(kind=dp_t), intent(in   ) ::   gamma(glo(1)-ng_g:,glo(2)-ng_g:)
     real(kind=dp_t), intent(in   ) :: dx(:)
     integer        , intent(in   ) :: color
     
@@ -249,10 +250,10 @@ contains
 
        if (do_x) then
 
-          do j=lo(2),hi(2)
+          do j=xlo(2),xhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1)+1,offset
+             if ( offset .eq. 2 .and. mod(xlo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=xlo(1)+ioff,xhi(1),offset
 
                 Lpx(i,j) = phix(i,j)*(alphax(i,j) + &
                      (beta(i,j)+beta(i-1,j)+beta_ed(i,j+1)+beta_ed(i,j))/dxsq) &
@@ -268,10 +269,10 @@ contains
 
        if (do_y) then
 
-          do j=lo(2),hi(2)+1
+          do j=ylo(2),yhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1),offset
+             if ( offset .eq. 2 .and. mod(ylo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=ylo(1)+ioff,yhi(1),offset
 
                 Lpy(i,j) = phiy(i,j)*(alphay(i,j) + &
                      (beta(i,j)+beta(i,j-1)+beta_ed(i+1,j)+beta_ed(i,j))/dxsq) &
@@ -287,14 +288,14 @@ contains
 
     else if (visc_type .eq. 1) then
 
-       b = beta(lo(1),lo(2))
+       b = beta(xlo(1),xlo(2))
 
        if (do_x) then
 
-          do j=lo(2),hi(2)
+          do j=xlo(2),xhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1)+1,offset
+             if ( offset .eq. 2 .and. mod(xlo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=xlo(1)+ioff,xhi(1),offset
 
                 Lpx(i,j) = phix(i,j)*(alphax(i,j) + 4.d0*b/dxsq) &
                      -(phix(i+1,j)+phix(i-1,j)+phix(i,j+1)+phix(i,j-1))*b/dxsq
@@ -306,10 +307,10 @@ contains
 
        if (do_y) then
 
-          do j=lo(2),hi(2)+1
+          do j=ylo(2),yhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1),offset
+             if ( offset .eq. 2 .and. mod(ylo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=ylo(1)+ioff,yhi(1),offset
 
                 Lpy(i,j) = phiy(i,j)*(alphay(i,j) + 4.d0*b/dxsq) &
                      -(phiy(i,j+1)+phiy(i,j-1)+phiy(i+1,j)+phiy(i-1,j))*b/dxsq
@@ -323,10 +324,10 @@ contains
 
        if (do_x) then
 
-          do j=lo(2),hi(2)
+          do j=xlo(2),xhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1)+1,offset
+             if ( offset .eq. 2 .and. mod(xlo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=xlo(1)+ioff,xhi(1),offset
 
                 Lpx(i,j) = phix(i,j)*(alphax(i,j) + &
                      (2.d0*beta(i,j)+2.d0*beta(i-1,j)+beta_ed(i,j+1)+beta_ed(i,j))/dxsq) &
@@ -348,10 +349,10 @@ contains
 
        if (do_y) then
 
-          do j=lo(2),hi(2)+1
+          do j=ylo(2),yhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1),offset
+             if ( offset .eq. 2 .and. mod(ylo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=ylo(1)+ioff,yhi(1),offset
 
                 Lpy(i,j) = phiy(i,j)*(alphay(i,j) + &
                      (2.d0*beta(i,j)+2.d0*beta(i,j-1)+beta_ed(i+1,j)+beta_ed(i,j))/dxsq) &
@@ -373,14 +374,14 @@ contains
 
     else if (visc_type .eq. 2) then
 
-       b = beta(lo(1),lo(2))
+       b = beta(xlo(1),xlo(2))
 
        if (do_x) then
 
-          do j=lo(2),hi(2)
+          do j=xlo(2),xhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1)+1,offset
+             if ( offset .eq. 2 .and. mod(xlo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=xlo(1)+ioff,xhi(1),offset
 
                 Lpx(i,j) = phix(i,j)*(alphax(i,j) + 6.d0*b/dxsq) &
                      -(2.d0*phix(i+1,j)+2.d0*phix(i-1,j)+phix(i,j+1)+phix(i,j-1) &
@@ -393,10 +394,10 @@ contains
 
        if (do_y) then
 
-          do j=lo(2),hi(2)+1
+          do j=ylo(2),yhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1),offset
+             if ( offset .eq. 2 .and. mod(ylo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=ylo(1)+ioff,yhi(1),offset
 
                 Lpy(i,j) = phiy(i,j)*(alphay(i,j) + 6.d0*b/dxsq) &
                      -(2.d0*phiy(i,j+1)+2.d0*phiy(i,j-1)+phiy(i+1,j)+phiy(i-1,j) &
@@ -411,10 +412,10 @@ contains
 
        if (do_x) then
 
-          do j=lo(2),hi(2)
+          do j=xlo(2),xhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1)+1,offset
+             if ( offset .eq. 2 .and. mod(xlo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=xlo(1)+ioff,xhi(1),offset
 
                 Lpx(i,j) = phix(i,j)*(alphax(i,j) + &
                      ( fourthirds*beta(i,j)+gamma(i,j)+fourthirds*beta(i-1,j)+gamma(i-1,j) &
@@ -437,10 +438,10 @@ contains
 
        if (do_y) then
 
-          do j=lo(2),hi(2)+1
+          do j=ylo(2),yhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1),offset
+             if ( offset .eq. 2 .and. mod(ylo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=ylo(1)+ioff,yhi(1),offset
 
                 Lpy(i,j) = phiy(i,j)*(alphay(i,j) + &
                      ( fourthirds*beta(i,j)+gamma(i,j)+fourthirds*beta(i,j-1)+gamma(i,j-1) &
@@ -463,15 +464,15 @@ contains
 
     else if (visc_type .eq. 3) then
 
-       b = beta(lo(1),lo(2))
-       c = gamma(lo(1),lo(2))
+       b = beta(xlo(1),xlo(2))
+       c = gamma(xlo(1),xlo(2))
 
        if (do_x) then
 
-          do j=lo(2),hi(2)
+          do j=xlo(2),xhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1)+1,offset
+             if ( offset .eq. 2 .and. mod(xlo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=xlo(1)+ioff,xhi(1),offset
 
                 Lpx(i,j) = phix(i,j)*(alphax(i,j)+(14.d0*b/3.d0+2.d0*c)/dxsq) &
                      -((phix(i+1,j)+phix(i-1,j))*(fourthirds*b+c) &
@@ -485,10 +486,10 @@ contains
 
        if (do_y) then
 
-          do j=lo(2),hi(2)+1
+          do j=ylo(2),yhi(2)
              ioff = 0
-             if ( offset .eq. 2 .and. mod(lo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
-             do i=lo(1)+ioff,hi(1),offset
+             if ( offset .eq. 2 .and. mod(ylo(1)+j,2) .ne. mod(color+1,2) ) ioff = 1
+             do i=ylo(1)+ioff,yhi(1),offset
 
                 Lpy(i,j) = phiy(i,j)*(alphay(i,j)+(14.d0*b/3.d0+2.d0*c)/dxsq) &
                      -((phiy(i,j+1)+phiy(i,j-1))*(fourthirds*b+c) &

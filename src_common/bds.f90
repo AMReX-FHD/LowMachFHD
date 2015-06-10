@@ -217,7 +217,7 @@ contains
              call bdsupdate_2d(lo, hi, &
                                uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
                                sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
-                               dx(n,:), ncomp, proj_type)
+                               dx(n,:), ncomp, proj_type,xlo,xhi,ylo,yhi)
           case (3)
              wadvp  => dataptr(umac(n,3), i)
              szp => dataptr(sedge(n,3), i)
@@ -1100,9 +1100,10 @@ contains
   end subroutine bdsconc_2d
 
   subroutine bdsupdate_2d(lo,hi,uadv,vadv,ng_v, &
-                          sedgex,sedgey,ng_e,dx,ncomp,proj_type)
+                          sedgex,sedgey,ng_e,dx,ncomp,proj_type,xlo,xhi,ylo,yhi)
 
     integer        ,intent(in   ) :: lo(:),hi(:),ng_v,ng_e,ncomp,proj_type
+    integer        ,intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:)
     real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:)
     real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:)
     real(kind=dp_t),intent(inout) ::   sedgex(lo(1)-ng_e:,lo(2)-ng_e:,:)
@@ -1117,8 +1118,8 @@ contains
     if (proj_type .eq. 1 .or. proj_type .eq. 2) then
 
        ! L2 projection: x-faces
-       do j = lo(2),hi(2) 
-       do i = lo(1),hi(1)+1 
+       do j = xlo(2),xhi(2) 
+       do i = xlo(1),xhi(1) 
           
           if (proj_type .eq. 1) then
              ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
@@ -1164,8 +1165,8 @@ contains
        enddo
 
        ! L2 projection: y-faces
-       do j = lo(2),hi(2)+1 
-       do i = lo(1),hi(1) 
+       do j = ylo(2),yhi(2) 
+       do i = ylo(1),yhi(1) 
           
           if (proj_type .eq. 1) then
              ! overwrite sedge so it contains rho_i instead of (rho,rho_1)
@@ -4233,6 +4234,9 @@ contains
     type(multifab) :: sedge(mla%dim)
 
     type(mfiter) :: mfi
+    type(box) :: xnodalbox, ynodalbox
+    integer :: xlo(mla%dim), xhi(mla%dim)
+    integer :: ylo(mla%dim), yhi(mla%dim)
     type(box) :: tilebox
     integer :: tlo(mla%dim), thi(mla%dim)
 
@@ -4336,6 +4340,9 @@ contains
     end do
 
     ! do L2 projection and increment s_update
+    
+    !$omp parallel private(mfi,i,xnodalbox,xlo,xhi,ynodalbox,ylo,yhi) &
+    !$omp private(sup,sxp,syp,uadvp,vadvp,lo,hi)
     do i = 1, nfabs(s(lev))
        sup => dataptr(s_update(lev), i)
        sxp => dataptr(sedge(1), i)
@@ -4349,11 +4356,12 @@ contains
           call bdsupdate_2d(lo, hi, &
                             uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
                             sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
-                            dx(lev,:), ncomp, proj_type)
+                            dx(lev,:), ncomp, proj_type,xlo,xhi,ylo,yhi)
        case (3)
           call parallel_abort("quadratic BDS advection not supported in 3D")  
        end select
     end do ! end loop over fabs
+    !$omp end parallel
 
     ! do L2 projection and increment s_update
 

@@ -95,7 +95,7 @@ contains
                 call compute_grad_2d(pp(:,:,1,comp), ng_p, &
                                      gpx(:,:,1,outcomp), gpy(:,:,1,outcomp), ng_g, &
                                      lo, hi, dx(n,:), &
-                                     the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
+                                     the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp),xlo,xhi,ylo,yhi)
              case (3)
                 gpz => dataptr(gradp(n,3), i)
                 call compute_grad_3d(pp(:,:,:,comp), ng_p, &
@@ -112,9 +112,10 @@ contains
 
   contains
     
-    subroutine compute_grad_2d(phi,ng_p,gpx,gpy,ng_g,lo,hi,dx,bc)
+    subroutine compute_grad_2d(phi,ng_p,gpx,gpy,ng_g,lo,hi,dx,bc,xlo,xhi,ylo,yhi)
 
       integer        , intent(in   ) :: ng_p,ng_g,lo(:),hi(:)
+      integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:)
       real(kind=dp_t), intent(in   ) :: phi(lo(1)-ng_p:,lo(2)-ng_p:)
       real(kind=dp_t), intent(inout) :: gpx(lo(1)-ng_g:,lo(2)-ng_g:)
       real(kind=dp_t), intent(inout) :: gpy(lo(1)-ng_g:,lo(2)-ng_g:)
@@ -125,47 +126,55 @@ contains
       integer :: i,j
 
       ! x-faces
-      do j=lo(2),hi(2)
-         do i=lo(1),hi(1)+1
+      do j=xlo(2),xhi(2)
+         do i=xlo(1),xhi(1)
             gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / dx(1)
          end do
       end do
    
       ! alter stencil at boundary since ghost value represents value at boundary
+      if (xlo(1) .eq. lo(1)) then
       if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
          i=lo(1)
          do j=lo(2),hi(2)
             gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / (0.5d0*dx(1))
          end do
       end if
+      end if
+      if (xhi(1) .eq. hi(1)+1) then
       if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
          i=hi(1)+1
          do j=lo(2),hi(2)
             gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / (0.5d0*dx(1))
          end do
       end if
+      end if
 
       ! y-faces
-      do j=lo(2),hi(2)+1
-         do i=lo(1),hi(1)
+      do j=ylo(2),yhi(2)
+         do i=ylo(1),yhi(1)
             gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / dx(2)
          end do
       end do
 
       ! alter stencil at boundary since ghost value represents value at boundary
+      if (ylo(2) .eq. lo(2)) then
       if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
          j=lo(2)
          do i=lo(1),hi(1)
             gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / (0.5d0*dx(2))
          end do
       end if
+      end if
 
       ! alter stencil at boundary since ghost value represents value at boundary
+      if (yhi(2) .eq. hi(2)+1) then
       if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
          j=hi(2)+1
          do i=lo(1),hi(1)
             gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / (0.5d0*dx(2))
          end do
+      end if
       end if
 
     end subroutine compute_grad_2d
@@ -341,7 +350,7 @@ contains
              select case (dm)
              case (2)
                 call compute_div_2d(pxp(:,:,1,comp), pyp(:,:,1,comp), ng_p, &
-                                    dp(:,:,1,outcomp), ng_d, dx(n,:),lo, hi, increment)
+                                    dp(:,:,1,outcomp), ng_d, dx(n,:),lo, hi, increment,tlo,thi)
              case (3) 
                 pzp => dataptr(phi_fc(n,3), i)
                 call compute_div_3d(pxp(:,:,:,comp), pyp(:,:,:,comp), pzp(:,:,:,comp), ng_p, &
@@ -356,9 +365,9 @@ contains
 
   contains
 
-    subroutine compute_div_2d(phix,phiy,ng_p,div,ng_d,dx,lo,hi,increment)
+    subroutine compute_div_2d(phix,phiy,ng_p,div,ng_d,dx,lo,hi,increment,tlo,thi)
 
-      integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d
+      integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d,tlo(:),thi(:)
       real(kind=dp_t), intent(in   ) :: phix(lo(1)-ng_p:,lo(2)-ng_p:)
       real(kind=dp_t), intent(in   ) :: phiy(lo(1)-ng_p:,lo(2)-ng_p:)
       real(kind=dp_t), intent(inout) ::  div(lo(1)-ng_d:,lo(2)-ng_d:)
@@ -369,8 +378,8 @@ contains
 
       if (increment) then
 
-         do j = lo(2),hi(2)
-         do i = lo(1),hi(1)
+         do j = tlo(2),thi(2)
+         do i = tlo(1),thi(1)
             div(i,j) = div(i,j) + &
                  (phix(i+1,j) - phix(i,j)) / dx(1) + &
                  (phiy(i,j+1) - phiy(i,j)) / dx(2)
@@ -379,8 +388,8 @@ contains
 
       else
 
-         do j = lo(2),hi(2)
-         do i = lo(1),hi(1)
+         do j = tlo(2),thi(2)
+         do i = tlo(1),thi(1)
             div(i,j) = &
                  (phix(i+1,j) - phix(i,j)) / dx(1) + &
                  (phiy(i,j+1) - phiy(i,j)) / dx(2)
@@ -391,22 +400,22 @@ contains
 
     end subroutine compute_div_2d
 
-    subroutine compute_div_3d(phix,phiy,phiz,ng_p,div,ng_d,dx,glo,ghi,increment,lo,hi)
+    subroutine compute_div_3d(phix,phiy,phiz,ng_p,div,ng_d,dx,lo,hi,increment,tlo,thi)
 
-      integer        , intent(in   ) :: glo(:),ghi(:),ng_p,ng_d,lo(:),hi(:)
-      real(kind=dp_t), intent(in   ) :: phix(glo(1)-ng_p:,glo(2)-ng_p:,glo(3)-ng_p:)
-      real(kind=dp_t), intent(in   ) :: phiy(glo(1)-ng_p:,glo(2)-ng_p:,glo(3)-ng_p:)
-      real(kind=dp_t), intent(in   ) :: phiz(glo(1)-ng_p:,glo(2)-ng_p:,glo(3)-ng_p:)
-      real(kind=dp_t), intent(inout) ::  div(glo(1)-ng_d:,glo(2)-ng_d:,glo(3)-ng_d:)
+      integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d,tlo(:),thi(:)
+      real(kind=dp_t), intent(in   ) :: phix(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real(kind=dp_t), intent(in   ) :: phiy(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real(kind=dp_t), intent(in   ) :: phiz(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
+      real(kind=dp_t), intent(inout) ::  div(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:)
       real(kind=dp_t), intent(in   ) :: dx(:)
       logical        , intent(in   ) :: increment
 
       integer :: i,j,k
 
       if (increment) then
-         do k = lo(3),hi(3)
-         do j = lo(2),hi(2)
-         do i = lo(1),hi(1)
+         do k = tlo(3),thi(3)
+         do j = tlo(2),thi(2)
+         do i = tlo(1),thi(1)
             div(i,j,k) = div(i,j,k) + &
                  (phix(i+1,j,k) - phix(i,j,k)) / dx(1) + &
                  (phiy(i,j+1,k) - phiy(i,j,k)) / dx(2) + &
@@ -415,9 +424,9 @@ contains
          end do
          end do
       else
-         do k = lo(3),hi(3)
-         do j = lo(2),hi(2)
-         do i = lo(1),hi(1)
+         do k = tlo(3),thi(3)
+         do j = tlo(2),thi(2)
+         do i = tlo(1),thi(1)
             div(i,j,k) = &
                  (phix(i+1,j,k) - phix(i,j,k)) / dx(1) + &
                  (phiy(i,j+1,k) - phiy(i,j,k)) / dx(2) + &
