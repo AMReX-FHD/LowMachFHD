@@ -194,19 +194,18 @@ contains
     do n=1,nlevs
        call mfiter_build(mfi, s_update(n), tiling=.true.)
        do while (more_tile(mfi))
-       i = get_fab_index(mfi)
+          i = get_fab_index(mfi)
 
-       xnodalbox = get_nodaltilebox(mfi,1)
-       xlo = lwb(xnodalbox)
-       xhi = upb(xnodalbox)
-       ynodalbox = get_nodaltilebox(mfi,2)
-       ylo = lwb(ynodalbox)
-       yhi = upb(ynodalbox)
-       znodalbox = get_nodaltilebox(mfi,3)
-       zlo = lwb(znodalbox)
-       zhi = upb(znodalbox)
+          xnodalbox = get_nodaltilebox(mfi,1)
+          xlo = lwb(xnodalbox)
+          xhi = upb(xnodalbox)
+          ynodalbox = get_nodaltilebox(mfi,2)
+          ylo = lwb(ynodalbox)
+          yhi = upb(ynodalbox)
+          znodalbox = get_nodaltilebox(mfi,3)
+          zlo = lwb(znodalbox)
+          zhi = upb(znodalbox)
 
-!       do i = 1, nfabs(s_update(n))
           sxp => dataptr(sedge(n,1), i)
           syp => dataptr(sedge(n,2), i)
           uadvp  => dataptr(umac(n,1), i)
@@ -237,13 +236,12 @@ contains
     do n=1,nlevs
        call mfiter_build(mfi, s_update(n), tiling=.true.)
        do while (more_tile(mfi))
-       i = get_fab_index(mfi)
+          i = get_fab_index(mfi)
 
-       tilebox = get_tilebox(mfi)
-       tlo = lwb(tilebox)
-       thi = upb(tilebox)
+          tilebox = get_tilebox(mfi)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
 
-!       do i = 1, nfabs(s_update(n))
           sup => dataptr(s_update(n), i)
           sxp => dataptr(sedge(n,1), i)
           syp => dataptr(sedge(n,2), i)
@@ -4234,6 +4232,10 @@ contains
 
     type(multifab) :: sedge(mla%dim)
 
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     type(bl_prof_timer),save :: bpt
 
     call build(bpt,"bds_quad")
@@ -4354,7 +4356,18 @@ contains
     end do ! end loop over fabs
 
     ! do L2 projection and increment s_update
-    do i = 1, nfabs(s(lev))
+
+    !$omp parallel private(mfi,i,tilebox,tlo,thi) &
+    !$omp private(sup,sxp,syp) &
+    !$omp private(uadvp,vadvp,lo,hi)
+    call mfiter_build(mfi, s_update(lev), tiling=.true.)
+    do while (more_tile(mfi))
+       i = get_fab_index(mfi)
+
+       tilebox = get_tilebox(mfi)
+       tlo = lwb(tilebox)
+       thi = upb(tilebox)
+
        sup => dataptr(s_update(lev), i)
        sxp => dataptr(sedge(1), i)
        syp => dataptr(sedge(2), i)
@@ -4364,15 +4377,16 @@ contains
        hi =  upb(get_box(s(lev), i))
        select case (dm)
        case (2)
-!          call bdsfluxdiv_2d(lo, hi, &
-!                            sup(:,:,1,scomp:), ng_u, &
-!                            uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
-!                            sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
-!                            dx(lev,:), ncomp,tlo,thi)
+          call bdsfluxdiv_2d(lo, hi, &
+                            sup(:,:,1,scomp:), ng_u, &
+                            uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
+                            sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
+                            dx(lev,:), ncomp,tlo,thi)
        case (3)
           call parallel_abort("quadratic BDS advection not supported in 3D")  
        end select
     end do ! end loop over fabs
+    !$omp end parallel
 
     call multifab_destroy(ave)
     call multifab_destroy(slx)
