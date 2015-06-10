@@ -257,7 +257,7 @@ contains
                                sup(:,:,1,scomp:), ng_u, &
                                uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
                                sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
-                               dx(n,:), ncomp)
+                               dx(n,:), ncomp,tlo,thi)
           case (3)
              wadvp  => dataptr(umac(n,3), i)
              szp => dataptr(sedge(n,3), i)
@@ -1208,7 +1208,7 @@ contains
              sedgey(i,j,1) = sedgey(i,j,1) + sedgey(i,j,2)
              sedgey(i,j,2) = temp
           end if
-          
+
        enddo
        enddo
 
@@ -1219,9 +1219,9 @@ contains
   end subroutine bdsupdate_2d
 
   subroutine bdsfluxdiv_2d(lo,hi,s_update,ng_u,uadv,vadv,ng_v, &
-                          sedgex,sedgey,ng_e,dx,ncomp)
+                          sedgex,sedgey,ng_e,dx,ncomp,tlo,thi)
 
-    integer        ,intent(in   ) :: lo(:),hi(:),ng_u,ng_v,ng_e,ncomp
+    integer        ,intent(in   ) :: lo(:),hi(:),ng_u,ng_v,ng_e,ncomp,tlo(:),thi(:)
     real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,:)
     real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:)
     real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:)
@@ -1236,9 +1236,10 @@ contains
 
     ! advance solution
     ! conservative update
+
     do comp=1,ncomp
-       do j = lo(2),hi(2) 
-       do i = lo(1),hi(1) 
+       do j = tlo(2),thi(2) 
+       do i = tlo(1),thi(1) 
           s_update(i,j,comp) = s_update(i,j,comp) - (  &
                (sedgex(i+1,j,comp)*uadv(i+1,j)-sedgex(i,j,comp)*uadv(i,j))/dx(1) +  &
                (sedgey(i,j+1,comp)*vadv(i,j+1)-sedgey(i,j,comp)*vadv(i,j))/dx(2) )
@@ -4363,11 +4364,11 @@ contains
        hi =  upb(get_box(s(lev), i))
        select case (dm)
        case (2)
-          call bdsfluxdiv_2d(lo, hi, &
-                            sup(:,:,1,scomp:), ng_u, &
-                            uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
-                            sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
-                            dx(lev,:), ncomp)
+!          call bdsfluxdiv_2d(lo, hi, &
+!                            sup(:,:,1,scomp:), ng_u, &
+!                            uadvp(:,:,1,1), vadvp(:,:,1,1), ng_v, &
+!                            sxp(:,:,1,:), syp(:,:,1,:), ng_e, &
+!                            dx(lev,:), ncomp,tlo,thi)
        case (3)
           call parallel_abort("quadratic BDS advection not supported in 3D")  
        end select
