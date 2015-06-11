@@ -28,9 +28,19 @@ contains
     real(kind=dp_t), pointer :: m1xp(:,:,:,:),m1yp(:,:,:,:),m1zp(:,:,:,:)
     real(kind=dp_t), pointer :: m2xp(:,:,:,:),m2yp(:,:,:,:),m2zp(:,:,:,:)
     
+    type(multifab) :: temp_cc
+    
+    type(mfiter) :: mfi
+    type(box) :: xnodalbox, ynodalbox, znodalbox
+    integer :: xlo(mla%dim), xhi(mla%dim)
+    integer :: ylo(mla%dim), yhi(mla%dim)
+    integer :: zlo(mla%dim), zhi(mla%dim)
+
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"stag_inner_prod")
+
+    call multifab_build(temp_cc,mla%la(1),1,0)
 
     inner_prod_proc = 0.d0
     nlevs = mla%nlevel
@@ -43,7 +53,27 @@ contains
        call bl_error('stag_inner_prod not written for multilevel yet')
     end if
 
-    do i=1,nfabs(m1(1,1))
+    !$omp parallel private(mfi,i,xnodalbox,xlo,xhi,ynodalbox,ylo,yhi) &
+    !$omp private(znodalbox,zlo,zhi,m1xp,m2xp,m1yp,m2yp,m1zp,m2zp) &
+    !$omp private(lo,hi,inner_prod_grid) &
+    !$omp reduction(+:inner_prod_proc)
+
+    call mfiter_build(mfi, temp_cc, tiling=.true.)
+
+      do while (more_tile(mfi))
+         i = get_fab_index(mfi)
+
+         xnodalbox = get_nodaltilebox(mfi,1)
+         xlo = lwb(xnodalbox)
+         xhi = upb(xnodalbox)
+         ynodalbox = get_nodaltilebox(mfi,2)
+         ylo = lwb(ynodalbox)
+         yhi = upb(ynodalbox)
+         znodalbox = get_nodaltilebox(mfi,3)
+         zlo = lwb(znodalbox)
+         zhi = upb(znodalbox)
+
+!    do i=1,nfabs(m1(1,1))
        m1xp => dataptr(m1(1,1), i)   ! for u
        m2xp => dataptr(m2(1,1), i)   ! for v
 
@@ -57,70 +87,90 @@ contains
        case (2)
           call stag_inner_prod_2d(m1xp(:,:,1,comp1),m1yp(:,:,1,comp1),ng_m1, &
                                   m2xp(:,:,1,comp2),m2yp(:,:,1,comp2),ng_m2, &
-                                  lo, hi, inner_prod_grid)
+                                  lo, hi, inner_prod_grid,xlo,xhi,ylo,yhi)
        case (3)
           m1zp => dataptr(m1(1,3), i)   ! for w
           m2zp => dataptr(m2(1,3), i)   ! for w
           call stag_inner_prod_3d(m1xp(:,:,:,comp1),m1yp(:,:,:,comp1),m1zp(:,:,:,comp1),ng_m1, &
                                   m2xp(:,:,:,comp2),m2yp(:,:,:,comp2),m2zp(:,:,:,comp2),ng_m2, &
-                                  lo, hi, inner_prod_grid)
+                                  lo, hi, inner_prod_grid,xlo,xhi,ylo,yhi,zlo,zhi)
        end select
 
        inner_prod_proc(1:dm) = inner_prod_proc(1:dm) + inner_prod_grid(1:dm)
 
     end do
+    !$omp end parallel
 
     do comp=1,dm
        call parallel_reduce(prod_val(comp), inner_prod_proc(comp), MPI_SUM)
     end do
 
+    call multifab_destroy(temp_cc)
+
     call destroy(bpt)
 
   end subroutine stag_inner_prod
 
-  subroutine stag_inner_prod_2d(m1x,m1y,ng_m1,m2x,m2y,ng_m2,lo,hi,inner_prod)
+  subroutine stag_inner_prod_2d(m1x,m1y,ng_m1,m2x,m2y,ng_m2,glo,ghi,inner_prod,xlo,xhi,ylo,yhi)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m1, ng_m2
-    real(kind=dp_t), intent(in   ) :: m1x(lo(1)-ng_m1:,lo(2)-ng_m1:)
-    real(kind=dp_t), intent(in   ) :: m1y(lo(1)-ng_m1:,lo(2)-ng_m1:)
-    real(kind=dp_t), intent(in   ) :: m2x(lo(1)-ng_m2:,lo(2)-ng_m2:)
-    real(kind=dp_t), intent(in   ) :: m2y(lo(1)-ng_m2:,lo(2)-ng_m2:)
+    integer        , intent(in   ) :: glo(:), ghi(:), ng_m1, ng_m2
+    integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:)
+    real(kind=dp_t), intent(in   ) :: m1x(glo(1)-ng_m1:,glo(2)-ng_m1:)
+    real(kind=dp_t), intent(in   ) :: m1y(glo(1)-ng_m1:,glo(2)-ng_m1:)
+    real(kind=dp_t), intent(in   ) :: m2x(glo(1)-ng_m2:,glo(2)-ng_m2:)
+    real(kind=dp_t), intent(in   ) :: m2y(glo(1)-ng_m2:,glo(2)-ng_m2:)
     real(kind=dp_t), intent(inout) :: inner_prod(:)
 
     ! local
     integer :: i,j
 
     ! mx, interior cells
-       do j=lo(2),hi(2)
-          do i=lo(1)+1,hi(1)
+       do j=xlo(2),xhi(2)
+          do i=xlo(1),xhi(1)
              inner_prod(1) = inner_prod(1) + m1x(i,j)*m2x(i,j)
           end do
        end do
 
     ! mx, boundary cells
-       do j=lo(2),hi(2)
-          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(lo(1),j)*m2x(lo(1),j)
-          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(hi(1)+1,j)*m2x(hi(1)+1,j)
+       if (xlo(1) .eq. glo(1)) then
+       do j=xlo(2),xhi(2)
+          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(glo(1),j)*m2x(glo(1),j)
        end do
+       end if
+
+       if (xhi(1) .eq. ghi(1)+1) then
+       do j=xlo(2),xhi(2)
+          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(ghi(1)+1,j)*m2x(ghi(1)+1,j)
+       end do
+       end if
 
     ! my, interior cells
-       do j=lo(2)+1,hi(2)
-          do i=lo(1),hi(1)
+       do j=ylo(2),yhi(2)
+          do i=ylo(1),yhi(1)
              inner_prod(2) = inner_prod(2) + m1y(i,j)*m2y(i,j)
           end do
        end do
 
     ! my, boundary cells
-       do i=lo(1),hi(1)
-          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,lo(2))* m2y(i,lo(2))
-          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,hi(2)+1)*m2y(i,hi(2)+1)
+       if (ylo(2) .eq. glo(2)) then
+       do i=ylo(1),yhi(1)
+          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,glo(2))* m2y(i,glo(2))
        end do
+       end if
+
+       if (yhi(2) .eq. ghi(2)+1) then
+       do i=ylo(1),yhi(1)
+          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,ghi(2)+1)*m2y(i,ghi(2)+1)
+       end do
+       end if
 
   end subroutine stag_inner_prod_2d
 
-  subroutine stag_inner_prod_3d(m1x,m1y,m1z,ng_m1,m2x,m2y,m2z,ng_m2,lo,hi,inner_prod)
+  subroutine stag_inner_prod_3d(m1x,m1y,m1z,ng_m1,m2x,m2y,m2z,ng_m2,lo,hi,inner_prod, &
+                                       xlo,xhi,ylo,yhi,zlo,zhi)
 
     integer        , intent(in   ) :: lo(:), hi(:), ng_m1, ng_m2
+    integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
     real(kind=dp_t), intent(in   ) :: m1x(lo(1)-ng_m1:,lo(2)-ng_m1:,lo(3)-ng_m1:)
     real(kind=dp_t), intent(in   ) :: m1y(lo(1)-ng_m1:,lo(2)-ng_m1:,lo(3)-ng_m1:)
     real(kind=dp_t), intent(in   ) :: m1z(lo(1)-ng_m1:,lo(2)-ng_m1:,lo(3)-ng_m1:)
