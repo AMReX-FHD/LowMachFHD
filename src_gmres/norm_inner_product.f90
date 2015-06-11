@@ -278,6 +278,10 @@ contains
     real(kind=dp_t), pointer :: m1p(:,:,:,:)
     real(kind=dp_t), pointer :: m2p(:,:,:,:)
     
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"cc_inner_prod")
@@ -293,7 +297,18 @@ contains
        call bl_error('cc_inner_prod not written for multilevel yet')
     end if
 
-    do i=1,nfabs(m1(1))
+    !$omp parallel private(mfi,i,tilebox,tlo,thi,m1p,m2p,lo,hi,inner_prod_grid) &
+    !$omp reduction(+:inner_prod_proc)
+
+    call mfiter_build(mfi, m1(1), tiling=.true.)
+
+    do while (more_tile(mfi))
+       i = get_fab_index(mfi)
+
+       tilebox = get_tilebox(mfi)
+       tlo = lwb(tilebox)
+       thi = upb(tilebox)
+!    do i=1,nfabs(m1(1))
        m1p => dataptr(m1(1), i)   ! for u
        m2p => dataptr(m2(1), i)   ! for v
 
@@ -303,15 +318,16 @@ contains
        select case (dm)
        case (2)
           call cc_inner_prod_2d(m1p(:,:,1,comp1),ng_m1,m2p(:,:,1,comp2),ng_m2, &
-                                lo, hi, inner_prod_grid)
+                                lo, hi, inner_prod_grid,tlo,thi)
        case (3)
           call cc_inner_prod_3d(m1p(:,:,:,comp1),ng_m1,m2p(:,:,:,comp2),ng_m2, &
-                                lo, hi, inner_prod_grid)
+                                lo, hi, inner_prod_grid,tlo,thi)
        end select
 
        inner_prod_proc = inner_prod_proc + inner_prod_grid
 
     end do
+    !$omp end parallel
 
     call parallel_reduce(prod_val, inner_prod_proc, MPI_SUM)
 
@@ -319,37 +335,37 @@ contains
 
   end subroutine cc_inner_prod
 
-  subroutine cc_inner_prod_2d(m1,ng_m1,m2,ng_m2,lo,hi,inner_prod)
+  subroutine cc_inner_prod_2d(m1,ng_m1,m2,ng_m2,glo,ghi,inner_prod,tlo,thi)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m1, ng_m2
-    real(kind=dp_t), intent(in   ) :: m1(lo(1)-ng_m1:,lo(2)-ng_m1:)
-    real(kind=dp_t), intent(in   ) :: m2(lo(1)-ng_m2:,lo(2)-ng_m2:)
+    integer        , intent(in   ) :: glo(:), ghi(:), ng_m1, ng_m2,tlo(:),thi(:)
+    real(kind=dp_t), intent(in   ) :: m1(glo(1)-ng_m1:,glo(2)-ng_m1:)
+    real(kind=dp_t), intent(in   ) :: m2(glo(1)-ng_m2:,glo(2)-ng_m2:)
     real(kind=dp_t), intent(inout) :: inner_prod
 
     ! local
     integer :: i,j
 
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
+    do j=tlo(2),thi(2)
+       do i=tlo(1),thi(1)
           inner_prod = inner_prod + m1(i,j)*m2(i,j)
        end do
     end do
 
   end subroutine cc_inner_prod_2d
 
-  subroutine cc_inner_prod_3d(m1,ng_m1,m2,ng_m2,lo,hi,inner_prod)
+  subroutine cc_inner_prod_3d(m1,ng_m1,m2,ng_m2,glo,ghi,inner_prod,tlo,thi)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m1, ng_m2
-    real(kind=dp_t), intent(in   ) :: m1(lo(1)-ng_m1:,lo(2)-ng_m1:,lo(3)-ng_m1:)
-    real(kind=dp_t), intent(in   ) :: m2(lo(1)-ng_m2:,lo(2)-ng_m2:,lo(3)-ng_m2:)
+    integer        , intent(in   ) :: glo(:), ghi(:), ng_m1, ng_m2,tlo(:),thi(:)
+    real(kind=dp_t), intent(in   ) :: m1(glo(1)-ng_m1:,glo(2)-ng_m1:,glo(3)-ng_m1:)
+    real(kind=dp_t), intent(in   ) :: m2(glo(1)-ng_m2:,glo(2)-ng_m2:,glo(3)-ng_m2:)
     real(kind=dp_t), intent(inout) :: inner_prod
 
     ! local
     integer :: i,j,k
 
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=tlo(3),thi(3)
+       do j=tlo(2),thi(2)
+          do i=tlo(1),thi(1)
              inner_prod = inner_prod + m1(i,j,k)*m2(i,j,k)
           end do
        end do
