@@ -166,72 +166,99 @@ contains
 
   end subroutine stag_inner_prod_2d
 
-  subroutine stag_inner_prod_3d(m1x,m1y,m1z,ng_m1,m2x,m2y,m2z,ng_m2,lo,hi,inner_prod, &
+  subroutine stag_inner_prod_3d(m1x,m1y,m1z,ng_m1,m2x,m2y,m2z,ng_m2,glo,ghi,inner_prod, &
                                        xlo,xhi,ylo,yhi,zlo,zhi)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m1, ng_m2
+    integer        , intent(in   ) :: glo(:), ghi(:), ng_m1, ng_m2
     integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
-    real(kind=dp_t), intent(in   ) :: m1x(lo(1)-ng_m1:,lo(2)-ng_m1:,lo(3)-ng_m1:)
-    real(kind=dp_t), intent(in   ) :: m1y(lo(1)-ng_m1:,lo(2)-ng_m1:,lo(3)-ng_m1:)
-    real(kind=dp_t), intent(in   ) :: m1z(lo(1)-ng_m1:,lo(2)-ng_m1:,lo(3)-ng_m1:)
-    real(kind=dp_t), intent(in   ) :: m2x(lo(1)-ng_m2:,lo(2)-ng_m2:,lo(3)-ng_m2:)
-    real(kind=dp_t), intent(in   ) :: m2y(lo(1)-ng_m2:,lo(2)-ng_m2:,lo(3)-ng_m2:)
-    real(kind=dp_t), intent(in   ) :: m2z(lo(1)-ng_m2:,lo(2)-ng_m2:,lo(3)-ng_m2:)
+    real(kind=dp_t), intent(in   ) :: m1x(glo(1)-ng_m1:,glo(2)-ng_m1:,glo(3)-ng_m1:)
+    real(kind=dp_t), intent(in   ) :: m1y(glo(1)-ng_m1:,glo(2)-ng_m1:,glo(3)-ng_m1:)
+    real(kind=dp_t), intent(in   ) :: m1z(glo(1)-ng_m1:,glo(2)-ng_m1:,glo(3)-ng_m1:)
+    real(kind=dp_t), intent(in   ) :: m2x(glo(1)-ng_m2:,glo(2)-ng_m2:,glo(3)-ng_m2:)
+    real(kind=dp_t), intent(in   ) :: m2y(glo(1)-ng_m2:,glo(2)-ng_m2:,glo(3)-ng_m2:)
+    real(kind=dp_t), intent(in   ) :: m2z(glo(1)-ng_m2:,glo(2)-ng_m2:,glo(3)-ng_m2:)
     real(kind=dp_t), intent(inout) :: inner_prod(:)
 
     ! local
     integer :: i,j,k
 
     ! x-comp, interior cells
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1)+1,hi(1)
+    do k=xlo(3),xhi(3)
+       do j=xlo(2),xhi(2)
+          do i=xlo(1),xhi(1)
              inner_prod(1) = inner_prod(1)+m1x(i,j,k)*m2x(i,j,k)
           end do
        end do
     end do
 
     ! x-comp, boundary cells
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(lo(1),j,k)*m2x(lo(1),j,k)
-          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(hi(1)+1,j,k)*m2x(hi(1)+1,j,k)
+    if (xlo(1) .eq. glo(1)) then
+    do k=xlo(3),xhi(3)
+       do j=xlo(2),xhi(2)
+          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(glo(1),j,k)*m2x(glo(1),j,k)
        end do
     end do
+    end if
+
+    if (xhi(1) .eq. ghi(1)+1) then
+    do k=xlo(3),xhi(3)
+       do j=xlo(2),xhi(2)
+          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(ghi(1)+1,j,k)*m2x(ghi(1)+1,j,k)
+       end do
+    end do
+    end if
 
     ! y-comp, interior cells
-    do k=lo(3),hi(3)
-       do j=lo(2)+1,hi(2)
-          do i=lo(1),hi(1)
+    do k=ylo(3),yhi(3)
+       do j=ylo(2),yhi(2)
+          do i=ylo(1),yhi(1)
              inner_prod(2) = inner_prod(2) + m1y(i,j,k)*m2y(i,j,k)
           end do
        end do
     end do
 
     ! y-comp, boundary cells
-    do k=lo(3),hi(3)
-       do i=lo(1),hi(1)
-          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,lo(2),k)*m2y(i,lo(2),k)
-          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,hi(2)+1,k)*m2y(i,hi(2)+1,k)
+    if (ylo(2) .eq. glo(2)) then
+    do k=ylo(3),yhi(3)
+       do i=ylo(1),yhi(1)
+          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,glo(2),k)*m2y(i,glo(2),k)
        end do
     end do
+    end if
+
+    if (yhi(2) .eq. ghi(2)+1) then
+    do k=ylo(3),yhi(3)
+       do i=ylo(1),yhi(1)
+          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,ghi(2)+1,k)*m2y(i,ghi(2)+1,k)
+       end do
+    end do
+    end if
 
     ! z-comp, interior cells
-    do k=lo(3)+1,hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=zlo(3),zhi(3)
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
              inner_prod(3) = inner_prod(3) + m1z(i,j,k)*m2z(i,j,k)
           end do
        end do
     end do
 
     ! z-comp, boundary cells
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-          inner_prod(3) = inner_prod(3) + 0.5d0*m1z(i,j,lo(3))*m2z(i,j,lo(3))
-          inner_prod(3) = inner_prod(3) + 0.5d0*m1z(i,j,hi(3)+1)*m2z(i,j,hi(3)+1)
+    if (zlo(3) .eq. glo(3)) then
+    do j=zlo(2),zhi(2)
+       do i=zlo(1),zhi(1)
+          inner_prod(3) = inner_prod(3) + 0.5d0*m1z(i,j,glo(3))*m2z(i,j,glo(3))
        end do
     end do
+    end if
+
+    if (zhi(3) .eq. ghi(3)+1) then
+    do j=zlo(2),zhi(2)
+       do i=zlo(1),zhi(1)
+          inner_prod(3) = inner_prod(3) + 0.5d0*m1z(i,j,ghi(3)+1)*m2z(i,j,ghi(3)+1)
+       end do
+    end do
+    end if
 
   end subroutine stag_inner_prod_3d
 
