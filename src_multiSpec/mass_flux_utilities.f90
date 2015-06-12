@@ -62,7 +62,6 @@ contains
           tilebox = get_growntilebox(mfi,rho(n)%ng)
           tlo = lwb(tilebox)
           thi = upb(tilebox)
-!          print *,tlo,thi
 
 !       do i=1,nfabs(rho(n))
           dp1 => dataptr(rho(n),i)
@@ -1106,6 +1105,10 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for chi
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for rhoWchi
 
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"compute_rhoWchi")
@@ -1117,9 +1120,21 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     ng_4 = rhoWchi(1)%ng
     nlevs = mla%nlevel  ! number of levels 
  
+    !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
+    !$omp private(dp1,dp2,dp3,dp4,lo,hi)
+
     ! loop over all boxes 
     do n=1,nlevs
-       do i=1,nfabs(rho(n))
+       call mfiter_build(mfi, rho(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          tilebox = get_growntilebox(mfi,rho(n)%ng)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
+
+!       do i=1,nfabs(rho(n))
           dp1 => dataptr(rho(n), i)
           dp2 => dataptr(rhotot(n), i)
           dp3 => dataptr(chi(n), i)
@@ -1130,33 +1145,34 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
           select case(dm)
           case (2)
              call compute_rhoWchi_2d(dp1(:,:,1,:),dp2(:,:,1,1),dp3(:,:,1,:),dp4(:,:,1,:), &
-                                     ng_1,ng_2,ng_3,ng_4,lo,hi) 
+                                     ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           case (3)
              call compute_rhoWchi_3d(dp1(:,:,:,:),dp2(:,:,:,1),dp3(:,:,:,:),dp4(:,:,:,:), &
-                                     ng_1,ng_2,ng_3,ng_4,lo,hi) 
+                                     ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           end select
        end do
     end do
- 
+    !$omp end parallel
+
     call destroy(bpt)
 
   end subroutine compute_rhoWchi
   
-  subroutine compute_rhoWchi_2d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,lo,hi)
+  subroutine compute_rhoWchi_2d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
   
-    integer          :: lo(2), hi(2), ng_1,ng_2,ng_3,ng_4
-    real(kind=dp_t)  ::     rho(lo(1)-ng_1:,lo(2)-ng_1:,:) ! density; last dimension for species
-    real(kind=dp_t)  ::  rhotot(lo(1)-ng_2:,lo(2)-ng_2:)   ! total density in each cell
-    real(kind=dp_t)  ::     chi(lo(1)-ng_3:,lo(2)-ng_3:,:) ! last dimension for nspecies^2
-    real(kind=dp_t)  :: rhoWchi(lo(1)-ng_4:,lo(2)-ng_4:,:) ! last dimension for nspecies^2
+    integer          :: glo(2), ghi(2), ng_1,ng_2,ng_3,ng_4,tlo(2),thi(2)
+    real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::  rhotot(glo(1)-ng_2:,glo(2)-ng_2:)   ! total density in each cell
+    real(kind=dp_t)  ::     chi(glo(1)-ng_3:,glo(2)-ng_3:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  :: rhoWchi(glo(1)-ng_4:,glo(2)-ng_4:,:) ! last dimension for nspecies^2
 
     ! local variables
     integer          :: i,j,row,column
     real(kind=dp_t), dimension(nspecies,nspecies) :: rhoWchiloc 
   
     ! for specific box, now start loops over alloted cells 
-    do j=lo(2)-ng_4,hi(2)+ng_4
-       do i=lo(1)-ng_4,hi(1)+ng_4
+    do j=tlo(2),thi(2)
+       do i=tlo(1),thi(1)
         
           call compute_rhoWchi_local(rho(i,j,:),rhotot(i,j),chi(i,j,:),rhoWchi(i,j,:))
 
@@ -1177,21 +1193,21 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
 
   end subroutine compute_rhoWchi_2d
 
-  subroutine compute_rhoWchi_3d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,lo,hi)
+  subroutine compute_rhoWchi_3d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
 
-    integer          :: lo(3), hi(3), ng_1,ng_2,ng_3,ng_4
-    real(kind=dp_t)  ::     rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:) ! density; last dimension for species
-    real(kind=dp_t)  ::  rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)   ! total density in each cell 
-    real(kind=dp_t)  ::     chi(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:) ! last dimension for nspecies^2
-    real(kind=dp_t)  :: rhoWchi(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:) ! last dimension for nspecies^2
+    integer          :: glo(3), ghi(3), ng_1,ng_2,ng_3,ng_4,tlo(3),thi(3)
+    real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:) ! density; last dimension for species
+    real(kind=dp_t)  ::  rhotot(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)   ! total density in each cell 
+    real(kind=dp_t)  ::     chi(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  :: rhoWchi(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:,:) ! last dimension for nspecies^2
     
     ! local variables
     integer          :: i,j,k
 
     ! for specific box, now start loops over alloted cells 
-    do k=lo(3)-ng_4,hi(3)+ng_4
-       do j=lo(2)-ng_4,hi(2)+ng_4
-          do i=lo(1)-ng_4,hi(1)+ng_4
+    do k=tlo(3),thi(3)
+       do j=tlo(2),thi(2)
+          do i=tlo(1),thi(1)
        
              call compute_rhoWchi_local(rho(i,j,k,:),rhotot(i,j,k),chi(i,j,k,:),rhoWchi(i,j,k,:))
               
@@ -1212,10 +1228,6 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     integer                              :: row,column
     real(kind=dp_t), dimension(nspecies) :: W !,chiw 
 
-    type(bl_prof_timer), save :: bpt
-
-    call build(bpt,"compute_rhoWchi_local")
-
     ! compute massfraction W_i = rho_i/rho; 
     do row=1, nspecies  
        W(row) = rho(row)/rhotot
@@ -1227,8 +1239,6 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
           rhoWchi(row,column) = -rho(row)*chi(row,column)  
        end do
     end do
-    
-    call destroy(bpt)
 
   end subroutine compute_rhoWchi_local
 
