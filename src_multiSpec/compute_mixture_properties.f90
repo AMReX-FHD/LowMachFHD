@@ -42,6 +42,10 @@ contains
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Hessian
     real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Temp
 
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"compute_mixture_properties")
@@ -56,9 +60,19 @@ contains
     ng_5 = Hessian(1)%ng
     ng_6 = Temp(1)%ng
  
-    ! loop over all boxes 
-    do n=1,nlevs
-       do i=1,nfabs(rho(n))
+    !$omp parallel private(mfi,n,i,tilebox,tlo,thi) &
+    !$omp private(dp1,dp2,dp3,dp4,dp5,dp6,lo,hi)
+    do n = 1,nlevs
+       call mfiter_build(mfi, rho(n), tiling=.true.)
+
+     do while (more_tile(mfi))
+       i = get_fab_index(mfi)
+
+       tilebox = get_growntilebox(mfi)
+       tlo = lwb(tilebox)
+       thi = upb(tilebox)
+
+!       do i=1,nfabs(rho(n))
           dp1 => dataptr(rho(n),i)
           dp2 => dataptr(rhotot(n),i)
           dp3 => dataptr(D_bar(n),i)
@@ -71,29 +85,30 @@ contains
           case (2)
              call mixture_properties_mass_2d(dp1(:,:,1,:),dp2(:,:,1,1),dp3(:,:,1,:), &
                                              dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,1), &
-                                             ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi) 
+                                             ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi,tlo,thi) 
           case (3)
              call mixture_properties_mass_3d(dp1(:,:,:,:),dp2(:,:,:,1),dp3(:,:,:,:), &
                                              dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,1), &
-                                             ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi) 
+                                             ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi,tlo,thi) 
           end select
        end do
     end do
-  
+    !$omp end parallel
+
     call destroy(bpt)
 
   end subroutine compute_mixture_properties
   
   subroutine mixture_properties_mass_2d(rho,rhotot,D_bar,D_therm,Hessian,Temp, &
-                                        ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi)
+                                        ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,glo,ghi,tlo,thi)
 
-    integer          :: lo(2), hi(2), ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
-    real(kind=dp_t)  ::     rho(lo(1)-ng_1:,lo(2)-ng_1:,:)     ! density; last dimension for species
-    real(kind=dp_t)  ::  rhotot(lo(1)-ng_2:,lo(2)-ng_2:)       ! total density in each cell 
-    real(kind=dp_t)  ::   D_bar(lo(1)-ng_3:,lo(2)-ng_3:,:)     ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_therm(lo(1)-ng_4:,lo(2)-ng_4:,:)     ! last dimension for nspecies
-    real(kind=dp_t)  :: Hessian(lo(1)-ng_5:,lo(2)-ng_5:,:)     ! last dimension for nspecies^2
-    real(kind=dp_t)  ::    Temp(lo(1)-ng_6:,lo(2)-ng_6:)       ! Temperature 
+    integer          :: glo(2), ghi(2), ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,tlo(2),thi(2)
+    real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,:)     ! density; last dimension for species
+    real(kind=dp_t)  ::  rhotot(glo(1)-ng_2:,glo(2)-ng_2:)       ! total density in each cell 
+    real(kind=dp_t)  ::   D_bar(glo(1)-ng_3:,glo(2)-ng_3:,:)     ! last dimension for nspecies^2
+    real(kind=dp_t)  :: D_therm(glo(1)-ng_4:,glo(2)-ng_4:,:)     ! last dimension for nspecies
+    real(kind=dp_t)  :: Hessian(glo(1)-ng_5:,glo(2)-ng_5:,:)     ! last dimension for nspecies^2
+    real(kind=dp_t)  ::    Temp(glo(1)-ng_6:,glo(2)-ng_6:)       ! Temperature 
 
     ! local varialbes
     integer          :: i,j
@@ -103,8 +118,8 @@ contains
     end if
 
     ! for specific box, now start loops over alloted cells 
-    do j=lo(2)-ng_3,hi(2)+ng_3
-       do i=lo(1)-ng_3,hi(1)+ng_3
+    do j=tlo(2),thi(2)
+       do i=tlo(1),thi(1)
        
           call mixture_properties_mass_local(rho(i,j,:),rhotot(i,j),D_bar(i,j,:),D_therm(i,j,:),&
                                              Hessian(i,j,:),Temp(i,j))
@@ -114,15 +129,16 @@ contains
   end subroutine mixture_properties_mass_2d
 
   subroutine mixture_properties_mass_3d(rho,rhotot,D_bar,D_therm,Hessian,Temp, &
-                                        ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi)
+                                        ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,glo,ghi,tlo,thi)
  
-    integer          :: lo(3), hi(3), ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
-    real(kind=dp_t)  ::     rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:)   ! density; last dimension for species
-    real(kind=dp_t)  ::  rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)     ! total density in each cell 
-    real(kind=dp_t)  ::   D_bar(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:)   ! last dimension for nspecies^2
-    real(kind=dp_t)  :: D_therm(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:)   ! last dimension for nspecies
-    real(kind=dp_t)  :: Hessian(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:)   ! last dimension for nspecies^2
-    real(kind=dp_t)  ::    Temp(lo(1)-ng_6:,lo(2)-ng_6:,lo(3)-ng_6:)     ! Temperature 
+    integer          :: glo(3), ghi(3), ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
+    integer          :: tlo(3), thi(3)
+    real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:)   ! density; last dimension for species
+    real(kind=dp_t)  ::  rhotot(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)     ! total density in each cell 
+    real(kind=dp_t)  ::   D_bar(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:)   ! last dimension for nspecies^2
+    real(kind=dp_t)  :: D_therm(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:,:)   ! last dimension for nspecies
+    real(kind=dp_t)  :: Hessian(glo(1)-ng_5:,glo(2)-ng_5:,glo(3)-ng_5:,:)   ! last dimension for nspecies^2
+    real(kind=dp_t)  ::    Temp(glo(1)-ng_6:,glo(2)-ng_6:,glo(3)-ng_6:)     ! Temperature 
  
     ! local varialbes
     integer          :: i,j,k
@@ -132,9 +148,9 @@ contains
     end if
 
     ! for specific box, now start loops over alloted cells 
-    do k=lo(3)-ng_3,hi(3)+ng_3
-       do j=lo(2)-ng_3,hi(2)+ng_3
-          do i=lo(1)-ng_3,hi(1)+ng_3
+    do k=tlo(3),thi(3)
+       do j=tlo(2),thi(2)
+          do i=tlo(1),thi(1)
 
              call mixture_properties_mass_local(rho(i,j,k,:),rhotot(i,j,k), &
                                                 D_bar(i,j,k,:),D_therm(i,j,k,:),&
@@ -163,10 +179,6 @@ contains
     real(kind=dp_t), dimension(nspecies*(nspecies-1)/2) :: D_bar_local, H_offdiag_local ! off-diagonal components of symmetric matrices
     real(kind=dp_t), dimension(nspecies)    :: H_diag_local ! Diagonal component
     
-    type(bl_prof_timer), save :: bpt
-
-    call build(bpt, "mixture_properties_mass_local")
-
     massfrac = rho/rhotot;
     
     select case (abs(prob_type))
@@ -217,7 +229,6 @@ contains
     
     end do
     
-    call destroy(bpt)
 
   end subroutine mixture_properties_mass_local
 
