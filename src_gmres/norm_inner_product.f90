@@ -101,9 +101,9 @@ contains
     end do
     !$omp end parallel
 
-    do comp=1,dm
-       call parallel_reduce(prod_val(comp), inner_prod_proc(comp), MPI_SUM)
-    end do
+!    do comp=1,dm
+       call parallel_reduce(prod_val, inner_prod_proc, MPI_SUM)
+!    end do
 
     call multifab_destroy(temp_cc)
 

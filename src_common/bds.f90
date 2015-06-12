@@ -66,6 +66,8 @@ contains
     integer :: zlo(mla%dim), zhi(mla%dim)
     type(box) :: tilebox
     integer :: tlo(mla%dim), thi(mla%dim)
+    type(box) :: growntilebox
+    integer :: gtlo(mla%dim), gthi(mla%dim)
 
     type(bl_prof_timer),save :: bpt
 
@@ -122,23 +124,31 @@ contains
     ng_e = sedge(1,1)%ng
     ng_n = s_nd(1)%ng
 
-    do n=1,nlevs
-       do i = 1, nfabs(s_update(n))
-          sop    => dataptr(s(n) , i)
-          sup    => dataptr(s_update(n), i)
-          fp     => dataptr(force(n), i)
-          spx => dataptr(s_fc(n,1), i)
-          spy => dataptr(s_fc(n,2), i)
-          sxp => dataptr(sedge(n,1), i)
-          syp => dataptr(sedge(n,2), i)
-          snp    => dataptr(s_nd(n) , i)
-          slopep => dataptr(slope(n), i)
-          uadvp  => dataptr(umac(n,1), i)
-          vadvp  => dataptr(umac(n,2), i)
-          lo =  lwb(get_box(s_update(n), i))
-          hi =  upb(get_box(s_update(n), i))
-          do comp=scomp,scomp+ncomp-1
-             bccomp = bc_comp+comp-scomp
+    do comp=scomp,scomp+ncomp-1
+       bccomp = bc_comp+comp-scomp
+
+       !$omp parallel private(n,i,mfi,tilebox,tlo,thi,growntilebox,gtlo,gthi) &
+       !$omp private(sop,snp,slopep,lo,hi)
+
+       do n=1,nlevs
+          call mfiter_build(mfi, s(n), tiling=.true.)
+
+          do while (more_tile(mfi))
+             i = get_fab_index(mfi)
+
+             tilebox = get_tilebox(mfi)
+             tlo = lwb(tilebox)
+             thi = upb(tilebox)
+          
+             growntilebox = get_growntilebox(mfi,1)
+             gtlo = lwb(growntilebox)
+             gthi = upb(growntilebox)
+
+             sop    => dataptr(s(n) , i)
+             snp    => dataptr(s_nd(n) , i)
+             slopep => dataptr(slope(n), i)
+             lo =  lwb(get_box(s_update(n), i))
+             hi =  upb(get_box(s_update(n), i))
              select case (dm)
              case (2)
                 ! only advancing the tracer
@@ -147,8 +157,58 @@ contains
                                  slopep(:,:,1,:), ng_l, &
                                  snp(:,:,1,comp), ng_n, &
                                  dx(n,:), &
-                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp)) 
+                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp), &
+                                 tlo,thi,gtlo,gthi) 
+             case (3)
+                ! only advancing the tracer
+                call bdsslope_3d(lo, hi, &
+                                 sop(:,:,:,comp), ng_s, &
+                                 slopep(:,:,:,:), ng_l, &
+                                 snp(:,:,:,comp), ng_n, &
+                                 dx(n,:), &
+                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
 
+             end select
+          end do ! end loop over fabs
+       end do ! end loop over levels
+       !$omp end parallel
+
+
+       !$omp parallel private(n,i,mfi,sop,sup,fp,spx,spy,spz,sxp,syp,szp,slopep) &
+       !$omp private(uadvp,vadvp,wadvp,lo,hi) &
+       !$omp private(xnodalbox,xlo,xhi,ynodalbox,ylo,yhi,znodalbox,zlo,zhi)
+
+       do n=1,nlevs
+          call mfiter_build(mfi, s(n), tiling=.true.)
+
+
+          do while (more_tile(mfi))
+             i = get_fab_index(mfi)
+
+             xnodalbox = get_nodaltilebox(mfi,1)
+             xlo = lwb(xnodalbox)
+             xhi = upb(xnodalbox)
+             ynodalbox = get_nodaltilebox(mfi,2)
+             ylo = lwb(ynodalbox)
+             yhi = upb(ynodalbox)
+             znodalbox = get_nodaltilebox(mfi,3)
+             zlo = lwb(znodalbox)
+             zhi = upb(znodalbox)
+
+             sop    => dataptr(s(n) , i)
+             sup    => dataptr(s_update(n), i)
+             fp     => dataptr(force(n), i)
+             spx => dataptr(s_fc(n,1), i)
+             spy => dataptr(s_fc(n,2), i)
+             sxp => dataptr(sedge(n,1), i)
+             syp => dataptr(sedge(n,2), i)
+             slopep => dataptr(slope(n), i)
+             uadvp  => dataptr(umac(n,1), i)
+             vadvp  => dataptr(umac(n,2), i)
+             lo =  lwb(get_box(s_update(n), i))
+             hi =  upb(get_box(s_update(n), i))
+             select case (dm)
+             case (2)
                 call bdsconc_2d(lo, hi, &
                                 sop(:,:,1,comp), ng_s, sup(:,:,1,comp), ng_u, &
                                 fp(:,:,1,comp), ng_o, &
@@ -158,19 +218,12 @@ contains
                                 spx(:,:,1,comp), spy(:,:,1,comp), ng_f, &
                                 sxp(:,:,1,comp-scomp+1), &
                                 syp(:,:,1,comp-scomp+1), ng_e, &
-                                the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
+                                the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp), &
+                                xlo,xhi,ylo,yhi)
              case (3)
                 wadvp  => dataptr(umac(n,3), i)
                 spz => dataptr(s_fc(n,3), i)
                 szp => dataptr(sedge(n,3), i)
-                ! only advancing the tracer
-                call bdsslope_3d(lo, hi, &
-                                 sop(:,:,:,comp), ng_s, &
-                                 slopep(:,:,:,:), ng_l, &
-                                 snp(:,:,:,comp), ng_n, &
-                                 dx(n,:), &
-                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
-
                 call bdsconc_3d(lo, hi, &
                                 sop(:,:,:,comp), ng_s, sup(:,:,:,comp), ng_u, &
                                 fp(:,:,:,comp), ng_o, &
@@ -183,9 +236,12 @@ contains
                                 szp(:,:,:,comp-scomp+1), ng_e, &
                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
              end select
-          end do ! end loop over components
-       end do ! end loop over fabs
-    end do ! end loop over levels
+          end do ! end loop over fabs
+       end do ! end loop over levels
+       !$omp end parallel
+
+    end do ! end loop over components
+
 
     ! do L2 projection and increment s_update
     !$omp parallel private(mfi,n,i,xnodalbox,xlo,xhi) &
@@ -195,7 +251,7 @@ contains
        call mfiter_build(mfi, s_update(n), tiling=.true.)
        do while (more_tile(mfi))
           i = get_fab_index(mfi)
-
+          
           xnodalbox = get_nodaltilebox(mfi,1)
           xlo = lwb(xnodalbox)
           xhi = upb(xnodalbox)
@@ -280,12 +336,13 @@ contains
 
   end subroutine bds
 
-  subroutine bdsslope_2d(lo,hi,s,ng_s,slope,ng_l,s_nd,ng_n,dx,bc)
+  subroutine bdsslope_2d(glo,ghi,s,ng_s,slope,ng_l,s_nd,ng_n,dx,bc,tlo,thi,gtlo,gthi)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_l,ng_n
-    real(kind=dp_t), intent(in   ) ::     s(lo(1)-ng_s:,lo(2)-ng_s:)
-    real(kind=dp_t), intent(inout) :: slope(lo(1)-ng_l:,lo(2)-ng_l:,:)
-    real(kind=dp_t), intent(in   ) ::  s_nd(lo(1)-ng_n:,lo(2)-ng_n:)
+    integer        , intent(in   ) :: glo(:),ghi(:),ng_s,ng_l,ng_n
+    integer        , intent(in   ) :: tlo(:),thi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(in   ) ::     s(glo(1)-ng_s:,glo(2)-ng_s:)
+    real(kind=dp_t), intent(inout) :: slope(glo(1)-ng_l:,glo(2)-ng_l:,:)
+    real(kind=dp_t), intent(in   ) ::  s_nd(glo(1)-ng_n:,glo(2)-ng_n:)
     real(kind=dp_t), intent(in   ) :: dx(:)
     integer        , intent(in   ) :: bc(:,:)
 
@@ -302,7 +359,7 @@ contains
     integer         :: i,j,ll,mm
 
     ! nodal with one ghost cell
-    allocate(sint(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2))
+    allocate(sint(tlo(1)-1:thi(1)+2,tlo(2)-1:thi(2)+2))
 
     hx = dx(1)
     hy = dx(2)
@@ -311,8 +368,8 @@ contains
 
     ! bicubic interpolation to corner points
     ! (i,j,k) refers to lower corner of cell
-    do j = lo(2)-1,hi(2)+2
-       do i = lo(1)-1,hi(1)+2
+    do j = tlo(2)-1,thi(2)+2
+       do i = tlo(1)-1,thi(1)+2
           sint(i,j) = (s(i-2,j-2) + s(i-2,j+1) + s(i+1,j-2) + s(i+1,j+1) &
                - 7.d0*(s(i-2,j-1) + s(i-2,j  ) + s(i-1,j-2) + s(i  ,j-2) + & 
                        s(i-1,j+1) + s(i  ,j+1) + s(i+1,j-1) + s(i+1,j  )) &
@@ -321,32 +378,40 @@ contains
     enddo
 
     ! for reservoirs, overwrite boundary nodes and ghost nodes to rho at boundary nodes
+    if (tlo(1) .eq. glo(1)) then
     if (bc(1,1) .eq. EXT_DIR) then
-       do j=lo(2)-ng_n,hi(2)+1+ng_n
-          sint(lo(1)-1:lo(1),j) = s_nd(lo(1),j)
+       do j=tlo(2)-1,thi(2)+2
+          sint(tlo(1)-1:tlo(1),j) = s_nd(tlo(1),j)
        end do
     end if
+    end if
 
+    if (thi(1) .eq. ghi(1)) then
     if (bc(1,2) .eq. EXT_DIR) then
-       do j=lo(2)-ng_n,hi(2)+1+ng_n
-          sint(hi(1)+1:hi(1)+2,j) = s_nd(hi(1)+1,j)
+       do j=tlo(2)-1,thi(2)+2
+          sint(thi(1)+1:thi(1)+2,j) = s_nd(thi(1)+1,j)
        end do
     end if
+    end if
 
+    if (tlo(2) .eq. glo(2)) then
     if (bc(2,1) .eq. EXT_DIR) then
-       do i=lo(1)-ng_n,hi(1)+1+ng_n
-          sint(i,lo(2)-1:lo(2)) = s_nd(i,lo(2))
+       do i=tlo(1)-1,thi(1)+2
+          sint(i,tlo(2)-1:tlo(2)) = s_nd(i,tlo(2))
        end do
     end if
+    end if
 
+    if (thi(2) .eq. ghi(2)) then
     if (bc(2,2) .eq. EXT_DIR) then
-       do i=lo(1)-ng_n,hi(1)+1+ng_n
-          sint(i,hi(2)+1:hi(2)+2) = s_nd(i,hi(2)+1)
+       do i=tlo(1)-1,thi(1)+2
+          sint(i,thi(2)+1:thi(2)+2) = s_nd(i,thi(2)+1)
        end do
     end if
+    end if
 
-    do j = lo(2)-1,hi(2)+1
-       do i = lo(1)-1,hi(1)+1 
+    do j = gtlo(2),gthi(2)
+       do i = gtlo(1),gthi(1)
 
           ! compute initial estimates of slopes from unlimited corner points
 
@@ -839,21 +904,22 @@ contains
 
   end subroutine bdsslope_3d
 
-  subroutine bdsconc_2d(lo,hi,s,ng_s,s_update,ng_u,force,ng_o, &
+  subroutine bdsconc_2d(glo,ghi,s,ng_s,s_update,ng_u,force,ng_o, &
                         slope,ng_l,uadv,vadv,ng_v,dx,dt,sx,sy,ng_f, &
-                        sedgex,sedgey,ng_e,bc)
+                        sedgex,sedgey,ng_e,bc,xlo,xhi,ylo,yhi)
 
-    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_u,ng_l,ng_v,ng_o,ng_f,ng_e
-    real(kind=dp_t),intent(in   ) ::        s(lo(1)-ng_s:,lo(2)-ng_s:)
-    real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:)
-    real(kind=dp_t),intent(in   ) ::    force(lo(1)-ng_o:,lo(2)-ng_o:)
-    real(kind=dp_t),intent(in   ) ::    slope(lo(1)-ng_l:,lo(2)-ng_l:,:)
-    real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:)
-    real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:)
-    real(kind=dp_t),intent(in   ) ::       sx(lo(1)-ng_f:,lo(2)-ng_f:)
-    real(kind=dp_t),intent(in   ) ::       sy(lo(1)-ng_f:,lo(2)-ng_f:)
-    real(kind=dp_t),intent(inout) ::   sedgex(lo(1)-ng_e:,lo(2)-ng_e:)
-    real(kind=dp_t),intent(inout) ::   sedgey(lo(1)-ng_e:,lo(2)-ng_e:)
+    integer        ,intent(in   ) :: glo(:),ghi(:),ng_s,ng_u,ng_l,ng_v,ng_o,ng_f,ng_e
+    integer        ,intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:)
+    real(kind=dp_t),intent(in   ) ::        s(glo(1)-ng_s:,glo(2)-ng_s:)
+    real(kind=dp_t),intent(inout) :: s_update(glo(1)-ng_u:,glo(2)-ng_u:)
+    real(kind=dp_t),intent(in   ) ::    force(glo(1)-ng_o:,glo(2)-ng_o:)
+    real(kind=dp_t),intent(in   ) ::    slope(glo(1)-ng_l:,glo(2)-ng_l:,:)
+    real(kind=dp_t),intent(in   ) ::     uadv(glo(1)-ng_v:,glo(2)-ng_v:)
+    real(kind=dp_t),intent(in   ) ::     vadv(glo(1)-ng_v:,glo(2)-ng_v:)
+    real(kind=dp_t),intent(in   ) ::       sx(glo(1)-ng_f:,glo(2)-ng_f:)
+    real(kind=dp_t),intent(in   ) ::       sy(glo(1)-ng_f:,glo(2)-ng_f:)
+    real(kind=dp_t),intent(inout) ::   sedgex(glo(1)-ng_e:,glo(2)-ng_e:)
+    real(kind=dp_t),intent(inout) ::   sedgey(glo(1)-ng_e:,glo(2)-ng_e:)
     real(kind=dp_t),intent(in   ) :: dx(:),dt
     integer        ,intent(in   ) :: bc(:,:)
 
@@ -868,8 +934,8 @@ contains
     hx = dx(1)
     hy = dx(2)
 
-    do j = lo(2),hi(2) 
-       do i = lo(1)-1,hi(1) 
+    do j = xlo(2),xhi(2) 
+       do i = xlo(1)-1,xhi(1)-1
 
           ! ******************************* 
           ! calculate Gamma plus for flux F
@@ -975,16 +1041,20 @@ contains
        enddo
     enddo
 
+    if (xlo(1) .eq. glo(1)) then
     if (bc(1,1) .eq. EXT_DIR) then
-       sedgex(lo(1),lo(2):hi(2)) = sx(lo(1),lo(2):hi(2))
+       sedgex(xlo(1),xlo(2):xhi(2)) = sx(xlo(1),xlo(2):xhi(2))
+    end if
     end if
 
+    if (xhi(1) .eq. ghi(1)+1) then
     if (bc(1,2) .eq. EXT_DIR) then
-       sedgex(hi(1)+1,lo(2):hi(2)) = sx(hi(1)+1,lo(2):hi(2))
+       sedgex(xhi(1),xlo(2):xhi(2)) = sx(xhi(1),xlo(2):xhi(2))
+    end if
     end if
 
-    do j = lo(2)-1,hi(2) 
-       do i = lo(1),hi(1)
+    do j = ylo(2)-1,yhi(2)-1
+       do i = ylo(1),yhi(1)
 
           ! ********************************** 
           ! calculate Gamma plus for flux G
@@ -1089,12 +1159,16 @@ contains
        enddo
     enddo
 
+    if (ylo(2) .eq. glo(2)) then
     if (bc(2,1) .eq. EXT_DIR) then
-       sedgey(lo(1):hi(1),lo(2)) = sy(lo(1):hi(1),lo(2))
+       sedgey(ylo(1):yhi(1),ylo(2)) = sy(ylo(1):yhi(1),ylo(2))
+    end if
     end if
 
+    if (yhi(2) .eq. ghi(2)+1) then
     if (bc(2,2) .eq. EXT_DIR) then
-       sedgey(lo(1):hi(1),hi(2)+1) = sy(lo(1):hi(1),hi(2)+1)
+       sedgey(ylo(1):yhi(1),yhi(2)) = sy(ylo(1):yhi(1),yhi(2))
+    end if
     end if
 
   end subroutine bdsconc_2d
@@ -1250,7 +1324,7 @@ contains
 
   subroutine bdsconc_3d(lo,hi,s,ng_s,s_update,ng_u,force,ng_o, &
                         slope,ng_l,uadv,vadv,wadv,ng_v,dx,dt,sx,sy,sz,ng_f, &
-                        sedgex,sedgey,sedgez,ng_e,bc)
+                        sedgex,sedgey,sedgez,ng_e,bc) !tlo thi xlo ...
 
     integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_l,ng_v,ng_u,ng_o,ng_f,ng_e
     real(kind=dp_t),intent(in   ) ::        s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
@@ -1282,7 +1356,7 @@ contains
     real(kind=dp_t) :: u,v,w,uu,vv,ww,gamma,gamma2
     real(kind=dp_t) :: dt2,dt3,dt4,half,sixth
 
-    allocate(ux(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1))
+    allocate(ux(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)) !tlo,thi keep -1 and +1
     allocate(vy(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1))
     allocate(wz(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1))
 
@@ -1302,7 +1376,7 @@ contains
 
     ! compute cell-centered ux, vy, and wz
     !$omp do
-    do k=lo(3)-1,hi(3)+1
+    do k=lo(3)-1,hi(3)+1 !keep +1, -1, tlo
        do j=lo(2)-1,hi(2)+1
           do i=lo(1)-1,hi(1)+1
              ux(i,j,k) = (uadv(i+1,j,k) - uadv(i,j,k)) / hx
@@ -1315,9 +1389,9 @@ contains
 
     ! compute sedgex on x-faces
     !$omp do
-    do k=lo(3),hi(3)
+    do k=lo(3),hi(3) !xlo
        do j=lo(2),hi(2)
-          do i=lo(1),hi(1)+1
+          do i=lo(1),hi(1)+1 !elim +1
 
              !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
              ! compute sedgex without transverse corrections
