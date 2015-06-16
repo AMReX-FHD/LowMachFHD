@@ -166,7 +166,8 @@ contains
                                  slopep(:,:,:,:), ng_l, &
                                  snp(:,:,:,comp), ng_n, &
                                  dx(n,:), &
-                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
+                                 the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp), &
+                                 tlo,thi,gtlo,gthi)
 
              end select
           end do ! end loop over fabs
@@ -175,7 +176,7 @@ contains
 
 
        !$omp parallel private(n,i,mfi,sop,sup,fp,spx,spy,spz,sxp,syp,szp,slopep) &
-       !$omp private(uadvp,vadvp,wadvp,lo,hi) &
+       !$omp private(uadvp,vadvp,wadvp,lo,hi,tilebox,tlo,thi) &
        !$omp private(xnodalbox,xlo,xhi,ynodalbox,ylo,yhi,znodalbox,zlo,zhi)
 
        do n=1,nlevs
@@ -184,7 +185,10 @@ contains
 
           do while (more_tile(mfi))
              i = get_fab_index(mfi)
-
+             
+             tilebox = get_tilebox(mfi)
+             tlo = lwb(tilebox)
+             thi = upb(tilebox)
              xnodalbox = get_nodaltilebox(mfi,1)
              xlo = lwb(xnodalbox)
              xhi = upb(xnodalbox)
@@ -207,6 +211,8 @@ contains
              vadvp  => dataptr(umac(n,2), i)
              lo =  lwb(get_box(s_update(n), i))
              hi =  upb(get_box(s_update(n), i))
+
+
              select case (dm)
              case (2)
                 call bdsconc_2d(lo, hi, &
@@ -234,7 +240,8 @@ contains
                                 sxp(:,:,:,comp-scomp+1), &
                                 syp(:,:,:,comp-scomp+1), &
                                 szp(:,:,:,comp-scomp+1), ng_e, &
-                                the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp))
+                                the_bc_tower%bc_tower_array(n)%adv_bc_level_array(i,:,:,bccomp), &
+                                tlo,thi,xlo,xhi,ylo,yhi,zlo,zhi)
              end select
           end do ! end loop over fabs
        end do ! end loop over levels
@@ -530,12 +537,13 @@ contains
 
   end subroutine bdsslope_2d
 
-  subroutine bdsslope_3d(lo,hi,s,ng_s,slope,ng_l,s_nd,ng_n,dx,bc)
+  subroutine bdsslope_3d(glo,ghi,s,ng_s,slope,ng_l,s_nd,ng_n,dx,bc,tlo,thi,gtlo,gthi)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_s,ng_l,ng_n
-    real(kind=dp_t), intent(in   ) ::     s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t), intent(inout) :: slope(lo(1)-ng_l:,lo(2)-ng_l:,lo(3)-ng_l:,:)
-    real(kind=dp_t), intent(in   ) ::  s_nd(lo(1)-ng_n:,lo(2)-ng_n:,lo(3)-ng_n:)
+    integer        , intent(in   ) :: glo(:),ghi(:),ng_s,ng_l,ng_n
+    integer        , intent(in   ) :: tlo(:),thi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(in   ) ::     s(glo(1)-ng_s:,glo(2)-ng_s:,glo(3)-ng_s:)
+    real(kind=dp_t), intent(inout) :: slope(glo(1)-ng_l:,glo(2)-ng_l:,glo(3)-ng_l:,:)
+    real(kind=dp_t), intent(in   ) ::  s_nd(glo(1)-ng_n:,glo(2)-ng_n:,glo(3)-ng_n:)
     real(kind=dp_t), intent(in   ) :: dx(:)
     integer        , intent(in   ) :: bc(:,:)
 
@@ -553,7 +561,7 @@ contains
     integer         :: i,j,k,ll,mm
 
     ! nodal with one ghost cell
-    allocate(sint(lo(1)-1:hi(1)+2,lo(2)-1:hi(2)+2,lo(3)-1:hi(3)+2))
+    allocate(sint(tlo(1)-1:thi(1)+2,tlo(2)-1:thi(2)+2,tlo(3)-1:thi(3)+2))
 
     hx = dx(1)
     hy = dx(2)
@@ -568,13 +576,9 @@ contains
 
     ! tricubic interpolation to corner points
     ! (i,j,k) refers to lower corner of cell
-    !$omp parallel private(k,j,i,sc,smin,smax,mm,ll) &
-    !$omp private(sumloc,sumdif,sgndif,diff,kdp,div,redfac,redmax)
-
-    !$omp do
-    do k = lo(3)-1,hi(3)+2
-       do j = lo(2)-1,hi(2)+2
-          do i = lo(1)-1,hi(1)+2
+    do k = tlo(3)-1,thi(3)+2
+       do j = tlo(2)-1,thi(2)+2
+          do i = tlo(1)-1,thi(1)+2
              sint(i,j,k) = c1*( s(i  ,j  ,k  ) + s(i-1,j  ,k  ) + s(i  ,j-1,k  ) &
                                +s(i  ,j  ,k-1) + s(i-1,j-1,k  ) + s(i-1,j  ,k-1) &
                                +s(i  ,j-1,k-1) + s(i-1,j-1,k-1) ) &
@@ -600,73 +604,71 @@ contains
           enddo
        enddo
     enddo
-    !$omp end do
 
     ! for reservoirs, overwrite boundary nodes and ghost nodes to rho at boundary nodes
+    if (tlo(1) .eq. glo(1)) then
     if (bc(1,1) .eq. EXT_DIR) then
-       !$omp do
-       do k=lo(3)-ng_n,hi(3)+1+ng_n
-       do j=lo(2)-ng_n,hi(2)+1+ng_n
-          sint(lo(1)-1:lo(1),j,k) = s_nd(lo(1),j,k)
+       do k=tlo(3)-1,thi(3)+2
+       do j=tlo(2)-1,thi(2)+2
+          sint(tlo(1)-1:tlo(1),j,k) = s_nd(tlo(1),j,k)
        end do
        end do
-       !$omp end do
+    end if
     end if
 
+    if (thi(1) .eq. ghi(1)) then    
     if (bc(1,2) .eq. EXT_DIR) then
-       !$omp do
-       do k=lo(3)-ng_n,hi(3)+1+ng_n
-       do j=lo(2)-ng_n,hi(2)+1+ng_n
-          sint(hi(1)+1:hi(1)+2,j,k) = s_nd(hi(1)+1,j,k)
+       do k=tlo(3)-1,thi(3)+2
+       do j=tlo(2)-1,thi(2)+2
+          sint(thi(1)+1:thi(1)+2,j,k) = s_nd(thi(1)+1,j,k)
        end do
        end do
-       !$omp end do
+    end if
     end if
 
+    if (tlo(2) .eq. glo(2)) then
     if (bc(2,1) .eq. EXT_DIR) then
-       !$omp do
-       do k=lo(3)-ng_n,hi(3)+1+ng_n
-       do i=lo(1)-ng_n,hi(1)+1+ng_n
-          sint(i,lo(2)-1:lo(2),k) = s_nd(i,lo(2),k)
+       do k=tlo(3)-1,thi(3)+2
+       do i=tlo(1)-1,thi(1)+2
+          sint(i,tlo(2)-1:tlo(2),k) = s_nd(i,tlo(2),k)
        end do
        end do
-       !$omp end do
+    end if
     end if
 
+    if (thi(2) .eq. ghi(2)) then
     if (bc(2,2) .eq. EXT_DIR) then
-       !$omp do
-       do k=lo(3)-ng_n,hi(3)+1+ng_n
-       do i=lo(1)-ng_n,hi(1)+1+ng_n
-          sint(i,hi(2)+1:hi(2)+2,k) = s_nd(i,hi(2)+1,k)
+       do k=tlo(3)-1,thi(3)+2
+       do i=tlo(1)-1,thi(1)+2
+          sint(i,thi(2)+1:thi(2)+2,k) = s_nd(i,thi(2)+1,k)
        end do
        end do
-       !$omp end  do
+    end if
     end if
 
+    if (tlo(3) .eq. glo(3)) then
     if (bc(3,1) .eq. EXT_DIR) then
-       !$omp do
-       do j=lo(2)-ng_n,hi(2)+1+ng_n
-       do i=lo(1)-ng_n,hi(1)+1+ng_n
-          sint(i,j,lo(3)-1:lo(3)) = s_nd(i,j,lo(3))
+       do j=tlo(2)-1,thi(2)+2
+       do i=tlo(1)-1,thi(1)+2
+          sint(i,j,tlo(3)-1:tlo(3)) = s_nd(i,j,tlo(3))
        end do
        end do
-       !$omp end do
+    end if
     end if
 
+    if (thi(3) .eq. ghi(3)) then
     if (bc(3,2) .eq. EXT_DIR) then
-       !$omp do
-       do j=lo(2)-ng_n,hi(2)+1+ng_n
-       do i=lo(1)-ng_n,hi(1)+1+ng_n
-          sint(i,j,hi(3)+1:hi(3)+2) = s_nd(i,j,hi(3)+1)
+       do j=tlo(2)-1,thi(2)+2
+       do i=tlo(1)-1,thi(1)+2
+          sint(i,j,thi(3)+1:thi(3)+2) = s_nd(i,j,thi(3)+1)
        end do
        end do
-       !$omp end do
+    end if
     end if
 
-    !$omp do 
-    do k = lo(3)-1,hi(3)+1
-       do j = lo(2)-1,hi(2)+1
-          do i = lo(1)-1,hi(1)+1 
+    do k = gtlo(3),gthi(3)
+       do j = gtlo(2),gthi(2)
+          do i = gtlo(1),gthi(1) 
 
              ! compute initial estimates of slopes from unlimited corner points
 
@@ -899,8 +901,6 @@ contains
           enddo
        enddo
     enddo
-    !$omp end do
-    !$omp end parallel
 
   end subroutine bdsslope_3d
 
@@ -1322,24 +1322,26 @@ contains
   end subroutine bdsfluxdiv_2d
 
 
-  subroutine bdsconc_3d(lo,hi,s,ng_s,s_update,ng_u,force,ng_o, &
+  subroutine bdsconc_3d(glo,ghi,s,ng_s,s_update,ng_u,force,ng_o, &
                         slope,ng_l,uadv,vadv,wadv,ng_v,dx,dt,sx,sy,sz,ng_f, &
-                        sedgex,sedgey,sedgez,ng_e,bc) !tlo thi xlo ...
+                        sedgex,sedgey,sedgez,ng_e,bc,tlo,thi, &
+                        xlo,xhi,ylo,yhi,zlo,zhi) 
 
-    integer        ,intent(in   ) :: lo(:),hi(:),ng_s,ng_l,ng_v,ng_u,ng_o,ng_f,ng_e
-    real(kind=dp_t),intent(in   ) ::        s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
-    real(kind=dp_t),intent(inout) :: s_update(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
-    real(kind=dp_t),intent(in   ) ::    force(lo(1)-ng_o:,lo(2)-ng_o:,lo(3)-ng_o:)
-    real(kind=dp_t),intent(in   ) ::    slope(lo(1)-ng_l:,lo(2)-ng_l:,lo(3)-ng_l:,:)
-    real(kind=dp_t),intent(in   ) ::     uadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
-    real(kind=dp_t),intent(in   ) ::     vadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
-    real(kind=dp_t),intent(in   ) ::     wadv(lo(1)-ng_v:,lo(2)-ng_v:,lo(3)-ng_v:)
-    real(kind=dp_t),intent(in   ) ::       sx(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    real(kind=dp_t),intent(in   ) ::       sy(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    real(kind=dp_t),intent(in   ) ::       sz(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    real(kind=dp_t),intent(inout) ::   sedgex(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
-    real(kind=dp_t),intent(inout) ::   sedgey(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
-    real(kind=dp_t),intent(inout) ::   sedgez(lo(1)-ng_e:,lo(2)-ng_e:,lo(3)-ng_e:)
+    integer        ,intent(in   ) :: glo(:),ghi(:),ng_s,ng_l,ng_v,ng_u,ng_o,ng_f,ng_e
+    integer        ,intent(in   ) :: tlo(:),thi(:),xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
+    real(kind=dp_t),intent(in   ) ::        s(glo(1)-ng_s:,glo(2)-ng_s:,glo(3)-ng_s:)
+    real(kind=dp_t),intent(inout) :: s_update(glo(1)-ng_u:,glo(2)-ng_u:,glo(3)-ng_u:)
+    real(kind=dp_t),intent(in   ) ::    force(glo(1)-ng_o:,glo(2)-ng_o:,glo(3)-ng_o:)
+    real(kind=dp_t),intent(in   ) ::    slope(glo(1)-ng_l:,glo(2)-ng_l:,glo(3)-ng_l:,:)
+    real(kind=dp_t),intent(in   ) ::     uadv(glo(1)-ng_v:,glo(2)-ng_v:,glo(3)-ng_v:)
+    real(kind=dp_t),intent(in   ) ::     vadv(glo(1)-ng_v:,glo(2)-ng_v:,glo(3)-ng_v:)
+    real(kind=dp_t),intent(in   ) ::     wadv(glo(1)-ng_v:,glo(2)-ng_v:,glo(3)-ng_v:)
+    real(kind=dp_t),intent(in   ) ::       sx(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:)
+    real(kind=dp_t),intent(in   ) ::       sy(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:)
+    real(kind=dp_t),intent(in   ) ::       sz(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:)
+    real(kind=dp_t),intent(inout) ::   sedgex(glo(1)-ng_e:,glo(2)-ng_e:,glo(3)-ng_e:)
+    real(kind=dp_t),intent(inout) ::   sedgey(glo(1)-ng_e:,glo(2)-ng_e:,glo(3)-ng_e:)
+    real(kind=dp_t),intent(inout) ::   sedgez(glo(1)-ng_e:,glo(2)-ng_e:,glo(3)-ng_e:)
     real(kind=dp_t),intent(in   ) :: dx(:),dt
     integer        ,intent(in   ) :: bc(:,:)
 
@@ -1356,9 +1358,9 @@ contains
     real(kind=dp_t) :: u,v,w,uu,vv,ww,gamma,gamma2
     real(kind=dp_t) :: dt2,dt3,dt4,half,sixth
 
-    allocate(ux(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1)) !tlo,thi keep -1 and +1
-    allocate(vy(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1))
-    allocate(wz(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,lo(3)-1:hi(3)+1))
+    allocate(ux(tlo(1)-1:thi(1)+1,tlo(2)-1:thi(2)+1,tlo(3)-1:thi(3)+1))
+    allocate(vy(tlo(1)-1:thi(1)+1,tlo(2)-1:thi(2)+1,tlo(3)-1:thi(3)+1))
+    allocate(wz(tlo(1)-1:thi(1)+1,tlo(2)-1:thi(2)+1,tlo(3)-1:thi(3)+1))
 
     hx = dx(1)
     hy = dx(2)
@@ -1371,27 +1373,21 @@ contains
     half = 0.5d0
     sixth = 1.d0/6.d0
 
-    !$omp parallel private(del,i,isign,ioff,j,jsign,joff,k,ksign,koff,ll) &
-    !$omp private(p1,p2,p3,p4,u,uu,v,vv,w,ww,val1,val2,val3,val4,val5,gamma,gamma2)
-
     ! compute cell-centered ux, vy, and wz
-    !$omp do
-    do k=lo(3)-1,hi(3)+1 !keep +1, -1, tlo
-       do j=lo(2)-1,hi(2)+1
-          do i=lo(1)-1,hi(1)+1
+    do k=tlo(3)-1,thi(3)+1
+       do j=tlo(2)-1,thi(2)+1
+          do i=tlo(1)-1,thi(1)+1
              ux(i,j,k) = (uadv(i+1,j,k) - uadv(i,j,k)) / hx
              vy(i,j,k) = (vadv(i,j+1,k) - vadv(i,j,k)) / hy
              wz(i,j,k) = (wadv(i,j,k+1) - wadv(i,j,k)) / hz
           end do
        end do
     end do
-    !$omp end do
 
     ! compute sedgex on x-faces
-    !$omp do
-    do k=lo(3),hi(3) !xlo
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)+1 !elim +1
+    do k=xlo(3),xhi(3)
+       do j=xlo(2),xhi(2)
+          do i=xlo(1),xhi(1)
 
              !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
              ! compute sedgex without transverse corrections
@@ -1410,7 +1406,7 @@ contains
              del(2) = 0.d0
              del(3) = 0.d0
              call eval(s(i+ioff,j,k),slope(i+ioff,j,k,:),del,sedgex(i,j,k))
-
+    
              ! source term
              sedgex(i,j,k) = sedgex(i,j,k) - dt2*sedgex(i,j,k)*ux(i+ioff,j,k) &
                   + dt2*force(i+ioff,j,k)
@@ -2238,43 +2234,24 @@ contains
           enddo
        enddo
     enddo
-    !$omp end do
 
-!rewrite as double do loop over k j
-!    if (bc(1,1) .eq. EXT_DIR) then
-!       sedgex(lo(1),lo(2):hi(2),lo(3):hi(3)) = sx(lo(1),lo(2):hi(2),lo(3):hi(3))
-!    end if
-
-!    if (bc(1,2) .eq. EXT_DIR) then
-!       sedgex(hi(1)+1,lo(2):hi(2),lo(3):hi(3)) = sx(hi(1)+1,lo(2):hi(2),lo(3):hi(3))
-!    end if
-
+    if (xlo(1) .eq. glo(1)) then
     if (bc(1,1) .eq. EXT_DIR) then
-       !$omp do
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             sedgex(lo(1),j,k) = sx(lo(1),j,k)
-          end do
-       end do
-       !$omp end do
+       sedgex(xlo(1),xlo(2):xhi(2),xlo(3):xhi(3)) = sx(xlo(1),xlo(2):xhi(2),xlo(3):xhi(3))
+    end if
     end if
 
+    if (xhi(1) .eq. ghi(1)+1) then
     if (bc(1,2) .eq. EXT_DIR) then
-      !$omp do
-      do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             sedgex(hi(1)+1,j,k) = sx(hi(1)+1,j,k)
-          end do
-       end do
-       !$omp end do
-    end if 
+       sedgex(xhi(1),xlo(2):xhi(2),xlo(3):xhi(3)) = sx(xhi(1),xlo(2):xhi(2),xlo(3):xhi(3))
+    end if
+    end if
 
 
     ! compute sedgey on y-faces    
-    !$omp do
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)+1
-          do i=lo(1),hi(1)
+    do k=ylo(3),yhi(3)
+       do j=ylo(2),yhi(2)
+          do i=ylo(1),yhi(1)
 
              !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
              ! compute sedgey without transverse corrections
@@ -3121,42 +3098,25 @@ contains
           enddo
        enddo
     enddo
-    !$omp end do
 
 
-!    if (bc(2,1) .eq. EXT_DIR) then
-!       sedgey(lo(1):hi(1),lo(2),lo(3):hi(3)) = sy(lo(1):hi(1),lo(2),lo(3):hi(3))
-!    end if
+    if (ylo(2) .eq. glo(2)) then    
+    if (bc(2,1) .eq. EXT_DIR) then
+       sedgey(ylo(1):yhi(1),ylo(2),ylo(3):yhi(3)) = sy(ylo(1):yhi(1),ylo(2),ylo(3):yhi(3))
+    end if
+    end if
 
-!    if (bc(2,2) .eq. EXT_DIR) then
-!       sedgey(lo(1):hi(1),hi(2)+1,lo(3):hi(3)) = sy(lo(1):hi(1),hi(2)+1,lo(3):hi(3))
-!    end if
+    if (yhi(2) .eq. ghi(2)+1) then
+    if (bc(2,2) .eq. EXT_DIR) then
+       sedgey(ylo(1):yhi(1),yhi(2),ylo(3):yhi(3)) = sy(ylo(1):yhi(1),yhi(2),ylo(3):yhi(3))
+    end if
+    end if
 
-     if (bc(2,1) .eq. EXT_DIR) then
-        !$omp do
-        do k=lo(3),hi(3)
-           do i=lo(1),hi(1)
-              sedgey(i,lo(2),k) = sy(i,lo(2),k)
-           end do
-        end do
-        !$omp end do
-     end if
-
-     if (bc(2,2) .eq. EXT_DIR) then
-        !$omp do
-        do k=lo(3),hi(3)
-           do i=lo(1),hi(1)
-              sedgey(i,hi(2)+1,k) = sy(i,hi(2)+1,k)
-           end do
-        end do
-        !$omp end do
-     end if
 
     ! compute sedgez on z-faces
-    !$omp do
-    do k=lo(3),hi(3)+1
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=zlo(3),zhi(3)
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
 
              !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
              ! compute sedgez without transverse corrections
@@ -4003,37 +3963,19 @@ contains
           enddo
        enddo
     enddo
-    !$omp end do
 
-!    if (bc(3,1) .eq. EXT_DIR) then
-!       sedgez(lo(1):hi(1),lo(2):hi(2),lo(3)) = sz(lo(1):hi(1),lo(2):hi(2),lo(3))
-!    end if
-
-!    if (bc(3,2) .eq. EXT_DIR) then
-!       sedgez(lo(1):hi(1),lo(2):hi(2),hi(3)+1) = sz(lo(1):hi(1),lo(2):hi(2),hi(3)+1)
-!    end if
-
+    if (zlo(3) .eq. glo(3)) then
     if (bc(3,1) .eq. EXT_DIR) then
-       !$omp do
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-             sedgez(i,j,lo(3)) = sz(i,j,lo(3))
-          end do
-       end do
-       !$omp end do
+       sedgez(zlo(1):zhi(1),zlo(2):zhi(2),zlo(3)) = sz(zlo(1):zhi(1),zlo(2):zhi(2),zlo(3))
+    end if
     end if
 
+    if (zhi(3) .eq. ghi(3)+1) then
     if (bc(3,2) .eq. EXT_DIR) then
-       !$omp do
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-             sedgez(i,j,hi(3)+1) = sz(i,j,hi(3)+1)
-          end do
-       end do
-       !$omp end do
+       sedgez(zlo(1):zhi(1),zlo(2):zhi(2),zhi(3)) = sz(zlo(1):zhi(1),zlo(2):zhi(2),zhi(3))
+    end if
     end if
 
-    !$omp end parallel
 
     deallocate(ux,vy,wz)
 
