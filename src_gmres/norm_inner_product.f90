@@ -680,6 +680,8 @@ contains
     if(present(av_sump)) av_sump=sump_lev/n_cell
     if(present(av_sumu)) av_sumu(1:dm)=sumu_lev(1:dm)/n_cell
     
+    call multifab_destroy(temp_cc)
+
     call destroy(bpt)
 
   end subroutine sum_umac_press
