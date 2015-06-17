@@ -594,9 +594,19 @@ contains
     real(kind=dp_t), pointer :: myp(:,:,:,:)
     real(kind=dp_t), pointer :: mzp(:,:,:,:)
 
+    type(multifab) :: temp_cc
+
+    type(mfiter) :: mfi
+    type(box) :: xnodalbox, ynodalbox, znodalbox
+    integer :: xlo(mla%dim), xhi(mla%dim)
+    integer :: ylo(mla%dim), yhi(mla%dim)
+    integer :: zlo(mla%dim), zhi(mla%dim)
+
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"sum_umac_press")
+
+    call multifab_build(temp_cc,mla%la(1),1,0)
 
     sumu_lev = 0.d0
     sumu_proc = 0.d0
@@ -615,8 +625,27 @@ contains
     ! add up pressure
     sump_lev = multifab_sum_c(pressure(1),1,1,all=.false.)
 
+    !$omp parallel private(mfi,i,xnodalbox,xlo,xhi,ynodalbox,ylo,yhi) &
+    !$omp private(znodalbox,zlo,zhi,cp,mxp,myp,lo,hi,sumu_grid) &
+    !$omp reduction(+:sumu_proc)
+
     ! add up umac
-    do i=1,nfabs(pressure(1))
+    call mfiter_build(mfi, temp_cc, tiling=.true.)
+
+    do while (more_tile(mfi))
+       i = get_fab_index(mfi)
+       
+       xnodalbox = get_nodaltilebox(mfi,1)
+       xlo = lwb(xnodalbox)
+       xhi = upb(xnodalbox)
+       ynodalbox = get_nodaltilebox(mfi,2)
+       ylo = lwb(ynodalbox)
+       yhi = upb(ynodalbox)
+       znodalbox = get_nodaltilebox(mfi,3)
+       zlo = lwb(znodalbox)
+       zhi = upb(znodalbox)
+
+!    do i=1,nfabs(pressure(1))
        cp  => dataptr(pressure(1), i)
        mxp => dataptr(umac(1,1), i)
        myp => dataptr(umac(1,2), i)
@@ -626,17 +655,18 @@ contains
        select case (dm)
        case (2)
           call sum_umac_2d(mxp(:,:,1,1), myp(:,:,1,1), ng_m, &
-                           lo, hi, sumu_grid)
+                           lo, hi, sumu_grid,xlo,xhi,ylo,yhi)
        case (3)
           mzp => dataptr(umac(1,3), i)
           call sum_umac_3d(mxp(:,:,:,1), myp(:,:,:,1), mzp(:,:,:,1), ng_m, &
-                           lo, hi, sumu_grid)
+                           lo, hi, sumu_grid,xlo,xhi,ylo,yhi,zlo,zhi)
 
        end select
 
        sumu_proc(1:dm) = sumu_proc(1:dm) + sumu_grid(1:dm)
 
     end do
+    !$omp end parallel
 
     call parallel_reduce(sumu_lev(1:dm), sumu_proc(1:dm), MPI_SUM)
 
@@ -654,105 +684,117 @@ contains
 
   end subroutine sum_umac_press
 
-  subroutine sum_umac_2d(umac,vmac,ng_m,lo,hi,sumu)
+  subroutine sum_umac_2d(umac,vmac,ng_m,glo,ghi,sumu,xlo,xhi,ylo,yhi)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m
-    real(kind=dp_t), intent(in   ) ::   umac(lo(1)-ng_m:,lo(2)-ng_m:)
-    real(kind=dp_t), intent(in   ) ::   vmac(lo(1)-ng_m:,lo(2)-ng_m:)
+    integer        , intent(in   ) :: glo(:), ghi(:), ng_m
+    integer        , intent(in   ) :: xlo(:), xhi(:), ylo(:), yhi(:)
+    real(kind=dp_t), intent(in   ) ::   umac(glo(1)-ng_m:,glo(2)-ng_m:)
+    real(kind=dp_t), intent(in   ) ::   vmac(glo(1)-ng_m:,glo(2)-ng_m:)
     real(kind=dp_t), intent(inout) :: sumu(:)
 
     ! local
     integer :: i,j
 
     ! umac, interior cells
-    do j=lo(2),hi(2)
-       do i=lo(1)+1,hi(1)
+    do j=xlo(2),xhi(2)
+       do i=xlo(1),xhi(1)
           sumu(1) = sumu(1) + umac(i,j)
        end do
     end do
 
     ! umac, boundary cells
-    do j=lo(2),hi(2)
-       sumu(1) = sumu(1) + 0.5d0*umac(lo(1)  ,j)
-       sumu(1) = sumu(1) + 0.5d0*umac(hi(1)+1,j)
+    if(xlo(1) .eq. glo(1)+1 .and. xhi(1) .eq. ghi(1)+1) then
+    do j=xlo(2),xhi(2)
+       sumu(1) = sumu(1) + 0.5d0*umac(xlo(1)  ,j)
+       sumu(1) = sumu(1) + 0.5d0*umac(xhi(1),j)
     end do
+    end if
 
     ! vmac, interior cells
-    do j=lo(2)+1,hi(2)
-       do i=lo(1),hi(1)
+    do j=ylo(2),yhi(2)
+       do i=ylo(1),yhi(1)
           sumu(2) = sumu(2) + vmac(i,j)
        end do
     end do
 
     ! vmac, boundary cells
-    do i=lo(1),hi(1)
-       sumu(2) = sumu(2) + 0.5d0*vmac(i,lo(2)  )
-       sumu(2) = sumu(2) + 0.5d0*vmac(i,hi(2)+1)
+    if(ylo(2) .eq. glo(2) .and. yhi(2) .eq. ghi(2)+1) then
+    do i=ylo(1),yhi(1)
+       sumu(2) = sumu(2) + 0.5d0*vmac(i,ylo(2)  )
+       sumu(2) = sumu(2) + 0.5d0*vmac(i,yhi(2))
     end do
+    end if
 
   end subroutine sum_umac_2d
 
-  subroutine sum_umac_3d(umac,vmac,wmac,ng_m,lo,hi,sumu)
+  subroutine sum_umac_3d(umac,vmac,wmac,ng_m,glo,ghi,sumu,xlo,xhi,ylo,yhi,zlo,zhi)
 
-    integer        , intent(in   ) :: lo(:), hi(:), ng_m
-    real(kind=dp_t), intent(in   ) ::   umac(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
-    real(kind=dp_t), intent(in   ) ::   vmac(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
-    real(kind=dp_t), intent(in   ) ::   wmac(lo(1)-ng_m:,lo(2)-ng_m:,lo(3)-ng_m:)
+    integer        , intent(in   ) :: glo(:), ghi(:), ng_m
+    integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
+    real(kind=dp_t), intent(in   ) ::   umac(glo(1)-ng_m:,glo(2)-ng_m:,glo(3)-ng_m:)
+    real(kind=dp_t), intent(in   ) ::   vmac(glo(1)-ng_m:,glo(2)-ng_m:,glo(3)-ng_m:)
+    real(kind=dp_t), intent(in   ) ::   wmac(glo(1)-ng_m:,glo(2)-ng_m:,glo(3)-ng_m:)
     real(kind=dp_t), intent(inout) :: sumu(:)
 
     ! local
     integer :: i,j,k
 
     ! umac, interior cells
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1)+1,hi(1)
+    do k=xlo(3),xhi(3)
+       do j=xlo(2),xhi(2)
+          do i=xlo(1),xhi(1)
              sumu(1) = sumu(1) + umac(i,j,k)
           end do
        end do
     end do
 
     ! umac, boundary cells
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          sumu(1) = sumu(1) + 0.5d0*umac(lo(1)  ,j,k)
-          sumu(1) = sumu(1) + 0.5d0*umac(hi(1)+1,j,k)
+    if(xlo(1) .eq. glo(1) .and. xhi(1) .eq. ghi(1)+1) then
+    do k=xlo(3),xhi(3)
+       do j=xlo(2),xhi(2)
+          sumu(1) = sumu(1) + 0.5d0*umac(xlo(1)  ,j,k)
+          sumu(1) = sumu(1) + 0.5d0*umac(xhi(1),j,k)
        end do
     end do
+    end if
 
     ! vmac, interior cells
-    do k=lo(3),hi(3)
-       do j=lo(2)+1,hi(2)
-          do i=lo(1),hi(1)
+    do k=ylo(3),yhi(3)
+       do j=ylo(2),yhi(2)
+          do i=ylo(1),yhi(1)
              sumu(2) = sumu(2) + vmac(i,j,k)
           end do
        end do
     end do
 
     ! vmac, boundary cells
-    do k=lo(3),hi(3)
-       do i=lo(1),hi(1)
-          sumu(2) = sumu(2) + 0.5d0*vmac(i,lo(2)  ,k)
-          sumu(2) = sumu(2) + 0.5d0*vmac(i,hi(2)+1,k)
+    if(ylo(2) .eq. glo(2) .and. yhi(2) .eq. ghi(2)+1) then
+    do k=ylo(3),yhi(3)
+       do i=ylo(1),yhi(1)
+          sumu(2) = sumu(2) + 0.5d0*vmac(i,ylo(2)  ,k)
+          sumu(2) = sumu(2) + 0.5d0*vmac(i,yhi(2),k)
        end do
     end do
+    end if
 
     ! wmac, interior cells
-    do k=lo(3)+1,hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=zlo(3),zhi(3)
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
              sumu(3) = sumu(3) + wmac(i,j,k)
           end do
        end do
     end do
 
     ! wmac, boundary cells
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-          sumu(3) = sumu(3) + 0.5d0*wmac(i,j,lo(3)  )
-          sumu(3) = sumu(3) + 0.5d0*wmac(i,j,hi(3)+1)
+    if(zlo(3) .eq. glo(3) .and. zhi(3) .eq. ghi(3)+1) then
+    do j=zlo(2),zhi(2)
+       do i=zlo(1),zhi(1)
+          sumu(3) = sumu(3) + 0.5d0*wmac(i,j,zlo(3)  )
+          sumu(3) = sumu(3) + 0.5d0*wmac(i,j,zhi(3))
        end do
     end do
+    end if
 
   end subroutine sum_umac_3d
 

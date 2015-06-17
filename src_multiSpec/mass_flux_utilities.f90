@@ -167,6 +167,10 @@ contains
    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molar concentrations
    real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for total molar concentrations
 
+   type(mfiter) :: mfi
+   type(box) :: tilebox
+   integer :: tlo(mla%dim), thi(mla%dim)
+
    type(bl_prof_timer), save :: bpt
 
    call build(bpt,"convert_cons_to_prim")
@@ -182,9 +186,20 @@ contains
       call bl_error('convert_cons_to_prim: ng for molarconc and molmass differ')
    end if
  
+   !$omp parallel private(n,i,mfi,tilebox,tlo,thi,dp1,dp2,dp3,dp4,lo,hi)
+
     ! loop over all boxes 
     do n=1,nlevs
-       do i=1,nfabs(rho(n))
+       call mfiter_build(mfi, rho(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          tilebox = get_growntilebox(mfi,rho(n)%ng)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
+
+ !      do i=1,nfabs(rho(n))
           dp1 => dataptr(rho(n),i)
           dp2 => dataptr(rhotot(n),i)
           dp3 => dataptr(molarconc(n),i)
@@ -195,34 +210,36 @@ contains
           case (2)
              call compute_molconc_rhotot_2d(dp1(:,:,1,:),dp2(:,:,1,1), &
                                             dp3(:,:,1,:),dp4(:,:,1,1), &
-                                            ng_1,ng_2,ng_3,ng_4,lo,hi) 
+                                            ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           case (3)
              call compute_molconc_rhotot_3d(dp1(:,:,:,:),dp2(:,:,:,1), &
                                             dp3(:,:,:,:),dp4(:,:,:,1), &
-                                            ng_1,ng_2,ng_3,ng_4,lo,hi) 
+                                            ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           end select
        end do
     end do
+    !$omp end parallel
 
     call destroy(bpt)
 
   end subroutine convert_cons_to_prim
 
   subroutine compute_molconc_rhotot_2d(rho,rhotot,molarconc,molmtot, &
-                                       ng_1,ng_2,ng_3,ng_4,lo,hi)
+                                       ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
  
-    integer          :: lo(2), hi(2), ng_1, ng_2, ng_3, ng_4
-    real(kind=dp_t)  ::       rho(lo(1)-ng_1:,lo(2)-ng_1:,:)       ! density- last dim for #species
-    real(kind=dp_t)  ::    rhotot(lo(1)-ng_2:,lo(2)-ng_2:)     ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng_3:,lo(2)-ng_3:,:) ! molar concentration
-    real(kind=dp_t)  ::   molmtot(lo(1)-ng_4:,lo(2)-ng_4:)     ! total molar mass 
+    integer          :: glo(2), ghi(2), ng_1, ng_2, ng_3, ng_4
+    integer          :: tlo(2), thi(2)
+    real(kind=dp_t)  ::       rho(glo(1)-ng_1:,glo(2)-ng_1:,:)       ! density- last dim for #species
+    real(kind=dp_t)  ::    rhotot(glo(1)-ng_2:,glo(2)-ng_2:)     ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(glo(1)-ng_3:,glo(2)-ng_3:,:) ! molar concentration
+    real(kind=dp_t)  ::   molmtot(glo(1)-ng_4:,glo(2)-ng_4:)     ! total molar mass 
         
     ! local variables
     integer          :: i,j
     
     ! for specific box, now start loops over alloted cells    
-    do j=lo(2)-ng_3, hi(2)+ng_3
-       do i=lo(1)-ng_3, hi(1)+ng_3
+    do j=tlo(2), thi(2)
+       do i=tlo(1), thi(1)
          
          call compute_molconc_rhotot_local(rho(i,j,:),rhotot(i,j), &
                                            molarconc(i,j,:),molmtot(i,j))
@@ -233,21 +250,22 @@ contains
   end subroutine compute_molconc_rhotot_2d
 
   subroutine compute_molconc_rhotot_3d(rho,rhotot,molarconc,molmtot, &
-                                       ng_1,ng_2,ng_3,ng_4,lo,hi)
+                                       ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
  
-    integer          :: lo(3), hi(3), ng_1, ng_2, ng_3, ng_4
-    real(kind=dp_t)  ::       rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:) ! density- last dim for #species
-    real(kind=dp_t)  ::    rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)   ! total density in each cell 
-    real(kind=dp_t)  :: molarconc(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:) ! molar concentration
-    real(kind=dp_t)  ::   molmtot(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:)   ! total molar mass 
+    integer          :: glo(3), ghi(3), ng_1, ng_2, ng_3, ng_4
+    integer          :: tlo(3), thi(3)
+    real(kind=dp_t)  ::       rho(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:) ! density- last dim for #species
+    real(kind=dp_t)  ::    rhotot(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)   ! total density in each cell 
+    real(kind=dp_t)  :: molarconc(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:) ! molar concentration
+    real(kind=dp_t)  ::   molmtot(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:)   ! total molar mass 
     
     ! local variables
     integer          :: i,j,k
     
     ! for specific box, now start loops over alloted cells    
-    do k=lo(3)-ng_3, hi(3)+ng_3
-       do j=lo(2)-ng_3, hi(2)+ng_3
-          do i=lo(1)-ng_3, hi(1)+ng_3
+    do k=tlo(3), thi(3)
+       do j=tlo(2), thi(2)
+          do i=tlo(1), thi(1)
 
              call compute_molconc_rhotot_local(rho(i,j,k,:),rhotot(i,j,k),&
                                                molarconc(i,j,k,:),molmtot(i,j,k))
@@ -270,9 +288,6 @@ contains
     real(kind=dp_t), dimension(nspecies) :: W            ! mass fraction w_i = rho_i/rho 
     real(kind=dp_t)  :: Sum_woverm, rhotot_local
 
-    type(bl_prof_timer), save :: bpt
-
-    call build(bpt,"compute_molconc_rhotot_local")
 
     ! calculate total density inside each cell
     rhotot_local=0.d0 
@@ -294,7 +309,6 @@ contains
        molarconc(n) = molmtot*W(n)/molmass(n)
     end do
     
-    call destroy(bpt)
 
   end subroutine compute_molconc_rhotot_local 
 
@@ -312,6 +326,10 @@ contains
    real(kind=dp_t), pointer        :: dp1(:,:,:,:)   ! for rho    
    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
 
+   type(mfiter) :: mfi
+   type(box) :: tilebox
+   integer :: tlo(mla%dim), thi(mla%dim)
+
    type(bl_prof_timer), save :: bpt
 
    call build(bpt, "compute_rhotot")
@@ -321,9 +339,20 @@ contains
    ng_2  = rhotot(1)%ng
    nlevs = mla%nlevel  ! number of levels 
  
+   !$omp parallel private(n,i,mfi,tilebox,tlo,thi,dp1,dp2,lo,hi)
+
     ! loop over all boxes 
     do n=1,nlevs
-       do i=1,nfabs(rho(n))
+       call mfiter_build(mfi, rho(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          tilebox = get_growntilebox(mfi,rho(n)%ng)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
+
+!       do i=1,nfabs(rho(n))
           dp1 => dataptr(rho(n),i)
           dp2 => dataptr(rhotot(n),i)
           lo = lwb(get_box(rho(n),i))
@@ -332,30 +361,31 @@ contains
           select case(dm)
           case (2)
              call compute_rhotot_2d(dp1(:,:,1,:),dp2(:,:,1,1),&
-                                    ng_1,ng_2,lo,hi) 
+                                    ng_1,ng_2,lo,hi,tlo,thi) 
           case (3)
              call compute_rhotot_3d(dp1(:,:,:,:),dp2(:,:,:,1),&
-                                    ng_1,ng_2,lo,hi) 
+                                    ng_1,ng_2,lo,hi,tlo,thi) 
           end select
        end do
     end do
+    !$omp end parallel
 
     call destroy(bpt)
 
   end subroutine compute_rhotot
 
-  subroutine compute_rhotot_2d(rho,rhotot,ng_1,ng_2,lo,hi)
+  subroutine compute_rhotot_2d(rho,rhotot,ng_1,ng_2,glo,ghi,tlo,thi)
  
-    integer          :: lo(2), hi(2), ng_1, ng_2
-    real(kind=dp_t)  ::    rho(lo(1)-ng_1:,lo(2)-ng_1:,:) ! density- last dim for #species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:)   ! total density in each cell 
+    integer          :: glo(2), ghi(2), ng_1, ng_2, tlo(2), thi(2)
+    real(kind=dp_t)  ::    rho(glo(1)-ng_1:,glo(2)-ng_1:,:) ! density- last dim for #species
+    real(kind=dp_t)  :: rhotot(glo(1)-ng_2:,glo(2)-ng_2:)   ! total density in each cell 
         
     ! local variables
     integer          :: i,j,n
     
     ! for specific box, now start loops over alloted cells    
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
+    do j=tlo(2),thi(2)
+       do i=tlo(1),thi(1)
 
           ! calculate total density inside each cell
           rhotot(i,j)=0.d0
@@ -368,19 +398,19 @@ contains
  
   end subroutine compute_rhotot_2d
 
-  subroutine compute_rhotot_3d(rho,rhotot,ng_1,ng_2,lo,hi)
+  subroutine compute_rhotot_3d(rho,rhotot,ng_1,ng_2,glo,ghi,tlo,thi)
  
-    integer          :: lo(3), hi(3), ng_1, ng_2
-    real(kind=dp_t)  ::    rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:) ! density- last dim for #species
-    real(kind=dp_t)  :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)   ! total density in each cell 
+    integer          :: glo(3), ghi(3), ng_1, ng_2, tlo(3), thi(3)
+    real(kind=dp_t)  ::    rho(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:) ! density- last dim for #species
+    real(kind=dp_t)  :: rhotot(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)   ! total density in each cell 
     
     ! local variables
     integer          :: i,j,k,n
     
     ! for specific box, now start loops over alloted cells    
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=tlo(3),thi(3)
+       do j=tlo(2),thi(2)
+          do i=tlo(1),thi(1)
 
              ! calculate total density inside each cell
              rhotot(i,j,k)=0.d0
