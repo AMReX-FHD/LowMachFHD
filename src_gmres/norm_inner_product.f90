@@ -705,7 +705,7 @@ contains
     end do
 
     ! umac, boundary cells
-    if(xlo(1) .eq. glo(1)+1 .and. xhi(1) .eq. ghi(1)+1) then
+    if(xlo(1) .eq. glo(1) .and. xhi(1) .eq. ghi(1)+1) then
     do j=xlo(2),xhi(2)
        sumu(1) = sumu(1) + 0.5d0*umac(xlo(1)  ,j)
        sumu(1) = sumu(1) + 0.5d0*umac(xhi(1),j)
