@@ -203,14 +203,16 @@ contains
     real(kind=dp_t)  :: time 
  
     ! local varables
-    integer          :: i,j,n,seed
+    integer          :: i,j,n,seed(12)
     real(kind=dp_t)  :: x,y,rad,L(2),sum,r,r1,r2,y1,c_loc
     real(kind=dp_t)  :: gradToverT,m_e
  
+    real(kind=dp_t)  :: random
+
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
 
-    seed = n_cells(1)*lo(2) + lo(1)
-    call srand(seed)
+    seed = n_cells(1)*lo(2) + lo(1) + 1
+    call random_seed(put=seed(1:12))
 
     select case (abs(prob_type))
     
@@ -307,7 +309,6 @@ contains
        end do
 
        if (smoothing_width .le. 0.d0 .and. smoothing_width .ge. -1.d0) then
-
           ! discontinuous version with random perturbation
           do j=lo(2),hi(2)
              y = prob_lo(2) + (j+0.5d0)*dx(2)
@@ -324,7 +325,8 @@ contains
              if (j .eq. n_cells(2)/2) then
                 do i=lo(1),hi(1)
                    x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                   c_loc = abs(smoothing_width)*rand()
+                   call random_number(random)
+                   c_loc = abs(smoothing_width)*random
                    do n=1,nspecies
                       c(i,j,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
                    end do
@@ -550,13 +552,15 @@ contains
     real(kind=dp_t)  :: time 
  
     ! local variables
-    integer          :: i,j,k,n,seed
+    integer          :: i,j,k,n,seed(12)
     real(kind=dp_t)  :: x,y,z,rad,L(3),sum,c_loc,y1,r,r1,r2,m_e,gradToverT
+
+    real(kind=dp_t) :: random
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
     seed = n_cells(1)*n_cells(2)*lo(3) + n_cells(1)*lo(2) + lo(1)
-    call srand(seed)
+    call random_seed(put=seed(1:12))
 
     select case (abs(prob_type))
 
@@ -684,7 +688,8 @@ contains
              if (j .eq. n_cells(2)/2) then
                 do k=lo(3),hi(3)
                    do i=lo(1),hi(1)
-                      c_loc = abs(smoothing_width)*rand()
+                      call random_number(random)
+                      c_loc = abs(smoothing_width)*random
                       do n=1,nspecies
                          c(i,j,k,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
                       end do
