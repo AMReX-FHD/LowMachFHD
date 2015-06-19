@@ -195,7 +195,7 @@ contains
        do while (more_tile(mfi))
           i = get_fab_index(mfi)
 
-          tilebox = get_growntilebox(mfi,rho(n)%ng)
+          tilebox = get_growntilebox(mfi,molarconc(n)%ng)
           tlo = lwb(tilebox)
           thi = upb(tilebox)
 
@@ -348,7 +348,7 @@ contains
        do while (more_tile(mfi))
           i = get_fab_index(mfi)
 
-          tilebox = get_growntilebox(mfi,rho(n)%ng)
+          tilebox = get_tilebox(mfi)
           tlo = lwb(tilebox)
           thi = upb(tilebox)
 
@@ -469,7 +469,7 @@ contains
 
     ! loop over all boxes 
     do n=1,nlevs
-       call mfiter_build(mfi, rho(n), tiling=.true.)
+       call mfiter_build(mfi, Gama(n), tiling=.true.)
 
        do while (more_tile(mfi))
           i = get_fab_index(mfi)
@@ -653,7 +653,7 @@ contains
        do while (more_tile(mfi))
           i = get_fab_index(mfi)
 
-          tilebox = get_growntilebox(mfi,rho(n)%ng)
+          tilebox = get_growntilebox(mfi,chi(n)%ng)
           tlo = lwb(tilebox)
           thi = upb(tilebox)
 
@@ -1160,7 +1160,7 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
        do while (more_tile(mfi))
           i = get_fab_index(mfi)
 
-          tilebox = get_growntilebox(mfi,rho(n)%ng)
+          tilebox = get_growntilebox(mfi,rhoWchi(n)%ng)
           tlo = lwb(tilebox)
           thi = upb(tilebox)
 
