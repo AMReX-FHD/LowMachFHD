@@ -289,6 +289,7 @@ contains
        ! x-vel = u_init(1) below centerline, u_init(2) above centerline
        !=============================================================
 
+       u = 0.d0
        v = 0.d0
 
        ! middle of domain
@@ -645,6 +646,7 @@ contains
        ! x-vel = u_init(1) below centerline, u_init(2) above centerline
        !=============================================================
 
+       u = 0.d0
        v = 0.d0
        w = 0.d0
 
