@@ -53,7 +53,7 @@ program main
      print*, 'Run Time = ', r1
   end if
 
-  call flush()
+!  call flush()
 
   call boxlib_finalize()
 
