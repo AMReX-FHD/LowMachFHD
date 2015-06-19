@@ -63,13 +63,27 @@ contains
        call multifab_physbc(x_p(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                             dx_in=dx(n,:))
        do i=1,dm
-          call multifab_physbc_domainvel(x_u(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_n(n,:))
+          ! these if present tests are a workaround for an intel compiler bug where
+          ! passing optional arguments through causes crashes on edison
+          if (present(vel_bc_n)) then
+             call multifab_physbc_domainvel(x_u(n,i),vel_bc_comp+i-1, &
+                                            the_bc_tower%bc_tower_array(n), &
+                                            dx(n,:),vel_bc_n(n,:))
+          else
+             call multifab_physbc_domainvel(x_u(n,i),vel_bc_comp+i-1, &
+                                            the_bc_tower%bc_tower_array(n), &
+                                            dx(n,:))
+          end if
           call multifab_fill_boundary(x_u(n,i))
-          call multifab_physbc_macvel(x_u(n,i),vel_bc_comp+i-1, &
-                                      the_bc_tower%bc_tower_array(n), &
-                                      dx(n,:),vel_bc_t(n,:))
+          if (present(vel_bc_t)) then
+             call multifab_physbc_macvel(x_u(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:),vel_bc_t(n,:))
+          else
+             call multifab_physbc_macvel(x_u(n,i),vel_bc_comp+i-1, &
+                                         the_bc_tower%bc_tower_array(n), &
+                                         dx(n,:))
+          end if
        end do
     end do
 
