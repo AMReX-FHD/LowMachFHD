@@ -9,7 +9,6 @@ module compute_mass_fluxdiv_module
   use compute_mixture_properties_module
   use external_force_module
   use ml_layout_module
-  use F95_LAPACK
   use mass_flux_utilities_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: variance_coef_mass

@@ -14,7 +14,6 @@ module diffusive_mass_fluxdiv_module
   use matmat_mul_module
   use correction_flux_module
   use zero_edgeval_module
-  use F95_LAPACK
   
   implicit none
 
