@@ -63,7 +63,7 @@ contains
     !$omp parallel private(mfi,n,i,tilebox,tlo,thi) &
     !$omp private(dp1,dp2,dp3,dp4,dp5,dp6,lo,hi)
     do n = 1,nlevs
-       call mfiter_build(mfi, rho(n), tiling=.true.)
+       call mfiter_build(mfi, D_bar(n), tiling=.true.)
 
      do while (more_tile(mfi))
        i = get_fab_index(mfi)

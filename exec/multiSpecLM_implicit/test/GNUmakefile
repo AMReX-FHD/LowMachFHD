@@ -4,12 +4,12 @@ BOXLIB_HOME := ../../../../../BoxLib
 HYDROLIB_HOME := ../../../../HydroGrid
 STAGGERED_HOME := ../../..
 
-NDEBUG    :=
+NDEBUG    := t
 MPI       := t
 OMP       :=
 PROF      :=
-COMP      := gfortran
-CCOMP     := gcc
+COMP      := Intel
+CCOMP     := Intel
 MKVERBOSE := t
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
@@ -40,6 +40,8 @@ F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
 ifeq ($(findstring hopper, $(HOST)), hopper)
   libraries += $(LAPACK95_DIR)/lapack95.a
 else ifeq ($(findstring edison, $(HOST)), edison)
+  libraries += $(LAPACK95_DIR)/lapack95.a
+else ifeq ($(findstring bint01, $(HOST)), bint01)
   libraries += $(LAPACK95_DIR)/lapack95.a
 else
   libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas

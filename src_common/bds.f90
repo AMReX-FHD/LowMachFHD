@@ -140,7 +140,7 @@ contains
              tlo = lwb(tilebox)
              thi = upb(tilebox)
           
-             growntilebox = get_growntilebox(mfi,1)
+             growntilebox = get_growntilebox(mfi,slope(n)%ng)
              gtlo = lwb(growntilebox)
              gthi = upb(growntilebox)
 
