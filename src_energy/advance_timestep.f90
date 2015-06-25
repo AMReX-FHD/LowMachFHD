@@ -358,7 +358,7 @@ contains
 
     ! compute S^n and alpha^n (store them in delta_S_old and delta_alpha_old)
     call compute_S_alpha(mla,delta_S_old,delta_alpha_old,mass_fluxdiv_old, &
-                         rhoh_fluxdiv_old,conc_old,Temp_old,rhotot_old,p0_old)
+                         rhoh_fluxdiv_old,conc_old,Temp_old,rhotot_old)
 
     ! compute P_eos^n
     call compute_p(mla,rhotot_old,Temp_old,conc_old,Peos)
@@ -366,7 +366,7 @@ contains
     ! Scorr = (Peos^n - P0^n) / (rho*P_rho*dt)
     do n=1,nlevs
        call multifab_sub_sub_s_c(Peos(n),1,p0_old,1,0)
-       call scale_deltaP(mla,Peos,rhotot_old,Temp_old,conc_old,p0_old,dt,1.d0)
+       call scale_deltaP(mla,Peos,rhotot_old,Temp_old,conc_old,dt,1.d0)
        call multifab_copy_c(Scorr(n),1,Peos(n),1,1,0)
     end do
 
@@ -611,7 +611,7 @@ contains
 
        ! compute S^{n+1,m+1} and alpha^{n+1,m+1} (store them in delta_S_new and delta_alpha_new)
        call compute_S_alpha(mla,delta_S_new,delta_alpha_new,mass_fluxdiv_new, &
-                            rhoh_fluxdiv_new,conc_new,Temp_new,rhotot_new,p0_new)
+                            rhoh_fluxdiv_new,conc_new,Temp_new,rhotot_new)
 
        ! compute P_eos^{n+1,m+1}
        call compute_p(mla,rhotot_new,Temp_new,conc_new,Peos)
@@ -651,7 +651,7 @@ contains
           end if
 
           ! multiply deltaP by (dpdt_factor/(rho*P_rho*dt))
-          call scale_deltaP(mla,Peos,rhotot_new,Temp_new,conc_new,p0_new,dt,dpdt_factor)
+          call scale_deltaP(mla,Peos,rhotot_new,Temp_new,conc_new,dt,dpdt_factor)
 
           call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
        end do

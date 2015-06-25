@@ -393,7 +393,7 @@ contains
 
   end subroutine add_external_heating_3d
 
-  subroutine compute_S_alpha(mla,S,alpha,mass_fluxdiv,rhoh_fluxdiv,conc,Temp,rhotot,p0)
+  subroutine compute_S_alpha(mla,S,alpha,mass_fluxdiv,rhoh_fluxdiv,conc,Temp,rhotot)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: S(:)
@@ -403,7 +403,6 @@ contains
     type(multifab) , intent(in   ) :: conc(:)
     type(multifab) , intent(in   ) :: Temp(:)
     type(multifab) , intent(in   ) :: rhotot(:)
-    real(kind=dp_t), intent(in   ) :: p0
 
     ! local
     integer :: n,nlevs,i,dm
@@ -445,12 +444,12 @@ contains
              call compute_S_alpha_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
                                      dp3(:,:,1,:),ng_3,dp4(:,:,1,1),ng_4, &
                                      dp5(:,:,1,:),ng_5,dp6(:,:,1,1),ng_6, &
-                                     dp7(:,:,1,1),ng_7,p0,lo,hi)
+                                     dp7(:,:,1,1),ng_7,lo,hi)
           case (3)
              call compute_S_alpha_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
                                      dp3(:,:,:,:),ng_3,dp4(:,:,:,1),ng_4, &
                                      dp5(:,:,:,:),ng_5,dp6(:,:,:,1),ng_6, &
-                                     dp7(:,:,:,1),ng_7,p0,lo,hi)
+                                     dp7(:,:,:,1),ng_7,lo,hi)
           end select
        end do
     end do
@@ -458,7 +457,7 @@ contains
   end subroutine compute_S_alpha
   
   subroutine compute_S_alpha_2d(S,ng_1,alpha,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
-                                conc,ng_5,Temp,ng_6,rhotot,ng_7,p0,lo,hi)
+                                conc,ng_5,Temp,ng_6,rhotot,ng_7,lo,hi)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo(:),hi(:)
     real(kind=dp_t), intent(inout) ::            S(lo(1)-ng_1:,lo(2)-ng_1:)
@@ -468,7 +467,6 @@ contains
     real(kind=dp_t), intent(in   ) ::         conc(lo(1)-ng_5:,lo(2)-ng_5:,:)
     real(kind=dp_t), intent(in   ) ::         Temp(lo(1)-ng_6:,lo(2)-ng_6:)
     real(kind=dp_t), intent(in   ) ::       rhotot(lo(1)-ng_7:,lo(2)-ng_7:)
-    real(kind=dp_t), intent(in   ) :: p0
 
     ! local
     integer :: i,j,n
@@ -507,7 +505,7 @@ contains
   end subroutine compute_S_alpha_2d
   
   subroutine compute_S_alpha_3d(S,ng_1,alpha,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
-                                conc,ng_5,Temp,ng_6,rhotot,ng_7,p0,lo,hi)
+                                conc,ng_5,Temp,ng_6,rhotot,ng_7,lo,hi)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo(:),hi(:)
     real(kind=dp_t), intent(inout) ::            S(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
@@ -517,7 +515,6 @@ contains
     real(kind=dp_t), intent(in   ) ::         conc(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:)
     real(kind=dp_t), intent(in   ) ::         Temp(lo(1)-ng_6:,lo(2)-ng_6:,lo(3)-ng_6:)
     real(kind=dp_t), intent(in   ) ::       rhotot(lo(1)-ng_7:,lo(2)-ng_7:,lo(3)-ng_7:)
-    real(kind=dp_t), intent(in   ) :: p0
 
     ! local
     integer :: i,j,k,n
@@ -557,14 +554,14 @@ contains
        
   end subroutine compute_S_alpha_3d
 
-  subroutine scale_deltaP(mla,deltaP,rhotot,Temp,conc,p0,dt,factor)
+  subroutine scale_deltaP(mla,deltaP,rhotot,Temp,conc,dt,factor)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: deltaP(:)
     type(multifab) , intent(in   ) :: rhotot(:)
     type(multifab) , intent(in   ) :: Temp(:)
     type(multifab) , intent(in   ) :: conc(:)
-    real(kind=dp_t), intent(in   ) :: p0,dt,factor
+    real(kind=dp_t), intent(in   ) :: dt,factor
 
     ! local
     integer :: n,nlevs,i,dm
@@ -596,7 +593,7 @@ contains
           case (2)
              call scale_deltaP_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
                                   dp3(:,:,1,1),ng_3,dp4(:,:,1,:),ng_4, &
-                                  p0,dt,lo,hi,factor)
+                                  dt,lo,hi,factor)
           case (3)
              call bl_error("scale_deltaP_3d not written yet")
           end select
@@ -606,14 +603,14 @@ contains
   end subroutine scale_deltaP
   
   subroutine scale_deltaP_2d(deltaP,ng_1,rhotot,ng_2,Temp,ng_3,conc,ng_4, &
-                             p0,dt,lo,hi,factor)
+                             dt,lo,hi,factor)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,lo(:),hi(:)
     real(kind=dp_t), intent(inout) :: deltaP(lo(1)-ng_1:,lo(2)-ng_1:)
     real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:)
     real(kind=dp_t), intent(in   ) ::   Temp(lo(1)-ng_3:,lo(2)-ng_3:)
     real(kind=dp_t), intent(in   ) ::   conc(lo(1)-ng_4:,lo(2)-ng_4:,:)
-    real(kind=dp_t), intent(in   ) :: p0,dt,factor
+    real(kind=dp_t), intent(in   ) :: dt,factor
 
     ! local
     integer :: i,j

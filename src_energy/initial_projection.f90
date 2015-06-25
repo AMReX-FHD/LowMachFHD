@@ -147,7 +147,7 @@ contains
 
     ! compute S^0 and alpha^0 (store them in delta_S and delta_alpha)
     call compute_S_alpha(mla,delta_S,delta_alpha,mass_fluxdiv, &
-                         rhoh_fluxdiv,conc,Temp,rhotot,p0)
+                         rhoh_fluxdiv,conc,Temp,rhotot)
 
     ! split S and alpha into average and perturbational pieces
     ! S = Sbar + delta_S
