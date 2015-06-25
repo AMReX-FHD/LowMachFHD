@@ -653,7 +653,11 @@ contains
           ! multiply deltaP by (dpdt_factor/(rho*P_rho*dt))
           call scale_deltaP(mla,Peos,rhotot_new,Temp_new,conc_new,dt,dpdt_factor)
 
-          call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
+          ! after the first iteration, don't need to update Scorr since we haven't
+          ! seen the effect of Scorr^n applied to the new-time velocity computation
+          if (k .gt. 1) then
+             call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
+          end if
        end do
 
        ! split S^{n+1,m+1}, alpha^{n+1,m+1}, and Scorr into average and perturbational pieces
