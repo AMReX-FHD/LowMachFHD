@@ -499,7 +499,7 @@ contains
           end do
           theta = P_T / (rhotot(i,j)**2*P_rho*cpmix)
           S(i,j) = S(i,j) + theta*rhoh_fluxdiv(i,j)
-          alpha(i,j) = cvmix/(cpmix*p0)
+          alpha(i,j) = cvmix/(cpmix*rhotot(i,j)*P_rho)
 
        end do
     end do
@@ -549,7 +549,7 @@ contains
              end do
              theta = P_T / (rhotot(i,j,k)**2*P_rho*cpmix)
              S(i,j,k) = S(i,j,k) + theta * rhoh_fluxdiv(i,j,k)
-             alpha(i,j,k) = cvmix/(cpmix*p0)
+             alpha(i,j,k) = cvmix/(cpmix*rhotot(i,j,k)*P_rho)
 
           end do
        end do
