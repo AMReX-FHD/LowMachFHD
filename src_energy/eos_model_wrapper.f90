@@ -4,7 +4,7 @@ module eos_model_wrapper_module
   use eos_model_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: prob_lo, prob_hi
-  use probin_energy_module, only: heating_type, dpdt_factor
+  use probin_energy_module, only: heating_type
   implicit none
 
   private
@@ -557,16 +557,14 @@ contains
        
   end subroutine compute_S_alpha_3d
 
-
-
-  subroutine scale_deltaP(mla,deltaP,rhotot,Temp,conc,p0,dt)
+  subroutine scale_deltaP(mla,deltaP,rhotot,Temp,conc,p0,dt,factor)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: deltaP(:)
     type(multifab) , intent(in   ) :: rhotot(:)
     type(multifab) , intent(in   ) :: Temp(:)
     type(multifab) , intent(in   ) :: conc(:)
-    real(kind=dp_t), intent(in   ) :: p0,dt
+    real(kind=dp_t), intent(in   ) :: p0,dt,factor
 
     ! local
     integer :: n,nlevs,i,dm
@@ -598,8 +596,9 @@ contains
           case (2)
              call scale_deltaP_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
                                   dp3(:,:,1,1),ng_3,dp4(:,:,1,:),ng_4, &
-                                  p0,dt,lo,hi)
+                                  p0,dt,lo,hi,factor)
           case (3)
+             call bl_error("scale_deltaP_3d not written yet")
           end select
        end do
     end do
@@ -607,14 +606,14 @@ contains
   end subroutine scale_deltaP
   
   subroutine scale_deltaP_2d(deltaP,ng_1,rhotot,ng_2,Temp,ng_3,conc,ng_4, &
-                             p0,dt,lo,hi)
+                             p0,dt,lo,hi,factor)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,lo(:),hi(:)
     real(kind=dp_t), intent(inout) :: deltaP(lo(1)-ng_1:,lo(2)-ng_1:)
     real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:)
     real(kind=dp_t), intent(in   ) ::   Temp(lo(1)-ng_3:,lo(2)-ng_3:)
     real(kind=dp_t), intent(in   ) ::   conc(lo(1)-ng_4:,lo(2)-ng_4:,:)
-    real(kind=dp_t), intent(in   ) :: p0,dt
+    real(kind=dp_t), intent(in   ) :: p0,dt,factor
 
     ! local
     integer :: i,j
@@ -625,7 +624,7 @@ contains
 
           call compute_P_rho(P_rho,rhotot(i,j),conc(i,j,:),Temp(i,j))
 
-          deltaP(i,j) = dpdt_factor * deltaP(i,j) / (rhotot(i,j)*P_rho*dt)
+          deltaP(i,j) = factor * deltaP(i,j) / (rhotot(i,j)*P_rho*dt)
 
        end do
     end do

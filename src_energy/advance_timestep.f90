@@ -24,7 +24,7 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use probin_common_module, only: n_cells, grav
   use probin_multispecies_module, only: nspecies
-  use probin_energy_module, only: dpdt_iters, deltaT_iters
+  use probin_energy_module, only: dpdt_iters, deltaT_iters, dpdt_factor
 
   use fabio_module
 
@@ -363,10 +363,10 @@ contains
     ! compute P_eos^n
     call compute_p(mla,rhotot_old,Temp_old,conc_old,Peos)
 
-    ! Scorr = Scorr + (1 / p0^n) * (Peos^n - P0^n)/dt
+    ! Scorr = (Peos^n - P0^n) / (rho*P_rho*dt)
     do n=1,nlevs
        call multifab_sub_sub_s_c(Peos(n),1,p0_old,1,0)
-       call multifab_mult_mult_s_c(Peos(n),1,1.d0/(p0_old*dt),1,0)
+       call scale_deltaP(mla,Peos,rhotot_old,Temp_old,conc_old,p0_old,dt,1.d0)
        call multifab_copy_c(Scorr(n),1,Peos(n),1,1,0)
     end do
 
@@ -651,11 +651,9 @@ contains
           end if
 
           ! multiply deltaP by (dpdt_factor/(rho*P_rho*dt))
-          call scale_deltaP(mla,Peos,rhotot_new,Temp_new,conc_new,p0_new,dt)
+          call scale_deltaP(mla,Peos,rhotot_new,Temp_new,conc_new,p0_new,dt,dpdt_factor)
 
-          if (k .ge. 2) then
-             call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
-          end if
+          call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
        end do
 
        ! split S^{n+1,m+1}, alpha^{n+1,m+1}, and Scorr into average and perturbational pieces
