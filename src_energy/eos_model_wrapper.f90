@@ -595,7 +595,9 @@ contains
                                   dp3(:,:,1,1),ng_3,dp4(:,:,1,:),ng_4, &
                                   dt,lo,hi,factor)
           case (3)
-             call bl_error("scale_deltaP_3d not written yet")
+             call scale_deltaP_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
+                                  dp3(:,:,:,1),ng_3,dp4(:,:,:,:),ng_4, &
+                                  dt,lo,hi,factor)
           end select
        end do
     end do
@@ -627,6 +629,34 @@ contains
     end do
        
   end subroutine scale_deltaP_2d
+  
+  subroutine scale_deltaP_3d(deltaP,ng_1,rhotot,ng_2,Temp,ng_3,conc,ng_4, &
+                             dt,lo,hi,factor)
+
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,lo(:),hi(:)
+    real(kind=dp_t), intent(inout) :: deltaP(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
+    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+    real(kind=dp_t), intent(in   ) ::   Temp(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)
+    real(kind=dp_t), intent(in   ) ::   conc(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:)
+    real(kind=dp_t), intent(in   ) :: dt,factor
+
+    ! local
+    integer :: i,j,k
+    real(kind=dp_t) :: P_rho
+
+    do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+
+             call compute_P_rho(P_rho,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
+             
+             deltaP(i,j,k) = factor * deltaP(i,j,k) / (rhotot(i,j,k)*P_rho*dt)
+
+          end do
+       end do
+    end do
+       
+  end subroutine scale_deltaP_3d
 
   subroutine compute_h(mla,Temp,h,conc)
 
