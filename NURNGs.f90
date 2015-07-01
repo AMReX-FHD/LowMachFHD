@@ -761,6 +761,9 @@ REAL, PARAMETER :: fact(10) = (/ 1., 1., 2., 6., 24., 120., 720., 5040.,  &
 
 !     ..
 !     .. Executable Statements ..
+
+if(.not.first) write(*,*) "WARNING: Calling random_poisson with mu=", mu, " with first=F"
+
 IF (mu > 10.0) THEN
 !     C A S E  A. (RECALCULATION OF S, D, L IF MU HAS CHANGED)
 
@@ -888,6 +891,7 @@ ELSE
     q = p
     p0 = p
   END IF
+  !write(*,*) "TEST=", first, m
 
 !     STEP U. UNIFORM SAMPLE FOR INVERSION METHOD
 
@@ -904,6 +908,7 @@ ELSE
     j = 1
     IF (u > 0.458) j = MIN(l, m)
     DO k = j, l
+      !write(*,*) "k,j,l,m=", k,j,l,m
       IF (u <= pp(k)) GO TO 180
     END DO
     IF (l == 35) CYCLE

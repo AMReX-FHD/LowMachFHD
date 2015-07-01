@@ -141,12 +141,12 @@ contains ! It is likely that vectorized versions will do better here
 
   end subroutine NormalRNGFast
 
-    SUBROUTINE PoissonNumber(number,mean)
-       INTEGER, INTENT(OUT) :: number
-       REAL(dp), INTENT(IN) :: mean
+ SUBROUTINE PoissonNumber(number,mean)
+    INTEGER, INTENT(OUT) :: number
+    REAL(dp), INTENT(IN) :: mean
 
-       number=random_Poisson(mu=real(mean), first=.false.)
+    number=random_Poisson(mu=real(mean), first=.true.)
 
-    END SUBROUTINE
+ END SUBROUTINE
   
 end module
