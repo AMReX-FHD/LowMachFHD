@@ -594,8 +594,6 @@ contains
     real(kind=dp_t), pointer :: myp(:,:,:,:)
     real(kind=dp_t), pointer :: mzp(:,:,:,:)
 
-    type(multifab) :: temp_cc
-
     type(mfiter) :: mfi
     type(box) :: xnodalbox, ynodalbox, znodalbox
     integer :: xlo(mla%dim), xhi(mla%dim)
@@ -605,8 +603,6 @@ contains
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"sum_umac_press")
-
-    call multifab_build(temp_cc,mla%la(1),1,0)
 
     sumu_lev = 0.d0
     sumu_proc = 0.d0
@@ -630,7 +626,7 @@ contains
     !$omp reduction(+:sumu_proc)
 
     ! add up umac
-    call mfiter_build(mfi, temp_cc, tiling=.true.)
+    call mfiter_build(mfi, pressure(1), tiling=.true.)
 
     do while (more_tile(mfi))
        i = get_fab_index(mfi)
@@ -680,8 +676,6 @@ contains
     if(present(av_sump)) av_sump=sump_lev/n_cell
     if(present(av_sumu)) av_sumu(1:dm)=sumu_lev(1:dm)/n_cell
     
-    call multifab_destroy(temp_cc)
-
     call destroy(bpt)
 
   end subroutine sum_umac_press

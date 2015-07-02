@@ -361,7 +361,7 @@ contains
     real(kind=dp_t) :: smax(4)
     real(kind=dp_t) :: sc(4)
 
-    real(kind=dp_t) :: hx,hy,eps
+    real(kind=dp_t) :: hx,hy,eps,hxinv,hyinv
     real(kind=dp_t) :: sumloc,redfac,redmax,div,kdp,sumdif,sgndif
     integer         :: i,j,ll,mm
 
@@ -370,6 +370,9 @@ contains
 
     hx = dx(1)
     hy = dx(2)
+
+    hxinv = 1/hx
+    hyinv = 1/hy
 
     eps = 1.d-10
 
@@ -424,15 +427,15 @@ contains
 
           ! sx
           slope(i,j,1) = 0.5d0*(sint(i+1,j+1) + sint(i+1,j  ) - &
-                                sint(i  ,j+1) - sint(i  ,j  ) ) / hx
+                                sint(i  ,j+1) - sint(i  ,j  ) ) * hxinv
 
           ! sy
           slope(i,j,2) = 0.5d0*(sint(i+1,j+1) - sint(i+1,j  ) + &
-                                sint(i  ,j+1) - sint(i  ,j  ) ) / hy
+                                sint(i  ,j+1) - sint(i  ,j  ) ) * hyinv
 
           ! sxy
           slope(i,j,3) = ( sint(i+1,j+1) - sint(i+1,j  ) &
-                          -sint(i  ,j+1) + sint(i  ,j  ) ) / (hx*hy)
+                          -sint(i  ,j+1) + sint(i  ,j  ) ) * (hxinv*hyinv)
           
           ! limit slopes
           if (advection_type .eq. 2) then
@@ -518,15 +521,15 @@ contains
 
              ! sx
              slope(i,j,1) = 0.5d0*( sc(4) + sc(3) &
-                                   -sc(1) - sc(2))/hx
+                                   -sc(1) - sc(2)) * hxinv
 
              ! sy
              slope(i,j,2) = 0.5d0*( sc(4) + sc(2) &
-                                   -sc(1) - sc(3))/hy
+                                   -sc(1) - sc(3)) * hyinv
 
              ! sxy
              slope(i,j,3) = ( sc(1) + sc(4) &
-                             -sc(2) - sc(3) ) / (hx*hy)
+                             -sc(2) - sc(3) ) * (hxinv * hyinv)
 
           end if
 
@@ -556,7 +559,7 @@ contains
     real(kind=dp_t) :: sc(8)
 
     real(kind=dp_t) :: c1,c2,c3,c4
-    real(kind=dp_t) :: hx,hy,hz,eps
+    real(kind=dp_t) :: hx,hy,hz,eps,hxinv,hyinv,hzinv
     real(kind=dp_t) :: sumloc,redfac,redmax,div,kdp,sumdif,sgndif
     integer         :: i,j,k,ll,mm
 
@@ -566,6 +569,10 @@ contains
     hx = dx(1)
     hy = dx(2)
     hz = dx(3)
+
+    hxinv = 1/hx
+    hyinv = 1/hy
+    hzinv = 1/hz
 
     eps = 1.d-10
 
@@ -676,42 +683,42 @@ contains
              slope(i,j,k,1) = 0.25d0*( ( sint(i+1,j  ,k  ) + sint(i+1,j+1,k  ) &
                                         +sint(i+1,j  ,k+1) + sint(i+1,j+1,k+1)) &
                                       -( sint(i  ,j  ,k  ) + sint(i  ,j+1,k  ) &
-                                        +sint(i  ,j  ,k+1) + sint(i  ,j+1,k+1)) ) / hx
+                                        +sint(i  ,j  ,k+1) + sint(i  ,j+1,k+1)) ) * hxinv
 
              ! sy
              slope(i,j,k,2) = 0.25d0*( ( sint(i  ,j+1,k  ) + sint(i+1,j+1,k  ) &
                                         +sint(i  ,j+1,k+1) + sint(i+1,j+1,k+1)) &
                                       -( sint(i  ,j  ,k  ) + sint(i+1,j  ,k  ) &
-                                        +sint(i  ,j  ,k+1) + sint(i+1,j  ,k+1)) ) / hy
+                                        +sint(i  ,j  ,k+1) + sint(i+1,j  ,k+1)) ) * hyinv
 
              ! sz
              slope(i,j,k,3) = 0.25d0*( ( sint(i  ,j  ,k+1) + sint(i+1,j  ,k+1) &
                                         +sint(i  ,j+1,k+1) + sint(i+1,j+1,k+1)) &
                                       -( sint(i  ,j  ,k  ) + sint(i+1,j  ,k  ) &
-                                        +sint(i  ,j+1,k  ) + sint(i+1,j+1,k  )) ) / hz
+                                        +sint(i  ,j+1,k  ) + sint(i+1,j+1,k  )) ) * hzinv
 
              ! sxy
              slope(i,j,k,4) = 0.5d0*( ( sint(i  ,j  ,k  ) + sint(i  ,j  ,k+1) &
                                        +sint(i+1,j+1,k  ) + sint(i+1,j+1,k+1)) &
                                      -( sint(i+1,j  ,k  ) + sint(i+1,j  ,k+1) &
-                                       +sint(i  ,j+1,k  ) + sint(i  ,j+1,k+1)) ) / (hx*hy)
+                                       +sint(i  ,j+1,k  ) + sint(i  ,j+1,k+1)) ) * (hxinv*hyinv)
 
              ! sxz
              slope(i,j,k,5) = 0.5d0*( ( sint(i  ,j  ,k  ) + sint(i  ,j+1,k  ) &
                                        +sint(i+1,j  ,k+1) + sint(i+1,j+1,k+1)) &
                                      -( sint(i+1,j  ,k  ) + sint(i+1,j+1,k  ) &
-                                       +sint(i  ,j  ,k+1) + sint(i  ,j+1,k+1)) ) / (hx*hz)
+                                       +sint(i  ,j  ,k+1) + sint(i  ,j+1,k+1)) ) * (hxinv*hzinv)
 
              ! syz
              slope(i,j,k,6) = 0.5d0*( ( sint(i  ,j  ,k  ) + sint(i+1,j  ,k  ) &
                                        +sint(i  ,j+1,k+1) + sint(i+1,j+1,k+1)) &
                                      -( sint(i  ,j  ,k+1) + sint(i+1,j  ,k+1) &
-                                       +sint(i  ,j+1,k  ) + sint(i+1,j+1,k  )) ) / (hy*hz)
+                                       +sint(i  ,j+1,k  ) + sint(i+1,j+1,k  )) ) * (hyinv*hzinv)
 
              ! sxyz
              slope(i,j,k,7) = (-sint(i  ,j  ,k  ) + sint(i+1,j  ,k  ) + sint(i  ,j+1,k  ) &
                                +sint(i  ,j  ,k+1) - sint(i+1,j+1,k  ) - sint(i+1,j  ,k+1) &
-                               -sint(i  ,j+1,k+1) + sint(i+1,j+1,k+1) ) / (hx*hy*hz)
+                               -sint(i  ,j+1,k+1) + sint(i+1,j+1,k+1) ) * (hxinv*hyinv*hzinv)
 
              ! limit slopes
              if (advection_type .eq. 2) then
@@ -859,42 +866,42 @@ contains
                 slope(i,j,k,1) = 0.25d0*( ( sc(5) + sc(7) &
                                            +sc(6) + sc(8)) &
                                          -( sc(1) + sc(3) &
-                                           +sc(2) + sc(4)) ) / hx
+                                           +sc(2) + sc(4)) ) * hxinv
 
                 ! sy
                 slope(i,j,k,2) = 0.25d0*( ( sc(3) + sc(7) &
                                            +sc(4) + sc(8)) &
                                          -( sc(1) + sc(5) &
-                                           +sc(2) + sc(6)) ) / hy
+                                           +sc(2) + sc(6)) ) * hyinv
 
                 ! sz
                 slope(i,j,k,3) = 0.25d0*( ( sc(2) + sc(6) &
                                            +sc(4) + sc(8)) &
                                          -( sc(1) + sc(5) &
-                                           +sc(3) + sc(7)) ) / hz
+                                           +sc(3) + sc(7)) ) * hzinv
 
                 ! sxy
                 slope(i,j,k,4) = 0.5d0*( ( sc(1) + sc(2) &
                                           +sc(7) + sc(8)) &
                                         -( sc(5) + sc(6) &
-                                          +sc(3) + sc(4)) ) / (hx*hy)
+                                          +sc(3) + sc(4)) ) * (hxinv*hyinv)
 
                 ! sxz
                 slope(i,j,k,5) = 0.5d0*( ( sc(1) + sc(3) &
                                           +sc(6) + sc(8)) &
                                         -( sc(5) + sc(7) &
-                                          +sc(2) + sc(4)) ) / (hx*hz)
+                                          +sc(2) + sc(4)) ) * (hxinv*hzinv)
 
                 ! syz
                 slope(i,j,k,6) = 0.5d0*( ( sc(1) + sc(5) &
                                           +sc(4) + sc(8)) &
                                         -( sc(2) + sc(6) &
-                                          +sc(3) + sc(7)) ) / (hy*hz)
+                                          +sc(3) + sc(7)) ) * (hyinv*hzinv)
 
                 ! sxyz
                 slope(i,j,k,7) = (-sc(1) + sc(5) + sc(3) &
                                           +sc(2) - sc(7) - sc(6) &
-                                          -sc(4) + sc(8) ) / (hx*hy*hz)
+                                          -sc(4) + sc(8) ) * (hxinv*hyinv*hzinv)
 
              endif
 
@@ -924,7 +931,7 @@ contains
     integer        ,intent(in   ) :: bc(:,:)
 
     ! local variables
-    real(kind=dp_t) :: hx,hy,hxs,hys,gamp,gamm
+    real(kind=dp_t) :: hx,hy,hxs,hys,gamp,gamm,hxinv,hyinv
     real(kind=dp_t) :: vtrans,stem,vaddif,vdif
     real(kind=dp_t) :: isign, jsign
     real(kind=dp_t) :: u1,u2,v1,v2,uu,vv
@@ -933,6 +940,9 @@ contains
 
     hx = dx(1)
     hy = dx(2)
+
+    hxinv = 1/hx
+    hyinv = 1/hy
 
     do j = xlo(2),xhi(2) 
        do i = xlo(1)-1,xhi(1)-1
@@ -1029,10 +1039,10 @@ contains
           end if
 
           vdif = 0.5d0*dt*(vadv(iup,j+1)*gamp -  &
-               vadv(iup,j)*gamm ) / hy
+               vadv(iup,j)*gamm ) * hyinv
           stem = s(iup,j) + (isign*hx - uadv(i+1,j)*dt)*0.5d0*slope(iup,j,1)
           vaddif = stem*0.5d0*dt*( &
-               uadv(iup+1,j) - uadv(iup,j))/hx
+               uadv(iup+1,j) - uadv(iup,j))*hxinv
           sedgex(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*force(iup,j)
 
           ! end of calculation of sedgex
@@ -1148,9 +1158,9 @@ contains
           end if
 
           vdif = 0.5d0*dt* &
-               (uadv(i+1,jup)*gamp-uadv(i,jup)*gamm)/hx
+               (uadv(i+1,jup)*gamp-uadv(i,jup)*gamm)*hxinv
           stem = s(i,jup) + (jsign*hy - vadv(i,j+1)*dt)*0.5d0*slope(i,jup,2)
-          vaddif = stem*0.5d0*dt*(vadv(i,jup+1) - vadv(i,jup))/hy
+          vaddif = stem*0.5d0*dt*(vadv(i,jup+1) - vadv(i,jup))*hyinv
           sedgey(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*force(i,jup)
 
           ! end of calculation of sedgey
@@ -1188,6 +1198,7 @@ contains
     integer comp,i,j
 
     real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
+
 
     if (proj_type .eq. 1 .or. proj_type .eq. 2) then
 
@@ -1352,7 +1363,7 @@ contains
     real(kind=dp_t), allocatable :: vy(:,:,:)
     real(kind=dp_t), allocatable :: wz(:,:,:)
 
-    real(kind=dp_t) :: isign,jsign,ksign,hx,hy,hz
+    real(kind=dp_t) :: isign,jsign,ksign,hx,hy,hz,hxinv,hyinv,hzinv
     real(kind=dp_t) :: del(3),p1(3),p2(3),p3(3),p4(3)
     real(kind=dp_t) :: val1,val2,val3,val4,val5
     real(kind=dp_t) :: u,v,w,uu,vv,ww,gamma,gamma2
@@ -1366,6 +1377,10 @@ contains
     hy = dx(2)
     hz = dx(3)
 
+    hxinv = 1/hx
+    hyinv = 1/hy
+    hzinv = 1/hz
+
     dt2 = dt/2.d0
     dt3 = dt/3.d0
     dt4 = dt/4.d0
@@ -1377,9 +1392,9 @@ contains
     do k=tlo(3)-1,thi(3)+1
        do j=tlo(2)-1,thi(2)+1
           do i=tlo(1)-1,thi(1)+1
-             ux(i,j,k) = (uadv(i+1,j,k) - uadv(i,j,k)) / hx
-             vy(i,j,k) = (vadv(i,j+1,k) - vadv(i,j,k)) / hy
-             wz(i,j,k) = (wadv(i,j,k+1) - wadv(i,j,k)) / hz
+             ux(i,j,k) = (uadv(i+1,j,k) - uadv(i,j,k)) * hxinv
+             vy(i,j,k) = (vadv(i,j+1,k) - vadv(i,j,k)) * hyinv
+             wz(i,j,k) = (wadv(i,j,k+1) - wadv(i,j,k)) * hzinv
           end do
        end do
     end do
@@ -4449,7 +4464,7 @@ contains
     real(kind=dp_t), allocatable :: sgndif(:)
     integer        , allocatable :: kdp(:)
 
-    real(kind=dp_t) :: hx,hy,sumloc,redfac,redmax,div
+    real(kind=dp_t) :: hx,hy,sumloc,redfac,redmax,div,hxinv,hyinv
     real(kind=dp_t) :: eps
     integer         :: inc1, inc2, inc3, inc4
     integer         :: i,j,k,ll,is,ie,js,je
@@ -4463,6 +4478,8 @@ contains
 
     hx = dx(1)
     hy = dx(2)
+    hxinv = 1/hx
+    hyinv = 1/hy
     is = lo(1)
     ie = hi(1)
     js = lo(2)
@@ -4485,11 +4502,11 @@ contains
        do i = is-1,ie+1 
 
           slx(i,j) = 0.5d0*(sint(i  ,j) + sint(i  ,j-1) - &
-                            sint(i-1,j) - sint(i-1,j-1) ) / hx
+                            sint(i-1,j) - sint(i-1,j-1) ) * hxinv
           sly(i,j) = 0.5d0*(sint(i  ,j) - sint(i  ,j-1) + &
-                            sint(i-1,j) - sint(i-1,j-1) ) / hy
+                            sint(i-1,j) - sint(i-1,j-1) ) * hyinv
           slxy(i,j) = (sint(i,j  ) - sint(i  ,j-1) - &
-                       sint(i-1,j) + sint(i-1,j-1) ) / (hx*hy)
+                       sint(i-1,j) + sint(i-1,j-1) ) * (hxinv*hyinv)
 
        enddo
     enddo
@@ -4542,7 +4559,7 @@ contains
 
 
     real(kind=dp_t) :: hx,hy,sumloc,redfac,redmax,div,cmp,cmp_x,cmp_y,my_sn,min_x,min_y
-    real(kind=dp_t) :: eps, pos, my_val,my_min,my_max
+    real(kind=dp_t) :: eps, pos, my_val,my_min,my_max,hxinv,hyinv
     integer         :: inc1, inc2, inc3, inc4, ind_x1, ind_y1,ind_x2, ind_y2, limit_x, limit_y 
     integer         :: edge_xh, edge_xl, edge_yh, edge_yl, test_corners
     integer         :: i,j,k,ll,is,ie,js,je
@@ -4561,6 +4578,8 @@ contains
 
     hx = dx(1)
     hy = dx(2)
+    hxinv = 1/hx
+    hyinv = 1/hy
     is = lo(1)
     ie = hi(1)
     js = lo(2)
@@ -4625,11 +4644,11 @@ contains
              ! calculate slopes out of sint
 
              slx(i,j) = 0.5d0*(sint(i  ,j) + sint(i  ,j-1) - &
-                  sint(i-1,j) - sint(i-1,j-1) ) / hx
+                  sint(i-1,j) - sint(i-1,j-1) ) * hxinv
              sly(i,j) = 0.5d0*(sint(i  ,j) - sint(i  ,j-1) + &
-                  sint(i-1,j) - sint(i-1,j-1) ) / hy
+                  sint(i-1,j) - sint(i-1,j-1) ) * hyinv
              slxy(i,j) = (sint(i,j  ) - sint(i  ,j-1) - &
-                  sint(i-1,j) + sint(i-1,j-1) ) / (hx*hy)
+                  sint(i-1,j) + sint(i-1,j-1) ) * (hxinv*hyinv)
 
              ! limit slxx, slyy such that no true interior min/max
 
@@ -4668,15 +4687,15 @@ contains
              end if
              if (ind_x1 .eq. 1 .and. ind_y2 .eq. 1) then
                 slxx(i,j) = 0.d0;
-                slyy(i,j) = sign(1.0d0,slyy_extr(i,j)) * cmp_y / hy;
+                slyy(i,j) = sign(1.0d0,slyy_extr(i,j)) * cmp_y * hyinv;
              end if
              if (ind_x2 .eq. 1 .and. ind_y1 .eq. 1) then
-                slxx(i,j) =  sign(1.0d0,slxx_extr(i,j)) * cmp_x / hx;
+                slxx(i,j) =  sign(1.0d0,slxx_extr(i,j)) * cmp_x * hxinv;
                 slyy(i,j) = 0.d0;
              end if
              if (ind_x2 .eq. 1 .and. ind_y2 .eq. 1) then
-                slxx(i,j) =  sign(1.0d0,slxx_extr(i,j)) * cmp_x / hx;
-                slyy(i,j) =  sign(1.0d0,slyy_extr(i,j)) * cmp_y / hy;
+                slxx(i,j) =  sign(1.0d0,slxx_extr(i,j)) * cmp_x * hxinv;
+                slyy(i,j) =  sign(1.0d0,slyy_extr(i,j)) * cmp_y * hyinv;
              end if
 
 
@@ -4847,7 +4866,7 @@ contains
                 else
                    cmp = min(abs(slxy(i,j)*hy/2.+slx(i,j)) , abs(slxy(i,j)*hy/2.-slx(i,j)) )
                    if (cmp .lt. abs(slxx(i,j))*hx) then ! ie would create interior extrema
-                      slxx(i,j) = sign(1.0d0,slxx_extr(i,j)) * cmp / hx
+                      slxx(i,j) = sign(1.0d0,slxx_extr(i,j)) * cmp * hxinv
                    end if
                 end if
 
@@ -4856,7 +4875,7 @@ contains
                 else
                    cmp = min(abs(slxy(i,j)*hx/2.+sly(i,j)) , abs(slxy(i,j)*hx/2.-sly(i,j)) )
                    if (cmp .lt. abs(slyy(i,j))*hy) then ! ie would create interior extrema
-                      slyy(i,j) = sign(1.0d0,slyy_extr(i,j)) * cmp / hy
+                      slyy(i,j) = sign(1.0d0,slyy_extr(i,j)) * cmp * hyinv
                    end if
                 end if
 
@@ -5016,7 +5035,7 @@ contains
              sly(i,j) = 0.5d0*(sc(i,j,4) + sc(i,j,2) -  &
                   sc(i,j,1) - sc(i,j,3))/hy
              slxy(i,j) = ( sc(i,j,1) + sc(i,j,4) &
-                  -sc(i,j,2) - sc(i,j,3) ) / (hx*hy)
+                  -sc(i,j,2) - sc(i,j,3) ) * (hxinv*hyinv)
 
           end if
        enddo
@@ -5041,7 +5060,7 @@ contains
              else
                 cmp = min(abs(slxy(i,j)*hy/2.+slx(i,j)) , abs(slxy(i,j)*hy/2.-slx(i,j)) )
                 if (cmp .lt. abs(slxx(i,j))*hx) then ! ie would create interior extrema
-                   slxx(i,j) = sign(1.0d0,slxx_extr(i,j)) * cmp / hx
+                   slxx(i,j) = sign(1.0d0,slxx_extr(i,j)) * cmp * hxinv
                 end if
              end if
 
@@ -5054,7 +5073,7 @@ contains
              else
                 cmp = min(abs(slxy(i,j)*hx/2.+sly(i,j)) , abs(slxy(i,j)*hx/2.-sly(i,j)) )
                 if (cmp .lt. abs(slyy(i,j))*hy) then ! ie would create interior extrema
-                   slyy(i,j) = sign(1.0d0,slyy_extr(i,j)) * cmp / hy
+                   slyy(i,j) = sign(1.0d0,slyy_extr(i,j)) * cmp * hyinv
                 end if
              end if
 
@@ -5152,7 +5171,7 @@ contains
     real(kind=dp_t),allocatable ::       c(:,:)
 
 
-    real(kind=dp_t) :: hx,hy,dt3rd,hxs,hys
+    real(kind=dp_t) :: hx,hy,dt3rd,hxs,hys,hxinv,hyinv
     real(kind=dp_t) :: vtrans,stem,vaddif,vdif
     real(kind=dp_t) :: isign, jsign, force_local
     integer i,j,is,ie,js,je
@@ -5176,6 +5195,8 @@ contains
     je = hi(2)
     hx = dx(1)
     hy = dx(2)
+    hxinv = 1/hx
+    hyinv = 1/hy
 
     dt3rd = dt / 3.d0
 
@@ -5307,12 +5328,12 @@ contains
           hxs = hx*isign
 
           vdif = 0.5d0*dt*(vadv(iup,j+1)*gamp(i) -  &
-               vadv(iup,j)*gamm(i) ) / hy
+               vadv(iup,j)*gamm(i) ) * hyinv
           stem = ave(iup,j) + (hxs - uadv(i+1,j)*dt)*0.5d0*slx(iup,j) + &
                0.5d0*slxx(iup,j)*( (hxs/2. - uadv(i+1,j)*dt*(1.+sqrt(3.))/(2.*sqrt(3.)))**2 + &
                (hxs/2. + uadv(i+1,j)*dt*(1.-sqrt(3.))/(2.*sqrt(3.)))**2   ) + &
                slyy(iup,j)*hy*hy/12.d0
-          vaddif = stem*0.5d0*dt*(uadv(iup+1,j) - uadv(iup,j))/hx
+          vaddif = stem*0.5d0*dt*(uadv(iup+1,j) - uadv(iup,j)) * hyinv
           sedgex(i+1,j) = stem - vdif - vaddif + 0.5d0*dt*force_local
 
        enddo
@@ -5446,12 +5467,12 @@ contains
           hys = hy*jsign
 
           vdif = 0.5d0*dt* &
-               (uadv(i+1,jup)*gamp(i)-uadv(i,jup)*gamm(i))/hx
+               (uadv(i+1,jup)*gamp(i)-uadv(i,jup)*gamm(i))*hxinv
           stem = ave(i,jup) + (hys - vadv(i,j+1)*dt)*0.5d0*sly(i,jup) + &
                0.5d0*slyy(i,jup)*( (hys/2. - vadv(i,j+1)*dt*(1.+sqrt(3.))/(2.*sqrt(3.)))**2 + &
                (hys/2. + vadv(i,j+1)*dt*(1.-sqrt(3.))/(2.*sqrt(3.)))**2   ) + &
                slxx(i,jup)*hx*hx/12.d0
-          vaddif = stem*0.5d0*dt*(vadv(i,jup+1) - vadv(i,jup))/hy
+          vaddif = stem*0.5d0*dt*(vadv(i,jup+1) - vadv(i,jup))*hyinv
           sedgey(i,j+1) = stem - vdif - vaddif + 0.5d0*dt*force_local
 
        enddo
