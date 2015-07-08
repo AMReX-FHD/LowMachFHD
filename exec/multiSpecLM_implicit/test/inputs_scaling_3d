@@ -205,9 +205,9 @@
   gmres_rel_tol = 1.d-9 ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
   gmres_verbose = 1     ! gmres verbosity; if greater than 1, more residuals will be printed out
-  gmres_max_outer = 20  ! max number of outer iterations
-  gmres_max_inner = 5   ! max number of inner iterations, or restart number
-  gmres_max_iter = 100  ! max number of gmres iterations
+  gmres_max_outer = 2   ! max number of outer iterations
+  gmres_max_inner = 3   ! max number of inner iterations, or restart number
+  gmres_max_iter = 6    ! max number of gmres iterations
   gmres_min_iter = 1    ! min number of gmres iterations
 
 /
