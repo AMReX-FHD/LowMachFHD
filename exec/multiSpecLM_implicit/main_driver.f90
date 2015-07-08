@@ -19,6 +19,7 @@ subroutine main_driver()
   use eos_check_module
   use estdt_module
   use stag_mg_layout_module
+  use macproject_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use fill_umac_ghost_cells_module
@@ -229,9 +230,6 @@ subroutine main_driver()
 
   end if
 
-  ! build layouts for staggered multigrid solver
-  call stag_mg_layout_build(mla)
-
   deallocate(pmask)
 
   !=======================================================
@@ -263,6 +261,10 @@ subroutine main_driver()
   c_bc_comp   = scal_bc_comp + 1
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
   temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
+
+  ! build layouts for staggered multigrid solver and macproject within preconditioner
+  call stag_mg_layout_build(mla)
+  call mgt_macproj_precon_build(mla,dx,the_bc_tower)
 
   if (restart .lt. 0) then
 
@@ -676,8 +678,9 @@ subroutine main_driver()
   deallocate(lo,hi,dx)
   deallocate(rho_old,rhotot_old,Temp,umac)
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
+  call stag_mg_layout_destroy()
+  call mgt_macproj_precon_destroy()
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
-  call stag_mg_layout_destroy()
 
 end subroutine main_driver

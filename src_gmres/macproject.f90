@@ -23,7 +23,9 @@ module macproject_module
 
   private
 
-  public :: macproject, subtract_weighted_gradp
+  public :: macproject, subtract_weighted_gradp, mgt_macproj_precon_build, mgt_macproj_precon_destroy
+
+  type(mg_tower), save, allocatable :: mgt_macproj_precon(:)
 
 contains 
 
@@ -93,17 +95,10 @@ contains
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
 
-    rel_solver_eps = mg_rel_tol
-    abs_solver_eps = 1.d-16
-
     if (full_solve) then
-       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,pres_bc_comp, &
-                          mla%mba%rr,rel_solver_eps,abs_solver_eps, &
-                          abort_on_max_iter=.true.)
+       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,pres_bc_comp)
     else
-       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,pres_bc_comp, &
-                          mla%mba%rr,rel_solver_eps,abs_solver_eps, &
-                          abort_on_max_iter=.false.)
+       call mac_multigrid(mla,mac_rhs,phi,fine_flx,zero_fab,alphainv_fc,dx,the_bc_tower,pres_bc_comp)
     end if
 
     ! restore alphainv_fc
@@ -131,9 +126,7 @@ contains
 
   contains
 
-    subroutine mac_multigrid(mla,rh,phi,fine_flx,alpha,beta,dx,the_bc_tower,pres_bc_comp, &
-                             ref_ratio,rel_solver_eps,abs_solver_eps, &
-                             abort_on_max_iter)
+    subroutine mac_multigrid(mla,rh,phi,fine_flx,alpha,beta,dx,the_bc_tower,pres_bc_comp)
 
       type(ml_layout), intent(in   ) :: mla
       type(multifab) , intent(inout) :: rh(:),phi(:)
@@ -142,10 +135,6 @@ contains
       real(dp_t)     , intent(in   ) :: dx(:,:)
       type(bc_tower) , intent(in   ) :: the_bc_tower
       integer        , intent(in   ) :: pres_bc_comp
-      integer        , intent(in   ) :: ref_ratio(:,:)
-      real(dp_t)     , intent(in   ) :: rel_solver_eps
-      real(dp_t)     , intent(in   ) :: abs_solver_eps
-      logical        , intent(in   ) :: abort_on_max_iter
 
       type(layout  ) :: la
 
@@ -178,9 +167,8 @@ contains
       bottom_solver_eps = mgt(nlevs)%bottom_solver_eps
       bottom_max_iter   = mgt(nlevs)%bottom_max_iter
 
-      do n = nlevs, 1, -1
-
-         if (full_solve) then
+      if (full_solve) then
+         do n = nlevs, 1, -1
 
             call mg_tower_build(mgt(n), mla%la(n), layout_get_pd(mla%la(n)), &
                                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
@@ -196,88 +184,108 @@ contains
                                 bottom_max_iter = bottom_max_iter, &
                                 bottom_solver_eps = bottom_solver_eps, &
                                 max_iter = mgt(nlevs)%max_iter, &
-                                abort_on_max_iter = abort_on_max_iter, &
+                                abort_on_max_iter = .true., &
                                 max_nlevel = max_nlevel, &
                                 max_bottom_nlevel = mgt(nlevs)%max_bottom_nlevel, &
                                 min_width = mgt(nlevs)%min_width, &
-                                eps = rel_solver_eps, &
-                                abs_eps = abs_solver_eps, &
+                                eps = mg_rel_tol, &
+                                abs_eps = 1.d-16, &
                                 verbose = mg_verbose, &
                                 cg_verbose = cg_verbose, &
                                 nodal = nodal_flags(rh(nlevs)))
 
-         else
+         end do
+      end if
 
-            call mg_tower_build(mgt(n), mla%la(n), layout_get_pd(mla%la(n)), &
-                                the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
-                                stencil_type = CC_CROSS_STENCIL, &
-                                dh = dx(n,:), &
-                                smoother = smoother, &
-                                nu1 = mg_nsmooths_down, &
-                                nu2 = mg_nsmooths_up, &
-                                nuf = mg_nsmooths_bottom, &
-                                nub = nub, &
-                                cycle_type = cycle_type, &
-                                bottom_solver = mg_bottom_solver, &
-                                bottom_max_iter = bottom_max_iter, &
-                                bottom_solver_eps = bottom_solver_eps, &
-                                max_iter = mg_max_vcycles, &
-                                abort_on_max_iter = abort_on_max_iter, &
-                                max_nlevel = max_nlevel, &
-                                max_bottom_nlevel = mg_max_bottom_nlevels, &
-                                min_width = mg_minwidth, &
-                                eps = rel_solver_eps, &
-                                abs_eps = abs_solver_eps, &
-                                verbose = mg_verbose, &
-                                cg_verbose = cg_verbose, &
-                                nodal = nodal_flags(rh(nlevs)), &
-                                fancy_bottom_type = 0)
+      if (full_solve) then
 
+         !! Fill coefficient array
+
+         do n = nlevs,1,-1
+
+            allocate(cell_coeffs(mgt(n)%nlevels))
+            allocate(face_coeffs(mgt(n)%nlevels,dm))
+
+            la = mla%la(n)
+
+            call multifab_build(cell_coeffs(mgt(n)%nlevels), la, 1, 1)
+            call multifab_copy_c(cell_coeffs(mgt(n)%nlevels),1,alpha(n),1, 1,ng=nghost(alpha(n)))
+
+            do d = 1, dm
+               call multifab_build_edge(face_coeffs(mgt(n)%nlevels,d),la,1,1,d)
+               call multifab_copy_c(face_coeffs(mgt(n)%nlevels,d),1,beta(n,d),1,1,ng=nghost(beta(n,d)))
+            end do
+
+            if (n > 1) then
+               xa = HALF*mla%mba%rr(n-1,:)*mgt(n)%dh(:,mgt(n)%nlevels)
+               xb = HALF*mla%mba%rr(n-1,:)*mgt(n)%dh(:,mgt(n)%nlevels)
+            else
+               xa = ZERO
+               xb = ZERO
             end if
 
-      end do
+            pxa = ZERO
+            pxb = ZERO
 
-      !! Fill coefficient array
+            call stencil_fill_cc_all_mglevels(mgt(n), cell_coeffs, face_coeffs, &
+                 xa, xb, pxa, pxb, 2, &
+                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp))
 
-      do n = nlevs,1,-1
+            call destroy(cell_coeffs(mgt(n)%nlevels))
+            deallocate(cell_coeffs)
 
-         allocate(cell_coeffs(mgt(n)%nlevels))
-         allocate(face_coeffs(mgt(n)%nlevels,dm))
+            do d = 1, dm
+               call destroy(face_coeffs(mgt(n)%nlevels,d))
+            end do
+            deallocate(face_coeffs)
 
-         la = mla%la(n)
-
-         call multifab_build(cell_coeffs(mgt(n)%nlevels), la, 1, 1)
-         call multifab_copy_c(cell_coeffs(mgt(n)%nlevels),1,alpha(n),1, 1,ng=nghost(alpha(n)))
-
-         do d = 1, dm
-            call multifab_build_edge(face_coeffs(mgt(n)%nlevels,d),la,1,1,d)
-            call multifab_copy_c(face_coeffs(mgt(n)%nlevels,d),1,beta(n,d),1,1,ng=nghost(beta(n,d)))
          end do
 
-         if (n > 1) then
-            xa = HALF*ref_ratio(n-1,:)*mgt(n)%dh(:,mgt(n)%nlevels)
-            xb = HALF*ref_ratio(n-1,:)*mgt(n)%dh(:,mgt(n)%nlevels)
-         else
-            xa = ZERO
-            xb = ZERO
-         end if
+      else
 
-         pxa = ZERO
-         pxb = ZERO
+         !! Fill coefficient array
 
-         call stencil_fill_cc_all_mglevels(mgt(n), cell_coeffs, face_coeffs, &
-              xa, xb, pxa, pxb, 2, &
-              the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp))
+         do n = nlevs,1,-1
 
-         call destroy(cell_coeffs(mgt(n)%nlevels))
-         deallocate(cell_coeffs)
+            allocate(cell_coeffs(mgt_macproj_precon(n)%nlevels))
+            allocate(face_coeffs(mgt_macproj_precon(n)%nlevels,dm))
 
-         do d = 1, dm
-            call destroy(face_coeffs(mgt(n)%nlevels,d))
+            la = mla%la(n)
+
+            call multifab_build(cell_coeffs(mgt_macproj_precon(n)%nlevels), la, 1, 1)
+            call multifab_copy_c(cell_coeffs(mgt_macproj_precon(n)%nlevels),1,alpha(n),1, 1,ng=nghost(alpha(n)))
+
+            do d = 1, dm
+               call multifab_build_edge(face_coeffs(mgt_macproj_precon(n)%nlevels,d),la,1,1,d)
+               call multifab_copy_c(face_coeffs(mgt_macproj_precon(n)%nlevels,d),1,beta(n,d),1,1,ng=nghost(beta(n,d)))
+            end do
+
+            if (n > 1) then
+               xa = HALF*mla%mba%rr(n-1,:)*mgt_macproj_precon(n)%dh(:,mgt_macproj_precon(n)%nlevels)
+               xb = HALF*mla%mba%rr(n-1,:)*mgt_macproj_precon(n)%dh(:,mgt_macproj_precon(n)%nlevels)
+            else
+               xa = ZERO
+               xb = ZERO
+            end if
+
+            pxa = ZERO
+            pxb = ZERO
+
+            call stencil_fill_cc_all_mglevels(mgt_macproj_precon(n), cell_coeffs, face_coeffs, &
+                 xa, xb, pxa, pxb, 2, &
+                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp))
+
+            call destroy(cell_coeffs(mgt_macproj_precon(n)%nlevels))
+            deallocate(cell_coeffs)
+
+            do d = 1, dm
+               call destroy(face_coeffs(mgt_macproj_precon(n)%nlevels,d))
+            end do
+            deallocate(face_coeffs)
+
          end do
-         deallocate(face_coeffs)
 
-      end do
+      end if
 
       if (mg_verbose >= 3) then
          do_diagnostics = 1
@@ -285,7 +293,11 @@ contains
          do_diagnostics = 0
       end if
 
-      call ml_cc_solve(mla, mgt, rh, phi, fine_flx, do_diagnostics)
+      if (full_solve) then
+         call ml_cc_solve(mla, mgt, rh, phi, fine_flx, do_diagnostics)
+      else
+         call ml_cc_solve(mla, mgt_macproj_precon, rh, phi, fine_flx, do_diagnostics)
+      end if
 
       do n = 1,nlevs
          call multifab_fill_boundary(phi(n))
@@ -293,9 +305,11 @@ contains
                               dx_in=dx(n,:))
       end do
 
-      do n = 1, nlevs
-         call mg_tower_destroy(mgt(n))
-      end do
+      if (full_solve) then
+         do n = 1, nlevs
+            call mg_tower_destroy(mgt(n))
+         end do
+      end if
 
       call destroy(bpt)
 
@@ -349,4 +363,81 @@ contains
 
   end subroutine subtract_weighted_gradp
   
+  subroutine mgt_macproj_precon_build(mla,dx,the_bc_tower)
+
+    type(ml_layout), intent(in   ) :: mla
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower ), intent(in   ) :: the_bc_tower
+
+    ! local
+    integer :: d, dm, n, nlevs
+    integer :: max_nlevel, smoother, nub, cycle_type, bottom_max_iter
+    real(dp_t) :: bottom_solver_eps
+    real(dp_t) ::  xa(mla%dim),  xb(mla%dim)
+    real(dp_t) :: pxa(mla%dim), pxb(mla%dim)
+
+    type(multifab), allocatable :: cell_coeffs(:)
+    type(multifab), allocatable :: face_coeffs(:,:)
+
+    type(layout  ) :: la
+
+    logical :: nodal_flag(mla%dim)
+
+    nlevs = mla%nlevel
+    dm    = mla%dim
+
+    allocate(mgt_macproj_precon(mla%nlevel))
+
+    !! Defaults:
+    max_nlevel        = mgt_macproj_precon(nlevs)%max_nlevel
+    smoother          = mgt_macproj_precon(nlevs)%smoother
+    nub               = mgt_macproj_precon(nlevs)%nub
+    cycle_type        = mgt_macproj_precon(nlevs)%cycle_type
+    bottom_solver_eps = mgt_macproj_precon(nlevs)%bottom_solver_eps
+    bottom_max_iter   = mgt_macproj_precon(nlevs)%bottom_max_iter
+
+    nodal_flag = .false.
+
+    do n = nlevs, 1, -1
+
+       call mg_tower_build(mgt_macproj_precon(n), mla%la(n), layout_get_pd(mla%la(n)), &
+                           the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
+                           stencil_type = CC_CROSS_STENCIL, &
+                           dh = dx(n,:), &
+                           smoother = smoother, &
+                           nu1 = mg_nsmooths_down, &
+                           nu2 = mg_nsmooths_up, &
+                           nuf = mg_nsmooths_bottom, &
+                           nub = nub, &
+                           cycle_type = cycle_type, &
+                           bottom_solver = mg_bottom_solver, &
+                           bottom_max_iter = bottom_max_iter, &
+                           bottom_solver_eps = bottom_solver_eps, &
+                           max_iter = mg_max_vcycles, &
+                           abort_on_max_iter = .false., &
+                           max_nlevel = max_nlevel, &
+                           max_bottom_nlevel = mg_max_bottom_nlevels, &
+                           min_width = mg_minwidth, &
+                           eps = mg_rel_tol, &
+                           abs_eps = 1.d-16, &
+                           verbose = mg_verbose, &
+                           cg_verbose = cg_verbose, &
+                           nodal = nodal_flag, &
+                           fancy_bottom_type = 0)
+
+    end do
+
+  end subroutine mgt_macproj_precon_build
+
+  subroutine mgt_macproj_precon_destroy()
+    
+    ! local
+    integer :: n
+
+    do n = 1, size(mgt_macproj_precon)
+       call mg_tower_destroy(mgt_macproj_precon(n))
+    end do
+
+  end subroutine mgt_macproj_precon_destroy
+
 end module macproject_module

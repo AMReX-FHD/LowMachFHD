@@ -31,6 +31,7 @@ subroutine main_driver()
   use estdt_module
   use stag_mg_layout_module
   use convert_stag_module
+  use macproject_module
   use probin_binarylm_module, only: probin_binarylm_init, analyze_binary, diff_coef
   use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
                                    prob_lo, prob_hi, max_grid_size, &
@@ -236,9 +237,6 @@ subroutine main_driver()
 
   end if
 
-  ! build layouts for staggered multigrid solver
-  call stag_mg_layout_build(mla)
-
   deallocate(pmask)
 
   ! tell the_bc_tower about max_levs, dm, and domain_phys_bc
@@ -249,6 +247,10 @@ subroutine main_driver()
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
   end do
+
+  ! build layouts for staggered multigrid solver and macproject within preconditioner
+  call stag_mg_layout_build(mla)
+  call mgt_macproj_precon_build(mla,dx,the_bc_tower)
 
   do n=1,nlevs
      do i=1,dm
@@ -649,8 +651,9 @@ subroutine main_driver()
 
   end do
 
+  call stag_mg_layout_destroy()
+  call mgt_macproj_precon_destroy()
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
-  call stag_mg_layout_destroy()
 
 end subroutine main_driver

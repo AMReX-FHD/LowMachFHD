@@ -34,6 +34,7 @@ subroutine main_driver()
   use checkpoint_module
   use project_onto_eos_module
   use fluid_charge_module
+  use macproject_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -247,9 +248,6 @@ subroutine main_driver()
 
   end if
 
-  ! build layouts for staggered multigrid solver
-  call stag_mg_layout_build(mla)
-
   deallocate(pmask)
 
   !=======================================================
@@ -283,6 +281,10 @@ subroutine main_driver()
   mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
   temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
   Epot_bc_comp       = scal_bc_comp + 2*nspecies + 2
+
+  ! build layouts for staggered multigrid solver and macproject within preconditioner
+  call stag_mg_layout_build(mla)
+  call mgt_macproj_precon_build(mla,dx,the_bc_tower)
 
   if (restart .lt. 0) then
 
@@ -720,8 +722,9 @@ subroutine main_driver()
   deallocate(lo,hi,dx)
   deallocate(rho_old,rhotot_old,Temp,umac)
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
+  call stag_mg_layout_destroy()
+  call mgt_macproj_precon_destroy()
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
-  call stag_mg_layout_destroy()
 
 end subroutine main_driver

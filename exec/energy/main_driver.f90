@@ -19,6 +19,7 @@ subroutine main_driver()
   use advance_timestep_module
   use eos_model_module
   use stag_mg_layout_module
+  use macproject_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -307,9 +308,6 @@ subroutine main_driver()
 
   end if
 
-  ! build layouts for staggered multigrid solver
-  call stag_mg_layout_build(mla)
-
   deallocate(pmask)
 
   !=======================================================
@@ -343,6 +341,10 @@ subroutine main_driver()
      ! define level n of the_bc_tower
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
   end do
+
+  ! build layouts for staggered multigrid solver and macproject within preconditioner
+  call stag_mg_layout_build(mla)
+  call mgt_macproj_precon_build(mla,dx,the_bc_tower)
 
   if (restart .lt. 0) then
 
@@ -712,8 +714,9 @@ subroutine main_driver()
   deallocate(Scorr_old,deltaScorr_old)
   deallocate(eta_new,eta_new_ed)
   deallocate(mass_update_old,rhoh_update_old)
+  call stag_mg_layout_destroy()
+  call mgt_macproj_precon_destroy()
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
-  call stag_mg_layout_destroy()
 
 end subroutine main_driver
