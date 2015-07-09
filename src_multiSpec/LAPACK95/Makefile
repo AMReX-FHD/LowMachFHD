@@ -3,8 +3,13 @@
 #     UNI-C, Denmark; Univ. of Tennessee, USA; NAG Ltd., UK
 #     August 5, 2000
 #
+ifeq ($(findstring bint, $(HOST)), bint)
+FC       = ifort -mmic
+FC1      = ifort -mmic
+else
 FC       = gfortran -ffree-form
 FC1      = gfortran -ffixed-form
+endif
 
 OPTS0    = -O3
 #MODLIB   = -I./lapack95_modules
