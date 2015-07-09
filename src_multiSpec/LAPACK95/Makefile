@@ -6,6 +6,12 @@
 ifeq ($(findstring bint, $(HOST)), bint)
 FC       = ifort -mmic
 FC1      = ifort -mmic
+else ifeq ($(findstring edison, $(HOST)), edison)
+FC       = ifort
+FC1      = ifort
+else ifeq ($(findstring hopper, $(HOST)), hopper)
+FC       = ifort
+FC1      = ifort
 else
 FC       = gfortran -ffree-form
 FC1      = gfortran -ffixed-form
