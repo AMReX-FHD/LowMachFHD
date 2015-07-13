@@ -236,7 +236,8 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
       nPassiveScalars, fileUnit, fileNamePrefix, structFactMultiplier)
    type (HydroGrid), target :: grid
    integer, intent(in) :: nCells(nMaxDims), nSpecies, nVelocityDimensions
-   real (wp), intent(in) :: systemLength(nMaxDims), heatCapacity(nSpecies), timestep
+   real (wp), intent(in) :: systemLength(nMaxDims), timestep
+   real (wp), intent(in), optional :: heatCapacity(nSpecies)
    logical, intent(in) :: isSingleFluid
    integer, intent(in), optional :: nPassiveScalars
    integer, intent(in), optional :: fileUnit ! If positive, read the namelist from the given file unit
@@ -299,7 +300,11 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
    grid%timestep = timestep
 
    allocate( grid%heatCapacity(nSpecies) )
-   grid%heatCapacity = heatCapacity
+   if(present(heatCapacity)) then
+      grid%heatCapacity = heatCapacity
+   else
+      grid%heatCapacity = 1.0_wp
+   end if   
    
    grid%estimateCovariances = estimateCovariances
    grid%subtractMeanFT = subtractMeanFT
