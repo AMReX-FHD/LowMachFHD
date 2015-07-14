@@ -53,7 +53,8 @@ program main
      print*, 'Run Time = ', r1
   end if
 
-!  call flush()
+  ! "6" is the standard output
+  call flush(6)
 
   call boxlib_finalize()
 

@@ -393,7 +393,8 @@ contains
 
           ! force output to be written for screen
           ! useful for parallel problems
-          call flush()
+          ! "6" is the standard output
+          call flush(6)
 
           if(total_iter >= gmres_max_iter) then
             exit InnerLoop
