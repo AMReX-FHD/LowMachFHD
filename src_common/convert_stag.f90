@@ -148,6 +148,11 @@ contains
     real(kind=dp_t), pointer :: epy(:,:,:,:)
     real(kind=dp_t), pointer :: epz(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: xnodalbox, ynodalbox, znodalbox
+    integer :: xlo(cc(1)%dim), xhi(cc(1)%dim)
+    integer :: ylo(cc(1)%dim), yhi(cc(1)%dim)
+    integer :: zlo(cc(1)%dim), zhi(cc(1)%dim)
     type(bl_prof_timer),save :: bpt
 
     call build(bpt,"average_cc_to_face")
@@ -166,8 +171,26 @@ contains
        increment_bccomp = increment_bccomp_in
     end if
 
+    !$omp parallel private(n,i,mfi,xnodalbox,ynodalbox,znodalbox) &
+    !$omp private(xlo,xhi,ylo,yhi,zlo,zhi,cp,epx,epy,epz,lo,hi) &
+    !$omp private(scomp,bccomp)
+
     do n=1,nlevs
-       do i=1,nfabs(cc(n))
+       call mfiter_build(mfi, cc(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+          xnodalbox = get_grownnodaltilebox(mfi,1,ng_f)
+          xlo = lwb(xnodalbox)
+          xhi = upb(xnodalbox)
+          ynodalbox = get_grownnodaltilebox(mfi,2,ng_f)
+          ylo = lwb(ynodalbox)
+          yhi = upb(ynodalbox)
+          znodalbox = get_grownnodaltilebox(mfi,3,ng_f)
+          zlo = lwb(znodalbox)
+          zhi = upb(znodalbox)
+
+!       do i=1,nfabs(cc(n))
           cp  => dataptr(cc(n), i)
           epx => dataptr(face(n,1), i)
           epy => dataptr(face(n,2), i)
@@ -184,113 +207,126 @@ contains
                 call average_cc_to_face_2d(cp(:,:,1,scomp),ng_c, &
                                            epx(:,:,1,scomp),epy(:,:,1,scomp),ng_f, &
                                            lo,hi, &
-                                           the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
+                                           the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp), &
+                                           xlo,xhi,ylo,yhi)
              case (3)
                 epz => dataptr(face(n,3), i)
                 call average_cc_to_face_3d(cp(:,:,:,scomp),ng_c, &
                                            epx(:,:,:,scomp),epy(:,:,:,scomp),epz(:,:,:,scomp),ng_f, &
                                            lo,hi, &
-                                           the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp))
+                                           the_bc_level(n)%adv_bc_level_array(i,:,:,bccomp), &
+                                           xlo,xhi,ylo,yhi,zlo,zhi)
              end select
           end do
        end do
     end do
+    !$omp end parallel
 
     call destroy(bpt)
 
   end subroutine average_cc_to_face
     
-  subroutine average_cc_to_face_2d(cc,ng_c,facex,facey,ng_f,lo,hi,adv_bc)
+  subroutine average_cc_to_face_2d(cc,ng_c,facex,facey,ng_f,glo,ghi,adv_bc,xlo,xhi,ylo,yhi)
 
     use bc_module
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_f
-    real(kind=dp_t), intent(in   ) ::    cc(lo(1)-ng_c:,lo(2)-ng_c:)
-    real(kind=dp_t), intent(inout) :: facex(lo(1)-ng_f:,lo(2)-ng_f:)
-    real(kind=dp_t), intent(inout) :: facey(lo(1)-ng_f:,lo(2)-ng_f:)
+    integer        , intent(in   ) :: glo(:),ghi(:),ng_c,ng_f
+    integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:)
+    real(kind=dp_t), intent(in   ) ::    cc(glo(1)-ng_c:,glo(2)-ng_c:)
+    real(kind=dp_t), intent(inout) :: facex(glo(1)-ng_f:,glo(2)-ng_f:)
+    real(kind=dp_t), intent(inout) :: facey(glo(1)-ng_f:,glo(2)-ng_f:)
     integer        , intent(in   ) :: adv_bc(:,:)
 
     ! local
     integer :: i,j
 
     ! x-faces
-    do j=lo(2)-ng_f,hi(2)+ng_f
-       do i=lo(1)-ng_f,hi(1)+ng_f+1
+    do j=xlo(2),xhi(2)
+       do i=xlo(1),xhi(1)
           facex(i,j) = 0.5d0*(cc(i,j)+cc(i-1,j))
        end do
     end do
 
     ! overwrite x-boundary faces
     ! value in ghost cells represents boundary value
+    if (xlo(1)+ng_f .eq. glo(1)) then
     if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. HOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
-       do i=lo(1)-ng_f,lo(1)
-          facex(i,lo(2)-ng_f:hi(2)+ng_f) = cc(lo(1)-1,lo(2)-ng_f:hi(2)+ng_f)
+       do i=xlo(1),xlo(1)+ng_f
+          facex(i,xlo(2):xhi(2)) = cc(glo(1)-1,xlo(2):xhi(2))
        end do
     end if
+    end if
+    if (xhi(1)-ng_f .eq. ghi(1)+1) then
     if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. HOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
-       do i=hi(1)+1,hi(1)+ng_f+1
-          facex(i,lo(2)-ng_f:hi(2)+ng_f) = cc(hi(1)+1,lo(2)-ng_f:hi(2)+ng_f)
+       do i=xhi(1)-ng_f,xhi(1)
+          facex(i,xlo(2):xhi(2)) = cc(ghi(1)+1,xlo(2):xhi(2))
        end do
+    end if
     end if
 
     ! y-faces
-    do j=lo(2)-ng_f,hi(2)+ng_f+1
-       do i=lo(1)-ng_f,hi(1)+ng_f
+    do j=ylo(2),yhi(2)
+       do i=ylo(1),yhi(1)
           facey(i,j) = 0.5d0*(cc(i,j)+cc(i,j-1))
        end do
     end do
 
     ! overwrite y-boundary faces
     ! value in ghost cells represents boundary value
+    if (ylo(2)+ng_f .eq. glo(2)) then
     if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. HOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
-       do j=lo(2)-ng_f,lo(2)
-          facey(lo(1)-ng_f:hi(1)+ng_f,j) = cc(lo(1)-ng_f:hi(1)+ng_f,lo(2)-1)
+       do j=ylo(2),ylo(2)+ng_f
+          facey(ylo(1):yhi(1),j) = cc(ylo(1):yhi(1),glo(2)-1)
        end do
     end if
+    end if
+    if (yhi(2)-ng_f .eq. ghi(2)+1) then
     if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. HOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
-       do j=hi(2)+1,hi(2)+ng_f+1
-          facey(lo(1)-ng_f:hi(1)+ng_f,j) = cc(lo(1)-ng_f:hi(1)+ng_f,hi(2)+1)
+       do j=yhi(2)-ng_f,yhi(2)
+          facey(ylo(1):yhi(1),j) = cc(ylo(1):yhi(1),ghi(2)+1)
        end do
+    end if
     end if
 
   end subroutine average_cc_to_face_2d
 
-  subroutine average_cc_to_face_3d(cc,ng_c,facex,facey,facez,ng_f,lo,hi,adv_bc)
+  subroutine average_cc_to_face_3d(cc,ng_c,facex,facey,facez,ng_f,glo,ghi,adv_bc,xlo,xhi,ylo,yhi,zlo,zhi)
 
     use bc_module
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_f
-    real(kind=dp_t), intent(in   ) ::    cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:)
-    real(kind=dp_t), intent(inout) :: facex(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    real(kind=dp_t), intent(inout) :: facey(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
-    real(kind=dp_t), intent(inout) :: facez(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
+    integer        , intent(in   ) :: glo(:),ghi(:),ng_c,ng_f
+    integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
+    real(kind=dp_t), intent(in   ) ::    cc(glo(1)-ng_c:,glo(2)-ng_c:,glo(3)-ng_c:)
+    real(kind=dp_t), intent(inout) :: facex(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:)
+    real(kind=dp_t), intent(inout) :: facey(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:)
+    real(kind=dp_t), intent(inout) :: facez(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:)
     integer        , intent(in   ) :: adv_bc(:,:)
 
     ! local
     integer :: i,j,k
 
     ! x-faces
-    do k=lo(3)-ng_f,hi(3)+ng_f
-       do j=lo(2)-ng_f,hi(2)+ng_f
-          do i=lo(1)-ng_f,hi(1)+ng_f+1
+    do k=xlo(3),xhi(3)
+       do j=xlo(2),xhi(2)
+          do i=xlo(1),xhi(1)
              facex(i,j,k) = 0.5d0*(cc(i,j,k)+cc(i-1,j,k))
           end do
        end do
     end do
 
     ! y-faces
-    do k=lo(3)-ng_f,hi(3)+ng_f
-       do j=lo(2)-ng_f,hi(2)+ng_f+1
-          do i=lo(1)-ng_f,hi(1)+ng_f
+    do k=ylo(3),yhi(3)
+       do j=ylo(2),yhi(2)
+          do i=ylo(1),yhi(1)
              facey(i,j,k) = 0.5d0*(cc(i,j,k)+cc(i,j-1,k))
           end do
        end do
     end do
 
     ! z-faces
-    do k=lo(3)-ng_f,hi(3)+ng_f+1
-       do j=lo(2)-ng_f,hi(2)+ng_f
-          do i=lo(1)-ng_f,hi(1)+ng_f
+    do k=zlo(3),zhi(3)
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
              facez(i,j,k) = 0.5d0*(cc(i,j,k)+cc(i,j,k-1))
           end do
        end do
@@ -300,45 +336,58 @@ contains
     ! Note: At physical boundaries, the value in ghost cells represents the boundary value
 
     ! overwrite x-boundary faces
+    if (xlo(1)+ng_f .eq. glo(1)) then
     if (adv_bc(1,1) .eq. FOEXTRAP .or. adv_bc(1,1) .eq. HOEXTRAP .or. adv_bc(1,1) .eq. EXT_DIR) then
-       do i=lo(1)-ng_f,lo(1)
-          facex(i,lo(2)-ng_f:hi(2)+ng_f,lo(3)-ng_f:hi(3)+ng_f) = &
-               cc(lo(1)-1,lo(2)-ng_f:hi(2)+ng_f,lo(3)-ng_f:hi(3)+ng_f)
+       do i=xlo(1),xlo(1)+ng_f
+          facex(i,xlo(2):xhi(2),xlo(3):xhi(3)) = &
+               cc(glo(1)-1,xlo(2):xhi(2),xlo(3):xhi(3))
        end do
     end if
+    end if
+    if (xhi(1)-ng_f .eq. ghi(1)+1) then
     if (adv_bc(1,2) .eq. FOEXTRAP .or. adv_bc(1,2) .eq. HOEXTRAP .or. adv_bc(1,2) .eq. EXT_DIR) then
-       do i=hi(1)+1,hi(1)+ng_f+1
-          facex(i,lo(2)-ng_f:hi(2)+ng_f,lo(3)-ng_f:hi(3)+ng_f) = &
-               cc(hi(1)+1,lo(2)-ng_f:hi(2)+ng_f,lo(3)-ng_f:hi(3)+ng_f)
+       do i=xhi(1)-ng_f,xhi(1)
+          facex(i,xlo(2):xhi(2),xlo(3):xhi(3)) = &
+               cc(ghi(1)+1,xlo(2):xhi(2),xlo(3):xhi(3))
        end do
+    end if
     end if
 
     ! overwrite y-boundary faces
-    if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. HOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
-       do j=lo(2)-ng_f,lo(2)
-          facey(lo(1)-ng_f:hi(1)+ng_f,j,lo(3)-ng_f:hi(3)+ng_f) = &
-               cc(lo(1)-ng_f:hi(1)+ng_f,lo(2)-1,lo(3)-ng_f:hi(3)+ng_f)
+   if (ylo(2)+ng_f .eq. glo(2)) then
+   if (adv_bc(2,1) .eq. FOEXTRAP .or. adv_bc(2,1) .eq. HOEXTRAP .or. adv_bc(2,1) .eq. EXT_DIR) then
+       do j=ylo(2),ylo(2)+ng_f
+          facey(ylo(1):yhi(1),j,ylo(3):yhi(3)) = &
+               cc(ylo(1):yhi(1),glo(2)-1,ylo(3):yhi(3))
        end do
     end if
+    end if
+
+    if (yhi(2)-ng_f .eq. ghi(2)+1) then
     if (adv_bc(2,2) .eq. FOEXTRAP .or. adv_bc(2,2) .eq. HOEXTRAP .or. adv_bc(2,2) .eq. EXT_DIR) then
-       do j=hi(2)+1,hi(2)+ng_f+1
-          facey(lo(1)-ng_f:hi(1)+ng_f,j,lo(3)-ng_f:hi(3)+ng_f) = &
-               cc(lo(1)-ng_f:hi(1)+ng_f,hi(2)+1,lo(3)-ng_f:hi(3)+ng_f)
+       do j=yhi(2)-ng_f,yhi(2)
+          facey(ylo(1):yhi(1),j,ylo(3):yhi(3)) = &
+               cc(ylo(1):yhi(1),ghi(2)+1,ylo(3):yhi(3))
        end do
+    end if
     end if
 
     ! overwrite z-boundary faces
+    if (zlo(3)+ng_f .eq. glo(3)) then
     if (adv_bc(3,1) .eq. FOEXTRAP .or. adv_bc(3,1) .eq. HOEXTRAP .or. adv_bc(3,1) .eq. EXT_DIR) then
-       do k=lo(3)-ng_f,lo(3)
-          facez(lo(1)-ng_f:hi(1)+ng_f,lo(2)-ng_f:hi(2)+ng_f,k) = &
-               cc(lo(1)-ng_f:hi(1)+ng_f,lo(2)-ng_f:hi(2)+ng_f,lo(3)-1)
+       do k=zlo(3),zlo(3)+ng_f
+          facez(zlo(1):zhi(1),zlo(2):zhi(2),k) = &
+               cc(zlo(1):zhi(1),zlo(2):zhi(2),glo(3)-1)
        end do
     end if
+    end if
+    if (zhi(3)-ng_f .eq. ghi(3)+1) then
     if (adv_bc(3,2) .eq. FOEXTRAP .or. adv_bc(3,2) .eq. HOEXTRAP .or. adv_bc(3,2) .eq. EXT_DIR) then
-       do k=hi(3)+1,hi(3)+ng_f+1
-          facez(lo(1)-ng_f:hi(1)+ng_f,lo(2)-ng_f:hi(2)+ng_f,k) = &
-               cc(lo(1)-ng_f:hi(1)+ng_f,lo(2)-ng_f:hi(2)+ng_f,hi(3)+1)
+       do k=zhi(3)-ng_f,zhi(3)
+          facez(zlo(1):zhi(1),zlo(2):zhi(2),k) = &
+               cc(zlo(1):zhi(1),zlo(2):zhi(2),ghi(3)+1)
        end do
+    end if
     end if
 
   end subroutine average_cc_to_face_3d
