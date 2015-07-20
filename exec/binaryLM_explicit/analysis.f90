@@ -23,7 +23,8 @@ module analysis_module
     type(multifab) , intent(inout) :: mnew(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:), time
 
-    integer :: n,nlevs,i,dm,n_cell
+    integer :: n,nlevs,i,dm
+    integer(kind=ll_t) :: n_cell
     real(kind=dp_t) :: norm,norm_stag(mla%dim,1:2)
 
     nlevs = mla%nlevel
@@ -41,7 +42,7 @@ module analysis_module
     ! compute L1 and L2 norms for staggered data
     call staggered_norm(mla,mnew,norm_stag)
 
-    n_cell = multifab_volume(snew(1)) / nscal
+    n_cell = multifab_volume(snew(1)) / snew(1)%nc
 
     norm = multifab_norm_inf_c(snew(1),1,1,all=.false.)
     if (parallel_IOProcessor()) print*,"L0 RHO  =",norm
@@ -58,14 +59,14 @@ module analysis_module
 
     if (parallel_IOProcessor()) print*,""
 
-    norm = multifab_norm_l1_c(snew(1),1,1,all=.false.) / dble(n_cell)
+    norm = multifab_norm_l1_c(snew(1),1,1,all=.false.) / n_cell
     if (parallel_IOProcessor()) print*,"L1 RHO  =",norm
     norm = multifab_norm_l1_c(snew(1),2,1,all=.false.)
-    if (parallel_IOProcessor()) print*,"L1 RHOC =",norm / dble(n_cell)
-    if (parallel_IOProcessor()) print*,"L1 MX   =",norm_stag(1,1) / dble(n_cell)
-    if (parallel_IOProcessor()) print*,"L1 MY   =",norm_stag(2,1) / dble(n_cell)
+    if (parallel_IOProcessor()) print*,"L1 RHOC =",norm / n_cell
+    if (parallel_IOProcessor()) print*,"L1 MX   =",norm_stag(1,1) / n_cell
+    if (parallel_IOProcessor()) print*,"L1 MY   =",norm_stag(2,1) / n_cell
     if (dm .eq. 3) then
-       if (parallel_IOProcessor()) print*,"L1 MZ   =",norm_stag(3,1) / dble(n_cell)
+       if (parallel_IOProcessor()) print*,"L1 MZ   =",norm_stag(3,1) / n_cell
     end if
 
     if (parallel_IOProcessor()) print*,""
@@ -189,7 +190,8 @@ module analysis_module
     real(kind=dp_t), intent(out), optional :: av_mass(nscal), av_momentum(mla%dim) ! Level 1 only
 
     ! local
-    integer :: i,comp,n,dm,nlevs,ng_c,ng_m, n_cell
+    integer :: i,comp,n,dm,nlevs,ng_c,ng_m
+    integer(kind=ll_t) :: n_cell
     integer :: lo(mla%dim), hi(mla%dim)
 
     real(kind=dp_t) :: mass_tot(nscal) , mass_lev(nscal),  mass_proc(nscal),  mass_grid(nscal)
@@ -214,7 +216,7 @@ module analysis_module
     nlevs = mla%nlevel
     dm = mla%dim
     
-    n_cell = multifab_volume(cons(1)) / nscal
+    n_cell = multifab_volume(cons(1)) / cons(1)%ng
     
     if (nlevs .gt. 1) then
        call bl_error('sum_mass_momentum not written for multilevel yet')

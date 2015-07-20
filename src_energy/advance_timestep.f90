@@ -22,7 +22,7 @@ module advance_timestep_module
   use gmres_module
   use convert_m_to_umac_module
   use multifab_physbc_stag_module
-  use probin_common_module, only: n_cells, grav
+  use probin_common_module, only: total_volume, grav
   use probin_multispecies_module, only: nspecies
   use probin_energy_module, only: dpdt_iters, deltaT_iters, dpdt_factor
 
@@ -61,7 +61,6 @@ contains
 
     ! local variables
     integer :: n,nlevs,i,dm,comp
-    integer :: n_cell
     integer :: k,l
 
     ! concentration
@@ -180,18 +179,12 @@ contains
     real(kind=dp_t) :: p0_update_old
     real(kind=dp_t) :: p0_update_new
 
-    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, norm
+    real(kind=dp_t) :: theta_alpha, norm_pre_rhs, norm, norm_old
 
     logical :: nodal_temp(3)
 
     nlevs = mla%nlevel
     dm = mla%dim
-
-    if (dm .eq. 2) then
-       n_cell = n_cells(1)*n_cells(2)
-    else
-       n_cell = n_cells(1)*n_cells(2)*n_cells(3)
-    end if
 
     if (dm .eq. 2) then
        allocate(eta_ed_old(nlevs,1))
@@ -372,9 +365,9 @@ contains
 
     ! split S^n, alpha^n, and Scorr into average and perturbational pieces
     do n=1,nlevs
-       Sbar_old     = multifab_sum_c(delta_S_old(n)    ,1,1) / dble(n_cell)
-       alphabar_old = multifab_sum_c(delta_alpha_old(n),1,1) / dble(n_cell)
-       Scorrbar     = multifab_sum_c(Scorr(n),1,1) / dble(n_cell)
+       Sbar_old     = multifab_sum_c(delta_S_old(n)    ,1,1) / total_volume
+       alphabar_old = multifab_sum_c(delta_alpha_old(n),1,1) / total_volume
+       Scorrbar     = multifab_sum_c(Scorr(n),1,1) / total_volume
        call multifab_sub_sub_s_c(delta_S_old(n)    ,1,Sbar_old    ,1,0)
        call multifab_sub_sub_s_c(delta_alpha_old(n),1,alphabar_old,1,0)
        call multifab_copy_c(delta_Scorr(n),1,Scorr(n),1,1,0)
@@ -522,7 +515,7 @@ contains
           call ml_cc_solve(mla,deltaT_rhs,deltaT,fine_flx,cc_solver_alpha,cc_solver_beta,dx, &
                            the_bc_tower,temp_bc_comp)
 
-          norm = multifab_norm_l1_c(deltaT(1),1,1)/n_cell
+          norm = multifab_norm_l1_c(deltaT(1),1,1)/total_volume
           if (parallel_IOProcessor()) then
              print*,'deltaT_norm',norm
           end if
@@ -645,10 +638,18 @@ contains
              end if
           end if
 
-          norm = multifab_norm_l1_c(Peos(n),1,1)/n_cell
+          norm = multifab_norm_l1_c(Peos(n),1,1)/total_volume
           if (parallel_IOProcessor()) then
              print*,'Peos-p0 drift_norm',norm
           end if
+
+          if (k .ne. 1) then
+             if (parallel_IOProcessor()) then
+                print*,'drift norm reduction',norm_old/norm
+             end if
+          end if
+
+          norm_old = norm
 
           ! multiply deltaP by (dpdt_factor/(rho*P_rho*dt))
           call scale_deltaP(mla,Peos,rhotot_new,Temp_new,conc_new,dt,dpdt_factor)
@@ -660,9 +661,9 @@ contains
 
        ! split S^{n+1,m+1}, alpha^{n+1,m+1}, and Scorr into average and perturbational pieces
        do n=1,nlevs
-          Sbar_new     = multifab_sum_c(delta_S_new(n)    ,1,1) / dble(n_cell)
-          alphabar_new = multifab_sum_c(delta_alpha_new(n),1,1) / dble(n_cell)
-          Scorrbar     = multifab_sum_c(Scorr(n),1,1) / dble(n_cell)
+          Sbar_new     = multifab_sum_c(delta_S_new(n)    ,1,1) / total_volume
+          alphabar_new = multifab_sum_c(delta_alpha_new(n),1,1) / total_volume
+          Scorrbar     = multifab_sum_c(Scorr(n),1,1) / total_volume
           call multifab_sub_sub_s_c(delta_S_new(n)    ,1,Sbar_new    ,1,0)
           call multifab_sub_sub_s_c(delta_alpha_new(n),1,alphabar_new,1,0)
           call multifab_copy_c(delta_Scorr(n),1,Scorr(n),1,1,0)

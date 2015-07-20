@@ -31,6 +31,9 @@ module probin_common_module
   real(dp_t),save :: molmass(max_species)
   real(dp_t),save :: rhobar(max_species)
 
+  integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
+  integer(kind=ll_t),save :: total_volume
+
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
   !------------------------------------------------------------- 
@@ -637,6 +640,9 @@ contains
 
        farg = farg + 1
     end do
+
+    n_cells_long = n_cells
+    total_volume = product(n_cells_long(1:dim_in))
     
   end subroutine probin_common_init
 

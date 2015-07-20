@@ -8,6 +8,7 @@ module analysis_module
   use init_lowmach_module
   use init_temp_module
   use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: total_volume
  
   implicit none
 
@@ -30,7 +31,7 @@ module analysis_module
      ! local variables
      real(kind=dp_t), dimension(nspecies) :: norm_inf,norm_l1,norm_l2
      real(kind=dp_t)                      :: norm_inf_tot,norm_l1_tot,norm_l2_tot
-     integer                              :: i,n,nlevs,n_cell,dm
+     integer                              :: i,n,nlevs,dm
      type(multifab)                       :: umac_tmp(mla%nlevel,mla%dim)
 
      type(bl_prof_timer), save :: bpt
@@ -55,8 +56,6 @@ module analysis_module
         call multifab_sub_sub_c(rho_exact(n),1,rho(n),1,nspecies,0)
      end do
 
-     n_cell = multifab_volume(rho_exact(1))/nspecies 
-     
      ! calculate norms for each species
      do n=1,nlevs
         do i=1, nspecies 
@@ -64,19 +63,19 @@ module analysis_module
            ! Linf norm = max(diff_i)
            norm_inf(i) = multifab_norm_inf_c(rho_exact(n),i,1,all=.false.)
 
-           ! L1 norm = 1/n_cell*sum(diff_i) 
-           norm_l1(i) = multifab_sum_c(rho_exact(n),i,1,all=.false.)/dble(n_cell)
+           ! L1 norm = 1/total_volume*sum(diff_i) 
+           norm_l1(i) = multifab_sum_c(rho_exact(n),i,1,all=.false.)/total_volume
 
-           ! L2 norm = sqrt{1/n_cell*sum(diff_i^2)} 
-           norm_l2(i) = multifab_norm_l2_c(rho_exact(n),i,1,all=.false.)/sqrt(dble(n_cell))
+           ! L2 norm = sqrt{1/total_volume*sum(diff_i^2)} 
+           norm_l2(i) = multifab_norm_l2_c(rho_exact(n),i,1,all=.false.)/sqrt(dble(total_volume))
      
         end do
      end do
      
      ! calculate total norms 
      norm_inf_tot = multifab_norm_inf_c(rho_exact(1),1,nspecies,all=.false.)
-     norm_l1_tot = multifab_sum_c(rho_exact(1),1,nspecies,all=.false.)/dble(n_cell)
-     norm_l2_tot = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(n_cell))
+     norm_l1_tot = multifab_sum_c(rho_exact(1),1,nspecies,all=.false.)/total_volume
+     norm_l2_tot = multifab_norm_l2_c(rho_exact(1),1,nspecies,all=.false.)/sqrt(dble(total_volume))
      
      ! print the norms
      if(.false.) then
@@ -142,7 +141,7 @@ module analysis_module
     real(kind=dp_t), intent(inout)  :: wiwjt(nspecies,nspecies)
 
     ! local variables
-    integer :: n,i,j,dm,nlevs,n_cell
+    integer :: n,i,j,dm,nlevs
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
     real(kind=dp_t), dimension(nspecies) :: cellW, cellW_procavg    
     real(kind=dp_t), dimension(nspecies,nspecies) :: cellWij, cellWij_procavg   
@@ -156,7 +155,6 @@ module analysis_module
 
     dm     = mla%dim     ! dimensionality
     nlevs  = mla%nlevel 
-    n_cell = multifab_volume(rho(1))/nspecies 
  
     cellW_procavg   = 0.d0
     cellWij_procavg = 0.d0
@@ -172,9 +170,9 @@ module analysis_module
 
           select case(dm)
           case (2)
-             call compute_cov_2d(dp(:,:,1,:),n_cell,cellW,cellWij,lo,hi) 
+             call compute_cov_2d(dp(:,:,1,:),cellW,cellWij,lo,hi) 
           case (3)
-             call compute_cov_3d(dp(:,:,:,:),n_cell,cellW,cellWij,lo,hi) 
+             call compute_cov_3d(dp(:,:,:,:),cellW,cellWij,lo,hi) 
           end select
        end do
     end do
@@ -187,17 +185,17 @@ module analysis_module
        end do
     end do
 
-    ! average over n_cell and calculate covW
-    wit   = wit   + cellW_procavg/dble(n_cell)
-    wiwjt = wiwjt + cellWij_procavg/dble(n_cell) 
+    ! average over total_volume and calculate covW
+    wit   = wit   + cellW_procavg/total_volume
+    wiwjt = wiwjt + cellWij_procavg/total_volume 
  
     call destroy(bpt)
 
     end subroutine compute_cov
      
-    subroutine compute_cov_2d(rho,n_cell,cellW,cellWij,lo,hi)
+    subroutine compute_cov_2d(rho,cellW,cellWij,lo,hi)
  
-       integer         :: lo(2), hi(2), n_cell
+       integer         :: lo(2), hi(2)
        real(kind=dp_t) :: rho(lo(1):,lo(2):,:) 
        real(kind=dp_t) :: cellW(nspecies)  
        real(kind=dp_t) :: cellWij(nspecies,nspecies)  
@@ -214,9 +212,9 @@ module analysis_module
 
     end subroutine compute_cov_2d
 
-    subroutine compute_cov_3d(rho,n_cell,cellW,cellWij,lo,hi)
+    subroutine compute_cov_3d(rho,cellW,cellWij,lo,hi)
  
-       integer          :: lo(3), hi(3), n_cell
+       integer          :: lo(3), hi(3)
        real(kind=dp_t)  :: rho(lo(1):,lo(2):,lo(3):,:) 
        real(kind=dp_t)  :: cellW(nspecies)  
        real(kind=dp_t)  :: cellWij(nspecies,nspecies)  

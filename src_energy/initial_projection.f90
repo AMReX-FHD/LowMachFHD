@@ -11,7 +11,7 @@ module initial_projection_module
   use div_and_grad_module
   use macproject_module
   use multifab_physbc_stag_module
-  use probin_common_module, only: n_cells
+  use probin_common_module, only: total_volume
   use probin_multispecies_module, only: nspecies
 
   implicit none
@@ -38,7 +38,6 @@ contains
 
     ! local variables
     integer :: n,nlevs,i,dm
-    integer :: n_cell
 
     ! temporary storage for concentrations and mole fractions
     type(multifab) :: conc(mla%nlevel)
@@ -83,12 +82,6 @@ contains
 
     nlevs = mla%nlevel
     dm = mla%dim
-
-    if (dm .eq. 2) then
-       n_cell = n_cells(1)*n_cells(2)
-    else
-       n_cell = n_cells(1)*n_cells(2)*n_cells(3)
-    end if
 
     do n=1,nlevs
        call multifab_build(conc(n)    ,mla%la(n),nspecies   ,1)
@@ -153,8 +146,8 @@ contains
     ! S = Sbar + delta_S
     ! alpha = alphabar + delta_alpha
     do n=1,nlevs
-       Sbar     = multifab_sum_c(delta_S(n)    ,1,1) / dble(n_cell)
-       alphabar = multifab_sum_c(delta_alpha(n),1,1) / dble(n_cell)
+       Sbar     = multifab_sum_c(delta_S(n)    ,1,1) / total_volume
+       alphabar = multifab_sum_c(delta_alpha(n),1,1) / total_volume
        call multifab_sub_sub_s_c(delta_S(n)    ,1,Sbar    ,1,0)
        call multifab_sub_sub_s_c(delta_alpha(n),1,alphabar,1,0)
     end do
