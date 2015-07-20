@@ -4,8 +4,13 @@
 #     August 5, 2000
 #
 ifeq ($(findstring bint, $(HOST)), bint)
+ifdef MIC
 FC       = ifort -mmic
 FC1      = ifort -mmic
+else
+FC       = ifort
+FC1      = ifort
+endif
 else ifeq ($(findstring edison, $(HOST)), edison)
 FC       = ifort
 FC1      = ifort
