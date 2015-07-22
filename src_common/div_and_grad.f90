@@ -124,11 +124,15 @@ contains
 
       ! local
       integer :: i,j
+      real(kind=dp_t) :: dxinv,twodxinv
+
+      dxinv = 1.d0/dx(1)
+      twodxinv = 2.d0*dxinv
 
       ! x-faces
       do j=xlo(2),xhi(2)
          do i=xlo(1),xhi(1)
-            gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / dx(1)
+            gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) * dxinv
          end do
       end do
    
@@ -137,7 +141,7 @@ contains
       if (bc(1,1) .eq. FOEXTRAP .or. bc(1,1) .eq. HOEXTRAP .or. bc(1,1) .eq. EXT_DIR) then
          i=lo(1)
          do j=lo(2),hi(2)
-            gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / (0.5d0*dx(1))
+            gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) * twodxinv
          end do
       end if
       end if
@@ -145,7 +149,7 @@ contains
       if (bc(1,2) .eq. FOEXTRAP .or. bc(1,2) .eq. HOEXTRAP .or. bc(1,2) .eq. EXT_DIR) then
          i=hi(1)+1
          do j=lo(2),hi(2)
-            gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) / (0.5d0*dx(1))
+            gpx(i,j) = ( phi(i,j)-phi(i-1,j) ) * twodxinv
          end do
       end if
       end if
@@ -153,7 +157,7 @@ contains
       ! y-faces
       do j=ylo(2),yhi(2)
          do i=ylo(1),yhi(1)
-            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / dx(2)
+            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * dxinv
          end do
       end do
 
@@ -162,7 +166,7 @@ contains
       if (bc(2,1) .eq. FOEXTRAP .or. bc(2,1) .eq. HOEXTRAP .or. bc(2,1) .eq. EXT_DIR) then
          j=lo(2)
          do i=lo(1),hi(1)
-            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / (0.5d0*dx(2))
+            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
          end do
       end if
       end if
@@ -172,7 +176,7 @@ contains
       if (bc(2,2) .eq. FOEXTRAP .or. bc(2,2) .eq. HOEXTRAP .or. bc(2,2) .eq. EXT_DIR) then
          j=hi(2)+1
          do i=lo(1),hi(1)
-            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) / (0.5d0*dx(2))
+            gpy(i,j) = ( phi(i,j)-phi(i,j-1) ) * twodxinv
          end do
       end if
       end if
@@ -192,13 +196,17 @@ contains
 
       ! local
       integer :: i,j,k
+      real(kind=dp_t) :: dxinv,twodxinv
       
+      dxinv = 1.d0/dx(1)
+      twodxinv = 2.d0*dxinv
+
 
       ! x-faces
       do k=xlo(3),xhi(3)
          do j=xlo(2),xhi(2)
             do i=xlo(1),xhi(1)
-               gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) / dx(1)
+               gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) * dxinv
             end do
          end do
       end do
@@ -209,7 +217,7 @@ contains
          i=xlo(1)
          do k=xlo(3),xhi(3)
             do j=xlo(2),xhi(2)
-               gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) / (0.5d0*dx(1))
+               gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) * twodxinv
             end do
          end do
       end if
@@ -219,7 +227,7 @@ contains
          i=xhi(1)
          do k=xlo(3),xhi(3)
             do j=xlo(2),xhi(2)
-               gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) / (0.5d0*dx(1))
+               gpx(i,j,k) = ( phi(i,j,k)-phi(i-1,j,k) ) * twodxinv
             end do
          end do
       end if
@@ -229,7 +237,7 @@ contains
       do k=ylo(3),yhi(3)
          do j=ylo(2),yhi(2)
             do i=ylo(1),yhi(1)
-               gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) / dx(2)
+               gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) * dxinv
             end do
          end do
       end do
@@ -240,7 +248,7 @@ contains
          j=ylo(2)
          do k=ylo(3),yhi(3)
             do i=ylo(1),yhi(1)
-               gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) / (0.5d0*dx(2))
+               gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) * twodxinv
             end do
          end do
       end if
@@ -250,7 +258,7 @@ contains
          j=yhi(2)
          do k=ylo(3),yhi(3)
             do i=ylo(1),yhi(1)
-               gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) / (0.5d0*dx(2))
+               gpy(i,j,k) = ( phi(i,j,k)-phi(i,j-1,k) ) * twodxinv
             end do
          end do
       end if
@@ -260,7 +268,7 @@ contains
       do k=zlo(3),zhi(3)
          do j=zlo(2),zhi(2)
             do i=zlo(1),zhi(1)
-               gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) / dx(3)
+               gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) * dxinv
             end do
          end do
       end do
@@ -271,7 +279,7 @@ contains
          k=zlo(3)
          do j=zlo(2),zhi(2)
             do i=zlo(1),zhi(1)
-               gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) / (0.5d0*dx(3))
+               gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) * twodxinv
             end do
          end do
       end if
@@ -283,7 +291,7 @@ contains
          k=zhi(3)
          do j=zlo(2),zhi(2)
             do i=zlo(1),zhi(1)
-               gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) / (0.5d0*dx(3))
+               gpz(i,j,k) = ( phi(i,j,k)-phi(i,j,k-1) ) * twodxinv
             end do
          end do
       end if
@@ -375,14 +383,17 @@ contains
       logical        , intent(in   ) :: increment
 
       integer :: i,j
+      real(kind=dp_t) :: dxinv
+
+      dxinv = 1.d0/dx(1)
 
       if (increment) then
 
          do j = tlo(2),thi(2)
          do i = tlo(1),thi(1)
             div(i,j) = div(i,j) + &
-                 (phix(i+1,j) - phix(i,j)) / dx(1) + &
-                 (phiy(i,j+1) - phiy(i,j)) / dx(2)
+                 (phix(i+1,j) - phix(i,j)) * dxinv  + &
+                 (phiy(i,j+1) - phiy(i,j)) * dxinv
          end do
          end do
 
@@ -391,8 +402,8 @@ contains
          do j = tlo(2),thi(2)
          do i = tlo(1),thi(1)
             div(i,j) = &
-                 (phix(i+1,j) - phix(i,j)) / dx(1) + &
-                 (phiy(i,j+1) - phiy(i,j)) / dx(2)
+                 (phix(i+1,j) - phix(i,j)) * dxinv + &
+                 (phiy(i,j+1) - phiy(i,j)) * dxinv
          end do
          end do
          
@@ -411,15 +422,18 @@ contains
       logical        , intent(in   ) :: increment
 
       integer :: i,j,k
+      real(kind=dp_t) :: dxinv
+
+      dxinv = 1.d0/dx(1)
 
       if (increment) then
          do k = tlo(3),thi(3)
          do j = tlo(2),thi(2)
          do i = tlo(1),thi(1)
             div(i,j,k) = div(i,j,k) + &
-                 (phix(i+1,j,k) - phix(i,j,k)) / dx(1) + &
-                 (phiy(i,j+1,k) - phiy(i,j,k)) / dx(2) + &
-                 (phiz(i,j,k+1) - phiz(i,j,k)) / dx(3)
+                 (phix(i+1,j,k) - phix(i,j,k)) * dxinv + &
+                 (phiy(i,j+1,k) - phiy(i,j,k)) * dxinv + &
+                 (phiz(i,j,k+1) - phiz(i,j,k)) * dxinv
          end do
          end do
          end do
@@ -428,9 +442,9 @@ contains
          do j = tlo(2),thi(2)
          do i = tlo(1),thi(1)
             div(i,j,k) = &
-                 (phix(i+1,j,k) - phix(i,j,k)) / dx(1) + &
-                 (phiy(i,j+1,k) - phiy(i,j,k)) / dx(2) + &
-                 (phiz(i,j,k+1) - phiz(i,j,k)) / dx(3)
+                 (phix(i+1,j,k) - phix(i,j,k)) * dxinv + &
+                 (phiy(i,j+1,k) - phiy(i,j,k)) * dxinv + &
+                 (phiz(i,j,k+1) - phiz(i,j,k)) * dxinv
          end do
          end do
          end do

@@ -2349,6 +2349,9 @@ contains
 
     ! local
     integer :: i,j
+    real(kind=dp_t) :: dxinv
+
+    dxinv = 1.d0/dx(1)
 
     !!!!!!!!!!!!!!!!!!!!!!!!
     ! transverse velocities
@@ -2359,7 +2362,7 @@ contains
     if (bc(1,1,2) .eq. DIR_TRACT) then
        do j=lo(2),hi(2)+1
           vel_bc_tyx(lo(1),j) = vel_bc_tyx(lo(1),j) &
-               - (vel_bc_nx(lo(1),j)-vel_bc_nx(lo(1),j-1)) / dx(2)
+               - (vel_bc_nx(lo(1),j)-vel_bc_nx(lo(1),j-1)) * dxinv
        end do
     end if
 
@@ -2368,7 +2371,7 @@ contains
     if (bc(1,2,2) .eq. DIR_TRACT) then
        do j=lo(2),hi(2)+1
           vel_bc_tyx(hi(1)+1,j) = vel_bc_tyx(hi(1)+1,j) &
-               - (vel_bc_nx(hi(1)+1,j)-vel_bc_nx(hi(1)+1,j-1)) / dx(2)
+               - (vel_bc_nx(hi(1)+1,j)-vel_bc_nx(hi(1)+1,j-1)) * dxinv
        end do
     end if
 
@@ -2377,7 +2380,7 @@ contains
     if (bc(2,1,1) .eq. DIR_TRACT) then
        do i=lo(1),hi(1)+1
           vel_bc_txy(i,lo(2)) = vel_bc_txy(i,lo(2)) &
-               - (vel_bc_ny(i,lo(2))-vel_bc_ny(i-1,lo(2))) / dx(1)
+               - (vel_bc_ny(i,lo(2))-vel_bc_ny(i-1,lo(2))) * dxinv
 
        end do
     end if
@@ -2387,7 +2390,7 @@ contains
     if (bc(2,2,1) .eq. DIR_TRACT) then
        do i=lo(1),hi(1)+1
           vel_bc_txy(i,hi(2)+1) = vel_bc_txy(i,hi(2)+1) &
-               - (vel_bc_ny(i,hi(2)+1)-vel_bc_ny(i-1,hi(2)+1)) / dx(1)
+               - (vel_bc_ny(i,hi(2)+1)-vel_bc_ny(i-1,hi(2)+1)) * dxinv
        end do
     end if
 
@@ -2413,6 +2416,10 @@ contains
     ! local
     integer :: i,j,k
 
+    real(kind=dp_t) :: dxinv
+
+    dxinv = 1.d0/dx(1)
+
     !!!!!!!!!!!!!!!!!!!!!!!!
     ! transverse velocities
     !!!!!!!!!!!!!!!!!!!!!!!!
@@ -2423,7 +2430,7 @@ contains
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)+1
              vel_bc_tyx(lo(1),j,k) = vel_bc_tyx(lo(1),j,k) &
-                  - (vel_bc_nx(lo(1),j,k)-vel_bc_nx(lo(1),j-1,k)) / dx(2)
+                  - (vel_bc_nx(lo(1),j,k)-vel_bc_nx(lo(1),j-1,k)) * dxinv
           end do
        end do
 
@@ -2435,7 +2442,7 @@ contains
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)+1
              vel_bc_tyx(hi(1)+1,j,k) = vel_bc_tyx(hi(1)+1,j,k) &
-                  - (vel_bc_nx(hi(1)+1,j,k)-vel_bc_nx(hi(1)+1,j-1,k)) / dx(2)
+                  - (vel_bc_nx(hi(1)+1,j,k)-vel_bc_nx(hi(1)+1,j-1,k)) * dxinv
           end do
        end do
 
@@ -2447,7 +2454,7 @@ contains
        do k=lo(3),hi(3)+1
           do j=lo(2),hi(2)
              vel_bc_tzx(lo(1),j,k) = vel_bc_tzx(lo(1),j,k) &
-                  - (vel_bc_nx(lo(1),j,k)-vel_bc_nx(lo(1),j,k-1)) / dx(3)
+                  - (vel_bc_nx(lo(1),j,k)-vel_bc_nx(lo(1),j,k-1)) * dxinv
           end do
        end do
 
@@ -2459,7 +2466,7 @@ contains
        do k=lo(3),hi(3)+1
           do j=lo(2),hi(2)
              vel_bc_tzx(hi(1)+1,j,k) = vel_bc_tzx(hi(1)+1,j,k) &
-                  - (vel_bc_nx(hi(1)+1,j,k)-vel_bc_nx(hi(1)+1,j,k-1)) / dx(3)
+                  - (vel_bc_nx(hi(1)+1,j,k)-vel_bc_nx(hi(1)+1,j,k-1)) * dxinv
           end do
        end do
 
@@ -2471,7 +2478,7 @@ contains
        do k=lo(3),hi(3)
           do i=lo(1),hi(1)+1
              vel_bc_txy(i,lo(2),k) = vel_bc_txy(i,lo(2),k) &
-                  - (vel_bc_ny(i,lo(2),k)-vel_bc_ny(i-1,lo(2),k)) / dx(1)
+                  - (vel_bc_ny(i,lo(2),k)-vel_bc_ny(i-1,lo(2),k)) * dxinv
           end do
        end do
 
@@ -2483,7 +2490,7 @@ contains
        do k=lo(3),hi(3)
           do i=lo(1),hi(1)+1
              vel_bc_txy(i,hi(2)+1,k) = vel_bc_txy(i,hi(2)+1,k) &
-                  - (vel_bc_ny(i,hi(2)+1,k)-vel_bc_ny(i-1,hi(2)+1,k)) / dx(1)
+                  - (vel_bc_ny(i,hi(2)+1,k)-vel_bc_ny(i-1,hi(2)+1,k)) * dxinv
           end do
        end do
 
@@ -2495,7 +2502,7 @@ contains
        do k=lo(3),hi(3)+1
           do i=lo(1),hi(1)
              vel_bc_tzy(i,lo(2),k) = vel_bc_tzy(i,lo(2),k) &
-                  - (vel_bc_ny(i,lo(2),k)-vel_bc_ny(i,lo(2),k-1)) / dx(3)
+                  - (vel_bc_ny(i,lo(2),k)-vel_bc_ny(i,lo(2),k-1)) * dxinv
           end do
        end do
 
@@ -2507,7 +2514,7 @@ contains
        do k=lo(3),hi(3)+1
           do i=lo(1),hi(1)
              vel_bc_tzy(i,hi(2)+1,k) = vel_bc_tzy(i,hi(2)+1,k) &
-                  - (vel_bc_ny(i,hi(2)+1,k)-vel_bc_ny(i,hi(2)+1,k-1)) / dx(3)
+                  - (vel_bc_ny(i,hi(2)+1,k)-vel_bc_ny(i,hi(2)+1,k-1)) * dxinv
           end do
        end do
 
@@ -2519,7 +2526,7 @@ contains
        do i=lo(1),hi(1)+1
           do j=lo(2),hi(2)
              vel_bc_txz(i,j,lo(3)) = vel_bc_txz(i,j,lo(3)) &
-                  - (vel_bc_nz(i,j,lo(3))-vel_bc_nz(i-1,j,lo(3))) / dx(1)
+                  - (vel_bc_nz(i,j,lo(3))-vel_bc_nz(i-1,j,lo(3))) * dxinv
           end do
        end do
 
@@ -2531,7 +2538,7 @@ contains
        do i=lo(1),hi(1)+1
           do j=lo(2),hi(2)
              vel_bc_txz(i,j,hi(3)+1) = vel_bc_txz(i,j,hi(3)+1) &
-                  - (vel_bc_nz(i,j,hi(3)+1)-vel_bc_nz(i-1,j,hi(3)+1)) / dx(1)
+                  - (vel_bc_nz(i,j,hi(3)+1)-vel_bc_nz(i-1,j,hi(3)+1)) * dxinv
           end do
        end do
 
@@ -2543,7 +2550,7 @@ contains
        do j=lo(2),hi(2)+1
           do i=lo(1),hi(1)
              vel_bc_tyz(i,j,lo(3)) = vel_bc_tyz(i,j,lo(3)) &
-                  - (vel_bc_nz(i,j,lo(3))-vel_bc_nz(i,j-1,lo(3))) / dx(2)
+                  - (vel_bc_nz(i,j,lo(3))-vel_bc_nz(i,j-1,lo(3))) * dxinv
           end do
        end do
 
@@ -2555,7 +2562,7 @@ contains
        do j=lo(2),hi(2)+1
           do i=lo(1),hi(1)
              vel_bc_tyz(i,j,hi(3)+1) = vel_bc_tyz(i,j,hi(3)+1) &
-                  - (vel_bc_nz(i,j,hi(3)+1)-vel_bc_nz(i,j-1,hi(3)+1)) / dx(2)
+                  - (vel_bc_nz(i,j,hi(3)+1)-vel_bc_nz(i,j-1,hi(3)+1)) * dxinv
           end do
        end do
 

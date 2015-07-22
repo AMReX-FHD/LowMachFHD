@@ -93,6 +93,10 @@ contains
       real(kind=dp_t) :: fluxx(lo(1):hi(1)+1,lo(2):hi(2))
       real(kind=dp_t) :: fluxy(lo(1):hi(1),lo(2):hi(2)+1)
 
+      real(kind=dp_t) :: dxinv
+
+      dxinv = 1.d0/dx(1)
+
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
             fluxx(i,j) = umac(i,j)*sx(i,j)
@@ -111,8 +115,8 @@ contains
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)
             s_update(i,j) = s_update(i,j) - ( &
-                 (fluxx(i+1,j)-fluxx(i,j)) / dx(1) &
-                 + (fluxy(i,j+1)-fluxy(i,j)) / dx(2) )
+                 (fluxx(i+1,j)-fluxx(i,j)) * dxinv &
+                 + (fluxy(i,j+1)-fluxy(i,j)) * dxinv )
          end do
       end do
 
@@ -136,6 +140,10 @@ contains
       real(kind=dp_t) :: fluxx(lo(1):hi(1)+1,lo(2):hi(2),lo(3):hi(3))
       real(kind=dp_t) :: fluxy(lo(1):hi(1),lo(2):hi(2)+1,lo(3):hi(3))
       real(kind=dp_t) :: fluxz(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)+1)
+
+      real(kind=dp_t) :: dxinv
+
+      dxinv = 1.d0/dx(1)
       
       do k=lo(3),hi(3)
          do j=lo(2),hi(2)
@@ -168,9 +176,9 @@ contains
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)
                s_update(i,j,k) = s_update(i,j,k) - ( &
-                    (fluxx(i+1,j,k)-fluxx(i,j,k)) / dx(1) &
-                    + (fluxy(i,j+1,k)-fluxy(i,j,k)) / dx(2) &
-                    + (fluxz(i,j,k+1)-fluxz(i,j,k)) / dx(3) )
+                    (fluxx(i+1,j,k)-fluxx(i,j,k)) * dxinv &
+                    + (fluxy(i,j+1,k)-fluxy(i,j,k)) * dxinv &
+                    + (fluxz(i,j,k+1)-fluxz(i,j,k)) * dxinv )
             end do
          end do
       end do

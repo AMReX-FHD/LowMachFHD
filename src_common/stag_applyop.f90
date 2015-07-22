@@ -242,7 +242,7 @@ contains
     end if
 
     dxsq = dx(1)**2
-    dxsqinv = 1/dxsq
+    dxsqinv = 1.d0/dxsq
     onethird = 1.d0/3.d0
     twothirds = 2.d0/3.d0
     fourthirds = 4.d0/3.d0
@@ -560,7 +560,7 @@ contains
     end if
 
     dxsq = dx(1)**2
-    dxsqinv = 1/dxsq
+    dxsqinv = 1.d0/dxsq
     onethird = 1.d0/3.d0
     twothirds = 2.d0/3.d0
     fourthirds = 4.d0/3.d0

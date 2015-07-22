@@ -103,7 +103,11 @@ contains
 
     ! Local variables
     integer :: i,j
-    real(kind=dp_t) :: x,y
+    real(kind=dp_t) :: x,y,threeEighths,nineEighths,oneEighth
+
+    threeEighths = 3.d0/8.d0
+    nineEighths = 9.d0/8.d0
+    oneEighth = 1.d0/8.d0
 
 !!!!!!!!!!!!!!!!!!
 ! lo-x boundary
@@ -121,8 +125,8 @@ contains
        x = prob_lo(1)
        do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(lo(1)-ng:lo(1)-1,j) = -(3.d0/8.d0)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
-               + (9.d0/8.d0)*s(lo(1),j) - (1.d0/8.d0)*s(lo(1)+1,j)
+          s(lo(1)-ng:lo(1)-1,j) = -(threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+               + (nineEighths)*s(lo(1),j) - (oneEighth)*s(lo(1)+1,j)
        end do
     else if (bc(1,1) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
@@ -154,8 +158,8 @@ contains
        x = prob_hi(1)
        do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(hi(1)+1:hi(1)+ng,j) = (3.d0/8.d0)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
-               + (9.d0/8.d0)*s(hi(1),j) - (1.d0/8.d0)*s(hi(1)-1,j)
+          s(hi(1)+1:hi(1)+ng,j) = (threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+               + (nineEighths)*s(hi(1),j) - (oneEighth)*s(hi(1)-1,j)
        end do
     else if (bc(1,2) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
@@ -187,8 +191,8 @@ contains
        y = prob_lo(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,lo(2)-ng:lo(2)-1) = -(3.d0/8.d0)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y) &
-               + (9.d0/8.d0)*s(i,lo(2)) - (1.d0/8.d0)*s(i,lo(2)+1)
+          s(i,lo(2)-ng:lo(2)-1) = -(threeEighths)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+               + (nineEighths)*s(i,lo(2)) - (oneEighth)*s(i,lo(2)+1)
        end do
     else if (bc(2,1) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
@@ -220,8 +224,8 @@ contains
        y = prob_hi(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,hi(2)+1:hi(2)+ng) = (3.d0/8.d0)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y) &
-               + (9.d0/8.d0)*s(i,hi(2)) - (1.d0/8.d0)*s(i,hi(2)-1)
+          s(i,hi(2)+1:hi(2)+ng) = (threeEighths)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+               + (nineEighths)*s(i,hi(2)) - (oneEighth)*s(i,hi(2)-1)
        end do
     else if (bc(2,2) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
@@ -249,7 +253,11 @@ contains
 
     ! Local variables
     integer :: i,j,k
-    real(kind=dp_t) :: x,y,z
+    real(kind=dp_t) :: x,y,z,threeEighths,nineEighths,oneEighth
+
+    threeEighths = 3.d0/8.d0
+    nineEighths = 9.d0/8.d0
+    oneEighth = 1.d0/8.d0
 
 !!!!!!!!!!!!!!!!!!
 ! lo-x boundary
@@ -274,8 +282,8 @@ contains
           do j=lo(2)-ng,hi(2)+ng
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(lo(1)-ng:lo(1)-1,j,k) = &
-                  -(3.d0/8.d0)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                  + (9.d0/8.d0)*s(lo(1),j,k) - (1.d0/8.d0)*s(lo(1)+1,j,k)
+                  -(threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  + (nineEighths)*s(lo(1),j,k) - (oneEighth)*s(lo(1)+1,j,k)
           end do
        end do
     else if (bc(1,1) .eq. EXT_DIR) then
@@ -318,8 +326,8 @@ contains
           do j=lo(2)-ng,hi(2)+ng
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(hi(1)+1:hi(1)+ng,j,k) = &
-                  (3.d0/8.d0)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                  + (9.d0/8.d0)*s(hi(1),j,k) - (1.d0/8.d0)*s(hi(1)-1,j,k)
+                  (threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  + (nineEighths)*s(hi(1),j,k) - (oneEighth)*s(hi(1)-1,j,k)
           end do
        end do
     else if (bc(1,2) .eq. EXT_DIR) then
@@ -362,8 +370,8 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,lo(2)-ng:lo(2)-1,k) = &
-                  -(3.d0/8.d0)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                  + (9.d0/8.d0)*s(i,lo(2),k) - (1.d0/8.d0)*s(i,lo(2)+1,k)
+                  -(threeEighths)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  + (nineEighths)*s(i,lo(2),k) - (oneEighth)*s(i,lo(2)+1,k)
           end do
        end do
     else if (bc(2,1) .eq. EXT_DIR) then
@@ -406,8 +414,8 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,hi(2)+1:hi(2)+ng,k) = &
-                  (3.d0/8.d0)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                  + (9.d0/8.d0)*s(i,hi(2),k) - (1.d0/8.d0)*s(i,hi(2)-1,k)
+                  (threeEighths)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  + (nineEighths)*s(i,hi(2),k) - (oneEighth)*s(i,hi(2)-1,k)
           end do
        end do
     else if (bc(2,2) .eq. EXT_DIR) then
@@ -450,8 +458,8 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,lo(3)-ng:lo(3)-1) = &
-                  -(3.d0/8.d0)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                  + (9.d0/8.d0)*s(i,j,lo(3)) - (1.d0/8.d0)*s(i,j,lo(3)+1)
+                  -(threeEighths)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  + (nineEighths)*s(i,j,lo(3)) - (oneEighth)*s(i,j,lo(3)+1)
           end do
        end do
     else if (bc(3,1) .eq. EXT_DIR) then
@@ -494,8 +502,8 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,hi(3)+1:hi(3)+ng) = &
-                  (3.d0/8.d0)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                  + (9.d0/8.d0)*s(i,j,hi(3)) - (1.d0/8.d0)*s(i,j,hi(3)-1)
+                  (threeEighths)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  + (nineEighths)*s(i,j,hi(3)) - (oneEighth)*s(i,j,hi(3)-1)
           end do
        end do
     else if (bc(3,2) .eq. EXT_DIR) then

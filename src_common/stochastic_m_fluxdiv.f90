@@ -458,14 +458,17 @@ contains
       real(kind=dp_t), intent(in   ) :: dx(:)
 
       integer :: i,j
+      real(kind=dp_t) :: dxinv
+
+      dxinv = 1.d0/dx(1)
 
       ! divergence on x-faces
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
 
             divx(i,j) = divx(i,j) + &
-                 (flux_cc(i,j,1) - flux_cc(i-1,j,1)) / dx(1) + &
-                 (flux_nd(i,j+1,1) - flux_nd(i,j,1)) / dx(2)
+                 (flux_cc(i,j,1) - flux_cc(i-1,j,1)) * dxinv + &
+                 (flux_nd(i,j+1,1) - flux_nd(i,j,1)) * dxinv
 
          end do
       end do
@@ -475,8 +478,8 @@ contains
          do i=lo(1),hi(1)
 
             divy(i,j) = divy(i,j) + &
-                 (flux_nd(i+1,j,2) - flux_nd(i,j,2)) / dx(1) + &
-                 (flux_cc(i,j,2) - flux_cc(i,j-1,2)) / dx(2)
+                 (flux_nd(i+1,j,2) - flux_nd(i,j,2)) * dxinv + &
+                 (flux_cc(i,j,2) - flux_cc(i,j-1,2)) * dxinv
 
          end do
       end do
@@ -499,6 +502,9 @@ contains
 
       ! local
       integer :: i,j,k
+      real(kind=dp_t) :: dxinv
+
+      dxinv = 1.d0/dx(1)
 
       ! divergence on x-faces
       do k=lo(3),hi(3)
@@ -506,9 +512,9 @@ contains
             do i=lo(1),hi(1)+1
 
                divx(i,j,k) = divx(i,j,k) + &
-                    (flux_cc(i,j,k,1) - flux_cc(i-1,j,k,1)) / dx(1) + &
-                    (flux_xy(i,j+1,k,1) - flux_xy(i,j,k,1)) / dx(2) + &
-                    (flux_xz(i,j,k+1,1) - flux_xz(i,j,k,1)) / dx(3)
+                    (flux_cc(i,j,k,1) - flux_cc(i-1,j,k,1)) * dxinv + &
+                    (flux_xy(i,j+1,k,1) - flux_xy(i,j,k,1)) * dxinv + &
+                    (flux_xz(i,j,k+1,1) - flux_xz(i,j,k,1)) * dxinv
 
             end do
          end do
@@ -520,9 +526,9 @@ contains
             do i=lo(1),hi(1)
 
                divy(i,j,k) = divy(i,j,k) + &
-                    (flux_xy(i+1,j,k,2) - flux_xy(i,j,k,2)) / dx(1) + &
-                    (flux_cc(i,j,k,2) - flux_cc(i,j-1,k,2)) / dx(2) + &
-                    (flux_yz(i,j,k+1,1) - flux_yz(i,j,k,1)) / dx(3)
+                    (flux_xy(i+1,j,k,2) - flux_xy(i,j,k,2)) * dxinv + &
+                    (flux_cc(i,j,k,2) - flux_cc(i,j-1,k,2)) * dxinv + &
+                    (flux_yz(i,j,k+1,1) - flux_yz(i,j,k,1)) * dxinv
 
             end do
          end do
@@ -534,9 +540,9 @@ contains
             do i=lo(1),hi(1)
 
                divz(i,j,k) = divz(i,j,k) + &
-                    (flux_xz(i+1,j,k,2) - flux_xz(i,j,k,2)) / dx(1) + &
-                    (flux_yz(i,j+1,k,2) - flux_yz(i,j,k,2)) / dx(2) + &
-                    (flux_cc(i,j,k,3) - flux_cc(i,j,k-1,3)) / dx(3)
+                    (flux_xz(i+1,j,k,2) - flux_xz(i,j,k,2)) * dxinv + &
+                    (flux_yz(i,j+1,k,2) - flux_yz(i,j,k,2)) * dxinv + &
+                    (flux_cc(i,j,k,3) - flux_cc(i,j,k-1,3)) * dxinv
 
             end do
          end do

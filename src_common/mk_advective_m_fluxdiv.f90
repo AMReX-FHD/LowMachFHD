@@ -111,6 +111,10 @@ contains
       real(kind=dp_t) ::   my_fluxy(lo(1):hi(1)  ,lo(2):hi(2)+2)
       real(kind=dp_t) :: my_fluxdiv(lo(1):hi(1)  ,lo(2):hi(2)+1)
 
+      real(kind=dp_t) :: dxinv
+
+      dxinv = 1.d0/dx(1)
+
       !=============================
       ! mx fluxes and divergence
       !=============================
@@ -128,8 +132,8 @@ contains
 
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
-            mx_fluxdiv(i,j) = -( (mx_fluxx(i+1,j)-mx_fluxx(i,j)) / dx(1) + &
-                                 (mx_fluxy(i,j+1)-mx_fluxy(i,j)) / dx(2) )
+            mx_fluxdiv(i,j) = -( (mx_fluxx(i+1,j)-mx_fluxx(i,j)) * dxinv + &
+                                 (mx_fluxy(i,j+1)-mx_fluxy(i,j)) * dxinv )
          end do
       end do
 
@@ -156,8 +160,8 @@ contains
 
       do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)
-            my_fluxdiv(i,j) = -( (my_fluxx(i+1,j)-my_fluxx(i,j)) / dx(1) + &
-                                 (my_fluxy(i,j+1)-my_fluxy(i,j)) / dx(2) )
+            my_fluxdiv(i,j) = -( (my_fluxx(i+1,j)-my_fluxx(i,j)) * dxinv + &
+                                 (my_fluxy(i,j+1)-my_fluxy(i,j)) * dxinv )
          end do
       end do
 
@@ -202,6 +206,10 @@ contains
       real(kind=dp_t) ::   mz_fluxz(lo(1):hi(1)  ,lo(2):hi(2)  ,lo(3):hi(3)+2)
       real(kind=dp_t) :: mz_fluxdiv(lo(1):hi(1)  ,lo(2):hi(2)  ,lo(3):hi(3)+1)
 
+      real(kind=dp_t) :: dxinv
+
+      dxinv = 1.d0/dx(1)
+
       !=============================
       ! mx fluxes and divergence
       !=============================
@@ -225,9 +233,9 @@ contains
       do k=lo(3),hi(3)
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)+1
-               mx_fluxdiv(i,j,k) = -( (mx_fluxx(i+1,j,k)-mx_fluxx(i,j,k)) / dx(1) + &
-                                      (mx_fluxy(i,j+1,k)-mx_fluxy(i,j,k)) / dx(2) + &
-                                      (mx_fluxz(i,j,k+1)-mx_fluxz(i,j,k)) / dx(3) )
+               mx_fluxdiv(i,j,k) = -( (mx_fluxx(i+1,j,k)-mx_fluxx(i,j,k)) * dxinv + &
+                                      (mx_fluxy(i,j+1,k)-mx_fluxy(i,j,k)) * dxinv + &
+                                      (mx_fluxz(i,j,k+1)-mx_fluxz(i,j,k)) * dxinv )
             end do
          end do
       end do
@@ -263,9 +271,9 @@ contains
       do k=lo(3),hi(3)
          do j=lo(2),hi(2)+1
             do i=lo(1),hi(1)
-               my_fluxdiv(i,j,k) = -( (my_fluxx(i+1,j,k)-my_fluxx(i,j,k)) / dx(1) + &
-                                      (my_fluxy(i,j+1,k)-my_fluxy(i,j,k)) / dx(2) + &
-                                      (my_fluxz(i,j,k+1)-my_fluxz(i,j,k)) / dx(3) )
+               my_fluxdiv(i,j,k) = -( (my_fluxx(i+1,j,k)-my_fluxx(i,j,k)) * dxinv + &
+                                      (my_fluxy(i,j+1,k)-my_fluxy(i,j,k)) * dxinv + &
+                                      (my_fluxz(i,j,k+1)-my_fluxz(i,j,k)) * dxinv )
             end do
          end do
       end do
@@ -301,9 +309,9 @@ contains
       do k=lo(3),hi(3)+1
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)
-               mz_fluxdiv(i,j,k) = -( (mz_fluxx(i+1,j,k)-mz_fluxx(i,j,k)) / dx(1) + &
-                                      (mz_fluxy(i,j+1,k)-mz_fluxy(i,j,k)) / dx(2) + &
-                                      (mz_fluxz(i,j,k+1)-mz_fluxz(i,j,k)) / dx(3) )
+               mz_fluxdiv(i,j,k) = -( (mz_fluxx(i+1,j,k)-mz_fluxx(i,j,k)) * dxinv + &
+                                      (mz_fluxy(i,j+1,k)-mz_fluxy(i,j,k)) * dxinv + &
+                                      (mz_fluxz(i,j,k+1)-mz_fluxz(i,j,k)) * dxinv )
             end do
          end do
       end do

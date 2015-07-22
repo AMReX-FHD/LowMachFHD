@@ -1316,7 +1316,9 @@ contains
     ! local variables
     integer comp,i,j
 
-    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
+    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp, dxinv
+
+    dxinv = 1.d0/dx(1) !assumed all dx equal
 
     ! advance solution
     ! conservative update
@@ -1325,8 +1327,8 @@ contains
        do j = tlo(2),thi(2) 
        do i = tlo(1),thi(1) 
           s_update(i,j,comp) = s_update(i,j,comp) - (  &
-               (sedgex(i+1,j,comp)*uadv(i+1,j)-sedgex(i,j,comp)*uadv(i,j))/dx(1) +  &
-               (sedgey(i,j+1,comp)*vadv(i,j+1)-sedgey(i,j,comp)*vadv(i,j))/dx(2) )
+               (sedgex(i+1,j,comp)*uadv(i+1,j)-sedgex(i,j,comp)*uadv(i,j))*dxinv +  &
+               (sedgey(i,j+1,comp)*vadv(i,j+1)-sedgey(i,j,comp)*vadv(i,j))*dxinv )
        enddo
        enddo
     enddo
@@ -4189,19 +4191,22 @@ contains
     ! local variables
     integer comp,i,j,k
 
-    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp
+    real(kind=dp_t) :: w(ncomp), rhobar_sq, delta_eos, temp, dxinv
 
     ! advance solution
     ! conservative update
+
+    dxinv=1.d0/dx(1) !assumed all dx equal
+    
 
     do comp=1,ncomp
        do k = tlo(3),thi(3)
        do j = tlo(2),thi(2) 
        do i = tlo(1),thi(1) 
           s_update(i,j,k,comp) = s_update(i,j,k,comp) - (  &
-               (sedgex(i+1,j,k,comp)*uadv(i+1,j,k)-sedgex(i,j,k,comp)*uadv(i,j,k))/dx(1) +  &
-               (sedgey(i,j+1,k,comp)*vadv(i,j+1,k)-sedgey(i,j,k,comp)*vadv(i,j,k))/dx(2) + &
-               (sedgez(i,j,k+1,comp)*wadv(i,j,k+1)-sedgez(i,j,k,comp)*wadv(i,j,k))/dx(3) )
+               (sedgex(i+1,j,k,comp)*uadv(i+1,j,k)-sedgex(i,j,k,comp)*uadv(i,j,k))*dxinv +  &
+               (sedgey(i,j+1,k,comp)*vadv(i,j+1,k)-sedgey(i,j,k,comp)*vadv(i,j,k))*dxinv + &
+               (sedgez(i,j,k+1,comp)*wadv(i,j,k+1)-sedgez(i,j,k,comp)*wadv(i,j,k))*dxinv )
        enddo
        enddo
        enddo
