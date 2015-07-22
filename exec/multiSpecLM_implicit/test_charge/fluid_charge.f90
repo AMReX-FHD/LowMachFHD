@@ -5,7 +5,7 @@ module fluid_charge_module
   use define_bc_module
   use bc_module
   use probin_multispecies_module, only: charge_per_mass, nspecies, charge_per_mass
-  use probin_common_module, only: molmass, k_B, n_cells
+  use probin_common_module, only: molmass, k_B, total_volume
 
   implicit none
 
@@ -299,7 +299,7 @@ contains
     ! local
     type(multifab) :: charge(mla%nlevel)
 
-    integer :: i,dm,nlevs,n,n_cell,ng_r
+    integer :: i,dm,nlevs,n,ng_r
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t) :: charge_temp
@@ -316,12 +316,6 @@ contains
        call bl_error("enforce_charge_neutrality only works with nlevs=1")
     end if
 
-    if (dm .eq. 2) then
-       n_cell = n_cells(1)*n_cells(2)
-    else if (dm .eq. 3) then
-       n_cell = n_cells(1)*n_cells(2)*n_cells(3)
-    end if
-
     do n=1,nlevs
        call multifab_build(charge(n),mla%la(n),1,0)
     end do
@@ -333,7 +327,7 @@ contains
     charge_temp = multifab_sum_c(charge(1),1,1)
 
     ! divide total charge by # of zones
-!    charge_temp = charge_temp / n_cell
+!    charge_temp = charge_temp / total_volume
 
     print*,'charge before',charge_temp
     
@@ -359,7 +353,7 @@ contains
     charge_temp = multifab_sum_c(charge(1),1,1)
 
     ! divide total charge by # of zones
-!    charge_temp = charge_temp / n_cell
+!    charge_temp = charge_temp / total_volume
 
     print*,'charge after',charge_temp
 

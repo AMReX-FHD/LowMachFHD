@@ -2,7 +2,7 @@ module sum_momenta_module
 
   use multifab_module
   use ml_layout_module
-  use probin_common_module, only: n_cells
+  use probin_common_module, only: total_volume
 
   implicit none
 
@@ -19,7 +19,7 @@ contains
     real(kind=dp_t), intent(inout), optional :: av_m(:)
 
     ! local
-    integer :: i,dm,nlevs,ng_m,n_cell
+    integer :: i,dm,nlevs,ng_m
     integer :: lo(mla%dim), hi(mla%dim)
 
     real(kind=dp_t) :: mom_tot(mla%dim), mom_lev(mla%dim), mom_proc(mla%dim), mom_grid(mla%dim)
@@ -40,8 +40,6 @@ contains
     
     nlevs = mla%nlevel
     dm = mla%dim
-    
-    n_cell = product(n_cells(1:dm))
     
     if (nlevs .gt. 1) then
        call bl_error('sum_momenta not written for multilevel yet')
@@ -71,10 +69,10 @@ contains
     call parallel_reduce(mom_lev(1:dm)    , mom_proc(1:dm)    , MPI_SUM)
 
     if (parallel_IOProcessor()) then
-       write(*,"(A,100G17.9)") "CONSERVE: <mom_k>=", mom_lev(1:dm)/n_cell
+       write(*,"(A,100G17.9)") "CONSERVE: <mom_k>=", mom_lev(1:dm)/total_volume
     end if
         
-    if(present(av_m)) av_m=mom_lev(1:dm)/n_cell
+    if(present(av_m)) av_m=mom_lev(1:dm)/total_volume
     
     call destroy(bpt)
 

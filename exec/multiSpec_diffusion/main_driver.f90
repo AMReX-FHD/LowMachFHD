@@ -14,7 +14,7 @@ subroutine main_driver()
   use analyze_spectra_module
   use ParallelRNGs 
   use mass_flux_utilities_module
-  use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
+  use probin_common_module, only: prob_lo, prob_hi, n_cells, n_cell, dim_in, hydro_grid_int, &
                                   k_B, max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, seed, stats_int, &
                                   bc_lo, bc_hi, probin_common_init, cfl, max_step, &
@@ -50,7 +50,7 @@ subroutine main_driver()
   real(kind=dp_t),allocatable  :: wit(:) 
 
   ! For HydroGrid
-  integer :: narg, farg, un, n_cell, n_Dbar
+  integer :: narg, farg, un, n_Dbar
   character(len=128) :: fname
   logical :: lexist
   

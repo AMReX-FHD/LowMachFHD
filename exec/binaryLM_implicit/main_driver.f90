@@ -33,7 +33,7 @@ subroutine main_driver()
   use convert_stag_module
   use macproject_module
   use probin_binarylm_module, only: probin_binarylm_init, analyze_binary, diff_coef
-  use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, &
+  use probin_common_module , only: probin_common_init, seed, dim_in, n_cells, total_volume, &
                                    prob_lo, prob_hi, max_grid_size, &
                                    hydro_grid_int, n_steps_save_stats, n_steps_skip, &
                                    stats_int, variance_coef_mom, variance_coef_mass, &
@@ -51,7 +51,7 @@ subroutine main_driver()
   ! will be allocated with (nlevs,dm) components
   real(dp_t), allocatable :: dx(:,:)
 
-  integer :: n,nlevs,i,dm,istep,n_cell
+  integer :: n,nlevs,i,dm,istep
 
   real(kind=dp_t) :: dt,dt_diffusive,time,runtime1,runtime2,max_vel,av_mass
   real(kind=dp_t) :: l1, l2, linf
@@ -368,7 +368,7 @@ subroutine main_driver()
      call eos_check(mla,sold)
      call sum_momenta(mla,mold)
      do i=1,2
-        av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+        av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/total_volume
         if (parallel_IOProcessor()) then
            write(*,"(A,100G17.9)") "Conservation: rho=", i, av_mass
         end if
@@ -441,7 +441,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"
         call sum_momenta(mla,mold)
         do i=1,2
-           av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+           av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/total_volume
            if (parallel_IOProcessor()) then
               write(*,"(A,100G17.9)") "Conservation: rho=", i, av_mass
            end if
@@ -524,7 +524,7 @@ subroutine main_driver()
         call eos_check(mla,snew)
         call sum_momenta(mla,mnew)
         do i=1,2
-           av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/product(n_cells(1:dm))
+           av_mass = multifab_sum_c(sold(1),i,1,all=.false.)/total_volume
            if (parallel_IOProcessor()) then
               write(*,"(A,100G17.9)") "Conservation: rho=", i, av_mass
            end if
@@ -606,11 +606,10 @@ subroutine main_driver()
      linf = multifab_norm_inf_c(sold(1),2,1,all=.false.)
      l1 = multifab_norm_l1_c(sold(1),2,1,all=.false.)
      l2 = multifab_norm_l2_c(sold(1),2,1,all=.false.)
-     n_cell = multifab_volume(sold(1)) / 2
      if (parallel_IOProcessor()) then
         print*,'linf error in rho*c',linf
-        print*,'l1   error in rho*c',l1 / dble(n_cell)
-        print*,'l2   error in rho*c',l2 / sqrt(dble(n_cell))
+        print*,'l1   error in rho*c',l1 / total_volume
+        print*,'l2   error in rho*c',l2 / sqrt(dble(total_volume))
      end if
   end if   
   !!!!!!!!!!!! convergence testing

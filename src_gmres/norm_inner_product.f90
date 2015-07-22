@@ -3,6 +3,7 @@
   use ml_layout_module
   use multifab_module
   use define_bc_module
+  use probin_common_module, only: total_volume
 
   implicit none
 
@@ -583,7 +584,7 @@ contains
     real(kind=dp_t), intent(out), optional :: av_sump, av_sumu(mla%dim) ! Level 1 only
 
     ! local
-    integer :: i,dm,nlevs,ng_m, n_cell
+    integer :: i,dm,nlevs,ng_m
     integer :: lo(mla%dim), hi(mla%dim)
 
     real(kind=dp_t) :: sump_lev
@@ -611,8 +612,6 @@ contains
     
     nlevs = mla%nlevel
     dm = mla%dim
-    
-    n_cell = multifab_volume(pressure(1))
     
     if (nlevs .gt. 1) then
        call bl_error('sum_umac_press not written for multilevel yet')
@@ -667,14 +666,14 @@ contains
     call parallel_reduce(sumu_lev(1:dm), sumu_proc(1:dm), MPI_SUM)
 
     if (parallel_IOProcessor().and.(.not.present(av_sump))) then
-       write(*,"(A,100G17.9)") "<p>=", sump_lev/n_cell
+       write(*,"(A,100G17.9)") "<p>=", sump_lev/total_volume
     end if
     if (parallel_IOProcessor().and.(.not.present(av_sumu))) then       
-       write(*,"(A,100G17.9)") "<u>=", sumu_lev(1:dm)/n_cell
+       write(*,"(A,100G17.9)") "<u>=", sumu_lev(1:dm)/total_volume
     end if
         
-    if(present(av_sump)) av_sump=sump_lev/n_cell
-    if(present(av_sumu)) av_sumu(1:dm)=sumu_lev(1:dm)/n_cell
+    if(present(av_sump)) av_sump=sump_lev/total_volume
+    if(present(av_sumu)) av_sumu(1:dm)=sumu_lev(1:dm)/total_volume
     
     call destroy(bpt)
 
