@@ -493,7 +493,7 @@ S^n = \bar{S}^n + \delta S^n,
 {\bf Step 2:}\\ \\
 Compute a volume discrepancy correction:
 \begin{equation}
-S_{\rm corr} = \frac{1}{\rho^n P_\rho^n}\left(\frac{P(\rho,\wb,T)^n - P_0^n}{\Delta t}\right),
+S_{\rm corr} = \frac{1}{(\rho P_\rho)^n}\left(\frac{P(\rho,\wb,T)^n - P_0^n}{\Delta t}\right),
 \end{equation}
 and split this into average and perturbational components,
 \begin{equation}
@@ -613,7 +613,7 @@ Rewriting the Stokes system above we have:
 {\bf Step 8}\\ \\
 Update volume discrepancy
 \begin{equation}
-S_{\rm corr} = S_{\rm corr} + \frac{2}{P_0^{n+1,m+1}}\left(\frac{P(\rho,\wb,T)^{n+1,m+1} - P_0^{n+1,m+1}}{\Delta t}\right)
+S_{\rm corr} = S_{\rm corr} + \frac{2}{(\rho P_\rho)^{n+1,m+1}}\left(\frac{P(\rho,\wb,T)^{n+1,m+1} - P_0^{n+1,m+1}}{\Delta t}\right)
 \end{equation}
 Note: I've found this factor of two to be more effective at reducing the drift
 since we are using trapezoidal advective fluxes.  If the drift is unacceptable,
