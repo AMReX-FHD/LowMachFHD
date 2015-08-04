@@ -56,6 +56,8 @@ ifeq ($(findstring hopper, $(HOST)), hopper)
   libraries += $(LAPACK95_DIR)/lapack95.a
 else ifeq ($(findstring edison, $(HOST)), edison)
   libraries += $(LAPACK95_DIR)/lapack95.a
+else ifeq ($(findstring bint01, $(HOST)), bint01)
+  libraries += $(LAPACK95_DIR)/lapack95.a
 else
   libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
 endif
