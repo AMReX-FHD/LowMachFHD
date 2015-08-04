@@ -77,7 +77,8 @@ void srandgen (unsigned long seed)
     mti = N;
 }
 
-void genrand (double* rn)
+/* A. Donev separated this into a separate routine so we can return integers directly */
+unsigned long genrandbase ()
 {
     unsigned long y;
     static unsigned long mag01[2]={0x0, MATRIX_A};
@@ -108,10 +109,36 @@ void genrand (double* rn)
     y ^= TEMPERING_SHIFT_S(y) & TEMPERING_MASK_B;
     y ^= TEMPERING_SHIFT_T(y) & TEMPERING_MASK_C;
     y ^= TEMPERING_SHIFT_L(y);
+    
+    return(y);
+}
 
+void genrand (double* rn)
+{
+    unsigned long y;
+    y = genrandbase ();
     *rn = ( (double)y * 2.3283064365386963e-10 ); /* reals: [0,1)-interval */
 }
 
+/* A. Donev addeed this by copying the code from the gsl library's function gsl_rng_uniform_int */
+/* Generates a random integer in the range [1,n] */
+void genrandint (unsigned long int *r, unsigned long int n)
+{
+  unsigned long int offset = 0;
+  unsigned long int range = 0xffffffffUL - offset;
+  unsigned long int scale;
+  unsigned long int k;
+
+  scale = range / n;
+
+  do
+    {
+      k = (genrandbase() - offset) / scale;
+    }
+  while (k >= n);
+
+  *r = k+1;
+}
 
 /*
 ** Lower tail quantile for standard normal distribution function.

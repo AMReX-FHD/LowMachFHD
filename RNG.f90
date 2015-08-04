@@ -25,6 +25,16 @@ module BoxLibRNGs
 !      end subroutine
 !   end interface   
 
+   interface UniformInteger
+      ! void genrandint (const gsl_rng * r, unsigned long int n)
+      subroutine genrandint(number, range) bind(c)
+         ! Returns an integer uniformly distributed in the range [1,range]
+         import
+         integer, intent(out) :: number
+         integer, intent(in), value :: range
+      end subroutine   
+   end interface
+
    interface UniformRNG
       subroutine genrand(number) bind(c)
          ! Returns pseudorandom number in interval [0,1).
