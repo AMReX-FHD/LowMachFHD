@@ -856,6 +856,15 @@ IF (mu > 10.0) THEN
 
   70 IF (ival>=10) GO TO 80
   px = -mu
+
+  ! Donev: There is something weird happening here, sometimes ival goes out of range, a misterious bug that I was unable to uncover
+  ! It may be a compiler bug, but it may also be some numerical issue like underflow or overflow...
+  ! Adding this test here seemed to make the issue go away -- probably disables some optimization
+  if((ival+1<1).or.(ival+1>10)) then
+     write(*,*) "ival=", ival, " mu=", mu
+     stop
+  end if
+
   py = mu**ival/fact(ival+1)
   GO TO 110
 
