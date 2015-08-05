@@ -30,14 +30,35 @@ contains
     real(kind=dp_t), pointer :: dp1(:,:,:,:)
     real(kind=dp_t), pointer :: dp2(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: growntilebox
+    integer :: gtlo(mla%dim), gthi(mla%dim)
+
     nlevs = mla%nlevel
     dm = mla%dim
 
     ng_1 = conc(1)%ng
     ng_2 = molefrac(1)%ng
 
+    !$omp parallel private(n,i,mfi,growntilebox,gtlo,gthi) &
+    !$omp private(dp1,dp2,lo,hi)
+
     do n=1,nlevs
-       do i=1,nfabs(conc(n))
+       call mfiter_build(mfi, conc(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          if (conc_to_molefrac) then
+             growntilebox = get_growntilebox(mfi,ng_2)
+             gtlo = lwb(growntilebox)
+             gthi = upb(growntilebox)
+          else
+             growntilebox = get_growntilebox(mfi,ng_1)
+             gtlo = lwb(growntilebox)
+             gthi = upb(growntilebox)
+          end if
+  
           dp1 => dataptr(conc(n), i)
           dp2 => dataptr(molefrac(n), i)
           lo = lwb(get_box(conc(n), i))
@@ -45,21 +66,23 @@ contains
           select case (dm)
           case (2)
              call convert_conc_to_molefrac_2d(dp1(:,:,1,:),ng_1,dp2(:,:,1,:),ng_2, &
-                                              lo,hi,conc_to_molefrac)
+                                              lo,hi,conc_to_molefrac,gtlo,gthi)
           case (3)
              call convert_conc_to_molefrac_3d(dp1(:,:,:,:),ng_1,dp2(:,:,:,:),ng_2, &
-                                              lo,hi,conc_to_molefrac)
+                                              lo,hi,conc_to_molefrac,gtlo,gthi)
           end select
        end do
     end do
+    !$omp end parallel
 
   end subroutine convert_conc_to_molefrac
   
-  subroutine convert_conc_to_molefrac_2d(conc,ng_1,molefrac,ng_2,lo,hi,conc_to_molefrac)
+  subroutine convert_conc_to_molefrac_2d(conc,ng_1,molefrac,ng_2,glo,ghi,conc_to_molefrac, &
+       gtlo,gthi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) ::     conc(lo(1)-ng_1:,lo(2)-ng_1:,:)
-    real(kind=dp_t), intent(inout) :: molefrac(lo(1)-ng_2:,lo(2)-ng_2:,:)
+    integer        , intent(in   ) :: ng_1,ng_2,glo(:),ghi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(inout) ::     conc(glo(1)-ng_1:,glo(2)-ng_1:,:)
+    real(kind=dp_t), intent(inout) :: molefrac(glo(1)-ng_2:,glo(2)-ng_2:,:)
     logical        , intent(in   ) :: conc_to_molefrac
 
     ! local
@@ -69,16 +92,16 @@ contains
 
     if (conc_to_molefrac) then
 
-       do j=lo(2)-ng_2,hi(2)+ng_2
-          do i=lo(1)-ng_2,hi(1)+ng_2
+       do j=gtlo(2),gthi(2)
+          do i=gtlo(1),gthi(1)
              call CKYTX(conc(i,j,:),iwrk,rwrk,molefrac(i,j,:))
           end do
        end do
 
     else
 
-       do j=lo(2)-ng_1,hi(2)+ng_1
-          do i=lo(1)-ng_1,hi(1)+ng_1
+       do j=gtlo(2),gthi(2)
+          do i=gtlo(1),gthi(1)
              call CKXTY(molefrac(i,j,:),iwrk,rwrk,conc(i,j,:))
           end do
        end do
@@ -87,11 +110,12 @@ contains
 
   end subroutine convert_conc_to_molefrac_2d
   
-  subroutine convert_conc_to_molefrac_3d(conc,ng_1,molefrac,ng_2,lo,hi,conc_to_molefrac)
+  subroutine convert_conc_to_molefrac_3d(conc,ng_1,molefrac,ng_2,glo,ghi,conc_to_molefrac, &
+       gtlo,gthi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) ::     conc(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:)
-    real(kind=dp_t), intent(inout) :: molefrac(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:)
+    integer        , intent(in   ) :: ng_1,ng_2,glo(:),ghi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(inout) ::     conc(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:)
+    real(kind=dp_t), intent(inout) :: molefrac(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:,:)
     logical        , intent(in   ) :: conc_to_molefrac
 
     ! local
@@ -101,9 +125,9 @@ contains
 
     if (conc_to_molefrac) then
 
-       do k=lo(3)-ng_2,hi(3)+ng_2
-          do j=lo(2)-ng_2,hi(2)+ng_2
-             do i=lo(1)-ng_2,hi(1)+ng_2
+       do k=gtlo(3),gthi(3)
+          do j=gtlo(2),gthi(2)
+             do i=gtlo(1),gthi(1)
                 call CKYTX(conc(i,j,k,:),iwrk,rwrk,molefrac(i,j,k,:))
              end do
           end do
@@ -111,9 +135,9 @@ contains
 
     else
 
-       do k=lo(3)-ng_1,hi(3)+ng_1
-          do j=lo(2)-ng_1,hi(2)+ng_1
-             do i=lo(1)-ng_1,hi(1)+ng_1
+       do k=gtlo(3),gthi(3)+ng_1
+          do j=gtlo(2),gthi(2)
+             do i=gtlo(1),gthi(1)
                 call CKXTY(molefrac(i,j,k,:),iwrk,rwrk,conc(i,j,k,:))
              end do
           end do
@@ -147,7 +171,7 @@ contains
 
     ! local
     integer :: n,nlevs,i,dm
-    integer :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,ng_8,ng_9
+    integer :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,ng_8,ng_9,ng
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t), pointer :: dp1(:,:,:,:)
@@ -159,6 +183,10 @@ contains
     real(kind=dp_t), pointer :: dp7(:,:,:,:)
     real(kind=dp_t), pointer :: dp8(:,:,:,:)
     real(kind=dp_t), pointer :: dp9(:,:,:,:)
+
+    type(mfiter) :: mfi
+    type(box) :: growntilebox
+    integer :: gtlo(mla%dim), gthi(mla%dim)
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -173,8 +201,21 @@ contains
     ng_8 = diff_ij(1)%ng
     ng_9 = chitil(1)%ng
 
+    ng = min(ng_5,ng_6,ng_7,ng_8,ng_9)
+    
+    !$omp parallel private(n,i,mfi,growntilebox,gtlo,gthi) &
+    !$omp private(dp1,dp2,dp3,dp4,dp5,dp6,dp7,dp8,dp9,lo,hi)
+
     do n=1,nlevs
-       do i=1,nfabs(rhotot(n))
+       call mfiter_build(mfi, rhotot(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          growntilebox = get_growntilebox(mfi,ng)
+          gtlo = lwb(growntilebox)
+          gthi = upb(growntilebox)
+
           dp1 => dataptr(rhotot(n),i)
           dp2 => dataptr(Temp(n),i)
           dp3 => dataptr(Yk(n),i)
@@ -192,43 +233,42 @@ contains
                                              dp3(:,:,1,:),ng_3,dp4(:,:,1,:),ng_4, &
                                              dp5(:,:,1,1),ng_5,dp6(:,:,1,1),ng_6, &
                                              dp7(:,:,1,1),ng_7,dp8(:,:,1,:),ng_8, &
-                                             dp9(:,:,1,:),ng_9,p0,lo,hi)
+                                             dp9(:,:,1,:),ng_9,p0,lo,hi,gtlo,gthi)
           case (3)
              call ideal_mixture_transport_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
                                              dp3(:,:,:,:),ng_3,dp4(:,:,:,:),ng_4, &
                                              dp5(:,:,:,1),ng_5,dp6(:,:,:,1),ng_6, &
                                              dp7(:,:,:,1),ng_7,dp8(:,:,:,:),ng_8, &
-                                             dp9(:,:,:,:),ng_9,p0,lo,hi)
+                                             dp9(:,:,:,:),ng_9,p0,lo,hi,gtlo,gthi)
           end select
        end do
     end do
+    !$omp end parallel
 
   end subroutine ideal_mixture_transport_wrapper
   
   subroutine ideal_mixture_transport_2d(rhotot,ng_1,Temp,ng_2,Yk,ng_3,Xk,ng_4,eta,ng_5, &
                                         kappa,ng_6,zeta,ng_7,diff_ij,ng_8,chitil,ng_9, &
-                                        p0,lo,hi)
+                                        p0,glo,ghi,gtlo,gthi)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,ng_8,ng_9
-    integer        , intent(in   ) :: lo(:),hi(:)
-    real(kind=dp_t), intent(in   ) ::  rhotot(lo(1)-ng_1:,lo(2)-ng_1:)
-    real(kind=dp_t), intent(in   ) ::    Temp(lo(1)-ng_2:,lo(2)-ng_2:)
-    real(kind=dp_t), intent(in   ) ::      Yk(lo(1)-ng_3:,lo(2)-ng_3:,:)
-    real(kind=dp_t), intent(in   ) ::      Xk(lo(1)-ng_4:,lo(2)-ng_4:,:)
-    real(kind=dp_t), intent(inout) ::     eta(lo(1)-ng_5:,lo(2)-ng_5:)
-    real(kind=dp_t), intent(inout) ::   kappa(lo(1)-ng_6:,lo(2)-ng_6:)
-    real(kind=dp_t), intent(inout) ::    zeta(lo(1)-ng_7:,lo(2)-ng_7:)
-    real(kind=dp_t), intent(inout) :: diff_ij(lo(1)-ng_8:,lo(2)-ng_8:,:)
-    real(kind=dp_t), intent(inout) ::  chitil(lo(1)-ng_9:,lo(2)-ng_9:,:)
+    integer        , intent(in   ) :: glo(:),ghi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(in   ) ::  rhotot(glo(1)-ng_1:,glo(2)-ng_1:)
+    real(kind=dp_t), intent(in   ) ::    Temp(glo(1)-ng_2:,glo(2)-ng_2:)
+    real(kind=dp_t), intent(in   ) ::      Yk(glo(1)-ng_3:,glo(2)-ng_3:,:)
+    real(kind=dp_t), intent(in   ) ::      Xk(glo(1)-ng_4:,glo(2)-ng_4:,:)
+    real(kind=dp_t), intent(inout) ::     eta(glo(1)-ng_5:,glo(2)-ng_5:)
+    real(kind=dp_t), intent(inout) ::   kappa(glo(1)-ng_6:,glo(2)-ng_6:)
+    real(kind=dp_t), intent(inout) ::    zeta(glo(1)-ng_7:,glo(2)-ng_7:)
+    real(kind=dp_t), intent(inout) :: diff_ij(glo(1)-ng_8:,glo(2)-ng_8:,:)
+    real(kind=dp_t), intent(inout) ::  chitil(glo(1)-ng_9:,glo(2)-ng_9:,:)
     real(kind=dp_t), intent(in   ) :: p0
 
     ! local
     integer :: i,j,ng
 
-    ng = min(ng_5,ng_6,ng_7,ng_8,ng_9)
-
-    do j=lo(2)-ng,hi(2)+ng
-       do i=lo(1)-ng,hi(1)+ng
+    do j=gtlo(2),gthi(2)
+       do i=gtlo(1),gthi(1)
 
           call ideal_mixture_transport(rhotot(i,j),Temp(i,j),p0,Yk(i,j,:),Xk(i,j,:), &
                                        eta(i,j),kappa(i,j),zeta(i,j),diff_ij(i,j,:), &
@@ -241,19 +281,19 @@ contains
   
   subroutine ideal_mixture_transport_3d(rhotot,ng_1,Temp,ng_2,Yk,ng_3,Xk,ng_4,eta,ng_5, &
                                         kappa,ng_6,zeta,ng_7,diff_ij,ng_8,chitil,ng_9, &
-                                        p0,lo,hi)
+                                        p0,glo,ghi,gtlo,gthi)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,ng_8,ng_9
-    integer        , intent(in   ) :: lo(:),hi(:)
-    real(kind=dp_t), intent(in   ) ::  rhotot(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(in   ) ::    Temp(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
-    real(kind=dp_t), intent(in   ) ::      Yk(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:)
-    real(kind=dp_t), intent(in   ) ::      Xk(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:)
-    real(kind=dp_t), intent(inout) ::     eta(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:)
-    real(kind=dp_t), intent(inout) ::   kappa(lo(1)-ng_6:,lo(2)-ng_6:,lo(3)-ng_6:)
-    real(kind=dp_t), intent(inout) ::    zeta(lo(1)-ng_7:,lo(2)-ng_7:,lo(3)-ng_7:)
-    real(kind=dp_t), intent(inout) :: diff_ij(lo(1)-ng_8:,lo(2)-ng_8:,lo(3)-ng_8:,:)
-    real(kind=dp_t), intent(inout) ::  chitil(lo(1)-ng_9:,lo(2)-ng_9:,lo(3)-ng_9:,:)
+    integer        , intent(in   ) :: glo(:),ghi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(in   ) ::  rhotot(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)
+    real(kind=dp_t), intent(in   ) ::    Temp(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)
+    real(kind=dp_t), intent(in   ) ::      Yk(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:)
+    real(kind=dp_t), intent(in   ) ::      Xk(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:,:)
+    real(kind=dp_t), intent(inout) ::     eta(glo(1)-ng_5:,glo(2)-ng_5:,glo(3)-ng_5:)
+    real(kind=dp_t), intent(inout) ::   kappa(glo(1)-ng_6:,glo(2)-ng_6:,glo(3)-ng_6:)
+    real(kind=dp_t), intent(inout) ::    zeta(glo(1)-ng_7:,glo(2)-ng_7:,glo(3)-ng_7:)
+    real(kind=dp_t), intent(inout) :: diff_ij(glo(1)-ng_8:,glo(2)-ng_8:,glo(3)-ng_8:,:)
+    real(kind=dp_t), intent(inout) ::  chitil(glo(1)-ng_9:,glo(2)-ng_9:,glo(3)-ng_9:,:)
     real(kind=dp_t), intent(in   ) :: p0
 
     ! local
@@ -261,9 +301,9 @@ contains
 
     ng = min(ng_5,ng_6,ng_7,ng_8,ng_9)
 
-    do k=lo(3)-ng,hi(3)+ng
-       do j=lo(2)-ng,hi(2)+ng
-          do i=lo(1)-ng,hi(1)+ng
+    do k=gtlo(3),gthi(3)
+       do j=gtlo(2),gthi(2)
+          do i=gtlo(1),gthi(1)
 
              call ideal_mixture_transport(rhotot(i,j,k),Temp(i,j,k),p0,Yk(i,j,k,:), &
                                           Xk(i,j,k,:),eta(i,j,k),kappa(i,j,k), &
@@ -292,34 +332,52 @@ contains
     real(kind=dp_t), pointer :: dp1(:,:,:,:)
     real(kind=dp_t), pointer :: dp2(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     nlevs = mla%nlevel
     dm = mla%dim
 
     ng_1 = rhotot(1)%ng
     ng_2 = rhoHext(1)%ng
 
+    !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
+    !$omp private(dp1,dp2,lo,hi)
+
     do n=1,nlevs
-       do i=1,nfabs(rhotot(n))
+       call mfiter_build(mfi, rhotot(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          tilebox = get_tilebox(mfi)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
+
           dp1 => dataptr(rhotot(n), i)
           dp2 => dataptr(rhoHext(n), i)
           lo = lwb(get_box(rhotot(n), i))
           hi = upb(get_box(rhotot(n), i))
           select case (dm)
           case (2)
-             call add_external_heating_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2,dx(n,:),lo,hi)
+             call add_external_heating_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2,dx(n,:), &
+                  lo,hi,tlo,thi)
           case (3)
-             call add_external_heating_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2,dx(n,:),lo,hi)
+             call add_external_heating_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2,dx(n,:), &
+                  lo,hi,tlo,thi)
           end select
        end do
     end do
+    !$omp end parallel
 
   end subroutine add_external_heating
   
-  subroutine add_external_heating_2d(rhotot,ng_1,rhoHext,ng_2,dx,lo,hi)
+  subroutine add_external_heating_2d(rhotot,ng_1,rhoHext,ng_2,dx,glo,ghi,tlo,thi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
-    real(kind=dp_t), intent(in   ) ::  rhotot(lo(1)-ng_1:,lo(2)-ng_1:)
-    real(kind=dp_t), intent(inout) :: rhoHext(lo(1)-ng_2:,lo(2)-ng_2:)
+    integer        , intent(in   ) :: ng_1,ng_2,glo(:),ghi(:),tlo(:),thi(:)
+    real(kind=dp_t), intent(in   ) ::  rhotot(glo(1)-ng_1:,glo(2)-ng_1:)
+    real(kind=dp_t), intent(inout) :: rhoHext(glo(1)-ng_2:,glo(2)-ng_2:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! local
@@ -333,9 +391,9 @@ contains
        xcen = 0.5d0*(prob_lo(1)+prob_hi(1))
        ycen = 0.5d0*(prob_lo(2)+prob_hi(2))
 
-       do j=lo(2),hi(2)
+       do j=tlo(2),thi(2)
           y = prob_lo(2) + dx(2)*(dble(j)+0.5d0)
-          do i=lo(1),hi(1)
+          do i=tlo(1),thi(1)
              x = prob_lo(1) + dx(1)*(dble(i)+0.5d0)
 
              r = sqrt((x-xcen)**2 + (y-ycen)**2)
@@ -351,11 +409,11 @@ contains
 
   end subroutine add_external_heating_2d
   
-  subroutine add_external_heating_3d(rhotot,ng_1,rhoHext,ng_2,dx,lo,hi)
+  subroutine add_external_heating_3d(rhotot,ng_1,rhoHext,ng_2,dx,glo,ghi,tlo,thi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
-    real(kind=dp_t), intent(in   ) ::  rhotot(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(inout) :: rhoHext(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+    integer        , intent(in   ) :: ng_1,ng_2,glo(:),ghi(:),tlo(:),thi(:)
+    real(kind=dp_t), intent(in   ) ::  rhotot(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)
+    real(kind=dp_t), intent(inout) :: rhoHext(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)
     real(kind=dp_t), intent(in   ) :: dx(:)
 
     ! local
@@ -370,11 +428,11 @@ contains
        ycen = 0.5d0*(prob_lo(2)+prob_hi(2))
        zcen = 0.5d0*(prob_lo(3)+prob_hi(3))
 
-       do k=lo(3),hi(3)
+       do k=tlo(3),thi(3)
           z = prob_lo(3) + dx(3)*(dble(k)+0.5d0)
-          do j=lo(2),hi(2)
+          do j=tlo(2),thi(2)
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0)
-             do i=lo(1),hi(1)
+             do i=tlo(1),thi(1)
                 x = prob_lo(1) + dx(1)*(dble(i)+0.5d0)
 
                 r = sqrt((x-xcen)**2 + (y-ycen)**2 + (z-zcen)**2)
@@ -417,6 +475,10 @@ contains
     real(kind=dp_t), pointer :: dp6(:,:,:,:)
     real(kind=dp_t), pointer :: dp7(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -428,8 +490,19 @@ contains
     ng_6 = Temp(1)%ng
     ng_7 = rhotot(1)%ng
 
+    !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
+    !$omp private(dp1,dp2,dp3,dp4,dp5,dp6,dp7,lo,hi)
+
     do n=1,nlevs
-       do i=1,nfabs(S(n))
+       call mfiter_build(mfi, S(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          tilebox = get_tilebox(mfi)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
+  
           dp1 => dataptr(S(n), i)
           dp2 => dataptr(alpha(n), i)
           dp3 => dataptr(mass_fluxdiv(n), i)
@@ -444,29 +517,31 @@ contains
              call compute_S_alpha_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
                                      dp3(:,:,1,:),ng_3,dp4(:,:,1,1),ng_4, &
                                      dp5(:,:,1,:),ng_5,dp6(:,:,1,1),ng_6, &
-                                     dp7(:,:,1,1),ng_7,lo,hi)
+                                     dp7(:,:,1,1),ng_7,lo,hi,tlo,thi)
           case (3)
              call compute_S_alpha_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
                                      dp3(:,:,:,:),ng_3,dp4(:,:,:,1),ng_4, &
                                      dp5(:,:,:,:),ng_5,dp6(:,:,:,1),ng_6, &
-                                     dp7(:,:,:,1),ng_7,lo,hi)
+                                     dp7(:,:,:,1),ng_7,lo,hi,tlo,thi)
           end select
        end do
     end do
+    !$omp end parallel
 
   end subroutine compute_S_alpha
   
   subroutine compute_S_alpha_2d(S,ng_1,alpha,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
-                                conc,ng_5,Temp,ng_6,rhotot,ng_7,lo,hi)
+                                conc,ng_5,Temp,ng_6,rhotot,ng_7,glo,ghi,tlo,thi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) ::            S(lo(1)-ng_1:,lo(2)-ng_1:)
-    real(kind=dp_t), intent(inout) ::        alpha(lo(1)-ng_2:,lo(2)-ng_2:)
-    real(kind=dp_t), intent(in   ) :: mass_fluxdiv(lo(1)-ng_3:,lo(2)-ng_3:,:)
-    real(kind=dp_t), intent(in   ) :: rhoh_fluxdiv(lo(1)-ng_4:,lo(2)-ng_4:)
-    real(kind=dp_t), intent(in   ) ::         conc(lo(1)-ng_5:,lo(2)-ng_5:,:)
-    real(kind=dp_t), intent(in   ) ::         Temp(lo(1)-ng_6:,lo(2)-ng_6:)
-    real(kind=dp_t), intent(in   ) ::       rhotot(lo(1)-ng_7:,lo(2)-ng_7:)
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:)
+    real(kind=dp_t), intent(inout) ::            S(glo(1)-ng_1:,glo(2)-ng_1:)
+    real(kind=dp_t), intent(inout) ::        alpha(glo(1)-ng_2:,glo(2)-ng_2:)
+    real(kind=dp_t), intent(in   ) :: mass_fluxdiv(glo(1)-ng_3:,glo(2)-ng_3:,:)
+    real(kind=dp_t), intent(in   ) :: rhoh_fluxdiv(glo(1)-ng_4:,glo(2)-ng_4:)
+    real(kind=dp_t), intent(in   ) ::         conc(glo(1)-ng_5:,glo(2)-ng_5:,:)
+    real(kind=dp_t), intent(in   ) ::         Temp(glo(1)-ng_6:,glo(2)-ng_6:)
+    real(kind=dp_t), intent(in   ) ::       rhotot(glo(1)-ng_7:,glo(2)-ng_7:)
 
     ! local
     integer :: i,j,n
@@ -476,8 +551,8 @@ contains
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
+    do j=tlo(2),thi(2)
+       do i=tlo(1),thi(1)
 
           ! mixture-averaged molecular mass, W = (sum (w_k/m_k) )^-1
           call CKMMWY(conc(i,j,:),iwrk,rwrk,W)
@@ -505,16 +580,17 @@ contains
   end subroutine compute_S_alpha_2d
   
   subroutine compute_S_alpha_3d(S,ng_1,alpha,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
-                                conc,ng_5,Temp,ng_6,rhotot,ng_7,lo,hi)
+                                conc,ng_5,Temp,ng_6,rhotot,ng_7,glo,ghi,tlo,thi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) ::            S(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(inout) ::        alpha(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
-    real(kind=dp_t), intent(in   ) :: mass_fluxdiv(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:)
-    real(kind=dp_t), intent(in   ) :: rhoh_fluxdiv(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:)
-    real(kind=dp_t), intent(in   ) ::         conc(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:)
-    real(kind=dp_t), intent(in   ) ::         Temp(lo(1)-ng_6:,lo(2)-ng_6:,lo(3)-ng_6:)
-    real(kind=dp_t), intent(in   ) ::       rhotot(lo(1)-ng_7:,lo(2)-ng_7:,lo(3)-ng_7:)
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:)
+    real(kind=dp_t), intent(inout) ::            S(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)
+    real(kind=dp_t), intent(inout) ::        alpha(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)
+    real(kind=dp_t), intent(in   ) :: mass_fluxdiv(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:)
+    real(kind=dp_t), intent(in   ) :: rhoh_fluxdiv(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:)
+    real(kind=dp_t), intent(in   ) ::         conc(glo(1)-ng_5:,glo(2)-ng_5:,glo(3)-ng_5:,:)
+    real(kind=dp_t), intent(in   ) ::         Temp(glo(1)-ng_6:,glo(2)-ng_6:,glo(3)-ng_6:)
+    real(kind=dp_t), intent(in   ) ::       rhotot(glo(1)-ng_7:,glo(2)-ng_7:,glo(3)-ng_7:)
 
     ! local
     integer :: i,j,k,n
@@ -524,9 +600,9 @@ contains
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=tlo(3),thi(3)
+       do j=tlo(2),thi(2)
+          do i=tlo(1),thi(1)
 
              ! mixture-averaged molecular mass, W = (sum (w_k/m_k) )^-1
              call CKMMWY(conc(i,j,k,:),iwrk,rwrk,W)
@@ -573,6 +649,10 @@ contains
     real(kind=dp_t), pointer :: dp3(:,:,:,:)
     real(kind=dp_t), pointer :: dp4(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+    
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -581,8 +661,19 @@ contains
     ng_3 = Temp(1)%ng
     ng_4 = conc(1)%ng
 
+    !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
+    !$omp private(dp1,dp2,dp3,dp4,lo,hi)
+
     do n=1,nlevs
-       do i=1,nfabs(deltaP(n))
+       call mfiter_build(mfi, deltaP(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          tilebox = get_tilebox(mfi)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
+
           dp1 => dataptr(deltaP(n), i)
           dp2 => dataptr(rhotot(n), i)
           dp3 => dataptr(Temp(n), i)
@@ -593,33 +684,35 @@ contains
           case (2)
              call scale_deltaP_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
                                   dp3(:,:,1,1),ng_3,dp4(:,:,1,:),ng_4, &
-                                  dt,lo,hi,factor)
+                                  dt,lo,hi,factor,tlo,thi)
           case (3)
              call scale_deltaP_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
                                   dp3(:,:,:,1),ng_3,dp4(:,:,:,:),ng_4, &
-                                  dt,lo,hi,factor)
+                                  dt,lo,hi,factor,tlo,thi)
           end select
        end do
     end do
+    !$omp end parallel
 
   end subroutine scale_deltaP
   
   subroutine scale_deltaP_2d(deltaP,ng_1,rhotot,ng_2,Temp,ng_3,conc,ng_4, &
-                             dt,lo,hi,factor)
+                             dt,glo,ghi,factor,tlo,thi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) :: deltaP(lo(1)-ng_1:,lo(2)-ng_1:)
-    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:)
-    real(kind=dp_t), intent(in   ) ::   Temp(lo(1)-ng_3:,lo(2)-ng_3:)
-    real(kind=dp_t), intent(in   ) ::   conc(lo(1)-ng_4:,lo(2)-ng_4:,:)
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:)
+    real(kind=dp_t), intent(inout) :: deltaP(glo(1)-ng_1:,glo(2)-ng_1:)
+    real(kind=dp_t), intent(inout) :: rhotot(glo(1)-ng_2:,glo(2)-ng_2:)
+    real(kind=dp_t), intent(in   ) ::   Temp(glo(1)-ng_3:,glo(2)-ng_3:)
+    real(kind=dp_t), intent(in   ) ::   conc(glo(1)-ng_4:,glo(2)-ng_4:,:)
     real(kind=dp_t), intent(in   ) :: dt,factor
 
     ! local
     integer :: i,j
     real(kind=dp_t) :: P_rho
 
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
+    do j=tlo(2),thi(2)
+       do i=tlo(1),thi(1)
 
           call compute_P_rho(P_rho,rhotot(i,j),conc(i,j,:),Temp(i,j))
 
@@ -631,22 +724,23 @@ contains
   end subroutine scale_deltaP_2d
   
   subroutine scale_deltaP_3d(deltaP,ng_1,rhotot,ng_2,Temp,ng_3,conc,ng_4, &
-                             dt,lo,hi,factor)
+                             dt,glo,ghi,factor,tlo,thi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) :: deltaP(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(inout) :: rhotot(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
-    real(kind=dp_t), intent(in   ) ::   Temp(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)
-    real(kind=dp_t), intent(in   ) ::   conc(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:)
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:)
+    real(kind=dp_t), intent(inout) :: deltaP(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)
+    real(kind=dp_t), intent(inout) :: rhotot(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)
+    real(kind=dp_t), intent(in   ) ::   Temp(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:)
+    real(kind=dp_t), intent(in   ) ::   conc(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:,:)
     real(kind=dp_t), intent(in   ) :: dt,factor
 
     ! local
     integer :: i,j,k
     real(kind=dp_t) :: P_rho
 
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=tlo(3),thi(3)
+       do j=tlo(2),thi(2)
+          do i=tlo(1),thi(1)
 
              call compute_P_rho(P_rho,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
              
@@ -710,62 +804,78 @@ contains
     real(kind=dp_t), pointer :: dp1(:,:,:,:)
     real(kind=dp_t), pointer :: dp2(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: growntilebox
+    integer :: gtlo(mla%dim), gthi(mla%dim)
+
     nlevs = mla%nlevel
     dm = mla%dim
 
     ng_1 = Temp(1)%ng
     ng_2 = hk(1)%ng
 
+    !$omp parallel private(n,i,mfi,growntilebox,gtlo,gthi) &
+    !$omp private(dp1,dp2,lo,hi)
+
     do n=1,nlevs
-       do i=1,nfabs(Temp(n))
+       call mfiter_build(mfi, Temp(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          growntilebox = get_growntilebox(mfi,ng_2)
+          gtlo = lwb(growntilebox)
+          gthi = upb(growntilebox)
+
           dp1 => dataptr(Temp(n), i)
           dp2 => dataptr(hk(n), i)
           lo = lwb(get_box(Temp(n), i))
           hi = upb(get_box(Temp(n), i))
           select case (dm)
           case (2)
-             call compute_hk_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2,lo,hi)
+             call compute_hk_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2,lo,hi,gtlo,gthi)
           case (3)
-             call compute_hk_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2,lo,hi)
+             call compute_hk_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2,lo,hi,gtlo,gthi)
           end select
        end do
     end do
+    !$omp end parallel
 
   end subroutine compute_hk
   
-  subroutine compute_hk_2d(Temp,ng_1,hk,ng_2,lo,hi)
+  subroutine compute_hk_2d(Temp,ng_1,hk,ng_2,glo,ghi,gtlo,gthi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
-    real(kind=dp_t), intent(in   ) :: Temp(lo(1)-ng_1:,lo(2)-ng_1:)
-    real(kind=dp_t), intent(inout) ::   hk(lo(1)-ng_2:,lo(2)-ng_2:,:)
+    integer        , intent(in   ) :: ng_1,ng_2,glo(:),ghi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(in   ) :: Temp(glo(1)-ng_1:,glo(2)-ng_1:)
+    real(kind=dp_t), intent(inout) ::   hk(glo(1)-ng_2:,glo(2)-ng_2:,:)
 
     ! local
     integer :: i,j
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    do j=lo(2)-ng_2,hi(2)+ng_2
-       do i=lo(1)-ng_2,hi(1)+ng_2
+    do j=gtlo(2),gthi(2)
+       do i=gtlo(1),gthi(1)
           call CKHMS(Temp(i,j),iwrk,rwrk,hk(i,j,:))
        end do
     end do
 
   end subroutine compute_hk_2d
   
-  subroutine compute_hk_3d(Temp,ng_1,hk,ng_2,lo,hi)
+  subroutine compute_hk_3d(Temp,ng_1,hk,ng_2,glo,ghi,gtlo,gthi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,lo(:),hi(:)
-    real(kind=dp_t), intent(in   ) :: Temp(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(inout) ::   hk(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:)
+    integer        , intent(in   ) :: ng_1,ng_2,glo(:),ghi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(in   ) :: Temp(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)
+    real(kind=dp_t), intent(inout) ::   hk(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:,:)
 
     ! local
     integer :: i,j,k
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    do k=lo(3)-ng_2,hi(3)+ng_2
-       do j=lo(2)-ng_2,hi(2)+ng_2
-          do i=lo(1)-ng_2,hi(1)+ng_2
+    do k=gtlo(3),gthi(3)
+       do j=gtlo(2),gthi(2)
+          do i=gtlo(1),gthi(1)
              call CKHMS(Temp(i,j,k),iwrk,rwrk,hk(i,j,k,:))
           end do
        end do
@@ -791,6 +901,10 @@ contains
     real(kind=dp_t), pointer :: dp3(:,:,:,:)
     real(kind=dp_t), pointer :: dp4(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -799,8 +913,19 @@ contains
     ng_3 = conc(1)%ng
     ng_4 = pres(1)%ng
 
+    !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
+    !$omp private(dp1,dp2,dp3,dp4,lo,hi)
+
     do n=1,nlevs
-       do i=1,nfabs(pres(n))
+       call mfiter_build(mfi, pres(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          tilebox = get_tilebox(mfi)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
+
           dp1 => dataptr(rhotot(n), i)
           dp2 => dataptr(Temp(n), i)
           dp3 => dataptr(conc(n), i)
@@ -810,53 +935,56 @@ contains
           select case (dm)
           case (2)
              call compute_p_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
-                               dp3(:,:,1,:),ng_3,dp4(:,:,1,1),ng_4,lo,hi)
+                               dp3(:,:,1,:),ng_3,dp4(:,:,1,1),ng_4,lo,hi,tlo,thi)
           case (3)
              call compute_p_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
-                               dp3(:,:,:,:),ng_3,dp4(:,:,:,1),ng_4,lo,hi)
+                               dp3(:,:,:,:),ng_3,dp4(:,:,:,1),ng_4,lo,hi,tlo,thi)
           end select
        end do
     end do
+    !$omp end parallel
 
   end subroutine compute_p
   
-  subroutine compute_p_2d(rhotot,ng_1,Temp,ng_2,conc,ng_3,pres,ng_4,lo,hi)
+  subroutine compute_p_2d(rhotot,ng_1,Temp,ng_2,conc,ng_3,pres,ng_4,glo,ghi,tlo,thi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,lo(:),hi(:)
-    real(kind=dp_t), intent(in   ) :: rhotot(lo(1)-ng_1:,lo(2)-ng_1:)
-    real(kind=dp_t), intent(in   ) ::   Temp(lo(1)-ng_2:,lo(2)-ng_2:)
-    real(kind=dp_t), intent(in   ) ::   conc(lo(1)-ng_3:,lo(2)-ng_3:,:)
-    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_4:,lo(2)-ng_4:)
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:)
+    real(kind=dp_t), intent(in   ) :: rhotot(glo(1)-ng_1:,glo(2)-ng_1:)
+    real(kind=dp_t), intent(in   ) ::   Temp(glo(1)-ng_2:,glo(2)-ng_2:)
+    real(kind=dp_t), intent(in   ) ::   conc(glo(1)-ng_3:,glo(2)-ng_3:,:)
+    real(kind=dp_t), intent(inout) ::   pres(glo(1)-ng_4:,glo(2)-ng_4:)
 
     ! local
     integer :: i,j
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
+    do j=tlo(2),thi(2)
+       do i=tlo(1),thi(1)
           call CKPY(rhotot(i,j),Temp(i,j),conc(i,j,:),iwrk,rwrk,pres(i,j))
        end do
     end do
 
   end subroutine compute_p_2d
   
-  subroutine compute_p_3d(rhotot,ng_1,Temp,ng_2,conc,ng_3,pres,ng_4,lo,hi)
+  subroutine compute_p_3d(rhotot,ng_1,Temp,ng_2,conc,ng_3,pres,ng_4,glo,ghi,tlo,thi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,lo(:),hi(:)
-    real(kind=dp_t), intent(in   ) :: rhotot(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(in   ) ::   Temp(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
-    real(kind=dp_t), intent(in   ) ::   conc(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:,:)
-    real(kind=dp_t), intent(inout) ::   pres(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:)
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:)
+    real(kind=dp_t), intent(in   ) :: rhotot(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)
+    real(kind=dp_t), intent(in   ) ::   Temp(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)
+    real(kind=dp_t), intent(in   ) ::   conc(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:)
+    real(kind=dp_t), intent(inout) ::   pres(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:)
 
     ! local
     integer :: i,j,k
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=tlo(3),thi(3)
+       do j=tlo(2),thi(2)
+          do i=tlo(1),thi(1)
              call CKPY(rhotot(i,j,k),Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,pres(i,j,k))
           end do
        end do
@@ -880,6 +1008,10 @@ contains
     real(kind=dp_t), pointer :: dp2(:,:,:,:)
     real(kind=dp_t), pointer :: dp3(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: growntilebox
+    integer :: gtlo(mla%dim), gthi(mla%dim)
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -887,8 +1019,19 @@ contains
     ng_2 = conc(1)%ng
     ng_3 = Temp(1)%ng
 
+    !$omp parallel private(n,i,mfi,growntilebox,gtlo,gthi) &
+    !$omp private(dp1,dp2,dp3,lo,hi)
+
     do n=1,nlevs
-       do i=1,nfabs(cp(n))
+       call mfiter_build(mfi, cp(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          growntilebox = get_growntilebox(mfi,ng_1)
+          gtlo = lwb(growntilebox)
+          gthi = upb(growntilebox)
+
           dp1 => dataptr(cp(n), i)
           dp2 => dataptr(conc(n), i)
           dp3 => dataptr(Temp(n), i)
@@ -897,22 +1040,24 @@ contains
           select case (dm)
           case (2)
              call compute_cp_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2, &
-                                dp3(:,:,1,1),ng_3,lo,hi)
+                                dp3(:,:,1,1),ng_3,lo,hi,gtlo,gthi)
           case (3)
              call compute_cp_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2, &
-                                dp3(:,:,:,1),ng_3,lo,hi)
+                                dp3(:,:,:,1),ng_3,lo,hi,gtlo,gthi)
           end select
        end do
     end do
+    !$omp end parallel
 
   end subroutine compute_cp
   
-  subroutine compute_cp_2d(cp,ng_1,conc,ng_2,Temp,ng_3,lo,hi)
+  subroutine compute_cp_2d(cp,ng_1,conc,ng_2,Temp,ng_3,glo,ghi,gtlo,gthi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) ::   cp(lo(1)-ng_1:,lo(2)-ng_1:)
-    real(kind=dp_t), intent(in   ) :: conc(lo(1)-ng_2:,lo(2)-ng_2:,:)
-    real(kind=dp_t), intent(in   ) :: Temp(lo(1)-ng_3:,lo(2)-ng_3:)
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3
+    integer        , intent(in   ) :: glo(:),ghi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(inout) ::   cp(glo(1)-ng_1:,glo(2)-ng_1:)
+    real(kind=dp_t), intent(in   ) :: conc(glo(1)-ng_2:,glo(2)-ng_2:,:)
+    real(kind=dp_t), intent(in   ) :: Temp(glo(1)-ng_3:,glo(2)-ng_3:)
 
     ! local
     integer :: i,j
@@ -920,20 +1065,21 @@ contains
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    do j=lo(2)-ng_1,hi(2)+ng_1
-       do i=lo(1)-ng_1,hi(1)+ng_1
+    do j=gtlo(2),gthi(2)
+       do i=gtlo(1),gthi(1)
           call CKCPBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cp(i,j))
        end do
     end do       
 
   end subroutine compute_cp_2d
   
-  subroutine compute_cp_3d(cp,ng_1,conc,ng_2,Temp,ng_3,lo,hi)
+  subroutine compute_cp_3d(cp,ng_1,conc,ng_2,Temp,ng_3,glo,ghi,gtlo,gthi)
 
-    integer        , intent(in   ) :: ng_1,ng_2,ng_3,lo(:),hi(:)
-    real(kind=dp_t), intent(inout) ::   cp(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
-    real(kind=dp_t), intent(in   ) :: conc(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_1:,:)
-    real(kind=dp_t), intent(in   ) :: Temp(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_1:)
+    integer        , intent(in   ) :: ng_1,ng_2,ng_3
+    integer        , intent(in   ) :: glo(:),ghi(:),gtlo(:),gthi(:)
+    real(kind=dp_t), intent(inout) ::   cp(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)
+    real(kind=dp_t), intent(in   ) :: conc(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_1:,:)
+    real(kind=dp_t), intent(in   ) :: Temp(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_1:)
 
     ! local
     integer :: i,j,k
@@ -941,9 +1087,9 @@ contains
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    do k=lo(3)-ng_1,hi(3)+ng_1
-       do j=lo(2)-ng_1,hi(2)+ng_1
-          do i=lo(1)-ng_1,hi(1)+ng_1
+    do k=gtlo(3),gthi(3)
+       do j=gtlo(2),gthi(2)
+          do i=gtlo(1),gthi(1)
              call CKCPBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cp(i,j,k))
           end do
        end do
