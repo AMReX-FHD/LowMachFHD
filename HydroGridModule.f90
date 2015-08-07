@@ -1447,6 +1447,7 @@ contains
       character(len=nMaxCharacters), target :: filename
       
       real(wp), dimension(:,:,:,:), allocatable, target :: velocity
+      integer :: nvars
 
       filename = trim(filenameBase) // ".snapshot.vtk"
       write(*,*) "Writing instantaneous single-fluid variables to file ", trim(filename)
@@ -1455,40 +1456,64 @@ contains
       mesh_dims=grid%nCells(1:3)
       if(grid%nCells(3)<=1) mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)
 
-      allocate(velocity(3, grid%nCells(1), grid%nCells(2), grid%nCells(3)))
-      do dim=1, grid%nDimensions
-         velocity(dim, :, :, :) = grid%primitive(:, :, :, grid%jIdx1 + dim - 1 , 0)
-      end do   
-      velocity(grid%nDimensions+1 : 3, :, :, :) = 0.0_wp
+      if(grid%nDimensions==0) then ! Don't plot velocity, plot scalars only
+         nvars=grid%nVariables-grid%nDimensions
+         varnames(1) = "Density" // C_NULL_CHAR
+         varnames(2) = "Temperature" // C_NULL_CHAR
+         varnames(3) = "Scalar1" // C_NULL_CHAR
+         varnames(4) = "Scalar2" // C_NULL_CHAR
+         varnames(5) = "Scalar3" // C_NULL_CHAR
+         varnames(6:) = "Scalar" // C_NULL_CHAR
+         CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
+            ub=0_c_int, dims=mesh_dims+1, &
+            x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
+            y=(/ (grid%systemLength(2)/grid%nCells(2)*dim, dim=0,mesh_dims(2)) /), &
+            z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
+            nvars=nvars, vardim=(/(1, dim=1,nvars)/), &
+            centering=(/(0, dim=1,nvars)/), &
+            varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,nvars) /), &
+            vars=(/ C_LOC(grid%primitive(1,1,1,grid%mIdx,0)), &
+                   (C_LOC(grid%primitive(1,1,1,grid%eIdx+dim,0)), dim=0,grid%nVariables-grid%eIdx) /))
+      else
 
-      varnames(1) = "Density" // C_NULL_CHAR
-      varnames(2) = "Velocity" // C_NULL_CHAR
-      varnames(3) = "Scalar1" // C_NULL_CHAR
-      varnames(4) = "Scalar2" // C_NULL_CHAR
-      varnames(5) = "Scalar3" // C_NULL_CHAR
-      varnames(6:) = "Scalar" // C_NULL_CHAR
-      CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
-         ub=0_c_int, dims=mesh_dims+1, &
-         x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
-         y=(/ (grid%systemLength(2)/grid%nCells(2)*dim, dim=0,mesh_dims(2)) /), &
-         z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
-         nvars=grid%nVariables+1-grid%nDimensions, vardim=(/1, 3, (1, dim=3,grid%nVariables)/), &
-         centering=(/(0, dim=1,grid%nVariables)/), &
-         varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,grid%nVariables) /), &
-         vars=(/ C_LOC(grid%primitive(1,1,1,grid%mIdx,0)), C_LOC(velocity), &
-                (C_LOC(grid%primitive(1,1,1,grid%eIdx+dim,0)), dim=0,grid%nVariables-grid%eIdx) /))
+         ! We always make the velocity be three dimensional to plot correctly in visit as a vector
+         allocate(velocity(3, grid%nCells(1), grid%nCells(2), grid%nCells(3)))
+         do dim=1, grid%nDimensions
+            velocity(dim, :, :, :) = grid%primitive(:, :, :, grid%jIdx1 + dim - 1 , 0)
+         end do   
+         velocity(grid%nDimensions+1 : 3, :, :, :) = 0.0_wp
 
+         nvars=grid%nVariables+1-grid%nDimensions
+         varnames(1) = "Density" // C_NULL_CHAR
+         varnames(2) = "Velocity" // C_NULL_CHAR
+         varnames(3) = "Temperature" // C_NULL_CHAR
+         varnames(4) = "Scalar1" // C_NULL_CHAR
+         varnames(5) = "Scalar2" // C_NULL_CHAR
+         varnames(6) = "Scalar3" // C_NULL_CHAR
+         varnames(7:) = "Scalar" // C_NULL_CHAR
+         CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
+            ub=0_c_int, dims=mesh_dims+1, &
+            x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
+            y=(/ (grid%systemLength(2)/grid%nCells(2)*dim, dim=0,mesh_dims(2)) /), &
+            z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
+            nvars=nvars, vardim=(/1, 3, (1, dim=3,nvars)/), &
+            centering=(/(0, dim=1,nvars)/), &
+            varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,nvars) /), &
+            vars=(/ C_LOC(grid%primitive(1,1,1,grid%mIdx,0)), C_LOC(velocity), &
+                   (C_LOC(grid%primitive(1,1,1,grid%eIdx+dim,0)), dim=0,grid%nVariables-grid%eIdx) /))
+      end if
    end subroutine
 
    subroutine writeVelocityToVTK()
       ! For now we only write rho and v to a VTK file
       ! Otherwise there may be lots and lots of variables
       integer :: mesh_dims(3), dim, iVariance
-      character(len=16), dimension(grid%nVariables), target :: varnames
+      character(len=16), dimension(max(6,grid%nVariables)), target :: varnames
 
       character(len=nMaxCharacters), target :: filename
       
       real(wp), dimension(:,:,:,:), allocatable, target :: velocity
+      integer :: nvars
 
       filename = trim(filenameBase) // ".means.vtk"
       write(*,*) "Writing mean density and velocity to file ", trim(filename)
@@ -1497,22 +1522,47 @@ contains
       mesh_dims=grid%nCells(1:3)
       if(grid%nCells(3)<=1) mesh_dims(3)=0 ! Indicate that this is a 2D grid (sorry, no 1D grid in VTK)
 
-      allocate(velocity(3, grid%nCells(1), grid%nCells(2), grid%nCells(3)))
-      do dim=1, grid%nDimensions
-         velocity(dim, :, :, :) = grid%meanPrimitive(:, :, :, grid%jIdx1 + dim - 1 , 0)
-      end do   
-      velocity(grid%nDimensions+1 : 3, :, :, :) = 0.0_wp
+      if(grid%nDimensions==0) then ! Don't plot velocity, plot scalars only
 
-      varnames(1) = "Density" // C_NULL_CHAR
-      varnames(2) = "Velocity" // C_NULL_CHAR
-      CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
-         ub=0_c_int, dims=mesh_dims+1, &
-         x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
-         y=(/ (grid%systemLength(2)/grid%nCells(2)*dim, dim=0,mesh_dims(2)) /), &
-         z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
-         nvars=2, vardim=(/1, 3/), centering=(/0, 0/), &
-         varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,2) /), &
-         vars=(/ C_LOC(grid%meanPrimitive(1,1,1,grid%mIdx,0)), C_LOC(velocity) /))
+         nvars=grid%nVariables-grid%nDimensions
+         varnames(1) = "Density" // C_NULL_CHAR
+         varnames(2) = "Temperature" // C_NULL_CHAR
+         varnames(3) = "Scalar1" // C_NULL_CHAR
+         varnames(4) = "Scalar2" // C_NULL_CHAR
+         varnames(5) = "Scalar3" // C_NULL_CHAR
+         varnames(6:) = "Scalar" // C_NULL_CHAR
+         CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
+            ub=0_c_int, dims=mesh_dims+1, &
+            x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
+            y=(/ (grid%systemLength(2)/grid%nCells(2)*dim, dim=0,mesh_dims(2)) /), &
+            z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
+            nvars=nvars, vardim=(/(1, dim=1,nvars)/), &
+            centering=(/(0, dim=1,nvars)/), &
+            varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,nvars) /), &
+            vars=(/ C_LOC(grid%meanPrimitive(1,1,1,grid%mIdx,0)), &
+                   (C_LOC(grid%meanPrimitive(1,1,1,grid%eIdx+dim,0)), dim=0,grid%nVariables-grid%eIdx) /))
+      
+      
+      else ! Save a 3D velocity field for plotting in visit
+
+         allocate(velocity(3, grid%nCells(1), grid%nCells(2), grid%nCells(3)))
+         do dim=1, grid%nDimensions
+            velocity(dim, :, :, :) = grid%meanPrimitive(:, :, :, grid%jIdx1 + dim - 1 , 0)
+         end do   
+         velocity(grid%nDimensions+1 : 3, :, :, :) = 0.0_wp
+
+         varnames(1) = "Density" // C_NULL_CHAR
+         varnames(2) = "Velocity" // C_NULL_CHAR
+         CALL WriteRectilinearVTKMesh(filename=C_LOC(filename(1:1)), &
+            ub=0_c_int, dims=mesh_dims+1, &
+            x=(/ (grid%systemLength(1)/grid%nCells(1)*dim, dim=0,mesh_dims(1)) /), &
+            y=(/ (grid%systemLength(2)/grid%nCells(2)*dim, dim=0,mesh_dims(2)) /), &
+            z=(/ (grid%systemLength(3)/grid%nCells(3)*dim, dim=0,mesh_dims(3)) /), &            
+            nvars=2, vardim=(/1, 3/), centering=(/0, 0/), &
+            varnames=(/ (C_LOC(varnames(dim)(1:1)), dim=1,2) /), &
+            vars=(/ C_LOC(grid%meanPrimitive(1,1,1,grid%mIdx,0)), C_LOC(velocity) /))
+         
+      end if   
 
    end subroutine
 
