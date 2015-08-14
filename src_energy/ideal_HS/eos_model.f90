@@ -325,6 +325,38 @@ contains
   end subroutine compute_P_w
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine compute_rho_w(rho_w,rho,Yk,temp)
+
+
+    real(kind=8) :: rho_w(1:nspecies),rho,Yk(1:nspecies),temp
+
+    real(kind=8) :: P_w(1:nspecies),P_rho
+
+    call compute_P_w(P_w,rho,Yk,temp)
+    call compute_P_rho(P_rho,rho,Yk,temp)
+
+    rho_w(1:nspecies) = P_w(1:nspecies) / P_rho
+
+  end subroutine compute_rho_w
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine compute_rho_T(rho_T,rho,Yk,temp)
+
+
+    real(kind=8) :: rho_T,rho,Yk(1:nspecies),temp
+
+    real(kind=8) :: P_T,P_rho
+
+    call compute_P_T(P_T,rho,Yk,temp)
+    call compute_P_rho(P_rho,rho,Yk,temp)
+
+    rho_T = P_T / P_rho
+
+  end subroutine compute_rho_T
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! takes $\rho,T,P,\wb$, and $\xb$ as inputs and computes the following:
   ! eta     is the dynamic viscosity, $\eta$
   ! kappa   is the thermal conductivity, $\lambda$

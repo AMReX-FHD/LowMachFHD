@@ -546,7 +546,8 @@ contains
     ! local
     integer :: i,j,n
     real(kind=dp_t) :: W,beta,theta,cpmix,cvmix
-    real(kind=dp_t) :: hk(nspecies),P_rho,P_T,P_w(nspecies)
+    real(kind=dp_t) :: hk(nspecies),P_rho
+    real(kind=dp_t) :: rho_w(nspecies), rho_T
 
     integer :: iwrk
     real(kind=dp_t) :: rwrk
@@ -560,18 +561,22 @@ contains
           call CKHMS(Temp(i,j),iwrk,rwrk,hk)
           call CKCPBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cpmix)
           call CKCVBS(Temp(i,j),conc(i,j,:),iwrk,rwrk,cvmix)
-          ! P_rho, P_T, P_w
+          ! rho_w, rho_T
+          call compute_rho_w(rho_w,rhotot(i,j),conc(i,j,:),Temp(i,j))
+          call compute_rho_T(rho_T,rhotot(i,j),conc(i,j,:),Temp(i,j))
+          ! P_rho
           call compute_P_rho(P_rho,rhotot(i,j),conc(i,j,:),Temp(i,j))
-          call compute_P_T(P_T,rhotot(i,j),conc(i,j,:),Temp(i,j))
-          call compute_P_w(P_w,rhotot(i,j),conc(i,j,:),Temp(i,j))
 
           S(i,j) = 0.d0
           do n=1,nspecies
-             beta = P_w(n) / (rhotot(i,j)**2*P_rho) - hk(n)*P_T/(rhotot(i,j)**2*cpmix*P_rho)
+             beta = 1.d0 / (rhotot(i,j)**2) * rho_w(n)
              S(i,j) = S(i,j) + beta*mass_fluxdiv(i,j,n)
           end do
-          theta = P_T / (rhotot(i,j)**2*P_rho*cpmix)
+          theta = (1.d0 / (rhotot(i,j)**2 * cpmix)) * rho_T
           S(i,j) = S(i,j) + theta*rhoh_fluxdiv(i,j)
+          do n=1,nspecies
+             S(i,j) = S(i,j) - hk(n)*theta*mass_fluxdiv(i,j,n)
+          end do
           alpha(i,j) = cvmix/(cpmix*rhotot(i,j)*P_rho)
 
        end do
@@ -595,7 +600,8 @@ contains
     ! local
     integer :: i,j,k,n
     real(kind=dp_t) :: W,beta,theta,cpmix,cvmix
-    real(kind=dp_t) :: hk(nspecies),P_rho,P_T,P_w(nspecies)
+    real(kind=dp_t) :: hk(nspecies),P_rho
+    real(kind=dp_t) :: rho_w(nspecies), rho_T
 
     integer :: iwrk
     real(kind=dp_t) :: rwrk
@@ -610,18 +616,22 @@ contains
              call CKHMS(Temp(i,j,k),iwrk,rwrk,hk)
              call CKCPBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cpmix)
              call CKCVBS(Temp(i,j,k),conc(i,j,k,:),iwrk,rwrk,cvmix)
-             ! P_rho, P_T, P_w
+             ! rho_w, rho_T
+             call compute_rho_w(rho_w,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
+             call compute_rho_T(rho_T,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
+             ! P_rho
              call compute_P_rho(P_rho,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
-             call compute_P_T(P_T,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
-             call compute_P_w(P_w,rhotot(i,j,k),conc(i,j,k,:),Temp(i,j,k))
 
              S(i,j,k) = 0.d0
              do n=1,nspecies
-                beta = P_w(n) / (rhotot(i,j,k)**2*P_rho) - hk(n)*P_T/(rhotot(i,j,k)**2*cpmix*P_rho)
+                beta = 1.d0 / (rhotot(i,j,k)**2) * rho_w(n)
                 S(i,j,k) = S(i,j,k) + beta*mass_fluxdiv(i,j,k,n)
              end do
-             theta = P_T / (rhotot(i,j,k)**2*P_rho*cpmix)
-             S(i,j,k) = S(i,j,k) + theta * rhoh_fluxdiv(i,j,k)
+             theta = (1.d0 / (rhotot(i,j,k)**2 * cpmix)) * rho_T
+             S(i,j,k) = S(i,j,k) + theta*rhoh_fluxdiv(i,j,k)
+             do n=1,nspecies
+                S(i,j,k) = S(i,j,k) - hk(n)*theta*mass_fluxdiv(i,j,k,n)
+             end do
              alpha(i,j,k) = cvmix/(cpmix*rhotot(i,j,k)*P_rho)
 
           end do

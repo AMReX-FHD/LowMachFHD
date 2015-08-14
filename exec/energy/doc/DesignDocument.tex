@@ -243,17 +243,20 @@ and from equation (\ref{eq:enthalpy}) we have,
 \end{equation}
 Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext - \sum_kh_k\nabla\cdot\Fb_k\right].\label{eq:DTDt}
+\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k - \sum_kh_k\nabla\cdot\Fb_k + \rho\Hext\right].\label{eq:DTDt}
 \end{equation}
 Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left(\nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right) \equiv S,\label{eq:constraint}
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k\right) + \rho\Hext\right] \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
 \alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
-\beta_k = \frac{P_{w_k}}{\rho^2 P_\rho} - \frac{h_k P_T}{\rho^2 c_p P_\rho}, \quad
-\theta = \frac{1}{\rho^2 P_\rho}\frac{P_T}{c_P}.\label{eq:thermo deriv}
+\beta_k = \frac{1}{\rho^2}\frac{\partial\rho}{\partial w_k}, \quad
+\theta = \frac{1}{\rho^2 c_p}\frac{\partial\rho}{\partial T}.\label{eq:thermo deriv}
 \end{equation}
+Note that $(1/\rho)\partial\rho/\partial w_k$ and $(1\rho)\partial\rho/\partial T$
+are the solutal and thermal expansion coefficients, respectively.
+
 In \cite{MAESTROI}, it was shown that
 \begin{equation}
 \alpha = \frac{1}{\Gamma_1 P},
@@ -456,6 +459,12 @@ At the most basic level, the time-stepping strategy is an iterative loop over th
 \item Advance velocity using a Stokes solver.
 \item Compute a volume discrepancy correction.
 \end{itemize}
+
+The discretization we would like to solve is:
+
+\begin{equation}
+\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1}\right]
+\end{equation}
 
 \section{Time-Advancement Strategy}\label{Sec:Time-Advancement Strategy}
 
