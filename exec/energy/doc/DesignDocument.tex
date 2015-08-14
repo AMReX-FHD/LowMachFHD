@@ -441,6 +441,37 @@ We solve this implicitly for $\delta T$, then compute $T^{n+1,l+1}$
 using (\ref{eq:delta T}) and compute $h^{n+1,l+1}$ using the EOS.
 
 \section{Overview of Time Stepping Strategy}
+Our unknowns are $(\rho_i,h,\vb,\pi,P_0)^{n+1}$, and $S_{\rm corr}$.  A quantity can
+be split into average and perturbational components using
+\begin{equation}
+\phi = \bar\phi + \delta\phi, \quad \int_\Omega \delta\phi~d\Omega = 0,
+\end{equation}
+where $\bar\phi$ is constant in space.\\ \\
+The discretization we would like to solve is:
+\begin{equation}
+\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1}\right]
+\end{equation}
+\begin{eqnarray}
+\frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& -\half\nabla\cdot(\rho h\vb)^n - \half\nabla\cdot(\rho h\vb)^{n+1} + \left(\frac{dP_0}{dt}\right)^{n+\myhalf}\nonumber\\
+&&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1}\nabla T^{n+1}\nonumber\\
+&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
+&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
+\end{eqnarray}
+\begin{equation}
+\frac{(\rho\vb)^{n+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1}) + \frac{1}{2}(\rho^n + \rho^{n+1})\gb,
+\end{equation}
+\begin{equation}
+\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right),
+\end{equation}
+\begin{equation}
+\frac{P_0^{n+1} - P_0^n}{\Delta t} = \frac{\bar S + \bar S_{\rm corr}}{\bar\alpha},
+\end{equation}
+with $S_{\rm corr}$ chosen so that
+\begin{equation}
+P(\rho,w_k,T)^{n+1} = P_0^{n+1}.
+\end{equation}
+We don't want to solve this implicitly, so we use an iterative approach that lags some
+of the time-advanced quantities.
 
 The form of the system given above can fit into the framework of low Mach number algorithms we have
 developed based on the generalized Stokes solver. 
@@ -459,12 +490,6 @@ At the most basic level, the time-stepping strategy is an iterative loop over th
 \item Advance velocity using a Stokes solver.
 \item Compute a volume discrepancy correction.
 \end{itemize}
-
-The discretization we would like to solve is:
-
-\begin{equation}
-\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1}\right]
-\end{equation}
 
 \section{Time-Advancement Strategy}\label{Sec:Time-Advancement Strategy}
 
