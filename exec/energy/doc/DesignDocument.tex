@@ -125,7 +125,7 @@ of future work.
 The governing conservation equations for momentum, mass, and energy for our system are:
 \begin{eqnarray}
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb,\label{eq:momentum}\\
-\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot \Fb_i,\label{eq:mass}\\
+\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot\Fb_i + E_i,\label{eq:mass}\\
 \frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb + \sum_k \nabla\cdot h_k \Fb_k + \rho\Hext,\label{eq:enthalpy}
 \end{eqnarray}
 where $\rho$ is the density, $\vb$ is the velocity, $\pi$ is the dynamic 
@@ -134,7 +134,8 @@ the density of fluid component $i$ with $\rho = \sum_k\rho_k$ and $w_i$ the
 concentrations (mass fractions), $P$ is the total
 pressure, $h$ is the specific enthalpy, $h_k = \partial h/\partial w_k$,
 $\Hext$ is an external heating term, $\taub$ is the stress tensor,
-$\Fb$ are the mass fluxes, and $\Qb$ is the heat flux.
+$\Fb_i$ are the mass fluxes, $E_i$ are external sources/sinks that sum to zero,
+and $\Qb$ is the heat flux.
 Starting from the fully compressible equations and expanding in Mach number shows 
 that the leading order pressure terms in Mach number must be constant in space. 
 Thus, the perturbational pressure $\pi$ is $O(M^2)$.
@@ -235,7 +236,7 @@ where $c_p = \partial h/\partial T$.  This gives
 From equation (\ref{eq:mass}) and 
 continuity we have,
 \begin{equation}
-\frac{Dw_k}{Dt} = \frac{1}{\rho}\nabla\cdot\Fb_k,\label{eq:DwDt}
+\frac{Dw_k}{Dt} = \frac{1}{\rho}\left(\nabla\cdot\Fb_k + E_k\right),\label{eq:DwDt}
 \end{equation}
 and from equation (\ref{eq:enthalpy}) we have,
 \begin{equation}
@@ -243,11 +244,11 @@ and from equation (\ref{eq:enthalpy}) we have,
 \end{equation}
 Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k - \sum_kh_k\nabla\cdot\Fb_k + \rho\Hext\right].\label{eq:DTDt}
+\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k - \sum_kh_k(\nabla\cdot\Fb_k + E_k) + \rho\Hext\right].\label{eq:DTDt}
 \end{equation}
 Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k\right) + \rho\Hext\right] \equiv S,\label{eq:constraint}
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k - h_kE_k\right) + \rho\Hext\right] \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
 \alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
@@ -449,7 +450,7 @@ be split into average and perturbational components using
 where $\bar\phi$ is constant in space.\\ \\
 The discretization we would like to solve is:
 \begin{equation}
-\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1}\right]
+\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} + \nabla\cdot\Fb_i^n + \nabla\cdot\Fb_i^{n+1} + E_i^n + E_i^{n+1}\right]
 \end{equation}
 \begin{eqnarray}
 \frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& -\half\nabla\cdot(\rho h\vb)^n - \half\nabla\cdot(\rho h\vb)^{n+1} + \left(\frac{dP_0}{dt}\right)^{n+\myhalf}\nonumber\\
@@ -555,7 +556,7 @@ P_0^{n+1,m+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm c
 {\bf Step 5}\\ \\
 Recompute densities with trapezoidal-rule advective and diffusive fluxes.
 \begin{equation}
-\rho_i^{n+1,m+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1,m} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1,m}\right],
+\rho_i^{n+1,m+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1,m} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1,m} + E^n + E^{n+1,m}\right],
 \end{equation}
 \begin{equation}
 \rho^{n+1,m+1} = \sum_k\rho_k^{n+1,m+1}.
@@ -610,9 +611,10 @@ S^{n+1,m+1} = \bar{S}^{n+1,m+1} + \delta S^{n+1,m+1},
 \alpha^{n+1,m+1} = \bar{\alpha}^{n+1,m+1} + \delta\alpha^{n+1,m+1},
 \end{equation}
 Then perform a GMRES solve for $(\vb,\pi)^{n+1,m+1}$.
-\begin{equation}
-\frac{(\rho\vb)^{n+1,m+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1,m+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1,m+1}) + \frac{1}{2}(\rho^n + \rho^{n+1,m+1})\gb,\label{eq:Stokes}
-\end{equation}
+\begin{eqnarray}
+\frac{(\rho\vb)^{n+1,m+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1,m+1} &=& \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1,m+1})\nonumber\\
+&& + \frac{1}{2}(\rho^n + \rho^{n+1,m+1})\gb,\label{eq:Stokes}
+\end{eqnarray}
 \begin{equation}
 \nabla\cdot\vb^{n+1,m+1} = \delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\alpha^{n+1,m+1}\left(\frac{\bar{S}^{n+1,m+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m+1}}\right).
 \end{equation}
