@@ -246,16 +246,17 @@ Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 \begin{equation}
 \frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k - \sum_kh_k(-\nabla\cdot\Fb_k + E_k) + \rho\Hext\right].\label{eq:DTDt}
 \end{equation}
-Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
+Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt})
+and using $P_{w_k}/P_\rho = -\rho_{w_k}$ and $P_T/P_\rho = -\rho_T$ gives
 \begin{equation}
 \nabla\cdot\vb + \alpha\frac{dP_0}{dt} = -\sum_k \beta_k \nabla\cdot\Fb_k + \theta\left[\nabla\cdot\Qb + \sum_k\left(-\nabla\cdot h_k\Fb_k + h_k\nabla\cdot\Fb_k - h_kE_k\right) + \rho\Hext\right] \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
 \alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
-\beta_k = \frac{1}{\rho^2}\frac{\partial\rho}{\partial w_k}, \quad
-\theta = \frac{1}{\rho^2 c_p}\frac{\partial\rho}{\partial T}.\label{eq:thermo deriv}
+\beta_k = -\frac{\rho_{w_k}}{\rho^2}, \quad
+\theta = -\frac{\rho_T}{\rho^2 c_p}.\label{eq:thermo deriv}
 \end{equation}
-Note that $(1/\rho)\partial\rho/\partial w_k$ and $(1\rho)\partial\rho/\partial T$
+Note that $\rho_{w_k}/\rho$ and $\rho_T/\rho$
 are the solutal and thermal expansion coefficients, respectively.
 
 In \cite{MAESTROI}, it was shown that
