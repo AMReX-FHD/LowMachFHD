@@ -763,8 +763,26 @@ with
 \frac{\partial b(\wb)}{\partial w_k} = b_k.
 \end{equation}
 
+\section{Temperature-Dependent Density Example}
+Consider an equation of state where the pure component densities are a function
+of temperature,
+\begin{equation}
+\sum_i\frac{\rho_i}{\bar\rho_i(T)} = 1.
+\end{equation}
+Then,
+\begin{equation}
+\rho = \left(\sum_i\frac{w_i}{\bar\rho_i(T)}\right)^{-1},
+\end{equation}
+\begin{equation}
+\rho_{w_k} = -\frac{1}{\left(\sum_i\frac{w_i}{\bar\rho_i(T)}\right)^2}\frac{1}{\bar\rho_k}
+= -\frac{\rho^2}{\bar\rho_k},
+\end{equation}
+\begin{equation}
+\rho_T = \frac{1}{\left(\sum_i\frac{w_i}{\bar\rho_i(T)}\right)^2}\sum_i\left(\frac{w_i}{\rho_i(T)^2}\frac{\partial\rho_i(T)}{\partial T}\right)
+\end{equation}
 
-\subsection{Implementation Notes}
+
+\section{Implementation Notes}
 The molecular weights, diameters, and assumption of hard sphere dynamics
  are all that is needed to specify the transport in
 {\tt energy\_EOS\_module\_HS.f90}.  The functions of interest are
