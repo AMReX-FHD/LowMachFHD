@@ -69,11 +69,11 @@
 The equations for the momentum and densities:
 \begin{eqnarray}
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb - \rho(\wb^T\zb)\nabla\Phi\\
-\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot\Fb_i,
+\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) - \nabla\cdot\Fb_i,
 \end{eqnarray}
 with $\Fb_i$ containing both the diffusive and stochastic mass fluxes.  The equation of state is:
 \begin{equation}
-\nabla\cdot\vb = \nabla\cdot\left(\sum_i\frac{\Fb_i}{\bar\rho_i}\right) \equiv S\label{eq:S}.
+\nabla\cdot\vb = -\nabla\cdot\left(\sum_i\frac{\Fb_i}{\bar\rho_i}\right) \equiv S\label{eq:S}.
 \end{equation}
 The deterministic part of the mass fluxes, $\overline{F}$, contains contributions from compositional
 gradients, barodiffusion, temperature gradients, and electric fields induced by charged species,
@@ -116,7 +116,7 @@ either {\bf Step 0} or {\bf Step 6} from the previous time step.\\ \\
 Using the velocity field from either {\bf Step 0} or {\bf Step 7} from the previous
 time step, take a predictor forward Euler step for $\rho_i$:
 \begin{equation}
-\rho_i^{*,n+1} = \rho_i^n + \Delta t\nabla\cdot\left(-\rho_i^n\vb^n + \Fb^n\right).
+\rho_i^{*,n+1} = \rho_i^n + \Delta t\nabla\cdot\left(-\rho_i^n\vb^n - \Fb^n\right).
 \end{equation}
 {\bf Step 3: Calculate Corrector Diffusive and Stochastic Fluxes}\\ \\
 We reuse the same random numbers, but evaluate the diffusive fluxes and the noise amplitude from the predictor
@@ -152,7 +152,7 @@ Next, define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb$ and $p^{*,n+1} = p^n + 
 {\bf Step 5: Trapezoidal Scalar Corrector}\\ \\
 Update the densities:
 \begin{equation}
-\rho_i^{n+1} = \half\rho_i^n + \half\left[\rho_i^{*,n+1} + \Delta t\nabla\cdot(-\rho_i^{*,n+1}\vb^{*,n+1} + \Fb^{*,n+1})\right].
+\rho_i^{n+1} = \half\rho_i^n + \half\left[\rho_i^{*,n+1} + \Delta t\nabla\cdot(-\rho_i^{*,n+1}\vb^{*,n+1} - \Fb^{*,n+1})\right].
 \end{equation}
 {\bf Step 6: Calculate Diffusive and Stochastic Fluxes}\\ \\
 Calculate the fluxes for the next time level using a new set of random numbers to obtain $\Fb^{n+1}$ and $S^{n+1}$.
@@ -219,7 +219,7 @@ which can be written as
 {\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
 Take a midpoint predictor forward Euler step for $\rho_i$:
 \begin{equation}
-\rho_i^{*,n+\myhalf} = \rho_i^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_i^n\vb^* + \Fb_i^n).
+\rho_i^{*,n+\myhalf} = \rho_i^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_i^n\vb^* - \Fb_i^n).
 \end{equation}
 Set $\rho^{*,n+\myhalf} = \sum_i\rho_i^{*,n+\myhalf}$.\\ \\
 {\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
@@ -248,7 +248,7 @@ Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} 
 {\bf Step 6: Midpoint Scalar Corrector:}\\ \\
 Update the densities and concentrations
 \begin{eqnarray}
-\rho_i^{n+1} &=& \rho_i^n + \Delta t\left(-\rho_i^{*,n+\myhalf}\vb^{n+\myhalf} + \Fb_i^{*,n+\myhalf}\right).
+\rho_i^{n+1} &=& \rho_i^n + \Delta t\left(-\rho_i^{*,n+\myhalf}\vb^{n+\myhalf} - \Fb_i^{*,n+\myhalf}\right).
 \end{eqnarray}
 Set $\rho^{n+1} = \sum_i\rho_i^{n+1}$.
 
@@ -287,7 +287,7 @@ which can be written as
 {\bf Step 3: Scalar Predictor Midpoint Euler Step}\\ \\
 Take a midpoint predictor forward Euler step for $\rho_i$:
 \begin{equation}
-\rho_i^{*,n+\myhalf} = \rho_i^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_i^n\vb^* + \Fb_i^n).
+\rho_i^{*,n+\myhalf} = \rho_i^n + \frac{\Delta t}{2}\nabla\cdot(-\rho_i^n\vb^* - \Fb_i^n).
 \end{equation}
 Set $\rho^{*,n+\myhalf} = \sum_i\rho_i^{*,n+\myhalf}$.\\ \\
 {\bf Step 4: Corrector Stochastic/Diffusive Fluxes:}\\ \\
@@ -317,7 +317,7 @@ Next, define $\vb^{n+\myhalf} = \overline\vb^* + \deltab\vb$ and $p^{n+\myhalf} 
 {\bf Step 6: Midpoint Scalar Corrector:}\\ \\
 Update the densities and concentrations
 \begin{eqnarray}
-\rho_i^{n+1} &=& \rho_i^n + \Delta t\left(-\rho_i^{*,n+\myhalf}\vb^{n+\myhalf} + \Fb_i^{*,n+\myhalf}\right).
+\rho_i^{n+1} &=& \rho_i^n + \Delta t\left(-\rho_i^{*,n+\myhalf}\vb^{n+\myhalf} - \Fb_i^{*,n+\myhalf}\right).
 \end{eqnarray}
 Set $\rho^{n+1} = \sum_i\rho_i^{n+1}$.
 
