@@ -569,10 +569,10 @@ contains
 
           S(i,j) = 0.d0
           do n=1,nspecies
-             beta = 1.d0 / (rhotot(i,j)**2) * rho_w(n)
+             beta = -1.d0 / (rhotot(i,j)**2) * rho_w(n)
              S(i,j) = S(i,j) + beta*mass_fluxdiv(i,j,n)
           end do
-          theta = (1.d0 / (rhotot(i,j)**2 * cpmix)) * rho_T
+          theta = -(1.d0 / (rhotot(i,j)**2 * cpmix)) * rho_T
           S(i,j) = S(i,j) + theta*rhoh_fluxdiv(i,j)
           do n=1,nspecies
              S(i,j) = S(i,j) - hk(n)*theta*mass_fluxdiv(i,j,n)
@@ -624,10 +624,10 @@ contains
 
              S(i,j,k) = 0.d0
              do n=1,nspecies
-                beta = 1.d0 / (rhotot(i,j,k)**2) * rho_w(n)
+                beta = -1.d0 / (rhotot(i,j,k)**2) * rho_w(n)
                 S(i,j,k) = S(i,j,k) + beta*mass_fluxdiv(i,j,k,n)
              end do
-             theta = (1.d0 / (rhotot(i,j,k)**2 * cpmix)) * rho_T
+             theta = -(1.d0 / (rhotot(i,j,k)**2 * cpmix)) * rho_T
              S(i,j,k) = S(i,j,k) + theta*rhoh_fluxdiv(i,j,k)
              do n=1,nspecies
                 S(i,j,k) = S(i,j,k) - hk(n)*theta*mass_fluxdiv(i,j,k,n)
