@@ -125,8 +125,8 @@ of future work.
 The governing conservation equations for momentum, mass, and energy for our system are:
 \begin{eqnarray}
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb,\label{eq:momentum}\\
-\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) + \nabla\cdot\Fb_i + E_i,\label{eq:mass}\\
-\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb + \sum_k \nabla\cdot h_k \Fb_k + \rho\Hext,\label{eq:enthalpy}
+\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) - \nabla\cdot\Fb_i + E_i,\label{eq:mass}\\
+\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb - \sum_k \nabla\cdot h_k \Fb_k + \rho\Hext,\label{eq:enthalpy}
 \end{eqnarray}
 where $\rho$ is the density, $\vb$ is the velocity, $\pi$ is the dynamic 
 (or perturbational) pressure, $\gb$ is the gravitational vector, $\rho_i=\rho w_i$ is
@@ -236,19 +236,19 @@ where $c_p = \partial h/\partial T$.  This gives
 From equation (\ref{eq:mass}) and 
 continuity we have,
 \begin{equation}
-\frac{Dw_k}{Dt} = \frac{1}{\rho}\left(\nabla\cdot\Fb_k + E_k\right),\label{eq:DwDt}
+\frac{Dw_k}{Dt} = \frac{1}{\rho}\left(-\nabla\cdot\Fb_k + E_k\right),\label{eq:DwDt}
 \end{equation}
 and from equation (\ref{eq:enthalpy}) we have,
 \begin{equation}
-\frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right).\label{eq:DhDt}
+\frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{dP_0}{dt} + \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right).\label{eq:DhDt}
 \end{equation}
 Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb + \sum_k\nabla\cdot h_k\Fb_k - \sum_kh_k(\nabla\cdot\Fb_k + E_k) + \rho\Hext\right].\label{eq:DTDt}
+\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k - \sum_kh_k(-\nabla\cdot\Fb_k + E_k) + \rho\Hext\right].\label{eq:DTDt}
 \end{equation}
 Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt}) gives
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = \sum_k \beta_k \nabla\cdot\Fb_k + \theta\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k - h_kE_k\right) + \rho\Hext\right] \equiv S,\label{eq:constraint}
+\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = -\sum_k \beta_k \nabla\cdot\Fb_k + \theta\left[\nabla\cdot\Qb + \sum_k\left(-\nabla\cdot h_k\Fb_k + h_k\nabla\cdot\Fb_k - h_kE_k\right) + \rho\Hext\right] \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
 \alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
@@ -281,7 +281,7 @@ This model is equivalent to equation (7) in \cite{DayBell:2000},
 but with three exceptions.  First,
 we are not accounting for reactions, so $\dot\omega=0$.  Second, here we have 
 {\it not} made the substitution, 
-$\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k = \Fb\cdot\nabla h_k$, so the coefficients
+$-\nabla\cdot h_k\Fb_k + h_k\nabla\cdot\Fb_k = -\Fb\cdot\nabla h_k$, so the coefficients
 $\beta_k$ and $\theta$ are slightly different (although the overall expression is
 analytically equivalent).  Third, the time-derivative of $P_0$ is no longer zero,
 so we gain an additional term.  Notably, the coefficient in front of the pressure 
@@ -401,7 +401,7 @@ the current solution drifts using $\delta S_{\rm corr}$ the previous iteration.
 \section{Heat Flux Integration Strategy}
 Recall the form of the enthalpy equation we are interested in:
 \begin{equation}
-\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt} + \nabla\cdot\lambda\nabla T + \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext.
+\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt} + \nabla\cdot\lambda\nabla T - \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext.
 \end{equation}
 In our time-advancement scheme, we want to handle the thermal diffusion semi-implicitly.
 The details are given in Section {\ref{Sec:Time-Advancement Strategy}} but for ease
@@ -418,7 +418,7 @@ Let's assume we want to form an iterative update to $h$ using
 \begin{eqnarray}
 \frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l+1}\nonumber\\
-&& + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l}\Fb_k^{n+1,l}\nonumber\\
+&& - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,l}\Fb_k^{n+1,l}\nonumber\\
 && + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,l}.\label{eq:temp form}
 \end{eqnarray}
 \\
@@ -435,7 +435,7 @@ Substituting (\ref{eq:delta T}) and (\ref{eq:delta h}) into (\ref{eq:temp form})
 \begin{eqnarray}
 \frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt}\nonumber\\
 &&\hspace{-0.5in}+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
-&&\hspace{-0.5in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}\nonumber\\
+&&\hspace{-0.5in} - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}\nonumber\\
 &&\hspace{-0.5in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,l}.
 \end{eqnarray}
 We solve this implicitly for $\delta T$, then compute $T^{n+1,l+1}$
@@ -450,12 +450,12 @@ be split into average and perturbational components using
 where $\bar\phi$ is constant in space.\\ \\
 The discretization we would like to solve is:
 \begin{equation}
-\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} + \nabla\cdot\Fb_i^n + \nabla\cdot\Fb_i^{n+1} + E_i^n + E_i^{n+1}\right]
+\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} - \nabla\cdot\Fb_i^n - \nabla\cdot\Fb_i^{n+1} + E_i^n + E_i^{n+1}\right]
 \end{equation}
 \begin{eqnarray}
 \frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& -\half\nabla\cdot(\rho h\vb)^n - \half\nabla\cdot(\rho h\vb)^{n+1} + \left(\frac{dP_0}{dt}\right)^{n+\myhalf}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1}\nabla T^{n+1}\nonumber\\
-&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
+&&- \half\sum_k\nabla\cdot h_k^n\Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
 &&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
 \end{eqnarray}
 \begin{equation}
@@ -556,7 +556,7 @@ P_0^{n+1,m+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm c
 {\bf Step 5}\\ \\
 Recompute densities with trapezoidal-rule advective and diffusive fluxes.
 \begin{equation}
-\rho_i^{n+1,m+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1,m} + \nabla\cdot\Fb^n + \nabla\cdot\Fb^{n+1,m} + E^n + E^{n+1,m}\right],
+\rho_i^{n+1,m+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1,m} - \nabla\cdot\Fb^n - \nabla\cdot\Fb^{n+1,m} + E^n + E^{n+1,m}\right],
 \end{equation}
 \begin{equation}
 \rho^{n+1,m+1} = \sum_k\rho_k^{n+1,m+1}.
@@ -568,7 +568,7 @@ are $h^{n+1,m+1}$ and $T^{n+1,m+1}$:
 \begin{eqnarray}
 \frac{(\rho h)^{n+1,m+1} - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right]\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1}\nabla T^{n+1,m+1}\nonumber\\
-&&+ \half\sum_k\nabla\cdot h_k^n\Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,m+1}\Fb_k^{n+1,m}\nonumber\\
+&&- \half\sum_k\nabla\cdot h_k^n\Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,m+1}\Fb_k^{n+1,m}\nonumber\\
 &&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1},
 \end{eqnarray}
 but since the heat fluxes are expressed in terms of temperature gradients, we
@@ -576,7 +576,7 @@ need an iterative approach that linearizes the dependence of $h$ on $T$,
 \begin{eqnarray}
 \frac{\rho^{n+1,m+1}(h^{n+1,m+1,l} + c_p^{n+1,m+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right]\nonumber\\
 &&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla(T^{n+1,m+1,l} + \delta T)\nonumber\\
-&&\hspace{-1in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m},\nonumber\\
+&&\hspace{-1in} - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m},\nonumber\\
 &&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1},
 \end{eqnarray}
 which can be rearranged to solve for $\delta T$,
@@ -584,7 +584,7 @@ which can be rearranged to solve for $\delta T$,
 \left(\frac{\rho^{n+1,m+1}c_p^{n+1,m+1,l}}{\Delta t} - \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1,m+1}h^{n+1,m+1,l}}{\Delta t}\nonumber\\
 &&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right]\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla T^{n+1,m+1,l}\nonumber\\
-&&\hspace{-1.25in} + \half\sum_k\nabla\cdot h_k^n \Fb_k^n + \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m}\nonumber\\
+&&\hspace{-1.25in} - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m}\nonumber\\
 &&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1}.\label{eq:deltaT}
 \end{eqnarray}
 To proceed, we set $(h,T,\lambda,c_p,h_k)^{n+1,m+1,l=1} = (h,T,\lambda,c_p,h_k)^{n+1,m}$
