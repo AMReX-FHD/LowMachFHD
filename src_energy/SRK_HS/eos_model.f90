@@ -218,7 +218,7 @@ contains
     call compute_P_w(P_w,rho,Yk,temp)
     call compute_P_rho(P_rho,rho,Yk,temp)
 
-    rho_w(1:nspecies) = P_w(1:nspecies) / P_rho
+    rho_w(1:nspecies) = -P_w(1:nspecies) / P_rho
 
   end subroutine compute_rho_w
 
@@ -234,7 +234,7 @@ contains
     call compute_P_T(P_T,rho,Yk,temp)
     call compute_P_rho(P_rho,rho,Yk,temp)
 
-    rho_T = P_T / P_rho
+    rho_T = -P_T / P_rho
 
   end subroutine compute_rho_T
 
