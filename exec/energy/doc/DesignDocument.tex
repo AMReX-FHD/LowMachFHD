@@ -463,34 +463,41 @@ The discretization we would like to solve is:
 \frac{(\rho\vb)^{n+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1}) + \frac{1}{2}(\rho^n + \rho^{n+1})\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right),
+\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right),\label{eq:div_constraint}
 \end{equation}
 \begin{equation}
-\frac{P_0^{n+1} - P_0^n}{\Delta t} = \frac{\bar S + \bar S_{\rm corr}}{\bar\alpha},
+\frac{P_0^{n+1} - P_0^n}{\Delta t} = \frac{\bar S + \bar S_{\rm corr}}{\bar\alpha},\label{eq:P0_update}
 \end{equation}
-with $S_{\rm corr}$ chosen so that
+with $S_{\rm corr}$ chosen so that the equation of state is satifised.  For gases, this means,
 \begin{equation}
-P(\rho,w_k,T)^{n+1} = P_0^{n+1}.
+P(\rho,w_k,T)^{n+1} = P_0^{n+1},
+\end{equation}
+and for our liquid model,
+\begin{equation}
+\sum_i\frac{\rho_i}{\bar\rho_i(T)} = 1.
 \end{equation}
 We don't want to solve this implicitly, so we use an iterative approach that lags some
-of the time-advanced quantities.
+of the time-advanced quantities while updating $S_{\rm corr}$.
 
-The form of the system given above can fit into the framework of low Mach number algorithms we have
-developed based on the generalized Stokes solver. 
-The additional issue that arises is that since the core numerical algorithm is based on the derivative
-of the constraint, we can numerically drift off of the actual algebraic constraint. Thus, we augment the
-basic algorithm with iterative 
-``volume discrepancy'' scheme described below to solve 
-(\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
-while enforcing condition (\ref{eq:EOS}) to a specified tolerance.\\
+Note that for liquids, we are taking the limit that $\Gamma_1 \rightarrow 0$, or equivalently,
+$\alpha\rightarrow\infty$.  Thus, $P_0$ is constant, and therefore the right-hand-side of equation 
+(\ref{eq:P0_update}) is zero, and the term proportional to $\delta\alpha$ in 
+(\ref{eq:div_constraint}) % is zero.
+
+% The form of the system given above can fit into the framework of low Mach number algorithms we have
+% developed based on the generalized Stokes solver. 
+% The additional issue that arises is that since the core numerical algorithm is based on the derivative
+% of the constraint, we can numerically drift off of the actual algebraic constraint. Thus, we augment the
+% basic algorithm with iterative 
+% ``volume discrepancy'' scheme described below to solve 
+% (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
+% while enforcing condition (\ref{eq:EOS}) to a specified tolerance.\\
 
 At the most basic level, the time-stepping strategy is an iterative loop over the following:\\
 \begin{itemize}
-\item Advance $P_0$.
-\item Advance densities using trapezoidal-rule fluxes.
-\item Advance enthalpy semi-implicitly.
+\item Advance thermodynamic variables $\rho,w_k,h,P_0$.
 \item Advance velocity using a Stokes solver.
-\item Compute a volume discrepancy correction.
+\item Update $S_{\rm corr}$ so the EOS is more closely maintained in the next iteration.
 \end{itemize}
 
 \section{Time-Advancement Strategy}\label{Sec:Time-Advancement Strategy}
