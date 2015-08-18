@@ -481,7 +481,7 @@ To compute $P_0^{n+1}$ we use
 We seek $S_{\rm corr}$ that causes the evolution of the thermodynamic variables to stay on the equation of 
 state.  For gases, this means,
 \begin{equation}
-P(\rho,w_k,T)^{n+1} = P_0^{n+1},
+P(\rho^{n+1},w_k^{n+1},T^{n+1}) = P_0^{n+1},
 \end{equation}
 and for our liquid model,
 \begin{equation}
@@ -490,10 +490,10 @@ and for our liquid model,
 We don't want to solve this implicitly, so we use an iterative approach that lags some
 of the time-advanced quantities while updating $S_{\rm corr}$.
 
-Note that for liquids, we are taking the limit that $\Gamma_1 \rightarrow 0$, or equivalently,
-$\alpha\rightarrow\infty$.  Thus, $P_0$ is constant, and therefore the right-hand-side of equation 
-(\ref{eq:P0_update}) is zero, and the term proportional to $\delta\alpha$ in 
-(\ref{eq:div_constraint}) % is zero.
+% Note that for liquids, we are taking the limit that $\Gamma_1 \rightarrow 0$, or equivalently,
+% $\alpha\rightarrow\infty$.  Thus, $P_0$ is constant, and therefore the right-hand-side of equation 
+% (\ref{eq:P0_update}) is zero, and the term proportional to $\delta\alpha$ in 
+% (\ref{eq:div_constraint}) % is zero.
 
 % The form of the system given above can fit into the framework of low Mach number algorithms we have
 % developed based on the generalized Stokes solver. 
@@ -531,9 +531,8 @@ and velocity update,
 
 \subsection{Time-Advancement Scheme}
 We are given $(\vb,\rho,\wb,h,T,P_0,\pi)^n$.
-Note that in general that the thermodynamic variables are not in 
-equilibrium.
-The time-advancement consists of:\\ \\
+Note that in general that the thermodynamic variables are not
+necessarily on the EOS.  The time-advancement consists of:\\ \\
 {\bf Step 1:}\\ \\
 Compute $(S,\alpha,\Fb,\eta,\lambda,h_k)^n$ from $(\rho,\wb,h,P_0,T)^n$.
 \MarginPar{The routines in the code take in all these variables and mix the usage.  More details need to be given here.}
@@ -547,7 +546,7 @@ S^n = \bar{S}^n + \delta S^n,
 {\bf Step 2:}\\ \\
 Compute a volume discrepancy correction:
 \begin{equation}
-S_{\rm corr} = \frac{1}{(\rho P_\rho)^n}\left(\frac{P(\rho,\wb,T)^n - P_0^n}{\Delta t}\right),
+S_{\rm corr} = \frac{1}{(\rho P_\rho)^n}\left(\frac{P(\rho^n,\wb^n,T^n) - P_0^n}{\Delta t}\right),
 \end{equation}
 and split this into average and perturbational components,
 \begin{equation}
@@ -573,7 +572,7 @@ Pressure update:
 P_0^{n+1,m+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right).
 \end{equation}
 {\bf Step 5}\\ \\
-Recompute densities with trapezoidal-rule advective and diffusive fluxes.
+Compute densities with trapezoidal-rule advective and diffusive fluxes.
 \begin{equation}
 \rho_i^{n+1,m+1} = \rho_i^n + \frac{\Delta t}{2}\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1,m} - \nabla\cdot\Fb^n - \nabla\cdot\Fb^{n+1,m} + E^n + E^{n+1,m}\right],
 \end{equation}
@@ -668,7 +667,7 @@ Rewriting the Stokes system above we have:
 {\bf Step 8}\\ \\
 Update volume discrepancy
 \begin{equation}
-S_{\rm corr} = S_{\rm corr} + \frac{2}{(\rho P_\rho)^{n+1,m+1}}\left(\frac{P(\rho,\wb,T)^{n+1,m+1} - P_0^{n+1,m+1}}{\Delta t}\right)
+S_{\rm corr} = S_{\rm corr} + \frac{2}{(\rho P_\rho)^{n+1,m+1}}\left(\frac{P(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1}) - P_0^{n+1,m+1}}{\Delta t}\right)
 \end{equation}
 Note: I've found this factor of two to be more effective at reducing the drift
 since we are using trapezoidal advective fluxes.  If the drift is unacceptable,
