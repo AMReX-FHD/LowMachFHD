@@ -462,7 +462,7 @@ The discretizations we would like to solve are as follows.  To compute $\rho_i^{
 \end{equation}
 To compute $h^{n+1}$, we use
 \begin{eqnarray}
-\frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& -\half\nabla\cdot(\rho h\vb)^n - \half\nabla\cdot(\rho h\vb)^{n+1} + \frac{\Delta P}{\Delta t}\nonumber\\
+\frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& -\half\nabla\cdot(\rho h\vb)^n - \half\nabla\cdot(\rho h\vb)^{n+1} + \left(\frac{dP_0}{dt}\right)^{n+\myhalf}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1}\nabla T^{n+1}\nonumber\\
 &&- \half\sum_k\nabla\cdot h_k^n\Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
 &&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
@@ -476,7 +476,7 @@ To compute $\vb^{n+1}$ and the Lagrance multiplier $\pi^{n+\myhalf}$ we use
 \end{equation}
 To compute $P_0^{n+1}$ we use
 \begin{equation}
-\frac{P_0^{n+1} - P_0^n}{\Delta t} \equiv \frac{\Delta P}{\Delta t} = \frac{\bar S + \bar S_{\rm corr}}{\bar\alpha},\label{eq:P0_update}
+\left(\frac{dP_0}{dt}\right)^{n+\myhalf} = \frac{P_0^{n+1} - P_0^n}{\Delta t} = \half\left(\frac{\bar S^n + \bar S_{\rm corr}}{\bar\alpha^n} + \frac{\bar S^{n+1} + \bar S_{\rm corr}}{\bar\alpha^{n+1}}\right),\label{eq:P0_update}
 \end{equation}
 We seek $S_{\rm corr}$ that causes the evolution of the thermodynamic variables to stay on the equation of 
 state.  For gases, this means,
