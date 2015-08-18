@@ -126,7 +126,7 @@ The governing conservation equations for momentum, mass, and energy for our syst
 \begin{eqnarray}
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb,\label{eq:momentum}\\
 \frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) - \nabla\cdot\Fb_i + E_i,\label{eq:mass}\\
-\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} + \nabla\cdot\Qb - \sum_k \nabla\cdot h_k \Fb_k + \rho\Hext,\label{eq:enthalpy}
+\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k \nabla\cdot h_k \Fb_k + \rho\Hext,\label{eq:enthalpy}
 \end{eqnarray}
 where $\rho$ is the density, $\vb$ is the velocity, $\pi$ is the dynamic 
 (or perturbational) pressure, $\gb$ is the gravitational vector, $\rho_i=\rho w_i$ is
@@ -151,7 +151,7 @@ where $T=T(\rho,\wb,h)$ is specified by the equation of state.\\
 The viscous stress tensor,
 $\taub = \eta[\nabla\vb + (\nabla\vb)^T]$,
 ignores the effect of bulk viscosity, which can be aborbed into $\pi$.
-The heat flux has the form $\Qb = \lambda\nabla T$.
+The heat flux has the form $\Qb = -\lambda\nabla T$.
 The mass fluxes contains contributions from 
 compositional and temperature gradients,
 \begin{equation}
@@ -207,56 +207,48 @@ right-hand side of equation (\ref{eq:EOS}) along particle paths,
 \frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
 \end{equation}
 This statement is always true, but in our low Mach number model we wish to enforce
-that the pressure is spatially constant, yet can vary in time.  Thus, we
-replace $DP/Dt$ with $dP_0/ dt$:
-\begin{equation}
-\frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths2}
-\end{equation}
-As noted above we also make the
-substitution $DP/Dt = dP_0/ d t$ in the enthalpy equation.  (Since we
-are currently assuming $P_0$ is constant in space, we are not allowing
-for pressure stratification due to gravity.)
+that the pressure is spatially constant, yet can vary in time.
+
 Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, 
 we can rewrite 
-(\ref{eq:particle paths2}) as
+(\ref{eq:particle paths}) as
 \begin{equation}
 \nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{dP_o}{dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
 To obtain an expression for $DT/Dt$, we differentiate the enthalpy, $h=h(T,P,\wb)$, 
-along particle paths and replace $DP/Dt$ with $dP_0/dt$ to obtain
+along particle paths to obtain
 \begin{equation}
 \frac{Dh}{Dt} = 
 c_p \frac{DT}{Dt} 
-+ h_P\frac{dP_0}{d t} + \sum_k h_{k}\frac{Dw_k}{Dt}  \;\;  ,
++ h_P\frac{DP}{Dt} + \sum_k h_{k}\frac{Dw_k}{Dt}  \;\;  ,
 \end{equation}
 where $c_p = \partial h/\partial T$.  This gives
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{dP_0}{d t} - \sum_kh_{k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
+\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{dP}{Dt} - \sum_kh_{k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
 \end{equation}
-From equation (\ref{eq:mass}) and 
-continuity we have,
+From equation (\ref{eq:mass}) and continuity we have,
 \begin{equation}
 \frac{Dw_k}{Dt} = \frac{1}{\rho}\left(-\nabla\cdot\Fb_k + E_k\right),\label{eq:DwDt}
 \end{equation}
 and from equation (\ref{eq:enthalpy}) we have,
 \begin{equation}
-\frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{dP_0}{dt} + \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right).\label{eq:DhDt}
+\frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right).\label{eq:DhDt}
 \end{equation}
 Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{dP_0}{dt} + \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k - \sum_kh_k(-\nabla\cdot\Fb_k + E_k) + \rho\Hext\right].\label{eq:DTDt}
+\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k - \sum_kh_k(-\nabla\cdot\Fb_k + E_k) + \rho\Hext\right].\label{eq:DTDt}
 \end{equation}
 Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt})
 and using $P_{w_k}/P_\rho = -\rho_{w_k}$ and $P_T/P_\rho = -\rho_T$ gives
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = -\sum_k \beta_k \nabla\cdot\Fb_k + \theta\left[\nabla\cdot\Qb + \sum_k\left(-\nabla\cdot h_k\Fb_k + h_k\nabla\cdot\Fb_k - h_kE_k\right) + \rho\Hext\right] \equiv S,\label{eq:constraint}
+\nabla\cdot\vb + \alpha\frac{DP}{Dt} = \sum_k \frac{1}{\rho}\beta_k \nabla\cdot\Fb_k + \frac{1}{\rho c_p}\theta\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k + h_kE_k\right) - \rho\Hext\right] \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
-\alpha = -\frac{1}{\rho^2 P_\rho}\left[\frac{(1-\rho h_p)P_T - \rho c_p}{c_p}\right], \quad
-\beta_k = -\frac{\rho_{w_k}}{\rho^2}, \quad
-\theta = -\frac{\rho_T}{\rho^2 c_p}.\label{eq:thermo deriv}
+\alpha = \frac{1}{\rho P_\rho} + \frac{(1-\rho h_p)}{\rho c_p}\theta, \quad
+\beta_k = \frac{1}{\rho}\rho_{w_k}, \quad
+\theta = \frac{1}{\rho}\rho_T.\label{eq:thermo deriv}
 \end{equation}
-Note that $\rho_{w_k}/\rho$ and $\rho_T/\rho$
+Note that $\beta_k$ and $\theta$
 are the solutal and thermal expansion coefficients, respectively.
 
 In \cite{MAESTROI}, it was shown that
@@ -274,7 +266,20 @@ where
 \chi_\rho \equiv \left(\frac{\partial\ln{P}}{\partial\ln{\rho}}\right)_T = \frac{\rho}{P}P_\rho
 \end{equation}
 is the ``density exponent in the pressure equation of state.''
-Note that for ideal gases, $\chi_\rho=1$ and $\Gamma_1=\gamma$.
+Note that for ideal gases, $\chi_\rho=1, \Gamma_1=\gamma$, and therefore
+\begin{equation}
+\alpha = \frac{1}{\gamma\rho P_\rho} = \frac{1}{\gamma P}
+\end{equation}
+
+In our low Mach number model we replace $DP/Dt$ with $dP_0/ dt$ in the 
+constraint (\ref{eq:constraint}) and enthalpy (\ref{eq:enthalpy}) equations.
+(Since we are currently assuming $P_0$ is constant in space,
+we are not allowing for pressure stratification due to gravity.)
+%\begin{equation}
+%\frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths2}
+%\end{equation}
+%As noted above we also make the
+%substitution $DP/Dt = dP_0/ d t$ in the enthalpy equation.
 
 \subsection{Comparison to LMC and MAESTRO}
 It is worth comparing this formulation to other low Mach number constraints.
@@ -342,7 +347,9 @@ Thus, the original system is analytically equivalent to solving the system (\ref
 subject to (\ref{eq:P0}) and (\ref{eq:constraint3}).
 
 \section{Equation of State Drift}
-Recall equation (\ref{eq:particle paths2}), where we analytically enforce that
+Consider equation (\ref{eq:particle paths}), but with
+$DP/Dt$ replaced with $\partial P_0/\partial t$,
+where we analytically enforce that
 thermodynamic pressure will evolve to be consistent with the evolution of $P_0$,
 \begin{equation}
 \frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
@@ -449,32 +456,36 @@ be split into average and perturbational components using
 \phi = \bar\phi + \delta\phi, \quad \int_\Omega \delta\phi~d\Omega = 0,
 \end{equation}
 where $\bar\phi$ is constant in space.\\ \\
-The discretization we would like to solve is:
+The discretizations we would like to solve are as follows.  To compute $\rho_i^{n+1}$ we use
 \begin{equation}
-\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} - \nabla\cdot\Fb_i^n - \nabla\cdot\Fb_i^{n+1} + E_i^n + E_i^{n+1}\right]
+\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} - \nabla\cdot\Fb_i^n - \nabla\cdot\Fb_i^{n+1} + E_i^n + E_i^{n+1}\right].
 \end{equation}
+To compute $h^{n+1}$, we use
 \begin{eqnarray}
-\frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& -\half\nabla\cdot(\rho h\vb)^n - \half\nabla\cdot(\rho h\vb)^{n+1} + \left(\frac{dP_0}{dt}\right)^{n+\myhalf}\nonumber\\
+\frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& -\half\nabla\cdot(\rho h\vb)^n - \half\nabla\cdot(\rho h\vb)^{n+1} + \frac{\Delta P}{\Delta t}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1}\nabla T^{n+1}\nonumber\\
 &&- \half\sum_k\nabla\cdot h_k^n\Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
 &&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
 \end{eqnarray}
+To compute $\vb^{n+1}$ and the Lagrance multiplier $\pi^{n+\myhalf}$ we use
 \begin{equation}
-\frac{(\rho\vb)^{n+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+1} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1}) + \frac{1}{2}(\rho^n + \rho^{n+1})\gb,
+\frac{(\rho\vb)^{n+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+\myhalf} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1}) + \frac{1}{2}(\rho^n + \rho^{n+1})\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right),\label{eq:div_constraint}
+\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).\label{eq:div_constraint}
 \end{equation}
+To compute $P_0^{n+1}$ we use
 \begin{equation}
-\frac{P_0^{n+1} - P_0^n}{\Delta t} = \frac{\bar S + \bar S_{\rm corr}}{\bar\alpha},\label{eq:P0_update}
+\frac{P_0^{n+1} - P_0^n}{\Delta t} \equiv \frac{\Delta P}{\Delta t} = \frac{\bar S + \bar S_{\rm corr}}{\bar\alpha},\label{eq:P0_update}
 \end{equation}
-with $S_{\rm corr}$ chosen so that the equation of state is satifised.  For gases, this means,
+We seek $S_{\rm corr}$ that causes the evolution of the thermodynamic variables to stay on the equation of 
+state.  For gases, this means,
 \begin{equation}
 P(\rho,w_k,T)^{n+1} = P_0^{n+1},
 \end{equation}
 and for our liquid model,
 \begin{equation}
-\sum_i\frac{\rho_i}{\bar\rho_i(T)} = 1.
+\sum_i\frac{\rho_i}{\bar\rho_i(T,P)} = 1.
 \end{equation}
 We don't want to solve this implicitly, so we use an iterative approach that lags some
 of the time-advanced quantities while updating $S_{\rm corr}$.
