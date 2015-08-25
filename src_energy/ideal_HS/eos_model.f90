@@ -288,12 +288,9 @@ contains
 
   end subroutine compute_P_rho
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! computes $P_T
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine compute_P_T(P_T,rho,Yk,temp)
+  subroutine compute_rho_w(rho_w,rho,Yk,temp)
 
-    real(kind=8) :: P_T, rho, temp, Yk(1:nspecies)
+    real(kind=8) :: rho_w(1:nspecies),rho,Yk(1:nspecies),temp
 
     real(kind=8) :: molmix
     integer :: ns
@@ -304,39 +301,7 @@ contains
     enddo
     molmix = 1.0d0/molmix
 
-    P_T = rho*Runiv/molmix
-
-  end subroutine compute_P_T
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! computes $P_w
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine compute_P_w(P_w,rho,Yk,temp)
-
-    real(kind=8) :: P_w(1:nspecies), rho, temp, Yk(1:nspecies)
-
-    real(kind=8) :: molmix
-    integer :: ns
-
-    do ns = 1, nspecies
-       P_w(ns) = rho*Runiv*temp / molecular_weight(ns)
-    end do
-
-  end subroutine compute_P_w
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  subroutine compute_rho_w(rho_w,rho,Yk,temp)
-
-
-    real(kind=8) :: rho_w(1:nspecies),rho,Yk(1:nspecies),temp
-
-    real(kind=8) :: P_w(1:nspecies),P_rho
-
-    call compute_P_w(P_w,rho,Yk,temp)
-    call compute_P_rho(P_rho,rho,Yk,temp)
-
-    rho_w(1:nspecies) = -P_w(1:nspecies) / P_rho
+    rho_w(1:nspecies) = -rho*molmix/molecular_weight(1:nspecies)
 
   end subroutine compute_rho_w
 
@@ -344,15 +309,9 @@ contains
 
   subroutine compute_rho_T(rho_T,rho,Yk,temp)
 
-
     real(kind=8) :: rho_T,rho,Yk(1:nspecies),temp
 
-    real(kind=8) :: P_T,P_rho
-
-    call compute_P_T(P_T,rho,Yk,temp)
-    call compute_P_rho(P_rho,rho,Yk,temp)
-
-    rho_T = -P_T / P_rho
+    rho_T = -rho/temp
 
   end subroutine compute_rho_T
 
