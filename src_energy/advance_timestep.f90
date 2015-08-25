@@ -119,9 +119,9 @@ contains
     type(multifab) :: delta_S_old(mla%nlevel)
     type(multifab) :: delta_S_new(mla%nlevel)
 
-    ! delta_alpha
-    type(multifab) :: delta_alpha_old(mla%nlevel)
-    type(multifab) :: delta_alpha_new(mla%nlevel)
+    ! delta_theta
+    type(multifab) :: delta_theta_old(mla%nlevel)
+    type(multifab) :: delta_theta_new(mla%nlevel)
 
     ! rhotot on faces
     type(multifab) :: rhotot_fc_old(mla%nlevel,mla%dim)
@@ -173,7 +173,7 @@ contains
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
     real(kind=dp_t) :: Sbar_old, Sbar_new
-    real(kind=dp_t) :: alphabar_old, alphabar_new
+    real(kind=dp_t) :: thetabar_old, thetabar_new
     real(kind=dp_t) :: Scorrbar
 
     real(kind=dp_t) :: p0_update_old
@@ -227,8 +227,8 @@ contains
        call multifab_build(rhoh_update_new(n) ,mla%la(n),1       ,0)
        call multifab_build(delta_S_old(n)     ,mla%la(n),1       ,0)
        call multifab_build(delta_S_new(n)     ,mla%la(n),1       ,0)
-       call multifab_build(delta_alpha_old(n) ,mla%la(n),1       ,0)
-       call multifab_build(delta_alpha_new(n) ,mla%la(n),1       ,0)
+       call multifab_build(delta_theta_old(n) ,mla%la(n),1       ,0)
+       call multifab_build(delta_theta_new(n) ,mla%la(n),1       ,0)
        do i=1,dm
           call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
@@ -349,8 +349,8 @@ contains
     call rhoh_fluxdiv_energy(mla,lambda_old,Temp_old,mass_flux_old,rhotot_old, &
                              rhoh_fluxdiv_old,dx,0.d0,the_bc_tower)
 
-    ! compute S^n and alpha^n (store them in delta_S_old and delta_alpha_old)
-    call compute_S_alpha(mla,delta_S_old,delta_alpha_old,mass_fluxdiv_old, &
+    ! compute S^n and theta^n (store them in delta_S_old and delta_theta_old)
+    call compute_S_theta(mla,delta_S_old,delta_theta_old,mass_fluxdiv_old, &
                          rhoh_fluxdiv_old,conc_old,Temp_old,rhotot_old)
 
     ! compute P_eos^n
@@ -363,18 +363,18 @@ contains
        call multifab_copy_c(Scorr(n),1,Peos(n),1,1,0)
     end do
 
-    ! split S^n, alpha^n, and Scorr into average and perturbational pieces
+    ! split S^n, theta^n, and Scorr into average and perturbational pieces
     do n=1,nlevs
        Sbar_old     = multifab_sum_c(delta_S_old(n)    ,1,1) / total_volume
-       alphabar_old = multifab_sum_c(delta_alpha_old(n),1,1) / total_volume
+       thetabar_old = multifab_sum_c(delta_theta_old(n),1,1) / total_volume
        Scorrbar     = multifab_sum_c(Scorr(n),1,1) / total_volume
        call multifab_sub_sub_s_c(delta_S_old(n)    ,1,Sbar_old    ,1,0)
-       call multifab_sub_sub_s_c(delta_alpha_old(n),1,alphabar_old,1,0)
+       call multifab_sub_sub_s_c(delta_theta_old(n),1,thetabar_old,1,0)
        call multifab_copy_c(delta_Scorr(n),1,Scorr(n),1,1,0)
        call multifab_sub_sub_s_c(delta_Scorr(n),1,Scorrbar,1,0)
     end do
 
-    p0_update_old = (Sbar_old + Scorrbar)/alphabar_old
+    p0_update_old = (Sbar_old + Scorrbar)/thetabar_old
 
     ! mass_update_old = [-div(rho_i*v) + div(F)]^n
     do n=1,nlevs
@@ -410,12 +410,12 @@ contains
        call multifab_copy_c(mass_fluxdiv_new(n),1,mass_fluxdiv_old(n),1,nspecies   ,0)
        call multifab_copy_c(rhoh_fluxdiv_new(n),1,rhoh_fluxdiv_old(n),1,1          ,0)
        call multifab_copy_c(delta_S_new(n)     ,1,delta_S_old(n)     ,1,1          ,0)
-       call multifab_copy_c(delta_alpha_new(n) ,1,delta_alpha_old(n) ,1,1          ,0)
+       call multifab_copy_c(delta_theta_new(n) ,1,delta_theta_old(n) ,1,1          ,0)
     end do
 
     p0_new = p0_old
     Sbar_new = Sbar_old
-    alphabar_new = alphabar_old
+    thetabar_new = thetabar_old
 
     ! compute grad(pi^n)
     call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
@@ -434,7 +434,7 @@ contains
        call mk_advective_m_fluxdiv(mla,umac_new,mtemp,mtemp2,dx, &
                                    the_bc_tower%bc_tower_array)
 
-       p0_update_new = (Sbar_new + Scorrbar)/alphabar_new
+       p0_update_new = (Sbar_new + Scorrbar)/thetabar_new
 
        ! update pressure
        p0_new = p0_old + 0.5d0*dt*(p0_update_old + p0_update_new)
@@ -602,8 +602,8 @@ contains
        call rhoh_fluxdiv_energy(mla,lambda_new,Temp_new,mass_flux_new,rhotot_new, &
                                 rhoh_fluxdiv_new,dx,0.d0,the_bc_tower)
 
-       ! compute S^{n+1,m+1} and alpha^{n+1,m+1} (store them in delta_S_new and delta_alpha_new)
-       call compute_S_alpha(mla,delta_S_new,delta_alpha_new,mass_fluxdiv_new, &
+       ! compute S^{n+1,m+1} and theta^{n+1,m+1} (store them in delta_S_new and delta_theta_new)
+       call compute_S_theta(mla,delta_S_new,delta_theta_new,mass_fluxdiv_new, &
                             rhoh_fluxdiv_new,conc_new,Temp_new,rhotot_new)
 
        ! compute P_eos^{n+1,m+1}
@@ -659,21 +659,21 @@ contains
 
        end do
 
-       ! split S^{n+1,m+1}, alpha^{n+1,m+1}, and Scorr into average and perturbational pieces
+       ! split S^{n+1,m+1}, theta^{n+1,m+1}, and Scorr into average and perturbational pieces
        do n=1,nlevs
           Sbar_new     = multifab_sum_c(delta_S_new(n)    ,1,1) / total_volume
-          alphabar_new = multifab_sum_c(delta_alpha_new(n),1,1) / total_volume
+          thetabar_new = multifab_sum_c(delta_theta_new(n),1,1) / total_volume
           Scorrbar     = multifab_sum_c(Scorr(n),1,1) / total_volume
           call multifab_sub_sub_s_c(delta_S_new(n)    ,1,Sbar_new    ,1,0)
-          call multifab_sub_sub_s_c(delta_alpha_new(n),1,alphabar_new,1,0)
+          call multifab_sub_sub_s_c(delta_theta_new(n),1,thetabar_new,1,0)
           call multifab_copy_c(delta_Scorr(n),1,Scorr(n),1,1,0)
           call multifab_sub_sub_s_c(delta_Scorr(n),1,Scorrbar,1,0)
        end do
 
        ! compute gmres_rhs_p = delta_S_new + delta_Scorr
-       !                       - delta_alpha_new * (Sbar_new + Scorrbar)/alphabar_new
+       !                       - delta_theta_new * (Sbar_new + Scorrbar)/thetabar_new
        do n=1,nlevs
-          call multifab_copy_c(gmres_rhs_p(n),1,delta_alpha_new(n),1,1,0)
+          call multifab_copy_c(gmres_rhs_p(n),1,delta_theta_new(n),1,1,0)
           call multifab_mult_mult_s_c(gmres_rhs_p(n),1,-p0_update_new,1,0)
           call multifab_plus_plus_c(gmres_rhs_p(n),1,delta_S_new(n),1,1,0)
           call multifab_plus_plus_c(gmres_rhs_p(n),1,delta_Scorr(n),1,1,0)
@@ -861,8 +861,8 @@ contains
        call multifab_destroy(rhoh_update_new(n))
        call multifab_destroy(delta_S_old(n))
        call multifab_destroy(delta_S_new(n))
-       call multifab_destroy(delta_alpha_old(n))
-       call multifab_destroy(delta_alpha_new(n))
+       call multifab_destroy(delta_theta_old(n))
+       call multifab_destroy(delta_theta_new(n))
        do i=1,dm
           call multifab_destroy(rhotot_fc_old(n,i))
           call multifab_destroy(rhotot_fc_new(n,i))

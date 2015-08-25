@@ -10,7 +10,7 @@ module eos_model_wrapper_module
   private
 
   public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper, &
-            add_external_heating, compute_S_alpha, scale_deltaP, &
+            add_external_heating, compute_S_theta, scale_deltaP, &
             compute_h, compute_hk, compute_p, compute_cp
 
 contains
@@ -265,7 +265,7 @@ contains
     real(kind=dp_t), intent(in   ) :: p0
 
     ! local
-    integer :: i,j,ng
+    integer :: i,j
 
     do j=gtlo(2),gthi(2)
        do i=gtlo(1),gthi(1)
@@ -451,11 +451,11 @@ contains
 
   end subroutine add_external_heating_3d
 
-  subroutine compute_S_alpha(mla,S,alpha,mass_fluxdiv,rhoh_fluxdiv,conc,Temp,rhotot)
+  subroutine compute_S_theta(mla,S,theta,mass_fluxdiv,rhoh_fluxdiv,conc,Temp,rhotot)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: S(:)
-    type(multifab) , intent(inout) :: alpha(:)
+    type(multifab) , intent(inout) :: theta(:)
     type(multifab) , intent(in   ) :: mass_fluxdiv(:)
     type(multifab) , intent(in   ) :: rhoh_fluxdiv(:)
     type(multifab) , intent(in   ) :: conc(:)
@@ -483,7 +483,7 @@ contains
     dm = mla%dim
 
     ng_1 = S(1)%ng
-    ng_2 = alpha(1)%ng
+    ng_2 = theta(1)%ng
     ng_3 = mass_fluxdiv(1)%ng
     ng_4 = rhoh_fluxdiv(1)%ng
     ng_5 = conc(1)%ng
@@ -504,7 +504,7 @@ contains
           thi = upb(tilebox)
   
           dp1 => dataptr(S(n), i)
-          dp2 => dataptr(alpha(n), i)
+          dp2 => dataptr(theta(n), i)
           dp3 => dataptr(mass_fluxdiv(n), i)
           dp4 => dataptr(rhoh_fluxdiv(n), i)
           dp5 => dataptr(conc(n), i)
@@ -514,12 +514,12 @@ contains
           hi = upb(get_box(S(n), i))
           select case (dm)
           case (2)
-             call compute_S_alpha_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
+             call compute_S_theta_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,1),ng_2, &
                                      dp3(:,:,1,:),ng_3,dp4(:,:,1,1),ng_4, &
                                      dp5(:,:,1,:),ng_5,dp6(:,:,1,1),ng_6, &
                                      dp7(:,:,1,1),ng_7,lo,hi,tlo,thi)
           case (3)
-             call compute_S_alpha_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
+             call compute_S_theta_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,1),ng_2, &
                                      dp3(:,:,:,:),ng_3,dp4(:,:,:,1),ng_4, &
                                      dp5(:,:,:,:),ng_5,dp6(:,:,:,1),ng_6, &
                                      dp7(:,:,:,1),ng_7,lo,hi,tlo,thi)
@@ -528,15 +528,15 @@ contains
     end do
     !$omp end parallel
 
-  end subroutine compute_S_alpha
+  end subroutine compute_S_theta
   
-  subroutine compute_S_alpha_2d(S,ng_1,alpha,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
+  subroutine compute_S_theta_2d(S,ng_1,theta,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
                                 conc,ng_5,Temp,ng_6,rhotot,ng_7,glo,ghi,tlo,thi)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
     integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:)
     real(kind=dp_t), intent(inout) ::            S(glo(1)-ng_1:,glo(2)-ng_1:)
-    real(kind=dp_t), intent(inout) ::        alpha(glo(1)-ng_2:,glo(2)-ng_2:)
+    real(kind=dp_t), intent(inout) ::        theta(glo(1)-ng_2:,glo(2)-ng_2:)
     real(kind=dp_t), intent(in   ) :: mass_fluxdiv(glo(1)-ng_3:,glo(2)-ng_3:,:)
     real(kind=dp_t), intent(in   ) :: rhoh_fluxdiv(glo(1)-ng_4:,glo(2)-ng_4:)
     real(kind=dp_t), intent(in   ) ::         conc(glo(1)-ng_5:,glo(2)-ng_5:,:)
@@ -545,7 +545,7 @@ contains
 
     ! local
     integer :: i,j,n
-    real(kind=dp_t) :: W,beta,theta,cpmix,cvmix
+    real(kind=dp_t) :: W,beta,alpha,cpmix,cvmix
     real(kind=dp_t) :: hk(nspecies),P_rho
     real(kind=dp_t) :: rho_w(nspecies), rho_T
 
@@ -572,25 +572,25 @@ contains
              beta = -1.d0 / (rhotot(i,j)**2) * rho_w(n)
              S(i,j) = S(i,j) + beta*mass_fluxdiv(i,j,n)
           end do
-          theta = -(1.d0 / (rhotot(i,j)**2 * cpmix)) * rho_T
-          S(i,j) = S(i,j) + theta*rhoh_fluxdiv(i,j)
+          alpha = -(1.d0 / (rhotot(i,j)**2 * cpmix)) * rho_T
+          S(i,j) = S(i,j) + alpha*rhoh_fluxdiv(i,j)
           do n=1,nspecies
-             S(i,j) = S(i,j) - hk(n)*theta*mass_fluxdiv(i,j,n)
+             S(i,j) = S(i,j) - hk(n)*alpha*mass_fluxdiv(i,j,n)
           end do
-          alpha(i,j) = cvmix/(cpmix*rhotot(i,j)*P_rho)
+          theta(i,j) = cvmix/(cpmix*rhotot(i,j)*P_rho)
 
        end do
     end do
        
-  end subroutine compute_S_alpha_2d
+  end subroutine compute_S_theta_2d
   
-  subroutine compute_S_alpha_3d(S,ng_1,alpha,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
+  subroutine compute_S_theta_3d(S,ng_1,theta,ng_2,mass_fluxdiv,ng_3,rhoh_fluxdiv,ng_4, &
                                 conc,ng_5,Temp,ng_6,rhotot,ng_7,glo,ghi,tlo,thi)
 
     integer        , intent(in   ) :: ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
     integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:)
     real(kind=dp_t), intent(inout) ::            S(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)
-    real(kind=dp_t), intent(inout) ::        alpha(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)
+    real(kind=dp_t), intent(inout) ::        theta(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)
     real(kind=dp_t), intent(in   ) :: mass_fluxdiv(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:)
     real(kind=dp_t), intent(in   ) :: rhoh_fluxdiv(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:)
     real(kind=dp_t), intent(in   ) ::         conc(glo(1)-ng_5:,glo(2)-ng_5:,glo(3)-ng_5:,:)
@@ -599,7 +599,7 @@ contains
 
     ! local
     integer :: i,j,k,n
-    real(kind=dp_t) :: W,beta,theta,cpmix,cvmix
+    real(kind=dp_t) :: W,beta,alpha,cpmix,cvmix
     real(kind=dp_t) :: hk(nspecies),P_rho
     real(kind=dp_t) :: rho_w(nspecies), rho_T
 
@@ -627,18 +627,18 @@ contains
                 beta = -1.d0 / (rhotot(i,j,k)**2) * rho_w(n)
                 S(i,j,k) = S(i,j,k) + beta*mass_fluxdiv(i,j,k,n)
              end do
-             theta = -(1.d0 / (rhotot(i,j,k)**2 * cpmix)) * rho_T
-             S(i,j,k) = S(i,j,k) + theta*rhoh_fluxdiv(i,j,k)
+             alpha = -(1.d0 / (rhotot(i,j,k)**2 * cpmix)) * rho_T
+             S(i,j,k) = S(i,j,k) + alpha*rhoh_fluxdiv(i,j,k)
              do n=1,nspecies
-                S(i,j,k) = S(i,j,k) - hk(n)*theta*mass_fluxdiv(i,j,k,n)
+                S(i,j,k) = S(i,j,k) - hk(n)*alpha*mass_fluxdiv(i,j,k,n)
              end do
-             alpha(i,j,k) = cvmix/(cpmix*rhotot(i,j,k)*P_rho)
+             theta(i,j,k) = cvmix/(cpmix*rhotot(i,j,k)*P_rho)
 
           end do
        end do
     end do
        
-  end subroutine compute_S_alpha_3d
+  end subroutine compute_S_theta_3d
 
   subroutine scale_deltaP(mla,deltaP,rhotot,Temp,conc,dt,factor)
 

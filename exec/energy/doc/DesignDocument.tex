@@ -241,22 +241,29 @@ Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt})
 and using $P_{w_k}/P_\rho = -\rho_{w_k}$ and $P_T/P_\rho = -\rho_T$ gives
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{DP}{Dt} = \sum_k \frac{1}{\rho}\beta_k \nabla\cdot\Fb_k + \frac{1}{\rho c_p}\theta\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k + h_kE_k\right) - \rho\Hext\right] \equiv S,\label{eq:constraint}
+\nabla\cdot\vb + \theta\frac{DP}{Dt} = \sum_k \frac{1}{\rho}\beta_k \nabla\cdot\Fb_k + \frac{1}{\rho c_p}\alpha\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k + h_kE_k\right) - \rho\Hext\right] \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
-\alpha = \frac{1}{\rho P_\rho} + \frac{(1-\rho h_p)}{\rho c_p}\theta, \quad
+\theta = \frac{1}{\rho P_\rho} + \frac{(1-\rho h_p)}{\rho c_p}\alpha, \quad
 \beta_k = \frac{1}{\rho}\rho_{w_k}, \quad
-\theta = \frac{1}{\rho}\rho_T.\label{eq:thermo deriv}
+\alpha = \frac{1}{\rho}\rho_T.\label{eq:thermo deriv}
 \end{equation}
-Note that $\beta_k$ and $\theta$
+Note that $\beta_k$ and $\alpha$
 are the solutal and thermal expansion coefficients, respectively.
+Some complex equations of state are represented in terms of $P=P(\rho,w_k,T)$,
+so to find the expansion coefficients we can use the triple product rule to say,
+\begin{equation}
+\rho_{w_k} = -\frac{P_{w_k}}{P_\rho}, \quad \rho_T = -\frac{P_T}{P_\rho}.
+\end{equation}
 
 In \cite{MAESTROI}, it was shown that
 \begin{equation}
-\alpha = \frac{1}{\Gamma_1 P},
+\theta = \frac{1}{\Gamma_1 P},
 \end{equation}
 where $\Gamma_1 = \left(d\ln{p}/d\ln{\rho}\right)_{\rm ad}$ is the first 
-adiabatic exponent.  This is related to the ratio of specific heats, 
+adiabatic exponent.  We point out in the MAESTRO papers, this term was represented
+by $\alpha$ but here we reserve $\alpha$ for the more standard thermal expansion
+coefficient.  The coefficient $\theta$ is related to the ratio of specific heats, 
 $\gamma$, via
 \begin{equation}
 \gamma = \frac{c_p}{c_v} = \frac{\Gamma_1}{\chi_\rho},
@@ -268,7 +275,7 @@ where
 is the ``density exponent in the pressure equation of state.''
 Note that for ideal gases, $\chi_\rho=1, \Gamma_1=\gamma$, and therefore
 \begin{equation}
-\alpha = \frac{1}{\gamma\rho P_\rho} = \frac{1}{\gamma P}
+\theta = \frac{1}{\gamma\rho P_\rho} = \frac{1}{\gamma P}
 \end{equation}
 
 In our low Mach number model we replace $DP/Dt$ with $dP_0/ dt$ in the 
@@ -288,7 +295,7 @@ but with three exceptions.  First,
 we are not accounting for reactions, so $\dot\omega=0$.  Second, here we have 
 {\it not} made the substitution, 
 $-\nabla\cdot h_k\Fb_k + h_k\nabla\cdot\Fb_k = -\Fb\cdot\nabla h_k$, so the coefficients
-$\beta_k$ and $\theta$ are slightly different (although the overall expression is
+$\beta_k$ and $\alpha$ are slightly different (although the overall expression is
 analytically equivalent).  Third, the time-derivative of $P_0$ is no longer zero,
 so we gain an additional term.  Notably, the coefficient in front of the pressure 
 derivative matches that in the MAESTRO algorithm \cite{MAESTROIII},
@@ -319,29 +326,29 @@ To do this, we split up $S$ into an average and a perturbational component,
 S = \bar{S} + \delta S.
 \end{equation}
 We also
-split $\alpha$ into an average and a perturbational component,
+split $\theta$ into an average and a perturbational component,
 \begin{equation}
-\alpha = \bar{\alpha} + \delta\alpha.
+\theta = \bar{\theta} + \delta\theta.
 \end{equation}
 By definition,
 \begin{equation}
-\int_{\Omega} \delta S ~\partial\Omega = \int_{\Omega} \delta \alpha ~\partial\Omega = 0.\label{eq:zero int}
+\int_{\Omega} \delta S ~\partial\Omega = \int_{\Omega} \delta \theta ~\partial\Omega = 0.\label{eq:zero int}
 \end{equation}
 So equation (\ref{eq:constraint}) can be rewritten as,
 \begin{equation}
-\nabla\cdot\vb + \bar{\alpha}\frac{dP_0}{d t} 
+\nabla\cdot\vb + \bar{\theta}\frac{dP_0}{d t} 
 = \bar{S} + \delta S -
-\delta\alpha\frac{dP_0}{d t}.\label{eq:constraint2}
+\delta\theta\frac{dP_0}{d t}.\label{eq:constraint2}
 \end{equation}
 Since $\nabla \cdot \vb$ must integrate to zero and $P_0$ must be only a function of time,
 equation (\ref{eq:constraint2}) can be uniquely decomposed to give
 \begin{equation}
-\frac{dP_0}{dt} = \frac{\bar{S}}{\bar{\alpha}}.\label{eq:P0}
+\frac{dP_0}{dt} = \frac{\bar{S}}{\bar{\theta}}.\label{eq:P0}
 \end{equation}
 and
 \begin{eqnarray}
-\nabla\cdot\vb &=& \delta S - \delta\alpha\frac{dP_0}{dt} \nonumber\\
-&=& \delta S - \delta\alpha\frac{\bar{S}}{\bar{\alpha}}.\label{eq:constraint3}
+\nabla\cdot\vb &=& \delta S - \delta\theta\frac{dP_0}{dt} \nonumber\\
+&=& \delta S - \delta\theta\frac{\bar{S}}{\bar{\theta}}.\label{eq:constraint3}
 \end{eqnarray}
 Thus, the original system is analytically equivalent to solving the system (\ref{eq:momentum}), (\ref{eq:mass}), and (\ref{eq:enthalpy})
 subject to (\ref{eq:P0}) and (\ref{eq:constraint3}).
@@ -356,7 +363,7 @@ thermodynamic pressure will evolve to be consistent with the evolution of $P_0$,
 \end{equation}
 This equation was shown to be analytically equivalent to equation (\ref{eq:constraint}):
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = S.
+\nabla\cdot\vb + \theta\frac{dP_0}{dt} = S.
 \end{equation}
 
 This divergence constraint represents a linearized approximation for the velocity 
@@ -392,15 +399,15 @@ the pressure.
 By substituting (\ref{eq:DPDt}) into (\ref{eq:particle paths}),
 and following the same derivation, we end up with,
 \begin{equation}
-\nabla\cdot\vb + \alpha\frac{dP_0}{dt} = S + \underbrace{\frac{1}{\rho P_\rho}\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
+\nabla\cdot\vb + \theta\frac{dP_0}{dt} = S + \underbrace{\frac{1}{\rho P_\rho}\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
 \end{equation}
 Similar to above, in order for this sytem to be solvable we split the update into
 equations for $P_0$ and $\vb$,
 \begin{equation}
-\frac{dP_0}{dt} = \frac{\bar{S} + \bar{S}_{\rm corr}}{\bar{\alpha}}
+\frac{dP_0}{dt} = \frac{\bar{S} + \bar{S}_{\rm corr}}{\bar{\theta}}
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\alpha\left(\frac{\bar{S} + \bar{S}_{\rm corr}}{\bar{\alpha}}\right).
+\nabla\cdot\vb = \delta S + \delta S_{\rm corr} - \delta\theta\left(\frac{\bar{S} + \bar{S}_{\rm corr}}{\bar{\theta}}\right).
 \end{equation}
 At the beginning of each time step, we initialize $S_{\rm corr}$ based on the current drift of the data at $t^n$.
 As we iterate, we increment (rather than reset) $\delta S_{\rm corr}$ based on how much 
@@ -472,11 +479,11 @@ To compute $\vb^{n+1}$ and the Lagrance multiplier $\pi^{n+\myhalf}$ we use
 \frac{(\rho\vb)^{n+1} - (\rho\vb)^n}{\Delta t} + \nabla\pi^{n+\myhalf} = \half\left[-\nabla\cdot(\rho\vb\vb)^n - \nabla\cdot(\rho\vb\vb)^{n+1}\right] + \frac{1}{2}\nabla\cdot(\taub^n + \taub^{n+1}) + \frac{1}{2}(\rho^n + \rho^{n+1})\gb,
 \end{equation}
 \begin{equation}
-\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr} - \delta\alpha^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1}}\right).\label{eq:div_constraint}
+\nabla\cdot\vb^{n+1} = \delta S^{n+1} + \delta S_{\rm corr} - \delta\theta^{n+1}\left(\frac{\bar{S}^{n+1} + \bar{S}_{\rm corr}}{\bar{\theta}^{n+1}}\right).\label{eq:div_constraint}
 \end{equation}
 To compute $P_0^{n+1}$ we use
 \begin{equation}
-\left(\frac{dP_0}{dt}\right)^{n+\myhalf} = \frac{P_0^{n+1} - P_0^n}{\Delta t} = \half\left(\frac{\bar S^n + \bar S_{\rm corr}}{\bar\alpha^n} + \frac{\bar S^{n+1} + \bar S_{\rm corr}}{\bar\alpha^{n+1}}\right),\label{eq:P0_update}
+\left(\frac{dP_0}{dt}\right)^{n+\myhalf} = \frac{P_0^{n+1} - P_0^n}{\Delta t} = \half\left(\frac{\bar S^n + \bar S_{\rm corr}}{\bar\theta^n} + \frac{\bar S^{n+1} + \bar S_{\rm corr}}{\bar\theta^{n+1}}\right),\label{eq:P0_update}
 \end{equation}
 We seek $S_{\rm corr}$ that causes the evolution of the thermodynamic variables to stay on the equation of 
 state.  For gases, this means,
@@ -491,8 +498,8 @@ We don't want to solve this implicitly, so we use an iterative approach that lag
 of the time-advanced quantities while updating $S_{\rm corr}$.
 
 % Note that for liquids, we are taking the limit that $\Gamma_1 \rightarrow 0$, or equivalently,
-% $\alpha\rightarrow\infty$.  Thus, $P_0$ is constant, and therefore the right-hand-side of equation 
-% (\ref{eq:P0_update}) is zero, and the term proportional to $\delta\alpha$ in 
+% $\theta\rightarrow\infty$.  Thus, $P_0$ is constant, and therefore the right-hand-side of equation 
+% (\ref{eq:P0_update}) is zero, and the term proportional to $\delta\theta$ in 
 % (\ref{eq:div_constraint}) % is zero.
 
 % The form of the system given above can fit into the framework of low Mach number algorithms we have
@@ -518,7 +525,7 @@ We are given $\vb^{\rm init}$ and $(\rho,\wb,h,T,P_0,\pi)^0$,
 where the thermodynamic variables are in equilibrium
 and $\pi^0=0$.  We compute $\vb^0$ by enforcing,
 \begin{equation}
-\nabla\cdot\vb^0 = \delta S^0 - \delta\alpha^0\frac{\bar{S}^0}{\bar{\alpha}^0} \equiv S_{\rm proj}^0
+\nabla\cdot\vb^0 = \delta S^0 - \delta\theta^0\frac{\bar{S}^0}{\bar{\theta}^0} \equiv S_{\rm proj}^0
 \end{equation}
 This involves solving the ellptic equation,
 \begin{equation}
@@ -534,14 +541,14 @@ We are given $(\vb,\rho,\wb,h,T,P_0,\pi)^n$.
 Note that in general that the thermodynamic variables are not
 necessarily on the EOS.  The time-advancement consists of:\\ \\
 {\bf Step 1:}\\ \\
-Compute $(S,\alpha,\Fb,\eta,\lambda,h_k)^n$ from $(\rho,\wb,h,P_0,T)^n$.
+Compute $(S,\theta,\Fb,\eta,\lambda,h_k)^n$ from $(\rho,\wb,h,P_0,T)^n$.
 \MarginPar{The routines in the code take in all these variables and mix the usage.  More details need to be given here.}
-Split $(S,\alpha)^n$ into average and perturbational components:
+Split $(S,\theta)^n$ into average and perturbational components:
 \begin{equation}
 S^n = \bar{S}^n + \delta S^n,
 \end{equation}
 \begin{equation}
-\alpha^n = \bar{\alpha}^n + \delta\alpha^n.
+\theta^n = \bar{\theta}^n + \delta\theta^n.
 \end{equation}
 {\bf Step 2:}\\ \\
 Compute a volume discrepancy correction:
@@ -556,20 +563,20 @@ Note: it's possible that setting $S_{\rm corr}=0$ here may cause the iterations 
 quickly, and that will be easily testable.
 Note that if the thermodynamic variables are in equilibrium, then $S_{\rm corr}=0$ regardless.\\ \\
 Set $(\vb,\rho,\wb,h,T,P_0)^{n+1,m=1} = (\vb,\rho,\wb,h,T,P_0)^n$, 
-and  $(S,\alpha,\Fb,\eta,c_p,\lambda,h_k)^{n+1,m=1} = (S,\alpha,\Fb,\eta,c_p,\lambda,h_k)^n$.\\ \\
+and  $(S,\theta,\Fb,\eta,c_p,\lambda,h_k)^{n+1,m=1} = (S,\theta,\Fb,\eta,c_p,\lambda,h_k)^n$.\\ \\
 {\bf Step 3}\\ \\
-Split $(S,\alpha)^{n+1,1}$ into average and perturbational components:
+Split $(S,\theta)^{n+1,1}$ into average and perturbational components:
 \begin{equation}
 S^{n+1,1} = \bar{S}^{n+1,1} + \delta S^{n+1,1},
 \end{equation}
 \begin{equation}
-\alpha^{n+1,1} = \bar{\alpha}^{n+1,1} + \delta\alpha^{n+1,1}.
+\theta^{n+1,1} = \bar{\theta}^{n+1,1} + \delta\theta^{n+1,1}.
 \end{equation}
 Iterate over an outer loop from $m=1$ over {\bf Steps 4-8}:\\ \\
 {\bf Step 4}\\ \\
 Pressure update:
 \begin{equation}
-P_0^{n+1,m+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right).
+P_0^{n+1,m+1} = P_0^n + \frac{\Delta t}{2}\left(\frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\theta}^n} + \frac{\bar{S}^{n+1,m} + \bar{S}_{\rm corr}}{\bar{\theta}^{n+1,m}}\right).
 \end{equation}
 {\bf Step 5}\\ \\
 Compute densities with trapezoidal-rule advective and diffusive fluxes.
@@ -584,7 +591,7 @@ Recompute enthalpy semi-implicitly.  This involves a linearized iteration
 for $\delta T$.  In this fundamental formulation, the unknowns 
 are $h^{n+1,m+1}$ and $T^{n+1,m+1}$:
 \begin{eqnarray}
-\frac{(\rho h)^{n+1,m+1} - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right]\nonumber\\
+\frac{(\rho h)^{n+1,m+1} - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\theta}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\theta}^{n+1,m}}\right]\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1}\nabla T^{n+1,m+1}\nonumber\\
 &&- \half\sum_k\nabla\cdot h_k^n\Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,m+1}\Fb_k^{n+1,m}\nonumber\\
 &&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1},
@@ -592,7 +599,7 @@ are $h^{n+1,m+1}$ and $T^{n+1,m+1}$:
 but since the heat fluxes are expressed in terms of temperature gradients, we
 need an iterative approach that linearizes the dependence of $h$ on $T$,
 \begin{eqnarray}
-\frac{\rho^{n+1,m+1}(h^{n+1,m+1,l} + c_p^{n+1,m+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right]\nonumber\\
+\frac{\rho^{n+1,m+1}(h^{n+1,m+1,l} + c_p^{n+1,m+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\theta}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\theta}^{n+1,m}}\right]\nonumber\\
 &&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla(T^{n+1,m+1,l} + \delta T)\nonumber\\
 &&\hspace{-1in} - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m},\nonumber\\
 &&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1},
@@ -600,7 +607,7 @@ need an iterative approach that linearizes the dependence of $h$ on $T$,
 which can be rearranged to solve for $\delta T$,
 \begin{eqnarray}
 \left(\frac{\rho^{n+1,m+1}c_p^{n+1,m+1,l}}{\Delta t} - \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla\right)\delta T &=& \frac{(\rho h)^n - \rho^{n+1,m+1}h^{n+1,m+1,l}}{\Delta t}\nonumber\\
-&&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\alpha}^n} + \frac{\bar{S}^{n+1,m} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m}}\right]\nonumber\\
+&&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\theta}^n} + \frac{\bar{S}^{n+1,m} + \bar{S}_{\rm corr}}{\bar{\theta}^{n+1,m}}\right]\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla T^{n+1,m+1,l}\nonumber\\
 &&\hspace{-1.25in} - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m}\nonumber\\
 &&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1}.\label{eq:deltaT}
@@ -620,13 +627,13 @@ compute $(\lambda,c_p,h_k)^{n+1,m+1,l+1}$ from
 $(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1,l+1})$,
 increment $l$, and return to {\bf Step 6a}.\\ \\
 {\bf Step 7}\\ \\
-Compute $(S,\alpha)^{n+1,m+1}$ from the ``$n+1,m+1$'' state and split them 
+Compute $(S,\theta)^{n+1,m+1}$ from the ``$n+1,m+1$'' state and split them 
 into average and perturbational components:
 \begin{equation}
 S^{n+1,m+1} = \bar{S}^{n+1,m+1} + \delta S^{n+1,m+1},
 \end{equation}
 \begin{equation}
-\alpha^{n+1,m+1} = \bar{\alpha}^{n+1,m+1} + \delta\alpha^{n+1,m+1},
+\theta^{n+1,m+1} = \bar{\theta}^{n+1,m+1} + \delta\theta^{n+1,m+1},
 \end{equation}
 Then perform a GMRES solve for $(\vb,\pi)^{n+1,m+1}$.
 \begin{eqnarray}
@@ -634,7 +641,7 @@ Then perform a GMRES solve for $(\vb,\pi)^{n+1,m+1}$.
 && + \frac{1}{2}(\rho^n + \rho^{n+1,m+1})\gb,\label{eq:Stokes}
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot\vb^{n+1,m+1} = \delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\alpha^{n+1,m+1}\left(\frac{\bar{S}^{n+1,m+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m+1}}\right).
+\nabla\cdot\vb^{n+1,m+1} = \delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\theta^{n+1,m+1}\left(\frac{\bar{S}^{n+1,m+1} + \bar{S}_{\rm corr}}{\bar{\theta}^{n+1,m+1}}\right).
 \end{equation}
 If we express the viscous stress tensor in operator form, e.g., 
 $\mathcal{A}_0^n\vb = \nabla\cdot[\eta^n(\nabla\vb + (\nabla\vb)^T)]$, 
@@ -661,7 +668,7 @@ Rewriting the Stokes system above we have:
 &&\hspace{-1.5in} - \half\left[\nabla\cdot(\rho\vb\vb)^n + \nabla\cdot(\rho\vb\vb)^{n+1,m}\right] + \half(\mathcal{A}_0^n\vb^n+\mathcal{A}_0^{n+1,m+1}\bar{\vb}^n) + \half(\rho^n + \rho^{n+1,m+1})\gb,\nonumber\\
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\alpha^{n+1,m+1}\left(\frac{\bar{S}^{n+1,m+1} + \bar{S}_{\rm corr}}{\bar{\alpha}^{n+1,m+1}}\right)\right].
+-\nabla\cdot\delta\vb = \nabla\cdot\bar{\vb}^n - \left[\delta S^{n+1,m+1} + \delta S_{\rm corr} - \delta\theta^{n+1,m+1}\left(\frac{\bar{S}^{n+1,m+1} + \bar{S}_{\rm corr}}{\bar{\theta}^{n+1,m+1}}\right)\right].
 \end{equation}
 }% end red color block
 {\bf Step 8}\\ \\
@@ -686,20 +693,13 @@ The enthalpy, mass fractions, and temperature are related by:
 \begin{equation}
 h = \sum_k w_k h_k(T).
 \end{equation}
-For an ideal gas, the thermodynamic derivatives in (\ref{eq:thermo deriv})
-reduce to,
-\begin{eqnarray}
-P_\rho = \mathcal{R} T\sum_k\frac{w_k}{m_k}, \quad
-P_T = \rho\mathcal{R}\sum_k\frac{w_k}{m_k}, \quad
-P_{w_k} = \frac{\rho\mathcal{R}T}{m_k},
-\end{eqnarray}
-and simply the coefficients in the constraint equation,
+For an ideal gas, the expansion coefficients are
 \begin{equation}
-\beta_k = \frac{1}{\rho}\left(\frac{\bar{m}}{m_k} - \frac{h_m}{c_p T}\right), \quad
-\theta = \frac{1}{\rho c_p T},
+\beta_k = -\frac{\rho\bar{m}}{m_k}, \qquad
+\alpha = -\frac{\rho}{T}
 \end{equation}
 where $\bar{m} = (\sum_k w_k/m_k)^{-1}$ is the mixture-averaged (mean) molecular mass.  Since for an ideal gas, $\Gamma_1 = \gamma = c_p/c_v$, we have
-$\alpha = 1/(\gamma P)$.
+$\theta = 1/(\gamma P)$.
 
 In this hard sphere model, we use $c_p = c_v = \sum_k 3k_b/2m_k$.
 The transport coefficients $\eta,\lambda$ and $\chi$ are evaluated using the 
@@ -741,7 +741,7 @@ temperature and pressure for component $i$.
 a(T,\wb) = \sum_i\sum_j w_iw_j\sqrt{a_i(T)a_j(T)}
 \end{equation}
 \begin{equation}
-a_i(T) = 0.42748\frac{R^2T_{c,i}^2}{m_i^2 P_{c,i}}\underbrace{\left[1 + \underbrace{\left(0.48508 + 1.5517\bar\omega_i - 0.151613\bar\omega_i^2\right)}_{s_i}\left(1-\sqrt{\frac{T}{T_{c,i}}}\right)\right]^2}_{\alpha_i(T)},
+a_i(T) = 0.42748\frac{R^2T_{c,i}^2}{m_i^2 P_{c,i}}\underbrace{\left[1 + \underbrace{\left(0.48508 + 1.5517\bar\omega_i - 0.151613\bar\omega_i^2\right)}_{s_i}\left(1-\sqrt{\frac{T}{T_{c,i}}}\right)\right]^2}_{\zeta_i(T)},
 \end{equation}
 with $\bar\omega_i$ the acentric factor for component $i$.
 \begin{equation}
@@ -766,7 +766,7 @@ with
 \frac{\partial a(T,\wb)}{\partial T} = \half \sum_i\sum_j w_i w_j\left(\sqrt{\frac{a_i(T)}{a_j(T)}}\frac{\partial a_i(T)}{\partial T} + \sqrt{\frac{a_j(T)}{a_i(T)}}\frac{\partial a_j(T)}{\partial T}\right)
 \end{equation}
 \begin{equation}
-\frac{\partial a_i(T)}{\partial T} = -0.42748\frac{R^2T_{c,i}^2s_i}{m_i^2 P_{c,i}}\sqrt{\frac{\alpha_i(T)}{T_{c,i}T}}
+\frac{\partial a_i(T)}{\partial T} = -0.42748\frac{R^2T_{c,i}^2s_i}{m_i^2 P_{c,i}}\sqrt{\frac{\zeta_i(T)}{T_{c,i}T}}
 \end{equation}
 \begin{equation}
 P_{w_k} = \left(\frac{\mathcal{R}T}{v-b(\wb)}\right)\frac{1}{m_k}

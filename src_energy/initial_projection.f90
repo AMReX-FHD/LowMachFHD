@@ -63,9 +63,9 @@ contains
     type(multifab) :: mass_fluxdiv(mla%nlevel)
     type(multifab) :: rhoh_fluxdiv(mla%nlevel)
 
-    ! delta_S^0 and delta_alpha^0
+    ! delta_S^0 and delta_theta^0
     type(multifab) :: delta_S(mla%nlevel)
-    type(multifab) :: delta_alpha(mla%nlevel)
+    type(multifab) :: delta_theta(mla%nlevel)
 
     ! S_proj
     type(multifab) :: Sproj(mla%nlevel)
@@ -78,7 +78,7 @@ contains
     type(multifab) :: phi(mla%nlevel)
 
     real(kind=dp_t) :: Sbar
-    real(kind=dp_t) :: alphabar
+    real(kind=dp_t) :: thetabar
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -97,7 +97,7 @@ contains
        call multifab_build(mass_fluxdiv(n),mla%la(n),nspecies,0)
        call multifab_build(rhoh_fluxdiv(n),mla%la(n),1       ,0)
        call multifab_build(delta_S(n)     ,mla%la(n),1       ,0)
-       call multifab_build(delta_alpha(n) ,mla%la(n),1       ,0)
+       call multifab_build(delta_theta(n) ,mla%la(n),1       ,0)
        call multifab_build(Sproj(n)       ,mla%la(n),1       ,0)
        do i=1,dm
           call multifab_build_edge(rhotot_fc(n,i)   ,mla%la(n),1,0,i)
@@ -138,24 +138,24 @@ contains
     call rhoh_fluxdiv_energy(mla,lambda,Temp,mass_flux,rhotot, &
                              rhoh_fluxdiv,dx,0.d0,the_bc_tower)
 
-    ! compute S^0 and alpha^0 (store them in delta_S and delta_alpha)
-    call compute_S_alpha(mla,delta_S,delta_alpha,mass_fluxdiv, &
+    ! compute S^0 and theta^0 (store them in delta_S and delta_theta)
+    call compute_S_theta(mla,delta_S,delta_theta,mass_fluxdiv, &
                          rhoh_fluxdiv,conc,Temp,rhotot)
 
-    ! split S and alpha into average and perturbational pieces
+    ! split S and theta into average and perturbational pieces
     ! S = Sbar + delta_S
-    ! alpha = alphabar + delta_alpha
+    ! theta = thetabar + delta_theta
     do n=1,nlevs
        Sbar     = multifab_sum_c(delta_S(n)    ,1,1) / total_volume
-       alphabar = multifab_sum_c(delta_alpha(n),1,1) / total_volume
+       thetabar = multifab_sum_c(delta_theta(n),1,1) / total_volume
        call multifab_sub_sub_s_c(delta_S(n)    ,1,Sbar    ,1,0)
-       call multifab_sub_sub_s_c(delta_alpha(n),1,alphabar,1,0)
+       call multifab_sub_sub_s_c(delta_theta(n),1,thetabar,1,0)
     end do
 
-    ! compute Sproj = delta_S - delta_alpha * Sbar /alphabar
+    ! compute Sproj = delta_S - delta_theta * Sbar /thetabar
     do n=1,nlevs
-       call multifab_copy_c(Sproj(n),1,delta_alpha(n),1,1,0)
-       call multifab_mult_mult_s_c(Sproj(n),1,-Sbar/alphabar,1,0)
+       call multifab_copy_c(Sproj(n),1,delta_theta(n),1,1,0)
+       call multifab_mult_mult_s_c(Sproj(n),1,-Sbar/thetabar,1,0)
        call multifab_plus_plus_c(Sproj(n),1,delta_S(n),1,1,0)
     end do
 
@@ -204,7 +204,7 @@ contains
        call multifab_destroy(mass_fluxdiv(n))
        call multifab_destroy(rhoh_fluxdiv(n))
        call multifab_destroy(delta_S(n))
-       call multifab_destroy(delta_alpha(n))
+       call multifab_destroy(delta_theta(n))
        call multifab_destroy(Sproj(n))
        do i=1,dm
           call multifab_destroy(rhotot_fc(n,i))
