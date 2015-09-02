@@ -213,7 +213,7 @@ Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$,
 we can rewrite 
 (\ref{eq:particle paths}) as
 \begin{equation}
-\nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{dP_o}{dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
+\nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{DP}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
 To obtain an expression for $DT/Dt$, we differentiate the enthalpy, $h=h(T,P,\wb)$, 
 along particle paths to obtain
@@ -224,7 +224,7 @@ c_p \frac{DT}{Dt}
 \end{equation}
 where $c_p = \partial h/\partial T$.  This gives
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{dP}{Dt} - \sum_kh_{k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
+\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{DP}{Dt} - \sum_kh_{k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
 \end{equation}
 From equation (\ref{eq:mass}) and continuity we have,
 \begin{equation}
@@ -234,11 +234,11 @@ and from equation (\ref{eq:enthalpy}) we have,
 \begin{equation}
 \frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right).\label{eq:DhDt}
 \end{equation}
-Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
+Substituting equations (\ref{eq:DwDt}) and (\ref{eq:DhDt}) into (\ref{eq:DTDt1}), we have
 \begin{equation}
 \frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k - \sum_kh_k(-\nabla\cdot\Fb_k + E_k) + \rho\Hext\right].\label{eq:DTDt}
 \end{equation}
-Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt})
+Substituting equations (\ref{eq:DTDt}) and (\ref{eq:DwDt}) into (\ref{eq:constraint1})
 and using $P_{w_k}/P_\rho = -\rho_{w_k}$ and $P_T/P_\rho = -\rho_T$ gives
 \begin{equation}
 \nabla\cdot\vb + \theta\frac{DP}{Dt} = \sum_k \frac{1}{\rho}\beta_k \nabla\cdot\Fb_k - \frac{1}{\rho c_p}\alpha\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k + h_kE_k\right) - \rho\Hext\right] \equiv S,\label{eq:constraint}
