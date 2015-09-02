@@ -241,42 +241,69 @@ Combining (\ref{eq:DTDt1}), (\ref{eq:DwDt}), and (\ref{eq:DhDt}) we have
 Combining equations (\ref{eq:constraint1}) and (\ref{eq:DTDt})
 and using $P_{w_k}/P_\rho = -\rho_{w_k}$ and $P_T/P_\rho = -\rho_T$ gives
 \begin{equation}
-\nabla\cdot\vb + \theta\frac{DP}{Dt} = \sum_k \frac{1}{\rho}\beta_k \nabla\cdot\Fb_k + \frac{1}{\rho c_p}\alpha\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k + h_kE_k\right) - \rho\Hext\right] \equiv S,\label{eq:constraint}
+\nabla\cdot\vb + \theta\frac{DP}{Dt} = \sum_k \frac{1}{\rho}\beta_k \nabla\cdot\Fb_k - \frac{1}{\rho c_p}\alpha\left[\nabla\cdot\Qb + \sum_k\left(\nabla\cdot h_k\Fb_k - h_k\nabla\cdot\Fb_k + h_kE_k\right) - \rho\Hext\right] \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
-\theta = \frac{1}{\rho P_\rho} + \frac{(1-\rho h_p)}{\rho c_p}\alpha, \quad
+\theta = \frac{1}{\rho P_\rho} - \frac{(1-\rho h_p)\alpha}{\rho c_p}, \quad
 \beta_k = \frac{1}{\rho}\rho_{w_k}, \quad
-\alpha = \frac{1}{\rho}\rho_T.\label{eq:thermo deriv}
+\alpha = -\frac{1}{\rho}\rho_T.\label{eq:thermo deriv}
 \end{equation}
 Note that $\beta_k$ and $\alpha$
 are the solutal and thermal expansion coefficients, respectively.
-Some complex equations of state are represented in terms of $P=P(\rho,w_k,T)$,
+Some complex equations of state 
+such as Soave-Redlich-Kwong \cite{RedlichKwong,Soave}
+are most easily represented in terms of $P=P(\rho,w_k,T)$,
 so to find the expansion coefficients we can use the triple product rule to say,
 \begin{equation}
 \rho_{w_k} = -\frac{P_{w_k}}{P_\rho}, \quad \rho_T = -\frac{P_T}{P_\rho}.
 \end{equation}
 
-In \cite{MAESTROI}, it was shown that
+To derive a simpler expression for $\theta$, we first begin with the identity
+in Kuiken,
+\begin{equation}
+c_v - c_p = \frac{\alpha^2 T}{\rho \kappa_T},\label{eq:theta_deriv_1}
+\end{equation}
+with $\kappa_T$ the isothermal compressibility,
+\begin{equation}
+\kappa_T = \frac{1}{\rho}\left.\frac{\partial\rho}{\partial P}\right|_{w,P} = \frac{1}{\rho P_\rho}.
+\end{equation}
+We can multiply (\ref{eq:theta_deriv_1}) by $\kappa_T/c_p$ to obtain
+\begin{equation}
+\frac{c_v - c_p}{c_p}\kappa_T = \frac{\alpha^2 T}{\rho c_p},
+\end{equation}
+or equivalently,
+\begin{equation}
+\frac{c_v}{c_p}\kappa_T = \kappa_T + \frac{\alpha^2 T}{\rho c_p}.
+\end{equation}
+Using the identity from Kuiken, $\alpha T = 1 - \rho h_P$, we can say,
+\begin{equation}
+\frac{c_v}{c_p}\kappa_T = \kappa_T - \frac{(1-\rho h_P)\alpha}{\rho c_p}.
+\end{equation}
+Substituting in the definition of $\kappa_T$,
+using $\gamma=c_p/c_v$ to denote the ratio of specific heats,
+and comparing to (\ref{eq:thermo deriv}) it is apparent that
+\begin{equation}
+\theta = \frac{1}{\gamma\rho P_\rho}.
+\end{equation}
+An alternate derivation can be found in the Appendix of \cite{MAESTROI},
+where it was shown that
 \begin{equation}
 \theta = \frac{1}{\Gamma_1 P},
 \end{equation}
-where $\Gamma_1 = \left(d\ln{p}/d\ln{\rho}\right)_{\rm ad}$ is the first 
+where $\Gamma_1 = \left(d\ln{P}/d\ln{\rho}\right)_{\rm ad}$ is the first 
 adiabatic exponent.  We point out in the MAESTRO papers, this term was represented
 by $\alpha$ but here we reserve $\alpha$ for the more standard thermal expansion
 coefficient.  The coefficient $\theta$ is related to the ratio of specific heats, 
 $\gamma$, via
 \begin{equation}
-\gamma = \frac{c_p}{c_v} = \frac{\Gamma_1}{\chi_\rho},
+\Gamma_1 = \gamma\chi_\rho
 \end{equation}
 where
 \begin{equation}
 \chi_\rho \equiv \left(\frac{\partial\ln{P}}{\partial\ln{\rho}}\right)_T = \frac{\rho}{P}P_\rho
 \end{equation}
-is the ``density exponent in the pressure equation of state.''
-Note that for ideal gases, $\chi_\rho=1, \Gamma_1=\gamma$, and therefore
-\begin{equation}
-\theta = \frac{1}{\gamma\rho P_\rho} = \frac{1}{\gamma P}
-\end{equation}
+is the ``density exponent in the pressure equation of state.''  Substituting
+these expressions, we see that the two definitions of $\theta$ are equivalent.\\
 
 In our low Mach number model we replace $DP/Dt$ with $dP_0/ dt$ in the 
 constraint (\ref{eq:constraint}) and enthalpy (\ref{eq:enthalpy}) equations.
