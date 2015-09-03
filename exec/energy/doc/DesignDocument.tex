@@ -51,8 +51,6 @@
 \def\taub   {\boldsymbol{\tau}}
 \def\zetab  {\boldsymbol{\zeta}}
 
-\def\Hext {H_{\rm ext}}
-
 \def\half   {\frac{1}{2}}
 \def\myhalf {\sfrac{1}{2}}
 
@@ -125,16 +123,17 @@ of future work.
 The governing conservation equations for momentum, mass, and energy for our system are:
 \begin{eqnarray}
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb,\label{eq:momentum}\\
-\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) - \nabla\cdot\Fb_i + E_i,\label{eq:mass}\\
-\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k \nabla\cdot h_k \Fb_k + \rho\Hext,\label{eq:enthalpy}
+\frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) - \nabla\cdot\Fb_i + \rho W_i,\label{eq:mass}\\
+\frac{\partial\rho h}{\partial t} &=& -\nabla\cdot(\rho h\vb) + \frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k \nabla\cdot h_k \Fb_k + \rho H,\label{eq:enthalpy}
 \end{eqnarray}
 where $\rho$ is the density, $\vb$ is the velocity, $\pi$ is the dynamic 
 (or perturbational) pressure, $\gb$ is the gravitational vector, $\rho_i=\rho w_i$ is
 the density of fluid component $i$ with $\rho = \sum_k\rho_k$ and $w_i$ the 
 concentrations (mass fractions), $P$ is the total
-pressure, $h$ is the specific enthalpy, $h_k = \partial h/\partial w_k$,
-$\Hext$ is an external heating term, $\taub$ is the stress tensor,
-$\Fb_i$ are the mass fluxes, $E_i$ are external sources/sinks that sum to zero,
+pressure, $h$ is the specific enthalpy, $h_k = \partial h/\partial w_k|_{T,P}$,
+$H$ is an external heating term, $\taub$ is the stress tensor,
+$\Fb_i$ are the mass fluxes, $W_i$ are external component density
+sources/sinks that sum to zero,
 and $\Qb$ is the heat flux.
 Starting from the fully compressible equations and expanding in Mach number shows 
 that the leading order pressure terms in Mach number must be constant in space. 
@@ -163,7 +162,7 @@ $\phib$ are the volume fractions (which for an ideal gas is equivalent to mole f
 $k_B$ is Boltzmann's constant,
 $T$ is the temperature, and $\zetab$ are thermodiffusion coefficients.  The total
 number density is the sum of the partial number densities, $n=\sum_kn_k$ with
-$n_i=\rho_i/W_i$ and $W_i$ the molecular mass of species $i$.
+$n_i=\rho_i/m_i$ and $m_i$ the molecular mass of species $i$.
 
 Equations (\ref{eq:momentum}), (\ref{eq:mass}), (\ref{eq:enthalpy})
 with $DP/Dt$ in the enthalpy equation replaced by $dP_0/dt$, and (\ref{eq:EOS})
@@ -204,44 +203,53 @@ constraint interact to control the evolution and whether they are, in some sense
 We begin by differentiating the 
 right-hand side of equation (\ref{eq:EOS}) along particle paths,
 \begin{equation}
-\frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths}
+\frac{DP}{Dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_k\frac{Dw_k}{Dt},\label{eq:particle paths}
 \end{equation}
-This statement is always true, but in our low Mach number model we wish to enforce
-that the pressure is spatially constant, yet can vary in time.
-
+\begin{equation}
+P_\rho = \left.\frac{\partial P}{\partial\rho}\right|_{T,\wb},
+\quad
+P_T = \left.\frac{\partial P}{\partial T}\right|_{\rho,\wb},
+\quad
+P_k = \left.\frac{\partial P}{\partial w_k}\right|_{\rho,T}.
+\end{equation}
 Next, by noting that by continuity $D\rho/Dt = -\rho\nabla\cdot\vb$, 
 we can rewrite 
 (\ref{eq:particle paths}) as
 \begin{equation}
-\nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{DP}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
+\nabla\cdot\vb = \frac{1}{\rho P_\rho}\left(-\frac{DP}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_k\frac{Dw_k}{Dt}\right).\label{eq:constraint1}
 \end{equation}
 To obtain an expression for $DT/Dt$, we differentiate the enthalpy, $h=h(T,P,\wb)$, 
 along particle paths to obtain
 \begin{equation}
 \frac{Dh}{Dt} = 
 c_p \frac{DT}{Dt} 
-+ h_P\frac{DP}{Dt} + \sum_k h_{k}\frac{Dw_k}{Dt}  \;\;  ,
++ h_P\frac{DP}{Dt} + \sum_k h_k\frac{Dw_k}{Dt},
 \end{equation}
-where $c_p = \partial h/\partial T$.  This gives
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{DP}{Dt} - \sum_kh_{k}\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
+c_p = \left.\frac{\partial h}{\partial T}\right|_{P,\wb},
+\quad
+h_P = \left.\frac{\partial h}{\partial P}\right|_{T,\wb}.
+\end{equation}
+This can be rearranged to give
+\begin{equation}
+\frac{DT}{Dt} = \frac{1}{c_p}\left(\frac{Dh}{Dt} - h_P\frac{DP}{Dt} - \sum_kh_k\frac{Dw_k}{Dt}\right).\label{eq:DTDt1}
 \end{equation}
 From equation (\ref{eq:mass}) and continuity we have,
 \begin{equation}
-\frac{Dw_k}{Dt} = \frac{1}{\rho}\left(-\nabla\cdot\Fb_k + E_k\right),\label{eq:DwDt}
+\frac{Dw_k}{Dt} = \frac{1}{\rho}\left(-\nabla\cdot\Fb_k + \rho W\right),\label{eq:DwDt}
 \end{equation}
 and from equation (\ref{eq:enthalpy}) we have,
 \begin{equation}
-\frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext\right).\label{eq:DhDt}
+\frac{Dh}{Dt} = \frac{1}{\rho}\left(\frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k + \rho H\right).\label{eq:DhDt}
 \end{equation}
 Substituting equations (\ref{eq:DwDt}) and (\ref{eq:DhDt}) into (\ref{eq:DTDt1}), we have
 \begin{equation}
-\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k  + \rho\Hext - \sum_kh_k(-\nabla\cdot\Fb_k + E_k)\right].\label{eq:DTDt}
+\frac{DT}{Dt} = \frac{1}{\rho c_p}\left[\left(1 - \rho h_P\right)\frac{DP}{Dt} - \nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k  + \rho H - \sum_kh_k(-\nabla\cdot\Fb_k + \rho W)\right].\label{eq:DTDt}
 \end{equation}
 Substituting equations (\ref{eq:DTDt}) and (\ref{eq:DwDt}) into (\ref{eq:constraint1})
-and using $P_{w_k}/P_\rho = -\rho_{w_k}$ and $P_T/P_\rho = -\rho_T$ gives
+and using $P_k/P_\rho = -\rho_{w_k}$ and $P_T/P_\rho = -\rho_T$ gives
 \begin{equation}
-\nabla\cdot\vb + \theta\frac{DP}{Dt} = -\sum_k \frac{1}{\rho}\beta_k\left(-\nabla\cdot\Fb_k + E_k\right) + \frac{1}{\rho c_p}\alpha\left[-\nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k  + \rho\Hext - \sum_k h_k\left(-\nabla\cdot\Fb_k + E_k\right)\right] \equiv S,\label{eq:constraint}
+\nabla\cdot\vb + \theta\frac{DP}{Dt} = -\sum_k \frac{1}{\rho}\beta_k\left(-\nabla\cdot\Fb_k + \rho W\right) + \frac{1}{\rho c_p}\alpha\left[-\nabla\cdot\Qb - \sum_k\nabla\cdot h_k\Fb_k  + \rho H - \sum_k h_k\left(-\nabla\cdot\Fb_k + \rho W\right)\right] \equiv S,\label{eq:constraint}
 \end{equation}
 \begin{equation}
 \theta = \frac{1}{\rho P_\rho} - \frac{(1-\rho h_p)\alpha}{\rho c_p}, \quad
@@ -255,7 +263,7 @@ such as Soave-Redlich-Kwong \cite{RedlichKwong,Soave}
 are most easily represented in terms of $P=P(\rho,w_k,T)$,
 so to find the expansion coefficients we can use the triple product rule to say,
 \begin{equation}
-\rho_{w_k} = -\frac{P_{w_k}}{P_\rho}, \quad \rho_T = -\frac{P_T}{P_\rho}.
+\rho_{w_k} = -\frac{P_k}{P_\rho}, \quad \rho_T = -\frac{P_T}{P_\rho}.
 \end{equation}
 
 To derive a simpler expression for $\theta$, we first begin with the identity
@@ -310,7 +318,7 @@ constraint (\ref{eq:constraint}) and enthalpy (\ref{eq:enthalpy}) equations.
 (Since we are currently assuming $P_0$ is constant in space,
 we are not allowing for pressure stratification due to gravity.)
 %\begin{equation}
-%\frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.\label{eq:particle paths2}
+%\frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_k\frac{Dw_k}{Dt}.\label{eq:particle paths2}
 %\end{equation}
 %As noted above we also make the
 %substitution $DP/Dt = dP_0/ d t$ in the enthalpy equation.
@@ -386,7 +394,7 @@ $DP/Dt$ replaced with $\partial P_0/\partial t$,
 where we analytically enforce that
 thermodynamic pressure will evolve to be consistent with the evolution of $P_0$,
 \begin{equation}
-\frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_{w_k}\frac{Dw_k}{Dt}.
+\frac{dP_0}{dt} = P_\rho\frac{D\rho}{Dt} + P_T\frac{DT}{Dt} + \sum_kP_k\frac{Dw_k}{Dt}.
 \end{equation}
 This equation was shown to be analytically equivalent to equation (\ref{eq:constraint}):
 \begin{equation}
@@ -443,7 +451,7 @@ the current solution drifts using $\delta S_{\rm corr}$ the previous iteration.
 \section{Heat Flux Integration Strategy}
 Recall the form of the enthalpy equation we are interested in:
 \begin{equation}
-\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt} + \nabla\cdot\lambda\nabla T - \sum_k\nabla\cdot h_k\Fb_k + \rho\Hext.
+\frac{\partial(\rho h)}{\partial t} = -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt} + \nabla\cdot\lambda\nabla T - \sum_k\nabla\cdot h_k\Fb_k + \rho H.
 \end{equation}
 In our time-advancement scheme, we want to handle the thermal diffusion semi-implicitly.
 The details are given in Section {\ref{Sec:Time-Advancement Strategy}} but for ease
@@ -461,7 +469,7 @@ Let's assume we want to form an iterative update to $h$ using
 \frac{\rho^{n+1}h^{n+1,l+1} - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla T^{n+1,l+1}\nonumber\\
 && - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,l}\Fb_k^{n+1,l}\nonumber\\
-&& + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,l}.\label{eq:temp form}
+&& + \half(\rho H)^n + \half(\rho H)^{n+1,l}.\label{eq:temp form}
 \end{eqnarray}
 \\
 We start with initial guesses $(T,h)^{n+1,l=1} = (T,h)^n$.\\ \\
@@ -478,7 +486,7 @@ Substituting (\ref{eq:delta T}) and (\ref{eq:delta h}) into (\ref{eq:temp form})
 \frac{\rho^{n+1}(h^{n+1,l} + c_p^{n+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& -\nabla\cdot(\rho h\vb) + \frac{dP_0}{dt}\nonumber\\
 &&\hspace{-0.5in}+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,l}\nabla(T^{n+1,l} + \delta T)\nonumber\\
 &&\hspace{-0.5in} - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,l} \Fb_k^{n+1,l}\nonumber\\
-&&\hspace{-0.5in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,l}.
+&&\hspace{-0.5in} + \half(\rho H)^n + \half(\rho H)^{n+1,l}.
 \end{eqnarray}
 We solve this implicitly for $\delta T$, then compute $T^{n+1,l+1}$
 using (\ref{eq:delta T}) and compute $h^{n+1,l+1}$ using the EOS.
@@ -492,14 +500,14 @@ be split into average and perturbational components using
 where $\bar\phi$ is constant in space.\\ \\
 The discretizations we would like to solve are as follows.  To compute $\rho_i^{n+1}$ we use
 \begin{equation}
-\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} - \nabla\cdot\Fb_i^n - \nabla\cdot\Fb_i^{n+1} + E_i^n + E_i^{n+1}\right].
+\frac{\rho_i^{n+1} - \rho_i^n}{\Delta t} = \half\left[-\nabla\cdot(\rho_i\vb)^n -\nabla\cdot(\rho_i\vb)^{n+1} - \nabla\cdot\Fb_i^n - \nabla\cdot\Fb_i^{n+1} + (\rho W_i)^n + (\rho W_i)^{n+1}\right].
 \end{equation}
 To compute $h^{n+1}$, we use
 \begin{eqnarray}
 \frac{(\rho h)^{n+1} - (\rho h)^n}{\Delta t} &=& -\half\nabla\cdot(\rho h\vb)^n - \half\nabla\cdot(\rho h\vb)^{n+1} + \left(\frac{dP_0}{dt}\right)^{n+\myhalf}\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1}\nabla T^{n+1}\nonumber\\
 &&- \half\sum_k\nabla\cdot h_k^n\Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1}\Fb_k^{n+1}\nonumber\\
-&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1},
+&&+ \half(\rho H)^n + \half(\rho H)^{n+1},
 \end{eqnarray}
 To compute $\vb^{n+1}$ and the Lagrance multiplier $\pi^{n+\myhalf}$ we use
 \begin{equation}
@@ -621,7 +629,7 @@ are $h^{n+1,m+1}$ and $T^{n+1,m+1}$:
 \frac{(\rho h)^{n+1,m+1} - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\theta}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\theta}^{n+1,m}}\right]\nonumber\\
 &&+ \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1}\nabla T^{n+1,m+1}\nonumber\\
 &&- \half\sum_k\nabla\cdot h_k^n\Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,m+1}\Fb_k^{n+1,m}\nonumber\\
-&&+ \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1},
+&&+ \half(\rho H)^n + \half(\rho H)^{n+1,m+1},
 \end{eqnarray}
 but since the heat fluxes are expressed in terms of temperature gradients, we
 need an iterative approach that linearizes the dependence of $h$ on $T$,
@@ -629,7 +637,7 @@ need an iterative approach that linearizes the dependence of $h$ on $T$,
 \frac{\rho^{n+1,m+1}(h^{n+1,m+1,l} + c_p^{n+1,m+1,l}\delta T) - (\rho h)^n}{\Delta t} &=& \half\left[-\nabla\cdot(\rho h\vb)^n -\nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}}{\bar{\theta}^n} + \frac{\bar{S}^{n+1,m}+ \bar{S}_{\rm corr}}{\bar{\theta}^{n+1,m}}\right]\nonumber\\
 &&\hspace{-1in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla(T^{n+1,m+1,l} + \delta T)\nonumber\\
 &&\hspace{-1in} - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m},\nonumber\\
-&&\hspace{-1in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1},
+&&\hspace{-1in} + \half(\rho H)^n + \half(\rho H)^{n+1,m+1},
 \end{eqnarray}
 which can be rearranged to solve for $\delta T$,
 \begin{eqnarray}
@@ -637,7 +645,7 @@ which can be rearranged to solve for $\delta T$,
 &&\hspace{-1.25in} + \half\left[-\nabla\cdot(\rho h\vb)^n - \nabla\cdot(\rho h\vb)^{n+1,m} + \frac{\bar{S}^n + \bar{S}_{\rm corr}^n}{\bar{\theta}^n} + \frac{\bar{S}^{n+1,m} + \bar{S}_{\rm corr}}{\bar{\theta}^{n+1,m}}\right]\nonumber\\
 &&\hspace{-1.25in} + \half\nabla\cdot\lambda^n\nabla T^n + \half\nabla\cdot\lambda^{n+1,m+1,l}\nabla T^{n+1,m+1,l}\nonumber\\
 &&\hspace{-1.25in} - \half\sum_k\nabla\cdot h_k^n \Fb_k^n - \half\sum_k\nabla\cdot h_k^{n+1,m+1,l} \Fb_k^{n+1,m}\nonumber\\
-&&\hspace{-1.25in} + \half(\rho\Hext)^n + \half(\rho\Hext)^{n+1,m+1}.\label{eq:deltaT}
+&&\hspace{-1.25in} + \half(\rho H)^n + \half(\rho H)^{n+1,m+1}.\label{eq:deltaT}
 \end{eqnarray}
 To proceed, we set $(h,T,\lambda,c_p,h_k)^{n+1,m+1,l=1} = (h,T,\lambda,c_p,h_k)^{n+1,m}$
 and iterate over an inner loop from $l=1$ over {\bf Steps 6a-c}:\\ \\
@@ -739,7 +747,7 @@ the transport coefficients.
 The problem setup is a three-dimensional enclosed domain (solid impermeable 
 walls on each side) of 1~cm$^3$ initially at room temperature and pressure
 ($T=273$~K, $P=1.01325\times 10^6$~Ba).  The initial mass fraction of each component
-is $w_k = 0.25$.  There is an external heating of $\Hext=10^{10}e^{-100r^2}$~erg/(g-s),
+is $w_k = 0.25$.  There is an external heating of $H=10^{10}e^{-100r^2}$~erg/(g-s),
 where $r$ is the distance to the center of the domain.  We perform a convergence
 study using three different resolutions, with spatial and temporal refinement
 factors of 2 between simulations.  For the finest simulation, we use a grid
@@ -796,7 +804,7 @@ with
 \frac{\partial a_i(T)}{\partial T} = -0.42748\frac{R^2T_{c,i}^2s_i}{m_i^2 P_{c,i}}\sqrt{\frac{\zeta_i(T)}{T_{c,i}T}}
 \end{equation}
 \begin{equation}
-P_{w_k} = \left(\frac{\mathcal{R}T}{v-b(\wb)}\right)\frac{1}{m_k}
+P_k = \left(\frac{\mathcal{R}T}{v-b(\wb)}\right)\frac{1}{m_k}
 +\frac{\mathcal{R}Tb_k\sum_i\frac{w_i}{m_i}}{[v-b(\wb)]^2}
 - \frac{v(v+b(\wb))\frac{\partial a(T,\wb)}{\partial w_k} - a(T,\wb)v\frac{\partial b(\wb)}{\partial w_k}}{[v(v+b(\wb))]^2},
 \end{equation}
