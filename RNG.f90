@@ -5,7 +5,7 @@ module BoxLibRNGs
    implicit none
    public
    
-   integer, parameter, private :: dp=kind(0.0d0)
+   integer, parameter, private :: dp=kind(0.0d0), sp=kind(0.0)
    
    ! These are written in C and part of BoxLib
    interface SeedRNG_C
@@ -41,6 +41,8 @@ module BoxLibRNGs
          import
          real(dp), intent(out) :: number
       end subroutine   
+      
+      module procedure genrand_sp
    end interface
       
    interface NormalRNG  ! The Fortran version of this is below and may be faster
@@ -48,8 +50,25 @@ module BoxLibRNGs
          ! Returns a normally-distributed number with mean 0 and variance 1
          import
          real(dp), intent(out) :: number
-      end subroutine   
+      end subroutine 
+      
+      module procedure genrandn_sp  
    end interface
+
+   interface UniformRNGs  ! The Fortran version of this is below and may be faster
+      module procedure UniformRNGs_sp
+      module procedure UniformRNGs_dp
+   end interface
+
+   interface NormalRNGs  ! The Fortran version of this is below and may be faster
+      module procedure NormalRNGs_sp
+      module procedure NormalRNGs_dp
+   end interface
+   
+   interface PoissonNumber
+      module procedure PoissonNumber_sp
+      module procedure PoissonNumber_dp
+   end interface   
 
 contains ! It is likely that vectorized versions will do better here
 
@@ -66,9 +85,27 @@ contains ! It is likely that vectorized versions will do better here
       
       call SeedRNG_C(seed)
 
-   end subroutine SeedRNG
+   end subroutine
 
-  subroutine UniformRNGs(numbers, n_numbers)
+   subroutine genrand_sp(number)
+      ! Returns pseudorandom number in interval [0,1).
+      real(sp), intent(out) :: number
+      
+      real(dp) :: number_dp
+      call genrand(number_dp)
+      number=number_dp
+   end subroutine   
+
+   subroutine genrandn_sp(number)
+      ! Returns pseudorandom number in interval [0,1).
+      real(sp), intent(out) :: number
+      
+      real(dp) :: number_dp
+      call genrandn(number_dp)
+      number=number_dp
+   end subroutine   
+
+  subroutine UniformRNGs_dp(numbers, n_numbers)
     integer, intent(in) :: n_numbers
     real(dp), intent(out) :: numbers(n_numbers)
 
@@ -78,9 +115,21 @@ contains ! It is likely that vectorized versions will do better here
        call UniformRNG(numbers(i)) ! Marsenne-Twister in C
     end do   
 
-  end subroutine UniformRNGs
+  end subroutine
 
-  subroutine NormalRNGs(numbers, n_numbers)
+  subroutine UniformRNGs_sp(numbers, n_numbers)
+    integer, intent(in) :: n_numbers
+    real(sp), intent(out) :: numbers(n_numbers)
+
+    integer :: i
+
+    do i=1, n_numbers
+       call UniformRNG(numbers(i)) ! Marsenne-Twister in C
+    end do   
+
+  end subroutine
+
+  subroutine NormalRNGs_dp(numbers, n_numbers)
     integer, intent(in) :: n_numbers
     real(dp), intent(out) :: numbers(n_numbers)
 
@@ -90,7 +139,19 @@ contains ! It is likely that vectorized versions will do better here
        call NormalRNG(numbers(i))
     end do   
 
-  end subroutine NormalRNGs
+  end subroutine
+
+  subroutine NormalRNGs_sp(numbers, n_numbers)
+    integer, intent(in) :: n_numbers
+    real(sp), intent(out) :: numbers(n_numbers)
+
+    integer :: i
+
+    do i=1, n_numbers
+       call NormalRNG(numbers(i))
+    end do   
+
+  end subroutine 
 
   subroutine NormalRNG_Fortran(invnormdist)
       ! This is the Fortran equivalent of the C blinvnormdist, just for the record
@@ -149,13 +210,21 @@ contains ! It is likely that vectorized versions will do better here
   call UniformRNG(u)
   p = f*(u-0.5_dp)
 
-  end subroutine NormalRNGFast
+  end subroutine 
 
- SUBROUTINE PoissonNumber(number,mean)
+ SUBROUTINE PoissonNumber_dp(number,mean)
     INTEGER, INTENT(OUT) :: number
     REAL(dp), INTENT(IN) :: mean
 
     number=random_Poisson(mu=real(mean), first=.true.)
+
+ END SUBROUTINE
+
+ SUBROUTINE PoissonNumber_sp(number,mean)
+    INTEGER, INTENT(OUT) :: number
+    REAL(sp), INTENT(IN) :: mean
+
+    number=random_Poisson(mu=mean, first=.true.)
 
  END SUBROUTINE
   
