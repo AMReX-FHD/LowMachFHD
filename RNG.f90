@@ -25,7 +25,6 @@ module BoxLibRNGs
 !      end subroutine
 !   end interface   
 
-   ! Donev: THIS SEEMS BROKEN -- FIX IT
    interface UniformInteger
       ! void genrandint (unsigned long int *r, unsigned long int n)
       subroutine genrandint(number, range) bind(c)
@@ -56,19 +55,19 @@ module BoxLibRNGs
       module procedure genrandn_sp  
    end interface
 
-   interface UniformRNGs  ! The Fortran version of this is below and may be faster
+   interface UniformRNGVec  ! The Fortran version of this is below and may be faster
       module procedure UniformRNGs_sp
-      module procedure UniformRNGs_dp
+      module procedure UniformRNGs
    end interface
 
-   interface NormalRNGs  ! The Fortran version of this is below and may be faster
+   interface NormalRNGsVec  ! The Fortran version of this is below and may be faster
       module procedure NormalRNGs_sp
-      module procedure NormalRNGs_dp
+      module procedure NormalRNGs
    end interface
    
-   interface PoissonNumber
+   interface PoissonNumberVec
       module procedure PoissonNumber_sp
-      module procedure PoissonNumber_dp
+      module procedure PoissonNumber
    end interface   
 
 contains ! It is likely that vectorized versions will do better here
@@ -110,7 +109,7 @@ contains ! It is likely that vectorized versions will do better here
       number=number_dp
    end subroutine   
 
-  subroutine UniformRNGs_dp(numbers, n_numbers)
+  subroutine UniformRNGs(numbers, n_numbers)
     integer, intent(in) :: n_numbers
     real(dp), intent(out) :: numbers(n_numbers)
 
@@ -134,7 +133,7 @@ contains ! It is likely that vectorized versions will do better here
 
   end subroutine
 
-  subroutine NormalRNGs_dp(numbers, n_numbers)
+  subroutine NormalRNGs(numbers, n_numbers)
     integer, intent(in) :: n_numbers
     real(dp), intent(out) :: numbers(n_numbers)
 
@@ -217,7 +216,7 @@ contains ! It is likely that vectorized versions will do better here
 
   end subroutine 
 
- SUBROUTINE PoissonNumber_dp(number,mean)
+ SUBROUTINE PoissonNumber(number,mean)
     INTEGER, INTENT(OUT) :: number
     REAL(dp), INTENT(IN) :: mean
 
