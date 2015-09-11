@@ -113,11 +113,12 @@ unsigned long genrandbase ()
     return(y);
 }
 
-void genrand (double* rn)
+void genrand (double* rn) /* Largest returned number should be 0.999999999767169 */
 {
     unsigned long y;
     y = genrandbase ();
-    *rn = ( (double)y * 2.3283064365386963e-10 ); /* reals: [0,1)-interval */
+    /* Donev: Original value below was 2.3283064365386963e-10 but I added more digits of 2^(-32) */
+    *rn = ( (double)y * 2.32830643653869628906e-010 ); /* reals: [0,1)-interval */    
 }
 
 /* A. Donev addeed this by copying the code from the gsl library's function gsl_rng_uniform_int */

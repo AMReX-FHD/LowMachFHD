@@ -25,8 +25,9 @@ module BoxLibRNGs
 !      end subroutine
 !   end interface   
 
+   ! Donev: THIS SEEMS BROKEN -- FIX IT
    interface UniformInteger
-      ! void genrandint (const gsl_rng * r, unsigned long int n)
+      ! void genrandint (unsigned long int *r, unsigned long int n)
       subroutine genrandint(number, range) bind(c)
          ! Returns an integer uniformly distributed in the range [1,range]
          import
@@ -92,8 +93,12 @@ contains ! It is likely that vectorized versions will do better here
       real(sp), intent(out) :: number
       
       real(dp) :: number_dp
+      
       call genrand(number_dp)
       number=number_dp
+      ! In single precision, we may get 1.0 here so we need to do some hack      
+      if(number>=1.0) number=number-epsilon(number)
+      
    end subroutine   
 
    subroutine genrandn_sp(number)
