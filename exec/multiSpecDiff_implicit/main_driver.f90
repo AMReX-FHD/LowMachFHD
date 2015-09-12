@@ -3,44 +3,17 @@ subroutine main_driver()
   use boxlib
   use bl_IO_module
   use ml_layout_module
-  use init_lowmach_module
-  use init_temp_module
-  use compute_mixture_properties_module
-  use initial_projection_module
-  use write_plotfileLM_module
-  use advance_timestep_overdamped_module
-  use advance_timestep_inertial_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
-  use analysis_module
-  use analyze_spectra_module
-  use div_and_grad_module
-  use eos_check_module
-  use estdt_module
-  use stag_mg_layout_module
-  use macproject_module
-  use stochastic_mass_fluxdiv_module
-  use stochastic_m_fluxdiv_module
-  use fill_umac_ghost_cells_module
-  use fill_rho_ghost_cells_module
+  use stochastic_n_fluxdiv_module
+  use diffusive_n_fluxdiv_module
+  use write_plotfile_n_module
   use ParallelRNGs 
-  use mass_flux_utilities_module
-  use compute_HSE_pres_module
-  use convert_stag_module
-  use convert_rhoc_to_c_module
-  use convert_m_to_umac_module
-  use sum_momenta_module
-  use checkpoint_module
-  use project_onto_eos_module
-  use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
-                                  max_grid_size, n_steps_save_stats, n_steps_skip, &
-                                  plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
-                                  probin_common_init, print_int, project_eos_int, &
-                                  fixed_dt, max_step, cfl
-  use probin_multispecies_module, only: nspecies, Dbar, &
-                                        start_time, &
-                                        probin_multispecies_init
+  use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
+                                  plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
+                                  probin_common_init, fixed_dt, max_step
+  use probin_multispecies_module, only: nspecies, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
 
   use fabio_module
@@ -52,25 +25,28 @@ subroutine main_driver()
 
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t)              :: dt,time,runtime1,runtime2,Dbar_max,dt_diffusive
-  integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,n_Dbar
+  real(kind=dp_t)              :: dt,time,runtime1,runtime2,max
+  integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,comp
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
   type(bc_tower)               :: the_bc_tower
   logical, allocatable         :: pmask(:)
   
-  ! will be allocated on nlevels
-  type(multifab), allocatable  :: n_old(:)
-  type(multifab), allocatable  :: n_new(:)
-  type(multifab), allocatable  :: diff_fluxdiv(:)
-  type(multifab), allocatable  :: stoch_fluxdiv(:)
+  type(multifab), allocatable :: n_old(:)
+  type(multifab), allocatable :: n_new(:)
+  type(multifab), allocatable :: diff_fluxdiv(:)
+  type(multifab), allocatable :: stoch_fluxdiv(:)
+  type(multifab), allocatable :: diff_coef_face(:,:)
+
+  ! for multigrid solver; (alpha - div beta grad) phi = rhs
+  type(multifab), allocatable :: alpha(:)
+  type(multifab), allocatable :: rhs(:)
+  type(multifab), allocatable :: phi(:)
+  type(multifab), allocatable :: beta(:,:)
 
   ! For HydroGrid
-  integer :: narg, farg, un, n_rngs
-  character(len=128) :: fname
-  logical :: lexist
-  logical :: nodal_temp(3)
+  integer :: n_rngs
   
   !==============================================================
   ! Initialization
@@ -96,6 +72,7 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(n_old(nlevs),n_new(nlevs))
   allocate(diff_fluxdiv(nlevs),stoch_fluxdiv(nlevs))
+  allocate(diff_coef_face(nlevs,dm))
 
   ! set grid spacing at each level
   ! the grid spacing is the same in each direction
@@ -182,11 +159,25 @@ subroutine main_driver()
         call multifab_build(n_old(n)        ,mla%la(n),nspecies,ng_s) 
         call multifab_build(diff_fluxdiv(n) ,mla%la(n),nspecies,0) 
         call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0) 
+        do i=1,dm
+           call multifab_build_edge(diff_coef_face(n,i),mla%la(n),nspecies,0,i)
+        end do
+        ! for multigrid solver; (alpha - div beta grad) phi = rhs
+        call multifab_build(alpha(n),mla%la(n),1,0)
+        call multifab_build(rhs(n)  ,mla%la(n),1,0)
+        call multifab_build(phi(n)  ,mla%la(n),1,1) 
+        do i=1,dm
+           call multifab_build_edge(beta(n,i),mla%la(n),1,0,i)
+        end do
      end do
 
   end if
 
   deallocate(pmask)
+
+  ! allocate and build multifabs that will contain random numbers
+  n_rngs = 1
+  call init_mass_stochastic(mla,n_rngs)
 
   !=======================================================
   ! Setup boundary condition bc_tower
@@ -195,17 +186,14 @@ subroutine main_driver()
   ! bc_tower structure in memory
   ! 1:dm = velocity
   ! dm+1 = pressure
-  ! dm+2 = scal_bc_comp = rhotot
-  ! scal_bc_comp+1 = c_i
-  ! scal_bc_comp+nspecies+1 = molfrac or massfrac (dimensionless fractions)
-  ! scal_bc_comp+2*nspecies+1 = temp_bc_comp = temperature
-  ! scal_bc_comp+2*nspecies+2 = tran_bc_comp = diffusion coefficients (eta,kappa,chi)
+  ! dm+2 = scal_bc_comp (for n_i)
+  ! scal_bc_comp+nspecies = tran_bc_comp = diffusion coefficients
   ! It may be better if each transport coefficient has its own BC code?
   ! I think the only place this is used is average_cc_to_node/face/edge
   ! I cannot right now foresee a case where different values would be used in different places
   ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
-                     num_scal_bc_in=2*nspecies+2, &
+                     num_scal_bc_in=nspecies, &
                      num_tran_bc_in=1)
 
   do n=1,nlevs
@@ -213,18 +201,13 @@ subroutine main_driver()
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
   end do
 
-  ! these quantities are populated here and defined in bc.f90
-  c_bc_comp   = scal_bc_comp + 1
-  mol_frac_bc_comp   = scal_bc_comp + nspecies + 1
-  temp_bc_comp       = scal_bc_comp + 2*nspecies + 1
-
-  ! allocate and build multifabs that will contain random numbers
-  n_rngs = 1
-  call init_mass_stochastic(mla,n_rngs)
-
   !=====================================================================
   ! Initialize values
   !=====================================================================
+
+  do n=1,nlevs
+     call multifab_setval(n_old(n),1.d0,all=.true.)
+  end do
 
   if (restart .lt. 0) then
 
@@ -234,6 +217,11 @@ subroutine main_driver()
         call bl_error("Need to define what we mean by CFL time step")
      end if
      
+  end if
+
+  ! write a plotfile
+  if (plot_int .gt. 0) then
+     call write_plotfile_n(mla,n_old,dx,0.d0,0)
   end if
 
   !=======================================================
@@ -256,31 +244,90 @@ subroutine main_driver()
      ! fill random flux multifabs with new random numbers
      call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
-     ! compute diffusive flux divergence
+     ! compute the diffusion coefficients (for now just setting each to a different constant)
+     do n=1,nlevs
+        do i=1,dm
+           do comp=1,nspecies
+              call multifab_setval_c(diff_coef_face(n,i),dble(comp),comp,1,all=.true.)
+           end do
+        end do
+     end do
+
+     ! compute diffusive flux diverge
+     call diffusive_n_fluxdiv(mla,n_old,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
 
      ! compute stochastic flux divergence
+     call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,the_bc_tower)
 
      ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
      !                   + (dt/2)(div D_k grad n_k)^n+1
-     !                   +  dt    div (sqrt(2 D_k n_k) Z)
+     !                   +  dt    div (sqrt(2 D_k n_k) Z)^n
+     ! 
+     ! in operator form
+     !
+     ! (I - (dt/2) div D_k grad)n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
+     !                                            +  dt    div (sqrt(2 D_k n_k) Z)^n
+     !
+     
+     do comp=1,nspecies
 
-     ! form RHS for implicit system
+        ! alpha = 1
+        ! beta = (dt/2)*D_k
+        do n=1,nlevs
+           call multifab_setval(alpha(n),1.d0,all=.true.)
+           do i=1,dm
+              call multifab_copy_c(beta(n,i),1,diff_coef_face(n,i),comp,1,0)
+              call multifab_mult_mult_s(beta(n,i),0.5d0*fixed_dt)
+           end do
+        end do
 
-     ! solve the implicit system
+        ! rhs = n_k^n + (dt/2)(div D_k grad n_k)^n
+        !             +  dt    div (sqrt(2 D_k n_k) Z)^n
+        do n=1,nlevs
+           call multifab_copy_c(phi(n),1,diff_fluxdiv(n),comp,1,0)
+           call multifab_mult_mult_s(phi(n),0.5d0)
+           call multifab_plus_plus_c(phi(n),1,stoch_fluxdiv(n),comp,1,0)
+           call multifab_mult_mult_s(phi(n),fixed_dt)
+           call multifab_plus_plus_c(phi(n),1,n_old(n),comp,1,0)
+        end do
+
+        ! solve the implicit system
+
+        ! copy solution into n_new
+        do n=1,nlevs
+           call multifab_copy_c(n_new(n),comp,phi(n),1,1,0)
+        end do
+
+     end do
+
+     do n=1,nlevs
+        call multifab_fill_boundary(n_new(n))
+     end do
 
 
-      time = time + dt
+     time = time + dt
 
       if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+        if (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) then
            print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
+        end if
       end if
 
       runtime2 = parallel_wtime() - runtime1
       call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
       if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+        if (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) then
            print*,'Time to advance timestep: ',runtime1,' seconds'
+        end if
+      end if
+
+      ! write a plotfile
+      if (plot_int .gt. 0 .and. mod(init_step,plot_int) .eq. 0) then
+         call write_plotfile_n(mla,n_new,dx,time,istep)
+      end if
+
+      if (chk_int .gt. 0 .and. mod(init_step,chk_int) .eq. 0) then
+
       end if
 
       ! set old state to new state
@@ -297,6 +344,19 @@ subroutine main_driver()
   call destroy_mass_stochastic(mla)
 
   do n=1,nlevs
+     call multifab_destroy(n_new(n))
+     call multifab_destroy(n_old(n))
+     call multifab_destroy(diff_fluxdiv(n))
+     call multifab_destroy(stoch_fluxdiv(n))
+     do i=1,dm
+        call multifab_destroy(diff_coef_face(n,i))
+     end do
+     call multifab_destroy(alpha(n))
+     call multifab_destroy(rhs(n))
+     call multifab_destroy(phi(n))
+     do i=1,dm
+        call multifab_destroy(beta(n,i))
+     end do
   end do
 
   call destroy(mla)

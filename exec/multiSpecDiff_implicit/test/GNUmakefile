@@ -14,6 +14,7 @@ MKVERBOSE := t
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
+include ../GPackage.mak
 VPATH_LOCATIONS += ..
 
 include $(STAGGERED_HOME)/src_multiSpec/GPackage.mak
