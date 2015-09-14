@@ -5,16 +5,18 @@ subroutine main_driver()
   use ml_layout_module
   use define_bc_module
   use bc_module
+  use bndry_reg_module
   use multifab_physbc_module
   use stochastic_n_fluxdiv_module
   use diffusive_n_fluxdiv_module
   use write_plotfile_n_module
+  use ml_solve_module
   use ParallelRNGs 
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                   plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
                                   probin_common_init, fixed_dt, max_step
   use probin_multispecies_module, only: nspecies, start_time, probin_multispecies_init
-  use probin_gmres_module, only: probin_gmres_init
+  use probin_gmres_module, only: probin_gmres_init, mg_verbose, cg_verbose
 
   use fabio_module
 
@@ -45,6 +47,9 @@ subroutine main_driver()
   type(multifab), allocatable :: phi(:)
   type(multifab), allocatable :: beta(:,:)
 
+  ! for diffusion multigrid - not used but needs to be passed in
+  type(bndry_reg), allocatable :: fine_flx(:)
+
   ! For HydroGrid
   integer :: n_rngs
   
@@ -74,6 +79,7 @@ subroutine main_driver()
   allocate(diff_fluxdiv(nlevs),stoch_fluxdiv(nlevs))
   allocate(diff_coef_face(nlevs,dm))
   allocate(alpha(nlevs),rhs(nlevs),phi(nlevs),beta(nlevs,dm))
+  allocate(fine_flx(2:mla%nlevel))
 
   ! set grid spacing at each level
   ! the grid spacing is the same in each direction
@@ -170,6 +176,14 @@ subroutine main_driver()
         do i=1,dm
            call multifab_build_edge(beta(n,i),mla%la(n),1,0,i)
         end do
+     end do
+
+     ! stores beta*grad phi/dx_fine on coarse-fine interfaces
+     ! this gets computed inside of ml_cc_solve
+     ! we pass it back out because some algorithms (like projection methods) 
+     ! use this information
+     do n = 2,nlevs
+        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
      end do
 
   end if
@@ -285,14 +299,23 @@ subroutine main_driver()
         ! rhs = n_k^n + (dt/2)(div D_k grad n_k)^n
         !             +  dt    div (sqrt(2 D_k n_k) Z)^n
         do n=1,nlevs
-           call multifab_copy_c(phi(n),1,diff_fluxdiv(n),comp,1,0)
-           call multifab_mult_mult_s(phi(n),0.5d0)
-           call multifab_plus_plus_c(phi(n),1,stoch_fluxdiv(n),comp,1,0)
-           call multifab_mult_mult_s(phi(n),fixed_dt)
-           call multifab_plus_plus_c(phi(n),1,n_old(n),comp,1,0)
+           call multifab_copy_c(rhs(n),1,diff_fluxdiv(n),comp,1,0)
+           call multifab_mult_mult_s(rhs(n),0.5d0)
+           call multifab_plus_plus_c(rhs(n),1,stoch_fluxdiv(n),comp,1,0)
+           call multifab_mult_mult_s(rhs(n),fixed_dt)
+           call multifab_plus_plus_c(rhs(n),1,n_old(n),comp,1,0)
+        end do
+
+        ! initial guess for phi is n_k^n
+        do n=1,nlevs
+           call multifab_copy_c(phi(n),1,n_old(n),comp,1,1)
         end do
 
         ! solve the implicit system
+        call ml_cc_solve(mla,rhs,phi,fine_flx,alpha,beta,dx, &
+                         the_bc_tower,scal_bc_comp+comp-1, &
+                         verbose=mg_verbose, &
+                         cg_verbose=cg_verbose)
 
         ! copy solution into n_new
         do n=1,nlevs
@@ -358,6 +381,10 @@ subroutine main_driver()
      do i=1,dm
         call multifab_destroy(beta(n,i))
      end do
+  end do
+
+  do n = 2,nlevs
+     call bndry_reg_destroy(fine_flx(n))
   end do
 
   call destroy(mla)
