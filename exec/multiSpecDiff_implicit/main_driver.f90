@@ -25,7 +25,7 @@ subroutine main_driver()
 
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t)              :: dt,time,runtime1,runtime2,max
+  real(kind=dp_t)              :: dt,time,runtime1,runtime2
   integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,comp
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
@@ -73,6 +73,7 @@ subroutine main_driver()
   allocate(n_old(nlevs),n_new(nlevs))
   allocate(diff_fluxdiv(nlevs),stoch_fluxdiv(nlevs))
   allocate(diff_coef_face(nlevs,dm))
+  allocate(alpha(nlevs),rhs(nlevs),phi(nlevs),beta(nlevs,dm))
 
   ! set grid spacing at each level
   ! the grid spacing is the same in each direction

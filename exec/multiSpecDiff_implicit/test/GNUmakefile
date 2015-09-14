@@ -4,7 +4,7 @@ BOXLIB_HOME := ../../../../../BoxLib
 HYDROLIB_HOME := ../../../../HydroGrid
 STAGGERED_HOME := ../../..
 
-NDEBUG    := t
+NDEBUG    := 
 MPI       := t
 OMP       :=
 PROF      :=
