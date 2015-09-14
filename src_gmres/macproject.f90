@@ -48,8 +48,6 @@ contains
     type(multifab)  :: zero_fab(mla%nlevel)
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
     real(kind=dp_t) :: umac_norm(mla%nlevel)
-    real(kind=dp_t) :: rel_solver_eps
-    real(kind=dp_t) :: abs_solver_eps
     integer         :: dm,i,n,nlevs
     logical         :: full_solve
 
@@ -370,16 +368,9 @@ contains
     type(bc_tower ), intent(in   ) :: the_bc_tower
 
     ! local
-    integer :: d, dm, n, nlevs
+    integer :: dm, n, nlevs
     integer :: max_nlevel, smoother, nub, cycle_type, bottom_max_iter
     real(dp_t) :: bottom_solver_eps
-    real(dp_t) ::  xa(mla%dim),  xb(mla%dim)
-    real(dp_t) :: pxa(mla%dim), pxb(mla%dim)
-
-    type(multifab), allocatable :: cell_coeffs(:)
-    type(multifab), allocatable :: face_coeffs(:,:)
-
-    type(layout  ) :: la
 
     logical :: nodal_flag(mla%dim)
 
