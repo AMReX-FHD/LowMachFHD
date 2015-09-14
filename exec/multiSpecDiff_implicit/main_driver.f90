@@ -7,6 +7,7 @@ subroutine main_driver()
   use bc_module
   use bndry_reg_module
   use multifab_physbc_module
+  use init_n_module
   use stochastic_n_fluxdiv_module
   use diffusive_n_fluxdiv_module
   use write_plotfile_n_module
@@ -220,8 +221,9 @@ subroutine main_driver()
   ! Initialize values
   !=====================================================================
 
+  call init_n(mla,n_old,dx)
   do n=1,nlevs
-     call multifab_setval(n_old(n),1.d0,all=.true.)
+     call multifab_fill_boundary(n_old(n))
   end do
 
   if (restart .lt. 0) then
@@ -328,7 +330,6 @@ subroutine main_driver()
         call multifab_fill_boundary(n_new(n))
      end do
 
-
      time = time + dt
 
       if (parallel_IOProcessor()) then
@@ -346,10 +347,11 @@ subroutine main_driver()
       end if
 
       ! write a plotfile
-      if (plot_int .gt. 0 .and. mod(init_step,plot_int) .eq. 0) then
+      if (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) then
          call write_plotfile_n(mla,n_new,dx,time,istep)
       end if
 
+      ! write a checkpoint
       if (chk_int .gt. 0 .and. mod(init_step,chk_int) .eq. 0) then
 
       end if
