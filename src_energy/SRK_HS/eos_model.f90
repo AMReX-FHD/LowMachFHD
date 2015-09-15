@@ -239,6 +239,20 @@ contains
   end subroutine compute_rho_T
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine compute_rho_P(rho_P,rho,Yk,temp)
+
+    real(kind=8) :: rho_P,rho,Yk(1:nspecies),temp
+
+    ! local
+    real(kind=8) :: P_rho
+
+    call compute_P_rho(P_rho,rho,Yk,temp)
+
+    rho_P = 1.d0/P_rho
+
+  end subroutine compute_rho_P
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! scalar a
   subroutine compute_a(a,Temp,Yk)
@@ -401,23 +415,22 @@ contains
 
     real(kind=8) :: rho, temp, Yk(1:nspecies), rwrk, pt
     integer :: iwrk, ns
-    real(kind=8) :: molmix, rhoinv, b, a
+    real(kind=8) :: molmixinv, rhoinv, b, a
 
     rhoinv = 1.d0/rho
 
     call compute_a(a,Temp,Yk)
     call compute_b(b,Yk)
 
-    molmix = 0.0d0
+    molmixinv = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       molmixinv = molmixinv + Yk(ns)/molecular_weight(ns)
     enddo
-    molmix = 1.d0/molmix
 
-    pt = (Runiv*temp/molmix) / (rhoinv - b) - a / (rhoinv*(rhoinv + b))
+    pt = (Runiv*temp*molmixinv) / (rhoinv - b) - a / (rhoinv*(rhoinv + b))
 
     if(temp.ge.6000.0d0) then
-       print*, 'BUG IN CKPY ', rho, temp,Yk, molmix  
+       print*, 'BUG IN CKPY ', rho, temp,Yk, molmixinv  
        stop
     endif
  
@@ -446,14 +459,14 @@ contains
 
     real(kind=8) :: Yk(1:nspecies), Xk(1:nspecies), rwrk
     integer :: iwrk, ns
-    real*8 :: molmix
+    real*8 :: molmixinv
 
-    molmix = 0.0d0
+    molmixinv = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       molmixinv = molmixinv + Yk(ns)/molecular_weight(ns)
     enddo
     do ns = 1, nspecies
-       Xk(ns) = Yk(ns)/(molmix*molecular_weight(ns))
+       Xk(ns) = Yk(ns)/(molmixinv*molecular_weight(ns))
     enddo
 
     return
@@ -466,14 +479,14 @@ contains
     
     real(kind=8) :: Yk(1:nspecies), Xk(1:nspecies), rwrk
     integer :: iwrk, ns
-    real*8 :: molmix
+    real*8 :: molmixinv
 
-    molmix = 0.0d0
+    molmixinv = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Xk(ns)*molecular_weight(ns)
+       molmixinv = molmixinv + Xk(ns)*molecular_weight(ns)
     enddo
     do ns = 1, nspecies
-       Yk(ns) = Xk(ns)*molecular_weight(ns)/molmix
+       Yk(ns) = Xk(ns)*molecular_weight(ns)/molmixinv
     enddo
 
     return
@@ -503,21 +516,20 @@ contains
 
     real(kind=8) :: pt, temp, Yk(1:nspecies), rwrk, rho
     integer :: iwrk, ns, i
-    real(kind=8) :: molmix,a,b,c,f,fprime
+    real(kind=8) :: molmixinv,a,b,c,f,fprime
 
-    molmix = 0.0d0
+    molmixinv = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       molmixinv = molmixinv + Yk(ns)/molecular_weight(ns)
     enddo
-    molmix = 1.0d0/molmix
 
     ! initial guess using ideal gas law
-    rho = pt/(Runiv/molmix)/temp
+    rho = pt/(Runiv*molmixinv*temp)
 
     call compute_a(a,Temp,Yk)
     call compute_b(b,Yk)
 
-    c = Runiv*Temp/molmix
+    c = Runiv*Temp*molmixinv
 
     ! newton iteration to find rho
     do i=1,10
@@ -525,7 +537,6 @@ contains
        fprime = 3.d0*a*b*rho**2 + 2.d0*(b*c-a+pt*b**2)*rho + c
        rho = rho - f/fprime
     end do
-
 
     return
   end subroutine CKRHOY

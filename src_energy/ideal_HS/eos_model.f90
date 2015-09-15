@@ -198,14 +198,14 @@ contains
 
     real(kind=8) :: Yk(1:nspecies), Xk(1:nspecies), rwrk
     integer :: iwrk, ns
-    real*8 :: molmix
+    real*8 :: molmixinv
 
-    molmix = 0.0d0
+    molmixinv = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       molmixinv = molmixinv + Yk(ns)/molecular_weight(ns)
     enddo
     do ns = 1, nspecies
-       Xk(ns) = Yk(ns)/(molmix*molecular_weight(ns))
+       Xk(ns) = Yk(ns)/(molmixinv*molecular_weight(ns))
     enddo
 
     return
@@ -218,14 +218,14 @@ contains
     
     real(kind=8) :: Yk(1:nspecies), Xk(1:nspecies), rwrk
     integer :: iwrk, ns
-    real*8 :: molmix
+    real*8 :: molmixinv
 
-    molmix = 0.0d0
+    molmixinv = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Xk(ns)*molecular_weight(ns)
+       molmixinv = molmixinv + Xk(ns)*molecular_weight(ns)
     enddo
     do ns = 1, nspecies
-       Yk(ns) = Xk(ns)*molecular_weight(ns)/molmix
+       Yk(ns) = Xk(ns)*molecular_weight(ns)/molmixinv
     enddo
 
     return
@@ -255,53 +255,47 @@ contains
 
     real(kind=8) :: pt, temp, Yk(1:nspecies), rwrk, rho
     integer :: iwrk, ns     
-    real(kind=8) :: molmix
+    real(kind=8) :: molmixinv
 
-    molmix = 0.0d0
+    molmixinv = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       molmixinv = molmixinv + Yk(ns)/molecular_weight(ns)
     enddo
-    molmix = 1.0d0/molmix
-
-    rho = pt/(Runiv/molmix)/temp
+    rho = pt/(Runiv*molmixinv*temp)
 
     return
   end subroutine CKRHOY
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! computes $P_\rho
+  ! computes $\rho_P
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine compute_P_rho(P_rho,rho,Yk,temp)
+  subroutine compute_rho_P(rho_P,rho,Yk,temp)
 
-    real(kind=8) :: P_rho, rho, temp, Yk(1:nspecies)
+    real(kind=8) :: rho_P, rho, temp, Yk(1:nspecies)
 
-    real(kind=8) :: molmix
+    real(kind=8) :: molmixinv
     integer :: ns
 
-    molmix = 0.0d0
+    molmixinv = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       molmixinv = molmixinv + Yk(ns)/molecular_weight(ns)
     enddo
-    molmix = 1.0d0/molmix
+   rho_P = 1.d0/(Runiv*temp*molmixinv)
 
-    P_rho = Runiv*temp/molmix
-
-  end subroutine compute_P_rho
+  end subroutine compute_rho_P
 
   subroutine compute_rho_w(rho_w,rho,Yk,temp)
 
     real(kind=8) :: rho_w(1:nspecies),rho,Yk(1:nspecies),temp
 
-    real(kind=8) :: molmix
+    real(kind=8) :: molmixinv
     integer :: ns
 
-    molmix = 0.0d0
+    molmixinv = 0.0d0
     do ns = 1, nspecies
-       molmix = molmix + Yk(ns)/molecular_weight(ns)
+       molmixinv = molmixinv + Yk(ns)/molecular_weight(ns)
     enddo
-    molmix = 1.0d0/molmix
-
-    rho_w(1:nspecies) = -rho*molmix/molecular_weight(1:nspecies)
+    rho_w(1:nspecies) = -rho/(molmixinv*molecular_weight(1:nspecies))
 
   end subroutine compute_rho_w
 
