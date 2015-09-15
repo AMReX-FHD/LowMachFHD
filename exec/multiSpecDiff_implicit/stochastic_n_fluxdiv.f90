@@ -45,7 +45,7 @@ contains
 
     do n=1,nlevs
        do i=1,dm
-          call multifab_build_edge(flux(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do
 
@@ -141,7 +141,7 @@ contains
     real(kind=dp_t), intent(in   ) :: stochx(lo(1)-ng_s:,lo(2)-ng_s:,:)
     real(kind=dp_t), intent(in   ) :: stochy(lo(1)-ng_s:,lo(2)-ng_s:,:)
 
-    integer :: i,j,comp
+    integer :: i,j
     real(kind=dp_t) :: n_face(1:nspecies)
     
     ! x-fluxes
