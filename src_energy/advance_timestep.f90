@@ -345,7 +345,7 @@ contains
                              gradp_baro,Temp_old,mass_fluxdiv_old, &
                              mass_flux_old,dx,the_bc_tower)
 
-    ! compute rhoh_fluxdiv_old = div(Q)^n + sum(div(hk*Fk))^n + (rho*Hext)^n
+    ! compute rhoh_fluxdiv_old = div(Q)^n - sum(div(hk*Fk))^n + (rho*Hext)^n
     call rhoh_fluxdiv_energy(mla,lambda_old,Temp_old,mass_flux_old,rhotot_old, &
                              rhoh_fluxdiv_old,dx,0.d0,the_bc_tower)
 

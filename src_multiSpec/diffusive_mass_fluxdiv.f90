@@ -27,6 +27,8 @@ contains
                                     diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                     flux_total,dx,the_bc_tower)
 
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rhotot(:)
@@ -92,6 +94,8 @@ contains
   subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
                                  Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower)
 
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:) 
     type(multifab) , intent(in   ) :: rhotot(:) 
@@ -136,7 +140,7 @@ contains
        end do
     end do 
 
-    ! compute face-centered rhoWchi from cell-centered values 
+    ! compute face-centered -rhoWchi from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
                             nspecies**2, the_bc_tower%bc_tower_array, .false.) 
 
@@ -225,7 +229,7 @@ contains
 
     end if
 
-    ! compute rhoWchi * totalflux (on faces) 
+    ! compute -rhoWchi * (Gamma*grad(x) + ... ) on faces
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, flux(n,i), rhoWchi_face(n,i), nspecies)

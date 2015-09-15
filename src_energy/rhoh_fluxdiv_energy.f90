@@ -70,7 +70,7 @@ contains
     call average_cc_to_face(nlevs,hk,misc_fc,1,c_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array)
 
-    ! set misc_fc = -h_k F_k = +h_k (+rho*W*chi*Gamma*grad(x) + ... )
+    ! set misc_fc = -h_k F_k = -h_k (-rho*W*chi*Gamma*grad(x) + ... )
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_c(misc_fc(n,i),1,mass_flux(n,i),1,nspecies,0)

@@ -103,8 +103,8 @@ contains
        end do
     end do
 
-    ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
-    ! in init/end of this code
+    ! compute mass fluxes
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
     call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
                                 diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro,flux_total,dx,the_bc_tower)
 

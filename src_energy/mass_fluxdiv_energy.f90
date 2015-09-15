@@ -66,7 +66,7 @@ contains
        end do
     end do
 
-    ! compute rho*W*chi
+    ! compute -rho*W*chi
     call compute_minus_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
 
     do n=1,nlevs
