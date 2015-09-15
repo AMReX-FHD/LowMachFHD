@@ -327,16 +327,18 @@ we are not allowing for pressure stratification due to gravity.)
 
 \subsection{Comparison to LMC and MAESTRO}
 It is worth comparing this formulation to other low Mach number constraints.
-This model is equivalent to equation (7) in \cite{DayBell:2000},
-but with three exceptions.  First,
-we are not accounting for reactions, so $\dot\omega=0$.  Second, here we have 
-{\it not} made the substitution, 
-$-\nabla\cdot h_k\Fb_k + h_k\nabla\cdot\Fb_k = -\Fb\cdot\nabla h_k$, so the coefficients
-$\beta_k$ and $\alpha$ are slightly different (although the overall expression is
-analytically equivalent).  Third, the time-derivative of $P_0$ is no longer zero,
+This model is equivalent to equation (7) in \cite{DayBell:2000} using an ideal
+gas equation of state,
+\begin{equation}
+P = \rho\mathcal{R}T\sum_k\frac{w_k}{m_k}.
+\end{equation}
+Note that in \cite{DayBell:2000} the substitution
+$-\nabla\cdot h_k\Fb_k + h_k\nabla\cdot\Fb_k = -\Fb\cdot\nabla h_k$, has been made.
+Also, here the convective derivative of $P$ is no longer zero,
 so we gain an additional term.  Notably, the coefficient in front of the pressure 
 derivative matches that in the MAESTRO algorithm \cite{MAESTROIII},
-except that paper includes a convective derivative of $P_0$ due to stratification.
+except that paper includes a convective derivative of $P_0$ since $P_0$ varies
+as a function of latitude due to stratification.
 
 \subsection{Confined Domains}
 The unknowns in equation (\ref{eq:constraint}) are $\vb$ and $dP_0/d t$.
@@ -436,7 +438,7 @@ the pressure.
 By substituting (\ref{eq:DPDt}) into (\ref{eq:particle paths}),
 and following the same derivation, we end up with,
 \begin{equation}
-\nabla\cdot\vb + \theta\frac{dP_0}{dt} = S + \underbrace{\frac{1}{\rho P_\rho}\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
+\nabla\cdot\vb + \theta\frac{dP_0}{dt} = S + \underbrace{\kappa_T\frac{\Delta P}{\Delta t}}_{S_{\rm corr}}.
 \end{equation}
 Similar to above, in order for this sytem to be solvable we split the update into
 equations for $P_0$ and $\vb$,
@@ -525,7 +527,7 @@ To compute $P_0^{n+1}$ we use
 We seek $S_{\rm corr}$ that causes the evolution of the thermodynamic variables to stay on the equation of 
 state.  For gases, this means,
 \begin{equation}
-P(\rho^{n+1},w_k^{n+1},T^{n+1}) = P_0^{n+1},
+P(\rho^{n+1},\wb^{n+1},T^{n+1}) = P_0^{n+1},
 \end{equation}
 and for our liquid model,
 \begin{equation}
@@ -550,7 +552,7 @@ of the time-advanced quantities while updating $S_{\rm corr}$.
 
 At the most basic level, the time-stepping strategy is an iterative loop over the following:\\
 \begin{itemize}
-\item Advance thermodynamic variables $\rho,w_k,h,P_0$.
+\item Advance thermodynamic variables $\rho,\wb,h,P_0$.
 \item Advance velocity using a Stokes solver.
 \item Update $S_{\rm corr}$ so the EOS is more closely maintained in the next iteration.
 \end{itemize}
@@ -590,7 +592,7 @@ S^n = \bar{S}^n + \delta S^n,
 {\bf Step 2:}\\ \\
 Compute a volume discrepancy correction:
 \begin{equation}
-S_{\rm corr} = \frac{1}{(\rho P_\rho)^n}\left(\frac{P(\rho^n,\wb^n,T^n) - P_0^n}{\Delta t}\right),
+S_{\rm corr} = \kappa_T^n\left(\frac{P(\rho^n,\wb^n,T^n) - P_0^n}{\Delta t}\right),
 \end{equation}
 and split this into average and perturbational components,
 \begin{equation}
@@ -711,7 +713,7 @@ Rewriting the Stokes system above we have:
 {\bf Step 8}\\ \\
 Update volume discrepancy
 \begin{equation}
-S_{\rm corr} = S_{\rm corr} + \frac{2}{(\rho P_\rho)^{n+1,m+1}}\left(\frac{P(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1}) - P_0^{n+1,m+1}}{\Delta t}\right)
+S_{\rm corr} = S_{\rm corr} + 2\kappa_T^{n+1,m+1}\left(\frac{P(\rho^{n+1,m+1},\wb^{n+1,m+1},T^{n+1,m+1}) - P_0^{n+1,m+1}}{\Delta t}\right)
 \end{equation}
 Note: I've found this factor of two to be more effective at reducing the drift
 since we are using trapezoidal advective fluxes.  If the drift is unacceptable,

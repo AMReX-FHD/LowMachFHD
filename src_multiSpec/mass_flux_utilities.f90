@@ -17,7 +17,7 @@ module mass_flux_utilities_module
             compute_rhotot, &
             compute_Gama, &
             compute_chi, &
-            compute_rhoWchi, &
+            compute_minus_rhoWchi, &
             compute_Lonsager, &
             compute_baro_coef
 
@@ -1117,7 +1117,7 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
 
   end subroutine compute_Lonsager_local
 
-  subroutine compute_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
+  subroutine compute_minus_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
  
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -1141,7 +1141,7 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
 
     type(bl_prof_timer), save :: bpt
 
-    call build(bpt,"compute_rhoWchi")
+    call build(bpt,"compute_minus_rhoWchi")
 
     dm = mla%dim        ! dimensionality
     ng_1 = rho(1)%ng    ! number of ghost cells 
@@ -1174,10 +1174,10 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
           
           select case(dm)
           case (2)
-             call compute_rhoWchi_2d(dp1(:,:,1,:),dp2(:,:,1,1),dp3(:,:,1,:),dp4(:,:,1,:), &
+             call compute_minus_rhoWchi_2d(dp1(:,:,1,:),dp2(:,:,1,1),dp3(:,:,1,:),dp4(:,:,1,:), &
                                      ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           case (3)
-             call compute_rhoWchi_3d(dp1(:,:,:,:),dp2(:,:,:,1),dp3(:,:,:,:),dp4(:,:,:,:), &
+             call compute_minus_rhoWchi_3d(dp1(:,:,:,:),dp2(:,:,:,1),dp3(:,:,:,:),dp4(:,:,:,:), &
                                      ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           end select
        end do
@@ -1186,9 +1186,9 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
 
     call destroy(bpt)
 
-  end subroutine compute_rhoWchi
+  end subroutine compute_minus_rhoWchi
   
-  subroutine compute_rhoWchi_2d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
+  subroutine compute_minus_rhoWchi_2d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
   
     integer          :: glo(2), ghi(2), ng_1,ng_2,ng_3,ng_4,tlo(2),thi(2)
     real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,:) ! density; last dimension for species
@@ -1204,7 +1204,7 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
     do j=tlo(2),thi(2)
        do i=tlo(1),thi(1)
         
-          call compute_rhoWchi_local(rho(i,j,:),rhotot(i,j),chi(i,j,:),rhoWchi(i,j,:))
+          call compute_minus_rhoWchi_local(rho(i,j,:),rhotot(i,j),chi(i,j,:),rhoWchi(i,j,:))
 
           if(.false.) then
           if(i.eq.7 .and. j.eq.14) then
@@ -1221,9 +1221,9 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
        end do
     end do
 
-  end subroutine compute_rhoWchi_2d
+  end subroutine compute_minus_rhoWchi_2d
 
-  subroutine compute_rhoWchi_3d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
+  subroutine compute_minus_rhoWchi_3d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
 
     integer          :: glo(3), ghi(3), ng_1,ng_2,ng_3,ng_4,tlo(3),thi(3)
     real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:) ! density; last dimension for species
@@ -1239,15 +1239,15 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
        do j=tlo(2),thi(2)
           do i=tlo(1),thi(1)
        
-             call compute_rhoWchi_local(rho(i,j,k,:),rhotot(i,j,k),chi(i,j,k,:),rhoWchi(i,j,k,:))
+             call compute_minus_rhoWchi_local(rho(i,j,k,:),rhotot(i,j,k),chi(i,j,k,:),rhoWchi(i,j,k,:))
               
          end do
       end do
     end do
    
-  end subroutine compute_rhoWchi_3d
+  end subroutine compute_minus_rhoWchi_3d
   
-  subroutine compute_rhoWchi_local(rho,rhotot,chi,rhoWchi)
+  subroutine compute_minus_rhoWchi_local(rho,rhotot,chi,rhoWchi)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)            
     real(kind=dp_t), intent(in)   :: rhotot                  
@@ -1270,7 +1270,7 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Gama,Lonsager
        end do
     end do
 
-  end subroutine compute_rhoWchi_local
+  end subroutine compute_minus_rhoWchi_local
 
   subroutine set_Xij(Xout_ij, Xin_ij)
         

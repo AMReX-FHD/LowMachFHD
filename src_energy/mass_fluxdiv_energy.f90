@@ -67,7 +67,7 @@ contains
     end do
 
     ! compute rho*W*chi
-    call compute_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
+    call compute_minus_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
 
     do n=1,nlevs
        do i=1,dm
@@ -76,11 +76,12 @@ contains
     end do
 
     ! compute mass fluxes
-    ! this computes "-F" so we later multiply by -1
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molefrac,rhoWchi,Gama, &
                                 mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro,mass_flux,dx, &
                                 the_bc_tower)
 
+    ! now fluxes contain -F = +rho*W*chi*Gamma*grad(x) + ...
     do n=1,nlevs
        call multifab_mult_mult_s_c(mass_fluxdiv(n),1,-1.d0,nspecies,0)
        do i=1,dm

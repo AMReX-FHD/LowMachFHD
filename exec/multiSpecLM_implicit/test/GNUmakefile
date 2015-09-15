@@ -8,8 +8,8 @@ NDEBUG    := t
 MPI       := t
 OMP       :=
 PROF      :=
-COMP      := Intel
-CCOMP     := Intel
+COMP      := gfortran
+CCOMP     := gcc
 MKVERBOSE := t
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
