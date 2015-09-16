@@ -149,26 +149,81 @@ contains
     integer :: i,j
     real(kind=dp_t) :: n_face(1:nspecies)
     
-    ! x-fluxes
-    do j=lo(2),hi(2)
-    do i=lo(1),hi(1)+1
-       ! arithmetic averaging
-       n_face(1:nspecies) = 0.5d0*(n_cc(i-1,j,1:nspecies) + n_cc(i,j,1:nspecies))
-       fluxx(i,j,1:nspecies) = &
-            sqrt(2.d0*variance_coef_mass*coefx(i,j,1:nspecies)*n_face(1:nspecies))*stochx(i,j,1:nspecies)
-    end do
-    end do
+    integer :: avg_type  ! 1 = arithmetic, 2 = geometric, 3 = harmonic
+                         ! will eventually be moved to namelist
+
+    avg_type = 1
+
+    if (avg_type .eq. 1) then
+
+       ! x-fluxes
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)+1
+             ! arithmetic averaging
+             n_face(1:nspecies) = 0.5d0*(n_cc(i-1,j,1:nspecies) + n_cc(i,j,1:nspecies))
+             fluxx(i,j,1:nspecies) = &
+                  sqrt(2.d0*variance_coef_mass*coefx(i,j,1:nspecies)*n_face(1:nspecies))*stochx(i,j,1:nspecies)
+          end do
+       end do
 
 
-    ! y-fluxes
-    do j=lo(2),hi(2)+1
-    do i=lo(1),hi(1)
-       ! arithmetic averaging
-       n_face(1:nspecies) = 0.5d0*(n_cc(i,j-1,1:nspecies) + n_cc(i,j,1:nspecies))
-       fluxy(i,j,1:nspecies) = &
-            sqrt(2.d0*variance_coef_mass*coefy(i,j,1:nspecies)*n_face(1:nspecies))*stochy(i,j,1:nspecies)
-    end do
-    end do
+       ! y-fluxes
+       do j=lo(2),hi(2)+1
+          do i=lo(1),hi(1)
+             ! arithmetic averaging
+             n_face(1:nspecies) = 0.5d0*(n_cc(i,j-1,1:nspecies) + n_cc(i,j,1:nspecies))
+             fluxy(i,j,1:nspecies) = &
+                  sqrt(2.d0*variance_coef_mass*coefy(i,j,1:nspecies)*n_face(1:nspecies))*stochy(i,j,1:nspecies)
+          end do
+       end do
+
+    else if (avg_type .eq. 2) then
+
+       ! x-fluxes
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)+1
+             ! geometric averaging
+             n_face(1:nspecies) = sqrt(max(n_cc(i-1,j,1:nspecies),0.d0)*max(n_cc(i,j,1:nspecies),0.d0))
+             fluxx(i,j,1:nspecies) = &
+                  sqrt(2.d0*variance_coef_mass*coefx(i,j,1:nspecies)*n_face(1:nspecies))*stochx(i,j,1:nspecies)
+          end do
+       end do
+
+       ! y-fluxes
+       do j=lo(2),hi(2)+1
+          do i=lo(1),hi(1)
+             ! geometric averaging
+             n_face(1:nspecies) = sqrt(max(n_cc(i,j-1,1:nspecies),0.d0)*max(n_cc(i,j,1:nspecies),0.d0))
+             fluxy(i,j,1:nspecies) = &
+                  sqrt(2.d0*variance_coef_mass*coefy(i,j,1:nspecies)*n_face(1:nspecies))*stochy(i,j,1:nspecies)
+          end do
+       end do
+
+    else if (avg_type .eq. 3) then
+
+       ! x-fluxes
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)+1
+             ! harmonic averaging
+             n_face(1:nspecies) = 2.d0 / (1.d0/n_cc(i-1,j,1:nspecies) + 1.d0/n_cc(i,j,1:nspecies))
+             fluxx(i,j,1:nspecies) = &
+                  sqrt(2.d0*variance_coef_mass*coefx(i,j,1:nspecies)*n_face(1:nspecies))*stochx(i,j,1:nspecies)
+          end do
+       end do
+
+       ! y-fluxes
+       do j=lo(2),hi(2)+1
+          do i=lo(1),hi(1)
+             ! harmonic averaging
+             n_face(1:nspecies) = 2.d0 / (1.d0/n_cc(i,j-1,1:nspecies) + 1.d0/n_cc(i,j,1:nspecies))
+             fluxy(i,j,1:nspecies) = &
+                  sqrt(2.d0*variance_coef_mass*coefy(i,j,1:nspecies)*n_face(1:nspecies))*stochy(i,j,1:nspecies)
+          end do
+       end do
+
+    else
+       call bl_error("assemble_stoch_n_fluxes_2d: invalid avg_type")
+    end if
 
   end subroutine assemble_stoch_n_fluxes_2d
 
@@ -190,41 +245,129 @@ contains
     integer :: i,j,k
     real(kind=dp_t) :: n_face(1:nspecies)
     
-    ! x-fluxes
-    do k=lo(3),hi(3)
-    do j=lo(2),hi(2)
-    do i=lo(1),hi(1)+1
-       ! arithmetic averaging
-       n_face(1:nspecies) = 0.5d0*(n_cc(i-1,j,k,1:nspecies) + n_cc(i,j,k,1:nspecies))
-       fluxx(i,j,k,1:nspecies) = &
-            sqrt(2.d0*variance_coef_mass*coefx(i,j,k,1:nspecies)*n_face(1:nspecies))*stochx(i,j,k,1:nspecies)
-    end do
-    end do
-    end do
+    integer :: avg_type  ! 1 = arithmetic, 2 = geometric, 3 = harmonic
+                         ! will eventually be moved to namelist
+    
+    avg_type = 1
 
-    ! y-fluxes
-    do k=lo(3),hi(3)
-    do j=lo(2),hi(2)+1
-    do i=lo(1),hi(1)
-       ! arithmetic averaging
-       n_face(1:nspecies) = 0.5d0*(n_cc(i,j-1,k,1:nspecies) + n_cc(i,j,k,1:nspecies))
-       fluxy(i,j,k,1:nspecies) = &
-            sqrt(2.d0*variance_coef_mass*coefy(i,j,k,1:nspecies)*n_face(1:nspecies))*stochy(i,j,k,1:nspecies)
-    end do
-    end do
-    end do
+    if (avg_type .eq. 1) then
 
-    ! z-fluxes
-    do k=lo(3),hi(3)+1
-    do j=lo(2),hi(2)
-    do i=lo(1),hi(1)
-       ! arithmetic averaging
-       n_face(1:nspecies) = 0.5d0*(n_cc(i,j,k-1,1:nspecies) + n_cc(i,j,k,1:nspecies))
-       fluxz(i,j,k,1:nspecies) = &
-            sqrt(2.d0*variance_coef_mass*coefz(i,j,k,1:nspecies)*n_face(1:nspecies))*stochz(i,j,k,1:nspecies)
-    end do
-    end do
-    end do
+       ! x-fluxes
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)+1
+                ! arithmetic averaging
+                n_face(1:nspecies) = 0.5d0*(n_cc(i-1,j,k,1:nspecies) + n_cc(i,j,k,1:nspecies))
+                fluxx(i,j,k,1:nspecies) = &
+                     sqrt(2.d0*variance_coef_mass*coefx(i,j,k,1:nspecies)*n_face(1:nspecies))*stochx(i,j,k,1:nspecies)
+             end do
+          end do
+       end do
+
+       ! y-fluxes
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)+1
+             do i=lo(1),hi(1)
+                ! arithmetic averaging
+                n_face(1:nspecies) = 0.5d0*(n_cc(i,j-1,k,1:nspecies) + n_cc(i,j,k,1:nspecies))
+                fluxy(i,j,k,1:nspecies) = &
+                     sqrt(2.d0*variance_coef_mass*coefy(i,j,k,1:nspecies)*n_face(1:nspecies))*stochy(i,j,k,1:nspecies)
+             end do
+          end do
+       end do
+
+       ! z-fluxes
+       do k=lo(3),hi(3)+1
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)
+                ! arithmetic averaging
+                n_face(1:nspecies) = 0.5d0*(n_cc(i,j,k-1,1:nspecies) + n_cc(i,j,k,1:nspecies))
+                fluxz(i,j,k,1:nspecies) = &
+                     sqrt(2.d0*variance_coef_mass*coefz(i,j,k,1:nspecies)*n_face(1:nspecies))*stochz(i,j,k,1:nspecies)
+             end do
+          end do
+       end do
+
+    else if (avg_type .eq. 2) then
+
+       ! x-fluxes
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)+1
+                ! geometric averaging
+                n_face(1:nspecies) = sqrt(max(n_cc(i-1,j,k,1:nspecies),0.d0)*max(n_cc(i,j,k,1:nspecies),0.d0))
+                fluxx(i,j,k,1:nspecies) = &
+                     sqrt(2.d0*variance_coef_mass*coefx(i,j,k,1:nspecies)*n_face(1:nspecies))*stochx(i,j,k,1:nspecies)
+             end do
+          end do
+       end do
+
+       ! y-fluxes
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)+1
+             do i=lo(1),hi(1)
+                ! geometric averaging
+                n_face(1:nspecies) = sqrt(max(n_cc(i,j-1,k,1:nspecies),0.d0)*max(n_cc(i,j,k,1:nspecies),0.d0))
+                fluxy(i,j,k,1:nspecies) = &
+                     sqrt(2.d0*variance_coef_mass*coefy(i,j,k,1:nspecies)*n_face(1:nspecies))*stochy(i,j,k,1:nspecies)
+             end do
+          end do
+       end do
+
+       ! z-fluxes
+       do k=lo(3),hi(3)+1
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)
+                ! geometric averaging
+                n_face(1:nspecies) = sqrt(max(n_cc(i,j,k-1,1:nspecies),0.d0)*max(n_cc(i,j,k,1:nspecies),0.d0))
+                ! harmonic averaging
+                fluxz(i,j,k,1:nspecies) = &
+                     sqrt(2.d0*variance_coef_mass*coefz(i,j,k,1:nspecies)*n_face(1:nspecies))*stochz(i,j,k,1:nspecies)
+             end do
+          end do
+       end do
+
+    else if (avg_type .eq. 3) then
+
+       ! x-fluxes
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)+1
+                ! harmonic averaging
+                n_face(1:nspecies) = 2.d0 / (1.d0/n_cc(i-1,j,k,1:nspecies) + 1.d0/n_cc(i,j,k,1:nspecies))
+                fluxx(i,j,k,1:nspecies) = &
+                     sqrt(2.d0*variance_coef_mass*coefx(i,j,k,1:nspecies)*n_face(1:nspecies))*stochx(i,j,k,1:nspecies)
+             end do
+          end do
+       end do
+
+       ! y-fluxes
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)+1
+             do i=lo(1),hi(1)
+                ! harmonic averaging
+                n_face(1:nspecies) = 2.d0 / (1.d0/n_cc(i,j-1,k,1:nspecies) + 1.d0/n_cc(i,j,k,1:nspecies))
+                fluxy(i,j,k,1:nspecies) = &
+                     sqrt(2.d0*variance_coef_mass*coefy(i,j,k,1:nspecies)*n_face(1:nspecies))*stochy(i,j,k,1:nspecies)
+             end do
+          end do
+       end do
+
+       ! z-fluxes
+       do k=lo(3),hi(3)+1
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)
+                ! harmonic averaging
+                n_face(1:nspecies) = 2.d0 / (1.d0/n_cc(i,j,k-1,1:nspecies) + 1.d0/n_cc(i,j,k,1:nspecies))
+                fluxz(i,j,k,1:nspecies) = &
+                     sqrt(2.d0*variance_coef_mass*coefz(i,j,k,1:nspecies)*n_face(1:nspecies))*stochz(i,j,k,1:nspecies)
+             end do
+          end do
+       end do
+
+    else
+       call bl_error("assemble_stoch_n_fluxes_3d: invalid avg_type")
+    end if
 
   end subroutine assemble_stoch_n_fluxes_3d
 
