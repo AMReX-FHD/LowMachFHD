@@ -49,6 +49,7 @@ contains
           case (2)
              call init_n_2d(np(:,:,1,:),ng_n,lo,hi,dx(n,:))
           case (3)
+             call init_n_3d(np(:,:,:,:),ng_n,lo,hi,dx(n,:))
           end select
        end do
     end do
@@ -59,7 +60,7 @@ contains
 
   subroutine init_n_2d(n_init,ng_n,lo,hi,dx)
 
-    integer          :: lo(2), hi(2), ng_n
+    integer          :: lo(:), hi(:), ng_n
     real(kind=dp_t)  :: n_init(lo(1)-ng_n:,lo(2)-ng_n:,:)
     real(kind=dp_t)  :: dx(:)
  
@@ -93,5 +94,47 @@ contains
     end do
 
   end subroutine init_n_2d
+
+  subroutine init_n_3d(n_init,ng_n,lo,hi,dx)
+
+    integer          :: lo(:), hi(:), ng_n
+    real(kind=dp_t)  :: n_init(lo(1)-ng_n:,lo(2)-ng_n:,lo(3)-ng_n:,:)
+    real(kind=dp_t)  :: dx(:)
+ 
+    ! local varables
+    integer         :: i,j,k,comp
+    real(kind=dp_t) :: x,y,z,r,cen(3),sum
+
+    cen(1:3) = 0.5d0*(prob_lo(1:3)+prob_hi(1:3))
+
+    do k=lo(3),hi(3)
+       z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+
+             r = sqrt((x-cen(1))**2 + (y-cen(2))**2 + (z-cen(3))**2)
+             
+             n_init(i,j,k,1) = 0.5d0*exp(-r**2)
+             n_init(i,j,k,2) = 0.25d0
+
+          end do
+       end do
+    end do
+
+    do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+             sum = 0.d0
+             do comp=1,nspecies-1
+                sum = sum + n_init(i,j,k,comp)
+             end do
+             n_init(i,j,k,nspecies) = 1.d0-sum
+          end do
+       end do
+    end do
+
+  end subroutine init_n_3d
 
 end module init_n_module
