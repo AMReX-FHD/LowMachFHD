@@ -53,6 +53,9 @@ subroutine main_driver()
 
   ! For HydroGrid
   integer :: n_rngs
+
+  ! to test "conservation"
+  real(kind=dp_t), allocatable :: n_sum(:)
   
   !==============================================================
   ! Initialization
@@ -81,6 +84,8 @@ subroutine main_driver()
   allocate(diff_coef_face(nlevs,dm))
   allocate(alpha(nlevs),rhs(nlevs),phi(nlevs),beta(nlevs,dm))
   allocate(fine_flx(2:mla%nlevel))
+
+  allocate(n_sum(nspecies))
 
   ! set grid spacing at each level
   ! the grid spacing is the same in each direction
@@ -253,6 +258,15 @@ subroutine main_driver()
         if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
            print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
      end if
+
+     do comp=1,nspecies
+        n_sum(comp) = multifab_sum_c(n_old(1),comp,1)
+     end do
+     if (parallel_IOProcessor()) then
+        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+             print*,'sum of n',n_sum(:)
+     end if
+
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! advance the solution by dt
