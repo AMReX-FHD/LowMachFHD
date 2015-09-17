@@ -7,11 +7,12 @@ module probin_reactdiff_module
 
   integer, parameter :: max_species=10
 
-  integer, save      :: nspecies,mg_verbose,cg_verbose
+  integer, save      :: nspecies,mg_verbose,cg_verbose,avg_type
   
   namelist /probin_reactdiff/ nspecies
   namelist /probin_reactdiff/ mg_verbose
   namelist /probin_reactdiff/ cg_verbose
+  namelist /probin_reactdiff/ avg_type  ! 1=arithmetic, 2=geometric, 3=harmonic
 
 contains
 
@@ -36,6 +37,7 @@ contains
     nspecies           = 2 
     mg_verbose         = 0
     cg_verbose         = 0
+    avg_type           = 1
  
     ! read from input file 
     need_inputs = .true.
@@ -72,6 +74,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) cg_verbose
+
+       case ('--avg_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) avg_type
 
        case ('--')
           farg = farg + 1
