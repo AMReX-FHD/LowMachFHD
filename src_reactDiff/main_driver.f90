@@ -85,28 +85,6 @@ subroutine main_driver()
 
   allocate(n_sum(nspecies))
 
-  ! set grid spacing at each level
-  ! the grid spacing is the same in each direction
-  allocate(dx(nlevs,dm))
-  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
-  select case (dm) 
-  case(2)
-     if (dx(1,1) .ne. dx(1,2)) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-     end if
-  case(3)
-     if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-     end if
-  case default
-     call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
-  end select
-
-  ! use refined dx for next level
-  do n=2,nlevs
-     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
-  end do
-
   ! build pmask
   allocate(pmask(dm))
   pmask = .false.
@@ -197,6 +175,28 @@ subroutine main_driver()
   ! allocate and build multifabs that will contain random numbers
   n_rngs = 1
   call init_mass_stochastic(mla,n_rngs)
+
+  ! set grid spacing at each level
+  ! the grid spacing is the same in each direction
+  allocate(dx(nlevs,dm))
+  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
+  select case (dm) 
+  case(2)
+     if (dx(1,1) .ne. dx(1,2)) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+     end if
+  case(3)
+     if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+     end if
+  case default
+     call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+  end select
+
+  ! use refined dx for next level
+  do n=2,nlevs
+     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
+  end do
 
   !=======================================================
   ! Setup boundary condition bc_tower
