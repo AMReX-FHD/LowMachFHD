@@ -9,7 +9,7 @@ module stochastic_n_fluxdiv_module
   use multifab_fill_random_module
   use div_and_grad_module
   use probin_common_module, only: variance_coef_mass
-  use probin_multispecies_module, only: nspecies
+  use probin_reactdiff_module, only: nspecies
 
   implicit none
 

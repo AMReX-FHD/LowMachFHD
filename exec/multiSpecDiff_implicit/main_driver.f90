@@ -16,8 +16,7 @@ subroutine main_driver()
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                   plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
                                   probin_common_init, fixed_dt, max_step
-  use probin_multispecies_module, only: nspecies, start_time, probin_multispecies_init
-  use probin_gmres_module, only: probin_gmres_init, mg_verbose, cg_verbose
+  use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose, probin_reactdiff_init
 
   use fabio_module
 
@@ -62,8 +61,7 @@ subroutine main_driver()
   !==============================================================
 
   call probin_common_init()
-  call probin_multispecies_init() 
-  call probin_gmres_init()
+  call probin_reactdiff_init() 
   
   ! Initialize random numbers *after* the global (root) seed has been set:
   call SeedParallelRNG(seed)
@@ -127,7 +125,7 @@ subroutine main_driver()
   else
 
      init_step = 1
-     time = start_time
+     time = 0.d0
      
      ! tell mba how many levels and dimensionality of problem
      call ml_boxarray_build_n(mba,nlevs,dm)

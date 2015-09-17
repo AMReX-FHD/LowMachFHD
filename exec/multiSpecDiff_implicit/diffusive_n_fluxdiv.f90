@@ -5,7 +5,7 @@ module diffusive_n_fluxdiv_module
   use ml_layout_module
   use cc_applyop_module
   use probin_common_module, only: fixed_dt
-  use probin_multispecies_module, only: nspecies
+  use probin_reactdiff_module, only: nspecies
 
   implicit none
 

@@ -3,7 +3,7 @@ module write_plotfile_n_module
   use ml_layout_module
   use multifab_module
   use probin_common_module , only : prob_lo, prob_hi
-  use probin_multispecies_module, only: nspecies
+  use probin_reactdiff_module, only: nspecies
   use fabio_module
 
   implicit none

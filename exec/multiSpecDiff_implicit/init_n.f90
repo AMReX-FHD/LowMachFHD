@@ -3,7 +3,7 @@ module init_n_module
   use bl_types
   use ml_layout_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type
-  use probin_multispecies_module, only: nspecies
+  use probin_reactdiff_module, only: nspecies
  
   implicit none
 
