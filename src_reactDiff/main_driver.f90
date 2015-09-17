@@ -15,7 +15,7 @@ subroutine main_driver()
   use ParallelRNGs 
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                   plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
-                                  probin_common_init, fixed_dt, max_step
+                                  probin_common_init, fixed_dt, max_step, algorithm_type
   use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose, probin_reactdiff_init
 
   use fabio_module
@@ -266,9 +266,9 @@ subroutine main_driver()
      end if
 
 
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      ! advance the solution by dt
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     ! advance the solution by dt
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
      ! fill random flux multifabs with new random numbers
      call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
@@ -282,65 +282,103 @@ subroutine main_driver()
         end do
      end do
 
-     ! compute diffusive flux diverge
+     ! compute diffusive flux divergence
      call diffusive_n_fluxdiv(mla,n_old,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
 
      ! compute stochastic flux divergence
      call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,the_bc_tower)
 
-     ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
-     !                   + (dt/2)(div D_k grad n_k)^n+1
-     !                   +  dt    div (sqrt(2 D_k n_k) Z)^n
-     ! 
-     ! in operator form
-     !
-     ! (I - (dt/2) div D_k grad)n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
-     !                                            +  dt    div (sqrt(2 D_k n_k) Z)^n
-     !
-     
-     do comp=1,nspecies
+     if (algorithm_type .eq. 0) then
+        ! explicit predictor-corrector
 
-        ! alpha = 1
-        ! beta = (dt/2)*D_k
+        ! n_k^{n+1,*} = n_k^n + dt(div D_k grad n_k)^n
+        !                     + dt(div (sqrt(2 D_k n_k) Z)^n
         do n=1,nlevs
-           call multifab_setval(alpha(n),1.d0,all=.true.)
-           do i=1,dm
-              call multifab_copy_c(beta(n,i),1,diff_coef_face(n,i),comp,1,0)
-              call multifab_mult_mult_s(beta(n,i),0.5d0*fixed_dt)
+           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
+           call multifab_saxpy_3(n_new(n),fixed_dt,diff_fluxdiv(n))
+           call multifab_saxpy_3(n_new(n),fixed_dt,stoch_fluxdiv(n))
+           call multifab_fill_boundary(n_new(n))
+        end do
+
+        ! compute diffusive flux diverge
+        call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
+
+        ! compute stochastic flux divergence
+        call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,the_bc_tower)
+
+
+        ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
+        !                   + (dt/2)(div (sqrt(2 D_k n_k) Z)^n
+        !                   + (dt/2)(div D_k grad n_k)^{n+1,*}
+        !                   + (dt/2)(div (sqrt(2 D_k n_k) Z)^{n+1,*}
+        do n=1,nlevs
+!           call multifab_plus_plus_c(n_new(n),1,n_old(n),1,nspecies,0)
+!           call multifab_saxpy_3(n_new(n),fixed_dt,diff_fluxdiv(n))
+!           call multifab_saxpy_3(n_new(n),fixed_dt,stoch_fluxdiv(n))
+!           call multifab_mult_mult_s_c(n_new(n),1,0.5d0,nspecies,0)
+!           call multifab_fill_boundary(n_new(n))
+        end do
+
+     else if (algorithm_type .eq. 1) then
+        ! Crank-Nicolson
+
+        ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
+        !                   + (dt/2)(div D_k grad n_k)^n+1
+        !                   +  dt    div (sqrt(2 D_k n_k) Z)^n
+        ! 
+        ! in operator form
+        !
+        ! (I - (dt/2) div D_k grad)n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
+        !                                            +  dt    div (sqrt(2 D_k n_k) Z)^n
+        !
+
+        do comp=1,nspecies
+
+           ! alpha = 1
+           ! beta = (dt/2)*D_k
+           do n=1,nlevs
+              call multifab_setval(alpha(n),1.d0,all=.true.)
+              do i=1,dm
+                 call multifab_copy_c(beta(n,i),1,diff_coef_face(n,i),comp,1,0)
+                 call multifab_mult_mult_s(beta(n,i),0.5d0*fixed_dt)
+              end do
            end do
+
+           ! rhs = n_k^n + (dt/2)(div D_k grad n_k)^n
+           !             +  dt    div (sqrt(2 D_k n_k) Z)^n
+           do n=1,nlevs
+              call multifab_copy_c(rhs(n),1,diff_fluxdiv(n),comp,1,0)
+              call multifab_mult_mult_s(rhs(n),0.5d0)
+              call multifab_plus_plus_c(rhs(n),1,stoch_fluxdiv(n),comp,1,0)
+              call multifab_mult_mult_s(rhs(n),fixed_dt)
+              call multifab_plus_plus_c(rhs(n),1,n_old(n),comp,1,0)
+           end do
+
+           ! initial guess for phi is n_k^n
+           do n=1,nlevs
+              call multifab_copy_c(phi(n),1,n_old(n),comp,1,1)
+           end do
+
+           ! solve the implicit system
+           call ml_cc_solve(mla,rhs,phi,fine_flx,alpha,beta,dx, &
+                            the_bc_tower,scal_bc_comp+comp-1, &
+                            verbose=mg_verbose, &
+                            cg_verbose=cg_verbose)
+
+           ! copy solution into n_new
+           do n=1,nlevs
+              call multifab_copy_c(n_new(n),comp,phi(n),1,1,0)
+           end do
+
         end do
 
-        ! rhs = n_k^n + (dt/2)(div D_k grad n_k)^n
-        !             +  dt    div (sqrt(2 D_k n_k) Z)^n
         do n=1,nlevs
-           call multifab_copy_c(rhs(n),1,diff_fluxdiv(n),comp,1,0)
-           call multifab_mult_mult_s(rhs(n),0.5d0)
-           call multifab_plus_plus_c(rhs(n),1,stoch_fluxdiv(n),comp,1,0)
-           call multifab_mult_mult_s(rhs(n),fixed_dt)
-           call multifab_plus_plus_c(rhs(n),1,n_old(n),comp,1,0)
+           call multifab_fill_boundary(n_new(n))
         end do
 
-        ! initial guess for phi is n_k^n
-        do n=1,nlevs
-           call multifab_copy_c(phi(n),1,n_old(n),comp,1,1)
-        end do
-
-        ! solve the implicit system
-        call ml_cc_solve(mla,rhs,phi,fine_flx,alpha,beta,dx, &
-                         the_bc_tower,scal_bc_comp+comp-1, &
-                         verbose=mg_verbose, &
-                         cg_verbose=cg_verbose)
-
-        ! copy solution into n_new
-        do n=1,nlevs
-           call multifab_copy_c(n_new(n),comp,phi(n),1,1,0)
-        end do
-
-     end do
-
-     do n=1,nlevs
-        call multifab_fill_boundary(n_new(n))
-     end do
+     else
+        call bl_error("invalid algorithm_type")
+     end if
 
      time = time + dt
 
@@ -355,6 +393,7 @@ subroutine main_driver()
       if (parallel_IOProcessor()) then
         if (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) then
            print*,'Time to advance timestep: ',runtime1,' seconds'
+           print*,''
         end if
       end if
 

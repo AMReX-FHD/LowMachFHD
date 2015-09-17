@@ -14,7 +14,7 @@
 
   ! Time-step control
   !----------------------
-  fixed_dt = 1.d-4                 ! time step (if positive, fixed)
+  fixed_dt = 1.d-5                 ! time step (if positive, fixed)
   cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
