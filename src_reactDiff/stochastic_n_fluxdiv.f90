@@ -72,6 +72,8 @@ contains
 
   subroutine assemble_stoch_n_fluxes(mla,n_cc,diff_coef_face,flux)
 
+    ! note: n averaged to faces is stored in "flux" on entry to this subroutine
+
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: n_cc(:)
     type(multifab) , intent(in   )  :: diff_coef_face(:,:)
