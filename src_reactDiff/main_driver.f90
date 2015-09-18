@@ -9,10 +9,12 @@ subroutine main_driver()
   use write_plotfile_n_module
   use stochastic_n_fluxdiv_module
   use advance_timestep_module
+  use analyze_spectra_module
   use ParallelRNGs 
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                   plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
-                                  probin_common_init, fixed_dt, max_step
+                                  probin_common_init, fixed_dt, max_step, &
+                                  hydro_grid_int, stats_int, n_steps_save_stats
   use probin_reactdiff_module, only: nspecies, probin_reactdiff_init
 
   use fabio_module
@@ -35,8 +37,12 @@ subroutine main_driver()
   type(multifab), allocatable :: n_old(:)
   type(multifab), allocatable :: n_new(:)
 
-  ! For HydroGrid
   integer :: n_rngs
+
+  ! For HydroGrid
+  integer :: narg, farg, un
+  character(len=128) :: fname
+  logical :: lexist
 
   ! to test "conservation"
   real(kind=dp_t), allocatable :: n_sum(:)
@@ -182,6 +188,34 @@ subroutine main_driver()
   end do
 
   !=====================================================================
+  ! Initialize HydroGrid for analysis
+  !=====================================================================
+  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
+     narg = command_argument_count()
+     farg = 1
+     if (narg >= 1) then
+        call get_command_argument(farg, value = fname)
+        inquire(file = fname, exist = lexist )
+        if ( lexist ) then
+           un = unit_new()
+           open(unit=un, file = fname, status = 'old', action = 'read')
+           
+           ! We will also pass temperature here but no additional scalars
+           call initialize_hydro_grid(mla,n_old,dt,dx,namelist_file=un, &
+                                      nspecies_in=nspecies, &
+                                      nscal_in=0, &
+                                      exclude_last_species_in=.false., &
+                                      analyze_velocity=.false., &
+                                      analyze_density=.true., &
+                                      analyze_temperature=.false.) 
+           
+           close(unit=un)
+        end if
+     end if
+  end if
+
+
+  !=====================================================================
   ! Initialize values
   !=====================================================================
 
@@ -203,6 +237,23 @@ subroutine main_driver()
   ! write a plotfile
   if (plot_int .gt. 0) then
      call write_plotfile_n(mla,n_old,dx,0.d0,0)
+  end if
+
+  !=====================================================================
+  ! Hydrogrid analysis and output for initial data
+  !=====================================================================
+
+  if (restart .lt. 0) then
+
+     ! Add this snapshot to the average in HydroGrid
+     if (hydro_grid_int > 0) then
+        call analyze_hydro_grid(mla,dt,dx,istep,rho=n_old)
+     end if
+
+     if (hydro_grid_int > 0 .and. n_steps_save_stats > 0) then
+        call save_hydro_grid(id=0, step=0)
+     end if
+     
   end if
 
   !=======================================================
@@ -255,7 +306,26 @@ subroutine main_driver()
 
       ! write a checkpoint
       if (chk_int .gt. 0 .and. mod(init_step,chk_int) .eq. 0) then
+         call bl_error("checkpoint not supported")
+      end if
 
+      ! print out projection (average) and variance
+      if ( (stats_int > 0) .and. &
+           (mod(istep,stats_int) .eq. 0) ) then
+         ! Compute vertical and horizontal averages (hstat and vstat files)   
+         call print_stats(mla,dx,istep,time,rho=n_new)
+      end if
+
+      ! Add this snapshot to the average in HydroGrid
+      if ( (hydro_grid_int > 0) .and. &
+           ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
+         call analyze_hydro_grid(mla,dt,dx,istep,rho=n_new)
+      end if
+
+      if ( (hydro_grid_int > 0) .and. &
+           (n_steps_save_stats > 0) .and. &
+           ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
+         call save_hydro_grid(id=istep/n_steps_save_stats,step=istep)
       end if
 
       ! set old state to new state
@@ -268,6 +338,10 @@ subroutine main_driver()
   !=======================================================
   ! Destroy multifabs and layouts
   !=======================================================
+
+  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
+     call finalize_hydro_grid()
+  end if
 
   call destroy_mass_stochastic(mla)
 
