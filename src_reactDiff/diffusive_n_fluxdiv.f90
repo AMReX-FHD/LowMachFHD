@@ -50,15 +50,16 @@ contains
     end do
 
     do comp=1,nspecies
+       ! cc_applyop compute (alpha - div beta grad) phi
        ! phi = n_cc
        ! alpha = 0
-       ! beta = -(dt/2)*D_k
+       ! beta = -D_k
        do n=1,nlevs
           call multifab_copy_c(phi(n),1,n_cc(n),comp,1,1)
           call multifab_setval(alpha(n),0.d0,all=.true.)
           do i=1,dm
              call multifab_copy_c(beta(n,i),1,diff_coef_face(n,i),comp,1,0)
-             call multifab_mult_mult_s(beta(n,i),-0.5d0*fixed_dt)
+             call multifab_mult_mult_s(beta(n,i),-1.d0)
           end do
        end do
 
