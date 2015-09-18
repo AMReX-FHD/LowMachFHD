@@ -25,16 +25,18 @@ module stochastic_n_fluxdiv_module
   
 contains
   
-  subroutine stochastic_n_fluxdiv(mla,n_cc,diff_coef_face,stoch_fluxdiv,dx,the_bc_tower)
+  subroutine stochastic_n_fluxdiv(mla,n_cc,diff_coef_face,stoch_fluxdiv,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: n_cc(:)
     type(multifab) , intent(in   )  :: diff_coef_face(:,:)
     type(multifab) , intent(inout)  :: stoch_fluxdiv(:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
+    real(kind=dp_t), intent(in   )   :: dt
     type(bc_tower) , intent(in   )  :: the_bc_tower
 
     integer :: i,dm,n,nlevs
+    real(kind=dp_t)  :: variance
 
     type(multifab) :: flux(mla%nlevel,mla%dim)
 
@@ -51,11 +53,18 @@ contains
        end do
     end do
 
-    ! average n to faces, store in "flux"
+    ! average n to faces, store in "flux" so as to avoid an extra multifab
+    ! alternatively one could multiply diff_coeff_face with this number
     call average_to_faces(mla,n_cc,flux,1,1,nspecies)
 
-    ! assumble fluxes on faces, sqrt(2*D_k*n_k * Z)
+    ! assumble fluxes on faces, sqrt(2*D_k*n_k / (dt*dV)) * random_normal
+    variance = sqrt(2.d0*variance_coef_mass/(product(dx(1,1:dm))*dt))        
     call assemble_stoch_n_fluxes(mla,n_cc,diff_coef_face,flux)
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_s(flux(n,i), variance, 0)
+       end do
+    end do      
 
     ! take flux divergence
     call compute_div(mla,flux,stoch_fluxdiv,dx,1,1,nspecies)
@@ -77,7 +86,7 @@ contains
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: n_cc(:)
     type(multifab) , intent(in   )  :: diff_coef_face(:,:)
-    type(multifab) , intent(inout)  :: flux(:,:)
+    type(multifab) , intent(inout)  :: flux(:,:) ! On input this contains the face-averaged number densities
 
     integer :: i,dm,n,nlevs,lo(mla%dim),hi(mla%dim)
     integer :: ng_n,ng_d,ng_f,ng_s
@@ -158,7 +167,7 @@ contains
     do j=lo(2),hi(2)
        do i=lo(1),hi(1)+1
           fluxx(i,j,1:nspecies) = &
-               sqrt(2.d0*variance_coef_mass*coefx(i,j,1:nspecies)*fluxx(i,j,1:nspecies))*stochx(i,j,1:nspecies)
+               sqrt(coefx(i,j,1:nspecies)*fluxx(i,j,1:nspecies))*stochx(i,j,1:nspecies)
        end do
     end do
 
@@ -167,7 +176,7 @@ contains
     do j=lo(2),hi(2)+1
        do i=lo(1),hi(1)
           fluxy(i,j,1:nspecies) = &
-               sqrt(2.d0*variance_coef_mass*coefy(i,j,1:nspecies)*fluxy(i,j,1:nspecies))*stochy(i,j,1:nspecies)
+               sqrt(coefy(i,j,1:nspecies)*fluxy(i,j,1:nspecies))*stochy(i,j,1:nspecies)
        end do
     end do
 
@@ -195,7 +204,7 @@ contains
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)+1
                 fluxx(i,j,k,1:nspecies) = &
-                     sqrt(2.d0*variance_coef_mass*coefx(i,j,k,1:nspecies)*fluxx(i,j,k,1:nspecies))*stochx(i,j,k,1:nspecies)
+                     sqrt(coefx(i,j,k,1:nspecies)*fluxx(i,j,k,1:nspecies))*stochx(i,j,k,1:nspecies)
              end do
           end do
        end do
@@ -205,7 +214,7 @@ contains
           do j=lo(2),hi(2)+1
              do i=lo(1),hi(1)
                 fluxy(i,j,k,1:nspecies) = &
-                     sqrt(2.d0*variance_coef_mass*coefy(i,j,k,1:nspecies)*fluxy(i,j,k,1:nspecies))*stochy(i,j,k,1:nspecies)
+                     sqrt(coefy(i,j,k,1:nspecies)*fluxy(i,j,k,1:nspecies))*stochy(i,j,k,1:nspecies)
              end do
           end do
        end do
@@ -215,7 +224,7 @@ contains
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)
                 fluxz(i,j,k,1:nspecies) = &
-                     sqrt(2.d0*variance_coef_mass*coefz(i,j,k,1:nspecies)*fluxz(i,j,k,1:nspecies))*stochz(i,j,k,1:nspecies)
+                     sqrt(coefz(i,j,k,1:nspecies)*fluxz(i,j,k,1:nspecies))*stochz(i,j,k,1:nspecies)
              end do
           end do
        end do

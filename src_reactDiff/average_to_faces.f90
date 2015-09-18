@@ -66,6 +66,23 @@ contains
     end do
 
   end subroutine average_to_faces
+  
+  function average_values(value1,value2) result(av)
+      real(kind=dp_t) :: av
+      real(kind=dp_t), intent(in) :: value1, value2
+  
+      select case(avg_type)
+      case(1) ! Aritmetic
+         av=max(0.5d0*(value1+value2), 0.0d0)
+      case(2) ! Geometric
+         av=sqrt(max(value1,0.d0)*max(value2,0.d0))
+      case(3) ! Harmonic
+         av=max(2.d0 / (1.d0/value1 + 1.d0/value2), 0.0d0)
+      case default
+         call bl_error("average_to_faces_2d: invalid avg_type")   
+      end select   
+  
+  end function average_values
 
   subroutine average_to_faces_2d(n_cc,ng_c,n_fcx,n_fcy,ng_f,lo,hi,incomp,outcomp,numcomp)
 
@@ -78,60 +95,19 @@ contains
 
     do comp=0,numcomp-1
 
-       if (avg_type .eq. 1) then
-          ! arithmetic averaging
-
-          ! x-faces
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)+1
-                n_fcx(i,j,outcomp+comp) = 0.5d0*(n_cc(i-1,j,incomp+comp) + n_cc(i,j,incomp+comp))
-             end do
+       ! x-faces
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)+1
+             n_fcx(i,j,outcomp+comp) = average_values(n_cc(i-1,j,incomp+comp), n_cc(i,j,incomp+comp))
           end do
+       end do
 
-          ! y-faces
-          do j=lo(2),hi(2)+1
-             do i=lo(1),hi(1)
-                n_fcy(i,j,outcomp+comp) = 0.5d0*(n_cc(i,j-1,incomp+comp) + n_cc(i,j,incomp+comp))
-             end do
+       ! y-faces
+       do j=lo(2),hi(2)+1
+          do i=lo(1),hi(1)
+             n_fcy(i,j,outcomp+comp) = average_values(n_cc(i,j-1,incomp+comp), n_cc(i,j,incomp+comp))
           end do
-
-       else if (avg_type .eq. 2) then
-          ! geometric averaging
-
-          ! x-faces
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)+1
-                n_fcx(i,j,outcomp+comp) = sqrt(max(n_cc(i-1,j,incomp+comp),0.d0)*max(n_cc(i,j,incomp+comp),0.d0))
-             end do
-          end do
-
-          ! y-faces
-          do j=lo(2),hi(2)+1
-             do i=lo(1),hi(1)
-                n_fcy(i,j,outcomp+comp) = sqrt(max(n_cc(i,j-1,incomp+comp),0.d0)*max(n_cc(i,j,incomp+comp),0.d0))
-             end do
-          end do
-
-       else if (avg_type .eq. 3) then
-          ! harmonic averaging
-
-          ! x-faces
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)+1
-                n_fcx(i,j,outcomp+comp) = 2.d0 / (1.d0/n_cc(i-1,j,incomp+comp) + 1.d0/n_cc(i,j,incomp+comp))
-             end do
-          end do
-
-          ! y-faces
-          do j=lo(2),hi(2)+1
-             do i=lo(1),hi(1)
-                n_fcy(i,j,outcomp+comp) = 2.d0 / (1.d0/n_cc(i,j-1,incomp+comp) + 1.d0/n_cc(i,j,incomp+comp))
-             end do
-          end do
-
-       else
-          call bl_error("average_to_faces_2d: invalid avg_type")
-       end if
+       end do
 
     end do
 

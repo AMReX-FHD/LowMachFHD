@@ -8,7 +8,7 @@ module advance_timestep_module
   use diffusive_n_fluxdiv_module
   use ml_solve_module  
   use probin_common_module, only: algorithm_type
-  use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose
+  use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose, D_Fick
 
   implicit none
 
@@ -75,7 +75,7 @@ contains
     do n=1,nlevs
        do i=1,dm
           do comp=1,nspecies
-             call multifab_setval_c(diff_coef_face(n,i),dble(comp),comp,1,all=.true.)
+             call multifab_setval_c(diff_coef_face(n,i), D_Fick(comp),comp,1,all=.true.)
           end do
        end do
     end do
@@ -84,13 +84,14 @@ contains
     call diffusive_n_fluxdiv(mla,n_old,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
 
     ! compute stochastic flux divergence
-    call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,the_bc_tower)
+    call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt,the_bc_tower)
 
     if (algorithm_type .eq. 0) then
        ! explicit predictor-corrector
 
+       ! Euler predictor
        ! n_k^{n+1,*} = n_k^n + dt(div D_k grad n_k)^n
-       !                     + dt(div (sqrt(2 D_k n_k) Z)^n
+       !                     + dt(div (sqrt(2 D_k n_k / dt) Z)^n
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
@@ -101,10 +102,10 @@ contains
        ! compute diffusive flux diverge
        call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
 
+       ! Trapezoidal corrector:
        ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
-       !                   + (dt/2)(div (sqrt(2 D_k n_k) Z)^n
        !                   + (dt/2)(div D_k grad n_k)^{n+1,*}
-       !                   + (dt/2)(div (sqrt(2 D_k n_k) Z)^n
+       !                   + (dt)(div (sqrt(2 D_k n_k / dt) Z)^n
        do n=1,nlevs
           call multifab_plus_plus_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
@@ -118,20 +119,23 @@ contains
 
        ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
        !                   + (dt/2)(div D_k grad n_k)^n+1
-       !                   +  dt    div (sqrt(2 D_k n_k) Z)^n
+       !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
        ! 
        ! in operator form
        !
        ! (I - (dt/2) div D_k grad)n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
-       !                                            +  dt    div (sqrt(2 D_k n_k) Z)^n
+       !                                            +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
        !
 
+         
+       ! alpha=1 here for all components since it is simple difusion  
+       do n=1,nlevs
+          call multifab_setval(alpha(n),1.d0,all=.true.)
+       end do   
        do comp=1,nspecies
 
-          ! alpha = 1
           ! beta = (dt/2)*D_k
           do n=1,nlevs
-             call multifab_setval(alpha(n),1.d0,all=.true.)
              do i=1,dm
                 call multifab_copy_c(beta(n,i),1,diff_coef_face(n,i),comp,1,0)
                 call multifab_mult_mult_s(beta(n,i),0.5d0*dt)
@@ -139,7 +143,7 @@ contains
           end do
 
           ! rhs = n_k^n + (dt/2)(div D_k grad n_k)^n
-          !             +  dt    div (sqrt(2 D_k n_k) Z)^n
+          !             +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
           do n=1,nlevs
              call multifab_copy_c(rhs(n),1,diff_fluxdiv(n),comp,1,0)
              call multifab_mult_mult_s(rhs(n),0.5d0)

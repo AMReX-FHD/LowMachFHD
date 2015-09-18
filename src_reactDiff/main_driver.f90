@@ -24,6 +24,7 @@ subroutine main_driver()
   ! quantities will be allocated with dm components
   integer, allocatable :: lo(:), hi(:)
 
+  ! nlevs is always 1 and so it is redundant but to be consistent with BoxLib we need to carry it around    
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time,runtime1,runtime2
@@ -174,10 +175,6 @@ subroutine main_driver()
   ! dm+1 = pressure
   ! dm+2 = scal_bc_comp (for n_i)
   ! scal_bc_comp+nspecies = tran_bc_comp = diffusion coefficients
-  ! It may be better if each transport coefficient has its own BC code?
-  ! I think the only place this is used is average_cc_to_node/face/edge
-  ! I cannot right now foresee a case where different values would be used in different places
-  ! so it is OK to keep num_tran_bc_in=1. But note the same code applies to eta,kappa and chi's
   call initialize_bc(the_bc_tower,nlevs,dm,mla%pmask, &
                      num_scal_bc_in=nspecies, &
                      num_tran_bc_in=1)
@@ -262,27 +259,27 @@ subroutine main_driver()
 
   do istep=init_step,max_step
 
-     runtime1 = parallel_wtime()
+      runtime1 = parallel_wtime()
 
-     if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-           print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-     end if
+      if (parallel_IOProcessor()) then
+         if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+            print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+      end if
 
-     do comp=1,nspecies
-        n_sum(comp) = multifab_sum_c(n_old(1),comp,1)
-     end do
-     if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-             print*,'sum of n',n_sum(:)
-     end if
+      do comp=1,nspecies
+         n_sum(comp) = multifab_sum_c(n_old(1),comp,1)
+      end do
+      if (parallel_IOProcessor()) then
+         if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+              print*,'sum of n',n_sum(:)
+      end if
 
-     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-     ! advance the solution by dt
-     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-     call advance_timestep(mla,n_old,n_new,dx,dt,the_bc_tower)
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      ! advance the solution by dt
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      call advance_timestep(mla,n_old,n_new,dx,dt,the_bc_tower)
 
-     time = time + dt
+      time = time + dt
 
       if (parallel_IOProcessor()) then
         if (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) then
