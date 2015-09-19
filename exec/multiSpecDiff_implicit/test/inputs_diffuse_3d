@@ -35,16 +35,15 @@
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mom = 1.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 1.d-8 ! global scaling epsilon for stochastic mass forcing
   k_B = 1.d0            ! Boltzmann's constant
   Runiv = 8.314462175d7 ! Universal gas constant in ergs/mol/K
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
-                         ! 0 = Inertial algorithm
-                         ! 1 = Overdamped with 1 RNG
-                         ! 2 = Overdamped with 2 RNGs
+  algorithm_type = 0     ! differs from code to code.  In implicit diffusion code:
+                         ! 0 = explicit trapezoidal predictor/corrector
+                         ! 1 = Crank-Nicolson semi-implicit
 
    barodiffusion_type = 0    ! 0 = no barodiffusion
                              ! 1 = fixed gradp from initialization

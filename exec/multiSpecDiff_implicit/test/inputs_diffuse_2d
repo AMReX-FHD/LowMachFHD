@@ -41,10 +41,9 @@
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
-                         ! 0 = Inertial algorithm
-                         ! 1 = Overdamped with 1 RNG
-                         ! 2 = Overdamped with 2 RNGs
+  algorithm_type = 0     ! differs from code to code.  In implicit diffusion code:
+                         ! 0 = explicit trapezoidal predictor/corrector
+                         ! 1 = Crank-Nicolson semi-implicit
 
    barodiffusion_type = 0    ! 0 = no barodiffusion
                              ! 1 = fixed gradp from initialization
