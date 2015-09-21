@@ -14,8 +14,6 @@ module average_to_faces_module
 
 contains
 
-
-
   subroutine average_to_faces(mla,n_cc,n_fc,incomp,outcomp,numcomp)
 
     type(ml_layout), intent(in   ) :: mla
@@ -86,8 +84,8 @@ contains
 
   subroutine average_to_faces_2d(n_cc,ng_c,n_fcx,n_fcy,ng_f,lo,hi,incomp,outcomp,numcomp)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_f,incomp,outcomp,numcomp
-    real(kind=dp_t), intent(in   ) ::   n_cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
+    integer        , intent(in   ) ::  lo(:),hi(:),ng_c,ng_f,incomp,outcomp,numcomp
+    real(kind=dp_t), intent(in   ) ::  n_cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
     real(kind=dp_t), intent(inout) ::  n_fcx(lo(1)-ng_f:,lo(2)-ng_f:,:)
     real(kind=dp_t), intent(inout) ::  n_fcy(lo(1)-ng_f:,lo(2)-ng_f:,:)
 
@@ -125,99 +123,32 @@ contains
 
     do comp=0,numcomp-1
 
-       if (avg_type .eq. 1) then
-          ! arithmetic averaging
-
-          ! x-faces
-          do k=lo(3),hi(3)
-             do j=lo(2),hi(2)
-                do i=lo(1),hi(1)+1
-                   n_fcx(i,j,k,outcomp+comp) = 0.5d0*(n_cc(i-1,j,k,incomp+comp) + n_cc(i,j,k,incomp+comp))
-                end do
+       ! x-faces
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)+1
+                n_fcx(i,j,k,outcomp+comp) = average_values(n_cc(i-1,j,k,incomp+comp), n_cc(i,j,k,incomp+comp))
              end do
           end do
+       end do
 
-          ! y-faces
-          do k=lo(3),hi(3)
-             do j=lo(2),hi(2)+1
-                do i=lo(1),hi(1)
-                   n_fcy(i,j,k,outcomp+comp) = 0.5d0*(n_cc(i,j-1,k,incomp+comp) + n_cc(i,j,k,incomp+comp))
-                end do
+       ! y-faces
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)+1
+             do i=lo(1),hi(1)
+                n_fcy(i,j,k,outcomp+comp) = average_values(n_cc(i,j-1,k,incomp+comp), n_cc(i,j,k,incomp+comp))
              end do
           end do
+       end do
 
-          ! z-faces
-          do k=lo(3),hi(3)+1
-             do j=lo(2),hi(2)
-                do i=lo(1),hi(1)
-                   n_fcz(i,j,k,outcomp+comp) = 0.5d0*(n_cc(i,j,k-1,incomp+comp) + n_cc(i,j,k,incomp+comp))
-                end do
+       ! z-faces
+       do k=lo(3),hi(3)+1
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)
+                n_fcz(i,j,k,outcomp+comp) = average_values(n_cc(i,j,k-1,incomp+comp), n_cc(i,j,k,incomp+comp))
              end do
           end do
-
-       else if (avg_type .eq. 2) then
-          ! geometric averaging
-
-          ! x-faces
-          do k=lo(3),hi(3)
-             do j=lo(2),hi(2)
-                do i=lo(1),hi(1)+1
-                   n_fcx(i,j,k,outcomp+comp) = sqrt(max(n_cc(i-1,j,k,incomp+comp),0.d0)*max(n_cc(i,j,k,incomp+comp),0.d0))
-                end do
-             end do
-          end do
-
-          ! y-faces
-          do k=lo(3),hi(3)
-             do j=lo(2),hi(2)+1
-                do i=lo(1),hi(1)
-                   n_fcy(i,j,k,outcomp+comp) = sqrt(max(n_cc(i,j-1,k,incomp+comp),0.d0)*max(n_cc(i,j,k,incomp+comp),0.d0))
-                end do
-             end do
-          end do
-
-          ! z-faces
-          do k=lo(3),hi(3)+1
-             do j=lo(2),hi(2)
-                do i=lo(1),hi(1)
-                   n_fcz(i,j,k,outcomp+comp) = sqrt(max(n_cc(i,j,k-1,incomp+comp),0.d0)*max(n_cc(i,j,k,incomp+comp),0.d0))
-                end do
-             end do
-          end do
-
-       else if (avg_type .eq. 3) then
-          ! harmonic averaging
-
-          ! x-faces
-          do k=lo(3),hi(3)
-             do j=lo(2),hi(2)
-                do i=lo(1),hi(1)+1
-                   n_fcx(i,j,k,outcomp+comp) = 2.d0 / (1.d0/n_cc(i-1,j,k,incomp+comp) + 1.d0/n_cc(i,j,k,incomp+comp))
-                end do
-             end do
-          end do
-
-          ! y-faces
-          do k=lo(3),hi(3)
-             do j=lo(2),hi(2)+1
-                do i=lo(1),hi(1)
-                   n_fcy(i,j,k,outcomp+comp) = 2.d0 / (1.d0/n_cc(i,j-1,k,incomp+comp) + 1.d0/n_cc(i,j,k,incomp+comp))
-                end do
-             end do
-          end do
-
-          ! z-faces
-          do k=lo(3),hi(3)+1
-             do j=lo(2),hi(2)
-                do i=lo(1),hi(1)
-                   n_fcz(i,j,k,outcomp+comp) = 2.d0 / (1.d0/n_cc(i,j,k-1,incomp+comp) + 1.d0/n_cc(i,j,k,incomp+comp))
-                end do
-             end do
-          end do
-
-       else
-          call bl_error("average_to_faces_3d: invalid avg_type")
-       end if
+       end do
 
     end do
 

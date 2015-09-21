@@ -171,7 +171,6 @@ contains
        end do
     end do
 
-
     ! y-fluxes
     do j=lo(2),hi(2)+1
        do i=lo(1),hi(1)
@@ -199,35 +198,35 @@ contains
 
     integer :: i,j,k
 
-       ! x-fluxes
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)+1
-                fluxx(i,j,k,1:nspecies) = &
-                     sqrt(coefx(i,j,k,1:nspecies)*fluxx(i,j,k,1:nspecies))*stochx(i,j,k,1:nspecies)
-             end do
+    ! x-fluxes
+    do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)+1
+             fluxx(i,j,k,1:nspecies) = &
+                  sqrt(coefx(i,j,k,1:nspecies)*fluxx(i,j,k,1:nspecies))*stochx(i,j,k,1:nspecies)
           end do
        end do
+    end do
 
-       ! y-fluxes
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)+1
-             do i=lo(1),hi(1)
-                fluxy(i,j,k,1:nspecies) = &
-                     sqrt(coefy(i,j,k,1:nspecies)*fluxy(i,j,k,1:nspecies))*stochy(i,j,k,1:nspecies)
-             end do
+    ! y-fluxes
+    do k=lo(3),hi(3)
+       do j=lo(2),hi(2)+1
+          do i=lo(1),hi(1)
+             fluxy(i,j,k,1:nspecies) = &
+                  sqrt(coefy(i,j,k,1:nspecies)*fluxy(i,j,k,1:nspecies))*stochy(i,j,k,1:nspecies)
           end do
        end do
+    end do
 
-       ! z-fluxes
-       do k=lo(3),hi(3)+1
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)
-                fluxz(i,j,k,1:nspecies) = &
-                     sqrt(coefz(i,j,k,1:nspecies)*fluxz(i,j,k,1:nspecies))*stochz(i,j,k,1:nspecies)
-             end do
+    ! z-fluxes
+    do k=lo(3),hi(3)+1
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+             fluxz(i,j,k,1:nspecies) = &
+                  sqrt(coefz(i,j,k,1:nspecies)*fluxz(i,j,k,1:nspecies))*stochz(i,j,k,1:nspecies)
           end do
        end do
+    end do
 
   end subroutine assemble_stoch_n_fluxes_3d
 

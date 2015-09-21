@@ -72,6 +72,8 @@ contains
     call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
     ! compute the diffusion coefficients (for now just setting each to a different constant)
+    ! If one wants a space-dependent D or state-dependent D see multispecies code as example
+    ! We have a routine average_cc_to_face there that is meant to compute face-averaged values
     do n=1,nlevs
        do i=1,dm
           do comp=1,nspecies
