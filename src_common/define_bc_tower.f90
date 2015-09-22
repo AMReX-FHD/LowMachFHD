@@ -288,16 +288,25 @@ contains
           ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_PER
           ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_PER
 
-       else if (phys_bc_level(igrid,d,lohi) == FOEXTRAP) then
+       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL .or. &
+                phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
 
           ! pressure and scalars are homogeneous Neumann
           ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
           ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_NEU
 
-       else if (phys_bc_level(igrid,d,lohi) == EXT_DIR) then
+       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR .or. &
+                phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
 
+          ! pressure is homogeneous Neumann
           ! scalars are Dirichlet
+          ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
           ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_DIR
+
+       else
+
+          ! pressure is homogeneous Neumann
+          ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
 
        end if
 

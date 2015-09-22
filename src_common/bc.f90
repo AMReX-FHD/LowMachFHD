@@ -37,7 +37,7 @@ module bc_module
   ! These specify boundary conditions on phi for the cc mg solver  
   integer, parameter, public :: BC_PER       = -1
   integer, parameter, public :: BC_INT       = 0
-  integer, parameter, public :: BC_DIR       = 1 ! not currently used but needed by BoxLib
+  integer, parameter, public :: BC_DIR       = 1
   integer, parameter, public :: BC_NEU       = 2
 
   ! These specify boundary conditions for the velocity, pressure, and scalars
