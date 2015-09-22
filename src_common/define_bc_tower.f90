@@ -284,13 +284,15 @@ contains
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
-          ! pressure is periodic
-          ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_PER
+          ! pressure and scalars are periodic
+          ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_PER
+          ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_PER
 
        else
 
-          ! pressure and temperature are homogeneous neumann
-          ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_NEU
+          ! pressure and scalars are homogeneous Neumann
+          ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
+          ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_NEU
 
        end if
 
