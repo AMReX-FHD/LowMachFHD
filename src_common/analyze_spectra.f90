@@ -15,7 +15,7 @@ module analyze_spectra_module
   use HydroGridCInterface 
   use probin_common_module, only: n_cells, prob_lo, prob_hi, &
        hydro_grid_int, project_dir, max_grid_projection, stats_int, n_steps_save_stats, &
-       center_snapshots, analyze_conserved
+       center_snapshots, analyze_conserved, histogram_unit
 
   implicit none
 
@@ -559,7 +559,7 @@ contains
     type(multifab) , intent(in), dimension(:), optional :: rho, temperature, scalars
 
     ! Local
-    integer :: i, ii, jj, n, nlevs, dm, pdim, comp, n_passive_scals, species
+    integer :: i, j, k, ii, jj, n, nlevs, dm, pdim, comp, n_passive_scals, species
     real(kind=dp_t), pointer, dimension(:,:,:,:) :: variables, p_v, p_rho, p_c, p_T, p_s
     real(kind=dp_t), dimension(:,:), allocatable :: variables_1D ! Projection of data along project_dir
     
@@ -616,8 +616,18 @@ contains
             comp=1
           end if       
           call updateHydroAnalysisPrimitive (grid_1D, density=variables_1D(:,comp), &
-                  concentration=variables_1D(:,comp:comp+nspecies_analysis))                     
+                  concentration=variables_1D(:,comp:comp+nspecies_analysis))
        end if
+       
+       if((histogram_unit>0).and.present(rho)) then          
+          do k=lbound(p_rho,3), ubound(p_rho,3)
+          do j=lbound(p_rho,2), ubound(p_rho,2)
+          do i=lbound(p_rho,1), ubound(p_rho,1)             
+             write(histogram_unit,*) real(p_rho(i,j,k,:)) ! For histogramming the values
+          end do
+          end do             
+          end do
+       end if       
 
        if(pdim>0) deallocate(variables_1D)
     end if   

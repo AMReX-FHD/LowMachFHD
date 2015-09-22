@@ -21,7 +21,7 @@ module probin_common_module
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_hi(MAX_SPACEDIM-1,MAX_SPACEDIM)
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
-  integer,save    :: stats_int,n_steps_save_stats,n_steps_skip
+  integer,save    :: stats_int,n_steps_save_stats,n_steps_skip,histogram_unit
   logical,save    :: analyze_conserved,center_snapshots
   real(dp_t),save :: variance_coef_mom,variance_coef_mass,initial_variance
   real(dp_t),save :: k_B,Runiv,visc_coef
@@ -170,7 +170,8 @@ module probin_common_module
                                                ! (does not work well)
   namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
                                                ! (will smooth fluctuations)
-
+                                               
+  namelist /probin_common/ histogram_unit      ! If positive, write the values of the densities to a file for histogramming
   !------------------------------------------------------------- 
 
 contains
@@ -260,6 +261,7 @@ contains
     n_steps_skip = 0
     analyze_conserved = .false.
     center_snapshots = .false.
+    histogram_unit=-1
 
     need_inputs = .true.
 

@@ -238,15 +238,15 @@ subroutine main_driver()
    !=====================================================================
    ! Hydrogrid analysis and output for initial data
    !=====================================================================
-
-   if (restart .lt. 0) then
-
-      ! Add this snapshot to the average in HydroGrid
+   istep=init_step
+   if ((restart .lt. 0).and.(istep >= n_steps_skip)) then
+      ! Add the initial snapshot to the average in HydroGrid
+      
       if (hydro_grid_int > 0) then
          call analyze_hydro_grid(mla,dt,dx,istep,rho=n_old)
       end if
 
-      if (hydro_grid_int > 0 .and. n_steps_save_stats > 0) then
+      if ((hydro_grid_int > 0) .and. (n_steps_save_stats > 0)) then
          call save_hydro_grid(id=0, step=0)
       end if
 
