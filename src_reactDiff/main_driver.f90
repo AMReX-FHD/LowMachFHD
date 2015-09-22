@@ -15,8 +15,8 @@ subroutine main_driver()
                                    plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
-                                   variance_coef_mass
-   use probin_reactdiff_module, only: nspecies, probin_reactdiff_init
+                                   variance_coef_mass, cfl
+   use probin_reactdiff_module, only: nspecies, probin_reactdiff_init, D_Fick
 
    use fabio_module
 
@@ -225,7 +225,7 @@ subroutine main_driver()
       if (fixed_dt .gt. 0.d0) then
          dt = fixed_dt
       else
-         call bl_error("Need to define what we mean by CFL time step")
+         dt = cfl * dx(1,1)**2 / (maxval(D_Fick(1:nspecies)))
       end if
 
    end if
