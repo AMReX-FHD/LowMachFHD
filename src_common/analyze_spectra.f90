@@ -58,7 +58,7 @@ contains
   subroutine initialize_hydro_grid(mla,s_in,dt,dx,namelist_file, &
                                    nspecies_in, nscal_in, exclude_last_species_in, &
                                    analyze_velocity, analyze_density, analyze_temperature, &
-                                   heat_capacity_in)
+                                   heat_capacity_in,structFactMultiplier)
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: s_in(:) ! A cell-centered multifab on the desired grid (to grab layout and grid size from)
     real(dp_t)     , intent(inout) :: dt
@@ -72,7 +72,8 @@ contains
         ! Pass exclude_last_species=.false. if you want to analyze all nspecies densities/concentrations
         ! Or pass exclude_last_species=.true. if you want to pass total density rho as the first scalar and 
         !    then only include only n_species-1 additional partial densities/concentrations
-    real(dp_t), intent(in), optional :: heat_capacity_in(nspecies_in) ! This assumes constant heat capacity (ideal gas mixture)   
+    real(dp_t), intent(in), optional :: heat_capacity_in(nspecies_in) ! This assumes constant heat capacity (ideal gas mixture) 
+    real (wp), intent(in), optional :: structFactMultiplier ! Global variance prefactor to normalize output
 
     ! local
     type(box)  :: bx_serial, bx_dir, bx_projected
@@ -269,7 +270,7 @@ contains
              isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_in, &
              systemLength = ncells*grid_dx, heatCapacity = heat_capacity, &
              timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-             structFactMultiplier = 1.0_dp_t )
+             structFactMultiplier = structFactMultiplier )
 
           if(project_dir/=0) then
              ! Also perform analysis on a projected grid (averaged along project_dir axes)
@@ -277,7 +278,7 @@ contains
                   isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_in, &
                   systemLength = nCells*grid_dx, heatCapacity = heat_capacity, &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-                  structFactMultiplier = 1.0_dp_t )
+                  structFactMultiplier = structFactMultiplier )
           end if
 
           if(project_dir/=0) then ! Also perform analysis on a 1D grid (along project_dir only)
@@ -285,7 +286,7 @@ contains
                   isSingleFluid = .true., nVelocityDimensions = dm, nPassiveScalars = nscal_in, &
                   systemLength = nCells*grid_dx, heatCapacity = heat_capacity, &
                   timestep = abs(hydro_grid_int)*dt, fileUnit=namelist_file, &
-                  structFactMultiplier = 1.0_dp_t )
+                  structFactMultiplier = structFactMultiplier )
           end if
 
        end if

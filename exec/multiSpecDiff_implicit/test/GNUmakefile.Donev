@@ -5,7 +5,7 @@ HYDROLIB_HOME := ${HPC_SRC}/FluctHydro/HydroGrid
 STAGGERED_HOME := ${HPC_SRC}/FluctHydro/FluctHydro/staggered_grid
 REACTDIFF_HOME := $(STAGGERED_HOME)/exec/multiSpecDiff_implicit
 
-NDEBUG    := 
+NDEBUG    := t
 MPI       := t
 OMP       :=
 PROF      :=

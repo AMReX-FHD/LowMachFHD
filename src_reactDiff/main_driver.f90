@@ -13,8 +13,9 @@ subroutine main_driver()
    use ParallelRNGs 
    use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                    plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
-                                   probin_common_init, fixed_dt, max_step, &
-                                   hydro_grid_int, stats_int, n_steps_save_stats
+                                   probin_common_init, fixed_dt, max_step, n_steps_skip, &
+                                   hydro_grid_int, stats_int, n_steps_save_stats, &
+                                   variance_coef_mass
    use probin_reactdiff_module, only: nspecies, probin_reactdiff_init
 
    use fabio_module
@@ -204,7 +205,8 @@ subroutine main_driver()
                                        exclude_last_species_in=.false., &
                                        analyze_velocity=.false., &
                                        analyze_density=.true., &
-                                       analyze_temperature=.false.) 
+                                       analyze_temperature=.false., &
+                                       structFactMultiplier = 1.0_dp_t/variance_coef_mass) 
 
             close(unit=un)
          end if
@@ -293,33 +295,38 @@ subroutine main_driver()
          end if
        end if
 
-       ! write a plotfile
-       if (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) then
-          call write_plotfile_n(mla,n_new,dx,time,istep)
-       end if
+       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
+       if (istep >= n_steps_skip) then
 
-       ! write a checkpoint
-       if (chk_int .gt. 0 .and. mod(init_step,chk_int) .eq. 0) then
-          call bl_error("checkpoint not supported")
-       end if
+          ! write a plotfile
+          if (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) then
+             call write_plotfile_n(mla,n_new,dx,time,istep)
+          end if
 
-       ! print out projection (average) and variance
-       if ( (stats_int > 0) .and. &
-            (mod(istep,stats_int) .eq. 0) ) then
-          ! Compute vertical and horizontal averages (hstat and vstat files)   
-          call print_stats(mla,dx,istep,time,rho=n_new)
-       end if
+          ! write a checkpoint
+          if (chk_int .gt. 0 .and. mod(init_step,chk_int) .eq. 0) then
+             call bl_error("checkpoint not supported")
+          end if
 
-       ! Add this snapshot to the average in HydroGrid
-       if ( (hydro_grid_int > 0) .and. &
-            ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
-          call analyze_hydro_grid(mla,dt,dx,istep,rho=n_new)
-       end if
+          ! print out projection (average) and variance
+          if ( (stats_int > 0) .and. &
+               (mod(istep,stats_int) .eq. 0) ) then
+             ! Compute vertical and horizontal averages (hstat and vstat files)   
+             call print_stats(mla,dx,istep,time,rho=n_new)
+          end if
 
-       if ( (hydro_grid_int > 0) .and. &
-            (n_steps_save_stats > 0) .and. &
-            ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
-          call save_hydro_grid(id=istep/n_steps_save_stats,step=istep)
+          ! Add this snapshot to the average in HydroGrid
+          if ( (hydro_grid_int > 0) .and. &
+               ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
+             call analyze_hydro_grid(mla,dt,dx,istep,rho=n_new)
+          end if
+
+          if ( (hydro_grid_int > 0) .and. &
+               (n_steps_save_stats > 0) .and. &
+               ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
+             call save_hydro_grid(id=istep/n_steps_save_stats,step=istep)
+          end if
+       
        end if
 
        ! set old state to new state
