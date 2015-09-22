@@ -116,7 +116,7 @@ contains
     integer         :: i,j,k,comp
     real(kind=dp_t) :: x,y,z,r,cen(3),sum
 
-    cen(1:3) = 0.5d0*(prob_lo(1:3)+prob_hi(1:3))
+    cen(1:3) = 0.6d0*prob_lo(1:3) + 0.4d0*prob_hi(1:3)
 
     do k=lo(3),hi(3)
        z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
@@ -127,7 +127,7 @@ contains
 
              r = sqrt((x-cen(1))**2 + (y-cen(2))**2 + (z-cen(3))**2)
              
-             n_init(i,j,k,1) = 0.5d0*exp(-r**2)
+             n_init(i,j,k,1) = 0.5d0*exp(-100.d0*r**2)
              n_init(i,j,k,2) = 0.25d0
 
           end do

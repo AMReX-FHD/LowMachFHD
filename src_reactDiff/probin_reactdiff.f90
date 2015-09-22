@@ -7,12 +7,18 @@ module probin_reactdiff_module
 
   integer, parameter :: max_species=10
 
-  integer, save      :: nspecies=1, mg_verbose=0, cg_verbose=0, avg_type=3
-  real(kind=dp_t)    :: D_Fick(max_species)=1.0_dp_t
+  integer, save         :: nspecies = 2
+  integer, save         :: mg_verbose = 0
+  integer, save         :: cg_verbose = 0
+  integer, save         :: avg_type = 3
+  real(kind=dp_t), save :: D_Fick(max_species) = 0.d0
+  real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0
   
-  namelist /probin_reactdiff/ nspecies, D_Fick
+  namelist /probin_reactdiff/ nspecies
   namelist /probin_reactdiff/ mg_verbose, cg_verbose
   namelist /probin_reactdiff/ avg_type  ! 1=arithmetic, 2=geometric, 3=harmonic
+  namelist /probin_reactdiff/ D_Fick
+  namelist /probin_reactdiff/ n_bc      ! n_i boundary conditions (dir,lohi,species)
 
 contains
 
@@ -33,12 +39,8 @@ contains
     
     narg = command_argument_count()
 
-    ! here we set some random values to be replaced from the input file
-    nspecies           = 2 
-    mg_verbose         = 0
-    cg_verbose         = 0
-    avg_type           = 3
-    D_Fick             = 1.0d0    
+    ! You can put default values here if you want, but we have specified them above 
+    ! in the variable declaration
  
     ! read from input file 
     need_inputs = .true.
