@@ -6,14 +6,18 @@ module init_n_module
   use define_bc_module
   use bc_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type
-  use probin_reactdiff_module, only: nspecies
- 
+  use probin_reactdiff_module, only: nspecies, n_init_in
+  
   implicit none
 
   private
 
   public :: init_n
 
+  ! prob_type codes for LowMach:
+  ! 0=thermodynamic equilibrium, n=n_init_in(1,1:nspecies)
+  ! 1=gaussian spreading (order of accuracy testing)
+  ! 2=gradient along y, n=n_init_in(1,1:nspecies) on bottom (y=0) and n_init(2,1:nspecies) on top (y=Ly)
 
 contains
 
@@ -77,7 +81,46 @@ contains
  
     ! local varables
     integer         :: i,j,comp
-    real(kind=dp_t) :: x,y,r,cen(2),sum
+    real(kind=dp_t) :: x,y,r,cen(2),sum,L(2)
+
+    L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
+
+    select case (prob_type)
+
+    case(0) 
+    !============================================================
+    ! Thermodynamic equilibrium
+    !============================================================
+ 
+    do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+ 
+          n_init(i,j,1:nspecies) = n_init_in(1,1:nspecies)
+
+       end do
+    end do  
+    
+    case(2) 
+    !=========================================================
+    ! Initializing with constant gradient 
+    !=========================================================
+ 
+    do j=lo(2),hi(2)
+       y = prob_lo(2) + (dble(j)+0.5d0)*dx(2) 
+       do i=lo(1),hi(1)
+          x = prob_lo(1) + (dble(i)+0.5d0)*dx(1) 
+   
+            ! linear gradient in rho
+            n_init(i,j,1:nspecies) = n_init_in(1,1:nspecies) + & 
+               (n_init_in(2,1:nspecies) - n_init_in(1,1:nspecies))*(y-prob_lo(2))/L(2)
+   
+         end do
+      end do
+
+    case(1) 
+    !=============================================================
+    ! Initializing from a Gaussian
+    !=============================================================
 
     cen(1:2) = 0.6d0*prob_lo(1:2) + 0.4d0*prob_hi(1:2)
 
@@ -88,21 +131,17 @@ contains
 
           r = sqrt((x-cen(1))**2 + (y-cen(2))**2)
 
-          n_init(i,j,1) = 0.5d0*exp(-100.d0*r**2)
-          n_init(i,j,2) = 0.25d0
+          n_init(i,j,1:nspecies) = n_init_in(1,1:nspecies)*exp(-100.d0*r**2)
 
        end do
     end do
 
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)
-          sum = 0.d0
-          do comp=1,nspecies-1
-             sum = sum + n_init(i,j,comp)
-          end do
-          n_init(i,j,nspecies) = 1.d0-sum
-       end do
-    end do
+   case default
+      
+      call bl_error("init_n_2d: prob_type not supported")
+      
+    end select
+   
 
   end subroutine init_n_2d
 
@@ -114,8 +153,31 @@ contains
  
     ! local varables
     integer         :: i,j,k,comp
-    real(kind=dp_t) :: x,y,z,r,cen(3),sum
+    real(kind=dp_t) :: x,y,z,r,cen(3),sum,L(3)
 
+    L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
+
+    select case (prob_type)
+
+    case(0) 
+    !================================================================================
+    ! Thermodynamic equilibrium
+    !================================================================================
+ 
+    do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+
+             n_init(i,j,k,1:nspecies) = n_init_in(1,1:nspecies)
+
+          end do
+       end do
+    end do
+    
+    case(1) 
+    !================================================================================
+    ! Initializing from a Gaussian
+    !================================================================================
     cen(1:3) = 0.6d0*prob_lo(1:3) + 0.4d0*prob_hi(1:3)
 
     do k=lo(3),hi(3)
@@ -127,25 +189,37 @@ contains
 
              r = sqrt((x-cen(1))**2 + (y-cen(2))**2 + (z-cen(3))**2)
              
-             n_init(i,j,k,1) = 0.5d0*exp(-100.d0*r**2)
-             n_init(i,j,k,2) = 0.25d0
+             n_init(i,j,k,1:nspecies) = n_init_in(1,1:nspecies)*exp(-100.d0*r**2)
 
           end do
        end do
     end do
 
+    case(2) 
+    !========================================================
+    ! Initializing with constant gradient
+    !========================================================
+ 
     do k=lo(3),hi(3)
+       z = prob_lo(3) + (dble(k)+0.5d0)*dx(3) 
        do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           do i=lo(1),hi(1)
-             sum = 0.d0
-             do comp=1,nspecies-1
-                sum = sum + n_init(i,j,k,comp)
-             end do
-             n_init(i,j,k,nspecies) = 1.d0-sum
+             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+
+               n_init(i,j,k,1:nspecies) = n_init_in(1,1:nspecies) + &
+                   (n_init_in(2,1:nspecies) - n_init_in(1,1:nspecies))*(y-prob_lo(2))/L(2)
+
           end do
        end do
     end do
-
+    
+    case default
+      
+      call bl_error("init_n_3d: prob_type not supported")
+      
+    end select
+   
   end subroutine init_n_3d
 
 end module init_n_module
