@@ -216,10 +216,7 @@ subroutine main_driver()
    ! Initialize values
    !=====================================================================
 
-   call init_n(mla,n_old,dx)
-   do n=1,nlevs
-      call multifab_fill_boundary(n_old(n))
-   end do
+   call init_n(mla,n_old,dx,the_bc_tower)
 
    if (restart .lt. 0) then
 

@@ -2,6 +2,9 @@ module init_n_module
 
   use bl_types
   use ml_layout_module
+  use multifab_physbc_module
+  use define_bc_module
+  use bc_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type
   use probin_reactdiff_module, only: nspecies
  
@@ -14,7 +17,7 @@ module init_n_module
 
 contains
 
-  subroutine init_n(mla,n_init,dx)
+  subroutine init_n(mla,n_init,dx,the_bc_tower)
 
     ! initialize rho_i and umac in the valid region
     ! we first initialize c_i in the valid region
@@ -24,6 +27,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: n_init(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower ), intent(in   ) :: the_bc_tower
  
     ! local variables
     integer                        :: lo(mla%dim), hi(mla%dim)
@@ -56,6 +60,13 @@ contains
 
     call destroy(bpt)
 
+   do n=1,nlevs
+      call multifab_fill_boundary(n_init(n))
+      call multifab_physbc(n_init(n),1,scal_bc_comp,nspecies, &
+                           the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+   end do
+
+
   end subroutine init_n
 
   subroutine init_n_2d(n_init,ng_n,lo,hi,dx)
@@ -68,7 +79,7 @@ contains
     integer         :: i,j,comp
     real(kind=dp_t) :: x,y,r,cen(2),sum
 
-    cen(1:2) = 0.5d0*(prob_lo(1:2)+prob_hi(1:2))
+    cen(1:2) = 0.6d0*prob_lo(1:2) + 0.4d0*prob_hi(1:2)
 
     do j=lo(2),hi(2)
        y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
@@ -77,7 +88,7 @@ contains
 
           r = sqrt((x-cen(1))**2 + (y-cen(2))**2)
 
-          n_init(i,j,1) = 0.5d0*exp(-r**2)
+          n_init(i,j,1) = 0.5d0*exp(-100.d0*r**2)
           n_init(i,j,2) = 0.25d0
 
        end do

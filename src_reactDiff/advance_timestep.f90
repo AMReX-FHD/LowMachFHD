@@ -6,7 +6,8 @@ module advance_timestep_module
   use bndry_reg_module
   use stochastic_n_fluxdiv_module
   use diffusive_n_fluxdiv_module
-  use ml_solve_module  
+  use ml_solve_module
+  use multifab_physbc_module
   use probin_common_module, only: algorithm_type
   use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose, D_Fick
 
@@ -99,6 +100,8 @@ contains
           call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
           call multifab_fill_boundary(n_new(n))
+          call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                               the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
        end do
 
        ! compute diffusive flux diverge
@@ -114,6 +117,8 @@ contains
           call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
           call multifab_mult_mult_s_c(n_new(n),1,0.5d0,nspecies,0)
           call multifab_fill_boundary(n_new(n))
+          call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                               the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
        end do
 
     else if (algorithm_type .eq. 1) then
@@ -174,6 +179,8 @@ contains
 
        do n=1,nlevs
           call multifab_fill_boundary(n_new(n))
+          call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                               the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
        end do
 
     else
