@@ -63,7 +63,8 @@ contains
           end do
        end do
 
-       call cc_applyop(mla,res,phi,alpha,beta,dx,the_bc_tower,scal_bc_comp+comp-1)
+       call cc_applyop(mla,res,phi,alpha,beta,dx,the_bc_tower,scal_bc_comp+comp-1, &
+                       stencil_order_in=1)
 
        ! copy solution into diff_fluxdiv
        do n=1,nlevs

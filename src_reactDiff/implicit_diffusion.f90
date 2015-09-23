@@ -109,6 +109,7 @@ contains
        ! solve the implicit system
        call ml_cc_solve(mla,rhs,phi,fine_flx,alpha,beta,dx, &
                         the_bc_tower,scal_bc_comp+comp-1, &
+                        stencil_order=1, &
                         verbose=mg_verbose, &
                         cg_verbose=cg_verbose)
 
