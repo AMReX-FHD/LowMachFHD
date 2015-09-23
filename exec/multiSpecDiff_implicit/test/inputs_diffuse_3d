@@ -40,6 +40,7 @@
   algorithm_type = 0     ! differs from code to code.  In implicit diffusion code:
                          ! 0 = explicit trapezoidal predictor/corrector
                          ! 1 = Crank-Nicolson semi-implicit
+                         ! 2 = explicit midpoint scheme
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
