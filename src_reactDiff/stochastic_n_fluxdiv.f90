@@ -28,20 +28,24 @@ module stochastic_n_fluxdiv_module
   
 contains
   
-  subroutine stochastic_n_fluxdiv(mla,n_cc,diff_coef_face,stoch_fluxdiv,dx,dt,the_bc_tower)
+  subroutine stochastic_n_fluxdiv(mla,n_cc,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                  the_bc_tower,increment_in)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: n_cc(:)
     type(multifab) , intent(in   )  :: diff_coef_face(:,:)
     type(multifab) , intent(inout)  :: stoch_fluxdiv(:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
-    real(kind=dp_t), intent(in   )   :: dt
+    real(kind=dp_t), intent(in   )  :: dt
     type(bc_tower) , intent(in   )  :: the_bc_tower
+    logical  , intent(in), optional :: increment_in
 
     integer :: i,dm,n,nlevs
     real(kind=dp_t)  :: variance
 
     type(multifab) :: flux(mla%nlevel,mla%dim)
+
+    logical :: increment_div
 
     type(bl_prof_timer), save :: bpt
 
@@ -49,6 +53,9 @@ contains
     nlevs = mla%nlevel
 
     call build(bpt,"stochastic_n_fluxdiv")
+
+    increment_div = .false.
+    if (present(increment_in)) increment_div = increment_in
 
     do n=1,nlevs
        do i=1,dm
@@ -70,7 +77,7 @@ contains
     end do      
 
     ! take flux divergence
-    call compute_div(mla,flux,stoch_fluxdiv,dx,1,1,nspecies)
+    call compute_div(mla,flux,stoch_fluxdiv,dx,1,1,nspecies,increment_div)
 
     do n=1,nlevs
        do i=1,dm
