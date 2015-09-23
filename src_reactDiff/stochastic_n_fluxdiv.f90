@@ -487,7 +487,8 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
-    integer :: n,nlevs,dm
+    integer :: n,nlevs,dm,comp
+    real(kind=dp_t) :: dn_sum
 
     type(multifab) :: n_temp(mla%nlevel)
 
@@ -503,6 +504,12 @@ contains
        call multifab_fill_random(n_temp(n:n), &
                                  variance_mfab=n_init, &
                                  variance=initial_variance*variance_coef_mass/product(dx(n,1:dm)))
+       ! Make sure this sums to zero
+       do comp=1, nspecies
+          dn_sum = multifab_sum_c(n_temp(n),comp,1)
+          ! Subtract dn_sum / grid_size from n_temp ????
+       end do   
+          
     end do
 
     do n=1,nlevs

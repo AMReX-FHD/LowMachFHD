@@ -260,44 +260,35 @@ subroutine main_driver()
    ! Begin time stepping loop
    !=======================================================
 
-   do istep=init_step,max_step
+   if (parallel_IOProcessor()) then
+      print*,"BEGIN time loop istep =",istep,"dt =",dt,"time =",time
+   end if
+   runtime1 = parallel_wtime()
 
-       runtime1 = parallel_wtime()
+   do istep=init_step,max_step      
 
-       if (parallel_IOProcessor()) then
-          if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-             print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-       end if
+       if (parallel_IOProcessor() .and. (print_int>0) .and. (mod(istep,print_int)==0) ) then
+          print*,''
+          write(*,*) "At istep =",istep,"dt =",dt,"time =",time
 
-       do comp=1,nspecies
-          n_sum(comp) = multifab_sum_c(n_old(1),comp,1)
-       end do
-       if (parallel_IOProcessor()) then
-          if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-               print*,'sum of n',n_sum(:)
+          do comp=1,nspecies
+             n_sum(comp) = multifab_sum_c(n_old(1),comp,1)
+          end do
+          print*,'sum of n=',n_sum(:)
+          
+          runtime2 = parallel_wtime()-runtime1
+          call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
+          print*,'Time to advance per timestep: ', runtime1/print_int,' seconds'
+          runtime1=parallel_wtime()
+          
+          print*,''          
        end if
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! advance the solution by dt
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
        call advance_timestep(mla,n_old,n_new,dx,dt,the_bc_tower)
-
        time = time + dt
-
-       if (parallel_IOProcessor()) then
-         if (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) then
-            print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
-         end if
-       end if
-
-       runtime2 = parallel_wtime() - runtime1
-       call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
-       if (parallel_IOProcessor()) then
-         if (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) then
-            print*,'Time to advance timestep: ',runtime1,' seconds'
-            print*,''
-         end if
-       end if
 
        ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
        if (istep >= n_steps_skip) then
@@ -339,6 +330,10 @@ subroutine main_driver()
        end do
 
    end do
+
+   if (parallel_IOProcessor()) then
+      print*,"END time loop istep =",istep,"dt =",dt,"time =",time
+   end if
 
    !=======================================================
    ! Destroy multifabs and layouts
