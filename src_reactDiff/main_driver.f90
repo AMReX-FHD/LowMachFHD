@@ -15,7 +15,7 @@ subroutine main_driver()
                                    plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
-                                   variance_coef_mass, cfl
+                                   variance_coef_mass, cfl, initial_variance
    use probin_reactdiff_module, only: nspecies, probin_reactdiff_init, D_Fick
 
    use fabio_module
@@ -219,6 +219,10 @@ subroutine main_driver()
    !=====================================================================
 
    call init_n(mla,n_old,dx,the_bc_tower)
+
+   if (initial_variance .gt. 0.d0) then
+      call add_n_fluctuations(mla,n_old,dx,the_bc_tower)
+   end if
 
    if (restart .lt. 0) then
 

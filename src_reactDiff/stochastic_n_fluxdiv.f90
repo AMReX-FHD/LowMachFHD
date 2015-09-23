@@ -7,16 +7,19 @@ module stochastic_n_fluxdiv_module
   use define_bc_module
   use bc_module
   use multifab_fill_random_module
+  use multifab_physbc_module
   use average_to_faces_module
   use div_and_grad_module
-  use probin_common_module, only: variance_coef_mass
+  use probin_common_module, only: variance_coef_mass, initial_variance
   use probin_reactdiff_module, only: nspecies
 
   implicit none
 
   private
 
-  public :: stochastic_n_fluxdiv, fill_mass_stochastic, init_mass_stochastic, destroy_mass_stochastic
+  public :: stochastic_n_fluxdiv, fill_mass_stochastic, &
+       init_mass_stochastic, destroy_mass_stochastic, &
+       add_n_fluctuations
 
   ! stochastic fluxes for mass densities are face-centered
   type(multifab), allocatable, save :: stoch_W_fc(:,:,:)
@@ -475,5 +478,44 @@ contains
       end if
 
   end subroutine stoch_mass_bc_3d
+
+  subroutine add_n_fluctuations(mla,n_init,dx,the_bc_tower)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: n_init(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+
+    ! local
+    integer :: n,nlevs,dm
+
+    type(multifab) :: n_temp(mla%nlevel)
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    do n=1,nlevs
+       call multifab_build(n_temp(n),mla%la(n),nspecies,n_init(n)%ng)
+    end do
+    
+    ! create a multifab full of random numbers
+    do n=1,nlevs
+       call multifab_fill_random(n_temp(n:n), &
+                                 variance_mfab=n_init, &
+                                 variance=initial_variance*variance_coef_mass/product(dx(n,1:dm)))
+    end do
+
+    do n=1,nlevs
+       call multifab_plus_plus_c(n_init(n),1,n_temp(n),1,nspecies,n_init(n)%ng)
+       call multifab_fill_boundary(n_init(n))
+       call multifab_physbc(n_init(n),1,scal_bc_comp,nspecies, &
+                            the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+    end do
+
+    do n=1,nlevs
+       call multifab_destroy(n_temp(n))
+    end do    
+
+  end subroutine add_n_fluctuations
    
 end module stochastic_n_fluxdiv_module
