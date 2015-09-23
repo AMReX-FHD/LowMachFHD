@@ -77,7 +77,8 @@ contains
     end do      
 
     ! take flux divergence
-    call compute_div(mla,flux,stoch_fluxdiv,dx,1,1,nspecies,increment_div)
+    call compute_div(mla,flux,stoch_fluxdiv,dx,1,1,nspecies, &
+                     increment_in=increment_div)
 
     do n=1,nlevs
        do i=1,dm
