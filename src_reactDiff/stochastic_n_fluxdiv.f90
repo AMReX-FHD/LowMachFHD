@@ -487,7 +487,7 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
-    integer :: n,nlevs,dm,comp
+    integer :: n,nlevs,dm,comp,n_cell
     real(kind=dp_t) :: dn_sum
 
     type(multifab) :: n_temp(mla%nlevel)
@@ -495,25 +495,31 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
+    ! the number of ghost cells must match variance_mfab input to multifab_fill_random
+    ! the values in the ghost cells do not have to be added to n_init since we
+    ! fill ghost cells for n_init afterwards
     do n=1,nlevs
        call multifab_build(n_temp(n),mla%la(n),nspecies,n_init(n)%ng)
     end do
-    
+
+    n_cell = multifab_volume(n_temp(1)) / nspecies
+
     ! create a multifab full of random numbers
     do n=1,nlevs
        call multifab_fill_random(n_temp(n:n), &
                                  variance_mfab=n_init, &
                                  variance=initial_variance*variance_coef_mass/product(dx(n,1:dm)))
+
        ! Make sure this sums to zero
        do comp=1, nspecies
-          dn_sum = multifab_sum_c(n_temp(n),comp,1)
-          ! Subtract dn_sum / grid_size from n_temp ????
+          dn_sum = multifab_sum_c(n_temp(n),comp,1) / dble(n_cell)
+          call multifab_sub_sub_s_c(n_temp(n),comp,dn_sum,1,0)
        end do   
           
     end do
 
     do n=1,nlevs
-       call multifab_plus_plus_c(n_init(n),1,n_temp(n),1,nspecies,n_init(n)%ng)
+       call multifab_plus_plus_c(n_init(n),1,n_temp(n),1,nspecies,0)
        call multifab_fill_boundary(n_init(n))
        call multifab_physbc(n_init(n),1,scal_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
