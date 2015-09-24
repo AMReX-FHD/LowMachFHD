@@ -6,7 +6,8 @@ module implicit_diffusion_module
   use bc_module
   use bndry_reg_module
   use ml_solve_module
-  use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose
+  use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose, &
+       implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
 
   implicit none
 
@@ -111,7 +112,9 @@ contains
                         the_bc_tower,scal_bc_comp+comp-1, &
                         stencil_order=1, &
                         verbose=mg_verbose, &
-                        cg_verbose=cg_verbose)
+                        cg_verbose=cg_verbose, &
+                        eps=implicit_diffusion_rel_eps, &
+                        abs_eps=implicit_diffusion_abs_eps)
 
        ! copy solution into n_new
        do n=1,nlevs

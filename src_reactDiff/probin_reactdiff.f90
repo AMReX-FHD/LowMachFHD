@@ -15,12 +15,15 @@ module probin_reactdiff_module
   real(kind=dp_t), save :: D_Fick(max_species) = 1.d0 ! Scalar diffusion coefficients
   real(kind=dp_t), save :: n_init_in(2,max_species) = 1.d0 ! Initial values to be used in init_n.f90
   real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0 ! n_i boundary conditions (dir,lohi,species)
+  real(kind=dp_t), save :: implicit_diffusion_rel_eps = 1.d-10 ! relative epsilon for implicit diffusion solve
+  real(kind=dp_t), save :: implicit_diffusion_abs_eps = -1.d0  ! absolute epsilon for implicit diffusion solve
   
   namelist /probin_reactdiff/ nspecies
   namelist /probin_reactdiff/ mg_verbose, cg_verbose
   namelist /probin_reactdiff/ avg_type  ! 1=arithmetic, 2=geometric, 3=harmonic
   namelist /probin_reactdiff/ D_Fick ! Fickian diffusion coeffs
   namelist /probin_reactdiff/ n_init_in, n_bc  ! Initial and boundary conditions
+  namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
 
 contains
 
@@ -84,6 +87,16 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) avg_type
+
+       case ('--implicit_diffusion_rel_eps')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) implicit_diffusion_rel_eps
+
+       case ('--implicit_diffusion_abs_eps')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) implicit_diffusion_abs_eps
 
        case ('--')
           farg = farg + 1
