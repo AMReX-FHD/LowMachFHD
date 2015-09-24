@@ -62,7 +62,8 @@ contains
     call diffusive_n_fluxdiv(mla,n_old,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
 
     ! compute stochastic flux divergence
-    call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt,the_bc_tower)
+    call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                              the_bc_tower,increment_in=.false.)
 
     if (algorithm_type .eq. 0) then
        ! explicit predictor-corrector
@@ -108,7 +109,7 @@ contains
        ! explicit midpoint scheme
 
        ! n_k^{n+1/2} = n_k^n + (dt/2) div (D_k grad n_k)^n
-       !                     +  dt    div (sqrt(D_k n_k / dt) Z_1)^n
+       !                     +  dt    div (sqrt(D_k n_k / (2dt)) Z_1)^n
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt/2.d0      ,diff_fluxdiv(n))
@@ -129,8 +130,8 @@ contains
                                  the_bc_tower,increment_in=.true.)
 
        ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
-       !                   + dt div (sqrt(D_k n_k / dt) Z_1)^n
-       !                   + dt div (sqrt(D_k n_k / dt) Z_2)^n
+       !                   + dt div (sqrt(D_k n_k / (2dt)) Z_1)^n
+       !                   + dt div (sqrt(D_k n_k / (2dt)) Z_2)^n
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt           ,diff_fluxdiv(n))

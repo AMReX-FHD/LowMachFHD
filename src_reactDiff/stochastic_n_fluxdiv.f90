@@ -38,7 +38,7 @@ contains
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     real(kind=dp_t), intent(in   )  :: dt
     type(bc_tower) , intent(in   )  :: the_bc_tower
-    logical  , intent(in), optional :: increment_in
+    logical  , intent(in), optional :: increment_in ! Increment or overwrite stoch_fluxdiv argument?
 
     integer :: i,dm,n,nlevs
     real(kind=dp_t)  :: variance
