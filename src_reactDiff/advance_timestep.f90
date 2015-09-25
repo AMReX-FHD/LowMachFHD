@@ -7,8 +7,7 @@ module advance_timestep_module
   use diffusive_n_fluxdiv_module
   use multifab_physbc_module
   use implicit_diffusion_module
-  use probin_common_module, only: algorithm_type
-  use probin_reactdiff_module, only: nspecies, D_Fick
+  use probin_reactdiff_module, only: nspecies, D_Fick, diffusion_type
 
   implicit none
 
@@ -65,7 +64,7 @@ contains
     call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
                               the_bc_tower,increment_in=.false.)
 
-    if (algorithm_type .eq. 0) then
+    if (diffusion_type .eq. 0) then
        ! explicit predictor-corrector
 
        ! Euler predictor
@@ -97,7 +96,7 @@ contains
                                the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
        end do
 
-    else if (algorithm_type .eq. 1) then
+    else if (diffusion_type .eq. 1) then
        ! Crank-Nicolson
        ! n_k^{n+1} = n_k^n + (dt/2) div )D_k grad n_k)^n
        !                   + (dt/2) div (D_k grad n_k)^n+1
@@ -105,7 +104,7 @@ contains
        call implicit_diffusion(mla,n_old,n_new,diff_coef_face,diff_fluxdiv,stoch_fluxdiv, &
                                dx,dt,the_bc_tower)
 
-    else if (algorithm_type .eq. 2) then
+    else if (diffusion_type .eq. 2) then
        ! explicit midpoint scheme
 
        ! n_k^{n+1/2} = n_k^n + (dt/2) div (D_k grad n_k)^n
@@ -143,7 +142,7 @@ contains
 
     else
 
-       call bl_error("invalid algorithm_type")
+       call bl_error("invalid diffusion_type")
     end if
 
     do n=1,nlevs

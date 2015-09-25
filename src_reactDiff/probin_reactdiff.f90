@@ -7,22 +7,28 @@ module probin_reactdiff_module
   implicit none
 
   integer, parameter :: max_species=10
+  integer, parameter :: max_reactions=20
 
   integer, save         :: nspecies = 2
-  integer, save         :: mg_verbose = 0
-  integer, save         :: cg_verbose = 0
-  integer, save         :: avg_type = 3 ! 1=arithmetic, 2=geometric, 3=harmonic
-  real(kind=dp_t), save :: D_Fick(max_species) = 1.d0 ! Scalar diffusion coefficients
+  integer, save         :: diffusion_type = 0 ! 0=explicit trapezoidal predictor/corrector
+                                              ! 1=Crank-Nicolson semi-implicit
+                                              ! 2=explicit midpoint
+  integer, save         :: reaction_type = 0  ! TBA
+  integer, save         :: splitting_type = 0 ! TBA
+  integer, save         :: avg_type = 3 ! compute n on faces for stochastic weighting
+                                        ! 1=arithmetic, 2=geometric, 3=harmonic
+  real(kind=dp_t), save :: D_Fick(max_species) = 1.d0 ! Fickian diffusion coeffs
   real(kind=dp_t), save :: n_init_in(2,max_species) = 1.d0 ! Initial values to be used in init_n.f90
   real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0 ! n_i boundary conditions (dir,lohi,species)
+  integer, save         :: mg_verbose = 0 ! implicit diffusion solve verbosity
+  integer, save         :: cg_verbose = 0 ! implicit diffusion solve bottom solver verbosity
   real(kind=dp_t), save :: implicit_diffusion_rel_eps = 1.d-10 ! relative epsilon for implicit diffusion solve
   real(kind=dp_t), save :: implicit_diffusion_abs_eps = -1.d0  ! absolute epsilon for implicit diffusion solve
   
   namelist /probin_reactdiff/ nspecies
+  namelist /probin_reactdiff/ diffusion_type, reaction_type, splitting_type, avg_type
+  namelist /probin_reactdiff/ D_Fick, n_init_in, n_bc
   namelist /probin_reactdiff/ mg_verbose, cg_verbose
-  namelist /probin_reactdiff/ avg_type  ! 1=arithmetic, 2=geometric, 3=harmonic
-  namelist /probin_reactdiff/ D_Fick ! Fickian diffusion coeffs
-  namelist /probin_reactdiff/ n_init_in, n_bc  ! Initial and boundary conditions
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
 
 contains
