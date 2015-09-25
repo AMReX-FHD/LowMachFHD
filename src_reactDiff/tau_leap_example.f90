@@ -8,7 +8,7 @@ public
 
 ...
 
-! Use negative value of method for second-order (-1 or -3)
+! Use negative value of method for second-order (-1 or -2)
 integer :: method=3 ! 0=SSA, 1=tau leaping, 2=Chemical Langevin Equation (CLE)
 logical :: use_gsl=.false.
 integer, parameter :: wp=kind(0.0d0)
