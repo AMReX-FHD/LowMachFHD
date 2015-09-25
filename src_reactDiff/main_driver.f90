@@ -186,6 +186,31 @@ subroutine main_driver()
    end do
 
    !=====================================================================
+   ! Initialize values
+   !=====================================================================
+
+   call init_n(mla,n_old,dx,the_bc_tower)
+
+   if (initial_variance .gt. 0.d0) then
+      call add_n_fluctuations(mla,n_old,dx,the_bc_tower)
+   end if
+
+   if (restart .lt. 0) then
+
+      if (fixed_dt .gt. 0.d0) then
+         dt = fixed_dt
+      else
+         dt = cfl * dx(1,1)**2 / (maxval(D_Fick(1:nspecies)))
+      end if
+
+   end if
+
+   ! write a plotfile
+   if (plot_int .gt. 0) then
+      call write_plotfile_n(mla,n_old,dx,0.d0,0)
+   end if
+
+   !=====================================================================
    ! Initialize HydroGrid for analysis
    !=====================================================================
    if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
@@ -211,32 +236,6 @@ subroutine main_driver()
             close(unit=un)
          end if
       end if
-   end if
-
-
-   !=====================================================================
-   ! Initialize values
-   !=====================================================================
-
-   call init_n(mla,n_old,dx,the_bc_tower)
-
-   if (initial_variance .gt. 0.d0) then
-      call add_n_fluctuations(mla,n_old,dx,the_bc_tower)
-   end if
-
-   if (restart .lt. 0) then
-
-      if (fixed_dt .gt. 0.d0) then
-         dt = fixed_dt
-      else
-         dt = cfl * dx(1,1)**2 / (maxval(D_Fick(1:nspecies)))
-      end if
-
-   end if
-
-   ! write a plotfile
-   if (plot_int .gt. 0) then
-      call write_plotfile_n(mla,n_old,dx,0.d0,0)
    end if
 
    !=====================================================================
