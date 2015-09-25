@@ -79,6 +79,26 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) nspecies
 
+       case ('--diffusion_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) diffusion_type
+
+       case ('--reaction_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) reaction_type
+
+       case ('--splitting_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) splitting_type
+
+       case ('--avg_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) avg_type
+
        case ('--mg_verbose')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -88,11 +108,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) cg_verbose
-
-       case ('--avg_type')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) avg_type
 
        case ('--implicit_diffusion_rel_eps')
           farg = farg + 1
