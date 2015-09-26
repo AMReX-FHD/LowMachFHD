@@ -55,7 +55,7 @@ contains
           hi = upb(get_box(n_new(n),i))
           select case (dm)
           case (2)
-!             call advance_reaction_2d(op(:,:,1,:),ng_o,np(:,:,1,:),ng_n,lo,hi,dv,dt)
+             call advance_reaction_2d(op(:,:,1,:),ng_o,np(:,:,1,:),ng_n,lo,hi,dv,dt)
           case (3)
              call advance_reaction_3d(op(:,:,:,:),ng_o,np(:,:,:,:),ng_n,lo,hi,dv,dt)
           end select
@@ -91,11 +91,11 @@ contains
        if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
           ! first-order tau-leaping
 
-          ! compute reaction rates
-          reaction_rates(:) = 0.d0
+          ! compute reaction rates in terms of reactions/volume
+          call compute_reaction_rates(n_old(i,j,:),reaction_rates(:))
 
-          ! compute mean number of events
-          avg_reactions(:) = reaction_rates(:)*dt
+          ! compute mean number of events over the time step
+          avg_reactions(:) = reaction_rates(:)*dt*dv
 
           do comp=1,nreactions
 
@@ -219,5 +219,18 @@ contains
     end do
 
   end subroutine advance_reaction_3d
+
+  subroutine compute_reaction_rates(n_in,reaction_rates)
+    
+    real(kind=dp_t), intent(in   ) :: n_in(:)
+    real(kind=dp_t), intent(inout) :: reaction_rates(:)
+
+    ! reaction 1: n1 + n2 -> n3
+    reaction_rates(1) = 0.0001d0*n_in(1)*n_in(2)
+
+    ! reaction 2: n3 -> n1 + n2
+    reaction_rates(2) = 0.d0
+    
+  end subroutine compute_reaction_rates
 
 end module advance_reaction_module

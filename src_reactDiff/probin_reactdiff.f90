@@ -14,8 +14,10 @@ module probin_reactdiff_module
   integer, save         :: diffusion_type = 0 ! 0=explicit trapezoidal predictor/corrector
                                               ! 1=Crank-Nicolson semi-implicit
                                               ! 2=explicit midpoint
-  integer, save         :: reaction_type = 0  ! TBA
-  integer, save         :: splitting_type = 0 ! TBA
+  integer, save         :: reaction_type = 0  ! 0=first-order tau leaping
+  integer, save         :: splitting_type = 0 ! 0=D + R
+                                              ! 1=(1/2)R + D + (1/2)R
+                                              ! 2=(1/2)D + R + (1/2)D
   integer, save         :: avg_type = 3 ! compute n on faces for stochastic weighting
                                         ! 1=arithmetic, 2=geometric, 3=harmonic
   real(kind=dp_t), save :: D_Fick(max_species) = 1.d0 ! Fickian diffusion coeffs
