@@ -10,6 +10,7 @@ module probin_reactdiff_module
   integer, parameter :: max_reactions=20
 
   integer, save         :: nspecies = 2
+  integer, save         :: nreactions = 2
   integer, save         :: diffusion_type = 0 ! 0=explicit trapezoidal predictor/corrector
                                               ! 1=Crank-Nicolson semi-implicit
                                               ! 2=explicit midpoint
@@ -24,12 +25,14 @@ module probin_reactdiff_module
   integer, save         :: cg_verbose = 0 ! implicit diffusion solve bottom solver verbosity
   real(kind=dp_t), save :: implicit_diffusion_rel_eps = 1.d-10 ! relative epsilon for implicit diffusion solve
   real(kind=dp_t), save :: implicit_diffusion_abs_eps = -1.d0  ! absolute epsilon for implicit diffusion solve
+  integer, save         :: stoichiometric_factors(max_species,max_reactions) = 0 ! stoichiometric factors for each reaction
   
-  namelist /probin_reactdiff/ nspecies
+  namelist /probin_reactdiff/ nspecies, nreactions
   namelist /probin_reactdiff/ diffusion_type, reaction_type, splitting_type, avg_type
   namelist /probin_reactdiff/ D_Fick, n_init_in, n_bc
   namelist /probin_reactdiff/ mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
+  namelist /probin_reactdiff/ stoichiometric_factors
 
 contains
 
@@ -78,6 +81,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) nspecies
+
+       case ('--nreactions')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) nreactions
 
        case ('--diffusion_type')
           farg = farg + 1
@@ -131,6 +139,12 @@ contains
     ! check that nspecies<=max_species, otherwise abort with error message
     if(nspecies.gt.max_species) then 
        call bl_error(" nspecies greater than max_species - Aborting")
+       stop
+    end if
+    
+    ! check that nreactions<=max_reactions, otherwise abort with error message
+    if(nreactions.gt.max_reactions) then 
+       call bl_error(" nreactions greater than max_reactions - Aborting")
        stop
     end if
     
