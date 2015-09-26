@@ -167,10 +167,10 @@ contains
           ! first-order tau-leaping
 
           ! compute reaction rates
-          reaction_rates(:) = 0.d0
+          call compute_reaction_rates(n_old(i,j,k,:),reaction_rates(:))
 
           ! compute mean number of events
-          avg_reactions(:) = reaction_rates(:)*dt
+          avg_reactions(:) = reaction_rates(:)*dt*dv
 
           do comp=1,nreactions
 
