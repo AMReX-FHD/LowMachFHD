@@ -40,12 +40,13 @@ contains
 
     dv = product(dx(1,1:dm))
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! can delete this once reactions are working
-    do n=1,nlevs
-       call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
-    end do
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! if there are no reactions, copy old state into new and return
+    if (nreactions .eq. 0) then
+       do n=1,nlevs
+          call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+       end do
+       return
+    end if
 
     do n=1,nlevs
        do i=1,nfabs(n_new(n))

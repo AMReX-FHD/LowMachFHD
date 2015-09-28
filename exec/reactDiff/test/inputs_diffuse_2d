@@ -88,6 +88,13 @@
                      ! 1=Crank-Nicolson semi-implicit
                      ! 2=explicit midpoint
 
+  reaction_type = 0  ! 0=first-order tau leaping
+                     ! 1=second-order tau leaping
+
+  splitting_type = 0 ! 0=D + R
+                     ! 1=(1/2)R + D + (1/2)R
+                     ! 2=(1/2)D + R + (1/2)D
+
   avg_type = 1 ! compute n on faces for stochastic weighting
                ! 1=arithmetic, 2=geometric, 3=harmonic
 

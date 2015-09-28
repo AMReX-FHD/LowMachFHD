@@ -10,11 +10,12 @@ module probin_reactdiff_module
   integer, parameter :: max_reactions=20
 
   integer, save         :: nspecies = 2
-  integer, save         :: nreactions = 2
+  integer, save         :: nreactions = 0
   integer, save         :: diffusion_type = 0 ! 0=explicit trapezoidal predictor/corrector
                                               ! 1=Crank-Nicolson semi-implicit
                                               ! 2=explicit midpoint
   integer, save         :: reaction_type = 0  ! 0=first-order tau leaping
+                                              ! 1=second-order tau leaping
   integer, save         :: splitting_type = 0 ! 0=D + R
                                               ! 1=(1/2)R + D + (1/2)R
                                               ! 2=(1/2)D + R + (1/2)D
