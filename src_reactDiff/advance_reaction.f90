@@ -80,8 +80,10 @@ contains
     ! local
     integer :: i,j,comp,n
 
-    real(kind=dp_t) :: reaction_rates(1:nreactions)
-    real(kind=dp_t) :: avg_reactions(1:nreactions)
+    real(kind=dp_t) :: theta, alpha1, alpha2
+
+    real(kind=dp_t) :: avg_reactions     (1:nreactions)
+    real(kind=dp_t) :: avg_reactions_pred(1:nreactions)
 
     integer :: num_reactions(1:nreactions)
 
@@ -92,16 +94,20 @@ contains
           ! first-order tau-leaping
 
           ! compute reaction rates in terms of reactions/volume
-          call compute_reaction_rates(n_old(i,j,:),reaction_rates(:))
+          call compute_reaction_rates(n_old(i,j,:),avg_reactions)
 
           ! compute mean number of events over the time step
-          avg_reactions(:) = reaction_rates(:)*dt*dv
+          avg_reactions = avg_reactions*dt*dv
 
           do comp=1,nreactions
 
+             if (avg_reactions(comp) .lt. 0.d0) then
+                avg_reactions(comp) = 0.d0
+             end if
+
              ! for each reaction, compute how many reactions will happen
              ! by sampling a Poisson number
-             if (reaction_rates(comp) .gt. 0.d0) then
+             if (avg_reactions(comp) .gt. 0.d0) then
                 call PoissonNumber(num_reactions(comp),avg_reactions(comp))
              else
                 num_reactions(comp) = 0
@@ -117,7 +123,44 @@ contains
 
           if (reaction_type .eq. 1) then
              ! second-order tau-leaping corrector
-             call bl_error("advance_reaction: reaction_type=1 not supported yet")
+             ! Mattingly predictor-corrector with theta=0.5d0
+
+             theta = 0.5d0
+             alpha1 = 1.d0/(2.d0*theta*(1.d0-theta))
+             alpha2 = alpha1-1.d0
+
+             ! save the mean reactions from the predictor
+             avg_reactions_pred = avg_reactions
+
+             ! compute reaction rates in terms of reactions/volume
+             call compute_reaction_rates(n_new(i,j,:),avg_reactions)
+             
+             ! compute mean number of events over the time step
+             avg_reactions = avg_reactions*dt*dv
+
+             avg_reactions = (alpha1*avg_reactions_pred-alpha2*avg_reactions)*(1.d0-theta)
+
+             do comp=1,nreactions
+
+                if (avg_reactions(comp) .lt. 0.d0) then
+                   avg_reactions(comp) = 0.d0
+                end if
+
+                ! for each reaction, compute how many reactions will happen
+                ! by sampling a Poisson number
+                if (avg_reactions(comp) .gt. 0.d0) then
+                   call PoissonNumber(num_reactions(comp),avg_reactions(comp))
+                else
+                   num_reactions(comp) = 0
+                end if
+
+                ! update number densities for this reaction
+                do n=1,nspecies
+                   n_new(i,j,n) = n_old(i,j,n) + &
+                        num_reactions(comp)*stoichiometric_factors(n,comp) / dv
+                end do
+                
+             end do
              
           end if
 
@@ -155,7 +198,6 @@ contains
     integer :: i,j,k,comp,n
 
     real(kind=dp_t) :: reaction_rates(1:nreactions)
-    real(kind=dp_t) :: avg_reactions(1:nreactions)
 
     integer :: num_reactions(1:nreactions)
 
@@ -170,14 +212,14 @@ contains
           call compute_reaction_rates(n_old(i,j,k,:),reaction_rates(:))
 
           ! compute mean number of events
-          avg_reactions(:) = reaction_rates(:)*dt*dv
+          reaction_rates(:) = reaction_rates(:)*dt*dv
 
           do comp=1,nreactions
 
              ! for each reaction, compute how many reactions will happen
              ! by sampling a Poisson number
              if (reaction_rates(comp) .gt. 0.d0) then
-                call PoissonNumber(num_reactions(comp),avg_reactions(comp))
+                call PoissonNumber(num_reactions(comp),reaction_rates(comp))
              else
                 num_reactions(comp) = 0
              end if
