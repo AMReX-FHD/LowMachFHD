@@ -7,7 +7,7 @@ module advance_reaction_module
   use BoxLibRNGs
   use probin_common_module, only: seed
   use probin_reactdiff_module, only: nspecies, nreactions, reaction_type, &
-       stoichiometric_factors
+       stoichiometric_factors, use_Poisson_rng
 
   implicit none
 
@@ -21,7 +21,7 @@ module advance_reaction_module
 
   ! Donev: Made these compile-time constants since they are so simple
   ! Here we use Mattingly's predictor-corrector with theta=0.5d0, giving the parameters:
-  real(kind=dp_t), parameter :: theta=0.5d0
+  real(kind=dp_t), parameter :: theta = 0.5d0
   real(kind=dp_t), parameter :: alpha1 = 2.0d0
   real(kind=dp_t), parameter :: alpha2 = 1.0d0
 
@@ -84,14 +84,16 @@ contains
   ! Donev: I extracted this local routine here outside of the loops
   ! This way code is not duplicated twice and it is clear that the code is purely local
   subroutine advance_reaction_cell(n_old,n_new,dv,dt)
-    real(kind=dp_t), intent(in   ) :: n_old(n_species)
-    real(kind=dp_t), intent(inout) :: n_new(n_species)
+
+    real(kind=dp_t), intent(in   ) :: n_old(:)
+    real(kind=dp_t), intent(inout) :: n_new(:)
     real(kind=dp_t), intent(in   ) :: dv,dt
 
     real(kind=dp_t) :: avg_reactions     (1:nreactions)
     real(kind=dp_t) :: avg_reactions_pred(1:nreactions)
+    real(kind=dp_t) :: num_reactions     (1:nreactions)
 
-    integer :: num_reactions(1:nreactions)
+    integer :: n,comp
 
     if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
        ! first-order tau-leaping
@@ -99,7 +101,7 @@ contains
        ! compute reaction rates in terms of (reaction rate)/volume
        ! Donev: dv needs to be an argument to compute_reaction_rates
        ! This because things like n^2 need to be replaced by N*(N-1)/dv^2, where N=n*dV is number of molecules
-       call compute_reaction_rates(n_old(i,j,:), avg_reactions)
+       call compute_reaction_rates(n_old(1:nspecies), avg_reactions)
 
        ! compute mean number of events over the time step
        avg_reactions = max(0.0_dp_t, avg_reactions*dt*dv) ! Donev: Moved test for negativity here
@@ -122,7 +124,7 @@ contains
           avg_reactions_pred = avg_reactions
 
           ! compute reaction rates in terms of (reaction rate)/volume
-          call compute_reaction_rates(n_new(i,j,:),avg_reactions)
+          call compute_reaction_rates(n_new(1:nspecies),avg_reactions)
 
           ! compute mean number of events over the time step
           avg_reactions = avg_reactions*dt*dv
@@ -141,7 +143,7 @@ contains
              ! update number densities for this reaction
              do n=1,nspecies
                 n_new(n) = n_old(n) + num_reactions(comp)/dv * &
-                  (stoichiometric_factors(1:nspecies,2,comp)-stoichiometric_factors(1:nspecies,1,comp))
+                  (stoichiometric_factors(n,2,comp)-stoichiometric_factors(n,1,comp))
              end do
 
           end do
@@ -160,12 +162,17 @@ contains
     
     subroutine sample_num_reactions(comp) ! Auxilliary routine (should be inlined by compiler)
       integer, intent(in) :: comp
+
+      ! local
+      integer :: tmp
+
       ! for each reaction, compute how many reactions will happen
       ! by sampling a Poisson or Gaussian number
       if (avg_reactions(comp) .gt. 0.d0) then
          ! Donev: Either do tau leaping or CLE:
          if(use_Poisson_rng) then
-             call PoissonNumber(number=num_reactions(comp), mean=avg_reactions(comp))
+             call PoissonNumber(number=tmp, mean=avg_reactions(comp))
+             num_reactions(comp) = dble(tmp)
          else
              call NormalRNG(num_reactions(comp))
              num_reactions(comp) = avg_reactions(comp) + sqrt(avg_reactions(comp))*num_reactions(comp)
@@ -185,7 +192,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dv,dt
     
     ! local
-    integer :: i,j,comp,n
+    integer :: i,j
 
     do j=lo(2),hi(2)
     do i=lo(1),hi(1)       
@@ -203,7 +210,7 @@ contains
     real(kind=dp_t), intent(in   ) :: dv,dt
     
     ! local
-    integer :: i,j,k,comp,n
+    integer :: i,j,k
 
     do k=lo(3),hi(3)
     do j=lo(2),hi(2)
