@@ -128,8 +128,10 @@ contains
     real(kind=dp_t) :: avg_reactions     (1:nreactions)
     real(kind=dp_t) :: avg_reactions_pred(1:nreactions)
     real(kind=dp_t) :: num_reactions     (1:nreactions)
+    real(kind=dp_t) :: rTotal, rr, rSum, tau, t_local
 
-    integer :: n,comp
+    integer :: n,comp,i,iReaction
+    integer :: n_steps_SSA
 
     if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
        ! first-order tau-leaping or CLE
@@ -185,8 +187,52 @@ contains
        end if
        
     else if (reaction_type .eq. 2) then ! SSA
-    
-       call bl_error("advance_reaction: reaction_type=2 (SSA) not supported yet")
+
+       t_local = 0.d0
+       n_steps_SSA = 0
+
+       EventLoop: do
+
+          ! compute reaction rates in terms of (reaction rate)/volume
+          call compute_reaction_rates(n_old(1:nspecies), avg_reactions,dv)
+
+          ! compute reaction rates
+          avg_reactions = max(0.0d0, avg_reactions*dv)
+
+          ! sum the reaction rates
+          rTotal = sum(avg_reactions(1:nreactions))
+
+          ! generate pseudorandom number in interval [0,1).
+          call UniformRNG(rr)
+          ! tau is how long until the next reaction occurs
+          tau = -log(1-rr)/rTotal
+          t_local = t_local + tau;
+
+          if (t_local .gt. dt) then
+             exit EventLoop
+          end if
+
+          ! Select the next reaction according to relative rates
+          call UniformRNG(rr)
+          rr = rr*rTotal
+          rSum = 0;
+          FindReaction: do i=1,nspecies
+             rSum = rSum + avg_reactions(i);
+             iReaction = i;
+             if( rSum >= rr ) then
+                exit FindReaction
+             end if
+          end do FindReaction
+
+          ! update number densities for this reaction
+          do n=1,nspecies
+             n_new(n) = n_old(n) + &
+                  (stoichiometric_factors(n,2,iReaction)-stoichiometric_factors(n,1,iReaction)) / dv
+          end do
+          
+          n_steps_SSA = n_steps_SSA+1
+
+       end do EventLoop
 
     else
        call bl_error("advance_reaction: invalid reaction_type")
