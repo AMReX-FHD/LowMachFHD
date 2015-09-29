@@ -13,7 +13,16 @@ module advance_reaction_module
 
   private
 
-  public :: advance_reaction
+  public :: advance_reaction, n_rejections
+  
+  ! Donev: It is important to keep track of the number of corrector steps that are null (rejected) in the second-order method
+  ! This should be printed in the end (perhaps as a fraction of what number of steps were rejected)
+  integer*8 ::  n_rejections=0 ! Number of reaction rates set to zero in corrector stage
+
+  ! Donev: Made these compile-time constants since they are so simple
+  ! Here we use Mattingly's predictor-corrector with theta=0.5d0, giving the parameters:
+  real(kind=dp_t), parameter :: alpha1 = 2.0d0
+  real(kind=dp_t), parameter :: alpha2 = 1.0d0
 
 contains
 
@@ -70,7 +79,103 @@ contains
     end do
 
   end subroutine advance_reaction
+  
+  ! Donev: I extracted this local routine here outside of the loops
+  ! This way code is not duplicated twice and it is clear that the code is purely local
+  subroutine advance_reaction_cell(n_old,n_new,dv,dt)
+    real(kind=dp_t), intent(in   ) :: n_old(n_species)
+    real(kind=dp_t), intent(inout) :: n_new(n_species)
+    real(kind=dp_t), intent(in   ) :: dv,dt
 
+    real(kind=dp_t) :: avg_reactions     (1:nreactions)
+    real(kind=dp_t) :: avg_reactions_pred(1:nreactions)
+
+    integer :: num_reactions(1:nreactions)
+
+    if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
+       ! first-order tau-leaping
+
+       ! compute reaction rates in terms of (reaction rate)/volume
+       ! Donev: dv needs to be an argument to compute_reaction_rates
+       ! This because things like n^2 need to be replaced by N*(N-1)/dv^2, where N=n*dV is number of molecules
+       call compute_reaction_rates(n_old(i,j,:), avg_reactions)
+
+       ! compute mean number of events over the time step
+       avg_reactions = max(0.0_dp_t, avg_reactions*dt*dv) ! Donev: Moved test for negativity here
+
+       do comp=1,nreactions
+          call sample_num_reactions(comp)
+
+          ! update number densities for this reaction
+          ! Donev: Rewrote this to use array syntax since it reads nicer I think
+          n_new(1:nspecies) = n_old(1:nspecies) + num_reactions(comp)/dv * &
+             (stoichiometric_factors(1:nspecies,2,comp)-stoichiometric_factors(1:nspecies,1,comp))
+
+       end do
+
+       if (reaction_type .eq. 1) then
+          ! second-order tau-leaping corrector
+          ! Mattingly predictor-corrector with theta=0.5d0
+
+          ! save the mean reactions from the predictor
+          avg_reactions_pred = avg_reactions
+
+          ! compute reaction rates in terms of (reaction rate)/volume
+          call compute_reaction_rates(n_new(i,j,:),avg_reactions)
+
+          ! compute mean number of events over the time step
+          avg_reactions = avg_reactions*dt*dv
+
+          avg_reactions = (alpha1*avg_reactions_pred-alpha2*avg_reactions)*(1.d0-theta)
+
+          do comp=1,nreactions
+
+             if (avg_reactions(comp) .lt. 0.d0) then
+                n_rejections = n_rejections + 1
+                avg_reactions(comp) = 0.d0
+             end if
+
+             call sample_num_reactions(comp)
+
+             ! update number densities for this reaction
+             do n=1,nspecies
+                n_new(n) = n_old(n) + num_reactions(comp)/dv * &
+                  (stoichiometric_factors(1:nspecies,2,comp)-stoichiometric_factors(1:nspecies,1,comp))
+             end do
+
+          end do
+
+       end if
+       
+    else if (reaction_type .eq. 2) then ! SSA
+    
+       call bl_error("advance_reaction: reaction_type=2 (SSA) not supported yet")
+
+    else
+       call bl_error("advance_reaction: invalid reaction_type")
+    end if
+
+  contains
+    
+    subroutine sample_num_reactions(comp) ! Auxilliary routine (should be inlined by compiler)
+      integer, intent(in) :: comp
+      ! for each reaction, compute how many reactions will happen
+      ! by sampling a Poisson or Gaussian number
+      if (avg_reactions(comp) .gt. 0.d0) then
+         ! Donev: Either do tau leaping or CLE:
+         if(use_Poisson_rng) then
+             call PoissonNumber(number=num_reactions(comp), mean=avg_reactions(comp))
+         else
+             call NormalRNG(num_reactions(comp))
+             num_reactions(comp) = avg_reactions(comp) + sqrt(avg_reactions(comp))*num_reactions(comp)
+         end if    
+      else
+         num_reactions(comp) = 0
+      end if
+    end subroutine           
+    
+  end subroutine
+  
   subroutine advance_reaction_2d(n_old,ng_o,n_new,ng_n,lo,hi,dv,dt)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_o,ng_n
@@ -81,108 +186,9 @@ contains
     ! local
     integer :: i,j,comp,n
 
-    real(kind=dp_t) :: theta, alpha1, alpha2
-
-    real(kind=dp_t) :: avg_reactions     (1:nreactions)
-    real(kind=dp_t) :: avg_reactions_pred(1:nreactions)
-
-    integer :: num_reactions(1:nreactions)
-
     do j=lo(2),hi(2)
-    do i=lo(1),hi(1)
-       
-       if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
-          ! first-order tau-leaping
-
-          ! compute reaction rates in terms of (reaction rate)/volume
-          call compute_reaction_rates(n_old(i,j,:),avg_reactions)
-
-          ! compute mean number of events over the time step
-          avg_reactions = avg_reactions*dt*dv
-
-          do comp=1,nreactions
-
-             if (avg_reactions(comp) .lt. 0.d0) then
-                avg_reactions(comp) = 0.d0
-             end if
-
-             ! for each reaction, compute how many reactions will happen
-             ! by sampling a Poisson number
-             if (avg_reactions(comp) .gt. 0.d0) then
-                call PoissonNumber(num_reactions(comp),avg_reactions(comp))
-             else
-                num_reactions(comp) = 0
-             end if
-
-             ! update number densities for this reaction
-             do n=1,nspecies
-                n_new(i,j,n) = n_old(i,j,n) + &
-                     num_reactions(comp)*stoichiometric_factors(n,comp) / dv
-             end do
-
-          end do
-
-          if (reaction_type .eq. 1) then
-             ! second-order tau-leaping corrector
-             ! Mattingly predictor-corrector with theta=0.5d0
-
-             theta = 0.5d0
-             alpha1 = 1.d0/(2.d0*theta*(1.d0-theta))
-             alpha2 = alpha1-1.d0
-
-             ! save the mean reactions from the predictor
-             avg_reactions_pred = avg_reactions
-
-             ! compute reaction rates in terms of (reaction rate)/volume
-             call compute_reaction_rates(n_new(i,j,:),avg_reactions)
-             
-             ! compute mean number of events over the time step
-             avg_reactions = avg_reactions*dt*dv
-
-             avg_reactions = (alpha1*avg_reactions_pred-alpha2*avg_reactions)*(1.d0-theta)
-
-             do comp=1,nreactions
-
-                if (avg_reactions(comp) .lt. 0.d0) then
-                   avg_reactions(comp) = 0.d0
-                end if
-
-                ! for each reaction, compute how many reactions will happen
-                ! by sampling a Poisson number
-                if (avg_reactions(comp) .gt. 0.d0) then
-                   call PoissonNumber(num_reactions(comp),avg_reactions(comp))
-                else
-                   num_reactions(comp) = 0
-                end if
-
-                ! update number densities for this reaction
-                do n=1,nspecies
-                   n_new(i,j,n) = n_old(i,j,n) + &
-                        num_reactions(comp)*stoichiometric_factors(n,comp) / dv
-                end do
-                
-             end do
-             
-          end if
-
-       else if (reaction_type .eq. 2 .or. reaction_type .eq. 3) then
-          ! first-order CLE
-          call bl_error("advance_reaction: reaction_type=2 not supported yet")
-
-          if (reaction_type .eq. 3) then
-             ! second-order CLE corrector
-             call bl_error("advance_reaction: reaction_type=3 not supported yet")
-
-          end if
-
-       else if (reaction_type .eq. 4) then
-          ! SSA
-          call bl_error("advance_reaction: reaction_type=4 not supported yet")
-
-       else
-          call bl_error("advance_reaction: invalid reaction_type")
-       end if
-
+    do i=lo(1),hi(1)       
+       call advance_reaction_cell(n_old(i,j,1:nspecies), n_new(i,j,1:nspecies), dv, dt)
     end do
     end do
 
@@ -198,115 +204,20 @@ contains
     ! local
     integer :: i,j,k,comp,n
 
-    real(kind=dp_t) :: theta, alpha1, alpha2
-
-    real(kind=dp_t) :: avg_reactions     (1:nreactions)
-    real(kind=dp_t) :: avg_reactions_pred(1:nreactions)
-
-    integer :: num_reactions(1:nreactions)
-
     do k=lo(3),hi(3)
     do j=lo(2),hi(2)
     do i=lo(1),hi(1)
-       
-       if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
-          ! first-order tau-leaping
-
-          ! compute reaction rates in terms of (reaction rate)/volume
-          call compute_reaction_rates(n_old(i,j,k,:),avg_reactions)
-
-          ! compute mean number of events over the time step
-          avg_reactions = avg_reactions*dt*dv
-
-          do comp=1,nreactions
-
-             if (avg_reactions(comp) .lt. 0.d0) then
-                avg_reactions(comp) = 0.d0
-             end if
-
-             ! for each reaction, compute how many reactions will happen
-             ! by sampling a Poisson number
-             if (avg_reactions(comp) .gt. 0.d0) then
-                call PoissonNumber(num_reactions(comp),avg_reactions(comp))
-             else
-                num_reactions(comp) = 0
-             end if
-
-             ! update number densities for this reaction
-             do n=1,nspecies
-                n_new(i,j,k,n) = n_old(i,j,k,n) + &
-                     num_reactions(comp)*stoichiometric_factors(n,comp) / dv
-             end do
-
-          end do
-
-          if (reaction_type .eq. 1) then
-             ! second-order tau-leaping corrector
-             ! Mattingly predictor-corrector with theta=0.5d0
-
-             theta = 0.5d0
-             alpha1 = 1.d0/(2.d0*theta*(1.d0-theta))
-             alpha2 = alpha1-1.d0
-
-             ! save the mean reactions from the predictor
-             avg_reactions_pred = avg_reactions
-
-             ! compute reaction rates in terms of (reaction rate)/volume
-             call compute_reaction_rates(n_new(i,j,k,:),avg_reactions)
-             
-             ! compute mean number of events over the time step
-             avg_reactions = avg_reactions*dt*dv
-
-             avg_reactions = (alpha1*avg_reactions_pred-alpha2*avg_reactions)*(1.d0-theta)
-
-             do comp=1,nreactions
-
-                if (avg_reactions(comp) .lt. 0.d0) then
-                   avg_reactions(comp) = 0.d0
-                end if
-
-                ! for each reaction, compute how many reactions will happen
-                ! by sampling a Poisson number
-                if (avg_reactions(comp) .gt. 0.d0) then
-                   call PoissonNumber(num_reactions(comp),avg_reactions(comp))
-                else
-                   num_reactions(comp) = 0
-                end if
-
-                ! update number densities for this reaction
-                do n=1,nspecies
-                   n_new(i,j,k,n) = n_old(i,j,k,n) + &
-                        num_reactions(comp)*stoichiometric_factors(n,comp) / dv
-                end do
-                
-             end do
-             
-          end if
-
-       else if (reaction_type .eq. 2 .or. reaction_type .eq. 3) then
-          ! first-order CLE
-          call bl_error("advance_reaction: reaction_type=2 not supported yet")
-
-          if (reaction_type .eq. 3) then
-             ! second-order CLE corrector
-             call bl_error("advance_reaction: reaction_type=3 not supported yet")
-
-          end if
-
-       else if (reaction_type .eq. 4) then
-          ! SSA
-          call bl_error("advance_reaction: reaction_type=4 not supported yet")
-
-       else
-          call bl_error("advance_reaction: invalid reaction_type")
-       end if
-
+       call advance_reaction_cell(n_old(i,j,k,1:nspecies), n_new(i,j,k,1:nspecies), dv, dt)
     end do
     end do
     end do
 
   end subroutine advance_reaction_3d
 
+  ! Donev: This routine should be something in a separate .f90 file that can be overwritten in an exec module
+  ! That is, instead of listing all sorts of options in the code, each run can override this routine if needed
+  ! We will provide a default routine based on the Law of Mass Action (LMA) here as a default but applications can change the chemistry laws
+  ! Donev: Will write the default routine later
   subroutine compute_reaction_rates(n_in,reaction_rates)
     
     real(kind=dp_t), intent(in   ) :: n_in(:)

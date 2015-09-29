@@ -14,8 +14,12 @@ module probin_reactdiff_module
   integer, save         :: diffusion_type = 0 ! 0=explicit trapezoidal predictor/corrector
                                               ! 1=Crank-Nicolson semi-implicit
                                               ! 2=explicit midpoint
-  integer, save         :: reaction_type = 0  ! 0=first-order tau leaping
-                                              ! 1=second-order tau leaping
+  ! Donev: Added this new input                                              
+  logical, save         :: use_Poisson_rng = .true. ! If true do tau leaping (Poisson increments),
+                                                    ! otherwise do Chemical Langevin Equation (CLE) (Gaussian increments)                                 
+  integer, save         :: reaction_type = 0  ! 0=first-order tau leaping or CLE
+                                              ! 1=second-order tau leaping or CLE
+                                              ! 2=SSA
   integer, save         :: splitting_type = 0 ! 0=D + R
                                               ! 1=(1/2)R + D + (1/2)R
                                               ! 2=(1/2)D + R + (1/2)D
@@ -28,14 +32,21 @@ module probin_reactdiff_module
   integer, save         :: cg_verbose = 0 ! implicit diffusion solve bottom solver verbosity
   real(kind=dp_t), save :: implicit_diffusion_rel_eps = 1.d-10 ! relative epsilon for implicit diffusion solve
   real(kind=dp_t), save :: implicit_diffusion_abs_eps = -1.d0  ! absolute epsilon for implicit diffusion solve
-  integer, save         :: stoichiometric_factors(max_species,max_reactions) = 0 ! stoichiometric factors for each reaction
+  ! Donev: The stochiometric coefficients should have dimension (max_species,2,max_reactions) since there is coefficients on both sides of the equations
+  ! Just knowing the overall stochiometric coefficient (difference of two sides of equation) is not enough
+  ! I prefer the shape (max_species,2,max_reactions) over (2,max_species,max_reactions) because it is easier to enter reactions in namelists in the
+  ! standard notation reactants --> products
+  ! Here the component (:,1,reaction) corresponds to the left side of the --> (denoted with \nu^+ in paper)
+  ! And the right side corresponds to (:,2,reaction) (denoted with nu^- in paper)
+  ! The effective coefficient is nu = nu^(-) - nu^(+) = stochiometric coefficient(:,2,reaction)-stochiometric coefficient(:,1,reaction)
+  integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 ! stoichiometric factors for each reaction
   
   namelist /probin_reactdiff/ nspecies, nreactions
   namelist /probin_reactdiff/ diffusion_type, reaction_type, splitting_type, avg_type
   namelist /probin_reactdiff/ D_Fick, n_init_in, n_bc
   namelist /probin_reactdiff/ mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
-  namelist /probin_reactdiff/ stoichiometric_factors
+  namelist /probin_reactdiff/ stoichiometric_factors, use_Poisson_rng
 
 contains
 
