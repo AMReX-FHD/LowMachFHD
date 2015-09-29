@@ -146,7 +146,6 @@ contains
           call sample_num_reactions(comp)
 
           ! update number densities for this reaction
-          ! Donev: Rewrote this to use array syntax since it reads nicer I think
           n_new(1:nspecies) = n_old(1:nspecies) + num_reactions(comp)/dv * &
              (stoichiometric_factors(1:nspecies,2,comp)-stoichiometric_factors(1:nspecies,1,comp))
 
