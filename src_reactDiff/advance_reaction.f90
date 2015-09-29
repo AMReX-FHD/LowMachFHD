@@ -21,6 +21,7 @@ module advance_reaction_module
 
   ! Donev: Made these compile-time constants since they are so simple
   ! Here we use Mattingly's predictor-corrector with theta=0.5d0, giving the parameters:
+  real(kind=dp_t), parameter :: theta=0.5d0
   real(kind=dp_t), parameter :: alpha1 = 2.0d0
   real(kind=dp_t), parameter :: alpha2 = 1.0d0
 
