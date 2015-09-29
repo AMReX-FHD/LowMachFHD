@@ -89,8 +89,14 @@
                      ! 1=Crank-Nicolson semi-implicit
                      ! 2=explicit midpoint
 
-  reaction_type = 0 ! first-order tau leaping
-                    ! 1=second-order tau leaping
+  reaction_type = 0  ! 0=first-order tau leaping or CLE
+                     ! 1=second-order tau leaping or CLE
+                     ! 2=SSA
+
+  use_Poisson_rng = T ! Only used for reaction_type = 0, 1
+                      ! If true do tau leaping (Poisson increments),
+                      ! otherwise do Chemical Langevin Equation (CLE) 
+    		      ! (Gaussian increments)
 
   splitting_type = 2 ! D + R
                      ! 1=(1/2)R + D + (1/2)R
@@ -117,8 +123,12 @@
   implicit_diffusion_rel_eps = 1.d-10
   implicit_diffusion_abs_eps = -1.d0
 
-  stoichiometric_factors(1:3,1) = -1 -1  2
-  stoichiometric_factors(1:3,2) =  1  1 -2
+  ! stoichiometric factors for each reaction
+  ! (species,LHS(1)/RHS(2),reaction)
+  stoichiometric_factors(1:3,1,1) = 1 1 0
+  stoichiometric_factors(1:3,2,1) = 0 0 2
+  stoichiometric_factors(1:3,1,2) = 0 0 2
+  stoichiometric_factors(1:3,2,2) = 1 1 0
 
 /
 

@@ -88,8 +88,14 @@
                      ! 1=Crank-Nicolson semi-implicit
                      ! 2=explicit midpoint
 
-  reaction_type = 0  ! 0=first-order tau leaping
-                     ! 1=second-order tau leaping
+  reaction_type = 0  ! 0=first-order tau leaping or CLE
+                     ! 1=second-order tau leaping or CLE
+                     ! 2=SSA
+
+  use_Poisson_rng = T ! Only used for reaction_type = 0, 1
+                      ! If true do tau leaping (Poisson increments),
+                      ! otherwise do Chemical Langevin Equation (CLE) 
+    		      ! (Gaussian increments)
 
   splitting_type = 0 ! 0=D + R
                      ! 1=(1/2)R + D + (1/2)R
