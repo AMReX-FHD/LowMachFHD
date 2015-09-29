@@ -94,7 +94,7 @@ contains
        if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
           ! first-order tau-leaping
 
-          ! compute reaction rates in terms of reactions/volume
+          ! compute reaction rates in terms of (reaction rate)/volume
           call compute_reaction_rates(n_old(i,j,:),avg_reactions)
 
           ! compute mean number of events over the time step
@@ -133,7 +133,7 @@ contains
              ! save the mean reactions from the predictor
              avg_reactions_pred = avg_reactions
 
-             ! compute reaction rates in terms of reactions/volume
+             ! compute reaction rates in terms of (reaction rate)/volume
              call compute_reaction_rates(n_new(i,j,:),avg_reactions)
              
              ! compute mean number of events over the time step
@@ -212,7 +212,7 @@ contains
        if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
           ! first-order tau-leaping
 
-          ! compute reaction rates in terms of reactions/volume
+          ! compute reaction rates in terms of (reaction rate)/volume
           call compute_reaction_rates(n_old(i,j,k,:),avg_reactions)
 
           ! compute mean number of events over the time step
@@ -251,7 +251,7 @@ contains
              ! save the mean reactions from the predictor
              avg_reactions_pred = avg_reactions
 
-             ! compute reaction rates in terms of reactions/volume
+             ! compute reaction rates in terms of (reaction rate)/volume
              call compute_reaction_rates(n_new(i,j,k,:),avg_reactions)
              
              ! compute mean number of events over the time step
