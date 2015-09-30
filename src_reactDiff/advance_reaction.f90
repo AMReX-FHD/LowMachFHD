@@ -42,11 +42,18 @@ contains
     real(kind=dp_t), pointer :: np(:,:,:,:)
 
     type(bl_prof_timer),save :: bpt
-
-    call build(bpt,"advance_reaction")
-
+    
     nlevs = mla%nlevel
     dm = mla%dim
+
+    if(nreactions<1) return ! There are no reactions to process!
+       do n=1,nlevs
+          call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
+       end do
+       return
+    end if   
+
+    call build(bpt,"advance_reaction")
 
     ng_o = n_old(1)%ng
     ng_n = n_new(1)%ng
@@ -259,7 +266,7 @@ contains
            if(use_Poisson_rng) then
               ! Need a Poisson random number for tau leaping
               call PoissonNumber(number=tmp, mean=avg_reactions(comp))
-              num_reactions(comp) = dble(tmp)
+              num_reactions(comp) = tmp ! Convert to real
            else
               ! Need a Gaussian random number for CLE
               call NormalRNG(num_reactions(comp))
