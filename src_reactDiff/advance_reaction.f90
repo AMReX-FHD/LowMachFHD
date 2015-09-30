@@ -41,6 +41,10 @@ contains
     real(kind=dp_t), pointer :: op(:,:,:,:)
     real(kind=dp_t), pointer :: np(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"advance_reaction")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -54,6 +58,7 @@ contains
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
        end do
+       call destroy(bpt)
        return
     end if
 
@@ -77,6 +82,8 @@ contains
        call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
     end do
+
+    call destroy(bpt)
 
   end subroutine advance_reaction
   

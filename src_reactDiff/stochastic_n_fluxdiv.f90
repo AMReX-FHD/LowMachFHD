@@ -49,10 +49,10 @@ contains
 
     type(bl_prof_timer), save :: bpt
 
+    call build(bpt,"stochastic_n_fluxdiv")
+
     dm = mla%dim
     nlevs = mla%nlevel
-
-    call build(bpt,"stochastic_n_fluxdiv")
 
     increment_div = .false.
     if (present(increment_in)) increment_div = increment_in
@@ -113,6 +113,10 @@ contains
     real(kind=dp_t), pointer :: sy(:,:,:,:)
     real(kind=dp_t), pointer :: sz(:,:,:,:)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"assemble_stoch_n_fluxes")
+
     dm = mla%dim
     nlevs = mla%nlevel
 
@@ -157,6 +161,8 @@ contains
           call multifab_fill_boundary(flux(n,i))  
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine assemble_stoch_n_fluxes
 
@@ -500,6 +506,10 @@ contains
 
     type(multifab) :: n_temp(mla%nlevel)
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"add_n_fluctuations")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -536,6 +546,8 @@ contains
     do n=1,nlevs
        call multifab_destroy(n_temp(n))
     end do    
+
+    call destroy(bpt)
 
   end subroutine add_n_fluctuations
    

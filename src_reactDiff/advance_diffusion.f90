@@ -32,6 +32,10 @@ contains
 
     integer :: n,nlevs,i,dm,comp
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"advance_diffusion")
+
     nlevs = mla%nlevel
     dm = mla%dim
     
@@ -152,6 +156,8 @@ contains
           call multifab_destroy(diff_coef_face(n,i))
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine advance_diffusion
 

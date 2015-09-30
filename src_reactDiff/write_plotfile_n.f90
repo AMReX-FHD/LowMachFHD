@@ -33,6 +33,10 @@ contains
 
     integer :: nlevs,dm
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"write_plotfile_n")
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -69,6 +73,8 @@ contains
     end do
     deallocate(plotdata)
     deallocate(plot_names)
+
+    call destroy(bpt)
 
   end subroutine write_plotfile_n
 

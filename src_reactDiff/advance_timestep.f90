@@ -25,6 +25,10 @@ contains
     ! local
     integer :: n,nlevs
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"advance_timestep")
+
     nlevs = mla%nlevel
 
     if (splitting_type .eq. 0) then
@@ -53,6 +57,8 @@ contains
     else
        call bl_error("advance_timestep: invalid splitting_type")
     end if
+
+    call destroy(bpt)
 
   end subroutine advance_timestep
 

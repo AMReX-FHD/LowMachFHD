@@ -34,7 +34,7 @@ contains
 
     type(bl_prof_timer), save :: bpt
 
-    call build(bpt, "compute_mass_fluxdiv")
+    call build(bpt, "diffusive_n_fluxdiv")
 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality

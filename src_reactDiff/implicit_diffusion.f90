@@ -43,9 +43,12 @@ contains
 
     integer :: i,dm,n,nlevs,comp
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"implicit_diffusion")
+
     nlevs = mla%nlevel
     dm = mla%dim
-
 
     ! for multigrid solver; (alpha - div beta grad) phi = rhs
     do n=1,nlevs
@@ -142,6 +145,7 @@ contains
        call bndry_reg_destroy(fine_flx(n))
     end do
 
+    call destroy(bpt)
 
   end subroutine implicit_diffusion
 

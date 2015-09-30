@@ -29,6 +29,10 @@ contains
     real(kind=dp_t), pointer :: fy(:,:,:,:)
     real(kind=dp_t), pointer :: fz(:,:,:,:)
 
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"average_to_faces")
+
     dm = mla%dim
     nlevs = mla%nlevel
 
@@ -62,6 +66,8 @@ contains
           call multifab_fill_boundary(n_fc(n,i))  
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine average_to_faces
   
