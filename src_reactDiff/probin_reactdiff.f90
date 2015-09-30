@@ -11,6 +11,8 @@ module probin_reactdiff_module
 
   integer, save         :: nspecies = 2
   integer, save         :: nreactions = 0
+  
+  ! Control of algorithm:
   integer, save         :: diffusion_type = 0 ! 0=explicit trapezoidal predictor/corrector
                                               ! 1=Crank-Nicolson semi-implicit
                                               ! 2=explicit midpoint
@@ -25,13 +27,22 @@ module probin_reactdiff_module
                                               ! 2=(1/2)D + R + (1/2)D
   integer, save         :: avg_type = 3 ! compute n on faces for stochastic weighting
                                         ! 1=arithmetic, 2=geometric, 3=harmonic
-  real(kind=dp_t), save :: D_Fick(max_species) = 1.d0 ! Fickian diffusion coeffs
+  
+  ! Initial and boundary conditions:
   real(kind=dp_t), save :: n_init_in(2,max_species) = 1.d0 ! Initial values to be used in init_n.f90
   real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0 ! n_i boundary conditions (dir,lohi,species)
+  
+  ! Diffusion                                      
+  real(kind=dp_t), save :: D_Fick(max_species) = 1.d0 ! Fickian diffusion coeffs
   integer, save         :: mg_verbose = 0 ! implicit diffusion solve verbosity
   integer, save         :: cg_verbose = 0 ! implicit diffusion solve bottom solver verbosity
   real(kind=dp_t), save :: implicit_diffusion_rel_eps = 1.d-10 ! relative epsilon for implicit diffusion solve
   real(kind=dp_t), save :: implicit_diffusion_abs_eps = -1.d0  ! absolute epsilon for implicit diffusion solve
+  
+  ! Chemical reactions:
+  ! Donev: Added rates here as input and a new flag, see compute_reaction_rates
+  logical, save         :: include_discrete_LMA_correction = .true. ! Whether to compute chemical rates using classical LMA or integer-based one
+  real(kind=dp_t), save :: chemical_rates(max_reactions)=0.0d0 ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
   integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 ! stoichiometric factors for each reaction
                                                                                    ! (species,LHS(1)/RHS(2),reaction)
   
@@ -40,7 +51,7 @@ module probin_reactdiff_module
   namelist /probin_reactdiff/ D_Fick, n_init_in, n_bc
   namelist /probin_reactdiff/ mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
-  namelist /probin_reactdiff/ stoichiometric_factors, use_Poisson_rng
+  namelist /probin_reactdiff/ stoichiometric_factors, use_Poisson_rng, chemical_rates, include_discrete_LMA_correction
 
 contains
 
