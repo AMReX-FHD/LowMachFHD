@@ -46,7 +46,8 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    if(nreactions<1) then ! There are no reactions to process!
+    ! There are no reactions to process!
+    if(nreactions<1) then
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
        end do

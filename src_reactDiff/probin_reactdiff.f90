@@ -40,18 +40,18 @@ module probin_reactdiff_module
   real(kind=dp_t), save :: implicit_diffusion_abs_eps = -1.d0  ! absolute epsilon for implicit diffusion solve
   
   ! Chemical reactions:
-  ! Donev: Added rates here as input and a new flag, see compute_reaction_rates
   logical, save         :: include_discrete_LMA_correction = .true. ! Whether to compute chemical rates using classical LMA or integer-based one
-  real(kind=dp_t), save :: chemical_rates(max_reactions)=0.0d0 ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
+  real(kind=dp_t), save :: chemical_rates(max_reactions) = 0.0d0 ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
   integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 ! stoichiometric factors for each reaction
                                                                                    ! (species,LHS(1)/RHS(2),reaction)
   
   namelist /probin_reactdiff/ nspecies, nreactions
-  namelist /probin_reactdiff/ diffusion_type, reaction_type, splitting_type, avg_type
-  namelist /probin_reactdiff/ D_Fick, n_init_in, n_bc
-  namelist /probin_reactdiff/ mg_verbose, cg_verbose
+  namelist /probin_reactdiff/ diffusion_type, reaction_type, use_Poisson_rng, splitting_type, avg_type
+  namelist /probin_reactdiff/ n_init_in, n_bc
+  namelist /probin_reactdiff/ D_Fick, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
-  namelist /probin_reactdiff/ stoichiometric_factors, use_Poisson_rng, chemical_rates, include_discrete_LMA_correction
+  namelist /probin_reactdiff/ stoichiometric_factors, chemical_rates
+  namelist /probin_reactdiff/ include_discrete_LMA_correction
 
 contains
 
@@ -116,6 +116,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) reaction_type
 
+       case ('--use_Poisson_rng')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) use_Poisson_rng
+
        case ('--splitting_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -145,6 +150,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) implicit_diffusion_abs_eps
+
+       case ('--include_discrete_LMA_correction')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) include_discrete_LMA_correction
 
        case ('--')
           farg = farg + 1

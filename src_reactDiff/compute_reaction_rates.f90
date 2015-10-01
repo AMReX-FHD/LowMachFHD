@@ -27,22 +27,26 @@ contains
              case(0)
                 ! Species does not participate in reaction
              case(1)
+                ! Rate ~ N, where N is number of molecules
                 reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)
              case(2)
-                reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)*(n_in(species)-1.0d0/dv) ! Rate ~ N*(N-1) where N is number of molecules
+                ! Rate ~ N*(N-1) where N is number of molecules
+                reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)*(n_in(species)-1.0d0/dv) 
              case(3)   
-                reaction_rates(reaction)=reaction_rates(reaction)* & ! Rate ~ N*(N-1)*(N-2) where N is number of molecules
-                   n_in(species)*(n_in(species)-1.0d0/dv)*(n_in(species)-2.0d0/dv)
-             case default ! This is essentially impossible in practice and won't happen
+                ! Rate ~ N*(N-1)*(N-2) where N is number of molecules
+                reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)*(n_in(species)-1.0d0/dv)*(n_in(species)-2.0d0/dv)
+             case default
+                ! This is essentially impossible in practice and won't happen
                 call bl_error("Stochiometric coefficients larger then 3 not supported")      
              end select
           end do
        end do
-    else ! Use traditional LMA without accounting for discrete/integer nature of the molecules involved
+    else
+       ! Use traditional LMA without accounting for discrete/integer nature of the molecules involved
        do reaction=1, nreactions
           ! This works since raising to the zeroth power gives unity:
-          reaction_rates(reaction) = chemical_rates(reaction)* &
-            product(n_in(1:nspecies)**stoichiometric_factors(1:nspecies,1,reaction))
+          reaction_rates(reaction) = &
+               chemical_rates(reaction)*product(n_in(1:nspecies)**stoichiometric_factors(1:nspecies,1,reaction))
        end do
     end if
     
