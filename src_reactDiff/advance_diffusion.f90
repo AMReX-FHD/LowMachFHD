@@ -37,7 +37,7 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    if((multifab_volume(n_old)/nspecies)<=1) then ! Donev: Do not do diffusion if only one cell (well-mixed system)
+    if((multifab_volume(n_old(1))/nspecies)<=1) then ! Donev: Do not do diffusion if only one cell (well-mixed system)
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
        end do
