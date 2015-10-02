@@ -18,7 +18,7 @@
 \setlength{\marginparwidth}{0.75in}
 \newcommand{\MarginPar}[1]{\marginpar{\vskip-\baselineskip\raggedright\tiny\sffamily\hrule\smallskip{\color{red}#1}\par\smallskip\hrule}}
 
-\def\nb  {\bf n}
+\def\nb  {{\bf n}}
 \def\mRb {\bm{\mathcal{R}}}
 \def\mZb {\bm{\mathcal{Z}}}
 
@@ -50,8 +50,11 @@ In summary, we are solving the following system of stochastic PDEs:
 \begin{equation}
 \frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_i\nabla n_k + \sqrt{2D_in_k}\mZb\right) + \mRb(\nb),
 \end{equation}
-where $\nb=(n_1,n_2,\cdots)$ are the number densities and $D_i$ are Fickean diffusion
-coefficients.
+where $\nb=(n_1,n_2,\cdots)$ are the number densities, $D_i$ are Fickean diffusion
+coefficients, and $\mZb$ are standard zero-mean, unit-variance random Gaussian 
+vector fields with uncorrelated components.
+This model is essentially the fluctuating multispecies diffusion equations
+augmented with a stochastic reaction term, $\mRb$.
 
 \section{Source Code}
 There are two git repositories required to build/run the code.  BoxLib is a public
@@ -247,7 +250,14 @@ See \cite{Gillespie2007} for an overview of these methods.  We have options
 for second-order tau-leaping and CLE using the predictor-corrector
 method in \cite{AndersonMattingly2011}.
 
-{\bf SSA}
+Our stochastic reactions require deterministic reaction rates, which we obtain
+using the law of mass action.  Define $a_i(\nb)$ as the deterministic reaction
+rate in units of (?) for reaction $i$, and $a_0(\nb) = \sum a_i(\nb)$.
+
+{\bf SSA}.  To summarize, if we assume each reaction is a Poisson process, we
+can generate the time that the next reaction will occur using a uniform random
+variable, and then determine which reaction occurred using a separate 
+uniform random variable.  Then, update the state and repeate.
 
 {\bf Tau Leaping}
 
