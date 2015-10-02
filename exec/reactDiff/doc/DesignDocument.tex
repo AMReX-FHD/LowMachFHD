@@ -57,6 +57,9 @@ coefficients.
 There are two git repositories required to build/run the code.  BoxLib is a public
 repository available on github using the command:\\ \\
 {\tt git clone https://github.com/BoxLib-Codes/BoxLib.git}\\ \\
+If you are not familiar with BoxLib, we recommend reading the BoxLib's User's Guide
+in {\tt BoxLib/Docs}.
+
 FluctHydro exists on CCSE servers and you need to contact Vince/Andy to get an account
 and set up permissions on gamera.  Once you do, you can obtain the repository using:\\ \\
 {\tt git clone <username>@gamera.lbl.gov:/usr/local/gitroot/FluctHydro.git}\\ \\
@@ -132,9 +135,9 @@ Source code specific to this reaction/diffusion problem.
 \end{itemize}
 \end{itemize}
 
-\subsection{Compilation}
+\subsection{Compiling and Running}
 Go to {\tt FluctHydro/staggered\_grid/exec/reactDiff/test/} and edit the 
-{\tt GNUmakefile} settings to your liking (below) and simply type {\tt 'make'}.\\
+{\tt GNUmakefile} settings to your liking (below) and simply type {\tt `make'}.\\
 \begin{verbatim}
 NDEBUG    :=           # 'not debug'.  use 't' for an optimized build
 MPI       := t         # use 't' to build an mpi executable
@@ -143,9 +146,17 @@ PROF      :=           # use 't' to turn on code profiling
 COMP      := gfortran  # fortran compiler
 CCOMP     := gcc       # c compiler
 MKVERBOSE := t         # make verbosity
+
 \end{verbatim}
+This will generate an executable whose name provides information about the build settings,
+i.e., what compiler was used, whether MPI and/or OpenMP were enabled, etc.
+To run the code, simply type the executable name, followed by an inputs file.
 
 \subsection{Input Parameters}
+Refer to {\tt src\_common/probin\_common.f90} and 
+{\tt src\_reactDiff/probin\_reactDiff.f90} for namelist parameters used in the
+simulation and an explanation of what the parameters do.  Note that only a subset
+of the parameters in {\tt probin\_common.f90} are used in this code.
 
 \section{Algorithm}
 We use a finite volume framework on a regular Cartesian mesh.  Consider PDEs describing
@@ -156,7 +167,7 @@ diffusion and reactions in isolation:
 \begin{equation}
 \frac{\partial n_k}{\partial t} = \mRb(\nb).\label{eq:Reactions}
 \end{equation}
-The code supports three temporal splitting schemes:
+The code supports three temporal splitting schemes:\\
 
 {\bf First-Order Temporal Splitting}
 \begin{enumerate}
@@ -230,13 +241,19 @@ D_k\nabla n_k^{n+\myhalf}
 
 \subsection{Reactions}
 In order to discretize the reaction equation (\ref{eq:Reactions}) over a time
-increment $\delta t$, we have three options: tau-leaping, stochastic
-simulation algorithm (SSA), and chemical Langevin equation (CLE).
+increment $\delta t$, we have three options: stochastic
+simulation algorithm (SSA), tau-leaping, and chemical Langevin equation (CLE).
+See \cite{Gillespie2007} for an overview of these methods.  We have options
+for second-order tau-leaping and CLE using the predictor-corrector
+method in \cite{AndersonMattingly2011}.
 
-\subsubsection{SSA}
+{\bf SSA}
 
-\subsubsection{Tau Leaping}
+{\bf Tau Leaping}
 
-\subsubsection{CLE}
+{\bf CLE}
+
+\bibliographystyle{plain}
+\bibliography{DesignDocument}
 
 \end{document}
