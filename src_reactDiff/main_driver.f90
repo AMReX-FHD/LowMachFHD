@@ -29,7 +29,7 @@ subroutine main_driver()
    ! quantities will be allocated with (nlevs,dm) components
    real(kind=dp_t), allocatable :: dx(:,:)
    real(kind=dp_t)              :: dt,time,runtime1,runtime2
-   integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,comp
+   integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,spec
    type(box)                    :: bx
    type(ml_boxarray)            :: mba
    type(ml_layout)              :: mla
@@ -270,8 +270,8 @@ subroutine main_driver()
           print*,''
           write(*,*) "At istep =",istep,"dt =",dt,"time =",time
 
-          do comp=1,nspecies
-             n_sum(comp) = multifab_sum_c(n_old(1),comp,1)
+          do spec=1,nspecies
+             n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
           end do
           print*,'sum of n=',n_sum(:)
           

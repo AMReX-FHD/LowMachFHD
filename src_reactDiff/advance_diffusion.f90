@@ -30,7 +30,7 @@ contains
     type(multifab) :: stoch_fluxdiv(mla%nlevel)
     type(multifab) :: diff_coef_face(mla%nlevel,mla%dim)
 
-    integer :: n,nlevs,i,dm,comp
+    integer :: n,nlevs,i,dm,spec
 
     type(bl_prof_timer),save :: bpt
 
@@ -63,8 +63,8 @@ contains
     ! We have a routine average_cc_to_face there that is meant to compute face-averaged values
     do n=1,nlevs
        do i=1,dm
-          do comp=1,nspecies
-             call multifab_setval_c(diff_coef_face(n,i), D_Fick(comp),comp,1,all=.true.)
+          do spec=1,nspecies
+             call multifab_setval_c(diff_coef_face(n,i), D_Fick(spec),spec,1,all=.true.)
           end do
        end do
     end do
