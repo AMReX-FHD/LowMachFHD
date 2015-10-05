@@ -145,24 +145,26 @@ contains
     real(kind=dp_t) :: num_reactions     (1:nreactions)
     real(kind=dp_t) :: rTotal, rr, rSum, tau, t_local
 
-    integer :: n,comp,i,iReaction
+    integer :: spec,reaction,which_reaction
     integer :: n_steps_SSA
 
     if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
        ! first-order tau-leaping or CLE
 
-       ! compute reaction rates in terms of (reaction rate)/volume
+       ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
        call compute_reaction_rates(n_old(1:nspecies), avg_reactions,dv)
 
        ! compute mean number of events over the time step
        avg_reactions = max(0.0d0, avg_reactions*dt*dv)
 
-       do comp=1,nreactions
-          call sample_num_reactions(comp)
+       do reaction=1,nreactions
+          
+          ! compute num_reactions(reaction)
+          call sample_num_reactions(reaction)
 
           ! update number densities for this reaction
-          n_new(1:nspecies) = n_old(1:nspecies) + num_reactions(comp)/dv * &
-             (stoichiometric_factors(1:nspecies,2,comp)-stoichiometric_factors(1:nspecies,1,comp))
+          n_new(1:nspecies) = n_old(1:nspecies) + num_reactions(reaction)/dv * &
+             (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
 
        end do
 
@@ -173,7 +175,7 @@ contains
           ! save the mean reactions from the predictor
           avg_reactions_pred = avg_reactions
 
-          ! compute reaction rates in terms of (reaction rate)/volume
+          ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
           call compute_reaction_rates(n_new(1:nspecies),avg_reactions,dv)
 
           ! compute mean number of events over the time step
@@ -181,19 +183,20 @@ contains
 
           avg_reactions = (alpha1*avg_reactions_pred-alpha2*avg_reactions)*(1.d0-theta)
 
-          do comp=1,nreactions
+          do reaction=1,nreactions
 
-             if (avg_reactions(comp) .lt. 0.d0) then
+             if (avg_reactions(reaction) .lt. 0.d0) then
                 n_rejections = n_rejections + 1
-                avg_reactions(comp) = 0.d0
+                avg_reactions(reaction) = 0.d0
              end if
 
-             call sample_num_reactions(comp)
+             ! compute num_reactions(reaction)
+             call sample_num_reactions(reaction)
 
              ! update number densities for this reaction
-             do n=1,nspecies
-                n_new(n) = n_old(n) + num_reactions(comp)/dv * &
-                  (stoichiometric_factors(n,2,comp)-stoichiometric_factors(n,1,comp))
+             do spec=1,nspecies
+                n_new(spec) = n_old(spec) + num_reactions(reaction)/dv * &
+                  (stoichiometric_factors(spec,2,reaction)-stoichiometric_factors(spec,1,reaction))
              end do
 
           end do
@@ -207,10 +210,10 @@ contains
 
        EventLoop: do
 
-          ! compute reaction rates in terms of (reaction rate)/volume
+          ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
           call compute_reaction_rates(n_old(1:nspecies), avg_reactions,dv)
 
-          ! compute reaction rates
+          ! compute reaction rates in units (# reactions) / (unit time)
           avg_reactions = max(0.0d0, avg_reactions*dv)
 
           ! sum the reaction rates
@@ -230,18 +233,18 @@ contains
           call UniformRNG(rr)
           rr = rr*rTotal
           rSum = 0;
-          FindReaction: do i=1,nspecies
-             rSum = rSum + avg_reactions(i);
-             iReaction = i;
+          FindReaction: do reaction=1,nreactions
+             rSum = rSum + avg_reactions(reaction);
+             which_reaction = reaction;
              if( rSum >= rr ) then
                 exit FindReaction
              end if
           end do FindReaction
 
           ! update number densities for this reaction
-          do n=1,nspecies
-             n_new(n) = n_old(n) + &
-                  (stoichiometric_factors(n,2,iReaction)-stoichiometric_factors(n,1,iReaction)) / dv
+          do spec=1,nspecies
+             n_new(spec) = n_old(spec) + &
+                  (stoichiometric_factors(spec,2,which_reaction)-stoichiometric_factors(spec,1,which_reaction)) / dv
           end do
           
           n_steps_SSA = n_steps_SSA+1
@@ -254,6 +257,7 @@ contains
 
     contains
 
+      ! compute num_reactions(:)
       subroutine sample_num_reactions(comp) ! Auxilliary routine (should be inlined by compiler)
 
         integer, intent(in) :: comp

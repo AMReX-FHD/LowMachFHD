@@ -11,15 +11,17 @@ module compute_reaction_rates_module
 
 contains
 
+  ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
   subroutine compute_reaction_rates(n_in,reaction_rates,dv)
-    
+
     real(kind=dp_t), intent(in   ) :: n_in(:),dv
     real(kind=dp_t), intent(inout) :: reaction_rates(:)
 
     integer :: reaction, species
     
     if(include_discrete_LMA_correction) then
-       ! Use traditional LMA but correct for the fact that for binary reactions rate ~ N*(N-1) and not N^2, etc.
+       ! Use traditional LMA but correct for the fact that for binary reactions rate ~ N*(N-1) and not N^2, etc.,
+       ! where N is the total number of molecules
        do reaction=1, nreactions
           reaction_rates(reaction) = chemical_rates(reaction)
           do species=1, nspecies
@@ -27,13 +29,13 @@ contains
              case(0)
                 ! Species does not participate in reaction
              case(1)
-                ! Rate ~ N, where N is number of molecules
+                ! Rate ~ N
                 reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)
              case(2)
-                ! Rate ~ N*(N-1) where N is number of molecules
+                ! Rate ~ N*(N-1)
                 reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)*(n_in(species)-1.0d0/dv) 
              case(3)   
-                ! Rate ~ N*(N-1)*(N-2) where N is number of molecules
+                ! Rate ~ N*(N-1)*(N-2)
                 reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)*(n_in(species)-1.0d0/dv)*(n_in(species)-2.0d0/dv)
              case default
                 ! This is essentially impossible in practice and won't happen

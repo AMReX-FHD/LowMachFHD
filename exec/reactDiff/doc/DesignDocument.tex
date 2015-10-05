@@ -50,9 +50,9 @@
 This is a working design document for our stochastic diffusion/reaction code.
 In summary, we are solving the following system of stochastic PDEs:
 \begin{equation}
-\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_i\nabla n_k + \sqrt{2D_in_k}\mZb\right) + \mRb(\nb),
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right) + \mRb(\nb),
 \end{equation}
-where $\nb=(n_1,n_2,\cdots)$ are the number densities, $D_i$ are Fickean diffusion
+where $\nb=(n_1,n_2,\cdots)$ are the number densities, $D_k$ are Fickean diffusion
 coefficients, and $\mZb$ are standard zero-mean, unit-variance random Gaussian 
 vector fields with uncorrelated components.
 This model is essentially the fluctuating multispecies diffusion equations
@@ -167,7 +167,7 @@ of the parameters in {\tt probin\_common.f90} are used in this code.
 We use a finite volume framework on a regular Cartesian mesh.  Consider PDEs describing
 diffusion and reactions in isolation:
 \begin{equation}
-\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_i\nabla n_k + \sqrt{2D_in_k}\mZb\right),\label{eq:Diffusion}
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right),\label{eq:Diffusion}
 \end{equation}
 \begin{equation}
 \frac{\partial n_k}{\partial t} = \mRb(\nb).\label{eq:Reactions}
