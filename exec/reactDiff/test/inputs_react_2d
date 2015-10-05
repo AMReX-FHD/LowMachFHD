@@ -82,49 +82,55 @@
 ! reaction/diffusion number fraction code
 &probin_reactdiff
 
-  nspecies = 3
-  nreactions = 2
+  ! Problem description
+  !----------------------
+  nspecies = 3             ! number of species
+  nreactions = 2           ! number of reactions
+  
+  ! Control of algorithm
+  !----------------------
+  diffusion_type = 0       ! 0=explicit trapezoidal predictor/corrector
+                           ! 1=Crank-Nicolson semi-implicit
+                           ! 2=explicit midpoint
+  reaction_type = 0        ! 0=first-order tau leaping or CLE
+                           ! 1=second-order tau leaping or CLE
+                           ! 2=SSA
+  use_Poisson_rng = T      ! Only used for reaction_type = 0, 1
+                           ! If true do tau leaping (Poisson increments),
+                           ! otherwise do Chemical Langevin Equation (CLE) (Gaussian increments)
+  splitting_type = 2       ! 0=D + R (first-order splitting)
+                           ! 1=(1/2)R + D + (1/2)R (Strang option 1)
+                           ! 2=(1/2)D + R + (1/2)D (Strang option 2)
+  avg_type = 1             ! how to compute n on faces for stochastic weighting
+                           ! 1=arithmetic, 2=geometric, 3=harmonic
+  
+  ! Initial and boundary conditions
+  !----------------------
+  n_init_in(2,1:3) = 100.d0 200.d0 300.d0 ! Initial values to be used in init_n.f90
+  n_bc(2,1,1:3) = 1.0 1.0 1.0 ! n_i boundary conditions (dir,lohi,species)
+  n_bc(2,2,1:3) = 1.0 1.0 1.0
 
-  diffusion_type = 0 ! 0=explicit trapezoidal predictor/corrector
-                     ! 1=Crank-Nicolson semi-implicit
-                     ! 2=explicit midpoint
+  ! Diffusion     
+  !----------------------                          
+  D_Fick(1:3) = 1.d0 0.5d0 0.25d0     ! Fickian diffusion coeffs
+  mg_verbose = 0                      ! implicit diffusion solve verbosity
+  cg_verbose = 0                      ! implicit diffusion solve bottom solver verbosity
+  implicit_diffusion_rel_eps = 1.d-10 ! relative eps for implicit diffusion solve
+  implicit_diffusion_abs_eps = -1.d0  ! absolute eps for implicit diffusion solve
+  
+  ! Chemical reactions
+  !----------------------
 
-  reaction_type = 0  ! 0=first-order tau leaping or CLE
-                     ! 1=second-order tau leaping or CLE
-                     ! 2=SSA
+  ! Whether to compute chemical rates using classical LMA or integer-based one
+  include_discrete_LMA_correction = T
 
-  use_Poisson_rng = T ! Only used for reaction_type = 0, 1
-                      ! If true do tau leaping (Poisson increments),
-                      ! otherwise do Chemical Langevin Equation (CLE) 
-    		      ! (Gaussian increments)
+  ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
+  chemical_rates(1:2) = 0.d0
 
-  splitting_type = 2 ! D + R
-                     ! 1=(1/2)R + D + (1/2)R
-                     ! 2=(1/2)D + R + (1/2)D
-
-  avg_type = 1 ! compute n on faces for stochastic weighting
-               ! 1=arithmetic, 2=geometric, 3=harmonic
-
-  ! Fickian diffusion coeffs
-  D_Fick(1:3) = 1.d0 0.5d0 0.25d0
-
-  ! Initial values to be used in init_n.f90
-  n_init_in(1,1:3) = 100.d0 200.d0 300.d0
-
-  ! n_i boundary conditions (dir,lohi,species)
-  n_bc(2,1,1:3) = 1.0 1.0 1.0 ! Lower y
-  n_bc(2,2,1:3) = 1.0 1.0 1.0 ! Upper y
-
-  ! implicit diffusion solve verbosity, bottom solve verbosity
-  mg_verbose = 0
-  cg_verbose = 0
-
-  ! relative and absolute epsilon for implicit diffusion solve
-  implicit_diffusion_rel_eps = 1.d-10
-  implicit_diffusion_abs_eps = -1.d0
-
-  ! stoichiometric factors for each reaction
-  ! (species,LHS(1)/RHS(2),reaction)
+  ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
+  ! Example: For N1 + 2*N2 -> N3 use
+  ! stoichiometric_factors(1:3,1,1) = 1 2 0
+  ! stoichiometric_factors(1:3,2,1) = 0 0 1
   stoichiometric_factors(1:3,1,1) = 1 1 0
   stoichiometric_factors(1:3,2,1) = 0 0 2
   stoichiometric_factors(1:3,1,2) = 0 0 2
