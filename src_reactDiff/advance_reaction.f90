@@ -8,7 +8,7 @@ module advance_reaction_module
   use compute_reaction_rates_module
   use probin_common_module, only: seed
   use probin_reactdiff_module, only: nspecies, nreactions, reaction_type, &
-       stoichiometric_factors, use_Poisson_rng
+       stoichiometric_factors, use_Poisson_rng, cross_section
 
   implicit none
 
@@ -59,8 +59,8 @@ contains
     ng_o = n_old(1)%ng
     ng_n = n_new(1)%ng
 
-    dv = product(dx(1,1:dm)) ! Donev: This does not quite work in 2D, we should really have an input for thickness of domain
-    ! if(dm<3) dv = dv *  cross_section ! In 1D and 2D account for the other dimensions somehow
+    dv = product(dx(1,1:dm))
+    if (dm<3) dv = dv*cross_section
 
     ! if there are no reactions, copy old state into new and return
     if (nreactions .eq. 0) then
