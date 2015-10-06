@@ -23,6 +23,8 @@ contains
        ! Use traditional LMA but correct for the fact that for binary reactions rate ~ N*(N-1) and not N^2, etc.,
        ! where N is the total number of molecules
        do reaction=1, nreactions
+          !write(*,*) "reaction=", reaction, " rate=", chemical_rates(reaction), &
+          !  " stochiometry=", stoichiometric_factors(1:nspecies,1,reaction)
           reaction_rates(reaction) = chemical_rates(reaction)
           do species=1, nspecies
              select case(stoichiometric_factors(species,1,reaction))
@@ -42,6 +44,7 @@ contains
                 call bl_error("Stochiometric coefficients larger then 3 not supported")      
              end select
           end do
+          !write(*,*) "reaction=", reaction, " rate=", reaction_rates(reaction)
        end do
     else
        ! Use traditional LMA without accounting for discrete/integer nature of the molecules involved

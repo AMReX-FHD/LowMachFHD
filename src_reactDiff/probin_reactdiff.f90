@@ -22,9 +22,10 @@ module probin_reactdiff_module
   integer, save         :: reaction_type = 0        ! 0=first-order tau leaping or CLE
                                                     ! 1=second-order tau leaping or CLE
                                                     ! 2=SSA
-  logical, save         :: use_Poisson_rng = .true. ! Only used for reaction_type = 0, 1
-                                                    ! If true do tau leaping (Poisson increments),
-                                                    ! otherwise do Chemical Langevin Equation (CLE) (Gaussian increments)
+  integer, save         :: use_Poisson_rng = 1      ! Only used for reaction_type = 0, 1
+                                                    ! If -1 do deterministic chemistry
+                                                    ! If 1 do tau leaping (Poisson increments),
+                                                    ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
   integer, save         :: splitting_type = 0       ! 0=D + R (first-order splitting)
                                                     ! 1=(1/2)R + D + (1/2)R (Strang option 1)
                                                     ! 2=(1/2)D + R + (1/2)D (Strang option 2)

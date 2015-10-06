@@ -59,7 +59,8 @@ contains
     ng_o = n_old(1)%ng
     ng_n = n_new(1)%ng
 
-    dv = product(dx(1,1:dm))
+    dv = product(dx(1,1:dm)) ! Donev: This does not quite work in 2D, we should really have an input for thickness of domain
+    ! if(dm<3) dv = dv *  cross_section ! In 1D and 2D account for the other dimensions somehow
 
     ! if there are no reactions, copy old state into new and return
     if (nreactions .eq. 0) then
@@ -152,9 +153,11 @@ contains
        ! first-order tau-leaping or CLE
 
        ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
-       call compute_reaction_rates(n_old(1:nspecies), avg_reactions,dv)
+       call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
+       !write(*,*) "PREDICTOR PROPENSITY=", real(avg_reactions)
 
        ! compute mean number of events over the time step
+       if (reaction_type .eq. 1) avg_reactions = avg_reactions*theta ! Predictor step has length theta*dt
        avg_reactions = max(0.0d0, avg_reactions*dt*dv)
 
        do reaction=1,nreactions
@@ -176,7 +179,8 @@ contains
           avg_reactions_pred = avg_reactions
 
           ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
-          call compute_reaction_rates(n_new(1:nspecies),avg_reactions,dv)
+          call compute_reaction_rates(n_new(1:nspecies),avg_reactions, dv)
+          !write(*,*) "CORRECTOR PROPENSITY=", real(avg_reactions); stop
 
           ! compute mean number of events over the time step
           avg_reactions = avg_reactions*dt*dv
@@ -195,7 +199,7 @@ contains
 
              ! update number densities for this reaction
              do spec=1,nspecies
-                n_new(spec) = n_old(spec) + num_reactions(reaction)/dv * &
+                n_new(spec) = n_new(spec) + num_reactions(reaction)/dv * &
                   (stoichiometric_factors(spec,2,reaction)-stoichiometric_factors(spec,1,reaction))
              end do
 
@@ -211,7 +215,7 @@ contains
        EventLoop: do
 
           ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
-          call compute_reaction_rates(n_old(1:nspecies), avg_reactions,dv)
+          call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
 
           ! compute reaction rates in units (# reactions) / (unit time)
           avg_reactions = max(0.0d0, avg_reactions*dv)
@@ -225,20 +229,16 @@ contains
           tau = -log(1-rr)/rTotal
           t_local = t_local + tau;
 
-          if (t_local .gt. dt) then
-             exit EventLoop
-          end if
+          if (t_local .gt. dt) exit EventLoop
 
           ! Select the next reaction according to relative rates
           call UniformRNG(rr)
           rr = rr*rTotal
-          rSum = 0;
+          rSum = 0
           FindReaction: do reaction=1,nreactions
-             rSum = rSum + avg_reactions(reaction);
-             which_reaction = reaction;
-             if( rSum >= rr ) then
-                exit FindReaction
-             end if
+             rSum = rSum + avg_reactions(reaction)
+             which_reaction = reaction
+             if( rSum >= rr ) exit FindReaction
           end do FindReaction
 
           ! update number densities for this reaction
@@ -268,15 +268,18 @@ contains
         ! for each reaction, compute how many reactions will happen
         ! by sampling a Poisson (tau leaping) or Gaussian (CLE) number
         if (avg_reactions(comp) .gt. 0.d0) then
-           if(use_Poisson_rng) then
+           select case(use_Poisson_rng)           
+           case(1)
               ! Need a Poisson random number for tau leaping
               call PoissonRNG(number=tmp, mean=avg_reactions(comp))
               num_reactions(comp) = tmp ! Convert to real
-           else
+           case(0)
               ! Need a Gaussian random number for CLE
               call NormalRNG(num_reactions(comp))
               num_reactions(comp) = avg_reactions(comp) + sqrt(avg_reactions(comp))*num_reactions(comp)
-           end if
+           case default ! Do deterministic chemistry   
+              num_reactions(comp) = avg_reactions(comp)
+           end select
         else
            num_reactions(comp) = 0
         end if
