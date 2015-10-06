@@ -619,11 +619,11 @@ contains
                   concentration=variables_1D(:,comp:comp+nspecies_analysis))
        end if
        
-       if((histogram_unit>0).and.present(rho)) then          
+       if((histogram_unit>0).and.present(rho).and.present(scalars)) then          
           do k=lbound(p_rho,3), ubound(p_rho,3)
           do j=lbound(p_rho,2), ubound(p_rho,2)
           do i=lbound(p_rho,1), ubound(p_rho,1)             
-             write(histogram_unit,*) real(p_rho(i,j,k,:)) ! For histogramming the values
+             write(histogram_unit,*) real(p_rho(i,j,k,:)), real(p_c(i,j,k,:)) ! For histogramming the values
           end do
           end do             
           end do

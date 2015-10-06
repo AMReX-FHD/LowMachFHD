@@ -266,7 +266,7 @@ contains
         if (avg_reactions(comp) .gt. 0.d0) then
            if(use_Poisson_rng) then
               ! Need a Poisson random number for tau leaping
-              call PoissonNumber(number=tmp, mean=avg_reactions(comp))
+              call PoissonRNG(number=tmp, mean=avg_reactions(comp))
               num_reactions(comp) = tmp ! Convert to real
            else
               ! Need a Gaussian random number for CLE
