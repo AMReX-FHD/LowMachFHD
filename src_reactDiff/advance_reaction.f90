@@ -154,7 +154,9 @@ contains
 
        ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
        call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
-       !write(*,*) "PREDICTOR PROPENSITY=", real(avg_reactions)
+       !write(*,*) "PREDICTOR PROPENSITY=", real(avg_reactions); stop
+       ! save the mean reactions from the predictor
+       avg_reactions_pred = avg_reactions
 
        ! compute mean number of events over the time step
        if (reaction_type .eq. 1) avg_reactions = avg_reactions*theta ! Predictor step has length theta*dt
@@ -175,17 +177,15 @@ contains
           ! second-order tau-leaping or CLE corrector
           ! Mattingly predictor-corrector with theta=0.5d0
 
-          ! save the mean reactions from the predictor
-          avg_reactions_pred = avg_reactions
-
           ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
-          call compute_reaction_rates(n_new(1:nspecies),avg_reactions, dv)
+          call compute_reaction_rates(n_new(1:nspecies), avg_reactions, dv)
           !write(*,*) "CORRECTOR PROPENSITY=", real(avg_reactions); stop
-
+          
+          ! Corrector rate is a linear combination of the two rates:
+          avg_reactions = (alpha1*avg_reactions-alpha2*avg_reactions_pred)*(1.d0-theta)
+          
           ! compute mean number of events over the time step
           avg_reactions = avg_reactions*dt*dv
-
-          avg_reactions = (alpha1*avg_reactions_pred-alpha2*avg_reactions)*(1.d0-theta)
 
           do reaction=1,nreactions
 

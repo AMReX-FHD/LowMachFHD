@@ -147,7 +147,7 @@ if(method<0) then ! Do corrector stage of second-order Anderson/Mattingly method
    do iReaction=1, nreactions
    if(r(iReaction)>0.0_wp) then
    
-      mean = (alpha1*rates_p(iReaction)-alpha2*r(iReaction))*(1.0_wp-theta)*dt      
+      mean = (alpha1*r(iReaction)-alpha2*rates_p(iReaction))*(1.0_wp-theta)*dt      
       !write(*,*) "corrector=", mean
       if(mean<0) then
          n_rejections = n_rejections + 1
