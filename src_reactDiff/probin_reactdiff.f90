@@ -9,49 +9,62 @@ module probin_reactdiff_module
   integer, parameter :: max_species=10
   integer, parameter :: max_reactions=20
 
-  integer, save         :: nspecies = 2
-  integer, save         :: nreactions = 0
+  ! Problem description
+  !----------------------
+  integer, save         :: nspecies = 2             ! number of species
+  integer, save         :: nreactions = 0           ! number of reactions
   
-  ! Control of algorithm:
-  integer, save         :: diffusion_type = 0 ! 0=explicit trapezoidal predictor/corrector
-                                              ! 1=Crank-Nicolson semi-implicit
-                                              ! 2=explicit midpoint
-  integer, save         :: reaction_type = 0  ! 0=first-order tau leaping or CLE
-                                              ! 1=second-order tau leaping or CLE
-                                              ! 2=SSA
+  ! Control of algorithm
+  !----------------------
+  integer, save         :: diffusion_type = 0       ! 0=explicit trapezoidal predictor/corrector
+                                                    ! 1=Crank-Nicolson semi-implicit
+                                                    ! 2=explicit midpoint
+  integer, save         :: reaction_type = 0        ! 0=first-order tau leaping or CLE
+                                                    ! 1=second-order tau leaping or CLE
+                                                    ! 2=SSA
   logical, save         :: use_Poisson_rng = .true. ! Only used for reaction_type = 0, 1
                                                     ! If true do tau leaping (Poisson increments),
                                                     ! otherwise do Chemical Langevin Equation (CLE) (Gaussian increments)
-  integer, save         :: splitting_type = 0 ! 0=D + R
-                                              ! 1=(1/2)R + D + (1/2)R
-                                              ! 2=(1/2)D + R + (1/2)D
-  integer, save         :: avg_type = 3 ! compute n on faces for stochastic weighting
-                                        ! 1=arithmetic, 2=geometric, 3=harmonic
+  integer, save         :: splitting_type = 0       ! 0=D + R (first-order splitting)
+                                                    ! 1=(1/2)R + D + (1/2)R (Strang option 1)
+                                                    ! 2=(1/2)D + R + (1/2)D (Strang option 2)
+  integer, save         :: avg_type = 3             ! how to compute n on faces for stochastic weighting
+                                                    ! 1=arithmetic, 2=geometric, 3=harmonic
   
-  ! Initial and boundary conditions:
+  ! Initial and boundary conditions
+  !----------------------
   real(kind=dp_t), save :: n_init_in(2,max_species) = 1.d0 ! Initial values to be used in init_n.f90
-  real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0 ! n_i boundary conditions (dir,lohi,species)
+  real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0    ! n_i boundary conditions (dir,lohi,species)
+
+  ! Diffusion     
+  !----------------------                          
+  real(kind=dp_t), save :: D_Fick(max_species) = 1.d0          ! Fickian diffusion coeffs
+  integer, save         :: mg_verbose = 0                      ! implicit diffusion solve verbosity
+  integer, save         :: cg_verbose = 0                      ! implicit diffusion solve bottom solver verbosity
+  real(kind=dp_t), save :: implicit_diffusion_rel_eps = 1.d-10 ! relative eps for implicit diffusion solve
+  real(kind=dp_t), save :: implicit_diffusion_abs_eps = -1.d0  ! absolute eps for implicit diffusion solve
   
-  ! Diffusion                                      
-  real(kind=dp_t), save :: D_Fick(max_species) = 1.d0 ! Fickian diffusion coeffs
-  integer, save         :: mg_verbose = 0 ! implicit diffusion solve verbosity
-  integer, save         :: cg_verbose = 0 ! implicit diffusion solve bottom solver verbosity
-  real(kind=dp_t), save :: implicit_diffusion_rel_eps = 1.d-10 ! relative epsilon for implicit diffusion solve
-  real(kind=dp_t), save :: implicit_diffusion_abs_eps = -1.d0  ! absolute epsilon for implicit diffusion solve
-  
-  ! Chemical reactions:
-  logical, save         :: include_discrete_LMA_correction = .true. ! Whether to compute chemical rates using classical LMA or integer-based one
-  real(kind=dp_t), save :: chemical_rates(max_reactions) = 0.0d0 ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
-  integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 ! stoichiometric factors for each reaction
-                                                                                   ! (species,LHS(1)/RHS(2),reaction)
+  ! Chemical reactions
+  !----------------------
+
+  ! Whether to compute chemical rates using classical LMA or integer-based one
+  logical, save         :: include_discrete_LMA_correction = .true. 
+
+  ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
+  real(kind=dp_t), save :: chemical_rates(max_reactions) = 0.0d0    
+
+  ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
+  ! Example: For N1 + 2*N2 -> N3 use
+  ! stoichiometric_factors(1:3,1,1) = 1 2 0
+  ! stoichiometric_factors(1:3,2,1) = 0 0 1
+  integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 
   
   namelist /probin_reactdiff/ nspecies, nreactions
   namelist /probin_reactdiff/ diffusion_type, reaction_type, use_Poisson_rng, splitting_type, avg_type
   namelist /probin_reactdiff/ n_init_in, n_bc
   namelist /probin_reactdiff/ D_Fick, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
-  namelist /probin_reactdiff/ stoichiometric_factors, chemical_rates
-  namelist /probin_reactdiff/ include_discrete_LMA_correction
+  namelist /probin_reactdiff/ include_discrete_LMA_correction, chemical_rates, stoichiometric_factors
 
 contains
 

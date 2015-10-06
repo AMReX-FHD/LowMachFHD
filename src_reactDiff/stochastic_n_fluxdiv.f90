@@ -255,7 +255,7 @@ contains
     integer        , intent(in   ) :: n_rngs_in
 
     ! local
-    integer :: n,nlevs,i,dm,comp
+    integer :: n,nlevs,i,dm,rng
     
     type(bl_prof_timer), save :: bpt
 
@@ -269,10 +269,10 @@ contains
     allocate(stoch_W_fc(mla%nlevel, mla%dim, n_rngs))
 
     do n=1,nlevs
-       do comp=1,n_rngs
+       do rng=1,n_rngs
           do i=1,dm
              ! we need one face-centered flux for each concentration
-             call multifab_build_edge(stoch_W_fc(n,i,comp),mla%la(n),nspecies,0,i)
+             call multifab_build_edge(stoch_W_fc(n,i,rng),mla%la(n),nspecies,0,i)
           end do
        end do ! end loop over n_rngs
     end do ! end loop over nlevs
@@ -287,7 +287,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
 
     ! local
-    integer :: n,nlevs,i,dm,comp
+    integer :: n,nlevs,i,dm,rng
     
     type(bl_prof_timer), save :: bpt
 
@@ -297,9 +297,9 @@ contains
     dm = mla%dim
 
     do n=1,nlevs
-       do comp=1,n_rngs
+       do rng=1,n_rngs
           do i=1,dm
-             call multifab_destroy(stoch_W_fc(n,i,comp))
+             call multifab_destroy(stoch_W_fc(n,i,rng))
           end do
        end do
     end do
@@ -345,7 +345,7 @@ contains
     type(bc_level) , intent(in   )  :: the_bc_level(:)
 
     ! local
-    integer :: n,nlevs,dm,idim,comp,i,ng_f
+    integer :: n,nlevs,dm,idim,rng,i,ng_f
     integer :: lo(mla%dim),hi(mla%dim)
 
     real(kind=dp_t), pointer :: fp(:,:,:,:)
@@ -361,11 +361,11 @@ contains
 
     do n=1,nlevs
        do idim=1,dm
-          do comp=1,n_rngs
-             do i=1,nfabs(stoch_W_fc(n,idim,comp))
-                fp => dataptr(stoch_W_fc(n,idim,comp),i)
-                lo = lwb(get_box(stoch_W_fc(n,idim,comp),i))
-                hi = upb(get_box(stoch_W_fc(n,idim,comp),i))
+          do rng=1,n_rngs
+             do i=1,nfabs(stoch_W_fc(n,idim,rng))
+                fp => dataptr(stoch_W_fc(n,idim,rng),i)
+                lo = lwb(get_box(stoch_W_fc(n,idim,rng),i))
+                hi = upb(get_box(stoch_W_fc(n,idim,rng),i))
                 select case (dm)
                 case (2)
                    call stoch_mass_bc_2d(fp(:,:,1,:),ng_f,idim,lo,hi, &
@@ -501,7 +501,7 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
-    integer :: n,nlevs,dm,comp,n_cell
+    integer :: n,nlevs,dm,spec,n_cell
     real(kind=dp_t) :: dn_sum
 
     type(multifab) :: n_temp(mla%nlevel)
@@ -529,9 +529,9 @@ contains
                                  variance=initial_variance*variance_coef_mass/product(dx(n,1:dm)))
 
        ! Make sure this sums to zero
-       do comp=1, nspecies
-          dn_sum = multifab_sum_c(n_temp(n),comp,1) / dble(n_cell)
-          call multifab_sub_sub_s_c(n_temp(n),comp,dn_sum,1,0)
+       do spec=1, nspecies
+          dn_sum = multifab_sum_c(n_temp(n),spec,1) / dble(n_cell)
+          call multifab_sub_sub_s_c(n_temp(n),spec,dn_sum,1,0)
        end do   
           
     end do

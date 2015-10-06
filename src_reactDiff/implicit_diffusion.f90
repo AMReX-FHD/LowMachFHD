@@ -41,7 +41,7 @@ contains
     ! for diffusion multigrid - not used but needs to be passed in
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
-    integer :: i,dm,n,nlevs,comp
+    integer :: i,dm,n,nlevs,spec
 
     type(bl_prof_timer),save :: bpt
 
@@ -85,12 +85,13 @@ contains
     do n=1,nlevs
        call multifab_setval(alpha(n),1.d0,all=.true.)
     end do
-    do comp=1,nspecies
+
+    do spec=1,nspecies
 
        ! beta = (dt/2)*D_k
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(beta(n,i),1,diff_coef_face(n,i),comp,1,0)
+             call multifab_copy_c(beta(n,i),1,diff_coef_face(n,i),spec,1,0)
              call multifab_mult_mult_s(beta(n,i),0.5d0*dt)
           end do
        end do
@@ -98,21 +99,21 @@ contains
        ! rhs = n_k^n + (dt/2)(div D_k grad n_k)^n
        !             +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
        do n=1,nlevs
-          call multifab_copy_c(rhs(n),1,diff_fluxdiv(n),comp,1,0)
+          call multifab_copy_c(rhs(n),1,diff_fluxdiv(n),spec,1,0)
           call multifab_mult_mult_s(rhs(n),0.5d0)
-          call multifab_plus_plus_c(rhs(n),1,stoch_fluxdiv(n),comp,1,0)
+          call multifab_plus_plus_c(rhs(n),1,stoch_fluxdiv(n),spec,1,0)
           call multifab_mult_mult_s(rhs(n),dt)
-          call multifab_plus_plus_c(rhs(n),1,n_old(n),comp,1,0)
+          call multifab_plus_plus_c(rhs(n),1,n_old(n),spec,1,0)
        end do
 
        ! initial guess for phi is n_k^n
        do n=1,nlevs
-          call multifab_copy_c(phi(n),1,n_old(n),comp,1,1)
+          call multifab_copy_c(phi(n),1,n_old(n),spec,1,1)
        end do
 
        ! solve the implicit system
        call ml_cc_solve(mla,rhs,phi,fine_flx,alpha,beta,dx, &
-                        the_bc_tower,scal_bc_comp+comp-1, &
+                        the_bc_tower,scal_bc_comp+spec-1, &
                         stencil_order=1, &
                         verbose=mg_verbose, &
                         cg_verbose=cg_verbose, &
@@ -121,7 +122,7 @@ contains
 
        ! copy solution into n_new
        do n=1,nlevs
-          call multifab_copy_c(n_new(n),comp,phi(n),1,1,0)
+          call multifab_copy_c(n_new(n),spec,phi(n),1,1,0)
        end do
 
     end do

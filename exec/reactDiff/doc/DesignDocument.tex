@@ -18,6 +18,8 @@
 \setlength{\marginparwidth}{0.75in}
 \newcommand{\MarginPar}[1]{\marginpar{\vskip-\baselineskip\raggedright\tiny\sffamily\hrule\smallskip{\color{red}#1}\par\smallskip\hrule}}
 
+\def\eb  {{\bf e}}
+\def\ib  {{\bf i}}
 \def\nb  {{\bf n}}
 \def\mRb {\bm{\mathcal{R}}}
 \def\mZb {\bm{\mathcal{Z}}}
@@ -48,9 +50,9 @@
 This is a working design document for our stochastic diffusion/reaction code.
 In summary, we are solving the following system of stochastic PDEs:
 \begin{equation}
-\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_i\nabla n_k + \sqrt{2D_in_k}\mZb\right) + \mRb(\nb),
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right) + \mRb(\nb),
 \end{equation}
-where $\nb=(n_1,n_2,\cdots)$ are the number densities, $D_i$ are Fickean diffusion
+where $\nb=(n_1,n_2,\cdots)$ are the number densities, $D_k$ are Fickean diffusion
 coefficients, and $\mZb$ are standard zero-mean, unit-variance random Gaussian 
 vector fields with uncorrelated components.
 This model is essentially the fluctuating multispecies diffusion equations
@@ -61,15 +63,15 @@ There are two git repositories required to build/run the code.  BoxLib is a publ
 repository available on github using the command:\\ \\
 {\tt git clone https://github.com/BoxLib-Codes/BoxLib.git}\\ \\
 If you are not familiar with BoxLib, we recommend reading the BoxLib's User's Guide
-in {\tt BoxLib/Docs}.
+in {\tt BoxLib/Docs}.\\
 
 FluctHydro exists on CCSE servers and you need to contact Vince/Andy to get an account
 and set up permissions on gamera.  Once you do, you can obtain the repository using:\\ \\
 {\tt git clone <username>@gamera.lbl.gov:/usr/local/gitroot/FluctHydro.git}\\ \\
 You will now have the following directory structures (you will actually have
-more subdirectories, but below are the only directories that matter for this code):
+more subdirectories, but below are the only directories that matter for this code):\\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{figure}[htb]
+\begin{figure}[tb]
 \centering
 \includegraphics[width=6in]{./directory}
 \caption{\label{fig:directory}Directory structure.}
@@ -165,7 +167,7 @@ of the parameters in {\tt probin\_common.f90} are used in this code.
 We use a finite volume framework on a regular Cartesian mesh.  Consider PDEs describing
 diffusion and reactions in isolation:
 \begin{equation}
-\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_i\nabla n_k + \sqrt{2D_in_k}\mZb\right),\label{eq:Diffusion}
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right),\label{eq:Diffusion}
 \end{equation}
 \begin{equation}
 \frac{\partial n_k}{\partial t} = \mRb(\nb).\label{eq:Reactions}
@@ -201,10 +203,21 @@ diffusion (\ref{eq:Diffusion}) over $\Delta t/2$.
 \end{enumerate}
 
 \subsection{Diffusion}
+The Fickean diffusion term is discretized using standard finite volume
+Laplacian-like stencils:
+\begin{equation}
+\nabla\cdot D\nabla n \rightarrow \sum_d \frac{1}{\Delta x}\left[D_{\ib+\half\eb_d}\left(\frac{n_{\ib + \eb_d}-n_{\ib}}{\Delta x}\right) - D_{\ib-\half\eb_d}\left(\frac{n_{\ib}-n_{\ib-\eb_d}}{\Delta x}\right)\right],\label{eq:diffusion_stencil}
+\end{equation}
+For the stochastic fluxes,
+we generate random $\mZb$ on faces directory, compute $n$ on faces
+using either arithmetic, geometric, or harmonic averaging from the 
+neighboring cell centers, and use the same stencil 
+in (\ref{eq:diffusion_stencil}).\\
+
 In order to discretize the diffusion equation (\ref{eq:Diffusion}) over a time 
 increment $\delta t$, we have three options.  We use the superscripts $n$
 and $n+1$ to denote the state at $t^n$ and $t^{n+1}=t^n+\delta t$, noting
-that $\delta t$ can be a fraction of the time step $\Delta t$.
+that $\delta t$ can be a fraction of the time step $\Delta t$.\\
 
 {\bf Explicit Predictor-Corrector}
 We use a single set of random numbers, and keep the noise amplitude
@@ -248,18 +261,18 @@ increment $\delta t$, we have three options: stochastic
 simulation algorithm (SSA), tau-leaping, and chemical Langevin equation (CLE).
 See \cite{Gillespie2007} for an overview of these methods.  We have options
 for second-order tau-leaping and CLE using the predictor-corrector
-method in \cite{AndersonMattingly2011}.
+method in \cite{AndersonMattingly2011}.\\
 
 Our stochastic reactions require deterministic reaction rates, which we obtain
 using the law of mass action.  Define $a_i(\nb)$ as the deterministic reaction
-rate in units of (?) for reaction $i$, and $a_0(\nb) = \sum a_i(\nb)$.
+rate in units of (?) for reaction $i$, and $a_0(\nb) = \sum a_i(\nb)$.\\
 
 {\bf SSA}.  To summarize, if we assume each reaction is a Poisson process, we
 can generate the time that the next reaction will occur using a uniform random
 variable, and then determine which reaction occurred using a separate 
-uniform random variable.  Then, update the state and repeate.
+uniform random variable.  Then, update the state and repeate.\\
 
-{\bf Tau Leaping}
+{\bf Tau Leaping}\\
 
 {\bf CLE}
 
