@@ -625,6 +625,8 @@ contains
           do i=lbound(p_rho,1), ubound(p_rho,1)
              ! One can also write here real(p_rho(i,j,k,:))             
              write(histogram_unit,*) real(step*dt), real(p_c(i,j,k,:)) ! For histogramming the values
+             ! Hack to test OLR/BPM model by printing the collective coordinate
+             !write(histogram_unit,*) real(step*dt), real(sum((p_c(i,j,k,:)-(/435, 112, 82/))*(/-129, 122, 274/))/106601)
           end do
           end do             
           end do
