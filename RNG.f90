@@ -60,14 +60,14 @@ module BoxLibRNGs
       module procedure UniformRNGs
    end interface
 
-   interface NormalRNGsVec  ! The Fortran version of this is below and may be faster
+   interface NormalRNGVec  ! The Fortran version of this is below and may be faster
       module procedure NormalRNGs_sp
       module procedure NormalRNGs
    end interface
    
-   interface PoissonNumberVec
-      module procedure PoissonNumber_sp
-      module procedure PoissonNumber
+   interface PoissonRNG ! This is only scalar for now
+      module procedure PoissonRNG_sp
+      module procedure PoissonRNG_dp
    end interface   
 
 contains ! It is likely that vectorized versions will do better here
@@ -216,7 +216,7 @@ contains ! It is likely that vectorized versions will do better here
 
   end subroutine 
 
- SUBROUTINE PoissonNumber(number,mean)
+ SUBROUTINE PoissonRNG_dp(number,mean)
     INTEGER, INTENT(OUT) :: number
     REAL(dp), INTENT(IN) :: mean
 
@@ -224,7 +224,7 @@ contains ! It is likely that vectorized versions will do better here
 
  END SUBROUTINE
 
- SUBROUTINE PoissonNumber_sp(number,mean)
+ SUBROUTINE PoissonRNG_sp(number,mean)
     INTEGER, INTENT(OUT) :: number
     REAL(sp), INTENT(IN) :: mean
 
