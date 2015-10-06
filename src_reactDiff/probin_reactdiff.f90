@@ -47,6 +47,7 @@ module probin_reactdiff_module
   
   ! Chemical reactions
   !----------------------
+  real(kind=dp_t), save :: cross_section = 1.d0 ! thickness (in 2D) of cell
 
   ! Whether to compute chemical rates using classical LMA or integer-based one
   logical, save         :: include_discrete_LMA_correction = .true. 
@@ -65,7 +66,8 @@ module probin_reactdiff_module
   namelist /probin_reactdiff/ n_init_in, n_bc
   namelist /probin_reactdiff/ D_Fick, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
-  namelist /probin_reactdiff/ include_discrete_LMA_correction, chemical_rates, stoichiometric_factors
+  namelist /probin_reactdiff/ cross_section, include_discrete_LMA_correction
+  namelist /probin_reactdiff/ chemical_rates, stoichiometric_factors
 
 contains
 
@@ -164,6 +166,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) implicit_diffusion_abs_eps
+
+       case ('--cross_section')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) cross_section
 
        case ('--include_discrete_LMA_correction')
           farg = farg + 1
