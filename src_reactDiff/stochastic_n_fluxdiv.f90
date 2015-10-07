@@ -11,7 +11,7 @@ module stochastic_n_fluxdiv_module
   use average_to_faces_module
   use div_and_grad_module
   use probin_common_module, only: variance_coef_mass, initial_variance
-  use probin_reactdiff_module, only: nspecies
+  use probin_reactdiff_module, only: nspecies, cross_section
 
   implicit none
 
@@ -41,7 +41,7 @@ contains
     logical  , intent(in), optional :: increment_in ! Increment or overwrite stoch_fluxdiv argument?
 
     integer :: i,dm,n,nlevs
-    real(kind=dp_t)  :: variance
+    real(kind=dp_t)  :: variance, dv
 
     type(multifab) :: flux(mla%nlevel,mla%dim)
 
@@ -53,6 +53,9 @@ contains
 
     dm = mla%dim
     nlevs = mla%nlevel
+
+    dv = product(dx(1,1:dm))
+    if (dm<3) dv = dv*cross_section
 
     increment_div = .false.
     if (present(increment_in)) increment_div = increment_in
@@ -68,7 +71,7 @@ contains
     call average_to_faces(mla,n_cc,flux,1,1,nspecies)
 
     ! assumble fluxes on faces, sqrt(2*D_k*n_k / (dt*dV)) * random_normal
-    variance = sqrt(2.d0*variance_coef_mass/(product(dx(1,1:dm))*dt))        
+    variance = sqrt(2.d0*variance_coef_mass/(dv*dt))        
     call assemble_stoch_n_fluxes(mla,n_cc,diff_coef_face,flux)
     do n=1,nlevs
        do i=1,dm
@@ -502,7 +505,7 @@ contains
 
     ! local
     integer :: n,nlevs,dm,spec,n_cell
-    real(kind=dp_t) :: dn_sum
+    real(kind=dp_t) :: dn_sum, dv
 
     type(multifab) :: n_temp(mla%nlevel)
 
@@ -512,6 +515,9 @@ contains
 
     nlevs = mla%nlevel
     dm = mla%dim
+
+    dv = product(dx(1,1:dm))
+    if (dm<3) dv = dv*cross_section
 
     ! the number of ghost cells must match variance_mfab input to multifab_fill_random
     ! the values in the ghost cells do not have to be added to n_init since we
@@ -526,7 +532,7 @@ contains
     do n=1,nlevs
        call multifab_fill_random(n_temp(n:n), &
                                  variance_mfab=n_init, &
-                                 variance=initial_variance*variance_coef_mass/product(dx(n,1:dm)))
+                                 variance=initial_variance*variance_coef_mass/dv)
 
        ! Make sure this sums to zero
        do spec=1, nspecies

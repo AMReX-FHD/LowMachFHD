@@ -14,7 +14,7 @@
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 64.d0 64.d0         ! physical hi coordinate
   n_cells(1:2) = 64 64               ! number of cells in domain
-  max_grid_size(1:2) = 32 32       ! max number of cells in a box
+  max_grid_size(1:2) = 64 64 ! 32 32       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
@@ -27,7 +27,7 @@
   plot_int = 100                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 1                   ! how often to output statistics
+  print_int = 100                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
@@ -35,7 +35,7 @@
   ! Initial conditions
   !----------------------
   smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
+  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total mass fluctuation is set to zero)
 
   ! Algorithm control / selection
