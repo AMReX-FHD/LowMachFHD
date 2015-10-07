@@ -266,21 +266,28 @@ subroutine main_driver()
 
    do istep=init_step,max_step      
 
-       if (parallel_IOProcessor() .and. (print_int>0) .and. (mod(istep,print_int)==0) ) then
-          print*,''
-          write(*,*) "At istep =",istep,"dt =",dt,"time =",time
+      if ( (print_int>0) .and. (mod(istep,print_int)==0) ) then
+
+         if (parallel_IOProcessor() ) then
+            print*,''
+            write(*,*) "At istep =",istep,"dt =",dt,"time =",time
+         end if
 
           do spec=1,nspecies
              n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
           end do
-          print*,'sum of n=',n_sum(:)
+          if (parallel_IOProcessor() ) then
+             print*,'sum of n=',n_sum(:)
+          end if
           
           runtime2 = parallel_wtime()-runtime1
           call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
-          print*,'Time to advance per timestep: ', runtime1/print_int,' seconds'
+          if (parallel_IOProcessor() ) then
+             print*,'Time to advance per timestep: ', runtime1/print_int,' seconds'
+             print*,''
+          end if
           runtime1=parallel_wtime()
-          
-          print*,''          
+                
        end if
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
