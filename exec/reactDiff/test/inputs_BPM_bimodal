@@ -18,16 +18,16 @@
 
   ! Time-step control
   !----------------------
-  fixed_dt = 1.0                  ! time step (if positive, fixed)
+  fixed_dt = 0.25                  ! time step (if positive, fixed)
   cfl = 0.5d0                      ! max diffusive cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 5000000                  ! maximum number of time steps
+  max_step = 20000000                  ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 50000                   ! how often to output statistics
+  print_int = 200000                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
@@ -60,7 +60,7 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 1    ! How often to call updateHydroGrid
+  hydro_grid_int = 4    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
@@ -90,7 +90,7 @@
                      ! 1=Crank-Nicolson semi-implicit
                      ! 2=explicit midpoint
 
-  reaction_type = 2  ! 0=first-order tau leaping or CLE
+  reaction_type = 1  ! 0=first-order tau leaping or CLE
                      ! 1=second-order tau leaping or CLE
                      ! 2=SSA
 

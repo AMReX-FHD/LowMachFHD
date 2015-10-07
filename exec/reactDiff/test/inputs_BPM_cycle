@@ -12,8 +12,8 @@
   prob_type = 0 ! 0=equilibrium, 1=gaussian, 2=gradient
   dim_in = 2                       ! 2D or 3D (here we do a single cell) 
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
-  n_cells(1:2) = 1 1               ! number of cells in domain
+  prob_hi(1:2) = 64.d0 64.d0         ! physical hi coordinate
+  n_cells(1:2) = 64 64               ! number of cells in domain
   max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
   ! Time-step control
@@ -23,11 +23,11 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 30000                  ! maximum number of time steps
-  plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 10000                  ! maximum number of time steps
+  plot_int = 100                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 10000                   ! how often to output statistics
+  print_int = 1                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
@@ -60,7 +60,7 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 1    ! How often to call updateHydroGrid
+  hydro_grid_int = 0    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
@@ -79,7 +79,7 @@
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
   n_steps_skip = 0        ! How many steps to skip
   analyze_conserved = T   ! T = analyze n, F=analyze mole fractions x
-  histogram_unit = 10 ! Write snapshots of n in all cells to fort.10 for histogramming them
+  histogram_unit = -10 ! Write snapshots of n in all cells to fort.10 for histogramming them
 
 /
 
@@ -111,7 +111,7 @@
   nspecies = 3 ! In the order (U,V,W)
   nreactions = 7
     
-  cross_section = 5.0 ! Thickness of domain in 2D (dV scaling factor)
+  cross_section = 1000.0 ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition (start near chemical equilibrium):
   !n_init_in(1,1:3) = 1513.269663 438.1877579 38.40170224 ! Exact fixed point
@@ -134,7 +134,7 @@
   cg_verbose = 0
 
   ! relative and absolute epsilon for implicit diffusion solve
-  implicit_diffusion_rel_eps = 1.d-10
+  implicit_diffusion_rel_eps = 1.d-6
   implicit_diffusion_abs_eps = -1.d0
 
   ! Chemical reactions:
