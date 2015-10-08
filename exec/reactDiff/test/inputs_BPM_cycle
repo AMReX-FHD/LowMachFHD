@@ -12,8 +12,8 @@
   prob_type = 0 ! 0=equilibrium, 1=gaussian, 2=gradient
   dim_in = 2                       ! 2D or 3D (here we do a single cell) 
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 64.d0 64.d0         ! physical hi coordinate
-  n_cells(1:2) = 64 64               ! number of cells in domain
+  prob_hi(1:2) = 32 32 ! 64.d0 64.d0         ! physical hi coordinate
+  n_cells(1:2) = 32 32 ! 64 64               ! number of cells in domain
   max_grid_size(1:2) = 64 64 ! 32 32       ! max number of cells in a box
 
   ! Time-step control
@@ -27,7 +27,7 @@
   plot_int = 100                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 100                   ! how often to output statistics
+  print_int = 1                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
@@ -111,11 +111,11 @@
   nspecies = 3 ! In the order (U,V,W)
   nreactions = 7
     
-  cross_section = 1000.0 ! Thickness of domain in 2D (dV scaling factor)
+  cross_section = 10.0 ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition (start near chemical equilibrium):
-  !n_init_in(1,1:3) = 1513.269663 438.1877579 38.40170224 ! Exact fixed point
-  n_init_in(1,1:3) = 1685.8 533.5 56.38 ! Start on the limit cycle
+  n_init_in(1,1:3) = 1513.269663 438.1877579 38.40170224 ! Exact fixed point
+  !n_init_in(1,1:3) = 1685.8 533.5 56.38 ! Start on the limit cycle
                
 
   ! Diffusion:

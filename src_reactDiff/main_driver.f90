@@ -273,7 +273,7 @@ subroutine main_driver()
           do spec=1,nspecies
              n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
           end do
-          print*,'sum of n=',n_sum(:)
+          print*,time,' n_avg=',n_sum(:)/(multifab_volume(n_old(1))/nspecies)
           
           runtime2 = parallel_wtime()-runtime1
           call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
