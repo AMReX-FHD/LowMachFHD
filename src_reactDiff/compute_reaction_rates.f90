@@ -2,7 +2,8 @@ module compute_reaction_rates_module
 
   use bl_types
   use bl_error_module
-  use probin_reactdiff_module, only : nspecies, nreactions, stoichiometric_factors, chemical_rates, include_discrete_LMA_correction
+  use probin_reactdiff_module, only : nspecies, nreactions, stoichiometric_factors, &
+                                      chemical_rates, rate_multiplier, include_discrete_LMA_correction
   implicit none
 
   private
@@ -25,7 +26,7 @@ contains
        do reaction=1, nreactions
           !write(*,*) "reaction=", reaction, " rate=", chemical_rates(reaction), &
           !  " stochiometry=", stoichiometric_factors(1:nspecies,1,reaction)
-          reaction_rates(reaction) = chemical_rates(reaction)
+          reaction_rates(reaction) = rate_multiplier*chemical_rates(reaction)
           do species=1, nspecies
              select case(stoichiometric_factors(species,1,reaction))
              case(0)
@@ -50,8 +51,8 @@ contains
        ! Use traditional LMA without accounting for discrete/integer nature of the molecules involved
        do reaction=1, nreactions
           ! This works since raising to the zeroth power gives unity:
-          reaction_rates(reaction) = &
-               chemical_rates(reaction)*product(n_in(1:nspecies)**stoichiometric_factors(1:nspecies,1,reaction))
+          reaction_rates(reaction) = rate_multiplier*chemical_rates(reaction)*&
+               product(n_in(1:nspecies)**stoichiometric_factors(1:nspecies,1,reaction))
        end do
     end if
     

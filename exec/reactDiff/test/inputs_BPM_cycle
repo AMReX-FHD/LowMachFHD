@@ -114,8 +114,8 @@
   cross_section = 10.0 ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition (start near chemical equilibrium):
-  n_init_in(1,1:3) = 1513.269663 438.1877579 38.40170224 ! Exact fixed point
-  !n_init_in(1,1:3) = 1685.8 533.5 56.38 ! Start on the limit cycle
+  !n_init_in(1,1:3) = 1513.269663 438.1877579 38.40170224 ! Exact fixed point
+  n_init_in(1,1:3) = 1685.8 533.5 56.38 ! Start on the limit cycle
                
 
   ! Diffusion:
@@ -140,6 +140,7 @@
   ! Chemical reactions:
   ! ------------------  
   chemical_rates(1:7) =  0.000200000000000   0.000200000000000   1.000000000000000   0.036666630000000   4.444445555550000   0.003333330000000 16.666650000000001
+  rate_multiplier = 0.1 ! Change all rates by a constant multiplier
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   
   ! BPM model is:
