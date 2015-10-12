@@ -64,7 +64,7 @@ contains
 
     do n=1,nlevs
        do i=1,nfabs(n_new(n))
-          op => dataptr(n_new(n),i)
+          op => dataptr(n_old(n),i)
           np => dataptr(n_new(n),i)
           lo = lwb(get_box(n_new(n),i))
           hi = upb(get_box(n_new(n),i))
@@ -140,11 +140,14 @@ contains
     integer :: spec,reaction,which_reaction
     integer :: n_steps_SSA
 
+    ! copy old state into new
+    n_new = n_old
+
     if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
        ! first-order tau-leaping or CLE
 
        ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
-       call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
+       call compute_reaction_rates(n_new(1:nspecies), avg_reactions, dv)
        !write(*,*) "PREDICTOR PROPENSITY=", real(avg_reactions); stop
        ! save the mean reactions from the predictor
        avg_reactions_pred = avg_reactions
@@ -159,7 +162,7 @@ contains
           call sample_num_reactions(reaction)
 
           ! update number densities for this reaction
-          n_new(1:nspecies) = n_old(1:nspecies) + num_reactions(reaction)/dv * &
+          n_new(1:nspecies) = n_new(1:nspecies) + num_reactions(reaction)/dv * &
              (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
 
        end do
@@ -189,10 +192,8 @@ contains
              call sample_num_reactions(reaction)
 
              ! update number densities for this reaction
-             do spec=1,nspecies
-                n_new(spec) = n_new(spec) + num_reactions(reaction)/dv * &
-                  (stoichiometric_factors(spec,2,reaction)-stoichiometric_factors(spec,1,reaction))
-             end do
+             n_new(1:nspecies) = n_new(1:nspecies) + num_reactions(reaction)/dv * &
+                  (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
 
           end do
 
@@ -206,7 +207,7 @@ contains
        EventLoop: do
 
           ! compute reaction rates in units (# reactions) / (unit time) / (unit volume)
-          call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
+          call compute_reaction_rates(n_new(1:nspecies), avg_reactions, dv)
 
           ! compute reaction rates in units (# reactions) / (unit time)
           avg_reactions = max(0.0d0, avg_reactions*dv)
@@ -234,7 +235,7 @@ contains
 
           ! update number densities for this reaction
           do spec=1,nspecies
-             n_new(spec) = n_old(spec) + &
+             n_new(spec) = n_new(spec) + &
                   (stoichiometric_factors(spec,2,which_reaction)-stoichiometric_factors(spec,1,which_reaction)) / dv
           end do
           
