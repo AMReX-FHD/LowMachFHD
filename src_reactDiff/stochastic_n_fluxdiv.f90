@@ -532,7 +532,7 @@ contains
     do n=1,nlevs
        call multifab_fill_random(n_temp(n:n), &
                                  variance_mfab=n_init, &
-                                 variance=initial_variance*variance_coef_mass/dv)
+                                 variance=initial_variance/dv) ! We do not multiply here by variance_coef_mass
 
        ! Make sure this sums to zero
        do spec=1, nspecies

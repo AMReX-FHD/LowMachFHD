@@ -18,24 +18,24 @@
 
   ! Time-step control
   !----------------------
-  fixed_dt =  0.5                  ! time step (if positive, fixed)
+  fixed_dt = 1.0                  ! time step (if positive, fixed)
   cfl = 0.5d0                      ! max diffusive cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 100000                  ! maximum number of time steps
+  max_step = 10000                  ! maximum number of time steps
   plot_int = 100                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 1                   ! how often to output statistics
+  print_int = 10                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = 1.d-6 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 0 ! 1.0 ! global scaling epsilon for stochastic mass forcing
 
   ! Initial conditions
   !----------------------
   smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
+  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total mass fluctuation is set to zero)
 
   ! Algorithm control / selection
@@ -44,7 +44,7 @@
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
-  seed = 0
+  seed = 1
 
   ! Boundary conditions
   !----------------------
@@ -94,12 +94,12 @@
                      ! 1=second-order tau leaping or CLE
                      ! 2=SSA
 
-  use_Poisson_rng = 1 ! Only used for reaction_type = 0, 1
+  use_Poisson_rng = -1 ! 1 ! Only used for reaction_type = 0, 1
                       ! If -1 do deterministic chemistry
                       ! If 1 do tau leaping (Poisson increments),
                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
 
-  splitting_type = 0 ! 0=D + R
+  splitting_type = 1 ! 0=D + R
                      ! 1=(1/2)R + D + (1/2)R
                      ! 2=(1/2)D + R + (1/2)D
 
@@ -123,7 +123,7 @@
   
   ! Fickian diffusion coeffs (U/V/W)
   ! We want U to be much faster diffusing than the other two
-  D_Fick(1:3) = 0.01 0.001 0.001
+  D_Fick(1:3) = 0.1 0.01 0.01
 
   ! n_i boundary conditions (dir,lohi,species)
   n_bc(2,1,1:3) = 1.0 1.0 1.0 ! Lower y
@@ -146,7 +146,7 @@
 			 4.444445555550000   
 			 0.003333330000000 
 			 16.666650000000001
-  rate_multiplier = 0.1 ! Change all rates by a constant multiplier
+  rate_multiplier = 1.0 ! Change all rates by a constant multiplier
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   
   ! BPM model is:

@@ -199,6 +199,10 @@ subroutine main_driver()
 
       if (fixed_dt .gt. 0.d0) then
          dt = fixed_dt
+         if (parallel_IOProcessor() ) then
+            print*,''
+            write(*,*) "Specified time step gives diff CLFs=", real(dt*D_Fick(1:nspecies)/dx(1,1)**2)
+         end if         
       else
          dt = cfl * dx(1,1)**2 / (maxval(D_Fick(1:nspecies)))
       end if
