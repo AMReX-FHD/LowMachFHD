@@ -16,7 +16,7 @@ subroutine main_driver()
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    variance_coef_mass, cfl, initial_variance
-   use probin_reactdiff_module, only: nspecies, probin_reactdiff_init, D_Fick
+   use probin_reactdiff_module, only: nspecies, probin_reactdiff_init, D_Fick, cross_section
 
    use fabio_module
 
@@ -55,7 +55,7 @@ subroutine main_driver()
 
    call probin_common_init()
    call probin_reactdiff_init() 
-
+   
    ! Initialize random numbers *after* the global (root) seed has been set:
    call SeedParallelRNG(seed)
 
@@ -201,7 +201,7 @@ subroutine main_driver()
          dt = fixed_dt
          if (parallel_IOProcessor() ) then
             print*,''
-            write(*,*) "Specified time step gives diff CLFs=", real(dt*D_Fick(1:nspecies)/dx(1,1)**2)
+            write(*,*) "Specified time step gives diff CFLs=", real(dt*D_Fick(1:nspecies)/dx(1,1)**2)
          end if         
       else
          dt = cfl * dx(1,1)**2 / (maxval(D_Fick(1:nspecies)))
@@ -235,7 +235,7 @@ subroutine main_driver()
                                        analyze_velocity=.false., &
                                        analyze_density=.true., &
                                        analyze_temperature=.false., &
-                                       structFactMultiplier = 1.0_dp_t/variance_coef_mass) 
+                                       structFactMultiplier = cross_section) 
 
             close(unit=un)
          end if

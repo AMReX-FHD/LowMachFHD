@@ -12,7 +12,7 @@
   prob_type = 0 ! 0=equilibrium, 1=gaussian, 2=gradient
   dim_in = 2                       ! 2D or 3D (here we do a single cell) 
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 64.d0 2.d0         ! physical hi coordinate
+  prob_hi(1:2) = 128.d0 4.d0         ! physical hi coordinate
   n_cells(1:2) = 128 4               ! number of cells in domain
   max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
@@ -23,20 +23,20 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 50000                 ! maximum number of time steps
+  max_step = 60000                 ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 100                   ! how often to output statistics
+  print_int = 1000                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = 0.001 ! global scaling epsilon for stochastic mass forcing = 1/dV=1/1000
+  variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing on TOP of 1/dV
 
   ! Initial conditions
   !----------------------
   smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-  initial_variance = 0.001   ! multiplicative factor for initial fluctuations
-                            ! (if negative, total mass fluctuation is set to zero)
+  initial_variance = -1    ! multiplicative factor for initial fluctuations on  TOP of 1/dV
+                           ! (if negative, total mass fluctuation is set to zero)
 
   ! Algorithm control / selection
   !----------------------
@@ -77,7 +77,7 @@
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 1000    ! How many steps to skip
+  n_steps_skip = 10000    ! How many steps to skip
   analyze_conserved = T   ! T = analyze n, F=analyze mole fractions x
   histogram_unit = -1 ! Write snapshots of n in all cells to fort.10 for histogramming them
 
@@ -86,7 +86,7 @@
 ! reaction/diffusion number fraction code
 &probin_reactdiff
 
-  diffusion_type = 1 ! 0=explicit trapezoidal predictor/corrector
+  diffusion_type = 2 ! 0=explicit trapezoidal predictor/corrector
                      ! 1=Crank-Nicolson semi-implicit
                      ! 2=explicit midpoint
 
@@ -145,6 +145,7 @@
   !k=[3,1,1,3]; ! Bifurcation point
   !k=[2.1, 1, 0.1, 1.2]; ! Almost bifurcated (hump, with barely distinguishable peaks)
   chemical_rates(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
+  rate_multiplier = 0.1 ! Slow or speed up all reactions at once
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   
   ! Schlogl model is (we do not treat A as a separate species here since it is fixed):
