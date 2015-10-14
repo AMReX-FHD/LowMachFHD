@@ -12,8 +12,8 @@
   prob_type = 0 ! 0=equilibrium, 1=gaussian, 2=gradient
   dim_in = 2                       ! 2D or 3D (here we do a single cell) 
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 128.d0 4.d0         ! physical hi coordinate
-  n_cells(1:2) = 128 4               ! number of cells in domain
+  prob_hi(1:2) = 32.d0 4.d0         ! physical hi coordinate
+  n_cells(1:2) = 32 4               ! number of cells in domain
   max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
   ! Time-step control
@@ -79,14 +79,14 @@
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
   n_steps_skip = 10000    ! How many steps to skip
   analyze_conserved = T   ! T = analyze n, F=analyze mole fractions x
-  histogram_unit = -1 ! Write snapshots of n in all cells to fort.10 for histogramming them
+  histogram_unit = 10 ! Write snapshots of n in all cells to fort.10 for histogramming them
 
 /
 
 ! reaction/diffusion number fraction code
 &probin_reactdiff
 
-  diffusion_type = 1 ! 0=explicit trapezoidal predictor/corrector
+  diffusion_type = 0 ! 0=explicit trapezoidal predictor/corrector
                      ! 1=Crank-Nicolson semi-implicit
                      ! 2=explicit midpoint
 
@@ -94,7 +94,7 @@
                      ! 1=second-order tau leaping or CLE
                      ! 2=SSA
 
-  use_Poisson_rng = 0 ! Only used for reaction_type = 0, 1
+  use_Poisson_rng = 1 ! Only used for reaction_type = 0, 1
                       ! If -1 do deterministic chemistry
                       ! If 1 do tau leaping (Poisson increments),
                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
@@ -111,12 +111,10 @@
   nspecies = 1 ! Only X since A is fixed
   nreactions = 4 ! Forward and reverse both count here
     
-  cross_section = 1000.0 ! Thickness of domain in 2D (dV scaling factor)
+  cross_section = 10.0 ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition:
-  !n_init_in(1,1:1) = 1.0 ! Saddle point
-  n_init_in(1,1:1) = 0.5 ! First peak
-  !n_init_in(1,1:1) = 1.6 ! Second peak
+  n_init_in(1,1:1) = 1.0 ! Peak
 
   ! Diffusion:
   ! -----------------
@@ -144,7 +142,8 @@
   !k=[3.1, 1.0, 0.8, 2.9]; !Bimodal
   !k=[3,1,1,3]; ! Bifurcation point
   !k=[2.1, 1, 0.1, 1.2]; ! Almost bifurcated (hump, with barely distinguishable peaks)
-  chemical_rates(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
+  !chemical_rates(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
+  chemical_rates(1:4) =  1.0, 1.0, 1.0, 1.0 ! Monomodal with peak at x=1 obeying detailed balance
   rate_multiplier = 0.1 ! Slow or speed up all reactions at once
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   

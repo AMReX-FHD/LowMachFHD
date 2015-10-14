@@ -18,16 +18,16 @@
 
   ! Time-step control
   !----------------------
-  fixed_dt = 0.1                  ! time step (if positive, fixed)
+  fixed_dt = 0.25                  ! time step (if positive, fixed)
   cfl = 0.5d0                      ! max diffusive cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 60000                 ! maximum number of time steps
-  plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 175000                 ! maximum number of time steps
+  plot_int = 10                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 1000                   ! how often to output statistics
+  print_int = 10                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing on TOP of 1/dV
@@ -44,7 +44,7 @@
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
-  seed = 0
+  seed = 2569
 
   ! Boundary conditions
   !----------------------
@@ -60,7 +60,7 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 5    ! How often to call updateHydroGrid
+  hydro_grid_int = 10   ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
@@ -73,11 +73,11 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 32  ! parallelization parameters
-  stats_int = 10000               ! Project grid for analysis
+  stats_int = 10               ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 10000    ! How many steps to skip
+  n_steps_skip = 116500    ! How many steps to skip
   analyze_conserved = T   ! T = analyze n, F=analyze mole fractions x
   histogram_unit = -1 ! Write snapshots of n in all cells to fort.10 for histogramming them
 
@@ -94,7 +94,7 @@
                      ! 1=second-order tau leaping or CLE
                      ! 2=SSA
 
-  use_Poisson_rng = 0 ! Only used for reaction_type = 0, 1
+  use_Poisson_rng = 1 ! Only used for reaction_type = 0, 1
                       ! If -1 do deterministic chemistry
                       ! If 1 do tau leaping (Poisson increments),
                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
@@ -111,19 +111,19 @@
   nspecies = 1 ! Only X since A is fixed
   nreactions = 4 ! Forward and reverse both count here
     
-  cross_section = 1000.0 ! Thickness of domain in 2D (dV scaling factor)
+  cross_section = 25.0 ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition:
   !n_init_in(1,1:1) = 1.0 ! Saddle point
-  n_init_in(1,1:1) = 0.5 ! First peak
-  !n_init_in(1,1:1) = 1.6 ! Second peak
+  !n_init_in(1,1:1) = 0.5 ! First peak
+  n_init_in(1,1:1) = 1.6 ! Second peak
 
   ! Diffusion:
   ! -----------------
   
   ! Fickian diffusion coeffs (U/V/W)
   ! We want U to be much faster diffusing than the other two
-  D_Fick(1:1) = 1.0
+  D_Fick(1:1) = 0.5 ! 1.0
 
   ! n_i boundary conditions (dir,lohi,species)
   n_bc(2,1,1:1) = 1.0 ! Lower y

@@ -246,7 +246,7 @@ subroutine main_driver()
    ! Hydrogrid analysis and output for initial data
    !=====================================================================
    istep=init_step
-   if ((restart .lt. 0).and.(istep >= n_steps_skip)) then
+   if ((restart .lt. 0).and.(istep > n_steps_skip)) then
       ! Add the initial snapshot to the average in HydroGrid
       
       if (hydro_grid_int > 0) then
@@ -301,7 +301,7 @@ subroutine main_driver()
        time = time + dt
 
        ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
-       if (istep >= n_steps_skip) then
+       if (istep > n_steps_skip) then
 
           ! write a plotfile
           if (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) then
