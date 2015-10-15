@@ -434,15 +434,6 @@ contains
        call mk_advective_m_fluxdiv(mla,umac_new,mtemp,mtemp2,dx, &
                                    the_bc_tower%bc_tower_array)
 
-       ! HACK
-       p0_update_old = (Sbar_old + Scorrbar)/thetabar_old
-       ! rhoh_update_old = [-div(rhoh*v) + p0_update + div(Q) + sum(div(hk*Fk)) + rho*Hext]^n
-!       do n=1,nlevs
-!          call multifab_copy_c(rhoh_update_old(n),1,rhoh_fluxdiv_old(n),1,1,0)
-!          call multifab_plus_plus_s_c(rhoh_update_old(n),1,p0_update_old,1,0)
-!       end do
-!       call mk_advective_s_fluxdiv(mla,umac_old,rhoh_fc_old,rhoh_update_old,dx,1,1)
-
        p0_update_new = (Sbar_new + Scorrbar)/thetabar_new
 
        ! update pressure
@@ -458,13 +449,12 @@ contains
        end do
        call mk_advective_s_fluxdiv(mla,umac_new,rho_fc_new,mass_update_new,dx,1,nspecies)
 
-       ! HACK
        ! rhoh_update_new = [-div(rhoh*v) + p0_update + div(Q) + sum(div(hk*Fk)) + rho*Hext]^{n+1,m}
-!       do n=1,nlevs
-!          call multifab_copy_c(rhoh_update_new(n),1,rhoh_fluxdiv_new(n),1,1,0)
-!          call multifab_plus_plus_s_c(rhoh_update_new(n),1,p0_update_new,1,0)
-!       end do
-!       call mk_advective_s_fluxdiv(mla,umac_new,rhoh_fc_new,rhoh_update_new,dx,1,1)
+       do n=1,nlevs
+          call multifab_copy_c(rhoh_update_new(n),1,rhoh_fluxdiv_new(n),1,1,0)
+          call multifab_plus_plus_s_c(rhoh_update_new(n),1,p0_update_new,1,0)
+       end do
+       call mk_advective_s_fluxdiv(mla,umac_new,rhoh_fc_new,rhoh_update_new,dx,1,1)
 
        ! compute rho_i^{n+1,m+1}
        do n=1,nlevs
@@ -626,7 +616,7 @@ contains
           call multifab_sub_sub_s_c(Peos(n),1,p0_new,1,0)
 
           ! debugging statements
-          if (.true.) then
+          if (.false.) then
              if (k .eq. 1) then
                 call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift1")
              else if (k .eq. 2) then
