@@ -12,19 +12,8 @@
   prob_type = 0 ! 0=equilibrium, 1=gaussian, 2=gradient
   dim_in = 2                       ! 2D or 3D (here we do a single cell) 
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  
-  ! For histogramming:
-  !prob_hi(1:2) = 32.d0 4.d0         ! physical hi coordinate
-  !n_cells(1:2) = 32 4               ! number of cells in domain
-  
-  ! For structure factors:
-  prob_hi(1:2) = 128.d0 4.d0         ! physical hi coordinate
-  n_cells(1:2) = 128 4               ! number of cells in domain
-  
-  ! For single-cell studies
-  !prob_hi(1:2) = 1.0 1.0       ! physical hi coordinate
-  !n_cells(1:2) = 1 1              ! number of cells in domain
-
+  prob_hi(1:2) = 32.d0 4.d0         ! physical hi coordinate
+  n_cells(1:2) = 32 4               ! number of cells in domain
   max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
   ! Time-step control
@@ -34,7 +23,7 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 25000                 ! maximum number of time steps
+  max_step = 60000                 ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
@@ -84,7 +73,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 32  ! parallelization parameters
-  stats_int = 5000               ! Project grid for analysis
+  stats_int = 10000               ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
@@ -122,8 +111,7 @@
   nspecies = 1 ! Only X since A is fixed
   nreactions = 4 ! Forward and reverse both count here
     
-  cross_section = 10.0 ! Thickness of domain in 2D (dV scaling factor) -- for histogramming
-  !cross_section = 1000.0 ! Thickness of domain in 2D (dV scaling factor) -- for structure factors
+  cross_section = 10.0 ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition:
   n_init_in(1,1:1) = 1.0 ! Peak
@@ -133,7 +121,7 @@
   
   ! Fickian diffusion coeffs (U/V/W)
   ! We want U to be much faster diffusing than the other two
-  D_Fick(1:1) = 0.25
+  D_Fick(1:1) = 1.0
 
   ! n_i boundary conditions (dir,lohi,species)
   n_bc(2,1,1:1) = 1.0 ! Lower y
@@ -150,14 +138,12 @@
   ! Chemical reactions:
   ! ------------------  
   ! Known reaction rates (from MATLAB code):
-  !k = [1,1,1,1]; ! Monomodal in equilibrium (obeys detailed balance)
+  !k = [1,1,1,1]; ! Monomodal
   !k=[3.1, 1.0, 0.8, 2.9]; !Bimodal
   !k=[3,1,1,3]; ! Bifurcation point
   !k=[2.1, 1, 0.1, 1.2]; ! Almost bifurcated (hump, with barely distinguishable peaks)
-  !k=[1.5, .6, 2.050, 2.95]; ! Monomodal but out of equilibrium (no detailed balance)
   !chemical_rates(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
-  !chemical_rates(1:4) =  1.0, 1.0, 1.0, 1.0 ! Monomodal with peak at x=1 obeying detailed balance
-  chemical_rates(1:4) = 1.5, 0.6, 2.050, 2.95 ! Monomodal with peak at x=1 but out of detailed balance
+  chemical_rates(1:4) =  1.0, 1.0, 1.0, 1.0 ! Monomodal with peak at x=1 obeying detailed balance
   rate_multiplier = 0.1 ! Slow or speed up all reactions at once
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   
