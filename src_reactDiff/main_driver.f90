@@ -10,6 +10,8 @@ subroutine main_driver()
    use stochastic_n_fluxdiv_module
    use advance_timestep_module
    use analyze_spectra_module
+   use restart_module
+   use checkpoint_module
    use ParallelRNGs 
    use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                    plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
@@ -87,7 +89,12 @@ subroutine main_driver()
 
    if (restart .ge. 0) then
 
-      call bl_error("restart not supported yet")
+      init_step = restart + 1
+
+     ! build the ml_layout
+     ! read in time and dt from checkpoint
+     ! build and fill n_old
+     call initialize_from_restart(mla,time,dt,n_old,pmask)
 
    else
 
@@ -133,11 +140,14 @@ subroutine main_driver()
       call destroy(mba)
 
       do n=1,nlevs
-         call multifab_build(n_new(n),mla%la(n),nspecies,ng_s)
          call multifab_build(n_old(n),mla%la(n),nspecies,ng_s) 
       end do
 
    end if
+
+   do n=1,nlevs
+      call multifab_build(n_new(n),mla%la(n),nspecies,ng_s)
+   end do
 
    deallocate(pmask)
 
@@ -189,24 +199,23 @@ subroutine main_driver()
    ! Initialize values
    !=====================================================================
 
-   call init_n(mla,n_old,dx,the_bc_tower)
-
-   if (initial_variance .gt. 0.d0) then
-      call add_n_fluctuations(mla,n_old,dx,the_bc_tower)
-   end if
-
    if (restart .lt. 0) then
-
-      if (fixed_dt .gt. 0.d0) then
-         dt = fixed_dt
-         if (parallel_IOProcessor() ) then
-            print*,''
-            write(*,*) "Specified time step gives diff CFLs=", real(dt*D_Fick(1:nspecies)/dx(1,1)**2)
-         end if         
-      else
-         dt = cfl * dx(1,1)**2 / (maxval(D_Fick(1:nspecies)))
+      call init_n(mla,n_old,dx,the_bc_tower)
+      
+      if (initial_variance .gt. 0.d0) then
+         call add_n_fluctuations(mla,n_old,dx,the_bc_tower)
       end if
 
+   end if
+
+   if (fixed_dt .gt. 0.d0) then
+      dt = fixed_dt
+      if (parallel_IOProcessor() ) then
+         print*,''
+         write(*,*) "Specified time step gives diff CFLs=", real(dt*D_Fick(1:nspecies)/dx(1,1)**2)
+      end if
+   else
+      dt = cfl * dx(1,1)**2 / (maxval(D_Fick(1:nspecies)))
    end if
 
    ! write a plotfile
@@ -310,7 +319,7 @@ subroutine main_driver()
 
           ! write a checkpoint
           if (chk_int .gt. 0 .and. mod(init_step,chk_int) .eq. 0) then
-             call bl_error("checkpoint not supported")
+             call checkpoint_write(mla,n_new,time,dt,istep)
           end if
 
           ! print out projection (average) and variance
