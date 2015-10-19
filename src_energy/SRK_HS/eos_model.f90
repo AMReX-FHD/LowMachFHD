@@ -279,11 +279,11 @@ contains
     real(kind=8) :: a_i(1:nspecies),Temp
 
     integer :: n
-    real(kind=8) :: alpha_i(1:nspecies)
+    real(kind=8) :: zeta_i(1:nspecies)
 
-    call compute_alpha_i(alpha_i,Temp)
+    call compute_zeta_i(zeta_i,Temp)
     do n=1,nspecies
-       a_i(n) = 0.42748d0*Runiv**2*Tcrit(n)**2 / (molecular_weight(n)**2 * Pcrit(n)) * alpha_i(n)
+       a_i(n) = 0.42748d0*Runiv**2*Tcrit(n)**2 / (molecular_weight(n)**2 * Pcrit(n)) * zeta_i(n)
     end do
 
   end subroutine compute_a_i
@@ -316,12 +316,12 @@ contains
     real(kind=8) :: da_idt(1:nspecies),Temp
 
     integer :: n
-    real(kind=8) :: alpha_i(1:nspecies)
+    real(kind=8) :: zeta_i(1:nspecies)
 
-    call compute_alpha_i(alpha_i,Temp)
+    call compute_zeta_i(zeta_i,Temp)
     do n=1,nspecies
        da_idt(n) = -0.42748d0*Runiv**2*Tcrit(n)**2*s_i(n)/(molecular_weight(n)**2*Pcrit(n)) & 
-            * sqrt(alpha_i(n)/(Tcrit(n)*Temp))
+            * sqrt(zeta_i(n)/(Tcrit(n)*Temp))
     end do
 
   end subroutine compute_da_idt
@@ -347,18 +347,18 @@ contains
   end subroutine compute_dadw
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! vector \alpha_i
-  subroutine compute_alpha_i(alpha_i,Temp)
+  ! vector \zeta_i
+  subroutine compute_zeta_i(zeta_i,Temp)
 
-    real(kind=8) :: alpha_i(1:nspecies),Temp
+    real(kind=8) :: zeta_i(1:nspecies),Temp
 
     integer :: n
 
     do n=1,nspecies
-       alpha_i(n) = (1.d0 + s_i(n)*(1.d0 - sqrt(Temp/Tcrit(n))))**2
+       zeta_i(n) = (1.d0 + s_i(n)*(1.d0 - sqrt(Temp/Tcrit(n))))**2
     end do
 
-  end subroutine compute_alpha_i
+  end subroutine compute_zeta_i
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! scalar b
