@@ -41,6 +41,10 @@ contains
     real(kind=dp_t), pointer :: op(:,:,:,:)
     real(kind=dp_t), pointer :: np(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
     type(bl_prof_timer),save :: bpt
     
     nlevs = mla%nlevel
@@ -62,20 +66,33 @@ contains
     dv = product(dx(1,1:dm))
     if (dm<3) dv = dv*cross_section
 
+
+    !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
+    !$omp private(op,np,lo,hi)
+
     do n=1,nlevs
-       do i=1,nfabs(n_new(n))
+       call mfiter_build(mfi, n_old(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          tilebox = get_tilebox(mfi)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
+
           op => dataptr(n_old(n),i)
           np => dataptr(n_new(n),i)
           lo = lwb(get_box(n_new(n),i))
           hi = upb(get_box(n_new(n),i))
           select case (dm)
           case (2)
-             call advance_reaction_2d(op(:,:,1,:),ng_o,np(:,:,1,:),ng_n,lo,hi,dv,dt)
+             call advance_reaction_2d(op(:,:,1,:),ng_o,np(:,:,1,:),ng_n,lo,hi,tlo,thi,dv,dt)
           case (3)
-             call advance_reaction_3d(op(:,:,:,:),ng_o,np(:,:,:,:),ng_n,lo,hi,dv,dt)
+             call advance_reaction_3d(op(:,:,:,:),ng_o,np(:,:,:,:),ng_n,lo,hi,tlo,thi,dv,dt)
           end select
        end do
     end do
+    !$omp end parallel
 
     do n=1,nlevs
        call multifab_fill_boundary(n_new(n))
@@ -88,37 +105,37 @@ contains
   end subroutine advance_reaction
   
   
-  subroutine advance_reaction_2d(n_old,ng_o,n_new,ng_n,lo,hi,dv,dt)
+  subroutine advance_reaction_2d(n_old,ng_o,n_new,ng_n,glo,ghi,tlo,thi,dv,dt)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_o,ng_n
-    real(kind=dp_t), intent(in   ) :: n_old(lo(1)-ng_o:,lo(2)-ng_o:,:)
-    real(kind=dp_t), intent(inout) :: n_new(lo(1)-ng_o:,lo(2)-ng_o:,:)
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n
+    real(kind=dp_t), intent(in   ) :: n_old(glo(1)-ng_o:,glo(2)-ng_o:,:)
+    real(kind=dp_t), intent(inout) :: n_new(glo(1)-ng_o:,glo(2)-ng_o:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
     
     ! local
     integer :: i,j
 
-    do j=lo(2),hi(2)
-    do i=lo(1),hi(1)       
+    do j=tlo(2),thi(2)
+    do i=tlo(1),thi(1)       
        call advance_reaction_cell(n_old(i,j,1:nspecies), n_new(i,j,1:nspecies), dv, dt)
     end do
     end do
 
   end subroutine advance_reaction_2d
 
-  subroutine advance_reaction_3d(n_old,ng_o,n_new,ng_n,lo,hi,dv,dt)
+  subroutine advance_reaction_3d(n_old,ng_o,n_new,ng_n,glo,ghi,tlo,thi,dv,dt)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_o,ng_n
-    real(kind=dp_t), intent(in   ) :: n_old(lo(1)-ng_o:,lo(2)-ng_o:,lo(3)-ng_o:,:)
-    real(kind=dp_t), intent(inout) :: n_new(lo(1)-ng_o:,lo(2)-ng_o:,lo(3)-ng_n:,:)
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n
+    real(kind=dp_t), intent(in   ) :: n_old(glo(1)-ng_o:,glo(2)-ng_o:,glo(3)-ng_o:,:)
+    real(kind=dp_t), intent(inout) :: n_new(glo(1)-ng_o:,glo(2)-ng_o:,glo(3)-ng_n:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
     
     ! local
     integer :: i,j,k
 
-    do k=lo(3),hi(3)
-    do j=lo(2),hi(2)
-    do i=lo(1),hi(1)
+    do k=tlo(3),thi(3)
+    do j=tlo(2),thi(2)
+    do i=tlo(1),thi(1)
        call advance_reaction_cell(n_old(i,j,k,1:nspecies), n_new(i,j,k,1:nspecies), dv, dt)
     end do
     end do
