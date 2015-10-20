@@ -116,6 +116,12 @@ contains
     real(kind=dp_t), pointer :: sy(:,:,:,:)
     real(kind=dp_t), pointer :: sz(:,:,:,:)
 
+    type(mfiter) :: mfi
+    type(box) :: xnodalbox, ynodalbox, znodalbox
+    integer :: xlo(mla%dim), xhi(mla%dim)
+    integer :: ylo(mla%dim), yhi(mla%dim)
+    integer :: zlo(mla%dim), zhi(mla%dim)
+
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"assemble_stoch_n_fluxes")
@@ -127,9 +133,24 @@ contains
     ng_d = diff_coef_face(1,1)%ng
     ng_f = flux(1,1)%ng
     ng_s = stoch_W_fc(1,1,1)%ng
-
+    
+    !$omp parallel private(mfi,n,i,xnodalbox,ynodalbox,znodalbox,xlo,ylo,zlo) &
+    !$omp private(xhi,yhi,zhi,np,dx,dy,dz,fx,fy,fz,sx,sy,sz,lo,hi)
     do n=1,nlevs
-       do i=1,nfabs(n_cc(n))
+       call mfiter_build(mfi, n_cc(n), tiling=.true.)
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          xnodalbox = get_nodaltilebox(mfi,1)
+          xlo = lwb(xnodalbox)
+          xhi = upb(xnodalbox)
+          ynodalbox = get_nodaltilebox(mfi,2)
+          ylo = lwb(ynodalbox)
+          yhi = upb(ynodalbox)
+          znodalbox = get_nodaltilebox(mfi,3)
+          zlo = lwb(znodalbox)
+          zhi = upb(znodalbox)
+
           np => dataptr(n_cc(n),i)
           dx => dataptr(diff_coef_face(n,1),i)
           dy => dataptr(diff_coef_face(n,2),i)
@@ -144,7 +165,8 @@ contains
              call assemble_stoch_n_fluxes_2d(np(:,:,1,:),ng_n, &
                                              dx(:,:,1,:),dy(:,:,1,:),ng_d, &
                                              fx(:,:,1,:),fy(:,:,1,:),ng_f, &
-                                             sx(:,:,1,:),sy(:,:,1,:),ng_s, lo,hi)
+                                             sx(:,:,1,:),sy(:,:,1,:),ng_s, lo,hi, &
+                                             xlo,xhi,ylo,yhi)
           case (3)
              dz => dataptr(diff_coef_face(n,3),i)
              fz => dataptr(flux(n,3),i)
@@ -152,10 +174,12 @@ contains
              call assemble_stoch_n_fluxes_3d(np(:,:,:,:),ng_n, &
                                              dx(:,:,:,:),dy(:,:,:,:),dz(:,:,:,:),ng_d, &
                                              fx(:,:,:,:),fy(:,:,:,:),fz(:,:,:,:),ng_f, &
-                                             sx(:,:,:,:),sy(:,:,:,:),sz(:,:,:,:),ng_s, lo,hi)
+                                             sx(:,:,:,:),sy(:,:,:,:),sz(:,:,:,:),ng_s, lo,hi, &
+                                             xlo,xhi,ylo,yhi,zlo,zhi)
           end select
        end do
     end do
+    !$omp end parallel
 
     ! sync the fluxes at the boundaries
     do n=1,nlevs
@@ -170,30 +194,32 @@ contains
   end subroutine assemble_stoch_n_fluxes
 
   subroutine assemble_stoch_n_fluxes_2d(n_cc,ng_n,coefx,coefy,ng_d,fluxx,fluxy,ng_f, &
-                                        stochx,stochy,ng_s,lo,hi)
+                                        stochx,stochy,ng_s,glo,ghi, &
+                                        xlo,xhi,ylo,yhi)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_n,ng_d,ng_f,ng_s
-    real(kind=dp_t), intent(in   ) ::   n_cc(lo(1)-ng_n:,lo(2)-ng_n:,:)
-    real(kind=dp_t), intent(in   ) ::  coefx(lo(1)-ng_d:,lo(2)-ng_d:,:)
-    real(kind=dp_t), intent(in   ) ::  coefy(lo(1)-ng_d:,lo(2)-ng_d:,:)
-    real(kind=dp_t), intent(inout) ::  fluxx(lo(1)-ng_f:,lo(2)-ng_f:,:)
-    real(kind=dp_t), intent(inout) ::  fluxy(lo(1)-ng_f:,lo(2)-ng_f:,:)
-    real(kind=dp_t), intent(in   ) :: stochx(lo(1)-ng_s:,lo(2)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: stochy(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    integer        , intent(in   ) :: glo(:),ghi(:),ng_n,ng_d,ng_f,ng_s
+    integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:)
+    real(kind=dp_t), intent(in   ) ::   n_cc(glo(1)-ng_n:,glo(2)-ng_n:,:)
+    real(kind=dp_t), intent(in   ) ::  coefx(glo(1)-ng_d:,glo(2)-ng_d:,:)
+    real(kind=dp_t), intent(in   ) ::  coefy(glo(1)-ng_d:,glo(2)-ng_d:,:)
+    real(kind=dp_t), intent(inout) ::  fluxx(glo(1)-ng_f:,glo(2)-ng_f:,:)
+    real(kind=dp_t), intent(inout) ::  fluxy(glo(1)-ng_f:,glo(2)-ng_f:,:)
+    real(kind=dp_t), intent(in   ) :: stochx(glo(1)-ng_s:,glo(2)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: stochy(glo(1)-ng_s:,glo(2)-ng_s:,:)
 
     integer :: i,j
 
     ! x-fluxes
-    do j=lo(2),hi(2)
-       do i=lo(1),hi(1)+1
+    do j=xlo(2),xhi(2)
+       do i=xlo(1),xhi(1)
           fluxx(i,j,1:nspecies) = &
                sqrt(coefx(i,j,1:nspecies)*fluxx(i,j,1:nspecies))*stochx(i,j,1:nspecies)
        end do
     end do
 
     ! y-fluxes
-    do j=lo(2),hi(2)+1
-       do i=lo(1),hi(1)
+    do j=ylo(2),yhi(2)
+       do i=ylo(1),yhi(1)
           fluxy(i,j,1:nspecies) = &
                sqrt(coefy(i,j,1:nspecies)*fluxy(i,j,1:nspecies))*stochy(i,j,1:nspecies)
        end do
@@ -202,26 +228,28 @@ contains
   end subroutine assemble_stoch_n_fluxes_2d
 
   subroutine assemble_stoch_n_fluxes_3d(n_cc,ng_n,coefx,coefy,coefz,ng_d,fluxx,fluxy,fluxz,ng_f, &
-                                        stochx,stochy,stochz,ng_s,lo,hi)
+                                        stochx,stochy,stochz,ng_s,glo,ghi, &
+                                        xlo,xhi,ylo,yhi,zlo,zhi)
 
-    integer        , intent(in   ) :: lo(:),hi(:),ng_n,ng_d,ng_f,ng_s
-    real(kind=dp_t), intent(in   ) ::   n_cc(lo(1)-ng_n:,lo(2)-ng_n:,lo(3)-ng_n:,:)
-    real(kind=dp_t), intent(in   ) ::  coefx(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:,:)
-    real(kind=dp_t), intent(in   ) ::  coefy(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:,:)
-    real(kind=dp_t), intent(in   ) ::  coefz(lo(1)-ng_d:,lo(2)-ng_d:,lo(3)-ng_d:,:)
-    real(kind=dp_t), intent(inout) ::  fluxx(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
-    real(kind=dp_t), intent(inout) ::  fluxy(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
-    real(kind=dp_t), intent(inout) ::  fluxz(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:,:)
-    real(kind=dp_t), intent(in   ) :: stochx(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: stochy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
-    real(kind=dp_t), intent(in   ) :: stochz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    integer        , intent(in   ) :: glo(:),ghi(:),ng_n,ng_d,ng_f,ng_s
+    integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
+    real(kind=dp_t), intent(in   ) ::   n_cc(glo(1)-ng_n:,glo(2)-ng_n:,glo(3)-ng_n:,:)
+    real(kind=dp_t), intent(in   ) ::  coefx(glo(1)-ng_d:,glo(2)-ng_d:,glo(3)-ng_d:,:)
+    real(kind=dp_t), intent(in   ) ::  coefy(glo(1)-ng_d:,glo(2)-ng_d:,glo(3)-ng_d:,:)
+    real(kind=dp_t), intent(in   ) ::  coefz(glo(1)-ng_d:,glo(2)-ng_d:,glo(3)-ng_d:,:)
+    real(kind=dp_t), intent(inout) ::  fluxx(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:,:)
+    real(kind=dp_t), intent(inout) ::  fluxy(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:,:)
+    real(kind=dp_t), intent(inout) ::  fluxz(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:,:)
+    real(kind=dp_t), intent(in   ) :: stochx(glo(1)-ng_s:,glo(2)-ng_s:,glo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: stochy(glo(1)-ng_s:,glo(2)-ng_s:,glo(3)-ng_s:,:)
+    real(kind=dp_t), intent(in   ) :: stochz(glo(1)-ng_s:,glo(2)-ng_s:,glo(3)-ng_s:,:)
 
     integer :: i,j,k
 
     ! x-fluxes
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)+1
+    do k=xlo(3),xhi(3)
+       do j=xlo(2),xhi(2)
+          do i=xlo(1),xhi(1)
              fluxx(i,j,k,1:nspecies) = &
                   sqrt(coefx(i,j,k,1:nspecies)*fluxx(i,j,k,1:nspecies))*stochx(i,j,k,1:nspecies)
           end do
@@ -229,9 +257,9 @@ contains
     end do
 
     ! y-fluxes
-    do k=lo(3),hi(3)
-       do j=lo(2),hi(2)+1
-          do i=lo(1),hi(1)
+    do k=ylo(3),yhi(3)
+       do j=ylo(2),yhi(2)
+          do i=ylo(1),yhi(1)
              fluxy(i,j,k,1:nspecies) = &
                   sqrt(coefy(i,j,k,1:nspecies)*fluxy(i,j,k,1:nspecies))*stochy(i,j,k,1:nspecies)
           end do
@@ -239,9 +267,9 @@ contains
     end do
 
     ! z-fluxes
-    do k=lo(3),hi(3)+1
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+    do k=zlo(3),zhi(3)
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
              fluxz(i,j,k,1:nspecies) = &
                   sqrt(coefz(i,j,k,1:nspecies)*fluxz(i,j,k,1:nspecies))*stochz(i,j,k,1:nspecies)
           end do
