@@ -26,7 +26,7 @@ module advance_reaction_module
 
 contains
 
-  subroutine advance_reaction(mla,n_old,n_new,ext_src,dx,dt,the_bc_tower)
+  subroutine advance_reaction(mla,n_old,n_new,ext_src,dx,dt,the_bc_tower,return_rates_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
@@ -34,6 +34,7 @@ contains
     type(multifab) , intent(in   ) :: ext_src(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    logical , intent(in), optional :: return_rates_in
 
     ! local
     integer :: n,nlevs,dm,i,ng_o,ng_n,lo(mla%dim),hi(mla%dim)
@@ -106,6 +107,17 @@ contains
                             the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
     end do
 
+    ! return reaction rates (not the new state)
+    ! units of (number density) / time
+    if (present(return_rates_in)) then
+       if (return_rates_in) then
+          do n=1,nlevs
+             call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+             call multifab_mult_mult_s_c(n_new(n),1,1.d0/dt,nspecies,n_new(n)%ng)
+          end do
+       end if
+    end if
+
     call destroy(bpt)
 
   end subroutine advance_reaction
@@ -115,14 +127,14 @@ contains
 
     integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n
     real(kind=dp_t), intent(in   ) :: n_old(glo(1)-ng_o:,glo(2)-ng_o:,:)
-    real(kind=dp_t), intent(inout) :: n_new(glo(1)-ng_o:,glo(2)-ng_o:,:)
+    real(kind=dp_t), intent(inout) :: n_new(glo(1)-ng_n:,glo(2)-ng_n:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
     
     ! local
     integer :: i,j
 
     do j=tlo(2),thi(2)
-    do i=tlo(1),thi(1)       
+    do i=tlo(1),thi(1)
        call advance_reaction_cell(n_old(i,j,1:nspecies), n_new(i,j,1:nspecies), dv, dt)
     end do
     end do
@@ -133,7 +145,7 @@ contains
 
     integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n
     real(kind=dp_t), intent(in   ) :: n_old(glo(1)-ng_o:,glo(2)-ng_o:,glo(3)-ng_o:,:)
-    real(kind=dp_t), intent(inout) :: n_new(glo(1)-ng_o:,glo(2)-ng_o:,glo(3)-ng_n:,:)
+    real(kind=dp_t), intent(inout) :: n_new(glo(1)-ng_n:,glo(2)-ng_n:,glo(3)-ng_n:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
     
     ! local
