@@ -113,7 +113,7 @@ contains
        reaction_type_temp = reaction_type
        use_Poisson_rng_temp = use_Poisson_rng
 
-       reaction_type = 1
+       reaction_type = 0
        use_Poisson_rng = -1
 
        ! store reactions rates for z in ext_src_d
