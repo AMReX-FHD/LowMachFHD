@@ -21,6 +21,8 @@
 \def\eb  {{\bf e}}
 \def\ib  {{\bf i}}
 \def\nb  {{\bf n}}
+\def\Rb  {{\bf R}}
+\def\zb  {{\bf z}}
 \def\mRb {\bm{\mathcal{R}}}
 \def\mZb {\bm{\mathcal{Z}}}
 
@@ -230,7 +232,7 @@ n_k^{n+1,*} = n_k^n + \delta t \nabla\cdot\left(D_k \nabla n_k^n
 + \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}}\mZb^{(1)}\right),
 \end{equation}
 \begin{equation}
-n_k^{n+1} = n_k^n + \delta t\left(
+n_k^{n+1} = n_k^n + \delta t\nabla\cdot\left(
 \half D_k\nabla n_k^n + \half D_k\nabla n_k^{n+1,*}
 + \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}}\mZb^{(1)}
 \right).
@@ -239,7 +241,7 @@ n_k^{n+1} = n_k^n + \delta t\left(
 {\bf Crank-Nicolson}
 We update the number densities using a single semi-implicit solve:
 \begin{equation}
-n_k^{n+1} = n_k^n + \delta t\left(
+n_k^{n+1} = n_k^n + \delta t\nabla\cdot\left(
 \half D_k\nabla n_k^n + \half D_k\nabla n_k^{n+1}
 + \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}}\mZb^{(1)}
 \right).
@@ -252,7 +254,7 @@ n_k^{n+\myhalf} = n_k^n + \frac{\delta t}{2} \nabla\cdot\left(D_k\nabla n_k^n
 + \sqrt{2}\sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}}\mZb^{(1)}\right),
 \end{equation}
 \begin{equation}
-n_k^{n+1} = n_k^n + \delta t\left(
+n_k^{n+1} = n_k^n + \delta t\nabla\cdot\left(
 D_k\nabla n_k^{n+\myhalf}
 + \sqrt{2}\sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}}\left(\mZb^{(1)}+\mZb^{(2)}\right)
 \right).
@@ -284,7 +286,41 @@ In order to handle inhomogeneous boundary conditions correctly within a second-o
 splitting scheme, we use \cite{Einkemmer:2014}.  We first consider second-order
 Strang splitting, Option 2 (($\frac{\Delta t}{2}D$)($\Delta t R$)($\frac{\Delta t}{2}D$)).
 The diffusion and reaction solvers need to be modified to include an external, 
-constant-in-time forcing term, $E$.
+constant-in-time forcing terms, $F_d$ and $F_r$.
+
+This algorithm assumes the boundary conditions are independent of time.  This
+assumption can be changed later.  The stochastic reactions and diffusive fluxes
+probably aren't treated right in this description yet.
+
+\begin{itemize}
+\item Compute $\nabla\cdot D_k\nabla z_k = 0$ with $t^n$ inhomogeneous number density boundary
+conditions.
+
+\item Define $\tilde n_k^n = n_k^n - z_k$.
+
+\item Advance $\tilde n_k^n \rightarrow \tilde n_k^{(1)}$ by integrating 
+diffusion over $\Delta t/2$:
+\begin{equation}
+\frac{\partial\tilde n_k}{\partial t} = \nabla\cdot\left(D_k\nabla\tilde n_k + \sqrt{2D_kn_k}\mZb\right) + \Rb(\tilde\nb),\label{eq:diffusion_bc}
+\end{equation}
+where $\Rb$ are deterministic reaction rates.
+
+\item Advance $\tilde n_k^{(1)} \rightarrow \tilde n_k^{(2)}$ by integrating 
+reactions over $\Delta t$:
+\begin{equation}
+\frac{\partial\tilde n_k}{\partial t} = \mRb(\tilde\nb + \zb) - \Rb(\zb).
+\end{equation}
+
+\item Advance $\tilde n_k^{(2)} \rightarrow \tilde n_k^{n+1}$ by integrating 
+diffusion (\ref{eq:diffusion_bc}) over $\Delta t/2$.
+
+\item If the boundary conditions are time-dependent, recompute 
+$\nabla\cdot D_k\nabla z_k = 0$ with $t^{n+1}$ inhomogeneous number density 
+boundary conditions.
+
+\item Set $n_k^{n+1} = \tilde n_k^{(2)} + z_k$.
+
+\end{itemize}
 
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
