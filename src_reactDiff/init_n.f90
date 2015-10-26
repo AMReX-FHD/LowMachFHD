@@ -1,6 +1,7 @@
 module init_n_module
 
   use bl_types
+  use bl_constants_module
   use ml_layout_module
   use multifab_physbc_module
   use define_bc_module
@@ -18,6 +19,7 @@ module init_n_module
   ! 0=thermodynamic equilibrium, n=n_init_in(1,1:nspecies)
   ! 1=gaussian spreading (order of accuracy testing)
   ! 2=gradient along y, n=n_init_in(1,1:nspecies) on bottom (y=0) and n_init(2,1:nspecies) on top (y=Ly)
+  ! 3=1+sin^2(pi*x)*sin^2(pi*y)*sin^2(pi*z) test problem
 
 contains
 
@@ -136,6 +138,21 @@ contains
           end do
        end do
 
+    case(3) 
+       !=========================================================
+       ! 1+sin^2(pi*x)*sin^2(pi*y)*sin^2(pi*z) test problem
+       !=========================================================
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2) 
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1) 
+
+             n_init(i,j,1:nspecies) = 1.d0 + sin(M_PI*x)**2 * sin(M_PI*y)**2
+
+          end do
+       end do
+
     case default
 
        call bl_error("init_n_2d: prob_type not supported")
@@ -208,6 +225,24 @@ contains
 
                 n_init(i,j,k,1:nspecies) = n_init_in(1,1:nspecies) + &
                      (n_init_in(2,1:nspecies) - n_init_in(1,1:nspecies))*(y-prob_lo(2))/L(2)
+
+             end do
+          end do
+       end do
+
+    case(3) 
+       !========================================================
+       ! 1+sin^2(pi*x)*sin^2(pi*y)*sin^2(pi*z) test problem
+       !========================================================
+
+       do k=lo(3),hi(3)
+          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3) 
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+
+                n_init(i,j,k,1:nspecies) = 1.d0 + sin(M_PI*x)**2 * sin(M_PI*y)**2 * sin(M_PI*z)**2
 
              end do
           end do
