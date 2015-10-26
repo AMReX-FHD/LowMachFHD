@@ -118,15 +118,15 @@ contains
 
        ! store reactions rates for z in ext_src_d
        ! store (negative) reaction rates for z in ext_src_r
-       call advance_reaction(mla,n_old,ext_src_d,zerofab,dx,dt,the_bc_tower,return_rates_in=.true.)
+       call advance_reaction(mla,n_old,ext_src_d,zerofab,dx,0.5d0*dt,the_bc_tower,return_rates_in=.true.)
        do n=1,nlevs
           call multifab_copy_c(ext_src_r(n),1,ext_src_d(n),1,nspecies,0)
           call multifab_mult_mult_s_c(ext_src_r(n),1,-1.d0,nspecies,0)
        end do
 
        ! restore reaction_type
-       reaction_type = reaction_type
-       use_Poisson_rng = use_Poisson_rng
+       reaction_type = reaction_type_temp
+       use_Poisson_rng = use_Poisson_rng_temp
 
        ! advance diffusion
        call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower)
