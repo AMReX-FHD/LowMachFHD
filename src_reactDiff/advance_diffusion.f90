@@ -17,11 +17,12 @@ module advance_diffusion_module
 
 contains
 
-  subroutine advance_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower)
+  subroutine advance_diffusion(mla,n_old,n_new,ext_src,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
+    type(multifab) , intent(in   ) :: ext_src(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -82,10 +83,12 @@ contains
        ! Euler predictor
        ! n_k^{n+1,*} = n_k^n + dt div (D_k grad n_k)^n
        !                     + dt div (sqrt(2 D_k n_k / dt) Z)^n
+       !                     + dt ext_src
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
+          call multifab_saxpy_3(n_new(n),dt,ext_src(n))
           call multifab_fill_boundary(n_new(n))
           call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
                                the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
@@ -98,10 +101,12 @@ contains
        ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
        !                   + (dt/2) div (D_k grad n_k)^{n+1,*}
        !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
+       !                   +  dt    ext_src
        do n=1,nlevs
           call multifab_plus_plus_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
+          call multifab_saxpy_3(n_new(n),dt,ext_src(n))
           call multifab_mult_mult_s_c(n_new(n),1,0.5d0,nspecies,0)
           call multifab_fill_boundary(n_new(n))
           call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
@@ -113,18 +118,20 @@ contains
        ! n_k^{n+1} = n_k^n + (dt/2) div )D_k grad n_k)^n
        !                   + (dt/2) div (D_k grad n_k)^n+1
        !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
-       call implicit_diffusion(mla,n_old,n_new,diff_coef_face,diff_fluxdiv,stoch_fluxdiv, &
-                               dx,dt,the_bc_tower)
+       call implicit_diffusion(mla,n_old,n_new,ext_src,diff_coef_face, &
+                               diff_fluxdiv,stoch_fluxdiv,dx,dt,the_bc_tower)
 
     else if (diffusion_type .eq. 2) then
        ! explicit midpoint scheme
 
        ! n_k^{n+1/2} = n_k^n + (dt/2) div (D_k grad n_k)^n
        !                     +  dt    div (sqrt(D_k n_k / (2dt)) Z_1)^n
+       !                     + (dt/2) ext_src
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt/2.d0      ,diff_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+          call multifab_saxpy_3(n_new(n),dt/2.d0      ,ext_src(n))
           call multifab_fill_boundary(n_new(n))
           call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
                                the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
@@ -143,10 +150,12 @@ contains
        ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
        !                   + dt div (sqrt(D_k n_k / (2dt)) Z_1)^n
        !                   + dt div (sqrt(D_k n_k / (2dt)) Z_2)^n
+       !                   + dt     ext_src
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt           ,diff_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+          call multifab_saxpy_3(n_new(n),dt           ,ext_src(n))
           call multifab_fill_boundary(n_new(n))
           call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
                                the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))

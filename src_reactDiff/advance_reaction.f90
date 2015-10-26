@@ -26,11 +26,12 @@ module advance_reaction_module
 
 contains
 
-  subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower)
+  subroutine advance_reaction(mla,n_old,n_new,ext_src,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
+    type(multifab) , intent(in   ) :: ext_src(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -93,6 +94,11 @@ contains
        end do
     end do
     !$omp end parallel
+
+    ! add the external source
+    do n=1,nlevs
+       call multifab_plus_plus_c(n_new(n),1,ext_src(n),1,nspecies,0)
+    end do
 
     do n=1,nlevs
        call multifab_fill_boundary(n_new(n))

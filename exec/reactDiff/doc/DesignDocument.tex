@@ -174,15 +174,17 @@ diffusion and reactions in isolation:
 \end{equation}
 The code supports three temporal splitting schemes:\\
 
-{\bf First-Order Temporal Splitting}
+{\bf First-Order Temporal Splitting:}
+(($\Delta t R$)($\Delta t D$))
 \begin{enumerate}
 \item Advance $\nb^n \rightarrow \nb^{(1)}$ by discretizing 
-(\ref{eq:Diffusion}) over $\Delta t$.
+diffusion (\ref{eq:Diffusion}) over $\Delta t$.
 \item Advance $\nb^{(1)} \rightarrow \nb^{n+1}$ by discretizing 
-(\ref{eq:Reactions}) over $\Delta t$.
+reactions (\ref{eq:Reactions}) over $\Delta t$.
 \end{enumerate}
 
-{\bf Second-Order Strang Splitting, Option 1}
+{\bf Second-Order Strang Splitting, Option 1:}
+(($\frac{\Delta t}{2}R$)($\Delta t D$)($\frac{\Delta t}{2}R$))
 \begin{enumerate}
 \item Advance $\nb^n \rightarrow \nb^{(1)}$ by discretizing 
 reactions (\ref{eq:Reactions}) over $\Delta t/2$.
@@ -192,7 +194,8 @@ diffusion (\ref{eq:Diffusion}) over $\Delta t$.
 reactions (\ref{eq:Reactions}) over $\Delta t/2$.
 \end{enumerate}
 
-{\bf Second-Order Strang Splitting, Option 2}
+{\bf Second-Order Strang Splitting, Option 2:}
+(($\frac{\Delta t}{2}D$)($\Delta t R$)($\frac{\Delta t}{2}D$))
 \begin{enumerate}
 \item Advance $\nb^n \rightarrow \nb^{(1)}$ by discretizing 
 diffusion (\ref{eq:Diffusion}) over $\Delta t/2$.
@@ -275,6 +278,13 @@ uniform random variable.  Then, update the state and repeate.\\
 {\bf Tau Leaping}\\
 
 {\bf CLE}
+
+\section{Inhomogeneous Boundary Conditions}
+In order to handle inhomogeneous boundary conditions correctly within a second-order
+splitting scheme, we use \cite{Einkemmer:2014}.  We first consider second-order
+Strang splitting, Option 2 (($\frac{\Delta t}{2}D$)($\Delta t R$)($\frac{\Delta t}{2}D$)).
+The diffusion and reaction solvers need to be modified to include an external, 
+constant-in-time forcing term, $E$.
 
 \bibliographystyle{plain}
 \bibliography{DesignDocument}

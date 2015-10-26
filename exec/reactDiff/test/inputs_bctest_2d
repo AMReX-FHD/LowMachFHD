@@ -16,17 +16,17 @@
   max_step = 25                    ! maximum number of time steps
   plot_int = 25                    ! Interval for writing a plotfile (for visit/amrvis)
 
-!  n_cells(1:2) = 64 64             ! number of cells in domain
-!  max_grid_size(1:2) = 32 32       ! max number of cells in a box
-!  fixed_dt = 0.5d-3                ! time step (if positive, fixed)
-!  max_step = 50                    ! maximum number of time steps
-!  plot_int = 50                    ! Interval for writing a plotfile (for visit/amrvis)
+  n_cells(1:2) = 64 64             ! number of cells in domain
+  max_grid_size(1:2) = 32 32       ! max number of cells in a box
+  fixed_dt = 0.5d-3                ! time step (if positive, fixed)
+  max_step = 50                    ! maximum number of time steps
+  plot_int = 50                    ! Interval for writing a plotfile (for visit/amrvis)
 
-!  n_cells(1:2) = 128 128           ! number of cells in domain
-!  max_grid_size(1:2) = 64 64       ! max number of cells in a box
-!  fixed_dt = 0.25d-3               ! time step (if positive, fixed)
-!  max_step = 100                   ! maximum number of time steps
-!  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
+  n_cells(1:2) = 128 128           ! number of cells in domain
+  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+  fixed_dt = 0.25d-3               ! time step (if positive, fixed)
+  max_step = 100                   ! maximum number of time steps
+  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
 
   ! Time-step control
   !----------------------
@@ -110,9 +110,10 @@
                            ! If -1 do deterministic chemistry
                            ! If 1 do tau leaping (Poisson increments),
                            ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
-  splitting_type = 1       ! 0=D + R (first-order splitting)
+  splitting_type = 3       ! 0=D + R (first-order splitting)
                            ! 1=(1/2)R + D + (1/2)R (Strang option 1)
                            ! 2=(1/2)D + R + (1/2)D (Strang option 2)
+                           ! 3=Strang option 2 with inhomogeneous boundary conditions
   avg_type = 1             ! how to compute n on faces for stochastic weighting
                            ! 1=arithmetic, 2=geometric, 3=harmonic
   
