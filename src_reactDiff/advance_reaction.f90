@@ -98,7 +98,7 @@ contains
 
     ! add the external source
     do n=1,nlevs
-       call multifab_plus_plus_c(n_new(n),1,ext_src(n),1,nspecies,0)
+       call multifab_saxpy_3(n_new(n),dt,ext_src(n))
     end do
 
     do n=1,nlevs

@@ -131,11 +131,30 @@ contains
        ! advance diffusion
        call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower)
 
-       ! advance reaction
-       call advance_reaction (mla,n_new,n_old,ext_src_r,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       do n=1,nlevs
+          call multifab_copy_c(n_old(n),1,n_new(n),1,nspecies,n_old(n)%ng)
+       end do
+
+       ! compute \tilde{n} + z
+       do n=1,nlevs
+          call multifab_plus_plus_c(n_old(n),1,z(n),1,nspecies,0)
+       end do
+
+       ! compute reaction rates, store in n_new
+       call advance_reaction(mla,n_old,n_new,ext_src_r,dx,dt,the_bc_tower,return_rates_in=.true.)
+
+       ! restore \tilde{n}
+       do n=1,nlevs
+          call multifab_sub_sub_c(n_old(n),1,z(n),1,nspecies,0)
+       end do
+
+       ! \tilde{n} = \tilde{n} + dt*reactions
+       do n=1,nlevs
+          call multifab_saxpy_3(n_old(n),dt,n_new(n))
+       end do
 
        ! advance diffusion
-       call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower)
 
        ! restore boundary conditions
        n_bc(1:dm,1:2,1:nspecies) = n_bc_temp(1:dm,1:2,1:nspecies)
