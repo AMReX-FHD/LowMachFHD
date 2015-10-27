@@ -48,8 +48,8 @@ contains
     case(0)
        ! D + R
 
-       call advance_diffusion(mla,n_old,n_new,fz,dx,dt,the_bc_tower)
-       call advance_reaction (mla,n_new,n_old,fz,dx,dt,the_bc_tower)  ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower)
+       call advance_reaction (mla,n_new,n_old,dx,dt,the_bc_tower)  ! swap n_new/n_old to avoid calling copy()
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
        end do
@@ -57,16 +57,16 @@ contains
     case(1)
        ! (1/2)R + D + (1/2)R
 
-       call advance_reaction (mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower)
-       call advance_diffusion(mla,n_new,n_old,fz,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
-       call advance_reaction (mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_reaction (mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower)
+       call advance_diffusion(mla,n_new,n_old,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_reaction (mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
 
     case(2)
        ! (1/2)D + R + (1/2)D
 
-       call advance_diffusion(mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower)
-       call advance_reaction (mla,n_new,n_old,fz,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
-       call advance_diffusion(mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower)
+       call advance_reaction (mla,n_new,n_old,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
 
     case(3)
        ! (1/2)D + R + (1/2)D with inhomogeneous, time-independent boundary conditions
@@ -90,12 +90,12 @@ contains
        ! store reactions rates for z in fz
        ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
        ! returning an explicit rate in units of number_density/time
-       call advance_reaction(mla,z,fz,n_old,dx,dt,the_bc_tower,return_rates_in=.true.)
+       call advance_reaction(mla,z,fz,dx,dt,the_bc_tower,return_rates_in=.true.)
 
        ! This code should be identical to case=2 just passing in nonzero external sources:
-       call advance_diffusion(mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower)
-       call advance_reaction (mla,n_new,n_old,fz,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
-       call advance_diffusion(mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,ext_src_in=fz)
+       call advance_reaction (mla,n_new,n_old,dx,dt      ,the_bc_tower,ext_src_in=fz) ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,ext_src_in=fz) ! swap n_new/n_old to avoid calling copy()
               
        do n=1,nlevs
           call multifab_destroy(z(n))

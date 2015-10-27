@@ -17,19 +17,20 @@ module advance_diffusion_module
 
 contains
 
-  subroutine advance_diffusion(mla,n_old,n_new,ext_src,dx,dt,the_bc_tower)
+  subroutine advance_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
-    type(multifab) , intent(in   ) :: ext_src(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
+    type(multifab) , intent(in   ), optional :: ext_src_in(:)
 
     ! local
     type(multifab) :: diff_fluxdiv(mla%nlevel)
     type(multifab) :: stoch_fluxdiv(mla%nlevel)
     type(multifab) :: diff_coef_face(mla%nlevel,mla%dim)
+    type(multifab) :: ext_src(mla%nlevel)
 
     integer :: n,nlevs,i,dm,spec
 
@@ -41,7 +42,8 @@ contains
     ! do not do diffusion if only one cell (well-mixed system)
     if((multifab_volume(n_old(1))/nspecies)<=1) then
        do n=1,nlevs
-          call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
+          ! make sure n_new contains the new state
+          call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
        end do
        return
     end if   
@@ -49,12 +51,23 @@ contains
     call build(bpt,"advance_diffusion")
     
     do n=1,nlevs
-       call multifab_build(diff_fluxdiv(n) ,mla%la(n),nspecies,0) 
-       call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0) 
+       call multifab_build(diff_fluxdiv(n) ,mla%la(n),nspecies,0)
+       call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0)
        do i=1,dm
           call multifab_build_edge(diff_coef_face(n,i),mla%la(n),nspecies,0,i)
        end do
+       call multifab_build(ext_src(n),mla%la(n),nspecies,0)
     end do
+
+    if (present(ext_src_in)) then
+       do n=1,nlevs
+          call multifab_copy_c(ext_src(n),1,ext_src_in(n),1,nspecies,0)
+       end do
+    else
+       do n=1,nlevs
+          call multifab_setval(ext_src(n),0.d0,all=.true.)
+       end do
+    end if
 
     ! fill random flux multifabs with new random numbers
     call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
@@ -173,6 +186,7 @@ contains
        do i=1,dm
           call multifab_destroy(diff_coef_face(n,i))
        end do
+       call multifab_destroy(ext_src(n))
     end do
 
     call destroy(bpt)

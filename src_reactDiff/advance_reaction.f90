@@ -33,20 +33,16 @@ contains
   ! To model stochastic particle production (sources) include g in the definition of f instead
   ! If return_rates_in=T the code returns f(n)
   ! Note that chemical production rate is sum over reactions of chemical reaction times the stochiometric coefficient
-  subroutine advance_reaction(mla,n_old,n_new,ext_src,dx,dt,the_bc_tower,return_rates_in)
+  subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,return_rates_in,ext_src_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
-    type(multifab) , intent(inout) :: n_new(:)
-    ! Donev: Shouldn't this be optional so we don't have to always pass it even if zero?
-    ! Donev: I suggest you use this for both input and output instead of n_new, so I would make this intent(inout), but you decide
-    ! it also makes sense based on ghost cells. n_new has ghost cells etc. but this you do not need to return rates. ext_src seems like the right place...
-    ! If return_rates_in=F, ext_src is the external constant source term g (fixed and deterministic!)
-    ! otherwise, on output ext_src contains f(n_old) and n_new is not updated
-    type(multifab) , intent(inout) :: ext_src(:)
+    type(multifab) , intent(inout) :: n_new(:) ! if return_rates_in=F, return new state
+                                               ! if return_rates_in=T, return rates
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
     logical , intent(in), optional :: return_rates_in
+    type(multifab) , intent(in   ), optional :: ext_src_in(:)
 
     ! local
     integer :: n,nlevs,dm,i,ng_o,ng_n,ng_e
@@ -61,6 +57,8 @@ contains
     type(box) :: tilebox
     integer :: tlo(mla%dim), thi(mla%dim)
 
+    type(multifab) :: ext_src(mla%nlevel)
+
     type(bl_prof_timer),save :: bpt
     
     logical :: return_rates ! Should we do an actual time step or just compute the chemical rates?
@@ -70,8 +68,10 @@ contains
     
     return_rates=.false.
     if(present(return_rates_in)) return_rates=return_rates_in
-    ! Donev: The following is if we change the code to use ext_src to return rates
-    !if(return_rates.and.(.not.present(ext_src))) call bl_error("ext_src must be present ")
+
+    if (return_rates .and. present(ext_src_in)) then
+       call bl_error("advance_reaction: return_rates=T with an external source not implemented")
+    end if
 
     ! There are no reactions to process!
     if(nreactions<1) then
@@ -86,6 +86,20 @@ contains
     end if   
 
     call build(bpt,"advance_reaction")
+
+    do n=1,nlevs
+       call multifab_build(ext_src(n),mla%la(n),nspecies,0)
+    end do
+
+    if (present(ext_src_in)) then
+       do n=1,nlevs
+          call multifab_copy_c(ext_src(n),1,ext_src_in(n),1,nspecies,0)
+       end do
+    else
+       do n=1,nlevs
+          call multifab_setval(ext_src(n),0.d0,all=.true.)
+       end do
+    end if
 
     ng_o = n_old(1)%ng
     ng_n = n_new(1)%ng
@@ -123,6 +137,10 @@ contains
        end do
     end do
     !$omp end parallel
+
+    do n=1,nlevs
+       call multifab_destroy(ext_src(n))
+    end do
 
     if(return_rates) return ! We are done
     
