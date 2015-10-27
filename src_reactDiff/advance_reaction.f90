@@ -236,7 +236,7 @@ contains
 
        end do
 
-       n_new(1:nspecies) = n_new(1:nspecies) + dt*theta*ext_src(1:nspecies)
+       n_new(1:nspecies) = n_new(1:nspecies) - dt*theta*ext_src(1:nspecies)
 
        if (reaction_type .eq. 1) then
           ! second-order tau-leaping or CLE corrector
@@ -268,7 +268,7 @@ contains
 
           end do
 
-          n_new(1:nspecies) = n_new(1:nspecies) + dt*(alpha1-alpha2)*(1.d0-theta)*ext_src(1:nspecies)
+          n_new(1:nspecies) = n_new(1:nspecies) - dt*(alpha1-alpha2)*(1.d0-theta)*ext_src(1:nspecies)
 
        end if
        

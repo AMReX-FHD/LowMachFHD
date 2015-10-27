@@ -27,8 +27,7 @@ contains
     ! local
     integer :: n,nlevs,dm
 
-    type(multifab) :: ext_src_d(mla%nlevel)
-    type(multifab) :: ext_src_r(mla%nlevel)
+    type(multifab) :: fz(mla%nlevel)
     type(multifab) :: z(mla%nlevel)
 
     type(bl_prof_timer),save :: bpt
@@ -40,20 +39,17 @@ contains
 
     ! external source term for diffusion/reaction solvers for inhomogeneous bc algorithm
     ! Donev: It seems to me these should only be allocated if needed (splitting_algorithm=3 etc.)
-    ! Also, I don't really see why we need two of them when we can only use one and just switch the sign convention to be -ext_source in one of react/diff?
     do n=1,nlevs
-       call multifab_build(ext_src_d(n),mla%la(n),nspecies,0)
-       call multifab_build(ext_src_r(n),mla%la(n),nspecies,0)
-       call setval(ext_src_d(n),0.d0,all=.true.)
-       call setval(ext_src_r(n),0.d0,all=.true.)
+       call multifab_build(fz(n),mla%la(n),nspecies,0)
+       call setval(fz(n),0.d0,all=.true.)
     end do
 
     select case(splitting_type)
     case(0)
        ! D + R
 
-       call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,dt,the_bc_tower)
-       call advance_reaction (mla,n_new,n_old,ext_src_r,dx,dt,the_bc_tower)  ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,fz,dx,dt,the_bc_tower)
+       call advance_reaction (mla,n_new,n_old,fz,dx,dt,the_bc_tower)  ! swap n_new/n_old to avoid calling copy()
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
        end do
@@ -61,16 +57,16 @@ contains
     case(1)
        ! (1/2)R + D + (1/2)R
 
-       call advance_reaction (mla,n_old,n_new,ext_src_r,dx,0.5d0*dt,the_bc_tower)
-       call advance_diffusion(mla,n_new,n_old,ext_src_d,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
-       call advance_reaction (mla,n_old,n_new,ext_src_r,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_reaction (mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower)
+       call advance_diffusion(mla,n_new,n_old,fz,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_reaction (mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
 
     case(2)
        ! (1/2)D + R + (1/2)D
 
-       call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower)
-       call advance_reaction (mla,n_new,n_old,ext_src_r,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
-       call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower)
+       call advance_reaction (mla,n_new,n_old,fz,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
 
     case(3)
        ! (1/2)D + R + (1/2)D with inhomogeneous, time-independent boundary conditions
@@ -91,20 +87,15 @@ contains
           call setval(z(n),1.d0,all=.true.)
        end do
        
-       ! store reactions rates for z in ext_src_d
-       ! store (negative) reaction rates for z in ext_src_r
+       ! store reactions rates for z in fz
        ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
        ! returning an explicit rate in units of number_density/time
-       call advance_reaction(mla,z,ext_src_d,n_old,dx,dt,the_bc_tower,return_rates_in=.true.)
-       do n=1,nlevs ! Donev: Seems to me that duplicating this multifab twice is not needed just to flip a sign
-          call multifab_copy_c(ext_src_r(n),1,ext_src_d(n),1,nspecies,0)
-          call multifab_mult_mult_s_c(ext_src_r(n),1,-1.d0,nspecies,0)
-       end do
+       call advance_reaction(mla,z,fz,n_old,dx,dt,the_bc_tower,return_rates_in=.true.)
 
        ! This code should be identical to case=2 just passing in nonzero external sources:
-       call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower)
-       call advance_reaction (mla,n_new,n_old,ext_src_r,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
-       call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower)
+       call advance_reaction (mla,n_new,n_old,fz,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
+       call advance_diffusion(mla,n_old,n_new,fz,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
               
        do n=1,nlevs
           call multifab_destroy(z(n))
@@ -115,8 +106,7 @@ contains
     end select
 
     do n=1,nlevs
-       call multifab_destroy(ext_src_d(n))
-       call multifab_destroy(ext_src_r(n))
+       call multifab_destroy(fz(n))
     end do
 
 
