@@ -37,11 +37,13 @@ contains
     logical , intent(in), optional :: return_rates_in
 
     ! local
-    integer :: n,nlevs,dm,i,ng_o,ng_n,lo(mla%dim),hi(mla%dim)
+    integer :: n,nlevs,dm,i,ng_o,ng_n,ng_e
+    integer :: lo(mla%dim),hi(mla%dim)
     real(kind=dp_t) :: dv
 
     real(kind=dp_t), pointer :: op(:,:,:,:)
     real(kind=dp_t), pointer :: np(:,:,:,:)
+    real(kind=dp_t), pointer :: ep(:,:,:,:)
 
     type(mfiter) :: mfi
     type(box) :: tilebox
@@ -64,6 +66,7 @@ contains
 
     ng_o = n_old(1)%ng
     ng_n = n_new(1)%ng
+    ng_e = ext_src(1)%ng
 
     dv = product(dx(1,1:dm))
     if (dm<3) dv = dv*cross_section
@@ -84,22 +87,20 @@ contains
 
           op => dataptr(n_old(n),i)
           np => dataptr(n_new(n),i)
+          ep => dataptr(ext_src(n),i)
           lo = lwb(get_box(n_new(n),i))
           hi = upb(get_box(n_new(n),i))
           select case (dm)
           case (2)
-             call advance_reaction_2d(op(:,:,1,:),ng_o,np(:,:,1,:),ng_n,lo,hi,tlo,thi,dv,dt)
+             call advance_reaction_2d(op(:,:,1,:),ng_o,np(:,:,1,:),ng_n,ep(:,:,1,:),ng_e, &
+                                      lo,hi,tlo,thi,dv,dt)
           case (3)
-             call advance_reaction_3d(op(:,:,:,:),ng_o,np(:,:,:,:),ng_n,lo,hi,tlo,thi,dv,dt)
+             call advance_reaction_3d(op(:,:,:,:),ng_o,np(:,:,:,:),ng_n,ep(:,:,:,:),ng_e, &
+                                      lo,hi,tlo,thi,dv,dt)
           end select
        end do
     end do
     !$omp end parallel
-
-    ! add the external source
-    do n=1,nlevs
-       call multifab_saxpy_3(n_new(n),dt,ext_src(n))
-    end do
 
     do n=1,nlevs
        call multifab_fill_boundary(n_new(n))
@@ -123,11 +124,12 @@ contains
   end subroutine advance_reaction
   
   
-  subroutine advance_reaction_2d(n_old,ng_o,n_new,ng_n,glo,ghi,tlo,thi,dv,dt)
+  subroutine advance_reaction_2d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt)
 
-    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n
-    real(kind=dp_t), intent(in   ) :: n_old(glo(1)-ng_o:,glo(2)-ng_o:,:)
-    real(kind=dp_t), intent(inout) :: n_new(glo(1)-ng_n:,glo(2)-ng_n:,:)
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n,ng_e
+    real(kind=dp_t), intent(in   ) ::   n_old(glo(1)-ng_o:,glo(2)-ng_o:,:)
+    real(kind=dp_t), intent(inout) ::   n_new(glo(1)-ng_n:,glo(2)-ng_n:,:)
+    real(kind=dp_t), intent(inout) :: ext_src(glo(1)-ng_e:,glo(2)-ng_e:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
     
     ! local
@@ -135,17 +137,19 @@ contains
 
     do j=tlo(2),thi(2)
     do i=tlo(1),thi(1)
-       call advance_reaction_cell(n_old(i,j,1:nspecies), n_new(i,j,1:nspecies), dv, dt)
+       call advance_reaction_cell(n_old(i,j,1:nspecies), n_new(i,j,1:nspecies), &
+                                  ext_src(i,j,1:nspecies), dv, dt)
     end do
     end do
 
   end subroutine advance_reaction_2d
 
-  subroutine advance_reaction_3d(n_old,ng_o,n_new,ng_n,glo,ghi,tlo,thi,dv,dt)
+  subroutine advance_reaction_3d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt)
 
-    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n
-    real(kind=dp_t), intent(in   ) :: n_old(glo(1)-ng_o:,glo(2)-ng_o:,glo(3)-ng_o:,:)
-    real(kind=dp_t), intent(inout) :: n_new(glo(1)-ng_n:,glo(2)-ng_n:,glo(3)-ng_n:,:)
+    integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n,ng_e
+    real(kind=dp_t), intent(in   ) ::   n_old(glo(1)-ng_o:,glo(2)-ng_o:,glo(3)-ng_o:,:)
+    real(kind=dp_t), intent(inout) ::   n_new(glo(1)-ng_n:,glo(2)-ng_n:,glo(3)-ng_n:,:)
+    real(kind=dp_t), intent(inout) :: ext_src(glo(1)-ng_e:,glo(2)-ng_e:,glo(3)-ng_e:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
     
     ! local
@@ -154,17 +158,19 @@ contains
     do k=tlo(3),thi(3)
     do j=tlo(2),thi(2)
     do i=tlo(1),thi(1)
-       call advance_reaction_cell(n_old(i,j,k,1:nspecies), n_new(i,j,k,1:nspecies), dv, dt)
+       call advance_reaction_cell(n_old(i,j,k,1:nspecies), n_new(i,j,k,1:nspecies), &
+                                  ext_src(i,j,k,1:nspecies), dv, dt)
     end do
     end do
     end do
 
   end subroutine advance_reaction_3d
 
-  subroutine advance_reaction_cell(n_old,n_new,dv,dt)
+  subroutine advance_reaction_cell(n_old,n_new,ext_src,dv,dt)
 
     real(kind=dp_t), intent(in   ) :: n_old(:)
     real(kind=dp_t), intent(inout) :: n_new(:)
+    real(kind=dp_t), intent(in   ) :: ext_src(:)
     real(kind=dp_t), intent(in   ) :: dv,dt
 
     real(kind=dp_t) :: avg_reactions     (1:nreactions)
@@ -202,6 +208,8 @@ contains
 
        end do
 
+       n_new(1:nspecies) = n_new(1:nspecies) + dt*ext_src(1:nspecies)
+
        if (reaction_type .eq. 1) then
           ! second-order tau-leaping or CLE corrector
           ! Mattingly predictor-corrector with theta=0.5d0
@@ -231,6 +239,8 @@ contains
                   (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
 
           end do
+
+          n_new(1:nspecies) = n_new(1:nspecies) + dt*(alpha1-alpha2)*(1.d0-theta)*ext_src(1:nspecies)
 
        end if
        
