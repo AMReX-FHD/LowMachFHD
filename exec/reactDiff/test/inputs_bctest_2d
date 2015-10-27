@@ -16,17 +16,17 @@
   max_step = 25                    ! maximum number of time steps
   plot_int = 25                    ! Interval for writing a plotfile (for visit/amrvis)
 
-  n_cells(1:2) = 64 64             ! number of cells in domain
-  max_grid_size(1:2) = 32 32       ! max number of cells in a box
-  fixed_dt = 0.5d-3                ! time step (if positive, fixed)
-  max_step = 50                    ! maximum number of time steps
-  plot_int = 50                    ! Interval for writing a plotfile (for visit/amrvis)
+!  n_cells(1:2) = 64 64             ! number of cells in domain
+!  max_grid_size(1:2) = 32 32       ! max number of cells in a box
+!  fixed_dt = 0.5d-3                ! time step (if positive, fixed)
+!  max_step = 50                    ! maximum number of time steps
+!  plot_int = 50                    ! Interval for writing a plotfile (for visit/amrvis)
 
-  n_cells(1:2) = 128 128           ! number of cells in domain
-  max_grid_size(1:2) = 64 64       ! max number of cells in a box
-  fixed_dt = 0.25d-3               ! time step (if positive, fixed)
-  max_step = 100                   ! maximum number of time steps
-  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
+!  n_cells(1:2) = 128 128           ! number of cells in domain
+!  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+!  fixed_dt = 0.25d-3               ! time step (if positive, fixed)
+!  max_step = 100                   ! maximum number of time steps
+!  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
 
   ! Time-step control
   !----------------------
@@ -122,7 +122,6 @@
   n_bc(1,1:2,1) = 1.0 1.0 ! n_i boundary conditions (dir,lohi,species)
   n_bc(2,1:2,1) = 1.0 1.0 ! n_i boundary conditions (dir,lohi,species)
 
-
   ! Diffusion     
   !----------------------                          
   D_Fick(1) = 0.1d0                    ! Fickian diffusion coeffs
@@ -139,7 +138,7 @@
   include_discrete_LMA_correction = F
 
   ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
-  chemical_rates(1) = 1.d0
+  chemical_rates(1) = 100.d0
 
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
   ! Example: For N1 + 2*N2 -> N3 use
