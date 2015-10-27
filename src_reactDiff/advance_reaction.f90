@@ -20,18 +20,30 @@ module advance_reaction_module
   integer*8 ::  n_rejections=0 ! Number of reaction rates set to zero in corrector stage
 
   ! Here we use Mattingly's predictor-corrector with theta=0.5d0, giving the parameters:
+  ! Donev: This is actually equivalent to a traditional midpoint scheme and maybe it is better to write it this way
   real(kind=dp_t), parameter :: theta = 0.5d0
   real(kind=dp_t), parameter :: alpha1 = 2.0d0
   real(kind=dp_t), parameter :: alpha2 = 1.0d0
 
 contains
 
+  ! This solves dn/dt = f(n) + g
+  ! where f(n) are the chemical production rates (deterministic or stochastic)
+  ! and g is a constant (in time) *deterministic* source term.
+  ! To model stochastic particle production (sources) include g in the definition of f instead
+  ! If return_rates_in=T the code returns f(n)
+  ! Note that chemical production rate is sum over reactions of chemical reaction times the stochiometric coefficient
   subroutine advance_reaction(mla,n_old,n_new,ext_src,dx,dt,the_bc_tower,return_rates_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
-    type(multifab) , intent(in   ) :: ext_src(:)
+    ! Donev: Shouldn't this be optional so we don't have to always pass it even if zero?
+    ! Donev: I suggest you use this for both input and output instead of n_new, so I would make this intent(inout), but you decide
+    ! it also makes sense based on ghost cells. n_new has ghost cells etc. but this you do not need to return rates. ext_src seems like the right place...
+    type(multifab) , intent(inout   ) :: ext_src(:)
+       ! If return_rates_in=F, ext_src is the external constant source term g (fixed and deterministic!)
+       ! otherwise, on output ext_src contains f(n_old) and n_new is not updated
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
     logical , intent(in), optional :: return_rates_in
@@ -51,13 +63,24 @@ contains
 
     type(bl_prof_timer),save :: bpt
     
+    logical :: return_rates ! Should we do an actual time step or just compute the chemical rates?
+    
     nlevs = mla%nlevel
     dm = mla%dim
+    
+    return_rates=.false.
+    if(present(return_rates_in)) return_rates=return_rates_in
+    ! Donev: The following is if we change the code to use ext_src to return rates
+    !if(return_rates.and.(.not.present(ext_src))) call bl_error("ext_src must be present ")
 
     ! There are no reactions to process!
     if(nreactions<1) then
        do n=1,nlevs
-          call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
+          if(return_rates) then
+             call setval(n_new(n),0.d0,all=.true.)
+          else   
+             call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
+          end if   
        end do
        return
     end if   
@@ -70,7 +93,6 @@ contains
 
     dv = product(dx(1,1:dm))
     if (dm<3) dv = dv*cross_section
-
 
     !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
     !$omp private(op,np,lo,hi)
@@ -93,44 +115,37 @@ contains
           select case (dm)
           case (2)
              call advance_reaction_2d(op(:,:,1,:),ng_o,np(:,:,1,:),ng_n,ep(:,:,1,:),ng_e, &
-                                      lo,hi,tlo,thi,dv,dt)
+                                      lo,hi,tlo,thi,dv,dt,return_rates)
           case (3)
              call advance_reaction_3d(op(:,:,:,:),ng_o,np(:,:,:,:),ng_n,ep(:,:,:,:),ng_e, &
-                                      lo,hi,tlo,thi,dv,dt)
+                                      lo,hi,tlo,thi,dv,dt,return_rates)
           end select
        end do
     end do
     !$omp end parallel
 
+    if(return_rates) return ! We are done
+    
+    ! Ensure ghost cells are consistent or n_new
     do n=1,nlevs
        call multifab_fill_boundary(n_new(n))
        call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
     end do
 
-    ! return reaction rates (not the new state)
-    ! units of (number density) / time
-    if (present(return_rates_in)) then
-       if (return_rates_in) then
-          do n=1,nlevs
-             call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
-             call multifab_mult_mult_s_c(n_new(n),1,1.d0/dt,nspecies,n_new(n)%ng)
-          end do
-       end if
-    end if
-
     call destroy(bpt)
 
   end subroutine advance_reaction
   
   
-  subroutine advance_reaction_2d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt)
+  subroutine advance_reaction_2d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt,return_rates)
 
     integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n,ng_e
     real(kind=dp_t), intent(in   ) ::   n_old(glo(1)-ng_o:,glo(2)-ng_o:,:)
     real(kind=dp_t), intent(inout) ::   n_new(glo(1)-ng_n:,glo(2)-ng_n:,:)
     real(kind=dp_t), intent(inout) :: ext_src(glo(1)-ng_e:,glo(2)-ng_e:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
+    logical, intent(in) :: return_rates
     
     ! local
     integer :: i,j
@@ -138,19 +153,20 @@ contains
     do j=tlo(2),thi(2)
     do i=tlo(1),thi(1)
        call advance_reaction_cell(n_old(i,j,1:nspecies), n_new(i,j,1:nspecies), &
-                                  ext_src(i,j,1:nspecies), dv, dt)
+                                  ext_src(i,j,1:nspecies), dv, dt, return_rates)
     end do
     end do
 
   end subroutine advance_reaction_2d
 
-  subroutine advance_reaction_3d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt)
+  subroutine advance_reaction_3d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt,return_rates)
 
     integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n,ng_e
     real(kind=dp_t), intent(in   ) ::   n_old(glo(1)-ng_o:,glo(2)-ng_o:,glo(3)-ng_o:,:)
     real(kind=dp_t), intent(inout) ::   n_new(glo(1)-ng_n:,glo(2)-ng_n:,glo(3)-ng_n:,:)
     real(kind=dp_t), intent(inout) :: ext_src(glo(1)-ng_e:,glo(2)-ng_e:,glo(3)-ng_e:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
+    logical, intent(in) :: return_rates
     
     ! local
     integer :: i,j,k
@@ -159,19 +175,20 @@ contains
     do j=tlo(2),thi(2)
     do i=tlo(1),thi(1)
        call advance_reaction_cell(n_old(i,j,k,1:nspecies), n_new(i,j,k,1:nspecies), &
-                                  ext_src(i,j,k,1:nspecies), dv, dt)
+                                  ext_src(i,j,k,1:nspecies), dv, dt, return_rates)
     end do
     end do
     end do
 
   end subroutine advance_reaction_3d
 
-  subroutine advance_reaction_cell(n_old,n_new,ext_src,dv,dt)
+  subroutine advance_reaction_cell(n_old,n_new,ext_src,dv,dt,return_rates)
 
     real(kind=dp_t), intent(in   ) :: n_old(:)
     real(kind=dp_t), intent(inout) :: n_new(:)
     real(kind=dp_t), intent(in   ) :: ext_src(:)
     real(kind=dp_t), intent(in   ) :: dv,dt
+    logical, intent(in) :: return_rates
 
     real(kind=dp_t) :: avg_reactions     (1:nreactions)
     real(kind=dp_t) :: avg_reactions_pred(1:nreactions)
@@ -180,6 +197,15 @@ contains
 
     integer :: spec,reaction,which_reaction
     integer :: n_steps_SSA
+    
+    if(return_rates) then ! Donev: Added this here so it is clear what it is doing
+       call compute_reaction_rates(n_new(1:nspecies), avg_reactions, dv)
+       do reaction=1,nreactions
+          n_new(1:nspecies) = avg_reactions(reaction)/dv * &
+             (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
+       end do
+       return
+    end if
 
     ! copy old state into new
     n_new = n_old
