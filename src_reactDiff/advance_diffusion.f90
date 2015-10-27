@@ -118,6 +118,7 @@ contains
        ! n_k^{n+1} = n_k^n + (dt/2) div )D_k grad n_k)^n
        !                   + (dt/2) div (D_k grad n_k)^n+1
        !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
+       !                   +  dt    ext_src
        call implicit_diffusion(mla,n_old,n_new,ext_src,diff_coef_face, &
                                diff_fluxdiv,stoch_fluxdiv,dx,dt,the_bc_tower)
 
