@@ -118,7 +118,9 @@ contains
 
        ! store reactions rates for z in ext_src_d
        ! store (negative) reaction rates for z in ext_src_r
-       call advance_reaction(mla,n_old,ext_src_d,zerofab,dx,0.5d0*dt,the_bc_tower,return_rates_in=.true.)
+       ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
+       ! returning an explicit rate in units of number_density/time
+       call advance_reaction(mla,z,ext_src_d,zerofab,dx,0.5d0*dt,the_bc_tower,return_rates_in=.true.)
        do n=1,nlevs
           call multifab_copy_c(ext_src_r(n),1,ext_src_d(n),1,nspecies,0)
           call multifab_mult_mult_s_c(ext_src_r(n),1,-1.d0,nspecies,0)
