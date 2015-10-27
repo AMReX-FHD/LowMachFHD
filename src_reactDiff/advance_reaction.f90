@@ -41,9 +41,9 @@ contains
     ! Donev: Shouldn't this be optional so we don't have to always pass it even if zero?
     ! Donev: I suggest you use this for both input and output instead of n_new, so I would make this intent(inout), but you decide
     ! it also makes sense based on ghost cells. n_new has ghost cells etc. but this you do not need to return rates. ext_src seems like the right place...
-    type(multifab) , intent(inout   ) :: ext_src(:)
-       ! If return_rates_in=F, ext_src is the external constant source term g (fixed and deterministic!)
-       ! otherwise, on output ext_src contains f(n_old) and n_new is not updated
+    ! If return_rates_in=F, ext_src is the external constant source term g (fixed and deterministic!)
+    ! otherwise, on output ext_src contains f(n_old) and n_new is not updated
+    type(multifab) , intent(inout) :: ext_src(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
     logical , intent(in), optional :: return_rates_in
@@ -198,7 +198,8 @@ contains
     integer :: spec,reaction,which_reaction
     integer :: n_steps_SSA
     
-    if(return_rates) then ! Donev: Added this here so it is clear what it is doing
+    ! compute reaction rates only in units of (number density) / time
+    if(return_rates) then
        call compute_reaction_rates(n_new(1:nspecies), avg_reactions, dv)
        do reaction=1,nreactions
           n_new(1:nspecies) = avg_reactions(reaction)/dv * &

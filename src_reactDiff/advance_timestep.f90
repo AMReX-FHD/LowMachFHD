@@ -35,8 +35,6 @@ contains
     ! n_i boundary conditions (dir,lohi,species)
     real(kind=dp_t) :: n_bc_temp(mla%dim,2,nspecies)
 
-    integer :: reaction_type_temp, use_Poisson_rng_temp
-
     type(bl_prof_timer),save :: bpt
 
     call build(bpt,"advance_timestep")
@@ -79,9 +77,8 @@ contains
        call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
 
     case(3)
-       ! (1/2)D + R + (1/2)D with inhomogeneous boundary conditions
-       ! under development and can eventually be merged in with splitting_type=2
-       ! Donev: I don't think we should merge this with splitting_type=2 since it is more complicated and costly and the user should request it
+       ! (1/2)D + R + (1/2)D with inhomogeneous, time-dependent boundary conditions
+       ! under development
 
        do n=1,nlevs
           call multifab_build(z(n),mla%la(n),nspecies,0)
@@ -104,6 +101,16 @@ contains
 
        ! make boundary conditions homogeneous
        n_bc(1:dm,1:2,1:nspecies) = 0.d0
+
+       ! store reactions rates for z in ext_src_d
+       ! store (negative) reaction rates for z in ext_src_r
+       ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
+       ! returning an explicit rate in units of number_density/time
+       call advance_reaction(mla,z,ext_src_d,zerofab,dx,dt,the_bc_tower,return_rates_in=.true.)
+       do n=1,nlevs
+          call multifab_copy_c(ext_src_r(n),1,ext_src_d(n),1,nspecies,0)
+          call multifab_mult_mult_s_c(ext_src_r(n),1,-1.d0,nspecies,0)
+       end do
        
        ! compute \tilde{n}
        do n=1,nlevs
@@ -112,27 +119,6 @@ contains
           call multifab_physbc(n_old(n),1,scal_bc_comp,nspecies, &
                                the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
        end do
-
-       ! setup reaction_type so the reactions are done deterministically
-       reaction_type_temp = reaction_type
-       use_Poisson_rng_temp = use_Poisson_rng
-
-       reaction_type = 0
-       use_Poisson_rng = -1
-
-       ! store reactions rates for z in ext_src_d
-       ! store (negative) reaction rates for z in ext_src_r
-       ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
-       ! returning an explicit rate in units of number_density/time
-       call advance_reaction(mla,z,ext_src_d,zerofab,dx,0.5d0*dt,the_bc_tower,return_rates_in=.true.)
-       do n=1,nlevs
-          call multifab_copy_c(ext_src_r(n),1,ext_src_d(n),1,nspecies,0)
-          call multifab_mult_mult_s_c(ext_src_r(n),1,-1.d0,nspecies,0)
-       end do
-
-       ! restore reaction_type
-       reaction_type = reaction_type_temp
-       use_Poisson_rng = use_Poisson_rng_temp
 
        ! advance diffusion
        call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower)
@@ -182,14 +168,15 @@ contains
           call multifab_destroy(zerofab(n))
        end do
 
-    case(4) ! Donev: Temporary simplification of case=3 specific to constant z
-       ! (1/2)D + R + (1/2)D with inhomogeneous boundary conditions
+    case(4)
+       ! (1/2)D + R + (1/2)D with inhomogeneous, time-independent boundary conditions
+       ! under development
 
        do n=1,nlevs
           call multifab_build(z(n),mla%la(n),nspecies,0)
        end do
 
-       ! compute z with new-time boundary conditions
+       ! compute z with old-time boundary conditions
        ! Donev: Actually z should be computed only once in main.f90 or constructed analytically to have a simple gradint
        ! In general the user will know how to solve div D_k grad z_k = 0 manually...
        ! We definitely do NOT want to be solving a Poisson problem every time step -- that is much more expensive than a whole time step of react-diff      
@@ -204,15 +191,13 @@ contains
        ! store (negative) reaction rates for z in ext_src_r
        ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
        ! returning an explicit rate in units of number_density/time
-       ! Donev: The old code has 0.5d0*dt for time step -- why? In the end if one is computing rates the actual time step should not matter      
        call advance_reaction(mla,z,ext_src_d,n_old,dx,dt,the_bc_tower,return_rates_in=.true.)
        do n=1,nlevs ! Donev: Seems to me that duplicating this multifab twice is not needed just to flip a sign
           call multifab_copy_c(ext_src_r(n),1,ext_src_d(n),1,nspecies,0)
           call multifab_mult_mult_s_c(ext_src_r(n),1,-1.d0,nspecies,0)
        end do
 
-
-       ! Donev: Henceforth the code should be identical to case=2 just passing in nonzero external sources:
+       ! This code should be identical to case=2 just passing in nonzero external sources:
        call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower)
        call advance_reaction (mla,n_new,n_old,ext_src_r,dx,dt      ,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
        call advance_diffusion(mla,n_old,n_new,ext_src_d,dx,0.5d0*dt,the_bc_tower) ! swap n_new/n_old to avoid calling copy()
