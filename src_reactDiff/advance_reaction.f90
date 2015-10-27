@@ -200,9 +200,10 @@ contains
     
     ! compute reaction rates only in units of (number density) / time
     if(return_rates) then
-       call compute_reaction_rates(n_new(1:nspecies), avg_reactions, dv)
+       call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
+       n_new = 0.d0
        do reaction=1,nreactions
-          n_new(1:nspecies) = avg_reactions(reaction)/dv * &
+          n_new(1:nspecies) = n_new(1:nspecies) + avg_reactions(reaction) * &
              (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
        end do
        return
