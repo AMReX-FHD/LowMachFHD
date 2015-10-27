@@ -37,13 +37,6 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ! external source term for diffusion/reaction solvers for inhomogeneous bc algorithm
-    ! Donev: It seems to me these should only be allocated if needed (splitting_algorithm=3 etc.)
-    do n=1,nlevs
-       call multifab_build(fz(n),mla%la(n),nspecies,0)
-       call setval(fz(n),0.d0,all=.true.)
-    end do
-
     select case(splitting_type)
     case(0)
        ! D + R
@@ -72,8 +65,10 @@ contains
        ! (1/2)D + R + (1/2)D with inhomogeneous, time-independent boundary conditions
        ! under development
 
+       ! external source term for diffusion/reaction solvers for inhomogeneous bc algorithm
        do n=1,nlevs
           call multifab_build(z(n),mla%la(n),nspecies,0)
+          call multifab_build(fz(n),mla%la(n),nspecies,0)
        end do
 
        ! compute z with old-time boundary conditions
@@ -99,16 +94,12 @@ contains
               
        do n=1,nlevs
           call multifab_destroy(z(n))
+          call multifab_destroy(fz(n))
        end do
 
     case default
        call bl_error("advance_timestep: invalid splitting_type")
     end select
-
-    do n=1,nlevs
-       call multifab_destroy(fz(n))
-    end do
-
 
     call destroy(bpt)
 
