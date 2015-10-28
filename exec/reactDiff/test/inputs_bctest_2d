@@ -10,23 +10,29 @@
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
 
-  n_cells(1:2) = 32 32             ! number of cells in domain
-  max_grid_size(1:2) = 16 16       ! max number of cells in a box
-  fixed_dt = 1.d-3                 ! time step (if positive, fixed)
-  max_step = 25                    ! maximum number of time steps
-  plot_int = 25                    ! Interval for writing a plotfile (for visit/amrvis)
-
-!  n_cells(1:2) = 64 64             ! number of cells in domain
-!  max_grid_size(1:2) = 32 32       ! max number of cells in a box
-!  fixed_dt = 0.5d-3                ! time step (if positive, fixed)
-!  max_step = 50                    ! maximum number of time steps
-!  plot_int = 50                    ! Interval for writing a plotfile (for visit/amrvis)
+  n_cells(1:2) = 128 128           ! number of cells in domain
+  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+  fixed_dt = 0.003125d0           ! time step (if positive, fixed)
+  max_step = 32                    ! maximum number of time steps
+  plot_int = 32                    ! Interval for writing a plotfile (for visit/amrvis)
 
 !  n_cells(1:2) = 128 128           ! number of cells in domain
 !  max_grid_size(1:2) = 64 64       ! max number of cells in a box
-!  fixed_dt = 0.25d-3               ! time step (if positive, fixed)
-!  max_step = 100                   ! maximum number of time steps
-!  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
+!  fixed_dt = 0.0015625d0           ! time step (if positive, fixed)
+!  max_step = 64                    ! maximum number of time steps
+!  plot_int = 64                    ! Interval for writing a plotfile (for visit/amrvis)
+
+!  n_cells(1:2) = 128 128           ! number of cells in domain
+!  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+!  fixed_dt = 0.00078125d0          ! time step (if positive, fixed)
+!  max_step = 128                   ! maximum number of time steps
+!  plot_int = 128                   ! Interval for writing a plotfile (for visit/amrvis)
+
+!  n_cells(1:2) = 128 128           ! number of cells in domain
+!  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+!  fixed_dt = 0.000390625d0         ! time step (if positive, fixed)
+!  max_step = 256                   ! maximum number of time steps
+!  plot_int = 256                   ! Interval for writing a plotfile (for visit/amrvis)
 
   ! Time-step control
   !----------------------
@@ -124,7 +130,7 @@
 
   ! Diffusion     
   !----------------------                          
-  D_Fick(1) = 0.1d0                   ! Fickian diffusion coeffs
+  D_Fick(1) = 1.d0                    ! Fickian diffusion coeffs
   diffusion_stencil_order = 1         ! diffusion boundary stencil order
   mg_verbose = 0                      ! implicit diffusion solve verbosity
   cg_verbose = 0                      ! implicit diffusion solve bottom solver verbosity
@@ -139,7 +145,7 @@
   include_discrete_LMA_correction = F
 
   ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
-  chemical_rates(1) = 100.d0
+  chemical_rates(1) = 1.d0
 
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
   ! Example: For N1 + 2*N2 -> N3 use
