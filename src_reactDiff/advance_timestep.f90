@@ -16,11 +16,12 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,n_old,n_new,dx,dt,the_bc_tower)
+  subroutine advance_timestep(mla,n_old,n_new,z,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
+    type(multifab) , intent(in   ) :: z(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -28,7 +29,6 @@ contains
     integer :: n,nlevs,dm
 
     type(multifab) :: fz(mla%nlevel)
-    type(multifab) :: z(mla%nlevel)
 
     type(bl_prof_timer),save :: bpt
 
@@ -67,19 +67,7 @@ contains
 
        ! external source term for diffusion/reaction solvers for inhomogeneous bc algorithm
        do n=1,nlevs
-          call multifab_build(z(n),mla%la(n),nspecies,0)
           call multifab_build(fz(n),mla%la(n),nspecies,0)
-       end do
-
-       ! compute z with old-time boundary conditions
-       ! Donev: Actually z should be computed only once in main.f90 or constructed analytically to have a simple gradint
-       ! In general the user will know how to solve div D_k grad z_k = 0 manually...
-       ! We definitely do NOT want to be solving a Poisson problem every time step -- that is much more expensive than a whole time step of react-diff      
-
-       do n=1,nlevs
-          ! temporary hack to test n_bc=1 case
-          ! in general we will solve div D_k grad z_k = 0
-          call setval(z(n),1.d0,all=.true.)
        end do
        
        ! store reactions rates for z in fz
@@ -93,7 +81,6 @@ contains
        call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,ext_src_in=fz) ! swap n_new/n_old to avoid calling copy()
               
        do n=1,nlevs
-          call multifab_destroy(z(n))
           call multifab_destroy(fz(n))
        end do
 
