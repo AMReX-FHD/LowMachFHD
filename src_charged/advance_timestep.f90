@@ -1,4 +1,4 @@
-module advance_timestep_inertial_module
+module advance_timestep_module
 
   use ml_layout_module
   use define_bc_module
@@ -29,14 +29,15 @@ module advance_timestep_inertial_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, restart, barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: nspecies, use_charged_fluid
+  use probin_multispecies_module, only: nspecies
+  use probin_charged_module, only: use_charged_fluid
   use analysis_module
 
   implicit none
 
   private
 
-  public :: advance_timestep_inertial
+  public :: advance_timestep
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -55,7 +56,7 @@ module advance_timestep_inertial_module
 
 contains
 
-  subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+  subroutine advance_timestep(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep, &
@@ -942,7 +943,7 @@ contains
        end do
     end do
 
-  end subroutine advance_timestep_inertial
+  end subroutine advance_timestep
 
   subroutine build_bc_multifabs(mla)
 
@@ -1037,4 +1038,4 @@ contains
 
   end subroutine destroy_bc_multifabs
 
-end module advance_timestep_inertial_module
+end module advance_timestep_module

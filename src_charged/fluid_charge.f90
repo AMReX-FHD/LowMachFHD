@@ -4,8 +4,9 @@ module fluid_charge_module
   use convert_stag_module
   use define_bc_module
   use bc_module
-  use probin_multispecies_module, only: charge_per_mass, nspecies, charge_per_mass
   use probin_common_module, only: molmass, k_B, total_volume
+  use probin_multispecies_module, only: nspecies
+  use probin_charged_module, only: charge_per_mass
 
   implicit none
 

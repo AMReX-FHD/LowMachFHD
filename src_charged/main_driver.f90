@@ -8,8 +8,7 @@ subroutine main_driver()
   use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfileLM_module
-  use advance_timestep_overdamped_module
-  use advance_timestep_inertial_module
+  use advance_timestep_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
@@ -42,10 +41,10 @@ subroutine main_driver()
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
                                   barodiffusion_type
-  use probin_multispecies_module, only: nspecies, Dbar, &
-                                        start_time, &
-                                        probin_multispecies_init, use_charged_fluid
+  use probin_multispecies_module, only: nspecies, Dbar, start_time, &
+                                        probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
+  use probin_charged_module, only: probin_charged_init, use_charged_fluid
 
   implicit none
 
@@ -99,6 +98,7 @@ subroutine main_driver()
   call probin_common_init()
   call probin_multispecies_init() 
   call probin_gmres_init()
+  call probin_charged_init()
   
   ! Initialize random numbers *after* the global (root) seed has been set:
   call SeedParallelRNG(seed)
@@ -570,17 +570,14 @@ subroutine main_driver()
       ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
       ! routine, but since we have them around anyway for inertial we pass them in
       if (algorithm_type .eq. 0) then
-         call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                        dx,dt,time,the_bc_tower,istep, &
-                                        grad_Epot_old,grad_Epot_new, &
-                                        charge_old,charge_new)
+         call advance_timestep(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                               gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                               dx,dt,time,the_bc_tower,istep, &
+                               grad_Epot_old,grad_Epot_new, &
+                               charge_old,charge_new)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-         call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                          dx,dt,time,the_bc_tower,istep)
+         call bl_error("overdamped intergrator not written yet")
       end if
 
       time = time + dt

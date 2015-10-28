@@ -182,6 +182,10 @@
   H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
 
   plot_stag = F            ! plot staggered velocities in separate plotfile
+
+/
+
+&probin_charged
  
   use_charged_fluid = T
   dielectric_const = 8.854d-21

@@ -5,11 +5,10 @@ module diffusive_mass_fluxdiv_module
   use bc_module
   use div_and_grad_module
   use multifab_physbc_module
-  use probin_multispecies_module, only: nspecies, is_nonisothermal, &
-                                        nspecies, correct_flux, use_charged_fluid, &
-                                        dielectric_const
+  use probin_multispecies_module, only: nspecies, is_nonisothermal, nspecies, correct_flux
   use probin_common_module, only: barodiffusion_type
   use probin_gmres_module, only: mg_verbose
+  use probin_charged_module, only: use_charged_fluid, dielectric_const
   use mass_flux_utilities_module
   use ml_layout_module
   use convert_stag_module
