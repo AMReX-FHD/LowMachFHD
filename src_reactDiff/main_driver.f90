@@ -10,7 +10,7 @@ subroutine main_driver()
    use stochastic_n_fluxdiv_module
    use advance_timestep_module
    use analyze_spectra_module
-   use compute_z_module
+   use compute_n_steady_module
    use restart_module
    use checkpoint_module
    use ParallelRNGs 
@@ -227,7 +227,7 @@ subroutine main_driver()
 
    ! compute n_steady for splitting_type=3
    if (splitting_type .eq. 3) then
-      call compute_z(mla,n_steady,dx,dt,the_bc_tower)
+      call compute_n_steady(mla,n_steady,dx,dt,the_bc_tower)
    end if
 
    !=====================================================================

@@ -6,8 +6,9 @@ module implicit_diffusion_module
   use bc_module
   use bndry_reg_module
   use ml_solve_module
-  use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose, &
-       implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
+  use probin_reactdiff_module, only: nspecies, diffusion_stencil_order, mg_verbose, &
+                                     cg_verbose, &
+                                     implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
 
   implicit none
 
@@ -119,7 +120,7 @@ contains
        ! solve the implicit system
        call ml_cc_solve(mla,rhs,phi,fine_flx,alpha,beta,dx, &
                         the_bc_tower,scal_bc_comp+spec-1, &
-                        stencil_order=1, &
+                        stencil_order=diffusion_stencil_order, &
                         verbose=mg_verbose, &
                         cg_verbose=cg_verbose, &
                         eps=implicit_diffusion_rel_eps, &

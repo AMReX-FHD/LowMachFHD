@@ -40,6 +40,7 @@ module probin_reactdiff_module
   ! Diffusion     
   !----------------------                          
   real(kind=dp_t), save :: D_Fick(max_species) = 1.d0          ! Fickian diffusion coeffs
+  integer, save         :: diffusion_stencil_order = 1         ! diffusion boundary stencil order
   integer, save         :: mg_verbose = 0                      ! implicit diffusion solve verbosity
   integer, save         :: cg_verbose = 0                      ! implicit diffusion solve bottom solver verbosity
   real(kind=dp_t), save :: implicit_diffusion_rel_eps = 1.d-10 ! relative eps for implicit diffusion solve
@@ -64,7 +65,7 @@ module probin_reactdiff_module
   namelist /probin_reactdiff/ nspecies, nreactions
   namelist /probin_reactdiff/ diffusion_type, reaction_type, use_Poisson_rng, splitting_type, avg_type
   namelist /probin_reactdiff/ n_init_in, n_bc
-  namelist /probin_reactdiff/ D_Fick, mg_verbose, cg_verbose
+  namelist /probin_reactdiff/ D_Fick, diffusion_stencil_order, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
   namelist /probin_reactdiff/ cross_section, include_discrete_LMA_correction
   namelist /probin_reactdiff/ chemical_rates, rate_multiplier, stoichiometric_factors
@@ -146,6 +147,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) avg_type
+
+       case ('--diffusion_stencil_order')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) diffusion_stencil_order
 
        case ('--mg_verbose')
           farg = farg + 1

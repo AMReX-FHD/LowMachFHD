@@ -5,7 +5,7 @@ module diffusive_n_fluxdiv_module
   use ml_layout_module
   use cc_applyop_module
   use probin_common_module, only: fixed_dt
-  use probin_reactdiff_module, only: nspecies
+  use probin_reactdiff_module, only: nspecies, diffusion_stencil_order
 
   implicit none
 
@@ -64,7 +64,7 @@ contains
        end do
 
        call cc_applyop(mla,res,phi,alpha,beta,dx,the_bc_tower,scal_bc_comp+spec-1, &
-                       stencil_order_in=1)
+                       stencil_order_in=diffusion_stencil_order)
 
        ! copy solution into diff_fluxdiv
        do n=1,nlevs

@@ -124,7 +124,8 @@
 
   ! Diffusion     
   !----------------------                          
-  D_Fick(1) = 0.1d0                    ! Fickian diffusion coeffs
+  D_Fick(1) = 0.1d0                   ! Fickian diffusion coeffs
+  diffusion_stencil_order = 1         ! diffusion boundary stencil order
   mg_verbose = 0                      ! implicit diffusion solve verbosity
   cg_verbose = 0                      ! implicit diffusion solve bottom solver verbosity
   implicit_diffusion_rel_eps = 1.d-10 ! relative eps for implicit diffusion solve

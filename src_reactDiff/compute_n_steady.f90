@@ -1,4 +1,4 @@
-module compute_z_module
+module compute_n_steady_module
 
   use ml_layout_module
   use multifab_physbc_module
@@ -13,16 +13,16 @@ module compute_z_module
 
   private
 
-  public :: compute_z
+  public :: compute_n_steady
 
 contains
 
-  subroutine compute_z(mla,z,dx,dt,the_bc_tower)
+  subroutine compute_n_steady(mla,n_steady,dx,dt,the_bc_tower)
 
-    ! compute div D_k grad z_k = 0 with inhomogeneous boundary conditions
+    ! compute div D_k grad n_steady_k = 0 with inhomogeneous boundary conditions
     
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: z(:)
+    type(multifab) , intent(inout) :: n_steady(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -42,15 +42,15 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ! if we are periodic in all directions, set z=0 and return
+    ! if we are periodic in all directions, set n_steady=0 and return
     if (all(mla%pmask(1:dm))) then
        do n=1,nlevs
-          call multifab_setval(z(n),0.d0,all=.true.)
+          call multifab_setval(n_steady(n),0.d0,all=.true.)
        end do
        return
     end if
 
-    call build(bpt,"compute_z")
+    call build(bpt,"compute_n_steady")
 
     ! for multigrid solver; (alpha - div beta grad) phi = rhs
     do n=1,nlevs
@@ -104,7 +104,7 @@ contains
 
        ! copy solution into n_new
        do n=1,nlevs
-          call multifab_copy_c(z(n),spec,phi(n),1,1,0)
+          call multifab_copy_c(n_steady(n),spec,phi(n),1,1,0)
        end do
 
     end do
@@ -124,6 +124,6 @@ contains
 
     call destroy(bpt)
 
-  end subroutine compute_z
+  end subroutine compute_n_steady
 
-end module compute_z_module
+end module compute_n_steady_module
