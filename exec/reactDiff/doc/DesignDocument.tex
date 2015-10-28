@@ -284,7 +284,7 @@ uniform random variable.  Then, update the state and repeate.\\
 \section{Inhomogeneous Boundary Conditions}
 In order to handle inhomogeneous boundary conditions correctly within a second-order
 splitting scheme, we use \cite{Einkemmer:2014}.  We first consider second-order
-Strang splitting, Option 2 (($\frac{\Delta t}{2}D$)($\Delta t R$)($\frac{\Delta t}{2}D$)).
+Strang Splitting, Option 2 (($\frac{\Delta t}{2}D$)($\Delta t R$)($\frac{\Delta t}{2}D$)).
 The diffusion and reaction solvers need to be modified to include an external, 
 constant-in-time forcing terms, $F_d$ and $F_r$.
 
@@ -293,32 +293,24 @@ assumption can be changed later.  The stochastic reactions and diffusive fluxes
 probably aren't treated right in this description yet.
 
 \begin{itemize}
-\item Compute $\nabla\cdot D_k\nabla z_k = 0$ with $t^n$ inhomogeneous number density boundary
+\item Compute $\nabla\cdot D_k\nabla z_k = 0$ with inhomogeneous number density boundary
 conditions.
 
-\item Define $\tilde n_k^n = n_k^n - z_k$.
+\item Compute deterministic reaction rates, $\Rb(\zb)$.
 
-\item Advance $\tilde n_k^n \rightarrow \tilde n_k^{(1)}$ by integrating 
-diffusion over $\Delta t/2$:
+\item Advance $n_k^n \rightarrow n_k^{(1)}$ by integrating diffusion over $\Delta t/2$:
 \begin{equation}
-\frac{\partial\tilde n_k}{\partial t} = \nabla\cdot\left(D_k\nabla\tilde n_k + \sqrt{2D_kn_k}\mZb\right) + \Rb(\tilde\nb),\label{eq:diffusion_bc}
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right) + \Rb(\zb).\label{eq:diffusion_bc}
 \end{equation}
-where $\Rb$ are deterministic reaction rates.
 
-\item Advance $\tilde n_k^{(1)} \rightarrow \tilde n_k^{(2)}$ by integrating 
+\item Advance $ n_k^{(1)} \rightarrow  n_k^{(2)}$ by integrating 
 reactions over $\Delta t$:
 \begin{equation}
-\frac{\partial\tilde n_k}{\partial t} = \mRb(\tilde\nb + \zb) - \Rb(\zb).
+\frac{\partial n_k}{\partial t} = \mRb(\nb) - \Rb(\zb).
 \end{equation}
 
-\item Advance $\tilde n_k^{(2)} \rightarrow \tilde n_k^{n+1}$ by integrating 
+\item Advance $ n_k^{(2)} \rightarrow  n_k^{n+1}$ by integrating 
 diffusion (\ref{eq:diffusion_bc}) over $\Delta t/2$.
-
-\item If the boundary conditions are time-dependent, recompute 
-$\nabla\cdot D_k\nabla z_k = 0$ with $t^{n+1}$ inhomogeneous number density 
-boundary conditions.
-
-\item Set $n_k^{n+1} = \tilde n_k^{(2)} + z_k$.
 
 \end{itemize}
 
