@@ -7,6 +7,7 @@ module advance_diffusion_module
   use diffusive_n_fluxdiv_module
   use multifab_physbc_module
   use implicit_diffusion_module
+  use probin_common_module, only: variance_coef_mass
   use probin_reactdiff_module, only: nspecies, D_Fick, diffusion_type
 
   implicit none
@@ -72,7 +73,9 @@ contains
     end if
 
     ! fill random flux multifabs with new random numbers
-    call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+    if (variance_coef_mass .gt. 0.d0) then
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+    end if
 
     ! compute the diffusion coefficients (for now just setting each to a different constant)
     ! If one wants a space-dependent D or state-dependent D see multispecies code as example
@@ -89,8 +92,14 @@ contains
     call diffusive_n_fluxdiv(mla,n_old,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
 
     ! compute stochastic flux divergence
-    call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                              the_bc_tower,increment_in=.false.)
+    if (variance_coef_mass .gt. 0.d0) then
+       call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                 the_bc_tower,increment_in=.false.)
+    else
+       do n=1,nlevs
+          call multifab_setval(stoch_fluxdiv(n),0.d0,all=.true.)
+       end do
+    end if
 
     if (diffusion_type .eq. 0) then
        ! explicit predictor-corrector
@@ -156,12 +165,14 @@ contains
        ! compute diffusive flux divergence at t^{n+1/2}
        call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
 
-       ! fill random flux multifabs with new random numbers
-       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+       if (variance_coef_mass .gt. 0.d0) then
+          ! fill random flux multifabs with new random numbers
+          call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
-       ! compute second-stage stochastic flux divergence
-       call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                 the_bc_tower,increment_in=.true.)
+          ! compute second-stage stochastic flux divergence
+          call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                    the_bc_tower,increment_in=.true.)
+       end if
 
        ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
        !                   + dt div (sqrt(D_k n_k / (2dt)) Z_1)^n
