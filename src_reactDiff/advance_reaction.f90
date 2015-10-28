@@ -19,8 +19,8 @@ module advance_reaction_module
   ! keep track of the number of corrector steps that are null (rejected) in the second-order method
   integer*8 ::  n_rejections=0 ! Number of reaction rates set to zero in corrector stage
 
-  ! Here we use Mattingly's predictor-corrector with theta=0.5d0, giving the parameters:
-  ! Donev: This is actually equivalent to a traditional midpoint scheme and maybe it is better to write it this way
+  ! Here we use Mattingly's predictor-corrector with theta=0.5d0, giving these parameters
+  ! With these parameters this is actually equivalent to a traditional midpoint scheme
   real(kind=dp_t), parameter :: theta = 0.5d0
   real(kind=dp_t), parameter :: alpha1 = 2.0d0
   real(kind=dp_t), parameter :: alpha2 = 1.0d0
@@ -29,9 +29,10 @@ contains
 
   ! This solves dn/dt = f(n) + g
   ! where f(n) are the chemical production rates (deterministic or stochastic)
-  ! and g is a constant (in time) *deterministic* source term.
+  ! and g=ext_src_in is an optional, constant (in time) *deterministic* source term.
   ! To model stochastic particle production (sources) include g in the definition of f instead
-  ! If return_rates_in=T the code returns f(n)
+  ! If return_rates_in=F the code returns time-advanced n in the 'n_new' field
+  ! If return_rates_in=T the code returns f(n) in the 'n_new' field
   ! Note that chemical production rate is sum over reactions of chemical reaction times the stochiometric coefficient
   subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,return_rates_in,ext_src_in)
 
@@ -240,8 +241,11 @@ contains
        avg_reactions_pred = avg_reactions
 
        ! compute mean number of events over the time step
-       if (reaction_type .eq. 1) avg_reactions = avg_reactions*theta ! Predictor step has length theta*dt
        avg_reactions = max(0.0d0, avg_reactions*dt*dv)
+
+       ! if reaction_type=1, we are doing a predictor/corrector, so scale the # of
+       ! reactions by the predictor length (for midpoint, this is half the time interval)
+       if (reaction_type .eq. 1) avg_reactions = avg_reactions*theta
 
        do reaction=1,nreactions
           
@@ -254,6 +258,7 @@ contains
 
        end do
 
+       ! add contribution from external source
        n_new(1:nspecies) = n_new(1:nspecies) - dt*theta*ext_src(1:nspecies)
 
        if (reaction_type .eq. 1) then
@@ -264,7 +269,8 @@ contains
           call compute_reaction_rates(n_new(1:nspecies), avg_reactions, dv)
           !write(*,*) "CORRECTOR PROPENSITY=", real(avg_reactions); stop
           
-          ! Corrector rate is a linear combination of the two rates:
+          ! Corrector rate is a linear combination of the two rates
+          ! This is equivalent to a midpoint scheme
           avg_reactions = (alpha1*avg_reactions-alpha2*avg_reactions_pred)*(1.d0-theta)
           
           ! compute mean number of events over the time step
@@ -286,6 +292,7 @@ contains
 
           end do
 
+       ! add contribution from external source
           n_new(1:nspecies) = n_new(1:nspecies) - dt*(alpha1-alpha2)*(1.d0-theta)*ext_src(1:nspecies)
 
        end if
