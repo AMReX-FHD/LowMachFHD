@@ -8,7 +8,7 @@ module advance_timestep_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
-  use compute_mass_fluxdiv_module
+  use mass_fluxdiv_charged_module
   use compute_HSE_pres_module
   use convert_m_to_umac_module
   use convert_rhoc_to_c_module
@@ -356,11 +356,11 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv2(mla,rho_new,gradp_baro, &
-                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                       Temp,flux_total,dt,time,dx,weights, &
-                                       the_bc_tower, &
-                                       charge_new,grad_Epot_new)
+    call mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              Temp,flux_total,dt,time,dx,weights, &
+                              the_bc_tower, &
+                              charge_new,grad_Epot_new)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
@@ -734,11 +734,11 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call compute_mass_fluxdiv2(mla,rho_new,gradp_baro, &
-                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                       Temp,flux_total,dt,time,dx,weights, &
-                                       the_bc_tower, &
-                                       charge_new,grad_Epot_new)
+    call mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              Temp,flux_total,dt,time,dx,weights, &
+                              the_bc_tower, &
+                              charge_new,grad_Epot_new)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)

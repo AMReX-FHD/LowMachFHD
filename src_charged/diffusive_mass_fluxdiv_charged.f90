@@ -1,4 +1,4 @@
-module diffusive_mass_fluxdiv_module
+module diffusive_mass_fluxdiv_charged_module
 
   use multifab_module
   use define_bc_module
@@ -26,11 +26,11 @@ module diffusive_mass_fluxdiv_module
 
   private
 
-  public :: diffusive_mass_flux, diffusive_mass_fluxdiv
+  public :: diffusive_mass_flux_charged, diffusive_mass_fluxdiv_charged
 
 contains
 
-  subroutine diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
+  subroutine diffusive_mass_fluxdiv_charged(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
                                     diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                     flux_total,dx,the_bc_tower, &
                                     charge,grad_Epot)
@@ -71,7 +71,7 @@ contains
     
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
-    call diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,&
+    call diffusive_mass_flux_charged(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,&
                              zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower, &
                              charge,grad_Epot)
     
@@ -92,9 +92,9 @@ contains
        end do
     end do
 
-  end subroutine diffusive_mass_fluxdiv
+  end subroutine diffusive_mass_fluxdiv_charged
  
-  subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
+  subroutine diffusive_mass_flux_charged(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
                                  Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower, &
                                  charge,grad_Epot)
 
@@ -359,6 +359,6 @@ contains
        end do
     end do
 
-  end subroutine diffusive_mass_flux
+  end subroutine diffusive_mass_flux_charged
 
-end module diffusive_mass_fluxdiv_module
+end module diffusive_mass_fluxdiv_charged_module

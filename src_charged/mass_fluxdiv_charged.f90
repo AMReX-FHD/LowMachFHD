@@ -1,10 +1,10 @@
-module compute_mass_fluxdiv_module
+module mass_fluxdiv_charged_module
 
   use multifab_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use diffusive_mass_fluxdiv_module
+  use diffusive_mass_fluxdiv_charged_module
   use stochastic_mass_fluxdiv_module
   use compute_mixture_properties_module
   use external_force_module
@@ -17,38 +17,16 @@ module compute_mass_fluxdiv_module
 
   private
 
-  public :: compute_mass_fluxdiv, compute_mass_fluxdiv2
+  public :: mass_fluxdiv_charged
 
 contains
 
-  ! just a dummy so multispecies diffusion code compiles
-  subroutine compute_mass_fluxdiv(mla,rho,gradp_baro, &
+  subroutine mass_fluxdiv_charged(mla,rho,gradp_baro, &
                                   diff_fluxdiv,stoch_fluxdiv, &
                                   Temp,flux_total, &
                                   dt,stage_time,dx,weights, &
-                                  the_bc_tower)
-       
-    type(ml_layout), intent(in   )   :: mla
-    type(multifab) , intent(inout)   :: rho(:)
-    type(multifab) , intent(in   )   :: gradp_baro(:,:)
-    type(multifab) , intent(inout)   :: diff_fluxdiv(:)
-    type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
-    type(multifab) , intent(in   )   :: Temp(:)
-    type(multifab) , intent(inout)   :: flux_total(:,:)
-    real(kind=dp_t), intent(in   )   :: dt
-    real(kind=dp_t), intent(in   )   :: stage_time 
-    real(kind=dp_t), intent(in   )   :: dx(:,:)
-    real(kind=dp_t), intent(in   )   :: weights(:) 
-    type(bc_tower) , intent(in   )   :: the_bc_tower
-
-  end subroutine compute_mass_fluxdiv
-
-  subroutine compute_mass_fluxdiv2(mla,rho,gradp_baro, &
-                                   diff_fluxdiv,stoch_fluxdiv, &
-                                   Temp,flux_total, &
-                                   dt,stage_time,dx,weights, &
-                                   the_bc_tower, &
-                                   charge,grad_Epot)
+                                  the_bc_tower, &
+                                  charge,grad_Epot)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -126,7 +104,7 @@ contains
 
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
-    call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
+    call diffusive_mass_fluxdiv_charged(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
                                 diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro,flux_total,dx,the_bc_tower, &
                                 charge,grad_Epot)
 
@@ -164,6 +142,6 @@ contains
        call multifab_destroy(zeta_by_Temp(n))
     end do
 
-  end subroutine compute_mass_fluxdiv2
+  end subroutine mass_fluxdiv_charged
   
-end module compute_mass_fluxdiv_module
+end module mass_fluxdiv_charged_module
