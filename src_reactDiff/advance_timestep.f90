@@ -16,12 +16,12 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,n_old,n_new,z,dx,dt,the_bc_tower)
+  subroutine advance_timestep(mla,n_old,n_new,n_steady,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
-    type(multifab) , intent(in   ) :: z(:)
+    type(multifab) , intent(in   ) :: n_steady(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -70,10 +70,10 @@ contains
           call multifab_build(fz(n),mla%la(n),nspecies,0)
        end do
        
-       ! store reactions rates for z in fz
+       ! store reactions rates for n_steady in fz
        ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
        ! returning an explicit rate in units of number_density/time
-       call advance_reaction(mla,z,fz,dx,dt,the_bc_tower,return_rates_in=.true.)
+       call advance_reaction(mla,n_steady,fz,dx,dt,the_bc_tower,return_rates_in=.true.)
 
        ! This code should be identical to case=2 just passing in nonzero external sources:
        call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,ext_src_in=fz)

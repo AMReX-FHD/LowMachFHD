@@ -17,6 +17,8 @@ module advance_diffusion_module
 
 contains
 
+  ! Solves n_t = div ( D grad (n)) + div (sqrt(2*variance*D*n)*W) + g
+  ! where g is a constant in time external source
   subroutine advance_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in)
 
     type(ml_layout), intent(in   ) :: mla
@@ -24,7 +26,7 @@ contains
     type(multifab) , intent(inout) :: n_new(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(in   ), optional :: ext_src_in(:)
+    type(multifab) , intent(in   ), optional :: ext_src_in(:) ! The value of g
 
     ! local
     type(multifab) :: diff_fluxdiv(mla%nlevel)

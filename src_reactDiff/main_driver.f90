@@ -40,7 +40,7 @@ subroutine main_driver()
 
    type(multifab), allocatable :: n_old(:)
    type(multifab), allocatable :: n_new(:)
-   type(multifab), allocatable :: z(:)
+   type(multifab), allocatable :: n_steady(:)
 
    integer :: n_rngs
 
@@ -73,7 +73,7 @@ subroutine main_driver()
 
    ! now that we have dm, we can allocate these
    allocate(lo(dm),hi(dm))
-   allocate(n_old(nlevs),n_new(nlevs),z(nlevs))
+   allocate(n_old(nlevs),n_new(nlevs),n_steady(nlevs))
 
    allocate(n_sum(nspecies))
 
@@ -148,7 +148,7 @@ subroutine main_driver()
 
    do n=1,nlevs
       call multifab_build(n_new(n),mla%la(n),nspecies,ng_s)
-      call multifab_build(z(n)    ,mla%la(n),nspecies,0)
+      if (splitting_type .eq. 3) call multifab_build(n_steady(n)    ,mla%la(n),nspecies,0)
    end do
 
    deallocate(pmask)
@@ -225,9 +225,9 @@ subroutine main_driver()
       call write_plotfile_n(mla,n_old,dx,0.d0,0)
    end if
 
-   ! compute z for splitting_type=3
+   ! compute n_steady for splitting_type=3
    if (splitting_type .eq. 3) then
-      call compute_z(mla,z,dx,dt,the_bc_tower)
+      call compute_z(mla,n_steady,dx,dt,the_bc_tower)
    end if
 
    !=====================================================================
@@ -313,7 +313,7 @@ subroutine main_driver()
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! advance the solution by dt
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       call advance_timestep(mla,n_old,n_new,z,dx,dt,the_bc_tower)
+       call advance_timestep(mla,n_old,n_new,n_steady,dx,dt,the_bc_tower)
        time = time + dt
 
        ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
@@ -374,7 +374,7 @@ subroutine main_driver()
    do n=1,nlevs
       call multifab_destroy(n_new(n))
       call multifab_destroy(n_old(n))
-      call multifab_destroy(z(n))
+      if (splitting_type .eq. 3) call multifab_destroy(n_steady(n))
    end do
 
    call destroy(mla)

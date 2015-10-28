@@ -27,13 +27,14 @@ module advance_reaction_module
 
 contains
 
-  ! This solves dn/dt = f(n) + g
+  ! This solves dn/dt = f(n) - g (note the minus sign for g)
   ! where f(n) are the chemical production rates (deterministic or stochastic)
   ! and g=ext_src_in is an optional, constant (in time) *deterministic* source term.
   ! To model stochastic particle production (sources) include g in the definition of f instead
   ! If return_rates_in=F the code returns time-advanced n in the 'n_new' field
   ! If return_rates_in=T the code returns f(n) in the 'n_new' field
-  ! Note that chemical production rate is sum over reactions of chemical reaction times the stochiometric coefficient
+  ! Note that chemical *production* rate (per species) is
+  ! the sum over reactions of chemical *reaction* rates (per reaction) times the stochiometric coefficients
   subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,return_rates_in,ext_src_in)
 
     type(ml_layout), intent(in   ) :: mla
@@ -292,7 +293,7 @@ contains
 
           end do
 
-       ! add contribution from external source
+          ! add contribution from external source
           n_new(1:nspecies) = n_new(1:nspecies) - dt*(alpha1-alpha2)*(1.d0-theta)*ext_src(1:nspecies)
 
        end if
