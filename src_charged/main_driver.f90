@@ -6,8 +6,8 @@ subroutine main_driver()
   use init_lowmach_module
   use init_temp_module
   use compute_mixture_properties_module
-  use initial_projection_module
-  use write_plotfileLM_module
+  use initial_projection_charged_module
+  use write_plotfile_charged_module
   use advance_timestep_module
   use define_bc_module
   use bc_module
@@ -490,10 +490,11 @@ subroutine main_driver()
      ! From this perspective it may be useful to keep initial_projection even in overdamped
      ! because different gmres tolerances may be needed in the first step than in the rest
      if (algorithm_type .eq. 0) then
-        call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro,diff_mass_fluxdiv, &
-                                stoch_mass_fluxdiv, &
-                                Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                charge_old,grad_Epot_old)
+        call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
+                                        diff_mass_fluxdiv, &
+                                        stoch_mass_fluxdiv, &
+                                        Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+                                        charge_old,grad_Epot_old)
      end if
 
      if (print_int .gt. 0) then
@@ -513,7 +514,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfileLM(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,0,dx,time)
+        call write_plotfile_charged(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,0,dx,time)
      end if
      
      ! print out projection (average) and variance)
@@ -624,7 +625,7 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
-            call write_plotfileLM(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,istep,dx,time)
+            call write_plotfile_charged(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,istep,dx,time)
          end if
 
          ! write checkpoint at specific intervals

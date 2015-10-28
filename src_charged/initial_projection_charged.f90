@@ -1,4 +1,4 @@
-module initial_projection_module
+module initial_projection_charged_module
 
   use multifab_module
   use ml_layout_module
@@ -17,7 +17,7 @@ module initial_projection_module
 
   private
 
-  public :: initial_projection
+  public :: initial_projection_charged
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -36,7 +36,7 @@ module initial_projection_module
 
 contains
 
-  subroutine initial_projection(mla,umac,rho,rhotot,gradp_baro, &
+  subroutine initial_projection_charged(mla,umac,rho,rhotot,gradp_baro, &
                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                 Temp,eta,eta_ed,dt,dx,the_bc_tower, &
                                 charge_old,grad_Epot_old)
@@ -206,7 +206,7 @@ contains
        end do
     end do
 
-  end subroutine initial_projection
+  end subroutine initial_projection_charged
 
   subroutine build_bc_multifabs(mla)
 
@@ -301,4 +301,4 @@ contains
 
   end subroutine destroy_bc_multifabs
 
-end module initial_projection_module
+end module initial_projection_charged_module

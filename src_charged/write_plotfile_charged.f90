@@ -1,4 +1,4 @@
-module write_plotfileLM_module
+module write_plotfile_charged_module
 
   use ml_layout_module
   use multifab_module
@@ -13,7 +13,7 @@ module write_plotfileLM_module
 
 contains
   
-  subroutine write_plotfileLM(mla,name,rho,rhotot,Temp,umac,pres,istep,dx,time)
+  subroutine write_plotfile_charged(mla,name,rho,rhotot,Temp,umac,pres,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     character(len=*),   intent(in)    :: name
@@ -171,6 +171,6 @@ contains
     deallocate(plotdata_stag)
     deallocate(plot_names)
 
-  end subroutine write_plotfileLM
+  end subroutine write_plotfile_charged
 
-end module write_plotfileLM_module
+end module write_plotfile_charged_module
