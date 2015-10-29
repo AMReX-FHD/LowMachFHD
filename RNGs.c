@@ -123,18 +123,24 @@ void genrand (double* rn) /* Largest returned number should be 0.999999999767169
 
 /* A. Donev addeed this by copying the code from the gsl library's function gsl_rng_uniform_int */
 /* Generates a random integer in the range [1,n] */
+/* We have had some issues calling this from Fortran and it has to do with unsigned integers it seems or a gfortran bug?!? */
 void genrandint (unsigned long int *r, unsigned long int n)
 {
   unsigned long int offset = 0;
   unsigned long int range = 0xffffffffUL - offset;
   unsigned long int scale;
-  unsigned long int k;
+  unsigned long int k, rng;
 
+  /*unsigned long int n=*n_input;*/
+  
   scale = range / n;
+  /*printf("n=%u range=%u scale=%u\n",n,range,scale);*/
 
   do
     {
-      k = (genrandbase() - offset) / scale;
+      rng = genrandbase();
+      k = (rng - offset) / scale;
+      /*printf("n=%d  rng=%d r=%d\n", n, rng, k+1);*/
     }
   while (k >= n);
 

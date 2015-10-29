@@ -25,6 +25,10 @@ module BoxLibRNGs
 !      end subroutine
 !   end interface   
 
+   ! Donev: We have observed some difficulties calling this from Fortran
+   ! It either has to do with unsigned versus signed integers or passing by value
+   ! Appears to be a compiler bug in gfortran as it works in ifort.
+   ! For now, best avoid this routine and use the floating-point RNG to compute integers
    interface UniformInteger
       ! void genrandint (unsigned long int *r, unsigned long int n)
       subroutine genrandint(number, range) bind(c)
@@ -32,6 +36,7 @@ module BoxLibRNGs
          import
          integer, intent(out) :: number
          integer, intent(in), value :: range
+         !integer, intent(in) :: range ! Donev: Temporary change to pass by address here
       end subroutine   
    end interface
 
