@@ -222,7 +222,11 @@ subroutine main_driver()
 
    ! write a plotfile
    if (plot_int .gt. 0) then
-      call write_plotfile_n(mla,n_old,dx,0.d0,0)
+      if (restart .lt. 0) then
+         call write_plotfile_n(mla,n_old,dx,0.d0,0)
+      else
+         call write_plotfile_n(mla,n_old,dx,time,restart)
+      end if
    end if
 
    ! compute n_steady for splitting_type=3
