@@ -325,7 +325,7 @@ subroutine main_driver()
           end if
 
           ! write a checkpoint
-          if (chk_int .gt. 0 .and. mod(init_step,chk_int) .eq. 0) then
+          if (chk_int .gt. 0 .and. mod(istep,chk_int) .eq. 0) then
              call checkpoint_write(mla,n_new,time,dt,istep)
           end if
 
