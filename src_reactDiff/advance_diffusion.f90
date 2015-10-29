@@ -150,7 +150,7 @@ contains
        ! explicit midpoint scheme
 
        ! n_k^{n+1/2} = n_k^n + (dt/2) div (D_k grad n_k)^n
-       !                     +  dt    div (sqrt(D_k n_k / (2dt)) Z_1)^n
+       !                     + (dt/2) div (sqrt(2 D_k n_k / (dt/2) ) Z_1)^n
        !                     + (dt/2) ext_src
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
@@ -169,15 +169,15 @@ contains
           ! fill random flux multifabs with new random numbers
           call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
-          ! compute second-stage stochastic flux divergence
+          ! compute second-stage stochastic flux divergence and
+          ! add to first-stage stochastic flux divergence
           call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
                                     the_bc_tower,increment_in=.true.)
        end if
 
        ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
-       !                   + dt div (sqrt(D_k n_k / (2dt)) Z_1)^n
-       !                   + dt div (sqrt(D_k n_k / (2dt)) Z_2)^n
-       !                   + dt     ext_src
+       !                   + dt div (sqrt(2 D_k n_k / dt) (Z_1+Z_2)/sqrt(2) )^n
+       !                   + dt ext_src
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt           ,diff_fluxdiv(n))
