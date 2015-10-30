@@ -3,6 +3,8 @@
 ! form Ax=b by the restarted left-preconditioned Generalized Minimal Residual method (GMRES), 
 ! This code is based on Givens tranform, not Housholder transform, we refer to the Matlab code in 
 ! http://www.netlib.org/templates/matlab/gmres.m
+!
+! Here, x = (u,p)
 !**************************************************************************
 module gmres_module
 
@@ -66,11 +68,20 @@ contains
 
     integer :: n, d, i, k, dm, nlevs, iter, total_iter, i_copy  ! for looping iteration
     integer :: vcycle_counter_temp ! Local copy
-    real(kind=dp_t) :: norm_b,norm_pre_b,norm_resid,rel_resid, norm_init_resid
-    real(kind=dp_t) :: norm_resid_Stokes, norm_init_Stokes
-    real(kind=dp_t) :: norm_u, norm_p, norm_init_resid_u, norm_init_resid_p
-    real(kind=dp_t) :: norm_init_u, norm_init_p, norm_u_noprecon
-    real(kind=dp_t) :: norm_p_noprecon, norm_resid_est
+
+    real(kind=dp_t) :: norm_b            ! |b|;           computed once at beginning
+    real(kind=dp_t) :: norm_pre_b        ! |M^-1 b|;      computed once at beginning
+    real(kind=dp_t) :: norm_resid        ! |M^-1 (b-Ax)|; computed at beginning of each outer iteration
+    real(kind=dp_t) :: norm_init_resid   ! |M^-1 (b-Ax)|; computed once at beginning
+    real(kind=dp_t) :: norm_resid_Stokes ! |b-Ax|;        computed at beginning of each outer iteration
+    real(kind=dp_t) :: norm_init_Stokes  ! |b-Ax|;        computed once at beginning
+    real(kind=dp_t) :: norm_u_noprecon   ! u component of norm_resid_Stokes
+    real(kind=dp_t) :: norm_p_noprecon   ! p component of norm_resid_Stokes
+    real(kind=dp_t) :: norm_resid_est
+
+    real(kind=dp_t) :: norm_u ! temporary norms used to build full-state norm
+    real(kind=dp_t) :: norm_p ! temporary norms used to build full-state norm
+
     real(kind=dp_t) :: inner_prod_vel(mla%dim), inner_prod_pres
 
     call build(bpt, "gmres")
@@ -199,8 +210,6 @@ contains
        norm_p_noprecon = p_norm_weight*norm_p_noprecon
        norm_resid_Stokes=sqrt(norm_u_noprecon**2+norm_p_noprecon**2)
        if(iter==0) then
-         norm_init_u=norm_u_noprecon
-         norm_init_p=norm_p_noprecon
          norm_init_Stokes=norm_resid_Stokes               
        end if 
 
@@ -232,8 +241,6 @@ contains
        ! If first iteration, save the initial preconditioned residual
        if(iter==0) then
          norm_init_resid=norm_resid
-         norm_init_resid_u=norm_u
-         norm_init_resid_p=norm_p
          norm_resid_est=norm_resid
        end if  
 
@@ -246,7 +253,6 @@ contains
               norm_resid_est/norm_resid
            write ( *, '(a,100g17.9)' ) 'Precond. rel. res. (u,v,p) = ', &
                  norm_resid/norm_init_resid, norm_u/norm_init_resid, norm_p/norm_init_resid
-                 ! Printing norm_u/norm_init_resid_u, norm_p/norm_init_resid_p may divide by zero...
          end if 
        end if
     
