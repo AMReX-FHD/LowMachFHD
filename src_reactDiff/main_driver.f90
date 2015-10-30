@@ -20,7 +20,7 @@ subroutine main_driver()
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    variance_coef_mass, cfl, initial_variance
    use probin_reactdiff_module, only: nspecies, probin_reactdiff_init, D_Fick, cross_section, &
-                                      splitting_type
+                                      splitting_type, inhomogeneous_bc_fix
 
    implicit none
 
@@ -148,7 +148,9 @@ subroutine main_driver()
 
    do n=1,nlevs
       call multifab_build(n_new(n),mla%la(n),nspecies,ng_s)
-      if (splitting_type .eq. 3) call multifab_build(n_steady(n)    ,mla%la(n),nspecies,0)
+      if (inhomogeneous_bc_fix) then
+         call multifab_build(n_steady(n),mla%la(n),nspecies,0)
+      end if
    end do
 
    deallocate(pmask)
@@ -230,7 +232,7 @@ subroutine main_driver()
    end if
 
    ! compute n_steady for splitting_type=3
-   if (splitting_type .eq. 3) then
+   if (inhomogeneous_bc_fix) then
       call compute_n_steady(mla,n_steady,dx,dt,the_bc_tower)
    end if
 
@@ -378,7 +380,9 @@ subroutine main_driver()
    do n=1,nlevs
       call multifab_destroy(n_new(n))
       call multifab_destroy(n_old(n))
-      if (splitting_type .eq. 3) call multifab_destroy(n_steady(n))
+      if (inhomogeneous_bc_fix) then
+         call multifab_destroy(n_steady(n))
+      end if
    end do
 
    call destroy(mla)
