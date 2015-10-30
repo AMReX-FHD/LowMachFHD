@@ -10,11 +10,29 @@
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
 
-  n_cells(1:2) = 32 32             ! number of cells in domain
-  max_grid_size(1:2) = 16 16       ! max number of cells in a box
+  n_cells(1:2) = 256 256           ! number of cells in domain
+  max_grid_size(1:2) = 128 128     ! max number of cells in a box
+  fixed_dt = 8.d-3                 ! time step (if positive, fixed)
+  max_step = 10                    ! maximum number of time steps
+  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis) 
+
+  n_cells(1:2) = 256 256           ! number of cells in domain
+  max_grid_size(1:2) = 128 128     ! max number of cells in a box
+  fixed_dt = 4.d-3                 ! time step (if positive, fixed)
+  max_step = 20                    ! maximum number of time steps
+  plot_int = 20                    ! Interval for writing a plotfile (for visit/amrvis) 
+
+  n_cells(1:2) = 256 256           ! number of cells in domain
+  max_grid_size(1:2) = 128 128     ! max number of cells in a box
+  fixed_dt = 2.d-3                 ! time step (if positive, fixed)
+  max_step = 40                    ! maximum number of time steps
+  plot_int = 40                    ! Interval for writing a plotfile (for visit/amrvis) 
+
+  n_cells(1:2) = 256 256           ! number of cells in domain
+  max_grid_size(1:2) = 128 128     ! max number of cells in a box
   fixed_dt = 1.d-3                 ! time step (if positive, fixed)
-  max_step = 100                   ! maximum number of time steps
-  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 80                    ! maximum number of time steps
+  plot_int = 80                    ! Interval for writing a plotfile (for visit/amrvis) 
 
   ! Time-step control
   !----------------------
@@ -98,7 +116,7 @@
                            ! If -1 do deterministic chemistry
                            ! If 1 do tau leaping (Poisson increments),
                            ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
-  splitting_type = 0       ! 0=D + R (first-order splitting)
+  splitting_type = 3       ! 0=D + R (first-order splitting)
                            ! 1=(1/2)R + D + (1/2)R (Strang option 1)
                            ! 2=(1/2)D + R + (1/2)D (Strang option 2)
                            ! 3=Strang option 2 with inhomogeneous boundary conditions
