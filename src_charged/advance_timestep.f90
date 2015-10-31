@@ -26,8 +26,10 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
+  use project_onto_eos_module
+  use fluid_charge_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, restart, barodiffusion_type
+                                  variance_coef_mom, restart, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid
@@ -619,6 +621,17 @@ contains
           call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
        end do
 
+    end if
+
+    ! need to project rho onto eos here and use this rho to compute S
+    ! if you do this in main_driver, the fluxes don't match the state
+    ! they were derived from and the Poisson solver has tolerance
+    ! convergence issues
+    if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
+       call project_onto_eos(mla,rho_new)
+       if (use_charged_fluid) then
+          call enforce_charge_neutrality(mla,rho_new)
+       end if
     end if
 
     ! compute rhotot from rho in VALID REGION

@@ -609,14 +609,6 @@ subroutine main_driver()
           call eos_check(mla,rho_new)
       end if
 
-     ! project rho and rho1 back onto EOS
-     if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
-        call project_onto_eos(mla,rho_new)
-        if (use_charged_fluid) then
-           call enforce_charge_neutrality(mla,rho_new)
-        end if
-     end if
-
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then
 
