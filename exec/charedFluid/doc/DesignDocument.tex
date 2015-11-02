@@ -65,6 +65,125 @@
 
 \maketitle
 
+\section{Introduction}
+This is a working design document for our low Mach number multicomponent
+charged fluid code.
+
+\section{Source Code}
+There are two git repositories required to build/run the code.  BoxLib is a public
+repository available on github using the command:\\ \\
+{\tt git clone https://github.com/BoxLib-Codes/BoxLib.git}\\ \\
+If you are not familiar with BoxLib, we recommend reading the BoxLib's User's Guide
+in {\tt BoxLib/Docs}.\\
+
+FluctHydro exists on CCSE servers and you need to contact Vince/Andy to get an account
+and set up permissions on gamera.  Once you do, you can obtain the repository using:\\ \\
+{\tt git clone <username>@gamera.lbl.gov:/usr/local/gitroot/FluctHydro.git}\\ \\
+You will now have the following directory structures (you will actually have
+more subdirectories, but below are the only directories that matter for this code):\\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[tb]
+\centering
+\includegraphics[width=6in]{./directory}
+\caption{\label{fig:directory}Directory structure.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{itemize}
+
+\item {\tt BoxLib/}
+
+\begin{itemize}
+
+\item {\tt Src/}
+
+\begin{itemize}
+
+\item {\tt F\_BaseLib/}
+
+Core libraries for parallelization of structured grid data.
+
+\item {\tt LinearSolvers/F\_MG/}
+
+Core libraries for linear solvers (for implicit diffusion) and diffusion stencils.
+
+\end{itemize}
+\end{itemize}
+
+\begin{itemize}
+
+\item {\tt Tools/F\_mk/}
+
+Make system variables and flags.
+
+\end{itemize}
+\end{itemize}
+
+\begin{itemize}
+
+\item {\tt FluctHydro/}
+
+\begin{itemize}
+
+\item {\tt HydroGrid/}
+
+\item {\tt staggered\_grid/}
+
+\begin{itemize}
+
+\item {\tt exec/charged/doc/}
+
+Contains the document you are reading right now!
+
+\item {\tt exec/charged/test/}
+
+This is the compilation directory.  Contains a GNUmakefile and inputs files.
+
+\item {\tt src\_common/}
+
+Source code shared by all our staggered grid codes.  Contains generic namelist parameters
+and routines for boundary conditions, divergence, etc.
+
+\item {\tt src\_multiSpec/}
+
+Source code shared by all multicomponent codes.
+
+\item {\tt src\_gmres/}
+
+Source code for our GMRES stokes solver.
+
+\item {\tt src\_charged/}
+
+Source code specific to this charged fluid problem.
+
+\end{itemize}
+\end{itemize}
+\end{itemize}
+
+\subsection{Compiling and Running}
+Go to {\tt FluctHydro/staggered\_grid/exec/charged/test/} and edit the 
+{\tt GNUmakefile} settings to your liking (below) and simply type {\tt `make'}.\\
+\begin{verbatim}
+NDEBUG    :=           # 'not debug'.  use 't' for an optimized build
+MPI       := t         # use 't' to build an mpi executable
+OMP       :=           # use 't' to build an OpenMP threadded executable
+PROF      :=           # use 't' to turn on code profiling
+COMP      := gfortran  # fortran compiler
+CCOMP     := gcc       # c compiler
+MKVERBOSE := t         # make verbosity
+
+\end{verbatim}
+This will generate an executable whose name provides information about the build settings,
+i.e., what compiler was used, whether MPI and/or OpenMP were enabled, etc.
+To run the code, simply type the executable name, followed by an inputs file.
+
+\subsection{Input Parameters}
+Refer to
+{\tt src\_common/probin\_common.f90}, 
+{\tt src\_multiSpec/probin\_multiSpec.f90}, 
+{\tt src\_gmres/probin\_gmres.f90}, and
+{\tt src\_charged/probin\_charged.f90} for namelist parameters used in the
+simulation and an explanation of what the parameters do.
+
 \section{Equations}
 The equations for the momentum and densities:
 \begin{eqnarray}
