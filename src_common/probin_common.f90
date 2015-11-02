@@ -49,17 +49,17 @@ module probin_common_module
   ! Time-step control
   !----------------------
   namelist /probin_common/ fixed_dt        ! time step (if positive, fixed)
-  namelist /probin_common/ cfl             ! advective cfl number (used if fixed_dt<0) to determine time step
-
+  namelist /probin_common/ cfl             ! cfl number (used if fixed_dt<0) to determine time step
+                                             ! could be advective or diffusive CFL (code dependent)
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
   namelist /probin_common/ max_step        ! maximum number of time steps
   namelist /probin_common/ plot_int        ! Interval for writing a plotfile (for visit/amrvis)
   namelist /probin_common/ chk_int         ! Interval for writing a checkpoint
-  namelist /probin_common/ prob_type       ! sets scalars, m, coefficients (see init.f90)
+  namelist /probin_common/ prob_type       ! sets the problem type
   namelist /probin_common/ restart         ! checkpoint restart number
-  namelist /probin_common/ print_int       ! how often to output EOS drift and sum of conserved quantities
+  namelist /probin_common/ print_int       ! how often to output diagnostics to screen
   namelist /probin_common/ project_eos_int ! how often to call project_onto_eos
 
   ! Physical parameters
@@ -219,7 +219,7 @@ contains
     print_int = 0
     project_eos_int = -1
 
-    grav(1:3) = 0.d0
+    grav(1:MAX_SPACEDIM) = 0.d0
     molmass(:) = 1.0d0
     rhobar(:)  = 1.d0
 

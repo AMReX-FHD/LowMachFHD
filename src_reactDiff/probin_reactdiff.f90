@@ -12,7 +12,7 @@ module probin_reactdiff_module
   ! Problem description
   !----------------------
   integer, save         :: nspecies = 2             ! number of species
-  integer, save         :: nreactions = 0           ! number of reactions
+  integer, save         :: nreactions = 1           ! number of reactions
   
   ! Control of algorithm
   !----------------------
