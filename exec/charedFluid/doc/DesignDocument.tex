@@ -66,8 +66,13 @@
 \maketitle
 
 \section{Introduction}
-This is a working design document for our low Mach number multicomponent
-charged fluid code.
+These are working notes for our low Mach number multicomponent charged fluid code.
+The algorithm is an extension of our low Mach number multicomponent code
+\cite{LowMachMulti}.  The algorithmic details are described more fully in
+our previous works, in particular, the spatial discretization is described in
+\cite{lowMachMixing}, and the temporal discretization for binary mixtures is
+described in \cite{lowMachImplicit}.  The GMRES solver for the Stokes system
+in our temporal advancement scheme is described in \cite{StokesPreconditioners}.
 
 \section{Source Code}
 There are two git repositories required to build/run the code.  BoxLib is a public
@@ -190,7 +195,12 @@ The equations for the momentum and densities:
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb - \rho(\wb^T\zb)\nabla\Phi\\
 \frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) - \nabla\cdot\Fb_i,
 \end{eqnarray}
-with $\Fb_i$ containing both the diffusive and stochastic mass fluxes.  The equation of state is:
+with $\rho$ the total density, $\rho_i$ the density of component $i$, $\vb$ the fluid 
+velocity, $\pi$ the perturbational pressure, $\taub$ the stress tensor, $\gb$ the
+gravitational acceleration, $\wb = (w_1, w_2, \cdot)$ the vector of concentrations
+(mass fractions), $\zb$ the charge per unit mass, and $\Fb$ the mass fluxes.
+The mass fluxes include diffusive, electrostatic, and stochastic contributions, as
+shown below. The equation of state is:
 \begin{equation}
 \nabla\cdot\vb = -\nabla\cdot\left(\sum_i\frac{\Fb_i}{\bar\rho_i}\right) \equiv S\label{eq:S}.
 \end{equation}
@@ -199,12 +209,12 @@ gradients, barodiffusion, temperature gradients, and electric fields induced by 
 \begin{equation}
 \overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib-\wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T} + \frac{\rho}{n k_B T}\left(\zb - (\wb^T\zb)\1b \right)\nabla\Phib\right].
 \end{equation}
-Here, $\zb$ is the charge per unit mass and $\Phib$ is the electric potential,
-given by the solution of the Poisson equation,
+Here, $\Phib$ is the electric potential, given by the solution of the Poisson equation,
 \begin{equation}
 -\nabla\cdot\epsilon\nabla\Phib = \rho(\wb^T\zb),
 \end{equation}
-with $\rho(\wb^T\zb)$ the total charge density.  The point is that now the evaluation of $\Fb$
+with $\rho(\wb^T\zb)$ the total charge density and $\epsilon$ the dielectric constant.
+The point is that now the evaluation of $\Fb$
 at a particular instance in time requires the solution of this Poisson equation.
 
 \clearpage
@@ -299,5 +309,8 @@ We rewrite this system as:
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S^{n+1}.
 \end{equation}
+
+\bibliographystyle{plain}
+\bibliography{DesignDocument}
 
 \end{document}
