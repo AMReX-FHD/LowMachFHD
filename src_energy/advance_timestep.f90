@@ -356,9 +356,10 @@ contains
     ! compute P_eos^n
     call compute_p(mla,rhotot_old,Temp_old,conc_old,Peos)
 
-    ! Scorr = (Peos^n - P0^n) / (rho*P_rho*dt)
     do n=1,nlevs
+       ! compute Peos - P0
        call multifab_sub_sub_s_c(Peos(n),1,p0_old,1,0)
+       ! compute kappa_T (Peos - P0) / dt
        call scale_deltaP(mla,Peos,rhotot_old,Temp_old,conc_old,dt,1.d0)
        call multifab_copy_c(Scorr(n),1,Peos(n),1,1,0)
     end do
@@ -609,7 +610,7 @@ contains
        ! compute P_eos^{n+1,m+1}
        call compute_p(mla,rhotot_new,Temp_new,conc_new,Peos)
 
-       ! Scorr = Scorr + (dpdt_factor / (rho P_rho ) ) * (Peos^{n+1,m+1} - P0^{n+1,m+1})/dt
+       ! Scorr = Scorr + dpdt_factor * kappa_T * (Peos^{n+1,m+1} - P0^{n+1,m+1}) / dt
        do n=1,nlevs
 
           ! compute deltaP and store in Peos
@@ -651,7 +652,7 @@ contains
 
           norm_old = norm
 
-          ! multiply deltaP by (dpdt_factor/(rho*P_rho*dt))
+          ! multiply deltaP by dpdt_factor * kappa_T / dt
           call scale_deltaP(mla,Peos,rhotot_new,Temp_new,conc_new,dt,dpdt_factor)
 
           ! update Scorr
