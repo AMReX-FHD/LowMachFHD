@@ -187,7 +187,7 @@ contains
          end do
             
          do comp=1,nspecies
-            charge_coef(i,j,comp) = (rhotot(i,j)/(n*k_B*Temp(i,j))) &
+            charge_coef(i,j,comp) = (rho(i,j,comp)/(n*k_B*Temp(i,j))) &
                  * (charge_per_mass(comp) - charge(i,j))
          end do
 
@@ -220,7 +220,7 @@ contains
          end do
             
          do comp=1,nspecies
-            charge_coef(i,j,k,comp) = (rhotot(i,j,k)/(n*k_B*Temp(i,j,k))) &
+            charge_coef(i,j,k,comp) = (rho(i,j,k,comp)/(n*k_B*Temp(i,j,k))) &
                  * (charge_per_mass(comp) - charge(i,j,k))
          end do
 

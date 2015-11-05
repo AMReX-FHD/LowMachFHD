@@ -183,39 +183,53 @@ To run the code, simply type the executable name, followed by an inputs file.
 
 \subsection{Input Parameters}
 Refer to
-{\tt src\_common/probin\_common.f90}, 
-{\tt src\_multiSpec/probin\_multiSpec.f90}, 
-{\tt src\_gmres/probin\_gmres.f90}, and
-{\tt src\_charged/probin\_charged.f90} for namelist parameters used in the
-simulation and an explanation of what the parameters do.
+\begin{itemize}
+\item {\tt src\_common/probin\_common.f90}, 
+\item {\tt src\_multiSpec/probin\_multiSpec.f90}, 
+\item {\tt src\_gmres/probin\_gmres.f90}
+\item {\tt src\_charged/probin\_charged.f90}
+\end{itemize}
+for namelist parameters used in the simulation and an explanation of what the parameters do.
 
 \section{Equations}
-The equations for the momentum and densities:
+The equations for the momentum and densities are:
 \begin{eqnarray}
 \frac{\partial\rho\vb}{\partial t} &=& - \nabla\cdot(\rho\vb\vb) - \nabla\pi + \nabla\cdot\taub + \rho\gb - \rho(\wb^T\zb)\nabla\Phi\\
 \frac{\partial\rho_i}{\partial t} &=& -\nabla\cdot(\rho_i\vb) - \nabla\cdot\Fb_i,
 \end{eqnarray}
 with $\rho$ the total density, $\rho_i$ the density of component $i$, $\vb$ the fluid 
 velocity, $\pi$ the perturbational pressure, $\taub$ the stress tensor, $\gb$ the
-gravitational acceleration, $\wb = (w_1, w_2, \cdot)$ the vector of concentrations
-(mass fractions), $\zb$ the charge per unit mass, and $\Fb$ the mass fluxes.
-The mass fluxes include diffusive, electrostatic, and stochastic contributions, as
-shown below. The equation of state is:
+gravitational acceleration, $\wb = (w_1, w_2, \cdots)$ the vector of concentrations
+(mass fractions), $\zb$ the charge per unit mass, $\Phi$ the electric potential,
+and $\Fb_i$ the mass fluxes for component $i$.
+Note the total charge density is $\rho(\wb^T\zb)$.
+
+The mass fluxes include contributions from compositional gradients, barodiffusion,
+thermodiffusion, electrostatic, and stochastic driving forces as described below.
+The deterministic part of the mass fluxes, $\overline{\Fb}$, contains contributions from 
+compositional gradients, barodiffusion, themodiffusion, and electrostatic driving forces,
 \begin{equation}
-\nabla\cdot\vb = -\nabla\cdot\left(\sum_i\frac{\Fb_i}{\bar\rho_i}\right) \equiv S\label{eq:S}.
+\overline{\Fb} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib-\wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T} + \frac{\rho_i}{n k_B T}\left(\zb - (\wb^T\zb)\1b \right)\nabla\Phib\right].
 \end{equation}
-The deterministic part of the mass fluxes, $\overline{F}$, contains contributions from compositional
-gradients, barodiffusion, temperature gradients, and electric fields induced by charged species,
-\begin{equation}
-\overline{F} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib-\wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T} + \frac{\rho}{n k_B T}\left(\zb - (\wb^T\zb)\1b \right)\nabla\Phib\right].
-\end{equation}
-Here, $\Phib$ is the electric potential, given by the solution of the Poisson equation,
+Note $n = \sum_i(\rho_i/w_i)$ is the number density, and 
+$\rho/n = \overline{m} = (\sum_i w_i/m_i)^{-1}$ is the 
+mixture-average molecular mass.
+
+The electric potential can by found by solving the Poisson equation,
 \begin{equation}
 -\nabla\cdot\epsilon\nabla\Phib = \rho(\wb^T\zb),
 \end{equation}
-with $\rho(\wb^T\zb)$ the total charge density and $\epsilon$ the dielectric constant.
-The point is that now the evaluation of $\Fb$
+with $\epsilon$ the dielectric constant.  Now the evaluation of $\Fb$
 at a particular instance in time requires the solution of this Poisson equation.
+
+The equation of state can be found by assuming no volume changing upon mixing,
+and differentiating along particle paths (as in our previous low Mach mixing
+papaer; will add more details):
+\begin{equation}
+\nabla\cdot\vb = -\nabla\cdot\left(\sum_i\frac{\Fb_i}{\bar\rho_i}\right) \equiv S\label{eq:S}.
+\end{equation}
+
+\subsection{Linearized Analysis}
 
 \clearpage
 
