@@ -240,19 +240,27 @@ contains
 
        end if
        
-       ! The scalars can be handled in many different ways, so defer to application-specific code:
-       call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
-                      scal_bc_comp:scal_bc_comp+num_scal_bc-1))
+       if (num_scal_bc .gt. 0) then
+          ! The scalars can be handled in many different ways, so defer to application-specific code:
+          call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
+                         scal_bc_comp:scal_bc_comp+num_scal_bc-1))
+
+          if (any(adv_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) .eq. -999)) then
+             print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+             call bl_error('BC TYPE NOT SUPPORTED 2')
+          end if
+
+       end if
        
-       ! The transport coefficients can be handled in many different ways, so defer to application-specific code:
-       call transport_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
-                         tran_bc_comp:tran_bc_comp+num_tran_bc-1))
+       if (num_tran_bc .gt. 0) then
+          ! The transport coefficients can be handled in many different ways, so defer to application-specific code:
+          call transport_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
+                            tran_bc_comp:tran_bc_comp+num_tran_bc-1))
 
-       if (any(adv_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) .eq. -999)) then
-
-          print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
-          call bl_error('BC TYPE NOT SUPPORTED 2')
-
+          if (any(adv_bc_level(igrid,d,lohi,tran_bc_comp:tran_bc_comp+num_tran_bc-1) .eq. -999)) then
+             print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+             call bl_error('BC TYPE NOT SUPPORTED 3')
+          end if
        end if
 
     end do
@@ -286,14 +294,18 @@ contains
 
           ! pressure and scalars are periodic
           ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_PER
-          ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_PER
+          if (num_scal_bc .gt. 0) then
+             ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_PER
+          end if
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL .or. &
                 phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
 
           ! pressure and scalars are homogeneous Neumann
           ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
-          ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_NEU
+          if (num_scal_bc .gt. 0) then
+             ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_NEU
+          end if
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR .or. &
                 phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
@@ -301,7 +313,9 @@ contains
           ! pressure is homogeneous Neumann
           ! scalars are Dirichlet
           ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
-          ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_DIR
+          if (num_scal_bc .gt. 0) then
+             ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_DIR
+          end if
 
        else
 
