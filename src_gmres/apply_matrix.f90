@@ -9,6 +9,7 @@ module apply_matrix_module
   use bc_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
+  use probin_gmres_module, only: spatial_order
 
   implicit none
 
@@ -94,10 +95,18 @@ contains
     end do
 
     ! compute b_u = A x_u
-    call stag_applyop(mla,the_bc_tower,x_u,b_u,alpha_fc,beta,beta_ed,gamma,theta_alpha,dx)
+    if (spatial_order .eq. 2) then
+       call stag_applyop(mla,the_bc_tower,x_u,b_u,alpha_fc,beta,beta_ed,gamma,theta_alpha,dx)
+    else if (spatial_order .eq. 4) then
+       call stag_applyop_4o(mla,the_bc_tower,x_u,b_u,alpha_fc,beta,beta_ed,gamma,theta_alpha,dx)
+    end if
 
     ! compute G x_p and add to b_u
-    call compute_grad(mla,x_p,gx_p,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    if (spatial_order .eq. 2) then
+       call compute_grad(mla,x_p,gx_p,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    else if (spatial_order .eq. 4) then
+       call compute_grad_4o(mla,x_p,gx_p,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    end if
     
     do n=1,nlevs
        do i=1,dm
