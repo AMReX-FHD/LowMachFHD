@@ -1700,7 +1700,7 @@ contains
 
       !$omp parallel private(mfi,i,xnodalbox,xlo,xhi,ynodalbox,ylo,yhi) &
       !$omp private(znodalbox,zlo,zhi,ppx,ppy,ppz,rpx,rpy,rpz,lpx,lpy,lpz) &
-      !$omp private(apx,apy,apz,bp,bp1,bp2,bp3,kp,lo,hi)
+      !$omp private(apx,apy,apz,bp,bnp,bp1,bp2,bp3,kp,lo,hi)
 
       call mfiter_build(mfi, beta_cc, tiling=.true.)
 
