@@ -260,7 +260,11 @@ contains
        end do
 
        ! add contribution from external source
-       n_new(1:nspecies) = n_new(1:nspecies) - dt*theta*ext_src(1:nspecies)
+       if (reaction_type .eq. 1) then
+          n_new(1:nspecies) = n_new(1:nspecies) - dt*theta*ext_src(1:nspecies)
+       else
+          n_new(1:nspecies) = n_new(1:nspecies) - dt*ext_src(1:nspecies)
+       end if
 
        if (reaction_type .eq. 1) then
           ! second-order tau-leaping or CLE corrector
