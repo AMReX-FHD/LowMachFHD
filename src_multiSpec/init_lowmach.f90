@@ -70,7 +70,7 @@ module init_lowmach_module
 
   !=========================================================
   ! case 7:
-  ! not defined
+  ! 1D sin wave of c1
 
   !=========================================================
   ! case 8:
@@ -402,6 +402,28 @@ contains
              ! set c using Gaussian bump
              c(i,j,1) = c_init(1,1)*exp(-75.d0*r1**2)
              c(i,j,2) = c_init(2,2)*exp(-75.d0*r2**2)
+
+          enddo
+       enddo
+
+    case (7)
+
+       !=============================================================
+       ! 1D sin wave of c1
+       !=============================================================
+
+       u = 0.d0
+       v = 0.d0
+
+       ! note: c(:,:,3) will be computed below to enforce sum(c)=1
+       c(:,:,2) = 0.2d0
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + dx(2) * (dble(j)+0.5d0)
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + dx(1) * (dble(i)+0.5d0)
+
+             c(i,j,1) = 0.2d0 + 0.01d0*sin(2.d0*M_PI*x/L(1))
 
           enddo
        enddo
@@ -773,6 +795,31 @@ contains
                 ! set c using Gaussian bump
                 c(i,j,k,1) = c_init(1,1)*exp(-75.d0*r1**2)
                 c(i,j,k,2) = c_init(2,2)*exp(-75.d0*r2**2)
+                
+             enddo
+          enddo
+       enddo
+
+    case (7)
+
+       !=============================================================
+       ! 1D sin wave of c1
+       !=============================================================
+
+       u = 0.d0
+       v = 0.d0
+
+       ! note: c(:,:,:,3) will be computed below to enforce sum(c)=1
+       c(:,:,:,2) = 0.2d0
+
+       do k=lo(3),hi(3)
+          z = prob_lo(3) + dx(3) * (dble(k)+0.5d0)
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + dx(2) * (dble(j)+0.5d0)
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + dx(1) * (dble(i)+0.5d0)
+
+                c(i,j,k,1) = 0.2d0 + 0.01d0*sin(2.d0*M_PI*x/L(1))
                 
              enddo
           enddo
