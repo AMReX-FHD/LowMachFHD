@@ -416,14 +416,14 @@ contains
        v = 0.d0
 
        ! note: c(:,:,3) will be computed below to enforce sum(c)=1
-       c(:,:,2) = 0.2d0
+       c(:,:,2) = 0.05d0
 
        do j=lo(2),hi(2)
           y = prob_lo(2) + dx(2) * (dble(j)+0.5d0)
           do i=lo(1),hi(1)
              x = prob_lo(1) + dx(1) * (dble(i)+0.5d0)
 
-             c(i,j,1) = 0.2d0 + 0.01d0*sin(2.d0*M_PI*x/L(1))
+             c(i,j,1) = 0.05d0 + 0.0005d0*sin(2.d0*M_PI*x/L(1))
 
           enddo
        enddo
