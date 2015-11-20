@@ -13,7 +13,7 @@ STAGGERED_HOME := ../../..
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
-#include $(STAGGERED_HOME)/src_INS_fourthorder/GPackage.mak
+include $(STAGGERED_HOME)/src_INS_fourthorder/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_INS_fourthorder
 
 include $(STAGGERED_HOME)/src_gmres/GPackage.mak

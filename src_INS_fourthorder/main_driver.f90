@@ -3,8 +3,10 @@ subroutine main_driver()
   use ml_layout_module
   use define_bc_module
   use bc_module
+  use init_module
   use stag_mg_layout_module
   use macproject_module
+  use write_plotfile_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, print_int, &
                                   plot_int, bc_lo, bc_hi, restart, fixed_dt, max_step, &
                                   probin_common_init
@@ -17,8 +19,8 @@ subroutine main_driver()
 
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
-  real(kind=dp_t)              :: dt,time,runtime1,runtime2,Dbar_max,dt_diffusive
-  integer                      :: n,nlevs,i,dm,istep,init_step,n_Dbar
+  real(kind=dp_t)              :: dt,time,runtime1,runtime2
+  integer                      :: n,nlevs,i,dm,istep,init_step
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
   type(ml_layout)              :: mla
@@ -26,10 +28,11 @@ subroutine main_driver()
   logical, allocatable         :: pmask(:)
   
   ! will be allocated on nlevels
-  type(multifab), allocatable  :: umac(:,:)
-  type(multifab), allocatable  :: eta(:)
-  type(multifab), allocatable  :: eta_ed(:,:)
-  type(multifab), allocatable  :: kappa(:)
+  type(multifab), allocatable :: pres(:)
+  type(multifab), allocatable :: umac(:,:)
+  type(multifab), allocatable :: eta(:)
+  type(multifab), allocatable :: eta_ed(:,:)
+  type(multifab), allocatable :: kappa(:)
 
   logical :: nodal_temp(3)
   
@@ -51,6 +54,7 @@ subroutine main_driver()
  
   ! now that we have dm, we can allocate these
   allocate(lo(dm),hi(dm))
+  allocate(pres(nlevs))
   allocate(umac(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs))
   if (dm .eq. 2) then
@@ -116,8 +120,9 @@ subroutine main_driver()
      call destroy(mba)
 
      do n=1,nlevs
+        call multifab_build(pres(n),mla%la(n),1,2)
         do i=1,dm
-           call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
+           call multifab_build_edge(umac(n,i),mla%la(n),1,2,i)
         end do
      end do
 
@@ -167,7 +172,13 @@ subroutine main_driver()
   call mgt_macproj_precon_build(mla,dx,the_bc_tower)
 
   ! initialize umac
+  call init(mla,umac,dx,time)
 
+  ! write initial plotfile
+  call write_plotfile(mla,"plt",umac,pres,0,dx,0.d0)
+
+  print*,'here'
+  stop
 
   !=======================================================
   ! Build multifabs for all the variables
@@ -262,6 +273,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
+     call multifab_destroy(pres(n))
      do i=1,dm
         call multifab_destroy(umac(n,i))
      end do
