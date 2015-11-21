@@ -102,12 +102,14 @@ contains
 
     do n=1,nlevs
        do d=1,dm
-          call multifab_build_edge(r_u(n,d)  ,mla%la(n),1                ,1,d)
+          ! # of ghost cells must match x_u so higher-order stencils can work
+          call multifab_build_edge(r_u(n,d)  ,mla%la(n),1                ,x_u(1,1)%ng,d)
           call multifab_build_edge(w_u(n,d)  ,mla%la(n),1                ,0,d)
           call multifab_build_edge(tmp_u(n,d),mla%la(n),1                ,0,d)
           call multifab_build_edge(V_u(n,d)  ,mla%la(n),gmres_max_inner+1,0,d) ! Krylov vectors
        end do
-       call multifab_build(r_p(n)  ,mla%la(n),1                ,1)
+       ! # of ghost cells must match x_p so higher-order stencils can work
+       call multifab_build(r_p(n)  ,mla%la(n),1                ,x_p(1)%ng)
        call multifab_build(w_p(n)  ,mla%la(n),1                ,0)
        call multifab_build(tmp_p(n),mla%la(n),1                ,0)
        call multifab_build(V_p(n)  ,mla%la(n),gmres_max_inner+1,0) ! Krylov vectors
