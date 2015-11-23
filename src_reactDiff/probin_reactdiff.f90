@@ -39,7 +39,7 @@ module probin_reactdiff_module
   real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0    ! n_i boundary conditions (dir,lohi,species)
 
   logical, save           :: model_file_init = .false.     ! initialize from model files
-  character(len=20), save :: model_file(max_species)       ! one model file for each species
+  character(len=128), save :: model_file(max_species)       ! one model file for each species
 
   ! Diffusion     
   !----------------------                          
