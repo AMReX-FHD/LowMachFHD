@@ -38,6 +38,9 @@ module probin_reactdiff_module
   real(kind=dp_t), save :: n_init_in(2,max_species) = 1.d0 ! Initial values to be used in init_n.f90
   real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0    ! n_i boundary conditions (dir,lohi,species)
 
+  logical, save           :: model_file_init = .false.     ! initialize from model files
+  character(len=20), save :: model_file(max_species)       ! one model file for each species
+
   ! Diffusion     
   !----------------------                          
   real(kind=dp_t), save :: D_Fick(max_species) = 1.d0          ! Fickian diffusion coeffs
@@ -65,7 +68,7 @@ module probin_reactdiff_module
   
   namelist /probin_reactdiff/ nspecies, nreactions
   namelist /probin_reactdiff/ diffusion_type, reaction_type, use_Poisson_rng, splitting_type, avg_type
-  namelist /probin_reactdiff/ inhomogeneous_bc_fix, n_init_in, n_bc
+  namelist /probin_reactdiff/ inhomogeneous_bc_fix, n_init_in, n_bc, model_file_init, model_file
   namelist /probin_reactdiff/ D_Fick, diffusion_stencil_order, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
   namelist /probin_reactdiff/ cross_section, include_discrete_LMA_correction
@@ -153,6 +156,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) avg_type
+
+       case ('--model_file_init')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) model_file_init
 
        case ('--diffusion_stencil_order')
           farg = farg + 1

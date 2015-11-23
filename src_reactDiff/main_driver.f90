@@ -20,7 +20,10 @@ subroutine main_driver()
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    variance_coef_mass, cfl, initial_variance
    use probin_reactdiff_module, only: nspecies, probin_reactdiff_init, D_Fick, cross_section, &
-                                      splitting_type, inhomogeneous_bc_fix
+                                      splitting_type, inhomogeneous_bc_fix, model_file_init, &
+                                      model_file
+
+   use fabio_module
 
    implicit none
 
@@ -51,6 +54,8 @@ subroutine main_driver()
 
    ! to test "conservation"
    real(kind=dp_t), allocatable :: n_sum(:)
+
+   real(kind=dp_t), allocatable :: input_array(:,:)
 
    !==============================================================
    ! Initialization
@@ -204,7 +209,48 @@ subroutine main_driver()
    !=====================================================================
 
    if (restart .lt. 0) then
-      call init_n(mla,n_old,dx,the_bc_tower)
+
+      if (.not. model_file_init) then
+         ! initialize with a subroutine
+
+         call init_n(mla,n_old,dx,the_bc_tower)
+
+      else
+         ! initialize from model files
+
+         if (dm .ne. 2) then
+            call bl_error("model_file_init only works in 2d")
+         end if
+
+         allocate(input_array(n_cells(1),n_cells(2)))
+
+         do n=1,nspecies
+
+            if (parallel_IOProcessor()) then
+
+               ! read in model file for species n into IOProc
+               print*,'reading in model_file: ',model_file(n)
+               open(unit=100, file=model_file(n), status='old', action='read')
+               do i=1,n_cells(1)
+                  read(100,*) input_array(i,:)
+               end do
+               close(unit=100)
+
+            end if
+
+            ! broadcast input_array to all processors
+            do i=1,n_cells(1)
+               call parallel_bcast_dv(input_array(i,:))
+            end do
+
+            ! copy data from input_array into multifab
+            call init_n_model(mla,n_old,dx,the_bc_tower,input_array,n)
+
+         end do
+
+         deallocate(input_array)
+
+      end if
       
       if (initial_variance .gt. 0.d0) then
          call add_n_fluctuations(mla,n_old,dx,the_bc_tower)

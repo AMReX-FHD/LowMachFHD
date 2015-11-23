@@ -13,7 +13,7 @@ module init_n_module
 
   private
 
-  public :: init_n
+  public :: init_n, init_n_model
 
   ! prob_type codes for LowMach:
   ! 0=thermodynamic equilibrium, n=n_init_in(1,1:nspecies)
@@ -255,5 +255,79 @@ contains
     end select
 
   end subroutine init_n_3d
+
+  subroutine init_n_model(mla,n_init,dx,the_bc_tower,input_array,comp)
+
+    ! initialize rho_i and umac in the valid region
+    ! we first initialize c_i in the valid region
+    ! then enforce that sum(c_i)=1 by overwriting the final concentration,
+    ! and then use the EOS to compute rho_i
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: n_init(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower ), intent(in   ) :: the_bc_tower
+    real(kind=dp_t), intent(in   ) :: input_array(:,:)
+    integer        , intent(in   ) :: comp
+
+    ! local variables
+    integer                        :: lo(mla%dim), hi(mla%dim)
+    integer                        :: i, dm, n, nlevs, ng_n
+    real(kind=dp_t), pointer       :: np(:,:,:,:)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "init_n")
+
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    ng_n = n_init(1)%ng
+
+    ! looping over boxes 
+    do n=1,nlevs
+       do i=1,nfabs(n_init(n))
+          np => dataptr(n_init(n),i)
+          lo = lwb(get_box(n_init(n),i))
+          hi = upb(get_box(n_init(n),i))
+          select case (dm)
+          case (2)
+             call init_n_model_2d(np(:,:,1,:),ng_n,lo,hi,input_array,comp)
+          case (3)
+
+          end select
+       end do
+    end do
+
+    call destroy(bpt)
+
+    if (comp .eq. nspecies) then
+       do n=1,nlevs
+          call multifab_fill_boundary(n_init(n))
+          call multifab_physbc(n_init(n),1,scal_bc_comp,nspecies, &
+               the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+       end do
+    end if
+
+  end subroutine init_n_model
+
+  subroutine init_n_model_2d(n_init,ng_n,lo,hi,input_array,comp)
+
+    integer         :: lo(:), hi(:), ng_n, comp
+    real(kind=dp_t) :: n_init(lo(1)-ng_n:,lo(2)-ng_n:,:)
+    real(kind=dp_t) :: input_array(0:,0:)
+ 
+    ! local varables
+    integer         :: i,j
+
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+
+       n_init(i,j,comp) = input_array(i,j)
+
+    end do
+    end do
+
+  end subroutine init_n_model_2d
 
 end module init_n_module
