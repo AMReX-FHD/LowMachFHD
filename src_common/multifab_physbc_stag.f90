@@ -2097,7 +2097,7 @@ contains
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! five point stencil using homogeneous dirichlet velocity boundary condition
-          do j=lo(2),hi(2)+1
+          do j=lo(2)-ng_s,hi(2)+1+ng_s
              s(lo(1)-1,j) =         -4.d0*s(lo(1)  ,j) &
                                     +2.d0*s(lo(1)+1,j) &
                              -(4.d0/5.d0)*s(lo(1)+2,j) &
@@ -2125,7 +2125,7 @@ contains
           ! shouldn't have to do anything; this case is covered in physbc_domainvel
        else if (bccomp .eq. 2) then
           ! transverse velocity
-          do j=lo(2),hi(2)+1
+          do j=lo(2)-ng_s,hi(2)+1+ng_s
              s(hi(1)+1,j) =         -4.d0*s(hi(1)  ,j) &
                                     +2.d0*s(hi(1)-1,j) &
                              -(4.d0/5.d0)*s(hi(1)-2,j) &
@@ -2150,7 +2150,7 @@ contains
     if (bc(2,1) .eq. DIR_VEL) then
        if (bccomp .eq. 1) then
           ! transverse velocity
-          do i=lo(1),hi(1)+1
+          do i=lo(1)-ng_s,hi(1)+1+ng_s
              s(i,lo(2)-1) =         -4.d0*s(i,lo(2)  ) &
                                     +2.d0*s(i,lo(2)+1) &
                              -(4.d0/5.d0)*s(i,lo(2)+2) &
@@ -2178,7 +2178,7 @@ contains
     if (bc(2,2) .eq. DIR_VEL) then
        if (bccomp .eq. 1) then
           ! transverse velocity
-          do i=lo(1),hi(1)+1
+          do i=lo(1)-ng_s,hi(1)+1+ng_s
              s(i,hi(2)+1) =         -4.d0*s(i,hi(2)  ) &
                                     +2.d0*s(i,hi(2)-1) &
                              -(4.d0/5.d0)*s(i,hi(2)-2) &
