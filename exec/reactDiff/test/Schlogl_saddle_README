@@ -1,0 +1,33 @@
+The input file
+inputs_Schlogl_saddle
+and
+inputs_Schlogl_saddle_downhill
+are for a bistable Schlogl model with two peaks (stable points) at n=0.5 and n=1.6
+
+Here we start the computation from a saddle point, i.e., from the critical nucleus. It is a state that discretely satisfies
+0 = D*laplacian(n) + R(n)
+where D is the diffusion coefficient and R(n) is the reaction term. Here the laplacian is the standard 5pt stencil. Furthermore, this saddle-point state should have only unstable direction in phase space, meaning it is a true saddle point. Deterministic dynamics started from here should stay in place (it does but not exactly -- there is a slow drift of course due to numerical errors). But stochastic dynamics started here should go with 50-50% probability to one of the two minima: uniform states with either n=0.5 or n=1.6 everywhere.
+
+The most accurate available estimate for the saddle point is in the file
+test/schlogl_bimodal_saddle.dat
+The input file inputs_Schlogl_saddle starts from this configuration and runs a deterministic run for some time. It is seen that the initial state does not remain fixed forever but rather starts to move. This can either be due to time-discretization artifacts (compare different integrators including unsplit ones for different dt near t=0 to ensure behavior is not dominated by numerical artifacts), or it may be because the saddle point is not computed exactly, TBD.
+By changing 
+variance_coef_mass = 1.0
+use_Poisson_rng = 0 or 1
+in this input file, one can enable fluctuations and see what happens. In my tests with splitting_type = 1 and dt=0.01 all runs went to the state n=0.5 (i.e., the nucleating bubble disappeared instead of growing).
+
+There are 4 more initial configurations in the test folder, which are four points on the string (minimal energy path) that are before and after the saddle point:
+  !model_file(1) = "../test/schlogl_bimodal_saddle.dat" ! Best estimate of the saddle
+  model_file(1) = "../test/schlogl_bimodal_saddle_pp.dat" ! Before the saddle
+  !model_file(1) = "../test/schlogl_bimodal_saddle_p.dat" ! Only slightly before the saddle
+  !model_file(1) = "../test/schlogl_bimodal_saddle_m.dat" ! After the saddle
+  !model_file(1) = "../test/schlogl_bimodal_saddle_mm.dat" ! Only slightly after the saddle
+This input file was used to make the movie: 
+http://cims.nyu.edu/~donev/FluctHydro/Movies/saddle-pp.mpeg
+which shows how the nucleating bubble expands via a traveling wave to convert the system to n=1.6 starting from n=0.5; this is the "downhill" deterministic path. Note that we do not have a method to compute the uphil path, i.e., the way in which the actual bubble nucleates to begin with; it seems hard to compute this at present...
+
+The input file 
+inputs_Schlogl_saddle2
+and initial configuration
+test/schlogl_bimodal2_saddle.dat
+are for a different set of parameters from a PRE paper by Sorin Mitran-Tanase...ignore it for now.
