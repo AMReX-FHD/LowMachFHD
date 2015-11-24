@@ -620,13 +620,16 @@ contains
           ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
           ! to extrapolation of 4th-order polynomial
           s(lo(1),lo(2):hi(2)) = 0.d0
-          do i=1,ng_s
-             s(lo(1)-i,lo(2):hi(2)) =   5.d0*s(lo(1)  ,lo(2):hi(2)) &
-                                      -10.d0*s(lo(1)+1,lo(2):hi(2)) &
-                                      +10.d0*s(lo(1)+2,lo(2):hi(2)) &
-                                      - 5.d0*s(lo(1)+3,lo(2):hi(2)) &
-                                      + 1.d0*s(lo(1)+4,lo(2):hi(2))
-          end do
+          s(lo(1)-1,lo(2):hi(2)) =   5.d0*s(lo(1)  ,lo(2):hi(2)) &
+                                   -10.d0*s(lo(1)+1,lo(2):hi(2)) &
+                                   +10.d0*s(lo(1)+2,lo(2):hi(2)) &
+                                   - 5.d0*s(lo(1)+3,lo(2):hi(2)) &
+                                   + 1.d0*s(lo(1)+4,lo(2):hi(2))
+          s(lo(1)-2,lo(2):hi(2)) =  15.d0*s(lo(1)  ,lo(2):hi(2)) &
+                                   -40.d0*s(lo(1)+1,lo(2):hi(2)) &
+                                   +45.d0*s(lo(1)+2,lo(2):hi(2)) &
+                                   -24.d0*s(lo(1)+3,lo(2):hi(2)) &
+                                   + 5.d0*s(lo(1)+4,lo(2):hi(2))
        else if (bc(1,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -646,13 +649,16 @@ contains
           ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
           ! to extrapolation of 4th-order polynomial
           s(hi(1)+1,lo(2):hi(2)) = 0.d0
-          do i=1,ng_s
-             s(hi(1)+1+i,lo(2):hi(2)) =   5.d0*s(hi(1)+1,lo(2):hi(2)) &
-                                        -10.d0*s(hi(1)  ,lo(2):hi(2)) &
-                                        +10.d0*s(hi(1)-1,lo(2):hi(2)) &
-                                        - 5.d0*s(hi(1)-2,lo(2):hi(2)) &
-                                        + 1.d0*s(hi(1)-3,lo(2):hi(2))
-          end do
+          s(hi(1)+2,lo(2):hi(2)) =   5.d0*s(hi(1)+1,lo(2):hi(2)) &
+                                   -10.d0*s(hi(1)  ,lo(2):hi(2)) &
+                                   +10.d0*s(hi(1)-1,lo(2):hi(2)) &
+                                   - 5.d0*s(hi(1)-2,lo(2):hi(2)) &
+                                   + 1.d0*s(hi(1)-3,lo(2):hi(2))
+          s(hi(1)+3,lo(2):hi(2)) =  15.d0*s(hi(1)+1,lo(2):hi(2)) &
+                                   -40.d0*s(hi(1)  ,lo(2):hi(2)) &
+                                   +45.d0*s(hi(1)-1,lo(2):hi(2)) &
+                                   -24.d0*s(hi(1)-2,lo(2):hi(2)) &
+                                   + 5.d0*s(hi(1)-3,lo(2):hi(2))
        else if (bc(1,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -672,13 +678,16 @@ contains
           ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
           ! to extrapolation of 4th-order polynomial
           s(lo(1):hi(1),lo(2)) = 0.d0
-          do j=1,ng_s
-             s(lo(1):hi(1),lo(2)-j) =   5.d0*s(lo(1):hi(1),lo(2)  ) &
-                                      -10.d0*s(lo(1):hi(1),lo(2)+1) &
-                                      +10.d0*s(lo(1):hi(1),lo(2)+2) &
-                                      - 5.d0*s(lo(1):hi(1),lo(2)+3) &
-                                      + 1.d0*s(lo(1):hi(1),lo(2)+4)
-          end do
+          s(lo(1):hi(1),lo(2)-1) =   5.d0*s(lo(1):hi(1),lo(2)  ) &
+                                   -10.d0*s(lo(1):hi(1),lo(2)+1) &
+                                   +10.d0*s(lo(1):hi(1),lo(2)+2) &
+                                   - 5.d0*s(lo(1):hi(1),lo(2)+3) &
+                                   + 1.d0*s(lo(1):hi(1),lo(2)+4)
+          s(lo(1):hi(1),lo(2)-2) =  15.d0*s(lo(1):hi(1),lo(2)  ) &
+                                   -40.d0*s(lo(1):hi(1),lo(2)+1) &
+                                   +45.d0*s(lo(1):hi(1),lo(2)+2) &
+                                   -24.d0*s(lo(1):hi(1),lo(2)+3) &
+                                   + 5.d0*s(lo(1):hi(1),lo(2)+4)
        else if (bc(2,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -698,14 +707,16 @@ contains
           ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
           ! to extrapolation of 4th-order polynomial
           s(lo(1):hi(1),hi(2)+1) = 0.d0
-          do j=1,ng_s
-             s(lo(1):hi(1),hi(2)+1+j) =   5.d0*s(lo(1):hi(1),hi(2)+1) &
-                                        -10.d0*s(lo(1):hi(1),hi(2)  ) &
-                                        +10.d0*s(lo(1):hi(1),hi(2)-1) &
-                                        - 5.d0*s(lo(1):hi(1),hi(2)-2) &
-                                        + 1.d0*s(lo(1):hi(1),hi(2)-3)
-          end do
-
+          s(lo(1):hi(1),hi(2)+2) =   5.d0*s(lo(1):hi(1),hi(2)+1) &
+                                   -10.d0*s(lo(1):hi(1),hi(2)  ) &
+                                   +10.d0*s(lo(1):hi(1),hi(2)-1) &
+                                   - 5.d0*s(lo(1):hi(1),hi(2)-2) &
+                                   + 1.d0*s(lo(1):hi(1),hi(2)-3)
+          s(lo(1):hi(1),hi(2)+3) =  15.d0*s(lo(1):hi(1),hi(2)+1) &
+                                   -40.d0*s(lo(1):hi(1),hi(2)  ) &
+                                   +45.d0*s(lo(1):hi(1),hi(2)-1) &
+                                   -24.d0*s(lo(1):hi(1),hi(2)-2) &
+                                   + 5.d0*s(lo(1):hi(1),hi(2)-3)
        else if (bc(2,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
