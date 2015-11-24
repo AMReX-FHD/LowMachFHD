@@ -12,8 +12,9 @@ module multifab_physbc_stag_module
 
   private
 
-  public :: multifab_physbc_domainvel, multifab_physbc_macvel, &
-       set_inhomogeneous_vel_bcs, modify_traction_bcs
+  public :: multifab_physbc_domainvel, multifab_physbc_domainvel_ho, &
+            multifab_physbc_macvel,    multifab_physbc_macvel_ho, &
+            set_inhomogeneous_vel_bcs, modify_traction_bcs
 
 contains
 
@@ -530,6 +531,300 @@ contains
    end if
 
  end subroutine physbc_domainvel_3d_inhomogeneous
+
+  subroutine multifab_physbc_domainvel_ho(s,bccomp,the_bc_level,dx,vel_bc_n)
+
+    ! vel_bc_n(nlevs,dm) are the normal velocities
+
+    type(multifab) , intent(inout) :: s
+    integer        , intent(in   ) :: bccomp
+    type(bc_level) , intent(in   ) :: the_bc_level
+    real(kind=dp_t), intent(in   ) :: dx(:)
+    type(multifab) , intent(in   ), optional :: vel_bc_n(:)
+
+    ! Local
+    integer                  :: lo(get_dim(s)),hi(get_dim(s))
+    integer                  :: i,ng_s,ng_v,dm
+    real(kind=dp_t), pointer :: sp(:,:,:,:), vp(:,:,:,:)
+    logical                  :: use_inhomogeneous
+
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"multifab_physbc_domainvel_ho")
+
+    use_inhomogeneous = .false.
+    if (present(vel_bc_n)) then
+       use_inhomogeneous = .true.
+    end if
+
+    if (bccomp .gt. get_dim(s)) then
+       call bl_error('multifab_physbc_domainvel_ho expects bccomp <= dm')
+    end if
+
+    ng_s = nghost(s)
+    dm = get_dim(s)
+    
+    do i=1,nfabs(s)
+       sp => dataptr(s,i)
+       lo = lwb(get_box(s,i))
+       hi = upb(get_box(s,i))
+       select case (dm)
+       case (2)
+          if (use_inhomogeneous) then
+             ng_v = vel_bc_n(bccomp)%ng
+             vp => dataptr(vel_bc_n(bccomp),i)
+          else
+             call physbc_domainvel_ho_2d(sp(:,:,1,1), ng_s, lo, hi, &
+                                         the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
+                                         bccomp,dx)
+          end if
+       case (3)
+          if (use_inhomogeneous) then
+             ng_v = vel_bc_n(bccomp)%ng
+             vp => dataptr(vel_bc_n(bccomp),i)
+          else
+             call physbc_domainvel_ho_3d(sp(:,:,:,1), ng_s, lo, hi, &
+                                         the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
+                                         bccomp,dx)
+          end if
+       end select
+    end do
+ 
+    call destroy(bpt)
+
+  end subroutine multifab_physbc_domainvel_ho
+
+  subroutine physbc_domainvel_ho_2d(s,ng_s,lo,hi,bc,bccomp,dx)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s
+    real(kind=dp_t), intent(inout) ::    s(lo(1)-ng_s:,lo(2)-ng_s:)
+    integer        , intent(in   ) :: bc(:,:)
+    integer        , intent(in   ) :: bccomp
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    ! local
+    integer :: i,j
+
+    if (bccomp .ne. 1 .and. bccomp .ne. 2) then
+       call bl_error('physbc_domainvel_ho_2d requires bccomp = 1 or 2')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-x boundary
+!!!!!!!!!!!!!!!!!!
+
+    ! staggered x-velocity
+    if (bccomp .eq. 1) then
+       if (bc(1,1) .eq. DIR_VEL) then
+          ! set domain face value to Dirichlet value
+          ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
+          ! to extrapolation of 4th-order polynomial
+          s(lo(1),lo(2):hi(2)) = 0.d0
+          do i=1,ng_s
+             s(lo(1)-i,lo(2):hi(2)) =   5.d0*s(lo(1)  ,lo(2):hi(2)) &
+                                      -10.d0*s(lo(1)+1,lo(2):hi(2)) &
+                                      +10.d0*s(lo(1)+2,lo(2):hi(2)) &
+                                      - 5.d0*s(lo(1)+3,lo(2):hi(2)) &
+                                      + 1.d0*s(lo(1)+4,lo(2):hi(2))
+          end do
+       else if (bc(1,1) .eq. INTERIOR) then
+          ! either periodic or interior; do nothing
+       else
+          print *,'physbc_domainvel_ho_2d: bc(1,1) =',bc(1,1),' for bccomp =',bccomp
+          call bl_error('NOT SUPPORTED')
+       end if
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-x boundary
+!!!!!!!!!!!!!!!!!!
+
+    ! staggered x-velocity
+    if (bccomp .eq. 1) then
+       if (bc(1,2) .eq. DIR_VEL) then
+          ! set domain face value to Dirichlet value
+          ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
+          ! to extrapolation of 4th-order polynomial
+          s(hi(1)+1,lo(2):hi(2)) = 0.d0
+          do i=1,ng_s
+             s(hi(1)+1+i,lo(2):hi(2)) =   5.d0*s(hi(1)+1,lo(2):hi(2)) &
+                                        -10.d0*s(hi(1)  ,lo(2):hi(2)) &
+                                        +10.d0*s(hi(1)-1,lo(2):hi(2)) &
+                                        - 5.d0*s(hi(1)-2,lo(2):hi(2)) &
+                                        + 1.d0*s(hi(1)-3,lo(2):hi(2))
+          end do
+       else if (bc(1,2) .eq. INTERIOR) then
+          ! either periodic or interior; do nothing
+       else
+          print *,'physbc_domainvel_ho_2d: bc(1,2) =',bc(1,2),' for bccomp =',bccomp
+          call bl_error('NOT SUPPORTED')
+       end if
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-y boundary
+!!!!!!!!!!!!!!!!!!
+
+    ! staggered y-velocity
+    if (bccomp .eq. 2) then
+       if (bc(2,1) .eq. DIR_VEL) then
+          ! set domain face value to Dirichlet value
+          ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
+          ! to extrapolation of 4th-order polynomial
+          s(lo(1):hi(1),lo(2)) = 0.d0
+          do j=1,ng_s
+             s(lo(1):hi(1),lo(2)-j) =   5.d0*s(lo(1):hi(1),lo(2)  ) &
+                                      -10.d0*s(lo(1):hi(1),lo(2)+1) &
+                                      +10.d0*s(lo(1):hi(1),lo(2)+2) &
+                                      - 5.d0*s(lo(1):hi(1),lo(2)+3) &
+                                      + 1.d0*s(lo(1):hi(1),lo(2)+4)
+          end do
+       else if (bc(2,1) .eq. INTERIOR) then
+          ! either periodic or interior; do nothing
+       else
+          print *,'physbc_domainvel_ho_2d: bc(2,1) =',bc(2,1),' for bccomp =',bccomp
+          call bl_error('NOT SUPPORTED')
+       end if
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-y boundary
+!!!!!!!!!!!!!!!!!!
+
+    ! staggered y-velocity
+    if (bccomp .eq. 2) then
+       if (bc(2,2) .eq. DIR_VEL) then
+          ! set domain face value to Dirichlet value
+          ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
+          ! to extrapolation of 4th-order polynomial
+          s(lo(1):hi(1),hi(2)+1) = 0.d0
+          do j=1,ng_s
+             s(lo(1):hi(1),hi(2)+1+j) =   5.d0*s(lo(1):hi(1),hi(2)+1) &
+                                        -10.d0*s(lo(1):hi(1),hi(2)  ) &
+                                        +10.d0*s(lo(1):hi(1),hi(2)-1) &
+                                        - 5.d0*s(lo(1):hi(1),hi(2)-2) &
+                                        + 1.d0*s(lo(1):hi(1),hi(2)-3)
+          end do
+
+       else if (bc(2,2) .eq. INTERIOR) then
+          ! either periodic or interior; do nothing
+       else
+          print *,'physbc_domainvel_ho_2d: bc(2,2) =',bc(2,2),' for bccomp =',bccomp
+          call bl_error('NOT SUPPORTED')
+       end if
+    end if
+
+  end subroutine physbc_domainvel_ho_2d
+
+  subroutine physbc_domainvel_ho_3d(s,ng_s,lo,hi,bc,bccomp,dx)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s
+    real(kind=dp_t), intent(inout) ::    s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    integer        , intent(in   ) :: bc(:,:)
+    integer        , intent(in   ) :: bccomp
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    if (bccomp .ne. 1 .and. bccomp .ne. 2 .and. bccomp .ne. 3) then
+       call bl_error('physbc_domainvel_ho_3d requires bccomp = 1, 2, or 3')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-x boundary
+!!!!!!!!!!!!!!!!!!
+
+    ! staggered x-velocity
+    if (bccomp .eq. 1) then
+       if (bc(1,1) .eq. DIR_VEL) then
+
+       else if (bc(1,1) .eq. INTERIOR) then
+          ! either periodic or interior; do nothing
+       else
+          print *,'physbc_domainvel_ho_3d: bc(1,1) =',bc(1,1),' for bccomp =',bccomp
+          call bl_error('NOT SUPPORTED')
+       end if
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-x boundary
+!!!!!!!!!!!!!!!!!!
+
+    ! staggered x-velocity
+    if (bccomp .eq. 1) then
+       if (bc(1,2) .eq. DIR_VEL) then
+
+       else if (bc(1,2) .eq. INTERIOR) then
+          ! either periodic or interior; do nothing
+       else
+          print *,'physbc_domainvel_ho_3d: bc(1,2) =',bc(1,2),' for bccomp =',bccomp
+          call bl_error('NOT SUPPORTED')
+       end if
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-y boundary
+!!!!!!!!!!!!!!!!!!
+
+    ! staggered y-velocity
+    if (bccomp .eq. 2) then
+       if (bc(2,1) .eq. DIR_VEL) then
+
+       else if (bc(2,1) .eq. INTERIOR) then
+          ! either periodic or interior; do nothing
+       else
+          print *,'physbc_domainvel_ho_3d: bc(2,1) =',bc(2,1),' for bccomp =',bccomp
+          call bl_error('NOT SUPPORTED')
+       end if
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-y boundary
+!!!!!!!!!!!!!!!!!!
+
+    ! staggered y-velocity
+    if (bccomp .eq. 2) then
+       if (bc(2,2) .eq. DIR_VEL) then
+
+       else if (bc(2,2) .eq. INTERIOR) then
+          ! either periodic or interior; do nothing
+       else
+          print *,'physbc_domainvel_ho_3d: bc(2,2) =',bc(2,2),' for bccomp =',bccomp
+          call bl_error('NOT SUPPORTED')
+       end if
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-z boundary
+!!!!!!!!!!!!!!!!!!
+
+    ! staggered z-velocity
+    if (bccomp .eq. 3) then
+       if (bc(3,1) .eq. DIR_VEL) then
+
+       else if (bc(3,1) .eq. INTERIOR) then
+          ! either periodic or interior; do nothing
+       else
+          print *,'physbc_domainvel_ho_3d: bc(3,1) =',bc(3,1),' for bccomp =',bccomp
+          call bl_error('NOT SUPPORTED')
+      end if
+   end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-z boundary
+!!!!!!!!!!!!!!!!!!
+
+   ! staggered z-velocity
+   if (bccomp .eq. 3) then
+      if (bc(3,2) .eq. DIR_VEL) then
+
+      else if (bc(3,2) .eq. INTERIOR) then
+         ! either periodic or interior; do nothing
+      else
+         print *,'physbc_domainvel_ho_3d: bc(3,2) =',bc(3,2),' for bccomp =',bccomp
+         call bl_error('NOT SUPPORTED')
+      end if
+   end if
+
+ end subroutine physbc_domainvel_ho_3d
 
   subroutine multifab_physbc_macvel(s,bccomp,the_bc_level,dx,vel_bc_t)
 
@@ -1681,6 +1976,421 @@ contains
 
   end subroutine physbc_macvel_3d_inhomogeneous
 
+  subroutine multifab_physbc_macvel_ho(s,bccomp,the_bc_level,dx,vel_bc_t)
+
+    ! in 2D, vel_bc_t(nlevs,2) respresents
+    !   1. y-velocity bc on x-faces (nodal)
+    !   2. x-velocity bc on y-faces (nodal)
+    ! in 3D, vel_bc_t(nlevs,6) represents
+    !   1. y-velocity bc on x-faces (nodal in y and x)
+    !   2. z-velocity bc on x-faces (nodal in z and x)
+    !   3. x-velocity bc on y-faces (nodal in x and y)
+    !   4. z-velocity bc on y-faces (nodal in z and y)
+    !   5. x-velocity bc on z-faces (nodal in x and z)
+    !   6. y-velocity bc on z-faces (nodal in y and z)
+
+    type(multifab) , intent(inout) :: s
+    integer        , intent(in   ) :: bccomp
+    type(bc_level) , intent(in   ) :: the_bc_level
+    real(kind=dp_t), intent(in   ) :: dx(:)
+    type(multifab) , intent(in   ), optional :: vel_bc_t(:)
+
+    ! Local
+    integer                  :: lo(get_dim(s)),hi(get_dim(s))
+    integer                  :: i,ng_s,ng_v,dm
+    real(kind=dp_t), pointer :: sp(:,:,:,:), vp1(:,:,:,:), vp2(:,:,:,:)
+    logical                  :: use_inhomogeneous
+
+    type(bl_prof_timer),save :: bpt
+
+    call build(bpt,"multifab_physbc_macvel_ho")
+
+    use_inhomogeneous = .false.
+    if (present(vel_bc_t)) then
+       use_inhomogeneous = .true.
+    end if
+
+    if (bccomp .gt. get_dim(s)) then
+       call bl_error('multifab_physbc_macvel_ho expects bccomp <= dm')
+    end if
+
+    ng_s = nghost(s)
+    dm = get_dim(s)
+    
+    do i=1,nfabs(s)
+       sp => dataptr(s,i)
+       lo = lwb(get_box(s,i))
+       hi = upb(get_box(s,i))
+       select case (dm)
+       case (2)
+          if (use_inhomogeneous) then
+             ng_v = vel_bc_t(bccomp)%ng
+             if (bccomp .eq. 1) then
+                vp1 => dataptr(vel_bc_t(2),i)
+             else if (bccomp .eq. 2) then
+                vp1 => dataptr(vel_bc_t(1),i)
+             end if
+          else
+             call physbc_macvel_ho_2d(sp(:,:,1,1), ng_s, lo, hi, &
+                                   the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
+                                   bccomp,dx)
+          end if
+       case (3)
+          if (use_inhomogeneous) then
+             ng_v = vel_bc_t(bccomp)%ng
+             if (bccomp .eq. 1) then
+                vp1 => dataptr(vel_bc_t(3),i)
+                vp2 => dataptr(vel_bc_t(5),i)
+             else if (bccomp .eq. 2) then
+                vp1 => dataptr(vel_bc_t(1),i)
+                vp2 => dataptr(vel_bc_t(6),i)
+             else if (bccomp .eq. 3) then
+                vp1 => dataptr(vel_bc_t(2),i)
+                vp2 => dataptr(vel_bc_t(4),i)
+             end if
+          else
+             call physbc_macvel_ho_3d(sp(:,:,:,1), ng_s, lo, hi, &
+                                   the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
+                                   bccomp,dx)
+          end if
+       end select
+    end do
+ 
+    call destroy(bpt)
+
+  end subroutine multifab_physbc_macvel_ho
+
+  subroutine physbc_macvel_ho_2d(s,ng_s,lo,hi,bc,bccomp,dx)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s
+    real(kind=dp_t), intent(inout) :: s(lo(1)-ng_s:,lo(2)-ng_s:)
+    integer        , intent(in   ) :: bc(:,:)
+    integer        , intent(in   ) :: bccomp
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    ! Local variables
+    integer :: i,j
+
+    if (bccomp .ne. 1 .and. bccomp .ne. 2) then
+       call bl_error('physbc_macvel_ho_2d requires bccomp = 1 or 2')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-x boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(1,1) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       else if (bccomp .eq. 2) then
+          ! transverse velocity
+          ! five point stencil using homogeneous dirichlet velocity boundary condition
+          do j=lo(2),hi(2)+1
+             s(lo(1)-1,j) =         -4.d0*s(lo(1)  ,j) &
+                                    +2.d0*s(lo(1)+1,j) &
+                             -(4.d0/5.d0)*s(lo(1)+2,j) &
+                             +(1.d0/7.d0)*s(lo(1)+3,j)
+             s(lo(1)-2,j) =        -30.d0*s(lo(1)  ,j) &
+                                   +20.d0*s(lo(1)+1,j) &
+                                    -9.d0*s(lo(1)+2,j) &
+                            +(12.d0/7.d0)*s(lo(1)+3,j)
+          end do
+       end if
+    else if (bc(1,1) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_2d: bc(1,1) =',bc(1,1),' for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-x boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(1,2) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       else if (bccomp .eq. 2) then
+          ! transverse velocity
+          do j=lo(2),hi(2)+1
+             s(hi(1)+1,j) =         -4.d0*s(hi(1)  ,j) &
+                                    +2.d0*s(hi(1)-1,j) &
+                             -(4.d0/5.d0)*s(hi(1)-2,j) &
+                             +(1.d0/7.d0)*s(hi(1)-3,j)
+             s(hi(1)+2,j) =        -30.d0*s(hi(1)  ,j) &
+                                   +20.d0*s(hi(1)-1,j) &
+                                    -9.d0*s(hi(1)-2,j) &
+                            +(12.d0/7.d0)*s(hi(1)-3,j)
+          end do
+       end if
+    else if (bc(1,2) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_2d: bc(1,2) =',bc(1,2),' for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-y boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(2,1) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! transverse velocity
+          do i=lo(1),hi(1)+1
+             s(i,lo(2)-1) =         -4.d0*s(i,lo(2)  ) &
+                                    +2.d0*s(i,lo(2)+1) &
+                             -(4.d0/5.d0)*s(i,lo(2)+2) &
+                             +(1.d0/7.d0)*s(i,lo(2)+3)
+             s(i,lo(2)-2) =        -30.d0*s(i,lo(2)  ) &
+                                   +20.d0*s(i,lo(2)+1) &
+                                    -9.d0*s(i,lo(2)+2) &
+                            +(12.d0/7.d0)*s(i,lo(2)+3)
+          end do
+       else if (bccomp .eq. 2) then
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       end if
+    else if (bc(2,1) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_2d: bc(2,1) =',bc(2,1),' for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-y boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(2,2) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! transverse velocity
+          do i=lo(1),hi(1)+1
+             s(i,hi(2)+1) =         -4.d0*s(i,hi(2)  ) &
+                                    +2.d0*s(i,hi(2)-1) &
+                             -(4.d0/5.d0)*s(i,hi(2)-2) &
+                             +(1.d0/7.d0)*s(i,hi(2)-3)
+             s(i,hi(2)+2) =        -30.d0*s(i,hi(2)  ) &
+                                   +20.d0*s(i,hi(2)-1) &
+                                    -9.d0*s(i,hi(2)-2) &
+                            +(12.d0/7.d0)*s(i,hi(2)-3)
+          end do
+       else if (bccomp .eq. 2) then
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       end if
+    else if (bc(2,2) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_2d: bc(2,2) =',bc(2,2),' for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+  end subroutine physbc_macvel_ho_2d
+
+  subroutine physbc_macvel_ho_3d(s,ng_s,lo,hi,bc,bccomp,dx)
+
+    integer        , intent(in   ) :: lo(:),hi(:),ng_s
+    real(kind=dp_t), intent(inout) :: s(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:)
+    integer        , intent(in   ) :: bc(:,:)
+    integer        , intent(in   ) :: bccomp
+    real(kind=dp_t), intent(in   ) :: dx(:)
+
+    ! Local variables
+    integer :: i,j,k
+
+    if (bccomp .ne. 1 .and. bccomp .ne. 2 .and. bccomp .ne. 3) then
+       call bl_error('physbc_macvel_ho_3d requires bccomp = 1, 2 or 3')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-x boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(1,1) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       else if (bccomp .eq. 2) then
+          ! transverse velocity
+          do k=lo(3)-ng_s,hi(3)+ng_s
+             do j=lo(2),hi(2)+1
+
+             end do
+          end do
+       else if (bccomp .eq. 3) then
+          ! transverse velocity
+          do k=lo(3),hi(3)+1
+             do j=lo(2)-ng_s,hi(2)+ng_s
+
+             end do
+          end do
+       end if
+    else if (bc(1,1) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_3d: bc(1,1) =',bc(1,1),'for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-x boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(1,2) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       else if (bccomp .eq. 2) then
+          ! transverse velocity
+          do k=lo(3)-ng_s,hi(3)+ng_s
+             do j=lo(2),hi(2)+1
+
+             end do
+          end do
+       else if (bccomp .eq. 3) then
+          ! transverse velocity
+          do k=lo(3),hi(3)+1
+             do j=lo(2)-ng_s,hi(2)+ng_s
+
+             end do
+          end do
+       end if
+    else if (bc(1,2) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_3d: bc(1,2) =',bc(1,2),' for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-y boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(2,1) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! transverse velocity
+          do k=lo(3)-ng_s,hi(3)+ng_s
+             do i=lo(1),hi(1)+1
+
+             end do
+          end do
+       else if (bccomp .eq. 2) then
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       else if (bccomp .eq. 3) then
+          ! transverse velocity
+          do k=lo(3),hi(3)+1
+             do i=lo(1)-ng_s,hi(1)+ng_s
+
+             end do
+          end do
+       end if
+    else if (bc(2,1) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_3d: bc(2,1) =',bc(2,1),' for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-y boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(2,2) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! transverse velocity
+          do k=lo(3)-ng_s,hi(3)+ng_s
+             do i=lo(1),hi(1)+1
+
+             end do
+          end do
+       else if (bccomp .eq. 2) then
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       else if (bccomp .eq. 3) then
+          ! transverse velocity
+          do k=lo(3),hi(3)+1
+             do i=lo(1)-ng_s,hi(1)+ng_s
+
+             end do
+          end do
+       end if
+    else if (bc(2,2) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_3d: bc(2,2) =',bc(2,2),' for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! lo-z boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(3,1) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! transverse velocity
+          do i=lo(1),hi(1)+1
+             do j=lo(2)-ng_s,hi(2)+ng_s
+
+             end do
+          end do
+       else if (bccomp .eq. 2) then
+          ! transverse velocity
+          do i=lo(1)-ng_s,hi(1)+ng_s
+             do j=lo(2),hi(2)+1
+
+             end do
+          end do
+       else if (bccomp .eq. 3) then 
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       end if
+    else if (bc(3,1) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_3d: bc(3,1) =',bc(3,1),' for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+!!!!!!!!!!!!!!!!!!
+! hi-z boundary
+!!!!!!!!!!!!!!!!!!
+
+    if (bc(3,2) .eq. DIR_VEL) then
+       if (bccomp .eq. 1) then
+          ! transverse velocity
+          do i=lo(1),hi(1)+1
+             do j=lo(2)-ng_s,hi(2)+ng_s
+                s(i,j,hi(3)+1:hi(3)+ng_s) = -s(i,j,hi(3))
+                ! higher-order stencil
+                ! s(i,j,hi(3)+1:hi(3)+ng_s) = -2.d0*s(i,j,hi(3)) + (1.d0/3.d0)*s(i,j,hi(3)-1)
+             end do
+          end do
+       else if (bccomp .eq. 2) then
+          ! transverse velocity
+          do i=lo(1)-ng_s,hi(1)+ng_s
+             do j=lo(2),hi(2)+1
+                s(i,j,hi(3)+1:hi(3)+ng_s) = -s(i,j,hi(3))
+                ! higher-order stencil
+                ! s(i,j,hi(3)+1:hi(3)+ng_s) = -2.d0*s(i,j,hi(3)) + (1.d0/3.d0)*s(i,j,hi(3)-1)
+             end do
+          end do
+       else if (bccomp .eq. 3) then
+          ! normal velocity
+          ! shouldn't have to do anything; this case is covered in physbc_domainvel
+       end if
+    else if (bc(3,2) .eq. INTERIOR) then
+       ! either periodic or interior; do nothing
+    else
+       print *,'physbc_macvel_ho_3d: bc(3,2) =',bc(3,2),' for bccomp =',bccomp
+       call bl_error('NOT SUPPORTED')
+    end if
+
+  end subroutine physbc_macvel_ho_3d
+
   subroutine set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time,the_bc_level)
 
     ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -1765,7 +2475,7 @@ contains
           end select
        end do
     end do
-    
+
     call destroy(bpt)
 
   end subroutine set_inhomogeneous_vel_bcs
