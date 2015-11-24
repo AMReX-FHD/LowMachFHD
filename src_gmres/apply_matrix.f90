@@ -50,12 +50,21 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    if (x_u(1,1)%ng .lt. 1) then
-       call bl_error("apply_matrix.f90: x_u needs at least 1 ghost cell")
-    end if
-
-    if (x_p(1)%ng .lt. 1) then
-       call bl_error("apply_matrix.f90: x_p needs at least 1 ghost cell")
+    ! check to make sure x_u and x_p have enough ghost cells
+    if (spatial_order .eq. 2) then
+       if (x_u(1,1)%ng .lt. 1) then
+          call bl_error("apply_matrix.f90: x_u needs at least 1 ghost cell")
+       end if
+       if (x_p(1)%ng .lt. 1) then
+          call bl_error("apply_matrix.f90: x_p needs at least 1 ghost cell")
+       end if
+    else if (spatial_order .eq. 4) then
+       if (x_u(1,1)%ng .lt. 2) then
+          call bl_error("apply_matrix.f90: x_u needs at least 2 ghost cells")
+       end if
+       if (x_p(1)%ng .lt. 2) then
+          call bl_error("apply_matrix.f90: x_p needs at least 2 ghost cells")
+       end if
     end if
 
     ! fill ghost cells for x_u and x_p

@@ -301,13 +301,11 @@ contains
 
   end subroutine compute_grad
 
-
-
   subroutine compute_grad_4o(mla,phi,gradp,dx, &
-                          start_incomp,start_bccomp,start_outcomp,num_comp, &
-                          the_bc_level,increment_bccomp_in)
+                             start_incomp,start_bccomp,start_outcomp,num_comp, &
+                             the_bc_level,increment_bccomp_in)
 
-    ! compute the face-centered gradient of a cell-centered field
+    ! compute the 4th-order face-averaged gradient of a cell-averaged field
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: phi(:)
@@ -447,10 +445,36 @@ contains
 
       ! local
       integer :: i,j,k
-      real(kind=dp_t) :: dxinv,twodxinv
-      
-      dxinv = 1.d0/dx(1)
-      twodxinv = 2.d0*dxinv
+      real(kind=dp_t) :: twelvedxinv
+
+      twelvedxinv = 1.d0/(12.d0*dx(1))
+
+      ! x-faces
+      do k=xlo(3),hi(3)
+      do j=xlo(2),xhi(2)
+      do i=xlo(1),xhi(1)
+         gpx(i,j,k) = ( -phi(i+1,j,k) + 15.d0*phi(i,j,k) - 15.d0*phi(i-1,j,k) + phi(i-2,j,k) ) * twelvedxinv
+      end do
+      end do
+      end do
+
+      ! y-faces
+      do k=ylo(3),yhi(3)
+      do j=ylo(2),yhi(2)
+      do i=ylo(1),yhi(1)
+         gpy(i,j,k) = ( -phi(i,j+1,k) + 15.d0*phi(i,j,k) - 15.d0*phi(i,j-1,k) + phi(i,j-2,k) ) * twelvedxinv
+      end do
+      end do
+      end do
+
+      ! z-faces
+      do k=zlo(3),zhi(3)
+      do j=zlo(2),zhi(2)
+      do i=zlo(1),zhi(1)
+         gpz(i,j,k) = ( -phi(i,j,k+1) + 15.d0*phi(i,j,k) - 15.d0*phi(i,j,k-1) + phi(i,j,k-2) ) * twelvedxinv
+      end do
+      end do
+      end do
 
     end subroutine compute_grad_4o_3d
 
@@ -513,11 +537,11 @@ contains
              select case (dm)
              case (2)
                 call compute_div_2d(pxp(:,:,1,comp), pyp(:,:,1,comp), ng_p, &
-                                    dp(:,:,1,outcomp), ng_d, dx(n,:),lo, hi, increment,tlo,thi)
+                                    dp(:,:,1,outcomp), ng_d, dx(n,:),lo, hi,tlo,thi,increment)
              case (3) 
                 pzp => dataptr(phi_fc(n,3), i)
                 call compute_div_3d(pxp(:,:,:,comp), pyp(:,:,:,comp), pzp(:,:,:,comp), ng_p, &
-                                    dp(:,:,:,outcomp), ng_d, dx(n,:),lo, hi, increment,tlo,thi)
+                                    dp(:,:,:,outcomp), ng_d, dx(n,:),lo, hi,tlo,thi,increment)
              end select
           end do
        end do
@@ -528,7 +552,7 @@ contains
 
   contains
 
-    subroutine compute_div_2d(phix,phiy,ng_p,div,ng_d,dx,lo,hi,increment,tlo,thi)
+    subroutine compute_div_2d(phix,phiy,ng_p,div,ng_d,dx,lo,hi,tlo,thi,increment)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d,tlo(:),thi(:)
       real(kind=dp_t), intent(in   ) :: phix(lo(1)-ng_p:,lo(2)-ng_p:)
@@ -566,7 +590,7 @@ contains
 
     end subroutine compute_div_2d
 
-    subroutine compute_div_3d(phix,phiy,phiz,ng_p,div,ng_d,dx,lo,hi,increment,tlo,thi)
+    subroutine compute_div_3d(phix,phiy,phiz,ng_p,div,ng_d,dx,lo,hi,tlo,thi,increment)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_p,ng_d,tlo(:),thi(:)
       real(kind=dp_t), intent(in   ) :: phix(lo(1)-ng_p:,lo(2)-ng_p:,lo(3)-ng_p:)
