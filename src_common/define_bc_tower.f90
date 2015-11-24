@@ -221,8 +221,8 @@ contains
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet velocity condition
           ! for pressure we use extrapolation
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! normal and transverse velocity
-          adv_bc_level(igrid,d,lohi,pres_bc_comp)                    = FOEXTRAP ! pressure
+          adv_bc_level(igrid,d,lohi,1:dm)         = DIR_VEL  ! normal and transverse velocity
+          adv_bc_level(igrid,d,lohi,pres_bc_comp) = FOEXTRAP ! pressure
 
        else if ( (phys_bc_level(igrid,d,lohi) >= SLIP_START) .and.  (phys_bc_level(igrid,d,lohi) <= SLIP_END) ) then
 
