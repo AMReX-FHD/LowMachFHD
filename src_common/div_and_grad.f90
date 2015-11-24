@@ -471,7 +471,7 @@ contains
       do k=zlo(3),zhi(3)
       do j=zlo(2),zhi(2)
       do i=zlo(1),zhi(1)
-         gpy(i,j,k) = ( -phi(i,j,k+1) + 15.d0*phi(i,j,k) - 15.d0*phi(i,j,k-1) + phi(i,j,k-2) ) * twelvedxinv
+         gpz(i,j,k) = ( -phi(i,j,k+1) + 15.d0*phi(i,j,k) - 15.d0*phi(i,j,k-1) + phi(i,j,k-2) ) * twelvedxinv
       end do
       end do
       end do
