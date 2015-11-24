@@ -1216,12 +1216,12 @@ contains
        case (2)
           bnp => dataptr(beta_ed(1), i)
           call stag_applyop_4o_2d(ppx(:,:,1,1),ppy(:,:,1,1),ng_p, &
-                               lpx(:,:,1,1),lpy(:,:,1,1),ng_l, &
-                               apx(:,:,1,1),apy(:,:,1,1),ng_a, &
-                               bp(:,:,1,1),ng_b, &
-                               bnp(:,:,1,1),ng_e, &
-                               kp(:,:,1,1),ng_g, &
-                               lo,hi,dx,color,xlo,xhi,ylo,yhi)
+                                  lpx(:,:,1,1),lpy(:,:,1,1),ng_l, &
+                                  apx(:,:,1,1),apy(:,:,1,1),ng_a, &
+                                  bp(:,:,1,1),ng_b, &
+                                  bnp(:,:,1,1),ng_e, &
+                                  kp(:,:,1,1),ng_g, &
+                                  lo,hi,dx,color,xlo,xhi,ylo,yhi)
        case (3)
        ppz => dataptr(phi_fc(3), i)
        lpz => dataptr(Lphi_fc(3), i)
@@ -1230,12 +1230,12 @@ contains
        bp2 => dataptr(beta_ed(2), i)
        bp3 => dataptr(beta_ed(3), i)
        call stag_applyop_4o_3d(ppx(:,:,:,1),ppy(:,:,:,1),ppz(:,:,:,1),ng_p, &
-                            lpx(:,:,:,1),lpy(:,:,:,1),lpz(:,:,:,1),ng_l, &
-                            apx(:,:,:,1),apy(:,:,:,1),apz(:,:,:,1),ng_a, &
-                            bp(:,:,:,1),ng_b, &
-                            bp1(:,:,:,1),bp2(:,:,:,1),bp3(:,:,:,1),ng_e, &
-                            kp(:,:,:,1),ng_g, &
-                            lo,hi,dx,color,xlo,xhi,ylo,yhi,zlo,zhi)
+                               lpx(:,:,:,1),lpy(:,:,:,1),lpz(:,:,:,1),ng_l, &
+                               apx(:,:,:,1),apy(:,:,:,1),apz(:,:,:,1),ng_a, &
+                               bp(:,:,:,1),ng_b, &
+                               bp1(:,:,:,1),bp2(:,:,:,1),bp3(:,:,:,1),ng_e, &
+                               kp(:,:,:,1),ng_g, &
+                               lo,hi,dx,color,xlo,xhi,ylo,yhi,zlo,zhi)
 
        end select
     end do
@@ -1252,8 +1252,8 @@ contains
   end subroutine stag_applyop_4o_level
 
   subroutine stag_applyop_4o_2d(phix,phiy,ng_p,Lpx,Lpy,ng_l, &
-                             alphax,alphay,ng_a,beta,ng_b,beta_ed,ng_n, &
-                             gamma,ng_g,glo,ghi,dx,color,xlo,xhi,ylo,yhi)
+                                alphax,alphay,ng_a,beta,ng_b,beta_ed,ng_n, &
+                                gamma,ng_g,glo,ghi,dx,color,xlo,xhi,ylo,yhi)
 
     integer        , intent(in   ) :: glo(:),ghi(:),ng_p,ng_l,ng_a,ng_b,ng_n,ng_g
     integer        , intent(in   ) :: xlo(:),xhi(:),ylo(:),yhi(:)
@@ -1273,7 +1273,7 @@ contains
     integer :: i,j
 
     real(kind=dp_t) :: twelvedxsqinv
-    real(kind=dp_t) :: b,c
+    real(kind=dp_t) :: b
 
     ! coloring parameters
     logical :: do_x, do_y
@@ -1377,8 +1377,8 @@ contains
     ! local
     integer :: i,j,k
 
-    real(kind=dp_t) :: dxsq, onethird, twothirds, fourthirds,dxsqinv
-    real(kind=dp_t) :: b,c
+    real(kind=dp_t) :: twelvedxsqinv
+    real(kind=dp_t) :: b
 
     ! coloring parameters
     logical :: do_x, do_y, do_z
@@ -1403,17 +1403,97 @@ contains
        offset = 2
     end if
 
-    dxsq = dx(1)**2
-    dxsqinv = 1.d0/dxsq
-    onethird = 1.d0/3.d0
-    twothirds = 2.d0/3.d0
-    fourthirds = 4.d0/3.d0
-    
+    twelvedxsqinv = 1.d0 / (12.d0*dx(1)**2)
+
     if (visc_type .eq. 1) then
 
        b = beta(xlo(1),xlo(2),xlo(3))
 
-    else
+       if (do_x) then
+
+          do k=xlo(3),xhi(3)
+             do j=xlo(2),xhi(2)
+                ioff = 0
+                if ( offset .eq. 2 .and. mod(xlo(1)+j+k,2) .ne. mod(color+1,2) ) ioff = 1
+                do i=xlo(1)+ioff,xhi(1),offset
+
+                   Lpx(i,j,k) = (alphax(i,j,k) + 90.d0*b*twelvedxsqinv)*phix(i,j,k) &
+                        -(+ 16.d0*phix(i+1,j  ,k  ) &
+                          + 16.d0*phix(i-1,j  ,k  ) &
+                          -  1.d0*phix(i+2,j  ,k  ) &
+                          -  1.d0*phix(i-2,j  ,k  ) &
+                          + 16.d0*phix(i  ,j+1,k  ) &
+                          + 16.d0*phix(i  ,j-1,k  ) &
+                          -  1.d0*phix(i  ,j+2,k  ) &
+                          -  1.d0*phix(i  ,j-2,k  ) &
+                          + 16.d0*phix(i  ,j  ,k+1) &
+                          + 16.d0*phix(i  ,j  ,k-1) &
+                          -  1.d0*phix(i  ,j  ,k+2) &
+                          -  1.d0*phix(i  ,j  ,k-2) )*b*twelvedxsqinv
+
+                end do
+             end do
+          end do
+
+       end if
+
+       if (do_y) then
+
+          do k=ylo(3),yhi(3)
+             do j=ylo(2),yhi(2)
+                ioff = 0
+                if ( offset .eq. 2 .and. mod(ylo(1)+j+k,2) .ne. mod(color+1,2) ) ioff = 1
+                do i=ylo(1)+ioff,yhi(1),offset
+
+                   Lpy(i,j,k) = (alphay(i,j,k) + 90.d0*b*twelvedxsqinv)*phiy(i,j,k) &
+                        -(+ 16.d0*phiy(i+1,j  ,k  ) &
+                          + 16.d0*phiy(i-1,j  ,k  ) &
+                          -  1.d0*phiy(i+2,j  ,k  ) &
+                          -  1.d0*phiy(i-2,j  ,k  ) &
+                          + 16.d0*phiy(i  ,j+1,k  ) &
+                          + 16.d0*phiy(i  ,j-1,k  ) &
+                          -  1.d0*phiy(i  ,j+2,k  ) &
+                          -  1.d0*phiy(i  ,j-2,k  ) &
+                          + 16.d0*phiy(i  ,j  ,k+1) &
+                          + 16.d0*phiy(i  ,j  ,k-1) &
+                          -  1.d0*phiy(i  ,j  ,k+2) &
+                          -  1.d0*phiy(i  ,j  ,k-2) )*b*twelvedxsqinv
+
+                end do
+             end do
+          end do
+
+       end if
+
+       if (do_z) then
+
+          do k=zlo(3),zhi(3)
+             do j=zlo(2),zhi(2)
+                ioff = 0
+                if ( offset .eq. 2 .and. mod(zlo(1)+j+k,2) .ne. mod(color+1,2) ) ioff = 1
+                do i=zlo(1)+ioff,zhi(1),offset
+
+                   Lpz(i,j,k) = (alphaz(i,j,k) + 90.d0*b*twelvedxsqinv)*phiz(i,j,k) &
+                        -(+ 16.d0*phiz(i+1,j  ,k  ) &
+                          + 16.d0*phiz(i-1,j  ,k  ) &
+                          -  1.d0*phiz(i+2,j  ,k  ) &
+                          -  1.d0*phiz(i-2,j  ,k  ) &
+                          + 16.d0*phiz(i  ,j+1,k  ) &
+                          + 16.d0*phiz(i  ,j-1,k  ) &
+                          -  1.d0*phiz(i  ,j+2,k  ) &
+                          -  1.d0*phiz(i  ,j-2,k  ) &
+                          + 16.d0*phiz(i  ,j  ,k+1) &
+                          + 16.d0*phiz(i  ,j  ,k-1) &
+                          -  1.d0*phiz(i  ,j  ,k+2) &
+                          -  1.d0*phiz(i  ,j  ,k-2) )*b*twelvedxsqinv
+
+                end do
+             end do
+          end do
+
+       end if
+
+    else 
 
        call bl_error("stag_applyop_4o_3d only supports visc_type=1")
 
