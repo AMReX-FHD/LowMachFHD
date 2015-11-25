@@ -22,7 +22,6 @@
 \def\ib  {{\bf i}}
 \def\nb  {{\bf n}}
 \def\Rb  {{\bf R}}
-\def\zb  {{\bf z}}
 \def\mRb {\bm{\mathcal{R}}}
 \def\mZb {\bm{\mathcal{Z}}}
 
@@ -291,7 +290,7 @@ rate in units of (?) for reaction $i$, and $a_0(\nb) = \sum a_i(\nb)$.\\
 {\bf SSA}.  To summarize, if we assume each reaction is a Poisson process, we
 can generate the time that the next reaction will occur using a uniform random
 variable, and then determine which reaction occurred using a separate 
-uniform random variable.  Then, update the state and repeate.\\
+uniform random variable.  Then, update the state and repeat.\\
 
 {\bf Tau Leaping}\\
 
@@ -309,26 +308,22 @@ assumption can be changed later.  The stochastic reactions and diffusive fluxes
 probably aren't treated right in this description yet.
 
 \begin{itemize}
-\item Compute $\nabla\cdot D_k\nabla z_k = 0$ with inhomogeneous number density boundary
+\item Compute $\nabla\cdot D_k\nabla n_k^{\rm steady} = 0$ with inhomogeneous number density boundary
 conditions.
 
-\item Compute deterministic reaction rates, $\Rb(\zb)$.
-
-\item Advance $n_k^n \rightarrow n_k^{(1)}$ by integrating diffusion over $\Delta t/2$:
-\begin{equation}
-\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right) + \Rb(\zb).\label{eq:diffusion_bc}
-\end{equation}
-
-\item Advance $ n_k^{(1)} \rightarrow  n_k^{(2)}$ by integrating 
-reactions over $\Delta t$:
-\begin{equation}
-\frac{\partial n_k}{\partial t} = \mRb(\nb) - \Rb(\zb).
-\end{equation}
-
-\item Advance $ n_k^{(2)} \rightarrow  n_k^{n+1}$ by integrating 
-diffusion (\ref{eq:diffusion_bc}) over $\Delta t/2$.
-
+\item Compute deterministic reaction rates, $\Rb(\nb^{\rm steady})$.
 \end{itemize}
+
+Then use any of the splitting schemes above, but with an additional piecewise-constant
+source term:
+\begin{equation}
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right) + \Rb(\nb^{\rm steady}),\label{eq:Diffusion_bc}
+\end{equation}
+\begin{equation}
+\frac{\partial n_k}{\partial t} = \mRb(\nb) - \Rb(\nb^{\rm steady}).\label{eq:Reactions_bc}
+\end{equation}
+For stochastic reactions with multiple stages, we may want to include the source 
+term contribution at intermediate stages.
 
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
