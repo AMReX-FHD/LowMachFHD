@@ -20,7 +20,7 @@ module probin_gmres_module
   integer   , save :: gmres_max_iter,gmres_min_iter
   real(dp_t), save :: p_norm_weight,scale_factor,mg_rel_tol,stag_mg_omega,stag_mg_rel_tol
   real(dp_t), save :: gmres_rel_tol,gmres_abs_tol
-  integer   , save :: spatial_order
+  integer   , save :: gmres_spatial_order
 
   !------------------------------------------------------------- 
   ! Input parameters controlled via namelist input, with comments
@@ -87,7 +87,7 @@ module probin_gmres_module
   namelist /probin_gmres/ gmres_max_iter        ! max number of gmres iterations
   namelist /probin_gmres/ gmres_min_iter        ! min number of gmres iterations
 
-  namelist /probin_gmres/ spatial_order         ! spatial order of viscous and gradient operators in matrix "A"
+  namelist /probin_gmres/ gmres_spatial_order   ! spatial order of viscous and gradient operators in matrix "A"
   !------------------------------------------------------------- 
 
 contains
@@ -159,7 +159,7 @@ contains
     gmres_max_iter = 100
     gmres_min_iter = 1
 
-    spatial_order = 2
+    gmres_spatial_order = 2
 
     need_inputs = .true.
 
