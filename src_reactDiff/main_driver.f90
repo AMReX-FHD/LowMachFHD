@@ -277,7 +277,7 @@ subroutine main_driver()
       end if
    end if
 
-   ! compute n_steady for splitting_type=3
+   ! compute n_steady for inhomogeneous_bc_fix
    if (inhomogeneous_bc_fix) then
       call compute_n_steady(mla,n_steady,dx,dt,the_bc_tower)
    end if

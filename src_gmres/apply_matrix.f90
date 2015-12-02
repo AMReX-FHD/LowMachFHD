@@ -9,7 +9,7 @@ module apply_matrix_module
   use bc_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
-  use probin_gmres_module, only: spatial_order
+  use probin_gmres_module, only: gmres_spatial_order
 
   implicit none
 
@@ -51,14 +51,14 @@ contains
     dm = mla%dim
 
     ! check to make sure x_u and x_p have enough ghost cells
-    if (spatial_order .eq. 2) then
+    if (gmres_spatial_order .eq. 2) then
        if (x_u(1,1)%ng .lt. 1) then
           call bl_error("apply_matrix.f90: x_u needs at least 1 ghost cell")
        end if
        if (x_p(1)%ng .lt. 1) then
           call bl_error("apply_matrix.f90: x_p needs at least 1 ghost cell")
        end if
-    else if (spatial_order .eq. 4) then
+    else if (gmres_spatial_order .eq. 4) then
        if (x_u(1,1)%ng .lt. 2) then
           call bl_error("apply_matrix.f90: x_u needs at least 2 ghost cells")
        end if
@@ -70,10 +70,10 @@ contains
     ! fill ghost cells for x_u and x_p
     do n=1,nlevs
        call multifab_fill_boundary(x_p(n))
-       if (spatial_order .eq. 2) then
+       if (gmres_spatial_order .eq. 2) then
           call multifab_physbc(x_p(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                                dx_in=dx(n,:))
-       else if (spatial_order .eq. 4) then
+       else if (gmres_spatial_order .eq. 4) then
           call multifab_physbc_ho(x_p(n),1,pres_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                                   dx_in=dx(n,:))
        end if
@@ -85,11 +85,11 @@ contains
                                             the_bc_tower%bc_tower_array(n), &
                                             dx(n,:),vel_bc_n(n,:))
           else
-             if (spatial_order .eq. 2) then
+             if (gmres_spatial_order .eq. 2) then
                 call multifab_physbc_domainvel(x_u(n,i),vel_bc_comp+i-1, &
                                                the_bc_tower%bc_tower_array(n), &
                                                dx(n,:))
-             else if (spatial_order .eq. 4) then
+             else if (gmres_spatial_order .eq. 4) then
                 call multifab_physbc_domainvel_ho(x_u(n,i),vel_bc_comp+i-1, &
                                                   the_bc_tower%bc_tower_array(n), &
                                                   dx(n,:))
@@ -101,11 +101,11 @@ contains
                                          the_bc_tower%bc_tower_array(n), &
                                          dx(n,:),vel_bc_t(n,:))
           else
-             if (spatial_order .eq. 2) then
+             if (gmres_spatial_order .eq. 2) then
                 call multifab_physbc_macvel(x_u(n,i),vel_bc_comp+i-1, &
                                             the_bc_tower%bc_tower_array(n), &
                                             dx(n,:))
-             else if (spatial_order .eq. 4) then
+             else if (gmres_spatial_order .eq. 4) then
                 call multifab_physbc_macvel_ho(x_u(n,i),vel_bc_comp+i-1, &
                                                the_bc_tower%bc_tower_array(n), &
                                                dx(n,:))
@@ -121,16 +121,16 @@ contains
     end do
 
     ! compute b_u = A x_u
-    if (spatial_order .eq. 2) then
+    if (gmres_spatial_order .eq. 2) then
        call stag_applyop(mla,the_bc_tower,x_u,b_u,alpha_fc,beta,beta_ed,gamma,theta_alpha,dx)
-    else if (spatial_order .eq. 4) then
+    else if (gmres_spatial_order .eq. 4) then
        call stag_applyop_4o(mla,the_bc_tower,x_u,b_u,alpha_fc,beta,beta_ed,gamma,theta_alpha,dx)
     end if
 
     ! compute G x_p and add to b_u
-    if (spatial_order .eq. 2) then
+    if (gmres_spatial_order .eq. 2) then
        call compute_grad(mla,x_p,gx_p,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
-    else if (spatial_order .eq. 4) then
+    else if (gmres_spatial_order .eq. 4) then
        call compute_grad_4o(mla,x_p,gx_p,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
     end if
     

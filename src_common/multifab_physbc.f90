@@ -607,11 +607,7 @@ contains
 
     ! Local variables
     integer :: i,j
-    real(kind=dp_t) :: x,y,threeEighths,nineEighths,oneEighth
-
-    threeEighths = 3.d0/8.d0
-    nineEighths = 9.d0/8.d0
-    oneEighth = 1.d0/8.d0
+    real(kind=dp_t) :: x,y
 
 !!!!!!!!!!!!!!!!!!
 ! lo-x boundary
@@ -622,16 +618,16 @@ contains
        x = prob_lo(1)
        do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(lo(1)-1,j) = (    60.d0*inhomogeneous_bc_val_2d(bccomp,x,y) &
-                           -  77.d0*s(lo(1)  ,j) &
-                           +  43.d0*s(lo(1)+1,j) &
-                           -  17.d0*s(lo(1)+2,j) &
-                           +   3.d0*s(lo(1)+3,j) ) / 12.d0
-          s(lo(1)-2,j) = (   300.d0*inhomogeneous_bc_val_2d(bccomp,x,y) &
-                           - 505.d0*s(lo(1)  ,j) &
-                           + 335.d0*s(lo(1)+1,j) &
-                           - 145.d0*s(lo(1)+2,j) &
-                           +  27.d0*s(lo(1)+3,j) ) / 12.d0
+          s(lo(1)-1,j) = ( &
+                           +   5.d0*s(lo(1)  ,j) &
+                           +   9.d0*s(lo(1)+1,j) &
+                           -   5.d0*s(lo(1)+2,j) &
+                           +        s(lo(1)+3,j) ) / 10.d0
+          s(lo(1)-2,j) = ( &
+                           -  15.d0*s(lo(1)  ,j) &
+                           +  29.d0*s(lo(1)+1,j) &
+                           -  15.d0*s(lo(1)+2,j) &
+                           +   3.d0*s(lo(1)+3,j) ) / 2.d0
        end do
     else if (bc(1,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -649,16 +645,16 @@ contains
        x = prob_hi(1)
        do j=lo(2)-ng,hi(2)+ng
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(hi(1)+1,j) = (    60.d0*inhomogeneous_bc_val_2d(bccomp,x,y) &
-                           -  77.d0*s(hi(1)  ,j) &
-                           +  43.d0*s(hi(1)-1,j) &
-                           -  17.d0*s(hi(1)-2,j) &
-                           +   3.d0*s(hi(1)-3,j) ) / 12.d0
-          s(hi(1)+2,j) = (   300.d0*inhomogeneous_bc_val_2d(bccomp,x,y) &
-                           - 505.d0*s(hi(1)  ,j) &
-                           + 335.d0*s(hi(1)-1,j) &
-                           - 145.d0*s(hi(1)-2,j) &
-                           +  27.d0*s(hi(1)-3,j) ) / 12.d0
+          s(hi(1)+1,j) = ( &
+                           +   5.d0*s(hi(1)  ,j) &
+                           +   9.d0*s(hi(1)-1,j) &
+                           -   5.d0*s(hi(1)-2,j) &
+                           +        s(hi(1)-3,j) ) / 10.d0
+          s(hi(1)+2,j) = ( &
+                           -  15.d0*s(hi(1)  ,j) &
+                           +  29.d0*s(hi(1)-1,j) &
+                           -  15.d0*s(hi(1)-2,j) &
+                           +   3.d0*s(hi(1)-3,j) ) / 2.d0
        end do
     else if (bc(1,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -676,7 +672,16 @@ contains
        y = prob_lo(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-
+          s(i,lo(2)-1) = ( &
+                           +   5.d0*s(i,lo(2)  ) &
+                           +   9.d0*s(i,lo(2)+1) &
+                           -   5.d0*s(i,lo(2)+2) &
+                           +        s(i,lo(2)+3) ) / 10.d0
+          s(i,lo(2)-2) = ( &
+                           -  15.d0*s(i,lo(2)  ) &
+                           +  29.d0*s(i,lo(2)+1) &
+                           -  15.d0*s(i,lo(2)+2) &
+                           +   3.d0*s(i,lo(2)+3) ) / 2.d0
        end do
     else if (bc(2,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -694,7 +699,16 @@ contains
        y = prob_hi(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-
+          s(i,hi(2)+1) = ( &
+                           +   5.d0*s(i,hi(2)  ) &
+                           +   9.d0*s(i,hi(2)-1) &
+                           -   5.d0*s(i,hi(2)-2) &
+                           +        s(i,hi(2)-3) ) / 10.d0
+          s(i,hi(2)+2) = ( &
+                           -  15.d0*s(i,hi(2)  ) &
+                           +  29.d0*s(i,hi(2)-1) &
+                           -  15.d0*s(i,hi(2)-2) &
+                           +   3.d0*s(i,hi(2)-3) ) / 2.d0
        end do
     else if (bc(2,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -728,16 +742,16 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2)-ng,hi(2)+ng
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             s(lo(1)-1,j,k) = (    60.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                                -  77.d0*s(lo(1)  ,j,k) &
-                                +  43.d0*s(lo(1)+1,j,k) &
-                                -  17.d0*s(lo(1)+2,j,k) &
-                                +   3.d0*s(lo(1)+3,j,k) ) / 12.d0
-             s(lo(1)-2,j,k) = (   300.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                                - 505.d0*s(lo(1)  ,j,k) &
-                                + 335.d0*s(lo(1)+1,j,k) &
-                                - 145.d0*s(lo(1)+2,j,k) &
-                                +  27.d0*s(lo(1)+3,j,k) ) / 12.d0
+             s(lo(1)-1,j,k) = ( &
+                                +   5.d0*s(lo(1)  ,j,k) &
+                                +   9.d0*s(lo(1)+1,j,k) &
+                                -   5.d0*s(lo(1)+2,j,k) &
+                                +        s(lo(1)+3,j,k) ) / 10.d0
+             s(lo(1)-2,j,k) = ( &
+                                -  15.d0*s(lo(1)  ,j,k) &
+                                +  29.d0*s(lo(1)+1,j,k) &
+                                -  15.d0*s(lo(1)+2,j,k) &
+                                +   3.d0*s(lo(1)+3,j,k) ) / 2.d0
           end do
        end do
     else if (bc(1,1) .eq. INTERIOR) then
@@ -758,16 +772,16 @@ contains
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do j=lo(2)-ng,hi(2)+ng
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-             s(hi(1)+1,j,k) = (    60.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                                -  77.d0*s(hi(1)  ,j,k) &
-                                +  43.d0*s(hi(1)-1,j,k) &
-                                -  17.d0*s(hi(1)-2,j,k) &
-                                +   3.d0*s(hi(1)-3,j,k) ) / 12.d0
-             s(hi(1)+2,j,k) = (   300.d0*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
-                                - 505.d0*s(hi(1)  ,j,k) &
-                                + 335.d0*s(hi(1)-1,j,k) &
-                                - 145.d0*s(hi(1)-2,j,k) &
-                                +  27.d0*s(hi(1)-3,j,k) ) / 12.d0
+             s(hi(1)+1,j,k) = ( &
+                                +   5.d0*s(hi(1)  ,j,k) &
+                                +   9.d0*s(hi(1)-1,j,k) &
+                                -   5.d0*s(hi(1)-2,j,k) &
+                                +        s(hi(1)-3,j,k) ) / 10.d0
+             s(hi(1)+2,j,k) = ( &
+                                -  15.d0*s(hi(1)  ,j,k) &
+                                +  29.d0*s(hi(1)-1,j,k) &
+                                -  15.d0*s(hi(1)-2,j,k) &
+                                +   3.d0*s(hi(1)-3,j,k) ) / 2.d0
           end do
        end do
     else if (bc(1,2) .eq. INTERIOR) then
