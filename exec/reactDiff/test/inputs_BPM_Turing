@@ -102,6 +102,9 @@
   splitting_type = 1 ! 0=D + R
                      ! 1=(1/2)R + D + (1/2)R
                      ! 2=(1/2)D + R + (1/2)D
+                     ! 3=no splitting, euler
+                     ! 4=no splitting, explicit midpoint predictor-corrector
+                     ! (for splitting type=3 and 4, no diffusion_type and reaction_type are used)
 
   avg_type = 3 ! compute n on faces for stochastic weighting
                ! 1=arithmetic, 2=geometric, 3=harmonic

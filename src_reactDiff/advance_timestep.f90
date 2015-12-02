@@ -89,7 +89,7 @@ contains
        ! no splitting
        ! explicit midpoint predictor-corrector scheme
 
-       call advance_explicit_midpoint(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in=fz)
+       call advance_explicit_midpoint(mla,n_old,n_new,dx,dt,the_bc_tower)
 
     case default
        call bl_error("advance_timestep: invalid splitting_type")
