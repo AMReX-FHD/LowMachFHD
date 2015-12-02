@@ -6,6 +6,12 @@
 \usepackage{epsfig}
 \usepackage{bm}
 
+% for smaller margins
+\usepackage{fullpage}
+
+% to use \split, \align etc.
+\usepackage{amsmath}
+
 % total number of floats allowed on a page
 \setcounter{totalnumber}{100}
 
@@ -24,6 +30,7 @@
 \def\Rb  {{\bf R}}
 \def\mRb {\bm{\mathcal{R}}}
 \def\mZb {\bm{\mathcal{Z}}}
+\def\mPb {\bm{\mathcal{P}}}
 
 \def\half   {\frac{1}{2}}
 \def\myhalf {\sfrac{1}{2}}
@@ -295,6 +302,69 @@ uniform random variable.  Then, update the state and repeat.\\
 {\bf Tau Leaping}\\
 
 {\bf CLE}
+
+\section{Non-Splitting Schemes}
+
+\subsection{Euler Scheme}
+
+To introduce notations for the reaction part, we first consider the Euler scheme.
+The index $i$ is used for the $i$-th reaction.
+The factor $\nu_{i,k}$ denotes the stoichiometric factor of species $k$ in reaction $i$.
+As introduced above, $a_i(\nb)$ is the deterministic reaction rate of reaction $i$.
+Hence, given $\nb$, the crudest approximation for the average number of reactions 
+in a volume $\Delta V$ during a time interval $\Delta t$ for reaction $i$ is
+$a_i(\nb)\Delta V\Delta t$.
+$\mPb(N)$ denotes a random number obeying the Poisson distribution with mean $N$.
+By emplying a set of independent random numbers $\{\mPb_i\}$, we express the Euler scheme as follows:
+\begin{equation}
+n_k^{n+1} = n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^n
++ \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}}\mZb^{(1)}\right)
++\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\Delta t\right).
+\end{equation}
+
+\subsection{Explicit Midpoint Scheme}
+
+By combining the explicit midpoint scheme for diffusion given in the previous section
+with $\theta$-trapezoidal $\tau$-leaping scheme proposed in Ref.~\cite{HuLiMin2011} with $\theta=\frac{1}{2}$,
+we obtain the following scheme:
+\begin{equation}
+n_k^{n+\myhalf} = n_k^n + \frac{\Delta t}{2} \nabla\cdot\left(D_k\nabla n_k^n
++ \sqrt{\frac{2 D_k n_k^n}{(\Delta t/2)\Delta V}}\mZb^{(1)}\right)
++\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\frac{\Delta t}{2}\right),
+\end{equation}
+\begin{equation}
+\begin{split}
+n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
++ \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}}\left[\frac{\mZb^{(1)}+\mZb^{(2)}}{\sqrt{2}}\right]\right)\\
+&+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
+\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\frac{\Delta t}{2}\right)
++\mPb^{(2)}_i\left(\left[2 a_i\left(\nb^{n+\myhalf}\right)-a_i\left(\nb^n\right)\right]\Delta V\frac{\Delta t}{2}\right)\right\}.
+\end{split}
+\end{equation}
+As in the previous section, there are two other possibilities for the discretization of the stochastic flux:
+\begin{equation}
+\begin{split}
+n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
++\sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
++\sqrt{\frac{2 D_k n_k^{n+\myhalf}}{\delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
+\right)\\
+&+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
+\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\frac{\Delta t}{2}\right)
++\mPb^{(2)}_i\left(\left[2 a_i\left(\nb^{n+\myhalf}\right)-a_i\left(\nb^n\right)\right]\Delta V\frac{\Delta t}{2}\right)\right\},
+\end{split}
+\end{equation}
+\begin{equation}
+\begin{split}
+n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
++ \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
++ \sqrt{\frac{2 D_k \left( 2 n_k^{n+\myhalf} - n_k \right) }{\delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
+\right)\\
+&+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
+\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\frac{\Delta t}{2}\right)
++\mPb^{(2)}_i\left(\left[2 a_i\left(\nb^{n+\myhalf}\right)-a_i\left(\nb^n\right)\right]\Delta V\frac{\Delta t}{2}\right)\right\}.
+\end{split}
+\end{equation}
+
 
 \section{Inhomogeneous Boundary Conditions}
 In order to handle inhomogeneous boundary conditions correctly within a second-order
