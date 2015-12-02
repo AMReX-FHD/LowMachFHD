@@ -145,15 +145,20 @@ subroutine main_driver()
 
   ! set grid spacing at each level
   ! the grid spacing is the same in each direction
-  dx(1,1:dm) = (prob_hi(1)-prob_lo(1)) / n_cells(1:dm)
+  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
+  if (parallel_IOProcessor()) then 
+    write(*,*) "dx/dy/dz=", dx(1,1:dm)
+  end if  
   select case (dm) 
     case(2)
       if (dx(1,1) .ne. dx(1,2)) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+        !call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+        if (parallel_IOProcessor()) write(*,*) "WARNING: dx!=dy"
       end if    
     case(3)
       if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+        !call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+        if (parallel_IOProcessor()) write(*,*) "WARNING: dx!=dy!=dz"
       end if    
     case default
       call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
