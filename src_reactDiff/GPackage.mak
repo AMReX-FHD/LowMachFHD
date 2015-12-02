@@ -14,4 +14,4 @@ f90sources += stochastic_n_fluxdiv.f90
 f90sources += write_plotfile_n.f90
 f90sources += simulate_reaction.f90
 f90sources += advance_euler.f90
-#f90sources += advance_explicit_midpoint.f90
+f90sources += advance_explicit_midpoint.f90

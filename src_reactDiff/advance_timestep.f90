@@ -5,7 +5,7 @@ module advance_timestep_module
   use advance_diffusion_module
   use advance_reaction_module
   use advance_euler_module
-!  use advance_explicit_midpoint_module
+  use advance_explicit_midpoint_module
   use multifab_physbc_module
   use bc_module
   use probin_reactdiff_module, only: nspecies, splitting_type, n_bc, reaction_type, &
@@ -85,11 +85,11 @@ contains
 
        call advance_euler(mla,n_old,n_new,dx,dt,the_bc_tower)
 
-!!!    case(4)
-!!!       ! no splitting
-!!!       ! explicit midpoint predictor-corrector scheme
-!!!
-!!!       call advance_explicit_midpoint(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in=fz)
+    case(4)
+       ! no splitting
+       ! explicit midpoint predictor-corrector scheme
+
+       call advance_explicit_midpoint(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in=fz)
 
     case default
        call bl_error("advance_timestep: invalid splitting_type")

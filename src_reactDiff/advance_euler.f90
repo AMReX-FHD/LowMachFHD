@@ -18,7 +18,7 @@ module advance_euler_module
 
 contains
 
-  subroutine advance_euler (mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in)
+  subroutine advance_euler(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
@@ -59,7 +59,7 @@ contains
       call multifab_build(ext_src(n),mla%la(n),nspecies,0)
       call multifab_build(diff_fluxdiv(n),mla%la(n),nspecies,0)
       call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0)
-      call multifab_build(n_react(n),mla%la(n),nspecies)
+      call multifab_build(n_react(n),mla%la(n),nspecies,0)
     end do
 
     ! set diffusion coefficients
