@@ -899,7 +899,9 @@ contains
       elseif ( (abs(prob_sol)==20) .and. (abs(prob_coeff)==1) ) then 
          ! random rhs, Driven cavity BC
 
-         call UniformRNG(val)
+         !call UniformRNG(val) ! This seems a left-over from testing an does not quite work
+         ! Values on wall faces must be set to zero
+         val=0
 
       elseif ( abs(prob_sol)==100 ) then 
 
@@ -1228,11 +1230,13 @@ contains
       elseif ( (abs(prob_sol)==20) .and. (abs(prob_coeff)==1) ) then 
          ! random rhs, Driven cavity BC
 
-         call UniformRNG(val)
+         !call UniformRNG(val) ! This seems a left-over from testing an does not quite work
+         ! Values on wall faces must be set to zero
+         val = 0
 
       elseif ( abs(prob_sol)==100 ) then 
 
-         call UniformRNG(val)
+         call UniformRNG(val)         
 
       else 
 

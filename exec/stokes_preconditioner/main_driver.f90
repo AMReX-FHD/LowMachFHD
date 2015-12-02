@@ -336,6 +336,9 @@ subroutine main_driver()
   else
      ! initialize rhs_u and rhs_p with a subroutine
      call init_rhs(mla,rhs_u,rhs_p,dx,time,the_bc_tower%bc_tower_array)
+     ! Donev: The right-hand side is not necessarily in the range of the operator when created this way
+     ! For one thing one must set values on faces to zero since there cannot be a force exerted on non-DOFs
+     ! FIX ME
   end if 
 
   if (plot_int .gt. 0) then
