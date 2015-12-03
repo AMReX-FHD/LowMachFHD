@@ -555,6 +555,7 @@ contains
              call multifab_destroy(beta_ed_fancy(1,3))
           end if
           call bc_tower_destroy(the_bc_tower_fancy)
+          deallocate(beta_ed_fancy)
 
        else
 
