@@ -152,13 +152,13 @@ subroutine main_driver()
   select case (dm) 
     case(2)
       if (dx(1,1) .ne. dx(1,2)) then
-        !call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-        if (parallel_IOProcessor()) write(*,*) "WARNING: dx!=dy"
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+        !if (parallel_IOProcessor()) write(*,*) "WARNING: dx!=dy"
       end if    
     case(3)
       if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-        !call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-        if (parallel_IOProcessor()) write(*,*) "WARNING: dx!=dy!=dz"
+        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+        !if (parallel_IOProcessor()) write(*,*) "WARNING: dx!=dy!=dz"
       end if    
     case default
       call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')

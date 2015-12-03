@@ -905,7 +905,7 @@ contains
 
       elseif ( abs(prob_sol)==100 ) then 
 
-         call UniformRNG(val)
+         if(comp<3) call UniformRNG(val)
 
       else 
 
@@ -1236,7 +1236,7 @@ contains
 
       elseif ( abs(prob_sol)==100 ) then 
 
-         call UniformRNG(val)         
+         if(comp<4) call UniformRNG(val)         
 
       else 
 
