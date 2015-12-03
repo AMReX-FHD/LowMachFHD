@@ -336,9 +336,14 @@ subroutine main_driver()
   else
      ! initialize rhs_u and rhs_p with a subroutine
      call init_rhs(mla,rhs_u,rhs_p,dx,time,the_bc_tower%bc_tower_array)
-     ! Donev: The right-hand side is not necessarily in the range of the operator when created this way
+     ! The right-hand side is not necessarily in the range of the operator when created this way
      ! For one thing one must set values on faces to zero since there cannot be a force exerted on non-DOFs
-     ! FIX ME
+     do n=1,nlevs
+        do i=1,dm
+           call multifab_physbc_domainvel(rhs_u(n,i),i,the_bc_tower%bc_tower_array(n), &
+                                          dx(n,:))
+        end do
+     end do
   end if 
 
   if (plot_int .gt. 0) then
