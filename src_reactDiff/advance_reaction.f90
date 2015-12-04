@@ -33,7 +33,7 @@ contains
   ! To model stochastic particle production (sources) include g in the definition of f instead.
   ! If return_rates_in=0 (or not present), the code returns time-advanced n in the 'n_new' field.
   ! If return_rates_in=1, the code returns the deterministic rates.
-  ! (not yet implemented) If return_rates_in=2, the code returns the stochastic rates sampled by using random numbers specified by use_Poisson_rng.
+  ! If return_rates_in=2, the code returns the stochastic rates sampled by using random numbers specified by use_Poisson_rng.
   ! Note that chemical *production* rate (per species) is
   ! the sum over reactions of chemical *reaction* rates (per reaction) times the stochiometric coefficients
   subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,return_rates_in,ext_src_in)
@@ -73,24 +73,12 @@ contains
     if(present(return_rates_in)) return_rates=return_rates_in
 
     ! check
-    select case(return_rates)
-    case(0)
-       ! ok
-    case(1)
-       if (present(ext_src_in)) then
-          call bl_error("advance_reaction: return_rates=1 with an external source not implemented")
-       end if
-    case(2)
-       if (present(ext_src_in)) then
-          call bl_error("advance_reaction: return_rates=2 with an external source not implemented")
-       end if
-    case default
-       call bl_error("advance_reaction: invalid return_rates_in")
-    end select
+    if(present(ext_src_in) .and. (return_rates .eq. 1 .or. return_rates .eq. 2)) then
+       call bl_error("advance_reaction: return_rates>=1 with an external source not implemented")
+    end if
 
-    ! temporary
-    if (return_rates .eq. 2) then
-       call bl_error("advance_reaction: return_rates=2 has not been implemented yet")
+    if(return_rates .lt. 0 .or. return_rates .gt. 2) then
+       call bl_error("advance_reaction: invalid return_rates_in")
     end if
 
     ! There are no reactions to process!
@@ -237,14 +225,35 @@ contains
     integer :: n_steps_SSA
     
     ! compute reaction rates only in units of (number density) / time
-    if(return_rates .eq. 1) then
+    if(return_rates .eq. 1) then  ! deterministic rates case
        call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
+
        n_new = 0.d0
        do reaction=1,nreactions
           n_new(1:nspecies) = n_new(1:nspecies) + avg_reactions(reaction) * &
              (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
        end do
+
        return
+
+    else if(return_rates .eq. 2) then  !stochastic rates case
+       call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
+
+       ! compute mean number of events over the time step
+       avg_reactions = max(0.0d0, avg_reactions*dt*dv)
+
+       ! sampling
+       n_new = 0.d0
+       do reaction=1,nreactions
+          ! compute num_reactions(reaction)
+          call sample_num_reactions(reaction)
+          ! after loop, n_new will have stochastic rates (in units of (number density) / time)  
+          n_new(1:nspecies) = n_new(1:nspecies) + num_reactions(reaction)/dv/dt * &
+             (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
+       end do
+
+       return
+
     end if
 
     ! copy old state into new
