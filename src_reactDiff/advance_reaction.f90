@@ -30,23 +30,21 @@ contains
   ! This solves dn/dt = f(n) - g (note the minus sign for g)
   ! where f(n) are the chemical production rates (deterministic or stochastic)
   ! and g=ext_src_in is an optional, constant (in time) *deterministic* source term.
-  ! To model stochastic particle production (sources) include g in the definition of f instead
-  ! Unless return_rates_in is present, the code returns time-advanced n in the 'n_new' field
-  ! If return_rates_in=-1, the code returns the deterministic rates.
-  ! (not yet implemented) If return_rates_in=0, the code returns the stochastic rates sampled by using the Gaussian random numbers.
-  ! (not yet implemented) If return_rates_in=1, the code returns the stochastic rates sampled by using the Poisson random numbers.
-  ! Hence, the routine can be called with "return_rates_in = use_Poisson_rng".
+  ! To model stochastic particle production (sources) include g in the definition of f instead.
+  ! If return_rates_in=0 (or not present), the code returns time-advanced n in the 'n_new' field.
+  ! If return_rates_in=1, the code returns the deterministic rates.
+  ! (not yet implemented) If return_rates_in=2, the code returns the stochastic rates sampled by using random numbers specified by use_Poisson_rng.
   ! Note that chemical *production* rate (per species) is
   ! the sum over reactions of chemical *reaction* rates (per reaction) times the stochiometric coefficients
   subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,return_rates_in,ext_src_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
-    type(multifab) , intent(inout) :: n_new(:) ! unless return_rates_in is present, return new state
-                                               ! if return_rates_in is specified, return rates
+    type(multifab) , intent(inout) :: n_new(:) ! if return_rates_in=0 or not present, return new state
+                                               ! if return_rates_in=1 or 2, return rates
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    integer , intent(in), optional :: return_rates_in
+    integer, intent(in), optional  :: return_rates_in
     type(multifab) , intent(in   ), optional :: ext_src_in(:)
 
     ! local
@@ -71,28 +69,37 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
     
-    ! setting -2 as a default value may not be so fancy.
-    ! (any value other than the assigned case values for use_Poisson_rng (-1/0/1) will work.)
-    ! latter, if we can change the values of use_Poisson_rng,
-    ! then we may change the default value accordingly.
-    return_rates=-2
+    return_rates=0
     if(present(return_rates_in)) return_rates=return_rates_in
 
-    if (return_rates .eq. -1 .and. present(ext_src_in)) then
-       call bl_error("advance_reaction: return_rates=-1 with an external source not implemented")
-    end if
+    ! check
+    select case(return_rates)
+    case(0)
+       ! ok
+    case(1)
+       if (present(ext_src_in)) then
+          call bl_error("advance_reaction: return_rates=1 with an external source not implemented")
+       end if
+    case(2)
+       if (present(ext_src_in)) then
+          call bl_error("advance_reaction: return_rates=2 with an external source not implemented")
+       end if
+    case default
+       call bl_error("advance_reaction: invalid return_rates_in")
+    end select
 
-    if (return_rates .eq. 0 .or. return_rates .eq. 1) then
-       call bl_error("advance_reaction: return_rates=0 or 1 have not been implemented yet")
+    ! temporary
+    if (return_rates .eq. 2) then
+       call bl_error("advance_reaction: return_rates=2 has not been implemented yet")
     end if
 
     ! There are no reactions to process!
     if(nreactions<1) then
        do n=1,nlevs
-          if(present(return_rates_in)) then
-             call setval(n_new(n),0.d0,all=.true.)
-          else   
+          if(return_rates .eq. 0) then
              call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
+          else   
+             call setval(n_new(n),0.d0,all=.true.)
           end if   
        end do
        return
@@ -155,7 +162,7 @@ contains
        call multifab_destroy(ext_src(n))
     end do
 
-    if(present(return_rates_in)) return ! We are done
+    if(return_rates .eq. 1 .or. return_rates .eq. 2) return ! We are done
     
     ! Ensure ghost cells are consistent or n_new
     do n=1,nlevs
@@ -230,7 +237,7 @@ contains
     integer :: n_steps_SSA
     
     ! compute reaction rates only in units of (number density) / time
-    if(return_rates .eq. -1) then
+    if(return_rates .eq. 1) then
        call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
        n_new = 0.d0
        do reaction=1,nreactions
@@ -383,8 +390,11 @@ contains
               ! Need a Gaussian random number for CLE
               call NormalRNG(num_reactions(comp))
               num_reactions(comp) = avg_reactions(comp) + sqrt(avg_reactions(comp))*num_reactions(comp)
-           case default ! Do deterministic chemistry   
+           case(-1)
+               ! Do deterministic chemistry   
               num_reactions(comp) = avg_reactions(comp)
+           case default    
+              call bl_error("advance_reaction: invalid use_Poisson_rng")
            end select
         else
            num_reactions(comp) = 0
