@@ -31,19 +31,22 @@ contains
   ! where f(n) are the chemical production rates (deterministic or stochastic)
   ! and g=ext_src_in is an optional, constant (in time) *deterministic* source term.
   ! To model stochastic particle production (sources) include g in the definition of f instead
-  ! If return_rates_in=F the code returns time-advanced n in the 'n_new' field
-  ! If return_rates_in=T the code returns f(n) in the 'n_new' field
+  ! Unless return_rates_in is present, the code returns time-advanced n in the 'n_new' field
+  ! If return_rates_in=-1, the code returns the deterministic rates.
+  ! (not yet implemented) If return_rates_in=0, the code returns the stochastic rates sampled by using the Gaussian random numbers.
+  ! (not yet implemented) If return_rates_in=1, the code returns the stochastic rates sampled by using the Poisson random numbers.
+  ! Hence, the routine can be called with "return_rates_in = use_Poisson_rng".
   ! Note that chemical *production* rate (per species) is
   ! the sum over reactions of chemical *reaction* rates (per reaction) times the stochiometric coefficients
   subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,return_rates_in,ext_src_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
-    type(multifab) , intent(inout) :: n_new(:) ! if return_rates_in=F, return new state
-                                               ! if return_rates_in=T, return rates
+    type(multifab) , intent(inout) :: n_new(:) ! unless return_rates_in is present, return new state
+                                               ! if return_rates_in is specified, return rates
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    logical , intent(in), optional :: return_rates_in
+    integer , intent(in), optional :: return_rates_in
     type(multifab) , intent(in   ), optional :: ext_src_in(:)
 
     ! local
@@ -63,22 +66,30 @@ contains
 
     type(bl_prof_timer),save :: bpt
     
-    logical :: return_rates ! Should we do an actual time step or just compute the chemical rates?
+    integer :: return_rates ! Should we do an actual time step or compute the chemical rates?
     
     nlevs = mla%nlevel
     dm = mla%dim
     
-    return_rates=.false.
+    ! setting -2 as a default value may not be so fancy.
+    ! (any value other than the assigned case values for use_Poisson_rng (-1/0/1) will work.)
+    ! latter, if we can change the values of use_Poisson_rng,
+    ! then we may change the default value accordingly.
+    return_rates=-2
     if(present(return_rates_in)) return_rates=return_rates_in
 
-    if (return_rates .and. present(ext_src_in)) then
-       call bl_error("advance_reaction: return_rates=T with an external source not implemented")
+    if (return_rates .eq. -1 .and. present(ext_src_in)) then
+       call bl_error("advance_reaction: return_rates=-1 with an external source not implemented")
+    end if
+
+    if (return_rates .eq. 0 .or. return_rates .eq. 1) then
+       call bl_error("advance_reaction: return_rates=0 or 1 have not been implemented yet")
     end if
 
     ! There are no reactions to process!
     if(nreactions<1) then
        do n=1,nlevs
-          if(return_rates) then
+          if(present(return_rates_in)) then
              call setval(n_new(n),0.d0,all=.true.)
           else   
              call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng) ! make sure n_new contains the new state
@@ -144,7 +155,7 @@ contains
        call multifab_destroy(ext_src(n))
     end do
 
-    if(return_rates) return ! We are done
+    if(present(return_rates_in)) return ! We are done
     
     ! Ensure ghost cells are consistent or n_new
     do n=1,nlevs
@@ -165,7 +176,7 @@ contains
     real(kind=dp_t), intent(inout) ::   n_new(glo(1)-ng_n:,glo(2)-ng_n:,:)
     real(kind=dp_t), intent(inout) :: ext_src(glo(1)-ng_e:,glo(2)-ng_e:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
-    logical, intent(in) :: return_rates
+    integer, intent(in) :: return_rates
     
     ! local
     integer :: i,j
@@ -186,7 +197,7 @@ contains
     real(kind=dp_t), intent(inout) ::   n_new(glo(1)-ng_n:,glo(2)-ng_n:,glo(3)-ng_n:,:)
     real(kind=dp_t), intent(inout) :: ext_src(glo(1)-ng_e:,glo(2)-ng_e:,glo(3)-ng_e:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
-    logical, intent(in) :: return_rates
+    integer, intent(in) :: return_rates
     
     ! local
     integer :: i,j,k
@@ -208,7 +219,7 @@ contains
     real(kind=dp_t), intent(inout) :: n_new(:)
     real(kind=dp_t), intent(in   ) :: ext_src(:)
     real(kind=dp_t), intent(in   ) :: dv,dt
-    logical, intent(in) :: return_rates
+    integer, intent(in) :: return_rates
 
     real(kind=dp_t) :: avg_reactions     (1:nreactions)
     real(kind=dp_t) :: avg_reactions_pred(1:nreactions)
@@ -219,7 +230,7 @@ contains
     integer :: n_steps_SSA
     
     ! compute reaction rates only in units of (number density) / time
-    if(return_rates) then
+    if(return_rates .eq. -1) then
        call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
        n_new = 0.d0
        do reaction=1,nreactions
