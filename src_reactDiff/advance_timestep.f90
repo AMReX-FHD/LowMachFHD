@@ -49,7 +49,7 @@ contains
        ! store reactions rates for n_steady in Rn_steady
        ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
        ! returning an explicit rate in units of number_density/time
-       call advance_reaction(mla,n_steady,Rn_steady,dx,dt,the_bc_tower,return_rates_in=.true.)
+       call advance_reaction(mla,n_steady,Rn_steady,dx,dt,the_bc_tower,return_rates_in=-1)
 
     end if
 
