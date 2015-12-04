@@ -10,11 +10,13 @@ module probin_charged_module
   logical            :: use_charged_fluid
   real(kind=dp_t)    :: dielectric_const
   real(kind=dp_t)    :: charge_per_mass(max_species)
+  real(kind=dp_t)    :: Epot_wall(1:2,1:3)
   
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
   namelist /probin_charged/ dielectric_const
   namelist /probin_charged/ charge_per_mass
+  namelist /probin_charged/ Epot_wall
 
 contains
 
@@ -39,6 +41,7 @@ contains
     use_charged_fluid = .false.
     dielectric_const = 1.d0
     charge_per_mass(:) = 0.d0
+    Epot_wall(:,:)     = 0.d0
  
     ! read from input file 
     need_inputs = .true.
