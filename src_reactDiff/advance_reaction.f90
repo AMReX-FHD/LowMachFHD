@@ -36,7 +36,11 @@ contains
   ! If return_rates_in=2, the code returns the stochastic rates sampled by using random numbers specified by use_Poisson_rng.
   ! Note that chemical *production* rate (per species) is
   ! the sum over reactions of chemical *reaction* rates (per reaction) times the stochiometric coefficients
-  subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,return_rates_in,ext_src_in)
+  ! The optional argument n_pred_mattingly is for the second step of (unsplitting) Mattingly's scheme.
+  ! For return_rates_in=2, if n_pred_mattingly is present, rates are sampled from the average reaction rates 2*a(n_pred_mattingly)-a(n_old).
+  ! (cf. otherwisze, they are sampled from a(n_old).)
+
+  subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,return_rates_in,ext_src_in,n_pred_mattingly)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
@@ -46,15 +50,17 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer, intent(in), optional  :: return_rates_in
     type(multifab) , intent(in   ), optional :: ext_src_in(:)
+    type(multifab) , intent(in   ), optional :: n_pred_mattingly(:)
 
     ! local
-    integer :: n,nlevs,dm,i,ng_o,ng_n,ng_e
+    integer :: n,nlevs,dm,i,ng_o,ng_n,ng_e,ng_p
     integer :: lo(mla%dim),hi(mla%dim)
     real(kind=dp_t) :: dv
 
-    real(kind=dp_t), pointer :: op(:,:,:,:)
-    real(kind=dp_t), pointer :: np(:,:,:,:)
-    real(kind=dp_t), pointer :: ep(:,:,:,:)
+    real(kind=dp_t), pointer :: op(:,:,:,:) ! for n_old
+    real(kind=dp_t), pointer :: np(:,:,:,:) ! for n_new
+    real(kind=dp_t), pointer :: ep(:,:,:,:) ! for ext_src
+    real(kind=dp_t), pointer :: pp(:,:,:,:) ! for n_pred_mattingly
 
     type(mfiter) :: mfi
     type(box) :: tilebox
@@ -66,11 +72,22 @@ contains
     
     integer :: return_rates ! Should we do an actual time step or compute the chemical rates?
     
+    logical :: is_mattingly_2nd_step ! true only if return_rates_in=2 and present(n_pred_mattingly)
+
     nlevs = mla%nlevel
     dm = mla%dim
     
     return_rates=0
     if(present(return_rates_in)) return_rates=return_rates_in
+
+    is_mattingly_2nd_step = .false.
+    if(present(n_pred_mattingly)) then
+       if(return_rates .eq. 2) then
+          is_mattingly_2nd_step = .true.
+       else
+          call bl_error("advance_reaction: n_pred_mattingly can be given only with return_rates=2")
+       end if
+    end if
 
     ! check
     if(present(ext_src_in) .and. (return_rates .eq. 1 .or. return_rates .eq. 2)) then
@@ -113,6 +130,12 @@ contains
     ng_n = n_new(1)%ng
     ng_e = ext_src(1)%ng
 
+    if (is_mattingly_2nd_step) then
+       ng_p = n_pred_mattingly(1)%ng
+    else
+       ng_p = n_old(1)%ng ! won't be used
+    end if
+
     dv = product(dx(1,1:dm))
     if (dm<3) dv = dv*cross_section
 
@@ -132,15 +155,24 @@ contains
           op => dataptr(n_old(n),i)
           np => dataptr(n_new(n),i)
           ep => dataptr(ext_src(n),i)
+
+          if (is_mattingly_2nd_step) then
+             pp => dataptr(n_pred_mattingly(n),i)
+          else
+             pp => dataptr(n_old(n),i) ! won't be used
+          end if
+
           lo = lwb(get_box(n_new(n),i))
           hi = upb(get_box(n_new(n),i))
           select case (dm)
           case (2)
              call advance_reaction_2d(op(:,:,1,:),ng_o,np(:,:,1,:),ng_n,ep(:,:,1,:),ng_e, &
-                                      lo,hi,tlo,thi,dv,dt,return_rates)
+                                      lo,hi,tlo,thi,dv,dt,return_rates,                   &
+                                      is_mattingly_2nd_step,pp(:,:,1,:),ng_p)
           case (3)
              call advance_reaction_3d(op(:,:,:,:),ng_o,np(:,:,:,:),ng_n,ep(:,:,:,:),ng_e, &
-                                      lo,hi,tlo,thi,dv,dt,return_rates)
+                                      lo,hi,tlo,thi,dv,dt,return_rates,                   &
+                                      is_mattingly_2nd_step,pp(:,:,:,:),ng_p)
           end select
        end do
     end do
@@ -164,35 +196,44 @@ contains
   end subroutine advance_reaction
   
   
-  subroutine advance_reaction_2d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt,return_rates)
+  subroutine advance_reaction_2d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt,return_rates, &
+                                 is_mattingly_2nd_step,n_pred_mattingly,ng_p)
 
     integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n,ng_e
     real(kind=dp_t), intent(in   ) ::   n_old(glo(1)-ng_o:,glo(2)-ng_o:,:)
     real(kind=dp_t), intent(inout) ::   n_new(glo(1)-ng_n:,glo(2)-ng_n:,:)
     real(kind=dp_t), intent(inout) :: ext_src(glo(1)-ng_e:,glo(2)-ng_e:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
-    integer, intent(in) :: return_rates
+    integer,         intent(in   ) :: return_rates
+    logical,         intent(in   ) :: is_mattingly_2nd_step
+    integer        , intent(in   ) :: ng_p
+    real(kind=dp_t), intent(in   ) :: n_pred_mattingly(glo(1)-ng_p:,glo(2)-ng_p:,:)
     
     ! local
     integer :: i,j
 
     do j=tlo(2),thi(2)
     do i=tlo(1),thi(1)
-       call advance_reaction_cell(n_old(i,j,1:nspecies), n_new(i,j,1:nspecies), &
-                                  ext_src(i,j,1:nspecies), dv, dt, return_rates)
+       call advance_reaction_cell(n_old(i,j,1:nspecies), n_new(i,j,1:nspecies),           &
+                                  ext_src(i,j,1:nspecies), dv, dt, return_rates,          &
+                                  is_mattingly_2nd_step,n_pred_mattingly(i,j,1:nspecies))
     end do
     end do
 
   end subroutine advance_reaction_2d
 
-  subroutine advance_reaction_3d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt,return_rates)
+  subroutine advance_reaction_3d(n_old,ng_o,n_new,ng_n,ext_src,ng_e,glo,ghi,tlo,thi,dv,dt,return_rates, &
+                                 is_mattingly_2nd_step,n_pred_mattingly,ng_p)
 
     integer        , intent(in   ) :: glo(:),ghi(:),tlo(:),thi(:),ng_o,ng_n,ng_e
     real(kind=dp_t), intent(in   ) ::   n_old(glo(1)-ng_o:,glo(2)-ng_o:,glo(3)-ng_o:,:)
     real(kind=dp_t), intent(inout) ::   n_new(glo(1)-ng_n:,glo(2)-ng_n:,glo(3)-ng_n:,:)
     real(kind=dp_t), intent(inout) :: ext_src(glo(1)-ng_e:,glo(2)-ng_e:,glo(3)-ng_e:,:)
     real(kind=dp_t), intent(in   ) :: dv,dt
-    integer, intent(in) :: return_rates
+    integer,         intent(in   ) :: return_rates
+    logical,         intent(in   ) :: is_mattingly_2nd_step
+    integer,         intent(in   ) :: ng_p
+    real(kind=dp_t), intent(in   ) :: n_pred_mattingly(glo(1)-ng_p:,glo(2)-ng_p:,glo(3)-ng_p:,:)
     
     ! local
     integer :: i,j,k
@@ -200,21 +241,25 @@ contains
     do k=tlo(3),thi(3)
     do j=tlo(2),thi(2)
     do i=tlo(1),thi(1)
-       call advance_reaction_cell(n_old(i,j,k,1:nspecies), n_new(i,j,k,1:nspecies), &
-                                  ext_src(i,j,k,1:nspecies), dv, dt, return_rates)
+       call advance_reaction_cell(n_old(i,j,k,1:nspecies), n_new(i,j,k,1:nspecies),         &
+                                  ext_src(i,j,k,1:nspecies), dv, dt, return_rates,          &
+                                  is_mattingly_2nd_step,n_pred_mattingly(i,j,k,1:nspecies))
     end do
     end do
     end do
 
   end subroutine advance_reaction_3d
 
-  subroutine advance_reaction_cell(n_old,n_new,ext_src,dv,dt,return_rates)
+  subroutine advance_reaction_cell(n_old,n_new,ext_src,dv,dt,return_rates, &
+                                   is_mattingly_2nd_step,n_pred_mattingly)
 
     real(kind=dp_t), intent(in   ) :: n_old(:)
     real(kind=dp_t), intent(inout) :: n_new(:)
     real(kind=dp_t), intent(in   ) :: ext_src(:)
     real(kind=dp_t), intent(in   ) :: dv,dt
-    integer, intent(in) :: return_rates
+    integer,         intent(in   ) :: return_rates
+    logical,         intent(in   ) :: is_mattingly_2nd_step
+    real(kind=dp_t), intent(in   ) :: n_pred_mattingly(:)
 
     real(kind=dp_t) :: avg_reactions     (1:nreactions)
     real(kind=dp_t) :: avg_reactions_pred(1:nreactions)
@@ -224,7 +269,12 @@ contains
     integer :: spec,reaction,which_reaction
     integer :: n_steps_SSA
     
+    !!!!!!!!!!!!!!!!!!!
+    ! returning rates !
+    !!!!!!!!!!!!!!!!!!!
+
     ! compute reaction rates only in units of (number density) / time
+
     if(return_rates .eq. 1) then  ! deterministic rates case
        call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
 
@@ -236,8 +286,19 @@ contains
 
        return
 
-    else if(return_rates .eq. 2) then  !stochastic rates case
-       call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
+    else if(return_rates .eq. 2) then  ! stochastic rates case
+
+       if(is_mattingly_2nd_step) then
+          ! calculate 2*a(n_pred)-a(n_old)
+          ! note that the use of avg_reactions_pred is different from the time advancing case below.
+          ! here, avg_reactions_pred saves a(n_pred), whereas it saves a(n_old) below. 
+          call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
+          call compute_reaction_rates(n_pred_mattingly(1:nspecies), avg_reactions_pred, dv)
+          avg_reactions = 2.d0*avg_reactions_pred - avg_reactions
+       else
+          ! calculate a(n_old)
+          call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
+       end if
 
        ! compute mean number of events over the time step
        avg_reactions = max(0.0d0, avg_reactions*dt*dv)
@@ -256,6 +317,10 @@ contains
 
     end if
 
+    !!!!!!!!!!!!!!!!!!
+    ! advancing time !
+    !!!!!!!!!!!!!!!!!!
+ 
     ! copy old state into new
     n_new = n_old
 
