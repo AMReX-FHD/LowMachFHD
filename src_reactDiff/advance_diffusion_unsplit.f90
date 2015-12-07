@@ -33,9 +33,9 @@ contains
     type(multifab) :: stoch_fluxdiv(mla%nlevel)
     type(multifab) :: diff_coef_face(mla%nlevel,mla%dim)
     type(multifab) :: ext_src(mla%nlevel)
-    type(multifab) :: stoch_rate1(mla%nlevel)
+    type(multifab) :: rate1(mla%nlevel)
 !!!    will need for midpoint
-!!!    type(multifab) :: stoch_rate2(mla%nlevel) 
+!!!    type(multifab) :: rate2(mla%nlevel) 
 
     integer :: nlevs,dm,n,i,spec
 
@@ -63,7 +63,7 @@ contains
         call multifab_build_edge(diff_coef_face(n,i),mla%la(n),nspecies,0,i)
       end do
       call multifab_build(ext_src(n),mla%la(n),nspecies,0)
-      call multifab_build(stoch_rate1(n),mla%la(n),nspecies,0)
+      call multifab_build(rate1(n),mla%la(n),nspecies,0)
     end do
 
     ! ext_src
@@ -110,15 +110,16 @@ contains
 
     if (diffusion_type .eq. 3) then  ! forward Euler
 
-      ! sample stochastic rates
-      call advance_reaction(mla,n_old,stoch_rate1,dx,dt,the_bc_tower,return_rates_in=2)
+      ! calculate rates
+      ! rates could be deterministic or stochastic depending on use_Poisson_rng
+      call advance_reaction(mla,n_old,rate1,dx,dt,the_bc_tower,return_rates_in=2)
 
       ! update
       do n=1,nlevs
         call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
         call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
         call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
-        call multifab_saxpy_3(n_new(n),dt,stoch_rate1(n))
+        call multifab_saxpy_3(n_new(n),dt,rate1(n))
         call multifab_saxpy_3(n_new(n),dt,ext_src(n))
 
         call multifab_fill_boundary(n_new(n))
@@ -141,7 +142,7 @@ contains
         call multifab_destroy(diff_coef_face(n,i))
       end do
       call multifab_destroy(ext_src(n))
-      call multifab_destroy(stoch_rate1(n))
+      call multifab_destroy(rate1(n))
     end do
 
     call destroy(bpt)
