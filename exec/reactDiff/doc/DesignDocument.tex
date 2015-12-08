@@ -279,7 +279,7 @@ is
 n_k^{n+1} = n_k^n + \delta t\nabla\cdot\left(
 D_k\nabla n_k^{n+\myhalf}
 + \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
-+ \sqrt{\frac{2 D_k \left( 2 n_k^{n+\myhalf} - n_k^n \right) }{\delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}\right).
++ \sqrt{\frac{2 D_k \left( 2 n_k^{n+\myhalf} - n_k^n \right)^+ }{\delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}\right).
 \end{equation}
 
 \subsection{Reactions}
@@ -319,7 +319,7 @@ By emplying a set of independent random numbers $\{\mPb_i\}$, we express the Eul
 \begin{equation}
 n_k^{n+1} = n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^n
 + \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}}\mZb^{(1)}\right)
-+\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\Delta t\right).
++\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i^n\Delta V\Delta t\right).
 \end{equation}
 
 \subsection{Explicit Midpoint Scheme}
@@ -330,15 +330,15 @@ we obtain the following scheme:
 \begin{equation}
 n_k^{n+\myhalf} = n_k^n + \frac{\Delta t}{2} \nabla\cdot\left(D_k\nabla n_k^n
 + \sqrt{\frac{2 D_k n_k^n}{(\Delta t/2)\Delta V}}\mZb^{(1)}\right)
-+\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\frac{\Delta t}{2}\right),
++\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right),
 \end{equation}
 \begin{equation}
 \begin{split}
 n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
 + \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}}\left[\frac{\mZb^{(1)}+\mZb^{(2)}}{\sqrt{2}}\right]\right)\\
 &+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
-\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\frac{\Delta t}{2}\right)
-+\mPb^{(2)}_i\left(\left[2 a_i\left(\nb^{n+\myhalf}\right)-a_i\left(\nb^n\right)\right]\Delta V\frac{\Delta t}{2}\right)\right\}.
+\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
++\mPb^{(2)}_i\left(\left[2 a_i^{n+\myhalf}-a_i^n\right]^+\Delta V\frac{\Delta t}{2}\right)\right\}.
 \end{split}
 \end{equation}
 As in the previous section, there are two other possibilities for the discretization of the stochastic flux:
@@ -349,19 +349,19 @@ n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
 +\sqrt{\frac{2 D_k n_k^{n+\myhalf}}{\delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
 \right)\\
 &+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
-\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\frac{\Delta t}{2}\right)
-+\mPb^{(2)}_i\left(\left[2 a_i\left(\nb^{n+\myhalf}\right)-a_i\left(\nb^n\right)\right]\Delta V\frac{\Delta t}{2}\right)\right\},
+\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
++\mPb^{(2)}_i\left(\left[2 a_i^{n+\myhalf}-a_i^n\right]^+\Delta V\frac{\Delta t}{2}\right)\right\},
 \end{split}
 \end{equation}
 \begin{equation}
 \begin{split}
 n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
 + \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
-+ \sqrt{\frac{2 D_k \left( 2 n_k^{n+\myhalf} - n_k^n \right) }{\delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
++ \sqrt{\frac{2 D_k \left( 2 n_k^{n+\myhalf} - n_k^n \right)^+ }{\delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
 \right)\\
 &+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
-\mPb^{(1)}_i\left(a_i(\nb^n)\Delta V\frac{\Delta t}{2}\right)
-+\mPb^{(2)}_i\left(\left[2 a_i\left(\nb^{n+\myhalf}\right)-a_i\left(\nb^n\right)\right]\Delta V\frac{\Delta t}{2}\right)\right\}.
+\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
++\mPb^{(2)}_i\left(\left[2 a_i^{n+\myhalf}-a_i^n\right]^+\Delta V\frac{\Delta t}{2}\right)\right\}.
 \end{split}
 \end{equation}
 
