@@ -112,6 +112,11 @@ module init_lowmach_module
   ! assumes nspecies=3
   ! assumes the final species is the dominant component
 
+  !=========================================================
+  ! case 15:
+  ! Discontinuous band in central 50% of domain
+  ! c=c_init(1,:) inside; c=c_init(2,:) outside
+
 
 contains
 
@@ -526,6 +531,30 @@ contains
 
           enddo
        enddo
+
+    case (15)
+
+       !=========================================================
+       ! Discontinuous band in central 50% of domain
+       ! c=c_init(1,:) inside; c=c_init(2,:) outside
+       !=============================================================
+
+       u = 0.d0
+       v = 0.d0
+
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+
+             ! initialize c to a band region
+             if (j .ge. n_cells(2)/4 .and. j .le. 3*n_cells(2)/4-1) then
+                c(i,j,1:nspecies) = c_init(1,1:nspecies)
+             else
+                c(i,j,1:nspecies) = c_init(2,1:nspecies)
+             end if
+
+          enddo
+       enddo
+
 
     case default
 
