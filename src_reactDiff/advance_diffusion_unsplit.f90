@@ -185,8 +185,8 @@ contains
         case (3)
           ! compute 2*n_pred-n_old
           do n=1,nlevs
-            call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,0)
-            call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,0)
+            call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,n_new(n)%ng)
+            call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
           end do
           ! use 2*n_pred-n_old
           call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &

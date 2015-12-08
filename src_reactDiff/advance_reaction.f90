@@ -140,7 +140,7 @@ contains
     if (dm<3) dv = dv*cross_section
 
     !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
-    !$omp private(op,np,ep,lo,hi)
+    !$omp private(op,np,ep,pp,lo,hi)
 
     do n=1,nlevs
        call mfiter_build(mfi, n_old(n), tiling=.true.)
