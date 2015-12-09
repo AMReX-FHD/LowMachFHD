@@ -142,11 +142,11 @@
 
   !k=[3.1, 1.0, 0.8, 2.9]; !Bimodal, for input file schlogl_bimodal_saddle.dat
   chemical_rates(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
-  !model_file(1) = "../test/schlogl_bimodal_saddle.dat"
-  !model_file(1) = "../test/schlogl_bimodal_saddle_pp.dat" ! Before the saddle
-  model_file(1) = "../test/schlogl_bimodal_saddle_p.dat" ! Only slightly before the saddle
-  !model_file(1) = "../test/schlogl_bimodal_saddle_m.dat" ! After the saddle
-  !model_file(1) = "../test/schlogl_bimodal_saddle_mm.dat" ! Only slightly after the saddle
+  !model_file(1) = "./model_files/schlogl_bimodal_saddle.dat"
+  !model_file(1) = "./model_files/schlogl_bimodal_saddle_pp.dat" ! Before the saddle
+  model_file(1) = "./model_files/schlogl_bimodal_saddle_p.dat" ! Only slightly before the saddle
+  !model_file(1) = "./model_files/schlogl_bimodal_saddle_m.dat" ! After the saddle
+  !model_file(1) = "./model_files/schlogl_bimodal_saddle_mm.dat" ! Only slightly after the saddle
   
   rate_multiplier = 1.0 ! Slow or speed up all reactions at once
   include_discrete_LMA_correction = F ! Compute rates using classical LMA or molecular  
