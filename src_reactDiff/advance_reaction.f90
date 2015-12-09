@@ -295,6 +295,7 @@ contains
           call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
           call compute_reaction_rates(n_pred_mattingly(1:nspecies), avg_reactions_pred, dv)
           avg_reactions = 2.d0*avg_reactions_pred - avg_reactions
+          ! As impletemented below for second-order tau-leaping, we could count n_rejections here.
        else
           ! calculate a(n_old)
           call compute_reaction_rates(n_old(1:nspecies), avg_reactions, dv)
