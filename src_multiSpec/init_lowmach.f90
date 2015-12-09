@@ -209,7 +209,7 @@ contains
  
     ! local varables
     integer          :: i,j,n,seed(12)
-    real(kind=dp_t)  :: x,y,rad,L(2),sum,r,r1,r2,y1,c_loc
+    real(kind=dp_t)  :: x,y,rad,L(2),sum,r,r1,r2,y1,y2,c_loc
     real(kind=dp_t)  :: gradToverT,m_e
  
     real(kind=dp_t)  :: random
@@ -542,18 +542,115 @@ contains
        u = 0.d0
        v = 0.d0
 
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
+       ! first quarter of domain
+       y1 = (3*prob_lo(2) + prob_hi(2)) / 4.d0
 
-             ! initialize c to a band region
-             if (j .ge. n_cells(2)/4 .and. j .le. 3*n_cells(2)/4-1) then
-                c(i,j,1:nspecies) = c_init(1,1:nspecies)
+       ! last quarter of domain
+       y2 = (prob_lo(2) + 3*prob_hi(2)) / 4.d0
+
+       ! x-velocity = u_init(1) below centerline
+       !              u_init(2) above centerline
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (j+0.5d0)*dx(2)
+          if (y .lt. y2 .and. y .gt. y1) then
+             u(:,j) = u_init(1)
+          else
+             u(:,j) = u_init(2)
+          end if
+       end do
+
+       if (smoothing_width .le. 0.d0 .and. smoothing_width .ge. -1.d0) then
+          ! discontinuous version with random perturbation
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + (j+0.5d0)*dx(2)
+             if (y .lt. y2 .and. y .gt. y1) then
+                do n=1,nspecies
+                   c(lo(1):hi(1),j,n) = c_init(1,n)
+                end do
              else
-                c(i,j,1:nspecies) = c_init(2,1:nspecies)
+                do n=1,nspecies
+                   c(lo(1):hi(1),j,n) = c_init(2,n)
+                end do
              end if
 
-          enddo
-       enddo
+             if (j .eq. n_cells(2)/4) then
+                do i=lo(1),hi(1)
+                   x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+                   call random_number(random)
+                   c_loc = abs(smoothing_width)*random
+                   do n=1,nspecies
+                      c(i,j,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
+                   end do
+                end do
+             end if
+
+             if (j .eq. 3*n_cells(2)/4) then
+                do i=lo(1),hi(1)
+                   x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+                   call random_number(random)
+                   c_loc = abs(smoothing_width)*random
+                   do n=1,nspecies
+                      c(i,j,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
+                   end do
+                end do
+             end if
+
+          end do
+
+       else if (smoothing_width .gt. 0.d0) then
+
+          ! smoothed version
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
+             do n=1,nspecies
+                c_loc = c_init(2,n) + (c_init(1,n)-c_init(2,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)* &
+                                                 0.5d0*(tanh((-y+y2-y1)/(smoothing_width*dx(2)))+1.d0)
+                c(lo(1):hi(1),j,n) = c_loc
+             end do
+          end do
+
+       else if (smoothing_width .eq. -2.d0) then
+
+          ! discontinuous version with sinusoidal perturbation
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + (j+0.5d0)*dx(2)
+             if (y .lt. y2 .and. y .gt. y1) then
+                do n=1,nspecies
+                   c(lo(1):hi(1),j,n) = c_init(1,n)
+                end do
+             else
+                do n=1,nspecies
+                   c(lo(1):hi(1),j,n) = c_init(2,n)
+                end do
+             end if
+
+             if (j .eq. 3*n_cells(2)/4) then
+                do i=lo(1),hi(1)
+                   x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+                   c_loc = 0.5d0*(cos(4.d0*M_PI*x/L(1))+1.d0)
+                   do n=1,nspecies
+                      c(i,j,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
+                   end do
+                end do
+             end if
+
+             if (j .eq. n_cells(2)/4) then
+                do i=lo(1),hi(1)
+                   x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
+                   c_loc = 0.5d0*(cos(4.d0*M_PI*x/L(1))+1.d0)
+                   do n=1,nspecies
+                      c(i,j,n) = c_loc*(c_init(2,n)) + (1.d0-c_loc)*c_init(1,n)
+                   end do
+                end do
+             end if
+
+          end do
+
+       else
+
+          call bl_error("init_rho_and_umac_2d: smoothing_width not compatible with prob_type")
+
+       end if
 
 
     case default

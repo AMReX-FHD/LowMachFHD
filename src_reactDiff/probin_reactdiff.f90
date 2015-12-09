@@ -19,6 +19,7 @@ module probin_reactdiff_module
   integer, save   :: diffusion_type = 0             ! 0=explicit trapezoidal predictor/corrector
                                                     ! 1=Crank-Nicolson semi-implicit
                                                     ! 2=explicit midpoint
+                                                    ! 3=forward Euler
   integer, save   :: reaction_type = 0              ! 0=first-order tau leaping or CLE
                                                     ! 1=second-order tau leaping or CLE
                                                     ! 2=SSA
@@ -29,6 +30,7 @@ module probin_reactdiff_module
   integer, save   :: splitting_type = 0             ! 0=D + R (first-order splitting)
                                                     ! 1=(1/2)R + D + (1/2)R (Strang option 1)
                                                     ! 2=(1/2)D + R + (1/2)D (Strang option 2)
+                                                    ! 3=unsplitting schemes
   logical, save   :: inhomogeneous_bc_fix = .false. ! use the Einkemmer boundary condition fix
   integer, save   :: avg_type = 3                   ! how to compute n on faces for stochastic weighting
                                                     ! 1=arithmetic, 2=geometric, 3=harmonic

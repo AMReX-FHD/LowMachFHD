@@ -92,6 +92,7 @@
   diffusion_type = 1 ! 0=explicit trapezoidal predictor/corrector
                      ! 1=Crank-Nicolson semi-implicit
                      ! 2=explicit midpoint
+                     ! 3=forward Euler
 
   reaction_type = 1  ! 0=first-order tau leaping or CLE
                      ! 1=second-order tau leaping or CLE
@@ -105,6 +106,7 @@
   splitting_type = 1 ! 0=D + R
                      ! 1=(1/2)R + D + (1/2)R
                      ! 2=(1/2)D + R + (1/2)D
+                     ! 3=unsplitting schemes
 
   avg_type = 3 ! compute n on faces for stochastic weighting
                ! 1=arithmetic, 2=geometric, 3=harmonic
