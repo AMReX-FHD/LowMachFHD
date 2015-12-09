@@ -34,7 +34,7 @@ subroutine main_driver()
    ! quantities will be allocated with (nlevs,dm) components
    real(kind=dp_t), allocatable :: dx(:,:)
    real(kind=dp_t)              :: dt,time,runtime1,runtime2
-   integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,spec
+   integer                      :: n,nlevs,i,j,k,dm,istep,ng_s,init_step,spec
    type(box)                    :: bx
    type(ml_boxarray)            :: mba
    type(ml_layout)              :: mla
@@ -55,7 +55,7 @@ subroutine main_driver()
    ! to test "conservation"
    real(kind=dp_t), allocatable :: n_sum(:)
 
-   real(kind=dp_t), allocatable :: input_array(:,:)
+   real(kind=dp_t), allocatable :: input_array(:,:,:)
 
    !==============================================================
    ! Initialization
@@ -217,12 +217,7 @@ subroutine main_driver()
 
       else
          ! initialize from model files
-
-         if (dm .ne. 2) then
-            call bl_error("model_file_init only works in 2d")
-         end if
-
-         allocate(input_array(n_cells(1),n_cells(2)))
+         allocate(input_array(n_cells(1),n_cells(2),n_cells(3)))
 
          do n=1,nspecies
 
@@ -231,16 +226,16 @@ subroutine main_driver()
                ! read in model file for species n into IOProc
                print*,'reading in model_file: ',model_file(n)
                open(unit=100, file=model_file(n), status='old', action='read')
-               do i=1,n_cells(1)
-                  read(100,*) input_array(i,:)
-               end do
+               read(100,*) input_array
                close(unit=100)
 
             end if
 
             ! broadcast input_array to all processors
-            do i=1,n_cells(1)
-               call parallel_bcast_dv(input_array(i,:))
+            do k=1,n_cells(3)
+            do j=1,n_cells(2)
+               call parallel_bcast_dv(input_array(:,j,k))
+            end do
             end do
 
             ! copy data from input_array into multifab

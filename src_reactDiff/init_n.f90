@@ -267,7 +267,7 @@ contains
     type(multifab) , intent(inout) :: n_init(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower ), intent(in   ) :: the_bc_tower
-    real(kind=dp_t), intent(in   ) :: input_array(:,:)
+    real(kind=dp_t), intent(in   ) :: input_array(:,:,:)
     integer        , intent(in   ) :: comp
 
     ! local variables
@@ -292,7 +292,7 @@ contains
           hi = upb(get_box(n_init(n),i))
           select case (dm)
           case (2)
-             call init_n_model_2d(np(:,:,1,:),ng_n,lo,hi,input_array,comp)
+             call init_n_model_2d(np(:,:,1,:),ng_n,lo,hi,input_array(:,:,1),comp)
           case (3)
 
           end select
@@ -305,7 +305,7 @@ contains
        do n=1,nlevs
           call multifab_fill_boundary(n_init(n))
           call multifab_physbc(n_init(n),1,scal_bc_comp,nspecies, &
-               the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+                               the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
        end do
     end if
 
