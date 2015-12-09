@@ -205,8 +205,8 @@ contains
     dim_in = 2
     prob_lo(1:MAX_SPACEDIM) = 0.d0
     prob_hi(1:MAX_SPACEDIM) = 1.d0
-    n_cells(1:MAX_SPACEDIM) = 64
-    max_grid_size(1:MAX_SPACEDIM) = 64
+    n_cells(1:MAX_SPACEDIM) = 1
+    max_grid_size(1:MAX_SPACEDIM) = 1
 
     fixed_dt = 1.d0
     cfl = 0.5d0
