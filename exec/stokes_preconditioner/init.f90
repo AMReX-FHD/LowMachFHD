@@ -899,11 +899,7 @@ contains
       elseif ( (abs(prob_sol)==20) .and. (abs(prob_coeff)==1) ) then 
          ! random rhs, Driven cavity BC
 
-         if(comp<3) then
-            call UniformRNG(val)
-         else
-            val = 0.d0
-         end if
+         val = 0.d0
 
       elseif ( abs(prob_sol)==100 ) then 
 
@@ -1236,11 +1232,7 @@ contains
       elseif ( (abs(prob_sol)==20) .and. (abs(prob_coeff)==1) ) then 
          ! random rhs, Driven cavity BC
 
-         if(comp<4) then
-            call UniformRNG(val)         
-         else
-            val = 0.d0
-         end if
+         val = 0.d0
 
       elseif ( abs(prob_sol)==100 ) then 
 
