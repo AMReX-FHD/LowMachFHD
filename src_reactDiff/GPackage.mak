@@ -12,5 +12,5 @@ f90sources += probin_reactdiff.f90
 f90sources += restart.f90
 f90sources += stochastic_n_fluxdiv.f90
 f90sources += write_plotfile_n.f90
-f90sources += advance_diffusion_unsplit.f90
 f90sources += chemical_rates.f90
+f90sources += advance_reaction_diffusion.f90

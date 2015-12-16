@@ -4,7 +4,7 @@ module advance_timestep_module
   use define_bc_module
   use advance_diffusion_module
   use advance_reaction_module
-  use advance_diffusion_unsplit_module
+  use advance_reaction_diffusion_module
   use multifab_physbc_module
   use bc_module
   use probin_reactdiff_module, only: nspecies, splitting_type, n_bc, reaction_type, &
@@ -81,7 +81,7 @@ contains
     case(3)
        ! unsplitting
 
-       call advance_diffusion_unsplit(mla,n_old,n_new,dx,dt,the_bc_tower)
+       call advance_reaction_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower)
 
     case default
        call bl_error("advance_timestep: invalid splitting_type")

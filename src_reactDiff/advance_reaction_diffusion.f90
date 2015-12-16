@@ -1,4 +1,4 @@
-module advance_diffusion_unsplit_module
+module advance_reaction_diffusion_module
 
   use ml_layout_module
   use define_bc_module
@@ -6,7 +6,7 @@ module advance_diffusion_unsplit_module
   use bc_module
   use stochastic_n_fluxdiv_module
   use diffusive_n_fluxdiv_module
-  use advance_reaction_module
+  use chemical_rates_module
   use implicit_diffusion_module
   use probin_common_module, only: variance_coef_mass
   use probin_reactdiff_module, only: nspecies, D_Fick, diffusion_type
@@ -15,11 +15,11 @@ module advance_diffusion_unsplit_module
 
   private
 
-  public :: advance_diffusion_unsplit
+  public :: advance_reaction_diffusion
 
 contains
 
-  subroutine advance_diffusion_unsplit(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in)
+  subroutine advance_reaction_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
@@ -48,16 +48,21 @@ contains
     ! midpoint_stoch_flux_type = 3: K_n * W1 + K_{2*pred-n} * W2
     integer, parameter :: midpoint_stoch_flux_type = 1
 
+    real(kind=dp_t) :: mattingly_lin_comb_coef(1:2)
+
+    mattingly_lin_comb_coef(1) = -1.d0
+    mattingly_lin_comb_coef(2) = 2.d0
+
     !!!!!!!!
     ! init !
     !!!!!!!!
 
     ! single cell case? 
     if ((multifab_volume(n_old(1))/nspecies)<=1) then
-      call bl_error("advance_diffusion_unsplit: single cell case has not been considered yet")
+      call bl_error("advance_reaction_diffusion: single cell case has not been considered yet")
     end if
 
-    call build(bpt,"advance_diffusion_unsplit")
+    call build(bpt,"advance_reaction_diffusion")
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -123,7 +128,7 @@ contains
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
-      call advance_reaction(mla,n_old,rate1,dx,dt,the_bc_tower,return_rates_in=2)
+      call chemical_rates(mla,n_old,rate1,dx,dt)
 
       ! update
       do n=1,nlevs
@@ -141,7 +146,7 @@ contains
     else if (diffusion_type .eq. 2) then  ! explicit midpoint
 
       ! calculate rates from a(n_old)
-      call advance_reaction(mla,n_old,rate1,dx,dt/2.d0,the_bc_tower,return_rates_in=2)
+      call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
 
       ! predictor
       do n=1,nlevs
@@ -164,7 +169,7 @@ contains
       call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
 
       ! calculate rates from 2*a(n_pred)-a(n_old)
-      call advance_reaction(mla,n_old,rate2,dx,dt/2.d0,the_bc_tower,return_rates_in=2,n_pred_mattingly=n_new)
+      call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef)
 
       ! compute stochastic flux divergence
       if (variance_coef_mass .gt. 0.d0) then
@@ -192,7 +197,7 @@ contains
           call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
                                     the_bc_tower,increment_in=.true.)
         case default
-          call bl_error("advance_diffusion_unsplit: invalid midpoint_stoch_flux_type")
+          call bl_error("advance_reaction_diffusion: invalid midpoint_stoch_flux_type")
         end select
 
       else
@@ -218,7 +223,7 @@ contains
       end do
 
     else
-      call bl_error("advance_diffusion_unsplit: invalid diffusion_type")
+      call bl_error("advance_reaction_diffusion: invalid diffusion_type")
     end if
 
     !!!!!!!!!!!
@@ -241,6 +246,6 @@ contains
 
     call destroy(bpt)
 
-  end subroutine advance_diffusion_unsplit
+  end subroutine advance_reaction_diffusion
 
-end module advance_diffusion_unsplit_module
+end module advance_reaction_diffusion_module
