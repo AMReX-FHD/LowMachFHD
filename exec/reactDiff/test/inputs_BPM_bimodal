@@ -100,7 +100,7 @@
                       ! If 1 do tau leaping (Poisson increments),
                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
 
-  splitting_type = 0 ! 0=D + R
+  temporal_integrator = 0 ! 0=D + R
                      ! 1=(1/2)R + D + (1/2)R
                      ! 2=(1/2)D + R + (1/2)D
                      ! 3=unsplitting schemes

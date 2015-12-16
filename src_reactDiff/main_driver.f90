@@ -20,7 +20,7 @@ subroutine main_driver()
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    variance_coef_mass, cfl, initial_variance
    use probin_reactdiff_module, only: nspecies, probin_reactdiff_init, D_Fick, cross_section, &
-                                      splitting_type, inhomogeneous_bc_fix, model_file_init, &
+                                      inhomogeneous_bc_fix, model_file_init, &
                                       model_file
 
    use fabio_module

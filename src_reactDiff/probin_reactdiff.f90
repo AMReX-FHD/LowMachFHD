@@ -16,23 +16,23 @@ module probin_reactdiff_module
   
   ! Control of algorithm
   !----------------------
-  integer, save   :: diffusion_type = 0             ! 0=explicit trapezoidal predictor/corrector
+  integer, save :: diffusion_type = 0               ! 0=explicit trapezoidal predictor/corrector
                                                     ! 1=Crank-Nicolson semi-implicit
                                                     ! 2=explicit midpoint
                                                     ! 3=forward Euler
-  integer, save   :: reaction_type = 0              ! 0=first-order tau leaping or CLE
+  integer, save :: reaction_type = 0                ! 0=first-order tau leaping or CLE
                                                     ! 1=second-order tau leaping or CLE
                                                     ! 2=SSA
-  integer, save   :: use_Poisson_rng = 1            ! Only used for reaction_type = 0, 1
+  integer, save :: use_Poisson_rng = 1              ! Only used for reaction_type = 0, 1
                                                     ! If -1 do deterministic chemistry
                                                     ! If 1 do tau leaping (Poisson increments),
                                                     ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
-  integer, save   :: splitting_type = 0             ! 0=D + R (first-order splitting)
+  integer, save :: temporal_integrator = 0          ! 0=D + R (first-order splitting)
                                                     ! 1=(1/2)R + D + (1/2)R (Strang option 1)
                                                     ! 2=(1/2)D + R + (1/2)D (Strang option 2)
                                                     ! 3=unsplitting schemes
-  logical, save   :: inhomogeneous_bc_fix = .false. ! use the Einkemmer boundary condition fix
-  integer, save   :: avg_type = 3                   ! how to compute n on faces for stochastic weighting
+  logical, save :: inhomogeneous_bc_fix = .false.   ! use the Einkemmer boundary condition fix
+  integer, save :: avg_type = 3                     ! how to compute n on faces for stochastic weighting
                                                     ! 1=arithmetic, 2=geometric, 3=harmonic
   
   ! Initial and boundary conditions
@@ -69,7 +69,7 @@ module probin_reactdiff_module
   integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 
   
   namelist /probin_reactdiff/ nspecies, nreactions
-  namelist /probin_reactdiff/ diffusion_type, reaction_type, use_Poisson_rng, splitting_type, avg_type
+  namelist /probin_reactdiff/ diffusion_type, reaction_type, use_Poisson_rng, temporal_integrator, avg_type
   namelist /probin_reactdiff/ inhomogeneous_bc_fix, n_init_in, n_bc, model_file_init, model_file
   namelist /probin_reactdiff/ D_Fick, diffusion_stencil_order, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
@@ -144,10 +144,10 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) use_Poisson_rng
 
-       case ('--splitting_type')
+       case ('--temporal_integrator')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) splitting_type
+          read(fname, *) temporal_integrator 
 
        case ('--inhomogeneous_bc_fix')
           farg = farg + 1

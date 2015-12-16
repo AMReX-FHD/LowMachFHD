@@ -14,7 +14,7 @@ The input file inputs_Schlogl_saddle starts from this configuration and runs a d
 By changing 
 variance_coef_mass = 1.0
 use_Poisson_rng = 0 or 1
-in this input file, one can enable fluctuations and see what happens. In my tests with splitting_type = 1 and dt=0.01 all runs went to the state n=0.5 (i.e., the nucleating bubble disappeared instead of growing).
+in this input file, one can enable fluctuations and see what happens. In my tests with temporal_integrator = 1 and dt=0.01 all runs went to the state n=0.5 (i.e., the nucleating bubble disappeared instead of growing).
 
 There are 4 more initial configurations in the test folder, which are four points on the string (minimal energy path) that are before and after the saddle point:
   !model_file(1) = "../test/schlogl_bimodal_saddle.dat" ! Best estimate of the saddle

@@ -9,7 +9,7 @@ module advance_reaction_diffusion_module
   use chemical_rates_module
   use implicit_diffusion_module
   use probin_common_module, only: variance_coef_mass
-  use probin_reactdiff_module, only: nspecies, D_Fick, diffusion_type
+  use probin_reactdiff_module, only: nspecies, D_Fick, temporal_integrator 
 
   implicit none
 
@@ -77,7 +77,7 @@ contains
       call multifab_build(ext_src(n),mla%la(n),nspecies,0)
       call multifab_build(rate1(n),mla%la(n),nspecies,0)
 
-      if (diffusion_type .eq. 2) then ! explitcit midpoint
+      if (temporal_integrator .eq. -2) then ! explitcit midpoint
         call multifab_build(rate2(n),mla%la(n),nspecies,0)
       end if
     end do
@@ -124,7 +124,7 @@ contains
     ! time advance !
     !!!!!!!!!!!!!!!!
 
-    if (diffusion_type .eq. 3) then  ! forward Euler
+    if (temporal_integrator .eq. -1) then  ! forward Euler
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
@@ -143,7 +143,7 @@ contains
                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
       end do
 
-    else if (diffusion_type .eq. 2) then  ! explicit midpoint
+    else if (temporal_integrator .eq. -2) then  ! explicit midpoint
 
       ! calculate rates from a(n_old)
       call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
@@ -223,7 +223,7 @@ contains
       end do
 
     else
-      call bl_error("advance_reaction_diffusion: invalid diffusion_type")
+      call bl_error("advance_reaction_diffusion: invalid temporal_integrator")
     end if
 
     !!!!!!!!!!!
@@ -239,7 +239,7 @@ contains
       call multifab_destroy(ext_src(n))
       call multifab_destroy(rate1(n))
 
-      if (diffusion_type .eq. 2) then ! explicit midpoint
+      if (temporal_integrator .eq. -2) then  ! explicit midpoint
         call multifab_destroy(rate2(n))
       end if
     end do
