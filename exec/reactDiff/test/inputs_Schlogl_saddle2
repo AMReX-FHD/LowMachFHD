@@ -143,7 +143,7 @@
   !k = [1,1,1,1]; ! Monomodal
 
   !k=[3, 1, 0.2, 2]; ! Bimodal from Sorin's PRE, for input file schlogl_bimodal_saddle2.dat  
-  chemical_rates(1:4) =  3.0, 1.0, 0.2, 2.0 ! Bimodal, peaks at x=0.1211 and x=2.089, saddle at x=1
+  rate_const(1:4) =  3.0, 1.0, 0.2, 2.0 ! Bimodal, peaks at x=0.1211 and x=2.089, saddle at x=1
   model_file(1) = "./model_files/schlogl_bimodal2_saddle.dat"
   
   rate_multiplier = 1.0 ! Slow or speed up all reactions at once

@@ -136,7 +136,7 @@
   include_discrete_LMA_correction = T
 
   ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
-  chemical_rates(1:1) = 0.0d0
+  rate_const(1:1) = 0.0d0
   rate_multiplier = 1.0d0
 
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)

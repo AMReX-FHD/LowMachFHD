@@ -148,7 +148,7 @@
   !k = [1,1,1,1]; ! Monomodal
 
   !k=[3.1, 1.0, 0.8, 2.9]; !Bimodal, for input file schlogl_bimodal_saddle.dat
-  chemical_rates(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
+  rate_const(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
   model_file(1) = "./model_files/schlogl_bimodal_saddle.dat" ! Best estimate of the saddle
   !model_file(1) = "./model_files/schlogl_bimodal_saddle_pp.dat" ! Before the saddle
   !model_file(1) = "./model_files/schlogl_bimodal_saddle_p.dat" ! Only slightly before the saddle

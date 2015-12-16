@@ -146,7 +146,7 @@
   !k=[3.1, 1.0, 0.8, 2.9]; !Bimodal
   !k=[3,1,1,3]; ! Bifurcation point
   !k=[2.1, 1, 0.1, 1.2]; ! Almost bifurcated (hump, with barely distinguishable peaks)
-  chemical_rates(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
+  rate_const(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
   rate_multiplier = 0.1 ! Slow or speed up all reactions at once
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   

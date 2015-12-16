@@ -141,7 +141,7 @@
 
   ! Chemical reactions:
   ! ------------------  
-  chemical_rates(1:7) =  0.000200000000000   0.000200000000000   1.000000000000000   0.036666630000000   4.444445555550000   0.003333330000000 16.666650000000001
+  rate_const(1:7) =  0.000200000000000   0.000200000000000   1.000000000000000   0.036666630000000   4.444445555550000   0.003333330000000 16.666650000000001
   !rate_multiplier = 0.1 ! Change all rates by a constant multiplier
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   
