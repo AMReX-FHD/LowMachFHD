@@ -5,6 +5,7 @@ module advance_timestep_module
   use advance_diffusion_module
   use advance_reaction_module
   use advance_reaction_diffusion_module
+  use chemical_rates_module
   use multifab_physbc_module
   use bc_module
   use probin_reactdiff_module, only: nspecies, temporal_integrator, n_bc, reaction_type, &
@@ -51,7 +52,7 @@ contains
        ! store reactions rates for n_steady in Rn_steady
        ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
        ! returning an explicit rate in units of number_density/time
-       call advance_reaction(mla,n_steady,Rn_steady,dx,dt,the_bc_tower,return_rates_in=1)
+       call deterministic_chemical_rates(mla,n_steady,Rn_steady,dx,dt)
 
     end if
 
