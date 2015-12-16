@@ -247,7 +247,7 @@ contains
       call compute_reaction_rates(n_interm(1:nspecies),avg_react_rate_interm,dv)
       avg_react_rate = lin_comb_coef(1)*avg_react_rate + lin_comb_coef(2)*avg_react_rate_interm
 
-      ! check whether the resulting rates are negative
+      ! check whether the resulting rates are negative - if so, we set them zero below
       do reaction=1,nreactions 
         if (avg_react_rate(reaction) .lt. 0.d0) then 
           n_rejections = n_rejections+1
@@ -258,7 +258,8 @@ contains
       call compute_reaction_rates(n_cc(1:nspecies),avg_react_rate,dv)
     end if
 
-    ! convert each average reaction rates into the average number of reactions 
+    ! convert each average reaction rates into the average number of reactions
+    ! zero out any negative reactions 
     avg_num_reactions = max(0.d0,avg_react_rate*dv*dt)
 
     ! calculate chemical rates 
@@ -277,7 +278,7 @@ contains
     contains
 
       ! compute num_reactions from avg_num_reactions
-      ! note that avg_num_reactions(:) and avg_num_reactions(:) are defined in chemical_rates_cell
+      ! note that avg_num_reactions(:) and num_reactions(:) are defined in chemical_rates_cell
       subroutine sample_num_reactions(comp) ! auxilliary routine (should be inlined by compiler)
 
         integer, intent(in) :: comp
