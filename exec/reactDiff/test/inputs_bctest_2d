@@ -106,21 +106,23 @@
   
   ! Control of algorithm
   !----------------------
-  diffusion_type = 1       ! 0=explicit trapezoidal predictor/corrector
+  temporal_integrator = 0  ! 0=D + R (first-order splitting)
+                           ! 1=(1/2)R + D + (1/2)R (Strang option 1)
+                           ! 2=(1/2)D + R + (1/2)D (Strang option 2)
+                           ! -1=unsplitting forward Euler
+                           ! -2=unsplitting explicit midpoint
+  diffusion_type = 1       ! Only used for splitting schemes
+                           ! 0=explicit trapezoidal predictor/corrector
                            ! 1=Crank-Nicolson semi-implicit
                            ! 2=explicit midpoint
-                           ! 3=forward Euler
-  reaction_type = 1        ! 0=first-order tau leaping or CLE
+  reaction_type = 1        ! Only used for splitting schemes
+                           ! 0=first-order tau leaping or CLE
                            ! 1=second-order tau leaping or CLE
                            ! 2=SSA
   use_Poisson_rng = -1     ! Only used for reaction_type = 0, 1
                            ! If -1 do deterministic chemistry
                            ! If 1 do tau leaping (Poisson increments),
                            ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
-  temporal_integrator = 0       ! 0=D + R (first-order splitting)
-                           ! 1=(1/2)R + D + (1/2)R (Strang option 1)
-                           ! 2=(1/2)D + R + (1/2)D (Strang option 2)
-                           ! 3=unsplitting schemes
   inhomogeneous_bc_fix = T ! use the Einkemmer boundary condition fix
   avg_type = 1             ! how to compute n on faces for stochastic weighting
                            ! 1=arithmetic, 2=geometric, 3=harmonic
