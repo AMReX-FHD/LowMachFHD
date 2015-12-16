@@ -60,7 +60,7 @@ module probin_reactdiff_module
   logical, save         :: include_discrete_LMA_correction = .true. 
 
   ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
-  real(kind=dp_t), save :: chemical_rates(max_reactions) = 0.0d0, rate_multiplier=1.0d0
+  real(kind=dp_t), save :: rate_const(max_reactions) = 0.0d0, rate_multiplier=1.0d0
 
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
   ! Example: For N1 + 2*N2 -> N3 use
@@ -74,7 +74,7 @@ module probin_reactdiff_module
   namelist /probin_reactdiff/ D_Fick, diffusion_stencil_order, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
   namelist /probin_reactdiff/ cross_section, include_discrete_LMA_correction
-  namelist /probin_reactdiff/ chemical_rates, rate_multiplier, stoichiometric_factors
+  namelist /probin_reactdiff/ rate_const, rate_multiplier, stoichiometric_factors
 
 contains
 
