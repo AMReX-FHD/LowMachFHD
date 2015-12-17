@@ -25,6 +25,11 @@ module probin_reactdiff_module
                                                     ! 0=explicit trapezoidal predictor/corrector
                                                     ! 1=Crank-Nicolson semi-implicit
                                                     ! 2=explicit midpoint
+  integer, save :: midpoint_stoch_flux_type = 1     ! for midpoint diffusion schemes, (split and unsplit)
+                                                    ! corrector formulation of noise
+                                                    ! K(nold) * W1 + K(nold)         * W2
+                                                    ! K(nold) * W1 + K(npred)        * W2
+                                                    ! K(nold) * W1 + K(2*npred-nold) * W2
   integer, save :: reaction_type = 0                ! Only used for splitting schemes
                                                     ! 0=first-order tau leaping or CLE
                                                     ! 1=second-order tau leaping or CLE
@@ -71,7 +76,8 @@ module probin_reactdiff_module
   integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 
   
   namelist /probin_reactdiff/ nspecies, nreactions
-  namelist /probin_reactdiff/ temporal_integrator, diffusion_type, reaction_type, use_Poisson_rng, avg_type
+  namelist /probin_reactdiff/ temporal_integrator, diffusion_type, midpoint_stoch_flux_type
+  namelist /probin_reactdiff/ reaction_type, use_Poisson_rng, avg_type
   namelist /probin_reactdiff/ inhomogeneous_bc_fix, n_init_in, n_bc, model_file_init, model_file
   namelist /probin_reactdiff/ D_Fick, diffusion_stencil_order, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
@@ -140,6 +146,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) diffusion_type
+
+       case ('--midpoint_stoch_flux_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) midpoint_stoch_flux_type
 
        case ('--reaction_type')
           farg = farg + 1

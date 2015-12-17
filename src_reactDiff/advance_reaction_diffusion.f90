@@ -9,7 +9,8 @@ module advance_reaction_diffusion_module
   use chemical_rates_module
   use implicit_diffusion_module
   use probin_common_module, only: variance_coef_mass
-  use probin_reactdiff_module, only: nspecies, D_Fick, temporal_integrator 
+  use probin_reactdiff_module, only: nspecies, D_Fick, temporal_integrator, &
+       midpoint_stoch_flux_type
 
   implicit none
 
@@ -39,14 +40,6 @@ contains
     integer :: nlevs,dm,n,i,spec
 
     type(bl_prof_timer),save :: bpt
-
-    ! temporary 
-    ! (later, midpoint_stoch_flux_type will be included in probin_reactdiff.)
-    ! there are three options for updating the stochastic flux term of the corrector.
-    ! midpoint_stoch_flux_type = 1: K_n * W1 + K_n * W2
-    ! midpoint_stoch_flux_type = 2: K_n * W1 + K_pred * W2
-    ! midpoint_stoch_flux_type = 3: K_n * W1 + K_{2*pred-n} * W2
-    integer, parameter :: midpoint_stoch_flux_type = 1
 
     real(kind=dp_t) :: mattingly_lin_comb_coef(1:2)
 

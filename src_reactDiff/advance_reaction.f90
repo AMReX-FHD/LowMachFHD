@@ -153,7 +153,11 @@ contains
 
     else if (reaction_type .eq. 2) then  ! SSA
 
-      call advance_reaction_SSA(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src)
+       if (present(ext_src_in)) then
+          call bl_error("advance_reaction_SSA does not use ext_src")
+       end if
+
+      call advance_reaction_SSA(mla,n_old,n_new,dx,dt,the_bc_tower)
 
     else
 

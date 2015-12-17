@@ -16,10 +16,6 @@ module advance_reaction_SSA_module
   
 contains
 
-  ! this is a routine which is called by advance_reaction when reaction_type=2.
-  ! note that the contribution of ext_src to n_new has not be implemented yet.
-  ! when implementing it, remind the role and sign convention for ext_src in advance_reaction.
-  ! 
   ! advance_reaction solves dn/dt = f(n) - g (note the minus sign for g)
   !  where f(n) are the chemical production rates (deterministic or stochastic)
   !  and g=ext_src_in is an optional, constant (in time) *deterministic* source term.
@@ -51,10 +47,16 @@ contains
     type(multifab) :: ext_src(mla%nlevel)
 
     type(bl_prof_timer),save :: bpt
-    
+
+    ! this is a routine which is called by advance_reaction when reaction_type=2.
+    ! note that the contribution of ext_src to n_new has not be implemented yet.
+    ! when implementing it, remind the role and sign convention for ext_src in advance_reaction
+    if (present(ext_src_in)) then
+       call bl_error("advance_reaction_SSA does not use ext_src")
+    end if
+
     nlevs = mla%nlevel
     dm = mla%dim
-
    
     ! no reaction case is already checked before this routine is called by advance_reaction 
     ! hence, the following condition should not hold
