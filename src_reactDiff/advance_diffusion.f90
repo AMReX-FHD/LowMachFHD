@@ -48,6 +48,9 @@ contains
           ! make sure n_new contains the new state
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
        end do
+       if (present(ext_src_in)) then
+          call multifab_saxpy_3(n_new(n),dt,ext_src_in(n))
+       end if
        return
     end if   
     
