@@ -60,6 +60,17 @@ contains
     increment_div = .false.
     if (present(increment_in)) increment_div = increment_in
 
+    ! single cell case set stochastic mass fluxdiv to zero 
+    ! (or its increment if increment_in=T) and return
+    if ((multifab_volume(n_cc(1))/nspecies)<=1) then
+       if (.not. increment_div) then
+          do n=1,nlevs
+             call multifab_setval(stoch_fluxdiv(n),0.d0,all=.true.)
+          end do
+       end if
+       return
+    end if
+
     do n=1,nlevs
        do i=1,dm
           call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
