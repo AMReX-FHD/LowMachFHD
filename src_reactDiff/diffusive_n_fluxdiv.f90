@@ -39,8 +39,16 @@ contains
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
 
+    ! single cell case set diffusive mass fluxdiv to zero and return
+    if ((multifab_volume(n_cc(1))/nspecies)<=1) then
+       do n=1,nlevs
+          call multifab_setval(diff_fluxdiv(n),0.d0,all=.true.)
+       end do
+       return
+    end if
+
     do n=1,nlevs
-       ! for multigrid solver; (alpha - div beta grad) phi = rhs
+       ! cc_applyop compute res = (alpha - div beta grad) phi
        call multifab_build(alpha(n),mla%la(n),1,0)
        call multifab_build(res(n)  ,mla%la(n),1,0)
        call multifab_build(phi(n)  ,mla%la(n),1,1) 
@@ -50,7 +58,7 @@ contains
     end do
 
     do spec=1,nspecies
-       ! cc_applyop compute (alpha - div beta grad) phi
+       ! cc_applyop compute res = (alpha - div beta grad) phi
        ! phi = n_cc
        ! alpha = 0
        ! beta = -D_k
