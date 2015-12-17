@@ -38,8 +38,7 @@ contains
 
     ! local
     type(multifab) :: ext_src(mla%nlevel)
-    type(multifab) :: rate1(mla%nlevel)  ! only used for reaction_type=0,1
-    type(multifab) :: rate2(mla%nlevel)  ! only used for reaction_type=1
+    type(multifab) :: rate(mla%nlevel)  ! only used for reaction_type=0,1
 
     integer :: nlevs, dm, n
 
@@ -71,12 +70,8 @@ contains
     ! build
     do n=1,nlevs
       call multifab_build(ext_src(n),mla%la(n),nspecies,0)
-
-      if (reaction_type .eq. 0) then  ! first-order tau-leaping or CLE
-        call multifab_build(rate1(n),mla%la(n),nspecies,0)
-      else if (reaction_type .eq. 1) then  ! second-order tau-leaping or CLE
-        call multifab_build(rate1(n),mla%la(n),nspecies,0)
-        call multifab_build(rate2(n),mla%la(n),nspecies,0)
+      if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then  ! tau-leaping or CLE
+        call multifab_build(rate(n),mla%la(n),nspecies,0)
       end if
     end do
 
@@ -99,12 +94,12 @@ contains
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
-      call chemical_rates(mla,n_old,rate1,dx,dt)
+      call chemical_rates(mla,n_old,rate,dx,dt)
 
       ! update
       do n=1,nlevs
         call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
-        call multifab_saxpy_3(n_new(n),dt,rate1(n))
+        call multifab_saxpy_3(n_new(n),dt,rate(n))
         call multifab_saxpy_3(n_new(n),-dt,ext_src(n))  ! note the negative sign
 
         call multifab_fill_boundary(n_new(n))
@@ -115,12 +110,12 @@ contains
     else if (reaction_type .eq. 1) then  ! second-order tau-leaping or CLE 
 
       ! calculate rates from a(n_old)
-      call chemical_rates(mla,n_old,rate1,dx,theta*dt)
+      call chemical_rates(mla,n_old,rate,dx,theta*dt)
 
       ! predictor
       do n=1,nlevs
         call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
-        call multifab_saxpy_3(n_new(n),theta*dt,rate1(n))
+        call multifab_saxpy_3(n_new(n),theta*dt,rate(n))
         call multifab_saxpy_3(n_new(n),-theta*dt,ext_src(n))  ! note the negative sign
 
         call multifab_fill_boundary(n_new(n))
@@ -136,14 +131,12 @@ contains
       mattingly_lin_comb_coef(2) = alpha1 
 
       ! calculate rates from 2*a(n_pred)-a(n_old)
-      call chemical_rates(mla,n_old,rate2,dx,(1.d0-theta)*dt,n_new,mattingly_lin_comb_coef)
+      call chemical_rates(mla,n_old,rate,dx,(1.d0-theta)*dt,n_new,mattingly_lin_comb_coef)
 
       ! update
       do n=1,nlevs
-        call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
-        call multifab_saxpy_3(n_new(n),theta*dt,rate1(n))
-        call multifab_saxpy_3(n_new(n),(1.d0-theta)*dt,rate2(n))
-        call multifab_saxpy_3(n_new(n),-dt,ext_src(n))  ! note the negative sign
+        call multifab_saxpy_3(n_new(n),(1.d0-theta)*dt,rate(n))
+        call multifab_saxpy_3(n_new(n),-dt*(1.d0-theta)*(alpha1-alpha2),ext_src(n))  ! note the negative sign
         ! also note that ext_src does not change in the time interval (t,t+dt) 
 
         call multifab_fill_boundary(n_new(n))
@@ -171,12 +164,8 @@ contains
 
     do n=1,nlevs
       call multifab_destroy(ext_src(n))
-
-      if (reaction_type .eq. 0) then  ! first-order tau-leaping or CLE 
-        call multifab_destroy(rate1(n))
-      else if (reaction_type .eq. 1) then  ! second-order tau-leaping or CLE 
-        call multifab_destroy(rate1(n))
-        call multifab_destroy(rate2(n))
+      if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then  ! tau-leaping or CLE 
+        call multifab_destroy(rate(n))
       end if
     end do
 
