@@ -49,6 +49,10 @@ contains
 
     if (inhomogeneous_bc_fix) then
 
+       if (temporal_integrator .lt. 0) then
+          call bl_error("inhomogeneous_bc_fix not supported for temporal_integrator < 0")
+       end if
+
        ! store reactions rates for n_steady in Rn_steady
        ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
        ! returning an explicit rate in units of number_density/time
