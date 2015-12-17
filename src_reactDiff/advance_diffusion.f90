@@ -8,7 +8,7 @@ module advance_diffusion_module
   use multifab_physbc_module
   use implicit_diffusion_module
   use probin_common_module, only: variance_coef_mass
-  use probin_reactdiff_module, only: nspecies, D_Fick, diffusion_type
+  use probin_reactdiff_module, only: nspecies, D_Fick, diffusion_type, midpoint_stoch_flux_type
 
   implicit none
 
@@ -174,13 +174,36 @@ contains
 
           ! compute second-stage stochastic flux divergence and
           ! add to first-stage stochastic flux divergence
-          call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                    the_bc_tower,increment_in=.true.)
+          select case (midpoint_stoch_flux_type)
+          case (1)
+             ! use n_old
+             call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                       the_bc_tower,increment_in=.true.)
+          case (2)
+             ! use n_pred 
+             call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                       the_bc_tower,increment_in=.true.)
+          case (3)
+             ! compute 2*n_pred-n_old
+             do n=1,nlevs
+                call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,n_new(n)%ng)
+                call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+             end do
+             ! use 2*n_pred-n_old
+             call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                       the_bc_tower,increment_in=.true.)
+          case default
+             call bl_error("advance_diffusion: invalid midpoint_stoch_flux_type")
+          end select
        end if
-
        ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
-       !                   + dt div (sqrt(2 D_k n_k / dt) (Z_1+Z_2)/sqrt(2) )^n
+       !                   + dt div (sqrt(2 D_k n_k^n dt) Z_1 / sqrt(2) )
+       !                   + dt div (sqrt(2 D_k n_k^? dt) Z_2 / sqrt(2) )
        !                   + dt ext_src
+       ! where
+       ! n_k^? = n_k^n               (midpoint_stoch_flux_type=1)
+       !       = n_k^pred            (midpoint_stoch_flux_type=2)
+       !       = 2*n_k^pred - n_k^n  (midpoint_stoch_flux_type=3)
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
           call multifab_saxpy_3(n_new(n),dt           ,diff_fluxdiv(n))
