@@ -54,12 +54,15 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ! if there are no reactions to process, copy n_old to n_new and return
-    ! changho: what if ext_src_in is not zero?
+    ! if there are no reactions to process, copy n_old to n_new,
+    ! account for ext_src_in (if present) and return
     if(nreactions<1) then
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
        end do
+       if (present(ext_src_in)) then
+          call multifab_saxpy_3(n_new(n),-dt,ext_src_in(n))
+       end if
        return
     end if
     
