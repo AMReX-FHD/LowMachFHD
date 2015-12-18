@@ -1,36 +1,32 @@
-! This test is the simplified version of Baras-Pearson-Mansour (BPM) model
-! This specific input file gives a bimodal distribution in a well-mixed (single-cell) system
+! This runs the Schlogl model starting from an estimate of the saddle point in 1d
+! This is set up to do deterministic runs but easy to change to add fluctuations
 
-! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
-! be careful and check values are read correctly (e.g., c_bc)
-
-! Options for low Mach equations
 &probin_common
  
   ! Problem specification
   !----------------------
   prob_type = 0 ! 0=equilibrium, 1=gaussian, 2=gradient
-  dim_in = 2                       ! 2D or 3D (here we do a single cell) 
-  prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
-  n_cells(1:2) = 64 64             ! number of cells in domain
-  max_grid_size(1:2) = 32 32 ! 128 128       ! max number of cells in a box
+  dim_in = 3                       ! 2D or 3D (true 1D not supported yet)
+  prob_lo(1:3) = 0.0 0.0 0.0       ! physical lo coordinate
+  prob_hi(1:3) = 1.0 1.0 1.0 ! physical hi coordinate
+  n_cells(1:3) = 64 64 64             ! number of cells in domain
+  max_grid_size(1:3) = 32 32 32      ! max number of cells in a box
 
   ! Time-step control
   !----------------------
   ! Use dt=0.01 for fluctuating (otherwise sometimes it goes unstable it seems)
   ! One can use dt=0.1 for deterministic runs but I recommend dt=0.01 to minimize errors
   !   (always check the behavior near t=0 is physical and not a numerical artifact!)
-  fixed_dt = 0.01                  ! time step (if positive, fixed)
+  fixed_dt = 0.1                  ! time step (if positive, fixed)
   !cfl = 0.25d0                      ! max diffusive cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 100000                 ! maximum number of time steps
-  plot_int = 10000                     ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 100                 ! maximum number of time steps
+  plot_int = 100                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 100                   ! how often to output statistics
+  print_int = 10                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mass = -1.0 ! global scaling epsilon for stochastic mass forcing on TOP of 1/dV
@@ -38,8 +34,7 @@
   ! Initial conditions
   !----------------------
   smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-  initial_variance = -1    ! multiplicative factor for initial fluctuations on  TOP of 1/dV
-                           ! (if negative, total mass fluctuation is set to zero)
+  initial_variance = -1e-2    ! multiplicative factor for initial fluctuations on  TOP of 1/dV
 
   ! Algorithm control / selection
   !----------------------
@@ -58,8 +53,8 @@
   ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
-  bc_lo(1:2) = -1 -1 ! 101 101
-  bc_hi(1:2) = -1 -1 ! 101 101
+  bc_lo(1:3) = -1 -1 -1
+  bc_hi(1:3) = -1 -1 -1
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
@@ -68,7 +63,7 @@
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = -2         ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = 2         ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
@@ -76,7 +71,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 32  ! parallelization parameters
-  stats_int = 0               ! Project grid for analysis
+  stats_int = 10              ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
@@ -89,7 +84,7 @@
 ! reaction/diffusion number fraction code
 &probin_reactdiff
 
-  temporal_integrator = 1 ! 0=D + R
+  temporal_integrator =-1 ! 0=D + R
                           ! 1=(1/2)R + D + (1/2)R
                           ! 2=(1/2)D + R + (1/2)D
                           ! -1=unsplitting forward Euler
@@ -102,9 +97,9 @@
 
   midpoint_stoch_flux_type = 1   ! for midpoint diffusion schemes, (split and unsplit)
                                  ! corrector formulation of noise
-                                 ! K(nold) * W1 + K(nold)         * W2
-                                 ! K(nold) * W1 + K(npred)        * W2
-                                 ! K(nold) * W1 + K(2*npred-nold) * W2
+                                 ! 1 = K(nold) * W1 + K(nold)         * W2
+                                 ! 2 = K(nold) * W1 + K(npred)        * W2
+                                 ! 3 = K(nold) * W1 + K(2*npred-nold) * W2
 
   reaction_type = 1  ! Only used for splitting schemes
                      ! 0=first-order tau leaping or CLE
@@ -130,7 +125,7 @@
                  
   ! Initial condition:
   n_init_in(1,1:1) = 0.1
-  model_file_init = T ! Initialize from a file (computed saddle point)
+  model_file_init = -1 ! Initialize from a file (computed saddle point)
 
   ! Diffusion:
   ! -----------------
@@ -157,11 +152,12 @@
 
   !k=[3.1, 1.0, 0.8, 2.9]; !Bimodal, for input file schlogl_bimodal_saddle.dat
   rate_const(1:4) =  3.1, 1.0, 0.8, 2.9 ! Bimodal, peaks at x=0.5 and x=1.6, saddle at x=1
-  model_file(1) = "./model_files/schlogl_bimodal_saddle.dat" ! Best estimate of the saddle
-  !model_file(1) = "./model_files/schlogl_bimodal_saddle_pp.dat" ! Before the saddle
-  !model_file(1) = "./model_files/schlogl_bimodal_saddle_p.dat" ! Only slightly before the saddle
-  !model_file(1) = "./model_files/schlogl_bimodal_saddle_m.dat" ! After the saddle
-  !model_file(1) = "./model_files/schlogl_bimodal_saddle_mm.dat" ! Only slightly after the saddle
+
+  model_file(1) = "./model_files/3d/schlogl_bimodal_saddle.dat" ! Best estimate of the saddle
+  ! For m (minus) states the bubble grows and for p (plus) states the bubble shrinks in this 3d case
+  ! Note that these 3d files are not in git because of size, only the saddle is there
+  !model_file(1) = "./model_files/3d/schlogl_bimodal_saddle_pp.dat" ! Before the saddle
+  !model_file(1) = "./model_files/3d/schlogl_bimodal_saddle_mm.dat" ! Only slightly after the saddle
   
   rate_multiplier = 1.0 ! Slow or speed up all reactions at once
   include_discrete_LMA_correction = F ! Compute rates using classical LMA or molecular  

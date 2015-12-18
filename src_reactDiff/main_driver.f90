@@ -212,14 +212,27 @@ subroutine main_driver()
 
    if (restart .lt. 0) then
 
-      if (.not. model_file_init) then
+      if (model_file_init == 0) then
          ! initialize with a subroutine
 
          call init_n(mla,n_old,dx,the_bc_tower)
 
       else
          ! initialize from model files
-         allocate(input_array(n_cells(1),n_cells(2),n_cells(3)))
+         
+         if(dm==2) then
+            if (model_file_init>0) then ! Fortran (column-major) order
+               allocate(input_array(n_cells(1),n_cells(2),1))
+            else ! C (row-major) order   
+               allocate(input_array(n_cells(2),n_cells(1),1))
+            end if 
+         else
+            if (model_file_init>0) then ! Fortran (column-major) order
+               allocate(input_array(n_cells(1),n_cells(2),n_cells(3)))
+            else ! C (row-major) order   
+               allocate(input_array(n_cells(3),n_cells(2),n_cells(1)))
+            end if   
+         end if            
 
          do n=1,nspecies
 
@@ -234,6 +247,7 @@ subroutine main_driver()
             end if
 
             ! broadcast input_array to all processors
+            ! there is no higher-rank routine at present so just do this for now
             do k=1,n_cells(3)
             do j=1,n_cells(2)
                call parallel_bcast_dv(input_array(:,j,k))
@@ -263,15 +277,6 @@ subroutine main_driver()
       end if
    else
       dt = cfl * dx(1,1)**2 / (maxval(D_Fick(1:nspecies)))
-   end if
-
-   ! write a plotfile
-   if (plot_int .gt. 0) then
-      if (restart .lt. 0) then
-         call write_plotfile_n(mla,n_old,dx,0.d0,0)
-      else
-         call write_plotfile_n(mla,n_old,dx,time,restart)
-      end if
    end if
 
    ! compute n_steady for inhomogeneous_bc_fix
@@ -310,19 +315,37 @@ subroutine main_driver()
    !=====================================================================
    ! Hydrogrid analysis and output for initial data
    !=====================================================================
-   istep=init_step
-   if ((restart .lt. 0).and.(istep > n_steps_skip)) then
-      ! Add the initial snapshot to the average in HydroGrid
+
+
+   ! Donev: Changed the way this does things here to only apply to non-restarted runs and start from zero:
+   if (restart .lt. 0) then
+      istep=0
       
-      if (hydro_grid_int > 0) then
-         call analyze_hydro_grid(mla,dt,dx,istep,rho=n_old)
-      end if
+      if (plot_int .gt. 0) call write_plotfile_n(mla,n_old,dx,time,istep)
+   
+      if(istep >= n_steps_skip) then
+         ! Add the initial snapshot to the average in HydroGrid
 
-      if ((hydro_grid_int > 0) .and. (n_steps_save_stats > 0)) then
-         call save_hydro_grid(id=0, step=0)
-      end if
+         if (hydro_grid_int > 0) then
+            call analyze_hydro_grid(mla,dt,dx,istep,rho=n_old)
+         end if
 
-   end if
+         if ((hydro_grid_int > 0) .and. (n_steps_save_stats > 0)) then
+            call save_hydro_grid(id=0, step=0)
+         end if
+
+         if ( stats_int > 0) then
+            ! Compute vertical and horizontal averages (hstat and vstat files)   
+            call print_stats(mla,dx,istep,time,rho=n_old)
+         end if
+
+      end if
+   
+   else ! Here we always write the starting point to check restarts are working
+   
+      call write_plotfile_n(mla,n_old,dx,time,restart)   
+      
+   end if   
 
    !=======================================================
    ! Begin time stepping loop
@@ -357,6 +380,16 @@ subroutine main_driver()
           end if
           runtime1=parallel_wtime()
                 
+       end if
+       
+       if(.true.) then ! Donev: Temporary logging to analyze dynamics of mean
+          do spec=1,nspecies
+             n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
+          end do
+          if (parallel_IOProcessor() ) then
+             write(9,*) time, n_sum(:)/(multifab_volume(n_old(1))/nspecies) 
+          end if
+       
        end if
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!

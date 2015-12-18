@@ -7,7 +7,7 @@ module init_n_module
   use define_bc_module
   use bc_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type
-  use probin_reactdiff_module, only: nspecies, n_init_in
+  use probin_reactdiff_module, only: nspecies, n_init_in, model_file_init
   
   implicit none
 
@@ -256,12 +256,7 @@ contains
 
   end subroutine init_n_3d
 
-  subroutine init_n_model(mla,n_init,dx,the_bc_tower,input_array,comp)
-
-    ! initialize rho_i and umac in the valid region
-    ! we first initialize c_i in the valid region
-    ! then enforce that sum(c_i)=1 by overwriting the final concentration,
-    ! and then use the EOS to compute rho_i
+  subroutine init_n_model(mla,n_init,dx,the_bc_tower,input_array,comp) ! Read from a file
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: n_init(:)
@@ -294,7 +289,7 @@ contains
           case (2)
              call init_n_model_2d(np(:,:,1,:),ng_n,lo,hi,input_array(:,:,1),comp)
           case (3)
-
+             call init_n_model_3d(np,ng_n,lo,hi,input_array,comp)
           end select
        end do
     end do
@@ -315,19 +310,48 @@ contains
 
     integer         :: lo(:), hi(:), ng_n, comp
     real(kind=dp_t) :: n_init(lo(1)-ng_n:,lo(2)-ng_n:,:)
-    real(kind=dp_t) :: input_array(0:,0:)
+    real(kind=dp_t) :: input_array(0:,0:) ! This argument is replicated so it is the whole box, not just our patch!
  
     ! local varables
     integer         :: i,j
-
+    
     do j=lo(2),hi(2)
     do i=lo(1),hi(1)
 
-       n_init(i,j,comp) = input_array(i,j)
+       if(model_file_init>0) then  
+          n_init(i,j,comp) = input_array(i,j)
+       else
+          n_init(i,j,comp) = input_array(j,i)       
+       end if   
 
     end do
     end do
 
   end subroutine init_n_model_2d
+
+  subroutine init_n_model_3d(n_init,ng_n,lo,hi,input_array,comp)
+
+    integer         :: lo(:), hi(:), ng_n, comp
+    real(kind=dp_t) :: n_init(lo(1)-ng_n:,lo(2)-ng_n:,lo(3)-ng_n:,:)
+    real(kind=dp_t) :: input_array(0:,0:,0:) ! This argument is replicated so it is the whole box, not just our patch!
+ 
+    ! local varables
+    integer         :: i,j,k
+    
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+
+       if(model_file_init>0) then  
+          n_init(i,j,k,comp) = input_array(i,j,k)
+       else
+          n_init(i,j,k,comp) = input_array(k,j,i)       
+       end if   
+
+    end do
+    end do
+    end do
+
+  end subroutine init_n_model_3d
 
 end module init_n_module
