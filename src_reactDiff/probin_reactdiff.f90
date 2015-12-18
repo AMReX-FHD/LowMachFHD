@@ -27,9 +27,9 @@ module probin_reactdiff_module
                                                     ! 2=explicit midpoint
   integer, save :: midpoint_stoch_flux_type = 1     ! for midpoint diffusion schemes, (split and unsplit)
                                                     ! corrector formulation of noise
-                                                    ! K(nold) * W1 + K(nold)         * W2
-                                                    ! K(nold) * W1 + K(npred)        * W2
-                                                    ! K(nold) * W1 + K(2*npred-nold) * W2
+                                                    ! 1 = K(nold) * W1 + K(nold)         * W2
+                                                    ! 2 = K(nold) * W1 + K(npred)        * W2
+                                                    ! 3 = K(nold) * W1 + K(2*npred-nold) * W2
   integer, save :: reaction_type = 0                ! Only used for splitting schemes
                                                     ! 0=first-order tau leaping or CLE
                                                     ! 1=second-order tau leaping or CLE
@@ -47,7 +47,8 @@ module probin_reactdiff_module
   real(kind=dp_t), save :: n_init_in(2,max_species) = 1.d0 ! Initial values to be used in init_n.f90
   real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0    ! n_i boundary conditions (dir,lohi,species)
 
-  logical, save           :: model_file_init = .false.     ! initialize from model files
+  integer, save           :: model_file_init = 0     ! initialize from model files:
+                               ! 0=no, 1=usual order (Fortran), -1=transpose order (C)
   character(len=128), save :: model_file(max_species)       ! one model file for each species
 
   ! Diffusion     
