@@ -289,7 +289,7 @@ contains
           case (2)
              call init_n_model_2d(np(:,:,1,:),ng_n,lo,hi,input_array(:,:,1),comp)
           case (3)
-             call init_n_model_2d(np(:,:,1,:),ng_n,lo,hi,input_array(:,:,1),comp)
+             call init_n_model_3d(np,ng_n,lo,hi,input_array,comp)
           end select
        end do
     end do
@@ -328,5 +328,30 @@ contains
     end do
 
   end subroutine init_n_model_2d
+
+  subroutine init_n_model_3d(n_init,ng_n,lo,hi,input_array,comp)
+
+    integer         :: lo(:), hi(:), ng_n, comp
+    real(kind=dp_t) :: n_init(lo(1)-ng_n:,lo(2)-ng_n:,lo(3)-ng_n:,:)
+    real(kind=dp_t) :: input_array(0:,0:,0:) ! This argument is replicated so it is the whole box, not just our patch!
+ 
+    ! local varables
+    integer         :: i,j,k
+    
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
+
+       if(model_file_init>0) then  
+          n_init(i,j,k,comp) = input_array(i,j,k)
+       else
+          n_init(i,j,k,comp) = input_array(k,j,i)       
+       end if   
+
+    end do
+    end do
+    end do
+
+  end subroutine init_n_model_3d
 
 end module init_n_module
