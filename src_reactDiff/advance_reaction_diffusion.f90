@@ -68,6 +68,10 @@ contains
       ! Donev: There seems to be no point in doing the work, so just skip implementing this
       call bl_error("advance_reaction_diffusion: use splitting based schemes (temporal_integrator>=0) for single cell")
     end if
+    ! Donev: This is not technically an error as the code will work, but better tell the user there is a more efficient way:
+    if(nreactions<1) then
+      call bl_error("advance_reaction_diffusion: use splitting based schemes (temporal_integrator>=0) for diffusion only")
+    end if
 
     call build(bpt,"advance_reaction_diffusion")
 
