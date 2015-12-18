@@ -40,8 +40,6 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ! Donev: I reorganized this a bit so that for unsplit schemes this is just a wrapper around advance_reaction_diffusion
-    ! without any extra bloat or overheads
     if (temporal_integrator .lt. 0) then  ! unsplit schemes
 
        call advance_reaction_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower)
@@ -67,9 +65,9 @@ contains
        select case(temporal_integrator)
        case(0) ! D + R
 
-          call advance_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src=Rn_steady)
+          call advance_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower,Rn_steady)
           ! swap n_new/n_old to avoid calling copy()
-          call advance_reaction (mla,n_new,n_old,dx,dt,the_bc_tower,ext_src=Rn_steady)  
+          call advance_reaction (mla,n_new,n_old,dx,dt,the_bc_tower,Rn_steady)  
           do n=1,nlevs
              ! make sure n_new contains the new state
              call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
@@ -77,17 +75,17 @@ contains
 
        case(1) ! (1/2)R + D + (1/2)R
 
-          call advance_reaction (mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,ext_src=Rn_steady)
+          call advance_reaction (mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,Rn_steady)
           ! swap n_new/n_old to avoid calling copy()
-          call advance_diffusion(mla,n_new,n_old,dx,dt      ,the_bc_tower,ext_src=Rn_steady)  
-          call advance_reaction (mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,ext_src=Rn_steady)
+          call advance_diffusion(mla,n_new,n_old,dx,dt      ,the_bc_tower,Rn_steady)  
+          call advance_reaction (mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,Rn_steady)
 
        case(2)  ! (1/2)D + R + (1/2)D
 
-          call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,ext_src=Rn_steady)
+          call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,Rn_steady)
           ! swap n_new/n_old to avoid calling copy()
-          call advance_reaction (mla,n_new,n_old,dx,dt      ,the_bc_tower,ext_src=Rn_steady)
-          call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,ext_src=Rn_steady)
+          call advance_reaction (mla,n_new,n_old,dx,dt      ,the_bc_tower,Rn_steady)
+          call advance_diffusion(mla,n_old,n_new,dx,0.5d0*dt,the_bc_tower,Rn_steady)
 
        case default
           call bl_error("advance_timestep: invalid temporal_integrator")

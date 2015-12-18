@@ -28,7 +28,6 @@ contains
   ! to model stochastic particle production (sources) include g in the definition of f instead.
   ! or add it as a reaction 0->products
 
-  ! Donev: I made ext_src an non-optional argument -- please review
   subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src)
 
     type(ml_layout), intent(in   ) :: mla
@@ -59,8 +58,8 @@ contains
     if(nreactions<1) then
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+          call multifab_saxpy_3(n_new(n),-dt,ext_src(n))
        end do
-       call multifab_saxpy_3(n_new(n),-dt,ext_src(n))
        return
     end if
     
