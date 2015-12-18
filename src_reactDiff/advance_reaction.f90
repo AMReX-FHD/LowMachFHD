@@ -28,7 +28,6 @@ contains
   ! to model stochastic particle production (sources) include g in the definition of f instead.
   ! or add it as a reaction 0->products
 
-  ! Donev: I made ext_src an non-optional argument -- please review
   subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src)
 
     type(ml_layout), intent(in   ) :: mla

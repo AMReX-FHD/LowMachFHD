@@ -47,7 +47,6 @@ contains
     ! no reaction case is already checked before this routine is called by advance_reaction 
     ! hence, the following condition should not hold but we do it for completeness
     if (nreactions .lt. 1) then
-       ! Donev: there is no need to abort here with an error since this is trivial
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
        end do

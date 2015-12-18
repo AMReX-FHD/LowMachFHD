@@ -21,7 +21,6 @@ contains
   ! Solves n_t = div ( D grad (n)) + div (sqrt(2*variance*D*n)*W) + g
   !  where g is a constant in time external source
   
-  ! Donev: I made ext_src a non-optional argument -- please review
   subroutine advance_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src)
 
     type(ml_layout), intent(in   ) :: mla
@@ -44,10 +43,8 @@ contains
     dm = mla%dim
 
     ! do not do diffusion if only one cell (well-mixed system)
-    ! Donev: I believe that for diffusion there is actually a limit of at least 4 cells, or maybe at least 3
-    ! due to issues with ghost cells. Andy should confirm 
-    ! If the system is smaller than the minimum for which diffusion works correctly abort here
-    ! If it is not hard to support here 1D systems (n_cells(2)=1) please add that, it is useful
+    ! there is no restriction on the number of cells
+    ! but we can shortcut the single cell case anyway for simplicity
     if((multifab_volume(n_old(1))/nspecies)<=1) then
        do n=1,nlevs
           ! make sure n_new contains the new state
@@ -82,7 +79,6 @@ contains
 
     ! compute stochastic flux divergence
     if (variance_coef_mass .gt. 0.d0) then
-       ! Donev: I moved this here inside this if statement instead of way above as it used to be
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
                                  the_bc_tower,increment_in=.false.)
@@ -101,6 +97,7 @@ contains
        !                     + dt ext_src
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
+          ! By default, saxpy updates zero ghost cell.
           call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,ext_src(n))
@@ -122,8 +119,6 @@ contains
        !  which is what we use below
        do n=1,nlevs
           call multifab_plus_plus_c(n_new(n),1,n_old(n),1,nspecies,0)
-          ! Donev: Andy, for my edification, why don't you pass explicitly nghost=0 in the following 3 lines?
-          ! What is the convention in multifab_saxpy -- does it choose the smaller of the number of ghost cells of the two multifabs?
           call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,ext_src(n))
@@ -140,8 +135,7 @@ contains
        !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
        !                   +  dt    ext_src
        
-       ! Donev: Combine ext_src and stoch_fluxdiv together as an external source
-       ! Andy, please check I did this right -- not sure if there is a need here to pass nghost=0? explicitly?
+       ! Combine ext_src and stoch_fluxdiv together as an external source
        do n=1,nlevs
           call multifab_plus_plus(stoch_fluxdiv(n),ext_src(n),0)
        end do

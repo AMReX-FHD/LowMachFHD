@@ -161,8 +161,7 @@ subroutine main_driver()
    deallocate(pmask)
 
    ! allocate and build multifabs that will contain random numbers
-   ! Donev: Added this comment
-   ! in this case, we only one 1 rng because we are using an Ito interpretation
+   ! in this case, we only use one rng because we are using an Ito interpretation
    ! so that we can compute the term involving W_1 first, and then compute the one involving W_2 only
    n_rngs = 1
    call init_mass_stochastic(mla,n_rngs)

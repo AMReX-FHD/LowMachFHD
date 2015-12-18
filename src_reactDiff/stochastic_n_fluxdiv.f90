@@ -28,7 +28,6 @@ module stochastic_n_fluxdiv_module
   
 contains
   
-  ! Donev: Added a bit of documentation
   ! This computes div (sqrt(2*variance*D*n_cc / (dt*dV)) * W ) where W is a collection of i.i.d. standard normal variates
   ! It can easily be generalized to compute
   !  div (sqrt(2*variance*D*n_cc / (dt*dV)) * (alpha*W_1+beta*W_2) ) if n_rng=2

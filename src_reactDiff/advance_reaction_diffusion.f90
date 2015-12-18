@@ -20,18 +20,12 @@ module advance_reaction_diffusion_module
 
 contains
 
-  ! Donev: Added this documentation to explain what this does:
   ! this solves dn/dt = div ( D grad (n)) + div (sqrt(2*variance*D*n)*W) + f(n) - g
   !  where f(n) are the chemical production rates (deterministic or stochastic)
   !  and g=ext_src (note minus sign!) is a constant (in time) *deterministic* source term.
   ! To model stochastic particle production (sources) include g in the definition of f instead
   !  or add it as a reaction 0->products
 
-  ! Donev: Here I kept ext_src optional and made sure it works without having to make a temporary multifab
-  ! I would like to try to minimize the needless overheads in cases where programming is not made more complicated
-  ! In this case it is very easy to do this -- all you do is add if(present(ext_src)) in front of a few lines
-  ! Note that the same can be done even in advance_reaction and advance_diffusion but since we always call
-  ! those with that term present I kept it there as not optional instead
   subroutine advance_reaction_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src)
 
     type(ml_layout), intent(in   ) :: mla
@@ -42,7 +36,6 @@ contains
     type(multifab) , intent(in   ), optional :: ext_src(:)
 
     ! local
-    ! Donev: I deleted here ext_src
     type(multifab) :: diff_fluxdiv(mla%nlevel)
     type(multifab) :: stoch_fluxdiv(mla%nlevel)
     type(multifab) :: diff_coef_face(mla%nlevel,mla%dim)
@@ -53,22 +46,16 @@ contains
 
     type(bl_prof_timer),save :: bpt
 
-    ! Donev: I made this a parameter since it is fixed
     real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
 
     !!!!!!!!
     ! init !
     !!!!!!!!
 
-    ! Donev: I believe that for diffusion there is actually a limit of at least 4 cells, or maybe at least 3
-    ! due to issues with ghost cells. Andy should confirm 
-    ! If the system is smaller than the minimum for which diffusion works correctly abort here
-    ! single cell case? 
     if ((multifab_volume(n_old(1))/nspecies)<=1) then
-      ! Donev: There seems to be no point in doing the work, so just skip implementing this
       call bl_error("advance_reaction_diffusion: use splitting based schemes (temporal_integrator>=0) for single cell")
     end if
-    ! Donev: This is not technically an error as the code will work, but better tell the user there is a more efficient way:
+
     if(nreactions<1) then
       call bl_error("advance_reaction_diffusion: use splitting based schemes (temporal_integrator>=0) for diffusion only")
     end if
@@ -129,7 +116,6 @@ contains
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
       call chemical_rates(mla,n_old,rate1,dx,dt)
 
-      ! Donev: I added some documentation here, please check
       ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^n
       !                   + dt div (sqrt(2 D_k n_k^n dt) Z) ! Gaussian noise
       !                   + 1/dV * P( f(n_k)*dt*dV )        ! Poisson noise
@@ -214,11 +200,8 @@ contains
           call bl_error("advance_reaction_diffusion: invalid midpoint_stoch_flux_type")
         end select
 
-      ! Donev: I deleted the else clause here since stochfluxdiv is already set to zero
-      ! I did this to match what is in advance_diffusion since these two codes are copies of each other
       end if
 
-      ! Donev: I added some documentation here, please check
       ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
       !                   + dt div (sqrt(2 D_k n_k^n dt) Z_1 / sqrt(2) ) ! Gaussian noise
       !                   + dt div (sqrt(2 D_k n_k^? dt) Z_2 / sqrt(2) ) ! Gaussian noise

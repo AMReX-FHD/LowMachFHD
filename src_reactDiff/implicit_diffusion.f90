@@ -18,7 +18,7 @@ module implicit_diffusion_module
 
 contains
 
-  ! Donev: I removed stoch_fluxdiv from the argument list since it was redundant with ext_src
+  ! ext_src may contain stochastic contribution
   ! This solves
   ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
   !                   + (dt/2) div (D_k grad n_k)^n+1
