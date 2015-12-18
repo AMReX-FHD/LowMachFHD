@@ -6,7 +6,7 @@ module advance_reaction_module
   use bc_module
   use chemical_rates_module
   use advance_reaction_SSA_module
-  use probin_reactdiff_module, only: nspecies, nreactions, reaction_type 
+  use probin_reactdiff_module, only: nspecies, nreactions, reaction_type, inhomogeneous_bc_fix
 
   implicit none
 
@@ -146,8 +146,8 @@ contains
 
     else if (reaction_type .eq. 2) then  ! SSA
 
-       if (present(ext_src_in)) then
-          call bl_error("advance_reaction_SSA does not use ext_src")
+       if (inhomogeneous_bc_fix) then
+          call bl_error("advance_reaction_SSA does not support inhomogeneous_bc_fix")
        end if
 
       call advance_reaction_SSA(mla,n_old,n_new,dx,dt,the_bc_tower)
