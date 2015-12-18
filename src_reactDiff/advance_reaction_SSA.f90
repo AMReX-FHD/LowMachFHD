@@ -16,7 +16,7 @@ module advance_reaction_SSA_module
   
 contains
 
-  ! advance_reaction_SSA solves dn/dt = f(n)
+  ! advance_reaction_SSA solves dn/dt = f(n) 
   !  where f(n) are the chemical production rates (deterministic or stochastic)
   subroutine advance_reaction_SSA(mla,n_old,n_new,dx,dt,the_bc_tower)
 
