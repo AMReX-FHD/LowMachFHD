@@ -115,6 +115,11 @@
                            ! 0=explicit trapezoidal predictor/corrector
                            ! 1=Crank-Nicolson semi-implicit
                            ! 2=explicit midpoint
+  midpoint_stoch_flux_type = 1   ! for midpoint diffusion schemes, (split and unsplit)
+                                 ! corrector formulation of noise
+                                 ! K(nold) * W1 + K(nold)         * W2
+                                 ! K(nold) * W1 + K(npred)        * W2
+                                 ! K(nold) * W1 + K(2*npred-nold) * W2
   reaction_type = 1        ! Only used for splitting schemes
                            ! 0=first-order tau leaping or CLE
                            ! 1=second-order tau leaping or CLE
