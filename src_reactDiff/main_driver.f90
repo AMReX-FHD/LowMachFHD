@@ -91,7 +91,7 @@ subroutine main_driver()
       end if
    end do
 
-   ng_s = 2
+   ng_s = 1 
 
    if (restart .ge. 0) then
 
