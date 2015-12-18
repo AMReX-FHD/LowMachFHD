@@ -23,21 +23,22 @@ module advance_reaction_module
 contains
 
   ! this solves dn/dt = f(n) - g (note the minus sign for g)
-  !  where f(n) are the chemical production rates (deterministic or stochastic)
-  !  and g=ext_src_in is an optional, constant (in time) *deterministic* source term.
+  ! where f(n) are the chemical production rates (deterministic or stochastic)
+  ! and g=ext_src is a constant (in time) *deterministic* source term.
   ! to model stochastic particle production (sources) include g in the definition of f instead.
+  ! or add it as a reaction 0->products
 
-  subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in)
+  ! Donev: I made ext_src an non-optional argument -- please review
+  subroutine advance_reaction(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(in   ), optional :: ext_src_in(:)
+    type(multifab) , intent(in   ) :: ext_src(:)
 
     ! local
-    type(multifab) :: ext_src(mla%nlevel)
     type(multifab) :: rate(mla%nlevel)  ! only used for reaction_type=0,1
 
     integer :: nlevs, dm, n
@@ -54,14 +55,12 @@ contains
     dm = mla%dim
 
     ! if there are no reactions to process, copy n_old to n_new,
-    ! account for ext_src_in (if present) and return
+    ! account for ext_src and return
     if(nreactions<1) then
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
        end do
-       if (present(ext_src_in)) then
-          call multifab_saxpy_3(n_new(n),-dt,ext_src_in(n))
-       end if
+       call multifab_saxpy_3(n_new(n),-dt,ext_src(n))
        return
     end if
     
@@ -69,22 +68,10 @@ contains
 
     ! build
     do n=1,nlevs
-      call multifab_build(ext_src(n),mla%la(n),nspecies,0)
       if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then  ! tau-leaping or CLE
         call multifab_build(rate(n),mla%la(n),nspecies,0)
       end if
     end do
-
-    ! ext_src
-    if (present(ext_src_in)) then
-      do n=1,nlevs
-        call multifab_copy_c(ext_src(n),1,ext_src_in(n),1,nspecies,0)
-      end do
-    else
-      do n=1,nlevs
-        call multifab_setval(ext_src(n),0.d0,all=.true.)
-      end do
-    end if
 
     !!!!!!!!!!!!!!!!!!
     ! advancing time !
@@ -109,10 +96,13 @@ contains
 
     else if (reaction_type .eq. 1) then  ! second-order tau-leaping or CLE 
 
+      !!!!!!!!!!!!!!!
+      ! predictor   !
+      !!!!!!!!!!!!!!!
+
       ! calculate rates from a(n_old)
       call chemical_rates(mla,n_old,rate,dx,theta*dt)
 
-      ! predictor
       do n=1,nlevs
         call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
         call multifab_saxpy_3(n_new(n),theta*dt,rate(n))
@@ -124,8 +114,11 @@ contains
       end do
 
       !!!!!!!!!!!!!!!
-      ! second step !
+      ! corrector   !
       !!!!!!!!!!!!!!!
+      
+      ! Here we write this in the form that Mattingly et al do
+      !  where we just continue the second half of the time step from where we left
 
       mattingly_lin_comb_coef(1) = -alpha2
       mattingly_lin_comb_coef(2) = alpha1 
@@ -150,7 +143,7 @@ contains
           call bl_error("advance_reaction_SSA does not support inhomogeneous_bc_fix")
        end if
 
-      call advance_reaction_SSA(mla,n_old,n_new,dx,dt,the_bc_tower)
+       call advance_reaction_SSA(mla,n_old,n_new,dx,dt,the_bc_tower)
 
     else
 
@@ -163,7 +156,6 @@ contains
     !!!!!!!!!!!
 
     do n=1,nlevs
-      call multifab_destroy(ext_src(n))
       if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then  ! tau-leaping or CLE 
         call multifab_destroy(rate(n))
       end if

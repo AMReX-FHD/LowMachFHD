@@ -18,11 +18,15 @@ module implicit_diffusion_module
 
 contains
 
-  subroutine implicit_diffusion(mla,n_old,n_new,ext_src,diff_coef_face,diff_fluxdiv,stoch_fluxdiv, &
+  ! Donev: I removed stoch_fluxdiv from the argument list since it was redundant with ext_src
+  ! This solves
+  ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
+  !                   + (dt/2) div (D_k grad n_k)^n+1
+  !                   +  dt    ext_src
+  ! Note: diff_fluxdiv  enters holding (div D_k grad n_k)^n
+  subroutine implicit_diffusion(mla,n_old,n_new,ext_src,diff_coef_face,diff_fluxdiv, &
                                 dx,dt,the_bc_tower)
     
-    ! diff_fluxdiv  enters holding (div D_k grad n_k)^n
-    ! stoch_fluxdiv enters holding div( sqrt(2 D_k n_k / dt ) Z)^n
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
@@ -30,7 +34,6 @@ contains
     type(multifab) , intent(in   ) :: ext_src(:)
     type(multifab) , intent(in   ) :: diff_coef_face(:,:)
     type(multifab) , intent(in   ) :: diff_fluxdiv(:)
-    type(multifab) , intent(in   ) :: stoch_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -106,7 +109,6 @@ contains
        do n=1,nlevs
           call multifab_copy_c(rhs(n),1,diff_fluxdiv(n),spec,1,0)
           call multifab_mult_mult_s(rhs(n),0.5d0)
-          call multifab_plus_plus_c(rhs(n),1,stoch_fluxdiv(n),spec,1,0)
           call multifab_plus_plus_c(rhs(n),1,ext_src(n),spec,1,0)
           call multifab_mult_mult_s(rhs(n),dt)
           call multifab_plus_plus_c(rhs(n),1,n_old(n),spec,1,0)

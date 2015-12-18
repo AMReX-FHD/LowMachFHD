@@ -19,21 +19,22 @@ module advance_diffusion_module
 contains
 
   ! Solves n_t = div ( D grad (n)) + div (sqrt(2*variance*D*n)*W) + g
-  ! where g is a constant in time external source
-  subroutine advance_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src_in)
+  !  where g is a constant in time external source
+  
+  ! Donev: I made ext_src a non-optional argument -- please review
+  subroutine advance_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower,ext_src)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(in   ), optional :: ext_src_in(:) ! The value of g
+    type(multifab) , intent(in   ) :: ext_src(:) ! The value of g
 
     ! local
     type(multifab) :: diff_fluxdiv(mla%nlevel)
     type(multifab) :: stoch_fluxdiv(mla%nlevel)
     type(multifab) :: diff_coef_face(mla%nlevel,mla%dim)
-    type(multifab) :: ext_src(mla%nlevel)
 
     integer :: n,nlevs,i,dm,spec
 
@@ -43,16 +44,17 @@ contains
     dm = mla%dim
 
     ! do not do diffusion if only one cell (well-mixed system)
+    ! Donev: I believe that for diffusion there is actually a limit of at least 4 cells, or maybe at least 3
+    ! due to issues with ghost cells. Andy should confirm 
+    ! If the system is smaller than the minimum for which diffusion works correctly abort here
+    ! If it is not hard to support here 1D systems (n_cells(2)=1) please add that, it is useful
     if((multifab_volume(n_old(1))/nspecies)<=1) then
        do n=1,nlevs
           ! make sure n_new contains the new state
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
        end do
-       if (present(ext_src_in)) then
-          call multifab_saxpy_3(n_new(n),dt,ext_src_in(n))
-       end if
-       return
-    end if   
+       call multifab_saxpy_3(n_new(n),dt,ext_src(n))
+    end if
     
     call build(bpt,"advance_diffusion")
     
@@ -62,23 +64,7 @@ contains
        do i=1,dm
           call multifab_build_edge(diff_coef_face(n,i),mla%la(n),nspecies,0,i)
        end do
-       call multifab_build(ext_src(n),mla%la(n),nspecies,0)
     end do
-
-    if (present(ext_src_in)) then
-       do n=1,nlevs
-          call multifab_copy_c(ext_src(n),1,ext_src_in(n),1,nspecies,0)
-       end do
-    else
-       do n=1,nlevs
-          call multifab_setval(ext_src(n),0.d0,all=.true.)
-       end do
-    end if
-
-    ! fill random flux multifabs with new random numbers
-    if (variance_coef_mass .gt. 0.d0) then
-       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-    end if
 
     ! compute the diffusion coefficients (for now just setting each to a different constant)
     ! If one wants a space-dependent D or state-dependent D see multispecies code as example
@@ -96,6 +82,8 @@ contains
 
     ! compute stochastic flux divergence
     if (variance_coef_mass .gt. 0.d0) then
+       ! Donev: I moved this here inside this if statement instead of way above as it used to be
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
                                  the_bc_tower,increment_in=.false.)
     else
@@ -105,7 +93,7 @@ contains
     end if
 
     if (diffusion_type .eq. 0) then
-       ! explicit predictor-corrector
+       ! explicit trapezoidal predictor-corrector
 
        ! Euler predictor
        ! n_k^{n+1,*} = n_k^n + dt div (D_k grad n_k)^n
@@ -129,8 +117,13 @@ contains
        !                   + (dt/2) div (D_k grad n_k)^{n+1,*}
        !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
        !                   +  dt    ext_src
+       ! This is the same as stepping to time t+2*dt and then averaging with the state at time t:
+       !  n_new = 1/2 * (n_old + n_new + dt*div (D grad n_new) + div (sqrt(2 D_k n_k dt) Z)^n)
+       !  which is what we use below
        do n=1,nlevs
           call multifab_plus_plus_c(n_new(n),1,n_old(n),1,nspecies,0)
+          ! Donev: Andy, for my edification, why don't you pass explicitly nghost=0 in the following 3 lines?
+          ! What is the convention in multifab_saxpy -- does it choose the smaller of the number of ghost cells of the two multifabs?
           call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,ext_src(n))
@@ -142,12 +135,18 @@ contains
 
     else if (diffusion_type .eq. 1) then
        ! Crank-Nicolson
-       ! n_k^{n+1} = n_k^n + (dt/2) div )D_k grad n_k)^n
+       ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
        !                   + (dt/2) div (D_k grad n_k)^n+1
        !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
        !                   +  dt    ext_src
-       call implicit_diffusion(mla,n_old,n_new,ext_src,diff_coef_face, &
-                               diff_fluxdiv,stoch_fluxdiv,dx,dt,the_bc_tower)
+       
+       ! Donev: Combine ext_src and stoch_fluxdiv together as an external source
+       ! Andy, please check I did this right -- not sure if there is a need here to pass nghost=0? explicitly?
+       do n=1,nlevs
+          call multifab_plus_plus(stoch_fluxdiv(n),ext_src(n),0)
+       end do
+       call implicit_diffusion(mla,n_old,n_new,stoch_fluxdiv,diff_coef_face,diff_fluxdiv, &
+                               dx,dt,the_bc_tower)
 
     else if (diffusion_type .eq. 2) then
        ! explicit midpoint scheme
@@ -184,18 +183,19 @@ contains
              call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
                                        the_bc_tower,increment_in=.true.)
           case (3)
-             ! compute 2*n_pred-n_old
+             ! We use n_new=2*n_pred-n_old here as temporary storage since we will overwrite it shortly
              do n=1,nlevs
                 call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,n_new(n)%ng)
                 call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
              end do
-             ! use 2*n_pred-n_old
+             ! use n_new=2*n_pred-n_old
              call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
                                        the_bc_tower,increment_in=.true.)
           case default
              call bl_error("advance_diffusion: invalid midpoint_stoch_flux_type")
           end select
        end if
+       
        ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
        !                   + dt div (sqrt(2 D_k n_k^n dt) Z_1 / sqrt(2) )
        !                   + dt div (sqrt(2 D_k n_k^? dt) Z_2 / sqrt(2) )
@@ -225,7 +225,6 @@ contains
        do i=1,dm
           call multifab_destroy(diff_coef_face(n,i))
        end do
-       call multifab_destroy(ext_src(n))
     end do
 
     call destroy(bpt)

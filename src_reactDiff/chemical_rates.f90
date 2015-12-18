@@ -25,10 +25,9 @@ contains
   !  chemical *reaction* rates (per reaction) times with the stoichiometric coefficients.
   ! if optional arguments n_interm and lin_comb_coef_in are given,
   !  chemical rates are obtained by sampling reaction rates from the following average reaction rates:
-  !  [lin_comb_coef(1)*a_r(n_cc)+lin_comb_coef(2)*a_r(n_interm)]^+
-  !  where a_r(nn) is the average reaction rate of reaction r for state nn.
-  ! hence, for the second stage of Mattingly's scheme (with theta=1/2), lin_comb_coef_in should be
-  !  given as (-1,2).
+  !  [lin_comb_coef(1)*f(n_cc)+lin_comb_coef(2)*f(n_interm)]^+
+  !  where f(nn) is the average reaction rate of reaction r for state nn.
+  ! hence, for the second stage of Mattingly's midpoint scheme (with theta=1/2), lin_comb_coef_in=(-1,2).
 
   subroutine chemical_rates(mla,n_cc,chem_rate,dx,dt,n_interm,lin_comb_coef_in)
 
@@ -275,7 +274,7 @@ contains
          (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
     end do
 
-    contains
+  contains
 
       ! compute num_reactions from avg_num_reactions
       ! note that avg_num_reactions(:) and num_reactions(:) are defined in chemical_rates_cell

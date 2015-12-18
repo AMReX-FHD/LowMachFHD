@@ -45,9 +45,13 @@ contains
     dm = mla%dim
    
     ! no reaction case is already checked before this routine is called by advance_reaction 
-    ! hence, the following condition should not hold
+    ! hence, the following condition should not hold but we do it for completeness
     if (nreactions .lt. 1) then
-      call bl_error("advance_reaction: nreactions should be .ge. 1")
+       ! Donev: there is no need to abort here with an error since this is trivial
+       do n=1,nlevs
+          call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+       end do
+       return
     end if  
 
     ! otherwise, complete the remaining part
