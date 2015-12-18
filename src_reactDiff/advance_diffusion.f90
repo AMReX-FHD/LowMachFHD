@@ -52,8 +52,8 @@ contains
        do n=1,nlevs
           ! make sure n_new contains the new state
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+          call multifab_saxpy_3(n_new(n),dt,ext_src(n))
        end do
-       call multifab_saxpy_3(n_new(n),dt,ext_src(n))
     end if
     
     call build(bpt,"advance_diffusion")

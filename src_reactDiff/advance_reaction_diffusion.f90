@@ -9,7 +9,7 @@ module advance_reaction_diffusion_module
   use chemical_rates_module
   use implicit_diffusion_module
   use probin_common_module, only: variance_coef_mass
-  use probin_reactdiff_module, only: nspecies, D_Fick, temporal_integrator, &
+  use probin_reactdiff_module, only: nspecies, nreactions, D_Fick, temporal_integrator, &
        midpoint_stoch_flux_type
 
   implicit none
