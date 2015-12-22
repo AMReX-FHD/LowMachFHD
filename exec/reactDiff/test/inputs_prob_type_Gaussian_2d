@@ -1,0 +1,173 @@
+!!! initial number densities for prob_type=1 are given as
+!!!   n_init(i,j,1:nspecies) = n_init_in(1,1:nspecies)*exp(-100.d0*r**2)
+!!! where r is the distance from the center point
+!!!   cen(1:2) = 0.6d0*prob_lo(1:2) + 0.4d0*prob_hi(1:2).
+!!! see init_n.f90.
+!!! use domain size 1.d0 x 1.d0 or modify the coefficient inside the exponential accordingly.
+
+!!! note that decreasing dx, which results in small dv, may cause the following two issues:
+!!! 1. for use_Poisson_rng=1, because of small average reaction rates (due to small number of molecules),
+!!!    you may see almost no change in the number densities. 
+!!! 2. for include_discrete_LMA_correction=T, the 1/dv factor may be so large that reaction rates
+!!!    become negative. since negative values are replaced by zero, you may see no change
+!!!    in the number density.
+!!! you may want to increase cross_section to avoid these issues.
+
+!!! note that, for explicit schemes, much smaller fixed_dt should be used. 
+
+!!! Comments !*SOMETHING*! appearing in the script below are used in a script
+!!! to estimate deterministic convergence rate (simple_tests/determ_converg_rate/run.sh).
+!!! Each of these are used to indicate that parameter SOMETHING is defined in the line
+!!! where it is located.
+!!! So make sure that this is the case and each !*SOMETHING*! appears only in a single line.
+
+&probin_common
+
+  ! Problem specification
+  !----------------------
+  dim_in = 2                   ! 2D or 3D                       
+  prob_lo(1:2) = 0.d0 0.d0     ! physical lo coordinate         
+  prob_hi(1:2) = 1.d0 1.d0     ! physical hi coordinate          
+  n_cells(1:2) = 16 16         ! number of cells in domain                     !*N_CELLS*!    
+  max_grid_size(1:2) = 8 8   ! max number of cells in a box                    !*MAX_GRID_SIZE*!
+
+  ! Time-step control
+  !----------------------
+  fixed_dt = 1.d-2       ! time step (if positive, fixed)                      !*FIXED_DT*!                         
+  cfl = 0.5d0            ! cfl number (used if fixed_dt<0) to determine time step
+                         ! could be advective or diffusive CFL (code dependent)
+
+  ! Controls for number of steps between actions (for HydroGrid see below)
+  !----------------------
+  max_step = 100       ! maximum number of time steps                          !*MAX_STEP*!              
+  plot_int = 10        ! Interval for writing a plotfile (for visit/amrvis)    
+  chk_int = 0          ! Interval for writing a checkpoint                   
+  prob_type = 1        ! sets the problem type                                 !!! Gaussian dist for n_init 
+  restart = -1         ! checkpoint restart number
+  print_int = 10       ! how often to output diagnostics to screen
+
+  ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
+  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing  
+
+  ! Algorithm control / selection
+  !----------------------
+  ! random number seed
+  ! 0        = unpredictable seed based on clock
+  ! positive = fixed seed
+  seed = 1
+
+  ! Initial conditions
+  !----------------------
+  initial_variance = 1.d0  ! multiplicative factor for initial fluctuations  
+                           ! (if negative, total momentum is set to zero)    
+
+  ! Boundary conditions
+  !----------------------
+  ! BC specifications:
+  ! -1 = periodic
+  ! 100 = no-slip wall      (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 101 = no-slip reservoir (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! For a complete list see bc.f90
+  bc_lo(1:2) = -1 -1  
+  bc_hi(1:2) = -1 -1  
+
+  ! Control for analyze_spectra.90 for calling HydroGrid
+  !----------------------
+  hydro_grid_int = 0    ! How often to call updateHydroGrid
+                        ! 0 if never
+                    	! negative for projectHydroGrid custom analysis
+                        ! positive for updateHydroGrid
+
+  project_dir = 0       ! Projection direction (1=x, 2=y, 3=z)
+  ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
+  !          but still need projection if stats_int>0)
+  ! +dim=project along dim then analyze 2D only,
+  ! -dim=analyze 3D and then project along dim so we also analyze 2D data
+  ! It is better to use the conserved variables but it does not quite work for staggered
+
+  max_grid_projection(1:1) = 128 ! parallelization parameters
+  stats_int = -1                 ! Project grid for analysis
+                                 ! If positive, how often to compute mean and 
+                                 ! standard deviation over reduced dimensions
+  n_steps_save_stats = -1        ! How often to dump HydroGrid output files
+  n_steps_skip = 0               ! How many steps to skip
+  analyze_conserved = F          ! Should we use conserved variables for the analysis
+                                 ! (does not work well)
+  center_snapshots = F           ! Should we use cell-centered momenta for the analysis
+                                 ! (will smooth fluctuations)
+                                               
+  histogram_unit = -1            ! If positive, write the values of the densities
+                                 ! to a file for histogramming
+
+/
+
+&probin_reactdiff
+
+  ! Problem description
+  !----------------------
+  nspecies = 2     ! number of species   
+  nreactions = 1   ! number of reactions  
+  
+  ! Control of algorithm
+  !----------------------
+  temporal_integrator = 1        ! 0=D + R (first-order splitting)             
+                                 ! 1=(1/2)R + D + (1/2)R (Strang option 1)     
+                                 ! 2=(1/2)D + R + (1/2)D (Strang option 2)
+                                 ! -1=unsplitting forward Euler
+                                 ! -2=unsplitting explicit midpoint 
+  diffusion_type = 1             ! Only used for splitting schemes             
+                                 ! 0=explicit trapezoidal predictor/corrector
+                                 ! 1=Crank-Nicolson semi-implicit
+                                 ! 2=explicit midpoint
+  reaction_type = 1              ! Only used for splitting schemes             
+                                 ! 0=first-order tau leaping or CLE
+                                 ! 1=second-order tau leaping or CLE
+                                 ! 2=SSA
+  use_Poisson_rng = 1            ! Only used for reaction_type = 0, 1         
+                                 ! If -1 do deterministic chemistry
+                                 ! If 1 do tau leaping (Poisson increments),
+                                 ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
+  inhomogeneous_bc_fix = F       ! use the Einkemmer boundary condition fix     
+  avg_type = 3                   ! how to compute n on faces for stochastic weighting
+                                 ! 1=arithmetic, 2=geometric, 3=harmonic
+  
+  ! Initial and boundary conditions
+  !----------------------
+  n_init_in(1:2,1) = 3.d0 1.d0 
+  n_init_in(1:2,2) = 2.d0 1.d0                                            
+  n_bc(1:2,1,1) = 0.d0 0.d0    ! n_i boundary conditions (dir,lohi,species)
+  n_bc(1:2,2,1) = 0.d0 0.d0 
+  n_bc(1:2,1,2) = 0.d0 0.d0 
+  n_bc(1:2,2,2) = 0.d0 0.d0 
+
+  ! Diffusion     
+  !----------------------                          
+  D_Fick(1:2) = 1.d-1 2.d-1           ! Fickian diffusion coeffs              
+  diffusion_stencil_order = 1         ! diffusion boundary stencil order
+  mg_verbose = 0                      ! implicit diffusion solve verbosity
+  cg_verbose = 0                      ! implicit diffusion solve bottom solver verbosity
+  implicit_diffusion_rel_eps = 1.d-10 ! relative eps for implicit diffusion solve
+  implicit_diffusion_abs_eps = -1.d0  ! absolute eps for implicit diffusion solve
+  
+  ! Chemical reactions
+  !----------------------
+  cross_section = 1.d4 ! thickness (in 2D) of cell  
+
+  ! Whether to compute chemical rates using classical LMA or integer-based one
+  include_discrete_LMA_correction = T  
+
+  ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
+  rate_const(1:1) = 1.d0 
+  rate_multiplier = 1.d0
+
+  ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
+  ! Example: For N1 + 2*N2 -> N3 use
+  ! stoichiometric_factors(1:3,1,1) = 1 2 0
+  ! stoichiometric_factors(1:3,2,1) = 0 0 1
+  !!! there should be a total of 2*nreactions lines, which have nspecies columns
+  stoichiometric_factors(1:2,1,1) = 2 0  !!! 2N1 -> N2
+  stoichiometric_factors(1:2,2,1) = 0 1  
+
+/
