@@ -17,11 +17,11 @@
   !prob_hi(1:2) = 1.0 1.0       ! physical hi coordinate
   !n_cells(1:2) = 1 1              ! number of cells in domain
   
-  prob_hi(1:2) = 128.0 128.0       ! physical hi coordinate
-  n_cells(1:2) = 128 128              ! number of cells in domain
+  !prob_hi(1:2) = 128.0 128.0       ! physical hi coordinate
+  !n_cells(1:2) = 128 128              ! number of cells in domain
 
-  !prob_hi(1:2) = 32.0 32.0       ! physical hi coordinate
-  !n_cells(1:2) = 32 32              ! number of cells in domain
+  prob_hi(1:2) = 64.0 64.0       ! physical hi coordinate
+  n_cells(1:2) = 64 64              ! number of cells in domain
 
   max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
@@ -32,14 +32,14 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1000                 ! maximum number of time steps
-  plot_int = 10                   ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 20010000                 ! maximum number of time steps
+  plot_int = 0                   ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 100                   ! how often to output statistics
+  print_int = 10000                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = -1.0 ! global scaling epsilon for stochastic mass forcing on TOP of 1/dV
+  variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing on TOP of 1/dV
 
   ! Initial conditions
   !----------------------
@@ -86,7 +86,7 @@
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -10 ! How often to dump HydroGrid output files
-  n_steps_skip = 0    ! How many steps to skip
+  n_steps_skip = 9999    ! How many steps to skip
   analyze_conserved = T   ! T = analyze n, F=analyze mole fractions x
   histogram_unit = -10 ! Write snapshots of n in all cells to fort.10 for histogramming them
   
@@ -119,7 +119,7 @@
                      ! 1=second-order tau leaping or CLE
                      ! 2=SSA
 
-  use_Poisson_rng = -1 ! Only used for reaction_type = 0, 1
+  use_Poisson_rng = 1 ! Only used for reaction_type = 0, 1
                       ! If -1 do deterministic chemistry
                       ! If 1 do tau leaping (Poisson increments),
                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
@@ -131,7 +131,8 @@
   !------------------------
   nspecies = 3 ! C,A,B with C first
   nreactions = 2 ! Forward and reverse both count here
-    
+  
+  ! It is best to keep this as small as possible:  
   cross_section = 10.0 ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition:
@@ -160,7 +161,8 @@
   ! Chemical reactions:
   ! ------------------  
   rate_const(1:2) = 1.0 1.0
-  rate_multiplier = 1.0
+  rate_multiplier = 2.0 ! It is best to speed the reaction up as much as possible 
+     ! this is at the limit for dt=0.2 with this second-order integrator
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   
   ! Schlogl model is (we do not treat A as a separate species here since it is fixed):
@@ -212,14 +214,14 @@
    writeTheory = -1 ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
    nStructureFactors = 1
    structureFactorPairs = "0 1 0 1"
-   writeSpectrumHistory = T ! Should we store a history of static structure factors
+   writeSpectrumHistory = F ! Should we store a history of static structure factors
 
    ! Dynamic structure factors:
-   nWavenumbers=9
+   nWavenumbers= 9
    ! Shape (2,nWavenumbers):
    selectedWavenumbers="0 1, 1 1, 0 2, 1 2, 2 2, 0 3, 1 3, 2 3, 3 3"
    !selectedWavenumbers="0 1, 1 1, 0 2, 2 2, 0 4, 4 4, 0 8, 8 8, 16 16"
-   nSavedSnapshots=1000
+   nSavedSnapshots=10000
       
    outputFolder = "."
    filePrefix = "ABC_2D"

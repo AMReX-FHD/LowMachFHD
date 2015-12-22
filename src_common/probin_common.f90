@@ -30,6 +30,7 @@ module probin_common_module
   integer,save    :: barodiffusion_type
   real(dp_t),save :: molmass(max_species)
   real(dp_t),save :: rhobar(max_species)
+  real(dp_t),save :: density_weights(max_species)
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
   integer(kind=ll_t),save :: total_volume
@@ -170,8 +171,11 @@ module probin_common_module
                                                ! (does not work well)
   namelist /probin_common/ center_snapshots    ! Should we use cell-centered momenta for the analysis
                                                ! (will smooth fluctuations)
-                                               
-  namelist /probin_common/ histogram_unit      ! If positive, write the values of the densities to a file for histogramming
+  
+  ! These are mostly used for reaction-diffusion:             
+  ! Donev: Had to put these on one line for some reason for gfortran to recognize density_weights -- bug or some internal limit?!?
+  namelist /probin_common/ histogram_unit, &   ! If positive, write the values of the densities to a file for histogramming
+                           density_weights     ! if nonzero, compute rho <- \sum w_i * rho_i for HydroGrid analysis
   !------------------------------------------------------------- 
 
 contains
@@ -262,6 +266,7 @@ contains
     analyze_conserved = .false.
     center_snapshots = .false.
     histogram_unit=-1
+    density_weights=0.0d0 ! By default compute rho=\sum_i rho_i
 
     need_inputs = .true.
 

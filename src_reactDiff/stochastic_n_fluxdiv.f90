@@ -10,7 +10,7 @@ module stochastic_n_fluxdiv_module
   use multifab_physbc_module
   use average_to_faces_module
   use div_and_grad_module
-  use probin_common_module, only: variance_coef_mass, initial_variance
+  use probin_common_module, only: variance_coef_mass, initial_variance, density_weights
   use probin_reactdiff_module, only: nspecies, cross_section
 
   implicit none
@@ -573,10 +573,11 @@ contains
 
     ! create a multifab full of random numbers
     do n=1,nlevs
+       
        call multifab_fill_random(n_temp(n:n), &
                                  variance_mfab=n_init, &
                                  variance=abs(initial_variance)/dv) ! We do not multiply here by variance_coef_mass
-
+  
        if(initial_variance<0.0d0) then
           ! Make sure this sums to zero
           do spec=1, nspecies
@@ -588,7 +589,14 @@ contains
     end do
 
     do n=1,nlevs
-       call multifab_plus_plus_c(n_init(n),1,n_temp(n),1,nspecies,0)
+       if(.false..and.sum(abs(density_weights))>0.0d0) then ! For A+B<->C tests
+          ! Generate only one random perturbation and weight it: dn_k = w_k * dn_0
+          do spec=1,nspecies
+             call multifab_saxpy_3_cc(n_init(n),spec,density_weights(spec),n_temp(n),1,1)             
+          end do
+       else   
+          call multifab_plus_plus_c(n_init(n),1,n_temp(n),1,nspecies,0)
+       end if   
        call multifab_fill_boundary(n_init(n))
        call multifab_physbc(n_init(n),1,scal_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))

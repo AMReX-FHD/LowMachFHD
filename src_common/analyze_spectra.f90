@@ -15,7 +15,7 @@ module analyze_spectra_module
   use HydroGridCInterface 
   use probin_common_module, only: n_cells, prob_lo, prob_hi, &
        hydro_grid_int, project_dir, max_grid_projection, stats_int, n_steps_save_stats, &
-       center_snapshots, analyze_conserved, histogram_unit
+       center_snapshots, analyze_conserved, histogram_unit, density_weights
 
   implicit none
 
@@ -431,9 +431,14 @@ contains
        else
           call copy(s_hydro,comp+1,rho(1),1,nspecies_analysis) ! copy rho_1,...,rho_n
           ! Compute total density as a sum of densities rho=\sum_{i=1}^{n} rho_i
-          call setval(s_hydro, 0.0d0, comp)
+          ! potentially with some weighting to allow to compute things like index of refraction or such
+          call setval(s_hydro, 0.0d0, comp) ! rho=0
           do species=1, nspecies_analysis
-             call multifab_plus_plus_c(s_hydro,comp,s_hydro,species+comp,1)
+             if(sum(abs(density_weights))>0.0d0) then
+                call multifab_saxpy_3_cc(s_hydro,comp,density_weights(species),s_hydro,species+comp,1)
+             else   
+                call multifab_plus_plus_c(s_hydro,comp,s_hydro,species+comp,1)
+             end if   
           end do
        end if
        

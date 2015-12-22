@@ -388,7 +388,7 @@ subroutine main_driver()
           end do
           if (parallel_IOProcessor() ) then
              !write(9,*) time, n_sum(:)/(multifab_volume(n_old(1))/nspecies) 
-             write(9,*) time, n_sum(:)/(multifab_volume(n_old(1))/nspecies) - 1 ! Custom for A+B<->C
+             write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies) - 1.0d0) ! Custom for A+B<->C
           end if       
        end if
 
