@@ -2,8 +2,8 @@
 
 ###############################################################################
 
-PROG=../main.Linux.gfortran.debug.mpi.exe
-INPUTS=../inputs_BPM_Turing
+PROG=../../main.Linux.gfortran.debug.mpi.exe
+INPUTS=../../inputs_BPM_Turing
 
 # choose "short_run" for short runs and "run" for actual runs 
 JOB=short_run
@@ -14,29 +14,36 @@ DIR0="RUN"
 
 ###############################################################################
 
-# command to be executed test/test_BPM_Turing/RUN_***
+# command to be executed on ${DIR0}_***
 command="mpiexec -n 4 ../$PROG ../$INPUTS"
 
-# default options
+# basic options to be applied to all runs
+# you may add more options (e.g., variance_coef_mass = 0.d0)
 case "$JOB" in 
   "short_run" )
-    option0="--seed 1 --fixed_dt 0.5 --plot_int 200 --print_int 20 --max_step 200" ;;
+    option0="--seed 1 --fixed_dt 0.5d0 --plot_int 200 --print_int 20 --max_step 200" ;;
   "run" )
-    option0="--seed 1 --fixed_dt 0.5 --plot_int 200 --print_int 20 --max_step 10000" ;;
+    option0="--seed 1 --fixed_dt 0.5d0 --plot_int 200 --print_int 20 --max_step 10000" ;;
 esac
 
 ###############################################################################
 
+# checking files
+if [ ! -f "$PROG" ];   then echo "ERROR: reactdiff program not found"; exit; fi
+if [ ! -f "$INPUTS" ]; then echo "ERROR: inputs file not found";       exit; fi
+
+# main loops for paramter sweeping
+
 count=0
 
-for tempintg in split1 split2 split3
+for tempintg in split0 split1 split2
 do
   case "$tempintg" in
-    "split1" )
+    "split0" )
       option1="--temporal_integrator 0" ;;  # first-order splitting
-    "split2" )
+    "split1" )
       option1="--temporal_integrator 1" ;;  # Strang splitting 1
-    "split3" )
+    "split2" )
       option1="--temporal_integrator 2" ;;  # Strang splitting 2
   esac
 
