@@ -213,6 +213,9 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) include_discrete_LMA_correction
 
+       case ('--no_diffusion')
+          D_Fick(1:max_species) = 0.d0
+
        case ('--')
           farg = farg + 1
           exit
