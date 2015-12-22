@@ -1143,7 +1143,8 @@ subroutine updateStructureFactors(grid)
 
          do iTemp=1, grid%nSavedSnapshots
             write(551,'(1000g17.9)') (grid%iTimeSeries*grid%nSavedSnapshots+(iTemp-1))*grid%timestep, &
-               abs (grid%savedStructureFactors(iTemp, :, :))
+               grid%savedStructureFactors(iTemp, :, :) ! Complex number
+               !abs (grid%savedStructureFactors(iTemp, :, :)) ! Abs value only
                !real (grid%savedStructureFactors(grid%iSample, :, :))
                !aimag(grid%savedStructureFactors(grid%iSample, :, :))
          end do      
