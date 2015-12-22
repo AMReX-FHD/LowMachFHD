@@ -223,6 +223,7 @@ module HydroGridModule
    end type HydroGrid
    
    logical, public, save :: writeAbsValue=.true. ! Only write absolute value of static structure factors to VTK files
+   logical, public, save :: writeSpectrumHistory=.false. ! Write out a history of the structure factors
    integer, public, save :: writeTheory=-1 ! Write the theoretical prediction for incompressible hydro (-2=for MD analysis, -1=none, 0=continuum, 1=MAC)
    integer, public, save :: useRelativeVelocity=-1 ! Calculate v12 to test two-fluid models
    
@@ -420,7 +421,7 @@ contains
          nWavenumbers, selectedWavenumbers, nSavedSnapshots, axisToPrint, staggeredVelocities, &
          outputFolder, filePrefix, writeSpectrumVTK, writeVariancesVTK, writeMeansVTK, writeSnapshotVTK, &
          estimateCovariances, topConcentration, bottomConcentration, useRelativeVelocity, &
-         writeTheory, periodic, subtractMeanFT, correlationWavenumber
+         writeTheory, periodic, subtractMeanFT, correlationWavenumber, writeSpectrumHistory
 
       ! Setup default values:
       storeConserved=.true.
@@ -463,6 +464,7 @@ subroutine createStaticFactors(grid, structureFactorPairsString, vectorStructure
    integer :: iPair, iStructureFactor, iVariable, jVariable, nVariablesToFFT
    integer :: structureFactorPairs(2, 2, grid%nStructureFactors)
    integer :: nFactors, iDimension, iWavenumber, iTemp
+   character (nMaxCharacters) :: filename=""
 
    nFactors = grid%nStructureFactors
    
@@ -549,6 +551,12 @@ subroutine createStaticFactors(grid, structureFactorPairsString, vectorStructure
    grid%maxWavenumber = floor (grid%nCells / 2.0_wp)
    print *, "Min k = ", grid%minWavenumber
    print *, "Max k = ", grid%maxWavenumber   
+
+   if(writeSpectrumHistory) then ! Save a history of S(k)
+      filename = trim(grid%outputFolder) // "/" // trim(grid%filePrefix) // ".S_k.history.dat"
+      write(*,*) "Writing S(k) history to file ", trim(filename)
+      open (551, file = trim(filename), status = "unknown", action = "write")
+   end if
 
 end subroutine createStaticFactors
 
@@ -1124,6 +1132,25 @@ subroutine updateStructureFactors(grid)
    if (grid%nWavenumbers <= 0) return
 
    if (grid%iSample >= abs(grid%nSavedSnapshots)) then ! Memory of past history is full, do temporal FFT now
+
+      if(writeSpectrumHistory) then ! Save a history of S(k)
+         
+         if(.false.) then ! It is better to open it once and keep writing to it
+            filenameBase = trim(grid%outputFolder) // "/" // trim(grid%filePrefix) // ".S_k.history.dat"
+            write(*,*) "Writing S(k) history to file ", trim(filenameBase)
+            open (551, file = trim(filenameBase), status = "unknown", action = "write", position="append")
+         end if   
+
+         do iTemp=1, grid%nSavedSnapshots
+            write(551,'(1000g17.9)') (grid%iTimeSeries*grid%nSavedSnapshots+(iTemp-1))*grid%timestep, &
+               abs (grid%savedStructureFactors(iTemp, :, :))
+               !real (grid%savedStructureFactors(grid%iSample, :, :))
+               !aimag(grid%savedStructureFactors(grid%iSample, :, :))
+         end do      
+
+         if(.false.) close(551)
+      end if
+
       grid%iSample = 0
       grid%iTimeSeries = grid%iTimeSeries + 1
 
@@ -1173,19 +1200,6 @@ subroutine updateStructureFactors(grid)
          grid%savedStructureFactors(grid%iSample, iWavenumber, iVariable) = grid%staticFourierTransforms(kx, ky, kz, iVariable)
       end do
    end do
-
-   if(.false.) then ! Temporary: Save a history of S(k)
-      filenameBase = trim(grid%outputFolder) // "/" // trim(grid%filePrefix) // ".S_k.history.dat"
-      write(*,*) "Writing S(k) history to file ", trim(filenameBase)
-      open (551, file = trim(filenameBase), status = "unknown", action = "write", position="append")
-
-      write(551,'(1000g17.9)') &
-         abs  (grid%savedStructureFactors(grid%iSample, :, :)), &
-         real (grid%savedStructureFactors(grid%iSample, :, :)), &
-         aimag(grid%savedStructureFactors(grid%iSample, :, :))
-         
-      close(551)
-   end if   
 
 end subroutine updateStructureFactors
 
@@ -2183,6 +2197,12 @@ subroutine writeStructureFactors(grid,filenameBase)
       close(unit=structureFactorFile(3))
       
    end if WriteVTK_S_k
+
+   if(writeSpectrumHistory) then ! Save a history of S(k)
+      filename = trim(grid%outputFolder) // "/" // trim(grid%filePrefix) // ".S_k.history.dat"
+      write(*,*) "Wrote S(k) history to file ", trim(filename)
+      close(551)
+   end if
 
    if (grid%iTimeSeries > 0) call writeDynamicFactors(grid,filenameBase)
 
