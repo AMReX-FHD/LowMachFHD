@@ -263,7 +263,7 @@ subroutine main_driver()
 
       end if
       
-      if (initial_variance .gt. 0.d0) then
+      if (abs(initial_variance) .gt. 0.d0) then
          call add_n_fluctuations(mla,n_old,dx,the_bc_tower)
       end if
 
@@ -382,14 +382,14 @@ subroutine main_driver()
                 
        end if
        
-       if(.true.) then ! Donev: Temporary logging to analyze dynamics of mean
+       if(.true. .and. (istep > n_steps_skip)) then ! Donev: Temporary logging to analyze dynamics of mean
           do spec=1,nspecies
              n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
           end do
           if (parallel_IOProcessor() ) then
-             write(9,*) time, n_sum(:)/(multifab_volume(n_old(1))/nspecies) 
-          end if
-       
+             !write(9,*) time, n_sum(:)/(multifab_volume(n_old(1))/nspecies) 
+             write(9,*) time, n_sum(:)/(multifab_volume(n_old(1))/nspecies) - 1 ! Custom for A+B<->C
+          end if       
        end if
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!

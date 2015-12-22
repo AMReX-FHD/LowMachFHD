@@ -575,13 +575,15 @@ contains
     do n=1,nlevs
        call multifab_fill_random(n_temp(n:n), &
                                  variance_mfab=n_init, &
-                                 variance=initial_variance/dv) ! We do not multiply here by variance_coef_mass
+                                 variance=abs(initial_variance)/dv) ! We do not multiply here by variance_coef_mass
 
-       ! Make sure this sums to zero
-       do spec=1, nspecies
-          dn_sum = multifab_sum_c(n_temp(n),spec,1) / dble(n_cell)
-          call multifab_sub_sub_s_c(n_temp(n),spec,dn_sum,1,0)
-       end do   
+       if(initial_variance<0.0d0) then
+          ! Make sure this sums to zero
+          do spec=1, nspecies
+             dn_sum = multifab_sum_c(n_temp(n),spec,1) / dble(n_cell)
+             call multifab_sub_sub_s_c(n_temp(n),spec,dn_sum,1,0)
+          end do
+       end if   
           
     end do
 
