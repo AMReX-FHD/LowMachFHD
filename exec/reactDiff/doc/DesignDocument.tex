@@ -345,8 +345,8 @@ As in the previous section, there are two other possibilities for the discretiza
 \begin{equation}
 \begin{split}
 n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
-+\sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
-+\sqrt{\frac{2 D_k n_k^{n+\myhalf}}{\delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
++\sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
++\sqrt{\frac{2 D_k n_k^{n+\myhalf}}{\Delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
 \right)\\
 &+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
 \mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
@@ -356,8 +356,8 @@ n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
 \begin{equation}
 \begin{split}
 n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
-+ \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
-+ \sqrt{\frac{2 D_k \left( 2 n_k^{n+\myhalf} - n_k^n \right)^+ }{\delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
++ \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
++ \sqrt{\frac{2 D_k \left( 2 n_k^{n+\myhalf} - n_k^n \right)^+ }{\Delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
 \right)\\
 &+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
 \mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
