@@ -1,0 +1,28 @@
+** run **
+By executing "run.sh", you can run a series of simulations
+for a reaction-diffusion system, where Dirichlet boundary conditions are imposed
+for its initial number densities, with decreasing dx and dt by factor of 2.
+
+** output **
+On the screen, you will see
+- the options used for each run,
+- differences in number densities between successive runs,
+- ratios of the differences between successive runs.
+Note that, since dt and dx are decreased by factor of 2, if the ratio is close to 2 (or 4),
+then the scheme is of first-(or second-)order.
+The difference and ratio values will be also saved in file res_diff.
+ 
+** changeable options **
+In run.sh, you may change the following things:
+- PROG: path for the reactdiff executable
+- INPUTS: path for the inputs file
+- EXEC_DIFF: executable for calculating the difference between multifabs 
+- OPTIONS_DCRT: parameter values to be used for deterministic convergence rate test
+- MY_OPTIONS: some parameter values to be applied for all runs 
+- NTEST: number of successive runs
+Default starting values for n_cells, max_grid_size, fixed_dt, max_step are obtained from
+the inputs script. But, if you want to change some of these, you can do so by giving values.
+
+** decreasing only either dt or dx
+If you want to decrease only dt with dx fixed, comment out the lines updating NX, NY, MGSX, MGSY.
+Similarly, by commenting out the lines updating DT and MAXSTEP, you can decrease only dx, while dt is fixed.
