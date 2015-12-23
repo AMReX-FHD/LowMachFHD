@@ -20,8 +20,8 @@ subroutine main_driver()
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    variance_coef_mass, cfl, initial_variance
    use probin_reactdiff_module, only: nspecies, probin_reactdiff_init, D_Fick, cross_section, &
-                                      inhomogeneous_bc_fix, model_file_init, &
-                                      model_file
+                                      inhomogeneous_bc_fix, temporal_integrator, &
+                                      model_file_init, model_file
 
    use fabio_module
 
@@ -153,7 +153,7 @@ subroutine main_driver()
 
    do n=1,nlevs
       call multifab_build(n_new(n),mla%la(n),nspecies,ng_s)
-      if (inhomogeneous_bc_fix) then
+      if (inhomogeneous_bc_fix .and. temporal_integrator .ge. 0) then
          call multifab_build(n_steady(n),mla%la(n),nspecies,0)
       end if
    end do
@@ -280,7 +280,7 @@ subroutine main_driver()
    end if
 
    ! compute n_steady for inhomogeneous_bc_fix
-   if (inhomogeneous_bc_fix) then
+   if (inhomogeneous_bc_fix .and. temporal_integrator .ge. 0) then
       call compute_n_steady(mla,n_steady,dx,dt,the_bc_tower)
    end if
 
@@ -456,7 +456,7 @@ subroutine main_driver()
    do n=1,nlevs
       call multifab_destroy(n_new(n))
       call multifab_destroy(n_old(n))
-      if (inhomogeneous_bc_fix) then
+      if (inhomogeneous_bc_fix .and. temporal_integrator .ge. 0) then
          call multifab_destroy(n_steady(n))
       end if
    end do
