@@ -1,0 +1,16 @@
+This is a tool for generating an animated gif having thumbnails, 
+each of which contains a set of 2d plotfiles.
+
+"src_python" directory contains python scripts for this function.
+
+"example_2x2" directory contains bash scripts, which demonstrate
+how an animated gif file is generated.
+
+For example run, simply execute the following three scripts:
+  0_generate_plotfiles_example.sh
+  1_generate_animated_gif.sh
+  2_annotate_afterwards.sh
+Then, two gif files (1.gif, 2.gif) will be generated.
+
+If you want to change margins, plotsize etc.,
+modify "input_thumbnails_info.py".
