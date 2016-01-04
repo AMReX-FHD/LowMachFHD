@@ -19,6 +19,10 @@ contains
     real(kind=dp_t), intent(inout) :: reaction_rates(:)
 
     integer :: reaction, species
+
+    real(kind=dp_t) :: n_nonneg(nspecies)
+
+    n_nonneg(1:nspecies) = max(0.d0,n_in(1:nspecies))
     
     if(include_discrete_LMA_correction) then
        ! Use traditional LMA but correct for the fact that for binary reactions rate ~ N*(N-1) and not N^2, etc.,
@@ -33,13 +37,16 @@ contains
                 ! Species does not participate in reaction
              case(1)
                 ! Rate ~ N
-                reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)
+                reaction_rates(reaction)= &
+                     reaction_rates(reaction)*n_nonneg(species)
              case(2)
                 ! Rate ~ N*(N-1)
-                reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)*(n_in(species)-1.0d0/dv) 
+                reaction_rates(reaction)= &
+                     reaction_rates(reaction)*n_nonneg(species)*(n_nonneg(species)-1.0d0/dv) 
              case(3)   
                 ! Rate ~ N*(N-1)*(N-2)
-                reaction_rates(reaction)=reaction_rates(reaction)*n_in(species)*(n_in(species)-1.0d0/dv)*(n_in(species)-2.0d0/dv)
+                reaction_rates(reaction)= &
+                     reaction_rates(reaction)*n_nonneg(species)*(n_nonneg(species)-1.0d0/dv)*(n_nonneg(species)-2.0d0/dv)
              case default
                 ! This is essentially impossible in practice and won't happen
                 call bl_error("Stochiometric coefficients larger then 3 not supported")      
@@ -52,7 +59,7 @@ contains
        do reaction=1, nreactions
           ! This works since raising to the zeroth power gives unity:
           reaction_rates(reaction) = rate_multiplier*rate_const(reaction)*&
-               product(n_in(1:nspecies)**stoichiometric_factors(1:nspecies,1,reaction))
+               product(n_nonneg(1:nspecies)**stoichiometric_factors(1:nspecies,1,reaction))
        end do
     end if
     
