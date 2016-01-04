@@ -1,7 +1,6 @@
 module inhomogeneous_bc_val_module
 
   use bl_types
-  use bl_error_module 
   use bl_prof_module
   use bc_module
   use probin_common_module, only: prob_lo, prob_hi
