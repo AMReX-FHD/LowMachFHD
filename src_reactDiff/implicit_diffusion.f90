@@ -18,12 +18,19 @@ module implicit_diffusion_module
 
 contains
 
-  ! ext_src may contain stochastic contribution
-  ! This solves
-  ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
-  !                   + (dt/2) div (D_k grad n_k)^n+1
+  ! Note: diff_fluxdiv enters holding (div D_k grad n_k)^n
+  ! Note: ext_src may contain stochastic contribution
+  !
+  ! This solves the following Crank-Nicolson system:
+  ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
+  !                   + (dt/2)(div D_k grad n_k)^n+1
   !                   +  dt    ext_src
-  ! Note: diff_fluxdiv  enters holding (div D_k grad n_k)^n
+  ! 
+  ! using delta formulation, in operator form this becomes:
+  !
+  ! (I - div_(dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
+  !                                       + dt ext_src      
+  !
   subroutine implicit_diffusion(mla,n_old,n_new,ext_src,diff_coef_face,diff_fluxdiv, &
                                 dx,dt,the_bc_tower)
     
@@ -73,20 +80,21 @@ contains
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
 
+    ! copy n_new = n_old
+    do n=1,nlevs
+       call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
+    end do
+
     ! Crank-Nicolson diffusion solve
 
     ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
     !                   + (dt/2)(div D_k grad n_k)^n+1
-    !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
     !                   +  dt    ext_src
     ! 
-    ! in operator form
+    ! using delta formulation, in operator form this becomes:
     !
-    ! (I - (dt/2) div D_k grad)n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
-    !                                            +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
-    !                                            +  dt    ext_src
-    !
-
+    ! (I - div_(dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
+    !                                       + dt ext_src      
 
     ! alpha=1 here for all components since it is simple difusion  
     do n=1,nlevs
@@ -103,20 +111,18 @@ contains
           end do
        end do
 
-       ! rhs = n_k^n + (dt/2)(div D_k grad n_k)^n
-       !             +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
-       !             +  dt    ext_src
+       ! rhs =   dt div (D_k grad n_k^n)
+       !       + dt ext_src    
+
        do n=1,nlevs
           call multifab_copy_c(rhs(n),1,diff_fluxdiv(n),spec,1,0)
-          call multifab_mult_mult_s(rhs(n),0.5d0)
           call multifab_plus_plus_c(rhs(n),1,ext_src(n),spec,1,0)
           call multifab_mult_mult_s(rhs(n),dt)
-          call multifab_plus_plus_c(rhs(n),1,n_old(n),spec,1,0)
        end do
 
-       ! initial guess for phi is n_k^n
+       ! initial guess for phi is zero since we are solving delta formulation
        do n=1,nlevs
-          call multifab_copy_c(phi(n),1,n_old(n),spec,1,1)
+          call multifab_setval(phi(n),0.d0,all=.true.)
        end do
 
        ! solve the implicit system
@@ -128,9 +134,9 @@ contains
                         eps=implicit_diffusion_rel_eps, &
                         abs_eps=implicit_diffusion_abs_eps)
 
-       ! copy solution into n_new
+       ! n_new = n_old + delta n
        do n=1,nlevs
-          call multifab_copy_c(n_new(n),spec,phi(n),1,1,0)
+          call multifab_plus_plus_c(n_new(n),spec,phi(n),1,1,0)
        end do
 
     end do

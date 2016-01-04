@@ -250,8 +250,21 @@ We update the number densities using a single semi-implicit solve:
 n_k^{n+1} = n_k^n + \delta t\nabla\cdot\left(
 \half D_k\nabla n_k^n + \half D_k\nabla n_k^{n+1}
 + \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}}\mZb^{(1)}
-\right).
+\right),
 \end{equation}
+i.e.,
+\begin{equation}
+\left(\mathcal{I} - \nabla\cdot\frac{\delta t}{2}D_k\nabla\right)n_k^{n+1} = 
+n_k^n + \delta t\nabla\cdot\left(\half D_k\nabla n_k^n
++ \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}}\mZb^{(1)}\right).
+\end{equation}
+In practice, we define $n_k^{n+1} = n_k^n + \delta n_k$ and rewrite the implicit
+system in ``delta'' form,
+\begin{equation}
+\left(\mathcal{I} - \nabla\cdot\frac{\delta t}{2}D_k\nabla\right)\delta n_k = 
+\delta t\nabla\cdot\left(D_k\nabla n_k^n + \sqrt{\frac{2 D_k n_k^n}{\delta t\Delta V}}\mZb^{(1)}\right),
+\end{equation}
+and then set $n_k^{n+1} = n_k^n + \delta n_k$.\\
 
 {\bf Explicit Midpoint}
 We use two sets of random numbers, but use the same noise amplitude for both:

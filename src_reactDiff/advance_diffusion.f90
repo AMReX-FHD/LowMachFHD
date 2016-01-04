@@ -130,11 +130,16 @@ contains
 
     else if (diffusion_type .eq. 1) then
        ! Crank-Nicolson
-       ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
-       !                   + (dt/2) div (D_k grad n_k)^n+1
+       ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
+       !                   + (dt/2)(div D_k grad n_k)^n+1
        !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
        !                   +  dt    ext_src
-       
+       !
+       ! in delta formulation:
+       !
+       ! (I - div_(dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
+       !                                       + dt div (sqrt(2 D_k n_k / dt) Z)^n
+       !                                       + dt ext_src       
        ! Combine ext_src and stoch_fluxdiv together as an external source
        do n=1,nlevs
           call multifab_plus_plus(stoch_fluxdiv(n),ext_src(n),0)
