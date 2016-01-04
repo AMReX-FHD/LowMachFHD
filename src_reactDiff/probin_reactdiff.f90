@@ -38,7 +38,7 @@ module probin_reactdiff_module
                                                     ! If -1 do deterministic chemistry
                                                     ! If 1 do tau leaping (Poisson increments),
                                                     ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
-  logical, save :: inhomogeneous_bc_fix = .false.   ! use the Einkemmer boundary condition fix
+  logical, save :: inhomogeneous_bc_fix = .false.   ! use the Einkemmer boundary condition fix (split schemes only)
   integer, save :: avg_type = 3                     ! how to compute n on faces for stochastic weighting
                                                     ! 1=arithmetic, 2=geometric, 3=harmonic
   

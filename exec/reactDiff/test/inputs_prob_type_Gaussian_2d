@@ -129,7 +129,7 @@
                                  ! If -1 do deterministic chemistry
                                  ! If 1 do tau leaping (Poisson increments),
                                  ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
-  inhomogeneous_bc_fix = F       ! use the Einkemmer boundary condition fix     
+  inhomogeneous_bc_fix = F       ! use the Einkemmer boundary condition fix (split schemes only)     
   avg_type = 3                   ! how to compute n on faces for stochastic weighting
                                  ! 1=arithmetic, 2=geometric, 3=harmonic
   
