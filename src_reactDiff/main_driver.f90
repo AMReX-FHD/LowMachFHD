@@ -19,7 +19,7 @@ subroutine main_driver()
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    variance_coef_mass, cfl, initial_variance
-   use probin_reactdiff_module, only: nspecies, probin_reactdiff_init, D_Fick, cross_section, &
+   use probin_reactdiff_module, only: nspecies, nreactions, probin_reactdiff_init, D_Fick, cross_section, &
                                       inhomogeneous_bc_fix, temporal_integrator, &
                                       model_file_init, model_file
 
@@ -284,6 +284,19 @@ subroutine main_driver()
       call compute_n_steady(mla,n_steady,dx,dt,the_bc_tower)
    end if
 
+   if (temporal_integrator .lt. 0) then  ! unsplit schemes
+      ! Donev: The code will work for a single cell also but may not be the most efficient, so issue warning:
+      if ((multifab_volume(n_old(1))/nspecies)<=1) then
+        if (parallel_IOProcessor() ) write(0,*), &
+           "WARNING in advance_reaction_diffusion: use splitting based schemes (temporal_integrator>=0) for single cell"
+      end if
+
+      if(nreactions<1) then
+        if (parallel_IOProcessor() ) write(0,*), &
+           "WARNING in advance_reaction_diffusion: use splitting based schemes (temporal_integrator>=0) for diffusion only"
+      end if
+   end if
+
    !=====================================================================
    ! Initialize HydroGrid for analysis
    !=====================================================================
@@ -315,7 +328,6 @@ subroutine main_driver()
    !=====================================================================
    ! Hydrogrid analysis and output for initial data
    !=====================================================================
-
 
    ! Donev: Changed the way this does things here to only apply to non-restarted runs and start from zero:
    if (restart .lt. 0) then
@@ -382,7 +394,7 @@ subroutine main_driver()
                 
        end if
        
-       if(.true. .and. (istep > n_steps_skip)) then ! Donev: Temporary logging to analyze dynamics of mean
+       if((istep > n_steps_skip) .and. (mod(istep,abs(hydro_grid_int))==0)) then ! Donev: Temporary logging to analyze dynamics of mean
           do spec=1,nspecies
              n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
           end do

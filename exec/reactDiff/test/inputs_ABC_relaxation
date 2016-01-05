@@ -163,7 +163,6 @@
   rate_multiplier = 1.0
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   
-  ! Schlogl model is (we do not treat A as a separate species here since it is fixed):
   !     (1) A+B-->C
   !     (2) C->A+B
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)

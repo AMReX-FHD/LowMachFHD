@@ -52,14 +52,6 @@ contains
     ! init !
     !!!!!!!!
 
-    if ((multifab_volume(n_old(1))/nspecies)<=1) then
-      call bl_error("advance_reaction_diffusion: use splitting based schemes (temporal_integrator>=0) for single cell")
-    end if
-
-    if(nreactions<1) then
-      call bl_error("advance_reaction_diffusion: use splitting based schemes (temporal_integrator>=0) for diffusion only")
-    end if
-
     call build(bpt,"advance_reaction_diffusion")
 
     nlevs = mla%nlevel
