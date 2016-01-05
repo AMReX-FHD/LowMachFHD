@@ -75,6 +75,11 @@ module BoxLibRNGs
       module procedure PoissonRNG_dp
    end interface   
 
+   interface BinomialRNG ! This is only scalar for now
+      module procedure BinomialRNG_sp
+      module procedure BinomialRNG_dp
+   end interface   
+
 contains ! It is likely that vectorized versions will do better here
 
    ! This is in principle callable by C directly, but we go through the wrapper here for safety
@@ -235,6 +240,24 @@ contains ! It is likely that vectorized versions will do better here
 
     number=random_Poisson(mu=mean, first=.true.)
 
+ END SUBROUTINE
+
+ SUBROUTINE BinomialRNG_dp(number,n_trials,success_prob)
+    INTEGER, INTENT(OUT) :: number
+    INTEGER, INTENT(IN) :: n_trials ! Number of trials
+    REAL(dp), INTENT(IN) :: success_prob ! Probability of successful trial
+
+    number=random_binomial(n=n_trials, pp=real(success_prob), first=.true.)
+
+ END SUBROUTINE
+
+ SUBROUTINE BinomialRNG_sp(number,n_trials,success_prob)
+    INTEGER, INTENT(OUT) :: number
+    INTEGER, INTENT(IN) :: n_trials ! Number of trials
+    REAL(sp), INTENT(IN) :: success_prob ! Probability of successful trial
+
+    number=random_binomial(n=n_trials, pp=success_prob, first=.true.)
+    
  END SUBROUTINE
   
 end module
