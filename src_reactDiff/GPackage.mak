@@ -1,4 +1,5 @@
 f90sources += advance_diffusion.f90
+f90sources += advance_diffusion_multinomial.f90
 f90sources += advance_reaction.f90
 f90sources += advance_timestep.f90
 f90sources += average_to_faces.f90
