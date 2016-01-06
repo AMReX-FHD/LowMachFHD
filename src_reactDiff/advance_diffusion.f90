@@ -84,6 +84,7 @@ contains
              call multifab_destroy(diff_coef_face(n,i))
           end do
        end do
+       call destroy(bpt)
        return
 
     end if
