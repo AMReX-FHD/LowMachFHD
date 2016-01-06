@@ -259,5 +259,28 @@ contains ! It is likely that vectorized versions will do better here
     number=random_binomial(n=n_trials, pp=success_prob, first=.true.)
     
  END SUBROUTINE
+
+ ! This samples from a multinomial distribution
+ ! The last sample is not sampled explicitly since it is just N-sum(samples)
+ subroutine MultinomialRNG(samples, n_samples, N, p)
+    integer, intent(in) :: n_samples, N
+    integer, intent(out) :: samples(n_samples)
+    real(dp), intent(in) :: p(n_samples)
+
+    real(dp) :: sum_p
+    integer :: sample, sum_n
+
+    if(sum(p)>1.0_dp) stop "Sum of probabilities must be less than 1"
+
+    sum_p=0
+    sum_n=0
+    do sample=1, n_samples
+       call BinomialRNG(number=samples(sample), n_trials=N-sum_n, &
+               success_prob=p(sample)/(1.0_dp-sum_p))
+       sum_n = sum_n + samples(sample)
+       sum_p = sum_p + p(sample)
+    end do      
+
+ end subroutine
   
 end module
