@@ -7,7 +7,7 @@ module advance_reaction_diffusion_module
   use stochastic_n_fluxdiv_module
   use diffusive_n_fluxdiv_module
   use chemical_rates_module
-  use implicit_diffusion_module
+  use multinomial_diffusion_module
   use probin_common_module, only: variance_coef_mass
   use probin_reactdiff_module, only: nspecies, D_Fick, temporal_integrator, &
        midpoint_stoch_flux_type, nreactions
@@ -216,6 +216,25 @@ contains
         call multifab_fill_boundary(n_new(n))
         call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+      end do
+
+
+    else if (temporal_integrator .eq. -3) then  ! multinomial diffusion 
+
+      ! calculate rates
+      ! rates could be deterministic or stochastic depending on use_Poisson_rng
+      call chemical_rates(mla,n_old,rate1,dx,dt)
+
+      ! advance multinomial diffusion
+      call multinomial_diffusion(mla,n_old,n_new,diff_coef_face,dx,dt,the_bc_tower)
+      
+      do n=1,nlevs
+         ! add reaction contribution and external source
+         call multifab_saxpy_3(n_new(n),dt,rate1(n))
+         if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt,ext_src(n))
+         call multifab_fill_boundary(n_new(n))
+         call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
       end do
 
     else

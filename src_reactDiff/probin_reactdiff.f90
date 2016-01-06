@@ -21,6 +21,7 @@ module probin_reactdiff_module
                                                     ! 2=(1/2)D + R + (1/2)D (Strang option 2)
                                                     ! -1=unsplit forward Euler
                                                     ! -2=unsplit explicit midpoint 
+                                                    ! -3=unsplit multinomial diffusion
   integer, save :: diffusion_type = 0               ! Only used for splitting schemes
                                                     ! 0=explicit trapezoidal predictor/corrector
                                                     ! 1=Crank-Nicolson semi-implicit
