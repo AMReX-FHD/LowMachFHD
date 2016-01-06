@@ -7,6 +7,7 @@ module advance_diffusion_module
   use diffusive_n_fluxdiv_module
   use multifab_physbc_module
   use implicit_diffusion_module
+  use multinomial_diffusion_module
   use probin_common_module, only: variance_coef_mass
   use probin_reactdiff_module, only: nspecies, D_Fick, diffusion_type, midpoint_stoch_flux_type
 
@@ -56,8 +57,6 @@ contains
     call build(bpt,"advance_diffusion")
     
     do n=1,nlevs
-       call multifab_build(diff_fluxdiv(n) ,mla%la(n),nspecies,0)
-       call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0)
        do i=1,dm
           call multifab_build_edge(diff_coef_face(n,i),mla%la(n),nspecies,0,i)
        end do
@@ -72,6 +71,27 @@ contains
              call multifab_setval_c(diff_coef_face(n,i), D_Fick(spec),spec,1,all=.true.)
           end do
        end do
+    end do
+    
+    ! if doing multinomial diffusion, call it here and return
+    ! make sure to destroy diff_coef_face
+    if (diffusion_type .eq. 3) then
+
+       call multinomial_diffusion(mla,n_old,n_new,diff_coef_face,dx,dt,the_bc_tower)
+    
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_destroy(diff_coef_face(n,i))
+          end do
+       end do
+       return
+
+    end if
+
+
+    do n=1,nlevs
+       call multifab_build(diff_fluxdiv(n) ,mla%la(n),nspecies,0)
+       call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0)
     end do
 
     ! compute diffusive flux divergence

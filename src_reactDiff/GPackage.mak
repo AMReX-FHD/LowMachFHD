@@ -1,5 +1,4 @@
 f90sources += advance_diffusion.f90
-f90sources += advance_diffusion_multinomial.f90
 f90sources += advance_reaction.f90
 f90sources += advance_timestep.f90
 f90sources += average_to_faces.f90
@@ -9,6 +8,7 @@ f90sources += compute_reaction_rates.f90
 f90sources += diffusive_n_fluxdiv.f90
 f90sources += implicit_diffusion.f90
 f90sources += init_n.f90
+f90sources += multinomial_diffusion.f90
 f90sources += probin_reactdiff.f90
 f90sources += restart.f90
 f90sources += stochastic_n_fluxdiv.f90

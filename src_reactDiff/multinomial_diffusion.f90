@@ -1,4 +1,4 @@
-module advance_diffusion_multinomial_module
+module multinomial_diffusion_module
 
   use ml_layout_module
   use define_bc_module
@@ -10,58 +10,30 @@ module advance_diffusion_multinomial_module
 
   private
 
-  public :: advance_diffusion_multinomial
+  public :: multinomial_diffusion
 
 contains
 
   ! advances n_old to n_new using multinomial diffusion
-  subroutine advance_diffusion_multinomial(mla,n_old,n_new,dx,dt,the_bc_tower)
+  subroutine multinomial_diffusion(mla,n_old,n_new,diff_coef_face, &
+                                           dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
+    type(multifab) , intent(in   ) :: diff_coef_face(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local
-    type(multifab) :: diff_coef_face(mla%nlevel,mla%dim)
-
     integer :: n,nlevs,i,dm,spec
 
     type(bl_prof_timer),save :: bpt
 
     nlevs = mla%nlevel
     dm = mla%dim
-
-    ! do not do diffusion if only one cell (well-mixed system)
-    ! there is no restriction on the number of cells
-    ! but we can shortcut the single cell case anyway for simplicity
-    if((multifab_volume(n_old(1))/nspecies)<=1) then
-       do n=1,nlevs
-          ! make sure n_new contains the new state
-          call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
-       end do
-    end if
     
-    call build(bpt,"advance_diffusion")
-    
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_build_edge(diff_coef_face(n,i),mla%la(n),nspecies,0,i)
-       end do
-    end do
-
-    ! compute the diffusion coefficients (for now just setting each to a different constant)
-    ! If one wants a space-dependent D or state-dependent D see multispecies code as example
-    ! We have a routine average_cc_to_face there that is meant to compute face-averaged values
-    do n=1,nlevs
-       do i=1,dm
-          do spec=1,nspecies
-             call multifab_setval_c(diff_coef_face(n,i), D_Fick(spec),spec,1,all=.true.)
-          end do
-       end do
-    end do
-
+    call build(bpt,"multinomial_diffusion")
 
     ! set new state to zero everywhere, including ghost cells
     do n=1,nlevs
@@ -89,20 +61,15 @@ contains
                             the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
     end do
 
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_destroy(diff_coef_face(n,i))
-       end do
-    end do
-
     call destroy(bpt)
 
-  end subroutine advance_diffusion_multinomial
+  end subroutine multinomial_diffusion
 
-  subroutine multinomial_diffusion_update(mla,n_new,dx,dt,the_bc_tower)
+  subroutine multinomial_diffusion_update(mla,n_new,diff_coef_face,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: n_new(:)
+    type(multifab) , intent(in   ) :: diff_coef_face(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -166,4 +133,4 @@ contains
 
   end subroutine multinomial_diffusion_update_2d
 
-end module advance_diffusion_multinomial_module
+end module multinomial_diffusion_module
