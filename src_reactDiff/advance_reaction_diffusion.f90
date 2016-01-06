@@ -59,16 +59,10 @@ contains
 
     ! build
     do n=1,nlevs
-      call multifab_build(diff_fluxdiv(n),mla%la(n),nspecies,0)
-      call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0)
       do i=1,dm
         call multifab_build_edge(diff_coef_face(n,i),mla%la(n),nspecies,0,i)
       end do
       call multifab_build(rate1(n),mla%la(n),nspecies,0)
-
-      if (temporal_integrator .eq. -2) then ! explitcit midpoint
-        call multifab_build(rate2(n),mla%la(n),nspecies,0)
-      end if
     end do
 
     ! diffusion coefficients (for now just setting each to a different constant)
@@ -80,6 +74,39 @@ contains
           call multifab_setval_c(diff_coef_face(n,i),D_Fick(spec),spec,1,all=.true.)
         end do
       end do
+    end do
+
+    if (temporal_integrator .eq. -3) then  ! multinomial diffusion 
+
+       ! calculate rates
+       ! rates could be deterministic or stochastic depending on use_Poisson_rng
+       call chemical_rates(mla,n_old,rate1,dx,dt)
+
+       ! advance multinomial diffusion
+       call multinomial_diffusion(mla,n_old,n_new,diff_coef_face,dx,dt,the_bc_tower)
+      
+       do n=1,nlevs
+          ! add reaction contribution and external source
+          call multifab_saxpy_3(n_new(n),dt,rate1(n))
+          if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt,ext_src(n))
+          call multifab_fill_boundary(n_new(n))
+          call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                               the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+       end do
+
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_destroy(diff_coef_face(n,i))
+          end do
+          call multifab_destroy(rate1(n))
+       end do
+       return
+
+    end if
+
+    do n=1,nlevs
+       call multifab_build(diff_fluxdiv(n),mla%la(n),nspecies,0)
+       call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0)
     end do
 
     ! compute diffusive flux divergence
@@ -125,6 +152,11 @@ contains
       end do
 
     else if (temporal_integrator .eq. -2) then  ! explicit midpoint
+
+      ! temporary storage for second rate
+      do n=1,nlevs
+         call multifab_build(rate2(n),mla%la(n),nspecies,0)
+      end do
 
       !!!!!!!!!!!!!!!
       ! predictor   !
@@ -218,23 +250,8 @@ contains
                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
       end do
 
-
-    else if (temporal_integrator .eq. -3) then  ! multinomial diffusion 
-
-      ! calculate rates
-      ! rates could be deterministic or stochastic depending on use_Poisson_rng
-      call chemical_rates(mla,n_old,rate1,dx,dt)
-
-      ! advance multinomial diffusion
-      call multinomial_diffusion(mla,n_old,n_new,diff_coef_face,dx,dt,the_bc_tower)
-      
       do n=1,nlevs
-         ! add reaction contribution and external source
-         call multifab_saxpy_3(n_new(n),dt,rate1(n))
-         if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt,ext_src(n))
-         call multifab_fill_boundary(n_new(n))
-         call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
-                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+        call multifab_destroy(rate2(n))
       end do
 
     else
@@ -252,10 +269,6 @@ contains
         call multifab_destroy(diff_coef_face(n,i))
       end do
       call multifab_destroy(rate1(n))
-
-      if (temporal_integrator .eq. -2) then  ! explicit midpoint
-        call multifab_destroy(rate2(n))
-      end if
     end do
 
     call destroy(bpt)
