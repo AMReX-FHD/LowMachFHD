@@ -4,6 +4,7 @@ module multinomial_diffusion_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
+  use BoxLibRNGs
   use probin_reactdiff_module, only: nspecies, D_Fick
 
   implicit none
@@ -46,8 +47,7 @@ contains
     end do    
 
     ! update with multinomial diffusion, each grid in isolation
-
-
+    call multinomial_diffusion_update(mla,n_new,diff_coef_face,dx,dt,the_bc_tower)
 
     ! call sum_boundary to deal with grid boundaries
     do n=1,nlevs
