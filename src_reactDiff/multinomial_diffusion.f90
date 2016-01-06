@@ -134,7 +134,8 @@ contains
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             n_total = n_new(i,j,comp)*dx(1)**2
+             ! round to nearest integer to prevent roundoff error
+             n_total = idnint(n_new(i,j,comp)*dx(1)**2)
              n_sum = 0
              prob_sum = 0.d0
 
