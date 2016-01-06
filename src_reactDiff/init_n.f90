@@ -153,8 +153,13 @@ contains
           end do
        end do
 
-    case default
+    case(4)
 
+       n_init = 0.d0
+       n_init(8,8,1:nspecies) = n_init_in(1,1:nspecies)
+
+    case default
+       
        call bl_error("init_n_2d: prob_type not supported")
 
     end select
