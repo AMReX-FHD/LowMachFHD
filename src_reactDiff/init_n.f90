@@ -61,6 +61,7 @@ contains
           case (3)
              call init_n_3d(np(:,:,:,:),ng_n,lo,hi,dx(n,:))
           end select
+          if(integer_populations) np=nint(np) ! Round to the nearest integer
        end do
     end do
 

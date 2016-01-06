@@ -264,7 +264,7 @@ subroutine main_driver()
       end if
       
       if (abs(initial_variance) .gt. 0.d0) then
-         call add_n_fluctuations(mla,n_old,dx,the_bc_tower)
+         if(.not.integer_populations) call add_n_fluctuations(mla,n_old,dx,the_bc_tower)
       end if
 
    end if

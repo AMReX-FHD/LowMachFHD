@@ -68,7 +68,7 @@ contains
   subroutine multinomial_diffusion_update(mla,n_new,diff_coef_face,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: n_new(:)
+    type(multifab) , intent(inout) :: n_new(:) ! Old state on input, new state on output in valid region, or increment in ghosts
     type(multifab) , intent(in   ) :: diff_coef_face(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -114,62 +114,50 @@ contains
   subroutine multinomial_diffusion_update_2d(n_new,ng_n,diffx,diffy,ng_d,lo,hi,dx,dt)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_n,ng_d
-    real(kind=dp_t), intent(inout) :: n_new(lo(1)-ng_n:,lo(2)-ng_n:,:)
-    real(kind=dp_t), intent(inout) :: diffx(lo(1)-ng_d:,lo(2)-ng_d:,:)
-    real(kind=dp_t), intent(inout) :: diffy(lo(1)-ng_d:,lo(2)-ng_d:,:)
+    real(kind=dp_t), intent(inout) :: n_new(lo(1)-ng_n:,lo(2)-ng_n:,:) ! Old state on input, new state on output
+    real(kind=dp_t), intent(in)    :: diffx(lo(1)-ng_d:,lo(2)-ng_d:,:)
+    real(kind=dp_t), intent(in)    :: diffy(lo(1)-ng_d:,lo(2)-ng_d:,:)
     real(kind=dp_t), intent(in   ) :: dx(:),dt
 
     ! local
     integer :: i,j,comp,n_total,n_sum,n_change
-    integer :: cell_update(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,nspecies)
+    integer, allocatable :: cell_update(:,:,:) ! Avoid stack overflows and put this on the heap instead
+    
+    integer, parameter :: n_faces=4
+    integer :: fluxes(n_faces) ! Number of particles jumping out of this cell to each of the neighboring cells
+    real(kind=dp_t) :: probabilities(n_faces)
 
-    real(kind=dp_t) :: dtbydxsq,prob,prob_sum
-
-    dtbydxsq = dt/dx(1)**2
-
+    allocate(cell_update(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,nspecies))
     cell_update = 0.d0
 
     do comp=1,nspecies
 
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
-
-             n_total = n_new(i,j,comp)
-             n_sum = 0
-             prob_sum = 0.d0
+          
+             probabilities = (/diffx(i,j,  comp)*dt/dx(1)**2, &
+                               diffx(i+1,j,comp)*dt/dx(1)**2, &
+                               diffy(i,j,  comp)*dt/dx(2)**2, &
+                               diffy(i,j+1,comp)*dt/dx(2)**2/)
+             
+             call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
+                     N=nint(n_new(i,j,comp)), p=probabilities)
 
              ! lo-x face
-             prob = diffx(i,j,comp)*dtbydxsq
-             call BinomialRNG(n_change,n_total-n_sum,prob/(1.d0-prob_sum))
-             cell_update(i  ,j,comp) = cell_update(i  ,j,comp) - n_change
-             cell_update(i-1,j,comp) = cell_update(i-1,j,comp) + n_change
-
-             n_sum = n_sum + n_change
-             prob_sum = prob_sum + prob
+             cell_update(i  ,j,comp) = cell_update(i  ,j,comp) - fluxes(1)
+             cell_update(i-1,j,comp) = cell_update(i-1,j,comp) + fluxes(1)
              
              ! hi-x face
-             prob = diffx(i+1,j,comp)*dtbydxsq
-             call BinomialRNG(n_change,n_total-n_sum,prob/(1.d0-prob_sum))
-             cell_update(i  ,j,comp) = cell_update(i  ,j,comp) - n_change
-             cell_update(i+1,j,comp) = cell_update(i+1,j,comp) + n_change
-
-             n_sum = n_sum + n_change
-             prob_sum = prob_sum + prob
+             cell_update(i  ,j,comp) = cell_update(i  ,j,comp) - fluxes(2)
+             cell_update(i+1,j,comp) = cell_update(i+1,j,comp) + fluxes(2)
              
              ! lo-y face
-             prob = diffy(i,j,comp)*dtbydxsq
-             call BinomialRNG(n_change,n_total-n_sum,prob/(1.d0-prob_sum))
-             cell_update(i,j  ,comp) = cell_update(i,j  ,comp) - n_change
-             cell_update(i,j-1,comp) = cell_update(i,j-1,comp) + n_change
-
-             n_sum = n_sum + n_change
-             prob_sum = prob_sum + prob
+             cell_update(i,j  ,comp) = cell_update(i,j  ,comp) - fluxes(3)
+             cell_update(i,j-1,comp) = cell_update(i,j-1,comp) + fluxes(3)
 
              ! hi-y face
-             prob = diffy(i,j+1,comp)*dtbydxsq
-             call BinomialRNG(n_change,n_total-n_sum,prob/(1.d0-prob_sum))
-             cell_update(i,j  ,comp) = cell_update(i,j  ,comp) - n_change
-             cell_update(i,j+1,comp) = cell_update(i,j+1,comp) + n_change
+             cell_update(i,j  ,comp) = cell_update(i,j  ,comp) - fluxes(4)
+             cell_update(i,j+1,comp) = cell_update(i,j+1,comp) + fluxes(4)
 
           end do
        end do
@@ -180,6 +168,8 @@ contains
     n_new(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies) = &
                  n_new(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies) &
          + cell_update(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies)
+         
+    deallocate(cell_update)     
 
   end subroutine multinomial_diffusion_update_2d
 
