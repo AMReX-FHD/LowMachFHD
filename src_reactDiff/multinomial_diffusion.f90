@@ -134,7 +134,7 @@ contains
        do j=lo(2),hi(2)
           do i=lo(1),hi(1)
 
-             n_total = n_new(i,j,comp)
+             n_total = n_new(i,j,comp)*dx(1)**2
              n_sum = 0
              prob_sum = 0.d0
 
@@ -179,7 +179,7 @@ contains
     ! increment n_new for all components
     n_new(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies) = &
                  n_new(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies) &
-         + cell_update(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies)
+         + cell_update(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies)/dx(1)**2
 
   end subroutine multinomial_diffusion_update_2d
 
