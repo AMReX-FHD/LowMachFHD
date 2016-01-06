@@ -156,7 +156,9 @@ contains
     case(4)
 
        n_init = 0.d0
-       n_init(8,8,1:nspecies) = n_init_in(1,1:nspecies)
+       if (lo(1) .eq. 0 .and. lo(2) .eq. 0) then
+          n_init(8,8,1:nspecies) = n_init_in(1,1:nspecies)
+       end if
 
     case default
        
