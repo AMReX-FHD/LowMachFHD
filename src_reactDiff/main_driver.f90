@@ -394,14 +394,16 @@ subroutine main_driver()
                 
        end if
        
-       if((istep > n_steps_skip) .and. (mod(istep,abs(hydro_grid_int))==0)) then ! Donev: Temporary logging to analyze dynamics of mean
-          do spec=1,nspecies
-             n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
-          end do
-          if (parallel_IOProcessor() ) then
-             !write(9,*) time, n_sum(:)/(multifab_volume(n_old(1))/nspecies) 
-             write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies) - 1.0d0) ! Custom for A+B<->C
-          end if       
+       if (hydro_grid_int > 0) then
+          if((istep > n_steps_skip) .and. (mod(istep,abs(hydro_grid_int))==0)) then ! Donev: Temporary logging to analyze dynamics of mean
+             do spec=1,nspecies
+                n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
+             end do
+             if (parallel_IOProcessor() ) then
+                !write(9,*) time, n_sum(:)/(multifab_volume(n_old(1))/nspecies) 
+                write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies) - 1.0d0) ! Custom for A+B<->C
+             end if
+          end if
        end if
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
