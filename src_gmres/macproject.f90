@@ -187,7 +187,7 @@ contains
                                 max_bottom_nlevel = mgt(nlevs)%max_bottom_nlevel, &
                                 min_width = mgt(nlevs)%min_width, &
                                 eps = mg_rel_tol, &
-                                abs_eps = 1.d-16, &
+                                abs_eps = 1.d-15, &
                                 verbose = mg_verbose, &
                                 cg_verbose = cg_verbose, &
                                 nodal = nodal_flags(rh(nlevs)))
