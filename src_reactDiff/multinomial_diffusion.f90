@@ -107,7 +107,7 @@ contains
         case (2)
           if(n_cells(2)==1) then ! This is really a 1D domain
              ! Note the in this case the second dimension of dxp has bounds of (0:0)
-             call multinomial_diffusion_update_1d(np(:,1,1,:),ng_n, &
+             call multinomial_diffusion_update_1d(np(:,0,1,:),ng_n, &
                                                   dxp(:,0,1,:),ng_d, &
                                                   lo(1),hi(1),dx(n,1),dt,dv)
           else
