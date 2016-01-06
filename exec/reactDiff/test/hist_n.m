@@ -1,7 +1,7 @@
 clear all; format compact; format short
 
 u_av=1.0; % Average concentration
-dx=1000.0; % Grid size (cell volume in higher dimensions)
+dx=5.0; % Grid size (cell volume in higher dimensions)
 
 u_std = sqrt(u_av*dx)/dx; % Expected standard deviation
 
@@ -20,8 +20,9 @@ Gaussian = exp(-(bins_th-u_av).^2/(2*u_std.^2))/sqrt(2*pi)/u_std;
 posbins=bins_th(bins_th>0);
 Stirling=zeros(1,length(bins_th));
 Poisson=zeros(1,length(bins));
-% This is Stirling's approximation to the Poisson distribution:
-Stirling(bins_th>0) = exp( -posbins.*(log(posbins/(u_av-1/(2*dx)))-1)*dx );
+% This is Stirling's approximation to the Poisson distribution
+% This is including a continuity correction to correct the mean
+Stirling(bins_th>0) = exp( -(posbins+1/(2*dx)).*(log((posbins+1/(2*dx))/u_av)-1)*dx );
 Stirling = Stirling / (sum(Stirling(:))*du_th);
 % True Poisson distribution
 bins_nonneg = bins(round(bins*dx)>=0);
