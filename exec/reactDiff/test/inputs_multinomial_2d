@@ -26,7 +26,7 @@
   print_int = 1        ! how often to output diagnostics to screen
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
 
   ! Algorithm control / selection
   !----------------------
@@ -120,7 +120,7 @@
   
   ! Initial and boundary conditions
   !----------------------
-  n_init_in(1,1:2) = 100.d0 10.d0 ! Initial values to be used in init_n.f90
+  n_init_in(1,1:2) = 100000.d0 100000.d0 ! Initial values to be used in init_n.f90
 
   ! Diffusion     
   !----------------------                          
