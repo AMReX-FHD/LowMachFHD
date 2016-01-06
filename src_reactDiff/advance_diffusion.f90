@@ -73,8 +73,7 @@ contains
        end do
     end do
     
-    ! if doing multinomial diffusion, call it here and return
-    ! make sure to destroy diff_coef_face
+    ! multinomial diffusion
     if (diffusion_type .eq. 3) then
 
        call multinomial_diffusion(mla,n_old,n_new,diff_coef_face,dx,dt,the_bc_tower)
@@ -109,16 +108,16 @@ contains
        end do
     end if
 
-    if (diffusion_type .eq. 0) then
-       ! explicit trapezoidal predictor-corrector
+    if (diffusion_type .eq. 0 .or. diffusion_type .eq. 4) then
+       ! explicit trapezoidal predictor-corrector OR forward Euler
 
-       ! Euler predictor
+       ! forward Euler predictor
        ! n_k^{n+1,*} = n_k^n + dt div (D_k grad n_k)^n
        !                     + dt div (sqrt(2 D_k n_k / dt) Z)^n
        !                     + dt ext_src
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
-          ! By default, saxpy updates zero ghost cell.
+          ! By default, saxpy updates zero ghost cells
           call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
           call multifab_saxpy_3(n_new(n),dt,ext_src(n))
@@ -127,27 +126,32 @@ contains
                                the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
        end do
 
-       ! compute diffusive flux divergence
-       call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
+       if (diffusion_type .eq. 0) then
 
-       ! Trapezoidal corrector:
-       ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
-       !                   + (dt/2) div (D_k grad n_k)^{n+1,*}
-       !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
-       !                   +  dt    ext_src
-       ! This is the same as stepping to time t+2*dt and then averaging with the state at time t:
-       !  n_new = 1/2 * (n_old + n_new + dt*div (D grad n_new) + div (sqrt(2 D_k n_k dt) Z)^n)
-       !  which is what we use below
-       do n=1,nlevs
-          call multifab_plus_plus_c(n_new(n),1,n_old(n),1,nspecies,0)
-          call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
-          call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
-          call multifab_saxpy_3(n_new(n),dt,ext_src(n))
-          call multifab_mult_mult_s_c(n_new(n),1,0.5d0,nspecies,0)
-          call multifab_fill_boundary(n_new(n))
-          call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
-                               the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-       end do
+          ! Trapezoidal corrector:
+          ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
+          !                   + (dt/2) div (D_k grad n_k)^{n+1,*}
+          !                   +  dt    div (sqrt(2 D_k n_k / dt) Z)^n
+          !                   +  dt    ext_src
+          ! This is the same as stepping to time t+2*dt and then averaging with the state at time t:
+          !  n_new = 1/2 * (n_old + n_new + dt*div (D grad n_new) + div (sqrt(2 D_k n_k dt) Z)^n)
+          !  which is what we use below
+
+          ! compute diffusive flux divergence
+          call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
+
+          do n=1,nlevs
+             call multifab_plus_plus_c(n_new(n),1,n_old(n),1,nspecies,0)
+             call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
+             call multifab_saxpy_3(n_new(n),dt,stoch_fluxdiv(n))
+             call multifab_saxpy_3(n_new(n),dt,ext_src(n))
+             call multifab_mult_mult_s_c(n_new(n),1,0.5d0,nspecies,0)
+             call multifab_fill_boundary(n_new(n))
+             call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                                  the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+          end do
+          
+       end if
 
     else if (diffusion_type .eq. 1) then
        ! Crank-Nicolson

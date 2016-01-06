@@ -26,6 +26,8 @@ module probin_reactdiff_module
                                                     ! 0=explicit trapezoidal predictor/corrector
                                                     ! 1=Crank-Nicolson semi-implicit
                                                     ! 2=explicit midpoint
+                                                    ! 3=multinomial diffusion
+                                                    ! 4=forward Euler  
   integer, save :: midpoint_stoch_flux_type = 1     ! for midpoint diffusion schemes, (split and unsplit)
                                                     ! corrector formulation of noise
                                                     ! 1 = K(nold) * W1 + K(nold)         * W2

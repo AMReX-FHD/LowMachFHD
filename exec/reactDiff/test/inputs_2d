@@ -96,10 +96,13 @@
                                  ! 2=(1/2)D + R + (1/2)D (Strang option 2)
                                  ! -1=unsplitting forward Euler
                                  ! -2=unsplitting explicit midpoint 
+                                 ! -3=unsplit multinomial diffusion
   diffusion_type = 0             ! Only used for splitting schemes
                                  ! 0=explicit trapezoidal predictor/corrector
                                  ! 1=Crank-Nicolson semi-implicit
                                  ! 2=explicit midpoint
+                                 ! 3=multinomial diffusion
+                                 ! 4=forward Euler  
   midpoint_stoch_flux_type = 1   ! for midpoint diffusion schemes, (split and unsplit)
                                  ! corrector formulation of noise
                                  ! K(nold) * W1 + K(nold)         * W2
