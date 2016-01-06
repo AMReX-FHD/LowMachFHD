@@ -50,6 +50,8 @@ module probin_reactdiff_module
   integer, save           :: model_file_init = 0     ! initialize from model files:
                                ! 0=no, 1=usual order (Fortran), -1=transpose order (C)
   character(len=128), save :: model_file(max_species)       ! one model file for each species
+  
+  logical, save :: integer_populations=.false. ! Initialize with all number of molecules strictly integer
 
   ! Diffusion     
   !----------------------                          
@@ -79,7 +81,7 @@ module probin_reactdiff_module
   namelist /probin_reactdiff/ nspecies, nreactions
   namelist /probin_reactdiff/ temporal_integrator, diffusion_type, midpoint_stoch_flux_type
   namelist /probin_reactdiff/ reaction_type, use_Poisson_rng, avg_type
-  namelist /probin_reactdiff/ inhomogeneous_bc_fix, n_init_in, n_bc, model_file_init, model_file
+  namelist /probin_reactdiff/ inhomogeneous_bc_fix, n_init_in, n_bc, model_file_init, model_file, integer_populations
   namelist /probin_reactdiff/ D_Fick, diffusion_stencil_order, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
   namelist /probin_reactdiff/ cross_section, include_discrete_LMA_correction

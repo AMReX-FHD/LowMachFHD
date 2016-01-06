@@ -6,8 +6,10 @@ module init_n_module
   use multifab_physbc_module
   use define_bc_module
   use bc_module
-  use probin_common_module, only: prob_lo, prob_hi, prob_type
-  use probin_reactdiff_module, only: nspecies, n_init_in, model_file_init
+  use BoxLibRNGs
+  use probin_common_module, only: prob_lo, prob_hi, prob_type, initial_variance
+  use probin_reactdiff_module, only: nspecies, n_init_in, model_file_init, &
+         integer_populations, cross_section
   
   implicit none
 
@@ -60,8 +62,7 @@ contains
              call init_n_2d(np(:,:,1,:),ng_n,lo,hi,dx(n,:))
           case (3)
              call init_n_3d(np(:,:,:,:),ng_n,lo,hi,dx(n,:))
-          end select
-          if(integer_populations) np=nint(np) ! Round to the nearest integer
+          end select          
        end do
     end do
 
@@ -166,6 +167,14 @@ contains
        call bl_error("init_n_2d: prob_type not supported")
 
     end select
+    
+    if(integer_populations) then ! Ensure that the initial number of molecules are integers
+       do j=lo(2),hi(2)
+          do i=lo(1),hi(1)
+             call round_to_integers(n_init(i,j,1:nspecies), dv=dx(1)*dx(2)*cross_section)
+          end do
+       end do    
+    end if
 
   end subroutine init_n_2d
 
@@ -262,8 +271,37 @@ contains
 
     end select
 
+    if(integer_populations) then ! Ensure that the initial number of molecules are integers
+       do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)
+                call round_to_integers(n_init(i,j,k,1:nspecies), dv=dx(1)*dx(2)*dx(3))
+             end do
+          end do
+       end do    
+    end if
+
   end subroutine init_n_3d
 
+  subroutine round_to_integers(n, dv)
+    real(dp_t), intent(inout) :: n(nspecies)
+    real(dp_t), intent(in) :: dv ! cell volume
+    
+    integer :: comp, nparticles
+    
+    if(initial_variance>0.0d0) then
+       do comp=1, nspecies
+          ! Generate the initial fluctuations using a Poisson random number generator
+          ! This assumes that the distribution of initial conditions is a product Poisson measure
+          call PoissonRNG(number=nparticles, mean=n(comp)*dv)
+          n(comp) = nparticles/dv
+       end do   
+    else
+       n = nint(n*dv)/dv ! Round to nearest integer
+    end if  
+    
+  end subroutine round_to_integers
+  
   subroutine init_n_model(mla,n_init,dx,the_bc_tower,input_array,comp) ! Read from a file
 
     type(ml_layout), intent(in   ) :: mla

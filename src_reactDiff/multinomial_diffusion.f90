@@ -5,7 +5,8 @@ module multinomial_diffusion_module
   use bc_module
   use multifab_physbc_module
   use BoxLibRNGs
-  use probin_reactdiff_module, only: nspecies, D_Fick
+  use probin_common_module, only: n_cells
+  use probin_reactdiff_module, only: nspecies, D_Fick, cross_section
 
   implicit none
 
@@ -75,6 +76,7 @@ contains
 
     ! local
     integer :: n,nlevs,i,dm,ng_n,ng_d
+    real(kind=dp_t) :: dv ! Cell volume
 
     integer      ::  lo(mla%dim),  hi(mla%dim)
     
@@ -88,6 +90,9 @@ contains
     ng_n = n_new(1)%ng
     ng_d = diff_coef_face(1,1)%ng
 
+    dv = product(dx(1,1:dm))
+    if (dm<3) dv = dv*cross_section
+
     ! cannot use OpenMP with tiling since each cell is responsible for updating
     ! cells possibly outside of its file.  OpenMP could be added at the k loop level
     ! with reduction tricks
@@ -100,9 +105,16 @@ contains
         hi = upb(get_box(n_new(n),i))
         select case (dm)
         case (2)
-          call multinomial_diffusion_update_2d(np(:,:,1,:),ng_n, &
-                                               dxp(:,:,1,:),dyp(:,:,1,:),ng_d, &
-                                               lo,hi,dx(n,:),dt)
+          if(n_cells(2)==1) then ! This is really a 1D domain
+             ! Note the in this case the second dimension of dxp has bounds of (0:0)
+             call multinomial_diffusion_update_1d(np(:,1,1,:),ng_n, &
+                                                  dxp(:,0,1,:),ng_d, &
+                                                  lo(1),hi(1),dx(n,1),dt,dv)
+          else
+             call multinomial_diffusion_update_2d(np(:,:,1,:),ng_n, &
+                                                  dxp(:,:,1,:),dyp(:,:,1,:),ng_d, &
+                                                  lo,hi,dx(n,:),dt,dv)
+          end if
         case (3)
            call bl_error("multinomial_diffusion_update_3d not written yet")
         end select
@@ -111,13 +123,62 @@ contains
 
   end subroutine multinomial_diffusion_update
 
-  subroutine multinomial_diffusion_update_2d(n_new,ng_n,diffx,diffy,ng_d,lo,hi,dx,dt)
+  ! For 1D we want to be more efficient by sampling only two binomials instead of 4
+  subroutine multinomial_diffusion_update_1d(n_new,ng_n,diffx,ng_d,lo,hi,dx,dt,dv)
+
+    integer        , intent(in   ) :: lo,hi,ng_n,ng_d
+    real(kind=dp_t), intent(inout) :: n_new(lo-ng_n:,:) ! Old state on input, new state on output
+    real(kind=dp_t), intent(in)    :: diffx(lo-ng_d:,:)
+    real(kind=dp_t), intent(in   ) :: dx,dt,dv
+
+    ! local
+    integer :: i,j,comp,n_total,n_sum,n_change
+    integer, allocatable :: cell_update(:,:) ! Avoid stack overflows and put this on the heap instead
+    
+    integer, parameter :: n_faces=2
+    integer :: fluxes(n_faces) ! Number of particles jumping out of this cell to each of the neighboring cells
+    real(kind=dp_t) :: probabilities(n_faces)
+
+    allocate(cell_update(lo-1:hi+1,nspecies))
+    cell_update = 0.d0
+
+    do comp=1,nspecies
+
+       do i=lo,hi
+
+          probabilities = (/diffx(i,  comp)*dt/dx**2, &
+                            diffx(i+1,comp)*dt/dx**2/)
+
+          call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
+                  N=nint(n_new(i,comp)*dv), p=probabilities)
+
+          ! lo-x face
+          cell_update(i  ,comp) = cell_update(i  ,comp) - fluxes(1)
+          cell_update(i-1,comp) = cell_update(i-1,comp) + fluxes(1)
+
+          ! hi-x face
+          cell_update(i  ,comp) = cell_update(i  ,comp) - fluxes(2)
+          cell_update(i+1,comp) = cell_update(i+1,comp) + fluxes(2)
+
+       end do
+
+    end do
+
+    ! increment n_new for all components but remember to convert back to number densities from number of molecules
+    n_new(lo-1:hi+1,1:nspecies) = n_new(lo-1:hi+1,1:nspecies) + &
+                                        cell_update(lo-1:hi+1,1:nspecies) / dv
+         
+    deallocate(cell_update)     
+
+  end subroutine multinomial_diffusion_update_1d
+
+  subroutine multinomial_diffusion_update_2d(n_new,ng_n,diffx,diffy,ng_d,lo,hi,dx,dt,dv)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_n,ng_d
     real(kind=dp_t), intent(inout) :: n_new(lo(1)-ng_n:,lo(2)-ng_n:,:) ! Old state on input, new state on output
     real(kind=dp_t), intent(in)    :: diffx(lo(1)-ng_d:,lo(2)-ng_d:,:)
     real(kind=dp_t), intent(in)    :: diffy(lo(1)-ng_d:,lo(2)-ng_d:,:)
-    real(kind=dp_t), intent(in   ) :: dx(:),dt
+    real(kind=dp_t), intent(in   ) :: dx(:),dt,dv
 
     ! local
     integer :: i,j,comp,n_total,n_sum,n_change
@@ -141,7 +202,7 @@ contains
                                diffy(i,j+1,comp)*dt/dx(2)**2/)
              
              call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
-                     N=nint(n_new(i,j,comp)), p=probabilities)
+                     N=nint(n_new(i,j,comp)*dv), p=probabilities)
 
              ! lo-x face
              cell_update(i  ,j,comp) = cell_update(i  ,j,comp) - fluxes(1)
@@ -164,10 +225,10 @@ contains
 
     end do
 
-    ! increment n_new for all components
+    ! increment n_new for all components but remember to convert back to number densities from number of molecules
     n_new(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies) = &
                  n_new(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies) &
-         + cell_update(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies)
+         + cell_update(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,1:nspecies) / dv
          
     deallocate(cell_update)     
 

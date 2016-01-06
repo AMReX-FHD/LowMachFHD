@@ -1,7 +1,7 @@
 clear all; format compact; format short
 
 u_av=1.0; % Average concentration
-dx=5.0; % Grid size (cell volume in higher dimensions)
+dx=1000.0; % Grid size (cell volume in higher dimensions)
 
 u_std = sqrt(u_av*dx)/dx; % Expected standard deviation
 
