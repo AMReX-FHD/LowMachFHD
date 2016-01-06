@@ -602,9 +602,6 @@ contains
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
 
-    ! local
-    integer :: i,j
-
     if (bccomp .ne. 1 .and. bccomp .ne. 2) then
        call bl_error('physbc_domainvel_ho_2d requires bccomp = 1 or 2')
     end if
@@ -617,19 +614,18 @@ contains
     if (bccomp .eq. 1) then
        if (bc(1,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
-          ! to extrapolation of 4th-order polynomial
+          ! 6-point stencil using homogeneous dirichlet velocity boundary condition
           s(lo(1),lo(2)-ng_s:hi(2)+ng_s) = 0.d0
-          s(lo(1)-1,lo(2)-ng_s:hi(2)+ng_s) =   5.d0*s(lo(1)  ,lo(2)-ng_s:hi(2)+ng_s) &
-                                   -10.d0*s(lo(1)+1,lo(2)-ng_s:hi(2)+ng_s) &
-                                   +10.d0*s(lo(1)+2,lo(2)-ng_s:hi(2)+ng_s) &
-                                   - 5.d0*s(lo(1)+3,lo(2)-ng_s:hi(2)+ng_s) &
-                                   + 1.d0*s(lo(1)+4,lo(2)-ng_s:hi(2)+ng_s)
-          s(lo(1)-2,lo(2)-ng_s:hi(2)+ng_s) =  15.d0*s(lo(1)  ,lo(2)-ng_s:hi(2)+ng_s) &
-                                   -40.d0*s(lo(1)+1,lo(2)-ng_s:hi(2)+ng_s) &
-                                   +45.d0*s(lo(1)+2,lo(2)-ng_s:hi(2)+ng_s) &
-                                   -24.d0*s(lo(1)+3,lo(2)-ng_s:hi(2)+ng_s) &
-                                   + 5.d0*s(lo(1)+4,lo(2)-ng_s:hi(2)+ng_s)
+          s(lo(1)-1,lo(2)-ng_s:hi(2)+ng_s) = -15.d0*s(lo(1)+1,lo(2)-ng_s:hi(2)+ng_s) &
+                                             +20.d0*s(lo(1)+2,lo(2)-ng_s:hi(2)+ng_s) &
+                                             -15.d0*s(lo(1)+3,lo(2)-ng_s:hi(2)+ng_s) &
+                                             + 6.d0*s(lo(1)+4,lo(2)-ng_s:hi(2)+ng_s) &
+                                             - 1.d0*s(lo(1)+5,lo(2)-ng_s:hi(2)+ng_s)
+          s(lo(1)-2,lo(2)-ng_s:hi(2)+ng_s) = -70.d0*s(lo(1)+1,lo(2)-ng_s:hi(2)+ng_s) &
+                                            +105.d0*s(lo(1)+2,lo(2)-ng_s:hi(2)+ng_s) &
+                                             -84.d0*s(lo(1)+3,lo(2)-ng_s:hi(2)+ng_s) &
+                                             +35.d0*s(lo(1)+4,lo(2)-ng_s:hi(2)+ng_s) &
+                                             - 6.d0*s(lo(1)+5,lo(2)-ng_s:hi(2)+ng_s)
        else if (bc(1,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -646,19 +642,18 @@ contains
     if (bccomp .eq. 1) then
        if (bc(1,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
-          ! to extrapolation of 4th-order polynomial
+          ! 6-point stencil using homogeneous dirichlet velocity boundary condition
           s(hi(1)+1,lo(2)-ng_s:hi(2)+ng_s) = 0.d0
-          s(hi(1)+2,lo(2)-ng_s:hi(2)+ng_s) =   5.d0*s(hi(1)+1,lo(2)-ng_s:hi(2)+ng_s) &
-                                   -10.d0*s(hi(1)  ,lo(2)-ng_s:hi(2)+ng_s) &
-                                   +10.d0*s(hi(1)-1,lo(2)-ng_s:hi(2)+ng_s) &
-                                   - 5.d0*s(hi(1)-2,lo(2)-ng_s:hi(2)+ng_s) &
-                                   + 1.d0*s(hi(1)-3,lo(2)-ng_s:hi(2)+ng_s)
-          s(hi(1)+3,lo(2)-ng_s:hi(2)+ng_s) =  15.d0*s(hi(1)+1,lo(2)-ng_s:hi(2)+ng_s) &
-                                   -40.d0*s(hi(1)  ,lo(2)-ng_s:hi(2)+ng_s) &
-                                   +45.d0*s(hi(1)-1,lo(2)-ng_s:hi(2)+ng_s) &
-                                   -24.d0*s(hi(1)-2,lo(2)-ng_s:hi(2)+ng_s) &
-                                   + 5.d0*s(hi(1)-3,lo(2)-ng_s:hi(2)+ng_s)
+          s(hi(1)+2,lo(2)-ng_s:hi(2)+ng_s) = -15.d0*s(hi(1)  ,lo(2)-ng_s:hi(2)+ng_s) &
+                                             +20.d0*s(hi(1)-1,lo(2)-ng_s:hi(2)+ng_s) &
+                                             -15.d0*s(hi(1)-2,lo(2)-ng_s:hi(2)+ng_s) &
+                                             + 6.d0*s(hi(1)-3,lo(2)-ng_s:hi(2)+ng_s) &
+                                             - 1.d0*s(hi(1)-4,lo(2)-ng_s:hi(2)+ng_s)
+          s(hi(1)+3,lo(2)-ng_s:hi(2)+ng_s) = -70.d0*s(hi(1)  ,lo(2)-ng_s:hi(2)+ng_s) &
+                                            +105.d0*s(hi(1)-1,lo(2)-ng_s:hi(2)+ng_s) &
+                                             -84.d0*s(hi(1)-2,lo(2)-ng_s:hi(2)+ng_s) &
+                                             +35.d0*s(hi(1)-3,lo(2)-ng_s:hi(2)+ng_s) &
+                                             - 6.d0*s(hi(1)-4,lo(2)-ng_s:hi(2)+ng_s)
        else if (bc(1,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -675,19 +670,18 @@ contains
     if (bccomp .eq. 2) then
        if (bc(2,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
-          ! to extrapolation of 4th-order polynomial
+          ! 6-point stencil using homogeneous dirichlet velocity boundary condition
           s(lo(1)-ng_s:hi(1)+ng_s,lo(2)) = 0.d0
-          s(lo(1)-ng_s:hi(1)+ng_s,lo(2)-1) =   5.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)  ) &
-                                   -10.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+1) &
-                                   +10.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+2) &
-                                   - 5.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+3) &
-                                   + 1.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+4)
-          s(lo(1)-ng_s:hi(1)+ng_s,lo(2)-2) =  15.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)  ) &
-                                   -40.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+1) &
-                                   +45.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+2) &
-                                   -24.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+3) &
-                                   + 5.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+4)
+          s(lo(1)-ng_s:hi(1)+ng_s,lo(2)-1) = -15.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+1) &
+                                             +20.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+2) &
+                                             -15.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+3) &
+                                             + 6.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+4) &
+                                             - 1.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+5)
+          s(lo(1)-ng_s:hi(1)+ng_s,lo(2)-2) = -70.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+1) &
+                                            +105.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+2) &
+                                             -84.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+3) &
+                                             +35.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+4) &
+                                             - 6.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+5)
        else if (bc(2,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -704,19 +698,18 @@ contains
     if (bccomp .eq. 2) then
        if (bc(2,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
-          ! set first ghost cells (and all ghost cells to avoid intermediate NaNs
-          ! to extrapolation of 4th-order polynomial
+          ! 6-point stencil using homogeneous dirichlet velocity boundary condition
           s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+1) = 0.d0
-          s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+2) =   5.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+1) &
-                                   -10.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)  ) &
-                                   +10.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-1) &
-                                   - 5.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-2) &
-                                   + 1.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-3)
-          s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+3) =  15.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+1) &
-                                   -40.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)  ) &
-                                   +45.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-1) &
-                                   -24.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-2) &
-                                   + 5.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-3)
+          s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+2) = -15.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)  ) &
+                                             +20.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-1) &
+                                             -15.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-2) &
+                                             + 6.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-3) &
+                                             - 1.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-4)
+          s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+3) = -70.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)  ) &
+                                            +105.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-1) &
+                                             -84.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-2) &
+                                             +35.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-3) &
+                                             - 6.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-4)
        else if (bc(2,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -2079,9 +2072,6 @@ contains
     integer        , intent(in   ) :: bccomp
     real(kind=dp_t), intent(in   ) :: dx(:)
 
-    ! Local variables
-    integer :: i,j
-
     if (bccomp .ne. 1 .and. bccomp .ne. 2) then
        call bl_error('physbc_macvel_ho_2d requires bccomp = 1 or 2')
     end if
@@ -2096,17 +2086,17 @@ contains
           ! shouldn't have to do anything; this case is covered in physbc_domainvel
        else if (bccomp .eq. 2) then
           ! transverse velocity
-          ! five point stencil using homogeneous dirichlet velocity boundary condition
-          do j=lo(2)-ng_s,hi(2)+1+ng_s
-             s(lo(1)-1,j) =         -4.d0*s(lo(1)  ,j) &
-                                    +2.d0*s(lo(1)+1,j) &
-                             -(4.d0/5.d0)*s(lo(1)+2,j) &
-                             +(1.d0/7.d0)*s(lo(1)+3,j)
-             s(lo(1)-2,j) =        -30.d0*s(lo(1)  ,j) &
-                                   +20.d0*s(lo(1)+1,j) &
-                                    -9.d0*s(lo(1)+2,j) &
-                            +(12.d0/7.d0)*s(lo(1)+3,j)
-          end do
+          ! 6-point stencil using homogeneous dirichlet velocity boundary condition
+          s(lo(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) =         -5.d0*s(lo(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               +(10.d0/3.d0)*s(lo(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                       -2.d0*s(lo(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                +(5.d0/7.d0)*s(lo(1)+3,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                -(1.d0/9.d0)*s(lo(1)+4,lo(2)-ng_s:hi(2)+1+ng_s)
+          s(lo(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) =        -45.d0*s(lo(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                      +40.d0*s(lo(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                      -27.d0*s(lo(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               +(72.d0/7.d0)*s(lo(1)+3,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                -(5.d0/3.d0)*s(lo(1)+4,lo(2)-ng_s:hi(2)+1+ng_s)
        end if
     else if (bc(1,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -2125,16 +2115,17 @@ contains
           ! shouldn't have to do anything; this case is covered in physbc_domainvel
        else if (bccomp .eq. 2) then
           ! transverse velocity
-          do j=lo(2)-ng_s,hi(2)+1+ng_s
-             s(hi(1)+1,j) =         -4.d0*s(hi(1)  ,j) &
-                                    +2.d0*s(hi(1)-1,j) &
-                             -(4.d0/5.d0)*s(hi(1)-2,j) &
-                             +(1.d0/7.d0)*s(hi(1)-3,j)
-             s(hi(1)+2,j) =        -30.d0*s(hi(1)  ,j) &
-                                   +20.d0*s(hi(1)-1,j) &
-                                    -9.d0*s(hi(1)-2,j) &
-                            +(12.d0/7.d0)*s(hi(1)-3,j)
-          end do
+          ! 6-point stencil using homogeneous dirichlet velocity boundary condition
+          s(hi(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) =         -5.d0*s(hi(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               +(10.d0/3.d0)*s(hi(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                       -2.d0*s(hi(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                +(5.d0/7.d0)*s(hi(1)-3,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                -(1.d0/9.d0)*s(hi(1)-4,lo(2)-ng_s:hi(2)+1+ng_s)
+          s(hi(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) =        -45.d0*s(hi(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                      +40.d0*s(hi(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                      -27.d0*s(hi(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               +(72.d0/7.d0)*s(hi(1)-3,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                -(5.d0/3.d0)*s(hi(1)-4,lo(2)-ng_s:hi(2)+1+ng_s)
        end if
     else if (bc(1,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -2150,16 +2141,17 @@ contains
     if (bc(2,1) .eq. DIR_VEL) then
        if (bccomp .eq. 1) then
           ! transverse velocity
-          do i=lo(1)-ng_s,hi(1)+1+ng_s
-             s(i,lo(2)-1) =         -4.d0*s(i,lo(2)  ) &
-                                    +2.d0*s(i,lo(2)+1) &
-                             -(4.d0/5.d0)*s(i,lo(2)+2) &
-                             +(1.d0/7.d0)*s(i,lo(2)+3)
-             s(i,lo(2)-2) =        -30.d0*s(i,lo(2)  ) &
-                                   +20.d0*s(i,lo(2)+1) &
-                                    -9.d0*s(i,lo(2)+2) &
-                            +(12.d0/7.d0)*s(i,lo(2)+3)
-          end do
+          ! 6-point stencil using homogeneous dirichlet velocity boundary condition
+          s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)-1) =         -5.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)  ) &
+                                               +(10.d0/3.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+1) &
+                                                       -2.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+2) &
+                                                +(5.d0/7.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+3) &
+                                                -(1.d0/9.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+4)
+          s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)-2) =        -45.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)  ) &
+                                                      +40.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+1) &
+                                                      -27.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+2) &
+                                               +(72.d0/7.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+3) &
+                                                -(5.d0/3.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+4)
        else if (bccomp .eq. 2) then
           ! normal velocity
           ! shouldn't have to do anything; this case is covered in physbc_domainvel
@@ -2178,16 +2170,17 @@ contains
     if (bc(2,2) .eq. DIR_VEL) then
        if (bccomp .eq. 1) then
           ! transverse velocity
-          do i=lo(1)-ng_s,hi(1)+1+ng_s
-             s(i,hi(2)+1) =         -4.d0*s(i,hi(2)  ) &
-                                    +2.d0*s(i,hi(2)-1) &
-                             -(4.d0/5.d0)*s(i,hi(2)-2) &
-                             +(1.d0/7.d0)*s(i,hi(2)-3)
-             s(i,hi(2)+2) =        -30.d0*s(i,hi(2)  ) &
-                                   +20.d0*s(i,hi(2)-1) &
-                                    -9.d0*s(i,hi(2)-2) &
-                            +(12.d0/7.d0)*s(i,hi(2)-3)
-          end do
+          ! 6-point stencil using homogeneous dirichlet velocity boundary condition
+          s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)+1) =         -5.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)  ) &
+                                               +(10.d0/3.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-1) &
+                                                       -2.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-2) &
+                                                +(5.d0/7.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-3) &
+                                                -(1.d0/9.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-4)
+          s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)+2) =        -45.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)  ) &
+                                                      +40.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-1) &
+                                                      -27.d0*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-2) &
+                                               +(72.d0/7.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-3) &
+                                                -(5.d0/3.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-4)
        else if (bccomp .eq. 2) then
           ! normal velocity
           ! shouldn't have to do anything; this case is covered in physbc_domainvel
