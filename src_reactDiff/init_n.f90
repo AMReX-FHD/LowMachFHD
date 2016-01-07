@@ -7,9 +7,10 @@ module init_n_module
   use define_bc_module
   use bc_module
   use BoxLibRNGs
-  use probin_common_module, only: prob_lo, prob_hi, prob_type, initial_variance
+  use probin_common_module, only: prob_lo, prob_hi, prob_type, initial_variance, &
+                                  smoothing_width
   use probin_reactdiff_module, only: nspecies, n_init_in, model_file_init, &
-         integer_populations, cross_section
+                                     cross_section, integer_populations
   
   implicit none
 
@@ -22,6 +23,7 @@ module init_n_module
   ! 1=gaussian spreading (order of accuracy testing)
   ! 2=gradient along y, n=n_init_in(1,1:nspecies) on bottom (y=0) and n_init(2,1:nspecies) on top (y=Ly)
   ! 3=1+sin^2(pi*x)*sin^2(pi*y)*sin^2(pi*z) test problem
+  ! 4=vertical stripe (thirds of domain)
 
 contains
 
@@ -86,6 +88,7 @@ contains
     ! local varables
     integer         :: i,j,comp
     real(kind=dp_t) :: x,y,r,cen(2),sum,L(2)
+    real(kind=dp_t) :: one_third_domain1,one_third_domain2,x1,x2
 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -156,11 +159,24 @@ contains
        end do
 
     case(4)
+       !=========================================================
+       ! vertical stripe (thirds of domain)
+       !=========================================================
 
-       n_init = 0.d0
-       if (lo(1) .eq. 0 .and. lo(2) .eq. 0) then
-          n_init(8,8,1:nspecies) = n_init_in(1,1:nspecies)
-       end if
+       one_third_domain1=2.0d0/3.0d0*prob_lo(1)+1.0d0/3.0d0*prob_hi(1)
+       one_third_domain2=1.0d0/3.0d0*prob_lo(1)+2.0d0/3.0d0*prob_hi(1)
+
+       do i=lo(1),hi(1)
+          x1 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_third_domain1)
+          x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_third_domain2)
+          do j=lo(2),hi(2)
+
+             n_init(i,j,1:nspecies) = n_init_in(1,1:nspecies) + &
+                  0.5d0*(n_init_in(2,1:nspecies)-n_init_in(1,1:nspecies)) * &
+                  (tanh(x1/(smoothing_width*dx(1))) - tanh(x2/(smoothing_width*dx(1))))
+
+          end do
+       end do
 
     case default
        
@@ -187,6 +203,7 @@ contains
     ! local varables
     integer         :: i,j,k,comp
     real(kind=dp_t) :: x,y,z,r,cen(3),sum,L(3)
+    real(kind=dp_t) :: one_third_domain1,one_third_domain2,x1,x2
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
@@ -262,6 +279,28 @@ contains
                 n_init(i,j,k,1:nspecies) = 1.d0 + sin(M_PI*x)**2 * sin(M_PI*y)**2 * sin(M_PI*z)**2
 
              end do
+          end do
+       end do
+
+    case(4)
+       !=========================================================
+       ! vertical stripe (thirds of domain)
+       !=========================================================
+
+       one_third_domain1=2.0d0/3.0d0*prob_lo(1)+1.0d0/3.0d0*prob_hi(1)
+       one_third_domain2=1.0d0/3.0d0*prob_lo(1)+2.0d0/3.0d0*prob_hi(1)
+
+       do i=lo(1),hi(1)
+          x1 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_third_domain1)
+          x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_third_domain2)
+          do k=lo(3),hi(3)
+          do j=lo(2),hi(2)
+
+             n_init(i,j,k,1:nspecies) = n_init_in(1,1:nspecies) + &
+                  0.5d0*(n_init_in(2,1:nspecies)-n_init_in(1,1:nspecies)) * &
+                  (tanh(x1/(smoothing_width*dx(1))) - tanh(x2/(smoothing_width*dx(1))))
+
+          end do
           end do
        end do
 
