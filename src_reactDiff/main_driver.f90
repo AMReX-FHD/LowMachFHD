@@ -387,7 +387,7 @@ subroutine main_driver()
              n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
           end do
           if (parallel_IOProcessor() ) then
-             print*,time,' n_sum=',n_sum(:)
+             !print*,time,' n_sum=',n_sum(:)
              print*,time,' n_avg=',n_sum(:)/(multifab_volume(n_old(1))/nspecies)
           end if
           
