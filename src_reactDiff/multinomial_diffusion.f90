@@ -154,7 +154,7 @@ contains
                             diffx(i+1,comp)*dt/dx**2/)
 
           call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
-                  N=nint(n_new(i,comp)*dv), p=probabilities)
+                  N=max(0, nint(n_new(i,comp)*dv)), p=probabilities)
 
           ! lo-x face
           cell_update(i  ,comp) = cell_update(i  ,comp) - fluxes(1)
@@ -206,7 +206,7 @@ contains
                                diffy(i,j+1,comp)*dt/dx(2)**2/)
              
              call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
-                                 N=nint(n_new(i,j,comp)*dv), p=probabilities)
+                                 N=max(0, nint(n_new(i,j,comp)*dv)), p=probabilities)
 
              ! lo-x face
              cell_update(i  ,j,comp) = cell_update(i  ,j,comp) - fluxes(1)
@@ -272,7 +272,7 @@ contains
                             diffz(i,j,k+1,comp)*dt/dx(3)**2/)
              
           call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
-                              N=nint(n_new(i,j,k,comp)*dv), p=probabilities)
+                              N=max(0, nint(n_new(i,j,k,comp)*dv)), p=probabilities)
 
           ! lo-x face
           cell_update(i  ,j,k,comp) = cell_update(i  ,j,k,comp) - fluxes(1)
