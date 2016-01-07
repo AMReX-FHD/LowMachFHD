@@ -44,7 +44,7 @@
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
-  seed = 1
+  seed = 0
 
   ! Boundary conditions
   !----------------------
