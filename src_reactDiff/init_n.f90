@@ -88,7 +88,7 @@ contains
     ! local varables
     integer         :: i,j,comp
     real(kind=dp_t) :: x,y,r,cen(2),sum,L(2)
-    real(kind=dp_t) :: one_third_domain1,one_third_domain2,x1,x2
+    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_width
 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -163,15 +163,16 @@ contains
        ! vertical stripe (thirds of domain)
        !=========================================================
 
-       one_third_domain1=2.0d0/3.0d0*prob_lo(1)+1.0d0/3.0d0*prob_hi(1)
-       one_third_domain2=1.0d0/3.0d0*prob_lo(1)+2.0d0/3.0d0*prob_hi(1)
+       stripe_width = 1.0d0/16.0d0 ! Adjust this to match needs
+       one_fraction_domain1=0.5d0*(1.0d0-stripe_width)*prob_lo(1)+0.5d0*(1.0d0+stripe_width)*prob_hi(1)
+       one_fraction_domain2=0.5d0*(1.0d0+stripe_width)*prob_lo(1)+0.5d0*(1.0d0-stripe_width)*prob_hi(1)
 
        do i=lo(1),hi(1)
-          x1 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_third_domain1)
-          x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_third_domain2)
+          x1 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain1)
+          x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain2)
           do j=lo(2),hi(2)
 
-             n_init(i,j,1:nspecies) = n_init_in(1,1:nspecies) + &
+             n_init(i,j,1:nspecies) = n_init_in(2,1:nspecies) + &
                   0.5d0*(n_init_in(2,1:nspecies)-n_init_in(1,1:nspecies)) * &
                   (tanh(x1/(smoothing_width*dx(1))) - tanh(x2/(smoothing_width*dx(1))))
 
@@ -203,7 +204,7 @@ contains
     ! local varables
     integer         :: i,j,k,comp
     real(kind=dp_t) :: x,y,z,r,cen(3),sum,L(3)
-    real(kind=dp_t) :: one_third_domain1,one_third_domain2,x1,x2
+    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_width
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
@@ -287,16 +288,17 @@ contains
        ! vertical stripe (thirds of domain)
        !=========================================================
 
-       one_third_domain1=2.0d0/3.0d0*prob_lo(1)+1.0d0/3.0d0*prob_hi(1)
-       one_third_domain2=1.0d0/3.0d0*prob_lo(1)+2.0d0/3.0d0*prob_hi(1)
+       stripe_width = 1.0d0/16.0d0 ! Adjust this to match needs
+       one_fraction_domain1=0.5d0*(1.0d0-stripe_width)*prob_lo(1)+0.5d0*(1.0d0+stripe_width)*prob_hi(1)
+       one_fraction_domain2=0.5d0*(1.0d0+stripe_width)*prob_lo(1)+0.5d0*(1.0d0-stripe_width)*prob_hi(1)
 
        do i=lo(1),hi(1)
-          x1 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_third_domain1)
-          x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_third_domain2)
+          x1 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain1)
+          x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain2)
           do k=lo(3),hi(3)
           do j=lo(2),hi(2)
 
-             n_init(i,j,k,1:nspecies) = n_init_in(1,1:nspecies) + &
+             n_init(i,j,k,1:nspecies) = n_init_in(2,1:nspecies) + &
                   0.5d0*(n_init_in(2,1:nspecies)-n_init_in(1,1:nspecies)) * &
                   (tanh(x1/(smoothing_width*dx(1))) - tanh(x2/(smoothing_width*dx(1))))
 
