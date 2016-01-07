@@ -12,8 +12,8 @@
   !prob_type = 4 ! stripe for periodic
   dim_in = 2                       ! 2D or 3D (here we do a single cell) 
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 512.0d0 1.0d0       ! physical hi coordinate
-  n_cells(1:2) = 512 1               ! number of cells in domain
+  prob_hi(1:2) = 128.0d0 128.0d0       ! physical hi coordinate
+  n_cells(1:2) = 128 128               ! number of cells in domain
   max_grid_size(1:2) = 1024 1024       ! max number of cells in a box
 
   ! Time-step control
@@ -23,19 +23,19 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 20000                  ! maximum number of time steps
-  plot_int = 0                    ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 5000                  ! maximum number of time steps
+  plot_int = 500                   ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = -1000                   ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 1000                   ! how often to output statistics
+  print_int = 100                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = -1.0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing
 
   ! Initial conditions
   !----------------------
   smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
+  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total mass fluctuation is set to zero)
 
   ! Algorithm control / selection
@@ -77,7 +77,7 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 1024  ! parallelization parameters
-  stats_int = 1000                 ! Project grid for analysis
+  stats_int = 500                 ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
@@ -90,13 +90,13 @@
 ! reaction/diffusion number fraction code
 &probin_reactdiff
 
-  temporal_integrator = -2 ! 0=D + R
+  temporal_integrator = 2 ! 0=D + R
                           ! 1=(1/2)R + D + (1/2)R
                           ! 2=(1/2)D + R + (1/2)D
                           ! -1=unsplitting forward Euler
                           ! -2=unsplitting explicit midpoint
                           
-  inhomogeneous_bc_fix = F ! Apply the BC fix to correct splitting errors at boundaries
+  inhomogeneous_bc_fix = T ! Apply the BC fix to correct splitting errors at boundaries
 
   diffusion_type = 1 ! Only used for splitting schemes
                      ! 0=explicit trapezoidal predictor/corrector
@@ -115,7 +115,7 @@
                      ! 1=second-order tau leaping or CLE
                      ! 2=SSA
 
-  use_Poisson_rng = -1 ! Only used for reaction_type = 0, 1
+  use_Poisson_rng = 1 ! Only used for reaction_type = 0, 1
                       ! If -1 do deterministic chemistry
                       ! If 1 do tau leaping (Poisson increments),
                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
@@ -139,8 +139,8 @@
   ! For stripe initial condition with periodic BCs
   !n_init_in(1,1:2) = 2.16245, 1.35018 ! + stable state (but unstable spatially)               
   !n_init_in(2,1:2) = 0, 10 ! 0 stable state
-  
-  integer_populations = F
+
+  integer_populations = T
 
   ! Diffusion:
   ! -----------------
