@@ -88,7 +88,6 @@ contains
 
     end if
 
-
     do n=1,nlevs
        call multifab_build(diff_fluxdiv(n) ,mla%la(n),nspecies,0)
        call multifab_build(stoch_fluxdiv(n),mla%la(n),nspecies,0)
@@ -162,15 +161,17 @@ contains
        !
        ! in delta formulation:
        !
-       ! (I - div_(dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
+       ! (I - div (dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
        !                                       + dt div (sqrt(2 D_k n_k / dt) Z)^n
-       !                                       + dt ext_src       
-       ! Combine ext_src and stoch_fluxdiv together as an external source
+       !                                       + dt ext_src
+       !
+       ! we combine the entire rhs into stoch_fluxdiv
        do n=1,nlevs
           call multifab_plus_plus(stoch_fluxdiv(n),ext_src(n),0)
+          call multifab_plus_plus(stoch_fluxdiv(n),diff_fluxdiv(n),0)
+          call multifab_mult_mult_s(stoch_fluxdiv(n),dt)
        end do
-       call implicit_diffusion(mla,n_old,n_new,stoch_fluxdiv,diff_coef_face,diff_fluxdiv, &
-                               dx,dt,the_bc_tower)
+       call implicit_diffusion(mla,n_old,n_new,stoch_fluxdiv,diff_coef_face,dx,dt,the_bc_tower)
 
     else if (diffusion_type .eq. 2) then
        ! explicit midpoint scheme

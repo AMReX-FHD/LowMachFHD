@@ -151,7 +151,7 @@ contains
                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
       end do
 
-    else if (temporal_integrator .eq. -2) then  ! explicit midpoint
+   else if (temporal_integrator .eq. -2) then  ! explicit midpoint
 
       ! temporary storage for second rate
       do n=1,nlevs
@@ -184,7 +184,8 @@ contains
 
       ! Here we do not write this in the form that Mattingly et al do
       !  where we just continue the second half of the time step from where we left
-      ! Rather, we compute terms at the midpoint and then add contributions from both halves of the time step to n_old
+      ! Rather, we compute terms at the midpoint and then add contributions from both 
+      ! halves of the time step to n_old
       ! This works simpler with diffusion but we have to store both rates1 and rates2
 
       ! compute diffusive flux divergence
@@ -196,33 +197,33 @@ contains
       ! compute stochastic flux divergence and add to the ones from the predictor stage
       if (variance_coef_mass .gt. 0.d0) then
 
-        ! first, fill random flux multifabs with new random numbers
-        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+         ! first, fill random flux multifabs with new random numbers
+         call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
-        ! compute n on faces to use in the stochastic flux in the corrector
-        ! three possibilities
-        select case (midpoint_stoch_flux_type)
-        case (1)
-          ! use n_old
-          call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                    the_bc_tower,increment_in=.true.)
-        case (2)
-          ! use n_pred 
-          call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                    the_bc_tower,increment_in=.true.)
-        case (3)
-          ! compute n_new=2*n_pred-n_old
-          ! here we use n_new as temporary storage since it will be overwritten shortly
-          do n=1,nlevs
-            call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,n_new(n)%ng)
-            call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
-          end do
-          ! use n_new=2*n_pred-n_old
-          call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                    the_bc_tower,increment_in=.true.)
-        case default
-          call bl_error("advance_reaction_diffusion: invalid midpoint_stoch_flux_type")
-        end select
+         ! compute n on faces to use in the stochastic flux in the corrector
+         ! three possibilities
+         select case (midpoint_stoch_flux_type)
+         case (1)
+            ! use n_old
+            call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                      the_bc_tower,increment_in=.true.)
+         case (2)
+            ! use n_pred 
+            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                      the_bc_tower,increment_in=.true.)
+         case (3)
+            ! compute n_new=2*n_pred-n_old
+            ! here we use n_new as temporary storage since it will be overwritten shortly
+            do n=1,nlevs
+               call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,n_new(n)%ng)
+               call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+            end do
+            ! use n_new=2*n_pred-n_old
+            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                      the_bc_tower,increment_in=.true.)
+         case default
+            call bl_error("advance_reaction_diffusion: invalid midpoint_stoch_flux_type")
+         end select
 
       end if
 
@@ -238,25 +239,38 @@ contains
       !       = 2*n_k^pred - n_k^n  (midpoint_stoch_flux_type=3)
       
       do n=1,nlevs
-        call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
-        call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
-        call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
-        call multifab_saxpy_3(n_new(n),dt/2.d0,rate1(n))
-        call multifab_saxpy_3(n_new(n),dt/2.d0,rate2(n))
-        if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt,ext_src(n))
-
-        call multifab_fill_boundary(n_new(n))
-        call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
-                             the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+         call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
+         call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
+         call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+         call multifab_saxpy_3(n_new(n),dt/2.d0,rate1(n))
+         call multifab_saxpy_3(n_new(n),dt/2.d0,rate2(n))
+         if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt,ext_src(n))
+         
+         call multifab_fill_boundary(n_new(n))
+         call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
       end do
-
+     
       do n=1,nlevs
-        call multifab_destroy(rate2(n))
+         call multifab_destroy(rate2(n))
       end do
+     
+   else if (temporal_integrator .eq. -4) then
 
-    else
+      ! implicit midpoint
+
+      ! implicit predictor to half-time
+      ! n^{n+1/2} = n^n + (dt/2) div (D grad n^{n+1/2} + sqrt(2 D_k n_k^n/(dt/2) dV) Z_1
+
+
+      ! we can use the implicit_diffusion() interface, but here the input
+      ! diff_fluxdiv should enter with (1/2) (div D_k grad n_k)^n
+      ! and force should enter with
+      ! (1/sqrt(2))*stoch_fluxdiv + (1/2)*rate1
+
+   else
       call bl_error("advance_reaction_diffusion: invalid temporal_integrator")
-    end if
+   end if
 
     !!!!!!!!!!!
     ! destroy !

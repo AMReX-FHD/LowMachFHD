@@ -18,36 +18,25 @@ module implicit_diffusion_module
 
 contains
 
-  ! Note: diff_fluxdiv enters holding (div D_k grad n_k)^n
-  ! Note: ext_src may contain stochastic contribution
+  ! this routine sets n^k_new = n^k_old + delta n^k, where
   !
-  ! This solves the following Crank-Nicolson system:
-  ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
-  !                   + (dt/2)(div D_k grad n_k)^n+1
-  !                   +  dt    ext_src
   ! 
-  ! using delta formulation, in operator form this becomes:
-  !
-  ! (I - div_(dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
-  !                                       + dt ext_src      
-  !
-  subroutine implicit_diffusion(mla,n_old,n_new,ext_src,diff_coef_face,diff_fluxdiv, &
-                                dx,dt,the_bc_tower)
-    
-    
+  ! (I - (dt/2) div D_k grad) delta n_k = rhs
+
+  subroutine implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
+        
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:)
-    type(multifab) , intent(in   ) :: ext_src(:)
+    type(multifab) , intent(inout) :: rhs(:)
     type(multifab) , intent(in   ) :: diff_coef_face(:,:)
-    type(multifab) , intent(in   ) :: diff_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! for multigrid solver; (alpha - div beta grad) phi = rhs
     type(multifab) :: alpha(mla%nlevel)
-    type(multifab) :: rhs(mla%nlevel)
     type(multifab) :: phi(mla%nlevel)
+    type(multifab) :: rhs_comp(mla%nlevel)
     type(multifab) :: beta(mla%nlevel,mla%dim)
 
     ! for diffusion multigrid - not used but needs to be passed in
@@ -64,9 +53,9 @@ contains
 
     ! for multigrid solver; (alpha - div beta grad) phi = rhs
     do n=1,nlevs
-       call multifab_build(alpha(n),mla%la(n),1,0)
-       call multifab_build(rhs(n)  ,mla%la(n),1,0)
-       call multifab_build(phi(n)  ,mla%la(n),1,1) 
+       call multifab_build(alpha(n)   ,mla%la(n),1,0)
+       call multifab_build(phi(n)     ,mla%la(n),1,1)
+       call multifab_build(rhs_comp(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(beta(n,i),mla%la(n),1,0,i)
        end do
@@ -83,18 +72,7 @@ contains
     ! copy n_new = n_old
     do n=1,nlevs
        call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
-    end do
-
-    ! Crank-Nicolson diffusion solve
-
-    ! n_k^{n+1} = n_k^n + (dt/2)(div D_k grad n_k)^n
-    !                   + (dt/2)(div D_k grad n_k)^n+1
-    !                   +  dt    ext_src
-    ! 
-    ! using delta formulation, in operator form this becomes:
-    !
-    ! (I - div_(dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
-    !                                       + dt ext_src      
+    end do    
 
     ! alpha=1 here for all components since it is simple difusion  
     do n=1,nlevs
@@ -111,13 +89,8 @@ contains
           end do
        end do
 
-       ! rhs =   dt div (D_k grad n_k^n)
-       !       + dt ext_src    
-
        do n=1,nlevs
-          call multifab_copy_c(rhs(n),1,diff_fluxdiv(n),spec,1,0)
-          call multifab_plus_plus_c(rhs(n),1,ext_src(n),spec,1,0)
-          call multifab_mult_mult_s(rhs(n),dt)
+          call multifab_copy_c(rhs_comp(n),1,rhs(n),spec,1,0)
        end do
 
        ! initial guess for phi is zero since we are solving delta formulation
@@ -126,7 +99,7 @@ contains
        end do
 
        ! solve the implicit system
-       call ml_cc_solve(mla,rhs,phi,fine_flx,alpha,beta,dx, &
+       call ml_cc_solve(mla,rhs_comp,phi,fine_flx,alpha,beta,dx, &
                         the_bc_tower,scal_bc_comp+spec-1, &
                         stencil_order=diffusion_stencil_order, &
                         verbose=mg_verbose, &
@@ -149,8 +122,8 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(alpha(n))
-       call multifab_destroy(rhs(n))
        call multifab_destroy(phi(n))
+       call multifab_destroy(rhs_comp(n))
        do i=1,dm
           call multifab_destroy(beta(n,i))
        end do
