@@ -97,6 +97,7 @@
                                  ! -1=unsplitting forward Euler
                                  ! -2=unsplitting explicit midpoint 
                                  ! -3=unsplit multinomial diffusion
+                                 ! -4=unsplit implicit midpoint
   diffusion_type = 0             ! Only used for splitting schemes
                                  ! 0=explicit trapezoidal predictor/corrector
                                  ! 1=Crank-Nicolson semi-implicit
