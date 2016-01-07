@@ -165,7 +165,8 @@
   ! ------------------  
   rate_const(1:4) = 4, 1.37, 1, 10 
   rate_multiplier = 0.1 ! Change all rates by a constant multiplier
-  include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
+  ! For deterministic case do not include discrete correction
+  include_discrete_LMA_correction = F ! Compute rates using classical LMA or molecular  
   
   ! BPM model is:
   !     (1) A -> 0
