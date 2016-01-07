@@ -8,6 +8,7 @@ module advance_reaction_diffusion_module
   use diffusive_n_fluxdiv_module
   use chemical_rates_module
   use multinomial_diffusion_module
+  use implicit_diffusion_module
   use probin_common_module, only: variance_coef_mass
   use probin_reactdiff_module, only: nspecies, D_Fick, temporal_integrator, &
        midpoint_stoch_flux_type, nreactions
@@ -41,6 +42,7 @@ contains
     type(multifab) :: diff_coef_face(mla%nlevel,mla%dim)
     type(multifab) :: rate1(mla%nlevel)
     type(multifab) :: rate2(mla%nlevel) 
+    type(multifab) :: rhs(mla%nlevel)
 
     integer :: nlevs,dm,n,i,spec
 
@@ -165,7 +167,10 @@ contains
       ! calculate rates from a(n_old)
       call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
 
-      ! predictor
+      ! n_k^{n+1/2} = n_k^n + (dt/2)       div (D_k grad n_k)^n
+      !                     + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
+      !                     + 1/dV * P_1( f(n_k)*(dt/2)*dV )                   ! Poisson noise
+      !                     + (dt/2)        ext_src
       do n=1,nlevs
         call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
         call multifab_saxpy_3(n_new(n),dt/2.d0,diff_fluxdiv(n))
@@ -228,10 +233,10 @@ contains
       end if
 
       ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
-      !                   + dt div (sqrt(2 D_k n_k^n dt) Z_1 / sqrt(2) ) ! Gaussian noise
-      !                   + dt div (sqrt(2 D_k n_k^? dt) Z_2 / sqrt(2) ) ! Gaussian noise
-      !                   + 1/dV * P_1( f(n_k)*dt*dV/2 )                 ! Poisson noise
-      !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*dt*dV/2 ) ! Poisson noise
+      !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
+      !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
+      !                   + 1/dV * P_1( f(n_k)*(dt/2)*dV )                        ! Poisson noise
+      !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*(dt/2)*dV )        ! Poisson noise
       !                   + dt ext_src
       ! where
       ! n_k^? = n_k^n               (midpoint_stoch_flux_type=1)
@@ -259,14 +264,106 @@ contains
 
       ! implicit midpoint
 
-      ! implicit predictor to half-time
-      ! n^{n+1/2} = n^n + (dt/2) div (D grad n^{n+1/2} + sqrt(2 D_k n_k^n/(dt/2) dV) Z_1
+      ! backward Euler predictor to half-time
+      ! n_k^{n+1/2} = n_k^n + (dt/2)       div (D_k grad n_k)^{n+1/2}
+      !                     + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
+      !                     + 1/dV * P_1( f(n_k)*(dt/2)*dV )                   ! Poisson noise
+      !                     + (dt/2)        ext_src
+      !
+      ! in delta form
+      !
+      ! (I - div (dt/2) D_k grad) delta n_k =   (dt/2)       div (D_k grad n_k^n)
+      !                                       + (dt/sqrt(2)) div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1
+      !                                       + 1/dV * P_1( f(n_k)*(dt/2)*dV )
+      !                                       + (dt/2) ext_src
+
+      do n=1,nlevs
+         call multifab_build(rhs(n),mla%la(n),nspecies,0)
+         call multifab_build(rate2(n),mla%la(n),nspecies,0)
+      end do
+
+      do n=1,nlevs
+         call multifab_setval(rhs(n),0.d0)
+         call multifab_saxpy_3(rhs(n),dt/2.d0,diff_fluxdiv(n))
+         call multifab_saxpy_3(rhs(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+         call multifab_saxpy_3(rhs(n),dt/2.d0,rate1(n))
+         if(present(ext_src)) call multifab_saxpy_3(rhs(n),dt/2.d0,ext_src(n))
+      end do
+      
+      call implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
+
+      ! corrector
+
+      ! calculate rates from 2*a(n_pred)-a(n_old)
+      call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef)
+
+      ! compute stochastic flux divergence and add to the ones from the predictor stage
+      if (variance_coef_mass .gt. 0.d0) then
+
+         ! first, fill random flux multifabs with new random numbers
+         call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+
+         ! compute n on faces to use in the stochastic flux in the corrector
+         ! three possibilities
+         select case (midpoint_stoch_flux_type)
+         case (1)
+            ! use n_old
+            call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                      the_bc_tower,increment_in=.true.)
+         case (2)
+            ! use n_pred 
+            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                      the_bc_tower,increment_in=.true.)
+         case (3)
+            ! compute n_new=2*n_pred-n_old
+            ! here we use n_new as temporary storage since it will be overwritten shortly
+            do n=1,nlevs
+               call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,n_new(n)%ng)
+               call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+            end do
+            ! use n_new=2*n_pred-n_old
+            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                      the_bc_tower,increment_in=.true.)
+         case default
+            call bl_error("advance_reaction_diffusion: invalid midpoint_stoch_flux_type")
+         end select
+
+      end if
+
+      ! Crank-Nicolson
+      ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
+      !                   + (dt/2) div (D_k grad n_k)^{n+1}
+      !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
+      !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
+      !                   + 1/dV * P_1( f(n_k)*(dt/2)*dV )                        ! Poisson noise
+      !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*(dt/2)*dV )        ! Poisson noise
+      !                   + dt ext_src
+      !
+      ! in delta form
+      !
+      ! (I - div (dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
+      !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
+      !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
+      !                   + 1/dV * P_1( f(n_k)*(dt/2)*dV )                        ! Poisson noise
+      !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*(dt/2)*dV )        ! Poisson noise
+      !                   + dt ext_src
 
 
-      ! we can use the implicit_diffusion() interface, but here the input
-      ! diff_fluxdiv should enter with (1/2) (div D_k grad n_k)^n
-      ! and force should enter with
-      ! (1/sqrt(2))*stoch_fluxdiv + (1/2)*rate1
+      do n=1,nlevs
+         call multifab_setval(rhs(n),0.d0)
+         call multifab_saxpy_3(rhs(n),dt,diff_fluxdiv(n))
+         call multifab_saxpy_3(rhs(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+         call multifab_saxpy_3(rhs(n),dt/2.d0,rate1(n))
+         call multifab_saxpy_3(rhs(n),dt/2.d0,rate2(n))
+         if(present(ext_src)) call multifab_saxpy_3(rhs(n),dt,ext_src(n))
+      end do
+      
+      call implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
+
+      do n=1,nlevs
+         call multifab_destroy(rhs(n))
+         call multifab_destroy(rate2(n))
+      end do
 
    else
       call bl_error("advance_reaction_diffusion: invalid temporal_integrator")
