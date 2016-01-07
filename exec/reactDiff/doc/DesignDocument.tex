@@ -378,6 +378,26 @@ n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
 \end{split}
 \end{equation}
 
+\subsection{Implicit Midpoint Scheme}
+
+While we use a backward-Euler-type stepping for the predictor stage $n_k^{n+\myhalf}$, we use a Crank--Nicolson-type stepping for the corrector stage $n_k^{n+1}$.
+As in other midpoint schemes, there are three options for $n_k^\bullet$: $n_k^n$, $n_k^{n+\myhalf}$, and $\left(2 n_k^{n+\myhalf}-n_k^n\right)^+$. 
+\begin{equation}
+n_k^{n+\myhalf} = n_k^n + \frac{\Delta t}{2} \nabla\cdot\left(D_k\nabla n_k^{n+\myhalf}
++ \sqrt{\frac{2 D_k n_k^n}{(\Delta t/2)\Delta V}}\mZb^{(1)}\right)
++\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right),
+\end{equation}
+\begin{equation}
+\begin{split}
+n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left( \frac{1}{2} D_k \nabla n_k^n + \frac{1}{2} D_k \nabla n_k^{n+1}
++ \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}}\frac{\mZb^{(1)}}{\sqrt{2}}
++ \sqrt{\frac{2 D_k n_k^\bullet}{\Delta t\Delta V}}\frac{\mZb^{(2)}}{\sqrt{2}}\right)
+\\
+&+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
+\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
++\mPb^{(2)}_i\left(\left[2 a_i^{n+\myhalf}-a_i^n\right]^+\Delta V\frac{\Delta t}{2}\right)\right\}.
+\end{split}
+\end{equation}
 
 \section{Inhomogeneous Boundary Conditions}
 In order to handle inhomogeneous boundary conditions correctly within a second-order
