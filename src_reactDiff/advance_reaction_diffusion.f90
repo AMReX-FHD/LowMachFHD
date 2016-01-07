@@ -282,6 +282,10 @@ contains
          call multifab_build(rate2(n),mla%la(n),nspecies,0)
       end do
 
+      ! calculate rates
+      ! rates could be deterministic or stochastic depending on use_Poisson_rng
+      call chemical_rates(mla,n_old,rate1,dx,dt)
+
       do n=1,nlevs
          call multifab_setval(rhs(n),0.d0)
          call multifab_saxpy_3(rhs(n),dt/2.d0,diff_fluxdiv(n))
@@ -289,7 +293,7 @@ contains
          call multifab_saxpy_3(rhs(n),dt/2.d0,rate1(n))
          if(present(ext_src)) call multifab_saxpy_3(rhs(n),dt/2.d0,ext_src(n))
       end do
-      
+
       call implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
 
       ! corrector
