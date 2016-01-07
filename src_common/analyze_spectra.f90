@@ -936,7 +936,7 @@ contains
           write(1000,*) ! New line
 
           do i=lo(qdim),hi(qdim)
-             write(1000,'(1000(g17.9))') prob_lo(qdim) + (i+0.5d0)*dx(1,qdim), &
+             write(1000,'(1000(E20.8e3))') prob_lo(qdim) + (i+0.5d0)*dx(1,qdim), &
                   stats_1d(i,:)
           end do
           
@@ -1063,7 +1063,7 @@ contains
        write(1000,*) ! New line
 
        do i=lo(pdim),hi(pdim)
-          write(1000,'(1000(g17.9))') prob_lo(pdim) + (i+0.5d0)*dx(1,pdim), stats_1d(i,:)
+          write(1000,'(1000(E20.8e3))') prob_lo(pdim) + (i+0.5d0)*dx(1,pdim), stats_1d(i,:)
        end do
 
        close(1000)
