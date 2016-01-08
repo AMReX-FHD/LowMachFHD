@@ -204,31 +204,7 @@ contains
 
          ! first, fill random flux multifabs with new random numbers
          call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-
-         ! compute n on faces to use in the stochastic flux in the corrector
-         ! three possibilities
-         select case (midpoint_stoch_flux_type)
-         case (1)
-            ! use n_old
-            call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                      the_bc_tower,increment_in=.true.)
-         case (2)
-            ! use n_pred 
-            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                      the_bc_tower,increment_in=.true.)
-         case (3)
-            ! compute n_new=2*n_pred-n_old
-            ! here we use n_new as temporary storage since it will be overwritten shortly
-            do n=1,nlevs
-               call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,n_new(n)%ng)
-               call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
-            end do
-            ! use n_new=2*n_pred-n_old
-            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                      the_bc_tower,increment_in=.true.)
-         case default
-            call bl_error("advance_reaction_diffusion: invalid midpoint_stoch_flux_type")
-         end select
+         call generate_stochastic_fluxdiv_corrector()
 
       end if
 
@@ -309,28 +285,7 @@ contains
 
          ! compute n on faces to use in the stochastic flux in the corrector
          ! three possibilities
-         select case (midpoint_stoch_flux_type)
-         case (1)
-            ! use n_old
-            call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                      the_bc_tower,increment_in=.true.)
-         case (2)
-            ! use n_pred 
-            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                      the_bc_tower,increment_in=.true.)
-         case (3)
-            ! compute n_new=2*n_pred-n_old
-            ! here we use n_new as temporary storage since it will be overwritten shortly
-            do n=1,nlevs
-               call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,n_new(n)%ng)
-               call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
-            end do
-            ! use n_new=2*n_pred-n_old
-            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
-                                      the_bc_tower,increment_in=.true.)
-         case default
-            call bl_error("advance_reaction_diffusion: invalid midpoint_stoch_flux_type")
-         end select
+         call generate_stochastic_fluxdiv_corrector()
 
       end if
 
@@ -387,6 +342,35 @@ contains
     end do
 
     call destroy(bpt)
+    
+  contains
+  
+      subroutine generate_stochastic_fluxdiv_corrector()
+         ! compute n on faces to use in the stochastic flux in the corrector
+         ! three possibilities: old, mid, or 2*mid-old
+         select case (midpoint_stoch_flux_type)
+         case (1)
+            ! use n_old
+            call stochastic_n_fluxdiv(mla,n_old,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                      the_bc_tower,increment_in=.true.)
+         case (2)
+            ! use n_pred 
+            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                      the_bc_tower,increment_in=.true.)
+         case (3)
+            ! compute n_new=2*n_pred-n_old
+            ! here we use n_new as temporary storage since it will be overwritten shortly
+            do n=1,nlevs
+               call multifab_mult_mult_s_c(n_new(n),1,2.d0,nspecies,n_new(n)%ng)
+               call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+            end do
+            ! use n_new=2*n_pred-n_old
+            call stochastic_n_fluxdiv(mla,n_new,diff_coef_face,stoch_fluxdiv,dx,dt, &
+                                      the_bc_tower,increment_in=.true.)
+         case default
+            call bl_error("advance_reaction_diffusion: invalid midpoint_stoch_flux_type")
+         end select
+      end subroutine generate_stochastic_fluxdiv_corrector    
 
   end subroutine advance_reaction_diffusion
 
