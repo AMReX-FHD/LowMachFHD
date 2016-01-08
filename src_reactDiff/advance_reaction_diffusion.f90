@@ -260,7 +260,7 @@ contains
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
-      call chemical_rates(mla,n_old,rate1,dx,dt)
+      call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
 
       do n=1,nlevs
          call multifab_setval(rhs(n),0.d0)
