@@ -179,7 +179,7 @@ contains
       case(2) ! Geometric
          av=sqrt(max(value1,0.d0)*max(value2,0.d0))
       case(3) ! Harmonic
-         if (value1 .lt. 0.d0 .or. value2 .lt. 0.d0) then
+         if (value1 .le. 0.d0 .or. value2 .le. 0.d0) then
             av=0.d0
          else
             av=2.d0 / (1.d0/value1 + 1.d0/value2)
