@@ -1,20 +1,26 @@
-! This test is the simplified version of Baras-Pearson-Mansour (BPM) model
-! This specific input file gives a bimodal distribution in a well-mixed (single-cell) system
+! This inputs file calculates the structure factor S(k) of 1d monomodal Schlogl model.
+! For the analysis, see "test/misc/Schlog_1d_analysis" directory.
+!
+! For the reaction model and parameter values, see "Chemical reactions" part below.
+! For the rate constants k1 = 1.5, k2 = 0.6, k3 = 2.05, k4 = 2.95,
+! nb = 1, r = -d'(nb) = 1.75, D0 = DG(nb) = 3.55.
+! 
+! The use of unitless numbers is convenient for the analysis.
+! alpha = r*dt
+! beta = D_Fick*dt/dx/dx
+! You may find that by changing rate_multiplier and D_Fick, the values of alpha and beta
+! can be independently changed, respectively.  
 
-! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
-! be careful and check values are read correctly (e.g., c_bc)
-
-! Options for low Mach equations
 &probin_common
  
   ! Problem specification
   !----------------------
-  prob_type = 0 ! 0=equilibrium, 1=gaussian, 2=gradient
-  dim_in = 2                       ! 2D or 3D (here we do a single cell) 
+  prob_type = 0                    ! 0=equilibrium, 1=gaussian, 2=gradient
+  dim_in = 2                       ! 2D or 3D 
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 128.d0 0.25d0      ! physical hi coordinate
+  prob_hi(1:2) = 128.d0 0.25d0     ! physical hi coordinate
   n_cells(1:2) = 512 1             ! number of cells in domain
-  max_grid_size(1:2) = 128 1        ! max number of cells in a box
+  max_grid_size(1:2) = 128 1       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
@@ -27,7 +33,7 @@
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 1000                   ! how often to output statistics
+  print_int = 1000                 ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing on TOP of 1/dV
@@ -132,7 +138,9 @@
   ! -----------------
   
   ! Fickian diffusion coeffs
-  D_Fick(1:1) = 1.5625 
+  D_Fick(1:1) = 1.5625d0    ! for beta=0.25 
+  !D_Fick(1:1) = 15.625d0   ! for beta=2.5 
+  !D_Fick(1:1) = 62.5d0     ! for beta=10 
 
   ! n_i boundary conditions (dir,lohi,species)
   n_bc(2,1,1:1) = 1.0 ! Lower y
@@ -153,8 +161,11 @@
   !k=[3.1, 1.0, 0.8, 2.9]; !Bimodal
   !k=[3,1,1,3]; ! Bifurcation point
   !k=[2.1, 1, 0.1, 1.2]; ! Almost bifurcated (hump, with barely distinguishable peaks)
+
   rate_const(1:4) = 1.5d0, 0.6d0, 2.05d0, 2.95d0 ! Monomodal with peak at x=1 but out of detailed balance
-  rate_multiplier = 5.71429 ! Slow or speed up all reactions at once
+  rate_multiplier = 5.71429   ! for alpha=0.1  ! Slow or speed up all reactions at once
+  !rate_multiplier = 28.5714  ! for alpha=0.5  ! Slow or speed up all reactions at once
+
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   
   ! Schlogl model is (we do not treat A as a separate species here since it is fixed):
