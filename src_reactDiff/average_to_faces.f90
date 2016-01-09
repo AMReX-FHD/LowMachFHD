@@ -175,11 +175,16 @@ contains
   
       select case(avg_type)
       case(1) ! Aritmetic
-         av=max(0.5d0*(value1+value2), 0.0d0)
+         !av=max(0.5d0*(value1+value2), 0.0d0)
+         ! Donev: This seems more consistent to me with the other cases: always take max(value,0) and then compute the mean
+         av=0.5d0*(max(value1,0.0d0)+max(value2,0.0d0))         
       case(2) ! Geometric
          av=sqrt(max(value1,0.d0)*max(value2,0.d0))
       case(3) ! Harmonic
-         if (value1 .le. 0.d0 .or. value2 .le. 0.d0) then
+         ! What we want here is the harmonic mean of max(value1,0) and max(value2,0)
+         ! Where we define the result to be zero if either one is zero
+         ! But numerically we want to avoid here division by zero
+         if ( (value1 .le. 10.0d0*tiny(1.d0)) .or. (value2 .le. 10.0d0*tiny(1.d0)) ) then
             av=0.d0
          else
             av=2.d0 / (1.d0/value1 + 1.d0/value2)
