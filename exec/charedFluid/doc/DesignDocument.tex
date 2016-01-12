@@ -294,9 +294,11 @@ $\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta 
 Next, define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb$ and $p^{*,n+1} = p^n + \delta p$.\\ \\
 {\bf Step 5: Trapezoidal Scalar Corrector}\\ \\
 Update the densities:
-\begin{equation}
-\rho_i^{n+1} = \half\rho_i^n + \half\left[\rho_i^{*,n+1} + \Delta t\nabla\cdot(-\rho_i^{*,n+1}\vb^{*,n+1} - \Fb^{*,n+1})\right].
-\end{equation}
+\begin{eqnarray}
+\rho_i^{n+1} &=&
+\rho_i^n + \frac{\Delta t}{2}\nabla\cdot\left(-\rho_i^n\vb^n - \Fb^n\right) + \frac{\Delta t}{2}\nabla\cdot\left(-\rho_i^{*,n+1}\vb^{*,n+1} - \Fb^{*,n+1}\right)\nonumber\\
+&=&  \half\rho_i^n + \half\left[\rho_i^{*,n+1} + \Delta t\nabla\cdot(-\rho_i^{*,n+1}\vb^{*,n+1} - \Fb^{*,n+1})\right].
+\end{eqnarray}
 {\bf Step 6: Calculate Diffusive and Stochastic Fluxes}\\ \\
 Calculate the fluxes for the next time level using a new set of random numbers to obtain $\Fb^{n+1}$ and $S^{n+1}$.
 {\bf Step 7: Corrector Crank-Nicolson Step}\\ \\
@@ -333,20 +335,20 @@ Ignoring barodiffusion and thermodiffusion we have
 -\nabla\cdot\epsilon\nabla\Phib = \rho(\wb^T\zb),
 \end{equation}
 where the total charge vector, $(\wb^T\zb){\bf 1}$, is in the null space of $\chib$.
-The term containing the electric field, $\nabla\Phib$, is potentially stiff.  We 
-will use $\theta=1$ for the implicit case but generalize to semi-implicit or explicit.
-First, perform an explicit update of total density,
-\begin{equation}
-\rho^{*,n+1} = \rho^n + \Delta t \nabla\cdot(\rho\vb)^n.
-\end{equation}
-Define the electrostatic mass flux coefficient,
+Thus, we can define the electrostatic mass flux coefficient,
 \begin{eqnarray}
 A = \frac{\rho^2}{nk_B T}\Wb\chib\Wb\zb.
 \end{eqnarray}
+The term proportional to the electric field, $\nabla\Phib$, is potentially stiff.  We 
+will use $\theta=1$ for the implicit case but generalize to semi-implicit or explicit.
+First, perform an explicit update of total density,
+\begin{equation}
+\rho^{*,n+1} = \rho^n + \Delta t \nabla\cdot(-\rho\vb)^n.
+\end{equation}
 We would like to solve the following,
 \begin{equation}
 \frac{\rho^{*,n+1}\wb^{*,n+1} - \rho^n\wb^n}{\Delta t} + \nabla\cdot(\rho\wb\vb)^n =
-\nabla\cdot(\rho\wb\chib\Gammab\nabla\xb) + \theta\nabla\cdot A^n\nabla\phi^{*,n+1} +
+\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \theta\nabla\cdot A^n\nabla\phi^{*,n+1} +
 (1-\theta)\nabla\cdot A^n\nabla\phi^n,
 \end{equation}
 \begin{equation}
@@ -354,26 +356,27 @@ We would like to solve the following,
 \end{equation}
 but we can't directly.  Rewriting these equations gives,
 \begin{eqnarray}
-\rho^{*,n+1}\wb^{*,n+1} - \Delta t\theta A^n\nabla\phi^{*,n+1} &=& \rho^n\wb^n + \Delta t\left[-\nabla\cdot(\rho\wb\vb)^n + \nabla\cdot(\rho\wb\chib\Gammab\nabla\xb) + (1-\theta) A^n\nabla\phi^n\right]\nonumber\\
-&\equiv& \mathcal{R},\label{eq:implicit phi}
+\rho^{*,n+1}\wb^{*,n+1} - \Delta t\theta\nabla\cdot A^n\nabla\phi^{*,n+1} &=& \nonumber\\
+&&\hspace{-1.5in}\rho^n\wb^n + \Delta t\underbrace{\left[-\nabla\cdot(\rho\wb\vb)^n + \nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + (1-\theta) \nabla\cdot A^n\nabla\phi^n\right]}_{\mathcal{R}^n}\label{eq:implicit phi}
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\epsilon\nabla\phi^{*,n+1} - \left[\rho(\zb^T\wb)\right]^{*,n+1} = 0.\label{eq:implicit phi2}
 \end{equation}
 Applying $\zb^T$ to equation (\ref{eq:implicit phi}) gives
 \begin{equation}
-\rho^{*,n+1}\zb^T\wb^{*,n+1} - \Delta t\theta\zb^T A^n\nabla\phi^{*,n+1} = \zb^T\mathcal{R}
+\rho^{*,n+1}\zb^T\wb^{*,n+1} - \Delta t\theta\zb^T\nabla\cdot A^n\nabla\phi^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}^n\right)
 \end{equation}
 Substituting this into equation (\ref{eq:implicit phi2}) gives
 \begin{equation}
--\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T A^n\right)\nabla\phi^{*,n+1} = \zb^T\mathcal{R}.
+-\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T A^n\right)\nabla\phi^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}^n\right).
 \end{equation}
 Note that
 \begin{equation}
-\zb^T A = \nabla\cdot\frac{\rho^2}{nk_BT}\zb^T\Wb\chib\Wb\zb,
+\zb^T A = \frac{\rho^2}{nk_BT}\zb^T\Wb\chib\Wb\zb,
 \end{equation}
-and since $\Wb\chib\Wb$ is positive semi-definite, then $\zb^T\Wb\chib\Wb\zb \ge 0$
-and thus the system is elliptic (the coefficients all have the same sign).
+and since $\Wb\chib\Wb$ is positive semi-definite, then $\zb^T\Wb\chib\Wb\zb \ge 0$,
+the coefficients in the Poisson solve all have the same sign, and thus the system
+is elliptic.
 
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
