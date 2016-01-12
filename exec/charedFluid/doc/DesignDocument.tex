@@ -209,7 +209,7 @@ thermodiffusion, electrostatic, and stochastic driving forces as described below
 The deterministic part of the mass fluxes, $\overline{\Fb}$, contains contributions from 
 compositional gradients, barodiffusion, themodiffusion, and electrostatic driving forces,
 \begin{equation}
-\overline{\Fb} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib-\wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T} + \frac{\rho_i}{n k_B T}\left(\zb - (\wb^T\zb)\1b \right)\nabla\Phib\right].
+\overline{\Fb} = -\rho\Wb\chib\left[\Gammab\nabla\xb + (\phib-\wb)\frac{\nabla P}{n k_B T} + \zetab\frac{\nabla T}{T} + \frac{\rho}{n k_B T}\Wb\left(\zb - (\wb^T\zb)\1b \right)\nabla\Phib\right].
 \end{equation}
 Note $n = \sum_i(\rho_i/w_i)$ is the number density, and 
 $\rho/n = \overline{m} = (\sum_i w_i/m_i)^{-1}$ is the 
@@ -323,6 +323,57 @@ We rewrite this system as:
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S^{n+1}.
 \end{equation}
+
+\section{Implicit Potential Algorithm}
+Ignoring barodiffusion and thermodiffusion we have
+\begin{equation}
+\overline{\Fb} = -\rho\Wb\chib\left[\Gammab\nabla\xb + \frac{\rho}{n k_B T}\Wb\left(\zb - (\wb^T\zb)\1b \right)\nabla\Phib\right],
+\end{equation}
+\begin{equation}
+-\nabla\cdot\epsilon\nabla\Phib = \rho(\wb^T\zb),
+\end{equation}
+where the total charge vector, $(\wb^T\zb){\bf 1}$, is in the null space of $\chib$.
+The term containing the electric field, $\nabla\Phib$, is potentially stiff.  We 
+will use $\theta=1$ for the implicit case but generalize to semi-implicit or explicit.
+First, perform an explicit update of total density,
+\begin{equation}
+\rho^{*,n+1} = \rho^n + \Delta t \nabla\cdot(\rho\vb)^n.
+\end{equation}
+Define the electrostatic mass flux coefficient,
+\begin{eqnarray}
+A = \frac{\rho^2}{nk_B T}\Wb\chib\Wb\zb.
+\end{eqnarray}
+We would like to solve the following,
+\begin{equation}
+\frac{\rho^{*,n+1}\wb^{*,n+1} - \rho^n\wb^n}{\Delta t} + \nabla\cdot(\rho\wb\vb)^n =
+\nabla\cdot(\rho\wb\chib\Gammab\nabla\xb) + \theta\nabla\cdot A^n\nabla\phi^{*,n+1} +
+(1-\theta)\nabla\cdot A^n\nabla\phi^n,
+\end{equation}
+\begin{equation}
+-\nabla\cdot\epsilon\nabla\phi^{*,n+1} = \left[\rho(\wb^T\zb)\right]^{*,n+1},
+\end{equation}
+but we can't directly.  Rewriting these equations gives,
+\begin{eqnarray}
+\rho^{*,n+1}\wb^{*,n+1} - \Delta t\theta A^n\nabla\phi^{*,n+1} &=& \rho^n\wb^n + \Delta t\left[-\nabla\cdot(\rho\wb\vb)^n + \nabla\cdot(\rho\wb\chib\Gammab\nabla\xb) + (1-\theta) A^n\nabla\phi^n\right]\nonumber\\
+&\equiv& \mathcal{R},\label{eq:implicit phi}
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\epsilon\nabla\phi^{*,n+1} - \left[\rho(\zb^T\wb)\right]^{*,n+1} = 0.\label{eq:implicit phi2}
+\end{equation}
+Applying $\zb^T$ to equation (\ref{eq:implicit phi}) gives
+\begin{equation}
+\rho^{*,n+1}\zb^T\wb^{*,n+1} - \Delta t\theta\zb^T A^n\nabla\phi^{*,n+1} = \zb^T\mathcal{R}
+\end{equation}
+Substituting this into equation (\ref{eq:implicit phi2}) gives
+\begin{equation}
+-\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T A^n\right)\nabla\phi^{*,n+1} = \zb^T\mathcal{R}.
+\end{equation}
+Note that
+\begin{equation}
+\zb^T A = \nabla\cdot\frac{\rho^2}{nk_BT}\zb^T\Wb\chib\Wb\zb,
+\end{equation}
+and since $\Wb\chib\Wb$ is positive semi-definite, then $\zb^T\Wb\chib\Wb\zb \ge 0$
+and thus the system is elliptic (the coefficients all have the same sign).
 
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
