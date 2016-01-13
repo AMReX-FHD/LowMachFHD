@@ -411,7 +411,7 @@ Next, define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb$ and $p^{*,n+1} = p^n + 
 {\bf Step 4: Corrector Density Update}
 Perform a trapezoidal density update,
 \begin{equation}
-\rho^{*,n+1} = \rho^n + \frac{\Delta t}{2} \nabla\cdot(-\rho\vb)^n + \frac{\Delta t}{2} \nabla\cdot(-\rho\vb)^{*,n+1}.
+\rho^{n+1} = \rho^n + \frac{\Delta t}{2} \nabla\cdot(-\rho\vb)^n + \frac{\Delta t}{2} \nabla\cdot(-\rho\vb)^{*,n+1}.
 \end{equation}
 {\bf Step 5: Corrector Concentration Update}\\ \\
 We would like to solve the following,
@@ -421,7 +421,7 @@ We would like to solve the following,
 (1-\theta)\nabla\cdot A_\Phi^n\nabla\Phib^n,\label{eq:implicit phi3}
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\epsilon\nabla\Phib^{n+1} = \left[\rho(\wb^T\zb)\right]^{*,n+1},\label{eq:constraint2}
+-\nabla\cdot\epsilon\nabla\Phib^{n+1} = \left[\rho(\wb^T\zb)\right]^{n+1},\label{eq:constraint2}
 \end{equation}
 but we can't directly.  Rewriting equation (\ref{eq:implicit phi3} gives,
 \begin{eqnarray}
