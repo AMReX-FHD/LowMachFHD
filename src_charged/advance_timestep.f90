@@ -17,7 +17,6 @@ module advance_timestep_module
   use bds_module
   use gmres_module
   use div_and_grad_module
-  use eos_check_module
   use mk_grav_force_module
   use compute_mixture_properties_module
   use mass_flux_utilities_module
@@ -29,11 +28,10 @@ module advance_timestep_module
   use project_onto_eos_module
   use fluid_charge_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, restart, barodiffusion_type, project_eos_int
+                                  variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid
-  use analysis_module
 
   implicit none
 
