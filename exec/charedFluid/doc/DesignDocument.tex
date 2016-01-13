@@ -300,7 +300,7 @@ Update the densities:
 &=&  \half\rho_i^n + \half\left[\rho_i^{*,n+1} + \Delta t\nabla\cdot(-\rho_i^{*,n+1}\vb^{*,n+1} - \Fb^{*,n+1})\right].
 \end{eqnarray}
 {\bf Step 6: Calculate Diffusive and Stochastic Fluxes}\\ \\
-Calculate the fluxes for the next time level using a new set of random numbers to obtain $\Fb^{n+1}$ and $S^{n+1}$.
+Calculate the fluxes for the next time level using a new set of random numbers to obtain $\Fb^{n+1}$ and $S^{n+1}$.\\ \\
 {\bf Step 7: Corrector Crank-Nicolson Step}\\ \\
 Take a corrector step for velocity, using the same random numbers as for the predictor
 stage, but average the amplitude of the stochastic flux between time $n$ and $n+1$:
@@ -335,49 +335,133 @@ Ignoring barodiffusion and thermodiffusion we have
 -\nabla\cdot\epsilon\nabla\Phib = \rho(\wb^T\zb),
 \end{equation}
 where the total charge vector, $(\wb^T\zb){\bf 1}$, is in the null space of $\chib$.
-Thus, we can define the electrostatic mass flux coefficient,
+Thus, we can simplify the mass fluxes,
 \begin{eqnarray}
-A = \frac{\rho^2}{nk_B T}\Wb\chib\Wb\zb.
+\overline{\Fb} &=& -\rho\Wb\chib\left[\Gammab\nabla\xb + \frac{\rho}{n k_B T}\Wb\zb\nabla\Phib\right]\nonumber\\
+&=& -\rho\Wb\chib\Gammab\nabla\xb - \underbrace{\frac{\rho^2}{nk_B T}\Wb\chib\Wb\zb}_{A_\Phi}\nabla\Phib
 \end{eqnarray}
+where $A_\Phi$ is the electrostatic mass flux coefficient.
 The term proportional to the electric field, $\nabla\Phib$, is potentially stiff.  We 
-will use $\theta=1$ for the implicit case but generalize to semi-implicit or explicit.
-First, perform an explicit update of total density,
+use the parameter $\theta$ to generalize the electric potential temporal discretization
+to explicit, semi-implicit, implicit, etc.  We will try the implicit case ($\theta=1$).\\ \\
+{\bf Step 1: Predictor Density Update}\\ \\
+Perform a forward Euler density update,
 \begin{equation}
 \rho^{*,n+1} = \rho^n + \Delta t \nabla\cdot(-\rho\vb)^n.
 \end{equation}
+{\bf Step 2: Predictor Concentration Update}\\ \\
 We would like to solve the following,
 \begin{equation}
 \frac{\rho^{*,n+1}\wb^{*,n+1} - \rho^n\wb^n}{\Delta t} + \nabla\cdot(\rho\wb\vb)^n =
-\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \theta\nabla\cdot A^n\nabla\phi^{*,n+1} +
-(1-\theta)\nabla\cdot A^n\nabla\phi^n,
+\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \theta\nabla\cdot A_\Phi^n\nabla\Phib^{*,n+1} +
+(1-\theta)\nabla\cdot A_\Phi^n\nabla\Phib^n,\label{eq:implicit phi}
 \end{equation}
 \begin{equation}
--\nabla\cdot\epsilon\nabla\phi^{*,n+1} = \left[\rho(\wb^T\zb)\right]^{*,n+1},
+-\nabla\cdot\epsilon\nabla\Phib^{*,n+1} = \left[\rho(\wb^T\zb)\right]^{*,n+1},\label{eq:constraint}
 \end{equation}
-but we can't directly.  Rewriting these equations gives,
+but we can't directly.  Rewriting equation (\ref{eq:implicit phi}) gives,
 \begin{eqnarray}
-\rho^{*,n+1}\wb^{*,n+1} - \Delta t\theta\nabla\cdot A^n\nabla\phi^{*,n+1} &=& \nonumber\\
-&&\hspace{-1.5in}\rho^n\wb^n + \Delta t\underbrace{\left[-\nabla\cdot(\rho\wb\vb)^n + \nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + (1-\theta) \nabla\cdot A^n\nabla\phi^n\right]}_{\mathcal{R}^n}\label{eq:implicit phi}
+\rho^{*,n+1}\wb^{*,n+1} - \Delta t\theta\nabla\cdot A_\Phi^n\nabla\Phib^{*,n+1} &=& \nonumber\\
+&&\hspace{-1.5in}\rho^n\wb^n + \Delta t\underbrace{\left[-\nabla\cdot(\rho\wb\vb)^n + \nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + (1-\theta) \nabla\cdot A_\Phi^n\nabla\Phib^n\right]}_{\mathcal{R}_p}\label{eq:implicit phi2}
 \end{eqnarray}
+Applying $\zb^T$ to equation (\ref{eq:implicit phi2}) gives
 \begin{equation}
--\nabla\cdot\epsilon\nabla\phi^{*,n+1} - \left[\rho(\zb^T\wb)\right]^{*,n+1} = 0.\label{eq:implicit phi2}
+\rho^{*,n+1}\zb^T\wb^{*,n+1} - \Delta t\theta\zb^T\nabla\cdot A_\Phi^n\nabla\Phib^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}_p\right)
 \end{equation}
-Applying $\zb^T$ to equation (\ref{eq:implicit phi}) gives
+Substituting this into equation (\ref{eq:constraint}) gives
 \begin{equation}
-\rho^{*,n+1}\zb^T\wb^{*,n+1} - \Delta t\theta\zb^T\nabla\cdot A^n\nabla\phi^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}^n\right)
+-\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T A_\Phi^n\right)\nabla\Phib^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}_p\right),
 \end{equation}
-Substituting this into equation (\ref{eq:implicit phi2}) gives
+which we solve for $\Phib^{*,n+1}$.  Note that
 \begin{equation}
--\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T A^n\right)\nabla\phi^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}^n\right).
-\end{equation}
-Note that
-\begin{equation}
-\zb^T A = \frac{\rho^2}{nk_BT}\zb^T\Wb\chib\Wb\zb,
+\zb^T A_\Phi = \frac{\rho^2}{nk_BT}\zb^T\Wb\chib\Wb\zb,
 \end{equation}
 and since $\Wb\chib\Wb$ is positive semi-definite, then $\zb^T\Wb\chib\Wb\zb \ge 0$,
 the coefficients in the Poisson solve all have the same sign, and thus the system
-is elliptic.
-
+is elliptic.  Once we have $\Phib^{*,n+1}$, we can compute $\wb^{*,n+1}$ using
+(\ref{eq:implicit phi}).\\ \\
+{\bf Step 3: Predictor Crank-Nicolson Step}\\ \\
+Define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb, p^{*,n+1} = p^n + \delta p$ (in these notes the overline
+indicates the the velocity field has been modified to incorporate the boundary conditions on the
+full velocity field after the solve) and solve
+for $\deltab\vb$ and $\delta p$:
+\begin{eqnarray}
+\frac{\rho^{*,n+1}(\overline\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^n+\delta p) &=&\nonumber\\
+&&\hspace{-1in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}(\overline\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^n} + \rho^n\gb\nonumber\\
+&&\hspace{-1in}- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{*,n+1},
+\end{eqnarray}
+\begin{equation}
+\nabla\cdot(\overline\vb^n+\deltab\vb) = S^{*,n+1}.
+\end{equation}
+We rewrite this system as
+\begin{eqnarray}
+\left(\frac{\rho^{*,n+1}}{\Delta t} - \half\mathcal{A}_0^{*,n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{*,n+1}\overline\vb^n}{\Delta t} -\nabla p^n\nonumber\\
+&&+ \nabla\cdot(-\rho^n\vb^n\vb^n) + \half\mathcal{A}_0^n\vb^n + \half\mathcal{A}_0^{*,n+1}\overline\vb^n + \nabla\cdot\Sigmab^n + \rho^n\gb\nonumber\\
+&&- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{*,n+1},\label{eq:CN Vel Pred2}
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^n - S^{*,n+1}.
+\end{equation}
+Relating this to the GMRES solver, we can see that we are solving for 
+$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\overline\vb^n-S^{*,n+1}$ (note the change in sign!) 
+and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:CN Vel Pred2}).  For the Helmholtz-like operator, 
+$\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t, \alpha=\rho^{*,n+1}, 
+\beta=\eta/2$, and $\gamma=\kappa/2$.
+Next, define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb$ and $p^{*,n+1} = p^n + \delta p$.\\ \\
+{\bf Step 4: Corrector Density Update}
+Perform a trapezoidal density update,
+\begin{equation}
+\rho^{*,n+1} = \rho^n + \frac{\Delta t}{2} \nabla\cdot(-\rho\vb)^n + \frac{\Delta t}{2} \nabla\cdot(-\rho\vb)^{*,n+1}.
+\end{equation}
+{\bf Step 5: Corrector Concentration Update}\\ \\
+We would like to solve the following,
+\begin{eqnarray}
+\frac{\rho^{n+1}\wb^{n+1} - \rho^n\wb^n}{\Delta t} + \half\nabla\cdot(\rho\wb\vb)^n + \half\nabla\cdot(\rho\wb\vb)^{*,n+1} &=&\half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1} \nonumber\\
+&&\hspace{-2in} + \theta\nabla\cdot A_\Phi^{*,n+1}\nabla\Phib^{n+1} +
+(1-\theta)\nabla\cdot A_\Phi^n\nabla\Phib^n,\label{eq:implicit phi3}
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\epsilon\nabla\Phib^{n+1} = \left[\rho(\wb^T\zb)\right]^{*,n+1},\label{eq:constraint2}
+\end{equation}
+but we can't directly.  Rewriting equation (\ref{eq:implicit phi3} gives,
+\begin{eqnarray}
+\phi^{n+1}\wb^{n+1} - \Delta t\theta\nabla\cdot A_\Phi^{*,n+1}\nabla\Phib^{n+1} &=& \rho^n\wb^n\nonumber\\
+&&\hspace{-2.5in}+ \Delta t\underbrace{\left[-\half\nabla\cdot(\rho\wb\vb)^n - \half\nabla\cdot(\rho\wb\vb)^{*,n+1} + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1}+ (1-\theta)\nabla\cdot A_\Phi^n\nabla\Phib^{n+1} \right]}_{\mathcal{R}_c}\label{eq:implicit phi4}\nonumber\\
+\end{eqnarray}
+Applying $\zb^T$ to equation (\ref{eq:implicit phi4}) gives
+\begin{equation}
+\rho^{n+1}\zb^T\wb^{n+1} - \Delta t\theta\zb^T\nabla\cdot A_\Phi^{*,n+1}\nabla\Phib^{n+1} = \zb^T(\rho^n\wb^n + \Delta t\mathcal{R}_c).
+\end{equation}
+Substituting this into equation (\ref{eq:constraint2}) gives
+\begin{equation}
+-\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T A_\Phi^{*,n+1}\right)\nabla\Phib^{n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}_c\right),
+\end{equation}
+which we solve for $\Phib^{n+1}$.  Once we have $\Phib^{n+1}$, we can compute 
+$\wb^{n+1}$ using (\ref{eq:implicit phi3}).\\ \\
+{\bf Step 6: Corrector Crank-Nicolson Step}\\ \\
+Take a corrector step for velocity, using the same random numbers as for the predictor
+stage, but average the amplitude of the stochastic flux between time $n$ and $n+1$:
+Define $\vb^{n+1} = \overline\vb^{*,n+1} + \deltab\vb$ and $p^{n+1} = p^{*,n+1} + \delta p$ and
+solve the following system for $(\deltab\vb,\delta p)$:
+\begin{eqnarray}
+\frac{\rho^{n+1}(\overline\vb^{*,n+1} + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^{*,n+1}+\delta p) &=& \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1})\nonumber\\
+&&\hspace{-1.5in}+ \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}(\overline\vb^{*,n+1} + \deltab\vb)\right]\nonumber\\
+&&\hspace{-1.5in}+ \nabla\cdot\underbrace{\half\left(\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}} + \sqrt{\frac{2\eta^{n+1} k_B T}{\Delta t\Delta V}}\right)\overline\Wb^n}_{\Sigmab^{n'}} + \half\left(\rho^n+\rho^{n+1}\right)\gb\nonumber\\
+&&\hspace{-1.5in} - (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{n+1},
+\end{eqnarray}
+\begin{equation}
+\nabla\cdot(\overline\vb^{*,n+1} + \deltab\vb) = S^{n+1}.
+\end{equation}
+We rewrite this system as:
+\begin{eqnarray}
+\left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{n+1}\overline\vb^{*,n+1}}{\Delta t} -\nabla p^n\nonumber\\
+&&+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}\overline\vb^{*,n+1} )\nonumber\\
+&&+ \nabla\cdot\Sigmab^{n'} + \half\left(\rho^n+\rho^{n+1}\right)\gb\nonumber\\
+&&- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{n+1},
+\end{eqnarray}
+\begin{equation}
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S^{n+1}.
+\end{equation}
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
 
