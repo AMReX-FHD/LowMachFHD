@@ -33,6 +33,7 @@
   {#1\!/#2}}
 
 \def\1b {{\bf 1}}
+\def\Ab {{\bf A}}
 \def\bb {{\bf b}}
 \def\Fb {{\bf F}}
 \def\gb {{\bf g}}
@@ -338,9 +339,9 @@ where the total charge vector, $(\wb^T\zb){\bf 1}$, is in the null space of $\ch
 Thus, we can simplify the mass fluxes,
 \begin{eqnarray}
 \overline{\Fb} &=& -\rho\Wb\chib\left[\Gammab\nabla\xb + \frac{\rho}{n k_B T}\Wb\zb\nabla\Phib\right]\nonumber\\
-&=& -\rho\Wb\chib\Gammab\nabla\xb - \underbrace{\frac{\rho^2}{nk_B T}\Wb\chib\Wb\zb}_{A_\Phi}\nabla\Phib
+&=& -\rho\Wb\chib\Gammab\nabla\xb - \underbrace{\frac{\rho^2}{nk_B T}\Wb\chib\Wb\zb}_{\Ab_\Phi}\nabla\Phib
 \end{eqnarray}
-where $A_\Phi$ is the electrostatic mass flux coefficient.
+where $\Ab_\Phi$ is the electrostatic mass flux coefficient.
 The term proportional to the electric field, $\nabla\Phib$, is potentially stiff.  We 
 use the parameter $\theta$ to generalize the electric potential temporal discretization
 to explicit, semi-implicit, implicit, etc.  We will try the implicit case ($\theta=1$).\\ \\
@@ -353,28 +354,28 @@ Perform a forward Euler density update,
 We would like to solve the following,
 \begin{equation}
 \frac{\rho^{*,n+1}\wb^{*,n+1} - \rho^n\wb^n}{\Delta t} + \nabla\cdot(\rho\wb\vb)^n =
-\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \theta\nabla\cdot A_\Phi^n\nabla\Phib^{*,n+1} +
-(1-\theta)\nabla\cdot A_\Phi^n\nabla\Phib^n,\label{eq:implicit phi}
+\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \theta\nabla\cdot \Ab_\Phi^n\nabla\Phib^{*,n+1} +
+(1-\theta)\nabla\cdot \Ab_\Phi^n\nabla\Phib^n,\label{eq:implicit phi}
 \end{equation}
 \begin{equation}
 -\nabla\cdot\epsilon\nabla\Phib^{*,n+1} = \left[\rho(\wb^T\zb)\right]^{*,n+1},\label{eq:constraint}
 \end{equation}
 but we can't directly.  Rewriting equation (\ref{eq:implicit phi}) gives,
 \begin{eqnarray}
-\rho^{*,n+1}\wb^{*,n+1} - \Delta t\theta\nabla\cdot A_\Phi^n\nabla\Phib^{*,n+1} &=& \nonumber\\
-&&\hspace{-1.5in}\rho^n\wb^n + \Delta t\underbrace{\left[-\nabla\cdot(\rho\wb\vb)^n + \nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + (1-\theta) \nabla\cdot A_\Phi^n\nabla\Phib^n\right]}_{\mathcal{R}_p}\label{eq:implicit phi2}
+\rho^{*,n+1}\wb^{*,n+1} - \Delta t\theta\nabla\cdot \Ab_\Phi^n\nabla\Phib^{*,n+1} &=& \nonumber\\
+&&\hspace{-1.5in}\rho^n\wb^n + \Delta t\underbrace{\left[-\nabla\cdot(\rho\wb\vb)^n + \nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + (1-\theta) \nabla\cdot \Ab_\Phi^n\nabla\Phib^n\right]}_{\mathcal{R}_p}\label{eq:implicit phi2}
 \end{eqnarray}
 Applying $\zb^T$ to equation (\ref{eq:implicit phi2}) gives
 \begin{equation}
-\rho^{*,n+1}\zb^T\wb^{*,n+1} - \Delta t\theta\zb^T\nabla\cdot A_\Phi^n\nabla\Phib^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}_p\right)
+\rho^{*,n+1}\zb^T\wb^{*,n+1} - \Delta t\theta\zb^T\nabla\cdot \Ab_\Phi^n\nabla\Phib^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}_p\right)
 \end{equation}
 Substituting this into equation (\ref{eq:constraint}) gives
 \begin{equation}
--\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T A_\Phi^n\right)\nabla\Phib^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}_p\right),
+-\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T \Ab_\Phi^n\right)\nabla\Phib^{*,n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}_p\right),
 \end{equation}
 which we solve for $\Phib^{*,n+1}$.  Note that
 \begin{equation}
-\zb^T A_\Phi = \frac{\rho^2}{nk_BT}\zb^T\Wb\chib\Wb\zb,
+\zb^T \Ab_\Phi = \frac{\rho^2}{nk_BT}\zb^T\Wb\chib\Wb\zb,
 \end{equation}
 and since $\Wb\chib\Wb$ is positive semi-definite, then $\zb^T\Wb\chib\Wb\zb \ge 0$,
 the coefficients in the Poisson solve all have the same sign, and thus the system
@@ -391,7 +392,7 @@ for $\deltab\vb$ and $\delta p$:
 &&\hspace{-1in}- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{*,n+1},
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot(\overline\vb^n+\deltab\vb) = \underbrace{S[-(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1} - A_{\Phib}^n\nabla\Phib^{*,n+1}]}_{S_p}.
+\nabla\cdot(\overline\vb^n+\deltab\vb) = \underbrace{S[-(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1} - \Ab_\Phi^n\nabla\Phib^{*,n+1}]}_{S_p}.
 \end{equation}
 We rewrite this system as
 \begin{eqnarray}
@@ -417,24 +418,24 @@ Perform a trapezoidal density update,
 We would like to solve the following,
 \begin{eqnarray}
 \frac{\rho^{n+1}\wb^{n+1} - \rho^n\wb^n}{\Delta t} + \half\nabla\cdot(\rho\wb\vb)^n + \half\nabla\cdot(\rho\wb\vb)^{*,n+1} &=&\half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1} \nonumber\\
-&&\hspace{-2in} + \theta\nabla\cdot A_\Phi^{*,n+1}\nabla\Phib^{n+1} +
-(1-\theta)\nabla\cdot A_\Phi^n\nabla\Phib^n,\label{eq:implicit phi3}
+&&\hspace{-2in} + \theta\nabla\cdot \Ab_\Phi^{*,n+1}\nabla\Phib^{n+1} +
+(1-\theta)\nabla\cdot \Ab_\Phi^n\nabla\Phib^n,\label{eq:implicit phi3}
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\epsilon\nabla\Phib^{n+1} = \left[\rho(\wb^T\zb)\right]^{n+1},\label{eq:constraint2}
 \end{equation}
 but we can't directly.  Rewriting equation (\ref{eq:implicit phi3} gives,
 \begin{eqnarray}
-\phi^{n+1}\wb^{n+1} - \Delta t\theta\nabla\cdot A_\Phi^{*,n+1}\nabla\Phib^{n+1} &=& \rho^n\wb^n\nonumber\\
-&&\hspace{-2.5in}+ \Delta t\underbrace{\left[-\half\nabla\cdot(\rho\wb\vb)^n - \half\nabla\cdot(\rho\wb\vb)^{*,n+1} + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1}+ (1-\theta)\nabla\cdot A_\Phi^n\nabla\Phib^{n+1} \right]}_{\mathcal{R}_c}\label{eq:implicit phi4}\nonumber\\
+\phi^{n+1}\wb^{n+1} - \Delta t\theta\nabla\cdot \Ab_\Phi^{*,n+1}\nabla\Phib^{n+1} &=& \rho^n\wb^n\nonumber\\
+&&\hspace{-2.5in}+ \Delta t\underbrace{\left[-\half\nabla\cdot(\rho\wb\vb)^n - \half\nabla\cdot(\rho\wb\vb)^{*,n+1} + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1}+ (1-\theta)\nabla\cdot \Ab_\Phi^n\nabla\Phib^{n+1} \right]}_{\mathcal{R}_c}\label{eq:implicit phi4}\nonumber\\
 \end{eqnarray}
 Applying $\zb^T$ to equation (\ref{eq:implicit phi4}) gives
 \begin{equation}
-\rho^{n+1}\zb^T\wb^{n+1} - \Delta t\theta\zb^T\nabla\cdot A_\Phi^{*,n+1}\nabla\Phib^{n+1} = \zb^T(\rho^n\wb^n + \Delta t\mathcal{R}_c).
+\rho^{n+1}\zb^T\wb^{n+1} - \Delta t\theta\zb^T\nabla\cdot \Ab_\Phi^{*,n+1}\nabla\Phib^{n+1} = \zb^T(\rho^n\wb^n + \Delta t\mathcal{R}_c).
 \end{equation}
 Substituting this into equation (\ref{eq:constraint2}) gives
 \begin{equation}
--\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T A_\Phi^{*,n+1}\right)\nabla\Phib^{n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}_c\right),
+-\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T \Ab_\Phi^{*,n+1}\right)\nabla\Phib^{n+1} = \zb^T\left(\rho^n\wb^n + \Delta t\mathcal{R}_c\right),
 \end{equation}
 which we solve for $\Phib^{n+1}$.  Once we have $\Phib^{n+1}$, we can compute 
 $\wb^{n+1}$ using (\ref{eq:implicit phi3}).\\ \\
@@ -450,7 +451,7 @@ solve the following system for $(\deltab\vb,\delta p)$:
 &&\hspace{-1.5in} - (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{n+1},
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot(\overline\vb^{*,n+1} + \deltab\vb) =  \underbrace{S[-(\rho\Wb\chib\Gammab\nabla\xb)^{n+1} - A_{\Phib}^{*,n+1}\nabla\Phib^{n+1}]}_{S_c}.
+\nabla\cdot(\overline\vb^{*,n+1} + \deltab\vb) =  \underbrace{S[-(\rho\Wb\chib\Gammab\nabla\xb)^{n+1} - \Ab_\Phi^{*,n+1}\nabla\Phib^{n+1}]}_{S_c}.
 \end{equation}
 We rewrite this system as:
 \begin{eqnarray}
