@@ -1,4 +1,4 @@
-module advance_timestep_module
+module advance_timestep_potential_module
 
   use ml_layout_module
   use define_bc_module
@@ -37,7 +37,7 @@ module advance_timestep_module
 
   private
 
-  public :: advance_timestep
+  public :: advance_timestep_potential
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -56,7 +56,7 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+  subroutine advance_timestep_potential(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep, &
@@ -956,7 +956,7 @@ contains
        end do
     end do
 
-  end subroutine advance_timestep
+  end subroutine advance_timestep_potential
 
   subroutine build_bc_multifabs(mla)
 
@@ -1051,4 +1051,4 @@ contains
 
   end subroutine destroy_bc_multifabs
 
-end module advance_timestep_module
+end module advance_timestep_potential_module

@@ -21,6 +21,9 @@ module mass_fluxdiv_charged_module
 
 contains
 
+  ! compute diffusive, stochastic, and potential mass fluxes
+  ! with barodiffusion and thermodiffusion
+  ! this computes "-F = +rho W chi [Gamma grad x... ]" so we later multiply by -1
   subroutine mass_fluxdiv_charged(mla,rho,gradp_baro, &
                                   diff_fluxdiv,stoch_fluxdiv, &
                                   Temp,flux_total, &
