@@ -391,7 +391,7 @@ for $\deltab\vb$ and $\delta p$:
 &&\hspace{-1in}- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{*,n+1},
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot(\overline\vb^n+\deltab\vb) = S^{*,n+1}.
+\nabla\cdot(\overline\vb^n+\deltab\vb) = \underbrace{S[-(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1} - A_{\Phib}^n\nabla\Phib^{*,n+1}]}_{S_p}.
 \end{equation}
 We rewrite this system as
 \begin{eqnarray}
@@ -400,10 +400,10 @@ We rewrite this system as
 &&- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{*,n+1},\label{eq:CN Vel Pred2}
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^n - S^{*,n+1}.
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^n - S_p
 \end{equation}
 Relating this to the GMRES solver, we can see that we are solving for 
-$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\overline\vb^n-S^{*,n+1}$ (note the change in sign!) 
+$(\xb_\vb,x_p) = (\deltab\vb,\delta p)$ with $b_p = \nabla\cdot\overline\vb^n-S_p$ (note the change in sign!) 
 and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:CN Vel Pred2}).  For the Helmholtz-like operator, 
 $\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t, \alpha=\rho^{*,n+1}, 
 \beta=\eta/2$, and $\gamma=\kappa/2$.
@@ -450,7 +450,7 @@ solve the following system for $(\deltab\vb,\delta p)$:
 &&\hspace{-1.5in} - (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{n+1},
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot(\overline\vb^{*,n+1} + \deltab\vb) = S^{n+1}.
+\nabla\cdot(\overline\vb^{*,n+1} + \deltab\vb) =  \underbrace{S[-(\rho\Wb\chib\Gammab\nabla\xb)^{n+1} - A_{\Phib}^{*,n+1}\nabla\Phib^{n+1}]}_{S_c}.
 \end{equation}
 We rewrite this system as:
 \begin{eqnarray}
@@ -460,7 +460,7 @@ We rewrite this system as:
 &&- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{n+1},
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S^{n+1}.
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S_c.
 \end{equation}
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
