@@ -180,8 +180,8 @@ contains
 
     ! rho^{*,n+1} = rho^n + dt * -div(rho*v)^n
     do n=1,nlevs
-       call multifab_copy_c(rhotot_new(n),1,rhotot_old(n)1,1,0)
-       call multifab_saxpy_c(rhotot_new(n),dt,rhotot_update(n))
+       call multifab_copy_c(rhotot_new(n),1,rhotot_old(n),1,1,0)
+       call multifab_saxpy_3(rhotot_new(n),dt,rhotot_update(n))
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

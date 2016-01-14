@@ -240,7 +240,7 @@ contains
     if (use_charged_fluid) then
 
        ! compute total charge
-       call compute_total_charge(mla,rho,charge)
+       call dot_with_z(mla,rho,charge)
 
        ! solve poisson equation for phi (the electric potential)
        ! -del dot epsilon grad Phi = charge

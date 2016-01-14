@@ -87,7 +87,7 @@ contains
     enddo
 
     ! compute total charge, then copy into the correct component
-    call compute_total_charge(mla,rho,plotdata)
+    call dot_with_z(mla,rho,plotdata)
     do n=1,nlevs
        call multifab_copy_c(plotdata(n),2*nspecies+2*dm+4,plotdata(n),1,1,0)
     end do

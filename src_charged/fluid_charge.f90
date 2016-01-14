@@ -12,17 +12,17 @@ module fluid_charge_module
 
   private
 
-  public :: compute_total_charge, compute_charge_coef, momentum_charge_force, &
+  public :: dot_with_z, compute_charge_coef, momentum_charge_force, &
             enforce_charge_neutrality
   
 contains
 
-  ! compute total charge = rho y^T dot z = rho_i dot z
-  subroutine compute_total_charge(mla,rho,charge)
+  ! mfdotz = mf dot z
+  subroutine dot_with_z(mla,mf,mfdotz)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: rho(:)
-    type(multifab) , intent(inout) :: charge(:)
+    type(multifab) , intent(in   ) :: mf(:)
+    type(multifab) , intent(inout) :: mfdotz(:)
 
     ! local variables
     integer :: i,n,dm,nlevs
@@ -36,31 +36,31 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    ng_1 = rho(1)%ng
-    ng_2 = charge(1)%ng
+    ng_1 = mf(1)%ng
+    ng_2 = mfdotz(1)%ng
 
     do n=1,nlevs
-       do i=1,nfabs(charge(n))
-          dp1 => dataptr(rho(n),i)
-          dp2 => dataptr(charge(n),i)
-          lo = lwb(get_box(charge(n),i))
-          hi = upb(get_box(charge(n),i))
+       do i=1,nfabs(mf(n))
+          dp1 => dataptr(mf(n),i)
+          dp2 => dataptr(mfdotz(n),i)
+          lo = lwb(get_box(mf(n),i))
+          hi = upb(get_box(mf(n),i))
           select case (dm)
           case (2)
-             call compute_total_charge_2d(dp1(:,:,1,:),ng_1,dp2(:,:,1,1),ng_2,lo,hi)
+             call dot_with_z_2d(dp1(:,:,1,:),ng_1,dp2(:,:,1,1),ng_2,lo,hi)
           case (3)
-             call compute_total_charge_3d(dp1(:,:,:,:),ng_1,dp2(:,:,:,1),ng_2,lo,hi)
+             call dot_with_z_3d(dp1(:,:,:,:),ng_1,dp2(:,:,:,1),ng_2,lo,hi)
           end select
        end do
     end do
 
   contains
 
-    subroutine compute_total_charge_2d(rho,ng_1,charge,ng_2,lo,hi)
+    subroutine dot_with_z_2d(mf,ng_1,mfdotz,ng_2,lo,hi)
       
       integer          :: lo(:),hi(:),ng_1,ng_2
-      real(kind=dp_t)  ::    rho(lo(1)-ng_1:,lo(2)-ng_1:,:)
-      real(kind=dp_t)  :: charge(lo(1)-ng_2:,lo(2)-ng_2:)
+      real(kind=dp_t)  ::    mf(lo(1)-ng_1:,lo(2)-ng_1:,:)
+      real(kind=dp_t)  :: mfdotz(lo(1)-ng_2:,lo(2)-ng_2:)
 
       ! local variables
       integer :: i,j,comp
@@ -68,21 +68,21 @@ contains
       do j=lo(2)-ng_2,hi(2)+ng_2
          do i=lo(1)-ng_2,hi(1)+ng_2
 
-            charge(i,j) = 0.d0
+            mfdotz(i,j) = 0.d0
             do comp=1,nspecies
-               charge(i,j) = charge(i,j) + rho(i,j,comp)*charge_per_mass(comp)
+               mfdotz(i,j) = mfdotz(i,j) + mf(i,j,comp)*charge_per_mass(comp)
             end do
 
          end do
       end do
 
-    end subroutine compute_total_charge_2d
+    end subroutine dot_with_z_2d
 
-    subroutine compute_total_charge_3d(rho,ng_1,charge,ng_2,lo,hi)
+    subroutine dot_with_z_3d(mf,ng_1,mfdotz,ng_2,lo,hi)
       
       integer          :: lo(:),hi(:),ng_1,ng_2
-      real(kind=dp_t)  ::    rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:)
-      real(kind=dp_t)  :: charge(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+      real(kind=dp_t)  ::    mf(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:)
+      real(kind=dp_t)  :: mfdotz(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
 
       ! local variables
       integer :: i,j,k,n
@@ -91,18 +91,18 @@ contains
          do j=lo(2)-ng_2,hi(2)+ng_2
             do i=lo(1)-ng_2,hi(1)+ng_2
 
-               charge(i,j,k) = 0.d0
+               mfdotz(i,j,k) = 0.d0
                do n=1,nspecies
-                  charge(i,j,k) = charge(i,j,k) + rho(i,j,k,n)*charge_per_mass(n)
+                  mfdotz(i,j,k) = mfdotz(i,j,k) + mf(i,j,k,n)*charge_per_mass(n)
                end do
 
             end do
          end do
       end do
 
-    end subroutine compute_total_charge_3d
+    end subroutine dot_with_z_3d
 
-  end subroutine compute_total_charge
+  end subroutine dot_with_z
 
   ! compute cell-centered mass diffusion coefficients due to charge fluid
   ! charge_coef = (rho/(n k_B T)) (z - charge*vector_of_ones)
@@ -322,7 +322,7 @@ contains
     end do
 
     ! compute total charge in each cell
-    call compute_total_charge(mla,rho,charge)
+    call dot_with_z(mla,rho,charge)
 
     ! integrate charge over domain
     charge_temp = multifab_sum_c(charge(1),1,1)
@@ -348,7 +348,7 @@ contains
     end do
 
     ! compute total charge in each cell
-    call compute_total_charge(mla,rho,charge)
+    call dot_with_z(mla,rho,charge)
 
     ! integrate charge over domain
     charge_temp = multifab_sum_c(charge(1),1,1)
