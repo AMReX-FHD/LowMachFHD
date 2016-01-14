@@ -105,10 +105,10 @@ contains
     ! compute diffusive and stochastic mass fluxes
     ! this computes "+F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
     call compute_mass_fluxdiv(mla,rho,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp, &
-                                      flux_total,dt,0.d0,dx,weights, &
-                                      the_bc_tower)
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              Temp, &
+                              flux_total,dt,0.d0,dx,weights, &
+                              the_bc_tower)
 
     ! now fluxes contain -F = +rho*W*chi*Gamma*grad(x) + ...
     do n=1,nlevs

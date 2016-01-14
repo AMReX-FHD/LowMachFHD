@@ -1,10 +1,11 @@
-module mass_fluxdiv_charged_module
+module compute_mass_fluxdiv_charged_module
 
   use multifab_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
   use diffusive_mass_fluxdiv_charged_module
+  use compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use compute_mixture_properties_module
   use external_force_module
@@ -17,19 +18,19 @@ module mass_fluxdiv_charged_module
 
   private
 
-  public :: mass_fluxdiv_charged
+  public :: compute_mass_fluxdiv_charged
 
 contains
 
   ! compute diffusive, stochastic, and potential mass fluxes
   ! with barodiffusion and thermodiffusion
   ! this computes "-F = +rho W chi [Gamma grad x... ]" so we later multiply by -1
-  subroutine mass_fluxdiv_charged(mla,rho,gradp_baro, &
-                                  diff_fluxdiv,stoch_fluxdiv, &
-                                  Temp,flux_total, &
-                                  dt,stage_time,dx,weights, &
-                                  the_bc_tower, &
-                                  charge,grad_Epot)
+  subroutine compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
+                                          diff_fluxdiv,stoch_fluxdiv, &
+                                          Temp,flux_total, &
+                                          dt,stage_time,dx,weights, &
+                                          the_bc_tower, &
+                                          charge,grad_Epot)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -90,7 +91,7 @@ contains
     call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian,Temp)
 
     ! compute Gama from Hessian
-    call compute_Gama(mla,rho,rhotot_temp,molarconc,molmtot,Hessian,Gama)
+    call compute_Gama(mla,molarconc,Hessian,Gama)
    
     ! compute chi 
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
@@ -118,7 +119,7 @@ contains
     ! compute stochastic fluxdiv 
     if (variance_coef_mass .ne. 0.d0) then
        call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
-                                    molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
+                                    molmtot,chi,stoch_fluxdiv,flux_total,&
                                     dx,dt,weights,the_bc_tower%bc_tower_array)
     else
        do n=1,nlevs
@@ -146,6 +147,6 @@ contains
        call multifab_destroy(zeta_by_Temp(n))
     end do
 
-  end subroutine mass_fluxdiv_charged
+  end subroutine compute_mass_fluxdiv_charged
   
-end module mass_fluxdiv_charged_module
+end module compute_mass_fluxdiv_charged_module

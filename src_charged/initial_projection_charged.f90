@@ -8,7 +8,7 @@ module initial_projection_charged_module
   use div_and_grad_module
   use bc_module
   use multifab_physbc_stag_module
-  use mass_fluxdiv_charged_module
+  use compute_mass_fluxdiv_charged_module
   use reservoir_bc_fill_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type
@@ -37,9 +37,9 @@ module initial_projection_charged_module
 contains
 
   subroutine initial_projection_charged(mla,umac,rho,rhotot,gradp_baro, &
-                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                charge_old,grad_Epot_old)
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                        Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+                                        charge_old,grad_Epot_old)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -103,12 +103,12 @@ contains
 
     ! compute diff/stoch/baro mass fluxes
     ! this computes "-F" so we later multiply by -1
-    call mass_fluxdiv_charged(mla,rho,gradp_baro, &
-                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              Temp, &
-                              flux_total,dt,0.d0,dx,weights, &
-                              the_bc_tower, &
-                              charge_old,grad_Epot_old)
+    call compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                      Temp, &
+                                      flux_total,dt,0.d0,dx,weights, &
+                                      the_bc_tower, &
+                                      charge_old,grad_Epot_old)
 
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)

@@ -88,7 +88,7 @@ contains
     call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian,Temp)
 
     ! compute Gama from Hessian
-    call compute_Gama(mla,rho,rhotot_temp,molarconc,molmtot,Hessian,Gama)
+    call compute_Gama(mla,molarconc,Hessian,Gama)
    
     ! compute chi 
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
@@ -114,7 +114,7 @@ contains
     ! compute stochastic fluxdiv 
     if (variance_coef_mass .ne. 0.d0) then
        call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
-                                    molmtot,chi,Gama,stoch_fluxdiv,flux_total,&
+                                    molmtot,chi,stoch_fluxdiv,flux_total,&
                                     dx,dt,weights,the_bc_tower%bc_tower_array)
     else
        do n=1,nlevs
