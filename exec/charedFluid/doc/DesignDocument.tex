@@ -37,6 +37,7 @@
 \def\bb {{\bf b}}
 \def\Fb {{\bf F}}
 \def\gb {{\bf g}}
+\def\Lb {{\bf L}}
 \def\mb {{\bf m}}
 \def\vb {{\bf v}}
 \def\wb {{\bf w}}
@@ -215,13 +216,25 @@ compositional gradients, barodiffusion, themodiffusion, and electrostatic drivin
 Note $n = \sum_i(\rho_i/w_i)$ is the number density, and 
 $\rho/n = \overline{m} = (\sum_i w_i/m_i)^{-1}$ is the 
 mixture-average molecular mass.
-
+Also the total charge vector, $(\wb^T\zb){\bf 1}$, is in the null space of $\chib$,
+so this term can be omitted.
 The electric potential can by found by solving the Poisson equation,
 \begin{equation}
 -\nabla\cdot\epsilon\nabla\Phib = \rho(\wb^T\zb),
 \end{equation}
 with $\epsilon$ the dielectric constant.  Now the evaluation of $\Fb$
 at a particular instance in time requires the solution of this Poisson equation.
+
+The stochastic part of the mass fluxes, $\widetilde{\Fb}$, is given by,
+\begin{equation}
+\widetilde{\Fb} = \sqrt{2k_B}\Lb_{\half}\mathcal{Z} = \sqrt{2\bar{m}\rho}\Wb\chib_{\half}\mathcal{Z},
+\end{equation}
+with (see equations (28) and (29) in \cite{LowMachMulti})
+\begin{equation}
+\Lb_{\half} = \sqrt{\frac{\bar{m}\rho}{k_B}}\Wb\chib_{\half}
+\end{equation}
+In the code, we take the Cholesky factorization of $\bar{m}\rho\Wb\chib\Wb/k_B$
+to obtain $\Lb_{\half}$.
 
 The equation of state can be found by assuming no volume changing upon mixing,
 and differentiating along particle paths (as in our previous low Mach mixing
@@ -329,19 +342,15 @@ We rewrite this system as:
 
 \section{Implicit Potential Algorithm}
 Ignoring barodiffusion and thermodiffusion we have
-\begin{equation}
-\overline{\Fb} = -\rho\Wb\chib\left[\Gammab\nabla\xb + \frac{\rho}{n k_B T}\Wb\left(\zb - (\wb^T\zb)\1b \right)\nabla\Phib\right],
-\end{equation}
-\begin{equation}
--\nabla\cdot\epsilon\nabla\Phib = \rho(\wb^T\zb),
-\end{equation}
-where the total charge vector, $(\wb^T\zb){\bf 1}$, is in the null space of $\chib$.
-Thus, we can simplify the mass fluxes,
 \begin{eqnarray}
 \overline{\Fb} &=& -\rho\Wb\chib\left[\Gammab\nabla\xb + \frac{\rho}{n k_B T}\Wb\zb\nabla\Phib\right]\nonumber\\
-&=& -\rho\Wb\chib\Gammab\nabla\xb - \underbrace{\frac{\rho^2}{nk_B T}\Wb\chib\Wb\zb}_{\Ab_\Phi}\nabla\Phib
+&=& -\rho\Wb\chib\Gammab\nabla\xb - \underbrace{\frac{\rho^2}{nk_B T}\Wb\chib\Wb\zb}_{\Ab_\Phi}\nabla\Phib,
 \end{eqnarray}
-where $\Ab_\Phi$ is the electrostatic mass flux coefficient.
+with electric potential given by,
+\begin{equation}
+-\nabla\cdot\epsilon\nabla\Phib = \rho(\wb^T\zb).
+\end{equation}
+We define $\Ab_\Phi$ as the electrostatic mass flux coefficient.
 The term proportional to the electric field, $\nabla\Phib$, is potentially stiff.  We 
 use the parameter $\theta$ to generalize the electric potential temporal discretization
 to explicit, semi-implicit, implicit, etc.  We will try the implicit case ($\theta=1$).\\ \\
