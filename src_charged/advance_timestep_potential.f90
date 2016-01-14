@@ -87,15 +87,16 @@ contains
     type(multifab) , intent(inout) :: charge_new(:)
 
     ! local
-    type(multifab) ::  rho_update(mla%nlevel)
-    type(multifab) ::   bds_force(mla%nlevel)
-    type(multifab) :: gmres_rhs_p(mla%nlevel)
-    type(multifab) ::         dpi(mla%nlevel)
-    type(multifab) ::        divu(mla%nlevel)
-    type(multifab) ::        conc(mla%nlevel)
-    type(multifab) ::  rho_nd_old(mla%nlevel)
-    type(multifab) ::     rho_tmp(mla%nlevel)
-    type(multifab) ::      p_baro(mla%nlevel)
+    type(multifab) ::    rho_update(mla%nlevel)
+    type(multifab) :: rhotot_update(mla%nlevel)
+    type(multifab) ::     bds_force(mla%nlevel)
+    type(multifab) ::   gmres_rhs_p(mla%nlevel)
+    type(multifab) ::           dpi(mla%nlevel)
+    type(multifab) ::          divu(mla%nlevel)
+    type(multifab) ::          conc(mla%nlevel)
+    type(multifab) ::    rho_nd_old(mla%nlevel)
+    type(multifab) ::       rho_tmp(mla%nlevel)
+    type(multifab) ::        p_baro(mla%nlevel)
 
     type(multifab) ::          mold(mla%nlevel,mla%dim)
     type(multifab) ::         mtemp(mla%nlevel,mla%dim)
@@ -130,13 +131,14 @@ contains
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
-       call multifab_build( rho_update(n),mla%la(n),nspecies,0)
-       call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
-       call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
-       call multifab_build(         dpi(n),mla%la(n),1       ,1)
-       call multifab_build(       divu(n),mla%la(n),1       ,0)
-       call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
-       call multifab_build(     p_baro(n),mla%la(n),1       ,1)
+       call multifab_build(   rho_update(n),mla%la(n),nspecies,0)
+       call multifab_build(rhotot_update(n),mla%la(n),1       ,0)
+       call multifab_build(    bds_force(n),mla%la(n),nspecies,1)
+       call multifab_build(  gmres_rhs_p(n),mla%la(n),1       ,0)
+       call multifab_build(          dpi(n),mla%la(n),1       ,1)
+       call multifab_build(         divu(n),mla%la(n),1       ,0)
+       call multifab_build(         conc(n),mla%la(n),nspecies,rho_old(n)%ng)
+       call multifab_build(       p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
           call multifab_build_edge(         mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(        mtemp(n,i),mla%la(n),1       ,1,i)
@@ -164,6 +166,71 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 1 - Predictor Density Update
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    ! compute rhotot on faces
+    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+
+    ! set rhotot_update = -div(rho*v)^n
+    do n=1,nlevs
+       call setval(rhotot_update(n),0.d0,all=.true.)
+    end do
+    call mk_advective_s_fluxdiv(mla,umac,rhotot_fc,rhotot_update,dx,1,1)
+
+    ! rho^{*,n+1} = rho^n + dt * -div(rho*v)^n
+    do n=1,nlevs
+       call multifab_copy_c(rhotot_new(n),1,rhotot_old(n)1,1,0)
+       call multifab_saxpy_c(rhotot_new(n),dt,rhotot_update(n))
+    end do
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 2 - Predictor Concentration Update
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+    ! compute Phi^{*,n+1}
+
+    ! implicit potential solve needs as inputs:
+    ! dt, theta, rho_old, umac, ...
+
+
+
+    ! compute rho_i^{
+
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 3 - Predictor Crank-Nicolson Step
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 4 - Corrector Density Update
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 5 - Corrector Concentration Update
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 6 - Corrector Crank-Nicolson Step
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 1 - Calculate Predictor Diffusive and Stochastic Fluxes
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -175,8 +242,8 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! average rho_old and rhotot_old to faces
-    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! add D^n and St^n to rho_update
     do n=1,nlevs
@@ -931,6 +998,7 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(rho_update(n))
+       call multifab_destroy(rhotot_update(n))
        call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))

@@ -107,9 +107,10 @@ contains
 
     ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
     ! in init/end of this code
-    call diffusive_mass_fluxdiv_charged(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
-                                diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro,flux_total,dx,the_bc_tower, &
-                                charge,grad_Epot)
+    call diffusive_mass_fluxdiv_charged(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama, &
+                                        diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
+                                        flux_total,dx,the_bc_tower, &
+                                        charge,grad_Epot)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)

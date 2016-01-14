@@ -31,9 +31,9 @@ module diffusive_mass_fluxdiv_charged_module
 contains
 
   subroutine diffusive_mass_fluxdiv_charged(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
-                                    diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
-                                    flux_total,dx,the_bc_tower, &
-                                    charge,grad_Epot)
+                                            diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
+                                            flux_total,dx,the_bc_tower, &
+                                            charge,grad_Epot)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -72,8 +72,8 @@ contains
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
     call diffusive_mass_flux_charged(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,&
-                             zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower, &
-                             charge,grad_Epot)
+                                     zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower, &
+                                     charge,grad_Epot)
     
     ! add fluxes to flux_total
     do n=1,nlevs
@@ -95,8 +95,8 @@ contains
   end subroutine diffusive_mass_fluxdiv_charged
  
   subroutine diffusive_mass_flux_charged(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
-                                 Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower, &
-                                 charge,grad_Epot)
+                                         Temp,zeta_by_Temp,gradp_baro,flux,dx, &
+                                         the_bc_tower,charge,grad_Epot)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:) 
