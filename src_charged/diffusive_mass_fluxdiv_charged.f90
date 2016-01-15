@@ -4,11 +4,8 @@ module diffusive_mass_fluxdiv_charged_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use multifab_physbc_module
-  use probin_multispecies_module, only: nspecies, is_nonisothermal, nspecies, correct_flux
+  use probin_multispecies_module, only: nspecies, is_nonisothermal, correct_flux
   use probin_common_module, only: barodiffusion_type
-  use probin_gmres_module, only: mg_verbose
-  use probin_charged_module, only: use_charged_fluid, dielectric_const
   use mass_flux_utilities_module
   use ml_layout_module
   use convert_stag_module
@@ -18,9 +15,12 @@ module diffusive_mass_fluxdiv_charged_module
   use zero_edgeval_module
 
   ! for charged fluid
+  use probin_gmres_module, only: mg_verbose
+  use probin_charged_module, only: use_charged_fluid, dielectric_const
   use fluid_charge_module
   use bndry_reg_module
   use ml_solve_module
+  use multifab_physbc_module
   
   implicit none
 
@@ -57,6 +57,10 @@ contains
     ! local array of multifabs for grad and div; one for each direction
     type(multifab) :: flux(mla%nlevel,mla%dim)
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "diffusive_mass_fluxdiv_charged")
+    
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
  
@@ -92,11 +96,15 @@ contains
        end do
     end do
 
+    call destroy(bpt)
+
   end subroutine diffusive_mass_fluxdiv_charged
  
   subroutine diffusive_mass_flux_charged(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
                                          Temp,zeta_by_Temp,gradp_baro,flux,dx, &
                                          the_bc_tower,charge,grad_Epot)
+
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:) 
@@ -131,6 +139,10 @@ contains
     type(multifab)  :: charge_coef(mla%nlevel)
     type(multifab)  :: charge_coef_face(mla%nlevel,mla%dim)
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
+  
+    type(bl_prof_timer), save :: bpt
+    
+    call build(bpt,"diffusive_mass_flux_charged")
 
     dm    = mla%dim     ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
@@ -148,7 +160,7 @@ contains
        end do
     end do 
 
-    ! compute face-centered rhoWchi from cell-centered values 
+    ! compute face-centered -rhoWchi from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
                             nspecies**2, the_bc_tower%bc_tower_array, .false.) 
 
@@ -327,7 +339,7 @@ contains
 
     end if
 
-    ! compute rhoWchi * totalflux (on faces) 
+    ! compute -rhoWchi * (Gamma*grad(x) + ... ) on faces
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, flux(n,i), rhoWchi_face(n,i), nspecies)
@@ -358,6 +370,8 @@ contains
           call multifab_destroy(baro_coef_face(n,i))
        end do
     end do
+
+    call destroy(bpt)
 
   end subroutine diffusive_mass_flux_charged
 

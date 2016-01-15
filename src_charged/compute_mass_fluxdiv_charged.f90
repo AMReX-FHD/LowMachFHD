@@ -5,7 +5,6 @@ module compute_mass_fluxdiv_charged_module
   use bc_module
   use div_and_grad_module
   use diffusive_mass_fluxdiv_charged_module
-  use compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use compute_mixture_properties_module
   use external_force_module
@@ -22,8 +21,8 @@ module compute_mass_fluxdiv_charged_module
 
 contains
 
-  ! compute diffusive, stochastic, and potential mass fluxes
-  ! with barodiffusion and thermodiffusion
+  ! compute diffusive, stochastic, and electric potential mass fluxes
+  ! includes barodiffusion and thermodiffusion
   ! this computes "-F = +rho W chi [Gamma grad x... ]" so we later multiply by -1
   subroutine compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
                                           diff_fluxdiv,stoch_fluxdiv, &
@@ -62,6 +61,10 @@ contains
 
     integer         :: n,i,dm,nlevs
 
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_mass_fluxdiv_charged")
+
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
       
@@ -96,8 +99,8 @@ contains
     ! compute chi 
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
       
-    ! compute rho*W*chi
-    call compute_minus_rhoWchi(mla,rho,rhotot_temp,chi,rhoWchi)
+    ! compute -rho*W*chi
+    call compute_minus_rhoWchi(mla,rho,chi,rhoWchi)
 
     ! reset total flux
     do n=1,nlevs
@@ -106,8 +109,8 @@ contains
        end do
     end do
 
-    ! compute determinstic mass fluxdiv (interior only), rho contains ghost filled 
-    ! in init/end of this code
+    ! compute mass fluxes
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
     call diffusive_mass_fluxdiv_charged(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama, &
                                         diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                         flux_total,dx,the_bc_tower, &
@@ -146,6 +149,8 @@ contains
        call multifab_destroy(D_therm(n))
        call multifab_destroy(zeta_by_Temp(n))
     end do
+
+    call destroy(bpt)
 
   end subroutine compute_mass_fluxdiv_charged
   

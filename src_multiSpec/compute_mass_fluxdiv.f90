@@ -21,6 +21,9 @@ module compute_mass_fluxdiv_module
 
 contains
 
+  ! compute diffusive and stochastic mass fluxes
+  ! includes barodiffusion and thermodiffusion
+  ! this computes "-F = +rho W chi [Gamma grad x... ]" so we later multiply by -1
   subroutine compute_mass_fluxdiv(mla,rho,gradp_baro, &
                                   diff_fluxdiv,stoch_fluxdiv, &
                                   Temp,flux_total, &
@@ -94,7 +97,7 @@ contains
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
       
     ! compute -rho*W*chi
-    call compute_minus_rhoWchi(mla,rho,rhotot_temp,chi,rhoWchi)
+    call compute_minus_rhoWchi(mla,rho,chi,rhoWchi)
 
     ! reset total flux
     do n=1,nlevs
@@ -106,7 +109,8 @@ contains
     ! compute mass fluxes
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
     call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
-                                diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro,flux_total,dx,the_bc_tower)
+                                diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
+                                flux_total,dx,the_bc_tower)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)

@@ -4,8 +4,7 @@ module diffusive_mass_fluxdiv_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use probin_multispecies_module, only: nspecies, is_nonisothermal, &
-                                        nspecies, correct_flux
+  use probin_multispecies_module, only: nspecies, is_nonisothermal, correct_flux
   use probin_common_module, only: barodiffusion_type
   use mass_flux_utilities_module
   use ml_layout_module
@@ -92,7 +91,8 @@ contains
   end subroutine diffusive_mass_fluxdiv
  
   subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
-                                 Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower)
+                                 Temp,zeta_by_Temp,gradp_baro,flux,dx, &
+                                 the_bc_tower)
 
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
 

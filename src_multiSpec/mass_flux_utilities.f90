@@ -1084,21 +1084,19 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
 
   end subroutine compute_Lonsager_local
 
-  subroutine compute_minus_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
+  subroutine compute_minus_rhoWchi(mla,rho,chi,rhoWchi)
  
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
-    type(multifab) , intent(in   )  :: rhotot(:) 
     type(multifab) , intent(in   )  :: chi(:) 
     type(multifab) , intent(inout)  :: rhoWchi(:) 
 
     ! local variables
     integer :: lo(mla%dim), hi(mla%dim)
-    integer :: n,i,dm,nlevs,ng_1,ng_2,ng_3,ng_4
+    integer :: n,i,dm,nlevs,ng_1,ng_3,ng_4
  
     ! pointer for rho(nspecies), molarconc(nspecies) 
     real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rho    
-    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for chi
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for rhoWchi
 
@@ -1112,13 +1110,12 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
 
     dm = mla%dim        ! dimensionality
     ng_1 = rho(1)%ng    ! number of ghost cells 
-    ng_2 = rhotot(1)%ng
     ng_3 = chi(1)%ng
     ng_4 = rhoWchi(1)%ng
     nlevs = mla%nlevel  ! number of levels 
  
     !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
-    !$omp private(dp1,dp2,dp3,dp4,lo,hi)
+    !$omp private(dp1,dp3,dp4,lo,hi)
 
     ! loop over all boxes 
     do n=1,nlevs
@@ -1133,7 +1130,6 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
 
 !       do i=1,nfabs(rho(n))
           dp1 => dataptr(rho(n), i)
-          dp2 => dataptr(rhotot(n), i)
           dp3 => dataptr(chi(n), i)
           dp4 => dataptr(rhoWchi(n), i)
           lo  =  lwb(get_box(rho(n), i))
@@ -1141,11 +1137,11 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
           
           select case(dm)
           case (2)
-             call compute_minus_rhoWchi_2d(dp1(:,:,1,:),dp2(:,:,1,1),dp3(:,:,1,:),dp4(:,:,1,:), &
-                                     ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
+             call compute_minus_rhoWchi_2d(dp1(:,:,1,:),dp3(:,:,1,:),dp4(:,:,1,:), &
+                                     ng_1,ng_3,ng_4,lo,hi,tlo,thi) 
           case (3)
-             call compute_minus_rhoWchi_3d(dp1(:,:,:,:),dp2(:,:,:,1),dp3(:,:,:,:),dp4(:,:,:,:), &
-                                     ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
+             call compute_minus_rhoWchi_3d(dp1(:,:,:,:),dp3(:,:,:,:),dp4(:,:,:,:), &
+                                     ng_1,ng_3,ng_4,lo,hi,tlo,thi) 
           end select
        end do
     end do
@@ -1155,11 +1151,10 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
 
   end subroutine compute_minus_rhoWchi
   
-  subroutine compute_minus_rhoWchi_2d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
+  subroutine compute_minus_rhoWchi_2d(rho,chi,rhoWchi,ng_1,ng_3,ng_4,glo,ghi,tlo,thi)
   
-    integer          :: glo(2), ghi(2), ng_1,ng_2,ng_3,ng_4,tlo(2),thi(2)
+    integer          :: glo(2), ghi(2), ng_1,ng_3,ng_4,tlo(2),thi(2)
     real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,:) ! density; last dimension for species
-    real(kind=dp_t)  ::  rhotot(glo(1)-ng_2:,glo(2)-ng_2:)   ! total density in each cell
     real(kind=dp_t)  ::     chi(glo(1)-ng_3:,glo(2)-ng_3:,:) ! last dimension for nspecies^2
     real(kind=dp_t)  :: rhoWchi(glo(1)-ng_4:,glo(2)-ng_4:,:) ! last dimension for nspecies^2
 
@@ -1171,7 +1166,7 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
     do j=tlo(2),thi(2)
        do i=tlo(1),thi(1)
         
-          call compute_minus_rhoWchi_local(rho(i,j,:),rhotot(i,j),chi(i,j,:),rhoWchi(i,j,:))
+          call compute_minus_rhoWchi_local(rho(i,j,:),chi(i,j,:),rhoWchi(i,j,:))
 
           if(.false.) then
           if(i.eq.7 .and. j.eq.14) then
@@ -1190,11 +1185,10 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
 
   end subroutine compute_minus_rhoWchi_2d
 
-  subroutine compute_minus_rhoWchi_3d(rho,rhotot,chi,rhoWchi,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
+  subroutine compute_minus_rhoWchi_3d(rho,chi,rhoWchi,ng_1,ng_3,ng_4,glo,ghi,tlo,thi)
 
-    integer          :: glo(3), ghi(3), ng_1,ng_2,ng_3,ng_4,tlo(3),thi(3)
+    integer          :: glo(3), ghi(3), ng_1,ng_3,ng_4,tlo(3),thi(3)
     real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:) ! density; last dimension for species
-    real(kind=dp_t)  ::  rhotot(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)   ! total density in each cell 
     real(kind=dp_t)  ::     chi(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:) ! last dimension for nspecies^2
     real(kind=dp_t)  :: rhoWchi(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:,:) ! last dimension for nspecies^2
     
@@ -1206,7 +1200,7 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
        do j=tlo(2),thi(2)
           do i=tlo(1),thi(1)
        
-             call compute_minus_rhoWchi_local(rho(i,j,k,:),rhotot(i,j,k),chi(i,j,k,:),rhoWchi(i,j,k,:))
+             call compute_minus_rhoWchi_local(rho(i,j,k,:),chi(i,j,k,:),rhoWchi(i,j,k,:))
               
          end do
       end do
@@ -1214,21 +1208,14 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
    
   end subroutine compute_minus_rhoWchi_3d
   
-  subroutine compute_minus_rhoWchi_local(rho,rhotot,chi,rhoWchi)
+  subroutine compute_minus_rhoWchi_local(rho,chi,rhoWchi)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)            
-    real(kind=dp_t), intent(in)   :: rhotot                  
     real(kind=dp_t), intent(in)   :: chi(nspecies,nspecies)   ! rank conversion done 
     real(kind=dp_t), intent(out)  :: rhoWchi(nspecies,nspecies) 
  
     ! local variables
     integer                              :: row,column
-    real(kind=dp_t), dimension(nspecies) :: W !,chiw 
-
-    ! compute massfraction W_i = rho_i/rho; 
-    do row=1, nspecies  
-       W(row) = rho(row)/rhotot
-    end do
 
     ! populate -rho*W*chi = -rho_i*chi
     do row=1, nspecies
