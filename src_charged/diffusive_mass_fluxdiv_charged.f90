@@ -50,8 +50,8 @@ contains
     type(multifab) , intent(inout)  :: flux_total(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_tower) , intent(in   )  :: the_bc_tower
-    type(multifab) , intent(inout)  :: charge(:)
-    type(multifab) , intent(inout)  :: grad_Epot(:,:)
+    type(multifab) , intent(inout), optional :: charge(:)
+    type(multifab) , intent(inout), optional :: grad_Epot(:,:)
 
     ! local variables
     integer i,dm,n,nlevs
@@ -120,8 +120,8 @@ contains
     type(multifab) , intent(inout) :: flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
-    type(multifab) , intent(inout) :: charge(:)
-    type(multifab) , intent(inout) :: grad_Epot(:,:)
+    type(multifab) , intent(inout), optional :: charge(:)
+    type(multifab) , intent(inout), optional :: grad_Epot(:,:)
 
     ! local variables
     integer :: n,i,s,dm,nlevs
@@ -251,7 +251,7 @@ contains
 
     end if
 
-    if (use_charged_fluid) then
+    if (use_charged_fluid .and. present(charge) .and. present(grad_Epot)) then
 
        ! compute total charge
        call dot_with_z(mla,rho,charge)

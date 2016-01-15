@@ -43,8 +43,8 @@ contains
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
     type(bc_tower) , intent(in   )   :: the_bc_tower
-    type(multifab) , intent(inout)   :: charge(:)
-    type(multifab) , intent(inout)   :: grad_Epot(:,:)
+    type(multifab) , intent(inout), optional :: charge(:)
+    type(multifab) , intent(inout), optional :: grad_Epot(:,:)
        
     ! local variables
     type(multifab) :: drho(mla%nlevel)           ! correction to rho

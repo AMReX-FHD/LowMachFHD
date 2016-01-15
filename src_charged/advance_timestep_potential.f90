@@ -97,6 +97,7 @@ contains
     type(multifab) ::    rho_nd_old(mla%nlevel)
     type(multifab) ::       rho_tmp(mla%nlevel)
     type(multifab) ::        p_baro(mla%nlevel)
+    type(multifab) ::           R_p(mla%nlevel)
 
     type(multifab) ::          mold(mla%nlevel,mla%dim)
     type(multifab) ::         mtemp(mla%nlevel,mla%dim)
@@ -139,6 +140,7 @@ contains
        call multifab_build(         divu(n),mla%la(n),1       ,0)
        call multifab_build(         conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(       p_baro(n),mla%la(n),1       ,1)
+       call multifab_build(          R_p(n),mla%la(n),nspecies,0)
        do i=1,dm
           call multifab_build_edge(         mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(        mtemp(n,i),mla%la(n),1       ,1,i)
@@ -169,9 +171,9 @@ contains
     ! Step 1 - Predictor Density Update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! compute rhotot on faces
-    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,1, &
-                            the_bc_tower%bc_tower_array)
+    ! average rho_old and rhotot_old to faces
+    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! set rhotot_update = -div(rho*v)^n
     do n=1,nlevs
@@ -192,12 +194,65 @@ contains
 
     ! compute Phi^{*,n+1}
 
-    ! implicit potential solve needs as inputs:
-    ! dt, theta, rho_old, umac, ...
+    ! compute R_p = A^n + D^n + St^n
+    ! first add D^n and St^n to R_p
+    do n=1,nlevs
+       call setval(R_p(n),0.d0,all=.true.)
+       call multifab_plus_plus_c(R_p(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_plus_plus_c(R_p(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+       end if
+    end do
+
+    ! add A^n to R_p
+    if (advection_type .ge. 1) then
+      do n=1,nlevs
+         ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
+         call setval(bds_force(n),0.d0,all=.true.)
+         call multifab_copy_c(bds_force(n),1,R_p(n),1,nspecies,0)
+         call multifab_fill_boundary(bds_force(n))
+      end do
+
+      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+
+          ! rho_fc (computed above) and rho_nd_old (computed here) are used to set boundary conditions
+          do n=1,nlevs
+             call multifab_build_nodal(rho_nd_old(n),mla%la(n),nspecies,1)
+          end do
+          call average_cc_to_node(nlevs,rho_old,rho_nd_old,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+
+          ! the input s_tmp needs to have ghost cells filled with multifab_physbc_extrap
+          ! instead of multifab_physbc
+          do n=1,nlevs
+             call multifab_build(rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
+             call multifab_copy(rho_tmp(n),rho_old(n),rho_tmp(n)%ng)
+             call multifab_physbc_extrap(rho_tmp(n),1,c_bc_comp,nspecies, &
+                                         the_bc_tower%bc_tower_array(n))
+          end do
+
+          call bds(mla,umac,rho_tmp,R_p,bds_force,rho_fc,rho_nd_old,dx,dt,1,nspecies, &
+                   c_bc_comp,the_bc_tower,proj_type_in=2)
+
+      else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
+          call bds_quad(mla,umac,rho_old,R_p,bds_force,rho_fc,dx,dt,1,nspecies, &
+                        c_bc_comp,the_bc_tower,proj_type_in=2)
+      end if
+    else
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,R_p,dx,1,nspecies)
+    end if
+
+    ! compute A_Phi^n
+
+
+    ! solve -div (epsilon + dt*theta*z^T dot A_Phi) grad Phi^{*,n+1} = z^T (rho^n + dt*R_p)
+
+
+    ! compute A_Phi^n grad Phi^{*,n+1}
 
 
 
-    ! compute rho_i^{
+    ! compute rho^{*,n+1} = rho^n + dt*R_p + theta div A_Phi^n grad Phi^{*,n+1}
+
 
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1010,6 +1065,7 @@ contains
        call multifab_destroy(divu(n))
        call multifab_destroy(conc(n))
        call multifab_destroy(p_baro(n))
+       call multifab_destroy(R_p(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
