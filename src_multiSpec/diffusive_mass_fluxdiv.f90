@@ -26,7 +26,7 @@ contains
                                     diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                     flux_total,dx,the_bc_tower)
 
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+    ! this computes divergence of "F = -rho*W*chi*Gamma*grad(x) - ..."
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)

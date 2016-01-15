@@ -35,6 +35,8 @@ contains
                                             flux_total,dx,the_bc_tower, &
                                             charge,grad_Epot)
 
+    ! this computes divergence of "F = -rho*W*chi*Gamma*grad(x) - ..."
+
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rhotot(:)

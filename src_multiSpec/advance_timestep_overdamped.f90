@@ -221,7 +221,7 @@ contains
                                    the_bc_tower%bc_tower_array)
 
     ! compute diffusive and stochastic mass fluxes
-    ! this computes "+F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
+    ! this computes "+F = -rho*W*chi*Gamma*grad(x) - ..."
     if (algorithm_type .eq. 1) then
        call compute_mass_fluxdiv(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -234,7 +234,7 @@ contains
                                  the_bc_tower)
     end if
 
-    ! now fluxes contain -F = +rho*W*chi*Gamma*grad(x) + ...
+    ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0) then
@@ -249,7 +249,7 @@ contains
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     ! compute gmres_rhs_p
-    ! put "-S = div(+F_i/rho_i)" into gmres_rhs_p (we will later add divu)
+    ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
     do n=1,nlevs
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
@@ -483,13 +483,13 @@ contains
                                    the_bc_tower%bc_tower_array)
 
     ! compute diffusive and stochastic mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
     call compute_mass_fluxdiv(mla,rho_new,gradp_baro, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               Temp,flux_total,dt,time,dx,weights, &
                               the_bc_tower)
 
-    ! now fluxes contain -F = +rho*W*chi*Gamma*grad(x) + ...
+    ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
@@ -504,7 +504,7 @@ contains
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     ! compute gmres_rhs_p
-    ! put "-S = div(+F_i/rho_i)" into gmres_rhs_p (we will later add divu)
+    ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
     do n=1,nlevs
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)

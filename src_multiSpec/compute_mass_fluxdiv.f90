@@ -23,7 +23,7 @@ contains
 
   ! compute diffusive and stochastic mass fluxes
   ! includes barodiffusion and thermodiffusion
-  ! this computes "-F = +rho W chi [Gamma grad x... ]" so we later multiply by -1
+  ! this computes "F = -rho W chi [Gamma grad x... ]"
   subroutine compute_mass_fluxdiv(mla,rho,gradp_baro, &
                                   diff_fluxdiv,stoch_fluxdiv, &
                                   Temp,flux_total, &
@@ -107,7 +107,7 @@ contains
     end do
 
     ! compute mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
                                 diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                 flux_total,dx,the_bc_tower)

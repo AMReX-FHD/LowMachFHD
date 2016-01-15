@@ -69,6 +69,10 @@ contains
 
     real(kind=dp_t) :: weights(algorithm_type)
     
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"initial_projection_charged")
+    
     if (algorithm_type .eq. 1) then
        weights(1) = 1.d0
     else if (algorithm_type .eq. 2) then
@@ -101,8 +105,9 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,0.d0, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute diff/stoch/baro mass fluxes
-    ! this computes "-F" so we later multiply by -1
+    ! compute diffusive, stochastic, and potential mass fluxes
+    ! with barodiffusion and thermodiffusion
+    ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp, &
@@ -110,6 +115,7 @@ contains
                                       the_bc_tower, &
                                       charge_old,grad_Epot_old)
 
+    ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
@@ -123,8 +129,7 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
-    ! set mac_rhs to -S
-    ! -S = -sum div (F_i / rhobar_i)
+    ! set mac_rhs to "-S = div(F_i/rho_i)"
     do n=1,nlevs
        do i=1,nspecies
           call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
@@ -206,6 +211,8 @@ contains
        end do
     end do
 
+    call destroy(bpt)
+
   end subroutine initial_projection_charged
 
   subroutine build_bc_multifabs(mla)
@@ -214,6 +221,10 @@ contains
 
     integer :: dm,i,n,nlevs
     logical :: nodal_temp(3)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"initial_projection/build_bc_multifabs")
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -277,6 +288,8 @@ contains
 
     end do
 
+    call destroy(bpt)
+
   end subroutine build_bc_multifabs
 
   subroutine destroy_bc_multifabs(mla)
@@ -284,6 +297,10 @@ contains
     type(ml_layout), intent(in   ) :: mla
 
     integer :: dm,i,n,nlevs
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"initial_projection/destroy_bc_multifabs")
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -298,6 +315,8 @@ contains
     end do
 
     deallocate(vel_bc_n,vel_bc_t)
+
+    call destroy(bpt)
 
   end subroutine destroy_bc_multifabs
 

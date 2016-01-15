@@ -76,7 +76,7 @@ contains
     end do
 
     ! compute mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molefrac,rhoWchi,Gama, &
                                 mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro,mass_flux,dx, &
                                 the_bc_tower)
