@@ -85,7 +85,8 @@ contains
  
     ! compute molmtot,molarconc & rhotot_temp (primitive variables) for 
     ! each-cell from rho(conserved) 
-    call convert_cons_to_prim(mla,rho,rhotot_temp,molarconc,molmtot)
+    call compute_rhotot(mla,rho,rhotot_temp,ghost_cells_in=.true.)
+    call compute_molconc_molmtot(mla,rho,rhotot_temp,molarconc,molmtot)
       
     ! populate D_bar and Hessian matrix 
     call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian,Temp)

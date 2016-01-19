@@ -13,7 +13,7 @@ module mass_flux_utilities_module
   private
 
   public :: correct_rho_with_drho, &
-            convert_cons_to_prim, &
+            compute_molconc_molmtot, &
             compute_rhotot, &
             compute_Gama, &
             compute_chi, &
@@ -149,11 +149,11 @@ contains
 
   end subroutine correct_rho_with_drho_local 
 
-  subroutine convert_cons_to_prim(mla,rho,rhotot,molarconc,molmtot)
+  subroutine compute_molconc_molmtot(mla,rho,rhotot,molarconc,molmtot)
    
    type(ml_layout), intent(in   )  :: mla
    type(multifab) , intent(in   )  :: rho(:) 
-   type(multifab) , intent(inout)  :: rhotot(:) 
+   type(multifab) , intent(in   )  :: rhotot(:) 
    type(multifab) , intent(inout)  :: molarconc(:) 
    type(multifab) , intent(inout)  :: molmtot(:) 
 
@@ -173,7 +173,7 @@ contains
 
    type(bl_prof_timer), save :: bpt
 
-   call build(bpt,"convert_cons_to_prim")
+   call build(bpt,"compute_molconc_molmtot")
 
    dm    = mla%dim     ! dimensionality
    ng_1  = rho(1)%ng   ! number of ghost cells 
@@ -183,7 +183,7 @@ contains
    nlevs = mla%nlevel  ! number of levels 
 
    if (ng_3 .ne. ng_4) then
-      call bl_error('convert_cons_to_prim: ng for molarconc and molmass differ')
+      call bl_error('compute_molconc_molmtot: ng for molarconc and molmass differ')
    end if
  
    !$omp parallel private(n,i,mfi,tilebox,tlo,thi,dp1,dp2,dp3,dp4,lo,hi)
@@ -208,13 +208,13 @@ contains
           hi = upb(get_box(rho(n),i))
           select case(dm)
           case (2)
-             call compute_molconc_rhotot_2d(dp1(:,:,1,:),dp2(:,:,1,1), &
-                                            dp3(:,:,1,:),dp4(:,:,1,1), &
-                                            ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
+             call compute_molconc_molmtot_2d(dp1(:,:,1,:),dp2(:,:,1,1), &
+                                             dp3(:,:,1,:),dp4(:,:,1,1), &
+                                             ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           case (3)
-             call compute_molconc_rhotot_3d(dp1(:,:,:,:),dp2(:,:,:,1), &
-                                            dp3(:,:,:,:),dp4(:,:,:,1), &
-                                            ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
+             call compute_molconc_molmtot_3d(dp1(:,:,:,:),dp2(:,:,:,1), &
+                                             dp3(:,:,:,:),dp4(:,:,:,1), &
+                                             ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           end select
        end do
     end do
@@ -222,10 +222,10 @@ contains
 
     call destroy(bpt)
 
-  end subroutine convert_cons_to_prim
+  end subroutine compute_molconc_molmtot
 
-  subroutine compute_molconc_rhotot_2d(rho,rhotot,molarconc,molmtot, &
-                                       ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
+  subroutine compute_molconc_molmtot_2d(rho,rhotot,molarconc,molmtot, &
+                                        ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
  
     integer          :: glo(2), ghi(2), ng_1, ng_2, ng_3, ng_4
     integer          :: tlo(2), thi(2)
@@ -241,16 +241,16 @@ contains
     do j=tlo(2), thi(2)
        do i=tlo(1), thi(1)
          
-         call compute_molconc_rhotot_local(rho(i,j,:),rhotot(i,j), &
-                                           molarconc(i,j,:),molmtot(i,j))
+         call compute_molconc_molmtot_local(rho(i,j,:),rhotot(i,j), &
+                                            molarconc(i,j,:),molmtot(i,j))
 
        end do
     end do
  
-  end subroutine compute_molconc_rhotot_2d
+  end subroutine compute_molconc_molmtot_2d
 
-  subroutine compute_molconc_rhotot_3d(rho,rhotot,molarconc,molmtot, &
-                                       ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
+  subroutine compute_molconc_molmtot_3d(rho,rhotot,molarconc,molmtot, &
+                                               ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
  
     integer          :: glo(3), ghi(3), ng_1, ng_2, ng_3, ng_4
     integer          :: tlo(3), thi(3)
@@ -267,34 +267,26 @@ contains
        do j=tlo(2), thi(2)
           do i=tlo(1), thi(1)
 
-             call compute_molconc_rhotot_local(rho(i,j,k,:),rhotot(i,j,k),&
-                                               molarconc(i,j,k,:),molmtot(i,j,k))
+             call compute_molconc_molmtot_local(rho(i,j,k,:),rhotot(i,j,k),&
+                                                molarconc(i,j,k,:),molmtot(i,j,k))
 
           end do
        end do
     end do
  
-  end subroutine compute_molconc_rhotot_3d
+  end subroutine compute_molconc_molmtot_3d
 
-  subroutine compute_molconc_rhotot_local(rho,rhotot,molarconc,molmtot)
+  subroutine compute_molconc_molmtot_local(rho,rhotot,molarconc,molmtot)
  
     real(kind=dp_t), intent(in)   :: rho(nspecies)       ! density- last dim for #species
-    real(kind=dp_t), intent(out)  :: rhotot             ! total density in each cell 
+    real(kind=dp_t), intent(in)   :: rhotot              ! total density in each cell 
     real(kind=dp_t), intent(out)  :: molarconc(nspecies) ! molar concentration
     real(kind=dp_t), intent(out)  :: molmtot             ! total molar mass 
     
     ! local variables
     integer          :: n
     real(kind=dp_t), dimension(nspecies) :: W            ! mass fraction w_i = rho_i/rho 
-    real(kind=dp_t)  :: Sum_woverm, rhotot_local
-
-
-    ! calculate total density inside each cell
-    rhotot_local=0.d0 
-    do n=1, nspecies  
-       rhotot_local = rhotot_local + rho(n)
-    end do         
-    rhotot = rhotot_local
+    real(kind=dp_t)  :: Sum_woverm
 
     ! calculate mass fraction and total molar mass (1/m=Sum(w_i/m_i))
     Sum_woverm=0.d0
@@ -309,14 +301,14 @@ contains
        molarconc(n) = molmtot*W(n)/molmass(n)
     end do
     
+  end subroutine compute_molconc_molmtot_local 
 
-  end subroutine compute_molconc_rhotot_local 
-
-  subroutine compute_rhotot(mla,rho,rhotot)
+  subroutine compute_rhotot(mla,rho,rhotot,ghost_cells_in)
    
    type(ml_layout), intent(in   )  :: mla
    type(multifab) , intent(in   )  :: rho(:) 
    type(multifab) , intent(inout)  :: rhotot(:) 
+   logical, intent(in), optional   :: ghost_cells_in
 
    ! local variables
    integer :: lo(mla%dim), hi(mla%dim)
@@ -330,9 +322,14 @@ contains
    type(box) :: tilebox
    integer :: tlo(mla%dim), thi(mla%dim)
 
+   logical ghost_cells
+
    type(bl_prof_timer), save :: bpt
 
    call build(bpt, "compute_rhotot")
+
+   ghost_cells = .false.
+   if (present(ghost_cells_in)) ghost_cells = ghost_cells_in
 
    dm    = mla%dim     ! dimensionality
    ng_1  = rho(1)%ng   ! number of ghost cells 
@@ -347,8 +344,11 @@ contains
 
        do while (more_tile(mfi))
           i = get_fab_index(mfi)
-
-          tilebox = get_tilebox(mfi)
+          if (ghost_cells) then
+             tilebox = get_growntilebox(mfi,rhotot(n)%ng)
+          else
+             tilebox = get_tilebox(mfi)
+          end if
           tlo = lwb(tilebox)
           thi = upb(tilebox)
 
@@ -675,8 +675,7 @@ contains
     real(kind=dp_t)  ::      D_therm(glo(1)-ng_7:,glo(2)-ng_7:,:) ! thermo diff-coefs 
 
     ! local variables
-    integer          :: i,j,row
-    real(kind=dp_t), dimension(nspecies,nspecies) :: chilocal
+    integer          :: i,j
 
     ! for specific box, now start loops over alloted cells 
     do j=tlo(2),thi(2)
@@ -685,21 +684,6 @@ contains
           call compute_chi_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
                                  chi(i,j,:),D_bar(i,j,:),Temp(i,j),zeta_by_Temp(i,j,:),&
                                  D_therm(i,j,:))
-
-          ! print chi for one cell 
-          if(.false.) then 
-          if(i.eq.32 .and. j.eq.16) then
-            if(use_lapack) then 
-              print*, 'print chi via inverse/p-inverse'
-            else 
-              print*, 'print chi via iterative methods'
-            end if
-            call set_Xij(chilocal, chi(i,j,:)) 
-            do row=1, nspecies
-               print*, chilocal(row, :)
-            end do
-          end if
-          end if
 
        end do
     end do
@@ -976,8 +960,7 @@ contains
     real(kind=dp_t)  ::  Lonsager(lo(1)-ng_5:,lo(2)-ng_5:,:) ! last dimension for nspecies^2
 
     ! local variables
-    integer          :: i,j,row
-    real(kind=dp_t), dimension(nspecies,nspecies) :: Lonsager_local 
+    integer          :: i,j
  
     ! for specific box, now start loops over alloted cells 
     do j=lo(2)-ng_5,hi(2)+ng_5
@@ -985,20 +968,6 @@ contains
         
           call compute_Lonsager_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
                                       molmtot(i,j),chi(i,j,:),Lonsager(i,j,:))
-
-          if(.false.) then
-          if(i.eq.7 .and. j.eq.14) then
-          call set_Xij(Lonsager_local, Lonsager(i,j,:)) 
-            write(*,*), "Lonsager"
-            do row=1, nspecies
-               write(*,*), Lonsager_local(row,:) 
-               !write(*,*), sum(Lonsager_local(row,:))
-            end do
-            do row=1, nspecies
-               !write(*,*), sum(Lonsager_local(:,row))
-            end do
-          end if
-          end if
 
        end do
     end do
@@ -1159,26 +1128,13 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
     real(kind=dp_t)  :: rhoWchi(glo(1)-ng_4:,glo(2)-ng_4:,:) ! last dimension for nspecies^2
 
     ! local variables
-    integer          :: i,j,row,column
-    real(kind=dp_t), dimension(nspecies,nspecies) :: rhoWchiloc 
+    integer          :: i,j
   
     ! for specific box, now start loops over alloted cells 
     do j=tlo(2),thi(2)
        do i=tlo(1),thi(1)
         
           call compute_minus_rhoWchi_local(rho(i,j,:),chi(i,j,:),rhoWchi(i,j,:))
-
-          if(.false.) then
-          if(i.eq.7 .and. j.eq.14) then
-          call set_Xij(rhoWchiloc, rhoWchi(i,j,:))
-             do row=1, nspecies
-                do column=1, nspecies
-                   print*, rhoWchiloc(row,column) 
-                end do
-                print*, '' 
-             end do
-          end if
-          end if
 
        end do
     end do
@@ -1225,22 +1181,6 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
     end do
 
   end subroutine compute_minus_rhoWchi_local
-
-  subroutine set_Xij(Xout_ij, Xin_ij)
-        
-    real(kind=dp_t), dimension(nspecies,nspecies), intent(in)  :: Xin_ij
-    real(kind=dp_t), dimension(nspecies,nspecies), intent(out) :: Xout_ij  
-   
-    type(bl_prof_timer), save :: bpt
-
-    call build(bpt, "set_Xij")
-
-    ! reshape array into matrix without doing index algebra
-    Xout_ij = Xin_ij
-  
-    call destroy(bpt)
-
-  end subroutine set_Xij
 
   subroutine compute_baro_coef(mla,baro_coef,rho,rhotot,Temp)
  
