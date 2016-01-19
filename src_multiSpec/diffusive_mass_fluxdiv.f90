@@ -140,7 +140,7 @@ contains
        end do
     end do 
 
-    ! compute face-centered -rhoWchi from cell-centered values 
+    ! compute face-centered rhoWchi from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
                             nspecies**2, the_bc_tower%bc_tower_array, .false.) 
 
@@ -233,6 +233,7 @@ contains
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, flux(n,i), rhoWchi_face(n,i), nspecies)
+          call multifab_mult_mult_s(flux(n,i),-1.d0)
        end do
     end do    
 
