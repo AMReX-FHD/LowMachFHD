@@ -1,4 +1,4 @@
-module mass_fluxdiv_energy_module
+module compute_mass_fluxdiv_energy_module
 
   use ml_layout_module
   use define_bc_module
@@ -11,11 +11,11 @@ module mass_fluxdiv_energy_module
 
   private
 
-  public :: mass_fluxdiv_energy
+  public :: compute_mass_fluxdiv_energy
 
 contains
 
-  subroutine mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta,gradp_baro,Temp, &
+  subroutine compute_mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta,gradp_baro,Temp, &
                                  mass_fluxdiv,mass_flux,dx,the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
@@ -96,6 +96,6 @@ contains
        call multifab_destroy(zeta_by_Temp(n))
     end do
 
-  end subroutine mass_fluxdiv_energy
+  end subroutine compute_mass_fluxdiv_energy
   
-end module mass_fluxdiv_energy_module
+end module compute_mass_fluxdiv_energy_module

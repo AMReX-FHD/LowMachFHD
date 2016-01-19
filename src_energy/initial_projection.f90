@@ -6,7 +6,7 @@ module initial_projection_module
   use convert_stag_module
   use convert_rhoc_to_c_module
   use eos_model_wrapper_module
-  use mass_fluxdiv_energy_module
+  use compute_mass_fluxdiv_energy_module
   use rhoh_fluxdiv_energy_module
   use div_and_grad_module
   use macproject_module
@@ -130,9 +130,9 @@ contains
                                          eta,lambda,kappa,chi,zeta)
 
     ! compute mass_flux = F^0 and mass_fluxdiv = div(F^0)
-    call mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta, &
-                             gradp_baro,Temp,mass_fluxdiv, &
-                             mass_flux,dx,the_bc_tower)
+    call compute_mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta, &
+                                     gradp_baro,Temp,mass_fluxdiv, &
+                                     mass_flux,dx,the_bc_tower)
 
     ! compute rhoh_fluxdiv = div(Q)^0 + sum(div(hk*Fk))^0 + rho*Hext^0
     call rhoh_fluxdiv_energy(mla,lambda,Temp,mass_flux,rhotot, &
