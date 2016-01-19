@@ -4,7 +4,8 @@ module mass_flux_utilities_module
   use ml_layout_module
   use probin_common_module, only: k_B, molmass, rhobar
   use probin_multispecies_module, only: nspecies, use_lapack, fraction_tolerance, &
-       is_ideal_mixture, inverse_type, is_nonisothermal, chi_iterations
+                                        is_ideal_mixture, inverse_type, is_nonisothermal, &
+                                        chi_iterations
   use matrix_utilities 
   use F95_LAPACK
 
@@ -305,125 +306,38 @@ contains
 
   subroutine compute_rhotot(mla,rho,rhotot,ghost_cells_in)
    
-   type(ml_layout), intent(in   )  :: mla
-   type(multifab) , intent(in   )  :: rho(:) 
-   type(multifab) , intent(inout)  :: rhotot(:) 
-   logical, intent(in), optional   :: ghost_cells_in
+    type(ml_layout), intent(in   )  :: mla
+    type(multifab) , intent(in   )  :: rho(:) 
+    type(multifab) , intent(inout)  :: rhotot(:) 
+    logical, intent(in), optional   :: ghost_cells_in
 
-   ! local variables
-   integer :: lo(mla%dim), hi(mla%dim)
-   integer :: n,i,dm,nlevs,ng_1,ng_2
- 
-   ! pointer for rho(nspecies), rhotot(1), molarconc(nspecies) 
-   real(kind=dp_t), pointer        :: dp1(:,:,:,:)   ! for rho    
-   real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for rhotot
+    ! local variables
+    integer :: n,nlevs,comp,ng
 
-   type(mfiter) :: mfi
-   type(box) :: tilebox
-   integer :: tlo(mla%dim), thi(mla%dim)
+    logical ghost_cells
 
-   logical ghost_cells
+    type(bl_prof_timer), save :: bpt
 
-   type(bl_prof_timer), save :: bpt
+    call build(bpt, "compute_rhotot")
 
-   call build(bpt, "compute_rhotot")
+    nlevs = mla%nlevel  ! number of levels 
 
-   ghost_cells = .false.
-   if (present(ghost_cells_in)) ghost_cells = ghost_cells_in
+    ghost_cells = .false.
+    if (present(ghost_cells_in)) ghost_cells = ghost_cells_in
 
-   dm    = mla%dim     ! dimensionality
-   ng_1  = rho(1)%ng   ! number of ghost cells 
-   ng_2  = rhotot(1)%ng
-   nlevs = mla%nlevel  ! number of levels 
- 
-   !$omp parallel private(n,i,mfi,tilebox,tlo,thi,dp1,dp2,lo,hi)
+    ng=0
+    if (ghost_cells) then
+       ng=rhotot(1)%ng
+    end if
 
-    ! loop over all boxes 
     do n=1,nlevs
-       call mfiter_build(mfi, rho(n), tiling=.true.)
-
-       do while (more_tile(mfi))
-          i = get_fab_index(mfi)
-          if (ghost_cells) then
-             tilebox = get_growntilebox(mfi,rhotot(n)%ng)
-          else
-             tilebox = get_tilebox(mfi)
-          end if
-          tlo = lwb(tilebox)
-          thi = upb(tilebox)
-
-!       do i=1,nfabs(rho(n))
-          dp1 => dataptr(rho(n),i)
-          dp2 => dataptr(rhotot(n),i)
-          lo = lwb(get_box(rho(n),i))
-          hi = upb(get_box(rho(n),i))
-          
-          select case(dm)
-          case (2)
-             call compute_rhotot_2d(dp1(:,:,1,:),dp2(:,:,1,1),&
-                                    ng_1,ng_2,lo,hi,tlo,thi) 
-          case (3)
-             call compute_rhotot_3d(dp1(:,:,:,:),dp2(:,:,:,1),&
-                                    ng_1,ng_2,lo,hi,tlo,thi) 
-          end select
+       call multifab_setval(rhotot(n),0.d0,all=.true.)
+       do comp=1,nspecies
+          call multifab_plus_plus_c(rhotot(n),1,rho(n),comp,1,ng)
        end do
     end do
-    !$omp end parallel
-
-    call destroy(bpt)
 
   end subroutine compute_rhotot
-
-  subroutine compute_rhotot_2d(rho,rhotot,ng_1,ng_2,glo,ghi,tlo,thi)
- 
-    integer          :: glo(2), ghi(2), ng_1, ng_2, tlo(2), thi(2)
-    real(kind=dp_t)  ::    rho(glo(1)-ng_1:,glo(2)-ng_1:,:) ! density- last dim for #species
-    real(kind=dp_t)  :: rhotot(glo(1)-ng_2:,glo(2)-ng_2:)   ! total density in each cell 
-        
-    ! local variables
-    integer          :: i,j,n
-    
-    ! for specific box, now start loops over alloted cells    
-    do j=tlo(2),thi(2)
-       do i=tlo(1),thi(1)
-
-          ! calculate total density inside each cell
-          rhotot(i,j)=0.d0
-          do n=1, nspecies  
-             rhotot(i,j) = rhotot(i,j) + rho(i,j,n)
-          end do
-
-       end do
-    end do
- 
-  end subroutine compute_rhotot_2d
-
-  subroutine compute_rhotot_3d(rho,rhotot,ng_1,ng_2,glo,ghi,tlo,thi)
- 
-    integer          :: glo(3), ghi(3), ng_1, ng_2, tlo(3), thi(3)
-    real(kind=dp_t)  ::    rho(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:) ! density- last dim for #species
-    real(kind=dp_t)  :: rhotot(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)   ! total density in each cell 
-    
-    ! local variables
-    integer          :: i,j,k,n
-    
-    ! for specific box, now start loops over alloted cells    
-    do k=tlo(3),thi(3)
-       do j=tlo(2),thi(2)
-          do i=tlo(1),thi(1)
-
-             ! calculate total density inside each cell
-             rhotot(i,j,k)=0.d0
-             do n=1,nspecies  
-                rhotot(i,j,k) = rhotot(i,j,k) + rho(i,j,k,n)
-             end do
-
-
-          end do
-       end do
-    end do
- 
-  end subroutine compute_rhotot_3d
 
   subroutine compute_Gama(mla,molarconc,Hessian,Gama)
 
