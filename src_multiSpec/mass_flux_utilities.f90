@@ -638,14 +638,14 @@ contains
 
   subroutine compute_chi_local(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm)
     
-    real(kind=dp_t), intent(inout)  :: rho(nspecies)         
-    real(kind=dp_t), intent(in)     :: rhotot               
-    real(kind=dp_t), intent(inout)  :: molarconc(nspecies) 
-    real(kind=dp_t), intent(out)    :: chi(nspecies,nspecies)   
-    real(kind=dp_t), intent(in)     :: D_bar(nspecies,nspecies) 
-    real(kind=dp_t), intent(in)     :: Temp
-    real(kind=dp_t), intent(inout)  :: zeta_by_Temp(nspecies)
-    real(kind=dp_t), intent(in)     :: D_therm(nspecies)
+    real(kind=dp_t), intent(in   ) :: rho(nspecies)         
+    real(kind=dp_t), intent(in   ) :: rhotot               
+    real(kind=dp_t), intent(in   ) :: molarconc(nspecies) 
+    real(kind=dp_t), intent(inout) :: chi(nspecies,nspecies)   
+    real(kind=dp_t), intent(in   ) :: D_bar(nspecies,nspecies) 
+    real(kind=dp_t), intent(in   ) :: Temp
+    real(kind=dp_t), intent(inout) :: zeta_by_Temp(nspecies)
+    real(kind=dp_t), intent(in   ) :: D_therm(nspecies)
 
     ! local variables
     integer                         :: row,column
