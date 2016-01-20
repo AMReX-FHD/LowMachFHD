@@ -97,8 +97,8 @@ contains
     ! compute chi 
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
       
-    ! compute -rho*W*chi
-    call compute_minus_rhoWchi(mla,rho,chi,rhoWchi)
+    ! compute rho*W*chi
+    call compute_rhoWchi(mla,rho,chi,rhoWchi)
 
     ! reset total flux
     do n=1,nlevs
