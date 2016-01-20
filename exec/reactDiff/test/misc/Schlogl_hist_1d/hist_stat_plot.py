@@ -2,15 +2,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-DATA1 = "res.hist_stat"
-DATA2 = "res.hist_poiss"
-DATA3 = "res.hist_cont"
-
 # if additional argument is given, normalize the sample std by the number
 if (len(sys.argv)==2):
   NRUN = int(sys.argv[1])
 else:
   NRUN = 1
+
+########
+# hist #
+########
+
+DATA1 = "res.hist_stat"
+DATA2 = "res.hist_poiss"
+DATA3 = "res.hist_cont"
 
 x1 = []
 y1 = []
@@ -63,6 +67,7 @@ plt.xlabel("number density n")
 plt.ylabel("probability density")
 #plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
 plt.show()
+fig.savefig("hist_semilogy.jpg")
 
 # linear plot
 fig, a = plt.subplots()
@@ -77,3 +82,32 @@ plt.xlabel("number density n")
 plt.ylabel("probability density")
 #plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
 plt.show()
+fig.savefig("hist_linear.jpg")
+
+######
+# Sk #
+######
+
+DATA4 = "res.Sk_stat"
+
+x4 = []
+y4 = []
+y4err2 = []
+with open(DATA4) as inf:
+  for line in inf:
+    parts = line.split()
+    x4.append(float(parts[0]))
+    y4.append(float(parts[1]))
+    y4err2.append(float(parts[2]))
+y4err2=np.array(y4err2)
+y4err2=2*np.sqrt(y4err2/NRUN)  # normalize by NRUN (errorbars with 2 std)
+
+# plot
+fig, a = plt.subplots()
+a.errorbar(x4,y4,yerr=y4err2,label="Numerics",fmt='s')
+#a.legend(loc=1,numpoints=1,fontsize='small')
+#plt.title("N=%d particles per cell"%round(n_av*dV))
+plt.xlabel("k")
+plt.ylabel("structure factor S(k)")
+plt.show()
+fig.savefig("Sk.jpg")
