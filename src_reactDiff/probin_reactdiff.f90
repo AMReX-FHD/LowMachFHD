@@ -174,6 +174,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) inhomogeneous_bc_fix
 
+       case ('--integer_populations')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) integer_populations 
+
        case ('--avg_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
