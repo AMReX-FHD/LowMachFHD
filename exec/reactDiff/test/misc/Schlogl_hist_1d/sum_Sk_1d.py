@@ -18,7 +18,7 @@ datafile2="Hist1D.S_k.pair=1.Re.dat"
 # inputs_hist_1d assumes ncell*1 cells in 2d.
 # each cell has dx*dx in dimensions with cross_section=dz.
 ncell = 64
-dx = 0.5
+dx = 1.
 dz = 5.
 
 # if additional arguments are given
@@ -95,8 +95,10 @@ sum1 /= lcnt    # first moment of n
 sum2 /= lcnt    # second moment of n
 sum4 /= nblock  # second moment of nbar
 
-print "<n>=%g, <n^2>=%g, Var[n]=%g" % (sum1,sum2,sum2-sum1*sum1)
-print "<nbar*nbar>=%g" % (sum4)
+print "<n>= %.5f" % (sum1)
+print "<n^2>= %.5f" % (sum2)
+print "Var[n]= %.5f" % (sum2-sum1*sum1)
+print "<nbar*nbar>=%.5f" % (sum4)
 
 second_moment_n = sum2 
 second_moment_nbar = sum4
