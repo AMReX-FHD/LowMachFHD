@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RUNNAME=TEST
-NRUN=4
+NRUN=16
 OUTPUT1=res.hist_stat
 OUTPUT2=res.Sk_stat
 OUTPUT3=res.n_stat
