@@ -487,12 +487,26 @@ Solve the following for $\vb^{n+1,l+1}$ and $p^{n+1,l+1}$:
 {\color{red}
 \subsection{Implicit Potential Algorithm (Old)}
 The step-by-step algorithm is as follows:\\ \\
-{\bf Step 1: Predictor Density Update}\\ \\
-Perform a forward Euler density update,
+{\bf Step 0: Initialization}\\ \\
+During initialization $n=0$.
+We are given an initial velocity field, $\vb^{\rm init}$, pressure, $p^n$,
+and densities $(\rho\wb)^n$.
+Then, perform a projection to obtain an initial velocity field, $\vb^n$ that satisfies
 \begin{equation}
-\rho^{*,n+1} = \rho^n + \Delta t \nabla\cdot(-\rho\vb)^n.
+\nabla\cdot\vb^n = S^n \equiv S(\Fb^n),
 \end{equation}
-{\bf Step 2: Predictor Concentration Update}\\ \\
+where $\Fb_i^n$ and $\nabla\cdot\Fb_i^n$ are computed from $(\rho\wb)^n$ using the 
+supplied {\tt compute\_mass\_fluxdiv} subroutine and an explicit electric
+potential contribution.
+For the projection, we solve for $\phi$ and update $\vb^{\rm init}$ as follows:
+\begin{equation}
+\nabla\cdot\frac{1}{\rho^n}\nabla\phi = \nabla\cdot\vb^{\rm init} - S^n,
+\end{equation}
+\begin{equation}
+\vb^n = \vb^{\rm init} - \frac{1}{\rho^n}\nabla\phi.
+\end{equation}
+Set $(\vb,\rho_i)^{n+1,0} = (\vb,\rho_i)^n$.\\ \\
+{\bf Step 1: Predictor Concentration Update}\\ \\
 We would like to solve the following,
 \begin{eqnarray}
 \frac{(\rho\wb)^{*,n+1} - (\rho\wb)^n}{\Delta t} + \nabla\cdot(\rho\wb\vb)^n &=&
@@ -501,7 +515,7 @@ We would like to solve the following,
 &&+ \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n\label{eq:implicit phi}
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\epsilon\nabla\Phib^{*,n+1} = \left[\rho(\wb^T\zb)\right]^{*,n+1},\label{eq:constraint}
+-\nabla\cdot\epsilon\nabla\Phib^{*,n+1} = \left(\rho\wb^T\zb\right)^{*,n+1},\label{eq:constraint}
 \end{equation}
 but we can't directly.  Rewriting equation (\ref{eq:implicit phi}) gives,
 \begin{eqnarray}
@@ -525,7 +539,7 @@ and since $\Wb\chib\Wb$ is positive semi-definite, then $\zb^T\Wb\chib\Wb\zb \ge
 the coefficients in the Poisson solve all have the same sign, and thus the system
 is elliptic.  Once we have $\Phib^{*,n+1}$, we can compute $(\rho\wb)^{*,n+1}$ using
 (\ref{eq:implicit phi}).\\ \\
-{\bf Step 3: Predictor Crank-Nicolson Step}\\ \\
+{\bf Step 2: Predictor Crank-Nicolson Step}\\ \\
 Define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb, p^{*,n+1} = p^n + \delta p$ (in these notes the overline
 indicates the the velocity field has been modified to incorporate the boundary conditions on the
 full velocity field after the solve) and solve
@@ -553,12 +567,7 @@ and $\bb_\vb$ equal to the right-hand-side of (\ref{eq:CN Vel Pred2}).  For the 
 $\mathcal{A}=\Theta\alpha\mathcal{I} - \mathcal{A}_0$, we have $\Theta=1/\Delta t, \alpha=\rho^{*,n+1}, 
 \beta=\eta/2$, and $\gamma=\kappa/2$.
 Next, define $\vb^{*,n+1} = \overline\vb^n + \deltab\vb$ and $p^{*,n+1} = p^n + \delta p$.\\ \\
-{\bf Step 4: Corrector Density Update}
-Perform a trapezoidal density update,
-\begin{equation}
-\rho^{n+1} = \rho^n + \frac{\Delta t}{2} \nabla\cdot(-\rho\vb)^n + \frac{\Delta t}{2} \nabla\cdot(-\rho\vb)^{*,n+1}.
-\end{equation}
-{\bf Step 5: Corrector Concentration Update}\\ \\
+{\bf Step 3: Corrector Concentration Update}\\ \\
 We would like to solve the following,
 \begin{eqnarray}
 \frac{(\rho\wb)^{n+1} - (\rho\wb^n)}{\Delta t} + \half\nabla\cdot(\rho\wb\vb)^n + \half\nabla\cdot(\rho\wb\vb)^{*,n+1} &=&\half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1} \nonumber\\
@@ -568,7 +577,7 @@ We would like to solve the following,
 + \half\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{*,n+1}\mathcal{Z}^n,\label{eq:implicit phi3}
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\epsilon\nabla\Phib^{n+1} = \left[\rho(\wb^T\zb)\right]^{n+1},\label{eq:constraint2}
+-\nabla\cdot\epsilon\nabla\Phib^{n+1} = \left(\rho\wb^T\zb\right)^{n+1},\label{eq:constraint2}
 \end{equation}
 but we can't directly.  Rewriting equation (\ref{eq:implicit phi3} gives,
 \begin{eqnarray}
@@ -589,7 +598,7 @@ Substituting this into equation (\ref{eq:constraint2}) gives
 \end{equation}
 which we solve for $\Phib^{n+1}$.  Once we have $\Phib^{n+1}$, we can compute 
 $(\rho\wb)^{n+1}$ using (\ref{eq:implicit phi3}).\\ \\
-{\bf Step 6: Corrector Crank-Nicolson Step}\\ \\
+{\bf Step 4: Corrector Crank-Nicolson Step}\\ \\
 Take a corrector step for velocity, using the same random numbers as for the predictor
 stage, but average the amplitude of the stochastic flux between time $n$ and $n+1$:
 Define $\vb^{n+1} = \overline\vb^{*,n+1} + \deltab\vb$ and $p^{n+1} = p^{*,n+1} + \delta p$ and
