@@ -189,6 +189,12 @@ contains
          else
             av=2.d0 / (1.d0/value1 + 1.d0/value2)
          end if
+      case(4) ! new arithmetic (temporary)
+         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+            av=0.d0
+         else
+            av=(value1+value2)/2.d0
+         end if
       case default
          call bl_error("average_to_faces_2d: invalid avg_type")   
       end select   
