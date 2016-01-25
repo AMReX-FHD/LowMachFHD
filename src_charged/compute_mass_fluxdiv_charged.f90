@@ -97,8 +97,9 @@ contains
     ! compute Gama from Hessian
     call compute_Gama(mla,molarconc,Hessian,Gama)
    
-    ! compute chi 
-    call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
+    ! compute chi and zeta/Temp
+    call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar)
+    call compute_zeta_by_Temp(mla,molarconc,D_bar,D_therm,Temp,zeta_by_Temp)
       
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,chi,rhoWchi)

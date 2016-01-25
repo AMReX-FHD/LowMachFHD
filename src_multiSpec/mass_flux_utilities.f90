@@ -18,6 +18,7 @@ module mass_flux_utilities_module
             compute_rhotot, &
             compute_Gama, &
             compute_chi, &
+            compute_zeta_by_Temp, &
             compute_rhoWchi, &
             compute_Lonsager, &
             compute_baro_coef
@@ -486,7 +487,7 @@ contains
  
   end subroutine compute_Gama_local
 
-  subroutine compute_chi(mla,rho,rhotot,molarconc,chi,D_bar,D_therm,Temp,zeta_by_Temp)
+  subroutine compute_chi(mla,rho,rhotot,molarconc,chi,D_bar)
    
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -494,13 +495,10 @@ contains
     type(multifab) , intent(in   )  :: molarconc(:)
     type(multifab) , intent(inout)  :: chi(:) 
     type(multifab) , intent(in   )  :: D_bar(:) 
-    type(multifab) , intent(in   )  :: D_therm(:) 
-    type(multifab) , intent(in   )  :: Temp(:) 
-    type(multifab) , intent(inout)  :: zeta_by_Temp(:) 
 
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: n,i,dm,nlevs,ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
+    integer :: n,i,dm,nlevs,ng_0,ng_1,ng_2,ng_3,ng_4
  
     ! pointer for rho(nspecies), molarconc(nspecies) 
     real(kind=dp_t), pointer        :: dp0(:,:,:,:)  ! for rho    
@@ -508,9 +506,6 @@ contains
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for chi
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_bar
-    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Temp
-    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for zeta_by_Temp
-    real(kind=dp_t), pointer        :: dp7(:,:,:,:)  ! for D_therm
 
     type(mfiter) :: mfi
     type(box) :: tilebox
@@ -526,13 +521,10 @@ contains
     ng_2 = molarconc(1)%ng
     ng_3 = chi(1)%ng
     ng_4 = D_bar(1)%ng
-    ng_5 = Temp(1)%ng
-    ng_6 = zeta_by_Temp(1)%ng
-    ng_7 = D_therm(1)%ng
     nlevs = mla%nlevel  ! number of levels 
  
     !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
-    !$omp private(dp0,dp1,dp2,dp3,dp4,dp5,dp6,dp7,lo,hi)
+    !$omp private(dp0,dp1,dp2,dp3,dp4,lo,hi)
 
     ! loop over all boxes 
     do n=1,nlevs
@@ -551,20 +543,17 @@ contains
           dp2 => dataptr(molarconc(n), i)
           dp3 => dataptr(chi(n), i)
           dp4 => dataptr(D_bar(n), i)
-          dp5 => dataptr(Temp(n), i)
-          dp6 => dataptr(zeta_by_Temp(n), i)
-          dp7 => dataptr(D_therm(n), i)
           lo  =  lwb(get_box(rho(n), i))
           hi  =  upb(get_box(rho(n), i))          
           select case(dm)
           case (2)
              call compute_chi_2d(dp0(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),dp3(:,:,1,:),&
-                                 dp4(:,:,1,:),dp5(:,:,1,1),dp6(:,:,1,:),dp7(:,:,1,:),&
-                                 ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo,hi,tlo,thi) 
+                                 dp4(:,:,1,:),&
+                                 ng_0,ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           case (3)
              call compute_chi_3d(dp0(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),dp3(:,:,:,:),&
-                                 dp4(:,:,:,:),dp5(:,:,:,1),dp6(:,:,:,:),dp7(:,:,:,:),&
-                                 ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,lo,hi,tlo,thi) 
+                                 dp4(:,:,:,:),&
+                                 ng_0,ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           end select
        end do
     end do
@@ -574,19 +563,16 @@ contains
 
   end subroutine compute_chi
  
-  subroutine compute_chi_2d(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm, &
-                            ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,glo,ghi,tlo,thi)
+  subroutine compute_chi_2d(rho,rhotot,molarconc,chi,D_bar, &
+                            ng_0,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
 
-    integer          :: glo(2), ghi(2), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
+    integer          :: glo(2), ghi(2), ng_0,ng_1,ng_2,ng_3,ng_4
     integer          :: tlo(2), thi(2)
     real(kind=dp_t)  ::          rho(glo(1)-ng_0:,glo(2)-ng_0:,:) ! density; last dimension for species
     real(kind=dp_t)  ::       rhotot(glo(1)-ng_1:,glo(2)-ng_1:)   ! total density in each cell 
     real(kind=dp_t)  ::    molarconc(glo(1)-ng_2:,glo(2)-ng_2:,:) ! molar concentration 
     real(kind=dp_t)  ::          chi(glo(1)-ng_3:,glo(2)-ng_3:,:) ! last dimension for nspecies^2
     real(kind=dp_t)  ::        D_bar(glo(1)-ng_4:,glo(2)-ng_4:,:) ! MS diff-coefs 
-    real(kind=dp_t)  ::         Temp(glo(1)-ng_5:,glo(2)-ng_5:)   ! Temperature 
-    real(kind=dp_t)  :: zeta_by_Temp(glo(1)-ng_6:,glo(2)-ng_6:,:) ! zeta/T
-    real(kind=dp_t)  ::      D_therm(glo(1)-ng_7:,glo(2)-ng_7:,:) ! thermo diff-coefs 
 
     ! local variables
     integer          :: i,j
@@ -596,27 +582,23 @@ contains
        do i=tlo(1),thi(1)
     
           call compute_chi_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
-                                 chi(i,j,:),D_bar(i,j,:),Temp(i,j),zeta_by_Temp(i,j,:),&
-                                 D_therm(i,j,:))
+                                 chi(i,j,:),D_bar(i,j,:))
 
        end do
     end do
 
   end subroutine compute_chi_2d
 
-  subroutine compute_chi_3d(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm, &
-                            ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7,glo,ghi,tlo,thi)
+  subroutine compute_chi_3d(rho,rhotot,molarconc,chi,D_bar, &
+                            ng_0,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
    
-    integer          :: glo(3), ghi(3), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,ng_7
+    integer          :: glo(3), ghi(3), ng_0,ng_1,ng_2,ng_3,ng_4
     integer          :: tlo(3), thi(3)
     real(kind=dp_t)  ::          rho(glo(1)-ng_0:,glo(2)-ng_0:,glo(3)-ng_0:,:) ! density; last dimension for species
     real(kind=dp_t)  ::       rhotot(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)   ! total density in each cell 
     real(kind=dp_t)  ::    molarconc(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:,:) ! molar concentration; 
     real(kind=dp_t)  ::          chi(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:) ! last dimension for nspecies^2
     real(kind=dp_t)  ::        D_bar(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:,:) ! SM diffusion constants 
-    real(kind=dp_t)  ::         Temp(glo(1)-ng_5:,glo(2)-ng_5:,glo(3)-ng_5:)   ! Temperature 
-    real(kind=dp_t)  :: zeta_by_Temp(glo(1)-ng_6:,glo(2)-ng_6:,glo(3)-ng_6:,:) ! zeta/T
-    real(kind=dp_t)  ::      D_therm(glo(1)-ng_7:,glo(2)-ng_7:,glo(3)-ng_7:,:) ! thermo diffusion constants 
     
     ! local variables
     integer          :: i,j,k
@@ -627,8 +609,7 @@ contains
           do i=tlo(1),thi(1)
        
              call compute_chi_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
-                                    chi(i,j,k,:),D_bar(i,j,k,:),Temp(i,j,k),zeta_by_Temp(i,j,k,:),&
-                                    D_therm(i,j,k,:))
+                                    chi(i,j,k,:),D_bar(i,j,k,:))
 
           end do
        end do
@@ -636,16 +617,13 @@ contains
    
   end subroutine compute_chi_3d
 
-  subroutine compute_chi_local(rho,rhotot,molarconc,chi,D_bar,Temp,zeta_by_Temp,D_therm)
+  subroutine compute_chi_local(rho,rhotot,molarconc,chi,D_bar)
     
     real(kind=dp_t), intent(in   ) :: rho(nspecies)         
     real(kind=dp_t), intent(in   ) :: rhotot               
     real(kind=dp_t), intent(in   ) :: molarconc(nspecies) 
     real(kind=dp_t), intent(inout) :: chi(nspecies,nspecies)   
     real(kind=dp_t), intent(in   ) :: D_bar(nspecies,nspecies) 
-    real(kind=dp_t), intent(in   ) :: Temp
-    real(kind=dp_t), intent(inout) :: zeta_by_Temp(nspecies)
-    real(kind=dp_t), intent(in   ) :: D_therm(nspecies)
 
     ! local variables
     integer                         :: row,column
@@ -655,49 +633,36 @@ contains
     real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda
     real(kind=dp_t), dimension(nspecies)          :: W
 
-    ! free up memory  
-    Lambda        = 0.d0         
-    W             = 0.d0
+    ! compute chi either selecting inverse/pseudoinverse or iterative methods 
+    if (use_lapack) then
 
-    ! compute Lambda_ij matrix and massfraction W_i = rho_i/rho; molarconc is 
-    ! expressed in terms of molmtot,mi,rhotot etc. 
-    do row=1, nspecies  
-       do column=1, row-1
-          Lambda(row, column) = -molarconc(row)*molarconc(column)/D_bar(row,column)
-          Lambda(column, row) = Lambda(row, column) 
+       ! compute Lambda_ij matrix and massfraction W_i = rho_i/rho; molarconc is 
+       ! expressed in terms of molmtot,mi,rhotot etc. 
+       do row=1, nspecies  
+          do column=1, row-1
+             Lambda(row, column) = -molarconc(row)*molarconc(column)/D_bar(row,column)
+             Lambda(column, row) = Lambda(row, column) 
+          end do
+          W(row) = rho(row)/rhotot
        end do
-       W(row) = rho(row)/rhotot
-    end do
 
-    ! compute Lambda_ii
-    do row=1, nspecies
-       Sum_knoti = 0.d0
-       do column=1, nspecies
-          if(column.ne.row) then
-             Sum_knoti = Sum_knoti - Lambda(row,column)
-          end if
-          Lambda(row,row) = Sum_knoti
-       end do
-    end do
-
-    ! compute zeta_by_Temp for thermodiffusion
-    if(is_nonisothermal) then
+       ! compute Lambda_ii
        do row=1, nspecies
           Sum_knoti = 0.d0
           do column=1, nspecies
              if(column.ne.row) then
-                Sum_knoti = Sum_knoti + Lambda(row,column)*(D_therm(row)-D_therm(column))
+                Sum_knoti = Sum_knoti - Lambda(row,column)
              end if
-             zeta_by_Temp(row) = Sum_knoti/Temp
+             Lambda(row,row) = Sum_knoti
           end do
        end do
-    end if
-    
-    ! compute chi either selecting inverse/pseudoinverse or iterative methods 
-    if(use_lapack) then
+
        call compute_chi_lapack(Lambda(:,:),chi(:,:),W(:))
+
     else
+
        call Dbar2chi_iterative(chi_iterations,D_bar(:,:),molarconc(:),chi(:,:)) 
+
     end if
 
   end subroutine compute_chi_local
@@ -797,6 +762,179 @@ contains
     end do
           
   end subroutine compute_chi_lapack
+
+  subroutine compute_zeta_by_Temp(mla,molarconc,D_bar,D_therm,Temp,zeta_by_Temp)
+   
+    type(ml_layout), intent(in   )  :: mla
+    type(multifab) , intent(in   )  :: molarconc(:)
+    type(multifab) , intent(in   )  :: D_bar(:) 
+    type(multifab) , intent(in   )  :: D_therm(:) 
+    type(multifab) , intent(in   )  :: Temp(:) 
+    type(multifab) , intent(inout)  :: zeta_by_Temp(:) 
+
+    ! local variables
+    integer :: lo(mla%dim), hi(mla%dim)
+    integer :: n,i,dm,nlevs,ng_2,ng_4,ng_5,ng_6,ng_7
+
+    real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
+    real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_bar
+    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Temp
+    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for zeta_by_Temp
+    real(kind=dp_t), pointer        :: dp7(:,:,:,:)  ! for D_therm
+
+    type(mfiter) :: mfi
+    type(box) :: tilebox
+    integer :: tlo(mla%dim), thi(mla%dim)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_zeta_by_Temp")
+
+    dm = mla%dim        ! dimensionality
+    ng_2 = molarconc(1)%ng
+    ng_4 = D_bar(1)%ng
+    ng_5 = Temp(1)%ng
+    ng_6 = zeta_by_Temp(1)%ng
+    ng_7 = D_therm(1)%ng
+    nlevs = mla%nlevel  ! number of levels 
+ 
+    !$omp parallel private(n,i,mfi,tilebox,tlo,thi) &
+    !$omp private(dp0,dp1,dp2,dp4,dp5,dp6,dp7,lo,hi)
+
+    ! loop over all boxes 
+    do n=1,nlevs
+       call mfiter_build(mfi, zeta_by_Temp(n), tiling=.true.)
+
+       do while (more_tile(mfi))
+          i = get_fab_index(mfi)
+
+          tilebox = get_growntilebox(mfi,zeta_by_Temp(n)%ng)
+          tlo = lwb(tilebox)
+          thi = upb(tilebox)
+
+!       do i=1,nfabs(rho(n))
+          dp2 => dataptr(molarconc(n), i)
+          dp4 => dataptr(D_bar(n), i)
+          dp5 => dataptr(Temp(n), i)
+          dp6 => dataptr(zeta_by_Temp(n), i)
+          dp7 => dataptr(D_therm(n), i)
+          lo  =  lwb(get_box(zeta_by_Temp(n), i))
+          hi  =  upb(get_box(zeta_by_Temp(n), i))          
+          select case(dm)
+          case (2)
+             call compute_zeta_by_Temp_2d(dp2(:,:,1,:),&
+                                 dp4(:,:,1,:),dp5(:,:,1,1),dp6(:,:,1,:),dp7(:,:,1,:),&
+                                 ng_2,ng_4,ng_5,ng_6,ng_7,lo,hi,tlo,thi) 
+          case (3)
+             call compute_zeta_by_Temp_3d(dp2(:,:,:,:),&
+                                 dp4(:,:,:,:),dp5(:,:,:,1),dp6(:,:,:,:),dp7(:,:,:,:),&
+                                 ng_2,ng_4,ng_5,ng_6,ng_7,lo,hi,tlo,thi) 
+          end select
+       end do
+    end do
+    !$omp end parallel
+
+    call destroy(bpt)
+
+  end subroutine compute_zeta_by_Temp
+ 
+  subroutine compute_zeta_by_Temp_2d(molarconc,D_bar,Temp,zeta_by_Temp,D_therm, &
+                                     ng_2,ng_4,ng_5,ng_6,ng_7,glo,ghi,tlo,thi)
+
+    integer          :: glo(2), ghi(2), ng_2,ng_4,ng_5,ng_6,ng_7
+    integer          :: tlo(2), thi(2)
+    real(kind=dp_t)  ::    molarconc(glo(1)-ng_2:,glo(2)-ng_2:,:) ! molar concentration 
+    real(kind=dp_t)  ::        D_bar(glo(1)-ng_4:,glo(2)-ng_4:,:) ! MS diff-coefs 
+    real(kind=dp_t)  ::         Temp(glo(1)-ng_5:,glo(2)-ng_5:)   ! Temperature 
+    real(kind=dp_t)  :: zeta_by_Temp(glo(1)-ng_6:,glo(2)-ng_6:,:) ! zeta/T
+    real(kind=dp_t)  ::      D_therm(glo(1)-ng_7:,glo(2)-ng_7:,:) ! thermo diff-coefs 
+
+    ! local variables
+    integer          :: i,j
+
+    ! for specific box, now start loops over alloted cells 
+    do j=tlo(2),thi(2)
+       do i=tlo(1),thi(1)
+    
+          call compute_zeta_by_Temp_local(molarconc(i,j,:),&
+                                          D_bar(i,j,:),Temp(i,j),zeta_by_Temp(i,j,:),&
+                                          D_therm(i,j,:))
+
+       end do
+    end do
+
+  end subroutine compute_zeta_by_Temp_2d
+
+  subroutine compute_zeta_by_Temp_3d(molarconc,D_bar,Temp,zeta_by_Temp,D_therm, &
+                                     ng_2,ng_4,ng_5,ng_6,ng_7,glo,ghi,tlo,thi)
+   
+    integer          :: glo(3), ghi(3), ng_2,ng_4,ng_5,ng_6,ng_7
+    integer          :: tlo(3), thi(3)
+    real(kind=dp_t)  ::    molarconc(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:,:) ! molar concentration; 
+    real(kind=dp_t)  ::        D_bar(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:,:) ! SM diffusion constants 
+    real(kind=dp_t)  ::         Temp(glo(1)-ng_5:,glo(2)-ng_5:,glo(3)-ng_5:)   ! Temperature 
+    real(kind=dp_t)  :: zeta_by_Temp(glo(1)-ng_6:,glo(2)-ng_6:,glo(3)-ng_6:,:) ! zeta/T
+    real(kind=dp_t)  ::      D_therm(glo(1)-ng_7:,glo(2)-ng_7:,glo(3)-ng_7:,:) ! thermo diffusion constants 
+    
+    ! local variables
+    integer          :: i,j,k
+
+    ! for specific box, now start loops over alloted cells 
+    do k=tlo(3),thi(3)
+       do j=tlo(2),thi(2)
+          do i=tlo(1),thi(1)
+       
+             call compute_zeta_by_Temp_local(molarconc(i,j,k,:),&
+                                             D_bar(i,j,k,:),Temp(i,j,k),zeta_by_Temp(i,j,k,:),&
+                                             D_therm(i,j,k,:))
+
+          end do
+       end do
+    end do
+   
+  end subroutine compute_zeta_by_Temp_3d
+
+  subroutine compute_zeta_by_Temp_local(molarconc,D_bar,Temp,zeta_by_Temp,D_therm)
+    
+    real(kind=dp_t), intent(in   ) :: molarconc(nspecies) 
+    real(kind=dp_t), intent(in   ) :: D_bar(nspecies,nspecies) 
+    real(kind=dp_t), intent(in   ) :: Temp
+    real(kind=dp_t), intent(inout) :: zeta_by_Temp(nspecies)
+    real(kind=dp_t), intent(in   ) :: D_therm(nspecies)
+
+    ! local variables
+    integer                         :: row,column
+    real(kind=dp_t)                 :: Sum_knoti   
+
+    ! vectors and matrices to be used by LAPACK 
+    real(kind=dp_t), dimension(nspecies,nspecies) :: Lambda
+
+    ! compute zeta_by_Temp for thermodiffusion
+    if(is_nonisothermal) then
+
+       ! compute Lambda_ij matrix; molarconc is 
+       ! expressed in terms of molmtot,mi,rhotot etc. 
+       do row=1, nspecies  
+          do column=1, row-1
+             Lambda(row, column) = -molarconc(row)*molarconc(column)/D_bar(row,column)
+             Lambda(column, row) = Lambda(row, column) 
+          end do
+       end do
+
+       do row=1, nspecies
+          Sum_knoti = 0.d0
+          do column=1, nspecies
+             if(column.ne.row) then
+                Sum_knoti = Sum_knoti + Lambda(row,column)*(D_therm(row)-D_therm(column))
+             end if
+             zeta_by_Temp(row) = Sum_knoti/Temp
+          end do
+       end do
+
+    end if
+
+  end subroutine compute_zeta_by_Temp_local
+
 
   subroutine compute_Lonsager(mla,rho,rhotot,molarconc,molmtot,chi,Lonsager)
  
