@@ -4,6 +4,8 @@ module fluid_charge_module
   use convert_stag_module
   use define_bc_module
   use bc_module
+  use mass_flux_utilities_module
+  use matvec_mul_module
   use probin_common_module, only: molmass, k_B, total_volume
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: charge_per_mass
@@ -273,7 +275,9 @@ contains
     ! divide total charge by # of zones
 !    charge_temp = charge_temp / total_volume
 
-    print*,'charge before',charge_temp
+    if (parallel_IOProcessor()) then
+       print*,'enforce_charge_neutrality: charge before',charge_temp
+    end if
     
     ! for positively charged zones, pick the positive species with the largest rho and
     ! subtract density.  Pick the negative species with the largest rho_i and add density
@@ -299,7 +303,9 @@ contains
     ! divide total charge by # of zones
 !    charge_temp = charge_temp / total_volume
 
-    print*,'charge after',charge_temp
+    if (parallel_IOProcessor()) then
+       print*,'enforce_charge_neutrality: charge after',charge_temp
+    end if
 
     do n=1,nlevs
        call multifab_destroy(charge(n))
@@ -380,96 +386,100 @@ contains
   end subroutine enforce_charge_neutrality
 
 
-
   ! compute cell-centered A_\Phi
   ! compute rho W z / (n k_B T) on cell centers and average to faces
   ! compute rho W chi on cell centers and average to faces
   ! multiply them together and then dot with z^T
-  subroutine implicit_potential_coef(mla,rho,rhotot,Temp,charge,charge_coef)
+  subroutine implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab ), intent(in   ) :: rho(:)
-    type(multifab ), intent(in   ) :: rhotot(:)
+    type(multifab ), intent(inout) :: rho(:)
     type(multifab ), intent(in   ) :: Temp(:)
-    type(multifab ), intent(in   ) :: charge(:)
-    type(multifab ), intent(in   ) :: charge_coef(:)
+    type(multifab ), intent(inout) :: A_Phi(:,:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+    
+    ! local
+    type(multifab) :: drho            (mla%nlevel)
+    type(multifab) :: rhotot_temp     (mla%nlevel)
+    type(multifab) :: charge_coef     (mla%nlevel)
+    type(multifab) :: charge_coef_face(mla%nlevel,mla%dim)
+    type(multifab) :: molarconc       (mla%nlevel)
+    type(multifab) :: molmtot         (mla%nlevel)
+    type(multifab) :: chi             (mla%nlevel)
+    type(multifab) :: D_bar           (mla%nlevel)
+    type(multifab) :: rhoWchi         (mla%nlevel)
+    type(multifab) :: rhoWchi_face    (mla%nlevel,mla%dim)
 
-    ! local variables
-    integer :: i,n,dm,nlevs
-    integer :: ng_1,ng_2,ng_3,ng_4,ng_5
-    integer :: lo(mla%dim),hi(mla%dim)
+    integer :: n,nlevs,i,dm
 
-    ! pointers into multifabs
-    real(kind=dp_t), pointer :: dp1(:,:,:,:)
-    real(kind=dp_t), pointer :: dp2(:,:,:,:)
-    real(kind=dp_t), pointer :: dp3(:,:,:,:)
-    real(kind=dp_t), pointer :: dp4(:,:,:,:)
-    real(kind=dp_t), pointer :: dp5(:,:,:,:)
-
-    dm = mla%dim
     nlevs = mla%nlevel
-
-    ng_1 = rho(1)%ng
-    ng_2 = rhotot(1)%ng
-    ng_3 = Temp(1)%ng
-    ng_4 = charge(1)%ng
-    ng_5 = charge_coef(1)%ng
+    dm = mla%dim
 
     do n=1,nlevs
-       do i=1,nfabs(charge_coef(n))
-          dp1 => dataptr(rho(n),i)
-          dp2 => dataptr(rhotot(n),i)
-          dp3 => dataptr(Temp(n),i)
-          dp4 => dataptr(charge(n),i)
-          dp5 => dataptr(charge_coef(n),i)
-          lo = lwb(get_box(charge_coef(n),i))
-          hi = upb(get_box(charge_coef(n),i))
-          select case (dm)
-          case (2)
-             call implicit_potential_coef_2d(dp1(:,:,1,:),ng_1, &
-                                             dp2(:,:,1,1),ng_2, &
-                                             dp3(:,:,1,1),ng_3, &
-                                             dp4(:,:,1,1),ng_4, &
-                                             dp5(:,:,1,:),ng_5, lo,hi)
-          case (3)
-             call bl_error("implicit_potential_coef_3d not written yet")
-          end select
+       call multifab_build(drho(n),         mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(rhotot_temp(n),  mla%la(n), 1,           rho(n)%ng)
+       call multifab_build(charge_coef(n),  mla%la(n), nspecies,    1)
+       call multifab_build(molarconc(n),    mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
+       call multifab_build(chi(n),          mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(D_bar(n),        mla%la(n), nspecies**2, rho(n)%ng)
+       call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
+       do i=1,dm
+          call multifab_build_edge(charge_coef_face(n,i),  mla%la(n), nspecies, 0, i)
+          call multifab_build_edge(    rhoWchi_face(n,i),  mla%la(n), nspecies, 0, i)
        end do
     end do
 
-  contains
+    ! modify rho with drho to ensure no mass or mole fraction is zero
+    call correct_rho_with_drho(mla,rho,drho)
+    call compute_rhotot(mla,rho,rhotot_temp,ghost_cells_in=.true.)
 
-    subroutine implicit_potential_coef_2d(rho,ng_1,rhotot,ng_2,Temp,ng_3, &
-                                      charge,ng_4,charge_coef,ng_5,lo,hi)
-      
-      integer         :: lo(:),hi(:),ng_1,ng_2,ng_3,ng_4,ng_5
-      real(kind=dp_t) ::         rho(lo(1)-ng_1:,lo(2)-ng_1:,:)
-      real(kind=dp_t) ::      rhotot(lo(1)-ng_2:,lo(2)-ng_2:)
-      real(kind=dp_t) ::        Temp(lo(1)-ng_3:,lo(2)-ng_3:)
-      real(kind=dp_t) ::      charge(lo(1)-ng_4:,lo(2)-ng_4:)
-      real(kind=dp_t) :: charge_coef(lo(1)-ng_5:,lo(2)-ng_5:,:)
+    ! compute rho W z / (n k_B T) on cell centers
+    call compute_charge_coef(mla,rho,Temp,charge_coef)
 
-      ! local variables
-      integer :: i,j,comp
-      real(kind=dp_t) :: n
+    ! average charge_coef to faces
+    call average_cc_to_face(nlevs,charge_coef,charge_coef_face,1,c_bc_comp,nspecies, &
+                            the_bc_tower%bc_tower_array,.true.)
 
-      do j=lo(2)-1,hi(2)+1
-      do i=lo(1)-1,hi(1)+1
+    ! compute rhoWchi on cell centers
+    call compute_molconc_molmtot(mla,rho,rhotot_temp,molarconc,molmtot)
+    call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar)
+    call compute_rhoWchi(mla,rho,chi,rhoWchi)
 
-         n = 0.d0
-         do comp=1,nspecies
-            n = n + rho(i,j,comp)/molmass(comp)
-         end do
-            
-         do comp=1,nspecies
-            charge_coef(i,j,comp) = (rho(i,j,comp)/(n*k_B*Temp(i,j))) &
-                 * (charge_per_mass(comp) - charge(i,j))
-         end do
+    ! average rhoWchi to faces
+    call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
+                            nspecies**2, the_bc_tower%bc_tower_array, .false.) 
 
-      end do
-      end do
+    ! multiply charge_coef_face by rhoWchi
+    do n=1,nlevs
+       do i=1,dm
+          call matvec_mul(mla, charge_coef_face(n,i), rhoWchi_face(n,i), nspecies)
+       end do
+    end do    
 
-    end subroutine implicit_potential_coef_2d
+    ! multiply A_Phi by charge_coef_face and dot with z
+    call dot_with_z_face(mla,charge_coef_face,A_Phi)
+
+    ! revert back rho to it's original form
+    do n=1,nlevs
+       call saxpy(rho(n),-1.0d0,drho(n))
+    end do 
+
+    ! deallocate memory
+    do n=1,nlevs
+       call multifab_destroy(drho(n))
+       call multifab_destroy(rhotot_temp(n))
+       call multifab_destroy(charge_coef(n))
+       call multifab_destroy(molarconc(n))
+       call multifab_destroy(molmtot(n))
+       call multifab_destroy(chi(n))
+       call multifab_destroy(D_bar(n))
+       call multifab_destroy(rhoWchi(n))
+       do i=1,dm
+          call multifab_destroy(charge_coef_face(n,i))
+          call multifab_destroy(rhoWchi_face(n,i))
+       end do
+    end do
 
   end subroutine implicit_potential_coef
 
