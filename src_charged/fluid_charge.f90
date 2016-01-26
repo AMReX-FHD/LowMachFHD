@@ -12,7 +12,7 @@ module fluid_charge_module
 
   private
 
-  public :: dot_with_z, compute_charge_coef, momentum_charge_force, &
+  public :: dot_with_z, dot_with_z_face, compute_charge_coef, momentum_charge_force, &
             enforce_charge_neutrality, implicit_potential_coef
   
 contains
@@ -37,6 +37,30 @@ contains
     end do
 
   end subroutine dot_with_z
+
+  ! mfdotz = mf dot z
+  subroutine dot_with_z_face(mla,mf,mfdotz)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(in   ) :: mf(:,:)
+    type(multifab) , intent(inout) :: mfdotz(:,:)
+
+    ! local variables
+    integer :: n,nlevs,i,dm,comp
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_setval(mfdotz(n,i),0.d0,all=.true.)
+          do comp=1,nspecies
+             call multifab_saxpy_3_cc(mfdotz(n,i),1,charge_per_mass(comp),mf(n,i),comp,1,all=.true.)
+          end do
+       end do
+    end do
+
+  end subroutine dot_with_z_face
 
   ! compute cell-centered mass diffusion coefficients due to charge fluid
   ! charge_coef_i = rho_i z/(n k_B T)
