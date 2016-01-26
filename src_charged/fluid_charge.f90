@@ -386,10 +386,10 @@ contains
   end subroutine enforce_charge_neutrality
 
 
-  ! compute cell-centered A_\Phi
-  ! compute rho W z / (n k_B T) on cell centers and average to faces
-  ! compute rho W chi on cell centers and average to faces
-  ! multiply them together and then dot with z^T
+  ! compute face-centered A_\Phi (an nspecies vector)
+  ! compute vector rho W z / (n k_B T) on cell centers and average to faces
+  ! compute tensor rho W chi on cell centers and average to faces
+  ! multiply them together and store the resulting vector in A_Phi
   subroutine implicit_potential_coef(mla,rho,Temp,A_Phi,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -457,12 +457,9 @@ contains
        end do
     end do    
 
-    ! multiply A_Phi by charge_coef_face and dot with z
-    call dot_with_z_face(mla,charge_coef_face,A_Phi)
-
     ! revert back rho to it's original form
     do n=1,nlevs
-       call saxpy(rho(n),-1.0d0,drho(n))
+       call saxpy(rho(n),-1.0d0,drho(n),all=.true.)
     end do 
 
     ! deallocate memory
