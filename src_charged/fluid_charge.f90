@@ -13,7 +13,7 @@ module fluid_charge_module
   private
 
   public :: dot_with_z, compute_charge_coef, momentum_charge_force, &
-            enforce_charge_neutrality
+            enforce_charge_neutrality, implicit_potential_coef
   
 contains
 
@@ -25,82 +25,16 @@ contains
     type(multifab) , intent(inout) :: mfdotz(:)
 
     ! local variables
-    integer :: i,n,dm,nlevs
-    integer :: ng_1,ng_2
-    integer :: lo(mla%dim),hi(mla%dim)
+    integer :: n,nlevs,comp
 
-    ! pointers into multifabs
-    real(kind=dp_t), pointer :: dp1(:,:,:,:)
-    real(kind=dp_t), pointer :: dp2(:,:,:,:)
-
-    dm = mla%dim
     nlevs = mla%nlevel
 
-    ng_1 = mf(1)%ng
-    ng_2 = mfdotz(1)%ng
-
     do n=1,nlevs
-       do i=1,nfabs(mf(n))
-          dp1 => dataptr(mf(n),i)
-          dp2 => dataptr(mfdotz(n),i)
-          lo = lwb(get_box(mf(n),i))
-          hi = upb(get_box(mf(n),i))
-          select case (dm)
-          case (2)
-             call dot_with_z_2d(dp1(:,:,1,:),ng_1,dp2(:,:,1,1),ng_2,lo,hi)
-          case (3)
-             call dot_with_z_3d(dp1(:,:,:,:),ng_1,dp2(:,:,:,1),ng_2,lo,hi)
-          end select
+       call multifab_setval(mfdotz(n),0.d0,all=.true.)
+       do comp=1,nspecies
+          call multifab_saxpy_3_cc(mfdotz(n),1,charge_per_mass(comp),mf(n),comp,1,all=.true.)
        end do
     end do
-
-  contains
-
-    subroutine dot_with_z_2d(mf,ng_1,mfdotz,ng_2,lo,hi)
-      
-      integer          :: lo(:),hi(:),ng_1,ng_2
-      real(kind=dp_t)  ::    mf(lo(1)-ng_1:,lo(2)-ng_1:,:)
-      real(kind=dp_t)  :: mfdotz(lo(1)-ng_2:,lo(2)-ng_2:)
-
-      ! local variables
-      integer :: i,j,comp
-
-      do j=lo(2)-ng_2,hi(2)+ng_2
-         do i=lo(1)-ng_2,hi(1)+ng_2
-
-            mfdotz(i,j) = 0.d0
-            do comp=1,nspecies
-               mfdotz(i,j) = mfdotz(i,j) + mf(i,j,comp)*charge_per_mass(comp)
-            end do
-
-         end do
-      end do
-
-    end subroutine dot_with_z_2d
-
-    subroutine dot_with_z_3d(mf,ng_1,mfdotz,ng_2,lo,hi)
-      
-      integer          :: lo(:),hi(:),ng_1,ng_2
-      real(kind=dp_t)  ::    mf(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:)
-      real(kind=dp_t)  :: mfdotz(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
-
-      ! local variables
-      integer :: i,j,k,n
-
-      do k=lo(3)-ng_2,hi(3)+ng_2
-         do j=lo(2)-ng_2,hi(2)+ng_2
-            do i=lo(1)-ng_2,hi(1)+ng_2
-
-               mfdotz(i,j,k) = 0.d0
-               do n=1,nspecies
-                  mfdotz(i,j,k) = mfdotz(i,j,k) + mf(i,j,k,n)*charge_per_mass(n)
-               end do
-
-            end do
-         end do
-      end do
-
-    end subroutine dot_with_z_3d
 
   end subroutine dot_with_z
 
@@ -187,8 +121,7 @@ contains
          end do
             
          do comp=1,nspecies
-            charge_coef(i,j,comp) = (rho(i,j,comp)/(n*k_B*Temp(i,j))) &
-                 * (charge_per_mass(comp) - charge(i,j))
+            charge_coef(i,j,comp) = rho(i,j,comp)*charge_per_mass(comp)/(n*k_B*Temp(i,j))
          end do
 
       end do
@@ -438,6 +371,96 @@ contains
 
 
 
+  ! compute cell-centered A_\Phi
+  ! compute rho W z / (n k_B T) on cell centers and average to faces
+  ! compute rho W chi on cell centers and average to faces
+  ! multiply them together and then dot with z^T
+  subroutine implicit_potential_coef(mla,rho,rhotot,Temp,charge,charge_coef)
 
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab ), intent(in   ) :: rho(:)
+    type(multifab ), intent(in   ) :: rhotot(:)
+    type(multifab ), intent(in   ) :: Temp(:)
+    type(multifab ), intent(in   ) :: charge(:)
+    type(multifab ), intent(in   ) :: charge_coef(:)
+
+    ! local variables
+    integer :: i,n,dm,nlevs
+    integer :: ng_1,ng_2,ng_3,ng_4,ng_5
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    ! pointers into multifabs
+    real(kind=dp_t), pointer :: dp1(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2(:,:,:,:)
+    real(kind=dp_t), pointer :: dp3(:,:,:,:)
+    real(kind=dp_t), pointer :: dp4(:,:,:,:)
+    real(kind=dp_t), pointer :: dp5(:,:,:,:)
+
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    ng_1 = rho(1)%ng
+    ng_2 = rhotot(1)%ng
+    ng_3 = Temp(1)%ng
+    ng_4 = charge(1)%ng
+    ng_5 = charge_coef(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(charge_coef(n))
+          dp1 => dataptr(rho(n),i)
+          dp2 => dataptr(rhotot(n),i)
+          dp3 => dataptr(Temp(n),i)
+          dp4 => dataptr(charge(n),i)
+          dp5 => dataptr(charge_coef(n),i)
+          lo = lwb(get_box(charge_coef(n),i))
+          hi = upb(get_box(charge_coef(n),i))
+          select case (dm)
+          case (2)
+             call implicit_potential_coef_2d(dp1(:,:,1,:),ng_1, &
+                                             dp2(:,:,1,1),ng_2, &
+                                             dp3(:,:,1,1),ng_3, &
+                                             dp4(:,:,1,1),ng_4, &
+                                             dp5(:,:,1,:),ng_5, lo,hi)
+          case (3)
+             call bl_error("implicit_potential_coef_3d not written yet")
+          end select
+       end do
+    end do
+
+  contains
+
+    subroutine implicit_potential_coef_2d(rho,ng_1,rhotot,ng_2,Temp,ng_3, &
+                                      charge,ng_4,charge_coef,ng_5,lo,hi)
+      
+      integer         :: lo(:),hi(:),ng_1,ng_2,ng_3,ng_4,ng_5
+      real(kind=dp_t) ::         rho(lo(1)-ng_1:,lo(2)-ng_1:,:)
+      real(kind=dp_t) ::      rhotot(lo(1)-ng_2:,lo(2)-ng_2:)
+      real(kind=dp_t) ::        Temp(lo(1)-ng_3:,lo(2)-ng_3:)
+      real(kind=dp_t) ::      charge(lo(1)-ng_4:,lo(2)-ng_4:)
+      real(kind=dp_t) :: charge_coef(lo(1)-ng_5:,lo(2)-ng_5:,:)
+
+      ! local variables
+      integer :: i,j,comp
+      real(kind=dp_t) :: n
+
+      do j=lo(2)-1,hi(2)+1
+      do i=lo(1)-1,hi(1)+1
+
+         n = 0.d0
+         do comp=1,nspecies
+            n = n + rho(i,j,comp)/molmass(comp)
+         end do
+            
+         do comp=1,nspecies
+            charge_coef(i,j,comp) = (rho(i,j,comp)/(n*k_B*Temp(i,j))) &
+                 * (charge_per_mass(comp) - charge(i,j))
+         end do
+
+      end do
+      end do
+
+    end subroutine implicit_potential_coef_2d
+
+  end subroutine implicit_potential_coef
 
 end module fluid_charge_module
