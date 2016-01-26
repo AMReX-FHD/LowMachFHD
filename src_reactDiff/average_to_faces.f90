@@ -179,10 +179,18 @@ contains
       real(kind=dp_t) :: tmp
   
       select case(avg_type)
-      case(1) ! Aritmetic
-         !av=max(0.5d0*(value1+value2), 0.0d0)
-         ! Donev: This seems more consistent to me with the other cases: always take max(value,0) and then compute the mean
-         av=0.5d0*(max(value1,0.0d0)+max(value2,0.0d0))         
+      case(1) ! Arithmetic
+         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+            av=0.d0
+         else
+            tmp=dv*min(value1,value2)
+            if (tmp<1.5d0) then              
+               tmp=1.d0/(1.d0+exp(-12.d0*(tmp-0.5d0)))  ! smooth Heaviside function
+               av=tmp*(value1+value2)/2.d0
+            else
+               av=(value1+value2)/2.d0
+            end if
+         end if 
       case(2) ! Geometric
          av=sqrt(max(value1,0.d0)*max(value2,0.d0))
       case(3) ! Harmonic
@@ -194,40 +202,6 @@ contains
          else
             av=2.d0 / (1.d0/value1 + 1.d0/value2)
          end if
-      case(4) ! new arithmetic 
-         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-            av=0.d0
-         else
-            av=(value1+value2)/2.d0
-         end if
-      case(5) ! new arithmetic (smooth Heaviside function 1)
-         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-            av=0.d0
-         else
-            tmp=dv*min(value1,value2)              
-            tmp=1.d0/(1.d0+exp(-12.d0*(tmp-0.5d0)))  ! smooth Heaviside function 1
-            av=tmp*(value1+value2)/2.d0
-         end if 
-      case(6) ! new arithmetic (smooth Heaviside function 2)
-         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-            av=0.d0
-         else
-            tmp=dv*min(value1,value2)              
-            tmp=1.d0/(1.d0+exp(-10.d0*(tmp-1.d0)))   ! smooth Heaviside function 2
-            av=tmp*(value1+value2)/2.d0
-         end if 
-      case(7) ! new arithmetic (smooth Heaviside function 1, exp evaluation only for x<2.5)
-         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-            av=0.d0
-         else
-            tmp=dv*min(value1,value2)
-            if (tmp<2.5d0) then              
-               tmp=1.d0/(1.d0+exp(-12.d0*(tmp-0.5d0)))  ! smooth Heaviside function 1
-               av=tmp*(value1+value2)/2.d0
-            else
-               av=1.d0
-            end if
-         end if 
       case default
          call bl_error("average_to_faces_2d: invalid avg_type")   
       end select   
