@@ -134,7 +134,7 @@ contains
 
     ! revert back rho to it's original form
     do n=1,nlevs
-       call saxpy(rho(n),-1.0d0,drho(n))
+       call saxpy(rho(n),-1.0d0,drho(n),all=.true.)
     end do 
       
     ! free the multifab allocated memory
