@@ -27,11 +27,13 @@ module advance_timestep_potential_module
   use fill_rho_ghost_cells_module
   use project_onto_eos_module
   use fluid_charge_module
+  use ml_solve_module
+  use bndry_reg_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int
-  use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
+  use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid
+  use probin_charged_module, only: use_charged_fluid, dielectric_const
 
   implicit none
 
@@ -88,7 +90,6 @@ contains
 
     ! local
     type(multifab) ::    rho_update(mla%nlevel)
-    type(multifab) :: rhotot_update(mla%nlevel)
     type(multifab) ::     bds_force(mla%nlevel)
     type(multifab) ::   gmres_rhs_p(mla%nlevel)
     type(multifab) ::           dpi(mla%nlevel)
@@ -115,7 +116,16 @@ contains
 
     type(multifab) :: mom_charge_force_old(mla%nlevel,mla%dim)
     type(multifab) :: mom_charge_force_new(mla%nlevel,mla%dim)
+
+    type(multifab) :: solver_alpha(mla%nlevel)         ! alpha=0 for Poisson solve
+    type(multifab) :: solver_rhs  (mla%nlevel)         ! Poisson solve rhs
+    type(multifab) :: phi         (mla%nlevel)         ! Phi solution from Poisson solve
+    type(multifab) :: A_Phi       (mla%nlevel,mla%dim) ! face-centered A_Phi
+    type(multifab) :: solver_beta (mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
+    type(multifab) :: gphi        (mla%nlevel,mla%dim) ! gradPhi
     
+    type(bndry_reg) :: fine_flx(2:mla%nlevel)
+
     integer :: i,dm,n,nlevs
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
@@ -133,7 +143,6 @@ contains
     
     do n=1,nlevs
        call multifab_build(   rho_update(n),mla%la(n),nspecies,0)
-       call multifab_build(rhotot_update(n),mla%la(n),1       ,0)
        call multifab_build(    bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(  gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(          dpi(n),mla%la(n),1       ,1)
@@ -158,6 +167,19 @@ contains
           call multifab_build_edge(mom_charge_force_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(mom_charge_force_new(n,i),mla%la(n),1,0,i)
        end do
+       call multifab_build(solver_alpha(n),mla%la(n),1,0)
+       call multifab_build(solver_rhs(n),mla%la(n),1,0)
+       call multifab_build(phi(n),mla%la(n),1,1)
+       do i=1,dm
+          call multifab_build_edge(A_Phi(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(gphi(n,i),mla%la(n),1,0,i)
+       end do
+    end do
+
+    ! for the Poisson solver, alpha=0
+    do n=1,nlevs
+       call multifab_setval(solver_alpha(n),0.d0,all=.true.)
     end do
 
     ! make copies of old quantities
@@ -167,32 +189,24 @@ contains
        end do
     end do
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 1 - Predictor Density Update
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
     ! average rho_old and rhotot_old to faces
     call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
-    ! set rhotot_update = -div(rho*v)^n
-    do n=1,nlevs
-       call setval(rhotot_update(n),0.d0,all=.true.)
-    end do
-    call mk_advective_s_fluxdiv(mla,umac,rhotot_fc,rhotot_update,dx,1,1)
-
-    ! rho^{*,n+1} = rho^n + dt * -div(rho*v)^n
-    do n=1,nlevs
-       call multifab_copy_c(rhotot_new(n),1,rhotot_old(n),1,1,0)
-       call multifab_saxpy_3(rhotot_new(n),dt,rhotot_update(n))
-    end do
-
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 2 - Predictor Concentration Update
+    ! Step 1 - Predictor Concentration Update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-    ! compute Phi^{*,n+1}
+    if (istep .eq. 1) then
+       ! if this is the first step, we need to
+       ! compute the diffusive and stochastic fluxes (omitting the potential mass fluxes)
+       ! with barodiffusion and thermodiffusion
+       ! this computes "F = -rho W chi [Gamma grad x... ]"
+       call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         Temp,flux_total,dt,time,dx,weights, &
+                                         the_bc_tower)
+    end if
 
     ! compute R_p = A^n + D^n + St^n
     ! first add D^n and St^n to R_p
@@ -241,11 +255,46 @@ contains
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,R_p,dx,1,nspecies)
     end if
 
-    ! compute A_Phi^n
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(R_p(n),1,dt,nspecies,0)
+       call multifab_plus_plus_c(R_p(n),1,rho_old(n),1,nspecies,0)
+    end do
 
+    ! right-hand-side for Poisson solve
+    call dot_with_z(mla,R_p,solver_rhs)
 
-    ! solve -div (epsilon + dt*theta*z^T dot A_Phi) grad Phi^{*,n+1} = z^T (rho^n + dt*R_p)
+    ! compute A_Phi
+    call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
 
+    ! compute solver_beta = z^T dot A_Phi
+    call dot_with_z_face(mla,A_Phi,solver_beta)
+
+    ! compute solver_beta = epsilon + dt* z^T dot A_Phi
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+          call multifab_plus_plus_s_c(solver_beta(n,i),1,dielectric_const,1,0)
+       end do
+    end do
+
+    ! initial guess for Phi
+    do n=1,nlevs
+       call multifab_setval(phi(n),0.d0,all=.true.)
+    end do
+
+    do n = 2,nlevs
+       call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
+    end do
+
+    ! solve -div (epsilon + dt*theta*z^T dot A_Phi) grad Phi^{*,n+1} = z^T R_p
+    call ml_cc_solve(mla,solver_rhs,phi,fine_flx,solver_alpha,solver_beta,dx, &
+                     the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
+
+    do n = 2,nlevs
+       call bndry_reg_destroy(fine_flx(n))
+    end do
+
+    stop
 
     ! compute A_Phi^n grad Phi^{*,n+1}
 
@@ -256,25 +305,19 @@ contains
 
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 3 - Predictor Crank-Nicolson Step
+    ! Step 2 - Predictor Crank-Nicolson Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 4 - Corrector Density Update
+    ! Step 3 - Corrector Concentration Update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 5 - Corrector Concentration Update
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 6 - Corrector Crank-Nicolson Step
+    ! Step 4 - Corrector Crank-Nicolson Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -1058,7 +1101,6 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(rho_update(n))
-       call multifab_destroy(rhotot_update(n))
        call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
@@ -1082,6 +1124,14 @@ contains
           call multifab_destroy(flux_total(n,i))
           call multifab_destroy(mom_charge_force_old(n,i))
           call multifab_destroy(mom_charge_force_new(n,i))
+       end do
+       call multifab_destroy(solver_alpha(n))
+       call multifab_destroy(solver_rhs(n))
+       call multifab_destroy(phi(n))
+       do i=1,dm
+          call multifab_destroy(A_Phi(n,i))
+          call multifab_destroy(solver_beta(n,i))
+          call multifab_destroy(gphi(n,i))
        end do
     end do
 
