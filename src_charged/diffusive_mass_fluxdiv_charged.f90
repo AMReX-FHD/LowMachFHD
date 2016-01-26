@@ -305,7 +305,7 @@ contains
        do n=1,nlevs
           call multifab_build(charge_coef(n),mla%la(n),nspecies,1)
        end do
-       call compute_charge_coef(mla,rho,rhotot,Temp,charge,charge_coef)
+       call compute_charge_coef(mla,rho,Temp,charge_coef)
 
        ! average charge flux coefficient to faces
        do n=1,nlevs
