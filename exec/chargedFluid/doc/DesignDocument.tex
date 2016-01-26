@@ -520,16 +520,17 @@ We would like to solve the following,
 but we can't directly.  Rewriting equation (\ref{eq:implicit phi}) gives,
 \begin{eqnarray}
 (\rho\wb)^{*,n+1} - \Delta t\theta\nabla\cdot \Ab_\Phi^n\nabla\Phib^{*,n+1} &=& \nonumber\\
-&&\hspace{-2in}(\rho\wb)^n + \Delta t\underbrace{\left[-\nabla\cdot(\rho\wb\vb)^n + \nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + (1-\theta) \nabla\cdot \Ab_\Phi^n\nabla\Phib^n
-+ \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n\right]}_{\mathcal{R}_p}\label{eq:implicit phi2}
+&&\hspace{-2in}(\rho\wb)^n + \Delta t\left[-\nabla\cdot(\rho\wb\vb)^n + \nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + (1-\theta) \nabla\cdot \Ab_\Phi^n\nabla\Phib^n
++ \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n\right]\nonumber\\
+&=& \mathcal{R}_p\label{eq:implicit phi2}
 \end{eqnarray}
 Applying $\zb^T$ to equation (\ref{eq:implicit phi2}) gives
 \begin{equation}
-\zb^T(\rho\wb^{*,n+1}) - \Delta t\theta\zb^T\nabla\cdot \Ab_\Phi^n\nabla\Phib^{*,n+1} = \zb^T\left((\rho\wb)^n + \Delta t\mathcal{R}_p\right)
+\zb^T(\rho\wb^{*,n+1}) - \Delta t\theta\zb^T\nabla\cdot \Ab_\Phi^n\nabla\Phib^{*,n+1} = \zb^T\mathcal{R}_p.
 \end{equation}
 Substituting this into equation (\ref{eq:constraint}) gives
 \begin{equation}
--\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T \Ab_\Phi^n\right)\nabla\Phib^{*,n+1} = \zb^T\left((\rho\wb)^n + \Delta t\mathcal{R}_p\right),
+-\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T \Ab_\Phi^n\right)\nabla\Phib^{*,n+1} = \zb^T\mathcal{R}_p,
 \end{equation}
 which we solve for $\Phib^{*,n+1}$.  Note that
 \begin{equation}
@@ -573,8 +574,8 @@ We would like to solve the following,
 \frac{(\rho\wb)^{n+1} - (\rho\wb^n)}{\Delta t} + \half\nabla\cdot(\rho\wb\vb)^n + \half\nabla\cdot(\rho\wb\vb)^{*,n+1} &=&\half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1} \nonumber\\
 &&\hspace{-2in} + \theta\nabla\cdot \Ab_\Phi^{*,n+1}\nabla\Phib^{n+1} +
 (1-\theta)\nabla\cdot \Ab_\Phi^n\nabla\Phib^n\nonumber\\
-&&\hspace{-2in} + \half\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n
-+ \half\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{*,n+1}\mathcal{Z}^n,\label{eq:implicit phi3}
+&&\hspace{-2in} + \half(\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n
++ \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{*,n+1}\mathcal{Z}^n,\label{eq:implicit phi3}
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\epsilon\nabla\Phib^{n+1} = \left(\rho\wb^T\zb\right)^{n+1},\label{eq:constraint2}
@@ -582,19 +583,20 @@ We would like to solve the following,
 but we can't directly.  Rewriting equation (\ref{eq:implicit phi3} gives,
 \begin{eqnarray}
 (\rho\wb^{n+1}) - \Delta t\theta\nabla\cdot \Ab_\Phi^{*,n+1}\nabla\Phib^{n+1} &=& (\rho\wb)^n\nonumber\\
-&&\hspace{-2.5in}+ \Delta t\underbrace{\left[-\half\nabla\cdot(\rho\wb\vb)^n - \half\nabla\cdot(\rho\wb\vb)^{*,n+1} + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1}+ (1-\theta)\nabla\cdot \Ab_\Phi^n\nabla\Phib^{n+1} \right]}_{\mathcal{R}_c}\label{eq:implicit phi4}\nonumber\\
-&&\hspace{-2.5in}+ \Delta t\underbrace{\left[
+&&\hspace{-2in} + \Delta t\left[-\half\nabla\cdot(\rho\wb\vb)^n - \half\nabla\cdot(\rho\wb\vb)^{*,n+1}) + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1} + (1-\theta)\nabla\cdot \Ab_\Phi^n\nabla\Phib^{n+1} \right]\label{eq:implicit phi4}\nonumber\\
+&&\hspace{-2in}+ \Delta t\left[
 \half\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n
 + \half\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{*,n+1}\mathcal{Z}^n
-\right]}_{\mathcal{R}_c}
+\right]\nonumber\\
+&=& \mathcal{R}_c
 \end{eqnarray}
 Applying $\zb^T$ to equation (\ref{eq:implicit phi4}) gives
 \begin{equation}
-\zb^T(\rho\wb)^{n+1} - \Delta t\theta\zb^T\nabla\cdot \Ab_\Phi^{*,n+1}\nabla\Phib^{n+1} = \zb^T((\rho\wb)^n + \Delta t\mathcal{R}_c).
+\zb^T(\rho\wb)^{n+1} - \Delta t\theta\zb^T\nabla\cdot \Ab_\Phi^{*,n+1}\nabla\Phib^{n+1} = \zb^T\mathcal{R}_c
 \end{equation}
 Substituting this into equation (\ref{eq:constraint2}) gives
 \begin{equation}
--\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T \Ab_\Phi^{*,n+1}\right)\nabla\Phib^{n+1} = \zb^T\left((\rho\wb)^n + \Delta t\mathcal{R}_c\right),
+-\nabla\cdot\left(\epsilon + \Delta t\theta\zb^T \Ab_\Phi^{*,n+1}\right)\nabla\Phib^{n+1} = \zb^T\mathcal{R}_c,
 \end{equation}
 which we solve for $\Phib^{n+1}$.  Once we have $\Phib^{n+1}$, we can compute 
 $(\rho\wb)^{n+1}$ using (\ref{eq:implicit phi3}).\\ \\
