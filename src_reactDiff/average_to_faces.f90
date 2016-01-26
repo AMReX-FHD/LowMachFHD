@@ -14,12 +14,13 @@ module average_to_faces_module
 
 contains
 
-  subroutine average_to_faces(mla,n_cc,n_fc,incomp,outcomp,numcomp)
+  subroutine average_to_faces(mla,n_cc,n_fc,incomp,outcomp,numcomp,dv)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_cc(:)
     type(multifab) , intent(inout) :: n_fc(:,:)
     integer        , intent(in   ) :: incomp,outcomp,numcomp
+    real(kind=dp_t), intent(in   ) :: dv
 
     integer :: i,dm,n,nlevs,lo(mla%dim),hi(mla%dim)
     integer :: ng_c,ng_f
@@ -71,12 +72,12 @@ contains
           case (2)
              call average_to_faces_2d(cp(:,:,1,:),ng_c, &
                                       fx(:,:,1,:),fy(:,:,1,:),ng_f, lo,hi, &
-                                      xlo,xhi,ylo,yhi, incomp,outcomp,numcomp)
+                                      xlo,xhi,ylo,yhi, incomp,outcomp,numcomp,dv)
           case (3)
              fz => dataptr(n_fc(n,3),i)
              call average_to_faces_3d(cp(:,:,:,:),ng_c, &
                                       fx(:,:,:,:),fy(:,:,:,:),fz(:,:,:,:),ng_f, lo,hi, &
-                                      xlo,xhi,ylo,yhi,zlo,zhi, incomp,outcomp,numcomp)
+                                      xlo,xhi,ylo,yhi,zlo,zhi, incomp,outcomp,numcomp,dv)
           end select
        end do
     end do
@@ -94,13 +95,14 @@ contains
   end subroutine average_to_faces
 
   subroutine average_to_faces_2d(n_cc,ng_c,n_fcx,n_fcy,ng_f,glo,ghi, &
-                                 xlo,xhi,ylo,yhi,incomp,outcomp,numcomp)
+                                 xlo,xhi,ylo,yhi,incomp,outcomp,numcomp,dv)
 
     integer        , intent(in   ) :: glo(:),ghi(:),xlo(:),xhi(:),ylo(:),yhi(:)
     integer        , intent(in   ) :: ng_c,ng_f,incomp,outcomp,numcomp
     real(kind=dp_t), intent(in   ) ::  n_cc(glo(1)-ng_c:,glo(2)-ng_c:,:)
     real(kind=dp_t), intent(inout) :: n_fcx(glo(1)-ng_f:,glo(2)-ng_f:,:)
     real(kind=dp_t), intent(inout) :: n_fcy(glo(1)-ng_f:,glo(2)-ng_f:,:)
+    real(kind=dp_t), intent(in   ) :: dv
 
     integer :: i,j,comp
 
@@ -109,14 +111,14 @@ contains
        ! x-faces
        do j=xlo(2),xhi(2)
           do i=xlo(1),xhi(1)
-             n_fcx(i,j,outcomp+comp) = average_values(n_cc(i-1,j,incomp+comp), n_cc(i,j,incomp+comp))
+             n_fcx(i,j,outcomp+comp) = average_values(n_cc(i-1,j,incomp+comp), n_cc(i,j,incomp+comp),dv)
           end do
        end do
 
        ! y-faces
        do j=ylo(2),yhi(2)
           do i=ylo(1),yhi(1)
-             n_fcy(i,j,outcomp+comp) = average_values(n_cc(i,j-1,incomp+comp), n_cc(i,j,incomp+comp))
+             n_fcy(i,j,outcomp+comp) = average_values(n_cc(i,j-1,incomp+comp), n_cc(i,j,incomp+comp),dv)
           end do
        end do
 
@@ -125,7 +127,7 @@ contains
   end subroutine average_to_faces_2d
 
   subroutine average_to_faces_3d(n_cc,ng_c,n_fcx,n_fcy,n_fcz,ng_f,glo,ghi, &
-                                 xlo,xhi,ylo,yhi,zlo,zhi,incomp,outcomp,numcomp)
+                                 xlo,xhi,ylo,yhi,zlo,zhi,incomp,outcomp,numcomp,dv)
 
     integer        , intent(in   ) :: glo(:),ghi(:),xlo(:),xhi(:),ylo(:),yhi(:),zlo(:),zhi(:)
     integer        , intent(in   ) :: ng_c,ng_f,incomp,outcomp,numcomp
@@ -133,6 +135,7 @@ contains
     real(kind=dp_t), intent(inout) :: n_fcx(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:,:)
     real(kind=dp_t), intent(inout) :: n_fcy(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:,:)
     real(kind=dp_t), intent(inout) :: n_fcz(glo(1)-ng_f:,glo(2)-ng_f:,glo(3)-ng_f:,:)
+    real(kind=dp_t), intent(in   ) :: dv
 
     integer :: i,j,k,comp
 
@@ -142,7 +145,7 @@ contains
        do k=xlo(3),xhi(3)
           do j=xlo(2),xhi(2)
              do i=xlo(1),xhi(1)
-                n_fcx(i,j,k,outcomp+comp) = average_values(n_cc(i-1,j,k,incomp+comp), n_cc(i,j,k,incomp+comp))
+                n_fcx(i,j,k,outcomp+comp) = average_values(n_cc(i-1,j,k,incomp+comp), n_cc(i,j,k,incomp+comp),dv)
              end do
           end do
        end do
@@ -151,7 +154,7 @@ contains
        do k=ylo(3),yhi(3)
           do j=ylo(2),yhi(2)
              do i=ylo(1),yhi(1)
-                n_fcy(i,j,k,outcomp+comp) = average_values(n_cc(i,j-1,k,incomp+comp), n_cc(i,j,k,incomp+comp))
+                n_fcy(i,j,k,outcomp+comp) = average_values(n_cc(i,j-1,k,incomp+comp), n_cc(i,j,k,incomp+comp),dv)
              end do
           end do
        end do
@@ -160,7 +163,7 @@ contains
        do k=zlo(3),zhi(3)
           do j=zlo(2),zhi(2)
              do i=zlo(1),zhi(1)
-                n_fcz(i,j,k,outcomp+comp) = average_values(n_cc(i,j,k-1,incomp+comp), n_cc(i,j,k,incomp+comp))
+                n_fcz(i,j,k,outcomp+comp) = average_values(n_cc(i,j,k-1,incomp+comp), n_cc(i,j,k,incomp+comp),dv)
              end do
           end do
        end do
@@ -169,9 +172,11 @@ contains
 
   end subroutine average_to_faces_3d
   
-  function average_values(value1,value2) result(av)
+  function average_values(value1,value2,dv) result(av)
       real(kind=dp_t) :: av
       real(kind=dp_t), intent(in) :: value1, value2
+      real(kind=dp_t), intent(in) :: dv
+      real(kind=dp_t) :: tmp
   
       select case(avg_type)
       case(1) ! Aritmetic
@@ -189,12 +194,40 @@ contains
          else
             av=2.d0 / (1.d0/value1 + 1.d0/value2)
          end if
-      case(4) ! new arithmetic (temporary)
+      case(4) ! new arithmetic 
          if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
             av=0.d0
          else
             av=(value1+value2)/2.d0
          end if
+      case(5) ! new arithmetic (smooth Heaviside function 1)
+         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+            av=0.d0
+         else
+            tmp=dv*min(value1,value2)              
+            tmp=1.d0/(1.d0+exp(-12.d0*(tmp-0.5d0)))  ! smooth Heaviside function 1
+            av=tmp*(value1+value2)/2.d0
+         end if 
+      case(6) ! new arithmetic (smooth Heaviside function 2)
+         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+            av=0.d0
+         else
+            tmp=dv*min(value1,value2)              
+            tmp=1.d0/(1.d0+exp(-10.d0*(tmp-1.d0)))   ! smooth Heaviside function 2
+            av=tmp*(value1+value2)/2.d0
+         end if 
+      case(7) ! new arithmetic (smooth Heaviside function 1, exp evaluation only for x<2.5)
+         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+            av=0.d0
+         else
+            tmp=dv*min(value1,value2)
+            if (tmp<2.5d0) then              
+               tmp=1.d0/(1.d0+exp(-12.d0*(tmp-0.5d0)))  ! smooth Heaviside function 1
+               av=tmp*(value1+value2)/2.d0
+            else
+               av=1.d0
+            end if
+         end if 
       case default
          call bl_error("average_to_faces_2d: invalid avg_type")   
       end select   

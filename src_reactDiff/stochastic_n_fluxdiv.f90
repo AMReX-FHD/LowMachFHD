@@ -83,7 +83,7 @@ contains
 
     ! average n to faces, store in "flux" so as to avoid an extra multifab
     ! alternatively one could multiply diff_coeff_face with this number
-    call average_to_faces(mla,n_cc,flux,1,1,nspecies)
+    call average_to_faces(mla,n_cc,flux,1,1,nspecies,dv)
 
     ! assumble fluxes on faces, sqrt(2*D_k*n_k / (dt*dV)) * random_normal
     variance = sqrt(2.d0*variance_coef_mass/(dv*dt))        
