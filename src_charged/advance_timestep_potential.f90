@@ -212,6 +212,18 @@ contains
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,dt,time,dx,weights, &
                                          the_bc_tower)
+
+       ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
+       do n=1,nlevs
+          call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+          end if
+          do i=1,dm
+             call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
+          end do
+       end do
+
     end if
 
     ! compute R_p = rho_old + A^n + D^n + St^n (store in rho_new)
@@ -307,17 +319,10 @@ contains
 
        ! add component to R_p to get rho^{*,n+1}
        do n=1,nlevs
-          call multifab_plus_plus_c(rho_new(n),comp,rho_update(n),1,1,0)
+         call multifab_plus_plus_c(rho_new(n),comp,rho_update(n),1,1,0)
        end do
 
     end do
-
-    
-    call fabio_ml_multifab_write_d(rho_old,mla%mba%rr(:,1),"a_rho_old")
-    call fabio_ml_multifab_write_d(rho_new,mla%mba%rr(:,1),"a_rho_new")
-
-
-
 
     stop
 
