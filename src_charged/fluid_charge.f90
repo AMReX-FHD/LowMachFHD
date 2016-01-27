@@ -6,6 +6,7 @@ module fluid_charge_module
   use bc_module
   use mass_flux_utilities_module
   use matvec_mul_module
+  use compute_mixture_properties_module
   use probin_common_module, only: molmass, k_B, total_volume
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: charge_per_mass
@@ -399,16 +400,17 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
     
     ! local
-    type(multifab) :: drho            (mla%nlevel)
-    type(multifab) :: rhotot_temp     (mla%nlevel)
-    type(multifab) :: charge_coef     (mla%nlevel)
-    type(multifab) :: charge_coef_face(mla%nlevel,mla%dim)
-    type(multifab) :: molarconc       (mla%nlevel)
-    type(multifab) :: molmtot         (mla%nlevel)
-    type(multifab) :: chi             (mla%nlevel)
-    type(multifab) :: D_bar           (mla%nlevel)
-    type(multifab) :: rhoWchi         (mla%nlevel)
-    type(multifab) :: rhoWchi_face    (mla%nlevel,mla%dim)
+    type(multifab) :: drho        (mla%nlevel)
+    type(multifab) :: rhotot_temp (mla%nlevel)
+    type(multifab) :: charge_coef (mla%nlevel)
+    type(multifab) :: molarconc   (mla%nlevel)
+    type(multifab) :: molmtot     (mla%nlevel)
+    type(multifab) :: D_therm     (mla%nlevel)
+    type(multifab) :: Hessian     (mla%nlevel)
+    type(multifab) :: chi         (mla%nlevel)
+    type(multifab) :: D_bar       (mla%nlevel)
+    type(multifab) :: rhoWchi     (mla%nlevel)
+    type(multifab) :: rhoWchi_face(mla%nlevel,mla%dim)
 
     integer :: n,nlevs,i,dm
 
@@ -421,12 +423,13 @@ contains
        call multifab_build(charge_coef(n),  mla%la(n), nspecies,    1)
        call multifab_build(molarconc(n),    mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
+       call multifab_build(D_therm(n),      mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(Hessian(n),      mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(chi(n),          mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(D_bar(n),        mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
        do i=1,dm
-          call multifab_build_edge(charge_coef_face(n,i),  mla%la(n), nspecies, 0, i)
-          call multifab_build_edge(    rhoWchi_face(n,i),  mla%la(n), nspecies, 0, i)
+          call multifab_build_edge(    rhoWchi_face(n,i),  mla%la(n), nspecies**2, 0, i)
        end do
     end do
 
@@ -437,12 +440,13 @@ contains
     ! compute rho W z / (n k_B T) on cell centers
     call compute_charge_coef(mla,rho,Temp,charge_coef)
 
-    ! average charge_coef to faces
-    call average_cc_to_face(nlevs,charge_coef,charge_coef_face,1,c_bc_comp,nspecies, &
+    ! average charge_coef to faces (store in A_Phi)
+    call average_cc_to_face(nlevs,charge_coef,A_Phi,1,c_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array,.true.)
 
     ! compute rhoWchi on cell centers
     call compute_molconc_molmtot(mla,rho,rhotot_temp,molarconc,molmtot)
+    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian,Temp)
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar)
     call compute_rhoWchi(mla,rho,chi,rhoWchi)
 
@@ -450,10 +454,10 @@ contains
     call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
                             nspecies**2, the_bc_tower%bc_tower_array, .false.) 
 
-    ! multiply charge_coef_face by rhoWchi
+    ! multiply A_Phi by rhoWchi
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(mla, charge_coef_face(n,i), rhoWchi_face(n,i), nspecies)
+          call matvec_mul(mla, A_Phi(n,i), rhoWchi_face(n,i), nspecies)
        end do
     end do    
 
@@ -470,10 +474,11 @@ contains
        call multifab_destroy(molarconc(n))
        call multifab_destroy(molmtot(n))
        call multifab_destroy(chi(n))
-       call multifab_destroy(D_bar(n))
        call multifab_destroy(rhoWchi(n))
+       call multifab_destroy(D_bar(n))
+       call multifab_destroy(D_therm(n))
+       call multifab_destroy(Hessian(n))
        do i=1,dm
-          call multifab_destroy(charge_coef_face(n,i))
           call multifab_destroy(rhoWchi_face(n,i))
        end do
     end do

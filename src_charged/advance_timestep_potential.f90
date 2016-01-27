@@ -35,6 +35,8 @@ module advance_timestep_potential_module
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid, dielectric_const
 
+  use fabio_module
+
   implicit none
 
   private
@@ -171,7 +173,7 @@ contains
        call multifab_build(solver_rhs(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(A_Phi(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(gphi(n,i),mla%la(n),1,0,i)
        end do
@@ -202,7 +204,7 @@ contains
        ! compute the diffusive and stochastic fluxes (omitting the potential mass fluxes)
        ! with barodiffusion and thermodiffusion
        ! this computes "F = -rho W chi [Gamma grad x... ]"
-       call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+       call compute_mass_fluxdiv_charged(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,dt,time,dx,weights, &
                                          the_bc_tower)
@@ -294,6 +296,7 @@ contains
        call bndry_reg_destroy(fine_flx(n))
     end do
 
+!    call fabio_ml_multifab_write_d(phi,mla%mba%rr(:,1),"a_phi")
     stop
 
     ! compute A_Phi^n grad Phi^{*,n+1}
