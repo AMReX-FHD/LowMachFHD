@@ -98,8 +98,6 @@ contains
     type(multifab) ::           dpi(mla%nlevel)
     type(multifab) ::          divu(mla%nlevel)
     type(multifab) ::          conc(mla%nlevel)
-    type(multifab) ::    rho_nd_old(mla%nlevel)
-    type(multifab) ::       rho_tmp(mla%nlevel)
     type(multifab) ::        p_baro(mla%nlevel)
 
     type(multifab) ::          mold(mla%nlevel,mla%dim)
@@ -122,9 +120,11 @@ contains
     type(multifab) :: solver_alpha(mla%nlevel)         ! alpha=0 for Poisson solve
     type(multifab) :: solver_rhs  (mla%nlevel)         ! Poisson solve rhs
     type(multifab) :: phi         (mla%nlevel)         ! Phi solution from Poisson solve
+    type(multifab) :: Lphi        (mla%nlevel)
     type(multifab) :: A_Phi       (mla%nlevel,mla%dim) ! face-centered A_Phi
     type(multifab) :: solver_beta (mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
     type(multifab) :: gphi        (mla%nlevel,mla%dim) ! gradPhi
+    type(multifab) :: Epot_mass_fluxdiv(mla%nlevel)
     
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
@@ -144,8 +144,7 @@ contains
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
-       call multifab_build(   rho_update(n),mla%la(n),1       ,0)
-!      call multifab_build(   rho_update(n),mla%la(n),nspecies,0)
+       call multifab_build(   rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(    bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(  gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(          dpi(n),mla%la(n),1       ,1)
@@ -172,11 +171,13 @@ contains
        call multifab_build(solver_alpha(n),mla%la(n),1,0)
        call multifab_build(solver_rhs(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
+       call multifab_build(Lphi(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(gphi(n,i),mla%la(n),1,0,i)
        end do
+       call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
     end do
 
     do n = 2,nlevs
@@ -238,41 +239,17 @@ contains
 
     ! add A^n to R_p
     if (advection_type .ge. 1) then
-      do n=1,nlevs
-         ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
-         call setval(bds_force(n),0.d0,all=.true.)
-         call multifab_copy_c(bds_force(n),1,rho_new(n),1,nspecies,0)
-         call multifab_fill_boundary(bds_force(n))
-      end do
-
-      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-
-          ! rho_fc (computed above) and rho_nd_old (computed here) are used to set boundary conditions
-          do n=1,nlevs
-             call multifab_build_nodal(rho_nd_old(n),mla%la(n),nspecies,1)
-          end do
-          call average_cc_to_node(nlevs,rho_old,rho_nd_old,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-
-          ! the input s_tmp needs to have ghost cells filled with multifab_physbc_extrap
-          ! instead of multifab_physbc
-          do n=1,nlevs
-             call multifab_build(rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
-             call multifab_copy(rho_tmp(n),rho_old(n),rho_tmp(n)%ng)
-             call multifab_physbc_extrap(rho_tmp(n),1,c_bc_comp,nspecies, &
-                                         the_bc_tower%bc_tower_array(n))
-          end do
-
-          call bds(mla,umac,rho_tmp,rho_new,bds_force,rho_fc,rho_nd_old,dx,dt,1,nspecies, &
-                   c_bc_comp,the_bc_tower,proj_type_in=2)
-
-      else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
-          call bds_quad(mla,umac,rho_old,rho_new,bds_force,rho_fc,dx,dt,1,nspecies, &
-                        c_bc_comp,the_bc_tower,proj_type_in=2)
-      end if
+       call bl_error("advance_timestep_potential: bds not supported yet")
     else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_new,dx,1,nspecies)
     end if
 
+    ! store a copy of A^n + D^n + St^n in rho_update (will need in corrector)
+    do n=1,nlevs
+       call multifab_copy_c(rho_update(n),1,rho_new(n),1,nspecies,0)
+    end do
+
+    ! multiply by dt and add rho_old
     do n=1,nlevs
        call multifab_mult_mult_s_c(rho_new(n),1,dt,nspecies,0)
        call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
@@ -281,7 +258,7 @@ contains
     ! right-hand-side for Poisson solve
     call dot_with_z(mla,rho_new,solver_rhs)
 
-    ! compute A_Phi
+    ! compute A_Phi^n
     call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
 
     ! compute solver_beta = z^T dot A_Phi
@@ -310,113 +287,23 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
-             call multifab_mult_mult_s_c(solver_beta(n,i),1,-dt,1,0)
+             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
           end do
        end do
 
        ! call stag_applyop to compute A_Phi^n grad Phi^{*,n+1}
-       call cc_applyop(mla,rho_update,phi,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
-
-       ! add component to R_p to get rho^{*,n+1}
+       call cc_applyop(mla,Lphi,phi,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
+       
+       ! copy solution into Epot_mass_fluxdiv
        do n=1,nlevs
-         call multifab_plus_plus_c(rho_new(n),comp,rho_update(n),1,1,0)
+          call multifab_copy_c(Epot_mass_fluxdiv(n),comp,Lphi(n),1,1,0)
        end do
 
     end do
 
-    stop
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 2 - Predictor Crank-Nicolson Step
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 3 - Corrector Concentration Update
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 4 - Corrector Crank-Nicolson Step
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 1 - Calculate Predictor Diffusive and Stochastic Fluxes
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! diff/stoch_mass_fluxdiv already contain F_i
-    ! this was already done in Step 0 (initialization) or Step 6 from the previous time step
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 2 - Predictor Euler Step
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! average rho_old and rhotot_old to faces
-    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
-
-    ! add D^n and St^n to rho_update
+    ! add Epot_mass_fluxdiv to R_p to get rho^{*,n+1}
     do n=1,nlevs
-       call setval(rho_update(n),0.d0,all=.true.)
-       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
-       end if
-    end do
-
-    ! add A^n to rho_update
-    if (advection_type .ge. 1) then
-      do n=1,nlevs
-         ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
-         call setval(bds_force(n),0.d0,all=.true.)
-         call multifab_copy_c(bds_force(n),1,rho_update(n),1,nspecies,0)
-         call multifab_fill_boundary(bds_force(n))
-      end do
-
-      if (advection_type .eq. 1 .or. advection_type .eq. 2) then
-
-          ! rho_fc (computed above) and rho_nd_old (computed here) are used to set boundary conditions
-          do n=1,nlevs
-             call multifab_build_nodal(rho_nd_old(n),mla%la(n),nspecies,1)
-          end do
-          call average_cc_to_node(nlevs,rho_old,rho_nd_old,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-
-          ! the input s_tmp needs to have ghost cells filled with multifab_physbc_extrap
-          ! instead of multifab_physbc
-          do n=1,nlevs
-             call multifab_build(rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
-             call multifab_copy(rho_tmp(n),rho_old(n),rho_tmp(n)%ng)
-             call multifab_physbc_extrap(rho_tmp(n),1,c_bc_comp,nspecies, &
-                                         the_bc_tower%bc_tower_array(n))
-          end do
-
-          call bds(mla,umac,rho_tmp,rho_update,bds_force,rho_fc,rho_nd_old,dx,dt,1,nspecies, &
-                   c_bc_comp,the_bc_tower,proj_type_in=2)
-
-      else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
-          call bds_quad(mla,umac,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
-                        c_bc_comp,the_bc_tower,proj_type_in=2)
-      end if
-    else
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
-    end if
-
-    ! set rho_new = rho_old + dt * (A^n + D^n + St^n)
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(rho_update(n),1,dt,nspecies,0)
-       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-       call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+       call multifab_plus_plus_c(rho_new(n),1,Epot_mass_fluxdiv(n),1,nspecies,0)
     end do
 
     ! compute rhotot from rho in VALID REGION
@@ -434,12 +321,11 @@ contains
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 3 - Calculate Corrector Diffusive and Stochastic Fluxes
-    ! Step 4 - Predictor Crank-Nicolson Step
+    ! Step 2 - Predictor Crank-Nicolson Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve: first set gmres_rhs_v to mold/dt
@@ -548,8 +434,7 @@ contains
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower, &
-                                      charge_new,grad_Epot_new)
+                                      the_bc_tower)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -595,6 +480,7 @@ contains
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
@@ -651,18 +537,6 @@ contains
           call multifab_mult_mult_s_c(mtemp(n,i),1,0.5d0,1,0)
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
        end do
-    end do
-
-    ! reset rho_update for all scalars to zero
-    ! then, set rho_update to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
-    ! it is used in Step 5 below
-    do n=1,nlevs
-       call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
-       ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
-       end if
     end do
 
     ! compute div vbar^n
@@ -752,76 +626,83 @@ contains
     call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 5 - Trapezoidal Scalar Corrector
+    ! Step 3 - Corrector Concentration Update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
-    ! rho_update already contains D^{*,n+1} + St^{*,n+1} for rho from above
-    ! add A^{*,n+1} for rho to rho_update
-    if (advection_type .ge. 1) then
 
-       do n=1,nlevs
-          ! bds force currently contains D^n + St^n
-          ! add D^{*,n+1} + St^{*,n+1} and then multiply by 1/2
-          call multifab_plus_plus_c(bds_force(n),1,rho_update(n),1,nspecies,0)
-          call multifab_mult_mult_s_c(bds_force(n),1,0.5d0,nspecies,0)
-          call multifab_fill_boundary(bds_force(n))
-          do i=1,dm
-             call multifab_plus_plus_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
-             call multifab_mult_mult_s_c(umac_tmp(n,i),1,0.5d0,1,1)
-          end do
-          call setval(rho_update(n),0.d0,all=.true.)
-       end do
+    ! compute A_Phi^{*,n+1}
+    call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
 
-       if (advection_type .eq. 1 .or. advection_type .eq. 2) then
+    ! compute R_c = rho_old + (1/2)(A^n + A^{*,n+1} + D^n + D^{*,n+1} + St^n + St^{*,n+1})
+    ! store in rho_new
+    ! rho_update contains A^n + D^n + St^n
+    do n=1,nlevs
+       call setval(rho_new(n),0.d0,all=.true.)
+       call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+    end do
 
-          call bds(mla,umac_tmp,rho_tmp,rho_update,bds_force,rho_fc,rho_nd_old,dx,dt,1,nspecies, &
-                   c_bc_comp,the_bc_tower,proj_type_in=2)
-
-          do n=1,nlevs
-             call multifab_destroy(rho_nd_old(n))
-             call multifab_destroy(rho_tmp(n))
-          end do
-
-       else if (advection_type .eq. 3 .or. advection_type .eq. 4) then
-          call bds_quad(mla,umac_tmp,rho_old,rho_update,bds_force,rho_fc,dx,dt,1,nspecies, &
-                        c_bc_comp,the_bc_tower,proj_type_in=2)
-       end if    
-
-       ! snew = s^n + dt * A^{n+1/2} + (dt/2) * (D^n + D^{n+1,*} + S^n + S^{n+1,*})
-       do n=1,nlevs
-          call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-          call multifab_mult_mult_s_c(rho_update(n),1,dt,nspecies,0)
-          call multifab_mult_mult_s_c(bds_force(n),1,dt,nspecies,0)
-          call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
-          call multifab_plus_plus_c(rho_new(n),1,bds_force(n),1,nspecies,0)
-       end do
-
-    else
-
-       ! compute A^{*,n+1} for scalars
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
-
-       ! snew = s^{n+1} 
-       !      = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1})
-       do n=1,nlevs
-          call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-          call multifab_mult_mult_s_c(rho_new(n),1,0.5d0,nspecies,0)
-          call multifab_mult_mult_s_c(rho_update(n),1,dt/2.d0,nspecies,0)
-          call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
-       end do
-
-    end if
-
-    ! need to project rho onto eos here and use this rho to compute S
-    ! if you do this in main_driver, the fluxes don't match the state
-    ! they were derived from and the Poisson solver has tolerance
-    ! convergence issues
-    if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
-       call project_onto_eos(mla,rho_new)
-       if (use_charged_fluid) then
-          call enforce_charge_neutrality(mla,rho_new)
+    ! add D^{*,n+1} and St^{*,n+1} to R_c
+    do n=1,nlevs
+       call multifab_plus_plus_c(rho_new(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_plus_plus_c(rho_new(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
        end if
+    end do
+
+   ! add A^{*,n+1} to R_c
+    if (advection_type .ge. 1) then
+       call bl_error("advance_timestep_potential: bds not supported yet")
+    else
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_new,dx,1,nspecies)
     end if
+
+    ! multiply by dt and add rho_old
+    do n=1,nlevs
+       call multifab_mult_mult_s_c(rho_new(n),1,0.5d0*dt,nspecies,0)
+       call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+    end do
+
+    ! right-hand-side for Poisson solve
+    call dot_with_z(mla,rho_new,solver_rhs)
+
+    ! compute solver_beta = z^T dot A_Phi
+    call dot_with_z_face(mla,A_Phi,solver_beta)
+
+    ! compute solver_beta = epsilon + dt* z^T dot A_Phi
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+          call multifab_plus_plus_s_c(solver_beta(n,i),1,dielectric_const,1,0)
+       end do
+    end do
+
+    ! solve -div (epsilon + dt*theta*z^T dot A_Phi) grad Phi^{n+1} = z^T R_c
+    call ml_cc_solve(mla,solver_rhs,phi,fine_flx,solver_alpha,solver_beta,dx, &
+                     the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
+
+    do comp=1,nspecies
+
+       ! copy component of A_Phi into beta and multiply by -dt
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
+             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+          end do
+       end do
+
+       ! call stag_applyop to compute A_Phi^n grad Phi^{n+1}
+       call cc_applyop(mla,Lphi,phi,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
+       
+       ! copy solution into Epot_mass_fluxdiv
+       do n=1,nlevs
+          call multifab_copy_c(Epot_mass_fluxdiv(n),comp,Lphi(n),1,1,0)
+       end do
+
+    end do
+
+    ! add Epot_mass_fluxdiv to R_p to get rho^{*,n+1}
+    do n=1,nlevs
+       call multifab_plus_plus_c(rho_new(n),1,Epot_mass_fluxdiv(n),1,nspecies,0)
+    end do
 
     ! compute rhotot from rho in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
@@ -837,6 +718,11 @@ contains
     ! conc to rho - INCLUDING GHOST CELLS
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Step 4 - Corrector Crank-Nicolson Step
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     ! average rho_new and rhotot_new to faces
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
@@ -844,11 +730,6 @@ contains
     ! compute (eta,kappa)^{n+1}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 6 - Calculate Diffusive and Stochastic Fluxes
-    ! Step 7 - Corrector Crank-Nicolson Step
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! build up rhs_v for gmres solve: first set gmres_rhs_v to mold/dt
     do n=1,nlevs
@@ -985,6 +866,7 @@ contains
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
@@ -1149,11 +1031,13 @@ contains
        call multifab_destroy(solver_alpha(n))
        call multifab_destroy(solver_rhs(n))
        call multifab_destroy(phi(n))
+       call multifab_destroy(Lphi(n))
        do i=1,dm
           call multifab_destroy(A_Phi(n,i))
           call multifab_destroy(solver_beta(n,i))
           call multifab_destroy(gphi(n,i))
        end do
+       call multifab_destroy(Epot_mass_fluxdiv(n))
     end do
     do n = 2,nlevs
        call bndry_reg_destroy(fine_flx(n))
