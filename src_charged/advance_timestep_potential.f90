@@ -114,7 +114,6 @@ contains
     type(multifab) ::     rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::    flux_total(mla%nlevel,mla%dim)
 
-    type(multifab) :: mom_charge_force_old(mla%nlevel,mla%dim)
     type(multifab) :: mom_charge_force_new(mla%nlevel,mla%dim)
 
     type(multifab) :: solver_alpha(mla%nlevel)         ! alpha=0 for Poisson solve
@@ -165,7 +164,6 @@ contains
           call multifab_build_edge(       rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(    rhotot_fc(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(   flux_total(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(mom_charge_force_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(mom_charge_force_new(n,i),mla%la(n),1,0,i)
        end do
        call multifab_build(solver_alpha(n),mla%la(n),1,0)
@@ -280,6 +278,9 @@ contains
     ! solve -div (epsilon + dt*theta*z^T dot A_Phi) grad Phi^{*,n+1} = z^T R_p
     call ml_cc_solve(mla,solver_rhs,phi,fine_flx,solver_alpha,solver_beta,dx, &
                      the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
+
+    ! compute the gradient of the electric potential for use in momentum force
+    call compute_grad(mla,phi,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
     do comp=1,nspecies
 
@@ -452,22 +453,17 @@ contains
 
     if (use_charged_fluid) then
 
-       ! compute (1/2) old and new momentum charge force
-       call average_cc_to_face(nlevs,charge_old,mom_charge_force_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       ! compute momentum charge force
        call average_cc_to_face(nlevs,charge_new,mom_charge_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_c(mom_charge_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
              call multifab_mult_mult_c(mom_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
-             call multifab_mult_mult_s_c(mom_charge_force_old(n,i),1,0.5d0,1,0)
-             call multifab_mult_mult_s_c(mom_charge_force_new(n,i),1,0.5d0,1,0)
           end do
        end do
 
-       ! subtract (1/2) old and (1/2) new from gmres_rhs_v
+       ! subtract momentum charge force
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_old(n,i),1,1,0)
              call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_new(n,i),1,1,0)
           end do
        end do
@@ -679,6 +675,9 @@ contains
     call ml_cc_solve(mla,solver_rhs,phi,fine_flx,solver_alpha,solver_beta,dx, &
                      the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
+    ! compute the gradient of the electric potential for use in momentum force
+    call compute_grad(mla,phi,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
     do comp=1,nspecies
 
        ! copy component of A_Phi into beta and multiply by -dt
@@ -821,8 +820,7 @@ contains
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower, &
-                                      charge_new,grad_Epot_new)
+                                      the_bc_tower)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -841,19 +839,17 @@ contains
 
     if (use_charged_fluid) then
 
-       ! compute (1/2) new momentum charge force
+       ! compute momentum charge force
        call average_cc_to_face(nlevs,charge_new,mom_charge_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
              call multifab_mult_mult_c(mom_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
-             call multifab_mult_mult_s_c(mom_charge_force_new(n,i),1,0.5d0,1,0)
           end do
        end do
 
-       ! subtract (1/2) old and (1/2) new from gmres_rhs_v
+       ! subtract momentum charge force
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_old(n,i),1,1,0)
              call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_new(n,i),1,1,0)
           end do
        end do
@@ -1025,7 +1021,6 @@ contains
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(flux_total(n,i))
-          call multifab_destroy(mom_charge_force_old(n,i))
           call multifab_destroy(mom_charge_force_new(n,i))
        end do
        call multifab_destroy(solver_alpha(n))
