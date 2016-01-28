@@ -86,10 +86,10 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
-    type(multifab) , intent(inout) :: grad_Epot_old(:,:)
-    type(multifab) , intent(inout) :: grad_Epot_new(:,:)
-    type(multifab) , intent(inout) :: charge_old(:)
-    type(multifab) , intent(inout) :: charge_new(:)
+    type(multifab) , intent(inout) :: grad_Epot_old(:,:) ! not used
+    type(multifab) , intent(inout) :: grad_Epot_new(:,:) ! doesn't need to be persistent
+    type(multifab) , intent(inout) :: charge_old(:)      ! not used
+    type(multifab) , intent(inout) :: charge_new(:)      ! doesn't need to be persistent
 
     ! local
     type(multifab) ::    rho_update(mla%nlevel)
@@ -107,22 +107,20 @@ contains
     type(multifab) ::   m_s_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) ::   gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::         dumac(mla%nlevel,mla%dim)
-    type(multifab) ::      umac_tmp(mla%nlevel,mla%dim)
     type(multifab) :: rhotot_fc_old(mla%nlevel,mla%dim)
     type(multifab) ::        gradpi(mla%nlevel,mla%dim)
     type(multifab) ::        rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::     rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::    flux_total(mla%nlevel,mla%dim)
 
-    type(multifab) :: mom_charge_force_new(mla%nlevel,mla%dim)
+    type(multifab) :: mom_charge_force(mla%nlevel,mla%dim)
 
-    type(multifab) :: solver_alpha(mla%nlevel)         ! alpha=0 for Poisson solve
-    type(multifab) :: solver_rhs  (mla%nlevel)         ! Poisson solve rhs
-    type(multifab) :: phi         (mla%nlevel)         ! Phi solution from Poisson solve
-    type(multifab) :: Lphi        (mla%nlevel)
-    type(multifab) :: A_Phi       (mla%nlevel,mla%dim) ! face-centered A_Phi
-    type(multifab) :: solver_beta (mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
-    type(multifab) :: gphi        (mla%nlevel,mla%dim) ! gradPhi
+    type(multifab) :: solver_alpha     (mla%nlevel)         ! alpha=0 for Poisson solve
+    type(multifab) :: solver_rhs       (mla%nlevel)         ! Poisson solve rhs
+    type(multifab) :: Epot             (mla%nlevel)         ! Phi solution from Poisson solve
+    type(multifab) :: divAgradPhi      (mla%nlevel)
+    type(multifab) :: A_Phi            (mla%nlevel,mla%dim) ! face-centered A_Phi
+    type(multifab) :: solver_beta      (mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
     type(multifab) :: Epot_mass_fluxdiv(mla%nlevel)
     
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
@@ -151,29 +149,27 @@ contains
        call multifab_build(         conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(       p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
-          call multifab_build_edge(         mold(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(        mtemp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(  m_a_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(  m_d_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(  m_s_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(  gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(        dumac(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(     umac_tmp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(       gradpi(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(       rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(    rhotot_fc(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(   flux_total(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(mom_charge_force_new(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(            mold(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(           mtemp(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(     m_a_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(     m_d_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(     m_s_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(     gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(           dumac(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(          gradpi(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(   rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(          rho_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(       rhotot_fc(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(      flux_total(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(mom_charge_force(n,i),mla%la(n),1,0,i)
        end do
        call multifab_build(solver_alpha(n),mla%la(n),1,0)
        call multifab_build(solver_rhs(n),mla%la(n),1,0)
-       call multifab_build(phi(n),mla%la(n),1,1)
-       call multifab_build(Lphi(n),mla%la(n),1,0)
+       call multifab_build(Epot(n),mla%la(n),1,1)
+       call multifab_build(divAgradPhi(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(gphi(n,i),mla%la(n),1,0,i)
        end do
        call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
     end do
@@ -185,13 +181,6 @@ contains
     ! for the Poisson solver, alpha=0
     do n=1,nlevs
        call multifab_setval(solver_alpha(n),0.d0,all=.true.)
-    end do
-
-    ! make copies of old quantities
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_copy_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
-       end do
     end do
 
     ! average rho_old and rhotot_old to faces
@@ -272,15 +261,15 @@ contains
 
     ! initial guess for Phi
     do n=1,nlevs
-       call multifab_setval(phi(n),0.d0,all=.true.)
+       call multifab_setval(Epot(n),0.d0,all=.true.)
     end do
 
     ! solve -div (epsilon + dt*theta*z^T dot A_Phi) grad Phi^{*,n+1} = z^T R_p
-    call ml_cc_solve(mla,solver_rhs,phi,fine_flx,solver_alpha,solver_beta,dx, &
+    call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
                      the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
     ! compute the gradient of the electric potential for use in momentum force
-    call compute_grad(mla,phi,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    call compute_grad(mla,Epot,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
     do comp=1,nspecies
 
@@ -293,11 +282,11 @@ contains
        end do
 
        ! call stag_applyop to compute A_Phi^n grad Phi^{*,n+1}
-       call cc_applyop(mla,Lphi,phi,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
+       call cc_applyop(mla,divAgradPhi,Epot,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
        
        ! copy solution into Epot_mass_fluxdiv
        do n=1,nlevs
-          call multifab_copy_c(Epot_mass_fluxdiv(n),comp,Lphi(n),1,1,0)
+          call multifab_copy_c(Epot_mass_fluxdiv(n),comp,divAgradPhi(n),1,1,0)
        end do
 
     end do
@@ -435,7 +424,7 @@ contains
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower)
+                                      the_bc_tower,charge_new)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -454,17 +443,17 @@ contains
     if (use_charged_fluid) then
 
        ! compute momentum charge force
-       call average_cc_to_face(nlevs,charge_new,mom_charge_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_c(mom_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_new(n,i),1,1,0)
           end do
        end do
 
        ! subtract momentum charge force
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_new(n,i),1,1,0)
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force(n,i),1,1,0)
           end do
        end do
 
@@ -651,7 +640,7 @@ contains
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_new,dx,1,nspecies)
     end if
 
-    ! multiply by dt and add rho_old
+    ! multiply by 0.5*dt and add rho_old
     do n=1,nlevs
        call multifab_mult_mult_s_c(rho_new(n),1,0.5d0*dt,nspecies,0)
        call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
@@ -672,11 +661,11 @@ contains
     end do
 
     ! solve -div (epsilon + dt*theta*z^T dot A_Phi) grad Phi^{n+1} = z^T R_c
-    call ml_cc_solve(mla,solver_rhs,phi,fine_flx,solver_alpha,solver_beta,dx, &
+    call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
                      the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
     ! compute the gradient of the electric potential for use in momentum force
-    call compute_grad(mla,phi,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    call compute_grad(mla,Epot,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
     do comp=1,nspecies
 
@@ -688,12 +677,12 @@ contains
           end do
        end do
 
-       ! call stag_applyop to compute A_Phi^n grad Phi^{n+1}
-       call cc_applyop(mla,Lphi,phi,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
+       ! call stag_applyop to compute div A_Phi^n grad Phi^{n+1}
+       call cc_applyop(mla,divAgradPhi,Epot,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
        
        ! copy solution into Epot_mass_fluxdiv
        do n=1,nlevs
-          call multifab_copy_c(Epot_mass_fluxdiv(n),comp,Lphi(n),1,1,0)
+          call multifab_copy_c(Epot_mass_fluxdiv(n),comp,divAgradPhi(n),1,1,0)
        end do
 
     end do
@@ -820,7 +809,7 @@ contains
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower)
+                                      the_bc_tower,charge_new)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -840,17 +829,17 @@ contains
     if (use_charged_fluid) then
 
        ! compute momentum charge force
-       call average_cc_to_face(nlevs,charge_new,mom_charge_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_c(mom_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_new(n,i),1,1,0)
           end do
        end do
 
        ! subtract momentum charge force
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_new(n,i),1,1,0)
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force(n,i),1,1,0)
           end do
        end do
 
@@ -1015,22 +1004,20 @@ contains
           call multifab_destroy(m_s_fluxdiv(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))
-          call multifab_destroy(umac_tmp(n,i))
           call multifab_destroy(rhotot_fc_old(n,i))
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(flux_total(n,i))
-          call multifab_destroy(mom_charge_force_new(n,i))
+          call multifab_destroy(mom_charge_force(n,i))
        end do
        call multifab_destroy(solver_alpha(n))
        call multifab_destroy(solver_rhs(n))
-       call multifab_destroy(phi(n))
-       call multifab_destroy(Lphi(n))
+       call multifab_destroy(Epot(n))
+       call multifab_destroy(divAgradPhi(n))
        do i=1,dm
           call multifab_destroy(A_Phi(n,i))
           call multifab_destroy(solver_beta(n,i))
-          call multifab_destroy(gphi(n,i))
        end do
        call multifab_destroy(Epot_mass_fluxdiv(n))
     end do
