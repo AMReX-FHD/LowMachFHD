@@ -211,6 +211,9 @@ contains
           end do
        end do
 
+       ! set the Dirichlet velocity value on reservoir faces
+       call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
+
     end if
 
     ! compute charge^n
@@ -279,7 +282,7 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
-             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+             call multifab_mult_mult_s_c(solver_beta(n,i),1,-dt,1,0)
           end do
        end do
 
@@ -676,7 +679,7 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
-             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+             call multifab_mult_mult_s_c(solver_beta(n,i),1,-dt,1,0)
           end do
        end do
 
