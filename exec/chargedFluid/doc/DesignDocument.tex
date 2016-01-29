@@ -548,7 +548,7 @@ for $\deltab\vb$ and $\delta p$:
 \begin{eqnarray}
 \frac{\rho^{*,n+1}(\overline\vb^n + \deltab\vb) - \rho^n\vb^n}{\Delta t} + \nabla(p^n+\delta p) &=&\nonumber\\
 &&\hspace{-1in}\nabla\cdot(-\rho^n\vb^n\vb^n) + \half\left[\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{*,n+1}(\overline\vb^n + \deltab\vb)\right] + \nabla\cdot\underbrace{\sqrt{\frac{2\eta^n k_B T}{\Delta t\Delta V}}\overline\Wb^n}_{\Sigmab^n} + \rho^n\gb\nonumber\\
-&&\hspace{-1in}- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{*,n+1},
+&&\hspace{-1in}- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta[\rho(\wb^T\zb)]^n\nabla\Phib^{*,n+1},
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot(\overline\vb^n+\deltab\vb) = \underbrace{S[-(\rho\Wb\chib\Gammab\nabla\xb)^{*,n+1} - \Ab_\Phi^n\nabla\Phib^{*,n+1} + \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{*,n+1}\mathcal{Z}^n]}_{S_p}.
@@ -619,7 +619,7 @@ We rewrite this system as:
 \left(\frac{\rho^{n+1}}{\Delta t} - \half\mathcal{A}_0^{n+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{n+1}\overline\vb^{*,n+1}}{\Delta t} -\nabla p^n\nonumber\\
 &&+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{*,n+1}\vb^{*,n+1}\vb^{*,n+1}) + \half(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}\overline\vb^{*,n+1} )\nonumber\\
 &&+ \nabla\cdot\Sigmab^{n'} + \half\left(\rho^n+\rho^{n+1}\right)\gb\nonumber\\
-&&- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta\left[\rho(\wb^T\zb)\nabla\Phib\right]^{n+1},
+&&- (1-\theta)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta[\rho(\wb^T\zb)]^{*,n+1}\nabla\Phib^{n+1},
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{*,n+1} - S_c.

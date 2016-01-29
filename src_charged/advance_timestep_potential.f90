@@ -14,7 +14,6 @@ module advance_timestep_potential_module
   use convert_rhoc_to_c_module
   use mk_advective_m_fluxdiv_module
   use reservoir_bc_fill_module
-  use bds_module
   use gmres_module
   use div_and_grad_module
   use mk_grav_force_module
@@ -88,12 +87,11 @@ contains
     integer        , intent(in   ) :: istep
     type(multifab) , intent(inout) :: grad_Epot_old(:,:) ! not used
     type(multifab) , intent(inout) :: grad_Epot_new(:,:) ! doesn't need to be persistent
-    type(multifab) , intent(inout) :: charge_old(:)      ! not used
+    type(multifab) , intent(inout) :: charge_old(:)      ! doesn't need to be persistent
     type(multifab) , intent(inout) :: charge_new(:)      ! doesn't need to be persistent
 
     ! local
     type(multifab) ::    rho_update(mla%nlevel)
-    type(multifab) ::     bds_force(mla%nlevel)
     type(multifab) ::   gmres_rhs_p(mla%nlevel)
     type(multifab) ::           dpi(mla%nlevel)
     type(multifab) ::          divu(mla%nlevel)
@@ -142,7 +140,6 @@ contains
     
     do n=1,nlevs
        call multifab_build(   rho_update(n),mla%la(n),nspecies,0)
-       call multifab_build(    bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(  gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(          dpi(n),mla%la(n),1       ,1)
        call multifab_build(         divu(n),mla%la(n),1       ,0)
@@ -195,7 +192,7 @@ contains
        ! if this is the first step, we need to
        ! compute the diffusive and stochastic fluxes (omitting the potential mass fluxes)
        ! with barodiffusion and thermodiffusion
-       ! this computes "F = -rho W chi [Gamma grad x... ]"
+       ! this computes "F = -rho W chi [Gamma grad x... ]" at t^n
        call compute_mass_fluxdiv_charged(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,dt,time,dx,weights, &
@@ -213,6 +210,9 @@ contains
        end do
 
     end if
+
+    ! compute charge^n
+    call dot_with_z(mla,rho_old,charge_old)
 
     ! compute R_p = rho_old + A^n + D^n + St^n (store in rho_new)
     ! first add D^n and St^n to R_p
@@ -420,7 +420,8 @@ contains
 
     ! compute diffusive, stochastic, and potential mass fluxes
     ! with barodiffusion and thermodiffusion
-    ! this computes "F = -rho W chi [Gamma grad x... ]"
+    ! this computes "F = -rho W chi [Gamma grad x... ]" at t^{*,n+1}
+    ! also compute charge^{*,n+1}
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
@@ -442,8 +443,8 @@ contains
 
     if (use_charged_fluid) then
 
-       ! compute momentum charge force
-       call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       ! compute momentum charge force, charge^{n}*grad_Epot^{*,n+1}
+       call average_cc_to_face(nlevs,charge_old,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
              call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_new(n,i),1,1,0)
@@ -805,11 +806,11 @@ contains
 
     ! compute diffusive, stochastic, and potential mass fluxes
     ! with barodiffusion and thermodiffusion
-    ! this computes "F = -rho W chi [Gamma grad x... ]"
+    ! this computes "F = -rho W chi [Gamma grad x... ]" at t^{n+1}
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower,charge_new)
+                                      the_bc_tower)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -825,10 +826,9 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
-
     if (use_charged_fluid) then
 
-       ! compute momentum charge force
+       ! compute momentum charge force, charge^{*,n+1}*grad_Epot^{n+1}
        call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
@@ -990,7 +990,6 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(rho_update(n))
-       call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
        call multifab_destroy(divu(n))
