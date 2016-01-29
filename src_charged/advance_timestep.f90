@@ -106,9 +106,9 @@ contains
     type(multifab) ::         dumac(mla%nlevel,mla%dim)
     type(multifab) ::      umac_tmp(mla%nlevel,mla%dim)
     type(multifab) :: rhotot_fc_old(mla%nlevel,mla%dim)
+    type(multifab) :: rhotot_fc_new(mla%nlevel,mla%dim)
     type(multifab) ::        gradpi(mla%nlevel,mla%dim)
     type(multifab) ::        rho_fc(mla%nlevel,mla%dim)
-    type(multifab) ::     rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::    flux_total(mla%nlevel,mla%dim)
 
     type(multifab) :: mom_charge_force_old(mla%nlevel,mla%dim)
@@ -148,8 +148,8 @@ contains
           call multifab_build_edge(     umac_tmp(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(       gradpi(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(       rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(    rhotot_fc(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(   flux_total(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(mom_charge_force_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(mom_charge_force_new(n,i),mla%la(n),1,0,i)
@@ -246,8 +246,8 @@ contains
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Calculate Corrector Diffusive and Stochastic Fluxes
@@ -432,7 +432,7 @@ contains
     end do
 
    ! compute mtemp = rho^{*,n+1} * vbar^n
-   call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+   call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
    do n=1,nlevs
       do i=1,dm
@@ -514,7 +514,7 @@ contains
     ! gmres_abs_tol = 0.d0 ! It is better to set gmres_abs_tol in namelist to a sensible value
 
     ! call gmres to compute delta v and delta pi
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
 
     ! for the corrector gmres solve we want the stopping criteria based on the
@@ -561,7 +561,7 @@ contains
 
     ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
     ! now mnew has properly filled ghost cells
-    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+    call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 5 - Trapezoidal Scalar Corrector
@@ -650,8 +650,8 @@ contains
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,c_bc_comp   ,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute (eta,kappa)^{n+1}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
@@ -735,7 +735,7 @@ contains
 
     ! add gravity term
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
     end if
 
     ! reset inhomogeneous bc condition to deal with reservoirs
@@ -822,7 +822,7 @@ contains
     end do
 
    ! compute mtemp = rho^{n+1} * vbar^{*,n+1}
-   call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+   call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
    do n=1,nlevs
       do i=1,dm
@@ -885,7 +885,7 @@ contains
     end do
 
     ! call gmres to compute delta v and delta pi
-    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc, &
+    call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
                eta,eta_ed,kappa,theta_alpha)
                               
     gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
@@ -951,9 +951,9 @@ contains
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(umac_tmp(n,i))
           call multifab_destroy(rhotot_fc_old(n,i))
+          call multifab_destroy(rhotot_fc_new(n,i))
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
-          call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(flux_total(n,i))
           call multifab_destroy(mom_charge_force_old(n,i))
           call multifab_destroy(mom_charge_force_new(n,i))
