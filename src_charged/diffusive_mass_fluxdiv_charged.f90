@@ -251,10 +251,14 @@ contains
 
     end if
 
-    if (use_charged_fluid .and. present(charge) .and. present(grad_Epot)) then
+    if (use_charged_fluid .and. present(charge)) then
 
        ! compute total charge
        call dot_with_z(mla,rho,charge)
+
+    end if
+
+    if (use_charged_fluid .and. present(charge) .and. present(grad_Epot)) then      
 
        ! solve poisson equation for phi (the electric potential)
        ! -del dot epsilon grad Phi = charge
