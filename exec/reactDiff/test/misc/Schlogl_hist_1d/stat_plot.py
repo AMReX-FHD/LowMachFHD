@@ -51,15 +51,29 @@ with open(DATA3) as inf:
       continue
     parts = line.split()
     x3.append(float(parts[0]))
-    y31.append(float(parts[1]))
-    y32.append(float(parts[2]))
+    if (len(parts)==3):
+      y31.append(float(parts[1]))
+      y32.append(float(parts[2]))
+    else:
+      y31.append(float(parts[1]))
 
 # semi-log plot
 fig, a = plt.subplots()
 plt.yscale('log')
-a.errorbar(x1,y1,yerr=y1err2,label="Numerics",fmt='--o')
-a.plot(x2,y2,'sb',label="Poisson (normalized)",mfc='none')
-a.plot(x3,y32,'-g',label="Stirling approximation")
+
+if (len(y1)<=100):
+  a.errorbar(x1,y1,yerr=y1err2,label="Numerics",fmt='--o')
+else:
+  a.errorbar(x1,y1,yerr=y1err2,label="Numerics",fmt='k')
+
+if (len(y2)<=100):
+  a.plot(x2,y2,'sb',label="Poisson (normalized)",mfc='none')
+else:
+  a.plot(x2,y2,'-b',label="Poisson (normalized)",mfc='none')
+
+if (len(y32)>0):
+  a.plot(x3,y32,'-g',label="Stirling approximation")
+
 a.plot(x3,y31,'-r',label="Gaussian")
 a.legend(loc=8,numpoints=1,fontsize='small')
 #plt.title("N=%d particles per cell"%round(n_av*dV))
@@ -72,9 +86,20 @@ fig.savefig("hist_semilogy.jpg")
 # linear plot
 fig, a = plt.subplots()
 plt.yscale('linear')
-a.errorbar(x1,y1,yerr=y1err2,label="Numerics",fmt='--o')
-a.plot(x2,y2,'sb',label="Poisson (normalized)",mfc='none')
-a.plot(x3,y32,'-g',label="Stirling approximation")
+
+if (len(y1)<=100):
+  a.errorbar(x1,y1,yerr=y1err2,label="Numerics",fmt='--o')
+else:
+  a.errorbar(x1,y1,yerr=y1err2,label="Numerics",fmt='k')
+
+if (len(y2)<=100):
+  a.plot(x2,y2,'sb',label="Poisson (normalized)",mfc='none')
+else:
+  a.plot(x2,y2,'-b',label="Poisson (normalized)",mfc='none')
+
+if (len(y32)>0):
+  a.plot(x3,y32,'-g',label="Stirling approximation")
+
 a.plot(x3,y31,'-r',label="Gaussian")
 a.legend(loc=1,numpoints=1,fontsize='small')
 #plt.title("N=%d particles per cell"%round(n_av*dV))
