@@ -216,9 +216,6 @@ contains
 
     end if
 
-    ! compute charge^n
-    call dot_with_z(mla,rho_old,charge_old)
-
     ! compute R_p = rho_old + A^n + D^n + St^n (store in rho_new)
     ! first add D^n and St^n to R_p
     do n=1,nlevs
@@ -286,7 +283,7 @@ contains
           end do
        end do
 
-       ! call stag_applyop to compute A_Phi^n grad Phi^{*,n+1}
+       ! call cc_applyop to compute div A_Phi^n grad Phi^{*,n+1}
        call cc_applyop(mla,divAgradPhi,Epot,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
        
        ! copy solution into Epot_mass_fluxdiv
@@ -447,6 +444,9 @@ contains
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     if (use_charged_fluid) then
+
+       ! compute charge^n
+       call dot_with_z(mla,rho_old,charge_old)
 
        ! compute momentum charge force, charge^{n}*grad_Epot^{*,n+1}
        call average_cc_to_face(nlevs,charge_old,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
@@ -683,7 +683,7 @@ contains
           end do
        end do
 
-       ! call stag_applyop to compute div A_Phi^n grad Phi^{n+1}
+       ! call cc_applyop to compute div A_Phi^n grad Phi^{n+1}
        call cc_applyop(mla,divAgradPhi,Epot,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
        
        ! copy solution into Epot_mass_fluxdiv
@@ -693,7 +693,7 @@ contains
 
     end do
 
-    ! add Epot_mass_fluxdiv to R_p to get rho^{*,n+1}
+    ! add Epot_mass_fluxdiv to R_c to get rho^{n+1}
     do n=1,nlevs
        call multifab_plus_plus_c(rho_new(n),1,Epot_mass_fluxdiv(n),1,nspecies,0)
     end do
@@ -711,7 +711,6 @@ contains
 
     ! conc to rho - INCLUDING GHOST CELLS
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
-
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 4 - Corrector Crank-Nicolson Step
@@ -832,6 +831,9 @@ contains
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     if (use_charged_fluid) then
+
+       ! compute charge^{*,n+1}
+       call dot_with_z(mla,rho_new,charge_new)
 
        ! compute momentum charge force, charge^{*,n+1}*grad_Epot^{n+1}
        call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
