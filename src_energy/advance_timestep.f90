@@ -10,7 +10,7 @@ module advance_timestep_module
   use convert_rhoh_to_h_module
   use eos_model_wrapper_module
   use mass_flux_utilities_module
-  use mass_fluxdiv_energy_module
+  use compute_mass_fluxdiv_energy_module
   use rhoh_fluxdiv_energy_module
   use div_and_grad_module
   use macproject_module
@@ -341,9 +341,9 @@ contains
     end if
 
     ! compute mass_flux_old = F^n and mass_fluxdiv_old = div(F^n)
-    call mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac_old,chi_old,zeta_old, &
-                             gradp_baro,Temp_old,mass_fluxdiv_old, &
-                             mass_flux_old,dx,the_bc_tower)
+    call compute_mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac_old,chi_old,zeta_old, &
+                                     gradp_baro,Temp_old,mass_fluxdiv_old, &
+                                     mass_flux_old,dx,the_bc_tower)
 
     ! compute rhoh_fluxdiv_old = div(Q)^n - sum(div(hk*Fk))^n + (rho*Hext)^n
     call rhoh_fluxdiv_energy(mla,lambda_old,Temp_old,mass_flux_old,rhotot_old, &
@@ -595,9 +595,9 @@ contains
        end do
        
        ! compute mass_flux_new = F^{n+1,m+1} and mass_fluxdiv_new = div(F^{n+1,m+1})
-       call mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac_new,chi_new,zeta_new, &
-                                gradp_baro,Temp_new,mass_fluxdiv_new, &
-                                mass_flux_new,dx,the_bc_tower)
+       call compute_mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac_new,chi_new,zeta_new, &
+                                        gradp_baro,Temp_new,mass_fluxdiv_new, &
+                                        mass_flux_new,dx,the_bc_tower)
 
        ! compute rhoh_fluxdiv_new = div(Q)^{n+1,m+1} + sum(div(hk*Fk))^{n+1,m+1} + rho_new*Hext^{n+1,m+1}
        call rhoh_fluxdiv_energy(mla,lambda_new,Temp_new,mass_flux_new,rhotot_new, &

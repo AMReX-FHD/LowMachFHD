@@ -9,6 +9,7 @@ subroutine main_driver()
   use initial_projection_charged_module
   use write_plotfile_charged_module
   use advance_timestep_module
+  use advance_timestep_potential_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
@@ -477,22 +478,12 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
      
-     ! initial projection - only truly needed for inertial algorithm
-     ! for the overdamped algorithm, this only changes the reference state for the first
-     ! gmres solve in the first time step
-     ! Yes, I think in the purely overdamped version this can be removed
-     ! In either case the first ever solve cannot have a good reference state
-     ! so in general there is the danger it will be less accurate than subsequent solves
-     ! but I do not see how one can avoid that
-     ! From this perspective it may be useful to keep initial_projection even in overdamped
-     ! because different gmres tolerances may be needed in the first step than in the rest
-     if (algorithm_type .eq. 0) then
-        call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
-                                        diff_mass_fluxdiv, &
-                                        stoch_mass_fluxdiv, &
-                                        Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                        charge_old,grad_Epot_old)
-     end if
+     ! initial projection
+     call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
+                                     diff_mass_fluxdiv, &
+                                     stoch_mass_fluxdiv, &
+                                     Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+                                     charge_old,grad_Epot_old)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -574,8 +565,13 @@ subroutine main_driver()
                                dx,dt,time,the_bc_tower,istep, &
                                grad_Epot_old,grad_Epot_new, &
                                charge_old,charge_new)
-      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-         call bl_error("overdamped intergrator not written yet")
+      else if (algorithm_type .eq. 1) then
+         call advance_timestep_potential(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         dx,dt,time,the_bc_tower,istep, &
+                                         grad_Epot_old,grad_Epot_new, &
+                                         charge_old,charge_new)
       end if
 
       time = time + dt

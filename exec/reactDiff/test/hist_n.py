@@ -1,116 +1,247 @@
+import sys
 import math
 import numpy as np
 import scipy.stats 
 import matplotlib.pyplot as plt
 
-u_av = 1.                                  # average concentration
-dx = 5.                                    # grid size (cell volume in higher dimensions)
+# this script calculates the histogram of n.
+# it is compared with Gaussian and Poisson distributions.
+# screen output as well as file output are generated.
+
+# usage:
+#   python hist_n.py input output1 output2 output3 n_av dV show_plot(yes/no)
+
+##############
+# parameters #
+##############
+
+# datafile contains number densities n of the cells at different times.
 datafile = "fort.10"
 
-###################
-# histogram range #
-###################
+# output filenames for (n_hist,Gauss,Stirling), (Gaussian,Stirling), or Poisson
+# if "none" is given, that file is omitted.  
+output_hist = "res.hist" 
+output_cont = "res.hist_cont" 
+output_poiss = "res.hist_poiss" 
 
-u_std = math.sqrt(u_av*dx)/dx              # expected standard deviation
-u_std_int = round(math.sqrt(u_av*dx))/dx   # ensure that the bins are centered on actual integers
+# average value of n (n_av) and the volume of a cell (dV) are needed
+#  to calculate Gaussian and Poisson distributions. 
+# for 1d and 2d, dV=dx*dy*cross_section.
+n_av = 1. 
+dV = 5.    
 
-range1 = u_av-4*u_std_int                  # center value of left-most bin in histogram
-range2 = u_av+6*u_std_int                  # center value of right-most bin in histogram 
+# flags for showing semi-log-scale or linear plot on the screen
+show_plot = True
 
-Nbins = int(round((range2-range1)*dx)+1)   # number of bins for numerical results
-du = (range2-range1)/(Nbins-1)             # width of each bin
-bins = range1+du*np.arange(Nbins)          # center values of bins 
+# if additional arguments are given
+if (len(sys.argv)!=1):
+  if (len(sys.argv)==8):    # for seven additonal arguments
+    datafile = sys.argv[1]
+    output_hist = sys.argv[2]
+    output_cont = sys.argv[3]
+    output_poiss = sys.argv[4]
+    n_av = float(sys.argv[5])
+    dV = float(sys.argv[6])
+    if (sys.argv[7]=="no"):
+      show_plot = False
+  else:                     # otherwise, generate error
+    print "Error: only seven additonal arguments can be given."
+    sys.exit()
 
-bin_edges = list(bins-0.5*du)              # note: len(bins) = Nbins 
-bin_edges.append(bins[-1]+0.5*du)          #       len(bin_edges) = Nbins + 1
+# the range of histogram [n_min,n_max] is determined by [N_min/dV,N_max/dV].
+# number of bins (nbin) is determined by nbin_in:
+#  if nbin_in=0, nbin = N_max-N_min+1. 
+#  otherwise, nbin = nbin_in.
+N_min = int(n_av*dV-5.*math.sqrt(n_av*dV))
+N_max = int(n_av*dV+7.*math.sqrt(n_av*dV)) 
+nbin_in = 0
 
-Nbins_th = 10000                           # number of bins for theoretical predictions
-du_th = (range2-range1)/(Nbins_th-1)       # (compute the theory on a finer grid to get closer to zero)  
-bins_th = range1+du_th*np.arange(Nbins_th)
+#####################
+# histogram setting #
+#####################
+
+n_min = N_min/dV        # center value of left-most bin (=smallest value)
+n_max = N_max/dV        # center value of right-most bin (=largest value)
+
+if (nbin_in==0):        # in this case, consider all possible integers for n*dV
+  nbin = N_max-N_min+1
+else:                   # for any positive integer value
+  nbin = nbin_in
+
+dn = (n_max-n_min)/(nbin-1)        # width of each bin
+bins = n_min+dn*np.arange(nbin)    # center values of bins 
+
+bin_edges = list(bins-0.5*dn)      # note: len(bins) = nbin 
+bin_edges.append(bins[-1]+0.5*dn)  #       len(bin_edges) = nbin + 1
+
+###################################
+# read data | calculate histogram #
+###################################
+
+# read data
+f_data = []
+with open(datafile) as inf:
+  for line in inf:
+    nval = float(line.split()[1])          # read the second number
+
+    if (nval<n_min or nval>n_max):
+      print "** Warning: nval=%g is out of range [n_min=%g:n_max=%g]" % (nval,n_min,n_max)
+
+    f_data.append(nval)                   
+f_data = np.array(f_data)
+
+# calculate histogram (actually, density)
+n_hist = np.histogram(f_data,bin_edges,density=True)[0]
 
 ###########################
 # theoretical predictions #
 ###########################
 
-# Gaussian approximation to the Poisson distribution
-# Gaussian for bins_th | Gaussian0 for bins
-Gaussian = np.exp(-(bins_th-u_av)**2/(2*u_std**2))/math.sqrt(2*math.pi)/u_std;
-Gaussian0 = np.exp(-(bins-u_av)**2/(2*u_std**2))/math.sqrt(2*math.pi)/u_std;
+# n values for discrete distribution (that is, Poisson)
+nbin_disc = N_max-N_min+1
+dn_disc = (n_max-n_min)/(nbin_disc-1)
+bins_disc = n_min+dn_disc*np.arange(nbin_disc) 
+
+# n values for continuous distributions (that is, Gaussian and Stirling approximation) 
+nbin_cont = (N_max-N_min)*10+1
+dn_cont = (n_max-n_min)/(nbin_cont-1)
+bins_cont = n_min+dn_cont*np.arange(nbin_cont) 
+
+# Poisson 
+
+def fnc_Poisson(x):
+  if (round(x*dV)>=0):
+    return scipy.stats.poisson.pmf(round(x*dV),n_av*dV)
+  else:
+    return 0
+
+Poisson_disc = np.array([ fnc_Poisson(x) for x in bins_disc ])
+Poisson_disc_normalized = Poisson_disc/dn_disc 
+
+# Gaussian
+
+def fnc_Gaussian(x):
+  n_std = math.sqrt(n_av*dV)/dV        
+  return math.exp(-0.5*(x-n_av)**2/n_std**2)/math.sqrt(2*math.pi)/n_std
+
+Gaussian = np.array([ fnc_Gaussian(x) for x in bins ])
+Gaussian_cont = np.array([ fnc_Gaussian(x) for x in bins_cont ])
 
 # Stirling's approximation to the Poisson distribution
 # This includes a continuity correction to correct the mean
-# Stirling for bins_th | Stirling for bins
+
+overflowerror_Stirling = False
+
 def fnc_Stirling(x):
-  if (x>0):
-    return math.exp(-(x+1/(2*dx))*(math.log((x+1/(2*dx))/u_av)-1)*dx);
+  global overflowerror_Stirling
+  if (overflowerror_Stirling):
+    return 0.
+  elif (x>0):
+    try:
+      return math.exp(-(x+1/(2*dV))*(math.log((x+1/(2*dV))/n_av)-1)*dV)
+    except OverflowError:
+      overflowerror_Stirling = True
+      print "** Warning: overflow error in fnc_Stirling"
+      return 0.
   else:
-    return 0
+    return 0.
 
-Stirling = np.array([ fnc_Stirling(x) for x in bins_th ])
-Stirling = Stirling/(sum(Stirling)*du_th)
-Stirling0 = np.array([ fnc_Stirling(x) for x in bins ])
-Stirling0 = Stirling0/(sum(Stirling0)*du)
+Stirling = np.array([ fnc_Stirling(x) for x in bins ])
+Stirling_cont = np.array([ fnc_Stirling(x) for x in bins_cont ])
 
-# True Poisson distribution
-def fnc_Poisson(x):
-  if (round(x*dx)>=0):
-    return scipy.stats.poisson.pmf(round(x*dx),u_av*dx)
-  else:
-    return 0
+if (not overflowerror_Stirling):
+  Stirling = Stirling/(sum(Stirling)*dn)
+  Stirling_cont = Stirling_cont/(sum(Stirling_cont)*dn_cont)
 
-Poisson = np.array([ fnc_Poisson(x) for x in bins ])
-Poisson = Poisson/(sum(Poisson)*du) 
+############################
+# show plots on the screen #
+############################
 
-################################################################################
-# read data file | calculate histogram | create plot | write histogram on file # 
-################################################################################
+# semi-log scale plot
 
-compare = 0                        # whether to plot many curves at once or just a single run
-
-if (compare):                      # compare difference curves (to be implemented later)
-
-  print "The compare feature has not been implemented yet..."
-
-else:                              # plot results from a single run
-
-  # read data
-  f_data = []
-  with open('fort.10') as inf:
-    for line in inf:
-      parts = line.split()
-      f_data.append(float(parts[1]))   # remove the time label
-  f_data = np.array(f_data)
-
-  # calculate histogram
-  u_hist = np.histogram(f_data,bin_edges)[0]
-  u_hist_std = np.sqrt(u_hist)
-
-  Z = 1/(sum(u_hist)*du)
-  u_hist = Z*u_hist
-  u_hist_std = Z*u_hist_std
-
-  u_mean_num = np.mean(f_data)
-  u_std_num = np.std(f_data)
-
-  # create plot on screen
+if (show_plot):
   fig, a = plt.subplots()
   plt.yscale('log')
-  a.plot(bins,u_hist,'ok',label="Numerics",mfc='none') 
-  a.plot(bins,Poisson,'-b',label="Poisson")
-  a.plot(bins_th,Stirling,'--g',label="Stirling")
-  a.plot(bins_th,Gaussian,'--r',label="Gaussian")
-  a.legend(loc=3,numpoints=1)
-  plt.title("N=%d particles per cell"%round(u_av*dx))
+  a.plot(bins,n_hist,'--ok',label="Numerics") 
+  a.plot(bins_disc,Poisson_disc_normalized,'sb',label="Poisson (normalized)",mfc='none')
+
+  if (not overflowerror_Stirling):
+    a.plot(bins_cont,Stirling_cont,'-g',label="Stirling approximation")
+
+  a.plot(bins_cont,Gaussian_cont,'-r',label="Gaussian")
+  a.legend(loc=8,numpoints=1,fontsize='small')
+  #plt.title("N=%d particles per cell"%round(n_av*dV))
+  plt.xlabel("number density n")
+  plt.ylabel("probability density")
+  #plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
   plt.show()
 
-  # write on file
+if (show_plot):
+  fig, a = plt.subplots()
+  plt.yscale('linear')
+  a.plot(bins,n_hist,'--ok',label="Numerics") 
+  a.plot(bins_disc,Poisson_disc_normalized,'sb',label="Poisson (normalized)",mfc='none')
+ 
+  if (not overflowerror_Stirling):
+    a.plot(bins_cont,Stirling_cont,'-g',label="Stirling approximation")
 
-  outputfile = datafile+"_hist"
-  out = open(outputfile,'w')
-  out.write("# bin_val numerics Poisson Stirling Gaussian\n");
+  a.plot(bins_cont,Gaussian_cont,'-r',label="Gaussian")
+  a.legend(loc=1,numpoints=1,fontsize='small')
+  #plt.title("N=%d particles per cell"%round(n_av*dV))
+  plt.xlabel("number density n")
+  plt.ylabel("probability density")
+  #plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
+  plt.show()
 
-  for i in range(Nbins):
-    out.write("%g\t%g\t%g\t%g\t%g\n" % (bins[i], u_hist[i], Poisson[i], Stirling0[i], Gaussian0[i]))
+################
+# output files # 
+################
+
+# output_hist
+if (output_hist!="none"):
+
+  out = open(output_hist,'w')
+  
+  if (overflowerror_Stirling):
+    out.write("# bin_val numerics Gaussian\n")
+  else:
+    out.write("# bin_val numerics Gaussian Poisson(Stirling approx)\n")
+
+  for i in range(nbin):
+    if (overflowerror_Stirling):
+      out.write("%g\t%g\t%g\n" % (bins[i],n_hist[i],Gaussian[i]))
+    else:
+      out.write("%g\t%g\t%g\t%g\n" % (bins[i],n_hist[i],Gaussian[i], Stirling[i]))
+
   out.close() 
 
-  print "histogram has been saved in %s" % outputfile
+  print "output_hist file \"%s\" generated." % output_hist
+
+# output_cont
+if (output_cont!="none"):
+  out = open(output_cont,'w')
+
+  if (overflowerror_Stirling):
+    out.write("# bin_val Gaussian\n")
+  else:
+    out.write("# bin_val Gaussian Poisson(Stirling approx)\n")
+
+  for i in range(nbin_cont):
+    if (overflowerror_Stirling):
+      out.write("%g\t%g\n" % (bins_cont[i],Gaussian_cont[i]))
+    else:
+      out.write("%g\t%g\t%g\n" % (bins_cont[i],Gaussian_cont[i],Stirling_cont[i]))
+  out.close() 
+
+  print "output_cont file \"%s\" generated." % output_cont
+
+# output_poiss
+if (output_poiss!="none"):
+  out = open(output_poiss,'w')
+  out.write("# bin_val Poisson(normalized)\n");
+
+  for i in range(nbin_disc):
+    out.write("%g\t%g\n" % (bins_disc[i], Poisson_disc_normalized[i]))
+  out.close() 
+
+  print "output_poiss file \"%s\" generated." % output_poiss

@@ -1,4 +1,4 @@
-module mass_fluxdiv_energy_module
+module compute_mass_fluxdiv_energy_module
 
   use ml_layout_module
   use define_bc_module
@@ -11,11 +11,11 @@ module mass_fluxdiv_energy_module
 
   private
 
-  public :: mass_fluxdiv_energy
+  public :: compute_mass_fluxdiv_energy
 
 contains
 
-  subroutine mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta,gradp_baro,Temp, &
+  subroutine compute_mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta,gradp_baro,Temp, &
                                  mass_fluxdiv,mass_flux,dx,the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
@@ -66,8 +66,8 @@ contains
        end do
     end do
 
-    ! compute -rho*W*chi
-    call compute_minus_rhoWchi(mla,rho,rhotot,chi,rhoWchi)
+    ! compute rho*W*chi
+    call compute_rhoWchi(mla,rho,chi,rhoWchi)
 
     do n=1,nlevs
        do i=1,dm
@@ -76,7 +76,7 @@ contains
     end do
 
     ! compute mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..." so we later multiply by -1
+    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molefrac,rhoWchi,Gama, &
                                 mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro,mass_flux,dx, &
                                 the_bc_tower)
@@ -96,6 +96,6 @@ contains
        call multifab_destroy(zeta_by_Temp(n))
     end do
 
-  end subroutine mass_fluxdiv_energy
+  end subroutine compute_mass_fluxdiv_energy
   
-end module mass_fluxdiv_energy_module
+end module compute_mass_fluxdiv_energy_module

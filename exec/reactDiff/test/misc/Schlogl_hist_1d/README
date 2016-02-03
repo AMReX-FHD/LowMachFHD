@@ -1,0 +1,13 @@
+how to run: first, execute run.sh
+            then, execute stat.sh (for NRUN>1)
+
+1. run.sh
+
+This script executes inputs_Schlogl_hist_1d.
+If NRUN>1, several runs are performed with different random seeds.
+(if USEMPIEXEC=yes, these runs are concurrently performed.)
+You can change relevant options by modifying run.sh.
+
+2. stat.sh
+
+For NRUN>1, this scripts calculates the mean and standard error of each quntity over the runs.

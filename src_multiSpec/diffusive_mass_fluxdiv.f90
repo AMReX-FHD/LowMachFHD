@@ -4,8 +4,7 @@ module diffusive_mass_fluxdiv_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use probin_multispecies_module, only: nspecies, is_nonisothermal, &
-                                        nspecies, correct_flux
+  use probin_multispecies_module, only: nspecies, is_nonisothermal, correct_flux
   use probin_common_module, only: barodiffusion_type
   use mass_flux_utilities_module
   use ml_layout_module
@@ -27,7 +26,7 @@ contains
                                     diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                     flux_total,dx,the_bc_tower)
 
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+    ! this computes divergence of "F = -rho*W*chi*Gamma*grad(x) - ..."
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -92,7 +91,8 @@ contains
   end subroutine diffusive_mass_fluxdiv
  
   subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
-                                 Temp,zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower)
+                                 Temp,zeta_by_Temp,gradp_baro,flux,dx, &
+                                 the_bc_tower)
 
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
 
@@ -140,7 +140,7 @@ contains
        end do
     end do 
 
-    ! compute face-centered -rhoWchi from cell-centered values 
+    ! compute face-centered rhoWchi from cell-centered values 
     call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
                             nspecies**2, the_bc_tower%bc_tower_array, .false.) 
 
@@ -233,6 +233,7 @@ contains
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, flux(n,i), rhoWchi_face(n,i), nspecies)
+          call multifab_mult_mult_s(flux(n,i),-1.d0)
        end do
     end do    
 

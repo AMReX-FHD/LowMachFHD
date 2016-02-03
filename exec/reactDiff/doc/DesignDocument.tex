@@ -223,7 +223,10 @@ For the stochastic fluxes,
 we generate random $\mZb$ on faces directory, compute $n$ on faces
 using either arithmetic, geometric, or harmonic averaging from the 
 neighboring cell centers, and use the same stencil 
-in (\ref{eq:diffusion_stencil}).\\
+in (\ref{eq:diffusion_stencil}).
+When a cell has a negative density, stochastic fluxes through the faces of the cell are zeroed in all three average types.
+For the arithmetic-mean average type, a smoothed Heaviside function is employed so that the flux can be continuous as a function of the number densities of two contiguous cells. 
+\\
 
 In order to discretize the diffusion equation (\ref{eq:Diffusion}) over a time 
 increment $\delta t$, we have three options.  We use the superscripts $n$
