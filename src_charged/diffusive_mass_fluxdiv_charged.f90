@@ -290,10 +290,12 @@ contains
           call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
        end do
 
-       avg_charge = multifab_sum_c(charge(1),1,1) / multifab_volume(charge(1))
-       call multifab_sub_sub_s_c(charge(1),1,avg_charge,1,0)
-       if (abs(avg_charge) .gt. 1.d-12) then
-          call bl_warn("Warning: average charge is not zero")
+       if (all(mla%pmask(1:dm))) then
+          avg_charge = multifab_sum_c(charge(1),1,1) / multifab_volume(charge(1))
+          call multifab_sub_sub_s_c(charge(1),1,avg_charge,1,0)
+          if (abs(avg_charge) .gt. 1.d-12) then
+             call bl_warn("Warning: average charge is not zero")
+          end if
        end if
 
        ! solve (alpha - del dot beta grad) Epot = charge
