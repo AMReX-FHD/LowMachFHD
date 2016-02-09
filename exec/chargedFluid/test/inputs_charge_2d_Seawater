@@ -8,19 +8,19 @@
   !----------------------
   dim_in = 2                       ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 2.d-6 2.d-6       ! physical hi coordinate
-  n_cells(1:2) = 32 32             ! number of cells in domain
-  max_grid_size(1:2) = 16 16       ! max number of cells in a box
+  prob_hi(1:2) = 4.d-6 4.d-6       ! physical hi coordinate
+  n_cells(1:2) = 64 64             ! number of cells in domain
+  max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 2.5d-11                  ! time step (if positive, fixed)
+  fixed_dt = 1.25d-11                  ! time step (if positive, fixed)
   cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 10000                 ! maximum number of time steps
-  plot_int = 1000                ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 500000                 ! maximum number of time steps
+  plot_int = 50000                ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
@@ -124,11 +124,11 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 128 ! parallelization parameters
-  stats_int = 1000                ! Project grid for analysis
+  stats_int = 50000                ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 1000      ! How many steps to skip
+  n_steps_skip = 50000      ! How many steps to skip
   analyze_conserved = F   ! Should we use conserved variables for the analysis
                           ! (does not work well)
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
