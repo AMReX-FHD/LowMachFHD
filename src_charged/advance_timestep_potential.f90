@@ -101,7 +101,9 @@ contains
     type(multifab) ::          mold(mla%nlevel,mla%dim)
     type(multifab) ::         mtemp(mla%nlevel,mla%dim)
     type(multifab) ::   m_a_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::   m_a_fluxdiv_temp(mla%nlevel,mla%dim)
     type(multifab) ::   m_d_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::   m_d_fluxdiv_temp(mla%nlevel,mla%dim)
     type(multifab) ::   m_s_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) ::   gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::         dumac(mla%nlevel,mla%dim)
@@ -123,11 +125,11 @@ contains
     
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
-    integer :: i,dm,n,nlevs,comp
+    integer :: i,dm,n,nlevs,comp,k
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
-    real(kind=dp_t) :: weights(1)
+    real(kind=dp_t) :: weights(1), norm
 
     weights(1) = 1.d0
 
@@ -149,7 +151,9 @@ contains
           call multifab_build_edge(            mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(           mtemp(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(     m_a_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(     m_a_fluxdiv_temp(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     m_d_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(     m_d_fluxdiv_temp(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     m_s_fluxdiv(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(           dumac(n,i),mla%la(n),1       ,1,i)
@@ -369,6 +373,7 @@ contains
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
+          call multifab_copy_c(m_a_fluxdiv_temp(n,i),1,m_a_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -386,6 +391,12 @@ contains
        do i=1,dm
           call multifab_mult_mult_s_c(m_d_fluxdiv(n,i),1,0.5d0,1,0)
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
+       end do
+    end do
+
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(m_d_fluxdiv_temp(n,i),1,m_d_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -612,13 +623,17 @@ contains
        end do
     end do
 
-    ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
-    ! now mnew has properly filled ghost cells
-    call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
-
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Corrector Concentration Update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    do k=1,1
+
+    print*,'k=',k
+
+    ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
+    ! now mnew has properly filled ghost cells
+    call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
     ! compute A_Phi^{*,n+1}
     call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
@@ -757,6 +772,12 @@ contains
     end do
 
     ! m_a_fluxdiv already contains A^n for momentum
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(m_a_fluxdiv(n,i),1,m_a_fluxdiv_temp(n,i),1,1,0)
+       end do
+    end do
+
     ! add A^{*,n+1} = -rho^{*,n+1} v^{*,n+1} v^{*,n+1} for momentum to m_a_fluxdiv
     call mk_advective_m_fluxdiv(mla,umac,mtemp,m_a_fluxdiv,dx, &
                                 the_bc_tower%bc_tower_array)
@@ -773,7 +794,7 @@ contains
     ! add (1/2) A_0^n v^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_temp(n,i),1,1,0)
        end do
     end do
 
@@ -814,7 +835,7 @@ contains
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower)
+                                      the_bc_tower,charge_new)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -831,9 +852,6 @@ contains
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     if (use_charged_fluid) then
-
-       ! compute charge^{*,n+1}
-       call dot_with_z(mla,rho_new,charge_new)
 
        ! compute momentum charge force, charge^{*,n+1}*grad_Epot^{n+1}
        call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
@@ -949,8 +967,8 @@ contains
     ! call gmres to compute delta v and delta pi
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
                eta,eta_ed,kappa,theta_alpha)
-                              
-    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
+
+!    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
 
     ! restore eta and kappa
     do n=1,nlevs
@@ -989,6 +1007,16 @@ contains
        end do
     end do
 
+    norm=multifab_norm_l1_c(umac(1,1),1,1)
+
+    if (parallel_IOProcessor()) then
+       print*,'norm',norm
+    end if
+
+    end do
+
+    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1006,7 +1034,9 @@ contains
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
           call multifab_destroy(m_a_fluxdiv(n,i))
+          call multifab_destroy(m_a_fluxdiv_temp(n,i))
           call multifab_destroy(m_d_fluxdiv(n,i))
+          call multifab_destroy(m_d_fluxdiv_temp(n,i))
           call multifab_destroy(m_s_fluxdiv(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))
