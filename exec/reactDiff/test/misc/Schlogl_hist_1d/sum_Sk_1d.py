@@ -19,7 +19,7 @@ datafile2="Hist1D.S_k.pair=1.Re.dat"
 # each cell has dx*dx in dimensions with cross_section=dz.
 ncell = 64
 dx = 1.
-dz = 5.
+dz = 10.
 
 # if additional arguments are given
 if (len(sys.argv)!=1):   
