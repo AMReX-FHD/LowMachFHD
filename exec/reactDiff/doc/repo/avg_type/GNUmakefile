@@ -1,6 +1,6 @@
 EPStoPDF = epstopdf
 
-ALL: repo1.pdf repo2.pdf
+ALL: repo1.pdf repo2.pdf repo3.pdf
 
 repo1.pdf: repo1.tex
 	pdflatex repo1.tex < /dev/null
@@ -9,6 +9,10 @@ repo1.pdf: repo1.tex
 repo2.pdf: repo2.tex
 	pdflatex repo2.tex < /dev/null
 	pdflatex repo2.tex < /dev/null
+
+repo3.pdf: repo3.tex
+	pdflatex repo3.tex < /dev/null
+	pdflatex repo3.tex < /dev/null
 
 clean:
 	$(RM) repo*.blg repo*.log repo*.pdf repo*.aux
