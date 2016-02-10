@@ -11,20 +11,23 @@ USEMPIEXEC=yes
 #dV=5.
 dV=10.
 #dV=100.
+#dV=1000.
 
 OPT1="--nreactions 0"
 #OPT1="--nreactions 4 --rate_multiplier 0.1"
 
+#OPT2="--fixed_dt 2. --max_step 22000 --print_int 2000 --hydro_grid_int 1 --n_steps_skip 2000"
 #OPT2="--fixed_dt 1. --max_step 22000 --print_int 2000 --hydro_grid_int 1 --n_steps_skip 2000"
+#OPT2="--fixed_dt 1. --max_step 101000 --print_int 1000 --hydro_grid_int 1 --n_steps_skip 1000"
 #OPT2="--fixed_dt 0.25 --max_step 44000 --print_int 4000 --hydro_grid_int 2 --n_steps_skip 4000"
-OPT2="--fixed_dt 0.1 --max_step 110000 --print_int 10000 --hydro_grid_int 5 --n_steps_skip 10000"
-#OPT2="--fixed_dt 0.01 --max_step 1100000 --print_int 100000 --hydro_grid_int 50 --n_steps_skip 100000"
+#OPT2="--fixed_dt 0.1 --max_step 110000 --print_int 10000 --hydro_grid_int 5 --n_steps_skip 10000"
+OPT2="--fixed_dt 0.01 --max_step 1100000 --print_int 100000 --hydro_grid_int 50 --n_steps_skip 100000"
 
-OPT3="--temporal_integrator -2 --avg_type 1 --midpoint_stoch_flux_type 2"
-#OPT3="--temporal_integrator -4 --avg_type 1 --midpoint_stoch_flux_type 2"
-#OPT3="--temporal_integrator 0 --diffusion_type 3 --reaction_type 2"
+OPT3="--temporal_integrator -2 --avg_type 1 --midpoint_stoch_flux_type 3"
+#OPT3="--temporal_integrator -4 --avg_type 1 --midpoint_stoch_flux_type 3"
+#OPT3="--temporal_integrator 0 --diffusion_type 3 --reaction_type 1"
 
-OPT4="--use_Poisson_rng 1"
+#OPT4="--use_Poisson_rng 1"
 
 #OPT5="--initial_variance 1."
 #OPT5="--initial_variance 1.  --integer_populsations T"
