@@ -98,9 +98,9 @@ contains
     type(multifab) ::          mold(mla%nlevel,mla%dim)
     type(multifab) ::         mtemp(mla%nlevel,mla%dim)
     type(multifab) ::   m_a_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) ::   m_a_fluxdiv_temp(mla%nlevel,mla%dim)
+    type(multifab) ::   m_a_fluxdiv_old(mla%nlevel,mla%dim)
     type(multifab) ::   m_d_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) ::   m_d_fluxdiv_temp(mla%nlevel,mla%dim)
+    type(multifab) ::   m_d_fluxdiv_old(mla%nlevel,mla%dim)
     type(multifab) ::   m_s_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) ::   gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::         dumac(mla%nlevel,mla%dim)
@@ -147,9 +147,9 @@ contains
           call multifab_build_edge(            mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(           mtemp(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(     m_a_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(     m_a_fluxdiv_temp(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(     m_a_fluxdiv_old(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     m_d_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(     m_d_fluxdiv_temp(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(     m_d_fluxdiv_old(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     m_s_fluxdiv(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(           dumac(n,i),mla%la(n),1       ,1,i)
@@ -359,11 +359,11 @@ contains
     call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv,dx, &
                                 the_bc_tower%bc_tower_array)
 
-    ! add A^n for momentum to gmres_rhs_v
+    ! add A^n for momentum to gmres_rhs_v and keep a copy of A^n
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
-          call multifab_copy_c(m_a_fluxdiv_temp(n,i),1,m_a_fluxdiv(n,i),1,1,0)
+          call multifab_copy_c(m_a_fluxdiv_old(n,i),1,m_a_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -377,16 +377,11 @@ contains
                              the_bc_tower%bc_tower_array)
 
     ! add (1/2) A_0^n v^n to gmres_rhs_v
+    ! and keep a copy of m_d_fluxdiv at t^n
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(m_d_fluxdiv(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
-       end do
-    end do
-
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_copy_c(m_d_fluxdiv_temp(n,i),1,m_d_fluxdiv(n,i),1,1,0)
+          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_d_fluxdiv(n,i),1,1)
+          call multifab_copy_c(m_d_fluxdiv_old(n,i),1,m_d_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -471,10 +466,10 @@ contains
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
-             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+             call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
        end do
     end do
@@ -760,7 +755,7 @@ contains
     ! m_a_fluxdiv already contains A^n for momentum
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(m_a_fluxdiv(n,i),1,m_a_fluxdiv_temp(n,i),1,1,0)
+          call multifab_copy_c(m_a_fluxdiv(n,i),1,m_a_fluxdiv_old(n,i),1,1,0)
        end do
     end do
 
@@ -776,11 +771,11 @@ contains
        end do
     end do
 
-    ! m_d_fluxdiv already contains (1/2) A_0^n v^n
+    ! m_d_fluxdiv already contains A_0^n v^n
     ! add (1/2) A_0^n v^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv_temp(n,i),1,1,0)
+          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_d_fluxdiv_old(n,i),1,1)
        end do
     end do
 
@@ -861,10 +856,10 @@ contains
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
-             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+             call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
        end do
     end do
@@ -914,8 +909,7 @@ contains
     ! add (1/2) A_0^{n+1} vbar^{n+1,*} to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(m_d_fluxdiv(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
+          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_d_fluxdiv(n,i),1,1)
        end do
     end do
 
@@ -1020,9 +1014,9 @@ contains
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
           call multifab_destroy(m_a_fluxdiv(n,i))
-          call multifab_destroy(m_a_fluxdiv_temp(n,i))
+          call multifab_destroy(m_a_fluxdiv_old(n,i))
           call multifab_destroy(m_d_fluxdiv(n,i))
-          call multifab_destroy(m_d_fluxdiv_temp(n,i))
+          call multifab_destroy(m_d_fluxdiv_old(n,i))
           call multifab_destroy(m_s_fluxdiv(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))
