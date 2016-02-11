@@ -54,7 +54,7 @@ then
   echo "../$EXEC ../$INPUTS $OPTS" | tee screen_out; sleep 3s
   ../$EXEC ../$INPUTS $OPTS | tee -a screen_out
 
-  python ../$PYSCR_HIST fort.10 res.hist res.hist_cont res.hist_poiss 1. $dV yes
+  python ../$PYSCR_HIST 1. $dV yes yes
   python ../$PYSCR_SUMSK 
 else
   for ((i=1;i<=$NRUN;i++))
@@ -90,7 +90,7 @@ else
   do
     echo "cd $RUNNAME$i"
     cd $RUNNAME$i
-    python ../$PYSCR_HIST fort.10 res.hist res.hist_cont res.hist_poiss 1. $dV no
+    python ../$PYSCR_HIST 1. $dV no yes
     python ../$PYSCR_SUMSK > res.sum_Sk
     echo "res.sum_Sk generated"
     cd - > /dev/null
