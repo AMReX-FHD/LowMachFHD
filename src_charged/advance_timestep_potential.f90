@@ -28,14 +28,11 @@ module advance_timestep_potential_module
   use fluid_charge_module
   use ml_solve_module
   use bndry_reg_module
-  use cc_applyop_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid, dielectric_const
-
-  use fabio_module
 
   implicit none
 
@@ -118,7 +115,6 @@ contains
     type(multifab) :: solver_alpha     (mla%nlevel)         ! alpha=0 for Poisson solve
     type(multifab) :: solver_rhs       (mla%nlevel)         ! Poisson solve rhs
     type(multifab) :: Epot             (mla%nlevel)         ! Phi solution from Poisson solve
-    type(multifab) :: divAgradPhi      (mla%nlevel)
     type(multifab) :: A_Phi            (mla%nlevel,mla%dim) ! face-centered A_Phi
     type(multifab) :: solver_beta      (mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
     type(multifab) :: Epot_mass_fluxdiv(mla%nlevel)
@@ -167,7 +163,6 @@ contains
        call multifab_build(solver_alpha(n),mla%la(n),1,0)
        call multifab_build(solver_rhs(n),mla%la(n),1,0)
        call multifab_build(Epot(n),mla%la(n),1,1)
-       call multifab_build(divAgradPhi(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
@@ -279,22 +274,17 @@ contains
 
     do comp=1,nspecies
 
-       ! copy component of A_Phi into beta and multiply by -dt
+       ! copy component of A_Phi into beta and multiply by dt*grad_Epot
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
-             call multifab_mult_mult_s_c(solver_beta(n,i),1,-dt,1,0)
+             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+             call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
           end do
        end do
 
-       ! call cc_applyop to compute div A_Phi^n grad Phi^{*,n+1}
-       call cc_applyop(mla,divAgradPhi,Epot,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
-       
-       ! copy solution into Epot_mass_fluxdiv
-       do n=1,nlevs
-          call multifab_copy_c(Epot_mass_fluxdiv(n),comp,divAgradPhi(n),1,1,0)
-       end do
-
+       ! compute Epot_mass_fluxdiv = dt div A_Phi grad Epot
+       call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
     end do
 
     ! add Epot_mass_fluxdiv to R_p to get rho^{*,n+1}
@@ -690,21 +680,17 @@ contains
 
     do comp=1,nspecies
 
-       ! copy component of A_Phi into beta and multiply by -dt
+       ! copy component of A_Phi into beta and multiply by  dt*grad_Epot
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
-             call multifab_mult_mult_s_c(solver_beta(n,i),1,-dt,1,0)
+             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+             call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
           end do
        end do
 
-       ! call cc_applyop to compute div A_Phi^n grad Phi^{n+1}
-       call cc_applyop(mla,divAgradPhi,Epot,solver_alpha,solver_beta,dx,the_bc_tower,Epot_bc_comp)
-       
-       ! copy solution into Epot_mass_fluxdiv
-       do n=1,nlevs
-          call multifab_copy_c(Epot_mass_fluxdiv(n),comp,divAgradPhi(n),1,1,0)
-       end do
+       ! compute Epot_mass_fluxdiv = dt div A_Phi grad Epot
+       call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
 
     end do
 
@@ -1050,7 +1036,6 @@ contains
        call multifab_destroy(solver_alpha(n))
        call multifab_destroy(solver_rhs(n))
        call multifab_destroy(Epot(n))
-       call multifab_destroy(divAgradPhi(n))
        do i=1,dm
           call multifab_destroy(A_Phi(n,i))
           call multifab_destroy(solver_beta(n,i))
