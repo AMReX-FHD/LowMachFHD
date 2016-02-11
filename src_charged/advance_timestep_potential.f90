@@ -82,10 +82,10 @@ contains
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
-    type(multifab) , intent(inout) :: grad_Epot_old(:,:) ! not used
-    type(multifab) , intent(inout) :: grad_Epot_new(:,:) ! doesn't need to be persistent
-    type(multifab) , intent(inout) :: charge_old(:)      ! doesn't need to be persistent
-    type(multifab) , intent(inout) :: charge_new(:)      ! doesn't need to be persistent
+    type(multifab) , intent(inout) :: grad_Epot_old(:,:)
+    type(multifab) , intent(inout) :: grad_Epot_new(:,:)
+    type(multifab) , intent(inout) :: charge_old(:)
+    type(multifab) , intent(inout) :: charge_new(:)
 
     ! local
     type(multifab) ::    rho_update(mla%nlevel)
@@ -440,9 +440,6 @@ contains
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     if (use_charged_fluid) then
-
-       ! compute charge^n
-       call dot_with_z(mla,rho_old,charge_old)
 
        ! compute momentum charge force, charge^{n}*grad_Epot^{*,n+1}
        call average_cc_to_face(nlevs,charge_old,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
@@ -816,7 +813,7 @@ contains
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower,charge_new)
+                                      the_bc_tower)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -996,6 +993,9 @@ contains
     end do
 
     gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
+
+    ! compute total charge for next timestep
+    call dot_with_z(mla,rho_new,charge_new)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! End Time-Advancement
