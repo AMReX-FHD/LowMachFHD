@@ -245,31 +245,30 @@ contains
     ! Epot_mass_fluxdiv_new via Poisson solve
     call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
 
-    ! compute Epot_mass_fluxdiv_old = dt (1-theta) div A_Phi grad Epot_old
+    ! compute Epot_mass_fluxdiv_old = div A_Phi grad Epot_old
     do comp=1,nspecies
 
-       ! copy component of A_Phi into beta and multiply by dt*(1-theta)*grad_Epot_old
+       ! copy component of A_Phi into beta and multiply by grad_Epot_old
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
-             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt*(1.d0-theta_pot),1,0)
              call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_old(n,i),1,1,0)
           end do
        end do
 
-       ! compute Epot_mass_fluxdiv_old = dt (1-theta) div A_Phi grad Epot_old
+       ! compute Epot_mass_fluxdiv_old = div A_Phi grad Epot_old
        call compute_div(mla,solver_beta,Epot_mass_fluxdiv_old,dx,1,comp,1)
+    end do
+
+    ! add (1-theta) Epot_mass_fluxdiv_old to RHS
+    do n=1,nlevs
+       call multifab_saxpy_3_cc(rho_new(n),1,1.d0-theta_pot,Epot_mass_fluxdiv_old(n),1,nspecies)
     end do
 
     ! multiply by dt and add rho_old
     do n=1,nlevs
        call multifab_mult_mult_s_c(rho_new(n),1,dt,nspecies,0)
        call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-    end do
-
-    ! add Epot_mass_fluxdiv_old to RHS
-    do n=1,nlevs
-       call multifab_plus_plus_c(rho_new(n),1,Epot_mass_fluxdiv_old(n),1,nspecies,0)
     end do
 
     ! right-hand-side for Poisson solve
@@ -300,22 +299,21 @@ contains
 
     do comp=1,nspecies
 
-       ! copy component of A_Phi into beta and multiply by dt*grad_Epot_new
+       ! copy component of A_Phi into beta and multiply by grad_Epot_new
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
-             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
              call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
           end do
        end do
 
-       ! compute Epot_mass_fluxdiv = dt div A_Phi grad Epot
+       ! compute Epot_mass_fluxdiv = div A_Phi grad Epot
        call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
     end do
 
-    ! add Epot_mass_fluxdiv to R_p to get rho^{*,n+1}
+    ! add dt*theta*Epot_mass_fluxdiv to R_p to get rho^{*,n+1}
     do n=1,nlevs
-       call multifab_plus_plus_c(rho_new(n),1,Epot_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_saxpy_3_cc(rho_new(n),1,dt*theta_pot,Epot_mass_fluxdiv(n),1,nspecies)
     end do
 
     ! compute rhotot from rho in VALID REGION
@@ -669,15 +667,20 @@ contains
           call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_new,dx,1,nspecies)
        end if
 
-       ! multiply by 0.5*dt and add rho_old
+       ! multiply by 0.5
        do n=1,nlevs
-          call multifab_mult_mult_s_c(rho_new(n),1,0.5d0*dt,nspecies,0)
-          call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+          call multifab_mult_mult_s_c(rho_new(n),1,0.5d0,nspecies,0)
        end do
 
-       ! add Epot_mass_fluxdiv_old to RHS
+       ! add (1-theta) Epot_mass_fluxdiv_old to RHS
        do n=1,nlevs
-          call multifab_plus_plus_c(rho_new(n),1,Epot_mass_fluxdiv_old(n),1,nspecies,0)
+          call multifab_saxpy_3_cc(rho_new(n),1,1.d0-theta_pot,Epot_mass_fluxdiv_old(n),1,nspecies)
+       end do
+
+       ! multiply by dt and add rho_old
+       do n=1,nlevs
+          call multifab_mult_mult_s_c(rho_new(n),1,dt,nspecies,0)
+          call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
        end do
 
        ! right-hand-side for Poisson solve
@@ -703,23 +706,22 @@ contains
 
        do comp=1,nspecies
 
-          ! copy component of A_Phi into beta and multiply by dt*theta*grad_Epot
+          ! copy component of A_Phi into beta and multiply by grad_Epot
           do n=1,nlevs
              do i=1,dm
                 call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
-                call multifab_mult_mult_s_c(solver_beta(n,i),1,dt*theta_pot,1,0)
                 call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
              end do
           end do
 
-          ! compute Epot_mass_fluxdiv = dt theta div A_Phi grad Epot
+          ! compute Epot_mass_fluxdiv = div A_Phi grad Epot
           call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
 
        end do
 
-       ! add Epot_mass_fluxdiv to R_c to get rho^{n+1}
+       ! add dt*theta*Epot_mass_fluxdiv to R_p to get rho^{n+1}
        do n=1,nlevs
-          call multifab_plus_plus_c(rho_new(n),1,Epot_mass_fluxdiv(n),1,nspecies,0)
+          call multifab_saxpy_3_cc(rho_new(n),1,dt*theta_pot,Epot_mass_fluxdiv(n),1,nspecies)
        end do
 
        ! compute rhotot from rho in VALID REGION
