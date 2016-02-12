@@ -118,6 +118,7 @@ contains
     type(multifab) :: A_Phi            (mla%nlevel,mla%dim) ! face-centered A_Phi
     type(multifab) :: solver_beta      (mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
     type(multifab) :: Epot_mass_fluxdiv(mla%nlevel)
+    type(multifab) :: Epot_mass_fluxdiv_old(mla%nlevel)
     
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
@@ -125,7 +126,7 @@ contains
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
-    real(kind=dp_t) :: weights(1), norm
+    real(kind=dp_t) :: weights(1), norm, theta_pot
 
     weights(1) = 1.d0
 
@@ -134,6 +135,8 @@ contains
 
     theta_alpha = 1.d0/dt
     
+    theta_pot = 1.d0
+
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
@@ -167,7 +170,8 @@ contains
           call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
        end do
-       call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
+       call multifab_build(Epot_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+       call multifab_build(Epot_mass_fluxdiv_old(n),mla%la(n),nspecies,0) 
     end do
 
     do n = 2,nlevs
@@ -237,25 +241,47 @@ contains
        call multifab_copy_c(rho_update(n),1,rho_new(n),1,nspecies,0)
     end do
 
+    ! compute A_Phi^n for explicit Epot_mass_fluxdiv_old, and to solve for
+    ! Epot_mass_fluxdiv_new via Poisson solve
+    call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
+
+    ! compute Epot_mass_fluxdiv_old = dt (1-theta) div A_Phi grad Epot_old
+    do comp=1,nspecies
+
+       ! copy component of A_Phi into beta and multiply by dt*(1-theta)*grad_Epot_old
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
+             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt*(1.d0-theta_pot),1,0)
+             call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_old(n,i),1,1,0)
+          end do
+       end do
+
+       ! compute Epot_mass_fluxdiv_old = dt (1-theta) div A_Phi grad Epot_old
+       call compute_div(mla,solver_beta,Epot_mass_fluxdiv_old,dx,1,comp,1)
+    end do
+
     ! multiply by dt and add rho_old
     do n=1,nlevs
        call multifab_mult_mult_s_c(rho_new(n),1,dt,nspecies,0)
        call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
     end do
 
+    ! add Epot_mass_fluxdiv_old to RHS
+    do n=1,nlevs
+       call multifab_plus_plus_c(rho_new(n),1,Epot_mass_fluxdiv_old(n),1,nspecies,0)
+    end do
+
     ! right-hand-side for Poisson solve
     call dot_with_z(mla,rho_new,solver_rhs)
-
-    ! compute A_Phi^n
-    call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
 
     ! compute solver_beta = z^T dot A_Phi
     call dot_with_z_face(mla,A_Phi,solver_beta)
 
-    ! compute solver_beta = epsilon + dt* z^T dot A_Phi
+    ! compute solver_beta = epsilon + dt*theta*z^T dot A_Phi
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+          call multifab_mult_mult_s_c(solver_beta(n,i),1,dt*theta_pot,1,0)
           call multifab_plus_plus_s_c(solver_beta(n,i),1,dielectric_const,1,0)
        end do
     end do
@@ -274,7 +300,7 @@ contains
 
     do comp=1,nspecies
 
-       ! copy component of A_Phi into beta and multiply by dt*grad_Epot
+       ! copy component of A_Phi into beta and multiply by dt*grad_Epot_new
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
@@ -649,16 +675,21 @@ contains
           call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
        end do
 
+       ! add Epot_mass_fluxdiv_old to RHS
+       do n=1,nlevs
+          call multifab_plus_plus_c(rho_new(n),1,Epot_mass_fluxdiv_old(n),1,nspecies,0)
+       end do
+
        ! right-hand-side for Poisson solve
        call dot_with_z(mla,rho_new,solver_rhs)
 
        ! compute solver_beta = z^T dot A_Phi
        call dot_with_z_face(mla,A_Phi,solver_beta)
 
-       ! compute solver_beta = epsilon + dt* z^T dot A_Phi
+       ! compute solver_beta = epsilon + dt*theta*z^T dot A_Phi
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+             call multifab_mult_mult_s_c(solver_beta(n,i),1,dt*theta_pot,1,0)
              call multifab_plus_plus_s_c(solver_beta(n,i),1,dielectric_const,1,0)
           end do
        end do
@@ -672,16 +703,16 @@ contains
 
        do comp=1,nspecies
 
-          ! copy component of A_Phi into beta and multiply by  dt*grad_Epot
+          ! copy component of A_Phi into beta and multiply by dt*theta*grad_Epot
           do n=1,nlevs
              do i=1,dm
                 call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
-                call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
+                call multifab_mult_mult_s_c(solver_beta(n,i),1,dt*theta_pot,1,0)
                 call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
              end do
           end do
 
-          ! compute Epot_mass_fluxdiv = dt div A_Phi grad Epot
+          ! compute Epot_mass_fluxdiv = dt theta div A_Phi grad Epot
           call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
 
        end do
@@ -1035,6 +1066,7 @@ contains
           call multifab_destroy(solver_beta(n,i))
        end do
        call multifab_destroy(Epot_mass_fluxdiv(n))
+       call multifab_destroy(Epot_mass_fluxdiv_old(n))
     end do
     do n = 2,nlevs
        call bndry_reg_destroy(fine_flx(n))
