@@ -24,7 +24,6 @@ module advance_timestep_potential_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
-  use project_onto_eos_module
   use fluid_charge_module
   use ml_solve_module
   use bndry_reg_module
@@ -219,11 +218,13 @@ contains
 
     end if
 
-    ! compute R_p = rho_old + A^n + D^n + St^n (store in rho_new)
+    ! compute R_p = rho_old + dt(A^n + D^n + St^n + (1-theta)E^n)
+    ! store in rho_new
+
     ! first add D^n and St^n to R_p
     do n=1,nlevs
        call setval(rho_new(n),0.d0,all=.true.)
-       call multifab_plus_plus_c(rho_new(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_plus_plus_c(rho_new(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_new(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
        end if
@@ -241,14 +242,14 @@ contains
        call multifab_copy_c(rho_update(n),1,rho_new(n),1,nspecies,0)
     end do
 
-    ! compute A_Phi^n for explicit Epot_mass_fluxdiv_old, and to solve for
-    ! Epot_mass_fluxdiv_new via Poisson solve
+    ! compute A_Phi^n for explicit Epot_mass_fluxdiv_old
+    ! and to solve for Epot_mass_fluxdiv_new via Poisson solve
     call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
 
-    ! compute Epot_mass_fluxdiv_old = div A_Phi grad Epot_old
+    ! compute Epot_mass_fluxdiv_old = div A_Phi^n grad Epot_old
     do comp=1,nspecies
 
-       ! copy component of A_Phi into beta and multiply by grad_Epot_old
+       ! copy component of A_Phi^n into beta and multiply by grad_Epot_old
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
@@ -256,11 +257,11 @@ contains
           end do
        end do
 
-       ! compute Epot_mass_fluxdiv_old = div A_Phi grad Epot_old
+       ! compute Epot_mass_fluxdiv_old = div A_Phi^n grad Epot_old
        call compute_div(mla,solver_beta,Epot_mass_fluxdiv_old,dx,1,comp,1)
     end do
 
-    ! add (1-theta) Epot_mass_fluxdiv_old to RHS
+    ! add (1-theta) Epot_mass_fluxdiv_old to R_p
     do n=1,nlevs
        call multifab_saxpy_3_cc(rho_new(n),1,1.d0-theta_pot,Epot_mass_fluxdiv_old(n),1,nspecies)
     end do
@@ -271,13 +272,13 @@ contains
        call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
     end do
 
-    ! right-hand-side for Poisson solve
+    ! right-hand-side for Poisson solve is z^T R_p
     call dot_with_z(mla,rho_new,solver_rhs)
 
-    ! compute solver_beta = z^T dot A_Phi
+    ! compute z^T A_Phi^n, store in solver_beta
     call dot_with_z_face(mla,A_Phi,solver_beta)
 
-    ! compute solver_beta = epsilon + dt*theta*z^T dot A_Phi
+    ! compute solver_beta = epsilon + dt theta z^T A_Phi^n
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(solver_beta(n,i),1,dt*theta_pot,1,0)
@@ -290,7 +291,7 @@ contains
        call multifab_setval(Epot(n),0.d0,all=.true.)
     end do
 
-    ! solve -div (epsilon + dt*theta*z^T dot A_Phi) grad Phi^{*,n+1} = z^T R_p
+    ! solve -div (epsilon + dt theta z^T A_Phi) grad Phi^{*,n+1} = z^T R_p
     call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
                      the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
@@ -299,7 +300,7 @@ contains
 
     do comp=1,nspecies
 
-       ! copy component of A_Phi into beta and multiply by grad_Epot_new
+       ! copy component of A_Phi^n into beta and multiply by grad_Epot_new
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
@@ -307,7 +308,7 @@ contains
           end do
        end do
 
-       ! compute Epot_mass_fluxdiv = div A_Phi grad Epot
+       ! compute Epot_mass_fluxdiv = div A_Phi^n grad Epot
        call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
     end do
 
@@ -644,8 +645,9 @@ contains
        ! compute A_Phi^{*,n+1}
        call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
 
-       ! compute R_c = rho_old + (1/2)(A^n + A^{*,n+1} + D^n + D^{*,n+1} + St^n + St^{*,n+1})
+       ! compute R_c = rho_old + (dt/2)(A^n + A^{*,n+1} + D^n + D^{*,n+1} + St^n + St^{*,n+1}) + dt(1-theta)E^n 
        ! store in rho_new
+
        ! rho_update contains A^n + D^n + St^n
        do n=1,nlevs
           call setval(rho_new(n),0.d0,all=.true.)
@@ -672,7 +674,7 @@ contains
           call multifab_mult_mult_s_c(rho_new(n),1,0.5d0,nspecies,0)
        end do
 
-       ! add (1-theta) Epot_mass_fluxdiv_old to RHS
+       ! add (1-theta) Epot_mass_fluxdiv_old to R_c
        do n=1,nlevs
           call multifab_saxpy_3_cc(rho_new(n),1,1.d0-theta_pot,Epot_mass_fluxdiv_old(n),1,nspecies)
        end do
@@ -686,10 +688,10 @@ contains
        ! right-hand-side for Poisson solve
        call dot_with_z(mla,rho_new,solver_rhs)
 
-       ! compute solver_beta = z^T dot A_Phi
+       ! compute z^T A_Phi^{*,n+1}, store in solver_beta
        call dot_with_z_face(mla,A_Phi,solver_beta)
 
-       ! compute solver_beta = epsilon + dt*theta*z^T dot A_Phi
+       ! compute solver_beta = epsilon + dt theta z^T A_Phi^{*,n+1}
        do n=1,nlevs
           do i=1,dm
              call multifab_mult_mult_s_c(solver_beta(n,i),1,dt*theta_pot,1,0)
@@ -706,7 +708,7 @@ contains
 
        do comp=1,nspecies
 
-          ! copy component of A_Phi into beta and multiply by grad_Epot
+          ! copy component of A_Phi^{*,n+1} into beta and multiply by grad_Epot
           do n=1,nlevs
              do i=1,dm
                 call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
@@ -714,12 +716,12 @@ contains
              end do
           end do
 
-          ! compute Epot_mass_fluxdiv = div A_Phi grad Epot
+          ! compute Epot_mass_fluxdiv = div A_Phi^{*,n+1} grad Epot
           call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
 
        end do
 
-       ! add dt*theta*Epot_mass_fluxdiv to R_p to get rho^{n+1}
+       ! add dt theta Epot_mass_fluxdiv to R_p to get rho^{n+1}
        do n=1,nlevs
           call multifab_saxpy_3_cc(rho_new(n),1,dt*theta_pot,Epot_mass_fluxdiv(n),1,nspecies)
        end do
