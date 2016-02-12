@@ -15,8 +15,8 @@ dV=10.
 OPT1="--nreactions 4 --rate_multiplier 0.1"
 
 #OPT2="--fixed_dt 2.   --max_step 5500   --print_int 500    --hydro_grid_int 1   --n_steps_skip 500"
-OPT2="--fixed_dt 1.   --max_step 6000   --print_int 500    --hydro_grid_int 1   --n_steps_skip 1000"
-#OPT2="--fixed_dt 0.5  --max_step 12000  --print_int 1000   --hydro_grid_int 2   --n_steps_skip 2000"
+#OPT2="--fixed_dt 1.   --max_step 6000   --print_int 500    --hydro_grid_int 1   --n_steps_skip 1000"
+OPT2="--fixed_dt 0.5  --max_step 12000  --print_int 1000   --hydro_grid_int 2   --n_steps_skip 2000"
 #OPT2="--fixed_dt 0.25 --max_step 24000  --print_int 2000   --hydro_grid_int 4   --n_steps_skip 4000"
 #OPT2="--fixed_dt 0.1  --max_step 60000  --print_int 5000   --hydro_grid_int 10  --n_steps_skip 10000"
 
@@ -56,14 +56,14 @@ cd ..
 SCRHISTPY=../../hist_n.py
 
 cd $RUNNAME
-python ../$SCRHISTPY fort.10 res.hist res.hist_cont res.hist_poiss 1. $dV yes
+python ../$SCRHISTPY 1. $dV yes yes
 cd ..
 
 ########
 # S(k) #
 ########
 
-SCRSKVISIT=visit_drawSk.py
+SCRSKVISIT=visit_drawSk2d.py
 
 cd $RUNNAME
 visit -nowin -cli -s ../$SCRSKVISIT

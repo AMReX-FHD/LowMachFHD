@@ -4,12 +4,12 @@ import numpy as np
 import scipy.stats 
 import matplotlib.pyplot as plt
 
-# this script calculates the histogram of n.
-# it is compared with Gaussian and Poisson distributions.
+# this script calculates the histogram of n as well as the mean and variance of n.
 # screen output as well as file output are generated.
 
 # usage:
-#   python hist_n.py input output1 output2 output3 n_av dV show_plot(yes/no)
+#   python hist_n.py 
+#   python hist_n.py n_av dV show_plot(yes/no) save_plot(yes/no)
 
 ##############
 # parameters #
@@ -23,36 +23,40 @@ datafile = "fort.10"
 output_hist = "res.hist" 
 output_cont = "res.hist_cont" 
 output_poiss = "res.hist_poiss" 
+# output filenames for figures
+output_fig_hist1 = "hist_semilogy.png"
+output_fig_hist2 = "hist_linear.png"
+# output filename for mean and variance
+output_n_stat = "res.n_stat"
 
 # average value of n (n_av) and the volume of a cell (dV) are needed
 #  to calculate Gaussian and Poisson distributions. 
 # for 1d and 2d, dV=dx*dy*cross_section.
 n_av = 1. 
-dV = 5.    
+dV = 10.
 
 # flags for showing semi-log-scale or linear plot on the screen
 show_plot = True
+save_plot = True
 
 # if additional arguments are given
 if (len(sys.argv)!=1):
-  if (len(sys.argv)==8):    # for seven additonal arguments
-    datafile = sys.argv[1]
-    output_hist = sys.argv[2]
-    output_cont = sys.argv[3]
-    output_poiss = sys.argv[4]
-    n_av = float(sys.argv[5])
-    dV = float(sys.argv[6])
-    if (sys.argv[7]=="no"):
+  if (len(sys.argv)==5):    # for four additonal arguments
+    n_av = float(sys.argv[1])
+    dV = float(sys.argv[2])
+    if (sys.argv[3]=="no"):
       show_plot = False
+    if (sys.argv[4]=="no"):
+      save_plot = False
   else:                     # otherwise, generate error
-    print "Error: only seven additonal arguments can be given."
+    print "Error: only four additonal arguments can be given."
     sys.exit()
 
 # the range of histogram [n_min,n_max] is determined by [N_min/dV,N_max/dV].
 # number of bins (nbin) is determined by nbin_in:
 #  if nbin_in=0, nbin = N_max-N_min+1. 
 #  otherwise, nbin = nbin_in.
-N_min = int(n_av*dV-5.*math.sqrt(n_av*dV))
+N_min = int(n_av*dV-6.*math.sqrt(n_av*dV))
 N_max = int(n_av*dV+7.*math.sqrt(n_av*dV)) 
 nbin_in = 0
 
@@ -92,6 +96,18 @@ f_data = np.array(f_data)
 
 # calculate histogram (actually, density)
 n_hist = np.histogram(f_data,bin_edges,density=True)[0]
+
+data_mean = np.mean(f_data)
+data_var = np.var(f_data)
+
+print "<n>= %f" % data_mean 
+print "Var[n]= %f" % data_var
+
+out = open(output_n_stat,"w")
+out.write("<n>= %f\n" % data_mean)
+out.write("Var[n] = %f\n" % data_var)
+out.close()
+print "%s generated." % output_n_stat
 
 ###########################
 # theoretical predictions #
@@ -159,39 +175,45 @@ if (not overflowerror_Stirling):
 
 # semi-log scale plot
 
+fig, a = plt.subplots()
+plt.yscale('log')
+a.plot(bins,n_hist,'--ok',label="Numerics") 
+a.plot(bins_disc,Poisson_disc_normalized,'sb',label="Poisson (normalized)",mfc='none')
+
+if (not overflowerror_Stirling):
+  a.plot(bins_cont,Stirling_cont,'-g',label="Stirling approximation")
+
+a.plot(bins_cont,Gaussian_cont,'-r',label="Gaussian")
+a.legend(loc=8,numpoints=1,fontsize='small')
+#plt.title("N=%d particles per cell"%round(n_av*dV))
+plt.xlabel("number density n")
+plt.ylabel("probability density")
+#plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
 if (show_plot):
-  fig, a = plt.subplots()
-  plt.yscale('log')
-  a.plot(bins,n_hist,'--ok',label="Numerics") 
-  a.plot(bins_disc,Poisson_disc_normalized,'sb',label="Poisson (normalized)",mfc='none')
-
-  if (not overflowerror_Stirling):
-    a.plot(bins_cont,Stirling_cont,'-g',label="Stirling approximation")
-
-  a.plot(bins_cont,Gaussian_cont,'-r',label="Gaussian")
-  a.legend(loc=8,numpoints=1,fontsize='small')
-  #plt.title("N=%d particles per cell"%round(n_av*dV))
-  plt.xlabel("number density n")
-  plt.ylabel("probability density")
-  #plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
   plt.show()
+if (save_plot):
+  fig.savefig(output_fig_hist1)
+  print "%s generated." % output_fig_hist1
 
+fig, a = plt.subplots()
+plt.yscale('linear')
+a.plot(bins,n_hist,'--ok',label="Numerics") 
+a.plot(bins_disc,Poisson_disc_normalized,'sb',label="Poisson (normalized)",mfc='none')
+
+if (not overflowerror_Stirling):
+  a.plot(bins_cont,Stirling_cont,'-g',label="Stirling approximation")
+
+a.plot(bins_cont,Gaussian_cont,'-r',label="Gaussian")
+a.legend(loc=1,numpoints=1,fontsize='small')
+#plt.title("N=%d particles per cell"%round(n_av*dV))
+plt.xlabel("number density n")
+plt.ylabel("probability density")
+#plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
 if (show_plot):
-  fig, a = plt.subplots()
-  plt.yscale('linear')
-  a.plot(bins,n_hist,'--ok',label="Numerics") 
-  a.plot(bins_disc,Poisson_disc_normalized,'sb',label="Poisson (normalized)",mfc='none')
- 
-  if (not overflowerror_Stirling):
-    a.plot(bins_cont,Stirling_cont,'-g',label="Stirling approximation")
-
-  a.plot(bins_cont,Gaussian_cont,'-r',label="Gaussian")
-  a.legend(loc=1,numpoints=1,fontsize='small')
-  #plt.title("N=%d particles per cell"%round(n_av*dV))
-  plt.xlabel("number density n")
-  plt.ylabel("probability density")
-  #plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
   plt.show()
+if (save_plot):
+  fig.savefig(output_fig_hist2)
+  print "%s generated." % output_fig_hist2
 
 ################
 # output files # 
