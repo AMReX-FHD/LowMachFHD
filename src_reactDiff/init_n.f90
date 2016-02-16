@@ -316,7 +316,7 @@ contains
        do k=lo(3),hi(3)
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)
-                call round_to_integers(n_init(i,j,k,1:nspecies), dv=dx(1)*dx(2)*dx(3))
+                call round_to_integers(n_init(i,j,k,1:nspecies), dv=dx(1)*dx(2)*dx(3)*cross_section)
              end do
           end do
        end do    

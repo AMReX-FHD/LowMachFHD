@@ -56,8 +56,7 @@ contains
     ! otherwise, complete the remaining part
     call build(bpt,"advance_reaction_SSA")
 
-    dv = product(dx(1,1:dm))
-    if (dm<3) dv = dv*cross_section
+    dv = product(dx(1,1:dm))*cross_section
 
 
     !!!!! omp tiling
