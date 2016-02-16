@@ -91,8 +91,7 @@ contains
     ng_n = n_new(1)%ng
     ng_d = diff_coef_face(1,1)%ng
 
-    dv = product(dx(1,1:dm))
-    if (dm<3) dv = dv*cross_section
+    dv = product(dx(1,1:dm))*cross_section
 
     ! cannot use OpenMP with tiling since each cell is responsible for updating
     ! cells possibly outside of its file.  OpenMP could be added at the k loop level

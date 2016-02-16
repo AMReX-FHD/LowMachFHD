@@ -58,11 +58,13 @@
 This is a working design document for our stochastic diffusion/reaction code.
 In summary, we are solving the following system of stochastic PDEs:
 \begin{equation}
-\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right) + \mRb(\nb),
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{\frac{2D_kn_k}{A}}\mZb\right) + \mRb(\nb),
 \end{equation}
 where $\nb=(n_1,n_2,\cdots)$ are the number densities, $D_k$ are Fickean diffusion
 coefficients, and $\mZb$ are standard zero-mean, unit-variance random Gaussian 
 vector fields with uncorrelated components.
+Here, $A$ is the volume adjusting factor in general and the cross section of the system in the two dimensional case.
+Hence, for a cell having dimensions $\Delta x\times\Delta y\times\Delta z$ (or $\Delta x\times\Delta y$), its volume is defined as $\Delta V=A\Delta x\Delta y\Delta z$ (or $\Delta V=A\Delta x\Delta y$). 
 This model is essentially the fluctuating multispecies diffusion equations
 augmented with a stochastic reaction term, $\mRb$.
 
@@ -175,7 +177,7 @@ of the parameters in {\tt probin\_common.f90} are used in this code.
 We use a finite volume framework on a regular Cartesian mesh.  Consider PDEs describing
 diffusion and reactions in isolation:
 \begin{equation}
-\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right),\label{eq:Diffusion}
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{\frac{2D_kn_k}{A}}\mZb\right),\label{eq:Diffusion}
 \end{equation}
 \begin{equation}
 \frac{\partial n_k}{\partial t} = \mRb(\nb).\label{eq:Reactions}
@@ -423,7 +425,7 @@ conditions.
 Then use any of the splitting schemes above, but with an additional piecewise-constant
 source term:
 \begin{equation}
-\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right) + \Rb(\nb^{\rm steady}),\label{eq:Diffusion_bc}
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{\frac{2D_kn_k}{A}}\mZb\right) + \Rb(\nb^{\rm steady}),\label{eq:Diffusion_bc}
 \end{equation}
 \begin{equation}
 \frac{\partial n_k}{\partial t} = \mRb(\nb) - \Rb(\nb^{\rm steady}).\label{eq:Reactions_bc}

@@ -58,8 +58,7 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    dv = product(dx(1,1:dm))
-    if (dm<3) dv = dv*cross_section
+    dv = product(dx(1,1:dm))*cross_section
 
     increment_div = .false.
     if (present(increment_in)) increment_div = increment_in
@@ -559,8 +558,7 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    dv = product(dx(1,1:dm))
-    if (dm<3) dv = dv*cross_section
+    dv = product(dx(1,1:dm))*cross_section
 
     ! the number of ghost cells must match variance_mfab input to multifab_fill_random
     ! the values in the ghost cells do not have to be added to n_init since we

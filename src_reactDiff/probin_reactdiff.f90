@@ -68,7 +68,8 @@ module probin_reactdiff_module
   
   ! Chemical reactions
   !----------------------
-  real(kind=dp_t), save :: cross_section = 1.d0 ! thickness (in 2D) of cell
+  real(kind=dp_t), save :: cross_section = 1.d0 ! in 2D, thickness of cell
+                                                ! in general, dv = product(dx(1,1:dm))*cross_section
 
   ! Whether to compute chemical rates using classical LMA or integer-based one
   logical, save         :: include_discrete_LMA_correction = .true. 
