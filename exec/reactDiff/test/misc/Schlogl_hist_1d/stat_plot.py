@@ -81,7 +81,7 @@ plt.xlabel("number density n")
 plt.ylabel("probability density")
 #plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
 plt.show()
-fig.savefig("hist_semilogy.jpg")
+fig.savefig("hist_semilogy.png")
 
 # linear plot
 fig, a = plt.subplots()
@@ -107,7 +107,7 @@ plt.xlabel("number density n")
 plt.ylabel("probability density")
 #plt.vlines(0,1e-8,1,colors='k',linestyles='dotted')
 plt.show()
-fig.savefig("hist_linear.jpg")
+fig.savefig("hist_linear.png")
 
 ######
 # Sk #
@@ -135,4 +135,4 @@ a.errorbar(x4,y4,yerr=y4err2,label="Numerics",fmt='s')
 plt.xlabel("k")
 plt.ylabel("structure factor S(k)")
 plt.show()
-fig.savefig("Sk.jpg")
+fig.savefig("Sk.png")

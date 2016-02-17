@@ -12,27 +12,21 @@ datafile="fort.10"
 # inputs_hist_1d assumes ncell*1 cells in 2d.
 # each cell has dx*dx in dimensions with cross_section=dz.
 ncell = 64
-dx = 1.
-dz = 10.
+dv = 10.
 avg_type = 1                   # 1=arith 2=geom 3=harmo
 
 # if additional arguments are given
 if (len(sys.argv)!=1):   
-  if (len(sys.argv)==2):       # for one additional argument
-    datafile = sys.argv[1]  
-  elif (len(sys.argv)==6):     # for five additional arguments
-    datafile = sys.argv[1]
-    ncell = int(sys.argv[2])
-    dx = float(sys.argv[3])
-    dz = float(sys.argv[4])
-    avg_type = int(sys.argv[5])
+  if (len(sys.argv)==4):     # for three additional arguments
+    ncell = int(sys.argv[1])
+    dv = float(sys.argv[2])
+    avg_type = int(sys.argv[3])
   else:                        # otherwise, generate error
-    print "Error: only one or five additional arguments can be given."
+    print "Error: only one or four additional arguments can be given."
 
     sys.exit()
 
 # print parameter values
-dv = dx*dx*dz
 print "** ncell=%d, dv=%g" %(ncell,dv)
 
 ####################
@@ -132,17 +126,18 @@ var = sum2-sum1*sum1
 cov = sum3-sum1*sum1
 corr = cov/var
 
-print "<n>= %.5f" % (sum1)
-print "<n^2>= %.5f" % (sum2)
-print "Var[n]= %.5f" % (var)
+print "<n>= %.10f" % (sum1)
+print "<n^2>= %.10f" % (sum2)
+print "Var[n]= %.10f" % (var)
 
-print "<n*n_neigh>= %.5f" % (sum3)
-print "Cov[n,n_neigh]= %.5f" % (cov)
-print "Corr[n,n_neigh]= %.5f" % (corr)
+print "<n*n_neigh>= %.10f" % (sum3)
+print "Cov[n,n_neigh]= %.10f" % (cov)
+print "Corr[n,n_neigh]= %.10f" % (corr)
 
-print "face_avg_arith= %.5f" % (face_avg[0]) 
-print "face_avg_geom= %.5f" % (face_avg[1]) 
-print "face_avg_harmo= %.5f" % (face_avg[2]) 
+print "face_avg_arith= %.10f" % (face_avg[0]) 
+print "face_avg_geom= %.10f" % (face_avg[1]) 
+print "face_avg_harmo= %.10f" % (face_avg[2]) 
 
+print "-1/(Nc-1)= %.10f" % (-1./(ncell-1))
 print "(Nc-1)/Nc*<face_avg>/dv= %.10f" % (float(ncell-1)/ncell*face_avg[avg_type-1]/dv)
 print "-1/Nc*<face_avg>/dv= %.10f" % (-1./ncell*face_avg[avg_type-1]/dv)

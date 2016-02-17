@@ -16,23 +16,23 @@ dV=10.
 OPT1="--nreactions 0"
 #OPT1="--nreactions 4 --rate_multiplier 0.1"
 
-#OPT2="--fixed_dt 2. --max_step 22000 --print_int 2000 --hydro_grid_int 1 --n_steps_skip 2000"
-#OPT2="--fixed_dt 1. --max_step 22000 --print_int 2000 --hydro_grid_int 1 --n_steps_skip 2000"
-#OPT2="--fixed_dt 1. --max_step 101000 --print_int 1000 --hydro_grid_int 1 --n_steps_skip 1000"
-#OPT2="--fixed_dt 0.25 --max_step 44000 --print_int 4000 --hydro_grid_int 2 --n_steps_skip 4000"
-#OPT2="--fixed_dt 0.1 --max_step 110000 --print_int 10000 --hydro_grid_int 5 --n_steps_skip 10000"
-OPT2="--fixed_dt 0.01 --max_step 1100000 --print_int 100000 --hydro_grid_int 50 --n_steps_skip 100000"
+#OPT2="--fixed_dt 2.    --max_step 10500    --print_int 500     --hydro_grid_int 1    --n_steps_skip 500"
+#OPT2="--fixed_dt 1.    --max_step 11000    --print_int 1000    --hydro_grid_int 1    --n_steps_skip 1000"
+#OPT2="--fixed_dt 0.5   --max_step 22000    --print_int 2000    --hydro_grid_int 2    --n_steps_skip 2000"
+#OPT2="--fixed_dt 0.25  --max_step 44000    --print_int 4000    --hydro_grid_int 4    --n_steps_skip 4000"
+OPT2="--fixed_dt 0.1   --max_step 110000   --print_int 10000   --hydro_grid_int 10   --n_steps_skip 10000"
+#OPT2="--fixed_dt 0.01  --max_step 1100000  --print_int 100000  --hydro_grid_int 100  --n_steps_skip 100000"
 
-OPT3="--temporal_integrator -2 --avg_type 1 --midpoint_stoch_flux_type 3"
-#OPT3="--temporal_integrator -4 --avg_type 1 --midpoint_stoch_flux_type 3"
+#OPT3="--temporal_integrator -2 --avg_type 1 --midpoint_stoch_flux_type 3"
+OPT3="--temporal_integrator -4 --avg_type 1 --midpoint_stoch_flux_type 3"
 #OPT3="--temporal_integrator 0 --diffusion_type 3 --reaction_type 1"
 
 #OPT4="--use_Poisson_rng 1"
 
-#OPT5="--initial_variance 1."
+OPT5="--initial_variance -1. --integer_populations F"
+#OPT5="--initial_variance 1.  -integer_population_F"
 #OPT5="--initial_variance 1.  --integer_populsations T"
 #OPT5="--initial_variance 0.  --integer_populations T"
-OPT5="--initial_variance -1. --integer_populations F"
 
 #######
 # RUN #
@@ -42,7 +42,6 @@ EXEC=../../main.Linux.gfortran.debug.mpi.exe
 INPUTS=inputs_Schlogl_hist_1d
 OPTS="--cross_section $dV $OPT1 $OPT2 $OPT3 $OPT4 $OPT5"
 PYSCR_HIST=../../hist_n.py
-PYSCR_SUMSK=sum_Sk_1d.py
 
 if [ "$NRUN" == 1 ]
 then
@@ -55,7 +54,6 @@ then
   ../$EXEC ../$INPUTS $OPTS | tee -a screen_out
 
   python ../$PYSCR_HIST 1. $dV yes yes
-  python ../$PYSCR_SUMSK 
 else
   for ((i=1;i<=$NRUN;i++))
   do 
@@ -91,8 +89,6 @@ else
     echo "cd $RUNNAME$i"
     cd $RUNNAME$i
     python ../$PYSCR_HIST 1. $dV no yes
-    python ../$PYSCR_SUMSK > res.sum_Sk
-    echo "res.sum_Sk generated"
     cd - > /dev/null
   done
 fi

@@ -1,13 +1,25 @@
 how to run: first, execute run.sh
             then, execute stat.sh (for NRUN>1)
 
+
 1. run.sh
 
-This script executes inputs_Schlogl_hist_1d.
 If NRUN>1, several runs are performed with different random seeds.
-(if USEMPIEXEC=yes, these runs are concurrently performed.)
+(if USEMPIEXEC=yes, these runs are concurrently performed by mpiexec.)
+
+For each run, this script first executes inputs_Schlogl_hist_1d, then executes ../../hist_n.py, which calculates:
+  - distribution of cell number density (output: res.hist*) (figure files: hist_semilogy.png and hist_linear.png)
+  - mean, variance, probability of negative density, and the KL-divergence (output: res.n_stat)
+
 You can change relevant options by modifying run.sh.
+
 
 2. stat.sh
 
-For NRUN>1, this scripts calculates the mean and standard error of each quntity over the runs.
+For NRUN>1, this script calculates the mean and standard error of each quntity over the runs.
+In addition, it also executes stat_plot.py to generate three plots with errorbars: hist_semilog.png, hist_linear.png, and Sk.png
+
+
+** additional analysis
+- face_avg.sh
+- sum_Sk.py (execute: cd TEST1; python ../sum_Sk_1d.py; cd ..)

@@ -15,29 +15,22 @@ import sys
 datafile1="fort.10"
 datafile2="Hist1D.S_k.pair=1.Re.dat"
 
-# inputs_hist_1d assumes ncell*1 cells in 2d.
-# each cell has dx*dx in dimensions with cross_section=dz.
+# inputs_hist_1d assumes ncell*1 cells of volume dv in 2d.
+# dv = dx*dx*cross_section
 ncell = 64
-dx = 1.
-dz = 10.
+dv = 10.
 
 # if additional arguments are given
 if (len(sys.argv)!=1):   
   if (len(sys.argv)==3):       # for two additional arguments
-    datafile1 = sys.argv[1]  
-    datafile2 = sys.argv[2] 
-  elif (len(sys.argv)==6):     # for five additional arguments
-    datafile1 = sys.argv[1]
-    datafile2 = sys.argv[2]
-    ncell = int(sys.argv[3])
-    dx = float(sys.argv[4])
-    dz = float(sys.argv[5])
+    ncell = int(sys.argv[1])
+    dv = float(sys.argv[2])
   else:                        # otherwise, generate error
-    print "Error: only two or five additional arguments can be given."
+    print "Error: only two additional arguments can be given."
     sys.exit()
 
 # print parameter values
-print "** ncell=%d, dx=%g, dz=%g" %(ncell,dx,dz)
+print "** ncell=%d, dv=%g" %(ncell,dv)
 
 #####################
 # datafile1=fort.10 #
@@ -127,7 +120,7 @@ else:
   print "Error: ncell-1 != nSkval"
   sys.exit()
 
-V = ncell*dx*dx*dz
+V = ncell*dv
 S0 = V*second_moment_nbar
 
 print "sum of S(k) (k!=0) / V = %g  (cf. <n^2> - <nbar^2> = %g)" % (sum1/V,second_moment_n-second_moment_nbar)

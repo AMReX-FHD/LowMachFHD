@@ -3,10 +3,8 @@
 RUNNAME=TEST
 NRUN=16
 
-DATAFILE=fort.10
 NCELL=64
-DX=1.
-DZ=10.
+DV=10.
 AVGTYPE=1
 
 PYSCR=face_avg.py
@@ -15,8 +13,7 @@ OUTPUT_STAT=res.face_avg_stat
 ################################################################################
 
 echo "NCELL=$NCELL"
-echo "DX=$DX"
-echo "DZ=$DZ"
+echo "DV=$DV"
 echo "AVGTYPE=$AVGTYPE"
 echo
 
@@ -25,7 +22,7 @@ do
   dir=$RUNNAME$i
   cd $dir
   echo "***** $dir"
-  python ../$PYSCR $DATAFILE $NCELL $DX $DZ $AVGTYPE | tee res.face_avg
+  python ../$PYSCR $NCELL $DV $AVGTYPE | tee res.face_avg
   cd ..
   echo 
 done
@@ -50,4 +47,4 @@ eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$
 paste <(awk 'NR>2{print $1}' $dir/res.face_avg) <(awk '{print $0}' $TMP_OUTPUT_STAT) > $RUNNAME/$OUTPUT_STAT
 rm $TMP_OUTPUT_STAT
 
-cat $RUNNAME/$OUTPUT_STAT 
+awk '{printf("%s\t%g\t%g\n",$1,$2,$4)}' $RUNNAME/$OUTPUT_STAT 
