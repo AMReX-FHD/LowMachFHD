@@ -8,21 +8,36 @@
   !----------------------
   dim_in = 2                       ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
-  n_cells(1:2) = 32 32             ! number of cells in domain
-  max_grid_size(1:2) = 16 16       ! max number of cells in a box
+  prob_hi(1:2) = 1.6d-5 1.6d-5       ! physical hi coordinate
+  n_cells(1:2) = 64 64             ! number of cells in domain
+  max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 1.d-1                 ! time step (if positive, fixed)
-  cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
+
+!  ! explicit limit
+  fixed_dt = 1.25d-10                  ! time step (if positive, fixed)
+  algorithm_type = 0
+
+  ! implicit limit
+!  fixed_dt = 7.5d-10                  ! time step (if positive, fixed)
+!  algorithm_type = 1
+
+  ! equilibrium fluctuations
+  prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
+  bc_lo(1:2) = -1 -1
+  bc_hi(1:2) = -1 -1
+
+!  ! gradient, fresh water on top of salt water
+!  prob_type = 3                    ! sets scalars, m, coefficients (see init.f90)
+!  bc_lo(1:2) = -1 100
+!  bc_hi(1:2) = -1 100
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1000                  ! maximum number of time steps
-  plot_int = 10                   ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 10000                 ! maximum number of time steps
+  plot_int = 1000                  ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
-  prob_type = 7                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
   print_int = 10                   ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 0             ! how often to call project_onto_eos
@@ -30,19 +45,18 @@
   ! Physical parameters
   !--------------------
   grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
-  molmass(1:3) = 1.d-22 1.d-22 1.d-22
-  rhobar(1:3) =   1.d0 1.d0 1.d0 ! rhobar for nspecies
+  molmass(1:3) = 3.82d-23 5.89d-23 3.35d-23  ! sodium: 3.82e-23 g, Cl: 5.89e-23 g
+  rhobar(1:3) =   3.17d0 3.17d0 1.d0
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mom = 0.d0
-  variance_coef_mass = 0.d0
-  k_B = 1.d0            ! Boltzmann's constant
+  variance_coef_mom = 1.d0
+  variance_coef_mass = 1.d0
   k_B = 1.3806488d-16       ! Boltzmann's constant
   
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
+       ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
@@ -63,7 +77,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 2
-  visc_coef = 1.d-5         ! momentum diffusion coefficient 'eta'   
+  visc_coef = 1.05d-4       ! momentum diffusion coefficient 'eta'   
 
   advection_type = 0 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
@@ -79,21 +93,9 @@
   ! Initial conditions
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
+  smoothing_width = 2.d0   ! scale factor for smoothing initial profile
+  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero)
-
-  ! Boundary conditions
-  !----------------------
-  ! BC specifications:
-  ! -1 = periodic
-  ! 100 = no-slip wall      (Dir condition for normal vel; Dir velocity condition for trans vel)
-  ! 101 = no-slip reservoir (Dir condition for normal vel; Dir velocity condition for trans vel)
-  ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
-  ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
-  ! For a complete list see bc.f90
-  bc_lo(1:2) = -1 -1
-  bc_hi(1:2) = -1 -1
 
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions
@@ -112,7 +114,7 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 0    ! How often to call updateHydroGrid
+  hydro_grid_int = 1   ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
@@ -125,11 +127,11 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 128 ! parallelization parameters
-  stats_int = 0                  ! Project grid for analysis
+  stats_int = 1000                ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 0       ! How many steps to skip
+  n_steps_skip = 1000      ! How many steps to skip
   analyze_conserved = F   ! Should we use conserved variables for the analysis
                           ! (does not work well)
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
@@ -156,27 +158,33 @@
   
   ! Initial and boundary conditions 
   !----------------------
-  T_init(1:2) = 1.d0 1.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  T_init(1:2) = 300.d0 300.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   temp_type = 0 ! for initializing temperature
-
-  ! initial values for CONCENTRATIONS
-  c_init(1,1:3) = 0.05d0 0.05d0 0.9d0
-  c_init(2,1:3) = 0.05d0 0.05d0 0.9d0
 
   ! c_i boundary conditions (dir,lohi,species)
   c_bc(1,1,1:2) = 0.d0 0.d0
   c_bc(1,2,1:2) = 0.d0 0.d0
   c_bc(2,1,1:2) = 0.d0 0.d0
   c_bc(2,2,1:2) = 0.d0 0.d0
+
+  ! equilibrium fluctuations
+  ! initial values for CONCENTRATIONS
+  c_init(1,1:3) = 0.01088d0  0.0168d0  0.97232d0  ! those values because 2720*0.168 = 4200*0.0108
+  c_init(2,1:3) = 0.01088d0  0.0168d0  0.97232d0
+
+!  ! gradient, fresh water on top of salt water
+!  ! initial values for CONCENTRATIONS
+!  c_init(1,1:3) = 0.01088d0  0.0168d0  0.97232d0  ! those values because 2720*0.168 = 4200*0.0108
+!  c_init(2,1:3) = 0.001088d0  0.00168d0  0.997232d0
   
   ! Thermodynamic and transport properties:
   !----------------------
 
   ! These are lower-triangules of symmetric matrices represented as vectors
   ! Number of elements is (nspecies*(nspecies-1)/2)
-  ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
+  ! The values are read row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
-  Dbar(1:3) = 1.d-5 1.d-5 1.d-5
+  Dbar(1:3) = 1.17d-5 1.33d-5 2.03d-5  ! diffusion of Na: 13.3e-6 ; Cl: 20.3e-6; water: 2.3e-5
   Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients, only differences among elements matter
   H_offdiag(1:1) = 0.d0    ! Off diagonal elements of H=d^2F/dx^2  
   H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
@@ -188,9 +196,8 @@
 &probin_charged
  
   use_charged_fluid = T
-  dielectric_const = 8.854d-21
-  charge_per_mass(1:3) = 1.d-5 -1.d-5 0.d0
-
+  dielectric_const = 6.91d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
+  charge_per_mass(1:3) = 4.2d3 -2.72d3 0.d0
 /
 
 ! Stokes solver for velocity
