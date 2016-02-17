@@ -4,9 +4,15 @@ import numpy as np
 import scipy.stats 
 import matplotlib.pyplot as plt
 
-# this script calculates the histogram of n as well as the mean and variance of n.
-# screen output as well as file output are generated.
-
+# this script calculates the following quantities of n (=cell number density):
+# 1. histogram of n (compared with Gaussian and Poisson statistics)
+#   a. semi-log-y plot 
+#   b. linear plot
+# 2. mean and variance of n
+# 3. probability of negative density
+# 4. KL divergence with respect to the Poisson distribution
+# screen outputs as well as file outputs are generated.
+#
 # usage:
 #   python hist_n.py 
 #   python hist_n.py n_av dV show_plot(yes/no) save_plot(yes/no)
@@ -26,17 +32,19 @@ output_poiss = "res.hist_poiss"
 # output filenames for figures
 output_fig_hist1 = "hist_semilogy.png"
 output_fig_hist2 = "hist_linear.png"
-# output filename for mean and variance
+# output filename for mean, variance, negative density probability, and the KL-divergence
 output_n_stat = "res.n_stat"
 
 # average value of n (n_av) and the volume of a cell (dV) are needed
 #  to calculate Gaussian and Poisson distributions. 
-# for 1d and 2d, dV=dx*dy*cross_section.
+# for 2d (and 1d), dV=dx*dy*cross_section.
+# for 3d, dV=dx*dy*dz*cross_section.
 n_av = 1. 
 dV = 10.
 
 # flags for showing semi-log-scale or linear plot on the screen
 show_plot = True
+# flags for saving semi-log-scale or linear plot on a file 
 save_plot = True
 
 # if additional arguments are given
@@ -78,11 +86,12 @@ bins = n_min+dn*np.arange(nbin)    # center values of bins
 bin_edges = list(bins-0.5*dn)      # note: len(bins) = nbin 
 bin_edges.append(bins[-1]+0.5*dn)  #       len(bin_edges) = nbin + 1
 
-###################################
-# read data | calculate histogram #
-###################################
+#############
+# read data #
+#############
 
-# read data
+print "** reading %s..." % datafile
+
 f_data = []
 with open(datafile) as inf:
   for line in inf:
@@ -94,20 +103,12 @@ with open(datafile) as inf:
     f_data.append(nval)                   
 f_data = np.array(f_data)
 
-# calculate histogram (actually, density)
+#######################
+# calculate histogram #
+#######################
+
+# actually, we calculate the probability density function.
 n_hist = np.histogram(f_data,bin_edges,density=True)[0]
-
-data_mean = np.mean(f_data)
-data_var = np.var(f_data)
-
-print "<n>= %f" % data_mean 
-print "Var[n]= %f" % data_var
-
-out = open(output_n_stat,"w")
-out.write("<n>= %f\n" % data_mean)
-out.write("Var[n] = %f\n" % data_var)
-out.close()
-print "%s generated." % output_n_stat
 
 ###########################
 # theoretical predictions #
@@ -124,7 +125,6 @@ dn_cont = (n_max-n_min)/(nbin_cont-1)
 bins_cont = n_min+dn_cont*np.arange(nbin_cont) 
 
 # Poisson 
-
 def fnc_Poisson(x):
   if (round(x*dV)>=0):
     return scipy.stats.poisson.pmf(round(x*dV),n_av*dV)
@@ -135,7 +135,6 @@ Poisson_disc = np.array([ fnc_Poisson(x) for x in bins_disc ])
 Poisson_disc_normalized = Poisson_disc/dn_disc 
 
 # Gaussian
-
 def fnc_Gaussian(x):
   n_std = math.sqrt(n_av*dV)/dV        
   return math.exp(-0.5*(x-n_av)**2/n_std**2)/math.sqrt(2*math.pi)/n_std
@@ -144,10 +143,8 @@ Gaussian = np.array([ fnc_Gaussian(x) for x in bins ])
 Gaussian_cont = np.array([ fnc_Gaussian(x) for x in bins_cont ])
 
 # Stirling's approximation to the Poisson distribution
-# This includes a continuity correction to correct the mean
-
+# (this includes a continuity correction to correct the mean.)
 overflowerror_Stirling = False
-
 def fnc_Stirling(x):
   global overflowerror_Stirling
   if (overflowerror_Stirling):
@@ -193,7 +190,7 @@ if (show_plot):
   plt.show()
 if (save_plot):
   fig.savefig(output_fig_hist1)
-  print "%s generated." % output_fig_hist1
+  print "** %s generated." % output_fig_hist1
 
 fig, a = plt.subplots()
 plt.yscale('linear')
@@ -213,11 +210,11 @@ if (show_plot):
   plt.show()
 if (save_plot):
   fig.savefig(output_fig_hist2)
-  print "%s generated." % output_fig_hist2
+  print "** %s generated." % output_fig_hist2
 
-################
-# output files # 
-################
+##############################
+# output files for histogram # 
+##############################
 
 # output_hist
 if (output_hist!="none"):
@@ -237,7 +234,7 @@ if (output_hist!="none"):
 
   out.close() 
 
-  print "output_hist file \"%s\" generated." % output_hist
+  print "** %s generated." % output_hist
 
 # output_cont
 if (output_cont!="none"):
@@ -255,7 +252,7 @@ if (output_cont!="none"):
       out.write("%g\t%g\t%g\n" % (bins_cont[i],Gaussian_cont[i],Stirling_cont[i]))
   out.close() 
 
-  print "output_cont file \"%s\" generated." % output_cont
+  print "** %s generated." % output_cont
 
 # output_poiss
 if (output_poiss!="none"):
@@ -266,4 +263,52 @@ if (output_poiss!="none"):
     out.write("%g\t%g\n" % (bins_disc[i], Poisson_disc_normalized[i]))
   out.close() 
 
-  print "output_poiss file \"%s\" generated." % output_poiss
+  print "** %s generated." % output_poiss
+
+#####################################################################
+# calculate mean, variance, prob of neg dens, and the KL-divergence # 
+#####################################################################
+
+# mean and variance
+data_mean = np.mean(f_data)
+data_var = np.var(f_data)
+
+print "<n>= %f" % data_mean 
+print "Var[n]= %f" % data_var
+
+# probability of negative density
+neg_cnt = 0
+for n in f_data:
+  if (n<0.):
+    neg_cnt += 1
+data_prob_neg = float(neg_cnt)/len(f_data)
+
+print "prob_of_neg_dens= %e" % data_prob_neg 
+
+# Kullback-Leibler divergence
+if (nbin == nbin_disc):
+  sum_KLdiv = 0.
+  for i in range(nbin):
+    if (Poisson_disc[i]>0. and n_hist[i]>0.):
+      # D_KL(P||Q) = sum_i P_i*log(P_i/Q_i)
+      # sum is over Q_i>0.
+      # if P_i=0, its contribution becomes zero.
+      # note that Poisson_disc is used for P_i, whereas Poisson_disc_normalized for P_i/Q_i. 
+      sum_KLdiv += Poisson_disc[i]*math.log(Poisson_disc_normalized[i]/n_hist[i])
+else:
+  print "** calculation of the KL-divergence is skipped: only for n_bin_in = 0."
+
+print "KL-divergence= %e" % sum_KLdiv
+
+###########################################################################
+# file output for mean, variance, prob of neg dens, and the KL-divergence #
+########################################################################### 
+
+out = open(output_n_stat,"w")
+out.write("<n>= %f\n" % data_mean)
+out.write("Var[n]= %f\n" % data_var)
+out.write("prob_of_neg_dens= %e\n" % data_prob_neg)
+out.write("KL-divergence= %e\n" % sum_KLdiv)
+out.close()
+print "** %s generated." % output_n_stat
+
