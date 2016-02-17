@@ -294,6 +294,9 @@ contains
           avg_charge = multifab_sum_c(charge(1),1,1) / multifab_volume(charge(1))
           call multifab_sub_sub_s_c(charge(1),1,avg_charge,1,0)
           if (abs(avg_charge) .gt. 1.d-12) then
+             if (parallel_IOProcessor()) then
+                print*,'average charge =',avg_charge
+             end if
              call bl_warn("Warning: average charge is not zero")
           end if
        end if
