@@ -1,0 +1,8 @@
+how to run: execute run.sh
+
+This script first executes inputs_Schlogl_hist_3d, then executes the following two python scripts.
+1. ../../hist_n.py
+  - distribution of cell number density (output: res.hist*)
+    (figure files: hist_semilogy.png and hist_linear.png)
+  - mean, variance, probability of negative density, and the KL-divergence (output: res.n_stat)
+2. visit_drawSk3d.py: ThreeSlice plot of S(k1,k2,k3) (i.e., k3=0) fro Hist3D.S_k.pair=1.Re.dat through visit (output: Sk.png)
