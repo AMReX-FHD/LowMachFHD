@@ -16,23 +16,23 @@
   n_cells(1:2) = 128 128           ! number of cells in domain
   max_grid_size(1:2) = 64 64       ! max number of cells in a box
   fixed_dt = 4.d-11
-  max_step = 20                  ! maximum number of time steps
-  plot_int = 20                ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 5                   ! maximum number of time steps
+  plot_int = 5                 ! Interval for writing a plotfile (for visit/amrvis)
   smoothing_width = 2.d0   ! scale factor for smoothing initial profile
 
-  n_cells(1:2) = 256 256           ! number of cells in domain
-  max_grid_size(1:2) = 128 128     ! max number of cells in a box
-  fixed_dt = 2.d-11
-  max_step = 40                 ! maximum number of time steps
-  plot_int = 40                ! Interval for writing a plotfile (for visit/amrvis)
-  smoothing_width = 4.d0   ! scale factor for smoothing initial profile
+!  n_cells(1:2) = 256 256           ! number of cells in domain
+!  max_grid_size(1:2) = 128 128     ! max number of cells in a box
+!  fixed_dt = 2.d-11
+!  max_step = 10                 ! maximum number of time steps
+!  plot_int = 10                ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 4.d0   ! scale factor for smoothing initial profile
 
-  n_cells(1:2) = 512 512           ! number of cells in domain
-  max_grid_size(1:2) = 256 256     ! max number of cells in a box
-  fixed_dt = 1.d-11
-  max_step = 80                 ! maximum number of time steps
-  plot_int = 80                ! Interval for writing a plotfile (for visit/amrvis)
-  smoothing_width = 8.d0   ! scale factor for smoothing initial profile
+!  n_cells(1:2) = 512 512           ! number of cells in domain
+!  max_grid_size(1:2) = 256 256     ! max number of cells in a box
+!  fixed_dt = 1.d-11
+!  max_step = 20                 ! maximum number of time steps
+!  plot_int = 20                ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 8.d0   ! scale factor for smoothing initial profile
 
   ! Algorithm control / selection
   !----------------------
