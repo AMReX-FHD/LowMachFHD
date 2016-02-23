@@ -738,6 +738,24 @@ contains
        ! conc to rho - INCLUDING GHOST CELLS
        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
+       ! compute A_Phi^{n+1}
+       call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
+
+       do comp=1,nspecies
+
+          ! copy component of A_Phi^{n+1} into beta and multiply by grad_Epot
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
+                call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
+             end do
+          end do
+
+          ! compute Epot_mass_fluxdiv = div A_Phi^{n+1} grad Epot
+          call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
+
+       end do
+
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 4 - Corrector Crank-Nicolson Step
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -846,7 +864,7 @@ contains
        call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,dt,time,dx,weights, &
-                                         the_bc_tower)
+                                         the_bc_tower,charge_new)
 
        ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
        do n=1,nlevs
@@ -864,7 +882,7 @@ contains
 
        if (use_charged_fluid) then
 
-          ! compute momentum charge force, charge^{*,n+1}*grad_Epot^{n+1}
+          ! compute momentum charge force, charge^{n+1}*grad_Epot^{n+1}
           call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
           do n=1,nlevs
              do i=1,dm
