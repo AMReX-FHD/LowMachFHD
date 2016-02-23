@@ -626,6 +626,70 @@ We rewrite this system as:
 \end{equation}
 } % end color
 
+\section{Deterministic Testing}
+Comparison of the explicit algorithm, and the old, non-iterative implicit
+potential algorithm with both $\theta=1$ and $\theta=0.5$.
+
+This is a horizontal strip of seawater of width equal to half the domain
+with a hyperbolic tangent smoothing to a lower concentration of seawater.
+The strip is centered in the domain, and all boundary conditions are periodic.
+
+The seawater parameters are the same from Alej's talk.  $\Delta x$ is a factor
+of 4 greater than Alej's talk, which is 'good' because for coarser runs
+(at the resolution I did the structure factor calculations for) the implicit
+algorithm can run stably with factor of 5 greater time step.
+
+\begin{table}
+\begin{center}
+\caption{$L^1$ errors for explicit algorithm}
+\label{tab:explicit convergence}
+\begin{tabular}{cccccc}
+\\ \hline\hline                                                                 
+Method & $128^2-256^2$ & Rate & $256^2-512^2$ \\
+\hline\hline
+$\rho_1$     & 6.72e-16 & 2.03 & 1.65e-16 \\
+$\rho_2$     & 1.05e-15 & 2.02 & 2.59e-16 \\
+$\rho_3$     & 5.45e-16 & 2.02 & 1.34e-16 \\
+Total Charge & 6.75e-14 & 1.91 & 1.79e-14 \\
+$v$          & 1.07e-08 & 2.01 & 2.66e-09 \\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\caption{$L^1$ errors for implicit algorithm}
+\label{tab:implicit convergence}
+\begin{tabular}{cccccc}
+\\ \hline\hline                                                                 
+Method & $128^2-256^2$ & Rate & $256^2-512^2$ \\
+\hline\hline
+$\rho_1$     & 6.64e-16 & 2.05 & 1.61e-16 \\
+$\rho_2$     & 1.07e-15 & 1.99 & 2.70e-16 \\
+$\rho_3$     & 5.64e-16 & 1.97 & 1.44e-16 \\
+Total Charge & 1.38e-13 & 1.16 & 6.19e-14 \\
+$v$          & 9.53e-09 & 2.18 & 2.11e-09 \\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}
+\begin{center}
+\caption{$L^1$ errors for semi-implicit algorithm}
+\label{tab:semi-implicit convergence}
+\begin{tabular}{cccccc}
+\\ \hline\hline                                                                 
+Method & $128^2-256^2$ & Rate & $256^2-512^2$ \\
+\hline\hline
+$\rho_1$     & 6.74e-16 & 2.02 & 1.66e-16 \\
+$\rho_2$     & 1.05e-15 & 2.02 & 2.58e-16 \\
+$\rho_3$     & 5.43e-16 & 2.02 & 1.34e-16 \\
+Total Charge & 6.14e-14 & 1.95 & 1.59e-14 \\
+$v$          & 1.11e-08 & 2.01 & 2.75e-09 \\
+\end{tabular}
+\end{center}
+\end{table}
+
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
 
