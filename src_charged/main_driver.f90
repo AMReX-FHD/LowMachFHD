@@ -384,11 +384,7 @@ subroutine main_driver()
   end do
 
   ! allocate and build multifabs that will contain random numbers
-  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1) then
-     n_rngs = 1
-  else if (algorithm_type .eq. 2) then
-     n_rngs = 2
-  end if
+  n_rngs = 1
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
 
@@ -426,9 +422,7 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
 
-     ! add initial momentum fluctuations - only call in inertial code for now
-     ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
-     if (algorithm_type .eq. 0 .and. initial_variance .ne. 0.d0) then
+     if (initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
      end if

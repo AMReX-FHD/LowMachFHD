@@ -11,7 +11,7 @@ module initial_projection_charged_module
   use compute_mass_fluxdiv_charged_module
   use reservoir_bc_fill_module
   use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type
+  use probin_common_module, only: rhobar, variance_coef_mass
 
   implicit none
 
@@ -67,18 +67,13 @@ contains
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
 
-    real(kind=dp_t) :: weights(algorithm_type)
+    real(kind=dp_t) :: weights(1)
     
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"initial_projection_charged")
     
-    if (algorithm_type .eq. 1) then
-       weights(1) = 1.d0
-    else if (algorithm_type .eq. 2) then
-       weights(1) = 1.d0
-       weights(2) = 0.d0
-    end if
+    weights(1) = 1.d0
 
     dm = mla%dim
     nlevs = mla%nlevel
