@@ -381,18 +381,15 @@ For the projection, we solve for $\phi$ and update $\vb^{\rm init}$ as follows:
 Set $(\vb,\rho_i)^{n+1,0} = (\vb,\rho_i)^n$.
 We loop over {\bf Step 1} -- {\bf Step 3} for $l=0,\cdots,l_{\rm max}$:\\ \\
 {\bf Step 1: Density Update}\\ \\
-In this algorithm, there are three parameters, $\theta_\rho$, $\theta_\Phi$, 
-and $\theta_v$, that control the ``implicitness'' of the density, electric potential,
-and velocity temporal discretizations.
-We will likely begin testing with the fully implicit case, 
-$\theta_\rho=\theta_\Phi=\theta_v=1$.\\ \\
+In this algorithm $\theta_\Phi$ controls
+the temporal discretization of the electric potential.\\ \\
 
 We would like to solve the following,
 \begin{eqnarray}
-\frac{(\rho\wb)^{n+1,l+1} - (\rho\wb)^n}{\Delta t} &=&  -(1-\theta_\rho)\nabla\cdot(\rho\wb\vb)^n - \theta_\rho\nabla\cdot(\rho\wb\vb)^{n+1,l}\nonumber\\
-&&+ (1-\theta_\rho)\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \theta_\rho\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l} \nonumber\\
-&&+ (1-\theta_\rho)\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n
-+ \theta_\rho\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l}\mathcal{Z}^n\nonumber\\
+\frac{(\rho\wb)^{n+1,l+1} - (\rho\wb)^n}{\Delta t} &=&  -\half\nabla\cdot(\rho\wb\vb)^n - \half\nabla\cdot(\rho\wb\vb)^{n+1,l}\nonumber\\
+&&+ \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l} \nonumber\\
+&&+ \half\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n
++ \half\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l}\mathcal{Z}^n\nonumber\\
 &&+ (1-\theta_\Phi)\nabla\cdot \Ab_\Phi^n\nabla\Phib^n + \theta_\Phi\nabla\cdot \Ab_\Phi^{n+1,l}\nabla\Phib^{n+1,l+1}
 \label{eq:density update}
 \end{eqnarray}
@@ -403,9 +400,9 @@ but we can't easily since the right-hand-size of (\ref{eq:potential}) is what we
 solving for in (\ref{eq:density update}).  Rewriting (\ref{eq:density update}) gives,
 \begin{eqnarray}
 (\rho\wb)^{n+1,l+1} - \Delta t\theta_\Phi\nabla\cdot \Ab_\Phi^{n+1,l}\nabla\Phib^{n+1,l+1} &=& \nonumber\\
-&&\hspace{-1.5in}(\rho\wb)^n + \Delta t\Big[-(1-\theta_\rho)\nabla\cdot(\rho\wb\vb)^n -\theta_\rho\nabla\cdot(\rho\wb\vb)^{n+1,l}\nonumber\\
-&&\hspace{-.7in}+ (1-\theta_\rho)\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \theta_\rho\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l}\nonumber\\
-&&\hspace{-.7in}+ (1-\theta_\rho)\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n + \theta_\rho\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l}\mathcal{Z}^n\nonumber\\
+&&\hspace{-1.5in}(\rho\wb)^n + \Delta t\Big[-\half\nabla\cdot(\rho\wb\vb)^n -\half\nabla\cdot(\rho\wb\vb)^{n+1,l}\nonumber\\
+&&\hspace{-.7in}+ \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l}\nonumber\\
+&&\hspace{-.7in}+ \half\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n + \half\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l}\mathcal{Z}^n\nonumber\\
 &&\hspace{-.7in}+ (1-\theta_\Phi)\nabla\cdot \Ab_\Phi^n\nabla\Phib^n\Big]\nonumber\\
 &\equiv& \mathcal{R}\label{eq:density update2}
 \end{eqnarray}
@@ -474,10 +471,10 @@ $S = S_{\rm prev} + \Delta t(\rhob\bar\rhob^{-1}-1)/\rhob\bar\rhob^{-1}$\\ \\
 Solve the following for $\vb^{n+1,l+1}$ and $p^{n+1,l+1}$:
 \begin{eqnarray}
 \frac{\rho^{n+1,l+1}\vb^{n+1,l+1} - \rho^n\vb^n}{\Delta t} &=&
--(1-\theta_\vb)\nabla\cdot(\rho^n\vb^n\vb^n) - \theta_\vb\nabla\cdot(\rho^{n+1,l}\vb^{n+1,l}\vb^{n+1,l})\nonumber\\
-&&+(1-\theta_\vb)\mathcal{A}_0^n\vb^n + \theta_\vb\mathcal{A}_0^{n+1,l+1}\vb^{n+1,l+1}\nonumber\\
-&&+(1-\theta_\vb)\nabla\cdot\sqrt{\frac{2\eta^nk_BT}{\Delta t\Delta V}}\overline{\Wb}^n
-+\theta_\vb\nabla\cdot\sqrt{\frac{2\eta^{n+1,l+1}k_BT}{\Delta t\Delta V}}\overline{\Wb}^n\nonumber\\
+-\half\nabla\cdot(\rho^n\vb^n\vb^n) - \half\nabla\cdot(\rho^{n+1,l}\vb^{n+1,l}\vb^{n+1,l})\nonumber\\
+&&+\half\mathcal{A}_0^n\vb^n + \half\mathcal{A}_0^{n+1,l+1}\vb^{n+1,l+1}\nonumber\\
+&&+\half\nabla\cdot\sqrt{\frac{2\eta^nk_BT}{\Delta t\Delta V}}\overline{\Wb}^n
++\half\nabla\cdot\sqrt{\frac{2\eta^{n+1,l+1}k_BT}{\Delta t\Delta V}}\overline{\Wb}^n\nonumber\\
 &&-(1-\theta_\Phi)(\rho\wb^T\zb\nabla\Phib)^n - \theta_\Phi(\rho\wb^T\nabla\Phib)^{n+1,l+1}
 \end{eqnarray}
 \begin{equation}
