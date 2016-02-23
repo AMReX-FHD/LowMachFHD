@@ -366,7 +366,8 @@ We are given an initial velocity field, $\vb^{\rm init}$, pressure, $p^n$,
 and densities $(\rho\wb)^n$.
 Then, perform a projection to obtain an initial velocity field, $\vb^n$ that satisfies
 \begin{equation}
-\nabla\cdot\vb^n = S^n \equiv S(\Fb^n),
+\nabla\cdot\vb^n = S^n \equiv 
+S[(\rho\Wb\chib\Gammab\nabla\xb)^n + \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n - \Ab_\Phi^n\nabla\Phib^n],
 \end{equation}
 where $\Fb_i^n$ and $\nabla\cdot\Fb_i^n$ are computed from $(\rho\wb)^n$ using the 
 supplied {\tt compute\_mass\_fluxdiv} subroutine and an explicit electric
@@ -382,7 +383,8 @@ Set $(\vb,\rho_i)^{n+1,0} = (\vb,\rho_i)^n$.
 We loop over {\bf Step 1} -- {\bf Step 3} for $l=0,\cdots,l_{\rm max}$:\\ \\
 {\bf Step 1: Density Update}\\ \\
 In this algorithm $\theta_\Phi$ controls
-the temporal discretization of the electric potential.\\ \\
+the temporal discretization of the electric potential.  $\theta_\Phi=1$ is fully
+implicit; $\theta_\Phi=0.5$ is semi-implicit.\\ \\
 
 We would like to solve the following,
 \begin{eqnarray}
@@ -478,7 +480,7 @@ Solve the following for $\vb^{n+1,l+1}$ and $p^{n+1,l+1}$:
 &&-(1-\theta_\Phi)(\rho\wb^T\zb\nabla\Phib)^n - \theta_\Phi(\rho\wb^T\zb\nabla\Phib)^{n+1,l+1}
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot\vb^{n+1,l+1} = S[(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l+1} + \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l+1}\mathcal{Z}^{n+1} - \Ab_\Phi^{n+1,l+1}\nabla\Phib^{n+1,l+1}]
+\nabla\cdot\vb^{n+1,l+1} = S^{n+1,l+1} \equiv S[(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l+1} + \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l+1}\mathcal{Z}^{n+1} - \Ab_\Phi^{n+1,l+1}\nabla\Phib^{n+1,l+1}]
 \end{equation}
 
 {\color{red}
