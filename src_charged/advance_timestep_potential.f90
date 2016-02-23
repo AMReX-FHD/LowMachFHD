@@ -31,7 +31,7 @@ module advance_timestep_potential_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid, dielectric_const
+  use probin_charged_module, only: use_charged_fluid, dielectric_const, theta_pot
 
   implicit none
 
@@ -125,7 +125,7 @@ contains
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
-    real(kind=dp_t) :: weights(1), norm, theta_pot
+    real(kind=dp_t) :: weights(1), norm
 
     weights(1) = 1.d0
 
@@ -134,8 +134,6 @@ contains
 
     theta_alpha = 1.d0/dt
     
-    theta_pot = 1.d0
-
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
