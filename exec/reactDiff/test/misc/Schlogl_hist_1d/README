@@ -23,3 +23,4 @@ In addition, it also executes stat_plot.py to generate three plots with errorbar
 ** additional analysis
 - face_avg.sh
 - sum_Sk.py (execute: cd TEST1; python ../sum_Sk_1d.py; cd ..)
+- cond_exp.py (execute: cd TEST1; python ../cond_exp.py; cd ..)
