@@ -366,12 +366,12 @@ contains
        end do
     end do    
 
-    ! If there are walls with zero-flux boundary conditions
-    if(is_nonisothermal) then
-       do n=1,nlevs
-          call zero_edgeval_walls(flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
-       end do   
-    end if
+    ! zero the total mass flux on walls to make sure 
+    ! that the potential gradient matches the species gradient
+    do n=1,nlevs
+       call zero_edgeval_walls(flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
+    end do   
+
 
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then
