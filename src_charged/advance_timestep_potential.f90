@@ -253,6 +253,8 @@ contains
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
              call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_old(n,i),1,1,0)
           end do
+          ! zero mass flux on walls
+          call zero_edgeval_walls(solver_beta(n,:),1,1,the_bc_tower%bc_tower_array(n))
        end do
 
        ! compute Epot_mass_fluxdiv_old = div A_Phi^n grad Epot_old
@@ -284,9 +286,18 @@ contains
        end do
     end do
 
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_setval(solver_beta(n,i),dielectric_const)
+       end do
+    end do
+
     ! initial guess for Phi
     do n=1,nlevs
        call multifab_setval(Epot(n),0.d0,all=.true.)
+       ! fill ghost cells for Epot at walls using Dirichlet value
+       call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                            dx_in=dx(n,:))
     end do
 
     ! solve -div (epsilon + dt theta z^T A_Phi) grad Phi^{*,n+1} = z^T R_p
@@ -304,6 +315,8 @@ contains
              call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
              call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
           end do
+          ! zero mass flux on walls
+          call zero_edgeval_walls(solver_beta(n,:),1,1,the_bc_tower%bc_tower_array(n))
        end do
 
        ! compute Epot_mass_fluxdiv = div A_Phi^n grad Epot
@@ -712,6 +725,8 @@ contains
                 call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
                 call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
              end do
+             ! zero mass flux on walls
+             call zero_edgeval_walls(solver_beta(n,:),1,1,the_bc_tower%bc_tower_array(n))
           end do
 
           ! compute Epot_mass_fluxdiv = div A_Phi^{*,n+1} grad Epot
@@ -749,6 +764,8 @@ contains
                 call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
                 call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
              end do
+             ! zero mass flux on walls
+             call zero_edgeval_walls(solver_beta(n,:),1,1,the_bc_tower%bc_tower_array(n))
           end do
 
           ! compute Epot_mass_fluxdiv = div A_Phi^{n+1} grad Epot
