@@ -31,7 +31,8 @@ module advance_timestep_iterative_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid, dielectric_const, theta_pot
+  use probin_charged_module, only: use_charged_fluid, dielectric_const, theta_pot, &
+                                   num_pot_iters
 
   implicit none
 
@@ -121,7 +122,7 @@ contains
     
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
-    integer :: i,dm,n,nlevs,comp,k
+    integer :: i,dm,n,nlevs,comp,l
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
@@ -645,9 +646,9 @@ contains
     ! Step 3 - Corrector Concentration Update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    do k=1,1
+    do l=1,num_pot_iters
 
-       print*,'k=',k
+       print*,'l=',l
 
        ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
        ! now mnew has properly filled ghost cells
