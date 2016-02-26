@@ -118,7 +118,6 @@ contains
     type(multifab) :: Epot             (mla%nlevel)         ! Phi solution from Poisson solve
     type(multifab) :: A_Phi            (mla%nlevel,mla%dim) ! face-centered A_Phi
     type(multifab) :: solver_beta      (mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
-    type(multifab) :: Epot_mass_fluxdiv(mla%nlevel)
     type(multifab) :: Epot_mass_fluxdiv_old(mla%nlevel)
     
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
@@ -169,7 +168,6 @@ contains
           call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
        end do
-       call multifab_build(Epot_mass_fluxdiv(n),mla%la(n),nspecies,0) 
        call multifab_build(Epot_mass_fluxdiv_old(n),mla%la(n),nspecies,0) 
     end do
 
@@ -1106,7 +1104,6 @@ contains
           call multifab_destroy(A_Phi(n,i))
           call multifab_destroy(solver_beta(n,i))
        end do
-       call multifab_destroy(Epot_mass_fluxdiv(n))
        call multifab_destroy(Epot_mass_fluxdiv_old(n))
     end do
     do n = 2,nlevs

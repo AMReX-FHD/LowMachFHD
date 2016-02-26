@@ -10,7 +10,7 @@ subroutine main_driver()
   use write_plotfile_charged_module
   use advance_timestep_module
 !  use advance_timestep_iterative_module
-!  use advance_timestep_potential_module
+  use advance_timestep_potential_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
@@ -564,13 +564,13 @@ subroutine main_driver()
                                grad_Epot_old,grad_Epot_new, &
                                charge_old,charge_new)
       else if (algorithm_type .eq. 1) then
-!         call advance_timestep_potential(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-!                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-!                                         Epot_mass_fluxdiv, &
-!                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-!                                         dx,dt,time,the_bc_tower,istep, &
-!                                         grad_Epot_old,grad_Epot_new, &
-!                                         charge_old,charge_new)
+         call advance_timestep_potential(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                         Epot_mass_fluxdiv, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         dx,dt,time,the_bc_tower,istep, &
+                                         grad_Epot_old,grad_Epot_new, &
+                                         charge_old,charge_new)
       else if (algorithm_type .eq. 2) then
 !         call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
 !                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
