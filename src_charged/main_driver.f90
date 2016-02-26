@@ -9,8 +9,8 @@ subroutine main_driver()
   use initial_projection_charged_module
   use write_plotfile_charged_module
   use advance_timestep_module
-  use advance_timestep_iterative_module
-  use advance_timestep_potential_module
+!  use advance_timestep_iterative_module
+!  use advance_timestep_potential_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
@@ -70,6 +70,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: rhotot_new(:)
   type(multifab), allocatable  :: Temp(:)
   type(multifab), allocatable  :: Temp_ed(:,:)
+  type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
   type(multifab), allocatable  :: umac(:,:)
@@ -118,7 +119,8 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
-  allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
+  allocate(Temp(nlevs),Epot_mass_fluxdiv(nlevs))
+  allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
@@ -210,6 +212,7 @@ subroutine main_driver()
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
         ! pi - need 1 ghost cell since we calculate its gradient
         call multifab_build(pi(n)      ,mla%la(n),1       ,1)
+        call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
         do i=1,dm
@@ -475,7 +478,7 @@ subroutine main_driver()
      
      ! initial projection
      call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
-                                     diff_mass_fluxdiv, &
+                                     Epot_mass_fluxdiv,diff_mass_fluxdiv, &
                                      stoch_mass_fluxdiv, &
                                      Temp,eta,eta_ed,dt,dx,the_bc_tower, &
                                      charge_old,grad_Epot_old)
@@ -556,24 +559,24 @@ subroutine main_driver()
       if (algorithm_type .eq. 0) then
          call advance_timestep(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                               Epot_mass_fluxdiv,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                dx,dt,time,the_bc_tower,istep, &
                                grad_Epot_old,grad_Epot_new, &
                                charge_old,charge_new)
       else if (algorithm_type .eq. 1) then
-         call advance_timestep_potential(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         dx,dt,time,the_bc_tower,istep, &
-                                         grad_Epot_old,grad_Epot_new, &
-                                         charge_old,charge_new)
+!         call advance_timestep_potential(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+!                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+!                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+!                                         dx,dt,time,the_bc_tower,istep, &
+!                                         grad_Epot_old,grad_Epot_new, &
+!                                         charge_old,charge_new)
       else if (algorithm_type .eq. 2) then
-         call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         dx,dt,time,the_bc_tower,istep, &
-                                         grad_Epot_old,grad_Epot_new, &
-                                         charge_old,charge_new)
+!         call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+!                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+!                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+!                                         dx,dt,time,the_bc_tower,istep, &
+!                                         grad_Epot_old,grad_Epot_new, &
+!                                         charge_old,charge_new)
       end if
 
       time = time + dt
@@ -677,6 +680,7 @@ subroutine main_driver()
      call multifab_destroy(rho_new(n))
      call multifab_destroy(rhotot_new(n))
      call multifab_destroy(Temp(n))
+     call multifab_destroy(Epot_mass_fluxdiv(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      call multifab_destroy(stoch_mass_fluxdiv(n))
      call multifab_destroy(pi(n))
@@ -706,7 +710,7 @@ subroutine main_driver()
 
   deallocate(lo,hi,dx)
   deallocate(rho_old,rhotot_old,Temp,umac)
-  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
+  deallocate(Epot_mass_fluxdiv,diff_mass_fluxdiv,stoch_mass_fluxdiv)
   call stag_mg_layout_destroy()
   call mgt_macproj_precon_destroy()
   call destroy(mla)

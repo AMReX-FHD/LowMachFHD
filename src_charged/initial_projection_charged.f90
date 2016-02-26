@@ -37,6 +37,7 @@ module initial_projection_charged_module
 contains
 
   subroutine initial_projection_charged(mla,umac,rho,rhotot,gradp_baro, &
+                                        Epot_mass_fluxdiv, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         Temp,eta,eta_ed,dt,dx,the_bc_tower, &
                                         charge_old,grad_Epot_old)
@@ -46,6 +47,7 @@ contains
     type(multifab) , intent(inout) :: rho(:)
     type(multifab) , intent(inout) :: rhotot(:)
     type(multifab) , intent(in   ) :: gradp_baro(:,:)
+    type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     type(multifab) , intent(in   ) :: Temp(:)
@@ -104,14 +106,15 @@ contains
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp, &
+                                      Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                      stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,0.d0,dx,weights, &
                                       the_bc_tower, &
                                       charge_old,grad_Epot_old)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
+       call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
@@ -127,6 +130,7 @@ contains
     ! set mac_rhs to "-S = div(F_i/rho_i)"
     do n=1,nlevs
        do i=1,nspecies
+          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)

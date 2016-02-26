@@ -4,7 +4,8 @@ module compute_mass_fluxdiv_charged_module
   use define_bc_module
   use bc_module
   use div_and_grad_module
-  use diffusive_mass_fluxdiv_charged_module
+  use Epot_mass_fluxdiv_module
+  use diffusive_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use compute_mixture_properties_module
   use external_force_module
@@ -25,7 +26,7 @@ contains
   ! includes barodiffusion and thermodiffusion
   ! this computes "F = -rho W chi [Gamma grad x... ]"
   subroutine compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
-                                          diff_fluxdiv,stoch_fluxdiv, &
+                                          Epot_fluxdiv,diff_fluxdiv,stoch_fluxdiv, &
                                           Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_tower, &
@@ -34,6 +35,7 @@ contains
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
+    type(multifab) , intent(inout)   :: Epot_fluxdiv(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
@@ -112,11 +114,13 @@ contains
     end do
 
     ! compute mass fluxes
+    call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
+                           flux_total,dx,the_bc_tower,charge,grad_Epot)
+
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
-    call diffusive_mass_fluxdiv_charged(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama, &
-                                        diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
-                                        flux_total,dx,the_bc_tower, &
-                                        charge,grad_Epot)
+    call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama, &
+                                diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
+                                flux_total,dx,the_bc_tower)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
