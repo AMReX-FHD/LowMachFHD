@@ -190,32 +190,6 @@ contains
     ! Step 1 - Predictor Concentration Update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    if (istep .eq. 1) then
-       ! if this is the first step, we need to
-       ! compute the diffusive and stochastic fluxes (omitting the potential mass fluxes)
-       ! with barodiffusion and thermodiffusion
-       ! this computes "F = -rho W chi [Gamma grad x... ]" at t^n
-       call compute_mass_fluxdiv_charged(mla,rho_old,gradp_baro, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         Temp,flux_total,dt,time,dx,weights, &
-                                         the_bc_tower)
-
-       ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
-       do n=1,nlevs
-          call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-          if (variance_coef_mass .ne. 0.d0) then
-             call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-          end if
-          do i=1,dm
-             call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
-          end do
-       end do
-
-       ! set the Dirichlet velocity value on reservoir faces
-       call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
-
-    end if
-
     ! compute R_p = rho_old + dt(A^n + D^n + St^n + (1-theta)E^n)
     ! store in rho_new
 
