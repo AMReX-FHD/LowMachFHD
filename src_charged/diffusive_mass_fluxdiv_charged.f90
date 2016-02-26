@@ -22,8 +22,6 @@ module diffusive_mass_fluxdiv_charged_module
   use ml_solve_module
   use multifab_physbc_module
   
-  use fabio_module
-
   implicit none
 
   private
@@ -307,10 +305,6 @@ contains
        call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
                         verbose=mg_verbose)
           
-
-    call fabio_ml_multifab_write_d(charge,mla%mba%rr(:,1),"a_charge")
-    call fabio_ml_multifab_write_d(Epot,mla%mba%rr(:,1),"a_Epot")
-
        do n=1,nlevs
           call multifab_destroy(alpha(n))
           do i=1,dm
@@ -347,8 +341,6 @@ contains
              end do
           end do
        end do
-
-    call fabio_ml_multifab_write_d(charge_coef_face(:,2),mla%mba%rr(:,1),"a_cflux")
 
        ! add charge flux to the running total
        do n=1,nlevs
