@@ -1,4 +1,4 @@
-module advance_timestep_potential_module
+module advance_timestep_iterative_module
 
   use ml_layout_module
   use define_bc_module
@@ -31,13 +31,14 @@ module advance_timestep_potential_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid, dielectric_const, theta_pot
+  use probin_charged_module, only: use_charged_fluid, dielectric_const, theta_pot, &
+                                   num_pot_iters
 
   implicit none
 
   private
 
-  public :: advance_timestep_potential
+  public :: advance_timestep_iterative
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -56,7 +57,7 @@ module advance_timestep_potential_module
 
 contains
 
-  subroutine advance_timestep_potential(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+  subroutine advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep, &
@@ -121,7 +122,7 @@ contains
     
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
-    integer :: i,dm,n,nlevs,comp,k
+    integer :: i,dm,n,nlevs,comp,l
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
@@ -230,7 +231,7 @@ contains
 
     ! add A^n to R_p
     if (advection_type .ge. 1) then
-       call bl_error("advance_timestep_potential: bds not supported yet")
+       call bl_error("advance_timestep_iterative: bds not supported yet")
     else
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_new,dx,1,nspecies)
     end if
@@ -645,9 +646,9 @@ contains
     ! Step 3 - Corrector Concentration Update
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    do k=1,1
+    do l=1,num_pot_iters
 
-       print*,'k=',k
+       print*,'l=',l
 
        ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
        ! now mnew has properly filled ghost cells
@@ -675,7 +676,7 @@ contains
 
        ! add A^{*,n+1} to R_c
        if (advection_type .ge. 1) then
-          call bl_error("advance_timestep_potential: bds not supported yet")
+          call bl_error("advance_timestep_iterative: bds not supported yet")
        else
           call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_new,dx,1,nspecies)
        end if
@@ -1109,7 +1110,7 @@ contains
        call bndry_reg_destroy(fine_flx(n))
     end do
 
-  end subroutine advance_timestep_potential
+  end subroutine advance_timestep_iterative
 
   subroutine build_bc_multifabs(mla)
 
@@ -1204,4 +1205,4 @@ contains
 
   end subroutine destroy_bc_multifabs
 
-end module advance_timestep_potential_module
+end module advance_timestep_iterative_module

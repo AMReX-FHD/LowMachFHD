@@ -12,6 +12,7 @@ module probin_charged_module
   real(kind=dp_t)    :: charge_per_mass(max_species)
   real(kind=dp_t)    :: Epot_wall(1:2,1:3)
   real(kind=dp_t)    :: theta_pot
+  integer            :: num_pot_iters
   
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
@@ -20,6 +21,7 @@ module probin_charged_module
   namelist /probin_charged/ Epot_wall
   namelist /probin_charged/ theta_pot          ! for implicit algorithm_type=1, controls
                                                ! temporal discretization for potential term
+  namelist /probin_charge/ num_pot_iters
 
 contains
 
@@ -41,11 +43,12 @@ contains
     narg = command_argument_count()
 
     ! defaults - will be overwritten by inputs file or command line
-    use_charged_fluid = .false.
-    dielectric_const = 1.d0
+    use_charged_fluid  = .false.
+    dielectric_const   = 1.d0
     charge_per_mass(:) = 0.d0
     Epot_wall(:,:)     = 0.d0
     theta_pot          = 1.d0
+    num_pot_iters      = 2
  
     ! read from input file 
     need_inputs = .true.
@@ -82,6 +85,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) theta_pot
+
+       case ('--num_pot_iters')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) num_pot_iters
 
        case ('--')
           farg = farg + 1
