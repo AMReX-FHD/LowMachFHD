@@ -251,6 +251,9 @@ contains
     call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
+    ! compute total charge
+    call dot_with_z(mla,rho_new,charge_new)
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Calculate Corrector Diffusive and Stochastic Fluxes
     ! Step 4 - Predictor Crank-Nicolson Step
@@ -360,10 +363,10 @@ contains
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
-                                      Epot_mass_fluxdiv,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
                                       the_bc_tower, &
-                                      charge_new,grad_Epot_new)
+                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -658,6 +661,9 @@ contains
     call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,c_bc_comp   ,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
+    ! compute total charge
+    call dot_with_z(mla,rho_new,charge_new)
+
     ! compute (eta,kappa)^{n+1}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
@@ -755,10 +761,10 @@ contains
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
-                                      Epot_mass_fluxdiv,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
                                       the_bc_tower, &
-                                      charge_new,grad_Epot_new)
+                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs

@@ -10,6 +10,7 @@ module initial_projection_charged_module
   use multifab_physbc_stag_module
   use compute_mass_fluxdiv_charged_module
   use reservoir_bc_fill_module
+  use fluid_charge_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: rhobar, variance_coef_mass
 
@@ -102,15 +103,18 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,0.d0, &
                                    the_bc_tower%bc_tower_array)
 
+    ! compute total charge
+    call dot_with_z(mla,rho,charge_old)
+
     ! compute diffusive, stochastic, and potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
-                                      Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                      diff_mass_fluxdiv, &
                                       stoch_mass_fluxdiv,Temp, &
                                       flux_total,dt,0.d0,dx,weights, &
                                       the_bc_tower, &
-                                      charge_old,grad_Epot_old)
+                                      Epot_mass_fluxdiv,charge_old,grad_Epot_old)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs

@@ -26,16 +26,15 @@ contains
   ! includes barodiffusion and thermodiffusion
   ! this computes "F = -rho W chi [Gamma grad x... ]"
   subroutine compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
-                                          Epot_fluxdiv,diff_fluxdiv,stoch_fluxdiv, &
+                                          diff_fluxdiv,stoch_fluxdiv, &
                                           Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_tower, &
-                                          charge,grad_Epot)
+                                          Epot_fluxdiv,charge,grad_Epot)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
-    type(multifab) , intent(inout)   :: Epot_fluxdiv(:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
@@ -45,6 +44,7 @@ contains
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
     type(bc_tower) , intent(in   )   :: the_bc_tower
+    type(multifab) , intent(inout), optional :: Epot_fluxdiv(:)
     type(multifab) , intent(inout), optional :: charge(:)
     type(multifab) , intent(inout), optional :: grad_Epot(:,:)
        
@@ -113,9 +113,11 @@ contains
        end do
     end do
 
-    ! compute mass fluxes
-    call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                           flux_total,dx,the_bc_tower,charge,grad_Epot)
+    if (present(Epot_fluxdiv) .and. present(charge) .and. present(grad_Epot)) then
+       ! compute electric potential mass fluxes
+       call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
+                              flux_total,dx,the_bc_tower,charge,grad_Epot)
+    end if
 
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama, &

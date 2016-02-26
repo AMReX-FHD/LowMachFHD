@@ -58,6 +58,7 @@ contains
 
   subroutine advance_timestep_potential(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                       Epot_mass_fluxdiv, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep, &
                                        grad_Epot_old,grad_Epot_new,charge_old,charge_new)
@@ -76,6 +77,7 @@ contains
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: Temp(:)
     type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
@@ -346,6 +348,9 @@ contains
     call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
+    ! compute total charge
+    call dot_with_z(mla,rho_new,charge_new)
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Predictor Crank-Nicolson Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -455,11 +460,10 @@ contains
     ! compute diffusive, stochastic, and potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]" at t^{*,n+1}
-    ! also compute charge^{*,n+1}
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower,charge_new)
+                                      the_bc_tower)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -753,6 +757,9 @@ contains
        ! conc to rho - INCLUDING GHOST CELLS
        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
+       ! compute total charge
+       call dot_with_z(mla,rho_new,charge_new)
+
        ! compute A_Phi^{n+1}
        call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
 
@@ -881,7 +888,7 @@ contains
        call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,dt,time,dx,weights, &
-                                         the_bc_tower,charge_new)
+                                         the_bc_tower)
 
        ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
        do n=1,nlevs
@@ -1057,9 +1064,6 @@ contains
        if (parallel_IOProcessor()) then
           print*,'norm',norm
        end if
-
-       ! compute total charge for next k iteration OR next timestep
-       call dot_with_z(mla,rho_new,charge_new)
 
     end do
 
