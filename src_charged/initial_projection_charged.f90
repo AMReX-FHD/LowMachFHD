@@ -13,6 +13,8 @@ module initial_projection_charged_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: rhobar, variance_coef_mass
 
+  use fabio_module
+
   implicit none
 
   private

@@ -33,6 +33,8 @@ module advance_timestep_module
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid
 
+  use fabio_module
+
   implicit none
 
   private
