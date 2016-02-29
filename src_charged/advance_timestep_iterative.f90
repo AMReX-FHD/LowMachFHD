@@ -90,6 +90,12 @@ contains
     type(multifab) , intent(inout) :: charge_new(:)
 
     ! local
+    type(multifab) ::  diff_mass_fluxdiv_old(mla%nlevel)
+    type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
+    type(multifab) ::  Epot_mass_fluxdiv_old(mla%nlevel)
+
+    type(multifab) :: rho_a_fluxdiv_old(mla%nlevel)
+    type(multifab) :: rho_a_fluxdiv_new(mla%nlevel)
     type(multifab) ::    rho_update(mla%nlevel)
     type(multifab) ::   gmres_rhs_p(mla%nlevel)
     type(multifab) ::           dpi(mla%nlevel)
@@ -99,11 +105,12 @@ contains
 
     type(multifab) ::          mold(mla%nlevel,mla%dim)
     type(multifab) ::         mtemp(mla%nlevel,mla%dim)
-    type(multifab) ::   m_a_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::   m_a_fluxdiv_new(mla%nlevel,mla%dim)
     type(multifab) ::   m_a_fluxdiv_old(mla%nlevel,mla%dim)
-    type(multifab) ::   m_d_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::   m_d_fluxdiv_new(mla%nlevel,mla%dim)
     type(multifab) ::   m_d_fluxdiv_old(mla%nlevel,mla%dim)
-    type(multifab) ::   m_s_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::   m_s_fluxdiv_new(mla%nlevel,mla%dim)
+    type(multifab) ::   m_s_fluxdiv_old(mla%nlevel,mla%dim)
     type(multifab) ::   gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::         dumac(mla%nlevel,mla%dim)
     type(multifab) :: rhotot_fc_old(mla%nlevel,mla%dim)
@@ -112,14 +119,14 @@ contains
     type(multifab) ::        rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::    flux_total(mla%nlevel,mla%dim)
 
-    type(multifab) :: mom_charge_force(mla%nlevel,mla%dim)
+    type(multifab) :: m_charge_force_old(mla%nlevel,mla%dim)
+    type(multifab) :: m_charge_force_new(mla%nlevel,mla%dim)
 
     type(multifab) :: solver_alpha     (mla%nlevel)         ! alpha=0 for Poisson solve
     type(multifab) :: solver_rhs       (mla%nlevel)         ! Poisson solve rhs
     type(multifab) :: Epot             (mla%nlevel)         ! Phi solution from Poisson solve
     type(multifab) :: A_Phi            (mla%nlevel,mla%dim) ! face-centered A_Phi
     type(multifab) :: solver_beta      (mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
-    type(multifab) :: Epot_mass_fluxdiv_old(mla%nlevel)
     
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
 
@@ -139,28 +146,36 @@ contains
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
-       call multifab_build(   rho_update(n),mla%la(n),nspecies,0)
-       call multifab_build(  gmres_rhs_p(n),mla%la(n),1       ,0)
-       call multifab_build(          dpi(n),mla%la(n),1       ,1)
-       call multifab_build(         divu(n),mla%la(n),1       ,0)
-       call multifab_build(         conc(n),mla%la(n),nspecies,rho_old(n)%ng)
-       call multifab_build(       p_baro(n),mla%la(n),1       ,1)
+       call multifab_build( diff_mass_fluxdiv_old(n),mla%la(n),nspecies,0) 
+       call multifab_build(stoch_mass_fluxdiv_old(n),mla%la(n),nspecies,0) 
+       call multifab_build( Epot_mass_fluxdiv_old(n),mla%la(n),nspecies,0) 
+
+       call multifab_build(rho_a_fluxdiv_old(n),mla%la(n),nspecies,0)
+       call multifab_build(rho_a_fluxdiv_new(n),mla%la(n),nspecies,0)
+       call multifab_build(       rho_update(n),mla%la(n),nspecies,0)
+       call multifab_build(      gmres_rhs_p(n),mla%la(n),1       ,0)
+       call multifab_build(              dpi(n),mla%la(n),1       ,1)
+       call multifab_build(             divu(n),mla%la(n),1       ,0)
+       call multifab_build(             conc(n),mla%la(n),nspecies,rho_old(n)%ng)
+       call multifab_build(           p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
-          call multifab_build_edge(            mold(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(           mtemp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(     m_a_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(     m_a_fluxdiv_old(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(     m_d_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(     m_d_fluxdiv_old(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(     m_s_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(     gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(           dumac(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(          gradpi(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(   rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(   rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(          rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(      flux_total(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(mom_charge_force(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(              mold(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(             mtemp(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(   m_a_fluxdiv_new(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(   m_a_fluxdiv_old(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(   m_d_fluxdiv_new(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(   m_d_fluxdiv_old(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(   m_s_fluxdiv_new(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(   m_s_fluxdiv_old(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(       gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(             dumac(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(            gradpi(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(     rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(     rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(            rho_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(        flux_total(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(m_charge_force_old(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(m_charge_force_new(n,i),mla%la(n),1       ,0,i)
        end do
        call multifab_build(solver_alpha(n),mla%la(n),1,0)
        call multifab_build(solver_rhs(n),mla%la(n),1,0)
@@ -169,7 +184,6 @@ contains
           call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
        end do
-       call multifab_build(Epot_mass_fluxdiv_old(n),mla%la(n),nspecies,0) 
     end do
 
     do n = 2,nlevs
@@ -183,9 +197,101 @@ contains
        call multifab_setval(solver_alpha(n),0.d0,all=.true.)
     end do
 
+    !!!!!!!!!!!!!!!!!!!!!!
+    ! t^n terms for the density update that do not change with iteration
+
+    ! make copies of the "old" diffusive, stochastic, and potential mass fluxes
+    do n=1,nlevs
+       call multifab_copy_c( diff_mass_fluxdiv_old(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_copy_c( Epot_mass_fluxdiv_old(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
+    end do
+    
     ! average rho_old and rhotot_old to faces
     call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+
+    ! compute "old" advective mass fluxes and copy into "new"
+    do n=1,nlevs
+       call multifab_setval(rho_a_fluxdiv_old(n),0.d0)
+    end do
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_a_fluxdiv_old,dx,1,nspecies)
+
+    !!!!!!!!!!!!!!!!!!!!!!
+    ! t^n terms for gmres_rhs_v that do not change with iteration
+
+    ! compute A_0^n v^n
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_setval(m_d_fluxdiv_old(n,i),0.d0,all=.true.)
+       end do
+    end do
+    call diffusive_m_fluxdiv(mla,m_d_fluxdiv_old,umac,eta,eta_ed,kappa,dx, &
+                             the_bc_tower%bc_tower_array)
+
+    ! compute "old" stochastic momentum fluxes and copy into "new"
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_setval(m_s_fluxdiv_old(n,i),0.d0,all=.true.)
+       end do
+    end do
+    if (variance_coef_mom .ne. 0.d0) then
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv_old, &
+                                 eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
+    end if
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(m_s_fluxdiv_new(n,i),1,m_s_fluxdiv_old(n,i),1,dm,0)
+       end do
+    end do
+
+    ! compute "old" momentum charge force and copy into "new"
+    call average_cc_to_face(nlevs,charge_old,m_charge_force_old,1,scal_bc_comp, &
+                            1,the_bc_tower%bc_tower_array)
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_c(m_charge_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
+          call multifab_copy_c(m_charge_force_new(n,i),1,m_charge_force_old(n,i),1,1,0)
+       end do
+    end do
+
+    ! compute "old" advective momentum fluxes and copy into "new"
+
+
+
+
+    ! iterative loop over l
+    do l=1,num_pot_iters
+
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       ! Step 1 - Density Update
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+       ! build RHS for Poisson solve
+
+
+       ! solve for new electric potential, Phi^{n+1,l+1}
+
+
+       ! compute new densities by adding dt*theta_pot*div A_Phi^{n+1,l} grad Phi^{n+1,l+1}
+
+
+
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       ! Step 2 - Compute Velocity Constraint Correction
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       ! Step 3 - Velocity Update
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+    end do ! end loop l=1,num_pot_iters
+
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 1 - Predictor Concentration Update
@@ -196,7 +302,7 @@ contains
 
     ! first add D^n and St^n to R_p
     do n=1,nlevs
-       call setval(rho_new(n),0.d0,all=.true.)
+       call multifab_setval(rho_new(n),0.d0,all=.true.)
        call multifab_plus_plus_c(rho_new(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_new(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
@@ -367,53 +473,53 @@ contains
     ! compute m_a_fluxdiv = A^n for momentum
     do n=1,nlevs
        do i=1,dm
-          call setval(m_a_fluxdiv(n,i),0.d0,all=.true.)
+          call multifab_setval(m_a_fluxdiv_new(n,i),0.d0,all=.true.)
        end do
     end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv_new,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add A^n for momentum to gmres_rhs_v and keep a copy of A^n
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
-          call multifab_copy_c(m_a_fluxdiv_old(n,i),1,m_a_fluxdiv(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv_new(n,i),1,1,0)
+          call multifab_copy_c(m_a_fluxdiv_old(n,i),1,m_a_fluxdiv_new(n,i),1,1,0)
        end do
     end do
 
     ! compute m_d_fluxdiv = A_0^n v^n
     do n=1,nlevs
        do i=1,dm
-          call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
+          call multifab_setval(m_d_fluxdiv_new(n,i),0.d0,all=.true.)
        end do
     end do
-    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! add (1/2) A_0^n v^n to gmres_rhs_v
     ! and keep a copy of m_d_fluxdiv at t^n
     do n=1,nlevs
        do i=1,dm
-          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_d_fluxdiv(n,i),1,1)
-          call multifab_copy_c(m_d_fluxdiv_old(n,i),1,m_d_fluxdiv(n,i),1,1,0)
+          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_d_fluxdiv_new(n,i),1,1)
+          call multifab_copy_c(m_d_fluxdiv_old(n,i),1,m_d_fluxdiv_new(n,i),1,1,0)
        end do
     end do
 
     ! compute m_s_fluxdiv = div(Sigma^n)
     do n=1,nlevs
        do i=1,dm
-          call setval(m_s_fluxdiv(n,i),0.d0,all=.true.)
+          call multifab_setval(m_s_fluxdiv_new(n,i),0.d0,all=.true.)
        end do
     end do
     if (variance_coef_mom .ne. 0.d0) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv_new,eta,eta_ed, &
                                  Temp,Temp_ed,dx,dt,weights)
     end if
 
     ! add div(Sigma^n) to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv_new(n,i),1,1,0)
        end do
     end do
 
@@ -455,17 +561,17 @@ contains
     if (use_charged_fluid) then
 
        ! compute momentum charge force, charge^{n}*grad_Epot^{*,n+1}
-       call average_cc_to_face(nlevs,charge_old,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,charge_old,m_charge_force_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_mult_mult_c(m_charge_force_old(n,i),1,grad_Epot_new(n,i),1,1,0)
           end do
        end do
 
        ! subtract momentum charge force
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force(n,i),1,1,0)
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,m_charge_force_old(n,i),1,1,0)
           end do
        end do
 
@@ -474,7 +580,7 @@ contains
     ! compute gmres_rhs_p
     ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
     do n=1,nlevs
-       call setval(gmres_rhs_p(n),0.d0,all=.true.)
+       call multifab_setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
@@ -638,7 +744,7 @@ contains
 
        ! rho_update contains A^n + D^n + St^n
        do n=1,nlevs
-          call setval(rho_new(n),0.d0,all=.true.)
+          call multifab_setval(rho_new(n),0.d0,all=.true.)
           call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
        end do
 
@@ -800,19 +906,19 @@ contains
        ! m_a_fluxdiv already contains A^n for momentum
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(m_a_fluxdiv(n,i),1,m_a_fluxdiv_old(n,i),1,1,0)
+             call multifab_copy_c(m_a_fluxdiv_new(n,i),1,m_a_fluxdiv_old(n,i),1,1,0)
           end do
        end do
 
        ! add A^{*,n+1} = -rho^{*,n+1} v^{*,n+1} v^{*,n+1} for momentum to m_a_fluxdiv
-       call mk_advective_m_fluxdiv(mla,umac,mtemp,m_a_fluxdiv,dx, &
+       call mk_advective_m_fluxdiv(mla,umac,mtemp,m_a_fluxdiv_new,dx, &
                                    the_bc_tower%bc_tower_array)
 
        ! add (1/2) m_a_fluxdiv to gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_s_c(m_a_fluxdiv(n,i),1,0.5d0,1,0)
-             call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
+             call multifab_mult_mult_s_c(m_a_fluxdiv_new(n,i),1,0.5d0,1,0)
+             call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv_new(n,i),1,1,0)
           end do
        end do
 
@@ -826,11 +932,11 @@ contains
 
        ! compute div(Sigma^n') by incrementing existing stochastic flux and dividing by 2
        if (variance_coef_mom .ne. 0.d0) then
-          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
+          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv_new,eta,eta_ed, &
                                     Temp,Temp_ed,dx,dt,weights)
           do n=1,nlevs
              do i=1,dm
-                call multifab_mult_mult_s_c(m_s_fluxdiv(n,i),1,0.5d0,1,0)
+                call multifab_mult_mult_s_c(m_s_fluxdiv_new(n,i),1,0.5d0,1,0)
              end do
           end do
        end if
@@ -838,7 +944,7 @@ contains
        ! add div(Sigma^n') to gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
+             call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv_new(n,i),1,1,0)
           end do
        end do
 
@@ -880,17 +986,17 @@ contains
        if (use_charged_fluid) then
 
           ! compute momentum charge force, charge^{n+1}*grad_Epot^{n+1}
-          call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+          call average_cc_to_face(nlevs,charge_new,m_charge_force_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
           do n=1,nlevs
              do i=1,dm
-                call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_new(n,i),1,1,0)
+                call multifab_mult_mult_c(m_charge_force_old(n,i),1,grad_Epot_new(n,i),1,1,0)
              end do
           end do
 
           ! subtract momentum charge force
           do n=1,nlevs
              do i=1,dm
-                call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force(n,i),1,1,0)
+                call multifab_sub_sub_c(gmres_rhs_v(n,i),1,m_charge_force_old(n,i),1,1,0)
              end do
           end do
 
@@ -899,7 +1005,7 @@ contains
        ! compute gmres_rhs_p
        ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
        do n=1,nlevs
-          call setval(gmres_rhs_p(n),0.d0,all=.true.)
+          call multifab_setval(gmres_rhs_p(n),0.d0,all=.true.)
           do i=1,nspecies
              call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
              call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
@@ -945,16 +1051,16 @@ contains
        ! set m_d_fluxdiv = A_0^{n+1} vbar^{n+1,*}
        do n=1,nlevs
           do i=1,dm
-             call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
+             call multifab_setval(m_d_fluxdiv_new(n,i),0.d0,all=.true.)
           end do
        end do
-       call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_ed,kappa,dx, &
+       call diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
                                 the_bc_tower%bc_tower_array)
 
        ! add (1/2) A_0^{n+1} vbar^{n+1,*} to gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_d_fluxdiv(n,i),1,1)
+             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_d_fluxdiv_new(n,i),1,1)
           end do
        end do
 
@@ -1049,6 +1155,11 @@ contains
     call destroy_bc_multifabs(mla)
 
     do n=1,nlevs
+       call multifab_destroy(diff_mass_fluxdiv_old(n))
+       call multifab_destroy(stoch_mass_fluxdiv_old(n))
+       call multifab_destroy(Epot_mass_fluxdiv_old(n))
+       call multifab_destroy(rho_a_fluxdiv_old(n))
+       call multifab_destroy(rho_a_fluxdiv_new(n))
        call multifab_destroy(rho_update(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
@@ -1058,11 +1169,12 @@ contains
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
-          call multifab_destroy(m_a_fluxdiv(n,i))
+          call multifab_destroy(m_a_fluxdiv_new(n,i))
           call multifab_destroy(m_a_fluxdiv_old(n,i))
-          call multifab_destroy(m_d_fluxdiv(n,i))
+          call multifab_destroy(m_d_fluxdiv_new(n,i))
           call multifab_destroy(m_d_fluxdiv_old(n,i))
-          call multifab_destroy(m_s_fluxdiv(n,i))
+          call multifab_destroy(m_s_fluxdiv_new(n,i))
+          call multifab_destroy(m_s_fluxdiv_old(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(rhotot_fc_old(n,i))
@@ -1070,7 +1182,8 @@ contains
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(flux_total(n,i))
-          call multifab_destroy(mom_charge_force(n,i))
+          call multifab_destroy(m_charge_force_old(n,i))
+          call multifab_destroy(m_charge_force_new(n,i))
        end do
        call multifab_destroy(solver_alpha(n))
        call multifab_destroy(solver_rhs(n))
@@ -1079,7 +1192,6 @@ contains
           call multifab_destroy(A_Phi(n,i))
           call multifab_destroy(solver_beta(n,i))
        end do
-       call multifab_destroy(Epot_mass_fluxdiv_old(n))
     end do
     do n = 2,nlevs
        call bndry_reg_destroy(fine_flx(n))
