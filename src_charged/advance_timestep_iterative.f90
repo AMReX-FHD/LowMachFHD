@@ -210,9 +210,9 @@ contains
 
     ! make copies of the "old" diffusive, stochastic, and potential mass fluxes
     do n=1,nlevs
-       call multifab_copy_c( diff_mass_fluxdiv_old(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
-       call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
-       call multifab_copy_c( Epot_mass_fluxdiv_old(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_copy_c( diff_mass_fluxdiv_old(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_copy_c( Epot_mass_fluxdiv_old(n),1, Epot_mass_fluxdiv(n),1,nspecies,0)
     end do
     
     ! average rho_old and rhotot_old to faces
