@@ -486,10 +486,10 @@ Defining $\vb^{n+1,l+1} = \overline{\vb}^{n+1,l} + \delta\vb$ and
 $p^{n+1,l+1} = p^{n+1,l} + \delta p$ this can be written as:
 \begin{eqnarray}
 \left(\frac{\rho^{n+1,l+1}}{\Delta t} - \half\mathcal{A}_0^{n+1,l+1}\right)\deltab\vb + \nabla\delta p &=& \frac{\rho^n\vb^n-\rho^{n+1,l+1}\overline\vb^{n+1,l}}{\Delta t} -\nabla p^{n+1,l}\nonumber\\
-&&+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1,l}\vb^{n+1,l}\vb^{n+1,l}) + \half(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1}\overline\vb^{n+1,l} )\nonumber\\
+&&+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1,l}\vb^{n+1,l}\vb^{n+1,l}) + \half(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1,l+1}\overline\vb^{n+1,l} )\nonumber\\
 &&+\half\nabla\cdot\sqrt{\frac{2\eta^nk_BT}{\Delta t\Delta V}}\overline{\Wb}^n +\half\nabla\cdot\sqrt{\frac{2\eta^{n+1,l+1}k_BT}{\Delta t\Delta V}}\overline{\Wb}^n\nonumber\\
 &&+ \half\left(\rho^n+\rho^{n+1}\right)\gb\nonumber\\
-&&- (1-\theta_\Phi)\left[\rho(\wb^T\zb)\nabla\Phib\right]^n - \theta_\Phi\left[\rho(\wb^T\zb)\nabla\Phib\right]^{n+1},
+&&- (1-\theta_\Phi)\left(\rho\wb^T\zb\nabla\Phib\right)^n - \theta_\Phi\left(\rho\wb^T\zb\nabla\Phib\right)^{n+1,l+1},
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n+1,l} - S^{n+1,l+1}.
