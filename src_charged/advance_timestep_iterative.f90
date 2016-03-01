@@ -12,6 +12,7 @@ module advance_timestep_iterative_module
   use compute_HSE_pres_module
   use convert_m_to_umac_module
   use convert_rhoc_to_c_module
+  use eos_check_module
   use mk_advective_m_fluxdiv_module
   use reservoir_bc_fill_module
   use gmres_module
@@ -101,6 +102,7 @@ contains
     type(multifab) ::                 divu(mla%nlevel)
     type(multifab) ::                 conc(mla%nlevel)
     type(multifab) ::               p_baro(mla%nlevel)
+    type(multifab) ::                S_inc(mla%nlevel)
 
     type(multifab) ::            mold(mla%nlevel,mla%dim)
     type(multifab) ::           mtemp(mla%nlevel,mla%dim)
@@ -135,7 +137,7 @@ contains
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
-    real(kind=dp_t) :: weights(1), norm
+    real(kind=dp_t) :: weights(1)
 
     weights(1) = 1.d0
 
@@ -158,6 +160,7 @@ contains
        call multifab_build(             divu(n),mla%la(n),1       ,0)
        call multifab_build(             conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(           p_baro(n),mla%la(n),1       ,1)
+       call multifab_build(            S_inc(n),mla%la(n),1       ,0)
        do i=1,dm
           call multifab_build_edge(              mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(             mtemp(n,i),mla%la(n),1       ,1,i)
@@ -190,12 +193,13 @@ contains
     do n = 2,nlevs
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
-
-    ! alpha=0
-    ! this is used for the electric potential Poisson solve
-    ! and for the evaluation of div A_Phi grad Phi
     do n=1,nlevs
-       call multifab_setval(solver_alpha(n),0.d0,all=.true.)
+       ! alpha=0
+       ! this is used for the electric potential Poisson solve
+       ! and for the evaluation of div A_Phi grad Phi
+       call multifab_setval(solver_alpha(n),0.d0)
+       ! this is the iterative low Mach constraint correction
+       call multifab_setval(S_inc(n),0.d0)
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!
@@ -394,6 +398,9 @@ contains
 
        ! conc to rho - INCLUDING GHOST CELLS
        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
+
+       ! print out EOS drift
+       call eos_check(mla,rho_new)
 
        ! average rho_new and rhotot_new to faces
        call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -630,6 +637,11 @@ contains
           call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
        end do
 
+       call modify_S(mla,rho_new,S_inc,dt)
+       do n=1,nlevs
+          call multifab_plus_plus_c(gmres_rhs_p(n),1,S_inc(n),1,1,0)
+       end do
+
        ! multiply eta and kappa by 1/2 to put in proper form for gmres solve
        do n=1,nlevs
           call multifab_mult_mult_s_c(eta(n)  ,1,1.d0/2.d0,1,eta(n)%ng)
@@ -706,12 +718,6 @@ contains
           end do
        end do
 
-       norm=multifab_norm_l1_c(umac(1,1),1,1)
-
-       if (parallel_IOProcessor()) then
-          print*,'norm',norm
-       end if
-
     end do ! end loop l=1,num_pot_iters
 
     gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
@@ -732,6 +738,7 @@ contains
        call multifab_destroy(divu(n))
        call multifab_destroy(conc(n))
        call multifab_destroy(p_baro(n))
+       call multifab_destroy(S_inc(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
