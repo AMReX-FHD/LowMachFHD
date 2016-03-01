@@ -289,8 +289,7 @@ contains
        ! compute mtemp = rho^{n+1,l} v^{n+1,l} v^{n+1,l}
        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
-       ! compute A_Phi^{n+1,l} for explicit Epot_mass_fluxdiv_old
-       ! and to solve for Epot_mass_fluxdiv_new via Poisson solve
+       ! compute A_Phi^{n+1,l} to solve for Epot_mass_fluxdiv_new via Poisson solve
        call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
 
        if (l .gt. 1) then
@@ -324,7 +323,7 @@ contains
           call multifab_saxpy_3_cc(rho_new(n),1,0.5d0,adv_mass_fluxdiv_new(n),1,nspecies)
        end do
 
-       ! add (1-theta) Epot_mass_fluxdiv_old to R_p
+       ! add (1-theta) Epot_mass_fluxdiv_old to RHS
        do n=1,nlevs
           call multifab_saxpy_3_cc(rho_new(n),1,1.d0-theta_pot,Epot_mass_fluxdiv_old(n),1,nspecies)
        end do
@@ -335,10 +334,10 @@ contains
           call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
        end do
 
-       ! right-hand-side for Poisson solve is z^T R_p
+       ! right-hand-side for Poisson solve is z^T RHS
        call dot_with_z(mla,rho_new,solver_rhs)
 
-       ! compute z^T A_Phi^n, store in solver_beta
+       ! compute z^T A_Phi^{n+1,l}, store in solver_beta
        call dot_with_z_face(mla,A_Phi,solver_beta)
 
        ! compute solver_beta = epsilon + dt theta z^T A_Phi^{n+1,l}
@@ -357,7 +356,7 @@ contains
                                dx_in=dx(n,:))
        end do
 
-       ! solve -div (epsilon + dt theta z^T A_Phi) grad Phi^{*,n+1} = z^T R_p
+       ! solve -div (epsilon + dt theta z^T A_Phi^{n+1,l}) grad Phi^{n+1,l+1} = z^T RHS
        call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
                         the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
@@ -376,11 +375,11 @@ contains
              call zero_edgeval_walls(solver_beta(n,:),1,1,the_bc_tower%bc_tower_array(n))
           end do
 
-          ! compute Epot_mass_fluxdiv = div A_Phi^n grad Epot
+          ! compute Epot_mass_fluxdiv = div A_Phi^{n+1,l} grad Epot
           call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
        end do
 
-       ! add dt*theta*Epot_mass_fluxdiv to R_p to get rho^{n+1,l+1}
+       ! add dt*theta*Epot_mass_fluxdiv to RHS to get rho^{n+1,l+1}
        do n=1,nlevs
           call multifab_saxpy_3_cc(rho_new(n),1,dt*theta_pot,Epot_mass_fluxdiv(n),1,nspecies)
        end do
@@ -413,6 +412,24 @@ contains
        call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                               the_bc_tower%bc_tower_array)
 
+       ! compute A_Phi^{n+1,l+1} to compute updated Epot_mass_fluxdiv_new
+       call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
+
+       do comp=1,nspecies
+
+          ! copy component of A_Phi^{n+1,l+1} into beta and multiply by grad_Epot_new
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
+                call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
+             end do
+             ! zero mass flux on walls
+             call zero_edgeval_walls(solver_beta(n,:),1,1,the_bc_tower%bc_tower_array(n))
+          end do
+
+          ! compute Epot_mass_fluxdiv = div A_Phi^{n+1,l+1} grad Epot
+          call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
+       end do
 
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        ! Step 2 - Compute Velocity Constraint Correction
@@ -497,7 +514,7 @@ contains
           end do
        end do
 
-       ! compute A_0^{n+1,l} vbar^{n+1,l}
+       ! compute A_0^{n+1,l+1} vbar^{n+1,l}
        do n=1,nlevs
           do i=1,dm
              call multifab_setval(m_d_fluxdiv_new(n,i),0.d0,all=.true.)
