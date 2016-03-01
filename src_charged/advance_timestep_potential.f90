@@ -260,12 +260,6 @@ contains
        end do
     end do
 
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(solver_beta(n,i),dielectric_const)
-       end do
-    end do
-
     ! initial guess for Phi
     do n=1,nlevs
        call multifab_setval(Epot(n),0.d0,all=.true.)
