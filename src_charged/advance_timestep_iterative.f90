@@ -286,9 +286,6 @@ contains
        ! Step 1 - Density Update
        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-       ! compute mtemp = rho^{n+1,l} v^{n+1,l} v^{n+1,l}
-       call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
-
        ! compute A_Phi^{n+1,l} to solve for Epot_mass_fluxdiv_new via Poisson solve
        call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
 
@@ -397,7 +394,7 @@ contains
 
        ! conc to rho - INCLUDING GHOST CELLS
        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
-    
+
        ! average rho_new and rhotot_new to faces
        call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
        call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
@@ -481,6 +478,9 @@ contains
           end do
 
        end if
+
+       ! compute mtemp = rho^{n+1,l+1} v^{n+1,l} v^{n+1,l}
+       call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
        ! build gmres_rhs_v
        ! first set gmres_rhs_v = (mold - mtemp) / dt
