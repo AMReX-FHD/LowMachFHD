@@ -9,7 +9,7 @@ module fluid_charge_module
   use compute_mixture_properties_module
   use probin_common_module, only: molmass, k_B, total_volume, rhobar
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: charge_per_mass
+  use probin_charged_module, only: charge_per_mass, dpdt_factor
 
   implicit none
 
@@ -549,7 +549,7 @@ contains
             rhorhobar = rhorhobar + rho(i,j,comp)/rhobar(comp)
          end do
 
-         S_inc(i,j) = S_inc(i,j) - (2.d0/dt)*(rhorhobar - 1.d0)/rhorhobar
+         S_inc(i,j) = S_inc(i,j) - (dpdt_factor/dt)*(rhorhobar - 1.d0)/rhorhobar
 
       end do
       end do
@@ -576,7 +576,7 @@ contains
             rhorhobar = rhorhobar + rho(i,j,k,comp)/rhobar(comp)
          end do
 
-         S_inc(i,j,k) = S_inc(i,j,k) - (1.d0/dt)*(rhorhobar - 1.d0)/rhorhobar
+         S_inc(i,j,k) = S_inc(i,j,k) - (dpdt_factor/dt)*(rhorhobar - 1.d0)/rhorhobar
 
       end do
       end do
