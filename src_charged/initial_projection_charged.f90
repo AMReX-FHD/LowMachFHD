@@ -109,12 +109,11 @@ contains
     ! compute diffusive, stochastic, and potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
-                                      diff_mass_fluxdiv, &
-                                      stoch_mass_fluxdiv,Temp, &
-                                      flux_total,dt,0.d0,dx,weights, &
-                                      the_bc_tower, &
-                                      Epot_mass_fluxdiv,charge_old,grad_Epot_old)
+    call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
+                                      stoch_mass_fluxdiv,Temp,flux_total,dt,0.d0,dx,weights, &
+                                      the_bc_tower,Epot_mass_fluxdiv, &
+                                      charge=charge_old, &
+                                      grad_Epot=grad_Epot_old)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -148,8 +147,8 @@ contains
 
     do n=1,nlevs
        do i=1,dm
-!          ! to deal with reservoirs
-!          ! set normal velocity on physical domain boundaries
+          ! to deal with reservoirs
+          ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
                                          the_bc_tower%bc_tower_array(n), &
                                          dx(n,:),vel_bc_n(n,:))

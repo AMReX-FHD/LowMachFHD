@@ -31,7 +31,8 @@ contains
                                           Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_tower, &
-                                          Epot_fluxdiv,charge,grad_Epot)
+                                          Epot_fluxdiv,charge,grad_Epot, &
+                                          stoch_fluxdiv_bak)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -48,6 +49,7 @@ contains
     type(multifab) , intent(inout), optional :: Epot_fluxdiv(:)
     type(multifab) , intent(inout), optional :: charge(:)
     type(multifab) , intent(inout), optional :: grad_Epot(:,:)
+    type(multifab) , intent(inout), optional :: stoch_fluxdiv_bak(:)
        
     ! local variables
     type(multifab) :: drho(mla%nlevel)           ! correction to rho
@@ -147,6 +149,14 @@ contains
        call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
                                     molmtot,chi,Lonsager_fc,stoch_fluxdiv,flux_total,&
                                     dx,dt,weights,the_bc_tower%bc_tower_array)
+
+       if (present(stoch_fluxdiv_bak)) then
+          call swap_mass_stochastic(mla)
+          call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
+                                       molmtot,chi,Lonsager_fc,stoch_fluxdiv_bak,flux_total,&
+                                       dx,dt,weights,the_bc_tower%bc_tower_array)
+          call swap_mass_stochastic(mla)
+       end if
     else
        do n=1,nlevs
           call multifab_setval(stoch_fluxdiv(n),0.d0,all=.true.)
