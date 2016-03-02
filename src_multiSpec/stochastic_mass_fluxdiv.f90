@@ -29,7 +29,7 @@ module stochastic_mass_fluxdiv_module
   
 contains
   
-  subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,&
+  subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Lonsager_fc, &
                                      stoch_fluxdiv,flux_total,dx,dt,weights, &
                                      the_bc_level,increment_in)
 
@@ -39,6 +39,7 @@ contains
     type(multifab) , intent(in   )   :: molarconc(:)
     type(multifab) , intent(in   )   :: molmtot(:)
     type(multifab) , intent(in   )   :: chi(:)
+    type(multifab) , intent(in   )   :: Lonsager_fc(:,:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(inout)   :: flux_total(:,:)
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -48,8 +49,6 @@ contains
     logical  ,  intent(in), optional :: increment_in
 
     ! Local variables
-    type(multifab)   :: Lonsager(mla%nlevel)            ! cholesky factored Lonsager 
-    type(multifab)   :: Lonsager_fc(mla%nlevel,mla%dim) ! cholesky factored Lonsager on face
     type(multifab)   :: flux(mla%nlevel,mla%dim)        ! face-centered stochastic flux
     integer          :: n,nlevs,i,dm,rng
     real(kind=dp_t)  :: variance
@@ -71,9 +70,7 @@ contains
 
     ! build multifabs 
     do n=1,nlevs
-       call multifab_build(Lonsager(n), mla%la(n), nspecies**2, rho(n)%ng)
        do i=1,dm
-          call multifab_build_edge(Lonsager_fc(n,i),   mla%la(n), nspecies**2, 0, i)
           call multifab_build_edge(flux(n,i), mla%la(n), nspecies,    0, i)
        end do
     end do
@@ -93,12 +90,6 @@ contains
           end do   
        end do   
     end do
-    
-    ! compute cell-centered cholesky-factored Lonsager^(1/2)
-    call compute_Lonsager(mla,rho,rhotot,molarconc,molmtot,chi,Lonsager)
-                  
-    ! compute face-centered cholesky factor of cell-centered cholesky factored Lonsager^(1/2)
-    call average_cc_to_face(nlevs,Lonsager,Lonsager_fc,1,tran_bc_comp,nspecies**2,the_bc_level,.false.)
 
     ! compute variance X cholesky-Lonsager-face X W(0,1) 
     do n=1,nlevs
@@ -141,9 +132,7 @@ contains
 
     ! free the multifab allocated memory
     do n=1,nlevs
-       call multifab_destroy(Lonsager(n))
        do i=1,dm
-          call multifab_destroy(Lonsager_fc(n,i))
           call multifab_destroy(flux(n,i))
        end do
     end do
