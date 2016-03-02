@@ -864,8 +864,8 @@ contains
                                       the_bc_tower%bc_tower_array)
 
        ! fill the stochastic multifabs with a new set of random numbers
-       call fill_m_stochastic(mla)
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+       call fill_m_stochastic(mla)
 
        ! compute diffusive, stochastic, and potential mass fluxes
        ! with barodiffusion and thermodiffusion
