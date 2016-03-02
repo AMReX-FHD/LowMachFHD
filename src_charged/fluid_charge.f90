@@ -549,7 +549,7 @@ contains
             rhorhobar = rhorhobar + rho(i,j,comp)/rhobar(comp)
          end do
 
-         S_inc(i,j) = S_inc(i,j) - (1.d0/dt)*(rhorhobar - 1.d0)/rhorhobar
+         S_inc(i,j) = S_inc(i,j) - (2.d0/dt)*(rhorhobar - 1.d0)/rhorhobar
 
       end do
       end do
