@@ -33,7 +33,7 @@ module advance_timestep_iterative_module
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid, dielectric_const, theta_pot, &
-                                   num_pot_iters
+                                   num_pot_iters, dpdt_factor
 
   implicit none
 
@@ -642,10 +642,12 @@ contains
           call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
        end do
 
-       call modify_S(mla,rho_new,S_inc,dt)
-       do n=1,nlevs
-          call multifab_plus_plus_c(gmres_rhs_p(n),1,S_inc(n),1,1,0)
-       end do
+       if (dpdt_factor .ne. 0.d0) then
+          call modify_S(mla,rho_new,S_inc,dt)
+          do n=1,nlevs
+             call multifab_plus_plus_c(gmres_rhs_p(n),1,S_inc(n),1,1,0)
+          end do
+       end if
 
        ! multiply eta and kappa by 1/2 to put in proper form for gmres solve
        do n=1,nlevs
