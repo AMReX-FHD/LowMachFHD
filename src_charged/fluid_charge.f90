@@ -7,16 +7,16 @@ module fluid_charge_module
   use mass_flux_utilities_module
   use matvec_mul_module
   use compute_mixture_properties_module
-  use probin_common_module, only: molmass, k_B, total_volume
+  use probin_common_module, only: molmass, k_B, total_volume, rhobar
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: charge_per_mass
+  use probin_charged_module, only: charge_per_mass, dpdt_factor
 
   implicit none
 
   private
 
   public :: dot_with_z, dot_with_z_face, compute_charge_coef, momentum_charge_force, &
-            enforce_charge_neutrality, implicit_potential_coef
+            enforce_charge_neutrality, implicit_potential_coef, modify_S
   
 contains
 
@@ -484,5 +484,107 @@ contains
     end do
 
   end subroutine implicit_potential_coef
+
+  subroutine modify_S(mla,rho,S_inc,dt)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab ), intent(in   ) :: rho(:)
+    type(multifab ), intent(inout) :: S_inc(:)
+    real(kind=dp_t), intent(in   ) :: dt
+
+    ! local variables
+    integer :: i,n,dm,nlevs
+    integer :: ng_1,ng_2
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    ! pointers into multifabs
+    real(kind=dp_t), pointer :: dp1(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2(:,:,:,:)
+    
+    real(kind=dp_t) :: S_avg
+
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    ng_1 = rho(1)%ng
+    ng_2 = S_inc(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp1 => dataptr(rho(n),i)
+          dp2 => dataptr(S_inc(n),i)
+          lo = lwb(get_box(rho(n),i))
+          hi = upb(get_box(rho(n),i))
+          select case (dm)
+          case (2)
+             call modify_S_2d(dp1(:,:,1,:),ng_1,dp2(:,:,1,1),ng_2,lo,hi,dt)
+          case (3)
+             call modify_S_3d(dp1(:,:,:,:),ng_1,dp2(:,:,:,1),ng_2,lo,hi,dt)
+          end select
+       end do
+    end do
+
+    ! subtract off average so S sums to zero
+    S_avg = multifab_sum_c(S_inc(1),1,1) / multifab_volume(S_inc(1))
+    call multifab_sub_sub_s_c(S_inc(1),1,S_avg,1,0)
+
+  contains
+
+    subroutine modify_S_2d(rho,ng_1,S_inc,ng_2,lo,hi,dt)
+      
+      integer         :: lo(:),hi(:),ng_1,ng_2
+      real(kind=dp_t) :: dt
+      real(kind=dp_t) ::   rho(lo(1)-ng_1:,lo(2)-ng_1:,:)
+      real(kind=dp_t) :: S_inc(lo(1)-ng_2:,lo(2)-ng_2:)
+
+      ! local variables
+      integer :: i,j,comp
+      real(kind=dp_t) :: rhorhobar
+
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
+
+         rhorhobar = 0.d0
+         do comp=1,nspecies
+            rhorhobar = rhorhobar + rho(i,j,comp)/rhobar(comp)
+         end do
+
+         S_inc(i,j) = S_inc(i,j) - (dpdt_factor/dt)*(rhorhobar - 1.d0)/rhorhobar
+
+      end do
+      end do
+
+    end subroutine modify_S_2d
+
+    subroutine modify_S_3d(rho,ng_1,S_inc,ng_2,lo,hi,dt)
+      
+      integer         :: lo(:),hi(:),ng_1,ng_2
+      real(kind=dp_t) :: dt
+      real(kind=dp_t) ::   rho(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:,:)
+      real(kind=dp_t) :: S_inc(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+
+      ! local variables
+      integer :: i,j,k,comp
+      real(kind=dp_t) :: rhorhobar
+
+      do k=lo(3),hi(3)
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
+
+         rhorhobar = 0.d0
+         do comp=1,nspecies
+            rhorhobar = rhorhobar + rho(i,j,k,comp)/rhobar(comp)
+         end do
+
+         S_inc(i,j,k) = S_inc(i,j,k) - (dpdt_factor/dt)*(rhorhobar - 1.d0)/rhorhobar
+
+      end do
+      end do
+      end do
+
+    end subroutine modify_S_3d
+
+  end subroutine modify_S
+
 
 end module fluid_charge_module

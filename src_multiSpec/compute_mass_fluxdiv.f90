@@ -10,6 +10,7 @@ module compute_mass_fluxdiv_module
   use external_force_module
   use ml_layout_module
   use mass_flux_utilities_module
+  use convert_stag_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: variance_coef_mass
 
@@ -55,6 +56,8 @@ contains
     type(multifab) :: D_bar(mla%nlevel)          ! D_bar-matrix
     type(multifab) :: D_therm(mla%nlevel)        ! DT-matrix
     type(multifab) :: zeta_by_Temp(mla%nlevel)   ! for Thermo-diffusion 
+    type(multifab) :: Lonsager(mla%nlevel)            ! cholesky factored Lonsager 
+    type(multifab) :: Lonsager_fc(mla%nlevel,mla%dim) ! cholesky factored Lonsager on face
 
     integer         :: n,i,dm,nlevs
 
@@ -78,6 +81,10 @@ contains
        call multifab_build(D_bar(n),        mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(D_therm(n),      mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
+       call multifab_build(Lonsager(n),     mla%la(n), nspecies**2, rho(n)%ng)
+       do i=1,dm
+          call multifab_build_edge(Lonsager_fc(n,i),   mla%la(n), nspecies**2, 0, i)
+       end do
     end do
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
@@ -119,8 +126,16 @@ contains
 
     ! compute stochastic fluxdiv 
     if (variance_coef_mass .ne. 0.d0) then
+
+       ! compute cell-centered cholesky-factored Lonsager^(1/2)
+       call compute_Lonsager(mla,rho,rhotot_temp,molarconc,molmtot,chi,Lonsager)
+                  
+       ! compute face-centered cholesky factor of cell-centered cholesky factored Lonsager^(1/2)
+       call average_cc_to_face(nlevs,Lonsager,Lonsager_fc,1,tran_bc_comp,nspecies**2, &
+                               the_bc_tower%bc_tower_array,.false.)
+
        call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
-                                    molmtot,chi,stoch_fluxdiv,flux_total,&
+                                    molmtot,chi,Lonsager_fc,stoch_fluxdiv,flux_total,&
                                     dx,dt,weights,the_bc_tower%bc_tower_array)
     else
        do n=1,nlevs
@@ -146,6 +161,10 @@ contains
        call multifab_destroy(D_bar(n))
        call multifab_destroy(D_therm(n))
        call multifab_destroy(zeta_by_Temp(n))
+       call multifab_destroy(Lonsager(n))
+       do i=1,dm
+          call multifab_destroy(Lonsager_fc(n,i))
+       end do
     end do
 
     call destroy(bpt)

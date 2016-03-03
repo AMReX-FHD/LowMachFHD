@@ -289,7 +289,10 @@ contains
           ! pressure is periodic
           ell_bc_level(igrid,d,lohi,pres_bc_comp:pres_bc_comp+num_scal_bc) = BC_PER
 
-       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL .or. phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
+       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL .or. &
+                phys_bc_level(igrid,d,lohi) == SLIP_WALL .or. &
+                phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR .or. &
+                phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
 
           ! walls
           ! pressure is homogeneous Neumann

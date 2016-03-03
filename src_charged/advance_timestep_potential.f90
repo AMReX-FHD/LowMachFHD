@@ -260,12 +260,6 @@ contains
        end do
     end do
 
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(solver_beta(n,i),dielectric_const)
-       end do
-    end do
-
     ! initial guess for Phi
     do n=1,nlevs
        call multifab_setval(Epot(n),0.d0,all=.true.)
@@ -322,6 +316,25 @@ contains
 
     ! compute total charge
     call dot_with_z(mla,rho_new,charge_new)
+
+    ! compute A_Phi^{*,n+1} to compute updated Epot_mass_fluxdiv_new
+    call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
+
+    do comp=1,nspecies
+
+       ! copy component of A_Phi^{*,n+1} into beta and multiply by grad_Epot_new
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(solver_beta(n,i),1,A_Phi(n,i),comp,1,0)
+             call multifab_mult_mult_c(solver_beta(n,i),1,grad_Epot_new(n,i),1,1,0)
+          end do
+          ! zero mass flux on walls
+          call zero_edgeval_walls(solver_beta(n,:),1,1,the_bc_tower%bc_tower_array(n))
+       end do
+
+       ! compute Epot_mass_fluxdiv = div A_Phi^{*,n+1} grad Epot
+       call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
+    end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 2 - Predictor Crank-Nicolson Step
@@ -453,18 +466,21 @@ contains
 
     if (use_charged_fluid) then
 
-       ! compute momentum charge force, charge^{n}*grad_Epot^{*,n+1}
+       ! subtract momentum charge force, (1-theta)*charge^{n}*grad_Epot^{n}
        call average_cc_to_face(nlevs,charge_old,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_old(n,i),1,1,0)
+             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-(1.d0-theta_pot),mom_charge_force(n,i),1,1)
           end do
        end do
 
-       ! subtract momentum charge force
+       ! subtract momentum charge force, theta*charge^{*,n+1}*grad_Epot^{*,n+1}
+       call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force(n,i),1,1,0)
+             call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-theta_pot,mom_charge_force(n,i),1,1)
           end do
        end do
 
@@ -628,9 +644,6 @@ contains
        ! convert v^{*,n+1} to rho^{*,n+1}v^{*,n+1} in valid and ghost region
        ! now mnew has properly filled ghost cells
        call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
-
-       ! compute A_Phi^{*,n+1}
-       call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
 
        ! compute R_c = rho_old + (dt/2)(A^n + A^{*,n+1} + D^n + D^{*,n+1} + St^n + St^{*,n+1}) + dt(1-theta)E^n 
        ! store in rho_new
@@ -851,8 +864,8 @@ contains
                                       the_bc_tower%bc_tower_array)
 
        ! fill the stochastic multifabs with a new set of random numbers
-       call fill_m_stochastic(mla)
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+       call fill_m_stochastic(mla)
 
        ! compute diffusive, stochastic, and potential mass fluxes
        ! with barodiffusion and thermodiffusion
@@ -878,18 +891,21 @@ contains
 
        if (use_charged_fluid) then
 
-          ! compute momentum charge force, charge^{n+1}*grad_Epot^{n+1}
+          ! subtract momentum charge force, (1-theta)*charge^{n}*grad_Epot^{n}
+          call average_cc_to_face(nlevs,charge_old,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_old(n,i),1,1,0)
+                call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-(1.d0-theta_pot),mom_charge_force(n,i),1,1)
+             end do
+          end do
+
+          ! subtract momentum charge force, theta*charge^{n+1}*grad_Epot^{n+1}
           call average_cc_to_face(nlevs,charge_new,mom_charge_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
           do n=1,nlevs
              do i=1,dm
                 call multifab_mult_mult_c(mom_charge_force(n,i),1,grad_Epot_new(n,i),1,1,0)
-             end do
-          end do
-
-          ! subtract momentum charge force
-          do n=1,nlevs
-             do i=1,dm
-                call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force(n,i),1,1,0)
+                call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-theta_pot,mom_charge_force(n,i),1,1)
              end do
           end do
 

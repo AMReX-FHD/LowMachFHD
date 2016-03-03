@@ -20,16 +20,22 @@ module stochastic_mass_fluxdiv_module
 
   private
 
-  public :: stochastic_mass_fluxdiv, fill_mass_stochastic, init_mass_stochastic, destroy_mass_stochastic
+  public :: stochastic_mass_fluxdiv, fill_mass_stochastic, init_mass_stochastic, &
+       swap_mass_stochastic, destroy_mass_stochastic
 
   ! stochastic fluxes for mass densities are face-centered
   type(multifab), allocatable, save :: stoch_W_fc(:,:,:)
+
+  ! storage for a second set of random numbers used in the iterative charged fluid algorithm
+  ! where we need to keep around t^n and t^n+1 random numbers (not the same as multiple stages)
+  type(multifab), allocatable, save :: stoch_W_fc_bak(:,:,:) 
+  type(multifab), allocatable, save :: stoch_W_fc_tmp(:,:,:) 
 
   integer, save :: n_rngs ! how many random number stages
   
 contains
   
-  subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,&
+  subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Lonsager_fc, &
                                      stoch_fluxdiv,flux_total,dx,dt,weights, &
                                      the_bc_level,increment_in)
 
@@ -39,6 +45,7 @@ contains
     type(multifab) , intent(in   )   :: molarconc(:)
     type(multifab) , intent(in   )   :: molmtot(:)
     type(multifab) , intent(in   )   :: chi(:)
+    type(multifab) , intent(in   )   :: Lonsager_fc(:,:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(inout)   :: flux_total(:,:)
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -48,8 +55,6 @@ contains
     logical  ,  intent(in), optional :: increment_in
 
     ! Local variables
-    type(multifab)   :: Lonsager(mla%nlevel)            ! cholesky factored Lonsager 
-    type(multifab)   :: Lonsager_fc(mla%nlevel,mla%dim) ! cholesky factored Lonsager on face
     type(multifab)   :: flux(mla%nlevel,mla%dim)        ! face-centered stochastic flux
     integer          :: n,nlevs,i,dm,rng
     real(kind=dp_t)  :: variance
@@ -71,9 +76,7 @@ contains
 
     ! build multifabs 
     do n=1,nlevs
-       call multifab_build(Lonsager(n), mla%la(n), nspecies**2, rho(n)%ng)
        do i=1,dm
-          call multifab_build_edge(Lonsager_fc(n,i),   mla%la(n), nspecies**2, 0, i)
           call multifab_build_edge(flux(n,i), mla%la(n), nspecies,    0, i)
        end do
     end do
@@ -93,12 +96,6 @@ contains
           end do   
        end do   
     end do
-    
-    ! compute cell-centered cholesky-factored Lonsager^(1/2)
-    call compute_Lonsager(mla,rho,rhotot,molarconc,molmtot,chi,Lonsager)
-                  
-    ! compute face-centered cholesky factor of cell-centered cholesky factored Lonsager^(1/2)
-    call average_cc_to_face(nlevs,Lonsager,Lonsager_fc,1,tran_bc_comp,nspecies**2,the_bc_level,.false.)
 
     ! compute variance X cholesky-Lonsager-face X W(0,1) 
     do n=1,nlevs
@@ -141,9 +138,7 @@ contains
 
     ! free the multifab allocated memory
     do n=1,nlevs
-       call multifab_destroy(Lonsager(n))
        do i=1,dm
-          call multifab_destroy(Lonsager_fc(n,i))
           call multifab_destroy(flux(n,i))
        end do
     end do
@@ -171,13 +166,20 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    allocate(stoch_W_fc(mla%nlevel, mla%dim, n_rngs))
+    allocate(stoch_W_fc    (mla%nlevel, mla%dim, n_rngs))
+    allocate(stoch_W_fc_bak(mla%nlevel, mla%dim, n_rngs))
+    allocate(stoch_W_fc_tmp(mla%nlevel, mla%dim, n_rngs))
 
     do n=1,nlevs
        do comp=1,n_rngs
           do i=1,dm
              ! we need one face-centered flux for each concentration
-             call multifab_build_edge(stoch_W_fc(n,i,comp),mla%la(n),nspecies,0,i)
+             call multifab_build_edge(stoch_W_fc    (n,i,comp),mla%la(n),nspecies,0,i)
+             call multifab_build_edge(stoch_W_fc_bak(n,i,comp),mla%la(n),nspecies,0,i)
+             call multifab_build_edge(stoch_W_fc_tmp(n,i,comp),mla%la(n),nspecies,0,i)
+             call multifab_setval(stoch_W_fc    (n,i,comp),0.d0)
+             call multifab_setval(stoch_W_fc_bak(n,i,comp),0.d0)
+             call multifab_setval(stoch_W_fc_tmp(n,i,comp),0.d0)
           end do
        end do ! end loop over n_rngs
     end do ! end loop over nlevs
@@ -204,12 +206,14 @@ contains
     do n=1,nlevs
        do comp=1,n_rngs
           do i=1,dm
-             call multifab_destroy(stoch_W_fc(n,i,comp))
+             call multifab_destroy(stoch_W_fc    (n,i,comp))
+             call multifab_destroy(stoch_W_fc_bak(n,i,comp))
+             call multifab_destroy(stoch_W_fc_tmp(n,i,comp))
           end do
        end do
     end do
     
-    deallocate(stoch_W_fc)
+    deallocate(stoch_W_fc,stoch_W_fc_bak,stoch_W_fc_tmp)
 
     call destroy(bpt)
 
@@ -219,6 +223,7 @@ contains
   
     type(ml_layout), intent(in   )  :: mla
     type(bc_level) , intent(in   )  :: the_bc_level(:)
+
 
     ! Local variables
     integer :: dm,nlevs,box,i,rng
@@ -243,6 +248,29 @@ contains
     call destroy(bpt)
 
   end subroutine fill_mass_stochastic
+
+  subroutine swap_mass_stochastic(mla)
+
+    ! swap the random numbers in stoch_W_fc and stoch_W_fc_tmp
+
+    type(ml_layout), intent(in   )  :: mla
+
+    integer :: n,nlevs,i,dm,comp
+
+    nlevs = mla%nlevel
+    dm    = mla%dim    
+
+    do n=1,nlevs
+       do comp=1,n_rngs
+          do i=1,dm
+             call multifab_copy(stoch_W_fc_tmp(n,i,comp),stoch_W_fc    (n,i,comp))
+             call multifab_copy(stoch_W_fc    (n,i,comp),stoch_W_fc_bak(n,i,comp))
+             call multifab_copy(stoch_W_fc_bak(n,i,comp),stoch_W_fc_tmp(n,i,comp))
+          end do
+       end do ! end loop over n_rngs
+    end do ! end loop over nlevs
+
+  end subroutine swap_mass_stochastic
 
   subroutine stoch_mass_bc(mla,the_bc_level)
     
