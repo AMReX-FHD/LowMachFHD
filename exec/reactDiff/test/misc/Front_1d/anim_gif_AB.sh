@@ -1,17 +1,19 @@
 #!/bin/bash
 
+RUNNAME=TEST
+
 EXEC=../../main.Linux.gfortran.debug.mpi.exe
-INPUTSFILE=inputs_Turing_stripe_1d
+INPUTSFILE=inputs_AB
+GNUPLOTSCRIPT="AB_vstat.plt"
 
 DATAFILEPREFIX=vstat
 TIMEMIN=0
 TIMEINCR=1000
 TIMEMAX=20000
 
-GNUPLOTSCRIPT="vstat.plt"
 GNUPLOTOUTPUTEXT="png"
 GIFDELAY=50
-GIFOUTPUT=${DATAFILEPREFIX}.gif
+GIFOUTPUT=AB.gif
 
 # if the script is executed by "./anim_gif.sh run", run the reactdiff program
 # otherwise, skip this 
@@ -19,15 +21,33 @@ if [ $# -eq 1 ]
 then
   if [ $1 == run ]
   then
-  $EXEC $INPUTSFILE
+    if [ -d $RUNNAME ]
+    then
+      echo "** directory $RUNNAME already present **"
+      sleep 3s
+    else
+      mkdir $RUNNAME
+    fi
+
+    cd $RUNNAME
+    ../$EXEC ../$INPUTSFILE
+    cd ..
   fi
 fi
 
 # generate figures from datafiles
+if [ -d $RUNNAME ]
+then 
+  cd  $RUNNAME
+else
+  echo "directory $RUNNAME does not exist"
+  exit
+fi
+
 for i in $(seq -f "%08g" $TIMEMIN $TIMEINCR $TIMEMAX)
 do
   datafile=$DATAFILEPREFIX$i
-  gnuplot -e "datafile='$datafile'" $GNUPLOTSCRIPT
+  gnuplot -e "datafile='$datafile'" ../$GNUPLOTSCRIPT
   echo "$datafile generated"
 done
 
