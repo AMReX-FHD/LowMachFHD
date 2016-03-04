@@ -25,7 +25,7 @@
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
   print_int = 10                   ! how often to output EOS drift and sum of conserved quantities
-  project_eos_int = 0             ! how often to call project_onto_eos
+  project_eos_int = 10000             ! how often to call project_onto_eos
 
   ! Physical parameters
   !--------------------
