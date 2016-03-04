@@ -63,7 +63,8 @@ contains
                                         Epot_mass_fluxdiv, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep, &
-                                        grad_Epot_old,grad_Epot_new,charge_old,charge_new)
+                                        grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
+                                        Epot)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -89,6 +90,7 @@ contains
     type(multifab) , intent(inout) :: grad_Epot_new(:,:)
     type(multifab) , intent(inout) :: charge_old(:)
     type(multifab) , intent(inout) :: charge_new(:)
+    type(multifab) , intent(inout) :: Epot(:)
 
     ! local
     type(multifab) ::  diff_mass_fluxdiv_old(mla%nlevel)
@@ -128,7 +130,6 @@ contains
 
     type(multifab) :: solver_alpha(mla%nlevel)         ! alpha=0 for Poisson solve
     type(multifab) ::   solver_rhs(mla%nlevel)         ! Poisson solve rhs
-    type(multifab) ::         Epot(mla%nlevel)         ! Phi solution from Poisson solve
     type(multifab) ::        A_Phi(mla%nlevel,mla%dim) ! face-centered A_Phi
     type(multifab) ::  solver_beta(mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
     
@@ -185,7 +186,6 @@ contains
        end do
        call multifab_build(solver_alpha(n),mla%la(n),1,0)
        call multifab_build(solver_rhs(n),mla%la(n),1,0)
-       call multifab_build(Epot(n),mla%la(n),1,1)
        do i=1,dm
           call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
@@ -777,7 +777,6 @@ contains
        end do
        call multifab_destroy(solver_alpha(n))
        call multifab_destroy(solver_rhs(n))
-       call multifab_destroy(Epot(n))
        do i=1,dm
           call multifab_destroy(A_Phi(n,i))
           call multifab_destroy(solver_beta(n,i))

@@ -87,6 +87,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: charge_new(:)
   type(multifab), allocatable  :: grad_Epot_old(:,:)
   type(multifab), allocatable  :: grad_Epot_new(:,:)
+  type(multifab), allocatable  :: Epot(:)
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs
@@ -135,6 +136,7 @@ subroutine main_driver()
   allocate(charge_new(nlevs))
   allocate(grad_Epot_old(nlevs,dm))
   allocate(grad_Epot_new(nlevs,dm))
+  allocate(Epot(nlevs))
 
   ! build pmask
   allocate(pmask(dm))
@@ -304,16 +306,6 @@ subroutine main_driver()
   ! rho to conc - NO GHOST CELLS
   call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
   call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
-
-  ! fill ghost cells
-  do n=1,nlevs
-     ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-     call multifab_fill_boundary(pi(n))
-     ! fill non-periodic domain boundary ghost cells
-     call multifab_physbc(pi(n),1,pres_bc_comp,1, &
-                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-  end do
-
   do n=1,nlevs
      call fill_rho_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
   end do
@@ -323,6 +315,15 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_destroy(conc(n))
+  end do
+
+  ! fill ghost cells
+  do n=1,nlevs
+     ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+     call multifab_fill_boundary(pi(n))
+     ! fill non-periodic domain boundary ghost cells
+     call multifab_physbc(pi(n),1,pres_bc_comp,1, &
+                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
   end do
 
   do n=1,nlevs
@@ -362,6 +363,7 @@ subroutine main_driver()
         call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,0,i)
         call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,0,i)
      end do
+     call multifab_build(Epot(n),mla%la(n),1,1)
 
      ! eta and Temp on nodes (2d) or edges (3d)
      if (dm .eq. 2) then
@@ -481,7 +483,7 @@ subroutine main_driver()
                                      Epot_mass_fluxdiv,diff_mass_fluxdiv, &
                                      stoch_mass_fluxdiv, &
                                      Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                     charge_old,grad_Epot_old)
+                                     charge_old,grad_Epot_old,Epot)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -500,7 +502,8 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfile_charged(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,0,dx,time)
+        call write_plotfile_charged(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,Epot, &
+                                    0,dx,time)
      end if
      
      ! print out projection (average) and variance)
@@ -562,7 +565,7 @@ subroutine main_driver()
                                Epot_mass_fluxdiv,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                dx,dt,time,the_bc_tower,istep, &
                                grad_Epot_old,grad_Epot_new, &
-                               charge_old,charge_new)
+                               charge_old,charge_new,Epot)
       else if (algorithm_type .eq. 1) then
          call advance_timestep_potential(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -570,7 +573,7 @@ subroutine main_driver()
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          dx,dt,time,the_bc_tower,istep, &
                                          grad_Epot_old,grad_Epot_new, &
-                                         charge_old,charge_new)
+                                         charge_old,charge_new,Epot)
       else if (algorithm_type .eq. 2) then
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -578,7 +581,7 @@ subroutine main_driver()
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          dx,dt,time,the_bc_tower,istep, &
                                          grad_Epot_old,grad_Epot_new, &
-                                         charge_old,charge_new)
+                                         charge_old,charge_new,Epot)
       end if
 
       time = time + dt
@@ -642,7 +645,8 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
-            call write_plotfile_charged(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,istep,dx,time)
+            call write_plotfile_charged(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,Epot, &
+                                        istep,dx,time)
          end if
 
          ! write checkpoint at specific intervals
@@ -732,6 +736,7 @@ subroutine main_driver()
         call multifab_destroy(grad_Epot_old(n,i))
         call multifab_destroy(grad_Epot_new(n,i))
      end do
+     call multifab_destroy(Epot(n))
   end do
   deallocate(grad_Epot_old,grad_Epot_new)
 

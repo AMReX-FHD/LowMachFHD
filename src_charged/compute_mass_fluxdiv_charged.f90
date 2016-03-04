@@ -31,7 +31,7 @@ contains
                                           Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_tower, &
-                                          Epot_fluxdiv,charge,grad_Epot, &
+                                          Epot_fluxdiv,charge,grad_Epot,Epot, &
                                           stoch_fluxdiv_bak)
        
     type(ml_layout), intent(in   )   :: mla
@@ -49,6 +49,7 @@ contains
     type(multifab) , intent(inout), optional :: Epot_fluxdiv(:)
     type(multifab) , intent(inout), optional :: charge(:)
     type(multifab) , intent(inout), optional :: grad_Epot(:,:)
+    type(multifab) , intent(inout), optional :: Epot(:)
     type(multifab) , intent(inout), optional :: stoch_fluxdiv_bak(:)
        
     ! local variables
@@ -122,10 +123,13 @@ contains
        end do
     end do
 
-    if (present(Epot_fluxdiv) .and. present(charge) .and. present(grad_Epot)) then
+    if (present(Epot_fluxdiv) .and. &
+        present(charge) .and. &
+        present(grad_Epot) .and. &
+        present(Epot)) then
        ! compute electric potential mass fluxes
        call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                              flux_total,dx,the_bc_tower,charge,grad_Epot)
+                              flux_total,dx,the_bc_tower,charge,grad_Epot,Epot)
     end if
 
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."

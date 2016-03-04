@@ -25,7 +25,7 @@ module Epot_mass_fluxdiv_module
 contains
 
   subroutine Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                               flux_total,dx,the_bc_tower,charge,grad_Epot)
+                               flux_total,dx,the_bc_tower,charge,grad_Epot,Epot)
 
     ! this computes "Epot_fluxdiv = -div(F) = div(A_Phi grad Phi)"
     !               "grad_Epot    = grad Phi"
@@ -40,6 +40,7 @@ contains
     type(bc_tower) , intent(in   )  :: the_bc_tower
     type(multifab) , intent(inout)  :: charge(:)
     type(multifab) , intent(inout)  :: grad_Epot(:,:)
+    type(multifab) , intent(inout)  :: Epot(:)
 
     ! local variables
     integer i,dm,n,nlevs
@@ -65,7 +66,7 @@ contains
     
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
-    call Epot_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge,grad_Epot)
+    call Epot_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge,grad_Epot,Epot)
     
     ! add fluxes to flux_total
     do n=1,nlevs
@@ -89,7 +90,7 @@ contains
   end subroutine Epot_mass_fluxdiv
  
   subroutine Epot_mass_flux(mla,rho,Temp,rhoWchi,flux,dx, &
-                            the_bc_tower,charge,grad_Epot)
+                            the_bc_tower,charge,grad_Epot,Epot)
 
     ! this computes "-F = A_Phi grad Phi"
 
@@ -102,6 +103,7 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: charge(:)
     type(multifab) , intent(inout) :: grad_Epot(:,:)
+    type(multifab) , intent(inout) :: Epot(:)
 
     ! local variables
     integer :: n,i,s,dm,nlevs
@@ -112,7 +114,6 @@ contains
     ! for electric potential Poisson solve
     type(multifab)  :: alpha(mla%nlevel)
     type(multifab)  :: beta(mla%nlevel,mla%dim)
-    type(multifab)  :: Epot(mla%nlevel)
     type(multifab)  :: charge_coef(mla%nlevel)
     type(multifab)  :: charge_coef_face(mla%nlevel,mla%dim)
     type(bndry_reg) :: fine_flx(2:mla%nlevel)
@@ -127,7 +128,6 @@ contains
     nlevs = mla%nlevel  ! number of levels 
     
     do n=1,nlevs
-       call multifab_build(Epot(n),mla%la(n),1,1)
        call multifab_build(alpha(n),mla%la(n),1,0)
        call multifab_build(charge_coef(n),mla%la(n),nspecies,1)
        do i=1,dm
@@ -218,7 +218,6 @@ contains
     do n=1,nlevs
        call multifab_destroy(alpha(n))
        call multifab_destroy(charge_coef(n))
-       call multifab_destroy(Epot(n))
        do i=1,dm
           call multifab_destroy(rhoWchi_face(n,i))
           call multifab_destroy(beta(n,i))

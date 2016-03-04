@@ -41,7 +41,7 @@ contains
                                         Epot_mass_fluxdiv, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                        charge_old,grad_Epot_old)
+                                        charge_old,grad_Epot_old,Epot)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -59,6 +59,7 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
     type(multifab) , intent(inout) :: charge_old(:)
     type(multifab) , intent(inout) :: grad_Epot_old(:,:)
+    type(multifab) , intent(inout) :: Epot(:)
 
     ! local
     integer :: i,dm,n,nlevs
@@ -113,7 +114,8 @@ contains
                                       stoch_mass_fluxdiv,Temp,flux_total,dt,0.d0,dx,weights, &
                                       the_bc_tower,Epot_mass_fluxdiv, &
                                       charge=charge_old, &
-                                      grad_Epot=grad_Epot_old)
+                                      grad_Epot=grad_Epot_old, &
+                                      Epot=Epot)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs

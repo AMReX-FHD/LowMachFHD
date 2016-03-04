@@ -13,7 +13,7 @@ module write_plotfile_charged_module
 
 contains
   
-  subroutine write_plotfile_charged(mla,name,rho,rhotot,Temp,umac,pres,istep,dx,time)
+  subroutine write_plotfile_charged(mla,name,rho,rhotot,Temp,umac,pres,Epot,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     character(len=*),   intent(in)    :: name
@@ -22,6 +22,7 @@ contains
     type(multifab),     intent(in)    :: Temp(:)
     type(multifab),     intent(in)    :: umac(:,:)
     type(multifab),     intent(in)    :: pres(:)
+    type(multifab),     intent(in)    :: Epot(:)
     integer,            intent(in)    :: istep
     real(kind=dp_t),    intent(in)    :: dx(:,:),time
 
@@ -46,8 +47,8 @@ contains
     dm = mla%dim
   
     ! rho + species (rho) + nspeces (conc) + Temp + dm (averaged umac) 
-    !     + dm (shifted umac) + pres + charge
-    allocate(plot_names(2*nspecies+2*dm+4))
+    !     + dm (shifted umac) + pres + charge + Epot
+    allocate(plot_names(2*nspecies+2*dm+5))
     allocate(plotdata(nlevs))
     allocate(plotdata_stag(nlevs,dm))
  
@@ -67,6 +68,7 @@ contains
     if (dm > 2) plot_names(2*nspecies+dm+5) = "shifted_velz"
     plot_names(2*nspecies+2*dm+3) = "pres"
     plot_names(2*nspecies+2*dm+4) = "charge"
+    plot_names(2*nspecies+2*dm+5) = "Epot"
 
     plot_names_stagx(1) = "velx"
     plot_names_stagy(1) = "vely"
@@ -80,7 +82,7 @@ contains
 
     ! build plotdata for 2*nspecies+2*dm+4 and 0 ghost cells
     do n=1,nlevs
-       call multifab_build(plotdata(n),mla%la(n),2*nspecies+2*dm+4,0)
+       call multifab_build(plotdata(n),mla%la(n),2*nspecies+2*dm+5,0)
        do i=1,dm
           call multifab_build_edge(plotdata_stag(n,i), mla%la(n), 1, 0, i)
        end do
@@ -113,6 +115,11 @@ contains
     ! pressure
     do n = 1,nlevs
        call multifab_copy_c(plotdata(n),2*nspecies+2*dm+3,pres(n),1,1,0)
+    enddo
+
+    ! Epot
+    do n = 1,nlevs
+       call multifab_copy_c(plotdata(n),2*nspecies+2*dm+5,Epot(n),1,1,0)
     enddo
 
     ! copy staggered velocity and momentum into plotdata_stag
