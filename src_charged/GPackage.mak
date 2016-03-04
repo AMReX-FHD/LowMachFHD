@@ -6,4 +6,5 @@ f90sources += Epot_mass_fluxdiv.f90
 f90sources += fluid_charge.f90
 f90sources += initial_projection_charged.f90
 f90sources += probin_charged.f90
+f90sources += project_onto_eos_charged.f90
 f90sources += write_plotfile_charged.f90

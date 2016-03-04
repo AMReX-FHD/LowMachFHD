@@ -33,7 +33,7 @@ subroutine main_driver()
   use sum_momenta_module
   use restart_module
   use checkpoint_module
-  use project_onto_eos_module
+  use project_onto_eos_charged_module
   use fluid_charge_module
   use macproject_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
@@ -608,6 +608,31 @@ subroutine main_driver()
           call sum_momenta(mla,mtemp)
           call eos_check(mla,rho_new)
       end if
+
+     ! project rho and rho1 back onto EOS
+     if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
+        call project_onto_eos_charged(mla,rho_new)
+
+        ! compute rhotot from rho in VALID REGION
+        call compute_rhotot(mla,rho_new,rhotot_new)
+
+        ! rho to conc - NO GHOST CELLS
+        do n=1,nlevs
+           call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
+        end do
+        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
+        call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+
+        do n=1,nlevs
+           call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
+        end do
+
+        ! conc to rho - INCLUDING GHOST CELLS
+        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
+        do n=1,nlevs
+           call multifab_destroy(conc(n))
+        end do
+     end if
 
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then
