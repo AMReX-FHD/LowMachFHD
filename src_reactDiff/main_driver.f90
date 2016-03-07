@@ -33,7 +33,7 @@ subroutine main_driver()
    ! nlevs is always 1 and so it is redundant but to be consistent with BoxLib we need to carry it around    
    ! quantities will be allocated with (nlevs,dm) components
    real(kind=dp_t), allocatable :: dx(:,:)
-   real(kind=dp_t)              :: dt,time,runtime1,runtime2
+   real(kind=dp_t)              :: dt,time,runtime1,runtime2,cellvolume
    integer                      :: n,nlevs,i,j,k,dm,istep,ng_s,init_step,spec
    type(box)                    :: bx
    type(ml_boxarray)            :: mba
@@ -376,11 +376,12 @@ subroutine main_driver()
 
    do istep=init_step,max_step      
 
-      if ( (print_int>0) .and. (mod(istep,print_int)==0) ) then
+      ! Since we are still at the beginning of the time step here we use istep-1
+      if ( (print_int>0) .and. (mod(istep-1,print_int)==0) ) then
 
          if (parallel_IOProcessor() ) then
             print*,''
-            write(*,*) "At istep =",istep,"dt =",dt,"time =",time
+            write(*,*) "At istep =",istep-1,"dt =",dt,"time =",time
          end if
 
           do spec=1,nspecies
@@ -388,7 +389,7 @@ subroutine main_driver()
           end do
           if (parallel_IOProcessor() ) then
              !print*,time,' n_sum=',n_sum(:)
-             print*,time,' n_avg=',n_sum(:)/(multifab_volume(n_old(1))/nspecies)
+             write(*,*) istep-1, time, ' n_avg=', n_sum(:)/(multifab_volume(n_old(1))/nspecies)
           end if
           
           runtime2 = parallel_wtime()-runtime1
@@ -401,15 +402,21 @@ subroutine main_driver()
                 
        end if
        
-       if (abs(hydro_grid_int) > 0) then
-          if((istep > n_steps_skip) .and. (mod(istep,abs(hydro_grid_int))==0)) then ! Donev: Temporary logging to analyze dynamics of mean
-             do spec=1,nspecies
-                n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
-             end do
-             if (parallel_IOProcessor() ) then
-                write(9,*) real(time), real(n_sum(:)/(multifab_volume(n_old(1))/nspecies)) 
-                !write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies) - 1.0d0) ! Custom for A+B<->C
-             end if
+       ! Donev: Temporary logging to analyze dynamics of mean
+       if ((abs(hydro_grid_int) > 0) .and. (mod(istep-1,abs(hydro_grid_int-1))==0)) then
+          do spec=1,nspecies
+             n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
+          end do
+          cellvolume=product(dx(1,1:dm))*cross_section ! Total system volume
+          if (parallel_IOProcessor() ) then
+
+             write(9,*) real(time), real(n_sum(:)/(multifab_volume(n_old(1))/nspecies)) 
+             !write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies) - 1.0d0) ! Custom for A+B<->C
+
+             ! A. Donev: This is to match the particle code, write the same file it does
+             ! Here we write total number of molecules in the system instead of number densities
+             write(21,*) real(time), real(sum(n_sum(:))*cellvolume), real(n_sum(:)*cellvolume)
+
           end if
        end if
 

@@ -11,12 +11,12 @@ OMP       :=
 PROF      :=
 MKVERBOSE := t
 
-COMP := gfortran48
-CCOMP     := gcc48
+COMP := gfortran52
+CCOMP     := gcc52
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
-xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/4.8.2/lib64
+xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/4.9.2/lib64
 
 VPATH_LOCATIONS += $(REACTDIFF_HOME)
 
