@@ -18,12 +18,19 @@ contains
 
   subroutine scalar_bc(phys_bc, bc_code)
 
+    ! variable ordering for charged fluid code (num_scal_bc = 2*nspecies+3):
+    ! 1                       = total density
+    ! 2:nspecies+1            = concentrations
+    ! nspecies+2:2*nspecies+1 = molfrac or massfrac (dimensionless fractions
+    ! 2*nspecies+2            = temperature
+    ! 2*nspecies+3            = electric potential
+
     integer, intent(in   ) :: phys_bc
     integer, intent(inout) :: bc_code(1:num_scal_bc)
 
     if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
 
-       bc_code(1:num_scal_bc-2) = FOEXTRAP  ! Pure Neumann for densities / mass fractions
+       bc_code(1:num_scal_bc-2) = FOEXTRAP  ! Pure Neumann for total density, conctractions, mol/mass fractions
        bc_code(  num_scal_bc-1) = EXT_DIR   ! But temperature is still specified at the boundary (via call to multifab_coefbc)
        bc_code(  num_scal_bc  ) = EXT_DIR   ! Electric potential fixed on walls
 
@@ -45,6 +52,8 @@ contains
   end subroutine scalar_bc
 
   subroutine transport_bc(phys_bc, bc_code)
+
+    ! we use num_tran_bc=1; same bc for all transport coefficients
 
     integer, intent(in   ) :: phys_bc
     integer, intent(inout) :: bc_code(1:num_tran_bc)
@@ -151,7 +160,7 @@ contains
 
     else if (comp .eq. Epot_bc_comp) then
 
-       ! test setting the electric potential on walls to be 0 and 1
+       ! electric potential
        if (x .eq. prob_lo(1)) then
           val = Epot_wall(1,1)
        else if (x .eq. prob_hi(1)) then
