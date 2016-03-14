@@ -8,7 +8,7 @@ module init_n_module
   use bc_module
   use BoxLibRNGs
   use probin_common_module, only: prob_lo, prob_hi, prob_type, initial_variance, &
-                                  smoothing_width
+                                  perturb_width, smoothing_width
   use probin_reactdiff_module, only: nspecies, n_init_in, model_file_init, &
                                      cross_section, integer_populations
   
@@ -86,9 +86,9 @@ contains
     real(kind=dp_t)  :: dx(:)
  
     ! local varables
-    integer         :: i,j,comp
-    real(kind=dp_t) :: x,y,r,cen(2),sum,L(2)
-    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_width
+    integer         :: i,j
+    real(kind=dp_t) :: x,y,r,cen(2),L(2)
+    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_ratio
 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -160,23 +160,38 @@ contains
 
     case(4)
        !=========================================================
-       ! vertical stripe (thirds of domain)
+       ! vertical stripe having width = perturb_width*dx(1) 
        !=========================================================
 
-       stripe_width = 1.0d0/16.0d0 ! Adjust this to match needs
-       one_fraction_domain1=0.5d0*(1.0d0-stripe_width)*prob_lo(1)+0.5d0*(1.0d0+stripe_width)*prob_hi(1)
-       one_fraction_domain2=0.5d0*(1.0d0+stripe_width)*prob_lo(1)+0.5d0*(1.0d0-stripe_width)*prob_hi(1)
+       stripe_ratio = perturb_width*dx(1)/L(1)
+
+       ! prob_lo(1) < one_fraction_domain2 < center < one_fraction_domain1 < prob_hi(1) 
+       one_fraction_domain1=0.5d0*(1.0d0-stripe_ratio)*prob_lo(1)+0.5d0*(1.0d0+stripe_ratio)*prob_hi(1)
+       one_fraction_domain2=0.5d0*(1.0d0+stripe_ratio)*prob_lo(1)+0.5d0*(1.0d0-stripe_ratio)*prob_hi(1)
 
        do i=lo(1),hi(1)
           x1 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain1)
           x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain2)
-          do j=lo(2),hi(2)
-
-             n_init(i,j,1:nspecies) = n_init_in(2,1:nspecies) + &
-                  0.5d0*(n_init_in(2,1:nspecies)-n_init_in(1,1:nspecies)) * &
-                  (tanh(x1/(smoothing_width*dx(1))) - tanh(x2/(smoothing_width*dx(1))))
-
-          end do
+       
+          if (smoothing_width > 0.d0) then
+             ! smoothed profile
+             do j=lo(2),hi(2)
+                n_init(i,j,1:nspecies) = n_init_in(2,1:nspecies) + &
+                     0.5d0*(n_init_in(2,1:nspecies)-n_init_in(1,1:nspecies)) * &
+                     (tanh(x1/(smoothing_width*dx(1))) - tanh(x2/(smoothing_width*dx(1))))
+             end do
+          else
+             ! discontinuous profile
+             if (x2 < 0.d0 .or. x1 > 0.d0) then   ! outside the stripe
+                do j=lo(2),hi(2)
+                   n_init(i,j,1:nspecies) = n_init_in(2,1:nspecies)
+                end do
+             else                                 ! inside the stripe
+                do j=lo(2),hi(2)
+                   n_init(i,j,1:nspecies) = n_init_in(1,1:nspecies)
+                end do
+             end if
+          end if
        end do
 
     case default
@@ -202,9 +217,9 @@ contains
     real(kind=dp_t)  :: dx(:)
  
     ! local varables
-    integer         :: i,j,k,comp
-    real(kind=dp_t) :: x,y,z,r,cen(3),sum,L(3)
-    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_width
+    integer         :: i,j,k
+    real(kind=dp_t) :: x,y,z,r,cen(3),L(3)
+    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_ratio
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
@@ -285,25 +300,44 @@ contains
 
     case(4)
        !=========================================================
-       ! vertical stripe (thirds of domain)
+       ! vertical stripe having width = perturb_width*dx(1) 
        !=========================================================
 
-       stripe_width = 1.0d0/16.0d0 ! Adjust this to match needs
-       one_fraction_domain1=0.5d0*(1.0d0-stripe_width)*prob_lo(1)+0.5d0*(1.0d0+stripe_width)*prob_hi(1)
-       one_fraction_domain2=0.5d0*(1.0d0+stripe_width)*prob_lo(1)+0.5d0*(1.0d0-stripe_width)*prob_hi(1)
+       stripe_ratio = perturb_width*dx(1)/L(1)
+
+       ! prob_lo(1) < one_fraction_domain2 < center < one_fraction_domain1 < prob_hi(1) 
+       one_fraction_domain1=0.5d0*(1.0d0-stripe_ratio)*prob_lo(1)+0.5d0*(1.0d0+stripe_ratio)*prob_hi(1)
+       one_fraction_domain2=0.5d0*(1.0d0+stripe_ratio)*prob_lo(1)+0.5d0*(1.0d0-stripe_ratio)*prob_hi(1)
 
        do i=lo(1),hi(1)
           x1 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain1)
           x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain2)
-          do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-
-             n_init(i,j,k,1:nspecies) = n_init_in(2,1:nspecies) + &
-                  0.5d0*(n_init_in(2,1:nspecies)-n_init_in(1,1:nspecies)) * &
-                  (tanh(x1/(smoothing_width*dx(1))) - tanh(x2/(smoothing_width*dx(1))))
-
-          end do
-          end do
+       
+          if (smoothing_width > 0.d0) then
+             ! smoothed profile
+             do k=lo(3),hi(3)
+             do j=lo(2),hi(2)
+                n_init(i,j,k,1:nspecies) = n_init_in(2,1:nspecies) + &
+                     0.5d0*(n_init_in(2,1:nspecies)-n_init_in(1,1:nspecies)) * &
+                     (tanh(x1/(smoothing_width*dx(1))) - tanh(x2/(smoothing_width*dx(1))))
+             end do
+             end do
+          else
+             ! discontinuous profile
+             if (x2 < 0.d0 .or. x1 > 0.d0) then   ! outside the stripe
+                do k=lo(3),hi(3)
+                do j=lo(2),hi(2)
+                   n_init(i,j,k,1:nspecies) = n_init_in(2,1:nspecies)
+                end do
+                end do
+             else                                 ! inside the stripe
+                do k=lo(3),hi(3)
+                do j=lo(2),hi(2)
+                   n_init(i,j,k,1:nspecies) = n_init_in(1,1:nspecies)
+                end do
+                end do
+             end if
+          end if
        end do
 
     case default
