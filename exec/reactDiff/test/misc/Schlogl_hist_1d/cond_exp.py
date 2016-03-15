@@ -18,7 +18,7 @@ import math
 # input parameters
 
 datafile="fort.10"
-ncell = 8
+ncell = 64
 
 nbin_min = -0.5	 
 nbin_max = 2.5       
