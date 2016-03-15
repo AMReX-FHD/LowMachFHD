@@ -88,7 +88,7 @@ contains
     ! local varables
     integer         :: i,j
     real(kind=dp_t) :: x,y,r,cen(2),L(2)
-    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_ratio
+    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_ratio,rad
 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
     
@@ -159,9 +159,11 @@ contains
        end do
 
     case(4)
-       !=========================================================
+       !=================================================================
        ! vertical stripe having width = perturb_width*dx(1) 
-       !=========================================================
+       ! n_init = n_init_in(1,:) inside, n_init = n_init_in (2,:) outside
+       ! can be discontinous or smooth depending on smoothing_width
+       !=================================================================
 
        stripe_ratio = perturb_width*dx(1)/L(1)
 
@@ -174,14 +176,14 @@ contains
           x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain2)
        
           if (smoothing_width > 0.d0) then
-             ! smoothed profile
+             ! smooth interface
              do j=lo(2),hi(2)
                 n_init(i,j,1:nspecies) = n_init_in(2,1:nspecies) + &
                      0.5d0*(n_init_in(2,1:nspecies)-n_init_in(1,1:nspecies)) * &
                      (tanh(x1/(smoothing_width*dx(1))) - tanh(x2/(smoothing_width*dx(1))))
              end do
           else
-             ! discontinuous profile
+             ! discontinuous interface 
              if (x2 < 0.d0 .or. x1 > 0.d0) then   ! outside the stripe
                 do j=lo(2),hi(2)
                    n_init(i,j,1:nspecies) = n_init_in(2,1:nspecies)
@@ -192,6 +194,39 @@ contains
                 end do
              end if
           end if
+       end do
+
+    case(5)
+       !=================================================================
+       ! bubble having radius = 0.5*perturb_width*dx(1) 
+       ! n_init = n_init_in(1,:) inside, n_init = n_init_in (2,:) outside
+       ! can be discontinous or smooth depending on smoothing_width
+       !=================================================================
+
+       rad = 0.5d0*perturb_width*dx(1) 
+
+       do j=lo(2),hi(2)
+          y = prob_lo(2) + (dble(j)+0.5d0)*dx(2) - 0.5d0*(prob_lo(2)+prob_hi(2))
+          do i=lo(1),hi(1)
+             x = prob_lo(1) + (dble(i)+0.5d0)*dx(1) - 0.5d0*(prob_lo(1)+prob_hi(1))
+
+             r = sqrt(x**2 + y**2)
+
+             if (smoothing_width .eq. 0) then
+                ! discontinuous interface
+                if (r .lt. rad) then
+                   n_init(i,j,1:nspecies) = n_init_in(1,1:nspecies)
+                else
+                   n_init(i,j,1:nspecies) = n_init_in(2,1:nspecies)
+                end if
+             else
+                ! smooth interface
+                n_init(i,j,1:nspecies) = n_init_in(1,1:nspecies) + &
+                     (n_init_in(2,1:nspecies) - n_init_in(1,1:nspecies))* &
+                     0.5d0*(1.d0 + tanh((r-rad)/(smoothing_width*dx(1))))
+             end if
+
+          end do
        end do
 
     case default
@@ -219,7 +254,7 @@ contains
     ! local varables
     integer         :: i,j,k
     real(kind=dp_t) :: x,y,z,r,cen(3),L(3)
-    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_ratio
+    real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_ratio,rad
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
@@ -299,9 +334,11 @@ contains
        end do
 
     case(4)
-       !=========================================================
+       !=================================================================
        ! vertical stripe having width = perturb_width*dx(1) 
-       !=========================================================
+       ! n_init = n_init_in(1,:) inside, n_init = n_init_in (2,:) outside
+       ! can be discontinous or smooth depending on smoothing_width
+       !=================================================================
 
        stripe_ratio = perturb_width*dx(1)/L(1)
 
@@ -314,7 +351,7 @@ contains
           x2 =(prob_lo(1) + dx(1)*(dble(i)+0.5d0) - one_fraction_domain2)
        
           if (smoothing_width > 0.d0) then
-             ! smoothed profile
+             ! smooth interface
              do k=lo(3),hi(3)
              do j=lo(2),hi(2)
                 n_init(i,j,k,1:nspecies) = n_init_in(2,1:nspecies) + &
@@ -323,7 +360,7 @@ contains
              end do
              end do
           else
-             ! discontinuous profile
+             ! discontinuous interface 
              if (x2 < 0.d0 .or. x1 > 0.d0) then   ! outside the stripe
                 do k=lo(3),hi(3)
                 do j=lo(2),hi(2)
@@ -338,6 +375,41 @@ contains
                 end do
              end if
           end if
+       end do
+
+    case(5)
+       !=================================================================
+       ! bubble having radius = 0.5*perturb_width*dx(1) 
+       ! n_init = n_init_in(1,:) inside, n_init = n_init_in (2,:) outside
+       ! can be discontinous or smooth depending on smoothing_width
+       !=================================================================
+
+       rad = 0.5d0*perturb_width*dx(1) 
+
+       do k=lo(3),hi(3)
+          z = prob_lo(3) + (dble(k)+0.5d0)*dx(3) - 0.5d0*(prob_lo(3)+prob_hi(3))
+          do j=lo(2),hi(2)
+             y = prob_lo(2) + (dble(j)+0.5d0)*dx(2) - 0.5d0*(prob_lo(2)+prob_hi(2))
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1) - 0.5d0*(prob_lo(1)+prob_hi(1))
+
+                r = sqrt(x**2 + y**2 + z**2)
+
+                if (smoothing_width .eq. 0) then
+                   ! discontinuous interface
+                   if (r .lt. rad) then
+                      n_init(i,j,k,1:nspecies) = n_init_in(1,1:nspecies)
+                   else
+                      n_init(i,j,k,1:nspecies) = n_init_in(2,1:nspecies)
+                   end if
+                else
+                   ! smooth interface
+                   n_init(i,j,k,1:nspecies) = n_init_in(1,1:nspecies) + &
+                        (n_init_in(2,1:nspecies) - n_init_in(1,1:nspecies))* &
+                        0.5d0*(1.d0 + tanh((r-rad)/(smoothing_width*dx(1))))
+                end if
+             end do
+          end do
        end do
 
     case default
