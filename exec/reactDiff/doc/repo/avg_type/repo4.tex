@@ -149,7 +149,7 @@ From the conservation of total sum of cell number densities, the following expre
 \langle n_2|n_1\rangle = \frac{\Nc\nb-n_1}{\Nc-1}.
 \end{equation}
 If fact, Eq.~\eqref{expr_n2n1} can be obtained by assuming that $\langle n_j|n_1\rangle$ $(j\ne1)$ does not depend on $j$.
-In the Appendix, it is numerically verified that this assumption and Eq.~\eqref{expr_n2n1} hold.
+In Appendix~A, it is numerically verified that this assumption and Eq.~\eqref{expr_n2n1} hold.
 On the other hand, as the average number of particles per cell, denoted by $\Nav$, becomes larger, the cell number density becomes more narrowly distributed around $\nb$.
 In this case, even if the equilibrium distribuion possibly allows negative densities, the probability of negative density becomes asymptotically zero.
 Hence, for $\tilde{n}^{\mathrm{AM},+}$, we may assume that 
@@ -346,19 +346,33 @@ Although slight deviations are observed in the tails from the Poisson distributi
 
 \clearpage
 
-\section*{Appendix: Numerical Verification of Expression~\eqref{expr_n2n1} for $\langle n_2|n_1\rangle$}
+\section*{Appendices}
+
+\subsection*{A. Numerical Verification of Expression~\eqref{expr_n2n1} for $\langle n_2|n_1\rangle$}
 
 \begin{figure}
 \begin{center}
-\includegraphics[angle=270,width=0.4\linewidth]{fig4/cond_exp.eps}
-\caption{\label{fig_condexp}For the system having $\Nc=8$ cells with $\nb=1$ and $\dV=10$, the values of $\langle n_j|n_1\rangle$ are plotted as functions of $n_1$ for $j=2,\dots,\Nc$ and compared with Eq.~\eqref{expr_n2n1}.}
+\includegraphics[angle=270,width=0.4\linewidth]{fig4/n1n2_Nc1024.eps}
+\caption{\label{fig_condexp}For the system having $\Nc=1024$ cells with $\nb=1$ and $\dV=1000$, the values of $\langle n_2|n_1\rangle$ are plotted as functions of $n_1$ for $\Delta t = 0.01$, 0.02, 0.05, and 0.1 and compared with Eq.~\eqref{expr_n2n1}.}
 \end{center}
 \end{figure}
 
-The expression of $\langle n_2|n_1\rangle$ given in Eq.~\eqref{expr_n2n1} is numerically confirmed by simulating Eq.~\eqref{sode} using a temporal integrator with a small time step.
-More specifically, the system having $\chi=1$, $\nb=1$, $\dx=1$, and $A=10$ was simulated by the implicit midpoint predictor-corrector scheme with $\dt=0.1$.
-In order to clearly observe the finite-system-size effect, a total of $\Nc=8$ cells were calculated.
-As shown in Fig.~\ref{fig_condexp}, numerical results coincide perfectly with Eq.~\eqref{expr_n2n1}.
-Note that for the regions with $n_1\gg\nb$ or $n_1\ll\nb$ the standard errors are large because of small number of samples for averaging.
+The expression of $\langle n_2|n_1\rangle$ given in Eq.~\eqref{expr_n2n1} is numerically confirmed by simulating Eq.~\eqref{sode} using a temporal integrator with small time steps.
+More specifically, the system having $\chi=1$, $\nb=1$, $\dx=1$, and $A=1000$ was simulated by the implicit midpoint predictor-corrector scheme with $\dt=0.01$, 0.02, 0.05, and 0.1.
+In order to minimize the finite-system-size effect, $\Nc=1024$ was chosen.
+As shown in Fig.~\ref{fig_condexp}, for smaller time steps, numerical results agree very well with Eq.~\eqref{expr_n2n1}.
+Note that for the regions with $n_1\gg\nb$ or $n_1\ll\nb$ the standard errors become larger because of small number of samples for averaging.
+
+\subsection*{B. Numerical Results: Probability of Negative Cell Number Density}
+
+\begin{figure}
+\begin{center}
+\includegraphics[angle=270,width=0.4\linewidth]{fig4/neg_dens.eps}
+\caption{\label{fig_negdens}For the system having $\Nc=1024$ cells with $\nb=1$ and $\dV=10$, the probability of having negative cell number density is plotted as functions of $\Delta t$.}
+\end{center}
+\end{figure}
+
+In order to numerically confirm that Eq.~\eqref{sode} does not allow negative cell number density, a diffusion-only system with $\Nc=1024$ was simulated by using a temporal integrator with small time steps $\Delta t=0.005$, 0.01, 0.02, 0.05, and 0.1.
+As shown in Fig.~\ref{fig_negdens}, the probability of having negative cell number density quickly decreases to zero as $\Delta t\rightarrow 0$.
 
 \end{document}
