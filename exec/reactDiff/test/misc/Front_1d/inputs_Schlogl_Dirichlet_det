@@ -2,35 +2,34 @@
  
   ! Problem specification
   !----------------------
-  prob_type = 0                    ! uniform for walls
+  prob_type = 0                    ! uniform 
   dim_in = 2                       ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 128.0d0 1.0d0     ! physical hi coordinate
-  n_cells(1:2) = 128 1             ! number of cells in domain
+  prob_hi(1:2) = 256.0d0 1.0d0     ! physical hi coordinate
+  n_cells(1:2) = 256 1             ! number of cells in domain
   max_grid_size(1:2) = 1024 1024   ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 0.1                   ! time step (if positive, fixed)
+  fixed_dt = 1.d0                  ! time step (if positive, fixed)
   cfl = 0.5d0                      ! max diffusive cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 50000                 ! maximum number of time steps
+  max_step = 15000                 ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = -1000                  ! Interval for writing a checkpoint
+  chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
   print_int = 1000                 ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  !variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
-  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
 
   ! Initial conditions
   !----------------------
+  perturb_width = 0.d0      ! scale factor for perturbed part in initial profile
   smoothing_width = 1.d0    ! scale factor for smoothing initial profile
-  !initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
-  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
+  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total mass fluctuation is set to zero)
 
   ! Algorithm control / selection
@@ -90,6 +89,8 @@
                              ! 2=(1/2)D + R + (1/2)D
                              ! -1=unsplitting forward Euler
                              ! -2=unsplitting explicit midpoint
+                             ! -3=unsplit multinomial diffusion
+                             ! -4=unsplit implicit midpoint
                           
   inhomogeneous_bc_fix = F   ! Apply the BC fix to correct splitting errors at boundaries
 
@@ -110,11 +111,10 @@
                       ! 1=second-order tau leaping or CLE
                       ! 2=SSA
 
-  !use_Poisson_rng = -1 ! Only used for reaction_type = 0, 1
-  use_Poisson_rng = 1 ! Only used for reaction_type = 0, 1
-                      ! If -1 do deterministic chemistry
-                      ! If 1 do tau leaping (Poisson increments),
-                      ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
+  use_Poisson_rng = -1 ! Only used for reaction_type = 0, 1
+                       ! If -1 do deterministic chemistry
+                       ! If 1 do tau leaping (Poisson increments),
+                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
 
   avg_type = 1 ! compute n on faces for stochastic weighting
                ! 1=arithmetic, 2=geometric, 3=harmonic
@@ -154,8 +154,7 @@
   ! ------------------  
   rate_const(1:4) = 3.1, 1.0, 0.8, 2.9
   rate_multiplier = 0.1 ! Change all rates by a constant multiplier
-  !include_discrete_LMA_correction = F ! Compute rates using classical LMA or molecular  
-  include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
+  include_discrete_LMA_correction = F ! Compute rates using classical LMA or molecular  
   
   ! Schlogl model is (we do not treat A as a separate species here since it is fixed):
   !     (1) A+2X --> 3X

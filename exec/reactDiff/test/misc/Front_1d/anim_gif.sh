@@ -1,15 +1,20 @@
 #!/bin/bash
 
-RUNNAME=TEST
 
 EXEC=../../main.Linux.gfortran.debug.mpi.exe
-INPUTSFILE=inputs_Schlogl
-GNUPLOTSCRIPT="Schlogl_vstat.plt"
+
+#RUNNAME=Schlogl_Dirichlet
+#INPUTSFILE=inputs_Schlogl_Dirichlet
+#RUNNAME=Schlogl_Dirichlet_det
+#INPUTSFILE=inputs_Schlogl_Dirichlet_det
+#RUNNAME=Schlogl_PBC
+#INPUTSFILE=inputs_Schlogl_PBC
+RUNNAME=Schlogl_PBC_det4
+INPUTSFILE=inputs_Schlogl_PBC_det
+
+GNUPLOTSCRIPT="Schlogl.plt"
 
 DATAFILEPREFIX=vstat
-TIMEMIN=0
-TIMEINCR=1000
-TIMEMAX=50000
 
 GNUPLOTOUTPUTEXT="png"
 GIFDELAY=50
@@ -41,12 +46,14 @@ then
   cd  $RUNNAME
 else
   echo "directory $RUNNAME does not exist"
+  echo "try ./anim_gif.sh run"
   exit
 fi
 
-for i in $(seq -f "%08g" $TIMEMIN $TIMEINCR $TIMEMAX)
+DATAFILES=`ls $DATAFILEPREFIX????????`
+
+for datafile in $DATAFILES 
 do
-  datafile=$DATAFILEPREFIX$i
   gnuplot -e "datafile='$datafile'" ../$GNUPLOTSCRIPT
   echo "$datafile generated"
 done
