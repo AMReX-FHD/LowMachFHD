@@ -20,7 +20,7 @@
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 128.d0 0.25d0     ! physical hi coordinate
   n_cells(1:2) = 512 1             ! number of cells in domain
-  max_grid_size(1:2) = 128 1       ! max number of cells in a box
+  max_grid_size(1:2) = 1024 1024   ! max number of cells in a box
 
   ! Time-step control
   !----------------------
@@ -93,19 +93,19 @@
 &probin_reactdiff
 
   temporal_integrator = -2 ! 0=D + R
-                          ! 1=(1/2)R + D + (1/2)R
-                          ! 2=(1/2)D + R + (1/2)D
-                          ! -1=unsplitting forward Euler
-                          ! -2=unsplitting explicit midpoint
-                          ! -3=multinomial diffusion
-                          ! -4=unsplitting implicit midpoint
+                           ! 1=(1/2)R + D + (1/2)R
+                           ! 2=(1/2)D + R + (1/2)D
+                           ! -1=unsplitting forward Euler
+                           ! -2=unsplitting explicit midpoint
+                           ! -3=multinomial diffusion
+                           ! -4=unsplitting implicit midpoint
 
   diffusion_type = 1 ! Only used for splitting schemes
                      ! 0=explicit trapezoidal predictor/corrector
                      ! 1=Crank-Nicolson semi-implicit
                      ! 2=explicit midpoint
 
-  midpoint_stoch_flux_type = 2   ! for midpoint diffusion schemes, (split and unsplit)
+  midpoint_stoch_flux_type = 3   ! for midpoint diffusion schemes, (split and unsplit)
                                  ! corrector formulation of noise
                                  ! K(nold) * W1 + K(nold)         * W2
                                  ! K(nold) * W1 + K(npred)        * W2
@@ -121,12 +121,12 @@
                       ! If 1 do tau leaping (Poisson increments),
                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
 
-  avg_type = 3 ! compute n on faces for stochastic weighting
+  avg_type = 1 ! compute n on faces for stochastic weighting
                ! 1=arithmetic, 2=geometric, 3=harmonic
 
   ! Setup
   !------------------------
-  nspecies = 1 ! Only X since A is fixed
+  nspecies = 1   ! Only X since A is fixed
   nreactions = 4 ! Forward and reverse both count here
     
   cross_section = 1000.0 ! Thickness of domain in 2D (dV scaling factor)
@@ -143,8 +143,8 @@
   !D_Fick(1:1) = 62.5d0     ! for beta=10 
 
   ! n_i boundary conditions (dir,lohi,species)
-  n_bc(2,1,1:1) = 1.0 ! Lower y
-  n_bc(2,2,1:1) = 1.0 ! Upper y
+  !n_bc(2,1,1:1) = 1.0 ! Lower y
+  !n_bc(2,2,1:1) = 1.0 ! Upper y
 
   ! implicit diffusion solve verbosity, bottom solve verbosity
   mg_verbose = 0

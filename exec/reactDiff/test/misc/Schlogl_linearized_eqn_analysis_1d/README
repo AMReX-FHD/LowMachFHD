@@ -1,0 +1,12 @@
+executing run.sh will
+1) run reactdiff program with inputs_Schlogl_linearized_eqn_analysis_1d; 
+2) generate a plot through gnuplot with Sk.plt.
+** you will get a warning that res_theo is not found. see below.
+
+you will need to
+1) change the following parameters in Sk.plt accordingly.
+  - nb, r, D0 (these values are only problem specific)
+  - dt, dx, rm, chi (these values give alpha and beta)
+  - you may also want to change yrange, ytics, mytics.
+2) provide "res_theo" containing theoretical result.
+  - this can be calculated from Mathematica notebook "Schlogl_linearized_eqn_analysis_1d.nb"
