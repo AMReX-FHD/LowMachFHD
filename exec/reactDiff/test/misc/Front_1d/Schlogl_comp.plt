@@ -12,5 +12,4 @@ set output datafile.EXT
 
 set key reverse Left
 plot [0:256][0:2] 0.5 w l ls 4 t "",1.6 w l ls 4 t "",datafile1 u 1:3 w l ls 1 t "",datafile2 u 1:3 w l ls 2 t ""
-#plot [-128:128][0:2] 0.5 w l ls 4 t "",1.6 w l ls 4 t "",datafile1 u ($1-128):3 w l ls 1 t "",datafile2 u ($1-128):3 w l ls 2 t "","../equil_sol" u 1:2 w l ls 3 t "Threshold Function",'' u (-$1):2 w l ls 3 t ""
 

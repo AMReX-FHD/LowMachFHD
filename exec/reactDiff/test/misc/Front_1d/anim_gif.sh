@@ -9,16 +9,23 @@ EXEC=../../main.Linux.gfortran.debug.mpi.exe
 #INPUTSFILE=inputs_Schlogl_Dirichlet_det
 #RUNNAME=Schlogl_PBC
 #INPUTSFILE=inputs_Schlogl_PBC
-RUNNAME=Schlogl_PBC_det4
-INPUTSFILE=inputs_Schlogl_PBC_det
+#RUNNAME=Schlogl_PBC_det
+#INPUTSFILE=inputs_Schlogl_PBC_det
+#GNUPLOTSCRIPT=Schlogl.plt
+#GIFOUTPUT=Schlogl.gif
 
-GNUPLOTSCRIPT="Schlogl.plt"
+#RUNNAME=AB_Dirichlet
+#INPUTSFILE=inputs_AB_Dirichlet
+#RUNNAME=AB_Dirichlet
+INPUTSFILE=inputs_AB_PBC
+RUNNAME=AB_PBC
+GNUPLOTSCRIPT=AB.plt
+GIFOUTPUT=AB.gif
 
 DATAFILEPREFIX=vstat
 
 GNUPLOTOUTPUTEXT="png"
 GIFDELAY=50
-GIFOUTPUT=Schlogl.gif
 
 # if the script is executed by "./anim_gif.sh run", run the reactdiff program
 # otherwise, skip this 
