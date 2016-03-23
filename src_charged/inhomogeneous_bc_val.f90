@@ -167,7 +167,7 @@ contains
           val = Epot_wall(2,1)
        else if (y .eq. prob_lo(2)) then
           val = Epot_wall(1,2)
-       else if (y.eq. prob_hi(2)) then
+       else if (y .eq. prob_hi(2)) then
           val = Epot_wall(2,2)
        else
           val = 0.d0
@@ -315,6 +315,25 @@ contains
           val = c_bc(3,1,comp-c_bc_comp+1)
        else if (z .eq. prob_hi(3)) then
           val = c_bc(3,2,comp-c_bc_comp+1)
+       else
+          val = 0.d0
+       end if
+
+    else if (comp .eq. Epot_bc_comp) then
+
+       ! electric potential
+       if (x .eq. prob_lo(1)) then
+          val = Epot_wall(1,1)
+       else if (x .eq. prob_hi(1)) then
+          val = Epot_wall(2,1)
+       else if (y .eq. prob_lo(2)) then
+          val = Epot_wall(1,2)
+       else if (y .eq. prob_hi(2)) then
+          val = Epot_wall(2,2)
+       else if (z .eq. prob_lo(3)) then
+          val = Epot_wall(1,3)
+       else if (z .eq. prob_hi(3)) then
+          val = Epot_wall(2,3)
        else
           val = 0.d0
        end if
