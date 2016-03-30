@@ -20,7 +20,7 @@ subroutine main_driver()
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    variance_coef_mass, cfl, initial_variance
    use probin_reactdiff_module, only: nspecies, nreactions, probin_reactdiff_init, D_Fick, cross_section, &
-                                      inhomogeneous_bc_fix, temporal_integrator, &
+                                      inhomogeneous_bc_fix, temporal_integrator, n_steps_write_avg, &
                                       model_file_init, model_file, integer_populations
 
    use fabio_module
@@ -403,20 +403,19 @@ subroutine main_driver()
        end if
        
        ! Donev: Temporary logging to analyze dynamics of mean
-       if ((abs(hydro_grid_int) > 0) .and. (mod(istep-1,abs(hydro_grid_int-1))==0)) then
+       if ((abs(n_steps_write_avg) > 0) .and. (mod(istep-1,abs(n_steps_write_avg))==0)) then
           do spec=1,nspecies
              n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
           end do
           cellvolume=product(dx(1,1:dm))*cross_section ! Total system volume
-          if (parallel_IOProcessor() ) then
-
+          if (parallel_IOProcessor()) then
+          if (n_steps_write_avg>0) then ! Write number densities
              write(9,*) real(time), real(n_sum(:)/(multifab_volume(n_old(1))/nspecies)) 
              !write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies) - 1.0d0) ! Custom for A+B<->C
-
+          else ! Here we write total number of molecules in the system instead of number densities             
              ! A. Donev: This is to match the particle code, write the same file it does
-             ! Here we write total number of molecules in the system instead of number densities
              write(21,*) real(time), real(sum(n_sum(:))*cellvolume), real(n_sum(:)*cellvolume)
-
+          end if
           end if
        end if
 
