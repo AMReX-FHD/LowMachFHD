@@ -83,6 +83,11 @@ module probin_reactdiff_module
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
   integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 
   
+  ! Controlling output:
+  integer, save :: n_steps_write_avg = 0 ! If non-zero, its absolute value tells how many steps before writing total densites
+                                         ! If positive, it writes average number densities in the system
+                                         ! If negative, it writes the total number of molecules in the system
+  
   namelist /probin_reactdiff/ nspecies, nreactions
   namelist /probin_reactdiff/ temporal_integrator, diffusion_type, midpoint_stoch_flux_type
   namelist /probin_reactdiff/ reaction_type, use_Poisson_rng, avg_type
@@ -91,6 +96,7 @@ module probin_reactdiff_module
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
   namelist /probin_reactdiff/ cross_section, include_discrete_LMA_correction
   namelist /probin_reactdiff/ rate_const, rate_multiplier, stoichiometric_factors
+  namelist /probin_reactdiff/ n_steps_write_avg
 
 contains
 

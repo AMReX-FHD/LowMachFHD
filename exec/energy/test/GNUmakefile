@@ -52,11 +52,9 @@ VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/LinearSolvers/F_MG
 LAPACK95_DIR = $(STAGGERED_HOME)/src_multiSpec/LAPACK95
 
 F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
-ifeq ($(findstring hopper, $(HOST)), hopper)
+ifeq ($(findstring edison, $(HOST)), edison)
   libraries += $(LAPACK95_DIR)/lapack95.a
-else ifeq ($(findstring edison, $(HOST)), edison)
-  libraries += $(LAPACK95_DIR)/lapack95.a
-else ifeq ($(findstring bint01, $(HOST)), bint01)
+else ifeq ($(findstring cori, $(HOST)), cori)
   libraries += $(LAPACK95_DIR)/lapack95.a
 else
   libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
