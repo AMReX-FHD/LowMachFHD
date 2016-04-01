@@ -61,7 +61,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 2
-  visc_coef = 1.05d-4         ! momentum diffusion coefficient 'eta'   
+  visc_coef = 1.05d-2         ! momentum diffusion coefficient 'eta'   
 
   advection_type = 0 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
