@@ -133,7 +133,7 @@ contains
     type(multifab) ::        A_Phi(mla%nlevel,mla%dim) ! face-centered A_Phi
     type(multifab) ::  solver_beta(mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
     
-    type(bndry_reg) :: fine_flx(2:mla%nlevel)
+    type(bndry_reg) :: fine_flx(mla%nlevel)
 
     integer :: i,dm,n,nlevs,comp,l
 
@@ -192,7 +192,7 @@ contains
        end do
     end do
 
-    do n = 2,nlevs
+    do n = 1,nlevs
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
     do n=1,nlevs
@@ -782,7 +782,7 @@ contains
           call multifab_destroy(solver_beta(n,i))
        end do
     end do
-    do n = 2,nlevs
+    do n = 1,nlevs
        call bndry_reg_destroy(fine_flx(n))
     end do
 

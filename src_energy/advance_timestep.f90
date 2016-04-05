@@ -170,7 +170,7 @@ contains
 
     ! for energy implicit solve
     ! doesn't actually do anything for single-level solves
-    type(bndry_reg) :: fine_flx(2:mla%nlevel)
+    type(bndry_reg) :: fine_flx(mla%nlevel)
 
     real(kind=dp_t) :: Sbar_old, Sbar_new
     real(kind=dp_t) :: thetabar_old, thetabar_new
@@ -281,7 +281,7 @@ contains
     end do
 
     ! temporary boundary register needed for deltaT solve
-    do n=2,nlevs
+    do n=1,nlevs
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
 
@@ -896,7 +896,7 @@ contains
        end do
     end do
 
-    do n=2,nlevs
+    do n=1,nlevs
        call bndry_reg_destroy(fine_flx(n))
     end do
 

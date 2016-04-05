@@ -46,7 +46,7 @@ contains
 
     ! Local  
     type(multifab)  :: zero_fab(mla%nlevel)
-    type(bndry_reg) :: fine_flx(2:mla%nlevel)
+    type(bndry_reg) :: fine_flx(mla%nlevel)
     real(kind=dp_t) :: umac_norm(mla%nlevel)
     integer         :: dm,i,n,nlevs
     logical         :: full_solve
@@ -89,7 +89,7 @@ contains
     end do
 
     ! stores (alphainv_fc/dx**2) grad phi at coarse-fine interfaces
-    do n = 2,nlevs
+    do n = 1,nlevs
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
 
@@ -112,7 +112,7 @@ contains
        call multifab_destroy(zero_fab(n))
     end do
 
-    do n = 2,nlevs
+    do n = 1,nlevs
        call bndry_reg_destroy(fine_flx(n))
     end do
 
@@ -128,7 +128,7 @@ contains
 
       type(ml_layout), intent(in   ) :: mla
       type(multifab) , intent(inout) :: rh(:),phi(:)
-      type(bndry_reg), intent(inout) :: fine_flx(2:)
+      type(bndry_reg), intent(inout) :: fine_flx(:)
       type(multifab) , intent(in   ) :: alpha(:), beta(:,:)
       real(dp_t)     , intent(in   ) :: dx(:,:)
       type(bc_tower) , intent(in   ) :: the_bc_tower
