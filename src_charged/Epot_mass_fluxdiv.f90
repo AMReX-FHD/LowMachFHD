@@ -116,7 +116,7 @@ contains
     type(multifab)  :: beta(mla%nlevel,mla%dim)
     type(multifab)  :: charge_coef(mla%nlevel)
     type(multifab)  :: charge_coef_face(mla%nlevel,mla%dim)
-    type(bndry_reg) :: fine_flx(2:mla%nlevel)
+    type(bndry_reg) :: fine_flx(mla%nlevel)
   
     real(kind=dp_t) :: avg_charge
 
@@ -162,7 +162,7 @@ contains
     end do
 
     ! build the boundary flux register
-    do n=2,nlevs
+    do n=1,nlevs
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
 
@@ -180,6 +180,10 @@ contains
     ! solve (alpha - del dot beta grad) Epot = charge
     call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
                      verbose=mg_verbose)
+
+    do n=1,nlevs
+       call bndry_reg_destroy(fine_flx(n))
+    end do
 
     ! compute the gradient of the electric potential
     call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
