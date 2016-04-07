@@ -152,8 +152,8 @@ module probin_common_module
   !----------------------
   namelist /probin_common/ hydro_grid_int     ! How often to call updateHydroGrid
                                               ! 0 if never
-                                              ! negative for projectHydroGrid custom analysis
                                               ! positive for updateHydroGrid
+                                              ! negative reserved for problem-specific analysis (see analyze_spectra_binary.f90)
 
   namelist /probin_common/ project_dir         ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
