@@ -14,7 +14,7 @@ endif
 else ifeq ($(findstring edison, $(HOST)), edison)
 FC       = ifort
 FC1      = ifort
-else ifeq ($(findstring hopper, $(HOST)), hopper)
+else ifeq ($(findstring cori, $(HOST)), cori)
 FC       = ifort
 FC1      = ifort
 else

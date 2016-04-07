@@ -33,7 +33,7 @@ contains
     type(multifab) :: beta(mla%nlevel,mla%dim)
 
     ! for diffusion multigrid - not used but needs to be passed in
-    type(bndry_reg) :: fine_flx(2:mla%nlevel)
+    type(bndry_reg) :: fine_flx(mla%nlevel)
 
     integer :: i,dm,n,nlevs,spec
 
@@ -66,7 +66,7 @@ contains
     ! this gets computed inside of ml_cc_solve
     ! we pass it back out because some algorithms (like projection methods) 
     ! use this information
-    do n = 2,nlevs
+    do n = 1,nlevs
        call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
 
@@ -118,7 +118,7 @@ contains
        end do
     end do
 
-    do n = 2,nlevs
+    do n = 1,nlevs
        call bndry_reg_destroy(fine_flx(n))
     end do
 
