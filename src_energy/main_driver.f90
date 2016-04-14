@@ -460,7 +460,7 @@ subroutine main_driver()
   !=====================================================================
   ! Initialize HydroGrid for analysis
   !=====================================================================
-  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
+  if((hydro_grid_int>0) .or. (stats_int>0)) then
      narg = command_argument_count()
      farg = 1
      if (narg >= 1) then
@@ -667,7 +667,7 @@ subroutine main_driver()
   ! Destroy multifabs and layouts
   !=======================================================
 
-  if((abs(hydro_grid_int)>0) .or. (stats_int>0)) then
+  if((hydro_grid_int>0) .or. (stats_int>0)) then
      call finalize_hydro_grid()
   end if
 
