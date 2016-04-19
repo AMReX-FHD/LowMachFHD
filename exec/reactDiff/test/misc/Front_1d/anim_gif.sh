@@ -3,22 +3,21 @@
 
 EXEC=../../main.Linux.gfortran.debug.mpi.exe
 
-#RUNNAME=Schlogl_Dirichlet
+RUNNAME=TEST
+
 #INPUTSFILE=inputs_Schlogl_Dirichlet
-#RUNNAME=Schlogl_Dirichlet_det
 #INPUTSFILE=inputs_Schlogl_Dirichlet_det
-#RUNNAME=Schlogl_PBC
 #INPUTSFILE=inputs_Schlogl_PBC
-#RUNNAME=Schlogl_PBC_det
 #INPUTSFILE=inputs_Schlogl_PBC_det
+
 #GNUPLOTSCRIPT=Schlogl.plt
 #GIFOUTPUT=Schlogl.gif
 
-#RUNNAME=AB_Dirichlet
-#INPUTSFILE=inputs_AB_Dirichlet
-#RUNNAME=AB_Dirichlet
-INPUTSFILE=inputs_AB_PBC
-RUNNAME=AB_PBC
+INPUTSFILE=inputs_AB_Dirichlet
+#INPUTSFILE=inputs_AB_Dirichlet_det
+#INPUTSFILE=inputs_AB_PBC
+#INPUTSFILE=inputs_AB_PBC_det
+
 GNUPLOTSCRIPT=AB.plt
 GIFOUTPUT=AB.gif
 
