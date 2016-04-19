@@ -578,24 +578,31 @@ contains
        ! build gmres_rhs_p
        ! fill the stochastic mass multifabs with a new set of random numbers
        ! FIXME - need to somehow preserve t^n random numbers
-       if (l .eq. 1) then
-          call swap_mass_stochastic(mla)
+!       if (l .eq. 1) then
+!          call swap_mass_stochastic(mla)
+!          call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+!          call swap_mass_stochastic(mla)
+!       end if
+
+       if (l .eq. num_pot_iters) then
           call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-          call swap_mass_stochastic(mla)
        end if
 
        ! compute diff_mass_fluxdiv_new and stoch_mass_fluxdiv_new for gmres_rhs_p
+!       call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+!                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+!                                         Temp,flux_total,dt,time,dx,weights,the_bc_tower, &
+!                                         stoch_fluxdiv_bak=stoch_mass_fluxdiv_bak)
        call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         Temp,flux_total,dt,time,dx,weights,the_bc_tower, &
-                                         stoch_fluxdiv_bak=stoch_mass_fluxdiv_bak)
+                                         Temp,flux_total,dt,time,dx,weights,the_bc_tower)
 
        ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
        do n=1,nlevs
           call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
           if (variance_coef_mass .ne. 0) then
              call multifab_mult_mult_s_c(stoch_mass_fluxdiv    (n),1,-1.d0,nspecies,0)
-             call multifab_mult_mult_s_c(stoch_mass_fluxdiv_bak(n),1,-1.d0,nspecies,0)
+!             call multifab_mult_mult_s_c(stoch_mass_fluxdiv_bak(n),1,-1.d0,nspecies,0)
           end if
           do i=1,dm
              call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
@@ -609,7 +616,8 @@ contains
              call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
              call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
              if (variance_coef_mass .ne. 0.d0) then
-                call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv_bak(n),i,1)
+!                call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv_bak(n),i,1)
+                call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
              end if
           end do
        end do
@@ -732,13 +740,13 @@ contains
     ! fill the stochastic momentum multifabs with a new set of random numbers
     call fill_m_stochastic(mla)
 
-    if (variance_coef_mass .ne. 0.d0) then
-       ! move the t^n+1 stochastic mass fluxes into stoch_W_fc
-       call swap_mass_stochastic(mla)
-       do n=1,nlevs
-          call multifab_copy_c(stoch_mass_fluxdiv(n),1,stoch_mass_fluxdiv_bak(n),1,nspecies,0)
-       end do
-    end if
+!    if (variance_coef_mass .ne. 0.d0) then
+!       ! move the t^n+1 stochastic mass fluxes into stoch_W_fc
+!       call swap_mass_stochastic(mla)
+!       do n=1,nlevs
+!          call multifab_copy_c(stoch_mass_fluxdiv(n),1,stoch_mass_fluxdiv_bak(n),1,nspecies,0)
+!       end do
+!    end if
 
     call destroy_bc_multifabs(mla)
 
