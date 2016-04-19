@@ -102,7 +102,8 @@ def SetAnnotationAttributes(domain,legendInfo):
   aa.userInfoFlag = 0
   aa.databaseInfoFlag = 0
 
-  aa.axes2D.visible = 1
+  # aa.axes2D.visible = 1
+  aa.axes2D.visible = 0
   aa.axes2D.autoSetTicks = 0
   aa.axes2D.autoSetScaling = 0
   aa.axes2D.lineWidth = 0
