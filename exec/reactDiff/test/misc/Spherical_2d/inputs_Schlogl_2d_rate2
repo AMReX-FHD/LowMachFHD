@@ -6,8 +6,8 @@
   dim_in = 2                       ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 256.d0 256.d0     ! physical hi coordinate
-  n_cells(1:2) = 128 128           ! number of cells in domain
-  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+  n_cells(1:2) = 256 256           ! number of cells in domain
+  max_grid_size(1:2) = 128 128     ! max number of cells in a box
 
   ! Time-step control
   !----------------------
@@ -16,21 +16,19 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 100000                ! maximum number of time steps
-  plot_int = 500                   ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 20000                 ! maximum number of time steps
+  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 500                  ! how often to output statistics
+  print_int = 10                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  !variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
   variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
 
   ! Initial conditions
   !----------------------
-  perturb_width = 0.d0
-  smoothing_width = 0.d0    ! scale factor for smoothing initial profile
-  !initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
+  perturb_width = 22.d0
+  smoothing_width = 5.d0    ! scale factor for smoothing initial profile
   initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total mass fluctuation is set to zero)
 
@@ -40,7 +38,7 @@
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
-  seed = 0 
+  seed = 0
 
   ! Boundary conditions
   !----------------------
@@ -111,7 +109,6 @@
                       ! 1=second-order tau leaping or CLE
                       ! 2=SSA
 
-  !use_Poisson_rng = -1 ! Only used for reaction_type = 0, 1
   use_Poisson_rng = 1 ! Only used for reaction_type = 0, 1
                       ! If -1 do deterministic chemistry
                       ! If 1 do tau leaping (Poisson increments),
@@ -125,11 +122,11 @@
   nspecies = 1 
   nreactions = 4
     
-  cross_section = 20 ! Thickness of domain in 2D (dV scaling factor)
+  cross_section = 100 ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition (start near chemical equilibrium):
   ! For uniform initial condition:
-  n_init_in(1,1) = 2.
+  n_init_in(1,1) = 1.4 
   n_init_in(2,1) = 0.75
   
   integer_populations = F
@@ -141,11 +138,11 @@
   D_Fick(1:1) = 1.0 
 
   ! n_i boundary conditions (dir,lohi,species)
-  !n_bc(1,1,1) = 2.  ! Lower x fixed at + state
-  !n_bc(1,1,1) = 0.5 ! Lower x at 0 state
-  !n_bc(1,2,1) = 0.5 ! Upper x at 0 state
-  !n_bc(2,1,1) = 0.5 ! Lower x at 0 state
-  !n_bc(2,2,1) = 0.5 ! Upper x at 0 state
+  !n_bc(1,1,1) = 2.   ! Lower x fixed at + state
+  !n_bc(1,1,1) = 0.75 ! Lower x at 0 state
+  !n_bc(1,2,1) = 0.75 ! Upper x at 0 state
+  !n_bc(2,1,1) = 0.75 ! Lower x at 0 state
+  !n_bc(2,2,1) = 0.75 ! Upper x at 0 state
 
   ! implicit diffusion solve verbosity, bottom solve verbosity
   mg_verbose = 0
@@ -159,7 +156,6 @@
   ! ------------------  
   rate_const(1:4) = 3.75, 1.0, 1.5, 4.25
   rate_multiplier = 0.1 ! Change all rates by a constant multiplier
-  !include_discrete_LMA_correction = F ! Compute rates using classical LMA or molecular  
   include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
   
   ! Schlogl model is (we do not treat A as a separate species here since it is fixed):
