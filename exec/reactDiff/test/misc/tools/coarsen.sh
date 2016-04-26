@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# in order to execute this script, you need to compile fcoarsen:
+# BoxLib/Tools/Postprocessing/F_Src/fcoarsen.f90
+
 EXEC=fcoarsen
 FACTOR=2
 RUNNAME=TEST
