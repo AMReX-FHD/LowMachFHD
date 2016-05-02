@@ -790,7 +790,7 @@ b(\wb) = \sum_i w_i b_i, \quad b_i = 0.08664\frac{RT_{c,i}}{m_i P_{c,i}}
 The acentric factors, $\bar\omega$, for H$_2$, O$_2$, and N$_2$, respectively, 
 are (-0.220,0.022,0.040.)  Thus, $s_i=$(0.13637,0.51914,0.54691),
 the critical temperatures are $T_{c}=$ (33.20,154.6,126.2)~K, 
-and the critical pressures are ($1.3\times 10^7,5.05\times 10^7,3.35\times 10^7$~Ba.
+and the critical pressures are ($1.3\times 10^7,5.05\times 10^7,3.35\times 10^7$)~Ba.
 
 \subsection{Thermodynamic Derivatives}
 To evaluate $P_\rho$, use the chain rule, $P_\rho = P_v v_\rho = -v^2 P_v$:
@@ -811,6 +811,44 @@ with
 P_{w_k} = \left(\frac{\mathcal{R}T}{v-b(\wb)}\right)\frac{1}{m_k}
 +\frac{\mathcal{R}Tb_k\sum_i\frac{w_i}{m_i}}{[v-b(\wb)]^2}
 - \frac{v(v+b(\wb))\frac{\partial a(T,\wb)}{\partial w_k} - a(T,\wb)v\frac{\partial b(\wb)}{\partial w_k}}{[v(v+b(\wb))]^2},
+\end{equation}
+with
+\begin{equation}
+\frac{\partial a(T,\wb)}{\partial w_k} = 2\sum_i w_i\sqrt{a_i(T)a_k(T)},
+\quad
+\frac{\partial b(\wb)}{\partial w_k} = b_k.
+\end{equation}
+
+
+\section{Van der Walls Test Problem}
+
+\begin{equation}
+P = \frac{\mathcal{R}T}{v-b(\wb)}\sum_k\frac{w_k}{m_k} - \frac{a(\wb)}{v^2}
+\end{equation}
+with specific volume $v=1/\rho$.  We will denote $T_{c,i}$ and $P_{c,i}$ as the critical
+temperature and pressure for component $i$.
+\begin{equation}
+a(\wb) = \sum_i\sum_j w_iw_j\sqrt{a_i a_j}
+\end{equation}
+\begin{equation}
+a_i = \frac{27}{64}\frac{R^2T_{c,i}^2}{m_i^2 P_{c,i}},
+\end{equation}
+\begin{equation}
+b(\wb) = \sum_i w_i b_i, \quad b_i = \frac{1}{8}\frac{RT_{c,i}}{m_i P_{c,i}}
+\end{equation}
+
+\subsection{Thermodynamic Derivatives}
+To evaluate $P_\rho$, use the chain rule, $P_\rho = P_v v_\rho = -v^2 P_v$:
+\begin{equation}
+P_\rho = \frac{v^2}{(v-b(\wb))^2}\mathcal{R}T\sum_k\frac{w_k}{m_k} - \frac{2a}{v}
+\end{equation}
+\begin{equation}
+P_T = \frac{\mathcal{R}}{v-b(\wb)}\sum_k\frac{w_k}{m_k},
+\end{equation}
+\begin{equation}
+P_{w_k} = \left(\frac{\mathcal{R}T}{v-b(\wb)}\right)\frac{1}{m_k}
++\frac{\mathcal{R}Tb_k\sum_i\frac{w_i}{m_i}}{[v-b(\wb)]^2}
+- \frac{\frac{\partial a(\wb)}{\partial w_k}}{v^2}
 \end{equation}
 with
 \begin{equation}

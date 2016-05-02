@@ -23,8 +23,13 @@ VPATH_LOCATIONS += ..
 include $(STAGGERED_HOME)/src_energy/ideal_HS/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/ideal_HS
 
+# Soave-Redlich-Kwong
 #include $(STAGGERED_HOME)/src_energy/SRK_HS/GPackage.mak
 #VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/SRK_HS
+
+# Van der Waals
+#include $(STAGGERED_HOME)/src_energy/VDW_HS/GPackage.mak
+#VPATH_LOCATIONS += $(STAGGERED_HOME)/src_energy/VDW_HS
 
 #######################################
 
