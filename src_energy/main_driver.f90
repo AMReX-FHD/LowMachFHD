@@ -366,11 +366,7 @@ subroutine main_driver()
   call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
   call fill_h_ghost_cells(mla,enth,dx,the_bc_tower)
 
-  ! conc to rho and enth to rhoh - INCLUDING GHOST CELLS
-  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
-  call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.false.)
-
-  ! fill ghost cells
+  ! fill ghost cells for rhotot, pi, Temp
   do n=1,nlevs
      ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
      call multifab_fill_boundary(rhotot_old(n))
@@ -397,6 +393,10 @@ subroutine main_driver()
                                        dx(n,:))
      end do
   end do
+
+  ! conc to rhoc and enth to rhoh - INCLUDING GHOST CELLS
+  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
+  call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.false.)
 
   if (print_int .gt. 0) then
      if (parallel_IOProcessor()) write(*,*) "Initial state:"  
