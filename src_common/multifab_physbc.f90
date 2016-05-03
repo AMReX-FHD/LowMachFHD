@@ -108,7 +108,22 @@ contains
 
     ! Local variables
     integer :: i,j
-    real(kind=dp_t) :: x,y,threeEighths,nineEighths,oneEighth
+    integer :: ngylo, ngyhi
+
+    real(kind=dp_t) :: x,y
+    real(kind=dp_t) :: threeEighths,nineEighths,oneEighth
+
+    if (bc(2,1) .eq. INTERIOR) then  ! y-lo direction
+       ngylo = ng
+    else
+       ngylo = 0  ! avoid corner ghost cells because we don't have good data in y-lo faces
+    end if
+
+    if (bc(2,2) .eq. INTERIOR) then  ! y-hi direction
+       ngyhi = ng
+    else
+       ngyhi = 0
+    end if
 
     threeEighths = 3.d0/8.d0
     nineEighths = 9.d0/8.d0
@@ -121,14 +136,14 @@ contains
     if (bc(1,1) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        x = prob_lo(1)
-       do j=lo(2)-ng,hi(2)+ng
+       do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(lo(1)-ng:lo(1)-1,j) = s(lo(1),j) - 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
     else if (bc(1,1) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        x = prob_lo(1)
-       do j=lo(2)-ng,hi(2)+ng
+       do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(lo(1)-ng:lo(1)-1,j) = -(threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
                + (nineEighths)*s(lo(1),j) - (oneEighth)*s(lo(1)+1,j)
@@ -136,7 +151,7 @@ contains
     else if (bc(1,1) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
        x = prob_lo(1)
-       do j=lo(2)-ng,hi(2)+ng
+       do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(lo(1)-ng:lo(1)-1,j) = inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
@@ -154,14 +169,14 @@ contains
     if (bc(1,2) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        x = prob_hi(1)
-       do j=lo(2)-ng,hi(2)+ng
+       do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j) + 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
     else if (bc(1,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        x = prob_hi(1)
-       do j=lo(2)-ng,hi(2)+ng
+       do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(hi(1)+1:hi(1)+ng,j) = (threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
                + (nineEighths)*s(hi(1),j) - (oneEighth)*s(hi(1)-1,j)
@@ -169,7 +184,7 @@ contains
     else if (bc(1,2) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
        x = prob_hi(1)
-       do j=lo(2)-ng,hi(2)+ng
+       do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(hi(1)+1:hi(1)+ng,j) = inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
@@ -258,7 +273,35 @@ contains
 
     ! Local variables
     integer :: i,j,k
-    real(kind=dp_t) :: x,y,z,threeEighths,nineEighths,oneEighth
+    integer :: ngylo, ngyhi, ngzlo, ngzhi
+
+    real(kind=dp_t) :: x,y,z
+    real(kind=dp_t) :: threeEighths,nineEighths,oneEighth
+
+
+    if (bc(2,1) .eq. INTERIOR) then  ! y-lo direction
+       ngylo = ng
+    else
+       ngylo = 0  ! avoid corner ghost cells because we don't have good data in y-lo faces
+    end if
+
+    if (bc(2,2) .eq. INTERIOR) then  ! y-hi direction
+       ngyhi = ng
+    else
+       ngyhi = 0
+    end if
+
+    if (bc(3,1) .eq. INTERIOR) then  ! z-lo direction
+       ngzlo = ng
+    else
+       ngzlo = 0
+    end if
+
+    if (bc(3,2) .eq. INTERIOR) then  ! z-hi direction
+       ngzhi = ng
+    else
+       ngzhi = 0
+    end if
 
     threeEighths = 3.d0/8.d0
     nineEighths = 9.d0/8.d0
@@ -271,9 +314,9 @@ contains
     if (bc(1,1) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        x = prob_lo(1)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
-          do j=lo(2)-ng,hi(2)+ng
+          do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(lo(1)-ng:lo(1)-1,j,k) = s(lo(1),j,k) &
                   - 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
@@ -282,9 +325,9 @@ contains
     else if (bc(1,1) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        x = prob_lo(1)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
-          do j=lo(2)-ng,hi(2)+ng
+          do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(lo(1)-ng:lo(1)-1,j,k) = &
                   -(threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
@@ -294,9 +337,9 @@ contains
     else if (bc(1,1) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
        x = prob_lo(1)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
-          do j=lo(2)-ng,hi(2)+ng
+          do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(lo(1)-ng:lo(1)-1,j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
@@ -315,9 +358,9 @@ contains
     if (bc(1,2) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        x = prob_hi(1)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
-          do j=lo(2)-ng,hi(2)+ng
+          do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(hi(1)+1:hi(1)+ng,j,k) = s(hi(1),j,k) &
                   + 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
@@ -326,9 +369,9 @@ contains
     else if (bc(1,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        x = prob_hi(1)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
-          do j=lo(2)-ng,hi(2)+ng
+          do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(hi(1)+1:hi(1)+ng,j,k) = &
                   (threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
@@ -338,9 +381,9 @@ contains
     else if (bc(1,2) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
        x = prob_hi(1)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
-          do j=lo(2)-ng,hi(2)+ng
+          do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(hi(1)+1:hi(1)+ng,j,k) = inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
@@ -359,7 +402,7 @@ contains
     if (bc(2,1) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        y = prob_lo(2)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
@@ -370,7 +413,7 @@ contains
     else if (bc(2,1) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        y = prob_lo(2)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
@@ -382,7 +425,7 @@ contains
     else if (bc(2,1) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
        y = prob_lo(2)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
@@ -403,7 +446,7 @@ contains
     if (bc(2,2) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        y = prob_hi(2)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
@@ -414,7 +457,7 @@ contains
     else if (bc(2,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        y = prob_hi(2)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
@@ -426,7 +469,7 @@ contains
     else if (bc(2,2) .eq. EXT_DIR) then
        ! dirichlet condition obtained from inhomogeneous_bc_val
        y = prob_hi(2)
-       do k=lo(3)-ng,hi(3)+ng
+       do k=lo(3)-ngzlo,hi(3)+ngzhi
           z = prob_lo(3) + (dble(k)+0.5d0)*dx(3)
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
