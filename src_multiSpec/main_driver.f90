@@ -41,12 +41,9 @@ subroutine main_driver()
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
                                   barodiffusion_type
-  use probin_multispecies_module, only: nspecies, Dbar, &
-                                        start_time, &
+  use probin_multispecies_module, only: nspecies, Dbar, start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
-
-  use fabio_module
 
   implicit none
 
@@ -271,7 +268,7 @@ subroutine main_driver()
      ! initialize rho
      call init_rho_and_umac(mla,rho_old,umac,dx,time,the_bc_tower%bc_tower_array)
 
-     ! initialize pressure
+     ! initialize pi
      do n=1,nlevs
         call multifab_setval(pi(n),0.d0,all=.true.)
      end do
@@ -591,6 +588,26 @@ subroutine main_driver()
      ! project rho and rho1 back onto EOS
      if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
         call project_onto_eos(mla,rho_new)
+
+        ! compute rhotot from rho in VALID REGION
+        call compute_rhotot(mla,rho_new,rhotot_new)
+
+        ! rho to conc - NO GHOST CELLS
+        do n=1,nlevs
+           call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
+        end do
+        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
+        call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+
+        do n=1,nlevs
+           call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
+        end do
+
+        ! conc to rho - INCLUDING GHOST CELLS
+        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
+        do n=1,nlevs
+           call multifab_destroy(conc(n))
+        end do
      end if
 
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0

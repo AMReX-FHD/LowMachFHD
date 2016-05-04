@@ -19,6 +19,7 @@ subroutine main_driver()
   use eos_check_module
   use estdt_module
   use stag_mg_layout_module
+  use macproject_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use fill_umac_ghost_cells_module
@@ -34,7 +35,6 @@ subroutine main_driver()
   use checkpoint_module
   use project_onto_eos_charged_module
   use fluid_charge_module
-  use macproject_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -119,8 +119,8 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
-  allocate(Temp(nlevs),Epot_mass_fluxdiv(nlevs))
-  allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
+  allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
+  allocate(Epot_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
@@ -305,6 +305,16 @@ subroutine main_driver()
   ! rho to conc - NO GHOST CELLS
   call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
   call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+
+  ! fill ghost cells
+  do n=1,nlevs
+     ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
+     call multifab_fill_boundary(pi(n))
+     ! fill non-periodic domain boundary ghost cells
+     call multifab_physbc(pi(n),1,pres_bc_comp,1, &
+                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+  end do
+
   do n=1,nlevs
      call fill_rho_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
   end do
@@ -314,15 +324,6 @@ subroutine main_driver()
 
   do n=1,nlevs
      call multifab_destroy(conc(n))
-  end do
-
-  ! fill ghost cells
-  do n=1,nlevs
-     ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-     call multifab_fill_boundary(pi(n))
-     ! fill non-periodic domain boundary ghost cells
-     call multifab_physbc(pi(n),1,pres_bc_comp,1, &
-                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
   end do
 
   do n=1,nlevs
@@ -389,7 +390,11 @@ subroutine main_driver()
   end do
 
   ! allocate and build multifabs that will contain random numbers
-  n_rngs = 1
+  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1 .or. algorithm_type .eq. 3) then
+     n_rngs = 1
+  else if (algorithm_type .eq. 2) then
+     n_rngs = 2
+  end if
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
 
@@ -427,7 +432,10 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
 
-     if (initial_variance .ne. 0.d0) then
+     ! add initial momentum fluctuations - only call in inertial code for now
+     ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
+     if ((algorithm_type .eq. 0 .or. algorithm_type .eq. 3) .and. &
+          initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
      end if
@@ -477,12 +485,22 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
      
-     ! initial projection
-     call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
-                                     Epot_mass_fluxdiv,diff_mass_fluxdiv, &
-                                     stoch_mass_fluxdiv, &
-                                     Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                     charge_old,grad_Epot_old,Epot)
+     ! initial projection - only truly needed for inertial algorithm
+     ! for the overdamped algorithm, this only changes the reference state for the first
+     ! gmres solve in the first time step
+     ! Yes, I think in the purely overdamped version this can be removed
+     ! In either case the first ever solve cannot have a good reference state
+     ! so in general there is the danger it will be less accurate than subsequent solves
+     ! but I do not see how one can avoid that
+     ! From this perspective it may be useful to keep initial_projection even in overdamped
+     ! because different gmres tolerances may be needed in the first step than in the rest
+     if (algorithm_type .eq. 0 .or. algorithm_type .eq. 3) then
+        call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
+                                        Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                        stoch_mass_fluxdiv, &
+                                        Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+                                        charge_old,grad_Epot_old,Epot)
+     end if
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -566,10 +584,8 @@ subroutine main_driver()
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new, &
                                         charge_old,charge_new,Epot)
-      else if (algorithm_type .eq. 1) then
-         call bl_error("overdamped 1RNG not written yet")
-      else if (algorithm_type .eq. 2) then
-         call bl_error("overdamped 2RNG not written yet")
+      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
+         call bl_error("overdamped integrator not written yet")
       else if (algorithm_type .eq. 3) then
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -637,7 +653,7 @@ subroutine main_driver()
       if (istep >= n_steps_skip) then
 
          ! write plotfile at specific intervals
-         if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
+         if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
