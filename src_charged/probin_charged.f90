@@ -20,7 +20,7 @@ module probin_charged_module
   namelist /probin_charged/ dielectric_const
   namelist /probin_charged/ charge_per_mass
   namelist /probin_charged/ Epot_wall
-  namelist /probin_charged/ theta_pot          ! for implicit algorithm_type=1, controls
+  namelist /probin_charged/ theta_pot          ! for implicit algorithm_type=3, controls
                                                ! temporal discretization for potential term
   namelist /probin_charged/ num_pot_iters
   namelist /probin_charged/ dpdt_factor

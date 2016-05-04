@@ -1,5 +1,4 @@
 f90sources += advance_timestep_iterative.f90
-f90sources += advance_timestep_potential.f90
 f90sources += compute_mass_fluxdiv_charged.f90
 f90sources += Epot_mass_fluxdiv.f90
 f90sources += fluid_charge.f90

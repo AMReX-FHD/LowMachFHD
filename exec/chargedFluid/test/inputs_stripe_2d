@@ -18,7 +18,7 @@
   ! use for algorithm_type=0
   fixed_dt = 1.d-8                 ! time step (if positive, fixed)
 
-  ! use for algorithm_type=1
+  ! use for algorithm_type=3
 !  fixed_dt = 5.d-7                 ! time step (if positive, fixed)
 
   cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
@@ -52,6 +52,7 @@
                          ! 0 = Inertial algorithm
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
+                         ! 3 = Iterative implicit
 
   barodiffusion_type = 0    ! 0 = no barodiffusion
                             ! 1 = fixed gradp from initialization

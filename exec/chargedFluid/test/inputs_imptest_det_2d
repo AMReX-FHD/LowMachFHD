@@ -36,7 +36,11 @@
 
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 2
+  algorithm_type = 3     ! differs from code to code.  In binary and multispcies code:
+                         ! 0 = Inertial algorithm
+                         ! 1 = Overdamped with 1 RNG
+                         ! 2 = Overdamped with 2 RNGs
+                         ! 3 = Iterative implicit
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------

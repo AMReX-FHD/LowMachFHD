@@ -45,6 +45,7 @@
                          ! 0 = Inertial algorithm
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
+                         ! 3 = Iterative implicit
 
    barodiffusion_type = 0    ! 0 = no barodiffusion
                              ! 1 = fixed gradp from initialization
