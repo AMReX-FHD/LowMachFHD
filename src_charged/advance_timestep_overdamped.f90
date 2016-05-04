@@ -9,7 +9,8 @@ module advance_timestep_overdamped_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
-  use compute_mass_fluxdiv_module
+  use compute_mass_fluxdiv_charged_module
+  use fluid_charge_module
   use compute_HSE_pres_module
   use reservoir_bc_fill_module
   use bds_module
@@ -28,6 +29,7 @@ module advance_timestep_overdamped_module
                                   barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
+  use probin_charged_module, only: use_charged_fluid
   use analysis_module
 
   implicit none
@@ -60,8 +62,10 @@ contains
   ! both temperature at the beginning and at the end of the timestep
   subroutine advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                         Epot_mass_fluxdiv, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         dx,dt,time,the_bc_tower,istep)
+                                         dx,dt,time,the_bc_tower,istep, &
+                                         grad_Epot_old,grad_Epot_new,charge_old,charge_new,Epot)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -77,12 +81,18 @@ contains
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: Temp(:)
     type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
-    ! diff/stoch_mass_fluxdiv can be built locally for overdamped
+    ! Epot/diff/stoch_mass_fluxdiv can be built locally for overdamped
+    type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
+    type(multifab) , intent(inout) :: grad_Epot_old(:,:)
+    type(multifab) , intent(inout) :: grad_Epot_new(:,:)
+    type(multifab) , intent(inout) :: charge_old(:)
+    type(multifab) , intent(inout) :: charge_new(:)
+    type(multifab) , intent(inout) :: Epot(:)
 
     ! local
     type(multifab) ::  rho_update(mla%nlevel)
@@ -101,6 +111,9 @@ contains
     type(multifab) ::      rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::   rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
+
+    type(multifab) :: mom_charge_force_old(mla%nlevel,mla%dim)
+    type(multifab) :: mom_charge_force_new(mla%nlevel,mla%dim)
 
     integer :: i,dm,n,nlevs
 
@@ -137,6 +150,8 @@ contains
           call multifab_build_edge(     rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(  rhotot_fc(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge( flux_total(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(mom_charge_force_old(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(mom_charge_force_new(n,i),mla%la(n),1,0,i)
        end do
     end do
 
@@ -220,22 +235,26 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute diffusive and stochastic mass fluxes
-    ! this computes "+F = -rho*W*chi*Gamma*grad(x) - ..."
+    ! compute diffusive, stochastic, potential mass fluxes
+    ! with barodiffusion and thermodiffusion
+    ! this computes "F = -rho W chi [Gamma grad x... ]"
     if (algorithm_type .eq. 1) then
-       call compute_mass_fluxdiv(mla,rho_old,gradp_baro, &
-                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                 Temp,flux_total,dt,time,dx,weights, &
-                                 the_bc_tower)
+       call compute_mass_fluxdiv_charged(mla,rho_old,gradp_baro, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         Temp,flux_total,dt,time,dx,weights, &
+                                         the_bc_tower, &
+                                         Epot_mass_fluxdiv,charge_old,grad_Epot_old,Epot)
     else if (algorithm_type .eq. 2) then
-       call compute_mass_fluxdiv(mla,rho_old,gradp_baro, &
-                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                 Temp,flux_total,0.5d0*dt,time,dx,weights, &
-                                 the_bc_tower)
+       call compute_mass_fluxdiv_charged(mla,rho_old,gradp_baro, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         Temp,flux_total,0.5d0*dt,time,dx,weights, &
+                                         the_bc_tower, &
+                                         Epot_mass_fluxdiv,charge_old,grad_Epot_old,Epot)
     end if
 
     ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
+       call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
@@ -248,10 +267,30 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
+    if (use_charged_fluid) then
+
+       ! compute old momentum charge force
+       call average_cc_to_face(nlevs,charge_old,mom_charge_force_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_c(mom_charge_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
+          end do
+       end do
+
+       ! subtract from gmres_rhs_v
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_old(n,i),1,1,0)
+          end do
+       end do
+
+    end if
+
     ! compute gmres_rhs_p
     ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
     do n=1,nlevs
        do i=1,nspecies
+          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
@@ -264,6 +303,7 @@ contains
     do n=1,nlevs
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
+       call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies)
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
@@ -418,6 +458,9 @@ contains
     call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
+    ! compute total charge
+    call dot_with_z(mla,rho_new,charge_new)
+
     ! compute (eta,kappa)^{*,n+1/2}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
@@ -482,15 +525,18 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+0.5d0*dt, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute diffusive and stochastic mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
-    call compute_mass_fluxdiv(mla,rho_new,gradp_baro, &
-                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              Temp,flux_total,dt,time,dx,weights, &
-                              the_bc_tower)
+    ! compute diffusive, stochastic, potential mass fluxes
+    ! with barodiffusion and thermodiffusion
+    ! this computes "F = -rho W chi [Gamma grad x... ]"
+    call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                      Temp,flux_total,dt,time,dx,weights, &
+                                      the_bc_tower, &
+                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot)
 
     ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
+       call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
@@ -503,10 +549,30 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
+
+    if (use_charged_fluid) then
+
+       ! compute t^{n+1/2} momentum charge force
+       call average_cc_to_face(nlevs,charge_new,mom_charge_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_c(mom_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
+          end do
+       end do
+
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_new(n,i),1,1,0)
+          end do
+       end do
+
+    end if
+
     ! compute gmres_rhs_p
     ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
     do n=1,nlevs
        do i=1,nspecies
+          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
@@ -519,6 +585,7 @@ contains
     do n=1,nlevs
        call multifab_setval(rho_update(n),0.d0,all=.true.)
        ! add fluxes
+       call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies)
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
@@ -647,6 +714,9 @@ contains
 
     ! conc to rho - INCLUDING GHOST CELLS
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
+
+    ! compute total charge
+    call dot_with_z(mla,rho_new,charge_new)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Compute stuff for plotfile and next time step
