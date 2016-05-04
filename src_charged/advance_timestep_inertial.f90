@@ -1,4 +1,4 @@
-module advance_timestep_module
+module advance_timestep_inertial_module
 
   use ml_layout_module
   use define_bc_module
@@ -9,6 +9,8 @@ module advance_timestep_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use compute_mass_fluxdiv_charged_module
+  use project_onto_eos_module
+  use fluid_charge_module
   use compute_HSE_pres_module
   use convert_m_to_umac_module
   use convert_rhoc_to_c_module
@@ -25,8 +27,7 @@ module advance_timestep_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
-  use project_onto_eos_module
-  use fluid_charge_module
+
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
@@ -37,7 +38,7 @@ module advance_timestep_module
 
   private
 
-  public :: advance_timestep
+  public :: advance_timestep_inertial
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -56,9 +57,10 @@ module advance_timestep_module
 
 contains
 
-  subroutine advance_timestep(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+  subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                               gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                              Epot_mass_fluxdiv,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              Epot_mass_fluxdiv, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               dx,dt,time,the_bc_tower,istep, &
                               grad_Epot_old,grad_Epot_new,charge_old,charge_new,Epot)
 
@@ -121,6 +123,10 @@ contains
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
     real(kind=dp_t) :: weights(1)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "advance_timestep_inertial")
 
     weights(1) = 1.d0
 
@@ -249,8 +255,8 @@ contains
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute total charge
     call dot_with_z(mla,rho_new,charge_new)
@@ -360,7 +366,7 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute diffusive, stochastic, and potential mass fluxes
+    ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
@@ -659,7 +665,7 @@ contains
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,c_bc_comp   ,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute total charge
@@ -758,7 +764,7 @@ contains
     call fill_m_stochastic(mla)
     call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
-    ! compute diffusive, stochastic, and potential mass fluxes
+    ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
@@ -974,7 +980,9 @@ contains
        end do
     end do
 
-  end subroutine advance_timestep
+    call destroy(bpt)
+
+  end subroutine advance_timestep_inertial
 
   subroutine build_bc_multifabs(mla)
 
@@ -982,6 +990,10 @@ contains
 
     integer :: dm,i,n,nlevs
     logical :: nodal_temp(3)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "advance_timestep_inertial/build_bc_multifabs")
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -1045,6 +1057,8 @@ contains
 
     end do
 
+    call destroy(bpt)
+
   end subroutine build_bc_multifabs
 
   subroutine destroy_bc_multifabs(mla)
@@ -1052,6 +1066,10 @@ contains
     type(ml_layout), intent(in   ) :: mla
 
     integer :: dm,i,n,nlevs
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "advance_timestep_inertial/destroy_bc_multifabs")
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -1067,6 +1085,8 @@ contains
 
     deallocate(vel_bc_n,vel_bc_t)
 
+    call destroy(bpt)
+
   end subroutine destroy_bc_multifabs
 
-end module advance_timestep_module
+end module advance_timestep_inertial_module

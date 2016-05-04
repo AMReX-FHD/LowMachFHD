@@ -17,7 +17,6 @@ module advance_timestep_inertial_module
   use bds_module
   use gmres_module
   use div_and_grad_module
-  use eos_check_module
   use mk_grav_force_module
   use compute_mixture_properties_module
   use mass_flux_utilities_module
@@ -26,11 +25,11 @@ module advance_timestep_inertial_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
+
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, restart, barodiffusion_type
+                                  variance_coef_mom, barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
-  use analysis_module
 
   implicit none
 
@@ -168,8 +167,8 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! average rho_old and rhotot_old to faces
-    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,    scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! add D^n and St^n to rho_update
     do n=1,nlevs
@@ -347,8 +346,9 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute diffusive and stochastic mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+    ! compute diffusive, stochastic mass fluxes
+    ! with barodiffusion and thermodiffusion
+    ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
@@ -702,8 +702,9 @@ contains
     call fill_m_stochastic(mla)
     call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
-    ! compute diffusive and stochastic mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+    ! compute diffusive, stochastic mass fluxes
+    ! with barodiffusion and thermodiffusion
+    ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
@@ -712,7 +713,7 @@ contains
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       if (variance_coef_mass .ne. 0) then
+       if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
        do i=1,dm
