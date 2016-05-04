@@ -9,6 +9,7 @@ subroutine main_driver()
   use initial_projection_charged_module
   use write_plotfile_charged_module
   use advance_timestep_inertial_module
+  use advance_timestep_overdamped_module
   use advance_timestep_iterative_module
   use define_bc_module
   use bc_module
@@ -46,6 +47,8 @@ subroutine main_driver()
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid
+
+  use fabio_module
 
   implicit none
 
@@ -494,13 +497,11 @@ subroutine main_driver()
      ! but I do not see how one can avoid that
      ! From this perspective it may be useful to keep initial_projection even in overdamped
      ! because different gmres tolerances may be needed in the first step than in the rest
-     if (algorithm_type .eq. 0 .or. algorithm_type .eq. 3) then
-        call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
-                                        Epot_mass_fluxdiv,diff_mass_fluxdiv, &
-                                        stoch_mass_fluxdiv, &
-                                        Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                        charge_old,grad_Epot_old,Epot)
-     end if
+     call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
+                                     Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                     stoch_mass_fluxdiv, &
+                                     Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+                                     charge_old,grad_Epot_old,Epot)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -585,7 +586,13 @@ subroutine main_driver()
                                         grad_Epot_old,grad_Epot_new, &
                                         charge_old,charge_new,Epot)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
-         call bl_error("overdamped integrator not written yet")
+         call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                          Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                          stoch_mass_fluxdiv, &
+                                          dx,dt,time,the_bc_tower,istep, &
+                                          grad_Epot_old,grad_Epot_new, &
+                                          charge_old,charge_new,Epot)
       else if (algorithm_type .eq. 3) then
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &

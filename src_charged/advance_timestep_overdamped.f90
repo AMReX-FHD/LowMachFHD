@@ -746,6 +746,8 @@ contains
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(flux_total(n,i))
+          call multifab_destroy(mom_charge_force_old(n,i))
+          call multifab_destroy(mom_charge_force_new(n,i))
        end do
     end do
 
