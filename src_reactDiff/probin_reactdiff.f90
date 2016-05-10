@@ -231,6 +231,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) include_discrete_LMA_correction
 
+       case ('--n_steps_write_avg')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) n_steps_write_avg 
+
        case ('--no_diffusion')
           D_Fick(1:max_species) = 0.d0
 
