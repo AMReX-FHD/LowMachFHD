@@ -615,17 +615,17 @@ contains
        if (bc(1,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           ! 6-point stencil using homogeneous dirichlet velocity boundary condition
-          s(lo(1),lo(2)-ng_s:hi(2)+ng_s) = 0.d0
-          s(lo(1)-1,lo(2)-ng_s:hi(2)+ng_s) = -15.d0*s(lo(1)+1,lo(2)-ng_s:hi(2)+ng_s) &
-                                             +20.d0*s(lo(1)+2,lo(2)-ng_s:hi(2)+ng_s) &
-                                             -15.d0*s(lo(1)+3,lo(2)-ng_s:hi(2)+ng_s) &
-                                             + 6.d0*s(lo(1)+4,lo(2)-ng_s:hi(2)+ng_s) &
-                                             - 1.d0*s(lo(1)+5,lo(2)-ng_s:hi(2)+ng_s)
-          s(lo(1)-2,lo(2)-ng_s:hi(2)+ng_s) = -70.d0*s(lo(1)+1,lo(2)-ng_s:hi(2)+ng_s) &
-                                            +105.d0*s(lo(1)+2,lo(2)-ng_s:hi(2)+ng_s) &
-                                             -84.d0*s(lo(1)+3,lo(2)-ng_s:hi(2)+ng_s) &
-                                             +35.d0*s(lo(1)+4,lo(2)-ng_s:hi(2)+ng_s) &
-                                             - 6.d0*s(lo(1)+5,lo(2)-ng_s:hi(2)+ng_s)
+          s(lo(1),lo(2):hi(2)) = 0.d0
+          s(lo(1)-1,lo(2):hi(2)) = -15.d0*s(lo(1)+1,lo(2):hi(2)) &
+                                   +20.d0*s(lo(1)+2,lo(2):hi(2)) &
+                                   -15.d0*s(lo(1)+3,lo(2):hi(2)) &
+                                   + 6.d0*s(lo(1)+4,lo(2):hi(2)) &
+                                   - 1.d0*s(lo(1)+5,lo(2):hi(2))
+          s(lo(1)-2,lo(2):hi(2)) = -70.d0*s(lo(1)+1,lo(2):hi(2)) &
+                                  +105.d0*s(lo(1)+2,lo(2):hi(2)) &
+                                   -84.d0*s(lo(1)+3,lo(2):hi(2)) &
+                                   +35.d0*s(lo(1)+4,lo(2):hi(2)) &
+                                   - 6.d0*s(lo(1)+5,lo(2):hi(2))
        else if (bc(1,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -643,17 +643,17 @@ contains
        if (bc(1,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           ! 6-point stencil using homogeneous dirichlet velocity boundary condition
-          s(hi(1)+1,lo(2)-ng_s:hi(2)+ng_s) = 0.d0
-          s(hi(1)+2,lo(2)-ng_s:hi(2)+ng_s) = -15.d0*s(hi(1)  ,lo(2)-ng_s:hi(2)+ng_s) &
-                                             +20.d0*s(hi(1)-1,lo(2)-ng_s:hi(2)+ng_s) &
-                                             -15.d0*s(hi(1)-2,lo(2)-ng_s:hi(2)+ng_s) &
-                                             + 6.d0*s(hi(1)-3,lo(2)-ng_s:hi(2)+ng_s) &
-                                             - 1.d0*s(hi(1)-4,lo(2)-ng_s:hi(2)+ng_s)
-          s(hi(1)+3,lo(2)-ng_s:hi(2)+ng_s) = -70.d0*s(hi(1)  ,lo(2)-ng_s:hi(2)+ng_s) &
-                                            +105.d0*s(hi(1)-1,lo(2)-ng_s:hi(2)+ng_s) &
-                                             -84.d0*s(hi(1)-2,lo(2)-ng_s:hi(2)+ng_s) &
-                                             +35.d0*s(hi(1)-3,lo(2)-ng_s:hi(2)+ng_s) &
-                                             - 6.d0*s(hi(1)-4,lo(2)-ng_s:hi(2)+ng_s)
+          s(hi(1)+1,lo(2):hi(2)) = 0.d0
+          s(hi(1)+2,lo(2):hi(2)) = -15.d0*s(hi(1)  ,lo(2):hi(2)) &
+                                   +20.d0*s(hi(1)-1,lo(2):hi(2)) &
+                                   -15.d0*s(hi(1)-2,lo(2):hi(2)) &
+                                   + 6.d0*s(hi(1)-3,lo(2):hi(2)) &
+                                   - 1.d0*s(hi(1)-4,lo(2):hi(2))
+          s(hi(1)+3,lo(2):hi(2)) = -70.d0*s(hi(1)  ,lo(2):hi(2)) &
+                                  +105.d0*s(hi(1)-1,lo(2):hi(2)) &
+                                   -84.d0*s(hi(1)-2,lo(2):hi(2)) &
+                                   +35.d0*s(hi(1)-3,lo(2):hi(2)) &
+                                   - 6.d0*s(hi(1)-4,lo(2):hi(2))
        else if (bc(1,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -671,17 +671,17 @@ contains
        if (bc(2,1) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           ! 6-point stencil using homogeneous dirichlet velocity boundary condition
-          s(lo(1)-ng_s:hi(1)+ng_s,lo(2)) = 0.d0
-          s(lo(1)-ng_s:hi(1)+ng_s,lo(2)-1) = -15.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+1) &
-                                             +20.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+2) &
-                                             -15.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+3) &
-                                             + 6.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+4) &
-                                             - 1.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+5)
-          s(lo(1)-ng_s:hi(1)+ng_s,lo(2)-2) = -70.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+1) &
-                                            +105.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+2) &
-                                             -84.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+3) &
-                                             +35.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+4) &
-                                             - 6.d0*s(lo(1)-ng_s:hi(1)+ng_s,lo(2)+5)
+          s(lo(1):hi(1),lo(2)) = 0.d0
+          s(lo(1):hi(1),lo(2)-1) = -15.d0*s(lo(1):hi(1),lo(2)+1) &
+                                   +20.d0*s(lo(1):hi(1),lo(2)+2) &
+                                   -15.d0*s(lo(1):hi(1),lo(2)+3) &
+                                   + 6.d0*s(lo(1):hi(1),lo(2)+4) &
+                                   - 1.d0*s(lo(1):hi(1),lo(2)+5)
+          s(lo(1):hi(1),lo(2)-2) = -70.d0*s(lo(1):hi(1),lo(2)+1) &
+                                  +105.d0*s(lo(1):hi(1),lo(2)+2) &
+                                   -84.d0*s(lo(1):hi(1),lo(2)+3) &
+                                   +35.d0*s(lo(1):hi(1),lo(2)+4) &
+                                   - 6.d0*s(lo(1):hi(1),lo(2)+5)
        else if (bc(2,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -699,17 +699,17 @@ contains
        if (bc(2,2) .eq. DIR_VEL) then
           ! set domain face value to Dirichlet value
           ! 6-point stencil using homogeneous dirichlet velocity boundary condition
-          s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+1) = 0.d0
-          s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+2) = -15.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)  ) &
-                                             +20.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-1) &
-                                             -15.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-2) &
-                                             + 6.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-3) &
-                                             - 1.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-4)
-          s(lo(1)-ng_s:hi(1)+ng_s,hi(2)+3) = -70.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)  ) &
-                                            +105.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-1) &
-                                             -84.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-2) &
-                                             +35.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-3) &
-                                             - 6.d0*s(lo(1)-ng_s:hi(1)+ng_s,hi(2)-4)
+          s(lo(1):hi(1),hi(2)+1) = 0.d0
+          s(lo(1):hi(1),hi(2)+2) = -15.d0*s(lo(1):hi(1),hi(2)  ) &
+                                   +20.d0*s(lo(1):hi(1),hi(2)-1) &
+                                   -15.d0*s(lo(1):hi(1),hi(2)-2) &
+                                   + 6.d0*s(lo(1):hi(1),hi(2)-3) &
+                                   - 1.d0*s(lo(1):hi(1),hi(2)-4)
+          s(lo(1):hi(1),hi(2)+3) = -70.d0*s(lo(1):hi(1),hi(2)  ) &
+                                  +105.d0*s(lo(1):hi(1),hi(2)-1) &
+                                   -84.d0*s(lo(1):hi(1),hi(2)-2) &
+                                   +35.d0*s(lo(1):hi(1),hi(2)-3) &
+                                   - 6.d0*s(lo(1):hi(1),hi(2)-4)
        else if (bc(2,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -2036,8 +2036,8 @@ contains
              end if
           else
              call physbc_macvel_ho_2d(sp(:,:,1,1), ng_s, lo, hi, &
-                                   the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
-                                   bccomp,dx)
+                                      the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
+                                      bccomp,dx)
           end if
        case (3)
           if (use_inhomogeneous) then
@@ -2054,8 +2054,8 @@ contains
              end if
           else
              call physbc_macvel_ho_3d(sp(:,:,:,1), ng_s, lo, hi, &
-                                   the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
-                                   bccomp,dx)
+                                      the_bc_level%adv_bc_level_array(i,:,:,bccomp), &
+                                      bccomp,dx)
           end if
        end select
     end do
