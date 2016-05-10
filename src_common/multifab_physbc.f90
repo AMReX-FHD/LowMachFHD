@@ -659,7 +659,7 @@ contains
     if (bc(1,1) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        x = prob_lo(1)
-       do j=lo(2)-ng,hi(2)+ng
+       do j=lo(2),hi(2)
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(lo(1)-1,j) = ( &
                            +   5.d0*s(lo(1)  ,j) &
@@ -686,7 +686,7 @@ contains
     if (bc(1,2) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        x = prob_hi(1)
-       do j=lo(2)-ng,hi(2)+ng
+       do j=lo(2),hi(2)
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
           s(hi(1)+1,j) = ( &
                            +   5.d0*s(hi(1)  ,j) &
@@ -713,7 +713,7 @@ contains
     if (bc(2,1) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        y = prob_lo(2)
-       do i=lo(1)-ng,hi(1)+ng
+       do i=lo(1),hi(1)
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
           s(i,lo(2)-1) = ( &
                            +   5.d0*s(i,lo(2)  ) &
@@ -740,7 +740,7 @@ contains
     if (bc(2,2) .eq. FOEXTRAP) then
        ! linear extrapolation using interior point and Neumann bc
        y = prob_hi(2)
-       do i=lo(1)-ng,hi(1)+ng
+       do i=lo(1),hi(1)
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
           s(i,hi(2)+1) = ( &
                            +   5.d0*s(i,hi(2)  ) &
