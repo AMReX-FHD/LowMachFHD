@@ -175,6 +175,7 @@ contains
     real(kind=dp_t) :: Sbar_old, Sbar_new
     real(kind=dp_t) :: thetabar_old, thetabar_new
     real(kind=dp_t) :: Scorrbar
+    real(kind=dp_t) :: peosbar, driftbar
 
     real(kind=dp_t) :: p0_update_old
     real(kind=dp_t) :: p0_update_new
@@ -415,6 +416,7 @@ contains
     end do
 
     p0_new = p0_old
+    p0_update_new = p0_update_old
     Sbar_new = Sbar_old
     thetabar_new = thetabar_old
 
@@ -435,14 +437,19 @@ contains
        call mk_advective_m_fluxdiv(mla,umac_new,mtemp,mtemp2,dx, &
                                    the_bc_tower%bc_tower_array)
 
-       p0_update_new = (Sbar_new + Scorrbar)/thetabar_new
+       ! update p0_update_old based on current Scorr
+       ! the idea is that you can reduce dpdt_factor by a factor of 2 since
+       ! we account for it in p0_update_old and p0_update_new
+!       do n=1,nlevs
+!          call multifab_plus_plus_s_c(rhoh_update_old(n),1,-p0_update_old,1,0)
+!       end do
+!       p0_update_old = (Sbar_old + Scorrbar)/thetabar_old
+!       do n=1,nlevs
+!          call multifab_plus_plus_s_c(rhoh_update_old(n),1,p0_update_old,1,0)
+!       end do
 
        ! update pressure
        p0_new = p0_old + 0.5d0*dt*(p0_update_old + p0_update_new)
-
-       if (parallel_IOProcessor()) then
-          print*,'p0_old,new',p0_old,p0_new
-       end if
 
        ! mass_update_new = [-div(rho_i*v) + div(F)]^{n+1,m}
        do n=1,nlevs
@@ -609,6 +616,8 @@ contains
 
        ! compute P_eos^{n+1,m+1}
        call compute_p(mla,rhotot_new,Temp_new,conc_new,Peos)
+       
+       peosbar = multifab_sum_c(Peos(1),1,1) / total_volume
 
        ! Scorr = Scorr + dpdt_factor * kappa_T * (Peos^{n+1,m+1} - P0^{n+1,m+1}) / dt
        do n=1,nlevs
@@ -637,6 +646,12 @@ contains
              else if (k .eq. 9) then
                 call fabio_ml_multifab_write_d(Peos,mla%mba%rr(:,1),"a_drift9")
              end if
+          end if
+
+          driftbar = multifab_sum_c(Peos(n),1,1) / total_volume
+
+          if (parallel_IOProcessor()) then
+             print*,'p0_old,new',p0_old,p0_new,peosbar,driftbar,Sbar_old,Sbar_new,Scorrbar
           end if
 
           norm = multifab_norm_l1_c(Peos(n),1,1)/total_volume
@@ -670,6 +685,8 @@ contains
           call multifab_copy_c(delta_Scorr(n),1,Scorr(n),1,1,0)
           call multifab_sub_sub_s_c(delta_Scorr(n),1,Scorrbar,1,0)
        end do
+
+       p0_update_new = (Sbar_new + Scorrbar)/thetabar_new
 
        ! compute gmres_rhs_p = delta_S_new + delta_Scorr
        !                       - delta_theta_new * (Sbar_new + Scorrbar)/thetabar_new

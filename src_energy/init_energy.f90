@@ -49,6 +49,9 @@ contains
     ng_3 = rhoh(1)%ng
     ng_4 = Temp(1)%ng
 
+    ! set pressure
+    p0 = p0_in
+
     ! looping over boxes 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
@@ -107,8 +110,6 @@ contains
        ! zero velocity
        !=============================================================
  
-       p0 = p0_in
-
        umac = 0.d0
        vmac = 0.d0
 
@@ -200,8 +201,6 @@ contains
        ! zero velocity
        !=============================================================
  
-       p0 = p0_in
-       
        umac = 0.d0
        vmac = 0.d0
        wmac = 0.d0
