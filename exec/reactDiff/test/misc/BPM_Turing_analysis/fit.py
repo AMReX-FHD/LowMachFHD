@@ -58,6 +58,7 @@ out.write("%g\t" % popt[2])
 out.write("%g\t" % popt[3])
 out.write("%g\t" % popt[4])
 out.write("%g\t" % popt[5])
-out.write("%g\n" % popt[6])
+out.write("%g\t" % popt[6])
+out.write("%g\n" % err)
 out.close()
 print "%s generated" % reportfile
