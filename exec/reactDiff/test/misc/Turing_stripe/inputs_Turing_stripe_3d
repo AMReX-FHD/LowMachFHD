@@ -80,13 +80,15 @@
 ! reaction/diffusion number fraction code
 &probin_reactdiff
 
-  temporal_integrator = 2 ! 0=D + R
-                          ! 1=(1/2)R + D + (1/2)R
-                          ! 2=(1/2)D + R + (1/2)D
-                          ! -1=unsplitting forward Euler
-                          ! -2=unsplitting explicit midpoint
+  temporal_integrator = -4 ! 0=D + R
+                           ! 1=(1/2)R + D + (1/2)R
+                           ! 2=(1/2)D + R + (1/2)D
+                           ! -1=unsplitting forward Euler
+                           ! -2=unsplitting explicit midpoint
+                           ! -3=unsplit multinomial diffusion
+                           ! -4=unsplit implicit midpoint
                           
-  inhomogeneous_bc_fix = T ! Apply the BC fix to correct splitting errors at boundaries
+  inhomogeneous_bc_fix = F ! Apply the BC fix to correct splitting errors at boundaries
 
   diffusion_type = 1 ! Only used for splitting schemes
                      ! 0=explicit trapezoidal predictor/corrector
@@ -94,7 +96,7 @@
                      ! 2=explicit midpoint
                      ! 3=multinomial diffusion
 
-  midpoint_stoch_flux_type = 2   ! for midpoint diffusion schemes, (split and unsplit)
+  midpoint_stoch_flux_type = 3   ! for midpoint diffusion schemes, (split and unsplit)
                                  ! corrector formulation of noise
                                  ! K(nold) * W1 + K(nold)         * W2
                                  ! K(nold) * W1 + K(npred)        * W2
@@ -110,8 +112,10 @@
                       ! If 1 do tau leaping (Poisson increments),
                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
 
-  avg_type = 3 ! compute n on faces for stochastic weighting
+  avg_type = 5 ! compute n on faces for stochastic weighting
                ! 1=arithmetic, 2=geometric, 3=harmonic
+               ! 4=arithmetic/discont Heaviside
+               ! 5=arithmetic/C0-smoothed Heaviside
 
   ! Setup
   !------------------------
@@ -130,7 +134,7 @@
   !n_init_in(1,1:2) = 2.16245, 1.35018 ! + stable state (but unstable spatially)               
   !n_init_in(2,1:2) = 0, 10 ! 0 stable state
 
-  integer_populations = T
+  integer_populations = F
 
   ! Diffusion:
   ! -----------------
