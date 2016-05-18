@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NRUN=2
+NRUN=16
 
 date >> res.submit
 for ((i=1;i<=$NRUN;i++))

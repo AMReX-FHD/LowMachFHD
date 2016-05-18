@@ -6,7 +6,7 @@
   dim_in = 2                       ! 2D or 3D (here we do a single cell) 
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 32.d0 32.d0       ! physical hi coordinate
-  n_cells(1:2) = 256 256           ! number of cells in domain
+  n_cells(1:2) = 128 128           ! number of cells in domain
   max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
   ! Time-step control
@@ -92,7 +92,7 @@
 
   ! Control of algorithm
   !----------------------
-  temporal_integrator = -2       ! 0=D + R (first-order splitting)
+  temporal_integrator = -4       ! 0=D + R (first-order splitting)
                                  ! 1=(1/2)R + D + (1/2)R (Strang option 1)
                                  ! 2=(1/2)D + R + (1/2)D (Strang option 2)
                                  ! -1=unsplitting forward Euler
