@@ -2,8 +2,7 @@ import numpy as np
 import scipy.optimize as optimization
 import matplotlib.pyplot as plt
 
-datafile="fort.21"
-factor=32*32*0.5
+datafile="fort.9"
 figfile="n_avg.png"
 reportfile="res.fit"
 
@@ -14,12 +13,12 @@ with open(datafile) as inf:
   for line in inf:
     parts = line.split()
     xdata.append(float(parts[0]))
-    ydata.append(float(parts[2])/factor)
+    ydata.append(float(parts[2]))
 xdata=np.array(xdata)
 ydata=np.array(ydata)
 
 # initial guess
-init_a = np.array([2000,250,1000,0.01,3,75,1400])
+init_a = np.array([2200,250,880,0.013,2.9,70,1390])
 
 # fitting function
 def f(x,a0,a1,a2,a3,a4,a5,a6):
