@@ -58,11 +58,11 @@ module advance_timestep_inertial_module
 contains
 
   subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                              gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                              Epot_mass_fluxdiv, &
-                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              dx,dt,time,the_bc_tower,istep, &
-                              grad_Epot_old,grad_Epot_new,charge_old,charge_new,Epot)
+                                       gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                       Epot_mass_fluxdiv, &
+                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                       dx,dt,time,the_bc_tower,istep, &
+                                       grad_Epot_old,grad_Epot_new,charge_old,charge_new,Epot)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -259,7 +259,9 @@ contains
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute total charge
-    call dot_with_z(mla,rho_new,charge_new)
+    if (use_charged_fluid) then
+       call dot_with_z(mla,rho_new,charge_new)
+    end if
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Calculate Corrector Diffusive and Stochastic Fluxes
@@ -669,7 +671,9 @@ contains
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute total charge
-    call dot_with_z(mla,rho_new,charge_new)
+    if (use_charged_fluid) then
+       call dot_with_z(mla,rho_new,charge_new)
+    end if
 
     ! compute (eta,kappa)^{n+1}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
