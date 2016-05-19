@@ -87,12 +87,12 @@
   nspecies = 3 ! In the order (U,V,W)
   nreactions = 7
 
-  integer_populations = T        ! Initialize to integer populations
+  integer_populations = F        ! Initialize to integer populations
   cross_section = 1.d0           ! Thickness of domain in 2D (dV scaling factor)
 
   ! Control of algorithm
   !----------------------
-  temporal_integrator = 2        ! 0=D + R (first-order splitting)
+  temporal_integrator = -4       ! 0=D + R (first-order splitting)
                                  ! 1=(1/2)R + D + (1/2)R (Strang option 1)
                                  ! 2=(1/2)D + R + (1/2)D (Strang option 2)
                                  ! -1=unsplitting forward Euler

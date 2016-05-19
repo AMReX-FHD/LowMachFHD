@@ -153,7 +153,7 @@ contains
                             diffx(i+1,comp)*dt/dx**2/)
 
           if(sum(probabilities)>1.0_dp_t) &
-             call bl_error("Explicit CLF stability limit violated for multinomial diffusion")
+             call bl_error("Explicit CFL stability limit violated for multinomial diffusion")
           call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                   N=max(0, nint(n_new(i,comp)*dv)), p=probabilities)
 
@@ -208,7 +208,7 @@ contains
                                
              !write(*,*) "species=", comp, " probability=", sum(probabilities), "D=", diffx(i  ,j,comp), " dt=", dt, " dx=", dx(1)
              if(sum(probabilities)>1.0_dp_t) &
-                call bl_error("Explicit CLF stability limit violated for multinomial diffusion")
+                call bl_error("Explicit CFL stability limit violated for multinomial diffusion")
              call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                  N=max(0, nint(n_new(i,j,comp)*dv)), p=probabilities)
 
@@ -276,7 +276,7 @@ contains
                             diffz(i,j,k+1,comp)*dt/dx(3)**2/)
              
           if(sum(probabilities)>1.0_dp_t) &
-             call bl_error("Explicit CLF stability limit violated for multinomial diffusion")
+             call bl_error("Explicit CFL stability limit violated for multinomial diffusion")
           call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                               N=max(0, nint(n_new(i,j,k,comp)*dv)), p=probabilities)
 
