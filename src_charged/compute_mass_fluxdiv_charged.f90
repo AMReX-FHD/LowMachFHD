@@ -14,6 +14,7 @@ module compute_mass_fluxdiv_charged_module
   use convert_stag_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: variance_coef_mass
+  use probin_charged_module, only: use_charged_fluid
 
   implicit none
 
@@ -112,7 +113,7 @@ contains
     ! compute chi and zeta/Temp
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar)
     call compute_zeta_by_Temp(mla,molarconc,D_bar,D_therm,Temp,zeta_by_Temp)
-      
+
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,chi,rhoWchi)
 
@@ -127,9 +128,11 @@ contains
         present(charge) .and. &
         present(grad_Epot) .and. &
         present(Epot)) then
-       ! compute electric potential mass fluxes
-       call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                              flux_total,dx,the_bc_tower,charge,grad_Epot,Epot)
+       if (use_charged_fluid) then
+          ! compute electric potential mass fluxes
+          call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
+                                 flux_total,dx,the_bc_tower,charge,grad_Epot,Epot)
+       end if
     end if
 
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."

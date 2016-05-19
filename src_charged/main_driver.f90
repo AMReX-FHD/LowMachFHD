@@ -409,6 +409,23 @@ subroutine main_driver()
   ! Initialize values
   !=====================================================================
 
+  ! set these to zero - if use_charge_fluid=F they will stay zero
+  do n=1,nlevs
+     call multifab_setval(charge_old(n),0.d0,all=.true.)
+     call multifab_setval(charge_new(n),0.d0,all=.true.)
+     do i=1,dm
+        call multifab_setval(grad_Epot_old(n,i),0.d0,all=.true.)
+        call multifab_setval(grad_Epot_new(n,i),0.d0,all=.true.)
+     end do
+     call multifab_setval(Epot(n),0.d0,all=.true.)
+     call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
+  end do
+
+  ! compute total charge
+  if (use_charged_fluid) then
+     call dot_with_z(mla,rho_old,charge_old)
+  end if
+
   ! initialize Temp
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
   if (dm .eq. 2) then
