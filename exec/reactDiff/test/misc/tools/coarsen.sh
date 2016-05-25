@@ -22,9 +22,6 @@ cd ..
 
 for pf in $PLOTFILES
 do
-  echo "$EXEC --coarsen $FACTOR --infile $RUNNAME/$pf --outfile $RUNNAME2/${pf}"
-  $EXEC --coarsen $FACTOR --infile $RUNNAME/$pf --outfile $RUNNAME2/${pf}
+  echo "$EXEC --coarsen $FACTOR --infile $RUNNAME/$pf --outfile $RUNNAME2/$pf"
+  $EXEC --coarsen $FACTOR --infile $RUNNAME/$pf --outfile $RUNNAME2/$pf
 done
-
-cd ..
-
