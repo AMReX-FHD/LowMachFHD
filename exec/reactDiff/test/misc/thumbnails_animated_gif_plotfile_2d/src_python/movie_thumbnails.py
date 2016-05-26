@@ -177,6 +177,10 @@ for iTimestep in range(nTimestep):
   visit.SetSaveWindowAttributes(sa)
   visit.SaveWindow()
 
+  # decrease frequency if compute engine error (memory issue) occurs
+  if (iTimestep%5==0):
+    visit.CloseComputeEngine()
+
 #############
 # terminate #
 #############
