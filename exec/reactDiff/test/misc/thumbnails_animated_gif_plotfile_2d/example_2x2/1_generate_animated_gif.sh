@@ -29,7 +29,8 @@ mkdir ${OUTPNG_DIR}
 if [ "$JOB" = ONLY_FIRST_FRAME ]
 then
   visit -nowin -cli -s $SCRIPT $THUMBNAILS_INFO ${OUTPNG_FILENAME} $JOB 
-  display ${OUTPNG_FILENAME}0000.png &
+  convert ${OUTPNG_FILENAME}0000.png ${OUTGIF_FILENAME}
+  eog ${OUTGIF_FILENAME} &
 fi
 
 # for the second option, generate png files and convert them into a gif file.
@@ -38,5 +39,5 @@ if [ "$JOB" = ALL_FRAMES ]
 then
   visit -nowin -cli -s $SCRIPT $THUMBNAILS_INFO ${OUTPNG_FILENAME} $JOB 
   convert -delay $DELAY ${OUTPNG_FILENAME}*.png ${OUTGIF_FILENAME}
-  animate ${OUTGIF_FILENAME} &
+  eog ${OUTGIF_FILENAME} &
 fi
