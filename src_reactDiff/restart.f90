@@ -16,24 +16,23 @@ module restart_module
 
 contains
 
-  subroutine initialize_from_restart(mla,time,dt,n_old,pmask)
+  subroutine initialize_from_restart(mla,time,dt,n_old,pmask,ng_s)
  
      type(ml_layout),intent(  out) :: mla
      real(dp_t)    , intent(  out) :: time,dt
      type(multifab), intent(inout) :: n_old(:)
      logical       , intent(in   ) :: pmask(:)
+     integer       , intent(in   ) :: ng_s
 
      type(ml_boxarray)         :: mba
      type(multifab), pointer   :: chkdata(:)
      type(layout)              :: la
 
-     integer :: n,nlevs,ng_s
+     integer :: n,nlevs
 
      type(bl_prof_timer), save :: bpt
 
      call build(bpt,"initialize_from_restart")
-
-     ng_s = 2 
 
      call fill_restart_data(mba,chkdata,time,dt)
 
