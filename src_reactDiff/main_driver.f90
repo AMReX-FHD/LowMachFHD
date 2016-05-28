@@ -14,6 +14,7 @@ subroutine main_driver()
    use restart_module
    use checkpoint_module
    use ParallelRNGs 
+   use multifab_physbc_module
    use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                    plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
@@ -100,7 +101,7 @@ subroutine main_driver()
      ! build the ml_layout
      ! read in time and dt from checkpoint
      ! build and fill n_old
-     call initialize_from_restart(mla,time,dt,n_old,pmask)
+     call initialize_from_restart(mla,time,dt,n_old,pmask,ng_s)
 
    else
 
@@ -210,7 +211,16 @@ subroutine main_driver()
    ! Initialize values
    !=====================================================================
 
-   if (restart .lt. 0) then
+   if (restart .ge. 0) then
+
+      ! fill ghost cells
+      do n=1,nlevs
+         call multifab_fill_boundary(n_old(n))
+         call multifab_physbc(n_old(n),1,scal_bc_comp,nspecies, &
+                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+      end do
+
+   else
 
       if (model_file_init == 0) then
          ! initialize with a subroutine
