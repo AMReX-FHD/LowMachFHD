@@ -179,18 +179,14 @@ contains
       real(kind=dp_t) :: tmp,tmp1,tmp2
   
       select case(avg_type)
-      case(1) ! Arithmetic
+      case(1) ! Arithmetic with a C0-smoothed Heaviside
          if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
             av=0.d0
          else
-            tmp=dv*min(value1,value2)
-            if (tmp<1.5d0) then              
-               tmp=1.d0/(1.d0+exp(-12.d0*(tmp-0.5d0)))  ! smooth Heaviside function
-               av=tmp*(value1+value2)/2.d0
-            else
-               av=(value1+value2)/2.d0
-            end if
-         end if 
+            tmp1=min(dv*value1,1.d0)
+            tmp2=min(dv*value2,1.d0)
+            av=(value1+value2)/2.d0*tmp1*tmp2
+         end if
       case(2) ! Geometric
          av=sqrt(max(value1,0.d0)*max(value2,0.d0))
       case(3) ! Harmonic
@@ -202,21 +198,13 @@ contains
          else
             av=2.d0 / (1.d0/value1 + 1.d0/value2)
          end if
-      case(4) ! Arithmetic with Heaviside
+      case(10) ! Arithmetic with (discontinuous) Heaviside
          if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
             av=0.d0
          else
             av=(value1+value2)/2.d0
          end if
-      case(5) ! Arithmetic with C0-smoothed Heaviside
-         if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-            av=0.d0
-         else
-            tmp1=min(dv*value1,1.d0)
-            tmp2=min(dv*value2,1.d0)
-            av=(value1+value2)/2.d0*tmp1*tmp2
-         end if
-      case(6) ! Arithmetic with C1-smoothed Heaviside
+      case(11) ! Arithmetic with C1-smoothed Heaviside
          if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
             av=0.d0
          else
@@ -234,7 +222,7 @@ contains
             end if
             av=(value1+value2)/2.d0*tmp1*tmp2
          endif
-      case(7) ! Arithmetic with C2-smoothed Heaviside
+      case(12) ! Arithmetic with C2-smoothed Heaviside
          if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
             av=0.d0
          else

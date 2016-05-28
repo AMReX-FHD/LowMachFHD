@@ -119,10 +119,8 @@
                                  ! If 1 do tau leaping (Poisson increments),
                                  ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
   inhomogeneous_bc_fix = F       ! use the Einkemmer boundary condition fix (split schemes only)
-  avg_type = 5                   ! how to compute n on faces for stochastic weighting
+  avg_type = 1                   ! how to compute n on faces for stochastic weighting
                                  ! 1=arithmetic, 2=geometric, 3=harmonic
-                                 ! 4=arithmetic/discont Heaviside
-                                 ! 5=arithmetic/C0-smoothed Heaviside
 
   ! Initial and boundary conditions
   !----------------------
