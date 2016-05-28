@@ -6,30 +6,31 @@
   dim_in = 3                           ! 3D 
   prob_lo(1:3) = 0.d0 0.d0 0.d0        ! physical lo coordinate
   prob_hi(1:3) = 128.d0 128.d0 128.d0  ! physical hi coordinate
-  n_cells(1:3) = 128 128 128           ! number of cells in domain
-  max_grid_size(1:3) = 64 64 64        ! max number of cells in a box
+  n_cells(1:3) = 64 64 64              ! number of cells in domain
+  max_grid_size(1:3) = 32 32 32        ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 0.025                     ! time step (if positive, fixed)
+  fixed_dt = 0.25d0                    ! time step (if positive, fixed)
   cfl = 0.5d0                          ! max diffusive cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 5000                      ! maximum number of time steps
-  plot_int = 10                       ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = -1000                      ! Interval for writing a checkpoint
+  max_step = 500                       ! maximum number of time steps
+  plot_int = 40                        ! Interval for writing a plotfile (for visit/amrvis)
+  chk_int = 0                          ! Interval for writing a checkpoint
   restart = -1                         ! checkpoint restart number
-  print_int = 10                      ! how often to output statistics
+  print_int = 4                        ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 1.0             ! global scaling epsilon for stochastic mass forcing
 
   ! Initial conditions
   !----------------------
-  smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
-                            ! (if negative, total mass fluctuation is set to zero)
+  perturb_width = 0.d0                 ! scale factor for perturbed part in initial profile
+  smoothing_width = 1.d0               ! scale factor for smoothing initial profile
+  initial_variance = 1.d0              ! multiplicative factor for initial fluctuations
+                                       ! (if negative, total mass fluctuation is set to zero)
 
   ! Algorithm control / selection
   !----------------------
@@ -59,7 +60,7 @@
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = 2         ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = 2       ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
@@ -130,10 +131,6 @@
   !n_init_in(1,1:2) = 2.16245, 1.35018 ! + stable state (but unstable spatially)
   !n_init_in(1,1:2) = 0.337546, 8.64982 ! - unstable state
   
-  ! For stripe initial condition with periodic BCs
-  !n_init_in(1,1:2) = 2.16245, 1.35018 ! + stable state (but unstable spatially)               
-  !n_init_in(2,1:2) = 0, 10 ! 0 stable state
-
   integer_populations = F
 
   ! Diffusion:

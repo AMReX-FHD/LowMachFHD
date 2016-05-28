@@ -1,42 +1,36 @@
-! This test is the simplified version of Baras-Pearson-Mansour (BPM) model
-! This specific input file gives a bimodal distribution in a well-mixed (single-cell) system
-
-! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
-! be careful and check values are read correctly (e.g., c_bc)
-
 &probin_common
  
   ! Problem specification
   !----------------------
-  prob_type = 0 ! uniform for walls
-  !prob_type = 4 ! stripe for periodic
-  dim_in = 2                       ! 2D or 3D (here we do a single cell) 
-  prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 128.0d0 128.0d0       ! physical hi coordinate
+  prob_type = 0                        ! uniform for walls
+  dim_in = 2                           ! 2D
+  prob_lo(1:2) = 0.d0 0.d0             ! physical lo coordinate
+  prob_hi(1:2) = 256.d0 256.d0         ! physical hi coordinate
   n_cells(1:2) = 128 128               ! number of cells in domain
-  max_grid_size(1:2) = 1024 1024       ! max number of cells in a box
+  max_grid_size(1:2) = 64 64           ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 0.025                 ! time step (if positive, fixed)
-  cfl = 0.5d0                      ! max diffusive cfl number (used if fixed_dt<0) to determine time step
+  fixed_dt = 0.25d0                    ! time step (if positive, fixed)
+  cfl = 0.5d0                          ! max diffusive cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 5000                  ! maximum number of time steps
-  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = -1000                   ! Interval for writing a checkpoint
-  restart = -1                     ! checkpoint restart number
-  print_int = 100                   ! how often to output statistics
+  max_step = 1000                      ! maximum number of time steps
+  plot_int = 40                        ! Interval for writing a plotfile (for visit/amrvis)
+  chk_int = 0                          ! Interval for writing a checkpoint
+  restart = -1                         ! checkpoint restart number
+  print_int = 40                       ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 1.d0            ! global scaling epsilon for stochastic mass forcing
 
   ! Initial conditions
   !----------------------
-  smoothing_width = 1.d0   ! scale factor for smoothing initial profile
-  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
-                            ! (if negative, total mass fluctuation is set to zero)
+  perturb_width = 0.d0                 ! scale factor for perturbed part in initial profile
+  smoothing_width = 1.d0               ! scale factor for smoothing initial profile
+  initial_variance = 1.d0              ! multiplicative factor for initial fluctuations
+                                       ! (if negative, total mass fluctuation is set to zero)
 
   ! Algorithm control / selection
   !----------------------
@@ -58,9 +52,6 @@
   ! Not periodic:
   bc_lo(1:2) = 101 -1
   bc_hi(1:2) = 101 -1
-  ! Periodic:
-  !bc_lo(1:2) = -1 -1
-  !bc_hi(1:2) = -1 -1
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
@@ -77,26 +68,28 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 1024  ! parallelization parameters
-  stats_int = 0                 ! Project grid for analysis
-                                 ! If positive, how often to compute mean and 
-                                 ! standard deviation over reduced dimensions
+  stats_int = 0                    ! Project grid for analysis
+                                   ! If positive, how often to compute mean and 
+                                   ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
   n_steps_skip = 0        ! How many steps to skip
   analyze_conserved = T   ! T = analyze n, F=analyze mole fractions x
-  histogram_unit = -10 ! Write snapshots of n in all cells to fort.10 for histogramming them
+  histogram_unit = -10    ! Write snapshots of n in all cells to fort.10 for histogramming them
 
 /
 
 ! reaction/diffusion number fraction code
 &probin_reactdiff
 
-  temporal_integrator = 2 ! 0=D + R
-                          ! 1=(1/2)R + D + (1/2)R
-                          ! 2=(1/2)D + R + (1/2)D
-                          ! -1=unsplitting forward Euler
-                          ! -2=unsplitting explicit midpoint
+  temporal_integrator = -4  ! 0=D + R
+                            ! 1=(1/2)R + D + (1/2)R
+                            ! 2=(1/2)D + R + (1/2)D
+                            ! -1=unsplitting forward Euler
+                            ! -2=unsplitting explicit midpoint
+                            ! -3=unsplit multinomial diffusion
+                            ! -4=unsplit implicit midpoint
                           
-  inhomogeneous_bc_fix = T ! Apply the BC fix to correct splitting errors at boundaries
+  inhomogeneous_bc_fix = F  ! Apply the BC fix to correct splitting errors at boundaries
 
   diffusion_type = 1 ! Only used for splitting schemes
                      ! 0=explicit trapezoidal predictor/corrector
@@ -104,7 +97,7 @@
                      ! 2=explicit midpoint
                      ! 3=multinomial diffusion
 
-  midpoint_stoch_flux_type = 2   ! for midpoint diffusion schemes, (split and unsplit)
+  midpoint_stoch_flux_type = 3   ! for midpoint diffusion schemes, (split and unsplit)
                                  ! corrector formulation of noise
                                  ! K(nold) * W1 + K(nold)         * W2
                                  ! K(nold) * W1 + K(npred)        * W2
@@ -120,8 +113,10 @@
                       ! If 1 do tau leaping (Poisson increments),
                       ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
 
-  avg_type = 3 ! compute n on faces for stochastic weighting
+  avg_type = 5 ! compute n on faces for stochastic weighting
                ! 1=arithmetic, 2=geometric, 3=harmonic
+               ! 4=arithmetic/discont Heaviside
+               ! 5=arithmetic/C0-smoothed Heaviside
 
   ! Setup
   !------------------------
@@ -136,11 +131,7 @@
   !n_init_in(1,1:2) = 2.16245, 1.35018 ! + stable state (but unstable spatially)
   !n_init_in(1,1:2) = 0.337546, 8.64982 ! - unstable state
   
-  ! For stripe initial condition with periodic BCs
-  !n_init_in(1,1:2) = 2.16245, 1.35018 ! + stable state (but unstable spatially)               
-  !n_init_in(2,1:2) = 0, 10 ! 0 stable state
-
-  integer_populations = T
+  integer_populations = F
 
   ! Diffusion:
   ! -----------------
@@ -149,9 +140,8 @@
   D_Fick(1:3) = 1.0 10.0
 
   ! n_i boundary conditions (dir,lohi,species)
-  n_bc(1,1,1:2) = 2.16245, 1.35018 ! Lower x fixed at + state
-  n_bc(1,2,1:2) = 0, 10 ! Upper x at 0 state
-  !n_bc(1,2,1:2) = 2.16245, 1.35018 ! Lower x fixed at + state
+  n_bc(1,1,1:2) = 2.16245, 1.35018       ! Lower x fixed at + state
+  n_bc(1,2,1:2) = 0, 10                  ! Upper x at 0 state
 
   ! implicit diffusion solve verbosity, bottom solve verbosity
   mg_verbose = 0
