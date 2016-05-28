@@ -2,6 +2,8 @@ module chemical_rates_module
 
   use ml_layout_module
   use BoxLibRNGs
+  use bl_random_module
+  use bl_rng_module
   use compute_reaction_rates_module
   use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, &
                                      use_Poisson_rng, cross_section
@@ -290,8 +292,11 @@ contains
           select case(use_Poisson_rng)           
           case(1)
             ! need a Poisson random number for tau leaping
-            call PoissonRNG(number=tmp, mean=avg_num_reactions(comp))
-            num_reactions(comp) = tmp ! convert to real
+!            call PoissonRNG(number=tmp, mean=avg_num_reactions(comp))
+!            num_reactions(comp) = tmp ! convert to real
+             call bl_rng_change_distribution(rng_poisson_reaction,avg_num_reactions(comp))
+             tmp = bl_rng_get(rng_poisson_reaction)
+             num_reactions(comp) = tmp ! convert to real
           case(0)
             ! need a Gaussian random number for CLE
             call NormalRNG(num_reactions(comp))

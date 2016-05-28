@@ -14,6 +14,7 @@ subroutine main_driver()
    use restart_module
    use checkpoint_module
    use ParallelRNGs 
+   use bl_rng_module
    use multifab_physbc_module
    use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                    plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
@@ -67,6 +68,8 @@ subroutine main_driver()
    
    ! Initialize random numbers *after* the global (root) seed has been set:
    call SeedParallelRNG(seed)
+
+   call rng_init()
 
    ! in this example we fix nlevs to be 1
    ! for adaptive simulations where the grids change, cells at finer
@@ -497,6 +500,8 @@ subroutine main_driver()
          call multifab_destroy(n_steady(n))
       end if
    end do
+
+   call rng_destroy()
 
    call destroy(mla)
    call bc_tower_destroy(the_bc_tower)

@@ -46,6 +46,11 @@ module probin_reactdiff_module
   integer, save :: avg_type = 3                     ! how to compute n on faces for stochastic weighting
                                                     ! 1=arithmetic, 2=geometric, 3=harmonic
   
+  ! Random number seeds for each physical process
+  integer, save :: seed_diffusion = 1
+  integer, save :: seed_reaction = 1
+  integer, save :: seed_init = 1
+
   ! Initial and boundary conditions
   !----------------------
   real(kind=dp_t), save :: n_init_in(2,max_species) = 1.d0 ! Initial values to be used in init_n.f90
@@ -91,6 +96,7 @@ module probin_reactdiff_module
   namelist /probin_reactdiff/ nspecies, nreactions
   namelist /probin_reactdiff/ temporal_integrator, diffusion_type, midpoint_stoch_flux_type
   namelist /probin_reactdiff/ reaction_type, use_Poisson_rng, avg_type
+  namelist /probin_reactdiff/ seed_diffusion, seed_reaction, seed_init
   namelist /probin_reactdiff/ inhomogeneous_bc_fix, n_init_in, n_bc, model_file_init, model_file, integer_populations
   namelist /probin_reactdiff/ D_Fick, diffusion_stencil_order, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
@@ -190,6 +196,21 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) avg_type
+
+       case ('--seed_diffusion')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) seed_diffusion
+
+       case ('--seed_reaction')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) seed_reaction
+
+       case ('--seed_init')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) seed_init
 
        case ('--model_file_init')
           farg = farg + 1

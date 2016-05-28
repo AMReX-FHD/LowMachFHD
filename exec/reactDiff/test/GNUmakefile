@@ -12,6 +12,9 @@ COMP      := gfortran
 CCOMP     := gcc
 MKVERBOSE := t
 
+# need this to compile bl_rng.f90 (module to store random number engines and distributions)
+CXX11 = t
+
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
 VPATH_LOCATIONS += ..
