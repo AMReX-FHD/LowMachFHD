@@ -75,13 +75,11 @@ subroutine main_driver()
       ! Build the random number engine and give initial distributions for the
       ! F_BaseLib/bl_random RNG module
       call rng_init()
+   else
+      ! Initialize random numbers *after* the global (root) seed has been set:
+      ! This is for the RNG module that sits in Hydrogrid
+      call SeedParallelRNG(seed)
    end if
-   
-   ! Initialize random numbers *after* the global (root) seed has been set:
-   ! This is for the RNG module that sits in Hydrogrid
-   ! Once the bl_random implementation is complete, this should be wrapped in
-   ! an if/else statement
-   call SeedParallelRNG(seed)
 
    ! in this example we fix nlevs to be 1
    ! for adaptive simulations where the grids change, cells at finer
@@ -513,7 +511,9 @@ subroutine main_driver()
       end if
    end do
 
-   call rng_destroy()
+   if (use_bl_rng) then
+      call rng_destroy()
+   end if
 
    call destroy(mla)
    call bc_tower_destroy(the_bc_tower)
