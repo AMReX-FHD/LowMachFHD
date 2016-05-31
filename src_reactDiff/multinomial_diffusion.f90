@@ -5,8 +5,10 @@ module multinomial_diffusion_module
   use bc_module
   use multifab_physbc_module
   use BoxLibRNGs
+  use bl_rng_module
+  use bl_random_module
   use probin_common_module, only: n_cells
-  use probin_reactdiff_module, only: nspecies, D_Fick, cross_section
+  use probin_reactdiff_module, only: nspecies, D_Fick, cross_section, use_bl_rng
 
   implicit none
 
@@ -154,8 +156,13 @@ contains
 
           if(sum(probabilities)>1.0_dp_t) &
              call bl_error("Explicit CFL stability limit violated for multinomial diffusion")
-          call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
-                  N=max(0, nint(n_new(i,comp)*dv)), p=probabilities)
+          if (use_bl_rng) then
+             call bl_MultinomialRNG(fluxes, n_faces, &
+                                    max(0, nint(n_new(i,comp)*dv)), probabilities)
+          else
+             call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
+                                 N=max(0, nint(n_new(i,comp)*dv)), p=probabilities)
+          end if
 
           ! lo-x face
           cell_update(i  ,comp) = cell_update(i  ,comp) - fluxes(1)
@@ -209,8 +216,14 @@ contains
              !write(*,*) "species=", comp, " probability=", sum(probabilities), "D=", diffx(i  ,j,comp), " dt=", dt, " dx=", dx(1)
              if(sum(probabilities)>1.0_dp_t) &
                 call bl_error("Explicit CFL stability limit violated for multinomial diffusion")
-             call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
-                                 N=max(0, nint(n_new(i,j,comp)*dv)), p=probabilities)
+
+             if (use_bl_rng) then
+                call bl_MultinomialRNG(fluxes, n_faces, &
+                                       max(0, nint(n_new(i,j,comp)*dv)), probabilities)
+             else
+                call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
+                                    N=max(0, nint(n_new(i,j,comp)*dv)), p=probabilities)
+             end if
 
              ! lo-x face
              cell_update(i  ,j,comp) = cell_update(i  ,j,comp) - fluxes(1)
@@ -277,8 +290,14 @@ contains
              
           if(sum(probabilities)>1.0_dp_t) &
              call bl_error("Explicit CFL stability limit violated for multinomial diffusion")
-          call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
-                              N=max(0, nint(n_new(i,j,k,comp)*dv)), p=probabilities)
+
+          if (use_bl_rng) then
+             call bl_MultinomialRNG(fluxes, n_faces, &
+                                    max(0, nint(n_new(i,j,k,comp)*dv)), probabilities)
+          else
+             call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
+                                 N=max(0, nint(n_new(i,j,k,comp)*dv)), p=probabilities)
+          end if
 
           ! lo-x face
           cell_update(i  ,j,k,comp) = cell_update(i  ,j,k,comp) - fluxes(1)

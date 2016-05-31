@@ -15,7 +15,8 @@ module bl_rng_module
             rng_normal_diffusion, &
             rng_poisson_reaction, &
             rng_normal_reaction, &
-            rng_uniform_real_reaction
+            rng_uniform_real_reaction, &
+            bl_MultinomialRNG
 
   ! diffusion
   type(bl_rng_binomial)    , save :: rng_binomial_diffusion     ! multinomial
@@ -35,8 +36,9 @@ contains
 
     ! diffusion
     if (temporal_integrator .eq. -3 .or. diffusion_type .eq. 3) then
-       ! multinomial diffusion
-
+       ! multinomial diffusion - calls a sequence of binomial random numbers
+       ! (initialize the trials to 1 and probability to 0.5; this will be overridden)
+       call bl_rng_build(rng_binomial_diffusion,seed_diffusion,1,0.5d0)
     else
        ! fluctuating hydro (mean 0, standard deviation 1)
        call bl_rng_build(rng_normal_diffusion,seed_diffusion,0.d0,1.d0)
@@ -64,7 +66,7 @@ contains
     ! diffusion
     if (temporal_integrator .eq. -3 .or. diffusion_type .eq. 3) then
        ! multinomial diffusion
-
+       call bl_rng_destroy(rng_binomial_diffusion)
     else
        ! fluctuating hydro
        call bl_rng_destroy(rng_normal_diffusion)
@@ -86,6 +88,30 @@ contains
 
   end subroutine rng_destroy
 
-  ! an interface for multinomial random number by calling binomial
+  ! This samples from a multinomial distribution
+  ! The last sample is not sampled explicitly since it is just N-sum(samples)
+  subroutine bl_MultinomialRNG(samples, n_samples, N, p)
+
+    integer   , intent(in)  :: n_samples, N
+    integer   , intent(out) :: samples(n_samples)
+    real(dp_t), intent(in)  :: p(n_samples)
+
+    real(dp_t) :: sum_p
+    integer :: sample, sum_n
+
+    if(sum(p)>1.d0) stop "Sum of probabilities must be less than 1"
+
+    sum_p=0
+    sum_n=0
+    do sample=1, n_samples
+
+       call bl_rng_change_distribution(rng_binomial_diffusion, &
+                                       N-sum_n,p(sample)/(1.d0-sum_p))
+       samples(sample) = bl_rng_get(rng_binomial_diffusion)
+       sum_n = sum_n + samples(sample)
+       sum_p = sum_p + p(sample)
+    end do      
+
+ end subroutine
 
 end module bl_rng_module
