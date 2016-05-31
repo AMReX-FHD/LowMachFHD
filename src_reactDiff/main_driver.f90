@@ -17,13 +17,17 @@ subroutine main_driver()
    use bl_rng_module
    use multifab_physbc_module
    use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
-                                   plot_int, chk_int, print_int, seed, bc_lo, bc_hi, restart, &
+                                   plot_int, chk_int, print_int, seed, bc_lo, bc_hi, &
+                                   restart, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    variance_coef_mass, cfl, initial_variance
-   use probin_reactdiff_module, only: nspecies, nreactions, probin_reactdiff_init, D_Fick, cross_section, &
-                                      inhomogeneous_bc_fix, temporal_integrator, n_steps_write_avg, &
-                                      model_file_init, model_file, integer_populations
+   use probin_reactdiff_module, only: nspecies, nreactions, probin_reactdiff_init, D_Fick, &
+                                      cross_section, &
+                                      inhomogeneous_bc_fix, temporal_integrator, &
+                                      n_steps_write_avg, &
+                                      model_file_init, model_file, integer_populations, &
+                                      use_bl_rng
 
    use fabio_module
 
@@ -32,7 +36,8 @@ subroutine main_driver()
    ! quantities will be allocated with dm components
    integer, allocatable :: lo(:), hi(:)
 
-   ! nlevs is always 1 and so it is redundant but to be consistent with BoxLib we need to carry it around    
+   ! nlevs is always 1 and so it is redundant but to be consistent with BoxLib we need 
+   ! to carry it around.
    ! quantities will be allocated with (nlevs,dm) components
    real(kind=dp_t), allocatable :: dx(:,:)
    real(kind=dp_t)              :: dt,time,runtime1,runtime2,cellvolume
@@ -65,11 +70,18 @@ subroutine main_driver()
 
    call probin_common_init()
    call probin_reactdiff_init() 
+
+   if (use_bl_rng) then
+      ! Build the random number engine and give initial distributions for the
+      ! F_BaseLib/bl_random RNG module
+      call rng_init()
+   end if
    
    ! Initialize random numbers *after* the global (root) seed has been set:
+   ! This is for the RNG module that sits in Hydrogrid
+   ! Once the bl_random implementation is complete, this should be wrapped in
+   ! an if/else statement
    call SeedParallelRNG(seed)
-
-   call rng_init()
 
    ! in this example we fix nlevs to be 1
    ! for adaptive simulations where the grids change, cells at finer

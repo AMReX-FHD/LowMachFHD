@@ -48,8 +48,8 @@ contains
           ! tau-leaping (initialize mean to 1; this will be overridden)
           call bl_rng_build(rng_poisson_reaction,seed_reaction,1.d0)
        else if (use_Poisson_rng .eq. 0) then
-          ! CLE
-
+          ! CLE (mean 0, standard deviation 1)
+          call bl_rng_build(rng_normal_reaction,seed_reaction,0.d0,1.d0)
        end if
     else if (reaction_type .eq. 1) then
        ! SSA

@@ -6,7 +6,7 @@ module chemical_rates_module
   use bl_rng_module
   use compute_reaction_rates_module
   use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, &
-                                     use_Poisson_rng, cross_section
+                                     use_Poisson_rng, cross_section, use_bl_rng
 
   implicit none
 
@@ -239,23 +239,22 @@ contains
     real(kind=dp_t) :: avg_num_reactions    (1:nreactions)
     real(kind=dp_t) :: num_reactions        (1:nreactions)
 
-
     ! obtain average reaction rates
     if (lin_comb_avg_react_rate) then
-      ! calculate linearly combined average reaction rates
-      call compute_reaction_rates(n_cc    (1:nspecies),avg_react_rate       ,dv)
-      call compute_reaction_rates(n_interm(1:nspecies),avg_react_rate_interm,dv)
-      avg_react_rate = lin_comb_coef(1)*avg_react_rate + lin_comb_coef(2)*avg_react_rate_interm
+       ! calculate linearly combined average reaction rates
+       call compute_reaction_rates(n_cc    (1:nspecies),avg_react_rate       ,dv)
+       call compute_reaction_rates(n_interm(1:nspecies),avg_react_rate_interm,dv)
+       avg_react_rate = lin_comb_coef(1)*avg_react_rate + lin_comb_coef(2)*avg_react_rate_interm
 
-      ! check whether the resulting rates are negative - if so, we set them zero below
-      do reaction=1,nreactions 
-        if (avg_react_rate(reaction) .lt. 0.d0) then 
-          n_rejections = n_rejections+1
-        end if
-      end do
+       ! check whether the resulting rates are negative - if so, we set them zero below
+       do reaction=1,nreactions 
+          if (avg_react_rate(reaction) .lt. 0.d0) then 
+             n_rejections = n_rejections+1
+          end if
+       end do
     else
-      ! calculate the average reaction rates from n_cc
-      call compute_reaction_rates(n_cc(1:nspecies),avg_react_rate,dv)
+       ! calculate the average reaction rates from n_cc
+       call compute_reaction_rates(n_cc(1:nspecies),avg_react_rate,dv)
     end if
 
     ! convert each average reaction rates into the average number of reactions
@@ -272,46 +271,52 @@ contains
 
       ! convert this into chemical rates  
       chem_rate(1:nspecies) = chem_rate(1:nspecies) + num_reactions(reaction)/dv/dt *                  &
-         (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
+           (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
     end do
 
   contains
 
-      ! compute num_reactions from avg_num_reactions
-      ! note that avg_num_reactions(:) and num_reactions(:) are defined in chemical_rates_cell
-      subroutine sample_num_reactions(comp) ! auxilliary routine (should be inlined by compiler)
+    ! compute num_reactions from avg_num_reactions
+    ! note that avg_num_reactions(:) and num_reactions(:) are defined in chemical_rates_cell
+    subroutine sample_num_reactions(comp) ! auxilliary routine (should be inlined by compiler)
 
-        integer, intent(in) :: comp
+      integer, intent(in) :: comp
 
-        ! local
-        integer :: tmp
+      ! local
+      integer :: tmp
 
-        ! for a given reaction, compute how many reactions will happen
-        !  by sampling a Poisson (tau leaping) or Gaussian (CLE) random number
-        if (avg_num_reactions(comp) .gt. 0.d0) then
-          select case(use_Poisson_rng)           
-          case(1)
+      ! for a given reaction, compute how many reactions will happen
+      !  by sampling a Poisson (tau leaping) or Gaussian (CLE) random number
+      if (avg_num_reactions(comp) .gt. 0.d0) then
+         select case(use_Poisson_rng)           
+         case(1)
             ! need a Poisson random number for tau leaping
-            call PoissonRNG(number=tmp, mean=avg_num_reactions(comp))
+            if (use_bl_rng) then
+               call bl_rng_change_distribution(rng_poisson_reaction,avg_num_reactions(comp))
+               tmp = bl_rng_get(rng_poisson_reaction)
+            else
+               call PoissonRNG(number=tmp, mean=avg_num_reactions(comp))
+            end if
             num_reactions(comp) = tmp ! convert to real
-!             call bl_rng_change_distribution(rng_poisson_reaction,avg_num_reactions(comp))
-!             tmp = bl_rng_get(rng_poisson_reaction)
-!             num_reactions(comp) = tmp ! convert to real
-          case(0)
+         case(0)
             ! need a Gaussian random number for CLE
-            call NormalRNG(num_reactions(comp))
+            if (use_bl_rng) then
+               num_reactions(comp) = bl_rng_get(rng_normal_reaction)
+            else
+               call NormalRNG(num_reactions(comp))
+            end if
             num_reactions(comp) = avg_num_reactions(comp) + sqrt(avg_num_reactions(comp))*num_reactions(comp)
-          case(-1)
+         case(-1)
             ! do deterministic chemistry   
             num_reactions(comp) = avg_num_reactions(comp)
-          case default    
+         case default    
             call bl_error("chemical_rates: invalid use_Poisson_rng")
-          end select
-        else
-          num_reactions(comp) = 0
-        end if
-
-      end subroutine sample_num_reactions
+         end select
+      else
+         num_reactions(comp) = 0
+      end if
+      
+    end subroutine sample_num_reactions
 
   end subroutine chemical_rates_cell
 
