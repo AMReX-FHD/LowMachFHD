@@ -38,8 +38,8 @@ contains
        ! multinomial diffusion
 
     else
-       ! fluctuating hydro
-
+       ! fluctuating hydro (mean 0, standard deviation 1)
+       call bl_rng_build(rng_normal_diffusion,seed_diffusion,0.d0,1.d0)
     end if
 
     ! reactions
@@ -67,7 +67,7 @@ contains
 
     else
        ! fluctuating hydro
-
+       call bl_rng_destroy(rng_normal_diffusion)
     end if
 
     ! reactions
@@ -77,13 +77,15 @@ contains
           call bl_rng_destroy(rng_poisson_reaction)
        else if (use_Poisson_rng .eq. 0) then
           ! CLE
-
+          call bl_rng_destroy(rng_normal_reaction)
        end if
     else if (reaction_type .eq. 1) then
        ! SSA
-
+       call bl_rng_destroy(rng_uniform_real_reaction)
     end if
 
   end subroutine rng_destroy
+
+  ! an interface for multinomial random number by calling binomial
 
 end module bl_rng_module
