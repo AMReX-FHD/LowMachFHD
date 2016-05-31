@@ -2,8 +2,8 @@ module chemical_rates_module
 
   use ml_layout_module
   use BoxLibRNGs
-  use bl_random_module
   use bl_rng_module
+  use bl_random_module
   use compute_reaction_rates_module
   use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, &
                                      use_Poisson_rng, cross_section, use_bl_rng

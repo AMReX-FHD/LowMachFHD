@@ -5,8 +5,11 @@ module advance_reaction_SSA_module
   use define_bc_module
   use multifab_physbc_module
   use BoxLibRNGs
+  use bl_rng_module
+  use bl_random_module
   use compute_reaction_rates_module
-  use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, cross_section
+  use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, &
+                                     cross_section, use_bl_rng
 
   implicit none
 
@@ -179,7 +182,11 @@ contains
        rTotal = sum(avg_react_rate(1:nreactions))
 
        ! generate pseudorandom number in interval [0,1).
-       call UniformRNG(rr)
+       if (use_bl_rng) then
+          rr = bl_rng_get(rng_uniform_real_reaction)
+       else
+          call UniformRNG(rr)
+       end if
        ! tau is how long until the next reaction occurs
        tau = -log(1-rr)/rTotal
        t_local = t_local + tau;
@@ -187,7 +194,11 @@ contains
        if (t_local .gt. dt) exit EventLoop
 
        ! Select the next reaction according to relative rates
-       call UniformRNG(rr)
+       if (use_bl_rng) then
+          rr = bl_rng_get(rng_uniform_real_reaction)
+       else
+          call UniformRNG(rr)
+       end if
        rr = rr*rTotal
        rSum = 0
        FindReaction: do reaction=1,nreactions

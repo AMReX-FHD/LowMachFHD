@@ -51,9 +51,9 @@ contains
           ! CLE (mean 0, standard deviation 1)
           call bl_rng_build(rng_normal_reaction,seed_reaction,0.d0,1.d0)
        end if
-    else if (reaction_type .eq. 1) then
-       ! SSA
-
+    else if (reaction_type .eq. 2) then
+       ! SSA (in interval [0,1))
+       call bl_rng_build(rng_uniform_real_reaction,seed_reaction,0.d0,1.d0)
     end if
 
 
