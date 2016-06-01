@@ -13,7 +13,7 @@ with open(datafile) as inf:
   for line in inf:
     parts = line.split()
     xdata.append(float(parts[0]))
-    ydata.append(float(parts[2]))
+    ydata.append(float(parts[1]))
 xdata=np.array(xdata)
 ydata=np.array(ydata)
 
