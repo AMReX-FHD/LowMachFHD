@@ -1,20 +1,22 @@
 #!/bin/bash -l
 
 #SBATCH -p debug
-#SBATCH -N 8 
+#SBATCH -N 1 
 #SBATCH -t 00:30:00 
-#SBATCH -J TEST
+#SBATCH -J AB2D 
 
 # for nersc/cori (queue: debug/regular)
 # sbatch (script)
 # squeue -u (id)
 # scancel (job id)
 
-RUNNAME=TEST
+RUNNAME=RUN_stripe_2d
+#RUNNAME=RUN_bubble_2d
 RUNNO=$1
-INPUTSFILE=inputs_Lemarchand_AB_bubble_3d
+INPUTSFILE=inputs_Lemarchand_AB_stripe_2d
+#INPUTSFILE=inputs_Lemarchand_AB_bubble_2d
 
-EXEC=../main.Linux.Intel.mpi.exe
+EXEC=../../main.Linux.Intel.mpi.exe
 
 if [ "$RUNNO" != "" ]
 then
@@ -29,9 +31,8 @@ else
 fi
 
 cp $INPUTSFILE $RUNNAME
-cp sbatch.sh $RUNNAME
 
 echo "cd $RUNNAME"
 cd $RUNNAME
-echo "srun -n 512 -e run_err -o scr_out ../$EXEC ../$INPUTSFILE"
-srun -n 512 -e run_err -o scr_out ../$EXEC ../$INPUTSFILE  
+echo "srun -n 64 -e run_err -o scr_out ../$EXEC ../$INPUTSFILE"
+srun -n 64 -e run_err -o scr_out ../$EXEC ../$INPUTSFILE  
