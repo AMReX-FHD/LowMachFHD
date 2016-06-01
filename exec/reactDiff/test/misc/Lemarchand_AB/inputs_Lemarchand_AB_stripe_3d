@@ -5,8 +5,8 @@
   prob_type = 0                        ! uniform 
   dim_in = 3                           ! 3D 
   prob_lo(1:3) = 0.d0 0.d0 0.d0        ! physical lo coordinate
-  prob_hi(1:3) = 128.d0 128.d0 128.d0  ! physical hi coordinate
-  n_cells(1:3) = 64 64 64              ! number of cells in domain
+  prob_hi(1:3) = 512.d0 512.d0 512.d0  ! physical hi coordinate
+  n_cells(1:3) = 256 256 256           ! number of cells in domain
   max_grid_size(1:3) = 32 32 32        ! max number of cells in a box
 
   ! Time-step control
@@ -16,8 +16,8 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 500                       ! maximum number of time steps
-  plot_int = 40                        ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 2000                      ! maximum number of time steps
+  plot_int = 8                         ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                          ! Interval for writing a checkpoint
   restart = -1                         ! checkpoint restart number
   print_int = 4                        ! how often to output statistics
@@ -121,13 +121,13 @@
   nspecies = 2 ! In the order (A,B)
   nreactions = 4
     
-  cross_section = 1000 ! Thickness of domain in 2D (dV scaling factor)
+  cross_section = 1000                      ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition (start near chemical equilibrium):
   ! For uniform initial condition:
-  n_init_in(1,1:2) = 0, 10 ! 0 stable state
-  !n_init_in(1,1:2) = 2.16245, 1.35018 ! + stable state (but unstable spatially)
-  !n_init_in(1,1:2) = 0.337546, 8.64982 ! - unstable state
+  n_init_in(1,1:2) = 0, 10                  ! 0 stable state
+  !n_init_in(1,1:2) = 2.16245, 1.35018      ! + stable state (but unstable spatially)
+  !n_init_in(1,1:2) = 0.337546, 8.64982     ! - unstable state
   
   integer_populations = F
 
@@ -138,9 +138,9 @@
   D_Fick(1:3) = 1.0 10.0
 
   ! n_i boundary conditions (dir,lohi,species)
-  n_bc(1,1,1:2) = 2.16245, 1.35018 ! Lower x fixed at + state
-  n_bc(1,2,1:2) = 0, 10 ! Upper x at 0 state
-  !n_bc(1,2,1:2) = 2.16245, 1.35018 ! Lower x fixed at + state
+  n_bc(1,1,1:2) = 2.16245, 1.35018     ! Lower x fixed at + state
+  n_bc(1,2,1:2) = 0, 10                ! Upper x at 0 state
+  !n_bc(1,2,1:2) = 2.16245, 1.35018    ! Lower x fixed at + state
 
   ! implicit diffusion solve verbosity, bottom solve verbosity
   mg_verbose = 0
@@ -153,10 +153,9 @@
   ! Chemical reactions:
   ! ------------------  
   rate_const(1:4) = 4, 1.37, 1, 10 
-  rate_multiplier = 0.1 ! Change all rates by a constant multiplier
-  include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
+  rate_multiplier = 0.1                 ! Change all rates by a constant multiplier
+  include_discrete_LMA_correction = T   ! Compute rates using classical LMA or molecular  
   
-  ! BPM model is:
   !     (1) A -> 0
   !     (2) 2A + B --> 3A
   !     (3) B --> 0

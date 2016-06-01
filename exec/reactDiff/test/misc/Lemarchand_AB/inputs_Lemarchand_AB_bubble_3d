@@ -23,7 +23,7 @@
   print_int = 4                        ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 1.0             ! global scaling epsilon for stochastic mass forcing
 
   ! Initial conditions
   !----------------------
@@ -121,7 +121,7 @@
   nspecies = 2 ! In the order (A,B)
   nreactions = 4
     
-  cross_section = 1000 ! Thickness of domain in 2D (dV scaling factor)
+  cross_section = 1000                      ! Thickness of domain in 2D (dV scaling factor)
                  
   ! Initial condition (start near chemical equilibrium):
   !n_init_in(1,1:2) = 0, 10                 ! 0 stable state
@@ -140,9 +140,9 @@
   D_Fick(1:3) = 1.0 10.0
 
   ! n_i boundary conditions (dir,lohi,species)
-  !n_bc(1,1,1:2) = 2.16245, 1.35018 ! Lower x fixed at + state
-  !n_bc(1,2,1:2) = 0, 10 ! Upper x at 0 state
-  !n_bc(1,2,1:2) = 2.16245, 1.35018 ! Lower x fixed at + state
+  !n_bc(1,1,1:2) = 2.16245, 1.35018    ! Lower x fixed at + state
+  !n_bc(1,2,1:2) = 0, 10               ! Upper x at 0 state
+  !n_bc(1,2,1:2) = 2.16245, 1.35018    ! Lower x fixed at + state
 
   ! implicit diffusion solve verbosity, bottom solve verbosity
   mg_verbose = 0

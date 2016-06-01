@@ -7,7 +7,7 @@
   prob_lo(1:2) = 0.d0 0.d0             ! physical lo coordinate
   prob_hi(1:2) = 512.d0 512.d0         ! physical hi coordinate
   n_cells(1:2) = 256 256               ! number of cells in domain
-  max_grid_size(1:2) = 64 64           ! max number of cells in a box
+  max_grid_size(1:2) = 32 32           ! max number of cells in a box
 
   ! Time-step control
   !----------------------
@@ -17,7 +17,7 @@
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
   max_step = 1000                      ! maximum number of time steps
-  plot_int = 4                         ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 10                         ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                          ! Interval for writing a checkpoint
   restart = -1                         ! checkpoint restart number
   print_int = 40                       ! how often to output statistics
@@ -60,7 +60,7 @@
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = 2       ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = 2         ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
@@ -81,15 +81,15 @@
 ! reaction/diffusion number fraction code
 &probin_reactdiff
 
-  temporal_integrator = -4 ! 0=D + R
-                           ! 1=(1/2)R + D + (1/2)R
-                           ! 2=(1/2)D + R + (1/2)D
-                           ! -1=unsplitting forward Euler
-                           ! -2=unsplitting explicit midpoint
-                           ! -3=unsplit multinomial diffusion
-                           ! -4=unsplit implicit midpoint
+  temporal_integrator = -4  ! 0=D + R
+                            ! 1=(1/2)R + D + (1/2)R
+                            ! 2=(1/2)D + R + (1/2)D
+                            ! -1=unsplitting forward Euler
+                            ! -2=unsplitting explicit midpoint
+                            ! -3=unsplit multinomial diffusion
+                            ! -4=unsplit implicit midpoint
                           
-  inhomogeneous_bc_fix = F ! Apply the BC fix to correct splitting errors at boundaries
+  inhomogeneous_bc_fix = F  ! Apply the BC fix to correct splitting errors at boundaries
 
   diffusion_type = 1 ! Only used for splitting schemes
                      ! 0=explicit trapezoidal predictor/corrector
