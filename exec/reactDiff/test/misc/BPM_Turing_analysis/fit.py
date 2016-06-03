@@ -41,7 +41,7 @@ err = np.sqrt(sum((ydata-yfit)**2)/len(ydata))
 
 # plot
 plt.plot(xdata,ydata,"r-")
-plt.plot(xdata2,yfit2,"b--")
+plt.plot(xdata2,yfit2,"b-")
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 plt.title(r'Root-Mean-Squared Error $\sqrt{\frac{1}{N}\sum{(y_i-\hat{y}_i)^2}}$ = %.2f' % err)
