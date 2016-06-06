@@ -6,9 +6,11 @@ module checkpoint_module
   use ml_layout_module
   use bl_IO_module
   use fab_module
+  use bl_rng_module
+  use bl_random_module
   use fabio_module, only: fabio_mkdir, fabio_ml_multifab_write_d
   use probin_common_module, only: dim_in
-  use probin_reactdiff_module, only: nspecies
+  use probin_reactdiff_module, only: nspecies, use_bl_rng
 
   implicit none
 
@@ -27,9 +29,10 @@ contains
 
     type(multifab), pointer :: chkdata(:)
 
-    integer :: n,nlevs,dm,i
+    integer :: n,nlevs,dm
 
     character(len=11) :: sd_name
+    character(len=40) :: rand_name
 
     type(bl_prof_timer), save :: bpt
 
@@ -46,6 +49,24 @@ contains
     write(unit=sd_name,fmt='("chk",i8.8)') istep_to_write
 
     call checkpoint_write_doit(nlevs, sd_name, chkdata, mla%mba%rr, time, dt)
+    
+    ! random state
+    if (use_bl_rng) then
+       rand_name = sd_name//'/rng_binomial_diffusion'
+       call bl_rng_save(rng_binomial_diffusion, rand_name)
+
+       rand_name = sd_name//'/rng_normal_diffusion'
+       call bl_rng_save(rng_normal_diffusion, rand_name)
+
+       rand_name = sd_name//'/rng_poisson_reaction'
+       call bl_rng_save(rng_poisson_reaction, rand_name)
+
+       rand_name = sd_name//'/rng_normal_reaction'
+       call bl_rng_save(rng_normal_reaction, rand_name)
+
+       rand_name = sd_name//'/rng_uniform_real_reaction'
+       call bl_rng_save(rng_uniform_real_reaction, rand_name)
+    end if
 
     do n = 1,nlevs
        call multifab_destroy(chkdata(n))

@@ -35,68 +35,70 @@ contains
 
   subroutine rng_init()
 
+    !!!!!!!!!!!!!!!!!!
     ! diffusion
-    if (temporal_integrator .eq. -3 .or. diffusion_type .eq. 3) then
-       ! multinomial diffusion - calls a sequence of binomial random numbers
-       ! (initialize the trials to 1 and probability to 0.5; this will be overridden)
-       call bl_rng_build(rng_binomial_diffusion,seed_diffusion,1,0.5d0)
-    else
-       ! fluctuating hydro (mean 0, standard deviation 1)
-       call bl_rng_build(rng_normal_diffusion,seed_diffusion,0.d0,1.d0)
-    end if
+    !!!!!!!!!!!!!!!!!!
 
+    ! multinomial diffusion - calls a sequence of binomial random numbers
+    ! (initialize the trials to 1 and probability to 0.5; this will be overridden)
+    call bl_rng_build(rng_binomial_diffusion,seed_diffusion,1,0.5d0)
+
+    ! fluctuating hydro (mean 0, standard deviation 1)
+    call bl_rng_build(rng_normal_diffusion,seed_diffusion,0.d0,1.d0)
+
+    !!!!!!!!!!!!!!!!!!
     ! reactions
-    if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
-       if (use_Poisson_rng .eq. 1) then
-          ! tau-leaping (initialize mean to 1; this will be overridden)
-          call bl_rng_build(rng_poisson_reaction,seed_reaction,1.d0)
-       else if (use_Poisson_rng .eq. 0) then
-          ! CLE (mean 0, standard deviation 1)
-          call bl_rng_build(rng_normal_reaction,seed_reaction,0.d0,1.d0)
-       end if
-    else if (reaction_type .eq. 2) then
-       ! SSA (in interval [0,1))
-       call bl_rng_build(rng_uniform_real_reaction,seed_reaction,0.d0,1.d0)
-    end if
+    !!!!!!!!!!!!!!!!!!
 
+    ! tau-leaping (initialize mean to 1; this will be overridden)
+    call bl_rng_build(rng_poisson_reaction,seed_reaction,1.d0)
+
+    ! CLE (mean 0, standard deviation 1)
+    call bl_rng_build(rng_normal_reaction,seed_reaction,0.d0,1.d0)
+
+    ! SSA (in interval [0,1))
+    call bl_rng_build(rng_uniform_real_reaction,seed_reaction,0.d0,1.d0)
+
+    !!!!!!!!!!!!!!!!!!
     ! initilization
-    if (integer_populations) then
-       ! random integer population (initialize mean to 1; this will be overridden)
-       call bl_rng_build(rng_poisson_init,seed_init,1.d0)
-    end if
+    !!!!!!!!!!!!!!!!!!
+    
+    ! random integer population (initialize mean to 1; this will be overridden)
+    call bl_rng_build(rng_poisson_init,seed_init,1.d0)
 
   end subroutine rng_init
 
   subroutine rng_destroy()
 
+    !!!!!!!!!!!!!!!!!!
     ! diffusion
-    if (temporal_integrator .eq. -3 .or. diffusion_type .eq. 3) then
-       ! multinomial diffusion
-       call bl_rng_destroy(rng_binomial_diffusion)
-    else
-       ! fluctuating hydro
-       call bl_rng_destroy(rng_normal_diffusion)
-    end if
+    !!!!!!!!!!!!!!!!!!
 
+    ! multinomial diffusion
+    call bl_rng_destroy(rng_binomial_diffusion)
+
+    ! fluctuating hydro
+    call bl_rng_destroy(rng_normal_diffusion)
+
+    !!!!!!!!!!!!!!!!!!
     ! reactions
-    if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then
-       if (use_Poisson_rng .eq. 1) then
-          ! tau-leaping
-          call bl_rng_destroy(rng_poisson_reaction)
-       else if (use_Poisson_rng .eq. 0) then
-          ! CLE
-          call bl_rng_destroy(rng_normal_reaction)
-       end if
-    else if (reaction_type .eq. 1) then
-       ! SSA
-       call bl_rng_destroy(rng_uniform_real_reaction)
-    end if
+    !!!!!!!!!!!!!!!!!!
 
+    ! tau-leaping
+    call bl_rng_destroy(rng_poisson_reaction)
+
+    ! CLE
+    call bl_rng_destroy(rng_normal_reaction)
+
+    ! SSA
+    call bl_rng_destroy(rng_uniform_real_reaction)
+
+    !!!!!!!!!!!!!!!!!!
     ! initialization
-    if (integer_populations) then
-       ! random integer population
-       call bl_rng_destroy(rng_poisson_init)
-    end if
+    !!!!!!!!!!!!!!!!!!
+
+    ! random integer population
+    call bl_rng_destroy(rng_poisson_init)
 
   end subroutine rng_destroy
 
