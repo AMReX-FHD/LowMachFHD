@@ -4,7 +4,7 @@ module bl_rng_module
   use bl_random_module
   use probin_reactdiff_module, only: temporal_integrator, diffusion_type, reaction_type, &
                                      use_Poisson_rng, seed_diffusion, seed_reaction, &
-                                     seed_init
+                                     seed_init, integer_populations
 
   implicit none
 
@@ -16,6 +16,7 @@ module bl_rng_module
             rng_poisson_reaction, &
             rng_normal_reaction, &
             rng_uniform_real_reaction, &
+            rng_poisson_init, &
             bl_MultinomialRNG
 
   ! diffusion
@@ -27,8 +28,8 @@ module bl_rng_module
   type(bl_rng_normal)      , save :: rng_normal_reaction        ! CLE
   type(bl_rng_uniform_real), save :: rng_uniform_real_reaction  ! SSA
 
-  ! initialization
-  type(bl_rng_normal)      , save :: rng_normal_init
+  ! initialization (limited support for now)
+  type(bl_rng_poisson)      , save :: rng_poisson_init
 
 contains
 
@@ -58,6 +59,11 @@ contains
        call bl_rng_build(rng_uniform_real_reaction,seed_reaction,0.d0,1.d0)
     end if
 
+    ! initilization
+    if (integer_populations) then
+       ! random integer population (initialize mean to 1; this will be overridden)
+       call bl_rng_build(rng_poisson_init,seed_init,1.d0)
+    end if
 
   end subroutine rng_init
 
@@ -84,6 +90,12 @@ contains
     else if (reaction_type .eq. 1) then
        ! SSA
        call bl_rng_destroy(rng_uniform_real_reaction)
+    end if
+
+    ! initialization
+    if (integer_populations) then
+       ! random integer population
+       call bl_rng_destroy(rng_poisson_init)
     end if
 
   end subroutine rng_destroy

@@ -6,11 +6,15 @@ module init_n_module
   use multifab_physbc_module
   use define_bc_module
   use bc_module
+  use bl_rng_module
+  use bl_random_module
   use BoxLibRNGs
+
+
   use probin_common_module, only: prob_lo, prob_hi, prob_type, initial_variance, &
                                   perturb_width, smoothing_width
   use probin_reactdiff_module, only: nspecies, n_init_in, model_file_init, &
-                                     cross_section, integer_populations
+                                     cross_section, integer_populations, use_bl_rng
   
   implicit none
 
@@ -440,7 +444,12 @@ contains
        do comp=1, nspecies
           ! Generate the initial fluctuations using a Poisson random number generator
           ! This assumes that the distribution of initial conditions is a product Poisson measure
-          call PoissonRNG(number=nparticles, mean=n(comp)*dv)
+            if (use_bl_rng) then
+               call bl_rng_change_distribution(rng_poisson_init,n(comp)*dv)
+               nparticles = bl_rng_get(rng_poisson_init)
+            else
+               call PoissonRNG(number=nparticles, mean=n(comp)*dv)
+            end if
           n(comp) = nparticles/dv
        end do   
     else
