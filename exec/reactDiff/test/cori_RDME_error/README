@@ -1,0 +1,2 @@
+assuming that you have obtained the executable "../main.Linux.Intel.mpi.exe",
+you can run the code by "sbatch sbatch.sh" 
