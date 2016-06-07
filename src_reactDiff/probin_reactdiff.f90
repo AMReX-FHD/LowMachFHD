@@ -48,7 +48,7 @@ module probin_reactdiff_module
   
   logical, save :: use_bl_rng = .false.             ! enable F_BaseLib/bl_random RNGs
 
-  ! Random number seeds for each physical process
+  ! Random number seeds for each physical process for use_bl_rng=T
   integer, save :: seed_diffusion = 1
   integer, save :: seed_reaction = 1
   integer, save :: seed_init = 1

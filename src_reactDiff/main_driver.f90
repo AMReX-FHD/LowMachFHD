@@ -15,6 +15,7 @@ subroutine main_driver()
    use checkpoint_module
    use ParallelRNGs 
    use bl_rng_module
+   use bl_random_module
    use multifab_physbc_module
    use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                    plot_int, chk_int, print_int, seed, bc_lo, bc_hi, &

@@ -5,8 +5,10 @@ module restart_module
   use ml_layout_module
   use checkpoint_module
   use define_bc_module
+  use bl_rng_module
+  use bl_random_module
   use probin_common_module, only: dim_in, restart
-  use probin_reactdiff_module, only: nspecies
+  use probin_reactdiff_module, only: nspecies, use_bl_rng
 
   implicit none
 
@@ -68,6 +70,7 @@ contains
 
     type(multifab)   , pointer        :: chkdata(:)
     character(len=11)                 :: sd_name
+    character(len=40)                 :: rand_name
     integer                           :: n,nlevs
     integer                           :: rrs(10)
 
@@ -92,6 +95,24 @@ contains
     do n = 1,nlevs
       call boxarray_build_copy(mba%bas(n), get_boxarray(chkdata(n))) 
     end do
+
+     ! random state
+    if (use_bl_rng) then
+       rand_name = sd_name//'/rng_binomial_diffusion'
+       call bl_rng_restore(rng_binomial_diffusion, rand_name)
+
+       rand_name = sd_name//'/rng_normal_diffusion'
+       call bl_rng_restore(rng_normal_diffusion, rand_name)
+
+       rand_name = sd_name//'/rng_poisson_reaction'
+       call bl_rng_restore(rng_poisson_reaction, rand_name)
+
+       rand_name = sd_name//'/rng_normal_reaction'
+       call bl_rng_restore(rng_normal_reaction, rand_name)
+
+       rand_name = sd_name//'/rng_uniform_real_reaction'
+       call bl_rng_restore(rng_uniform_real_reaction, rand_name)
+    end if
 
     call destroy(bpt)
 
