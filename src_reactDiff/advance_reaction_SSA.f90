@@ -21,13 +21,14 @@ contains
 
   ! advance_reaction_SSA solves dn/dt = f(n) 
   !  where f(n) are the chemical production rates (deterministic or stochastic)
-  subroutine advance_reaction_SSA(mla,n_old,n_new,dx,dt,the_bc_tower)
+  subroutine advance_reaction_SSA(mla,n_old,n_new,dx,dt,the_bc_tower,return_chemical_rates_in)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: n_old(:)
     type(multifab) , intent(inout) :: n_new(:) 
     real(kind=dp_t), intent(in   ) :: dx(:,:), dt
-    type(bc_tower) , intent(in   ) :: the_bc_tower
+    type(bc_tower) , intent(in   ), optional :: the_bc_tower
+    logical, intent(in), optional  :: return_chemical_rates_in
 
     ! local
     integer         :: nlevs, dm, n, i
@@ -42,10 +43,24 @@ contains
     real(kind=dp_t), pointer :: op(:,:,:,:) ! "o" for n_old
     real(kind=dp_t), pointer :: np(:,:,:,:) ! "n" for n_new
 
+    logical :: return_chemical_rates
+
     type(bl_prof_timer),save :: bpt
 
     nlevs = mla%nlevel
     dm = mla%dim
+
+    return_chemical_rates = .false.
+
+    if (present(return_chemical_rates_in)) then
+      return_chemical_rates = return_chemical_rates_in
+    endif
+
+    if (.not. return_chemical_rates) then
+      if (.not. present(the_bc_tower)) then
+        call bl_error("advance_reaction_SSA needs the_bc_tower")
+      end if
+    end if
    
     ! no reaction case is already checked before this routine is called by advance_reaction 
     ! hence, the following condition should not hold but we do it for completeness
@@ -53,6 +68,11 @@ contains
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
        end do
+       if (return_chemical_rates) then
+         do n=1,nlevs
+           call multifab_setval(n_new(n),0.d0,all=.true.)
+         end do
+       end if
        return
     end if  
 
@@ -97,6 +117,13 @@ contains
     end do
     !$omp end parallel
 
+    if (return_chemical_rates) then
+      do n=1,nlevs
+        call multifab_sub_sub_c(n_new(n),1,n_old(n),1,nspecies,n_new(n)%ng)
+        call multifab_mult_mult_s_c(n_new(n),1,1.d0/dt,nspecies,n_new(n)%ng)
+      end do
+      return
+    end if
 
     ! ensure ghost cells are consistent for n_new
     do n=1,nlevs
