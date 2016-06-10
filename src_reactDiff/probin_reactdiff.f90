@@ -38,10 +38,12 @@ module probin_reactdiff_module
                                                     ! 0=first-order tau leaping or CLE
                                                     ! 1=second-order tau leaping or CLE
                                                     ! 2=SSA
-  integer, save :: use_Poisson_rng = 1              ! Only used for reaction_type = 0, 1
-                                                    ! If -1 do deterministic chemistry
-                                                    ! If 1 do tau leaping (Poisson increments),
-                                                    ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
+  integer, save :: use_Poisson_rng = 1              ! for split schemes with reaction_type = 0 or 1:
+                                                    !  If -1 do deterministic chemistry
+                                                    !  If 1 do tau leaping (Poisson increments),
+                                                    !  If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
+                                                    ! for unsplit schemes:
+                                                    !  If 2 use SSA for reaction
   logical, save :: inhomogeneous_bc_fix = .false.   ! use the Einkemmer boundary condition fix (split schemes only)
   integer, save :: avg_type = 3                     ! how to compute n on faces for stochastic weighting
                                                     ! 1=arithmetic, 2=geometric, 3=harmonic
