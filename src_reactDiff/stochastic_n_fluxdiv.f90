@@ -19,7 +19,7 @@ module stochastic_n_fluxdiv_module
 
   public :: stochastic_n_fluxdiv, fill_mass_stochastic, &
        init_mass_stochastic, destroy_mass_stochastic, &
-       add_n_fluctuations
+       add_init_n_fluctuations
 
   ! stochastic fluxes for mass densities are face-centered
   type(multifab), allocatable, save :: stoch_W_fc(:,:,:)
@@ -538,7 +538,7 @@ contains
 
   end subroutine stoch_mass_bc_3d
 
-  subroutine add_n_fluctuations(mla,n_init,dx,the_bc_tower)
+  subroutine add_init_n_fluctuations(mla,n_init,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: n_init(:)
@@ -553,7 +553,7 @@ contains
 
     type(bl_prof_timer), save :: bpt
 
-    call build(bpt,"add_n_fluctuations")
+    call build(bpt,"add_init_n_fluctuations")
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -574,7 +574,8 @@ contains
        
        call multifab_fill_random(n_temp(n:n), &
                                  variance_mfab=n_init, &
-                                 variance=abs(initial_variance)/dv) ! We do not multiply here by variance_coef_mass
+                                 variance=abs(initial_variance)/dv, &  ! We do not multiply here by variance_coef_mass
+                                 init_in=.true.)
   
        if(initial_variance<0.0d0) then
           ! Make sure this sums to zero
@@ -606,6 +607,6 @@ contains
 
     call destroy(bpt)
 
-  end subroutine add_n_fluctuations
+  end subroutine add_init_n_fluctuations
    
 end module stochastic_n_fluxdiv_module

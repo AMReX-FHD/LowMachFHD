@@ -18,6 +18,7 @@ module bl_rng_module
             rng_normal_reaction, &
             rng_uniform_real_reaction, &
             rng_poisson_init, &
+            rng_normal_init, &
             bl_MultinomialRNG
 
   ! diffusion
@@ -31,59 +32,81 @@ module bl_rng_module
 
   ! initialization (limited support for now)
   type(bl_rng_poisson)      , save :: rng_poisson_init
+  type(bl_rng_normal)       , save :: rng_normal_init
 
 contains
 
   subroutine rng_init()
 
+    integer :: r
+    r = bl_rng_random_uint_c()
+
     !!!!!!!!!!!!!!!!!!
     ! diffusion
     !!!!!!!!!!!!!!!!!!
 
+    if (seed_diffusion .eq. 0) then
+       seed_diffusion = bl_rng_random_uint_c()
+       call parallel_bcast(seed_diffusion)
+       if (parallel_IOProcessor()) then
+          print*,'seed_diffusion = 0 --> picking a random root seed'
+       end if
+    end if
+    if (parallel_IOProcessor()) then
+       print*,'seed_diffusion =',seed_diffusion
+    end if    
+
     ! multinomial diffusion - calls a sequence of binomial random numbers
     ! (initialize the trials to 1 and probability to 0.5; this will be overridden)
-    if (parallel_IOProcessor()) then
-       print*,'building rng_binomial_diffusion'
-    end if
     call bl_rng_build(rng_binomial_diffusion,seed_diffusion,1,0.5d0)
 
     ! fluctuating hydro (mean 0, standard deviation 1)
-    if (parallel_IOProcessor()) then
-       print*,'building rng_normal_diffusion'
-    end if
     call bl_rng_build(rng_normal_diffusion,seed_diffusion,0.d0,1.d0)
 
     !!!!!!!!!!!!!!!!!!
     ! reactions
     !!!!!!!!!!!!!!!!!!
 
-    ! tau-leaping (initialize mean to 1; this will be overridden)
-    if (parallel_IOProcessor()) then
-       print*,'building rng_poisson_reaction'
+    if (seed_reaction .eq. 0) then
+       seed_reaction = bl_rng_random_uint_c()
+       call parallel_bcast(seed_reaction)
+       if (parallel_IOProcessor()) then
+          print*,'seed_reaction = 0 --> picking a random root seed'
+       end if
     end if
+    if (parallel_IOProcessor()) then
+       print*,'seed_reaction =',seed_reaction
+    end if
+
+    ! tau-leaping (initialize mean to 1; this will be overridden)
     call bl_rng_build(rng_poisson_reaction,seed_reaction,1.d0)
 
     ! CLE (mean 0, standard deviation 1)
-    if (parallel_IOProcessor()) then
-       print*,'building rng_normal_reaction'
-    end if
     call bl_rng_build(rng_normal_reaction,seed_reaction,0.d0,1.d0)
 
     ! SSA (in interval [0,1))
-    if (parallel_IOProcessor()) then
-       print*,'building rng_uniform_real_reaction'
-    end if
     call bl_rng_build(rng_uniform_real_reaction,seed_reaction,0.d0,1.d0)
 
     !!!!!!!!!!!!!!!!!!
     ! initilization
     !!!!!!!!!!!!!!!!!!
+
+    if (seed_init .eq. 0) then
+       seed_init = bl_rng_random_uint_c()
+       call parallel_bcast(seed_init)
+       if (parallel_IOProcessor()) then
+          print*,'seed_init = 0 --> picking a random root seed'
+       end if
+    end if
+    if (parallel_IOProcessor()) then
+       print*,'seed_init =',seed_init
+    end if
     
     ! random integer population (initialize mean to 1; this will be overridden)
-    if (parallel_IOProcessor()) then
-       print*,'building rng_poisson_init'
-    end if
     call bl_rng_build(rng_poisson_init,seed_init,1.d0)
+
+    ! Gaussian noise (mean 0, standard deviation 1)
+    call bl_rng_build(rng_normal_init,seed_init,0.d0,1.d0)
 
   end subroutine rng_init
 
@@ -118,6 +141,9 @@ contains
 
     ! random integer population
     call bl_rng_destroy(rng_poisson_init)
+
+    ! Gaussian noise
+    call bl_rng_destroy(rng_normal_init)
 
   end subroutine rng_destroy
 
