@@ -38,9 +38,6 @@ contains
 
   subroutine rng_init()
 
-    integer :: r
-    r = bl_rng_random_uint_c()
-
     !!!!!!!!!!!!!!!!!!
     ! diffusion
     !!!!!!!!!!!!!!!!!!
