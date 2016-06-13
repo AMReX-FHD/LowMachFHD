@@ -2,6 +2,7 @@ module bl_rng_module
 
   use bl_types
   use bl_random_module
+  use parallel
   use probin_reactdiff_module, only: temporal_integrator, diffusion_type, reaction_type, &
                                      use_Poisson_rng, seed_diffusion, seed_reaction, &
                                      seed_init, integer_populations
@@ -41,9 +42,15 @@ contains
 
     ! multinomial diffusion - calls a sequence of binomial random numbers
     ! (initialize the trials to 1 and probability to 0.5; this will be overridden)
+    if (parallel_IOProcessor()) then
+       print*,'building rng_binomial_diffusion'
+    end if
     call bl_rng_build(rng_binomial_diffusion,seed_diffusion,1,0.5d0)
 
     ! fluctuating hydro (mean 0, standard deviation 1)
+    if (parallel_IOProcessor()) then
+       print*,'building rng_normal_diffusion'
+    end if
     call bl_rng_build(rng_normal_diffusion,seed_diffusion,0.d0,1.d0)
 
     !!!!!!!!!!!!!!!!!!
@@ -51,12 +58,21 @@ contains
     !!!!!!!!!!!!!!!!!!
 
     ! tau-leaping (initialize mean to 1; this will be overridden)
+    if (parallel_IOProcessor()) then
+       print*,'building rng_poisson_reaction'
+    end if
     call bl_rng_build(rng_poisson_reaction,seed_reaction,1.d0)
 
     ! CLE (mean 0, standard deviation 1)
+    if (parallel_IOProcessor()) then
+       print*,'building rng_normal_reaction'
+    end if
     call bl_rng_build(rng_normal_reaction,seed_reaction,0.d0,1.d0)
 
     ! SSA (in interval [0,1))
+    if (parallel_IOProcessor()) then
+       print*,'building rng_uniform_real_reaction'
+    end if
     call bl_rng_build(rng_uniform_real_reaction,seed_reaction,0.d0,1.d0)
 
     !!!!!!!!!!!!!!!!!!
@@ -64,6 +80,9 @@ contains
     !!!!!!!!!!!!!!!!!!
     
     ! random integer population (initialize mean to 1; this will be overridden)
+    if (parallel_IOProcessor()) then
+       print*,'building rng_poisson_init'
+    end if
     call bl_rng_build(rng_poisson_init,seed_init,1.d0)
 
   end subroutine rng_init
