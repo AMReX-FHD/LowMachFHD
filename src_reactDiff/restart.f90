@@ -8,7 +8,7 @@ module restart_module
   use bl_rng_module
   use bl_random_module
   use probin_common_module, only: dim_in, restart
-  use probin_reactdiff_module, only: nspecies, use_bl_rng
+  use probin_reactdiff_module, only: nspecies, use_bl_rng, seed_reaction, seed_diffusion
 
   implicit none
 
@@ -98,20 +98,26 @@ contains
 
      ! random state
     if (use_bl_rng) then
-       rand_name = sd_name//'/rng_binomial_diffusion'
-       call bl_rng_restore(rng_binomial_diffusion, rand_name)
 
-       rand_name = sd_name//'/rng_normal_diffusion'
-       call bl_rng_restore(rng_normal_diffusion, rand_name)
+       if (seed_diffusion .eq. -1) then
+          rand_name = sd_name//'/rng_binomial_diffusion'
+          call bl_rng_restore(rng_binomial_diffusion, rand_name)
 
-       rand_name = sd_name//'/rng_poisson_reaction'
-       call bl_rng_restore(rng_poisson_reaction, rand_name)
+          rand_name = sd_name//'/rng_normal_diffusion'
+          call bl_rng_restore(rng_normal_diffusion, rand_name)
+       end if
 
-       rand_name = sd_name//'/rng_normal_reaction'
-       call bl_rng_restore(rng_normal_reaction, rand_name)
+       if (seed_reaction .eq. -1) then
+          rand_name = sd_name//'/rng_poisson_reaction'
+          call bl_rng_restore(rng_poisson_reaction, rand_name)
 
-       rand_name = sd_name//'/rng_uniform_real_reaction'
-       call bl_rng_restore(rng_uniform_real_reaction, rand_name)
+          rand_name = sd_name//'/rng_normal_reaction'
+          call bl_rng_restore(rng_normal_reaction, rand_name)
+
+          rand_name = sd_name//'/rng_uniform_real_reaction'
+          call bl_rng_restore(rng_uniform_real_reaction, rand_name)
+       end if
+
     end if
 
     call destroy(bpt)

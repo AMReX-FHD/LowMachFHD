@@ -3,6 +3,8 @@ module bl_rng_module
   use bl_types
   use bl_random_module
   use parallel
+  use bl_error_module
+  use probin_common_module, only: restart
   use probin_reactdiff_module, only: temporal_integrator, diffusion_type, reaction_type, &
                                      use_Poisson_rng, seed_diffusion, seed_reaction, &
                                      seed_init, integer_populations
@@ -38,6 +40,14 @@ contains
 
   subroutine rng_init()
 
+    if (seed_diffusion .eq. -1 .and. restart .lt. 0) then
+       call bl_error("seed_diffusion = -1 requires restart")
+    end if
+
+    if (seed_reaction .eq. -1 .and. restart .lt. 0) then
+       call bl_error("seed_reaction = -1 requires restart")
+    end if
+
     !!!!!!!!!!!!!!!!!!
     ! diffusion
     !!!!!!!!!!!!!!!!!!
@@ -51,14 +61,18 @@ contains
     end if
     if (parallel_IOProcessor()) then
        print*,'seed_diffusion =',seed_diffusion
-    end if    
+    end if
 
-    ! multinomial diffusion - calls a sequence of binomial random numbers
-    ! (initialize the trials to 1 and probability to 0.5; this will be overridden)
-    call bl_rng_build(rng_binomial_diffusion,seed_diffusion,1,0.5d0)
+    if (seed_diffusion .ne. -1) then
 
-    ! fluctuating hydro (mean 0, standard deviation 1)
-    call bl_rng_build(rng_normal_diffusion,seed_diffusion,0.d0,1.d0)
+       ! multinomial diffusion - calls a sequence of binomial random numbers
+       ! (initialize the trials to 1 and probability to 0.5; this will be overridden)
+       call bl_rng_build(rng_binomial_diffusion,seed_diffusion,1,0.5d0)
+
+       ! fluctuating hydro (mean 0, standard deviation 1)
+       call bl_rng_build(rng_normal_diffusion,seed_diffusion,0.d0,1.d0)
+
+    end if
 
     !!!!!!!!!!!!!!!!!!
     ! reactions
@@ -75,14 +89,18 @@ contains
        print*,'seed_reaction =',seed_reaction
     end if
 
-    ! tau-leaping (initialize mean to 1; this will be overridden)
-    call bl_rng_build(rng_poisson_reaction,seed_reaction,1.d0)
+    if (seed_diffusion .ne. -1) then
 
-    ! CLE (mean 0, standard deviation 1)
-    call bl_rng_build(rng_normal_reaction,seed_reaction,0.d0,1.d0)
+       ! tau-leaping (initialize mean to 1; this will be overridden)
+       call bl_rng_build(rng_poisson_reaction,seed_reaction,1.d0)
 
-    ! SSA (in interval [0,1))
-    call bl_rng_build(rng_uniform_real_reaction,seed_reaction,0.d0,1.d0)
+       ! CLE (mean 0, standard deviation 1)
+       call bl_rng_build(rng_normal_reaction,seed_reaction,0.d0,1.d0)
+
+       ! SSA (in interval [0,1))
+       call bl_rng_build(rng_uniform_real_reaction,seed_reaction,0.d0,1.d0)
+
+    end if
 
     !!!!!!!!!!!!!!!!!!
     ! initilization
