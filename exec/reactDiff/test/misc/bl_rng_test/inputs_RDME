@@ -1,0 +1,238 @@
+&probin_common
+ 
+  ! Problem specification
+  !----------------------
+  prob_type = 0                    ! 0=equilibrium, 1=gaussian, 2=gradient
+  dim_in = 2                       ! 2D or 3D (here we do a single cell) 
+  prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
+  prob_hi(1:2) = 32.d0 32.d0       ! physical hi coordinate
+  n_cells(1:2) = 64 64             ! number of cells in domain
+  max_grid_size(1:2) = 32 32       ! max number of cells in a box
+
+  ! Time-step control
+  !----------------------
+  fixed_dt = 0.05                  ! time step (if positive, fixed)
+  cfl = 0.5d0                      ! max diffusive cfl number (used if fixed_dt<0) to determine time step
+
+  ! Controls for number of steps between actions (for HydroGrid see below)
+  !----------------------
+  max_step = 1000                  ! maximum number of time steps
+  plot_int = 1000                  ! Interval for writing a plotfile (for visit/amrvis)
+  chk_int = 0                      ! Interval for writing a checkpoint
+  restart = -1                     ! checkpoint restart number
+  print_int = 100                  ! how often to output statistics (see also negative hydro_grid_int)
+
+  ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
+  variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing
+
+  ! Initial conditions
+  !----------------------
+  smoothing_width = 1.d0    ! scale factor for smoothing initial profile
+  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
+                            ! (if negative, total mass fluctuation is set to zero)
+
+  ! Algorithm control / selection
+  !----------------------
+
+  ! random number seed
+  ! 0        = unpredictable seed based on clock
+  ! positive = fixed seed
+  !seed = 0
+
+  ! Boundary conditions
+  !----------------------
+  ! BC specifications:
+  ! -1 = periodic
+  ! 100 = no-slip wall      (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 101 = no-slip reservoir (Dir condition for normal vel; Dir velocity condition for trans vel)
+  ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
+  ! For a complete list see bc.f90
+  bc_lo(1:2) = -1 -1 ! 101 101
+  bc_hi(1:2) = -1 -1 ! 101 101
+
+  ! Control for analyze_spectra.90 for calling HydroGrid
+  !----------------------
+  ! This controls writing of fort.9 and fort.21
+  hydro_grid_int = 0    ! How often to call updateHydroGrid
+                        ! 0 if never
+                        ! negative for projectHydroGrid custom analysis
+                        ! positive for updateHydroGrid
+
+  project_dir = 0       ! Projection direction (1=x, 2=y, 3=z)
+  ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
+  !          but still need projection if stats_int>0)
+  ! +dim=project along dim then analyze 2D only,
+  ! -dim=analyze 3D and then project along dim so we also analyze 2D data
+  ! It is better to use the conserved variables but it does not quite work for staggered
+
+  max_grid_projection(1:1) = 32  ! parallelization parameters
+  stats_int = -1                 ! Project grid for analysis
+                                 ! If positive, how often to compute mean and 
+                                 ! standard deviation over reduced dimensions
+  n_steps_save_stats = -1 ! How often to dump HydroGrid output files
+  n_steps_skip = 0        ! How many steps to skip
+  analyze_conserved = T   ! T = analyze n, F=analyze mole fractions x
+  histogram_unit = -10 ! Write snapshots of n in all cells to fort.10 for histogramming them
+
+/
+
+! reaction/diffusion number fraction code
+&probin_reactdiff
+
+  use_bl_rng = T
+  seed_init = 0
+  seed_diffusion = 0
+  seed_reaction = 0
+
+  n_steps_write_avg = 0  ! How often to write fort.21 
+
+  ! Problem description
+  !----------------------
+  nspecies = 3 ! In the order (U,V,W)
+  nreactions = 7
+
+  integer_populations = T        ! Initialize to integer populations
+  cross_section = 1.d0           ! Thickness of domain in 2D (dV scaling factor)
+
+  ! Control of algorithm
+  !----------------------
+  temporal_integrator = 2        ! 0=D + R (first-order splitting)
+                                 ! 1=(1/2)R + D + (1/2)R (Strang option 1)
+                                 ! 2=(1/2)D + R + (1/2)D (Strang option 2)
+                                 ! -1=unsplitting forward Euler
+                                 ! -2=unsplitting explicit midpoint 
+                                 ! -3=unsplit multinomial diffusion
+                                 ! -4=unsplit implicit midpoint
+  diffusion_type = 3             ! Only used for splitting schemes
+                                 ! 0=explicit trapezoidal predictor/corrector
+                                 ! 1=Crank-Nicolson semi-implicit
+                                 ! 2=explicit midpoint
+                                 ! 3=multinomial diffusion
+                                 ! 4=forward Euler  
+  midpoint_stoch_flux_type = 3   ! for midpoint diffusion schemes, (split and unsplit)
+                                 ! corrector formulation of noise
+                                 ! K(nold) * W1 + K(nold)         * W2
+                                 ! K(nold) * W1 + K(npred)        * W2
+                                 ! K(nold) * W1 + K(2*npred-nold) * W2
+  reaction_type = 2              ! Only used for splitting schemes
+                                 ! 0=first-order tau leaping or CLE
+                                 ! 1=second-order tau leaping or CLE
+                                 ! 2=SSA
+  use_Poisson_rng = 1            ! Only used for reaction_type = 0, 1
+                                 ! If -1 do deterministic chemistry
+                                 ! If 1 do tau leaping (Poisson increments),
+                                 ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
+  inhomogeneous_bc_fix = F       ! use the Einkemmer boundary condition fix (split schemes only)
+  avg_type = 1                   ! how to compute n on faces for stochastic weighting
+                                 ! 1=arithmetic, 2=geometric, 3=harmonic
+
+  ! Initial and boundary conditions
+  !----------------------
+                     
+  ! Initial condition (start near chemical equilibrium):
+  !n_init_in(1,1:3) = 1513.269663 438.1877579 38.40170224 ! Exact fixed point
+  n_init_in(1,1:3) = 1685.8 533.5 56.38 ! Start on the limit cycle
+
+  ! n_i boundary conditions (dir,lohi,species)
+  !n_bc(2,1,1:3) = 1.0 1.0 1.0 ! Lower y
+  !n_bc(2,2,1:3) = 1.0 1.0 1.0 ! Upper y
+              
+  ! Diffusion:
+  ! -----------------
+  
+  ! Fickian diffusion coeffs (U/V/W)
+  ! We want U to be much faster diffusing than the other two
+  D_Fick(1:3) = 0.1 0.01 0.01
+
+  ! implicit diffusion solve verbosity, bottom solve verbosity
+  mg_verbose = 0
+  cg_verbose = 0
+
+  ! relative and absolute epsilon for implicit diffusion solve
+  implicit_diffusion_rel_eps = 1.d-10
+  implicit_diffusion_abs_eps = -1.d0
+
+  ! Chemical reactions:
+  ! ------------------  
+  rate_const(1:7) =      0.000200000000000   
+                         0.000200000000000   
+			 1.000000000000000   
+			 0.036666630000000   
+			 4.444445555550000   
+			 0.003333330000000 
+			 16.666650000000001
+  rate_multiplier = 1.0 ! Change all rates by a constant multiplier
+  include_discrete_LMA_correction = T ! Compute rates using classical LMA or molecular  
+  
+  ! BPM model is:
+  !     (1) U + W --> V + W
+  !     (2) V + V --> W
+  !     (3) W     --> V + V
+  !     (4) V     --> 0
+  !     (5) 0     --> V
+  !     (6) U     --> 0
+  !     (7) 0     --> U
+  ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
+  stoichiometric_factors(1:3,1:2,1:7) = 1 0 1, 0 1 1,
+                                        0 2 0, 0 0 1,
+					0 0 1, 0 2 0,
+					0 1 0, 0 0 0,
+					0 0 0, 0 1 0,
+					1 0 0, 0 0 0,
+					0 0 0, 1 0 0
+    
+/
+
+! HydroGrid spectral and other analysis
+!---------------------------------------
+! The variables are numbered as:
+! 3D: 1=rho, 2-4=v, 5=T, 6 onward=n_k or x_k
+! 2D: 1=rho, 2-3=v, 4=T, 5 onward=n_k or x_k
+! Means file:
+! 1=y, 2=rho, 3-5=v, 6=T, 7+=n's or x's in 3D
+! 1=y, 2=rho, 3-4=v, 5=T, 6+=n's or x's in 2D
+! Variance file:
+! 1=y, 2=w1-w1, 3=w2-w2, 4=w3-w3
+! Structure factor numbering:
+! 1=w1-w1, 2=w2-w2, 3=w3-w3
+
+&hydroAnalysisOptions
+! 2D full grid data
+! NOTE: This namelist will be ignored if project_dir>0
+
+   storeConserved = F ! We are not using conserved variables here
+
+   ! Save the flow to a VTK file:
+   writeMeansVTK = F ! Save the means over the averaging interval
+   writeSnapshotVTK = F ! Save snapshots of the instantaneous fields
+
+   ! Variances
+   writeVariancesVTK = T ! Should we save a VTK file
+   nVariances = 0
+   variancePairs = "0 5 0 5, 0 6 0 6, 0 7 0 7" ! Variances in each cell
+      ! species1 variable1 species2 variable2
+   !variancePairs = "0 -5 0 5, 0 -6 0 6, 0 -7 0 7" ! Correlations with the central cell
+   !correlationCell = 5 5 1 ! The index of the special cell, if calculating correlations in real space
+      ! If so, then use a negative integer for the first variable in variancePairs
+      ! By default correlationCell is the cell in the center of the domain
+
+   ! Static structure factors
+   writeSpectrumVTK = T
+   subtractMeanFT = F ! The means are trivial here so no need to estimate them
+   writeAbsValue = T ! Only write absolute values of complex values to VTK file?
+   writeTheory = -1 ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
+   nStructureFactors = 0
+   structureFactorPairs = "0 5 0 5, 0 6 0 6, 0 7 0 7"
+
+   ! Dynamic structure factors:
+   nWavenumbers=0
+   ! Shape (2,nWavenumbers):
+   selectedWavenumbers=""
+   nSavedSnapshots=128
+      
+   outputFolder = "."
+   filePrefix = "BPM"
+   axisToPrint = 2 ! 1=x, 2=y, 3=z axis
+   periodic = T ! Is the system periodic along the y axes
+/
