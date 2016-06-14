@@ -23,48 +23,56 @@ module probin_reactdiff_module
                                                     ! -2=unsplit explicit midpoint 
                                                     ! -3=unsplit multinomial diffusion
                                                     ! -4=unsplit implicit midpoint
-  integer, save :: diffusion_type = 0               ! Only used for splitting schemes
+  integer, save :: diffusion_type = 0               ! only used for splitting schemes
                                                     ! 0=explicit trapezoidal predictor/corrector
                                                     ! 1=Crank-Nicolson semi-implicit
                                                     ! 2=explicit midpoint
                                                     ! 3=multinomial diffusion
                                                     ! 4=forward Euler  
-  integer, save :: midpoint_stoch_flux_type = 1     ! for midpoint diffusion schemes, (split and unsplit)
+  integer, save :: midpoint_stoch_flux_type = 1     ! only used for midpoint diffusion schemes (split as well as unsplit)
                                                     ! corrector formulation of noise
                                                     ! 1 = K(nold) * W1 + K(nold)         * W2
                                                     ! 2 = K(nold) * W1 + K(npred)        * W2
                                                     ! 3 = K(nold) * W1 + K(2*npred-nold) * W2
-  integer, save :: reaction_type = 0                ! Only used for splitting schemes
+  integer, save :: reaction_type = 0                ! only used for splitting schemes (temporal_integrator>=0)
                                                     ! 0=first-order tau leaping or CLE
                                                     ! 1=second-order tau leaping or CLE
                                                     ! 2=SSA
-  integer, save :: use_Poisson_rng = 1              ! for split schemes with reaction_type = 0 or 1:
-                                                    !  If -1 do deterministic chemistry
-                                                    !  If 1 do tau leaping (Poisson increments),
-                                                    !  If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
-                                                    ! for unsplit schemes:
-                                                    !  If 2 use SSA for reaction
+  integer, save :: use_Poisson_rng = 1              ! how to calculate chemical production rates
+                                                    ! (not used if if temporal_integrator>=0 and reaction_type=2)
+                                                    ! 1=do tau leaping (Poisson increments)
+                                                    ! 0= do CLE (Gaussian increments)
+                                                    ! -1=do deterministic chemistry
+                                                    ! for unsplitting schemes with SSA reaction, use
+                                                    ! 2=calculate rates from SSA
   logical, save :: inhomogeneous_bc_fix = .false.   ! use the Einkemmer boundary condition fix (split schemes only)
-  integer, save :: avg_type = 3                     ! how to compute n on faces for stochastic weighting
-                                                    ! 1=arithmetic, 2=geometric, 3=harmonic
-  
-  logical, save :: use_bl_rng = .false.             ! enable F_BaseLib/bl_random RNGs
+  integer, save :: avg_type = 1                     ! how to compute n on faces for stochastic weighting
+                                                    ! 1=arithmetic (with C0-Heaviside), 2=geometric, 3=harmonic
+                                                    ! 10=arithmetic average with discontinuous Heaviside function
+                                                    ! 11=arithmetic average with C1-smoothed Heaviside function
+                                                    ! 12=arithmetic average with C2-smoothed Heaviside function
+
+  logical, save :: use_bl_rng = .false.             ! if true, use F_BaseLib/bl_random RNGs
+                                                    ! if false, use HydroGrid RNGs
 
   ! Random number seeds for each physical process for use_bl_rng=T
+  ! for positive value, the value is assigned as seed value
+  ! for 0, a positive value is randomly chosen
+  ! if -1 (only for restart), RNGs status is restored from checkpoint data
   integer, save :: seed_diffusion = 1
   integer, save :: seed_reaction = 1
   integer, save :: seed_init = 1
 
   ! Initial and boundary conditions
   !----------------------
-  real(kind=dp_t), save :: n_init_in(2,max_species) = 1.d0 ! Initial values to be used in init_n.f90
-  real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0    ! n_i boundary conditions (dir,lohi,species)
+  real(kind=dp_t), save :: n_init_in(2,max_species) = 1.d0     ! initial values to be used in init_n.f90
+  real(kind=dp_t), save :: n_bc(3,2,max_species) = 0.d0        ! n_i boundary conditions (dir,lohi,species)
 
-  integer, save           :: model_file_init = 0     ! initialize from model files:
-                               ! 0=no, 1=usual order (Fortran), -1=transpose order (C)
-  character(len=128), save :: model_file(max_species)       ! one model file for each species
+  integer, save            :: model_file_init = 0              ! initialize from model files:
+                                                               ! 0=no, 1=usual order (Fortran), -1=transpose order (C)
+  character(len=128), save :: model_file(max_species)          ! one model file for each species
   
-  logical, save :: integer_populations=.false. ! Initialize with all number of molecules strictly integer
+  logical, save :: integer_populations=.false.                 ! initialize with all number of molecules strictly integer
 
   ! Diffusion     
   !----------------------                          
@@ -77,10 +85,10 @@ module probin_reactdiff_module
   
   ! Chemical reactions
   !----------------------
-  real(kind=dp_t), save :: cross_section = 1.d0 ! in 2D, thickness of cell
-                                                ! in general, dv = product(dx(1,1:dm))*cross_section
+  real(kind=dp_t), save :: cross_section = 1.d0                ! in 2D, thickness of cell
+                                                               ! in general, dv = product(dx(1,1:dm))*cross_section
 
-  ! Whether to compute chemical rates using classical LMA or integer-based one
+  ! whether to compute chemical rates using classical LMA or integer-based one
   logical, save         :: include_discrete_LMA_correction = .true. 
 
   ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)

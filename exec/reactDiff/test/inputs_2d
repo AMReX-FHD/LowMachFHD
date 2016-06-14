@@ -4,43 +4,53 @@
 
   ! Problem specification
   !----------------------
-  dim_in = 2                   ! 2D or 3D  
-  prob_lo(1:2) = 0.d0 0.d0     ! physical lo coordinate
-  prob_hi(1:2) = 1.d0 1.d0     ! physical hi coordinate
-  n_cells(1:2) = 64 64         ! number of cells in domain
-  max_grid_size(1:2) = 64 64   ! max number of cells in a box
+  dim_in = 2                       ! 2D or 3D
+  prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
+  prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
+  n_cells(1:2) = 64 64             ! number of cells in domain
+  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+
+  prob_type = 1                    ! sets the problem type (initial condition)
+                                   ! 0 thermodynamic equilibrium
+                                   ! 1 Gaussian distribution
+                                   ! 2 constant gradient
+                                   ! 3 1+sin^2(pi*x)*sin^2(pi*y)
+                                   ! 4 vertical stripe
+                                   ! 5 bubble
 
   ! Time-step control
   !----------------------
-  fixed_dt = 1.d0        ! time step (if positive, fixed)
-  cfl = 0.5d0            ! cfl number (used if fixed_dt<0) to determine time step
-                         ! could be advective or diffusive CFL (code dependent)
+  fixed_dt = 1.d0                  ! time step (if positive, fixed)
+  cfl = 0.5d0                      ! cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1         ! maximum number of time steps
-  plot_int = 0         ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = 0          ! Interval for writing a checkpoint
-  prob_type = 1        ! sets the problem type
-  restart = -1         ! checkpoint restart number
-  print_int = 0        ! how often to output diagnostics to screen
+  max_step = 1                     ! maximum number of time steps
+  plot_int = 0                     ! interval for writing a plotfile (for visit/amrvis)
+                                   ! (no plot files for plot_int<=0)
+  chk_int = 0                      ! interval for writing a checkpoint
+                                   ! (no checkpoint files for chk_int<=0)
+  restart = -1                     ! checkpoint restart number
+                                   ! (no restart for restart<0)
+  print_int = 0                    ! how often to output diagnostics to screen
+                                   ! (no screen output for print_int<=0)
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 1.d0        ! global scaling epsilon for stochastic mass forcing
 
   ! Algorithm control / selection
   !----------------------
-  ! random number seed
+  ! random number seed (for HydroGrid RNGs: check use_bl_rng below in probin_reactdiff)
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
   seed = 1
 
   ! Initial conditions
   !----------------------
-  perturb_width = 0.d0      ! scale factor for perturbed part in initial profile
-  smoothing_width = 1.d0    ! scale factor for smoothing initial profile
-  initial_variance = 0.d0   ! multiplicative factor for initial fluctuations
-                            ! (if negative, total mass fluctuation is set to zero)
+  perturb_width = 0.d0             ! scale factor for perturbed part in initial profile (for prob_type=4,5)
+  smoothing_width = 1.d0           ! scale factor for smoothing initial profile (for prob_type=4,5)
+  initial_variance = 0.d0          ! multiplicative factor for initial fluctuations
+                                   ! if negative, total mass fluctuation is set to zero (for integer_populations=F)
 
   ! Boundary conditions
   !----------------------
@@ -86,68 +96,100 @@
 
 &probin_reactdiff
 
+  ! Random number generator
+  !----------------------
+  use_bl_rng = F                   ! if T, use F_BaseLib/bl_random RNGs
+                                   ! if F, use HydroGrid RNGs
+
+  ! if use_bl_rng=T, assign random number seeds for each physical process
+  ! (if use_bl_rng=F, use seed option above in probin_common)
+  ! for positive value, the value is assigned as seed value
+  ! for 0, a positive value is randomly chosen
+  ! if -1 (only for restart), RNGs status is restored from checkpoint data
+  seed_diffusion = 1
+  seed_reaction = 1
+  seed_init = 1
+
   ! Problem description
   !----------------------
-  nspecies = 2     ! number of species
-  nreactions = 1   ! number of reactions
+  nspecies = 2                     ! number of species
+  nreactions = 1                   ! number of reactions
   
   ! Control of algorithm
   !----------------------
-  temporal_integrator = 0        ! 0=D + R (first-order splitting)
-                                 ! 1=(1/2)R + D + (1/2)R (Strang option 1)
-                                 ! 2=(1/2)D + R + (1/2)D (Strang option 2)
-                                 ! -1=unsplitting forward Euler
-                                 ! -2=unsplitting explicit midpoint 
-                                 ! -3=unsplit multinomial diffusion
-                                 ! -4=unsplit implicit midpoint
-  diffusion_type = 0             ! Only used for splitting schemes
-                                 ! 0=explicit trapezoidal predictor/corrector
-                                 ! 1=Crank-Nicolson semi-implicit
-                                 ! 2=explicit midpoint
-                                 ! 3=multinomial diffusion
-                                 ! 4=forward Euler  
-  midpoint_stoch_flux_type = 1   ! for midpoint diffusion schemes, (split and unsplit)
-                                 ! corrector formulation of noise
-                                 ! K(nold) * W1 + K(nold)         * W2
-                                 ! K(nold) * W1 + K(npred)        * W2
-                                 ! K(nold) * W1 + K(2*npred-nold) * W2
-  reaction_type = 0              ! Only used for splitting schemes
-                                 ! 0=first-order tau leaping or CLE
-                                 ! 1=second-order tau leaping or CLE
-                                 ! 2=SSA
-  use_Poisson_rng = 1            ! for split schemes with reaction_type = 0 or 1:
-                                 !  If -1 do deterministic chemistry
-                                 !  If 1 do tau leaping (Poisson increments),
-                                 !  If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
-                                 ! for unsplit schemes: 
-                                 !  If 2 use SSA for reaction
-  inhomogeneous_bc_fix = F       ! use the Einkemmer boundary condition fix (split schemes only)
-  avg_type = 3                   ! how to compute n on faces for stochastic weighting
-                                 ! 1=arithmetic, 2=geometric, 3=harmonic
+  temporal_integrator = 0          ! 0=D + R (first-order splitting)
+                                   ! 1=(1/2)R + D + (1/2)R (Strang option 1)
+                                   ! 2=(1/2)D + R + (1/2)D (Strang option 2)
+                                   ! -1=unsplitting forward Euler
+                                   ! -2=unsplitting explicit midpoint
+                                   ! -3=unsplit multinomial diffusion
+                                   ! -4=unsplit implicit midpoint
+
+  diffusion_type = 0               ! only used for splitting schemes (temporal_integrator>=0)
+                                   ! 0=explicit trapezoidal predictor/corrector
+                                   ! 1=Crank-Nicolson semi-implicit
+                                   ! 2=explicit midpoint
+                                   ! 3=multinomial diffusion
+                                   ! 4=forward Euler
+
+  midpoint_stoch_flux_type = 1     ! only used for midpoint diffusion schemes (split as well as unsplit)
+                                   ! corrector formulation of noise
+                                   ! 1=K(nold) * W1 + K(nold)         * W2
+                                   ! 2=K(nold) * W1 + K(npred)        * W2
+                                   ! 3=K(nold) * W1 + K(2*npred-nold) * W2
+
+  reaction_type = 0                ! only used for splitting schemes (temporal_integrator>=0)
+                                   ! 0=first-order tau leaping or CLE
+                                   ! 1=second-order tau leaping or CLE
+                                   ! 2=SSA
+
+  use_Poisson_rng = 1              ! how to calculate chemical production rates
+                                   ! (not used if temporal_integrator>=0 and reaction_type=2)
+                                   ! 1=do tau leaping (Poisson increments)
+                                   ! 0= do CLE (Gaussian increments)
+                                   ! -1=do deterministic chemistry
+                                   ! for unsplitting schemes with SSA reaction, use
+                                   ! 2=calculate rates from SSA
+
+  inhomogeneous_bc_fix = F         ! use the Einkemmer boundary condition fix (split schemes only)
+
+  avg_type = 1                     ! how to compute n on faces for stochastic weighting
+                                   ! 1=arithmetic (with C0-Heaviside), 2=geometric, 3=harmonic
+                                   ! 10=arithmetic average with discontinuous Heaviside function
+                                   ! 11=arithmetic average with C1-smoothed Heaviside function
+                                   ! 12=arithmetic average with C2-smoothed Heaviside function
   
   ! Initial and boundary conditions
   !----------------------
-  n_init_in(1:2,1) = 1.d0 1.d0 ! Initial values to be used in init_n.f90
+  n_init_in(1:2,1) = 1.d0 1.d0     ! initial values to be used in init_n.f90
   n_init_in(1:2,2) = 1.d0 1.d0
-  n_bc(1:2,1,1) = 0.d0 0.d0    ! n_i boundary conditions (dir,lohi,species)
+  n_bc(1:2,1,1) = 0.d0 0.d0        ! n_i boundary conditions (dir,lohi,species)
   n_bc(1:2,2,1) = 0.d0 0.d0 
   n_bc(1:2,1,2) = 0.d0 0.d0 
   n_bc(1:2,2,2) = 0.d0 0.d0 
 
+  model_file_init = 0                  ! initialize from model files:
+                                       ! 0=no, 1=usual order (Fortran), -1=transpose order (C)
+  !model_file(1)="./init1.dat"         ! one model file for each species
+  !model_file(2)="./init2.dat"
+
+  integer_populations = F              ! initialize with all number of molecules strictly integer
+
   ! Diffusion     
   !----------------------                          
-  D_Fick(1:2) = 1.d0 1.d0             ! Fickian diffusion coeffs
-  diffusion_stencil_order = 1         ! diffusion boundary stencil order
-  mg_verbose = 0                      ! implicit diffusion solve verbosity
-  cg_verbose = 0                      ! implicit diffusion solve bottom solver verbosity
-  implicit_diffusion_rel_eps = 1.d-10 ! relative eps for implicit diffusion solve
-  implicit_diffusion_abs_eps = -1.d0  ! absolute eps for implicit diffusion solve
+  D_Fick(1:2) = 1.d0 1.d0              ! Fickian diffusion coeffs
+  diffusion_stencil_order = 1          ! diffusion boundary stencil order
+  mg_verbose = 0                       ! implicit diffusion solve verbosity
+  cg_verbose = 0                       ! implicit diffusion solve bottom solver verbosity
+  implicit_diffusion_rel_eps = 1.d-10  ! relative eps for implicit diffusion solve
+  implicit_diffusion_abs_eps = -1.d0   ! absolute eps for implicit diffusion solve
   
   ! Chemical reactions
   !----------------------
-  cross_section = 1.d0 ! thickness (in 2D) of cell
+  cross_section = 1.d0                 ! in 2D, thickness of cell
+                                       ! in general, dv = product(dx(1,1:dm))*cross_section
 
-  ! Whether to compute chemical rates using classical LMA or integer-based one
+  ! whether to compute chemical rates using classical LMA or integer-based one
   include_discrete_LMA_correction = T
 
   ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
@@ -161,5 +203,9 @@
   stoichiometric_factors(1:2,1,1) = 0 0
   stoichiometric_factors(1:2,2,1) = 0 0
 
+  ! controlling output:
+  n_steps_write_avg = 0                ! if non-zero, its absolute value tells how many steps before writing total densites
+                                       ! if positive, it writes average number densities in the system (fort.9)
+                                       ! if negative, it writes the total number of molecules in the system (fort.21)
 
 /
