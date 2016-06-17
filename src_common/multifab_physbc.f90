@@ -171,14 +171,14 @@ contains
        x = prob_hi(1)
        do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j) + 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(hi(1)+1:hi(1)+ng,j) = s(hi(1),j) - 0.5d0*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
     else if (bc(1,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        x = prob_hi(1)
        do j=lo(2)-ngylo,hi(2)+ngyhi
           y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
-          s(hi(1)+1:hi(1)+ng,j) = (threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+          s(hi(1)+1:hi(1)+ng,j) = -(threeEighths)*dx(1)*inhomogeneous_bc_val_2d(bccomp,x,y) &
                + (nineEighths)*s(hi(1),j) - (oneEighth)*s(hi(1)-1,j)
        end do
     else if (bc(1,2) .eq. EXT_DIR) then
@@ -237,14 +237,14 @@ contains
        y = prob_hi(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,hi(2)+1:hi(2)+ng) = s(i,hi(2)) + 0.5d0*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y)
+          s(i,hi(2)+1:hi(2)+ng) = s(i,hi(2)) - 0.5d0*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y)
        end do
     else if (bc(2,2) .eq. HOEXTRAP) then
        ! quadratric extrapolation using two interior points and Neumann bc
        y = prob_hi(2)
        do i=lo(1)-ng,hi(1)+ng
           x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-          s(i,hi(2)+1:hi(2)+ng) = (threeEighths)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y) &
+          s(i,hi(2)+1:hi(2)+ng) = -(threeEighths)*dx(2)*inhomogeneous_bc_val_2d(bccomp,x,y) &
                + (nineEighths)*s(i,hi(2)) - (oneEighth)*s(i,hi(2)-1)
        end do
     else if (bc(2,2) .eq. EXT_DIR) then
@@ -363,7 +363,7 @@ contains
           do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(hi(1)+1:hi(1)+ng,j,k) = s(hi(1),j,k) &
-                  + 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
        end do
     else if (bc(1,2) .eq. HOEXTRAP) then
@@ -374,7 +374,7 @@ contains
           do j=lo(2)-ngylo,hi(2)+ngyhi
              y = prob_lo(2) + (dble(j)+0.5d0)*dx(2)
              s(hi(1)+1:hi(1)+ng,j,k) = &
-                  (threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  -(threeEighths)*dx(1)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
                   + (nineEighths)*s(hi(1),j,k) - (oneEighth)*s(hi(1)-1,j,k)
           end do
        end do
@@ -451,7 +451,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,hi(2)+1:hi(2)+ng,k) = s(i,hi(2),k) &
-                  + 0.5d0*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
        end do
     else if (bc(2,2) .eq. HOEXTRAP) then
@@ -462,7 +462,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,hi(2)+1:hi(2)+ng,k) = &
-                  (threeEighths)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  -(threeEighths)*dx(2)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
                   + (nineEighths)*s(i,hi(2),k) - (oneEighth)*s(i,hi(2)-1,k)
           end do
        end do
@@ -539,7 +539,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,hi(3)+1:hi(3)+ng) = s(i,j,hi(3)) &
-                  + 0.5d0*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
+                  - 0.5d0*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z)
           end do
        end do
     else if (bc(3,2) .eq. HOEXTRAP) then
@@ -550,7 +550,7 @@ contains
           do i=lo(1)-ng,hi(1)+ng
              x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
              s(i,j,hi(3)+1:hi(3)+ng) = &
-                  (threeEighths)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
+                  -(threeEighths)*dx(3)*inhomogeneous_bc_val_3d(bccomp,x,y,z) &
                   + (nineEighths)*s(i,j,hi(3)) - (oneEighth)*s(i,j,hi(3)-1)
           end do
        end do
