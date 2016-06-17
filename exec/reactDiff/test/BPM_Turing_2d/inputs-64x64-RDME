@@ -60,7 +60,7 @@
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = -2    ! How often to call updateHydroGrid
+  hydro_grid_int = 0    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
