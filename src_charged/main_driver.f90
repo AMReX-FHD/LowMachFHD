@@ -58,6 +58,7 @@ subroutine main_driver()
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time,runtime1,runtime2,Dbar_max,dt_diffusive
+  real(kind=dp_t)              :: total_charge
   integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,n_Dbar
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
@@ -424,6 +425,10 @@ subroutine main_driver()
   ! compute total charge
   if (use_charged_fluid) then
      call dot_with_z(mla,rho_old,charge_old)
+     total_charge = multifab_sum_c(charge_old(1),1,1)
+     if (parallel_IOProcessor()) then
+        print*,'Total charge',total_charge
+     end if
   end if
 
   ! initialize Temp

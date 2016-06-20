@@ -14,7 +14,7 @@ module Epot_mass_fluxdiv_module
   use matvec_mul_module
   use probin_multispecies_module, only: nspecies
   use probin_gmres_module, only: mg_verbose
-  use probin_charged_module, only: dielectric_const
+  use probin_charged_module, only: dielectric_const, Epot_wall_bc_type
   
   implicit none
 
@@ -177,6 +177,11 @@ contains
        end if
     end if
 
+    ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
+    if (Epot_wall_bc_type .eq. 2) then
+       call inhomogeneous_neumann_fix()
+    end if
+
     ! solve (alpha - del dot beta grad) Epot = charge
     call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
                      verbose=mg_verbose)
@@ -187,6 +192,11 @@ contains
 
     ! compute the gradient of the electric potential
     call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
+    ! hack - add potential in periodic problem
+!    do n=1,nlevs
+!       call multifab_plus_plus_s(grad_Epot(n,1),-1.d10,0)
+!    end do
 
     ! compute the charge flux coefficient
     call compute_charge_coef(mla,rho,Temp,charge_coef)
@@ -230,6 +240,64 @@ contains
     end do
 
     call destroy(bpt)
+
+  contains
+
+    ! We would like to solve A x = b with inhomogeneous bc's
+    ! Here, "A" is -dielectric_const * Lap
+    ! This is equivalent to A_H x = b - A x_H, where
+    !   A   is the inhomogeneous operator
+    !   A_H is the homogeneous operator
+    !   x_H is a multifab filled with zeros, but ghost cells filled to respect bc's
+    ! We use this for walls with inhomogeneous Neumann conditions on the electric potential
+    subroutine inhomogeneous_neumann_fix()
+
+      type(multifab) :: zerofab(mla%nlevel)
+      type(multifab) :: gradphi(mla%nlevel,mla%dim)
+
+
+      do n=1,nlevs
+         call multifab_build(zerofab(n),mla%la(n),1,1)
+         do i=1,dm
+            call multifab_build_edge(gradphi(n,i),mla%la(n),1,0,i)
+         end do
+      end do
+
+      do n=1,nlevs
+         call multifab_setval(zerofab(n),0.d0,all=.true.)
+      end do
+
+      do n=1,nlevs
+         ! fill ghost cells for zerofab
+         call multifab_physbc(zerofab(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                              dx_in=dx(n,:))
+
+         call multifab_fill_boundary(zerofab(n))
+
+         ! multiply zerofab everywhere (including ghost cells) by dielectric_const since
+         ! we are incrementing the RHS (charge) by -A x_H
+         call multifab_mult_mult_s(zerofab(n), dielectric_const, 1)
+
+      end do
+
+      ! compute gradient of zerofab
+      call compute_grad(mla,zerofab,gradphi,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
+      ! increment charge with negative divergence
+      call compute_div(mla,gradphi,charge,dx,1,1,1,increment_in=.true.)
+
+      do n=1,nlevs
+         call multifab_fill_boundary(charge(n))
+      end do
+
+      do n=1,nlevs
+         call multifab_destroy(zerofab(n))
+         do i=1,dm
+            call multifab_destroy(gradphi(n,i))
+         end do
+      end do
+
+    end subroutine inhomogeneous_neumann_fix
 
   end subroutine Epot_mass_flux
 

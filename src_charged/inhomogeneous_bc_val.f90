@@ -6,7 +6,7 @@ module inhomogeneous_bc_val_module
   use bl_constants_module
   use probin_multispecies_module, only: nspecies, c_bc
   use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type
-  use probin_charged_module, only: Epot_wall
+  use probin_charged_module, only: Epot_wall, Epot_wall_bc_type
 
   implicit none
 
@@ -32,7 +32,12 @@ contains
 
        bc_code(1:num_scal_bc-2) = FOEXTRAP  ! Pure Neumann for total density, conctractions, mol/mass fractions
        bc_code(  num_scal_bc-1) = EXT_DIR   ! But temperature is still specified at the boundary (via call to multifab_coefbc)
-       bc_code(  num_scal_bc  ) = EXT_DIR   ! Electric potential fixed on walls
+       
+       if (Epot_wall_bc_type .eq. 1) then
+          bc_code(  num_scal_bc  ) = EXT_DIR   ! Electric potential fixed on walls
+       else if (Epot_wall_bc_type .eq. 2) then
+          bc_code(  num_scal_bc  ) = FOEXTRAP  ! Charge density fixed on walls
+       end if
 
     else if ((phys_bc == NO_SLIP_RESERVOIR) .or. (phys_bc == SLIP_RESERVOIR)) then
 

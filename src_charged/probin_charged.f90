@@ -10,6 +10,7 @@ module probin_charged_module
   logical            :: use_charged_fluid
   real(kind=dp_t)    :: dielectric_const
   real(kind=dp_t)    :: charge_per_mass(max_species)
+  real(kind=dp_t)    :: Epot_wall_bc_type
   real(kind=dp_t)    :: Epot_wall(1:2,1:3)
   real(kind=dp_t)    :: theta_pot
   integer            :: num_pot_iters
@@ -19,7 +20,9 @@ module probin_charged_module
   namelist /probin_charged/ use_charged_fluid
   namelist /probin_charged/ dielectric_const
   namelist /probin_charged/ charge_per_mass
-  namelist /probin_charged/ Epot_wall
+  namelist /probin_charged/ Epot_wall_bc_type  ! 1 = Dirichlet (fixed potential)
+                                               ! 2 = Neumann (fixed charge density)
+  namelist /probin_charged/ Epot_wall          ! Dirichlet or Neumann condition
   namelist /probin_charged/ theta_pot          ! for implicit algorithm_type=3, controls
                                                ! temporal discretization for potential term
   namelist /probin_charged/ num_pot_iters
@@ -48,6 +51,7 @@ contains
     use_charged_fluid  = .false.
     dielectric_const   = 1.d0
     charge_per_mass(:) = 0.d0
+    Epot_wall_bc_type  = 1
     Epot_wall(:,:)     = 0.d0
     theta_pot          = 1.d0
     num_pot_iters      = 2
@@ -83,6 +87,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) dielectric_const
+
+       case ('--Epot_wall_bc_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) Epot_wall_bc_type
 
        case ('--theta_pot')
           farg = farg + 1

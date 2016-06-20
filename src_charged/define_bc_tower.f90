@@ -4,6 +4,8 @@ module define_bc_module
   use ml_layout_module
   use bc_module
   use inhomogeneous_bc_val_module
+  use probin_common_module, only : bc_lo, bc_hi
+  use probin_charged_module, only: Epot_wall_bc_type
 
   implicit none
 
@@ -31,10 +33,6 @@ module define_bc_module
 contains
 
   subroutine initialize_bc(the_bc_tower,num_levs,dm,pmask,num_scal_bc_in,num_tran_bc_in)
-
-     use bc_module
-
-     use probin_common_module, only : bc_lo, bc_hi
 
      type(bc_tower), intent(  out) :: the_bc_tower
      integer       , intent(in   ) :: num_levs,dm,num_scal_bc_in,num_tran_bc_in
@@ -298,7 +296,15 @@ contains
           ! pressure is homogeneous Neumann
           ! make everything else Dirichlet (only used for Epot right now)
           ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
-          ell_bc_level(igrid,d,lohi,pres_bc_comp+1:pres_bc_comp+num_scal_bc) = BC_DIR
+
+          ! electric potential
+          if (Epot_wall_bc_type .eq. 1) then
+             ell_bc_level(igrid,d,lohi,pres_bc_comp+1:pres_bc_comp+num_scal_bc) = BC_DIR
+          else if (Epot_wall_bc_type .eq. 2) then
+             ell_bc_level(igrid,d,lohi,pres_bc_comp+1:pres_bc_comp+num_scal_bc) = BC_NEU
+          else
+
+          end if
 
        else
 
