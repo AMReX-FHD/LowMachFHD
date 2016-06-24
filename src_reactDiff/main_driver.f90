@@ -65,8 +65,6 @@ subroutine main_driver()
 
    real(kind=dp_t), allocatable :: input_array(:,:,:)
 
-   real(kind=dp_t) :: test
-
    !==============================================================
    ! Initialization
    !==============================================================

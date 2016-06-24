@@ -28,7 +28,6 @@ contains
 
      type(ml_boxarray)         :: mba
      type(multifab), pointer   :: chkdata(:)
-     type(layout)              :: la
      type(layout)              :: la_array(1)
 
      integer :: n,nlevs

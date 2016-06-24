@@ -200,8 +200,6 @@ contains
     integer :: fluxes(n_faces) ! Number of particles jumping out of this cell to each of the neighboring cells
     real(kind=dp_t) :: probabilities(n_faces)
 
-    print*,'hack',parallel_myproc()
-
     allocate(cell_update(lo(1)-1:hi(1)+1,lo(2)-1:hi(2)+1,nspecies))
     cell_update = 0.d0
 

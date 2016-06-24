@@ -36,8 +36,6 @@ contains
 
     type(bl_prof_timer), save :: bpt
 
-    real(kind=dp_t) :: test
-
     call build(bpt, "checkpoint_write")
 
     nlevs = mla%nlevel

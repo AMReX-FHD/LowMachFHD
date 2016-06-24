@@ -14,7 +14,7 @@
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 32.d0 32.d0       ! physical hi coordinate
   n_cells(1:2) = 128 128               ! number of cells in domain
-  max_grid_size(1:2) = 128 128         ! max number of cells in a box
+  max_grid_size(1:2) = 128 128       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
@@ -23,14 +23,14 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 10                  ! maximum number of time steps
-  plot_int = 1                    ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = 1                      ! Interval for writing a checkpoint
-  restart =  5                    ! checkpoint restart number
-  print_int = 1                   ! how often to output statistics
+  max_step = 80000                  ! maximum number of time steps
+  plot_int = 800                    ! Interval for writing a plotfile (for visit/amrvis)
+  chk_int = 0                      ! Interval for writing a checkpoint
+  restart = -1                     ! checkpoint restart number
+  print_int = 800                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing
 
   ! Initial conditions
   !----------------------
@@ -114,23 +114,17 @@
                                  ! K(nold) * W1 + K(nold)         * W2
                                  ! K(nold) * W1 + K(npred)        * W2
                                  ! K(nold) * W1 + K(2*npred-nold) * W2
-  reaction_type = 1              ! Only used for splitting schemes
+  reaction_type = 2              ! Only used for splitting schemes
                                  ! 0=first-order tau leaping or CLE
                                  ! 1=second-order tau leaping or CLE
                                  ! 2=SSA
-  use_Poisson_rng = -1           ! Only used for reaction_type = 0, 1
+  use_Poisson_rng = 1            ! Only used for reaction_type = 0, 1
                                  ! If -1 do deterministic chemistry
                                  ! If 1 do tau leaping (Poisson increments),
                                  ! If 0 do Chemical Langevin Equation (CLE) (Gaussian increments)
   inhomogeneous_bc_fix = F       ! use the Einkemmer boundary condition fix (split schemes only)
   avg_type = 3                   ! how to compute n on faces for stochastic weighting
                                  ! 1=arithmetic, 2=geometric, 3=harmonic
-
-  use_bl_rng = T
-  seed_diffusion = -1
-  seed_reaction = -1
-  seed_init = 1
-
 
   ! Initial and boundary conditions
   !----------------------
