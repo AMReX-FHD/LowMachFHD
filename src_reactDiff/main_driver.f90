@@ -395,6 +395,7 @@ subroutine main_driver()
    
    else ! Here we always write the starting point to check restarts are working
    
+      istep = restart
       call write_plotfile_n(mla,n_old,dx,time,restart)   
       
    end if   
@@ -403,9 +404,9 @@ subroutine main_driver()
    ! Begin time stepping loop
    !=======================================================
 
-!   if (parallel_IOProcessor()) then
-!      print*,"BEGIN time loop istep =",istep,"dt =",dt,"time =",time
-!   end if
+   if (parallel_IOProcessor()) then
+      print*,"BEGIN time loop istep =",istep,"dt =",dt,"time =",time
+   end if
    runtime1 = parallel_wtime()
 
    do istep=init_step,max_step      
