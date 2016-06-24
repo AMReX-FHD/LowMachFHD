@@ -29,6 +29,7 @@ contains
      type(ml_boxarray)         :: mba
      type(multifab), pointer   :: chkdata(:)
      type(layout)              :: la
+     type(layout)              :: la_array(1)
 
      integer :: n,nlevs
 
@@ -38,7 +39,12 @@ contains
 
      call fill_restart_data(mba,chkdata,time,dt)
 
-     call ml_layout_build(mla,mba,pmask)
+     ! old way
+!     call ml_layout_build(mla,mba,pmask)
+
+     ! new way
+     la_array(1) = chkdata(1)%la
+     call ml_layout_build_la_array(mla,la_array,mba,pmask,1)
 
      nlevs = mba%nlevel
 
@@ -51,9 +57,7 @@ contains
         ! The layout for chkdata is built standalone, level
         ! by level, and need to be destroy()d as such as well.
         !
-        la = get_layout(chkdata(n))
         call multifab_destroy(chkdata(n))
-        call destroy(la)
      end do
      deallocate(chkdata)
      call destroy(mba)
@@ -100,22 +104,30 @@ contains
     if (use_bl_rng) then
 
        if (seed_diffusion .eq. -1) then
-          rand_name = sd_name//'/rng_binomial_diffusion'
-          call bl_rng_restore(rng_binomial_diffusion, rand_name)
 
-          rand_name = sd_name//'/rng_normal_diffusion'
-          call bl_rng_restore(rng_normal_diffusion, rand_name)
+          rand_name = sd_name//'/rng_eng_diffusion'
+          call bl_rng_restore_engine(rng_eng_diffusion, rand_name)
+
+          rand_name = sd_name//'/rng_dist_binomial_diffusion'
+          call bl_rng_restore_distro(rng_dist_binomial_diffusion, rand_name)
+
+          rand_name = sd_name//'/rng_dist_normal_diffusion'
+          call bl_rng_restore_distro(rng_dist_normal_diffusion, rand_name)
        end if
 
        if (seed_reaction .eq. -1) then
-          rand_name = sd_name//'/rng_poisson_reaction'
-          call bl_rng_restore(rng_poisson_reaction, rand_name)
 
-          rand_name = sd_name//'/rng_normal_reaction'
-          call bl_rng_restore(rng_normal_reaction, rand_name)
+          rand_name = sd_name//'/rng_eng_reaction'
+          call bl_rng_restore_engine(rng_eng_reaction, rand_name)
 
-          rand_name = sd_name//'/rng_uniform_real_reaction'
-          call bl_rng_restore(rng_uniform_real_reaction, rand_name)
+          rand_name = sd_name//'/rng_dist_poisson_reaction'
+          call bl_rng_restore_distro(rng_dist_poisson_reaction, rand_name)
+
+          rand_name = sd_name//'/rng_dist_normal_reaction'
+          call bl_rng_restore_distro(rng_dist_normal_reaction, rand_name)
+
+          rand_name = sd_name//'/rng_dist_uniform_real_reaction'
+          call bl_rng_restore_distro(rng_dist_uniform_real_reaction, rand_name)
        end if
 
     end if

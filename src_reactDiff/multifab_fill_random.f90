@@ -87,11 +87,11 @@ contains
 
     if (use_init_rng) then
        do i=1, n_numbers
-          numbers(i) = bl_rng_get(rng_normal_init)
+          numbers(i) = bl_rng_get(rng_dist_normal_init,rng_eng_init)
        end do
     else
        do i=1, n_numbers
-          numbers(i) = bl_rng_get(rng_normal_diffusion)
+          numbers(i) = bl_rng_get(rng_dist_normal_diffusion,rng_eng_diffusion)
        end do
     end if
 

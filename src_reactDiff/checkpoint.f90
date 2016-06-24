@@ -36,6 +36,8 @@ contains
 
     type(bl_prof_timer), save :: bpt
 
+    real(kind=dp_t) :: test
+
     call build(bpt, "checkpoint_write")
 
     nlevs = mla%nlevel
@@ -52,20 +54,25 @@ contains
     
     ! random state
     if (use_bl_rng) then
-       rand_name = sd_name//'/rng_binomial_diffusion'
-       call bl_rng_save(rng_binomial_diffusion, rand_name)
 
-       rand_name = sd_name//'/rng_normal_diffusion'
-       call bl_rng_save(rng_normal_diffusion, rand_name)
+       ! engines
+       rand_name = sd_name//'/rng_eng_diffusion'
+       call bl_rng_save_engine(rng_eng_diffusion, rand_name)
+       rand_name = sd_name//'/rng_eng_reaction'
+       call bl_rng_save_engine(rng_eng_reaction, rand_name)
 
-       rand_name = sd_name//'/rng_poisson_reaction'
-       call bl_rng_save(rng_poisson_reaction, rand_name)
+       ! distributions
+       rand_name = sd_name//'/rng_dist_binomial_diffusion'
+       call bl_rng_save_distro(rng_dist_binomial_diffusion, rand_name)
+       rand_name = sd_name//'/rng_dist_normal_diffusion'
+       call bl_rng_save_distro(rng_dist_normal_diffusion, rand_name)
+       rand_name = sd_name//'/rng_dist_poisson_reaction'
+       call bl_rng_save_distro(rng_dist_poisson_reaction, rand_name)
+       rand_name = sd_name//'/rng_dist_normal_reaction'
+       call bl_rng_save_distro(rng_dist_normal_reaction, rand_name)
+       rand_name = sd_name//'/rng_dist_uniform_real_reaction'
+       call bl_rng_save_distro(rng_dist_uniform_real_reaction, rand_name)
 
-       rand_name = sd_name//'/rng_normal_reaction'
-       call bl_rng_save(rng_normal_reaction, rand_name)
-
-       rand_name = sd_name//'/rng_uniform_real_reaction'
-       call bl_rng_save(rng_uniform_real_reaction, rand_name)
     end if
 
     do n = 1,nlevs

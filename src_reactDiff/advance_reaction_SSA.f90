@@ -210,7 +210,7 @@ contains
 
        ! generate pseudorandom number in interval [0,1).
        if (use_bl_rng) then
-          rr = bl_rng_get(rng_uniform_real_reaction)
+          rr = bl_rng_get(rng_dist_uniform_real_reaction,rng_eng_reaction)
        else
           call UniformRNG(rr)
        end if
@@ -222,7 +222,7 @@ contains
 
        ! Select the next reaction according to relative rates
        if (use_bl_rng) then
-          rr = bl_rng_get(rng_uniform_real_reaction)
+          rr = bl_rng_get(rng_dist_uniform_real_reaction,rng_eng_reaction)
        else
           call UniformRNG(rr)
        end if

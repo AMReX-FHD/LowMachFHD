@@ -65,6 +65,8 @@ subroutine main_driver()
 
    real(kind=dp_t), allocatable :: input_array(:,:,:)
 
+   real(kind=dp_t) :: test
+
    !==============================================================
    ! Initialization
    !==============================================================
@@ -401,9 +403,9 @@ subroutine main_driver()
    ! Begin time stepping loop
    !=======================================================
 
-   if (parallel_IOProcessor()) then
-      print*,"BEGIN time loop istep =",istep,"dt =",dt,"time =",time
-   end if
+!   if (parallel_IOProcessor()) then
+!      print*,"BEGIN time loop istep =",istep,"dt =",dt,"time =",time
+!   end if
    runtime1 = parallel_wtime()
 
    do istep=init_step,max_step      
