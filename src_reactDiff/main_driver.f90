@@ -363,7 +363,15 @@ subroutine main_driver()
    if (restart .lt. 0) then
       istep=0
       
-      if (plot_int .gt. 0) call write_plotfile_n(mla,n_old,dx,time,istep)
+      if (plot_int .gt. 0) then
+         ! write a plotfile
+         call write_plotfile_n(mla,n_old,dx,time,istep)
+      end if
+
+      if (chk_int .ge. 0) then
+         ! write a checkpoint
+         call checkpoint_write(mla,n_old,time,dt,istep)
+      end if
    
       if(istep >= n_steps_skip) then
          ! Add the initial snapshot to the average in HydroGrid
