@@ -39,12 +39,10 @@ module probin_reactdiff_module
                                                     ! 1=second-order tau leaping or CLE
                                                     ! 2=SSA
   integer, save :: use_Poisson_rng = 1              ! how to calculate chemical production rates
-                                                    ! (not used if if temporal_integrator>=0 and reaction_type=2)
+                                                    ! (not used if temporal_integrator>=0 and reaction_type=2)
                                                     ! 1=do tau leaping (Poisson increments)
                                                     ! 0= do CLE (Gaussian increments)
                                                     ! -1=do deterministic chemistry
-                                                    ! for unsplitting schemes with SSA reaction, use
-                                                    ! 2=calculate rates from SSA
   logical, save :: inhomogeneous_bc_fix = .false.   ! use the Einkemmer boundary condition fix (split schemes only)
   integer, save :: avg_type = 1                     ! how to compute n on faces for stochastic weighting
                                                     ! 1=arithmetic (with C0-Heaviside), 2=geometric, 3=harmonic

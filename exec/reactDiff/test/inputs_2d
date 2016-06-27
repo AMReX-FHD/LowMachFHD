@@ -148,8 +148,6 @@
                                    ! 1=do tau leaping (Poisson increments)
                                    ! 0= do CLE (Gaussian increments)
                                    ! -1=do deterministic chemistry
-                                   ! for unsplitting schemes with SSA reaction, use
-                                   ! 2=calculate rates from SSA
 
   inhomogeneous_bc_fix = F         ! use the Einkemmer boundary condition fix (split schemes only)
 
