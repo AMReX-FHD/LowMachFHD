@@ -73,16 +73,6 @@ contains
       return
     end if   
 
-    if (use_Poisson_rng .eq. 2) then
-      if (temporal_integrator .ge. 0 .and. (reaction_type .eq. 0 .or. reaction_type .eq. 1)) then
-        ! really don't need to use SSA (use_Poisson_rng=2) with reaction_type=0 or 1
-        call bl_error("use reaction_type=2")
-      end if
-
-      call advance_reaction_SSA(mla,n_cc,chem_rate,dx,dt,return_chemical_rates_in=.true.)
-      return
-    end if
-
     ! otherwise, complete the remaining part
     call build(bpt,"chemical_rates")
 
