@@ -28,12 +28,13 @@ module advance_timestep_iterative_module
   use fluid_charge_module
   use ml_solve_module
   use bndry_reg_module
+  use Epot_mass_fluxdiv_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid, dielectric_const, theta_pot, &
-                                   num_pot_iters, dpdt_factor
+                                   num_pot_iters, dpdt_factor, Epot_wall_bc_type
 
   implicit none
 
@@ -358,6 +359,11 @@ contains
           call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                                dx_in=dx(n,:))
        end do
+
+       ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
+       if (Epot_wall_bc_type .eq. 2) then
+          call inhomogeneous_neumann_fix(mla,solver_rhs,dx,the_bc_tower)
+       end if
 
        ! solve -div (epsilon + dt theta z^T A_Phi^{n+1,l}) grad Phi^{n+1,l+1} = z^T RHS
        call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
