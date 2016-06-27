@@ -104,28 +104,28 @@ contains
 
        if (seed_diffusion .eq. -1) then
 
-          rand_name = sd_name//'/rng_eng_diffusion'
+          rand_name = sd_name//'/rng_eng_diff'
           call bl_rng_restore_engine(rng_eng_diffusion, rand_name)
 
-          rand_name = sd_name//'/rng_dist_binomial_diffusion'
+          rand_name = sd_name//'/rng_dist_binomial_diff'
           call bl_rng_restore_distro(rng_dist_binomial_diffusion, rand_name)
 
-          rand_name = sd_name//'/rng_dist_normal_diffusion'
+          rand_name = sd_name//'/rng_dist_normal_diff'
           call bl_rng_restore_distro(rng_dist_normal_diffusion, rand_name)
        end if
 
        if (seed_reaction .eq. -1) then
 
-          rand_name = sd_name//'/rng_eng_reaction'
+          rand_name = sd_name//'/rng_eng_react'
           call bl_rng_restore_engine(rng_eng_reaction, rand_name)
 
-          rand_name = sd_name//'/rng_dist_poisson_reaction'
+          rand_name = sd_name//'/rng_dist_poisson_react'
           call bl_rng_restore_distro(rng_dist_poisson_reaction, rand_name)
 
-          rand_name = sd_name//'/rng_dist_normal_reaction'
+          rand_name = sd_name//'/rng_dist_normal_react'
           call bl_rng_restore_distro(rng_dist_normal_reaction, rand_name)
 
-          rand_name = sd_name//'/rng_dist_uniform_real_reaction'
+          rand_name = sd_name//'/rng_dist_uniform_real_react'
           call bl_rng_restore_distro(rng_dist_uniform_real_reaction, rand_name)
        end if
 
