@@ -3,7 +3,7 @@
 BOXLIB_HOME := ${HPC_SRC}/FluctHydro/BoxLib
 HYDROLIB_HOME := ${HPC_SRC}/FluctHydro/HydroGrid
 STAGGERED_HOME := ${HPC_SRC}/FluctHydro/FluctHydro/staggered_grid
-REACTDIFF_HOME := $(STAGGERED_HOME)/exec/multiSpecDiff_implicit
+REACTDIFF_HOME := $(STAGGERED_HOME)/exec/reactDiff/test
 
 NDEBUG    := t
 MPI       := t
@@ -11,12 +11,16 @@ OMP       :=
 PROF      :=
 MKVERBOSE := t
 
+
 COMP := gfortran52
 CCOMP     := gcc52
 
+# need this to compile bl_rng.f90 (module to store random number engines and distributions)
+CXX11 = t
+
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
-xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/4.9.2/lib64
+xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/5.2.0/lib64
 
 VPATH_LOCATIONS += $(REACTDIFF_HOME)
 
