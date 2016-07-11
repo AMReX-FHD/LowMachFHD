@@ -157,8 +157,9 @@ contains
           if(sum(probabilities)>1.0_dp_t) &
              call bl_error("Explicit CFL stability limit violated for multinomial diffusion")
           if (use_bl_rng) then
-             call bl_MultinomialRNG(fluxes, n_faces, &
-                                    max(0, nint(n_new(i,comp)*dv)), probabilities)
+             call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
+                                 N=max(0, nint(n_new(i,comp)*dv)), p=probabilities, &
+                                 engine=rng_eng_diffusion)
           else
              call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                  N=max(0, nint(n_new(i,comp)*dv)), p=probabilities)
@@ -218,8 +219,9 @@ contains
                 call bl_error("Explicit CFL stability limit violated for multinomial diffusion")
 
              if (use_bl_rng) then
-                call bl_MultinomialRNG(fluxes, n_faces, &
-                                       max(0, nint(n_new(i,j,comp)*dv)), probabilities)
+                call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
+                                    N=max(0, nint(n_new(i,j,comp)*dv)), p=probabilities, &
+                                    engine=rng_eng_diffusion)
              else
                 call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                     N=max(0, nint(n_new(i,j,comp)*dv)), p=probabilities)
@@ -292,8 +294,9 @@ contains
              call bl_error("Explicit CFL stability limit violated for multinomial diffusion")
 
           if (use_bl_rng) then
-             call bl_MultinomialRNG(fluxes, n_faces, &
-                                    max(0, nint(n_new(i,j,k,comp)*dv)), probabilities)
+             call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
+                                 N=max(0, nint(n_new(i,j,k,comp)*dv)), p=probabilities, &
+                                 engine=rng_eng_diffusion)
           else
              call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                  N=max(0, nint(n_new(i,j,k,comp)*dv)), p=probabilities)
