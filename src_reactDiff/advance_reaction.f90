@@ -73,7 +73,7 @@ contains
     ! advancing time !
     !!!!!!!!!!!!!!!!!!
 
-    if (reaction_type .eq. 0) ! first-order tau-leaping/CLE, or SSA
+    if (reaction_type .eq. 0) then ! first-order tau-leaping/CLE, or SSA
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
