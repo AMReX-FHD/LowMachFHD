@@ -288,7 +288,7 @@ contains ! It is likely that vectorized versions will do better here
     REAL(dp), INTENT(IN) :: mean
     type(hg_rng_engine), intent(inout), optional :: engine
 
-    number=random_Poisson(mu=real(mean), first=.true., engine=engine)
+    number=random_Poisson(mu=real(mean), engine=engine)
 
  END SUBROUTINE
 
@@ -297,7 +297,7 @@ contains ! It is likely that vectorized versions will do better here
     REAL(sp), INTENT(IN) :: mean
     type(hg_rng_engine), intent(inout), optional :: engine
 
-    number=random_Poisson(mu=mean, first=.true., engine=engine)
+    number=random_Poisson(mu=mean, engine=engine)
 
  END SUBROUTINE
 
@@ -307,7 +307,7 @@ contains ! It is likely that vectorized versions will do better here
     REAL(dp), INTENT(IN) :: success_prob ! Probability of successful trial
     type(hg_rng_engine), intent(inout), optional :: engine
 
-    number=random_binomial(n=n_trials, pp=real(success_prob), first=.true., engine=engine)
+    number=random_binomial(n=n_trials, pp=real(success_prob), engine=engine)
 
  END SUBROUTINE
 
@@ -317,7 +317,7 @@ contains ! It is likely that vectorized versions will do better here
     REAL(sp), INTENT(IN) :: success_prob ! Probability of successful trial
     type(hg_rng_engine), intent(inout), optional :: engine
 
-    number=random_binomial(n=n_trials, pp=success_prob, first=.true., engine=engine)
+    number=random_binomial(n=n_trials, pp=success_prob, engine=engine)
     
  END SUBROUTINE
 

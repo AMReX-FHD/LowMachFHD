@@ -712,7 +712,7 @@ END FUNCTION random_inv_gauss
 
 
 
-FUNCTION random_Poisson(mu, first, engine) RESULT(ival)
+FUNCTION random_Poisson(mu, engine) RESULT(ival)
 !**********************************************************************
 !     Translated to Fortran 90 by Alan Miller from:
 !                           RANLIB
@@ -760,21 +760,19 @@ FUNCTION random_Poisson(mu, first, engine) RESULT(ival)
 
 !     .. Scalar Arguments ..
 REAL, INTENT(IN)    :: mu
-LOGICAL, INTENT(IN) :: first
 type(hg_rng_engine), intent(inout), optional :: engine
 INTEGER             :: ival
 !     ..
 !     .. Local Scalars ..
-! Donev: Fixed a bug here by adding SAVE attribute to next line
-REAL, SAVE    :: b1, b2, c, c0, c1, c2, c3, del, difmuk, e, fk, fx, fy, g,  &
-                 omega, px, py, t, u, v, x, xx
-REAL, SAVE    :: s, d, p, q, p0
-INTEGER       :: j, k, kflag
-LOGICAL, SAVE :: full_init
-INTEGER, SAVE :: l, m
+REAL    :: b1, b2, c, c0, c1, c2, c3, del, difmuk, e, fk, fx, fy, g,  &
+           omega, px, py, t, u, v, x, xx
+REAL    :: s, d, p, q, p0
+INTEGER :: j, k, kflag
+LOGICAL :: full_init
+INTEGER :: l, m
 !     ..
 !     .. Local Arrays ..
-REAL, SAVE    :: pp(35)
+REAL    :: pp(35)
 !     ..
 !     .. Data statements ..
 REAL, PARAMETER :: a0 = -.5, a1 = .3333333, a2 = -.2500068, a3 = .2000118,  &
@@ -787,22 +785,18 @@ REAL, PARAMETER :: fact(10) = (/ 1., 1., 2., 6., 24., 120., 720., 5040.,  &
 !     ..
 !     .. Executable Statements ..
 
-if(.not.first) write(*,*) "WARNING: Calling random_poisson with mu=", mu, " with first=F"
-
 IF (mu > 10.0) THEN
 !     C A S E  A. (RECALCULATION OF S, D, L IF MU HAS CHANGED)
 
-  IF (first) THEN
-    s = SQRT(mu)
-    d = 6.0*mu*mu
+   s = SQRT(mu)
+   d = 6.0*mu*mu
 
 !             THE POISSON PROBABILITIES PK EXCEED THE DISCRETE NORMAL
 !             PROBABILITIES FK WHENEVER K >= M(MU). L=IFIX(MU-1.1484)
 !             IS AN UPPER BOUND TO M(MU) FOR ALL MU >= 10 .
 
-    l = mu - 1.1484
-    full_init = .false.
-  END IF
+   l = mu - 1.1484
+   full_init = .false.
 
 
 !     STEP N. NORMAL SAMPLE - random_normal() FOR STANDARD NORMAL DEVIATE
@@ -918,14 +912,11 @@ IF (mu > 10.0) THEN
 !     START NEW TABLE AND CALCULATE P0 IF NECESSARY
 
 ELSE
-  IF (first) THEN
-    m = MAX(1, INT(mu))
-    l = 0
-    p = EXP(-mu)
-    q = p
-    p0 = p
-  END IF
-  !write(*,*) "TEST=", first, m
+   m = MAX(1, INT(mu))
+   l = 0
+   p = EXP(-mu)
+   q = p
+   p0 = p
 
 !     STEP U. UNIFORM SAMPLE FOR INVERSION METHOD
 
@@ -1130,7 +1121,7 @@ END FUNCTION lngamma
 
 
 
-FUNCTION random_binomial(n, pp, first, engine) RESULT(ival)
+FUNCTION random_binomial(n, pp, engine) RESULT(ival)
 !**********************************************************************
 !     Translated to Fortran 90 by Alan Miller from:
 !                              RANLIB
@@ -1194,7 +1185,6 @@ FUNCTION random_binomial(n, pp, first, engine) RESULT(ival)
 !     .. Scalar Arguments ..
 REAL, INTENT(IN)    :: pp
 INTEGER, INTENT(IN) :: n
-LOGICAL, INTENT(IN) :: first
 type(hg_rng_engine), intent(inout), optional :: engine
 INTEGER             :: ival
 !     ..
@@ -1202,8 +1192,8 @@ INTEGER             :: ival
 REAL            :: alv, amaxp, f, f1, f2, u, v, w, w2, x, x1, x2, ynorm, z, z2
 REAL, PARAMETER :: zero = 0.0, half = 0.5, one = 1.0
 INTEGER         :: i, ix, ix1, k, mp
-INTEGER, SAVE   :: m
-REAL, SAVE      :: p, q, xnp, ffm, fm, xnpq, p1, xm, xl, xr, c, al, xll,  &
+INTEGER         :: m
+REAL            :: p, q, xnp, ffm, fm, xnpq, p1, xm, xl, xr, c, al, xll,  &
                    xlr, p2, p3, p4, qn, r, g
 
 !     ..
@@ -1211,31 +1201,27 @@ REAL, SAVE      :: p, q, xnp, ffm, fm, xnpq, p1, xm, xl, xr, c, al, xll,  &
 
 !*****SETUP, PERFORM ONLY WHEN PARAMETERS CHANGE
 
-IF (first) THEN
-  p = MIN(pp, one-pp)
-  q = one - p
-  xnp = n * p
-END IF
+p = MIN(pp, one-pp)
+q = one - p
+xnp = n * p
 
 IF (xnp > 30.) THEN
-  IF (first) THEN
-    ffm = xnp + p
-    m = ffm
-    fm = m
-    xnpq = xnp * q
-    p1 = INT(2.195*SQRT(xnpq) - 4.6*q) + half
-    xm = fm + half
-    xl = xm - p1
-    xr = xm + p1
-    c = 0.134 + 20.5 / (15.3 + fm)
-    al = (ffm-xl) / (ffm - xl*p)
-    xll = al * (one + half*al)
-    al = (xr - ffm) / (xr*q)
-    xlr = al * (one + half*al)
-    p2 = p1 * (one + c + c)
-    p3 = p2 + c / xll
-    p4 = p3 + c / xlr
-  END IF
+   ffm = xnp + p
+   m = ffm
+   fm = m
+   xnpq = xnp * q
+   p1 = INT(2.195*SQRT(xnpq) - 4.6*q) + half
+   xm = fm + half
+   xl = xm - p1
+   xr = xm + p1
+   c = 0.134 + 20.5 / (15.3 + fm)
+   al = (ffm-xl) / (ffm - xl*p)
+   xll = al * (one + half*al)
+   al = (xr - ffm) / (xr*q)
+   xlr = al * (one + half*al)
+   p2 = p1 * (one + c + c)
+   p3 = p2 + c / xll
+   p4 = p3 + c / xlr
 
 !*****GENERATE VARIATE, Binomial mean at least 30.
 
@@ -1336,11 +1322,9 @@ IF (xnp > 30.) THEN
 
 ELSE
 !     INVERSE CDF LOGIC FOR MEAN LESS THAN 30
-  IF (first) THEN
-    qn = q ** n
-    r = p / q
-    g = r * (n+1)
-  END IF
+   qn = q ** n
+   r = p / q
+   g = r * (n+1)
 
   90 ix = 0
   f = qn
