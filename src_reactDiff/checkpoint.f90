@@ -55,21 +55,9 @@ contains
 
        ! engines
        rand_name = sd_name//'/rng_eng_diff'
-       call bl_rng_save_engine(rng_eng_diffusion, rand_name)
+       call bl_rng_save_engine(rng_eng_diffusion_e, rand_name)
        rand_name = sd_name//'/rng_eng_react'
-       call bl_rng_save_engine(rng_eng_reaction, rand_name)
-
-       ! distributions
-       rand_name = sd_name//'/rng_dist_binomial_diff'
-       call bl_rng_save_distro(rng_dist_binomial_diffusion, rand_name)
-       rand_name = sd_name//'/rng_dist_normal_diff'
-       call bl_rng_save_distro(rng_dist_normal_diffusion, rand_name)
-       rand_name = sd_name//'/rng_dist_poisson_react'
-       call bl_rng_save_distro(rng_dist_poisson_reaction, rand_name)
-       rand_name = sd_name//'/rng_dist_normal_react'
-       call bl_rng_save_distro(rng_dist_normal_reaction, rand_name)
-       rand_name = sd_name//'/rng_dist_uniform_real_react'
-       call bl_rng_save_distro(rng_dist_uniform_real_reaction, rand_name)
+       call bl_rng_save_engine(rng_eng_reaction_e, rand_name)
 
     end if
 

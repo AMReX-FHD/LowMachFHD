@@ -44,8 +44,10 @@ contains
           end if
 
           ! Fill the whole grid with random numbers
-          if (use_bl_rng) then
-             call bl_NormalRNGs(fp, size(fp), init)
+          if (init) then
+             call bl_NormalRNGs(fp, size(fp))
+          else if (use_bl_rng) then
+             call NormalRNGs(fp, size(fp), rng_eng_diffusion)
           else
              call NormalRNGs(fp, size(fp))
           end if
@@ -78,22 +80,15 @@ contains
   end subroutine multifab_fill_random
 
   ! interface to call bl_random on an array of data (e.g., for multifabs)
-  subroutine bl_NormalRNGs(numbers, n_numbers, use_init_rng)
+  subroutine bl_NormalRNGs(numbers, n_numbers)
     integer   , intent(in ) :: n_numbers
     real(dp_t), intent(out) :: numbers(n_numbers)
-    logical   , intent(in ) :: use_init_rng
 
     integer :: i
 
-    if (use_init_rng) then
-       do i=1, n_numbers
-          numbers(i) = bl_rng_get(rng_dist_normal_init,rng_eng_init)
-       end do
-    else
-       do i=1, n_numbers
-          numbers(i) = bl_rng_get(rng_dist_normal_diffusion,rng_eng_diffusion)
-       end do
-    end if
+    do i=1, n_numbers
+       numbers(i) = bl_rng_get(rng_dist_normal_init,rng_eng_init)
+    end do
 
   end subroutine
 

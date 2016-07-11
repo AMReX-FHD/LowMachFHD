@@ -105,28 +105,25 @@ contains
        if (seed_diffusion .eq. -1) then
 
           rand_name = sd_name//'/rng_eng_diff'
-          call bl_rng_restore_engine(rng_eng_diffusion, rand_name)
+          call bl_rng_restore_engine(rng_eng_diffusion_e, rand_name)
 
-          rand_name = sd_name//'/rng_dist_binomial_diff'
-          call bl_rng_restore_distro(rng_dist_binomial_diffusion, rand_name)
+          ! uniform real distribution: [0.d0, 1.d0)
+          call bl_rng_build_distro(rng_eng_diffusion_d, 0.d0, 1.d0)
+          rng_eng_diffusion%eng = rng_eng_diffusion_e%p
+          rng_eng_diffusion%dis = rng_eng_diffusion_d%p
 
-          rand_name = sd_name//'/rng_dist_normal_diff'
-          call bl_rng_restore_distro(rng_dist_normal_diffusion, rand_name)
        end if
 
        if (seed_reaction .eq. -1) then
 
           rand_name = sd_name//'/rng_eng_react'
-          call bl_rng_restore_engine(rng_eng_reaction, rand_name)
+          call bl_rng_restore_engine(rng_eng_reaction_e, rand_name)
 
-          rand_name = sd_name//'/rng_dist_poisson_react'
-          call bl_rng_restore_distro(rng_dist_poisson_reaction, rand_name)
+          ! uniform real distribution: [0.d0, 1.d0)
+          call bl_rng_build_distro(rng_eng_reaction_d, 0.d0, 1.d0)
+          rng_eng_reaction%eng = rng_eng_reaction_e%p
+          rng_eng_reaction%dis = rng_eng_reaction_d%p
 
-          rand_name = sd_name//'/rng_dist_normal_react'
-          call bl_rng_restore_distro(rng_dist_normal_reaction, rand_name)
-
-          rand_name = sd_name//'/rng_dist_uniform_real_react'
-          call bl_rng_restore_distro(rng_dist_uniform_real_reaction, rand_name)
        end if
 
     end if

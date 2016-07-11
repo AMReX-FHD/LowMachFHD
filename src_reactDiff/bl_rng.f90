@@ -8,6 +8,7 @@ module bl_rng_module
   use probin_reactdiff_module, only: temporal_integrator, diffusion_type, reaction_type, &
                                      use_Poisson_rng, seed_diffusion, seed_reaction, &
                                      seed_init, integer_populations
+  use hg_rng_engine_module, only : hg_rng_engine
 
   implicit none
 
@@ -15,28 +16,25 @@ module bl_rng_module
 
   public :: rng_init, rng_destroy, &
             rng_eng_diffusion, &
+            rng_eng_diffusion_e, &
+            rng_eng_diffusion_d, &
             rng_eng_reaction, &
+            rng_eng_reaction_e, &
+            rng_eng_reaction_d, &
             rng_eng_init, &
-            rng_dist_binomial_diffusion, &
-            rng_dist_normal_diffusion, &
-            rng_dist_poisson_reaction, &
-            rng_dist_normal_reaction, &
-            rng_dist_uniform_real_reaction, &
             rng_dist_poisson_init, &
-            rng_dist_normal_init, &
-            bl_MultinomialRNG
+            rng_dist_normal_init
 
   ! randon number engines
-  type(bl_rng_engine), save :: rng_eng_diffusion
-  type(bl_rng_engine), save :: rng_eng_reaction
-  type(bl_rng_engine), save :: rng_eng_init
+  type(hg_rng_engine)      , save :: rng_eng_diffusion
+  type(bl_rng_engine)      , save :: rng_eng_diffusion_e
+  type(bl_rng_uniform_real), save :: rng_eng_diffusion_d
+  type(hg_rng_engine)      , save :: rng_eng_reaction
+  type(bl_rng_engine)      , save :: rng_eng_reaction_e
+  type(bl_rng_uniform_real), save :: rng_eng_reaction_d
 
-  ! distributions
-  type(bl_rng_binomial)    , save :: rng_dist_binomial_diffusion
-  type(bl_rng_normal)      , save :: rng_dist_normal_diffusion
-  type(bl_rng_poisson)     , save :: rng_dist_poisson_reaction
-  type(bl_rng_normal)      , save :: rng_dist_normal_reaction
-  type(bl_rng_uniform_real), save :: rng_dist_uniform_real_reaction
+  !
+  type(bl_rng_engine)      , save :: rng_eng_init
   type(bl_rng_poisson)     , save :: rng_dist_poisson_init
   type(bl_rng_normal)      , save :: rng_dist_normal_init
 
@@ -57,37 +55,24 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!
 
     if (seed_diffusion .ne. -1) then
-       call bl_rng_build_engine(rng_eng_diffusion, seed_diffusion)
+       call bl_rng_build_engine(rng_eng_diffusion_e, seed_diffusion)
+       ! uniform real distribution: [0.d0, 1.d0)
+       call bl_rng_build_distro(rng_eng_diffusion_d, 0.d0, 1.d0)
+       rng_eng_diffusion%eng = rng_eng_diffusion_e%p
+       rng_eng_diffusion%dis = rng_eng_diffusion_d%p
     end if
     
     if (seed_reaction .ne. -1) then
-       call bl_rng_build_engine(rng_eng_reaction, seed_reaction)
+       call bl_rng_build_engine(rng_eng_reaction_e, seed_reaction)
+       ! uniform real distribution: [0.d0, 1.d0)
+       call bl_rng_build_distro(rng_eng_reaction_d, 0.d0, 1.d0)
+       rng_eng_reaction%eng = rng_eng_reaction_e%p
+       rng_eng_reaction%dis = rng_eng_reaction_d%p
     end if
 
     call bl_rng_build_engine(rng_eng_init, seed_init)
-
-    !!!!!!!!!!!!!!!!!!!!!!
-    ! build distributions
-    !!!!!!!!!!!!!!!!!!!!!!
-
-    ! binomial; t=1 (trials), p=0.5; this will be overridden
-    call bl_rng_build_distro(rng_dist_binomial_diffusion, 1, 0.5d0)
-
-    ! normal; mean=0, std=1
-    call bl_rng_build_distro(rng_dist_normal_diffusion, 0.d0, 1.d0)
-
-    ! poisson; mean=1; this will be overridden
-    call bl_rng_build_distro(rng_dist_poisson_reaction, 1.d0)
-
-    ! normal; mean=0, std=1
-    call bl_rng_build_distro(rng_dist_normal_reaction, 0.d0, 1.d0)
-
-    ! uniform real distribution: [0.d0, 1.d0)
-    call bl_rng_build_distro(rng_dist_uniform_real_reaction, 0.d0, 1.d0)
-
     ! poisson; mean=1; this will be overridden
     call bl_rng_build_distro(rng_dist_poisson_init, 1.d0)
-
     ! normal; mean=0, std=1
     call bl_rng_build_distro(rng_dist_normal_init, 0.d0, 1.d0)
 
@@ -95,44 +80,16 @@ contains
 
   subroutine rng_destroy()
 
-    call bl_rng_destroy_engine(rng_eng_diffusion)
-    call bl_rng_destroy_engine(rng_eng_reaction)
-    call bl_rng_destroy_engine(rng_eng_init)
+    call bl_rng_destroy_engine(rng_eng_diffusion_e)
+    call bl_rng_destroy_distro(rng_eng_diffusion_d)
 
-    call bl_rng_destroy_distro(rng_dist_binomial_diffusion)
-    call bl_rng_destroy_distro(rng_dist_normal_diffusion)
-    call bl_rng_destroy_distro(rng_dist_poisson_reaction)
-    call bl_rng_destroy_distro(rng_dist_normal_reaction)
-    call bl_rng_destroy_distro(rng_dist_uniform_real_reaction)
+    call bl_rng_destroy_engine(rng_eng_reaction_e)
+    call bl_rng_destroy_distro(rng_eng_reaction_d)
+
+    call bl_rng_destroy_engine(rng_eng_init)
     call bl_rng_destroy_distro(rng_dist_poisson_init)
     call bl_rng_destroy_distro(rng_dist_normal_init)
 
   end subroutine rng_destroy
-
-  ! This samples from a multinomial distribution
-  ! The last sample is not sampled explicitly since it is just N-sum(samples)
-  subroutine bl_MultinomialRNG(samples, n_samples, N, p)
-
-    integer   , intent(in)  :: n_samples, N
-    integer   , intent(out) :: samples(n_samples)
-    real(dp_t), intent(in)  :: p(n_samples)
-
-    real(dp_t) :: sum_p
-    integer :: sample, sum_n
-
-    if(sum(p)>1.d0) stop "Sum of probabilities must be less than 1"
-
-    sum_p=0
-    sum_n=0
-    do sample=1, n_samples
-
-       call bl_rng_destroy_distro(rng_dist_binomial_diffusion)
-       call bl_rng_build_distro(rng_dist_binomial_diffusion,N-sum_n,p(sample)/(1.d0-sum_p))
-       samples(sample) = bl_rng_get(rng_dist_binomial_diffusion,rng_eng_diffusion)
-       sum_n = sum_n + samples(sample)
-       sum_p = sum_p + p(sample)
-    end do      
-
- end subroutine
 
 end module bl_rng_module

@@ -294,9 +294,7 @@ contains
          case(1)
             ! need a Poisson random number for tau leaping
             if (use_bl_rng) then
-               call bl_rng_destroy_distro(rng_dist_poisson_reaction)
-               call bl_rng_build_distro(rng_dist_poisson_reaction, avg_num_reactions(comp))
-               tmp = bl_rng_get(rng_dist_poisson_reaction, rng_eng_reaction)
+               call PoissonRNG(number=tmp, mean=avg_num_reactions(comp), engine=rng_eng_reaction)
             else
                call PoissonRNG(number=tmp, mean=avg_num_reactions(comp))
             end if
@@ -304,7 +302,7 @@ contains
          case(0)
             ! need a Gaussian random number for CLE
             if (use_bl_rng) then
-               num_reactions(comp) = bl_rng_get(rng_dist_normal_reaction, rng_eng_reaction)
+               call NormalRNG(num_reactions(comp), rng_eng_reaction)
             else
                call NormalRNG(num_reactions(comp))
             end if
