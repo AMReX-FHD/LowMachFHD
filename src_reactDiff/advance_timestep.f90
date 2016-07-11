@@ -42,10 +42,6 @@ contains
 
     if (temporal_integrator .lt. 0) then  ! unsplit schemes
 
-       if (inhomogeneous_bc_fix) then
-          call bl_error("inhomogeneous_bc_fix only appropriate for split schemes")
-       end if
-
        call advance_reaction_diffusion(mla,n_old,n_new,dx,dt,the_bc_tower)
     
     else   
