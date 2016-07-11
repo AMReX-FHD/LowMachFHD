@@ -357,6 +357,9 @@ use the parameter $\theta_\Phi$ to control the temporal discretization of this t
 ($\theta_\Phi=1$ is fully implicit, etc.).
 
 \subsection{Iterative Implicit Potential Algorithm}
+Note that this algorithm is bit-wise equivalent to the iterative potential 
+algorithm with 2 iterations, so it is outdated.
+
 We use an iterative approach, and then define a state at $t^n$, and
 a $t^{n+1,l}$ state for velocity and the densities.  The initial guess for
 the time-advanced state is a copy of the state at $t^n$.\\ \\
@@ -467,9 +470,15 @@ constant we can say
 We need this to be equal to the amount we want to change the densities,
 $(\rhob\bar\rhob^{-1}-1)$.
 The increment to $S$ in the next iteration should be
-$S = S_{\rm prev} + \Delta t(\rhob\bar\rhob^{-1}-1)/\rhob\bar\rhob^{-1}$\\ \\
+
+$S_{\rm eff}^{n+1,l+1} = S^{n+1,l+1} + \rm {``sum~of~all~previous''} ~ \left[\Delta t(\rhob\bar\rhob^{-1}-1)/\rhob\bar\rhob^{-1}\right]$\MarginPar{I need some notation here; the algorithm description below is more complete}\\ \\
 
 {\bf Step 3: Velocity Update}\\ \\
+First we compute the constraint correction
+\begin{equation}
+\delta\chi^{n+1,l+1} = \delta\chi^{n+1,l} + 2\Delta t(\rhob\bar\rhob^{-1}-1)/\rhob\bar\rhob^{-1}
+\end{equation}
+(Note that $\delta\chi^{n+1,l=0}=0$)
 Solve the following for $\vb^{n+1,l+1}$ and $p^{n+1,l+1}$:
 \begin{eqnarray}
 \frac{\rho^{n+1,l+1}\vb^{n+1,l+1} - \rho^n\vb^n}{\Delta t} + \nabla p^{n+1,l+1} &=&
@@ -480,7 +489,7 @@ Solve the following for $\vb^{n+1,l+1}$ and $p^{n+1,l+1}$:
 &&-(1-\theta_\Phi)(\rho\wb^T\zb\nabla\Phib)^n - \theta_\Phi(\rho\wb^T\zb\nabla\Phib)^{n+1,l+1}
 \end{eqnarray}
 \begin{equation}
-\nabla\cdot\vb^{n+1,l+1} = S^{n+1,l+1} \equiv S[(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l+1} + \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l+1}\mathcal{Z}^{n+1} - \Ab_\Phi^{n+1,l+1}\nabla\Phib^{n+1,l+1}]
+\nabla\cdot\vb^{n+1,l+1} = S^{n+1,l+1}  + \delta\chi^{n+1,l+1} \equiv S[(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l+1} + \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l+1}\mathcal{Z}^{n+1} - \Ab_\Phi^{n+1,l+1}\nabla\Phib^{n+1,l+1}] + \delta\chi^{n+1,l+1}
 \end{equation}
 Defining $\vb^{n+1,l+1} = \overline{\vb}^{n+1,l} + \delta\vb$ and 
 $p^{n+1,l+1} = p^{n+1,l} + \delta p$ this can be written as:
@@ -492,7 +501,7 @@ $p^{n+1,l+1} = p^{n+1,l} + \delta p$ this can be written as:
 &&- (1-\theta_\Phi)\left(\rho\wb^T\zb\nabla\Phib\right)^n - \theta_\Phi\left(\rho\wb^T\zb\nabla\Phib\right)^{n+1,l+1},
 \end{eqnarray}
 \begin{equation}
--\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n+1,l} - S^{n+1,l+1}.
+-\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n+1,l} - (S^{n+1,l+1} + \delta\chi^{n+1,l+1}).
 \end{equation}
 
 {\color{red}
