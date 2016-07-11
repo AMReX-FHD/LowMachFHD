@@ -295,6 +295,12 @@ contains
        call bl_error(" nreactions greater than max_reactions - Aborting")
        stop
     end if
+
+    if (temporal_integrator .ge. 0 .and. reaction_type .eq. 2) then
+       if (use use_Poisson_RNG .ne. 2) then
+          call bl_error("Splitting schemecs with SSA require use_Poisson_RNG=2")
+       end if
+    end if
     
   end subroutine probin_reactdiff_init
 
