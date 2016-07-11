@@ -29,20 +29,22 @@ module probin_reactdiff_module
                                                     ! 2=explicit midpoint
                                                     ! 3=multinomial diffusion
                                                     ! 4=forward Euler  
-  integer, save :: midpoint_stoch_flux_type = 1     ! only used for midpoint diffusion schemes (split as well as unsplit)
-                                                    ! corrector formulation of noise
-                                                    ! 1 = K(nold) * W1 + K(nold)         * W2
-                                                    ! 2 = K(nold) * W1 + K(npred)        * W2
-                                                    ! 3 = K(nold) * W1 + K(2*npred-nold) * W2
   integer, save :: reaction_type = 0                ! only used for splitting schemes (temporal_integrator>=0)
                                                     ! 0=first-order tau leaping or CLE
                                                     ! 1=second-order tau leaping or CLE
                                                     ! 2=SSA
   integer, save :: use_Poisson_rng = 1              ! how to calculate chemical production rates
                                                     ! (not used if temporal_integrator>=0 and reaction_type=2)
-                                                    ! 1=do tau leaping (Poisson increments)
-                                                    ! 0= do CLE (Gaussian increments)
+                                                    !  2=SSA
+                                                    !  1=do tau leaping (Poisson increments)
+                                                    !  0=do CLE (Gaussian increments)
                                                     ! -1=do deterministic chemistry
+  integer, save :: midpoint_stoch_flux_type = 1     ! only used for midpoint diffusion schemes (split as well as unsplit)
+                                                    ! corrector formulation of noise
+                                                    ! 1 = K(nold) * W1 + K(nold)         * W2
+                                                    ! 2 = K(nold) * W1 + K(npred)        * W2
+                                                    ! 3 = K(nold) * W1 + K(2*npred-nold) * W2
+
   logical, save :: inhomogeneous_bc_fix = .false.   ! use the Einkemmer boundary condition fix (split schemes only)
   integer, save :: avg_type = 1                     ! how to compute n on faces for stochastic weighting
                                                     ! 1=arithmetic (with C0-Heaviside), 2=geometric, 3=harmonic
@@ -287,17 +289,19 @@ contains
     ! check that nspecies<=max_species, otherwise abort with error message
     if(nspecies.gt.max_species) then 
        call bl_error(" nspecies greater than max_species - Aborting")
-       stop
     end if
     
     ! check that nreactions<=max_reactions, otherwise abort with error message
     if(nreactions.gt.max_reactions) then 
        call bl_error(" nreactions greater than max_reactions - Aborting")
-       stop
+    end if
+
+    if (inhomogeneous_bc_fix .and. temporal_integrator .lt. 0) then
+       call bl_error("inhomogeneous_bc_fix only appropriate for split schemes")
     end if
 
     if (temporal_integrator .ge. 0 .and. reaction_type .eq. 2) then
-       if (use use_Poisson_RNG .ne. 2) then
+       if (use_Poisson_RNG .ne. 2) then
           call bl_error("Splitting schemecs with SSA require use_Poisson_RNG=2")
        end if
     end if
