@@ -265,3 +265,28 @@ void genrandn(double* result)
 
     *result = InvNormDist(val);
 }
+
+void hg_genrandn(double* result, void* rng)
+{
+    double val;
+    /*
+    ** Get a random number in (0,1) -- the generator gives one in [0,1);
+    */
+    do
+    {
+      hg_genrand(&val, rng);
+    }
+    while (val == 0);
+
+    *result = InvNormDist(val);
+}
+
+#ifdef FORTRAN_BOXLIB
+// BoxLib/Src/F_BaseLib/bl_random_c.cpp provides hg_genrand
+#else
+void hg_genrand (double* rn, void* rng)
+{
+  genrand(rn);
+}
+#endif
+

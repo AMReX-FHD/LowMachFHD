@@ -83,6 +83,8 @@ MODULE NonUniformRNGs
 !     Phone: (+61) 3 9545-8016      Fax: (+61) 3 9545-8080
 !     e-mail: amiller @ bigpond.net.au
 
+use hg_rng_engine_module, only : hg_rng_engine
+
 IMPLICIT NONE
 REAL, PRIVATE      :: zero = 0.0, half = 0.5, one = 1.0, two = 2.0,   &
                       vsmall = TINY(1.0), vlarge = HUGE(1.0)
@@ -92,29 +94,41 @@ INTEGER, PARAMETER, PRIVATE :: dp = SELECTED_REAL_KIND(12, 60)
 
 CONTAINS
 
-subroutine random_uniform(x)
+subroutine random_uniform(x, engine)
    use iso_c_binding
-   real, intent(out) :: x     
+   real, intent(out) :: x
+   type(hg_rng_engine), intent(inout), optional :: engine
 
    interface UniformRNG
       subroutine genrand(number) bind(c)
          ! Returns pseudorandom number in interval [0,1).
          use iso_c_binding
          real(c_double), intent(out) :: number
-      end subroutine   
+      end subroutine
+      subroutine hg_genrand(number, engine) bind(c)
+         ! Returns pseudorandom number in interval [0,1).
+        import
+         real(c_double), intent(out) :: number
+         type(hg_rng_engine), intent(inout) :: engine
+      end subroutine
    end interface
-   
+
    real(c_double) :: dice
 
-   if(.true.) then ! use our BoxLib Marsenne-Twister 
-      CALL UniformRNG(dice)
+   if(.true.) then ! use our BoxLib Marsenne-Twister
+      if (present(engine)) then
+         CALL UniformRNG(dice, engine)
+      else
+         CALL UniformRNG(dice)
+      end if
       x=dice
-   else ! use built-in generator  
+   else ! use built-in generator
       call random_number(x)
-   end if   
+   end if
 end subroutine
 
-FUNCTION random_normal() RESULT(fn_val)
+FUNCTION random_normal(engine) RESULT(fn_val)
+  type(hg_rng_engine), intent(inout), optional :: engine
 
 ! Adapted from the following Fortran 77 code
 !      ALGORITHM 712, COLLECTED ALGORITHMS FROM ACM.
@@ -136,8 +150,8 @@ REAL     :: s = 0.449871, t = -0.386595, a = 0.19600, b = 0.25472,           &
 !     Generate P = (u,v) uniform in rectangle enclosing acceptance region
 
 DO
-  CALL RANDOM_UNIFORM(u)
-  CALL RANDOM_UNIFORM(v)
+  CALL RANDOM_UNIFORM(u,engine)
+  CALL RANDOM_UNIFORM(v,engine)
   v = 1.7156 * (v - half)
 
 !     Evaluate the quadratic form
@@ -161,7 +175,7 @@ END FUNCTION random_normal
 
 
 
-FUNCTION random_gamma(s, first) RESULT(fn_val)
+FUNCTION random_gamma(s, first,engine) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -176,6 +190,7 @@ FUNCTION random_gamma(s, first) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: s
 LOGICAL, INTENT(IN) :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 REAL                :: fn_val
 
 IF (s <= zero) THEN
@@ -184,11 +199,11 @@ IF (s <= zero) THEN
 END IF
 
 IF (s > one) THEN
-  fn_val = random_gamma1(s, first)
+  fn_val = random_gamma1(s, first, engine)
 ELSE IF (s < one) THEN
-  fn_val = random_gamma2(s, first)
+  fn_val = random_gamma2(s, first, engine)
 ELSE
-  fn_val = random_exponential()
+  fn_val = random_exponential(engine)
 END IF
 
 RETURN
@@ -196,7 +211,7 @@ END FUNCTION random_gamma
 
 
 
-FUNCTION random_gamma1(s, first) RESULT(fn_val)
+FUNCTION random_gamma1(s, first, engine) RESULT(fn_val)
 
 ! Uses the algorithm in
 ! Marsaglia, G. and Tsang, W.W. (2000) `A simple method for generating
@@ -206,6 +221,7 @@ FUNCTION random_gamma1(s, first) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: s
 LOGICAL, INTENT(IN) :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 REAL                :: fn_val
 
 ! Local variables
@@ -223,14 +239,14 @@ DO
 ! Generate v = (1+cx)^3 where x is random normal; repeat if v <= 0.
 
   DO
-    x = random_normal()
+    x = random_normal(engine)
     v = (one + c*x)**3
     IF (v > zero) EXIT
   END DO
 
 ! Generate uniform variable U
 
-  CALL RANDOM_UNIFORM(u)
+  CALL RANDOM_UNIFORM(u, engine)
   IF (u < one - 0.0331*x**4) THEN
     fn_val = d*v
     EXIT
@@ -245,7 +261,7 @@ END FUNCTION random_gamma1
 
 
 
-FUNCTION random_gamma2(s, first) RESULT(fn_val)
+FUNCTION random_gamma2(s, first, engine) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -261,6 +277,7 @@ FUNCTION random_gamma2(s, first) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: s
 LOGICAL, INTENT(IN) :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 REAL                :: fn_val
 
 !     Local variables
@@ -286,7 +303,7 @@ IF (first) THEN                        ! Initialization, if necessary
 END IF
 
 DO
-  CALL RANDOM_UNIFORM(r)
+  CALL RANDOM_UNIFORM(r, engine)
   IF (r >= vr) THEN
     CYCLE
   ELSE IF (r > p) THEN
@@ -300,7 +317,7 @@ DO
     RETURN
   END IF
 
-  CALL RANDOM_UNIFORM(r)
+  CALL RANDOM_UNIFORM(r, engine)
   IF (one-r <= w .AND. r > zero) THEN
     IF (r*(w + one) >= one) CYCLE
     IF (-LOG(r) <= w) CYCLE
@@ -315,23 +332,25 @@ END FUNCTION random_gamma2
 
 
 
-FUNCTION random_chisq(ndf, first) RESULT(fn_val)
+FUNCTION random_chisq(ndf, first, engine) RESULT(fn_val)
 
 !     Generates a random variate from the chi-squared distribution with
 !     ndf degrees of freedom
 
 INTEGER, INTENT(IN) :: ndf
 LOGICAL, INTENT(IN) :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 REAL                :: fn_val
 
-fn_val = two * random_gamma(half*ndf, first)
+fn_val = two * random_gamma(half*ndf, first, engine)
 RETURN
 
 END FUNCTION random_chisq
 
 
 
-FUNCTION random_exponential() RESULT(fn_val)
+FUNCTION random_exponential(engine) RESULT(fn_val)
+  type(hg_rng_engine), intent(inout), optional :: engine
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -347,7 +366,7 @@ REAL  :: fn_val
 REAL  :: r
 
 DO
-  CALL RANDOM_UNIFORM(r)
+  CALL RANDOM_UNIFORM(r, engine)
   IF (r > zero) EXIT
 END DO
 
@@ -358,7 +377,7 @@ END FUNCTION random_exponential
 
 
 
-FUNCTION random_Weibull(a) RESULT(fn_val)
+FUNCTION random_Weibull(a, engine) RESULT(fn_val)
 
 !     Generates a random variate from the Weibull distribution with
 !     probability density:
@@ -367,18 +386,19 @@ FUNCTION random_Weibull(a) RESULT(fn_val)
 !     f(x) = a.x    e
 
 REAL, INTENT(IN) :: a
+type(hg_rng_engine), intent(inout), optional :: engine
 REAL             :: fn_val
 
 !     For speed, there is no checking that a is not zero or very small.
 
-fn_val = random_exponential() ** (one/a)
+fn_val = random_exponential(engine) ** (one/a)
 RETURN
 
 END FUNCTION random_Weibull
 
 
 
-FUNCTION random_beta(aa, bb, first) RESULT(fn_val)
+FUNCTION random_beta(aa, bb, first, engine) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -394,6 +414,7 @@ FUNCTION random_beta(aa, bb, first) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: aa, bb
 LOGICAL, INTENT(IN) :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 REAL                :: fn_val
 
 !     Local variables
@@ -429,8 +450,8 @@ IF (first) THEN                        ! Initialization, if necessary
 END IF
 
 DO
-  CALL RANDOM_UNIFORM(r)
-  CALL RANDOM_UNIFORM(x)
+  CALL RANDOM_UNIFORM(r, engine)
+  CALL RANDOM_UNIFORM(x, engine)
   s = r*r*x
   IF (r < vsmall .OR. s <= zero) CYCLE
   IF (r < t) THEN
@@ -455,7 +476,7 @@ END FUNCTION random_beta
 
 
 
-FUNCTION random_t(m) RESULT(fn_val)
+FUNCTION random_t(m, engine) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -468,6 +489,7 @@ FUNCTION random_t(m) RESULT(fn_val)
 !           (1 <= 1NTEGER)
 
 INTEGER, INTENT(IN) :: m
+type(hg_rng_engine), intent(inout), optional :: engine
 REAL                :: fn_val
 
 !     Local variables
@@ -498,9 +520,9 @@ IF (m /= mm) THEN                    ! Initialization, if necessary
 END IF
 
 DO
-  CALL RANDOM_UNIFORM(r)
+  CALL RANDOM_UNIFORM(r, engine)
   IF (r <= zero) CYCLE
-  CALL RANDOM_UNIFORM(v)
+  CALL RANDOM_UNIFORM(v, engine)
   x = (two*v - one)*g/r
   v = x*x
   IF (v > five - a*r) THEN
@@ -516,7 +538,7 @@ END FUNCTION random_t
 
 
 
-SUBROUTINE random_mvnorm(n, h, d, f, first, x, ier)
+SUBROUTINE random_mvnorm(n, h, d, f, first, x, ier, engine)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -555,6 +577,7 @@ REAL, INTENT(IN OUT)  :: f(:)         ! f(n*(n+1)/2)
 REAL, INTENT(OUT)     :: x(:)
 LOGICAL, INTENT(IN)   :: first
 INTEGER, INTENT(OUT)  :: ier
+type(hg_rng_engine), intent(inout), optional :: engine
 
 !     Local variables
 INTEGER       :: j, i, m
@@ -606,7 +629,7 @@ END IF
 
 x(1:n) = h(1:n)
 DO j = 1,n
-  y = random_normal()
+  y = random_normal(engine)
   DO i = j,n
     x(i) = x(i) + f((j-1)*(n2-j)/2 + i) * y
   END DO ! i = j,n
@@ -617,7 +640,7 @@ END SUBROUTINE random_mvnorm
 
 
 
-FUNCTION random_inv_gauss(h, b, first) RESULT(fn_val)
+FUNCTION random_inv_gauss(h, b, first, engine) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -633,6 +656,7 @@ FUNCTION random_inv_gauss(h, b, first) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: h, b
 LOGICAL, INTENT(IN) :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 REAL                :: fn_val
 
 !     Local variables
@@ -673,9 +697,9 @@ IF (first) THEN                        ! Initialization, if necessary
 END IF
 
 DO
-  CALL RANDOM_UNIFORM(r1)
+  CALL RANDOM_UNIFORM(r1, engine)
   IF (r1 <= zero) CYCLE
-  CALL RANDOM_UNIFORM(r2)
+  CALL RANDOM_UNIFORM(r2, engine)
   x = a*r2/r1
   IF (x <= zero) CYCLE
   IF (LOG(r1) < d*LOG(x) + e*(x + one/x) + c) EXIT
@@ -688,7 +712,7 @@ END FUNCTION random_inv_gauss
 
 
 
-FUNCTION random_Poisson(mu, first) RESULT(ival)
+FUNCTION random_Poisson(mu, first, engine) RESULT(ival)
 !**********************************************************************
 !     Translated to Fortran 90 by Alan Miller from:
 !                           RANLIB
@@ -737,6 +761,7 @@ FUNCTION random_Poisson(mu, first) RESULT(ival)
 !     .. Scalar Arguments ..
 REAL, INTENT(IN)    :: mu
 LOGICAL, INTENT(IN) :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 INTEGER             :: ival
 !     ..
 !     .. Local Scalars ..
@@ -782,7 +807,7 @@ IF (mu > 10.0) THEN
 
 !     STEP N. NORMAL SAMPLE - random_normal() FOR STANDARD NORMAL DEVIATE
 
-  g = mu + s*random_normal()
+  g = mu + s*random_normal(engine)
   IF (g > 0.0) THEN
     ival = g
 
@@ -794,7 +819,7 @@ IF (mu > 10.0) THEN
 
     fk = ival
     difmuk = mu - fk
-    CALL RANDOM_UNIFORM(u)
+    CALL RANDOM_UNIFORM(u, engine)
     IF (d*u >= difmuk*difmuk*difmuk) RETURN
   END IF
 
@@ -833,7 +858,7 @@ IF (mu > 10.0) THEN
 !             (IF T <= -.6744 THEN PK < FK FOR ALL MU >= 10.)
 
   50 e = random_exponential()
-  CALL RANDOM_UNIFORM(u)
+  CALL RANDOM_UNIFORM(u, engine)
   u = u + u - one
   t = 1.8 + SIGN(e, u)
   IF (t <= (-.6744)) GO TO 50
@@ -905,7 +930,7 @@ ELSE
 !     STEP U. UNIFORM SAMPLE FOR INVERSION METHOD
 
   DO
-    CALL RANDOM_UNIFORM(u)
+    CALL RANDOM_UNIFORM(u, engine)
     ival = 0
     IF (u <= p0) RETURN
 
@@ -945,7 +970,7 @@ END FUNCTION random_Poisson
 
 
 
-FUNCTION random_binomial1(n, p, first) RESULT(ival)
+FUNCTION random_binomial1(n, p, first, engine) RESULT(ival)
 
 ! FUNCTION GENERATES A RANDOM BINOMIAL VARIATE USING C.D.Kemp's method.
 ! This algorithm is suitable when many random variates are required
@@ -964,6 +989,7 @@ FUNCTION random_binomial1(n, p, first) RESULT(ival)
 INTEGER, INTENT(IN) :: n
 REAL, INTENT(IN)    :: p
 LOGICAL, INTENT(IN) :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 INTEGER             :: ival
 
 !     Local variables
@@ -980,7 +1006,7 @@ IF (first) THEN
   odds_ratio = p / (one - p)
 END IF
 
-CALL RANDOM_UNIFORM(u)
+CALL RANDOM_UNIFORM(u, engine)
 u = u - p_r
 IF (u < zero) THEN
   ival = r0
@@ -1104,7 +1130,7 @@ END FUNCTION lngamma
 
 
 
-FUNCTION random_binomial(n, pp, first) RESULT(ival)
+FUNCTION random_binomial(n, pp, first, engine) RESULT(ival)
 !**********************************************************************
 !     Translated to Fortran 90 by Alan Miller from:
 !                              RANLIB
@@ -1169,6 +1195,7 @@ FUNCTION random_binomial(n, pp, first) RESULT(ival)
 REAL, INTENT(IN)    :: pp
 INTEGER, INTENT(IN) :: n
 LOGICAL, INTENT(IN) :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 INTEGER             :: ival
 !     ..
 !     .. Local Scalars ..
@@ -1212,9 +1239,9 @@ IF (xnp > 30.) THEN
 
 !*****GENERATE VARIATE, Binomial mean at least 30.
 
-  20 CALL RANDOM_UNIFORM(u)
+  20 CALL RANDOM_UNIFORM(u, engine)
   u = u * p4
-  CALL RANDOM_UNIFORM(v)
+  CALL RANDOM_UNIFORM(v, engine)
 
 !     TRIANGULAR REGION
 
@@ -1317,7 +1344,7 @@ ELSE
 
   90 ix = 0
   f = qn
-  CALL RANDOM_UNIFORM(u)
+  CALL RANDOM_UNIFORM(u, engine)
   100 IF (u >= f) THEN
     IF (ix > 110) GO TO 90
     u = u - f
@@ -1336,7 +1363,7 @@ END FUNCTION random_binomial
 
 
 
-FUNCTION random_neg_binomial(sk, p) RESULT(ival)
+FUNCTION random_neg_binomial(sk, p, engine) RESULT(ival)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -1356,6 +1383,7 @@ FUNCTION random_neg_binomial(sk, p) RESULT(ival)
 ! THE REPRODUCTIVE PROPERTY IS USED.
 
 REAL, INTENT(IN)   :: sk, p
+type(hg_rng_engine), intent(inout), optional :: engine
 INTEGER            :: ival
 
 !     Local variables
@@ -1378,7 +1406,7 @@ IF (p > h) THEN
   k = st
   DO i = 1,k
     DO
-      CALL RANDOM_UNIFORM(r)
+      CALL RANDOM_UNIFORM(r, engine)
       IF (r > zero) EXIT
     END DO
     n = v*LOG(r)
@@ -1396,7 +1424,7 @@ END IF
 
 y = q**st
 g = st
-CALL RANDOM_UNIFORM(r)
+CALL RANDOM_UNIFORM(r, engine)
 DO
   IF (y > r) EXIT
   r = r - y
@@ -1411,7 +1439,7 @@ END FUNCTION random_neg_binomial
 
 
 
-FUNCTION random_von_Mises(k, first) RESULT(fn_val)
+FUNCTION random_von_Mises(k, first, engine) RESULT(fn_val)
 
 !     Algorithm VMD from:
 !     Dagpunar, J.S. (1990) `Sampling from the von Mises distribution via a
@@ -1429,6 +1457,7 @@ FUNCTION random_von_Mises(k, first) RESULT(fn_val)
 
 REAL, INTENT(IN)     :: k
 LOGICAL, INTENT(IN)  :: first
+type(hg_rng_engine), intent(inout), optional :: engine
 REAL                 :: fn_val
 
 !     Local variables
@@ -1478,7 +1507,7 @@ IF (first) THEN                        ! Initialization, if necessary
   END IF                         ! if k > 0.5
 END IF                           ! if first
 
-CALL RANDOM_UNIFORM(r)
+CALL RANDOM_UNIFORM(r, engine)
 DO j = 1, nk
   r = r - p(j)
   IF (r < zero) EXIT
@@ -1492,14 +1521,14 @@ DO
   rlast = lambda
 
   DO
-    CALL RANDOM_UNIFORM(r)
+    CALL RANDOM_UNIFORM(r, engine)
     IF (r > rlast) EXIT
     n = n + 1
     rlast = r
   END DO
 
   IF (n .NE. 2*(n/2)) EXIT         ! is n even?
-  CALL RANDOM_UNIFORM(r)
+  CALL RANDOM_UNIFORM(r, engine)
 END DO
 
 fn_val = SIGN(th, (r - rlast)/(one - rlast) - half)
@@ -1539,7 +1568,8 @@ END SUBROUTINE integral
 
 
 
-FUNCTION random_Cauchy() RESULT(fn_val)
+FUNCTION random_Cauchy(engine) RESULT(fn_val)
+  type(hg_rng_engine), intent(inout), optional :: engine
 
 !     Generate a random deviate from the standard Cauchy distribution
 
@@ -1549,8 +1579,8 @@ REAL     :: fn_val
 REAL     :: v(2)
 
 DO
-  CALL RANDOM_UNIFORM(v(1))
-  CALL RANDOM_UNIFORM(v(2))
+  CALL RANDOM_UNIFORM(v(1), engine)
+  CALL RANDOM_UNIFORM(v(2), engine)
   v = two*(v - half)
   IF (ABS(v(2)) < vsmall) CYCLE               ! Test for zero
   IF (v(1)**2 + v(2)**2 < one) EXIT
@@ -1562,12 +1592,13 @@ END FUNCTION random_Cauchy
 
 
 
-SUBROUTINE random_order(order, n)
+SUBROUTINE random_order(order, n, engine)
 
 !     Generate a random ordering of the integers 1 ... n.
 
 INTEGER, INTENT(IN)  :: n
 INTEGER, INTENT(OUT) :: order(n)
+type(hg_rng_engine), intent(inout), optional :: engine
 
 !     Local variables
 
@@ -1582,7 +1613,7 @@ END DO
 !     randomly chosen from those preceeding it.
 
 DO i = n, 2, -1
-  CALL RANDOM_UNIFORM(wk)
+  CALL RANDOM_UNIFORM(wk, engine)
   j = 1 + i * wk
   IF (j < i) THEN
     k = order(i)
