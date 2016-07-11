@@ -153,88 +153,162 @@ contains
                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
       end do
 
-   else if (temporal_integrator .eq. -2) then  ! explicit midpoint
+   else if (temporal_integrator .eq. -2) then
 
-      if (use_Poisson_rng .eq. 2) then
-         call bl_error("temporal_integrator=-2 and use_Poisson_RNG=2 to be implemented soon")
-      end if
+      ! explicit midpoint for SSA
 
       ! temporary storage for second rate
       do n=1,nlevs
          call multifab_build(rate2(n),mla%la(n),nspecies,0)
       end do
 
-      !!!!!!!!!!!!!!!
-      ! predictor   !
-      !!!!!!!!!!!!!!!
+      if (use_Poisson_rng .eq. 2) then
 
-      ! calculate rates from a(n_old)
-      call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
+         !!!!!!!!!!!!!!!
+         ! predictor   !
+         !!!!!!!!!!!!!!!
 
-      ! n_k^{n+1/2} = n_k^n + (dt/2)       div (D_k grad n_k)^n
-      !                     + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
-      !                     + 1/dV * P_1( f(n_k)*(dt/2)*dV )                   ! Poisson noise
-      !                     + (dt/2)        ext_src
-      do n=1,nlevs
-        call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
-        call multifab_saxpy_3(n_new(n),dt/2.d0,diff_fluxdiv(n))
-        call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
-        call multifab_saxpy_3(n_new(n),dt/2.d0,rate1(n))
-        if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt/2.d0,ext_src(n))
-
-        call multifab_fill_boundary(n_new(n))
-        call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
-                             the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-      end do
-
-      !!!!!!!!!!!!!!!
-      ! corrector !
-      !!!!!!!!!!!!!!!
-
-      ! Here we do not write this in the form that Mattingly et al do
-      !  where we just continue the second half of the time step from where we left
-      ! Rather, we compute terms at the midpoint and then add contributions from both 
-      ! halves of the time step to n_old
-      ! This works simpler with diffusion but we have to store both rates1 and rates2
-
-      ! compute diffusive flux divergence
-      call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
-
-      ! calculate rates from 2*a(n_pred)-a(n_old)
-      call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef)
-
-      ! compute stochastic flux divergence and add to the ones from the predictor stage
-      if (variance_coef_mass .gt. 0.d0) then
-
-         ! first, fill random flux multifabs with new random numbers
-         call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-         call generate_stochastic_fluxdiv_corrector()
-
-      end if
-
-      ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
-      !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
-      !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
-      !                   + 1/dV * P_1( f(n_k)*(dt/2)*dV )                        ! Poisson noise
-      !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*(dt/2)*dV )        ! Poisson noise
-      !                   + dt ext_src
-      ! where
-      ! n_k^? = n_k^n               (midpoint_stoch_flux_type=1)
-      !       = n_k^pred            (midpoint_stoch_flux_type=2)
-      !       = 2*n_k^pred - n_k^n  (midpoint_stoch_flux_type=3)
-      
-      do n=1,nlevs
-         call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
-         call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
-         call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
-         call multifab_saxpy_3(n_new(n),dt/2.d0,rate1(n))
-         call multifab_saxpy_3(n_new(n),dt/2.d0,rate2(n))
-         if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt,ext_src(n))
+         ! n_k^{**} = n_k^n + (dt/2)       div (D_k grad n_k)^n
+         !                  + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
+         !                  + (dt/2)        ext_src
+         do n=1,nlevs
+            call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
+            call multifab_saxpy_3(n_new(n),dt/2.d0,diff_fluxdiv(n))
+            call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+            if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt/2.d0,ext_src(n))
+         end do
          
-         call multifab_fill_boundary(n_new(n))
-         call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
-                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-      end do
+         ! computing rate1 = R(n^{**},dt/2) / (dt/2)
+         call chemical_rates(mla,n_new,rate1,dx,dt/2.d0)
+
+         ! n_k^* = n_k^{**} + R(n^{**},dt/2)
+         do n=1,nlevs
+            call multifab_saxpy_3(n_new(n),dt/2.d0,rate1(n))
+            call multifab_fill_boundary(n_new(n))
+            call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                                 the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+         end do
+
+         !!!!!!!!!!!!!!!
+         ! corrector !
+         !!!!!!!!!!!!!!!
+
+         ! compute diffusive flux divergence
+         call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
+         
+         ! computing rate2 = R(n^*,dt/2) / (dt/2)
+         call chemical_rates(mla,n_new,rate2,dx,dt/2.d0)
+
+         ! compute stochastic flux divergence and add to the ones from the predictor stage
+         if (variance_coef_mass .gt. 0.d0) then
+
+            ! first, fill random flux multifabs with new random numbers
+            call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+            call generate_stochastic_fluxdiv_corrector()
+
+         end if
+
+         ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^*
+         !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
+         !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
+         !                   + R(n^{**},dt/2)
+         !                   + R(n^{*},dt/2)
+         !                   + dt ext_src
+         ! where
+         ! n_k^? = n_k^n               (midpoint_stoch_flux_type=1)
+         !       = n_k^pred            (midpoint_stoch_flux_type=2)
+         !       = 2*n_k^pred - n_k^n  (midpoint_stoch_flux_type=3)
+      
+         do n=1,nlevs
+            call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
+            call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
+            call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+            call multifab_saxpy_3(n_new(n),dt/2.d0,rate1(n))
+            call multifab_saxpy_3(n_new(n),dt/2.d0,rate2(n))
+            if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt,ext_src(n))
+         
+            call multifab_fill_boundary(n_new(n))
+            call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                                 the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+         end do
+
+      else
+
+         ! explicit midpoint for det/tau/CLE
+
+         !!!!!!!!!!!!!!!
+         ! predictor   !
+         !!!!!!!!!!!!!!!
+
+         ! calculate rates from a(n_old)
+         call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
+
+         ! n_k^{n+1/2} = n_k^n + (dt/2)       div (D_k grad n_k)^n
+         !                     + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
+         !                     + 1/dV * P_1( f(n_k)*(dt/2)*dV )                   ! Poisson noise
+         !                     + (dt/2)        ext_src
+         do n=1,nlevs
+            call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
+            call multifab_saxpy_3(n_new(n),dt/2.d0,diff_fluxdiv(n))
+            call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+            call multifab_saxpy_3(n_new(n),dt/2.d0,rate1(n))
+            if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt/2.d0,ext_src(n))
+            
+            call multifab_fill_boundary(n_new(n))
+            call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                                 the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+         end do
+
+         !!!!!!!!!!!!!!!
+         ! corrector !
+         !!!!!!!!!!!!!!!
+
+         ! Here we do not write this in the form that Mattingly et al do
+         !  where we just continue the second half of the time step from where we left
+         ! Rather, we compute terms at the midpoint and then add contributions from both 
+         ! halves of the time step to n_old
+         ! This works simpler with diffusion but we have to store both rates1 and rates2
+         
+         ! compute diffusive flux divergence
+         call diffusive_n_fluxdiv(mla,n_new,diff_coef_face,diff_fluxdiv,dx,the_bc_tower)
+
+         ! calculate rates from 2*a(n_pred)-a(n_old)
+         call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef)
+
+         ! compute stochastic flux divergence and add to the ones from the predictor stage
+         if (variance_coef_mass .gt. 0.d0) then
+
+            ! first, fill random flux multifabs with new random numbers
+            call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+            call generate_stochastic_fluxdiv_corrector()
+
+         end if
+
+         ! n_k^{n+1} = n_k^n + dt div (D_k grad n_k)^{n+1/2}
+         !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
+         !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
+         !                   + 1/dV * P_1( f(n_k)*(dt/2)*dV )                        ! Poisson noise
+         !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*(dt/2)*dV )        ! Poisson noise
+         !                   + dt ext_src
+         ! where
+         ! n_k^? = n_k^n               (midpoint_stoch_flux_type=1)
+         !       = n_k^pred            (midpoint_stoch_flux_type=2)
+         !       = 2*n_k^pred - n_k^n  (midpoint_stoch_flux_type=3)
+         
+         do n=1,nlevs
+            call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
+            call multifab_saxpy_3(n_new(n),dt,diff_fluxdiv(n))
+            call multifab_saxpy_3(n_new(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+            call multifab_saxpy_3(n_new(n),dt/2.d0,rate1(n))
+            call multifab_saxpy_3(n_new(n),dt/2.d0,rate2(n))
+            if(present(ext_src)) call multifab_saxpy_3(n_new(n),dt,ext_src(n))
+         
+            call multifab_fill_boundary(n_new(n))
+            call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
+                                 the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
+         end do
+
+      end if  ! end if/else (use_Poisson_rng)
      
       do n=1,nlevs
          call multifab_destroy(rate2(n))
@@ -242,95 +316,171 @@ contains
      
    else if (temporal_integrator .eq. -4) then
 
-      if (use_Poisson_rng .eq. 2) then
-         call bl_error("temporal_integrator=-4 and use_Poisson_RNG=2 to be implemented soon")
-      end if
+      if (use_Poisson_rng .eq. -2) then
 
-      ! implicit midpoint
+         ! implicit midpoint with SSA
 
-      ! backward Euler predictor to half-time
-      ! n_k^{n+1/2} = n_k^n + (dt/2)       div (D_k grad n_k)^{n+1/2}
-      !                     + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
-      !                     + 1/dV * P_1( f(n_k)*(dt/2)*dV )                   ! Poisson noise
-      !                     + (dt/2)        ext_src
-      !
-      ! in delta form
-      !
-      ! (I - div (dt/2) D_k grad) delta n_k =   (dt/2)       div (D_k grad n_k^n)
-      !                                       + (dt/sqrt(2)) div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1
-      !                                       + 1/dV * P_1( f(n_k)*(dt/2)*dV )
-      !                                       + (dt/2) ext_src
+         ! backward Euler predictor to half-time
+         ! n_k^* = n_k^n + (dt/2)       div (D_k grad n_k)^{n+1/2}
+         !               + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
+         !               + (dt/2)        ext_src
+         !
+         ! in delta form
+         !
+         ! (I - div (dt/2) D_k grad) delta n_k =   (dt/2)       div (D_k grad n_k^n)
+         !                                       + (dt/sqrt(2)) div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1
+         !                                       + (dt/2) ext_src
+         
+         do n=1,nlevs
+            call multifab_build(rhs(n),mla%la(n),nspecies,0)
+            call multifab_build(rate2(n),mla%la(n),nspecies,0)
+         end do
 
-      do n=1,nlevs
-         call multifab_build(rhs(n),mla%la(n),nspecies,0)
-         call multifab_build(rate2(n),mla%la(n),nspecies,0)
-      end do
+         do n=1,nlevs
+            call multifab_setval(rhs(n),0.d0)
+            call multifab_saxpy_3(rhs(n),dt/2.d0,diff_fluxdiv(n))
+            call multifab_saxpy_3(rhs(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+            if(present(ext_src)) call multifab_saxpy_3(rhs(n),dt/2.d0,ext_src(n))
+         end do
 
-      ! calculate rates
-      ! rates could be deterministic or stochastic depending on use_Poisson_rng
-      call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
+         call implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
 
-      do n=1,nlevs
-         call multifab_setval(rhs(n),0.d0)
-         call multifab_saxpy_3(rhs(n),dt/2.d0,diff_fluxdiv(n))
-         call multifab_saxpy_3(rhs(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
-         call multifab_saxpy_3(rhs(n),dt/2.d0,rate1(n))
-         if(present(ext_src)) call multifab_saxpy_3(rhs(n),dt/2.d0,ext_src(n))
-      end do
+         ! corrector
 
-      call implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
+         ! compute R(n^*,dt) / dt
+         call chemical_rates(mla,n_new,rate1,dx,dt)
 
-      ! corrector
+         ! compute stochastic flux divergence and add to the ones from the predictor stage
+         if (variance_coef_mass .gt. 0.d0) then
+            
+            ! first, fill random flux multifabs with new random numbers
+            call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
 
-      ! calculate rates from 2*a(n_pred)-a(n_old)
-      call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef)
+            ! compute n on faces to use in the stochastic flux in the corrector
+            ! three possibilities
+            call generate_stochastic_fluxdiv_corrector()
 
-      ! compute stochastic flux divergence and add to the ones from the predictor stage
-      if (variance_coef_mass .gt. 0.d0) then
+         end if
 
-         ! first, fill random flux multifabs with new random numbers
-         call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+         ! Crank-Nicolson
+         ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
+         !                   + (dt/2) div (D_k grad n_k)^{n+1}
+         !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
+         !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
+         !                   + R(n^*,dt)
+         !                   + dt ext_src
+         !
+         ! in delta form
+         !
+         ! (I - div (dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
+         !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
+         !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
+         !                   + R(n^*,dt)
+         !                   + dt ext_src
 
-         ! compute n on faces to use in the stochastic flux in the corrector
-         ! three possibilities
-         call generate_stochastic_fluxdiv_corrector()
-
-      end if
-
-      ! Crank-Nicolson
-      ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
-      !                   + (dt/2) div (D_k grad n_k)^{n+1}
-      !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
-      !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
-      !                   + 1/dV * P_1( f(n_k)*(dt/2)*dV )                        ! Poisson noise
-      !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*(dt/2)*dV )        ! Poisson noise
-      !                   + dt ext_src
-      !
-      ! in delta form
-      !
-      ! (I - div (dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
-      !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
-      !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
-      !                   + 1/dV * P_1( f(n_k)*(dt/2)*dV )                        ! Poisson noise
-      !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*(dt/2)*dV )        ! Poisson noise
-      !                   + dt ext_src
-
-
-      do n=1,nlevs
-         call multifab_setval(rhs(n),0.d0)
-         call multifab_saxpy_3(rhs(n),dt,diff_fluxdiv(n))
-         call multifab_saxpy_3(rhs(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
-         call multifab_saxpy_3(rhs(n),dt/2.d0,rate1(n))
-         call multifab_saxpy_3(rhs(n),dt/2.d0,rate2(n))
-         if(present(ext_src)) call multifab_saxpy_3(rhs(n),dt,ext_src(n))
-      end do
+         do n=1,nlevs
+            call multifab_setval(rhs(n),0.d0)
+            call multifab_saxpy_3(rhs(n),dt,diff_fluxdiv(n))
+            call multifab_saxpy_3(rhs(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+            call multifab_saxpy_3(rhs(n),dt,rate1(n))
+            if(present(ext_src)) call multifab_saxpy_3(rhs(n),dt,ext_src(n))
+         end do
       
-      call implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
+         call implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
 
-      do n=1,nlevs
-         call multifab_destroy(rhs(n))
-         call multifab_destroy(rate2(n))
-      end do
+         do n=1,nlevs
+            call multifab_destroy(rhs(n))
+            call multifab_destroy(rate2(n))
+         end do
+
+      else
+
+         ! implicit midpoint with det/tau/CLE
+
+         ! backward Euler predictor to half-time
+         ! n_k^{n+1/2} = n_k^n + (dt/2)       div (D_k grad n_k)^{n+1/2}
+         !                     + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
+         !                     + 1/dV * P_1( f(n_k)*(dt/2)*dV )                   ! Poisson noise
+         !                     + (dt/2)        ext_src
+         !
+         ! in delta form
+         !
+         ! (I - div (dt/2) D_k grad) delta n_k =   (dt/2)       div (D_k grad n_k^n)
+         !                                       + (dt/sqrt(2)) div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1
+         !                                       + 1/dV * P_1( f(n_k)*(dt/2)*dV )
+         !                                       + (dt/2) ext_src
+         
+         do n=1,nlevs
+            call multifab_build(rhs(n),mla%la(n),nspecies,0)
+            call multifab_build(rate2(n),mla%la(n),nspecies,0)
+         end do
+
+         ! calculate rates
+         ! rates could be deterministic or stochastic depending on use_Poisson_rng
+         call chemical_rates(mla,n_old,rate1,dx,dt/2.d0)
+
+         do n=1,nlevs
+            call multifab_setval(rhs(n),0.d0)
+            call multifab_saxpy_3(rhs(n),dt/2.d0,diff_fluxdiv(n))
+            call multifab_saxpy_3(rhs(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+            call multifab_saxpy_3(rhs(n),dt/2.d0,rate1(n))
+            if(present(ext_src)) call multifab_saxpy_3(rhs(n),dt/2.d0,ext_src(n))
+         end do
+
+         call implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
+
+         ! corrector
+
+         ! calculate rates from 2*a(n_pred)-a(n_old)
+         call chemical_rates(mla,n_old,rate2,dx,dt/2.d0,n_new,mattingly_lin_comb_coef)
+
+         ! compute stochastic flux divergence and add to the ones from the predictor stage
+         if (variance_coef_mass .gt. 0.d0) then
+            
+            ! first, fill random flux multifabs with new random numbers
+            call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+
+            ! compute n on faces to use in the stochastic flux in the corrector
+            ! three possibilities
+            call generate_stochastic_fluxdiv_corrector()
+
+         end if
+
+         ! Crank-Nicolson
+         ! n_k^{n+1} = n_k^n + (dt/2) div (D_k grad n_k)^n
+         !                   + (dt/2) div (D_k grad n_k)^{n+1}
+         !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
+         !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
+         !                   + 1/dV * P_1( f(n_k)*(dt/2)*dV )                        ! Poisson noise
+         !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*(dt/2)*dV )        ! Poisson noise
+         !                   + dt ext_src
+         !
+         ! in delta form
+         !
+         ! (I - div (dt/2) D_k grad) delta n_k =   dt div (D_k grad n_k^n)
+         !                   + dt div (sqrt(2 D_k n_k^n / (dt*dV)) Z_1 / sqrt(2) ) ! Gaussian noise
+         !                   + dt div (sqrt(2 D_k n_k^? / (dt*dV)) Z_2 / sqrt(2) ) ! Gaussian noise
+         !                   + 1/dV * P_1( f(n_k)*(dt/2)*dV )                        ! Poisson noise
+         !                   + 1/dV * P_2( (2*f(n_k^pred)-f(n_k))*(dt/2)*dV )        ! Poisson noise
+         !                   + dt ext_src
+
+         do n=1,nlevs
+            call multifab_setval(rhs(n),0.d0)
+            call multifab_saxpy_3(rhs(n),dt,diff_fluxdiv(n))
+            call multifab_saxpy_3(rhs(n),dt/sqrt(2.d0),stoch_fluxdiv(n))
+            call multifab_saxpy_3(rhs(n),dt/2.d0,rate1(n))
+            call multifab_saxpy_3(rhs(n),dt/2.d0,rate2(n))
+            if(present(ext_src)) call multifab_saxpy_3(rhs(n),dt,ext_src(n))
+         end do
+      
+         call implicit_diffusion(mla,n_old,n_new,rhs,diff_coef_face,dx,dt,the_bc_tower)
+
+         do n=1,nlevs
+            call multifab_destroy(rhs(n))
+            call multifab_destroy(rate2(n))
+         end do
+
+      end if ! end if/else (use_Poisson_rng)
 
    else
       call bl_error("advance_reaction_diffusion: invalid temporal_integrator")
