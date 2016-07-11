@@ -8,7 +8,7 @@ module advance_timestep_module
   use chemical_rates_module
   use multifab_physbc_module
   use bc_module
-  use probin_reactdiff_module, only: nspecies, temporal_integrator, n_bc, reaction_type, &
+  use probin_reactdiff_module, only: nspecies, temporal_integrator, n_bc, &
                                      use_Poisson_rng, inhomogeneous_bc_fix
 
   implicit none
@@ -53,8 +53,8 @@ contains
 
        if (inhomogeneous_bc_fix) then
           ! store reactions rates for n_steady in Rn_steady
-          ! the input time step does not matter as the reaction_type/use_Poisson_rng settings are
-          ! returning an explicit rate in units of number_density/time
+          ! the input time step does not matter as this routine returns
+          ! an explicit rate in units of number_density/time
           call deterministic_chemical_rates(mla,n_steady,Rn_steady,dx,dt)
        else
           do n=1,nlevs
