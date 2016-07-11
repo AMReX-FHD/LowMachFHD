@@ -23,11 +23,11 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 80000                  ! maximum number of time steps
-  plot_int = 800                    ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = 0                      ! Interval for writing a checkpoint
+  max_step = 10                  ! maximum number of time steps
+  plot_int = 1                    ! Interval for writing a plotfile (for visit/amrvis)
+  chk_int = 1                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 800                   ! how often to output statistics
+  print_int = 1                   ! how often to output statistics
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   variance_coef_mass = 1.0 ! global scaling epsilon for stochastic mass forcing
@@ -85,6 +85,10 @@
 
 ! reaction/diffusion number fraction code
 &probin_reactdiff
+
+  use_bl_rng = T
+  seed_reaction = 1
+  seed_diffusion = 1
 
   ! Problem description
   !----------------------

@@ -30,11 +30,9 @@ module probin_reactdiff_module
                                                     ! 3=multinomial diffusion
                                                     ! 4=forward Euler  
   integer, save :: reaction_type = 0                ! only used for splitting schemes (temporal_integrator>=0)
-                                                    ! 0=first-order tau leaping or CLE
-                                                    ! 1=second-order tau leaping or CLE
-                                                    ! 2=SSA
+                                                    ! 0=first-order (tau leaping, CLE, or SSA)
+                                                    ! 1=second-order (tau leaping or CLE only)
   integer, save :: use_Poisson_rng = 1              ! how to calculate chemical production rates
-                                                    ! (not used if temporal_integrator>=0 and reaction_type=2)
                                                     !  2=SSA
                                                     !  1=do tau leaping (Poisson increments)
                                                     !  0=do CLE (Gaussian increments)
@@ -300,9 +298,9 @@ contains
        call bl_error("inhomogeneous_bc_fix only appropriate for split schemes")
     end if
 
-    if (temporal_integrator .ge. 0 .and. reaction_type .eq. 2) then
-       if (use_Poisson_RNG .ne. 2) then
-          call bl_error("Splitting schemecs with SSA require use_Poisson_RNG=2")
+    if (temporal_integrator .ge. 0 .and. reaction_type .ne. 0) then
+       if (use_Poisson_rng .eq. 2) then
+          call bl_error("SSA (use_Poisson_rng=2) requires reaction_type=0 for split schemes")
        end if
     end if
     

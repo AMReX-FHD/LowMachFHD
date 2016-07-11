@@ -38,7 +38,7 @@ contains
     type(multifab) , intent(in   ) :: ext_src(:)
 
     ! local
-    type(multifab) :: rate(mla%nlevel)  ! only used for reaction_type=0,1
+    type(multifab) :: rate(mla%nlevel)
 
     integer :: nlevs, dm, n
 
@@ -73,8 +73,7 @@ contains
     ! advancing time !
     !!!!!!!!!!!!!!!!!!
 
-    if (reaction_type .eq. 0 .or. &  ! first-order tau-leaping or CLE 
-        reaction_type .eq. 2) then   ! SSA
+    if (reaction_type .eq. 0) ! first-order tau-leaping/CLE, or SSA
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
