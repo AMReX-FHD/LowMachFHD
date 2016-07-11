@@ -11,7 +11,7 @@ module advance_reaction_diffusion_module
   use implicit_diffusion_module
   use probin_common_module, only: variance_coef_mass
   use probin_reactdiff_module, only: nspecies, D_Fick, temporal_integrator, &
-       midpoint_stoch_flux_type, nreactions
+       midpoint_stoch_flux_type, nreactions, use_Poisson_rng
 
   implicit none
 
@@ -155,6 +155,10 @@ contains
 
    else if (temporal_integrator .eq. -2) then  ! explicit midpoint
 
+      if (use_Poisson_rng .eq. 2) then
+         call bl_error("temporal_integrator=-2 and use_Poisson_RNG=2 to be implemented soon")
+      end if
+
       ! temporary storage for second rate
       do n=1,nlevs
          call multifab_build(rate2(n),mla%la(n),nspecies,0)
@@ -237,6 +241,10 @@ contains
       end do
      
    else if (temporal_integrator .eq. -4) then
+
+      if (use_Poisson_rng .eq. 2) then
+         call bl_error("temporal_integrator=-4 and use_Poisson_RNG=2 to be implemented soon")
+      end if
 
       ! implicit midpoint
 

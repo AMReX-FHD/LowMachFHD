@@ -241,40 +241,51 @@ contains
     real(kind=dp_t) :: avg_num_reactions    (1:nreactions)
     real(kind=dp_t) :: num_reactions        (1:nreactions)
 
-    ! obtain average reaction rates
-    if (lin_comb_avg_react_rate) then
-       ! calculate linearly combined average reaction rates
-       call compute_reaction_rates(n_cc    (1:nspecies),avg_react_rate       ,dv)
-       call compute_reaction_rates(n_interm(1:nspecies),avg_react_rate_interm,dv)
-       avg_react_rate = lin_comb_coef(1)*avg_react_rate + lin_comb_coef(2)*avg_react_rate_interm
+    real(kind=dp_t) :: n_tmp(1:nspecies)
 
-       ! check whether the resulting rates are negative - if so, we set them zero below
-       do reaction=1,nreactions 
-          if (avg_react_rate(reaction) .lt. 0.d0) then 
-             n_rejections = n_rejections+1
-          end if
-       end do
+    if (use_poisson_RNG .eq. 2) then
+
+       call advance_reaction_SSA_cell(n_cc,n_tmp,dv,dt)
+       chem_rate(1:nspecies) = (n_tmp(1:nspecies) - n_cc(1:nspecies)) / dt
+
     else
-       ! calculate the average reaction rates from n_cc
-       call compute_reaction_rates(n_cc(1:nspecies),avg_react_rate,dv)
+
+       ! obtain average reaction rates
+       if (lin_comb_avg_react_rate) then
+          ! calculate linearly combined average reaction rates
+          call compute_reaction_rates(n_cc    (1:nspecies),avg_react_rate       ,dv)
+          call compute_reaction_rates(n_interm(1:nspecies),avg_react_rate_interm,dv)
+          avg_react_rate = lin_comb_coef(1)*avg_react_rate + lin_comb_coef(2)*avg_react_rate_interm
+
+          ! check whether the resulting rates are negative - if so, we set them zero below
+          do reaction=1,nreactions 
+             if (avg_react_rate(reaction) .lt. 0.d0) then 
+                n_rejections = n_rejections+1
+             end if
+          end do
+       else
+          ! calculate the average reaction rates from n_cc
+          call compute_reaction_rates(n_cc(1:nspecies),avg_react_rate,dv)
+       end if
+
+       ! convert each average reaction rates into the average number of reactions
+       ! zero out any negative reactions 
+       avg_num_reactions = max(0.d0,avg_react_rate*dv*dt)
+
+       ! calculate chemical rates 
+       chem_rate(1:nspecies) = 0.d0
+
+       do reaction=1,nreactions
+          ! for each reaction, sample the number of reaction
+          ! sample_num_reactions determines num_reactions(reaction) by using avg_num_reactions(reaction)
+          call sample_num_reactions(reaction)
+
+          ! convert this into chemical rates  
+          chem_rate(1:nspecies) = chem_rate(1:nspecies) + num_reactions(reaction)/dv/dt *                  &
+               (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
+       end do
+
     end if
-
-    ! convert each average reaction rates into the average number of reactions
-    ! zero out any negative reactions 
-    avg_num_reactions = max(0.d0,avg_react_rate*dv*dt)
-
-    ! calculate chemical rates 
-    chem_rate(1:nspecies) = 0.d0
-
-    do reaction=1,nreactions
-      ! for each reaction, sample the number of reaction
-      ! sample_num_reactions determines num_reactions(reaction) by using avg_num_reactions(reaction)
-      call sample_num_reactions(reaction)
-
-      ! convert this into chemical rates  
-      chem_rate(1:nspecies) = chem_rate(1:nspecies) + num_reactions(reaction)/dv/dt *                  &
-           (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
-    end do
 
   contains
 

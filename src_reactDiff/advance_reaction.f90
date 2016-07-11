@@ -65,18 +65,16 @@ contains
     
     call build(bpt,"advance_reaction")
 
-    ! build
     do n=1,nlevs
-      if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then  ! tau-leaping or CLE
-        call multifab_build(rate(n),mla%la(n),nspecies,0)
-      end if
+       call multifab_build(rate(n),mla%la(n),nspecies,0)
     end do
 
     !!!!!!!!!!!!!!!!!!
     ! advancing time !
     !!!!!!!!!!!!!!!!!!
 
-    if (reaction_type .eq. 0) then  ! first-order tau-leaping or CLE 
+    if (reaction_type .eq. 0 .or. &  ! first-order tau-leaping or CLE 
+        reaction_type .eq. 2) then   ! SSA
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
@@ -128,17 +126,14 @@ contains
       ! update
       do n=1,nlevs
         call multifab_saxpy_3(n_new(n),(1.d0-theta)*dt,rate(n))
-        call multifab_saxpy_3(n_new(n),-dt*(1.d0-theta)*(alpha1-alpha2),ext_src(n))  ! note the negative sign
+        ! note the negative sign
         ! also note that ext_src does not change in the time interval (t,t+dt) 
+        call multifab_saxpy_3(n_new(n),-dt*(1.d0-theta)*(alpha1-alpha2),ext_src(n))
 
         call multifab_fill_boundary(n_new(n))
         call multifab_physbc(n_new(n),1,scal_bc_comp,nspecies, &
                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
       end do
-
-    else if (reaction_type .eq. 2) then  ! SSA
-
-       call advance_reaction_SSA(mla,n_old,n_new,dx,dt,the_bc_tower)
 
     else
 
@@ -149,11 +144,8 @@ contains
     !!!!!!!!!!!
     ! destroy !
     !!!!!!!!!!!
-
     do n=1,nlevs
-      if (reaction_type .eq. 0 .or. reaction_type .eq. 1) then  ! tau-leaping or CLE 
         call multifab_destroy(rate(n))
-      end if
     end do
 
     call destroy(bpt)
