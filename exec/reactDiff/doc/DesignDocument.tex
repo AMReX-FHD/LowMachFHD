@@ -50,23 +50,25 @@
 %==========================================================================
 % Title
 %==========================================================================
-\title{User's Guide to Stochastic Diffusion/Reaction Code}
+\title{User's Guide to Stochastic Reaction/Diffusion Code}
 
 \maketitle
 
 \section{Introduction}
-This is a working design document for our stochastic diffusion/reaction code.
-In summary, we are solving the following system of stochastic PDEs:
+This repository contains source code for the stochastic reaction/diffusion model,
 \begin{equation}
-\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{\frac{2D_kn_k}{A}}\mZb\right) + \mRb(\nb),
+\frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{2D_kn_k}\mZb\right) + \mRb(\nb),
 \end{equation}
-where $\nb=(n_1,n_2,\cdots)$ are the number densities, $D_k$ are Fickean diffusion
-coefficients, and $\mZb$ are standard zero-mean, unit-variance random Gaussian 
-vector fields with uncorrelated components.
-Here, $A$ is the volume adjusting factor in general and the cross section of the system in the two dimensional case.
-Hence, for a cell having dimensions $\Delta x\times\Delta y\times\Delta z$ (or $\Delta x\times\Delta y$), its volume is defined as $\Delta V=A\Delta x\Delta y\Delta z$ (or $\Delta V=A\Delta x\Delta y$). 
-This model is essentially the fluctuating multispecies diffusion equations
-augmented with a stochastic reaction term, $\mRb$.
+where $\nb=(n_1,n_2,\cdots,n_N)$ are the number densities, $D_k$ are Fickean diffusion
+coefficients, $\mZb$ are standard zero-mean, unit-variance random Gaussian 
+vector fields with uncorrelated components, and $\mRb$ is the reaction term.
+%Here, $A$ is the volume adjusting factor in general and the cross section of the system in the 
+%two dimensional case.  Hence, for a cell having dimensions $\Delta x\times\Delta y\times\Delta z$
+%(or $\Delta x\times\Delta y$), its volume is defined as 
+%$\Delta V=A\Delta x\Delta y\Delta z$ (or $\Delta V=A\Delta x\Delta y$).
+
+This user's guide briefly describes the spatial discretization, and gives an overview of the
+many available temporal discretizations, both split and unsplit.
 
 \section{Source Code}
 There are two git repositories required to build/run the code.  BoxLib is a public
@@ -75,6 +77,7 @@ repository available on github using the command:\\ \\
 If you are not familiar with BoxLib, we recommend reading the BoxLib's User's Guide
 in {\tt BoxLib/Docs}.\\
 
+\MarginPar{When this code moves to github, modify this.}
 FluctHydro exists on CCSE servers and you need to contact Vince/Andy to get an account
 and set up permissions on gamera.  Once you do, you can obtain the repository using:\\ \\
 {\tt git clone <username>@gamera.lbl.gov:/usr/local/gitroot/FluctHydro.git}\\ \\
@@ -173,8 +176,30 @@ Refer to {\tt src\_common/probin\_common.f90} and
 simulation and an explanation of what the parameters do.  Note that only a subset
 of the parameters in {\tt probin\_common.f90} are used in this code.
 
-\section{Algorithm}
-We use a finite volume framework on a regular Cartesian mesh.  Consider PDEs describing
+\section{Algorithms}
+\subsection{Spatial Discretization}
+We use a finite volume framework on a regular Cartesian mesh with grid spacing $\Delta x$.
+The number densities are assumed to be the average over the cell.
+We assume the Fickean diffusion coefficients, $D_k$ are constant, but these can be generalized
+in future releases to be function of space, time, and/or composition.
+
+The deterministic diffusion terms are spatially discretized using the standard 5-point (in 2D) or
+7-point (in 3D) variable-coefficient Laplacian, e.g.,
+\begin{eqnarray}
+\nabla\cdot D\nabla n &\rightarrow& \frac{1}{\Delta x}\left[D_{i+\half,j}\left(\frac{n_{i+1,j}-n_{i,j}}{\Delta x}\right) - D_{i-\half,j}\left(\frac{n_{i,j}-n_{i-1,j}}{\Delta x}\right)\right] \nonumber\\
+&& + \frac{1}{\Delta x}\left[D_{i,j+\half}\left(\frac{n_{i,j+1}-n_{i,j}}{\Delta x}\right) - D_{i,j-\half}\left(\frac{n_{i,j}-n_{i,j-1}}{\Delta x}\right)\right]. \nonumber\\
+\end{eqnarray}
+The stochastic diffusion terms use the standard divergence,
+\begin{eqnarray}
+\nabla\cdot\sqrt{2Dn}\mZb &\rightarrow&\left[\frac{\sqrt{2D_{i+\half,j}n_{i+\half,j}}\mathcal{Z}_{i+\half,j} - \sqrt{2D_{i-\half,j}n_{i-\half,j}}\mathcal{Z}_{i-\half,j}}{\Delta x}\right]\nonumber\\
+&&+ \left[\frac{\sqrt{2D_{i,j+\half}n_{i,j+\half}}\mathcal{Z}_{i,j+\half} - \sqrt{2D_{i,j-\half}n_{i,j-\half}}\mathcal{Z}_{i,j-\half}}{\Delta x}\right]
+\end{eqnarray}
+To obtain diffusion coefficients or number densities on faces, there are several options for averaging the neighboring cell-averaged data to faces.  These include a variety of arithmetic, geometric, and harmonic stencils with options for preventing negative number densities using smoothing functions.  See the subroutine {\tt average\_values} in {\tt average\_to\_faces.f90} for current implementation.
+
+\subsection{Boundary Conditions}
+
+\subsection{Temporal Discretization}
+Consider PDEs describing
 diffusion and reactions in isolation:
 \begin{equation}
 \frac{\partial n_k}{\partial t} = \nabla\cdot\left(D_k\nabla n_k + \sqrt{\frac{2D_kn_k}{A}}\mZb\right),\label{eq:Diffusion}
