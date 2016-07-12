@@ -30,8 +30,8 @@ module probin_reactdiff_module
                                                     ! 3=multinomial diffusion
                                                     ! 4=forward Euler  
   integer, save :: reaction_type = 0                ! only used for splitting schemes (temporal_integrator>=0)
-                                                    ! 0=first-order (tau leaping, CLE, or SSA)
-                                                    ! 1=second-order (tau leaping or CLE only)
+                                                    ! 0=first-order (deterministic, tau leaping, CLE, or SSA)
+                                                    ! 1=second-order (determinisitc, tau leaping, or CLE only)
   integer, save :: use_Poisson_rng = 1              ! how to calculate chemical production rates
                                                     ! 2=SSA
                                                     ! 1=do tau leaping (Poisson increments)

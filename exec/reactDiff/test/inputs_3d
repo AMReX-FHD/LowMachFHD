@@ -139,12 +139,11 @@
                                    ! 3=K(nold) * W1 + K(2*npred-nold) * W2
 
   reaction_type = 0                ! only used for splitting schemes (temporal_integrator>=0)
-                                   ! 0=first-order tau leaping or CLE
-                                   ! 1=second-order tau leaping or CLE
-                                   ! 2=SSA
+                                   ! 0=first-order (deterministic, tau leaping, CLE, or SSA)
+                                   ! 1=second-order (deterministic, tau leaping, or CLE only)
 
   use_Poisson_rng = 1              ! how to calculate chemical production rates
-                                   ! (not used if temporal_integrator>=0 and reaction_type=2)
+                                   ! 2=SSA
                                    ! 1=do tau leaping (Poisson increments)
                                    ! 0= do CLE (Gaussian increments)
                                    ! -1=do deterministic chemistry
