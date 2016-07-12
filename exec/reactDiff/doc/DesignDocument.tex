@@ -62,13 +62,15 @@ This repository contains source code for the stochastic reaction/diffusion model
 where $\nb=(n_1,n_2,\cdots,n_N)$ are the number densities, $D_k$ are Fickean diffusion
 coefficients, $\mZb$ are standard zero-mean, unit-variance random Gaussian 
 vector fields with uncorrelated components, and $\mRb$ is the reaction term.
-%Here, $A$ is the volume adjusting factor in general and the cross section of the system in the 
-%two dimensional case.  Hence, for a cell having dimensions $\Delta x\times\Delta y\times\Delta z$
-%(or $\Delta x\times\Delta y$), its volume is defined as 
-%$\Delta V=A\Delta x\Delta y\Delta z$ (or $\Delta V=A\Delta x\Delta y$).
 
-This user's guide briefly describes the spatial discretization, and gives an overview of the
-many available temporal discretizations, both split and unsplit.
+Our code leverages the {\tt BoxLib} software framework in order to perform
+finite volume calculations on regular Cartesian grids on HPC architectures.
+
+For stochastic diffusion, we support multinomial and fluctuating hydrodynamics.
+For stochastic reactions, we support stochastic simulation algorithm (SSA),
+tau-leaping, and chemical Lengevin equation (CLE).  We support a variety of
+split and unsplit temporal integration strategies to couple the reaction/diffusion
+equations.
 
 \section{Source Code}
 There are two git repositories required to build/run the code.  BoxLib is a public
