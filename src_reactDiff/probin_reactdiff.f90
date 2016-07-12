@@ -23,7 +23,7 @@ module probin_reactdiff_module
                                                     ! -2=unsplit explicit midpoint 
                                                     ! -3=unsplit multinomial diffusion
                                                     ! -4=unsplit implicit midpoint
-  integer, save :: diffusion_type = 0               ! only used for splitting schemes
+  integer, save :: diffusion_type = 0               ! only used for splitting schemes (temporal_integrator>=0)
                                                     ! 0=explicit trapezoidal predictor/corrector
                                                     ! 1=Crank-Nicolson semi-implicit
                                                     ! 2=explicit midpoint
@@ -33,9 +33,9 @@ module probin_reactdiff_module
                                                     ! 0=first-order (tau leaping, CLE, or SSA)
                                                     ! 1=second-order (tau leaping or CLE only)
   integer, save :: use_Poisson_rng = 1              ! how to calculate chemical production rates
-                                                    !  2=SSA
-                                                    !  1=do tau leaping (Poisson increments)
-                                                    !  0=do CLE (Gaussian increments)
+                                                    ! 2=SSA
+                                                    ! 1=do tau leaping (Poisson increments)
+                                                    ! 0=do CLE (Gaussian increments)
                                                     ! -1=do deterministic chemistry
   integer, save :: midpoint_stoch_flux_type = 1     ! only used for midpoint diffusion schemes (split as well as unsplit)
                                                     ! corrector formulation of noise

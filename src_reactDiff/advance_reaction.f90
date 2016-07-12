@@ -73,7 +73,7 @@ contains
     ! advancing time !
     !!!!!!!!!!!!!!!!!!
 
-    if (reaction_type .eq. 0) then ! first-order tau-leaping/CLE, or SSA
+    if (reaction_type .eq. 0) then ! first-order det/tau-leaping/CLE, or SSA
 
       ! calculate rates
       ! rates could be deterministic or stochastic depending on use_Poisson_rng
@@ -90,7 +90,7 @@ contains
                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
       end do
 
-    else if (reaction_type .eq. 1) then  ! second-order tau-leaping or CLE 
+    else if (reaction_type .eq. 1) then  ! second-order det/tau-leaping/CLE
 
       !!!!!!!!!!!!!!!
       ! predictor   !
