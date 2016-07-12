@@ -243,7 +243,7 @@ contains
 
     real(kind=dp_t) :: n_tmp(1:nspecies)
 
-    if (use_poisson_RNG .eq. 2) then
+    if (use_Poisson_rng .eq. 2) then
 
        call advance_reaction_SSA_cell(n_cc,n_tmp,dv,dt)
        chem_rate(1:nspecies) = (n_tmp(1:nspecies) - n_cc(1:nspecies)) / dt
