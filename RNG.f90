@@ -9,6 +9,7 @@ module BoxLibRNGs
    integer, parameter, private :: dp=kind(0.0d0), sp=kind(0.0)
 
    ! Returns pseudorandom number in interval [0,1).
+   ! Donev: The single precision generator should be tested at least once!
    interface UniformRNG
       module procedure UniformRNG_dp
       module procedure UniformRNG_sp
