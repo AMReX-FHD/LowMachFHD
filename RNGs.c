@@ -121,6 +121,15 @@ void genrand (double* rn) /* Largest returned number should be 0.999999999767169
     *rn = ( (double)y * 2.32830643653869628906e-010 ); /* reals: [0,1)-interval */    
 }
 
+/* A. Donev added this routine to avoid returning 1.0 in single precision */
+void genrand_sp (float* rn) /* Largest returned number should be 0.9999847412109375*/
+{
+    unsigned long y;
+    y = genrandbase ();
+    *rn = ( (float)y * 1.525878906250e-05 ); /* reals: [0,1)-interval */
+}
+
+
 /* A. Donev addeed this by copying the code from the gsl library's function gsl_rng_uniform_int */
 /* Generates a random integer in the range [1,n] */
 /* We have had some issues calling this from Fortran and it has to do with unsigned integers it seems or a gfortran bug?!? */
