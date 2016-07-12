@@ -153,16 +153,14 @@ contains
                              the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
       end do
 
-   else if (temporal_integrator .eq. -2) then
-
-      ! explicit midpoint for SSA
+   else if (temporal_integrator .eq. -2) then  ! explicit midpoint
 
       ! temporary storage for second rate
       do n=1,nlevs
          call multifab_build(rate2(n),mla%la(n),nspecies,0)
       end do
 
-      if (use_Poisson_rng .eq. 2) then
+      if (use_Poisson_rng .eq. 2) then  ! explicit midpoint with SSA
 
          !!!!!!!!!!!!!!!
          ! predictor   !
@@ -170,7 +168,7 @@ contains
 
          ! n_k^{**} = n_k^n + (dt/2)       div (D_k grad n_k)^n
          !                  + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
-         !                  + (dt/2)        ext_src
+         !                  + (dt/2)       ext_src
          do n=1,nlevs
             call multifab_copy_c(n_new(n),1,n_old(n),1,nspecies,0)
             call multifab_saxpy_3(n_new(n),dt/2.d0,diff_fluxdiv(n))
@@ -190,7 +188,7 @@ contains
          end do
 
          !!!!!!!!!!!!!!!
-         ! corrector !
+         ! corrector   !
          !!!!!!!!!!!!!!!
 
          ! compute diffusive flux divergence
@@ -232,9 +230,7 @@ contains
                                  the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
          end do
 
-      else
-
-         ! explicit midpoint for det/tau/CLE
+      else  ! explicit midpoint for det/tau/CLE
 
          !!!!!!!!!!!!!!!
          ! predictor   !
@@ -260,7 +256,7 @@ contains
          end do
 
          !!!!!!!!!!!!!!!
-         ! corrector !
+         ! corrector   !
          !!!!!!!!!!!!!!!
 
          ! Here we do not write this in the form that Mattingly et al do
@@ -314,16 +310,14 @@ contains
          call multifab_destroy(rate2(n))
       end do
      
-   else if (temporal_integrator .eq. -4) then
+   else if (temporal_integrator .eq. -4) then  ! implicit midpoint
 
-      if (use_Poisson_rng .eq. -2) then
-
-         ! implicit midpoint with SSA
+      if (use_Poisson_rng .eq. 2) then  ! implicit midpoint with SSA
 
          ! backward Euler predictor to half-time
          ! n_k^* = n_k^n + (dt/2)       div (D_k grad n_k)^{n+1/2}
          !               + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
-         !               + (dt/2)        ext_src
+         !               + (dt/2)       ext_src
          !
          ! in delta form
          !
@@ -333,7 +327,6 @@ contains
          
          do n=1,nlevs
             call multifab_build(rhs(n),mla%la(n),nspecies,0)
-            call multifab_build(rate2(n),mla%la(n),nspecies,0)
          end do
 
          do n=1,nlevs
@@ -390,18 +383,15 @@ contains
 
          do n=1,nlevs
             call multifab_destroy(rhs(n))
-            call multifab_destroy(rate2(n))
          end do
 
-      else
-
-         ! implicit midpoint with det/tau/CLE
+      else  ! implicit midpoint for det/tau/CLE
 
          ! backward Euler predictor to half-time
          ! n_k^{n+1/2} = n_k^n + (dt/2)       div (D_k grad n_k)^{n+1/2}
          !                     + (dt/sqrt(2)) div sqrt(2 D_k n_k^n / (dt*dV)) Z_1 ! Gaussian noise
          !                     + 1/dV * P_1( f(n_k)*(dt/2)*dV )                   ! Poisson noise
-         !                     + (dt/2)        ext_src
+         !                     + (dt/2)       ext_src
          !
          ! in delta form
          !
