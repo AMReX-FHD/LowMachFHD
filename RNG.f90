@@ -1,83 +1,22 @@
 module BoxLibRNGs
-   ! These are written in C and part of BoxLib
+   use RNGEngine ! Interfaces for uniform/integer RNG generators written in C and part of BoxLib
    use Random_Numbers ! Used to generate unpredictable seeds or initial seeds for Marsenne twister
    use NonUniformRNGs ! Generates samples from several nonuniform distributions (we use our own for Guassian)
-   use hg_rng_engine_module, only : hg_rng_engine
    use iso_c_binding
    implicit none
-   public
+   public ! Export all names of public entities so this is the one unified Fortran RNG interface for the outside world
    
    integer, parameter, private :: dp=kind(0.0d0), sp=kind(0.0)
 
-   ! These are written in C and part of BoxLib
-   interface SeedRNG_C
-      subroutine srandgen(seed) bind(c)
-         ! Seed the generator (should be called at the beginning)
-         ! Use the shell script $RANDOM to generate a truly random seed
-         integer, value :: seed
-      end subroutine
-   end interface
-
-! This is not used at present and since it requires a C++ compiler I leave it out here   
-!   interface SeedParallelRNG_C
-!      subroutine SeedParallelRNG(seed) bind(c, name="SeedParallelRNG")
-!         ! Seed the generator on each processor (should be called at the beginning)
-!         ! This requires MPI to be initialized and running and is compiled with C++
-!         integer, value :: seed
-!      end subroutine
-!   end interface   
-
-   ! Donev: We have observed some difficulties calling this from Fortran
-   ! It either has to do with unsigned versus signed integers or passing by value
-   ! Appears to be a compiler bug in gfortran as it works in ifort.
-   ! For now, best avoid this routine and use the floating-point RNG to compute integers
-   interface UniformInteger
-      ! void genrandint (unsigned long int *r, unsigned long int n)
-      subroutine genrandint(number, range) bind(c)
-         ! Returns an integer uniformly distributed in the range [1,range]
-         import
-         integer, intent(out) :: number
-         integer, intent(in), value :: range
-         !integer, intent(in) :: range ! Donev: Temporary change to pass by address here
-      end subroutine   
-   end interface
-
    ! Returns pseudorandom number in interval [0,1).
    interface UniformRNG
-      module procedure genrand_dp
-      module procedure genrand_sp
+      module procedure UniformRNG_dp
+      module procedure UniformRNG_sp
    end interface UniformRNG
-
-   ! Returns pseudorandom number in interval [0,1).
-   interface
-      subroutine genrand(number) bind(c)
-         import
-         real(dp), intent(out) :: number
-      end subroutine   
-      subroutine hg_genrand(number, engine) bind(c)
-        import
-        real(dp), intent(out) :: number
-        type(hg_rng_engine), intent(inout) :: engine
-      end subroutine hg_genrand
-   end interface
       
    interface NormalRNG  ! The Fortran version of this is below and may be faster
-      module procedure genrandn_dp
-      module procedure genrandn_sp  
-   end interface
-
-   interface
-      subroutine genrandn(number) bind(c)
-         ! Returns a normally-distributed number with mean 0 and variance 1
-         import
-         real(dp), intent(out) :: number
-      end subroutine 
-      subroutine hg_genrandn(number, engine) bind(c)
-        ! Returns a normally-distributed number with mean 0 and variance 1
-        import
-        real(dp), intent(out) :: number
-        type(hg_rng_engine), intent(inout) :: engine
-      end subroutine hg_genrandn
+      module procedure NormalRNG_dp
+      module procedure NormalRNG_sp  
    end interface
 
    interface UniformRNGVec  ! The Fortran version of this is below and may be faster
@@ -117,18 +56,18 @@ contains ! It is likely that vectorized versions will do better here
 
    end subroutine
 
-   subroutine genrand_dp(number, engine)
+   subroutine UniformRNG_dp(number, engine)
       ! Returns pseudorandom number in interval [0,1).
       real(dp), intent(out) :: number
       type(hg_rng_engine), intent(inout), optional :: engine
       if (present(engine)) then
-         call hg_genrand(number, engine)
+         call UniformRNG_C(number, engine)
       else
-         call genrand(number)
+         call UniformRNG_C(number)
       end if
-    end subroutine genrand_dp
+    end subroutine 
 
-   subroutine genrand_sp(number, engine)
+   subroutine UniformRNG_sp(number, engine)
       ! Returns pseudorandom number in interval [0,1).
       real(sp), intent(out) :: number
       type(hg_rng_engine), intent(inout), optional :: engine
@@ -136,36 +75,38 @@ contains ! It is likely that vectorized versions will do better here
       real(dp) :: number_dp
       
       if (present(engine)) then
-         call hg_genrand(number_dp, engine)
+         ! Donev: Consider adding support for single-precision reals here
+         call UniformRNG_C(number_dp, engine)
+         number=number_dp
+         ! In single precision, we may get 1.0 here so we need to do some hack      
+         if(number>=1.0) number=number-epsilon(number)
       else
-         call genrand(number_dp)
+         call UniformRNG_C(number)
       end if
-      number=number_dp
-      ! In single precision, we may get 1.0 here so we need to do some hack      
-      if(number>=1.0) number=number-epsilon(number)
       
    end subroutine   
 
-   subroutine genrandn_dp(number, engine)
+   ! Donev: Consider replacing this with NormalRNG_Fortran for this and removing NormalRNG_C from the code  
+   subroutine NormalRNG_dp(number, engine)
       ! Returns pseudorandom number in interval [0,1).
       real(dp), intent(out) :: number
       type(hg_rng_engine), intent(inout), optional :: engine
       if (present(engine)) then
-         call hg_genrandn(number, engine)
+         call NormalRNG_C(number, engine)
       else
-         call genrandn(number)
+         call NormalRNG_C(number)
       end if
    end subroutine   
 
-   subroutine genrandn_sp(number, engine)
+   subroutine NormalRNG_sp(number, engine)
       ! Returns pseudorandom number in interval [0,1).
       real(sp), intent(out) :: number
       type(hg_rng_engine), intent(inout), optional :: engine
       real(dp) :: number_dp
       if (present(engine)) then
-         call hg_genrandn(number_dp, engine)
+         call NormalRNG_C(number_dp, engine)
       else
-         call genrandn(number_dp)
+         call NormalRNG_C(number_dp)
       end if
       number=number_dp
    end subroutine   
@@ -222,6 +163,9 @@ contains ! It is likely that vectorized versions will do better here
 
   end subroutine 
 
+  ! Donev: Consider renaming this NormalRNG_dp so it is used instead of the C code
+  ! Donev: It should be tested for histogram at least once or checked that given the same random integer
+  !   it produces the same result as the C code
   subroutine NormalRNG_Fortran(invnormdist, engine)
       ! This is the Fortran equivalent of the C blinvnormdist, just for the record
       real(dp), intent(inout) :: invnormdist
@@ -273,13 +217,14 @@ contains ! It is likely that vectorized versions will do better here
 
   end subroutine
 
-  subroutine NormalRNGFast(p, engine)
-  type(hg_rng_engine), intent(inout), optional :: engine
-  real(dp)     :: u,p
-  real(dp), parameter :: f = 3.46410161514d0
-  
-  call UniformRNG(u, engine)
-  p = f*(u-0.5_dp)
+  subroutine NormalRNGFast(p, engine) ! This has the correct first and second moment only
+    ! It is not an actual normal random generator!
+    type(hg_rng_engine), intent(inout), optional :: engine
+    real(dp)     :: u,p
+    real(dp), parameter :: f = 3.46410161514d0
+
+    call UniformRNG(u, engine)
+    p = f*(u-0.5_dp)
 
   end subroutine 
 

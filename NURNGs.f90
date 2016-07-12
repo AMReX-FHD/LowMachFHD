@@ -83,7 +83,8 @@ MODULE NonUniformRNGs
 !     Phone: (+61) 3 9545-8016      Fax: (+61) 3 9545-8080
 !     e-mail: amiller @ bigpond.net.au
 
-use hg_rng_engine_module, only : hg_rng_engine
+! Donev: I am not sure if this is needed here to compile the code or if this use can be moved inside the subroutine random_uniform?
+use RNGEngine, only : hg_rng_engine ! Add support for changing the RNG engine but don't export everything
 
 IMPLICIT NONE
 REAL, PRIVATE      :: zero = 0.0, half = 0.5, one = 1.0, two = 2.0,   &
@@ -96,32 +97,20 @@ CONTAINS
 
 subroutine random_uniform(x, engine)
    use iso_c_binding
+   use RNGEngine
    real, intent(out) :: x
    type(hg_rng_engine), intent(inout), optional :: engine
 
-   interface UniformRNG
-      subroutine genrand(number) bind(c)
-         ! Returns pseudorandom number in interval [0,1).
-         use iso_c_binding
-         real(c_double), intent(out) :: number
-      end subroutine
-      subroutine hg_genrand(number, engine) bind(c)
-         ! Returns pseudorandom number in interval [0,1).
-        import
-         real(c_double), intent(out) :: number
-         type(hg_rng_engine), intent(inout) :: engine
-      end subroutine
-   end interface
-
    real(c_double) :: dice
-
+   
    if(.true.) then ! use our BoxLib Marsenne-Twister
       if (present(engine)) then
-         CALL UniformRNG(dice, engine)
+         ! Donev: Consider using proper single precision generator here
+         CALL UniformRNG_C(dice, engine)
+         x=dice
       else
-         CALL UniformRNG(dice)
-      end if
-      x=dice
+         CALL UniformRNG_C(x)
+      end if      
    else ! use built-in generator
       call random_number(x)
    end if
