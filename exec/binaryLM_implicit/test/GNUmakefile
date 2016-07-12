@@ -3,6 +3,9 @@ MPI    := t
 OMP    :=
 MKVERBOSE := t
 
+# need this to compile bl_rng.f90 (module to store random number engines and distributions)
+CXX11 = t
+
 COMP := gfortran
 
 # BOXLIB_HOME defines the directory in which we will find all the BoxLib code
