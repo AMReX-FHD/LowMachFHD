@@ -8,7 +8,7 @@ module bl_rng_module
   use probin_reactdiff_module, only: temporal_integrator, diffusion_type, &
                                      use_Poisson_rng, seed_diffusion, seed_reaction, &
                                      seed_init, integer_populations
-  use hg_rng_engine_module, only : hg_rng_engine
+  use RNGEngine, only : hg_rng_engine
 
   implicit none
 
