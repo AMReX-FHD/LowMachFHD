@@ -113,20 +113,20 @@ unsigned long genrandbase ()
     return(y);
 }
 
-void genrand (double* rn) /* Largest returned number should be 0.999999999767169 */
+void genrand (double* rn) /* Largest returned number should be 1.0-epsilon(1.0) */
 {
     unsigned long y;
     y = genrandbase ();
-    /* Donev: Original value below was 2.3283064365386963e-10 -- we should assign the value bitwise */
-    *rn = ( (double)y * 2.32830643653869628906e-010 ); /* reals: [0,1)-interval */    
+    /* Donev: Original value below was 2.3283064365386963e-10 but now this is same as C++ code */
+    *rn = ( (double)y * 2.3283064370807969e-10 ); /* reals: [0,1)-interval */    
 }
 
 /* A. Donev added this routine to avoid returning 1.0 in single precision */
-void genrand_sp (float* rn) /* Largest returned number should be 0.9999847412109375*/
+void genrand_sp (float* rn) /* Largest returned number should be 1.0f-epsilon(1.0f)*/
 {
     unsigned long y;
     y = genrandbase ();
-    /* A. Donev: TODO: Assign the value bitwise and not as a constant */
+    /* A. Donev: Value taken from C++ code */
     *rn = ( (float)y * 2.32830616e-10f ); /* reals: [0,1)-interval */
 }
 
