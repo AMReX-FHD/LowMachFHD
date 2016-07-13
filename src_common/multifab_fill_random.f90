@@ -2,6 +2,7 @@ module multifab_fill_random_module
 
   use multifab_module
   use BoxLibRNGs
+  use bl_random_module
   use bl_error_module
 
   implicit none
@@ -13,12 +14,15 @@ module multifab_fill_random_module
 contains
 
   ! fill a multifab with random numbers
-  subroutine multifab_fill_random(mfab, comp, variance, variance_mfab, variance_mfab2)
-    type(multifab), intent(inout)           :: mfab(:)
-    integer       , intent(in   ), optional :: comp ! Only one component
-    real(dp_t)    , intent(in   ), optional :: variance
-    type(multifab), intent(in   ), optional :: variance_mfab(:)
-    type(multifab), intent(in   ), optional :: variance_mfab2(:)
+  subroutine multifab_fill_random(mfab, comp, variance, variance_mfab, variance_mfab2, &
+                                  rng_eng)
+
+    type(multifab)     , intent(inout)           :: mfab(:)
+    integer            , intent(in   ), optional :: comp ! Only one component
+    real(dp_t)         , intent(in   ), optional :: variance
+    type(multifab)     , intent(in   ), optional :: variance_mfab(:)
+    type(multifab)     , intent(in   ), optional :: variance_mfab2(:)
+    type(bl_rng_engine), intent(in   ), optional :: rng_eng
 
     integer :: n,box
 
@@ -33,7 +37,12 @@ contains
              fp => dataptr(mfab(n),box)
           end if
 
-          call NormalRNGs(fp, size(fp)) ! Fill the whole grid with random numbers
+          ! Fill the whole grid with random numbers
+          if (present(rng_eng)) then
+             call NormalRNGs(fp, size(fp), rng_eng%p)
+          else
+             call NormalRNGs(fp, size(fp))
+          end if
 
           if(present(variance_mfab)) then 
              ! Must have same distribution
