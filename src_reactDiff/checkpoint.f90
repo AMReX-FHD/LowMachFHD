@@ -55,9 +55,9 @@ contains
 
        ! engines
        rand_name = sd_name//'/rng_eng_diff'
-       call bl_rng_save_engine(rng_eng_diffusion_e, rand_name)
+       call bl_rng_save_engine(rng_eng_diffusion, rand_name)
        rand_name = sd_name//'/rng_eng_react'
-       call bl_rng_save_engine(rng_eng_reaction_e, rand_name)
+       call bl_rng_save_engine(rng_eng_reaction, rand_name)
 
     end if
 

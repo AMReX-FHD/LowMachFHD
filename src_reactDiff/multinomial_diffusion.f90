@@ -159,7 +159,7 @@ contains
           if (use_bl_rng) then
              call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                  N=max(0, nint(n_new(i,comp)*dv)), p=probabilities, &
-                                 engine=rng_eng_diffusion)
+                                 engine=rng_eng_diffusion%p)
           else
              call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                  N=max(0, nint(n_new(i,comp)*dv)), p=probabilities)
@@ -221,7 +221,7 @@ contains
              if (use_bl_rng) then
                 call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                     N=max(0, nint(n_new(i,j,comp)*dv)), p=probabilities, &
-                                    engine=rng_eng_diffusion)
+                                    engine=rng_eng_diffusion%p)
              else
                 call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                     N=max(0, nint(n_new(i,j,comp)*dv)), p=probabilities)
@@ -296,7 +296,7 @@ contains
           if (use_bl_rng) then
              call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                  N=max(0, nint(n_new(i,j,k,comp)*dv)), p=probabilities, &
-                                 engine=rng_eng_diffusion)
+                                 engine=rng_eng_diffusion%p)
           else
              call MultinomialRNG(samples=fluxes, n_samples=n_faces, &
                                  N=max(0, nint(n_new(i,j,k,comp)*dv)), p=probabilities)

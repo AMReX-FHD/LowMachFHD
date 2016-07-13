@@ -47,7 +47,7 @@ contains
           if (init) then
              call bl_NormalRNGs(fp, size(fp))
           else if (use_bl_rng) then
-             call NormalRNGs(fp, size(fp), rng_eng_diffusion)
+             call NormalRNGs(fp, size(fp), rng_eng_diffusion%p)
           else
              call NormalRNGs(fp, size(fp))
           end if
