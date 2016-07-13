@@ -44,10 +44,12 @@ contains
           end if
 
           ! Fill the whole grid with random numbers
-          if (init) then
-             call bl_NormalRNGs(fp, size(fp))
-          else if (use_bl_rng) then
-             call NormalRNGs(fp, size(fp), rng_eng_diffusion%p)
+          if (use_bl_rng) then
+             if (init) then
+                call NormalRNGs(fp, size(fp), rng_eng_init%p)
+             else
+                call NormalRNGs(fp, size(fp), rng_eng_diffusion%p)
+             end if
           else
              call NormalRNGs(fp, size(fp))
           end if
