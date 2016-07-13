@@ -297,5 +297,9 @@ void hg_genrand (double* rn, void* rng)
 {
   genrand(rn);
 }
+void hg_genrand_sp (float* rn, void* rng)
+{
+  genrand_sp(rn);
+}
 #endif
 

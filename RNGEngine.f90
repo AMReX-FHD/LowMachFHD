@@ -7,12 +7,6 @@ module RNGEngine
    
    integer, parameter, private :: dp=kind(0.0d0), sp=kind(0.0)
 
-   type, bind(c) :: hg_rng_engine
-      type(c_ptr) :: eng = c_null_ptr   ! engine
-      ! Donev: Consider removing dis here since we can generate uniform numbers ourselves
-      type(c_ptr) :: dis = c_null_ptr   ! uniform distribution [0,1)
-   end type hg_rng_engine
-
    ! These are written in C and part of BoxLib
    interface SeedRNG_C
       subroutine srandgen(seed) bind(c)
@@ -57,11 +51,17 @@ module RNGEngine
          real(sp), intent(out) :: number
       end subroutine   
       ! Donev: Consider adding support here for single precision number
+      ! Weiqun: done
       subroutine hg_genrand(number, engine) bind(c)
         import
         real(dp), intent(out) :: number
-        type(hg_rng_engine), intent(inout) :: engine
+        type(c_ptr), value :: engine
       end subroutine hg_genrand
+      subroutine hg_genrand_sp(number, engine) bind(c)
+        import
+        real(sp), intent(out) :: number
+        type(c_ptr), value :: engine
+      end subroutine hg_genrand_sp
    end interface
    
    ! Donev: Consider using the Fortran version in RNG.f90 for this and removing NormalRNG_C from the code   
@@ -75,7 +75,7 @@ module RNGEngine
         ! Returns a normally-distributed number with mean 0 and variance 1
         import
         real(dp), intent(out) :: number
-        type(hg_rng_engine), intent(inout) :: engine
+        type(c_ptr), value :: engine
       end subroutine hg_genrandn
    end interface
 

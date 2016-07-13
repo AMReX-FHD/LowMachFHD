@@ -60,7 +60,7 @@ contains ! It is likely that vectorized versions will do better here
    subroutine UniformRNG_dp(number, engine)
       ! Returns pseudorandom number in interval [0,1).
       real(dp), intent(out) :: number
-      type(hg_rng_engine), intent(inout), optional :: engine
+      type(c_ptr), intent(in), optional :: engine
       if (present(engine)) then
          call UniformRNG_C(number, engine)
       else
@@ -71,27 +71,23 @@ contains ! It is likely that vectorized versions will do better here
    subroutine UniformRNG_sp(number, engine)
       ! Returns pseudorandom number in interval [0,1).
       real(sp), intent(out) :: number
-      type(hg_rng_engine), intent(inout), optional :: engine
-      
-      real(dp) :: number_dp
-      
+      type(c_ptr), intent(in), optional :: engine
       if (present(engine)) then
          ! Donev: Consider adding support for single-precision reals here
-         call UniformRNG_C(number_dp, engine)
-         number=number_dp
+         ! Weiqun: Single-precision is supported now. Maybe we can remove that 1-epsilon line.
+         call UniformRNG_C(number, engine)
          ! In single precision, we may get 1.0 here so we need to do some hack      
          if(number>=1.0) number=number-epsilon(number)
       else
          call UniformRNG_C(number)
-      end if
-      
+      end if      
    end subroutine   
 
    ! Donev: Consider replacing this with NormalRNG_Fortran for this and removing NormalRNG_C from the code  
    subroutine NormalRNG_dp(number, engine)
       ! Returns pseudorandom number in interval [0,1).
       real(dp), intent(out) :: number
-      type(hg_rng_engine), intent(inout), optional :: engine
+      type(c_ptr), intent(in), optional :: engine
       if (present(engine)) then
          call NormalRNG_C(number, engine)
       else
@@ -102,7 +98,7 @@ contains ! It is likely that vectorized versions will do better here
    subroutine NormalRNG_sp(number, engine)
       ! Returns pseudorandom number in interval [0,1).
       real(sp), intent(out) :: number
-      type(hg_rng_engine), intent(inout), optional :: engine
+      type(c_ptr), intent(in), optional :: engine
       real(dp) :: number_dp
       if (present(engine)) then
          call NormalRNG_C(number_dp, engine)
@@ -115,7 +111,7 @@ contains ! It is likely that vectorized versions will do better here
   subroutine UniformRNGs(numbers, n_numbers, engine)
     integer, intent(in) :: n_numbers
     real(dp), intent(out) :: numbers(n_numbers)
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
 
     integer :: i
 
@@ -128,7 +124,7 @@ contains ! It is likely that vectorized versions will do better here
   subroutine UniformRNGs_sp(numbers, n_numbers, engine)
     integer, intent(in) :: n_numbers
     real(sp), intent(out) :: numbers(n_numbers)
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
 
     integer :: i
 
@@ -141,7 +137,7 @@ contains ! It is likely that vectorized versions will do better here
   subroutine NormalRNGs(numbers, n_numbers, engine)
     integer, intent(in) :: n_numbers
     real(dp), intent(out) :: numbers(n_numbers)
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
 
     integer :: i
 
@@ -154,7 +150,7 @@ contains ! It is likely that vectorized versions will do better here
   subroutine NormalRNGs_sp(numbers, n_numbers, engine)
     integer, intent(in) :: n_numbers
     real(sp), intent(out) :: numbers(n_numbers)
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
 
     integer :: i
 
@@ -170,7 +166,7 @@ contains ! It is likely that vectorized versions will do better here
   subroutine NormalRNG_Fortran(invnormdist, engine)
       ! This is the Fortran equivalent of the C blinvnormdist, just for the record
       real(dp), intent(inout) :: invnormdist
-      type(hg_rng_engine), intent(inout), optional :: engine
+      type(c_ptr), intent(in), optional :: engine
 
       real(dp)     :: p
 
@@ -220,7 +216,7 @@ contains ! It is likely that vectorized versions will do better here
 
   subroutine NormalRNGFast(p, engine) ! This has the correct first and second moment only
     ! It is not an actual normal random generator!
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
     real(dp)     :: u,p
     real(dp), parameter :: f = 3.46410161514d0
 
@@ -232,7 +228,7 @@ contains ! It is likely that vectorized versions will do better here
  SUBROUTINE PoissonRNG_dp(number,mean,engine)
     INTEGER, INTENT(OUT) :: number
     REAL(dp), INTENT(IN) :: mean
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
 
     number=random_Poisson(mu=real(mean), engine=engine)
 
@@ -241,7 +237,7 @@ contains ! It is likely that vectorized versions will do better here
  SUBROUTINE PoissonRNG_sp(number,mean,engine)
     INTEGER, INTENT(OUT) :: number
     REAL(sp), INTENT(IN) :: mean
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
 
     number=random_Poisson(mu=mean, engine=engine)
 
@@ -251,7 +247,7 @@ contains ! It is likely that vectorized versions will do better here
     INTEGER, INTENT(OUT) :: number
     INTEGER, INTENT(IN) :: n_trials ! Number of trials
     REAL(dp), INTENT(IN) :: success_prob ! Probability of successful trial
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
 
     number=random_binomial(n=n_trials, pp=real(success_prob), engine=engine)
 
@@ -261,7 +257,7 @@ contains ! It is likely that vectorized versions will do better here
     INTEGER, INTENT(OUT) :: number
     INTEGER, INTENT(IN) :: n_trials ! Number of trials
     REAL(sp), INTENT(IN) :: success_prob ! Probability of successful trial
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
 
     number=random_binomial(n=n_trials, pp=success_prob, engine=engine)
     
@@ -273,7 +269,7 @@ contains ! It is likely that vectorized versions will do better here
     integer, intent(in) :: n_samples, N
     integer, intent(out) :: samples(n_samples)
     real(dp), intent(in) :: p(n_samples)
-    type(hg_rng_engine), intent(inout), optional :: engine
+    type(c_ptr), intent(in), optional :: engine
 
     real(dp) :: sum_p
     integer :: sample, sum_n

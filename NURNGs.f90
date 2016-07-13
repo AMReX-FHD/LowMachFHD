@@ -83,8 +83,7 @@ MODULE NonUniformRNGs
 !     Phone: (+61) 3 9545-8016      Fax: (+61) 3 9545-8080
 !     e-mail: amiller @ bigpond.net.au
 
-! Donev: I am not sure if this is needed here to compile the code or if this use can be moved inside the subroutine random_uniform?
-use RNGEngine, only : hg_rng_engine ! Add support for changing the RNG engine but don't export everything
+use iso_c_binding, only : c_ptr
 
 IMPLICIT NONE
 REAL, PRIVATE      :: zero = 0.0, half = 0.5, one = 1.0, two = 2.0,   &
@@ -99,15 +98,12 @@ subroutine random_uniform(x, engine)
    use iso_c_binding
    use RNGEngine
    real, intent(out) :: x
-   type(hg_rng_engine), intent(inout), optional :: engine
-
-   real(c_double) :: dice
-   
+   type(c_ptr), intent(in), optional :: engine
    if(.true.) then ! use our BoxLib Marsenne-Twister
       if (present(engine)) then
          ! Donev: Consider using proper single precision generator here
-         CALL UniformRNG_C(dice, engine)
-         x=dice
+         ! Weiqun: done
+         CALL UniformRNG_C(x, engine)
       else
          CALL UniformRNG_C(x)
       end if      
@@ -117,7 +113,7 @@ subroutine random_uniform(x, engine)
 end subroutine
 
 FUNCTION random_normal(engine) RESULT(fn_val)
-  type(hg_rng_engine), intent(inout), optional :: engine
+  type(c_ptr), intent(in), optional :: engine
 
 ! Adapted from the following Fortran 77 code
 !      ALGORITHM 712, COLLECTED ALGORITHMS FROM ACM.
@@ -179,7 +175,7 @@ FUNCTION random_gamma(s, first,engine) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: s
 LOGICAL, INTENT(IN) :: first
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 REAL                :: fn_val
 
 IF (s <= zero) THEN
@@ -210,7 +206,7 @@ FUNCTION random_gamma1(s, first, engine) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: s
 LOGICAL, INTENT(IN) :: first
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 REAL                :: fn_val
 
 ! Local variables
@@ -266,7 +262,7 @@ FUNCTION random_gamma2(s, first, engine) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: s
 LOGICAL, INTENT(IN) :: first
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 REAL                :: fn_val
 
 !     Local variables
@@ -328,7 +324,7 @@ FUNCTION random_chisq(ndf, first, engine) RESULT(fn_val)
 
 INTEGER, INTENT(IN) :: ndf
 LOGICAL, INTENT(IN) :: first
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 REAL                :: fn_val
 
 fn_val = two * random_gamma(half*ndf, first, engine)
@@ -339,7 +335,7 @@ END FUNCTION random_chisq
 
 
 FUNCTION random_exponential(engine) RESULT(fn_val)
-  type(hg_rng_engine), intent(inout), optional :: engine
+  type(c_ptr), intent(in), optional :: engine
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -375,7 +371,7 @@ FUNCTION random_Weibull(a, engine) RESULT(fn_val)
 !     f(x) = a.x    e
 
 REAL, INTENT(IN) :: a
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 REAL             :: fn_val
 
 !     For speed, there is no checking that a is not zero or very small.
@@ -403,7 +399,7 @@ FUNCTION random_beta(aa, bb, first, engine) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: aa, bb
 LOGICAL, INTENT(IN) :: first
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 REAL                :: fn_val
 
 !     Local variables
@@ -478,7 +474,7 @@ FUNCTION random_t(m, engine) RESULT(fn_val)
 !           (1 <= 1NTEGER)
 
 INTEGER, INTENT(IN) :: m
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 REAL                :: fn_val
 
 !     Local variables
@@ -566,7 +562,7 @@ REAL, INTENT(IN OUT)  :: f(:)         ! f(n*(n+1)/2)
 REAL, INTENT(OUT)     :: x(:)
 LOGICAL, INTENT(IN)   :: first
 INTEGER, INTENT(OUT)  :: ier
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 
 !     Local variables
 INTEGER       :: j, i, m
@@ -645,7 +641,7 @@ FUNCTION random_inv_gauss(h, b, first, engine) RESULT(fn_val)
 
 REAL, INTENT(IN)    :: h, b
 LOGICAL, INTENT(IN) :: first
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 REAL                :: fn_val
 
 !     Local variables
@@ -749,7 +745,7 @@ FUNCTION random_Poisson(mu, engine) RESULT(ival)
 
 !     .. Scalar Arguments ..
 REAL, INTENT(IN)    :: mu
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 INTEGER             :: ival
 !     ..
 !     .. Local Scalars ..
@@ -969,7 +965,7 @@ FUNCTION random_binomial1(n, p, first, engine) RESULT(ival)
 INTEGER, INTENT(IN) :: n
 REAL, INTENT(IN)    :: p
 LOGICAL, INTENT(IN) :: first
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 INTEGER             :: ival
 
 !     Local variables
@@ -1174,7 +1170,7 @@ FUNCTION random_binomial(n, pp, engine) RESULT(ival)
 !     .. Scalar Arguments ..
 REAL, INTENT(IN)    :: pp
 INTEGER, INTENT(IN) :: n
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 INTEGER             :: ival
 !     ..
 !     .. Local Scalars ..
@@ -1356,7 +1352,7 @@ FUNCTION random_neg_binomial(sk, p, engine) RESULT(ival)
 ! THE REPRODUCTIVE PROPERTY IS USED.
 
 REAL, INTENT(IN)   :: sk, p
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 INTEGER            :: ival
 
 !     Local variables
@@ -1430,7 +1426,7 @@ FUNCTION random_von_Mises(k, first, engine) RESULT(fn_val)
 
 REAL, INTENT(IN)     :: k
 LOGICAL, INTENT(IN)  :: first
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 REAL                 :: fn_val
 
 !     Local variables
@@ -1542,7 +1538,7 @@ END SUBROUTINE integral
 
 
 FUNCTION random_Cauchy(engine) RESULT(fn_val)
-  type(hg_rng_engine), intent(inout), optional :: engine
+  type(c_ptr), intent(in), optional :: engine
 
 !     Generate a random deviate from the standard Cauchy distribution
 
@@ -1571,7 +1567,7 @@ SUBROUTINE random_order(order, n, engine)
 
 INTEGER, INTENT(IN)  :: n
 INTEGER, INTENT(OUT) :: order(n)
-type(hg_rng_engine), intent(inout), optional :: engine
+type(c_ptr), intent(in), optional :: engine
 
 !     Local variables
 
