@@ -16,17 +16,12 @@ module bl_rng_module
   public :: rng_init, rng_destroy, &
             rng_eng_diffusion, &
             rng_eng_reaction, &
-            rng_eng_init, &
-            rng_dist_poisson_init, &
-            rng_dist_normal_init
+            rng_eng_init
 
   ! randon number engines
   type(bl_rng_engine)      , save :: rng_eng_diffusion
   type(bl_rng_engine)      , save :: rng_eng_reaction
-  !
   type(bl_rng_engine)      , save :: rng_eng_init
-  type(bl_rng_poisson)     , save :: rng_dist_poisson_init
-  type(bl_rng_normal)      , save :: rng_dist_normal_init
 
 contains
 
@@ -53,10 +48,6 @@ contains
     end if
 
     call bl_rng_build_engine(rng_eng_init, seed_init)
-    ! poisson; mean=1; this will be overridden
-    call bl_rng_build_distro(rng_dist_poisson_init, 1.d0)
-    ! normal; mean=0, std=1
-    call bl_rng_build_distro(rng_dist_normal_init, 0.d0, 1.d0)
 
   end subroutine rng_init
 
@@ -65,8 +56,6 @@ contains
     call bl_rng_destroy_engine(rng_eng_diffusion)
     call bl_rng_destroy_engine(rng_eng_reaction)
     call bl_rng_destroy_engine(rng_eng_init)
-    call bl_rng_destroy_distro(rng_dist_poisson_init)
-    call bl_rng_destroy_distro(rng_dist_normal_init)
 
   end subroutine rng_destroy
 

@@ -445,9 +445,7 @@ contains
           ! Generate the initial fluctuations using a Poisson random number generator
           ! This assumes that the distribution of initial conditions is a product Poisson measure
             if (use_bl_rng) then
-               call bl_rng_destroy_distro(rng_dist_poisson_init)
-               call bl_rng_build_distro(rng_dist_poisson_init, n(comp)*dv)
-               nparticles = bl_rng_get(rng_dist_poisson_init,rng_eng_init)
+               call PoissonRNG(number=nparticles, mean=n(comp)*dv, engine=rng_eng_init%p)
             else
                call PoissonRNG(number=nparticles, mean=n(comp)*dv)
             end if
