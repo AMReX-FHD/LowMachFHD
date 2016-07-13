@@ -42,6 +42,10 @@ module BoxLibRNGs
 
 contains ! It is likely that vectorized versions will do better here
 
+!-------------------------------------------
+! Uniform RNGs -- interfaces to C Marsenne-Twister codes
+!-------------------------------------------
+
    ! This is in principle callable by C directly, but we go through the wrapper here for safety
    ! void SeedRNG(int *seed); // On output, the actual seed used
    !
@@ -73,39 +77,10 @@ contains ! It is likely that vectorized versions will do better here
       real(sp), intent(out) :: number
       type(c_ptr), intent(in), optional :: engine
       if (present(engine)) then
-         ! Donev: Consider adding support for single-precision reals here
-         ! Weiqun: Single-precision is supported now. Maybe we can remove that 1-epsilon line.
          call UniformRNG_C(number, engine)
-         ! In single precision, we may get 1.0 here so we need to do some hack      
-         if(number>=1.0) number=number-epsilon(number)
       else
          call UniformRNG_C(number)
       end if      
-   end subroutine   
-
-   ! Donev: Consider replacing this with NormalRNG_Fortran for this and removing NormalRNG_C from the code  
-   subroutine NormalRNG_dp(number, engine)
-      ! Returns pseudorandom number in interval [0,1).
-      real(dp), intent(out) :: number
-      type(c_ptr), intent(in), optional :: engine
-      if (present(engine)) then
-         call NormalRNG_C(number, engine)
-      else
-         call NormalRNG_C(number)
-      end if
-   end subroutine   
-
-   subroutine NormalRNG_sp(number, engine)
-      ! Returns pseudorandom number in interval [0,1).
-      real(sp), intent(out) :: number
-      type(c_ptr), intent(in), optional :: engine
-      real(dp) :: number_dp
-      if (present(engine)) then
-         call NormalRNG_C(number_dp, engine)
-      else
-         call NormalRNG_C(number_dp)
-      end if
-      number=number_dp
    end subroutine   
 
   subroutine UniformRNGs(numbers, n_numbers, engine)
@@ -134,6 +109,31 @@ contains ! It is likely that vectorized versions will do better here
 
   end subroutine
 
+!-------------------------------------------
+! Gaussian/normal RNGs
+!-------------------------------------------
+
+   ! Donev: Replaced this with Fortran implementation below instead of using NormalRNG_C
+   subroutine NormalRNG_dp_C(number, engine)
+      ! Returns normal N(0,1) variate
+      real(dp), intent(out) :: number
+      type(c_ptr), intent(in), optional :: engine
+      if (present(engine)) then
+         call NormalRNG_C(number, engine)
+      else
+         call NormalRNG_C(number)
+      end if
+   end subroutine   
+
+   subroutine NormalRNG_sp(number, engine)
+      ! Returns normal N(0,1) variate
+      real(sp), intent(out) :: number
+      type(c_ptr), intent(in), optional :: engine
+      real(dp) :: number_dp
+      call NormalRNG_dp(number_dp, engine)
+      number=number_dp
+   end subroutine   
+
   subroutine NormalRNGs(numbers, n_numbers, engine)
     integer, intent(in) :: n_numbers
     real(dp), intent(out) :: numbers(n_numbers)
@@ -160,12 +160,13 @@ contains ! It is likely that vectorized versions will do better here
 
   end subroutine 
 
-  ! Donev: Consider renaming this NormalRNG_dp so it is used instead of the C code
-  ! Donev: It should be tested for histogram at least once or checked that given the same random integer
+  ! Donev: This should be should be tested for histogram at least once or checked that given the same random integer
   !   it produces the same result as the C code
-  subroutine NormalRNG_Fortran(invnormdist, engine)
-      ! This is the Fortran equivalent of the C blinvnormdist, just for the record
-      real(dp), intent(inout) :: invnormdist
+  subroutine NormalRNG_dp(number, engine)
+      ! This is the Fortran equivalent of the C genrandn, it is a bit faster and better for inlining
+      ! It also is faster than the normal generator in NURNGs.f90 since it avoids rejection, so we use it here
+      ! Note that it is only accurate to 1E-9 (not an exact sampler!) but this is more than sufficient for applications
+      real(dp), intent(inout) :: number
       type(c_ptr), intent(in), optional :: engine
 
       real(dp)     :: p
@@ -197,18 +198,18 @@ contains ! It is likely that vectorized versions will do better here
       
       call UniformRNG(p, engine)
       
-      if(p.lt.p_low) then
+      if (p.lt.p_low) then
          q=dsqrt(-2.d0*dlog(p))
-         invnormdist = (((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6)/   &
+         number = (((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6)/   &
              ((((d1*q+d2)*q+d3)*q+d4)*q+1.d0)
       elseif (p.le.p_high)then
          q=p-0.5d0
          r=q*q
-         invnormdist = (((((a1*r+a2)*r+a3)*r+a4)*r+a5)*r+a6)*q/  &
+         number = (((((a1*r+a2)*r+a3)*r+a4)*r+a5)*r+a6)*q/  &
                    (((((b1*r+b2)*r+b3)*r+b4)*r+b5)*r+1.d0)
       else
          q=dsqrt(-2.d0*dlog(1.d0-p))
-         invnormdist = -(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6)/   &
+         number = -(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6)/   &
                ((((d1*q+d2)*q+d3)*q+d4)*q+1.d0)
       endif
 
@@ -224,6 +225,10 @@ contains ! It is likely that vectorized versions will do better here
     p = f*(u-0.5_dp)
 
   end subroutine 
+
+!-------------------------------------------
+! Poisson/binomial RNGs
+!-------------------------------------------
 
  SUBROUTINE PoissonRNG_dp(number,mean,engine)
     INTEGER, INTENT(OUT) :: number

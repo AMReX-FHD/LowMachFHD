@@ -101,8 +101,6 @@ subroutine random_uniform(x, engine)
    type(c_ptr), intent(in), optional :: engine
    if(.true.) then ! use our BoxLib Marsenne-Twister
       if (present(engine)) then
-         ! Donev: Consider using proper single precision generator here
-         ! Weiqun: done
          CALL UniformRNG_C(x, engine)
       else
          CALL UniformRNG_C(x)

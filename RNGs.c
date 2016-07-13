@@ -117,7 +117,7 @@ void genrand (double* rn) /* Largest returned number should be 0.999999999767169
 {
     unsigned long y;
     y = genrandbase ();
-    /* Donev: Original value below was 2.3283064365386963e-10 but I added more digits of 2^(-32) */
+    /* Donev: Original value below was 2.3283064365386963e-10 -- we should assign the value bitwise */
     *rn = ( (double)y * 2.32830643653869628906e-010 ); /* reals: [0,1)-interval */    
 }
 
@@ -126,7 +126,8 @@ void genrand_sp (float* rn) /* Largest returned number should be 0.9999847412109
 {
     unsigned long y;
     y = genrandbase ();
-    *rn = ( (float)y * 1.525878906250e-05 ); /* reals: [0,1)-interval */
+    /* A. Donev: TODO: Assign the value bitwise and not as a constant */
+    *rn = ( (float)y * 2.32830616e-10f ); /* reals: [0,1)-interval */
 }
 
 

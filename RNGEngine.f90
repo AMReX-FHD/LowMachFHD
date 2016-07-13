@@ -50,8 +50,6 @@ module RNGEngine
          import
          real(sp), intent(out) :: number
       end subroutine   
-      ! Donev: Consider adding support here for single precision number
-      ! Weiqun: done
       subroutine hg_genrand(number, engine) bind(c)
         import
         real(dp), intent(out) :: number
@@ -64,7 +62,7 @@ module RNGEngine
       end subroutine hg_genrand_sp
    end interface
    
-   ! Donev: Consider using the Fortran version in RNG.f90 for this and removing NormalRNG_C from the code   
+   ! Donev: Consider using the Fortran version in RNG.f90 instead of NormalRNG_C from the code   
    interface NormalRNG_C
       subroutine genrandn(number) bind(c)
          ! Returns a normally-distributed number with mean 0 and variance 1
