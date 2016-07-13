@@ -81,17 +81,4 @@ contains
 
   end subroutine multifab_fill_random
 
-  ! interface to call bl_random on an array of data (e.g., for multifabs)
-  subroutine bl_NormalRNGs(numbers, n_numbers)
-    integer   , intent(in ) :: n_numbers
-    real(dp_t), intent(out) :: numbers(n_numbers)
-
-    integer :: i
-
-    do i=1, n_numbers
-       numbers(i) = bl_rng_get(rng_dist_normal_init,rng_eng_init)
-    end do
-
-  end subroutine
-
 end module multifab_fill_random_module
