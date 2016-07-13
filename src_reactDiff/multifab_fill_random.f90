@@ -17,22 +17,23 @@ contains
 
   ! fill a multifab with random numbers
   subroutine multifab_fill_random(mfab, comp, variance, variance_mfab, variance_mfab2, &
-                                  init_in)
-    type(multifab), intent(inout)           :: mfab(:)
-    integer       , intent(in   ), optional :: comp ! Only one component
-    real(dp_t)    , intent(in   ), optional :: variance
-    type(multifab), intent(in   ), optional :: variance_mfab(:)
-    type(multifab), intent(in   ), optional :: variance_mfab2(:)
-    logical       , intent(in   ), optional :: init_in
+                                  rng_eng)
+
+    type(multifab)     , intent(inout)           :: mfab(:)
+    integer            , intent(in   ), optional :: comp ! Only one component
+    real(dp_t)         , intent(in   ), optional :: variance
+    type(multifab)     , intent(in   ), optional :: variance_mfab(:)
+    type(multifab)     , intent(in   ), optional :: variance_mfab2(:)
+    type(bl_rng_engine), intent(in   ), optional :: rng_eng
 
     integer :: n,box
 
     real(kind=dp_t), pointer :: fp(:,:,:,:), fpvar(:,:,:,:)
 
-    logical :: init
-
-    init = .false.
-    if (present(init_in)) init = init_in
+    ! sanity check
+    if (use_bl_rng .and. (.not. present(rng_eng)) ) then
+       call bl_error("multifab_fill_random with use_bl_rng requires an rng engine")
+    end if
 
     !--------------------------------------
     do n=1,size(mfab)
@@ -44,12 +45,8 @@ contains
           end if
 
           ! Fill the whole grid with random numbers
-          if (use_bl_rng) then
-             if (init) then
-                call NormalRNGs(fp, size(fp), rng_eng_init%p)
-             else
-                call NormalRNGs(fp, size(fp), rng_eng_diffusion%p)
-             end if
+          if (present(rng_eng)) then
+             call NormalRNGs(fp, size(fp), rng_eng%p)
           else
              call NormalRNGs(fp, size(fp))
           end if
