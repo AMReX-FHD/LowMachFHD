@@ -12,7 +12,7 @@ module stochastic_n_fluxdiv_module
   use div_and_grad_module
   use bl_rng_module
   use probin_common_module, only: variance_coef_mass, initial_variance, density_weights
-  use probin_reactdiff_module, only: nspecies, cross_section
+  use probin_reactdiff_module, only: nspecies, cross_section, use_bl_rng
 
   implicit none
 
@@ -372,11 +372,19 @@ contains
     dm    = mla%dim    
     
     ! generate and store the stochastic flux (random numbers)
-    do rng=1, n_rngs
-       do i = 1,dm
-          call multifab_fill_random(stoch_W_fc(:,i,rng), rng_eng=rng_eng_diffusion)
+    if (use_bl_rng) then
+       do rng=1, n_rngs
+          do i = 1,dm
+             call multifab_fill_random(stoch_W_fc(:,i,rng), rng_eng=rng_eng_diffusion)
+          end do
        end do
-    end do
+    else
+       do rng=1, n_rngs
+          do i = 1,dm
+             call multifab_fill_random(stoch_W_fc(:,i,rng))
+          end do
+       end do
+    end if
 
     ! apply boundary conditions to stochastic fluxes
     call stoch_mass_bc(mla,the_bc_level)
@@ -573,10 +581,17 @@ contains
     ! create a multifab full of random numbers
     do n=1,nlevs
        
-       call multifab_fill_random(n_temp(n:n), &
-                                 variance_mfab=n_init, &
-                                 variance=abs(initial_variance)/dv, &  ! We do not multiply here by variance_coef_mass
-                                 rng_eng=rng_eng_init)
+       if (use_bl_rng) then
+          call multifab_fill_random(n_temp(n:n), &
+                                    variance_mfab=n_init, &
+                                    variance=abs(initial_variance)/dv, &  ! We do not multiply here by variance_coef_mass
+                                    rng_eng=rng_eng_init)
+       else
+          call multifab_fill_random(n_temp(n:n), &
+                                    variance_mfab=n_init, &
+                                    variance=abs(initial_variance)/dv)  ! We do not multiply here by variance_coef_mass
+
+       end if
   
        if(initial_variance<0.0d0) then
           ! Make sure this sums to zero
