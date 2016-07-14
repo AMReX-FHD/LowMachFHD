@@ -195,8 +195,11 @@ contains ! It is likely that vectorized versions will do better here
       real(dp), parameter :: d4=3.75440866190742d0
       real(dp), parameter :: p_low=0.02425d0
       real(dp), parameter :: p_high=0.9575d0
-      
-      call UniformRNG(p, engine)
+
+      do 
+         call UniformRNG(p, engine)
+         if (p .ne. 0.d0) exit
+      end do
       
       if (p.lt.p_low) then
          q=dsqrt(-2.d0*dlog(p))
