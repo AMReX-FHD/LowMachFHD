@@ -1,16 +1,11 @@
 \documentclass[final]{siamltex}
 
-% for red MarginPars
-\usepackage{color}
-
 \usepackage{epsfig}
-\usepackage{bm}
-
-% for smaller margins
-\usepackage{fullpage}
-
-% to use \split, \align etc.
-\usepackage{amsmath}
+\usepackage{color}        % for red MarginPars
+\usepackage{fullpage}     % for smaller margins
+\usepackage{amsmath}      % to use \split, \align etc.
+\usepackage{amsfonts}     % to use \mathfrak font
+\usepackage{bm}           % to use \mathcal in boldface
 
 % total number of floats allowed on a page
 \setcounter{totalnumber}{100}
@@ -24,9 +19,10 @@
 \setlength{\marginparwidth}{0.75in}
 \newcommand{\MarginPar}[1]{\marginpar{\vskip-\baselineskip\raggedright\tiny\sffamily\hrule\smallskip{\color{red}#1}\par\smallskip\hrule}}
 
-\def\eb  {{\bf e}}
-\def\ib  {{\bf i}}
-\def\nb  {{\bf n}}
+\newcommand{\nb}{\mathbf{n}}            
+\newcommand{\ib}{\mathbf{i}}           
+\newcommand{\eb}{\mathbf{e}}           
+
 \def\Rb  {{\bf R}}
 \def\mRb {\bm{\mathcal{R}}}
 \def\mZb {\bm{\mathcal{Z}}}
@@ -350,86 +346,142 @@ uniform random variable.  Then, update the state and repeat.\\
 
 \section{Unsplitting Schemes}
 
-\subsection{Euler Scheme}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To introduce notations for the reaction part, we first consider the Euler scheme.
-The index $i$ is used for the $i$-th reaction.
-The factor $\nu_{i,k}$ denotes the stoichiometric factor of species $k$ in reaction $i$.
-As introduced above, $a_i(\nb)$ is the deterministic reaction rate of reaction $i$.
-Hence, given $\nb$, the crudest approximation for the average number of reactions 
-in a volume $\Delta V$ during a time interval $\Delta t$ for reaction $i$ is
-$a_i(\nb)\Delta V\Delta t$.
-$\mPb(N)$ denotes a random number obeying the Poisson distribution with mean $N$.
-By emplying a set of independent random numbers $\{\mPb_i\}$, we express the Euler scheme as follows:
+\newcommand{\Pc}{\mathcal{P}}           % mathcal P
+\newcommand{\Nc}{\mathcal{N}}           % mathcal N 
+\newcommand{\Rfrak}{\mathfrak{R}}       % fraktur R
+\newcommand{\nablab}{\bm{\nabla}}       % nabla in boldface
+
+\newcommand{\dt}{{\Delta t}}            % Delta t 
+\newcommand{\dthalf}{{\frac{\dt}{2}}}   % dt/2 (frac)
+\newcommand{\dV}{{\Delta V}}            % Delta V 
+
+\newcommand{\Ns}{{N_\mathrm{s}}}        % number of species
+\newcommand{\Nr}{{N_\mathrm{r}}}        % number of reactions
+\newcommand{\Ds}{{D_s}}                 % diffusion coefficient of species s
+\newcommand{\ns}{n_s}                   % number density of species s
+\newcommand{\ar}{a_r}                   % reaction rate of reaction r
+\newcommand{\tar}{{\ta_r}}              % LMA-corrected reaction rate of r
+\newcommand{\nusr}{{\nu_{s r}}}         % stoichiometric factor of s in r
+\newcommand{\tn}{\tilde{n}}             % tilde n (for avg_type)
+\newcommand{\ta}{\tilde{a}}             % tilde a (for LMA correction)
+\newcommand{\pone}{{(1)}}               % 1 in parentheses
+\newcommand{\ptwo}{{(2)}}               % 2 in parentheses
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Reaction}
+
+Depending on the value of \texttt{use\_Poisson\_rng}, one of the following four methods is employed to sample the reaction:
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline 
+\texttt{use\_Poisson\_rng} & sampling method \\
+\hline
+2 & SSA \\
+1 & tau-leaping (Poissonian increment) \\
+0 & CLE (Gaussian increment) \\
+-1 & deterministic \\
+\hline
+\end{tabular}
+\end{center}
+For the SSA, the change in $\ns$ after time $\tau$ for initial state $\nb$ is denoted by $\Rfrak_s(\nb,\tau)$.
+For the other methods, the number of occurrences of reaction $r$ per volume during time interval $\tau$ is denoted by $R_r(a_r,\tau)$.
+This is sampled as follows:
 \begin{equation}
-n_k^{n+1} = n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^n
-+ \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}}\mZb^{(1)}\right)
-+\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i^n\Delta V\Delta t\right).
+R_r(\ar,\tau)=\begin{cases}
+\frac{1}{\dV}\Pc(\ar\dV\tau)  & \mbox{for tau-leaping}, \\
+\ar\tau+\sqrt{\frac{\ar\tau}{\dV}}\Nc(0,1) & \mbox{for CLE}, \\
+\ar\tau & \mbox{for deterministic},
+\end{cases}
 \end{equation}
+and the change in $\ns$ is obtained from $\sum_{r=1}^\Nr \nusr R_r (\ar,\tau)$.
+Here, $\ar=\ar(\nb)$ is the deterministic reaction rate of reaction $r$ and $\nusr$ is the stoichiometric factor of species $s$ in reaction $r$;
+$\Pc(\lambda)$ and $\Nc(0,1)$ are the Poisson distribution with mean $\lambda$ and the standard normal distribution, respectively.
+Note that the integer-based LMA, $\tar$, can be used by setting \texttt{include\_discrete\_LMA\_correction = T}.
 
-\subsection{Explicit Midpoint Scheme}
+In the subsequent subsections, we present the unsplitting schemes implemented in the codes.
+Note that the CLE or deterministic case has the same temporal integrator form as the tau-leaping case.
+In addition, as in the previous section, all midpoint schemes have three possibilities for the calculation of the stochastic diffusive flux for the second-half step.
+That is, $\tn_s^\bullet$ can be $\ns^k$, $\ns^\star$, or $(2\ns^\star-\ns^k)^+$.
+
+\subsection{Forward Euler Scheme}
+
+For the tau-leaping reaction, the scheme is written as
+\begin{equation}
+\ns^{k+1} = \ns^k + \dt\Ds\nablab^2\ns^k
++\sqrt{\frac{2\Ds\tn_s^k}{\dV}\dt} \nablab\cdot Z_s^\pone
++\sum_{r=1}^\Nr \nusr R_r^\pone\left(\ar^k,\dt\right).
+\end{equation}
+For the SSA case, the reaction part is simply replaced by $\Rfrak_s^\pone\left(\nb^k,\dt\right)$.
+
+\subsection{Multinomial diffusion}
+
+Similar to the forward Euler scheme except that the change due to diffusion is calculated from the multinomial diffusion.  
+
+\subsection{Explicit Midpoint + Tau-Leaping Scheme}
 
 By combining the explicit midpoint scheme for diffusion given in the previous section
-with $\theta$-trapezoidal $\tau$-leaping scheme proposed in Ref.~\cite{HuLiMin2011} with $\theta=\frac{1}{2}$,
+with the $\theta$-trapezoidal $\tau$-leaping scheme proposed in Ref.~\cite{HuLiMin2011} with $\theta=\frac{1}{2}$,
 we obtain the following scheme:
-\begin{equation}
-n_k^{n+\myhalf} = n_k^n + \frac{\Delta t}{2} \nabla\cdot\left(D_k\nabla n_k^n
-+ \sqrt{\frac{2 D_k n_k^n}{(\Delta t/2)\Delta V}}\mZb^{(1)}\right)
-+\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right),
-\end{equation}
-\begin{equation}
-\begin{split}
-n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
-+ \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}}\left[\frac{\mZb^{(1)}+\mZb^{(2)}}{\sqrt{2}}\right]\right)\\
-&+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
-\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
-+\mPb^{(2)}_i\left(\left[2 a_i^{n+\myhalf}-a_i^n\right]^+\Delta V\frac{\Delta t}{2}\right)\right\}.
-\end{split}
-\end{equation}
-As in the previous section, there are two other possibilities for the discretization of the stochastic flux:
-\begin{equation}
-\begin{split}
-n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
-+\sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
-+\sqrt{\frac{2 D_k n_k^{n+\myhalf}}{\Delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
-\right)\\
-&+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
-\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
-+\mPb^{(2)}_i\left(\left[2 a_i^{n+\myhalf}-a_i^n\right]^+\Delta V\frac{\Delta t}{2}\right)\right\},
-\end{split}
-\end{equation}
-\begin{equation}
-\begin{split}
-n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left(D_k \nabla n_k^{n+\myhalf}
-+ \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}} \frac{\mZb^{(1)}}{\sqrt{2}}
-+ \sqrt{\frac{2 D_k \left( 2 n_k^{n+\myhalf} - n_k^n \right)^+ }{\Delta t\Delta V}} \frac{\mZb^{(2)}}{\sqrt{2}}
-\right)\\
-&+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
-\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
-+\mPb^{(2)}_i\left(\left[2 a_i^{n+\myhalf}-a_i^n\right]^+\Delta V\frac{\Delta t}{2}\right)\right\}.
-\end{split}
-\end{equation}
+\begin{subequations}
+\begin{align}
+&\ns^\star = \ns^k + \dthalf\Ds\nablab^2\ns^k 
++\sqrt{\frac{2\Ds\tn_s^k}{\dV}\dthalf} \nablab\cdot Z_s^\pone
++\sum_{r=1}^\Nr \nusr R_r^\pone\left(\ar^k,\dthalf\right),\\
+&\ns^{k+1} = \ns^k + \dt\Ds\nablab^2\ns^\star
++\sqrt{\frac{2\Ds\tn_s^k}{\dV}\dthalf} \nablab\cdot Z_s^\pone
++\sqrt{\frac{2\Ds\tn_s^\bullet}{\dV}\dthalf} \nablab\cdot Z_s^\ptwo\\
+&\quad+\sum_{r=1}^\Nr \nusr R_r^\pone\left(\ar^k,\dthalf\right)
++\sum_{r=1}^\Nr \nusr R_r^\ptwo\left((2\ar^\star-\ar^k)^+,\dthalf\right)\notag
+\end{align}
+\end{subequations}
 
-\subsection{Implicit Midpoint Scheme}
+\subsection{Explicit Midpoint + SSA Scheme}
 
-While we use a backward-Euler-type stepping for the predictor stage $n_k^{n+\myhalf}$, we use a Crank--Nicolson-type stepping for the corrector stage $n_k^{n+1}$.
-As in other midpoint schemes, there are three options for $n_k^\bullet$: $n_k^n$, $n_k^{n+\myhalf}$, and $\left(2 n_k^{n+\myhalf}-n_k^n\right)^+$. 
-\begin{equation}
-n_k^{n+\myhalf} = n_k^n + \frac{\Delta t}{2} \nabla\cdot\left(D_k\nabla n_k^{n+\myhalf}
-+ \sqrt{\frac{2 D_k n_k^n}{(\Delta t/2)\Delta V}}\mZb^{(1)}\right)
-+\sum_i \frac{\nu_{i,k}}{\Delta V}\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right),
-\end{equation}
-\begin{equation}
-\begin{split}
-n_k^{n+1} &= n_k^n + \Delta t \nabla\cdot\left( \frac{1}{2} D_k \nabla n_k^n + \frac{1}{2} D_k \nabla n_k^{n+1}
-+ \sqrt{\frac{2 D_k n_k^n}{\Delta t\Delta V}}\frac{\mZb^{(1)}}{\sqrt{2}}
-+ \sqrt{\frac{2 D_k n_k^\bullet}{\Delta t\Delta V}}\frac{\mZb^{(2)}}{\sqrt{2}}\right)
-\\
-&+\sum_i \frac{\nu_{i,k}}{\Delta V}\left\{
-\mPb^{(1)}_i\left(a_i^n\Delta V\frac{\Delta t}{2}\right)
-+\mPb^{(2)}_i\left(\left[2 a_i^{n+\myhalf}-a_i^n\right]^+\Delta V\frac{\Delta t}{2}\right)\right\}.
-\end{split}
-\end{equation}
+\begin{subequations}
+\begin{align}
+&\ns^{\star\star} = \ns^k + \dthalf\Ds\nablab^2\ns^k 
++\sqrt{\frac{2\Ds\tn_s^k}{\dV}\dthalf} \nablab\cdot Z_s^\pone,\\
+&\ns^\star = \ns^{\star\star} + \Rfrak_s^\pone\left(\nb^{\star\star},\dthalf\right),\\
+&\ns^{k+1} = n_s^k + \dt\Ds\nablab^2 n_s^\star
++\sqrt{\frac{2\Ds\tn_s^k}{\dV}\dthalf} \nablab\cdot Z_s^\pone
++\sqrt{\frac{2\Ds\tn_s^\bullet}{\dV}\dthalf} \nablab\cdot Z_s^\ptwo\\
+&\quad+\Rfrak_s^\pone\left(\nb^{\star\star},\dthalf\right)
++\Rfrak_s^\ptwo\left(\nb^\star,\dthalf\right)\notag
+\end{align}
+\end{subequations}
+
+\subsection{Implicit Midpoint + Tau-Leaping Scheme}
+
+While we use a backward-Euler-type stepping for the predictor stage $\nb^\star$, we use a Crank--Nicolson-type stepping for the corrector stage $\nb^{k+1}$.
+\begin{subequations}
+\begin{align}
+&\ns^\star = \ns^k + \dthalf\Ds\nablab^2\ns^\star
++\sqrt{\frac{2\Ds\tilde{n}_s^k}{\dV}\dthalf}\nablab\cdot Z_s^\pone
++\sum_{r=1}^\Nr \nusr R_r^\pone\left(\ar^k,\dthalf\right),\\
+&\ns^{k+1} = \ns^k + \dt\Ds\nablab^2 \left[\frac{n_s^k+n_s^{k+1}}{2}\right]
++\sqrt{\frac{2\Ds\tn_s^k}{\dV}\dthalf} \nablab\cdot Z_s^\pone
++\sqrt{\frac{2\Ds\tn_s^\bullet}{\dV}\dthalf} \nablab\cdot Z_s^\ptwo\\
+&\quad+\sum_{r=1}^\Nr \nusr R_r^\pone\left(\ar^k,\dthalf\right)
++\sum_{r=1}^\Nr \nusr R_r^\ptwo\left((2\ar^\star-\ar^k)^+,\dthalf\right)\notag
+\end{align}
+\end{subequations}
+
+\subsection{Implicit Midpoint + SSA Scheme}
+
+\begin{subequations}
+\begin{align}
+&\ns^\star = \ns^k + \dthalf\Ds\nablab^2\ns^\star
++\sqrt{\frac{2\Ds\tn_s^k}{\dV}\dthalf} \nablab\cdot Z_s^\pone,\\
+&\ns^{k+1} = \ns^k + \dt\Ds\nablab^2 \left[\frac{n_s^k+n_s^{k+1}}{2}\right]
++\sqrt{\frac{2\Ds\tn_s^k}{\dV}\dthalf} \nablab\cdot Z_s^\pone
++\sqrt{\frac{2\Ds\tn_s^\bullet}{\dV}\dthalf} \nablab\cdot Z_s^\ptwo
++\Rfrak_s^\pone\left(\nb^\star,\dt\right)
+\end{align}
+\end{subequations}
 
 \section{Inhomogeneous Boundary Conditions}
 In order to handle inhomogeneous boundary conditions correctly within a second-order
