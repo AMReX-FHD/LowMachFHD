@@ -262,6 +262,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) cross_section
 
+       case ('--rate_multiplier')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rate_multiplier
+
        case ('--include_discrete_LMA_correction')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
