@@ -1,0 +1,24 @@
+** Schlogl model (monomodal having peak at n0=1; out of detailed balance)
+(1) 2X --> 3X    k1=1.5*rm (rm=rate_multiplier)
+(2) 3X --> 2X    k2=0.6*rm
+(3) 0  --> X     k3=2.05*rm
+(4) X  --> 0     k4=2.95*rm
+
+a(n) = k1*n^2-k2*n^3+k3-k4*n        a(n0)=0, r=-a'(n0)=1.75*rm
+G(n) = (k1*n^2+k2*n^3+k3+k4*n)/2    G(n0)=3.55*rm
+
+** dimensionless numbers (we fix dx=1 and dt=1)
+alpha = r*dt = 1.75*rm
+beta = D*dt/dx^2 = D
+C = G(n0)/n0/r = 3.55/1.75 = 2.02857 
+xi_max = sqrt(D/r)*k_max = sqrt(beta/alpha)*pi
+
+** parameter values
+alpha=0.05: rm=0.0285714
+alpha=0.1:  rm=0.0571429 
+alpha=0.5:  rm=0.285714
+beta=D=0.1
+beta=D=0.2
+beta=D=2.5
+beta=D=5
+beta=D=10 
