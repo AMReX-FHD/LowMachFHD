@@ -272,6 +272,21 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) n_steps_write_avg 
 
+       case ('--D_Fick_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) D_Fick(1)
+
+       case ('--D_Fick_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) D_Fick(2)
+
+       case ('--D_Fick_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) D_Fick(3)
+
        case ('--no_diffusion')
           D_Fick(1:max_species) = 0.d0
 
