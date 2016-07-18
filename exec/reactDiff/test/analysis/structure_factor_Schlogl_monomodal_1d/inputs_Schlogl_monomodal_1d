@@ -1,4 +1,5 @@
 ! Schlogl monomodal 1d 
+! read info_Schlogl_monomodal_1d
 
 &probin_common
 
@@ -6,9 +7,9 @@
   !----------------------
   dim_in = 2                       ! 2D or 3D
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 1024.d0 1.d0      ! physical hi coordinate
-  n_cells(1:2) = 1024 1            ! number of cells in domain
-  max_grid_size(1:2) = 1024 1      ! max number of cells in a box
+  prob_hi(1:2) = 512.d0 1.d0       ! physical hi coordinate
+  n_cells(1:2) = 512 1             ! number of cells in domain
+  max_grid_size(1:2) = 512 1       ! max number of cells in a box
 
   prob_type = 0                    ! sets the problem type (initial condition)
                                    ! 0 thermodynamic equilibrium
@@ -106,9 +107,9 @@
   ! for positive value, the value is assigned as seed value
   ! for 0, a positive value is randomly chosen
   ! if -1 (only for restart), RNGs status is restored from checkpoint data
-  seed_diffusion = 1
-  seed_reaction = 1
-  seed_init = 1
+  seed_diffusion = 0
+  seed_reaction = 0
+  seed_init = 0
 
   ! Problem description
   !----------------------
@@ -117,7 +118,7 @@
   
   ! Control of algorithm
   !----------------------
-  temporal_integrator = -4         ! 0=D + R (first-order splitting)
+  temporal_integrator = -2         ! 0=D + R (first-order splitting)
                                    ! 1=(1/2)R + D + (1/2)R (Strang option 1)
                                    ! 2=(1/2)D + R + (1/2)D (Strang option 2)
                                    ! -1=unsplitting forward Euler
