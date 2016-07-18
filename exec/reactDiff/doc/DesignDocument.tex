@@ -58,12 +58,12 @@ This repository contains source code for the stochastic reaction/diffusion model
 where $\nb=(n_1,n_2,\cdots,n_N)$ are the number densities, $D_k$ are Fickean diffusion
 coefficients, $\mZb$ are standard zero-mean, unit-variance random Gaussian 
 vector fields with uncorrelated components, and $\mRb$ is the reaction term.
-
 Our code leverages the {\tt BoxLib} software framework in order to perform
 finite volume calculations on regular Cartesian grids on HPC architectures.
 
-For stochastic diffusion, we support multinomial and fluctuating hydrodynamics.
-For stochastic reactions, we support stochastic simulation algorithm (SSA),
+The code supports deterministic diffusion, fluctuating hydrodynamics,
+as well as multinomial diffusion.  The code supports deterministic reactions, 
+stochastic simulation algorithm (SSA),
 tau-leaping, and chemical Lengevin equation (CLE).  We support a variety of
 split and unsplit temporal integration strategies to couple the reaction/diffusion
 equations.
@@ -195,6 +195,8 @@ The stochastic diffusion terms use the standard divergence,
 To obtain diffusion coefficients or number densities on faces, there are several options for averaging the neighboring cell-averaged data to faces.  These include a variety of arithmetic, geometric, and harmonic stencils with options for preventing negative number densities using smoothing functions.  See the subroutine {\tt average\_values} in {\tt average\_to\_faces.f90} for current implementation.
 
 \subsection{Boundary Conditions}
+The code supports periodic, solid wall ($\partial n_k/\partial t = g_k$), and reservoir 
+($n_k = f_k$) boundary conditions using standard first-order stenciles at the boundary.
 
 \subsection{Temporal Discretization}
 Consider PDEs describing
