@@ -644,11 +644,10 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) stoch_stress_form
 
-       case ('--')
-          farg = farg + 1
-          exit
-
        case default
+          if (parallel_IOProcessor() ) then
+             print*,'probin_common: command-line input ',trim(fname),' not read'
+          end if
 
        end select
 

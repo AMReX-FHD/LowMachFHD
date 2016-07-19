@@ -295,12 +295,13 @@ contains
        case ('--no_diffusion')
           D_Fick(1:max_species) = 0.d0
 
-       case ('--')
-          farg = farg + 1
-          exit
        case default
+          if (parallel_IOProcessor() ) then
+             print*,'probin_reactdiff: command-line input ',trim(fname),' not read'
+          end if
 
        end select
+
        farg = farg + 1
     end do
     
