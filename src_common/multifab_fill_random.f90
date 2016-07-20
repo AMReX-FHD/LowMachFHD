@@ -38,11 +38,7 @@ contains
           end if
 
           ! Fill the whole grid with random numbers
-          if (present(rng_eng)) then
-             call NormalRNGs(fp, size(fp), rng_eng%p)
-          else
-             call NormalRNGs(fp, size(fp))
-          end if
+          call NormalRNGs(fp, size(fp), rng_eng%p)
 
           if(present(variance_mfab)) then 
              ! Must have same distribution

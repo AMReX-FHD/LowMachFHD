@@ -12,15 +12,15 @@ PROF      :=
 MKVERBOSE := t
 
 
-COMP := gfortran52
-CCOMP     := gcc52
+COMP := gfortran61
+CCOMP     := gcc61
 
 # need this to compile bl_rng.f90 (module to store random number engines and distributions)
 CXX11 = t
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
-xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/5.2.0/lib64
+xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/6.1.0/lib64
 
 VPATH_LOCATIONS += $(REACTDIFF_HOME)
 
