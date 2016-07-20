@@ -8,38 +8,38 @@
   !----------------------
   dim_in = 2                       ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 3.6d-5 3.6d-5       ! physical hi coordinate
+  prob_hi(1:2) = 1.125d-6 3.6d-5       ! physical hi coordinate
 
   ! Time-step control
   !----------------------
 
-  n_cells(1:2) = 128 128           ! number of cells in domain
-  max_grid_size(1:2) = 64 64       ! max number of cells in a box
+  n_cells(1:2) = 4 128             ! number of cells in domain
+  max_grid_size(1:2) = 4 32        ! max number of cells in a box
   fixed_dt = 1.d-10
   max_step = 100                   ! maximum number of time steps
-  plot_int = 100                 ! Interval for writing a plotfile (for visit/amrvis)
-  smoothing_width = 2.d0   ! scale factor for smoothing initial profile
+  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
+  smoothing_width = 2.d0           ! scale factor for smoothing initial profile
 
-!  n_cells(1:2) = 256 256           ! number of cells in domain
-!  max_grid_size(1:2) = 128 128     ! max number of cells in a box
+!  n_cells(1:2) = 8 256             ! number of cells in domain
+!  max_grid_size(1:2) = 8 64        ! max number of cells in a box
 !  fixed_dt = 5.d-11
-!  max_step = 200                ! maximum number of time steps
-!  plot_int = 200               ! Interval for writing a plotfile (for visit/amrvis)
-!  smoothing_width = 4.d0   ! scale factor for smoothing initial profile
+!  max_step = 200                   ! maximum number of time steps
+!  plot_int = 200                   ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 4.d0           ! scale factor for smoothing initial profile
 
-!  n_cells(1:2) = 512 512           ! number of cells in domain
-!  max_grid_size(1:2) = 256 256     ! max number of cells in a box
+!  n_cells(1:2) = 16 512            ! number of cells in domain
+!  max_grid_size(1:2) = 16 128      ! max number of cells in a box
 !  fixed_dt = 2.5d-11
-!  max_step = 400                ! maximum number of time steps
-!  plot_int = 400               ! Interval for writing a plotfile (for visit/amrvis)
-!  smoothing_width = 8.d0   ! scale factor for smoothing initial profile
+!  max_step = 400                   ! maximum number of time steps
+!  plot_int = 400                   ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 8.d0           ! scale factor for smoothing initial profile
 
-!  n_cells(1:2) = 1024 1024         ! number of cells in domain
-!  max_grid_size(1:2) = 512 512     ! max number of cells in a box
+!  n_cells(1:2) = 32 1024           ! number of cells in domain
+!  max_grid_size(1:2) = 32 256      ! max number of cells in a box
 !  fixed_dt = 1.25d-11
-!  max_step = 800                ! maximum number of time steps
-!  plot_int = 100               ! Interval for writing a plotfile (for visit/amrvis)
-!  smoothing_width = 16.d0   ! scale factor for smoothing initial profile
+!  max_step = 800                   ! maximum number of time steps
+!  plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 16.d0          ! scale factor for smoothing initial profile
 
   ! Algorithm control / selection
   !----------------------

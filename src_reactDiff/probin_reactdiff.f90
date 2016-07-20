@@ -262,6 +262,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) cross_section
 
+       case ('--rate_multiplier')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rate_multiplier
+
        case ('--include_discrete_LMA_correction')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -272,15 +277,31 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) n_steps_write_avg 
 
+       case ('--D_Fick_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) D_Fick(1)
+
+       case ('--D_Fick_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) D_Fick(2)
+
+       case ('--D_Fick_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) D_Fick(3)
+
        case ('--no_diffusion')
           D_Fick(1:max_species) = 0.d0
 
-       case ('--')
-          farg = farg + 1
-          exit
        case default
+          if (parallel_IOProcessor() ) then
+             print*,'probin_reactdiff: command-line input ',trim(fname),' not read'
+          end if
 
        end select
+
        farg = farg + 1
     end do
     

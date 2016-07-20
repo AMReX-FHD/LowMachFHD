@@ -1,0 +1,11 @@
+by running run.sh,
+1) inputs_Schlogl_monomodal_1d is excuted with modified options given in run.sh;
+2) Sk_xi.py is executed to generate res.Sk_xi from Schlogl.S_k.pair=1.Re.dat.
+
+res.Sk_xi contains three columns:
+1st=xi (unitless variable corresponding to k; see info_Schlogl_monomodal_1d)
+2st=calculated structure factor Sk(xi)
+3rd=exact structure factor
+
+theoretical values of Sk(xi) can be obtained from mathematica notebook structure_factor_analysis.nb
+(some results are in subdirectory theo_data for code validation purpose)
