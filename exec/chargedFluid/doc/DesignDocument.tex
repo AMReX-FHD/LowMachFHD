@@ -35,6 +35,8 @@
 \def\1b {{\bf 1}}
 \def\Ab {{\bf A}}
 \def\bb {{\bf b}}
+\def\Eb {{\bf E}}
+\def\fb {{\bf f}}
 \def\Fb {{\bf F}}
 \def\gb {{\bf g}}
 \def\Lb {{\bf L}}
@@ -52,6 +54,7 @@
 \def\Phib   {\boldsymbol{\Phi}}
 \def\Psib   {\boldsymbol{\Psi}}
 \def\rhob   {\boldsymbol{\rho}}
+\def\sigmab {\boldsymbol{\sigma}}
 \def\Sigmab {\boldsymbol{\Sigma}}
 \def\taub   {\boldsymbol{\tau}}
 \def\zetab  {\boldsymbol{\zeta}}
@@ -205,7 +208,7 @@ velocity, $\pi$ the perturbational pressure, $\taub$ the stress tensor, $\gb$ th
 gravitational acceleration, $\wb = (w_1, w_2, \cdots)$ the vector of concentrations
 (mass fractions), $\zb$ the charge per unit mass, $\Phi$ the electric potential,
 and $\Fb_i$ the mass fluxes for component $i$.
-Note the total charge density is $\rho(\wb^T\zb)$.
+Note the total charge density is $q^f = \rho(\wb^T\zb)$.
 
 The mass fluxes include contributions from compositional gradients, barodiffusion,
 thermodiffusion, electrostatic, and stochastic driving forces as described below.
@@ -515,7 +518,7 @@ potential algorithm with both $\theta=1$ and $\theta=0.5$ and 2 iterations.
 This is the same deterministic test we used in the charged fluid paper, except
 I mad the domain skinnier so it runs faster.
 
-\begin{table}
+\begin{table}[htb]
 \begin{center}
 \caption{$L^1$ errors for explicit algorithm}
 \label{tab:explicit convergence}
@@ -532,7 +535,7 @@ $v$          & 1.27e-09 & 2.09 & 2.99e-10 \\
 \end{center}
 \end{table}
 
-\begin{table}
+\begin{table}[htb]
 \begin{center}
 \caption{$L^1$ errors for implicit algorithm}
 \label{tab:implicit convergence}
@@ -549,7 +552,7 @@ $v$          & 1.26e-09 & 2.09 & 2.95e-10 \\
 \end{center}
 \end{table}
 
-\begin{table}
+\begin{table}[htb]
 \begin{center}
 \caption{$L^1$ errors for semi-implicit algorithm}
 \label{tab:semi-implicit convergence}
@@ -565,6 +568,68 @@ $v$          & 1.27e-09 & 2.09 & 2.99e-10 \\
 \end{tabular}
 \end{center}
 \end{table}
+
+\section{Permittivity Notes}
+
+\subsection{Maxwell Stress Tensor - Constant Permittivity}
+The Maxwell Stress tensor in the absence of a magnetic field is
+\begin{equation}
+\sigmab_{ij} = \epsilon E_i E_j - \half\epsilon E^2 \delta_{ij}
+\end{equation}
+For a dieletric fluid with constant permittivity, $\epsilon\nabla\cdot\Eb = q^f$, so that
+the resulting force density (Lorentz force) on the fluid is
+\begin{equation}
+\fb^E = \nabla\cdot\sigmab = q^f\Eb = -q^f\nabla\Phi
+\end{equation}
+We can show this using index notation,
+\begin{eqnarray}
+\nabla\cdot\sigmab &\rightarrow& \epsilon\left[\frac{\partial E_i}{\partial x_i}E_j + E_i\frac{\partial E_j}{\partial x_i} - \half\frac{\partial}{\partial x_j}\left(E_1^2 + E_2^2 + E_2^2\right)\right]\nonumber\\
+&\rightarrow& \epsilon\left[\frac{\partial E_i}{\partial x_i}E_j + E_i\frac{\partial E_j}{\partial x_i} - E_1\frac{\partial E_1}{\partial x_j} - E_2\frac{\partial E_2}{\partial x_j} - E_3\frac{\partial E_3}{\partial x_j}\right]\nonumber\\
+&\rightarrow& \epsilon\left[\frac{\partial E_i}{\partial x_i}E_j
++ E_1\frac{\partial E_j}{\partial x_1}
++ E_2\frac{\partial E_j}{\partial x_2}
++ E_3\frac{\partial E_j}{\partial x_3}
+- E_1\frac{\partial E_1}{\partial x_j}
+- E_2\frac{\partial E_2}{\partial x_j}
+- E_3\frac{\partial E_3}{\partial x_j}\right]\label{eq:Lorentz}
+\end{eqnarray}
+Using the fact that each component in the curl of the electric field is zero,
+$\nabla\times\Eb=0$, we have
+\begin{eqnarray}
+\frac{\partial E_3}{\partial x_2} - \frac{\partial E_2}{\partial x_3} &=& 0 \nonumber\\
+\frac{\partial E_3}{\partial x_1} - \frac{\partial E_1}{\partial x_3} &=& 0 \nonumber\\
+\frac{\partial E_1}{\partial x_2} - \frac{\partial E_2}{\partial x_2} &=& 0 \label{eq:curl}
+\end{eqnarray}
+Combining (\ref{eq:Lorentz}) with (\ref{eq:curl}), all the terms in (\ref{eq:Lorentz})
+cancel except for the first term,
+\begin{eqnarray}
+\nabla\cdot\sigmab &\rightarrow& \epsilon\frac{\partial E_i}{\partial x_i}E_j \nonumber\\
+&=& \epsilon (\nabla\cdot\Eb) \Eb \nonumber\\
+&=& q^f\Eb
+\end{eqnarray}
+
+\subsection{Maxwell Stress Tensor - Spatially-Varying Permittivity}
+\begin{equation}
+\sigmab =
+\left[\begin{array}{ccc}
+\epsilon E_1 E_1 - \half\epsilon E^2 & \epsilon E_1 E_2 & \epsilon E_1 E_3 \\
+\epsilon E_2 E_1 & \epsilon E_2 E_2 - \half\epsilon E^2 & \epsilon E_2 E_3 \\
+\epsilon E_3 E_1 & \epsilon E_3 E_2 & \epsilon E_3 E_3- \half\epsilon E^2 
+\end{array}\right]
+\end{equation}
+\begin{equation}
+\nabla\cdot\sigmab =
+\left[\begin{array}{c}
+\frac{\partial\sigma_{11}}{\partial x_1} + \frac{\partial\sigma_{21}}{\partial x_2} + \frac{\partial\sigma_{31}}{\partial x_3} \\
+\frac{\partial\sigma_{12}}{\partial x_1} + \frac{\partial\sigma_{22}}{\partial x_2} + \frac{\partial\sigma_{32}}{\partial x_3} \\
+\frac{\partial\sigma_{13}}{\partial x_1} + \frac{\partial\sigma_{23}}{\partial x_2} + \frac{\partial\sigma_{33}}{\partial x_3}
+\end{array}\right]
+\end{equation}
+The electric field naturally lives on normal faces ($E_1$ on $x$-faces, etc.) since we have cell-centered potential $\Phi$, and $E=-\nabla\Phi$.
+The permittivity naturally lives at cell-centers since they are commonly functions of concentration.
+
+Consider the $x$-face.
+
 
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
