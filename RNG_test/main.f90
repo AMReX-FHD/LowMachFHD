@@ -3,6 +3,7 @@ program main
   use BoxLib
   use BoxLibRNGs
   use bl_random_module
+  use ParallelRNGs
 
   implicit none
 
@@ -19,6 +20,8 @@ program main
   call boxlib_initialize()
 
   seed = 1
+
+  call SeedParallelRNG(seed)
 
   call bl_rng_build_engine(rng_eng,seed)
 
