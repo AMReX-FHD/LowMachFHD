@@ -65,7 +65,7 @@ contains
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
-                                        Epot)
+                                        Epot,permittivity_old,permittivity_new)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -92,6 +92,8 @@ contains
     type(multifab) , intent(inout) :: charge_old(:)
     type(multifab) , intent(inout) :: charge_new(:)
     type(multifab) , intent(inout) :: Epot(:)
+    type(multifab) , intent(in   ) :: permittivity_old(:)
+    type(multifab) , intent(inout) :: permittivity_new(:)
 
     ! local
     type(multifab) ::  diff_mass_fluxdiv_old(mla%nlevel)

@@ -46,7 +46,7 @@ subroutine main_driver()
   use probin_multispecies_module, only: nspecies, Dbar, start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
-  use probin_charged_module, only: probin_charged_init, use_charged_fluid
+  use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const
 
   use fabio_module
 
@@ -88,6 +88,8 @@ subroutine main_driver()
 
   type(multifab), allocatable  :: charge_old(:)
   type(multifab), allocatable  :: charge_new(:)
+  type(multifab), allocatable  :: permittivity_old(:)
+  type(multifab), allocatable  :: permittivity_new(:)
   type(multifab), allocatable  :: grad_Epot_old(:,:)
   type(multifab), allocatable  :: grad_Epot_new(:,:)
   type(multifab), allocatable  :: Epot(:)
@@ -137,6 +139,8 @@ subroutine main_driver()
 
   allocate(charge_old(nlevs))
   allocate(charge_new(nlevs))
+  allocate(permittivity_old(nlevs))
+  allocate(permittivity_new(nlevs))
   allocate(grad_Epot_old(nlevs,dm))
   allocate(grad_Epot_new(nlevs,dm))
   allocate(Epot(nlevs))
@@ -356,13 +360,15 @@ subroutine main_driver()
 
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs 
-     call multifab_build(rho_new(n),           mla%la(n),nspecies,ng_s)
-     call multifab_build(rhotot_new(n),        mla%la(n),1,       ng_s) 
-     call multifab_build(Temp(n),              mla%la(n),1,       ng_s)
-     call multifab_build(eta(n)  ,mla%la(n),1,1)
-     call multifab_build(kappa(n),mla%la(n),1,1)
-     call multifab_build(charge_old(n),mla%la(n),1,1)
-     call multifab_build(charge_new(n),mla%la(n),1,1)
+     call multifab_build(rho_new(n)         ,mla%la(n),nspecies,ng_s)
+     call multifab_build(rhotot_new(n)      ,mla%la(n),1,       ng_s) 
+     call multifab_build(Temp(n)            ,mla%la(n),1,       ng_s)
+     call multifab_build(eta(n)             ,mla%la(n),1       ,1)
+     call multifab_build(kappa(n)           ,mla%la(n),1       ,1)
+     call multifab_build(charge_old(n)      ,mla%la(n),1       ,1)
+     call multifab_build(charge_new(n)      ,mla%la(n),1       ,1)
+     call multifab_build(permittivity_old(n),mla%la(n),1       ,1)
+     call multifab_build(permittivity_new(n),mla%la(n),1       ,1)
      do i=1,dm
         call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
         call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
@@ -429,6 +435,16 @@ subroutine main_driver()
      if (parallel_IOProcessor()) then
         print*,'Total charge',total_charge
      end if
+  end if
+
+  ! compute permittivity
+  if (dielectric_const .ge. 0.d0) then
+     do n=1,nlevs
+        call multifab_setval(permittivity_old(n),dielectric_const,all=.true.)
+        call multifab_setval(permittivity_new(n),dielectric_const,all=.true.)
+     end do
+  else
+     call bl_error("main_driver.f90: need to write routine for spatially-varying permittivity")
   end if
 
   ! initialize Temp
@@ -606,7 +622,8 @@ subroutine main_driver()
                                         stoch_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new, &
-                                        charge_old,charge_new,Epot)
+                                        charge_old,charge_new,Epot, &
+                                        permittivity_old,permittivity_new)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -614,7 +631,8 @@ subroutine main_driver()
                                           stoch_mass_fluxdiv, &
                                           dx,dt,time,the_bc_tower,istep, &
                                           grad_Epot_old,grad_Epot_new, &
-                                          charge_old,charge_new,Epot)
+                                          charge_old,charge_new,Epot, &
+                                        permittivity_old,permittivity_new)
       else if (algorithm_type .eq. 3) then
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -622,7 +640,8 @@ subroutine main_driver()
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          dx,dt,time,the_bc_tower,istep, &
                                          grad_Epot_old,grad_Epot_new, &
-                                         charge_old,charge_new,Epot)
+                                         charge_old,charge_new,Epot, &
+                                        permittivity_old,permittivity_new)
       end if
 
       time = time + dt
@@ -722,13 +741,12 @@ subroutine main_driver()
 
       ! set old state to new state
       do n=1,nlevs
-         call multifab_copy_c(rho_old(n)   ,1,rho_new(n)   ,1,nspecies,rho_old(n)%ng)
-         call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1,1       ,rhotot_old(n)%ng)
-
-         call multifab_copy_c(charge_old(n),1,charge_new(n),1,1       ,charge_old(n)%ng)
+         call multifab_copy_c(rho_old(n)         ,1,rho_new(n)         ,1,nspecies,rho_old(n)%ng)
+         call multifab_copy_c(rhotot_old(n)      ,1,rhotot_new(n)      ,1,1       ,rhotot_old(n)%ng)
+         call multifab_copy_c(charge_old(n)      ,1,charge_new(n)      ,1,1       ,charge_old(n)%ng)
+         call multifab_copy_c(permittivity_old(n),1,permittivity_new(n),1,1       ,permittivity_old(n)%ng)
          do i=1,dm
-            call multifab_copy_c(grad_Epot_old(n,i),1,grad_Epot_new(n,i),1,1, &
-                                 grad_Epot_old(n,i)%ng)
+            call multifab_copy_c(grad_Epot_old(n,i),1,grad_Epot_new(n,i),1,1,grad_Epot_old(n,i)%ng)
          end do
 
       end do
@@ -773,6 +791,8 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(charge_old(n))
      call multifab_destroy(charge_new(n))
+     call multifab_destroy(permittivity_old(n))
+     call multifab_destroy(permittivity_new(n))
      do i=1,dm
         call multifab_destroy(grad_Epot_old(n,i))
         call multifab_destroy(grad_Epot_new(n,i))

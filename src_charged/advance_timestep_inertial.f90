@@ -62,7 +62,8 @@ contains
                                        Epot_mass_fluxdiv, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep, &
-                                       grad_Epot_old,grad_Epot_new,charge_old,charge_new,Epot)
+                                       grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
+                                       Epot,permittivity_old,permittivity_new)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -89,6 +90,8 @@ contains
     type(multifab) , intent(inout) :: charge_old(:)
     type(multifab) , intent(inout) :: charge_new(:)
     type(multifab) , intent(inout) :: Epot(:)
+    type(multifab) , intent(in   ) :: permittivity_old(:)
+    type(multifab) , intent(inout) :: permittivity_new(:)
 
     ! local
     type(multifab) ::  rho_update(mla%nlevel)
@@ -141,7 +144,7 @@ contains
        call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
-       call multifab_build(         dpi(n),mla%la(n),1       ,1)
+       call multifab_build(        dpi(n),mla%la(n),1       ,1)
        call multifab_build(       divu(n),mla%la(n),1       ,0)
        call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(     p_baro(n),mla%la(n),1       ,1)
@@ -159,8 +162,8 @@ contains
           call multifab_build_edge(    rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(           rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(       flux_total(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(Lorentz_force_old(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(Lorentz_force_new(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(Lorentz_force_old(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(Lorentz_force_new(n,i),mla%la(n),1       ,0,i)
        end do
     end do
 
