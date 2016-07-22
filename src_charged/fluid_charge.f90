@@ -15,7 +15,7 @@ module fluid_charge_module
 
   private
 
-  public :: dot_with_z, dot_with_z_face, compute_charge_coef, momentum_charge_force, &
+  public :: dot_with_z, dot_with_z_face, compute_charge_coef, &
             enforce_charge_neutrality, implicit_potential_coef, modify_S
   
 contains
@@ -176,67 +176,6 @@ contains
     end subroutine compute_charge_coef_3d
 
   end subroutine compute_charge_coef
-
-  ! increment the momentum charge force by 
-  ! -(1/2)(charge * grad_Epot)^old - (1/2)(charge * grad_Epot)^new
-  subroutine momentum_charge_force(mla,mom_charge_force,charge_old,charge_new,grad_Epot_old,grad_Epot_new, &
-                                   the_bc_tower)
-
-    type(ml_layout), intent(in   ) :: mla
-    type(multifab ), intent(inout) :: mom_charge_force(:,:)
-    type(multifab ), intent(in   ) :: charge_old(:)
-    type(multifab ), intent(in   ) :: charge_new(:)
-    type(multifab ), intent(in   ) :: grad_Epot_old(:,:)
-    type(multifab ), intent(in   ) :: grad_Epot_new(:,:)
-    type(bc_tower) , intent(in   ) :: the_bc_tower
-
-    ! local variables
-    integer :: i,n,dm,nlevs
-
-    type(multifab) :: charge_edge(mla%nlevel,mla%dim)
-
-    nlevs = mla%nlevel
-    dm = mla%dim
-
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_build_edge(charge_edge(n,i),mla%la(n),1,0,i)
-       end do
-    end do
-
-    ! put charge^old on faces
-    call average_cc_to_face(nlevs,charge_old,charge_edge,1,c_bc_comp,1, &
-                            the_bc_tower%bc_tower_array)
-
-    ! increment mom_charge_force by -(charge * grad Epot)^old
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_c(charge_edge(n,i),1,grad_Epot_old(n,i),1,0)
-          call multifab_mult_mult_s_c(charge_edge(n,i),1,0.5d0,1,0)
-          call multifab_sub_sub_c(mom_charge_force(n,i),1,charge_edge(n,i),1,1,0)
-       end do
-    end do
-
-    ! put charge^new on faces
-    call average_cc_to_face(nlevs,charge_new,charge_edge,1,c_bc_comp,1, &
-                            the_bc_tower%bc_tower_array)
-
-    ! increment mom_charge_force by -(charge * grad Epot)^new
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_c(charge_edge(n,i),1,grad_Epot_new(n,i),1,0)
-          call multifab_mult_mult_s_c(charge_edge(n,i),1,0.5d0,1,0)
-          call multifab_sub_sub_c(mom_charge_force(n,i),1,charge_edge(n,i),1,1,0)
-       end do
-    end do
-    
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_destroy(charge_edge(n,i))
-       end do
-    end do
-
-  end subroutine momentum_charge_force
 
   subroutine enforce_charge_neutrality(mla,rho)
 
