@@ -364,8 +364,8 @@ subroutine main_driver()
      call multifab_build(charge_old(n),mla%la(n),1,1)
      call multifab_build(charge_new(n),mla%la(n),1,1)
      do i=1,dm
-        call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
+        call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
      end do
      call multifab_build(Epot(n),mla%la(n),1,1)
 
