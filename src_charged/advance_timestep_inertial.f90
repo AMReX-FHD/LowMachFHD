@@ -115,8 +115,8 @@ contains
     type(multifab) ::        rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::    flux_total(mla%nlevel,mla%dim)
 
-    type(multifab) :: mom_charge_force_old(mla%nlevel,mla%dim)
-    type(multifab) :: mom_charge_force_new(mla%nlevel,mla%dim)
+    type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
+    type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
     
     integer :: i,dm,n,nlevs
 
@@ -146,21 +146,21 @@ contains
        call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(     p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
-          call multifab_build_edge(         mold(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(        mtemp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(  m_a_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(  m_d_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(  m_s_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(  gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(        dumac(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(     umac_tmp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(       gradpi(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(       rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(   flux_total(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(mom_charge_force_old(n,i),mla%la(n),1,0,i)
-          call multifab_build_edge(mom_charge_force_new(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(             mold(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(            mtemp(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(      m_a_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(      m_d_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(      m_s_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(      gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(            dumac(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(         umac_tmp(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(           gradpi(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(    rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(    rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(           rho_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(       flux_total(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(Lorentz_force_old(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(Lorentz_force_new(n,i),mla%la(n),1,0,i)
        end do
     end do
 
@@ -395,22 +395,22 @@ contains
     if (use_charged_fluid) then
 
        ! compute (1/2) old and new momentum charge force
-       call average_cc_to_face(nlevs,charge_old,mom_charge_force_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-       call average_cc_to_face(nlevs,charge_new,mom_charge_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,charge_old,Lorentz_force_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,charge_new,Lorentz_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_c(mom_charge_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
-             call multifab_mult_mult_c(mom_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
-             call multifab_mult_mult_s_c(mom_charge_force_old(n,i),1,0.5d0,1,0)
-             call multifab_mult_mult_s_c(mom_charge_force_new(n,i),1,0.5d0,1,0)
+             call multifab_mult_mult_c(Lorentz_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
+             call multifab_mult_mult_c(Lorentz_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_mult_mult_s_c(Lorentz_force_old(n,i),1,0.5d0,1,0)
+             call multifab_mult_mult_s_c(Lorentz_force_new(n,i),1,0.5d0,1,0)
           end do
        end do
 
        ! subtract (1/2) old and (1/2) new from gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_old(n,i),1,1,0)
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_new(n,i),1,1,0)
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,Lorentz_force_old(n,i),1,1,0)
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,Lorentz_force_new(n,i),1,1,0)
           end do
        end do
 
@@ -796,19 +796,19 @@ contains
     if (use_charged_fluid) then
 
        ! compute (1/2) new momentum charge force
-       call average_cc_to_face(nlevs,charge_new,mom_charge_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,charge_new,Lorentz_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_c(mom_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
-             call multifab_mult_mult_s_c(mom_charge_force_new(n,i),1,0.5d0,1,0)
+             call multifab_mult_mult_c(Lorentz_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_mult_mult_s_c(Lorentz_force_new(n,i),1,0.5d0,1,0)
           end do
        end do
 
        ! subtract (1/2) old and (1/2) new from gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_old(n,i),1,1,0)
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mom_charge_force_new(n,i),1,1,0)
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,Lorentz_force_old(n,i),1,1,0)
+             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,Lorentz_force_new(n,i),1,1,0)
           end do
        end do
 
@@ -979,8 +979,8 @@ contains
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(flux_total(n,i))
-          call multifab_destroy(mom_charge_force_old(n,i))
-          call multifab_destroy(mom_charge_force_new(n,i))
+          call multifab_destroy(Lorentz_force_old(n,i))
+          call multifab_destroy(Lorentz_force_new(n,i))
        end do
     end do
 

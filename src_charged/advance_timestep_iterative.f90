@@ -126,8 +126,8 @@ contains
     type(multifab) :: m_grav_force_old(mla%nlevel,mla%dim)
     type(multifab) :: m_grav_force_new(mla%nlevel,mla%dim)
 
-    type(multifab) :: m_charge_force_old(mla%nlevel,mla%dim)
-    type(multifab) :: m_charge_force_new(mla%nlevel,mla%dim)
+    type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
+    type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
 
     type(multifab) :: solver_alpha(mla%nlevel)         ! alpha=0 for Poisson solve
     type(multifab) ::   solver_rhs(mla%nlevel)         ! Poisson solve rhs
@@ -182,8 +182,8 @@ contains
           call multifab_build_edge(        flux_total(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(  m_grav_force_old(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(  m_grav_force_new(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(m_charge_force_old(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(m_charge_force_new(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge( Lorentz_force_old(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge( Lorentz_force_new(n,i),mla%la(n),1       ,0,i)
        end do
        call multifab_build(solver_alpha(n),mla%la(n),1,0)
        call multifab_build(solver_rhs(n),mla%la(n),1,0)
@@ -266,11 +266,11 @@ contains
     end if
 
     ! compute "old" momentum charge force
-    call average_cc_to_face(nlevs,charge_old,m_charge_force_old,1,scal_bc_comp, &
+    call average_cc_to_face(nlevs,charge_old,Lorentz_force_old,1,scal_bc_comp, &
                             1,the_bc_tower%bc_tower_array)
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_c(m_charge_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
+          call multifab_mult_mult_c(Lorentz_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
        end do
     end do
 
@@ -465,11 +465,11 @@ contains
        end if
 
        ! compute "new" momentum charge force
-       call average_cc_to_face(nlevs,charge_new,m_charge_force_new,1,scal_bc_comp, &
+       call average_cc_to_face(nlevs,charge_new,Lorentz_force_new,1,scal_bc_comp, &
                                1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_c(m_charge_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
+             call multifab_mult_mult_c(Lorentz_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
           end do
        end do
 
@@ -576,8 +576,8 @@ contains
        ! subtract momentum charge force
        do n=1,nlevs
           do i=1,dm
-             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-(1.d0-theta_pot),m_charge_force_old(n,i),1,1)
-             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,      -theta_pot ,m_charge_force_new(n,i),1,1)
+             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-(1.d0-theta_pot),Lorentz_force_old(n,i),1,1)
+             call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,      -theta_pot ,Lorentz_force_new(n,i),1,1)
           end do
        end do
 
@@ -786,8 +786,8 @@ contains
           call multifab_destroy(flux_total(n,i))
           call multifab_destroy(m_grav_force_old(n,i))
           call multifab_destroy(m_grav_force_new(n,i))
-          call multifab_destroy(m_charge_force_old(n,i))
-          call multifab_destroy(m_charge_force_new(n,i))
+          call multifab_destroy(Lorentz_force_old(n,i))
+          call multifab_destroy(Lorentz_force_new(n,i))
        end do
        call multifab_destroy(solver_alpha(n))
        call multifab_destroy(solver_rhs(n))
