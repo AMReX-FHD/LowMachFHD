@@ -608,6 +608,8 @@ cancel except for the first term,
 &=& q^f\Eb
 \end{eqnarray}
 
+\clearpage
+
 \subsection{Maxwell Stress Tensor - Spatially-Varying Permittivity}
 \begin{equation}
 \sigmab =
@@ -625,11 +627,33 @@ cancel except for the first term,
 \frac{\partial\sigma_{13}}{\partial x_1} + \frac{\partial\sigma_{23}}{\partial x_2} + \frac{\partial\sigma_{33}}{\partial x_3}
 \end{array}\right]
 \end{equation}
-The electric field naturally lives on normal faces ($E_1$ on $x$-faces, etc.) since we have cell-centered potential $\Phi$, and $E=-\nabla\Phi$.
-The permittivity naturally lives at cell-centers since they are commonly functions of concentration.
+The electric field naturally lives on normal faces ($E_1$ on $x$-faces, etc.) since we 
+have cell-centered potential $\Phi$, and $E=-\nabla\Phi$.
+The permittivity naturally lives at cell-centers since they are often functions of 
+concentration.
 
-Consider the $x$-face.
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[htb]
+\centering
+\includegraphics[width=2in]{./permittivity}
+\caption{\label{fig:permittivity}Stencil width of Lorentz force on $x$-faces.  The solid dot
+is the $x$-face of interest.  Open circles show where we need $E=-\nabla\Phi$ and small dots
+indicate where we need $\epsilon$.}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+(Two-dimensions) Consider the $x$-face.  Term by term,
+\begin{equation}
+\left(\frac{\partial\sigma_{11}}{\partial x_1}\right)_{i+\half,j} = \frac{(\sigma_{11})_{i+1,j}-(\sigma_{11})_{i,j}}{h},
+\end{equation}
+\begin{equation}
+(\sigma_{11})_{i,j} = \epsilon_{i,j}\left(\frac{(E_1)_{i+\half,j} + (E_1)_{i-\half,j}}{2}\right)^2 - \half\epsilon_{i,j}\left[\left(\frac{(E_1)_{i+\half,j} + (E_1)_{i-\half,j}}{2}\right)^2 + \left(\frac{(E_2)_{i,j+\half} + (E_2)_{i,j-\half}}{2}\right)^2 \right]
+\end{equation}
+\begin{equation}
+\left(\frac{\partial\sigma_{21}}{\partial x_2}\right)_{i+\half,j} = \frac{(\sigma_{21})_{i+\half,j+\half}-(\sigma_{21})_{i+\half,j-\half}}{h}
+\end{equation}
+\begin{equation}
+(\sigma_{21})_{i+\myhalf,j+\myhalf} = \left(\frac{\epsilon_{i,j} +\epsilon_{i+1,j} +\epsilon_{i,j+1} +\epsilon_{i+1,j+1}}{4}\right)\left(\frac{(E_1)_{i+\half,j}+(E_1)_{i+\half,j+1}}{2}\right)\left(\frac{(E_2)_{i,j+\half}+(E_2)_{i+1,j+\half}}{2}\right)
+\end{equation}
 
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
