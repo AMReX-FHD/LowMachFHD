@@ -32,7 +32,8 @@ contains
                                           Temp,flux_total, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_tower, &
-                                          Epot_fluxdiv,charge,grad_Epot,Epot)
+                                          Epot_fluxdiv,charge,grad_Epot,Epot, &
+                                          permittivity)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -50,6 +51,7 @@ contains
     type(multifab) , intent(inout), optional :: charge(:)
     type(multifab) , intent(inout), optional :: grad_Epot(:,:)
     type(multifab) , intent(inout), optional :: Epot(:)
+    type(multifab) , intent(in   ), optional :: permittivity(:)
        
     ! local variables
     type(multifab) :: drho(mla%nlevel)           ! correction to rho
@@ -125,11 +127,13 @@ contains
     if (present(Epot_fluxdiv) .and. &
         present(charge) .and. &
         present(grad_Epot) .and. &
-        present(Epot)) then
+        present(Epot) .and. &
+        present(permittivity)) then
        if (use_charged_fluid) then
           ! compute electric potential mass fluxes
           call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                                 flux_total,dx,the_bc_tower,charge,grad_Epot,Epot)
+                                 flux_total,dx,the_bc_tower,charge,grad_Epot,Epot, &
+                                 permittivity)
        end if
     end if
 

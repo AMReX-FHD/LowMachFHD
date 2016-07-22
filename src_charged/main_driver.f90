@@ -539,7 +539,7 @@ subroutine main_driver()
                                      Epot_mass_fluxdiv,diff_mass_fluxdiv, &
                                      stoch_mass_fluxdiv, &
                                      Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                     charge_old,grad_Epot_old,Epot)
+                                     charge_old,grad_Epot_old,Epot,permittivity_old)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -632,7 +632,7 @@ subroutine main_driver()
                                           dx,dt,time,the_bc_tower,istep, &
                                           grad_Epot_old,grad_Epot_new, &
                                           charge_old,charge_new,Epot, &
-                                        permittivity_old,permittivity_new)
+                                          permittivity_old,permittivity_new)
       else if (algorithm_type .eq. 3) then
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -641,7 +641,7 @@ subroutine main_driver()
                                          dx,dt,time,the_bc_tower,istep, &
                                          grad_Epot_old,grad_Epot_new, &
                                          charge_old,charge_new,Epot, &
-                                        permittivity_old,permittivity_new)
+                                          permittivity_old,permittivity_new)
       end if
 
       time = time + dt

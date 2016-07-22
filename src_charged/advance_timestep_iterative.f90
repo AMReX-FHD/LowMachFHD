@@ -33,7 +33,7 @@ module advance_timestep_iterative_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid, dielectric_const, theta_pot, &
+  use probin_charged_module, only: use_charged_fluid, theta_pot, &
                                    num_pot_iters, dpdt_factor, Epot_wall_bc_type
 
   implicit none
@@ -131,10 +131,11 @@ contains
     type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
     type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
 
-    type(multifab) :: solver_alpha(mla%nlevel)         ! alpha=0 for Poisson solve
-    type(multifab) ::   solver_rhs(mla%nlevel)         ! Poisson solve rhs
-    type(multifab) ::        A_Phi(mla%nlevel,mla%dim) ! face-centered A_Phi
-    type(multifab) ::  solver_beta(mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
+    type(multifab) ::     solver_alpha(mla%nlevel)         ! alpha=0 for Poisson solve
+    type(multifab) ::       solver_rhs(mla%nlevel)         ! Poisson solve rhs
+    type(multifab) ::            A_Phi(mla%nlevel,mla%dim) ! face-centered A_Phi
+    type(multifab) ::      solver_beta(mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
+    type(multifab) ::  permittivity_fc(mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
     
     type(bndry_reg) :: fine_flx(mla%nlevel)
 
@@ -192,6 +193,7 @@ contains
        do i=1,dm
           call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(permittivity_fc(n,i),mla%la(n),1,0,i)
        end do
     end do
 
@@ -346,11 +348,14 @@ contains
        ! compute z^T A_Phi^{n+1,l}, store in solver_beta
        call dot_with_z_face(mla,A_Phi,solver_beta)
 
+       call average_cc_to_face(nlevs,permittivity_new,permittivity_fc,1,scal_bc_comp,1, &
+                               the_bc_tower%bc_tower_array)
+
        ! compute solver_beta = epsilon + dt theta z^T A_Phi^{n+1,l}
        do n=1,nlevs
           do i=1,dm
              call multifab_mult_mult_s_c(solver_beta(n,i),1,dt*theta_pot,1,0)
-             call multifab_plus_plus_s_c(solver_beta(n,i),1,dielectric_const,1,0)
+             call multifab_plus_plus_c(solver_beta(n,i),1,permittivity_fc(n,i),1,1,0)
           end do
        end do
 
@@ -796,6 +801,7 @@ contains
        do i=1,dm
           call multifab_destroy(A_Phi(n,i))
           call multifab_destroy(solver_beta(n,i))
+          call multifab_destroy(permittivity_fc(n,i))
        end do
     end do
     do n = 1,nlevs

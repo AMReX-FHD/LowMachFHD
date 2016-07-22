@@ -246,13 +246,15 @@ contains
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,dt,time,dx,weights, &
                                          the_bc_tower, &
-                                         Epot_mass_fluxdiv,charge_old,grad_Epot_old,Epot)
+                                         Epot_mass_fluxdiv,charge_old,grad_Epot_old,Epot, &
+                                         permittivity_old)
     else if (algorithm_type .eq. 2) then
        call compute_mass_fluxdiv_charged(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,0.5d0*dt,time,dx,weights, &
                                          the_bc_tower, &
-                                         Epot_mass_fluxdiv,charge_old,grad_Epot_old,Epot)
+                                         Epot_mass_fluxdiv,charge_old,grad_Epot_old,Epot, &
+                                         permittivity_old)
     end if
 
     ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
@@ -535,7 +537,8 @@ contains
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
                                       the_bc_tower, &
-                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot)
+                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                                      permittivity_new)
 
     ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs

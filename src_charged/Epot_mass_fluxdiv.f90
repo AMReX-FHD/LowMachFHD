@@ -25,7 +25,8 @@ module Epot_mass_fluxdiv_module
 contains
 
   subroutine Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                               flux_total,dx,the_bc_tower,charge,grad_Epot,Epot)
+                               flux_total,dx,the_bc_tower,charge,grad_Epot,Epot, &
+                               permittivity)
 
     ! this computes "Epot_fluxdiv = -div(F) = div(A_Phi grad Phi)"
     !               "grad_Epot    = grad Phi"
@@ -41,6 +42,7 @@ contains
     type(multifab) , intent(inout)  :: charge(:)
     type(multifab) , intent(inout)  :: grad_Epot(:,:)
     type(multifab) , intent(inout)  :: Epot(:)
+    type(multifab) , intent(in   )  :: permittivity(:)
 
     ! local variables
     integer i,dm,n,nlevs
@@ -66,7 +68,8 @@ contains
     
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
-    call Epot_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge,grad_Epot,Epot)
+    call Epot_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
+                        permittivity)
     
     ! add fluxes to flux_total
     do n=1,nlevs
@@ -90,7 +93,7 @@ contains
   end subroutine Epot_mass_fluxdiv
  
   subroutine Epot_mass_flux(mla,rho,Temp,rhoWchi,flux,dx, &
-                            the_bc_tower,charge,grad_Epot,Epot)
+                            the_bc_tower,charge,grad_Epot,Epot,permittivity)
 
     ! this computes "-F = A_Phi grad Phi"
 
@@ -104,6 +107,7 @@ contains
     type(multifab) , intent(inout) :: charge(:)
     type(multifab) , intent(inout) :: grad_Epot(:,:)
     type(multifab) , intent(inout) :: Epot(:)
+    type(multifab) , intent(in   ) :: permittivity(:)
 
     ! local variables
     integer :: n,i,s,dm,nlevs
@@ -154,10 +158,9 @@ contains
        ! set alpha=0
        call setval(alpha(n),0.d0,all=.true.)
 
-       ! set beta=dielectric_const
-       do i=1,dm
-          call setval(beta(n,i),dielectric_const,all=.true.)
-       end do
+       ! set beta=permittivity (epsilon)
+       call average_cc_to_face(nlevs,permittivity,beta,1,scal_bc_comp,1, &
+                               the_bc_tower%bc_tower_array)
 
     end do
 

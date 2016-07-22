@@ -378,7 +378,8 @@ contains
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
                                       the_bc_tower, &
-                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot)
+                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                                      permittivity_new)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -778,7 +779,8 @@ contains
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,dt,time,dx,weights, &
                                       the_bc_tower, &
-                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot)
+                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                                      permittivity_new)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
