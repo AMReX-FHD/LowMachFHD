@@ -1,0 +1,14 @@
+# by running gen_randnum.sh, you can generate a file containing random numbers.
+# for a quick histogram test, you can use the following commands on gnuplot
+
+# uniform
+binwidth=0.01;Nsample=1000000;bin(x,width)=width*floor(x/width);plot [0:1] "res.gen_randnum" using (bin($1,binwidth)):(1./Nsample/binwidth) smooth freq with boxes t "",1 t ""
+
+# standard normal
+binwidth=0.01;Nsample=1000000;bin(x,width)=width*floor(x/width);plot [-5:5] "res.gen_randnum" using (bin($1,binwidth)):(1./Nsample/binwidth) smooth freq with boxes t "",exp(-x**2/2)/sqrt(2*3.141592)
+
+# Poisson
+fac(x) = (int(x)==0) ? 1.0 : int(x) * fac(int(x)-1.0);lambda=10.;Nsample=1000000;plot [0:3*lambda] "res.gen_randnum" using 1:(1./Nsample) smooth freq with boxes t "",'+' u 0:(lambda**int($0)*exp(-lambda)/fac($0)) t ""
+
+# binomial
+fac(x) = (int(x)==0) ? 1.0 : int(x) * fac(int(x)-1.0);ntrial=100;psuccess=0.2;Nsample=1000000;plot [0:ntrial] "res.gen_randnum" using 1:(1./Nsample) smooth freq with boxes t "",'+' u 0:(fac(ntrial)/fac($0)/fac(ntrial-$0)*psuccess**$0*(1-psuccess)**(ntrial-$0)) t ""

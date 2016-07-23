@@ -1,0 +1,10 @@
+# you can generate a histogram by running:
+
+test_BinomialRNG.sh
+test_NormalRNG.sh
+test_PoissonRNG.sh
+test_UniformRNG.sh
+
+# you can generate a file containing a number of random numbers by running:
+
+gen_randnum.sh
