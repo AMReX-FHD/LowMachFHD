@@ -615,12 +615,13 @@ contains
 
   end subroutine compute_permittivity
 
-  subroutine compute_Lorentz_force(mla,Lorentz_force,grad_Epot,permittivity,dx,the_bc_tower)
+  subroutine compute_Lorentz_force(mla,Lorentz_force,grad_Epot,permittivity,charge,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: Lorentz_force(:,:)
     type(multifab) , intent(in   ) :: grad_Epot(:,:)
     type(multifab) , intent(in   ) :: permittivity(:)
+    type(multifab) , intent(in   ) :: charge(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -641,31 +642,48 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    ng_1 = Lorentz_force(1,1)%ng
-    ng_2 = grad_Epot(1,1)%ng
-    ng_3 = permittivity(1)%ng
+    if (dielectric_const .gt. 0.d0) then
 
-    do n=1,nlevs
-       do i=1,nfabs(Lorentz_force(n,1))
-          dp1x => dataptr(Lorentz_force(n,1),i)
-          dp1y => dataptr(Lorentz_force(n,2),i)
-          dp2x => dataptr(grad_Epot(n,1),i)
-          dp2y => dataptr(grad_Epot(n,2),i)
-          dp3  => dataptr(permittivity(n),i)
-          lo = lwb(get_box(Lorentz_force(n,1),i))
-          hi = upb(get_box(Lorentz_force(n,1),i))
-          select case (dm)
-          case (2)
-             call compute_Lorentz_force__2d(dp1x(:,:,1,1),dp1y(:,:,1,1),ng_1, &
-                                            dp2x(:,:,1,1),dp2y(:,:,1,1),ng_2, &
-                                            dp3(:,:,1,1),ng_3,lo,hi,dx(n,:))
-          case (3)
-             dp1z => dataptr(Lorentz_force(n,3),i)
-             dp2z => dataptr(grad_Epot(n,3),i)
+       ! constant permittivity
 
-          end select
+       call average_cc_to_face(nlevs,charge,Lorentz_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
+          end do
        end do
-    end do
+
+    else
+
+       ! spatially-varying permittivity
+
+       ng_1 = Lorentz_force(1,1)%ng
+       ng_2 = grad_Epot(1,1)%ng
+       ng_3 = permittivity(1)%ng
+
+       do n=1,nlevs
+          do i=1,nfabs(Lorentz_force(n,1))
+             dp1x => dataptr(Lorentz_force(n,1),i)
+             dp1y => dataptr(Lorentz_force(n,2),i)
+             dp2x => dataptr(grad_Epot(n,1),i)
+             dp2y => dataptr(grad_Epot(n,2),i)
+             dp3  => dataptr(permittivity(n),i)
+             lo = lwb(get_box(Lorentz_force(n,1),i))
+             hi = upb(get_box(Lorentz_force(n,1),i))
+             select case (dm)
+             case (2)
+                call compute_Lorentz_force__2d(dp1x(:,:,1,1),dp1y(:,:,1,1),ng_1, &
+                                               dp2x(:,:,1,1),dp2y(:,:,1,1),ng_2, &
+                                               dp3(:,:,1,1),ng_3,lo,hi,dx(n,:))
+             case (3)
+                dp1z => dataptr(Lorentz_force(n,3),i)
+                dp2z => dataptr(grad_Epot(n,3),i)
+
+             end select
+          end do
+       end do
+
+    end if
 
   contains
 
