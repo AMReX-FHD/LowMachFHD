@@ -7,16 +7,18 @@ module fluid_charge_module
   use mass_flux_utilities_module
   use matvec_mul_module
   use compute_mixture_properties_module
+  use multifab_physbc_module
   use probin_common_module, only: molmass, k_B, total_volume, rhobar
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: charge_per_mass, dpdt_factor
+  use probin_charged_module, only: charge_per_mass, dpdt_factor, dielectric_const
 
   implicit none
 
   private
 
   public :: dot_with_z, dot_with_z_face, compute_charge_coef, &
-            enforce_charge_neutrality, implicit_potential_coef, modify_S
+            enforce_charge_neutrality, implicit_potential_coef, modify_S, &
+            compute_permittivity
   
 contains
 
@@ -525,5 +527,92 @@ contains
 
   end subroutine modify_S
 
+  subroutine compute_permittivity(mla,permittivity,rho,the_bc_tower)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: permittivity(:)
+    type(multifab) , intent(in   ) :: rho(:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+
+    ! local variables
+    integer :: i,n,dm,nlevs
+    integer :: ng_1,ng_2
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    ! pointers into multifabs
+    real(kind=dp_t), pointer :: dp1(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2(:,:,:,:)
+    
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    ng_1 = permittivity(1)%ng
+    ng_2 = rho(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp1 => dataptr(permittivity(n),i)
+          dp2 => dataptr(rho(n),i)
+          lo = lwb(get_box(permittivity(n),i))
+          hi = upb(get_box(permittivity(n),i))
+          select case (dm)
+          case (2)
+             call compute_permittivity_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2,lo,hi)
+          case (3)
+             call compute_permittivity_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2,lo,hi)
+          end select
+       end do
+    end do
+
+    do n=1,nlevs
+       call multifab_fill_boundary(permittivity(n))
+       call multifab_physbc(permittivity(n),1,scal_bc_comp,1,the_bc_tower%bc_tower_array(n))
+    end do
+
+  contains
+
+    subroutine compute_permittivity_2d(permittivity,ng_1,rho,ng_2,lo,hi)
+
+      integer         :: lo(:),hi(:),ng_1,ng_2
+      real(kind=dp_t) :: permittivity(lo(1)-ng_1:,lo(2)-ng_1:)
+      real(kind=dp_t) ::          rho(lo(1)-ng_2:,lo(2)-ng_2:,:)
+      
+      ! local
+      integer :: i,j
+
+      do j=lo(2),hi(2)
+         do i=lo(1),hi(1)
+
+            ! later we can make epsilon a function of rho
+            permittivity(i,j) = dielectric_const
+
+         end do
+      end do
+
+    end subroutine compute_permittivity_2d
+
+    subroutine compute_permittivity_3d(permittivity,ng_1,rho,ng_2,lo,hi)
+
+      integer         :: lo(:),hi(:),ng_1,ng_2
+      real(kind=dp_t) :: permittivity(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
+      real(kind=dp_t) ::          rho(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:)
+      
+      ! local
+      integer :: i,j,k
+
+      do k=lo(3),hi(3)
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)
+
+               ! later we can make epsilon a function of rho
+               permittivity(i,j,k) = dielectric_const
+
+            end do
+         end do
+      end do
+      
+    end subroutine compute_permittivity_3d
+
+  end subroutine compute_permittivity
 
 end module fluid_charge_module
