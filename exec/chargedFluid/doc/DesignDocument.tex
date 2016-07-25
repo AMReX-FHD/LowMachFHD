@@ -655,6 +655,20 @@ indicate where we need $\epsilon$.}
 (\sigma_{21})_{i-\half,j-\half} = \left(\frac{\epsilon_{i-1,j-1} +\epsilon_{i,j-1} +\epsilon_{i-1,j} +\epsilon_{i,j}}{4}\right)\left(\frac{(E_1)_{i-\half,j-1}+(E_1)_{i-\half,j}}{2}\right)\left(\frac{(E_2)_{i-1,j-\half}+(E_2)_{i,j-\half}}{2}\right)
 \end{equation}
 
+Now consider the $y$-face.  Term by term,
+\begin{equation}
+\left(\frac{\partial\sigma_{12}}{\partial x_1}\right)_{i,j-\half} = \frac{(\sigma_{12})_{i+\half,j-\half}-(\sigma_{12})_{i-\half,j-\half}}{h},
+\end{equation}
+\begin{equation}
+(\sigma_{12})_{i-\half,j-\half} = (\sigma_{21})_{i-\half,j-\half}
+\end{equation}
+\begin{equation}
+\left(\frac{\partial\sigma_{22}}{\partial x_2}\right)_{i,j-\half} = \frac{(\sigma_{22})_{i,j}-(\sigma_{22})_{i,j-1}}{h},
+\end{equation}
+\begin{equation}
+(\sigma_{22})_{i,j} = \epsilon_{i,j}\left(\frac{(E_2)_{i,j+\half} + (E_2)_{i,j-\half}}{2}\right)^2 - \half\epsilon_{i,j}\left[\left(\frac{(E_1)_{i+\half,j} + (E_1)_{i-\half,j}}{2}\right)^2 + \left(\frac{(E_2)_{i,j+\half} + (E_2)_{i,j-\half}}{2}\right)^2 \right]
+\end{equation}
+
 \bibliographystyle{plain}
 \bibliography{DesignDocument}
 

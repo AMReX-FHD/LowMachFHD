@@ -615,4 +615,117 @@ contains
 
   end subroutine compute_permittivity
 
+  subroutine compute_Lorentz_force(mla,Lorentz_force,grad_Epot,permittivity,dx,the_bc_tower)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: Lorentz_force(:,:)
+    type(multifab) , intent(in   ) :: grad_Epot(:,:)
+    type(multifab) , intent(in   ) :: permittivity(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+
+    ! local variables
+    integer :: i,n,dm,nlevs
+    integer :: ng_1,ng_2,ng_3
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    ! pointers into multifabs
+    real(kind=dp_t), pointer :: dp1x(:,:,:,:)
+    real(kind=dp_t), pointer :: dp1y(:,:,:,:)
+    real(kind=dp_t), pointer :: dp1z(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2x(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2y(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2z(:,:,:,:)
+    real(kind=dp_t), pointer :: dp3(:,:,:,:)
+    
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    ng_1 = Lorentz_force(1,1)%ng
+    ng_2 = grad_Epot(1,1)%ng
+    ng_3 = permittivity(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(Lorentz_force(n,1))
+          dp1x => dataptr(Lorentz_force(n,1),i)
+          dp1y => dataptr(Lorentz_force(n,2),i)
+          dp2x => dataptr(grad_Epot(n,1),i)
+          dp2y => dataptr(grad_Epot(n,2),i)
+          dp3  => dataptr(permittivity(n),i)
+          lo = lwb(get_box(Lorentz_force(n,1),i))
+          hi = upb(get_box(Lorentz_force(n,1),i))
+          select case (dm)
+          case (2)
+             call compute_Lorentz_force__2d(dp1x(:,:,1,1),dp1y(:,:,1,1),ng_1, &
+                                            dp2x(:,:,1,1),dp2y(:,:,1,1),ng_2, &
+                                            dp3(:,:,1,1),ng_3,lo,hi,dx(n,:))
+          case (3)
+             dp1z => dataptr(Lorentz_force(n,3),i)
+             dp2z => dataptr(grad_Epot(n,3),i)
+
+          end select
+       end do
+    end do
+
+  contains
+
+    subroutine compute_Lorentz_force_2d(forcex,forcey,ng_1,Ex,Ey,ng_2,perm,ng_3,lo,hi,dx)
+
+      integer         :: lo(:),hi(:),ng_1,ng_2,ng_3
+      real(kind=dp_t) :: forcex(lo(1)-ng_1:,lo(2)-ng_1:)
+      real(kind=dp_t) :: forcey(lo(1)-ng_1:,lo(2)-ng_1:)
+      real(kind=dp_t) ::     Ex(lo(1)-ng_2:,lo(2)-ng_2:)
+      real(kind=dp_t) ::     Ey(lo(1)-ng_2:,lo(2)-ng_2:)
+      real(kind=dp_t) ::   perm(lo(1)-ng_3:,lo(2)-ng_3:)
+      real(kind=dp_t) :: dx(:)
+
+      ! local variables
+      integer :: i,j
+
+      real(kind=dp_t) :: sigma11(lo(1)-1:hi(1)+1,lo(2)  :hi(2)  ) ! cell-centered, 1 ghost cell in x
+      real(kind=dp_t) :: sigma21(lo(1)  :hi(1)+1,lo(2)  :hi(2)+1) ! nodal in x and y, no ghost cells
+      real(kind=dp_t) :: sigma22(lo(1)  :hi(1)  ,lo(2)-1:hi(2)+1) ! cell-centered, 1 ghost cell in y
+
+      ! sigma11
+      do j=lo(2),hi(2)
+         do i=lo(1)-1,hi(1)+1
+            sigma11(i,j) = perm(i,j)*((Ex(i+1,j)+Ex(i,j))/2.d0)**2 &
+                 - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
+         end do
+      end do
+
+      ! sigma22
+      do j=lo(2)-1,hi(2)+1
+         do i=lo(1),hi(1)
+            sigma22(i,j) = perm(i,j)*((Ey(i,j+1)+Ey(i,j))/2.d0)**2 &
+                 - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
+         end do
+      end do
+
+      ! sigma21
+      do j=lo(2),hi(2)+1
+         do i=lo(1),hi(1)+1
+            sigma21(i,j) = 0.25d0*(perm(i-1,j-1)+perm(i,j-1)+perm(i-1,j)+perm(i,j)) &
+                 *((Ex(i,j-1))+(Ex(i,j))/2.d0) * ((Ey(i-1,j))+(Ey(i,j))/2.d0)
+         end do
+      end do
+
+      ! forcex
+      do j=lo(2),hi(2)
+         do i=lo(1),hi(1)+1
+            forcex(i,j) = (sigma11(i,j) - sigma11(i-1,j) + sigma21(i,j+1) - sigma21(i,j)) / dx(1)
+         end do
+      end do
+
+      ! forcey
+      do j=lo(2),hi(2)+1
+         do i=lo(1),hi(1)
+            forcey(i,j) = (sigma22(i,j) - sigma22(i,j-1) + sigma21(i+1,j) - sigma21(i,j)) / dx(1)
+         end do
+      end do
+
+    end subroutine compute_Lorentz_force_2d
+
+  end subroutine compute_Lorentz_force
+
 end module fluid_charge_module
