@@ -643,16 +643,16 @@ indicate where we need $\epsilon$.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 (Two-dimensions) Consider the $x$-face.  Term by term,
 \begin{equation}
-\left(\frac{\partial\sigma_{11}}{\partial x_1}\right)_{i+\half,j} = \frac{(\sigma_{11})_{i+1,j}-(\sigma_{11})_{i,j}}{h},
+\left(\frac{\partial\sigma_{11}}{\partial x_1}\right)_{i-\half,j} = \frac{(\sigma_{11})_{i,j}-(\sigma_{11})_{i-1,j}}{h},
 \end{equation}
 \begin{equation}
 (\sigma_{11})_{i,j} = \epsilon_{i,j}\left(\frac{(E_1)_{i+\half,j} + (E_1)_{i-\half,j}}{2}\right)^2 - \half\epsilon_{i,j}\left[\left(\frac{(E_1)_{i+\half,j} + (E_1)_{i-\half,j}}{2}\right)^2 + \left(\frac{(E_2)_{i,j+\half} + (E_2)_{i,j-\half}}{2}\right)^2 \right]
 \end{equation}
 \begin{equation}
-\left(\frac{\partial\sigma_{21}}{\partial x_2}\right)_{i+\half,j} = \frac{(\sigma_{21})_{i+\half,j+\half}-(\sigma_{21})_{i+\half,j-\half}}{h}
+\left(\frac{\partial\sigma_{21}}{\partial x_2}\right)_{i-\half,j} = \frac{(\sigma_{21})_{i-\half,j+\half}-(\sigma_{21})_{i-\half,j-\half}}{h}
 \end{equation}
 \begin{equation}
-(\sigma_{21})_{i+\myhalf,j+\myhalf} = \left(\frac{\epsilon_{i,j} +\epsilon_{i+1,j} +\epsilon_{i,j+1} +\epsilon_{i+1,j+1}}{4}\right)\left(\frac{(E_1)_{i+\half,j}+(E_1)_{i+\half,j+1}}{2}\right)\left(\frac{(E_2)_{i,j+\half}+(E_2)_{i+1,j+\half}}{2}\right)
+(\sigma_{21})_{i-\half,j-\half} = \left(\frac{\epsilon_{i-1,j-1} +\epsilon_{i,j-1} +\epsilon_{i-1,j} +\epsilon_{i,j}}{4}\right)\left(\frac{(E_1)_{i-\half,j-1}+(E_1)_{i-\half,j}}{2}\right)\left(\frac{(E_2)_{i-1,j-\half}+(E_2)_{i,j-\half}}{2}\right)
 \end{equation}
 
 \bibliographystyle{plain}
