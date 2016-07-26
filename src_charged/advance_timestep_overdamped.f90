@@ -274,13 +274,9 @@ contains
 
     if (use_charged_fluid) then
 
-       ! compute old momentum charge force
-       call average_cc_to_face(nlevs,charge_old,Lorentz_force_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_c(Lorentz_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
-          end do
-       end do
+       ! compute "old" Lorentz force
+       call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity_old, &
+                                  charge_old,dx,the_bc_tower)
 
        ! subtract from gmres_rhs_v
        do n=1,nlevs
@@ -555,16 +551,11 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
-
     if (use_charged_fluid) then
 
-       ! compute t^{n+1/2} momentum charge force
-       call average_cc_to_face(nlevs,charge_new,Lorentz_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_c(Lorentz_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
-          end do
-       end do
+       ! compute t^{n+1/2} Lorentz force
+       call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity_new, &
+                                  charge_new,dx,the_bc_tower)
 
        do n=1,nlevs
           do i=1,dm

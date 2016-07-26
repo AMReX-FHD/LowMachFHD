@@ -18,7 +18,7 @@ module fluid_charge_module
 
   public :: dot_with_z, dot_with_z_face, compute_charge_coef, &
             enforce_charge_neutrality, implicit_potential_coef, modify_S, &
-            compute_permittivity
+            compute_permittivity, compute_Lorentz_force
   
 contains
 
@@ -672,9 +672,9 @@ contains
              hi = upb(get_box(Lorentz_force(n,1),i))
              select case (dm)
              case (2)
-                call compute_Lorentz_force__2d(dp1x(:,:,1,1),dp1y(:,:,1,1),ng_1, &
-                                               dp2x(:,:,1,1),dp2y(:,:,1,1),ng_2, &
-                                               dp3(:,:,1,1),ng_3,lo,hi,dx(n,:))
+                call compute_Lorentz_force_2d(dp1x(:,:,1,1),dp1y(:,:,1,1),ng_1, &
+                                              dp2x(:,:,1,1),dp2y(:,:,1,1),ng_2, &
+                                              dp3(:,:,1,1),ng_3,lo,hi,dx(n,:))
              case (3)
                 dp1z => dataptr(Lorentz_force(n,3),i)
                 dp2z => dataptr(grad_Epot(n,3),i)
