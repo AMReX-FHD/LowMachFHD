@@ -8,6 +8,7 @@ module fluid_charge_module
   use matvec_mul_module
   use compute_mixture_properties_module
   use multifab_physbc_module
+  use zero_edgeval_module
   use probin_common_module, only: molmass, k_B, total_volume, rhobar
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: charge_per_mass, dpdt_factor, dielectric_const
@@ -566,7 +567,8 @@ contains
 
     do n=1,nlevs
        call multifab_fill_boundary(permittivity(n))
-       call multifab_physbc(permittivity(n),1,scal_bc_comp,1,the_bc_tower%bc_tower_array(n))
+       ! FIXME
+       call multifab_physbc(permittivity(n),1,c_bc_comp,1,the_bc_tower%bc_tower_array(n))
     end do
 
   contains
@@ -615,7 +617,8 @@ contains
 
   end subroutine compute_permittivity
 
-  subroutine compute_Lorentz_force(mla,Lorentz_force,grad_Epot,permittivity,charge,dx,the_bc_tower)
+  subroutine compute_Lorentz_force(mla,Lorentz_force,grad_Epot,permittivity,charge, &
+                                   dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: Lorentz_force(:,:)
@@ -646,7 +649,8 @@ contains
 
        ! constant permittivity
 
-       call average_cc_to_face(nlevs,charge,Lorentz_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,charge,Lorentz_force,1,scal_bc_comp,1, &
+                               the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
              call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
@@ -681,6 +685,11 @@ contains
 
              end select
           end do
+       end do
+
+       ! set force on walls to be zero since normal velocity is zero
+       do n=1,nlevs
+          call zero_edgeval_walls(Lorentz_force(n,:),1,1,the_bc_tower%bc_tower_array(n))
        end do
 
     end if
