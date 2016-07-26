@@ -7,16 +7,18 @@ module fluid_charge_module
   use mass_flux_utilities_module
   use matvec_mul_module
   use compute_mixture_properties_module
+  use multifab_physbc_module
   use probin_common_module, only: molmass, k_B, total_volume, rhobar
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: charge_per_mass, dpdt_factor
+  use probin_charged_module, only: charge_per_mass, dpdt_factor, dielectric_const
 
   implicit none
 
   private
 
   public :: dot_with_z, dot_with_z_face, compute_charge_coef, &
-            enforce_charge_neutrality, implicit_potential_coef, modify_S
+            enforce_charge_neutrality, implicit_potential_coef, modify_S, &
+            compute_permittivity, compute_Lorentz_force
   
 contains
 
@@ -525,5 +527,223 @@ contains
 
   end subroutine modify_S
 
+  subroutine compute_permittivity(mla,permittivity,rho,the_bc_tower)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: permittivity(:)
+    type(multifab) , intent(in   ) :: rho(:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+
+    ! local variables
+    integer :: i,n,dm,nlevs
+    integer :: ng_1,ng_2
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    ! pointers into multifabs
+    real(kind=dp_t), pointer :: dp1(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2(:,:,:,:)
+    
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    ng_1 = permittivity(1)%ng
+    ng_2 = rho(1)%ng
+
+    do n=1,nlevs
+       do i=1,nfabs(rho(n))
+          dp1 => dataptr(permittivity(n),i)
+          dp2 => dataptr(rho(n),i)
+          lo = lwb(get_box(permittivity(n),i))
+          hi = upb(get_box(permittivity(n),i))
+          select case (dm)
+          case (2)
+             call compute_permittivity_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2,lo,hi)
+          case (3)
+             call compute_permittivity_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2,lo,hi)
+          end select
+       end do
+    end do
+
+    do n=1,nlevs
+       call multifab_fill_boundary(permittivity(n))
+       call multifab_physbc(permittivity(n),1,scal_bc_comp,1,the_bc_tower%bc_tower_array(n))
+    end do
+
+  contains
+
+    subroutine compute_permittivity_2d(permittivity,ng_1,rho,ng_2,lo,hi)
+
+      integer         :: lo(:),hi(:),ng_1,ng_2
+      real(kind=dp_t) :: permittivity(lo(1)-ng_1:,lo(2)-ng_1:)
+      real(kind=dp_t) ::          rho(lo(1)-ng_2:,lo(2)-ng_2:,:)
+      
+      ! local
+      integer :: i,j
+
+      do j=lo(2),hi(2)
+         do i=lo(1),hi(1)
+
+            ! later we can make epsilon a function of rho
+            permittivity(i,j) = abs(dielectric_const)
+
+         end do
+      end do
+
+    end subroutine compute_permittivity_2d
+
+    subroutine compute_permittivity_3d(permittivity,ng_1,rho,ng_2,lo,hi)
+
+      integer         :: lo(:),hi(:),ng_1,ng_2
+      real(kind=dp_t) :: permittivity(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
+      real(kind=dp_t) ::          rho(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:)
+      
+      ! local
+      integer :: i,j,k
+
+      do k=lo(3),hi(3)
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)
+
+               ! later we can make epsilon a function of rho
+               permittivity(i,j,k) = abs(dielectric_const)
+
+            end do
+         end do
+      end do
+      
+    end subroutine compute_permittivity_3d
+
+  end subroutine compute_permittivity
+
+  subroutine compute_Lorentz_force(mla,Lorentz_force,grad_Epot,permittivity,charge,dx,the_bc_tower)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: Lorentz_force(:,:)
+    type(multifab) , intent(in   ) :: grad_Epot(:,:)
+    type(multifab) , intent(in   ) :: permittivity(:)
+    type(multifab) , intent(in   ) :: charge(:)
+    real(kind=dp_t), intent(in   ) :: dx(:,:)
+    type(bc_tower) , intent(in   ) :: the_bc_tower
+
+    ! local variables
+    integer :: i,n,dm,nlevs
+    integer :: ng_1,ng_2,ng_3
+    integer :: lo(mla%dim),hi(mla%dim)
+
+    ! pointers into multifabs
+    real(kind=dp_t), pointer :: dp1x(:,:,:,:)
+    real(kind=dp_t), pointer :: dp1y(:,:,:,:)
+    real(kind=dp_t), pointer :: dp1z(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2x(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2y(:,:,:,:)
+    real(kind=dp_t), pointer :: dp2z(:,:,:,:)
+    real(kind=dp_t), pointer :: dp3(:,:,:,:)
+    
+    dm = mla%dim
+    nlevs = mla%nlevel
+
+    if (dielectric_const .gt. 0.d0) then
+
+       ! constant permittivity
+
+       call average_cc_to_face(nlevs,charge,Lorentz_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
+          end do
+       end do
+
+    else
+
+       ! spatially-varying permittivity
+
+       ng_1 = Lorentz_force(1,1)%ng
+       ng_2 = grad_Epot(1,1)%ng
+       ng_3 = permittivity(1)%ng
+
+       do n=1,nlevs
+          do i=1,nfabs(Lorentz_force(n,1))
+             dp1x => dataptr(Lorentz_force(n,1),i)
+             dp1y => dataptr(Lorentz_force(n,2),i)
+             dp2x => dataptr(grad_Epot(n,1),i)
+             dp2y => dataptr(grad_Epot(n,2),i)
+             dp3  => dataptr(permittivity(n),i)
+             lo = lwb(get_box(Lorentz_force(n,1),i))
+             hi = upb(get_box(Lorentz_force(n,1),i))
+             select case (dm)
+             case (2)
+                call compute_Lorentz_force_2d(dp1x(:,:,1,1),dp1y(:,:,1,1),ng_1, &
+                                              dp2x(:,:,1,1),dp2y(:,:,1,1),ng_2, &
+                                              dp3(:,:,1,1),ng_3,lo,hi,dx(n,:))
+             case (3)
+                dp1z => dataptr(Lorentz_force(n,3),i)
+                dp2z => dataptr(grad_Epot(n,3),i)
+
+             end select
+          end do
+       end do
+
+    end if
+
+  contains
+
+    subroutine compute_Lorentz_force_2d(forcex,forcey,ng_1,Ex,Ey,ng_2,perm,ng_3,lo,hi,dx)
+
+      integer         :: lo(:),hi(:),ng_1,ng_2,ng_3
+      real(kind=dp_t) :: forcex(lo(1)-ng_1:,lo(2)-ng_1:)
+      real(kind=dp_t) :: forcey(lo(1)-ng_1:,lo(2)-ng_1:)
+      real(kind=dp_t) ::     Ex(lo(1)-ng_2:,lo(2)-ng_2:)
+      real(kind=dp_t) ::     Ey(lo(1)-ng_2:,lo(2)-ng_2:)
+      real(kind=dp_t) ::   perm(lo(1)-ng_3:,lo(2)-ng_3:)
+      real(kind=dp_t) :: dx(:)
+
+      ! local variables
+      integer :: i,j
+
+      real(kind=dp_t) :: sigma11(lo(1)-1:hi(1)+1,lo(2)  :hi(2)  ) ! cell-centered, 1 ghost cell in x
+      real(kind=dp_t) :: sigma21(lo(1)  :hi(1)+1,lo(2)  :hi(2)+1) ! nodal in x and y, no ghost cells
+      real(kind=dp_t) :: sigma22(lo(1)  :hi(1)  ,lo(2)-1:hi(2)+1) ! cell-centered, 1 ghost cell in y
+
+      ! sigma11
+      do j=lo(2),hi(2)
+         do i=lo(1)-1,hi(1)+1
+            sigma11(i,j) = perm(i,j)*((Ex(i+1,j)+Ex(i,j))/2.d0)**2 &
+                 - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
+         end do
+      end do
+
+      ! sigma22
+      do j=lo(2)-1,hi(2)+1
+         do i=lo(1),hi(1)
+            sigma22(i,j) = perm(i,j)*((Ey(i,j+1)+Ey(i,j))/2.d0)**2 &
+                 - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
+         end do
+      end do
+
+      ! sigma21
+      do j=lo(2),hi(2)+1
+         do i=lo(1),hi(1)+1
+            sigma21(i,j) = 0.25d0*(perm(i-1,j-1)+perm(i,j-1)+perm(i-1,j)+perm(i,j)) &
+                 *((Ex(i,j-1))+(Ex(i,j))/2.d0) * ((Ey(i-1,j))+(Ey(i,j))/2.d0)
+         end do
+      end do
+
+      ! forcex
+      do j=lo(2),hi(2)
+         do i=lo(1),hi(1)+1
+            forcex(i,j) = (sigma11(i,j) - sigma11(i-1,j) + sigma21(i,j+1) - sigma21(i,j)) / dx(1)
+         end do
+      end do
+
+      ! forcey
+      do j=lo(2),hi(2)+1
+         do i=lo(1),hi(1)
+            forcey(i,j) = (sigma22(i,j) - sigma22(i,j-1) + sigma21(i+1,j) - sigma21(i,j)) / dx(1)
+         end do
+      end do
+
+    end subroutine compute_Lorentz_force_2d
+
+  end subroutine compute_Lorentz_force
 
 end module fluid_charge_module

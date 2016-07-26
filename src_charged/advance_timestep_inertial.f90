@@ -32,7 +32,7 @@ module advance_timestep_inertial_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid
+  use probin_charged_module, only: use_charged_fluid, dielectric_const
 
   implicit none
 
@@ -266,6 +266,11 @@ contains
        call dot_with_z(mla,rho_new,charge_new)
     end if
 
+    ! compute new permittivity
+    if (dielectric_const .lt. 0.d0) then
+       call compute_permittivity(mla,permittivity_new,rho_new,the_bc_tower)
+    end if
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 3 - Calculate Corrector Diffusive and Stochastic Fluxes
     ! Step 4 - Predictor Crank-Nicolson Step
@@ -398,23 +403,16 @@ contains
 
     if (use_charged_fluid) then
 
-       ! compute (1/2) old and new momentum charge force
-       call average_cc_to_face(nlevs,charge_old,Lorentz_force_old,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-       call average_cc_to_face(nlevs,charge_new,Lorentz_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_c(Lorentz_force_old(n,i),1,grad_Epot_old(n,i),1,1,0)
-             call multifab_mult_mult_c(Lorentz_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
-             call multifab_mult_mult_s_c(Lorentz_force_old(n,i),1,0.5d0,1,0)
-             call multifab_mult_mult_s_c(Lorentz_force_new(n,i),1,0.5d0,1,0)
-          end do
-       end do
+       call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity_old, &
+                                  charge_old,dx,the_bc_tower)
+       call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity_new, &
+                                  charge_new,dx,the_bc_tower)
 
        ! subtract (1/2) old and (1/2) new from gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,Lorentz_force_old(n,i),1,1,0)
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,Lorentz_force_new(n,i),1,1,0)
+             call multifab_saxpy_3(gmres_rhs_v(n,i),-0.5d0,Lorentz_force_old(n,i))
+             call multifab_saxpy_3(gmres_rhs_v(n,i),-0.5d0,Lorentz_force_new(n,i))
           end do
        end do
 
@@ -679,6 +677,11 @@ contains
        call dot_with_z(mla,rho_new,charge_new)
     end if
 
+    ! compute new permittivity
+    if (dielectric_const .lt. 0.d0) then
+       call compute_permittivity(mla,permittivity_new,rho_new,the_bc_tower)
+    end if
+
     ! compute (eta,kappa)^{n+1}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
@@ -800,20 +803,14 @@ contains
 
     if (use_charged_fluid) then
 
-       ! compute (1/2) new momentum charge force
-       call average_cc_to_face(nlevs,charge_new,Lorentz_force_new,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_c(Lorentz_force_new(n,i),1,grad_Epot_new(n,i),1,1,0)
-             call multifab_mult_mult_s_c(Lorentz_force_new(n,i),1,0.5d0,1,0)
-          end do
-       end do
+       call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity_new, &
+                                  charge_new,dx,the_bc_tower)
 
        ! subtract (1/2) old and (1/2) new from gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,Lorentz_force_old(n,i),1,1,0)
-             call multifab_sub_sub_c(gmres_rhs_v(n,i),1,Lorentz_force_new(n,i),1,1,0)
+             call multifab_saxpy_3(gmres_rhs_v(n,i),-0.5d0,Lorentz_force_old(n,i))
+             call multifab_saxpy_3(gmres_rhs_v(n,i),-0.5d0,Lorentz_force_new(n,i))
           end do
        end do
 

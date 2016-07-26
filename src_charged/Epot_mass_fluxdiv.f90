@@ -195,6 +195,11 @@ contains
 
     ! compute the gradient of the electric potential
     call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_fill_boundary(grad_Epot(n,i))
+       end do
+    end do
 
     ! hack - add potential in periodic problem
 !    do n=1,nlevs

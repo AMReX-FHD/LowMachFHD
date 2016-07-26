@@ -444,7 +444,8 @@ subroutine main_driver()
         call multifab_setval(permittivity_new(n),dielectric_const,all=.true.)
      end do
   else
-     call bl_error("main_driver.f90: need to write routine for spatially-varying permittivity")
+     call compute_permittivity(mla,permittivity_old,rho_old,the_bc_tower)
+     call compute_permittivity(mla,permittivity_new,rho_old,the_bc_tower)
   end if
 
   ! initialize Temp
