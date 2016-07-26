@@ -364,7 +364,7 @@ contains
 
        ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
        if (Epot_wall_bc_type .eq. 2) then
-          call inhomogeneous_neumann_fix(mla,solver_rhs,dx,the_bc_tower)
+          call inhomogeneous_neumann_fix(mla,solver_rhs,permittivity_new,dx,the_bc_tower)
        end if
 
        ! solve -div (epsilon + dt theta z^T A_Phi^{n+1,l}) grad Phi^{n+1,l+1} = z^T RHS

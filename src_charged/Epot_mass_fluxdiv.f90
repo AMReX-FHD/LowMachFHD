@@ -182,7 +182,7 @@ contains
 
     ! for inhomogeneous Neumann bc's for electric potential, put in homogeneous form
     if (Epot_wall_bc_type .eq. 2) then
-       call inhomogeneous_neumann_fix(mla,charge,dx,the_bc_tower)
+       call inhomogeneous_neumann_fix(mla,charge,permittivity,dx,the_bc_tower)
     end if
 
     ! solve (alpha - del dot beta grad) Epot = charge
@@ -258,10 +258,11 @@ contains
   !   A_H is the homogeneous operator
   !   x_H is a multifab filled with zeros, but ghost cells filled to respect bc's
   ! We use this for walls with inhomogeneous Neumann conditions on the electric potential
-  subroutine inhomogeneous_neumann_fix(mla,charge,dx,the_bc_tower)
+  subroutine inhomogeneous_neumann_fix(mla,charge,permittivity,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: charge(:)
+    type(multifab) , intent(in   ) :: permittivity(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -294,7 +295,7 @@ contains
 
        ! multiply zerofab everywhere (including ghost cells) by dielectric_const since
        ! we are incrementing the RHS (charge) by -A x_H
-       call multifab_mult_mult_s(zerofab(n), dielectric_const, 1)
+       call multifab_mult_mult_c(zerofab(n),1,permittivity(n),1,1,1)
 
     end do
 
