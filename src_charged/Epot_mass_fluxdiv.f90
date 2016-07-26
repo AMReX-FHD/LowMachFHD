@@ -189,6 +189,15 @@ contains
     call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
                      verbose=mg_verbose)
 
+    ! Fill ghost cells to represent inhomogeneous condition on potential
+    if (Epot_wall_bc_type .eq. 2) then
+       do n=1,nlevs
+          call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                               dx_in=dx(n,:))
+          call multifab_fill_boundary(Epot(n))
+       end do
+    end if
+
     do n=1,nlevs
        call bndry_reg_destroy(fine_flx(n))
     end do
