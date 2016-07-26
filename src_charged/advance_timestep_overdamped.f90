@@ -29,7 +29,7 @@ module advance_timestep_overdamped_module
                                   barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid
+  use probin_charged_module, only: use_charged_fluid, dielectric_const
   use analysis_module
 
   implicit none
@@ -462,6 +462,11 @@ contains
     ! compute total charge
     call dot_with_z(mla,rho_new,charge_new)
 
+    ! compute new permittivity
+    if (dielectric_const .lt. 0.d0) then
+       call compute_permittivity(mla,permittivity_new,rho_new,the_bc_tower)
+    end if
+
     ! compute (eta,kappa)^{*,n+1/2}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
@@ -714,6 +719,11 @@ contains
 
     ! compute total charge
     call dot_with_z(mla,rho_new,charge_new)
+
+    ! compute new permittivity
+    if (dielectric_const .lt. 0.d0) then
+       call compute_permittivity(mla,permittivity_new,rho_new,the_bc_tower)
+    end if
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Compute stuff for plotfile and next time step

@@ -32,7 +32,7 @@ module advance_timestep_inertial_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid
+  use probin_charged_module, only: use_charged_fluid, dielectric_const
 
   implicit none
 
@@ -264,6 +264,11 @@ contains
     ! compute total charge
     if (use_charged_fluid) then
        call dot_with_z(mla,rho_new,charge_new)
+    end if
+
+    ! compute new permittivity
+    if (dielectric_const .lt. 0.d0) then
+       call compute_permittivity(mla,permittivity_new,rho_new,the_bc_tower)
     end if
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -670,6 +675,11 @@ contains
     ! compute total charge
     if (use_charged_fluid) then
        call dot_with_z(mla,rho_new,charge_new)
+    end if
+
+    ! compute new permittivity
+    if (dielectric_const .lt. 0.d0) then
+       call compute_permittivity(mla,permittivity_new,rho_new,the_bc_tower)
     end if
 
     ! compute (eta,kappa)^{n+1}
