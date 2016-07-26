@@ -584,7 +584,7 @@ contains
          do i=lo(1),hi(1)
 
             ! later we can make epsilon a function of rho
-            permittivity(i,j) = dielectric_const
+            permittivity(i,j) = abs(dielectric_const)
 
          end do
       end do
@@ -605,7 +605,7 @@ contains
             do i=lo(1),hi(1)
 
                ! later we can make epsilon a function of rho
-               permittivity(i,j,k) = dielectric_const
+               permittivity(i,j,k) = abs(dielectric_const)
 
             end do
          end do
