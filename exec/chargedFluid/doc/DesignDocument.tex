@@ -572,16 +572,28 @@ $v$          & 1.27e-09 & 2.09 & 2.99e-10 \\
 \section{Permittivity Notes}
 
 \subsection{Maxwell Stress Tensor - Constant Permittivity}
-The Maxwell Stress tensor in the absence of a magnetic field is
+The Maxwell stress tensor in the absence of a magnetic field is
 \begin{equation}
-\sigmab_{ij} = \epsilon E_i E_j - \half\epsilon E^2 \delta_{ij}
+\sigma_{ij} = \epsilon E_i E_j - \half\epsilon E^2 \delta_{ij}
 \end{equation}
-For a dieletric fluid with constant permittivity, $\epsilon\nabla\cdot\Eb = q^f$, so that
+For a dieletric fluid with constant permittivity, $-\epsilon\nabla\cdot\nabla\Phi = \epsilon\nabla\cdot\Eb = q^f$, so that
 the resulting force density (Lorentz force) on the fluid is
 \begin{equation}
-\fb^E = \nabla\cdot\sigmab = q^f\Eb = -q^f\nabla\Phi
+\fb^E = \nabla\cdot\sigmab = q^f\Eb = -q^f\nabla\Phi.
 \end{equation}
-We can show this using index notation,
+This can be easily seen using the identities,
+\begin{equation}
+\nabla\cdot(\Eb\Eb) = \Eb\nabla\cdot\Eb + \Eb\cdot\nabla\Eb
+\end{equation}
+\begin{equation}
+\half\nabla(\Eb\cdot\Eb) = \Eb\cdot\nabla\Eb + \Eb\times(\nabla\times\Eb).
+\end{equation}
+Since we are not modeling electric fields, $\nabla\times\Eb=0$.  Substituting these
+into the divergence of the Maxwell stress tensor, and assuming constant permittivity,
+\begin{equation}
+\nabla\cdot\sigmab = \epsilon\nabla\cdot(\Eb\Eb) - \half\epsilon\nabla(\Eb\cdot\Eb) = \epsilon\Eb\nabla\cdot\Eb = q^f\Eb = q^f\nabla\Phi.
+\end{equation}
+We can also prove this using index notation,
 \begin{eqnarray}
 \nabla\cdot\sigmab &\rightarrow& \epsilon\left[\frac{\partial E_i}{\partial x_i}E_j + E_i\frac{\partial E_j}{\partial x_i} - \half\frac{\partial}{\partial x_j}\left(E_1^2 + E_2^2 + E_2^2\right)\right]\nonumber\\
 &\rightarrow& \epsilon\left[\frac{\partial E_i}{\partial x_i}E_j + E_i\frac{\partial E_j}{\partial x_i} - E_1\frac{\partial E_1}{\partial x_j} - E_2\frac{\partial E_2}{\partial x_j} - E_3\frac{\partial E_3}{\partial x_j}\right]\nonumber\\
