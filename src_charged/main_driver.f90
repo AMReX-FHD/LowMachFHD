@@ -48,6 +48,7 @@ subroutine main_driver()
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const
 
+  use multifab_fill_random_module
   use fabio_module
 
   implicit none
@@ -291,6 +292,9 @@ subroutine main_driver()
   call stag_mg_layout_build(mla)
   call mgt_macproj_precon_build(mla,dx,the_bc_tower)
 
+
+  
+
   if (restart .lt. 0) then
 
      ! initialize rho
@@ -371,7 +375,7 @@ subroutine main_driver()
      call multifab_build(permittivity_new(n),mla%la(n),1       ,1)
      do i=1,dm
         call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
-        call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
+        call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,0,i)
      end do
      call multifab_build(Epot(n),mla%la(n),1,1)
 
@@ -447,6 +451,21 @@ subroutine main_driver()
      call compute_permittivity(mla,permittivity_old,rho_old,the_bc_tower)
      call compute_permittivity(mla,permittivity_new,rho_old,the_bc_tower)
   end if
+
+
+
+  ! ajn hack
+  call multifab_fill_random(Epot)
+  call compute_grad(mla,Epot,grad_Epot_old,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
+  call dot_with_z(mla,rho_old,charge_old)
+  call fabio_ml_multifab_write_d(Epot,mla%mba%rr(:,1),"a_Epot")
+  call fabio_ml_multifab_write_d(rho_old,mla%mba%rr(:,1),"a_rho_old")
+       call compute_Lorentz_force(mla,grad_Epot_new,grad_Epot_old,permittivity_old, &
+                                  charge_old,dx,the_bc_tower)
+  call fabio_ml_multifab_write_d(grad_Epot_new(:,1),mla%mba%rr(:,1),"a_Lfx")
+  call fabio_ml_multifab_write_d(grad_Epot_new(:,2),mla%mba%rr(:,1),"a_Lfy")
+  stop
+
 
   ! initialize Temp
   call init_Temp(Temp,dx,time,the_bc_tower%bc_tower_array)
