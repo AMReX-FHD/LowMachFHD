@@ -10,7 +10,6 @@ module init_lowmach_module
   use ml_layout_module
   use convert_stag_module
   use convert_rhoc_to_c_module
-  use BoxLibRNGs
   use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
                                   molmass, rhobar, smoothing_width, u_init, n_cells
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
@@ -222,22 +221,6 @@ contains
 
     select case (abs(prob_type))
     
-    case (0)
-       
- 
-       u = 0.d0
-       v = 0.d0
-
-       ! hack test, random c1, c2=-c1, c3=remaining
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-             c(i,j,1:nspecies) = c_init(1,1:nspecies)
-             call UniformRNG(random)
-             c(i,j,1) = c(i,j,1) + 0.01d0*random
-             c(i,j,2) = c(i,j,2) + 0.01d0*random
-          end do
-       end do
-
     case (1)
 
        !=============================================================
