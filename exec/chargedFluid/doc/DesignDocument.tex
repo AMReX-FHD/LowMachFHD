@@ -450,10 +450,10 @@ must be consistent with mass fluxes in that,
 The problem is that the mass fluxes are a function of the velocity field itself
 (see, e.g., {\bf Step 1}), so the best we can do is used an iteratively-lagged
 approximation for the velocity field to compute $\Fb$.  
-For the fully implicit case ($\theta=1$), as the iterations converge, the RHS
-of the constraint does become consistent with the mass fluxes used to update
-the densities, and the variables stay on the EOS.
-For the semi-implicit case this is not true, and since the overall scheme
+For the semi-implicit case ($\theta=0.5$) as the iterations converge, the RHS
+of the constraint does become consistent with the new-time mass fluxes used
+to update the densities, and the variables stay on the EOS.
+For the fully-implicit case this is not true, and since the overall scheme
 is iterative, we need to form a correction to the constraint that modifies the
 velocity field in a way that drives the variables toward satisfying the equation of 
 state.  Furthermore, since thie equation of state is linear, there should be no
