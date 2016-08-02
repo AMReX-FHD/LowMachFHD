@@ -624,17 +624,23 @@ cancel except for the first term,
 \clearpage
 
 \subsection{Maxwell Stress Tensor - Spatially-Varying Permittivity}
-Trying to simplify the stress tensor doesn't help much:
+Trying to simplify the stress tensor still leaves an extra term we don't know what
+to do with.  First note that for variable $\epsilon$,
+\begin{equation}
+\nabla\cdot(\epsilon\Eb) = \Eb\cdot\nabla\epsilon + \epsilon\nabla\cdot\Eb = q_f
+\end{equation}
+Taking the divergence of the Maxwell stress tensor,
 \begin{eqnarray}
 \nabla\cdot(\epsilon\Eb\Eb - \half\epsilon\Eb\cdot\Eb\Ib) &\rightarrow& \frac{\partial}{\partial x_i}(\epsilon E_iE_j) - \half\frac{\partial}{\partial x_i}(\epsilon E_kE_k\delta_{ij}) \nonumber\\
 &=& E_jE_i\frac{\partial\epsilon}{\partial x_i} + \epsilon E_j\frac{\partial E_j}{\partial x_i} + \epsilon E_i\frac{\partial E_j}{\partial x_i} \nonumber\\
 && - \half\left(E_kE_k\delta_{ij}\frac{\partial\epsilon}{\partial x_i} + 2\epsilon E_k\delta_{ij}\frac{\partial E_k}{\partial x_i} + \epsilon E_kE_k\underbrace{\frac{\partial\delta_{ij}}{\partial x_i}}_{0}\right)\nonumber\\
 &\rightarrow& \Eb\Eb\cdot\nabla\epsilon + \epsilon\Eb\nabla\cdot\Eb + \underbrace{\epsilon\Eb\cdot\nabla\Eb} - \half\Eb\cdot\Eb\nabla\epsilon - \underbrace{\epsilon\Eb\cdot\nabla\Eb}\nonumber\\
-&=& \Eb\Eb\cdot\nabla\epsilon + \epsilon\Eb\nabla\cdot\Eb - \half\Eb\cdot\Eb\nabla\epsilon
+&=& \Eb\Eb\cdot\nabla\epsilon + \epsilon\Eb\nabla\cdot\Eb - \half\Eb\cdot\Eb\nabla\epsilon\nonumber\\
+&=& q_f \Eb - \half\Eb\cdot\Eb\nabla\epsilon\label{eq:divstress}
 \end{eqnarray}
-Since normal components of $\Eb$ live on faces, and $\epsilon$ lives at cell-centers, there is no
-obvious way to make terms cancel/simplify.  The problem is the $\half\Eb\cdot\Eb\nabla\epsilon$
-term is not as compact as the other terms.  The other terms naturally have all the pieces where you need them.
+Since normal components of $\Eb$ live on faces, and $\epsilon$ lives at cell-centers, there 
+is no obvious way to discretize the second term in (\ref{eq:divstress}) without an
+expanded stencil.
 
 Maybe we can try spatially discretizing the full stress tensor directly.
 \begin{equation}
