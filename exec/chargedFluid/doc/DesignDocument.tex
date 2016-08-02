@@ -570,6 +570,18 @@ $v$          & 1.27e-09 & 2.09 & 2.99e-10 \\
 \end{center}
 \end{table}
 
+\section{Charged Walls}
+We simulate electro-osmosis by initialing the domain to a homogeneous mixture of fluids with
+a net charge.  For solvability, we need Neumann conditions on walls for the electric
+potential,
+\begin{equation}
+\frac{\partial\Phi}{\partial n} = \frac{q^{\rm tot}}{\epsilon L^{\rm tot}}
+\end{equation}
+where $L^{\rm tot}$ is the total length (or area in 3D) of walls in the simulation
+and $q^{\rm tot}$ is the total charge in the interior.  Thus
+the Neumann condition is the surface charge density divided by the permittivity.
+Thus, the total charge (boundary + interior) is zero, and the simulation is well-posed.
+
 \section{Permittivity Notes}
 
 \subsection{Maxwell Stress Tensor - Constant Permittivity}
