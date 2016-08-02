@@ -67,7 +67,7 @@ contains
     plot_names(2*nspecies+dm+4) = "shifted_vely"
     if (dm > 2) plot_names(2*nspecies+dm+5) = "shifted_velz"
     plot_names(2*nspecies+2*dm+3) = "pres"
-    plot_names(2*nspecies+2*dm+4) = "charge"
+    plot_names(2*nspecies+2*dm+4) = "charge_density"
     plot_names(2*nspecies+2*dm+5) = "Epot"
 
     plot_names_stagx(1) = "velx"
