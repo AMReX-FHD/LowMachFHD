@@ -1,3 +1,5 @@
+#!/bin/bash
+
 RUNNAME=cs1_64_ExMidTau_0.05
 NRUN=16
 
