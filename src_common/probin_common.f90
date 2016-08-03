@@ -155,12 +155,12 @@ module probin_common_module
                                               ! positive for updateHydroGrid
                                               ! negative reserved for problem-specific analysis (see analyze_spectra_binary.f90)
 
-  namelist /probin_common/ project_dir         ! Projection direction (1=x, 2=y, 3=z)
-  ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
-  !          but still need projection if stats_int>0)
-  ! +dim=project along dim then analyze 2D only,
-  ! -dim=analyze 3D and then project along dim so we also analyze 2D data
-  ! It is better to use the conserved variables but it does not quite work for staggered
+  namelist /probin_common/ project_dir     ! Projection direction (1=x, 2=y, 3=z)
+                                           ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
+                                           !          but still need projection if stats_int>0)
+                                           ! +dim=project along dim then analyze 2D only,
+                                           ! -dim=analyze 3D and then project along dim so we also analyze 2D data
+                                           ! It is better to use the conserved variables but it does not quite work for staggered
 
   namelist /probin_common/ max_grid_projection ! parallelization parameters
   namelist /probin_common/ stats_int           ! Project grid for analysis
@@ -174,9 +174,8 @@ module probin_common_module
                                                ! (will smooth fluctuations)
   
   ! These are mostly used for reaction-diffusion:             
-  ! Donev: Had to put these on one line for some reason for gfortran to recognize density_weights -- bug or some internal limit?!?
-  namelist /probin_common/ histogram_unit, &   ! If positive, write the values of the densities to a file for histogramming
-                           density_weights     ! if nonzero, compute rho <- \sum w_i * rho_i for HydroGrid analysis
+  namelist /probin_common/ histogram_unit      ! If positive, write the values of the densities to a file for histogramming
+  namelist /probin_common/ density_weights     ! if nonzero, compute rho <- \sum w_i * rho_i for HydroGrid analysis
   !------------------------------------------------------------- 
 
 contains

@@ -21,7 +21,9 @@ module probin_multispecies_module
   real(kind=dp_t)    :: c_init(2,max_species)
   real(kind=dp_t)    :: c_bc(3,2,max_species)
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
-  
+
+  ! Physical properties:
+  !----------------------
   namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ fraction_tolerance ! For roundoff errors in mass and mole fractions
   namelist /probin_multispecies/ start_time
@@ -33,10 +35,17 @@ module probin_multispecies_module
   namelist /probin_multispecies/ is_nonisothermal   ! If T Soret effect will be included
   namelist /probin_multispecies/ use_lapack         ! Use LAPACK or iterative method for diffusion matrix (recommend False)
   namelist /probin_multispecies/ chi_iterations     ! number of iterations used in Dbar2chi_iterative
+
+  ! Initial and boundary conditions 
+  !----------------------
   namelist /probin_multispecies/ T_init     ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   namelist /probin_multispecies/ temp_type  ! for initializing temperature
-  namelist /probin_multispecies/ c_init   ! initial values for c
-  namelist /probin_multispecies/ c_bc     ! c_i boundary conditions (dir,lohi,species)
+  namelist /probin_multispecies/ c_init     ! initial values for c
+  namelist /probin_multispecies/ c_bc       ! c_i boundary conditions (dir,lohi,species)
+  
+  ! Thermodynamic and transport properties:
+  !----------------------
+
   ! These are lower-triangules of symmetric matrices represented as vectors
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
@@ -75,7 +84,7 @@ contains
     correct_flux       = .true.
     print_error_norms  = .true.
     is_ideal_mixture   = .true.
-    is_nonisothermal   = .true.
+    is_nonisothermal   = .false.
     use_lapack         = .false.
     chi_iterations     = 10
     T_init             = 1.0d0
