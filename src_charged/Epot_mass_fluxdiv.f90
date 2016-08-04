@@ -212,7 +212,7 @@ contains
 
     ! hack - add potential in periodic problem
 !    do n=1,nlevs
-!       call multifab_plus_plus_s(grad_Epot(n,1),-1.d10,0)
+!       call multifab_plus_plus_s(grad_Epot(n,1),-100.d0,1)
 !    end do
 
     ! compute the charge flux coefficient
