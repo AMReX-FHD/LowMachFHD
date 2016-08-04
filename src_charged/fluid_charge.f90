@@ -658,7 +658,7 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    if (dielectric_const .gt. 0.d0) then
+    if (dielectric_const .ge. 0.d0) then
 
        ! constant permittivity
 
