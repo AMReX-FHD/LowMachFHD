@@ -557,6 +557,7 @@ contains
        do i=1,nfabs(rho(n))
           dp1 => dataptr(permittivity(n),i)
           dp2 => dataptr(rho(n),i)
+          dp3 => dataptr(rhotot(n),i)
           lo = lwb(get_box(permittivity(n),i))
           hi = upb(get_box(permittivity(n),i))
           select case (dm)
@@ -587,12 +588,17 @@ contains
       
       ! local
       integer :: i,j
+      real(kind=dp_t) :: c1
 
+      ! we only get here if dielectric_const < 0
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)
 
+            c1 = rho(i,j,1) / rhotot(i,j)
+            permittivity(i,j) = (1.d0+c1)*abs(dielectric_const)
+
             ! later we can make epsilon a function of rho
-            permittivity(i,j) = abs(dielectric_const)
+            ! permittivity(i,j) = abs(dielectric_const)
 
          end do
       end do
