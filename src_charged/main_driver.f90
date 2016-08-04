@@ -444,8 +444,10 @@ subroutine main_driver()
         call multifab_setval(permittivity_new(n),dielectric_const,all=.true.)
      end do
   else
-     call compute_permittivity(mla,permittivity_old,rho_old,the_bc_tower)
-     call compute_permittivity(mla,permittivity_new,rho_old,the_bc_tower)
+     call compute_permittivity(mla,permittivity_old,rho_old,rhotot_old, &
+                               the_bc_tower)
+     call compute_permittivity(mla,permittivity_new,rho_old,rhotot_old, &
+                               the_bc_tower)
   end if
 
   ! initialize Temp

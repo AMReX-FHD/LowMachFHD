@@ -528,27 +528,30 @@ contains
 
   end subroutine modify_S
 
-  subroutine compute_permittivity(mla,permittivity,rho,the_bc_tower)
+  subroutine compute_permittivity(mla,permittivity,rho,rhotot,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: permittivity(:)
     type(multifab) , intent(in   ) :: rho(:)
+    type(multifab) , intent(in   ) :: rhotot(:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables
     integer :: i,n,dm,nlevs
-    integer :: ng_1,ng_2
+    integer :: ng_1,ng_2,ng_3
     integer :: lo(mla%dim),hi(mla%dim)
 
     ! pointers into multifabs
     real(kind=dp_t), pointer :: dp1(:,:,:,:)
     real(kind=dp_t), pointer :: dp2(:,:,:,:)
+    real(kind=dp_t), pointer :: dp3(:,:,:,:)
     
     dm = mla%dim
     nlevs = mla%nlevel
 
     ng_1 = permittivity(1)%ng
     ng_2 = rho(1)%ng
+    ng_3 = rhotot(1)%ng
 
     do n=1,nlevs
        do i=1,nfabs(rho(n))
@@ -558,9 +561,11 @@ contains
           hi = upb(get_box(permittivity(n),i))
           select case (dm)
           case (2)
-             call compute_permittivity_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2,lo,hi)
+             call compute_permittivity_2d(dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2, &
+                                          dp3(:,:,1,1),ng_3,lo,hi)
           case (3)
-             call compute_permittivity_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2,lo,hi)
+             call compute_permittivity_3d(dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2, &
+                                          dp3(:,:,:,1),ng_3,lo,hi)
           end select
        end do
     end do
@@ -573,11 +578,12 @@ contains
 
   contains
 
-    subroutine compute_permittivity_2d(permittivity,ng_1,rho,ng_2,lo,hi)
+    subroutine compute_permittivity_2d(permittivity,ng_1,rho,ng_2,rhotot,ng_3,lo,hi)
 
-      integer         :: lo(:),hi(:),ng_1,ng_2
+      integer         :: lo(:),hi(:),ng_1,ng_2,ng_3
       real(kind=dp_t) :: permittivity(lo(1)-ng_1:,lo(2)-ng_1:)
       real(kind=dp_t) ::          rho(lo(1)-ng_2:,lo(2)-ng_2:,:)
+      real(kind=dp_t) ::       rhotot(lo(1)-ng_3:,lo(2)-ng_3:)
       
       ! local
       integer :: i,j
@@ -593,11 +599,12 @@ contains
 
     end subroutine compute_permittivity_2d
 
-    subroutine compute_permittivity_3d(permittivity,ng_1,rho,ng_2,lo,hi)
+    subroutine compute_permittivity_3d(permittivity,ng_1,rho,ng_2,rhotot,ng_3,lo,hi)
 
-      integer         :: lo(:),hi(:),ng_1,ng_2
+      integer         :: lo(:),hi(:),ng_1,ng_2,ng_3
       real(kind=dp_t) :: permittivity(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
       real(kind=dp_t) ::          rho(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:)
+      real(kind=dp_t) ::       rhotot(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)
       
       ! local
       integer :: i,j,k

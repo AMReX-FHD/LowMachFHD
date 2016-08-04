@@ -464,7 +464,8 @@ contains
 
     ! compute new permittivity
     if (dielectric_const .lt. 0.d0) then
-       call compute_permittivity(mla,permittivity_new,rho_new,the_bc_tower)
+       call compute_permittivity(mla,permittivity_new,rho_new,rhotot_new, &
+                                 the_bc_tower)
     end if
 
     ! compute (eta,kappa)^{*,n+1/2}
@@ -722,7 +723,8 @@ contains
 
     ! compute new permittivity
     if (dielectric_const .lt. 0.d0) then
-       call compute_permittivity(mla,permittivity_new,rho_new,the_bc_tower)
+       call compute_permittivity(mla,permittivity_new,rho_new,rhotot_new, &
+                                 the_bc_tower)
     end if
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
