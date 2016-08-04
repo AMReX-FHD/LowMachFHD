@@ -14,7 +14,7 @@ module Epot_mass_fluxdiv_module
   use matvec_mul_module
   use probin_multispecies_module, only: nspecies
   use probin_gmres_module, only: mg_verbose
-  use probin_charged_module, only: dielectric_const, Epot_wall_bc_type
+  use probin_charged_module, only: Epot_wall_bc_type
   
   implicit none
 
@@ -261,7 +261,7 @@ contains
   end subroutine Epot_mass_flux
   
   ! We would like to solve A x = b with inhomogeneous bc's
-  ! Here, "A" is -dielectric_const * Lap
+  ! Here, "A" is -epsilon * Lap
   ! This is equivalent to A_H x = b - A x_H, where
   !   A   is the inhomogeneous operator
   !   A_H is the homogeneous operator
@@ -302,7 +302,7 @@ contains
 
        call multifab_fill_boundary(zerofab(n))
 
-       ! multiply zerofab everywhere (including ghost cells) by dielectric_const since
+       ! multiply zerofab everywhere (including ghost cells) by the permittivity since
        ! we are incrementing the RHS (charge) by -A x_H
        call multifab_mult_mult_c(zerofab(n),1,permittivity(n),1,1,1)
 

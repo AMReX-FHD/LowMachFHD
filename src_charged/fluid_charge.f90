@@ -11,7 +11,8 @@ module fluid_charge_module
   use zero_edgeval_module
   use probin_common_module, only: molmass, k_B, total_volume, rhobar
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: charge_per_mass, dpdt_factor, dielectric_const
+  use probin_charged_module, only: charge_per_mass, dpdt_factor, &
+                                   dielectric_const, dielectric_type
 
   implicit none
 
@@ -590,15 +591,10 @@ contains
       integer :: i,j
       real(kind=dp_t) :: c1
 
-      ! we only get here if dielectric_const < 0
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)
 
-            c1 = rho(i,j,1) / rhotot(i,j)
-            permittivity(i,j) = (1.d0+c1)*abs(dielectric_const)
-
-            ! later we can make epsilon a function of rho
-            ! permittivity(i,j) = abs(dielectric_const)
+            call compute_permittivity_local(permittivity(i,j),rho(i,j,:),rhotot(i,j))
 
          end do
       end do
@@ -619,14 +615,28 @@ contains
          do j=lo(2),hi(2)
             do i=lo(1),hi(1)
 
-               ! later we can make epsilon a function of rho
-               permittivity(i,j,k) = abs(dielectric_const)
+               call compute_permittivity_local(permittivity(i,j,k),rho(i,j,k,:),rhotot(i,j,k))
+
 
             end do
          end do
       end do
       
     end subroutine compute_permittivity_3d
+
+    subroutine compute_permittivity_local(perm,rho,rhotot)
+
+      real(kind=dp_t) :: perm, rho(:), rhotot
+
+      ! local
+      real(kind=dp_t) :: c1
+
+      if (dielectric_type .eq. 1) then
+         c1 = rho(1)/rhotot
+         perm = (1.d0+c1)*dielectric_const
+      end if
+
+    end subroutine compute_permittivity_local
 
   end subroutine compute_permittivity
 
@@ -658,7 +668,7 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    if (dielectric_const .ge. 0.d0) then
+    if (dielectric_type .eq. 0) then
 
        ! constant permittivity
 

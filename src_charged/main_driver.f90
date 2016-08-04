@@ -46,7 +46,8 @@ subroutine main_driver()
   use probin_multispecies_module, only: nspecies, Dbar, start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
-  use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const
+  use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
+                                   dielectric_type
 
   use fabio_module
 
@@ -438,7 +439,7 @@ subroutine main_driver()
   end if
 
   ! compute permittivity
-  if (dielectric_const .ge. 0.d0) then
+  if (dielectric_type .eq. 0) then
      do n=1,nlevs
         call multifab_setval(permittivity_old(n),dielectric_const,all=.true.)
         call multifab_setval(permittivity_new(n),dielectric_const,all=.true.)

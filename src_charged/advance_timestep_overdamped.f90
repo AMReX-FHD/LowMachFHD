@@ -29,7 +29,7 @@ module advance_timestep_overdamped_module
                                   barodiffusion_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid, dielectric_const
+  use probin_charged_module, only: use_charged_fluid, dielectric_type
   use analysis_module
 
   implicit none
@@ -463,7 +463,7 @@ contains
     call dot_with_z(mla,rho_new,charge_new)
 
     ! compute new permittivity
-    if (dielectric_const .lt. 0.d0) then
+    if (dielectric_type .ne. 0) then
        call compute_permittivity(mla,permittivity_new,rho_new,rhotot_new, &
                                  the_bc_tower)
     end if
@@ -722,7 +722,7 @@ contains
     call dot_with_z(mla,rho_new,charge_new)
 
     ! compute new permittivity
-    if (dielectric_const .lt. 0.d0) then
+    if (dielectric_type .ne. 0) then
        call compute_permittivity(mla,permittivity_new,rho_new,rhotot_new, &
                                  the_bc_tower)
     end if

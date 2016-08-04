@@ -192,7 +192,8 @@
 &probin_charged
 
   use_charged_fluid = T
-  dielectric_const = -1.d0
+  dielectric_const = 1.d0
+  dielectric_type = 1
   charge_per_mass(1:2) = 0.d0 0.d0
 
   Epot_wall_bc_type  = 1 ! 1 = Dirichlet (fixed potential)
