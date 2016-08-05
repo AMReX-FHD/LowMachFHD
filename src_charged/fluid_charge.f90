@@ -589,7 +589,6 @@ contains
       
       ! local
       integer :: i,j
-      real(kind=dp_t) :: c1
 
       do j=lo(2),hi(2)
          do i=lo(1),hi(1)
@@ -670,7 +669,7 @@ contains
 
     if (dielectric_type .eq. 0) then
 
-       ! constant permittivity
+       ! constant permittivity.  force = q*E
 
        call average_cc_to_face(nlevs,charge,Lorentz_force,1,scal_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
@@ -681,6 +680,15 @@ contains
        end do
 
     else
+
+       ! compute q*E.  the -(1/2) E dot E grad(eps) is below
+       call average_cc_to_face(nlevs,charge,Lorentz_force,1,scal_bc_comp,1, &
+                               the_bc_tower%bc_tower_array)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
+          end do
+       end do
 
        ! spatially-varying permittivity
 
@@ -736,6 +744,8 @@ contains
       real(kind=dp_t) :: sigma21(lo(1)  :hi(1)+1,lo(2)  :hi(2)+1) ! nodal in x and y, no ghost cells
       real(kind=dp_t) :: sigma22(lo(1)  :hi(1)  ,lo(2)-1:hi(2)+1) ! cell-centered, 1 ghost cell in y
 
+      if (.false.) then
+
       ! sigma11
       do j=lo(2),hi(2)
          do i=lo(1)-1,hi(1)+1
@@ -773,6 +783,32 @@ contains
             forcey(i,j) = (sigma22(i,j) - sigma22(i,j-1) + sigma21(i+1,j) - sigma21(i,j)) / dx(1)
          end do
       end do
+
+
+      else
+
+
+
+      do j=lo(2),hi(2)
+         do i=lo(1),hi(1)+1
+
+            forcex(i,j) = forcex(i,j) - 0.5d0 * ( Ex(i,j)**2 + (0.25d0*(Ey(i,j)+Ey(i,j+1)+Ey(i-1,j)+Ey(i-1,j+1)))*2 ) &
+                 * (perm(i,j)-perm(i-1,j)) / dx(1)
+
+         end do
+      end do
+
+      do j=lo(2),hi(2)+1
+         do i=lo(1),hi(1)
+
+            forcey(i,j) = forcey(i,j) - 0.5d0 * ( Ey(i,j)**2 + (0.25d0*(Ex(i,j)+Ex(i+1,j)+Ex(i,j-1)+Ex(i+1,j-1)))**2 ) &
+                 * (perm(i,j)-perm(i,j-1)) / dx(1)
+
+         end do
+      end do
+
+
+      end if
 
     end subroutine compute_Lorentz_force_2d
 
