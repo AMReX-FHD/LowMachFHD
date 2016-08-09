@@ -12,7 +12,7 @@ module fluid_charge_module
   use probin_common_module, only: molmass, k_B, total_volume, rhobar
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: charge_per_mass, dpdt_factor, &
-                                   dielectric_const, dielectric_type
+                                   dielectric_const, dielectric_type, E_ext_type
 
   implicit none
 
@@ -20,7 +20,7 @@ module fluid_charge_module
 
   public :: dot_with_z, dot_with_z_face, compute_charge_coef, &
             enforce_charge_neutrality, implicit_potential_coef, modify_S, &
-            compute_permittivity, compute_Lorentz_force
+            compute_permittivity, compute_Lorentz_force, compute_E_ext
   
 contains
 
@@ -813,5 +813,26 @@ contains
     end subroutine compute_Lorentz_force_2d
 
   end subroutine compute_Lorentz_force
+
+  subroutine compute_E_ext(mla,E_ext)
+
+    type(ml_layout), intent(in   ) :: mla
+    type(multifab) , intent(inout) :: E_ext(:,:)
+
+    integer :: n, nlevs, i, dm
+
+    nlevs = mla%nlevel
+    dm = mla%dim
+
+    if (E_ext_type .eq. 1) then
+
+       do n=1,nlevs
+          call multifab_setval(E_ext(n,1),-100.d0,all=.true.)
+          call multifab_setval(E_ext(n,2),   0.d0,all=.true.)
+       end do
+
+    end if
+
+  end subroutine compute_E_ext
 
 end module fluid_charge_module

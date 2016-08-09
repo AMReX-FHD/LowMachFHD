@@ -207,6 +207,8 @@
   num_pot_iters = 2
   dpdt_factor = 0.d0
 
+  E_ext_type = 1                ! external electric field
+
 /
 
 &probin_gmres
