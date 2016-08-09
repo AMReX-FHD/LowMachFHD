@@ -16,6 +16,7 @@ module probin_charged_module
   real(kind=dp_t)    :: theta_pot
   integer            :: num_pot_iters
   real(kind=dp_t)    :: dpdt_factor
+  integer            :: E_ext_type
   
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
@@ -29,6 +30,7 @@ module probin_charged_module
                                                ! temporal discretization for potential term
   namelist /probin_charged/ num_pot_iters
   namelist /probin_charged/ dpdt_factor
+  namelist /probin_charged/ E_ext_type         ! external electric field
 
 contains
 
@@ -61,6 +63,7 @@ contains
     theta_pot          = 1.d0
     num_pot_iters      = 2
     dpdt_factor        = 0.d0
+    E_ext_type         = 0
  
     ! read from input file 
     need_inputs = .true.
@@ -117,6 +120,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) dpdt_factor
+
+       case ('--E_ext_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) E_ext_type
 
        case ('--')
           farg = farg + 1

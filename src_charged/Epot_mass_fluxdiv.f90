@@ -14,8 +14,10 @@ module Epot_mass_fluxdiv_module
   use matvec_mul_module
   use probin_multispecies_module, only: nspecies
   use probin_gmres_module, only: mg_verbose
-  use probin_charged_module, only: Epot_wall_bc_type
+  use probin_charged_module, only: Epot_wall_bc_type, E_ext_type
   
+  use fabio_module
+
   implicit none
 
   private
@@ -120,6 +122,9 @@ contains
     type(multifab)  :: beta(mla%nlevel,mla%dim)
     type(multifab)  :: charge_coef(mla%nlevel)
     type(multifab)  :: charge_coef_face(mla%nlevel,mla%dim)
+    type(multifab)  :: rhs(mla%nlevel)
+    type(multifab)  :: permittivity_fc(mla%nlevel,mla%dim)
+    type(multifab)  :: E_ext(mla%nlevel,mla%dim)
     type(bndry_reg) :: fine_flx(mla%nlevel)
   
     real(kind=dp_t) :: avg_charge
@@ -134,10 +139,13 @@ contains
     do n=1,nlevs
        call multifab_build(alpha(n),mla%la(n),1,0)
        call multifab_build(charge_coef(n),mla%la(n),nspecies,1)
+       call multifab_build(rhs(n),mla%la(n),1,0)
        do i=1,dm
           call multifab_build_edge(beta(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(charge_coef_face(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(rhoWchi_face(n,i),mla%la(n),nspecies**2,0,i)
+          call multifab_build_edge(permittivity_fc(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(E_Ext(n,i),mla%la(n),1,0,i)
        end do
     end do
 
@@ -185,8 +193,33 @@ contains
        call inhomogeneous_neumann_fix(mla,charge,permittivity,dx,the_bc_tower)
     end if
 
+    do n=1,nlevs
+       call multifab_copy_c(rhs(n),1,charge(n),1,1,0)
+    end do
+
+    if (E_ext_type .ne. 0) then
+       
+       ! compute permittivity on edges
+       call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
+                               the_bc_tower%bc_tower_array)
+
+       ! compute external electric field on edges
+       call compute_E_ext(mla,E_ext)
+
+       ! compute epsilon*E_ext
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_mult_mult_c(permittivity_fc(n,i),1,E_ext(n,i),1,1,0)
+          end do
+       end do
+
+       ! compute div (epsilon*E_ext) and add it to solver rhs
+       call compute_div(mla,permittivity_fc,rhs,dx,1,1,1,increment_in=.true.)
+
+    end if
+
     ! solve (alpha - del dot beta grad) Epot = charge
-    call ml_cc_solve(mla,charge,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
+    call ml_cc_solve(mla,rhs,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
                      verbose=mg_verbose)
 
     ! Fill ghost cells to represent inhomogeneous condition on potential
@@ -204,16 +237,21 @@ contains
 
     ! compute the gradient of the electric potential
     call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
+
+    if (E_ext_type .ne. 0) then
+       ! add external electric field
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_plus_plus_c(grad_Epot(n,i),1,E_ext(n,i),1,1,0)
+          end do
+       end do
+    end if
+
     do n=1,nlevs
        do i=1,dm
           call multifab_fill_boundary(grad_Epot(n,i))
        end do
     end do
-
-    ! hack - add potential in periodic problem
-!    do n=1,nlevs
-!       call multifab_plus_plus_s(grad_Epot(n,1),-100.d0,1)
-!    end do
 
     ! compute the charge flux coefficient
     call compute_charge_coef(mla,rho,Temp,charge_coef)
@@ -249,10 +287,13 @@ contains
     do n=1,nlevs
        call multifab_destroy(alpha(n))
        call multifab_destroy(charge_coef(n))
+       call multifab_destroy(rhs(n))
        do i=1,dm
           call multifab_destroy(rhoWchi_face(n,i))
           call multifab_destroy(beta(n,i))
           call multifab_destroy(charge_coef_face(n,i))
+          call multifab_destroy(permittivity_fc(n,i))
+          call multifab_destroy(E_ext(n,i))
        end do
     end do
 
