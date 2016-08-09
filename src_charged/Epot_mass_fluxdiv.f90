@@ -238,12 +238,14 @@ contains
     ! compute the gradient of the electric potential
     call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
-    ! add external electric field
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_plus_plus_c(grad_Epot(n,i),1,E_ext(n,i),1,1,0)
+    if (E_ext_type .ne. 0) then
+       ! add external electric field
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_plus_plus_c(grad_Epot(n,i),1,E_ext(n,i),1,1,0)
+          end do
        end do
-    end do
+    end if
 
     do n=1,nlevs
        do i=1,dm
