@@ -359,6 +359,9 @@ contains
        ! sum the reaction rates
        rTotal = sum(avg_react_rate(1:nreactions))
 
+       ! if rTotal is zero (=no reaction), then exit the EventLoop
+       if (rTotal .eq. 0.d0) exit EventLoop
+
        ! generate pseudorandom number in interval [0,1).
        if (use_bl_rng) then
           call UniformRNG(rr, rng_eng_reaction%p)
