@@ -220,7 +220,7 @@ contains
 
     ! solve (alpha - del dot beta grad) Epot = charge
     call ml_cc_solve(mla,rhs,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
-                     verbose=mg_verbose)
+                     verbose=mg_verbose,ok_to_fix_singular=.false.)
 
     ! Fill ghost cells to represent inhomogeneous condition on potential
     if (Epot_wall_bc_type .eq. 2) then
