@@ -288,13 +288,8 @@ subroutine main_driver()
       end if
       
       if (abs(initial_variance) .gt. 0.d0) then
-         if(.not.integer_populations) then
-            call add_init_n_fluctuations(mla,n_old,dx,the_bc_tower)
-         else if(initial_variance<0.0d0) then
-            ! For integer populations the fluctuations were already added in init_n using Poisson random variates
-            ! There is no way here to ensure that the average does not change since this would destroy the Poisson fluctuations
-            call bl_error("initial_variance<0 not supported for integer_populations=T")
-         end if   
+         ! For integer populations fluctuations have already been added at initialization via the Poisson distribution
+         if(.not.integer_populations) call add_init_n_fluctuations(mla,n_old,dx,the_bc_tower)
       end if
 
    end if

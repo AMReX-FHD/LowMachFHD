@@ -90,7 +90,7 @@ contains
     real(kind=dp_t)  :: dx(:)
  
     ! local varables
-    integer         :: i,j
+    integer         :: i,j,species
     real(kind=dp_t) :: x,y,r,cen(2),L(2)
     real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_ratio,rad
 
@@ -238,15 +238,30 @@ contains
        call bl_error("init_n_2d: prob_type not supported")
 
     end select
-    
-    if(integer_populations) then ! Ensure that the initial number of molecules are integers
-       do j=lo(2),hi(2)
-          do i=lo(1),hi(1)
-             call round_to_integers(n_init(i,j,1:nspecies), dv=dx(1)*dx(2)*cross_section)
-          end do
-       end do    
-    end if
 
+    if(integer_populations) then ! Ensure that the initial number of molecules are integers
+       if(initial_variance<0.0d0) then ! Distribute the particles on the box using a multinomial sampler
+       
+          ! To do this really correctly one should do this for the whole system, not box per box
+          if (parallel_IOProcessor()) write(*,*) "Using multinomial initial distribution PER BOX, not domain"
+          
+          do species=1, nspecies
+            call sample_integers(n_init(lo(1):hi(1),lo(2):hi(2),species), &
+                     ncells=size(n_init(lo(1):hi(1),lo(2):hi(2),species)), &
+                     dv=dx(1)*dx(2)*cross_section)
+          end do
+       
+       else ! Make the number of molecules in each cell Poisson distributed with desired mean
+       
+          do j=lo(2),hi(2)
+             do i=lo(1),hi(1)
+                call round_to_integers(n_init(i,j,1:nspecies), dv=dx(1)*dx(2)*cross_section)
+             end do
+          end do    
+           
+       end if    
+    end if
+    
   end subroutine init_n_2d
 
   subroutine init_n_3d(n_init,ng_n,lo,hi,dx)
@@ -256,7 +271,7 @@ contains
     real(kind=dp_t)  :: dx(:)
  
     ! local varables
-    integer         :: i,j,k
+    integer         :: i,j,k,species
     real(kind=dp_t) :: x,y,z,r,cen(3),L(3)
     real(kind=dp_t) :: one_fraction_domain1,one_fraction_domain2,x1,x2,stripe_ratio,rad
 
@@ -423,39 +438,83 @@ contains
     end select
 
     if(integer_populations) then ! Ensure that the initial number of molecules are integers
-       do k=lo(3),hi(3)
-          do j=lo(2),hi(2)
-             do i=lo(1),hi(1)
-                call round_to_integers(n_init(i,j,k,1:nspecies), dv=dx(1)*dx(2)*dx(3)*cross_section)
-             end do
+       if(initial_variance<0.0d0) then ! Distribute the particles on the box using a multinomial sampler
+       
+          ! To do this really correctly one should do this for the whole system, not box per box
+          if (parallel_IOProcessor()) write(*,*) "Using multinomial initial distribution PER BOX, not domain"
+          
+          do species=1, nspecies
+            call sample_integers(n_init(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),species), &
+                     ncells=size(n_init(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),species)), &
+                     dv=dx(1)*dx(2)*dx(3)*cross_section)
           end do
-       end do    
+       
+       else ! Make the number of molecules in each cell Poisson distributed with desired mean
+       
+          do k=lo(3),hi(3)
+             do j=lo(2),hi(2)
+                do i=lo(1),hi(1)
+                   call round_to_integers(n_init(i,j,k,1:nspecies), dv=dx(1)*dx(2)*dx(3)*cross_section)
+                end do
+             end do
+          end do  
+           
+       end if    
     end if
 
   end subroutine init_n_3d
-
+  
   subroutine round_to_integers(n, dv)
     real(dp_t), intent(inout) :: n(nspecies)
     real(dp_t), intent(in) :: dv ! cell volume
     
     integer :: comp, nparticles
+    real(dp_t) :: random(nspecies)
     
     if(initial_variance>0.0d0) then
        do comp=1, nspecies
           ! Generate the initial fluctuations using a Poisson random number generator
           ! This assumes that the distribution of initial conditions is a product Poisson measure
-            if (use_bl_rng) then
-               call PoissonRNG(number=nparticles, mean=n(comp)*dv, engine=rng_eng_init%p)
-            else
-               call PoissonRNG(number=nparticles, mean=n(comp)*dv)
-            end if
+          if (use_bl_rng) then
+             call PoissonRNG(number=nparticles, mean=n(comp)*dv, engine=rng_eng_init%p)
+          else
+             call PoissonRNG(number=nparticles, mean=n(comp)*dv)
+          end if
           n(comp) = nparticles/dv
        end do   
-    else
-       n = nint(n*dv)/dv ! Round to nearest integer
+    else ! Minimize fluctuations but ensure the number density is an integer
+       ! It is important here to use smart rounding so that the average concentration is preserved in expectation
+       ! Using nearest integer n = nint(n*dv)/dv will not work except for lots of molecules
+       if (use_bl_rng) then
+          call UniformRNGs(random, nspecies, engine=rng_eng_init%p)
+       else
+          call UniformRNGs(random, nspecies)
+       end if      
+        ! Round to nearest integer
+       n = floor( n*dv + random ) / dv
     end if  
     
   end subroutine round_to_integers
+  
+  subroutine sample_integers(n, ncells, dv)
+    integer, intent(in) :: ncells
+    real(dp_t), intent(inout) :: n(ncells)
+    real(dp_t), intent(in) :: dv ! cell volume
+    
+    integer, dimension(ncells) :: n_molecules ! Temporary array of integer number of molecules
+    real(dp_t), dimension(ncells) :: p
+    
+    p=n/sum(n) ! Probability proportional to mean density
+
+    if (use_bl_rng) then
+       call MultinomialRNG(samples=n_molecules, n_samples=ncells, N=nint(sum(n)*dv), p=p, engine=rng_eng_init%p)
+    else
+       call MultinomialRNG(samples=n_molecules, n_samples=ncells, N=nint(sum(n)*dv), p=p)
+    end if
+    
+    n = n_molecules/dv ! Convert back to number density
+  
+  end subroutine sample_integers
   
   subroutine init_n_model(mla,n_init,dx,the_bc_tower,input_array,comp) ! Read from a file
 
