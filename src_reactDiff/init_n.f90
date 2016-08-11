@@ -505,6 +505,7 @@ contains
     real(dp_t), dimension(ncells) :: p
     
     p=n/sum(n) ! Probability proportional to mean density
+    p=p/sum(p) ! Make sure it sums to 1 to roundoff again
 
     if (use_bl_rng) then
        call MultinomialRNG(samples=n_molecules, n_samples=ncells, N=nint(sum(n)*dv), p=p, engine=rng_eng_init%p)
