@@ -282,13 +282,16 @@ contains ! It is likely that vectorized versions will do better here
     real(dp) :: sum_p
     integer :: sample, sum_n
 
-    if(sum(p)>1.0_dp) stop "Sum of probabilities must be less than 1"
+    ! Donev: We need to give some slack here to allow for roundoff
+    ! Not really sure how to best handle this?
+    if(sum(p)>(1.0_dp+1e3*epsilon(1.0_dp))) stop "Sum of probabilities must be less than 1"
 
     sum_p=0
     sum_n=0
     do sample=1, n_samples
+       ! One should be careful here to avoid roundoff issues due to some probabilities being zero or summing to not exactly 1
        call BinomialRNG(number=samples(sample), n_trials=N-sum_n, &
-               success_prob=p(sample)/(1.0_dp-sum_p), engine=engine)
+               success_prob=min(1.0_dp, p(sample)/max(epsilon(1.0_dp), 1.0_dp-sum_p)), engine=engine)
        sum_n = sum_n + samples(sample)
        sum_p = sum_p + p(sample)
     end do      
