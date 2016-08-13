@@ -288,13 +288,8 @@ subroutine main_driver()
       end if
       
       if (abs(initial_variance) .gt. 0.d0) then
-         if(.not.integer_populations) then
-            call add_init_n_fluctuations(mla,n_old,dx,the_bc_tower)
-         else if(initial_variance<0.0d0) then
-            ! For integer populations the fluctuations were already added in init_n using Poisson random variates
-            ! There is no way here to ensure that the average does not change since this would destroy the Poisson fluctuations
-            call bl_error("initial_variance<0 not supported for integer_populations=T")
-         end if   
+         ! For integer populations fluctuations have already been added at initialization via the Poisson distribution
+         if(.not.integer_populations) call add_init_n_fluctuations(mla,n_old,dx,the_bc_tower)
       end if
 
    end if
@@ -442,9 +437,11 @@ subroutine main_driver()
           end do
           cellvolume=product(dx(1,1:dm))*cross_section ! Total system volume
           if (parallel_IOProcessor()) then
-          if (n_steps_write_avg>0) then ! Write number densities
-             !write(9,*) real(time), real(n_sum(:)/(multifab_volume(n_old(1))/nspecies)) 
-             write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies)) ! Custom for A+B<->C, only write one to save file space
+          if (n_steps_write_avg==2) then ! Write *only* the first species number density
+             ! Useful to save space in files where there is only one independent reaction
+             write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies))
+          else if (n_steps_write_avg>0) then ! Write number densities
+             write(9,*) real(time), real(n_sum(:)/(multifab_volume(n_old(1))/nspecies)) 
           else ! Here we write total number of molecules in the system instead of number densities             
              ! A. Donev: This is to match the particle code, write the same file it does
              write(21,*) real(time), real(sum(n_sum(:))*cellvolume), real(n_sum(:)*cellvolume)
