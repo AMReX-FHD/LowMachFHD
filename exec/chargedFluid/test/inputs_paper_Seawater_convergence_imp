@@ -54,32 +54,35 @@
 !  smoothing_width = 2.d0           ! scale factor for smoothing initial profile
 
   
-! convergence test
-  prob_hi(1:2) = 1.8d-5 5.76d-4       ! physical hi coordinate
+  !!!!!!!!!!!!!!!!!!
+  ! convergence test
+  !!!!!!!!!!!!!!!!!!
+
+  prob_hi(1:2) = 3.6d-5 1.152d-3       ! physical hi coordinate
   n_cells(1:2) = 4 128             ! number of cells in domain
   max_grid_size(1:2) = 4 32        ! max number of cells in a box
-  fixed_dt = 3.d-8
+  fixed_dt = 2.4d-7
   max_step = 100                   ! maximum number of time steps
   plot_int = 100                   ! Interval for writing a plotfile (for visit/amrvis)
   smoothing_width = 2.d0           ! scale factor for smoothing initial profile
 
 
-  prob_hi(1:2) = 1.8d-5 5.76d-4       ! physical hi coordinate
-  n_cells(1:2) = 8 256             ! number of cells in domain
-  max_grid_size(1:2) = 8 64        ! max number of cells in a box
-  fixed_dt = 1.5d-8
-  max_step = 200                   ! maximum number of time steps
-  plot_int = 200                   ! Interval for writing a plotfile (for visit/amrvis)
-  smoothing_width = 2.d0           ! scale factor for smoothing initial profile
+!  prob_hi(1:2) = 3.6d-5 1.152d-3       ! physical hi coordinate
+!  n_cells(1:2) = 8 256             ! number of cells in domain
+!  max_grid_size(1:2) = 8 64        ! max number of cells in a box
+!  fixed_dt = 1.2d-7
+!  max_step = 200                   ! maximum number of time steps
+!  plot_int = 200                   ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 4.d0           ! scale factor for smoothing initial profile
 
 
- prob_hi(1:2) = 1.8d-5 5.76d-4       ! physical hi coordinate
- n_cells(1:2) = 16 512             ! number of cells in domain
- max_grid_size(1:2) = 16 128        ! max number of cells in a box
- fixed_dt = 7.5d-9
- max_step = 400                   ! maximum number of time steps
- plot_int = 400                   ! Interval for writing a plotfile (for visit/amrvis)
- smoothing_width = 2.d0           ! scale factor for smoothing initial profile
+!  prob_hi(1:2) = 3.6d-5 1.152d-3       ! physical hi coordinate
+!  n_cells(1:2) = 16 512             ! number of cells in domain
+!  max_grid_size(1:2) = 16 128        ! max number of cells in a box
+!  fixed_dt = 6.d-8
+!  max_step = 400                   ! maximum number of time steps
+!  plot_int = 400                   ! Interval for writing a plotfile (for visit/amrvis)
+!  smoothing_width = 8.d0           ! scale factor for smoothing initial profile
 
 
 
@@ -251,7 +254,7 @@
   H_offdiag(1:1) = 0.d0    ! Off diagonal elements of H=d^2F/dx^2  
   H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
 
-  plot_stag = F            ! plot staggered velocities in separate plotfile
+  plot_stag = T            ! plot staggered velocities in separate plotfile
 
 /
 
@@ -263,7 +266,7 @@
   theta_pot = 0.5d0               ! for implicit algorithm_type=3, controls
                                  ! temporal discretization for potential term
 
-  num_pot_iters = 4
+  num_pot_iters = 2
 
 
 /
