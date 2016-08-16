@@ -13,6 +13,7 @@ module initial_projection_charged_module
   use fluid_charge_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: rhobar, variance_coef_mass
+  use probin_charged_module, only: dielectric_const
 
   implicit none
 
@@ -108,13 +109,26 @@ contains
     ! compute diffusive, stochastic, and potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
-                                      stoch_mass_fluxdiv,Temp,flux_total,dt,0.d0,dx,weights, &
-                                      the_bc_tower,Epot_mass_fluxdiv, &
-                                      charge=charge_old, &
-                                      grad_Epot=grad_Epot_old, &
-                                      Epot=Epot, &
-                                      permittivity=permittivity)
+    if (dielectric_const .eq. 0.d0) then
+       call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
+                                         stoch_mass_fluxdiv,Temp,flux_total,dt,0.d0,dx,weights, &
+                                         the_bc_tower)
+       do n=1,nlevs
+          call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
+          call multifab_setval(Epot(n),0.d0,all=.true.)
+          do i=1,dm
+             call multifab_setval(grad_Epot_old(n,i),0.d0,all=.true.)
+          end do
+       end do
+    else
+       call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
+                                         stoch_mass_fluxdiv,Temp,flux_total,dt,0.d0,dx,weights, &
+                                         the_bc_tower,Epot_mass_fluxdiv, &
+                                         charge=charge_old, &
+                                         grad_Epot=grad_Epot_old, &
+                                         Epot=Epot, &
+                                         permittivity=permittivity)
+    end if
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
