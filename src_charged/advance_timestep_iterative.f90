@@ -423,7 +423,7 @@ contains
                                     the_bc_tower)
        end if
 
-       ! compute mtemp = rho^{n+1,l+1} v^{n+1,l} v^{n+1,l}
+       ! compute mtemp = rho^{n+1,l+1} v^{n+1,l}
        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
        ! compute (eta,kappa)^{n+1,l+1}
@@ -478,9 +478,6 @@ contains
           call mk_advective_m_fluxdiv(mla,umac,mtemp,m_a_fluxdiv_new,dx,the_bc_tower%bc_tower_array)
 
        end if
-
-       ! compute mtemp = rho^{n+1,l+1} v^{n+1,l} v^{n+1,l}
-       call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
        ! build gmres_rhs_v
        ! first set gmres_rhs_v = (mold - mtemp) / dt
