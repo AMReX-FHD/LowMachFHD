@@ -127,7 +127,7 @@ contains
     type(multifab)  :: E_ext(mla%nlevel,mla%dim)
     type(bndry_reg) :: fine_flx(mla%nlevel)
   
-    real(kind=dp_t) :: avg_charge
+    real(kind=dp_t) :: sum
 
     type(bl_prof_timer), save :: bpt
     
@@ -147,6 +147,11 @@ contains
           call multifab_build_edge(permittivity_fc(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(E_Ext(n,i),mla%la(n),1,0,i)
        end do
+    end do
+
+    ! build the boundary flux register
+    do n=1,nlevs
+       call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
     end do
 
     ! compute face-centered rhoWchi from cell-centered values 
@@ -172,17 +177,12 @@ contains
 
     end do
 
-    ! build the boundary flux register
-    do n=1,nlevs
-       call bndry_reg_build(fine_flx(n),mla%la(n),ml_layout_get_pd(mla,n))
-    end do
-
     if (all(mla%pmask(1:dm))) then
-       avg_charge = multifab_sum_c(charge(1),1,1) / multifab_volume(charge(1))
-       call multifab_sub_sub_s_c(charge(1),1,avg_charge,1,0)
-       if (abs(avg_charge) .gt. 1.d-12) then
+       sum = multifab_sum_c(charge(1),1,1) / multifab_volume(charge(1))
+       call multifab_sub_sub_s_c(charge(1),1,sum,1,0)
+       if (abs(sum) .gt. 1.d-12) then
           if (parallel_IOProcessor()) then
-             print*,'average charge =',avg_charge
+             print*,'average charge =',sum
           end if
           call bl_warn("Warning: average charge is not zero")
        end if
@@ -222,18 +222,17 @@ contains
     call ml_cc_solve(mla,rhs,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
                      verbose=mg_verbose,ok_to_fix_singular=.false.)
 
-    ! Fill ghost cells to represent inhomogeneous condition on potential
-    if (Epot_wall_bc_type .eq. 2) then
+    ! for periodic problems subtract off the average of Epot
+    ! we can generalize this later for walls
+    if ( all(mla%pmask(1:dm)) ) then
+       sum = multifab_sum(Epot(1)) / boxarray_dvolume(get_boxarray(Epot(1)))
+       call multifab_sub_sub_s(Epot(1),sum)
        do n=1,nlevs
           call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                                dx_in=dx(n,:))
           call multifab_fill_boundary(Epot(n))
        end do
     end if
-
-    do n=1,nlevs
-       call bndry_reg_destroy(fine_flx(n))
-    end do
 
     ! compute the gradient of the electric potential
     call compute_grad(mla,Epot,grad_Epot,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
@@ -282,6 +281,10 @@ contains
     do n=1,nlevs
        call zero_edgeval_walls(flux(n,:),1,nspecies, &
                                the_bc_tower%bc_tower_array(n))
+    end do
+
+    do n=1,nlevs
+       call bndry_reg_destroy(fine_flx(n))
     end do
 
     do n=1,nlevs

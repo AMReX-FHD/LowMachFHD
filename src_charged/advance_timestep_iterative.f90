@@ -141,7 +141,7 @@ contains
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
-    real(kind=dp_t) :: weights(1)
+    real(kind=dp_t) :: weights(1), sum
 
     weights(1) = 1.d0
 
@@ -369,6 +369,18 @@ contains
        call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
                         the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
+       ! for periodic problems subtract off the average of Epot
+       ! we can generalize this later for walls
+       if ( all(mla%pmask(1:dm)) ) then
+          sum = multifab_sum(Epot(1)) / multifab_volume(Epot(1))
+          call multifab_sub_sub_s(Epot(1),sum)
+          do n=1,nlevs
+             call multifab_physbc(Epot(n),1,Epot_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+                                  dx_in=dx(n,:))
+             call multifab_fill_boundary(Epot(n))
+          end do
+       end if
+       
        ! compute the gradient of the electric potential for use in momentum force
        call compute_grad(mla,Epot,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
