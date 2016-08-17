@@ -13,7 +13,8 @@ module write_plotfile_charged_module
 
 contains
   
-  subroutine write_plotfile_charged(mla,name,rho,rhotot,Temp,umac,pres,Epot,istep,dx,time)
+  subroutine write_plotfile_charged(mla,name,rho,rhotot,Temp,umac,pres,Epot,grad_Epot, &
+                                    istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     character(len=*),   intent(in)    :: name
@@ -23,14 +24,15 @@ contains
     type(multifab),     intent(in)    :: umac(:,:)
     type(multifab),     intent(in)    :: pres(:)
     type(multifab),     intent(in)    :: Epot(:)
+    type(multifab),     intent(in)    :: grad_Epot(:,:)
     integer,            intent(in)    :: istep
     real(kind=dp_t),    intent(in)    :: dx(:,:),time
 
     ! local variables
     character(len=20), allocatable  :: plot_names(:)
-    character(len=20)               :: plot_names_stagx(1)
-    character(len=20)               :: plot_names_stagy(1)
-    character(len=20)               :: plot_names_stagz(1)
+    character(len=20)               :: plot_names_stagx(2)
+    character(len=20)               :: plot_names_stagy(2)
+    character(len=20)               :: plot_names_stagz(2)
     character(len=20)               :: plotfile_name
     character(len=20)               :: plotfile_namex
     character(len=20)               :: plotfile_namey
@@ -73,6 +75,9 @@ contains
     plot_names_stagx(1) = "velx"
     plot_names_stagy(1) = "vely"
     plot_names_stagz(1) = "velz"
+    plot_names_stagx(2) = "grad_Epotx"
+    plot_names_stagy(2) = "grad_Epoty"
+    plot_names_stagz(2) = "grad_Epotz"
 
     ! compute concentrations
     do n=1,nlevs
@@ -80,11 +85,12 @@ contains
     end do
     call convert_rhoc_to_c(mla,rho,rhotot,conc,.true.)
 
-    ! build plotdata for 2*nspecies+2*dm+4 and 0 ghost cells
     do n=1,nlevs
+       ! build plotdata for 2*nspecies+2*dm+4 and 0 ghost cells
        call multifab_build(plotdata(n),mla%la(n),2*nspecies+2*dm+5,0)
        do i=1,dm
-          call multifab_build_edge(plotdata_stag(n,i), mla%la(n), 1, 0, i)
+          ! staggered velocity and grad_Epot
+          call multifab_build_edge(plotdata_stag(n,i), mla%la(n), 2, 0, i)
        end do
     enddo
 
@@ -122,10 +128,11 @@ contains
        call multifab_copy_c(plotdata(n),2*nspecies+2*dm+5,Epot(n),1,1,0)
     enddo
 
-    ! copy staggered velocity and momentum into plotdata_stag
+    ! copy staggered velocity and grad_Epot into plotdata_stag
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(plotdata_stag(n,i),1,umac(n,i),1,1)
+          call multifab_copy_c(plotdata_stag(n,i),1,     umac(n,i),1,1)
+          call multifab_copy_c(plotdata_stag(n,i),2,grad_Epot(n,i),1,1)
        end do
     end do
     

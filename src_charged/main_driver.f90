@@ -563,7 +563,7 @@ subroutine main_driver()
            write(*,*), 'writing initial plotfile 0'
         end if
         call write_plotfile_charged(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,Epot, &
-                                    0,dx,time)
+                                    grad_Epot_old,0,dx,time)
      end if
      
      ! print out projection (average) and variance)
@@ -710,7 +710,7 @@ subroutine main_driver()
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
             call write_plotfile_charged(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,Epot, &
-                                        istep,dx,time)
+                                        grad_Epot_new,istep,dx,time)
          end if
 
          ! write checkpoint at specific intervals
