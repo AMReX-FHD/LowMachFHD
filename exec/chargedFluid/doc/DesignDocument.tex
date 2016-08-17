@@ -357,8 +357,8 @@ with electric potential given by,
 \end{equation}
 We define $\Ab_\Phi$ as the electrostatic mass flux coefficient.
 The flux due to the electrostatic force is potentially stiff.  We
-use the parameter $\theta_\Phi$ to control the temporal discretization of this term
-($\theta_\Phi=1$ is fully implicit, etc.).
+use the parameter $\theta$ to control the temporal discretization of this term
+($\theta=1$ is fully implicit, etc.).
 
 \subsection{Iterative Implicit Potential Algorithm}
 Note that this algorithm is bit-wise equivalent to the iterative potential 
@@ -389,17 +389,17 @@ For the projection, we solve for $\phi$ and update $\vb^{\rm init}$ as follows:
 Set $(\vb,\rho_i)^{n+1,0} = (\vb,\rho_i)^n$.
 We loop over {\bf Step 1} -- {\bf Step 3} for $l=0,\cdots,l_{\rm max}$:\\ \\
 {\bf Step 1: Density Update}\\ \\
-In this algorithm $\theta_\Phi$ controls
-the temporal discretization of the electric potential.  $\theta_\Phi=1$ is fully
-implicit; $\theta_\Phi=0.5$ is semi-implicit.\\ \\
+In this algorithm $\theta$ controls
+the temporal discretization of the scheme.  $\theta=1$ is fully
+implicit; $\theta=0.5$ is semi-implicit.\\ \\
 
 We would like to solve the following,
 \begin{eqnarray}
-\frac{(\rho\wb)^{n+1,l+1} - (\rho\wb)^n}{\Delta t} &=&  -\half\nabla\cdot(\rho\wb\vb)^n - \half\nabla\cdot(\rho\wb\vb)^{n+1,l}\nonumber\\
-&&+ \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l} \nonumber\\
-&&+ \half\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n
-+ \half\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l}\mathcal{Z}^n\nonumber\\
-&&+ (1-\theta_\Phi)\nabla\cdot \Ab_\Phi^n\nabla\Phib^n + \theta_\Phi\nabla\cdot \Ab_\Phi^{n+1,l}\nabla\Phib^{n+1,l+1}
+\frac{(\rho\wb)^{n+1,l+1} - (\rho\wb)^n}{\Delta t} &=&  -(1-\theta)\nabla\cdot(\rho\wb\vb)^n - \theta\nabla\cdot(\rho\wb\vb)^{n+1,l}\nonumber\\
+&&+ (1-\theta)\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \theta\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l} \nonumber\\
+&&+ (1-\theta)\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n
++ \theta\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l}\mathcal{Z}^n\nonumber\\
+&&+ (1-\theta)\nabla\cdot \Ab_\Phi^n\nabla\Phib^n + \theta\nabla\cdot \Ab_\Phi^{n+1,l}\nabla\Phib^{n+1,l+1}
 \label{eq:density update}
 \end{eqnarray}
 \begin{equation}
@@ -408,16 +408,16 @@ We would like to solve the following,
 but we can't easily since the right-hand-size of (\ref{eq:potential}) is what we are
 solving for in (\ref{eq:density update}).  Rewriting (\ref{eq:density update}) gives,
 \begin{eqnarray}
-(\rho\wb)^{n+1,l+1} - \Delta t\theta_\Phi\nabla\cdot \Ab_\Phi^{n+1,l}\nabla\Phib^{n+1,l+1} &=& \nonumber\\
-&&\hspace{-1.5in}(\rho\wb)^n + \Delta t\Big[-\half\nabla\cdot(\rho\wb\vb)^n -\half\nabla\cdot(\rho\wb\vb)^{n+1,l}\nonumber\\
-&&\hspace{-.7in}+ \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \half\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l}\nonumber\\
-&&\hspace{-.7in}+ \half\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n + \half\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l}\mathcal{Z}^n\nonumber\\
-&&\hspace{-.7in}+ (1-\theta_\Phi)\nabla\cdot \Ab_\Phi^n\nabla\Phib^n\Big]\nonumber\\
+(\rho\wb)^{n+1,l+1} - \Delta t\theta\nabla\cdot \Ab_\Phi^{n+1,l}\nabla\Phib^{n+1,l+1} &=& \nonumber\\
+&&\hspace{-1.5in}(\rho\wb)^n + \Delta t\Big[-(1-\theta)\nabla\cdot(\rho\wb\vb)^n -\theta\nabla\cdot(\rho\wb\vb)^{n+1,l}\nonumber\\
+&&\hspace{-.7in}+ (1-\theta)\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^n + \theta\nabla\cdot(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l}\nonumber\\
+&&\hspace{-.7in}+ (1-\theta)\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^n\mathcal{Z}^n + \theta\nabla\cdot\sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l}\mathcal{Z}^n\nonumber\\
+&&\hspace{-.7in}+ (1-\theta)\nabla\cdot \Ab_\Phi^n\nabla\Phib^n\Big]\nonumber\\
 &\equiv& \mathcal{R}\label{eq:density update2}
 \end{eqnarray}
 Applying $\zb^T$ to equation (\ref{eq:density update2}) gives
 \begin{equation}
-(\zb^T\rho\wb)^{n+1,l+1} - \Delta t\theta_\Phi\zb^T\nabla\cdot \Ab_\Phi^{n+1,l}\nabla\Phib^{n+1,l+1} = \zb^T\mathcal{R}\label{eq:density update3}
+(\zb^T\rho\wb)^{n+1,l+1} - \Delta t\theta\zb^T\nabla\cdot \Ab_\Phi^{n+1,l}\nabla\Phib^{n+1,l+1} = \zb^T\mathcal{R}\label{eq:density update3}
 \end{equation}
 Substituting (\ref{eq:density update3}) into (\ref{eq:potential}) gives,
 \begin{equation}
@@ -432,6 +432,7 @@ the coefficients in the Poisson solve all have the same sign, and thus the syste
 is elliptic.  Once we have $\Phib^{n+1,l+1}$, we compute $(\rho\wb)^{n+1,l+1}$ using
 (\ref{eq:density update}).\\ \\
 {\bf Step 2: Compute Velocity Constraint Correction}\\ \\
+{\color{red} I don't think we need this anymore.}
 Now in general $(\rho\wb)^{n+1,l+1}$ will not satisfy the equation of state,
 \begin{equation}
 \sum_i \frac{\rho_i}{\bar\rho_i} = 1,
@@ -449,15 +450,7 @@ must be consistent with mass fluxes in that,
 \end{equation}
 The problem is that the mass fluxes are a function of the velocity field itself
 (see, e.g., {\bf Step 1}), so the best we can do is used an iteratively-lagged
-approximation for the velocity field to compute $\Fb$.  
-For the semi-implicit case ($\theta=0.5$) as the iterations converge, the RHS
-of the constraint does become consistent with the new-time mass fluxes used
-to update the densities, and the variables stay on the EOS.
-For the fully-implicit case this is not true, and since the overall scheme
-is iterative, we need to form a correction to the constraint that modifies the
-velocity field in a way that drives the variables toward satisfying the equation of 
-state.  Furthermore, since thie equation of state is linear, there should be no
-drift due to numerical discretization.
+approximation for the velocity field to compute $\Fb$.
 
 If we use the notation $\rhob = (\rho_1,\rho_2,\cdots)$ and
 $\bar\rhob^{-1}=(\frac{1}{\bar\rho_1},\frac{1}{\bar\rho_2},\cdots)$ we can write
@@ -494,7 +487,7 @@ Solve the following for $\vb^{n+1,l+1}$ and $p^{n+1,l+1}$:
 &&+\half\mathcal{A}_0^n\vb^n + \half\mathcal{A}_0^{n+1,l+1}\vb^{n+1,l+1}\nonumber\\
 &&+\half\nabla\cdot\sqrt{\frac{2\eta^nk_BT}{\Delta t\Delta V}}\overline{\Wb}^n
 +\half\nabla\cdot\sqrt{\frac{2\eta^{n+1,l+1}k_BT}{\Delta t\Delta V}}\overline{\Wb}^n\nonumber\\
-&&-(1-\theta_\Phi)(\rho\wb^T\zb\nabla\Phib)^n - \theta_\Phi(\rho\wb^T\zb\nabla\Phib)^{n+1,l+1}
+&&-(1-\theta)(\rho\wb^T\zb\nabla\Phib)^n - \theta(\rho\wb^T\zb\nabla\Phib)^{n+1,l+1}
 \end{eqnarray}
 \begin{equation}
 \nabla\cdot\vb^{n+1,l+1} = S^{n+1,l+1}  + \delta\chi^{n+1,l+1} \equiv S[(\rho\Wb\chib\Gammab\nabla\xb)^{n+1,l+1} + \sqrt{\frac{2k_B}{\Delta t\Delta V}}\Lb_\half^{n+1,l+1}\mathcal{Z}^{n+1} - \Ab_\Phi^{n+1,l+1}\nabla\Phib^{n+1,l+1}] + \delta\chi^{n+1,l+1}
@@ -506,7 +499,7 @@ $p^{n+1,l+1} = p^{n+1,l} + \delta p$ this can be written as:
 &&+ \half\nabla\cdot(-\rho^n\vb^n\vb^n - \rho^{n+1,l}\vb^{n+1,l}\vb^{n+1,l}) + \half(\mathcal{A}_0^n\vb^n + \mathcal{A}_0^{n+1,l+1}\overline\vb^{n+1,l} )\nonumber\\
 &&+\half\nabla\cdot\sqrt{\frac{2\eta^nk_BT}{\Delta t\Delta V}}\overline{\Wb}^n +\half\nabla\cdot\sqrt{\frac{2\eta^{n+1,l+1}k_BT}{\Delta t\Delta V}}\overline{\Wb}^n\nonumber\\
 &&+ \half\left(\rho^n+\rho^{n+1}\right)\gb\nonumber\\
-&&- (1-\theta_\Phi)\left(\rho\wb^T\zb\nabla\Phib\right)^n - \theta_\Phi\left(\rho\wb^T\zb\nabla\Phib\right)^{n+1,l+1},
+&&- (1-\theta)\left(\rho\wb^T\zb\nabla\Phib\right)^n - \theta\left(\rho\wb^T\zb\nabla\Phib\right)^{n+1,l+1},
 \end{eqnarray}
 \begin{equation}
 -\nabla\cdot\deltab\vb = \nabla\cdot\overline\vb^{n+1,l} - (S^{n+1,l+1} + \delta\chi^{n+1,l+1}).
