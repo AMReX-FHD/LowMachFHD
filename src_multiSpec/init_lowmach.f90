@@ -42,7 +42,7 @@ module init_lowmach_module
 
   !=========================================================
   ! case 3:
-  ! 1 fluid on top of another
+  ! one fluid on top of another
   ! c = c_init(1,:) on bottom; c = c_init(2,:) on top
   ! smoothing_width > 0 is a tanh smoothed interface where smoothing width is approx the # of grid 
   !   cells and then c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
@@ -116,6 +116,7 @@ module init_lowmach_module
   ! case 15:
   ! Discontinuous band in central 50% of domain
   ! c=c_init(1,:) inside; c=c_init(2,:) outside
+  ! if prob_type=-15, add another tanh along other dimension for last two species (two stripes crossing)
 
 
 contains
@@ -209,7 +210,7 @@ contains
  
     ! local varables
     integer          :: i,j,n,seed(12)
-    real(kind=dp_t)  :: x,y,rad,L(2),sum,r,r1,r2,y1,y2,c_loc
+    real(kind=dp_t)  :: x,y,rad,L(2),sum,r,r1,r2,y1,y2,c_loc,x1,x2,coeff
     real(kind=dp_t)  :: gradToverT,m_e
  
     real(kind=dp_t)  :: random
@@ -345,11 +346,12 @@ contains
           ! smoothed version
           do j=lo(2),hi(2)
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
-             do n=1,nspecies
+             do n=1,nspecies                
                 c_loc = c_init(1,n) + (c_init(2,n)-c_init(1,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)
                 c(lo(1):hi(1),j,n) = c_loc
              end do
           end do
+          
 
        else if (smoothing_width .eq. -2.d0) then
 
@@ -544,9 +546,11 @@ contains
 
        ! first quarter of domain
        y1 = (3*prob_lo(2) + prob_hi(2)) / 4.d0
-
+       x1 = (3*prob_lo(1) + prob_hi(1)) / 4.d0
+       
        ! last quarter of domain
        y2 = (prob_lo(2) + 3*prob_hi(2)) / 4.d0
+       x2 = (prob_lo(`) + 3*prob_hi(1)) / 4.d0
 
        ! x-velocity = u_init(1) below centerline
        !              u_init(2) above centerline
@@ -603,8 +607,12 @@ contains
           do j=lo(2),hi(2)
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
              do n=1,nspecies
-                c_loc = c_init(2,n) + (c_init(1,n)-c_init(2,n))*0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)* &
-                                                 0.5d0*(tanh((-y+y2-y1)/(smoothing_width*dx(2)))+1.d0)
+                coeff=0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)*0.5d0*(tanh((-y+y2-y1)/(smoothing_width*dx(2)))+1.d0)
+                if((prob_type==-15).and.(n>=nspecies-1)) then ! Donev: Add a special case for doing ternary diffusion NaCl + KCl
+                   ! Here the last two species have a tanh profile in both x and y
+                   coeff=coeff*0.5d0*(tanh(x/(smoothing_width*dx(1)))+1.d0)*0.5d0*(tanh((-x+x2-x1)/(smoothing_width*dx(1)))+1.d0)
+                end if   
+                c_loc = c_init(1,n) + (c_init(2,n)-c_init(1,n))*coeff
                 c(lo(1):hi(1),j,n) = c_loc
              end do
           end do
