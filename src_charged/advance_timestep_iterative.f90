@@ -94,7 +94,9 @@ contains
     type(multifab) , intent(inout) :: Epot(:)
     type(multifab) , intent(in   ) :: permittivity_old(:)
     type(multifab) , intent(inout) :: permittivity_new(:)
-    type(multifab) , intent(inout) :: gradPhiApprox(:,:)
+    ! If present, this will contain z^T*F/z^T*A = z^T*W*chi*Gamma*grad(x) / (rho^/(nkT)*z^T*W*chi*W*z)
+    ! This is the ambipolar approximation to the gradient of the potential, which is wrong in general
+    type(multifab) , intent(inout), optional :: gradPhiApprox(:,:) 
 
     ! local
     type(multifab) ::  diff_mass_fluxdiv_old(mla%nlevel)
@@ -592,12 +594,14 @@ contains
                                          Temp,flux_total,flux_diff, &
                                          dt,time,dx,weights,the_bc_tower)
 
-       ! compute grad(phi) approximation, z^T Fmass / z^T A_Phi
-       call dot_with_z_face(mla,flux_diff,gradPhiApprox)
-       call dot_with_z_face(mla,A_Phi,zdotA)
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_div_div_c(gradPhiApprox(n,i),1,zdotA(n,i),1,1,0)
+       if(present(gradPhiApprox) .and. (l==num_pot_iters)) then 
+          ! compute grad(phi) approximation, z^T Fmass / z^T A_Phi
+          call dot_with_z_face(mla,flux_diff,gradPhiApprox)
+          call dot_with_z_face(mla,A_Phi,zdotA)
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_div_div_c(gradPhiApprox(n,i),1,zdotA(n,i),1,1,0)
+             end do
           end do
        end do
 
