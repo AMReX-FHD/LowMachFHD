@@ -65,7 +65,7 @@ contains
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
-                                        Epot,permittivity_old,permittivity_new)
+                                        Epot,permittivity_old,permittivity_new,gradPhiApprox)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -94,6 +94,7 @@ contains
     type(multifab) , intent(inout) :: Epot(:)
     type(multifab) , intent(in   ) :: permittivity_old(:)
     type(multifab) , intent(inout) :: permittivity_new(:)
+    type(multifab) , intent(inout) :: gradPhiApprox(:,:)
 
     ! local
     type(multifab) ::  diff_mass_fluxdiv_old(mla%nlevel)
@@ -135,6 +136,8 @@ contains
     type(multifab) ::            A_Phi(mla%nlevel,mla%dim) ! face-centered A_Phi
     type(multifab) ::      solver_beta(mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
     type(multifab) ::  permittivity_fc(mla%nlevel,mla%dim) ! beta=epsilon+dt*z^T*A_Phi for Poisson solve
+
+    type(multifab) :: zdotA(mla%nlevel,mla%dim)
     
     type(bndry_reg) :: fine_flx(mla%nlevel)
 
@@ -192,6 +195,7 @@ contains
           call multifab_build_edge(A_Phi(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(solver_beta(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(permittivity_fc(n,i),mla%la(n),1,0,i)
+          call multifab_build_edge(zdotA(n,i),mla%la(n),1,0,i)
        end do
     end do
 
@@ -588,6 +592,15 @@ contains
                                          Temp,flux_total,flux_diff, &
                                          dt,time,dx,weights,the_bc_tower)
 
+       ! compute grad(phi) approximation, z^T Fmass / z^T A_Phi
+       call dot_with_z_face(mla,flux_diff,gradPhiApprox)
+       call dot_with_z_face(mla,A_Phi,zdotA)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_div_div_c(gradPhiApprox(n,i),1,zdotA(n,i),1,1,0)
+          end do
+       end do
+
        ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
        do n=1,nlevs
           call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
@@ -767,6 +780,7 @@ contains
           call multifab_destroy(A_Phi(n,i))
           call multifab_destroy(solver_beta(n,i))
           call multifab_destroy(permittivity_fc(n,i))
+          call multifab_destroy(zdotA(n,i))
        end do
     end do
     do n = 1,nlevs

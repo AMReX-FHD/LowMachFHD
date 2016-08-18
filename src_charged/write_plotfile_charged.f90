@@ -14,7 +14,7 @@ module write_plotfile_charged_module
 contains
   
   subroutine write_plotfile_charged(mla,name,rho,rhotot,Temp,umac,pres,Epot,grad_Epot, &
-                                    istep,dx,time)
+                                    gradPhiApprox,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     character(len=*),   intent(in)    :: name
@@ -25,14 +25,15 @@ contains
     type(multifab),     intent(in)    :: pres(:)
     type(multifab),     intent(in)    :: Epot(:)
     type(multifab),     intent(in)    :: grad_Epot(:,:)
+    type(multifab),     intent(in)    :: gradPhiApprox(:,:)
     integer,            intent(in)    :: istep
     real(kind=dp_t),    intent(in)    :: dx(:,:),time
 
     ! local variables
     character(len=20), allocatable  :: plot_names(:)
-    character(len=20)               :: plot_names_stagx(2)
-    character(len=20)               :: plot_names_stagy(2)
-    character(len=20)               :: plot_names_stagz(2)
+    character(len=20)               :: plot_names_stagx(3)
+    character(len=20)               :: plot_names_stagy(3)
+    character(len=20)               :: plot_names_stagz(3)
     character(len=20)               :: plotfile_name
     character(len=20)               :: plotfile_namex
     character(len=20)               :: plotfile_namey
@@ -78,6 +79,9 @@ contains
     plot_names_stagx(2) = "grad_Epotx"
     plot_names_stagy(2) = "grad_Epoty"
     plot_names_stagz(2) = "grad_Epotz"
+    plot_names_stagx(3) = "gradPhiApproxx"
+    plot_names_stagy(3) = "gradPhiApproxy"
+    plot_names_stagz(3) = "gradPhiApproxz"
 
     ! compute concentrations
     do n=1,nlevs
@@ -90,7 +94,7 @@ contains
        call multifab_build(plotdata(n),mla%la(n),2*nspecies+2*dm+5,0)
        do i=1,dm
           ! staggered velocity and grad_Epot
-          call multifab_build_edge(plotdata_stag(n,i), mla%la(n), 2, 0, i)
+          call multifab_build_edge(plotdata_stag(n,i), mla%la(n), 3, 0, i)
        end do
     enddo
 
@@ -131,8 +135,9 @@ contains
     ! copy staggered velocity and grad_Epot into plotdata_stag
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(plotdata_stag(n,i),1,     umac(n,i),1,1)
-          call multifab_copy_c(plotdata_stag(n,i),2,grad_Epot(n,i),1,1)
+          call multifab_copy_c(plotdata_stag(n,i),1,         umac(n,i),1,1)
+          call multifab_copy_c(plotdata_stag(n,i),2,    grad_Epot(n,i),1,1)
+          call multifab_copy_c(plotdata_stag(n,i),3,gradPhiApprox(n,i),1,1)
        end do
     end do
     

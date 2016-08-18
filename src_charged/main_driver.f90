@@ -94,6 +94,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: grad_Epot_old(:,:)
   type(multifab), allocatable  :: grad_Epot_new(:,:)
   type(multifab), allocatable  :: Epot(:)
+  type(multifab), allocatable  :: gradPhiApprox(:,:)
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs
@@ -145,6 +146,7 @@ subroutine main_driver()
   allocate(grad_Epot_old(nlevs,dm))
   allocate(grad_Epot_new(nlevs,dm))
   allocate(Epot(nlevs))
+  allocate(gradPhiApprox(nlevs,dm))
 
   ! build pmask
   allocate(pmask(dm))
@@ -375,6 +377,9 @@ subroutine main_driver()
         call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
      end do
      call multifab_build(Epot(n),mla%la(n),1,1)
+     do i=1,dm
+        call multifab_build_edge(gradPhiApprox(n,i),mla%la(n),1,0,i)
+     end do
 
      ! eta and Temp on nodes (2d) or edges (3d)
      if (dm .eq. 2) then
@@ -427,6 +432,9 @@ subroutine main_driver()
      end do
      call multifab_setval(Epot(n),0.d0,all=.true.)
      call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
+     do i=1,dm
+        call multifab_setval(gradPhiApprox(n,i),0.d0,all=.true.)
+     end do
   end do
 
   ! compute total charge
@@ -563,7 +571,7 @@ subroutine main_driver()
            write(*,*), 'writing initial plotfile 0'
         end if
         call write_plotfile_charged(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,Epot, &
-                                    grad_Epot_old,0,dx,time)
+                                    grad_Epot_old,gradPhiApprox,0,dx,time)
      end if
      
      ! print out projection (average) and variance)
@@ -645,7 +653,8 @@ subroutine main_driver()
                                          dx,dt,time,the_bc_tower,istep, &
                                          grad_Epot_old,grad_Epot_new, &
                                          charge_old,charge_new,Epot, &
-                                          permittivity_old,permittivity_new)
+                                         permittivity_old,permittivity_new, &
+                                         gradPhiApprox)
       end if
 
       time = time + dt
@@ -710,7 +719,7 @@ subroutine main_driver()
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
             call write_plotfile_charged(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,Epot, &
-                                        grad_Epot_new,istep,dx,time)
+                                        grad_Epot_new,gradPhiApprox,istep,dx,time)
          end if
 
          ! write checkpoint at specific intervals
@@ -802,6 +811,9 @@ subroutine main_driver()
         call multifab_destroy(grad_Epot_new(n,i))
      end do
      call multifab_destroy(Epot(n))
+     do i=1,dm
+        call multifab_destroy(gradPhiApprox(n,i))
+     end do
   end do
   deallocate(grad_Epot_old,grad_Epot_new)
 
