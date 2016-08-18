@@ -608,12 +608,15 @@ contains
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
              do n=1,nspecies
                 coeff=0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)*0.5d0*(tanh((-y+y2-y1)/(smoothing_width*dx(2)))+1.d0)
-                if((prob_type==-15).and.(n>=nspecies-1)) then ! Donev: Add a special case for doing ternary diffusion NaCl + KCl
-                   ! Here the last two species have a tanh profile in both x and y
+                if((prob_type==-15).and.(n==nspecies-1)) then ! Donev: Add a special case for doing ternary diffusion NaCl + KCl
+                   ! Here the last two species have a tanh profile in both x and y (species are Na+,Cl-,K+,water)
                    coeff=coeff*0.5d0*(tanh(x/(smoothing_width*dx(1)))+1.d0)*0.5d0*(tanh((-x+x2-x1)/(smoothing_width*dx(1)))+1.d0)
                 end if   
-                c_loc = c_init(1,n) + (c_init(2,n)-c_init(1,n))*coeff
+                c_loc = c_init(2,n) + (c_init(1,n)-c_init(2,n))*coeff
                 c(lo(1):hi(1),j,n) = c_loc
+                if((prob_type==-15).and.(n==nspecies-1)) then ! Add chlorine if adding potassium
+                    c(lo(1):hi(1),j,2) = c(lo(1):hi(1),j,2) + c_loc
+                end if
              end do
           end do
 
