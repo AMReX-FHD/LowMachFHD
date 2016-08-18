@@ -114,6 +114,7 @@ contains
     type(multifab) ::      rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::   rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
+    type(multifab) ::  flux_diff(mla%nlevel,mla%dim)
 
     type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
     type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
@@ -153,6 +154,7 @@ contains
           call multifab_build_edge(           rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(        rhotot_fc(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(       flux_total(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(        flux_diff(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(Lorentz_force_old(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(Lorentz_force_new(n,i),mla%la(n),1,0,i)
        end do
@@ -244,14 +246,14 @@ contains
     if (algorithm_type .eq. 1) then
        call compute_mass_fluxdiv_charged(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         Temp,flux_total,dt,time,dx,weights, &
+                                         Temp,flux_total,flux_diff,dt,time,dx,weights, &
                                          the_bc_tower, &
                                          Epot_mass_fluxdiv,charge_old,grad_Epot_old,Epot, &
                                          permittivity_old)
     else if (algorithm_type .eq. 2) then
        call compute_mass_fluxdiv_charged(mla,rho_old,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         Temp,flux_total,0.5d0*dt,time,dx,weights, &
+                                         Temp,flux_total,flux_diff,0.5d0*dt,time,dx,weights, &
                                          the_bc_tower, &
                                          Epot_mass_fluxdiv,charge_old,grad_Epot_old,Epot, &
                                          permittivity_old)
@@ -537,7 +539,7 @@ contains
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp,flux_total,dt,time,dx,weights, &
+                                      Temp,flux_total,flux_diff,dt,time,dx,weights, &
                                       the_bc_tower, &
                                       Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
                                       permittivity_new)
@@ -755,6 +757,7 @@ contains
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(flux_total(n,i))
+          call multifab_destroy(flux_diff(n,i))
           call multifab_destroy(Lorentz_force_old(n,i))
           call multifab_destroy(Lorentz_force_new(n,i))
        end do

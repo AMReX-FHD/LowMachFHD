@@ -72,6 +72,7 @@ contains
     type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
+    type(multifab) :: flux_diff(mla%nlevel,mla%dim)
 
     real(kind=dp_t) :: weights(1)
     
@@ -94,6 +95,7 @@ contains
           call multifab_build_edge(   rhotot_fc(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(rhototinv_fc(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(  flux_total(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(   flux_diff(n,i),mla%la(n),nspecies,0,i)
        end do       
     end do
 
@@ -111,7 +113,8 @@ contains
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     if (dielectric_const .eq. 0.d0) then
        call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
-                                         stoch_mass_fluxdiv,Temp,flux_total,dt,0.d0,dx,weights, &
+                                         stoch_mass_fluxdiv,Temp,flux_total,flux_diff, &
+                                         dt,0.d0,dx,weights, &
                                          the_bc_tower)
        do n=1,nlevs
           call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
@@ -122,7 +125,8 @@ contains
        end do
     else
        call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
-                                         stoch_mass_fluxdiv,Temp,flux_total,dt,0.d0,dx,weights, &
+                                         stoch_mass_fluxdiv,Temp,flux_total,flux_diff, &
+                                         dt,0.d0,dx,weights, &
                                          the_bc_tower,Epot_mass_fluxdiv, &
                                          charge=charge_old, &
                                          grad_Epot=grad_Epot_old, &
@@ -225,6 +229,7 @@ contains
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(rhototinv_fc(n,i))
           call multifab_destroy(flux_total(n,i))
+          call multifab_destroy(flux_diff(n,i))
        end do
     end do
 

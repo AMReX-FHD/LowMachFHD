@@ -29,7 +29,7 @@ contains
   ! this computes "F = -rho W chi [Gamma grad x... ]"
   subroutine compute_mass_fluxdiv_charged(mla,rho,gradp_baro, &
                                           diff_fluxdiv,stoch_fluxdiv, &
-                                          Temp,flux_total, &
+                                          Temp,flux_total,flux_diff, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_tower, &
                                           Epot_fluxdiv,charge,grad_Epot,Epot, &
@@ -42,6 +42,7 @@ contains
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
     type(multifab) , intent(inout)   :: flux_total(:,:)
+    type(multifab) , intent(inout)   :: flux_diff(:,:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -121,6 +122,7 @@ contains
     do n=1,nlevs
        do i=1,dm
           call setval(flux_total(n,i),0.d0,all=.true.)
+          call setval(flux_diff(n,i),0.d0,all=.true.)
        end do
     end do
 
@@ -140,7 +142,14 @@ contains
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama, &
                                 diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
-                                flux_total,dx,the_bc_tower)
+                                flux_diff,dx,the_bc_tower)
+
+    ! add to flux total.  We need flux_diff separately
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_plus_plus_c(flux_total(n,i),1,flux_diff(n,i),1,nspecies,0)
+       end do
+    end do
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
