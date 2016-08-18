@@ -550,7 +550,7 @@ contains
        
        ! last quarter of domain
        y2 = (prob_lo(2) + 3*prob_hi(2)) / 4.d0
-       x2 = (prob_lo(`) + 3*prob_hi(1)) / 4.d0
+       x2 = (prob_lo(1) + 3*prob_hi(1)) / 4.d0
 
        ! x-velocity = u_init(1) below centerline
        !              u_init(2) above centerline
