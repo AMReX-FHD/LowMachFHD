@@ -603,7 +603,7 @@ contains
                 call multifab_div_div_c(gradPhiApprox(n,i),1,zdotA(n,i),1,1,0)
              end do
           end do
-       end do
+       end if
 
        ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
        do n=1,nlevs
