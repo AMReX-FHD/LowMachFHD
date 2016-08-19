@@ -51,7 +51,7 @@ contains
   
     ! rho + species (rho) + nspeces (conc) + Temp + dm (averaged umac) 
     !     + dm (shifted umac) + pres + charge + Epot + dm (averaged grad_Epot)
-    allocate(plot_names(2*nspecies+2*dm+8))
+    allocate(plot_names(2*nspecies+3*dm+8))
     allocate(plotdata(nlevs))
     allocate(plotdata_stag(nlevs,dm))
  
@@ -75,6 +75,8 @@ contains
     plot_names(2*nspecies+2*dm+6) = "averaged_grad_Epotx"
     plot_names(2*nspecies+2*dm+7) = "averaged_grad_Epoty"
     if (dm > 2) plot_names(2*nspecies+2*dm+8) = "averaged_grad_Epotz"
+    plot_names(2*nspecies+3*dm+6) = "av_gradPhiApproxx"
+    plot_names(2*nspecies+3*dm+7) = "av_gradPhiApproxy"
 
     plot_names_stagx(1) = "velx"
     plot_names_stagy(1) = "vely"
@@ -94,7 +96,7 @@ contains
 
     do n=1,nlevs
        ! build plotdata for 2*nspecies+3*dm+5 and 0 ghost cells
-       call multifab_build(plotdata(n),mla%la(n),2*nspecies+3*dm+5,0)
+       call multifab_build(plotdata(n),mla%la(n),2*nspecies+4*dm+5,0)
        do i=1,dm
           ! staggered velocity and grad_Epot
           call multifab_build_edge(plotdata_stag(n,i), mla%la(n), 3, 0, i)
@@ -138,6 +140,11 @@ contains
     ! grad_Epot_averaged
     do i=1,dm
        call average_face_to_cc(mla,grad_Epot(:,i),1,plotdata,2*nspecies+2*dm+5+i,1)
+    end do
+
+    ! gradPhiApprox_averaged
+    do i=1,dm
+       call average_face_to_cc(mla,gradPhiApprox(:,i),1,plotdata,2*nspecies+3*dm+5+i,1)
     end do
 
     ! copy staggered velocity and grad_Epot into plotdata_stag
