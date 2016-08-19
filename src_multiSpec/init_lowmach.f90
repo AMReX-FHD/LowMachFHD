@@ -551,6 +551,16 @@ contains
        ! last quarter of domain
        y2 = (prob_lo(2) + 3*prob_hi(2)) / 4.d0
        x2 = (prob_lo(1) + 3*prob_hi(1)) / 4.d0
+       
+       if (prob_type==-15) then
+          ! first quarter of domain
+          y1 = (2*prob_lo(2) + prob_hi(2)) / 3.d0
+          x1 = (2*prob_lo(1) + prob_hi(1)) / 3.d0
+       
+          ! last quarter of domain
+          y2 = (prob_lo(2) + 2*prob_hi(2)) / 3.d0
+          x2 = (prob_lo(1) + 2*prob_hi(1)) / 3.d0
+       end if
 
        ! x-velocity = u_init(1) below centerline
        !              u_init(2) above centerline
@@ -606,17 +616,20 @@ contains
           ! smoothed version
           do j=lo(2),hi(2)
              y = prob_lo(2) + dx(2)*(dble(j)+0.5d0) - y1
-             do n=1,nspecies
-                coeff=0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)*0.5d0*(tanh((-y+y2-y1)/(smoothing_width*dx(2)))+1.d0)
-                if((prob_type==-15).and.(n==nspecies-1)) then ! Donev: Add a special case for doing ternary diffusion NaCl + KCl
-                   ! Here the last two species have a tanh profile in both x and y (species are Na+,Cl-,K+,water)
-                   coeff=coeff*0.5d0*(tanh(x/(smoothing_width*dx(1)))+1.d0)*0.5d0*(tanh((-x+x2-x1)/(smoothing_width*dx(1)))+1.d0)
-                end if   
-                c_loc = c_init(2,n) + (c_init(1,n)-c_init(2,n))*coeff
-                c(lo(1):hi(1),j,n) = c_loc
-                if((prob_type==-15).and.(n==nspecies-1)) then ! Add chlorine if adding potassium
-                    c(lo(1):hi(1),j,2) = c(lo(1):hi(1),j,2) + c_loc
-                end if
+             do i=lo(1),hi(1)
+                x = prob_lo(1) + (dble(i)+0.5d0)*dx(1) - x1
+                do n=1,nspecies
+                   coeff=0.5d0*(tanh(y/(smoothing_width*dx(2)))+1.d0)*0.5d0*(tanh((-y+y2-y1)/(smoothing_width*dx(2)))+1.d0)
+                   if((prob_type==-15).and.(n==nspecies-1)) then ! Donev: Add a special case for doing ternary diffusion NaCl + KCl
+                      ! Here the last two species have a tanh profile in both x and y (species are Na+,Cl-,K+,water)
+                      coeff=0.5d0*(tanh(x/(smoothing_width*dx(1)))+1.d0)*0.5d0*(tanh((-x+x2-x1)/(smoothing_width*dx(1)))+1.d0)*coeff
+                   end if   
+                   c_loc = c_init(2,n) + (c_init(1,n)-c_init(2,n))*coeff
+                   c(i,j,n) = c_loc
+                   if((prob_type==-15).and.(n==nspecies-1)) then ! Add chlorine if adding potassium
+                      c(i,j,2) = c(i,j,2) + c_loc
+                   end if
+                end do
              end do
           end do
 
