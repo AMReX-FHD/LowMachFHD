@@ -1,4 +1,4 @@
-module advance_timestep_iterative_module
+module advance_timestep_imp_bousq_module
 
   use ml_layout_module
   use define_bc_module
@@ -40,7 +40,7 @@ module advance_timestep_iterative_module
 
   private
 
-  public :: advance_timestep_iterative
+  public :: advance_timestep_imp_bousq
 
   ! special inhomogeneous boundary condition multifab
   ! vel_bc_n(nlevs,dm) are the normal velocities
@@ -59,7 +59,7 @@ module advance_timestep_iterative_module
 
 contains
 
-  subroutine advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+  subroutine advance_timestep_imp_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         Epot_mass_fluxdiv, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -109,7 +109,6 @@ contains
     type(multifab) ::                  dpi(mla%nlevel)
     type(multifab) ::                 divu(mla%nlevel)
     type(multifab) ::                 conc(mla%nlevel)
-    type(multifab) ::                S_inc(mla%nlevel)
 
     type(multifab) ::            mold(mla%nlevel,mla%dim)
     type(multifab) ::           mtemp(mla%nlevel,mla%dim)
@@ -149,7 +148,9 @@ contains
 
     real(kind=dp_t) :: weights(1), sum
 
-    weights(1) = 1.d0
+    if (any(rhobar(1:nspecies) .ne. rhobar(1))) then
+       call bl_error("Implicit Boussinesq algorithm requires all the same rhobar's")
+    end if
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -169,7 +170,6 @@ contains
        call multifab_build(              dpi(n),mla%la(n),1       ,1)
        call multifab_build(             divu(n),mla%la(n),1       ,0)
        call multifab_build(             conc(n),mla%la(n),nspecies,rho_old(n)%ng)
-       call multifab_build(            S_inc(n),mla%la(n),1       ,0)
        do i=1,dm
           call multifab_build_edge(              mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(             mtemp(n,i),mla%la(n),1       ,1,i)
@@ -209,8 +209,6 @@ contains
        ! this is used for the electric potential Poisson solve
        ! and for the evaluation of div A_Phi grad Phi
        call multifab_setval(solver_alpha(n),0.d0)
-       ! this is the iterative low Mach constraint correction
-       call multifab_setval(S_inc(n),0.d0)
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!
@@ -513,7 +511,7 @@ contains
        call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
        if (barodiffusion_type .ne. 0) then
-          call bl_error("advance_timestep_iterative: barodiffusion not supported yet")
+          call bl_error("advance_timestep_imp_bousq: barodiffusion not supported yet")
        end if
 
        ! subtract grad pi^{n+1,l} from gmres_rhs_v
@@ -615,18 +613,6 @@ contains
              call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
           end do
        end do
-
-       ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
-       do n=1,nlevs
-          call multifab_setval(gmres_rhs_p(n),0.d0,all=.true.)
-          do i=1,nspecies
-             call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-             call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
-             if (variance_coef_mass .ne. 0.d0) then
-                call multifab_saxpy_3_cc(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
-             end if
-          end do
-       end do
        
        ! modify umac to respect the boundary conditions we want after the next gmres solve
        ! thus when we add A_0^n vbar^n to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
@@ -649,20 +635,11 @@ contains
        ! compute div vbar^{n+1,l}
        call compute_div(mla,umac,divu,dx,1,1,1)
 
-       ! add div vbar^{n+1,l} to gmres_rhs_p
-       ! now gmres_rhs_p = div vbar^{n+1,l} - S^{n+1,l+1}
+       ! set gmres_rhs_p to div vbar^{n+1,*}
        ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
        do n=1,nlevs
-          call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
+          call multifab_copy_c(gmres_rhs_p(n),1,divu(n),1,1,0)
        end do
-
-       ! Compute Velocity Constraint Correction
-       if (dpdt_factor .ne. 0.d0) then
-          call modify_S(mla,rho_new,S_inc,dt)
-          do n=1,nlevs
-             call multifab_plus_plus_c(gmres_rhs_p(n),1,S_inc(n),1,1,0)
-          end do
-       end if
 
        ! multiply eta and kappa by 1/2 to put in proper form for gmres solve
        do n=1,nlevs
@@ -756,7 +733,6 @@ contains
        call multifab_destroy(dpi(n))
        call multifab_destroy(divu(n))
        call multifab_destroy(conc(n))
-       call multifab_destroy(S_inc(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
@@ -791,7 +767,7 @@ contains
        call bndry_reg_destroy(fine_flx(n))
     end do
 
-  end subroutine advance_timestep_iterative
+  end subroutine advance_timestep_imp_bousq
 
   subroutine build_bc_multifabs(mla)
 
@@ -886,4 +862,4 @@ contains
 
   end subroutine destroy_bc_multifabs
 
-end module advance_timestep_iterative_module
+end module advance_timestep_imp_bousq_module

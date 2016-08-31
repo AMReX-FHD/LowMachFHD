@@ -63,7 +63,7 @@ contains
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep, &
                                        grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
-                                       Epot,permittivity_old,permittivity_new)
+                                       Epot,permittivity)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -90,8 +90,8 @@ contains
     type(multifab) , intent(inout) :: charge_old(:)
     type(multifab) , intent(inout) :: charge_new(:)
     type(multifab) , intent(inout) :: Epot(:)
-    type(multifab) , intent(in   ) :: permittivity_old(:)
-    type(multifab) , intent(inout) :: permittivity_new(:)
+    ! permittivity enters consistent with old and leaves consistent with new
+    type(multifab) , intent(inout) :: permittivity(:)
 
     ! local
     type(multifab) ::  rho_update(mla%nlevel)
@@ -187,6 +187,10 @@ contains
     ! Step 2 - Predictor Euler Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    ! compute old Lorentz force
+    call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity, &
+                               charge_old,dx,the_bc_tower)
+
     ! average rho_old and rhotot_old to faces
     call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
@@ -270,7 +274,7 @@ contains
 
     ! compute new permittivity
     if (dielectric_type .ne. 0) then
-       call compute_permittivity(mla,permittivity_new,rho_new,rhotot_new, &
+       call compute_permittivity(mla,permittivity,rho_new,rhotot_new, &
                                  the_bc_tower)
     end if
 
@@ -387,7 +391,7 @@ contains
                                       Temp,flux_total,flux_diff,dt,time,dx,weights, &
                                       the_bc_tower, &
                                       Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
-                                      permittivity_new)
+                                      permittivity)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -406,9 +410,7 @@ contains
 
     if (use_charged_fluid) then
 
-       call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity_old, &
-                                  charge_old,dx,the_bc_tower)
-       call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity_new, &
+       call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                   charge_new,dx,the_bc_tower)
 
        ! subtract (1/2) old and (1/2) new from gmres_rhs_v
@@ -682,7 +684,7 @@ contains
 
     ! compute new permittivity
     if (dielectric_type .ne. 0) then
-       call compute_permittivity(mla,permittivity_new,rho_new,rhotot_new, &
+       call compute_permittivity(mla,permittivity,rho_new,rhotot_new, &
                                  the_bc_tower)
     end if
 
@@ -787,7 +789,7 @@ contains
                                       Temp,flux_total,flux_diff,dt,time,dx,weights, &
                                       the_bc_tower, &
                                       Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
-                                      permittivity_new)
+                                      permittivity)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -807,7 +809,7 @@ contains
 
     if (use_charged_fluid) then
 
-       call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity_new, &
+       call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                   charge_new,dx,the_bc_tower)
 
        ! subtract (1/2) old and (1/2) new from gmres_rhs_v

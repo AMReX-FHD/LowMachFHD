@@ -89,8 +89,7 @@ subroutine main_driver()
 
   type(multifab), allocatable  :: charge_old(:)
   type(multifab), allocatable  :: charge_new(:)
-  type(multifab), allocatable  :: permittivity_old(:)
-  type(multifab), allocatable  :: permittivity_new(:)
+  type(multifab), allocatable  :: permittivity(:)
   type(multifab), allocatable  :: grad_Epot_old(:,:)
   type(multifab), allocatable  :: grad_Epot_new(:,:)
   type(multifab), allocatable  :: Epot(:)
@@ -141,8 +140,7 @@ subroutine main_driver()
 
   allocate(charge_old(nlevs))
   allocate(charge_new(nlevs))
-  allocate(permittivity_old(nlevs))
-  allocate(permittivity_new(nlevs))
+  allocate(permittivity(nlevs))
   allocate(grad_Epot_old(nlevs,dm))
   allocate(grad_Epot_new(nlevs,dm))
   allocate(Epot(nlevs))
@@ -370,8 +368,7 @@ subroutine main_driver()
      call multifab_build(kappa(n)           ,mla%la(n),1       ,1)
      call multifab_build(charge_old(n)      ,mla%la(n),1       ,1)
      call multifab_build(charge_new(n)      ,mla%la(n),1       ,1)
-     call multifab_build(permittivity_old(n),mla%la(n),1       ,1)
-     call multifab_build(permittivity_new(n),mla%la(n),1       ,1)
+     call multifab_build(permittivity(n)    ,mla%la(n),1       ,1)
      do i=1,dm
         call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
         call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
@@ -449,13 +446,10 @@ subroutine main_driver()
   ! compute permittivity
   if (dielectric_type .eq. 0) then
      do n=1,nlevs
-        call multifab_setval(permittivity_old(n),dielectric_const,all=.true.)
-        call multifab_setval(permittivity_new(n),dielectric_const,all=.true.)
+        call multifab_setval(permittivity(n),dielectric_const,all=.true.)
      end do
   else
-     call compute_permittivity(mla,permittivity_old,rho_old,rhotot_old, &
-                               the_bc_tower)
-     call compute_permittivity(mla,permittivity_new,rho_old,rhotot_old, &
+     call compute_permittivity(mla,permittivity,rho_old,rhotot_old, &
                                the_bc_tower)
   end if
 
@@ -551,7 +545,7 @@ subroutine main_driver()
                                      Epot_mass_fluxdiv,diff_mass_fluxdiv, &
                                      stoch_mass_fluxdiv, &
                                      Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                     charge_old,grad_Epot_old,Epot,permittivity_old)
+                                     charge_old,grad_Epot_old,Epot,permittivity)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -635,7 +629,7 @@ subroutine main_driver()
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new, &
                                         charge_old,charge_new,Epot, &
-                                        permittivity_old,permittivity_new)
+                                        permittivity)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -644,7 +638,7 @@ subroutine main_driver()
                                           dx,dt,time,the_bc_tower,istep, &
                                           grad_Epot_old,grad_Epot_new, &
                                           charge_old,charge_new,Epot, &
-                                          permittivity_old,permittivity_new)
+                                          permittivity)
       else if (algorithm_type .eq. 3) then
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -653,8 +647,7 @@ subroutine main_driver()
                                          dx,dt,time,the_bc_tower,istep, &
                                          grad_Epot_old,grad_Epot_new, &
                                          charge_old,charge_new,Epot, &
-                                         permittivity_old,permittivity_new, &
-                                         gradPhiApprox)
+                                         permittivity,gradPhiApprox)
       end if
 
       time = time + dt
@@ -757,7 +750,6 @@ subroutine main_driver()
          call multifab_copy_c(rho_old(n)         ,1,rho_new(n)         ,1,nspecies,rho_old(n)%ng)
          call multifab_copy_c(rhotot_old(n)      ,1,rhotot_new(n)      ,1,1       ,rhotot_old(n)%ng)
          call multifab_copy_c(charge_old(n)      ,1,charge_new(n)      ,1,1       ,charge_old(n)%ng)
-         call multifab_copy_c(permittivity_old(n),1,permittivity_new(n),1,1       ,permittivity_old(n)%ng)
          do i=1,dm
             call multifab_copy_c(grad_Epot_old(n,i),1,grad_Epot_new(n,i),1,1,grad_Epot_old(n,i)%ng)
          end do
@@ -804,8 +796,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(charge_old(n))
      call multifab_destroy(charge_new(n))
-     call multifab_destroy(permittivity_old(n))
-     call multifab_destroy(permittivity_new(n))
+     call multifab_destroy(permittivity(n))
      do i=1,dm
         call multifab_destroy(grad_Epot_old(n,i))
         call multifab_destroy(grad_Epot_new(n,i))
