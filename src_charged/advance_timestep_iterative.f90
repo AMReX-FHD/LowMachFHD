@@ -616,6 +616,9 @@ contains
           end do
        end do
 
+       ! set the Dirichlet velocity value on reservoir faces
+       call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
+
        ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
        do n=1,nlevs
           call multifab_setval(gmres_rhs_p(n),0.d0,all=.true.)

@@ -613,6 +613,9 @@ contains
              call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
           end do
        end do
+
+       ! set the Dirichlet velocity value on reservoir faces
+       call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
        
        ! modify umac to respect the boundary conditions we want after the next gmres solve
        ! thus when we add A_0^n vbar^n to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
