@@ -143,7 +143,7 @@ contains
     
     type(bndry_reg) :: fine_flx(mla%nlevel)
 
-    integer :: i,dm,n,nlevs,comp,l
+    integer :: i,dm,n,nlevs,comp
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
@@ -651,8 +651,12 @@ contains
     gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
 
     ! fill the stochastic momentum and mass multifabs with new sets of random numbers
-    call fill_m_stochastic(mla)
-    call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+    if (variance_coef_mass .ne. 0.d0) then
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+    end if
+    if (variance_coef_mom .ne. 0.d0) then
+       call fill_m_stochastic(mla)
+    end if
 
     call destroy_bc_multifabs(mla)
 

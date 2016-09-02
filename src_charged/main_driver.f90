@@ -43,7 +43,7 @@ subroutine main_driver()
                                   probin_common_init, print_int, project_eos_int, &
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
-                                  variance_coef_mass, barodiffusion_type
+                                  variance_coef_mass, variance_coef_mom, barodiffusion_type
   use probin_multispecies_module, only: nspecies, Dbar, start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
@@ -413,9 +413,13 @@ subroutine main_driver()
   call init_m_stochastic(mla,n_rngs)
 
   ! fill random flux multifabs with new random numbers
-  call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-  call fill_m_stochastic(mla)
-
+  if (variance_coef_mass .ne. 0.d0) then
+     call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+  end if
+  if (variance_coef_mom .ne. 0.d0) then
+     call fill_m_stochastic(mla)
+  end if
+  
   !=====================================================================
   ! Initialize values
   !=====================================================================

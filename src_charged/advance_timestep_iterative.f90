@@ -584,7 +584,7 @@ contains
        end do
 
        ! new random fluxes? - is this right?
-       if (l .eq. num_pot_iters) then
+       if (l .eq. num_pot_iters .and. variance_coef_mass .ne. 0.d0) then
           call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        end if
 
@@ -745,7 +745,9 @@ contains
     gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
 
     ! fill the stochastic momentum multifabs with a new set of random numbers
-    call fill_m_stochastic(mla)
+    if (variance_coef_mom .ne. 0.d0) then
+       call fill_m_stochastic(mla)
+    end if
 
     call destroy_bc_multifabs(mla)
 
