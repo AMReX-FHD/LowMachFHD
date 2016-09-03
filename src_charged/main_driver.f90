@@ -11,6 +11,7 @@ subroutine main_driver()
   use advance_timestep_inertial_module
   use advance_timestep_overdamped_module
   use advance_timestep_iterative_module
+  use advance_timestep_imp_bousq_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
@@ -42,7 +43,7 @@ subroutine main_driver()
                                   probin_common_init, print_int, project_eos_int, &
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
-                                  barodiffusion_type
+                                  variance_coef_mass, variance_coef_mom, barodiffusion_type
   use probin_multispecies_module, only: nspecies, Dbar, start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
@@ -403,18 +404,22 @@ subroutine main_driver()
   end do
 
   ! allocate and build multifabs that will contain random numbers
-  if (algorithm_type .eq. 0 .or. algorithm_type .eq. 1 .or. algorithm_type .eq. 3) then
-     n_rngs = 1
-  else if (algorithm_type .eq. 2) then
+  if (algorithm_type .eq. 2) then
      n_rngs = 2
+  else
+     n_rngs = 1
   end if
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
 
   ! fill random flux multifabs with new random numbers
-  call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-  call fill_m_stochastic(mla)
-
+  if (variance_coef_mass .ne. 0.d0) then
+     call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+  end if
+  if (variance_coef_mom .ne. 0.d0) then
+     call fill_m_stochastic(mla)
+  end if
+  
   !=====================================================================
   ! Initialize values
   !=====================================================================
@@ -481,8 +486,8 @@ subroutine main_driver()
 
      ! add initial momentum fluctuations - only call in inertial code for now
      ! Note, for overdamped code, the steady Stokes solver will wipe out the initial condition
-     if ((algorithm_type .eq. 0 .or. algorithm_type .eq. 3) .and. &
-          initial_variance .ne. 0.d0) then
+     if ((algorithm_type .ne. 1 .and. algorithm_type .ne. 2) &
+          .and. initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
      end if
@@ -641,6 +646,15 @@ subroutine main_driver()
                                           permittivity)
       else if (algorithm_type .eq. 3) then
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                         Epot_mass_fluxdiv, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         dx,dt,time,the_bc_tower,istep, &
+                                         grad_Epot_old,grad_Epot_new, &
+                                         charge_old,charge_new,Epot, &
+                                         permittivity,gradPhiApprox)
+      else if (algorithm_type .eq. 4) then
+         call advance_timestep_imp_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                          Epot_mass_fluxdiv, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
