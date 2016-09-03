@@ -8,11 +8,11 @@ import numpy as np
 
 datafile = "fort.10"
 
-n_min = -0.099            # center value of left-most bin (=smallest value)
-n_max = 0.399             # center value of right-most bin (=largest value)
-nbin = 250 
+n_min = -0.395           # center value of left-most bin (=smallest value)
+n_max = 0.195            # center value of right-most bin (=largest value)
+nbin = 60 
 
-output_hist = "res.hist_n=0"
+output_hist = "res.hist_near_zero"
 
 #####################
 # histogram setting #
