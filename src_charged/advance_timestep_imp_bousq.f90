@@ -96,17 +96,21 @@ contains
     type(multifab) , intent(inout) :: Epot(:)
     ! permittivity enters consistent with old and leaves consistent with new
     type(multifab) , intent(inout) :: permittivity(:)
-    ! If present, this will contain z^T*F/z^T*A = z^T*W*chi*Gamma*grad(x) / (rho^/(nkT)*z^T*W*chi*W*z)
-    ! This is the ambipolar approximation to the gradient of the potential, which is wrong in general
+    ! If present, this will contain 
+    ! z^T*F/z^T*A = z^T*W*chi*Gamma*grad(x) / (rho^/(nkT)*z^T*W*chi*W*z)
+    ! This is the ambipolar approximation to the gradient of the potential,
+    ! which is wrong in general
     type(multifab) , intent(inout), optional :: gradPhiApprox(:,:) 
 
     ! local
     type(multifab) ::  diff_mass_fluxdiv_old(mla%nlevel)
     type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
     type(multifab) ::  Epot_mass_fluxdiv_old(mla%nlevel)
+    type(multifab) ::   adv_mass_fluxdiv_old(mla%nlevel)
+    type(multifab) ::   adv_mass_fluxdiv    (mla%nlevel)
 
-    type(multifab) :: adv_mass_fluxdiv_old(mla%nlevel)
-    type(multifab) ::     adv_mass_fluxdiv(mla%nlevel)
+    type(multifab) ::              rho_tmp(mla%nlevel)
+    type(multifab) ::           rhotot_tmp(mla%nlevel)
     type(multifab) ::          gmres_rhs_p(mla%nlevel)
     type(multifab) ::                  dpi(mla%nlevel)
     type(multifab) ::                 conc(mla%nlevel)
@@ -164,12 +168,14 @@ contains
        call multifab_build( diff_mass_fluxdiv_old(n),mla%la(n),nspecies,0) 
        call multifab_build(stoch_mass_fluxdiv_old(n),mla%la(n),nspecies,0) 
        call multifab_build( Epot_mass_fluxdiv_old(n),mla%la(n),nspecies,0) 
-
        call multifab_build(adv_mass_fluxdiv_old(n),mla%la(n),nspecies,0)
-       call multifab_build(adv_mass_fluxdiv(n),mla%la(n),nspecies,0)
-       call multifab_build(      gmres_rhs_p(n),mla%la(n),1       ,0)
-       call multifab_build(              dpi(n),mla%la(n),1       ,1)
-       call multifab_build(             conc(n),mla%la(n),nspecies,rho_old(n)%ng)
+       call multifab_build(adv_mass_fluxdiv    (n),mla%la(n),nspecies,0)
+
+       call multifab_build(    rho_tmp(n),mla%la(n),nspecies,rho_old(n)%ng)
+       call multifab_build( rhotot_tmp(n),mla%la(n),1       ,rhotot_old(n)%ng)
+       call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
+       call multifab_build(        dpi(n),mla%la(n),1       ,1)
+       call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        do i=1,dm
           call multifab_build_edge(              mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(             mtemp(n,i),mla%la(n),1       ,1,i)
@@ -270,22 +276,33 @@ contains
     end do
     call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv_old,dx,the_bc_tower%bc_tower_array)
 
-    ! build RHS for Poisson solve (store in rho_new)
+    ! compute A_Phi^n for Poisson solve (does not have z^T)
+    call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
+
+    ! build RHS for Poisson solve (store in rho_tmp)
     ! (rho w)^n - dt div (F_a^n + F_d^n)
     do n=1,nlevs
-       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-       call multifab_saxpy_3_cc(rho_new(n),1,dt, adv_mass_fluxdiv_old(n),1,nspecies)
-       call multifab_saxpy_3_cc(rho_new(n),1,dt,diff_mass_fluxdiv_old(n),1,nspecies)
+       call multifab_copy_c(rho_tmp(n),1,rho_old(n),1,nspecies,0)
+       call multifab_saxpy_3_cc(rho_tmp(n),1,dt, adv_mass_fluxdiv_old(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_tmp(n),1,dt,diff_mass_fluxdiv_old(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
-          call multifab_saxpy_3_cc(rho_new(n),1,dt,stoch_mass_fluxdiv_old(n),1,nspecies)
+          call multifab_saxpy_3_cc(rho_tmp(n),1,dt,stoch_mass_fluxdiv_old(n),1,nspecies)
+       end if
+    end do
+
+    ! start building rho_new - first piece is
+    ! (rho w)^n - (dt/2) div (F_a^n + F_d^n)
+    do n=1,nlevs
+       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt, adv_mass_fluxdiv_old(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,diff_mass_fluxdiv_old(n),1,nspecies)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,stoch_mass_fluxdiv_old(n),1,nspecies)
        end if
     end do
 
     ! right-hand-side for Poisson solve is z^T [ (rho w)^n - dt div (F_a^n + F_d^n) ]
-    call dot_with_z(mla,rho_new,solver_rhs)
-
-    ! compute A_Phi^n for Poisson solve (does not have z^T)
-    call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
+    call dot_with_z(mla,rho_tmp,solver_rhs)
 
     ! compute z^T A_Phi^n, store in solver_beta
     call dot_with_z_face(mla,A_Phi,solver_beta)
@@ -346,43 +363,48 @@ contains
           call zero_edgeval_walls(solver_beta(n,:),1,1,the_bc_tower%bc_tower_array(n))
        end do
 
-       ! compute Epot_mass_fluxdiv_old = div A_Phi^n grad Epot
+       ! compute Epot_mass_fluxdiv_old = div A_Phi^n grad Epot^{n+1,*}
        call compute_div(mla,solver_beta,Epot_mass_fluxdiv_old,dx,1,comp,1)
     end do
 
-    ! add dt*Epot_mass_fluxdiv_old to RHS to get rho^{n+1,*}
+    ! add dt*Epot_mass_fluxdiv_old to RHS to get rho_tmp = rho^{n+1,*}
     do n=1,nlevs
-       call multifab_saxpy_3_cc(rho_new(n),1,dt,Epot_mass_fluxdiv_old(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_tmp(n),1,dt,Epot_mass_fluxdiv_old(n),1,nspecies)
+    end do
+
+    ! add (dt/2)*Epot_mass_fluxdiv_old to continue building rho_new
+    do n=1,nlevs
+       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,Epot_mass_fluxdiv_old(n),1,nspecies)
     end do
 
     ! compute rhotot^{n+1,*} from rho^{n+1,*} in VALID REGION
-    call compute_rhotot(mla,rho_new,rhotot_new)
+    call compute_rhotot(mla,rho_tmp,rhotot_tmp)
 
     ! rho to conc - NO GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
+    call convert_rhoc_to_c(mla,rho_tmp,rhotot_tmp,conc,.true.)
     call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
     ! fill conc ghost cells
     do n=1,nlevs
-       call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
+       call fill_rho_ghost_cells(conc(n),rhotot_tmp(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! conc to rho - INCLUDING GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
+    call convert_rhoc_to_c(mla,rho_tmp,rhotot_tmp,conc,.false.)
 
     ! print out EOS drift
-    call eos_check(mla,rho_new)
+    call eos_check(mla,rho_tmp)
 
     ! average (rho,rhotot)^{n+1,*} to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
-    call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_tmp,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,rhotot_tmp,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     ! compute charge^{n+1,*}
-    call dot_with_z(mla,rho_new,charge_new)
+    call dot_with_z(mla,rho_tmp,charge_new)
 
     ! compute permittivity^{n+1,*}
     if (dielectric_type .ne. 0) then
-       call compute_permittivity(mla,permittivity,rho_new,rhotot_new,the_bc_tower)
+       call compute_permittivity(mla,permittivity,rho_tmp,rhotot_tmp,the_bc_tower)
     end if
 
     ! compute rho^{n+1,*}*g
@@ -396,7 +418,7 @@ contains
     end if
 
     ! compute (eta,kappa)^{n+1,*}
-    call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
+    call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_tmp,rhotot_tmp,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
     ! compute Lorentz_force^{n+1,*}
@@ -405,7 +427,7 @@ contains
 
     ! compute diff_mass_fluxdiv_new and stoch_mass_fluxdiv_new for corrector
     ! and for reservoir boundary conditions on velocity
-    call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+    call compute_mass_fluxdiv_charged(mla,rho_tmp,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff, &
                                       dt,time,dx,weights,the_bc_tower)
@@ -605,6 +627,9 @@ contains
     ! end of predictor - can EXIT here if first order is desired
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    ! compute mtemp = rho^{n+1,*} v^{n+1,*}
+    call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+
     ! compute "new" advective mass fluxes
     do n=1,nlevs
        call multifab_setval(adv_mass_fluxdiv(n),0.d0)
@@ -614,26 +639,37 @@ contains
     ! compute "new" advective momentum term, m_a_fluxdiv_new = div(-rho v v)^{n+1,*}
     do n=1,nlevs
        do i=1,dm
-          call multifab_setval(m_a_fluxdiv_old(n,i),0.d0,all=.true.)
+          call multifab_setval(m_a_fluxdiv_new(n,i),0.d0,all=.true.)
        end do
     end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv_old,dx,the_bc_tower%bc_tower_array)
+    call mk_advective_m_fluxdiv(mla,umac,mtemp,m_a_fluxdiv_new,dx,the_bc_tower%bc_tower_array)
 
-    ! build RHS for Poisson solve (store in rho_new)
+    ! compute A_Phi^{n+1,*} for Poisson solve (does not have z^T)
+    call implicit_potential_coef(mla,rho_tmp,Temp,A_Phi,the_bc_tower)
+
+    ! build RHS for Poisson solve (store in rho_tmp)
     ! (rho w)^{n+1,*} - dt div (F_a^{n+1,*} + F_d^{n+1,*})
     do n=1,nlevs
-       call multifab_saxpy_3_cc(rho_new(n),1,dt,adv_mass_fluxdiv(n),1,nspecies)
-       call multifab_saxpy_3_cc(rho_new(n),1,dt,diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_tmp(n),1,dt,adv_mass_fluxdiv(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_tmp(n),1,dt,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
-          call multifab_saxpy_3_cc(rho_new(n),1,dt,stoch_mass_fluxdiv(n),1,nspecies)
+          call multifab_saxpy_3_cc(rho_tmp(n),1,dt,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
+    end do
+
+    ! continue rho_new
+    ! (rho w)^n - (dt/2) div (F_a^n + F_d^n + F_e^{n+1,*})
+    !           - (dt/2) div (F_a^{n+1,*} + F_d^{n+1,*})
+    do n=1,nlevs
+       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt, adv_mass_fluxdiv_old(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,diff_mass_fluxdiv_old(n),1,nspecies)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,stoch_mass_fluxdiv_old(n),1,nspecies)
        end if
     end do
 
     ! right-hand-side for Poisson solve is z^T [ (rho w)^{n+1,*} - dt div (F_a^{n+1,*} + F_d^{n+1,*}) ]
-    call dot_with_z(mla,rho_new,solver_rhs)
-
-    ! compute A_Phi^{n+1,*} for Poisson solve (does not have z^T)
-    call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
+    call dot_with_z(mla,rho_tmp,solver_rhs)
 
     ! compute z^T A_Phi^{n+1,*}, store in solver_beta
     call dot_with_z_face(mla,A_Phi,solver_beta)
@@ -642,7 +678,7 @@ contains
     call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
                             the_bc_tower%bc_tower_array)
 
-    ! compute solver_beta = epsilon + dt theta z^T A_Phi^n
+    ! compute solver_beta = epsilon + dt theta z^T A_Phi^{n+1,*}
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(solver_beta(n,i),1,dt,1,0)
@@ -663,7 +699,7 @@ contains
        call inhomogeneous_neumann_fix(mla,solver_rhs,permittivity,dx,the_bc_tower)
     end if
 
-    ! solve -div (epsilon + dt theta z^T A_Phi^{n+1,*}) grad Phi^{n+1,*} = z^T RHS
+    ! solve -div (epsilon + dt theta z^T A_Phi^{n+1,*}) grad Phi^{n+2,*} = z^T RHS
     call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
                      the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
@@ -694,13 +730,13 @@ contains
           call zero_edgeval_walls(solver_beta(n,:),1,1,the_bc_tower%bc_tower_array(n))
        end do
 
-       ! compute Epot_mass_fluxdiv_old = div A_Phi^{n+1,*} grad Epot
-       call compute_div(mla,solver_beta,Epot_mass_fluxdiv_old,dx,1,comp,1)
+       ! compute Epot_mass_fluxdiv = div A_Phi^{n+1,*} grad Epot^{n+2,*}
+       call compute_div(mla,solver_beta,Epot_mass_fluxdiv,dx,1,comp,1)
     end do
 
-    ! add dt*Epot_mass_fluxdiv_old to RHS to get rho^{n+1}
+    ! add (dt/2)*Epot_mass_fluxdiv to finishg building rho_new
     do n=1,nlevs
-       call multifab_saxpy_3_cc(rho_new(n),1,dt,Epot_mass_fluxdiv_old(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,Epot_mass_fluxdiv(n),1,nspecies)
     end do
 
     ! compute rhotot^{n+1} from rho^{n+1} in VALID REGION
@@ -748,8 +784,9 @@ contains
                            the_bc_tower%bc_tower_array)
 
     ! compute Lorentz_force^{n+1}
-    call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
-                               charge_new,dx,the_bc_tower)
+    ! can't - we don't have Phi^{n+1}, only Phi^{n+1,*}
+!    call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
+!                               charge_new,dx,the_bc_tower)
 
     ! compute diff_mass_fluxdiv_new and stoch_mass_fluxdiv_new for corrector
     ! and for reservoir boundary conditions on velocity
@@ -973,6 +1010,8 @@ contains
        call multifab_destroy(Epot_mass_fluxdiv_old(n))
        call multifab_destroy(adv_mass_fluxdiv_old(n))
        call multifab_destroy(adv_mass_fluxdiv(n))
+       call multifab_destroy(rho_tmp(n))
+       call multifab_destroy(rhotot_tmp(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
        call multifab_destroy(conc(n))
