@@ -279,7 +279,7 @@ print "Var[n]= %f" % data_var
 # probability of negative density
 neg_cnt = 0
 for n in f_data:
-  if (n<0.):
+  if (n<-1e-4/dV):
     neg_cnt += 1
 data_prob_neg = float(neg_cnt)/len(f_data)
 
