@@ -215,23 +215,25 @@ contains
        call multifab_setval(solver_alpha(n),0.d0)
     end do
     
-    ! average rho_old and rhotot_old to faces
+    ! average rho_i^n and rho^n to faces
     call average_cc_to_face(nlevs,   rho_old,   rho_fc,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
-    ! make copies of the "old" diffusive and stochastic mass fluxes
+    ! make copies of 
+    ! diff_mass_fluxdiv_old = div (rho W chi Gamma grad x + ...)^n
+    ! stoch_mass_fluxdiv_old = div sqrt(...) B^n Z^{n:n+1}
     do n=1,nlevs
        call multifab_copy_c( diff_mass_fluxdiv_old(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
        call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
     end do
 
-    ! compute "old" advective mass fluxes
+    ! compute adv_mass_fluxdiv_old = -div(rho v w)^n
     do n=1,nlevs
        call multifab_setval(adv_mass_fluxdiv_old(n),0.d0)
     end do
     call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,dx,1,nspecies)
 
-    ! compute "old" viscous term
+    ! compute m_d_fluxdiv_old = L_0^n v^n
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(m_d_fluxdiv_old(n,i),0.d0,all=.true.)
@@ -240,7 +242,7 @@ contains
     call diffusive_m_fluxdiv(mla,m_d_fluxdiv_old,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! compute "old" stochastic momentum fluxes
+    ! compute m_s_fluxdiv_old = div (sqrt() (W + W^T)^{n:n+1})
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(m_s_fluxdiv_old(n,i),0.d0,all=.true.)
@@ -265,10 +267,10 @@ contains
     call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity, &
                                charge_old,dx,the_bc_tower)
 
-    ! compute "old" momentum, mold = rho^n v^n
+    ! compute momentum, mold = rho^n v^n
     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
 
-    ! compute "old" advective momentum term, m_a_fluxdiv_old = div(-rho v v)^n
+    ! compute advective flux divergence, m_a_fluxdiv_old = div(-rho v v)^n
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(m_a_fluxdiv_old(n,i),0.d0,all=.true.)
@@ -425,14 +427,15 @@ contains
     call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                charge_new,dx,the_bc_tower)
 
-    ! compute diff_mass_fluxdiv_new and stoch_mass_fluxdiv_new for corrector
-    ! and for reservoir boundary conditions on velocity
+    ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1,*}
+    ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1,*} Z^{n:n+1}
+    ! and flux_total for reservoir boundary conditions on velocity
     call compute_mass_fluxdiv_charged(mla,rho_tmp,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff, &
                                       dt,time,dx,weights,the_bc_tower)
 
-    ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
+    ! now fluxdivs contain "-div(F) = div (rho W chi Gamma grad x + ...)", etc.
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0) then
@@ -447,7 +450,7 @@ contains
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
        
     ! modify umac to respect the boundary conditions we want after the next gmres solve
-    ! thus when we add A_0^n vbar^n to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
+    ! thus when we add L_0^n vbar^n to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
     ! are automatically putting the system in delta form WITH homogeneous boundary conditions
     do n=1,nlevs
        do i=1,dm
@@ -495,14 +498,14 @@ contains
        end do
     end do
 
-    ! add advective momentum fluxes, A^n
+    ! add advective momentum flux divergence, m_a_fluxdiv_old = div(-rho v v)^n
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,1.d0,m_a_fluxdiv_old(n,i),1,1)
        end do
     end do
 
-    ! compute A_0^{n+1,*} vbar^n
+    ! compute m_d_fluxdiv_new = L_0^{n+1,*} vbar, where vbar = v^n with t^{n+1} bc's
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(m_d_fluxdiv_new(n,i),0.d0,all=.true.)
@@ -511,7 +514,7 @@ contains
     call diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! add (1/2) (A_0^n v^n + A_0^{n+1,*} vbar^n)
+    ! add (1/2) (L_0^n v^n + L_0^{n+1,*} vbar^n)
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_d_fluxdiv_old(n,i),1,1)
@@ -519,7 +522,8 @@ contains
        end do
     end do
 
-    ! compute "new" stochastic momentum fluxes (these should only differ because of eta)
+    ! compute m_s_fluxdiv_new = div (sqrt() (W + W^T)^{n:n+1})
+    ! (these should only differ from the t^n stochastic fluxdiv because of eta^{n+1,*})
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(m_s_fluxdiv_new(n,i),0.d0,all=.true.)
@@ -530,7 +534,7 @@ contains
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
-    ! add (1/2) (old + new) stochastic fluxes
+    ! add (1/2) (t^n + t^{n+1,*}) stochastic fluxes
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_s_fluxdiv_old(n,i),1,1)
@@ -538,7 +542,7 @@ contains
        end do
     end do
 
-    ! add (1/2) (old + new) gravitational force
+    ! add (1/2) (t^n + t^{n+1,*}) gravitational force
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_grav_force_old(n,i),1,1)
@@ -546,7 +550,7 @@ contains
        end do
     end do
 
-    ! subtract Lorentz force
+    ! subtract (1/2) (t^n + t^{n+1,*}) Lorentz force
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-0.5d0,Lorentz_force_old(n,i),1,1)
@@ -624,19 +628,19 @@ contains
     end do
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! end of predictor - can EXIT here if first order is desired
+    ! end of predictor
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! compute mtemp = rho^{n+1,*} v^{n+1,*}
     call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
-    ! compute "new" advective mass fluxes
+    ! compute -div(rho v w)^{n+1,*}
     do n=1,nlevs
        call multifab_setval(adv_mass_fluxdiv(n),0.d0)
     end do
     call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,dx,1,nspecies)
 
-    ! compute "new" advective momentum term, m_a_fluxdiv_new = div(-rho v v)^{n+1,*}
+    ! compute advective flux divergence, m_a_fluxdiv_new = div(-rho v v)^{n+1,*}
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(m_a_fluxdiv_new(n,i),0.d0,all=.true.)
@@ -783,30 +787,25 @@ contains
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
-    ! compute Lorentz_force^{n+1}
+    ! Here is where we could compute Lorentz_force^{n+1}, but we
     ! can't - we don't have Phi^{n+1}, only Phi^{n+1,*}
 !    call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
 !                               charge_new,dx,the_bc_tower)
 
-    ! compute diff_mass_fluxdiv_new and stoch_mass_fluxdiv_new for corrector
-    ! and for reservoir boundary conditions on velocity
+    ! fill the stochastic mass multifabs with new sets of random numbers
+    if (variance_coef_mass .ne. 0.d0) then
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+    end if
+
+    ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1}
+    ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1,*} Z^{n+1:n+2}
+    ! and flux_total for reservoir boundary conditions on velocity
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff, &
                                       dt,time,dx,weights,the_bc_tower)
 
-    if(present(gradPhiApprox)) then 
-       ! compute grad(phi) approximation, z^T Fmass / z^T A_Phi
-       call dot_with_z_face(mla,flux_diff,gradPhiApprox)
-       call dot_with_z_face(mla,A_Phi,zdotA)
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_div_div_c(gradPhiApprox(n,i),1,zdotA(n,i),1,1,0)
-          end do
-       end do
-    end if
-
-    ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
+    ! now fluxes contain "-div(F) = div (rho W chi Gamma grad x + ...)", etc.
     do n=1,nlevs
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        if (variance_coef_mass .ne. 0) then
@@ -820,8 +819,19 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
        
+    if(present(gradPhiApprox)) then 
+       ! compute grad(phi) approximation, z^T Fmass / z^T A_Phi
+       call dot_with_z_face(mla,flux_diff,gradPhiApprox)
+       call dot_with_z_face(mla,A_Phi,zdotA)
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_div_div_c(gradPhiApprox(n,i),1,zdotA(n,i),1,1,0)
+          end do
+       end do
+    end if
+
     ! modify umac to respect the boundary conditions we want after the next gmres solve
-    ! thus when we add A_0^n vbar^{n+1,*} to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
+    ! thus when we add L_0^n vbar^{n+1,*} to gmres_rhs_v and add div vbar^n to gmres_rhs_p we
     ! are automatically putting the system in delta form WITH homogeneous boundary conditions
     do n=1,nlevs
        do i=1,dm
@@ -869,7 +879,7 @@ contains
        end do
     end do
 
-    ! add advective momentum fluxes
+    ! add advective momentum flux divergence, (1/2) (div(-rho v v)^n + div(-rho v v)^{n+1,*})
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_a_fluxdiv_old(n,i),1,1)
@@ -877,7 +887,7 @@ contains
        end do
     end do
 
-    ! compute A_0^{n+1} vbar^{n+1,*}
+    ! compute m_d_fluxdiv_new = L_0^{n+1} vbar, where vbar = v^{n+1,*} with t^{n+1} bc's
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(m_d_fluxdiv_new(n,i),0.d0,all=.true.)
@@ -886,7 +896,7 @@ contains
     call diffusive_m_fluxdiv(mla,m_d_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! add (1/2) (A_0^n v^n + A_0^{n+1} vbar^{n+1,*})
+    ! add (1/2) (L_0^n v^n + L_0^{n+1} vbar^{n+1,*})
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_d_fluxdiv_old(n,i),1,1)
@@ -894,7 +904,8 @@ contains
        end do
     end do
 
-    ! compute "new" stochastic momentum fluxes (these should only differ because of eta)
+    ! compute m_s_fluxdiv_new = div (sqrt() (W + W^T)^{n:n+1})
+    ! (these should only differ from the t^n stochastic fluxdiv because of eta^{n+1})
     do n=1,nlevs
        do i=1,dm
           call multifab_setval(m_s_fluxdiv_new(n,i),0.d0,all=.true.)
@@ -905,7 +916,7 @@ contains
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
-    ! add (1/2) (old + new) stochastic fluxes
+    ! add (1/2) (t^n + t^{n+1}) stochastic fluxes
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_s_fluxdiv_old(n,i),1,1)
@@ -913,7 +924,7 @@ contains
        end do
     end do
 
-    ! add (1/2) (old + new) gravitational force
+    ! add (1/2) (t^n + t^{n+1}) gravitational force
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,m_grav_force_old(n,i),1,1)
@@ -921,7 +932,8 @@ contains
        end do
     end do
 
-    ! subtract Lorentz force
+    ! subtract (1/2) (t^n + t^{n+1,*}) Lorentz force
+    ! Note: we do not have a t^{n+1} Lorentz force
     do n=1,nlevs
        do i=1,dm
           call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-0.5d0,Lorentz_force_old(n,i),1,1)
@@ -994,7 +1006,7 @@ contains
 
     gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
 
-    ! fill the stochastic momentum and mass multifabs with new sets of random numbers
+    ! fill the stochastic momentum multifabs with new sets of random numbers
     if (variance_coef_mass .ne. 0.d0) then
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
     end if
