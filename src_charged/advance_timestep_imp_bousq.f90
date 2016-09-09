@@ -665,10 +665,10 @@ contains
     ! (rho w)^n - (dt/2) div (F_a^n + F_d^n + F_e^{n+1,*})
     !           - (dt/2) div (F_a^{n+1,*} + F_d^{n+1,*})
     do n=1,nlevs
-       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt, adv_mass_fluxdiv_old(n),1,nspecies)
-       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,diff_mass_fluxdiv_old(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt, adv_mass_fluxdiv(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
-          call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,stoch_mass_fluxdiv_old(n),1,nspecies)
+          call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt,stoch_mass_fluxdiv(n),1,nspecies)
        end if
     end do
 
