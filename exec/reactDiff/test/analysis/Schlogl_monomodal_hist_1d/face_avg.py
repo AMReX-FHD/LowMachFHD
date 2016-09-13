@@ -202,6 +202,7 @@ elif (avg_type==2):
 elif (avg_type==3):
   face_avg = sum43
 
+print "face_avg= %.10f" % face_avg
 print "-1/(Nc-1)= %.10f" % (-1./(ncell-1))
 print "(Nc-1)/Nc*<face_avg>/dv= %.10f" % (float(ncell-1)/ncell*face_avg/dv)
 print "-1/Nc*<face_avg>/dv= %.10f" % (-1./ncell*face_avg/dv)

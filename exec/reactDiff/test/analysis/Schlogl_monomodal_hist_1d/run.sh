@@ -41,6 +41,10 @@ OPT4="--initial_variance -1. --integer_populations T"
 #OPT5="--fixed_dt 0.025 --max_step 440000   --print_int 40000   --hydro_grid_int 40   --n_steps_skip 40000"
 #OPT5="--fixed_dt 0.02  --max_step 550000   --print_int 50000   --hydro_grid_int 50   --n_steps_skip 50000"
 OPT5="--fixed_dt 0.01  --max_step 1100000  --print_int 100000  --hydro_grid_int 100  --n_steps_skip 100000"
+#OPT5="--fixed_dt 0.005 --max_step 2200000  --print_int 200000  --hydro_grid_int 200  --n_steps_skip 200000"
+#OPT5="--fixed_dt 0.002 --max_step 5500000  --print_int 500000  --hydro_grid_int 500  --n_steps_skip 500000"
+#OPT5="--fixed_dt 0.001 --max_step 11000000 --print_int 1000000 --hydro_grid_int 1000 --n_steps_skip 1000000"
+#OPT5="--fixed_dt 0.0001 --max_step 110000000 --print_int 10000000 --hydro_grid_int 10000 --n_steps_skip 10000000"
 
 # rng
 OPT6="--use_bl_rng F --seed 0"

@@ -47,9 +47,9 @@ do
   python ../hist_n_near_zero.py
   cp res.hist_near_zero ../$RUNNAME/res.hist_near_zero$i
 
-  # run script face_avg.py and copy results
-  python ../face_avg.py $NCELL $DV $AVG > res.face_avg
-  cp res.face_avg ../$RUNNAME/res.face_avg$i
+#  # run script face_avg.py and copy results
+#  python ../face_avg.py $NCELL $DV $AVG > res.face_avg
+#  cp res.face_avg ../$RUNNAME/res.face_avg$i
 
   echo 
   cd ..
@@ -91,6 +91,7 @@ done
 TMP="tmp.hist_stat"
 eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$i}sum1/=NF;sum2/=NF;printf "%e\t%e\t",sum1,sqrt((sum2-sum1*sum1)/NF);print $0}' > $TMP
 paste <(awk 'NR>=2{print $1}' res.hist1) <(awk '{print $0}' $TMP) > res.hist_stat
+rm $TMP
 
 ## n_stat
 
@@ -104,6 +105,7 @@ done
 TMP="tmp.n_stat_stat"
 eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$i}sum1/=NF;sum2/=NF;printf "%e\t%e\t",sum1,sqrt((sum2-sum1*sum1)/NF);print $0}' > $TMP
 paste <(awk '{print $1}' res.n_stat1) <(awk '{print $0}' $TMP) > res.n_stat_stat
+rm $TMP
 
 ## hist_near_zero
 
@@ -117,19 +119,21 @@ done
 TMP="tmp.hist_near_zero_stat"
 eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$i}sum1/=NF;sum2/=NF;printf "%e\t%e\t",sum1,sqrt((sum2-sum1*sum1)/NF);print $0}' > $TMP
 paste <(awk '{print $1}' res.hist_near_zero1) <(awk '{print $0}' $TMP) > res.hist_near_zero_stat
+rm $TMP
 
 ## face_avg 
 
-cmd_awk=""
-for ((i=1;i<=$NRUN;i++))
-do
-  cmd_tmp="<(awk 'NR>=3{print \$2}' res.face_avg$i)"
-  cmd_awk="$cmd_awk $cmd_tmp"
-done
+#cmd_awk=""
+#for ((i=1;i<=$NRUN;i++))
+#do
+#  cmd_tmp="<(awk 'NR>=3{print \$2}' res.face_avg$i)"
+#  cmd_awk="$cmd_awk $cmd_tmp"
+#done
 
-TMP="tmp.face_avg_stat"
-eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$i}sum1/=NF;sum2/=NF;printf "%e\t%e\t",sum1,sqrt((sum2-sum1*sum1)/NF);print $0}' > $TMP
-paste <(awk 'NR>=3{print $1}' res.face_avg1) <(awk '{print $0}' $TMP) > res.face_avg_stat
+#TMP="tmp.face_avg_stat"
+#eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$i}sum1/=NF;sum2/=NF;printf "%e\t%e\t",sum1,sqrt((sum2-sum1*sum1)/NF);print $0}' > $TMP
+#paste <(awk 'NR>=3{print $1}' res.face_avg1) <(awk '{print $0}' $TMP) > res.face_avg_stat
+#rm $TMP
 
 ########
 # plot #

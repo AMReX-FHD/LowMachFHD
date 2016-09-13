@@ -8,9 +8,13 @@ import numpy as np
 
 datafile = "fort.10"
 
-n_min = -0.395           # center value of left-most bin (=smallest value)
-n_max = 0.195            # center value of right-most bin (=largest value)
-nbin = 60 
+
+n_min = -0.199           # center value of left-most bin (=smallest value)
+n_max = 0.399            # center value of right-most bin (=largest value)
+nbin = 300 
+#n_min = -0.099            # center value of left-most bin (=smallest value)
+#n_max = 0.199             # center value of right-most bin (=largest value)
+#nbin = 150 
 
 output_hist = "res.hist_near_zero"
 
