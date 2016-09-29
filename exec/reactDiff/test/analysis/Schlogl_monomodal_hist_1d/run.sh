@@ -12,7 +12,7 @@ OPT1="--nreactions 0"
 #OPT1="--nreactions 4 --rate_multiplier 0.1"
 
 # system paras: cross_section, dx, Ncell 
-CS=5. 
+CS=10.
 DX=1.
 NCELL=64
 DV=`echo print $CS*$DX | python`
@@ -34,6 +34,7 @@ OPT4="--initial_variance -1. --integer_populations T"
 #OPT5="--fixed_dt 2.    --max_step 10500    --print_int 500     --hydro_grid_int 1    --n_steps_skip 500"
 #OPT5="--fixed_dt 1.    --max_step 11000    --print_int 1000    --hydro_grid_int 1    --n_steps_skip 1000"
 #OPT5="--fixed_dt 0.5   --max_step 22000    --print_int 2000    --hydro_grid_int 2    --n_steps_skip 2000"
+#OPT5="--fixed_dt 0.4   --max_step 27500    --print_int 2500    --hydro_grid_int 5    --n_steps_skip 2500"
 #OPT5="--fixed_dt 0.25  --max_step 44000    --print_int 4000    --hydro_grid_int 4    --n_steps_skip 4000"
 #OPT5="--fixed_dt 0.2   --max_step 55000    --print_int 5000    --hydro_grid_int 5    --n_steps_skip 5000"
 #OPT5="--fixed_dt 0.1   --max_step 110000   --print_int 10000   --hydro_grid_int 10   --n_steps_skip 10000"
