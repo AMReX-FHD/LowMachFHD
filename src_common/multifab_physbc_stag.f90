@@ -616,14 +616,24 @@ contains
           ! set domain face value to Dirichlet value
           ! 6-point stencil using homogeneous dirichlet velocity boundary condition
           s(lo(1),lo(2):hi(2)) = 0.d0
-          s(lo(1)-1,lo(2):hi(2)) = -10.d0*s(lo(1)+1,lo(2):hi(2)) &
-                                   +10.d0*s(lo(1)+2,lo(2):hi(2)) &
-                                   - 5.d0*s(lo(1)+3,lo(2):hi(2)) &
-                                   + 1.d0*s(lo(1)+4,lo(2):hi(2))
-          s(lo(1)-2,lo(2):hi(2)) = -10.d0*s(lo(1)+1,lo(2):hi(2)) &
-                                   +10.d0*s(lo(1)+2,lo(2):hi(2)) &
-                                   - 5.d0*s(lo(1)+3,lo(2):hi(2)) &
-                                   + 1.d0*s(lo(1)+4,lo(2):hi(2))
+          s(lo(1)-1,lo(2):hi(2)) = -15.d0*s(lo(1)+1,lo(2):hi(2)) &
+                                   +20.d0*s(lo(1)+2,lo(2):hi(2)) &
+                                   -15.d0*s(lo(1)+3,lo(2):hi(2)) &
+                                   + 6.d0*s(lo(1)+4,lo(2):hi(2)) &
+                                   - 1.d0*s(lo(1)+5,lo(2):hi(2))
+          s(lo(1)-2,lo(2):hi(2)) = -15.d0*s(lo(1)+1,lo(2):hi(2)) &
+                                   +20.d0*s(lo(1)+2,lo(2):hi(2)) &
+                                   -15.d0*s(lo(1)+3,lo(2):hi(2)) &
+                                   + 6.d0*s(lo(1)+4,lo(2):hi(2)) &
+                                   - 1.d0*s(lo(1)+5,lo(2):hi(2))
+!          s(lo(1)-1,lo(2):hi(2)) = -10.d0*s(lo(1)+1,lo(2):hi(2)) &
+!                                   +10.d0*s(lo(1)+2,lo(2):hi(2)) &
+!                                   - 5.d0*s(lo(1)+3,lo(2):hi(2)) &
+!                                   + 1.d0*s(lo(1)+4,lo(2):hi(2))
+!          s(lo(1)-2,lo(2):hi(2)) = -10.d0*s(lo(1)+1,lo(2):hi(2)) &
+!                                   +10.d0*s(lo(1)+2,lo(2):hi(2)) &
+!                                   - 5.d0*s(lo(1)+3,lo(2):hi(2)) &
+!                                   + 1.d0*s(lo(1)+4,lo(2):hi(2))
        else if (bc(1,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -642,14 +652,24 @@ contains
           ! set domain face value to Dirichlet value
           ! 6-point stencil using homogeneous dirichlet velocity boundary condition
           s(hi(1)+1,lo(2):hi(2)) = 0.d0
-          s(hi(1)+2,lo(2):hi(2)) = -10.d0*s(hi(1)  ,lo(2):hi(2)) &
-                                   +10.d0*s(hi(1)-1,lo(2):hi(2)) &
-                                   - 5.d0*s(hi(1)-2,lo(2):hi(2)) &
-                                   + 1.d0*s(hi(1)-3,lo(2):hi(2))
-          s(hi(1)+3,lo(2):hi(2)) = -10.d0*s(hi(1)  ,lo(2):hi(2)) &
-                                   +10.d0*s(hi(1)-1,lo(2):hi(2)) &
-                                   - 5.d0*s(hi(1)-2,lo(2):hi(2)) &
-                                   + 1.d0*s(hi(1)-3,lo(2):hi(2))
+          s(hi(1)+2,lo(2):hi(2)) = -15.d0*s(hi(1)  ,lo(2):hi(2)) &
+                                   +20.d0*s(hi(1)-1,lo(2):hi(2)) &
+                                   -15.d0*s(hi(1)-2,lo(2):hi(2)) &
+                                   + 6.d0*s(hi(1)-3,lo(2):hi(2)) &
+                                   - 1.d0*s(hi(1)-4,lo(2):hi(2))
+          s(hi(1)+3,lo(2):hi(2)) = -15.d0*s(hi(1)  ,lo(2):hi(2)) &
+                                   +20.d0*s(hi(1)-1,lo(2):hi(2)) &
+                                   -15.d0*s(hi(1)-2,lo(2):hi(2)) &
+                                   + 6.d0*s(hi(1)-3,lo(2):hi(2)) &
+                                   - 1.d0*s(hi(1)-4,lo(2):hi(2))
+!          s(hi(1)+2,lo(2):hi(2)) = -10.d0*s(hi(1)  ,lo(2):hi(2)) &
+!                                   +10.d0*s(hi(1)-1,lo(2):hi(2)) &
+!                                   - 5.d0*s(hi(1)-2,lo(2):hi(2)) &
+!                                   + 1.d0*s(hi(1)-3,lo(2):hi(2))
+!          s(hi(1)+3,lo(2):hi(2)) = -10.d0*s(hi(1)  ,lo(2):hi(2)) &
+!                                   +10.d0*s(hi(1)-1,lo(2):hi(2)) &
+!                                   - 5.d0*s(hi(1)-2,lo(2):hi(2)) &
+!                                   + 1.d0*s(hi(1)-3,lo(2):hi(2))
        else if (bc(1,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -668,14 +688,24 @@ contains
           ! set domain face value to Dirichlet value
           ! 6-point stencil using homogeneous dirichlet velocity boundary condition
           s(lo(1):hi(1),lo(2)) = 0.d0
-          s(lo(1):hi(1),lo(2)-1) = -10.d0*s(lo(1):hi(1),lo(2)+1) &
-                                   +10.d0*s(lo(1):hi(1),lo(2)+2) &
-                                   - 5.d0*s(lo(1):hi(1),lo(2)+3) &
-                                   + 1.d0*s(lo(1):hi(1),lo(2)+4)
-          s(lo(1):hi(1),lo(2)-2) = -10.d0*s(lo(1):hi(1),lo(2)+1) &
-                                   +10.d0*s(lo(1):hi(1),lo(2)+2) &
-                                   - 5.d0*s(lo(1):hi(1),lo(2)+3) &
-                                   + 1.d0*s(lo(1):hi(1),lo(2)+4)
+          s(lo(1):hi(1),lo(2)-1) = -15.d0*s(lo(1):hi(1),lo(2)+1) &
+                                   +20.d0*s(lo(1):hi(1),lo(2)+2) &
+                                   -15.d0*s(lo(1):hi(1),lo(2)+3) &
+                                   + 6.d0*s(lo(1):hi(1),lo(2)+4) &
+                                   - 1.d0*s(lo(1):hi(1),lo(2)+5)
+          s(lo(1):hi(1),lo(2)-2) = -15.d0*s(lo(1):hi(1),lo(2)+1) &
+                                   +20.d0*s(lo(1):hi(1),lo(2)+2) &
+                                   -15.d0*s(lo(1):hi(1),lo(2)+3) &
+                                   + 6.d0*s(lo(1):hi(1),lo(2)+4) &
+                                   - 1.d0*s(lo(1):hi(1),lo(2)+5)
+!          s(lo(1):hi(1),lo(2)-1) = -10.d0*s(lo(1):hi(1),lo(2)+1) &
+!                                   +10.d0*s(lo(1):hi(1),lo(2)+2) &
+!                                   - 5.d0*s(lo(1):hi(1),lo(2)+3) &
+!                                   + 1.d0*s(lo(1):hi(1),lo(2)+4)
+!          s(lo(1):hi(1),lo(2)-2) = -10.d0*s(lo(1):hi(1),lo(2)+1) &
+!                                   +10.d0*s(lo(1):hi(1),lo(2)+2) &
+!                                   - 5.d0*s(lo(1):hi(1),lo(2)+3) &
+!                                   + 1.d0*s(lo(1):hi(1),lo(2)+4)
        else if (bc(2,1) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -694,14 +724,24 @@ contains
           ! set domain face value to Dirichlet value
           ! 6-point stencil using homogeneous dirichlet velocity boundary condition
           s(lo(1):hi(1),hi(2)+1) = 0.d0
-          s(lo(1):hi(1),hi(2)+2) = -10.d0*s(lo(1):hi(1),hi(2)  ) &
-                                   +10.d0*s(lo(1):hi(1),hi(2)-1) &
-                                   - 5.d0*s(lo(1):hi(1),hi(2)-2) &
-                                   + 1.d0*s(lo(1):hi(1),hi(2)-3)
-          s(lo(1):hi(1),hi(2)+3) = -10.d0*s(lo(1):hi(1),hi(2)  ) &
-                                   +10.d0*s(lo(1):hi(1),hi(2)-1) &
-                                   - 5.d0*s(lo(1):hi(1),hi(2)-2) &
-                                   + 1.d0*s(lo(1):hi(1),hi(2)-3)
+          s(lo(1):hi(1),hi(2)+2) = -15.d0*s(lo(1):hi(1),hi(2)  ) &
+                                   +20.d0*s(lo(1):hi(1),hi(2)-1) &
+                                   -15.d0*s(lo(1):hi(1),hi(2)-2) &
+                                   + 6.d0*s(lo(1):hi(1),hi(2)-3) &
+                                   - 1.d0*s(lo(1):hi(1),hi(2)-4)
+          s(lo(1):hi(1),hi(2)+3) = -15.d0*s(lo(1):hi(1),hi(2)  ) &
+                                   +20.d0*s(lo(1):hi(1),hi(2)-1) &
+                                   -15.d0*s(lo(1):hi(1),hi(2)-2) &
+                                   + 6.d0*s(lo(1):hi(1),hi(2)-3) &
+                                   - 1.d0*s(lo(1):hi(1),hi(2)-4)
+!          s(lo(1):hi(1),hi(2)+2) = -10.d0*s(lo(1):hi(1),hi(2)  ) &
+!                                   +10.d0*s(lo(1):hi(1),hi(2)-1) &
+!                                   - 5.d0*s(lo(1):hi(1),hi(2)-2) &
+!                                   + 1.d0*s(lo(1):hi(1),hi(2)-3)
+!          s(lo(1):hi(1),hi(2)+3) = -10.d0*s(lo(1):hi(1),hi(2)  ) &
+!                                   +10.d0*s(lo(1):hi(1),hi(2)-1) &
+!                                   - 5.d0*s(lo(1):hi(1),hi(2)-2) &
+!                                   + 1.d0*s(lo(1):hi(1),hi(2)-3)
        else if (bc(2,2) .eq. INTERIOR) then
           ! either periodic or interior; do nothing
        else
@@ -2079,14 +2119,24 @@ contains
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! 5-point stencil using homogeneous dirichlet velocity boundary condition
-          s(lo(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) =  -(77.d0/12.d0)*s(lo(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                                +(43.d0/12.d0)*s(lo(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                                -(17.d0/12.d0)*s(lo(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                                 +(3.d0/12.d0)*s(lo(1)+3,lo(2)-ng_s:hi(2)+1+ng_s)
-          s(lo(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) = -(505.d0/12.d0)*s(lo(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                               +(335.d0/12.d0)*s(lo(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                               -(145.d0/12.d0)*s(lo(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                               + (27.d0/12.d0)*s(lo(1)+3,lo(2)-ng_s:hi(2)+1+ng_s)
+          s(lo(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) =  -(87.d0/10.d0)*s(lo(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                +(63.d0/10.d0)*s(lo(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                -(37.d0/10.d0)*s(lo(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                +(13.d0/10.d0)*s(lo(1)+3,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                -( 2.d0/10.d0)*s(lo(1)+4,lo(2)-ng_s:hi(2)+1+ng_s)
+          s(lo(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) = -(336.d0/5.d0)*s(lo(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               +(289.d0/5.d0)*s(lo(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               -(186.d0/5.d0)*s(lo(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               +( 69.d0/5.d0)*s(lo(1)+3,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               -( 11.d0/5.d0)*s(lo(1)+4,lo(2)-ng_s:hi(2)+1+ng_s)
+!          s(lo(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) =  -(77.d0/12.d0)*s(lo(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                                +(43.d0/12.d0)*s(lo(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                                -(17.d0/12.d0)*s(lo(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                                 +(3.d0/12.d0)*s(lo(1)+3,lo(2)-ng_s:hi(2)+1+ng_s)
+!          s(lo(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) = -(505.d0/12.d0)*s(lo(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                               +(335.d0/12.d0)*s(lo(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                               -(145.d0/12.d0)*s(lo(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                               + (27.d0/12.d0)*s(lo(1)+3,lo(2)-ng_s:hi(2)+1+ng_s)
        end if
     else if (bc(1,1) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -2106,14 +2156,24 @@ contains
        else if (bccomp .eq. 2) then
           ! transverse velocity
           ! 5-point stencil using homogeneous dirichlet velocity boundary condition
-          s(hi(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) =  -(77.d0/12.d0)*s(hi(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                                +(43.d0/12.d0)*s(hi(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                                -(17.d0/12.d0)*s(hi(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                                 +(3.d0/12.d0)*s(hi(1)-3,lo(2)-ng_s:hi(2)+1+ng_s)
-          s(hi(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) = -(505.d0/12.d0)*s(hi(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                               +(335.d0/12.d0)*s(hi(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                               -(145.d0/12.d0)*s(hi(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) &
-                                                +(27.d0/12.d0)*s(hi(1)-3,lo(2)-ng_s:hi(2)+1+ng_s)
+          s(hi(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) =  -(87.d0/10.d0)*s(hi(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                +(63.d0/10.d0)*s(hi(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                -(37.d0/10.d0)*s(hi(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                +(13.d0/10.d0)*s(hi(1)-3,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                                -( 2.d0/10.d0)*s(hi(1)-4,lo(2)-ng_s:hi(2)+1+ng_s)
+          s(hi(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) = -(336.d0/5.d0)*s(hi(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               +(289.d0/5.d0)*s(hi(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               -(186.d0/5.d0)*s(hi(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               +( 69.d0/5.d0)*s(hi(1)-3,lo(2)-ng_s:hi(2)+1+ng_s) &
+                                               -( 11.d0/5.d0)*s(hi(1)-4,lo(2)-ng_s:hi(2)+1+ng_s)
+!          s(hi(1)+1,lo(2)-ng_s:hi(2)+1+ng_s) =  -(77.d0/12.d0)*s(hi(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                                +(43.d0/12.d0)*s(hi(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                                -(17.d0/12.d0)*s(hi(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                                 +(3.d0/12.d0)*s(hi(1)-3,lo(2)-ng_s:hi(2)+1+ng_s)
+!          s(hi(1)+2,lo(2)-ng_s:hi(2)+1+ng_s) = -(505.d0/12.d0)*s(hi(1)  ,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                               +(335.d0/12.d0)*s(hi(1)-1,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                               -(145.d0/12.d0)*s(hi(1)-2,lo(2)-ng_s:hi(2)+1+ng_s) &
+!                                                +(27.d0/12.d0)*s(hi(1)-3,lo(2)-ng_s:hi(2)+1+ng_s)
        end if
     else if (bc(1,2) .eq. INTERIOR) then
        ! either periodic or interior; do nothing
@@ -2130,14 +2190,24 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! 5-point stencil using homogeneous dirichlet velocity boundary condition
-          s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)-1) =  -(77.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)  ) &
-                                                +(43.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+1) &
-                                                -(17.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+2) &
-                                                 +(3.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+3)
-          s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)-2) = -(505.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)  ) &
-                                               +(335.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+1) &
-                                               -(145.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+2) &
-                                                +(27.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+3)
+          s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)-1) =  -(87.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)  ) &
+                                                +(63.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+1) &
+                                                -(37.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+2) &
+                                                +(13.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+3) &
+                                                -( 2.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+4)
+          s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)-2) = -(336.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)  ) &
+                                               +(289.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+1) &
+                                               -(186.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+2) &
+                                               +( 69.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+3) &
+                                               -( 11.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+4)
+!          s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)-1) =  -(77.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)  ) &
+!                                                +(43.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+1) &
+!                                                -(17.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+2) &
+!                                                 +(3.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+3)
+!          s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)-2) = -(505.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)  ) &
+!                                               +(335.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+1) &
+!                                               -(145.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+2) &
+!                                                +(27.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,lo(2)+3)
        else if (bccomp .eq. 2) then
           ! normal velocity
           ! shouldn't have to do anything; this case is covered in physbc_domainvel
@@ -2157,14 +2227,24 @@ contains
        if (bccomp .eq. 1) then
           ! transverse velocity
           ! 5-point stencil using homogeneous dirichlet velocity boundary condition
-          s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)+1) =  -(77.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)  ) &
-                                                +(43.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-1) &
-                                                -(17.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-2) &
-                                                 +(3.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-3)
-          s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)+2) = -(505.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)  ) &
-                                               +(335.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-1) &
-                                               -(145.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-2) &
-                                                +(27.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-3)
+          s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)+1) =  -(87.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)  ) &
+                                                +(63.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-1) &
+                                                -(37.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-2) &
+                                                +(13.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-3) &
+                                                -( 2.d0/10.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-4)
+          s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)+2) = -(336.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)  ) &
+                                               +(289.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-1) &
+                                               -(186.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-2) &
+                                               +( 69.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-3) &
+                                               -( 11.d0/5.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-4)
+!          s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)+1) =  -(77.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)  ) &
+!                                                +(43.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-1) &
+!                                                -(17.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-2) &
+!                                                 +(3.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-3)
+!          s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)+2) = -(505.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)  ) &
+!                                               +(335.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-1) &
+!                                               -(145.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-2) &
+!                                                +(27.d0/12.d0)*s(lo(1)-ng_s:hi(1)+1+ng_s,hi(2)-3)
        else if (bccomp .eq. 2) then
           ! normal velocity
           ! shouldn't have to do anything; this case is covered in physbc_domainvel
