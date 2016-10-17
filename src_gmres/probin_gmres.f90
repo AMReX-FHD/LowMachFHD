@@ -310,7 +310,7 @@ contains
        case ('--gmres_abs_tol')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) gmres_rel_tol
+          read(fname, *) gmres_abs_tol
 
        case ('--gmres_verbose')
           farg = farg + 1
