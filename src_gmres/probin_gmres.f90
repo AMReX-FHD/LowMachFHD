@@ -337,6 +337,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) gmres_min_iter
 
+      case ('--gmres_spatial_order')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) gmres_spatial_order
+
        case ('--')
           farg = farg + 1
           exit
