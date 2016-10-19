@@ -292,6 +292,14 @@ contains ! It is likely that vectorized versions will do better here
        ! One should be careful here to avoid roundoff issues due to some probabilities being zero or summing to not exactly 1
        call BinomialRNG(number=samples(sample), n_trials=N-sum_n, &
                success_prob=min(1.0_dp, p(sample)/max(epsilon(1.0_dp), 1.0_dp-sum_p)), engine=engine)
+
+       ! hack
+       do while (samples(sample)<0 .or. samples(sample)>N-sum_n) 
+          print *, "BinomialRNG ERROR:", N-sum_n, min(1.0_dp, p(sample)/max(epsilon(1.0_dp), 1.0_dp-sum_p)), samples(sample)
+          call BinomialRNG(number=samples(sample), n_trials=N-sum_n, &
+                  success_prob=min(1.0_dp, p(sample)/max(epsilon(1.0_dp), 1.0_dp-sum_p)), engine=engine)
+       end do
+
        sum_n = sum_n + samples(sample)
        sum_p = sum_p + p(sample)
     end do      
