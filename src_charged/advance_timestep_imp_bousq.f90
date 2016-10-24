@@ -271,7 +271,7 @@ contains
        call mk_grav_force(mla,m_grav_force_old,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
-    ! compute "old" Lorentz force
+    ! compute "old" Lorentz force (NOT USED RIGHT NOW)
     call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity, &
                                charge_old,dx,the_bc_tower)
 
@@ -431,7 +431,7 @@ contains
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_tmp,rhotot_tmp,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
-    ! compute Lorentz_force^{n+1,*}
+    ! compute "new" Lorentz_force^{n+1,*}
     call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                charge_new,dx,the_bc_tower)
 
@@ -558,11 +558,10 @@ contains
        end do
     end do
 
-    ! subtract (1/2) (t^n + t^{n+1,*}) Lorentz force
+    ! subtract t^{n+1,*} Lorentz force
     do n=1,nlevs
        do i=1,dm
-          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-0.5d0,Lorentz_force_old(n,i),1,1)
-          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-0.5d0,Lorentz_force_new(n,i),1,1)
+          call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-1.d0,Lorentz_force_new(n,i),1,1)
        end do
     end do
 
@@ -774,7 +773,7 @@ contains
        call compute_permittivity(mla,permittivity,rho_tmp,rhotot_tmp,the_bc_tower)
     end if
 
-    ! compute Lorentz_force^{n+2,*}
+    ! compute Lorentz_force^{n+2,*} (NOT USED RIGHT NOW)
     call compute_Lorentz_force(mla,Lorentz_force_np2,grad_Epot_np2,permittivity, &
                                charge_np2,dx,the_bc_tower)
 
@@ -829,28 +828,29 @@ contains
 
     ! AJN HACK - compute a new grad Epot^{n+1} here?
     ! this will become grad Epot^n at the beginning of the next time step
-    if (dielectric_const .ne. 0.d0) then
-       call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
-                               the_bc_tower%bc_tower_array)
-       do n=1,nlevs
-          call multifab_setval(Epot(n),0.d0,all=.true.)
-          call multifab_copy_c(solver_rhs(n),1,charge_new(n),1,1,0)
-          do i=1,dm
-             call multifab_copy_c(solver_beta(n,i),1,permittivity_fc(n,i),1,1,0)
-          end do
-       end do
-       call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
-                        the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
-       call compute_grad(mla,Epot,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
-       call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
-                                  charge_new,dx,the_bc_tower)
-    else
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_copy_c(Lorentz_force_new(n,i),1,Lorentz_force_np2(n,i),1,1,0)
-          end do
-       end do
-    end if
+!    if (dielectric_const .ne. 0.d0) then
+!       call average_cc_to_face(nlevs,permittivity,permittivity_fc,1,scal_bc_comp,1, &
+!                               the_bc_tower%bc_tower_array)
+!       do n=1,nlevs
+!          call multifab_setval(Epot(n),0.d0,all=.true.)
+!          call multifab_copy_c(solver_rhs(n),1,charge_new(n),1,1,0)
+!          do i=1,dm
+!             call multifab_copy_c(solver_beta(n,i),1,permittivity_fc(n,i),1,1,0)
+!          end do
+!       end do
+!       call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
+!                        the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
+!       call compute_grad(mla,Epot,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
+!       ! compute "new" Lorentz_force^{n+1}
+!       call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
+!                                  charge_new,dx,the_bc_tower)
+!    else
+!       do n=1,nlevs
+!          do i=1,dm
+!             call multifab_copy_c(Lorentz_force_new(n,i),1,Lorentz_force_np2(n,i),1,1,0)
+!          end do
+!       end do
+!    end if
 
     ! fill the stochastic mass multifabs with new sets of random numbers
     if (variance_coef_mass .ne. 0.d0) then
@@ -992,12 +992,10 @@ contains
        end do
     end do
 
-    ! subtract (1/2) (t^n + t^{n+1,*}) Lorentz force
-    ! Note: we do not have a t^{n+1} Lorentz force without above hack
+    ! subtract t^{n+1,*} Lorentz force
     do n=1,nlevs
        do i=1,dm
-         call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-0.5d0,Lorentz_force_old(n,i),1,1)
-         call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-0.5d0,Lorentz_force_new(n,i),1,1)
+         call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,-1.d0,Lorentz_force_new(n,i),1,1)
        end do
     end do
 
