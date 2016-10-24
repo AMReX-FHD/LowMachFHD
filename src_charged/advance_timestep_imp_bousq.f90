@@ -857,8 +857,9 @@ contains
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
     end if
 
+    ! mass fluxes for the next time step
     ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1}
-    ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1,*} Z^{n+1:n+2}
+    ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1} Z^{n+1:n+2}
     ! and flux_total for reservoir boundary conditions on velocity
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -1065,9 +1066,6 @@ contains
     gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
 
     ! fill the stochastic momentum multifabs with new sets of random numbers
-    if (variance_coef_mass .ne. 0.d0) then
-       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-    end if
     if (variance_coef_mom .ne. 0.d0) then
        call fill_m_stochastic(mla)
     end if
