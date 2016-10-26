@@ -60,7 +60,7 @@ contains
     charge_per_mass(:) = 0.d0
     Epot_wall_bc_type  = 1
     Epot_wall(:,:)     = 0.d0
-    theta_pot          = 1.d0
+    theta_pot          = 0.5d0
     num_pot_iters      = 2
     dpdt_factor        = 0.d0
     E_ext_type         = 0
