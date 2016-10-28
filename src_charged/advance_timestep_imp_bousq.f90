@@ -157,6 +157,8 @@ contains
 
     real(kind=dp_t) :: weights(1), sum
 
+    weights(1) = 1.d0
+
     if (any(rhobar(1:nspecies) .ne. rhobar(1))) then
        call bl_error("Implicit Boussinesq algorithm requires all the same rhobar's")
     end if
