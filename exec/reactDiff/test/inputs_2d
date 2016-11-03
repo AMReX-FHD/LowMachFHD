@@ -29,7 +29,7 @@
   plot_int = 0                     ! interval for writing a plotfile (for visit/amrvis)
                                    ! (no plot files for plot_int<=0)
   chk_int = 0                      ! interval for writing a checkpoint
-                                   ! (no checkpoint files for chk_int<=0)
+                                   ! (no checkpoint files for chk_int<0)
   restart = -1                     ! checkpoint restart number
                                    ! (no restart for restart<0)
   print_int = 0                    ! how often to output diagnostics to screen
