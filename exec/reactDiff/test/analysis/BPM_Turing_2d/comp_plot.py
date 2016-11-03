@@ -2,17 +2,26 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
+colperline = 4
+figfile = "test.png"
+
 # check command-line input
 
-if len(sys.argv)<3:
-  print "ERROR: python this_script fit_data1 fit_data2 ..."
+if len(sys.argv)<4:
+  print "ERROR: python this_script colperline figfile fit_data1 fit_data2 ..."
   exit(0)
 
-nfitdata = len(sys.argv)-1
+colperline = int(sys.argv[1])
+figfile = sys.argv[2]
+
+print "colperline=%d"%colperline
+print "figfile=%s"%figfile
+
+nfitdata = len(sys.argv)-3
 
 fitdata = []
 for i in range(nfitdata):
-  fitdata.append(sys.argv[i+1])
+  fitdata.append(sys.argv[i+3])
 
 # read data
 
@@ -42,15 +51,26 @@ for i in range(nfitdata):
 
 # plot
 
-fig = plt.figure(figsize=(12,12),dpi=96)
+plt.rc('font',family="serif")
+plt.rc('font',size=10)
+
+fig = plt.figure()
 
 for n in range(nparam):
   ax = fig.add_subplot(4,2,n+1)
 
-  if n!=7:
-    ax.set_title("a%i"%n)
+  if n+1 != 8:
+    tmp="$a_%i$"%(n+1)
+    ax.set_title(r"%s"%tmp,fontsize=10)
   else:
-    ax.set_title("RMS Fit Error")
+    ax.set_title("RMS Fit Error",fontsize=10)
+
+  if n+1 == 2:
+    prevn = 2
+  elif n+1 == 3:
+    prevn = 1
+  else:
+    prevn = n
 
   ax.set_xlim([0.5,nfitdata+0.5])
   ax.set_xticks(range(1,nfitdata+1))
@@ -61,18 +81,19 @@ for n in range(nparam):
  
     yy = []
     for j in range(nsample):
-      yy.append(aaa[i][j][n]) 
+      yy.append(aaa[i][j][prevn]) 
 
     ax.plot(xx,yy,'o')
 
-legend=""
+legend="$\\left(1-\\tanh\\frac{t-a_1}{a_2}\\right)\\left(a_3\\sin(a_4 t+a_5)+a_6\\right)+a_7$\n"
 for i in range(nfitdata):
-  tmp = "%i: %s      " % (i+1,fitdata[i])
+  tmp = "$%i:$ %s  " % (i+1,fitdata[i])
   legend+=tmp
-  if ((i+1)%4==0):
+  if ((i+1)%colperline==0):
     legend+="\n"
-fig.suptitle(legend)
+fig.suptitle(r"%s"%legend,fontsize=10)
 
-plt.tight_layout()
-plt.subplots_adjust(top=0.9)
-plt.show()
+fig.set_size_inches(10,10)
+fig.tight_layout()
+fig.subplots_adjust(top=0.8)
+fig.savefig(figfile,dpi=200)
