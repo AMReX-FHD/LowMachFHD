@@ -46,7 +46,8 @@ contains
              case(3)   
                 ! Rate ~ N*(N-1)*(N-2)
                 reaction_rates(reaction)= &
-                     reaction_rates(reaction)*n_nonneg(species)*(n_nonneg(species)-1.0d0/dv)*(n_nonneg(species)-2.0d0/dv)
+                     reaction_rates(reaction)*n_nonneg(species)*max(n_nonneg(species)-1.0d0/dv,0.d0) &
+                     *max(n_nonneg(species)-2.0d0/dv,0.d0)
              case default
                 ! This is essentially impossible in practice and won't happen
                 call bl_error("Stochiometric coefficients larger then 3 not supported")      
