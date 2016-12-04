@@ -437,15 +437,16 @@ subroutine main_driver()
           end do
           cellvolume=product(dx(1,1:dm))*cross_section ! Total system volume
           if (parallel_IOProcessor()) then
-          if (n_steps_write_avg==2) then ! Write *only* the first species number density
-             ! Useful to save space in files where there is only one independent reaction
-             write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies))
-          else if (n_steps_write_avg>0) then ! Write number densities
-             write(9,*) real(time), real(n_sum(:)/(multifab_volume(n_old(1))/nspecies)) 
-          else ! Here we write total number of molecules in the system instead of number densities             
-             ! A. Donev: This is to match the particle code, write the same file it does
-             write(21,*) real(time), real(sum(n_sum(:))*cellvolume), real(n_sum(:)*cellvolume)
-          end if
+          !!if (n_steps_write_avg==2) then ! Write *only* the first species number density
+          !!   ! Useful to save space in files where there is only one independent reaction
+          !!   write(9,*) real(time), real(n_sum(1)/(multifab_volume(n_old(1))/nspecies))
+          !!else if (n_steps_write_avg>0) then ! Write number densities
+            if (n_steps_write_avg>0) then ! Write number densities
+               write(9,*) real(time), real(n_sum(:)/(multifab_volume(n_old(1))/nspecies)) 
+            else ! Here we write total number of molecules in the system instead of number densities             
+               ! A. Donev: This is to match the particle code, write the same file it does
+               write(21,*) real(time), real(sum(n_sum(:))*cellvolume), real(n_sum(:)*cellvolume)
+            end if
           end if
        end if
 
