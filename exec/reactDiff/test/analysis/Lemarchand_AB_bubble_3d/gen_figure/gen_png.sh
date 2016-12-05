@@ -1,0 +1,13 @@
+#!/bin/bash
+
+RUNNAME=TEST
+
+PYSCR=gen_png.py
+DATABASENAME=${RUNNAME}.visit
+FIGURENAME=${RUNNAME}_
+WIDTH=512
+HEIGHT=512
+
+visit -nowin -cli -s $PYSCR $DATABASENAME $FIGURENAME $WIDTH $HEIGHT
+
+rm visitlog.py
