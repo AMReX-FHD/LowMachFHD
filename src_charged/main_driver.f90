@@ -449,13 +449,11 @@ subroutine main_driver()
   end if
 
   ! compute permittivity
-  if (dielectric_type .eq. 0) then
-     do n=1,nlevs
-        call multifab_setval(permittivity(n),dielectric_const,all=.true.)
-     end do
-  else
-     call compute_permittivity(mla,permittivity,rho_old,rhotot_old, &
-                               the_bc_tower)
+  do n=1,nlevs
+     call multifab_setval(permittivity(n),dielectric_const,all=.true.)
+  end do
+  if (use_charged_fluid .and. dielectric_type .gt. 0) then
+     call compute_permittivity(mla,permittivity,rho_old,rhotot_old,the_bc_tower)
   end if
 
   ! initialize Temp

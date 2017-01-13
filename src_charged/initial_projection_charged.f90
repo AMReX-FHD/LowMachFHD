@@ -13,7 +13,7 @@ module initial_projection_charged_module
   use fluid_charge_module
   use probin_multispecies_module, only: nspecies
   use probin_common_module, only: rhobar, variance_coef_mass
-  use probin_charged_module, only: dielectric_const
+  use probin_charged_module, only: dielectric_const, use_charged_fluid
 
   implicit none
 
@@ -111,7 +111,7 @@ contains
     ! compute diffusive, stochastic, and potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
-    if (dielectric_const .eq. 0.d0) then
+    if (dielectric_const .eq. 0.d0 .or. (.not. use_charged_fluid) ) then
        call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
                                          stoch_mass_fluxdiv,Temp,flux_total,flux_diff, &
                                          dt,0.d0,dx,weights, &
@@ -136,8 +136,10 @@ contains
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
-       call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       if (use_charged_fluid) then
+          call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
@@ -152,8 +154,10 @@ contains
     ! set mac_rhs to "-S = div(F_i/rho_i)"
     do n=1,nlevs
        do i=1,nspecies
-          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          if (use_charged_fluid) then
+             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
+          end if
           if (variance_coef_mass .ne. 0.d0) then
              call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if

@@ -126,17 +126,16 @@ contains
        end do
     end do
 
-    if (present(Epot_fluxdiv) .and. &
+    if (use_charged_fluid .and. &
+        present(Epot_fluxdiv) .and. &
         present(charge) .and. &
         present(grad_Epot) .and. &
         present(Epot) .and. &
         present(permittivity)) then
-       if (use_charged_fluid) then
-          ! compute electric potential mass fluxes
-          call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                                 flux_total,dx,the_bc_tower,charge,grad_Epot,Epot, &
-                                 permittivity)
-       end if
+       ! compute electric potential mass fluxes
+       call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
+                              flux_total,dx,the_bc_tower,charge,grad_Epot,Epot, &
+                              permittivity)
     end if
 
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."

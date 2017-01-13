@@ -187,9 +187,11 @@ contains
     ! Step 2 - Predictor Euler Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! compute old Lorentz force
-    call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity, &
-                               charge_old,dx,the_bc_tower)
+    if (use_charged_fluid) then
+       ! compute old Lorentz force
+       call compute_Lorentz_force(mla,Lorentz_force_old,grad_Epot_old,permittivity, &
+                                  charge_old,dx,the_bc_tower)
+    end if
 
     ! average rho_old and rhotot_old to faces
     call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -198,8 +200,10 @@ contains
     ! add D^n and St^n to rho_update
     do n=1,nlevs
        call setval(rho_update(n),0.d0,all=.true.)
-       call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies,0)
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
+       if (use_charged_fluid) then
+          call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies,0)
+       end if
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
        end if
@@ -207,6 +211,7 @@ contains
 
     ! add A^n to rho_update
     if (advection_type .ge. 1) then
+
       do n=1,nlevs
          ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
          call setval(bds_force(n),0.d0,all=.true.)
@@ -239,7 +244,10 @@ contains
                         c_bc_comp,the_bc_tower,proj_type_in=2)
       end if
     else
+
+       ! compute A^n for scalars using centered advection
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+
     end if
 
     ! set rho_new = rho_old + dt * (A^n + D^n + St^n)
@@ -273,9 +281,8 @@ contains
     end if
 
     ! compute new permittivity
-    if (dielectric_type .ne. 0) then
-       call compute_permittivity(mla,permittivity,rho_new,rhotot_new, &
-                                 the_bc_tower)
+    if (use_charged_fluid .and. dielectric_type .gt. 0) then
+       call compute_permittivity(mla,permittivity,rho_new,rhotot_new,the_bc_tower)
     end if
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -395,8 +402,10 @@ contains
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
-       call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       if (use_charged_fluid) then
+          call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
@@ -410,6 +419,7 @@ contains
 
     if (use_charged_fluid) then
 
+       ! compute new Lorentz force
        call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                   charge_new,dx,the_bc_tower)
 
@@ -428,8 +438,10 @@ contains
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          if (use_charged_fluid) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
+          end if
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
@@ -494,8 +506,10 @@ contains
     do n=1,nlevs
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies)
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
+       if (use_charged_fluid) then
+          call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies)
+       end if
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
        end if
@@ -634,7 +648,7 @@ contains
 
     else
 
-       ! compute A^{*,n+1} for scalars
+       ! compute A^{*,n+1} for scalars using centered advection
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
 
        ! snew = s^{n+1} 
@@ -683,9 +697,8 @@ contains
     end if
 
     ! compute new permittivity
-    if (dielectric_type .ne. 0) then
-       call compute_permittivity(mla,permittivity,rho_new,rhotot_new, &
-                                 the_bc_tower)
+    if (use_charged_fluid .and. dielectric_type .gt. 0) then
+       call compute_permittivity(mla,permittivity,rho_new,rhotot_new,the_bc_tower)
     end if
 
     ! compute (eta,kappa)^{n+1}
@@ -797,8 +810,10 @@ contains
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
-       call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       if (use_charged_fluid) then
+          call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
+       end if
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
@@ -810,9 +825,9 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
-
     if (use_charged_fluid) then
 
+       ! compute new Lorentz force
        call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                   charge_new,dx,the_bc_tower)
 
@@ -831,8 +846,10 @@ contains
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          if (use_charged_fluid) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
+          end if
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
