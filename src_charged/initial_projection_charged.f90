@@ -12,7 +12,7 @@ module initial_projection_charged_module
   use reservoir_bc_fill_module
   use fluid_charge_module
   use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: rhobar, variance_coef_mass
+  use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type
   use probin_charged_module, only: dielectric_const, use_charged_fluid
 
   implicit none
@@ -65,6 +65,7 @@ contains
 
     ! local
     integer :: i,dm,n,nlevs
+    real(kind=dp_t) :: dt_eff
 
     type(multifab) ::mac_rhs(mla%nlevel)
     type(multifab) :: divu(mla%nlevel)
@@ -74,12 +75,20 @@ contains
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
     type(multifab) :: flux_diff(mla%nlevel,mla%dim)
 
-    real(kind=dp_t) :: weights(1)
+    real(kind=dp_t) :: weights(2)
     
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"initial_projection_charged")
     
+    if (algorithm_type .eq. 5) then
+       ! for midpoint scheme where predictor goes to t^{n+1/2}
+       dt_eff = 0.5d0*dt
+    else
+       dt_eff = dt
+    end if
+
+    weights(:) = 0.d0
     weights(1) = 1.d0
 
     dm = mla%dim
@@ -114,7 +123,7 @@ contains
     if (dielectric_const .eq. 0.d0 .or. (.not. use_charged_fluid) ) then
        call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
                                          stoch_mass_fluxdiv,Temp,flux_total,flux_diff, &
-                                         dt,0.d0,dx,weights, &
+                                         dt_eff,0.d0,dx,weights, &
                                          the_bc_tower)
        do n=1,nlevs
           call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
@@ -126,7 +135,7 @@ contains
     else
        call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
                                          stoch_mass_fluxdiv,Temp,flux_total,flux_diff, &
-                                         dt,0.d0,dx,weights, &
+                                         dt_eff,0.d0,dx,weights, &
                                          the_bc_tower,Epot_mass_fluxdiv, &
                                          charge=charge_old, &
                                          grad_Epot=grad_Epot_old, &
