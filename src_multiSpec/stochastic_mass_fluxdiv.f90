@@ -91,7 +91,7 @@ contains
     ! convert stoch_W_fc into flux
     do n=1,nlevs
        do i = 1,dm
-          do rng=1,size(weights)
+          do rng=1,n_rngs
              call saxpy(flux(n,i), weights(rng), stoch_W_fc(n,i,rng))
           end do   
        end do   
