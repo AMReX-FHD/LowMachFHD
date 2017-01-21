@@ -7,3 +7,4 @@ f90sources += initial_projection_charged.f90
 f90sources += probin_charged.f90
 f90sources += project_onto_eos_charged.f90
 f90sources += write_plotfile_charged.f90
+f90sources += advance_timestep_inertial_midpoint.f90

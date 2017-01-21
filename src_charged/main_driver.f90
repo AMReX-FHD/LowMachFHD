@@ -12,6 +12,7 @@ subroutine main_driver()
   use advance_timestep_overdamped_module
   use advance_timestep_iterative_module
   use advance_timestep_imp_bousq_module
+  use advance_timestep_inertial_midpoint_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
@@ -406,6 +407,8 @@ subroutine main_driver()
   ! allocate and build multifabs that will contain random numbers
   if (algorithm_type .eq. 2) then
      n_rngs = 2
+  else if (algorithm_type .eq. 5) then
+     n_rngs = 2
   else
      n_rngs = 1
   end if
@@ -660,6 +663,15 @@ subroutine main_driver()
                                          grad_Epot_old,grad_Epot_new, &
                                          charge_old,charge_new,Epot, &
                                          permittivity,gradPhiApprox)
+      else if (algorithm_type .eq. 5) then
+         call advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                                 gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                                 Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                                 stoch_mass_fluxdiv, &
+                                                 dx,dt,time,the_bc_tower,istep, &
+                                                 grad_Epot_old,grad_Epot_new, &
+                                                 charge_old,charge_new,Epot, &
+                                                 permittivity)
       end if
 
       time = time + dt
