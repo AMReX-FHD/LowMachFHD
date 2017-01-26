@@ -129,9 +129,9 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
-  allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
-  allocate(chem_rate(nlevs))
+  allocate(Temp(nlevs))
   allocate(Epot_mass_fluxdiv(nlevs))
+  allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
@@ -149,6 +149,10 @@ subroutine main_driver()
   allocate(grad_Epot_new(nlevs,dm))
   allocate(Epot(nlevs))
   allocate(gradPhiApprox(nlevs,dm))
+
+  if (include_reactions) then
+     allocate(chem_rate(nlevs))
+  end if
 
   ! build pmask
   allocate(pmask(dm))
@@ -233,11 +237,16 @@ subroutine main_driver()
         call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
-        call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
      end do
+
+     if (include_reactions) then
+        do n=1,nlevs
+           call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
+        end do
+     end if
 
   end if
 
@@ -813,7 +822,6 @@ subroutine main_driver()
      call multifab_destroy(Epot_mass_fluxdiv(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      call multifab_destroy(stoch_mass_fluxdiv(n))
-     call multifab_destroy(chem_rate(n))
      call multifab_destroy(pi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
@@ -844,10 +852,17 @@ subroutine main_driver()
   end do
   deallocate(grad_Epot_old,grad_Epot_new)
 
+  if (include_reactions) then
+     do n=1,nlevs
+        call multifab_destroy(chem_rate(n))
+     end do
+
+     deallocate(chem_rate)
+  end if
+
   deallocate(lo,hi,dx)
   deallocate(rho_old,rhotot_old,Temp,umac)
   deallocate(Epot_mass_fluxdiv,diff_mass_fluxdiv,stoch_mass_fluxdiv)
-  deallocate(chem_rate)
   call stag_mg_layout_destroy()
   call mgt_macproj_precon_destroy()
   call destroy(mla)

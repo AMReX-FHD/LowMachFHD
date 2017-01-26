@@ -163,14 +163,13 @@ contains
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
-       call multifab_build(    rho_update(n),mla%la(n),nspecies,0)
-       call multifab_build(     bds_force(n),mla%la(n),nspecies,1)
-       call multifab_build(   gmres_rhs_p(n),mla%la(n),1       ,0)
-       call multifab_build(           dpi(n),mla%la(n),1       ,1)
-       call multifab_build(          divu(n),mla%la(n),1       ,0)
-       call multifab_build(          conc(n),mla%la(n),nspecies,rho_old(n)%ng)
-       call multifab_build(        p_baro(n),mla%la(n),1       ,1)
-       call multifab_build(chem_rate_temp(n),mla%la(n),nspecies,0)
+       call multifab_build( rho_update(n),mla%la(n),nspecies,0)
+       call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
+       call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
+       call multifab_build(        dpi(n),mla%la(n),1       ,1)
+       call multifab_build(       divu(n),mla%la(n),1       ,0)
+       call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
+       call multifab_build(     p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
           call multifab_build_edge(             mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(            mtemp(n,i),mla%la(n),1       ,1,i)
@@ -190,6 +189,12 @@ contains
           call multifab_build_edge(Lorentz_force_new(n,i),mla%la(n),1       ,0,i)
        end do
     end do
+
+    if (include_reactions) then
+       do n=1,nlevs
+          call multifab_build(chem_rate_temp(n),mla%la(n),nspecies,0)
+       end do
+    end if
 
     ! make copies of old quantities
     do n=1,nlevs
@@ -1094,7 +1099,6 @@ contains
        call multifab_destroy(divu(n))
        call multifab_destroy(conc(n))
        call multifab_destroy(p_baro(n))
-       call multifab_destroy(chem_rate_temp(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
@@ -1114,6 +1118,12 @@ contains
           call multifab_destroy(Lorentz_force_new(n,i))
        end do
     end do
+
+    if (include_reactions) then
+       do n=1,nlevs
+          call multifab_destroy(chem_rate_temp(n))
+       end do
+    end if
 
     call destroy(bpt)
 
