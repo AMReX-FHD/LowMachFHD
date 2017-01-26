@@ -49,7 +49,7 @@ subroutine main_driver()
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
-                                   dielectric_type
+                                   dielectric_type, include_reactions
 
   use fabio_module
 
@@ -79,6 +79,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
+  type(multifab), allocatable  :: chem_rate(:)
   type(multifab), allocatable  :: umac(:,:)
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
@@ -129,6 +130,7 @@ subroutine main_driver()
   allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs),diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
+  allocate(chem_rate(nlevs))
   allocate(Epot_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
@@ -168,6 +170,10 @@ subroutine main_driver()
   if (restart .ge. 0) then
 
      init_step = restart + 1
+
+     if (include_reactions .or. use_charged_fluid) then
+        call bl_error('Error: restart function currently not supported for include_reactions=T or use_charged_fluid=T')
+     end if
 
      ! build the ml_layout
      ! read in time and dt from checkpoint
@@ -227,6 +233,7 @@ subroutine main_driver()
         call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+        call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
@@ -548,10 +555,10 @@ subroutine main_driver()
      ! From this perspective it may be useful to keep initial_projection even in overdamped
      ! because different gmres tolerances may be needed in the first step than in the rest
      call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
-                                     Epot_mass_fluxdiv,diff_mass_fluxdiv, &
-                                     stoch_mass_fluxdiv, &
-                                     Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                     charge_old,grad_Epot_old,Epot,permittivity)
+                                        Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                        stoch_mass_fluxdiv,chem_rate, &
+                                        Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+                                        charge_old,grad_Epot_old,Epot,permittivity)
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -667,7 +674,7 @@ subroutine main_driver()
          call advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                                  gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                                  Epot_mass_fluxdiv,diff_mass_fluxdiv, &
-                                                 stoch_mass_fluxdiv, &
+                                                 stoch_mass_fluxdiv,chem_rate, &
                                                  dx,dt,time,the_bc_tower,istep, &
                                                  grad_Epot_old,grad_Epot_new, &
                                                  charge_old,charge_new,Epot, &
@@ -741,6 +748,10 @@ subroutine main_driver()
 
          ! write checkpoint at specific intervals
          if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
+            if (include_reactions .or. use_charged_fluid) then
+               call bl_error('Error: checkpoint function currently not supported for include_reactions=T or use_charged_fluid=T')
+            end if
+
             if (parallel_IOProcessor()) then
                write(*,*), 'writing checkpoint at timestep =', istep 
             end if
@@ -802,6 +813,7 @@ subroutine main_driver()
      call multifab_destroy(Epot_mass_fluxdiv(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      call multifab_destroy(stoch_mass_fluxdiv(n))
+     call multifab_destroy(chem_rate(n))
      call multifab_destroy(pi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
@@ -835,6 +847,7 @@ subroutine main_driver()
   deallocate(lo,hi,dx)
   deallocate(rho_old,rhotot_old,Temp,umac)
   deallocate(Epot_mass_fluxdiv,diff_mass_fluxdiv,stoch_mass_fluxdiv)
+  deallocate(chem_rate)
   call stag_mg_layout_destroy()
   call mgt_macproj_precon_destroy()
   call destroy(mla)

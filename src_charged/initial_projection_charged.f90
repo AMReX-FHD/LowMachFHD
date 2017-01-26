@@ -12,8 +12,11 @@ module initial_projection_charged_module
   use reservoir_bc_fill_module
   use fluid_charge_module
   use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type
-  use probin_charged_module, only: dielectric_const, use_charged_fluid
+  use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type, &
+                                  molmass
+  use probin_charged_module, only: dielectric_const, use_charged_fluid, &
+                                   include_reactions, use_Poisson_rng
+  use chemical_rates_module
 
   implicit none
 
@@ -40,7 +43,7 @@ contains
 
   subroutine initial_projection_charged(mla,umac,rho,rhotot,gradp_baro, &
                                         Epot_mass_fluxdiv, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,chem_rate, &
                                         Temp,eta,eta_ed,dt,dx,the_bc_tower, &
                                         charge_old,grad_Epot_old,Epot,permittivity)
 
@@ -52,6 +55,7 @@ contains
     type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: chem_rate(:)
     type(multifab) , intent(in   ) :: Temp(:)
     type(multifab) , intent(in   ) :: eta(:)
     type(multifab) , intent(in   ) :: eta_ed(:,:)  ! nodal (2d); edge-centered (3d)
@@ -67,7 +71,7 @@ contains
     integer :: i,dm,n,nlevs
     real(kind=dp_t) :: dt_eff
 
-    type(multifab) ::mac_rhs(mla%nlevel)
+    type(multifab) :: mac_rhs(mla%nlevel)
     type(multifab) :: divu(mla%nlevel)
     type(multifab) :: phi(mla%nlevel)
     type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
@@ -86,6 +90,14 @@ contains
        dt_eff = 0.5d0*dt
     else
        dt_eff = dt
+    end if
+
+    if (include_reactions) then
+       if (algorithm_type .ne. 5) then
+          call bl_error('Error: only algorithm_type=5 allowed for include_reactions=T')
+       else if (use_Poisson_rng .eq. 2) then
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorithm_type=5 and include_reactions=T')
+       end if
     end if
 
     weights(:) = 0.d0
@@ -157,18 +169,45 @@ contains
        end do
     end do
 
+    ! compute chemical rates m_i*R_i
+    if (include_reactions) then
+       ! convert rho from mass densities (rho_i) into number densities (rho_i/m_i)
+       ! will convert back into mass densities after computing chemical rates
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_div_div_s_c(rho(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates R_i (units=[number density]/[time])
+       call chemical_rates(mla,rho,chem_rate,dx,dt_eff)
+
+       ! convert chemical rates R_i into m_i*R_i (units=[mass density]/[time])
+       ! convert rho back into mass densities
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_mult_mult_s_c(chem_rate(n),i,molmass(i),1,0)
+             call multifab_mult_mult_s_c(rho(n),i,molmass(i),1,0)
+          end do
+       end do
+    end if
+
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
-    ! set mac_rhs to "-S = div(F_i/rho_i)"
+    ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
+    ! if include_reactions=T, also add sum_i -(m_i*R_i)/rhobar_i
     do n=1,nlevs
        do i=1,nspecies
-          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
           if (use_charged_fluid) then
-             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
+             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),Epot_mass_fluxdiv(n),i,1)
           end if
           if (variance_coef_mass .ne. 0.d0) then
              call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
+          if (include_reactions) then
+             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
           end if
        end do
     end do

@@ -17,7 +17,19 @@ module probin_charged_module
   integer            :: num_pot_iters
   real(kind=dp_t)    :: dpdt_factor
   integer            :: E_ext_type
-  
+
+  ! for reactions
+  integer, parameter    :: max_reactions=20
+
+  logical, save         :: include_reactions = .false.
+  integer, save         :: nreactions = 1
+  integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0
+  real(kind=dp_t), save :: rate_const(max_reactions) = 0.d0
+  real(kind=dp_t), save :: rate_multiplier = 1.d0
+  logical, save         :: include_discrete_LMA_correction = .true.
+  integer, save         :: use_Poisson_rng = 1
+  real(kind=dp_t), save :: cross_section = 1.d0
+
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
   namelist /probin_charged/ dielectric_const
@@ -31,6 +43,16 @@ module probin_charged_module
   namelist /probin_charged/ num_pot_iters
   namelist /probin_charged/ dpdt_factor
   namelist /probin_charged/ E_ext_type         ! external electric field
+
+  ! for reactions
+  namelist /probin_charged/ include_reactions
+  namelist /probin_charged/ nreactions
+  namelist /probin_charged/ stoichiometric_factors
+  namelist /probin_charged/ rate_const
+  namelist /probin_charged/ rate_multiplier
+  namelist /probin_charged/ include_discrete_LMA_correction
+  namelist /probin_charged/ use_Poisson_rng
+  namelist /probin_charged/ cross_section
 
 contains
 
@@ -125,6 +147,36 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) E_ext_type
+
+       case ('--include_reactions')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) include_reactions
+
+       case ('--nreactions')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) nreactions
+
+       case ('--rate_multiplier')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rate_multiplier
+
+       case ('--include_discrete_LMA_correction')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) include_discrete_LMA_correction
+
+       case ('--use_Poisson_rng')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) use_Poisson_rng
+
+       case ('--cross_section')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) cross_section
 
        case ('--')
           farg = farg + 1

@@ -29,10 +29,13 @@ module advance_timestep_inertial_midpoint_module
   use fill_rho_ghost_cells_module
 
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, barodiffusion_type, project_eos_int
+                                  variance_coef_mom, barodiffusion_type, project_eos_int, &
+                                  molmass
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: use_charged_fluid, dielectric_type
+  use probin_charged_module, only: use_charged_fluid, dielectric_type, &
+                                   include_reactions, use_Poisson_rng
+  use chemical_rates_module
 
   implicit none
 
@@ -60,7 +63,7 @@ contains
   subroutine advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                                 gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                                 Epot_mass_fluxdiv, &
-                                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                                diff_mass_fluxdiv,stoch_mass_fluxdiv,chem_rate, &
                                                 dx,dt,time,the_bc_tower,istep, &
                                                 grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
                                                 Epot,permittivity)
@@ -82,6 +85,7 @@ contains
     type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: chem_rate(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
@@ -94,15 +98,16 @@ contains
     type(multifab) , intent(inout) :: permittivity(:)
 
     ! local
-    type(multifab) ::  rho_update(mla%nlevel)
-    type(multifab) ::   bds_force(mla%nlevel)
-    type(multifab) :: gmres_rhs_p(mla%nlevel)
-    type(multifab) ::         dpi(mla%nlevel)
-    type(multifab) ::        divu(mla%nlevel)
-    type(multifab) ::        conc(mla%nlevel)
-    type(multifab) ::  rho_nd_old(mla%nlevel)
-    type(multifab) ::     rho_tmp(mla%nlevel)
-    type(multifab) ::      p_baro(mla%nlevel)
+    type(multifab) ::     rho_update(mla%nlevel)
+    type(multifab) ::      bds_force(mla%nlevel)
+    type(multifab) ::    gmres_rhs_p(mla%nlevel)
+    type(multifab) ::            dpi(mla%nlevel)
+    type(multifab) ::           divu(mla%nlevel)
+    type(multifab) ::           conc(mla%nlevel)
+    type(multifab) ::     rho_nd_old(mla%nlevel)
+    type(multifab) ::        rho_tmp(mla%nlevel)
+    type(multifab) ::         p_baro(mla%nlevel)
+    type(multifab) :: chem_rate_temp(mla%nlevel)
 
     type(multifab) ::          mold(mla%nlevel,mla%dim)
     type(multifab) ::         mtemp(mla%nlevel,mla%dim)
@@ -128,6 +133,8 @@ contains
 
     real(kind=dp_t) :: weights(2)
 
+    real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
+
     type(bl_prof_timer), save :: bpt
 
     if (advection_type .ne. 0) then
@@ -142,6 +149,12 @@ contains
        call bl_error('Error: currently only use_charged_fluid=F allowed for algorithm_type=5')
     end if
 
+    if (include_reactions) then
+       if (use_Poisson_rng .eq. 2) then
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=5 and include_reactions=T')
+       end if
+    end if
+
     call build(bpt, "advance_timestep_inertial_midpoint")
 
     nlevs = mla%nlevel
@@ -150,13 +163,14 @@ contains
     call build_bc_multifabs(mla)
     
     do n=1,nlevs
-       call multifab_build( rho_update(n),mla%la(n),nspecies,0)
-       call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
-       call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
-       call multifab_build(        dpi(n),mla%la(n),1       ,1)
-       call multifab_build(       divu(n),mla%la(n),1       ,0)
-       call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
-       call multifab_build(     p_baro(n),mla%la(n),1       ,1)
+       call multifab_build(    rho_update(n),mla%la(n),nspecies,0)
+       call multifab_build(     bds_force(n),mla%la(n),nspecies,1)
+       call multifab_build(   gmres_rhs_p(n),mla%la(n),1       ,0)
+       call multifab_build(           dpi(n),mla%la(n),1       ,1)
+       call multifab_build(          divu(n),mla%la(n),1       ,0)
+       call multifab_build(          conc(n),mla%la(n),nspecies,rho_old(n)%ng)
+       call multifab_build(        p_baro(n),mla%la(n),1       ,1)
+       call multifab_build(chem_rate_temp(n),mla%la(n),nspecies,0)
        do i=1,dm
           call multifab_build_edge(             mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(            mtemp(n,i),mla%la(n),1       ,1,i)
@@ -208,12 +222,15 @@ contains
     ! add D^n and St^n to rho_update
     do n=1,nlevs
        call setval(rho_update(n),0.d0,all=.true.)
-       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
        if (use_charged_fluid) then
-          call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies,0)
+          call multifab_plus_plus_c(rho_update(n),1,Epot_mass_fluxdiv(n),1,nspecies,0)
        end if
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+       end if
+       if (include_reactions) then
+          call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies,0)
        end if
     end do
 
@@ -425,6 +442,37 @@ contains
        end do
     end do
 
+    ! compute chemical rates m_i*R^{n+1/2}_i
+    if (include_reactions) then
+       ! convert rho_old (at n) and rho_new (at n+1/2) from mass densities (rho_i) into number densities (rho_i/m_i)
+       ! will convert back into mass densities after computing chemical rates
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_div_div_s_c(rho_old(n),i,molmass(i),1,0)
+             call multifab_div_div_s_c(rho_new(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates R_i (units=[number density]/[time]) for the second half step
+       call chemical_rates(mla,rho_old,chem_rate_temp,dx,0.5d0*dt,rho_new,mattingly_lin_comb_coef)
+
+       ! convert chemical rates R_i into m_i*R_i (units=[mass density]/[time])
+       ! convert rho_old and rho_new back into mass densities
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_mult_mult_s_c(chem_rate_temp(n),i,molmass(i),1,0)
+             call multifab_mult_mult_s_c(rho_old(n),i,molmass(i),1,0)
+             call multifab_mult_mult_s_c(rho_new(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates m_i*R^{n+1/2}_i for the full step
+       do n=1,nlevs
+          call multifab_plus_plus_c(chem_rate(n),1,chem_rate_temp(n),1,nspecies,0)
+          call multifab_mult_mult_s_c(chem_rate(n),1,0.5d0,nspecies,0)
+       end do
+    end if
+
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
@@ -445,16 +493,20 @@ contains
     end if
 
     ! compute gmres_rhs_p
-    ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
+    ! put -S = sum_i div(F^{n+1/2}_i)/rhobar_i into gmres_rhs_p (we will later add divu)
+    ! if include_reactions=T, also add sum_i -(m_i*R^{n+1/2}_i)/rhobar_i
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
           if (use_charged_fluid) then
-             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),Epot_mass_fluxdiv(n),i,1)
           end if
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
+          if (include_reactions) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
           end if
        end do
     end do
@@ -512,17 +564,20 @@ contains
     end do
 
     ! reset rho_update for all scalars to zero
-    ! then, set rho_update to F^{n+1/2}
+    ! then, set rho_update to -F^{n+1/2}_i (plus m_i*R^{n+1/2}_i, if include_reactions=T)
     ! it is used in Step 5 below
     do n=1,nlevs
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
        if (use_charged_fluid) then
-          call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies)
+          call multifab_plus_plus_c(rho_update(n),1,Epot_mass_fluxdiv(n),1,nspecies)
        end if
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
+       if (include_reactions) then
+          call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies)
        end if
     end do
 
@@ -563,7 +618,7 @@ contains
     ! gmres_abs_tol = 0.d0 ! It is better to set gmres_abs_tol in namelist to a sensible value
 
     ! call gmres to compute delta v and delta pi
-    theta_alpha = 2.0d0/dt
+    theta_alpha = 2.d0/dt
     call gmres(mla,the_bc_tower,dx,gmres_rhs_v,gmres_rhs_p,dumac,dpi,rhotot_fc_new, &
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
 
@@ -582,7 +637,7 @@ contains
     end do
 
     ! compute v^{n+1/2} = v^n + dumac
-    ! compute pi^{n+1/2}= pi + dpi
+    ! compute pi^{n+1/2}= pi^n + dpi
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
@@ -724,7 +779,7 @@ contains
        end do
     end do
 
-    ! compute grad pi
+    ! compute grad pi^{n+1/2}
     call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
     ! barodiffusion uses predicted grad(pi)
@@ -741,7 +796,7 @@ contains
                          the_bc_tower%bc_tower_array)
     end if
 
-    ! subtract grad pi from gmres_rhs_v
+    ! subtract grad pi^{n+1/2} from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradpi(n,i),1,1,0)
@@ -816,8 +871,8 @@ contains
     ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
-    weights(1) = 1.0d0
-    weights(2) = 0.0d0
+    weights(1) = 1.d0
+    weights(2) = 0.d0
     call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff,0.5d0*dt,time,dx,weights, &
@@ -839,6 +894,29 @@ contains
        end do
     end do
 
+    ! compute chemical rates m_i*R^{n+1}_i
+    if (include_reactions) then
+       ! convert rho_new (at n+1) from mass densities (rho_i) into number densities (rho_i/m_i)
+       ! will convert back into mass densities after computing chemical rates
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_div_div_s_c(rho_new(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates R^{n+1}_i (units=[number density]/[time])
+       call chemical_rates(mla,rho_new,chem_rate,dx,0.5d0*dt)
+
+       ! convert chemical rates R^{n+1}_i into m_i*R^{n+1}_i (units=[mass density]/[time])
+       ! convert rho_new back into mass densities
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_mult_mult_s_c(chem_rate(n),i,molmass(i),1,0)
+             call multifab_mult_mult_s_c(rho_new(n),i,molmass(i),1,0)
+          end do
+       end do
+    end if
+
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
@@ -859,16 +937,20 @@ contains
     end if
 
     ! compute gmres_rhs_p
-    ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
+    ! put -S = sum_i div(F^{n+1}_i)/rhobar_i into gmres_rhs_p (we will later add divu)
+    ! if include_reactions=T, also add sum_i -(m_i*R^{n+1}_i)/rhobar_i
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
           if (use_charged_fluid) then
-             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),Epot_mass_fluxdiv(n),i,1)
           end if
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
+          if (include_reactions) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
           end if
        end do
     end do
@@ -1012,6 +1094,7 @@ contains
        call multifab_destroy(divu(n))
        call multifab_destroy(conc(n))
        call multifab_destroy(p_baro(n))
+       call multifab_destroy(chem_rate_temp(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
