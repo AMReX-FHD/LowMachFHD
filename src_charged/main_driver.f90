@@ -837,6 +837,11 @@ subroutine main_driver()
      end do
   end do
 
+  deallocate(lo,hi,dx)
+  deallocate(rho_old,rhotot_old,rho_new,rhotot_new,rhotot_fc,conc)
+  deallocate(Temp,umac,pi,mtemp,gradp_baro,eta,kappa,eta_ed,Temp_ed)
+  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
+
   do n=1,nlevs
      call multifab_destroy(charge_old(n))
      call multifab_destroy(charge_new(n))
@@ -850,7 +855,10 @@ subroutine main_driver()
         call multifab_destroy(gradPhiApprox(n,i))
      end do
   end do
-  deallocate(grad_Epot_old,grad_Epot_new)
+
+  deallocate(Epot_mass_fluxdiv)
+  deallocate(charge_old,charge_new,permittivity)
+  deallocate(grad_Epot_old,grad_Epot_new,Epot,gradPhiApprox)
 
   if (include_reactions) then
      do n=1,nlevs
@@ -860,9 +868,6 @@ subroutine main_driver()
      deallocate(chem_rate)
   end if
 
-  deallocate(lo,hi,dx)
-  deallocate(rho_old,rhotot_old,Temp,umac)
-  deallocate(Epot_mass_fluxdiv,diff_mass_fluxdiv,stoch_mass_fluxdiv)
   call stag_mg_layout_destroy()
   call mgt_macproj_precon_destroy()
   call destroy(mla)
