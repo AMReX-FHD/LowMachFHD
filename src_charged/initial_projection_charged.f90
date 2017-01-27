@@ -74,6 +74,7 @@ contains
     type(multifab) :: mac_rhs(mla%nlevel)
     type(multifab) :: divu(mla%nlevel)
     type(multifab) :: phi(mla%nlevel)
+    type(multifab) :: n_cc(mla%nlevel)
     type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
@@ -119,6 +120,12 @@ contains
           call multifab_build_edge(   flux_diff(n,i),mla%la(n),nspecies,0,i)
        end do       
     end do
+
+    if (include_reactions) then
+       do n=1,nlevs
+          call multifab_build(n_cc(n),mla%la(n),nspecies,0)
+       end do
+    end if
 
     do n=1,nlevs
        call setval(mac_rhs(n),0.d0)
@@ -171,23 +178,21 @@ contains
 
     ! compute chemical rates m_i*R_i
     if (include_reactions) then
-       ! convert rho from mass densities (rho_i) into number densities (rho_i/m_i)
-       ! will convert back into mass densities after computing chemical rates
+       ! convert rho (mass densities rho_i) into n_cc (number densities n_i=rho_i/m_i)
        do n=1,nlevs
+          call multifab_copy_c(n_cc(n),1,rho(n),1,nspecies,0)
           do i=1,nspecies
-             call multifab_div_div_s_c(rho(n),i,molmass(i),1,0)
+             call multifab_div_div_s_c(n_cc(n),i,molmass(i),1,0)
           end do
        end do
 
        ! compute chemical rates R_i (units=[number density]/[time])
-       call chemical_rates(mla,rho,chem_rate,dx,dt_eff)
+       call chemical_rates(mla,n_cc,chem_rate,dx,dt_eff)
 
        ! convert chemical rates R_i into m_i*R_i (units=[mass density]/[time])
-       ! convert rho back into mass densities
        do n=1,nlevs
           do i=1,nspecies
              call multifab_mult_mult_s_c(chem_rate(n),i,molmass(i),1,0)
-             call multifab_mult_mult_s_c(rho(n),i,molmass(i),1,0)
           end do
        end do
     end if
@@ -284,6 +289,12 @@ contains
           call multifab_destroy(flux_diff(n,i))
        end do
     end do
+
+    if (include_reactions) then
+       do n=1,nlevs
+          call multifab_destroy(n_cc(n))
+       end do
+    end if
 
     call destroy(bpt)
 

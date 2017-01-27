@@ -108,6 +108,8 @@ contains
     type(multifab) ::        rho_tmp(mla%nlevel)
     type(multifab) ::         p_baro(mla%nlevel)
     type(multifab) :: chem_rate_temp(mla%nlevel)
+    type(multifab) ::          n_old(mla%nlevel)
+    type(multifab) ::          n_new(mla%nlevel)
 
     type(multifab) ::          mold(mla%nlevel,mla%dim)
     type(multifab) ::         mtemp(mla%nlevel,mla%dim)
@@ -193,6 +195,8 @@ contains
     if (include_reactions) then
        do n=1,nlevs
           call multifab_build(chem_rate_temp(n),mla%la(n),nspecies,0)
+          call multifab_build(         n_old(n),mla%la(n),nspecies,0)
+          call multifab_build(         n_new(n),mla%la(n),nspecies,0)
        end do
     end if
 
@@ -449,25 +453,24 @@ contains
 
     ! compute chemical rates m_i*R^{n+1/2}_i
     if (include_reactions) then
-       ! convert rho_old (at n) and rho_new (at n+1/2) from mass densities (rho_i) into number densities (rho_i/m_i)
-       ! will convert back into mass densities after computing chemical rates
+       ! convert rho_old (at n) and rho_new (at n+1/2) (mass densities rho_i)
+       ! into n_old and n_new (number densities n_i=rho_i/m_i)
        do n=1,nlevs
+          call multifab_copy_c(n_old(n),1,rho_old(n),1,nspecies,0)
+          call multifab_copy_c(n_new(n),1,rho_new(n),1,nspecies,0)
           do i=1,nspecies
-             call multifab_div_div_s_c(rho_old(n),i,molmass(i),1,0)
-             call multifab_div_div_s_c(rho_new(n),i,molmass(i),1,0)
+             call multifab_div_div_s_c(n_old(n),i,molmass(i),1,0)
+             call multifab_div_div_s_c(n_new(n),i,molmass(i),1,0)
           end do
        end do
 
        ! compute chemical rates R_i (units=[number density]/[time]) for the second half step
-       call chemical_rates(mla,rho_old,chem_rate_temp,dx,0.5d0*dt,rho_new,mattingly_lin_comb_coef)
+       call chemical_rates(mla,n_old,chem_rate_temp,dx,0.5d0*dt,n_new,mattingly_lin_comb_coef)
 
        ! convert chemical rates R_i into m_i*R_i (units=[mass density]/[time])
-       ! convert rho_old and rho_new back into mass densities
        do n=1,nlevs
           do i=1,nspecies
              call multifab_mult_mult_s_c(chem_rate_temp(n),i,molmass(i),1,0)
-             call multifab_mult_mult_s_c(rho_old(n),i,molmass(i),1,0)
-             call multifab_mult_mult_s_c(rho_new(n),i,molmass(i),1,0)
           end do
        end do
 
@@ -901,23 +904,21 @@ contains
 
     ! compute chemical rates m_i*R^{n+1}_i
     if (include_reactions) then
-       ! convert rho_new (at n+1) from mass densities (rho_i) into number densities (rho_i/m_i)
-       ! will convert back into mass densities after computing chemical rates
+       ! convert rho_new (at n+1) (mass densities rho_i) into n_new (number densities n_i=rho_i/m_i)
        do n=1,nlevs
+          call multifab_copy_c(n_new(n),1,rho_new(n),1,nspecies,0)
           do i=1,nspecies
-             call multifab_div_div_s_c(rho_new(n),i,molmass(i),1,0)
+             call multifab_div_div_s_c(n_new(n),i,molmass(i),1,0)
           end do
        end do
 
        ! compute chemical rates R^{n+1}_i (units=[number density]/[time])
-       call chemical_rates(mla,rho_new,chem_rate,dx,0.5d0*dt)
+       call chemical_rates(mla,n_new,chem_rate,dx,0.5d0*dt)
 
        ! convert chemical rates R^{n+1}_i into m_i*R^{n+1}_i (units=[mass density]/[time])
-       ! convert rho_new back into mass densities
        do n=1,nlevs
           do i=1,nspecies
              call multifab_mult_mult_s_c(chem_rate(n),i,molmass(i),1,0)
-             call multifab_mult_mult_s_c(rho_new(n),i,molmass(i),1,0)
           end do
        end do
     end if
@@ -1122,6 +1123,8 @@ contains
     if (include_reactions) then
        do n=1,nlevs
           call multifab_destroy(chem_rate_temp(n))
+          call multifab_destroy(n_old(n))
+          call multifab_destroy(n_new(n))
        end do
     end if
 
