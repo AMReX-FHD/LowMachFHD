@@ -8,7 +8,7 @@
   !----------------------
   dim_in = 2                       ! 2D or 3D  
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 6.4d-5 6.4d-5       ! physical hi coordinate
+  prob_hi(1:2) = 6.4e-5 6.4e-5       ! physical hi coordinate
   n_cells(1:2) = 64 64             ! number of cells in domain
   max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
@@ -16,7 +16,7 @@
   !----------------------
 
   ! explicit limit
-  fixed_dt = 1.d-9                  ! time step (if positive, fixed)
+  fixed_dt = 1.e-9                 ! time step (if positive, fixed)
 
   ! equilibrium fluctuations
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
@@ -45,8 +45,8 @@
   ! Physical parameters
   !--------------------
   grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
-  molmass(1:3) = 1.d-23 2.d-23 1.d-23
-  rhobar(1:3) =   1.d0 1.d0 1.d0
+  molmass(1:4) = 1.e-23 2.e-23 1.e-23 1.e-23
+  rhobar(1:4) = 1. 1. 1. 1.
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   ! dz = 1.e-6
@@ -149,7 +149,7 @@
 
   ! Physical properties:
   !----------------------
-  nspecies = 3
+  nspecies = 4 
   fraction_tolerance = 1.d-12 ! For roundoff errors in mass and mole fractions
   start_time = 0.d0
 
@@ -168,19 +168,16 @@
   temp_type = 0 ! for initializing temperature
 
   ! c_i boundary conditions (dir,lohi,species)
-  c_bc(1,1,1:3) = 0.d0 0.d0 0.d0
-  c_bc(1,2,1:3) = 0.d0 0.d0 0.d0
-  c_bc(2,1,1:3) = 0.01d0 0.01d0 0.98d0
-  c_bc(2,2,1:3) = 0.001d0 0.001d0 0.998d0
+  !c_bc(1,1,1:3) = 0.d0 0.d0 0.d0
+  !c_bc(1,2,1:3) = 0.d0 0.d0 0.d0
+  !c_bc(2,1,1:3) = 0.01d0 0.01d0 0.98d0
+  !c_bc(2,2,1:3) = 0.001d0 0.001d0 0.998d0
 
   ! gradient, fresh water on top of salt water
   ! initial values for CONCENTRATIONS
   ! equilibrium case
-  c_init(1,1:3) = 0.01d0 0.98d0 0.01d0
-  c_init(2,1:3) = 0.01d0 0.98d0 0.01d0
-  ! nonequilibrium case
-  !c_init(1,1:3) = 0.02d0 0.96d0 0.02d0
-  !c_init(2,1:3) = 0.02d0 0.96d0 0.02d0
+  c_init(1,1:4) = 1.e-3 8.e-3 1.e-3 0.99
+  c_init(2,1:4) = 1.e-3 8.e-3 1.e-3 0.99 
   
   ! Thermodynamic and transport properties:
   !----------------------
@@ -189,7 +186,7 @@
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are read row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
-  Dbar(1:3) = 1.d-6 1.d-6 1.d-6
+  Dbar(1:6) = 1.e-6 1.e-6 1.e-6 1.e-6 1.e-6 1.e-6
   Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients, only differences among elements matter
   H_offdiag(1:1) = 0.d0    ! Off diagonal elements of H=d^2F/dx^2  
   H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
@@ -202,7 +199,7 @@
  
   use_charged_fluid = F
   dielectric_const = 6.91d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
-  charge_per_mass(1:3) = 0.d0 0.d0 0.d0
+  charge_per_mass(1:4) = 0. 0. 0. 0.
   theta_pot = 1.d0               ! for implicit algorithm_type=3, controls
                                  ! temporal discretization for potential term
 
@@ -218,14 +215,13 @@
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
   ! R + B -> G
   ! G -> R + B
-  stoichiometric_factors(1:3,1,1) = 1 0 1
-  stoichiometric_factors(1:3,2,1) = 0 1 0
-  stoichiometric_factors(1:3,1,2) = 0 1 0
-  stoichiometric_factors(1:3,2,2) = 1 0 1
+  stoichiometric_factors(1:4,1,1) = 1 0 1 0
+  stoichiometric_factors(1:4,2,1) = 0 1 0 0
+  stoichiometric_factors(1:4,1,2) = 0 1 0 0
+  stoichiometric_factors(1:4,2,2) = 1 0 1 0
 
-  rate_const(1:2) = 4.9e-20 1.
-  !rate_multiplier = 1.e4
-  rate_multiplier = 1.e5
+  rate_const(1:2) = 4.e-20 1.
+  rate_multiplier = 1.e6
   include_discrete_LMA_correction = T
 
   use_Poisson_rng = 1              ! how to calculate chemical production rates
