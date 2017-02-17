@@ -97,6 +97,10 @@ module probin_reactdiff_module
   ! stoichiometric_factors(1:3,1,1) = 1 2 0
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
   integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 
+
+  ! if positive n, exclude species n (=solvent) when computing reaction rates
+  ! if 0, no species is excluded
+  integer, save         :: exclude_solvent_comput_rates = 0
   
   ! Controlling output:
   integer, save :: n_steps_write_avg = 0 ! If non-zero, its absolute value tells how many steps before writing total densites
@@ -111,7 +115,7 @@ module probin_reactdiff_module
   namelist /probin_reactdiff/ D_Fick, diffusion_stencil_order, mg_verbose, cg_verbose
   namelist /probin_reactdiff/ implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
   namelist /probin_reactdiff/ cross_section, include_discrete_LMA_correction
-  namelist /probin_reactdiff/ rate_const, rate_multiplier, stoichiometric_factors
+  namelist /probin_reactdiff/ rate_const, rate_multiplier, stoichiometric_factors, exclude_solvent_comput_rates
   namelist /probin_reactdiff/ n_steps_write_avg
 
 contains
@@ -271,6 +275,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) include_discrete_LMA_correction
+
+       case ('--exclude_solvent_comput_rates')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) exclude_solvent_comput_rates 
 
        case ('--n_steps_write_avg')
           farg = farg + 1
