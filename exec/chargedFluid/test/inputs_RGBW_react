@@ -1,14 +1,10 @@
-! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
-! be careful and check values are read correctly (e.g., c_bc)
-
-! Options for low Mach equations
 &probin_common
  
   ! Problem specification
   !----------------------
   dim_in = 2                       ! 2D or 3D  
-  prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 6.4e-5 6.4e-5       ! physical hi coordinate
+  prob_lo(1:2) = 0. 0.             ! physical lo coordinate
+  prob_hi(1:2) = 6.4e-5 6.4e-5     ! physical hi coordinate
   n_cells(1:2) = 64 64             ! number of cells in domain
   max_grid_size(1:2) = 32 32       ! max number of cells in a box
 
@@ -19,7 +15,7 @@
   fixed_dt = 1.e-9                 ! time step (if positive, fixed)
 
   ! equilibrium fluctuations
-  prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
+  prob_type = 2                    ! constant concentration gradient along y (see src_multiSpec/init_lowmach.f90)
 
   ! Boundary conditions
   !----------------------
@@ -44,37 +40,34 @@
 
   ! Physical parameters
   !--------------------
-  grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
+  grav(1:2) = 0. 0.               ! gravity vector (negative is downwards)
   molmass(1:4) = 1.e-23 2.e-23 1.e-23 1.e-23
   rhobar(1:4) = 1. 1. 1. 1.
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  ! dz = 1.e-6
-  !variance_coef_mom = 1.e6
-  !variance_coef_mass = 1.e6
-  ! dz = 1.e-5
+  ! for dz=1.e-5
   variance_coef_mom = 1.e5
   variance_coef_mass = 1.e5
-  k_B = 1.3806488d-16       ! Boltzmann's constant
-  
 
+  k_B = 1.3806488e-16             ! Boltzmann's constant
+  
   ! Algorithm control / selection
   !----------------------
-  algorithm_type = 5     ! differs from code to code.  In binary and multispcies code:
-                         ! 0 = Inertial algorithm
-                         ! 1 = Overdamped with 1 RNG
-                         ! 2 = Overdamped with 2 RNGs
-                         ! 3 = Iterative implicit
-                         ! 5 = Inertial (midpoint) algorithm
+  algorithm_type = 5       ! differs from code to code.  In binary and multispcies code:
+                           ! 0 = Inertial algorithm
+                           ! 1 = Overdamped with 1 RNG
+                           ! 2 = Overdamped with 2 RNGs
+                           ! 3 = Iterative implicit
+                           ! 5 = Inertial (midpoint) algorithm
 
-   barodiffusion_type = 0    ! 0 = no barodiffusion
-                             ! 1 = fixed gradp from initialization
-                             ! 2 = update gradp each time step
+  barodiffusion_type = 0   ! 0 = no barodiffusion
+                           ! 1 = fixed gradp from initialization
+                           ! 2 = update gradp each time step
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
-  seed = 1
+  seed = 0 
 
   ! Viscous friction L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -83,25 +76,25 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 2
-  visc_coef = 1.d-6       ! momentum diffusion coefficient 'eta'   
+  visc_coef = 1.e-6        ! momentum diffusion coefficient 'eta'   
 
-  advection_type = 0 ! 0 = centered explicit
-                     ! 1 = unlimited bilinear bds in space and time
-                     ! 2 = limited bliniear bds in space and time
-                     ! 3 = unlimited quadratic bds in space and time
-                     ! 4 = limited quadratic bds in space and time
+  advection_type = 0       ! 0 = centered explicit
+                           ! 1 = unlimited bilinear bds in space and time
+                           ! 2 = limited bliniear bds in space and time
+                           ! 3 = unlimited quadratic bds in space and time
+                           ! 4 = limited quadratic bds in space and time
 
   ! Stochastic momentum flux controls:
-  filtering_width = 0   ! If positive the *momentum* stochastic fluxes will be filtered (smoothed)
-                        ! Stochastic *mass* fluxes are not filtered
-  stoch_stress_form = 1 ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
+  filtering_width = 0      ! If positive the *momentum* stochastic fluxes will be filtered (smoothed)
+                           ! Stochastic *mass* fluxes are not filtered
+  stoch_stress_form = 1    ! 0=nonsymmetric (div(v)=0), 1=symmetric (no bulk)
 
   ! Initial conditions
   !----------------------
-  u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 2.d0   ! scale factor for smoothing initial profile
-  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
-                            ! (if negative, total momentum is set to zero)
+  u_init(1:2) = 0. 0.      ! controls initial velocity
+  smoothing_width = 2.     ! scale factor for smoothing initial profile
+  initial_variance = 1.    ! multiplicative factor for initial fluctuations
+                           ! (if negative, total momentum is set to zero)
 
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions
@@ -115,17 +108,17 @@
   ! wallspeed_lo/hi(2,2) - zvel on y-face
   ! wallspeed_lo/hi(1,3) - xvel on z-face
   ! wallspeed_lo/hi(2,3) - yvel on z-face
-  wallspeed_lo(1,1:2) = 0.d0 0.d0
-  wallspeed_hi(1,1:2) = 0.d0 0.d0
+  wallspeed_lo(1,1:2) = 0. 0.
+  wallspeed_hi(1,1:2) = 0. 0.
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 0    ! How often to call updateHydroGrid
+  hydro_grid_int = 1    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = -2        ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = -2      ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
@@ -150,8 +143,8 @@
   ! Physical properties:
   !----------------------
   nspecies = 4 
-  fraction_tolerance = 1.d-12 ! For roundoff errors in mass and mole fractions
-  start_time = 0.d0
+  fraction_tolerance = 1.e-12 ! For roundoff errors in mass and mole fractions
+  start_time = 0.
 
   inverse_type = 1       ! Only for LAPACK:  1=inverse, 2=pseudo inverse
   timeinteg_type = 1
@@ -164,20 +157,33 @@
   
   ! Initial and boundary conditions 
   !----------------------
-  T_init(1:2) = 300.d0 300.d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  T_init(1:2) = 300. 300.  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
   temp_type = 0 ! for initializing temperature
 
   ! c_i boundary conditions (dir,lohi,species)
-  !c_bc(1,1,1:3) = 0.d0 0.d0 0.d0
-  !c_bc(1,2,1:3) = 0.d0 0.d0 0.d0
-  !c_bc(2,1,1:3) = 0.01d0 0.01d0 0.98d0
-  !c_bc(2,2,1:3) = 0.001d0 0.001d0 0.998d0
+  !c_bc(1,1,1:3) = 0. 0. 0.
+  !c_bc(1,2,1:3) = 0. 0. 0.
+  !c_bc(2,1,1:3) = 0.01 0.01 0.98
+  !c_bc(2,2,1:3) = 0.001 0.001 0.998
 
   ! gradient, fresh water on top of salt water
   ! initial values for CONCENTRATIONS
   ! equilibrium case
-  c_init(1,1:4) = 1.e-3 8.e-3 1.e-3 0.99
-  c_init(2,1:4) = 1.e-3 8.e-3 1.e-3 0.99 
+  !alpha=0.1
+  !c_init(1,1:4) = 1.e-3 8.e-3 1.e-3 0.99
+  !c_init(2,1:4) = 1.e-3 8.e-3 1.e-3 0.99
+  !alpha=0.01
+  c_init(1,1:4) = 1.e-4 9.8e-3 1.e-4 0.99
+  c_init(2,1:4) = 1.e-4 9.8e-3 1.e-4 0.99
+  !alpha=0.001
+  !c_init(1,1:4) = 1.e-5 9.98e-3 1.e-5 0.99
+  !c_init(2,1:4) = 1.e-5 9.98e-3 1.e-5 0.99
+  !alpha=0.002
+  !c_init(1,1:4) = 2.e-5 9.96e-3 2.e-5 0.99
+  !c_init(2,1:4) = 2.e-5 9.96e-3 2.e-5 0.99
+  !alpha=0.005
+  !c_init(1,1:4) = 5.e-5 9.9e-3 5.e-5 0.99
+  !c_init(2,1:4) = 5.e-5 9.9e-3 5.e-5 0.99
   
   ! Thermodynamic and transport properties:
   !----------------------
@@ -187,9 +193,9 @@
   ! The values are read row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
   Dbar(1:6) = 1.e-6 1.e-6 1.e-6 1.e-6 1.e-6 1.e-6
-  Dtherm(1:1) = 0.d0       ! thermo-diffusion coefficients, only differences among elements matter
-  H_offdiag(1:1) = 0.d0    ! Off diagonal elements of H=d^2F/dx^2  
-  H_diag(1:1) = 0.d0       ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
+  Dtherm(1:1) = 0.         ! thermo-diffusion coefficients, only differences among elements matter
+  H_offdiag(1:1) = 0.      ! Off diagonal elements of H=d^2F/dx^2  
+  H_diag(1:1) = 0.         ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
 
   plot_stag = F            ! plot staggered velocities in separate plotfile
 
@@ -198,9 +204,9 @@
 &probin_charged
  
   use_charged_fluid = F
-  dielectric_const = 6.91d-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
+  dielectric_const = 6.91e-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
   charge_per_mass(1:4) = 0. 0. 0. 0.
-  theta_pot = 1.d0               ! for implicit algorithm_type=3, controls
+  theta_pot = 1.                 ! for implicit algorithm_type=3, controls
                                  ! temporal discretization for potential term
 
   ! Reactions
@@ -220,8 +226,18 @@
   stoichiometric_factors(1:4,1,2) = 0 1 0 0
   stoichiometric_factors(1:4,2,2) = 1 0 1 0
 
-  rate_const(1:2) = 4.e-20 1.
-  rate_multiplier = 1.e6
+  !for alpha=0.1
+  !rate_const(1:2) = 4.e-20 1.
+  !for alpha=0.01
+  rate_const(1:2) = 4.9e-18 1.
+  !for alpha=0.001
+  !rate_const(1:2) = 4.99e-16 1.
+  !for alpha=0.002
+  !rate_const(1:2) = 1.245e-16 1.
+  !for alpha=0.005
+  !rate_const(1:2) = 1.98e-17 1.
+
+  rate_multiplier = 1.e5
   include_discrete_LMA_correction = T
 
   use_Poisson_rng = 1              ! how to calculate chemical production rates
@@ -229,8 +245,7 @@
                                    ! 0= do CLE (Gaussian increments)
                                    ! -1=do deterministic chemistry
 
-  !cross_section = 1.e-6            ! dz = 1.e-6
-  cross_section = 1.e-5            ! dz = 1.e-5
+  cross_section = 1.e-5            ! for dz=1.e-5
 /
 
 ! Stokes solver for velocity
@@ -248,10 +263,10 @@
   precon_type = 1
 
   ! weighting of pressure when computing norms and inner products
-  p_norm_weight = 1.d0
+  p_norm_weight = 1.
 
   ! scale theta_alpha, beta, gamma, and b_u by this, and then scale x_p by the inverse
-  scale_factor = 1.d0
+  scale_factor = 1.
 
   ! MAC projection solver parameters:
   mg_verbose = 0        ! multigrid verbosity
@@ -267,7 +282,7 @@
   mg_nsmooths_up = 2         ! number of smooths at each level on the way up
   mg_nsmooths_bottom = 8     ! number of smooths at the bottom (only if mg_bottom_solver=0)
   mg_max_bottom_nlevels = 10 ! for mg_bottom_solver=4, number of additional levels of multigrid
-  mg_rel_tol = 1.d-10        ! relative tolerance stopping criteria
+  mg_rel_tol = 1.e-10        ! relative tolerance stopping criteria
 
   ! Staggered multigrid solver parameters
   stag_mg_verbosity = 0       ! verbosity (set to 1 for debugging the gmres solver!)
@@ -281,18 +296,18 @@
   stag_mg_nsmooths_up = 2     ! number of smooths at each level on the way up
   stag_mg_nsmooths_bottom = 8 ! number of smooths at the bottom
   stag_mg_max_bottom_nlevels = 10 ! for stag_mg_bottom_solver=4, number of additional levels of multigrid
-  stag_mg_omega = 1.d0        ! weighted-jacobi omega coefficient
+  stag_mg_omega = 1.          ! weighted-jacobi omega coefficient
   stag_mg_smoother = 1        ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
-  stag_mg_rel_tol = 1.d-10    ! relative tolerance stopping criteria
+  stag_mg_rel_tol = 1.e-10    ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.d-12 ! relative tolerance stopping criteria
-  gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
-  gmres_verbose = 0     ! gmres verbosity; if greater than 1, more residuals will be printed out
-  gmres_max_outer = 20  ! max number of outer iterations
-  gmres_max_inner = 5   ! max number of inner iterations, or restart number
-  gmres_max_iter = 100  ! max number of gmres iterations
-  gmres_min_iter = 1    ! min number of gmres iterations
+  gmres_rel_tol = 1.e-12 ! relative tolerance stopping criteria
+  gmres_abs_tol = 0.     ! absolute tolerance stopping criteria
+  gmres_verbose = 0      ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_max_outer = 20   ! max number of outer iterations
+  gmres_max_inner = 5    ! max number of inner iterations, or restart number
+  gmres_max_iter = 100   ! max number of gmres iterations
+  gmres_min_iter = 1     ! min number of gmres iterations
 
 /
 
@@ -332,8 +347,8 @@
    subtractMeanFT = F ! The means are trivial here so no need to estimate them
    writeAbsValue = T ! Only write absolute values of complex values to VTK file?
    writeTheory = -1 ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
-   nStructureFactors = 7
-   structureFactorPairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 7 0 7, 0 5 0 6, 0 5 0 7, 0 6 0 7"
+   nStructureFactors = 11
+   structureFactorPairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 7 0 7, 0 8 0 8, 0 5 0 6, 0 5 0 7, 0 5 0 8, 0 6 0 7, 0 6 0 8, 0 7 0 8"
 
    ! Dynamic structure factors:
    nWavenumbers=10
@@ -343,7 +358,7 @@
    nSavedSnapshots=5 ! Maximum time in S(k,t) will be (nSavedSnapshots/2)*dt*hydro_grid_int
       
    outputFolder = "."
-   filePrefix = "charge"
+   filePrefix = "RGBW"
    axisToPrint = 2 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
 /
@@ -381,7 +396,7 @@
    nSavedSnapshots=200
       
    outputFolder = "."
-   filePrefix = "charge_vstat"
+   filePrefix = "RGBW_vstat"
    axisToPrint = 1 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
 /
@@ -419,7 +434,7 @@
    nSavedSnapshots=100
       
    outputFolder = "."
-   filePrefix = "charge_hstat"
+   filePrefix = "RGBW_hstat"
    axisToPrint = 1 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
 /
