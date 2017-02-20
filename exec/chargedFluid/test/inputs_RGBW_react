@@ -169,19 +169,19 @@
   ! gradient, fresh water on top of salt water
   ! initial values for CONCENTRATIONS
   ! equilibrium case
-  !alpha=0.1
+  !for alpha=0.1
   !c_init(1,1:4) = 1.e-3 8.e-3 1.e-3 0.99
   !c_init(2,1:4) = 1.e-3 8.e-3 1.e-3 0.99
-  !alpha=0.01
+  !for alpha=0.01
   c_init(1,1:4) = 1.e-4 9.8e-3 1.e-4 0.99
   c_init(2,1:4) = 1.e-4 9.8e-3 1.e-4 0.99
-  !alpha=0.001
+  !for alpha=0.001
   !c_init(1,1:4) = 1.e-5 9.98e-3 1.e-5 0.99
   !c_init(2,1:4) = 1.e-5 9.98e-3 1.e-5 0.99
-  !alpha=0.002
+  !for alpha=0.002
   !c_init(1,1:4) = 2.e-5 9.96e-3 2.e-5 0.99
   !c_init(2,1:4) = 2.e-5 9.96e-3 2.e-5 0.99
-  !alpha=0.005
+  !for alpha=0.005
   !c_init(1,1:4) = 5.e-5 9.9e-3 5.e-5 0.99
   !c_init(2,1:4) = 5.e-5 9.9e-3 5.e-5 0.99
   

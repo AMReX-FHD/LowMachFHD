@@ -1,7 +1,7 @@
 EXEC=../../main.Linux.gfortran.mpi.exe
 INPUTS=../../inputs_RGBW_react
 
-RUNNAME=plot_a0.01_5T
+RUNNAME=TEST
 
 # OPT1: chose one
 OPT1="--algorithm_type 5 --include_reactions T"
@@ -23,6 +23,12 @@ RM=1.e5
 OPT4="--rate_multiplier $RM"
 
 #####
+
+if [ ! -f $EXEC ]
+then
+  echo "ERROR: $EXEC does not exist"
+  exit
+fi
 
 RUNNAME=RUN_$RUNNAME
 if [ -d $RUNNAME ]
@@ -51,4 +57,7 @@ grep sum scr_out | grep 'rho=' | awk '{print $5}' > rhotot
 paste rho1 rho2 rho3 rho4 rhotot > res.rho
 rm rho1 rho2 rho3 rho4 rhotot
 
-sed -i 's/0.00000000/#0.00000000/g' RGBW.S_k.pair=*.Re.dat
+if [ -f RGBW.S_k.pair=1.Re.dat ]
+then
+  sed -i 's/0.00000000/#0.00000000/g' RGBW.S_k.pair=*.Re.dat
+fi
