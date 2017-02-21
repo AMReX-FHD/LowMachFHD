@@ -99,7 +99,12 @@ module probin_reactdiff_module
   integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 
 
   ! if positive n, exclude species n (=solvent) when computing reaction rates
+  ! in this case, the concentration of the solvent is assumed to be constant,
+  ! which should be reflected on rate constants.
   ! if 0, no species is excluded
+  ! e.g. U + S -> 2U, if exclude_solvent_comput_rates=0, rate=k*n_U*n_S
+  !                   if exclude_solvent_comput_rates=2, rate=k_new*n_U where k_new=k*n_S
+
   integer, save         :: exclude_solvent_comput_rates = 0
   
   ! Controlling output:

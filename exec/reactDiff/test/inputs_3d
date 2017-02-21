@@ -200,6 +200,14 @@
   stoichiometric_factors(1:2,1,1) = 0 0
   stoichiometric_factors(1:2,2,1) = 0 0
 
+  ! if positive n, exclude species n (=solvent) when computing reaction rates
+  ! in this case, the concentration of the solvent is assumed to be constant,
+  ! which should be reflected on rate constants.
+  ! if 0, no species is excluded
+  ! e.g. U + S -> 2U, if exclude_solvent_comput_rates=0, rate=k*n_U*n_S
+  !                   if exclude_solvent_comput_rates=2, rate=k_new*n_U where k_new=k*n_S
+  exclude_solvent_comput_rates = 0
+
   ! controlling output:
   n_steps_write_avg = 0                ! if non-zero, its absolute value tells how many steps before writing total densites
                                        ! if positive, it writes average number densities in the system (fort.9)
