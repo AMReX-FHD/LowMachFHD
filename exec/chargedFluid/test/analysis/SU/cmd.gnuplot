@@ -1,0 +1,1 @@
+gnuplot> alpha=1.e-2;S0=1.e-18*alpha;k2k1ratio=2.;pendxratiosq=10.;dx=1.e-6;dk=(2*3.14159265/64/dx);plot "SU.S_k.pair=2.Re.dat" u (sin($1*dx/2)/(dx/2)):($33) w l,S0*(1+1./(k2k1ratio-1.)/(1+pendxratiosq*(dx*x)**2))
