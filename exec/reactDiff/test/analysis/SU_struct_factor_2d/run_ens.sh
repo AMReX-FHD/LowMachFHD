@@ -4,6 +4,7 @@ EXEC=../../main.Linux.gfortran.mpi.exe
 INPUTS=../../inputs_SU_2d
 
 RUNNAME=TEST
+NRUN=500
 
 # D_Fick
 OPT0="--D_Fick_1 1.e-6 --D_Fick_2 1.e-6"
@@ -20,7 +21,7 @@ OPT3="--cross_section 1.e-5"
 #OPT3="--cross_section 4.e-5"
 
 # timestep 
-OPT4="--max_step 10000 --plot_int 0 --print_int 100 --hydro_grid_int 1 --n_steps_skip 1000 --fixed_dt 1.e-7"
+OPT4="--max_step 260 --plot_int 0 --print_int 20 --hydro_grid_int 1 --n_steps_skip 220 --fixed_dt 1.e-7"
 #OPT4="--max_step 40000 --plot_int 0 --print_int 400 --hydro_grid_int 4 --n_steps_skip 4000 --fixed_dt 0.25e-7"
 
 # scheme
@@ -35,28 +36,34 @@ then
   exit
 fi
 
-RUNNAME=RUN_$RUNNAME
-if [ -d $RUNNAME ]
-then
-  echo "ERROR: $RUNNAME exists"
-  exit
-else
-  mkdir $RUNNAME
-  cp $0 $RUNNAME
-  cp $INPUTS $RUNNAME
-  cd $RUNNAME
-fi
+for ((i=1;i<=$NRUN;i++))
+do
+  RUNNAMENO=${RUNNAME}_RUN$i
 
-OPTS="$OPT0 $OPT1 $OPT2 $OPT3 $OPT4 $OPT5"
+  if [ -d $RUNNAMENO ]
+  then
+    echo "ERROR: $RUNNAMENO exists"
+    exit
+  else
+    mkdir $RUNNAMENO
+    cp $0 $RUNNAMENO
+    cp $INPUTS $RUNNAMENO
+    cd $RUNNAMENO
+  fi
 
-echo "mpiexec -n 4 ../$EXEC ../$INPUTS $OPTS | tee scr_out"
-mpiexec -n 4 ../$EXEC ../$INPUTS $OPTS | tee scr_out
+  OPTS="$OPT0 $OPT1 $OPT2 $OPT3 $OPT4 $OPT5 --seed $RANDOM"
 
-#####
+  echo "mpiexec -n 4 ../$EXEC ../$INPUTS $OPTS | tee scr_out"
+  mpiexec -n 4 ../$EXEC ../$INPUTS $OPTS | tee scr_out
 
-grep n_avg scr_out | awk '{print $4, $5}' > res.n_avg
+  #####
 
-if [ -f SU.S_k.pair=1.Re.dat ]
-then
-  sed -i 's/0.00000000/#0.00000000/g' SU.S_k.pair=*.Re.dat
-fi
+  grep n_avg scr_out | awk '{print $4, $5}' > res.n_avg
+
+  if [ -f SU.S_k.pair=1.Re.dat ]
+  then
+    sed -i 's/0.00000000/#0.00000000/g' SU.S_k.pair=*.Re.dat
+  fi
+
+  cd ..
+done

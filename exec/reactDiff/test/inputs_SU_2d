@@ -24,7 +24,7 @@
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
   max_step = 10000                 ! maximum number of time steps
-  plot_int = 0                     ! interval for writing a plotfile (for visit/amrvis)
+  plot_int = 1000                  ! interval for writing a plotfile (for visit/amrvis)
                                    ! (no plot files for plot_int<=0)
   chk_int = -1                     ! interval for writing a checkpoint
                                    ! (no checkpoint files for chk_int<0)
@@ -115,7 +115,7 @@
   
   ! Control of algorithm
   !----------------------
-  temporal_integrator = 1          ! 0=D + R (first-order splitting)
+  temporal_integrator = -2         ! 0=D + R (first-order splitting)
                                    ! 1=(1/2)R + D + (1/2)R (Strang option 1)
                                    ! 2=(1/2)D + R + (1/2)D (Strang option 2)
                                    ! -1=unsplit forward Euler
@@ -140,7 +140,7 @@
                                    ! 0=first-order (deterministic, tau leaping, CLE, or SSA)
                                    ! 1=second-order (deterministic, tau leaping, or CLE only)
 
-  use_Poisson_rng = 2              ! how to calculate chemical production rates
+  use_Poisson_rng = 1              ! how to calculate chemical production rates
                                    ! 2=SSA
                                    ! 1=do tau leaping (Poisson increments)
                                    ! 0= do CLE (Gaussian increments)
@@ -156,9 +156,9 @@
   
   ! Initial and boundary conditions
   !----------------------
-  !n_init_in(1,1:2) = 1.e21 0.99e23    ! for alpha=1e-2
+  n_init_in(1,1:2) = 1.e21 0.99e23     ! for alpha=1e-2
   !n_init_in(1,1:2) = 1.e20 0.999e23   ! for alpha=1e-3
-  n_init_in(1,1:2) = 1.e19 0.9999e23   ! for alpha=1e-4
+  !n_init_in(1,1:2) = 1.e19 0.9999e23  ! for alpha=1e-4
   !n_init_in(1,1:2) = 1.e18 0.99999e23 ! for alpha=1e-5
   !n_init_in(1,1:2) = 2.e18 0.99998e23 ! for alpha=2e-5
   !n_init_in(1,1:2) = 5.e18 0.99995e23 ! for alpha=5e-5
@@ -196,9 +196,9 @@
 
   ! LMA chemical reaction rate for each reaction (assuming Law of Mass holds)
   !for exclude_solvent_comput_rates = 2
-  !rate_const(1:3) = 1.e5 2.e5 1.e26   ! for alpha=1e-2
+  rate_const(1:3) = 1.e5 2.e5 1.e26    ! for alpha=1e-2
   !rate_const(1:3) = 1.e5 2.e5 1.e25   ! for alpha=1e-3
-  rate_const(1:3) = 1.e5 2.e5 1.e24    ! for alpha=1e-4
+  !rate_const(1:3) = 1.e5 2.e5 1.e24   ! for alpha=1e-4
   !rate_const(1:3) = 1.e5 2.e5 1.e23   ! for alpha=1e-5
   !rate_const(1:3) = 1.e5 2.e5 2.e23   ! for alpha=2e-5
   !rate_const(1:3) = 1.e5 2.e5 5.e23   ! for alpha=5e-5
