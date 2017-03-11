@@ -11,7 +11,7 @@ OPT1="--algorithm_type 5 --include_reactions T"
 # OPT2: choose one
 OPT2="--max_step 1000 --plot_int 10 --print_int 10 --hydro_grid_int 0 --n_steps_skip 0 --fixed_dt 1.e-9"
 #OPT2="--max_step 10000 --plot_int 0 --print_int 100 --hydro_grid_int 1 --n_steps_skip 1000 --fixed_dt 1.e-9"
-#OPT2="--max_step 100000 --plot_int 0 --print_int 1000--hydro_grid_int 1 --n_steps_skip 10000 --fixed_dt 1.e-9"
+#OPT2="--max_step 100000 --plot_int 0 --print_int 1000 --hydro_grid_int 1 --n_steps_skip 10000 --fixed_dt 1.e-9"
 
 # OPT3: specify dz
 DZ=1.e-5
