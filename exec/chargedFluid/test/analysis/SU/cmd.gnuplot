@@ -1,1 +1,1 @@
-gnuplot> alpha=1.e-2;S0=1.e-18*alpha;k2k1ratio=2.;pendxratiosq=10.;dx=1.e-6;dk=(2*3.14159265/64/dx);plot "SU.S_k.pair=2.Re.dat" u (sin($1*dx/2)/(dx/2)):($33) w l,S0*(1+1./(k2k1ratio-1.)/(1+pendxratiosq*(dx*x)**2))
+gnuplot> D=1e-4;rm=100;pendepth=sqrt(D/(1e5*rm));alpha=1e-2;S0=1e-23*alpha;k2k1ratio=2;dx=1e-6;dz=1e-5;set format y "%.1e";set samples 1000;plot S0*(1+1./(k2k1ratio-1.)/(1+(pendepth*x)**2)),"SU.S_k.pair=2.Re.dat" u (sin($1*dx/2)/(dx/2)):(dz*$33) w l

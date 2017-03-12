@@ -1,17 +1,34 @@
+#!/bin/bash
+
 EXEC=../../main.Linux.gfortran.mpi.exe
 INPUTS=../../inputs_SU
 
 RUNNAME=TEST
 
-# OPT1: chose one
-OPT1="--algorithm_type 5 --include_reactions T"
-#OPT1="--algorithm_type 5 --include_reactions F"
-#OPT1="--algorithm_type 0 --include_reactions F"
+# Dbar: should be changed in the inputs file
 
-# OPT2: choose one
-OPT2="--max_step 1000 --plot_int 10 --print_int 10 --hydro_grid_int 0 --n_steps_skip 0 --fixed_dt 1.e-9"
-#OPT2="--max_step 10000 --plot_int 0 --print_int 100 --hydro_grid_int 1 --n_steps_skip 1000 --fixed_dt 1.e-9"
-#OPT2="--max_step 100000 --plot_int 0 --print_int 1000--hydro_grid_int 1 --n_steps_skip 10000 --fixed_dt 1.e-9"
+# rate_multiplier
+OPT1="--rate_multiplier 100."
+
+# grid 
+OPT2="--prob_hi_x 6.4e-5 --prob_hi_y 6.4e-5 --n_cells_x 64 --n_cells_y 64 --max_grid_size_x 32 --max_grid_size_y 32"
+#OPT2="--prob_hi_x 3.2e-5 --prob_hi_y 3.2e-5 --n_cells_x 64 --n_cells_y 64 --max_grid_size_x 32 --max_grid_size_y 32"
+#OPT2="--prob_hi_x 6.4e-5 --prob_hi_y 6.4e-5 --n_cells_x 128 --n_cells_y 128 --max_grid_size_x 64 --max_grid_size_y 64"
+
+# dz and stoch_mom_flux
+DZ=1.e-5
+VC=`python -c "print 1./$DZ"`
+OPT3="--variance_coef_mom $VC --variance_coef_mass $VC --cross_section $DZ"
+#OPT3="--variance_coef_mom 0. --variance_coef_mass $VC --cross_section $DZ"
+
+# timestep 
+OPT4="--max_step 10000 --plot_int 1000 --print_int 100 --hydro_grid_int 1 --n_steps_skip 1000 --fixed_dt 1.e-9"
+#OPT4="--max_step 40000 --plot_int 4000 --print_int 400 --hydro_grid_int 4 --n_steps_skip 4000 --fixed_dt 0.25e-9"
+
+# scheme 
+OPT5="--algorithm_type 5 --include_reactions T"
+#OPT5="--algorithm_type 5 --include_reactions F"
+#OPT5="--algorithm_type 0 --include_reactions F"
 
 #####
 
@@ -33,7 +50,7 @@ else
   cd $RUNNAME
 fi
 
-OPTS="$OPT1 $OPT2"
+OPTS="$OPT1 $OPT2 $OPT3 $OPT4 $OPT5"
 
 echo "mpiexec -n 4 ../$EXEC ../$INPUTS $OPTS | tee scr_out"
 mpiexec -n 4 ../$EXEC ../$INPUTS $OPTS | tee scr_out
