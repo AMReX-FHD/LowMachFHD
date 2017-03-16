@@ -8,7 +8,7 @@ module multinomial_diffusion_module
   use bl_rng_module
   use bl_random_module
   use probin_common_module, only: n_cells
-  use probin_reactdiff_module, only: nspecies, D_Fick, cross_section, use_bl_rng
+  use probin_reactdiff_module, only: nspecies, cross_section, use_bl_rng
 
   implicit none
 

@@ -5,7 +5,7 @@ module advance_reaction_module
   use multifab_physbc_module
   use bc_module
   use chemical_rates_module
-  use probin_reactdiff_module, only: nspecies, nreactions, reaction_type, inhomogeneous_bc_fix
+  use probin_reactdiff_module, only: nspecies, nreactions, reaction_type
 
   implicit none
 

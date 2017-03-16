@@ -5,9 +5,7 @@ module bl_rng_module
   use parallel
   use bl_error_module
   use probin_common_module, only: restart
-  use probin_reactdiff_module, only: temporal_integrator, diffusion_type, &
-                                     use_Poisson_rng, seed_diffusion, seed_reaction, &
-                                     seed_init, integer_populations
+  use probin_reactdiff_module, only: seed_diffusion, seed_reaction, seed_init
 
   implicit none
 

@@ -6,7 +6,6 @@ module chemical_rates_module
   use bl_random_module
   use compute_reaction_rates_module
   use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, &
-                                     temporal_integrator, &
                                      use_Poisson_rng, cross_section, use_bl_rng
 
   implicit none

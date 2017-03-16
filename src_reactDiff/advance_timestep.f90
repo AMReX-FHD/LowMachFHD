@@ -8,8 +8,7 @@ module advance_timestep_module
   use chemical_rates_module
   use multifab_physbc_module
   use bc_module
-  use probin_reactdiff_module, only: nspecies, temporal_integrator, n_bc, &
-                                     use_Poisson_rng, inhomogeneous_bc_fix
+  use probin_reactdiff_module, only: nspecies, temporal_integrator, inhomogeneous_bc_fix
 
   implicit none
 

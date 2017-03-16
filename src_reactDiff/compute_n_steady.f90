@@ -7,7 +7,8 @@ module compute_n_steady_module
   use bndry_reg_module
   use ml_solve_module
   use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose, &
-       implicit_diffusion_rel_eps, implicit_diffusion_abs_eps, D_Fick
+                                     implicit_diffusion_rel_eps, &
+                                     implicit_diffusion_abs_eps, D_Fick
 
   implicit none
 
@@ -76,7 +77,6 @@ contains
     end do
 
     do spec=1,nspecies
-
 
        ! beta = D_k
        do n=1,nlevs

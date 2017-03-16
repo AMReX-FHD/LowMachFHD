@@ -22,7 +22,7 @@ subroutine main_driver()
                                    restart, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
-                                   variance_coef_mass, cfl, initial_variance
+                                   cfl, initial_variance
    use probin_reactdiff_module, only: nspecies, nreactions, probin_reactdiff_init, D_Fick, &
                                       cross_section, &
                                       inhomogeneous_bc_fix, temporal_integrator, &
