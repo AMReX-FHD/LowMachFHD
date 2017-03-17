@@ -5,12 +5,11 @@ module chemical_rates_module
 
   use ml_layout_module
   use BoxLibRNGs
-!=omit  use bl_rng_module
-!=omit  use bl_random_module
+  use bl_rng_module
   use compute_reaction_rates_module
 !=rep2  use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, &
-!=rep2                                     temporal_integrator, &
-!=rep2                                     use_Poisson_rng, cross_section, use_bl_rng
+!=rep2                                     use_Poisson_rng, cross_section
+  use probin_common_module, only: use_bl_rng
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: include_reactions, nreactions, stoichiometric_factors, use_Poisson_rng, &
                                    cross_section
@@ -307,21 +306,19 @@ contains
          select case(use_Poisson_rng)           
          case(1)
             ! need a Poisson random number for tau leaping
-!=rep1            if (use_bl_rng) then
-!=rep1               call PoissonRNG(number=tmp, mean=avg_num_reactions(comp), engine=rng_eng_reaction%p)
-!=rep1            else
-!=rep1               call PoissonRNG(number=tmp, mean=avg_num_reactions(comp))
-!=rep1            end if
-            call PoissonRNG(number=tmp, mean=avg_num_reactions(comp))
+            if (use_bl_rng) then
+               call PoissonRNG(number=tmp, mean=avg_num_reactions(comp), engine=rng_eng_reaction%p)
+            else
+               call PoissonRNG(number=tmp, mean=avg_num_reactions(comp))
+            end if
             num_reactions(comp) = tmp ! convert to real
          case(0)
             ! need a Gaussian random number for CLE
-!=rep1            if (use_bl_rng) then
-!=rep1               call NormalRNG(num_reactions(comp), rng_eng_reaction%p)
-!=rep1            else
-!=rep1               call NormalRNG(num_reactions(comp))
-!=rep1            end if
-            call NormalRNG(num_reactions(comp))
+            if (use_bl_rng) then
+               call NormalRNG(num_reactions(comp), rng_eng_reaction%p)
+            else
+               call NormalRNG(num_reactions(comp))
+            end if
             num_reactions(comp) = avg_num_reactions(comp) + sqrt(avg_num_reactions(comp))*num_reactions(comp)
          case(-1)
             ! do deterministic chemistry   
@@ -370,13 +367,11 @@ contains
        if (rTotal .eq. 0.d0) exit EventLoop
 
        ! generate pseudorandom number in interval [0,1).
-!=rep1       if (use_bl_rng) then
-!=rep1          call UniformRNG(rr, rng_eng_reaction%p)
-!=rep1       else
-!=rep1          call UniformRNG(rr)
-!=rep1       end if
-       call UniformRNG(rr)
-
+       if (use_bl_rng) then
+          call UniformRNG(rr, rng_eng_reaction%p)
+       else
+          call UniformRNG(rr)
+       end if
        ! tau is how long until the next reaction occurs
        tau = -log(1-rr)/rTotal
        t_local = t_local + tau;
@@ -384,12 +379,11 @@ contains
        if (t_local .gt. dt) exit EventLoop
 
        ! Select the next reaction according to relative rates
-!=rep1       if (use_bl_rng) then
-!=rep1          call UniformRNG(rr, rng_eng_reaction%p)
-!=rep1       else
-!=rep1          call UniformRNG(rr)
-!=rep1       end if
-       call UniformRNG(rr)
+       if (use_bl_rng) then
+          call UniformRNG(rr, rng_eng_reaction%p)
+       else
+          call UniformRNG(rr)
+       end if
        rr = rr*rTotal
        rSum = 0
        FindReaction: do reaction=1,nreactions

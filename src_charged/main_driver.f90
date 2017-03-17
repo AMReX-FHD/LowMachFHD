@@ -28,6 +28,7 @@ subroutine main_driver()
   use fill_umac_ghost_cells_module
   use fill_rho_ghost_cells_module
   use ParallelRNGs 
+  use bl_rng_module
   use mass_flux_utilities_module
   use compute_HSE_pres_module
   use convert_stag_module
@@ -44,7 +45,7 @@ subroutine main_driver()
                                   probin_common_init, print_int, project_eos_int, &
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
-                                  variance_coef_mass, variance_coef_mom, barodiffusion_type
+                                  variance_coef_mass, barodiffusion_type, use_bl_rng
   use probin_multispecies_module, only: nspecies, Dbar, start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
@@ -111,10 +112,17 @@ subroutine main_driver()
   call probin_common_init()
   call probin_multispecies_init() 
   call probin_gmres_init()
-  call probin_charged_init()
-  
-  ! Initialize random numbers *after* the global (root) seed has been set:
-  call SeedParallelRNG(seed)
+  call probin_charged_init() 
+
+   if (use_bl_rng) then
+      ! Build the random number engine and give initial distributions for the
+      ! F_BaseLib/bl_random RNG module
+      call rng_init()
+   else
+      ! Initialize random numbers *after* the global (root) seed has been set:
+      ! This is for the RNG module that sits in Hydrogrid
+      call SeedParallelRNG(seed)
+   end if
 
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
@@ -856,15 +864,14 @@ subroutine main_driver()
      end do
   end do
 
-  deallocate(Epot_mass_fluxdiv)
-  deallocate(charge_old,charge_new,permittivity)
-  deallocate(grad_Epot_old,grad_Epot_new,Epot,gradPhiApprox)
+   if (use_bl_rng) then
+      call rng_destroy()
+   end if
 
   if (include_reactions) then
      do n=1,nlevs
         call multifab_destroy(chem_rate(n))
      end do
-
      deallocate(chem_rate)
   end if
 
@@ -872,5 +879,9 @@ subroutine main_driver()
   call mgt_macproj_precon_destroy()
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
+
+  deallocate(Epot_mass_fluxdiv)
+  deallocate(charge_old,charge_new,permittivity)
+  deallocate(grad_Epot_old,grad_Epot_new,Epot,gradPhiApprox)
 
 end subroutine main_driver

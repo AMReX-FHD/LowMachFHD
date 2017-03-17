@@ -3,7 +3,6 @@ module chemical_rates_module
   use ml_layout_module
   use BoxLibRNGs
   use bl_rng_module
-  use bl_random_module
   use compute_reaction_rates_module
   use probin_common_module, only: use_bl_rng
   use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, &
@@ -282,7 +281,6 @@ contains
           chem_rate(1:nspecies) = chem_rate(1:nspecies) + num_reactions(reaction)/dv/dt *                  &
                (stoichiometric_factors(1:nspecies,2,reaction)-stoichiometric_factors(1:nspecies,1,reaction))
        end do
-
     end if
 
   contains
