@@ -13,7 +13,8 @@ module stochastic_mass_fluxdiv_module
   use matvec_mul_module
   use correction_flux_module
   use zero_edgeval_module
-  use probin_common_module, only: k_B, variance_coef_mass
+  use bl_rng_module
+  use probin_common_module, only: k_B, variance_coef_mass, use_bl_rng
   use probin_multispecies_module, only: nspecies, correct_flux, is_nonisothermal
 
   implicit none
@@ -238,7 +239,11 @@ contains
     ! generate and store the stochastic flux (random numbers)
     do rng=1, n_rngs
        do i = 1,dm
-          call multifab_fill_random(stoch_W_fc(:,i,rng))
+          if (use_bl_rng) then
+             call multifab_fill_random(stoch_W_fc(:,i,rng), rng_eng=rng_eng_diffusion)
+          else
+             call multifab_fill_random(stoch_W_fc(:,i,rng))
+          end if
        end do
     end do
 

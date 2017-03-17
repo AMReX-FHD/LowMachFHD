@@ -17,7 +17,7 @@ module probin_common_module
   real(dp_t),save :: perturb_width,smoothing_width,u_init(2)
   integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM)
   logical,save    :: use_bl_rng
-  integer,save    :: seed,seed_diffusion,seed_reaction,seed_init
+  integer,save    :: seed,seed_momentum,seed_diffusion,seed_reaction,seed_init
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)  
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
@@ -102,6 +102,7 @@ module probin_common_module
   ! for positive value, the value is assigned as seed value
   ! for 0, a positive value is randomly chosen
   ! if -1 (only for restart), RNGs status is restored from checkpoint data
+  namelist /probin_common/ seed_momentum
   namelist /probin_common/ seed_diffusion
   namelist /probin_common/ seed_reaction
   namelist /probin_common/ seed_init
@@ -252,6 +253,7 @@ contains
 
     use_bl_rng = .false.
     seed = 1
+    seed_momentum = 1
     seed_diffusion = 1
     seed_reaction = 1
     seed_init = 1
@@ -448,6 +450,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) seed
+
+       case ('--seed_momentum')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) seed_momentum
 
        case ('--seed_diffusion')
           farg = farg + 1

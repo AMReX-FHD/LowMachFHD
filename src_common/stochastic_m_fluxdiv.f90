@@ -13,8 +13,9 @@ module stochastic_m_fluxdiv_module
   use sum_momenta_module
   use convert_m_to_umac_module
   use convert_stag_module
+  use bl_rng_module
   use probin_common_module , only: visc_coef, variance_coef_mom, k_B, &
-                                   stoch_stress_form, filtering_width
+                                   stoch_stress_form, filtering_width, use_bl_rng
 
   implicit none
 
@@ -558,7 +559,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
 
     ! local
-    integer :: n,nlevs,dm,comp
+    integer :: n,nlevs,i,dm,comp
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -568,9 +569,18 @@ contains
        ! Diagonal components of stochastic stress tensor for momentum
        select case(stoch_stress_form)
        case (0) ! Non-symmetric
-          call multifab_fill_random(mflux_cc(:,comp))
+          if (use_bl_rng) then
+             call multifab_fill_random(mflux_cc(:,comp), rng_eng=rng_eng_momentum)
+          else
+             call multifab_fill_random(mflux_cc(:,comp))
+          end if
        case default ! Symmetric
-          call multifab_fill_random(mflux_cc(:,comp), variance=2.d0)
+          if (use_bl_rng) then
+             call multifab_fill_random(mflux_cc(:,comp), variance=2.d0, &
+                                       rng_eng=rng_eng_momentum)
+          else
+             call multifab_fill_random(mflux_cc(:,comp), variance=2.d0)
+          end if
        end select
 
        ! Off-diagonal components of stochastic stress tensor for momentum
@@ -578,9 +588,17 @@ contains
           ! in 2D, we need 2 random fluxes at each node
           select case(stoch_stress_form)
           case(0) ! Non-symmetric
-             call multifab_fill_random(mflux_nd(:,comp))
+             if (use_bl_rng) then
+                call multifab_fill_random(mflux_nd(:,comp), rng_eng=rng_eng_momentum)
+             else
+                call multifab_fill_random(mflux_nd(:,comp))
+             end if
           case default ! Symmetric
-             call multifab_fill_random(mflux_nd(:,comp), comp=1)
+             if (use_bl_rng) then
+                call multifab_fill_random(mflux_nd(:,comp), comp=1, rng_eng=rng_eng_momentum)
+             else
+                call multifab_fill_random(mflux_nd(:,comp), comp=1)
+             end if
              do n=1,nlevs
                 call multifab_copy_c(mflux_nd(n,comp),2,mflux_nd(n,comp),1)
              end do
@@ -589,17 +607,26 @@ contains
           ! in 3D, we need 2 random fluxes at each edge
           select case(stoch_stress_form)
           case(0) ! Non-symmetric
-             call multifab_fill_random(mflux_ed(:,1,comp))
-             call multifab_fill_random(mflux_ed(:,2,comp))
-             call multifab_fill_random(mflux_ed(:,3,comp))
+             do i=1,dm
+                if (use_bl_rng) then
+                   call multifab_fill_random(mflux_ed(:,i,comp), rng_eng=rng_eng_momentum)
+                else
+                   call multifab_fill_random(mflux_ed(:,i,comp))
+                end if
+             end do
           case default ! Symmetric
-             call multifab_fill_random(mflux_ed(:,1,comp), comp=1)
-             call multifab_fill_random(mflux_ed(:,2,comp), comp=1)
-             call multifab_fill_random(mflux_ed(:,3,comp), comp=1)
-             do n = 1, nlevs
-                call multifab_copy_c(mflux_ed(n,1,comp),2,mflux_ed(n,1,comp),1)
-                call multifab_copy_c(mflux_ed(n,2,comp),2,mflux_ed(n,2,comp),1)
-                call multifab_copy_c(mflux_ed(n,3,comp),2,mflux_ed(n,3,comp),1)
+             do i=1,dm
+                if (use_bl_rng) then
+                   call multifab_fill_random(mflux_ed(:,i,comp), comp=1, &
+                                             rng_eng=rng_eng_momentum)
+                else
+                   call multifab_fill_random(mflux_ed(:,i,comp), comp=1)
+                end if
+             end do
+             do n = 1,nlevs
+                do i=1,dm
+                   call multifab_copy_c(mflux_ed(n,i,comp),2,mflux_ed(n,i,comp),1)
+                end do
              end do
           end select
        end if
@@ -709,10 +736,18 @@ contains
    ! Generate random numbers first and store them in mactemp
    do n=1,nlevs
       do i=1,dm
-         call multifab_fill_random(mactemp(n:n,i), &
-                                   variance=abs(variance)*k_B/product(dx(n,1:dm)), &
-                                   variance_mfab=s_face(n:n,i), &
-                                   variance_mfab2=temperature_face(n:n,i))
+         if (use_bl_rng) then
+            call multifab_fill_random(mactemp(n:n,i), &
+                                      variance=abs(variance)*k_B/product(dx(n,1:dm)), &
+                                      variance_mfab=s_face(n:n,i), &
+                                      variance_mfab2=temperature_face(n:n,i), &
+                                      rng_eng=rng_eng_momentum)
+         else
+            call multifab_fill_random(mactemp(n:n,i), &
+                                      variance=abs(variance)*k_B/product(dx(n,1:dm)), &
+                                      variance_mfab=s_face(n:n,i), &
+                                      variance_mfab2=temperature_face(n:n,i))
+         end if
          call saxpy(m_face(n,i), 1.0_dp_t, mactemp(n,i), all=.true.)
       end do
    end do
