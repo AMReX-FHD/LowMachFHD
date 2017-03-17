@@ -10,8 +10,11 @@ module init_lowmach_module
   use ml_layout_module
   use convert_stag_module
   use convert_rhoc_to_c_module
+  use BoxLibRNGs
+  use bl_rng_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
-                                  molmass, rhobar, smoothing_width, u_init, n_cells
+                                  molmass, rhobar, smoothing_width, u_init, n_cells, &
+                                  use_bl_rng
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
                                         c_init, nspecies, T_init
  
@@ -209,16 +212,13 @@ contains
     real(kind=dp_t)  :: time 
  
     ! local varables
-    integer          :: i,j,n,seed(12)
+    integer          :: i,j,n
     real(kind=dp_t)  :: x,y,rad,L(2),sum,r,r1,r2,y1,y2,c_loc,x1,x2,coeff
     real(kind=dp_t)  :: gradToverT,m_e
  
     real(kind=dp_t)  :: random
 
     L(1:2) = prob_hi(1:2)-prob_lo(1:2) ! Domain length
-
-    seed = n_cells(1)*lo(2) + lo(1) + 1
-    call random_seed(put=seed(1:12))
 
     select case (abs(prob_type))
     
@@ -331,7 +331,11 @@ contains
              if (j .eq. n_cells(2)/2) then
                 do i=lo(1),hi(1)
                    x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                   call random_number(random)
+                   if (use_bl_rng) then
+                      call UniformRNG(random,engine=rng_eng_init%p)
+                   else
+                      call UniformRNG(random)
+                   end if
                    c_loc = abs(smoothing_width)*random
                    do n=1,nspecies
                       c(i,j,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
@@ -590,7 +594,11 @@ contains
              if (j .eq. n_cells(2)/4) then
                 do i=lo(1),hi(1)
                    x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                   call random_number(random)
+                   if (use_bl_rng) then
+                      call UniformRNG(random,engine=rng_eng_init%p)
+                   else
+                      call UniformRNG(random)
+                   end if
                    c_loc = abs(smoothing_width)*random
                    do n=1,nspecies
                       c(i,j,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
@@ -601,7 +609,11 @@ contains
              if (j .eq. 3*n_cells(2)/4) then
                 do i=lo(1),hi(1)
                    x = prob_lo(1) + (dble(i)+0.5d0)*dx(1)
-                   call random_number(random)
+                   if (use_bl_rng) then
+                      call UniformRNG(random,engine=rng_eng_init%p)
+                   else
+                      call UniformRNG(random)
+                   end if
                    c_loc = abs(smoothing_width)*random
                    do n=1,nspecies
                       c(i,j,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
@@ -724,16 +736,13 @@ contains
     real(kind=dp_t)  :: time 
  
     ! local variables
-    integer          :: i,j,k,n,seed(12)
+    integer          :: i,j,k,n
     real(kind=dp_t)  :: x,y,z,rad,L(3),sum,c_loc,y1,r,r1,r2,m_e,gradToverT
 
     real(kind=dp_t) :: random
 
     L(1:3) = prob_hi(1:3)-prob_lo(1:3) ! Domain length
     
-    seed = n_cells(1)*n_cells(2)*lo(3) + n_cells(1)*lo(2) + lo(1)
-    call random_seed(put=seed(1:12))
-
     select case (abs(prob_type))
 
     case (1) 
@@ -860,7 +869,11 @@ contains
              if (j .eq. n_cells(2)/2) then
                 do k=lo(3),hi(3)
                    do i=lo(1),hi(1)
-                      call random_number(random)
+                      if (use_bl_rng) then
+                         call UniformRNG(random,engine=rng_eng_init%p)
+                      else
+                         call UniformRNG(random)
+                      end if
                       c_loc = abs(smoothing_width)*random
                       do n=1,nspecies
                          c(i,j,k,n) = c_loc*(c_init(1,n)) + (1.d0-c_loc)*c_init(2,n)
