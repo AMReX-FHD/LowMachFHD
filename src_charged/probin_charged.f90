@@ -21,8 +21,7 @@ module probin_charged_module
   ! for reactions
   integer, parameter    :: max_reactions=20
 
-  logical, save         :: include_reactions = .false.
-  integer, save         :: nreactions = 1
+  integer, save         :: nreactions = 0
   integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0
   real(kind=dp_t), save :: rate_const(max_reactions) = 0.d0
   real(kind=dp_t), save :: rate_multiplier = 1.d0
@@ -46,7 +45,6 @@ module probin_charged_module
   namelist /probin_charged/ E_ext_type         ! external electric field
 
   ! for reactions
-  namelist /probin_charged/ include_reactions
   namelist /probin_charged/ nreactions
   namelist /probin_charged/ stoichiometric_factors
   namelist /probin_charged/ rate_const
@@ -149,11 +147,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) E_ext_type
-
-       case ('--include_reactions')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) include_reactions
 
        case ('--nreactions')
           farg = farg + 1

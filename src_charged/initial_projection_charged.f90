@@ -15,7 +15,7 @@ module initial_projection_charged_module
   use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type, &
                                   molmass
   use probin_charged_module, only: dielectric_const, use_charged_fluid, &
-                                   include_reactions, use_Poisson_rng
+                                   nreactions, use_Poisson_rng
   use chemical_rates_module
 
   implicit none
@@ -93,11 +93,11 @@ contains
        dt_eff = dt
     end if
 
-    if (include_reactions) then
+    if (nreactions > 0) then
        if (algorithm_type .ne. 5) then
-          call bl_error('Error: only algorithm_type=5 allowed for include_reactions=T')
+          call bl_error('Error: only algorithm_type=5 allowed for nreactions>0')
        else if (use_Poisson_rng .eq. 2) then
-          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorithm_type=5 and include_reactions=T')
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorithm_type=5 and nreactions>0')
        end if
     end if
 
@@ -121,7 +121,7 @@ contains
        end do       
     end do
 
-    if (include_reactions) then
+    if (nreactions > 0) then
        do n=1,nlevs
           call multifab_build(n_cc(n),mla%la(n),nspecies,0)
        end do
@@ -177,7 +177,7 @@ contains
     end do
 
     ! compute chemical rates m_i*R_i
-    if (include_reactions) then
+    if (nreactions > 0) then
        ! convert rho (mass densities rho_i) into n_cc (number densities n_i=rho_i/m_i)
        do n=1,nlevs
           call multifab_copy_c(n_cc(n),1,rho(n),1,nspecies,0)
@@ -201,7 +201,7 @@ contains
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
-    ! if include_reactions=T, also add sum_i -(m_i*R_i)/rhobar_i
+    ! if nreactions>0, also add sum_i -(m_i*R_i)/rhobar_i
     do n=1,nlevs
        do i=1,nspecies
           call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
@@ -211,7 +211,7 @@ contains
           if (variance_coef_mass .ne. 0.d0) then
              call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
-          if (include_reactions) then
+          if (nreactions > 0) then
              call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
           end if
        end do
@@ -290,7 +290,7 @@ contains
        end do
     end do
 
-    if (include_reactions) then
+    if (nreactions > 0) then
        do n=1,nlevs
           call multifab_destroy(n_cc(n))
        end do

@@ -34,7 +34,7 @@ module advance_timestep_inertial_midpoint_module
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid, dielectric_type, &
-                                   include_reactions, use_Poisson_rng
+                                   use_Poisson_rng, nreactions
   use chemical_rates_module
 
   implicit none
@@ -151,9 +151,9 @@ contains
        call bl_error('Error: currently only use_charged_fluid=F allowed for algorithm_type=5')
     end if
 
-    if (include_reactions) then
+    if (nreactions > 0) then
        if (use_Poisson_rng .eq. 2) then
-          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=5 and include_reactions=T')
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=5 and nreactions>0')
        end if
     end if
 
@@ -192,7 +192,7 @@ contains
        end do
     end do
 
-    if (include_reactions) then
+    if (nreactions > 0) then
        do n=1,nlevs
           call multifab_build(chem_rate_temp(n),mla%la(n),nspecies,0)
           call multifab_build(         n_old(n),mla%la(n),nspecies,0)
@@ -238,7 +238,7 @@ contains
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
        end if
-       if (include_reactions) then
+       if (nreactions > 0) then
           call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies,0)
        end if
     end do
@@ -452,7 +452,7 @@ contains
     end do
 
     ! compute chemical rates m_i*R^{n+1/2}_i
-    if (include_reactions) then
+    if (nreactions > 0) then
        ! convert rho_old (at n) and rho_new (at n+1/2) (mass densities rho_i)
        ! into n_old and n_new (number densities n_i=rho_i/m_i)
        do n=1,nlevs
@@ -502,7 +502,7 @@ contains
 
     ! compute gmres_rhs_p
     ! put -S = sum_i div(F^{n+1/2}_i)/rhobar_i into gmres_rhs_p (we will later add divu)
-    ! if include_reactions=T, also add sum_i -(m_i*R^{n+1/2}_i)/rhobar_i
+    ! if nreactions>0, also add sum_i -(m_i*R^{n+1/2}_i)/rhobar_i
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
@@ -513,7 +513,7 @@ contains
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
-          if (include_reactions) then
+          if (nreactions > 0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
           end if
        end do
@@ -572,7 +572,7 @@ contains
     end do
 
     ! reset rho_update for all scalars to zero
-    ! then, set rho_update to -F^{n+1/2}_i (plus m_i*R^{n+1/2}_i, if include_reactions=T)
+    ! then, set rho_update to -F^{n+1/2}_i (plus m_i*R^{n+1/2}_i, if nreactions>0)
     ! it is used in Step 5 below
     do n=1,nlevs
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
@@ -584,7 +584,7 @@ contains
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
        end if
-       if (include_reactions) then
+       if (nreactions > 0) then
           call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies)
        end if
     end do
@@ -903,7 +903,7 @@ contains
     end do
 
     ! compute chemical rates m_i*R^{n+1}_i
-    if (include_reactions) then
+    if (nreactions > 0) then
        ! convert rho_new (at n+1) (mass densities rho_i) into n_new (number densities n_i=rho_i/m_i)
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,rho_new(n),1,nspecies,0)
@@ -944,7 +944,7 @@ contains
 
     ! compute gmres_rhs_p
     ! put -S = sum_i div(F^{n+1}_i)/rhobar_i into gmres_rhs_p (we will later add divu)
-    ! if include_reactions=T, also add sum_i -(m_i*R^{n+1}_i)/rhobar_i
+    ! if nreactions>0, also add sum_i -(m_i*R^{n+1}_i)/rhobar_i
     do n=1,nlevs
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
@@ -955,7 +955,7 @@ contains
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
-          if (include_reactions) then
+          if (nreactions > 0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
           end if
        end do
@@ -1120,7 +1120,7 @@ contains
        end do
     end do
 
-    if (include_reactions) then
+    if (nreactions > 0) then
        do n=1,nlevs
           call multifab_destroy(chem_rate_temp(n))
           call multifab_destroy(n_old(n))

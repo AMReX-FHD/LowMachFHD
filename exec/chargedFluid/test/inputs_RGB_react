@@ -209,7 +209,6 @@
   ! Reactions
   !----------
 
-  include_reactions = T
   nreactions = 2
 
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)

@@ -11,7 +11,7 @@ module chemical_rates_module
 !=rep2                                     use_Poisson_rng, cross_section
   use probin_common_module, only: use_bl_rng
   use probin_multispecies_module, only: nspecies
-  use probin_charged_module, only: include_reactions, nreactions, stoichiometric_factors, use_Poisson_rng, &
+  use probin_charged_module, only: nreactions, stoichiometric_factors, use_Poisson_rng, &
                                    cross_section
   implicit none
 
@@ -69,8 +69,7 @@ contains
     dm = mla%dim
     
     ! if there are no reactions to process, set rates zero and return. 
-!=rep1    if (nreactions<1) then
-    if (nreactions<1 .or. (.not. include_reactions)) then
+    if (nreactions<1) then
       do n=1,nlevs
         call setval(chem_rate(n),0.d0,all=.true.)
       end do

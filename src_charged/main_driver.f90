@@ -50,7 +50,7 @@ subroutine main_driver()
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
-                                   dielectric_type, include_reactions
+                                   dielectric_type, nreactions
 
   use fabio_module
 
@@ -158,7 +158,7 @@ subroutine main_driver()
   allocate(Epot(nlevs))
   allocate(gradPhiApprox(nlevs,dm))
 
-  if (include_reactions) then
+  if (nreactions > 0) then
      allocate(chem_rate(nlevs))
   end if
 
@@ -183,8 +183,8 @@ subroutine main_driver()
 
      init_step = restart + 1
 
-     if (include_reactions .or. use_charged_fluid) then
-        call bl_error('Error: restart function currently not supported for include_reactions=T or use_charged_fluid=T')
+     if (nreactions > 0 .or. use_charged_fluid) then
+        call bl_error('Error: restart function currently not supported for nreactions>0 or use_charged_fluid=T')
      end if
 
      ! build the ml_layout
@@ -250,7 +250,7 @@ subroutine main_driver()
         end do
      end do
 
-     if (include_reactions) then
+     if (nreactions > 0) then
         do n=1,nlevs
            call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
         end do
@@ -765,8 +765,8 @@ subroutine main_driver()
 
          ! write checkpoint at specific intervals
          if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
-            if (include_reactions .or. use_charged_fluid) then
-               call bl_error('Error: checkpoint function currently not supported for include_reactions=T or use_charged_fluid=T')
+            if (nreactions > 0 .or. use_charged_fluid) then
+               call bl_error('Error: checkpoint function currently not supported for nreactions>0 or use_charged_fluid=T')
             end if
 
             if (parallel_IOProcessor()) then
@@ -868,7 +868,7 @@ subroutine main_driver()
       call rng_destroy()
    end if
 
-  if (include_reactions) then
+  if (nreactions > 0) then
      do n=1,nlevs
         call multifab_destroy(chem_rate(n))
      end do
