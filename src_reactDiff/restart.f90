@@ -7,8 +7,8 @@ module restart_module
   use define_bc_module
   use bl_rng_module
   use bl_random_module
-  use probin_common_module, only: dim_in, restart
-  use probin_reactdiff_module, only: nspecies, use_bl_rng, seed_reaction, seed_diffusion
+  use probin_common_module, only: dim_in, restart, use_bl_rng, seed_reaction, seed_diffusion
+  use probin_reactdiff_module, only: nspecies
 
   implicit none
 

@@ -41,10 +41,15 @@
   ! Algorithm control / selection
   !----------------------
 
+  use_bl_rng = T
+
   ! random number seed
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
   seed = 0
+
+  seed_reaction = 1
+  seed_diffusion = 1
 
   ! Boundary conditions
   !----------------------
@@ -85,10 +90,6 @@
 
 ! reaction/diffusion number fraction code
 &probin_reactdiff
-
-  use_bl_rng = T
-  seed_reaction = 1
-  seed_diffusion = 1
 
   ! Problem description
   !----------------------

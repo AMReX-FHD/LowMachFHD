@@ -19,7 +19,7 @@ subroutine main_driver()
    use multifab_physbc_module
    use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                    plot_int, chk_int, print_int, seed, bc_lo, bc_hi, &
-                                   restart, &
+                                   restart, use_bl_rng, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    cfl, initial_variance
@@ -27,8 +27,8 @@ subroutine main_driver()
                                       cross_section, &
                                       inhomogeneous_bc_fix, temporal_integrator, &
                                       n_steps_write_avg, &
-                                      model_file_init, model_file, integer_populations, &
-                                      use_bl_rng
+                                      model_file_init, model_file, integer_populations
+
 
    use fabio_module
 

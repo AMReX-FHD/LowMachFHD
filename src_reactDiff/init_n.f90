@@ -9,12 +9,10 @@ module init_n_module
   use bl_rng_module
   use bl_random_module
   use BoxLibRNGs
-
-
   use probin_common_module, only: prob_lo, prob_hi, prob_type, initial_variance, &
-                                  perturb_width, smoothing_width
+                                  perturb_width, smoothing_width, use_bl_rng
   use probin_reactdiff_module, only: nspecies, n_init_in, model_file_init, &
-                                     cross_section, integer_populations, use_bl_rng
+                                     cross_section, integer_populations
   
   implicit none
 

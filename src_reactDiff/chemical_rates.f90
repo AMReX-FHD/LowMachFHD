@@ -5,8 +5,9 @@ module chemical_rates_module
   use bl_rng_module
   use bl_random_module
   use compute_reaction_rates_module
+  use probin_common_module, only: use_bl_rng
   use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, &
-                                     use_Poisson_rng, cross_section, use_bl_rng
+                                     use_Poisson_rng, cross_section
 
   implicit none
 

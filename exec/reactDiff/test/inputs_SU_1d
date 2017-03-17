@@ -38,10 +38,25 @@
 
   ! Algorithm control / selection
   !----------------------
+
+  ! Random number generator
+  !----------------------
+  use_bl_rng = F                   ! if T, use F_BaseLib/bl_random RNGs
+                                   ! if F, use HydroGrid RNGs
+
   ! random number seed (for HydroGrid RNGs: check use_bl_rng below in probin_reactdiff)
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
   seed = 0 
+
+  ! if use_bl_rng=T, assign random number seeds for each physical process
+  ! (if use_bl_rng=F, use seed option above in probin_common)
+  ! for positive value, the value is assigned as seed value
+  ! for 0, a positive value is randomly chosen
+  ! if -1 (only for restart), RNGs status is restored from checkpoint data
+  seed_diffusion = 0 
+  seed_reaction = 0
+  seed_init = 0
 
   ! Initial conditions
   !----------------------
@@ -93,20 +108,6 @@
 /
 
 &probin_reactdiff
-
-  ! Random number generator
-  !----------------------
-  use_bl_rng = F                   ! if T, use F_BaseLib/bl_random RNGs
-                                   ! if F, use HydroGrid RNGs
-
-  ! if use_bl_rng=T, assign random number seeds for each physical process
-  ! (if use_bl_rng=F, use seed option above in probin_common)
-  ! for positive value, the value is assigned as seed value
-  ! for 0, a positive value is randomly chosen
-  ! if -1 (only for restart), RNGs status is restored from checkpoint data
-  seed_diffusion = 0 
-  seed_reaction = 0
-  seed_init = 0
 
   ! Problem description
   !----------------------

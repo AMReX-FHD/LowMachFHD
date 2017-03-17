@@ -11,8 +11,9 @@ module stochastic_n_fluxdiv_module
   use average_to_faces_module
   use div_and_grad_module
   use bl_rng_module
-  use probin_common_module, only: variance_coef_mass, initial_variance, density_weights
-  use probin_reactdiff_module, only: nspecies, cross_section, use_bl_rng
+  use probin_common_module, only: variance_coef_mass, initial_variance, &
+                                  density_weights, use_bl_rng
+  use probin_reactdiff_module, only: nspecies, cross_section
 
   implicit none
 

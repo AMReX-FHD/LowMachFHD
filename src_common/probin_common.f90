@@ -15,7 +15,9 @@ module probin_common_module
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt,cfl,grav(3)
   real(dp_t),save :: perturb_width,smoothing_width,u_init(2)
-  integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),seed
+  integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM)
+  logical,save    :: use_bl_rng
+  integer,save    :: seed,seed_diffusion,seed_reaction,seed_init
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)  
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
@@ -87,10 +89,22 @@ module probin_common_module
                                               ! 2 = update gradp each time step from solver pi
                                               ! 3 = update gradp each time step from HSE
 
-  ! random number seed
+  namelist /probin_common/ use_bl_rng         ! if false, use HydroGrid RNGs
+                                              ! if true, use F_BaseLib/bl_random RNGs
+                                              
+
+  ! random number seed (for HydroGrid RNGs)
   ! 0        = unpredictable seed based on clock
   ! positive = fixed seed
   namelist /probin_common/ seed
+
+  ! Random number seeds for each physical process for use_bl_rng=T
+  ! for positive value, the value is assigned as seed value
+  ! for 0, a positive value is randomly chosen
+  ! if -1 (only for restart), RNGs status is restored from checkpoint data
+  namelist /probin_common/ seed_diffusion
+  namelist /probin_common/ seed_reaction
+  namelist /probin_common/ seed_init
 
   ! Viscous friction L phi operator
   ! if abs(visc_type) = 1, L = div beta grad
@@ -236,7 +250,11 @@ contains
 
     barodiffusion_type = 0
 
+    use_bl_rng = .false.
     seed = 1
+    seed_diffusion = 1
+    seed_reaction = 1
+    seed_init = 1
 
     visc_type = 1
     visc_coef = 1.d0
@@ -421,10 +439,30 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) u_init(2)
 
+       case ('--use_bl_rng')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) use_bl_rng
+
        case ('--seed')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) seed
+
+       case ('--seed_diffusion')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) seed_diffusion
+
+       case ('--seed_reaction')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) seed_reaction
+
+       case ('--seed_init')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) seed_init
 
        case ('--grav_x')
           farg = farg + 1
