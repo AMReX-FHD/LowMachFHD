@@ -5,7 +5,11 @@ module restart_module
   use ml_layout_module
   use checkpoint_module
   use define_bc_module
-  use probin_common_module, only: dim_in, advection_type, restart, advection_type, algorithm_type
+  use bl_rng_module
+  use bl_random_module
+  use probin_common_module, only: dim_in, advection_type, restart, advection_type, &
+                                  algorithm_type, use_bl_rng, &
+                                  seed_momentum, seed_diffusion, seed_reaction
   use probin_multispecies_module, only: nspecies
 
   implicit none
@@ -73,7 +77,8 @@ contains
         call multifab_copy_c(rho(n)   ,1,chkdata(n)      ,1         ,nspecies)
         call multifab_copy_c(rhotot(n),1,chkdata(n)      ,nspecies+1,1)
         call multifab_copy_c(pres(n)  ,1,chkdata(n)      ,nspecies+2,1)
-        if (algorithm_type .eq. 0) then
+        if (algorithm_type .ne. 1 .and. algorithm_type .ne. 2) then
+           ! non-overdamped algorithms - need to save diff/stoch_mass_fluxdiv
            call multifab_copy_c( diff_mass_fluxdiv(n),1,chkdata(n),  nspecies+3,nspecies)
            call multifab_copy_c(stoch_mass_fluxdiv(n),1,chkdata(n),2*nspecies+3,nspecies)
         end if
@@ -101,6 +106,7 @@ contains
            call destroy(la)
         end if
      end do
+
      deallocate(chkdata)
      deallocate(chkdata_edgex)
      deallocate(chkdata_edgey)
@@ -126,6 +132,7 @@ contains
     type(multifab)   , pointer        :: chkdata_edgey(:)
     type(multifab)   , pointer        :: chkdata_edgez(:)
     character(len=11)                 :: sd_name
+    character(len=40)                 :: rand_name
     integer                           :: n,nlevs,dm
     integer                           :: rrs(10)
 
@@ -153,6 +160,26 @@ contains
     do n = 1,nlevs
       call boxarray_build_copy(mba%bas(n), get_boxarray(chkdata(n))) 
     end do
+
+     ! random state
+    if (use_bl_rng) then
+
+       if (seed_momentum .eq. -1) then
+          rand_name = sd_name//'/rng_eng_mom'
+          call bl_rng_restore_engine(rng_eng_momentum, rand_name)
+       end if
+
+       if (seed_diffusion .eq. -1) then
+          rand_name = sd_name//'/rng_eng_diff'
+          call bl_rng_restore_engine(rng_eng_diffusion, rand_name)
+       end if
+
+       if (seed_reaction .eq. -1) then
+          rand_name = sd_name//'/rng_eng_react'
+          call bl_rng_restore_engine(rng_eng_reaction, rand_name)
+       end if
+
+    end if
 
     call destroy(bpt)
 

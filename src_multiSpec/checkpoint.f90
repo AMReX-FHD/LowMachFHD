@@ -6,8 +6,11 @@ module checkpoint_module
   use ml_layout_module
   use bl_IO_module
   use fab_module
+  use bl_rng_module
+  use bl_random_module
   use fabio_module, only: fabio_mkdir, fabio_ml_multifab_write_d
-  use probin_common_module, only: dim_in, algorithm_type
+  use probin_common_module, only: dim_in, algorithm_type, use_bl_rng, &
+                                  seed_diffusion, seed_momentum, seed_reaction
   use probin_multispecies_module, only: nspecies
 
   implicit none
@@ -37,6 +40,7 @@ contains
     integer :: n,nlevs,dm,i
 
     character(len=11) :: sd_name
+    character(len=40) :: rand_name
 
     type(bl_prof_timer), save :: bpt
 
@@ -48,10 +52,12 @@ contains
     allocate(chkdata(nlevs))
     allocate(chkdata_edge(nlevs,dm))
     do n = 1,nlevs
-       if (algorithm_type .eq. 0) then
+       if (algorithm_type .ne. 1 .and. algorithm_type .ne. 2) then
+          ! non-overdamped algorithms - need to save diff/stoch_mass_fluxdiv
           ! nspecies densities + 1 total density + 1 pressure + diff/stoch_mass_fluxdiv
           call multifab_build(chkdata(n), mla%la(n), 3*nspecies+2, 0)
        else
+          ! overdamped algorithms - don't need to save diff/stoch_mass_fluxdiv
           ! nspecies densities + 1 total density + 1 pressure
           call multifab_build(chkdata(n), mla%la(n), nspecies+2, 0)
        end if
@@ -59,7 +65,7 @@ contains
        call multifab_copy_c(chkdata(n), 1         , rho(n)   , 1, nspecies)
        call multifab_copy_c(chkdata(n), nspecies+1, rhotot(n), 1, 1)
        call multifab_copy_c(chkdata(n), nspecies+2, pres(n)  , 1, 1)
-       if (algorithm_type .eq. 0) then
+       if (algorithm_type .ne. 1 .and. algorithm_type .ne. 2) then
           call multifab_copy_c(chkdata(n), nspecies+3, diff_mass_fluxdiv(n), 1, nspecies)
           call multifab_copy_c(chkdata(n), 2*nspecies+3, stoch_mass_fluxdiv(n), 1, nspecies)
        end if
@@ -73,6 +79,19 @@ contains
     write(unit=sd_name,fmt='("chk",i8.8)') istep_to_write
 
     call checkpoint_write_doit(nlevs, sd_name, chkdata, chkdata_edge, mla%mba%rr, time, dt)
+
+    ! random state
+    if (use_bl_rng) then
+
+       ! engines
+       rand_name = sd_name//'/rng_eng_mom'
+       call bl_rng_save_engine(rng_eng_momentum, rand_name)
+       rand_name = sd_name//'/rng_eng_diff'
+       call bl_rng_save_engine(rng_eng_diffusion, rand_name)
+       rand_name = sd_name//'/rng_eng_react'
+       call bl_rng_save_engine(rng_eng_reaction, rand_name)
+
+    end if
 
     do n = 1,nlevs
        call multifab_destroy(chkdata(n))

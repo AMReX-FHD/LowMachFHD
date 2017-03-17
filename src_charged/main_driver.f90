@@ -52,8 +52,6 @@ subroutine main_driver()
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
                                    dielectric_type, nreactions
 
-  use fabio_module
-
   implicit none
 
   ! quantities will be allocated with dm components
@@ -183,8 +181,8 @@ subroutine main_driver()
 
      init_step = restart + 1
 
-     if (nreactions > 0 .or. use_charged_fluid) then
-        call bl_error('Error: restart function currently not supported for nreactions>0 or use_charged_fluid=T')
+     if (use_charged_fluid) then
+        call bl_error('Error: restart function currently not supported for use_charged_fluid=T')
      end if
 
      ! build the ml_layout
@@ -193,6 +191,12 @@ subroutine main_driver()
      call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi, &
                                   diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                   umac,pmask)
+
+     ! when we put in restarts for charged fluids this should to in
+     ! initialize_from_restart
+     do n=1,nlevs
+        call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
+     end do
 
   else
 
@@ -765,8 +769,8 @@ subroutine main_driver()
 
          ! write checkpoint at specific intervals
          if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
-            if (nreactions > 0 .or. use_charged_fluid) then
-               call bl_error('Error: checkpoint function currently not supported for nreactions>0 or use_charged_fluid=T')
+            if (use_charged_fluid) then
+               call bl_error('Error: checkpoint function currently not supported for use_charged_fluid=T')
             end if
 
             if (parallel_IOProcessor()) then
