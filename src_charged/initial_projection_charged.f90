@@ -195,7 +195,12 @@ contains
              call multifab_mult_mult_s_c(chem_rate(n),i,molmass(i),1,0)
           end do
        end do
+    else
+       do n=1,nlevs
+          call multifab_setval(chem_rate(n),0.d0,all=.true.)
+       end do
     end if
+
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)

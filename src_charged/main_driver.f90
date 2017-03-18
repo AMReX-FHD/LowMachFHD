@@ -137,7 +137,7 @@ subroutine main_driver()
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs))
   allocate(Epot_mass_fluxdiv(nlevs))
-  allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
+  allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs),chem_rate(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
@@ -155,10 +155,6 @@ subroutine main_driver()
   allocate(grad_Epot_new(nlevs,dm))
   allocate(Epot(nlevs))
   allocate(gradPhiApprox(nlevs,dm))
-
-  if (nreactions > 0) then
-     allocate(chem_rate(nlevs))
-  end if
 
   ! build pmask
   allocate(pmask(dm))
@@ -190,7 +186,7 @@ subroutine main_driver()
      ! build and fill rho, rhotot, pi, and umac
      call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi, &
                                   diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                  umac,pmask)
+                                  chem_rate,umac,pmask)
 
      ! when we put in restarts for charged fluids this should to in
      ! initialize_from_restart
@@ -249,16 +245,11 @@ subroutine main_driver()
         call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+        call multifab_build(chem_rate(n)         ,mla%la(n),nspecies,0)
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
      end do
-
-     if (nreactions > 0) then
-        do n=1,nlevs
-           call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
-        end do
-     end if
 
   end if
 
@@ -777,7 +768,7 @@ subroutine main_driver()
                write(*,*), 'writing checkpoint at timestep =', istep 
             end if
             call checkpoint_write(mla,rho_new,rhotot_new,pi,diff_mass_fluxdiv, &
-                                  stoch_mass_fluxdiv,umac,time,dt,istep)
+                                  stoch_mass_fluxdiv,chem_rate,umac,time,dt,istep)
          end if
 
          ! print out projection (average) and variance
@@ -834,6 +825,7 @@ subroutine main_driver()
      call multifab_destroy(Epot_mass_fluxdiv(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      call multifab_destroy(stoch_mass_fluxdiv(n))
+     call multifab_destroy(chem_rate(n))
      call multifab_destroy(pi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
@@ -852,7 +844,7 @@ subroutine main_driver()
   deallocate(lo,hi,dx)
   deallocate(rho_old,rhotot_old,rho_new,rhotot_new,rhotot_fc,conc)
   deallocate(Temp,umac,pi,mtemp,gradp_baro,eta,kappa,eta_ed,Temp_ed)
-  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
+  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv,chem_rate)
 
   do n=1,nlevs
      call multifab_destroy(charge_old(n))
@@ -871,13 +863,6 @@ subroutine main_driver()
    if (use_bl_rng) then
       call rng_destroy()
    end if
-
-  if (nreactions > 0) then
-     do n=1,nlevs
-        call multifab_destroy(chem_rate(n))
-     end do
-     deallocate(chem_rate)
-  end if
 
   call stag_mg_layout_destroy()
   call mgt_macproj_precon_destroy()
