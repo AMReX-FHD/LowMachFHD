@@ -24,9 +24,11 @@ module advance_timestep_overdamped_module
   use multifab_physbc_extrap_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
+  use bl_rng_module
+  use bl_random_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, restart, algorithm_type, &
-                                  barodiffusion_type
+                                  barodiffusion_type, use_bl_rng
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid, dielectric_type
@@ -182,6 +184,9 @@ contains
     if (istep .ne. 1 .and. istep .ne. restart+1) then
        if (variance_coef_mass .ne. 0.d0) then
           call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+       end if
+       if (use_bl_rng) then
+          call bl_rng_copy_engine(rng_eng_diffusion_old,rng_eng_diffusion)
        end if
        if (variance_coef_mom .ne. 0.d0) then
           call fill_m_stochastic(mla)

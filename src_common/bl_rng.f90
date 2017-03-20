@@ -14,12 +14,14 @@ module bl_rng_module
   public :: rng_init, rng_destroy, &
             rng_eng_momentum, &
             rng_eng_diffusion, &
+            rng_eng_diffusion_old, &
             rng_eng_reaction, &
             rng_eng_init
 
   ! randon number engines
   type(bl_rng_engine)      , save :: rng_eng_momentum
   type(bl_rng_engine)      , save :: rng_eng_diffusion
+  type(bl_rng_engine)      , save :: rng_eng_diffusion_old
   type(bl_rng_engine)      , save :: rng_eng_reaction
   type(bl_rng_engine)      , save :: rng_eng_init
 
@@ -50,6 +52,15 @@ contains
     if (seed_diffusion .ne. -1) then
        call bl_rng_build_engine(rng_eng_diffusion, seed_diffusion)
     end if
+
+    ! build this - seed doesn't matter unless it's step 0
+    ! since we overwrite this engine
+    if (seed_diffusion .ne. -1) then
+       call bl_rng_build_engine(rng_eng_diffusion_old, seed_diffusion)
+    else
+       ! if we are restarting this gets built here
+       call bl_rng_build_engine(rng_eng_diffusion_old, 1)
+    end if
     
     if (seed_reaction .ne. -1) then
        call bl_rng_build_engine(rng_eng_reaction, seed_reaction)
@@ -63,6 +74,7 @@ contains
 
     call bl_rng_destroy_engine(rng_eng_momentum)
     call bl_rng_destroy_engine(rng_eng_diffusion)
+    call bl_rng_destroy_engine(rng_eng_diffusion_old)
     call bl_rng_destroy_engine(rng_eng_reaction)
     call bl_rng_destroy_engine(rng_eng_init)
 
