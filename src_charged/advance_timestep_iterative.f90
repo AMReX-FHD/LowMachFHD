@@ -261,7 +261,9 @@ contains
           call multifab_setval(m_s_fluxdiv_old(n,i),0.d0,all=.true.)
        end do
     end do
-    if (variance_coef_mom .ne. 0.d0) then
+    if (variance_coef_mom .ne. 0.d0) then   
+       ! fill the stochastic momentum multifabs with a new set of random numbers
+       call fill_m_stochastic(mla)
        call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv_old, &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
@@ -742,12 +744,7 @@ contains
 
     end do ! end loop l=1,num_pot_iters
 
-    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance   
-
-    ! fill the stochastic momentum multifabs with a new set of random numbers
-    if (variance_coef_mom .ne. 0.d0) then
-       call fill_m_stochastic(mla)
-    end if
+    gmres_abs_tol = gmres_abs_tol_in ! Restore the desired tolerance
 
     call destroy_bc_multifabs(mla)
 

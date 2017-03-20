@@ -400,6 +400,8 @@ contains
        end do
     end do
     if (variance_coef_mom .ne. 0.d0) then
+       ! fill random flux multifabs with new random numbers
+       call fill_m_stochastic(mla)
        weights(1) = 1.d0
        weights(2) = 0.d0
        call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
@@ -871,9 +873,6 @@ contains
     ! fill the stochastic multifabs with a new set of random numbers
     if (variance_coef_mass .ne. 0.d0) then
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-    end if
-    if (variance_coef_mom .ne. 0.d0) then
-       call fill_m_stochastic(mla)
     end if
 
     ! compute diffusive, stochastic, potential mass fluxes
