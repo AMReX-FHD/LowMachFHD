@@ -8,7 +8,8 @@ module advance_timestep_module
   use chemical_rates_module
   use multifab_physbc_module
   use bc_module
-  use probin_reactdiff_module, only: nspecies, temporal_integrator, inhomogeneous_bc_fix
+  use probin_reactdiff_module, only: nspecies, temporal_integrator, reaction_type, inhomogeneous_bc_fix
+  use probin_chemistry_module, only: use_Poisson_rng
 
   implicit none
 
@@ -33,6 +34,12 @@ contains
     type(multifab) :: Rn_steady(mla%nlevel)
 
     type(bl_prof_timer),save :: bpt
+
+    if (temporal_integrator .ge. 0 .and. reaction_type .ne. 0) then
+       if (use_Poisson_rng .eq. 2) then
+          call bl_error("SSA (use_Poisson_rng=2) requires reaction_type=0 for split schemes")
+       end if
+    end if
 
     call build(bpt,"advance_timestep")
 

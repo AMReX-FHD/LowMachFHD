@@ -22,11 +22,11 @@ subroutine main_driver()
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    cfl, initial_variance
-   use probin_reactdiff_module, only: nspecies, nreactions, probin_reactdiff_init, D_Fick, &
-                                      cross_section, &
+   use probin_reactdiff_module, only: probin_reactdiff_init, nspecies, D_Fick, &
                                       inhomogeneous_bc_fix, temporal_integrator, &
                                       n_steps_write_avg, &
                                       model_file_init, model_file, integer_populations
+   use probin_chemistry_module, only: probin_chemistry_init, nreactions, cross_section
 
 
    use fabio_module
@@ -70,6 +70,7 @@ subroutine main_driver()
 
    call probin_common_init()
    call probin_reactdiff_init() 
+   call probin_chemistry_init()
 
    if (use_bl_rng) then
       ! Build the random number engine and give initial distributions for the

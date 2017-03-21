@@ -11,7 +11,8 @@ module advance_reaction_diffusion_module
   use implicit_diffusion_module
   use probin_common_module, only: variance_coef_mass
   use probin_reactdiff_module, only: nspecies, D_Fick, temporal_integrator, &
-                                     midpoint_stoch_flux_type, use_Poisson_rng
+                                     midpoint_stoch_flux_type
+  use probin_chemistry_module, only: use_Poisson_rng
 
   implicit none
 

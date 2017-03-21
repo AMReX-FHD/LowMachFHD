@@ -10,6 +10,7 @@ f90sources += implicit_diffusion.f90
 f90sources += init_n.f90
 f90sources += multinomial_diffusion.f90
 f90sources += probin_reactdiff.f90
+f90sources += probin_chemistry.f90
 f90sources += restart.f90
 f90sources += stochastic_n_fluxdiv.f90
 f90sources += write_plotfile_n.f90
