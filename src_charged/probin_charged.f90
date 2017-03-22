@@ -27,7 +27,6 @@ module probin_charged_module
   real(kind=dp_t), save :: rate_multiplier = 1.d0
   logical, save         :: include_discrete_LMA_correction = .true.
   integer, save         :: use_Poisson_rng = 1
-  real(kind=dp_t), save :: cross_section = 1.d0
   integer, save         :: exclude_solvent_comput_rates = 0
 
   ! for charged fluid
@@ -51,7 +50,6 @@ module probin_charged_module
   namelist /probin_charged/ rate_multiplier
   namelist /probin_charged/ include_discrete_LMA_correction
   namelist /probin_charged/ use_Poisson_rng
-  namelist /probin_charged/ cross_section
   namelist /probin_charged/ exclude_solvent_comput_rates 
 
 contains
@@ -167,11 +165,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) use_Poisson_rng
-
-       case ('--cross_section')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) cross_section
 
        case ('--exclude_solvent_comput_rates')
           farg = farg + 1

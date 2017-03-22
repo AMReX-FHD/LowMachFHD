@@ -37,16 +37,11 @@ module probin_chemistry_module
                                                     ! 0=do CLE (Gaussian increments)
                                                     ! -1=do deterministic chemistry
 
-  !!! to be deleted 
-  real(kind=dp_t), save :: cross_section = 1.d0     ! in 2D, thickness of cell
-                                                    ! in general, dv = product(dx(1,1:dm))*cross_section
-
   namelist /probin_chemistry/ nreactions
   namelist /probin_chemistry/ stoichiometric_factors
   namelist /probin_chemistry/ rate_const, rate_multiplier, include_discrete_LMA_correction
   namelist /probin_chemistry/ exclude_solvent_comput_rates
   namelist /probin_chemistry/ use_Poisson_rng
-  namelist /probin_chemistry/ cross_section
 
 contains
 
@@ -115,11 +110,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) use_Poisson_rng
-
-       case ('--cross_section')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) cross_section
 
        case default
           if (parallel_IOProcessor() ) then

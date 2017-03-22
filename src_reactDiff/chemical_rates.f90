@@ -4,9 +4,9 @@ module chemical_rates_module
   use BoxLibRNGs
   use bl_rng_module
   use compute_reaction_rates_module
-  use probin_common_module, only: use_bl_rng
+  use probin_common_module, only: use_bl_rng, cross_section
   use probin_reactdiff_module, only: nspecies
-  use probin_chemistry_module, only: nreactions, stoichiometric_factors, use_Poisson_rng, cross_section
+  use probin_chemistry_module, only: nreactions, stoichiometric_factors, use_Poisson_rng
 
   implicit none
 

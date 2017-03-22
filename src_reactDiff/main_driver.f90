@@ -21,12 +21,12 @@ subroutine main_driver()
                                    restart, use_bl_rng, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
-                                   cfl, initial_variance
+                                   cfl, initial_variance, cross_section
    use probin_reactdiff_module, only: probin_reactdiff_init, nspecies, D_Fick, &
                                       inhomogeneous_bc_fix, temporal_integrator, &
                                       n_steps_write_avg, &
                                       model_file_init, model_file, integer_populations
-   use probin_chemistry_module, only: probin_chemistry_init, nreactions, cross_section
+   use probin_chemistry_module, only: probin_chemistry_init, nreactions
 
 
    use fabio_module

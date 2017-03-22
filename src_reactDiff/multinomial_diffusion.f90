@@ -7,9 +7,8 @@ module multinomial_diffusion_module
   use BoxLibRNGs
   use bl_rng_module
   use bl_random_module
-  use probin_common_module, only: n_cells, use_bl_rng
+  use probin_common_module, only: n_cells, use_bl_rng, cross_section
   use probin_reactdiff_module, only: nspecies
-  use probin_chemistry_module, only: cross_section
 
   implicit none
 
