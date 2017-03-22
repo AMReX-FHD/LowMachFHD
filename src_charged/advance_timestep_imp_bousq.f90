@@ -445,7 +445,7 @@ contains
     ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1,*}
     ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1,*} Z^{n:n+1}
     ! and flux_total for reservoir boundary conditions on velocity
-    call compute_mass_fluxdiv_charged(mla,rho_tmp,gradp_baro, &
+    call compute_mass_fluxdiv_charged(mla,rho_tmp,rhotot_tmp,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff, &
                                       dt,time,dx,weights,the_bc_tower)
@@ -871,7 +871,7 @@ contains
     ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1}
     ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1} Z^{n+1:n+2}
     ! and flux_total for reservoir boundary conditions on velocity
-    call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff, &
                                       dt,time,dx,weights,the_bc_tower)

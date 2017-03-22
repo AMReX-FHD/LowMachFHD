@@ -25,7 +25,7 @@ contains
   ! compute diffusive and stochastic mass fluxes
   ! includes barodiffusion and thermodiffusion
   ! this computes "F = -rho W chi [Gamma grad x... ]"
-  subroutine compute_mass_fluxdiv(mla,rho,gradp_baro, &
+  subroutine compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
                                   diff_fluxdiv,stoch_fluxdiv, &
                                   Temp,flux_total, &
                                   dt,stage_time,dx,weights, &
@@ -33,6 +33,7 @@ contains
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
+    type(multifab) , intent(inout)   :: rhotot(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
@@ -47,7 +48,6 @@ contains
     ! local variables
     type(multifab) :: drho(mla%nlevel)           ! correction to rho
     type(multifab) :: rhoWchi(mla%nlevel)        ! rho*W*chi*Gama
-    type(multifab) :: rhotot_temp(mla%nlevel)    ! temp storage for rho with drho correction
     type(multifab) :: molarconc(mla%nlevel)      ! molar concentration
     type(multifab) :: molmtot(mla%nlevel)        ! total molar mass
     type(multifab) :: chi(mla%nlevel)            ! Chi-matrix
@@ -71,7 +71,6 @@ contains
     do n=1,nlevs
        call multifab_build(drho(n),         mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(rhotot_temp(n),  mla%la(n), 1          , rho(n)%ng)
        call multifab_build(molarconc(n),    mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
        call multifab_build(chi(n),          mla%la(n), nspecies**2, rho(n)%ng)
@@ -87,22 +86,22 @@ contains
  
     ! modify rho with drho to ensure no mass or mole fraction is zero
     call correct_rho_with_drho(mla,rho,drho)
+    call compute_rhotot(mla,rho,rhotot,ghost_cells_in=.true.)
  
-    ! compute molmtot,molarconc & rhotot_temp (primitive variables) for 
+    ! compute molmtot, molarconc (primitive variables) for 
     ! each-cell from rho(conserved) 
-    call compute_rhotot(mla,rho,rhotot_temp,ghost_cells_in=.true.)
-    call compute_molconc_molmtot(mla,rho,rhotot_temp,molarconc,molmtot)
+    call compute_molconc_molmtot(mla,rho,rhotot,molarconc,molmtot)
       
     ! populate D_bar and Hessian matrix 
-    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian)
+    call compute_mixture_properties(mla,rho,rhotot,D_bar,D_therm,Hessian)
 
     ! compute Gama from Hessian
     call compute_Gama(mla,molarconc,Hessian,Gama)
    
     ! compute chi and zeta/Temp
-    call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar)
+    call compute_chi(mla,rho,rhotot,molarconc,chi,D_bar)
     call compute_zeta_by_Temp(mla,molarconc,D_bar,D_therm,Temp,zeta_by_Temp)
-      
+ 
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,chi,rhoWchi)
 
@@ -115,20 +114,26 @@ contains
 
     ! compute mass fluxes
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
-    call diffusive_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,rhoWchi,Gama,&
+    call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
                                 diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                 flux_total,dx,the_bc_tower)
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
 
+    ! revert back rho to it's original form
+    do n=1,nlevs
+       call saxpy(rho(n),-1.0d0,drho(n),all=.true.)
+       call compute_rhotot(mla,rho,rhotot,ghost_cells_in=.true.)
+    end do 
+
     ! compute stochastic fluxdiv 
     if (variance_coef_mass .ne. 0.d0) then
 
        ! compute face-centered cholesky-factored Lonsager^(1/2)
-       call compute_sqrtLonsager_fc(mla,rho,rhotot_temp,sqrtLonsager_fc,dx)
+       call compute_sqrtLonsager_fc(mla,rho,rhotot,sqrtLonsager_fc,dx)
 
-       call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
+       call stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,&
                                     molmtot,chi,sqrtLonsager_fc,stoch_fluxdiv,flux_total,&
                                     dx,dt,weights,the_bc_tower%bc_tower_array)
     else
@@ -136,17 +141,11 @@ contains
           call multifab_setval(stoch_fluxdiv(n),0.d0,all=.true.)
        end do
     end if
-
-    ! revert back rho to it's original form
-    do n=1,nlevs
-       call saxpy(rho(n),-1.0d0,drho(n),all=.true.)
-    end do 
       
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(drho(n))
        call multifab_destroy(rhoWchi(n))
-       call multifab_destroy(rhotot_temp(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(molmtot(n))
        call multifab_destroy(chi(n))

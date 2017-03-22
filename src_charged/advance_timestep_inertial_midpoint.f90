@@ -433,7 +433,7 @@ contains
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     weights(:) = 1.d0/sqrt(2.d0)
-    call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff,dt,time,dx,weights, &
                                       the_bc_tower, &
@@ -884,7 +884,7 @@ contains
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     weights(1) = 1.d0
     weights(2) = 0.d0
-    call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff,0.5d0*dt,time,dx,weights, &
                                       the_bc_tower, &

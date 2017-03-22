@@ -597,7 +597,7 @@ contains
        end if
 
        ! compute diff_mass_fluxdiv_new and stoch_mass_fluxdiv_new for gmres_rhs_p
-       call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+       call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          Temp,flux_total,flux_diff, &
                                          dt,time,dx,weights,the_bc_tower)

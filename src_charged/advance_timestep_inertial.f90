@@ -397,7 +397,7 @@ contains
     ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff,dt,time,dx,weights, &
                                       the_bc_tower, &
@@ -805,7 +805,7 @@ contains
     ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv_charged(mla,rho_new,gradp_baro, &
+    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                       Temp,flux_total,flux_diff,dt,time,dx,weights, &
                                       the_bc_tower, &

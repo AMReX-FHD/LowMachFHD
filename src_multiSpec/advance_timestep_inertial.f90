@@ -349,10 +349,10 @@ contains
     ! compute diffusive, stochastic mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv(mla,rho_new,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower)
+    call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              Temp,flux_total,dt,time,dx,weights, &
+                              the_bc_tower)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -705,10 +705,10 @@ contains
     ! compute diffusive, stochastic mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv(mla,rho_new,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower)
+    call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              Temp,flux_total,dt,time,dx,weights, &
+                              the_bc_tower)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs

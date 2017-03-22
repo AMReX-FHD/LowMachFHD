@@ -140,7 +140,7 @@ contains
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     if (dielectric_const .eq. 0.d0 .or. (.not. use_charged_fluid) ) then
-       call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
+       call compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro,diff_mass_fluxdiv, &
                                          stoch_mass_fluxdiv,Temp,flux_total,flux_diff, &
                                          dt_eff,0.d0,dx,weights, &
                                          the_bc_tower)
@@ -152,7 +152,7 @@ contains
           end do
        end do
     else
-       call compute_mass_fluxdiv_charged(mla,rho,gradp_baro,diff_mass_fluxdiv, &
+       call compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro,diff_mass_fluxdiv, &
                                          stoch_mass_fluxdiv,Temp,flux_total,flux_diff, &
                                          dt_eff,0.d0,dx,weights, &
                                          the_bc_tower,Epot_mass_fluxdiv, &
