@@ -16,7 +16,7 @@ module compute_mixture_properties_module
 
   private
 
-  public :: compute_mixture_properties, compute_eta_kappa
+  public :: compute_mixture_properties, compute_eta_kappa, compute_D_bar_local
     
 contains
   

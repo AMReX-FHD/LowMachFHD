@@ -56,7 +56,6 @@ contains
     type(multifab) :: D_bar(mla%nlevel)          ! D_bar-matrix
     type(multifab) :: D_therm(mla%nlevel)        ! DT-matrix
     type(multifab) :: zeta_by_Temp(mla%nlevel)   ! for Thermo-diffusion 
-    type(multifab) :: sqrtLonsager(mla%nlevel)            ! cholesky factored Lonsager 
     type(multifab) :: sqrtLonsager_fc(mla%nlevel,mla%dim) ! cholesky factored Lonsager on face
 
     integer         :: n,i,dm,nlevs
@@ -81,7 +80,6 @@ contains
        call multifab_build(D_bar(n),        mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(D_therm(n),      mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    rho(n)%ng)
-       call multifab_build(sqrtLonsager(n), mla%la(n), nspecies**2, rho(n)%ng)
        do i=1,dm
           call multifab_build_edge(sqrtLonsager_fc(n,i), mla%la(n), nspecies**2, 0, i)
        end do
@@ -127,12 +125,8 @@ contains
     ! compute stochastic fluxdiv 
     if (variance_coef_mass .ne. 0.d0) then
 
-       ! compute cell-centered cholesky-factored Lonsager^(1/2)
-       call compute_sqrtLonsager(mla,rho,rhotot_temp,molarconc,molmtot,chi,sqrtLonsager)
-                  
-       ! compute face-centered cholesky factor of cell-centered cholesky factored Lonsager^(1/2)
-       call average_cc_to_face(nlevs,sqrtLonsager,sqrtLonsager_fc,1,tran_bc_comp,nspecies**2, &
-                               the_bc_tower%bc_tower_array,.false.)
+       ! compute face-centered cholesky-factored Lonsager^(1/2)
+       call compute_sqrtLonsager_fc(mla,rho,rhotot_temp,sqrtLonsager_fc,dx)
 
        call stochastic_mass_fluxdiv(mla,rho,rhotot_temp,molarconc,&
                                     molmtot,chi,sqrtLonsager_fc,stoch_fluxdiv,flux_total,&
@@ -161,7 +155,6 @@ contains
        call multifab_destroy(D_bar(n))
        call multifab_destroy(D_therm(n))
        call multifab_destroy(zeta_by_Temp(n))
-       call multifab_destroy(sqrtLonsager(n))
        do i=1,dm
           call multifab_destroy(sqrtLonsager_fc(n,i))
        end do
