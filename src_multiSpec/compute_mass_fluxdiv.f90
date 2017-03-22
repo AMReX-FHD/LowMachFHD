@@ -133,8 +133,8 @@ contains
        ! compute face-centered cholesky-factored Lonsager^(1/2)
        call compute_sqrtLonsager_fc(mla,rho,rhotot,sqrtLonsager_fc,dx)
 
-       call stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,&
-                                    molmtot,chi,sqrtLonsager_fc,stoch_fluxdiv,flux_total,&
+       call stochastic_mass_fluxdiv(mla,rho,rhotot, &
+                                    sqrtLonsager_fc,stoch_fluxdiv,flux_total,&
                                     dx,dt,weights,the_bc_tower%bc_tower_array)
     else
        do n=1,nlevs

@@ -32,16 +32,13 @@ module stochastic_mass_fluxdiv_module
   
 contains
   
-  subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,sqrtLonsager_fc, &
+  subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,sqrtLonsager_fc, &
                                      stoch_fluxdiv,flux_total,dx,dt,weights, &
                                      the_bc_level,increment_in)
 
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
     type(multifab) , intent(in   )   :: rhotot(:)
-    type(multifab) , intent(in   )   :: molarconc(:)
-    type(multifab) , intent(in   )   :: molmtot(:)
-    type(multifab) , intent(in   )   :: chi(:)
     type(multifab) , intent(in   )   :: sqrtLonsager_fc(:,:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(inout)   :: flux_total(:,:)
