@@ -106,7 +106,7 @@ contains
     call compute_molconc_molmtot(mla,rho,rhotot_temp,molarconc,molmtot)
       
     ! populate D_bar and Hessian matrix 
-    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian,Temp)
+    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian)
 
     ! compute Gama from Hessian
     call compute_Gama(mla,molarconc,Hessian,Gama)

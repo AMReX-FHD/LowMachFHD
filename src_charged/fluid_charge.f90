@@ -389,7 +389,7 @@ contains
 
     ! compute rhoWchi on cell centers
     call compute_molconc_molmtot(mla,rho,rhotot_temp,molarconc,molmtot)
-    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian,Temp)
+    call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian)
     call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar)
     call compute_rhoWchi(mla,rho,chi,rhoWchi)
 

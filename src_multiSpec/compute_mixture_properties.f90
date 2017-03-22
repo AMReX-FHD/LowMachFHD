@@ -20,7 +20,7 @@ module compute_mixture_properties_module
     
 contains
   
-  subroutine compute_mixture_properties(mla,rho,rhotot,D_bar,D_therm,Hessian,Temp)
+  subroutine compute_mixture_properties(mla,rho,rhotot,D_bar,D_therm,Hessian)
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab),  intent(in   )  :: rho(:) 
@@ -28,11 +28,10 @@ contains
     type(multifab),  intent(inout)  :: D_bar(:)      ! MS diffusion constants 
     type(multifab),  intent(inout)  :: D_therm(:)    ! thermo diffusion constants 
     type(multifab),  intent(inout)  :: Hessian(:)    ! Non-ideality coefficient 
-    type(multifab) , intent(in   )  :: Temp(:) 
  
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-    integer :: n,i,dm,nlevs,ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
+    integer :: n,i,dm,nlevs,ng_1,ng_2,ng_3,ng_4,ng_5
 
     ! assign pointers for multifabs to be passed
     real(kind=dp_t), pointer        :: dp1(:,:,:,:)   ! for rho    
@@ -40,7 +39,6 @@ contains
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for D_bar
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_therm 
     real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Hessian
-    real(kind=dp_t), pointer        :: dp6(:,:,:,:)  ! for Temp
 
     type(mfiter) :: mfi
     type(box) :: tilebox
@@ -58,10 +56,9 @@ contains
     ng_3 = D_bar(1)%ng
     ng_4 = D_therm(1)%ng
     ng_5 = Hessian(1)%ng
-    ng_6 = Temp(1)%ng
  
     !$omp parallel private(mfi,n,i,tilebox,tlo,thi) &
-    !$omp private(dp1,dp2,dp3,dp4,dp5,dp6,lo,hi)
+    !$omp private(dp1,dp2,dp3,dp4,dp5,lo,hi)
     do n = 1,nlevs
        call mfiter_build(mfi, D_bar(n), tiling=.true.)
 
@@ -78,18 +75,17 @@ contains
           dp3 => dataptr(D_bar(n),i)
           dp4 => dataptr(D_therm(n),i)
           dp5 => dataptr(Hessian(n),i)
-          dp6 => dataptr(Temp(n),i)
           lo = lwb(get_box(rho(n),i))
           hi = upb(get_box(rho(n),i))
           select case(dm)
           case (2)
              call mixture_properties_mass_2d(dp1(:,:,1,:),dp2(:,:,1,1),dp3(:,:,1,:), &
-                                             dp4(:,:,1,:),dp5(:,:,1,:),dp6(:,:,1,1), &
-                                             ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi,tlo,thi) 
+                                             dp4(:,:,1,:),dp5(:,:,1,:), &
+                                             ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi,tlo,thi) 
           case (3)
              call mixture_properties_mass_3d(dp1(:,:,:,:),dp2(:,:,:,1),dp3(:,:,:,:), &
-                                             dp4(:,:,:,:),dp5(:,:,:,:),dp6(:,:,:,1), &
-                                             ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,lo,hi,tlo,thi) 
+                                             dp4(:,:,:,:),dp5(:,:,:,:), &
+                                             ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi,tlo,thi) 
           end select
        end do
     end do
@@ -99,16 +95,15 @@ contains
 
   end subroutine compute_mixture_properties
   
-  subroutine mixture_properties_mass_2d(rho,rhotot,D_bar,D_therm,Hessian,Temp, &
-                                        ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,glo,ghi,tlo,thi)
+  subroutine mixture_properties_mass_2d(rho,rhotot,D_bar,D_therm,Hessian, &
+                                        ng_1,ng_2,ng_3,ng_4,ng_5,glo,ghi,tlo,thi)
 
-    integer          :: glo(2), ghi(2), ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,tlo(2),thi(2)
+    integer          :: glo(2), ghi(2), ng_1,ng_2,ng_3,ng_4,ng_5,tlo(2),thi(2)
     real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,:)     ! density; last dimension for species
     real(kind=dp_t)  ::  rhotot(glo(1)-ng_2:,glo(2)-ng_2:)       ! total density in each cell 
     real(kind=dp_t)  ::   D_bar(glo(1)-ng_3:,glo(2)-ng_3:,:)     ! last dimension for nspecies^2
     real(kind=dp_t)  :: D_therm(glo(1)-ng_4:,glo(2)-ng_4:,:)     ! last dimension for nspecies
     real(kind=dp_t)  :: Hessian(glo(1)-ng_5:,glo(2)-ng_5:,:)     ! last dimension for nspecies^2
-    real(kind=dp_t)  ::    Temp(glo(1)-ng_6:,glo(2)-ng_6:)       ! Temperature 
 
     ! local varialbes
     integer          :: i,j
@@ -122,23 +117,22 @@ contains
        do i=tlo(1),thi(1)
        
           call mixture_properties_mass_local(rho(i,j,:),rhotot(i,j),D_bar(i,j,:),D_therm(i,j,:),&
-                                             Hessian(i,j,:),Temp(i,j))
+                                             Hessian(i,j,:))
        end do
     end do
    
   end subroutine mixture_properties_mass_2d
 
-  subroutine mixture_properties_mass_3d(rho,rhotot,D_bar,D_therm,Hessian,Temp, &
-                                        ng_1,ng_2,ng_3,ng_4,ng_5,ng_6,glo,ghi,tlo,thi)
+  subroutine mixture_properties_mass_3d(rho,rhotot,D_bar,D_therm,Hessian, &
+                                        ng_1,ng_2,ng_3,ng_4,ng_5,glo,ghi,tlo,thi)
  
-    integer          :: glo(3), ghi(3), ng_1,ng_2,ng_3,ng_4,ng_5,ng_6
+    integer          :: glo(3), ghi(3), ng_1,ng_2,ng_3,ng_4,ng_5
     integer          :: tlo(3), thi(3)
     real(kind=dp_t)  ::     rho(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:)   ! density; last dimension for species
     real(kind=dp_t)  ::  rhotot(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:)     ! total density in each cell 
     real(kind=dp_t)  ::   D_bar(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:)   ! last dimension for nspecies^2
     real(kind=dp_t)  :: D_therm(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:,:)   ! last dimension for nspecies
     real(kind=dp_t)  :: Hessian(glo(1)-ng_5:,glo(2)-ng_5:,glo(3)-ng_5:,:)   ! last dimension for nspecies^2
-    real(kind=dp_t)  ::    Temp(glo(1)-ng_6:,glo(2)-ng_6:,glo(3)-ng_6:)     ! Temperature 
  
     ! local varialbes
     integer          :: i,j,k
@@ -154,7 +148,7 @@ contains
 
              call mixture_properties_mass_local(rho(i,j,k,:),rhotot(i,j,k), &
                                                 D_bar(i,j,k,:),D_therm(i,j,k,:),&
-                                                Hessian(i,j,k,:),Temp(i,j,k))
+                                                Hessian(i,j,k,:))
           end do
        end do
     end do
@@ -162,65 +156,46 @@ contains
   end subroutine mixture_properties_mass_3d
 
   ! The default case should be to simply set D_bar, D_therm and H to constants, read from the input file
-  subroutine mixture_properties_mass_local(rho,rhotot,D_bar,D_therm,Hessian,Temp)
+  subroutine mixture_properties_mass_local(rho,rhotot,D_bar,D_therm,Hessian)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)        
     real(kind=dp_t), intent(in)   :: rhotot
     real(kind=dp_t), intent(out)  :: D_bar(nspecies,nspecies) 
     real(kind=dp_t), intent(out)  :: D_therm(nspecies) 
     real(kind=dp_t), intent(out)  :: Hessian(nspecies,nspecies)
-    real(kind=dp_t), intent(in)   :: Temp
  
     ! local variables
     integer :: n,row,column
     real(kind=dp_t) :: massfrac(nspecies)
 
     ! Local values of transport and thermodynamic coefficients (functions of composition!):
-    real(kind=dp_t), dimension(nspecies*(nspecies-1)/2) :: D_bar_local, H_offdiag_local ! off-diagonal components of symmetric matrices
-    real(kind=dp_t), dimension(nspecies)    :: H_diag_local ! Diagonal component
+    real(kind=dp_t), dimension(nspecies*(nspecies-1)/2) :: H_offdiag_local ! off-diagonal components of symmetric matrices
+    real(kind=dp_t), dimension(nspecies) :: H_diag_local ! Diagonal component
     
     massfrac = rho/rhotot;
+
+    ! populate D_bar
+    call compute_D_bar_local(rho,rhotot,D_bar)
     
-    select case (abs(prob_type))
-    case (9)
-
-       ! This is where formula for chi as a function of concentration goes
-       ! We assume nspecies=2
-       ! Dbar(1) = chi0 in the binary notation
-       if (nspecies .ne. 2) then
-          call bl_error("mixture_properties_mass_local assumes nspecies=2 if prob_type=9 (water-glycerol)")
-       end if
-       
-       call chi_water_glycerol(D_bar_local(1), rho, rhotot, Temp)
-       
-    case default
-
-       D_bar_local(1:nspecies*(nspecies-1)/2) = Dbar(1:nspecies*(nspecies-1)/2) ! Keep it constant
-
-    end select
-    
-    ! For now we only encode constant Hessian matrices since we do not have any thermodynamic models coded up (Wilson, NTLR, UNIQUAC, etc.)
+    ! For now we only encode constant Hessian matrices since we do not have any thermodynamic 
+    ! models coded up (Wilson, NTLR, UNIQUAC, etc.)
     H_diag_local(1:nspecies) = H_diag(1:nspecies)
     H_offdiag_local(1:nspecies*(nspecies-1)/2) = H_offdiag(1:nspecies*(nspecies-1)/2)
     
     ! Complete the process by filling the matrices using generic formulae -- this part should not change
-    ! populate D_bar and Hessian matrix 
+    ! populate Hessian matrix 
     n=0; 
     do row=1, nspecies  
        do column=1, row-1
           n=n+1
-          D_bar(row, column) = D_bar_local(n)                ! SM-diffcoeff's read from input
-          D_bar(column, row) = D_bar(row, column)     ! symmetric
-          
           if(.not. is_ideal_mixture) then
-             Hessian(row, column) = H_offdiag_local(n)         ! positive semidefinite matrix read from input
+             Hessian(row, column) = H_offdiag_local(n)   ! positive semidefinite matrix read from input
              Hessian(column, row) = Hessian(row,column)  ! Hessian is symmetric
           end if
        end do
        
        ! populate diagonals 
-       D_bar(row, row) = 0.d0           ! as self-diffusion is zero
-       D_therm(row)    = Dtherm(row)    ! thermal diffcoeff's read from input
+       D_therm(row)    = Dtherm(row)    ! thermal diffcoeff's read from input    
        if(.not. is_ideal_mixture) then 
           Hessian(row, row) = H_diag_local(row)     
        else 
@@ -231,6 +206,50 @@ contains
     
 
   end subroutine mixture_properties_mass_local
+
+  subroutine compute_D_bar_local(rho,rhotot,D_bar)
+
+    real(kind=dp_t), intent(in)   :: rho(nspecies)        
+    real(kind=dp_t), intent(in)   :: rhotot
+    real(kind=dp_t), intent(out)  :: D_bar(nspecies,nspecies) 
+
+    ! off-diagonal components of symmetric matrices
+    real(kind=dp_t), dimension(nspecies*(nspecies-1)/2) :: D_bar_local
+    
+    integer :: n,row,column
+
+    select case (abs(prob_type))
+    case (9)
+
+       ! This is where formula for chi as a function of concentration goes
+       ! We assume nspecies=2
+       ! Dbar(1) = chi0 in the binary notation
+       if (nspecies .ne. 2) then
+          call bl_error("mixture_properties_mass_local assumes nspecies=2 if prob_type=9 (water-glycerol)")
+       end if
+       
+       call chi_water_glycerol(D_bar_local(1), rho, rhotot)
+       
+    case default
+
+       D_bar_local(1:nspecies*(nspecies-1)/2) = Dbar(1:nspecies*(nspecies-1)/2) ! Keep it constant
+
+    end select
+
+    ! Complete the process by filling the matrices using generic formulae -- this part should not change
+    ! populate D_bar and Hessian matrix 
+    n=0; 
+    do row=1, nspecies  
+       do column=1, row-1
+          n=n+1
+          D_bar(row, column) = D_bar_local(n)                ! SM-diffcoeff's read from input
+          D_bar(column, row) = D_bar(row, column)     ! symmetric
+       end do       
+       ! populate diagonals 
+       D_bar(row, row) = 0.d0           ! as self-diffusion is zero
+    end do
+
+  end subroutine compute_D_bar_local
 
   subroutine compute_eta_kappa(mla,eta,eta_ed,kappa,rho,rhotot,Temp,dx,the_bc_level)
 
@@ -409,12 +428,12 @@ contains
   ! Water-glycerol mixtures near room temperature
   !=================================================
   
-  subroutine chi_water_glycerol(chi,rho,rhotot,Temp) ! This only works for room temperature for now
+  subroutine chi_water_glycerol(chi,rho,rhotot)
 
+    ! This only works for room temperature for now
     real(kind=dp_t), intent(inout) :: chi
     real(kind=dp_t), intent(in   ) :: rho(:)
     real(kind=dp_t), intent(in   ) :: rhotot
-    real(kind=dp_t), intent(in   ) :: Temp
 
     ! local
     real(kind=dp_t) :: c_loc
