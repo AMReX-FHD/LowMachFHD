@@ -32,7 +32,7 @@ module stochastic_mass_fluxdiv_module
   
 contains
   
-  subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,Lonsager_fc, &
+  subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,molarconc,molmtot,chi,sqrtLonsager_fc, &
                                      stoch_fluxdiv,flux_total,dx,dt,weights, &
                                      the_bc_level,increment_in)
 
@@ -42,7 +42,7 @@ contains
     type(multifab) , intent(in   )   :: molarconc(:)
     type(multifab) , intent(in   )   :: molmtot(:)
     type(multifab) , intent(in   )   :: chi(:)
-    type(multifab) , intent(in   )   :: Lonsager_fc(:,:)
+    type(multifab) , intent(in   )   :: sqrtLonsager_fc(:,:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(inout)   :: flux_total(:,:)
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -94,10 +94,10 @@ contains
        end do   
     end do
 
-    ! compute variance X cholesky-Lonsager-face X W(0,1) 
+    ! compute variance X sqrtLonsager-face X W(0,1) 
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(mla, flux(n,i), Lonsager_fc(n,i), nspecies)
+          call matvec_mul(mla, flux(n,i), sqrtLonsager_fc(n,i), nspecies)
           call multifab_mult_mult_s(flux(n,i), variance, 0)
        end do
     end do  

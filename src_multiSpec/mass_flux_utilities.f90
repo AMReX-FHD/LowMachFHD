@@ -20,7 +20,7 @@ module mass_flux_utilities_module
             compute_chi, &
             compute_zeta_by_Temp, &
             compute_rhoWchi, &
-            compute_Lonsager, &
+            compute_sqrtLonsager, &
             compute_baro_coef
 
 contains
@@ -936,7 +936,7 @@ contains
   end subroutine compute_zeta_by_Temp_local
 
 
-  subroutine compute_Lonsager(mla,rho,rhotot,molarconc,molmtot,chi,Lonsager)
+  subroutine compute_sqrtLonsager(mla,rho,rhotot,molarconc,molmtot,chi,sqrtLonsager)
  
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
@@ -944,7 +944,7 @@ contains
     type(multifab) , intent(in   )  :: molarconc(:) 
     type(multifab) , intent(in   )  :: molmtot(:) 
     type(multifab) , intent(in   )  :: chi(:) 
-    type(multifab) , intent(inout)  :: Lonsager(:)
+    type(multifab) , intent(inout)  :: sqrtLonsager(:)
 
     ! local variables
     integer :: lo(rho(1)%dim), hi(rho(1)%dim)
@@ -956,11 +956,11 @@ contains
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
     real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for molmtot
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for chi
-    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for Lonsager 
+    real(kind=dp_t), pointer        :: dp5(:,:,:,:)  ! for sqrtLonsager 
 
     type(bl_prof_timer), save :: bpt
 
-    call build(bpt, "compute_Lonsager")
+    call build(bpt, "compute_sqrtLonsager")
 
     dm = mla%dim        ! dimensionality
     ng_0 = rho(1)%ng    ! number of ghost cells 
@@ -968,7 +968,7 @@ contains
     ng_2 = molarconc(1)%ng
     ng_3 = molmtot(1)%ng
     ng_4 = chi(1)%ng
-    ng_5 = Lonsager(1)%ng
+    ng_5 = sqrtLonsager(1)%ng
     nlevs = mla%nlevel  ! number of levels 
  
     ! loop over all boxes 
@@ -979,17 +979,17 @@ contains
           dp2 => dataptr(molarconc(n),i)
           dp3 => dataptr(molmtot(n),i)
           dp4 => dataptr(chi(n), i)
-          dp5 => dataptr(Lonsager(n), i)
+          dp5 => dataptr(sqrtLonsager(n), i)
           lo  =  lwb(get_box(rho(n), i))
           hi  =  upb(get_box(rho(n), i))
           
           select case(dm)
           case (2)
-             call compute_Lonsager_2d(dp0(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
+             call compute_sqrtLonsager_2d(dp0(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),&
                                       dp3(:,:,1,1),dp4(:,:,1,:),dp5(:,:,1,:),&
                                       ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi) 
           case (3)
-             call compute_Lonsager_3d(dp0(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
+             call compute_sqrtLonsager_3d(dp0(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),&
                                       dp3(:,:,:,1),dp4(:,:,:,:),dp5(:,:,:,:),&
                                       ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi) 
           end select
@@ -998,9 +998,9 @@ contains
  
     call destroy(bpt)
 
-  end subroutine compute_Lonsager
+  end subroutine compute_sqrtLonsager
   
-  subroutine compute_Lonsager_2d(rho,rhotot,molarconc,molmtot,chi,Lonsager, &
+  subroutine compute_sqrtLonsager_2d(rho,rhotot,molarconc,molmtot,chi,sqrtLonsager, &
                                  ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi)
   
     integer          :: lo(2), hi(2), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5
@@ -1009,7 +1009,7 @@ contains
     real(kind=dp_t)  :: molarconc(lo(1)-ng_2:,lo(2)-ng_2:,:) ! molar concentration
     real(kind=dp_t)  ::   molmtot(lo(1)-ng_3:,lo(2)-ng_3:)   ! total molar mass 
     real(kind=dp_t)  ::       chi(lo(1)-ng_4:,lo(2)-ng_4:,:) ! last dimension for nspecies^2
-    real(kind=dp_t)  ::  Lonsager(lo(1)-ng_5:,lo(2)-ng_5:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::  sqrtLonsager(lo(1)-ng_5:,lo(2)-ng_5:,:) ! last dimension for nspecies^2
 
     ! local variables
     integer          :: i,j
@@ -1018,15 +1018,15 @@ contains
     do j=lo(2)-ng_5,hi(2)+ng_5
        do i=lo(1)-ng_5,hi(1)+ng_5
         
-          call compute_Lonsager_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
-                                      molmtot(i,j),chi(i,j,:),Lonsager(i,j,:))
+          call compute_sqrtLonsager_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
+                                      molmtot(i,j),chi(i,j,:),sqrtLonsager(i,j,:))
 
        end do
     end do
 
-  end subroutine compute_Lonsager_2d
+  end subroutine compute_sqrtLonsager_2d
 
-  subroutine compute_Lonsager_3d(rho,rhotot,molarconc,molmtot,chi,Lonsager, &
+  subroutine compute_sqrtLonsager_3d(rho,rhotot,molarconc,molmtot,chi,sqrtLonsager, &
                                  ng_0,ng_1,ng_2,ng_3,ng_4,ng_5,lo,hi)
 
     integer          :: lo(3), hi(3), ng_0,ng_1,ng_2,ng_3,ng_4,ng_5
@@ -1035,7 +1035,7 @@ contains
     real(kind=dp_t)  :: molarconc(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:,:) ! molar concentration
     real(kind=dp_t)  ::   molmtot(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)   ! total molar mass 
     real(kind=dp_t)  ::       chi(lo(1)-ng_4:,lo(2)-ng_4:,lo(3)-ng_4:,:) ! last dimension for nspecies^2
-    real(kind=dp_t)  ::  Lonsager(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::  sqrtLonsager(lo(1)-ng_5:,lo(2)-ng_5:,lo(3)-ng_5:,:) ! last dimension for nspecies^2
     
     ! local variables
     integer          :: i,j,k
@@ -1045,23 +1045,23 @@ contains
        do j=lo(2)-ng_5,hi(2)+ng_5
           do i=lo(1)-ng_5,hi(1)+ng_5
        
-             call compute_Lonsager_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
-                                         molmtot(i,j,k),chi(i,j,k,:),Lonsager(i,j,k,:))
+             call compute_sqrtLonsager_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
+                                         molmtot(i,j,k),chi(i,j,k,:),sqrtLonsager(i,j,k,:))
               
          end do
       end do
     end do
    
-  end subroutine compute_Lonsager_3d
+  end subroutine compute_sqrtLonsager_3d
 
-subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
+subroutine compute_sqrtLonsager_local(rho,rhotot,molarconc,molmtot,chi,sqrtLonsager)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)            
     real(kind=dp_t), intent(in)   :: rhotot                  
     real(kind=dp_t), intent(in)   :: molarconc(nspecies)      ! molar concentration
     real(kind=dp_t), intent(in)   :: molmtot                  ! total molar mass 
     real(kind=dp_t), intent(in)   :: chi(nspecies,nspecies)   ! rank conversion done 
-    real(kind=dp_t), intent(out)  :: Lonsager(nspecies,nspecies) 
+    real(kind=dp_t), intent(out)  :: sqrtLonsager(nspecies,nspecies) 
 
     ! local variables
     integer                              :: row,column,info
@@ -1070,40 +1070,40 @@ subroutine compute_Lonsager_local(rho,rhotot,molarconc,molmtot,chi,Lonsager)
   
     type(bl_prof_timer), save :: bpt
 
-    call build(bpt,"compute_Lonsager_local")
+    call build(bpt,"compute_sqrtLonsager_local")
 
     ! compute massfraction W_i = rho_i/rho; 
     do row=1, nspecies  
        W(row) = rho(row)/rhotot
     end do
 
-    ! compute Onsager matrix L
+    ! compute Onsager matrix L (store in sqrtLonsager)
     do column=1, nspecies
        do row=1, nspecies
-          Lonsager(row, column) = molmtot*rhotot*W(row)*chi(row,column)*W(column)/k_B
+          sqrtLonsager(row, column) = molmtot*rhotot*W(row)*chi(row,column)*W(column)/k_B
        end do
     end do
 
-    ! compute cell-centered Cholesky factor of Lonsager
+    ! compute cell-centered Cholesky factor, sqrtLonsager
     if(use_lapack) then
        
-       call dpotrf_f95(Lonsager,'L', rcond, 'I', info)
+       call dpotrf_f95(sqrtLonsager,'L', rcond, 'I', info)
     
        ! remove all upper-triangular entries and NXN entry that lapack doesn't set to zero 
        do row=1, nspecies
           do column=row+1, nspecies
-             Lonsager(row, column) = 0.0d0          
+             sqrtLonsager(row, column) = 0.0d0          
           end do
        end do    
-       Lonsager(nspecies, nspecies) = 0.0d0          
+       sqrtLonsager(nspecies, nspecies) = 0.0d0          
     
     else
-       call choldc(Lonsager,nspecies)   
+       call choldc(sqrtLonsager,nspecies)   
     end if
 
     call destroy(bpt)
 
-  end subroutine compute_Lonsager_local
+  end subroutine compute_sqrtLonsager_local
 
   subroutine compute_rhoWchi(mla,rho,chi,rhoWchi)
  
