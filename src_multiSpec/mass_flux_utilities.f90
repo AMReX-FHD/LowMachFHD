@@ -1090,17 +1090,24 @@ contains
           rhoav(comp)=0.d0
        else
           tmp1=dv*value1
-          if (tmp1<1.d0) then
-             tmp1=(3.d0-2.d0*tmp1)*tmp1**2
-          else
-             tmp1=1.d0
-          end if
           tmp2=dv*value2
-          if (tmp2<1.d0) then
-             tmp2=(3.d0-2.d0*tmp2)*tmp2**2
-          else
-             tmp2=1.d0
+
+          if (.true.) then   ! C0-smoothed Heaviside
+             tmp1=min(tmp1,1.d0)
+             tmp2=min(tmp2,1.d0)
+          else               ! C1-smoothed Heaviside
+             if (tmp1<1.d0) then
+                tmp1=(3.d0-2.d0*tmp1)*tmp1**2
+             else
+                tmp1=1.d0
+             end if
+             if (tmp2<1.d0) then
+                tmp2=(3.d0-2.d0*tmp2)*tmp2**2
+             else
+                tmp2=1.d0
+             end if
           end if
+
           rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
        end if
     end do
