@@ -154,6 +154,11 @@ contains
     
     ! If norm_b=0 we should return zero as the solution and "return" from this routine
     ! It is important to use gmres_abs_tol and not 0 since sometimes due to roundoff we get a nonzero number that should really be zero
+    if (gmres_verbose .ge. 1) then
+       if (parallel_IOProcessor()) then 
+          write ( *, *) "gmres.f90: GMRES called with ||rhs||=", norm_b ! Useful to print out to give expected scale for gmres_abs_tol
+       end if 
+    end if    
     if (norm_b .le. gmres_abs_tol) then 
        do n=1,nlevs
          do d=1,dm
