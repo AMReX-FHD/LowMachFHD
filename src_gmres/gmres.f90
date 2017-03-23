@@ -153,7 +153,8 @@ contains
     norm_b = sqrt(norm_u**2+norm_p**2)
     
     ! If norm_b=0 we should return zero as the solution and "return" from this routine
-    if (norm_b .le. 0.0d0) then
+    ! It is important to use gmres_abs_tol and not 0 since sometimes due to roundoff we get a nonzero number that should really be zero
+    if (norm_b .le. gmres_abs_tol) then 
        do n=1,nlevs
          do d=1,dm
            call setval(x_u(n,d),0.d0,all=.true.)

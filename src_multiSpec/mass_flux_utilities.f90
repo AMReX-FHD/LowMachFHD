@@ -1008,16 +1008,16 @@ contains
     real(kind=dp_t) :: rhoav(nspecies)
 
     ! x-faces
-    do j=lo(2)-ng_2,hi(2)+ng_2
-    do i=lo(1)-ng_2,hi(1)+ng_2+1
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)+1
           call compute_nonnegative_rho_av(rho(i-1,j,:), rho(i,j,:), rhoav, dx)
           call compute_sqrtLonsager_local(rhoav,sum(rhoav),sqrtLonsager_x(i,j,:))
     end do
     end do
 
     ! y-faces
-    do j=lo(2)-ng_2,hi(2)+ng_2+1
-    do i=lo(1)-ng_2,hi(1)+ng_2
+    do j=lo(2),hi(2)+1
+    do i=lo(1),hi(1)
           call compute_nonnegative_rho_av(rho(i,j-1,:), rho(i,j,:), rhoav, dx)
           call compute_sqrtLonsager_local(rhoav,sum(rhoav),sqrtLonsager_y(i,j,:))
     end do
@@ -1041,9 +1041,9 @@ contains
     real(kind=dp_t) :: rhoav(nspecies)
 
     ! x-faces
-    do k=lo(3)-ng_2,hi(3)+ng_2
-    do j=lo(2)-ng_2,hi(2)+ng_2
-    do i=lo(1)-ng_2,hi(1)+ng_2+1
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)+1
           call compute_nonnegative_rho_av(rho(i-1,j,k,:), rho(i,j,k,:), rhoav, dx)
           call compute_sqrtLonsager_local(rhoav,sum(rhoav),sqrtLonsager_x(i,j,k,:))
     end do
@@ -1051,9 +1051,9 @@ contains
     end do
 
     ! y-faces
-    do k=lo(3)-ng_2,hi(3)+ng_2
-    do j=lo(2)-ng_2,hi(2)+ng_2+1
-    do i=lo(1)-ng_2,hi(1)+ng_2
+    do k=lo(3),hi(3)
+    do j=lo(2),hi(2)+1
+    do i=lo(1),hi(1)
           call compute_nonnegative_rho_av(rho(i,j-1,k,:), rho(i,j,k,:), rhoav, dx)
           call compute_sqrtLonsager_local(rhoav,sum(rhoav),sqrtLonsager_y(i,j,k,:))
     end do
@@ -1061,9 +1061,9 @@ contains
     end do
 
     ! z-faces
-    do k=lo(3)-ng_2,hi(3)+ng_2+1
-    do j=lo(2)-ng_2,hi(2)+ng_2
-    do i=lo(1)-ng_2,hi(1)+ng_2
+    do k=lo(3),hi(3)+1
+    do j=lo(2),hi(2)
+    do i=lo(1),hi(1)
           call compute_nonnegative_rho_av(rho(i,j,k-1,:), rho(i,j,k,:), rhoav, dx)
           call compute_sqrtLonsager_local(rhoav,sum(rhoav),sqrtLonsager_z(i,j,k,:))
     end do
