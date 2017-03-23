@@ -1116,59 +1116,13 @@ contains
 
     ! local variables
     integer          :: i,j,k,comp
-    
-    real(kind=dp_t), allocatable :: n_c(:,:,:,:)  ! number densities at cell-centers
-    real(kind=dp_t), allocatable :: r_x(:,:,:,:)  ! densities on x-faces
-    real(kind=dp_t), allocatable :: r_y(:,:,:,:)  ! densities on y-faces
-    real(kind=dp_t), allocatable :: r_z(:,:,:,:)  ! densities on z-faces
- 
-    real(kind=dp_t) :: dv, value1, value2, tmp1, tmp2
-    real(kind=dp_t) :: rhotot_tmp
-
-    allocate(n_c(lo(1)-ng_2-1:hi(1)+ng_2+1,lo(2)-ng_2-1:hi(2)+ng_2+1,lo(3)-ng_2-1:hi(3)+ng_2+1,nspecies))
-    allocate(r_x(lo(1)-ng_2  :hi(1)+ng_2+1,lo(2)-ng_2  :hi(2)+ng_2  ,lo(3)-ng_2  :hi(3)+ng_2  ,nspecies))
-    allocate(r_y(lo(1)-ng_2  :hi(1)+ng_2  ,lo(2)-ng_2  :hi(2)+ng_2+1,lo(3)-ng_2  :hi(3)+ng_2  ,nspecies))
-    allocate(r_z(lo(1)-ng_2  :hi(1)+ng_2  ,lo(2)-ng_2  :hi(2)+ng_2  ,lo(3)-ng_2  :hi(3)+ng_2+1,nspecies))
-
-    ! cell volume
-    dv = dx(1)*dx(2)*dx(3)*cross_section
-
-    ! cell-centered number denisites
-    do k=lo(3)-ng_2-1,hi(3)+ng_2+1
-    do j=lo(2)-ng_2-1,hi(2)+ng_2+1
-    do i=lo(1)-ng_2-1,hi(1)+ng_2+1
-       n_c(i,j,k,1:nspecies) = rho(i,j,k,1:nspecies) / molmass(1:nspecies)
-    end do
-    end do
-    end do
-
-    ! compute rho on faces with arithmetic C1-smoothed Heaviside for total molecules
 
     ! x-faces
     do k=lo(3)-ng_2,hi(3)+ng_2
     do j=lo(2)-ng_2,hi(2)+ng_2
     do i=lo(1)-ng_2,hi(1)+ng_2+1
-       do comp=1,nspecies
-          value1 = n_c(i-1,j,k,comp)
-          value2 = n_c(i  ,j,k,comp)
-          if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-             r_x(i,j,k,comp)=0.d0
-          else
-             tmp1=dv*value1
-             if (tmp1<1.d0) then
-                tmp1=(3.d0-2.d0*tmp1)*tmp1**2
-             else
-                tmp1=1.d0
-             end if
-             tmp2=dv*value2
-             if (tmp2<1.d0) then
-                tmp2=(3.d0-2.d0*tmp2)*tmp2**2
-             else
-                tmp2=1.d0
-             end if
-             r_x(i,j,k,comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
-          end if
-       end do
+          call compute_nonnegative_rho_av(rho(i-1,j,k,comp), rho(i  ,j,k,comp), rhoav)
+          call compute_sqrtLonsager_local(rhoav,sum(rhoav),sqrtLonsager_x(i,j,k,:))
     end do
     end do
     end do
@@ -1177,77 +1131,8 @@ contains
     do k=lo(3)-ng_2,hi(3)+ng_2
     do j=lo(2)-ng_2,hi(2)+ng_2+1
     do i=lo(1)-ng_2,hi(1)+ng_2
-       do comp=1,nspecies
-          value1 = n_c(i,j-1,k,comp)
-          value2 = n_c(i,j  ,k,comp)
-          if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-             r_y(i,j,k,comp)=0.d0
-          else
-             tmp1=dv*value1
-             if (tmp1<1.d0) then
-                tmp1=(3.d0-2.d0*tmp1)*tmp1**2
-             else
-                tmp1=1.d0
-             end if
-             tmp2=dv*value2
-             if (tmp2<1.d0) then
-                tmp2=(3.d0-2.d0*tmp2)*tmp2**2
-             else
-                tmp2=1.d0
-             end if
-             r_y(i,j,k,comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
-          end if
-       end do
-    end do
-    end do
-    end do
-
-    ! z-faces
-    do k=lo(3)-ng_2,hi(3)+ng_2+1
-    do j=lo(2)-ng_2,hi(2)+ng_2
-    do i=lo(1)-ng_2,hi(1)+ng_2
-       do comp=1,nspecies
-          value1 = n_c(i,j,k-1,comp)
-          value2 = n_c(i,j,k  ,comp)
-          if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
-             r_z(i,j,k,comp)=0.d0
-          else
-             tmp1=dv*value1
-             if (tmp1<1.d0) then
-                tmp1=(3.d0-2.d0*tmp1)*tmp1**2
-             else
-                tmp1=1.d0
-             end if
-             tmp2=dv*value2
-             if (tmp2<1.d0) then
-                tmp2=(3.d0-2.d0*tmp2)*tmp2**2
-             else
-                tmp2=1.d0
-             end if
-             r_z(i,j,k,comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
-          end if
-       end do
-    end do
-    end do
-    end do
-
-
-    ! x-faces
-    do k=lo(3)-ng_2,hi(3)+ng_2
-    do j=lo(2)-ng_2,hi(2)+ng_2
-    do i=lo(1)-ng_2,hi(1)+ng_2+1
-          rhotot_tmp = sum(r_x(i,j,k,1:nspecies))
-          call compute_sqrtLonsager_local(r_x(i,j,k,:),rhotot_tmp,sqrtLonsager_x(i,j,k,:))
-    end do
-    end do
-    end do
-
-    ! y-faces
-    do k=lo(3)-ng_2,hi(3)+ng_2
-    do j=lo(2)-ng_2,hi(2)+ng_2+1
-    do i=lo(1)-ng_2,hi(1)+ng_2
-          rhotot_tmp = sum(r_y(i,j,k,1:nspecies))
-          call compute_sqrtLonsager_local(r_y(i,j,k,:),rhotot_tmp,sqrtLonsager_y(i,j,k,:))
+          call compute_nonnegative_rho_av(rho(i,j-1,k,comp), rho(i,j  ,k,comp), rhoav)
+          call compute_sqrtLonsager_local(rhoav,sum(rhoav),sqrtLonsager_x(i,j,k,:))
     end do
     end do
     end do
@@ -1256,15 +1141,47 @@ contains
     do k=lo(3)-ng_2,hi(3)+ng_2
     do j=lo(2)-ng_2,hi(2)+ng_2+1
     do i=lo(1)-ng_2,hi(1)+ng_2
-          rhotot_tmp = sum(r_z(i,j,k,1:nspecies))
-          call compute_sqrtLonsager_local(r_z(i,j,k,:),rhotot_tmp,sqrtLonsager_z(i,j,k,:))
+          call compute_nonnegative_rho_av(rho(i,j,k-1,comp), rho(i,j,k  ,comp), rhoav)
+          call compute_sqrtLonsager_local(rhoav,sum(rhoav),sqrtLonsager_x(i,j,k,:))
     end do
     end do
     end do
-
-    deallocate(n_c,r_x,r_y,r_z)
    
   end subroutine compute_sqrtLonsager_3d
+
+subroutine compute_nonnegative_rho_av(rho1, rho2, rhoav) ! Donev
+   real(kind=dp_t), intent(in)   :: rho1(nspecies), rho2(nspecies) ! Densities in two neighboring cells
+   real(kind=dp_t), intent(out)   :: rhoav(nspecies) ! Face-centered average  
+
+   real(kind=dp_t) :: dv, value1, value2, tmp1, tmp2
+   real(kind=dp_t) :: rhotot_tmp
+
+   ! cell volume
+   dv = product(dx)*cross_section
+   
+   do comp=1,nspecies
+      value1 = rho1(comp)/molmass(comp) ! Convert to number density
+      value2 = rho2(comp)/molmass(comp)
+      if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+         rhoav(comp)=0.d0
+      else
+         tmp1=dv*value1
+         if (tmp1<1.d0) then
+            tmp1=(3.d0-2.d0*tmp1)*tmp1**2
+         else
+            tmp1=1.d0
+         end if
+         tmp2=dv*value2
+         if (tmp2<1.d0) then
+            tmp2=(3.d0-2.d0*tmp2)*tmp2**2
+         else
+            tmp2=1.d0
+         end if
+         rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
+      end if
+   end do
+
+end subroutine
 
 subroutine compute_sqrtLonsager_local(rho,rhotot,sqrtLonsager)
    
