@@ -5,6 +5,8 @@
   dim_in = 2                       ! 2D or 3D
   prob_lo(1:2) = 0.  0.            ! physical lo coordinate
   prob_hi(1:2) = 64. 1.            ! physical hi coordinate
+  cross_section = 5.               ! in 2D, thickness of cell
+                                   ! in general, dv = product(dx(1,1:dm))*cross_section
   n_cells(1:2) = 64  1             ! number of cells in domain
   max_grid_size(1:2) = 64 64       ! max number of cells in a box
 
@@ -16,6 +18,8 @@
                                    ! 4 vertical stripe
                                    ! 5 bubble
 
+  nspecies = 1                     ! number of species
+  
   ! Time-step control
   !----------------------
   fixed_dt = 0.1                   ! time step (if positive, fixed)
@@ -105,11 +109,6 @@
 
 &probin_reactdiff
 
-
-  ! Problem description
-  !----------------------
-  nspecies = 1                     ! number of species
-  
   ! Control of algorithm
   !----------------------
   temporal_integrator = 0          ! 0=D + R (first-order splitting)
@@ -207,8 +206,6 @@
                                    ! 0= do CLE (Gaussian increments)
                                    ! -1=do deterministic chemistry
 
-  cross_section = 5.                  ! in 2D, thickness of cell
-                                      ! in general, dv = product(dx(1,1:dm))*cross_section
 /
 
 ! HydroGrid spectral and other analysis

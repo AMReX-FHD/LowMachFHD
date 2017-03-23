@@ -8,6 +8,8 @@
   dim_in = 2                       ! 2D or 3D
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 512.d0 1.d0       ! physical hi coordinate
+  cross_section = 1000.            ! in 2D, thickness of cell
+                                   ! in general, dv = product(dx(1,1:dm))*cross_section
   n_cells(1:2) = 512 1             ! number of cells in domain
   max_grid_size(1:2) = 512 1       ! max number of cells in a box
 
@@ -19,6 +21,8 @@
                                    ! 4 vertical stripe
                                    ! 5 bubble
 
+  nspecies = 1                     ! number of species
+  
   ! Time-step control
   !----------------------
   fixed_dt = 1.d0                  ! time step (if positive, fixed)
@@ -108,10 +112,6 @@
 
 &probin_reactdiff
 
-  ! Problem description
-  !----------------------
-  nspecies = 1                     ! number of species
-  
   ! Control of algorithm
   !----------------------
   temporal_integrator = -2         ! 0=D + R (first-order splitting)
@@ -204,9 +204,6 @@
                                    ! 1=do tau leaping (Poisson increments)
                                    ! 0= do CLE (Gaussian increments)
                                    ! -1=do deterministic chemistry
-
-  cross_section = 1000.                ! in 2D, thickness of cell
-                                       ! in general, dv = product(dx(1,1:dm))*cross_section
 
 /
 

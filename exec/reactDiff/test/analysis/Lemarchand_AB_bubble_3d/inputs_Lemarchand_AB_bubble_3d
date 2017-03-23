@@ -5,16 +5,20 @@
   dim_in = 3                           ! 3D 
   prob_lo(1:3) = 0. 0. 0.              ! physical lo coordinate
   prob_hi(1:3) = 512. 512. 512.        ! physical hi coordinate
+  cross_section = 1000.                ! in 2D, thickness of cell
+                                       ! in general, dv = product(dx(1,1:dm))*cross_section
   n_cells(1:3) = 256 256 256           ! number of cells in domain
   max_grid_size(1:3) = 64 64 64        ! max number of cells in a box
 
-  prob_type = 5                    ! sets the problem type (initial condition)
-                                   ! 0 thermodynamic equilibrium
-                                   ! 1 Gaussian distribution
-                                   ! 2 constant gradient
-                                   ! 3 1+sin^2(pi*x)*sin^2(pi*y)*sin^2(pi*z)
-                                   ! 4 vertical stripe
-                                   ! 5 bubble
+  prob_type = 5                        ! sets the problem type (initial condition)
+                                       ! 0 thermodynamic equilibrium
+                                       ! 1 Gaussian distribution
+                                       ! 2 constant gradient
+                                       ! 3 1+sin^2(pi*x)*sin^2(pi*y)*sin^2(pi*z)
+                                       ! 4 vertical stripe
+                                       ! 5 bubble
+
+  nspecies = 2                         ! number of species
 
   ! Time-step control
   !----------------------
@@ -101,10 +105,6 @@
 
 ! reaction/diffusion number fraction code
 &probin_reactdiff
-
-  ! Problem description
-  !----------------------
-  nspecies = 2             ! number of species
 
   ! Control of algorithm
   !----------------------
@@ -201,8 +201,6 @@
                                    ! 0= do CLE (Gaussian increments)
                                    ! -1=do deterministic chemistry
 
-  cross_section = 1000.                ! in 2D, thickness of cell
-                                       ! in general, dv = product(dx(1,1:dm))*cross_section
 /
 
 ! HydroGrid spectral and other analysis
