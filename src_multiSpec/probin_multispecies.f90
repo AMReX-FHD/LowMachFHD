@@ -2,10 +2,10 @@ module probin_multispecies_module
 
   use bl_types
   use bl_space
+  use probin_common_module, only: max_species
  
   implicit none
 
-  integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2  
 
   integer, save      :: inverse_type,temp_type,chi_iterations

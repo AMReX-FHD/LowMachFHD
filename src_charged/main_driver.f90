@@ -49,7 +49,8 @@ subroutine main_driver()
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
-                                   dielectric_type, nreactions
+                                   dielectric_type
+  use probin_chemistry_module, only: nreactions
 
   implicit none
 

@@ -2,7 +2,7 @@ module probin_chemistry_module
 
   use bl_types
 
-  use probin_reactdiff_module, only: max_species
+  use probin_common_module, only: max_species
 
   implicit none
 
@@ -19,8 +19,8 @@ module probin_chemistry_module
   ! using rate_multiplier, reaction rates can be changed by the same factor
   ! if include_discrete_LMA_correction, n^2 and n^3 in rate expressions become
   ! n*(n-1/dv) and n*(n-1/dv)*(n-2/dv). 
-  real(kind=dp_t), save :: rate_const(max_reactions) = 0.0d0
-  real(kind=dp_t), save :: rate_multiplier = 1.0d0
+  real(kind=dp_t), save :: rate_const(max_reactions) = 0.d0
+  real(kind=dp_t), save :: rate_multiplier = 1.d0
   logical, save         :: include_discrete_LMA_correction = .true. 
 
   ! if n is positive, exclude species n (=solvent) when computing reaction rates
@@ -37,10 +37,8 @@ module probin_chemistry_module
                                                     ! 0=do CLE (Gaussian increments)
                                                     ! -1=do deterministic chemistry
 
-  namelist /probin_chemistry/ nreactions
-  namelist /probin_chemistry/ stoichiometric_factors
-  namelist /probin_chemistry/ rate_const, rate_multiplier, include_discrete_LMA_correction
-  namelist /probin_chemistry/ exclude_solvent_comput_rates
+  namelist /probin_chemistry/ nreactions, stoichiometric_factors, rate_const, rate_multiplier
+  namelist /probin_chemistry/ include_discrete_LMA_correction, exclude_solvent_comput_rates
   namelist /probin_chemistry/ use_Poisson_rng
 
 contains

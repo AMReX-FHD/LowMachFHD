@@ -33,8 +33,8 @@ module advance_timestep_inertial_midpoint_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   molmass, use_bl_rng, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_charged_module, only: use_charged_fluid, dielectric_type, &
-                                   use_Poisson_rng, nreactions
+  use probin_charged_module, only: use_charged_fluid, dielectric_type
+  use probin_chemistry_module, only: nreactions, use_Poisson_rng
   use chemical_rates_module
 
   implicit none

@@ -13,8 +13,8 @@ module initial_projection_charged_module
   use fluid_charge_module
   use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type, &
                                   molmass, nspecies
-  use probin_charged_module, only: dielectric_const, use_charged_fluid, &
-                                   nreactions, use_Poisson_rng
+  use probin_charged_module, only: dielectric_const, use_charged_fluid
+  use probin_chemistry_module, only: nreactions, use_Poisson_rng
   use chemical_rates_module
 
   implicit none

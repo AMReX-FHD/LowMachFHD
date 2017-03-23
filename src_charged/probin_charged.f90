@@ -2,10 +2,9 @@ module probin_charged_module
 
   use bl_types
   use bl_space
+  use probin_common_module, only: max_species
  
   implicit none
-
-  integer, parameter :: max_species=10
 
   logical            :: use_charged_fluid
   real(kind=dp_t)    :: dielectric_const
@@ -17,17 +16,6 @@ module probin_charged_module
   integer            :: num_pot_iters
   real(kind=dp_t)    :: dpdt_factor
   integer            :: E_ext_type
-
-  ! for reactions
-  integer, parameter    :: max_reactions=20
-
-  integer, save         :: nreactions = 0
-  integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0
-  real(kind=dp_t), save :: rate_const(max_reactions) = 0.d0
-  real(kind=dp_t), save :: rate_multiplier = 1.d0
-  logical, save         :: include_discrete_LMA_correction = .true.
-  integer, save         :: use_Poisson_rng = 1
-  integer, save         :: exclude_solvent_comput_rates = 0
 
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
@@ -42,15 +30,6 @@ module probin_charged_module
   namelist /probin_charged/ num_pot_iters
   namelist /probin_charged/ dpdt_factor
   namelist /probin_charged/ E_ext_type         ! external electric field
-
-  ! for reactions
-  namelist /probin_charged/ nreactions
-  namelist /probin_charged/ stoichiometric_factors
-  namelist /probin_charged/ rate_const
-  namelist /probin_charged/ rate_multiplier
-  namelist /probin_charged/ include_discrete_LMA_correction
-  namelist /probin_charged/ use_Poisson_rng
-  namelist /probin_charged/ exclude_solvent_comput_rates 
 
 contains
 
@@ -145,31 +124,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) E_ext_type
-
-       case ('--nreactions')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) nreactions
-
-       case ('--rate_multiplier')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) rate_multiplier
-
-       case ('--include_discrete_LMA_correction')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) include_discrete_LMA_correction
-
-       case ('--use_Poisson_rng')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) use_Poisson_rng
-
-       case ('--exclude_solvent_comput_rates')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) exclude_solvent_comput_rates
 
        case ('--')
           farg = farg + 1

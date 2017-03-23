@@ -2,10 +2,10 @@ module compute_reaction_rates_module
 
   use bl_types
   use bl_error_module
-  use probin_common_module, only : nspecies
-  use probin_chemistry_module, only : nreactions, stoichiometric_factors, &
-                                      rate_const, rate_multiplier, include_discrete_LMA_correction, &
-                                      exclude_solvent_comput_rates
+  use probin_common_module, only: nspecies
+  use probin_chemistry_module, only: nreactions, stoichiometric_factors, rate_const, rate_multiplier, &
+                                     include_discrete_LMA_correction, exclude_solvent_comput_rates
+
   implicit none
 
   private

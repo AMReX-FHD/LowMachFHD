@@ -2,12 +2,10 @@ module probin_reactdiff_module
 
   use bl_types
   use bl_space
-  use probin_common_module, only: dim_in
+  use probin_common_module, only: max_species
  
   implicit none
 
-  integer, parameter    :: max_species = 10
-  
   ! Control of algorithm
   !----------------------
   integer, save :: temporal_integrator = 0          ! 0=D + R (first-order splitting)
