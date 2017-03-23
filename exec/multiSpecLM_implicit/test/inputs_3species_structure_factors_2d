@@ -3,6 +3,8 @@
 
 ! Options for low Mach equations
 &probin_common
+
+  !use_bl_rng = T ! Use BoxLib generator
  
   ! Problem specification
   !----------------------
@@ -11,7 +13,7 @@
   prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
   prob_hi(1:2) = 32.d0 32.d0       ! physical hi coordinate
   n_cells(1:2) = 32 32             ! number of cells in domain
-  max_grid_size(1:2) = 16 16         ! max number of cells in a box
+  max_grid_size(1:2) = 128 128         ! max number of cells in a box
 
   ! Time-step control
   !----------------------
@@ -20,11 +22,11 @@
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1030000                ! maximum number of time steps
+  max_step = 10 ! 1030000                ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 1000                  ! how often to output EOS drift and sum of conserved quantities
+  print_int = 1 ! 1000                  ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10             ! how often to call project_onto_eos
 
   ! Physical parameters
@@ -35,7 +37,7 @@
   rhobar(1:3) = 2.0d0 3.0d0 3.85714d0   ! pure component densities for all species (chosen from EOS)
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mom = 1e-6  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mom = 0 ! 1e-6  ! global scaling epsilon for stochastic momentum forcing
   variance_coef_mass = 1e-6 ! global scaling epsilon for stochastic mass forcing
   k_B = 1.d0                ! Boltzmann's constant
 

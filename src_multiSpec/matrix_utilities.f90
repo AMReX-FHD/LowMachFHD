@@ -37,6 +37,8 @@ contains
       type(bl_prof_timer), save :: bpt
 
       call build(bpt,"Dbar2chi_iterative")
+      
+      !write(*,*) "chi_iterative called with ", num_iterations, "D_bar=", D_bar, "Xk=", Xk
 
       ! mole fractions correction
       ! Turned this off since it should be done in the caller
@@ -71,6 +73,7 @@ contains
        Mmat(i) = Xkp(i)/Di(i)
        Minv(i) = Di(i)/Xkp(i)
       end do
+      
 
       ! Compute P matrix
       Pmat = 0.0d0
@@ -137,6 +140,7 @@ contains
        end do
       end do
 
+
       do jj = 1,num_iterations
        do i = 1, nspecies
         do j = 1, nspecies
@@ -149,6 +153,9 @@ contains
        end do 
        chi=matrix1
       end do
+
+      !write(*,*) "Result chi=", chi
+      !stop
 
       call destroy(bpt)
 
