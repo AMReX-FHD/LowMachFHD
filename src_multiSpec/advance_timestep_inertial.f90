@@ -9,6 +9,7 @@ module advance_timestep_inertial_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use compute_mass_fluxdiv_module
+  use project_onto_eos_module
   use compute_HSE_pres_module
   use convert_m_to_umac_module
   use convert_rhoc_to_c_module
@@ -25,9 +26,11 @@ module advance_timestep_inertial_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
-
+  use bl_rng_module
+  use bl_random_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, barodiffusion_type
+                                  variance_coef_mom, barodiffusion_type, project_eos_int, &
+                                  use_bl_rng
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: nspecies
 
@@ -181,6 +184,7 @@ contains
 
     ! add A^n to rho_update
     if (advection_type .ge. 1) then
+
       do n=1,nlevs
          ! set to zero to make sure ghost cells behind physical boundaries don't have NaNs
          call setval(bds_force(n),0.d0,all=.true.)
@@ -213,7 +217,10 @@ contains
                         c_bc_comp,the_bc_tower,proj_type_in=2)
       end if
     else
+
+       ! compute A^n for scalars using centered advection
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+
     end if
 
     ! set rho_new = rho_old + dt * (A^n + D^n + St^n)
@@ -322,6 +329,8 @@ contains
        end do
     end do
     if (variance_coef_mom .ne. 0.d0) then
+       ! fill the stochastic multifabs with a new set of random numbers
+       call fill_m_stochastic(mla)
        call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
                                  Temp,Temp_ed,dx,dt,weights)
     end if
@@ -577,7 +586,7 @@ contains
 
     else
 
-       ! compute A^{*,n+1} for scalars
+       ! compute A^{*,n+1} for scalars using centered advection
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
 
        ! snew = s^{n+1} 
@@ -589,6 +598,14 @@ contains
           call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
        end do
 
+    end if
+
+    ! need to project rho onto eos here and use this rho to compute S
+    ! if you do this in main_driver, the fluxes don't match the state
+    ! they were derived from and the Poisson solver has tolerance
+    ! convergence issues
+    if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
+       call project_onto_eos(mla,rho_new)
     end if
 
     ! compute rhotot from rho in VALID REGION
@@ -699,8 +716,12 @@ contains
                                    the_bc_tower%bc_tower_array)
 
     ! fill the stochastic multifabs with a new set of random numbers
-    call fill_m_stochastic(mla)
-    call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+    if (variance_coef_mass .ne. 0.d0) then
+       if (use_bl_rng) then
+          call bl_rng_copy_engine(rng_eng_diffusion_old,rng_eng_diffusion)
+       end if
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+    end if
 
     ! compute diffusive, stochastic mass fluxes
     ! with barodiffusion and thermodiffusion

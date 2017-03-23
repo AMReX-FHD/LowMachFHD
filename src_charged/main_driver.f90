@@ -42,7 +42,7 @@ subroutine main_driver()
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
-                                  probin_common_init, print_int, project_eos_int, &
+                                  probin_common_init, print_int, &
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng
@@ -424,9 +424,7 @@ subroutine main_driver()
   end do
 
   ! allocate and build multifabs that will contain random numbers
-  if (algorithm_type .eq. 2) then
-     n_rngs = 2
-  else if (algorithm_type .eq. 5) then
+  if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5) then
      n_rngs = 2
   else
      n_rngs = 1
@@ -565,11 +563,13 @@ subroutine main_driver()
      ! but I do not see how one can avoid that
      ! From this perspective it may be useful to keep initial_projection even in overdamped
      ! because different gmres tolerances may be needed in the first step than in the rest
-     call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
+     if (algorithm_type .ne. 1 .and. algorithm_type .ne. 2) then
+        call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
                                         Epot_mass_fluxdiv,diff_mass_fluxdiv, &
                                         stoch_mass_fluxdiv,chem_rate, &
                                         Temp,eta,eta_ed,dt,dx,the_bc_tower, &
                                         charge_old,grad_Epot_old,Epot,permittivity)
+     end if
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -719,31 +719,6 @@ subroutine main_driver()
           call sum_momenta(mla,mtemp)
           call eos_check(mla,rho_new)
       end if
-
-     ! project rho and rho1 back onto EOS
-     if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
-        call project_onto_eos_charged(mla,rho_new)
-
-        ! compute rhotot from rho in VALID REGION
-        call compute_rhotot(mla,rho_new,rhotot_new)
-
-        ! rho to conc - NO GHOST CELLS
-        do n=1,nlevs
-           call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
-        end do
-        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
-        call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
-
-        do n=1,nlevs
-           call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
-        end do
-
-        ! conc to rho - INCLUDING GHOST CELLS
-        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
-        do n=1,nlevs
-           call multifab_destroy(conc(n))
-        end do
-     end if
 
       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
       if (istep >= n_steps_skip) then
