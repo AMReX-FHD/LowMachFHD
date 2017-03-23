@@ -28,9 +28,8 @@ module advance_timestep_overdamped_module
   use bl_random_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, restart, algorithm_type, &
-                                  barodiffusion_type, use_bl_rng
+                                  barodiffusion_type, use_bl_rng, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid, dielectric_type
   use analysis_module
 

@@ -3,8 +3,7 @@ module project_onto_eos_charged_module
   use bl_types
   use multifab_module
   use ml_layout_module
-  use probin_common_module, only: rhobar
-  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: rhobar, nspecies
   use probin_charged_module, only: charge_per_mass
 
   implicit none

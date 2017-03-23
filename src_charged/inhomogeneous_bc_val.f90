@@ -4,8 +4,9 @@ module inhomogeneous_bc_val_module
   use bc_module
   use bl_error_module
   use bl_constants_module
-  use probin_multispecies_module, only: nspecies, c_bc
-  use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type
+  use probin_multispecies_module, only: c_bc
+  use probin_common_module, only: prob_lo, prob_hi, wallspeed_lo, wallspeed_hi, prob_type, &
+                                  nspecies
   use probin_charged_module, only: Epot_wall, Epot_wall_bc_type
 
   implicit none

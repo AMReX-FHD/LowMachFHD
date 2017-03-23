@@ -18,11 +18,11 @@ subroutine main_driver()
    use multifab_physbc_module
    use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, max_grid_size, &
                                    plot_int, chk_int, print_int, seed, bc_lo, bc_hi, &
-                                   restart, use_bl_rng, &
+                                   restart, use_bl_rng, nspecies, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
                                    cfl, initial_variance, cross_section
-   use probin_reactdiff_module, only: probin_reactdiff_init, nspecies, D_Fick, &
+   use probin_reactdiff_module, only: probin_reactdiff_init, D_Fick, &
                                       inhomogeneous_bc_fix, temporal_integrator, &
                                       n_steps_write_avg, &
                                       model_file_init, model_file, integer_populations

@@ -3,9 +3,8 @@ module project_onto_eos_module
   use bl_types
   use multifab_module
   use ml_layout_module
-  use probin_common_module, only: rhobar
+  use probin_common_module, only: rhobar, nspecies
   use probin_gmres_module, only: mg_rel_tol
-  use probin_multispecies_module, only: nspecies
 
   implicit none
 

@@ -12,8 +12,7 @@ module stochastic_n_fluxdiv_module
   use div_and_grad_module
   use bl_rng_module
   use probin_common_module, only: variance_coef_mass, initial_variance, &
-                                  density_weights, use_bl_rng, cross_section
-  use probin_reactdiff_module, only: nspecies
+                                  density_weights, use_bl_rng, cross_section, nspecies
 
   implicit none
 

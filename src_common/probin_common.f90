@@ -15,7 +15,7 @@ module probin_common_module
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt,cfl,grav(3)
   real(dp_t),save :: perturb_width,smoothing_width,u_init(2)
-  integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM)
+  integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),nspecies
   logical,save    :: use_bl_rng
   integer,save    :: seed,seed_momentum,seed_diffusion,seed_reaction,seed_init
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)  
@@ -70,6 +70,7 @@ module probin_common_module
   ! Physical parameters
   !--------------------
   namelist /probin_common/ grav            ! gravity vector (negative is downwards)
+  namelist /probin_common/ nspecies        ! number of species
   namelist /probin_common/ molmass         ! molecular masses for nspecies (mass per molecule, *not* molar mass)
   namelist /probin_common/ rhobar          ! pure component densities for all species
 
@@ -242,6 +243,7 @@ contains
     project_eos_int = -1
 
     grav(1:MAX_SPACEDIM) = 0.d0
+    nspecies = 2
     molmass(:) = 1.0d0
     rhobar(:)  = 1.d0
 
@@ -375,11 +377,6 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) max_grid_size(3)
 
-       case ('--max_step')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) max_step
-
        case ('--fixed_dt')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -389,6 +386,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) cfl
+
+       case ('--max_step')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) max_step
 
        case ('--plot_int')
           farg = farg + 1
@@ -420,15 +422,77 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) project_eos_int
 
-       case ('--perturb_width')
+       case ('--grav_x')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) perturb_width
+          read(fname, *) grav(1)
+       case ('--grav_y')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) grav(2)
+       case ('--grav_z')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) grav(3)
 
-       case ('--smoothing_width')
+       case ('--nspecies')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
-          read(fname, *) smoothing_width
+          read(fname, *) nspecies
+
+       case ('--molmass_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) molmass(1)
+       case ('--molmass_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) molmass(2)
+       case ('--molmass_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) molmass(3)
+       case ('--molmass_4')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) molmass(4)
+
+       case ('--rhobar_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(1)
+       case ('--rhobar_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(2)
+       case ('--rhobar_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(3)
+       case ('--rhobar_4')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) rhobar(4)
+
+       case ('--variance_coef_mom')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) variance_coef_mom
+
+       case ('--variance_coef_mass')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) variance_coef_mass
+
+       case ('--k_B')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) k_B
+
+       case ('--Runiv')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) Runiv
 
        case ('--algorithm_type')
           farg = farg + 1
@@ -439,15 +503,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) barodiffusion_type
-
-       case ('--u_init_1')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) u_init(1)
-       case ('--u_init_2')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) u_init(2)
 
        case ('--use_bl_rng')
           farg = farg + 1
@@ -479,53 +534,6 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) seed_init
 
-       case ('--grav_x')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) grav(1)
-       case ('--grav_y')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) grav(2)
-       case ('--grav_z')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) grav(3)
-
-       case ('--rhobar_1')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) rhobar(1)
-       case ('--rhobar_2')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) rhobar(2)
-       case ('--rhobar_3')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) rhobar(3)
-       case ('--rhobar_4')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) rhobar(4)
-
-       case ('--molmass_1')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) molmass(1)
-       case ('--molmass_2')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) molmass(2)
-       case ('--molmass_3')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) molmass(3)
-       case ('--molmass_4')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) molmass(4)
-
        case ('--visc_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
@@ -540,6 +548,40 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) advection_type
+
+       case ('--filtering_width')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) filtering_width
+
+       case ('--stoch_stress_form')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) stoch_stress_form
+
+       case ('--u_init_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) u_init(1)
+       case ('--u_init_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) u_init(2)
+
+       case ('--perturb_width')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) perturb_width
+
+       case ('--smoothing_width')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) smoothing_width
+
+       case ('--initial_variance')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) initial_variance
 
        case ('--bc_lo_x')
           farg = farg + 1
@@ -661,41 +703,6 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) center_snapshots
 
-       case ('--variance_coef_mom')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) variance_coef_mom
-
-       case ('--variance_coef_mass')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) variance_coef_mass
-
-       case ('--initial_variance')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) initial_variance
-
-       case ('--k_B')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) k_B
-
-       case ('--Runiv')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) Runiv
-
-       case ('--filtering_width')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) filtering_width
-
-       case ('--stoch_stress_form')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) stoch_stress_form
-
        case default
           if (parallel_IOProcessor() ) then
              print*,'probin_common: command-line input ',trim(fname),' not read'
@@ -709,6 +716,12 @@ contains
     n_cells_long = n_cells
     total_volume = product(n_cells_long(1:dim_in))
     
+        ! check that nspecies<=max_species, otherwise abort with error message
+    if(nspecies.gt.max_species) then 
+       call bl_error(" nspecies greater than max_species - Aborting")
+       stop
+    end if
+
   end subroutine probin_common_init
 
 end module probin_common_module

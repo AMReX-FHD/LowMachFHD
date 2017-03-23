@@ -8,7 +8,7 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2  
 
-  integer, save      :: nspecies,inverse_type,timeinteg_type,temp_type,chi_iterations
+  integer, save      :: inverse_type,timeinteg_type,temp_type,chi_iterations
   real(kind=dp_t)    :: start_time
   real(kind=dp_t)    :: T_init(2) 
   real(kind=dp_t)    :: Dbar(max_element)
@@ -24,7 +24,6 @@ module probin_multispecies_module
 
   ! Physical properties:
   !----------------------
-  namelist /probin_multispecies/ nspecies
   namelist /probin_multispecies/ fraction_tolerance ! For roundoff errors in mass and mole fractions
   namelist /probin_multispecies/ start_time
   namelist /probin_multispecies/ inverse_type       ! Only for LAPACK:  1=inverse, 2=pseudo inverse
@@ -76,7 +75,6 @@ contains
     narg = command_argument_count()
 
     ! here we set some random values to be replaced from the input file
-    nspecies           = 2 
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
     inverse_type       = 1
@@ -117,11 +115,6 @@ contains
     do while ( farg <= narg )
        call get_command_argument(farg, value = fname)
        select case (fname)
-
-       case ('--nspecies')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) nspecies
 
        case ('--fraction_tolerance')
           farg = farg + 1
@@ -191,12 +184,6 @@ contains
        end select
        farg = farg + 1
     end do
-    
-    ! check that nspecies<=max_species, otherwise abort with error message
-    if(nspecies.gt.max_species) then 
-       call bl_error(" nspecies greater than max_species - Aborting")
-       stop
-    end if
     
   end subroutine probin_multispecies_init
 

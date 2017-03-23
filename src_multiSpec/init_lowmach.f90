@@ -14,9 +14,9 @@ module init_lowmach_module
   use bl_rng_module
   use probin_common_module, only: prob_lo, prob_hi, prob_type, k_B, grav, &
                                   molmass, rhobar, smoothing_width, u_init, n_cells, &
-                                  use_bl_rng
+                                  use_bl_rng, nspecies
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, Dtherm, &
-                                        c_init, nspecies, T_init
+                                        c_init, T_init
  
   implicit none
 

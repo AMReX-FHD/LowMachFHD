@@ -7,7 +7,6 @@ module probin_reactdiff_module
   implicit none
 
   integer, parameter    :: max_species = 10
-  integer, save         :: nspecies = 2             ! number of species
   
   ! Control of algorithm
   !----------------------
@@ -77,7 +76,6 @@ module probin_reactdiff_module
                                          ! If positive, it writes average number densities in the system
                                          ! If negative, it writes the total number of molecules in the system
   
-  namelist /probin_reactdiff/ nspecies
   namelist /probin_reactdiff/ temporal_integrator, diffusion_type, reaction_type
   namelist /probin_reactdiff/ midpoint_stoch_flux_type, avg_type, inhomogeneous_bc_fix
   namelist /probin_reactdiff/ n_init_in, model_file_init, model_file, integer_populations, n_bc
@@ -127,11 +125,6 @@ contains
     do while ( farg <= narg )
        call get_command_argument(farg, value = fname)
        select case (fname)
-
-       case ('--nspecies')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) nspecies
 
        case ('--temporal_integrator')
           farg = farg + 1
@@ -227,11 +220,6 @@ contains
 
        farg = farg + 1
     end do
-    
-    ! check that nspecies<=max_species, otherwise abort with error message
-    if (nspecies .gt. max_species) then 
-       call bl_error("nspecies greater than max_species - Aborting")
-    end if
     
     if (inhomogeneous_bc_fix .and. temporal_integrator .lt. 0) then
        call bl_error("inhomogeneous_bc_fix only appropriate for split schemes")

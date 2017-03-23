@@ -9,8 +9,7 @@ module checkpoint_module
   use bl_rng_module
   use bl_random_module
   use fabio_module, only: fabio_mkdir, fabio_ml_multifab_write_d
-  use probin_common_module, only: use_bl_rng
-  use probin_reactdiff_module, only: nspecies
+  use probin_common_module, only: use_bl_rng, nspecies
 
   implicit none
 

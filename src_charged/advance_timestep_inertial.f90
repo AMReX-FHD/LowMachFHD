@@ -31,9 +31,8 @@ module advance_timestep_inertial_module
   use bl_random_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
-                                  use_bl_rng
+                                  use_bl_rng, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: nspecies
   use probin_charged_module, only: use_charged_fluid, dielectric_type
 
   implicit none

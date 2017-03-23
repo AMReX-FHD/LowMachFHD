@@ -11,9 +11,8 @@ module initial_projection_charged_module
   use compute_mass_fluxdiv_charged_module
   use reservoir_bc_fill_module
   use fluid_charge_module
-  use probin_multispecies_module, only: nspecies
   use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type, &
-                                  molmass
+                                  molmass, nspecies
   use probin_charged_module, only: dielectric_const, use_charged_fluid, &
                                    nreactions, use_Poisson_rng
   use chemical_rates_module

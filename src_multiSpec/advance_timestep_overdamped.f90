@@ -25,9 +25,8 @@ module advance_timestep_overdamped_module
   use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, restart, algorithm_type, &
-                                  barodiffusion_type
+                                  barodiffusion_type, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: nspecies
   use analysis_module
 
   implicit none

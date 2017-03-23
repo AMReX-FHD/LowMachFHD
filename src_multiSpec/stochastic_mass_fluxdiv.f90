@@ -14,8 +14,8 @@ module stochastic_mass_fluxdiv_module
   use correction_flux_module
   use zero_edgeval_module
   use bl_rng_module
-  use probin_common_module, only: k_B, variance_coef_mass, use_bl_rng
-  use probin_multispecies_module, only: nspecies, correct_flux, is_nonisothermal
+  use probin_common_module, only: k_B, variance_coef_mass, use_bl_rng, nspecies
+  use probin_multispecies_module, only: correct_flux, is_nonisothermal
 
   implicit none
 

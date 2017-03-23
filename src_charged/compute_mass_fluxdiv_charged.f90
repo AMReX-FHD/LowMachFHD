@@ -12,8 +12,7 @@ module compute_mass_fluxdiv_charged_module
   use ml_layout_module
   use mass_flux_utilities_module
   use convert_stag_module
-  use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: variance_coef_mass
+  use probin_common_module, only: variance_coef_mass, nspecies
   use probin_charged_module, only: use_charged_fluid
 
   implicit none

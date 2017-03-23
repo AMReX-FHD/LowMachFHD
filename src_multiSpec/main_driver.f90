@@ -38,11 +38,11 @@ subroutine main_driver()
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
-                                  probin_common_init, print_int, &
+                                  probin_common_init, print_int, nspecies, &
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng
-  use probin_multispecies_module, only: nspecies, Dbar, start_time, &
+  use probin_multispecies_module, only: Dbar, start_time, &
                                         probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
 

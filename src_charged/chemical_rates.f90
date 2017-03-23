@@ -9,8 +9,7 @@ module chemical_rates_module
   use compute_reaction_rates_module
 !=rep2  use probin_reactdiff_module, only: nspecies, nreactions, stoichiometric_factors, &
 !=rep2                                     use_Poisson_rng, cross_section
-  use probin_common_module, only: use_bl_rng, cross_section
-  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: use_bl_rng, cross_section, nspecies
   use probin_charged_module, only: nreactions, stoichiometric_factors, use_Poisson_rng
 
   implicit none

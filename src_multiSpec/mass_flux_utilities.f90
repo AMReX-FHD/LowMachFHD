@@ -2,8 +2,8 @@ module mass_flux_utilities_module
 
   use multifab_module
   use ml_layout_module
-  use probin_common_module, only: k_B, molmass, rhobar, molmass, cross_section
-  use probin_multispecies_module, only: nspecies, use_lapack, fraction_tolerance, &
+  use probin_common_module, only: k_B, molmass, rhobar, molmass, cross_section, nspecies
+  use probin_multispecies_module, only: use_lapack, fraction_tolerance, &
                                         is_ideal_mixture, inverse_type, is_nonisothermal, &
                                         chi_iterations
   use matrix_utilities 

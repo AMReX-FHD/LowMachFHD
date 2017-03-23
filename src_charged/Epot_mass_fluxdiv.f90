@@ -12,7 +12,7 @@ module Epot_mass_fluxdiv_module
   use ml_solve_module
   use multifab_physbc_module
   use matvec_mul_module
-  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: nspecies
   use probin_gmres_module, only: mg_verbose
   use probin_charged_module, only: Epot_wall_bc_type, E_ext_type
   

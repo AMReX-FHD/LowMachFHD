@@ -7,8 +7,8 @@ module advance_timestep_diffusion_module
   use compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use bc_module
-  use probin_multispecies_module, only: nspecies, timeinteg_type
-  use probin_common_module, only: variance_coef_mass, barodiffusion_type
+  use probin_multispecies_module, only: timeinteg_type
+  use probin_common_module, only: variance_coef_mass, barodiffusion_type, nspecies
 
   implicit none
 

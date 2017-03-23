@@ -6,7 +6,8 @@ module compute_n_steady_module
   use bc_module
   use bndry_reg_module
   use ml_solve_module
-  use probin_reactdiff_module, only: nspecies, mg_verbose, cg_verbose, &
+  use probin_common_module, only: nspecies
+  use probin_reactdiff_module, only: mg_verbose, cg_verbose, &
                                      implicit_diffusion_rel_eps, &
                                      implicit_diffusion_abs_eps, D_Fick
 

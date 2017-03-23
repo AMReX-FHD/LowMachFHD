@@ -8,9 +8,8 @@ module restart_module
   use bl_rng_module
   use bl_random_module
   use probin_common_module, only: dim_in, advection_type, restart, advection_type, &
-                                  use_bl_rng, &
+                                  use_bl_rng, nspecies, &
                                   seed_momentum, seed_diffusion, seed_reaction
-  use probin_multispecies_module, only: nspecies
 
   implicit none
 

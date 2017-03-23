@@ -6,7 +6,8 @@ module implicit_diffusion_module
   use bc_module
   use bndry_reg_module
   use ml_solve_module
-  use probin_reactdiff_module, only: nspecies, diffusion_stencil_order, mg_verbose, cg_verbose, &
+  use probin_common_module, only: nspecies
+  use probin_reactdiff_module, only: diffusion_stencil_order, mg_verbose, cg_verbose, &
                                      implicit_diffusion_rel_eps, implicit_diffusion_abs_eps
 
   implicit none

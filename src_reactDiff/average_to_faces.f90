@@ -176,7 +176,7 @@ contains
       real(kind=dp_t) :: av
       real(kind=dp_t), intent(in) :: value1, value2
       real(kind=dp_t), intent(in) :: dv
-      real(kind=dp_t) :: tmp,tmp1,tmp2
+      real(kind=dp_t) :: tmp1,tmp2
   
       select case(avg_type)
       case(1) ! Arithmetic with a C0-smoothed Heaviside

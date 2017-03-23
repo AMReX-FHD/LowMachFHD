@@ -10,8 +10,7 @@ module initial_projection_module
   use multifab_physbc_stag_module
   use compute_mass_fluxdiv_module
   use reservoir_bc_fill_module
-  use probin_multispecies_module, only: nspecies
-  use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type
+  use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type, nspecies
 
   implicit none
 

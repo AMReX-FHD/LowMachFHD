@@ -10,9 +10,9 @@ module init_diffusion_module
   use ml_layout_module
   use convert_stag_module
   use convert_rhoc_to_c_module
-  use probin_common_module, only: prob_lo, prob_hi, prob_type, molmass
+  use probin_common_module, only: prob_lo, prob_hi, prob_type, molmass, nspecies
   use probin_multispecies_module, only: alpha1, beta, delta, sigma, Dbar, &
-                                        c_init, nspecies
+                                        c_init
  
   implicit none
 

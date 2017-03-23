@@ -8,8 +8,8 @@ module advance_diffusion_module
   use multifab_physbc_module
   use implicit_diffusion_module
   use multinomial_diffusion_module
-  use probin_common_module, only: variance_coef_mass
-  use probin_reactdiff_module, only: nspecies, D_Fick, diffusion_type, midpoint_stoch_flux_type
+  use probin_common_module, only: nspecies, variance_coef_mass
+  use probin_reactdiff_module, only: D_Fick, diffusion_type, midpoint_stoch_flux_type
 
   implicit none
 

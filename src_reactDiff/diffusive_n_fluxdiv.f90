@@ -4,7 +4,8 @@ module diffusive_n_fluxdiv_module
   use bc_module
   use ml_layout_module
   use cc_applyop_module
-  use probin_reactdiff_module, only: nspecies, diffusion_stencil_order
+  use probin_common_module, only: nspecies
+  use probin_reactdiff_module, only: diffusion_stencil_order
 
   implicit none
 

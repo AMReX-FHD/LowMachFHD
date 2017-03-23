@@ -9,8 +9,7 @@ module fluid_charge_module
   use compute_mixture_properties_module
   use multifab_physbc_module
   use zero_edgeval_module
-  use probin_common_module, only: molmass, k_B, total_volume, rhobar
-  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: molmass, k_B, total_volume, rhobar, nspecies
   use probin_charged_module, only: charge_per_mass, dpdt_factor, &
                                    dielectric_const, dielectric_type, E_ext_type
 

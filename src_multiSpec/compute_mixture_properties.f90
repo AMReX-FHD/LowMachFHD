@@ -8,8 +8,8 @@ module compute_mixture_properties_module
   use ml_layout_module
   use bc_module
   use convert_stag_module
-  use probin_common_module, only: molmass, prob_type, visc_coef
-  use probin_multispecies_module, only: nspecies, is_ideal_mixture, Dbar, &
+  use probin_common_module, only: molmass, prob_type, visc_coef, nspecies
+  use probin_multispecies_module, only: is_ideal_mixture, Dbar, &
                                         Dtherm, H_offdiag, H_diag
  
   implicit none

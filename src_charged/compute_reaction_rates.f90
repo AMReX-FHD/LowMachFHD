@@ -8,10 +8,10 @@ module compute_reaction_rates_module
 !=rep4  use probin_reactdiff_module, only : nspecies, nreactions, stoichiometric_factors, &
 !=rep4                                      rate_const, rate_multiplier, include_discrete_LMA_correction, &
 !=rep4                                      exclude_solvent_comput_rates
-  use probin_multispecies_module, only : nspecies
   use probin_charged_module, only : nreactions, stoichiometric_factors, &
                                     rate_const, rate_multiplier, include_discrete_LMA_correction, &
                                     exclude_solvent_comput_rates
+  use probin_common_module, only: nspecies
 
   implicit none
 
