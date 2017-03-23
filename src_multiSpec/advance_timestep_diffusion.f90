@@ -1,4 +1,9 @@
 module advance_timestep_diffusion_module
+  ! This does diffusion only with fluctuations and multispecies, using standard integrators
+  ! algorithm_type =1 is Euler-Maruyama
+  ! algorithm_type =2 is Trapezoidal
+  ! algorithm_type =3 is Midpoint
+  ! algorithm_type =4 is RK3 
 
   use multifab_module
   use define_bc_module
@@ -7,8 +12,7 @@ module advance_timestep_diffusion_module
   use compute_mass_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use bc_module
-  use probin_multispecies_module, only: timeinteg_type
-  use probin_common_module, only: variance_coef_mass, barodiffusion_type, nspecies
+  use probin_common_module, only: algorithm_type, variance_coef_mass, barodiffusion_type, nspecies
 
   implicit none
 
@@ -67,9 +71,9 @@ contains
     ! initialize random number generator for stochastic flux
     !========================================================
  
-    if (timeinteg_type .eq. 1) then       ! Euler-Maruyama
+    if (algorithm_type .eq. 1) then       ! Euler-Maruyama
         n_rngs=1
-    else if (timeinteg_type .eq. 2) then  ! Trapezoidal
+    else if (algorithm_type .eq. 2) then  ! Trapezoidal
         n_rngs=1
     else                                ! Midpoint & RK3
         n_rngs=2  
@@ -88,7 +92,7 @@ contains
     endif
 
    !==================================================================================
-    select case(timeinteg_type)
+    select case(algorithm_type)
    !==================================================================================
  
       case(1)

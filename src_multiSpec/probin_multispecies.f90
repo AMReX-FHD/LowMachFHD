@@ -8,7 +8,7 @@ module probin_multispecies_module
   integer, parameter :: max_species=10
   integer, parameter :: max_element=max_species*(max_species-1)/2  
 
-  integer, save      :: inverse_type,timeinteg_type,temp_type,chi_iterations
+  integer, save      :: inverse_type,temp_type,chi_iterations
   real(kind=dp_t)    :: start_time
   real(kind=dp_t)    :: T_init(2) 
   real(kind=dp_t)    :: Dbar(max_element)
@@ -27,7 +27,6 @@ module probin_multispecies_module
   namelist /probin_multispecies/ fraction_tolerance ! For roundoff errors in mass and mole fractions
   namelist /probin_multispecies/ start_time
   namelist /probin_multispecies/ inverse_type       ! Only for LAPACK:  1=inverse, 2=pseudo inverse
-  namelist /probin_multispecies/ timeinteg_type   
   namelist /probin_multispecies/ correct_flux       ! Manually ensure mass is conserved to roundoff 
   namelist /probin_multispecies/ print_error_norms   
   namelist /probin_multispecies/ is_ideal_mixture   ! If T assume Gamma=I (H=0) and simplify
@@ -78,7 +77,6 @@ contains
     fraction_tolerance = 1e-13 
     start_time         = 0.0d0 
     inverse_type       = 1
-    timeinteg_type     = 1
     correct_flux       = .true.
     print_error_norms  = .true.
     is_ideal_mixture   = .true.
@@ -130,11 +128,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) inverse_type
-
-       case ('--timeinteg_type')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) timeinteg_type
 
        case ('--correct_flux')
           farg = farg + 1
