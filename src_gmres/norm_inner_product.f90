@@ -126,44 +126,60 @@ contains
     integer :: i,j
 
     ! mx, interior cells
-       do j=xlo(2),xhi(2)
-          do i=xlo(1),xhi(1)
-             inner_prod(1) = inner_prod(1) + m1x(i,j)*m2x(i,j)
-          end do
+    do j=xlo(2),xhi(2)
+       do i=xlo(1)+1,xhi(1)-1
+          inner_prod(1) = inner_prod(1) + m1x(i,j)*m2x(i,j)
        end do
-
+    end do
+    
     ! mx, boundary cells
-       if (xlo(1) .eq. glo(1)) then
+    if (xlo(1) .eq. glo(1)) then
        do j=xlo(2),xhi(2)
           inner_prod(1) = inner_prod(1) + 0.5d0*m1x(glo(1),j)*m2x(glo(1),j)
        end do
-       end if
+    else
+       do j=xlo(2),xhi(2)
+          inner_prod(1) = inner_prod(1) + m1x(glo(1),j)*m2x(glo(1),j)
+       end do
+    end if
 
-       if (xhi(1) .eq. ghi(1)+1) then
+    if (xhi(1) .eq. ghi(1)+1) then
        do j=xlo(2),xhi(2)
           inner_prod(1) = inner_prod(1) + 0.5d0*m1x(ghi(1)+1,j)*m2x(ghi(1)+1,j)
        end do
-       end if
+    else
+       do j=xlo(2),xhi(2)
+          inner_prod(1) = inner_prod(1) + m1x(ghi(1)+1,j)*m2x(ghi(1)+1,j)
+       end do
+    end if
 
     ! my, interior cells
-       do j=ylo(2),yhi(2)
-          do i=ylo(1),yhi(1)
-             inner_prod(2) = inner_prod(2) + m1y(i,j)*m2y(i,j)
-          end do
+    do j=ylo(2)+1,yhi(2)-1
+       do i=ylo(1),yhi(1)
+          inner_prod(2) = inner_prod(2) + m1y(i,j)*m2y(i,j)
        end do
+    end do
 
     ! my, boundary cells
-       if (ylo(2) .eq. glo(2)) then
+    if (ylo(2) .eq. glo(2)) then
        do i=ylo(1),yhi(1)
           inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,glo(2))* m2y(i,glo(2))
        end do
-       end if
+    else
+       do i=ylo(1),yhi(1)
+          inner_prod(2) = inner_prod(2) + m1y(i,glo(2))* m2y(i,glo(2))
+       end do
+    end if
 
-       if (yhi(2) .eq. ghi(2)+1) then
+    if (yhi(2) .eq. ghi(2)+1) then
        do i=ylo(1),yhi(1)
           inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,ghi(2)+1)*m2y(i,ghi(2)+1)
        end do
-       end if
+    else
+       do i=ylo(1),yhi(1)
+          inner_prod(2) = inner_prod(2) + m1y(i,ghi(2)+1)*m2y(i,ghi(2)+1)
+       end do
+    end if
 
   end subroutine stag_inner_prod_2d
 
@@ -186,7 +202,7 @@ contains
     ! x-comp, interior cells
     do k=xlo(3),xhi(3)
        do j=xlo(2),xhi(2)
-          do i=xlo(1),xhi(1)
+          do i=xlo(1)+1,xhi(1)-1
              inner_prod(1) = inner_prod(1)+m1x(i,j,k)*m2x(i,j,k)
           end do
        end do
@@ -194,24 +210,36 @@ contains
 
     ! x-comp, boundary cells
     if (xlo(1) .eq. glo(1)) then
-    do k=xlo(3),xhi(3)
-       do j=xlo(2),xhi(2)
-          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(glo(1),j,k)*m2x(glo(1),j,k)
+       do k=xlo(3),xhi(3)
+          do j=xlo(2),xhi(2)
+             inner_prod(1) = inner_prod(1) + 0.5d0*m1x(glo(1),j,k)*m2x(glo(1),j,k)
+          end do
        end do
-    end do
+    else
+       do k=xlo(3),xhi(3)
+          do j=xlo(2),xhi(2)
+             inner_prod(1) = inner_prod(1) + m1x(glo(1),j,k)*m2x(glo(1),j,k)
+          end do
+       end do
     end if
 
     if (xhi(1) .eq. ghi(1)+1) then
-    do k=xlo(3),xhi(3)
-       do j=xlo(2),xhi(2)
-          inner_prod(1) = inner_prod(1) + 0.5d0*m1x(ghi(1)+1,j,k)*m2x(ghi(1)+1,j,k)
+       do k=xlo(3),xhi(3)
+          do j=xlo(2),xhi(2)
+             inner_prod(1) = inner_prod(1) + 0.5d0*m1x(ghi(1)+1,j,k)*m2x(ghi(1)+1,j,k)
+          end do
        end do
-    end do
+    else
+       do k=xlo(3),xhi(3)
+          do j=xlo(2),xhi(2)
+             inner_prod(1) = inner_prod(1) + m1x(ghi(1)+1,j,k)*m2x(ghi(1)+1,j,k)
+          end do
+       end do
     end if
 
     ! y-comp, interior cells
     do k=ylo(3),yhi(3)
-       do j=ylo(2),yhi(2)
+       do j=ylo(2)+1,yhi(2)-1
           do i=ylo(1),yhi(1)
              inner_prod(2) = inner_prod(2) + m1y(i,j,k)*m2y(i,j,k)
           end do
@@ -220,23 +248,35 @@ contains
 
     ! y-comp, boundary cells
     if (ylo(2) .eq. glo(2)) then
-    do k=ylo(3),yhi(3)
-       do i=ylo(1),yhi(1)
-          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,glo(2),k)*m2y(i,glo(2),k)
+       do k=ylo(3),yhi(3)
+          do i=ylo(1),yhi(1)
+             inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,glo(2),k)*m2y(i,glo(2),k)
+          end do
        end do
-    end do
+    else
+       do k=ylo(3),yhi(3)
+          do i=ylo(1),yhi(1)
+             inner_prod(2) = inner_prod(2) + m1y(i,glo(2),k)*m2y(i,glo(2),k)
+          end do
+       end do
     end if
 
     if (yhi(2) .eq. ghi(2)+1) then
-    do k=ylo(3),yhi(3)
-       do i=ylo(1),yhi(1)
-          inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,ghi(2)+1,k)*m2y(i,ghi(2)+1,k)
+       do k=ylo(3),yhi(3)
+          do i=ylo(1),yhi(1)
+             inner_prod(2) = inner_prod(2) + 0.5d0*m1y(i,ghi(2)+1,k)*m2y(i,ghi(2)+1,k)
+          end do
        end do
-    end do
+    else
+       do k=ylo(3),yhi(3)
+          do i=ylo(1),yhi(1)
+             inner_prod(2) = inner_prod(2) + m1y(i,ghi(2)+1,k)*m2y(i,ghi(2)+1,k)
+          end do
+       end do
     end if
 
     ! z-comp, interior cells
-    do k=zlo(3),zhi(3)
+    do k=zlo(3)+1,zhi(3)-1
        do j=zlo(2),zhi(2)
           do i=zlo(1),zhi(1)
              inner_prod(3) = inner_prod(3) + m1z(i,j,k)*m2z(i,j,k)
@@ -246,19 +286,31 @@ contains
 
     ! z-comp, boundary cells
     if (zlo(3) .eq. glo(3)) then
-    do j=zlo(2),zhi(2)
-       do i=zlo(1),zhi(1)
-          inner_prod(3) = inner_prod(3) + 0.5d0*m1z(i,j,glo(3))*m2z(i,j,glo(3))
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
+             inner_prod(3) = inner_prod(3) + 0.5d0*m1z(i,j,glo(3))*m2z(i,j,glo(3))
+          end do
        end do
-    end do
+    else
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
+             inner_prod(3) = inner_prod(3) + m1z(i,j,glo(3))*m2z(i,j,glo(3))
+          end do
+       end do
     end if
 
     if (zhi(3) .eq. ghi(3)+1) then
-    do j=zlo(2),zhi(2)
-       do i=zlo(1),zhi(1)
-          inner_prod(3) = inner_prod(3) + 0.5d0*m1z(i,j,ghi(3)+1)*m2z(i,j,ghi(3)+1)
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
+             inner_prod(3) = inner_prod(3) + 0.5d0*m1z(i,j,ghi(3)+1)*m2z(i,j,ghi(3)+1)
+          end do
        end do
-    end do
+    else
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
+             inner_prod(3) = inner_prod(3) + m1z(i,j,ghi(3)+1)*m2z(i,j,ghi(3)+1)
+          end do
+       end do
     end if
 
   end subroutine stag_inner_prod_3d
@@ -692,32 +744,59 @@ contains
 
     ! umac, interior cells
     do j=xlo(2),xhi(2)
-       do i=xlo(1),xhi(1)
+       do i=xlo(1)+1,xhi(1)-1
           sumu(1) = sumu(1) + umac(i,j)
        end do
     end do
 
     ! umac, boundary cells
-    if(xlo(1) .eq. glo(1) .and. xhi(1) .eq. ghi(1)+1) then
-    do j=xlo(2),xhi(2)
-       sumu(1) = sumu(1) + 0.5d0*umac(xlo(1)  ,j)
-       sumu(1) = sumu(1) + 0.5d0*umac(xhi(1),j)
-    end do
+    if (xlo(1) .eq. glo(1)) then
+       do j=xlo(2),xhi(2)
+          sumu(1) = sumu(1) + 0.5d0*umac(xlo(1),j)
+       end do
+    else
+       do j=xlo(2),xhi(2)
+          sumu(1) = sumu(1) + umac(xlo(1),j)
+       end do
+    end if
+
+
+    if(xhi(1) .eq. ghi(1)+1) then
+       do j=xlo(2),xhi(2)
+          sumu(1) = sumu(1) + 0.5d0*umac(xhi(1),j)
+       end do
+    else
+       do j=xlo(2),xhi(2)
+          sumu(1) = sumu(1) + umac(xhi(1),j)
+       end do
     end if
 
     ! vmac, interior cells
-    do j=ylo(2),yhi(2)
+    do j=ylo(2)+1,yhi(2)-1
        do i=ylo(1),yhi(1)
           sumu(2) = sumu(2) + vmac(i,j)
        end do
     end do
 
     ! vmac, boundary cells
-    if(ylo(2) .eq. glo(2) .and. yhi(2) .eq. ghi(2)+1) then
-    do i=ylo(1),yhi(1)
-       sumu(2) = sumu(2) + 0.5d0*vmac(i,ylo(2)  )
-       sumu(2) = sumu(2) + 0.5d0*vmac(i,yhi(2))
-    end do
+    if(ylo(2) .eq. glo(2)) then
+       do i=ylo(1),yhi(1)
+          sumu(2) = sumu(2) + 0.5d0*vmac(i,ylo(2))
+       end do
+    else
+       do i=ylo(1),yhi(1)
+          sumu(2) = sumu(2) + vmac(i,ylo(2))
+       end do
+    end if
+
+    if(yhi(2) .eq. ghi(2)+1) then
+       do i=ylo(1),yhi(1)
+          sumu(2) = sumu(2) + 0.5d0*vmac(i,yhi(2))
+       end do
+    else
+       do i=ylo(1),yhi(1)
+          sumu(2) = sumu(2) + vmac(i,yhi(2))
+       end do
     end if
 
   end subroutine sum_umac_2d
@@ -737,25 +816,44 @@ contains
     ! umac, interior cells
     do k=xlo(3),xhi(3)
        do j=xlo(2),xhi(2)
-          do i=xlo(1),xhi(1)
+          do i=xlo(1)+1,xhi(1)-1
              sumu(1) = sumu(1) + umac(i,j,k)
           end do
        end do
     end do
 
     ! umac, boundary cells
-    if(xlo(1) .eq. glo(1) .and. xhi(1) .eq. ghi(1)+1) then
-    do k=xlo(3),xhi(3)
-       do j=xlo(2),xhi(2)
-          sumu(1) = sumu(1) + 0.5d0*umac(xlo(1)  ,j,k)
-          sumu(1) = sumu(1) + 0.5d0*umac(xhi(1),j,k)
+    if(xlo(1) .eq. glo(1)) then
+       do k=xlo(3),xhi(3)
+          do j=xlo(2),xhi(2)
+             sumu(1) = sumu(1) + 0.5d0*umac(xlo(1),j,k)
+          end do
        end do
-    end do
+    else
+       do k=xlo(3),xhi(3)
+          do j=xlo(2),xhi(2)
+             sumu(1) = sumu(1) + umac(xlo(1),j,k)
+          end do
+       end do
+    end if
+
+    if(xhi(1) .eq. ghi(1)+1) then
+       do k=xlo(3),xhi(3)
+          do j=xlo(2),xhi(2)
+             sumu(1) = sumu(1) + 0.5d0*umac(xhi(1),j,k)
+          end do
+       end do
+    else
+       do k=xlo(3),xhi(3)
+          do j=xlo(2),xhi(2)
+             sumu(1) = sumu(1) + umac(xhi(1),j,k)
+          end do
+       end do
     end if
 
     ! vmac, interior cells
     do k=ylo(3),yhi(3)
-       do j=ylo(2),yhi(2)
+       do j=ylo(2)+1,yhi(2)-1
           do i=ylo(1),yhi(1)
              sumu(2) = sumu(2) + vmac(i,j,k)
           end do
@@ -763,17 +861,36 @@ contains
     end do
 
     ! vmac, boundary cells
-    if(ylo(2) .eq. glo(2) .and. yhi(2) .eq. ghi(2)+1) then
-    do k=ylo(3),yhi(3)
-       do i=ylo(1),yhi(1)
-          sumu(2) = sumu(2) + 0.5d0*vmac(i,ylo(2)  ,k)
-          sumu(2) = sumu(2) + 0.5d0*vmac(i,yhi(2),k)
+    if(ylo(2) .eq. glo(2)) then
+       do k=ylo(3),yhi(3)
+          do i=ylo(1),yhi(1)
+             sumu(2) = sumu(2) + 0.5d0*vmac(i,ylo(2),k)
+          end do
        end do
-    end do
+    else
+       do k=ylo(3),yhi(3)
+          do i=ylo(1),yhi(1)
+             sumu(2) = sumu(2) + vmac(i,ylo(2),k)
+          end do
+       end do
+    end if
+
+    if(yhi(2) .eq. ghi(2)+1) then
+       do k=ylo(3),yhi(3)
+          do i=ylo(1),yhi(1)
+             sumu(2) = sumu(2) + 0.5d0*vmac(i,yhi(2),k)
+          end do
+       end do
+    else
+       do k=ylo(3),yhi(3)
+          do i=ylo(1),yhi(1)
+             sumu(2) = sumu(2) + vmac(i,yhi(2),k)
+          end do
+       end do
     end if
 
     ! wmac, interior cells
-    do k=zlo(3),zhi(3)
+    do k=zlo(3)+1,zhi(3)-1
        do j=zlo(2),zhi(2)
           do i=zlo(1),zhi(1)
              sumu(3) = sumu(3) + wmac(i,j,k)
@@ -782,13 +899,32 @@ contains
     end do
 
     ! wmac, boundary cells
-    if(zlo(3) .eq. glo(3) .and. zhi(3) .eq. ghi(3)+1) then
-    do j=zlo(2),zhi(2)
-       do i=zlo(1),zhi(1)
-          sumu(3) = sumu(3) + 0.5d0*wmac(i,j,zlo(3)  )
-          sumu(3) = sumu(3) + 0.5d0*wmac(i,j,zhi(3))
+    if(zlo(3) .eq. glo(3)) then
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
+             sumu(3) = sumu(3) + 0.5d0*wmac(i,j,zlo(3))
+          end do
        end do
-    end do
+    else
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
+             sumu(3) = sumu(3) + wmac(i,j,zlo(3))
+          end do
+       end do
+    end if
+
+    if(zhi(3) .eq. ghi(3)+1) then
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
+             sumu(3) = sumu(3) + 0.5d0*wmac(i,j,zhi(3))
+          end do
+       end do
+    else
+       do j=zlo(2),zhi(2)
+          do i=zlo(1),zhi(1)
+             sumu(3) = sumu(3) + wmac(i,j,zhi(3))
+          end do
+       end do
     end if
 
   end subroutine sum_umac_3d
