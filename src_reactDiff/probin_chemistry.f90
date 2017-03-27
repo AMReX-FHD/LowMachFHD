@@ -7,7 +7,7 @@ module probin_chemistry_module
   implicit none
 
   integer, parameter    :: max_reactions = 20
-  integer, save         :: nreactions = 1           ! number of reactions
+  integer, save         :: nreactions = 0           ! number of reactions
 
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
   ! Example: For N1 + 2*N2 -> N3 use
