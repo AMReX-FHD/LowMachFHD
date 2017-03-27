@@ -1,15 +1,14 @@
 module probin_charged_module
 
   use bl_types
-  use bl_space
-  use probin_common_module, only: max_species
+  use probin_common_module, only: MAX_SPECIES
  
   implicit none
 
   logical            :: use_charged_fluid
   real(kind=dp_t)    :: dielectric_const
   integer            :: dielectric_type
-  real(kind=dp_t)    :: charge_per_mass(max_species)
+  real(kind=dp_t)    :: charge_per_mass(MAX_SPECIES)
   real(kind=dp_t)    :: Epot_wall_bc_type
   real(kind=dp_t)    :: Epot_wall(1:2,1:3)
   real(kind=dp_t)    :: theta_pot

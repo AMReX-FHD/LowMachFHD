@@ -4,7 +4,6 @@
 module probin_module
 
   use bl_types
-  use bl_space
 
   implicit none
 

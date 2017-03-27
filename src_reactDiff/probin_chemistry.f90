@@ -2,7 +2,7 @@ module probin_chemistry_module
 
   use bl_types
 
-  use probin_common_module, only: max_species
+  use probin_common_module, only: MAX_SPECIES
 
   implicit none
 
@@ -13,7 +13,7 @@ module probin_chemistry_module
   ! Example: For N1 + 2*N2 -> N3 use
   ! stoichiometric_factors(1:3,1,1) = 1 2 0
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
-  integer, save         :: stoichiometric_factors(max_species,2,max_reactions) = 0 
+  integer, save         :: stoichiometric_factors(MAX_SPECIES,2,max_reactions) = 0 
 
   ! reaction rate constant for each reaction (assuming Law of Mass Action holds)
   ! using rate_multiplier, reaction rates can be changed by the same factor

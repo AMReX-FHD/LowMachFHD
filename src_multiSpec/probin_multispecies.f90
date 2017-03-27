@@ -1,25 +1,24 @@
 module probin_multispecies_module
 
   use bl_types
-  use bl_space
-  use probin_common_module, only: max_species
+  use probin_common_module, only: MAX_SPECIES
  
   implicit none
 
-  integer, parameter :: max_element=max_species*(max_species-1)/2  
+  integer, parameter :: max_element=MAX_SPECIES*(MAX_SPECIES-1)/2  
 
   integer, save      :: inverse_type,temp_type,chi_iterations
   real(kind=dp_t)    :: start_time
   real(kind=dp_t)    :: T_init(2) 
   real(kind=dp_t)    :: Dbar(max_element)
-  real(kind=dp_t)    :: Dtherm(max_species)
+  real(kind=dp_t)    :: Dtherm(MAX_SPECIES)
   real(kind=dp_t)    :: H_offdiag(max_element)
-  real(kind=dp_t)    :: H_diag(max_species)
+  real(kind=dp_t)    :: H_diag(MAX_SPECIES)
   real(kind=dp_t)    :: fraction_tolerance
   logical            :: correct_flux,print_error_norms,plot_stag
   logical            :: is_nonisothermal,is_ideal_mixture,use_lapack
-  real(kind=dp_t)    :: c_init(2,max_species)
-  real(kind=dp_t)    :: c_bc(3,2,max_species)
+  real(kind=dp_t)    :: c_init(2,MAX_SPECIES)
+  real(kind=dp_t)    :: c_bc(3,2,MAX_SPECIES)
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
 
   ! Physical properties:

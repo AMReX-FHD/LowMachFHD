@@ -10,7 +10,7 @@ module probin_common_module
 
   ! For comments and instructions on how to set the input parameters see namelist section below
   !------------------------------------------------------------- 
-  integer, parameter :: max_species = 10
+  integer, parameter :: MAX_SPECIES = 10
 
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
   real(dp_t),save :: fixed_dt,cfl,grav(3)
@@ -31,9 +31,9 @@ module probin_common_module
   integer,save    :: stoch_stress_form,filtering_width,max_step
   integer,save    :: restart,print_int,project_eos_int,algorithm_type
   integer,save    :: barodiffusion_type
-  real(dp_t),save :: molmass(max_species)
-  real(dp_t),save :: rhobar(max_species)
-  real(dp_t),save :: density_weights(max_species)
+  real(dp_t),save :: molmass(MAX_SPECIES)
+  real(dp_t),save :: rhobar(MAX_SPECIES)
+  real(dp_t),save :: density_weights(MAX_SPECIES)
 
   integer(kind=ll_t)      :: n_cells_long(MAX_SPACEDIM)
   integer(kind=ll_t),save :: total_volume
@@ -716,10 +716,9 @@ contains
     n_cells_long = n_cells
     total_volume = product(n_cells_long(1:dim_in))
     
-        ! check that nspecies<=max_species, otherwise abort with error message
-    if(nspecies.gt.max_species) then 
-       call bl_error(" nspecies greater than max_species - Aborting")
-       stop
+    ! check that nspecies<=MAX_SPECIES, otherwise abort with error message
+    if(nspecies.gt.MAX_SPECIES) then 
+       call bl_error(" nspecies greater than MAX_SPECIES - Aborting")
     end if
 
   end subroutine probin_common_init

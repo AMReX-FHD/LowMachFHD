@@ -1,8 +1,7 @@
 module probin_reactdiff_module
 
   use bl_types
-  use bl_space
-  use probin_common_module, only: max_species
+  use probin_common_module, only: MAX_SPECIES
  
   implicit none
 
@@ -43,20 +42,20 @@ module probin_reactdiff_module
 
   ! Initial and boundary conditions
   !----------------------
-  real(kind=dp_t), save    :: n_init_in(2,max_species) = 1.d0  ! initial values to be used in init_n.f90
+  real(kind=dp_t), save    :: n_init_in(2,MAX_SPECIES) = 1.d0  ! initial values to be used in init_n.f90
 
   integer, save            :: model_file_init = 0              ! initialize from model files:
                                                                ! 0=no, 1=usual order (Fortran), -1=transpose order (C)
 
-  character(len=128), save :: model_file(max_species)          ! one model file for each species
+  character(len=128), save :: model_file(MAX_SPECIES)          ! one model file for each species
   
   logical, save :: integer_populations = .false.               ! initialize with all number of molecules strictly integer
 
-  real(kind=dp_t), save    :: n_bc(3,2,max_species) = 0.d0     ! n_i boundary conditions (dir,lohi,species)
+  real(kind=dp_t), save    :: n_bc(3,2,MAX_SPECIES) = 0.d0     ! n_i boundary conditions (dir,lohi,species)
 
   ! Diffusion     
   !----------------------                          
-  real(kind=dp_t), save :: D_Fick(max_species) = 1.d0          ! Fickian diffusion coeffs
+  real(kind=dp_t), save :: D_Fick(MAX_SPECIES) = 1.d0          ! Fickian diffusion coeffs
 
   integer, save         :: diffusion_stencil_order = 1         ! diffusion boundary stencil order
 
