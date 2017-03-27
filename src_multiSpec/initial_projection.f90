@@ -63,18 +63,13 @@ contains
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
 
-    real(kind=dp_t) :: weights(algorithm_type)
+    real(kind=dp_t) :: weights(1)
     
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"initial_projection")
 
-    if (algorithm_type .eq. 1) then
-       weights(1) = 1.d0
-    else if (algorithm_type .eq. 2) then
-       weights(1) = 1.d0
-       weights(2) = 0.d0
-    end if
+    weights(1) = 1.d0
 
     dm = mla%dim
     nlevs = mla%nlevel

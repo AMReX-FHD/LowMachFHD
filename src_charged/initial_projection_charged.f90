@@ -79,12 +79,21 @@ contains
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
     type(multifab) :: flux_diff(mla%nlevel,mla%dim)
 
-    real(kind=dp_t) :: weights(2)
+    real(kind=dp_t), allocatable :: weights(:)
     
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"initial_projection_charged")
     
+    if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5) then
+       allocate(weights(2)
+       weights(:) = 0.d0
+       weights(1) = 1.d0
+    else
+       allocate(weights(1)
+       weights(1) = 1.d0
+    end if
+
     if (algorithm_type .eq. 5) then
        ! for midpoint scheme where predictor goes to t^{n+1/2}
        dt_eff = 0.5d0*dt
@@ -99,9 +108,6 @@ contains
           call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorithm_type=5 and nreactions>0')
        end if
     end if
-
-    weights(:) = 0.d0
-    weights(1) = 1.d0
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -403,7 +409,7 @@ contains
        end do
     end do
 
-    deallocate(vel_bc_n,vel_bc_t)
+    deallocate(vel_bc_n,vel_bc_t,weights)
 
     call destroy(bpt)
 
