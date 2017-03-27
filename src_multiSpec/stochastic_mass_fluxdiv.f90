@@ -1,6 +1,7 @@
 module stochastic_mass_fluxdiv_module
 
   use bl_types
+  use bl_space
   use bl_constants_module
   use multifab_module
   use ml_layout_module
@@ -66,7 +67,7 @@ contains
     dm    = mla%dim
  
     ! populate the variance (only first level)
-    variance = sqrt(2.d0*k_B*variance_coef_mass/(product(dx(1,1:dm))*dt))
+    variance = sqrt(2.d0*k_B*variance_coef_mass/(product(dx(1,1:MAX_SPACEDIM))*dt))
 
     ! build multifabs 
     do n=1,nlevs

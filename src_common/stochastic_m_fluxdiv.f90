@@ -1,6 +1,7 @@
 module stochastic_m_fluxdiv_module
 
   use bl_types
+  use bl_space
   use bl_constants_module
   use multifab_module
   use ml_layout_module
@@ -133,7 +134,7 @@ contains
     do n=1,nlevs
 
        ! include eta and temperature contribution in an ijk loop
-       variance = sqrt(variance_coef_mom*2.d0*k_B/(product(dx(n,1:dm))*dt))
+       variance = sqrt(variance_coef_mom*2.d0*k_B/(product(dx(n,1:MAX_SPACEDIM))*dt))
 
        if (dm .eq. 2) then
 
@@ -738,13 +739,13 @@ contains
       do i=1,dm
          if (use_bl_rng) then
             call multifab_fill_random(mactemp(n:n,i), &
-                                      variance=abs(variance)*k_B/product(dx(n,1:dm)), &
+                                      variance=abs(variance)*k_B/product(dx(n,1:MAX_SPACEDIM)), &
                                       variance_mfab=s_face(n:n,i), &
                                       variance_mfab2=temperature_face(n:n,i), &
                                       rng_eng=rng_eng_momentum)
          else
             call multifab_fill_random(mactemp(n:n,i), &
-                                      variance=abs(variance)*k_B/product(dx(n,1:dm)), &
+                                      variance=abs(variance)*k_B/product(dx(n,1:MAX_SPACEDIM)), &
                                       variance_mfab=s_face(n:n,i), &
                                       variance_mfab2=temperature_face(n:n,i))
          end if

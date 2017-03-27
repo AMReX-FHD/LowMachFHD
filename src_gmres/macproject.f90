@@ -171,7 +171,7 @@ contains
             call mg_tower_build(mgt(n), mla%la(n), layout_get_pd(mla%la(n)), &
                                 the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
                                 stencil_type = CC_CROSS_STENCIL, &
-                                dh = dx(n,1:2), &
+                                dh = dx(n,1:dm), &
                                 smoother = smoother, &
                                 nu1 = mgt(nlevs)%nu1, &
                                 nu2 = mgt(nlevs)%nu2, &
@@ -394,7 +394,7 @@ contains
        call mg_tower_build(mgt_macproj_precon(n), mla%la(n), layout_get_pd(mla%la(n)), &
                            the_bc_tower%bc_tower_array(n)%ell_bc_level_array(0,:,:,pres_bc_comp),&
                            stencil_type = CC_CROSS_STENCIL, &
-                           dh = dx(n,1:2), &
+                           dh = dx(n,1:dm), &
                            smoother = smoother, &
                            nu1 = mg_nsmooths_down, &
                            nu2 = mg_nsmooths_up, &
