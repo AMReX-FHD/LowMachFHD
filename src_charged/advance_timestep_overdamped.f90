@@ -187,9 +187,6 @@ contains
        if (use_bl_rng) then
           call bl_rng_copy_engine(rng_eng_diffusion_old,rng_eng_diffusion)
        end if
-       if (variance_coef_mom .ne. 0.d0) then
-          call fill_m_stochastic(mla)
-       end if
     end if
 
     ! build up rhs_v for gmres solve
@@ -225,6 +222,8 @@ contains
 
     ! add div(Sigma^(1)) to gmres_rhs_v
     if (variance_coef_mom .ne. 0.d0) then
+       ! fill the stochastic multifabs with a new set of random numbers
+       call fill_m_stochastic(mla)
        if (algorithm_type .eq. 1) then
           call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
                                     eta,eta_ed,Temp,Temp_ed,dx,dt,weights)

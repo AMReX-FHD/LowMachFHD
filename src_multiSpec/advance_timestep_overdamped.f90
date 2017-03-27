@@ -160,7 +160,6 @@ contains
     ! we already have random numbers from initialization
     if (istep .ne. 1 .and. istep .ne. restart+1) then
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-       call fill_m_stochastic(mla)
     end if
 
     ! build up rhs_v for gmres solve
@@ -196,6 +195,8 @@ contains
 
     ! add div(Sigma^(1)) to gmres_rhs_v
     if (variance_coef_mom .ne. 0.d0) then
+       ! fill the stochastic multifabs with a new set of random numbers
+       call fill_m_stochastic(mla)
        if (algorithm_type .eq. 1) then
           call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
                                     eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
