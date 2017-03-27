@@ -99,7 +99,7 @@ contains
        end do
 
        ! solve the implicit system
-       call ml_cc_solve(mla,rhs_comp,phi,fine_flx,alpha,beta,dx, &
+       call ml_cc_solve(mla,rhs_comp,phi,fine_flx,alpha,beta,dx(:,1:dm), &
                         the_bc_tower,scal_bc_comp+spec-1, &
                         stencil_order=diffusion_stencil_order, &
                         verbose=mg_verbose, &

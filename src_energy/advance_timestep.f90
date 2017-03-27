@@ -520,8 +520,8 @@ contains
           end do
 
           ! solve for deltaT
-          call ml_cc_solve(mla,deltaT_rhs,deltaT,fine_flx,cc_solver_alpha,cc_solver_beta,dx, &
-                           the_bc_tower,temp_bc_comp)
+          call ml_cc_solve(mla,deltaT_rhs,deltaT,fine_flx,cc_solver_alpha,cc_solver_beta, &
+                           dx(:,1:dm),the_bc_tower,temp_bc_comp)
 
           norm = multifab_norm_l1_c(deltaT(1),1,1)/total_volume
           if (parallel_IOProcessor()) then

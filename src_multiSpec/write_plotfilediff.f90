@@ -20,7 +20,7 @@ contains
     ! local variables
     character(len=20), allocatable  :: plot_names(:)
     character(len=20)               :: plotfile_name
-    integer                         :: n,nlevs
+    integer                         :: n,nlevs,dm
 
     ! multifab of size nlevs  
     type(multifab), allocatable     :: plotdata(:)
@@ -30,6 +30,7 @@ contains
     call build(bpt,"write_plotfilediff")
 
     nlevs = mla%nlevel
+    dm = mla%dim
   
     allocate(plot_names(nspecies))
     allocate(plotdata(nlevs))
@@ -59,7 +60,7 @@ contains
     ! write the plotfile
     call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), trim(plotfile_name), & 
                                    plot_names, mla%mba%pd(1), prob_lo, prob_hi, & 
-                                   time, dx(1,:))
+                                   time, dx(1,1:dm))
 
     ! make sure to destroy the multifab or you'll leak memory
     do n=1,nlevs
@@ -84,7 +85,7 @@ contains
     ! local variables
     character(len=20), allocatable  :: plot_names(:)
     character(len=20)               :: plotfile_name
-    integer                         :: n,nlevs
+    integer                         :: n,nlevs,dm
 
     ! multifab of size nlevs  
     type(multifab), allocatable     :: plotdata(:)
@@ -94,6 +95,7 @@ contains
     call build(bpt,"write_plotfile_onecomp")
 
     nlevs = mla%nlevel
+    dm = mla%dim
   
     allocate(plot_names(1))
     allocate(plotdata(nlevs))
@@ -117,7 +119,7 @@ contains
     ! write the plotfile
     call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), trim(plotfile_name), & 
                                    plot_names, mla%mba%pd(1), prob_lo, prob_hi, & 
-                                   time, dx(1,:))
+                                   time, dx(1,1:dm))
 
     ! make sure to destroy the multifab or you'll leak memory
     do n=1,nlevs

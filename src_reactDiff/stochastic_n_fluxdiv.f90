@@ -1,6 +1,7 @@
 module stochastic_n_fluxdiv_module
 
   use bl_types
+  use bl_space
   use bl_constants_module
   use multifab_module
   use ml_layout_module
@@ -12,7 +13,7 @@ module stochastic_n_fluxdiv_module
   use div_and_grad_module
   use bl_rng_module
   use probin_common_module, only: variance_coef_mass, initial_variance, &
-                                  density_weights, use_bl_rng, cross_section, nspecies
+                                  density_weights, use_bl_rng, nspecies
 
   implicit none
 
@@ -59,7 +60,7 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    dv = product(dx(1,1:dm))*cross_section
+    dv = product(dx(1,1:MAX_SPACEDIM))
 
     increment_div = .false.
     if (present(increment_in)) increment_div = increment_in
@@ -567,7 +568,7 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    dv = product(dx(1,1:dm))*cross_section
+    dv = product(dx(1,1:MAX_SPACEDIM))
 
     ! the number of ghost cells must match variance_mfab input to multifab_fill_random
     ! the values in the ghost cells do not have to be added to n_init since we

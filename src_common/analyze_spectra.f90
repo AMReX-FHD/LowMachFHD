@@ -5,6 +5,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module analyze_spectra_module
 
+  use bl_space
   use fabio_module
   use bl_types
   use bl_constants_module
@@ -258,7 +259,7 @@ contains
        if(parallel_IOProcessor()) then
        
           grid_dx=1.0_dp_t ! Default grid spacing
-          grid_dx(1:dm)=dx(1,1:dm) 
+          grid_dx(1:MAX_SPACEDIM) = dx(1,1:MAX_SPACEDIM)
 
           if(project_dir <= 0) then ! Perform analysis on the full 3D grid
             ncells_tmp=nCells

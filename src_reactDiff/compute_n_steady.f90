@@ -95,7 +95,7 @@ contains
        end do
 
        ! solve the Poisson equation
-       call ml_cc_solve(mla,rhs,phi,fine_flx,alpha,beta,dx, &
+       call ml_cc_solve(mla,rhs,phi,fine_flx,alpha,beta,dx(:,1:dm), &
                         the_bc_tower,scal_bc_comp+spec-1, &
                         stencil_order=1, &
                         verbose=mg_verbose, &

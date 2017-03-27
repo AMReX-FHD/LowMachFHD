@@ -219,7 +219,7 @@ contains
     end if
 
     ! solve (alpha - del dot beta grad) Epot = charge
-    call ml_cc_solve(mla,rhs,Epot,fine_flx,alpha,beta,dx,the_bc_tower,Epot_bc_comp, &
+    call ml_cc_solve(mla,rhs,Epot,fine_flx,alpha,beta,dx(:,1:dm),the_bc_tower,Epot_bc_comp, &
                      verbose=mg_verbose,ok_to_fix_singular=.false.)
 
     ! for periodic problems subtract off the average of Epot

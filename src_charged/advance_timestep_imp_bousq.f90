@@ -349,7 +349,7 @@ contains
     end if
 
     ! solve -div (epsilon + dt theta z^T A_Phi^n) grad Phi^{n+1,*} = z^T RHS
-    call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
+    call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx(:,1:dm), &
                      the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
     ! for periodic problems subtract off the average of Epot
@@ -717,7 +717,7 @@ contains
     end if
 
     ! solve -div (epsilon + dt theta z^T A_Phi^{n+1,*}) grad Phi^{n+2,*} = z^T RHS
-    call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
+    call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx(:,1:dm), &
                      the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
     ! for periodic problems subtract off the average of Epot
@@ -844,7 +844,7 @@ contains
 !             call multifab_copy_c(solver_beta(n,i),1,permittivity_fc(n,i),1,1,0)
 !          end do
 !       end do
-!       call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
+!       call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx(:,1:dm), &
 !                        the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 !       call compute_grad(mla,Epot,grad_Epot_new,dx,1,Epot_bc_comp,1,1,the_bc_tower%bc_tower_array)
 !       ! compute "new" Lorentz_force^{n+1}

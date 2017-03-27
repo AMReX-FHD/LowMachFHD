@@ -1,8 +1,9 @@
 module mass_flux_utilities_module 
 
+  use bl_space
   use multifab_module
   use ml_layout_module
-  use probin_common_module, only: k_B, molmass, rhobar, molmass, cross_section, nspecies
+  use probin_common_module, only: k_B, molmass, rhobar, molmass, nspecies
   use probin_multispecies_module, only: use_lapack, fraction_tolerance, &
                                         is_ideal_mixture, inverse_type, is_nonisothermal, &
                                         chi_iterations
@@ -1083,7 +1084,7 @@ contains
     integer :: comp
 
     ! cell volume
-    dv = product(dx)*cross_section
+    dv = product(dx(1:MAX_SPACEDIM))
 
     do comp=1,nspecies
        value1 = rho1(comp)/molmass(comp) ! Convert to number density

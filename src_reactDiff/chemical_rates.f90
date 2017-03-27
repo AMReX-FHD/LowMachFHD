@@ -1,10 +1,11 @@
 module chemical_rates_module
 
+  use bl_space
   use ml_layout_module
   use BoxLibRNGs
   use bl_rng_module
   use compute_reaction_rates_module
-  use probin_common_module, only: use_bl_rng, cross_section, nspecies
+  use probin_common_module, only: use_bl_rng, nspecies
   use probin_chemistry_module, only: nreactions, stoichiometric_factors, use_Poisson_rng
 
   implicit none
@@ -90,8 +91,7 @@ contains
       end if
     end if
 
-    dv = product(dx(1,1:dm))*cross_section
-
+    dv = product(dx(1,1:MAX_SPACEDIM))
 
     !!!!! omp tiling
 

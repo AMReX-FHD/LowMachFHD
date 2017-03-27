@@ -2,6 +2,7 @@ subroutine main_driver()
 
    use boxlib
    use bl_IO_module
+   use bl_space
    use ml_layout_module
    use define_bc_module
    use bc_module
@@ -21,7 +22,7 @@ subroutine main_driver()
                                    restart, use_bl_rng, nspecies, &
                                    probin_common_init, fixed_dt, max_step, n_steps_skip, &
                                    hydro_grid_int, stats_int, n_steps_save_stats, &
-                                   cfl, initial_variance, cross_section
+                                   cfl, initial_variance
    use probin_reactdiff_module, only: probin_reactdiff_init, D_Fick, &
                                       inhomogeneous_bc_fix, temporal_integrator, &
                                       n_steps_write_avg, &
@@ -58,6 +59,7 @@ subroutine main_driver()
    integer :: narg, farg, un
    character(len=128) :: fname
    logical :: lexist
+   real(kind=dp_t) :: structFactMult
 
    ! to test "conservation"
    real(kind=dp_t), allocatable :: n_sum(:)
@@ -181,27 +183,31 @@ subroutine main_driver()
    n_rngs = 1
    call init_mass_stochastic(mla,n_rngs)
 
-   ! set grid spacing at each level
-   ! the grid spacing is the same in each direction
-   allocate(dx(nlevs,dm))
-   dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
-   select case (dm) 
-   case(2)
-      if (dx(1,1) .ne. dx(1,2)) then
-         call bl_error('ERROR: main_driver.f90, we only support dx=dy')
-      end if
-   case(3)
-      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-         call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
-      end if
-   case default
-      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
-   end select
+  ! set grid spacing at each level
+  allocate(dx(nlevs,MAX_SPACEDIM))
+  dx(1,1:MAX_SPACEDIM) = (prob_hi(1:MAX_SPACEDIM)-prob_lo(1:MAX_SPACEDIM)) &
+       / n_cells(1:MAX_SPACEDIM)
+  ! check that the grid spacing is the same in each direction for the first dm dimensions
+  select case (dm) 
+  case(2)
+     if (dx(1,1) .ne. dx(1,2)) then
+        call bl_error('ERROR: main_driver.f90, in 2D we only support dx=dy')
+     end if
+  case(3)
+     if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
+        call bl_error('ERROR: main_driver.f90, in 3D we only support dx=dy=dz')
+     end if
+  case default
+     call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
+  end select
 
-   ! use refined dx for next level
-   do n=2,nlevs
-      dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
-   end do
+  ! use refined dx for next level
+  ! assume refinement ratio is the same in each direction
+  ! we do this because dx is allocated over MAX_SPACEDIM dimensions,
+  ! whereas mba is only allocated over dm dimensions
+  do n=2,nlevs
+     dx(n,:) = dx(n-1,:) / mba%rr(n-1,1)
+  end do
 
    !=======================================================
    ! Setup boundary condition bc_tower
@@ -325,6 +331,12 @@ subroutine main_driver()
    !=====================================================================
    ! Initialize HydroGrid for analysis
    !=====================================================================
+   structFactMult = 1.d0
+   if (dm .eq. 1) then
+      structFactMult = dx(1,2)*dx(1,3)
+   else if (dm .eq. 2) then
+      structFactMult = dx(1,3)
+   end if
    if((hydro_grid_int>0) .or. (stats_int>0)) then
       narg = command_argument_count()
       farg = 1
@@ -343,7 +355,7 @@ subroutine main_driver()
                                        analyze_velocity=.false., &
                                        analyze_density=.true., &
                                        analyze_temperature=.false., &
-                                       structFactMultiplier = cross_section) 
+                                       structFactMultiplier = structFactMult)
 
             close(unit=un)
          end if
@@ -435,7 +447,7 @@ subroutine main_driver()
           do spec=1,nspecies
              n_sum(spec) = multifab_sum_c(n_old(1),spec,1)
           end do
-          cellvolume=product(dx(1,1:dm))*cross_section ! Total system volume
+          cellvolume=product(dx(1,1:MAX_SPACEDIM)) ! Total system volume
           if (parallel_IOProcessor()) then
           !!if (n_steps_write_avg==2) then ! Write *only* the first species number density
           !!   ! Useful to save space in files where there is only one independent reaction

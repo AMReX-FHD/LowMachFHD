@@ -168,7 +168,7 @@ contains
     ! write the plotfile
     call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), trim(plotfile_name), & 
                                    plot_names, mla%mba%pd(1), prob_lo, prob_hi, & 
-                                   time, dx(1,:))
+                                   time, dx(1,1:dm))
 
     if (plot_stag) then
        ! staggered plotfiles
@@ -176,16 +176,16 @@ contains
        ! all the boundary data
        call fabio_ml_multifab_write_d(plotdata_stag(:,1), mla%mba%rr(:,1), trim(plotfile_namex), &
                                       plot_names_stagx, mla%mba%pd(1), prob_lo, prob_hi, &
-                                      time, dx(1,:))
+                                      time, dx(1,1:dm))
 
        call fabio_ml_multifab_write_d(plotdata_stag(:,2), mla%mba%rr(:,1), trim(plotfile_namey), &
                                       plot_names_stagy, mla%mba%pd(1), prob_lo, prob_hi, &
-                                      time, dx(1,:))
+                                      time, dx(1,1:dm))
 
        if (dm > 2) then
           call fabio_ml_multifab_write_d(plotdata_stag(:,3), mla%mba%rr(:,1), trim(plotfile_namez), &
                                          plot_names_stagz, mla%mba%pd(1), prob_lo, prob_hi, &
-                                         time, dx(1,:))
+                                         time, dx(1,1:dm))
        end if
     end if
 

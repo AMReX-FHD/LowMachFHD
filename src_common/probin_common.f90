@@ -20,7 +20,6 @@ module probin_common_module
   integer,save    :: seed,seed_momentum,seed_diffusion,seed_reaction,seed_init
   integer,save    :: n_cells(MAX_SPACEDIM),max_grid_size(MAX_SPACEDIM)  
   real(dp_t),save :: prob_lo(MAX_SPACEDIM),prob_hi(MAX_SPACEDIM)
-  real(dp_t),save :: cross_section
   real(dp_t),save :: wallspeed_lo(MAX_SPACEDIM-1,MAX_SPACEDIM)
   real(dp_t),save :: wallspeed_hi(MAX_SPACEDIM-1,MAX_SPACEDIM)
   integer,save    :: hydro_grid_int,project_dir,max_grid_projection(2)
@@ -47,7 +46,6 @@ module probin_common_module
   namelist /probin_common/ dim_in          ! 2D or 3D  
   namelist /probin_common/ prob_lo         ! physical lo coordinate
   namelist /probin_common/ prob_hi         ! physical hi coordinate
-  namelist /probin_common/ cross_section
   namelist /probin_common/ n_cells         ! number of cells in domain
   namelist /probin_common/ max_grid_size   ! max number of cells in a box
 
@@ -227,7 +225,6 @@ contains
     dim_in = 2
     prob_lo(1:MAX_SPACEDIM) = 0.d0
     prob_hi(1:MAX_SPACEDIM) = 1.d0
-    cross_section = 1.d0
     n_cells(1:MAX_SPACEDIM) = 1
     max_grid_size(1:MAX_SPACEDIM) = 1
 
@@ -345,11 +342,6 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) prob_hi(3)
-
-       case ('--cross_section')
-          farg = farg + 1
-          call get_command_argument(farg, value = fname)
-          read(fname, *) cross_section
 
        case ('--n_cells_x')
           farg = farg + 1

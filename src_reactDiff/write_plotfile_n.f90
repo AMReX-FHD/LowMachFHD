@@ -65,7 +65,7 @@ contains
 
     ! cell-centered plotfile
     call fabio_ml_multifab_write_d(plotdata, mla%mba%rr(:,1), sd_name, plot_names, &
-                                   mla%mba%pd(1), prob_lo, prob_hi, time, dx(1,:))
+                                   mla%mba%pd(1), prob_lo, prob_hi, time, dx(1,1:dm))
 
     do n=1,nlevs
       call multifab_destroy(plotdata(n))

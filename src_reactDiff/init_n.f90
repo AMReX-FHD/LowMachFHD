@@ -1,5 +1,6 @@
 module init_n_module
 
+  use bl_space
   use bl_types
   use bl_constants_module
   use ml_layout_module
@@ -10,7 +11,7 @@ module init_n_module
   use bl_random_module
   use BoxLibRNGs
   use probin_common_module, only: prob_lo, prob_hi, prob_type, initial_variance, nspecies, &
-                                  perturb_width, smoothing_width, use_bl_rng, cross_section
+                                  perturb_width, smoothing_width, use_bl_rng
   use probin_reactdiff_module, only: n_init_in, model_file_init, integer_populations
   
   implicit none
@@ -245,14 +246,14 @@ contains
           do species=1, nspecies
             call sample_integers(n_init(lo(1):hi(1),lo(2):hi(2),species), &
                      ncells=size(n_init(lo(1):hi(1),lo(2):hi(2),species)), &
-                     dv=dx(1)*dx(2)*cross_section)
+                     dv=product(dx(1:MAX_SPACEDIM)))
           end do
        
        else ! Make the number of molecules in each cell Poisson distributed with desired mean
        
           do j=lo(2),hi(2)
              do i=lo(1),hi(1)
-                call round_to_integers(n_init(i,j,1:nspecies), dv=dx(1)*dx(2)*cross_section)
+                call round_to_integers(n_init(i,j,1:nspecies), dv=product(dx(1:MAX_SPACEDIM)))
              end do
           end do    
            
@@ -443,7 +444,7 @@ contains
           do species=1, nspecies
             call sample_integers(n_init(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),species), &
                      ncells=size(n_init(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),species)), &
-                     dv=dx(1)*dx(2)*dx(3)*cross_section)
+                     dv=product(dx(1:MAX_SPACEDIM)))
           end do
        
        else ! Make the number of molecules in each cell Poisson distributed with desired mean
@@ -451,7 +452,8 @@ contains
           do k=lo(3),hi(3)
              do j=lo(2),hi(2)
                 do i=lo(1),hi(1)
-                   call round_to_integers(n_init(i,j,k,1:nspecies), dv=dx(1)*dx(2)*dx(3)*cross_section)
+                   call round_to_integers(n_init(i,j,k,1:nspecies), &
+                                          dv=product(dx(1:MAX_SPACEDIM)))
                 end do
              end do
           end do  

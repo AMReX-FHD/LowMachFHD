@@ -2,6 +2,7 @@ subroutine main_driver()
 
   use boxlib
   use bl_IO_module
+  use bl_space
   use ml_layout_module
   use init_lowmach_module
   use init_temp_module
@@ -256,25 +257,29 @@ subroutine main_driver()
   deallocate(pmask)
 
   ! set grid spacing at each level
-  ! the grid spacing is the same in each direction
-  allocate(dx(nlevs,dm))
-  dx(1,1:dm) = (prob_hi(1:dm)-prob_lo(1:dm)) / n_cells(1:dm)
+  allocate(dx(nlevs,MAX_SPACEDIM))
+  dx(1,1:MAX_SPACEDIM) = (prob_hi(1:MAX_SPACEDIM)-prob_lo(1:MAX_SPACEDIM)) &
+       / n_cells(1:MAX_SPACEDIM)
+  ! check that the grid spacing is the same in each direction for the first dm dimensions
   select case (dm) 
   case(2)
      if (dx(1,1) .ne. dx(1,2)) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy')
+        call bl_error('ERROR: main_driver.f90, in 2D we only support dx=dy')
      end if
   case(3)
      if ((dx(1,1) .ne. dx(1,2)) .or. (dx(1,1) .ne. dx(1,3))) then
-        call bl_error('ERROR: main_driver.f90, we only support dx=dy=dz')
+        call bl_error('ERROR: main_driver.f90, in 3D we only support dx=dy=dz')
      end if
   case default
      call bl_error('ERROR: main_driver.f90, dimension should be only equal to 2 or 3')
   end select
 
   ! use refined dx for next level
+  ! assume refinement ratio is the same in each direction
+  ! we do this because dx is allocated over MAX_SPACEDIM dimensions,
+  ! whereas mba is only allocated over dm dimensions
   do n=2,nlevs
-     dx(n,:) = dx(n-1,:) / mba%rr(n-1,:)
+     dx(n,:) = dx(n-1,:) / mba%rr(n-1,1)
   end do
 
   !=======================================================

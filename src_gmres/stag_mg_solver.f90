@@ -144,7 +144,7 @@ contains
     do n=1,nlevs_mg
 
        ! compute dx at this level of multigrid
-       dx_mg(n,:) = dx(1,:) * 2**(n-1)
+       dx_mg(n,1:dm) = dx(1,1:dm) * 2**(n-1)
 
        ! create the problem domain for this multigrid level
        pd = coarsen(pd_base,2**(n-1))
