@@ -8,16 +8,16 @@
  
   ! Problem specification
   !----------------------
-  dim_in = 2                       ! 2D or 3D  
+  dim_in = 3                       ! 2D or 3D  
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
-  prob_lo(1:3) = 0.  0.  0.        ! physical lo coordinate
-  prob_hi(1:3) = 32. 32. 1.e6      ! physical hi coordinate
-  n_cells(1:3) = 32  32  1         ! number of cells in domain
-  max_grid_size(1:3) = 16 16 1     ! max number of cells in a box
+  prob_lo(1:3) = 0.    0.    0.    ! physical lo coordinate
+  prob_hi(1:3) = 1600. 1600. 1600. ! physical hi coordinate
+  n_cells(1:3) = 16    16    16    ! number of cells in domain
+  max_grid_size(1:3) = 16 16 16    ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 0.1                   ! time step (if positive, fixed)
+  fixed_dt = 500                   ! time step (if positive, fixed)
   cfl = 0.5                        ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
@@ -31,7 +31,7 @@
 
   ! Physical parameters
   !--------------------
-  grav(1:2) = 0. 0.                ! gravity vector (negative is downwards)
+  grav(1:3) = 0. 0. 0.             ! gravity vector (negative is downwards)
   nspecies = 3
   molmass(1:3) = 1. 2. 3.          ! molecular masses for nspecies (mass per molecule, *not* molar mass)
   rhobar(1:3) = 2. 3. 3.85714      ! pure component densities for all species (chosen from EOS)
@@ -89,8 +89,8 @@
   ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
-  bc_lo(1:2) = -1 -1
-  bc_hi(1:2) = -1 -1
+  bc_lo(1:3) = -1 -1 -1
+  bc_hi(1:3) = -1 -1 -1
 
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions
@@ -104,8 +104,8 @@
   ! wallspeed_lo/hi(2,2) - zvel on y-face
   ! wallspeed_lo/hi(1,3) - xvel on z-face
   ! wallspeed_lo/hi(2,3) - yvel on z-face
-  wallspeed_lo(1,1:2) = 0. 0.
-  wallspeed_hi(1,1:2) = 0. 0.
+  wallspeed_lo(1,1:3) = 0. 0. 0.
+  wallspeed_hi(1,1:3) = 0. 0. 0.
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
@@ -114,17 +114,17 @@
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = -2      ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = 0      ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze full grid data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
   ! -dim=analyze full grid using HydroGrid and then project along dim so we also analyze projections
   ! It is better to use the conserved variables but it does not quite work for staggered
 
-  max_grid_projection(1:1) = 32  ! parallelization parameters
-  stats_int = 0                  ! Project grid for analysis (writes hstat and vstat files)
-                                 ! If positive, how often to compute mean and 
-                                 ! standard deviation over reduced dimensions
+  max_grid_projection(1:2) = 32 32  ! parallelization parameters
+  stats_int = 0                     ! Project grid for analysis (writes hstat and vstat files)
+                                    ! If positive, how often to compute mean and 
+                                    ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
   n_steps_skip = 20000    ! How many steps to skip > L^2/(chi*dt)
   analyze_conserved = F   ! Should we use conserved variables for the analysis
@@ -275,7 +275,7 @@
    writeVariancesVTK = T ! Should we save a VTK file
    nVariances = 7
    ! numbering: 1=rho-rho, 2=w1-w1, 3=w2-w2, 4=w3-w3, 5=w1-w2, 6=w1-w3, 7=w2-w3
-   variancePairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 7 0 7, 0 5 0 6, 0 5 0 7, 0 6 0 7"
+   variancePairs = "0 1 0 1, 0 6 0 6, 0 7 0 7, 0 8 0 8, 0 6 0 7, 0 6 0 8, 0 7 0 8"
       ! species1 variable1 species2 variable2
 
    ! Static structure factors
@@ -284,22 +284,24 @@
    writeAbsValue = T ! Only write absolute values of complex values to VTK file?
    writeTheory = -1 ! Write the theoretical prediction (-1=none, 0==continuum or 1=MAC)
    nStructureFactors = 7
-   structureFactorPairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 7 0 7, 0 5 0 6, 0 5 0 7, 0 6 0 7"
+   structureFactorPairs = "0 1 0 1, 0 6 0 6, 0 7 0 7, 0 8 0 8, 0 6 0 7, 0 6 0 8, 0 7 0 8"
 
    ! Dynamic structure factors:
-   nWavenumbers=10
+   nWavenumbers=0
    ! Shape (2,nWavenumbers):
-   selectedWavenumbers="0 1, 0 2, 2 2, 0 4, 2 4, 4 4, 0 8, 2 8, 4 8, 8 8"
+   selectedWavenumbers=""
    nSavedSnapshots=2000 ! Maximum time in S(k,t) will be (nSavedSnapshots/2)*dt*hydro_grid_int
       
    outputFolder = "."
-   filePrefix = "3species_dynamic"
+   filePrefix = "3species"
    axisToPrint = 2 ! 1=x, 2=y, 3=z axis
    periodic = T ! Is the system periodic along the y axes
 /
 
+! NOT USED HERE AFTER !
+
 &hydroAnalysisOptions
-! 1D grid after vertical projection (corresponds to vstat files)
+! 2D grid after vertical projection (corresponds to vstat files)
 ! NOTE: This namelist will be ignored if project_dir=0
 
    staggeredVelocities = 0 ! Are velocities on a staggered grid or not, (0, +1, or -1)*h/2
