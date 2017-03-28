@@ -83,7 +83,7 @@ contains
     integer :: ncells_tmp(nMaxDims)
     integer :: nlevs, dm, pdim, max_grid_dir(3), max_grid_projected(3)
     ! The analysis codes always works in 3D
-    real(dp_t) :: grid_dx(3)
+    real(dp_t) :: grid_dx(MAX_SPACEDIM)
     real(dp_t) :: heat_capacity(nspecies_in+1)
 
     nlevs = mla%nlevel
