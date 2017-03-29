@@ -26,13 +26,21 @@ contains
   ! compute diffusive, stochastic, and electric potential mass fluxes
   ! includes barodiffusion and thermodiffusion
   ! this computes "F = -rho W chi [Gamma grad x... ]"
+  ! Donev: Why is this routine necessary when we already have src_multiSpec/compute_mass_fluxdiv.f90 ?
+  ! I would very strongly prefer to avoid the very substantial code duplication between codes
+  ! especially inside the advance_timestep routines which are massive and hard to read by someone learning the codes now
+  ! When I diff this with src_multiSpec/compute_mass_fluxdiv.f90 the only difference is flux_diff versus flux_total
+  ! But we can handle that with optional flux_diff argument to src_multiSpec/compute_mass_fluxdiv.f90
+  ! or just pass flux_diff as flux_total (initialized to zero) when calling compute_mass_fluxdiv()
+  ! The electric stuff is just tacked on at the end, so it could be two separate calls one after the other instead
+  ! I propose a way to rewrite this below
   subroutine compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro, &
                                           diff_fluxdiv,stoch_fluxdiv, &
                                           Temp,flux_total,flux_diff, &
                                           dt,stage_time,dx,weights, &
                                           the_bc_tower, &
                                           Epot_fluxdiv,charge,grad_Epot,Epot, &
-                                          permittivity)
+                                          permittivity) ! Donev: Add a logical flag for whether to do electroneutral or not
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -72,6 +80,19 @@ contains
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"compute_mass_fluxdiv_charged")
+    
+    ! Donev: I propose the following rewrite:
+    call compute_mass_fluxdiv() ! Compute F=F_bar+F_tilde using existing routine
+    ! if(electroneutral) then
+    !    solve Poisson equation with epsilon=0 and compute Epot to return to caller
+    !    note no advective fluxes required in this case
+    !    project fluxes by adding div(A_Phi grad Phi)
+    ! else
+    !    call Epot_mass_fluxdiv() ! Add the electrostatic piece using Epot passed in
+    !    may be better to compute Epot here by solving the simple Poisson equation though
+    !    this way callers don't have to worry about Poisson solves. 
+    !    but one needs to check if this will work with all of the existing algorithms
+    ! end
 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
@@ -122,12 +143,16 @@ contains
        end do
     end do
 
-    if (use_charged_fluid .and. &
-        present(Epot_fluxdiv) .and. &
-        present(charge) .and. &
-        present(grad_Epot) .and. &
-        present(Epot) .and. &
-        present(permittivity)) then
+    ! Donev: Observe that modified densities rho+drho are used when computing charges. Is this what we want?
+    ! In particular, in the implicit method, do we want to make sure there is charge everywhere ad-hoc? Probably not
+    if (use_charged_fluid) then
+        if(.not.(
+           present(Epot_fluxdiv) .and. &
+           present(charge) .and. &
+           present(grad_Epot) .and. &
+           present(Epot) .and. &
+           present(permittivity))) &
+           call bl_abort("Must pass in charge-multifabs to compute_mass_fluxdiv_charged if use_charged_fluid=T"
        ! compute electric potential mass fluxes
        call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
                               flux_total,dx,the_bc_tower,charge,grad_Epot,Epot, &
@@ -149,6 +174,7 @@ contains
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)
 
+    ! Donev: We moved this to another spot in the non-charged code
     ! revert back rho to it's original form
     do n=1,nlevs
        call saxpy(rho(n),-1.0d0,drho(n),all=.true.)
