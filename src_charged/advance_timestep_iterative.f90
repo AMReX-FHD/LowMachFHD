@@ -310,11 +310,22 @@ contains
 
        if (l .gt. 1) then
 
-          ! compute adv_mass_fluxdiv_new
+          ! compute adv_mass_fluxdiv_new = div(-rho^{n+1,l} w^{n+1,l} v^{n+1,l})
           do n=1,nlevs
              call multifab_setval(adv_mass_fluxdiv_new(n),0.d0)
           end do
           call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_new,dx,1,nspecies)
+
+          ! compute mtemp = rho^{n+1,l} v^{n+1,l}
+          call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+
+          ! compute m_a_fluxdiv_new = div(-rho^{n+1,l} v^{n+1,l} v^{n+1,l})
+          do n=1,nlevs
+             do i=1,dm
+                call multifab_setval(m_a_fluxdiv_new(n,i),0.d0,all=.true.)
+             end do
+          end do
+          call mk_advective_m_fluxdiv(mla,umac,mtemp,m_a_fluxdiv_new,dx,the_bc_tower%bc_tower_array)
 
        end if
 
@@ -490,18 +501,6 @@ contains
        ! compute "new" Lorentz force
        call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                   charge_new,dx,the_bc_tower)
-
-       if (l .gt. 1) then
-
-          ! compute m_a_fluxdiv_new = div(-rho^{n+1,l} v^{n+1,l} v^{n+1,l})
-          do n=1,nlevs
-             do i=1,dm
-                call multifab_setval(m_a_fluxdiv_new(n,i),0.d0,all=.true.)
-             end do
-          end do
-          call mk_advective_m_fluxdiv(mla,umac,mtemp,m_a_fluxdiv_new,dx,the_bc_tower%bc_tower_array)
-
-       end if
 
        ! build gmres_rhs_v
        ! first set gmres_rhs_v = (mold - mtemp) / dt
