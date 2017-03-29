@@ -378,7 +378,7 @@ contains
        end if
 
        ! solve -div (epsilon + dt theta z^T A_Phi^{n+1,l}) grad Phi^{n+1,l+1} = z^T RHS
-       call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx, &
+       call ml_cc_solve(mla,solver_rhs,Epot,fine_flx,solver_alpha,solver_beta,dx(:,1:dm), &
                         the_bc_tower,Epot_bc_comp,verbose=mg_verbose)
 
        ! for periodic problems subtract off the average of Epot
