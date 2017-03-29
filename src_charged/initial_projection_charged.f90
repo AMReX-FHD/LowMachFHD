@@ -86,11 +86,11 @@ contains
     call build(bpt,"initial_projection_charged")
     
     if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5) then
-       allocate(weights(2)
+       allocate(weights(2))
        weights(:) = 0.d0
        weights(1) = 1.d0
     else
-       allocate(weights(1)
+       allocate(weights(1))
        weights(1) = 1.d0
     end if
 
@@ -286,6 +286,8 @@ contains
        end do
     end do
 
+    deallocate(weights)
+
     call destroy_bc_multifabs(mla)
 
     do n=1,nlevs
@@ -409,7 +411,7 @@ contains
        end do
     end do
 
-    deallocate(vel_bc_n,vel_bc_t,weights)
+    deallocate(vel_bc_n,vel_bc_t)
 
     call destroy(bpt)
 
