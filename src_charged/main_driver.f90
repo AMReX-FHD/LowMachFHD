@@ -660,14 +660,14 @@ subroutine main_driver()
                                         charge_old,charge_new,Epot, &
                                         permittivity)
       else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
+         if (use_charged_fluid) then
+            call bl_error("overdamped does not support charged yet")
+         end if
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                          Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                          diff_mass_fluxdiv, &
                                           stoch_mass_fluxdiv, &
-                                          dx,dt,time,the_bc_tower,istep, &
-                                          grad_Epot_old,grad_Epot_new, &
-                                          charge_old,charge_new,Epot, &
-                                          permittivity)
+                                          dx,dt,time,the_bc_tower,istep)
       else if (algorithm_type .eq. 3) then
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
