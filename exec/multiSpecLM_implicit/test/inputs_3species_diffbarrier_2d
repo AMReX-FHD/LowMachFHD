@@ -8,37 +8,38 @@
   !----------------------
   dim_in = 2                       ! 2D or 3D  
   prob_type = 2                    ! sets scalars, m, coefficients (see init.f90)
-  prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 32.d0 32.d0       ! physical hi coordinate
-  n_cells(1:2) = 64 64             ! number of cells in domain
-  max_grid_size(1:2) = 32 32       ! max number of cells in a box
+  prob_lo(1:3) = 0.  0.  0.        ! physical lo coordinate
+  prob_hi(1:3) = 64. 32. 1.e6      ! physical hi coordinate
+  n_cells(1:3) = 64  32  1         ! number of cells in domain
+  max_grid_size(1:3) = 32 32 1     ! max number of cells in a box
 
   ! Time-step control
   !----------------------
   ! The eigenvalues of the diffusion matrix here are 1 and 1.333
   ! so diffusive CFL stability limit is dx=0.25*1.0^2/1.333=0.19 or so
-  fixed_dt = 0.0375 ! 0.15d0 ! factor ~0.8 of stability limit ! time step (if positive, fixed)
-  cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
+  fixed_dt = 0.1                   ! time step (if positive, fixed)
+  cfl = 0.5                        ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 5500                  ! maximum number of time steps
+  max_step = 100000                ! maximum number of time steps
   plot_int = 0                     ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
-  print_int = 100                   ! how often to output EOS drift and sum of conserved quantities
+  print_int = 100                  ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 100            ! how often to call project_onto_eos
 
   ! Physical parameters
   !--------------------
-  grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
-  molmass(1:3) = 1.d0 1.d0 1.d0       ! molecular masses for nspecies (mass per molecule, *not* molar mass)
-  rhobar(1:3) = 1 1 1   ! pure component densities for all species (chosen from EOS)
+  grav(1:2) = 0. 0.                ! gravity vector (negative is downwards)
+  nspecies = 3
+  molmass(1:3) = 1. 1. 1.          ! molecular masses for nspecies (mass per molecule, *not* molar mass)
+  rhobar(1:3) = 1. 1. 1.           ! pure component densities for all species (chosen from EOS)
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
-  variance_coef_mom = 1  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 0 ! global scaling epsilon for stochastic mass forcing
-  k_B = 1e-6           ! Boltzmann's constant
+  variance_coef_mom = 1.           ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 0.          ! global scaling epsilon for stochastic mass forcing
+  k_B = 1.                         ! Boltzmann's constant
 
   ! Algorithm control / selection
   !----------------------
@@ -59,7 +60,7 @@
   ! positive = assume constant coefficients
   ! negative = assume spatially-varying coefficients
   visc_type = 1
-  visc_coef = 1000.d0         ! momentum diffusion coefficient 'eta'   
+  visc_coef = 100.       ! momentum diffusion coefficient 'eta'   
 
   advection_type = 0 ! 0 = centered explicit
                      ! 1 = unlimited bilinear bds in space and time
@@ -73,10 +74,10 @@
 
   ! Initial conditions
   !----------------------
-  u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = 1.d0   ! scale factor for smoothing initial profile
+  u_init(1:2) = 0. 0.       ! controls initial velocity
+  smoothing_width = 1.      ! scale factor for smoothing initial profile
 
-  initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
+  initial_variance = 1.     ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero)
 
   ! Boundary conditions
@@ -103,12 +104,12 @@
   ! wallspeed_lo/hi(2,2) - zvel on y-face
   ! wallspeed_lo/hi(1,3) - xvel on z-face
   ! wallspeed_lo/hi(2,3) - yvel on z-face
-  wallspeed_lo(1,1:2) = 0.d0 0.d0
-  wallspeed_hi(1,1:2) = 0.d0 0.d0
+  wallspeed_lo(1,1:2) = 0. 0.
+  wallspeed_hi(1,1:2) = 0. 0.
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
-  hydro_grid_int = 2    ! How often to call updateHydroGrid
+  hydro_grid_int = 1    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
@@ -121,11 +122,11 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 32  ! parallelization parameters
-  stats_int = 100                ! Project grid for analysis (writes hstat and vstat files)
+  stats_int = 10000              ! Project grid for analysis (writes hstat and vstat files)
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
   n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 500    ! How many steps to skip > L^2/(chi*dt)
+  n_steps_skip = 25000    ! How many steps to skip > L^2/(chi*dt)
   analyze_conserved = F   ! Should we use conserved variables for the analysis
                           ! (does not work well)
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
@@ -137,7 +138,6 @@
 
   ! Physical properties:
   !----------------------
-  nspecies = 3
   is_ideal_mixture = T ! If T assume Gamma=I (H=0) and simplify
   is_nonisothermal = F ! If T Soret effect will be included
   
@@ -148,13 +148,13 @@
   ! Number of elements is (nspecies*(nspecies-1)/2)
   ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
-  Dbar(1:3) = 2.0d0 1.d0 1.0d0        ! Maxwell-Stefan diffusion constant  
+  Dbar(1:3) = 2. 1. 1.               ! Maxwell-Stefan diffusion constant  
   
   ! Here these are NOT USED so commented out:
-  !H_offdiag(1:3) = 1.5d0 2.5d0 0.5d0  ! Off diagonal elements of H=d^2F/dx^2  
+  !H_offdiag(1:3) = 1.5 2.5 0.5  ! Off diagonal elements of H=d^2F/dx^2  
   ! These are vectors of length nspecies
-  !Dtherm(1:3) = 1.d0 1.d0 -2.d0      ! thermo-diffusion coefficients, only differences among elements matter
-  !H_diag(1:3) = 4.d0 3.d0 2.d0       ! Diagonal of H=d^2F/dx^2  
+  !Dtherm(1:3) = 1. 1. -2.      ! thermo-diffusion coefficients, only differences among elements matter
+  !H_diag(1:3) = 4. 3. 2.       ! Diagonal of H=d^2F/dx^2  
   
   ! Algorithmic options:
   !----------------------
@@ -165,7 +165,7 @@
   
   ! Initial and boundary conditions 
   !----------------------
-  T_init(1:2) = 1.0d0 1.0d0  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
+  T_init(1:2) = 1. 1.  ! initial values for temperature (bottom/top, inside/outside circle, etc.)
 
   ! initial values for w
   ! These are MASS FRACTIONS (concentrations), not partial densities
@@ -200,10 +200,10 @@
   precon_type = 1
 
   ! weighting of pressure when computing norms and inner products
-  p_norm_weight = 1.d0
+  p_norm_weight = 1.
 
   ! scale theta_alpha, beta, gamma, and b_u by this, and then scale x_p by the inverse
-  scale_factor = 1.d0
+  scale_factor = 1.
 
   ! MAC projection solver parameters:
   mg_verbose = 0        ! multigrid verbosity
@@ -233,13 +233,13 @@
   stag_mg_nsmooths_up = 2     ! number of smooths at each level on the way up
   stag_mg_nsmooths_bottom = 8 ! number of smooths at the bottom
   stag_mg_max_bottom_nlevels = 10 ! for stag_mg_bottom_solver=4, number of additional levels of multigrid
-  stag_mg_omega = 1.d0        ! weighted-jacobi omega coefficient
+  stag_mg_omega = 1.          ! weighted-jacobi omega coefficient
   stag_mg_smoother = 1        ! 0 = jacobi; 1 = 2*dm-color Gauss-Seidel
-  stag_mg_rel_tol = 1.d-9     ! relative tolerance stopping criteria
+  stag_mg_rel_tol = 1.e-9     ! relative tolerance stopping criteria
 
   ! GMRES solver parameters
-  gmres_rel_tol = 1.d-9 ! relative tolerance stopping criteria
-  gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
+  gmres_rel_tol = 1.e-9 ! relative tolerance stopping criteria
+  gmres_abs_tol = 0.    ! absolute tolerance stopping criteria
   gmres_verbose = 0     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20  ! max number of outer iterations
   gmres_max_inner = 5   ! max number of inner iterations, or restart number
@@ -330,7 +330,7 @@
    structureFactorPairs = "0 1 0 1, 0 5 0 5, 0 6 0 6, 0 5 0 6"
 
    ! Dynamic structure factors:
-   nWavenumbers=8
+   nWavenumbers=0
    ! Shape (2,nWavenumbers):
    selectedWavenumbers="2 0, 4 0, 6 0, 8 0, 10 0, 12 0, 14 0, 16 0"
    nSavedSnapshots=200
