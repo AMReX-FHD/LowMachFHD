@@ -82,7 +82,7 @@ contains
     call build(bpt,"compute_mass_fluxdiv_charged")
     
     ! Donev: I propose the following rewrite:
-    call compute_mass_fluxdiv() ! Compute F=F_bar+F_tilde using existing routine
+    ! call compute_mass_fluxdiv() ! Compute F=F_bar+F_tilde using existing routine
     ! if(electroneutral) then
     !    solve Poisson equation with epsilon=0 and compute Epot to return to caller
     !    note no advective fluxes required in this case
@@ -146,13 +146,14 @@ contains
     ! Donev: Observe that modified densities rho+drho are used when computing charges. Is this what we want?
     ! In particular, in the implicit method, do we want to make sure there is charge everywhere ad-hoc? Probably not
     if (use_charged_fluid) then
-        if(.not.(
+        if(.not.( &
            present(Epot_fluxdiv) .and. &
            present(charge) .and. &
            present(grad_Epot) .and. &
            present(Epot) .and. &
-           present(permittivity))) &
-           call bl_abort("Must pass in charge-multifabs to compute_mass_fluxdiv_charged if use_charged_fluid=T"
+           present(permittivity))) then
+           call bl_error("Must pass in charge-multifabs to compute_mass_fluxdiv_charged if use_charged_fluid=T")
+        end if
        ! compute electric potential mass fluxes
        call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
                               flux_total,dx,the_bc_tower,charge,grad_Epot,Epot, &
