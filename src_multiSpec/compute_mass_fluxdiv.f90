@@ -23,12 +23,9 @@ contains
 
   ! compute diffusive and stochastic mass fluxes
   ! includes barodiffusion and thermodiffusion
-  ! this computes "F = -rho W chi [Gamma grad x... ]"
-  subroutine compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
-                                  diff_fluxdiv,stoch_fluxdiv, &
-                                  Temp,flux_total, &
-                                  dt,stage_time,dx,weights, &
-                                  the_bc_tower)
+  subroutine compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,diff_fluxdiv,stoch_fluxdiv, &
+                                  Temp,flux_total,dt,stage_time,dx,weights,the_bc_tower, &
+                                  flux_diff,rhoWchi_out)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -43,6 +40,8 @@ contains
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
     type(bc_tower) , intent(in   )   :: the_bc_tower
+    type(multifab) , intent(inout), optional :: flux_diff(:,:)
+    type(multifab) , intent(inout), optional :: rhoWchi_out(:)
 
     ! local variables
     type(multifab) :: drho(mla%nlevel)           ! correction to rho
@@ -100,9 +99,16 @@ contains
     ! compute chi and zeta/Temp
     call compute_chi(mla,rho,rhotot,molarconc,chi,D_bar)
     call compute_zeta_by_Temp(mla,molarconc,D_bar,D_therm,Temp,zeta_by_Temp)
- 
+
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,chi,rhoWchi)
+
+    ! pass out a copy of rhoWchi (needed for the electric potential code)
+    if (present(rhoWchi_out)) then
+       do n=1,nlevs
+          call multifab_copy_c(rhoWchi_out(n),1,rhoWchi(n),1,nspecies**2,rhoWchi_out(n)%ng)
+       end do
+    end if
 
     ! reset total flux
     do n=1,nlevs
@@ -111,11 +117,19 @@ contains
        end do
     end do
 
-    ! compute mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
-    call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
+    ! compute diffusive mass fluxes, "F = -rho*W*chi*Gamma*grad(x) - ..."
+    call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
                                 diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                 flux_total,dx,the_bc_tower)
+
+    ! we need to save only the diffusive fluxes for the implicit potential algorithms
+    if (present(flux_diff)) then
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(flux_diff(n,i),1,flux_total(n,i),1,nspecies,0)
+          end do
+       end do
+    end if
 
     ! compute external forcing for manufactured solution and add to diff_fluxdiv
     call external_source(mla,rho,diff_fluxdiv,dx,stage_time)

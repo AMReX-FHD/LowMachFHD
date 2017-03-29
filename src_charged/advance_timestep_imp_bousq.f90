@@ -8,7 +8,7 @@ module advance_timestep_imp_bousq_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
-  use compute_mass_fluxdiv_charged_module
+  use compute_mass_fluxdiv_module
   use compute_HSE_pres_module
   use convert_m_to_umac_module
   use convert_rhoc_to_c_module
@@ -444,10 +444,10 @@ contains
     ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1,*}
     ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1,*} Z^{n:n+1}
     ! and flux_total for reservoir boundary conditions on velocity
-    call compute_mass_fluxdiv_charged(mla,rho_tmp,rhotot_tmp,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp,flux_total,flux_diff, &
-                                      dt,time,dx,weights,the_bc_tower)
+    call compute_mass_fluxdiv(mla,rho_tmp,rhotot_tmp,gradp_baro, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              Temp,flux_total, &
+                              dt,time,dx,weights,the_bc_tower)
 
     ! now fluxdivs contain "-div(F) = div (rho W chi Gamma grad x + ...)", etc.
     do n=1,nlevs
@@ -870,10 +870,11 @@ contains
     ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1}
     ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1} Z^{n+1:n+2}
     ! and flux_total for reservoir boundary conditions on velocity
-    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp,flux_total,flux_diff, &
-                                      dt,time,dx,weights,the_bc_tower)
+    call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              Temp,flux_total, &
+                              dt,time,dx,weights,the_bc_tower, &
+                              flux_diff)
 
     ! now fluxes contain "-div(F) = div (rho W chi Gamma grad x + ...)", etc.
     do n=1,nlevs

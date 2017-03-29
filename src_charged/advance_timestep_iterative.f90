@@ -8,7 +8,7 @@ module advance_timestep_iterative_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
-  use compute_mass_fluxdiv_charged_module
+  use compute_mass_fluxdiv_module
   use compute_HSE_pres_module
   use convert_m_to_umac_module
   use convert_rhoc_to_c_module
@@ -596,10 +596,11 @@ contains
        end if
 
        ! compute diff_mass_fluxdiv_new and stoch_mass_fluxdiv_new for gmres_rhs_p
-       call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         Temp,flux_total,flux_diff, &
-                                         dt,time,dx,weights,the_bc_tower)
+       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro, &
+                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                 Temp,flux_total, &
+                                 dt,time,dx,weights,the_bc_tower, &
+                                 flux_diff)
 
        if(present(gradPhiApprox) .and. (l==num_pot_iters)) then 
           ! compute grad(phi) approximation, z^T Fmass / z^T A_Phi
