@@ -374,7 +374,7 @@ contains
        end do
     end do
 
-    ! compute m_d_fluxdiv = A_0^n v^n
+    ! compute m_d_fluxdiv = (1/2) A_0^n v^n (to be used later)
     do n=1,nlevs
        do i=1,dm
           call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
@@ -382,12 +382,9 @@ contains
     end do
     call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
-
-    ! add (1/2) A_0^n v^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_mult_mult_s_c(m_d_fluxdiv(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -563,10 +560,9 @@ contains
     call diffusive_m_fluxdiv(mla,mtemp,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! add (1/2) A_0^n vbar^n to gmres_rhs_v
+    ! add A_0^n vbar^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(mtemp(n,i),1,0.5d0,1,0)
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
        end do
     end do
@@ -599,15 +595,6 @@ contains
        call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
     end do
 
-    ! multiply eta and kappa by 1/2 to put in proper form for gmres solve
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(eta(n)  ,1,1.d0/2.d0,1,eta(n)%ng)
-       call multifab_mult_mult_s_c(kappa(n),1,1.d0/2.d0,1,kappa(n)%ng)
-       do i=1,size(eta_ed,dim=2)
-          call multifab_mult_mult_s_c(eta_ed(n,i),1,1.d0/2.d0,1,eta_ed(n,i)%ng)
-       end do
-    end do
-
     ! set the initial guess to zero
     do n=1,nlevs
        do i=1,dm
@@ -634,15 +621,6 @@ contains
     ! norm of the preconditioned rhs from the predictor gmres solve.  otherwise
     ! for cases where du in the corrector should be small the gmres stalls
     gmres_abs_tol = max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol)
-
-    ! restore eta and kappa
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(eta(n)  ,1,2.d0,1,eta(n)%ng)
-       call multifab_mult_mult_s_c(kappa(n),1,2.d0,1,kappa(n)%ng)
-       do i=1,size(eta_ed,dim=2)
-          call multifab_mult_mult_s_c(eta_ed(n,i),1,2.d0,1,eta_ed(n,i)%ng)
-       end do
-    end do
 
     ! compute v^{n+1/2} = v^n + dumac
     ! compute pi^{n+1/2}= pi^n + dpi
