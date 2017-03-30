@@ -712,7 +712,7 @@ contains
              case (3)
                 dp1z => dataptr(Lorentz_force(n,3),i)
                 dp2z => dataptr(grad_Epot(n,3),i)
-
+                call bl_error("compute_Lorentz_force_3d for spatially-varying eps not written yet")
              end select
           end do
        end do
@@ -745,67 +745,63 @@ contains
 
       if (.false.) then
 
-      ! sigma11
-      do j=lo(2),hi(2)
-         do i=lo(1)-1,hi(1)+1
-            sigma11(i,j) = perm(i,j)*((Ex(i+1,j)+Ex(i,j))/2.d0)**2 &
-                 - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
+         ! sigma11
+         do j=lo(2),hi(2)
+            do i=lo(1)-1,hi(1)+1
+               sigma11(i,j) = perm(i,j)*((Ex(i+1,j)+Ex(i,j))/2.d0)**2 &
+                    - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
+            end do
          end do
-      end do
 
-      ! sigma22
-      do j=lo(2)-1,hi(2)+1
-         do i=lo(1),hi(1)
-            sigma22(i,j) = perm(i,j)*((Ey(i,j+1)+Ey(i,j))/2.d0)**2 &
-                 - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
+         ! sigma22
+         do j=lo(2)-1,hi(2)+1
+            do i=lo(1),hi(1)
+               sigma22(i,j) = perm(i,j)*((Ey(i,j+1)+Ey(i,j))/2.d0)**2 &
+                    - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
+            end do
          end do
-      end do
 
-      ! sigma21
-      do j=lo(2),hi(2)+1
-         do i=lo(1),hi(1)+1
-            sigma21(i,j) = 0.25d0*(perm(i-1,j-1)+perm(i,j-1)+perm(i-1,j)+perm(i,j)) &
-                 *((Ex(i,j-1))+(Ex(i,j))/2.d0) * ((Ey(i-1,j))+(Ey(i,j))/2.d0)
+         ! sigma21
+         do j=lo(2),hi(2)+1
+            do i=lo(1),hi(1)+1
+               sigma21(i,j) = 0.25d0*(perm(i-1,j-1)+perm(i,j-1)+perm(i-1,j)+perm(i,j)) &
+                    *((Ex(i,j-1))+(Ex(i,j))/2.d0) * ((Ey(i-1,j))+(Ey(i,j))/2.d0)
+            end do
          end do
-      end do
 
-      ! forcex
-      do j=lo(2),hi(2)
-         do i=lo(1),hi(1)+1
-            forcex(i,j) = (sigma11(i,j) - sigma11(i-1,j) + sigma21(i,j+1) - sigma21(i,j)) / dx(1)
+         ! forcex
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)+1
+               forcex(i,j) = (sigma11(i,j) - sigma11(i-1,j) + sigma21(i,j+1) - sigma21(i,j)) / dx(1)
+            end do
          end do
-      end do
 
-      ! forcey
-      do j=lo(2),hi(2)+1
-         do i=lo(1),hi(1)
-            forcey(i,j) = (sigma22(i,j) - sigma22(i,j-1) + sigma21(i+1,j) - sigma21(i,j)) / dx(1)
+         ! forcey
+         do j=lo(2),hi(2)+1
+            do i=lo(1),hi(1)
+               forcey(i,j) = (sigma22(i,j) - sigma22(i,j-1) + sigma21(i+1,j) - sigma21(i,j)) / dx(1)
+            end do
          end do
-      end do
-
 
       else
 
+         do j=lo(2),hi(2)
+            do i=lo(1),hi(1)+1
 
+               forcex(i,j) = forcex(i,j) - 0.5d0 * ( Ex(i,j)**2 + (0.25d0*(Ey(i,j)+Ey(i,j+1)+Ey(i-1,j)+Ey(i-1,j+1)))*2 ) &
+                    * (perm(i,j)-perm(i-1,j)) / dx(1)
 
-      do j=lo(2),hi(2)
-         do i=lo(1),hi(1)+1
-
-            forcex(i,j) = forcex(i,j) - 0.5d0 * ( Ex(i,j)**2 + (0.25d0*(Ey(i,j)+Ey(i,j+1)+Ey(i-1,j)+Ey(i-1,j+1)))*2 ) &
-                 * (perm(i,j)-perm(i-1,j)) / dx(1)
-
+            end do
          end do
-      end do
 
-      do j=lo(2),hi(2)+1
-         do i=lo(1),hi(1)
+         do j=lo(2),hi(2)+1
+            do i=lo(1),hi(1)
 
-            forcey(i,j) = forcey(i,j) - 0.5d0 * ( Ey(i,j)**2 + (0.25d0*(Ex(i,j)+Ex(i+1,j)+Ex(i,j-1)+Ex(i+1,j-1)))**2 ) &
-                 * (perm(i,j)-perm(i,j-1)) / dx(1)
+               forcey(i,j) = forcey(i,j) - 0.5d0 * ( Ey(i,j)**2 + (0.25d0*(Ex(i,j)+Ex(i+1,j)+Ex(i,j-1)+Ex(i+1,j-1)))**2 ) &
+                    * (perm(i,j)-perm(i,j-1)) / dx(1)
 
+            end do
          end do
-      end do
-
 
       end if
 
@@ -818,7 +814,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: E_ext(:,:)
 
-    integer :: n, nlevs, i, dm
+    integer :: n, nlevs, dm
 
     nlevs = mla%nlevel
     dm = mla%dim
