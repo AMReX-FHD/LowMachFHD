@@ -67,10 +67,11 @@ floatfix,
 
 \begin{document}
 
-\section*{Low-Mach Multispecies Midpoint Scheme}
+\section*{Low Mach Number Schemes for Reactive Multispecies}
 
-% scheme
-\begin{itemize}
+\subsection{Midpoint Inertial Scheme}
+
+\begin{enumerate}
 
 \item Calculate $\rho^{n+\myhalf}_i$:
 \begin{equation}
@@ -88,14 +89,15 @@ floatfix,
 \end{equation}
 \end{itemize}
 
-
 \item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
 \begin{align}
 &\divg\V{F}^{n+\myhalf} \equiv \divg\V{F}_\mathrm{det}^{n+\myhalf} + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf}_{\frac12} \frac{ \widetilde{\V{W}}^n_A + \widetilde{\V{W}}^n_B }{\sqrt{2}} \right), \\
 &R^{n+\myhalf}_i = \frac{1}{2}\left[ \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2) + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
 \end{align}
 
+\begin{itemize}
 \item Generate $\overline{\V{W}}^n_A$ and $\overline{\V{W}}^n_B$.
+\end{itemize}
 
 \item Solve for $\V{v}^{n+\myhalf}$ and $\pi^\paren{1}$:
 \begin{align}
@@ -114,7 +116,9 @@ floatfix,
 \rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i + \divg\left( -\rho^{n+\myhalf}_i \V{v}^{n+\myhalf} \right) \right].
 \end{equation} 
 
+\begin{itemize}
 \item Generate $\widetilde{\V{W}}^{n+1}_A$ and $\widetilde{\V{W}}^{n+1}_B$.
+\end{itemize}
 
 \item Calculate $\divg\V{F}^{n+1}$ and $R^{n+1}_i$:
 \begin{align}
@@ -136,11 +140,11 @@ floatfix,
 \divg\V{v}^{n+1}=S^{n+1}\equiv \sum_i \frac{-\divg\V{F}^{n+1}_i + m_i R^{n+1}_i }{\bar{\rho}_i}.
 \end{gather}
 
-\end{itemize}
+\end{enumerate}
 
 
 
-\subsection{Equations for the GMRES solver}
+\subsubsection{Equations for the GMRES solver}
 
 \begin{enumerate}
 
@@ -188,6 +192,53 @@ $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=2/\D{t
 $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=1/\D{t}$, $\alpha=\rho^{n+1}$, $\beta=\eta/2$ and $\gamma=\kappa/2$.
 \end{itemize}
 
+\end{enumerate}
+
+
+
+\clearpage
+
+\subsection{Midpoint Overdamped Scheme}
+
+\begin{enumerate}
+
+\item Calculate $\divg\V{F}^n$ and $R^n_i$:
+\begin{equation}
+\divg\V{F}^n \equiv \divg\V{F}^n_\mathrm{det} + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{W}}^n_A \right),
+\quad R^n_i = \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2).
+\end{equation}
+
+\item Solve for $\V{v}^n$ and $\pi^\paren{1}$:
+\begin{align}
+\grad\pi^\paren{1} & = \divg\left( \eta^n \overline{\grad}\V{v}^n \right)
++ \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}/2}} \overline{\V{W}}^n_A \right),
+\\
+\divg\V{v}^n & = S^n\equiv \sum_i \frac{-\divg\V{F}^n_i + m_i R^n_i }{\bar{\rho}_i}.
+\end{align}
+
+\item Calculate $\rho^{n+\myhalf}_i$:
+\begin{equation}
+\rho^{n+\myhalf}_i = \rho^n_i + \frac{\D{t}}{2} \left[ -\divg\V{F}^n_i + m_i R^n_i + \divg\left( -\rho^n_i \V{v}^n \right) \right].
+\end{equation}
+
+\item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
+\begin{align}
+&\divg\V{F}^{n+\myhalf} \equiv \divg\V{F}_\mathrm{det}^{n+\myhalf} + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf}_{\frac12} \frac{ \widetilde{\V{W}}^n_A + \widetilde{\V{W}}^n_B }{\sqrt{2}} \right), \\
+&R^{n+\myhalf}_i = \frac{1}{2}\left[ \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2) + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
+\end{align}
+
+\item Solve for $\V{v}^{n+\myhalf}$ and $\pi^\paren{2}$:
+\begin{align}
+\grad\pi^\paren{2} &= \divg\left( \eta^{n+\myhalf} \overline{\grad}\V{v}^{n+\myhalf} \right) 
++ \divg\left( \sqrt{\frac{\eta^{n+1/2} k_\mathrm{B}T}{\D{V}\D{t}} } \frac{\overline{\V{W}}^n_A + \overline{\V{W}}^n_B}{\sqrt{2}} \right),\\
+\divg\V{v}^{n+\myhalf} &= S^{n+\myhalf}\equiv \sum_i \frac{-\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i }{\bar{\rho}_i}.
+\end{align}
+
+\item Calculate $\rho^{n+1}_i$:
+\begin{equation}
+\rho^{n+1}_i = \rho^n_i + \D{t} \left[ -\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i + \divg\left( -\rho^{n+\myhalf}_i \V{v}^{n+\myhalf} \right) \right].
+\end{equation} 
 
 \end{enumerate}
+
 \end{document}
