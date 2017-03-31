@@ -69,6 +69,8 @@ floatfix,
 
 \section*{Low Mach Number Schemes for Reactive Multispecies}
 
+
+
 \subsection{Midpoint Inertial Scheme}
 
 \begin{enumerate}
@@ -78,12 +80,12 @@ floatfix,
 \rho^{n+\myhalf}_i = \rho^n_i + \frac{\D{t}}{2} \left[ -\divg\V{F}^n_i + m_i R^n_i + \divg\left( -\rho^n_i \V{v}^n \right) \right].
 \end{equation}
 \begin{itemize}
-\item The flux $\divg\V{F}^n$ and the rate $R^n_i$ are available from the previous time step (see Eqs.~\eqref{fluxdiv_2nd} and \eqref{chemrate_2nd}):
+\item The flux $\divg\V{F}^n$ and the rate $R^n_i$ are available from the previous time step (see Eqs.~\eqref{inertial_fluxdiv_2nd} and \eqref{inertial_chemrate_2nd}):
 \begin{equation}
 \divg\V{F}^n \equiv \divg\V{F}^n_\mathrm{det} + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{W}}^n_A \right),
 \quad R^n_i = \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2).
 \end{equation}
-\item The velocity field $\V{v}^n$ satisfies (see Eq.~\eqref{stokes_p_2nd}):
+\item The velocity field $\V{v}^n$ satisfies (see Eq.~\eqref{inertial_stokes_p_2nd}):
 \begin{equation}
 \divg\V{v}^n = \sum_i \frac{ -\divg\V{F}^n_i + m_i R^n_i }{\bar{\rho}_i}.
 \end{equation}
@@ -91,7 +93,12 @@ floatfix,
 
 \item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
 \begin{align}
-&\divg\V{F}^{n+\myhalf} \equiv \divg\V{F}_\mathrm{det}^{n+\myhalf} + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf}_{\frac12} \frac{ \widetilde{\V{W}}^n_A + \widetilde{\V{W}}^n_B }{\sqrt{2}} \right), \\
+&\divg\V{F}^{n+\myhalf} \equiv \divg\V{F}_\mathrm{det}^{n+\myhalf} + 
+{\color{red}
+\frac{1}{2}\left[ 
+\divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{W}}^n_A \right) 
++\divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^{n+\myhalf}_{\frac12} \widetilde{\V{W}}^n_B \right) 
+\right]}, \\
 &R^{n+\myhalf}_i = \frac{1}{2}\left[ \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2) + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
 \end{align}
 
@@ -101,12 +108,12 @@ floatfix,
 
 \item Solve for $\V{v}^{n+\myhalf}$ and $\pi^\paren{1}$:
 \begin{align}
-\label{stokes_v_1st}
+\label{inertial_stokes_v_1st}
 \frac{\rho^{n+\myhalf}\V{v}^{n+\myhalf}-\rho^n\V{v}^n}{\D{t}/2} + \grad\pi^\paren{1}
 & = \divg\left(-\rho^n\V{v}^n\V{v}^n\right) + \divg\left( \eta^{n+\myhalf} \overline{\grad}\V{v}^{n+\myhalf} \right)
 + \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}/2} } \overline{\V{W}}^n_A \right),
 \\
-\label{stokes_p_1st}
+\label{inertial_stokes_p_1st}
 \divg\V{v}^{n+\myhalf}
 & = S^{n+\myhalf}\equiv \sum_i \frac{-\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i }{\bar{\rho}_i}.
 \end{align}
@@ -122,21 +129,21 @@ floatfix,
 
 \item Calculate $\divg\V{F}^{n+1}$ and $R^{n+1}_i$:
 \begin{align}
-\label{fluxdiv_2nd}
+\label{inertial_fluxdiv_2nd}
 & \divg\V{F}^{n+1} \equiv \divg\V{F}_\mathrm{det}^{n+1} + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^{n+1}_{\frac12} \widetilde{\V{W}}^{n+1}_A \right), \\
-\label{chemrate_2nd}
-& R^{n+1}_i = \frac{1}{\D{V}\D{t}/2}\sum_r \mathcal{P}_A(a^{n+1}_r\D{V}\D{t}/2).
+\label{inertial_chemrate_2nd}
+& R^{n+1}_i = \frac{1}{\D{V}\D{t}/2}\sum_r \nu_{sr}\mathcal{P}_A(a^{n+1}_r\D{V}\D{t}/2).
 \end{align}
 
 \item Solve for $\V{v}^{n+1}$ and $\pi^\paren{2}$:
 \begin{gather}
-\label{stokes_v_2nd}
+\label{inertial_stokes_v_2nd}
 \begin{split}
 \frac{\rho^{n+1}\V{v}^{n+1}-\rho^n\V{v}^n}{\D{t}} + \grad\pi^\paren{2}
 &= \divg\left(-\rho^{n+\myhalf}\V{v}^{n+\myhalf}\V{v}^{n+\myhalf}\right) + \frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^{n+1} \overline{\grad}\V{v}^{n+1} \right) \\
 &+ \divg\left( \sqrt{\frac{\eta^{n+1/2} k_\mathrm{B}T}{\D{V}\D{t}} } \frac{\overline{\V{W}}^n_A + \overline{\V{W}}^n_B}{\sqrt{2}} \right),
 \end{split} \\
-\label{stokes_p_2nd}
+\label{inertial_stokes_p_2nd}
 \divg\V{v}^{n+1}=S^{n+1}\equiv \sum_i \frac{-\divg\V{F}^{n+1}_i + m_i R^{n+1}_i }{\bar{\rho}_i}.
 \end{gather}
 
@@ -148,14 +155,14 @@ floatfix,
 
 \begin{enumerate}
 
-\item In order to solve Eqs.~\eqref{stokes_v_1st} and \eqref{stokes_p_1st}, we use $\V{v}^{n+\myhalf}=\bar{\V{v}}^n+\d\V{v}$ and $\pi^\paren{1}=\pi+\d{\pi}$.
+\item In order to solve Eqs.~\eqref{inertial_stokes_v_1st} and \eqref{inertial_stokes_p_1st}, we use $\V{v}^{n+\myhalf}=\bar{\V{v}}^n+\d\V{v}$ and $\pi^\paren{1}=\pi+\d{\pi}$.
 
 \begin{itemize}
 \item $\bar{\V{v}}^n$ is obtained from $\V{v}^n$ so that it satisfies the boundary conditions.
 \item $\pi$ is $\pi^\paren{2}$ of the previous time step.
 \item $\d{\V{v}}$ and $\d{\pi}$ satisfy
 \begin{gather}
-\label{gmres_v_1st}
+\label{inertial_gmres_v_1st}
 \begin{split}
 \frac{\rho^{n+\myhalf}\d{\V{v}}}{\D{t}/2} - \divg\left(\eta^{n+\myhalf}\overline{\grad}\d{\V{v}}\right) + \grad\d{\pi}
 & = \frac{\rho^n\V{v}^n-\rho^{n+\myhalf}\bar{\V{v}}^n}{\D{t}/2} - \grad\pi 
@@ -163,21 +170,21 @@ floatfix,
 & + \divg\left( \eta^{n+\myhalf} \overline{\grad}\bar{\V{v}}^n \right)
 + \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}/2} } \overline{\V{W}}^n_A \right),
 \end{split} \\
-\label{gmres_p_1st}
+\label{inertial_gmres_p_1st}
 -\divg\d{\V{v}} = \divg\bar{\V{v}}^n-S^{n+\myhalf}.
 \end{gather}
-\item By the GMRES solver, Eqs.~\eqref{gmres_v_1st} and \eqref{gmres_p_1st} are solved for $(\V{x}_{\V{v}},x_p)=(\d{\V{v}},\d{\pi})$, where $\V{b}_{\V{v}}$ and $b_p$ are given as the right-hand sides of Eqs.~\eqref{gmres_v_1st} and \eqref{gmres_p_1st} and 
-$\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=2/\D{t}$, $\alpha=\rho^{n+\myhalf}$, $\beta=\eta/2$ and $\gamma=\kappa/2$.
+\item By the GMRES solver, Eqs.~\eqref{inertial_gmres_v_1st} and \eqref{inertial_gmres_p_1st} are solved for $(\V{x}_{\V{v}},x_p)=(\d{\V{v}},\d{\pi})$, where $\V{b}_{\V{v}}$ and $b_p$ are given as the right-hand sides of Eqs.~\eqref{inertial_gmres_v_1st} and \eqref{inertial_gmres_p_1st} and 
+$\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=2/\D{t}$, $\alpha=\rho^{n+\myhalf}$, $\beta=\eta^{n+\myhalf}$ and $\gamma=\kappa^{n+\myhalf}$.
 \end{itemize}
 
-\item Similarly, to solve Eqs.~\eqref{stokes_v_2nd} and \eqref{stokes_p_2nd}, we use $\V{v}^{n+1}=\bar{\V{v}}^{n+\myhalf}+\d\V{v}$ and $\pi^\paren{2}=\pi+\d{\pi}$.
+\item Similarly, to solve Eqs.~\eqref{inertial_stokes_v_2nd} and \eqref{inertial_stokes_p_2nd}, we use $\V{v}^{n+1}=\bar{\V{v}}^{n+\myhalf}+\d\V{v}$ and $\pi^\paren{2}=\pi+\d{\pi}$.
 
 \begin{itemize}
 \item $\bar{\V{v}}^{n+\myhalf}$ is obtained from $\V{v}^{n+\myhalf}$ so that it satisfies the boundary conditions.
 \item $\pi$ is $\pi^\paren{1}$ of the current time step.
 \item $\d{\V{v}}$ and $\d{\pi}$ satisfy
 \begin{gather}
-\label{gmres_v_2nd}
+\label{inertial_gmres_v_2nd}
 \begin{split}
 \frac{\rho^{n+1}\d{\V{v}}}{\D{t}} - \frac{1}{2}\divg\left(\eta^{n+1}\overline{\grad}\d{\V{v}}\right) + & \grad\d{\pi}
 = \frac{\rho^n\V{v}^n-\rho^{n+1}\bar{\V{v}}^{n+\myhalf}}{\D{t}} - \grad\pi 
@@ -185,11 +192,10 @@ $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=2/\D{t
 & + \frac{1}{2}\divg\left( \eta^n \overline{\grad}\V{v}^n + \eta^{n+1} \overline{\grad}\bar{\V{v}}^{n+\myhalf} \right)
 + \divg\left( \sqrt{\frac{\eta^{n+\myhalf} k_\mathrm{B}T}{\D{V}\D{t}} } \frac{\overline{\V{W}}^n_A + \overline{\V{W}}^n_B}{\sqrt{2}} \right),
 \end{split} \\
-\label{gmres_p_2nd}
+\label{inertial_gmres_p_2nd}
 -\divg\d{\V{v}} = \divg\bar{\V{v}}^{n+\myhalf}-S^{n+1}.
 \end{gather}
-\item By the GMRES solver, Eqs.~\eqref{gmres_v_1st} and \eqref{gmres_p_1st} are solved for $(\V{x}_{\V{v}},x_p)=(\d{\V{v}},\d{\pi})$, where $\V{b}_{\V{v}}$ and $b_p$ are given as the right-hand sides of Eqs.~\eqref{gmres_v_1st} and \eqref{gmres_p_1st} and 
-$\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=1/\D{t}$, $\alpha=\rho^{n+1}$, $\beta=\eta/2$ and $\gamma=\kappa/2$.
+\item By the GMRES solver, Eqs.~\eqref{inertial_gmres_v_2nd} and \eqref{inertial_gmres_p_2nd} are solved for $(\V{x}_{\V{v}},x_p)=(\d{\V{v}},\d{\pi})$, where $\V{b}_{\V{v}}$ and $b_p$ are given as the right-hand sides of Eqs.~\eqref{inertial_gmres_v_2nd} and \eqref{inertial_gmres_p_2nd} and $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=1/\D{t}$, $\alpha=\rho^{n+1}$, $\beta=\eta^{n+1}/2$ and $\gamma=\kappa^{n+1}/2$.
 \end{itemize}
 
 \end{enumerate}
@@ -198,7 +204,17 @@ $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=1/\D{t
 
 \clearpage
 
+
+
 \subsection{Midpoint Overdamped Scheme}
+
+\begin{itemize}
+\item Generate $\overline{\V{W}}^n_A$ and $\overline{\V{W}}^n_B$.
+\end{itemize}
+
+\begin{itemize}
+\item Generate $\widetilde{\V{W}}^n_A$ and $\widetilde{\V{W}}^n_B$.
+\end{itemize}
 
 \begin{enumerate}
 
@@ -210,9 +226,11 @@ $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=1/\D{t
 
 \item Solve for $\V{v}^n$ and $\pi^\paren{1}$:
 \begin{align}
+\label{overdamped_stokes_v_1st}
 \grad\pi^\paren{1} & = \divg\left( \eta^n \overline{\grad}\V{v}^n \right)
 + \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}/2}} \overline{\V{W}}^n_A \right),
 \\
+\label{overdamped_stokes_p_1st}
 \divg\V{v}^n & = S^n\equiv \sum_i \frac{-\divg\V{F}^n_i + m_i R^n_i }{\bar{\rho}_i}.
 \end{align}
 
@@ -223,14 +241,21 @@ $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=1/\D{t
 
 \item Calculate $\divg\V{F}^{n+\myhalf}$ and $R^{n+\myhalf}_i$:
 \begin{align}
-&\divg\V{F}^{n+\myhalf} \equiv \divg\V{F}_\mathrm{det}^{n+\myhalf} + \divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}} } \V{L}^{n+\myhalf}_{\frac12} \frac{ \widetilde{\V{W}}^n_A + \widetilde{\V{W}}^n_B }{\sqrt{2}} \right), \\
+&\divg\V{F}^{n+\myhalf} \equiv \divg\V{F}_\mathrm{det}^{n+\myhalf} +
+{\color{red}
+\frac{1}{2}\left[ 
+\divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^n_{\frac12} \widetilde{\V{W}}^n_A \right) 
++\divg\left( \sqrt{ \frac{2k_\mathrm{B}}{\D{V}\D{t}/2} } \V{L}^{n+\myhalf}_{\frac12} \widetilde{\V{W}}^n_B \right) 
+\right]},\\
 &R^{n+\myhalf}_i = \frac{1}{2}\left[ \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_A(a^n_r\D{V}\D{t}/2) + \frac{1}{\D{V}\D{t}/2} \sum_r \nu_{sr} \mathcal{P}_B\left( \left[ 2 a^{n+\myhalf}_r - a^n_r \right]^+ \D{V}\D{t}/2 \right) \right].
 \end{align}
 
 \item Solve for $\V{v}^{n+\myhalf}$ and $\pi^\paren{2}$:
 \begin{align}
+\label{overdamped_stokes_v_2nd}
 \grad\pi^\paren{2} &= \divg\left( \eta^{n+\myhalf} \overline{\grad}\V{v}^{n+\myhalf} \right) 
 + \divg\left( \sqrt{\frac{\eta^{n+1/2} k_\mathrm{B}T}{\D{V}\D{t}} } \frac{\overline{\V{W}}^n_A + \overline{\V{W}}^n_B}{\sqrt{2}} \right),\\
+\label{overdamped_stokes_p_2nd}
 \divg\V{v}^{n+\myhalf} &= S^{n+\myhalf}\equiv \sum_i \frac{-\divg\V{F}^{n+\myhalf}_i + m_i R^{n+\myhalf}_i }{\bar{\rho}_i}.
 \end{align}
 
@@ -240,5 +265,50 @@ $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=1/\D{t
 \end{equation} 
 
 \end{enumerate}
+
+
+
+\subsubsection{Equations for the GMRES solver}
+
+\begin{enumerate}
+
+\item In order to solve Eqs.~\eqref{overdamped_stokes_v_1st} and \eqref{overdamped_stokes_p_1st}, we use $\V{v}^n=\bar{\V{v}}^{n-\myhalf}+\d\V{v}$ and $\pi^\paren{1}=\pi+\d{\pi}$.
+
+\begin{itemize}
+\item $\bar{\V{v}}^{n-\myhalf}$ is obtained from $\V{v}^{n-\myhalf}$ so that it satisfies the boundary conditions.
+\item $\pi$ is $\pi^\paren{2}$ of the previous time step.
+\item $\d{\V{v}}$ and $\d{\pi}$ satisfy
+\begin{align}
+\label{overdamped_gmres_v_1st}
+-\divg\left(\eta^n\overline{\grad}\d{\V{v}}\right) + \grad\d{\pi}
+& = -\grad\pi 
+ + \divg\left( \eta^n \overline{\grad}\bar{\V{v}}^{n-\myhalf} \right)
++ \divg\left( \sqrt{\frac{\eta^n k_\mathrm{B}T}{\D{V}\D{t}/2} } \overline{\V{W}}^n_A \right),\\
+\label{overdamped_gmres_p_1st}
+-\divg\d{\V{v}} & = \divg\bar{\V{v}}^{n-\myhalf}-S^n.
+\end{align}
+\item By the GMRES solver, Eqs.~\eqref{overdamped_gmres_v_1st} and \eqref{overdamped_gmres_p_1st} are solved for $(\V{x}_{\V{v}},x_p)=(\d{\V{v}},\d{\pi})$, where $\V{b}_{\V{v}}$ and $b_p$ are given as the right-hand sides of Eqs.~\eqref{overdamped_gmres_v_1st} and \eqref{overdamped_gmres_p_1st} and $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=0$, $\alpha=\rho^n$, $\beta=\eta^n$ and $\gamma=\kappa^n$.
+\end{itemize}
+
+\item Similarly, to solve Eqs.~\eqref{overdamped_stokes_v_2nd} and \eqref{overdamped_stokes_p_2nd}, we use $\V{v}^{n+\myhalf}=\bar{\V{v}}^n+\d\V{v}$ and $\pi^\paren{2}=\pi+\d{\pi}$.
+
+\begin{itemize}
+\item $\bar{\V{v}}^n$ is obtained from $\V{v}^n$ so that it satisfies the boundary conditions.
+\item $\pi$ is $\pi^\paren{1}$ of the current time step.
+\item $\d{\V{v}}$ and $\d{\pi}$ satisfy
+\begin{align}
+\label{overdamped_gmres_v_2nd}
+-\divg\left(\eta^{n+\myhalf}\overline{\grad}\d{\V{v}}\right) + \grad\d{\pi}
+& = -\grad\pi +\divg\left( \eta^{n+\myhalf} \overline{\grad}\bar{\V{v}}^n \right)
++ \divg\left( \sqrt{\frac{\eta^{n+\myhalf} k_\mathrm{B}T}{\D{V}\D{t}} } \frac{\overline{\V{W}}^n_A + \overline{\V{W}}^n_B}{\sqrt{2}} \right), \\
+\label{overdamped_gmres_p_2nd}
+-\divg\d{\V{v}} & = \divg\bar{\V{v}}^n-S^{n+\myhalf}.
+\end{align}
+\item By the GMRES solver, Eqs.~\eqref{overdamped_gmres_v_2nd} and \eqref{overdamped_gmres_p_2nd} are solved for $(\V{x}_{\V{v}},x_p)=(\d{\V{v}},\d{\pi})$, where $\V{b}_{\V{v}}$ and $b_p$ are given as the right-hand sides of Eqs.~\eqref{overdamped_gmres_v_2nd} and \eqref{overdamped_gmres_p_2nd} and $\mathcal{A}=\Theta\alpha\mathcal{I}-\mathcal{A}_0$ is defined by $\Theta=0$, $\alpha=\rho^{n+\myhalf}$, $\beta=\eta^{n+\myhalf}$ and $\gamma=\kappa^{n+\myhalf}$.
+\end{itemize}
+
+\end{enumerate}
+
+
 
 \end{document}
