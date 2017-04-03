@@ -2,6 +2,7 @@ module fluid_charge_module
  
   use ml_layout_module
   use convert_stag_module
+  use div_and_grad_module
   use define_bc_module
   use bc_module
   use mass_flux_utilities_module
@@ -10,7 +11,7 @@ module fluid_charge_module
   use multifab_physbc_module
   use zero_edgeval_module
   use probin_common_module, only: molmass, k_B, total_volume, rhobar, nspecies
-  use probin_charged_module, only: charge_per_mass, dpdt_factor, is_electroneutral, &
+  use probin_charged_module, only: charge_per_mass, dpdt_factor, &
                                    dielectric_const, dielectric_type, E_ext_type
 
   implicit none
@@ -371,7 +372,7 @@ contains
        call multifab_build(D_bar(n),        mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
        do i=1,dm
-          call multifab_build_edge(    rhoWchi_face(n,i),  mla%la(n), nspecies**2, 0, i)
+          call multifab_build_edge(rhoWchi_face(n,i),  mla%la(n), nspecies**2, 0, i)
        end do
     end do
 
@@ -653,6 +654,8 @@ contains
     integer :: ng_1,ng_2,ng_3
     integer :: lo(mla%dim),hi(mla%dim)
 
+    type(multifab) :: temp_cc(mla%nlevel)
+
     ! pointers into multifabs
     real(kind=dp_t), pointer :: dp1x(:,:,:,:)
     real(kind=dp_t), pointer :: dp1y(:,:,:,:)
@@ -665,27 +668,53 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
+    ! temporary multifab to hold div(eps*E)
+    do n=1,nlevs
+       call multifab_build(temp_cc(n),mla%la(n),1,1)
+    end do
+
     ! Lorentz force = E div (eps*E) - (1/2) E^2 grad(eps)
 
-    if (is_electroneutral) then
-
-       ! discretize E div(eps*E)
-
-       call bl_error("compute_Lorentz_force: need to write code to discretize E div(eps*E)")
-
-    else
-
-       ! compute E div (eps*E) = q*E
-
-       call average_cc_to_face(nlevs,charge,Lorentz_force,1,scal_bc_comp,1, &
-                               the_bc_tower%bc_tower_array)
+    ! discretize E div(eps*E)
+    ! start by averaging epsilon to faces
+    ! store this in Lorentz_force temporarily
+    if (dielectric_type .eq. 0) then
        do n=1,nlevs
           do i=1,dm
-             call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
+             call multifab_setval(Lorentz_force(n,i),dielectric_const,all=.true.)
           end do
        end do
-
+    else
+       call average_cc_to_face(nlevs,permittivity,Lorentz_force,1,c_bc_comp,1, &
+                               the_bc_tower%bc_tower_array)
     end if
+
+    ! multiply by E to get eps*E on faces
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
+       end do
+    end do
+
+    ! take divergence of eps*E and put it in cc_temp
+    call compute_div(mla,Lorentz_force,temp_cc,dx,1,1,1)
+
+    ! fill ghost cells for eps*E
+    do n=1,nlevs
+       call multifab_fill_boundary(temp_cc(n))
+       call multifab_physbc(temp_cc(n),1,c_bc_comp,1,the_bc_tower%bc_tower_array(n))
+    end do
+
+    ! average div(eps*E) to faces, store in Lorentz_force
+    call average_cc_to_face(nlevs,temp_cc,Lorentz_force,1,c_bc_comp,1, &
+                            the_bc_tower%bc_tower_array)
+
+    ! multiply by E to get E*div(eps*E) on faces
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
+       end do
+    end do       
 
     if (dielectric_type .ne. 0) then
 
@@ -725,6 +754,10 @@ contains
     ! set force on walls to be zero since normal velocity is zero
     do n=1,nlevs
        call zero_edgeval_walls(Lorentz_force(n,:),1,1,the_bc_tower%bc_tower_array(n))
+    end do
+
+    do n=1,nlevs
+       call multifab_destroy(temp_cc(n))
     end do
 
   contains
