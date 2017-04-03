@@ -10,7 +10,7 @@ module fluid_charge_module
   use multifab_physbc_module
   use zero_edgeval_module
   use probin_common_module, only: molmass, k_B, total_volume, rhobar, nspecies
-  use probin_charged_module, only: charge_per_mass, dpdt_factor, &
+  use probin_charged_module, only: charge_per_mass, dpdt_factor, is_electroneutral, &
                                    dielectric_const, dielectric_type, E_ext_type
 
   implicit none
@@ -573,7 +573,6 @@ contains
 
     do n=1,nlevs
        call multifab_fill_boundary(permittivity(n))
-       ! FIXME
        call multifab_physbc(permittivity(n),1,c_bc_comp,1,the_bc_tower%bc_tower_array(n))
     end do
 
@@ -666,21 +665,18 @@ contains
     dm = mla%dim
     nlevs = mla%nlevel
 
-    if (dielectric_type .eq. 0) then
+    ! Lorentz force = E div (eps*E) - (1/2) E^2 grad(eps)
 
-       ! constant permittivity.  force = q*E
+    if (is_electroneutral) then
 
-       call average_cc_to_face(nlevs,charge,Lorentz_force,1,scal_bc_comp,1, &
-                               the_bc_tower%bc_tower_array)
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_c(Lorentz_force(n,i),1,grad_Epot(n,i),1,1,0)
-          end do
-       end do
+       ! discretize E div(eps*E)
+
+       call bl_error("compute_Lorentz_force: need to write code to discretize E div(eps*E)")
 
     else
 
-       ! compute q*E.  the -(1/2) E dot E grad(eps) is below
+       ! compute E div (eps*E) = q*E
+
        call average_cc_to_face(nlevs,charge,Lorentz_force,1,scal_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
        do n=1,nlevs
@@ -689,7 +685,12 @@ contains
           end do
        end do
 
+    end if
+
+    if (dielectric_type .ne. 0) then
+
        ! spatially-varying permittivity
+       ! add -(1/2) E^2 grad(eps)
 
        ng_1 = Lorentz_force(1,1)%ng
        ng_2 = grad_Epot(1,1)%ng
@@ -706,27 +707,29 @@ contains
              hi = upb(get_box(Lorentz_force(n,1),i))
              select case (dm)
              case (2)
-                call compute_Lorentz_force_2d(dp1x(:,:,1,1),dp1y(:,:,1,1),ng_1, &
+                call Lorentz_force_gradeps_2d(dp1x(:,:,1,1),dp1y(:,:,1,1),ng_1, &
                                               dp2x(:,:,1,1),dp2y(:,:,1,1),ng_2, &
                                               dp3(:,:,1,1),ng_3,lo,hi,dx(n,:))
              case (3)
                 dp1z => dataptr(Lorentz_force(n,3),i)
                 dp2z => dataptr(grad_Epot(n,3),i)
-                call bl_error("compute_Lorentz_force_3d for spatially-varying eps not written yet")
+                call Lorentz_force_gradeps_3d(dp1x(:,:,:,1),dp1y(:,:,:,1),dp1z(:,:,:,1),ng_1, &
+                                              dp2x(:,:,:,1),dp2y(:,:,:,1),dp2z(:,:,:,1),ng_2, &
+                                              dp3(:,:,:,1),ng_3,lo,hi,dx(n,:))
              end select
           end do
        end do
 
-       ! set force on walls to be zero since normal velocity is zero
-       do n=1,nlevs
-          call zero_edgeval_walls(Lorentz_force(n,:),1,1,the_bc_tower%bc_tower_array(n))
-       end do
-
     end if
+
+    ! set force on walls to be zero since normal velocity is zero
+    do n=1,nlevs
+       call zero_edgeval_walls(Lorentz_force(n,:),1,1,the_bc_tower%bc_tower_array(n))
+    end do
 
   contains
 
-    subroutine compute_Lorentz_force_2d(forcex,forcey,ng_1,Ex,Ey,ng_2,perm,ng_3,lo,hi,dx)
+    subroutine Lorentz_force_gradeps_2d(forcex,forcey,ng_1,Ex,Ey,ng_2,perm,ng_3,lo,hi,dx)
 
       integer         :: lo(:),hi(:),ng_1,ng_2,ng_3
       real(kind=dp_t) :: forcex(lo(1)-ng_1:,lo(2)-ng_1:)
@@ -739,73 +742,71 @@ contains
       ! local variables
       integer :: i,j
 
-      real(kind=dp_t) :: sigma11(lo(1)-1:hi(1)+1,lo(2)  :hi(2)  ) ! cell-centered, 1 ghost cell in x
-      real(kind=dp_t) :: sigma21(lo(1)  :hi(1)+1,lo(2)  :hi(2)+1) ! nodal in x and y, no ghost cells
-      real(kind=dp_t) :: sigma22(lo(1)  :hi(1)  ,lo(2)-1:hi(2)+1) ! cell-centered, 1 ghost cell in y
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)+1
+         forcex(i,j) = forcex(i,j) - 0.5d0 * ( Ex(i,j)**2 + (0.25d0*(Ey(i,j)+Ey(i,j+1)+Ey(i-1,j)+Ey(i-1,j+1)))*2 ) &
+              * (perm(i,j)-perm(i-1,j)) / dx(1)
+      end do
+      end do
 
-      if (.false.) then
+      do j=lo(2),hi(2)+1
+      do i=lo(1),hi(1)
+         forcey(i,j) = forcey(i,j) - 0.5d0 * ( Ey(i,j)**2 + (0.25d0*(Ex(i,j)+Ex(i+1,j)+Ex(i,j-1)+Ex(i+1,j-1)))**2 ) &
+              * (perm(i,j)-perm(i,j-1)) / dx(1)
+      end do
+      end do
 
-         ! sigma11
-         do j=lo(2),hi(2)
-            do i=lo(1)-1,hi(1)+1
-               sigma11(i,j) = perm(i,j)*((Ex(i+1,j)+Ex(i,j))/2.d0)**2 &
-                    - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
-            end do
-         end do
+    end subroutine Lorentz_force_gradeps_2d
 
-         ! sigma22
-         do j=lo(2)-1,hi(2)+1
-            do i=lo(1),hi(1)
-               sigma22(i,j) = perm(i,j)*((Ey(i,j+1)+Ey(i,j))/2.d0)**2 &
-                    - 0.5d0*perm(i,j)*(((Ex(i+1,j)+Ex(i,j))/2.d0)**2 + ((Ey(i,j+1)+Ey(i,j))/2.d0)**2)
-            end do
-         end do
+    subroutine Lorentz_force_gradeps_3d(forcex,forcey,forcez,ng_1,Ex,Ey,Ez,ng_2,perm,ng_3,lo,hi,dx)
 
-         ! sigma21
-         do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)+1
-               sigma21(i,j) = 0.25d0*(perm(i-1,j-1)+perm(i,j-1)+perm(i-1,j)+perm(i,j)) &
-                    *((Ex(i,j-1))+(Ex(i,j))/2.d0) * ((Ey(i-1,j))+(Ey(i,j))/2.d0)
-            end do
-         end do
+      integer         :: lo(:),hi(:),ng_1,ng_2,ng_3
+      real(kind=dp_t) :: forcex(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
+      real(kind=dp_t) :: forcey(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
+      real(kind=dp_t) :: forcez(lo(1)-ng_1:,lo(2)-ng_1:,lo(3)-ng_1:)
+      real(kind=dp_t) ::     Ex(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+      real(kind=dp_t) ::     Ey(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+      real(kind=dp_t) ::     Ez(lo(1)-ng_2:,lo(2)-ng_2:,lo(3)-ng_2:)
+      real(kind=dp_t) ::   perm(lo(1)-ng_3:,lo(2)-ng_3:,lo(3)-ng_3:)
+      real(kind=dp_t) :: dx(:)
 
-         ! forcex
-         do j=lo(2),hi(2)
-            do i=lo(1),hi(1)+1
-               forcex(i,j) = (sigma11(i,j) - sigma11(i-1,j) + sigma21(i,j+1) - sigma21(i,j)) / dx(1)
-            end do
-         end do
+      ! local variables
+      integer :: i,j,k
 
-         ! forcey
-         do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)
-               forcey(i,j) = (sigma22(i,j) - sigma22(i,j-1) + sigma21(i+1,j) - sigma21(i,j)) / dx(1)
-            end do
-         end do
+      do k=lo(3),hi(3)
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)+1
+         forcex(i,j,k) = forcex(i,j,k) - 0.5d0 * ( Ex(i,j,k)**2 &
+              + (0.25d0*(Ey(i,j,k)+Ey(i,j+1,k)+Ey(i-1,j,k)+Ey(i-1,j+1,k)))*2 &
+              + (0.25d0*(Ez(i,j,k)+Ez(i,j,k+1)+Ez(i-1,j,k)+Ez(i-1,j,k+1)))*2 ) &
+              * (perm(i,j,k)-perm(i-1,j,k)) / dx(1)
+      end do
+      end do
+      end do
 
-      else
+      do k=lo(3),hi(3)
+      do j=lo(2),hi(2)+1
+      do i=lo(1),hi(1)
+         forcey(i,j,k) = forcey(i,j,k) - 0.5d0 * ( Ey(i,j,k)**2 &
+              + (0.25d0*(Ex(i,j,k)+Ex(i+1,j,k)+Ex(i,j-1,k)+Ex(i+1,j-1,k)))**2 &
+              + (0.25d0*(Ez(i,j,k)+Ez(i,j,k+1)+Ez(i,j-1,k)+Ez(i,j-1,k+1)))**2 ) &
+              * (perm(i,j,k)-perm(i,j-1,k)) / dx(2)
+      end do
+      end do
+      end do
 
-         do j=lo(2),hi(2)
-            do i=lo(1),hi(1)+1
+      do k=lo(3),hi(3)+1
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
+         forcez(i,j,k) = forcez(i,j,k) - 0.5d0 * ( Ez(i,j,k)**2 &
+              + (0.25d0*(Ex(i,j,k)+Ex(i+1,j,k)+Ex(i,j,k-1)+Ex(i+1,j,k-1)))**2 &
+              + (0.25d0*(Ey(i,j,k)+Ey(i,j+1,k)+Ey(i,j,k-1)+Ey(i,j+1,k-1)))**2 ) &
+              * (perm(i,j,k)-perm(i,j,k-1)) / dx(3)
+      end do
+      end do
+      end do
 
-               forcex(i,j) = forcex(i,j) - 0.5d0 * ( Ex(i,j)**2 + (0.25d0*(Ey(i,j)+Ey(i,j+1)+Ey(i-1,j)+Ey(i-1,j+1)))*2 ) &
-                    * (perm(i,j)-perm(i-1,j)) / dx(1)
-
-            end do
-         end do
-
-         do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)
-
-               forcey(i,j) = forcey(i,j) - 0.5d0 * ( Ey(i,j)**2 + (0.25d0*(Ex(i,j)+Ex(i+1,j)+Ex(i,j-1)+Ex(i+1,j-1)))**2 ) &
-                    * (perm(i,j)-perm(i,j-1)) / dx(1)
-
-            end do
-         end do
-
-      end if
-
-    end subroutine compute_Lorentz_force_2d
+    end subroutine Lorentz_force_gradeps_3d
 
   end subroutine compute_Lorentz_force
 
