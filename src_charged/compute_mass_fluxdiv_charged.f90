@@ -27,7 +27,7 @@ contains
   ! compute diffusive, stochastic, and electric potential mass fluxes
   ! includes barodiffusion and thermodiffusion
   subroutine compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro,diff_fluxdiv,stoch_fluxdiv, &
-                                          Temp,flux_total,dt,stage_time,dx,weights,the_bc_tower, &
+                                          Temp,total_mass_flux,dt,stage_time,dx,weights,the_bc_tower, &
                                           Epot_fluxdiv,charge,grad_Epot,Epot,permittivity, &
                                           flux_diff) ! Donev: Add a logical flag for whether to do electroneutral or not
        
@@ -38,7 +38,7 @@ contains
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
-    type(multifab) , intent(inout)   :: flux_total(:,:)
+    type(multifab) , intent(inout)   :: total_mass_flux(:,:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -81,7 +81,7 @@ contains
     end do
 
     call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,diff_fluxdiv,stoch_fluxdiv, &
-                              Temp,flux_total,dt,stage_time,dx,weights,the_bc_tower, &
+                              Temp,total_mass_flux,dt,stage_time,dx,weights,the_bc_tower, &
                               flux_diff,rhoWchi)
 
     ! Donev: Observe that modified densities rho+drho are used when computing charges. Is this what we want?
@@ -89,7 +89,7 @@ contains
     if (use_charged_fluid) then
        ! compute electric potential mass fluxes
        call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                              flux_total,dx,the_bc_tower,charge,grad_Epot,Epot, &
+                              total_mass_flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
                               permittivity)
     end if
       

@@ -23,8 +23,8 @@ module diffusive_mass_fluxdiv_module
 contains
 
   subroutine diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
-                                    diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
-                                    flux_total,dx,the_bc_tower)
+                                    diff_mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
+                                    total_mass_flux,dx,the_bc_tower)
 
     ! this computes divergence of "F = -rho*W*chi*Gamma*grad(x) - ..."
 
@@ -34,11 +34,11 @@ contains
     type(multifab) , intent(in   )  :: molarconc(:)
     type(multifab) , intent(in   )  :: rhoWchi(:)
     type(multifab) , intent(in   )  :: Gama(:)
-    type(multifab) , intent(inout)  :: diff_fluxdiv(:)
+    type(multifab) , intent(inout)  :: diff_mass_fluxdiv(:)
     type(multifab) , intent(in   )  :: Temp(:)
     type(multifab) , intent(in   )  :: zeta_by_Temp(:)
     type(multifab) , intent(in   )  :: gradp_baro(:,:)
-    type(multifab) , intent(inout)  :: flux_total(:,:)
+    type(multifab) , intent(inout)  :: total_mass_flux(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_tower) , intent(in   )  :: the_bc_tower
 
@@ -46,7 +46,7 @@ contains
     integer i,dm,n,nlevs
 
     ! local array of multifabs for grad and div; one for each direction
-    type(multifab) :: flux(mla%nlevel,mla%dim)
+    type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
     
     type(bl_prof_timer), save :: bpt
 
@@ -60,29 +60,29 @@ contains
        do i=1,dm
           ! flux(i) is face-centered, has nspecies component, zero ghost 
           ! cells & nodal in direction i
-          call multifab_build_edge(flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do   
     
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
     call diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,&
-                             zeta_by_Temp,gradp_baro,flux,dx,the_bc_tower)
+                             zeta_by_Temp,gradp_baro,diff_mass_flux,dx,the_bc_tower)
     
-    ! add fluxes to flux_total
+    ! add fluxes to total_mass_flux
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(flux_total(n,i),1,flux(n,i),1,nspecies,0)
+          call multifab_plus_plus_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
        end do
     end do
 
     ! compute divergence of determinstic flux 
-    call compute_div(mla,flux,diff_fluxdiv,dx,1,1,nspecies)
+    call compute_div(mla,diff_mass_flux,diff_mass_fluxdiv,dx,1,1,nspecies)
     
     ! destroy the multifab to free the memory
     do n=1,nlevs
        do i=1,dm
-          call multifab_destroy(flux(n,i))
+          call multifab_destroy(diff_mass_flux(n,i))
        end do
     end do
 
@@ -91,7 +91,7 @@ contains
   end subroutine diffusive_mass_fluxdiv
  
   subroutine diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
-                                 Temp,zeta_by_Temp,gradp_baro,flux,dx, &
+                                 Temp,zeta_by_Temp,gradp_baro,diff_mass_flux,dx, &
                                  the_bc_tower)
 
     ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
@@ -105,7 +105,7 @@ contains
     type(multifab) , intent(in   ) :: Temp(:)  
     type(multifab) , intent(in   ) :: zeta_by_Temp(:)  
     type(multifab) , intent(in   ) :: gradp_baro(:,:)
-    type(multifab) , intent(inout) :: flux(:,:)
+    type(multifab) , intent(inout) :: diff_mass_flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -116,7 +116,7 @@ contains
     type(multifab)  :: rhoWchi_face(mla%nlevel,mla%dim)
     type(multifab)  :: Gama_face(mla%nlevel,mla%dim)
     type(multifab)  :: zeta_by_Temp_face(mla%nlevel,mla%dim)
-    type(multifab)  :: flux_Temp(mla%nlevel,mla%dim)
+    type(multifab)  :: thermodiff_mass_flux(mla%nlevel,mla%dim)
     type(multifab)  :: baro_coef(mla%nlevel)
     type(multifab)  :: baro_coef_face(mla%nlevel,mla%dim)
   
@@ -136,7 +136,7 @@ contains
           call multifab_build_edge(Gama_face(n,i),        mla%la(n),nspecies**2,0,i)
           call multifab_build_edge(zeta_by_Temp_face(n,i),mla%la(n),nspecies,   0,i)
           call multifab_build_edge(baro_coef_face(n,i),mla%la(n),nspecies,   0,i)
-          call multifab_build_edge(flux_Temp(n,i),        mla%la(n),1,          0,i)
+          call multifab_build_edge(thermodiff_mass_flux(n,i),        mla%la(n),1,          0,i)
        end do
     end do 
 
@@ -149,7 +149,7 @@ contains
     !==================================! 
 
     ! calculate face-centrered grad(molarconc) 
-    call compute_grad(mla, molarconc, flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
+    call compute_grad(mla, molarconc, diff_mass_flux, dx, 1, mol_frac_bc_comp, 1, nspecies, & 
                       the_bc_tower%bc_tower_array)
 
     ! compute face-centered Gama from cell-centered values 
@@ -159,7 +159,7 @@ contains
     ! compute Gama*grad(molarconc): Gama is nspecies^2 matrix; grad(x) is nspecies component vector 
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(mla, flux(n,i), Gama_face(n,i), nspecies)
+          call matvec_mul(mla, diff_mass_flux(n,i), Gama_face(n,i), nspecies)
        end do
     end do    
 
@@ -170,7 +170,7 @@ contains
        !====================================! 
  
        ! calculate face-centrered grad(T) 
-       call compute_grad(mla, Temp, flux_Temp, dx, 1, temp_bc_comp, 1, 1, the_bc_tower%bc_tower_array)
+       call compute_grad(mla, Temp, thermodiff_mass_flux, dx, 1, temp_bc_comp, 1, 1, the_bc_tower%bc_tower_array)
     
        ! compute face-centered zeta_by_T from cell-centered values 
        call average_cc_to_face(nlevs, zeta_by_Temp, zeta_by_Temp_face, 1, tran_bc_comp, &
@@ -180,7 +180,7 @@ contains
        do n=1,nlevs
           do i=1,dm
              do s=1,nspecies
-                call multifab_mult_mult_c(zeta_by_Temp_face(n,i), s, flux_Temp(n,i), 1, 1)
+                call multifab_mult_mult_c(zeta_by_Temp_face(n,i), s, thermodiff_mass_flux(n,i), 1, 1)
              end do
           end do
        end do  
@@ -190,7 +190,7 @@ contains
        !===============================! 
        do n=1,nlevs
           do i=1,dm
-             call multifab_plus_plus(flux(n,i), zeta_by_Temp_face(n,i), 0)
+             call multifab_plus_plus(diff_mass_flux(n,i), zeta_by_Temp_face(n,i), 0)
           end do
        end do  
    
@@ -223,7 +223,7 @@ contains
        !===============================! 
        do n=1,nlevs
           do i=1,dm
-             call multifab_plus_plus(flux(n,i), baro_coef_face(n,i), 0)
+             call multifab_plus_plus(diff_mass_flux(n,i), baro_coef_face(n,i), 0)
           end do
        end do  
 
@@ -232,22 +232,22 @@ contains
     ! compute -rhoWchi * (Gamma*grad(x) + ... ) on faces
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(mla, flux(n,i), rhoWchi_face(n,i), nspecies)
-          call multifab_mult_mult_s(flux(n,i),-1.d0)
+          call matvec_mul(mla, diff_mass_flux(n,i), rhoWchi_face(n,i), nspecies)
+          call multifab_mult_mult_s(diff_mass_flux(n,i),-1.d0)
        end do
     end do    
 
     ! If there are walls with zero-flux boundary conditions
     if(is_nonisothermal) then
        do n=1,nlevs
-          call zero_edgeval_walls(flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
+          call zero_edgeval_walls(diff_mass_flux(n,:),1,nspecies,the_bc_tower%bc_tower_array(n))
        end do   
     end if
 
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then
        !write(*,*) "Checking conservation of deterministic fluxes"
-       call correction_flux(mla, rho, rhotot, flux, the_bc_tower%bc_tower_array)
+       call correction_flux(mla, rho, rhotot, diff_mass_flux, the_bc_tower%bc_tower_array)
     end if
     
     ! destroy B^(-1)*Gama multifab to prevent leakage in memory
@@ -257,7 +257,7 @@ contains
           call multifab_destroy(rhoWchi_face(n,i))
           call multifab_destroy(Gama_face(n,i))
           call multifab_destroy(zeta_by_Temp_face(n,i))
-          call multifab_destroy(flux_Temp(n,i))
+          call multifab_destroy(thermodiff_mass_flux(n,i))
           call multifab_destroy(baro_coef_face(n,i))
        end do
     end do

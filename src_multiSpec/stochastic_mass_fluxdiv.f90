@@ -34,15 +34,15 @@ module stochastic_mass_fluxdiv_module
 contains
   
   subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,sqrtLonsager_fc, &
-                                     stoch_fluxdiv,flux_total,dx,dt,weights, &
+                                     stoch_mass_fluxdiv,total_mass_flux,dx,dt,weights, &
                                      the_bc_level,increment_in)
 
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
     type(multifab) , intent(in   )   :: rhotot(:)
     type(multifab) , intent(in   )   :: sqrtLonsager_fc(:,:)
-    type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
-    type(multifab) , intent(inout)   :: flux_total(:,:)
+    type(multifab) , intent(inout)   :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout)   :: total_mass_flux(:,:)
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: weights(:)         
@@ -50,7 +50,7 @@ contains
     logical  ,  intent(in), optional :: increment_in
 
     ! Local variables
-    type(multifab)   :: flux(mla%nlevel,mla%dim)        ! face-centered stochastic flux
+    type(multifab)   :: stoch_mass_flux(mla%nlevel,mla%dim) ! face-centered stochastic flux
     integer          :: n,nlevs,i,dm,rng
     real(kind=dp_t)  :: variance
     logical :: increment
@@ -72,22 +72,22 @@ contains
     ! build multifabs 
     do n=1,nlevs
        do i=1,dm
-          call multifab_build_edge(flux(n,i), mla%la(n), nspecies,    0, i)
+          call multifab_build_edge(stoch_mass_flux(n,i), mla%la(n), nspecies,    0, i)
        end do
     end do
  
-    ! set flux to zero
+    ! set stoch_mass_flux to zero
     do n=1,nlevs
        do i = 1,dm
-          call setval(flux(n,i), 0.d0, all=.true.)   
+          call setval(stoch_mass_flux(n,i), 0.d0, all=.true.)   
        end do   
     end do   
     
-    ! convert stoch_W_fc into flux
+    ! convert stoch_W_fc into stoch_mass_flux
     do n=1,nlevs
        do i = 1,dm
           do rng=1,n_rngs
-             call saxpy(flux(n,i), weights(rng), stoch_W_fc(n,i,rng))
+             call saxpy(stoch_mass_flux(n,i), weights(rng), stoch_W_fc(n,i,rng))
           end do   
        end do   
     end do
@@ -95,46 +95,46 @@ contains
     ! compute variance X sqrtLonsager-face X W(0,1) 
     do n=1,nlevs
        do i=1,dm
-          call matvec_mul(mla, flux(n,i), sqrtLonsager_fc(n,i), nspecies)
-          call multifab_mult_mult_s(flux(n,i), variance, 0)
+          call matvec_mul(mla, stoch_mass_flux(n,i), sqrtLonsager_fc(n,i), nspecies)
+          call multifab_mult_mult_s(stoch_mass_flux(n,i), variance, 0)
        end do
     end do  
     
     ! sync the fluxes at the boundaries
     do n=1,nlevs
        do i=1,dm
-          call multifab_internal_sync(flux(n,i))
-          call multifab_fill_boundary(flux(n,i))  
+          call multifab_internal_sync(stoch_mass_flux(n,i))
+          call multifab_fill_boundary(stoch_mass_flux(n,i))  
        end do
     end do
 
     ! If there are walls with zero-flux boundary conditions
     if(is_nonisothermal) then
        do n=1,nlevs
-          call zero_edgeval_walls(flux(n,:),1,nspecies,the_bc_level(n))
+          call zero_edgeval_walls(stoch_mass_flux(n,:),1,nspecies,the_bc_level(n))
        end do   
     end if
 
     !correct fluxes to ensure mass conservation to roundoff
     if (correct_flux .and. (nspecies .gt. 1)) then
        !write(*,*) "Checking conservation of stochastic fluxes"
-       call correction_flux(mla, rho, rhotot, flux, the_bc_level)
+       call correction_flux(mla, rho, rhotot, stoch_mass_flux, the_bc_level)
     end if
 
-    ! add fluxes to flux_total
+    ! add fluxes to total_mass_flux
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(flux_total(n,i),1,flux(n,i),1,nspecies,0)
+          call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
        end do
     end do
  
     ! compute divergence of stochastic flux
-    call compute_div(mla,flux,stoch_fluxdiv,dx,1,1,nspecies,increment)
+    call compute_div(mla,stoch_mass_flux,stoch_mass_fluxdiv,dx,1,1,nspecies,increment)
 
     ! free the multifab allocated memory
     do n=1,nlevs
        do i=1,dm
-          call multifab_destroy(flux(n,i))
+          call multifab_destroy(stoch_mass_flux(n,i))
        end do
     end do
 

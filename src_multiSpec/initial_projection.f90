@@ -61,7 +61,7 @@ contains
     type(multifab) :: phi(mla%nlevel)
     type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
-    type(multifab) :: flux_total(mla%nlevel,mla%dim)
+    type(multifab) :: total_mass_flux(mla%nlevel,mla%dim)
 
     real(kind=dp_t) :: weights(1)
     
@@ -81,9 +81,9 @@ contains
        call multifab_build(divu(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(   rhotot_fc(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(rhototinv_fc(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(  flux_total(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(      rhotot_fc(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(   rhototinv_fc(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(total_mass_flux(n,i),mla%la(n),nspecies,0,i)
        end do       
     end do
 
@@ -102,7 +102,7 @@ contains
     call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               Temp, &
-                              flux_total,dt,0.d0,dx,weights, &
+                              total_mass_flux,dt,0.d0,dx,weights, &
                               the_bc_tower)
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
@@ -112,12 +112,12 @@ contains
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
        do i=1,dm
-          call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
+          call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
        end do
     end do
 
     ! set the Dirichlet velocity value on reservoir faces
-    call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
+    call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
     ! set mac_rhs to "-S = div(F_i/rho_i)"
     do n=1,nlevs
@@ -197,7 +197,7 @@ contains
        do i=1,dm
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(rhototinv_fc(n,i))
-          call multifab_destroy(flux_total(n,i))
+          call multifab_destroy(total_mass_flux(n,i))
        end do
     end do
 

@@ -24,8 +24,8 @@ contains
   ! compute diffusive and stochastic mass fluxes
   ! includes barodiffusion and thermodiffusion
   subroutine compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,diff_fluxdiv,stoch_fluxdiv, &
-                                  Temp,flux_total,dt,stage_time,dx,weights,the_bc_tower, &
-                                  flux_diff,rhoWchi_out)
+                                  Temp,total_mass_flux,dt,stage_time,dx,weights, &
+                                  the_bc_tower,flux_diff,rhoWchi_out)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -34,7 +34,7 @@ contains
     type(multifab) , intent(inout)   :: diff_fluxdiv(:)
     type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
-    type(multifab) , intent(inout)   :: flux_total(:,:)
+    type(multifab) , intent(inout)   :: total_mass_flux(:,:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -113,20 +113,20 @@ contains
     ! reset total flux
     do n=1,nlevs
        do i=1,dm
-          call setval(flux_total(n,i),0.d0,all=.true.)
+          call setval(total_mass_flux(n,i),0.d0,all=.true.)
        end do
     end do
 
     ! compute diffusive mass fluxes, "F = -rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
                                 diff_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
-                                flux_total,dx,the_bc_tower)
+                                total_mass_flux,dx,the_bc_tower)
 
     ! we need to save only the diffusive fluxes for the implicit potential algorithms
     if (present(flux_diff)) then
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(flux_diff(n,i),1,flux_total(n,i),1,nspecies,0)
+             call multifab_copy_c(flux_diff(n,i),1,total_mass_flux(n,i),1,nspecies,0)
           end do
        end do
     end if
@@ -147,7 +147,7 @@ contains
        call compute_sqrtLonsager_fc(mla,rho,rhotot,sqrtLonsager_fc,dx)
 
        call stochastic_mass_fluxdiv(mla,rho,rhotot, &
-                                    sqrtLonsager_fc,stoch_fluxdiv,flux_total,&
+                                    sqrtLonsager_fc,stoch_fluxdiv,total_mass_flux,&
                                     dx,dt,weights,the_bc_tower%bc_tower_array)
     else
        do n=1,nlevs

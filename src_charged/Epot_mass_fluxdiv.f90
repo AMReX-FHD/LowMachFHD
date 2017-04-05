@@ -27,7 +27,7 @@ module Epot_mass_fluxdiv_module
 contains
 
   subroutine Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                               flux_total,dx,the_bc_tower,charge,grad_Epot,Epot, &
+                               total_mass_flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
                                permittivity)
 
     ! this computes "Epot_fluxdiv = -div(F) = div(A_Phi grad Phi)"
@@ -38,7 +38,7 @@ contains
     type(multifab) , intent(inout)  :: Epot_fluxdiv(:)
     type(multifab) , intent(in   )  :: Temp(:)
     type(multifab) , intent(in   )  :: rhoWchi(:)
-    type(multifab) , intent(inout)  :: flux_total(:,:)
+    type(multifab) , intent(inout)  :: total_mass_flux(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_tower) , intent(in   )  :: the_bc_tower
     type(multifab) , intent(inout)  :: charge(:)
@@ -73,10 +73,10 @@ contains
     call Epot_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
                         permittivity)
     
-    ! add fluxes to flux_total
+    ! add fluxes to total_mass_flux
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(flux_total(n,i),1,flux(n,i),1,nspecies,0)
+          call multifab_plus_plus_c(total_mass_flux(n,i),1,flux(n,i),1,nspecies,0)
        end do
     end do
 

@@ -14,10 +14,10 @@ module reservoir_bc_fill_module
 
 contains
 
-  subroutine reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_level)
+  subroutine reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(in   ) :: flux_total(:,:) ! should contain sum of diffusive and stochastic mass fluxes
+    type(multifab) , intent(in   ) :: total_mass_flux(:,:) ! should contain sum of diffusive and stochastic mass fluxes
     type(multifab) , intent(inout) :: vel_bc_n(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
@@ -39,24 +39,24 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    ng_f = flux_total(1,1)%ng
+    ng_f = total_mass_flux(1,1)%ng
     ng_b = vel_bc_n(1,1)%ng
 
     do n=1,nlevs
-       do i=1,nfabs(flux_total(1,1))
-          fpx => dataptr(flux_total(n,1), i)
-          fpy => dataptr(flux_total(n,2), i)
+       do i=1,nfabs(total_mass_flux(1,1))
+          fpx => dataptr(total_mass_flux(n,1), i)
+          fpy => dataptr(total_mass_flux(n,2), i)
           vpx => dataptr(vel_bc_n(n,1), i)
           vpy => dataptr(vel_bc_n(n,2), i)
-         lo =  lwb(get_box(flux_total(n,1), i))
-         hi =  upb(get_box(flux_total(n,1), i))
+         lo =  lwb(get_box(total_mass_flux(n,1), i))
+         hi =  upb(get_box(total_mass_flux(n,1), i))
           select case (dm)
           case (2)
              call reservoir_bc_fill_2d(fpx(:,:,1,:),fpy(:,:,1,:),ng_f, &
                                        vpx(:,:,1,1),vpy(:,:,1,1),ng_b, &
                                        lo,hi,the_bc_level(n)%phys_bc_level_array(i,:,:))
           case (3)
-             fpz => dataptr(flux_total(n,3), i)
+             fpz => dataptr(total_mass_flux(n,3), i)
              vpz => dataptr(vel_bc_n(n,3), i)
              call reservoir_bc_fill_3d(fpx(:,:,:,:),fpy(:,:,:,:),fpz(:,:,:,:),ng_f, &
                                        vpx(:,:,:,1),vpy(:,:,:,1),vpz(:,:,:,1),ng_b, &
