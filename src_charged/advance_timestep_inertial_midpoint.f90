@@ -525,6 +525,7 @@ contains
     end if
 
     ! set the Dirichlet velocity value on reservoir faces
+    ! FIXME - does not work with ito interpretation
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     if (use_charged_fluid) then

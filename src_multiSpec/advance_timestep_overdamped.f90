@@ -27,6 +27,7 @@ module advance_timestep_overdamped_module
                                   variance_coef_mom, restart, &
                                   barodiffusion_type, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
+  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type
   use analysis_module
 
   implicit none
@@ -101,6 +102,8 @@ contains
     type(multifab) ::   rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: flux_total(mla%nlevel,mla%dim)
 
+    type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
+
     integer :: i,dm,n,nlevs
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
@@ -138,6 +141,12 @@ contains
           call multifab_build_edge( flux_total(n,i),mla%la(n),nspecies,0,i)
        end do
     end do
+
+    if (variance_coef_mass .ne. 0.d0) then
+       do n=1,nlevs
+          call multifab_build(stoch_mass_fluxdiv_old(n),mla%la(n),nspecies,0)
+       end do
+    end if
 
     do n=1,nlevs
        call setval(rho_update(n),0.d0,all=.true.)
@@ -468,12 +477,38 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+0.5d0*dt, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute diffusive and stochastic mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
-    call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro, &
-                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              Temp,flux_total,dt,time,dx,weights, &
-                              the_bc_tower)
+    if (midpoint_stoch_mass_flux_type .eq. 1) then
+       ! strato
+
+       ! compute diffusive and stochastic mass fluxes
+       ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+       weights(:) = 1.d0/sqrt(2.d0)
+       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro, &
+                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                 Temp,flux_total,dt,time,dx,weights, &
+                                 the_bc_tower)
+
+    else if (midpoint_stoch_mass_flux_type .eq. 2) then
+       ! ito
+
+       if (variance_coef_mass .ne. 0.d0) then
+          ! for ito interpretation we need to save stoch_mass_fluxdiv_old here
+          ! then later add it to stoch_mass_fluxdiv and multiply by 1/2
+          do n=1,nlevs
+             call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+          end do
+       end if
+
+       ! compute diffusive and stochastic mass fluxes
+       ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+       weights(1) = 0.d0
+       weights(2) = 1.d0
+       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro, &
+                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                 Temp,flux_total,0.5d0*dt,time,dx,weights, &
+                                 the_bc_tower)
+
+    end if
 
     ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -486,7 +521,18 @@ contains
        end do
     end do
 
+    if (midpoint_stoch_mass_flux_type .eq. 2) then
+       ! ito
+
+       ! add stoch_mass_fluxdiv_old to stoch_mass_fluxdiv and multiply by 1/2
+       do n=1,nlevs
+          call multifab_plus_plus_c(stoch_mass_fluxdiv(n),1,stoch_mass_fluxdiv_old(n),1,nspecies,0)
+          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,0.5d0,nspecies,0)
+       end do
+    end if
+
     ! set the Dirichlet velocity value on reservoir faces
+    ! FIXME - does not work with ito interpretation
     call reservoir_bc_fill(mla,flux_total,vel_bc_n,the_bc_tower%bc_tower_array)
 
     ! compute gmres_rhs_p
@@ -664,6 +710,12 @@ contains
           call multifab_destroy(flux_total(n,i))
        end do
     end do
+
+    if (variance_coef_mass .ne. 0.d0) then
+       do n=1,nlevs
+          call multifab_destroy(stoch_mass_fluxdiv_old(n))
+       end do
+    end if
 
     call destroy(bpt)
 
