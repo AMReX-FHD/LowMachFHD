@@ -62,7 +62,8 @@
                          ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
                          ! 3 = Iterative implicit
-                         ! 5 = Inertial (midpoint) algorithm
+                         ! 5 = Inertial (midpoint) algorithm - Ito
+                         ! 6 = Inertial (midpoint) algorithm - Strato
 
    barodiffusion_type = 0    ! 0 = no barodiffusion
                              ! 1 = fixed gradp from initialization

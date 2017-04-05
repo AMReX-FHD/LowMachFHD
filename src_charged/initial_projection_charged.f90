@@ -85,7 +85,9 @@ contains
 
     call build(bpt,"initial_projection_charged")
     
-    if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5) then
+    if (algorithm_type .eq. 2 .or. &
+        algorithm_type .eq. 5 .or. &
+        algorithm_type .eq. 6) then
        allocate(weights(2))
        weights(:) = 0.d0
        weights(1) = 1.d0
@@ -94,7 +96,7 @@ contains
        weights(1) = 1.d0
     end if
 
-    if (algorithm_type .eq. 5) then
+    if (algorithm_type .eq. 5 .or. algorithm_type .eq. 6) then
        ! for midpoint scheme where predictor goes to t^{n+1/2}
        dt_eff = 0.5d0*dt
     else
@@ -102,10 +104,10 @@ contains
     end if
 
     if (nreactions > 0) then
-       if (algorithm_type .ne. 5) then
-          call bl_error('Error: only algorithm_type=5 allowed for nreactions>0')
+       if (algorithm_type .ne. 5 .and. algorithm_type .ne. 6) then
+          call bl_error('Error: only algorithm_type=5,6 allowed for nreactions>0')
        else if (use_Poisson_rng .eq. 2) then
-          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorithm_type=5 and nreactions>0')
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorithm_type=5,6 and nreactions>0')
        end if
     end if
 

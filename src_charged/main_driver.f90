@@ -429,7 +429,9 @@ subroutine main_driver()
   end do
 
   ! allocate and build multifabs that will contain random numbers
-  if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5) then
+  if (algorithm_type .eq. 2 .or. &
+      algorithm_type .eq. 5 .or. &
+      algorithm_type .eq. 6) then
      n_rngs = 2
   else
      n_rngs = 1
@@ -507,9 +509,9 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
 
-     ! add initial momentum fluctuations - only call in inertial code for now
-     ! Note, for overdamped code, the steady Stokes solver will wipe out the initial 
-     ! condition to solver tolerance
+     ! add initial momentum fluctuations
+     ! do not call for overdamped codes since the steady Stokes solver will 
+     ! wipe out the initial condition to solver tolerance
      if ((algorithm_type .ne. 1 .and. algorithm_type .ne. 2) &
           .and. variance_coef_mass .ne. 0.d0 &
           .and. initial_variance .ne. 0.d0) then
@@ -562,7 +564,7 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
      
-     ! initial projection - only truly needed for inertial algorithm
+     ! initial projection - only truly needed for inertial algorithms
      ! for the overdamped algorithm, this only changes the reference state for the first
      ! gmres solve in the first time step
      ! Yes, I think in the purely overdamped version this can be removed
@@ -654,6 +656,7 @@ subroutine main_driver()
       ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
       ! routine, but since we have them around anyway for inertial we pass them in
       if (algorithm_type .eq. 0) then
+         ! algorithm_type=0: inertial
          call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         Epot_mass_fluxdiv,diff_mass_fluxdiv, &
@@ -666,12 +669,15 @@ subroutine main_driver()
          if (use_charged_fluid) then
             call bl_error("overdamped does not support charged yet")
          end if
+         ! algorithm_type=1: overdamped with 1 RNG
+         ! algorithm_type=2: overdamped with 2 RNG
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                           diff_mass_fluxdiv, &
                                           stoch_mass_fluxdiv, &
                                           dx,dt,time,the_bc_tower,istep)
       else if (algorithm_type .eq. 3) then
+         ! algorithm_type=3: iterative implicit
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                          Epot_mass_fluxdiv, &
@@ -681,6 +687,7 @@ subroutine main_driver()
                                          charge_old,charge_new,Epot, &
                                          permittivity,gradPhiApprox)
       else if (algorithm_type .eq. 4) then
+         ! algorithm_type=4: implicit boussineq
          call advance_timestep_imp_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                          Epot_mass_fluxdiv, &
@@ -689,7 +696,9 @@ subroutine main_driver()
                                          grad_Epot_old,grad_Epot_new, &
                                          charge_old,charge_new,Epot, &
                                          permittivity,gradPhiApprox)
-      else if (algorithm_type .eq. 5) then
+      else if (algorithm_type .eq. 5 .or. algorithm_type .eq. 6) then
+         ! algorithm_type=5: inertial midpoint with ito stochastic mass fluxes
+         ! algorithm_type=6: inertial midpoint with strato stochastic mass fluxes
          call advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                                  gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                                  Epot_mass_fluxdiv,diff_mass_fluxdiv, &

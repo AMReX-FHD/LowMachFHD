@@ -31,7 +31,7 @@ module advance_timestep_inertial_midpoint_module
   use bl_random_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
-                                  molmass, use_bl_rng, nspecies
+                                  molmass, use_bl_rng, nspecies, algorithm_type
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_charged_module, only: use_charged_fluid
   use probin_chemistry_module, only: nreactions, use_Poisson_rng
@@ -127,16 +127,19 @@ contains
 
     type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
     type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
+
+    type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
     
     integer :: i,dm,n,nlevs
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
-
     real(kind=dp_t) :: weights(2)
 
     real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
 
     type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "advance_timestep_inertial_midpoint")
 
     if (advection_type .ne. 0) then
        call bl_error('Error: currently only advection_type=0 allowed for algorithm_type=5')
@@ -155,8 +158,6 @@ contains
           call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=5 and nreactions>0')
        end if
     end if
-
-    call build(bpt, "advance_timestep_inertial_midpoint")
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -189,6 +190,12 @@ contains
           call multifab_build_edge(Lorentz_force_new(n,i),mla%la(n),1       ,0,i)
        end do
     end do
+
+    if (variance_coef_mass .ne. 0.d0) then
+       do n=1,nlevs
+          call multifab_build(stoch_mass_fluxdiv_old(n),mla%la(n),nspecies,0)
+       end do
+    end if
 
     if (nreactions > 0) then
        do n=1,nlevs
@@ -423,16 +430,44 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
                                    the_bc_tower%bc_tower_array)
 
-    ! compute diffusive, stochastic, potential mass fluxes
-    ! with barodiffusion and thermodiffusion
-    ! this computes "F = -rho W chi [Gamma grad x... ]"
-    weights(:) = 1.d0/sqrt(2.d0)
-    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      Temp,flux_total,dt,time,dx,weights, &
-                                      the_bc_tower, &
-                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
-                                      permittivity)
+    if (algorithm_type .eq. 5) then
+       ! ito
+
+       if (variance_coef_mass .ne. 0.d0) then
+          ! for ito interpretation we need to save stoch_mass_fluxdiv_old here
+          ! then later add it to stoch_mass_fluxdiv and multiply by 1/2
+          do n=1,nlevs
+             call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+          end do
+       end if
+
+       ! compute diffusive, stochastic, potential mass fluxes
+       ! with barodiffusion and thermodiffusion
+       ! this computes "F = -rho W chi [Gamma grad x... ]"
+       weights(1) = 0.d0
+       weights(2) = 1.d0
+       call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         Temp,flux_total,0.5d0*dt,time,dx,weights, &
+                                         the_bc_tower, &
+                                         Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                                         permittivity)
+
+    else
+       ! strato
+
+       ! compute diffusive, stochastic, potential mass fluxes
+       ! with barodiffusion and thermodiffusion
+       ! this computes "F = -rho W chi [Gamma grad x... ]"
+       weights(:) = 1.d0/sqrt(2.d0)
+       call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         Temp,flux_total,dt,time,dx,weights, &
+                                         the_bc_tower, &
+                                         Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                                         permittivity)
+
+    end if
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -447,6 +482,14 @@ contains
           call multifab_mult_mult_s_c(flux_total(n,i),1,-1.d0,nspecies,0)
        end do
     end do
+
+    if (algorithm_type .eq. 5) then
+       ! add stoch_mass_fluxdiv_old to stoch_mass_fluxdiv and multiply by 1/2
+       do n=1,nlevs
+          call multifab_plus_plus_c(stoch_mass_fluxdiv(n),1,stoch_mass_fluxdiv_old(n),1,nspecies,0)
+          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,0.5d0,nspecies,0)
+       end do
+    end if
 
     ! compute chemical rates m_i*R^{n+1/2}_i
     if (nreactions > 0) then
@@ -1096,6 +1139,12 @@ contains
           call multifab_destroy(Lorentz_force_new(n,i))
        end do
     end do
+
+    if (variance_coef_mass .ne. 0.d0) then
+       do n=1,nlevs
+          call multifab_destroy(stoch_mass_fluxdiv_old(n))
+       end do
+    end if
 
     if (nreactions > 0) then
        do n=1,nlevs
