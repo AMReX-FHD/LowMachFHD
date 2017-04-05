@@ -58,8 +58,7 @@
                            ! 1 = Overdamped with 1 RNG
                            ! 2 = Overdamped with 2 RNGs
                            ! 3 = Iterative implicit
-                           ! 5 = Inertial (midpoint) algorithm - Ito
-                           ! 6 = Inertial (midpoint) algorithm - Strato
+                           ! 5 = Inertial (midpoint) algorithm
 
   barodiffusion_type = 0   ! 0 = no barodiffusion
                            ! 1 = fixed gradp from initialization
@@ -200,6 +199,10 @@
 
   plot_stag = F            ! plot staggered velocities in separate plotfile
 
+  ! Algorithm control
+  !----------------------
+  midpoint_stoch_mass_flux_type = 1 ! 1 = Strato
+                                    ! 2 = Ito
 /
 
 &probin_charged

@@ -429,9 +429,7 @@ subroutine main_driver()
   end do
 
   ! allocate and build multifabs that will contain random numbers
-  if (algorithm_type .eq. 2 .or. &
-      algorithm_type .eq. 5 .or. &
-      algorithm_type .eq. 6) then
+  if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5 ) then
      n_rngs = 2
   else
      n_rngs = 1
@@ -696,9 +694,8 @@ subroutine main_driver()
                                          grad_Epot_old,grad_Epot_new, &
                                          charge_old,charge_new,Epot, &
                                          permittivity,gradPhiApprox)
-      else if (algorithm_type .eq. 5 .or. algorithm_type .eq. 6) then
-         ! algorithm_type=5: inertial midpoint with ito stochastic mass fluxes
-         ! algorithm_type=6: inertial midpoint with strato stochastic mass fluxes
+      else if (algorithm_type .eq. 5) then
+         ! algorithm_type=5: inertial midpoint
          call advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                                  gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                                  Epot_mass_fluxdiv,diff_mass_fluxdiv, &

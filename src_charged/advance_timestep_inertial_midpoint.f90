@@ -31,10 +31,11 @@ module advance_timestep_inertial_midpoint_module
   use bl_random_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
-                                  molmass, use_bl_rng, nspecies, algorithm_type
+                                  molmass, use_bl_rng, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_charged_module, only: use_charged_fluid
   use probin_chemistry_module, only: nreactions, use_Poisson_rng
+  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type
   use chemical_rates_module
 
   implicit none
@@ -430,7 +431,21 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
                                    the_bc_tower%bc_tower_array)
 
-    if (algorithm_type .eq. 5) then
+    if (midpoint_stoch_mass_flux_type .eq. 1) then
+       ! strato
+
+       ! compute diffusive, stochastic, potential mass fluxes
+       ! with barodiffusion and thermodiffusion
+       ! this computes "F = -rho W chi [Gamma grad x... ]"
+       weights(:) = 1.d0/sqrt(2.d0)
+       call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         Temp,flux_total,dt,time,dx,weights, &
+                                         the_bc_tower, &
+                                         Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                                         permittivity)
+
+    else if (midpoint_stoch_mass_flux_type .eq. 2) then
        ! ito
 
        if (variance_coef_mass .ne. 0.d0) then
@@ -453,20 +468,6 @@ contains
                                          Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
                                          permittivity)
 
-    else
-       ! strato
-
-       ! compute diffusive, stochastic, potential mass fluxes
-       ! with barodiffusion and thermodiffusion
-       ! this computes "F = -rho W chi [Gamma grad x... ]"
-       weights(:) = 1.d0/sqrt(2.d0)
-       call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         Temp,flux_total,dt,time,dx,weights, &
-                                         the_bc_tower, &
-                                         Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
-                                         permittivity)
-
     end if
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
@@ -483,7 +484,9 @@ contains
        end do
     end do
 
-    if (algorithm_type .eq. 5) then
+    if (midpoint_stoch_mass_flux_type .eq. 2) then
+       ! ito
+
        ! add stoch_mass_fluxdiv_old to stoch_mass_fluxdiv and multiply by 1/2
        do n=1,nlevs
           call multifab_plus_plus_c(stoch_mass_fluxdiv(n),1,stoch_mass_fluxdiv_old(n),1,nspecies,0)

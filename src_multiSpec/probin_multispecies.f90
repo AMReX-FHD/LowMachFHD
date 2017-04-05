@@ -20,6 +20,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: c_init(2,MAX_SPECIES)
   real(kind=dp_t)    :: c_bc(3,2,MAX_SPECIES)
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
+  integer            :: midpoint_stoch_mass_flux_type
 
   ! Physical properties:
   !----------------------
@@ -52,6 +53,11 @@ module probin_multispecies_module
   namelist /probin_multispecies/ H_offdiag
   namelist /probin_multispecies/ H_diag     ! Diagonal of H=d^2F/dx^2, these are vectors of length nspecies
   namelist /probin_multispecies/ plot_stag  ! plot staggered velocities in separate plotfile
+
+  ! Algorithm control
+  !----------------------
+  namelist /probin_multispecies/ midpoint_stoch_mass_flux_type  ! 1 = Strato
+                                                                ! 2 = Ito
 
 contains
 
@@ -91,6 +97,7 @@ contains
     H_offdiag          = 0.0d0
     H_diag             = 0.0d0
     plot_stag          = .false.
+    midpoint_stoch_mass_flux_type = 1
  
     ! read from input file 
     need_inputs = .true.
@@ -167,6 +174,12 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_stag
+
+       case ('--midpoint_stoch_mass_flux_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) midpoint_stoch_mass_flux_type
+
 
        case ('--')
           farg = farg + 1
