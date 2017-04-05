@@ -546,6 +546,10 @@ contains
     real(kind=dp_t), pointer :: dp1(:,:,:,:)
     real(kind=dp_t), pointer :: dp2(:,:,:,:)
     real(kind=dp_t), pointer :: dp3(:,:,:,:)
+
+    if (dielectric_type .eq. 0) then
+       return
+    end if
     
     dm = mla%dim
     nlevs = mla%nlevel

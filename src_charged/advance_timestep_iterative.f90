@@ -35,7 +35,7 @@ module advance_timestep_iterative_module
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
                                   use_bl_rng, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
-  use probin_charged_module, only: use_charged_fluid, theta_pot, dielectric_type, &
+  use probin_charged_module, only: use_charged_fluid, theta_pot, &
                                    num_pot_iters, dpdt_factor, Epot_wall_bc_type
 
   implicit none
@@ -453,9 +453,8 @@ contains
        call dot_with_z(mla,rho_new,charge_new)
 
        ! compute new permittivity
-       if (dielectric_type .ne. 0) then
-          call compute_permittivity(mla,permittivity,rho_new,rhotot_new, &
-                                    the_bc_tower)
+       if (use_charged_fluid) then
+          call compute_permittivity(mla,permittivity,rho_new,rhotot_new,the_bc_tower)
        end if
 
        ! compute mtemp = rho^{n+1,l+1} v^{n+1,l}
