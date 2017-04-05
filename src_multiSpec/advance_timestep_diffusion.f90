@@ -35,9 +35,9 @@ contains
     ! local variables and array of multifabs
     type(multifab)               :: rhonew(mla%nlevel)
     type(multifab)               :: gradp_baro(mla%nlevel,mla%dim)
-    type(multifab)               :: diff_fluxdiv(mla%nlevel)
-    type(multifab)               :: diff_fluxdivnew(mla%nlevel)
-    type(multifab)               :: stoch_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
+    type(multifab)               :: diff_mass_fluxdiv(mla%nlevel)
+    type(multifab)               :: diff_mass_fluxdiv_new(mla%nlevel)
+    type(multifab)               :: stoch_mass_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
     type(multifab)               :: total_mass_flux(mla%nlevel,mla%dim) ! sum of diff/stoch fluxes
     real(kind=dp_t), allocatable :: weights(:) ! weights for stoch-time-integrators       
     real(kind=dp_t)              :: stage_time
@@ -56,9 +56,9 @@ contains
     ! fluxdiv needs no ghost cells as all computations will be in box interior. 
     do n=1,nlevs
        call multifab_build(rhonew(n),          mla%la(n), nspecies,    rho(n)%ng)
-       call multifab_build(diff_fluxdiv(n),    mla%la(n), nspecies,    0) 
-       call multifab_build(diff_fluxdivnew(n), mla%la(n), nspecies,    0)
-       call multifab_build(stoch_fluxdiv(n),   mla%la(n), nspecies,    0) 
+       call multifab_build(diff_mass_fluxdiv(n),    mla%la(n), nspecies,    0) 
+       call multifab_build(diff_mass_fluxdiv_new(n), mla%la(n), nspecies,    0)
+       call multifab_build(stoch_mass_fluxdiv(n),   mla%la(n), nspecies,    0) 
        do i=1,dm
           call multifab_build_edge(gradp_baro(n,i), mla%la(n),        1, 0, i)
           call multifab_setval(gradp_baro(n,i),0.d0,all=.true.)
@@ -106,14 +106,14 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,total_mass_flux,&
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp,total_mass_flux,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-                                          call saxpy(rho(n),-dt,diff_fluxdiv(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),-dt,stoch_fluxdiv(n))
+                                          call saxpy(rho(n),-dt,diff_mass_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),-dt,stoch_mass_fluxdiv(n))
       end do 
   
       case(2)
@@ -141,14 +141,14 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,total_mass_flux,&
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp,total_mass_flux,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
-                                          call saxpy(rhonew(n),-dt,diff_fluxdiv(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),-dt,stoch_fluxdiv(n))
+                                          call saxpy(rhonew(n),-dt,diff_mass_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),-dt,stoch_mass_fluxdiv(n))
       end do 
    
       ! update values of the ghost cells of rhonew
@@ -168,15 +168,15 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro, &
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,total_mass_flux,&
+                                        diff_mass_fluxdiv_new,stoch_mass_fluxdiv,Temp,total_mass_flux,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
 
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
-                                          call saxpy(rho(n),-0.5d0*dt,diff_fluxdiv(n))
-                                          call saxpy(rho(n),-0.5d0*dt,diff_fluxdivnew(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),      -dt,stoch_fluxdiv(n))
+                                          call saxpy(rho(n),-0.5d0*dt,diff_mass_fluxdiv(n))
+                                          call saxpy(rho(n),-0.5d0*dt,diff_mass_fluxdiv_new(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n),      -dt,stoch_mass_fluxdiv(n))
       end do
  
       case(3)
@@ -205,14 +205,14 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,total_mass_flux,&
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp,total_mass_flux,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
  
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
-                                          call saxpy(rhonew(n),-0.5d0*dt,diff_fluxdiv(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),      -dt,stoch_fluxdiv(n))
+                                          call saxpy(rhonew(n),-0.5d0*dt,diff_mass_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n),      -dt,stoch_mass_fluxdiv(n))
       end do 
 
       ! update values of the ghost cells of rhonew
@@ -234,14 +234,14 @@ contains
 
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro, &
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,total_mass_flux, &
+                                        diff_mass_fluxdiv_new,stoch_mass_fluxdiv,Temp,total_mass_flux, &
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
  
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
-                                          call saxpy(rho(n), -dt, diff_fluxdivnew(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n), -dt, stoch_fluxdiv(n))
+                                          call saxpy(rho(n), -dt, diff_mass_fluxdiv_new(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n), -dt, stoch_mass_fluxdiv(n))
       end do 
       
       case(4)
@@ -271,14 +271,14 @@ contains
       
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
-                                        diff_fluxdiv,stoch_fluxdiv,Temp,total_mass_flux,&
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp,total_mass_flux,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
  
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
-                                          call saxpy(rhonew(n), -dt, diff_fluxdiv(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n), -dt, stoch_fluxdiv(n))
+                                          call saxpy(rhonew(n), -dt, diff_mass_fluxdiv(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n), -dt, stoch_mass_fluxdiv(n))
       end do 
    
       ! update values of the ghost cells of rhonew
@@ -300,7 +300,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro, &
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,total_mass_flux,&
+                                        diff_mass_fluxdiv_new,stoch_mass_fluxdiv,Temp,total_mass_flux,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
 
@@ -308,8 +308,8 @@ contains
       do n=1,nlevs
                                           call multifab_mult_mult_s(rhonew(n),0.25d0)
                                           call saxpy(rhonew(n),  0.75d0   , rho(n))
-                                          call saxpy(rhonew(n), -0.25d0*dt, diff_fluxdivnew(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n), -0.25d0*dt, stoch_fluxdiv(n))
+                                          call saxpy(rhonew(n), -0.25d0*dt, diff_mass_fluxdiv_new(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rhonew(n), -0.25d0*dt, stoch_mass_fluxdiv(n))
       end do 
 
       ! update values of the ghost cells of rho_star
@@ -327,7 +327,7 @@ contains
 
       ! free up the values of fluxdivnew
       do n=1,nlevs
-         call setval(diff_fluxdivnew(n), 0.d0, all=.true.)
+         call setval(diff_mass_fluxdiv_new(n), 0.d0, all=.true.)
       end do 
 
       stage_time = time + dt/2.0d0
@@ -336,7 +336,7 @@ contains
 
       ! compute the total div of flux from rho
       call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro, &
-                                        diff_fluxdivnew,stoch_fluxdiv,Temp,total_mass_flux,&
+                                        diff_mass_fluxdiv_new,stoch_mass_fluxdiv,Temp,total_mass_flux,&
                                         dt,stage_time,dx,weights,&
                                         the_bc_tower)
 
@@ -344,8 +344,8 @@ contains
       do n=1,nlevs
                                           call multifab_mult_mult_s(rho(n),(1.0d0/3.0d0))
                                           call saxpy(rho(n),  (2.0d0/3.0d0)   , rhonew(n))
-                                          call saxpy(rho(n), -(2.0d0/3.0d0)*dt, diff_fluxdivnew(n))
-         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n), -(2.0d0/3.0d0)*dt, stoch_fluxdiv(n))
+                                          call saxpy(rho(n), -(2.0d0/3.0d0)*dt, diff_mass_fluxdiv_new(n))
+         if(variance_coef_mass .ne. 0.d0) call saxpy(rho(n), -(2.0d0/3.0d0)*dt, stoch_mass_fluxdiv(n))
       end do 
 
     !=============================================================================================
@@ -364,9 +364,9 @@ contains
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(rhonew(n))
-       call multifab_destroy(diff_fluxdiv(n))
-       call multifab_destroy(diff_fluxdivnew(n))
-       call multifab_destroy(stoch_fluxdiv(n))
+       call multifab_destroy(diff_mass_fluxdiv(n))
+       call multifab_destroy(diff_mass_fluxdiv_new(n))
+       call multifab_destroy(stoch_mass_fluxdiv(n))
        do i=1,dm
           call multifab_destroy(gradp_baro(n,i))
           call multifab_destroy(total_mass_flux(n,i))

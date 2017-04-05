@@ -26,17 +26,17 @@ contains
 
   ! compute diffusive, stochastic, and electric potential mass fluxes
   ! includes barodiffusion and thermodiffusion
-  subroutine compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro,diff_fluxdiv,stoch_fluxdiv, &
+  subroutine compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                           Temp,total_mass_flux,dt,stage_time,dx,weights,the_bc_tower, &
                                           Epot_fluxdiv,charge,grad_Epot,Epot,permittivity, &
-                                          flux_diff) ! Donev: Add a logical flag for whether to do electroneutral or not
+                                          diff_mass_flux) ! Donev: Add a logical flag for whether to do electroneutral or not
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
     type(multifab) , intent(inout)   :: rhotot(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
-    type(multifab) , intent(inout)   :: diff_fluxdiv(:)
-    type(multifab) , intent(inout)   :: stoch_fluxdiv(:)
+    type(multifab) , intent(inout)   :: diff_mass_fluxdiv(:)
+    type(multifab) , intent(inout)   :: stoch_mass_fluxdiv(:)
     type(multifab) , intent(in   )   :: Temp(:)
     type(multifab) , intent(inout)   :: total_mass_flux(:,:)
     real(kind=dp_t), intent(in   )   :: dt
@@ -49,7 +49,7 @@ contains
     type(multifab) , intent(inout)   :: grad_Epot(:,:)
     type(multifab) , intent(inout)   :: Epot(:)
     type(multifab) , intent(in   )   :: permittivity(:)
-    type(multifab) , intent(inout), optional :: flux_diff(:,:)
+    type(multifab) , intent(inout), optional :: diff_mass_flux(:,:)
        
     ! local variables
     type(multifab) :: rhoWchi(mla%nlevel)        ! rho*W*chi*Gama
@@ -80,9 +80,9 @@ contains
        call multifab_build(rhoWchi(n), mla%la(n), nspecies**2, rho(n)%ng)
     end do
 
-    call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,diff_fluxdiv,stoch_fluxdiv, &
+    call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               Temp,total_mass_flux,dt,stage_time,dx,weights,the_bc_tower, &
-                              flux_diff,rhoWchi)
+                              diff_mass_flux,rhoWchi)
 
     ! Donev: Observe that modified densities rho+drho are used when computing charges. Is this what we want?
     ! In particular, in the implicit method, do we want to make sure there is charge everywhere ad-hoc? Probably not

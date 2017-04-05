@@ -112,19 +112,19 @@ contains
     type(multifab) ::          n_old(mla%nlevel)
     type(multifab) ::          n_new(mla%nlevel)
 
-    type(multifab) ::            mold(mla%nlevel,mla%dim)
-    type(multifab) ::           mtemp(mla%nlevel,mla%dim)
-    type(multifab) ::     m_a_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) ::     m_d_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) ::     m_s_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) ::     gmres_rhs_v(mla%nlevel,mla%dim)
-    type(multifab) ::           dumac(mla%nlevel,mla%dim)
-    type(multifab) ::        umac_tmp(mla%nlevel,mla%dim)
-    type(multifab) ::   rhotot_fc_old(mla%nlevel,mla%dim)
-    type(multifab) ::   rhotot_fc_new(mla%nlevel,mla%dim)
-    type(multifab) ::          gradpi(mla%nlevel,mla%dim)
-    type(multifab) ::          rho_fc(mla%nlevel,mla%dim)
-    type(multifab) :: total_mass_flux(mla%nlevel,mla%dim)
+    type(multifab) ::              mold(mla%nlevel,mla%dim)
+    type(multifab) ::             mtemp(mla%nlevel,mla%dim)
+    type(multifab) ::   adv_mom_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::  diff_mom_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) :: stoch_mom_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::       gmres_rhs_v(mla%nlevel,mla%dim)
+    type(multifab) ::             dumac(mla%nlevel,mla%dim)
+    type(multifab) ::          umac_tmp(mla%nlevel,mla%dim)
+    type(multifab) ::     rhotot_fc_old(mla%nlevel,mla%dim)
+    type(multifab) ::     rhotot_fc_new(mla%nlevel,mla%dim)
+    type(multifab) ::            gradpi(mla%nlevel,mla%dim)
+    type(multifab) ::            rho_fc(mla%nlevel,mla%dim)
+    type(multifab) ::   total_mass_flux(mla%nlevel,mla%dim)
 
     type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
     type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
@@ -176,9 +176,9 @@ contains
        do i=1,dm
           call multifab_build_edge(             mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(            mtemp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(      m_a_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(      m_d_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(      m_s_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(  adv_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge( diff_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(stoch_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(      gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(            dumac(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(         umac_tmp(n,i),mla%la(n),1       ,1,i)
@@ -366,40 +366,40 @@ contains
        end do
     end do
 
-    ! compute m_a_fluxdiv = A^n for momentum
+    ! compute adv_mom_fluxdiv = A^n for momentum
     do n=1,nlevs
        do i=1,dm
-          call setval(m_a_fluxdiv(n,i),0.d0,all=.true.)
+          call setval(adv_mom_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,m_a_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add A^n for momentum to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,adv_mom_fluxdiv(n,i),1,1,0)
        end do
     end do
 
-    ! compute m_d_fluxdiv = (1/2) A_0^n v^n (to be used later)
+    ! compute diff_mom_fluxdiv = (1/2) A_0^n v^n (to be used later)
     do n=1,nlevs
        do i=1,dm
-          call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
+          call setval(diff_mom_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
-    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(m_d_fluxdiv(n,i),1,0.5d0,1,0)
+          call multifab_mult_mult_s_c(diff_mom_fluxdiv(n,i),1,0.5d0,1,0)
        end do
     end do
 
-    ! compute m_s_fluxdiv = div(Sigma^n)
+    ! compute stoch_mom_fluxdiv = div(Sigma^n)
     do n=1,nlevs
        do i=1,dm
-          call setval(m_s_fluxdiv(n,i),0.d0,all=.true.)
+          call setval(stoch_mom_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
     if (variance_coef_mom .ne. 0.d0) then
@@ -407,14 +407,14 @@ contains
        call fill_m_stochastic(mla)
        weights(1) = 1.d0
        weights(2) = 0.d0
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,eta,eta_ed, &
                                  Temp,Temp_ed,dx,0.5d0*dt,weights)
     end if
 
     ! add div(Sigma^n) to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,stoch_mom_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -836,47 +836,47 @@ contains
        end do
     end do
 
-    ! compute m_a_fluxdiv = A^{n+1/2} = -rho^{n+1/2} v^{n+1/2} v^{n+1/2}
+    ! compute adv_mom_fluxdiv = A^{n+1/2} = -rho^{n+1/2} v^{n+1/2} v^{n+1/2}
     ! (mtemp=rho^{n+1/2} v^{n+1/2} was set at the end of step 4)
     do n=1,nlevs
        do i=1,dm
-          call setval(m_a_fluxdiv(n,i),0.d0,all=.true.)
+          call setval(adv_mom_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
-    call mk_advective_m_fluxdiv(mla,umac,mtemp,m_a_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv,dx, &
                                 the_bc_tower%bc_tower_array)
 
-    ! add m_a_fluxdiv to gmres_rhs_v
+    ! add adv_mom_fluxdiv to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_a_fluxdiv(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,adv_mom_fluxdiv(n,i),1,1,0)
        end do
     end do
 
-    ! m_d_fluxdiv already contains (1/2) A_0^n v^n
+    ! diff_mom_fluxdiv already contains (1/2) A_0^n v^n
     ! add (1/2) A_0^n v^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,diff_mom_fluxdiv(n,i),1,1,0)
        end do
     end do
 
-    ! compute m_s_fluxdiv = div(Sigma^{n+1/2})
+    ! compute stoch_mom_fluxdiv = div(Sigma^{n+1/2})
     do n=1,nlevs
        do i=1,dm
-          call setval(m_s_fluxdiv(n,i),0.d0,all=.true.)
+          call setval(stoch_mom_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
     if (variance_coef_mom .ne. 0.d0) then
        weights(:) = 1.d0/sqrt(2.d0)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,m_s_fluxdiv,eta,eta_ed, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,eta,eta_ed, &
                                  Temp,Temp_ed,dx,dt,weights)
     end if
 
     ! add div(Sigma^{n+1/2}) to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_s_fluxdiv(n,i),1,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,stoch_mom_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -1019,20 +1019,20 @@ contains
       end do
    end do
 
-    ! set m_d_fluxdiv = A_0^{n+1} vbar^{n+1/2}
+    ! set diff_mom_fluxdiv = A_0^{n+1} vbar^{n+1/2}
     do n=1,nlevs
        do i=1,dm
-          call setval(m_d_fluxdiv(n,i),0.d0,all=.true.)
+          call setval(diff_mom_fluxdiv(n,i),0.d0,all=.true.)
        end do
     end do
-    call diffusive_m_fluxdiv(mla,m_d_fluxdiv,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! add (1/2) A_0^{n+1} vbar^{n+1/2} to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(m_d_fluxdiv(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,m_d_fluxdiv(n,i),1,1,0)
+          call multifab_mult_mult_s_c(diff_mom_fluxdiv(n,i),1,0.5d0,1,0)
+          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,diff_mom_fluxdiv(n,i),1,1,0)
        end do
     end do
 
@@ -1128,9 +1128,9 @@ contains
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
-          call multifab_destroy(m_a_fluxdiv(n,i))
-          call multifab_destroy(m_d_fluxdiv(n,i))
-          call multifab_destroy(m_s_fluxdiv(n,i))
+          call multifab_destroy(adv_mom_fluxdiv(n,i))
+          call multifab_destroy(diff_mom_fluxdiv(n,i))
+          call multifab_destroy(stoch_mom_fluxdiv(n,i))
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(umac_tmp(n,i))
