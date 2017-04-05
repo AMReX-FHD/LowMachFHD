@@ -24,7 +24,7 @@ module advance_timestep_overdamped_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, restart, algorithm_type, &
+                                  variance_coef_mom, restart, &
                                   barodiffusion_type, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use analysis_module
@@ -105,14 +105,14 @@ contains
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
-    real(kind=dp_t) :: weights(algorithm_type)
+    real(kind=dp_t) :: weights(2)
 
     type(bl_prof_timer), save :: bpt
 
     call build(bpt, "advance_timestep_overdamped")
 
-    weights(:) = 0.d0
     weights(1) = 1.d0
+    weights(2) = 0.d0
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -197,13 +197,8 @@ contains
     if (variance_coef_mom .ne. 0.d0) then
        ! fill the stochastic multifabs with a new set of random numbers
        call fill_m_stochastic(mla)
-       if (algorithm_type .eq. 1) then
-          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                    eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
-       else if (algorithm_type .eq. 2) then
-          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
-                                    eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
-       end if
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+                                 eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
     end if
 
     ! add rho^n*g to gmres_rhs_v
@@ -222,17 +217,10 @@ contains
 
     ! compute diffusive and stochastic mass fluxes
     ! this computes "+F = -rho*W*chi*Gamma*grad(x) - ..."
-    if (algorithm_type .eq. 1) then
-       call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro, &
-                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                 Temp,flux_total,dt,time,dx,weights, &
-                                 the_bc_tower)
-    else if (algorithm_type .eq. 2) then
-       call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro, &
-                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                 Temp,flux_total,0.5d0*dt,time,dx,weights, &
-                                 the_bc_tower)
-    end if
+    call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              Temp,flux_total,0.5d0*dt,time,dx,weights, &
+                              the_bc_tower)
 
     ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
     do n=1,nlevs
@@ -458,9 +446,7 @@ contains
        end do
     end do
 
-    if (algorithm_type .eq. 2) then
-       weights(:) = 1.d0/sqrt(2.d0)
-    end if
+    weights(:) = 1.d0/sqrt(2.d0)
 
     ! add div(Sigma^(2)) to gmres_rhs_v
     if (variance_coef_mom .ne. 0.d0) then

@@ -510,9 +510,9 @@ subroutine main_driver()
      ! add initial momentum fluctuations
      ! do not call for overdamped codes since the steady Stokes solver will 
      ! wipe out the initial condition to solver tolerance
-     if ((algorithm_type .ne. 1 .and. algorithm_type .ne. 2) &
-          .and. variance_coef_mass .ne. 0.d0 &
-          .and. initial_variance .ne. 0.d0) then
+     if (algorithm_type .ne. 2 .and. &
+         variance_coef_mass .ne. 0.d0 .and. &
+         initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
      end if
@@ -571,7 +571,7 @@ subroutine main_driver()
      ! but I do not see how one can avoid that
      ! From this perspective it may be useful to keep initial_projection even in overdamped
      ! because different gmres tolerances may be needed in the first step than in the rest
-     if (algorithm_type .ne. 1 .and. algorithm_type .ne. 2) then
+     if (algorithm_type .ne. 2) then
         call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
                                         Epot_mass_fluxdiv,diff_mass_fluxdiv, &
                                         stoch_mass_fluxdiv,chem_rate, &
@@ -663,11 +663,10 @@ subroutine main_driver()
                                         grad_Epot_old,grad_Epot_new, &
                                         charge_old,charge_new,Epot, &
                                         permittivity)
-      else if (algorithm_type .eq. 1 .or. algorithm_type .eq. 2) then
+      else if (algorithm_type .eq. 2) then
          if (use_charged_fluid) then
             call bl_error("overdamped does not support charged yet")
          end if
-         ! algorithm_type=1: overdamped with 1 RNG
          ! algorithm_type=2: overdamped with 2 RNG
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &

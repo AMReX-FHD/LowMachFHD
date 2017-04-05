@@ -51,7 +51,7 @@ contains
     allocate(chkdata(nlevs))
     allocate(chkdata_edge(nlevs,dm))
     do n = 1,nlevs
-       if (algorithm_type .ne. 1 .and. algorithm_type .ne. 2) then
+       if (algorithm_type .ne. 2) then
           ! non-overdamped algorithms - need to save diff/stoch_mass_fluxdiv
           ! nspecies densities + 1 total density + 1 pressure + diff/stoch_mass_fluxdiv
           call multifab_build(chkdata(n), mla%la(n), 3*nspecies+2, 0)
@@ -64,7 +64,7 @@ contains
        call multifab_copy_c(chkdata(n), 1         , rho(n)   , 1, nspecies)
        call multifab_copy_c(chkdata(n), nspecies+1, rhotot(n), 1, 1)
        call multifab_copy_c(chkdata(n), nspecies+2, pres(n)  , 1, 1)
-       if (algorithm_type .ne. 1 .and. algorithm_type .ne. 2) then
+       if (algorithm_type .ne. 2) then
           call multifab_copy_c(chkdata(n), nspecies+3, diff_mass_fluxdiv(n), 1, nspecies)
           call multifab_copy_c(chkdata(n), 2*nspecies+3, stoch_mass_fluxdiv(n), 1, nspecies)
        end if

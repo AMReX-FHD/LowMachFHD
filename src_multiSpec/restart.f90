@@ -76,7 +76,7 @@ contains
         call multifab_copy_c(rho(n)   ,1,chkdata(n)      ,1         ,nspecies)
         call multifab_copy_c(rhotot(n),1,chkdata(n)      ,nspecies+1,1)
         call multifab_copy_c(pres(n)  ,1,chkdata(n)      ,nspecies+2,1)
-        if (algorithm_type .ne. 1 .and. algorithm_type .ne. 2) then
+        if (algorithm_type .ne. 2) then
            ! non-overdamped algorithms - need to save diff/stoch_mass_fluxdiv
            call multifab_copy_c( diff_mass_fluxdiv(n),1,chkdata(n),  nspecies+3,nspecies)
            call multifab_copy_c(stoch_mass_fluxdiv(n),1,chkdata(n),2*nspecies+3,nspecies)
