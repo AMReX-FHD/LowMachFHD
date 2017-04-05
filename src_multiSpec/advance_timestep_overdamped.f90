@@ -455,8 +455,6 @@ contains
        end do
     end do
 
-    weights(:) = 1.d0/sqrt(2.d0)
-
     ! add div(Sigma^(2)) to gmres_rhs_v
     if (variance_coef_mom .ne. 0.d0) then
        call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
