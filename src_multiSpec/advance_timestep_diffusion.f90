@@ -38,6 +38,8 @@ contains
     type(multifab)               :: diff_mass_fluxdiv(mla%nlevel)
     type(multifab)               :: diff_mass_fluxdiv_new(mla%nlevel)
     type(multifab)               :: stoch_mass_fluxdiv(mla%nlevel)  ! stochastic fluxdiv
+    type(multifab)               :: diff_mass_flux(mla%nlevel,mla%dim) ! sum of diff/stoch fluxes
+    type(multifab)               :: stoch_mass_flux(mla%nlevel,mla%dim) ! sum of diff/stoch fluxes
     type(multifab)               :: total_mass_flux(mla%nlevel,mla%dim) ! sum of diff/stoch fluxes
     real(kind=dp_t), allocatable :: weights(:) ! weights for stoch-time-integrators       
     real(kind=dp_t)              :: stage_time
@@ -62,8 +64,9 @@ contains
        do i=1,dm
           call multifab_build_edge(gradp_baro(n,i), mla%la(n),        1, 0, i)
           call multifab_setval(gradp_baro(n,i),0.d0,all=.true.)
+          call multifab_build_edge(diff_mass_flux(n,i), mla%la(n), nspecies, 0, i)
+          call multifab_build_edge(stoch_mass_flux(n,i), mla%la(n), nspecies, 0, i)
           call multifab_build_edge(total_mass_flux(n,i), mla%la(n), nspecies, 0, i)
-          call setval(total_mass_flux(n,i), 0.d0)
        end do
     end do
 
@@ -105,10 +108,10 @@ contains
       if(variance_coef_mass .ne. 0.d0) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp,total_mass_flux,&
-                                        dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+      call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
+                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                diff_mass_flux,stoch_mass_flux,total_mass_flux,&
+                                dt,stage_time,dx,weights,the_bc_tower)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
@@ -140,10 +143,10 @@ contains
       if(variance_coef_mass .ne. 0.d0) weights(1) = 1.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp,total_mass_flux,&
-                                        dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+      call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
+                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                diff_mass_flux,stoch_mass_flux,total_mass_flux,&
+                                dt,stage_time,dx,weights,the_bc_tower)
       
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
@@ -167,10 +170,10 @@ contains
       stage_time = time + dt  
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro, &
-                                        diff_mass_fluxdiv_new,stoch_mass_fluxdiv,Temp,total_mass_flux,&
-                                        dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+      call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro,Temp, &
+                                diff_mass_fluxdiv_new,stoch_mass_fluxdiv, &
+                                diff_mass_flux,stoch_mass_flux,total_mass_flux,&
+                                dt,stage_time,dx,weights,the_bc_tower)
 
       ! compute rho(t+dt) (only interior)
       do n=1,nlevs
@@ -204,10 +207,10 @@ contains
       weights(2) = 0.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp,total_mass_flux,&
-                                        dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+      call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
+                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                diff_mass_flux,stoch_mass_flux,total_mass_flux,&
+                                dt,stage_time,dx,weights,the_bc_tower)
  
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
@@ -233,10 +236,10 @@ contains
       weights(2) = sqrt(0.5d0) 
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro, &
-                                        diff_mass_fluxdiv_new,stoch_mass_fluxdiv,Temp,total_mass_flux, &
-                                        dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+      call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro,Temp, &
+                                diff_mass_fluxdiv_new,stoch_mass_fluxdiv, &
+                                diff_mass_flux,stoch_mass_flux,total_mass_flux,&
+                                dt,stage_time,dx,weights,the_bc_tower)
  
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
@@ -270,10 +273,10 @@ contains
       weights(2) = (2*sqrt(2.0d0)+sqrt(3.0d0))/5.0d0 
       
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,Temp,total_mass_flux,&
-                                        dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+      call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
+                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                diff_mass_flux,stoch_mass_flux,total_mass_flux,&
+                                dt,stage_time,dx,weights,the_bc_tower)
  
       ! compute rhonew(t+dt) (only interior) 
       do n=1,nlevs
@@ -299,10 +302,10 @@ contains
       weights(2) = (-4*sqrt(2.0d0)+3*sqrt(3.0d0))/5.0d0 
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro, &
-                                        diff_mass_fluxdiv_new,stoch_mass_fluxdiv,Temp,total_mass_flux,&
-                                        dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+      call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro,Temp, &
+                                diff_mass_fluxdiv_new,stoch_mass_fluxdiv, &
+                                diff_mass_flux,stoch_mass_flux,total_mass_flux,&
+                                dt,stage_time,dx,weights,the_bc_tower)
 
       ! compute rhonew(t+dt/2) (only interior) 
       do n=1,nlevs
@@ -335,10 +338,10 @@ contains
       weights(2) = (sqrt(2.0d0)-2*sqrt(3.0d0))/10.0d0
 
       ! compute the total div of flux from rho
-      call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro, &
-                                        diff_mass_fluxdiv_new,stoch_mass_fluxdiv,Temp,total_mass_flux,&
-                                        dt,stage_time,dx,weights,&
-                                        the_bc_tower)
+      call compute_mass_fluxdiv(mla,rhonew,rhotot,gradp_baro,Temp, &
+                                diff_mass_fluxdiv_new,stoch_mass_fluxdiv, &
+                                diff_mass_flux,stoch_mass_flux,total_mass_flux,&
+                                dt,stage_time,dx,weights,the_bc_tower)
 
       ! compute rho(t+dt) (only interior) 
       do n=1,nlevs
@@ -369,6 +372,8 @@ contains
        call multifab_destroy(stoch_mass_fluxdiv(n))
        do i=1,dm
           call multifab_destroy(gradp_baro(n,i))
+          call multifab_destroy(diff_mass_flux(n,i))
+          call multifab_destroy(stoch_mass_flux(n,i))
           call multifab_destroy(total_mass_flux(n,i))
        end do
     end do

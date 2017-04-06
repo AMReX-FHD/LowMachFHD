@@ -16,7 +16,7 @@ module compute_mass_fluxdiv_energy_module
 contains
 
   subroutine compute_mass_fluxdiv_energy(mla,rho,rhotot,molefrac,chi,zeta,gradp_baro,Temp, &
-                                 mass_fluxdiv,mass_flux,dx,the_bc_tower)
+                                         mass_fluxdiv,mass_flux,dx,the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
@@ -27,7 +27,7 @@ contains
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(in   )   :: Temp(:)
     type(multifab) , intent(inout)   :: mass_fluxdiv(:)
-    type(multifab) , intent(inout)   :: mass_flux(:,:)
+    type(multifab) , intent(inout)   :: diff_mass_flux(:,:)
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     type(bc_tower) , intent(in   )   :: the_bc_tower
 

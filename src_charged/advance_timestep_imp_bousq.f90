@@ -131,8 +131,9 @@ contains
     type(multifab) ::                gradpi(mla%nlevel,mla%dim)
     type(multifab) ::                rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::             rhotot_fc(mla%nlevel,mla%dim)
-    type(multifab) ::       total_mass_flux(mla%nlevel,mla%dim)
     type(multifab) ::        diff_mass_flux(mla%nlevel,mla%dim)
+    type(multifab) ::       stoch_mass_flux(mla%nlevel,mla%dim)
+    type(multifab) ::       total_mass_flux(mla%nlevel,mla%dim)
     type(multifab) ::         grad_Epot_np2(mla%nlevel,mla%dim)
 
     type(multifab) :: m_grav_force_old(mla%nlevel,mla%dim)
@@ -199,8 +200,9 @@ contains
           call multifab_build_edge(               gradpi(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(            rhotot_fc(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(               rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(      total_mass_flux(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(       diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(      stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(      total_mass_flux(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(        grad_Epot_np2(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(     m_grav_force_old(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     m_grav_force_new(n,i),mla%la(n),1       ,0,i)
@@ -443,9 +445,9 @@ contains
     ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1,*}
     ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1,*} Z^{n:n+1}
     ! and total_mass_flux for reservoir boundary conditions on velocity
-    call compute_mass_fluxdiv(mla,rho_tmp,rhotot_tmp,gradp_baro, &
+    call compute_mass_fluxdiv(mla,rho_tmp,rhotot_tmp,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              Temp,total_mass_flux, &
+                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                               dt,time,dx,weights,the_bc_tower)
 
     ! now fluxdivs contain "-div(F) = div (rho W chi Gamma grad x + ...)", etc.
@@ -455,6 +457,10 @@ contains
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
        do i=1,dm
+          call multifab_mult_mult_s_c(diff_mass_flux(n,i),1,-1.d0,nspecies,0)
+          if (variance_coef_mass .ne. 0) then
+             call multifab_mult_mult_s_c(stoch_mass_flux(n,i),1,-1.d0,nspecies,0)
+          end if
           call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
        end do
     end do
@@ -869,11 +875,10 @@ contains
     ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1}
     ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1} Z^{n+1:n+2}
     ! and total_mass_flux for reservoir boundary conditions on velocity
-    call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro, &
+    call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              Temp,total_mass_flux, &
-                              dt,time,dx,weights,the_bc_tower, &
-                              diff_mass_flux)
+                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                              dt,time,dx,weights,the_bc_tower)
 
     ! now fluxes contain "-div(F) = div (rho W chi Gamma grad x + ...)", etc.
     do n=1,nlevs
@@ -882,6 +887,10 @@ contains
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
        do i=1,dm
+          call multifab_mult_mult_s_c(diff_mass_flux(n,i),1,-1.d0,nspecies,0)
+          if (variance_coef_mass .ne. 0) then
+             call multifab_mult_mult_s_c(stoch_mass_flux(n,i),1,-1.d0,nspecies,0)
+          end if
           call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
        end do
     end do
@@ -1103,8 +1112,9 @@ contains
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
-          call multifab_destroy(total_mass_flux(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
+          call multifab_destroy(stoch_mass_flux(n,i))
+          call multifab_destroy(total_mass_flux(n,i))
           call multifab_destroy(grad_Epot_np2(n,i))
           call multifab_destroy(m_grav_force_old(n,i))
           call multifab_destroy(m_grav_force_new(n,i))

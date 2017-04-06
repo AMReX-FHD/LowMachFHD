@@ -77,6 +77,8 @@ contains
     type(multifab) :: n_cc(mla%nlevel)
     type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
+    type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
+    type(multifab) :: stoch_mass_flux(mla%nlevel,mla%dim)
     type(multifab) :: total_mass_flux(mla%nlevel,mla%dim)
 
     real(kind=dp_t), allocatable :: weights(:)
@@ -119,9 +121,11 @@ contains
        call multifab_build(divu(n),mla%la(n),1,0)
        call multifab_build(phi(n),mla%la(n),1,1)
        do i=1,dm
-          call multifab_build_edge(   rhotot_fc(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(rhototinv_fc(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(  total_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(      rhotot_fc(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(   rhototinv_fc(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge( diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(total_mass_flux(n,i),mla%la(n),nspecies,0,i)
        end do       
     end do
 
@@ -144,10 +148,10 @@ contains
     ! with barodiffusion and thermodiffusion
     ! this computes "F = -rho W chi [Gamma grad x... ]"
     if (dielectric_const .eq. 0.d0 .or. (.not. use_charged_fluid) ) then
-       call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,diff_mass_fluxdiv, &
-                                 stoch_mass_fluxdiv,Temp,total_mass_flux, &
-                                 dt_eff,0.d0,dx,weights, &
-                                 the_bc_tower)
+       call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
+                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                 diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                                 dt_eff,0.d0,dx,weights,the_bc_tower)
        do n=1,nlevs
           call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
           call multifab_setval(Epot(n),0.d0,all=.true.)
@@ -156,12 +160,11 @@ contains
           end do
        end do
     else
-       call compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro,diff_mass_fluxdiv, &
-                                         stoch_mass_fluxdiv,Temp,total_mass_flux, &
-                                         dt_eff,0.d0,dx,weights, &
-                                         the_bc_tower,Epot_mass_fluxdiv, &
-                                         charge_old,grad_Epot_old, &
-                                         Epot,permittivity)
+       call compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro,Temp, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                                         dt_eff,0.d0,dx,weights,the_bc_tower,Epot_mass_fluxdiv, &
+                                         charge_old,grad_Epot_old,Epot,permittivity)
     end if
 
     ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
@@ -174,6 +177,10 @@ contains
           call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
        end if
        do i=1,dm
+          call multifab_mult_mult_s_c(diff_mass_flux(n,i),1,-1.d0,nspecies,0)
+          if (variance_coef_mass .ne. 0) then
+             call multifab_mult_mult_s_c(stoch_mass_flux(n,i),1,-1.d0,nspecies,0)
+          end if
           call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
        end do
     end do
@@ -294,6 +301,8 @@ contains
        do i=1,dm
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(rhototinv_fc(n,i))
+          call multifab_destroy(diff_mass_flux(n,i))
+          call multifab_destroy(stoch_mass_flux(n,i))
           call multifab_destroy(total_mass_flux(n,i))
        end do
     end do
