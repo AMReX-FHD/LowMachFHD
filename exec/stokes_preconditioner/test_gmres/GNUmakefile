@@ -1,9 +1,11 @@
-NDEBUG := t
-MPI    := 
-OMP    :=
+NDEBUG    := t
+MPI       := 
+OMP       :=
 MKVERBOSE := t
+COMP      := gfortran
 
-COMP := gfortran
+# need this to compile bl_rng.f90 (module to store random number engines and distributions)
+CXX11 = t
 
 # BOXLIB_HOME defines the directory in which we will find all the BoxLib code
 # If you set BOXLIB_HOME as an environment variable, this line will be ignored
