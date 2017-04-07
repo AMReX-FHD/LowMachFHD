@@ -9,8 +9,8 @@ subroutine main_driver()
   use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfileLM_module
-  use advance_timestep_overdamped_module
   use advance_timestep_inertial_module
+  use advance_timestep_overdamped_module
   use define_bc_module
   use bc_module
   use multifab_physbc_module
@@ -43,8 +43,7 @@ subroutine main_driver()
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng
-  use probin_multispecies_module, only: Dbar, start_time, &
-                                        probin_multispecies_init
+  use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
 
   implicit none
@@ -115,7 +114,7 @@ subroutine main_driver()
   dm = dim_in
  
   ! now that we have dm, we can allocate these
-  allocate(lo(dm),hi(dm))
+  allocate(lo(dm),hi(dm),pmask(dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs))
@@ -131,7 +130,6 @@ subroutine main_driver()
   end if
 
   ! build pmask
-  allocate(pmask(dm))
   pmask = .false.
   do i=1,dm
      if (bc_lo(i) .eq. PERIODIC .and. bc_hi(i) .eq. PERIODIC) then
@@ -214,8 +212,6 @@ subroutine main_driver()
      end do
 
   end if
-
-  deallocate(pmask)
 
   ! set grid spacing at each level
   allocate(dx(nlevs,MAX_SPACEDIM))
@@ -346,11 +342,11 @@ subroutine main_driver()
 
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs 
-     call multifab_build(rho_new(n),           mla%la(n),nspecies,ng_s)
-     call multifab_build(rhotot_new(n),        mla%la(n),1,       ng_s) 
-     call multifab_build(Temp(n),              mla%la(n),1,       ng_s)
-     call multifab_build(eta(n)  ,mla%la(n),1,1)
-     call multifab_build(kappa(n),mla%la(n),1,1)
+     call multifab_build(rho_new(n)   ,mla%la(n),nspecies,ng_s)
+     call multifab_build(rhotot_new(n),mla%la(n),1       ,ng_s) 
+     call multifab_build(Temp(n)      ,mla%la(n),1       ,ng_s)
+     call multifab_build(eta(n)       ,mla%la(n),1       ,1)
+     call multifab_build(kappa(n)     ,mla%la(n),1       ,1)
 
      ! eta and Temp on nodes (2d) or edges (3d)
      if (dm .eq. 2) then
@@ -420,9 +416,9 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
 
-     ! add initial momentum fluctuations - only call in inertial code for now
-     ! Note, for overdamped code, the steady Stokes solver will wipe out the initial 
-     ! condition to solver tolerance
+     ! add initial momentum fluctuations
+     ! do not call for overdamped codes since the steady Stokes solver will 
+     ! wipe out the initial condition to solver tolerance
      if (algorithm_type .ne. 2 .and. &
          variance_coef_mass .ne. 0.d0 .and. &
          initial_variance .ne. 0.d0) then
@@ -475,7 +471,7 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
      
-     ! initial projection - only truly needed for inertial algorithm
+     ! initial projection - only truly needed for inertial algorithms
      ! for the overdamped algorithm, this only changes the reference state for the first
      ! gmres solve in the first time step
      ! Yes, I think in the purely overdamped version this can be removed
@@ -564,11 +560,13 @@ subroutine main_driver()
       ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
       ! routine, but since we have them around anyway for inertial we pass them in
       if (algorithm_type .eq. 0) then
+         ! algorithm_type=0: inertial
          call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep)
       else if (algorithm_type .eq. 2) then
+         ! algorithm_type=2: overdamped with 2 RNG
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                           diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -646,8 +644,8 @@ subroutine main_driver()
 
       ! set old state to new state
       do n=1,nlevs
-         call multifab_copy_c(rho_old(n)   ,1,rho_new(n)   ,1,nspecies,rho_old(n)%ng)
-         call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1,1       ,rhotot_old(n)%ng)
+         call multifab_copy_c(rho_old(n)   ,1,   rho_new(n),1,nspecies,rho_old(n)%ng)
+         call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1       ,1,rhotot_old(n)%ng)
       end do
 
   end do
@@ -685,9 +683,26 @@ subroutine main_driver()
         call multifab_destroy(Temp_ed(n,i))
      end do
   end do
-  deallocate(lo,hi,dx)
-  deallocate(rho_old,rhotot_old,Temp,umac)
+
+  deallocate(lo,hi,pmask)
+  deallocate(rho_old,rhotot_old,pi)
+  deallocate(rho_new,rhotot_new)
+  deallocate(Temp)
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
+  deallocate(umac,mtemp,rhotot_fc,gradp_baro)
+  deallocate(eta,kappa,conc)
+  if (dm .eq. 2) then
+     deallocate(eta_ed)
+     deallocate(Temp_ed)
+  else if (dm .eq. 3) then
+     deallocate(eta_ed)
+     deallocate(Temp_ed)
+  end if
+
+   if (use_bl_rng) then
+      call rng_destroy()
+   end if
+
   call stag_mg_layout_destroy()
   call mgt_macproj_precon_destroy()
   call destroy(mla)

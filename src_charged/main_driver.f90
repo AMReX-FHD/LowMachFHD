@@ -61,7 +61,6 @@ subroutine main_driver()
   ! quantities will be allocated with (nlevs,dm) components
   real(kind=dp_t), allocatable :: dx(:,:)
   real(kind=dp_t)              :: dt,time,runtime1,runtime2,Dbar_max,dt_diffusive
-  real(kind=dp_t)              :: total_charge
   integer                      :: n,nlevs,i,dm,istep,ng_s,init_step,n_Dbar
   type(box)                    :: bx
   type(ml_boxarray)            :: mba
@@ -76,10 +75,8 @@ subroutine main_driver()
   type(multifab), allocatable  :: rhotot_new(:)
   type(multifab), allocatable  :: Temp(:)
   type(multifab), allocatable  :: Temp_ed(:,:)
-  type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
-  type(multifab), allocatable  :: chem_rate(:)
   type(multifab), allocatable  :: umac(:,:)
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
@@ -90,6 +87,8 @@ subroutine main_driver()
   type(multifab), allocatable  :: kappa(:)
   type(multifab), allocatable  :: conc(:)
 
+  real(kind=dp_t)              :: total_charge
+  type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
   type(multifab), allocatable  :: charge_old(:)
   type(multifab), allocatable  :: charge_new(:)
   type(multifab), allocatable  :: permittivity(:)
@@ -97,6 +96,8 @@ subroutine main_driver()
   type(multifab), allocatable  :: grad_Epot_new(:,:)
   type(multifab), allocatable  :: Epot(:)
   type(multifab), allocatable  :: gradPhiApprox(:,:)
+
+  type(multifab), allocatable  :: chem_rate(:)
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs
@@ -133,12 +134,11 @@ subroutine main_driver()
   dm = dim_in
  
   ! now that we have dm, we can allocate these
-  allocate(lo(dm),hi(dm))
+  allocate(lo(dm),hi(dm),pmask(dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs))
-  allocate(Epot_mass_fluxdiv(nlevs))
-  allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs),chem_rate(nlevs))
+  allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
@@ -149,6 +149,7 @@ subroutine main_driver()
      allocate(Temp_ed(nlevs,3))
   end if
 
+  allocate(Epot_mass_fluxdiv(nlevs))
   allocate(charge_old(nlevs))
   allocate(charge_new(nlevs))
   allocate(permittivity(nlevs))
@@ -157,8 +158,9 @@ subroutine main_driver()
   allocate(Epot(nlevs))
   allocate(gradPhiApprox(nlevs,dm))
 
+  allocate(chem_rate(nlevs))
+
   ! build pmask
-  allocate(pmask(dm))
   pmask = .false.
   do i=1,dm
      if (bc_lo(i) .eq. PERIODIC .and. bc_hi(i) .eq. PERIODIC) then
@@ -243,18 +245,18 @@ subroutine main_driver()
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
         ! pi - need 1 ghost cell since we calculate its gradient
         call multifab_build(pi(n)      ,mla%la(n),1       ,1)
-        call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
-        call multifab_build(chem_rate(n)         ,mla%la(n),nspecies,0)
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
+
+        call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
+
+        call multifab_build(chem_rate(n)         ,mla%la(n),nspecies,0)
      end do
 
   end if
-
-  deallocate(pmask)
 
   ! set grid spacing at each level
   allocate(dx(nlevs,MAX_SPACEDIM))
@@ -387,14 +389,15 @@ subroutine main_driver()
 
   ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs 
-     call multifab_build(rho_new(n)         ,mla%la(n),nspecies,ng_s)
-     call multifab_build(rhotot_new(n)      ,mla%la(n),1,       ng_s) 
-     call multifab_build(Temp(n)            ,mla%la(n),1,       ng_s)
-     call multifab_build(eta(n)             ,mla%la(n),1       ,1)
-     call multifab_build(kappa(n)           ,mla%la(n),1       ,1)
-     call multifab_build(charge_old(n)      ,mla%la(n),1       ,1)
-     call multifab_build(charge_new(n)      ,mla%la(n),1       ,1)
-     call multifab_build(permittivity(n)    ,mla%la(n),1       ,1)
+     call multifab_build(rho_new(n)   ,mla%la(n),nspecies,ng_s)
+     call multifab_build(rhotot_new(n),mla%la(n),1       ,ng_s) 
+     call multifab_build(Temp(n)      ,mla%la(n),1       ,ng_s)
+     call multifab_build(eta(n)       ,mla%la(n),1       ,1)
+     call multifab_build(kappa(n)     ,mla%la(n),1       ,1)
+
+     call multifab_build(charge_old(n)  ,mla%la(n),1,1)
+     call multifab_build(charge_new(n)  ,mla%la(n),1,1)
+     call multifab_build(permittivity(n),mla%la(n),1,1)
      do i=1,dm
         call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
         call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
@@ -441,7 +444,7 @@ subroutine main_driver()
   if (variance_coef_mass .ne. 0.d0) then
      call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   end if
-  
+
   !=====================================================================
   ! Initialize values
   !=====================================================================
@@ -781,9 +784,10 @@ subroutine main_driver()
 
       ! set old state to new state
       do n=1,nlevs
-         call multifab_copy_c(rho_old(n)         ,1,rho_new(n)         ,1,nspecies,rho_old(n)%ng)
-         call multifab_copy_c(rhotot_old(n)      ,1,rhotot_new(n)      ,1,1       ,rhotot_old(n)%ng)
-         call multifab_copy_c(charge_old(n)      ,1,charge_new(n)      ,1,1       ,charge_old(n)%ng)
+         call multifab_copy_c(rho_old(n)   ,1,   rho_new(n),1,nspecies,rho_old(n)%ng)
+         call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1       ,1,rhotot_old(n)%ng)
+
+         call multifab_copy_c(charge_old(n),1,charge_new(n),1,1,charge_old(n)%ng)
          do i=1,dm
             call multifab_copy_c(grad_Epot_old(n,i),1,grad_Epot_new(n,i),1,1,grad_Epot_old(n,i)%ng)
          end do
@@ -809,10 +813,8 @@ subroutine main_driver()
      call multifab_destroy(rho_new(n))
      call multifab_destroy(rhotot_new(n))
      call multifab_destroy(Temp(n))
-     call multifab_destroy(Epot_mass_fluxdiv(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      call multifab_destroy(stoch_mass_fluxdiv(n))
-     call multifab_destroy(chem_rate(n))
      call multifab_destroy(pi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
@@ -828,12 +830,8 @@ subroutine main_driver()
      end do
   end do
 
-  deallocate(lo,hi,dx)
-  deallocate(rho_old,rhotot_old,rho_new,rhotot_new,rhotot_fc,conc)
-  deallocate(Temp,umac,pi,mtemp,gradp_baro,eta,kappa,eta_ed,Temp_ed)
-  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv,chem_rate)
-
   do n=1,nlevs
+     call multifab_destroy(Epot_mass_fluxdiv(n))
      call multifab_destroy(charge_old(n))
      call multifab_destroy(charge_new(n))
      call multifab_destroy(permittivity(n))
@@ -846,6 +844,36 @@ subroutine main_driver()
         call multifab_destroy(gradPhiApprox(n,i))
      end do
   end do
+  
+  do n=1,nlevs
+     call multifab_destroy(chem_rate(n))
+  end do
+
+  deallocate(lo,hi,pmask)
+  deallocate(rho_old,rhotot_old,pi)
+  deallocate(rho_new,rhotot_new)
+  deallocate(Temp)
+  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
+  deallocate(umac,mtemp,rhotot_fc,gradp_baro)
+  deallocate(eta,kappa,conc)
+  if (dm .eq. 2) then
+     deallocate(eta_ed)
+     deallocate(Temp_ed)
+  else if (dm .eq. 3) then
+     deallocate(eta_ed)
+     deallocate(Temp_ed)
+  end if
+
+  deallocate(Epot_mass_fluxdiv)
+  deallocate(charge_old)
+  deallocate(charge_new)
+  deallocate(permittivity)
+  deallocate(grad_Epot_old)
+  deallocate(grad_Epot_new)
+  deallocate(Epot)
+  deallocate(gradPhiApprox)
+
+  deallocate(chem_rate)
 
    if (use_bl_rng) then
       call rng_destroy()
@@ -855,9 +883,5 @@ subroutine main_driver()
   call mgt_macproj_precon_destroy()
   call destroy(mla)
   call bc_tower_destroy(the_bc_tower)
-
-  deallocate(Epot_mass_fluxdiv)
-  deallocate(charge_old,charge_new,permittivity)
-  deallocate(grad_Epot_old,grad_Epot_new,Epot,gradPhiApprox)
 
 end subroutine main_driver
