@@ -69,27 +69,15 @@ contains
     ! populate the variance (only first level)
     variance = sqrt(2.d0*k_B*variance_coef_mass/(product(dx(1,1:MAX_SPACEDIM))*dt))
 
-    ! build multifabs 
+    ! build stoch_mass_flux and copy stoch_W_fc into it
     do n=1,nlevs
        do i=1,dm
-          call multifab_build_edge(stoch_mass_flux(n,i), mla%la(n), nspecies,    0, i)
-       end do
-    end do
- 
-    ! set stoch_mass_flux to zero
-    do n=1,nlevs
-       do i = 1,dm
+          call multifab_build_edge(stoch_mass_flux(n,i), mla%la(n), nspecies, 0, i)
           call setval(stoch_mass_flux(n,i), 0.d0, all=.true.)   
-       end do   
-    end do   
-    
-    ! convert stoch_W_fc into stoch_mass_flux
-    do n=1,nlevs
-       do i = 1,dm
           do rng=1,n_rngs
              call saxpy(stoch_mass_flux(n,i), weights(rng), stoch_W_fc(n,i,rng))
           end do   
-       end do   
+       end do
     end do
 
     ! compute variance X sqrtLonsager-face X W(0,1) 
@@ -99,7 +87,7 @@ contains
           call multifab_mult_mult_s(stoch_mass_flux(n,i), variance, 0)
        end do
     end do  
-    
+
     ! sync the fluxes at the boundaries
     do n=1,nlevs
        do i=1,dm

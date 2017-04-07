@@ -229,26 +229,11 @@ contains
                                    the_bc_tower%bc_tower_array)
 
     ! compute diffusive and stochastic mass fluxes
-    ! this computes "+F = -rho*W*chi*Gamma*grad(x) - ..."
+    ! this computes "-F = rho*W*chi*Gamma*grad(x) - ..."
     call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                               0.5d0*dt,time,dx,weights,the_bc_tower)
-
-    ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       if (variance_coef_mass .ne. 0) then
-          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
-       do i=1,dm
-          call multifab_mult_mult_s_c(diff_mass_flux(n,i),1,-1.d0,nspecies,0)
-          if (variance_coef_mass .ne. 0) then
-             call multifab_mult_mult_s_c(stoch_mass_flux(n,i),1,-1.d0,nspecies,0)
-          end if
-          call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
-       end do
-    end do
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
@@ -487,7 +472,7 @@ contains
        ! strato
 
        ! compute diffusive and stochastic mass fluxes
-       ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+       ! this computes "-F = rho*W*chi*Gamma*grad(x) - ..."
        weights(:) = 1.d0/sqrt(2.d0)
        call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -506,7 +491,7 @@ contains
        end if
 
        ! compute diffusive and stochastic mass fluxes
-       ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+       ! this computes "-F = rho*W*chi*Gamma*grad(x) - ..."
        weights(1) = 0.d0
        weights(2) = 1.d0
        call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
@@ -515,21 +500,6 @@ contains
                                  0.5d0*dt,time,dx,weights,the_bc_tower)
 
     end if
-
-    ! now fluxes contain "-F = +rho*W*chi*Gamma*grad(x) + ..."
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
-       do i=1,dm
-          call multifab_mult_mult_s_c(diff_mass_flux(n,i),1,-1.d0,nspecies,0)
-          if (variance_coef_mass .ne. 0) then
-             call multifab_mult_mult_s_c(stoch_mass_flux(n,i),1,-1.d0,nspecies,0)
-          end if
-          call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
-       end do
-    end do
 
     if (midpoint_stoch_mass_flux_type .eq. 2) then
        ! ito

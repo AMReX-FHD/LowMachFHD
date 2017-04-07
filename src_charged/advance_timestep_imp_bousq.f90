@@ -442,28 +442,13 @@ contains
     call compute_Lorentz_force(mla,Lorentz_force_new,grad_Epot_new,permittivity, &
                                charge_new,dx,the_bc_tower)
 
-    ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1,*}
-    ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1,*} Z^{n:n+1}
+    ! diff_mass_fluxdiv = -div(F) = div (rho W chi Gamma grad x + ...)^{n+1,*}
+    ! stoch_mass_fluxdiv = -div(F) = div sqrt(...) B^{n+1,*} Z^{n:n+1}
     ! and total_mass_flux for reservoir boundary conditions on velocity
     call compute_mass_fluxdiv(mla,rho_tmp,rhotot_tmp,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                               dt,time,dx,weights,the_bc_tower)
-
-    ! now fluxdivs contain "-div(F) = div (rho W chi Gamma grad x + ...)", etc.
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       if (variance_coef_mass .ne. 0) then
-          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
-       do i=1,dm
-          call multifab_mult_mult_s_c(diff_mass_flux(n,i),1,-1.d0,nspecies,0)
-          if (variance_coef_mass .ne. 0) then
-             call multifab_mult_mult_s_c(stoch_mass_flux(n,i),1,-1.d0,nspecies,0)
-          end if
-          call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
-       end do
-    end do
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
@@ -872,28 +857,13 @@ contains
     end if
 
     ! mass fluxes for the next time step
-    ! diff_mass_fluxdiv = -div (rho W chi Gamma grad x + ...)^{n+1}
-    ! stoch_mass_fluxdiv = -div sqrt(...) B^{n+1} Z^{n+1:n+2}
+    ! diff_mass_fluxdiv = -div(F) = div (rho W chi Gamma grad x + ...)^{n+1}
+    ! stoch_mass_fluxdiv = -div(F) = div sqrt(...) B^{n+1} Z^{n+1:n+2}
     ! and total_mass_flux for reservoir boundary conditions on velocity
     call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                               dt,time,dx,weights,the_bc_tower)
-
-    ! now fluxes contain "-div(F) = div (rho W chi Gamma grad x + ...)", etc.
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       if (variance_coef_mass .ne. 0) then
-          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
-       do i=1,dm
-          call multifab_mult_mult_s_c(diff_mass_flux(n,i),1,-1.d0,nspecies,0)
-          if (variance_coef_mass .ne. 0) then
-             call multifab_mult_mult_s_c(stoch_mass_flux(n,i),1,-1.d0,nspecies,0)
-          end if
-          call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
-       end do
-    end do
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)

@@ -76,19 +76,11 @@ contains
     end do
 
     ! compute mass fluxes
-    ! this computes "F = -rho*W*chi*Gamma*grad(x) - ..."
+    ! this computes "-F = rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molefrac,rhoWchi,Gama, &
                                 mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro,mass_flux,dx, &
                                 the_bc_tower)
 
-    ! now fluxes contain -F = +rho*W*chi*Gamma*grad(x) + ...
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       do i=1,dm
-          call multifab_mult_mult_s_c(mass_flux(n,i),1,-1.d0,nspecies,0)
-       end do
-    end do
-      
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(rhoWchi(n))

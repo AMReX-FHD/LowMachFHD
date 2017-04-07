@@ -440,7 +440,7 @@ contains
 
        ! compute diffusive, stochastic, potential mass fluxes
        ! with barodiffusion and thermodiffusion
-       ! this computes "F = -rho W chi [Gamma grad x... ]"
+       ! this computes "-F = rho W chi [Gamma grad x... ]"
        weights(:) = 1.d0/sqrt(2.d0)
        call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -462,7 +462,7 @@ contains
 
        ! compute diffusive, stochastic, potential mass fluxes
        ! with barodiffusion and thermodiffusion
-       ! this computes "F = -rho W chi [Gamma grad x... ]"
+       ! this computes "-F = rho W chi [Gamma grad x... ]"
        weights(1) = 0.d0
        weights(2) = 1.d0
        call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro,Temp, &
@@ -473,24 +473,6 @@ contains
                                          permittivity)
 
     end if
-
-    ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       if (use_charged_fluid) then
-          call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
-       do i=1,dm
-          call multifab_mult_mult_s_c(diff_mass_flux(n,i),1,-1.d0,nspecies,0)
-          if (variance_coef_mass .ne. 0) then
-             call multifab_mult_mult_s_c(stoch_mass_flux(n,i),1,-1.d0,nspecies,0)
-          end if
-          call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
-       end do
-    end do
 
     if (midpoint_stoch_mass_flux_type .eq. 2) then
        ! ito
@@ -911,7 +893,7 @@ contains
 
     ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
-    ! this computes "F = -rho W chi [Gamma grad x... ]"
+    ! this computes "-F = rho W chi [Gamma grad x... ]"
     weights(1) = 1.d0
     weights(2) = 0.d0
     call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro,Temp, &
@@ -920,24 +902,6 @@ contains
                                       0.5d0*dt,time,dx,weights,the_bc_tower, &
                                       Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
                                       permittivity)
-
-    ! now fluxes contain "-F = rho*W*chi*Gamma*grad(x) + ..."
-    do n=1,nlevs
-       call multifab_mult_mult_s_c(diff_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       if (use_charged_fluid) then
-          call multifab_mult_mult_s_c(Epot_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
-       if (variance_coef_mass .ne. 0.d0) then
-          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,-1.d0,nspecies,0)
-       end if
-       do i=1,dm
-          call multifab_mult_mult_s_c(diff_mass_flux(n,i),1,-1.d0,nspecies,0)
-          if (variance_coef_mass .ne. 0) then
-             call multifab_mult_mult_s_c(stoch_mass_flux(n,i),1,-1.d0,nspecies,0)
-          end if
-          call multifab_mult_mult_s_c(total_mass_flux(n,i),1,-1.d0,nspecies,0)
-       end do
-    end do
 
     ! compute chemical rates m_i*R^{n+1}_i
     if (nreactions > 0) then

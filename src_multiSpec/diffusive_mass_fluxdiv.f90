@@ -233,7 +233,6 @@ contains
     do n=1,nlevs
        do i=1,dm
           call matvec_mul(mla, diff_mass_flux(n,i), rhoWchi_face(n,i), nspecies)
-          call multifab_mult_mult_s(diff_mass_flux(n,i),-1.d0)
        end do
     end do    
 
