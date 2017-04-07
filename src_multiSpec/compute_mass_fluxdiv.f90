@@ -126,7 +126,7 @@ contains
                                 diff_mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                 diff_mass_flux,dx,the_bc_tower)
 
-    ! increment total mass flux
+    ! set total mass flux
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
@@ -155,7 +155,7 @@ contains
        ! increment total mass flux
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+             call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
           end do
        end do
 
