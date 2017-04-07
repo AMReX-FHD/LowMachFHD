@@ -89,8 +89,6 @@ contains
                               dt,stage_time,dx,weights,the_bc_tower, &
                               rhoWchi_out=rhoWchi)
 
-    ! Donev: Observe that modified densities rho+drho are used when computing charges. Is this what we want?
-    ! In particular, in the implicit method, do we want to make sure there is charge everywhere ad-hoc? Probably not
     if (use_charged_fluid) then
        ! compute electric potential mass fluxes
        call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
