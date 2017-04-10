@@ -17,13 +17,14 @@ CXX11 = t
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
-VPATH_LOCATIONS += ../
-
-include $(STAGGERED_HOME)/src_multiSpec/GPackage.mak
-VPATH_LOCATIONS += $(STAGGERED_HOME)/src_multiSpec
+include $(STAGGERED_HOME)/src_lowMach/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_lowMach
 
 include $(STAGGERED_HOME)/src_charged/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_charged
+
+include $(STAGGERED_HOME)/src_multiSpec/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_multiSpec
 
 include $(STAGGERED_HOME)/src_chemistry/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_chemistry
