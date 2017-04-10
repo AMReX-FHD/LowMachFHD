@@ -17,10 +17,16 @@ CXX11 = t
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
-VPATH_LOCATIONS += ..
+VPATH_LOCATIONS += ../
 
 include $(STAGGERED_HOME)/src_multiSpec/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_multiSpec
+
+include $(STAGGERED_HOME)/src_charged/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_charged
+
+include $(STAGGERED_HOME)/src_chemistry/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_chemistry
 
 include $(STAGGERED_HOME)/src_gmres/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_gmres
@@ -37,17 +43,15 @@ VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/F_BaseLib
 include $(BOXLIB_HOME)/Src/LinearSolvers/F_MG/GPackage.mak
 VPATH_LOCATIONS += $(BOXLIB_HOME)/Src/LinearSolvers/F_MG
 
-ifdef LAPACK95
-        LAPACK95_DIR = $(STAGGERED_HOME)/src_multiSpec/LAPACK95
+LAPACK95_DIR = $(STAGGERED_HOME)/src_multiSpec/LAPACK95
 
-        F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
-        ifeq ($(findstring edison, $(HOST)), edison)
-        libraries += $(LAPACK95_DIR)/lapack95.a
-        else ifeq ($(findstring cori, $(HOST)), cori)
-        libraries += $(LAPACK95_DIR)/lapack95.a
-        else
-        libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
-        endif
+F90FLAGS += -I$(LAPACK95_DIR)/lapack95_modules
+ifeq ($(findstring edison, $(HOST)), edison)
+  libraries += $(LAPACK95_DIR)/lapack95.a
+else ifeq ($(findstring cori, $(HOST)), cori)
+  libraries += $(LAPACK95_DIR)/lapack95.a
+else
+  libraries += $(LAPACK95_DIR)/lapack95.a -llapack -lblas
 endif
 
 main.$(suf).exe: $(objects) 

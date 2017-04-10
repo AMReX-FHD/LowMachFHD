@@ -5,7 +5,6 @@ module define_bc_module
   use bc_module
   use inhomogeneous_bc_val_module
   use probin_common_module, only : bc_lo, bc_hi
-  use probin_charged_module, only: Epot_wall_bc_type
 
   implicit none
 
@@ -124,17 +123,14 @@ contains
     ! Here we allocate (dm+1)=pres_bc_comp components for x_u and x_p
     !                  num_scal_bc components for scalars
     !                  num_tran_bc components for transport coefficients
-    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc+num_tran_bc))
+    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,1:tran_bc_comp+num_tran_bc-1))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
 
-    ! This is only used for the cell-centered Poisson solver
-    ! We need to keep x_u so indexing is consistent for x_p
-    !                  pres_bc_comp for x_p
-    !                  1 component for Epot
-    ! (due to ordering of Epot_bc_comp this is indexed much larger than it has to be)
-    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp:pres_bc_comp+num_scal_bc))
+    ! This is only used for the cell-centered Poisson solver for the projection
+    ! and for implicit mass diffusion
+    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp:scal_bc_comp+num_scal_bc-1))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -221,8 +217,8 @@ contains
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet velocity condition
           ! for pressure we use extrapolation
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! normal and transverse velocity
-          adv_bc_level(igrid,d,lohi,pres_bc_comp)                    = FOEXTRAP ! pressure
+          adv_bc_level(igrid,d,lohi,1:dm)         = DIR_VEL  ! normal and transverse velocity
+          adv_bc_level(igrid,d,lohi,pres_bc_comp) = FOEXTRAP ! pressure
 
        else if ( (phys_bc_level(igrid,d,lohi) >= SLIP_START) .and.  (phys_bc_level(igrid,d,lohi) <= SLIP_END) ) then
 
@@ -240,19 +236,27 @@ contains
 
        end if
        
-       ! The scalars can be handled in many different ways, so defer to application-specific code:
-       call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
-                      scal_bc_comp:scal_bc_comp+num_scal_bc-1))
+       if (num_scal_bc .gt. 0) then
+          ! The scalars can be handled in many different ways, so defer to application-specific code:
+          call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
+                         scal_bc_comp:scal_bc_comp+num_scal_bc-1))
+
+          if (any(adv_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) .eq. -999)) then
+             print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+             call bl_error('BC TYPE NOT SUPPORTED 2')
+          end if
+
+       end if
        
-       ! The transport coefficients can be handled in many different ways, so defer to application-specific code:
-       call transport_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
-                         tran_bc_comp:tran_bc_comp+num_tran_bc-1))
+       if (num_tran_bc .gt. 0) then
+          ! The transport coefficients can be handled in many different ways, so defer to application-specific code:
+          call transport_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
+                            tran_bc_comp:tran_bc_comp+num_tran_bc-1))
 
-       if (any(adv_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) .eq. -999)) then
-
-          print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
-          call bl_error('BC TYPE NOT SUPPORTED 2')
-
+          if (any(adv_bc_level(igrid,d,lohi,tran_bc_comp:tran_bc_comp+num_tran_bc-1) .eq. -999)) then
+             print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+             call bl_error('BC TYPE NOT SUPPORTED 3')
+          end if
        end if
 
     end do
@@ -284,8 +288,8 @@ contains
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
-          ! pressure is periodic
-          ell_bc_level(igrid,d,lohi,pres_bc_comp:pres_bc_comp+num_scal_bc) = BC_PER
+          ! pressure and scalars are periodic
+          ell_bc_level(igrid,d,lohi,pres_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_PER
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL .or. &
                 phys_bc_level(igrid,d,lohi) == SLIP_WALL .or. &
@@ -293,23 +297,14 @@ contains
                 phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
 
           ! walls
-          ! pressure is homogeneous Neumann
-          ! make everything else Dirichlet (only used for Epot right now)
-          ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
 
-          ! electric potential
-          if (Epot_wall_bc_type .eq. 1) then
-             ell_bc_level(igrid,d,lohi,pres_bc_comp+1:pres_bc_comp+num_scal_bc) = BC_DIR
-          else if (Epot_wall_bc_type .eq. 2) then
-             ell_bc_level(igrid,d,lohi,pres_bc_comp+1:pres_bc_comp+num_scal_bc) = BC_NEU
-          else
-
-          end if
+          ! pressure and scalars are homogeneous Neumann
+          ell_bc_level(igrid,d,lohi,pres_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_NEU
 
        else
 
-          ! pressure is homogeneous neumann
-          ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_NEU
+          print*,'ell_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+          call bl_error('BC TYPE NOT SUPPORTED')
 
        end if
 

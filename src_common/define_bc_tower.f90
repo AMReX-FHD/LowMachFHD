@@ -4,6 +4,8 @@ module define_bc_module
   use ml_layout_module
   use bc_module
   use inhomogeneous_bc_val_module
+  use probin_common_module, only : bc_lo, bc_hi
+  use probin_charged_module, only: Epot_wall_bc_type
 
   implicit none
 
@@ -31,10 +33,6 @@ module define_bc_module
 contains
 
   subroutine initialize_bc(the_bc_tower,num_levs,dm,pmask,num_scal_bc_in,num_tran_bc_in)
-
-     use bc_module
-
-     use probin_common_module, only : bc_lo, bc_hi
 
      type(bc_tower), intent(  out) :: the_bc_tower
      integer       , intent(in   ) :: num_levs,dm,num_scal_bc_in,num_tran_bc_in
@@ -126,15 +124,17 @@ contains
     ! Here we allocate (dm+1)=pres_bc_comp components for x_u and x_p
     !                  num_scal_bc components for scalars
     !                  num_tran_bc components for transport coefficients
-    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc+num_tran_bc))
+    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,1:tran_bc_comp+num_tran_bc-1))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
 
-    ! Here we allocate (dm+1)=pres_bc_comp components for x_u and x_p
-    !                  num_scal_bc components for scalars
-    !                  num_tran_bc components for transport coefficients
-    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc+num_tran_bc))
+    ! This is only used for the cell-centered Poisson solver for the projection
+    ! and for electric potential solves
+    !                  pres_bc_comp for x_p
+    !                  1 component for Epot
+    ! (since Epot_bc_comp is the "last" scalar this is indexed much larger than it has to be)
+    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp:Epot_bc_comp))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -271,7 +271,7 @@ contains
 
   subroutine ell_bc_level_build(ell_bc_level,phys_bc_level,default_value)
 
-    integer  , intent(inout) ::  ell_bc_level(0:,:,:,:)
+    integer  , intent(inout) ::  ell_bc_level(0:,:,:,pres_bc_comp:)
     integer  , intent(in   ) :: phys_bc_level(0:,:,:)
     integer  , intent(in   ) :: default_value
 
@@ -292,35 +292,30 @@ contains
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
-          ! pressure and scalars are periodic
-          ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_PER
-          if (num_scal_bc .gt. 0) then
-             ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_PER
-          end if
+          ! pressure, scalars, and electric potential are periodic
+          ell_bc_level(igrid,d,lohi,pres_bc_comp:Epot_bc_comp) = BC_PER
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL .or. &
-                phys_bc_level(igrid,d,lohi) == SLIP_WALL) then
-
-          ! pressure and scalars are homogeneous Neumann
-          ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
-          if (num_scal_bc .gt. 0) then
-             ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_NEU
-          end if
-
-       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR .or. &
+                phys_bc_level(igrid,d,lohi) == SLIP_WALL .or. &
+                phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR .or. &
                 phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
 
-          ! pressure is homogeneous Neumann
-          ! scalars are Dirichlet
-          ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
-          if (num_scal_bc .gt. 0) then
-             ell_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) = BC_DIR
+          ! walls
+
+          ! pressure and scalars are homogeneous Neumann
+          ell_bc_level(igrid,d,lohi,pres_bc_comp:Epot_bc_comp-1) = BC_NEU
+
+          ! electric potential
+          if (Epot_wall_bc_type .eq. 1) then
+             ell_bc_level(igrid,d,lohi,Epot_bc_comp) = BC_DIR
+          else if (Epot_wall_bc_type .eq. 2) then
+             ell_bc_level(igrid,d,lohi,Epot_bc_comp) = BC_NEU
           end if
 
        else
 
-          ! pressure is homogeneous Neumann
-          ell_bc_level(igrid,d,lohi,pres_bc_comp)                            = BC_NEU
+          print*,'ell_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+          call bl_error('BC TYPE NOT SUPPORTED')
 
        end if
 

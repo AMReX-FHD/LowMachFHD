@@ -25,8 +25,8 @@ VPATH_LOCATIONS += $(STAGGERED_HOME)/src_charged
 include $(STAGGERED_HOME)/src_multiSpec/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_multiSpec
 
-include $(STAGGERED_HOME)/src_reactDiff/GPackage.mak
-VPATH_LOCATIONS += $(STAGGERED_HOME)/src_reactDiff
+include $(STAGGERED_HOME)/src_chemistry/GPackage.mak
+VPATH_LOCATIONS += $(STAGGERED_HOME)/src_chemistry
 
 include $(STAGGERED_HOME)/src_gmres/GPackage.mak
 VPATH_LOCATIONS += $(STAGGERED_HOME)/src_gmres
