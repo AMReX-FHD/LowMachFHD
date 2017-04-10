@@ -1,7 +1,6 @@
 f90sources += advance_timestep_inertial.f90
 f90sources += advance_timestep_overdamped.f90
 f90sources += analysis.f90
-f90sources += checkpoint.f90
 f90sources += compute_mixture_properties.f90
 f90sources += convert_rhoc_to_c.f90
 f90sources += correction_flux.f90
@@ -21,5 +20,4 @@ f90sources += matvec_mul.f90
 f90sources += probin_multispecies.f90
 f90sources += project_onto_eos.f90
 f90sources += reservoir_bc_fill.f90
-f90sources += restart.f90
 f90sources += stochastic_mass_fluxdiv.f90

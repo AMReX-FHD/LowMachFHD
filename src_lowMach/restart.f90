@@ -8,8 +8,9 @@ module restart_module
   use bl_rng_module
   use bl_random_module
   use probin_common_module, only: dim_in, advection_type, restart, advection_type, &
-                                  algorithm_type, use_bl_rng, nspecies, &
+                                  use_bl_rng, nspecies, &
                                   seed_momentum, seed_diffusion, seed_reaction
+  use probin_chemistry_module, only: nreactions
 
   implicit none
 
@@ -20,7 +21,7 @@ module restart_module
 contains
 
   subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pres,diff_mass_fluxdiv, &
-                                     stoch_mass_fluxdiv,umac,pmask)
+                                     stoch_mass_fluxdiv,chem_rate,umac,pmask)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
@@ -29,6 +30,7 @@ contains
      type(multifab), intent(inout) :: pres(:)
      type(multifab), intent(inout) :: diff_mass_fluxdiv(:)
      type(multifab), intent(inout) :: stoch_mass_fluxdiv(:)
+     type(multifab), intent(inout) :: chem_rate(:)
      type(multifab), intent(inout) :: umac(:,:)
      logical       , intent(in   ) :: pmask(:)
 
@@ -55,8 +57,7 @@ contains
         ng_s = 4 ! limited quadratic bds
      end if
 
-     call fill_restart_data(mba,chkdata,chkdata_edgex,chkdata_edgey,chkdata_edgez, &
-                            time,dt)
+     call fill_restart_data(mba,chkdata,chkdata_edgex,chkdata_edgey,chkdata_edgez,time,dt)
 
      call ml_layout_build(mla,mba,pmask)
 
@@ -68,24 +69,39 @@ contains
         call multifab_build(pres(n)  , mla%la(n),        1, 1)
         call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+     end do
+     if (nreactions .gt. 0) then
+        do n=1,nlevs
+           call multifab_build(chem_rate(n),mla%la(n),nspecies,0) 
+        end do
+     end if
+     do n=1,nlevs
         do i=1,dm
            call multifab_build_edge(umac(n,i), mla%la(n), 1, 1, i)
         end do
      end do
+
      do n = 1,nlevs
-        call multifab_copy_c(rho(n)   ,1,chkdata(n)      ,1         ,nspecies)
-        call multifab_copy_c(rhotot(n),1,chkdata(n)      ,nspecies+1,1)
-        call multifab_copy_c(pres(n)  ,1,chkdata(n)      ,nspecies+2,1)
-        if (algorithm_type .ne. 2) then
-           ! non-overdamped algorithms - need to save diff/stoch_mass_fluxdiv
-           call multifab_copy_c( diff_mass_fluxdiv(n),1,chkdata(n),  nspecies+3,nspecies)
-           call multifab_copy_c(stoch_mass_fluxdiv(n),1,chkdata(n),2*nspecies+3,nspecies)
-        end if
-        call multifab_copy_c(umac(n,1),1,chkdata_edgex(n),1         ,1)
-        call multifab_copy_c(umac(n,2),1,chkdata_edgey(n),1         ,1)
+        call multifab_copy_c(rho(n)               ,1,chkdata(n),1           ,nspecies)
+        call multifab_copy_c(rhotot(n)            ,1,chkdata(n),nspecies+1  ,1)
+        call multifab_copy_c(pres(n)              ,1,chkdata(n),nspecies+2  ,1)
+        call multifab_copy_c(diff_mass_fluxdiv(n) ,1,chkdata(n),nspecies+3  ,nspecies)
+        call multifab_copy_c(stoch_mass_fluxdiv(n),1,chkdata(n),2*nspecies+3,nspecies)
+     end do
+     if (nreactions .gt. 0) then
+        do n=1,nlevs
+           call multifab_copy_c(chem_rate(n),1,chkdata(n),3*nspecies+3,nspecies)
+        end do
+     end if
+     do n=1,nlevs
+        call multifab_copy_c(umac(n,1),1,chkdata_edgex(n),1,1)
+        call multifab_copy_c(umac(n,2),1,chkdata_edgey(n),1,1)
         if (dm .eq. 3) then
            call multifab_copy_c(umac(n,3),1,chkdata_edgez(n),1,1)
         end if
+     end do
+
+     do n=1,nlevs
         !
         ! The layout for chkdata is built standalone, level
         ! by level, and need to be destroy()d as such as well.

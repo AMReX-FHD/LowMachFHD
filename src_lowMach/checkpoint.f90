@@ -8,9 +8,10 @@ module checkpoint_module
   use fab_module
   use bl_rng_module
   use bl_random_module
-  use fabio_module, only: fabio_mkdir, fabio_ml_multifab_write_d
-  use probin_common_module, only: dim_in, algorithm_type, use_bl_rng, nspecies, &
+  use fabio_module
+  use probin_common_module, only: dim_in, use_bl_rng, nspecies, &
                                   seed_diffusion, seed_momentum, seed_reaction
+  use probin_chemistry_module, only: nreactions
 
   implicit none
 
@@ -21,7 +22,7 @@ module checkpoint_module
 contains
 
   subroutine checkpoint_write(mla,rho,rhotot,pres,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              umac,time,dt,istep_to_write)
+                              chem_rate,umac,time,dt,istep_to_write)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)                ! cell-centered partial densities
@@ -29,6 +30,7 @@ contains
     type(multifab) , intent(in   ) :: pres(:)               ! cell-centered pressure
     type(multifab) , intent(in   ) :: diff_mass_fluxdiv(:)  ! diffusive mass fluxes
     type(multifab) , intent(in   ) :: stoch_mass_fluxdiv(:) ! stochastic mass fluxes
+    type(multifab) , intent(in   ) :: chem_rate(:)          ! chemical rates
     type(multifab) , intent(in   ) :: umac(:,:)             ! edge-based velocities
     integer        , intent(in   ) :: istep_to_write
     real(kind=dp_t), intent(in   ) :: time,dt
@@ -37,6 +39,7 @@ contains
     type(multifab), pointer :: chkdata_edge(:,:)
 
     integer :: n,nlevs,dm,i
+    integer num_chk, counter
 
     character(len=11) :: sd_name
     character(len=40) :: rand_name
@@ -48,33 +51,74 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
+    ! partial densities
+    ! total density
+    ! pressure
+    ! diff_mass_fluxdiv
+    ! stoch_mass_fluxdiv
+    num_chk = 3*nspecies + 2
+
+    if (nreactions .gt. 0) then
+       ! chem_rate
+       num_chk = num_chk + nspecies
+    end if
+
     allocate(chkdata(nlevs))
     allocate(chkdata_edge(nlevs,dm))
+
+    counter = 1
+
+    ! cell-centered quantities
     do n = 1,nlevs
-       if (algorithm_type .ne. 2) then
-          ! non-overdamped algorithms - need to save diff/stoch_mass_fluxdiv
-          ! nspecies densities + 1 total density + 1 pressure + diff/stoch_mass_fluxdiv
-          call multifab_build(chkdata(n), mla%la(n), 3*nspecies+2, 0)
-       else
-          ! overdamped algorithms - don't need to save diff/stoch_mass_fluxdiv
-          ! nspecies densities + 1 total density + 1 pressure
-          call multifab_build(chkdata(n), mla%la(n), nspecies+2, 0)
-       end if
-       ! copy partial densities, total density, and pressure
-       call multifab_copy_c(chkdata(n), 1         , rho(n)   , 1, nspecies)
-       call multifab_copy_c(chkdata(n), nspecies+1, rhotot(n), 1, 1)
-       call multifab_copy_c(chkdata(n), nspecies+2, pres(n)  , 1, 1)
-       if (algorithm_type .ne. 2) then
-          call multifab_copy_c(chkdata(n), nspecies+3, diff_mass_fluxdiv(n), 1, nspecies)
-          call multifab_copy_c(chkdata(n), 2*nspecies+3, stoch_mass_fluxdiv(n), 1, nspecies)
-       end if
+       call multifab_build(chkdata(n),mla%la(n),num_chk)
+    end do
+
+    ! partial densities
+    do n=1,nlevs
+       call multifab_copy_c(chkdata(n),1,rho(n),1,nspecies)
+    end do
+    counter = counter + nspecies
+
+    ! total density
+    do n=1,nlevs
+       call multifab_copy_c(chkdata(n),nspecies+1,rhotot(n),1,1)
+    end do
+    counter = counter + 1
+
+    ! pressure
+    do n=1,nlevs
+       call multifab_copy_c(chkdata(n),nspecies+2,pres(n),1,1)
+    end do
+    counter = counter + 1
+
+    ! diff_mass_fluxdiv
+    do n=1,nlevs
+       call multifab_copy_c(chkdata(n),nspecies+3,diff_mass_fluxdiv(n),1,nspecies)
+    end do
+    counter = counter + nspecies
+
+    ! stoch_mass_fluxdiv
+    do n=1,nlevs
+       call multifab_copy_c(chkdata(n),2*nspecies+3,stoch_mass_fluxdiv(n),1,nspecies)
+    end do
+    counter = counter + nspecies
+
+    ! chem_rate
+    if (nreactions > 0) then
+       do n=1,nlevs
+          call multifab_copy_c(chkdata(n),3*nspecies+3,chem_rate(n),1,nspecies)
+          counter = counter + 1
+       end do
+    end if
+
+    ! staggered quantities (normal velocity)
+    do n=1,nlevs
        do i=1,dm
-          ! 1 velocity component and 1 normal bc component for each face
-          call multifab_build_edge(chkdata_edge(n,i), mla%la(n), 1, 0, i)
-          ! copy velocities
-          call multifab_copy_c(chkdata_edge(n,i), 1, umac(n,i), 1, 1)
+          call multifab_build_edge(chkdata_edge(n,i),mla%la(n),1,0,i)
+          call multifab_copy_c(chkdata_edge(n,i),1,umac(n,i),1,1)
        end do
     end do
+
     write(unit=sd_name,fmt='("chk",i8.8)') istep_to_write
 
     call checkpoint_write_doit(nlevs, sd_name, chkdata, chkdata_edge, mla%mba%rr, time, dt)
@@ -86,7 +130,7 @@ contains
        rand_name = sd_name//'/rng_eng_mom'
        call bl_rng_save_engine(rng_eng_momentum, rand_name)
        rand_name = sd_name//'/rng_eng_diff'
-       call bl_rng_save_engine(rng_eng_diffusion, rand_name)
+       call bl_rng_save_engine(rng_eng_diffusion_old, rand_name)
        rand_name = sd_name//'/rng_eng_react'
        call bl_rng_save_engine(rng_eng_reaction, rand_name)
 
