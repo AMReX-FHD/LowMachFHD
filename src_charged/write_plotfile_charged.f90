@@ -8,6 +8,7 @@ module write_plotfile_charged_module
   use fluid_charge_module
   use probin_multispecies_module, only: plot_stag
   use probin_common_module, only: prob_lo, prob_hi, nspecies
+  use probin_charged_module, only: use_charged_fluid
 
   implicit none
 
@@ -31,9 +32,9 @@ contains
 
     ! local variables
     character(len=20), allocatable  :: plot_names(:)
-    character(len=20)               :: plot_names_stagx(3)
-    character(len=20)               :: plot_names_stagy(3)
-    character(len=20)               :: plot_names_stagz(3)
+    character(len=20), allocatable  :: plot_names_stagx(:)
+    character(len=20), allocatable  :: plot_names_stagy(:)
+    character(len=20), allocatable  :: plot_names_stagz(:)
     character(len=20)               :: plotfile_name
     character(len=20)               :: plotfile_namex
     character(len=20)               :: plotfile_namey
@@ -41,120 +42,246 @@ contains
     integer                         :: i,dm,n,nlevs
 
     ! multifab of size nlevs  
-    type(multifab), allocatable     :: plotdata(:)
-    type(multifab), allocatable     :: plotdata_stag(:,:)
+    type(multifab) :: plotdata(mla%nlevel)
+    type(multifab) :: plotdata_stag(mla%nlevel,mla%dim)
 
-    type(multifab) :: conc(mla%nlevel)
+    type(multifab) :: cc_temp(mla%nlevel)
+
+    integer :: nvarsCC, nvarsStag, counter
 
     nlevs = mla%nlevel
     dm = mla%dim
-  
-    ! rho + species (rho) + nspeces (conc) + Temp + dm (averaged umac) 
-    !     + dm (shifted umac) + pres + charge + Epot + dm (averaged grad_Epot)
-    allocate(plot_names(2*nspecies+3*dm+8))
-    allocate(plotdata(nlevs))
-    allocate(plotdata_stag(nlevs,dm))
+
+    ! cell-centered quantities
+
+    ! rho
+    ! rho_i
+    ! c_i
+    ! Temp
+    ! umac averaged
+    ! umac shifted
+    ! pressure
+    nvarsCC = 2*nspecies + 2*dm + 3
+
+    if (use_charged_fluid) then
+       ! charge
+       ! Epot
+       ! grad_Epot averaged
+       ! gradPhiApprox averaged
+       nvarsCC = nvarsCC + 2 + 2*dm
+    end if
+
+    allocate(plot_names(nvarsCC))
  
-    plot_names(1) = "rho"
+    counter = 1
+
+    plot_names(counter) = "rho"
+    counter = counter + 1
     do n=1,nspecies
-       write(plot_names(n+1),'(a,i0)') "rho", n
+       write(plot_names(counter),'(a,i0)') "rho", n
+       counter = counter + 1
     enddo
     do n=1,nspecies
-       write(plot_names(nspecies+n+1),'(a,i0)') "c", n
+       write(plot_names(counter),'(a,i0)') "c", n
+       counter = counter + 1
     enddo
-    plot_names(2*nspecies+2) = "Temp"
-    plot_names(2*nspecies+3) = "averaged_velx"
-    plot_names(2*nspecies+4) = "averaged_vely"
-    if (dm > 2) plot_names(2*nspecies+5) = "averaged_velz"
-    plot_names(2*nspecies+dm+3) = "shifted_velx"
-    plot_names(2*nspecies+dm+4) = "shifted_vely"
-    if (dm > 2) plot_names(2*nspecies+dm+5) = "shifted_velz"
-    plot_names(2*nspecies+2*dm+3) = "pres"
-    plot_names(2*nspecies+2*dm+4) = "charge_density"
-    plot_names(2*nspecies+2*dm+5) = "Epot"
-    plot_names(2*nspecies+2*dm+6) = "averaged_grad_Epotx"
-    plot_names(2*nspecies+2*dm+7) = "averaged_grad_Epoty"
-    if (dm > 2) plot_names(2*nspecies+2*dm+8) = "averaged_grad_Epotz"
-    plot_names(2*nspecies+3*dm+6) = "av_gradPhiApproxx"
-    plot_names(2*nspecies+3*dm+7) = "av_gradPhiApproxy"
 
-    plot_names_stagx(1) = "velx"
-    plot_names_stagy(1) = "vely"
-    plot_names_stagz(1) = "velz"
-    plot_names_stagx(2) = "grad_Epotx"
-    plot_names_stagy(2) = "grad_Epoty"
-    plot_names_stagz(2) = "grad_Epotz"
-    plot_names_stagx(3) = "gradPhiApproxx"
-    plot_names_stagy(3) = "gradPhiApproxy"
-    plot_names_stagz(3) = "gradPhiApproxz"
+    plot_names(counter) = "Temp"
+    counter = counter + 1
 
-    ! compute concentrations
+    plot_names(counter) = "averaged_velx"
+    counter = counter + 1
+    plot_names(counter) = "averaged_vely"
+    counter = counter + 1
+    if (dm > 2) then
+       plot_names(counter) = "averaged_velz"
+       counter = counter + 1
+    end if
+
+    plot_names(counter) = "shifted_velx"
+    counter = counter + 1
+    plot_names(counter) = "shifted_vely"
+    counter = counter + 1
+    if (dm > 2) then
+       plot_names(counter) = "shifted_velz"
+       counter = counter + 1
+    end if
+
+    plot_names(counter) = "pres"
+    counter = counter + 1
+
+    if (use_charged_fluid) then
+       plot_names(counter) = "charge_density"
+       counter = counter + 1
+
+       plot_names(counter) = "Epot"
+       counter = counter + 1
+
+       plot_names(counter) = "av_gradEpotx"
+       counter = counter + 1
+       plot_names(counter) = "av_gradEpoty"
+       counter = counter + 1
+       if (dm > 2) then
+          plot_names(counter) = "av_gradEpotz"
+          counter = counter + 1
+       end if
+
+       plot_names(counter) = "av_gradPhiApproxx"
+       counter = counter + 1
+       plot_names(counter) = "av_gradPhiApproxy"
+       counter = counter + 1
+       if (dm > 2) then
+          plot_names(counter) = "av_gradPhiApproxz"
+          counter = counter + 1
+       end if
+    end if
+
+    ! staggered quantities
+
+    ! vel
+    nvarsStag = 1
+    if (use_charged_fluid) then
+       ! grad_Epot
+       ! gradPhiApprox
+       nvarsStag = nvarsStag + 2
+    end if
+
+    allocate(plot_names_stagx(nvarsStag))
+    allocate(plot_names_stagy(nvarsStag))
+    allocate(plot_names_stagz(nvarsStag))
+
+    counter = 1
+
+    plot_names_stagx(counter) = "velx"
+    plot_names_stagy(counter) = "vely"
+    plot_names_stagz(counter) = "velz"
+    counter = counter + 1
+
+    if (use_charged_fluid) then
+       plot_names_stagx(counter) = "grad_Epotx"
+       plot_names_stagy(counter) = "grad_Epoty"
+       plot_names_stagz(counter) = "grad_Epotz"
+       counter = counter + 1
+
+       plot_names_stagx(counter) = "gradPhiApproxx"
+       plot_names_stagy(counter) = "gradPhiApproxy"
+       plot_names_stagz(counter) = "gradPhiApproxz"
+       counter = counter + 1
+    end if
+
     do n=1,nlevs
-       call multifab_build(conc(n),mla%la(n),nspecies,0)
-    end do
-    call convert_rhoc_to_c(mla,rho,rhotot,conc,.true.)
-
-    do n=1,nlevs
-       ! build plotdata for 2*nspecies+3*dm+5 and 0 ghost cells
-       call multifab_build(plotdata(n),mla%la(n),2*nspecies+4*dm+5,0)
+       ! temporary to help with variable conversions
+       call multifab_build(cc_temp(n),mla%la(n),nspecies,0)
+       ! build plotdata for nvarsCC components
+       call multifab_build(plotdata(n),mla%la(n),nvarsCC,0)
        do i=1,dm
-          ! staggered velocity and grad_Epot
-          call multifab_build_edge(plotdata_stag(n,i), mla%la(n), 3, 0, i)
+          ! plotdata_stag for nvarsStag components
+          call multifab_build_edge(plotdata_stag(n,i), mla%la(n), nvarsStag, 0, i)
        end do
     enddo
 
-    ! compute total charge, then copy into the correct component
-    call dot_with_z(mla,rho,plotdata)
-    do n=1,nlevs
-       call multifab_copy_c(plotdata(n),2*nspecies+2*dm+4,plotdata(n),1,1,0)
-    end do
+    counter = 1
     
-    ! copy rhotot, rho, conc, and Temp into plotdata
+    ! rhotot
     do n = 1,nlevs
-       call multifab_copy_c(plotdata(n),1           ,rhotot(n),1,       1,0)
-       call multifab_copy_c(plotdata(n),2           ,rho(n)   ,1,nspecies,0)
-       call multifab_copy_c(plotdata(n),nspecies+2  ,conc(n)  ,1,nspecies,0)
-       call multifab_copy_c(plotdata(n),2*nspecies+2,Temp(n)  ,1,1       ,0)
+       call multifab_copy_c(plotdata(n),counter,rhotot(n),1,1,0)
+    end do
+    counter = counter + 1
+
+    ! rho
+    do n=1,nlevs
+       call multifab_copy_c(plotdata(n),counter,rho(n),1,nspecies,0)
+    end do
+    counter = counter + nspecies
+
+    ! compute concentrations
+    call convert_rhoc_to_c(mla,rho,rhotot,cc_temp,.true.)
+    do n=1,nlevs
+       call multifab_copy_c(plotdata(n),counter,cc_temp(n),1,nspecies,0)
+    end do
+    counter = counter + nspecies
+
+    ! Temp
+    do n=1,nlevs
+       call multifab_copy_c(plotdata(n),counter,Temp(n),1,1,0)
     enddo
+    counter = counter + 1
 
     ! vel averaged
     do i=1,dm
-       call average_face_to_cc(mla,umac(:,i),1,plotdata,2*nspecies+2+i,1)
+       call average_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
+       counter = counter + 1
     end do
 
     ! vel shifted
     do i=1,dm
-       call shift_face_to_cc(mla,umac(:,i),1,plotdata,2*nspecies+dm+2+i,1)
+       call shift_face_to_cc(mla,umac(:,i),1,plotdata,counter,1)
+       counter = counter + 1
     end do
 
     ! pressure
     do n = 1,nlevs
-       call multifab_copy_c(plotdata(n),2*nspecies+2*dm+3,pres(n),1,1,0)
+       call multifab_copy_c(plotdata(n),counter,pres(n),1,1,0)
     enddo
+    counter = counter + 1
 
-    ! Epot
-    do n = 1,nlevs
-       call multifab_copy_c(plotdata(n),2*nspecies+2*dm+5,Epot(n),1,1,0)
-    enddo
+    if (use_charged_fluid) then
 
-    ! grad_Epot_averaged
-    do i=1,dm
-       call average_face_to_cc(mla,grad_Epot(:,i),1,plotdata,2*nspecies+2*dm+5+i,1)
-    end do
+       ! compute total charge, then copy into the correct component
+       call dot_with_z(mla,rho,cc_temp)
+       do n=1,nlevs
+          call multifab_copy_c(plotdata(n),counter,cc_temp(n),1,1,0)
+       end do
+       counter = counter + 1
 
-    ! gradPhiApprox_averaged
-    do i=1,dm
-       call average_face_to_cc(mla,gradPhiApprox(:,i),1,plotdata,2*nspecies+3*dm+5+i,1)
-    end do
+       ! Epot
+       do n = 1,nlevs
+          call multifab_copy_c(plotdata(n),counter,Epot(n),1,1,0)
+       enddo
+       counter = counter + 1
 
-    ! copy staggered velocity and grad_Epot into plotdata_stag
+       ! grad_Epot_averaged
+       do i=1,dm
+          call average_face_to_cc(mla,grad_Epot(:,i),1,plotdata,counter,1)
+          counter = counter + 1
+       end do
+
+       ! gradPhiApprox_averaged
+       do i=1,dm
+          call average_face_to_cc(mla,gradPhiApprox(:,i),1,plotdata,counter,1)
+          counter = counter + 1
+       end do
+    end if
+
+    counter = 1
+
+    ! copy staggered velocity
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(plotdata_stag(n,i),1,         umac(n,i),1,1)
-          call multifab_copy_c(plotdata_stag(n,i),2,    grad_Epot(n,i),1,1)
-          call multifab_copy_c(plotdata_stag(n,i),3,gradPhiApprox(n,i),1,1)
+          call multifab_copy_c(plotdata_stag(n,i),counter,umac(n,i),1,1)
        end do
     end do
+    counter = counter + 1
+
+    if (use_charged_fluid) then
+
+       ! grad_Epot
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(plotdata_stag(n,i),counter,grad_Epot(n,i),1,1)
+          end do
+       end do
+       counter = counter + 1
+
+       ! gradPhiApprox
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(plotdata_stag(n,i),counter,gradPhiApprox(n,i),1,1)
+          end do
+       end do
+       counter = counter + 1
+
+    end if
     
     ! define the name of the plotfile that will be written
     write(unit=plotfile_name,fmt='(a,i8.8)') name, istep
@@ -194,16 +321,17 @@ contains
 
     ! make sure to destroy the multifab or you'll leak memory
     do n=1,nlevs
-       call multifab_destroy(conc(n))
+       call multifab_destroy(cc_temp(n))
        call multifab_destroy(plotdata(n))
       do i=1,dm
          call multifab_destroy(plotdata_stag(n,i))
       end do
     enddo
     
-    deallocate(plotdata)
-    deallocate(plotdata_stag)
     deallocate(plot_names)
+    deallocate(plot_names_stagx)
+    deallocate(plot_names_stagy)
+    deallocate(plot_names_stagz)
 
   end subroutine write_plotfile_charged
 
