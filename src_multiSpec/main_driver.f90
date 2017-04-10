@@ -35,7 +35,6 @@ subroutine main_driver()
   use sum_momenta_module
   use restart_module
   use checkpoint_module
-  use project_onto_eos_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &

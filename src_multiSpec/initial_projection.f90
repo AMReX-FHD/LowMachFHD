@@ -55,6 +55,7 @@ contains
 
     ! local
     integer :: i,dm,n,nlevs
+    real(kind=dp_t) :: dt_eff
 
     type(multifab) ::mac_rhs(mla%nlevel)
     type(multifab) :: divu(mla%nlevel)
@@ -65,13 +66,27 @@ contains
     type(multifab) :: stoch_mass_flux(mla%nlevel,mla%dim)
     type(multifab) :: total_mass_flux(mla%nlevel,mla%dim)
 
-    real(kind=dp_t) :: weights(1)
+    real(kind=dp_t), allocatable :: weights(:)
     
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"initial_projection")
+    
+    if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5) then
+       allocate(weights(2))
+       weights(:) = 0.d0
+       weights(1) = 1.d0
+    else
+       allocate(weights(1))
+       weights(1) = 1.d0
+    end if
 
-    weights(1) = 1.d0
+    if (algorithm_type .eq. 5) then
+       ! for midpoint scheme where predictor goes to t^{n+1/2}
+       dt_eff = 0.5d0*dt
+    else
+       dt_eff = dt
+    end if
 
     dm = mla%dim
     nlevs = mla%nlevel
@@ -106,12 +121,12 @@ contains
     call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                              dt,0.d0,dx,weights,the_bc_tower)
+                              dt_eff,0.d0,dx,weights,the_bc_tower)
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
-    ! set mac_rhs to "-S = div(F_i/rho_i)"
+    ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
     do n=1,nlevs
        do i=1,nspecies
           call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
@@ -127,8 +142,8 @@ contains
 
     do n=1,nlevs
        do i=1,dm
-!          ! to deal with reservoirs
-!          ! set normal velocity on physical domain boundaries
+          ! to deal with reservoirs
+          ! set normal velocity on physical domain boundaries
           call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
                                          the_bc_tower%bc_tower_array(n), &
                                          dx(n,:),vel_bc_n(n,:))
@@ -179,6 +194,8 @@ contains
           call multifab_fill_boundary(umac(n,i))
        end do
     end do
+
+    deallocate(weights)
 
     call destroy_bc_multifabs(mla)
 

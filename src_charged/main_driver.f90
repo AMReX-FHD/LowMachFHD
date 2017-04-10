@@ -38,8 +38,6 @@ subroutine main_driver()
   use sum_momenta_module
   use restart_module
   use checkpoint_module
-  use project_onto_eos_charged_module
-  use fluid_charge_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -51,7 +49,7 @@ subroutine main_driver()
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
                                    dielectric_type
-  use probin_chemistry_module, only: nreactions
+  use probin_chemistry_module, only: probin_chemistry_init, nreactions
 
   implicit none
 
@@ -112,7 +110,12 @@ subroutine main_driver()
   call probin_common_init()
   call probin_multispecies_init() 
   call probin_gmres_init()
-  call probin_charged_init() 
+  if (use_charged_fluid) then
+     call probin_charged_init() 
+  end if
+  if (nreactions .gt. 0) then
+     call probin_chemistry_init()
+  end if
 
    if (use_bl_rng) then
       ! Build the random number engine and give initial distributions for the
@@ -191,12 +194,6 @@ subroutine main_driver()
                                   diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                   chem_rate,umac,pmask)
 
-     ! when we put in restarts for charged fluids this should to in
-     ! initialize_from_restart
-     do n=1,nlevs
-        call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
-     end do
-
   else
 
      init_step = 1
@@ -250,11 +247,19 @@ subroutine main_driver()
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
-
-        call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
-
-        call multifab_build(chem_rate(n)         ,mla%la(n),nspecies,0)
      end do
+
+     if (use_charged_fluid) then
+        do n=1,nlevs        
+           call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
+        end do
+     end if
+
+     if (nreactions .gt. 0) then
+        do n=1,nlevs
+           call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
+        end do
+     end if
 
   end if
 
@@ -400,19 +405,25 @@ subroutine main_driver()
      call multifab_build(Temp(n)      ,mla%la(n),1       ,ng_s)
      call multifab_build(eta(n)       ,mla%la(n),1       ,1)
      call multifab_build(kappa(n)     ,mla%la(n),1       ,1)
+  end do
 
-     call multifab_build(charge_old(n)  ,mla%la(n),1,1)
-     call multifab_build(charge_new(n)  ,mla%la(n),1,1)
-     call multifab_build(permittivity(n),mla%la(n),1,1)
-     do i=1,dm
-        call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
-        call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
+  if (use_charged_fluid) then
+     do n=1,nlevs
+        call multifab_build(charge_old(n)  ,mla%la(n),1,1)
+        call multifab_build(charge_new(n)  ,mla%la(n),1,1)
+        call multifab_build(permittivity(n),mla%la(n),1,1)
+        do i=1,dm
+           call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
+           call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
+        end do
+        call multifab_build(Epot(n),mla%la(n),1,1)
+        do i=1,dm
+           call multifab_build_edge(gradPhiApprox(n,i),mla%la(n),1,0,i)
+        end do
      end do
-     call multifab_build(Epot(n),mla%la(n),1,1)
-     do i=1,dm
-        call multifab_build_edge(gradPhiApprox(n,i),mla%la(n),1,0,i)
-     end do
+  end if
 
+  do n=1,nlevs
      ! eta and Temp on nodes (2d) or edges (3d)
      if (dm .eq. 2) then
         call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
@@ -455,31 +466,30 @@ subroutine main_driver()
   ! Initialize values
   !=====================================================================
 
-  ! set these to zero - if use_charge_fluid=F they will stay zero
-  do n=1,nlevs
-     call multifab_setval(charge_old(n),0.d0,all=.true.)
-     call multifab_setval(charge_new(n),0.d0,all=.true.)
-     do i=1,dm
-        call multifab_setval(grad_Epot_old(n,i),0.d0,all=.true.)
-        call multifab_setval(grad_Epot_new(n,i),0.d0,all=.true.)
-     end do
-     call multifab_setval(Epot(n),0.d0,all=.true.)
-     call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
-     do i=1,dm
-        call multifab_setval(gradPhiApprox(n,i),0.d0,all=.true.)
-     end do
-  end do
-
-  ! compute total charge
   if (use_charged_fluid) then
+
+     ! set these to zero
+     do n=1,nlevs
+        call multifab_setval(charge_old(n),0.d0,all=.true.)
+        call multifab_setval(charge_new(n),0.d0,all=.true.)
+        do i=1,dm
+           call multifab_setval(grad_Epot_old(n,i),0.d0,all=.true.)
+           call multifab_setval(grad_Epot_new(n,i),0.d0,all=.true.)
+        end do
+        call multifab_setval(Epot(n),0.d0,all=.true.)
+        call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
+        do i=1,dm
+           call multifab_setval(gradPhiApprox(n,i),0.d0,all=.true.)
+        end do
+     end do
+
+     ! compute total charge
      call dot_with_z(mla,rho_old,charge_old)
      total_charge = multifab_sum_c(charge_old(1),1,1)
      if (parallel_IOProcessor()) then
         print*,'Total charge',total_charge
      end if
-  end if
 
-  if (use_charged_fluid) then
      ! compute permittivity
      if (dielectric_type .eq. 0) then
         do n=1,nlevs
@@ -488,6 +498,7 @@ subroutine main_driver()
      else
         call compute_permittivity(mla,permittivity,rho_old,rhotot_old,the_bc_tower)
      end if
+
   end if
 
   ! initialize Temp
@@ -673,9 +684,6 @@ subroutine main_driver()
                                         charge_old,charge_new,Epot, &
                                         permittivity)
       else if (algorithm_type .eq. 2) then
-         if (use_charged_fluid) then
-            call bl_error("overdamped does not support charged yet")
-         end if
          ! algorithm_type=2: overdamped with 2 RNG
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
@@ -792,13 +800,17 @@ subroutine main_driver()
       do n=1,nlevs
          call multifab_copy_c(rho_old(n)   ,1,   rho_new(n),1,nspecies,rho_old(n)%ng)
          call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1       ,1,rhotot_old(n)%ng)
-
-         call multifab_copy_c(charge_old(n),1,charge_new(n),1,1,charge_old(n)%ng)
-         do i=1,dm
-            call multifab_copy_c(grad_Epot_old(n,i),1,grad_Epot_new(n,i),1,1,grad_Epot_old(n,i)%ng)
-         end do
-
       end do
+
+      if (use_charged_fluid) then
+         do n=1,nlevs
+            call multifab_copy_c(charge_old(n),1,charge_new(n),1,1,charge_old(n)%ng)
+            do i=1,dm
+               call multifab_copy_c(grad_Epot_old(n,i),1,grad_Epot_new(n,i),1,1, &
+                                    grad_Epot_old(n,i)%ng)
+            end do
+         end do
+      end if
 
   end do
 
@@ -836,24 +848,28 @@ subroutine main_driver()
      end do
   end do
 
-  do n=1,nlevs
-     call multifab_destroy(Epot_mass_fluxdiv(n))
-     call multifab_destroy(charge_old(n))
-     call multifab_destroy(charge_new(n))
-     call multifab_destroy(permittivity(n))
-     do i=1,dm
-        call multifab_destroy(grad_Epot_old(n,i))
-        call multifab_destroy(grad_Epot_new(n,i))
+  if (use_charged_fluid) then
+     do n=1,nlevs
+        call multifab_destroy(Epot_mass_fluxdiv(n))
+        call multifab_destroy(charge_old(n))
+        call multifab_destroy(charge_new(n))
+        call multifab_destroy(permittivity(n))
+        do i=1,dm
+           call multifab_destroy(grad_Epot_old(n,i))
+           call multifab_destroy(grad_Epot_new(n,i))
+        end do
+        call multifab_destroy(Epot(n))
+        do i=1,dm
+           call multifab_destroy(gradPhiApprox(n,i))
+        end do
      end do
-     call multifab_destroy(Epot(n))
-     do i=1,dm
-        call multifab_destroy(gradPhiApprox(n,i))
-     end do
-  end do
+  end if
   
-  do n=1,nlevs
-     call multifab_destroy(chem_rate(n))
-  end do
+  if (nreactions .gt. 0) then
+     do n=1,nlevs
+        call multifab_destroy(chem_rate(n))
+     end do
+  end if
 
   deallocate(lo,hi,pmask)
   deallocate(rho_old,rhotot_old,pi)

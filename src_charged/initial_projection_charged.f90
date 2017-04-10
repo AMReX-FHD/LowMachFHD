@@ -74,12 +74,13 @@ contains
     type(multifab) :: mac_rhs(mla%nlevel)
     type(multifab) :: divu(mla%nlevel)
     type(multifab) :: phi(mla%nlevel)
-    type(multifab) :: n_cc(mla%nlevel)
     type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
     type(multifab) :: stoch_mass_flux(mla%nlevel,mla%dim)
     type(multifab) :: total_mass_flux(mla%nlevel,mla%dim)
+
+    type(multifab) :: n_cc(mla%nlevel)
 
     real(kind=dp_t), allocatable :: weights(:)
     
@@ -147,11 +148,7 @@ contains
     ! compute diffusive, stochastic, and potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "-F = rho W chi [Gamma grad x... ]"
-    if (dielectric_const .eq. 0.d0 .or. (.not. use_charged_fluid) ) then
-       call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
-                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                 diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                                 dt_eff,0.d0,dx,weights,the_bc_tower)
+    if (use_charged_fluid) then
        do n=1,nlevs
           call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
           call multifab_setval(Epot(n),0.d0,all=.true.)
@@ -159,12 +156,20 @@ contains
              call multifab_setval(grad_Epot_old(n,i),0.d0,all=.true.)
           end do
        end do
-    else
+
+    end if
+
+    if (use_charged_fluid .and. dielectric_const .ne. 0.d0) then
        call compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro,Temp, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                          diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                                          dt_eff,0.d0,dx,weights,the_bc_tower,Epot_mass_fluxdiv, &
                                          charge_old,grad_Epot_old,Epot,permittivity)
+    else
+       call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
+                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                 diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                                 dt_eff,0.d0,dx,weights,the_bc_tower)
     end if
 
     ! compute chemical rates m_i*R_i
@@ -186,18 +191,12 @@ contains
              call multifab_mult_mult_s_c(chem_rate(n),i,molmass(i),1,0)
           end do
        end do
-    else
-       do n=1,nlevs
-          call multifab_setval(chem_rate(n),0.d0,all=.true.)
-       end do
     end if
-
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
     ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
-    ! if nreactions>0, also add sum_i -(m_i*R_i)/rhobar_i
     do n=1,nlevs
        do i=1,nspecies
           call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
@@ -208,6 +207,7 @@ contains
              call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
           if (nreactions > 0) then
+             ! if nreactions>0, also add sum_i -(m_i*R_i)/rhobar_i
              call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
           end if
        end do
