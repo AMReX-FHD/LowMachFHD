@@ -110,12 +110,8 @@ subroutine main_driver()
   call probin_common_init()
   call probin_multispecies_init() 
   call probin_gmres_init()
-  if (use_charged_fluid) then
-     call probin_charged_init() 
-  end if
-  if (nreactions .gt. 0) then
-     call probin_chemistry_init()
-  end if
+  call probin_charged_init() 
+  call probin_chemistry_init()
 
    if (use_bl_rng) then
       ! Build the random number engine and give initial distributions for the
