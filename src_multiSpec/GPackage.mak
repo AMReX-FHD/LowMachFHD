@@ -23,5 +23,4 @@ f90sources += project_onto_eos.f90
 f90sources += reservoir_bc_fill.f90
 f90sources += restart.f90
 f90sources += stochastic_mass_fluxdiv.f90
-f90sources += write_plotfilediff.f90
 f90sources += write_plotfileLM.f90
