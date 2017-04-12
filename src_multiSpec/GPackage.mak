@@ -4,7 +4,6 @@ f90sources += convert_rhoc_to_c.f90
 f90sources += correction_flux.f90
 f90sources += diffusive_mass_fluxdiv.f90
 f90sources += external_force.f90 
-f90sources += init_temp.f90
 f90sources += mass_flux_utilities.f90
 f90sources += matmat_mul.f90
 f90sources += matrix_utilities.f90

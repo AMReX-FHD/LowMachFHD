@@ -5,7 +5,6 @@ subroutine main_driver()
   use bl_space
   use ml_layout_module
   use init_lowmach_module
-  use init_temp_module
   use compute_mixture_properties_module
   use initial_projection_charged_module
   use write_plotfile_charged_module
