@@ -6,7 +6,6 @@ f90sources += convert_rhoc_to_c.f90
 f90sources += correction_flux.f90
 f90sources += diffusive_mass_fluxdiv.f90
 f90sources += compute_mass_fluxdiv.f90
-f90sources += eos_check.f90
 f90sources += external_force.f90 
 f90sources += fill_rho_ghost_cells.f90
 f90sources += init_diffusion.f90
