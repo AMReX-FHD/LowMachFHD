@@ -1,6 +1,5 @@
 f90sources += compute_mass_fluxdiv.f90
 f90sources += compute_mixture_properties.f90
-f90sources += convert_rhoc_to_c.f90
 f90sources += correction_flux.f90
 f90sources += diffusive_mass_fluxdiv.f90
 f90sources += external_force.f90 

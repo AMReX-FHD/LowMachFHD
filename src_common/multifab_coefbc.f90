@@ -23,6 +23,9 @@ contains
     ! so you could fill ghost+valid and then call this
     ! the better solution is to write loops to fill the ghost cell directly
 
+    ! this is also used in the gmres test suite where transport coefficients
+    ! have spatial dependence and we want Dirichlet values
+
     type(multifab) , intent(inout) :: s
     integer        , intent(in   ) :: start_scomp,ncomp
     type(bc_level) , intent(in   ) :: the_bc_level
