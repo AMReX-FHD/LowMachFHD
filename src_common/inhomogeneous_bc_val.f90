@@ -22,6 +22,8 @@ contains
 
     call build(bpt,"scalar_bc")
 
+    call bl_warn("using default scalar_bc - each application code should have its own copy")
+
     if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
 
        bc_code = FOEXTRAP  ! Pure Neumann
@@ -53,6 +55,8 @@ contains
     type(bl_prof_timer),save :: bpt
 
     call build(bpt,"transport_bc")
+
+    call bl_warn("using default transport_bc - each application code should have its own copy")
 
     if ((phys_bc == NO_SLIP_WALL) .or. (phys_bc == SLIP_WALL)) then
 
@@ -87,6 +91,7 @@ contains
     val = 0.d0
 
     call bl_warn("using default inhomogeneous_bc_val_2d; returning homogeneous bc")
+    call bl_warn("each application code should have its own copy")
 
   end function inhomogeneous_bc_val_2d
 
@@ -100,6 +105,7 @@ contains
     val = 0.d0
 
     call bl_warn("using default inhomogeneous_bc_val_2d; returning homogeneous bc")
+    call bl_warn("each application code should have its own copy")
 
   end function inhomogeneous_bc_val_3d
 
