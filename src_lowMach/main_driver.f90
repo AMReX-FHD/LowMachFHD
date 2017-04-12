@@ -6,7 +6,7 @@ subroutine main_driver()
   use ml_layout_module
   use init_lowmach_module
   use compute_mixture_properties_module
-  use initial_projection_charged_module
+  use initial_projection_module
   use write_plotfile_module
   use advance_timestep_inertial_module
   use advance_timestep_overdamped_module
@@ -587,11 +587,11 @@ subroutine main_driver()
      ! From this perspective it may be useful to keep initial_projection even in overdamped
      ! because different gmres tolerances may be needed in the first step than in the rest
      if (algorithm_type .ne. 2) then
-        call initial_projection_charged(mla,umac,rho_old,rhotot_old,gradp_baro, &
-                                        Epot_mass_fluxdiv,diff_mass_fluxdiv, &
-                                        stoch_mass_fluxdiv,chem_rate, &
-                                        Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                        charge_old,grad_Epot_old,Epot,permittivity)
+        call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro, &
+                                Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                stoch_mass_fluxdiv,chem_rate, &
+                                Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+                                charge_old,grad_Epot_old,Epot,permittivity)
      end if
 
      if (print_int .gt. 0) then
