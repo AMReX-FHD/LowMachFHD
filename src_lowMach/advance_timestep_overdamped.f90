@@ -20,7 +20,6 @@ module advance_timestep_overdamped_module
   use compute_mixture_properties_module
   use mass_flux_utilities_module
   use multifab_physbc_module
-  use multifab_physbc_extrap_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &

@@ -5,7 +5,6 @@ module bds_module
   use ml_layout_module
   use define_bc_module
   use convert_stag_module
-  use multifab_physbc_extrap_module
   use bc_module
   use probin_common_module, only: advection_type, rhobar
 
@@ -21,8 +20,8 @@ contains
                  bc_comp,the_bc_tower,proj_type_in)
 
     ! s_fc and s_nd are used to set boundary conditions
-    ! the input s needs to have ghost cells filled with multifab_physbc_extrap
-    ! instead of multifab_physbc
+    ! the input s needs to have ghost cells filled with 
+    ! multifab_physbc_extrap instead of multifab_physbc
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: umac(:,:)
