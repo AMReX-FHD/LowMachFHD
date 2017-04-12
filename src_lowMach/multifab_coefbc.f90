@@ -17,6 +17,12 @@ contains
     ! this fills ghost cells for transport coefficients at walls by
     ! averaging ghost and interior into ghost
 
+    ! this could be used for e.g., temperature, where we want Dirichlet
+    ! bc's with the ghost cells supplying the Dirichlet values,
+    ! but the Temperature profile is a function of space
+    ! so you could fill ghost+valid and then call this
+    ! the better solution is to write loops to fill the ghost cell directly
+
     type(multifab) , intent(inout) :: s
     integer        , intent(in   ) :: start_scomp,ncomp
     type(bc_level) , intent(in   ) :: the_bc_level

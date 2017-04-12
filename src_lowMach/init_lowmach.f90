@@ -1139,6 +1139,7 @@ contains
     end do
 
   end subroutine init_rho_and_umac_3d
+
   subroutine init_Temp(Temp,dx,time,the_bc_level)
 
     type(multifab) , intent(inout) :: Temp(:)            
@@ -1180,6 +1181,8 @@ contains
        call multifab_fill_boundary(Temp(n))
 
        ! fill non-periodic domain boundary ghost cells
+       ! FIXME: it is more accurate to write loops over the ghost cells below to fill in the functional values
+       !        than average the interior+ghost -> ghost to store the Dirichlet value
        call multifab_coefbc(Temp(n),1,1,the_bc_level(n))
 
     end do
@@ -1205,68 +1208,60 @@ contains
     select case (temp_type)
 
     case(0) 
-    !=========================================================================
-    ! Thermodynamic equilibrium
-    !=========================================================================
-    do j=lo(2)-ng,hi(2)+ng
-       y = prob_lo(2) + (dble(j)+half)*dx(2) 
-       do i=lo(1)-ng,hi(1)+ng
-          x = prob_lo(1) + (dble(i)+half)*dx(1) 
- 
-            Temp(i,j) = T_init(1)
-            ! These were used for testing thermodiffusion only
-            if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
-            if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*sin(2.0d0*M_PI*y/L(1))
+       !=========================================================================
+       ! Thermodynamic equilibrium
+       !=========================================================================
+       do j=lo(2)-ng,hi(2)+ng
+          y = prob_lo(2) + (dble(j)+half)*dx(2) 
+          do i=lo(1)-ng,hi(1)+ng
+             x = prob_lo(1) + (dble(i)+half)*dx(1) 
+             
+             Temp(i,j) = T_init(1)
+             ! These were used for testing thermodiffusion only
+             if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*cos(2.0d0*M_PI*x/L(1))*sin(2.0d0*M_PI*y/L(1))
+             if(.false.) Temp(i,j) = 1.0d0 + 0.01d0*sin(2.0d0*M_PI*y/L(1))
 
+          end do
        end do
-    end do  
     
     case(1) 
     !=========================================================================
     ! Initializing T in concentric circle at (Lx/2,Ly/2) with radius^2=0.1*L(1)*L(2)
     !=========================================================================
-    do j=lo(2)-ng,hi(2)+ng
-       y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
-       do i=lo(1)-ng,hi(1)+ng
-          x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
-      
-          ! temperature distribution follows the density 
-          rsq = x**2 + y**2
-          if (rsq .lt. L(1)*L(2)*0.1d0) then
-              Temp(i,j) = T_init(1)
-          else
-              Temp(i,j) = T_init(2)
-          end if
-    
-        end do
-    end do
+       do j=lo(2)-ng,hi(2)+ng
+          y = prob_lo(2) + (dble(j)+half)*dx(2) - half*(prob_lo(2)+prob_hi(2))
+          do i=lo(1)-ng,hi(1)+ng
+             x = prob_lo(1) + (dble(i)+half)*dx(1) - half*(prob_lo(1)+prob_hi(1))
+
+             ! temperature distribution follows the density 
+             rsq = x**2 + y**2
+             if (rsq .lt. L(1)*L(2)*0.1d0) then
+                Temp(i,j) = T_init(1)
+             else
+                Temp(i,j) = T_init(2)
+             end if
+
+          end do
+       end do
   
     case(2,6) 
     !========================================================
     ! Initializing T with constant gradient along y axes
     !========================================================
-    do j=lo(2)-ng,hi(2)+ng
-       y = prob_lo(2) + (dble(j)+half)*dx(2) 
-       do i=lo(1)-ng,hi(1)+ng
-          x = prob_lo(1) + (dble(i)+half)*dx(1) 
+       do j=lo(2)-ng,hi(2)+ng
+          y = prob_lo(2) + (dble(j)+half)*dx(2) 
+          do i=lo(1)-ng,hi(1)+ng
+             x = prob_lo(1) + (dble(i)+half)*dx(1) 
       
-          ! linear gradient in y direction
-          Temp(i,j) = T_init(1) + (T_init(2) - T_init(1))*(y-prob_lo(2))/L(2)
+             ! linear gradient in y direction
+             Temp(i,j) = T_init(1) + (T_init(2) - T_init(1))*(y-prob_lo(2))/L(2)
 
+          end do
        end do
-    end do
 
     case default
 
-    do j=lo(2)-ng,hi(2)+ng
-         y = prob_lo(2) + (dble(j)+half) * dx(2) - half
-         do i=lo(1)-ng,hi(1)+ng
-            x = prob_lo(1) + (dble(i)+half) * dx(1) - half
-        
-            Temp(i,j)  = T_init(1) 
-
-         end do
-    end do
+       Temp = T_init(1)
 
    end select
    
@@ -1292,18 +1287,7 @@ contains
     !================================================================================
     ! Thermodynamic equilibrium
     !================================================================================
- 
-    !$omp parallel do private(i,j,k,x,y,z)
-    do k=lo(3)-ng,hi(3)+ng
-       do j=lo(2)-ng,hi(2)+ng
-          do i=lo(1)-ng,hi(1)+ng
-             
-             Temp(i,j,k) = T_init(1)
-
-          end do
-       end do
-    end do
-    !$omp end parallel do
+       Temp = T_init(1)
     
     case(1) 
     !================================================================================
@@ -1354,17 +1338,7 @@ contains
 
     case default
 
-    !$omp parallel do private(i,j,k)
-    do k=lo(3)-ng,hi(3)+ng
-       do j=lo(2)-ng,hi(2)+ng
-          do i=lo(1)-ng,hi(1)+ng
-
-             Temp(i,j,k) = T_init(1)
-
-          end do
-       end do
-    end do
-    !$omp end parallel do
+       Temp = T_init(1)
 
    end select
    
