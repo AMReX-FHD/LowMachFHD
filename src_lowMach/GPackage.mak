@@ -16,3 +16,4 @@ f90sources += mk_advective_s_fluxdiv.f90
 f90sources += project_onto_eos.f90
 f90sources += reservoir_bc_fill.f90
 f90sources += restart.f90
+f90sources += stochastic_m_fluxdiv.f90
