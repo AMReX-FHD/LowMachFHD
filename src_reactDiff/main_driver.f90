@@ -7,7 +7,7 @@ subroutine main_driver()
    use define_bc_module
    use bc_module
    use init_n_module
-   use write_plotfile_n_module
+   use write_plotfile_module
    use stochastic_n_fluxdiv_module
    use advance_timestep_module
    use analyze_spectra_module
@@ -372,7 +372,7 @@ subroutine main_driver()
       
       if (plot_int .gt. 0) then
          ! write a plotfile
-         call write_plotfile_n(mla,n_old,dx,time,istep)
+         call write_plotfile(mla,n_old,dx,time,istep)
       end if
 
       if (chk_int .ge. 0) then
@@ -401,7 +401,7 @@ subroutine main_driver()
    else ! Here we always write the starting point to check restarts are working
    
       istep = restart
-      call write_plotfile_n(mla,n_old,dx,time,restart)   
+      call write_plotfile(mla,n_old,dx,time,restart)   
       
    end if   
 
@@ -473,7 +473,7 @@ subroutine main_driver()
 
           ! write a plotfile
           if (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) then
-             call write_plotfile_n(mla,n_new,dx,time,istep)
+             call write_plotfile(mla,n_new,dx,time,istep)
           end if
 
           ! write a checkpoint

@@ -1,4 +1,4 @@
-module write_plotfile_charged_module
+module write_plotfile_module
 
   use ml_layout_module
   use multifab_module
@@ -14,7 +14,7 @@ module write_plotfile_charged_module
 
 contains
   
-  subroutine write_plotfile_charged(mla,name,rho,rhotot,Temp,umac,pres,Epot,grad_Epot, &
+  subroutine write_plotfile(mla,name,rho,rhotot,Temp,umac,pres,Epot,grad_Epot, &
                                     gradPhiApprox,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
@@ -333,6 +333,6 @@ contains
     deallocate(plot_names_stagy)
     deallocate(plot_names_stagz)
 
-  end subroutine write_plotfile_charged
+  end subroutine write_plotfile
 
-end module write_plotfile_charged_module
+end module write_plotfile_module

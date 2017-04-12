@@ -7,7 +7,7 @@ subroutine main_driver()
   use init_lowmach_module
   use compute_mixture_properties_module
   use initial_projection_charged_module
-  use write_plotfile_charged_module
+  use write_plotfile_module
   use advance_timestep_inertial_module
   use advance_timestep_overdamped_module
   use advance_timestep_iterative_module
@@ -611,8 +611,8 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfile_charged(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,Epot, &
-                                    grad_Epot_old,gradPhiApprox,0,dx,time)
+        call write_plotfile(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,Epot, &
+                            grad_Epot_old,gradPhiApprox,0,dx,time)
      end if
      
      ! print out projection (average) and variance)
@@ -753,8 +753,8 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
-            call write_plotfile_charged(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,Epot, &
-                                        grad_Epot_new,gradPhiApprox,istep,dx,time)
+            call write_plotfile(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,Epot, &
+                                grad_Epot_new,gradPhiApprox,istep,dx,time)
          end if
 
          ! write checkpoint at specific intervals

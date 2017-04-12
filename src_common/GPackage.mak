@@ -16,4 +16,5 @@ f90sources += multifab_physbc_extrap.f90
 f90sources += multifab_physbc_stag.f90
 f90sources += probin_common.f90
 f90sources += sum_momenta.f90
+f90sources += write_plotfile.f90
 f90sources += zero_edgeval.f90

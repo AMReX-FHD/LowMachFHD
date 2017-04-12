@@ -1,4 +1,4 @@
-module write_plotfile_n_module
+module write_plotfile_module
 
   use ml_layout_module
   use multifab_module
@@ -9,11 +9,11 @@ module write_plotfile_n_module
 
   private
 
-  public :: write_plotfile_n
+  public :: write_plotfile
 
 contains
 
-  subroutine write_plotfile_n(mla,n_in,dx,time,istep_to_write)
+  subroutine write_plotfile(mla,n_in,dx,time,istep_to_write)
 
     type(ml_layout)  , intent(in   ) :: mla
     type(multifab)   , intent(in   ) :: n_in(:)
@@ -34,7 +34,7 @@ contains
 
     type(bl_prof_timer), save :: bpt
 
-    call build(bpt,"write_plotfile_n")
+    call build(bpt,"write_plotfile")
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -75,6 +75,6 @@ contains
 
     call destroy(bpt)
 
-  end subroutine write_plotfile_n
+  end subroutine write_plotfile
 
-end module write_plotfile_n_module
+end module write_plotfile_module
