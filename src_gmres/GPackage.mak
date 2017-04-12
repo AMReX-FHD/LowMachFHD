@@ -6,6 +6,7 @@ f90sources += inverse_diag_lap.f90
 f90sources += macproject.f90
 f90sources += norm_inner_product.f90
 f90sources += probin_gmres.f90
+f90sources += stag_applyop.f90
 f90sources += stag_mg_solver.f90
 f90sources += stag_mg_layout.f90
 f90sources += vcycle_counter.f90
