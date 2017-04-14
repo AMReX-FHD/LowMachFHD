@@ -1,0 +1,7 @@
+Supported Problems:
+
+inputs_bubble_2d
+inputs_bubble_3d
+
+A deterministic diffusing bubble with gravity enclosed by walls.  Two of the walls move with
+prescribed velocity, creating lid-driven cavity flow.
