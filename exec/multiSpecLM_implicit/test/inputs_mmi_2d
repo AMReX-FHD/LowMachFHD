@@ -3,18 +3,18 @@
  
   ! Problem specification
   !----------------------
-  dim_in = 2                       ! 2D or 3D  
-  prob_type =  3                   ! sets scalars, m, coefficients (see init.f90)
-  prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
-  prob_hi(1:2) = 0.8d0 0.8d0       ! physical hi coordinate
-  n_cells(1:2) = 256 256           ! number of cells in domain
-  max_grid_size(1:2) = 128 128     ! max number of cells in a box
+  dim_in = 2                         ! 2D or 3D  
+  prob_type =  3                     ! sets scalars, m, coefficients (see init.f90)
+  prob_lo(1:3) = 0.d0 0.d0 0.d0      ! physical lo coordinate
+  prob_hi(1:3) = 0.8d0 0.8d0 0.025d0 ! physical hi coordinate
+  n_cells(1:3) = 256 256 1           ! number of cells in domain
+  max_grid_size(1:3) = 128 128 1     ! max number of cells in a box
 
   fixed_dt = -1.d0                 ! time step
   cfl = 0.75d0                     ! cfl number
 
-  max_step = 1000                  ! maximum number of time steps
-  plot_int = 20                    ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 1                   ! maximum number of time steps
+  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 100                    ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
   print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
@@ -23,24 +23,20 @@
   ! Physical properties
   !----------------------
   grav(1:2) = 0.d0 -981.d0         ! gravity vector (negative is downwards)
+  nspecies = 3
 
   molmass(1:3) = 0.1238e-21    0.5684e-21    0.0299e-21 ! molecular masses for nspecies
   rhobar(1:3) =   2.81d0  1.55d0    1.d0 ! rhobar for nspecies
   k_B = 1.3806488d-16       ! Boltzmann's constant
   
   ! stochastic properties
-  ! the physical value here is 1/dz, where dz is the thickness of the film in cm
-  ! Let's take here dz=1/40=0.025cm=0.25mm as the "thin film" thickness
-!  variance_coef_mom = 40.d0  ! global scaling epsilon for stochastic momentum forcing
-!  variance_coef_mass = 40.d0 ! global scaling epsilon for stochastic mass forcing
-  variance_coef_mom = 0.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 0.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mom = 1.d0  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
   
   ! Algorithm control / selection
   !----------------------
   algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
-                         ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
 
   ! random number seed
@@ -123,7 +119,6 @@
 
   ! Physical properties:
   !----------------------
-  nspecies = 3
   is_ideal_mixture = T ! If T assume Gamma=I (H=0) and simplify
   is_nonisothermal = F ! If T Soret effect will be included
   
@@ -169,6 +164,14 @@
 !  c_bc(2,1,1:3) = 0.d0 0.d0 0.d0
 !  c_bc(2,2,1:3) = 0.d0 0.d0 0.d0
  
+/
+
+&probin_charged
+
+/
+
+&probin_chemistry
+
 /
 
 &probin_gmres
