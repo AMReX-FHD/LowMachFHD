@@ -316,12 +316,6 @@ subroutine main_driver()
      call bc_tower_level_build(the_bc_tower,n,mla%la(n))
   end do
 
-  ! these quantities are populated here and defined in bc.f90
-  c_bc_comp        = scal_bc_comp + 1
-  mol_frac_bc_comp = scal_bc_comp + nspecies + 1
-  temp_bc_comp     = scal_bc_comp + 2*nspecies + 1
-  Epot_bc_comp     = scal_bc_comp + 2*nspecies + 2
-
   ! build layouts for staggered multigrid solver and macproject within preconditioner
   call stag_mg_layout_build(mla)
   call mgt_macproj_precon_build(mla,dx,the_bc_tower)

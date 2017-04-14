@@ -4,7 +4,7 @@ module define_bc_module
   use ml_layout_module
   use bc_module
   use inhomogeneous_bc_val_module
-  use probin_common_module, only : bc_lo, bc_hi
+  use probin_common_module, only : bc_lo, bc_hi, nspecies
   use probin_charged_module, only: Epot_wall_bc_type
 
   implicit none
@@ -43,10 +43,14 @@ contains
      num_scal_bc  = num_scal_bc_in
      num_tran_bc  = num_tran_bc_in
 
-     vel_bc_comp  = 1
-     pres_bc_comp = vel_bc_comp+dm
-     scal_bc_comp = pres_bc_comp+1
-     tran_bc_comp = scal_bc_comp+num_scal_bc
+     vel_bc_comp      = 1
+     pres_bc_comp     = vel_bc_comp+dm
+     scal_bc_comp     = pres_bc_comp+1
+     c_bc_comp        = scal_bc_comp + 1
+     mol_frac_bc_comp = scal_bc_comp + nspecies + 1
+     temp_bc_comp     = scal_bc_comp + 2*nspecies + 1
+     Epot_bc_comp     = scal_bc_comp + 2*nspecies + 2
+     tran_bc_comp     = scal_bc_comp+num_scal_bc
 
      ! Define the physical boundary conditions on the domain
      ! Put the bc values from the inputs file into domain_phys_bc
