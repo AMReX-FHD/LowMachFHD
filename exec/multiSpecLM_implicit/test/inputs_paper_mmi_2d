@@ -10,11 +10,10 @@
   n_cells(1:3) = 256 256 1           ! number of cells in domain
   max_grid_size(1:3) = 128 128 1     ! max number of cells in a box
 
-  fixed_dt = -1.d0                 ! time step
-  cfl = 0.75d0                     ! cfl number
+  fixed_dt = 6.39d-2                 ! time step
 
-  max_step = 1                   ! maximum number of time steps
-  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 1000                  ! maximum number of time steps
+  plot_int = 20                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 100                    ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
   print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
@@ -64,6 +63,11 @@
   ! Initial conditions
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
+  ! for prob_type=3, smoothing_width is interpreted as:
+  ! positive is a tanh smoothed interface where smoothing width is approx the # of grid cells
+  ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
+  !  c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
+  ! -2 is sinusoidal
   smoothing_width = -0.1d0 ! scale factor for smoothing initial profile
 
   initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
@@ -79,13 +83,9 @@
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
 
-! reservoir
+! reservoir in y
   bc_lo(1:2) = -1 201
   bc_hi(1:2) = -1 201
-
-! wall
-!  bc_lo(1:2) = -1 100
-!  bc_hi(1:2) = -1 100
 
   ! Control for analyze_spectra.90
   !----------------------
@@ -95,7 +95,7 @@
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
 
-  project_dir = 2         ! Projection direction (1=x, 2=y, 3=z)
+  project_dir = 1         ! Projection direction (1=x, 2=y, 3=z)
   ! Meaning: 0=analyze 3D data only (no projection needed for HydroGrid, 
   !          but still need projection if stats_int>0)
   ! +dim=project along dim then analyze 2D only,
@@ -106,12 +106,12 @@
   stats_int = 100                    ! Project grid for analysis
                                      ! If positive, how often to compute mean and 
                                      ! standard deviation over reduced dimensions
-  n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 0        ! How many steps to skip
-  analyze_conserved = F   ! Should we use conserved variables for the analysis
-                          ! (does not work well)
-  center_snapshots = F    ! Should we use cell-centered momenta for the analysis
-                          ! (will smooth fluctuations)
+  n_steps_save_stats = -1  ! How often to dump HydroGrid output files
+  n_steps_skip = 0         ! How many steps to skip
+  analyze_conserved = F    ! Should we use conserved variables for the analysis
+                           ! (does not work well)
+  center_snapshots = F     ! Should we use cell-centered momenta for the analysis
+                           ! (will smooth fluctuations)
                           
 /
 
