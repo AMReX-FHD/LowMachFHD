@@ -1133,21 +1133,29 @@ subroutine compute_sqrtLonsager_local(rho,rhotot,sqrtLonsager)
     real(kind=dp_t) :: chi(nspecies,nspecies)
     real(kind=dp_t) :: D_bar(nspecies,nspecies)
 
+    real(kind=dp_t) :: rho_tmp(nspecies)
+    real(kind=dp_t) :: rhotot_tmp
+
   
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"compute_sqrtLonsager_local")
 
+    ! make copies of densities and adjust so they contain positive values
+    rho_tmp(1:nspecies) = max(rho(1:nspecies), fraction_tolerance*rhotot)
+    rhotot_tmp = sum(rho_tmp(1:nspecies))
+
     ! compute molarconc and molmtot
-    call compute_molconc_molmtot_local(rho,rhotot,molarconc,molmtot)
+    call compute_molconc_molmtot_local(rho_tmp,rhotot_tmp,molarconc,molmtot)
 
     ! compute D_bar
-    call compute_D_bar_local(rho,rhotot,D_bar)
+    call compute_D_bar_local(rho_tmp,rhotot_tmp,D_bar)
 
     ! compute chi
-    call compute_chi_local(rho,rhotot,molarconc,chi,D_bar)
+    call compute_chi_local(rho_tmp,rhotot_tmp,molarconc,chi,D_bar)
 
-    ! compute massfraction W_i = rho_i/rho; 
+    ! compute massfraction W_i = rho_i/rho
+    ! note: this uses original densities with possibly zero/negative values
     do row=1, nspecies  
        W(row) = rho(row)/rhotot
     end do
