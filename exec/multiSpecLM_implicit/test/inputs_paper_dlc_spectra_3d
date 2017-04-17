@@ -11,11 +11,10 @@
   max_grid_size(1:3) = 32 32 32    ! max number of cells in a box
 
   fixed_dt = 2.5d-2                ! time step
-!  cfl = 0.75d0                     ! cfl number
 
-  max_step = 800                  ! maximum number of time steps
+  max_step = 800                   ! maximum number of time steps
   plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = 50                    ! Interval for writing a checkpoint
+  chk_int = -1                     ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
   print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10             ! how often to call project_onto_eos
@@ -23,22 +22,20 @@
   ! Physical properties
   !----------------------
   grav(1:3) = 0.d0 -981.d0 0.d0    ! gravity vector (negative is downwards)
+  nspecies = 3
 
   molmass(1:3) = 0.1238e-21    0.5684e-21    0.0299e-21 ! molecular masses for nspecies
   rhobar(1:3) =   2.81d0  1.55d0    1.d0 ! rhobar for nspecies
   k_B = 1.3806488d-16       ! Boltzmann's constant
   
   ! stochastic properties
-  ! the physical value here is 1/dz, where dz is the thickness of the film in cm
-  ! Let's take here dz=1/40=0.025cm=0.25mm as the "thin film" thickness
-  variance_coef_mom = 0.0 ! 40.d0  ! global scaling epsilon for stochastic momentum forcing
-  variance_coef_mass = 0.0 ! 40.d0 ! global scaling epsilon for stochastic mass forcing
+  variance_coef_mom = 1.d0  ! global scaling epsilon for stochastic momentum forcing
+  variance_coef_mass = 1.d0 ! global scaling epsilon for stochastic mass forcing
   
   ! Algorithm control / selection
   !----------------------
   algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
-                         ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
 
   ! random number seed
@@ -66,7 +63,12 @@
   ! Initial conditions
   !----------------------
   u_init(1:2) = 0.d0 0.d0  ! controls initial velocity
-  smoothing_width = -1.d0  ! scale factor for smoothing initial profile
+  ! for prob_type=3, smoothing_width is interpreted as:
+  ! positive is a tanh smoothed interface where smoothing width is approx the # of grid cells
+  ! between 0 and -1 is random perturbation where rand = abs(smoothing_width)*rand() and then
+  !  c = rand*c_init(1,:) + (1-rand)*c_init(2,:)
+  ! -2 is sinusoidal
+  smoothing_width = 0.d0  ! scale factor for smoothing initial profile
 
   initial_variance = 1.d0   ! multiplicative factor for initial fluctuations
                             ! (if negative, total momentum is set to zero -- relevant for periodic)
@@ -81,18 +83,14 @@
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
 
-! reservoir
+! reservoir in y
   bc_lo(1:3) = -1 201 -1
   bc_hi(1:3) = -1 201 -1
-
-! wall
-!  bc_lo(1:3) = -1 100 100
-!  bc_hi(1:3) = -1 100 100
 
   ! Control for analyze_spectra.90
   !----------------------
 
-  hydro_grid_int = 1   ! How often to call updateHydroGrid
+  hydro_grid_int = 1    ! How often to call updateHydroGrid
                         ! 0 if never
                         ! negative for projectHydroGrid custom analysis
                         ! positive for updateHydroGrid
@@ -108,12 +106,12 @@
   stats_int = 10                     ! Project grid for analysis
                                      ! If positive, how often to compute mean and 
                                      ! standard deviation over reduced dimensions
-  n_steps_save_stats = 10 ! How often to dump HydroGrid output files
-  n_steps_skip = 0        ! How many steps to skip
-  analyze_conserved = F   ! Should we use conserved variables for the analysis
-                          ! (does not work well)
-  center_snapshots = F    ! Should we use cell-centered momenta for the analysis
-                          ! (will smooth fluctuations)
+  n_steps_save_stats = 10  ! How often to dump HydroGrid output files
+  n_steps_skip = 0         ! How many steps to skip
+  analyze_conserved = F    ! Should we use conserved variables for the analysis
+                           ! (does not work well)
+  center_snapshots = F     ! Should we use cell-centered momenta for the analysis
+                           ! (will smooth fluctuations)
                           
 /
 
@@ -121,7 +119,6 @@
 
   ! Physical properties:
   !----------------------
-  nspecies = 3
   is_ideal_mixture = T ! If T assume Gamma=I (H=0) and simplify
   is_nonisothermal = F ! If T Soret effect will be included
   
@@ -162,11 +159,15 @@
   ! use this set for reservoir (Dirichlet Values)
   c_bc(2,1,1:3) = 0.0     0.05      0.95
   c_bc(2,2,1:3) = 0.022   0.0      0.978
-
-  ! use this set for walls (Neumann Values)
-!  c_bc(2,1,1:3) = 0.d0 0.d0 0.d0
-!  c_bc(2,2,1:3) = 0.d0 0.d0 0.d0
  
+/
+
+&probin_charged
+
+/
+
+&probin_chemistry
+
 /
 
 &probin_gmres
@@ -223,7 +224,7 @@
   ! GMRES solver parameters
   gmres_rel_tol = 1.d-9 ! relative tolerance stopping criteria
   gmres_abs_tol = 0.d0  ! absolute tolerance stopping criteria
-  gmres_verbose = 0     ! gmres verbosity; if greater than 1, more residuals will be printed out
+  gmres_verbose = 1     ! gmres verbosity; if greater than 1, more residuals will be printed out
   gmres_max_outer = 20  ! max number of outer iterations
   gmres_max_inner = 5   ! max number of inner iterations, or restart number
   gmres_max_iter = 100  ! max number of gmres iterations
@@ -272,7 +273,7 @@
    outputFolder = "."
    filePrefix = "dlc_3d_full"
    axisToPrint = 1 ! 1=x, 2=y, 3=z axis
-   periodic = T ! Is the system periodic along the y axes, which is the z axes in the original 3d setup
+   periodic = T ! Is the system periodic along the y axes
 
 /
 
