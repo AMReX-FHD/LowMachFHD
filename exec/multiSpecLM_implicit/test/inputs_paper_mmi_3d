@@ -1,3 +1,10 @@
+! Run this inputs file as given, and then change:
+!
+! variance_coef_mom = 0.d0
+! variance_coef_mass = 0.d0
+!
+! to get the images similar to those in Figure 6 of the paper.
+
 ! Units used here are: length=cm, mass=g, time=s, temperature=K
 &probin_common
  
@@ -14,7 +21,7 @@
 
   max_step = 1000                  ! maximum number of time steps
   plot_int = 20                    ! Interval for writing a plotfile (for visit/amrvis)
-  chk_int = 100                    ! Interval for writing a checkpoint
+  chk_int = -1                     ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
   print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
   project_eos_int = 10             ! how often to call project_onto_eos

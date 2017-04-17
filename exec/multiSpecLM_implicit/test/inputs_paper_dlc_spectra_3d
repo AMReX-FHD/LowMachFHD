@@ -106,7 +106,7 @@
   stats_int = 10                     ! Project grid for analysis
                                      ! If positive, how often to compute mean and 
                                      ! standard deviation over reduced dimensions
-  n_steps_save_stats = 10  ! How often to dump HydroGrid output files
+  n_steps_save_stats = 40  ! How often to dump HydroGrid output files
   n_steps_skip = 0         ! How many steps to skip
   analyze_conserved = F    ! Should we use conserved variables for the analysis
                            ! (does not work well)

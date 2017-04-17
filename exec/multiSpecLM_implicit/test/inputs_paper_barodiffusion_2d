@@ -1,5 +1,4 @@
-! WARNING: gfortran has shown some issues reading matrices of rank higher than 2 from namelists
-! be careful and check values are read correctly (e.g., c_bc)
+!  Run this inputs file as given to obtain the data from Figure 4.
 
 ! Options for low Mach equations
 &probin_common
@@ -128,8 +127,8 @@
   stats_int = 100000             ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
-  n_steps_save_stats = -25000 ! How often to dump HydroGrid output files
-  n_steps_skip = 500000        ! How many steps to skip
+  n_steps_save_stats = -1 ! How often to dump HydroGrid output files
+  n_steps_skip = 500000   ! How many steps to skip
   analyze_conserved = F   ! Should we use conserved variables for the analysis
                           ! (does not work well)
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
