@@ -3,6 +3,7 @@ module advance_timestep_overdamped_module
   use ml_layout_module
   use define_bc_module
   use bc_module
+  use analysis_module
   use convert_stag_module
   use convert_rhoc_to_c_module
   use mk_advective_s_fluxdiv_module
@@ -27,7 +28,8 @@ module advance_timestep_overdamped_module
                                   barodiffusion_type, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_multispecies_module, only: midpoint_stoch_mass_flux_type
-  use analysis_module
+  use probin_charged_module, only: use_charged_fluid
+  use probin_chemistry_module, only: nreactions
 
   implicit none
 
@@ -114,6 +116,14 @@ contains
     type(bl_prof_timer), save :: bpt
 
     call build(bpt, "advance_timestep_overdamped")
+
+    if (nreactions .gt. 0) then
+       call bl_error("advance_timestep_imp_bousq does not support reactions yet")
+    end if
+
+    if (use_charged_fluid) then
+       call bl_error('advance_timestep_inertial_midpoint does not support charges yet')
+    end if
 
     weights(1) = 1.d0
     weights(2) = 0.d0

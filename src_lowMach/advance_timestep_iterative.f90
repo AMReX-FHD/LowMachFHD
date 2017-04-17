@@ -36,6 +36,7 @@ module advance_timestep_iterative_module
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_charged_module, only: use_charged_fluid, theta_pot, &
                                    num_pot_iters, dpdt_factor, Epot_wall_bc_type
+  use probin_chemistry_module, only: nreactions
 
   implicit none
 
@@ -150,6 +151,10 @@ contains
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
 
     real(kind=dp_t) :: weights(1), sum
+
+    if (nreactions .gt. 0) then
+       call bl_error("advance_timestep_imp_bousq does not support reactions yet")
+    end if
 
     weights(1) = 1.d0
 

@@ -35,6 +35,7 @@ module advance_timestep_imp_bousq_module
                                   use_bl_rng, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol, mg_verbose
   use probin_charged_module, only: use_charged_fluid, Epot_wall_bc_type
+  use probin_chemistry_module, only: nreactions
 
   use fabio_module
 
@@ -162,6 +163,10 @@ contains
 
     if (any(rhobar(1:nspecies) .ne. rhobar(1))) then
        call bl_error("Implicit Boussinesq algorithm requires all the same rhobar's")
+    end if
+
+    if (nreactions .gt. 0) then
+       call bl_error("advance_timestep_imp_bousq does not support reactions yet")
     end if
 
     nlevs = mla%nlevel

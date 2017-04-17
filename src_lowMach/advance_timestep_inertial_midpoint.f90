@@ -152,7 +152,7 @@ contains
     end if
 
     if (use_charged_fluid) then
-       call bl_error('Error: currently only use_charged_fluid=F allowed for algorithm_type=5')
+       call bl_error('advance_timestep_inertial_midpoint does not support charges yet')
     end if
 
     if (nreactions > 0) then
