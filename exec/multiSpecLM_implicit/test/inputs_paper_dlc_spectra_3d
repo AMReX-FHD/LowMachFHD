@@ -13,7 +13,7 @@
   fixed_dt = 2.5d-2                ! time step
 
   max_step = 800                   ! maximum number of time steps
-  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 40                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = -1                     ! Interval for writing a checkpoint
   restart = -1                     ! checkpoint restart number
   print_int = 1                    ! how often to output EOS drift and sum of conserved quantities
