@@ -16,7 +16,11 @@ very dilute water.
 
 inputs_paper_Seawater_structure
 
-Fig.2. Equilibrium structure factor of a system of Seawater (Na+ and Cl- in water)
+Fig.2. Equilibrium structure factor of a system of seawater (Na+ and Cl- in water)
 
 -----------------------------------
 
+inputs_Seawater_gradient
+
+Fig.4. Non-equilibrium (i.e. in the presence of gradient) structure factor
+of seawater
