@@ -1,0 +1,22 @@
+Supported Problems (./inputs_files/):
+
+----------------------------------
+The following inputs files were used to generate results in J-P.Peraud et al.
+"Low Mach number fluctuating hydrodanymics for electrolytes", Phys. Rev. Fluids 1, 
+074103, (2016)
+----------------------------------
+
+inputs_paper_Seawater_convergence
+
+Fig. 1 (a. and b., the line representing the system with charged species). 
+A deterministic diffusing stripe of salty water (Na+ and Cl- in water) in 
+very dilute water. 
+
+-----------------------------------
+
+inputs_paper_Seawater_structure
+
+Fig.2. Equilibrium structure factor of a system of Seawater (Na+ and Cl- in water)
+
+-----------------------------------
+
