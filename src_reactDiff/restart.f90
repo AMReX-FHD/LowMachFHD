@@ -73,8 +73,8 @@ contains
 
     type(multifab)   , pointer        :: chkdata(:)
     character(len=8)                  :: check_index
-    character(len=30)                 :: sd_name
-    character(len=40)                 :: rand_name
+    character(len=128)                :: sd_name
+    character(len=128)                :: rand_name
     integer                           :: n,nlevs
     integer                           :: rrs(10)
 

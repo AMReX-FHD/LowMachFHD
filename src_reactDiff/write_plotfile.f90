@@ -22,8 +22,8 @@ contains
 
     integer :: i,n,n_plot_comps
 
-    character(len=8)  :: plot_index
-    character(len=30) :: sd_name
+    character(len=8)   :: plot_index
+    character(len=128) :: sd_name
     character(len=20), allocatable :: plot_names(:)
 
     ! These are only used if you want to coarsen your plotdata before writing

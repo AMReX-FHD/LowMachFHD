@@ -148,8 +148,8 @@ contains
     type(multifab)   , pointer        :: chkdata_edgey(:)
     type(multifab)   , pointer        :: chkdata_edgez(:)
     character(len=8)                  :: check_index
-    character(len=30)                 :: sd_name
-    character(len=40)                 :: rand_name
+    character(len=128)                :: sd_name
+    character(len=128)                :: rand_name
     integer                           :: n,nlevs,dm
     integer                           :: rrs(10)
 
