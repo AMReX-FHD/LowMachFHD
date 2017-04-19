@@ -9,7 +9,8 @@ module restart_module
   use bl_random_module
   use probin_common_module, only: dim_in, advection_type, restart, advection_type, &
                                   use_bl_rng, nspecies, &
-                                  seed_momentum, seed_diffusion, seed_reaction
+                                  seed_momentum, seed_diffusion, seed_reaction, &
+                                  check_base_name
   use probin_chemistry_module, only: nreactions
 
   implicit none
@@ -146,7 +147,8 @@ contains
     type(multifab)   , pointer        :: chkdata_edgex(:)
     type(multifab)   , pointer        :: chkdata_edgey(:)
     type(multifab)   , pointer        :: chkdata_edgez(:)
-    character(len=11)                 :: sd_name
+    character(len=8)                  :: check_index
+    character(len=30)                 :: sd_name
     character(len=40)                 :: rand_name
     integer                           :: n,nlevs,dm
     integer                           :: rrs(10)
@@ -157,7 +159,8 @@ contains
 
     dm = dim_in
 
-    write(unit=sd_name,fmt='("chk",i8.8)') restart
+    write(unit=check_index,fmt='(i8.8)') restart
+    sd_name = trim(check_base_name) // check_index
 
     if ( parallel_IOProcessor() ) then
        print *,'Reading ',sd_name,' to get state data for restart'
@@ -180,17 +183,17 @@ contains
     if (use_bl_rng) then
 
        if (seed_momentum .eq. -1) then
-          rand_name = sd_name//'/rng_eng_mom'
+          rand_name = trim(sd_name) // '/rng_eng_mom'
           call bl_rng_restore_engine(rng_eng_momentum, rand_name)
        end if
 
        if (seed_diffusion .eq. -1) then
-          rand_name = sd_name//'/rng_eng_diff'
+          rand_name = trim(sd_name) // '/rng_eng_diff'
           call bl_rng_restore_engine(rng_eng_diffusion, rand_name)
        end if
 
        if (seed_reaction .eq. -1) then
-          rand_name = sd_name//'/rng_eng_react'
+          rand_name = trim(sd_name) // '/rng_eng_react'
           call bl_rng_restore_engine(rng_eng_reaction, rand_name)
        end if
 

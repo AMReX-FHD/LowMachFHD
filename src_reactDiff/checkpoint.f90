@@ -9,7 +9,7 @@ module checkpoint_module
   use bl_rng_module
   use bl_random_module
   use fabio_module, only: fabio_mkdir, fabio_ml_multifab_write_d
-  use probin_common_module, only: use_bl_rng, nspecies
+  use probin_common_module, only: use_bl_rng, nspecies, check_base_name
 
   implicit none
 
@@ -30,7 +30,8 @@ contains
 
     integer :: n,nlevs,dm
 
-    character(len=11) :: sd_name
+    character(len=8)  :: check_index
+    character(len=30) :: sd_name
     character(len=40) :: rand_name
 
     type(bl_prof_timer), save :: bpt
@@ -45,7 +46,8 @@ contains
        call multifab_build(chkdata(n), mla%la(n), nspecies, 0)
        call multifab_copy_c(chkdata(n), 1, n_new(n), 1, nspecies)
     end do
-    write(unit=sd_name,fmt='("chk",i8.8)') istep_to_write
+    write(unit=check_index,fmt='(i8.8)') istep_to_write
+    sd_name = trim(check_base_name) // check_index
 
     call checkpoint_write_doit(nlevs, sd_name, chkdata, mla%mba%rr, time, dt)
     
@@ -53,9 +55,9 @@ contains
     if (use_bl_rng) then
 
        ! engines
-       rand_name = sd_name//'/rng_eng_diff'
+       rand_name = trim(sd_name) // '/rng_eng_diff'
        call bl_rng_save_engine(rng_eng_diffusion, rand_name)
-       rand_name = sd_name//'/rng_eng_react'
+       rand_name = trim(sd_name) // '/rng_eng_react'
        call bl_rng_save_engine(rng_eng_reaction, rand_name)
 
     end if

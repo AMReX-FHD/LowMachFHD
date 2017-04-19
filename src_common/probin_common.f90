@@ -13,6 +13,7 @@ module probin_common_module
   integer, parameter :: MAX_SPECIES = 10
 
   integer,save    :: dim_in,plot_int,chk_int,prob_type,advection_type
+  character(len=256),save :: plot_base_name, check_base_name
   real(dp_t),save :: fixed_dt,cfl,grav(3)
   real(dp_t),save :: perturb_width,smoothing_width,u_init(2)
   integer,save    :: visc_type,bc_lo(MAX_SPACEDIM),bc_hi(MAX_SPACEDIM),nspecies
@@ -59,7 +60,9 @@ module probin_common_module
   !----------------------
   namelist /probin_common/ max_step        ! maximum number of time steps
   namelist /probin_common/ plot_int        ! Interval for writing a plotfile (for visit/amrvis)
+  namelist /probin_common/ plot_base_name  ! prefix for plotfile name
   namelist /probin_common/ chk_int         ! Interval for writing a checkpoint
+  namelist /probin_common/ check_base_name ! prefix for checkpoint name
   namelist /probin_common/ prob_type       ! sets the problem type
   namelist /probin_common/ restart         ! checkpoint restart number
   namelist /probin_common/ print_int       ! how often to output diagnostics to screen
@@ -233,7 +236,9 @@ contains
 
     max_step = 1
     plot_int = 0
+    plot_base_name = "plt"
     chk_int = 0
+    check_base_name = "chk"
     prob_type = 1
     restart = -1
     print_int = 0
@@ -389,10 +394,20 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_int
 
+       case ('--plot_base_name')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) plot_base_name
+
        case ('--chk_int')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) chk_int
+
+       case ('--check_base_name')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) check_base_name
 
        case ('--prob_type')
           farg = farg + 1

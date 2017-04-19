@@ -8,7 +8,7 @@ module restart_module
   use bl_rng_module
   use bl_random_module
   use probin_common_module, only: dim_in, restart, use_bl_rng, seed_reaction, &
-                                  seed_diffusion, nspecies
+                                  seed_diffusion, nspecies, check_base_name
          
   implicit none
 
@@ -72,7 +72,8 @@ contains
     type(ml_boxarray), intent(  out) :: mba
 
     type(multifab)   , pointer        :: chkdata(:)
-    character(len=11)                 :: sd_name
+    character(len=8)                  :: check_index
+    character(len=30)                 :: sd_name
     character(len=40)                 :: rand_name
     integer                           :: n,nlevs
     integer                           :: rrs(10)
@@ -81,8 +82,8 @@ contains
 
     call build(bpt,"fill_restart_data")
 
-    write(unit=sd_name,fmt='("chk",i8.8)') restart
-
+    write(unit=check_index,fmt='(i8.8)') restart
+    sd_name = trim(check_base_name) // check_index
     if ( parallel_IOProcessor() ) then
        print *,'Reading ',sd_name,' to get state data for restart'
     end if
@@ -103,12 +104,12 @@ contains
     if (use_bl_rng) then
 
        if (seed_diffusion .eq. -1) then
-          rand_name = sd_name//'/rng_eng_diff'
+          rand_name = trim(sd_name) // '/rng_eng_diff'
           call bl_rng_restore_engine(rng_eng_diffusion, rand_name)
        end if
 
        if (seed_reaction .eq. -1) then
-          rand_name = sd_name//'/rng_eng_react'
+          rand_name = trim(sd_name) // '/rng_eng_react'
           call bl_rng_restore_engine(rng_eng_reaction, rand_name)
        end if
 
