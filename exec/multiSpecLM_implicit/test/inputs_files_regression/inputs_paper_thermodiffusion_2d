@@ -13,7 +13,7 @@
 
   ! Time-step control
   !----------------------
-  fixed_dt = 0.25d0                ! time step (if positive, fixed)
+  fixed_dt = 0.5d0                ! time step (if positive, fixed)
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
