@@ -35,10 +35,10 @@ contains
     character(len=20), allocatable  :: plot_names_stagx(:)
     character(len=20), allocatable  :: plot_names_stagy(:)
     character(len=20), allocatable  :: plot_names_stagz(:)
-    character(len=20)               :: plotfile_name
-    character(len=20)               :: plotfile_namex
-    character(len=20)               :: plotfile_namey
-    character(len=20)               :: plotfile_namez
+    character(len=128)              :: plotfile_name
+    character(len=128)              :: plotfile_namex
+    character(len=128)              :: plotfile_namey
+    character(len=128)              :: plotfile_namez
     integer                         :: i,dm,n,nlevs
 
     ! multifab of size nlevs  

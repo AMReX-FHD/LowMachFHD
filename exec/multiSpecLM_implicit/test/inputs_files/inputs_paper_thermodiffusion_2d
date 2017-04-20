@@ -13,12 +13,12 @@
 
   ! Time-step control
   !----------------------
-  fixed_dt = 0.25d0                ! time step (if positive, fixed)
+  fixed_dt = 0.5d0                ! time step (if positive, fixed)
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
-  max_step = 1500000               ! maximum number of time steps
-  plot_int = 150000                ! Interval for writing a plotfile (for visit/amrvis)
+  max_step = 100000                ! maximum number of time steps
+  plot_int = 10000                 ! Interval for writing a plotfile (for visit/amrvis)
   chk_int =  -1                    ! Interval for writing a checkpoint
   prob_type = 14                   ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
@@ -124,11 +124,11 @@
   ! It is better to use the conserved variables but it does not quite work for staggered
 
   max_grid_projection(1:1) = 32  ! parallelization parameters
-  stats_int = 100000             ! Project grid for analysis
+  stats_int = 10000              ! Project grid for analysis
                                  ! If positive, how often to compute mean and 
                                  ! standard deviation over reduced dimensions
-  n_steps_save_stats = -1 ! How often to dump HydroGrid output files
-  n_steps_skip = 500000   ! How many steps to skip
+  n_steps_save_stats = 10000 ! How often to dump HydroGrid output files
+  n_steps_skip = 50001   ! How many steps to skip
   analyze_conserved = F   ! Should we use conserved variables for the analysis
                           ! (does not work well)
   center_snapshots = F    ! Should we use cell-centered momenta for the analysis
@@ -159,7 +159,7 @@
   ! initial values for c
   ! The last value for water will be overwritten to enforce the EOS
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  c_init(1,1:3) = 0.0492d0 0.0229d0 0.9279d0
+  c_init(1,1:3) = 0.1d0 0.1d0 0.8d0
 
   ! c_i boundary conditions (dir,lohi,species)
   c_bc(1,1,1:2) = 0.d0 0.d0

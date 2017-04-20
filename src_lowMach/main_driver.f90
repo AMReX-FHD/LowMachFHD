@@ -43,7 +43,8 @@ subroutine main_driver()
                                   probin_common_init, print_int, nspecies, &
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, initial_variance, &
-                                  variance_coef_mass, barodiffusion_type, use_bl_rng
+                                  variance_coef_mass, barodiffusion_type, use_bl_rng, &
+                                  plot_base_name, check_base_name
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
@@ -605,7 +606,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfile(mla,"plt",rho_old,rhotot_old,Temp,umac,pi,Epot, &
+        call write_plotfile(mla,trim(plot_base_name),rho_old,rhotot_old,Temp,umac,pi,Epot, &
                             grad_Epot_old,gradPhiApprox,0,dx,time)
      end if
      
@@ -747,7 +748,7 @@ subroutine main_driver()
             if (parallel_IOProcessor()) then
                write(*,*), 'writing plotfiles at timestep =', istep 
             end if
-            call write_plotfile(mla,"plt",rho_new,rhotot_new,Temp,umac,pi,Epot, &
+            call write_plotfile(mla,trim(plot_base_name),rho_new,rhotot_new,Temp,umac,pi,Epot, &
                                 grad_Epot_new,gradPhiApprox,istep,dx,time)
          end if
 

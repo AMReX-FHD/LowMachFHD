@@ -10,7 +10,8 @@ module checkpoint_module
   use bl_random_module
   use fabio_module
   use probin_common_module, only: dim_in, use_bl_rng, nspecies, &
-                                  seed_diffusion, seed_momentum, seed_reaction
+                                  seed_diffusion, seed_momentum, seed_reaction, &
+                                  check_base_name
   use probin_chemistry_module, only: nreactions
 
   implicit none
@@ -41,8 +42,9 @@ contains
     integer :: n,nlevs,dm,i
     integer num_chk, counter
 
-    character(len=11) :: sd_name
-    character(len=40) :: rand_name
+    character(len=8)  :: check_index
+    character(len=128) :: sd_name
+    character(len=128) :: rand_name
 
     type(bl_prof_timer), save :: bpt
 
@@ -119,7 +121,8 @@ contains
        end do
     end do
 
-    write(unit=sd_name,fmt='("chk",i8.8)') istep_to_write
+    write(unit=check_index,fmt='(i8.8)') istep_to_write
+    sd_name = trim(check_base_name) // check_index
 
     call checkpoint_write_doit(nlevs, sd_name, chkdata, chkdata_edge, mla%mba%rr, time, dt)
 
@@ -127,11 +130,11 @@ contains
     if (use_bl_rng) then
 
        ! engines
-       rand_name = sd_name//'/rng_eng_mom'
+       rand_name = trim(sd_name) // '/rng_eng_mom'
        call bl_rng_save_engine(rng_eng_momentum, rand_name)
-       rand_name = sd_name//'/rng_eng_diff'
+       rand_name = trim(sd_name) //'/rng_eng_diff'
        call bl_rng_save_engine(rng_eng_diffusion_old, rand_name)
-       rand_name = sd_name//'/rng_eng_react'
+       rand_name = trim(sd_name) //'/rng_eng_react'
        call bl_rng_save_engine(rng_eng_reaction, rand_name)
 
     end if
