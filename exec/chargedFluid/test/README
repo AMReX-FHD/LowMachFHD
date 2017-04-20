@@ -16,11 +16,18 @@ very dilute water.
 
 inputs_paper_Seawater_structure
 
-Fig.2. Equilibrium structure factor of a system of seawater (Na+ and Cl- in water)
+Fig. 2. Equilibrium structure factor of a system of seawater (Na+ and Cl- in water)
 
 -----------------------------------
 
-inputs_Seawater_gradient
+inputs_paper_Seawater_gradient
 
-Fig.4. Non-equilibrium (i.e. in the presence of gradient) structure factor
+Fig. 4. Non-equilibrium (i.e. in the presence of gradient) structure factor
 of seawater
+
+-----------------------------------
+
+inputs_Seawater_movie_3d
+
+Fig. 5. 3d simulation of the mixing instability. The potential at one of the walls
+is set by Epot_wall(2,2) (currently at 2.d9 in cgs units, i.e. 200V)
