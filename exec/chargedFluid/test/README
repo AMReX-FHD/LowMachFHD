@@ -27,7 +27,7 @@ of seawater
 
 -----------------------------------
 
-inputs_Seawater_movie_3d
+inputs_paper_Seawater_movie_3d
 
 Fig. 5. 3d simulation of the mixing instability. The potential at one of the walls
 is set by Epot_wall(2,2) (currently at 2.d9 in cgs units, i.e. 200V)
