@@ -150,7 +150,7 @@ contains
               end do
            else
               ! first set x_p = -L_alpha Phi
-              call cc_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx, &
+              call cc_applyop(mla,x_p,phi,zero_fab,alphainv_fc,dx(:,1:dm), &
                               the_bc_tower,pres_bc_comp,stencil_order_in=2)
            end if
 

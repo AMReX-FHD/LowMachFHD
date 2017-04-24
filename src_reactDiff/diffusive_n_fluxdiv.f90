@@ -71,7 +71,7 @@ contains
           end do
        end do
 
-       call cc_applyop(mla,res,phi,alpha,beta,dx,the_bc_tower,scal_bc_comp+spec-1, &
+       call cc_applyop(mla,res,phi,alpha,beta,dx(:,1:dm),the_bc_tower,scal_bc_comp+spec-1, &
                        stencil_order_in=diffusion_stencil_order)
 
        ! copy solution into diff_fluxdiv
