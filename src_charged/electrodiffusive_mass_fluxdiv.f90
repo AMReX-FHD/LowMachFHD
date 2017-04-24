@@ -1,4 +1,4 @@
-module Epot_mass_fluxdiv_module
+module electrodiffusive_mass_fluxdiv_module
 
   use multifab_module
   use ml_layout_module
@@ -22,20 +22,21 @@ module Epot_mass_fluxdiv_module
 
   private
 
-  public :: Epot_mass_flux, Epot_mass_fluxdiv, inhomogeneous_neumann_fix
+  public :: electrodiffusive_mass_flux, electrodiffusive_mass_fluxdiv, &
+       inhomogeneous_neumann_fix
 
 contains
 
-  subroutine Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                               total_mass_flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
-                               permittivity)
+  subroutine electrodiffusive_mass_fluxdiv(mla,rho,Epot_mass_fluxdiv,Temp,rhoWchi, &
+                                           total_mass_flux,dx,the_bc_tower,charge, &
+                                           grad_Epot,Epot,permittivity)
 
-    ! this computes "Epot_fluxdiv = -div(F) = div(A_Phi grad Phi)"
-    !               "grad_Epot    = grad Phi"
+    ! this computes "Epot_mass_fluxdiv = -div(F) = div(A_Phi grad Phi)"
+    !               "grad_Epot         = grad Phi"
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
-    type(multifab) , intent(inout)  :: Epot_fluxdiv(:)
+    type(multifab) , intent(inout)  :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(in   )  :: Temp(:)
     type(multifab) , intent(in   )  :: rhoWchi(:)
     type(multifab) , intent(inout)  :: total_mass_flux(:,:)
@@ -54,7 +55,7 @@ contains
     
     type(bl_prof_timer), save :: bpt
 
-    call build(bpt, "Epot_mass_fluxdiv")
+    call build(bpt, "electrodiffusive_mass_fluxdiv")
     
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
@@ -70,7 +71,7 @@ contains
     
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
-    call Epot_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
+    call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
                         permittivity)
     
     ! add fluxes to total_mass_flux
@@ -81,7 +82,7 @@ contains
     end do
 
     ! compute divergence of determinstic flux 
-    call compute_div(mla,flux,Epot_fluxdiv,dx,1,1,nspecies)
+    call compute_div(mla,flux,Epot_mass_fluxdiv,dx,1,1,nspecies)
     
     ! destroy the multifab to free the memory
     do n=1,nlevs
@@ -92,9 +93,9 @@ contains
 
     call destroy(bpt)
 
-  end subroutine Epot_mass_fluxdiv
+  end subroutine electrodiffusive_mass_fluxdiv
  
-  subroutine Epot_mass_flux(mla,rho,Temp,rhoWchi,flux,dx, &
+  subroutine electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx, &
                             the_bc_tower,charge,grad_Epot,Epot,permittivity)
 
     ! this computes "-F = A_Phi grad Phi"
@@ -131,7 +132,7 @@ contains
 
     type(bl_prof_timer), save :: bpt
     
-    call build(bpt,"Epot_mass_flux")
+    call build(bpt,"electrodiffusive_mass_flux")
 
     dm    = mla%dim     ! dimensionality
     nlevs = mla%nlevel  ! number of levels 
@@ -301,7 +302,7 @@ contains
 
     call destroy(bpt)
 
-  end subroutine Epot_mass_flux
+  end subroutine electrodiffusive_mass_flux
   
   ! We would like to solve A x = b with inhomogeneous bc's
   ! Here, "A" is -epsilon * Lap
@@ -370,4 +371,4 @@ contains
 
   end subroutine inhomogeneous_neumann_fix
 
-end module Epot_mass_fluxdiv_module
+end module electrodiffusive_mass_fluxdiv_module

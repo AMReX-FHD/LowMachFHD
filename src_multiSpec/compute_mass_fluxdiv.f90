@@ -11,7 +11,7 @@ module compute_mass_fluxdiv_module
   use ml_layout_module
   use mass_flux_utilities_module
   use convert_stag_module
-  use Epot_mass_fluxdiv_module
+  use electrodiffusive_mass_fluxdiv_module
   use probin_common_module, only: variance_coef_mass, nspecies
   use probin_charged_module, only: use_charged_fluid
 
@@ -29,7 +29,7 @@ contains
                                   diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                   diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                                   dt,stage_time,dx,weights,the_bc_tower, &
-                                  Epot_fluxdiv,charge,grad_Epot,Epot,permittivity)
+                                  Epot_mass_fluxdiv,charge,grad_Epot,Epot,permittivity)
     ! Donev: Add a logical flag for whether to do electroneutral or not
        
     type(ml_layout), intent(in   )   :: mla
@@ -47,7 +47,7 @@ contains
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
     type(bc_tower) , intent(in   )   :: the_bc_tower
-    type(multifab) , intent(inout), optional :: Epot_fluxdiv(:)
+    type(multifab) , intent(inout), optional :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout), optional :: charge(:)
     type(multifab) , intent(inout), optional :: grad_Epot(:,:)
     type(multifab) , intent(inout), optional :: Epot(:)
@@ -172,24 +172,25 @@ contains
     !    note no advective fluxes required in this case
     !    project fluxes by adding div(A_Phi grad Phi)
     ! else
-    !    call Epot_mass_fluxdiv() ! Add the electrostatic piece using Epot passed in
+    !    call electrodiffusive_mass_fluxdiv() ! Add the electrostatic piece using Epot passed in
     !    may be better to compute Epot here by solving the simple Poisson equation though
     !    this way callers don't have to worry about Poisson solves. 
     !    but one needs to check if this will work with all of the existing algorithms
     ! end
 
     if (use_charged_fluid) then
-       if ( (.not. present(Epot_fluxdiv)) .or. &
-            (.not. present(charge      )) .or. &
-            (.not. present(grad_Epot   )) .or. &
-            (.not. present(Epot        )) .or. &
-            (.not. present(permittivity)) ) then
+       if ( (.not. present(Epot_mass_fluxdiv)) .or. &
+            (.not. present(charge           )) .or. &
+            (.not. present(grad_Epot        )) .or. &
+            (.not. present(Epot             )) .or. &
+            (.not. present(permittivity     )) ) then
           call bl_error("compute_mass_fluxdiv: use_charged_fluid missing optional multifabs")
        end if
 
-       call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
-                              total_mass_flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
-                              permittivity)
+       call electrodiffusive_mass_fluxdiv(mla,rho,Epot_mass_fluxdiv,Temp,rhoWchi, &
+                                          total_mass_flux,dx,the_bc_tower, &
+                                          charge,grad_Epot,Epot, &
+                                          permittivity)
 
     end if
 

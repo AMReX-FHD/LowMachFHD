@@ -8,6 +8,7 @@ module advance_timestep_iterative_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
+  use electrodiffusive_mass_fluxdiv_module
   use compute_mass_fluxdiv_module
   use compute_HSE_pres_module
   use convert_m_to_umac_module
@@ -27,7 +28,6 @@ module advance_timestep_iterative_module
   use fluid_charge_module
   use ml_solve_module
   use bndry_reg_module
-  use Epot_mass_fluxdiv_module
   use bl_rng_module
   use bl_random_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
