@@ -9,7 +9,6 @@ module initial_projection_module
   use bc_module
   use multifab_physbc_stag_module
   use compute_mass_fluxdiv_module
-  use compute_mass_fluxdiv_charged_module
   use reservoir_bc_fill_module
   use fluid_charge_module
   use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type, &
@@ -159,18 +158,11 @@ contains
 
     end if
 
-    if (use_charged_fluid .and. dielectric_const .ne. 0.d0) then
-       call compute_mass_fluxdiv_charged(mla,rho,rhotot,gradp_baro,Temp, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                                         dt_eff,0.d0,dx,weights,the_bc_tower,Epot_mass_fluxdiv, &
-                                         charge_old,grad_Epot_old,Epot,permittivity)
-    else
-       call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
-                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                 diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                                 dt_eff,0.d0,dx,weights,the_bc_tower)
-    end if
+    call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                              dt_eff,0.d0,dx,weights,the_bc_tower,Epot_mass_fluxdiv, &
+                              charge_old,grad_Epot_old,Epot,permittivity)
 
     ! compute chemical rates m_i*R_i
     if (nreactions > 0) then

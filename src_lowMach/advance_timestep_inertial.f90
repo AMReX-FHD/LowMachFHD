@@ -8,7 +8,7 @@ module advance_timestep_inertial_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
-  use compute_mass_fluxdiv_charged_module
+  use compute_mass_fluxdiv_module
   use project_onto_eos_module
   use fluid_charge_module
   use compute_HSE_pres_module
@@ -397,12 +397,12 @@ contains
     ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "-F = rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro,Temp, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                                      dt,time,dx,weights,the_bc_tower, &
-                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
-                                      permittivity)
+    call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                              dt,time,dx,weights,the_bc_tower, &
+                              Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                              permittivity)
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
@@ -791,12 +791,12 @@ contains
     ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "-F = rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro,Temp, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                                      dt,time,dx,weights,the_bc_tower, &
-                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
-                                      permittivity)
+    call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                              dt,time,dx,weights,the_bc_tower, &
+                              Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                              permittivity)
 
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)

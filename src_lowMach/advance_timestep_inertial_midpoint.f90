@@ -8,7 +8,7 @@ module advance_timestep_inertial_midpoint_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
-  use compute_mass_fluxdiv_charged_module
+  use compute_mass_fluxdiv_module
   use project_onto_eos_module
   use fluid_charge_module
   use compute_HSE_pres_module
@@ -441,12 +441,12 @@ contains
        ! with barodiffusion and thermodiffusion
        ! this computes "-F = rho W chi [Gamma grad x... ]"
        weights(:) = 1.d0/sqrt(2.d0)
-       call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro,Temp, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                                         dt,time,dx,weights,the_bc_tower, &
-                                         Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
-                                         permittivity)
+       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
+                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                 diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                                 dt,time,dx,weights,the_bc_tower, &
+                                 Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                                 permittivity)
 
     else if (midpoint_stoch_mass_flux_type .eq. 2) then
        ! ito
@@ -464,12 +464,12 @@ contains
        ! this computes "-F = rho W chi [Gamma grad x... ]"
        weights(1) = 0.d0
        weights(2) = 1.d0
-       call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro,Temp, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                                         0.5d0*dt,time,dx,weights,the_bc_tower, &
-                                         Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
-                                         permittivity)
+       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
+                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                 diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                                 0.5d0*dt,time,dx,weights,the_bc_tower, &
+                                 Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                                 permittivity)
 
     end if
 
@@ -895,12 +895,12 @@ contains
     ! this computes "-F = rho W chi [Gamma grad x... ]"
     weights(1) = 1.d0
     weights(2) = 0.d0
-    call compute_mass_fluxdiv_charged(mla,rho_new,rhotot_new,gradp_baro,Temp, &
-                                      diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                      diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                                      0.5d0*dt,time,dx,weights,the_bc_tower, &
-                                      Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
-                                      permittivity)
+    call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
+                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                              0.5d0*dt,time,dx,weights,the_bc_tower, &
+                              Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                              permittivity)
 
     ! compute chemical rates m_i*R^{n+1}_i
     if (nreactions > 0) then

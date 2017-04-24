@@ -11,7 +11,9 @@ module compute_mass_fluxdiv_module
   use ml_layout_module
   use mass_flux_utilities_module
   use convert_stag_module
+  use Epot_mass_fluxdiv_module
   use probin_common_module, only: variance_coef_mass, nspecies
+  use probin_charged_module, only: use_charged_fluid
 
   implicit none
 
@@ -27,7 +29,8 @@ contains
                                   diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                   diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                                   dt,stage_time,dx,weights,the_bc_tower, &
-                                  rhoWchi_out)
+                                  Epot_fluxdiv,charge,grad_Epot,Epot,permittivity)
+    ! Donev: Add a logical flag for whether to do electroneutral or not
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(inout)   :: rho(:)
@@ -44,7 +47,11 @@ contains
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
     type(bc_tower) , intent(in   )   :: the_bc_tower
-    type(multifab) , intent(inout), optional :: rhoWchi_out(:)
+    type(multifab) , intent(inout), optional :: Epot_fluxdiv(:)
+    type(multifab) , intent(inout), optional :: charge(:)
+    type(multifab) , intent(inout), optional :: grad_Epot(:,:)
+    type(multifab) , intent(inout), optional :: Epot(:)
+    type(multifab) , intent(in   ), optional :: permittivity(:)
 
     ! local variables
     type(multifab) :: drho(mla%nlevel)           ! correction to rho
@@ -106,13 +113,6 @@ contains
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,chi,rhoWchi)
 
-    ! pass out a copy of rhoWchi (needed for the electric potential code)
-    if (present(rhoWchi_out)) then
-       do n=1,nlevs
-          call multifab_copy_c(rhoWchi_out(n),1,rhoWchi(n),1,nspecies**2,rhoWchi_out(n)%ng)
-       end do
-    end if
-
     ! reset total flux
     do n=1,nlevs
        do i=1,dm
@@ -164,7 +164,35 @@ contains
           call multifab_setval(stoch_mass_fluxdiv(n),0.d0,all=.true.)
        end do
     end if
-      
+    
+    ! Donev: I propose the following rewrite:
+    ! call compute_mass_fluxdiv() ! Compute F=F_bar+F_tilde using existing routine
+    ! if(electroneutral) then
+    !    solve Poisson equation with epsilon=0 and compute Epot to return to caller
+    !    note no advective fluxes required in this case
+    !    project fluxes by adding div(A_Phi grad Phi)
+    ! else
+    !    call Epot_mass_fluxdiv() ! Add the electrostatic piece using Epot passed in
+    !    may be better to compute Epot here by solving the simple Poisson equation though
+    !    this way callers don't have to worry about Poisson solves. 
+    !    but one needs to check if this will work with all of the existing algorithms
+    ! end
+
+    if (use_charged_fluid) then
+       if ( (.not. present(Epot_fluxdiv)) .or. &
+            (.not. present(charge      )) .or. &
+            (.not. present(grad_Epot   )) .or. &
+            (.not. present(Epot        )) .or. &
+            (.not. present(permittivity)) ) then
+          call bl_error("compute_mass_fluxdiv: use_charged_fluid missing optional multifabs")
+       end if
+
+       call Epot_mass_fluxdiv(mla,rho,Epot_fluxdiv,Temp,rhoWchi, &
+                              total_mass_flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
+                              permittivity)
+
+    end if
+
     ! free the multifab allocated memory
     do n=1,nlevs
        call multifab_destroy(drho(n))
