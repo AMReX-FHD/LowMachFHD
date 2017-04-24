@@ -1,17 +1,23 @@
 #!/bin/bash
 
-RUNNAME=TEST
-NRUN=4
+RUNNAME=Nav10_RD_Avg1
+NRUN=16
 
 NAV=1.
 DV=10.
-NCELL=64
+NCELL=512
 AVG=1
+
+if [ $NRUN == 1 ]
+then
+  echo "ERROR: NRUN > 1 expected"
+  exit
+fi
 
 if [ -d $RUNNAME ]
 then
-  echo "$RUNNAME already exists..."
-  sleep 3s
+  echo "ERROR: $RUNNAME already exists"
+  exit
 else
   mkdir $RUNNAME
 fi
@@ -21,9 +27,22 @@ fi
 # copy results to RUNNAME              #
 ########################################
 
+PYSCR1="../../analysis/hist_1d/hist_n.py"
+PYSCR2="../../analysis/hist_1d/hist_n_near_zero.py"
+PYSCR3="../../analysis/hist_1d/corr.py"
+PYSCR4="../../analysis/hist_1d/face_avg.py"
+PYSCR5="../../analysis/hist_1d/stat_plot.py"
+
 for ((i=1;i<=$NRUN;i++))
 do
   RUNDIR=${RUNNAME}_RUN$i
+
+  if [ ! -d $RUNDIR ]
+  then
+    echo "ERROR: $RUNDIR does not exist"
+    exit
+  fi
+
   echo $RUNDIR
   cd $RUNDIR
 
@@ -34,7 +53,8 @@ do
   cp Hist1D.S_k.pair\=1.Re.dat ../$RUNNAME/res.Sk$i
 
   # run script hist_n.py and copy results
-  python ../../../hist_n.py $NAV $DV no yes
+  echo "=== running $PYSCR1 ==="
+  python ../$PYSCR1 $NAV $DV no yes
   cp res.hist ../$RUNNAME/res.hist$i
   cp res.n_stat ../$RUNNAME/res.n_stat$i
   if [ $i -eq 1 ]
@@ -44,16 +64,19 @@ do
   fi
 
   # run script hist_n_near_zero.py and copy results
-  python ../hist_n_near_zero.py
+  echo "=== running $PYSCR2 ==="
+  python ../$PYSCR2
   cp res.hist_near_zero ../$RUNNAME/res.hist_near_zero$i
 
-#  # run script face_avg.py and copy results
-#  python ../face_avg.py $NCELL $DV $AVG > res.face_avg
-#  cp res.face_avg ../$RUNNAME/res.face_avg$i
-
   # run script corr.py and copy results
-  python ../corr.py $NCELL > res.corr
+  echo "=== running $PYSCR3 ==="
+  python ../$PYSCR3 $NCELL > res.corr
   cp res.corr ../$RUNNAME/res.corr$i
+
+  # run script face_avg.py and copy results
+  echo "=== running $PYSCR4 ==="
+  python ../$PYSCR4 $NCELL $DV $AVG > res.face_avg
+  cp res.face_avg ../$RUNNAME/res.face_avg$i
 
   echo 
   cd ..
@@ -125,20 +148,6 @@ eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$
 paste <(awk '{print $1}' res.hist_near_zero1) <(awk '{print $0}' $TMP) > res.hist_near_zero_stat
 rm $TMP
 
-## face_avg 
-
-#cmd_awk=""
-#for ((i=1;i<=$NRUN;i++))
-#do
-#  cmd_tmp="<(awk 'NR>=3{print \$2}' res.face_avg$i)"
-#  cmd_awk="$cmd_awk $cmd_tmp"
-#done
-
-#TMP="tmp.face_avg_stat"
-#eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$i}sum1/=NF;sum2/=NF;printf "%e\t%e\t",sum1,sqrt((sum2-sum1*sum1)/NF);print $0}' > $TMP
-#paste <(awk 'NR>=3{print $1}' res.face_avg1) <(awk '{print $0}' $TMP) > res.face_avg_stat
-#rm $TMP
-
 ## corr
 
 cmd_awk=""
@@ -153,9 +162,24 @@ eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$
 paste <(awk 'NR>=3{print $1}' res.corr1) <(awk '{print $0}' $TMP) > res.corr_stat
 rm $TMP
 
+## face_avg 
+
+cmd_awk=""
+for ((i=1;i<=$NRUN;i++))
+do
+  cmd_tmp="<(awk 'NR>=3{print \$2}' res.face_avg$i)"
+  cmd_awk="$cmd_awk $cmd_tmp"
+done
+
+TMP="tmp.face_avg_stat"
+eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$i}sum1/=NF;sum2/=NF;printf "%e\t%e\t",sum1,sqrt((sum2-sum1*sum1)/NF);print $0}' > $TMP
+paste <(awk 'NR>=3{print $1}' res.face_avg1) <(awk '{print $0}' $TMP) > res.face_avg_stat
+rm $TMP
+
 ########
 # plot #
 ########
 
-python ../stat_plot.py
+echo "=== running $PYSCR5 ==="
+python ../$PYSCR5
 
