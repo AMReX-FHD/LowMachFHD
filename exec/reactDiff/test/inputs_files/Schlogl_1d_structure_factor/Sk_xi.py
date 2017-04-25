@@ -8,7 +8,7 @@ else:
   RM = float(sys.argv[1]) 
   DFICK = float(sys.argv[2])
 
-hydro_grid_output = "Schlogl.S_k.pair=1.Re.dat"
+hydro_grid_output = "Schlogl1D.S_k.pair=1.Re.dat"
 output = "res.Sk_xi"
 
 # values from Schlogl monomodal

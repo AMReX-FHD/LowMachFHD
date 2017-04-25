@@ -1,0 +1,28 @@
+This directory contains scripts for the numerical confirmation of the structure
+factor analysis given in
+- Section IV.B
+- (see also Appendix C and Appendix A.2)
+- (see also Figures 2 and 9)
+in Paper by C. Kim et al. "Stochastic simulation of reaction-diffusion
+ systems: A fluctuating-hydrodynamics approach" 
+ J. Chem. Phys. 146, 124110 (2017).
+
+Scripts are based on inputs file ../inputs_paper_Schlogl_1d_structure_factor.
+Hence, the structure factor of the out-of-equilibrium Schlogl model is
+computed from a temporal integrator.
+To compare the result to the linearized equation analysis, large cross section
+(=1000) is used.
+
+** Execution
+1. edit run.sh and run it
+ -> Sk_xi.py is executed to generate res.Sk_xi from Schlogl1D.S_k.pair=1.Re.dat
+ -> res.Sk_xi contains three columns:
+  1st=xi (unitless variable corresponding to k; see info_Schlogl_monomodal_1d)
+  2st=calculated structure factor Sk(xi)
+  3rd=exact structure factor
+2. edit Sk.plot and "gnuplot Sk.plot"  
+ -> Sk.eps is generated
+
+** Theoretical prediction of Sk(xi) for a scheme
+ -> can be obtained from mathematica notebook structure_factor_analysis.nb
+ -> some results are in subdirectory theo_data for code validation purpose

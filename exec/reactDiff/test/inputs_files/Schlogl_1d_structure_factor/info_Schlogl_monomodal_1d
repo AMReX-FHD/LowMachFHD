@@ -14,11 +14,7 @@ C = G(n0)/n0/r = 3.55/1.75 = 2.02857
 xi_max = sqrt(D/r)*k_max = sqrt(beta/alpha)*pi
 
 ** parameter values
-alpha=0.05: rm=0.0285714
-alpha=0.1:  rm=0.0571429 
-alpha=0.5:  rm=0.285714
-beta=D=0.1
-beta=D=0.2
-beta=D=2.5
-beta=D=5
-beta=D=10 
+alpha=0.025: rm=0.0142857
+alpha=0.5:   rm=0.285714
+beta=0.25:   D=0.25
+beta=5:      D=5
