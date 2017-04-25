@@ -1,0 +1,14 @@
+This directory contains scripts for generating
+- Figure 8 (Section V.C)
+in Paper by C. Kim et al. "Stochastic simulation of reaction-diffusion systems:
+A fluctuating-hydrodynamics approach" J. Chem. Phys. 146, 124110 (2017).
+
+** in the paper, cross_section = 1000 is used
+** but in the current code, cross_section cannot be set independently
+
+Scripts are based on inputs file ../inputs_paper_Lemarchand_3d.
+Hence, the front propagation in Lemarchand et al. model is investigated. 
+
+** Execution
+1. this calculation is very large and should be run with slurm_submit.sh
+2. png files can be generated from scripts in gen_figure
