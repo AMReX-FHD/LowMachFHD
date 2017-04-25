@@ -1,0 +1,28 @@
+This directory contains scripts for generating
+- Figures 5, 6, 7 (Section V.B)
+in Paper by C. Kim et al. "Stochastic simulation of reaction-diffusion systems:
+A fluctuating-hydrodynamics approach" J. Chem. Phys. 146, 124110 (2017).
+
+Scripts are based on inputs file ../inputs_paper_BPM_2d.
+Hence, pattern formation of BPM model is investigated. 
+
+** Execution
+1. edit run.sh and run it
+ - if you do not want plot files, set plot_int = 0
+ - if you do not want spatial average densities (fort.9), 
+   set n_steps_write_avg = 0
+ - you can put a number or "plot"
+  ./run.sh -> subdirectory $RUNNAME created (screen output)
+  ./run.sh 10 -> subdirectory $RUNNAME_RUN10 created (background run)
+  ./run.sh plot -> subdirectory $RUNNAME_plot created (screen output)
+ * for job submission to slurm, use slurm_submit.sh
+ 
+2. you can fit the time profile of spatial average of U species (in fort.9)
+ - single run: go to subdirectory and "python ../fit.py"
+   (n_avg.png and res.fit obtained)
+ - multiple run: edit fit.sh and run it
+   ($RUNNAME.fit obtained in addition to n_avg.png and res.fit in each subdir)
+
+3. you can also obtain a png file that compares the distribution of fitting 
+  parameters for diffrent sets of runs using comp_plot.py
+  (for usage: "python comp_plot.py")

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RUNNAME=TEST
+RUNNAME=cs10_Nc64_ExMidTau_dt0.5
 NRUN=4
 OUTPUT=$RUNNAME.fit
 
