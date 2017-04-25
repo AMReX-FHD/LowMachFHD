@@ -331,12 +331,7 @@ subroutine main_driver()
    !=====================================================================
    ! Initialize HydroGrid for analysis
    !=====================================================================
-   structFactMult = 1.d0
-   if (dm .eq. 1) then
-      structFactMult = dx(1,2)*dx(1,3)
-   else if (dm .eq. 2) then
-      structFactMult = dx(1,3)
-   end if
+   structFactMult = 1.d0 ! No need for structure factor multiplier since dx(1:3) is passed
    if((hydro_grid_int>0) .or. (stats_int>0)) then
       narg = command_argument_count()
       farg = 1
