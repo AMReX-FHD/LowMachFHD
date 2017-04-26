@@ -14,13 +14,15 @@ The following inputs files were used to generate results in A. Donev et al.,
 Phys. Fluids, 27, 037103 (2015)
 ----------------------------------
 
-<inputs file coming soon>
+inputs_paper_3spec_equil_fluct_2d
+(see also test_3spec_equil_fluct_2d)
 
 Sec III-C-1. Equilibrium flucutation test for 3-species, non-ideal diffusion
 
 ----------------------------------
 
-<inputs file coming soon>
+inputs_paper_3spec_giant_fluct_2d
+(see also test_3spec_giant_fluct_2d)
 
 Sec III-C-2. Non-equilibrium giant flucutation test.
 
