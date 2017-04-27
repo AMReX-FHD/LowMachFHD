@@ -102,5 +102,5 @@ do
   cd ..
 done
 
-tail -f $RUNDIR/scr_out
-
+echo
+echo "try: tail -f $RUNDIR/scr_out"
