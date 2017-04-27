@@ -3,20 +3,18 @@ module advance_timestep_overdamped_module
   use ml_layout_module
   use define_bc_module
   use bc_module
-  use analysis_module
   use convert_stag_module
-  use convert_rhoc_to_c_module
   use mk_advective_s_fluxdiv_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use compute_mass_fluxdiv_module
   use compute_HSE_pres_module
+  use convert_rhoc_to_c_module
   use reservoir_bc_fill_module
   use bds_module
   use gmres_module
   use div_and_grad_module
-  use eos_check_module
   use mk_grav_force_module
   use compute_mixture_properties_module
   use mass_flux_utilities_module
@@ -24,12 +22,13 @@ module advance_timestep_overdamped_module
   use multifab_physbc_stag_module
   use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
-                                  variance_coef_mom, restart, &
-                                  barodiffusion_type, nspecies
+                                  variance_coef_mom, barodiffusion_type, restart, &
+                                  molmass, nspecies
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
-  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type
   use probin_charged_module, only: use_charged_fluid
-  use probin_chemistry_module, only: nreactions
+  use probin_chemistry_module, only: nreactions, use_Poisson_rng
+  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type
+  use chemical_rates_module
 
   implicit none
 
@@ -61,7 +60,7 @@ contains
   ! both temperature at the beginning and at the end of the timestep
   subroutine advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv,chem_rate, &
                                          dx,dt,time,the_bc_tower,istep)
 
     type(ml_layout), intent(in   ) :: mla
@@ -81,26 +80,30 @@ contains
     ! diff/stoch_mass_fluxdiv can be built locally for overdamped
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: chem_rate(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
 
     ! local
-    type(multifab) ::  rho_update(mla%nlevel)
-    type(multifab) ::   bds_force(mla%nlevel)
-    type(multifab) :: gmres_rhs_p(mla%nlevel)
-    type(multifab) ::         dpi(mla%nlevel)
-    type(multifab) ::        divu(mla%nlevel)
-    type(multifab) ::        conc(mla%nlevel)
-    type(multifab) ::  rho_nd_old(mla%nlevel)
-    type(multifab) ::     rho_tmp(mla%nlevel)
-    type(multifab) ::      p_baro(mla%nlevel)
+    type(multifab) ::     rho_update(mla%nlevel)
+    type(multifab) ::      bds_force(mla%nlevel)
+    type(multifab) ::    gmres_rhs_p(mla%nlevel)
+    type(multifab) ::            dpi(mla%nlevel)
+    type(multifab) ::           divu(mla%nlevel)
+    type(multifab) ::           conc(mla%nlevel)
+    type(multifab) ::     rho_nd_old(mla%nlevel)
+    type(multifab) ::        rho_tmp(mla%nlevel)
+    type(multifab) ::         p_baro(mla%nlevel)
+    type(multifab) :: chem_rate_temp(mla%nlevel)
+    type(multifab) ::          n_old(mla%nlevel)
+    type(multifab) ::          n_new(mla%nlevel)
 
     type(multifab) ::     gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::           dumac(mla%nlevel,mla%dim)
+    type(multifab) ::       rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::          gradpi(mla%nlevel,mla%dim)
     type(multifab) ::          rho_fc(mla%nlevel,mla%dim)
-    type(multifab) ::       rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::  diff_mass_flux(mla%nlevel,mla%dim)
     type(multifab) :: stoch_mass_flux(mla%nlevel,mla%dim)
     type(multifab) :: total_mass_flux(mla%nlevel,mla%dim)
@@ -110,8 +113,9 @@ contains
     integer :: i,dm,n,nlevs
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
-
     real(kind=dp_t) :: weights(2)
+
+    real(kind=dp_t), parameter :: mattingly_lin_comb_coef(1:2) = (/-1.d0, 2.d0/)
 
     type(bl_prof_timer), save :: bpt
 
@@ -128,6 +132,12 @@ contains
     weights(1) = 1.d0
     weights(2) = 0.d0
 
+    if (nreactions > 0) then
+       if (use_Poisson_rng .eq. 2) then
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=5 and nreactions>0')
+       end if
+    end if
+
     nlevs = mla%nlevel
     dm = mla%dim
 
@@ -139,25 +149,33 @@ contains
        call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
-       call multifab_build(         dpi(n),mla%la(n),1       ,1)
+       call multifab_build(        dpi(n),mla%la(n),1       ,1)
        call multifab_build(       divu(n),mla%la(n),1       ,0)
        call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(     p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
-          call multifab_build_edge(gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(      dumac(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(     gradpi(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(     rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(  rhotot_fc(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(  diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge( stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge( total_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(    gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(          dumac(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(         gradpi(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(      rhotot_fc(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(         rho_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge( diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(total_mass_flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do
 
     if (variance_coef_mass .ne. 0.d0) then
        do n=1,nlevs
           call multifab_build(stoch_mass_fluxdiv_old(n),mla%la(n),nspecies,0)
+       end do
+    end if
+
+    if (nreactions > 0) then
+       do n=1,nlevs
+          call multifab_build(chem_rate_temp(n),mla%la(n),nspecies,0)
+          call multifab_build(         n_old(n),mla%la(n),nspecies,0)
+          call multifab_build(         n_new(n),mla%la(n),nspecies,0)
        end do
     end if
 

@@ -677,8 +677,7 @@ subroutine main_driver()
          ! algorithm_type=2: overdamped with 2 RNG
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                          diff_mass_fluxdiv, &
-                                          stoch_mass_fluxdiv, &
+                                          diff_mass_fluxdiv, stoch_mass_fluxdiv, chem_rate, &
                                           dx,dt,time,the_bc_tower,istep)
       else if (algorithm_type .eq. 3) then
          ! algorithm_type=3: iterative implicit
