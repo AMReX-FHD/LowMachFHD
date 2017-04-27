@@ -118,11 +118,11 @@ contains
     call build(bpt, "advance_timestep_overdamped")
 
     if (nreactions .gt. 0) then
-       call bl_error("advance_timestep_imp_bousq does not support reactions yet")
+       call bl_error("advance_timestep_overdamped does not support reactions yet")
     end if
 
     if (use_charged_fluid) then
-       call bl_error('advance_timestep_inertial_midpoint does not support charges yet')
+       call bl_error('advance_timestep_overdamped does not support charges yet')
     end if
 
     weights(1) = 1.d0

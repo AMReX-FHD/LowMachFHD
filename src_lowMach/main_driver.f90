@@ -710,6 +710,8 @@ subroutine main_driver()
                                                  grad_Epot_old,grad_Epot_new, &
                                                  charge_old,charge_new,Epot, &
                                                  permittivity)
+      else
+         call bl_error("Error: invalid algorithm_type")
       end if
 
       time = time + dt

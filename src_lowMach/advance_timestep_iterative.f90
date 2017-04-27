@@ -153,7 +153,7 @@ contains
     real(kind=dp_t) :: weights(1), sum
 
     if (nreactions .gt. 0) then
-       call bl_error("advance_timestep_imp_bousq does not support reactions yet")
+       call bl_error("advance_timestep_iterative does not support reactions yet")
     end if
 
     weights(1) = 1.d0
