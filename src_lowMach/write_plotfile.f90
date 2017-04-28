@@ -7,18 +7,17 @@ module write_plotfile_module
   use convert_rhoc_to_c_module
   use fluid_charge_module
   use probin_multispecies_module, only: plot_stag
-  use probin_common_module, only: prob_lo, prob_hi, nspecies
+  use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name
   use probin_charged_module, only: use_charged_fluid
 
   implicit none
 
 contains
   
-  subroutine write_plotfile(mla,name,rho,rhotot,Temp,umac,pres,Epot,grad_Epot, &
-                                    gradPhiApprox,istep,dx,time)
+  subroutine write_plotfile(mla,rho,rhotot,Temp,umac,pres,Epot,grad_Epot, &
+                            gradPhiApprox,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
-    character(len=*),   intent(in)    :: name
     type(multifab),     intent(inout) :: rho(:)
     type(multifab),     intent(in)    :: rhotot(:)
     type(multifab),     intent(in)    :: Temp(:)
@@ -284,7 +283,7 @@ contains
     end if
     
     ! define the name of the plotfile that will be written
-    write(unit=plotfile_name,fmt='(a,i8.8)') name, istep
+    write(unit=plotfile_name,fmt='(a,i8.8)') trim(plot_base_name), istep
     if ( parallel_IOProcessor() ) then
       write(*,'(2A)') "Saving PLOT FILEs to directory ", trim(plotfile_name)
       write(*,*)
