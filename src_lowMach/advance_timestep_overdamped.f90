@@ -121,20 +121,13 @@ contains
 
     call build(bpt, "advance_timestep_overdamped")
 
-    if (nreactions .gt. 0) then
-       call bl_error("advance_timestep_overdamped does not support reactions yet")
-    end if
-
     if (use_charged_fluid) then
        call bl_error('advance_timestep_overdamped does not support charges yet')
     end if
 
-    weights(1) = 1.d0
-    weights(2) = 0.d0
-
     if (nreactions > 0) then
        if (use_Poisson_rng .eq. 2) then
-          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=5 and nreactions>0')
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=2 and nreactions>0')
        end if
     end if
 
@@ -194,6 +187,9 @@ contains
     ! Step 1 - Predictor Stochastic/Diffusive Fluxes
     ! Step 2 - Predictor Stokes Solve
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    weights(1) = 1.d0
+    weights(2) = 0.d0
 
     ! fill the stochastic multifabs with a new set of random numbers
     ! if this is the first step after initialization or restart then
@@ -262,28 +258,56 @@ contains
                               diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                               0.5d0*dt,time,dx,weights,the_bc_tower)
 
+    ! compute chemical rates m_i*R^n_i
+    if (nreactions>0) then
+       ! convert rho_old (at n) (mass densities rho_i) into n_old (number densities n_i=rho_i/m_i)
+       do n=1,nlevs
+          call multifab_copy_c(n_old(n),1,rho_old(n),1,nspecies,0)
+          do i=1,nspecies
+             call multifab_div_div_s_c(n_old(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates R^n_i (units=[number density]/[time])
+       call chemical_rates(mla,n_old,chem_rate,dx,0.5d0*dt)
+
+       ! convert chemical rates R^n_i into m_i*R^n_i (units=[mass density]/[time])
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_mult_mult_s_c(chem_rate(n),i,molmass(i),1,0)
+          end do
+       end do
+    end if
+
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
     ! compute gmres_rhs_p
-    ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
+    ! put -S = sum_i div(F^n_i)/rhobar_i into gmres_rhs_p (we will later add divu)
+    ! if nreactions>0, also add sum_i -(m_i*R^n_i)/rhobar_i
     do n=1,nlevs
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
+          if (nreactions > 0) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
           end if
        end do
     end do
 
     ! reset rho_update for all scalars to zero
-    ! then, set rho_update for rho1 to F^n = div(rho*chi grad c)^n + div(Psi^(1))
+    ! then, add -F^n_i (plus m_i*R^n_i, if nreactions>0)
     do n=1,nlevs
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
+       if (nreactions > 0) then
+          call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies,0)
        end if
     end do
 
@@ -477,6 +501,7 @@ contains
 
     ! add div(Sigma^(2)) to gmres_rhs_v
     if (variance_coef_mom .ne. 0.d0) then
+       weights(:) = 1.d0/sqrt(2.d0)
        call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
@@ -538,29 +563,63 @@ contains
        end do
     end if
 
+    ! compute chemical rates m_i*R^{n+1/2}_i
+    if (nreactions > 0) then
+       ! convert rho_new (at n+1/2) (mass densities rho_i) into n_new (number densities n_i=rho_i/m_i)
+       do n=1,nlevs
+          call multifab_copy_c(n_new(n),1,rho_new(n),1,nspecies,0)
+          do i=1,nspecies
+             call multifab_div_div_s_c(n_new(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates R_i (units=[number density]/[time]) for the second half step
+       call chemical_rates(mla,n_old,chem_rate_temp,dx,0.5d0*dt,n_new,mattingly_lin_comb_coef)
+
+       ! convert chemical rates R_i into m_i*R_i (units=[mass density]/[time])
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_mult_mult_s_c(chem_rate_temp(n),i,molmass(i),1,0)
+          end do
+       end do
+
+       ! compute chemical rates m_i*R^{n+1/2}_i for the full step
+       do n=1,nlevs
+          call multifab_plus_plus_c(chem_rate(n),1,chem_rate_temp(n),1,nspecies,0)
+          call multifab_mult_mult_s_c(chem_rate(n),1,0.5d0,nspecies,0)
+       end do
+    end if
+
     ! set the Dirichlet velocity value on reservoir faces
     ! FIXME - does not work with ito interpretation
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
     ! compute gmres_rhs_p
-    ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)
+    ! put -S = sum_i div(F^{n+1/2}_i)/rhobar_i into gmres_rhs_p (we will later add divu)
+    ! if nreactions>0, also add sum_i -(m_i*R^{n+1/2}_i)/rhobar_i
     do n=1,nlevs
        do i=1,nspecies
-          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
+          call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+          end if
+          if (nreactions > 0) then
+             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
           end if
        end do
     end do
 
     ! reset rho_update for all scalars to zero
-    ! then, set rho_update for rho1 to F^{*,n+1/2} = div(rho*chi grad c)^{*,n+1/2} + div(Psi^(2))
+    ! then, add -F^{n+1/2}_i (plus m_i*R^{n+1/2}_i, if nreactions>0)
     do n=1,nlevs
        call multifab_setval(rho_update(n),0.d0,all=.true.)
        ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
+       end if
+       if (nreactions > 0) then
+          call multifab_plus_plus_c(rho_update(n),1,chem_rate(n),1,nspecies)
        end if
     end do
 
@@ -723,6 +782,14 @@ contains
     if (variance_coef_mass .ne. 0.d0) then
        do n=1,nlevs
           call multifab_destroy(stoch_mass_fluxdiv_old(n))
+       end do
+    end if
+
+    if (nreactions > 0) then
+       do n=1,nlevs
+          call multifab_destroy(chem_rate_temp(n))
+          call multifab_destroy(n_old(n))
+          call multifab_destroy(n_new(n))
        end do
     end if
 
