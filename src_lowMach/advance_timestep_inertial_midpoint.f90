@@ -473,11 +473,14 @@ contains
                                  Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
                                  permittivity)
 
-       ! add stoch_mass_fluxdiv_old to stoch_mass_fluxdiv and multiply by 1/2
-       do n=1,nlevs
-          call multifab_plus_plus_c(stoch_mass_fluxdiv(n),1,stoch_mass_fluxdiv_old(n),1,nspecies,0)
-          call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,0.5d0,nspecies,0)
-       end do
+       if (variance_coef_mass .ne. 0.d0) then
+          ! add stoch_mass_fluxdiv_old to stoch_mass_fluxdiv and multiply by 1/2
+          do n=1,nlevs
+             call multifab_plus_plus_c(stoch_mass_fluxdiv(n),1,stoch_mass_fluxdiv_old(n),1,nspecies,0)
+             call multifab_mult_mult_s_c(stoch_mass_fluxdiv(n),1,0.5d0,nspecies,0)
+          end do
+       end if
+
     end if
 
     ! compute chemical rates m_i*R^{n+1/2}_i
