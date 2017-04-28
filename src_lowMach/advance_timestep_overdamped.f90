@@ -9,6 +9,7 @@ module advance_timestep_overdamped_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
   use compute_mass_fluxdiv_module
+  use project_onto_eos_module
   use compute_HSE_pres_module
   use convert_rhoc_to_c_module
   use reservoir_bc_fill_module
@@ -23,7 +24,7 @@ module advance_timestep_overdamped_module
   use fill_rho_ghost_cells_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, restart, &
-                                  molmass, nspecies
+                                  molmass, nspecies, project_eos_int
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_charged_module, only: use_charged_fluid
   use probin_chemistry_module, only: nreactions, use_Poisson_rng
@@ -729,6 +730,11 @@ contains
        call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
        call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
     end do
+
+    ! project rho onto eos
+    if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
+       call project_onto_eos(mla,rho_new)
+    end if
 
     ! compute rhotot from rho in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)

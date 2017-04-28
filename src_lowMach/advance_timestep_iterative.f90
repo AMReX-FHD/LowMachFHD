@@ -10,6 +10,7 @@ module advance_timestep_iterative_module
   use stochastic_mass_fluxdiv_module
   use electrodiffusive_mass_fluxdiv_module
   use compute_mass_fluxdiv_module
+  use project_onto_eos_module
   use compute_HSE_pres_module
   use convert_m_to_umac_module
   use convert_rhoc_to_c_module
@@ -433,6 +434,19 @@ contains
        do n=1,nlevs
           call multifab_saxpy_3_cc(rho_new(n),1,dt*theta_pot,Epot_mass_fluxdiv(n),1,nspecies)
        end do
+
+       if (l .eq. num_pot_iters) then
+          ! need to project rho onto eos here and use this rho to compute S
+          ! if you do this in main_driver, the fluxes don't match the state
+          ! they were derived from and the Poisson solver has tolerance
+          ! convergence issues
+          if ( project_eos_int .gt. 0 .and. mod(istep,project_eos_int) .eq. 0) then
+             call project_onto_eos(mla,rho_new)
+             if (use_charged_fluid) then
+                call enforce_charge_neutrality(mla,rho_new)
+             end if
+          end if
+       end if
 
        ! compute rhotot from rho in VALID REGION
        call compute_rhotot(mla,rho_new,rhotot_new)
