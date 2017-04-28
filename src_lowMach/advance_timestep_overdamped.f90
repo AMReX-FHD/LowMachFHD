@@ -195,8 +195,10 @@ contains
     ! fill the stochastic multifabs with a new set of random numbers
     ! if this is the first step after initialization or restart then
     ! we already have random numbers from initialization
-    if (istep .ne. 1 .and. istep .ne. restart+1) then
-       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+    if (variance_coef_mass .ne. 0.d0) then
+       if (istep .ne. 1 .and. istep .ne. restart+1) then
+          call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
+       end if
     end if
 
     ! build up rhs_v for gmres solve

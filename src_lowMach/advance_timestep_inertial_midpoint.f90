@@ -885,7 +885,7 @@ contains
     ! fill the stochastic multifabs with a new set of random numbers
     if (variance_coef_mass .ne. 0.d0) then
        if (use_bl_rng) then
-          call bl_rng_copy_engine(rng_eng_diffusion_old,rng_eng_diffusion)
+          call bl_rng_copy_engine(rng_eng_diffusion_chk,rng_eng_diffusion)
        end if
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
     end if

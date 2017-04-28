@@ -133,7 +133,7 @@ contains
        rand_name = trim(sd_name) // '/rng_eng_mom'
        call bl_rng_save_engine(rng_eng_momentum, rand_name)
        rand_name = trim(sd_name) //'/rng_eng_diff'
-       call bl_rng_save_engine(rng_eng_diffusion_old, rand_name)
+       call bl_rng_save_engine(rng_eng_diffusion_chk, rand_name)
        rand_name = trim(sd_name) //'/rng_eng_react'
        call bl_rng_save_engine(rng_eng_reaction, rand_name)
 
