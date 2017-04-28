@@ -237,9 +237,11 @@ contains
     call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
-    ! add D^n and St^n to rho_update
+    ! reset rho_update for all scalars to zero
+    ! then, add -F^n_i (plus m_i*R^n_i, if nreactions>0)
     do n=1,nlevs
-       call setval(rho_update(n),0.d0,all=.true.)
+       call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
+       ! add fluxes
        call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
        if (use_charged_fluid) then
           call multifab_plus_plus_c(rho_update(n),1,Epot_mass_fluxdiv(n),1,nspecies,0)
@@ -604,7 +606,7 @@ contains
     end do
 
     ! reset rho_update for all scalars to zero
-    ! then, set rho_update to -F^{n+1/2}_i (plus m_i*R^{n+1/2}_i, if nreactions>0)
+    ! then, add -F^{n+1/2}_i (plus m_i*R^{n+1/2}_i, if nreactions>0)
     ! it is used in Step 5 below
     do n=1,nlevs
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
