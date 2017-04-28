@@ -473,11 +473,6 @@ contains
                                  Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
                                  permittivity)
 
-    end if
-
-    if (midpoint_stoch_mass_flux_type .eq. 2) then
-       ! ito
-
        ! add stoch_mass_fluxdiv_old to stoch_mass_fluxdiv and multiply by 1/2
        do n=1,nlevs
           call multifab_plus_plus_c(stoch_mass_fluxdiv(n),1,stoch_mass_fluxdiv_old(n),1,nspecies,0)
