@@ -10,7 +10,7 @@ module fluid_charge_module
   use compute_mixture_properties_module
   use multifab_physbc_module
   use zero_edgeval_module
-  use probin_common_module, only: molmass, k_B, total_volume, rhobar, nspecies
+  use probin_common_module, only: molmass, k_B, rhobar, nspecies
   use probin_charged_module, only: charge_per_mass, dpdt_factor, &
                                    dielectric_const, dielectric_type, E_ext_type
 
@@ -216,15 +216,14 @@ contains
     ! integrate charge over domain
     charge_temp = multifab_sum_c(charge(1),1,1)
 
-    ! divide total charge by # of zones
-!    charge_temp = charge_temp / total_volume
-
     if (parallel_IOProcessor()) then
        print*,'enforce_charge_neutrality: charge before',charge_temp
     end if
     
-    ! for positively charged zones, pick the positive species with the largest rho and
-    ! subtract density.  Pick the negative species with the largest rho_i and add density
+    ! modify the (0,0,0) cell
+    ! for positively charged domains, pick the positive species with the largest rho 
+    ! and subtract density.  Pick the negative species with the largest rho_i and 
+    ! add density (and vice versa)
     do n=1,nlevs
        do i=1,nfabs(rho(n))
           rp => dataptr(rho(n),i)
@@ -234,6 +233,7 @@ contains
           case (2)
              call enforce_charge_neutrality_2d(rp(:,:,1,:),ng_r,lo,hi,charge_temp)
           case (3)
+             call enforce_charge_neutrality_3d(rp(:,:,:,:),ng_r,lo,hi,charge_temp)
           end select
        end do
     end do
@@ -243,9 +243,6 @@ contains
 
     ! integrate charge over domain
     charge_temp = multifab_sum_c(charge(1),1,1)
-
-    ! divide total charge by # of zones
-!    charge_temp = charge_temp / total_volume
 
     if (parallel_IOProcessor()) then
        print*,'enforce_charge_neutrality: charge after',charge_temp
@@ -280,9 +277,9 @@ contains
       end do
 
       do j=lo(2),hi(2)
-         do i=lo(1),hi(1)
+      do i=lo(1),hi(1)
 
-            if (i .eq. 0 .and. j .eq. 0) then
+         if (i .eq. 0 .and. j .eq. 0) then
 
             ! find the negatively charged species with largest rho_i
             rho_temp = -1.d0
@@ -320,12 +317,84 @@ contains
                     + abs(0.5d0*net_charge/charge_per_mass(negative_comp))
             end if
 
-            end if
+         end if
 
-         end do
+      end do
       end do
 
     end subroutine enforce_charge_neutrality_2d
+
+    subroutine enforce_charge_neutrality_3d(rho,ng_r,lo,hi,net_charge)
+      
+      integer         :: lo(:),hi(:),ng_r
+      real(kind=dp_t) :: rho(lo(1)-ng_r:,lo(2)-ng_r:,lo(3)-ng_r:,:)
+      real(kind=dp_t) :: net_charge
+
+      ! local variables
+      integer :: i,j,k,comp,negative_comp,positive_comp
+      logical :: is_positive(nspecies),is_negative(nspecies)
+      real(kind=dp_t) :: rho_temp
+
+      is_positive = .false.
+      is_negative = .false.
+      do comp=1,nspecies
+         if (charge_per_mass(comp) .gt. 0.d0) then
+            is_positive(comp) = .true.
+         end if
+         if (charge_per_mass(comp) .lt. 0.d0) then
+            is_negative(comp) = .true.
+         end if
+      end do
+
+      do k=lo(3),hi(3)
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
+
+         if (i .eq. 0 .and. j .eq. 0 .and. k .eq. 0) then
+
+            ! find the negatively charged species with largest rho_i
+            rho_temp = -1.d0
+            negative_comp = -1
+            do comp=1,nspecies
+               if (is_negative(comp)) then
+                  if (rho(i,j,k,comp) .gt. rho_temp) then
+                     rho_temp = rho(i,j,k,comp)
+                     negative_comp = comp
+                  end if
+               end if
+            end do
+
+            ! find the positively charged species with largest rho_i
+            rho_temp = -1.d0
+            positive_comp = -1
+            do comp=1,nspecies
+               if (is_positive(comp)) then
+                  if (rho(i,j,k,comp) .gt. rho_temp) then
+                     rho_temp = rho(i,j,k,comp)
+                     positive_comp = comp
+                  end if
+               end if
+            end do
+
+            if (net_charge .lt. 0.d0) then
+               rho(i,j,k,negative_comp) = rho(i,j,k,negative_comp) &
+                    - abs(0.5d0*net_charge/charge_per_mass(negative_comp))
+               rho(i,j,k,positive_comp) = rho(i,j,k,positive_comp) &
+                    + abs(0.5d0*net_charge/charge_per_mass(positive_comp))
+            else
+               rho(i,j,k,positive_comp) = rho(i,j,k,positive_comp) &
+                    - abs(0.5d0*net_charge/charge_per_mass(positive_comp))
+               rho(i,j,k,negative_comp) = rho(i,j,k,negative_comp) &
+                    + abs(0.5d0*net_charge/charge_per_mass(negative_comp))
+            end if
+
+         end if
+
+      end do
+      end do
+      end do
+
+    end subroutine enforce_charge_neutrality_3d
 
   end subroutine enforce_charge_neutrality
 
