@@ -625,7 +625,7 @@ subroutine main_driver()
      end if
 
      ! write initial checkpoint
-     if (chk_int .ge. 0) then
+     if (chk_int .gt. 0) then
         if (use_charged_fluid) then
            call bl_error('Error: checkpoint function currently not supported for use_charged_fluid=T')
         end if
