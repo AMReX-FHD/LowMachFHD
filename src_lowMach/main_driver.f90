@@ -610,7 +610,11 @@ subroutine main_driver()
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
         call sum_momenta(mla,mtemp)
         call eos_check(mla,rho_old)
-     end if   
+     end if
+
+     !=====================================================================
+     ! Hydrogrid analysis and output for initial data
+     !=====================================================================
 
      ! write initial plotfile
      if (plot_int .gt. 0) then
@@ -633,28 +637,25 @@ subroutine main_driver()
                               stoch_mass_fluxdiv,chem_rate,umac,time,dt,0)
      end if
      
-     ! print out projection (average) and variance)
      if (stats_int .gt. 0) then
+        ! write initial vertical and horizontal averages (hstat and vstat files)   
         call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp)
      end if
 
-  end if
+     ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
+     if (n_steps_skip .eq. 0) then
 
-  !=====================================================================
-  ! Hydrogrid analysis and output for initial data
-  !=====================================================================
+        ! Add this snapshot to the average in HydroGrid
+        if (hydro_grid_int > 0) then
+           call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_old,temperature=Temp)
+        end if
 
-  if (restart .lt. 0) then
+        if (hydro_grid_int > 0 .and. n_steps_save_stats > 0) then
+           call save_hydro_grid(id=0, step=0)
+        end if
 
-     ! Add this snapshot to the average in HydroGrid
-     if (hydro_grid_int > 0) then
-        call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_old,temperature=Temp)
      end if
 
-     if (hydro_grid_int > 0 .and. n_steps_save_stats > 0) then
-        call save_hydro_grid(id=0, step=0)
-     end if
-     
   end if
 
   !=======================================================
@@ -762,39 +763,38 @@ subroutine main_driver()
           call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
           call sum_momenta(mla,mtemp)
           call eos_check(mla,rho_new)
-      end if
+       end if
 
-      ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
-      if (istep >= n_steps_skip) then
+       ! write plotfile at specific intervals
+       if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
+          if (parallel_IOProcessor()) then
+             write(*,*), 'writing plotfiles at timestep =', istep 
+          end if
+          call write_plotfile(mla,rho_new,rhotot_new,Temp,umac,pi,Epot, &
+                              grad_Epot_new,gradPhiApprox,istep,dx,time)
+       end if
 
-         ! write plotfile at specific intervals
-         if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
-            if (parallel_IOProcessor()) then
-               write(*,*), 'writing plotfiles at timestep =', istep 
-            end if
-            call write_plotfile(mla,rho_new,rhotot_new,Temp,umac,pi,Epot, &
-                                grad_Epot_new,gradPhiApprox,istep,dx,time)
-         end if
+       ! write checkpoint at specific intervals
+       if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
+          if (use_charged_fluid) then
+             call bl_error('Error: checkpoint function not supported for use_charged_fluid=T')
+          end if
 
-         ! write checkpoint at specific intervals
-         if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
-            if (use_charged_fluid) then
-               call bl_error('Error: checkpoint function currently not supported for use_charged_fluid=T')
-            end if
+          if (parallel_IOProcessor()) then
+             write(*,*), 'writing checkpoint at timestep =', istep 
+          end if
+          call checkpoint_write(mla,rho_new,rhotot_new,pi,diff_mass_fluxdiv, &
+                                stoch_mass_fluxdiv,chem_rate,umac,time,dt,istep)
+       end if
 
-            if (parallel_IOProcessor()) then
-               write(*,*), 'writing checkpoint at timestep =', istep 
-            end if
-            call checkpoint_write(mla,rho_new,rhotot_new,pi,diff_mass_fluxdiv, &
-                                  stoch_mass_fluxdiv,chem_rate,umac,time,dt,istep)
-         end if
+       ! print out projection (average) and variance
+       if ( (stats_int > 0) .and. &
+            (mod(istep,stats_int) .eq. 0) ) then
+          ! Compute vertical and horizontal averages (hstat and vstat files)   
+          call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)            
+       end if
 
-         ! print out projection (average) and variance
-         if ( (stats_int > 0) .and. &
-               (mod(istep,stats_int) .eq. 0) ) then
-            ! Compute vertical and horizontal averages (hstat and vstat files)   
-            call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)            
-         end if
+      if (istep .ge. n_steps_skip) then
 
          ! Add this snapshot to the average in HydroGrid
          if ( (hydro_grid_int > 0) .and. &

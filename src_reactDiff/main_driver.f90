@@ -361,34 +361,34 @@ subroutine main_driver()
    ! Hydrogrid analysis and output for initial data
    !=====================================================================
 
-   ! Donev: Changed the way this does things here to only apply to non-restarted runs and start from zero:
    if (restart .lt. 0) then
       istep=0
       
       if (plot_int .gt. 0) then
-         ! write a plotfile
+         ! write initial plotfile
          call write_plotfile(mla,n_old,dx,time,istep)
       end if
 
       if (chk_int .ge. 0) then
-         ! write a checkpoint
+         ! write initial checkpoint
          call checkpoint_write(mla,n_old,time,dt,istep)
       end if
-   
-      if(istep >= n_steps_skip) then
-         ! Add the initial snapshot to the average in HydroGrid
 
+      if ( stats_int .gt. 0) then
+         ! write initial vertical and horizontal averages (hstat and vstat files)   
+         call print_stats(mla,dx,istep,time,rho=n_old)
+      end if
+   
+      ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
+      if (n_steps_skip .eq. 0) then
+
+         ! Add the initial snapshot to the average in HydroGrid
          if (hydro_grid_int > 0) then
             call analyze_hydro_grid(mla,dt,dx,istep,rho=n_old)
          end if
 
          if ((hydro_grid_int > 0) .and. (n_steps_save_stats > 0)) then
             call save_hydro_grid(id=0, step=0)
-         end if
-
-         if ( stats_int > 0) then
-            ! Compute vertical and horizontal averages (hstat and vstat files)   
-            call print_stats(mla,dx,istep,time,rho=n_old)
          end if
 
       end if
@@ -463,25 +463,24 @@ subroutine main_driver()
        call advance_timestep(mla,n_old,n_new,n_steady,dx,dt,the_bc_tower)
        time = time + dt
 
-       ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
+       ! write a plotfile
+       if (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) then
+          call write_plotfile(mla,n_new,dx,time,istep)
+       end if
+
+       ! write a checkpoint
+       if (chk_int .gt. 0 .and. mod(istep,chk_int) .eq. 0) then
+          call checkpoint_write(mla,n_new,time,dt,istep)
+       end if
+
+       ! print out projection (average) and variance
+       if ( (stats_int > 0) .and. &
+            (mod(istep,stats_int) .eq. 0) ) then
+          ! Compute vertical and horizontal averages (hstat and vstat files)   
+          call print_stats(mla,dx,istep,time,rho=n_new)
+       end if
+
        if (istep > n_steps_skip) then
-
-          ! write a plotfile
-          if (plot_int .gt. 0 .and. mod(istep,plot_int) .eq. 0) then
-             call write_plotfile(mla,n_new,dx,time,istep)
-          end if
-
-          ! write a checkpoint
-          if (chk_int .gt. 0 .and. mod(istep,chk_int) .eq. 0) then
-             call checkpoint_write(mla,n_new,time,dt,istep)
-          end if
-
-          ! print out projection (average) and variance
-          if ( (stats_int > 0) .and. &
-               (mod(istep,stats_int) .eq. 0) ) then
-             ! Compute vertical and horizontal averages (hstat and vstat files)   
-             call print_stats(mla,dx,istep,time,rho=n_new)
-          end if
 
           ! Add this snapshot to the average in HydroGrid
           if ( (hydro_grid_int > 0) .and. &
