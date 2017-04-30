@@ -366,11 +366,17 @@ subroutine main_driver()
       
       if (plot_int .gt. 0) then
          ! write initial plotfile
+         if (parallel_IOProcessor()) then
+            write(*,*), 'writing initial plotfile 0'
+         end if
          call write_plotfile(mla,n_old,dx,time,istep)
       end if
 
       if (chk_int .ge. 0) then
          ! write initial checkpoint
+         if (parallel_IOProcessor()) then
+            write(*,*), 'writing initial checkpoint 0'
+         end if
          call checkpoint_write(mla,n_old,time,dt,istep)
       end if
 
@@ -480,7 +486,7 @@ subroutine main_driver()
           call print_stats(mla,dx,istep,time,rho=n_new)
        end if
 
-       if (istep > n_steps_skip) then
+       if (istep .ge. n_steps_skip) then
 
           ! Add this snapshot to the average in HydroGrid
           if ( (hydro_grid_int > 0) .and. &
