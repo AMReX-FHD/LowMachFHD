@@ -34,7 +34,7 @@ module stochastic_mass_fluxdiv_module
 contains
   
   subroutine stochastic_mass_fluxdiv(mla,rho,rhotot,sqrtLonsager_fc, &
-                                     stoch_mass_fluxdiv,total_mass_flux,dx,dt,weights, &
+                                     stoch_mass_fluxdiv,stoch_mass_flux,dx,dt,weights, &
                                      the_bc_level,increment_in)
 
     type(ml_layout), intent(in   )   :: mla
@@ -42,7 +42,7 @@ contains
     type(multifab) , intent(in   )   :: rhotot(:)
     type(multifab) , intent(in   )   :: sqrtLonsager_fc(:,:)
     type(multifab) , intent(inout)   :: stoch_mass_fluxdiv(:)
-    type(multifab) , intent(inout)   :: total_mass_flux(:,:)
+    type(multifab) , intent(inout)   :: stoch_mass_flux(:,:)
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: weights(:)         
@@ -50,7 +50,6 @@ contains
     logical  ,  intent(in), optional :: increment_in
 
     ! Local variables
-    type(multifab)   :: stoch_mass_flux(mla%nlevel,mla%dim) ! face-centered stochastic flux
     integer          :: n,nlevs,i,dm,rng
     real(kind=dp_t)  :: variance
     logical :: increment
@@ -69,10 +68,9 @@ contains
     ! populate the variance (only first level)
     variance = sqrt(2.d0*k_B*variance_coef_mass/(product(dx(1,1:MAX_SPACEDIM))*dt))
 
-    ! build stoch_mass_flux and copy stoch_W_fc into it
+    ! copy weighted stochastic noise stages into stoch_mass_flux
     do n=1,nlevs
        do i=1,dm
-          call multifab_build_edge(stoch_mass_flux(n,i), mla%la(n), nspecies, 0, i)
           call setval(stoch_mass_flux(n,i), 0.d0, all=.true.)   
           do rng=1,n_rngs
              call saxpy(stoch_mass_flux(n,i), weights(rng), stoch_W_fc(n,i,rng))
@@ -108,23 +106,9 @@ contains
        !write(*,*) "Checking conservation of stochastic fluxes"
        call correction_flux(mla, rho, rhotot, stoch_mass_flux, the_bc_level)
     end if
-
-    ! add fluxes to total_mass_flux
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
-       end do
-    end do
  
     ! compute divergence of stochastic flux
     call compute_div(mla,stoch_mass_flux,stoch_mass_fluxdiv,dx,1,1,nspecies,increment)
-
-    ! free the multifab allocated memory
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_destroy(stoch_mass_flux(n,i))
-       end do
-    end do
 
     call destroy(bpt)
 

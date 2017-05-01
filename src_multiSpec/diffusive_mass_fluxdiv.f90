@@ -24,7 +24,7 @@ contains
 
   subroutine diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama,&
                                     diff_mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
-                                    total_mass_flux,dx,the_bc_tower)
+                                    diff_mass_flux,dx,the_bc_tower)
 
     ! this computes divergence of "F = -rho*W*chi*Gamma*grad(x) - ..."
 
@@ -38,53 +38,22 @@ contains
     type(multifab) , intent(in   )  :: Temp(:)
     type(multifab) , intent(in   )  :: zeta_by_Temp(:)
     type(multifab) , intent(in   )  :: gradp_baro(:,:)
-    type(multifab) , intent(inout)  :: total_mass_flux(:,:)
+    type(multifab) , intent(inout)  :: diff_mass_flux(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_tower) , intent(in   )  :: the_bc_tower
 
     ! local variables
-    integer i,dm,n,nlevs
-
-    ! local array of multifabs for grad and div; one for each direction
-    type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
-    
     type(bl_prof_timer), save :: bpt
 
     call build(bpt, "diffusive_mass_fluxdiv")
 
-    nlevs = mla%nlevel  ! number of levels 
-    dm    = mla%dim     ! dimensionality
- 
-    ! build the local multifabs
-    do n=1,nlevs
-       do i=1,dm
-          ! flux(i) is face-centered, has nspecies component, zero ghost 
-          ! cells & nodal in direction i
-          call multifab_build_edge(diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
-       end do
-    end do   
-    
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
     call diffusive_mass_flux(mla,rho,rhotot,molarconc,rhoWchi,Gama,Temp,&
                              zeta_by_Temp,gradp_baro,diff_mass_flux,dx,the_bc_tower)
     
-    ! add fluxes to total_mass_flux
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_plus_plus_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
-       end do
-    end do
-
     ! compute divergence of determinstic flux 
     call compute_div(mla,diff_mass_flux,diff_mass_fluxdiv,dx,1,1,nspecies)
-    
-    ! destroy the multifab to free the memory
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_destroy(diff_mass_flux(n,i))
-       end do
-    end do
 
     call destroy(bpt)
 

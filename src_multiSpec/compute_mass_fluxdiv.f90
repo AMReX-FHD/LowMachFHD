@@ -113,14 +113,6 @@ contains
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,chi,rhoWchi)
 
-    ! reset total flux
-    do n=1,nlevs
-       do i=1,dm
-          call setval(diff_mass_flux(n,i),0.d0,all=.true.)
-          call setval(stoch_mass_flux(n,i),0.d0,all=.true.)
-       end do
-    end do
-
     ! compute diffusive mass fluxes, "F = -rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
                                 diff_mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
