@@ -136,35 +136,6 @@ contains
     ! compute external forcing for manufactured solution and add to diff_mass_fluxdiv
     call external_source(mla,rho,diff_mass_fluxdiv,dx,stage_time)
 
-    ! revert back rho to it's original form
-    do n=1,nlevs
-       call saxpy(rho(n),-1.0d0,drho(n),all=.true.)
-       call compute_rhotot(mla,rho,rhotot,ghost_cells_in=.true.)
-    end do 
-
-    ! compute stochastic fluxdiv 
-    if (variance_coef_mass .ne. 0.d0) then
-
-       ! compute face-centered cholesky-factored Lonsager^(1/2)
-       call compute_sqrtLonsager_fc(mla,rho,rhotot,sqrtLonsager_fc,dx)
-
-       call stochastic_mass_fluxdiv(mla,rho,rhotot, &
-                                    sqrtLonsager_fc,stoch_mass_fluxdiv,stoch_mass_flux,&
-                                    dx,dt,weights,the_bc_tower%bc_tower_array)
-
-       ! increment total mass flux
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
-          end do
-       end do
-
-    else
-       do n=1,nlevs
-          call multifab_setval(stoch_mass_fluxdiv(n),0.d0,all=.true.)
-       end do
-    end if
-    
     ! Donev: I propose the following rewrite:
     ! call compute_mass_fluxdiv() ! Compute F=F_bar+F_tilde using existing routine
     ! if(electroneutral) then
@@ -192,6 +163,35 @@ contains
                                           charge,grad_Epot,Epot, &
                                           permittivity)
 
+    end if
+
+    ! revert back rho to it's original form
+    do n=1,nlevs
+       call saxpy(rho(n),-1.0d0,drho(n),all=.true.)
+       call compute_rhotot(mla,rho,rhotot,ghost_cells_in=.true.)
+    end do 
+
+    ! compute stochastic fluxdiv 
+    if (variance_coef_mass .ne. 0.d0) then
+
+       ! compute face-centered cholesky-factored Lonsager^(1/2)
+       call compute_sqrtLonsager_fc(mla,rho,rhotot,sqrtLonsager_fc,dx)
+
+       call stochastic_mass_fluxdiv(mla,rho,rhotot, &
+                                    sqrtLonsager_fc,stoch_mass_fluxdiv,stoch_mass_flux,&
+                                    dx,dt,weights,the_bc_tower%bc_tower_array)
+
+       ! increment total mass flux
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+          end do
+       end do
+
+    else
+       do n=1,nlevs
+          call multifab_setval(stoch_mass_fluxdiv(n),0.d0,all=.true.)
+       end do
     end if
 
     ! free the multifab allocated memory
