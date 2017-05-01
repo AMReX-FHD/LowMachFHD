@@ -83,10 +83,13 @@ module probin_common_module
 
   ! Algorithm control / selection
   !----------------------
-  namelist /probin_common/ algorithm_type     ! differs from code to code.  In binary and multispcies code:
+  namelist /probin_common/ algorithm_type     ! differs from code to code
+                                              ! In low Mach codes:
                                               ! 0 = Inertial algorithm
-                                              ! 1 = Overdamped with 1 RNG
                                               ! 2 = Overdamped with 2 RNGs
+                                              ! 3 = Iterative w/implicit electrodiffusion
+                                              ! 4 = Boussinesq w/implicit electrodiffusion
+                                              ! 5 = Inertial midpoint
 
   namelist /probin_common/ barodiffusion_type ! 0 = no barodiffusion
                                               ! 1 = fixed gradp from initialization
