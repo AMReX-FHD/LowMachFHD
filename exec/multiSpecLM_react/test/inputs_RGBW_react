@@ -3,10 +3,10 @@
   ! Problem specification
   !----------------------
   dim_in = 2                       ! 2D or 3D  
-  prob_lo(1:2) = 0. 0.             ! physical lo coordinate
-  prob_hi(1:2) = 6.4e-5 6.4e-5     ! physical hi coordinate
-  n_cells(1:2) = 64 64             ! number of cells in domain
-  max_grid_size(1:2) = 32 32       ! max number of cells in a box
+  prob_lo(1:3) = 0. 0. 0.          ! physical lo coordinate
+  prob_hi(1:3) = 6.4e-5 6.4e-5 1.e-5    ! physical hi coordinate
+  n_cells(1:3) = 64 64 1            ! number of cells in domain
+  max_grid_size(1:3) = 32 32 1       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
@@ -40,14 +40,15 @@
 
   ! Physical parameters
   !--------------------
+  nspecies = 4
   grav(1:2) = 0. 0.               ! gravity vector (negative is downwards)
   molmass(1:4) = 1.e-23 2.e-23 1.e-23 1.e-23
   rhobar(1:4) = 1. 1. 1. 1.
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
   ! for dz=1.e-5
-  variance_coef_mom = 1.e5
-  variance_coef_mass = 1.e5
+  variance_coef_mom = 1.
+  variance_coef_mass = 1.
 
   k_B = 1.3806488e-16             ! Boltzmann's constant
   
@@ -142,12 +143,10 @@
 
   ! Physical properties:
   !----------------------
-  nspecies = 4 
   fraction_tolerance = 1.e-12 ! For roundoff errors in mass and mole fractions
   start_time = 0.
 
   inverse_type = 1       ! Only for LAPACK:  1=inverse, 2=pseudo inverse
-  timeinteg_type = 1
   correct_flux = T       ! Manually ensure mass is conserved to roundoff 
   print_error_norms = T
   is_ideal_mixture = T   ! If T assume Gamma=I (H=0) and simplify
@@ -206,12 +205,10 @@
 /
 
 &probin_charged
- 
-  use_charged_fluid = F
-  dielectric_const = 6.91e-19    ! relative permitivity ~ 78, vacuum permitivity ~ 8.854d-21
-  charge_per_mass(1:4) = 0. 0. 0. 0.
-  theta_pot = 1.                 ! for implicit algorithm_type=3, controls
-                                 ! temporal discretization for potential term
+
+/
+
+&probin_chemistry 
 
   ! Reactions
   !----------
@@ -247,8 +244,6 @@
                                    ! 1=do tau leaping (Poisson increments)
                                    ! 0= do CLE (Gaussian increments)
                                    ! -1=do deterministic chemistry
-
-  cross_section = 1.e-5            ! for dz=1.e-5
 /
 
 ! Stokes solver for velocity
