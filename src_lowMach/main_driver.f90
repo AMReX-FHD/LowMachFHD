@@ -691,7 +691,7 @@ subroutine main_driver()
          ! algorithm_type=0: inertial
          call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                        Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                        diff_mass_fluxdiv, &
                                         stoch_mass_fluxdiv, &
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new, &
@@ -727,7 +727,7 @@ subroutine main_driver()
          ! algorithm_type=5: inertial midpoint
          call advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                                  gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                                 Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                                                 diff_mass_fluxdiv, &
                                                  stoch_mass_fluxdiv,chem_rate, &
                                                  dx,dt,time,the_bc_tower,istep, &
                                                  grad_Epot_old,grad_Epot_new, &

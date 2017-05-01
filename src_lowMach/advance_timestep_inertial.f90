@@ -59,7 +59,6 @@ contains
 
   subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                       Epot_mass_fluxdiv, &
                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep, &
                                        grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
@@ -79,7 +78,6 @@ contains
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: Temp(:)
     type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
-    type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
@@ -203,9 +201,6 @@ contains
     do n=1,nlevs
        call setval(rho_update(n),0.d0,all=.true.)
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
-       if (use_charged_fluid) then
-          call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies,0)
-       end if
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
        end if
@@ -401,7 +396,7 @@ contains
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                               dt,time,dx,weights,the_bc_tower, &
-                              Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                              charge_new,grad_Epot_new,Epot, &
                               permittivity)
 
     ! set the Dirichlet velocity value on reservoir faces
@@ -429,9 +424,6 @@ contains
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          if (use_charged_fluid) then
-             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
-          end if
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if
@@ -497,9 +489,6 @@ contains
        call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
        call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
-       if (use_charged_fluid) then
-          call multifab_plus_plus_c(rho_update(n),1, Epot_mass_fluxdiv(n),1,nspecies)
-       end if
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
        end if
@@ -796,7 +785,7 @@ contains
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                               dt,time,dx,weights,the_bc_tower, &
-                              Epot_mass_fluxdiv,charge_new,grad_Epot_new,Epot, &
+                              charge_new,grad_Epot_new,Epot, &
                               permittivity)
 
     ! set the Dirichlet velocity value on reservoir faces
@@ -824,9 +813,6 @@ contains
        call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), diff_mass_fluxdiv(n),i,1)
-          if (use_charged_fluid) then
-             call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i), Epot_mass_fluxdiv(n),i,1)
-          end if
           if (variance_coef_mass .ne. 0.d0) then
              call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
           end if

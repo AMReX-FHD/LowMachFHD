@@ -29,7 +29,7 @@ contains
                                   diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                   diff_mass_flux,stoch_mass_flux,total_mass_flux, &
                                   dt,stage_time,dx,weights,the_bc_tower, &
-                                  Epot_mass_fluxdiv,charge,grad_Epot,Epot,permittivity)
+                                  charge,grad_Epot,Epot,permittivity)
     ! Donev: Add a logical flag for whether to do electroneutral or not
        
     type(ml_layout), intent(in   )   :: mla
@@ -47,7 +47,6 @@ contains
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     real(kind=dp_t), intent(in   )   :: weights(:) 
     type(bc_tower) , intent(in   )   :: the_bc_tower
-    type(multifab) , intent(inout), optional :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout), optional :: charge(:)
     type(multifab) , intent(inout), optional :: grad_Epot(:,:)
     type(multifab) , intent(inout), optional :: Epot(:)
@@ -142,15 +141,14 @@ contains
     ! end
 
     if (use_charged_fluid) then
-       if ( (.not. present(Epot_mass_fluxdiv)) .or. &
-            (.not. present(charge           )) .or. &
+       if ( (.not. present(charge           )) .or. &
             (.not. present(grad_Epot        )) .or. &
             (.not. present(Epot             )) .or. &
             (.not. present(permittivity     )) ) then
           call bl_error("compute_mass_fluxdiv: use_charged_fluid missing optional multifabs")
        end if
 
-       call electrodiffusive_mass_fluxdiv(mla,rho,Epot_mass_fluxdiv,Temp,rhoWchi, &
+       call electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
                                           total_mass_flux,dx,the_bc_tower, &
                                           charge,grad_Epot,Epot, &
                                           permittivity)

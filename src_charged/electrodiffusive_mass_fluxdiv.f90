@@ -27,16 +27,16 @@ module electrodiffusive_mass_fluxdiv_module
 
 contains
 
-  subroutine electrodiffusive_mass_fluxdiv(mla,rho,Epot_mass_fluxdiv,Temp,rhoWchi, &
+  subroutine electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
                                            total_mass_flux,dx,the_bc_tower,charge, &
                                            grad_Epot,Epot,permittivity)
 
-    ! this computes "Epot_mass_fluxdiv = -div(F) = div(A_Phi grad Phi)"
-    !               "grad_Epot         = grad Phi"
+    ! this adds -div(F) = div(A_Phi grad Phi) to diff_mass_fluxdiv
+    ! grad_Epot = grad Phi
 
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
-    type(multifab) , intent(inout)  :: Epot_mass_fluxdiv(:)
+    type(multifab) , intent(inout)  :: diff_mass_fluxdiv(:)
     type(multifab) , intent(in   )  :: Temp(:)
     type(multifab) , intent(in   )  :: rhoWchi(:)
     type(multifab) , intent(inout)  :: total_mass_flux(:,:)
@@ -71,8 +71,8 @@ contains
     
     ! compute the face-centered flux (each direction: cells+1 faces while 
     ! cells contain interior+2 ghost cells) 
-    call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge,grad_Epot,Epot, &
-                        permittivity)
+    call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge, &
+                                    grad_Epot,Epot,permittivity)
     
     ! add fluxes to total_mass_flux
     do n=1,nlevs
@@ -82,7 +82,7 @@ contains
     end do
 
     ! compute divergence of determinstic flux 
-    call compute_div(mla,flux,Epot_mass_fluxdiv,dx,1,1,nspecies)
+    call compute_div(mla,flux,diff_mass_fluxdiv,dx,1,1,nspecies,increment_in=.true.)
     
     ! destroy the multifab to free the memory
     do n=1,nlevs
@@ -96,7 +96,7 @@ contains
   end subroutine electrodiffusive_mass_fluxdiv
  
   subroutine electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx, &
-                            the_bc_tower,charge,grad_Epot,Epot,permittivity)
+                                        the_bc_tower,charge,grad_Epot,Epot,permittivity)
 
     ! this computes "-F = A_Phi grad Phi"
 

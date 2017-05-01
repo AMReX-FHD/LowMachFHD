@@ -161,7 +161,7 @@ contains
     call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux,total_mass_flux, &
-                              dt_eff,0.d0,dx,weights,the_bc_tower,Epot_mass_fluxdiv, &
+                              dt_eff,0.d0,dx,weights,the_bc_tower, &
                               charge_old,grad_Epot_old,Epot,permittivity)
 
     ! compute chemical rates m_i*R_i
