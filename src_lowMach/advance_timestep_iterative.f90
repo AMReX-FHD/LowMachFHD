@@ -623,7 +623,7 @@ contains
 
        if(present(gradPhiApprox) .and. (l==num_pot_iters)) then 
           ! compute grad(phi) approximation, z^T Fmass / z^T A_Phi
-          call dot_with_z_face(mla,diff_mass_flux,gradPhiApprox)
+          call dot_with_z_face(mla,total_mass_flux,gradPhiApprox)
           call dot_with_z_face(mla,A_Phi,zdotA)
           do n=1,nlevs
              do i=1,dm
