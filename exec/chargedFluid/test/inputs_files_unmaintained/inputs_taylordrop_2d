@@ -42,7 +42,6 @@
   !----------------------
   algorithm_type = 0 ! differs from code to code.
                      ! 0 = Inertial algorithm
-                     ! 1 = Overdamped with 1 RNG
                      ! 2 = Overdamped with 2 RNGs
 		     ! 3 = Iterative implicit
 

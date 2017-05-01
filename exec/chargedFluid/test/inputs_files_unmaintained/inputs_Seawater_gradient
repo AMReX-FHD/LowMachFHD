@@ -19,7 +19,6 @@
   fixed_dt = 1.25d-10                  ! time step (if positive, fixed)
   algorithm_type = 0     ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
-                         ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
                          ! 3 = Iterative implicit
 
@@ -63,7 +62,6 @@
   !----------------------
        ! differs from code to code.  In binary and multispcies code:
                          ! 0 = Inertial algorithm
-                         ! 1 = Overdamped with 1 RNG
                          ! 2 = Overdamped with 2 RNGs
 
    barodiffusion_type = 0    ! 0 = no barodiffusion

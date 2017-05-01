@@ -46,7 +46,6 @@
   !----------------------
   algorithm_type = 2	  ! enable overdamped (infinite Sc) algorithm
                           ! 0 = Inertial algorithm
-                          ! 1 = Overdamped with 1 RNG
                           ! 2 = Overdamped with 2 RNGs  
   
   ! L phi operator
