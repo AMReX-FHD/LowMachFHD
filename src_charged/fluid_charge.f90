@@ -931,6 +931,9 @@ contains
        do n=1,nlevs
           call multifab_setval(E_ext(n,1),-100.d0,all=.true.)
           call multifab_setval(E_ext(n,2),   0.d0,all=.true.)
+          if (dm .eq. 3) then
+             call multifab_setval(E_ext(n,3),   0.d0,all=.true.)
+          end if
        end do
 
     end if
