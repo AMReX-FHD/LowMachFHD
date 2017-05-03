@@ -18,7 +18,7 @@ module probin_gmres_module
   integer   , save :: stag_mg_max_bottom_nlevels,gmres_verbose,gmres_max_outer,gmres_max_inner
   integer   , save :: gmres_max_iter,gmres_min_iter
   real(dp_t), save :: p_norm_weight,scale_factor,mg_rel_tol,stag_mg_omega,stag_mg_rel_tol
-  real(dp_t), save :: gmres_rel_tol,gmres_abs_tol
+  real(dp_t), save :: mg_abs_tol,gmres_rel_tol,gmres_abs_tol
   integer   , save :: gmres_spatial_order
 
   !------------------------------------------------------------- 
@@ -59,7 +59,8 @@ module probin_gmres_module
   namelist /probin_gmres/ mg_nsmooths_up        ! number of smooths at each level on the way up
   namelist /probin_gmres/ mg_nsmooths_bottom    ! number of smooths at the bottom (only if mg_bottom_solver=0)
   namelist /probin_gmres/ mg_max_bottom_nlevels ! for mg_bottom_solver=4, number of additional levels of multigrid
-  namelist /probin_gmres/ mg_rel_tol            ! relative tolerance stopping criteria
+  namelist /probin_gmres/ mg_rel_tol            ! rel_tol for Poisson solve
+  namelist /probin_gmres/ mg_abs_tol            ! abs_tol for Poisson solve
 
   ! Staggered multigrid solver parameters
   namelist /probin_gmres/ stag_mg_verbosity       ! verbosity
@@ -137,6 +138,7 @@ contains
     mg_nsmooths_bottom = 8
     mg_max_bottom_nlevels = 10
     mg_rel_tol = 1.d-9
+    mg_abs_tol = 1.d-14
 
     stag_mg_verbosity = 0
     stag_mg_max_vcycles = 1
@@ -250,6 +252,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) mg_rel_tol
+
+       case ('--mg_abs_tol')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) mg_abs_tol
 
        case ('--stag_mg_verbosity')
           farg = farg + 1

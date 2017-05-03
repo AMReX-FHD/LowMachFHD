@@ -4,7 +4,7 @@ module project_onto_eos_module
   use multifab_module
   use ml_layout_module
   use probin_common_module, only: rhobar, nspecies
-  use probin_gmres_module, only: mg_rel_tol
+  use probin_gmres_module, only: gmres_rel_tol
 
   implicit none
 
@@ -124,9 +124,9 @@ contains
     end do
     sum_change(:) = sqrt(sum_change(:)/dble(ncell))
     sum_change(:) = sum_change(:) / sqrt(rhobar_sq)
-    if(any( sum_change(1:nspecies) > 1000*mg_rel_tol)) then      
-       call bl_warn('EOS adjustment exceeded Poisson solver tolerance')
-       print*,sum_change(1:nspecies),mg_rel_tol
+    if(any( sum_change(1:nspecies) > 1000*gmres_rel_tol)) then      
+       call bl_warn('EOS adjustment exceeded GMRES solver tolerance')
+       print*,sum_change(1:nspecies),gmres_rel_tol
     end if
 
   end subroutine project_onto_eos_2d
@@ -207,9 +207,9 @@ contains
     end do
     sum_change(:) = sqrt(sum_change(:)/dble(ncell))
     sum_change(:) = sum_change(:) / sqrt(rhobar_sq)
-    if(any( sum_change(1:nspecies) > 1000*mg_rel_tol)) then      
-       call bl_warn('EOS adjustment exceeded Poisson solver tolerance')
-       print*,sum_change(1:nspecies),mg_rel_tol
+    if(any( sum_change(1:nspecies) > 1000*gmres_rel_tol)) then      
+       call bl_warn('EOS adjustment exceeded GMRES solver tolerance')
+       print*,sum_change(1:nspecies),gmres_rel_tol
     end if
 
 

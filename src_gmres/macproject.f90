@@ -8,7 +8,7 @@ module macproject_module
   use convert_stag_module
   use mg_module             , only: mg_tower, mg_tower_build, mg_tower_destroy
   use cc_stencil_fill_module, only: stencil_fill_cc_all_mglevels
-  use probin_gmres_module   , only: mg_max_vcycles, mg_rel_tol, cg_verbose, &
+  use probin_gmres_module   , only: mg_max_vcycles, mg_rel_tol, mg_abs_tol, cg_verbose, &
                                     mg_bottom_solver, mg_max_bottom_nlevels, &
                                     mg_minwidth, mg_nsmooths_bottom, &
                                     mg_nsmooths_down, mg_nsmooths_up, mg_verbose
@@ -187,7 +187,7 @@ contains
                                 max_bottom_nlevel = mgt(nlevs)%max_bottom_nlevel, &
                                 min_width = mgt(nlevs)%min_width, &
                                 eps = mg_rel_tol, &
-                                abs_eps = 1.d-14, &
+                                abs_eps = mg_abs_tol, &
                                 verbose = mg_verbose, &
                                 cg_verbose = cg_verbose, &
                                 nodal = nodal_flags(rh(nlevs)))
@@ -410,7 +410,7 @@ contains
                            max_bottom_nlevel = mg_max_bottom_nlevels, &
                            min_width = mg_minwidth, &
                            eps = mg_rel_tol, &
-                           abs_eps = 1.d-16, &
+                           abs_eps = mg_abs_tol, &
                            verbose = mg_verbose, &
                            cg_verbose = cg_verbose, &
                            nodal = nodal_flag, &
