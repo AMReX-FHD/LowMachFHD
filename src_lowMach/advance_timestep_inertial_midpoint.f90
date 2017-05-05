@@ -109,21 +109,22 @@ contains
     type(multifab) ::          n_old(mla%nlevel)
     type(multifab) ::          n_new(mla%nlevel)
 
-    type(multifab) ::              mold(mla%nlevel,mla%dim)
-    type(multifab) ::             mtemp(mla%nlevel,mla%dim)
-    type(multifab) ::   adv_mom_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) ::  diff_mom_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) :: stoch_mom_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) ::       gmres_rhs_v(mla%nlevel,mla%dim)
-    type(multifab) ::             dumac(mla%nlevel,mla%dim)
-    type(multifab) ::          umac_tmp(mla%nlevel,mla%dim)
-    type(multifab) ::     rhotot_fc_old(mla%nlevel,mla%dim)
-    type(multifab) ::     rhotot_fc_new(mla%nlevel,mla%dim)
-    type(multifab) ::            gradpi(mla%nlevel,mla%dim)
-    type(multifab) ::            rho_fc(mla%nlevel,mla%dim)
-    type(multifab) ::    diff_mass_flux(mla%nlevel,mla%dim)
-    type(multifab) ::   stoch_mass_flux(mla%nlevel,mla%dim)
-    type(multifab) ::   total_mass_flux(mla%nlevel,mla%dim)
+    type(multifab) ::                mold(mla%nlevel,mla%dim)
+    type(multifab) ::               mtemp(mla%nlevel,mla%dim)
+    type(multifab) ::     adv_mom_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::    diff_mom_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::   stoch_mom_fluxdiv(mla%nlevel,mla%dim)
+    type(multifab) ::         gmres_rhs_v(mla%nlevel,mla%dim)
+    type(multifab) ::               dumac(mla%nlevel,mla%dim)
+    type(multifab) ::            umac_tmp(mla%nlevel,mla%dim)
+    type(multifab) ::       rhotot_fc_old(mla%nlevel,mla%dim)
+    type(multifab) ::       rhotot_fc_new(mla%nlevel,mla%dim)
+    type(multifab) ::              gradpi(mla%nlevel,mla%dim)
+    type(multifab) ::              rho_fc(mla%nlevel,mla%dim)
+    type(multifab) ::      diff_mass_flux(mla%nlevel,mla%dim)
+    type(multifab) ::     stoch_mass_flux(mla%nlevel,mla%dim)
+    type(multifab) :: stoch_mass_flux_old(mla%nlevel,mla%dim)
+    type(multifab) ::     total_mass_flux(mla%nlevel,mla%dim)
 
     type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
     type(multifab) :: Lorentz_force_new(mla%nlevel,mla%dim)
@@ -173,23 +174,24 @@ contains
        call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(     p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
-          call multifab_build_edge(             mold(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(            mtemp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(  adv_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge( diff_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(stoch_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(      gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(            dumac(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(         umac_tmp(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(           gradpi(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(    rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(    rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(           rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(   diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(  stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(  total_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(Lorentz_force_old(n,i),mla%la(n),1       ,0,i)
-          call multifab_build_edge(Lorentz_force_new(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(               mold(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(              mtemp(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(    adv_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(   diff_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(  stoch_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(        gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(              dumac(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(           umac_tmp(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(             gradpi(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(      rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(      rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(             rho_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(     diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(    stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(stoch_mass_flux_old(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(    total_mass_flux(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(  Lorentz_force_old(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(  Lorentz_force_new(n,i),mla%la(n),1       ,0,i)
        end do
     end do
 
@@ -446,7 +448,6 @@ contains
                                  permittivity)
 
        ! assemble total fluxes to be used in reservoirs
-       ! FIXME - does not work with ito interpretation
        do n=1,nlevs
           do i=1,dm
              call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
@@ -464,6 +465,10 @@ contains
           ! then later add it to stoch_mass_fluxdiv and multiply by 1/2
           do n=1,nlevs
              call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+             do i=1,dm
+                ! fixme reservoir - this doesn't work because we need to save stoch_mass_fluxdiv from previous time step
+                ! call multifab_copy_c(stoch_mass_flux_old(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+             end do
           end do
        end if
 
@@ -482,10 +487,13 @@ contains
        ! assemble total fluxes to be used in reservoirs
        do n=1,nlevs
           do i=1,dm
-             call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+             call multifab_setval(total_mass_flux(n,i),0.d0)
              if (variance_coef_mass .ne. 0.d0) then
+                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux_old(n,i),1,nspecies,0)
                 call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+                call multifab_mult_mult_s_c(total_mass_flux(n,i),1,0.5d0,nspecies,0)
              end if
+             call multifab_plus_plus_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)            
           end do
        end do
 
@@ -530,7 +538,6 @@ contains
     end if
 
     ! set the Dirichlet velocity value on reservoir faces
-    ! FIXME - does not work with ito interpretation
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
     if (use_charged_fluid) then
@@ -1132,6 +1139,7 @@ contains
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
           call multifab_destroy(stoch_mass_flux(n,i))
+          call multifab_destroy(stoch_mass_flux_old(n,i))
           call multifab_destroy(total_mass_flux(n,i))
           call multifab_destroy(Lorentz_force_old(n,i))
           call multifab_destroy(Lorentz_force_new(n,i))
