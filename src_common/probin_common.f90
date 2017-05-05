@@ -713,6 +713,11 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) center_snapshots
 
+       case ('--histogram_unit')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) histogram_unit 
+
        case default
           if (parallel_IOProcessor() ) then
              print*,'probin_common: command-line input ',trim(fname),' not read'
