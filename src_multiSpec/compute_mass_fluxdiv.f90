@@ -27,7 +27,7 @@ contains
   ! includes barodiffusion and thermodiffusion
   subroutine compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
                                   diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                  diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                                  diff_mass_flux,stoch_mass_flux, &
                                   dt,stage_time,dx,weights,the_bc_tower, &
                                   charge,grad_Epot,Epot,permittivity)
     ! Donev: Add a logical flag for whether to do electroneutral or not
@@ -41,7 +41,6 @@ contains
     type(multifab) , intent(inout)   :: stoch_mass_fluxdiv(:)
     type(multifab) , intent(inout)   :: diff_mass_flux(:,:)
     type(multifab) , intent(inout)   :: stoch_mass_flux(:,:)
-    type(multifab) , intent(inout)   :: total_mass_flux(:,:)
     real(kind=dp_t), intent(in   )   :: dt
     real(kind=dp_t), intent(in   )   :: stage_time 
     real(kind=dp_t), intent(in   )   :: dx(:,:)
@@ -117,13 +116,6 @@ contains
                                 diff_mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                 diff_mass_flux,dx,the_bc_tower)
 
-    ! set total mass flux
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
-       end do
-    end do
-
     ! compute external forcing for manufactured solution and add to diff_mass_fluxdiv
     call external_source(mla,rho,diff_mass_fluxdiv,dx,stage_time)
 
@@ -148,7 +140,7 @@ contains
            present(Epot) .and. &
            present(permittivity)) then
           call electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
-                                             total_mass_flux,dx,the_bc_tower, &
+                                             diff_mass_flux,dx,the_bc_tower, &
                                              charge,grad_Epot,Epot, &
                                              permittivity)
        end if
@@ -170,17 +162,6 @@ contains
                                     sqrtLonsager_fc,stoch_mass_fluxdiv,stoch_mass_flux,&
                                     dx,dt,weights,the_bc_tower%bc_tower_array)
 
-       ! increment total mass flux
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
-          end do
-       end do
-
-    else
-       do n=1,nlevs
-          call multifab_setval(stoch_mass_fluxdiv(n),0.d0,all=.true.)
-       end do
     end if
 
     ! free the multifab allocated memory

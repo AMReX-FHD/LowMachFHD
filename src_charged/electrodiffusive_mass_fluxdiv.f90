@@ -28,7 +28,7 @@ module electrodiffusive_mass_fluxdiv_module
 contains
 
   subroutine electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
-                                           total_mass_flux,dx,the_bc_tower,charge, &
+                                           diff_mass_flux,dx,the_bc_tower,charge, &
                                            grad_Epot,Epot,permittivity)
 
     ! this adds -div(F) = div(A_Phi grad Phi) to diff_mass_fluxdiv
@@ -39,7 +39,7 @@ contains
     type(multifab) , intent(inout)  :: diff_mass_fluxdiv(:)
     type(multifab) , intent(in   )  :: Temp(:)
     type(multifab) , intent(in   )  :: rhoWchi(:)
-    type(multifab) , intent(inout)  :: total_mass_flux(:,:)
+    type(multifab) , intent(inout)  :: diff_mass_flux(:,:)
     real(kind=dp_t), intent(in   )  :: dx(:,:)
     type(bc_tower) , intent(in   )  :: the_bc_tower
     type(multifab) , intent(inout)  :: charge(:)
@@ -74,14 +74,14 @@ contains
     call electrodiffusive_mass_flux(mla,rho,Temp,rhoWchi,flux,dx,the_bc_tower,charge, &
                                     grad_Epot,Epot,permittivity)
     
-    ! add fluxes to total_mass_flux
+    ! add fluxes to diff_mass_flux
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(total_mass_flux(n,i),1,flux(n,i),1,nspecies,0)
+          call multifab_plus_plus_c(diff_mass_flux(n,i),1,flux(n,i),1,nspecies,0)
        end do
     end do
 
-    ! compute divergence of determinstic flux 
+    ! add flux divergence to diff_mass_fluxdiv
     call compute_div(mla,flux,diff_mass_fluxdiv,dx,1,1,nspecies,increment_in=.true.)
     
     ! destroy the multifab to free the memory

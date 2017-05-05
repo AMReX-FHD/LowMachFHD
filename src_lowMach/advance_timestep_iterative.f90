@@ -618,8 +618,19 @@ contains
        ! this computes "-F = rho W chi [Gamma grad x... ]"
        call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                 diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                                 diff_mass_flux,stoch_mass_flux, &
                                  dt,time,dx,weights,the_bc_tower)
+
+       ! assemble total fluxes to be used in reservoirs
+       ! FIXME - does not work with potential
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+             if (variance_coef_mass .ne. 0.d0) then
+                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+             end if
+          end do
+       end do
 
        if(present(gradPhiApprox) .and. (l==num_pot_iters)) then 
           ! compute grad(phi) approximation, z^T Fmass / z^T A_Phi
@@ -633,6 +644,7 @@ contains
        end if
 
        ! set the Dirichlet velocity value on reservoir faces
+       ! FIXME - does not work with potential
        call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
        ! put "-S = div(F_i/rho_i)" into gmres_rhs_p (we will later add divu)

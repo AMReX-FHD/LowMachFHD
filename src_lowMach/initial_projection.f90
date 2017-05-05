@@ -160,9 +160,19 @@ contains
 
     call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                              diff_mass_flux,stoch_mass_flux, &
                               dt_eff,0.d0,dx,weights,the_bc_tower, &
                               charge_old,grad_Epot_old,Epot,permittivity)
+
+    ! assemble total fluxes to be used in reservoirs
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+          end if
+       end do
+    end do
 
     ! compute chemical rates m_i*R_i
     if (nreactions > 0) then

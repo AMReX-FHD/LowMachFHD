@@ -440,10 +440,21 @@ contains
        weights(:) = 1.d0/sqrt(2.d0)
        call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                 diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                                 diff_mass_flux,stoch_mass_flux, &
                                  dt,time,dx,weights,the_bc_tower, &
                                  charge_new,grad_Epot_new,Epot, &
                                  permittivity)
+
+       ! assemble total fluxes to be used in reservoirs
+       ! FIXME - does not work with ito interpretation
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+             if (variance_coef_mass .ne. 0.d0) then
+                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+             end if
+          end do
+       end do
 
     else if (midpoint_stoch_mass_flux_type .eq. 2) then
        ! ito
@@ -463,10 +474,20 @@ contains
        weights(2) = 1.d0
        call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                 diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                                 diff_mass_flux,stoch_mass_flux, &
                                  0.5d0*dt,time,dx,weights,the_bc_tower, &
                                  charge_new,grad_Epot_new,Epot, &
                                  permittivity)
+
+       ! assemble total fluxes to be used in reservoirs
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+             if (variance_coef_mass .ne. 0.d0) then
+                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+             end if
+          end do
+       end do
 
        if (variance_coef_mass .ne. 0.d0) then
           ! add stoch_mass_fluxdiv_old to stoch_mass_fluxdiv and multiply by 1/2
@@ -886,10 +907,20 @@ contains
     weights(2) = 0.d0
     call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                              diff_mass_flux,stoch_mass_flux, &
                               0.5d0*dt,time,dx,weights,the_bc_tower, &
                               charge_new,grad_Epot_new,Epot, &
                               permittivity)
+
+    ! assemble total fluxes to be used in reservoirs
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+          end if
+       end do
+    end do
 
     ! compute chemical rates m_i*R^{n+1}_i
     if (nreactions > 0) then

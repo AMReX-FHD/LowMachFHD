@@ -451,10 +451,22 @@ contains
     ! and total_mass_flux for reservoir boundary conditions on velocity
     call compute_mass_fluxdiv(mla,rho_tmp,rhotot_tmp,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                              diff_mass_flux,stoch_mass_flux, &
                               dt,time,dx,weights,the_bc_tower)
 
+    ! assemble total fluxes to be used in reservoirs
+    ! FIXME - does not work with implicit potential
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+          end if
+       end do
+    end do
+
     ! set the Dirichlet velocity value on reservoir faces
+    ! FIXME - does not work with implicit potential
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
        
     ! modify umac to respect the boundary conditions we want after the next gmres solve
@@ -866,10 +878,22 @@ contains
     ! and total_mass_flux for reservoir boundary conditions on velocity
     call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              diff_mass_flux,stoch_mass_flux,total_mass_flux, &
+                              diff_mass_flux,stoch_mass_flux, &
                               dt,time,dx,weights,the_bc_tower)
 
+    ! assemble total fluxes to be used in reservoirs
+    ! FIXME - does not work with implicit potential
+    do n=1,nlevs
+       do i=1,dm
+          call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
+          if (variance_coef_mass .ne. 0.d0) then
+             call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+          end if
+       end do
+    end do
+
     ! set the Dirichlet velocity value on reservoir faces
+    ! FIXME - does not work with implicit potential
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
        
     if(present(gradPhiApprox)) then 
