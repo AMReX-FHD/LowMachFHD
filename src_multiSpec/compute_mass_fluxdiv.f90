@@ -141,18 +141,17 @@ contains
     ! end
 
     if (use_charged_fluid) then
-       if ( (.not. present(charge           )) .or. &
-            (.not. present(grad_Epot        )) .or. &
-            (.not. present(Epot             )) .or. &
-            (.not. present(permittivity     )) ) then
-          call bl_error("compute_mass_fluxdiv: use_charged_fluid missing optional multifabs")
+       ! we pass in these multifabs for explicit electrodiffusion
+       ! implicit electrodiffusion is handled elsewhere
+       if (present(charge) .and. &
+           present(grad_Epot) .and. &
+           present(Epot) .and. &
+           present(permittivity)) then
+          call electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
+                                             total_mass_flux,dx,the_bc_tower, &
+                                             charge,grad_Epot,Epot, &
+                                             permittivity)
        end if
-
-       call electrodiffusive_mass_fluxdiv(mla,rho,diff_mass_fluxdiv,Temp,rhoWchi, &
-                                          total_mass_flux,dx,the_bc_tower, &
-                                          charge,grad_Epot,Epot, &
-                                          permittivity)
-
     end if
 
     ! revert back rho to it's original form
