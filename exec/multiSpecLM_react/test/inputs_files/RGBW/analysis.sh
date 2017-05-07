@@ -25,7 +25,7 @@ fi
 PYSCR1="../../analysis/hist/hist_N.py"
 PYSCR1OPTS="1 3.e-9 10. -2 30 no yes"
 PYSCR2="../../analysis/hist/hist_N_near_zero.py"
-PYSCR2OPTS="1 3.e-9 101 -2 4 no yes"
+PYSCR2OPTS="1 3.e-9 51 -1 2 no yes"
 PYSCR3="../../analysis/hist/stat_plot.py"
 
 for ((i=1;i<=$NRUN;i++))

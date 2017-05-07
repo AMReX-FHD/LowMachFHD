@@ -6,7 +6,7 @@ module mass_flux_utilities_module
   use probin_common_module, only: k_B, molmass, rhobar, molmass, nspecies
   use probin_multispecies_module, only: use_lapack, fraction_tolerance, &
                                         is_ideal_mixture, inverse_type, is_nonisothermal, &
-                                        chi_iterations
+                                        chi_iterations, avg_type
   use matrix_utilities 
   use compute_mixture_properties_module
   !use F95_LAPACK ! Donev: Disabled LAPACK so this builds more easily on different systems
@@ -1087,37 +1087,79 @@ contains
     dv = product(dx(1:MAX_SPACEDIM))
 
     do comp=1,nspecies
-       value1 = rho1(comp)/molmass(comp) ! Convert to number density
-       value2 = rho2(comp)/molmass(comp)
-       if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+      value1 = rho1(comp)/molmass(comp) ! Convert to number density
+      value2 = rho2(comp)/molmass(comp)
+
+      select case(avg_type)
+      case(1) ! Arithmetic with a C0-smoothed Heaviside
+        if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
           rhoav(comp)=0.d0
-       else
-          tmp1=dv*value1
-          tmp2=dv*value2
-
-          if (.true.) then   ! C0-smoothed Heaviside
-             tmp1=min(tmp1,1.d0)
-             tmp2=min(tmp2,1.d0)
-          else               ! C1-smoothed Heaviside
-             if (tmp1<1.d0) then
-                tmp1=(3.d0-2.d0*tmp1)*tmp1**2
-             else
-                tmp1=1.d0
-             end if
-             if (tmp2<1.d0) then
-                tmp2=(3.d0-2.d0*tmp2)*tmp2**2
-             else
-                tmp2=1.d0
-             end if
-          end if
-
+        else
+          tmp1=min(dv*value1,1.d0)
+          tmp2=min(dv*value2,1.d0)
           rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
-       end if
+        end if
+      case(2) ! Geometric
+        rhoav(comp)=molmass(comp)*sqrt(max(value1,0.d0)*max(value2,0.d0))
+      case(3) ! Harmonic
+        ! What we want here is the harmonic mean of max(value1,0) and max(value2,0)
+        ! Where we define the result to be zero if either one is zero
+        ! But numerically we want to avoid here division by zero
+        if ( (value1 .le. 10.d0*tiny(1.d0)) .or. (value2 .le. 10.d0*tiny(1.d0)) ) then
+          rhoav(comp)=0.d0
+        else
+          rhoav(comp)=molmass(comp)*2.d0/(1.d0/value1+1.d0/value2)
+        end if
+      case(10) ! Arithmetic with (discontinuous) Heaviside
+        if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+          rhoav(comp)=0.d0
+        else
+          rhoav(comp)=molmass(comp)*(value1+value2)/2.d0
+        end if
+      case(11) ! Arithmetic with C1-smoothed Heaviside
+        if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+          rhoav(comp)=0.d0
+        else
+          tmp1=dv*value1
+          if (tmp1<1.d0) then
+            tmp1=(3.d0-2.d0*tmp1)*tmp1**2
+          else
+            tmp1=1.d0
+          end if
+          tmp2=dv*value2
+          if (tmp2<1.d0) then
+            tmp2=(3.d0-2.d0*tmp2)*tmp2**2
+          else
+            tmp2=1.d0
+          end if
+          rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
+        endif
+      case(12) ! Arithmetic with C2-smoothed Heaviside
+        if ( (value1 .le. 0.d0) .or. (value2 .le. 0.d0) ) then
+          rhoav(comp)=0.d0
+        else
+          tmp1=dv*value1
+          if (tmp1<1.d0) then
+            tmp1=(10.d0-15.d0*tmp1+6.d0*tmp1**2)*tmp1**3
+          else
+          tmp1=1.d0
+          end if
+          tmp2=dv*value2
+          if (tmp2<1.d0) then
+            tmp2=(10.d0-15.d0*tmp2+6.d0*tmp2**2)*tmp2**3
+          else
+            tmp2=1.d0
+          end if
+          rhoav(comp)=molmass(comp)*(value1+value2)/2.d0*tmp1*tmp2
+        endif
+      case default
+        call bl_error("compute_nonnegative_rho_av: invalid avg_type")
+      end select
     end do
 
   end subroutine compute_nonnegative_rho_av
 
-subroutine compute_sqrtLonsager_local(rho,rhotot,sqrtLonsager)
+  subroutine compute_sqrtLonsager_local(rho,rhotot,sqrtLonsager)
    
     real(kind=dp_t), intent(in)   :: rho(nspecies)            
     real(kind=dp_t), intent(in)   :: rhotot

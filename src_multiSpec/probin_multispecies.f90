@@ -21,6 +21,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: c_bc(3,2,MAX_SPECIES)
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   integer            :: midpoint_stoch_mass_flux_type
+  integer            :: avg_type
 
   ! Physical properties:
   !----------------------
@@ -58,6 +59,12 @@ module probin_multispecies_module
   !----------------------
   namelist /probin_multispecies/ midpoint_stoch_mass_flux_type  ! 1 = Strato
                                                                 ! 2 = Ito
+
+  namelist /probin_multispecies/ avg_type   ! how to compute stochastc_mass_fluxdiv
+                                            ! 1=arithmetic (with C0-Heaviside), 2=geometric, 3=harmonic
+                                            ! 10=arithmetic average with discontinuous Heaviside function
+                                            ! 11=arithmetic average with C1-smoothed Heaviside function
+                                            ! 12=arithmetic average with C2-smoothed Heaviside function
 
 contains
 
@@ -98,6 +105,7 @@ contains
     H_diag             = 0.0d0
     plot_stag          = .false.
     midpoint_stoch_mass_flux_type = 1
+    avg_type           = 1
  
     ! read from input file 
     need_inputs = .true.
@@ -180,6 +188,10 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) midpoint_stoch_mass_flux_type
 
+       case ('--avg_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) avg_type
 
        case ('--')
           farg = farg + 1

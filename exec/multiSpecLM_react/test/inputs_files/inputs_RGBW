@@ -203,6 +203,12 @@
   midpoint_stoch_mass_flux_type = 2     ! 1 = Strato
                                         ! 2 = Ito
 
+  avg_type = 1                          ! how to compute stochastc_mass_fluxdiv
+                                        ! 1=arithmetic (with C0-Heaviside), 2=geometric, 3=harmonic
+                                        ! 10=arithmetic average with discontinuous Heaviside function
+                                        ! 11=arithmetic average with C1-smoothed Heaviside function
+                                        ! 12=arithmetic average with C2-smoothed Heaviside function
+
 /
 
 &probin_charged

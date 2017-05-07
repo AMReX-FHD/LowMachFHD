@@ -23,8 +23,8 @@ OPT2="--nreactions 2"
 #OPT3="--max_step 1000    --plot_int 100 --print_int 100 --hydro_grid_int 0 --n_steps_skip 0"
 OPT3="--max_step 1000    --plot_int 0   --print_int 100 --hydro_grid_int 1 --n_steps_skip 500 --histogram_unit 10"
 
-# dt, dz, rate_multiplier
-OPT4="--fixed_dt 1.e-8 --prob_hi_z 0.01 --rate_multiplier 1."
+# dt, dz, rate_multiplier, avg_type
+OPT4="--fixed_dt 1.e-8 --prob_hi_z 0.01 --rate_multiplier 1. --avg_type 1"
 
 # misc options
 OPTMISC=""
