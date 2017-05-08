@@ -61,6 +61,8 @@ ax.legend(loc=1,numpoints=1,fontsize='small')
 ax.set_xlabel("Number of molecules N")
 ax.set_ylabel("probability density")
 
+ax.set_ylim(ymin=0.)
+
 plt.show()
 fig.savefig(OUTPUT2)
 

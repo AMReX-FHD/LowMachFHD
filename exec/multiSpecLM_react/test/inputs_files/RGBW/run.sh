@@ -21,15 +21,18 @@ OPT2="--nreactions 2"
 # task (check gmres solver | plot files | structure factor & histogram)
 #OPT3="--max_step 10      --plot int 0   --print_int 10  --hydro_grid_int 0 --n_steps_skip 0   --gmres_verbose 1"
 #OPT3="--max_step 1000    --plot_int 100 --print_int 100 --hydro_grid_int 0 --n_steps_skip 0"
-OPT3="--max_step 1000    --plot_int 0   --print_int 100 --hydro_grid_int 1 --n_steps_skip 500 --histogram_unit 10"
+OPT3="--max_step 1000    --plot_int 0   --print_int 100 --hydro_grid_int 1 --n_steps_skip 100 --histogram_unit 10"
 
 # dt, dz, rate_multiplier, avg_type
 OPT4="--fixed_dt 1.e-8 --prob_hi_z 0.01 --rate_multiplier 1. --avg_type 1"
 
+# turn off gmres solver (velocity becomes exactly zero)
+#OPT5="--variance_coef_mom 0. --initial_variance 0. --gmres_abs_tol 1.e-10 --mg_abs_tol 1.e-10"
+
 # misc options
 OPTMISC=""
 
-OPTS="$OPT1 $OPT2 $OPT3 $OPT4 $OPTMISC"
+OPTS="$OPT1 $OPT2 $OPT3 $OPT4 $OPT5 $OPTMISC"
 
 #######
 # RUN #

@@ -1,4 +1,6 @@
 import math
+import numpy as np
+import numpy.linalg
 
 # assume cgs units
 
@@ -78,3 +80,26 @@ print "bwd reactions per time = %e" % (kd*nG*dV*dt)
 # cfl numbers
 print "D*dt/dx^2 = %e" % (D*dt/dx**2)
 print "nu*dt/dx^2 = %e" % (nu*dt/dx**2)
+
+################################################################################
+# structure factor
+################################################################################
+
+ww = np.array([wR,wG,wB,wW])            # mass fraction vector
+mm = np.array([mR,mG,mB,mW])            # molecular mass vector
+mbar = 1./sum(ww/mm)                    # mean molecular mass
+xx = mbar*(ww/mm)                       # mole fraction vector
+
+W = np.diag(ww)
+X = np.diag(xx)
+
+wwww = np.outer(ww,ww)
+xxxx = np.outer(xx,xx)
+
+one = np.ones(4)
+oneone = np.outer(one,one)
+
+tmp = np.linalg.inv(X-xxxx+oneone)
+Sw = mbar/rho*np.dot(np.dot(W-wwww,tmp),W-wwww)
+
+print rho*rho*Sw
