@@ -452,11 +452,6 @@ subroutine main_driver()
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
 
-  ! fill random flux multifabs with new random numbers
-  if (variance_coef_mass .ne. 0.d0) then
-     call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-  end if
-
   !=====================================================================
   ! Initialize values
   !=====================================================================
@@ -526,7 +521,7 @@ subroutine main_driver()
      ! do not call for overdamped codes since the steady Stokes solver will 
      ! wipe out the initial condition to solver tolerance
      if (algorithm_type .ne. 2 .and. &
-         variance_coef_mass .ne. 0.d0 .and. &
+         variance_coef_mom .ne. 0.d0 .and. &
          initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
@@ -542,6 +537,11 @@ subroutine main_driver()
         dt = min(dt,dt_diffusive)
      end if
      
+  end if
+
+  ! fill random flux multifabs with new random numbers
+  if (variance_coef_mass .ne. 0.d0) then
+     call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
   end if
 
   !=====================================================================
