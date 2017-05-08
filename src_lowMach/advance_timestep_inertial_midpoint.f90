@@ -494,6 +494,7 @@ contains
              do i=1,dm
                 ! fixme reservoir - this doesn't work because we need to save stoch_mass_fluxdiv from previous time step
                 ! call multifab_copy_c(stoch_mass_flux_old(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
+                call multifab_setval(stoch_mass_flux_old(n,i),0.d0)
              end do
           end do
        end if
