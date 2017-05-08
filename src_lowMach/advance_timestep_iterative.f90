@@ -239,8 +239,12 @@ contains
     ! make copies of the "old" diffusive, stochastic, and potential mass fluxes
     do n=1,nlevs
        call multifab_copy_c( diff_mass_fluxdiv_old(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
-       call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
-       call multifab_copy_c( Epot_mass_fluxdiv_old(n),1, Epot_mass_fluxdiv(n),1,nspecies,0)
+       if (variance_coef_mass .ne. 0.d0) then
+          call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
+       end if
+       if (use_charged_fluid) then
+          call multifab_copy_c( Epot_mass_fluxdiv_old(n),1, Epot_mass_fluxdiv(n),1,nspecies,0)
+       end if
     end do
 
     ! compute "old" advective mass fluxes and copy into new

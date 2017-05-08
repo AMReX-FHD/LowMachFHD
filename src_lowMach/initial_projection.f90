@@ -12,7 +12,7 @@ module initial_projection_module
   use reservoir_bc_fill_module
   use fluid_charge_module
   use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type, &
-                                  molmass, nspecies
+                                  molmass, nspecies, restart
   use probin_charged_module, only: dielectric_const, use_charged_fluid
   use probin_chemistry_module, only: nreactions, use_Poisson_rng
   use chemical_rates_module
@@ -198,81 +198,88 @@ contains
     ! set the Dirichlet velocity value on reservoir faces
     call reservoir_bc_fill(mla,total_mass_flux,vel_bc_n,the_bc_tower%bc_tower_array)
 
-    ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
-    do n=1,nlevs
-       do i=1,nspecies
-          call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
-          if (use_charged_fluid) then
-             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),Epot_mass_fluxdiv(n),i,1)
-          end if
-          if (variance_coef_mass .ne. 0.d0) then
-             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
-          end if
-          if (nreactions > 0) then
-             ! if nreactions>0, also add sum_i -(m_i*R_i)/rhobar_i
-             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
-          end if
+    if (restart .lt. 0) then
+
+       ! project the velocities
+       ! only for non-restarting runs
+
+       ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
+       do n=1,nlevs
+          do i=1,nspecies
+             call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
+             if (use_charged_fluid) then
+                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),Epot_mass_fluxdiv(n),i,1)
+             end if
+             if (variance_coef_mass .ne. 0.d0) then
+                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),stoch_mass_fluxdiv(n),i,1)
+             end if
+             if (nreactions > 0) then
+                ! if nreactions>0, also add sum_i -(m_i*R_i)/rhobar_i
+                call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),chem_rate(n),i,1)
+             end if
+          end do
        end do
-    end do
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! build rhs = div(v^init) - S^0
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+       ! build rhs = div(v^init) - S^0
+       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    do n=1,nlevs
-       do i=1,dm
-          ! to deal with reservoirs
-          ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+       do n=1,nlevs
+          do i=1,dm
+             ! to deal with reservoirs
+             ! set normal velocity on physical domain boundaries
+             call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                            the_bc_tower%bc_tower_array(n), &
+                                            dx(n,:),vel_bc_n(n,:))
+             ! fill periodic and interior ghost cells
+             call multifab_fill_boundary(umac(n,i))
+          end do
+       end do
+
+       ! set divu = div(v^init)
+       call compute_div(mla,umac,divu,dx,1,1,1)
+
+       ! add div(v^init) to mac_rhs
+       ! now mac_rhs = div(v^init) - S
+       do n=1,nlevs
+          call multifab_plus_plus_c(mac_rhs(n),1,divu(n),1,1,0)
+       end do
+
+       ! average rhotot to faces
+       call average_cc_to_face(nlevs,rhotot,rhotot_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+
+       ! compute (1/rhotot) on faces
+       do n=1,nlevs
+          do i=1,dm
+             call setval(rhototinv_fc(n,i),1.d0,all=.true.)
+             call multifab_div_div_c(rhototinv_fc(n,i),1,rhotot_fc(n,i),1,1,0)
+          end do
+       end do
+
+       ! solve div (1/rhotot) grad phi = div(v^init) - S^0
+       ! solve to completion, i.e., use the 'full' solver
+       call macproject(mla,phi,umac,rhototinv_fc,mac_rhs,dx,the_bc_tower,.true.)
+
+       ! v^0 = v^init - (1/rho^0) grad phi
+       call subtract_weighted_gradp(mla,umac,rhototinv_fc,phi,dx,the_bc_tower)
+
+       ! fill ghost cells
+       do n=1,nlevs
+          do i=1,dm
+             ! set normal velocity on physical domain boundaries
+             call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                            the_bc_tower%bc_tower_array(n), &
+                                            dx(n,:),vel_bc_n(n,:))
+             ! set transverse velocity behind physical boundaries
+             call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
                                          the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_n(n,:))
-          ! fill periodic and interior ghost cells
-          call multifab_fill_boundary(umac(n,i))
+                                         dx(n,:),vel_bc_t(n,:))
+             ! fill periodic and interior ghost cells
+             call multifab_fill_boundary(umac(n,i))
+          end do
        end do
-    end do
 
-    ! set divu = div(v^init)
-    call compute_div(mla,umac,divu,dx,1,1,1)
-
-    ! add div(v^init) to mac_rhs
-    ! now mac_rhs = div(v^init) - S
-    do n=1,nlevs
-       call multifab_plus_plus_c(mac_rhs(n),1,divu(n),1,1,0)
-    end do
-
-    ! average rhotot to faces
-    call average_cc_to_face(nlevs,rhotot,rhotot_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-
-    ! compute (1/rhotot) on faces
-    do n=1,nlevs
-       do i=1,dm
-          call setval(rhototinv_fc(n,i),1.d0,all=.true.)
-          call multifab_div_div_c(rhototinv_fc(n,i),1,rhotot_fc(n,i),1,1,0)
-       end do
-    end do
-
-    ! solve div (1/rhotot) grad phi = div(v^init) - S^0
-    ! solve to completion, i.e., use the 'full' solver
-    call macproject(mla,phi,umac,rhototinv_fc,mac_rhs,dx,the_bc_tower,.true.)
-
-    ! v^0 = v^init - (1/rho^0) grad phi
-    call subtract_weighted_gradp(mla,umac,rhototinv_fc,phi,dx,the_bc_tower)
-
-    ! fill ghost cells
-    do n=1,nlevs
-       do i=1,dm
-          ! set normal velocity on physical domain boundaries
-          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_n(n,:))
-          ! set transverse velocity behind physical boundaries
-          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-                                      the_bc_tower%bc_tower_array(n), &
-                                      dx(n,:),vel_bc_t(n,:))
-          ! fill periodic and interior ghost cells
-          call multifab_fill_boundary(umac(n,i))
-       end do
-    end do
+    end if
 
     deallocate(weights)
 

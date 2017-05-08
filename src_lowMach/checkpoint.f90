@@ -22,15 +22,12 @@ module checkpoint_module
 
 contains
 
-  subroutine checkpoint_write(mla,rho,rhotot,pres,diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              chem_rate,umac,time,dt,istep_to_write)
+  subroutine checkpoint_write(mla,rho,rhotot,pi,chem_rate,umac,time,dt,istep_to_write)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)                ! cell-centered partial densities
     type(multifab) , intent(in   ) :: rhotot(:)             ! cell-centered total density
-    type(multifab) , intent(in   ) :: pres(:)               ! cell-centered pressure
-    type(multifab) , intent(in   ) :: diff_mass_fluxdiv(:)  ! diffusive mass fluxes
-    type(multifab) , intent(in   ) :: stoch_mass_fluxdiv(:) ! stochastic mass fluxes
+    type(multifab) , intent(in   ) :: pi(:)                 ! cell-centered pi
     type(multifab) , intent(in   ) :: chem_rate(:)          ! chemical rates
     type(multifab) , intent(in   ) :: umac(:,:)             ! edge-based velocities
     integer        , intent(in   ) :: istep_to_write
@@ -55,10 +52,8 @@ contains
 
     ! partial densities
     ! total density
-    ! pressure
-    ! diff_mass_fluxdiv
-    ! stoch_mass_fluxdiv
-    num_chk = 3*nspecies + 2
+    ! pi
+    num_chk = nspecies + 2
 
     if (nreactions .gt. 0) then
        ! chem_rate
@@ -87,30 +82,18 @@ contains
     end do
     counter = counter + 1
 
-    ! pressure
+    ! pi
     do n=1,nlevs
-       call multifab_copy_c(chkdata(n),nspecies+2,pres(n),1,1)
+       call multifab_copy_c(chkdata(n),nspecies+2,pi(n),1,1)
     end do
     counter = counter + 1
-
-    ! diff_mass_fluxdiv
-    do n=1,nlevs
-       call multifab_copy_c(chkdata(n),nspecies+3,diff_mass_fluxdiv(n),1,nspecies)
-    end do
-    counter = counter + nspecies
-
-    ! stoch_mass_fluxdiv
-    do n=1,nlevs
-       call multifab_copy_c(chkdata(n),2*nspecies+3,stoch_mass_fluxdiv(n),1,nspecies)
-    end do
-    counter = counter + nspecies
 
     ! chem_rate
     if (nreactions > 0) then
        do n=1,nlevs
-          call multifab_copy_c(chkdata(n),3*nspecies+3,chem_rate(n),1,nspecies)
-          counter = counter + 1
+          call multifab_copy_c(chkdata(n),nspecies+3,chem_rate(n),1,nspecies)
        end do
+       counter = counter + nspecies
     end if
 
     ! staggered quantities (normal velocity)

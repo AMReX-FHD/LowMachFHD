@@ -21,16 +21,13 @@ module restart_module
 
 contains
 
-  subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pres,diff_mass_fluxdiv, &
-                                     stoch_mass_fluxdiv,chem_rate,umac,pmask)
+  subroutine initialize_from_restart(mla,time,dt,rho,rhotot,pi,chem_rate,umac,pmask)
  
      type(ml_layout),intent(out)   :: mla
      real(dp_t)    , intent(  out) :: time,dt
      type(multifab), intent(inout) :: rho(:)
      type(multifab), intent(inout) :: rhotot(:)
-     type(multifab), intent(inout) :: pres(:)
-     type(multifab), intent(inout) :: diff_mass_fluxdiv(:)
-     type(multifab), intent(inout) :: stoch_mass_fluxdiv(:)
+     type(multifab), intent(inout) :: pi(:)
      type(multifab), intent(inout) :: chem_rate(:)
      type(multifab), intent(inout) :: umac(:,:)
      logical       , intent(in   ) :: pmask(:)
@@ -67,9 +64,7 @@ contains
      do n = 1,nlevs
         call multifab_build(rho(n)   , mla%la(n), nspecies, ng_s)
         call multifab_build(rhotot(n), mla%la(n),        1, ng_s)
-        call multifab_build(pres(n)  , mla%la(n),        1, 1)
-        call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
-        call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+        call multifab_build(pi(n)    , mla%la(n),        1, 1)
      end do
      if (nreactions .gt. 0) then
         do n=1,nlevs
@@ -83,15 +78,13 @@ contains
      end do
 
      do n = 1,nlevs
-        call multifab_copy_c(rho(n)               ,1,chkdata(n),1           ,nspecies)
-        call multifab_copy_c(rhotot(n)            ,1,chkdata(n),nspecies+1  ,1)
-        call multifab_copy_c(pres(n)              ,1,chkdata(n),nspecies+2  ,1)
-        call multifab_copy_c(diff_mass_fluxdiv(n) ,1,chkdata(n),nspecies+3  ,nspecies)
-        call multifab_copy_c(stoch_mass_fluxdiv(n),1,chkdata(n),2*nspecies+3,nspecies)
+        call multifab_copy_c(rho(n)   , 1,chkdata(n) ,1           ,nspecies)
+        call multifab_copy_c(rhotot(n), 1,chkdata(n) ,nspecies+1  ,1)
+        call multifab_copy_c(pi(n)    , 1,chkdata(n) ,nspecies+2  ,1)
      end do
      if (nreactions .gt. 0) then
         do n=1,nlevs
-           call multifab_copy_c(chem_rate(n),1,chkdata(n),3*nspecies+3,nspecies)
+           call multifab_copy_c(chem_rate(n),1,chkdata(n),nspecies+3,nspecies)
         end do
      end if
      do n=1,nlevs

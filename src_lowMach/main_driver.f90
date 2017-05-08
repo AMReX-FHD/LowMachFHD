@@ -185,9 +185,7 @@ subroutine main_driver()
      ! build the ml_layout
      ! read in time and dt from checkpoint
      ! build and fill rho, rhotot, pi, and umac
-     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi, &
-                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                  chem_rate,umac,pmask)
+     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi,chem_rate,umac,pmask)
 
   else
 
@@ -235,10 +233,7 @@ subroutine main_driver()
      do n=1,nlevs
         call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
-        ! pi - need 1 ghost cell since we calculate its gradient
-        call multifab_build(pi(n)      ,mla%la(n),1       ,1)
-        call multifab_build(diff_mass_fluxdiv(n), mla%la(n),nspecies,0) 
-        call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+        call multifab_build(pi(n)        ,mla%la(n),1       ,1)
         do i=1,dm
            call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
         end do
@@ -387,14 +382,20 @@ subroutine main_driver()
   ! Build multifabs for all the variables
   !=======================================================
 
-  ! build multifab with nspecies component and one ghost cell
   do n=1,nlevs 
-     call multifab_build(rho_new(n)   ,mla%la(n),nspecies,ng_s)
-     call multifab_build(rhotot_new(n),mla%la(n),1       ,ng_s) 
-     call multifab_build(Temp(n)      ,mla%la(n),1       ,ng_s)
-     call multifab_build(eta(n)       ,mla%la(n),1       ,1)
-     call multifab_build(kappa(n)     ,mla%la(n),1       ,1)
+     call multifab_build(rho_new(n)          ,mla%la(n),nspecies,ng_s)
+     call multifab_build(rhotot_new(n)       ,mla%la(n),1       ,ng_s) 
+     call multifab_build(Temp(n)             ,mla%la(n),1       ,ng_s)
+     call multifab_build(eta(n)              ,mla%la(n),1       ,1)
+     call multifab_build(kappa(n)            ,mla%la(n),1       ,1)
+     call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
   end do
+
+  if (variance_coef_mass .ne. 0.d0) then
+     do n=1,nlevs
+        call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+     end do
+  end if
 
   if (use_charged_fluid) then
      do n=1,nlevs
@@ -565,40 +566,48 @@ subroutine main_driver()
      end if
   end if
 
-  !=====================================================================
-  ! Process initial conditions
-  !=====================================================================
+     
+  ! initial projection
+  ! This routine is only called for inertial schemes
+  ! compute mass fluxes and flux divergences and then perform an initial projection
+
+  ! overdamped schemes compute mass fluxes and solve gmres system
+  ! at the beginning of the advance_timestep routine
+  ! for the overdamped algorithm, this only changes the reference state for the first
+  ! gmres solve in the first time step
+  ! For overdamped the first ever solve cannot have a good reference state
+  ! so in general there is the danger it will be less accurate than subsequent solves
+  ! but I do not see how one can avoid that
+  ! From this perspective it may be useful to keep initial_projection even in overdamped
+  ! because different gmres tolerances may be needed in the first step than in the rest
+
+  ! if we are restarting, we can exit this routine after computing the mass
+  ! fluxes and flux divergences
+  if (algorithm_type .ne. 2) then
+     call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro, &
+                             Epot_mass_fluxdiv,diff_mass_fluxdiv, &
+                             stoch_mass_fluxdiv,chem_rate, &
+                             Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+                             charge_old,grad_Epot_old,Epot,permittivity)
+  else
+     do n=1,nlevs
+        ! set these to zero so we can write an initial checkpoint
+        ! they aren't needed for overdamped, but I prefer not to write NaNs
+        call multifab_setval(diff_mass_fluxdiv(n),0.d0,all=.true.)
+        if (variance_coef_mass .ne. 0.d0) then
+           call multifab_setval(stoch_mass_fluxdiv(n),0.d0,all=.true.)
+        end if
+        if (nreactions .gt. 0) then
+           call multifab_setval(chem_rate(n),0.d0,all=.true.)
+        end if
+     end do
+  end if
 
   if (restart .lt. 0) then
-     
-     ! initial projection - only truly needed for inertial algorithms
-     ! for the overdamped algorithm, this only changes the reference state for the first
-     ! gmres solve in the first time step
-     ! Yes, I think in the purely overdamped version this can be removed
-     ! In either case the first ever solve cannot have a good reference state
-     ! so in general there is the danger it will be less accurate than subsequent solves
-     ! but I do not see how one can avoid that
-     ! From this perspective it may be useful to keep initial_projection even in overdamped
-     ! because different gmres tolerances may be needed in the first step than in the rest
-     if (algorithm_type .ne. 2) then
-        call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro, &
-                                Epot_mass_fluxdiv,diff_mass_fluxdiv, &
-                                stoch_mass_fluxdiv,chem_rate, &
-                                Temp,eta,eta_ed,dt,dx,the_bc_tower, &
-                                charge_old,grad_Epot_old,Epot,permittivity)
-     else
-        do n=1,nlevs
-           ! set these to zero so we can write an initial checkpoint
-           ! they aren't needed for overdamped, but I prefer not to write NaNs
-           call multifab_setval(diff_mass_fluxdiv(n),0.d0,all=.true.)
-           if (variance_coef_mass .ne. 0.d0) then
-              call multifab_setval(stoch_mass_fluxdiv(n),0.d0,all=.true.)
-           end if
-           if (nreactions .gt. 0) then
-              call multifab_setval(chem_rate(n),0.d0,all=.true.)
-           end if
-        end do
-     end if
+
+     !=====================================================================
+     ! Process initial conditions (non-restart runs)
+     !=====================================================================
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
@@ -633,8 +642,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial checkpoint 0'
         end if
-        call checkpoint_write(mla,rho_old,rhotot_old,pi,diff_mass_fluxdiv, &
-                              stoch_mass_fluxdiv,chem_rate,umac,time,dt,0)
+        call checkpoint_write(mla,rho_old,rhotot_old,pi,chem_rate,umac,time,dt,0)
      end if
      
      if (stats_int .gt. 0) then
@@ -783,8 +791,7 @@ subroutine main_driver()
           if (parallel_IOProcessor()) then
              write(*,*), 'writing checkpoint at timestep =', istep 
           end if
-          call checkpoint_write(mla,rho_new,rhotot_new,pi,diff_mass_fluxdiv, &
-                                stoch_mass_fluxdiv,chem_rate,umac,time,dt,istep)
+          call checkpoint_write(mla,rho_new,rhotot_new,pi,chem_rate,umac,time,dt,istep)
        end if
 
        ! print out projection (average) and variance
