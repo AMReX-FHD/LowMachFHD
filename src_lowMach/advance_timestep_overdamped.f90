@@ -205,8 +205,8 @@ contains
        if (istep .ne. 1 .and. istep .ne. restart+1) then
           call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        end if
-       ! keep this random number engine state for checkpointing
        if (use_bl_rng) then
+          ! save random state for restart
           call bl_rng_copy_engine(rng_eng_diffusion_chk,rng_eng_diffusion)
        end if
     end if
@@ -283,6 +283,7 @@ contains
 
     ! compute chemical rates m_i*R^n_i
     if (nreactions>0) then
+
        ! convert rho_old (at n) (mass densities rho_i) into n_old (number densities n_i=rho_i/m_i)
        do n=1,nlevs
           call multifab_copy_c(n_old(n),1,rho_old(n),1,nspecies,0)
@@ -636,6 +637,12 @@ contains
           call multifab_plus_plus_c(chem_rate(n),1,chem_rate_temp(n),1,nspecies,0)
           call multifab_mult_mult_s_c(chem_rate(n),1,0.5d0,nspecies,0)
        end do
+
+       if (use_bl_rng) then
+          ! save random state for restart
+          call bl_rng_copy_engine(rng_eng_reaction_chk,rng_eng_reaction)
+       end if
+
     end if
 
     ! set the Dirichlet velocity value on reservoir faces

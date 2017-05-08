@@ -16,6 +16,7 @@ module bl_rng_module
             rng_eng_diffusion, &
             rng_eng_diffusion_chk, &
             rng_eng_reaction, &
+            rng_eng_reaction_chk, &
             rng_eng_init
 
   ! randon number engines
@@ -23,6 +24,7 @@ module bl_rng_module
   type(bl_rng_engine)      , save :: rng_eng_diffusion
   type(bl_rng_engine)      , save :: rng_eng_diffusion_chk
   type(bl_rng_engine)      , save :: rng_eng_reaction
+  type(bl_rng_engine)      , save :: rng_eng_reaction_chk
   type(bl_rng_engine)      , save :: rng_eng_init
 
 contains
@@ -45,27 +47,26 @@ contains
     ! build engines
     !!!!!!!!!!!!!!!!!!!!!!
 
+    ! momentum
     if (seed_momentum .ne. -1) then
        call bl_rng_build_engine(rng_eng_momentum, seed_momentum)
     end if
 
+    ! mass diffusion
     if (seed_diffusion .ne. -1) then
        call bl_rng_build_engine(rng_eng_diffusion, seed_diffusion)
     end if
-
-    ! build this - seed doesn't matter unless it's step 0
-    ! since we overwrite this engine
-    if (seed_diffusion .ne. -1) then
-       call bl_rng_build_engine(rng_eng_diffusion_chk, seed_diffusion)
-    else
-       ! if we are restarting this gets built here
-       call bl_rng_build_engine(rng_eng_diffusion_chk, 1)
-    end if
+    ! build this - seed doesn't matter since this engine is overwritten
+    call bl_rng_build_engine(rng_eng_diffusion_chk, 1)
     
+    ! reactions
     if (seed_reaction .ne. -1) then
        call bl_rng_build_engine(rng_eng_reaction, seed_reaction)
     end if
+    ! build this - seed doesn't matter since this engine is overwritten
+    call bl_rng_build_engine(rng_eng_reaction_chk, 1)
 
+    ! initialization
     call bl_rng_build_engine(rng_eng_init, seed_init)
 
   end subroutine rng_init
@@ -76,6 +77,7 @@ contains
     call bl_rng_destroy_engine(rng_eng_diffusion)
     call bl_rng_destroy_engine(rng_eng_diffusion_chk)
     call bl_rng_destroy_engine(rng_eng_reaction)
+    call bl_rng_destroy_engine(rng_eng_reaction_chk)
     call bl_rng_destroy_engine(rng_eng_init)
 
   end subroutine rng_destroy

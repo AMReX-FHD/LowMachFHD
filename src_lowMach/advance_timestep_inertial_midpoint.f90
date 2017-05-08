@@ -927,11 +927,12 @@ contains
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+dt, &
                                    the_bc_tower%bc_tower_array)
 
-    ! fill the stochastic multifabs with a new set of random numbers
     if (variance_coef_mass .ne. 0.d0) then
        if (use_bl_rng) then
+          ! save random state for restart
           call bl_rng_copy_engine(rng_eng_diffusion_chk,rng_eng_diffusion)
        end if
+       ! fill the stochastic multifabs with a new set of random numbers
        call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
     end if
 
@@ -959,6 +960,12 @@ contains
 
     ! compute chemical rates m_i*R^{n+1}_i
     if (nreactions > 0) then
+       
+       if (use_bl_rng) then
+          ! save random state for restart
+          call bl_rng_copy_engine(rng_eng_reaction_chk,rng_eng_reaction)
+       end if
+
        ! convert rho_new (at n+1) (mass densities rho_i) into n_new (number densities n_i=rho_i/m_i)
        do n=1,nlevs
           call multifab_copy_c(n_new(n),1,rho_new(n),1,nspecies,0)

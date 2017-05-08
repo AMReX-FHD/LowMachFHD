@@ -22,13 +22,12 @@ module checkpoint_module
 
 contains
 
-  subroutine checkpoint_write(mla,rho,rhotot,pi,chem_rate,umac,time,dt,istep_to_write)
+  subroutine checkpoint_write(mla,rho,rhotot,pi,umac,time,dt,istep_to_write)
     
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: rho(:)                ! cell-centered partial densities
     type(multifab) , intent(in   ) :: rhotot(:)             ! cell-centered total density
     type(multifab) , intent(in   ) :: pi(:)                 ! cell-centered pi
-    type(multifab) , intent(in   ) :: chem_rate(:)          ! chemical rates
     type(multifab) , intent(in   ) :: umac(:,:)             ! edge-based velocities
     integer        , intent(in   ) :: istep_to_write
     real(kind=dp_t), intent(in   ) :: time,dt
@@ -54,11 +53,6 @@ contains
     ! total density
     ! pi
     num_chk = nspecies + 2
-
-    if (nreactions .gt. 0) then
-       ! chem_rate
-       num_chk = num_chk + nspecies
-    end if
 
     allocate(chkdata(nlevs))
     allocate(chkdata_edge(nlevs,dm))
@@ -88,14 +82,6 @@ contains
     end do
     counter = counter + 1
 
-    ! chem_rate
-    if (nreactions > 0) then
-       do n=1,nlevs
-          call multifab_copy_c(chkdata(n),nspecies+3,chem_rate(n),1,nspecies)
-       end do
-       counter = counter + nspecies
-    end if
-
     ! staggered quantities (normal velocity)
     do n=1,nlevs
        do i=1,dm
@@ -118,7 +104,7 @@ contains
        rand_name = trim(sd_name) //'/rng_eng_diff'
        call bl_rng_save_engine(rng_eng_diffusion_chk, rand_name)
        rand_name = trim(sd_name) //'/rng_eng_react'
-       call bl_rng_save_engine(rng_eng_reaction, rand_name)
+       call bl_rng_save_engine(rng_eng_reaction_chk, rand_name)
 
     end if
 

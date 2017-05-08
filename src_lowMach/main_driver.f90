@@ -187,7 +187,7 @@ subroutine main_driver()
      ! build the ml_layout
      ! read in time and dt from checkpoint
      ! build and fill rho, rhotot, pi, and umac
-     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi,chem_rate,umac,pmask)
+     call initialize_from_restart(mla,time,dt,rho_old,rhotot_old,pi,umac,pmask)
 
   else
 
@@ -244,12 +244,6 @@ subroutine main_driver()
      if (use_charged_fluid) then
         do n=1,nlevs        
            call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
-        end do
-     end if
-
-     if (nreactions .gt. 0) then
-        do n=1,nlevs
-           call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
         end do
      end if
 
@@ -415,6 +409,12 @@ subroutine main_driver()
         do i=1,dm
            call multifab_build_edge(gradPhiApprox(n,i),mla%la(n),1,0,i)
         end do
+     end do
+  end if
+
+  if (nreactions .gt. 0) then
+     do n=1,nlevs
+        call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
      end do
   end if
 
@@ -594,14 +594,6 @@ subroutine main_driver()
                              stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &
                              Temp,eta,eta_ed,dt,dx,the_bc_tower, &
                              charge_old,grad_Epot_old,Epot,permittivity)
-  else
-     do n=1,nlevs
-        ! set these to zero so we can write an initial checkpoint
-        ! they aren't needed for overdamped, but I prefer not to write NaNs
-        if (nreactions .gt. 0) then
-           call multifab_setval(chem_rate(n),0.d0,all=.true.)
-        end if
-     end do
   end if
 
   if (restart .lt. 0) then
@@ -643,7 +635,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial checkpoint 0'
         end if
-        call checkpoint_write(mla,rho_old,rhotot_old,pi,chem_rate,umac,time,dt,0)
+        call checkpoint_write(mla,rho_old,rhotot_old,pi,umac,time,dt,0)
      end if
      
      if (stats_int .gt. 0) then
@@ -794,7 +786,7 @@ subroutine main_driver()
           if (parallel_IOProcessor()) then
              write(*,*), 'writing checkpoint at timestep =', istep 
           end if
-          call checkpoint_write(mla,rho_new,rhotot_new,pi,chem_rate,umac,time,dt,istep)
+          call checkpoint_write(mla,rho_new,rhotot_new,pi,umac,time,dt,istep)
        end if
 
        ! print out projection (average) and variance
