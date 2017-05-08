@@ -74,6 +74,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: Temp_ed(:,:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
   type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
+  type(multifab), allocatable  :: stoch_mass_flux(:,:)
   type(multifab), allocatable  :: umac(:,:)
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
@@ -137,6 +138,7 @@ subroutine main_driver()
   allocate(rho_new(nlevs),rhotot_new(nlevs))
   allocate(Temp(nlevs))
   allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
+  allocate(stoch_mass_flux(nlevs,dm))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
   if (dm .eq. 2) then
@@ -394,6 +396,9 @@ subroutine main_driver()
   if (variance_coef_mass .ne. 0.d0) then
      do n=1,nlevs
         call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+        do i=1,dm
+           call multifab_build_edge(stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
+        end do
      end do
   end if
 
@@ -586,17 +591,13 @@ subroutine main_driver()
   if (algorithm_type .ne. 2) then
      call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro, &
                              Epot_mass_fluxdiv,diff_mass_fluxdiv, &
-                             stoch_mass_fluxdiv,chem_rate, &
+                             stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &
                              Temp,eta,eta_ed,dt,dx,the_bc_tower, &
                              charge_old,grad_Epot_old,Epot,permittivity)
   else
      do n=1,nlevs
         ! set these to zero so we can write an initial checkpoint
         ! they aren't needed for overdamped, but I prefer not to write NaNs
-        call multifab_setval(diff_mass_fluxdiv(n),0.d0,all=.true.)
-        if (variance_coef_mass .ne. 0.d0) then
-           call multifab_setval(stoch_mass_fluxdiv(n),0.d0,all=.true.)
-        end if
         if (nreactions .gt. 0) then
            call multifab_setval(chem_rate(n),0.d0,all=.true.)
         end if
@@ -700,7 +701,7 @@ subroutine main_driver()
          call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         diff_mass_fluxdiv, &
-                                        stoch_mass_fluxdiv, &
+                                        stoch_mass_fluxdiv,stoch_mass_flux, &
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new, &
                                         charge_old,charge_new,Epot, &
@@ -709,14 +710,15 @@ subroutine main_driver()
          ! algorithm_type=2: overdamped with 2 RNG
          call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                           gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                          diff_mass_fluxdiv, stoch_mass_fluxdiv, chem_rate, &
+                                          diff_mass_fluxdiv, stoch_mass_fluxdiv, stoch_mass_flux, &
+                                          chem_rate, &
                                           dx,dt,time,the_bc_tower,istep)
       else if (algorithm_type .eq. 3) then
          ! algorithm_type=3: iterative implicit
          call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                          Epot_mass_fluxdiv, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
                                          dx,dt,time,the_bc_tower,istep, &
                                          grad_Epot_old,grad_Epot_new, &
                                          charge_old,charge_new,Epot, &
@@ -727,6 +729,7 @@ subroutine main_driver()
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                          Epot_mass_fluxdiv, &
                                          diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         stoch_mass_flux, &
                                          dx,dt,time,the_bc_tower,istep, &
                                          grad_Epot_old,grad_Epot_new, &
                                          charge_old,charge_new,Epot, &
@@ -736,7 +739,7 @@ subroutine main_driver()
          call advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                                  gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                                  diff_mass_fluxdiv, &
-                                                 stoch_mass_fluxdiv,chem_rate, &
+                                                 stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &
                                                  dx,dt,time,the_bc_tower,istep, &
                                                  grad_Epot_old,grad_Epot_new, &
                                                  charge_old,charge_new,Epot, &
@@ -853,7 +856,6 @@ subroutine main_driver()
      call multifab_destroy(rhotot_new(n))
      call multifab_destroy(Temp(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
-     call multifab_destroy(stoch_mass_fluxdiv(n))
      call multifab_destroy(pi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
@@ -868,6 +870,15 @@ subroutine main_driver()
         call multifab_destroy(Temp_ed(n,i))
      end do
   end do
+
+  if (variance_coef_mass .ne. 0.d0) then
+     do n=1,nlevs
+        call multifab_destroy(stoch_mass_fluxdiv(n))
+        do i=1,dm
+           call multifab_destroy(stoch_mass_flux(n,i))
+        end do
+     end do
+  end if
 
   if (use_charged_fluid) then
      do n=1,nlevs

@@ -63,7 +63,8 @@ contains
   ! both temperature at the beginning and at the end of the timestep
   subroutine advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv,chem_rate, &
+                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                         stoch_mass_flux,chem_rate, &
                                          dx,dt,time,the_bc_tower,istep)
 
     type(ml_layout), intent(in   ) :: mla
@@ -80,9 +81,9 @@ contains
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: Temp(:)
     type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
-    ! diff/stoch_mass_fluxdiv can be built locally for overdamped
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: stoch_mass_flux(:,:)
     type(multifab) , intent(inout) :: chem_rate(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -108,11 +109,11 @@ contains
     type(multifab) ::              gradpi(mla%nlevel,mla%dim)
     type(multifab) ::              rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::      diff_mass_flux(mla%nlevel,mla%dim)
-    type(multifab) ::     stoch_mass_flux(mla%nlevel,mla%dim)
-    type(multifab) :: stoch_mass_flux_old(mla%nlevel,mla%dim)
     type(multifab) ::     total_mass_flux(mla%nlevel,mla%dim)
 
     type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
+    type(multifab) ::    stoch_mass_flux_old(mla%nlevel,mla%dim)
+
 
     integer :: i,dm,n,nlevs
 
@@ -157,8 +158,6 @@ contains
           call multifab_build_edge(          rhotot_fc(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(             rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(     diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(    stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(stoch_mass_flux_old(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(    total_mass_flux(n,i),mla%la(n),nspecies,0,i)
        end do
     end do
@@ -166,6 +165,9 @@ contains
     if (variance_coef_mass .ne. 0.d0) then
        do n=1,nlevs
           call multifab_build(stoch_mass_fluxdiv_old(n),mla%la(n),nspecies,0)
+          do i=1,dm
+             call multifab_build_edge(stoch_mass_flux_old(n,i),mla%la(n),nspecies,0,i)
+          end do
        end do
     end if
 
@@ -824,8 +826,6 @@ contains
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
-          call multifab_destroy(stoch_mass_flux(n,i))
-          call multifab_destroy(stoch_mass_flux_old(n,i))
           call multifab_destroy(total_mass_flux(n,i))
        end do
     end do
@@ -833,6 +833,9 @@ contains
     if (variance_coef_mass .ne. 0.d0) then
        do n=1,nlevs
           call multifab_destroy(stoch_mass_fluxdiv_old(n))
+          do i=1,dm
+             call multifab_destroy(stoch_mass_flux_old(n,i))
+          end do
        end do
     end if
 

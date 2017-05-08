@@ -62,7 +62,8 @@ contains
 
   subroutine advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                                 gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                                diff_mass_fluxdiv,stoch_mass_fluxdiv,chem_rate, &
+                                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                                stoch_mass_flux,chem_rate, &
                                                 dx,dt,time,the_bc_tower,istep, &
                                                 grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
                                                 Epot,permittivity)
@@ -83,6 +84,7 @@ contains
     type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: stoch_mass_flux(:,:)
     type(multifab) , intent(inout) :: chem_rate(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -125,7 +127,6 @@ contains
 
     ! only used when variance_coef_mass>0
     type(multifab) :: stoch_mass_fluxdiv_old(mla%nlevel)
-    type(multifab) ::        stoch_mass_flux(mla%nlevel,mla%dim)
     type(multifab) ::    stoch_mass_flux_old(mla%nlevel,mla%dim)
 
     ! only used when nreactions>0
@@ -208,7 +209,6 @@ contains
        do n=1,nlevs
           call multifab_build(stoch_mass_fluxdiv_old(n),mla%la(n),nspecies,0)
           do i=1,dm
-             call multifab_build_edge(    stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
              call multifab_build_edge(stoch_mass_flux_old(n,i),mla%la(n),nspecies,0,i)
           end do
        end do
@@ -492,9 +492,7 @@ contains
           do n=1,nlevs
              call multifab_copy_c(stoch_mass_fluxdiv_old(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
              do i=1,dm
-                ! fixme reservoir - this doesn't work because we need to save stoch_mass_fluxdiv from previous time step
-                ! call multifab_copy_c(stoch_mass_flux_old(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
-                call multifab_setval(stoch_mass_flux_old(n,i),0.d0)
+                call multifab_copy_c(stoch_mass_flux_old(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
              end do
           end do
        end if
@@ -1183,7 +1181,6 @@ contains
        do n=1,nlevs
           call multifab_destroy(stoch_mass_fluxdiv_old(n))
           do i=1,dm
-             call multifab_destroy(stoch_mass_flux(n,i))
              call multifab_destroy(stoch_mass_flux_old(n,i))
           end do
        end do

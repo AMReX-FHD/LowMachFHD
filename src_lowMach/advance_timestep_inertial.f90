@@ -59,7 +59,7 @@ contains
 
   subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                       diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
                                        dx,dt,time,the_bc_tower,istep, &
                                        grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
                                        Epot,permittivity)
@@ -80,6 +80,7 @@ contains
     type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: stoch_mass_flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
@@ -118,9 +119,6 @@ contains
 
     ! only used when variance_coef_mom>0
     type(multifab) :: stoch_mom_fluxdiv(mla%nlevel,mla%dim)
-
-    ! only used when variance_coef_mass>0
-    type(multifab) :: stoch_mass_flux(mla%nlevel,mla%dim)
 
     ! only used when use_charged_fluid=T
     type(multifab) :: Lorentz_force_old(mla%nlevel,mla%dim)
@@ -174,14 +172,6 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_build_edge(stoch_mom_fluxdiv(n,i),mla%la(n),1,0,i)
-          end do
-       end do
-    end if
-
-    if (variance_coef_mass .ne. 0.d0) then
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_build_edge(stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
           end do
        end do
     end if
@@ -1029,14 +1019,6 @@ contains
        do n=1,nlevs
           do i=1,dm
              call multifab_destroy(stoch_mom_fluxdiv(n,i))
-          end do
-       end do
-    end if
-
-    if (variance_coef_mass .ne. 0.d0) then
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_destroy(stoch_mass_flux(n,i))
           end do
        end do
     end if

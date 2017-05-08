@@ -42,7 +42,8 @@ contains
 
   subroutine initial_projection(mla,umac,rho,rhotot,gradp_baro, &
                                 Epot_mass_fluxdiv, &
-                                diff_mass_fluxdiv,stoch_mass_fluxdiv,chem_rate, &
+                                diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                stoch_mass_flux,chem_rate, &
                                 Temp,eta,eta_ed,dt,dx,the_bc_tower, &
                                 charge_old,grad_Epot_old,Epot,permittivity)
 
@@ -54,6 +55,7 @@ contains
     type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: stoch_mass_flux(:,:)
     type(multifab) , intent(inout) :: chem_rate(:)
     type(multifab) , intent(in   ) :: Temp(:)
     type(multifab) , intent(in   ) :: eta(:)
@@ -76,7 +78,6 @@ contains
     type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
-    type(multifab) :: stoch_mass_flux(mla%nlevel,mla%dim)
     type(multifab) :: total_mass_flux(mla%nlevel,mla%dim)
 
     type(multifab) :: n_cc(mla%nlevel)
@@ -124,7 +125,6 @@ contains
           call multifab_build_edge(      rhotot_fc(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(   rhototinv_fc(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge( diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(total_mass_flux(n,i),mla%la(n),nspecies,0,i)
        end do       
     end do
@@ -293,7 +293,6 @@ contains
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(rhototinv_fc(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
-          call multifab_destroy(stoch_mass_flux(n,i))
           call multifab_destroy(total_mass_flux(n,i))
        end do
     end do

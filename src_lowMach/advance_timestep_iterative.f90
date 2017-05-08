@@ -66,6 +66,7 @@ contains
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         Epot_mass_fluxdiv, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                        stoch_mass_flux, &
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new,charge_old,charge_new, &
                                         Epot,permittivity,gradPhiApprox)
@@ -87,6 +88,7 @@ contains
     type(multifab) , intent(inout) :: Epot_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: stoch_mass_flux(:,:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
@@ -128,7 +130,6 @@ contains
     type(multifab) ::                rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::             rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::        diff_mass_flux(mla%nlevel,mla%dim)
-    type(multifab) ::       stoch_mass_flux(mla%nlevel,mla%dim)
     type(multifab) ::       total_mass_flux(mla%nlevel,mla%dim)
 
     type(multifab) :: m_grav_force_old(mla%nlevel,mla%dim)
@@ -193,7 +194,6 @@ contains
           call multifab_build_edge(            rhotot_fc(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(               rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(       diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(      stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(      total_mass_flux(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(     m_grav_force_old(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     m_grav_force_new(n,i),mla%la(n),1       ,0,i)
@@ -804,7 +804,6 @@ contains
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
-          call multifab_destroy(stoch_mass_flux(n,i))
           call multifab_destroy(total_mass_flux(n,i))
           call multifab_destroy(m_grav_force_old(n,i))
           call multifab_destroy(m_grav_force_new(n,i))
