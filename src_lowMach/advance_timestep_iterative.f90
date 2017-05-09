@@ -379,6 +379,13 @@ contains
 
        end if
 
+       if (use_charged_fluid) then
+
+          ! compute A_Phi^{n+1,l} to solve for Epot_mass_fluxdiv_new via Poisson solve
+          call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
+
+       end if
+
        ! build RHS for Poisson solve (store in rho_new)
        ! first set RHS = (1-theta)*(A^n + D^n + St^n) + theta*(A^{n+1,l} + D^{n+1,l} + St^{n+1,l})
        do n=1,nlevs
@@ -407,9 +414,6 @@ contains
        end do
 
        if (use_charged_fluid) then
-
-          ! compute A_Phi^{n+1,l} to solve for Epot_mass_fluxdiv_new via Poisson solve
-          call implicit_potential_coef(mla,rho_new,Temp,A_Phi,the_bc_tower)
 
           ! right-hand-side for Poisson solve is z^T RHS
           call dot_with_z(mla,rho_new,solver_rhs)
