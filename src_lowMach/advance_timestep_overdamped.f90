@@ -24,6 +24,7 @@ module advance_timestep_overdamped_module
   use fill_rho_ghost_cells_module
   use bl_rng_module
   use bl_random_module
+  use chemical_rates_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, restart, &
                                   molmass, nspecies, project_eos_int, use_bl_rng
@@ -31,7 +32,6 @@ module advance_timestep_overdamped_module
   use probin_charged_module, only: use_charged_fluid
   use probin_chemistry_module, only: nreactions, use_Poisson_rng
   use probin_multispecies_module, only: midpoint_stoch_mass_flux_type
-  use chemical_rates_module
 
   implicit none
 
@@ -202,9 +202,7 @@ contains
     ! if this is the first step after initialization or restart then
     ! we already have random numbers from initialization
     if (variance_coef_mass .ne. 0.d0) then
-       if (istep .ne. 1 .and. istep .ne. restart+1) then
-          call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-       end if
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
        if (use_bl_rng) then
           ! save random state for restart
           call bl_rng_copy_engine(rng_eng_diffusion_chk,rng_eng_diffusion)

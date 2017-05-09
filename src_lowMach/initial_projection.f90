@@ -9,6 +9,7 @@ module initial_projection_module
   use bc_module
   use multifab_physbc_stag_module
   use compute_mass_fluxdiv_module
+  use stochastic_mass_fluxdiv_module
   use reservoir_bc_fill_module
   use fluid_charge_module
   use probin_common_module, only: rhobar, variance_coef_mass, algorithm_type, &
@@ -40,6 +41,21 @@ module initial_projection_module
 
 contains
 
+  ! this routine is only called for all inertial simulations (both restart and non-restart)
+  ! it does the following:
+  ! 1. fill mass random numbers
+  ! 2. computes mass fluxes and flux divergences
+  ! if restarting, the subroutine ends; otherwise
+  ! 3. perform an initial projection
+  !
+  ! overdamped schemes need to do 1. and 2. within the advance_timestep routine
+  ! in principle, performing an initial projection for overdamped will change
+  ! the reference state for the GMRES solver
+  ! For overdamped the first ever solve cannot have a good reference state
+  ! so in general there is the danger it will be less accurate than subsequent solves
+  ! but I do not see how one can avoid that
+  ! From this perspective it may be useful to keep initial_projection even in overdamped
+  ! because different gmres tolerances may be needed in the first step than in the rest
   subroutine initial_projection(mla,umac,rho,rhotot,gradp_baro, &
                                 Epot_mass_fluxdiv, &
                                 diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -87,25 +103,26 @@ contains
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"initial_projection")
+
+    if (algorithm_type .eq. 2) then
+       call bl_error("Should not call initial_projection for overdamped schemes")
+    end if
     
-    if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5) then
+    if (algorithm_type .eq. 5) then
        allocate(weights(2))
        weights(:) = 0.d0
        weights(1) = 1.d0
-    else
-       allocate(weights(1))
-       weights(1) = 1.d0
-    end if
-
-    if (algorithm_type .eq. 5) then
        ! for midpoint scheme where predictor goes to t^{n+1/2}
        dt_eff = 0.5d0*dt
     else
+       allocate(weights(1))
+       weights(1) = 1.d0
+       ! predictor integrates over full time step
        dt_eff = dt
     end if
 
     if (nreactions > 0) then
-       if (algorithm_type .ne. 5 .and. algorithm_type .ne. 6) then
+       if (algorithm_type .ne. 5) then
           call bl_error('Error: only algorithm_type=5 allowed for nreactions>0')
        else if (use_Poisson_rng .eq. 2) then
           call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorithm_type=5 and nreactions>0')
@@ -135,11 +152,6 @@ contains
        end do
     end if
 
-    do n=1,nlevs
-       call setval(mac_rhs(n),0.d0)
-       call setval(phi(n),0.d0)
-    end do
-
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,0.d0, &
                                    the_bc_tower%bc_tower_array)
@@ -151,11 +163,12 @@ contains
        do n=1,nlevs
           call multifab_setval(Epot_mass_fluxdiv(n),0.d0,all=.true.)
           call multifab_setval(Epot(n),0.d0,all=.true.)
-          do i=1,dm
-             call multifab_setval(grad_Epot_old(n,i),0.d0,all=.true.)
-          end do
        end do
 
+    end if
+
+    if (variance_coef_mass .ne. 0.d0) then
+       call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
     end if
 
     call compute_mass_fluxdiv(mla,rho,rhotot,gradp_baro,Temp, &
@@ -205,6 +218,7 @@ contains
 
        ! set mac_rhs to -S = sum_i div(F_i)/rhobar_i
        do n=1,nlevs
+          call setval(mac_rhs(n),0.d0)
           do i=1,nspecies
              call multifab_saxpy_3_cc(mac_rhs(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
              if (use_charged_fluid) then
@@ -258,6 +272,9 @@ contains
 
        ! solve div (1/rhotot) grad phi = div(v^init) - S^0
        ! solve to completion, i.e., use the 'full' solver
+       do n=1,nlevs
+          call setval(phi(n),0.d0)
+       end do
        call macproject(mla,phi,umac,rhototinv_fc,mac_rhs,dx,the_bc_tower,.true.)
 
        ! v^0 = v^init - (1/rho^0) grad phi

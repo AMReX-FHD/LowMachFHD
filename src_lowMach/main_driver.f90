@@ -29,6 +29,7 @@ subroutine main_driver()
   use fill_rho_ghost_cells_module
   use ParallelRNGs 
   use bl_rng_module
+  use bl_random_module
   use mass_flux_utilities_module
   use compute_HSE_pres_module
   use convert_stag_module
@@ -452,6 +453,11 @@ subroutine main_driver()
   call init_mass_stochastic(mla,n_rngs)
   call init_m_stochastic(mla,n_rngs)
 
+  if (use_bl_rng) then
+     ! save random state for writing checkpoint
+     call bl_rng_copy_engine(rng_eng_diffusion_chk,rng_eng_diffusion)
+  end if
+
   !=====================================================================
   ! Initialize values
   !=====================================================================
@@ -539,11 +545,6 @@ subroutine main_driver()
      
   end if
 
-  ! fill random flux multifabs with new random numbers
-  if (variance_coef_mass .ne. 0.d0) then
-     call fill_mass_stochastic(mla,the_bc_tower%bc_tower_array)
-  end if
-
   !=====================================================================
   ! Initialize HydroGrid for analysis
   !=====================================================================
@@ -571,23 +572,21 @@ subroutine main_driver()
      end if
   end if
 
-     
-  ! initial projection
-  ! This routine is only called for inertial schemes
-  ! compute mass fluxes and flux divergences and then perform an initial projection
-
-  ! overdamped schemes compute mass fluxes and solve gmres system
-  ! at the beginning of the advance_timestep routine
-  ! for the overdamped algorithm, this only changes the reference state for the first
-  ! gmres solve in the first time step
+  ! this routine is only called for all inertial simulations (both restart and non-restart)
+  ! it does the following:
+  ! 1. fill mass random numbers
+  ! 2. computes mass fluxes and flux divergences
+  ! if restarting, the subroutine ends; otherwise
+  ! 3. perform an initial projection
+  !
+  ! overdamped schemes need to do 1. and 2. within the advance_timestep routine
+  ! in principle, performing an initial projection for overdamped will change
+  ! the reference state for the GMRES solver
   ! For overdamped the first ever solve cannot have a good reference state
   ! so in general there is the danger it will be less accurate than subsequent solves
   ! but I do not see how one can avoid that
   ! From this perspective it may be useful to keep initial_projection even in overdamped
   ! because different gmres tolerances may be needed in the first step than in the rest
-
-  ! if we are restarting, we can exit this routine after computing the mass
-  ! fluxes and flux divergences
   if (algorithm_type .ne. 2) then
      call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro, &
                              Epot_mass_fluxdiv,diff_mass_fluxdiv, &
