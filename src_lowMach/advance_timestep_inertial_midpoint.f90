@@ -43,21 +43,6 @@ module advance_timestep_inertial_midpoint_module
 
   public :: advance_timestep_inertial_midpoint
 
-  ! special inhomogeneous boundary condition multifab
-  ! vel_bc_n(nlevs,dm) are the normal velocities
-  ! in 2D, vel_bc_t(nlevs,2) respresents
-  !   1. y-velocity bc on x-faces (nodal)
-  !   2. x-velocity bc on y-faces (nodal)
-  ! in 3D, vel_bc_t(nlevs,6) represents
-  !   1. y-velocity bc on x-faces (nodal in y and x)
-  !   2. z-velocity bc on x-faces (nodal in z and x)
-  !   3. x-velocity bc on y-faces (nodal in x and y)
-  !   4. z-velocity bc on y-faces (nodal in z and y)
-  !   5. x-velocity bc on z-faces (nodal in x and z)
-  !   6. y-velocity bc on z-faces (nodal in y and z)
-  type(multifab), allocatable, save :: vel_bc_n(:,:)
-  type(multifab), allocatable, save :: vel_bc_t(:,:)
-
 contains
 
   subroutine advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
@@ -170,8 +155,6 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
 
-    call build_bc_multifabs(mla)
-    
     do n=1,nlevs
        call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
@@ -1149,8 +1132,6 @@ contains
     ! End Time-Advancement
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call destroy_bc_multifabs(mla)
-
     do n=1,nlevs
        call multifab_destroy(rho_update(n))
        call multifab_destroy(bds_force(n))
@@ -1213,110 +1194,5 @@ contains
     call destroy(bpt)
 
   end subroutine advance_timestep_inertial_midpoint
-
-  subroutine build_bc_multifabs(mla)
-
-    type(ml_layout), intent(in   ) :: mla
-
-    integer :: dm,i,n,nlevs
-    logical :: nodal_temp(3)
-
-    type(bl_prof_timer), save :: bpt
-
-    call build(bpt, "advance_timestep_inertial_midpoint/build_bc_multifabs")
-
-    dm = mla%dim
-    nlevs = mla%nlevel
-
-    allocate(vel_bc_n(nlevs,dm))
-    if (dm .eq. 2) then
-       allocate(vel_bc_t(nlevs,2))
-    else if (dm .eq. 3) then
-       allocate(vel_bc_t(nlevs,6))
-    end if
-
-    do n=1,nlevs
-       ! boundary conditions
-       do i=1,dm
-          call multifab_build_edge(vel_bc_n(n,i),mla%la(n),1,0,i)
-       end do
-       if (dm .eq. 2) then
-          ! y-velocity bc on x-faces (nodal)
-          call multifab_build_nodal(vel_bc_t(n,1),mla%la(n),1,0)
-          ! x-velocity bc on y-faces (nodal)
-          call multifab_build_nodal(vel_bc_t(n,2),mla%la(n),1,0)
-       else
-          ! y-velocity bc on x-faces (nodal in y and x)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .false.
-          call multifab_build(vel_bc_t(n,1),mla%la(n),1,0,nodal_temp)
-          ! z-velocity bc on x-faces (nodal in z and x)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .false.
-          nodal_temp(3) = .true.
-          call multifab_build(vel_bc_t(n,2),mla%la(n),1,0,nodal_temp)
-          ! x-velocity bc on y-faces (nodal in x and y)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .false.
-          call multifab_build(vel_bc_t(n,3),mla%la(n),1,0,nodal_temp)
-          ! z-velocity bc on y-faces (nodal in z and y)
-          nodal_temp(1) = .false.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .true.
-          call multifab_build(vel_bc_t(n,4),mla%la(n),1,0,nodal_temp)
-          ! x-velocity bc on z-faces (nodal in x and z)
-          nodal_temp(1) = .true.
-          nodal_temp(2) = .false.
-          nodal_temp(3) = .true.
-          call multifab_build(vel_bc_t(n,5),mla%la(n),1,0,nodal_temp)
-          ! y-velocity bc on z-faces (nodal in y and z)
-          nodal_temp(1) = .false.
-          nodal_temp(2) = .true.
-          nodal_temp(3) = .true.
-          call multifab_build(vel_bc_t(n,6),mla%la(n),1,0,nodal_temp)
-       end if
-
-       do i=1,dm
-          call multifab_setval(vel_bc_n(n,i),0.d0,all=.true.)
-       end do
-       do i=1,size(vel_bc_t,dim=2)
-          call multifab_setval(vel_bc_t(n,i),0.d0,all=.true.)
-       end do
-
-    end do
-
-    call destroy(bpt)
-
-  end subroutine build_bc_multifabs
-
-  subroutine destroy_bc_multifabs(mla)
-
-    type(ml_layout), intent(in   ) :: mla
-
-    integer :: dm,i,n,nlevs
-
-    type(bl_prof_timer), save :: bpt
-
-    call build(bpt, "advance_timestep_inertial_midpoint/destroy_bc_multifabs")
-
-    dm = mla%dim
-    nlevs = mla%nlevel
-
-    do n=1,nlevs
-       do i=1,dm          
-          call multifab_destroy(vel_bc_n(n,i))
-       end do
-       do i=1,size(vel_bc_t,dim=2)
-          call multifab_destroy(vel_bc_t(n,i))
-       end do
-    end do
-
-    deallocate(vel_bc_n,vel_bc_t)
-
-    call destroy(bpt)
-
-  end subroutine destroy_bc_multifabs
 
 end module advance_timestep_inertial_midpoint_module

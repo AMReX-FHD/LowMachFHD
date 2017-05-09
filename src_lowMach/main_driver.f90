@@ -38,6 +38,7 @@ subroutine main_driver()
   use sum_momenta_module
   use restart_module
   use checkpoint_module
+  use reservoir_bc_fill_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -444,6 +445,9 @@ subroutine main_driver()
 
   end do
 
+  ! data structures to help with reservoirs
+  call build_bc_multifabs(mla)
+
   ! allocate and build multifabs that will contain random numbers
   if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5 ) then
      n_rngs = 2
@@ -839,6 +843,8 @@ subroutine main_driver()
 
   call destroy_mass_stochastic(mla)
   call destroy_m_stochastic(mla)
+
+  call destroy_bc_multifabs(mla)
 
   do n=1,nlevs
      call multifab_destroy(rho_old(n))
