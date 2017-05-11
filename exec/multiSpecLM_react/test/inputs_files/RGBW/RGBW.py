@@ -80,6 +80,7 @@ print "bwd reactions per time = %e" % (kd*nG*dV*dt)
 # cfl numbers
 print "D*dt/dx^2 = %e" % (D*dt/dx**2)
 print "nu*dt/dx^2 = %e" % (nu*dt/dx**2)
+print "u*dt/dx = %e" % (uRand*dt/dx)
 
 ################################################################################
 # structure factor

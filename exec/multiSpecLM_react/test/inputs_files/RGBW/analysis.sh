@@ -117,8 +117,8 @@ do
   cmd_awk="$cmd_awk $cmd_tmp"
 done
 
-TMP="tmp.n_stat_stat"
-OUTPUT="res.n_stat_stat"
+TMP="tmp.N_stat_stat"
+OUTPUT="res.N_stat_stat"
 eval paste $cmd_awk | awk '{sum1=0;sum2=0;for(i=1;i<=NF;i++){sum1+=$i;sum2+=$i*$i}sum1/=NF;sum2/=NF;printf "%e\t%e\t",sum1,sqrt((sum2-sum1*sum1)/NF);print $0}' > $TMP
 paste <(awk '{print $1}' res.N_stat1) <(awk '{print $0}' $TMP) > $OUTPUT
 rm $TMP

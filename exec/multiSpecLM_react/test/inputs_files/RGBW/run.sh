@@ -79,12 +79,14 @@ then
 
   if [ -f RGBW.S_k.pair=1.Re.dat ]
   then
-    sed -i 's/0.00000000/#0.00000000/g' RGBW.S_k.pair=*.Re.dat
+    ../../../analysis/Sk/Sk_2d.sh RGBW 
   fi
 
-  echo "if you generated fort.10, try (on $RUNNAME):" 
-  echo "  python ../../analysis/hist/hist_N.py (options)"
-  echo "  python ../../analysis/hist/hist_N_near_zero.py (options)"
+  if [ -f fort.10 ]
+  then
+    python ../../../analysis/hist/hist_N.py 1 3.e-9 10. -2 30 yes yes
+    python ../../../analysis/hist/hist_N_near_zero.py 1 3.e-9 101 -1 2 yes yes
+  fi
 
   exit
 fi

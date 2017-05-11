@@ -150,7 +150,7 @@ a.plot(bins_cont,Nhist_gauss_cont,'--r',label="Gaussian")
 a.legend(loc=8,numpoints=1,fontsize='small')
 plt.title("N=%.2f molecules per cell"%Nav)
 plt.xlabel("number of molecules N")
-plt.ylabel("probability density")
+plt.ylabel("P(N)")
 
 plt.ylim(ymin=Nhist_poiss[-1]/10)
 
@@ -172,7 +172,7 @@ a.plot(bins_cont,Nhist_gauss_cont,'--r',label="Gaussian")
 a.legend(loc=1,numpoints=1,fontsize='small')
 plt.title("N=%.2f molecules per cell"%Nav)
 plt.xlabel("number of molecules N")
-plt.ylabel("probability density")
+plt.ylabel("P(N)")
 
 if (show_plot):
   plt.show()

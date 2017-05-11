@@ -39,7 +39,7 @@ ax.plot(x3,y3,'--r',label="Gaussian")
 
 ax.legend(loc=8,numpoints=1,fontsize='small')
 ax.set_xlabel("Number of molecules N")
-ax.set_ylabel("probability density")
+ax.set_ylabel("P(N)")
 
 ax.set_ylim(ymin=y2[-1]/10)
 
@@ -59,7 +59,7 @@ ax.plot(x3,y3,'--r',label="Gaussian")
 
 ax.legend(loc=1,numpoints=1,fontsize='small')
 ax.set_xlabel("Number of molecules N")
-ax.set_ylabel("probability density")
+ax.set_ylabel("P(N)")
 
 ax.set_ylim(ymin=0.)
 
