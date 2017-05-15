@@ -273,12 +273,8 @@ contains
     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
 
     ! compute advective flux divergence, adv_mom_fluxdiv_old = div(-rho v v)^n
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(adv_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv_old,dx,the_bc_tower%bc_tower_array)
+    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv_old,.false., &
+                                dx,the_bc_tower%bc_tower_array)
 
     ! compute A_Phi^n for Poisson solve (does not have z^T)
     call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
@@ -643,12 +639,8 @@ contains
     call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,dx,1,nspecies)
 
     ! compute advective flux divergence, adv_mom_fluxdiv_new = div(-rho v v)^{n+1,*}
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(adv_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,dx,the_bc_tower%bc_tower_array)
+    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,.false., &
+                                dx,the_bc_tower%bc_tower_array)
 
     ! compute A_Phi^{n+1,*} for Poisson solve (does not have z^T)
     call implicit_potential_coef(mla,rho_tmp,Temp,A_Phi,the_bc_tower)

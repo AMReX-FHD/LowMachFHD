@@ -15,12 +15,14 @@ module mk_advective_m_fluxdiv_module
 
 contains
 
-  subroutine mk_advective_m_fluxdiv(mla,umac,m,m_update,dx,the_bc_level)
+  subroutine mk_advective_m_fluxdiv(mla,umac,m,m_update,increment, &
+                                    dx,the_bc_level)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) ::     umac(:,:)
     type(multifab) , intent(in   ) ::        m(:,:)
     type(multifab) , intent(inout) :: m_update(:,:)
+    logical        , intent(in   ) :: increment
     real(kind=dp_t), intent(in   ) :: dx(:,:)
     type(bc_level) , intent(in   ) :: the_bc_level(:)
 
@@ -64,7 +66,7 @@ contains
              call mk_advective_m_fluxdiv_2d(ump(:,:,1,1), vmp(:,:,1,1), ng_u, &
                                             mxp(:,:,1,1), myp(:,:,1,1), ng_m, &
                                             axp(:,:,1,1), ayp(:,:,1,1), ng_a, &
-                                            lo, hi, dx(n,:))
+                                            lo, hi, dx(n,:), increment)
           case (3)
              wmp => dataptr(umac(n,3), i)
              mzp => dataptr(m(n,3), i)
@@ -72,7 +74,7 @@ contains
              call mk_advective_m_fluxdiv_3d(ump(:,:,:,1), vmp(:,:,:,1), wmp(:,:,:,1), ng_u, &
                                             mxp(:,:,:,1), myp(:,:,:,1), mzp(:,:,:,1), ng_m, &
                                             axp(:,:,:,1), ayp(:,:,:,1), azp(:,:,:,1), ng_a, &
-                                            lo, hi, dx(n,:))
+                                            lo, hi, dx(n,:), increment)
           end select
        end do
 
@@ -89,7 +91,8 @@ contains
   contains
 
     subroutine mk_advective_m_fluxdiv_2d(umac,vmac,ng_u,mx,my,ng_m, &
-                                         m_updatex,m_updatey,ng_a,lo,hi,dx)
+                                         m_updatex,m_updatey,ng_a,lo,hi,dx, &
+                                         increment)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_m,ng_a
       real(kind=dp_t), intent(in   ) ::      umac(lo(1)-ng_u:,lo(2)-ng_u:)
@@ -99,17 +102,16 @@ contains
       real(kind=dp_t), intent(inout) :: m_updatex(lo(1)-ng_a:,lo(2)-ng_a:)
       real(kind=dp_t), intent(inout) :: m_updatey(lo(1)-ng_a:,lo(2)-ng_a:)
       real(kind=dp_t), intent(in   ) :: dx(:)
+      logical        , intent(in   ) :: increment
 
       ! local
       integer :: i,j
 
       real(kind=dp_t) :: mx_fluxx  (lo(1):hi(1)+2,lo(2):hi(2)  )
       real(kind=dp_t) :: mx_fluxy  (lo(1):hi(1)+1,lo(2):hi(2)+1)
-      real(kind=dp_t) :: mx_fluxdiv(lo(1):hi(1)+1,lo(2):hi(2)  )
 
-      real(kind=dp_t) ::   my_fluxx(lo(1):hi(1)+1,lo(2):hi(2)+1)
-      real(kind=dp_t) ::   my_fluxy(lo(1):hi(1)  ,lo(2):hi(2)+2)
-      real(kind=dp_t) :: my_fluxdiv(lo(1):hi(1)  ,lo(2):hi(2)+1)
+      real(kind=dp_t) :: my_fluxx(lo(1):hi(1)+1,lo(2):hi(2)+1)
+      real(kind=dp_t) :: my_fluxy(lo(1):hi(1)  ,lo(2):hi(2)+2)
 
       real(kind=dp_t) :: dxinv
 
@@ -119,62 +121,69 @@ contains
       ! mx fluxes and divergence
       !=============================
       do j=lo(2),hi(2)
-         do i=lo(1),hi(1)+2
-            mx_fluxx(i,j) = 0.25d0*(mx(i-1,j)+mx(i,j))*(umac(i-1,j)+umac(i,j))
-         end do
+      do i=lo(1),hi(1)+2
+         mx_fluxx(i,j) = 0.25d0*(mx(i-1,j)+mx(i,j))*(umac(i-1,j)+umac(i,j))
+      end do
       end do
 
       do j=lo(2),hi(2)+1
-         do i=lo(1),hi(1)+1
-            mx_fluxy(i,j) = 0.25d0*(mx(i,j-1)+mx(i,j))*(vmac(i-1,j)+vmac(i,j))
-         end do
+      do i=lo(1),hi(1)+1
+         mx_fluxy(i,j) = 0.25d0*(mx(i,j-1)+mx(i,j))*(vmac(i-1,j)+vmac(i,j))
+      end do
       end do
 
-      do j=lo(2),hi(2)
+      if (increment) then
+         do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
-            mx_fluxdiv(i,j) = -( (mx_fluxx(i+1,j)-mx_fluxx(i,j)) * dxinv + &
-                                 (mx_fluxy(i,j+1)-mx_fluxy(i,j)) * dxinv )
+            m_updatex(i,j) = m_updatex(i,j) - ( (mx_fluxx(i+1,j)-mx_fluxx(i,j)) * dxinv + &
+                                                (mx_fluxy(i,j+1)-mx_fluxy(i,j)) * dxinv )
          end do
-      end do
-
-      do j=lo(2),hi(2)
+         end do
+      else
+         do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
-            m_updatex(i,j) = m_updatex(i,j) + mx_fluxdiv(i,j)
+            m_updatex(i,j) = -( (mx_fluxx(i+1,j)-mx_fluxx(i,j)) * dxinv + &
+                                (mx_fluxy(i,j+1)-mx_fluxy(i,j)) * dxinv )
          end do
-      end do
+         end do
+      end if
 
       !=============================
       ! my fluxes and divergence
       !=============================
       do j=lo(2),hi(2)+1
-         do i=lo(1),hi(1)+1
-            my_fluxx(i,j) = 0.25d0*(my(i-1,j)+my(i,j))*(umac(i,j-1)+umac(i,j))
-         end do
+      do i=lo(1),hi(1)+1
+         my_fluxx(i,j) = 0.25d0*(my(i-1,j)+my(i,j))*(umac(i,j-1)+umac(i,j))
+      end do
       end do
 
       do j=lo(2),hi(2)+2
-         do i=lo(1),hi(1)
-            my_fluxy(i,j) = 0.25d0*(my(i,j-1)+my(i,j))*(vmac(i,j-1)+vmac(i,j))
-         end do
+      do i=lo(1),hi(1)
+         my_fluxy(i,j) = 0.25d0*(my(i,j-1)+my(i,j))*(vmac(i,j-1)+vmac(i,j))
+      end do
       end do
 
-      do j=lo(2),hi(2)+1
+      if (increment) then
+         do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)
-            my_fluxdiv(i,j) = -( (my_fluxx(i+1,j)-my_fluxx(i,j)) * dxinv + &
-                                 (my_fluxy(i,j+1)-my_fluxy(i,j)) * dxinv )
+            m_updatey(i,j) = m_updatey(i,j) - ( (my_fluxx(i+1,j)-my_fluxx(i,j)) * dxinv + &
+                                                (my_fluxy(i,j+1)-my_fluxy(i,j)) * dxinv )
          end do
-      end do
-
-      do j=lo(2),hi(2)+1
+         end do
+      else
+         do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)
-            m_updatey(i,j) = m_updatey(i,j) + my_fluxdiv(i,j)
+            m_updatey(i,j) = -( (my_fluxx(i+1,j)-my_fluxx(i,j)) * dxinv + &
+                                (my_fluxy(i,j+1)-my_fluxy(i,j)) * dxinv )
          end do
-      end do
+         end do
+      end if
 
     end subroutine mk_advective_m_fluxdiv_2d
 
     subroutine mk_advective_m_fluxdiv_3d(umac,vmac,wmac,ng_u,mx,my,mz,ng_m, &
-                                         m_updatex,m_updatey,m_updatez,ng_a,lo,hi,dx)
+                                         m_updatex,m_updatey,m_updatez,ng_a,lo,hi,dx, &
+                                         increment)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_m,ng_a
       real(kind=dp_t), intent(in   ) ::      umac(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
@@ -187,6 +196,7 @@ contains
       real(kind=dp_t), intent(inout) :: m_updatey(lo(1)-ng_a:,lo(2)-ng_a:,lo(3)-ng_a:)
       real(kind=dp_t), intent(inout) :: m_updatez(lo(1)-ng_a:,lo(2)-ng_a:,lo(3)-ng_a:)
       real(kind=dp_t), intent(in   ) :: dx(:)
+      logical        , intent(in   ) :: increment
 
       ! local
       integer :: i,j,k
@@ -194,17 +204,14 @@ contains
       real(kind=dp_t) ::   mx_fluxx(lo(1):hi(1)+2,lo(2):hi(2)  ,lo(3):hi(3)  )
       real(kind=dp_t) ::   mx_fluxy(lo(1):hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3)+1)
       real(kind=dp_t) ::   mx_fluxz(lo(1):hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3)+1)
-      real(kind=dp_t) :: mx_fluxdiv(lo(1):hi(1)+1,lo(2):hi(2)  ,lo(3):hi(3)  )
 
       real(kind=dp_t) ::   my_fluxx(lo(1):hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3)+1)
       real(kind=dp_t) ::   my_fluxy(lo(1):hi(1)  ,lo(2):hi(2)+2,lo(3):hi(3)  )
       real(kind=dp_t) ::   my_fluxz(lo(1):hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3)+1)
-      real(kind=dp_t) :: my_fluxdiv(lo(1):hi(1)  ,lo(2):hi(2)+1,lo(3):hi(3)  )
 
       real(kind=dp_t) ::   mz_fluxx(lo(1):hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3)+1)
       real(kind=dp_t) ::   mz_fluxy(lo(1):hi(1)+1,lo(2):hi(2)+1,lo(3):hi(3)+1)
       real(kind=dp_t) ::   mz_fluxz(lo(1):hi(1)  ,lo(2):hi(2)  ,lo(3):hi(3)+2)
-      real(kind=dp_t) :: mz_fluxdiv(lo(1):hi(1)  ,lo(2):hi(2)  ,lo(3):hi(3)+1)
 
       real(kind=dp_t) :: dxinv
 
@@ -214,115 +221,127 @@ contains
       ! mx fluxes and divergence
       !=============================
       do k=lo(3),hi(3)
-         do j=lo(2),hi(2)
-            do i=lo(1),hi(1)+2
-               mx_fluxx(i,j,k) = 0.25d0*(mx(i-1,j,k)+mx(i,j,k))*(umac(i-1,j,k)+umac(i,j,k))
-            end do
-         end do
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)+2
+         mx_fluxx(i,j,k) = 0.25d0*(mx(i-1,j,k)+mx(i,j,k))*(umac(i-1,j,k)+umac(i,j,k))
+      end do
+      end do
       end do
 
       do k=lo(3),hi(3)+1
-         do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)+1
-               mx_fluxy(i,j,k) = 0.25d0*(mx(i,j-1,k)+mx(i,j,k))*(vmac(i-1,j,k)+vmac(i,j,k))
-               mx_fluxz(i,j,k) = 0.25d0*(mx(i,j,k-1)+mx(i,j,k))*(wmac(i-1,j,k)+wmac(i,j,k))
-            end do
-         end do
+      do j=lo(2),hi(2)+1
+      do i=lo(1),hi(1)+1
+         mx_fluxy(i,j,k) = 0.25d0*(mx(i,j-1,k)+mx(i,j,k))*(vmac(i-1,j,k)+vmac(i,j,k))
+         mx_fluxz(i,j,k) = 0.25d0*(mx(i,j,k-1)+mx(i,j,k))*(wmac(i-1,j,k)+wmac(i,j,k))
+      end do
+      end do
       end do
 
-      do k=lo(3),hi(3)
+      if (increment) then
+         do k=lo(3),hi(3)
          do j=lo(2),hi(2)
-            do i=lo(1),hi(1)+1
-               mx_fluxdiv(i,j,k) = -( (mx_fluxx(i+1,j,k)-mx_fluxx(i,j,k)) * dxinv + &
-                                      (mx_fluxy(i,j+1,k)-mx_fluxy(i,j,k)) * dxinv + &
-                                      (mx_fluxz(i,j,k+1)-mx_fluxz(i,j,k)) * dxinv )
-            end do
+         do i=lo(1),hi(1)+1
+            m_updatex(i,j,k) = m_updatex(i,j,k) - ( (mx_fluxx(i+1,j,k)-mx_fluxx(i,j,k)) * dxinv + &
+                                                    (mx_fluxy(i,j+1,k)-mx_fluxy(i,j,k)) * dxinv + &
+                                                    (mx_fluxz(i,j,k+1)-mx_fluxz(i,j,k)) * dxinv )
          end do
-      end do
-
-      do k=lo(3),hi(3)
+         end do
+         end do
+      else
+         do k=lo(3),hi(3)
          do j=lo(2),hi(2)
-            do i=lo(1),hi(1)+1
-               m_updatex(i,j,k) = m_updatex(i,j,k) + mx_fluxdiv(i,j,k)
-            end do
+         do i=lo(1),hi(1)+1
+            m_updatex(i,j,k) = -( (mx_fluxx(i+1,j,k)-mx_fluxx(i,j,k)) * dxinv + &
+                                  (mx_fluxy(i,j+1,k)-mx_fluxy(i,j,k)) * dxinv + &
+                                  (mx_fluxz(i,j,k+1)-mx_fluxz(i,j,k)) * dxinv )
          end do
-      end do
+         end do
+         end do
+      end if
 
       !=============================
       ! my fluxes and divergence
       !=============================
       do k=lo(3),hi(3)
-         do j=lo(2),hi(2)+2
-            do i=lo(1),hi(1)
-               my_fluxy(i,j,k) = 0.25d0*(my(i,j-1,k)+my(i,j,k))*(vmac(i,j-1,k)+vmac(i,j,k))
-            end do
-         end do
+      do j=lo(2),hi(2)+2
+      do i=lo(1),hi(1)
+         my_fluxy(i,j,k) = 0.25d0*(my(i,j-1,k)+my(i,j,k))*(vmac(i,j-1,k)+vmac(i,j,k))
+      end do
+      end do
       end do
 
       do k=lo(3),hi(3)+1
-         do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)+1
-               my_fluxx(i,j,k) = 0.25d0*(my(i-1,j,k)+my(i,j,k))*(umac(i,j-1,k)+umac(i,j,k))
-               my_fluxz(i,j,k) = 0.25d0*(my(i,j,k-1)+my(i,j,k))*(wmac(i,j-1,k)+wmac(i,j,k))
-            end do
-         end do
+      do j=lo(2),hi(2)+1
+      do i=lo(1),hi(1)+1
+         my_fluxx(i,j,k) = 0.25d0*(my(i-1,j,k)+my(i,j,k))*(umac(i,j-1,k)+umac(i,j,k))
+         my_fluxz(i,j,k) = 0.25d0*(my(i,j,k-1)+my(i,j,k))*(wmac(i,j-1,k)+wmac(i,j,k))
+      end do
+      end do
       end do
 
-      do k=lo(3),hi(3)
+      if (increment) then
+         do k=lo(3),hi(3)
          do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)
-               my_fluxdiv(i,j,k) = -( (my_fluxx(i+1,j,k)-my_fluxx(i,j,k)) * dxinv + &
-                                      (my_fluxy(i,j+1,k)-my_fluxy(i,j,k)) * dxinv + &
-                                      (my_fluxz(i,j,k+1)-my_fluxz(i,j,k)) * dxinv )
-            end do
+         do i=lo(1),hi(1)
+            m_updatey(i,j,k) = m_updatey(i,j,k) - ( (my_fluxx(i+1,j,k)-my_fluxx(i,j,k)) * dxinv + &
+                                                    (my_fluxy(i,j+1,k)-my_fluxy(i,j,k)) * dxinv + &
+                                                    (my_fluxz(i,j,k+1)-my_fluxz(i,j,k)) * dxinv )
          end do
-      end do
-
-      do k=lo(3),hi(3)
+         end do
+         end do
+      else
+         do k=lo(3),hi(3)
          do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)
-               m_updatey(i,j,k) = m_updatey(i,j,k) + my_fluxdiv(i,j,k)
-            end do
+         do i=lo(1),hi(1)
+            m_updatey(i,j,k) = -( (my_fluxx(i+1,j,k)-my_fluxx(i,j,k)) * dxinv + &
+                                  (my_fluxy(i,j+1,k)-my_fluxy(i,j,k)) * dxinv + &
+                                  (my_fluxz(i,j,k+1)-my_fluxz(i,j,k)) * dxinv )
          end do
-      end do
+         end do
+         end do
+      end if
 
       !=============================
       ! mz fluxes and divergence
       !=============================
       do k=lo(3),hi(3)+2
-         do j=lo(2),hi(2)
-            do i=lo(1),hi(1)
-               mz_fluxz(i,j,k) = 0.25d0*(mz(i,j,k-1)+mz(i,j,k))*(wmac(i,j,k-1)+wmac(i,j,k))
-            end do
-         end do
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
+         mz_fluxz(i,j,k) = 0.25d0*(mz(i,j,k-1)+mz(i,j,k))*(wmac(i,j,k-1)+wmac(i,j,k))
+      end do
+      end do
       end do
 
       do k=lo(3),hi(3)+1
-         do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)+1
-               mz_fluxx(i,j,k) = 0.25d0*(mz(i-1,j,k)+mz(i,j,k))*(umac(i,j,k-1)+umac(i,j,k))
-               mz_fluxy(i,j,k) = 0.25d0*(mz(i,j-1,k)+mz(i,j,k))*(vmac(i,j,k-1)+vmac(i,j,k))
-            end do
-         end do
+      do j=lo(2),hi(2)+1
+      do i=lo(1),hi(1)+1
+         mz_fluxx(i,j,k) = 0.25d0*(mz(i-1,j,k)+mz(i,j,k))*(umac(i,j,k-1)+umac(i,j,k))
+         mz_fluxy(i,j,k) = 0.25d0*(mz(i,j-1,k)+mz(i,j,k))*(vmac(i,j,k-1)+vmac(i,j,k))
+      end do
+      end do
       end do
 
-      do k=lo(3),hi(3)+1
+      if (increment) then
+         do k=lo(3),hi(3)+1
          do j=lo(2),hi(2)
-            do i=lo(1),hi(1)
-               mz_fluxdiv(i,j,k) = -( (mz_fluxx(i+1,j,k)-mz_fluxx(i,j,k)) * dxinv + &
-                                      (mz_fluxy(i,j+1,k)-mz_fluxy(i,j,k)) * dxinv + &
-                                      (mz_fluxz(i,j,k+1)-mz_fluxz(i,j,k)) * dxinv )
-            end do
+         do i=lo(1),hi(1)
+            m_updatez(i,j,k) = m_updatez(i,j,k) - ( (mz_fluxx(i+1,j,k)-mz_fluxx(i,j,k)) * dxinv + &
+                                                    (mz_fluxy(i,j+1,k)-mz_fluxy(i,j,k)) * dxinv + &
+                                                    (mz_fluxz(i,j,k+1)-mz_fluxz(i,j,k)) * dxinv )
          end do
-      end do
-
-      do k=lo(3),hi(3)+1
+         end do
+         end do
+      else
+         do k=lo(3),hi(3)+1
          do j=lo(2),hi(2)
-            do i=lo(1),hi(1)
-               m_updatez(i,j,k) = m_updatez(i,j,k) + mz_fluxdiv(i,j,k)
-            end do
+         do i=lo(1),hi(1)
+            m_updatez(i,j,k) = -( (mz_fluxx(i+1,j,k)-mz_fluxx(i,j,k)) * dxinv + &
+                                  (mz_fluxy(i,j+1,k)-mz_fluxy(i,j,k)) * dxinv + &
+                                  (mz_fluxz(i,j,k+1)-mz_fluxz(i,j,k)) * dxinv )
          end do
-      end do
+         end do
+         end do
+      end if
 
     end subroutine mk_advective_m_fluxdiv_3d
     

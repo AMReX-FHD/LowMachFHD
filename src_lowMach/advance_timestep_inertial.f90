@@ -321,12 +321,7 @@ contains
     end do
 
     ! compute adv_mom_fluxdiv = A^n for momentum
-    do n=1,nlevs
-       do i=1,dm
-          call setval(adv_mom_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv,.false.,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add A^n for momentum to gmres_rhs_v
@@ -733,14 +728,13 @@ contains
 
     ! adv_mom_fluxdiv already contains A^n for momentum
     ! add A^{*,n+1} = -rho^{*,n+1} v^{*,n+1} v^{*,n+1} for momentum to adv_mom_fluxdiv
-    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv,.true.,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add (1/2) adv_mom_fluxdiv to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(adv_mom_fluxdiv(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,adv_mom_fluxdiv(n,i),1,1,0)
+          call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,adv_mom_fluxdiv(n,i))
        end do
     end do
 

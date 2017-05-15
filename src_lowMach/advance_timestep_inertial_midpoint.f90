@@ -372,12 +372,7 @@ contains
     end do
 
     ! compute adv_mom_fluxdiv = A^n for momentum
-    do n=1,nlevs
-       do i=1,dm
-          call setval(adv_mom_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv,.false.,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add A^n for momentum to gmres_rhs_v
@@ -846,12 +841,7 @@ contains
 
     ! compute adv_mom_fluxdiv = A^{n+1/2} = -rho^{n+1/2} v^{n+1/2} v^{n+1/2}
     ! (mtemp=rho^{n+1/2} v^{n+1/2} was set at the end of step 4)
-    do n=1,nlevs
-       do i=1,dm
-          call setval(adv_mom_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv,.false.,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add adv_mom_fluxdiv to gmres_rhs_v

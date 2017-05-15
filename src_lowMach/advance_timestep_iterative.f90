@@ -321,12 +321,8 @@ contains
     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
 
     ! compute adv_mom_fluxdiv_old = div(-rho^n v^n v^n) and copy into new
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(adv_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv_old,dx,the_bc_tower%bc_tower_array)
+    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv_old,.false., &
+                                dx,the_bc_tower%bc_tower_array)
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(adv_mom_fluxdiv_new(n,i),1,adv_mom_fluxdiv_old(n,i),1,1,0)
@@ -353,12 +349,8 @@ contains
           call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
           ! compute adv_mom_fluxdiv_new = div(-rho^{n+1,l} v^{n+1,l} v^{n+1,l})
-          do n=1,nlevs
-             do i=1,dm
-                call multifab_setval(adv_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-             end do
-          end do
-          call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,dx,the_bc_tower%bc_tower_array)
+          call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,.false., &
+                                      dx,the_bc_tower%bc_tower_array)
 
        end if
 
