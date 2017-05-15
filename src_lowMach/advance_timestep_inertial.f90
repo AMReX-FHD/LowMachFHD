@@ -198,8 +198,7 @@ contains
 
     ! add D^n and St^n to rho_update
     do n=1,nlevs
-       call setval(rho_update(n),0.d0,all=.true.)
-       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
        end if
@@ -248,9 +247,8 @@ contains
 
     ! set rho_new = rho_old + dt * (A^n + D^n + St^n)
     do n=1,nlevs
-       call multifab_mult_mult_s_c(rho_update(n),1,dt,nspecies,0)
        call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-       call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+       call multifab_saxpy_3_cc(rho_new(n),1,dt,rho_update(n),1,nspecies)
     end do
 
     ! compute rhotot from rho in VALID REGION

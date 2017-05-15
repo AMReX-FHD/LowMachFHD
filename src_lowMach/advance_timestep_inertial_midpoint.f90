@@ -245,9 +245,7 @@ contains
     ! reset rho_update for all scalars to zero
     ! then, add -F^n_i (plus m_i*R^n_i, if nreactions>0)
     do n=1,nlevs
-       call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
-       ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
        end if
@@ -495,13 +493,11 @@ contains
        ! assemble total fluxes to be used in reservoirs
        do n=1,nlevs
           do i=1,dm
-             call multifab_setval(total_mass_flux(n,i),0.d0)
+             call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
              if (variance_coef_mass .ne. 0.d0) then
-                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux_old(n,i),1,nspecies,0)
-                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
-                call multifab_mult_mult_s_c(total_mass_flux(n,i),1,0.5d0,nspecies,0)
+                call multifab_saxpy_3_cc(total_mass_flux(n,i),1,0.5d0,stoch_mass_flux_old(n,i),1,nspecies)
+                call multifab_saxpy_3_cc(total_mass_flux(n,i),1,0.5d0,stoch_mass_flux(n,i),1,nspecies)
              end if
-             call multifab_plus_plus_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)            
           end do
        end do
 
@@ -635,9 +631,7 @@ contains
     ! then, add -F^{n+1/2}_i (plus m_i*R^{n+1/2}_i, if nreactions>0)
     ! it is used in Step 5 below
     do n=1,nlevs
-       call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
-       ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
        end if
@@ -1077,7 +1071,7 @@ contains
        do i=1,dm
           call multifab_setval(dumac(n,i),0.d0,all=.true.)
        end do
-          call multifab_setval(dpi(n),0.d0,all=.true.)
+       call multifab_setval(dpi(n),0.d0,all=.true.)
     end do
 
     do n=1,nlevs
