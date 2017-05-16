@@ -9,7 +9,7 @@ module mass_flux_utilities_module
                                         chi_iterations, avg_type
   use matrix_utilities 
   use compute_mixture_properties_module
-  !use F95_LAPACK ! Donev: Disabled LAPACK so this builds more easily on different systems
+  use F95_LAPACK ! Donev: Disabled LAPACK so this builds more easily on different systems
 
   implicit none
 
