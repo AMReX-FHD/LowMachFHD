@@ -15,10 +15,11 @@ module mk_grav_force_module
 
 contains
 
-  subroutine mk_grav_force(mla,m_force,s_fc_old,s_fc_new,the_bc_tower)
+  subroutine mk_grav_force(mla,m_force,increment,s_fc_old,s_fc_new,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: m_force(:,:)
+    logical        , intent(in   ) :: increment
     type(multifab) , intent(in   ) :: s_fc_old(:,:)
     type(multifab) , intent(in   ) :: s_fc_new(:,:)
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -61,14 +62,16 @@ contains
           case (2)
              call mk_grav_force_2d(fxp(:,:,1,1), fyp(:,:,1,1), ng_u, &
                                    sox(:,:,1,:), soy(:,:,1,:), &
-                                   snx(:,:,1,:), sny(:,:,1,:), ng_s, lo, hi)
+                                   snx(:,:,1,:), sny(:,:,1,:), ng_s, lo, hi, &
+                                   increment)
           case (3)
              fzp => dataptr(m_force(n,3), i)
              soz => dataptr(s_fc_old(n,3), i)
              snz => dataptr(s_fc_new(n,3), i)
              call mk_grav_force_3d(fxp(:,:,:,1), fyp(:,:,:,1), fzp(:,:,:,1), ng_u, &
                                    sox(:,:,:,:), soy(:,:,:,:), soz(:,:,:,:), &
-                                   snx(:,:,:,:), sny(:,:,:,:), snz(:,:,:,:), ng_s, lo, hi)
+                                   snx(:,:,:,:), sny(:,:,:,:), snz(:,:,:,:), ng_s, lo, hi, &
+                                   increment)
           end select
        end do
 
@@ -82,7 +85,7 @@ contains
   end subroutine mk_grav_force
 
   subroutine mk_grav_force_2d(m_forcex,m_forcey,ng_u,rho_oldx,rho_oldy,rho_newx,rho_newy, &
-                              ng_s,lo,hi)
+                              ng_s,lo,hi,increment)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_s
     real(kind=dp_t), intent(inout) :: m_forcex(lo(1)-ng_u:,lo(2)-ng_u:)
@@ -91,29 +94,46 @@ contains
     real(kind=dp_t), intent(in   ) :: rho_oldy(lo(1)-ng_s:,lo(2)-ng_s:,:)
     real(kind=dp_t), intent(in   ) :: rho_newx(lo(1)-ng_s:,lo(2)-ng_s:,:)
     real(kind=dp_t), intent(in   ) :: rho_newy(lo(1)-ng_s:,lo(2)-ng_s:,:)
+    logical        , intent(in   ) :: increment
 
     ! local
     integer i,j
 
-    do j=lo(2),hi(2)
-    do i=lo(1),hi(1)+1
-       m_forcex(i,j) = m_forcex(i,j) + &
-            0.5d0*grav(1)*(rho_oldx(i,j,1)+rho_newx(i,j,1))
-    end do
-    end do
+    if (increment) then
 
-    do j=lo(2),hi(2)+1
-    do i=lo(1),hi(1)
-       m_forcey(i,j) = m_forcey(i,j) + &
-            0.5d0*grav(2)*(rho_oldy(i,j,1)+rho_newy(i,j,1))
-    end do
-    end do
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)+1
+          m_forcex(i,j) = m_forcex(i,j) + 0.5d0*grav(1)*(rho_oldx(i,j,1)+rho_newx(i,j,1))
+       end do
+       end do
+
+       do j=lo(2),hi(2)+1
+       do i=lo(1),hi(1)
+          m_forcey(i,j) = m_forcey(i,j) + 0.5d0*grav(2)*(rho_oldy(i,j,1)+rho_newy(i,j,1))
+       end do
+       end do
+
+    else
+
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)+1
+          m_forcex(i,j) = 0.5d0*grav(1)*(rho_oldx(i,j,1)+rho_newx(i,j,1))
+       end do
+       end do
+
+       do j=lo(2),hi(2)+1
+       do i=lo(1),hi(1)
+          m_forcey(i,j) = 0.5d0*grav(2)*(rho_oldy(i,j,1)+rho_newy(i,j,1))
+       end do
+       end do
+
+    end if
 
   end subroutine mk_grav_force_2d
 
   subroutine mk_grav_force_3d(m_forcex,m_forcey,m_forcez,ng_u, &
                               rho_oldx,rho_oldy,rho_oldz, &
-                              rho_newx,rho_newy,rho_newz,ng_s,lo,hi)
+                              rho_newx,rho_newy,rho_newz,ng_s,lo,hi,increment)
 
     integer        , intent(in   ) :: lo(:),hi(:),ng_u,ng_s
     real(kind=dp_t), intent(inout) :: m_forcex(lo(1)-ng_u:,lo(2)-ng_u:,lo(3)-ng_u:)
@@ -125,36 +145,64 @@ contains
     real(kind=dp_t), intent(in   ) :: rho_newx(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
     real(kind=dp_t), intent(in   ) :: rho_newy(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
     real(kind=dp_t), intent(in   ) :: rho_newz(lo(1)-ng_s:,lo(2)-ng_s:,lo(3)-ng_s:,:)
+    logical        , intent(in   ) :: increment
 
     ! local
     integer i,j,k
 
-    do k=lo(3),hi(3)
-    do j=lo(2),hi(2)
-    do i=lo(1),hi(1)+1
-       m_forcex(i,j,k) = m_forcex(i,j,k) + &
-            0.5d0*grav(1)*(rho_oldx(i,j,k,1)+rho_newx(i,j,k,1))
-    end do
-    end do
-    end do
+    if (increment) then
 
-    do k=lo(3),hi(3)
-    do j=lo(2),hi(2)+1
-    do i=lo(1),hi(1)
-       m_forcey(i,j,k) = m_forcey(i,j,k) + &
-            0.5d0*grav(2)*(rho_oldy(i,j,k,1)+rho_newy(i,j,k,1))
-    end do
-    end do
-    end do
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)+1
+          m_forcex(i,j,k) = m_forcex(i,j,k) + 0.5d0*grav(1)*(rho_oldx(i,j,k,1)+rho_newx(i,j,k,1))
+       end do
+       end do
+       end do
 
-    do k=lo(3),hi(3)+1
-    do j=lo(2),hi(2)
-    do i=lo(1),hi(1)
-       m_forcez(i,j,k) = m_forcez(i,j,k) + &
-            0.5d0*grav(3)*(rho_oldz(i,j,k,1)+rho_newz(i,j,k,1))
-    end do
-    end do
-    end do
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)+1
+       do i=lo(1),hi(1)
+          m_forcey(i,j,k) = m_forcey(i,j,k) + 0.5d0*grav(2)*(rho_oldy(i,j,k,1)+rho_newy(i,j,k,1))
+       end do
+       end do
+       end do
+
+       do k=lo(3),hi(3)+1
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+          m_forcez(i,j,k) = m_forcez(i,j,k) + 0.5d0*grav(3)*(rho_oldz(i,j,k,1)+rho_newz(i,j,k,1))
+       end do
+       end do
+       end do
+
+    else
+
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)+1
+          m_forcex(i,j,k) = 0.5d0*grav(1)*(rho_oldx(i,j,k,1)+rho_newx(i,j,k,1))
+       end do
+       end do
+       end do
+
+       do k=lo(3),hi(3)
+       do j=lo(2),hi(2)+1
+       do i=lo(1),hi(1)
+          m_forcey(i,j,k) = 0.5d0*grav(2)*(rho_oldy(i,j,k,1)+rho_newy(i,j,k,1))
+       end do
+       end do
+       end do
+
+       do k=lo(3),hi(3)+1
+       do j=lo(2),hi(2)
+       do i=lo(1),hi(1)
+          m_forcez(i,j,k) = 0.5d0*grav(3)*(rho_oldz(i,j,k,1)+rho_newz(i,j,k,1))
+       end do
+       end do
+       end do
+
+    end if
 
   end subroutine mk_grav_force_3d
 

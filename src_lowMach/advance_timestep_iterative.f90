@@ -295,12 +295,7 @@ contains
 
     ! compute "old" gravity force
     if (any(grav(1:dm) .ne. 0.d0)) then
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(m_grav_force_old(n,i),0.d0,all=.true.)
-          end do
-       end do
-       call mk_grav_force(mla,m_grav_force_old,rhotot_fc,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,m_grav_force_old,.false.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     if (use_charged_fluid) then
@@ -532,12 +527,7 @@ contains
 
        ! compute new gravity
        if (any(grav(1:dm) .ne. 0.d0)) then
-          do n=1,nlevs
-             do i=1,dm
-                call multifab_setval(m_grav_force_new(n,i),0.d0,all=.true.)
-             end do
-          end do
-          call mk_grav_force(mla,m_grav_force_new,rhotot_fc,rhotot_fc,the_bc_tower)
+          call mk_grav_force(mla,m_grav_force_new,.false.,rhotot_fc,rhotot_fc,the_bc_tower)
        end if
 
        if (use_charged_fluid) then

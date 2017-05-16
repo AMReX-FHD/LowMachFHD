@@ -419,7 +419,7 @@ contains
 
     ! add rho^n*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
+       call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
     end if
 
     ! compute (eta,kappa)^{n+1/2}
@@ -875,7 +875,7 @@ contains
 
     ! add gravity term
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
+       call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
     end if
 
     ! reset inhomogeneous bc condition to deal with reservoirs

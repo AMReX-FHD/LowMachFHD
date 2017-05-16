@@ -232,7 +232,7 @@ contains
 
     ! add rho^n*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     ! initialize rhs_p for gmres solve to zero
@@ -511,7 +511,7 @@ contains
 
     ! add rho^{*,n+1}*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     ! initialize rhs_p for gmres solve to zero
