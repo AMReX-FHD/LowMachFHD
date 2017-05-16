@@ -284,12 +284,7 @@ contains
        call fill_m_stochastic(mla)
 
        ! compute "old" stochastic momentum fluxes
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(stoch_mom_fluxdiv(n,i),0.d0,all=.true.)
-          end do
-       end do
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
@@ -583,7 +578,7 @@ contains
        if (variance_coef_mom .ne. 0.d0) then
 
           ! add "new" stochastic momentum fluxes to stoch_mom_fluxdiv
-          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv, &
+          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.true., &
                                     eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
 
           ! add (1/2) (old + new) stochastic fluxes

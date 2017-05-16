@@ -226,7 +226,7 @@ contains
     if (variance_coef_mom .ne. 0.d0) then
        ! fill the stochastic multifabs with a new set of random numbers
        call fill_m_stochastic(mla)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v,.true., &
                                  eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
     end if
 
@@ -505,7 +505,7 @@ contains
     ! add div(Sigma^(2)) to gmres_rhs_v
     if (variance_coef_mom .ne. 0.d0) then
        weights(:) = 1.d0/sqrt(2.d0)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v,.true., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 

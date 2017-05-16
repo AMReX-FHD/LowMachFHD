@@ -399,14 +399,9 @@ contains
        weights(1) = 1.d0
        weights(2) = 0.d0
 
-       do n=1,nlevs
-          do i=1,dm
-             call setval(stoch_mom_fluxdiv(n,i),0.d0,all=.true.)
-          end do
-       end do
-       ! increment stoch_mom_fluxdiv with div(Sigma^n)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,eta,eta_ed, &
-                                 Temp,Temp_ed,dx,0.5d0*dt,weights)
+       ! compute stoch_mom_fluxdiv = div(Sigma^n) and save for later
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false., &
+                                 eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
 
        ! add div(Sigma^n) to gmres_rhs_v
        do n=1,nlevs
@@ -851,13 +846,8 @@ contains
 
        weights(:) = 1.d0/sqrt(2.d0)
 
-       do n=1,nlevs
-          do i=1,dm
-             call setval(stoch_mom_fluxdiv(n,i),0.d0,all=.true.)
-          end do
-       end do
-       ! increment stoch_mom_fluxdiv with div(Sigma^{n+1/2})
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,eta,eta_ed, &
+       ! compute stoch_mom_fluxdiv = div(Sigma^{n+1/2})
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false.,eta,eta_ed, &
                                  Temp,Temp_ed,dx,dt,weights)
 
        ! add div(Sigma^{n+1/2}) to gmres_rhs_v

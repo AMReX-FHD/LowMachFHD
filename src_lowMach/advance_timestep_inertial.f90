@@ -348,14 +348,9 @@ contains
        ! fill the stochastic multifabs with a new set of random numbers
        call fill_m_stochastic(mla)
 
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(stoch_mom_fluxdiv(n,i),0.d0)
-          end do
-       end do
-       ! increment compute stoch_mom_fluxdiv by div(Sigma^n)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,eta,eta_ed, &
-                                 Temp,Temp_ed,dx,dt,weights)
+       ! compute and save stoch_mom_fluxdiv = div(Sigma^n) (save for later)
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false., &
+                                 eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
 
        ! add div(Sigma^n) to gmres_rhs_v
        do n=1,nlevs
@@ -736,19 +731,15 @@ contains
 
     if (variance_coef_mom .ne. 0.d0) then
 
-       ! compute div(Sigma^n') by incrementing existing stochastic flux and dividing by 2
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,eta,eta_ed, &
-                                 Temp,Temp_ed,dx,dt,weights)
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_s_c(stoch_mom_fluxdiv(n,i),1,0.5d0,1,0)
-          end do
-       end do
+       ! compute div(Sigma^n') by incrementing existing stochastic flux and 
+       ! dividing by 2 before adding to gmres_rhs_v
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.true., &
+                                 eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
 
        ! add div(Sigma^n') to gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
-             call multifab_plus_plus_c(gmres_rhs_v(n,i),1,stoch_mom_fluxdiv(n,i),1,1,0)
+             call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,stoch_mom_fluxdiv(n,i))
           end do
        end do
        

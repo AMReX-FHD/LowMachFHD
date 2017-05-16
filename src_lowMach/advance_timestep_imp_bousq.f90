@@ -234,16 +234,12 @@ contains
     call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! compute stoch_mom_fluxdiv_old = div (sqrt() (W + W^T)^{n:n+1})
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(stoch_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
     if (variance_coef_mom .ne. 0.d0) then   
        ! fill the stochastic momentum multifabs with new sets of random numbers
        call fill_m_stochastic(mla)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_old, &
+
+       ! compute stoch_mom_fluxdiv_old = div (sqrt() (W + W^T)^{n:n+1})
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_old,.false., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
@@ -500,13 +496,8 @@ contains
 
     ! compute stoch_mom_fluxdiv_new = div (sqrt() (W + W^T)^{n:n+1})
     ! (these should only differ from the t^n stochastic fluxdiv because of eta^{n+1,*})
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(stoch_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
     if (variance_coef_mom .ne. 0.d0) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_new, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_new,.false., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
@@ -920,15 +911,10 @@ contains
        end do
     end do
 
-    ! compute stoch_mom_fluxdiv_new = div (sqrt() (W + W^T)^{n:n+1})
-    ! (these should only differ from the t^n stochastic fluxdiv because of eta^{n+1})
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(stoch_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
     if (variance_coef_mom .ne. 0.d0) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_new, &
+       ! compute stoch_mom_fluxdiv_new = div (sqrt() (W + W^T)^{n:n+1})
+       ! (these should only differ from the t^n stochastic fluxdiv because of eta^{n+1})
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_new,.false., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
