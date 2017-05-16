@@ -79,7 +79,6 @@ contains
     type(multifab) ::      bds_force(mla%nlevel)
     type(multifab) ::    gmres_rhs_p(mla%nlevel)
     type(multifab) ::            dpi(mla%nlevel)
-    type(multifab) ::           divu(mla%nlevel)
     type(multifab) ::           conc(mla%nlevel)
     type(multifab) ::     rho_nd_old(mla%nlevel)
     type(multifab) ::        rho_tmp(mla%nlevel)
@@ -131,7 +130,6 @@ contains
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(        dpi(n),mla%la(n),1       ,1)
-       call multifab_build(       divu(n),mla%la(n),1       ,0)
        call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(     p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
@@ -191,13 +189,6 @@ contains
        end if
     end if
 
-    ! build up rhs_v for gmres solve
-    do n=1,nlevs
-       do i=1,dm
-          call setval(gmres_rhs_v(n,i),0.d0,all=.true.)
-       end do
-    end do
-
     ! compute grad pi^{n-1/2}
     call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
@@ -215,10 +206,10 @@ contains
                          the_bc_tower%bc_tower_array)
     end if
 
-    ! subtract grad pi^{n-1/2} from gmres_rhs_v
+    ! set gmres_rhs_v to -grad pi^{n-1/2}
     do n=1,nlevs
        do i=1,dm
-          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradpi(n,i),1,1,0)
+          call multifab_saxpy_5(gmres_rhs_v(n,i),-1.d0,gradpi(n,i),0.d0,gradpi(n,i))
        end do
     end do
 
@@ -234,11 +225,6 @@ contains
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
-
-    ! initialize rhs_p for gmres solve to zero
-    do n=1,nlevs
-       call setval(gmres_rhs_p(n),0.d0,all=.true.)
-    end do
 
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time, &
@@ -290,6 +276,7 @@ contains
     ! put -S = sum_i div(F^n_i)/rhobar_i into gmres_rhs_p (we will later add divu)
     ! if nreactions>0, also add sum_i -(m_i*R^n_i)/rhobar_i
     do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
@@ -336,15 +323,10 @@ contains
     call diffusive_m_fluxdiv(mla,gmres_rhs_v,.true.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! compute div v^{n-1/2}
-    call compute_div(mla,umac,divu,dx,1,1,1)
-
-    ! add div v^{n-1/2} to gmres_rhs_p
+    ! compute div v^{n-1/2} and add to gmres_rhs_p
     ! now gmres_rhs_p = div v^{n-1/2} - S^n
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
-    do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
-    end do
+    call compute_div(mla,umac,gmres_rhs_p,dx,1,1,1,increment_in=.true.)
 
     ! set the initial guess to zero
     do n=1,nlevs
@@ -438,11 +420,8 @@ contains
     end if
 
     ! compute s^{*,n+1/2} = s^n + (dt/2) * (A^n + F^n)
-    ! store result in snew
     do n=1,nlevs
-       call multifab_mult_mult_s_c(rho_update(n),1,0.5d0*dt,nspecies,0)
-       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-       call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+       call multifab_saxpy_4(rho_new(n),rho_old(n),0.5d0*dt,rho_update(n))
     end do
 
     ! compute rhotot from rho in VALID REGION
@@ -471,13 +450,6 @@ contains
     ! Step 5 - Corrector Stokes Solve
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! build up rhs_v for gmres solve
-    do n=1,nlevs
-       do i=1,dm
-          call setval(gmres_rhs_v(n,i),0.d0,all=.true.)
-       end do
-    end do
-
     ! compute grad pi^*
     call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
@@ -495,10 +467,10 @@ contains
                          the_bc_tower%bc_tower_array)
     end if
 
-    ! subtract grad pi^* from gmres_rhs_v
+    ! set gmres_rhs_v to -grad pi^*
     do n=1,nlevs
        do i=1,dm
-          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,gradpi(n,i),1,1,0)
+          call multifab_saxpy_5(gmres_rhs_v(n,i),-1.d0,gradpi(n,i),0.d0,gradpi(n,i))
        end do
     end do
 
@@ -513,11 +485,6 @@ contains
     if (any(grav(1:dm) .ne. 0.d0)) then
        call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
-
-    ! initialize rhs_p for gmres solve to zero
-    do n=1,nlevs
-       call setval(gmres_rhs_p(n),0.d0,all=.true.)
-    end do
 
     ! reset inhomogeneous bc condition to deal with reservoirs
     call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time+0.5d0*dt, &
@@ -629,6 +596,7 @@ contains
     ! put -S = sum_i div(F^{n+1/2}_i)/rhobar_i into gmres_rhs_p (we will later add divu)
     ! if nreactions>0, also add sum_i -(m_i*R^{n+1/2}_i)/rhobar_i
     do n=1,nlevs
+       call setval(gmres_rhs_p(n),0.d0,all=.true.)
        do i=1,nspecies
           call saxpy(gmres_rhs_p(n),1,-1.d0/rhobar(i),diff_mass_fluxdiv(n),i,1)
           if (variance_coef_mass .ne. 0.d0) then
@@ -674,15 +642,10 @@ contains
     call diffusive_m_fluxdiv(mla,gmres_rhs_v,.true.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! compute div v^*
-    call compute_div(mla,umac,divu,dx,1,1,1)
-
-    ! add div v^* to gmres_rhs_p
+    ! compute div v^*and add to gmres_rhs_p
     ! now gmres_rhs_p = div v^* - S^{*,n+1/2}
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
-    do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
-    end do
+    call compute_div(mla,umac,gmres_rhs_p,dx,1,1,1,increment_in=.true.)
 
     ! set the initial guess to zero
     do n=1,nlevs
@@ -756,9 +719,7 @@ contains
 
     ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})
     do n=1,nlevs
-       call multifab_mult_mult_s_c(rho_update(n),1,dt,nspecies,0)
-       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-       call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+       call multifab_saxpy_4(rho_new(n),rho_old(n),dt,rho_update(n))
     end do
 
     ! project rho onto eos
@@ -796,7 +757,6 @@ contains
        call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
-       call multifab_destroy(divu(n))
        call multifab_destroy(conc(n))
        call multifab_destroy(p_baro(n))
        do i=1,dm

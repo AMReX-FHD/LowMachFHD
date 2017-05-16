@@ -460,13 +460,10 @@ contains
        call zero_edgeval_physical(gmres_rhs_v(n,:),1,1,the_bc_tower%bc_tower_array(n))
     end do
 
-    ! reset rho_update for all scalars to zero
-    ! then, set rho_update to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
+    ! set rho_update to F^{*,n+1} = div(rho*chi grad c)^{*,n+1} + div(Psi^n)
     ! it is used in Step 5 below
     do n=1,nlevs
-       call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
-       ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_copy_c(rho_update(n),1, diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
        end if
@@ -600,12 +597,11 @@ contains
        call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
 
        ! snew = s^{n+1} 
-       !      = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1})
+       !      = (1/2)*(s^n + s^{*,n+1} + dt*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1}))
        do n=1,nlevs
           call multifab_plus_plus_c(rho_new(n),1,rho_old(n),1,nspecies,0)
+          call multifab_saxpy_3(rho_new(n),dt,rho_update(n))
           call multifab_mult_mult_s_c(rho_new(n),1,0.5d0,nspecies,0)
-          call multifab_mult_mult_s_c(rho_update(n),1,dt/2.d0,nspecies,0)
-          call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
        end do
 
     end if
