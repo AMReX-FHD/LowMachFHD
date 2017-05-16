@@ -720,9 +720,9 @@ contains
     !==========================================================
  
     ! compute chilocal inverse
-    !call dgetrf(nspecies, nspecies, chilocal, nspecies, ipiv, info) 
-    !call dgetri(nspecies, chilocal, nspecies, ipiv, work, nspecies, info) 
-    stop "LAPACK95 dget? disabled"
+    call dgetrf(nspecies, nspecies, chilocal, nspecies, ipiv, info) 
+    call dgetri(nspecies, chilocal, nspecies, ipiv, work, nspecies, info) 
+    !stop "LAPACK95 dget? disabled"
 
     ! populate chi with B^(-1)
     chi = chilocal   
@@ -734,8 +734,8 @@ contains
 
     ! SVD decomposition of chilocal = U * S * VTranspose; note that chilocal 
     ! is changed. also V=(VT)T, UT = (U)T are needed for pseudoinverse of chilocal.
-    stop "LAPACK95 la_gesvd disabled"
-    !call la_gesvd(chilocal, S, U, VT)
+    !stop "LAPACK95 la_gesvd disabled"
+    call la_gesvd(chilocal, S, U, VT)
     V = transpose(VT)
     UT = transpose(U)
    
@@ -1212,8 +1212,8 @@ contains
     ! compute cell-centered Cholesky factor, sqrtLonsager
     if(use_lapack) then
        
-       !call dpotrf_f95(sqrtLonsager,'L', rcond, 'I', info)
-       stop "LAPACK95 dpotrf_f95 disabled"
+       call dpotrf_f95(sqrtLonsager,'L', rcond, 'I', info)
+       !stop "LAPACK95 dpotrf_f95 disabled"
     
        ! remove all upper-triangular entries and NXN entry that lapack doesn't set to zero 
        do row=1, nspecies
