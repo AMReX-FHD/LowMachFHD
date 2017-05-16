@@ -169,7 +169,7 @@
   ! Physical properties:
   !----------------------
   
-  fraction_tolerance = 1.d-12 ! For roundoff errors in mass and mole fractions
+  fraction_tolerance = 1.d-64 ! For roundoff errors in mass and mole fractions
   start_time = 0.d0
 
   inverse_type = 1       ! Only for LAPACK:  1=inverse, 2=pseudo inverse
