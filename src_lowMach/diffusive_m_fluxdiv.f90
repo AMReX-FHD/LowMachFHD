@@ -13,11 +13,13 @@ module diffusive_m_fluxdiv_module
 
 contains
 
-  subroutine diffusive_m_fluxdiv(mla,m_update,umac,eta,eta_ed,kappa,dx,the_bc_level)
+  subroutine diffusive_m_fluxdiv(mla,m_update,increment,umac, &
+                                 eta,eta_ed,kappa,dx,the_bc_level)
 
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: m_update(:,:)
+    logical        , intent(in   ) :: increment
     type(multifab) , intent(in   ) ::     umac(:,:)
     type(multifab) , intent(in   ) ::      eta(:)
     type(multifab) , intent(in   ) ::   eta_ed(:,:)
@@ -40,7 +42,6 @@ contains
 
     do n=1,nlevs
        do i=1,dm
-          call multifab_build_edge(Lphi_fc(n,i),mla%la(n),1,0,i)
           call multifab_build_edge(alpha_fc(n,i),mla%la(n),1,0,i)
           ! set alpha to zero
           call setval(alpha_fc(n,i),0.d0,all=.true.)
@@ -49,21 +50,44 @@ contains
 
     do n=1,nlevs
 
-       ! compute -L(phi)
-       ! we could compute +L(phi) but then we'd have to multiply beta and kappa by -1
-       call stag_applyop_level(mla%la(n),the_bc_level(n),umac(n,:),Lphi_fc(n,:), &
-                               alpha_fc(n,:),eta(n),eta_ed(n,:),kappa(n),dx(n,:))
+       if (increment) then
 
-       ! subtract -L(phi) to m_update
-       do i=1,dm
-          call multifab_sub_sub_c(m_update(n,i),1,Lphi_fc(n,i),1,1,0)
-       end do
+          do i=1,dm
+             call multifab_build_edge(Lphi_fc(n,i),mla%la(n),1,0,i)
+          end do
+
+          ! compute -L(phi)
+          ! we could compute +L(phi) but then we'd have to multiply beta and kappa by -1
+          call stag_applyop_level(mla%la(n),the_bc_level(n),umac(n,:),Lphi_fc(n,:), &
+                                  alpha_fc(n,:),eta(n),eta_ed(n,:),kappa(n),dx(n,:))
+
+          ! subtract -L(phi) from m_update
+          do i=1,dm
+             call multifab_sub_sub_c(m_update(n,i),1,Lphi_fc(n,i),1,1,0)
+          end do
+
+          do i=1,dm
+             call multifab_destroy(Lphi_fc(n,i))
+          end do
+
+       else
+
+          ! compute -L(phi)
+          ! we could compute +L(phi) but then we'd have to multiply beta and kappa by -1
+          call stag_applyop_level(mla%la(n),the_bc_level(n),umac(n,:),m_update(n,:), &
+                                  alpha_fc(n,:),eta(n),eta_ed(n,:),kappa(n),dx(n,:))
+          
+          ! multiply m_update by -1
+          do i=1,dm
+             call multifab_mult_mult_s_c(m_update(n,i),1,-1.d0,1)
+          end do
+
+       end if
 
     end do
 
     do n=1,nlevs
        do i=1,dm
-          call multifab_destroy(Lphi_fc(n,i))
           call multifab_destroy(alpha_fc(n,i))
        end do
     end do

@@ -383,12 +383,7 @@ contains
     end do
 
     ! compute diff_mom_fluxdiv = (1/2) A_0^n v^n (to be used later)
-    do n=1,nlevs
-       do i=1,dm
-          call setval(diff_mom_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
     do n=1,nlevs
        do i=1,dm
@@ -589,30 +584,23 @@ contains
        end do
     end do
 
-   ! compute mtemp = rho^{n+1/2} * vbar^n
-   call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
+    ! compute mtemp = rho^{n+1/2} * vbar^n
+    call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
-   do n=1,nlevs
-      do i=1,dm
+    do n=1,nlevs
+       do i=1,dm
 
-         ! multiply mtemp by 1/(dt/2)
-         call multifab_mult_mult_s_c(mtemp(n,i),1,2.d0/dt,1,0)
+          ! multiply mtemp by 1/(dt/2)
+          call multifab_mult_mult_s_c(mtemp(n,i),1,2.d0/dt,1,0)
 
-         ! subtract rho^{n+1/2} * vbar^n / (dt/2) from gmres_rhs_v
-         call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
+          ! subtract rho^{n+1/2} * vbar^n / (dt/2) from gmres_rhs_v
+          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
 
-      end do
-   end do
-
-   do n=1,nlevs
-      do i=1,dm
-         ! reset mtemp
-         call multifab_setval(mtemp(n,i),0.d0,all=.true.)
-      end do
-   end do
+       end do
+    end do
 
     ! compute mtemp = A_0^n vbar^n
-    call diffusive_m_fluxdiv(mla,mtemp,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,mtemp,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! add A_0^n vbar^n to gmres_rhs_v
@@ -1021,13 +1009,8 @@ contains
    end do
 
     ! set diff_mom_fluxdiv = A_0^{n+1} vbar^{n+1/2}
-    do n=1,nlevs
-       do i=1,dm
-          call setval(diff_mom_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,umac,eta,eta_ed,kappa,dx, &
-                             the_bc_tower%bc_tower_array)
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,.false.,umac, &
+                             eta,eta_ed,kappa,dx,the_bc_tower%bc_tower_array)
 
     ! add (1/2) A_0^{n+1} vbar^{n+1/2} to gmres_rhs_v
     do n=1,nlevs

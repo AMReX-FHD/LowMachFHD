@@ -234,12 +234,7 @@ contains
     call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,dx,1,nspecies)
 
     ! compute diff_mom_fluxdiv_old = L_0^n v^n
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(diff_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! compute stoch_mom_fluxdiv_old = div (sqrt() (W + W^T)^{n:n+1})
@@ -505,12 +500,7 @@ contains
     end do
 
     ! compute diff_mom_fluxdiv_new = L_0^{n+1,*} vbar, where vbar = v^n with t^{n+1} bc's
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(diff_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! add (1/2) (L_0^n v^n + L_0^{n+1,*} vbar^n)
@@ -940,12 +930,7 @@ contains
     end do
 
     ! compute diff_mom_fluxdiv_new = L_0^{n+1} vbar, where vbar = v^{n+1,*} with t^{n+1} bc's
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(diff_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! add (1/2) (L_0^n v^n + L_0^{n+1} vbar^{n+1,*})

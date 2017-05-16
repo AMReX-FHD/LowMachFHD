@@ -279,12 +279,7 @@ contains
     ! t^n terms for gmres_rhs_v that do not change with iteration
 
     ! compute A_0^n v^n
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(diff_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     if (variance_coef_mom .ne. 0.d0) then   
@@ -590,13 +585,8 @@ contains
        end do
 
        ! compute A_0^{n+1,l+1} vbar^{n+1,l}
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(diff_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-          end do
-       end do
-       call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
-                                the_bc_tower%bc_tower_array)
+       call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,.false.,umac, &
+                                eta,eta_ed,kappa,dx,the_bc_tower%bc_tower_array)
 
        ! add (1/2) (A_0^n v^n + A_0^{n+1,l+1} vbar^{n+1,l})
        do n=1,nlevs

@@ -333,7 +333,7 @@ contains
     end do
 
     ! add A_0^n v^{n-1/2} to gmres_rhs_v
-    call diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,gmres_rhs_v,.true.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! compute div v^{n-1/2}
