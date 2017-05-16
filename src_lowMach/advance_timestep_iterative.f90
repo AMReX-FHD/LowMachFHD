@@ -267,10 +267,7 @@ contains
     end do
 
     ! compute "old" advective mass fluxes and copy into new
-    do n=1,nlevs
-       call multifab_setval(adv_mass_fluxdiv_old(n),0.d0)
-    end do
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,.false.,dx,1,nspecies)
     do n=1,nlevs
        call multifab_copy_c(adv_mass_fluxdiv_new(n),1,adv_mass_fluxdiv_old(n),1,nspecies,0)
     end do
@@ -335,10 +332,7 @@ contains
        if (l .gt. 1) then
 
           ! compute adv_mass_fluxdiv_new = div(-rho^{n+1,l} w^{n+1,l} v^{n+1,l})
-          do n=1,nlevs
-             call multifab_setval(adv_mass_fluxdiv_new(n),0.d0)
-          end do
-          call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_new,dx,1,nspecies)
+          call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_new,.false.,dx,1,nspecies)
 
           ! compute mtemp = rho^{n+1,l} v^{n+1,l}
           call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)

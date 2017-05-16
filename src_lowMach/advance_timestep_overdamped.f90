@@ -434,7 +434,7 @@ contains
                         c_bc_comp,the_bc_tower,proj_type_in=2)
       end if
     else
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
     end if
 
     ! compute s^{*,n+1/2} = s^n + (dt/2) * (A^n + F^n)
@@ -671,7 +671,7 @@ contains
     end do
 
     ! add A_0^* v^* to gmres_rhs_v
-    call diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,gmres_rhs_v,.true.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! compute div v^*
@@ -751,7 +751,7 @@ contains
                         c_bc_comp,the_bc_tower,proj_type_in=2)
       end if
     else
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
     end if
 
     ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})

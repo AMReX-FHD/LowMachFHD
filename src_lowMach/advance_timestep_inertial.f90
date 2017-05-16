@@ -241,7 +241,7 @@ contains
     else
 
        ! compute A^n for scalars using centered advection
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
 
     end if
 
@@ -621,7 +621,7 @@ contains
     else
 
        ! compute A^{*,n+1} for scalars using centered advection
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
 
        ! snew = s^{n+1} 
        !      = (1/2)*s^n + (1/2)*s^{*,n+1} + (dt/2)*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1})

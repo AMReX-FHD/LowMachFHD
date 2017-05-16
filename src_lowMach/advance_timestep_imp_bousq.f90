@@ -228,10 +228,7 @@ contains
     end do
 
     ! compute adv_mass_fluxdiv_old = -div(rho v w)^n
-    do n=1,nlevs
-       call multifab_setval(adv_mass_fluxdiv_old(n),0.d0)
-    end do
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,.false.,dx,1,nspecies)
 
     ! compute diff_mom_fluxdiv_old = L_0^n v^n
     call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,.false.,umac,eta,eta_ed,kappa,dx, &
@@ -623,10 +620,7 @@ contains
     call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
     ! compute -div(rho v w)^{n+1,*}
-    do n=1,nlevs
-       call multifab_setval(adv_mass_fluxdiv(n),0.d0)
-    end do
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
 
     ! compute advective flux divergence, adv_mom_fluxdiv_new = div(-rho v v)^{n+1,*}
     call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,.false., &
