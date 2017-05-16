@@ -95,7 +95,6 @@ contains
     type(multifab) :: adv_mass_fluxdiv_new(mla%nlevel)
     type(multifab) ::          gmres_rhs_p(mla%nlevel)
     type(multifab) ::                  dpi(mla%nlevel)
-    type(multifab) ::                 divu(mla%nlevel)
     type(multifab) ::                 conc(mla%nlevel)
     type(multifab) ::                S_inc(mla%nlevel)
 
@@ -160,7 +159,6 @@ contains
        call multifab_build(adv_mass_fluxdiv_new(n),mla%la(n),nspecies,0)
        call multifab_build(      gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(              dpi(n),mla%la(n),1       ,1)
-       call multifab_build(             divu(n),mla%la(n),1       ,0)
        call multifab_build(             conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        do i=1,dm
           call multifab_build_edge(                mold(n,i),mla%la(n),1       ,1,i)
@@ -684,15 +682,10 @@ contains
           end do
        end do
 
-       ! compute div vbar^{n+1,l}
-       call compute_div(mla,umac,divu,dx,1,1,1)
-
        ! add div vbar^{n+1,l} to gmres_rhs_p
        ! now gmres_rhs_p = div vbar^{n+1,l} - S^{n+1,l+1}
        ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
-       do n=1,nlevs
-          call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
-       end do
+       call compute_div(mla,umac,gmres_rhs_p,dx,1,1,1,increment_in=.true.)
 
        ! Compute Velocity Constraint Correction
        if (dpdt_factor .ne. 0.d0) then
@@ -785,7 +778,6 @@ contains
        call multifab_destroy(adv_mass_fluxdiv_new(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
-       call multifab_destroy(divu(n))
        call multifab_destroy(conc(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))

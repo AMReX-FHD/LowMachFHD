@@ -87,7 +87,6 @@ contains
     type(multifab) ::      bds_force(mla%nlevel)
     type(multifab) ::    gmres_rhs_p(mla%nlevel)
     type(multifab) ::            dpi(mla%nlevel)
-    type(multifab) ::           divu(mla%nlevel)
     type(multifab) ::           conc(mla%nlevel)
     type(multifab) ::     rho_nd_old(mla%nlevel)
     type(multifab) ::        rho_tmp(mla%nlevel)
@@ -160,7 +159,6 @@ contains
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(        dpi(n),mla%la(n),1       ,1)
-       call multifab_build(       divu(n),mla%la(n),1       ,0)
        call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(     p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
@@ -297,9 +295,7 @@ contains
 
     ! set rho_new = rho_old + (dt/2) * (A^n + D^n + St^n)
     do n=1,nlevs
-       call multifab_mult_mult_s_c(rho_update(n),1,0.5d0*dt,nspecies,0)
-       call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-       call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+       call multifab_saxpy_4(rho_new(n),rho_old(n),0.5d0*dt,rho_update(n))
     end do
 
     ! compute rhotot from rho in VALID REGION
@@ -335,15 +331,13 @@ contains
     ! Step 4 - Predictor Crank-Nicolson Step
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! build up rhs_v for gmres solve: first set gmres_rhs_v to mold/(dt/2)
-
     ! compute mold
     call convert_m_to_umac(mla,rhotot_fc_old,mold,umac,.false.)
 
+    ! build up rhs_v for gmres solve: first set gmres_rhs_v to mold/(dt/2)
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(gmres_rhs_v(n,i),1,mold(n,i),1,1,0)
-          call multifab_mult_mult_s_c(gmres_rhs_v(n,i),1,2.d0/dt,1,0)
+          call multifab_saxpy_5(gmres_rhs_v(n,i),2.d0/dt,mold(n,i),0.d0,mold(n,i))
        end do
     end do
 
@@ -382,14 +376,9 @@ contains
        end do
     end do
 
-    ! compute diff_mom_fluxdiv = (1/2) A_0^n v^n (to be used later)
+    ! compute diff_mom_fluxdiv = A_0^n v^n (to be used later)
     call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_s_c(diff_mom_fluxdiv(n,i),1,0.5d0,1,0)
-       end do
-    end do
 
     if (variance_coef_mom .ne. 0.d0) then
 
@@ -582,15 +571,10 @@ contains
     ! compute mtemp = rho^{n+1/2} * vbar^n
     call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
+    ! subtract rho^{n+1/2} * vbar^n / (dt/2) from gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-
-          ! multiply mtemp by 1/(dt/2)
-          call multifab_mult_mult_s_c(mtemp(n,i),1,2.d0/dt,1,0)
-
-          ! subtract rho^{n+1/2} * vbar^n / (dt/2) from gmres_rhs_v
-          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
-
+          call multifab_saxpy_3(gmres_rhs_v(n,i),-2.d0/dt,mtemp(n,i))
        end do
     end do
 
@@ -598,7 +582,7 @@ contains
     call diffusive_m_fluxdiv(mla,mtemp,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! add A_0^n vbar^n to gmres_rhs_v
+    ! add A_0^{n+1/2} vbar^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
@@ -618,15 +602,10 @@ contains
        end if
     end do
 
-    ! compute div vbar^n
-    call compute_div(mla,umac,divu,dx,1,1,1)
-
     ! add div vbar^n to gmres_rhs_p
     ! now gmres_rhs_p = div vbar^n - S^{*,n+1}
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
-    do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
-    end do
+    call compute_div(mla,umac,gmres_rhs_p,dx,1,1,1,increment_in=.true.)
 
     ! set the initial guess to zero
     do n=1,nlevs
@@ -695,6 +674,8 @@ contains
     ! add A^{n+1/2} for rho to rho_update
     if (advection_type .ge. 1) then
 
+       call bl_error("fix bds for inertial midpoint algorithm")
+
        do n=1,nlevs
           ! bds force currently contains D^n + St^n
           ! add D^{*,n+1} + St^{*,n+1} and then multiply by 1/2
@@ -739,9 +720,7 @@ contains
 
        ! snew = s^{n+1} = s^n + dt*(A^{n+1/2} + D^{n+1/2} + St^{n+1/2})
        do n=1,nlevs
-          call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-          call multifab_mult_mult_s_c(rho_update(n),1,dt,nspecies,0)
-          call multifab_plus_plus_c(rho_new(n),1,rho_update(n),1,nspecies,0)
+          call multifab_saxpy_4(rho_new(n),rho_old(n),dt,rho_update(n))
        end do
 
     end if
@@ -793,8 +772,7 @@ contains
     ! build up rhs_v for gmres solve: first set gmres_rhs_v to mold/dt
     do n=1,nlevs
        do i=1,dm
-          call multifab_copy_c(gmres_rhs_v(n,i),1,mold(n,i),1,1,0)
-          call multifab_mult_mult_s_c(gmres_rhs_v(n,i),1,1.d0/dt,1,0)
+          call multifab_saxpy_5(gmres_rhs_v(n,i),1.d0/dt,mold(n,i),0.d0,mold(n,i))
        end do
     end do
 
@@ -834,11 +812,11 @@ contains
        end do
     end do
 
-    ! diff_mom_fluxdiv already contains (1/2) A_0^n v^n
+    ! diff_mom_fluxdiv already contains A_0^n v^n
     ! add (1/2) A_0^n v^n to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,diff_mom_fluxdiv(n,i),1,1,0)
+          call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,diff_mom_fluxdiv(n,i))
        end do
     end do
 
@@ -847,8 +825,8 @@ contains
        weights(:) = 1.d0/sqrt(2.d0)
 
        ! compute stoch_mom_fluxdiv = div(Sigma^{n+1/2})
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false.,eta,eta_ed, &
-                                 Temp,Temp_ed,dx,dt,weights)
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv, &
+                                 .false.,eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
 
        ! add div(Sigma^{n+1/2}) to gmres_rhs_v
        do n=1,nlevs
@@ -1005,20 +983,14 @@ contains
     ! add (1/2) A_0^{n+1} vbar^{n+1/2} to gmres_rhs_v
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_s_c(diff_mom_fluxdiv(n,i),1,0.5d0,1,0)
-          call multifab_plus_plus_c(gmres_rhs_v(n,i),1,diff_mom_fluxdiv(n,i),1,1,0)
+          call multifab_saxpy_3(gmres_rhs_v(n,i),0.5d0,diff_mom_fluxdiv(n,i))
        end do
     end do
-
-    ! compute div(vbar^{n+1/2})
-    call compute_div(mla,umac,divu,dx,1,1,1)
 
     ! add div(vbar^{n+1/2}) to gmres_rhs_p
     ! now gmres_rhs_p = div(vbar^{n+1/2}) - S^{n+1}
     ! the sign convention is correct since we solve -div(delta v) = gmres_rhs_p
-    do n=1,nlevs
-       call multifab_plus_plus_c(gmres_rhs_p(n),1,divu(n),1,1,0)
-    end do
+    call compute_div(mla,umac,gmres_rhs_p,dx,1,1,1,increment_in=.true.)
 
     ! multiply eta and kappa by 1/2 to put in proper form for gmres solve
     do n=1,nlevs
@@ -1094,7 +1066,6 @@ contains
        call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
-       call multifab_destroy(divu(n))
        call multifab_destroy(conc(n))
        call multifab_destroy(p_baro(n))
        do i=1,dm
