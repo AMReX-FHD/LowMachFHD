@@ -86,7 +86,7 @@ contains
     narg = command_argument_count()
 
     ! here we set some random values to be replaced from the input file
-    fraction_tolerance = 1e-13 
+    fraction_tolerance = 1d-64 ! We have tests that show this can be very small so long as not exactly zero 
     start_time         = 0.0d0 
     inverse_type       = 1
     correct_flux       = .true.
