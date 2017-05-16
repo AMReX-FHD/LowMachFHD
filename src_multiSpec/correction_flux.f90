@@ -5,7 +5,6 @@ module correction_flux_module
   use define_bc_module
   use bc_module
   use probin_common_module, only: nspecies
-  use probin_multispecies_module, only: fraction_tolerance
 
   implicit none
 
@@ -98,18 +97,12 @@ contains
             ! caculate corr and print error if not zero 
             corr = flux_x(i,j,nspecies) + sumx
             
-            if(corr .gt. rhotot(i,j)*fraction_tolerance) then
-               !write(*,*) "Error: sum of x-fluxes = ", corr, " fluxes=", flux_x(i,j,:)
-            end if
-              
             ! correct x-flux for last species  
             flux_x(i,j,nspecies) = -sumx     
             total_corr = total_corr + abs(corr)
-            !if(i .eq. 32 .and. j.gt.13 .and. j.lt.19) print*, 'x-flux=', flux_x(i,j,:)
 
          end do
       end do
-      !write(*,*) "x flux correction = ", total_corr
    
       ! y-faces
       total_corr=0.0d0
@@ -128,18 +121,12 @@ contains
             ! caculate corr and print error if not zero 
             corr = flux_y(i,j,nspecies) + sumy
             
-            if(corr .gt. rhotot(i,j)*fraction_tolerance) then
-               !write(*,*) "Error: sum of y-fluxes = ", corr, " fluxes=", flux_y(i,j,:)
-            end if
-              
             ! correct y-flux for last species  
             flux_y(i,j,nspecies) = -sumy             
             total_corr = total_corr + abs(corr)
-            !if(i .eq. 32 .and. j.gt.14 .and. j.lt.18) print*, 'y-flux=', flux_y(i,j,:)
 
          end do
       end do
-     !write(*,*) "y flux correction = ", total_corr
 
     end subroutine correction_flux_2d
 
@@ -174,10 +161,6 @@ contains
                ! caculate corr and print error if not zero 
                corr = flux_x(i,j,k,nspecies) + sumx 
               
-               if(corr .gt. rhotot(i,j,k)*fraction_tolerance) then
-                  !write(*,*) "Error: sum of x-fluxes = ", corr, " fluxes=", flux_x(i,j,k,:)
-               end if
-              
                ! correct x-flux for last species  
                flux_x(i,j,k,nspecies) = -sumx             
                total_corr = total_corr + abs(corr) 
@@ -185,7 +168,6 @@ contains
             end do
          end do
       end do
-      !write(*,*) "x flux correction = ", total_corr
       
       ! y-faces
       total_corr=0.0d0
@@ -205,10 +187,6 @@ contains
                ! caculate corr and print error if not zero 
                corr = flux_y(i,j,k,nspecies) + sumy 
                
-               if(corr .gt. rhotot(i,j,k)*fraction_tolerance) then
-                  !write(*,*) "Error: sum of y-fluxes = ", corr, " fluxes=", flux_y(i,j,k,:)
-               end if
-              
                ! correct y-flux for last species  
                flux_y(i,j,k,nspecies) = -sumy             
                total_corr = total_corr + abs(corr) 
@@ -216,7 +194,6 @@ contains
             end do
          end do
       end do
-      !write(*,*) "y flux correction = ", total_corr
 
       ! z-faces
       total_corr=0.0d0
@@ -236,10 +213,6 @@ contains
                ! caculate corr and print error if not zero 
                corr = flux_z(i,j,k,nspecies) + sumz 
                
-               if(corr .gt. rhotot(i,j,k)*fraction_tolerance) then
-                  !write(*,*) "Error: sum of z-fluxes = ", corr, " fluxes=", flux_z(i,j,k,:)
-               end if
-              
                ! correct z-flux for last species  
                flux_z(i,j,k,nspecies) = -sumz             
                total_corr = total_corr + abs(corr) 
@@ -247,7 +220,6 @@ contains
             end do
          end do
       end do
-      !write(*,*) "z flux correction = ", total_corr
 
     end subroutine correction_flux_3d
 
