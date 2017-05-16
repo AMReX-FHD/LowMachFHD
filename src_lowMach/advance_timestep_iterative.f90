@@ -267,10 +267,7 @@ contains
     end do
 
     ! compute "old" advective mass fluxes and copy into new
-    do n=1,nlevs
-       call multifab_setval(adv_mass_fluxdiv_old(n),0.d0)
-    end do
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,.false.,dx,1,nspecies)
     do n=1,nlevs
        call multifab_copy_c(adv_mass_fluxdiv_new(n),1,adv_mass_fluxdiv_old(n),1,nspecies,0)
     end do
@@ -279,12 +276,7 @@ contains
     ! t^n terms for gmres_rhs_v that do not change with iteration
 
     ! compute A_0^n v^n
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(diff_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     if (variance_coef_mom .ne. 0.d0) then   
@@ -292,23 +284,13 @@ contains
        call fill_m_stochastic(mla)
 
        ! compute "old" stochastic momentum fluxes
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(stoch_mom_fluxdiv(n,i),0.d0,all=.true.)
-          end do
-       end do
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
     ! compute "old" gravity force
     if (any(grav(1:dm) .ne. 0.d0)) then
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(m_grav_force_old(n,i),0.d0,all=.true.)
-          end do
-       end do
-       call mk_grav_force(mla,m_grav_force_old,rhotot_fc,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,m_grav_force_old,.false.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     if (use_charged_fluid) then
@@ -321,12 +303,8 @@ contains
     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
 
     ! compute adv_mom_fluxdiv_old = div(-rho^n v^n v^n) and copy into new
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(adv_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv_old,dx,the_bc_tower%bc_tower_array)
+    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv_old,.false., &
+                                dx,the_bc_tower%bc_tower_array)
     do n=1,nlevs
        do i=1,dm
           call multifab_copy_c(adv_mom_fluxdiv_new(n,i),1,adv_mom_fluxdiv_old(n,i),1,1,0)
@@ -344,21 +322,14 @@ contains
        if (l .gt. 1) then
 
           ! compute adv_mass_fluxdiv_new = div(-rho^{n+1,l} w^{n+1,l} v^{n+1,l})
-          do n=1,nlevs
-             call multifab_setval(adv_mass_fluxdiv_new(n),0.d0)
-          end do
-          call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_new,dx,1,nspecies)
+          call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_new,.false.,dx,1,nspecies)
 
           ! compute mtemp = rho^{n+1,l} v^{n+1,l}
           call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
           ! compute adv_mom_fluxdiv_new = div(-rho^{n+1,l} v^{n+1,l} v^{n+1,l})
-          do n=1,nlevs
-             do i=1,dm
-                call multifab_setval(adv_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-             end do
-          end do
-          call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,dx,the_bc_tower%bc_tower_array)
+          call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,.false., &
+                                      dx,the_bc_tower%bc_tower_array)
 
        end if
 
@@ -551,12 +522,7 @@ contains
 
        ! compute new gravity
        if (any(grav(1:dm) .ne. 0.d0)) then
-          do n=1,nlevs
-             do i=1,dm
-                call multifab_setval(m_grav_force_new(n,i),0.d0,all=.true.)
-             end do
-          end do
-          call mk_grav_force(mla,m_grav_force_new,rhotot_fc,rhotot_fc,the_bc_tower)
+          call mk_grav_force(mla,m_grav_force_new,.false.,rhotot_fc,rhotot_fc,the_bc_tower)
        end if
 
        if (use_charged_fluid) then
@@ -598,13 +564,8 @@ contains
        end do
 
        ! compute A_0^{n+1,l+1} vbar^{n+1,l}
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_setval(diff_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-          end do
-       end do
-       call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
-                                the_bc_tower%bc_tower_array)
+       call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,.false.,umac, &
+                                eta,eta_ed,kappa,dx,the_bc_tower%bc_tower_array)
 
        ! add (1/2) (A_0^n v^n + A_0^{n+1,l+1} vbar^{n+1,l})
        do n=1,nlevs
@@ -617,7 +578,7 @@ contains
        if (variance_coef_mom .ne. 0.d0) then
 
           ! add "new" stochastic momentum fluxes to stoch_mom_fluxdiv
-          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv, &
+          call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.true., &
                                     eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
 
           ! add (1/2) (old + new) stochastic fluxes

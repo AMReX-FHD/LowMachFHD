@@ -39,12 +39,13 @@ module stochastic_m_fluxdiv_module
 contains
 
   ! Note that here we *increment* stoch_m_force so it must be initialized externally!
-  subroutine stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,eta,eta_ed, &
+  subroutine stochastic_m_fluxdiv(mla,the_bc_level,stoch_m_force,increment,eta,eta_ed, &
                                   temperature,temperature_ed,dx,dt,weights)
     
     type(ml_layout), intent(in   ) :: mla
     type(bc_level) , intent(in   ) :: the_bc_level(:)
     type(multifab) , intent(inout) :: stoch_m_force(:,:)
+    logical        , intent(in   ) :: increment
     type(multifab) , intent(in   ) :: eta(:)              ! cell-centered
     type(multifab) , intent(in   ) :: eta_ed(:,:)         ! nodal (2D), edge-based (3D)
     type(multifab) , intent(in   ) :: temperature(:)      ! cell-centered
@@ -243,7 +244,7 @@ contains
           case (2)
              sp => dataptr(mflux_nd_temp(n), i)
              call stoch_m_force_2d(fp(:,:,1,:), sp(:,:,1,:), dxp(:,:,1,1), dyp(:,:,1,1), &
-                                   ng_c, ng_n, ng_f, dx(n,:), lo, hi)
+                                   ng_c, ng_n, ng_f, dx(n,:), lo, hi, increment)
           case (3)
              dzp => dataptr(stoch_m_force(n,3), i)
              fxp => dataptr(mflux_ed_temp(n,1), i)
@@ -251,7 +252,7 @@ contains
              fzp => dataptr(mflux_ed_temp(n,3), i)
              call stoch_m_force_3d(fp(:,:,:,:), fxp(:,:,:,:), fyp(:,:,:,:), fzp(:,:,:,:), &
                                    dxp(:,:,:,1), dyp(:,:,:,1), dzp(:,:,:,1), &
-                                   ng_c, ng_e, ng_f, dx(n,:), lo, hi)
+                                   ng_c, ng_e, ng_f, dx(n,:), lo, hi, increment)
 
           end select
        end do
@@ -277,7 +278,7 @@ contains
   contains
     
     subroutine mult_by_sqrt_eta_2d(mflux_cc,ng_c,mflux_nd,ng_n,eta,ng_y,eta_nodal,ng_w, &
-         temperature,ng_t,temperature_nodal,ng_m,lo,hi)
+                                   temperature,ng_t,temperature_nodal,ng_m,lo,hi)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_n,ng_y,ng_w,ng_t,ng_m
       real(kind=dp_t), intent(inout) ::          mflux_cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
@@ -449,7 +450,7 @@ contains
 
     end subroutine mflux_bc_3d
 
-    subroutine stoch_m_force_2d(flux_cc,flux_nd,divx,divy,ng_c,ng_n,ng_f,dx,lo,hi)
+    subroutine stoch_m_force_2d(flux_cc,flux_nd,divx,divy,ng_c,ng_n,ng_f,dx,lo,hi,increment)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_n,ng_f
       real(kind=dp_t), intent(in   ) :: flux_cc(lo(1)-ng_c:,lo(2)-ng_c:,:)
@@ -457,39 +458,55 @@ contains
       real(kind=dp_t), intent(inout) ::    divx(lo(1)-ng_f:,lo(2)-ng_f:)
       real(kind=dp_t), intent(inout) ::    divy(lo(1)-ng_f:,lo(2)-ng_f:)
       real(kind=dp_t), intent(in   ) :: dx(:)
+      logical        , intent(in   ) :: increment
 
       integer :: i,j
       real(kind=dp_t) :: dxinv
 
       dxinv = 1.d0/dx(1)
 
-      ! divergence on x-faces
-      do j=lo(2),hi(2)
+      if (increment) then
+
+         ! divergence on x-faces
+         do j=lo(2),hi(2)
          do i=lo(1),hi(1)+1
-
-            divx(i,j) = divx(i,j) + &
-                 (flux_cc(i,j,1) - flux_cc(i-1,j,1)) * dxinv + &
-                 (flux_nd(i,j+1,1) - flux_nd(i,j,1)) * dxinv
-
+            divx(i,j) = divx(i,j) + (flux_cc(i,j,1) - flux_cc(i-1,j,1)) * dxinv + &
+                                    (flux_nd(i,j+1,1) - flux_nd(i,j,1)) * dxinv
          end do
-      end do
+         end do
 
-      ! divergence on y-faces
-      do j=lo(2),hi(2)+1
+         ! divergence on y-faces
+         do j=lo(2),hi(2)+1
          do i=lo(1),hi(1)
-
-            divy(i,j) = divy(i,j) + &
-                 (flux_nd(i+1,j,2) - flux_nd(i,j,2)) * dxinv + &
-                 (flux_cc(i,j,2) - flux_cc(i,j-1,2)) * dxinv
-
+            divy(i,j) = divy(i,j) + (flux_nd(i+1,j,2) - flux_nd(i,j,2)) * dxinv + &
+                                    (flux_cc(i,j,2) - flux_cc(i,j-1,2)) * dxinv
          end do
-      end do
+         end do
 
+      else
+
+         ! divergence on x-faces
+         do j=lo(2),hi(2)
+         do i=lo(1),hi(1)+1
+            divx(i,j) = (flux_cc(i,j,1) - flux_cc(i-1,j,1)) * dxinv + &
+                        (flux_nd(i,j+1,1) - flux_nd(i,j,1)) * dxinv
+         end do
+         end do
+
+         ! divergence on y-faces
+         do j=lo(2),hi(2)+1
+         do i=lo(1),hi(1)
+            divy(i,j) = (flux_nd(i+1,j,2) - flux_nd(i,j,2)) * dxinv + &
+                        (flux_cc(i,j,2) - flux_cc(i,j-1,2)) * dxinv
+         end do
+         end do
+
+      end if
 
     end subroutine stoch_m_force_2d
 
     subroutine stoch_m_force_3d(flux_cc,flux_xy,flux_xz,flux_yz,divx,divy,divz, &
-                                ng_c,ng_e,ng_f,dx,lo,hi)
+                                ng_c,ng_e,ng_f,dx,lo,hi,increment)
 
       integer        , intent(in   ) :: lo(:),hi(:),ng_c,ng_e,ng_f
       real(kind=dp_t), intent(in   ) :: flux_cc(lo(1)-ng_c:,lo(2)-ng_c:,lo(3)-ng_c:,:)
@@ -500,6 +517,7 @@ contains
       real(kind=dp_t), intent(inout) ::    divy(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
       real(kind=dp_t), intent(inout) ::    divz(lo(1)-ng_f:,lo(2)-ng_f:,lo(3)-ng_f:)
       real(kind=dp_t), intent(in   ) :: dx(:)
+      logical        , intent(in   ) :: increment
 
       ! local
       integer :: i,j,k
@@ -507,47 +525,77 @@ contains
 
       dxinv = 1.d0/dx(1)
 
-      ! divergence on x-faces
-      do k=lo(3),hi(3)
+      if (increment) then
+
+         ! divergence on x-faces
+         do k=lo(3),hi(3)
          do j=lo(2),hi(2)
-            do i=lo(1),hi(1)+1
-
-               divx(i,j,k) = divx(i,j,k) + &
-                    (flux_cc(i,j,k,1) - flux_cc(i-1,j,k,1)) * dxinv + &
-                    (flux_xy(i,j+1,k,1) - flux_xy(i,j,k,1)) * dxinv + &
-                    (flux_xz(i,j,k+1,1) - flux_xz(i,j,k,1)) * dxinv
-
-            end do
+         do i=lo(1),hi(1)+1
+            divx(i,j,k) = divx(i,j,k) + (flux_cc(i,j,k,1) - flux_cc(i-1,j,k,1)) * dxinv + &
+                                        (flux_xy(i,j+1,k,1) - flux_xy(i,j,k,1)) * dxinv + &
+                                        (flux_xz(i,j,k+1,1) - flux_xz(i,j,k,1)) * dxinv
          end do
-      end do
+         end do
+         end do
 
-      ! divergence on y-faces
-      do k=lo(3),hi(3)
+         ! divergence on y-faces
+         do k=lo(3),hi(3)
          do j=lo(2),hi(2)+1
-            do i=lo(1),hi(1)
-
-               divy(i,j,k) = divy(i,j,k) + &
-                    (flux_xy(i+1,j,k,2) - flux_xy(i,j,k,2)) * dxinv + &
-                    (flux_cc(i,j,k,2) - flux_cc(i,j-1,k,2)) * dxinv + &
-                    (flux_yz(i,j,k+1,1) - flux_yz(i,j,k,1)) * dxinv
-
-            end do
+         do i=lo(1),hi(1)
+            divy(i,j,k) = divy(i,j,k) + (flux_xy(i+1,j,k,2) - flux_xy(i,j,k,2)) * dxinv + &
+                                        (flux_cc(i,j,k,2) - flux_cc(i,j-1,k,2)) * dxinv + &
+                                        (flux_yz(i,j,k+1,1) - flux_yz(i,j,k,1)) * dxinv
          end do
-      end do
+         end do
+         end do
 
-      ! divergence on z-faces
-      do k=lo(3),hi(3)+1
+         ! divergence on z-faces
+         do k=lo(3),hi(3)+1
          do j=lo(2),hi(2)
-            do i=lo(1),hi(1)
-
-               divz(i,j,k) = divz(i,j,k) + &
-                    (flux_xz(i+1,j,k,2) - flux_xz(i,j,k,2)) * dxinv + &
-                    (flux_yz(i,j+1,k,2) - flux_yz(i,j,k,2)) * dxinv + &
-                    (flux_cc(i,j,k,3) - flux_cc(i,j,k-1,3)) * dxinv
-
-            end do
+         do i=lo(1),hi(1)
+            divz(i,j,k) = divz(i,j,k) + (flux_xz(i+1,j,k,2) - flux_xz(i,j,k,2)) * dxinv + &
+                                        (flux_yz(i,j+1,k,2) - flux_yz(i,j,k,2)) * dxinv + &
+                                        (flux_cc(i,j,k,3) - flux_cc(i,j,k-1,3)) * dxinv
          end do
-      end do
+         end do
+         end do
+
+      else
+
+         ! divergence on x-faces
+         do k=lo(3),hi(3)
+         do j=lo(2),hi(2)
+         do i=lo(1),hi(1)+1
+            divx(i,j,k) = (flux_cc(i,j,k,1) - flux_cc(i-1,j,k,1)) * dxinv + &
+                          (flux_xy(i,j+1,k,1) - flux_xy(i,j,k,1)) * dxinv + &
+                          (flux_xz(i,j,k+1,1) - flux_xz(i,j,k,1)) * dxinv
+         end do
+         end do
+         end do
+
+         ! divergence on y-faces
+         do k=lo(3),hi(3)
+         do j=lo(2),hi(2)+1
+         do i=lo(1),hi(1)
+            divy(i,j,k) = (flux_xy(i+1,j,k,2) - flux_xy(i,j,k,2)) * dxinv + &
+                          (flux_cc(i,j,k,2) - flux_cc(i,j-1,k,2)) * dxinv + &
+                          (flux_yz(i,j,k+1,1) - flux_yz(i,j,k,1)) * dxinv
+         end do
+         end do
+         end do
+
+         ! divergence on z-faces
+         do k=lo(3),hi(3)+1
+         do j=lo(2),hi(2)
+         do i=lo(1),hi(1)
+            divz(i,j,k) = (flux_xz(i+1,j,k,2) - flux_xz(i,j,k,2)) * dxinv + &
+                          (flux_yz(i,j+1,k,2) - flux_yz(i,j,k,2)) * dxinv + &
+                          (flux_cc(i,j,k,3) - flux_cc(i,j,k-1,3)) * dxinv
+         end do
+         end do
+         end do
+
+      end if
 
     end subroutine stoch_m_force_3d
 

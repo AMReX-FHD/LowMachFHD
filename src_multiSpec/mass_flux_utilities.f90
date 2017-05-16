@@ -1196,10 +1196,13 @@ contains
     ! compute chi
     call compute_chi_local(rho_tmp,rhotot_tmp,molarconc,chi,D_bar)
 
-    ! compute massfraction W_i = rho_i/rho
-    ! note: this uses original densities with possibly zero/negative values
+    ! make copies of densities and adjust so they contain non-negative values
+    rho_tmp(1:nspecies) = max(rho(1:nspecies), 0.d0)
+    rhotot_tmp = sum(rho_tmp(1:nspecies))
+
+    ! compute massfraction W_i using these non-negative values
     do row=1, nspecies  
-       W(row) = rho(row)/rhotot
+       W(row) = rho_tmp(row)/rhotot_tmp
     end do
 
     ! compute Onsager matrix L (store in sqrtLonsager)

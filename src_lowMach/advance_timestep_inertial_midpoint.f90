@@ -245,9 +245,7 @@ contains
     ! reset rho_update for all scalars to zero
     ! then, add -F^n_i (plus m_i*R^n_i, if nreactions>0)
     do n=1,nlevs
-       call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
-       ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
+       call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies,0)
        end if
@@ -293,7 +291,7 @@ contains
     else
 
        ! compute A^n for scalars using centered advection
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
 
     end if
 
@@ -374,12 +372,7 @@ contains
     end do
 
     ! compute adv_mom_fluxdiv = A^n for momentum
-    do n=1,nlevs
-       do i=1,dm
-          call setval(adv_mom_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv,.false.,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add A^n for momentum to gmres_rhs_v
@@ -390,12 +383,7 @@ contains
     end do
 
     ! compute diff_mom_fluxdiv = (1/2) A_0^n v^n (to be used later)
-    do n=1,nlevs
-       do i=1,dm
-          call setval(diff_mom_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
     do n=1,nlevs
        do i=1,dm
@@ -411,14 +399,9 @@ contains
        weights(1) = 1.d0
        weights(2) = 0.d0
 
-       do n=1,nlevs
-          do i=1,dm
-             call setval(stoch_mom_fluxdiv(n,i),0.d0,all=.true.)
-          end do
-       end do
-       ! increment stoch_mom_fluxdiv with div(Sigma^n)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,eta,eta_ed, &
-                                 Temp,Temp_ed,dx,0.5d0*dt,weights)
+       ! compute stoch_mom_fluxdiv = div(Sigma^n) and save for later
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false., &
+                                 eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
 
        ! add div(Sigma^n) to gmres_rhs_v
        do n=1,nlevs
@@ -431,7 +414,7 @@ contains
 
     ! add rho^n*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
+       call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
     end if
 
     ! compute (eta,kappa)^{n+1/2}
@@ -495,13 +478,11 @@ contains
        ! assemble total fluxes to be used in reservoirs
        do n=1,nlevs
           do i=1,dm
-             call multifab_setval(total_mass_flux(n,i),0.d0)
+             call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
              if (variance_coef_mass .ne. 0.d0) then
-                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux_old(n,i),1,nspecies,0)
-                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
-                call multifab_mult_mult_s_c(total_mass_flux(n,i),1,0.5d0,nspecies,0)
+                call multifab_saxpy_3_cc(total_mass_flux(n,i),1,0.5d0,stoch_mass_flux_old(n,i),1,nspecies)
+                call multifab_saxpy_3_cc(total_mass_flux(n,i),1,0.5d0,stoch_mass_flux(n,i),1,nspecies)
              end if
-             call multifab_plus_plus_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)            
           end do
        end do
 
@@ -598,30 +579,23 @@ contains
        end do
     end do
 
-   ! compute mtemp = rho^{n+1/2} * vbar^n
-   call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
+    ! compute mtemp = rho^{n+1/2} * vbar^n
+    call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac,.false.)
 
-   do n=1,nlevs
-      do i=1,dm
+    do n=1,nlevs
+       do i=1,dm
 
-         ! multiply mtemp by 1/(dt/2)
-         call multifab_mult_mult_s_c(mtemp(n,i),1,2.d0/dt,1,0)
+          ! multiply mtemp by 1/(dt/2)
+          call multifab_mult_mult_s_c(mtemp(n,i),1,2.d0/dt,1,0)
 
-         ! subtract rho^{n+1/2} * vbar^n / (dt/2) from gmres_rhs_v
-         call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
+          ! subtract rho^{n+1/2} * vbar^n / (dt/2) from gmres_rhs_v
+          call multifab_sub_sub_c(gmres_rhs_v(n,i),1,mtemp(n,i),1,1,0)
 
-      end do
-   end do
-
-   do n=1,nlevs
-      do i=1,dm
-         ! reset mtemp
-         call multifab_setval(mtemp(n,i),0.d0,all=.true.)
-      end do
-   end do
+       end do
+    end do
 
     ! compute mtemp = A_0^n vbar^n
-    call diffusive_m_fluxdiv(mla,mtemp,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,mtemp,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! add A_0^n vbar^n to gmres_rhs_v
@@ -635,9 +609,7 @@ contains
     ! then, add -F^{n+1/2}_i (plus m_i*R^{n+1/2}_i, if nreactions>0)
     ! it is used in Step 5 below
     do n=1,nlevs
-       call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
-       ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
        end if
@@ -763,7 +735,7 @@ contains
     else
 
        ! compute A^{n+1/2} for scalars using centered advection
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
 
        ! snew = s^{n+1} = s^n + dt*(A^{n+1/2} + D^{n+1/2} + St^{n+1/2})
        do n=1,nlevs
@@ -852,12 +824,7 @@ contains
 
     ! compute adv_mom_fluxdiv = A^{n+1/2} = -rho^{n+1/2} v^{n+1/2} v^{n+1/2}
     ! (mtemp=rho^{n+1/2} v^{n+1/2} was set at the end of step 4)
-    do n=1,nlevs
-       do i=1,dm
-          call setval(adv_mom_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv,dx, &
+    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv,.false.,dx, &
                                 the_bc_tower%bc_tower_array)
 
     ! add adv_mom_fluxdiv to gmres_rhs_v
@@ -879,13 +846,8 @@ contains
 
        weights(:) = 1.d0/sqrt(2.d0)
 
-       do n=1,nlevs
-          do i=1,dm
-             call setval(stoch_mom_fluxdiv(n,i),0.d0,all=.true.)
-          end do
-       end do
-       ! increment stoch_mom_fluxdiv with div(Sigma^{n+1/2})
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,eta,eta_ed, &
+       ! compute stoch_mom_fluxdiv = div(Sigma^{n+1/2})
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv,.false.,eta,eta_ed, &
                                  Temp,Temp_ed,dx,dt,weights)
 
        ! add div(Sigma^{n+1/2}) to gmres_rhs_v
@@ -903,7 +865,7 @@ contains
 
     ! add gravity term
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
+       call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
     end if
 
     ! reset inhomogeneous bc condition to deal with reservoirs
@@ -1037,13 +999,8 @@ contains
    end do
 
     ! set diff_mom_fluxdiv = A_0^{n+1} vbar^{n+1/2}
-    do n=1,nlevs
-       do i=1,dm
-          call setval(diff_mom_fluxdiv(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,umac,eta,eta_ed,kappa,dx, &
-                             the_bc_tower%bc_tower_array)
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv,.false.,umac, &
+                             eta,eta_ed,kappa,dx,the_bc_tower%bc_tower_array)
 
     ! add (1/2) A_0^{n+1} vbar^{n+1/2} to gmres_rhs_v
     do n=1,nlevs
@@ -1077,7 +1034,7 @@ contains
        do i=1,dm
           call multifab_setval(dumac(n,i),0.d0,all=.true.)
        end do
-          call multifab_setval(dpi(n),0.d0,all=.true.)
+       call multifab_setval(dpi(n),0.d0,all=.true.)
     end do
 
     do n=1,nlevs

@@ -228,41 +228,24 @@ contains
     end do
 
     ! compute adv_mass_fluxdiv_old = -div(rho v w)^n
-    do n=1,nlevs
-       call multifab_setval(adv_mass_fluxdiv_old(n),0.d0)
-    end do
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv_old,.false.,dx,1,nspecies)
 
     ! compute diff_mom_fluxdiv_old = L_0^n v^n
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(diff_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_old,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
-    ! compute stoch_mom_fluxdiv_old = div (sqrt() (W + W^T)^{n:n+1})
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(stoch_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
     if (variance_coef_mom .ne. 0.d0) then   
        ! fill the stochastic momentum multifabs with new sets of random numbers
        call fill_m_stochastic(mla)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_old, &
+
+       ! compute stoch_mom_fluxdiv_old = div (sqrt() (W + W^T)^{n:n+1})
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_old,.false., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
     ! compute "old" gravity force
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(m_grav_force_old(n,i),0.d0,all=.true.)
-       end do
-    end do
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,m_grav_force_old,rhotot_fc,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,m_grav_force_old,.false.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     ! compute "old" Lorentz force (NOT USED RIGHT NOW)
@@ -273,12 +256,8 @@ contains
     call convert_m_to_umac(mla,rhotot_fc,mold,umac,.false.)
 
     ! compute advective flux divergence, adv_mom_fluxdiv_old = div(-rho v v)^n
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(adv_mom_fluxdiv_old(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv_old,dx,the_bc_tower%bc_tower_array)
+    call mk_advective_m_fluxdiv(mla,umac,mold,adv_mom_fluxdiv_old,.false., &
+                                dx,the_bc_tower%bc_tower_array)
 
     ! compute A_Phi^n for Poisson solve (does not have z^T)
     call implicit_potential_coef(mla,rho_old,Temp,A_Phi,the_bc_tower)
@@ -412,13 +391,8 @@ contains
     end if
 
     ! compute rho^{n+1,*}*g
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(m_grav_force_new(n,i),0.d0,all=.true.)
-       end do
-    end do
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,m_grav_force_new,rhotot_fc,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,m_grav_force_new,.false.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     ! compute (eta,kappa)^{n+1,*}
@@ -509,12 +483,7 @@ contains
     end do
 
     ! compute diff_mom_fluxdiv_new = L_0^{n+1,*} vbar, where vbar = v^n with t^{n+1} bc's
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(diff_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! add (1/2) (L_0^n v^n + L_0^{n+1,*} vbar^n)
@@ -527,13 +496,8 @@ contains
 
     ! compute stoch_mom_fluxdiv_new = div (sqrt() (W + W^T)^{n:n+1})
     ! (these should only differ from the t^n stochastic fluxdiv because of eta^{n+1,*})
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(stoch_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
     if (variance_coef_mom .ne. 0.d0) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_new, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_new,.false., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
@@ -637,18 +601,11 @@ contains
     call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
 
     ! compute -div(rho v w)^{n+1,*}
-    do n=1,nlevs
-       call multifab_setval(adv_mass_fluxdiv(n),0.d0)
-    end do
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
 
     ! compute advective flux divergence, adv_mom_fluxdiv_new = div(-rho v v)^{n+1,*}
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(adv_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,dx,the_bc_tower%bc_tower_array)
+    call mk_advective_m_fluxdiv(mla,umac,mtemp,adv_mom_fluxdiv_new,.false., &
+                                dx,the_bc_tower%bc_tower_array)
 
     ! compute A_Phi^{n+1,*} for Poisson solve (does not have z^T)
     call implicit_potential_coef(mla,rho_tmp,Temp,A_Phi,the_bc_tower)
@@ -808,13 +765,8 @@ contains
     end if
 
     ! compute rho^{n+1}*g
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(m_grav_force_new(n,i),0.d0,all=.true.)
-       end do
-    end do
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,m_grav_force_new,rhotot_fc,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,m_grav_force_new,.false.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     ! compute (eta,kappa)^{n+1}
@@ -948,12 +900,7 @@ contains
     end do
 
     ! compute diff_mom_fluxdiv_new = L_0^{n+1} vbar, where vbar = v^{n+1,*} with t^{n+1} bc's
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(diff_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
-    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,diff_mom_fluxdiv_new,.false.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! add (1/2) (L_0^n v^n + L_0^{n+1} vbar^{n+1,*})
@@ -964,15 +911,10 @@ contains
        end do
     end do
 
-    ! compute stoch_mom_fluxdiv_new = div (sqrt() (W + W^T)^{n:n+1})
-    ! (these should only differ from the t^n stochastic fluxdiv because of eta^{n+1})
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_setval(stoch_mom_fluxdiv_new(n,i),0.d0,all=.true.)
-       end do
-    end do
     if (variance_coef_mom .ne. 0.d0) then
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_new, &
+       ! compute stoch_mom_fluxdiv_new = div (sqrt() (W + W^T)^{n:n+1})
+       ! (these should only differ from the t^n stochastic fluxdiv because of eta^{n+1})
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,stoch_mom_fluxdiv_new,.false., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 

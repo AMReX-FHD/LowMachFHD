@@ -163,7 +163,6 @@ contains
     end if
 
     do n=1,nlevs
-       call setval(rho_update(n),0.d0,all=.true.)
        do i=1,dm
           call setval(dumac(n,i),0.d0,all=.true.)
        end do
@@ -227,13 +226,13 @@ contains
     if (variance_coef_mom .ne. 0.d0) then
        ! fill the stochastic multifabs with a new set of random numbers
        call fill_m_stochastic(mla)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v,.true., &
                                  eta,eta_ed,Temp,Temp_ed,dx,0.5d0*dt,weights)
     end if
 
     ! add rho^n*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     ! initialize rhs_p for gmres solve to zero
@@ -305,9 +304,8 @@ contains
     ! reset rho_update for all scalars to zero
     ! then, add -F^n_i (plus m_i*R^n_i, if nreactions>0)
     do n=1,nlevs
-       call multifab_setval_c(rho_update(n),0.d0,1,nspecies,all=.true.)
        ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
        end if
@@ -335,7 +333,7 @@ contains
     end do
 
     ! add A_0^n v^{n-1/2} to gmres_rhs_v
-    call diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,gmres_rhs_v,.true.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! compute div v^{n-1/2}
@@ -436,7 +434,7 @@ contains
                         c_bc_comp,the_bc_tower,proj_type_in=2)
       end if
     else
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
     end if
 
     ! compute s^{*,n+1/2} = s^n + (dt/2) * (A^n + F^n)
@@ -507,13 +505,13 @@ contains
     ! add div(Sigma^(2)) to gmres_rhs_v
     if (variance_coef_mom .ne. 0.d0) then
        weights(:) = 1.d0/sqrt(2.d0)
-       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v, &
+       call stochastic_m_fluxdiv(mla,the_bc_tower%bc_tower_array,gmres_rhs_v,.true., &
                                  eta,eta_ed,Temp,Temp_ed,dx,dt,weights)
     end if
 
     ! add rho^{*,n+1}*g to gmres_rhs_v
     if (any(grav(1:dm) .ne. 0.d0)) then
-       call mk_grav_force(mla,gmres_rhs_v,rhotot_fc,rhotot_fc,the_bc_tower)
+       call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc,rhotot_fc,the_bc_tower)
     end if
 
     ! initialize rhs_p for gmres solve to zero
@@ -573,13 +571,11 @@ contains
        ! assemble total fluxes to be used in reservoirs
        do n=1,nlevs
           do i=1,dm
-             call multifab_setval(total_mass_flux(n,i),0.d0)
+             call multifab_copy_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
              if (variance_coef_mass .ne. 0.d0) then
-                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux_old(n,i),1,nspecies,0)
-                call multifab_plus_plus_c(total_mass_flux(n,i),1,stoch_mass_flux(n,i),1,nspecies,0)
-                call multifab_mult_mult_s_c(total_mass_flux(n,i),1,0.5d0,nspecies,0)
+                call multifab_saxpy_3_cc(total_mass_flux(n,i),1,0.5d0,stoch_mass_flux_old(n,i),1,nspecies)
+                call multifab_saxpy_3_cc(total_mass_flux(n,i),1,0.5d0,stoch_mass_flux(n,i),1,nspecies)
              end if
-             call multifab_plus_plus_c(total_mass_flux(n,i),1,diff_mass_flux(n,i),1,nspecies,0)            
           end do
        end do
 
@@ -647,9 +643,7 @@ contains
     ! reset rho_update for all scalars to zero
     ! then, add -F^{n+1/2}_i (plus m_i*R^{n+1/2}_i, if nreactions>0)
     do n=1,nlevs
-       call multifab_setval(rho_update(n),0.d0,all=.true.)
-       ! add fluxes
-       call multifab_plus_plus_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
+       call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_plus_plus_c(rho_update(n),1,stoch_mass_fluxdiv(n),1,nspecies)
        end if
@@ -677,7 +671,7 @@ contains
     end do
 
     ! add A_0^* v^* to gmres_rhs_v
-    call diffusive_m_fluxdiv(mla,gmres_rhs_v,umac,eta,eta_ed,kappa,dx, &
+    call diffusive_m_fluxdiv(mla,gmres_rhs_v,.true.,umac,eta,eta_ed,kappa,dx, &
                              the_bc_tower%bc_tower_array)
 
     ! compute div v^*
@@ -757,7 +751,7 @@ contains
                         c_bc_comp,the_bc_tower,proj_type_in=2)
       end if
     else
-       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
     end if
 
     ! compute s^{n+1} = s^n + dt * (A^{n+1/2} + F^{*,n+1/2})
