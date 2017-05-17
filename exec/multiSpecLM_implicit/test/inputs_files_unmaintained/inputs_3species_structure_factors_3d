@@ -156,7 +156,7 @@
   
   ! Algorithmic options:
   !----------------------
-  fraction_tolerance = 1.d-64 ! For roundoff errors in mass and mole fractions
+  fraction_tolerance = 1.d-14 ! For roundoff errors in mass and mole fractions
   use_lapack = F ! Use LAPACK or iterative method for diffusion matrix (recommend False)
   inverse_type = 1 ! Only for LAPACK:  1=inverse, 2=pseudo inverse
   correct_flux = T ! Manually ensure mass is conserved to roundoff 

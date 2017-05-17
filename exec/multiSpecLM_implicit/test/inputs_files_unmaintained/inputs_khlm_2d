@@ -121,7 +121,7 @@
 &probin_multispecies
 
   nspecies = 2
-  fraction_tolerance = 1.d-64
+  fraction_tolerance = 1.d-14
   start_time = 0.d0
   inverse_type = 1
   timeinteg_type = 1

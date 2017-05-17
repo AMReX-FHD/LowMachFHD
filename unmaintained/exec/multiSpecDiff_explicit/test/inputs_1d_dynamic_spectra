@@ -44,7 +44,7 @@
 &probin_multispecies
  
  nspecies = 3                     ! number of species
- fraction_tolerance = 1.d-64       ! to prevent division by zero 
+ fraction_tolerance = 1.d-14       ! to prevent division by zero 
  start_time  = 0                  ! For manufactured solutions
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
  timeinteg_type = 3               ! integrator type: 1=Euler,2=predictor-corrector,3=midpoint,4=RK3
