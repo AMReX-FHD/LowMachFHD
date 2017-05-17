@@ -15,6 +15,7 @@ module probin_charged_module
   integer            :: num_pot_iters
   real(kind=dp_t)    :: dpdt_factor
   integer            :: E_ext_type
+  real(kind=dp_t)    :: E_ext_value(1:3)
 
   ! for charged fluid
   namelist /probin_charged/ use_charged_fluid
@@ -29,6 +30,7 @@ module probin_charged_module
   namelist /probin_charged/ num_pot_iters
   namelist /probin_charged/ dpdt_factor
   namelist /probin_charged/ E_ext_type         ! external electric field
+  namelist /probin_charged/ E_ext_value
 
 contains
 
@@ -62,6 +64,7 @@ contains
     num_pot_iters      = 2
     dpdt_factor        = 0.d0
     E_ext_type         = 0
+    E_ext_value(:)     = 0.d0
  
     ! read from input file 
     need_inputs = .true.

@@ -12,7 +12,8 @@ module fluid_charge_module
   use zero_edgeval_module
   use probin_common_module, only: molmass, k_B, rhobar, nspecies
   use probin_charged_module, only: charge_per_mass, dpdt_factor, &
-                                   dielectric_const, dielectric_type, E_ext_type
+                                   dielectric_const, dielectric_type, &
+                                   E_ext_type, E_ext_value
 
   implicit none
 
@@ -921,7 +922,7 @@ contains
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: E_ext(:,:)
 
-    integer :: n, nlevs, dm
+    integer :: n, nlevs, dm, i
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -929,11 +930,9 @@ contains
     if (E_ext_type .eq. 1) then
 
        do n=1,nlevs
-          call multifab_setval(E_ext(n,1),-100.d0,all=.true.)
-          call multifab_setval(E_ext(n,2),   0.d0,all=.true.)
-          if (dm .eq. 3) then
-             call multifab_setval(E_ext(n,3),   0.d0,all=.true.)
-          end if
+          do i=1,dm
+             call multifab_setval(E_ext(n,i),E_ext_value(i),all=.true.)
+          end do
        end do
 
     end if

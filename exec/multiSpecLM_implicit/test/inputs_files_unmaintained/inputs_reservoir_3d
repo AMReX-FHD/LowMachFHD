@@ -37,7 +37,7 @@
 &probin_multispecies
  
  nspecies = 5                     ! number of species
- fraction_tolerance = 1e-14       ! to prevent division by zero 
+ fraction_tolerance = 1.d-64       ! to prevent division by zero 
  start_time  = 1.0                ! start at t=1 to avoid NAN coming from rho_exact at t=0
  !include_temp = .false.          ! right now no temperature equation
  inverse_type = 1                 ! LAPACK inverse type: 1=inverse, 2=pseudo inverse 
