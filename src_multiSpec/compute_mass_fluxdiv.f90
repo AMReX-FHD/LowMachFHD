@@ -90,7 +90,7 @@ contains
        end do
     end do
  
-    ! modify rho with drho to ensure no mass or mole fraction is zero
+    ! modify rho with drho to ensure each mass fraction is larger than a tolerance
     call correct_rho_with_drho(mla,rho,drho)
     call compute_rhotot(mla,rho,rhotot,ghost_cells_in=.true.)
  
