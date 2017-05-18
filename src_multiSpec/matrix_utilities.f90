@@ -38,12 +38,10 @@ contains
 
       call build(bpt,"Dbar2chi_iterative")
       
-      !write(*,*) "chi_iterative called with ", num_iterations, "D_bar=", D_bar, "Xk=", Xk
-
       ! mole fractions correction
       ! Turned this off since it should be done in the caller
       do ii = 1, nspecies
-       Xkp(ii) = Xk(ii) ! + fraction_tolerance*(sum(Xk(:))/dble(nspecies)-Xk(ii))
+       Xkp(ii) = Xk(ii)
       end do
 
       ! molecular weight of mixture - EGLIB
@@ -153,9 +151,6 @@ contains
        end do 
        chi=matrix1
       end do
-
-      !write(*,*) "Result chi=", chi
-      !stop
 
       call destroy(bpt)
 

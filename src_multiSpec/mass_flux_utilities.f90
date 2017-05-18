@@ -1197,14 +1197,10 @@ contains
     ! compute chi
     call compute_chi_local(rho_tmp,rhotot_tmp,molarconc,chi,D_bar)
 
-    ! Restore original values (which have been made non-negative already by compute_nonnegative_rho_av)
-    rho_tmp(1:nspecies) = rho(1:nspecies)
-    rhotot_tmp = sum(rho_tmp(1:nspecies))
-
-    ! compute massfraction W_i using these non-negative values *without* the correction of order fraction_tolerance
+    ! compute massfraction W_i using the non-negative values *without* the correction of order fraction_tolerance
     ! This ensures that if W_i=0 there is no stochastic flux generated at all for species i
     do row=1, nspecies  
-       W(row) = rho_tmp(row)/rhotot_tmp
+       W(row) = rho(row)/rhotot
     end do
 
     ! compute Onsager matrix L (store in sqrtLonsager)
