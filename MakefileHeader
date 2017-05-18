@@ -1,11 +1,5 @@
 SRC_HYDROLIB=../HydroGrid
 
-MPIDIR=/usr/lib64/openmpi
-MPIINC=/usr/include/openmpi-x86_64/
-
-#MPIDIR=/usr/lib64/openmpi/1.4-gcc
-#MPIINC=$(MPIDIR)/include
-
 # Note: We have to use gfortran>4.4 since we are using Fortran-C interop
 
 # C/C++ compiler:
@@ -33,5 +27,5 @@ FC=$(FC_O) # Optimized
 
 # For linking the right libraries in:
 LIBRARIES = -L/usr/lib64/
-LIBRARIES += -lgsl -lgslcblas # If using the GSL
+#LIBRARIES += -lgsl -lgslcblas # If using the GSL
 LIBRARIES += -lfftw3 -lfftw3f -lm -lgfortran
