@@ -190,7 +190,7 @@ module HydroGridModule
       ! For each pair of variables for which we calculated static structure factors,
       ! we can calculate dynamic ones at selected wavenumbers
       ! -------------------------------      
-      integer :: nSavedSnapshots = 1000 ! How many temporal snapshots to save per timeseries for each wavenumber
+      integer :: nSavedSnapshots = 1000, nSavedRawSnapshots=1000 ! How many temporal snapshots to save per timeseries for each wavenumber
       integer :: iSample = 0 ! Current temporal snapshot (sample) >=0 and <=nSavedSnapshots
       integer :: iTimeSeries = 0 ! How many timeseries we have had so far
       real (wp) :: timestep = 1.0_wp ! Time between snapshots
@@ -205,6 +205,7 @@ module HydroGridModule
       
       ! Dynamic structure factors for selected k's and all omega's
       integer :: nWavenumbers = 0 ! How many wavenumbers to keep track (record) of
+         ! If set to a negative value, the input is a range of wavenumbers to output on a grid so one does not need to list them all
       integer :: correlationWavenumber = -1 ! If positive, this calculates temporal correlations
          ! Between each of the tracked wavenumbers and the selected wavenumber
       integer :: minWavefrequency, maxWavefrequency
@@ -401,7 +402,9 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
    !---------------------------      
    grid%nStructureFactors = nStructureFactors
    grid%nWavenumbers = nWavenumbers
-   grid%nSavedSnapshots = nSavedSnapshots
+   grid%nSavedRawSnapshots = nSavedSnapshots
+   !grid%nSavedSnapshots = nSavedSnapshots ! No doubling for FFTs
+   grid%nSavedSnapshots = 2*nSavedSnapshots-2 ! In order to minimize periodic artifacts, we double the length
    grid%correlationWavenumber = correlationWavenumber
 
    call createStaticFactors(grid, structureFactorPairs, vectorStructureFactor)
@@ -564,19 +567,51 @@ subroutine createDynamicFactors(grid, wavenumbersString)
    type (HydroGrid), target :: grid
    character (*), intent(in) :: wavenumbersString
 
-   integer :: iDimension, iWavenumber
+   integer :: i,j,k, iDimension, iWavenumber, waveSubGrid(2,nMaxDims)
 
    ! For the dynamic factors, we select which selectedWavenumbers to record:
-   if(grid%nWavenumbers <= 0) return
+   if(grid%nWavenumbers == 0) return
+   
+   write(*,*) "Recording dynamic structure factors with time interval Dt=", grid%timestep
+   
+   if(grid%nWavenumbers < 0) then ! Track a whole subgrid of wavenumbers as selected by user
+      if(grid%nCells(3)==1) then
+         read(wavenumbersString, *) waveSubGrid(1:2,1:2)
+         waveSubGrid(1:2,3)=0
+      else      
+         read(wavenumbersString, *) waveSubGrid
+      end if 
+      grid%nWavenumbers = product(waveSubGrid(2,:)-waveSubGrid(1,:)+1)
+      write(*,*) "Keeping track of S(k,omega) and S(k,t) for ", grid%nWavenumbers, " wavenumbers"
 
-   allocate(grid%selectedWavenumbers(3, grid%nWavenumbers))
-   allocate(grid%selectedWaveindices(3, grid%nWavenumbers))
-   if(grid%nCells(3)==1) then ! We read only two indices per wavenumber here
-      read(wavenumbersString, *) grid%selectedWavenumbers(1:2,1:grid%nWavenumbers)
-      grid%selectedWavenumbers(3,1:grid%nWavenumbers)=0      
+      allocate(grid%selectedWavenumbers(3, grid%nWavenumbers))
+      allocate(grid%selectedWaveindices(3, grid%nWavenumbers))
+      
+      iWavenumber=0
+      do k=waveSubGrid(1,3), waveSubGrid(2,3)
+      do j=waveSubGrid(1,2), waveSubGrid(2,2)
+      do i=waveSubGrid(1,1), waveSubGrid(2,1)
+         iWavenumber=iWavenumber+1
+         grid%selectedWavenumbers(:,iWavenumber)=(/i,j,k/)
+         write(*,*) "Tracking wavenumber index=", iWavenumber, " k_index=", grid%selectedWavenumbers(:,iWavenumber)
+      end do
+      end do
+      end do         
+   
    else
-      read(wavenumbersString, *) grid%selectedWavenumbers
-   end if
+
+      allocate(grid%selectedWavenumbers(3, grid%nWavenumbers))
+      allocate(grid%selectedWaveindices(3, grid%nWavenumbers))
+
+      if(grid%nCells(3)==1) then ! We read only two indices per wavenumber here
+         read(wavenumbersString, *) grid%selectedWavenumbers(1:2,1:grid%nWavenumbers)
+         grid%selectedWavenumbers(3,1:grid%nWavenumbers)=0      
+      else
+         read(wavenumbersString, *) grid%selectedWavenumbers
+      end if
+   
+   end if   
+      
    do iWavenumber = 1, grid%nWavenumbers
       do iDimension = 1, 3
       if( (iDimension/=2) .or. (grid%periodic)) then
@@ -600,7 +635,7 @@ subroutine createDynamicFactors(grid, wavenumbersString)
    allocate(grid%dynamicFactors(grid%nSavedSnapshots, grid%nWavenumbers, grid%nStructureFactors))
 
    ! Prepare FFTWs internal stuff:
-   allocate(grid%dynamicFFTarray(grid%nSavedSnapshots))      
+   allocate(grid%dynamicFFTarray(grid%nSavedSnapshots)) ! In order to avoid periodic artifacts, it makes sense to double the length
    call FFTW_PlanDFT(grid%dynamicFFTplan, grid%nSavedSnapshots, &
       grid%dynamicFFTarray, grid%dynamicFFTarray, FFTW_FORWARD, FFTW_ESTIMATE)
 
@@ -1131,7 +1166,7 @@ subroutine updateStructureFactors(grid)
    ! Dynamic structure factors
    if (grid%nWavenumbers <= 0) return
 
-   if (grid%iSample >= abs(grid%nSavedSnapshots)) then ! Memory of past history is full, do temporal FFT now
+   if (grid%iSample >= abs(grid%nSavedRawSnapshots)) then ! Memory of past history is full, do temporal FFT now
 
       if(writeSpectrumHistory) then ! Save a history of S(k)
          
@@ -1141,7 +1176,7 @@ subroutine updateStructureFactors(grid)
             open (551, file = trim(filenameBase), status = "unknown", action = "write", position="append")
          end if   
 
-         do iTemp=1, grid%nSavedSnapshots
+         do iTemp=1, grid%nSavedRawSnapshots
             write(551,'(1000g17.9)') (grid%iTimeSeries*grid%nSavedSnapshots+(iTemp-1))*grid%timestep, &
                grid%savedStructureFactors(iTemp, :, :) ! Complex number
                !abs (grid%savedStructureFactors(iTemp, :, :)) ! Abs value only
@@ -1157,7 +1192,11 @@ subroutine updateStructureFactors(grid)
 
       do iVariable = 1, grid%nVariablesToFFT         
          do iWavenumber = 1, grid%nWavenumbers
-            grid%dynamicFFTarray = grid%savedStructureFactors(:, iWavenumber, iVariable)
+            grid%dynamicFFTarray(1:grid%nSavedRawSnapshots) = &
+               grid%savedStructureFactors(1:grid%nSavedRawSnapshots, iWavenumber, iVariable)
+            ! For the second half, invert the time so the result is periodic:
+            grid%dynamicFFTarray(grid%nSavedRawSnapshots+1 : 2*grid%nSavedRawSnapshots-2) = &
+               grid%savedStructureFactors(grid%nSavedRawSnapshots-1:2:-1, iWavenumber, iVariable)
             call FFTW_Execute(grid%dynamicFFTplan)
             grid%savedStructureFactors(:, iWavenumber, iVariable) = grid%dynamicFFTarray ! Use this as temporary storage
 
@@ -1795,6 +1834,14 @@ subroutine writeStructureFactors(grid,filenameBase)
    !-----------------------
    ! Now actually output the files:
 
+   ! i, j, k simply loop from the negative wavenumbers to the positive wavenumbers.
+   ! For example, if nCells(1) = 6, i loops from -2 to 3.
+   ! iCell = nCells(1) is the negative frequency corresponding to i = -1.
+   ! The next value is the zero component frequency, which is located back at iCell = 1.
+   iCell = frequencyToArrayIndex(mink(1), grid%nCells(1))
+   jCell = frequencyToArrayIndex(mink(2), grid%nCells(2))
+   kCell = frequencyToArrayIndex(mink(3), grid%nCells(3))
+
    ForEachStructureFactor: do iStructureFactor = 1, grid%nStructureFactors
      
       write(id_string,"(I25)") iStructureFactor
@@ -1803,14 +1850,6 @@ subroutine writeStructureFactors(grid,filenameBase)
       write(*,*) "Writing static structure factor to file ", trim(filename) // ".{Re,Im}.dat"
       open (file = trim(filename) // ".Re.dat", unit=structureFactorFile(1), status = "unknown", action = "write")
       open (file = trim(filename) // ".Im.dat", unit=structureFactorFile(2), status = "unknown", action = "write")
-
-      ! i, j, k simply loop from the negative wavenumbers to the positive wavenumbers.
-      ! For example, if nCells(1) = 6, i loops from -2 to 3.
-      ! iCell = nCells(1) is the negative frequency corresponding to i = -1.
-      ! The next value is the zero component frequency, which is located back at iCell = 1.
-      iCell = frequencyToArrayIndex(mink(1), grid%nCells(1))
-      jCell = frequencyToArrayIndex(mink(2), grid%nCells(2))
-      kCell = frequencyToArrayIndex(mink(3), grid%nCells(3))
       
       WriteS_ky: if ( product(grid%nCells) == grid%nCells(grid%axisToPrint) ) then 
          ! One-dimensional system, easy to do:         
@@ -2275,10 +2314,11 @@ subroutine writeDynamicFactors(grid,filenameBase)
       open (file = trim(filename) // ".Re.dat", unit=structureFactorFile(1), status = "unknown", action = "write")
       open (file = trim(filename) // ".Im.dat", unit=structureFactorFile(2), status = "unknown", action = "write")
       
-      ! This only works if the selected wavenumbers are positive, but this is always the case anyway:
+      ! It is useful to output the selected wavenumbers to the file headers
       wavevector = 2 * pi * (grid%selectedWavenumbers(:, iWavenumber)) / grid%systemLength
+      
       if(.not.grid%periodic) then ! This is actually y coordinate not k_y
-         wavevector(2) = (grid%selectedWavenumbers(2, iWavenumber)+0.5_wp) * grid%systemLength(dim) / grid%nCells(dim)
+         wavevector(2) = (grid%selectedWavenumbers(2, iWavenumber)+0.5_wp) * grid%systemLength(2) / grid%nCells(2)
       end if
       do iFile=1,2
          write(structureFactorFile(iFile), '(A,100G17.9)')  "# k=", wavevector            

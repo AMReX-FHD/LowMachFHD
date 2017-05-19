@@ -10,9 +10,10 @@ CPPC=$(CCOMP) #-g
 # Fortran compiler:
 
 # GNU:
+OPTIONS=-ffree-line-length-none -Wall -Wno-unused
 FCOMP=gfortran # gfortran44
-FC_O=$(FCOMP) -O -Wall -ffree-line-length-none  # Optimized
-FC_g=$(FCOMP) -g -fbounds-check -Wall -ffree-line-length-none # Debugging
+FC_O=$(FCOMP) -O $(OPTIONS) # Optimized
+FC_g=$(FCOMP) -g -fbounds-check $(OPTIONS) # Debugging
 FC_C=$(FC) # Mixed language linking is more complicated
 
 # Intel:

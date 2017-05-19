@@ -14,6 +14,8 @@ MODULE HydroGridCInterface ! Interface to my HydroGrid module
 
 CONTAINS   
 
+! Note that one can pass NULL for optional arguments which means not present
+
 ! The C interface to this routine is
 ! void setHydroInputFile_C(char * filename)
 subroutine setHydroInputFile_C(filename) BIND(C,NAME="setHydroInputFile_C")
@@ -42,7 +44,8 @@ subroutine createHydroAnalysis_C (nCells, nSpecies, nVelocityDimensions, isSingl
       BIND(C,NAME="createHydroAnalysis_C")
    integer(c_int), intent(in) :: nCells(nMaxDims)
    integer(c_int), value :: nSpecies, nVelocityDimensions
-   real (wp), intent(in) :: systemLength(nMaxDims), heatCapacity(nSpecies)
+   real (wp), intent(in) :: systemLength(nMaxDims)
+   real (wp), intent(in), optional :: heatCapacity(nSpecies)
    real (wp), value :: timestep
    integer(c_int), value :: isSingleFluid, nPassiveScalars, project2D
    real (wp), value :: structFactMultiplier  
@@ -101,14 +104,20 @@ end subroutine
 ! void updateHydroAnalysisIsothermal_C (double velocity[], double density[])
 subroutine updateHydroAnalysisIsothermal_C (velocity, density) &
               BIND(C, NAME="updateHydroAnalysisIsothermal_C")
-   real (wp), intent(in) :: velocity(grid%nCells(1), grid%nCells(2), grid%nCells(3), grid%nDimensions, 0:grid%nFluids)
-   real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
+   real (wp), intent(in), optional :: velocity(grid%nCells(1), grid%nCells(2), grid%nCells(3), grid%nDimensions, 0:grid%nFluids)
+   real (wp), intent(in), optional :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
 
    call updateHydroAnalysisPrimitive (grid, velocity, density)
    
    if(project_2D) then
-      call updateHydroAnalysisPrimitive (grid_2D, velocity=SUM(velocity,DIM=2)/grid%nCells(2), &
-         density=SUM(density,DIM=2)/grid%nCells(2))
+      if(present(density).and.present(velocity)) then
+         call updateHydroAnalysisPrimitive (grid_2D, velocity=SUM(velocity,DIM=2)/grid%nCells(2), &
+            density=SUM(density,DIM=2)/grid%nCells(2))
+      else if(present(density)) then
+         call updateHydroAnalysisPrimitive (grid_2D, density=SUM(density,DIM=2)/grid%nCells(2))
+      else if(present(velocity)) then
+         call updateHydroAnalysisPrimitive (grid_2D, velocity=SUM(velocity,DIM=2)/grid%nCells(2))         
+      end if
    end if
    
 end subroutine
@@ -116,15 +125,22 @@ end subroutine
 ! void updateHydroAnalysisMixture_C (double velocity[], double density[], double concentration[])
 subroutine updateHydroAnalysisMixture_C (velocity, density, concentration) &
               BIND(C, NAME="updateHydroAnalysisMixture_C")
-   real (wp), intent(in) :: velocity(grid%nCells(1), grid%nCells(2), grid%nCells(3), grid%nDimensions, 0:grid%nFluids)
-   real (wp), intent(in) :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
-   real (wp), intent(in) :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
+   real (wp), intent(in), optional :: velocity(grid%nCells(1), grid%nCells(2), grid%nCells(3), grid%nDimensions, 0:grid%nFluids)
+   real (wp), intent(in), optional :: density(grid%nCells(1), grid%nCells(2), grid%nCells(3), 0:grid%nFluids)
+   real (wp), intent(in), optional :: concentration(grid%nCells(1), grid%nCells(2), grid%nCells(3), 1:grid%nSpecies-1)
 
    call updateHydroAnalysisPrimitive (grid, velocity=velocity, density=density, concentration=concentration)
 
    if(project_2D) then
-      call updateHydroAnalysisPrimitive (grid_2D, velocity=SUM(velocity,DIM=2)/grid%nCells(2), &
-         density=SUM(density,DIM=2)/grid%nCells(2), concentration=SUM(concentration,DIM=2)/grid%nCells(2))
+      if(present(density).and.present(concentration).and.present(velocity)) then
+         call updateHydroAnalysisPrimitive (grid_2D, velocity=SUM(velocity,DIM=2)/grid%nCells(2), &
+            density=SUM(density,DIM=2)/grid%nCells(2), concentration=SUM(concentration,DIM=2)/grid%nCells(2))
+      else if(present(density).and.present(concentration)) then
+         call updateHydroAnalysisPrimitive (grid_2D, density=SUM(density,DIM=2)/grid%nCells(2), &
+                                                     concentration=SUM(concentration,DIM=2)/grid%nCells(2))
+      else
+         write(*,*) "Not calling updateHydroAnalysisPrimitive on grid_2D because not enough arguments present"
+      end if
    end if
    
 end subroutine
