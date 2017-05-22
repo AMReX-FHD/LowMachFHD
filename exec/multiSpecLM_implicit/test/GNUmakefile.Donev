@@ -8,12 +8,13 @@ MPI    := t
 OMP    :=
 MKVERBOSE := t
 
-COMP := gfortran48
-CCOMP     := gcc48
+COMP := gfortran63
+CCOMP     := gcc63
 
 include $(BOXLIB_HOME)/Tools/F_mk/GMakedefs.mak
 
-xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/4.8.2/lib64
+#xtr_libraries += -Wl,-rpath=/usr/local/pkg/gcc/4.8.2/lib64 # RedHat
+xtr_libraries += -Wl,-rpath=/usr/local/stow/gcc-6.3.0/lib64 # CentOS
 
 VPATH_LOCATIONS += $(LOW_MACH_HOME)
 
