@@ -285,7 +285,7 @@ contains
     real(kind=dp_t), intent(in)   :: rho(nspecies)       ! density- last dim for #species
     real(kind=dp_t), intent(in)   :: rhotot              ! total density in each cell 
     real(kind=dp_t), intent(out)  :: molarconc(nspecies) ! molar concentration
-    real(kind=dp_t), intent(out)  :: molmtot             ! total molar mass 
+    real(kind=dp_t), intent(out)  :: molmtot             ! total molar mass
     
     ! local variables
     integer          :: n
@@ -1167,65 +1167,198 @@ contains
     real(kind=dp_t), intent(out)  :: sqrtLonsager(nspecies,nspecies) 
 
     ! local variables
-    integer                              :: row,column,info
-    real(kind=dp_t), dimension(nspecies) :: W 
-    real(kind=dp_t)                      :: rcond 
+    integer         :: row,column,info,i,j
+    real(kind=dp_t) :: W(nspecies)
+    real(kind=dp_t) :: rcond
 
     real(kind=dp_t) :: molarconc(nspecies)
     real(kind=dp_t) :: molmtot
     real(kind=dp_t) :: chi(nspecies,nspecies)
     real(kind=dp_t) :: D_bar(nspecies,nspecies)
 
-    real(kind=dp_t) :: rho_tmp(nspecies)
-    real(kind=dp_t) :: rhotot_tmp
+    integer :: ntrace
+    integer :: nspecies_orig
+    real(kind=dp_t) :: molmass_orig(nspecies)
+    real(kind=dp_t) :: molmtot_sub
 
+    real(kind=dp_t), allocatable :: rho_sub(:), W_sub(:), molarconc_sub(:)
+    real(kind=dp_t), allocatable :: D_bar_sub(:,:), chi_sub(:,:), sqrtLonsager_sub(:,:)
+    real(kind=dp_t) :: rhotot_sub
+
+    ! this is a mapping used to eliminate elements in D_bar we don't need (for D_bar_sub)
+    ! and for expanding sqrtLonsager_sub into sqrtLonsager
+    ! it will contain the numbers 1, 2, ..., (nspecies-ntrace)
+    ! with zeros in elements corresponding to trace elements
+    ! (example) for a 5-species system having trace species 2 and 5:
+    !  species       1 2 3 4 5
+    !  dest(species) 1 0 2 3 0
+    integer :: dest(nspecies)
   
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"compute_sqrtLonsager_local")
 
-    ! make copies of densities and adjust so they contain positive values
-    rho_tmp(1:nspecies) = max(rho(1:nspecies), fraction_tolerance*rhotot)
-    rhotot_tmp = sum(rho_tmp(1:nspecies))
-
-    ! compute molarconc and molmtot
-    call compute_molconc_molmtot_local(rho_tmp,rhotot_tmp,molarconc,molmtot)
-
-    ! compute D_bar
-    call compute_D_bar_local(rho_tmp,rhotot_tmp,D_bar)
-
-    ! compute chi
-    call compute_chi_local(rho_tmp,rhotot_tmp,molarconc,chi,D_bar)
-
-    ! compute massfraction W_i using the non-negative values *without* the correction of order fraction_tolerance
-    ! This ensures that if W_i=0 there is no stochastic flux generated at all for species i
-    do row=1, nspecies  
+    ! compute the number of trace species
+    ! mark which species are trace species
+    ntrace = 0
+    do row=1, nspecies
        W(row) = rho(row)/rhotot
+       if (W(row) .lt. fraction_tolerance) then
+          ntrace = ntrace + 1
+          dest(row) = 0
+       else
+          dest(row) = row - ntrace
+       end if
     end do
 
-    ! compute Onsager matrix L (store in sqrtLonsager)
-    do column=1, nspecies
-       do row=1, nspecies
-          sqrtLonsager(row, column) = molmtot*rhotot*W(row)*chi(row,column)*W(column)/k_B
-       end do
-    end do
+    if (ntrace .eq. nspecies-1) then
 
-    ! compute cell-centered Cholesky factor, sqrtLonsager
-    if(use_lapack) then
-       
-       call dpotrf_f95(sqrtLonsager,'L', rcond, 'I', info)
-       !stop "LAPACK95 dpotrf_f95 disabled"
-    
-       ! remove all upper-triangular entries and NXN entry that lapack doesn't set to zero 
-       do row=1, nspecies
-          do column=row+1, nspecies
-             sqrtLonsager(row, column) = 0.0d0          
+       ! this is essentially pure solvent; set sqrtLonsager to zero
+       sqrtLonsager(:,:) = 0.d0
+
+    else if (ntrace .eq. 0) then
+
+       ! there are no trace species
+
+       ! compute molarconc and molmtot
+       call compute_molconc_molmtot_local(rho,rhotot,molarconc,molmtot)
+
+       ! compute D_bar
+       call compute_D_bar_local(rho,rhotot,D_bar)
+
+       ! compute chi
+       call compute_chi_local(rho,rhotot,molarconc,chi,D_bar)
+
+       ! compute Onsager matrix L (store in sqrtLonsager)
+       do column=1, nspecies
+          do row=1, nspecies
+             sqrtLonsager(row, column) = molmtot*rhotot*W(row)*chi(row,column)*W(column)/k_B
           end do
-       end do    
-       sqrtLonsager(nspecies, nspecies) = 0.0d0          
+       end do
+
+       ! compute cell-centered Cholesky factor, sqrtLonsager
+       if(use_lapack) then
+       
+          call dpotrf_f95(sqrtLonsager,'L', rcond, 'I', info)
+          !stop "LAPACK95 dpotrf_f95 disabled"
     
+          ! remove all upper-triangular entries and NXN entry that lapack doesn't set to zero 
+          do row=1, nspecies
+             do column=row+1, nspecies
+                sqrtLonsager(row, column) = 0.0d0          
+             end do
+          end do
+          sqrtLonsager(nspecies, nspecies) = 0.0d0          
+    
+       else
+          call choldc(sqrtLonsager,nspecies)   
+       end if
+
     else
-       call choldc(sqrtLonsager,nspecies)   
+       ! if there are trace species, we consider a subsystem 
+       ! consisting of non-trace species
+
+       allocate(      rho_sub(nspecies-ntrace))
+       allocate(        W_sub(nspecies-ntrace))
+       allocate(molarconc_sub(nspecies-ntrace))
+
+       allocate(       D_bar_sub(nspecies-ntrace,nspecies-ntrace))
+       allocate(         chi_sub(nspecies-ntrace,nspecies-ntrace))
+       allocate(sqrtLonsager_sub(nspecies-ntrace,nspecies-ntrace))
+
+       ! save the actual nspecies and molmass
+       nspecies_orig = nspecies
+       molmass_orig(1:nspecies_orig) = molmass(1:nspecies_orig)
+
+       ! before changing nspecies, compute the full D_bar
+       ! we will pick out the correct submatrix values later
+       call compute_D_bar_local(rho,rhotot,D_bar)
+
+       ! change nspecies (for the subsystem) 
+       nspecies = nspecies_orig - ntrace
+       
+       ! create a vector of non-trace densities and molmass for the subsystem
+       do row=1, nspecies_orig
+          if (dest(row) .ne. 0) then
+             rho_sub(dest(row)) = rho(row)
+             molmass(dest(row)) = molmass_orig(row)
+             ! only molmass(1:nspecies_orig-ntrace) to be used
+          end if
+       end do
+
+       ! renormalize total density and mass fractions
+       rhotot_sub = sum(rho_sub)
+       do row=1, nspecies
+          W_sub(row) = rho_sub(row)/rhotot_sub
+       end do
+
+       ! compute molarconc_sub and molmtot_sub
+       ! (molmass for the subsystem should be used)
+       call compute_molconc_molmtot_local(rho_sub,rhotot_sub,molarconc_sub,molmtot_sub)
+
+       ! construct D_bar_sub by mapping the full D_bar into D_bar_sub
+       ! you could read in only the lower diagonals, 
+       ! reflect, and set the diagnals to zero if you want
+       do row = 1, nspecies_orig
+          if (dest(row) .eq. 0) then
+             cycle
+          end if
+          do column = 1, nspecies_orig
+             if (dest(column) .ne. 0) then
+                D_bar_sub(dest(row),dest(column)) = D_bar(row,column)
+             end if
+          end do
+       end do
+
+       ! compute chi_sub
+       call compute_chi_local(rho_sub,rhotot_sub,molarconc_sub,chi_sub,D_bar_sub)
+
+       ! compute Onsager matrix L_sub (store in sqrtLonsager_sub)
+       do column=1, nspecies
+          do row=1, nspecies
+             sqrtLonsager_sub(row, column) = &
+                  molmtot_sub*rhotot_sub*W_sub(row)*chi_sub(row,column)*W_sub(column)/k_B
+          end do
+       end do
+
+       ! compute cell-centered Cholesky factor, sqrtLonsager_sub
+       if(use_lapack) then
+       
+          call dpotrf_f95(sqrtLonsager_sub,'L', rcond, 'I', info)
+          !stop "LAPACK95 dpotrf_f95 disabled"
+    
+          ! remove all upper-triangular entries and NXN entry that lapack doesn't set to zero 
+          do row=1, nspecies
+             do column=row+1, nspecies
+                sqrtLonsager_sub(row, column) = 0.0d0          
+             end do
+          end do
+          sqrtLonsager_sub(nspecies, nspecies) = 0.0d0          
+    
+       else
+          call choldc(sqrtLonsager_sub,nspecies)   
+       end if
+
+       ! expand sqrtLonsager_sub into sqrtLonsager
+       sqrtLonsager(:,:) = 0.d0
+       do row=1, nspecies_orig
+          if (dest(row) .eq. 0) then
+             cycle
+          end if
+          do column=1, nspecies_orig
+             if (dest(column) .ne. 0) then
+                sqrtLonsager(row,column) = sqrtLonsager_sub(dest(row),dest(column))
+             end if
+          end do
+       end do
+
+       ! restore nspecies and molmass 
+       nspecies = nspecies_orig
+       molmass(1:nspecies_orig) = molmass_orig(1:nspecies_orig)
+
+       deallocate(rho_sub,W_sub,molarconc_sub)
+       deallocate(D_bar_sub,chi_sub,sqrtLonsager_sub)
+
     end if
 
     call destroy(bpt)
