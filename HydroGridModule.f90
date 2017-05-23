@@ -167,7 +167,7 @@ module HydroGridModule
       ! Cross-correlations between structure factors for different variables: 
       logical :: writeSpectrumVTK=.false. ! Write to VTK
       logical :: estimateCovariances=.false. ! Estimate the covariance of all pairs of spectra
-      logical :: subtractMeanFT=.true. ! Subtract the mean of the structure factors (for non-uniform systems)
+      logical :: subtractMeanFT=.false. ! Subtract the mean of the structure factors (for non-uniform systems)
       real (wp) :: structFactMultiplier = 1.0_wp ! Normalization for structure factors
       integer :: nStructureFactors = 0 ! How many pairs of variables to calculate Fourier-space cross-correlations for
       integer, allocatable :: vectorFactors(:) ! Dimension (nStructureFactors), 1=diagonal, -1=off-diagonal
@@ -447,7 +447,7 @@ contains
       writeMeansVTK=.false.
       writeSnapshotVTK=.false.
       estimateCovariances=.false.
-      subtractMeanFT=.true.
+      subtractMeanFT=.false.
       staggeredVelocities=grid%staggeredVelocities
       topConcentration=0.5_wp
       bottomConcentration=0.5_wp
@@ -1166,7 +1166,21 @@ subroutine updateStructureFactors(grid)
    ! Dynamic structure factors
    if (grid%nWavenumbers <= 0) return
 
+   ! Save the current snapshot in the record (history):
+   grid%iSample = grid%iSample + 1
+   do iVariable = 1, grid%nVariablesToFFT
+      do iWavenumber = 1, grid%nWavenumbers
+         kx = grid%selectedWaveindices(1, iWavenumber)
+         ky = grid%selectedWaveindices(2, iWavenumber)
+         kz = grid%selectedWaveindices(3, iWavenumber)
+         grid%savedStructureFactors(grid%iSample, iWavenumber, iVariable) = grid%staticFourierTransforms(kx, ky, kz, iVariable)
+      end do
+   end do
+   
+   !write(*,*) "iStep=", grid%iStep, " sample=", grid%iSample, " series=", grid%iTimeSeries
+
    if (grid%iSample >= abs(grid%nSavedRawSnapshots)) then ! Memory of past history is full, do temporal FFT now
+      !write(*,*) "Computing time-correlation functions using FFTs every ", grid%nSavedRawSnapshots 
 
       if(writeSpectrumHistory) then ! Save a history of S(k)
          
@@ -1196,7 +1210,7 @@ subroutine updateStructureFactors(grid)
                grid%savedStructureFactors(1:grid%nSavedRawSnapshots, iWavenumber, iVariable)
             ! For the second half, invert the time so the result is periodic:
             grid%dynamicFFTarray(grid%nSavedRawSnapshots+1 : 2*grid%nSavedRawSnapshots-2) = &
-               grid%savedStructureFactors(grid%nSavedRawSnapshots-1:2:-1, iWavenumber, iVariable)
+               grid%savedStructureFactors(grid%nSavedRawSnapshots-1:2:-1, iWavenumber, iVariable)               
             call FFTW_Execute(grid%dynamicFFTplan)
             grid%savedStructureFactors(:, iWavenumber, iVariable) = grid%dynamicFFTarray ! Use this as temporary storage
 
@@ -1229,17 +1243,6 @@ subroutine updateStructureFactors(grid)
       end do
 
    end if
-
-   ! Save the current snapshot in the record (history):
-   grid%iSample = grid%iSample + 1
-   do iVariable = 1, grid%nVariablesToFFT
-      do iWavenumber = 1, grid%nWavenumbers
-         kx = grid%selectedWaveindices(1, iWavenumber)
-         ky = grid%selectedWaveindices(2, iWavenumber)
-         kz = grid%selectedWaveindices(3, iWavenumber)
-         grid%savedStructureFactors(grid%iSample, iWavenumber, iVariable) = grid%staticFourierTransforms(kx, ky, kz, iVariable)
-      end do
-   end do
 
 end subroutine updateStructureFactors
 
