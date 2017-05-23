@@ -1,4 +1,4 @@
-SRC_LAPACK=../
+SRC_LAPACK=./
 
 vpath %.f90 $(SRC_LAPACK)
 
