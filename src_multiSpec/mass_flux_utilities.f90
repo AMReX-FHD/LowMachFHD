@@ -1199,7 +1199,7 @@ contains
     call build(bpt,"compute_sqrtLonsager_local")
 
     ! compute the number of trace species
-    ! mark which species are trace species
+    ! build the mapping for expanding/contracting arrays
     ntrace = 0
     do row=1, nspecies
        W(row) = rho(row)/rhotot
@@ -1213,7 +1213,8 @@ contains
 
     if (ntrace .eq. nspecies-1) then
 
-       ! this is essentially pure solvent; set sqrtLonsager to zero
+       ! this is all trace species except for 1 (essentially pure solvent);
+       ! set sqrtLonsager to zero
        sqrtLonsager(:,:) = 0.d0
 
     else if (ntrace .eq. 0) then
