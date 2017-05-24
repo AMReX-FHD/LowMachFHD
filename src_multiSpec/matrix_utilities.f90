@@ -2,7 +2,6 @@ module matrix_utilities
 
   use bl_types
   use bl_prof_module
-  use probin_common_module, only: molmass, nspecies
 
   implicit none
 
@@ -12,25 +11,27 @@ module matrix_utilities
   
 contains
 
-    ! nspecies is number of species
+    ! nspecies_local is number of species
     ! num_iterations is the number of terms in the sum to use: 3-5 are reasonable values
     ! D_bar is matrix of Maxwell-Stefan binary diffusion coefficient
     ! chi is the multispecies diffusion matrix
     ! Xk is mole fractions --- MUST NOT BE ZERO
-    subroutine Dbar2chi_iterative(num_iterations,D_bar,Xk,chi)
+    subroutine Dbar2chi_iterative(nspecies_local,num_iterations,D_bar,Xk,molmass_local,chi)
+      integer, intent(in) :: nspecies_local
       integer, intent(in) :: num_iterations
-      real(kind=dp_t), intent(in) :: Xk(1:nspecies), D_bar(1:nspecies,1:nspecies)
-      real(kind=dp_t), intent(out) :: chi(1:nspecies,1:nspecies)
+      real(kind=dp_t), intent(in) :: D_bar(1:nspecies_local,1:nspecies_local)
+      real(kind=dp_t), intent(in) :: Xk(1:nspecies_local), molmass_local(1:nspecies_local)
+      real(kind=dp_t), intent(out) :: chi(1:nspecies_local,1:nspecies_local)
       
       ! Local variables
       real(kind=dp_t) :: term1, term2, MWmix
-      real(kind=dp_t) :: Di(1:nspecies)
-      real(kind=dp_t) :: Deltamat(1:nspecies,1:nspecies), Zmat(1:nspecies,1:nspecies)
-      real(kind=dp_t), dimension(1:nspecies,1:nspecies) :: Pmat, Jmat
-      real(kind=dp_t), dimension(1:nspecies) :: Minv, Mmat
-      real(kind=dp_t), dimension(1:nspecies,1:nspecies) :: PJ, matrix1, matrix2
+      real(kind=dp_t) :: Di(1:nspecies_local)
+      real(kind=dp_t) :: Deltamat(1:nspecies_local,1:nspecies_local), Zmat(1:nspecies_local,1:nspecies_local)
+      real(kind=dp_t), dimension(1:nspecies_local,1:nspecies_local) :: Pmat, Jmat
+      real(kind=dp_t), dimension(1:nspecies_local) :: Minv, Mmat
+      real(kind=dp_t), dimension(1:nspecies_local,1:nspecies_local) :: PJ, matrix1, matrix2
       real(kind=dp_t) :: scr
-      real(kind=dp_t) :: Ykp(1:nspecies), Xkp(1:nspecies)
+      real(kind=dp_t) :: Ykp(1:nspecies_local), Xkp(1:nspecies_local)
 
       integer :: i, j, k, ii, jj
 
@@ -40,25 +41,25 @@ contains
       
       ! mole fractions correction
       ! Turned this off since it should be done in the caller
-      do ii = 1, nspecies
+      do ii = 1, nspecies_local
        Xkp(ii) = Xk(ii)
       end do
 
       ! molecular weight of mixture - EGLIB
       Mwmix = 0.0d0
-      do ii = 1, nspecies
-       MWmix = MWmix + Xkp(ii)*molmass(ii)
+      do ii = 1, nspecies_local
+       MWmix = MWmix + Xkp(ii)*molmass_local(ii)
       end do
 
       ! mass fractions correction - EGLIB
-      do ii = 1, nspecies
-       Ykp(ii) = molmass(ii)/MWmix*Xkp(ii)
+      do ii = 1, nspecies_local
+       Ykp(ii) = molmass_local(ii)/MWmix*Xkp(ii)
       end do
 
       ! Find Di matrix 
-      do i = 1, nspecies
+      do i = 1, nspecies_local
        term2 = 0.0d0
-       do j = 1, nspecies
+       do j = 1, nspecies_local
         if(j.ne.i) then
           term2 = term2 + Xkp(j)/D_bar(i,j)
         end if
@@ -67,7 +68,7 @@ contains
       end do   
 
       ! Compute Mmat and Minv
-      do i = 1, nspecies
+      do i = 1, nspecies_local
        Mmat(i) = Xkp(i)/Di(i)
        Minv(i) = Di(i)/Xkp(i)
       end do
@@ -75,8 +76,8 @@ contains
 
       ! Compute P matrix
       Pmat = 0.0d0
-      do i = 1, nspecies
-       do j = 1, nspecies
+      do i = 1, nspecies_local
+       do j = 1, nspecies_local
          Pmat(i,j) = - Ykp(j) 
          if(i.eq.j) then
           Pmat(i,j) =  Pmat(i,j) + 1.0d0  
@@ -86,11 +87,11 @@ contains
 
       ! Compute Deltamat
       Deltamat = 0.0d0 
-      do i = 1, nspecies
-       do j = 1, nspecies
+      do i = 1, nspecies_local
+       do j = 1, nspecies_local
          if(i.eq.j) then
           term1 = 0.0d0
-          do k = 1, nspecies
+          do k = 1, nspecies_local
            if(k.ne.i) then
             term1 = term1 + Xkp(i)*Xkp(k)/D_bar(i,k)
            end if
@@ -104,32 +105,32 @@ contains
       end do  
 
       ! Compute Zmat
-      do i = 1, nspecies
+      do i = 1, nspecies_local
         Zmat(i,i) = Zmat(i,i) + Mmat(i)
       end do  
 
       ! Compute Jmat
-      do i = 1, nspecies
-       do j = 1, nspecies
+      do i = 1, nspecies_local
+       do j = 1, nspecies_local
          Jmat(i,j) = Minv(i)*Zmat(i,j)
         end do
        end do
 
       ! Compute PJ
       PJ = 0.0d0
-      do i = 1, nspecies
-       do j = 1, nspecies
-        do k = 1, nspecies
+      do i = 1, nspecies_local
+       do j = 1, nspecies_local
+        do k = 1, nspecies_local
          PJ(i,j) = PJ(i,j) + Pmat(i,k)*Jmat(k,j)
         end do
        end do
       end do
 
       ! Compute P M^-1 Pt; store it in matrix2
-      do i = 1, nspecies
-       do j = 1, nspecies
+      do i = 1, nspecies_local
+       do j = 1, nspecies_local
         scr = 0.d0
-        do k = 1, nspecies
+        do k = 1, nspecies_local
          scr = scr + Pmat(i,k)*Minv(k)*Pmat(j,k) 
             ! notice the change in indices for Pmat to represent Pmat^t
         end do
@@ -140,10 +141,10 @@ contains
 
 
       do jj = 1,num_iterations
-       do i = 1, nspecies
-        do j = 1, nspecies
+       do i = 1, nspecies_local
+        do j = 1, nspecies_local
          scr = 0.d0
-         do k = 1, nspecies
+         do k = 1, nspecies_local
             scr = scr + PJ(i,k)*chi(k,j)
          end do
           matrix1(i,j) = scr+matrix2(i,j)
