@@ -1230,6 +1230,20 @@ contains
        ! compute chi
        call compute_chi_local(rho,rhotot,molarconc,chi,D_bar)
 
+       ! hack
+       !do column=1, nspecies
+       !   do row=1, nspecies
+       !      sqrtLonsager(row, column) = W(row)*chi(row,column)
+       !   end do
+       !end do
+       !print *,"W chi"
+       !do row=1, nspecies
+       !   print *,sqrtLonsager(row,1:nspecies)
+       !end do
+       !print *,"molmtot=",molmtot
+       !print *,"rhotot=",rhotot
+       ! hack
+
        ! compute Onsager matrix L (store in sqrtLonsager)
        do column=1, nspecies
           do row=1, nspecies
@@ -1314,6 +1328,20 @@ contains
        ! compute chi_sub
        call compute_chi_local(rho_sub,rhotot_sub,molarconc_sub,chi_sub,D_bar_sub)
 
+       ! hack
+       !do column=1, nspecies
+       !   do row=1, nspecies
+       !      sqrtLonsager_sub(row, column) = W_sub(row)*chi_sub(row,column)
+       !   end do
+       !end do
+       !print *,"W_sub chi_sub"
+       !do row=1, nspecies
+       !   print *,sqrtLonsager_sub(row,1:nspecies)
+       !end do
+       !print *,"molmtot_sub=",molmtot_sub
+       !print *,"rhotot_sub=",rhotot_sub
+       ! hac
+
        ! compute Onsager matrix L_sub (store in sqrtLonsager_sub)
        do column=1, nspecies
           do row=1, nspecies
@@ -1361,6 +1389,23 @@ contains
        deallocate(D_bar_sub,chi_sub,sqrtLonsager_sub)
 
     end if
+
+    ! hack
+    !print*,'L^1/2'
+    !do row=1, nspecies
+    !   print *,sqrtLonsager(row,1:nspecies)
+    !end do
+    !print*,'sumL^1/2_col'
+    !select case (nspecies)
+    !   case (2)
+    !      print*,sum(sqrtLonsager(1:2,1)),sum(sqrtLonsager(1:2,2))
+    !   case (3)
+    !      print*,sum(sqrtLonsager(1:3,1)),sum(sqrtLonsager(1:3,2)),sum(sqrtLonsager(1:3,3))
+    !   case (4)
+    !      print*,sum(sqrtLonsager(1:4,1)),sum(sqrtLonsager(1:4,2)),sum(sqrtLonsager(1:4,3)),sum(sqrtLonsager(1:4,4))
+    !end select
+    !stop
+    !hack
 
     call destroy(bpt)
 
