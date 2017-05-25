@@ -153,6 +153,36 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) inhomogeneous_bc_fix
 
+       case ('--n_init_in1_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) n_init_in(1,1)
+
+       case ('--n_init_in1_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) n_init_in(1,2)
+
+       case ('--n_init_in1_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) n_init_in(1,3)
+
+       case ('--n_init_in2_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) n_init_in(2,1)
+
+       case ('--n_init_in2_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) n_init_in(2,2)
+
+       case ('--n_init_in2_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) n_init_in(2,3)
+
        case ('--model_file_init')
           farg = farg + 1
           call get_command_argument(farg, value = fname)

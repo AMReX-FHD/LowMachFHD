@@ -183,6 +183,46 @@ contains
           call get_command_argument(farg, value = fname)
           read(fname, *) plot_stag
 
+       case ('--c_init1_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(1,1)
+
+       case ('--c_init1_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(1,2)
+
+       case ('--c_init1_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(1,3)
+
+       case ('--c_init1_4')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(1,4)
+
+       case ('--c_init2_1')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(2,1)
+
+       case ('--c_init2_2')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(2,2)
+
+       case ('--c_init2_3')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(2,3)
+
+       case ('--c_init2_4')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) c_init(2,4)
+
        case ('--midpoint_stoch_mass_flux_type')
           farg = farg + 1
           call get_command_argument(farg, value = fname)
