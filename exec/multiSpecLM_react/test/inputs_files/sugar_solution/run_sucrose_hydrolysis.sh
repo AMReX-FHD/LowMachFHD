@@ -1,7 +1,7 @@
 #!/bin/bash
 
 EXEC=../../main.Linux.gfortran.mpi.exe
-INPUTS=../inputs_sucrose_hydrolysis
+INPUTS=../inputs_sugar_solution
 RUNNAME=TEST
 NRUN=1
 
