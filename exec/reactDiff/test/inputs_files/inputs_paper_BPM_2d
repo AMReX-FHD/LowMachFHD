@@ -110,7 +110,7 @@
                                         ! standard deviation over reduced dimensions
   n_steps_save_stats = -1               ! How often to dump HydroGrid output files
   n_steps_skip = 0                      ! How many steps to skip
-  analyze_conserved = F                 ! Should we use conserved variables for the analysis
+  analyze_conserved = T                 ! Should we use conserved variables for the analysis
                                         ! (does not work well)
   center_snapshots = F                  ! Should we use cell-centered momenta for the analysis
                                         ! (will smooth fluctuations)
