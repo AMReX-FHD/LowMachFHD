@@ -129,7 +129,7 @@ dt = 5e-7
 print "dt = %e" % dt
 
 # cfl numbers
-print "D*dt/dx^2 = %e" % (max(DR,DG,DB,DW)*dt/dx**2)
+print "D*dt/dx^2 = %e" % (max(DR,DG,DB)*dt/dx**2)
 print "nu*dt/dx^2 = %e" % (nu*dt/dx**2)
 print "u*dt/dx = %e" % (uRand*dt/dx)
 
