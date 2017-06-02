@@ -1,9 +1,6 @@
 subroutine main_driver()
 
-  use boxlib
   use bl_IO_module
-  use bl_space
-  use ml_layout_module
   use init_lowmach_module
   use compute_mixture_properties_module
   use initial_projection_module
@@ -32,8 +29,6 @@ subroutine main_driver()
   use bl_random_module
   use mass_flux_utilities_module
   use compute_HSE_pres_module
-  use convert_stag_module
-  use convert_rhoc_to_c_module
   use convert_m_to_umac_module
   use sum_momenta_module
   use restart_module
