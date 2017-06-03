@@ -4,6 +4,8 @@ module define_bc_module
   use ml_layout_module
   use bc_module
   use inhomogeneous_bc_val_module
+  use probin_common_module, only : bc_lo, bc_hi, nspecies
+  use probin_charged_module, only: Epot_wall_bc_type
 
   implicit none
 
@@ -32,10 +34,6 @@ contains
 
   subroutine initialize_bc(the_bc_tower,num_levs,dm,pmask,num_scal_bc_in,num_tran_bc_in)
 
-     use bc_module
-
-     use probin_common_module, only : bc_lo, bc_hi
-
      type(bc_tower), intent(  out) :: the_bc_tower
      integer       , intent(in   ) :: num_levs,dm,num_scal_bc_in,num_tran_bc_in
      logical       , intent(in   ) :: pmask(:)
@@ -45,10 +43,15 @@ contains
      num_scal_bc  = num_scal_bc_in
      num_tran_bc  = num_tran_bc_in
 
-     vel_bc_comp  = 1
-     pres_bc_comp = vel_bc_comp+dm
-     scal_bc_comp = pres_bc_comp+1
-     tran_bc_comp = scal_bc_comp+num_scal_bc
+     vel_bc_comp      = 1
+     pres_bc_comp     = vel_bc_comp+dm
+     scal_bc_comp     = pres_bc_comp+1
+     c_bc_comp        = scal_bc_comp + 1
+     mol_frac_bc_comp = scal_bc_comp + nspecies + 1
+     temp_bc_comp     = scal_bc_comp + 2*nspecies + 1
+     Epot_bc_comp     = scal_bc_comp + 2*nspecies + 2
+     h_bc_comp        = scal_bc_comp + 2*nspecies + 3
+     tran_bc_comp     = scal_bc_comp+num_scal_bc
 
      ! Define the physical boundary conditions on the domain
      ! Put the bc values from the inputs file into domain_phys_bc
@@ -126,15 +129,18 @@ contains
     ! Here we allocate (dm+1)=pres_bc_comp components for x_u and x_p
     !                  num_scal_bc components for scalars
     !                  num_tran_bc components for transport coefficients
-    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc+num_tran_bc))
+    allocate(bct%bc_tower_array(n)%adv_bc_level_array(0:ngrids,dm,2,1:tran_bc_comp+num_tran_bc-1))
     default_value = INTERIOR
     call adv_bc_level_build(bct%bc_tower_array(n)%adv_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
 
-    ! Here we allocate (dm+1)=pres_bc_comp components for x_u and x_p
-    !                  num_scal_bc components for scalars
-    !                  num_tran_bc components for transport coefficients
-    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp+num_scal_bc+num_tran_bc))
+    ! This is only used for the cell-centered Poisson solver for the projection
+    ! and for electric potential solves, and for temperature solves
+    !                  pres_bc_comp for x_p
+    !                  1 component for Epot
+    !                  1 component for Temperature
+    ! (since Epot_bc_comp is the "last" scalar this is indexed much larger than it has to be)
+    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp:temp_bc_comp))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)
@@ -221,8 +227,8 @@ contains
           ! for normal velocity we impose a Dirichlet velocity condition
           ! for transverse velocity we imposie a Dirichlet velocity condition
           ! for pressure we use extrapolation
-          adv_bc_level(igrid,d,lohi,1:dm)                    = DIR_VEL  ! normal and transverse velocity
-          adv_bc_level(igrid,d,lohi,pres_bc_comp)                    = FOEXTRAP ! pressure
+          adv_bc_level(igrid,d,lohi,1:dm)         = DIR_VEL  ! normal and transverse velocity
+          adv_bc_level(igrid,d,lohi,pres_bc_comp) = FOEXTRAP ! pressure
 
        else if ( (phys_bc_level(igrid,d,lohi) >= SLIP_START) .and.  (phys_bc_level(igrid,d,lohi) <= SLIP_END) ) then
 
@@ -240,19 +246,27 @@ contains
 
        end if
        
-       ! The scalars can be handled in many different ways, so defer to application-specific code:
-       call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
-                      scal_bc_comp:scal_bc_comp+num_scal_bc-1))
+       if (num_scal_bc .gt. 0) then
+          ! The scalars can be handled in many different ways, so defer to application-specific code:
+          call scalar_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
+                         scal_bc_comp:scal_bc_comp+num_scal_bc-1))
+
+          if (any(adv_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) .eq. -999)) then
+             print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+             call bl_error('BC TYPE NOT SUPPORTED 2')
+          end if
+
+       end if
        
-       ! The transport coefficients can be handled in many different ways, so defer to application-specific code:
-       call transport_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
-                         tran_bc_comp:tran_bc_comp+num_tran_bc-1))
+       if (num_tran_bc .gt. 0) then
+          ! The transport coefficients can be handled in many different ways, so defer to application-specific code:
+          call transport_bc(phys_bc_level(igrid,d,lohi),adv_bc_level(igrid,d,lohi, &
+                            tran_bc_comp:tran_bc_comp+num_tran_bc-1))
 
-       if (any(adv_bc_level(igrid,d,lohi,scal_bc_comp:scal_bc_comp+num_scal_bc-1) .eq. -999)) then
-
-          print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
-          call bl_error('BC TYPE NOT SUPPORTED 2')
-
+          if (any(adv_bc_level(igrid,d,lohi,tran_bc_comp:tran_bc_comp+num_tran_bc-1) .eq. -999)) then
+             print*,'adv_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+             call bl_error('BC TYPE NOT SUPPORTED 3')
+          end if
        end if
 
     end do
@@ -263,7 +277,7 @@ contains
 
   subroutine ell_bc_level_build(ell_bc_level,phys_bc_level,default_value)
 
-    integer  , intent(inout) ::  ell_bc_level(0:,:,:,:)
+    integer  , intent(inout) ::  ell_bc_level(0:,:,:,pres_bc_comp:)
     integer  , intent(in   ) :: phys_bc_level(0:,:,:)
     integer  , intent(in   ) :: default_value
 
@@ -284,23 +298,30 @@ contains
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
-          ! pressure and temperature are periodic
-          ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_PER
+          ! pressure and electric potential and temperature are periodic
+          ell_bc_level(igrid,d,lohi,pres_bc_comp:temp_bc_comp) = BC_PER
 
-          ! protect against the temporary bc tower object used in the fancy bottom solver
-          if (size(ell_bc_level,dim=4) .ge. temp_bc_comp) then
-             ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_PER
+       else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL .or. &
+                phys_bc_level(igrid,d,lohi) == SLIP_WALL .or. &
+                phys_bc_level(igrid,d,lohi) == NO_SLIP_RESERVOIR .or. &
+                phys_bc_level(igrid,d,lohi) == SLIP_RESERVOIR) then
+
+          ! walls
+
+          ! pressure and temperature are homogeneous Neumann
+          ell_bc_level(igrid,d,lohi,pres_bc_comp:temp_bc_comp) = BC_NEU
+
+          ! electric potential
+          if (Epot_wall_bc_type .eq. 1) then
+             ell_bc_level(igrid,d,lohi,Epot_bc_comp) = BC_DIR
+          else if (Epot_wall_bc_type .eq. 2) then
+             ell_bc_level(igrid,d,lohi,Epot_bc_comp) = BC_NEU
           end if
 
        else
 
-          ! pressure and temperature are homogeneous neumann
-          ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_NEU
-
-          ! protect against the temporary bc tower object used in the fancy bottom solver
-          if (size(ell_bc_level,dim=4) .ge. temp_bc_comp) then
-             ell_bc_level(igrid,d,lohi,temp_bc_comp) = BC_NEU
-          end if
+          print*,'ell_bc_level_build',igrid,d,lohi,phys_bc_level(igrid,d,lohi)
+          call bl_error('BC TYPE NOT SUPPORTED')
 
        end if
 

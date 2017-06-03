@@ -1,4 +1,4 @@
-module advance_timestep_module
+module advance_timestep_inertial_module
 
   use ml_layout_module
   use bndry_reg_module
@@ -32,14 +32,14 @@ module advance_timestep_module
 
   private
 
-  public :: advance_timestep
+  public :: advance_timestep_inertial
 
 contains
 
-  subroutine advance_timestep(mla,umac_old,umac_new,rho_old,rho_new, &
-                              rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
-                              p0_old,p0_new,gradp_baro,Temp_old,Temp_new, &
-                              pi,dx,dt,the_bc_tower)
+  subroutine advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new, &
+                                      rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
+                                      p0_old,p0_new,gradp_baro,Temp_old,Temp_new, &
+                                      pi,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac_old(:,:)
@@ -183,6 +183,18 @@ contains
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, norm, norm_old
 
     logical :: nodal_temp(3)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt, "advance_timestep_inertial")
+
+    if (use_charged_fluid) then
+       call bl_error('advance_timestep_inertial for energy does not support charges yet')
+    end if
+
+    if (nreactions > 0) then
+       call bl_error('advance_timestep_inertial for energy does not support reactions yet')
+    end if
 
     nlevs = mla%nlevel
     dm = mla%dim
@@ -919,6 +931,8 @@ contains
 
     deallocate(eta_ed_old,eta_ed_new)
 
-  end subroutine advance_timestep
+    call destroy(bpt)
 
-end module advance_timestep_module
+  end subroutine advance_timestep_inertial
+
+end module advance_timestep_inertial_module

@@ -1,4 +1,4 @@
-module init_energy_module
+module init_lowmach_module
 
   use ml_layout_module
   use eos_model_module
@@ -10,12 +10,12 @@ module init_energy_module
 
   private
 
-  public :: init_energy
+  public :: init_lowmach
 
 
 contains
 
-  subroutine init_energy(mla,umac,rhotot,rho,rhoh,Temp,p0)
+  subroutine init_lowmach(mla,umac,rhotot,rho,rhoh,Temp,p0)
 
     ! initialize umac, rho, rho_i, rhoh, Temp, and p0
     ! what you supply is problem dependent, except that concentrations are required
@@ -65,13 +65,13 @@ contains
           hi = upb(get_box(rho(n),i))
           select case (dm)
           case (2)
-             call init_energy_2d(up(:,:,1,1),vp(:,:,1,1),ng_u, &
+             call init_lowmach_2d(up(:,:,1,1),vp(:,:,1,1),ng_u, &
                                  dp1(:,:,1,1),ng_1,dp2(:,:,1,:),ng_2, &
                                  dp3(:,:,1,1),ng_3,dp4(:,:,1,1),ng_4, &
                                  p0,lo,hi)
           case (3)
              wp => dataptr(umac(n,3),i)
-             call init_energy_3d(up(:,:,:,1),vp(:,:,:,1),wp(:,:,:,1),ng_u, &
+             call init_lowmach_3d(up(:,:,:,1),vp(:,:,:,1),wp(:,:,:,1),ng_u, &
                                  dp1(:,:,:,1),ng_1,dp2(:,:,:,:),ng_2, &
                                  dp3(:,:,:,1),ng_3,dp4(:,:,:,1),ng_4, &
                                  p0,lo,hi)
@@ -79,9 +79,9 @@ contains
        end do
     end do
 
-  end subroutine init_energy
+  end subroutine init_lowmach
 
-  subroutine init_energy_2d(umac,vmac,ng_u,rhotot,ng_1,rho,ng_2,rhoh,ng_3,Temp,ng_4,p0,lo,hi)
+  subroutine init_lowmach_2d(umac,vmac,ng_u,rhotot,ng_1,rho,ng_2,rhoh,ng_3,Temp,ng_4,p0,lo,hi)
 
     integer         :: lo(2), hi(2), ng_u, ng_1, ng_2, ng_3, ng_4
     real(kind=dp_t) ::   umac(lo(1)-ng_u:,lo(2)-ng_u:)
@@ -168,9 +168,9 @@ contains
 
     end select
 
-  end subroutine init_energy_2d
+  end subroutine init_lowmach_2d
 
-  subroutine init_energy_3d(umac,vmac,wmac,ng_u,rhotot,ng_1,rho,ng_2,rhoh,ng_3,Temp,ng_4, &
+  subroutine init_lowmach_3d(umac,vmac,wmac,ng_u,rhotot,ng_1,rho,ng_2,rhoh,ng_3,Temp,ng_4, &
                             p0,lo,hi)
 
     integer         :: lo(3), hi(3), ng_u, ng_1, ng_2, ng_3, ng_4
@@ -270,6 +270,6 @@ contains
 
     end select
 
-  end subroutine init_energy_3d
+  end subroutine init_lowmach_3d
 
-end module init_energy_module
+end module init_lowmach_module

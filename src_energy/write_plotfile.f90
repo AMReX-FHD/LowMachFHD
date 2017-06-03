@@ -1,4 +1,4 @@
-module write_plotfileenergy_module
+module write_plotfile_module
 
   use ml_layout_module
   use multifab_module
@@ -14,7 +14,7 @@ module write_plotfileenergy_module
 
 contains
   
-  subroutine write_plotfileenergy(mla,name,rho,rhotot,rhoh,Temp,umac,pi,p0,istep,dx,time)
+  subroutine write_plotfile(mla,name,rho,rhotot,rhoh,Temp,umac,pi,p0,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
     character(len=*),   intent(in)    :: name
@@ -204,6 +204,6 @@ contains
     deallocate(plotdata_stag)
     deallocate(plot_names)
 
-  end subroutine write_plotfileenergy
+  end subroutine write_plotfile
 
-end module write_plotfileenergy_module
+end module write_plotfile_module
