@@ -296,7 +296,7 @@ contains
 
        else if (phys_bc_level(igrid,d,lohi) == PERIODIC) then
 
-          ! pressure, scalars, and electric potential are periodic
+          ! pressure and electric potential are periodic
           ell_bc_level(igrid,d,lohi,pres_bc_comp:Epot_bc_comp) = BC_PER
 
        else if (phys_bc_level(igrid,d,lohi) == NO_SLIP_WALL .or. &
@@ -306,8 +306,8 @@ contains
 
           ! walls
 
-          ! pressure and scalars are homogeneous Neumann
-          ell_bc_level(igrid,d,lohi,pres_bc_comp:Epot_bc_comp-1) = BC_NEU
+          ! pressure is homogeneous Neumann
+          ell_bc_level(igrid,d,lohi,pres_bc_comp) = BC_NEU
 
           ! electric potential
           if (Epot_wall_bc_type .eq. 1) then

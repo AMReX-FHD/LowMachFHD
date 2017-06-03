@@ -902,13 +902,8 @@ subroutine main_driver()
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
   deallocate(umac,mtemp,rhotot_fc,gradp_baro)
   deallocate(eta,kappa,conc)
-  if (dm .eq. 2) then
-     deallocate(eta_ed)
-     deallocate(Temp_ed)
-  else if (dm .eq. 3) then
-     deallocate(eta_ed)
-     deallocate(Temp_ed)
-  end if
+  deallocate(eta_ed)
+  deallocate(Temp_ed)
 
   deallocate(Epot_mass_fluxdiv)
   deallocate(charge_old)
