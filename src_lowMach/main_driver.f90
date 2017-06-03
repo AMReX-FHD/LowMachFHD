@@ -310,7 +310,7 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
 
-     ! initialize rho
+     ! initialize rho and umac
      call init_rho_and_umac(mla,rho_old,umac,dx,time,the_bc_tower%bc_tower_array)
 
      ! initialize pi
