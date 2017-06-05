@@ -25,7 +25,7 @@ module advance_timestep_iterative_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
-  use fill_rhotot_ghost_cells_module
+  use fill_rho_ghost_cells_module
   use fluid_charge_module
   use ml_solve_module
   use bndry_reg_module
@@ -95,7 +95,6 @@ contains
     type(multifab) :: adv_mass_fluxdiv_new(mla%nlevel)
     type(multifab) ::          gmres_rhs_p(mla%nlevel)
     type(multifab) ::                  dpi(mla%nlevel)
-    type(multifab) ::                 conc(mla%nlevel)
     type(multifab) ::                S_inc(mla%nlevel)
 
     type(multifab) ::                  mold(mla%nlevel,mla%dim)
@@ -159,7 +158,6 @@ contains
        call multifab_build(adv_mass_fluxdiv_new(n),mla%la(n),nspecies,0)
        call multifab_build(      gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(              dpi(n),mla%la(n),1       ,1)
-       call multifab_build(             conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        do i=1,dm
           call multifab_build_edge(                mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(               mtemp(n,i),mla%la(n),1       ,1,i)
@@ -456,19 +454,8 @@ contains
        ! compute rhotot from rho in VALID REGION
        call compute_rhotot(mla,rho_new,rhotot_new)
 
-       ! rho to conc - NO GHOST CELLS
-       call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
-
-       ! fill conc ghost cells
-       call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
-
-       ! fill rhotot_ghost cells
-       do n=1,nlevs
-          call fill_rhotot_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
-       end do
-
-       ! conc to rho - INCLUDING GHOST CELLS
-       call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
+       ! fill rho and rhotot ghost cells
+       call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
        ! print out EOS drift
        call eos_check(mla,rho_new)
@@ -781,7 +768,6 @@ contains
        call multifab_destroy(adv_mass_fluxdiv_new(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
-       call multifab_destroy(conc(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))

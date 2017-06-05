@@ -25,7 +25,7 @@ module advance_timestep_inertial_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
-  use fill_rhotot_ghost_cells_module
+  use fill_rho_ghost_cells_module
   use bl_rng_module
   use bl_random_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
@@ -82,7 +82,6 @@ contains
     type(multifab) ::   bds_force(mla%nlevel)
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::         dpi(mla%nlevel)
-    type(multifab) ::        conc(mla%nlevel)
     type(multifab) ::  rho_nd_old(mla%nlevel)
     type(multifab) ::     rho_tmp(mla%nlevel)
     type(multifab) ::      p_baro(mla%nlevel)
@@ -130,7 +129,6 @@ contains
        call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(        dpi(n),mla%la(n),1       ,1)
-       call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build(     p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
           call multifab_build_edge(            mold(n,i),mla%la(n),1       ,1,i)
@@ -251,19 +249,8 @@ contains
     ! compute rhotot from rho in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
 
-    ! rho to conc - NO GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
-
-    ! fill conc ghost cells
-    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
-
-    ! fill rhotot ghost cells
-    do n=1,nlevs
-       call fill_rhotot_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
-    end do
-
-    ! conc to rho - INCLUDING GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
+    ! fill rho and rhotot ghost cells
+    call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
     ! average rho_new and rhotot_new to faces
     call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -623,19 +610,8 @@ contains
     ! compute rhotot from rho in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
 
-    ! rho to conc - NO GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
-
-    ! fill conc ghost cells
-    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
-
-    ! fill rhotot ghost cells
-    do n=1,nlevs
-       call fill_rhotot_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
-    end do
-
-    ! conc to rho - INCLUDING GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
+    ! fill rho and rhotot ghost cells
+    call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
     ! average rho_new and rhotot_new to faces
     call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
@@ -910,7 +886,6 @@ contains
        call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
-       call multifab_destroy(conc(n))
        call multifab_destroy(p_baro(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))

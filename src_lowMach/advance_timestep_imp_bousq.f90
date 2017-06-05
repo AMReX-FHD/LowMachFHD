@@ -24,7 +24,7 @@ module advance_timestep_imp_bousq_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
-  use fill_rhotot_ghost_cells_module
+  use fill_rho_ghost_cells_module
   use fluid_charge_module
   use ml_solve_module
   use bndry_reg_module
@@ -102,7 +102,6 @@ contains
     type(multifab) ::           rhotot_tmp(mla%nlevel)
     type(multifab) ::          gmres_rhs_p(mla%nlevel)
     type(multifab) ::                  dpi(mla%nlevel)
-    type(multifab) ::                 conc(mla%nlevel)
     type(multifab) ::           charge_np2(mla%nlevel)
 
     type(multifab) ::                  mold(mla%nlevel,mla%dim)
@@ -172,7 +171,6 @@ contains
        call multifab_build( rhotot_tmp(n),mla%la(n),1       ,rhotot_old(n)%ng)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(        dpi(n),mla%la(n),1       ,1)
-       call multifab_build(       conc(n),mla%la(n),nspecies,rho_old(n)%ng)
        call multifab_build( charge_np2(n),mla%la(n),1       ,1)
        do i=1,dm
           call multifab_build_edge(                 mold(n,i),mla%la(n),1       ,1,i)
@@ -363,19 +361,8 @@ contains
     ! compute rhotot^{n+1,*} from rho^{n+1,*} in VALID REGION
     call compute_rhotot(mla,rho_tmp,rhotot_tmp)
 
-    ! rho to conc - NO GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_tmp,rhotot_tmp,conc,.true.)
-
-    ! fill conc ghost cells
-    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
-
-    ! fill rhotot ghost cells
-    do n=1,nlevs
-       call fill_rhotot_ghost_cells(conc(n),rhotot_tmp(n),the_bc_tower%bc_tower_array(n))
-    end do
-
-    ! conc to rho - INCLUDING GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_tmp,rhotot_tmp,conc,.false.)
+    ! fill rho and rhotot ghost cells
+    call fill_rho_rhotot_ghost(mla,rho_tmp,rhotot_tmp,dx,the_bc_tower)
 
     ! print out EOS drift
     call eos_check(mla,rho_tmp)
@@ -707,19 +694,8 @@ contains
     ! compute rhotot^{n+2,*} from rho^{n+2,*} in VALID REGION
     call compute_rhotot(mla,rho_tmp,rhotot_tmp)
 
-    ! rho to conc - NO GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_tmp,rhotot_tmp,conc,.true.)
-
-    ! fill conc ghost cells
-    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
-
-    ! fill rhotot ghost cells
-    do n=1,nlevs
-       call fill_rhotot_ghost_cells(conc(n),rhotot_tmp(n),the_bc_tower%bc_tower_array(n))
-    end do
-
-    ! conc to rho - INCLUDING GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_tmp,rhotot_tmp,conc,.false.)
+    ! fill rho and rhotot ghost cells
+    call fill_rho_rhotot_ghost(mla,rho_tmp,rhotot_tmp,dx,the_bc_tower)
 
     ! compute charge^{n+2,*}
     call dot_with_z(mla,rho_tmp,charge_np2)
@@ -741,21 +717,10 @@ contains
     ! compute rhotot^{n+1} from rho^{n+1} in VALID REGION
     call compute_rhotot(mla,rho_new,rhotot_new)
 
-    ! rho to conc - NO GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
+    ! fill rho and rhotot ghost cells
+    call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
-    ! fill conc ghost cells
-    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
-
-    ! fill rhotot ghost cells
-    do n=1,nlevs
-       call fill_rhotot_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
-    end do
-
-    ! conc to rho - INCLUDING GHOST CELLS
-    call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.false.)
-
-    ! print out EOS drift
+       ! print out EOS drift
     call eos_check(mla,rho_new)
 
     ! average (rho,rhotot)^{n+1} to faces
@@ -1023,7 +988,6 @@ contains
        call multifab_destroy(rhotot_tmp(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
-       call multifab_destroy(conc(n))
        call multifab_destroy(charge_np2(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))

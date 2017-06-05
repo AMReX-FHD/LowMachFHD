@@ -23,7 +23,7 @@ subroutine main_driver()
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use fill_umac_ghost_cells_module
-  use fill_rhotot_ghost_cells_module
+  use fill_rho_ghost_cells_module
   use ParallelRNGs 
   use bl_rng_module
   use bl_random_module
@@ -80,7 +80,6 @@ subroutine main_driver()
   type(multifab), allocatable  :: eta(:)
   type(multifab), allocatable  :: eta_ed(:,:)
   type(multifab), allocatable  :: kappa(:)
-  type(multifab), allocatable  :: conc(:)
 
   real(kind=dp_t)              :: total_charge
   type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
@@ -137,7 +136,7 @@ subroutine main_driver()
   allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
   allocate(stoch_mass_flux(nlevs,dm))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
-  allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
+  allocate(eta(nlevs),kappa(nlevs))
 
   ! 1 component in 2D, 3 components in 3D
   allocate(eta_ed(nlevs,2*dm-3))
@@ -321,25 +320,8 @@ subroutine main_driver()
   ! compute rhotot from rho in VALID REGION
   call compute_rhotot(mla,rho_old,rhotot_old)
 
-  ! rho to conc - NO GHOST CELLS
-  do n=1,nlevs
-     call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
-  end do
-  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
-
-  ! fill conc ghost cells
-  call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
-
-  ! fill rhotot ghost cells
-  do n=1,nlevs
-     call fill_rhotot_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
-  end do
-
-  ! conc to rho - INCLUDING GHOST CELLS
-  call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
-  do n=1,nlevs
-     call multifab_destroy(conc(n))
-  end do
+  ! fill rho and rhotot ghost cells
+  call fill_rho_rhotot_ghost(mla,rho_old,rhotot_old,dx,the_bc_tower)
 
   !=======================================================
   ! Build multifabs for all the variables
@@ -903,7 +885,7 @@ subroutine main_driver()
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
   deallocate(stoch_mass_flux)
   deallocate(umac,mtemp,rhotot_fc,gradp_baro)
-  deallocate(eta,kappa,conc)
+  deallocate(eta,kappa)
   deallocate(eta_ed)
   deallocate(Temp_ed)
 
