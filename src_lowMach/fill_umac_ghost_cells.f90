@@ -23,7 +23,7 @@ contains
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
+    type(multifab) , intent(in   ) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     real(kind=dp_t), intent(in   ) :: dx(:,:),time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 

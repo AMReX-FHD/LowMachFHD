@@ -23,7 +23,7 @@ subroutine main_driver()
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use fill_umac_ghost_cells_module
-  use fill_rho_ghost_cells_module
+  use fill_rhotot_ghost_cells_module
   use ParallelRNGs 
   use bl_rng_module
   use bl_random_module
@@ -308,7 +308,7 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
 
-     ! initialize rho and umac
+     ! initialize rho and umac in valid region only
      call init_rho_and_umac(mla,rho_old,umac,dx,time,the_bc_tower%bc_tower_array)
 
      ! initialize pi, including ghost cells
@@ -318,24 +318,25 @@ subroutine main_driver()
 
   end if
 
-  do n=1,nlevs
-     call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
-  end do
-
   ! compute rhotot from rho in VALID REGION
   call compute_rhotot(mla,rho_old,rhotot_old)
 
   ! rho to conc - NO GHOST CELLS
+  do n=1,nlevs
+     call multifab_build(conc(n),mla%la(n),nspecies,ng_s)
+  end do
   call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
+
+  ! fill conc ghost cells
   call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
+  ! fill rhotot ghost cells
   do n=1,nlevs
-     call fill_rho_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
+     call fill_rhotot_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
   end do
 
   ! conc to rho - INCLUDING GHOST CELLS
   call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
-
   do n=1,nlevs
      call multifab_destroy(conc(n))
   end do

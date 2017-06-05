@@ -24,7 +24,7 @@ module advance_timestep_imp_bousq_module
   use multifab_physbc_module
   use multifab_physbc_stag_module
   use zero_edgeval_module
-  use fill_rho_ghost_cells_module
+  use fill_rhotot_ghost_cells_module
   use fluid_charge_module
   use ml_solve_module
   use bndry_reg_module
@@ -365,11 +365,13 @@ contains
 
     ! rho to conc - NO GHOST CELLS
     call convert_rhoc_to_c(mla,rho_tmp,rhotot_tmp,conc,.true.)
-    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
     ! fill conc ghost cells
+    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+
+    ! fill rhotot ghost cells
     do n=1,nlevs
-       call fill_rho_ghost_cells(conc(n),rhotot_tmp(n),the_bc_tower%bc_tower_array(n))
+       call fill_rhotot_ghost_cells(conc(n),rhotot_tmp(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! conc to rho - INCLUDING GHOST CELLS
@@ -707,11 +709,13 @@ contains
 
     ! rho to conc - NO GHOST CELLS
     call convert_rhoc_to_c(mla,rho_tmp,rhotot_tmp,conc,.true.)
-    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
     ! fill conc ghost cells
+    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+
+    ! fill rhotot ghost cells
     do n=1,nlevs
-       call fill_rho_ghost_cells(conc(n),rhotot_tmp(n),the_bc_tower%bc_tower_array(n))
+       call fill_rhotot_ghost_cells(conc(n),rhotot_tmp(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! conc to rho - INCLUDING GHOST CELLS
@@ -739,11 +743,13 @@ contains
 
     ! rho to conc - NO GHOST CELLS
     call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc,.true.)
-    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
     ! fill conc ghost cells
+    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+
+    ! fill rhotot ghost cells
     do n=1,nlevs
-       call fill_rho_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
+       call fill_rhotot_ghost_cells(conc(n),rhotot_new(n),the_bc_tower%bc_tower_array(n))
     end do
 
     ! conc to rho - INCLUDING GHOST CELLS
