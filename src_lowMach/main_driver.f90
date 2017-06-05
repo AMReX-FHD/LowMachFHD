@@ -241,6 +241,9 @@ subroutine main_driver()
 
   end if
 
+  ! data structures to help with reservoirs
+  call build_bc_multifabs(mla)
+
   ! set grid spacing at each level
   allocate(dx(nlevs,MAX_SPACEDIM))
   dx(1,1:MAX_SPACEDIM) = (prob_hi(1:MAX_SPACEDIM)-prob_lo(1:MAX_SPACEDIM)) &
@@ -329,7 +332,6 @@ subroutine main_driver()
   do n=1,nlevs
      call fill_rho_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
   end do
-  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
 
   ! conc to rho - INCLUDING GHOST CELLS
   call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
@@ -337,18 +339,6 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(conc(n))
   end do
-
-  if (print_int .gt. 0) then
-     if (parallel_IOProcessor()) write(*,*) "Initial state:"  
-     call sum_mass(rho_old, 0) ! print out the total mass to check conservation
-     ! compute rhotot on faces
-     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
-                             the_bc_tower%bc_tower_array)
-     ! compute momentum
-     call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
-     call sum_momenta(mla,mtemp)
-     call eos_check(mla,rho_old)
-  end if
 
   !=======================================================
   ! Build multifabs for all the variables
@@ -420,9 +410,6 @@ subroutine main_driver()
         call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
      end do
   end if
-
-  ! data structures to help with reservoirs
-  call build_bc_multifabs(mla)
 
   ! allocate and build multifabs that will contain random numbers
   if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5 ) then
@@ -499,7 +486,21 @@ subroutine main_driver()
   call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp,dx, &
                          the_bc_tower%bc_tower_array)
 
+  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
+
   if (restart .lt. 0) then
+
+     if (print_int .gt. 0) then
+        if (parallel_IOProcessor()) write(*,*) "Initial state:"  
+        call sum_mass(rho_old, 0) ! print out the total mass to check conservation
+        ! compute rhotot on faces
+        call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
+                                the_bc_tower%bc_tower_array)
+        ! compute momentum
+        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+        call sum_momenta(mla,mtemp)
+        call eos_check(mla,rho_old)
+     end if
 
      ! add initial momentum fluctuations
      ! do not call for overdamped codes since the steady Stokes solver will 
@@ -509,6 +510,19 @@ subroutine main_driver()
          initial_variance .ne. 0.d0) then
         call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
                                 umac,rhotot_old,Temp,the_bc_tower)
+
+        if (print_int .gt. 0) then
+           if (parallel_IOProcessor()) write(*,*) "After adding momentum fluctuations:"
+           call sum_mass(rho_old, 0) ! print out the total mass to check conservation
+           ! compute rhotot on faces
+           call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
+                                   the_bc_tower%bc_tower_array)
+           ! compute momentum
+           call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+           call sum_momenta(mla,mtemp)
+           call eos_check(mla,rho_old)
+        end if
+
      end if
 
      if (fixed_dt .gt. 0.d0) then
@@ -734,7 +748,7 @@ subroutine main_driver()
       if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
-          if (parallel_IOProcessor()) write(*,*) "At time step ", istep, " t=", time           
+          if (parallel_IOProcessor()) write(*,*) "After time step ", istep, " t=", time           
           call sum_mass(rho_new, istep) ! print out the total mass to check conservation
           ! compute rhotot on faces
           call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,1, &
@@ -748,7 +762,7 @@ subroutine main_driver()
        ! write plotfile at specific intervals
        if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
           if (parallel_IOProcessor()) then
-             write(*,*), 'writing plotfiles at timestep =', istep 
+             write(*,*), 'writing plotfiles after timestep =', istep 
           end if
           call write_plotfile(mla,rho_new,rhotot_new,Temp,umac,pi,Epot, &
                               grad_Epot_new,gradPhiApprox,istep,dx,time)
@@ -761,7 +775,7 @@ subroutine main_driver()
           end if
 
           if (parallel_IOProcessor()) then
-             write(*,*), 'writing checkpoint at timestep =', istep 
+             write(*,*), 'writing checkpoint after timestep =', istep 
           end if
           call checkpoint_write(mla,rho_new,rhotot_new,pi,umac,time,dt,istep)
        end if
