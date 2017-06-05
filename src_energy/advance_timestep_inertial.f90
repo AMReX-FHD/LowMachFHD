@@ -38,7 +38,7 @@ contains
 
   subroutine advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new, &
                                       rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
-                                      p0_old,p0_new,gradp_baro,Temp_old,Temp_new, &
+                                      p0_old,p0_new,gradp_baro,Temp, &
                                       pi,dx,dt,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
@@ -53,8 +53,7 @@ contains
     real(kind=dp_t), intent(in   ) :: p0_old
     real(kind=dp_t), intent(inout) :: p0_new
     type(multifab) , intent(in   ) :: gradp_baro(:,:)
-    type(multifab) , intent(in   ) :: Temp_old(:)
-    type(multifab) , intent(inout) :: Temp_new(:)
+    type(multifab) , intent(inout) :: Temp(:)
     type(multifab) , intent(inout) :: pi(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt
     type(bc_tower) , intent(in   ) :: the_bc_tower
@@ -340,7 +339,7 @@ contains
     call convert_conc_to_molefrac(mla,conc_old,molefrac_old,.true.)
 
     ! compute t^n transport properties (eta,lambda,kappa,chi,zeta)
-    call ideal_mixture_transport_wrapper(mla,rhotot_old,Temp_old,p0_old,conc_old, &
+    call ideal_mixture_transport_wrapper(mla,rhotot_old,Temp,p0_old,conc_old, &
                                          molefrac_old,eta_old,lambda_old,kappa_old, &
                                          chi_old,zeta_old)
 
@@ -355,25 +354,25 @@ contains
 
     ! compute mass_flux_old = F^n and mass_fluxdiv_old = div(F^n)
     call compute_mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac_old,chi_old,zeta_old, &
-                                     gradp_baro,Temp_old,mass_fluxdiv_old, &
+                                     gradp_baro,Temp,mass_fluxdiv_old, &
                                      mass_flux_old,dx,the_bc_tower)
 
     ! compute rhoh_fluxdiv_old = div(Q)^n - sum(div(hk*Fk))^n + (rho*Hext)^n
-    call rhoh_fluxdiv_energy(mla,lambda_old,Temp_old,mass_flux_old,rhotot_old, &
+    call rhoh_fluxdiv_energy(mla,lambda_old,Temp,mass_flux_old,rhotot_old, &
                              rhoh_fluxdiv_old,dx,0.d0,the_bc_tower)
 
     ! compute S^n and theta^n (store them in delta_S_old and delta_theta_old)
     call compute_S_theta(mla,delta_S_old,delta_theta_old,mass_fluxdiv_old, &
-                         rhoh_fluxdiv_old,conc_old,Temp_old,rhotot_old)
+                         rhoh_fluxdiv_old,conc_old,Temp,rhotot_old)
 
     ! compute P_eos^n
-    call compute_p(mla,rhotot_old,Temp_old,conc_old,Peos)
+    call compute_p(mla,rhotot_old,Temp,conc_old,Peos)
 
     do n=1,nlevs
        ! compute Peos - P0
        call multifab_sub_sub_s_c(Peos(n),1,p0_old,1,0)
        ! compute kappa_T (Peos - P0) / dt
-       call scale_deltaP(mla,Peos,rhotot_old,Temp_old,conc_old,dt,1.d0)
+       call scale_deltaP(mla,Peos,rhotot_old,Temp,conc_old,dt,1.d0)
        call multifab_copy_c(Scorr(n),1,Peos(n),1,1,0)
     end do
 
@@ -408,7 +407,6 @@ contains
        call multifab_copy_c(rho_new(n)   ,1,rho_old(n)   ,1,nspecies,rho_new(n)%ng)
        call multifab_copy_c(rhotot_new(n),1,rhotot_old(n),1,1       ,rhotot_new(n)%ng)
        call multifab_copy_c(rhoh_new(n)  ,1,rhoh_old(n)  ,1,1       ,rhoh_new(n)%ng)
-       call multifab_copy_c(Temp_new(n)  ,1,Temp_old(n)  ,1,1       ,Temp_new(n)%ng)
        do i=1,dm
           call multifab_copy_c(umac_new(n,i)     ,1,umac_old(n,i)     ,1,1       ,umac_new(n,i)%ng)
           call multifab_copy_c(rhotot_fc_new(n,i),1,rhotot_fc_old(n,i),1,1       ,rhotot_fc_new(n,i)%ng)
@@ -511,7 +509,7 @@ contains
           end do
 
           ! cc_solver_alpha = rhotot^{n+1,m+1} c_p^{n+1,m+1,l} / dt
-          call compute_cp(mla,cc_solver_alpha,conc_new,Temp_new)
+          call compute_cp(mla,cc_solver_alpha,conc_new,Temp)
           do n=1,nlevs
              call multifab_mult_mult_c(cc_solver_alpha(n),1,rhotot_new(n),1,1,0)
              call multifab_mult_mult_s_c(cc_solver_alpha(n),1,1.d0/dt,1,0)
@@ -542,27 +540,27 @@ contains
 
           ! T^{n+1,m+1,l+1} = T^{n+1,m+1,l} + deltaT
           do n=1,nlevs
-             call multifab_plus_plus_c(Temp_new(n),1,deltaT(n),1,1,0)
+             call multifab_plus_plus_c(Temp(n),1,deltaT(n),1,1,0)
           end do
 
           ! fill T ghost cells
           do n=1,nlevs
-             call multifab_fill_boundary(Temp_new(n))
-             call multifab_physbc(Temp_new(n),1,temp_bc_comp,1,the_bc_tower%bc_tower_array(n), &
+             call multifab_fill_boundary(Temp(n))
+             call multifab_physbc(Temp(n),1,temp_bc_comp,1,the_bc_tower%bc_tower_array(n), &
                                   dx_in=dx(n,:))
           end do
 
           ! h^{n+1,m+1,l+1} = h(rhotot^{n+1,m+1},w^{n+1,m+1},T^{n+1,m+1,l+1})
-          call compute_h(mla,Temp_new,enth_new,conc_new)
+          call compute_h(mla,Temp,enth_new,conc_new)
           call convert_rhoh_to_h(mla,rhoh_new,rhotot_new,enth_new,.false.)
 
           ! compute t^{n+1,m+1,l+1} transport properties (eta,lambda,kappa,chi,zeta)
-          call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp_new,p0_new,conc_new, &
+          call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp,p0_new,conc_new, &
                                                molefrac_new,eta_new,lambda_new,kappa_new, &
                                                chi_new,zeta_new)
 
           ! rhoh_fluxdiv_new = div(Q)^{n+1,m+1,l} + sum(div(hk^{n+1,m+1,l}*Fk^{n+1,m})) + (rho*Hext)^{n+1,m+1}
-          call rhoh_fluxdiv_energy(mla,lambda_new,Temp_new,mass_flux_new,rhotot_new, &
+          call rhoh_fluxdiv_energy(mla,lambda_new,Temp,mass_flux_new,rhotot_new, &
                                    rhoh_fluxdiv_new,dx,0.d0,the_bc_tower)
 
           ! rhoh_update_new = [-div(rhoh*v) + p0_update + div(Q) + sum(div(hk*Fk)) + rho*Hext]^{n+1}
@@ -615,19 +613,19 @@ contains
        
        ! compute mass_flux_new = F^{n+1,m+1} and mass_fluxdiv_new = div(F^{n+1,m+1})
        call compute_mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac_new,chi_new,zeta_new, &
-                                        gradp_baro,Temp_new,mass_fluxdiv_new, &
+                                        gradp_baro,Temp,mass_fluxdiv_new, &
                                         mass_flux_new,dx,the_bc_tower)
 
        ! compute rhoh_fluxdiv_new = div(Q)^{n+1,m+1} + sum(div(hk*Fk))^{n+1,m+1} + rho_new*Hext^{n+1,m+1}
-       call rhoh_fluxdiv_energy(mla,lambda_new,Temp_new,mass_flux_new,rhotot_new, &
+       call rhoh_fluxdiv_energy(mla,lambda_new,Temp,mass_flux_new,rhotot_new, &
                                 rhoh_fluxdiv_new,dx,0.d0,the_bc_tower)
 
        ! compute S^{n+1,m+1} and theta^{n+1,m+1} (store them in delta_S_new and delta_theta_new)
        call compute_S_theta(mla,delta_S_new,delta_theta_new,mass_fluxdiv_new, &
-                            rhoh_fluxdiv_new,conc_new,Temp_new,rhotot_new)
+                            rhoh_fluxdiv_new,conc_new,Temp,rhotot_new)
 
        ! compute P_eos^{n+1,m+1}
-       call compute_p(mla,rhotot_new,Temp_new,conc_new,Peos)
+       call compute_p(mla,rhotot_new,Temp,conc_new,Peos)
        
        peosbar = multifab_sum_c(Peos(1),1,1) / total_volume
 
@@ -680,7 +678,7 @@ contains
           norm_old = norm
 
           ! multiply deltaP by dpdt_factor * kappa_T / dt
-          call scale_deltaP(mla,Peos,rhotot_new,Temp_new,conc_new,dt,dpdt_factor)
+          call scale_deltaP(mla,Peos,rhotot_new,Temp,conc_new,dt,dpdt_factor)
 
           ! update Scorr
           call multifab_plus_plus_c(Scorr(n),1,Peos(n),1,1,0)
