@@ -138,20 +138,15 @@ subroutine main_driver()
   allocate(stoch_mass_flux(nlevs,dm))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs),conc(nlevs))
-  if (dm .eq. 2) then
-     allocate(eta_ed(nlevs,1))
-     allocate(Temp_ed(nlevs,1))
-  else if (dm .eq. 3) then
-     allocate(eta_ed(nlevs,3))
-     allocate(Temp_ed(nlevs,3))
-  end if
+
+  ! 1 component in 2D, 3 components in 3D
+  allocate(eta_ed(nlevs,2*dm-3))
+  allocate(Temp_ed(nlevs,2*dm-3))
 
   allocate(Epot_mass_fluxdiv(nlevs))
-  allocate(charge_old(nlevs))
-  allocate(charge_new(nlevs))
+  allocate(charge_old(nlevs),charge_new(nlevs))
   allocate(permittivity(nlevs))
-  allocate(grad_Epot_old(nlevs,dm))
-  allocate(grad_Epot_new(nlevs,dm))
+  allocate(grad_Epot_old(nlevs,dm),grad_Epot_new(nlevs,dm))
   allocate(Epot(nlevs))
   allocate(gradPhiApprox(nlevs,dm))
 
@@ -313,7 +308,7 @@ subroutine main_driver()
      ! initialize rho and umac
      call init_rho_and_umac(mla,rho_old,umac,dx,time,the_bc_tower%bc_tower_array)
 
-     ! initialize pi
+     ! initialize pi, including ghost cells
      do n=1,nlevs
         call multifab_setval(pi(n),0.d0,all=.true.)
      end do
@@ -331,32 +326,16 @@ subroutine main_driver()
   call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.true.)
   call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
 
-  ! fill ghost cells
-  do n=1,nlevs
-     ! fill ghost cells for two adjacent grids including periodic boundary ghost cells
-     call multifab_fill_boundary(pi(n))
-     ! fill non-periodic domain boundary ghost cells
-     call multifab_physbc(pi(n),1,pres_bc_comp,1, &
-                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-  end do
-
   do n=1,nlevs
      call fill_rho_ghost_cells(conc(n),rhotot_old(n),the_bc_tower%bc_tower_array(n))
   end do
+  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
 
   ! conc to rho - INCLUDING GHOST CELLS
   call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc,.false.)
 
   do n=1,nlevs
      call multifab_destroy(conc(n))
-  end do
-
-  do n=1,nlevs
-     do i=1,dm
-        call multifab_build_edge     (mtemp(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
-     end do
   end do
 
   if (print_int .gt. 0) then
@@ -382,38 +361,12 @@ subroutine main_driver()
      call multifab_build(eta(n)              ,mla%la(n),1       ,1)
      call multifab_build(kappa(n)            ,mla%la(n),1       ,1)
      call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+     do i=1,dm
+        call multifab_build_edge     (mtemp(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
+     end do
   end do
-
-  if (variance_coef_mass .ne. 0.d0) then
-     do n=1,nlevs
-        call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
-        do i=1,dm
-           call multifab_build_edge(stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
-        end do
-     end do
-  end if
-
-  if (use_charged_fluid) then
-     do n=1,nlevs
-        call multifab_build(charge_old(n)  ,mla%la(n),1,1)
-        call multifab_build(charge_new(n)  ,mla%la(n),1,1)
-        call multifab_build(permittivity(n),mla%la(n),1,1)
-        do i=1,dm
-           call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
-           call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
-        end do
-        call multifab_build(Epot(n),mla%la(n),1,1)
-        do i=1,dm
-           call multifab_build_edge(gradPhiApprox(n,i),mla%la(n),1,0,i)
-        end do
-     end do
-  end if
-
-  if (nreactions .gt. 0) then
-     do n=1,nlevs
-        call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
-     end do
-  end if
 
   do n=1,nlevs
      ! eta and Temp on nodes (2d) or edges (3d)
@@ -437,8 +390,36 @@ subroutine main_driver()
         call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
         call multifab_build(Temp_ed(n,3),mla%la(n),1,0,nodal_temp)
      end if
-
   end do
+
+  if (variance_coef_mass .ne. 0.d0) then
+     do n=1,nlevs
+        call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
+        do i=1,dm
+           call multifab_build_edge(stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
+        end do
+     end do
+  end if
+
+  if (use_charged_fluid) then
+     do n=1,nlevs
+        call multifab_build(charge_old(n)  ,mla%la(n),1,1)
+        call multifab_build(charge_new(n)  ,mla%la(n),1,1)
+        call multifab_build(permittivity(n),mla%la(n),1,1)
+        call multifab_build(Epot(n)        ,mla%la(n),1,1)
+        do i=1,dm
+           call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
+           call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
+           call multifab_build_edge(gradPhiApprox(n,i),mla%la(n),1,0,i)
+        end do
+     end do
+  end if
+
+  if (nreactions .gt. 0) then
+     do n=1,nlevs
+        call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
+     end do
+  end if
 
   ! data structures to help with reservoirs
   call build_bc_multifabs(mla)
@@ -517,8 +498,6 @@ subroutine main_driver()
   ! initialize eta and kappa
   call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp,dx, &
                          the_bc_tower%bc_tower_array)
-
-  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
 
   if (restart .lt. 0) then
 
@@ -836,23 +815,33 @@ subroutine main_driver()
      call finalize_hydro_grid()
   end if
 
+  call destroy_bc_multifabs(mla)
   call destroy_mass_stochastic(mla)
   call destroy_m_stochastic(mla)
-
-  call destroy_bc_multifabs(mla)
 
   do n=1,nlevs
      call multifab_destroy(rho_old(n))
      call multifab_destroy(rhotot_old(n))
+     call multifab_destroy(pi(n))
+     do i=1,dm
+        call multifab_destroy(umac(n,i))
+     end do
+  end do
+
+  if (use_charged_fluid) then
+     do n=1,nlevs
+        call multifab_destroy(Epot_mass_fluxdiv(n))
+     end do
+  end if
+
+  do n=1,nlevs
      call multifab_destroy(rho_new(n))
      call multifab_destroy(rhotot_new(n))
      call multifab_destroy(Temp(n))
-     call multifab_destroy(diff_mass_fluxdiv(n))
-     call multifab_destroy(pi(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
+     call multifab_destroy(diff_mass_fluxdiv(n))
      do i=1,dm
-        call multifab_destroy(umac(n,i))
         call multifab_destroy(mtemp(n,i))
         call multifab_destroy(rhotot_fc(n,i))
         call multifab_destroy(gradp_baro(n,i))
@@ -874,16 +863,13 @@ subroutine main_driver()
 
   if (use_charged_fluid) then
      do n=1,nlevs
-        call multifab_destroy(Epot_mass_fluxdiv(n))
         call multifab_destroy(charge_old(n))
         call multifab_destroy(charge_new(n))
         call multifab_destroy(permittivity(n))
+        call multifab_destroy(Epot(n))
         do i=1,dm
            call multifab_destroy(grad_Epot_old(n,i))
            call multifab_destroy(grad_Epot_new(n,i))
-        end do
-        call multifab_destroy(Epot(n))
-        do i=1,dm
            call multifab_destroy(gradPhiApprox(n,i))
         end do
      end do
@@ -900,25 +886,26 @@ subroutine main_driver()
   deallocate(rho_new,rhotot_new)
   deallocate(Temp)
   deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
+  deallocate(stoch_mass_flux)
   deallocate(umac,mtemp,rhotot_fc,gradp_baro)
   deallocate(eta,kappa,conc)
   deallocate(eta_ed)
   deallocate(Temp_ed)
 
   deallocate(Epot_mass_fluxdiv)
-  deallocate(charge_old)
-  deallocate(charge_new)
+  deallocate(charge_old,charge_new)
   deallocate(permittivity)
-  deallocate(grad_Epot_old)
-  deallocate(grad_Epot_new)
+  deallocate(grad_Epot_old,grad_Epot_new)
   deallocate(Epot)
   deallocate(gradPhiApprox)
 
   deallocate(chem_rate)
 
-   if (use_bl_rng) then
-      call rng_destroy()
-   end if
+  deallocate(dx)
+
+  if (use_bl_rng) then
+     call rng_destroy()
+  end if
 
   call stag_mg_layout_destroy()
   call mgt_macproj_precon_destroy()
