@@ -13,6 +13,7 @@ subroutine main_driver()
   use define_bc_module
   use bc_module
   use multifab_physbc_module
+  use multifab_physbc_stag_module
   use analysis_module
   use analyze_spectra_module
   use div_and_grad_module
@@ -22,7 +23,6 @@ subroutine main_driver()
   use macproject_module
   use stochastic_mass_fluxdiv_module
   use stochastic_m_fluxdiv_module
-  use fill_umac_ghost_cells_module
   use fill_rho_ghost_cells_module
   use ParallelRNGs 
   use bl_rng_module
@@ -469,7 +469,25 @@ subroutine main_driver()
   call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp,dx, &
                          the_bc_tower%bc_tower_array)
 
-  call fill_umac_ghost_cells(mla,umac,eta_ed,dx,time,the_bc_tower)
+  ! now that we have eta, we can initialize the inhomogeneous velocity bcs
+  ! set inhomogeneous bc conditions
+  call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time, &
+                                 the_bc_tower%bc_tower_array)
+
+  do n=1,nlevs
+     do i=1,dm
+        ! set normal velocity on physical domain boundaries
+        call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+                                       the_bc_tower%bc_tower_array(n), &
+                                       dx(n,:),vel_bc_n(n,:))
+        ! set transverse velocity behind physical boundaries
+        call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+                                    the_bc_tower%bc_tower_array(n), &
+                                    dx(n,:),vel_bc_t(n,:))
+        ! fill periodic and interior ghost cells
+        call multifab_fill_boundary(umac(n,i))
+     end do
+  end do
 
   if (restart .lt. 0) then
 

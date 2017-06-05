@@ -12,7 +12,6 @@ f90sources += diffusive_m_fluxdiv.f90
 f90sources += eos_check.f90
 f90sources += estdt.f90
 f90sources += fill_rho_ghost_cells.f90
-f90sources += fill_umac_ghost_cells.f90
 f90sources += initial_projection.f90
 f90sources += init_lowmach.f90
 f90sources += mk_advective_m_fluxdiv.f90
