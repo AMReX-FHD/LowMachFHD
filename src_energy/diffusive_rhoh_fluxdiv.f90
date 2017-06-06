@@ -1,4 +1,4 @@
-module rhoh_fluxdiv_energy_module
+module diffusive_rhoh_fluxdiv_module
 
   use ml_layout_module
   use define_bc_module
@@ -12,12 +12,12 @@ module rhoh_fluxdiv_energy_module
 
   private
 
-  public :: rhoh_fluxdiv_energy
+  public :: diffusive_rhoh_fluxdiv
 
 contains
 
-  subroutine rhoh_fluxdiv_energy(mla,lambda,Temp,mass_flux,rhotot,rhoh_fluxdiv, &
-                                 dx,time,the_bc_tower)
+  subroutine diffusive_rhoh_fluxdiv(mla,lambda,Temp,mass_flux,rhotot,rhoh_fluxdiv, &
+                                    dx,time,the_bc_tower)
        
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: lambda(:)
@@ -96,6 +96,6 @@ contains
        end do
     end do
 
-  end subroutine rhoh_fluxdiv_energy
+  end subroutine diffusive_rhoh_fluxdiv
   
-end module rhoh_fluxdiv_energy_module
+end module diffusive_rhoh_fluxdiv_module

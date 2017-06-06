@@ -10,7 +10,7 @@ module advance_timestep_inertial_module
   use convert_rhoh_to_h_module
   use eos_model_wrapper_module
   use mass_flux_utilities_module
-  use compute_mass_fluxdiv_energy_module
+  use compute_mass_fluxdiv_module
   use rhoh_fluxdiv_energy_module
   use div_and_grad_module
   use macproject_module
@@ -353,7 +353,7 @@ contains
     end if
 
     ! compute mass_flux_old = F^n and mass_fluxdiv_old = div(F^n)
-    call compute_mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac_old,chi_old,zeta_old, &
+    call compute_mass_fluxdiv(mla,rho_old,rhotot_old,molefrac_old,chi_old,zeta_old, &
                                      gradp_baro,Temp,mass_fluxdiv_old, &
                                      mass_flux_old,dx,the_bc_tower)
 
@@ -608,7 +608,7 @@ contains
        end do
        
        ! compute mass_flux_new = F^{n+1,m+1} and mass_fluxdiv_new = div(F^{n+1,m+1})
-       call compute_mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac_new,chi_new,zeta_new, &
+       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,molefrac_new,chi_new,zeta_new, &
                                         gradp_baro,Temp,mass_fluxdiv_new, &
                                         mass_flux_new,dx,the_bc_tower)
 
