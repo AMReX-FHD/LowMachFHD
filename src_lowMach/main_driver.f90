@@ -667,158 +667,158 @@ subroutine main_driver()
 
      if (parallel_IOProcessor()) then
         if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-           print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+             print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
      end if
 
      runtime1 = parallel_wtime()
 
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      ! advance the solution by dt
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     ! advance the solution by dt
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      ! notes: eta, eta_ed, and kappa could be built and initialized within the advance routines
-      ! but for now we pass them around (it does save a few flops)
-      ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
-      ! routine, but since we have them around anyway for inertial we pass them in
-      if (algorithm_type .eq. 0) then
-         ! algorithm_type=0: inertial
-         call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+     ! notes: eta, eta_ed, and kappa could be built and initialized within the advance routines
+     ! but for now we pass them around (it does save a few flops)
+     ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
+     ! routine, but since we have them around anyway for inertial we pass them in
+     if (algorithm_type .eq. 0) then
+        ! algorithm_type=0: inertial
+        call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                       gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                       diff_mass_fluxdiv, &
+                                       stoch_mass_fluxdiv,stoch_mass_flux, &
+                                       dx,dt,time,the_bc_tower,istep, &
+                                       grad_Epot_old,grad_Epot_new, &
+                                       charge_old,charge_new,Epot, &
+                                       permittivity)
+     else if (algorithm_type .eq. 2) then
+        ! algorithm_type=2: overdamped with 2 RNG
+        call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                         diff_mass_fluxdiv, stoch_mass_fluxdiv, stoch_mass_flux, &
+                                         chem_rate, &
+                                         dx,dt,time,the_bc_tower,istep)
+     else if (algorithm_type .eq. 3) then
+        ! algorithm_type=3: iterative implicit
+        call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                        diff_mass_fluxdiv, &
-                                        stoch_mass_fluxdiv,stoch_mass_flux, &
+                                        Epot_mass_fluxdiv, &
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new, &
                                         charge_old,charge_new,Epot, &
-                                        permittivity)
-      else if (algorithm_type .eq. 2) then
-         ! algorithm_type=2: overdamped with 2 RNG
-         call advance_timestep_overdamped(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                          gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                          diff_mass_fluxdiv, stoch_mass_fluxdiv, stoch_mass_flux, &
-                                          chem_rate, &
-                                          dx,dt,time,the_bc_tower,istep)
-      else if (algorithm_type .eq. 3) then
-         ! algorithm_type=3: iterative implicit
-         call advance_timestep_iterative(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                         Epot_mass_fluxdiv, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
-                                         dx,dt,time,the_bc_tower,istep, &
-                                         grad_Epot_old,grad_Epot_new, &
-                                         charge_old,charge_new,Epot, &
-                                         permittivity,gradPhiApprox)
-      else if (algorithm_type .eq. 4) then
-         ! algorithm_type=4: implicit boussineq
-         call advance_timestep_imp_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                         Epot_mass_fluxdiv, &
-                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                         stoch_mass_flux, &
-                                         dx,dt,time,the_bc_tower,istep, &
-                                         grad_Epot_old,grad_Epot_new, &
-                                         charge_old,charge_new,Epot, &
-                                         permittivity,gradPhiApprox)
-      else if (algorithm_type .eq. 5) then
-         ! algorithm_type=5: inertial midpoint
-         call advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                                 gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                                 diff_mass_fluxdiv, &
-                                                 stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &
-                                                 dx,dt,time,the_bc_tower,istep, &
-                                                 grad_Epot_old,grad_Epot_new, &
-                                                 charge_old,charge_new,Epot, &
-                                                 permittivity)
-      else
-         call bl_error("Error: invalid algorithm_type")
-      end if
+                                        permittivity,gradPhiApprox)
+     else if (algorithm_type .eq. 4) then
+        ! algorithm_type=4: implicit boussineq
+        call advance_timestep_imp_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                        Epot_mass_fluxdiv, &
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
+                                        stoch_mass_flux, &
+                                        dx,dt,time,the_bc_tower,istep, &
+                                        grad_Epot_old,grad_Epot_new, &
+                                        charge_old,charge_new,Epot, &
+                                        permittivity,gradPhiApprox)
+     else if (algorithm_type .eq. 5) then
+        ! algorithm_type=5: inertial midpoint
+        call advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                                gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                                diff_mass_fluxdiv, &
+                                                stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &
+                                                dx,dt,time,the_bc_tower,istep, &
+                                                grad_Epot_old,grad_Epot_new, &
+                                                charge_old,charge_new,Epot, &
+                                                permittivity)
+     else
+        call bl_error("Error: invalid algorithm_type")
+     end if
 
-      time = time + dt
+     time = time + dt
 
-      if (parallel_IOProcessor()) then
+     if (parallel_IOProcessor()) then
         if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-           print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
-      end if
+             print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
+     end if
 
-      runtime2 = parallel_wtime() - runtime1
-      call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
-      if (parallel_IOProcessor()) then
+     runtime2 = parallel_wtime() - runtime1
+     call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
+     if (parallel_IOProcessor()) then
         if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-           print*,'Time to advance timestep: ',runtime1,' seconds'
-      end if
-      
-      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
+             print*,'Time to advance timestep: ',runtime1,' seconds'
+     end if
+
+     if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
-          if (parallel_IOProcessor()) write(*,*) "After time step ", istep, " t=", time           
-          call sum_mass(rho_new, istep) ! print out the total mass to check conservation
-          ! compute rhotot on faces
-          call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,1, &
-                                  the_bc_tower%bc_tower_array)
-          ! compute momentum
-          call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
-          call sum_momenta(mla,mtemp)
-          call eos_check(mla,rho_new)
-       end if
+        if (parallel_IOProcessor()) write(*,*) "After time step ", istep, " t=", time           
+        call sum_mass(rho_new, istep) ! print out the total mass to check conservation
+        ! compute rhotot on faces
+        call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,1, &
+                                the_bc_tower%bc_tower_array)
+        ! compute momentum
+        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+        call sum_momenta(mla,mtemp)
+        call eos_check(mla,rho_new)
+     end if
 
-       ! write plotfile at specific intervals
-       if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
-          if (parallel_IOProcessor()) then
-             write(*,*), 'writing plotfiles after timestep =', istep 
-          end if
-          call write_plotfile(mla,rho_new,rhotot_new,Temp,umac,pi,Epot, &
-                              grad_Epot_new,gradPhiApprox,istep,dx,time)
-       end if
+     ! write plotfile at specific intervals
+     if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
+        if (parallel_IOProcessor()) then
+           write(*,*), 'writing plotfiles after timestep =', istep 
+        end if
+        call write_plotfile(mla,rho_new,rhotot_new,Temp,umac,pi,Epot, &
+                            grad_Epot_new,gradPhiApprox,istep,dx,time)
+     end if
 
-       ! write checkpoint at specific intervals
-       if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
-          if (use_charged_fluid) then
-             call bl_error('Error: checkpoint function not supported for use_charged_fluid=T')
-          end if
+     ! write checkpoint at specific intervals
+     if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
+        if (use_charged_fluid) then
+           call bl_error('Error: checkpoint function not supported for use_charged_fluid=T')
+        end if
 
-          if (parallel_IOProcessor()) then
-             write(*,*), 'writing checkpoint after timestep =', istep 
-          end if
-          call checkpoint_write(mla,rho_new,rhotot_new,pi,umac,time,dt,istep)
-       end if
+        if (parallel_IOProcessor()) then
+           write(*,*), 'writing checkpoint after timestep =', istep 
+        end if
+        call checkpoint_write(mla,rho_new,rhotot_new,pi,umac,time,dt,istep)
+     end if
 
-       ! print out projection (average) and variance
-       if ( (stats_int > 0) .and. &
-            (mod(istep,stats_int) .eq. 0) ) then
-          ! Compute vertical and horizontal averages (hstat and vstat files)   
-          call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)            
-       end if
+     ! print out projection (average) and variance
+     if ( (stats_int > 0) .and. &
+          (mod(istep,stats_int) .eq. 0) ) then
+        ! Compute vertical and horizontal averages (hstat and vstat files)   
+        call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)
+     end if
 
-      if (istep .ge. n_steps_skip) then
+     if (istep .ge. n_steps_skip) then
 
-         ! Add this snapshot to the average in HydroGrid
-         if ( (hydro_grid_int > 0) .and. &
-              ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
-            call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)           
-         end if
+        ! Add this snapshot to the average in HydroGrid
+        if ( (hydro_grid_int > 0) .and. &
+             ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
+           call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)
+        end if
 
-         if ( (hydro_grid_int > 0) .and. &
-              (n_steps_save_stats > 0) .and. &
-              ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
-              call save_hydro_grid(id=istep/n_steps_save_stats, step=istep)            
-         end if
+        if ( (hydro_grid_int > 0) .and. &
+             (n_steps_save_stats > 0) .and. &
+             ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
+           call save_hydro_grid(id=istep/n_steps_save_stats, step=istep)            
+        end if
 
-      end if
+     end if
 
-      ! set old state to new state
-      do n=1,nlevs
-         call multifab_copy_c(rho_old(n)   ,1,   rho_new(n),1,nspecies,rho_old(n)%ng)
-         call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1       ,1,rhotot_old(n)%ng)
-      end do
+     ! set old state to new state
+     do n=1,nlevs
+        call multifab_copy_c(   rho_old(n),1,   rho_new(n),1,nspecies,   rho_old(n)%ng)
+        call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1       ,1,rhotot_old(n)%ng)
+     end do
 
-      if (use_charged_fluid) then
-         do n=1,nlevs
-            call multifab_copy_c(charge_old(n),1,charge_new(n),1,1,charge_old(n)%ng)
-            do i=1,dm
-               call multifab_copy_c(grad_Epot_old(n,i),1,grad_Epot_new(n,i),1,1, &
-                                    grad_Epot_old(n,i)%ng)
-            end do
-         end do
-      end if
+     if (use_charged_fluid) then
+        do n=1,nlevs
+           call multifab_copy_c(charge_old(n),1,charge_new(n),1,1,charge_old(n)%ng)
+           do i=1,dm
+              call multifab_copy_c(grad_Epot_old(n,i),1,grad_Epot_new(n,i),1,1, &
+                                   grad_Epot_old(n,i)%ng)
+           end do
+        end do
+     end if
 
   end do
 

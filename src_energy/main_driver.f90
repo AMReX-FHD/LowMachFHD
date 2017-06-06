@@ -342,7 +342,7 @@ subroutine main_driver()
   do n=1,nlevs 
      call multifab_build(rho_new(n)          ,mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n)       ,mla%la(n),1       ,ng_s) 
-     call multifab_build(rhoth_new(n)        ,mla%la(n),1       ,ng_s) 
+     call multifab_build(rhoh_new(n)         ,mla%la(n),1       ,ng_s) 
      call multifab_build(eta(n)              ,mla%la(n),1       ,1)
      call multifab_build(kappa(n)            ,mla%la(n),1       ,1)
      call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
@@ -423,10 +423,6 @@ subroutine main_driver()
   !=====================================================================
   ! Initialize values
   !=====================================================================
-
-  if (use_charged_fluid) then
-     call bl_error("use_charged_fluid does not work in energy code")
-  end if
 
   if (barodiffusion_type .gt. 0) then
 
@@ -588,7 +584,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfile(mla,"plt",rho_old,rhotot_old,rhoh_old,Temp, &
+        call write_plotfile(mla,rho_old,rhotot_old,rhoh_old,Temp, &
                             umac,pi,p0_old,0,dx,time)
      end if
 
@@ -614,7 +610,7 @@ subroutine main_driver()
            call save_hydro_grid(id=0, step=0)
         end if
 
-     end if    
+     end if
 
   end if
 
@@ -643,10 +639,10 @@ subroutine main_driver()
      ! advance the solution by dt
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      ! notes: eta, eta_ed, and kappa could be built and initialized within the advance routines
-      ! but for now we pass them around (it does save a few flops)
-      ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
-      ! routine, but since we have them around anyway for inertial we pass them in
+     ! notes: eta, eta_ed, and kappa could be built and initialized within the advance routines
+     ! but for now we pass them around (it does save a few flops)
+     ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
+     ! routine, but since we have them around anyway for inertial we pass them in
      if (algorithm_type .eq. 1) then
         call advance_timestep_inertial(mla,umac,rho_old,rho_new, &
                                        rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
@@ -663,72 +659,71 @@ subroutine main_driver()
              print*,"End Advance; istep =",istep,"DT =",dt,"TIME =",time
      end if
 
-      runtime2 = parallel_wtime() - runtime1
-      call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
-      if (parallel_IOProcessor()) then
+     runtime2 = parallel_wtime() - runtime1
+     call parallel_reduce(runtime1, runtime2, MPI_MAX, proc=parallel_IOProcessorNode())
+     if (parallel_IOProcessor()) then
         if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-           print*,'Time to advance timestep: ',runtime1,' seconds'
-      end if
-      
-      if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
+             print*,'Time to advance timestep: ',runtime1,' seconds'
+     end if
+
+     if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) &
           .or. &
           (istep .eq. max_step) ) then
-          if (parallel_IOProcessor()) write(*,*) "At time step ", istep, " t=", time           
-          call sum_mass(rho_new, istep) ! print out the total mass to check conservation
-          ! compute rhotot on faces
-          call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,1, &
-                                  the_bc_tower%bc_tower_array)
-          ! compute momentum
-          call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
-          call sum_momenta(mla,mtemp)
-      end if
+        if (parallel_IOProcessor()) write(*,*) "After time step ", istep, " t=", time           
+        call sum_mass(rho_new, istep) ! print out the total mass to check conservation
+        ! compute rhotot on faces
+        call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,1, &
+                                the_bc_tower%bc_tower_array)
+        ! compute momentum
+        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+        call sum_momenta(mla,mtemp)
+        ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
+     end if
 
-      ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
-      if (istep >= n_steps_skip) then
+     ! write plotfile at specific intervals
+     if (plot_int.gt.0 .and. ( (mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) ) then
+        if (parallel_IOProcessor()) then
+           write(*,*), 'writing plotfiles after timestep =', istep 
+        end if
+        call write_plotfile(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp, &
+                            umac,pi,p0_new,istep,dx,time)
+     end if
 
-         ! write plotfile at specific intervals
-         if ((plot_int.gt.0 .and. mod(istep,plot_int).eq.0) .or. (istep.eq.max_step)) then
-            if (parallel_IOProcessor()) then
-               write(*,*), 'writing plotfiles at timestep =', istep 
-            end if
-            call write_plotfile(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp, &
-                                umac,pi,p0_new,istep,dx,time)
-         end if
+     ! write checkpoint at specific intervals
+     if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
+        call bl_error('Error: checkpoint function not supported for energy code')
+     end if
 
-         ! write checkpoint at specific intervals
-         if ((chk_int.gt.0 .and. mod(istep,chk_int).eq.0)) then
-            call bl_error('Error: checkpoint function not supported for energy code')
-         end if
+     ! print out projection (average) and variance
+     if ( (stats_int > 0) .and. &
+          (mod(istep,stats_int) .eq. 0) ) then
+        ! Compute vertical and horizontal averages (hstat and vstat files)   
+        call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)
+     end if
 
-         ! print out projection (average) and variance
-         if ( (stats_int > 0) .and. &
-               (mod(istep,stats_int) .eq. 0) ) then
-            ! Compute vertical and horizontal averages (hstat and vstat files)   
-            call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)    
-         end if
+     if (istep .ge. n_steps_skip) then
 
-         ! Add this snapshot to the average in HydroGrid
-         if ( (hydro_grid_int > 0) .and. &
-              ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
-            call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)
-         end if
+        ! Add this snapshot to the average in HydroGrid
+        if ( (hydro_grid_int > 0) .and. &
+             ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
+           call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)
+        end if
 
-         if ( (hydro_grid_int > 0) .and. &
-              (n_steps_save_stats > 0) .and. &
-              ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
-              call save_hydro_grid(id=istep/n_steps_save_stats, step=istep)            
-         end if
+        if ( (hydro_grid_int > 0) .and. &
+             (n_steps_save_stats > 0) .and. &
+             ( mod(istep,n_steps_save_stats) .eq. 0 ) ) then
+           call save_hydro_grid(id=istep/n_steps_save_stats, step=istep)            
+        end if
 
-      end if
+     end if
 
-      ! set old state to new state
-
-      p0_old = p0_new
-      do n=1,nlevs
-         call multifab_copy_c(rho_old(n)   ,1,rho_new(n)   ,1,nspecies,rho_old(n)%ng)
-         call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1,1       ,rhotot_old(n)%ng)
-         call multifab_copy_c(rhoh_old(n)  ,1,rhoh_new(n)  ,1,1       ,rhoh_old(n)%ng)
-      end do
+     ! set old state to new state
+     p0_old = p0_new
+     do n=1,nlevs
+        call multifab_copy_c(   rho_old(n),1,   rho_new(n),1,nspecies,   rho_old(n)%ng)
+        call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1       ,1,rhotot_old(n)%ng)
+        call multifab_copy_c(  rhoh_old(n),1,rhoh_new(n)  ,1       ,1,  rhoh_old(n)%ng)
+     end do
 
   end do
 

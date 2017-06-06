@@ -14,10 +14,9 @@ module write_plotfile_module
 
 contains
   
-  subroutine write_plotfile(mla,name,rho,rhotot,rhoh,Temp,umac,pi,p0,istep,dx,time)
+  subroutine write_plotfile(mla,rho,rhotot,rhoh,Temp,umac,pi,p0,istep,dx,time)
 
     type(ml_layout),    intent(in)    :: mla
-    character(len=*),   intent(in)    :: name
     type(multifab),     intent(inout) :: rho(:)
     type(multifab),     intent(in)    :: rhotot(:)
     type(multifab),     intent(inout) :: rhoh(:)
@@ -51,7 +50,21 @@ contains
     nlevs = mla%nlevel
     dm = mla%dim
   
-    ! rho + rho_i (nspecies) + c_i (nspecies) + rhoh + h + Temp + averaged_umac (dm) + shifted umac (dm) + pi + p0, Peos + (Peos-p0)
+    ! cell-centered quantities
+
+    ! rho
+    ! rho_i
+    ! c_i
+    ! rhoh
+    ! h
+    ! Temp
+    ! umac averaged
+    ! umac shifted  
+    ! pi
+    ! p0
+    ! pi
+    ! Peos
+    ! (Peos-p0)
     allocate(plot_names(2*nspecies+2*dm+8))
     allocate(plotdata(nlevs))
     allocate(plotdata_stag(nlevs,dm))
@@ -154,7 +167,7 @@ contains
     end do
     
     ! define the name of the plotfile that will be written
-    write(unit=plotfile_name,fmt='(a,i8.8)') name, istep
+    write(unit=plotfile_name,fmt='(a,i8.8)') trim(plot_base_name), istep
     if ( parallel_IOProcessor() ) then
       write(*,'(2A)') "Saving PLOT FILEs to directory ", trim(plotfile_name)
       write(*,*)
