@@ -96,16 +96,9 @@ subroutine main_driver()
   logical :: lexist
   logical :: nodal_temp(3)
 
-  ! energy-specific multifabs
+  ! energy-specific data
   type(multifab), allocatable  :: rhoh_old(:)
   type(multifab), allocatable  :: rhoh_new(:)
-  type(multifab), allocatable  :: enth(:)
-  ! volume discrepancy correction
-  ! Scorr_old = Scorrbar_old + deltaScorr_old
-  type(multifab), allocatable :: Scorr_old(:)
-  type(multifab), allocatable :: deltaScorr_old(:)
-  real(kind=dp_t)             :: Scorrbar_old
-
   real(kind=dp_t) :: p0_old, p0_new
 
   !==============================================================
@@ -163,8 +156,7 @@ subroutine main_driver()
   allocate(chem_rate(nlevs))
 
   ! energy specific
-  allocate(rhoh_old(nlevs),rhoh_new(nlevs),enth(nlevs))
-  allocate(Scorr_old(nlevs),deltaScorr_old(nlevs))
+  allocate(rhoh_old(nlevs),rhoh_new(nlevs))
 
   ! build pmask
   pmask = .false.
@@ -328,27 +320,20 @@ subroutine main_driver()
 
   end if
 
+  ! fill temperature ghost cells
+  call fill_Temp_ghost_cells(mla,Temp,dx,the_bc_tower)
+
   ! compute rhotot from rho in VALID REGION
   call compute_rhotot(mla,rho_old,rhotot_old)
 
   ! fill rho and rhotot ghost cells
+  ! FIXME - different EOS; won't work for physical boundaries
+  ! we need to write a different version that computes rhotot from the EOS
+  ! which means this needs p0, Temp, and c
   call fill_rho_rhotot_ghost(mla,rho_old,rhotot_old,dx,the_bc_tower)
 
-  ! compute h from rhoh in VALID REGION
-  call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.true.)
-
-  ! fill h ghost cells
-  call fill_h_ghost_cells(mla,enth,dx,the_bc_tower)
-
-  ! compute h from rhoh - INCLUDING GHOST CELLS
-  call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth,.false.)
-
-  ! fill temperature ghost cells
-  do n=1,nlevs
-     call multifab_fill_boundary(Temp(n))
-     call multifab_physbc(Temp(n),1,temp_bc_comp,1, &
-                          the_bc_tower%bc_tower_array(n),dx_in=dx(n,:))
-  end do
+  ! fill rhoh ghost cells - note that rhotot needs filled ghost cells
+  call fill_rhoh_ghost_cells(mla,rhoh_old,rhotot_old,dx,the_bc_tower)
 
   !=======================================================
   ! Build multifabs for all the variables
@@ -357,6 +342,7 @@ subroutine main_driver()
   do n=1,nlevs 
      call multifab_build(rho_new(n)          ,mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n)       ,mla%la(n),1       ,ng_s) 
+     call multifab_build(rhoth_new(n)        ,mla%la(n),1       ,ng_s) 
      call multifab_build(eta(n)              ,mla%la(n),1       ,1)
      call multifab_build(kappa(n)            ,mla%la(n),1       ,1)
      call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
@@ -419,12 +405,6 @@ subroutine main_driver()
         call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
      end do
   end if
-
-  do n=1,nlevs
-
-  end do
-
-  ! energy specific
 
   ! allocate and build multifabs that will contain random numbers
   if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5 ) then
@@ -596,7 +576,7 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
         call sum_momenta(mla,mtemp)
-        ! FIXME - need to write a custom eos_check
+        ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
 
      !=====================================================================
@@ -652,17 +632,21 @@ subroutine main_driver()
         dt = min(dt,dt_diffusive)
      end if
 
+     if (parallel_IOProcessor()) then
+        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
+             print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
+     end if
+
      runtime1 = parallel_wtime()
 
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
      ! advance the solution by dt
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-     if (parallel_IOProcessor()) then
-        if ( (print_int .gt. 0 .and. mod(istep,print_int) .eq. 0) ) &
-             print*,"Begin Advance; istep =",istep,"dt =",dt,"time =",time
-     end if
-
+      ! notes: eta, eta_ed, and kappa could be built and initialized within the advance routines
+      ! but for now we pass them around (it does save a few flops)
+      ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
+      ! routine, but since we have them around anyway for inertial we pass them in
      if (algorithm_type .eq. 1) then
         call advance_timestep_inertial(mla,umac,rho_old,rho_new, &
                                        rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
@@ -752,7 +736,6 @@ subroutine main_driver()
   ! Destroy multifabs and layouts
   !=======================================================
 
-
   if((hydro_grid_int>0) .or. (stats_int>0)) then
      call finalize_hydro_grid()
   end if
@@ -764,6 +747,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(rho_old(n))
      call multifab_destroy(rhotot_old(n))
+     call multifab_destroy(rhoh_old(n))
      call multifab_destroy(pi(n))
      do i=1,dm
         call multifab_destroy(umac(n,i))
@@ -779,6 +763,7 @@ subroutine main_driver()
   do n=1,nlevs
      call multifab_destroy(rho_new(n))
      call multifab_destroy(rhotot_new(n))
+     call multifab_destroy(rhoh_new(n))
      call multifab_destroy(Temp(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
@@ -843,30 +828,17 @@ subroutine main_driver()
 
   deallocate(chem_rate)
 
+  deallocate(rhoh_old,rhoh_new)
+
   deallocate(dx)
 
-  ! fixme - destroy energy multifabs
+  if (use_bl_rng) then
+     call rng_destroy()
+  end if
 
-  deallocate(lo,hi,pmask)
-  deallocate(rho_old,rhotot_old,pi)
-  deallocate(rho_new,rhotot_new)
-  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
-  deallocate(umac,mtemp,rhotot_fc,gradp_baro)
-  deallocate(eta,kappa)
-  deallocate(eta_ed)
-
-  deallocate(Epot_mass_fluxdiv)
-  deallocate(charge_old)
-  deallocate(charge_new)
-  deallocate(permittivity)
-  deallocate(grad_Epot_old)
-  deallocate(grad_Epot_new)
-  deallocate(Epot)
-  deallocate(gradPhiApprox)
-
-  deallocate(chem_rate)
-
-  deallocate(rhoh_old,rhoh_new,enth)
-  deallocate(Scorr_old,deltaScorr_old)
+  call stag_mg_layout_destroy()
+  call mgt_macproj_precon_destroy()
+  call destroy(mla)
+  call bc_tower_destroy(the_bc_tower)
 
 end subroutine main_driver

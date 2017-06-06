@@ -544,11 +544,7 @@ contains
           end do
 
           ! fill T ghost cells
-          do n=1,nlevs
-             call multifab_fill_boundary(Temp(n))
-             call multifab_physbc(Temp(n),1,temp_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                                  dx_in=dx(n,:))
-          end do
+          call fill_Temp_ghost_cells(mla,Temp,dx,the_bc_tower)
 
           ! h^{n+1,m+1,l+1} = h(rhotot^{n+1,m+1},w^{n+1,m+1},T^{n+1,m+1,l+1})
           call compute_h(mla,Temp,enth_new,conc_new)

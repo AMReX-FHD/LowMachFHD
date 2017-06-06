@@ -15,6 +15,10 @@ module fill_rho_ghost_cells_module
 
 contains
 
+  ! at physical boundaries, this fills in ghost cells for concentration,
+  ! and then computes rhotot from the concentrations and the EOS.
+  ! for different EOS you need a local copy
+  ! this version is for no volume change upon mixing
   subroutine fill_rho_rhotot_ghost(mla,rho,rhotot,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
