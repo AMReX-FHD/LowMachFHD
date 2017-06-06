@@ -434,6 +434,12 @@ subroutine main_driver()
 
   end if
 
+  if (dm .eq. 2) then
+     call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  else if (dm .eq. 3) then
+     call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
+  end if
+
   ! initialize eta and kappa
   call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp,dx, &
                          the_bc_tower%bc_tower_array)
@@ -644,10 +650,11 @@ subroutine main_driver()
      ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
      ! routine, but since we have them around anyway for inertial we pass them in
      if (algorithm_type .eq. 1) then
-        call advance_timestep_inertial(mla,umac,rho_old,rho_new, &
-                                       rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
-                                       p0_old,p0_new,gradp_baro,Temp, &
-                                       pi,dx,dt,the_bc_tower)
+        call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                       gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                       diff_mass_fluxdiv, &
+                                       stoch_mass_fluxdiv,stoch_mass_flux, &
+                                       dx,dt,time,the_bc_tower,istep)
      else
         call bl_error("Error: invalid algorithm_type")
      end if
