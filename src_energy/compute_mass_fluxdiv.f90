@@ -86,7 +86,7 @@ contains
     end do
 
 
-    ! compute diffusive mass fluxes, "F = -rho*W*chi*Gamma*grad(x) - ..."
+    ! compute diffusive mass fluxes, "-F = rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
                                 diff_mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                 diff_mass_flux,dx,the_bc_tower)
