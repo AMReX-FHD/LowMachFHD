@@ -1,4 +1,4 @@
-module compute_mass_fluxdiv_module
+module diffusive_fluxdiv_module
 
   use multifab_module
   use define_bc_module
@@ -19,22 +19,27 @@ module compute_mass_fluxdiv_module
 
   private
 
-  public :: compute_mass_fluxdiv
+  public :: diffusive_fluxdiv
 
 contains
 
-  ! compute diffusive mass fluxes
-  subroutine compute_mass_fluxdiv(mla,rho,rhotot,molarconc,chi,zeta,gradp_baro,Temp, &
-                                  diff_mass_fluxdiv,diff_mass_flux,dx,the_bc_tower)
+  ! compute diffusive mass and rhoh fluxes
+  subroutine diffusive_fluxdiv(mla,rho,rhotot,molarconc,chi,zeta,lambda,gradp_baro,Temp, &
+                                         diff_mass_fluxdiv,diff_mass_flux,diff_rhoh_fluxdiv, &
+                                         dx,the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
     type(multifab) , intent(in   )   :: rhotot(:)
     type(multifab) , intent(in   )   :: molarconc(:)
+    type(multifab) , intent(in   )   :: chi(:)
+    type(multifab) , intent(in   )   :: zeta(:)
+    type(multifab) , intent(in   )   :: lambda(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(in   )   :: Temp(:)
     type(multifab) , intent(inout)   :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout)   :: diff_mass_flux(:,:)
+    type(multifab) , intent(inout)   :: diff_rhoh_fluxdiv(:,:)
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     type(bc_tower) , intent(in   )   :: the_bc_tower
 
@@ -47,7 +52,7 @@ contains
 
     type(bl_prof_timer), save :: bpt
 
-    call build(bpt,"compute_mass_fluxdiv")
+    call build(bpt,"diffusive_fluxdiv")
 
     nlevs = mla%nlevel  ! number of levels 
     dm    = mla%dim     ! dimensionality
@@ -57,6 +62,11 @@ contains
        call multifab_build(Gama(n),         mla%la(n), nspecies**2, 1)
        call multifab_build(zeta_by_Temp(n), mla%la(n), nspecies,    1)
     end do
+
+    ! compute transport properties (eta,lambda,kappa,chi,zeta)
+    call ideal_mixture_transport_wrapper(mla,rhotot,Temp,p0,conc, &
+                                         molarconc,eta,lambda,kappa, &
+                                         chi,zeta)
 
     ! set zeta_by_Temp to zeta/Temp
     do n=1,nlevs
@@ -79,17 +89,14 @@ contains
     ! compute rho*W*chi
     call compute_rhoWchi(mla,rho,chi,rhoWchi)
 
-    do n=1,nlevs
-       do i=1,dm
-          call setval(mass_flux(n,i),0.d0,all=.true.)
-       end do
-    end do
-
-
     ! compute diffusive mass fluxes, "-F = rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
                                 diff_mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
                                 diff_mass_flux,dx,the_bc_tower)
+
+    ! compute diffusive rhoh fluxes
+    call diffusive_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,diff_rhoh_fluxdiv, &
+                                dx,time,the_bc_tower)
 
     do n=1,nlevs
        call multifab_destroy(rhoWchi(n))
@@ -99,6 +106,6 @@ contains
 
     call destroy(bpt)
 
-  end subroutine compute_mass_fluxdiv
+  end subroutine diffusive_fluxdiv
   
-end module compute_mass_fluxdiv_module
+end module diffusive_fluxdiv_module

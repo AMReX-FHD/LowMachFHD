@@ -271,10 +271,6 @@ contains
        call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_old,the_bc_tower)
     end if
 
-    ! compute (eta,kappa)^{*,n+1}
-    call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
-                           the_bc_tower%bc_tower_array)
-
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F = rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
@@ -446,10 +442,6 @@ contains
     ! average rho_new and rhotot_new to faces
     call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
-
-    ! compute (eta,kappa)^{n+1}
-    call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
-                           the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Step 6 - Calculate Diffusive and Stochastic Fluxes
