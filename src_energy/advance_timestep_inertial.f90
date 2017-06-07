@@ -63,33 +63,63 @@ contains
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
-    type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
+    type(multifab) , intent(inout) :: diff_mass_fluxdiv(:) 
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
 
     ! local
-    type(multifab) ::  rho_update(mla%nlevel)
     type(multifab) :: gmres_rhs_p(mla%nlevel)
-    type(multifab) ::         dpi(mla%nlevel)
-    type(multifab) ::  rho_nd_old(mla%nlevel)
-    type(multifab) ::     rho_tmp(mla%nlevel)
+    type(multifab) :: gmres_rhs_v(mla%nlevel,mla%dim)
 
-    type(multifab) ::              mold(mla%nlevel,mla%dim)
-    type(multifab) ::             mtemp(mla%nlevel,mla%dim)
-    type(multifab) ::   adv_mom_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) ::  diff_mom_fluxdiv(mla%nlevel,mla%dim)
-    type(multifab) ::       gmres_rhs_v(mla%nlevel,mla%dim)
-    type(multifab) ::             dumac(mla%nlevel,mla%dim)
+    type(multifab) :: dpi  (mla%nlevel)
+    type(multifab) :: dumac(mla%nlevel,mla%dim)
+
+    type(multifab) :: deltaT             (mla%nlevel)
+    type(multifab) :: deltaT_rhs         (mla%nlevel)
+    type(multifab) :: deltaT_solver_alpha(mla%nlevel)
+    type(multifab) :: deltaT_solver_beta (mla%nlevel,mla%dim)
+
+    type(multifab) :: mom_old(mla%nlevel,mla%dim)
+    type(multifab) :: mom_new(mla%nlevel,mla%dim)
+    type(multifab) ::   mtemp(mla%nlevel,mla%dim)
+
+    type(multifab) :: conc_old(mla%nlevel,mla%dim)
+    type(multifab) :: conc_new(mla%nlevel,mla%dim)
+
+    type(multifab) ::        rho_fc_old(mla%nlevel,mla%dim)
+    type(multifab) ::        rho_fc_new(mla%nlevel,mla%dim)
     type(multifab) ::     rhotot_fc_old(mla%nlevel,mla%dim)
     type(multifab) ::     rhotot_fc_new(mla%nlevel,mla%dim)
-    type(multifab) ::            gradpi(mla%nlevel,mla%dim)
-    type(multifab) ::            rho_fc(mla%nlevel,mla%dim)
-    type(multifab) ::    diff_mass_flux(mla%nlevel,mla%dim)
+    type(multifab) ::       rhoh_fc_old(mla%nlevel,mla%dim)
+    type(multifab) ::       rhoh_fc_new(mla%nlevel,mla%dim)
 
-    ! energy specific multifabs
-    type(multifab) :: rhoh_fc(mla%nlevel,mla%dim)
-    
+    type(multifab) :: gradpi(mla%nlevel,mla%dim)
+
+    type(multifab) :: Peos(mla%nlevel)
+
+    type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
+
+    type(multifab) :: mass_update_old(mla%nlevel,mla%dim)
+    type(multifab) :: mass_update_new(mla%nlevel,mla%dim)
+
+    type(multifab) :: rhoh_update_old(mla%nlevel,mla%dim)
+    type(multifab) :: rhoh_update_new(mla%nlevel,mla%dim)
+
+    type(multifab) :: mom_adv_update_old(mla%nlevel,mla%dim)
+    type(multifab) :: mom_adv_update_new(mla%nlevel,mla%dim)
+
+    type(multifab) :: mom_diff_update_old(mla%nlevel,mla%dim)
+
+    type(multifab) ::       Scorr(mla%nlevel)
+    type(multifab) :: delta_Scorr(mla%nlevel)
+
+    real(kind=dp_t) :: Sbar_old, Sbar_new
+    real(kind=dp_t) :: thetabar_old, thetabar_new
+    real(kind=dp_t) :: Scorrbar
+    real(kind=dp_t) :: peosbar, driftbar
+
+
     integer :: i,dm,n,nlevs
 
     real(kind=dp_t) :: theta_alpha, norm_pre_rhs, gmres_abs_tol_in
@@ -108,44 +138,187 @@ contains
     theta_alpha = 1.d0/dt
     
     do n=1,nlevs
-       call multifab_build( rho_update(n),mla%la(n),nspecies,0)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(        dpi(n),mla%la(n),1       ,1)
        do i=1,dm
-          call multifab_build_edge(            mold(n,i),mla%la(n),1       ,1,i)
+          call multifab_build_edge(         mom_old(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(           mtemp(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge( adv_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(diff_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(           dumac(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(          gradpi(n,i),mla%la(n),1       ,0,i)
+          call multifab_build_edge(      rho_fc_old(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(      rho_fc_new(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(   rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(   rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(          rho_fc(n,i),mla%la(n),nspecies,0,i)
+          call multifab_build_edge(     rhoh_fc_old(n,i),mla%la(n),       1,0,i)
+          call multifab_build_edge(     rhoh_fc_new(n,i),mla%la(n),       1,0,i)
           call multifab_build_edge(  diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          ! energy specific
-          call multifab_build_edge(         rhoh_fc(n,i),mla%la(n),       1,0,i)
        end do
     end do
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 1 - Calculate Predictor Diffusive and Stochastic Fluxes
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! compute grad(pi^n)
+    call compute_grad(mla,pi,gradpi,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
 
-    ! diff/stoch_mass_fluxdiv already contain F_i
-    ! this was already done in Step 0 (initialization) or Step 6 from the previous time step
+    ! compute conc_old
+    call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc_old,.true.) ! valid region only
+    call fill_c_ghost_cells(mla,conc_old,dx,the_bc_tower)
 
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! Step 2 - Predictor Euler Step
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    ! average rho_old and rhotot_old to faces
-    call average_cc_to_face(nlevs,   rho_old,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    ! compute rhotot, rho, and rhoh on faces at t^n
     call average_cc_to_face(nlevs,rhotot_old,rhotot_fc_old,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_old,   rho_fc_old,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,  rhoh_old,  rhoh_fc_old,1,   h_bc_comp,       1,the_bc_tower%bc_tower_array)
 
-    ! energy
-    call average_cc_to_face(nlevs,rhoh_old  ,rhoh_fc      ,1,h_bc_comp   ,1       ,the_bc_tower%bc_tower_array)
+    ! compute diffusive mass and rhoh flux divergences at t^n
+    ! (store result in mass_update_old and rhoh_update_old)
+    ! also compute eta_old and kappa_old
+    call diffusive_fluxdiv(mla,rho,rhotot,gradp_baro,Temp,p0,eta,eta_ed,kappa,
+                           mass_update_old,diff_mass_flux,rhoh_update_old, &
+                           dx,the_bc_tower)
 
+    ! compute S^n and theta^n (store them in delta_S_old and delta_theta_old)
+    call compute_S_theta(mla,delta_S_old,delta_theta_old,mass_udpate_old, &
+                         rhoh_update_old,conc_old,Temp_old,rhotot_old)
+
+    ! compute Scorr^n = (rho_P / rho) (Peos - p0) / dt
+    ! first compute Scorr = Peos
+    call compute_p(mla,rhotot_old,Temp_old,conc_old,Scorr)
+    do n=1,nlevs
+       ! compute Scorr = Peos - p0
+       call multifab_sub_sub_s_c(Scorr(n),1,p0_old,1,0)
+       ! compute Scorr = (rho_P / rho) (Peos - p0) / dt
+       call scale_deltaP(mla,Scorr,rhotot_old,Temp,conc_old,dt,1.d0)
+    end do
+
+    ! split S^n, theta^n, Scorr into average and perturbational pieces
+    do n=1,nlevs
+       Sbar_old     = multifab_sum_c(delta_S_old(n)    ,1,1) / total_volume
+       thetabar_old = multifab_sum_c(delta_theta_old(n),1,1) / total_volume
+       Scorrbar     = multifab_sum_c(Scorr(n),1,1) / total_volume
+       call multifab_sub_sub_s_c(delta_S_old(n)    ,1,Sbar_old    ,1,0)
+       call multifab_sub_sub_s_c(delta_theta_old(n),1,thetabar_old,1,0)
+       call multifab_copy_c(delta_Scorr(n),1,Scorr(n),1,1,0)
+       call multifab_sub_sub_s_c(delta_Scorr(n),1,Scorrbar,1,0)
+    end do
+
+    ! compute p0_update_old
+    p0_update_old = (Sbar_old + Scorrbar)/thetabar_old
+
+    ! add advective terms to mass_update_old
+    ! mass_update_old = [-div(rho_i*v) + div(F)]^n
+    call mk_advective_s_fluxdiv(mla,umac_old,rho_fc_old,mass_update_old,.true.,dx,1,nspecies)
+
+    ! add advective terms to rhoh_update_old
+    call mk_advective_s_fluxdiv(mla,umac_old,rhoh_fc_old,rhoh_update_old,.true.,dx,1,1)
+
+    ! add dp0/dt (p0_update_old) to rhoh_update_old
+    ! rhoh_update_old = [-div(rhoh*v) + p0_update + div(Q) + sum(div(hk*Fk)) + rho*Hext]^n
+    do n=1,nlevs
+       call multifab_plus_plus_s_c(rhoh_update_old(n),1,p0_update_old,1,0)
+    end do
+
+    ! compute old momentum
+    call convert_m_to_umac(mla,rhotot_fc_old,mom_old,umac_old,.false.)
+
+    ! compute -div(rho*v*v)
+    call mk_advective_m_fluxdiv(mla,umac_old,mom_old,mom_adv_update_old,.false., &
+                                dx,the_bc_tower%bc_tower_array)
+
+    ! compute A_0^n * v^n
+    call diffusive_m_fluxdiv(mla,mom_diff_update_old,.false.,umac_old, &
+                             eta,eta_ed,kappa,dx,the_bc_tower%bc_tower_array)
+
+    ! loop over dpdt_iters
+    do k=1,dpdt_iters
+
+       if (k .eq. 1) then
+          ! if this is the first iteration, copy from the old
+          
+          do n=1,nlevs
+             call multifab_copy_c(rho_new(n)   ,1,rho_old(n)   ,1,nspecies,rho_new(n)%ng)
+             call multifab_copy_c(rhotot_new(n),1,rhotot_old(n),1,1       ,rhotot_new(n)%ng)
+             call multifab_copy_c(rhoh_new(n)  ,1,rhoh_old(n)  ,1,1       ,rhoh_new(n)%ng)
+             do i=1,dm
+                call multifab_copy_c(umac_new(n,i)     ,1,umac_old(n,i)     ,1,1       ,umac_new(n,i)%ng)
+                call multifab_copy_c(rhotot_fc_new(n,i),1,rhotot_fc_old(n,i),1,1       ,rhotot_fc_new(n,i)%ng)
+                call multifab_copy_c(rho_fc_new(n,i)   ,1,rho_fc_old(n,i)   ,1,nspecies,rho_fc_new(n,i)%ng)
+                call multifab_copy_c(rhoh_fc_new(n,i)  ,1,rhoh_fc_old(n,i)  ,1,1       ,rhoh_fc_new(n,i)%ng)
+             end do
+             call multifab_copy_c(eta_new(n)         ,1,eta_old(n)         ,1,1          ,1)
+             call multifab_copy_c(kappa_new(n)       ,1,kappa_old(n)       ,1,1          ,1)
+             call multifab_copy_c(mass_fluxdiv_new(n),1,mass_fluxdiv_old(n),1,nspecies   ,0)
+             call multifab_copy_c(rhoh_fluxdiv_new(n),1,rhoh_fluxdiv_old(n),1,1          ,0)
+             call multifab_copy_c(delta_S_new(n)     ,1,delta_S_old(n)     ,1,1          ,0)
+             call multifab_copy_c(delta_theta_new(n) ,1,delta_theta_old(n) ,1,1          ,0)
+
+             ! rhoh_update_new
+          end do
+
+          p0_new = p0_old
+          p0_update_new = p0_update_old
+          Sbar_new = Sbar_old
+          thetabar_new = thetabar_old
+
+       else
+          ! otherwise, generate new stuff not done at the end of the dpdt_iters loop
+
+
+          ! compute new-time densities on faces
+
+          ! update densities to new time
+
+
+          ! update total density
+
+
+          ! update pressure
+
+
+       end if
+
+
+
+
+       ! loop over deltaT_iters for temperature solve
+       do l=1,deltaT_iters
+
+
+          ! build RHS for deltaT solve
+          do n=1,nlevs
+             call multifab_copy_c(deltaT_rhs(n),1,rhoh_old(n),1,1,0)
+             call multifab_sub_sub_c(deltaT_rhs(n),1,rhoh_new(n),1,1,0)
+             call multifab_mult_mult_s_c(deltaT_rhs(n),1,1.d0/dt,1,0)
+             call multifab_saxpy_3(deltaT_rhs(n),0.5d0,rhoh_update_old(n))
+             call multifab_saxpy_3(deltaT_rhs(n),0.5d0,rhoh_update_new(n))
+          end do
+
+          ! cc_solver_alpha = rhotot^{n+1,m+1} c_p^{n+1,m+1,l} / dt
+          call compute_cp(mla,cc_solver_alpha,conc_new,Temp)
+          do n=1,nlevs
+             call multifab_mult_mult_c(cc_solver_alpha(n),1,rhotot_new(n),1,1,0)
+             call multifab_mult_mult_s_c(cc_solver_alpha(n),1,1.d0/dt,1,0)
+          end do
+
+
+       end do
+
+
+
+    end do
+
+
+
+
+
+
+
+
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!
+    
     ! add D^n and St^n to rho_update
     do n=1,nlevs
        call multifab_copy_c(rho_update(n),1,diff_mass_fluxdiv(n),1,nspecies,0)
@@ -153,7 +326,7 @@ contains
 
     ! add A^n to rho_update
     ! compute A^n for scalars using centered advection
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc_old,rho_update,.true.,dx,1,nspecies)
 
     ! energy - FIXME
 
@@ -165,13 +338,13 @@ contains
     end do
 
     ! compute rhotot from rho in VALID REGION
-    call compute_rhotot(mla,rho_new,rhotot_new)
+   call compute_rhotot(mla,rho_new,rhotot_new)
 
     ! fill rho and rhotot ghost cells
     call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc_new,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -378,7 +551,7 @@ contains
     ! rho_update already contains D^{*,n+1} + St^{*,n+1} for rho from above
     ! add A^{*,n+1} for rho to rho_update
     ! compute A^{*,n+1} for scalars using centered advection
-    call mk_advective_s_fluxdiv(mla,umac,rho_fc,rho_update,.true.,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc_new,rho_update,.true.,dx,1,nspecies)
 
     ! snew = s^{n+1} 
     !      = (1/2)*(s^n + s^{*,n+1} + dt*(A^{*,n+1} + D^{*,n+1} + St^{*,n+1}))
@@ -395,7 +568,7 @@ contains
     call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
     ! average rho_new and rhotot_new to faces
-    call average_cc_to_face(nlevs,   rho_new,   rho_fc    ,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
+    call average_cc_to_face(nlevs,   rho_new,   rho_fc_new,1,   c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
     call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,       1,the_bc_tower%bc_tower_array)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -573,7 +746,6 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     do n=1,nlevs
-       call multifab_destroy(rho_update(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
        do i=1,dm
@@ -584,10 +756,13 @@ contains
           call multifab_destroy(gmres_rhs_v(n,i))
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(umac_tmp(n,i))
+          call multifab_destroy(rho_fc_old(n,i))
+          call multifab_destroy(rho_fc_new(n,i))
           call multifab_destroy(rhotot_fc_old(n,i))
           call multifab_destroy(rhotot_fc_new(n,i))
+          call multifab_destroy(rhoh_fc_old(n,i))
+          call multifab_destroy(rhoh_fc_new(n,i))
           call multifab_destroy(gradpi(n,i))
-          call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
        end do
     end do

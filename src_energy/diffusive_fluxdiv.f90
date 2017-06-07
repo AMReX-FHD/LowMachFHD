@@ -25,7 +25,7 @@ contains
 
   ! compute diffusive mass and rhoh fluxes
   ! also compute eta and kappa
-  subroutine diffusive_fluxdiv(mla,rho,rhotot,gradp_baro,Temp,p0,eta,kappa,
+  subroutine diffusive_fluxdiv(mla,rho,rhotot,gradp_baro,Temp,p0,eta,eta_ed,kappa,
                                diff_mass_fluxdiv,diff_mass_flux,diff_rhoh_fluxdiv, &
                                dx,the_bc_tower)
        
@@ -35,6 +35,7 @@ contains
     type(multifab) , intent(in   ) :: gradp_baro(:,:)
     type(multifab) , intent(in   ) :: Temp(:)
     type(multifab) , intent(inout) :: eta(:)
+    type(multifab) , intent(inout) :: eta_ed(:)
     type(multifab) , intent(inout) :: kappa(:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout) :: diff_mass_flux(:,:)
@@ -85,6 +86,13 @@ contains
     call ideal_mixture_transport_wrapper(mla,rhotot,Temp,p0,conc, &
                                          molarconc,eta,lambda,kappa, &
                                          chi,zeta_over_Temp)
+
+    ! put eta on edges
+    if (dm .eq. 2) then
+       call average_cc_to_node(nlevs,eta,eta_ed(:,1),1,tran_bc_comp,1,the_bc_level)
+    else if (dm .eq. 3) then
+       call average_cc_to_edge(nlevs,eta,eta_ed,1,tran_bc_comp,1,the_bc_level)
+    end if
 
     ! set zeta_over_Temp to zeta/Temp
     do n=1,nlevs
