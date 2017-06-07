@@ -12,7 +12,6 @@ module advance_timestep_inertial_module
   use convert_m_to_umac_module
   use convert_rhoc_to_c_module
   use mk_advective_m_fluxdiv_module
-  use bds_module
   use gmres_module
   use div_and_grad_module
   use mk_grav_force_module
@@ -39,44 +38,42 @@ module advance_timestep_inertial_module
 
 contains
 
-  subroutine advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                       rhoh_old,rhoh_new,p0_old,p0_new, &
-                                       gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
+  subroutine advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                       rhoh_old,rhoh_new,Temp_old,Temp_new,p0_old,p0_new, &
+                                       gradp_baro,pi,eta,eta_ed,kappa, &
+                                       diff_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep)
 
     type(ml_layout), intent(in   ) :: mla
-    type(multifab) , intent(inout) :: umac(:,:)
-    type(multifab) , intent(inout) :: rho_old(:)
+    type(multifab) , intent(in   ) :: umac_old(:,:)
+    type(multifab) , intent(inout) :: umac_new(:,:)
+    type(multifab) , intent(in   ) :: rho_old(:)
     type(multifab) , intent(inout) :: rho_new(:)
-    type(multifab) , intent(inout) :: rhotot_old(:)
+    type(multifab) , intent(in   ) :: rhotot_old(:)
     type(multifab) , intent(inout) :: rhotot_new(:)
-    type(multifab) , intent(inout) :: rhoh_old(:)
+    type(multifab) , intent(in   ) :: rhoh_old(:)
     type(multifab) , intent(inout) :: rhoh_new(:)
-    type(multifab) , intent(inout) :: gradp_baro(:,:)
+    type(multifab) , intent(in   ) :: Temp_new(:)
+    type(multifab) , intent(inout) :: Temp_new(:)
+    real(kind=dp_t), intent(in   ) :: p0_old
+    real(kind=dp_t), intent(inout) :: p0_new
+    type(multifab) , intent(in   ) :: gradp_baro(:,:) ! not used, but required argument
     type(multifab) , intent(inout) :: pi(:)
     ! eta and kappa need to enter consistent with old and leave consistent with new
     type(multifab) , intent(inout) :: eta(:)
     type(multifab) , intent(inout) :: eta_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: kappa(:)
-    type(multifab) , intent(inout) :: Temp(:)
-    type(multifab) , intent(inout) :: Temp_ed(:,:) ! nodal (2d); edge-centered (3d)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
-    type(multifab) , intent(inout) :: stoch_mass_fluxdiv(:)
-    type(multifab) , intent(inout) :: stoch_mass_flux(:,:)
-    real(kind=dp_t), intent(inout) :: p0_old,p0_new
     real(kind=dp_t), intent(in   ) :: dx(:,:),dt,time
     type(bc_tower) , intent(in   ) :: the_bc_tower
     integer        , intent(in   ) :: istep
 
     ! local
     type(multifab) ::  rho_update(mla%nlevel)
-    type(multifab) ::   bds_force(mla%nlevel)
     type(multifab) :: gmres_rhs_p(mla%nlevel)
     type(multifab) ::         dpi(mla%nlevel)
     type(multifab) ::  rho_nd_old(mla%nlevel)
     type(multifab) ::     rho_tmp(mla%nlevel)
-    type(multifab) ::      p_baro(mla%nlevel)
 
     type(multifab) ::              mold(mla%nlevel,mla%dim)
     type(multifab) ::             mtemp(mla%nlevel,mla%dim)
@@ -84,13 +81,11 @@ contains
     type(multifab) ::  diff_mom_fluxdiv(mla%nlevel,mla%dim)
     type(multifab) ::       gmres_rhs_v(mla%nlevel,mla%dim)
     type(multifab) ::             dumac(mla%nlevel,mla%dim)
-    type(multifab) ::          umac_tmp(mla%nlevel,mla%dim)
     type(multifab) ::     rhotot_fc_old(mla%nlevel,mla%dim)
     type(multifab) ::     rhotot_fc_new(mla%nlevel,mla%dim)
     type(multifab) ::            gradpi(mla%nlevel,mla%dim)
     type(multifab) ::            rho_fc(mla%nlevel,mla%dim)
     type(multifab) ::    diff_mass_flux(mla%nlevel,mla%dim)
-    type(multifab) ::   total_mass_flux(mla%nlevel,mla%dim)
 
     ! energy specific multifabs
     type(multifab) :: rhoh_fc(mla%nlevel,mla%dim)
@@ -103,30 +98,6 @@ contains
 
     type(bl_prof_timer), save :: bpt
 
-    if (use_charged_fluid) then
-       call bl_error("energy advance_timestep_inertial does not support charges")
-    end if
-
-    if (nreactions .gt. 0) then
-       call bl_error("energy advance_timestep_inertial does not support reactions")
-    end if
-
-    if (variance_coef_mass .ne. 0.d0 .or. variance_coef_mom .ne. 0.d0) then
-       call bl_error("energy advance_timestep_inertial does not support fluctuations")
-    end if
-
-    if (advection_type .ge. 1) then
-       call bl_error("energy advance_timestep_inertial does not support bds advection")
-    end if
-
-    if (barodiffusion_type .ge. 1) then
-       call bl_error("energy advance_timestep_inertial does not support barodiffusion")
-    end if
-
-    if (is_nonisothermal) then
-       call bl_error("energy advance_timestep_inertial does not support is_nonisothermal")
-    end if
-
     call build(bpt, "advance_timestep_inertial")
 
     weights(1) = 1.d0
@@ -138,10 +109,8 @@ contains
     
     do n=1,nlevs
        call multifab_build( rho_update(n),mla%la(n),nspecies,0)
-       call multifab_build(  bds_force(n),mla%la(n),nspecies,1)
        call multifab_build(gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(        dpi(n),mla%la(n),1       ,1)
-       call multifab_build(     p_baro(n),mla%la(n),1       ,1)
        do i=1,dm
           call multifab_build_edge(            mold(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(           mtemp(n,i),mla%la(n),1       ,1,i)
@@ -149,27 +118,13 @@ contains
           call multifab_build_edge(diff_mom_fluxdiv(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(     gmres_rhs_v(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(           dumac(n,i),mla%la(n),1       ,1,i)
-          call multifab_build_edge(        umac_tmp(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(          gradpi(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(   rhotot_fc_old(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(   rhotot_fc_new(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(          rho_fc(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(  diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge( total_mass_flux(n,i),mla%la(n),nspecies,0,i)
-       end do
-    end do
-
-    ! energy specific
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_build_edge(rhoh_fc(n,i),mla%la(n),1,0,i)
-       end do
-    end do
-
-    ! make copies of old quantities
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_copy_c(umac_tmp(n,i),1,umac(n,i),1,1,1)
+          ! energy specific
+          call multifab_build_edge(         rhoh_fc(n,i),mla%la(n),       1,0,i)
        end do
     end do
 
@@ -274,8 +229,8 @@ contains
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F = rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
-                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              diff_mass_flux,stoch_mass_flux, &
+                              diff_mass_fluxdiv, &
+                              diff_mass_flux, &
                               dt,time,dx,weights,the_bc_tower)
 
     ! energy - FIXME call diffusive_rhoh_fluxdiv
@@ -492,8 +447,8 @@ contains
     ! compute diffusive and stochastic mass fluxes
     ! this computes "-F = rho W chi [Gamma grad x... ]"
     call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
-                              diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                              diff_mass_flux,stoch_mass_flux, &
+                              diff_mass_fluxdiv, &
+                              diff_mass_flux, &
                               dt,time,dx,weights,the_bc_tower)
 
     ! compute gmres_rhs_p (we will later add divu)
@@ -619,10 +574,8 @@ contains
 
     do n=1,nlevs
        call multifab_destroy(rho_update(n))
-       call multifab_destroy(bds_force(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
-       call multifab_destroy(p_baro(n))
        do i=1,dm
           call multifab_destroy(mold(n,i))
           call multifab_destroy(mtemp(n,i))
@@ -636,7 +589,6 @@ contains
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
-          call multifab_destroy(total_mass_flux(n,i))
        end do
     end do
 

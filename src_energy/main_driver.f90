@@ -17,8 +17,6 @@ subroutine main_driver()
   use estdt_module
   use stag_mg_layout_module
   use macproject_module
-  use stochastic_mass_fluxdiv_module
-  use stochastic_m_fluxdiv_module
   use fill_rho_ghost_cells_module
   use ParallelRNGs 
   use bl_rng_module
@@ -35,12 +33,11 @@ subroutine main_driver()
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
                                   probin_common_init, print_int, nspecies, &
                                   advection_type, fixed_dt, max_step, cfl, &
-                                  algorithm_type, variance_coef_mom, initial_variance, &
+                                  algorithm_type, variance_coef_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng
   use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
   use probin_gmres_module, only: probin_gmres_init
-  use probin_charged_module, only: probin_charged_init, use_charged_fluid, dielectric_const, &
-                                   dielectric_type
+  use probin_charged_module, only: probin_charged_init, use_charged_fluid
   use probin_chemistry_module, only: probin_chemistry_init, nreactions
   use probin_energy_module, only: probin_energy_init
 
@@ -61,15 +58,16 @@ subroutine main_driver()
   
   ! will be allocated on nlevels
   type(multifab), allocatable  :: rho_old(:)
-  type(multifab), allocatable  :: rhotot_old(:)
   type(multifab), allocatable  :: rho_new(:)
+  type(multifab), allocatable  :: rhotot_old(:)
   type(multifab), allocatable  :: rhotot_new(:)
-  type(multifab), allocatable  :: Temp(:)
-  type(multifab), allocatable  :: Temp_ed(:,:)
+  type(multifab), allocatable  :: rhoh_old(:)
+  type(multifab), allocatable  :: rhoh_new(:)
+  type(multifab), allocatable  :: Temp_old(:)
+  type(multifab), allocatable  :: Temp_new(:)
+  type(multifab), allocatable  :: umac_old(:,:)
+  type(multifab), allocatable  :: umac_new(:,:)
   type(multifab), allocatable  :: diff_mass_fluxdiv(:)
-  type(multifab), allocatable  :: stoch_mass_fluxdiv(:)
-  type(multifab), allocatable  :: stoch_mass_flux(:,:)
-  type(multifab), allocatable  :: umac(:,:)
   type(multifab), allocatable  :: mtemp(:,:)
   type(multifab), allocatable  :: rhotot_fc(:,:)
   type(multifab), allocatable  :: gradp_baro(:,:)
@@ -78,27 +76,12 @@ subroutine main_driver()
   type(multifab), allocatable  :: eta_ed(:,:)
   type(multifab), allocatable  :: kappa(:)
 
-  real(kind=dp_t)              :: total_charge
-  type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
-  type(multifab), allocatable  :: charge_old(:)
-  type(multifab), allocatable  :: charge_new(:)
-  type(multifab), allocatable  :: permittivity(:)
-  type(multifab), allocatable  :: grad_Epot_old(:,:)
-  type(multifab), allocatable  :: grad_Epot_new(:,:)
-  type(multifab), allocatable  :: Epot(:)
-  type(multifab), allocatable  :: gradPhiApprox(:,:)
-
-  type(multifab), allocatable  :: chem_rate(:)
-
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs
   character(len=128) :: fname
   logical :: lexist
   logical :: nodal_temp(3)
 
-  ! energy-specific data
-  type(multifab), allocatable  :: rhoh_old(:)
-  type(multifab), allocatable  :: rhoh_new(:)
   real(kind=dp_t) :: p0_old, p0_new
 
   !==============================================================
@@ -112,16 +95,30 @@ subroutine main_driver()
   call probin_chemistry_init()
   call probin_energy_init()
   call eos_model_init()
+  
+  if (use_charged_fluid) then
+     call bl_error("energy code does not support charges")
+  end if
 
-   if (use_bl_rng) then
-      ! Build the random number engine and give initial distributions for the
-      ! F_BaseLib/bl_random RNG module
-      call rng_init()
-   else
-      ! Initialize random numbers *after* the global (root) seed has been set:
-      ! This is for the RNG module that sits in Hydrogrid
-      call SeedParallelRNG(seed)
-   end if
+  if (nreactions .gt. 0) then
+     call bl_error("energy code does not support reactions")
+  end if
+
+  if (variance_coef_mass .ne. 0.d0 .or. variance_coef_mom .ne. 0.d0) then
+     call bl_error("energy code does not support fluctuations")
+  end if
+
+  if (advection_type .ge. 1) then
+     call bl_error("energy code does not support bds advection")
+  end if
+
+  if (barodiffusion_type .ge. 1) then
+     call bl_error("energy code does not support barodiffusion")
+  end if
+
+  if (is_nonisothermal) then
+     call bl_error("energy code does not support is_nonisothermal")
+  end if
 
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
@@ -136,24 +133,14 @@ subroutine main_driver()
   allocate(lo(dm),hi(dm),pmask(dm))
   allocate(rho_old(nlevs),rhotot_old(nlevs),pi(nlevs))
   allocate(rho_new(nlevs),rhotot_new(nlevs))
-  allocate(Temp(nlevs))
-  allocate(diff_mass_fluxdiv(nlevs),stoch_mass_fluxdiv(nlevs))
-  allocate(stoch_mass_flux(nlevs,dm))
-  allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
+  allocate(Temp_old(nlevs),Temp_new(nlevs))
+  allocate(diff_mass_fluxdiv(nlevs))
+  allocate(umac_old(nlevs,dm),umac_new(nlevs,dm))
+  allocate(mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs))
 
   ! 1 component in 2D, 3 components in 3D
   allocate(eta_ed(nlevs,2*dm-3))
-  allocate(Temp_ed(nlevs,2*dm-3))
-
-  allocate(Epot_mass_fluxdiv(nlevs))
-  allocate(charge_old(nlevs),charge_new(nlevs))
-  allocate(permittivity(nlevs))
-  allocate(grad_Epot_old(nlevs,dm),grad_Epot_new(nlevs,dm))
-  allocate(Epot(nlevs))
-  allocate(gradPhiApprox(nlevs,dm))
-
-  allocate(chem_rate(nlevs))
 
   ! energy specific
   allocate(rhoh_old(nlevs),rhoh_new(nlevs))
@@ -226,18 +213,12 @@ subroutine main_driver()
         call multifab_build(rho_old(n)   ,mla%la(n),nspecies,ng_s)
         call multifab_build(rhotot_old(n),mla%la(n),1       ,ng_s)
         call multifab_build(rhoh_old(n)  ,mla%la(n),1       ,ng_s)
-        call multifab_build(Temp(n)      ,mla%la(n),1       ,ng_s)
+        call multifab_build(Temp_old(n)  ,mla%la(n),1       ,ng_s)
         call multifab_build(pi(n)        ,mla%la(n),1       ,1)
         do i=1,dm
-           call multifab_build_edge(umac(n,i),mla%la(n),1,1,i)
+           call multifab_build_edge(umac_old(n,i),mla%la(n),1,1,i)
         end do
      end do
-
-     if (use_charged_fluid) then
-        do n=1,nlevs        
-           call multifab_build(Epot_mass_fluxdiv(n), mla%la(n),nspecies,0) 
-        end do
-     end if
 
   end if
 
@@ -311,7 +292,7 @@ subroutine main_driver()
 
      ! initialize rho and umac in valid region only
      ! also initialize rhoh, Temp, p0
-     call init_lowmach(mla,umac,rhotot_old,rho_old,rhoh_old,Temp,p0_old)
+     call init_lowmach(mla,umac_old,rhotot_old,rho_old,rhoh_old,Temp_old,p0_old)
 
      ! initialize pi, including ghost cells
      do n=1,nlevs
@@ -321,7 +302,7 @@ subroutine main_driver()
   end if
 
   ! fill temperature ghost cells
-  call fill_Temp_ghost_cells(mla,Temp,dx,the_bc_tower)
+  call fill_Temp_ghost_cells(mla,Temp_old,dx,the_bc_tower)
 
   ! compute rhotot from rho in VALID REGION
   call compute_rhotot(mla,rho_old,rhotot_old)
@@ -343,11 +324,13 @@ subroutine main_driver()
      call multifab_build(rho_new(n)          ,mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n)       ,mla%la(n),1       ,ng_s) 
      call multifab_build(rhoh_new(n)         ,mla%la(n),1       ,ng_s) 
+     call multifab_build(Temp_new(n)         ,mla%la(n),1       ,ng_s) 
      call multifab_build(eta(n)              ,mla%la(n),1       ,1)
      call multifab_build(kappa(n)            ,mla%la(n),1       ,1)
      call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
      do i=1,dm
-        call multifab_build_edge     (mtemp(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(  umac_new(n,i),mla%la(n),1,1,i)
+        call multifab_build_edge(     mtemp(n,i),mla%la(n),1,0,i)
         call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
         call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
      end do
@@ -357,91 +340,28 @@ subroutine main_driver()
      ! eta and Temp on nodes (2d) or edges (3d)
      if (dm .eq. 2) then
         call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
-        call multifab_build_nodal(Temp_ed(n,1),mla%la(n),1,0)
      else
         nodal_temp(1) = .true.
         nodal_temp(2) = .true.
         nodal_temp(3) = .false.
         call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
-        call multifab_build(Temp_ed(n,1),mla%la(n),1,0,nodal_temp)
         nodal_temp(1) = .true.
         nodal_temp(2) = .false.
         nodal_temp(3) = .true.
         call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
-        call multifab_build(Temp_ed(n,2),mla%la(n),1,0,nodal_temp)
         nodal_temp(1) = .false.
         nodal_temp(2) = .true.
         nodal_temp(3) = .true.
         call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
-        call multifab_build(Temp_ed(n,3),mla%la(n),1,0,nodal_temp)
      end if
   end do
-
-  if (variance_coef_mass .ne. 0.d0) then
-     do n=1,nlevs
-        call multifab_build(stoch_mass_fluxdiv(n),mla%la(n),nspecies,0) 
-        do i=1,dm
-           call multifab_build_edge(stoch_mass_flux(n,i),mla%la(n),nspecies,0,i)
-        end do
-     end do
-  end if
-
-  if (use_charged_fluid) then
-     do n=1,nlevs
-        call multifab_build(charge_old(n)  ,mla%la(n),1,1)
-        call multifab_build(charge_new(n)  ,mla%la(n),1,1)
-        call multifab_build(permittivity(n),mla%la(n),1,1)
-        call multifab_build(Epot(n)        ,mla%la(n),1,1)
-        do i=1,dm
-           call multifab_build_edge(grad_Epot_old(n,i),mla%la(n),1,1,i)
-           call multifab_build_edge(grad_Epot_new(n,i),mla%la(n),1,1,i)
-           call multifab_build_edge(gradPhiApprox(n,i),mla%la(n),1,0,i)
-        end do
-     end do
-  end if
-
-  if (nreactions .gt. 0) then
-     do n=1,nlevs
-        call multifab_build(chem_rate(n),mla%la(n),nspecies,0)
-     end do
-  end if
-
-  ! allocate and build multifabs that will contain random numbers
-  if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5 ) then
-     n_rngs = 2
-  else
-     n_rngs = 1
-  end if
-  call init_mass_stochastic(mla,n_rngs)
-  call init_m_stochastic(mla,n_rngs)
-
-  if (use_bl_rng) then
-     ! save random state for writing checkpoint
-     call bl_rng_copy_engine(rng_eng_diffusion_chk,rng_eng_diffusion)
-  end if
 
   !=====================================================================
   ! Initialize values
   !=====================================================================
 
-  if (barodiffusion_type .gt. 0) then
-
-     ! this computes an initial guess at p using HSE
-     call compute_HSE_pres(mla,rhotot_old,pi,dx,the_bc_tower)
-
-     ! compute grad p for barodiffusion
-     call compute_grad(mla,pi,gradp_baro,dx,1,pres_bc_comp,1,1,the_bc_tower%bc_tower_array)
-
-  end if
-
-  if (dm .eq. 2) then
-     call average_cc_to_node(nlevs,Temp,Temp_ed(:,1),1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  else if (dm .eq. 3) then
-     call average_cc_to_edge(nlevs,Temp,Temp_ed,1,tran_bc_comp,1,the_bc_tower%bc_tower_array)
-  end if
-
   ! initialize eta and kappa
-  call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp,dx, &
+  call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp_old,dx, &
                          the_bc_tower%bc_tower_array)
 
   ! now that we have eta, we can initialize the inhomogeneous velocity bcs
@@ -452,15 +372,15 @@ subroutine main_driver()
   do n=1,nlevs
      do i=1,dm
         ! set normal velocity on physical domain boundaries
-        call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+        call multifab_physbc_domainvel(umac_old(n,i),vel_bc_comp+i-1, &
                                        the_bc_tower%bc_tower_array(n), &
                                        dx(n,:),vel_bc_n(n,:))
         ! set transverse velocity behind physical boundaries
-        call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+        call multifab_physbc_macvel(umac_old(n,i),vel_bc_comp+i-1, &
                                     the_bc_tower%bc_tower_array(n), &
                                     dx(n,:),vel_bc_t(n,:))
         ! fill periodic and interior ghost cells
-        call multifab_fill_boundary(umac(n,i))
+        call multifab_fill_boundary(umac_old(n,i))
      end do
   end do
 
@@ -473,38 +393,15 @@ subroutine main_driver()
         call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
                                 the_bc_tower%bc_tower_array)
         ! compute momentum
-        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_old,.false.)
         call sum_momenta(mla,mtemp)
-        call eos_check(mla,rho_old)
-     end if
-
-     ! add initial momentum fluctuations
-     ! do not call for overdamped codes since the steady Stokes solver will 
-     ! wipe out the initial condition to solver tolerance
-     if (algorithm_type .ne. 2 .and. &
-         variance_coef_mom .ne. 0.d0 .and. &
-         initial_variance .ne. 0.d0) then
-        call add_m_fluctuations(mla,dx,initial_variance*variance_coef_mom, &
-                                umac,rhotot_old,Temp,the_bc_tower)
-
-        if (print_int .gt. 0) then
-           if (parallel_IOProcessor()) write(*,*) "After adding momentum fluctuations:"
-           call sum_mass(rho_old, 0) ! print out the total mass to check conservation
-           ! compute rhotot on faces
-           call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
-                                   the_bc_tower%bc_tower_array)
-           ! compute momentum
-           call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
-           call sum_momenta(mla,mtemp)
-           call eos_check(mla,rho_old)
-        end if
-
+        ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
 
      if (fixed_dt .gt. 0.d0) then
         dt = fixed_dt
      else
-        call estdt(mla,umac,dx,dt)
+        call estdt(mla,umac_old,dx,dt)
         n_Dbar = nspecies*(nspecies-1)/2
         Dbar_max = maxval(Dbar(1:n_Dbar))
         dt_diffusive = cfl*dx(1,1)**2/(2*dm*Dbar_max)
@@ -556,10 +453,9 @@ subroutine main_driver()
   ! From this perspective it may be useful to keep initial_projection even in overdamped
   ! because different gmres tolerances may be needed in the first step than in the rest
   if (algorithm_type .ne. 2) then
-     call initial_projection(mla,umac,rho_old,rhotot_old,gradp_baro, &
-                             Epot_mass_fluxdiv,diff_mass_fluxdiv, &
-                             stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &
-                             Temp,eta,eta_ed,dt,dx,the_bc_tower, &
+     call initial_projection(mla,umac_old,rho_old,rhotot_old,gradp_baro, &
+                             diff_mass_fluxdiv, &
+                             Temp_old,eta,eta_ed,dt,dx,the_bc_tower, &
                              charge_old,grad_Epot_old,Epot,permittivity)
   end if
 
@@ -571,12 +467,12 @@ subroutine main_driver()
 
      if (print_int .gt. 0) then
         if (parallel_IOProcessor()) write(*,*) "After initial projection:"  
-        call sum_mass(rho_old,0) ! print out the total mass to check conservation
+        call sum_mass(rho_old, 0) ! print out the total mass to check conservation
         ! compute rhotot on faces
         call average_cc_to_face(nlevs,rhotot_old,rhotot_fc,1,scal_bc_comp,1, &
                                 the_bc_tower%bc_tower_array)
         ! compute momentum
-        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_old,.false.)
         call sum_momenta(mla,mtemp)
         ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
@@ -590,8 +486,8 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing initial plotfile 0'
         end if
-        call write_plotfile(mla,rho_old,rhotot_old,rhoh_old,Temp, &
-                            umac,pi,p0_old,0,dx,time)
+        call write_plotfile(mla,rho_old,rhotot_old,rhoh_old,Temp_old, &
+                            umac_old,pi,p0_old,0,dx,time)
      end if
 
      ! write initial checkpoint
@@ -601,7 +497,7 @@ subroutine main_driver()
      
      if (stats_int .gt. 0) then
         ! write initial vertical and horizontal averages (hstat and vstat files)   
-        call print_stats(mla,dx,0,time,umac=umac,rho=rho_old,temperature=Temp)
+        call print_stats(mla,dx,0,time,umac=umac_old,rho=rho_old,temperature=Temp_old)
      end if
 
      ! We do the analysis first so we include the initial condition in the files if n_steps_skip=0
@@ -609,7 +505,7 @@ subroutine main_driver()
 
         ! Add this snapshot to the average in HydroGrid
         if (hydro_grid_int > 0) then
-           call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_old,temperature=Temp)
+           call analyze_hydro_grid(mla,dt,dx,istep,umac=umac_old,rho=rho_old,temperature=Temp_old)
         end if
 
         if (hydro_grid_int > 0 .and. n_steps_save_stats > 0) then
@@ -627,7 +523,7 @@ subroutine main_driver()
   do istep=init_step,max_step
 
      if (fixed_dt .le. 0.d0) then
-        call estdt(mla,umac,dx,dt)
+        call estdt(mla,umac_old,dx,dt)
         n_Dbar = nspecies*(nspecies-1)/2
         Dbar_max = maxval(Dbar(1:n_Dbar))
         dt_diffusive = cfl*dx(1,1)**2/(2*dm*Dbar_max)
@@ -647,13 +543,13 @@ subroutine main_driver()
 
      ! notes: eta, eta_ed, and kappa could be built and initialized within the advance routines
      ! but for now we pass them around (it does save a few flops)
-     ! diff/stoch_mass_fluxdiv could be built locally within the overdamped
+     ! diff _mass_fluxdiv could be built locally within the overdamped
      ! routine, but since we have them around anyway for inertial we pass them in
      if (algorithm_type .eq. 1) then
-        call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                       rhoh_old,rhoh_new,p0_old,p0_new, &
-                                       gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
+        call advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                       rhoh_old,rhoh_new,Temp_old,Temp_new,p0_old,p0_new, &
+                                       gradp_baro,pi,eta,eta_ed,kappa, &
+                                       diff_mass_fluxdiv, &
                                        dx,dt,time,the_bc_tower,istep)
      else
         call bl_error("Error: invalid algorithm_type")
@@ -682,7 +578,7 @@ subroutine main_driver()
         call average_cc_to_face(nlevs,rhotot_new,rhotot_fc,1,scal_bc_comp,1, &
                                 the_bc_tower%bc_tower_array)
         ! compute momentum
-        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac,.false.)
+        call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_new,.false.)
         call sum_momenta(mla,mtemp)
         ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
@@ -692,8 +588,8 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing plotfiles after timestep =', istep 
         end if
-        call write_plotfile(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp, &
-                            umac,pi,p0_new,istep,dx,time)
+        call write_plotfile(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp_new, &
+                            umac_new,pi,p0_new,istep,dx,time)
      end if
 
      ! write checkpoint at specific intervals
@@ -705,7 +601,7 @@ subroutine main_driver()
      if ( (stats_int > 0) .and. &
           (mod(istep,stats_int) .eq. 0) ) then
         ! Compute vertical and horizontal averages (hstat and vstat files)   
-        call print_stats(mla,dx,istep,time,umac=umac,rho=rho_new,temperature=Temp)
+        call print_stats(mla,dx,istep,time,umac=umac_new,rho=rho_new,temperature=Temp_new)
      end if
 
      if (istep .ge. n_steps_skip) then
@@ -713,7 +609,7 @@ subroutine main_driver()
         ! Add this snapshot to the average in HydroGrid
         if ( (hydro_grid_int > 0) .and. &
              ( mod(istep,hydro_grid_int) .eq. 0 ) ) then
-           call analyze_hydro_grid(mla,dt,dx,istep,umac=umac,rho=rho_new,temperature=Temp)
+           call analyze_hydro_grid(mla,dt,dx,istep,umac=umac_new,rho=rho_new,temperature=Temp_new)
         end if
 
         if ( (hydro_grid_int > 0) .and. &
@@ -730,6 +626,10 @@ subroutine main_driver()
         call multifab_copy_c(   rho_old(n),1,   rho_new(n),1,nspecies,   rho_old(n)%ng)
         call multifab_copy_c(rhotot_old(n),1,rhotot_new(n),1       ,1,rhotot_old(n)%ng)
         call multifab_copy_c(  rhoh_old(n),1,rhoh_new(n)  ,1       ,1,  rhoh_old(n)%ng)
+        call multifab_copy_c(  Temp_old(n),1,Temp_new(n)  ,1       ,1,  Temp_old(n)%ng)
+        do i=1,dm
+           call multifab_copy_c(umac_old(n,i),1,umac_new(n,1),1,1,umac_old(n)%ng)
+        end do
      end do
 
   end do
@@ -743,8 +643,6 @@ subroutine main_driver()
   end if
 
   call destroy_bc_multifabs(mla)
-  call destroy_mass_stochastic(mla)
-  call destroy_m_stochastic(mla)
 
   do n=1,nlevs
      call multifab_destroy(rho_old(n))
@@ -752,91 +650,48 @@ subroutine main_driver()
      call multifab_destroy(rhoh_old(n))
      call multifab_destroy(pi(n))
      do i=1,dm
-        call multifab_destroy(umac(n,i))
+        call multifab_destroy(umac_old(n,i))
      end do
   end do
-
-  if (use_charged_fluid) then
-     do n=1,nlevs
-        call multifab_destroy(Epot_mass_fluxdiv(n))
-     end do
-  end if
 
   do n=1,nlevs
      call multifab_destroy(rho_new(n))
      call multifab_destroy(rhotot_new(n))
      call multifab_destroy(rhoh_new(n))
-     call multifab_destroy(Temp(n))
+     call multifab_destroy(Temp_old(n))
+     call multifab_destroy(Temp_new(n))
      call multifab_destroy(eta(n))
      call multifab_destroy(kappa(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      do i=1,dm
+        call multifab_destroy(umac_new(n,i))
         call multifab_destroy(mtemp(n,i))
         call multifab_destroy(rhotot_fc(n,i))
         call multifab_destroy(gradp_baro(n,i))
      end do
      do i=1,size(eta_ed,dim=2)
         call multifab_destroy(eta_ed(n,i))
-        call multifab_destroy(Temp_ed(n,i))
      end do
   end do
-
-  if (variance_coef_mass .ne. 0.d0) then
-     do n=1,nlevs
-        call multifab_destroy(stoch_mass_fluxdiv(n))
-        do i=1,dm
-           call multifab_destroy(stoch_mass_flux(n,i))
-        end do
-     end do
-  end if
-
-  if (use_charged_fluid) then
-     do n=1,nlevs
-        call multifab_destroy(charge_old(n))
-        call multifab_destroy(charge_new(n))
-        call multifab_destroy(permittivity(n))
-        call multifab_destroy(Epot(n))
-        do i=1,dm
-           call multifab_destroy(grad_Epot_old(n,i))
-           call multifab_destroy(grad_Epot_new(n,i))
-           call multifab_destroy(gradPhiApprox(n,i))
-        end do
-     end do
-  end if
-  
-  if (nreactions .gt. 0) then
-     do n=1,nlevs
-        call multifab_destroy(chem_rate(n))
-     end do
-  end if
 
   deallocate(lo,hi,pmask)
   deallocate(rho_old,rhotot_old,pi)
   deallocate(rho_new,rhotot_new)
-  deallocate(Temp)
-  deallocate(diff_mass_fluxdiv,stoch_mass_fluxdiv)
-  deallocate(stoch_mass_flux)
-  deallocate(umac,mtemp,rhotot_fc,gradp_baro)
+  deallocate(Temp_old,Temp_new)
+  deallocate(diff_mass_fluxdiv)
+  deallocate(umac_old,mtemp,rhotot_fc,gradp_baro)
   deallocate(eta,kappa)
   deallocate(eta_ed)
-  deallocate(Temp_ed)
 
-  deallocate(Epot_mass_fluxdiv)
   deallocate(charge_old,charge_new)
   deallocate(permittivity)
   deallocate(grad_Epot_old,grad_Epot_new)
   deallocate(Epot)
   deallocate(gradPhiApprox)
 
-  deallocate(chem_rate)
-
   deallocate(rhoh_old,rhoh_new)
 
   deallocate(dx)
-
-  if (use_bl_rng) then
-     call rng_destroy()
-  end if
 
   call stag_mg_layout_destroy()
   call mgt_macproj_precon_destroy()
