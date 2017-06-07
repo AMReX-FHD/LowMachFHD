@@ -16,13 +16,13 @@ module diffusive_rhoh_fluxdiv_module
 
 contains
 
-  subroutine diffusive_rhoh_fluxdiv(mla,lambda,Temp,mass_flux,rhotot,rhoh_fluxdiv, &
+  subroutine diffusive_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,rhoh_fluxdiv, &
                                     dx,time,the_bc_tower)
        
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: lambda(:)
     type(multifab) , intent(in   ) :: Temp(:)
-    type(multifab) , intent(in   ) :: mass_flux(:,:)
+    type(multifab) , intent(in   ) :: diff_mass_flux(:,:)
     type(multifab) , intent(in   ) :: rhotot(:)
     type(multifab) , intent(inout) :: rhoh_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),time
@@ -66,14 +66,14 @@ contains
     ! compute a multifab holding h_k
     call compute_hk(mla,Temp,hk)
 
-    ! average h_k to faces and store in misc_fc
+    ! average all components h_k to faces and store in misc_fc
     call average_cc_to_face(nlevs,hk,misc_fc,1,c_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array)
 
-    ! set misc_fc = -h_k F_k = -h_k (-rho*W*chi*Gamma*grad(x) + ... )
+    ! set (misc_fc)_k = -h_k F_k = -h_k (-rho*W*chi*Gamma*grad(x) - ... )
     do n=1,nlevs
        do i=1,dm
-          call multifab_mult_mult_c(misc_fc(n,i),1,mass_flux(n,i),1,nspecies,0)
+          call multifab_mult_mult_c(misc_fc(n,i),1,diff_mass_flux(n,i),1,nspecies,0)
        end do
     end do
 

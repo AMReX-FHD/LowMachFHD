@@ -9,18 +9,18 @@ module eos_model_wrapper_module
 
   private
 
-  public :: convert_conc_to_molefrac, ideal_mixture_transport_wrapper, &
+  public :: convert_conc_to_molarconc, ideal_mixture_transport_wrapper, &
             add_external_heating, compute_S_theta, scale_deltaP, &
             compute_h, compute_hk, compute_p, compute_cp
 
 contains
 
-  subroutine convert_conc_to_molefrac(mla,conc,molefrac,conc_to_molefrac)
+  subroutine convert_conc_to_molarconc(mla,conc,molarconc,conc_to_molarconc)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: conc(:)
-    type(multifab) , intent(inout) :: molefrac(:)
-    logical        , intent(in   ) :: conc_to_molefrac
+    type(multifab) , intent(inout) :: molarconc(:)
+    logical        , intent(in   ) :: conc_to_molarconc
 
     ! local
     integer :: n,nlevs,i,dm
@@ -38,7 +38,7 @@ contains
     dm = mla%dim
 
     ng_1 = conc(1)%ng
-    ng_2 = molefrac(1)%ng
+    ng_2 = molarconc(1)%ng
 
     !$omp parallel private(n,i,mfi,growntilebox,gtlo,gthi) &
     !$omp private(dp1,dp2,lo,hi)
@@ -49,7 +49,7 @@ contains
        do while (more_tile(mfi))
           i = get_fab_index(mfi)
 
-          if (conc_to_molefrac) then
+          if (conc_to_molarconc) then
              growntilebox = get_growntilebox(mfi,ng_2)
              gtlo = lwb(growntilebox)
              gthi = upb(growntilebox)
@@ -60,41 +60,41 @@ contains
           end if
   
           dp1 => dataptr(conc(n), i)
-          dp2 => dataptr(molefrac(n), i)
+          dp2 => dataptr(molarconc(n), i)
           lo = lwb(get_box(conc(n), i))
           hi = upb(get_box(conc(n), i))
           select case (dm)
           case (2)
-             call convert_conc_to_molefrac_2d(dp1(:,:,1,:),ng_1,dp2(:,:,1,:),ng_2, &
-                                              lo,hi,conc_to_molefrac,gtlo,gthi)
+             call convert_conc_to_molarconc_2d(dp1(:,:,1,:),ng_1,dp2(:,:,1,:),ng_2, &
+                                              lo,hi,conc_to_molarconc,gtlo,gthi)
           case (3)
-             call convert_conc_to_molefrac_3d(dp1(:,:,:,:),ng_1,dp2(:,:,:,:),ng_2, &
-                                              lo,hi,conc_to_molefrac,gtlo,gthi)
+             call convert_conc_to_molarconc_3d(dp1(:,:,:,:),ng_1,dp2(:,:,:,:),ng_2, &
+                                              lo,hi,conc_to_molarconc,gtlo,gthi)
           end select
        end do
     end do
     !$omp end parallel
 
-  end subroutine convert_conc_to_molefrac
+  end subroutine convert_conc_to_molarconc
   
-  subroutine convert_conc_to_molefrac_2d(conc,ng_1,molefrac,ng_2,glo,ghi,conc_to_molefrac, &
+  subroutine convert_conc_to_molarconc_2d(conc,ng_1,molarconc,ng_2,glo,ghi,conc_to_molarconc, &
        gtlo,gthi)
 
     integer        , intent(in   ) :: ng_1,ng_2,glo(:),ghi(:),gtlo(:),gthi(:)
     real(kind=dp_t), intent(inout) ::     conc(glo(1)-ng_1:,glo(2)-ng_1:,:)
-    real(kind=dp_t), intent(inout) :: molefrac(glo(1)-ng_2:,glo(2)-ng_2:,:)
-    logical        , intent(in   ) :: conc_to_molefrac
+    real(kind=dp_t), intent(inout) :: molarconc(glo(1)-ng_2:,glo(2)-ng_2:,:)
+    logical        , intent(in   ) :: conc_to_molarconc
 
     ! local
     integer :: i,j
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    if (conc_to_molefrac) then
+    if (conc_to_molarconc) then
 
        do j=gtlo(2),gthi(2)
           do i=gtlo(1),gthi(1)
-             call CKYTX(conc(i,j,:),iwrk,rwrk,molefrac(i,j,:))
+             call CKYTX(conc(i,j,:),iwrk,rwrk,molarconc(i,j,:))
           end do
        end do
 
@@ -102,33 +102,33 @@ contains
 
        do j=gtlo(2),gthi(2)
           do i=gtlo(1),gthi(1)
-             call CKXTY(molefrac(i,j,:),iwrk,rwrk,conc(i,j,:))
+             call CKXTY(molarconc(i,j,:),iwrk,rwrk,conc(i,j,:))
           end do
        end do
 
     end if
 
-  end subroutine convert_conc_to_molefrac_2d
+  end subroutine convert_conc_to_molarconc_2d
   
-  subroutine convert_conc_to_molefrac_3d(conc,ng_1,molefrac,ng_2,glo,ghi,conc_to_molefrac, &
+  subroutine convert_conc_to_molarconc_3d(conc,ng_1,molarconc,ng_2,glo,ghi,conc_to_molarconc, &
        gtlo,gthi)
 
     integer        , intent(in   ) :: ng_1,ng_2,glo(:),ghi(:),gtlo(:),gthi(:)
     real(kind=dp_t), intent(inout) ::     conc(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:)
-    real(kind=dp_t), intent(inout) :: molefrac(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:,:)
-    logical        , intent(in   ) :: conc_to_molefrac
+    real(kind=dp_t), intent(inout) :: molarconc(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:,:)
+    logical        , intent(in   ) :: conc_to_molarconc
 
     ! local
     integer :: i,j,k
     integer :: iwrk
     real(kind=dp_t) :: rwrk
 
-    if (conc_to_molefrac) then
+    if (conc_to_molarconc) then
 
        do k=gtlo(3),gthi(3)
           do j=gtlo(2),gthi(2)
              do i=gtlo(1),gthi(1)
-                call CKYTX(conc(i,j,k,:),iwrk,rwrk,molefrac(i,j,k,:))
+                call CKYTX(conc(i,j,k,:),iwrk,rwrk,molarconc(i,j,k,:))
              end do
           end do
        end do
@@ -138,14 +138,14 @@ contains
        do k=gtlo(3),gthi(3)+ng_1
           do j=gtlo(2),gthi(2)
              do i=gtlo(1),gthi(1)
-                call CKXTY(molefrac(i,j,k,:),iwrk,rwrk,conc(i,j,k,:))
+                call CKXTY(molarconc(i,j,k,:),iwrk,rwrk,conc(i,j,k,:))
              end do
           end do
        end do
 
     end if
 
-  end subroutine convert_conc_to_molefrac_3d
+  end subroutine convert_conc_to_molarconc_3d
 
   ! takes $\rho,T,P,\wb$, and $\xb$ as inputs and computes the following:
   ! eta     is the dynamic viscosity, $\eta$

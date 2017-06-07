@@ -651,9 +651,9 @@ subroutine main_driver()
      ! routine, but since we have them around anyway for inertial we pass them in
      if (algorithm_type .eq. 1) then
         call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                       rhoh_old,rhoh_new,p0_old,p0_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                       diff_mass_fluxdiv, &
-                                       stoch_mass_fluxdiv,stoch_mass_flux, &
+                                       diff_mass_fluxdiv,stoch_mass_fluxdiv,stoch_mass_flux, &
                                        dx,dt,time,the_bc_tower,istep)
      else
         call bl_error("Error: invalid algorithm_type")

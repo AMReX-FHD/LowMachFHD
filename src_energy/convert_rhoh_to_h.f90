@@ -48,6 +48,7 @@ contains
 
   end subroutine convert_rhoh_to_h
 
+  ! ghost cells for rhotot must be filled
   subroutine fill_rhoh_ghost_cells(mla,rhoh,rhotot,dx,the_bc_tower)
     
     type(ml_layout), intent(in   ) :: mla
