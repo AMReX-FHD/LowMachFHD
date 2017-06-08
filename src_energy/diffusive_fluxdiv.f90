@@ -113,7 +113,7 @@ contains
     end do
 
     ! compute rho*W*chi
-    call compute_rhoWchi(mla,rho,chi,rhoWchi)
+    call compute_rhoWchi_from_chi(mla,rho,chi,rhoWchi)
 
     ! compute diffusive mass fluxes, "-F = rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
