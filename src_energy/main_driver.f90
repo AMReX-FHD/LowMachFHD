@@ -111,9 +111,9 @@ subroutine main_driver()
      call bl_error("energy code does not support barodiffusion")
   end if
 
-  if (is_nonisothermal) then
-     call bl_error("energy code does not support is_nonisothermal")
-  end if
+!  if (is_nonisothermal) then
+!     call bl_error("energy code does not support is_nonisothermal")
+!  end if
 
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
@@ -395,7 +395,7 @@ subroutine main_driver()
 
   if (restart .lt. 0) then
 
-     if (algorithm_type .eq. 1) then
+     if (algorithm_type .eq. 0) then
         call initial_projection(mla,umac_old,rho_old,rhotot_old,gradp_baro, &
                                 diff_mass_fluxdiv, &
                                 Temp_old,p0_old,dt,dx,the_bc_tower)
@@ -486,7 +486,7 @@ subroutine main_driver()
      ! but for now we pass them around (it does save a few flops)
      ! diff _mass_fluxdiv could be built locally within the overdamped
      ! routine, but since we have them around anyway for inertial we pass them in
-     if (algorithm_type .eq. 1) then
+     if (algorithm_type .eq. 0) then
         call advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new, &
                                        rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
                                        Temp_old,Temp_new,p0_old,p0_new,gradp_baro, &
@@ -567,7 +567,7 @@ subroutine main_driver()
         call multifab_copy_c(  rhoh_old(n),1,rhoh_new(n)  ,1       ,1,  rhoh_old(n)%ng)
         call multifab_copy_c(  Temp_old(n),1,Temp_new(n)  ,1       ,1,  Temp_old(n)%ng)
         do i=1,dm
-           call multifab_copy_c(umac_old(n,i),1,umac_new(n,1),1,1,umac_old(n,i)%ng)
+           call multifab_copy_c(umac_old(n,i),1,umac_new(n,i),1,1,umac_old(n,i)%ng)
         end do
      end do
 

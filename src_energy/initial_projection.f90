@@ -55,8 +55,6 @@ contains
     type(multifab) ::   rhototinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
 
-    real(kind=dp_t), allocatable :: weights(:)
-    
     type(bl_prof_timer), save :: bpt
 
     call build(bpt,"initial_projection")
@@ -147,8 +145,6 @@ contains
           call multifab_fill_boundary(umac(n,i))
        end do
     end do
-
-    deallocate(weights)
 
     do n=1,nlevs
        call multifab_destroy(conc(n))

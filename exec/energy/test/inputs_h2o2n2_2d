@@ -148,7 +148,7 @@
   correct_flux = T       ! Manually ensure mass is conserved to roundoff 
   print_error_norms = T
   is_ideal_mixture = T   ! If T assume Gamma=I (H=0) and simplify
-  is_nonisothermal = T   ! If T Soret effect will be included
+  is_nonisothermal = F   ! If T Soret effect will be included
   use_lapack = F         ! Use LAPACK or iterative method for diffusion matrix (recommend False)
   chi_iterations = 10    ! number of iterations used in Dbar2chi_iterative
   
