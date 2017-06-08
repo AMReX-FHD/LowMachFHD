@@ -74,7 +74,7 @@ contains
     end do
 
     ! compute rho*W*chi
-    call compute_rhoWchi(mla,rho,chi,rhoWchi)
+    call compute_rhoWchi_from_chi(mla,rho,chi,rhoWchi)
 
     do n=1,nlevs
        do i=1,dm
