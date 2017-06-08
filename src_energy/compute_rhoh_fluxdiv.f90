@@ -1,4 +1,4 @@
-module diffusive_rhoh_fluxdiv_module
+module compute_rhoh_fluxdiv_module
 
   use ml_layout_module
   use define_bc_module
@@ -12,11 +12,11 @@ module diffusive_rhoh_fluxdiv_module
 
   private
 
-  public :: diffusive_rhoh_fluxdiv
+  public :: compute_rhoh_fluxdiv
 
 contains
 
-  subroutine diffusive_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,rhoh_fluxdiv, &
+  subroutine compute_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,rhoh_fluxdiv, &
                                     dx,time,the_bc_tower)
        
     type(ml_layout), intent(in   ) :: mla
@@ -96,6 +96,6 @@ contains
        end do
     end do
 
-  end subroutine diffusive_rhoh_fluxdiv
+  end subroutine compute_rhoh_fluxdiv
   
-end module diffusive_rhoh_fluxdiv_module
+end module compute_rhoh_fluxdiv_module

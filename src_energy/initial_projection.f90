@@ -9,10 +9,7 @@ module initial_projection_module
   use bc_module
   use multifab_physbc_stag_module
   use compute_mass_fluxdiv_module
-  use probin_common_module, only: variance_coef_mass, algorithm_type, &
-                                  nspecies, restart
-  use probin_charged_module, only: use_charged_fluid
-  use probin_chemistry_module, only: nreactions
+  use probin_common_module, only: nspecies, restart
 
   implicit none
 
@@ -24,7 +21,7 @@ contains
 
   subroutine initial_projection(mla,umac,rho,rhotot,gradp_baro, &
                                 diff_mass_fluxdiv, &
-                                Temp,p0,eta,eta_ed,dt,dx,the_bc_tower)
+                                Temp,p0,dt,dx,the_bc_tower)
 
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(inout) :: umac(:,:)
@@ -33,8 +30,6 @@ contains
     type(multifab) , intent(in   ) :: gradp_baro(:,:)
     type(multifab) , intent(inout) :: diff_mass_fluxdiv(:)
     type(multifab) , intent(in   ) :: Temp(:)
-    type(multifab) , intent(in   ) :: eta(:)
-    type(multifab) , intent(in   ) :: eta_ed(:,:)  ! nodal (2d); edge-centered (3d)
     real(kind=dp_t), intent(in   ) :: p0
     real(kind=dp_t), intent(in   ) :: dt
     real(kind=dp_t), intent(in   ) :: dx(:,:)
@@ -57,23 +52,6 @@ contains
 
     call build(bpt,"initial_projection")
 
-
-    if (use_charged_fluid) then
-       call bl_error("energy initial_projection does not support charges")
-    end if
-
-    if (nreactions .gt. 0) then
-       call bl_error("energy initial_projection does not support reactions")
-    end if
-
-    if (variance_coef_mass .ne. 0.d0 .or. variance_coef_mom .ne. 0.d0) then
-       call bl_error("energy initial_projection does not support fluctuations")
-    end if
-
-    if (algorithm_type .eq. 2) then
-       call bl_error("Should not call initial_projection for overdamped schemes")
-    end if
-
     dm = mla%dim
     nlevs = mla%nlevel
  
@@ -93,13 +71,8 @@ contains
     call compute_mass_fluxdiv(mla,rho,rhotot,molarconc,chi,zeta,gradp_baro,Temp, &
                               diff_mass_fluxdiv,diff_mass_flux,dx,the_bc_tower)
 
-    call diffusive_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,rhoh_fluxdiv, &
-                                dx,time,the_bc_tower)
-
-    if (restart .lt. 0) then
-
-       ! project the velocities
-       ! only for non-restarting runs
+    call compute_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,rhoh_fluxdiv, &
+                              dx,time,the_bc_tower)
 
        ! compute mac_rhs
        do n=1,nlevs
@@ -157,8 +130,6 @@ contains
              call multifab_fill_boundary(umac(n,i))
           end do
        end do
-
-    end if
 
     deallocate(weights)
 

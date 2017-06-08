@@ -72,9 +72,6 @@ subroutine main_driver()
   type(multifab), allocatable  :: rhotot_fc(:,:)
   type(multifab), allocatable  :: gradp_baro(:,:)
   type(multifab), allocatable  :: pi(:)
-  type(multifab), allocatable  :: eta(:)
-  type(multifab), allocatable  :: eta_ed(:,:)
-  type(multifab), allocatable  :: kappa(:)
 
   ! For HydroGrid
   integer :: narg, farg, un, n_rngs
@@ -137,10 +134,6 @@ subroutine main_driver()
   allocate(diff_mass_fluxdiv(nlevs))
   allocate(umac_old(nlevs,dm),umac_new(nlevs,dm))
   allocate(mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
-  allocate(eta(nlevs),kappa(nlevs))
-
-  ! 1 component in 2D, 3 components in 3D
-  allocate(eta_ed(nlevs,2*dm-3))
 
   ! energy specific
   allocate(rhoh_old(nlevs),rhoh_new(nlevs))
@@ -308,9 +301,6 @@ subroutine main_driver()
   call compute_rhotot(mla,rho_old,rhotot_old)
 
   ! fill rho and rhotot ghost cells
-  ! FIXME - different EOS; won't work for physical boundaries
-  ! we need to write a different version that computes rhotot from the EOS
-  ! which means this needs p0, Temp, and c
   call fill_rho_rhotot_ghost(mla,rho_old,rhotot_old,dx,the_bc_tower)
 
   ! fill rhoh ghost cells - note that rhotot needs filled ghost cells
@@ -325,8 +315,6 @@ subroutine main_driver()
      call multifab_build(rhotot_new(n)       ,mla%la(n),1       ,ng_s) 
      call multifab_build(rhoh_new(n)         ,mla%la(n),1       ,ng_s) 
      call multifab_build(Temp_new(n)         ,mla%la(n),1       ,ng_s) 
-     call multifab_build(eta(n)              ,mla%la(n),1       ,1)
-     call multifab_build(kappa(n)            ,mla%la(n),1       ,1)
      call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
      do i=1,dm
         call multifab_build_edge(  umac_new(n,i),mla%la(n),1,1,i)
@@ -336,49 +324,20 @@ subroutine main_driver()
      end do
   end do
 
-  do n=1,nlevs
-     ! eta and Temp on nodes (2d) or edges (3d)
-     if (dm .eq. 2) then
-        call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
-     else
-        nodal_temp(1) = .true.
-        nodal_temp(2) = .true.
-        nodal_temp(3) = .false.
-        call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
-        nodal_temp(1) = .true.
-        nodal_temp(2) = .false.
-        nodal_temp(3) = .true.
-        call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
-        nodal_temp(1) = .false.
-        nodal_temp(2) = .true.
-        nodal_temp(3) = .true.
-        call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
-     end if
-  end do
-
   !=====================================================================
   ! Initialize values
   !=====================================================================
-
-  ! initialize eta and kappa
-  call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp_old,dx, &
-                         the_bc_tower%bc_tower_array)
-
-  ! now that we have eta, we can initialize the inhomogeneous velocity bcs
-  ! set inhomogeneous bc conditions
-  call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time, &
-                                 the_bc_tower%bc_tower_array)
 
   do n=1,nlevs
      do i=1,dm
         ! set normal velocity on physical domain boundaries
         call multifab_physbc_domainvel(umac_old(n,i),vel_bc_comp+i-1, &
                                        the_bc_tower%bc_tower_array(n), &
-                                       dx(n,:),vel_bc_n(n,:))
+                                       dx(n,:))
         ! set transverse velocity behind physical boundaries
         call multifab_physbc_macvel(umac_old(n,i),vel_bc_comp+i-1, &
                                     the_bc_tower%bc_tower_array(n), &
-                                    dx(n,:),vel_bc_t(n,:))
+                                    dx(n,:))
         ! fill periodic and interior ghost cells
         call multifab_fill_boundary(umac_old(n,i))
      end do
@@ -395,7 +354,6 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_old,.false.)
         call sum_momenta(mla,mtemp)
-        ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
 
      if (fixed_dt .gt. 0.d0) then
@@ -437,29 +395,15 @@ subroutine main_driver()
      end if
   end if
 
-  ! this routine is only called for all inertial simulations (both restart and non-restart)
-  ! it does the following:
-  ! 1. fill mass random numbers
-  ! 2. computes mass fluxes and flux divergences
-  ! if restarting, the subroutine ends; otherwise
-  ! 3. perform an initial projection
-  !
-  ! overdamped schemes need to do 1. and 2. within the advance_timestep routine
-  ! in principle, performing an initial projection for overdamped will change
-  ! the reference state for the GMRES solver
-  ! For overdamped the first ever solve cannot have a good reference state
-  ! so in general there is the danger it will be less accurate than subsequent solves
-  ! but I do not see how one can avoid that
-  ! From this perspective it may be useful to keep initial_projection even in overdamped
-  ! because different gmres tolerances may be needed in the first step than in the rest
-  if (algorithm_type .ne. 2) then
-     call initial_projection(mla,umac_old,rho_old,rhotot_old,gradp_baro, &
-                             diff_mass_fluxdiv, &
-                             Temp_old,eta,eta_ed,dt,dx,the_bc_tower, &
-                             charge_old,grad_Epot_old,Epot,permittivity)
-  end if
-
   if (restart .lt. 0) then
+
+     if (algorithm_type .eq. 1) then
+        call initial_projection(mla,umac_old,rho_old,rhotot_old,gradp_baro, &
+                                diff_mass_fluxdiv, &
+                                Temp_old,eta,eta_ed,dt,dx,the_bc_tower)
+     else
+        call bl_error("Error: invalid algorithm_type")
+     end if
 
      !=====================================================================
      ! Process initial conditions (non-restart runs)
@@ -474,7 +418,6 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_old,.false.)
         call sum_momenta(mla,mtemp)
-        ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
 
      !=====================================================================
@@ -546,11 +489,11 @@ subroutine main_driver()
      ! diff _mass_fluxdiv could be built locally within the overdamped
      ! routine, but since we have them around anyway for inertial we pass them in
      if (algorithm_type .eq. 1) then
-        call advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                       rhoh_old,rhoh_new,Temp_old,Temp_new,p0_old,p0_new, &
-                                       gradp_baro,pi,eta,eta_ed,kappa, &
-                                       diff_mass_fluxdiv, &
-                                       dx,dt,time,the_bc_tower,istep)
+        call advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new, &
+                                       rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
+                                       Temp_old,Temp_new,p0_old,p0_new,gradp_baro, &
+                                       pi,diff_mass_fluxdiv, &
+                                       dx,dt,time,the_bc_tower)
      else
         call bl_error("Error: invalid algorithm_type")
      end if
@@ -580,7 +523,6 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_new,.false.)
         call sum_momenta(mla,mtemp)
-        ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
 
      ! write plotfile at specific intervals
