@@ -111,10 +111,6 @@ subroutine main_driver()
      call bl_error("energy code does not support barodiffusion")
   end if
 
-!  if (is_nonisothermal) then
-!     call bl_error("energy code does not support is_nonisothermal")
-!  end if
-
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
   ! resolution don't necessarily exist depending on your tagging criteria,

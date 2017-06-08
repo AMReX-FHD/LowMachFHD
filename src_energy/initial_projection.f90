@@ -12,7 +12,7 @@ module initial_projection_module
   use convert_rhoc_to_c_module
   use eos_model_wrapper_module
   use compute_rhoh_fluxdiv_module
-  use probin_common_module, only: nspecies, restart
+  use probin_common_module, only: nspecies, restart, total_volume
 
   implicit none
 
@@ -48,12 +48,15 @@ contains
     type(multifab) ::               chi(mla%nlevel)
     type(multifab) ::              zeta(mla%nlevel)
     type(multifab) ::           mac_rhs(mla%nlevel)
+    type(multifab) ::             theta(mla%nlevel)
     type(multifab) ::               phi(mla%nlevel)
     type(multifab) :: diff_rhoh_fluxdiv(mla%nlevel)
 
     type(multifab) ::      rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::   rhototinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
+
+    real(kind=dp_t) :: Sbar
 
     type(bl_prof_timer), save :: bpt
 
@@ -71,6 +74,7 @@ contains
        call multifab_build(              chi(n),mla%la(n),nspecies**2,1)
        call multifab_build(             zeta(n),mla%la(n),nspecies   ,1)
        call multifab_build(          mac_rhs(n),mla%la(n),1          ,0)
+       call multifab_build(            theta(n),mla%la(n),1          ,0)
        call multifab_build(              phi(n),mla%la(n),1          ,1)
        call multifab_build(diff_rhoh_fluxdiv(n),mla%la(n),1          ,0)
        do i=1,dm
@@ -99,15 +103,18 @@ contains
     ! build rhs = div(v^init) - S^0
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! FIXME
     ! compute -S^0, then change compute_div() to increment
+    call compute_S_theta(mla,mac_rhs,theta,diff_mass_fluxdiv, &
+                         diff_rhoh_fluxdiv,conc,Temp,rhotot)
     
-
-
-
+    ! split S^n, theta^n, and Scorr into average and perturbational pieces
+    do n=1,nlevs
+       Sbar = multifab_sum_c(mac_rhs(n),1,1) / total_volume
+       call multifab_sub_sub_s_c(mac_rhs(n),1,Sbar,1,0)
+    end do
 
     ! change this to increment mac_rhs by div(v^init)
-    call compute_div(mla,umac,mac_rhs,dx,1,1,1)
+    call compute_div(mla,umac,mac_rhs,dx,1,1,1,increment_in=.true.)
 
     ! average rhotot to faces
     call average_cc_to_face(nlevs,rhotot,rhotot_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
@@ -155,6 +162,7 @@ contains
        call multifab_destroy(chi(n))
        call multifab_destroy(zeta(n))
        call multifab_destroy(mac_rhs(n))
+       call multifab_destroy(theta(n))
        call multifab_destroy(phi(n))
        call multifab_destroy(diff_rhoh_fluxdiv(n))
        do i=1,dm
