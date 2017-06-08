@@ -2,8 +2,8 @@ module init_lowmach_module
 
   use ml_layout_module
   use eos_model_module
-  use probin_common_module, only: prob_type
-  use probin_multispecies_module, only: nspecies, c_init, T_init
+  use probin_common_module, only: prob_type, nspecies
+  use probin_multispecies_module, only: c_init, T_init
   use probin_energy_module, only: p0_in
  
   implicit none

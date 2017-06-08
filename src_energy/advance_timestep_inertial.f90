@@ -10,7 +10,7 @@ module advance_timestep_inertial_module
   use convert_rhoh_to_h_module
   use eos_model_wrapper_module
   use mass_flux_utilities_module
-  use compute_mass_fluxdiv_module
+  use compute_mass_fluxdiv_energy_module
   use compute_rhoh_fluxdiv_module
   use div_and_grad_module
   use macproject_module
@@ -22,8 +22,7 @@ module advance_timestep_inertial_module
   use gmres_module
   use convert_m_to_umac_module
   use multifab_physbc_stag_module
-  use probin_common_module, only: total_volume, grav
-  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: total_volume, grav, nspecies
   use probin_energy_module, only: dpdt_iters, deltaT_iters, dpdt_factor
 
   use fabio_module
@@ -96,11 +95,10 @@ contains
     type(multifab) :: enth_new(mla%nlevel)
 
     ! store F
-    type(multifab) :: mass_flux_old(mla%nlevel,mla%dim)
+    type(multifab) :: mass_flux_old(mla%nlevel,mla%dim) ! FIXME - renname to diff_mass_flux_old
     type(multifab) :: mass_flux_new(mla%nlevel,mla%dim)
-
     ! div(F)
-    type(multifab) :: mass_fluxdiv_old(mla%nlevel)
+    type(multifab) :: mass_fluxdiv_old(mla%nlevel) ! FIXME - renname to diff_mass_fluxdiv_old
     type(multifab) :: mass_fluxdiv_new(mla%nlevel)
 
     ! -div(rho_i*v) + div(F)
@@ -108,7 +106,7 @@ contains
     type(multifab) :: mass_update_new(mla%nlevel)
 
     ! div(Q) + sum(div(hk*Fk)) + rho*Hext
-    type(multifab) :: rhoh_fluxdiv_old(mla%nlevel)
+    type(multifab) :: rhoh_fluxdiv_old(mla%nlevel) ! FIXME - renname to diff_rhoh_fluxdiv_old
     type(multifab) :: rhoh_fluxdiv_new(mla%nlevel)
 
     ! -div(rhoh*v) + p0_update + div(Q) + sum(div(hk*Fk)) + rho*Hext
@@ -342,9 +340,9 @@ contains
     end if
 
     ! compute mass_flux_old = F^n and mass_fluxdiv_old = div(F^n)
-    call compute_mass_fluxdiv(mla,rho_old,rhotot_old,molefrac_old,chi_old,zeta_old, &
-                                     gradp_baro,Temp_old,mass_fluxdiv_old, &
-                                     mass_flux_old,dx,the_bc_tower)
+    call compute_mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac_old,chi_old,zeta_old, &
+                              gradp_baro,Temp_old,mass_fluxdiv_old, &
+                              mass_flux_old,dx,the_bc_tower)
 
     ! compute rhoh_fluxdiv_old = div(Q)^n - sum(div(hk*Fk))^n + (rho*Hext)^n
     call compute_rhoh_fluxdiv(mla,lambda_old,Temp_old,mass_flux_old,rhotot_old, &
@@ -382,14 +380,14 @@ contains
     do n=1,nlevs
        call multifab_copy_c(mass_update_old(n),1,mass_fluxdiv_old(n),1,nspecies,0)
     end do
-    call mk_advective_s_fluxdiv(mla,umac_old,rho_fc_old,mass_update_old,dx,1,nspecies)
+    call mk_advective_s_fluxdiv(mla,umac_old,rho_fc_old,mass_update_old,.true.,dx,1,nspecies)
 
     ! rhoh_update_old = [-div(rhoh*v) + p0_update + div(Q) + sum(div(hk*Fk)) + rho*Hext]^n
     do n=1,nlevs
        call multifab_copy_c(rhoh_update_old(n),1,rhoh_fluxdiv_old(n),1,1,0)
        call multifab_plus_plus_s_c(rhoh_update_old(n),1,p0_update_old,1,0)
     end do
-    call mk_advective_s_fluxdiv(mla,umac_old,rhoh_fc_old,rhoh_update_old,dx,1,1)
+    call mk_advective_s_fluxdiv(mla,umac_old,rhoh_fc_old,rhoh_update_old,.true.,dx,1,1)
     
     ! new state begins as a copy of old state
     do n=1,nlevs
@@ -434,7 +432,7 @@ contains
 
        ! add -div(rho*v*v)^{n+1,m} to mtemp2
        call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac_new,.false.)
-       call mk_advective_m_fluxdiv(mla,umac_new,mtemp,mtemp2,dx, &
+       call mk_advective_m_fluxdiv(mla,umac_new,mtemp,mtemp2,.true.,dx, &
                                    the_bc_tower%bc_tower_array)
 
        ! update p0_update_old based on current Scorr
@@ -455,14 +453,14 @@ contains
        do n=1,nlevs
           call multifab_copy_c(mass_update_new(n),1,mass_fluxdiv_new(n),1,nspecies,0)
        end do
-       call mk_advective_s_fluxdiv(mla,umac_new,rho_fc_new,mass_update_new,dx,1,nspecies)
+       call mk_advective_s_fluxdiv(mla,umac_new,rho_fc_new,mass_update_new,.true.,dx,1,nspecies)
 
        ! rhoh_update_new = [-div(rhoh*v) + p0_update + div(Q) + sum(div(hk*Fk)) + rho*Hext]^{n+1,m}
        do n=1,nlevs
           call multifab_copy_c(rhoh_update_new(n),1,rhoh_fluxdiv_new(n),1,1,0)
           call multifab_plus_plus_s_c(rhoh_update_new(n),1,p0_update_new,1,0)
        end do
-       call mk_advective_s_fluxdiv(mla,umac_new,rhoh_fc_new,rhoh_update_new,dx,1,1)
+       call mk_advective_s_fluxdiv(mla,umac_new,rhoh_fc_new,rhoh_update_new,.true.,dx,1,1)
 
        ! compute rho_i^{n+1,m+1}
        do n=1,nlevs
@@ -558,7 +556,7 @@ contains
              call multifab_copy_c(rhoh_update_new(n),1,rhoh_fluxdiv_new(n),1,1,0)
              call multifab_plus_plus_s_c(rhoh_update_new(n),1,p0_update_new,1,0)
           end do
-          call mk_advective_s_fluxdiv(mla,umac_new,rhoh_fc_new,rhoh_update_new,dx,1,1)
+          call mk_advective_s_fluxdiv(mla,umac_new,rhoh_fc_new,rhoh_update_new,.true.,dx,1,1)
 
        end do  ! end loop l over deltaT_iters
 
@@ -602,7 +600,7 @@ contains
        end do
        
        ! compute mass_flux_new = F^{n+1,m+1} and mass_fluxdiv_new = div(F^{n+1,m+1})
-       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,molefrac_new,chi_new,zeta_new, &
+       call compute_mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac_new,chi_new,zeta_new, &
                                         gradp_baro,Temp_new,mass_fluxdiv_new, &
                                         mass_flux_new,dx,the_bc_tower)
 
@@ -705,7 +703,7 @@ contains
 
        ! add -div(rho*v*v)^n to mtemp2
        call convert_m_to_umac(mla,rhotot_fc_old,mtemp,umac_old,.false.)
-       call mk_advective_m_fluxdiv(mla,umac_old,mtemp,mtemp2,dx, &
+       call mk_advective_m_fluxdiv(mla,umac_old,mtemp,mtemp2,.true.,dx, &
                                    the_bc_tower%bc_tower_array)
 
        ! overwrite umac_new with vbar^n
@@ -757,7 +755,7 @@ contains
              call setval(mtemp(n,i),0.d0,all=.true.)
           end do
        end do
-       call diffusive_m_fluxdiv(mla,mtemp,umac_old,eta_old,eta_ed_old,kappa_old,dx, &
+       call diffusive_m_fluxdiv(mla,mtemp,.true.,umac_old,eta_old,eta_ed_old,kappa_old,dx, &
                                 the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
@@ -771,7 +769,7 @@ contains
              call setval(mtemp(n,i),0.d0,all=.true.)
           end do
        end do
-       call diffusive_m_fluxdiv(mla,mtemp,umac_new,eta_new,eta_ed_new,kappa_new,dx, &
+       call diffusive_m_fluxdiv(mla,mtemp,.true.,umac_new,eta_new,eta_ed_new,kappa_new,dx, &
                                 the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
@@ -781,7 +779,7 @@ contains
 
        ! add (1/2)(rhotot^n + rhotot^{n+1,m+1})g to gmres_rhs_v
        if (any(grav(1:dm) .ne. 0.d0)) then
-          call mk_grav_force(mla,gmres_rhs_v,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
+          call mk_grav_force(mla,gmres_rhs_v,.true.,rhotot_fc_old,rhotot_fc_new,the_bc_tower)
        end if
 
        ! set the initial guess to zero

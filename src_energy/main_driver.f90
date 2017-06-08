@@ -35,7 +35,7 @@ subroutine main_driver()
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng
-  use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
+  use probin_multispecies_module, only: probin_multispecies_init, Dbar, start_time, is_nonisothermal
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid
   use probin_chemistry_module, only: probin_chemistry_init, nreactions
@@ -400,7 +400,7 @@ subroutine main_driver()
      if (algorithm_type .eq. 1) then
         call initial_projection(mla,umac_old,rho_old,rhotot_old,gradp_baro, &
                                 diff_mass_fluxdiv, &
-                                Temp_old,eta,eta_ed,dt,dx,the_bc_tower)
+                                Temp_old,p0_old,dt,dx,the_bc_tower)
      else
         call bl_error("Error: invalid algorithm_type")
      end if
@@ -492,8 +492,7 @@ subroutine main_driver()
         call advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new, &
                                        rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
                                        Temp_old,Temp_new,p0_old,p0_new,gradp_baro, &
-                                       pi,diff_mass_fluxdiv, &
-                                       dx,dt,time,the_bc_tower)
+                                       pi,dx,dt,the_bc_tower)
      else
         call bl_error("Error: invalid algorithm_type")
      end if
@@ -530,7 +529,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing plotfiles after timestep =', istep 
         end if
-        call write_plotfile(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp_new, &
+        call write_plotfile(mla,rho_new,rhotot_new,rhoh_new,Temp_new, &
                             umac_new,pi,p0_new,istep,dx,time)
      end if
 
@@ -570,7 +569,7 @@ subroutine main_driver()
         call multifab_copy_c(  rhoh_old(n),1,rhoh_new(n)  ,1       ,1,  rhoh_old(n)%ng)
         call multifab_copy_c(  Temp_old(n),1,Temp_new(n)  ,1       ,1,  Temp_old(n)%ng)
         do i=1,dm
-           call multifab_copy_c(umac_old(n,i),1,umac_new(n,1),1,1,umac_old(n)%ng)
+           call multifab_copy_c(umac_old(n,i),1,umac_new(n,1),1,1,umac_old(n,i)%ng)
         end do
      end do
 
@@ -602,17 +601,12 @@ subroutine main_driver()
      call multifab_destroy(rhoh_new(n))
      call multifab_destroy(Temp_old(n))
      call multifab_destroy(Temp_new(n))
-     call multifab_destroy(eta(n))
-     call multifab_destroy(kappa(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      do i=1,dm
         call multifab_destroy(umac_new(n,i))
         call multifab_destroy(mtemp(n,i))
         call multifab_destroy(rhotot_fc(n,i))
         call multifab_destroy(gradp_baro(n,i))
-     end do
-     do i=1,size(eta_ed,dim=2)
-        call multifab_destroy(eta_ed(n,i))
      end do
   end do
 
@@ -622,14 +616,6 @@ subroutine main_driver()
   deallocate(Temp_old,Temp_new)
   deallocate(diff_mass_fluxdiv)
   deallocate(umac_old,mtemp,rhotot_fc,gradp_baro)
-  deallocate(eta,kappa)
-  deallocate(eta_ed)
-
-  deallocate(charge_old,charge_new)
-  deallocate(permittivity)
-  deallocate(grad_Epot_old,grad_Epot_new)
-  deallocate(Epot)
-  deallocate(gradPhiApprox)
 
   deallocate(rhoh_old,rhoh_new)
 

@@ -1,4 +1,4 @@
-module compute_mass_fluxdiv_module
+module compute_mass_fluxdiv_energy_module
 
   use multifab_module
   use define_bc_module
@@ -16,24 +16,24 @@ module compute_mass_fluxdiv_module
 
   private
 
-  public :: compute_mass_fluxdiv
+  public :: compute_mass_fluxdiv_energy
 
 contains
 
 
 
-  subroutine compute_mass_fluxdiv(mla,rho,rhotot,molefrac,chi,zeta,gradp_baro,Temp, &
-                                  mass_fluxdiv,mass_flux,dx,the_bc_tower)
+  subroutine compute_mass_fluxdiv_energy(mla,rho,rhotot,molarconc,chi,zeta,gradp_baro,Temp, &
+                                         diff_mass_fluxdiv,diff_mass_flux,dx,the_bc_tower)
        
     type(ml_layout), intent(in   )   :: mla
     type(multifab) , intent(in   )   :: rho(:)
     type(multifab) , intent(in   )   :: rhotot(:)
-    type(multifab) , intent(in   )   :: molefrac(:)
+    type(multifab) , intent(in   )   :: molarconc(:)
     type(multifab) , intent(in   )   :: chi(:)
     type(multifab) , intent(in   )   :: zeta(:)
     type(multifab) , intent(in   )   :: gradp_baro(:,:)
     type(multifab) , intent(in   )   :: Temp(:)
-    type(multifab) , intent(inout)   :: mass_fluxdiv(:)
+    type(multifab) , intent(inout)   :: diff_mass_fluxdiv(:)
     type(multifab) , intent(inout)   :: diff_mass_flux(:,:)
     real(kind=dp_t), intent(in   )   :: dx(:,:)
     type(bc_tower) , intent(in   )   :: the_bc_tower
@@ -78,15 +78,15 @@ contains
 
     do n=1,nlevs
        do i=1,dm
-          call setval(mass_flux(n,i),0.d0,all=.true.)
+          call setval(diff_mass_flux(n,i),0.d0,all=.true.)
        end do
     end do
 
     ! compute mass fluxes
     ! this computes "-F = rho*W*chi*Gamma*grad(x) - ..."
-    call diffusive_mass_fluxdiv(mla,rho,rhotot,molefrac,rhoWchi,Gama, &
-                                mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro,mass_flux,dx, &
-                                the_bc_tower)
+    call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
+                                diff_mass_fluxdiv,Temp,zeta_by_Temp,gradp_baro, &
+                                diff_mass_flux,dx,the_bc_tower)
 
     ! free the multifab allocated memory
     do n=1,nlevs
@@ -95,6 +95,6 @@ contains
        call multifab_destroy(zeta_by_Temp(n))
     end do
 
-  end subroutine compute_mass_fluxdiv
+  end subroutine compute_mass_fluxdiv_energy
   
-end module compute_mass_fluxdiv_module
+end module compute_mass_fluxdiv_energy_module

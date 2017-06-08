@@ -29,7 +29,7 @@ contains
     
     type(multifab) :: conc(mla%nlevel)
 
-    integer :: n,nlevs,i,dm
+    integer :: n,nlevs,dm
 
     nlevs = mla%nlevel
     dm = mla%dim

@@ -8,7 +8,7 @@ module initial_projection_module
   use div_and_grad_module
   use bc_module
   use multifab_physbc_stag_module
-  use compute_mass_fluxdiv_module
+  use compute_mass_fluxdiv_energy_module
   use probin_common_module, only: nspecies, restart
 
   implicit none
@@ -36,14 +36,20 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
     ! local
     integer :: i,dm,n,nlevs
-    real(kind=dp_t) :: dt_eff
 
-    type(multifab) :: conc
-    type(multifab) :: mac_rhs(mla%nlevel)
-    type(multifab) :: divu(mla%nlevel)
-    type(multifab) :: phi(mla%nlevel)
-    type(multifab) :: rhotot_fc(mla%nlevel,mla%dim)
-    type(multifab) :: rhototinv_fc(mla%nlevel,mla%dim)
+    type(multifab) ::              conc(mla%nlevel)
+    type(multifab) ::         molarconc(mla%nlevel)
+    type(multifab) ::               eta(mla%nlevel)
+    type(multifab) ::            lambda(mla%nlevel)
+    type(multifab) ::             kappa(mla%nlevel)
+    type(multifab) ::               chi(mla%nlevel)
+    type(multifab) ::              zeta(mla%nlevel)
+    type(multifab) ::           mac_rhs(mla%nlevel)
+    type(multifab) ::               phi(mla%nlevel)
+    type(multifab) :: diff_rhoh_fluxdiv(mla%nlevel)
+
+    type(multifab) ::      rhotot_fc(mla%nlevel,mla%dim)
+    type(multifab) ::   rhototinv_fc(mla%nlevel,mla%dim)
     type(multifab) :: diff_mass_flux(mla%nlevel,mla%dim)
 
     real(kind=dp_t), allocatable :: weights(:)
@@ -56,9 +62,16 @@ contains
     nlevs = mla%nlevel
  
     do n=1,nlevs
-       call multifab_build(mac_rhs(n),mla%la(n),1,0)
-       call multifab_build(divu(n),mla%la(n),1,0)
-       call multifab_build(phi(n),mla%la(n),1,1)
+       call multifab_build(             conc(n),mla%la(n),nspecies   ,1)
+       call multifab_build(        molarconc(n),mla%la(n),nspecies   ,1)
+       call multifab_build(              eta(n),mla%la(n),1          ,1)
+       call multifab_build(           lambda(n),mla%la(n),1          ,1)
+       call multifab_build(            kappa(n),mla%la(n),1          ,1)
+       call multifab_build(              chi(n),mla%la(n),nspecies**2,1)
+       call multifab_build(             zeta(n),mla%la(n),nspecies   ,1)
+       call multifab_build(          mac_rhs(n),mla%la(n),1          ,0)
+       call multifab_build(              phi(n),mla%la(n),1          ,1)
+       call multifab_build(diff_rhoh_fluxdiv(n),mla%la(n),1          ,0)
        do i=1,dm
           call multifab_build_edge(      rhotot_fc(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(   rhototinv_fc(n,i),mla%la(n),1       ,0,i)
@@ -66,77 +79,85 @@ contains
        end do       
     end do
 
+    call convert_rhoc_to_c(mla,rho,rhotot,conc,.true.)
+    call fill_c_ghost_cells(mla,conc,dx,the_bc_tower)
+    call convert_conc_to_molarconc(mla,conc,molarconc,.true.)
+
+    call ideal_mixture_transport_wrapper(mla,rhotot,Temp,p0,conc,molarconc, &
+                                         eta,lambda,kappa,chi,zeta)
+
     ! compute diffusive mass fluxes
     ! this computes "-F = rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv(mla,rho,rhotot,molarconc,chi,zeta,gradp_baro,Temp, &
-                              diff_mass_fluxdiv,diff_mass_flux,dx,the_bc_tower)
+    call compute_mass_fluxdiv_energy(mla,rho,rhotot,molarconc,chi,zeta,gradp_baro,Temp, &
+                                     diff_mass_fluxdiv,diff_mass_flux,dx,the_bc_tower)
 
-    call compute_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,rhoh_fluxdiv, &
-                              dx,time,the_bc_tower)
+    call compute_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,diff_rhoh_fluxdiv, &
+                              dx,0.d0,the_bc_tower)
 
-       ! compute mac_rhs
-       do n=1,nlevs
-          call setval(mac_rhs(n),0.d0)
-          ! FIXME
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! build rhs = div(v^init) - S^0
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+    ! FIXME
+    ! compute -S^0, then change compute_div() to increment
+    
+
+
+
+
+    ! change this to increment mac_rhs by div(v^init)
+    call compute_div(mla,umac,mac_rhs,dx,1,1,1)
+
+    ! average rhotot to faces
+    call average_cc_to_face(nlevs,rhotot,rhotot_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+
+    ! compute (1/rhotot) on faces
+    do n=1,nlevs
+       do i=1,dm
+          call setval(rhototinv_fc(n,i),1.d0,all=.true.)
+          call multifab_div_div_c(rhototinv_fc(n,i),1,rhotot_fc(n,i),1,1,0)
        end do
+    end do
 
-       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! build rhs = div(v^init) - S^0
-       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! solve div (1/rhotot) grad phi = div(v^init) - S^0
+    ! solve to completion, i.e., use the 'full' solver
+    do n=1,nlevs
+       call setval(phi(n),0.d0)
+    end do
+    call macproject(mla,phi,umac,rhototinv_fc,mac_rhs,dx,the_bc_tower,.true.)
 
-       ! set divu = div(v^init)
-       call compute_div(mla,umac,divu,dx,1,1,1)
+    ! v^0 = v^init - (1/rho^0) grad phi
+    call subtract_weighted_gradp(mla,umac,rhototinv_fc,phi,dx,the_bc_tower)
 
-       ! add div(v^init) to mac_rhs
-       ! now mac_rhs = div(v^init) - S
-       do n=1,nlevs
-          call multifab_plus_plus_c(mac_rhs(n),1,divu(n),1,1,0)
+    ! fill ghost cells
+    do n=1,nlevs
+       do i=1,dm
+          ! set normal velocity on physical domain boundaries
+          call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
+               the_bc_tower%bc_tower_array(n), &
+               dx(n,:))
+          ! set transverse velocity behind physical boundaries
+          call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
+               the_bc_tower%bc_tower_array(n), &
+               dx(n,:))
+          ! fill periodic and interior ghost cells
+          call multifab_fill_boundary(umac(n,i))
        end do
-
-       ! average rhotot to faces
-       call average_cc_to_face(nlevs,rhotot,rhotot_fc,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
-
-       ! compute (1/rhotot) on faces
-       do n=1,nlevs
-          do i=1,dm
-             call setval(rhototinv_fc(n,i),1.d0,all=.true.)
-             call multifab_div_div_c(rhototinv_fc(n,i),1,rhotot_fc(n,i),1,1,0)
-          end do
-       end do
-
-       ! solve div (1/rhotot) grad phi = div(v^init) - S^0
-       ! solve to completion, i.e., use the 'full' solver
-       do n=1,nlevs
-          call setval(phi(n),0.d0)
-       end do
-       call macproject(mla,phi,umac,rhototinv_fc,mac_rhs,dx,the_bc_tower,.true.)
-
-       ! v^0 = v^init - (1/rho^0) grad phi
-       call subtract_weighted_gradp(mla,umac,rhototinv_fc,phi,dx,the_bc_tower)
-
-       ! fill ghost cells
-       do n=1,nlevs
-          do i=1,dm
-             ! set normal velocity on physical domain boundaries
-             call multifab_physbc_domainvel(umac(n,i),vel_bc_comp+i-1, &
-                                            the_bc_tower%bc_tower_array(n), &
-                                            dx(n,:),vel_bc_n(n,:))
-             ! set transverse velocity behind physical boundaries
-             call multifab_physbc_macvel(umac(n,i),vel_bc_comp+i-1, &
-                                         the_bc_tower%bc_tower_array(n), &
-                                         dx(n,:),vel_bc_t(n,:))
-             ! fill periodic and interior ghost cells
-             call multifab_fill_boundary(umac(n,i))
-          end do
-       end do
+    end do
 
     deallocate(weights)
 
     do n=1,nlevs
+       call multifab_destroy(conc(n))
+       call multifab_destroy(molarconc(n))
+       call multifab_destroy(eta(n))
+       call multifab_destroy(lambda(n))
+       call multifab_destroy(kappa(n))
+       call multifab_destroy(chi(n))
+       call multifab_destroy(zeta(n))
        call multifab_destroy(mac_rhs(n))
-       call multifab_destroy(divu(n))
        call multifab_destroy(phi(n))
+       call multifab_destroy(diff_rhoh_fluxdiv(n))
        do i=1,dm
           call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(rhototinv_fc(n,i))
