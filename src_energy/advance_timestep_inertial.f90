@@ -67,8 +67,8 @@ contains
     type(multifab) :: conc_new(mla%nlevel)
 
     ! mole fractions
-    type(multifab) :: molefrac_old(mla%nlevel)
-    type(multifab) :: molefrac_new(mla%nlevel)
+    type(multifab) :: molarconc_old(mla%nlevel)
+    type(multifab) :: molarconc_new(mla%nlevel)
 
     ! viscosity
     type(multifab) :: eta_old(mla%nlevel)
@@ -198,8 +198,8 @@ contains
     do n=1,nlevs
        call multifab_build(conc_old(n)    ,mla%la(n),nspecies   ,rho_old(n)%ng)
        call multifab_build(conc_new(n)    ,mla%la(n),nspecies   ,rho_old(n)%ng)
-       call multifab_build(molefrac_old(n),mla%la(n),nspecies   ,1)
-       call multifab_build(molefrac_new(n),mla%la(n),nspecies   ,1)
+       call multifab_build(molarconc_old(n),mla%la(n),nspecies   ,1)
+       call multifab_build(molarconc_new(n),mla%la(n),nspecies   ,1)
        call multifab_build(eta_old(n)     ,mla%la(n),1          ,1)
        call multifab_build(eta_new(n)     ,mla%la(n),1          ,1)
        call multifab_build(kappa_old(n)   ,mla%la(n),1          ,1)
@@ -323,11 +323,11 @@ contains
     end do
 
     ! compute mole fractions, x^n, in VALID + GHOST regions
-    call convert_conc_to_molefrac(mla,conc_old,molefrac_old,.true.)
+    call convert_conc_to_molarconc(mla,conc_old,molarconc_old,.true.)
 
     ! compute t^n transport properties (eta,lambda,kappa,chi,zeta)
     call ideal_mixture_transport_wrapper(mla,rhotot_old,Temp_old,p0_old,conc_old, &
-                                         molefrac_old,eta_old,lambda_old,kappa_old, &
+                                         molarconc_old,eta_old,lambda_old,kappa_old, &
                                          chi_old,zeta_old)
 
     ! eta^n on nodes (2d) or edges (3d)
@@ -340,7 +340,7 @@ contains
     end if
 
     ! compute mass_flux_old = F^n and mass_fluxdiv_old = div(F^n)
-    call compute_mass_fluxdiv_energy(mla,rho_old,rhotot_old,molefrac_old,chi_old,zeta_old, &
+    call compute_mass_fluxdiv_energy(mla,rho_old,rhotot_old,molarconc_old,chi_old,zeta_old, &
                               gradp_baro,Temp_old,mass_fluxdiv_old, &
                               mass_flux_old,dx,the_bc_tower)
 
@@ -483,7 +483,7 @@ contains
        call convert_rhoc_to_c(mla,rho_new,rhotot_new,conc_new,.false.)
 
        ! compute x^{n+1,m+1} in VALID + GHOST regions
-       call convert_conc_to_molefrac(mla,conc_new,molefrac_new,.true.)
+       call convert_conc_to_molarconc(mla,conc_new,molarconc_new,.true.)
 
        do l=1,deltaT_iters
 
@@ -544,7 +544,7 @@ contains
 
           ! compute t^{n+1,m+1,l+1} transport properties (eta,lambda,kappa,chi,zeta)
           call ideal_mixture_transport_wrapper(mla,rhotot_new,Temp_new,p0_new,conc_new, &
-                                               molefrac_new,eta_new,lambda_new,kappa_new, &
+                                               molarconc_new,eta_new,lambda_new,kappa_new, &
                                                chi_new,zeta_new)
 
           ! rhoh_fluxdiv_new = div(Q)^{n+1,m+1,l} + sum(div(hk^{n+1,m+1,l}*Fk^{n+1,m})) + (rho*Hext)^{n+1,m+1}
@@ -600,7 +600,7 @@ contains
        end do
        
        ! compute mass_flux_new = F^{n+1,m+1} and mass_fluxdiv_new = div(F^{n+1,m+1})
-       call compute_mass_fluxdiv_energy(mla,rho_new,rhotot_new,molefrac_new,chi_new,zeta_new, &
+       call compute_mass_fluxdiv_energy(mla,rho_new,rhotot_new,molarconc_new,chi_new,zeta_new, &
                                         gradp_baro,Temp_new,mass_fluxdiv_new, &
                                         mass_flux_new,dx,the_bc_tower)
 
@@ -849,8 +849,8 @@ contains
     do n=1,nlevs
        call multifab_destroy(conc_old(n))
        call multifab_destroy(conc_new(n))
-       call multifab_destroy(molefrac_old(n))
-       call multifab_destroy(molefrac_new(n))
+       call multifab_destroy(molarconc_old(n))
+       call multifab_destroy(molarconc_new(n))
        call multifab_destroy(eta_old(n))
        call multifab_destroy(eta_new(n))
        call multifab_destroy(kappa_old(n))

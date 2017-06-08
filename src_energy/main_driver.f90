@@ -1,7 +1,7 @@
 subroutine main_driver()
 
   use bl_IO_module
-  use init_lowmach_module
+  use init_energy_module
   use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfile_module
@@ -25,9 +25,8 @@ subroutine main_driver()
   use compute_HSE_pres_module
   use convert_m_to_umac_module
   use sum_momenta_module
-  use restart_module
-  use checkpoint_module
   use reservoir_bc_fill_module
+  use eos_model_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -74,10 +73,9 @@ subroutine main_driver()
   type(multifab), allocatable  :: pi(:)
 
   ! For HydroGrid
-  integer :: narg, farg, un, n_rngs
+  integer :: narg, farg, un
   character(len=128) :: fname
   logical :: lexist
-  logical :: nodal_temp(3)
 
   real(kind=dp_t) :: p0_old, p0_new
 
@@ -285,7 +283,7 @@ subroutine main_driver()
 
      ! initialize rho and umac in valid region only
      ! also initialize rhoh, Temp, p0
-     call init_lowmach(mla,umac_old,rhotot_old,rho_old,rhoh_old,Temp_old,p0_old)
+     call init_energy(mla,umac_old,rhotot_old,rho_old,rhoh_old,Temp_old,p0_old)
 
      ! initialize pi, including ghost cells
      do n=1,nlevs

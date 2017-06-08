@@ -9,6 +9,9 @@ module initial_projection_module
   use bc_module
   use multifab_physbc_stag_module
   use compute_mass_fluxdiv_energy_module
+  use convert_rhoc_to_c_module
+  use eos_model_wrapper_module
+  use compute_rhoh_fluxdiv_module
   use probin_common_module, only: nspecies, restart
 
   implicit none
