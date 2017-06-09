@@ -59,7 +59,7 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
     ! local variables
-    integer :: n,nlevs,i,dm,comp
+    integer :: n,nlevs,i,dm
     integer :: k,l
 
     ! concentration
@@ -289,38 +289,16 @@ contains
                             the_bc_tower%bc_tower_array)
 
     ! compute rho_i^n on faces
-    ! first compute c^n and fill ghost cells
-    call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc_old,.true.)
-    call fill_c_ghost_cells(mla,conc_old,dx,the_bc_tower)
-
-    ! average c^n to faces
-    call average_cc_to_face(nlevs,conc_old,rho_fc_old,1,c_bc_comp,nspecies, &
+    call average_cc_to_face(nlevs,rho_old,rho_fc_old,1,c_bc_comp,nspecies, &
                             the_bc_tower%bc_tower_array)
-
-    ! multiply c^n on faces by rhotot^n on faces
-    do n=1,nlevs
-       do i=1,dm
-          do comp=1,nspecies
-             call multifab_mult_mult_c(rho_fc_old(n,i),comp,rhotot_fc_old(n,i),1,1,0)
-          end do
-       end do
-    end do
 
     ! compute rhoh^n on faces
-    ! first compute h^n and fill ghost cells
-    call convert_rhoh_to_h(mla,rhoh_old,rhotot_old,enth_old,.true.)
-    call fill_h_ghost_cells(mla,enth_old,dx,the_bc_tower)
-
-    ! average h^n to faces
-    call average_cc_to_face(nlevs,enth_old,rhoh_fc_old,1,h_bc_comp,1, &
+    call average_cc_to_face(nlevs,rhoh_old,rhoh_fc_old,1,h_bc_comp,1, &
                             the_bc_tower%bc_tower_array)
 
-    ! multiply h^n on faces by rhotot^n on faces
-    do n=1,nlevs
-       do i=1,dm
-          call multifab_mult_mult_c(rhoh_fc_old(n,i),1,rhotot_fc_old(n,i),1,1,0)
-       end do
-    end do
+    ! compute conc_old
+    call convert_rhoc_to_c(mla,rho_old,rhotot_old,conc_old,.true.)
+    call fill_c_ghost_cells(mla,conc_old,dx,the_bc_tower)
 
     ! compute mole fractions, x^n, in VALID + GHOST regions
     call convert_conc_to_molarconc(mla,conc_old,molarconc_old,.true.)
@@ -434,18 +412,6 @@ contains
        call convert_m_to_umac(mla,rhotot_fc_new,mtemp,umac_new,.false.)
        call mk_advective_m_fluxdiv(mla,umac_new,mtemp,mtemp2,.true.,dx, &
                                    the_bc_tower%bc_tower_array)
-
-       ! update p0_update_old based on current Scorr
-       ! the idea is that you can reduce dpdt_factor by a factor of 2 since
-       ! we account for it in p0_update_old and p0_update_new
-!       do n=1,nlevs
-!          call multifab_plus_plus_s_c(rhoh_update_old(n),1,-p0_update_old,1,0)
-!       end do
-!       p0_update_old = (Sbar_old + Scorrbar)/thetabar_old
-!       do n=1,nlevs
-!          call multifab_plus_plus_s_c(rhoh_update_old(n),1,p0_update_old,1,0)
-!       end do
-
        ! update pressure
        p0_new = p0_old + 0.5d0*dt*(p0_update_old + p0_update_new)
 
@@ -532,13 +498,9 @@ contains
           end do
 
           ! fill T ghost cells
-          do n=1,nlevs
-             call multifab_fill_boundary(Temp_new(n))
-             call multifab_physbc(Temp_new(n),1,temp_bc_comp,1,the_bc_tower%bc_tower_array(n), &
-                                  dx_in=dx(n,:))
-          end do
+          call fill_Temp_ghost_cells(mla,Temp_new,dx,the_bc_tower)
 
-          ! h^{n+1,m+1,l+1} = h(rhotot^{n+1,m+1},w^{n+1,m+1},T^{n+1,m+1,l+1})
+          ! h^{n+1,m+1,l+1} = h(rhotot^{n+1,m+1},w^{n+1,m+1},T^{n+1,m+1,l+1}) in VALID + GHOST region
           call compute_h(mla,Temp_new,enth_new,conc_new)
           call convert_rhoh_to_h(mla,rhoh_new,rhotot_new,enth_new,.false.)
 
@@ -573,31 +535,13 @@ contains
        call average_cc_to_face(nlevs,rhotot_new,rhotot_fc_new,1,scal_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
 
-       ! compute rho_i^{n+1,m+1} on faces
-       ! first, average c^{n+1,m+1} to faces
-       call average_cc_to_face(nlevs,conc_new,rho_fc_new,1,c_bc_comp,nspecies, &
+       ! compute rho_i^n on faces
+       call average_cc_to_face(nlevs,rho_new,rho_fc_new,1,c_bc_comp,nspecies, &
                                the_bc_tower%bc_tower_array)
-
-       ! multiply c^{n+1,m+1} on faces by rhotot^{n+1,m+1} on faces
-       do n=1,nlevs
-          do i=1,dm
-             do comp=1,nspecies
-                call multifab_mult_mult_c(rho_fc_new(n,i),comp,rhotot_fc_new(n,i),1,1,0)
-             end do
-          end do
-       end do
 
        ! compute rhoh^{n+1,m+1} on faces
-       ! average h^{n+1,m+1} to faces
-       call average_cc_to_face(nlevs,enth_new,rhoh_fc_new,1,h_bc_comp,1, &
+       call average_cc_to_face(nlevs,rhoh_new,rhoh_fc_new,1,h_bc_comp,1, &
                                the_bc_tower%bc_tower_array)
-
-       ! multiply h^{n+1,m+1} on faces by rhotot^{n+1,m+1} on faces
-       do n=1,nlevs
-          do i=1,dm
-             call multifab_mult_mult_c(rhoh_fc_new(n,i),1,rhotot_fc_new(n,i),1,1,0)
-          end do
-       end do
        
        ! compute mass_flux_new = F^{n+1,m+1} and mass_fluxdiv_new = div(F^{n+1,m+1})
        call compute_mass_fluxdiv_energy(mla,rho_new,rhotot_new,molarconc_new,chi_new,zeta_new, &
