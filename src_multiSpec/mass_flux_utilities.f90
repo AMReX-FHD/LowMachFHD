@@ -15,8 +15,7 @@ module mass_flux_utilities_module
 
   private
 
-  public :: correct_rho_with_drho, &
-            compute_molconc_molmtot, &
+  public :: compute_molconc_molmtot, &
             compute_rhotot, &
             compute_Gama, &
             compute_rhoWchi, &
@@ -27,132 +26,6 @@ module mass_flux_utilities_module
 
 contains
   
-  subroutine correct_rho_with_drho(mla,rho,drho)
-
-   type(ml_layout), intent(in   )  :: mla
-   type(multifab) , intent(inout)  :: rho(:) 
-   type(multifab) , intent(inout)  :: drho(:) 
-
-   ! local variables
-   integer :: lo(rho(1)%dim), hi(rho(1)%dim)
-   integer :: n,i,ng_1,ng_2,dm,nlevs
- 
-   ! pointer for rho(nspecies), rhotot(1), molarconc(nspecies) 
-   real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rho    
-   real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for drho
-
-   type(mfiter) :: mfi
-   type(box) :: tilebox
-   integer :: tlo(mla%dim), thi(mla%dim)
-
-   type(bl_prof_timer), save :: bpt
-
-   call build(bpt,"correct_rho_with_drho")
-
-   dm    = mla%dim     ! dimensionality
-   ng_1  = rho(1)%ng   ! number of ghost cells 
-   ng_2  = drho(1)%ng
-   nlevs = mla%nlevel  ! number of levels 
- 
-   !$omp parallel private(n,i,mfi,tilebox,tlo,thi,dp1,dp2,lo,hi)
-
-    ! loop over all boxes 
-    do n=1,nlevs
-       call mfiter_build(mfi, rho(n), tiling=.true.)
-
-       do while (more_tile(mfi))
-          i = get_fab_index(mfi)
-
-          tilebox = get_growntilebox(mfi,rho(n)%ng)
-          tlo = lwb(tilebox)
-          thi = upb(tilebox)
-
-!       do i=1,nfabs(rho(n))
-          dp1 => dataptr(rho(n),i)
-          dp2 => dataptr(drho(n),i)
-          lo = lwb(get_box(rho(n),i))
-          hi = upb(get_box(rho(n),i))          
-          select case(dm)
-          case (2)
-             call correct_rho_with_drho_2d(dp1(:,:,1,:),dp2(:,:,1,:),ng_1,ng_2,lo,hi,tlo,thi) 
-          case (3)
-             call correct_rho_with_drho_3d(dp1(:,:,:,:),dp2(:,:,:,:),ng_1,ng_2,lo,hi,tlo,thi) 
-          end select
-       end do
-    end do
-    !$omp end parallel
-
-    call destroy(bpt)
-
-  end subroutine correct_rho_with_drho
-
-  subroutine correct_rho_with_drho_2d(rho,drho,ng_1,ng_2,glo,ghi,tlo,thi)
- 
-    integer          :: glo(2), ghi(2), ng_1, ng_2, tlo(2), thi(2)
-    real(kind=dp_t)  ::  rho(glo(1)-ng_1:,glo(2)-ng_1:,:) ! density- last dim for #species
-    real(kind=dp_t)  :: drho(glo(1)-ng_2:,glo(2)-ng_2:,:) ! total density in each cell 
-        
-    ! local variables
-    integer          :: i,j
-    
-    ! for specific box, now start loops over alloted cells    
-    do j=tlo(2), thi(2)
-       do i=tlo(1), thi(1)
-         
-         call correct_rho_with_drho_local(rho(i,j,:),drho(i,j,:))
-
-       end do
-    end do
- 
-  end subroutine correct_rho_with_drho_2d
-
-  subroutine correct_rho_with_drho_3d(rho,drho,ng_1,ng_2,glo,ghi,tlo,thi)
- 
-    integer          :: glo(3), ghi(3), ng_1, ng_2,tlo(:),thi(:)
-    real(kind=dp_t)  ::  rho(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:,:) ! density- last dim for #species
-    real(kind=dp_t)  :: drho(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:,:) ! total density in each cell 
-    
-    ! local variables
-    integer          :: i,j,k
-    
-    ! for specific box, now start loops over alloted cells    
-    do k=tlo(3), thi(3)
-       do j=tlo(2), thi(2)
-          do i=tlo(1), thi(1)
-
-             call correct_rho_with_drho_local(rho(i,j,k,:),drho(i,j,k,:))
-
-          end do
-       end do
-    end do
- 
-  end subroutine correct_rho_with_drho_3d
-
-  subroutine correct_rho_with_drho_local(rho,drho)
- 
-    real(kind=dp_t), intent(inout) :: rho(nspecies)    ! density- last dim for #species
-    real(kind=dp_t), intent(out)   :: drho(nspecies)   ! total density in each cell 
-    
-    ! local variables
-    real(kind=dp_t)  :: rhotot_local
-    real(kind=dp_t)  :: rho_old(nspecies)
-
-    ! make a copy of the input rho's
-    rho_old = rho
-    
-    ! total rho in the cell
-    rhotot_local = sum(rho)
-
-    ! make sure each rho is greater than +epsilon 
-    ! to prevent division by zero in case species
-    ! density, molar concentration or total density = 0.
-    rho(1:nspecies) = max(rho(1:nspecies), fraction_tolerance*rhotot_local) 
-
-    ! keep track of how much rho changed so we can reset it back later
-    drho = rho - rho_old
-
-  end subroutine correct_rho_with_drho_local 
-
   subroutine compute_molconc_molmtot(mla,rho,rhotot,molarconc,molmtot)
    
    type(ml_layout), intent(in   )  :: mla

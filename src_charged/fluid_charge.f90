@@ -1,4 +1,5 @@
 module fluid_charge_module
+
  
   use ml_layout_module
   use convert_stag_module
@@ -413,7 +414,6 @@ contains
     type(bc_tower) , intent(in   ) :: the_bc_tower
     
     ! local
-    type(multifab) :: drho        (mla%nlevel)
     type(multifab) :: rhotot_temp (mla%nlevel)
     type(multifab) :: charge_coef (mla%nlevel)
     type(multifab) :: molarconc   (mla%nlevel)
@@ -430,7 +430,6 @@ contains
     dm = mla%dim
 
     do n=1,nlevs
-       call multifab_build(drho(n),         mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(rhotot_temp(n),  mla%la(n), 1,           rho(n)%ng)
        call multifab_build(charge_coef(n),  mla%la(n), nspecies,    1)
        call multifab_build(molarconc(n),    mla%la(n), nspecies,    rho(n)%ng)
@@ -444,8 +443,6 @@ contains
        end do
     end do
 
-    ! modify rho with drho to ensure no mass or mole fraction is zero
-    call correct_rho_with_drho(mla,rho,drho)
     call compute_rhotot(mla,rho,rhotot_temp,ghost_cells_in=.true.)
 
     ! compute rho W z / (n k_B T) on cell centers
@@ -471,14 +468,8 @@ contains
        end do
     end do    
 
-    ! revert back rho to it's original form
-    do n=1,nlevs
-       call saxpy(rho(n),-1.0d0,drho(n),all=.true.)
-    end do 
-
     ! deallocate memory
     do n=1,nlevs
-       call multifab_destroy(drho(n))
        call multifab_destroy(rhotot_temp(n))
        call multifab_destroy(charge_coef(n))
        call multifab_destroy(molarconc(n))

@@ -52,7 +52,6 @@ contains
     type(multifab) , intent(in   ), optional :: permittivity(:)
 
     ! local variables
-    type(multifab) :: drho(mla%nlevel)           ! correction to rho
     type(multifab) :: rhoWchi(mla%nlevel)        ! rho*W*chi*Gama
     type(multifab) :: molarconc(mla%nlevel)      ! molar concentration
     type(multifab) :: molmtot(mla%nlevel)        ! total molar mass
@@ -74,7 +73,6 @@ contains
       
     ! build cell-centered multifabs for nspecies and ghost cells contained in rho.
     do n=1,nlevs
-       call multifab_build(drho(n),         mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(molarconc(n),    mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
@@ -88,8 +86,6 @@ contains
        end do
     end do
  
-    ! modify rho with drho to ensure each mass fraction is larger than a tolerance
-    call correct_rho_with_drho(mla,rho,drho)
     call compute_rhotot(mla,rho,rhotot,ghost_cells_in=.true.)
  
     ! compute molmtot, molarconc (primitive variables) for 
@@ -141,12 +137,6 @@ contains
        end if
     end if
 
-    ! revert back rho to it's original form
-    do n=1,nlevs
-       call saxpy(rho(n),-1.0d0,drho(n),all=.true.)
-       call compute_rhotot(mla,rho,rhotot,ghost_cells_in=.true.)
-    end do 
-
     ! compute stochastic fluxdiv 
     if (variance_coef_mass .ne. 0.d0) then
 
@@ -161,7 +151,6 @@ contains
 
     ! free the multifab allocated memory
     do n=1,nlevs
-       call multifab_destroy(drho(n))
        call multifab_destroy(rhoWchi(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(molmtot(n))
