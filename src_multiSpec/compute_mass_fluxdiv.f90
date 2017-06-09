@@ -56,7 +56,6 @@ contains
     type(multifab) :: rhoWchi(mla%nlevel)        ! rho*W*chi*Gama
     type(multifab) :: molarconc(mla%nlevel)      ! molar concentration
     type(multifab) :: molmtot(mla%nlevel)        ! total molar mass
-    type(multifab) :: chi(mla%nlevel)            ! Chi-matrix
     type(multifab) :: Hessian(mla%nlevel)        ! Hessian-matrix
     type(multifab) :: Gama(mla%nlevel)           ! Gama-matrix
     type(multifab) :: D_bar(mla%nlevel)          ! D_bar-matrix
@@ -79,7 +78,6 @@ contains
        call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(molarconc(n),    mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
-       call multifab_build(chi(n),          mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(Hessian(n),      mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(Gama(n),         mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(D_bar(n),        mla%la(n), nspecies**2, rho(n)%ng)
@@ -104,12 +102,9 @@ contains
     ! compute Gama from Hessian
     call compute_Gama(mla,molarconc,Hessian,Gama)
    
-    ! compute chi and zeta/Temp
-    call compute_chi(mla,rho,rhotot,molarconc,chi,D_bar)
+    ! compute rho*W*chi and zeta/Temp
+    call compute_rhoWchi(mla,rho,rhotot,molarconc,rhoWchi,D_bar)
     call compute_zeta_by_Temp(mla,molarconc,D_bar,D_therm,Temp,zeta_by_Temp)
-
-    ! compute rho*W*chi
-    call compute_rhoWchi_from_chi(mla,rho,chi,rhoWchi)
 
     ! compute diffusive mass fluxes, "-F = rho*W*chi*Gamma*grad(x) - ..."
     call diffusive_mass_fluxdiv(mla,rho,rhotot,molarconc,rhoWchi,Gama, &
@@ -170,7 +165,6 @@ contains
        call multifab_destroy(rhoWchi(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(molmtot(n))
-       call multifab_destroy(chi(n))
        call multifab_destroy(Hessian(n))
        call multifab_destroy(Gama(n))
        call multifab_destroy(D_bar(n))

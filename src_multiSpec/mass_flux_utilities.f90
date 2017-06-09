@@ -19,7 +19,7 @@ module mass_flux_utilities_module
             compute_molconc_molmtot, &
             compute_rhotot, &
             compute_Gama, &
-            compute_chi, &
+            compute_rhoWchi, &
             compute_zeta_by_Temp, &
             compute_rhoWchi_from_chi, &
             compute_sqrtLonsager_fc, &
@@ -491,13 +491,13 @@ contains
  
   end subroutine compute_Gama_local
 
-  subroutine compute_chi(mla,rho,rhotot,molarconc,chi,D_bar)
+  subroutine compute_rhoWchi(mla,rho,rhotot,molarconc,rhoWchi,D_bar)
    
     type(ml_layout), intent(in   )  :: mla
     type(multifab) , intent(in   )  :: rho(:)
     type(multifab) , intent(in   )  :: rhotot(:) 
     type(multifab) , intent(in   )  :: molarconc(:)
-    type(multifab) , intent(inout)  :: chi(:) 
+    type(multifab) , intent(inout)  :: rhoWchi(:) 
     type(multifab) , intent(in   )  :: D_bar(:) 
 
     ! local variables
@@ -508,7 +508,7 @@ contains
     real(kind=dp_t), pointer        :: dp0(:,:,:,:)  ! for rho    
     real(kind=dp_t), pointer        :: dp1(:,:,:,:)  ! for rhotot
     real(kind=dp_t), pointer        :: dp2(:,:,:,:)  ! for molarconc
-    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for chi
+    real(kind=dp_t), pointer        :: dp3(:,:,:,:)  ! for rhoWchi
     real(kind=dp_t), pointer        :: dp4(:,:,:,:)  ! for D_bar
 
     type(mfiter) :: mfi
@@ -517,13 +517,13 @@ contains
 
     type(bl_prof_timer), save :: bpt
 
-    call build(bpt,"compute_chi")
+    call build(bpt,"compute_rhoWchi")
 
     dm = mla%dim        ! dimensionality
     ng_0 = rho(1)%ng    ! number of ghost cells 
     ng_1 = rhotot(1)%ng
     ng_2 = molarconc(1)%ng
-    ng_3 = chi(1)%ng
+    ng_3 = rhoWchi(1)%ng
     ng_4 = D_bar(1)%ng
     nlevs = mla%nlevel  ! number of levels 
  
@@ -537,7 +537,7 @@ contains
        do while (more_tile(mfi))
           i = get_fab_index(mfi)
 
-          tilebox = get_growntilebox(mfi,chi(n)%ng)
+          tilebox = get_growntilebox(mfi,rhoWchi(n)%ng)
           tlo = lwb(tilebox)
           thi = upb(tilebox)
 
@@ -545,19 +545,19 @@ contains
           dp0  => dataptr(rho(n), i)
           dp1 => dataptr(rhotot(n), i)
           dp2 => dataptr(molarconc(n), i)
-          dp3 => dataptr(chi(n), i)
+          dp3 => dataptr(rhoWchi(n), i)
           dp4 => dataptr(D_bar(n), i)
           lo  =  lwb(get_box(rho(n), i))
           hi  =  upb(get_box(rho(n), i))          
           select case(dm)
           case (2)
-             call compute_chi_2d(dp0(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),dp3(:,:,1,:),&
-                                 dp4(:,:,1,:),&
-                                 ng_0,ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
+             call compute_rhoWchi_2d(dp0(:,:,1,:),dp1(:,:,1,1),dp2(:,:,1,:),dp3(:,:,1,:),&
+                                     dp4(:,:,1,:),&
+                                     ng_0,ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           case (3)
-             call compute_chi_3d(dp0(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),dp3(:,:,:,:),&
-                                 dp4(:,:,:,:),&
-                                 ng_0,ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
+             call compute_rhoWchi_3d(dp0(:,:,:,:),dp1(:,:,:,1),dp2(:,:,:,:),dp3(:,:,:,:),&
+                                     dp4(:,:,:,:),&
+                                     ng_0,ng_1,ng_2,ng_3,ng_4,lo,hi,tlo,thi) 
           end select
        end do
     end do
@@ -565,9 +565,9 @@ contains
 
     call destroy(bpt)
 
-  end subroutine compute_chi
+  end subroutine compute_rhoWchi
  
-  subroutine compute_chi_2d(rho,rhotot,molarconc,chi,D_bar, &
+  subroutine compute_rhoWchi_2d(rho,rhotot,molarconc,rhoWchi,D_bar, &
                             ng_0,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
 
     integer          :: glo(2), ghi(2), ng_0,ng_1,ng_2,ng_3,ng_4
@@ -575,7 +575,7 @@ contains
     real(kind=dp_t)  ::          rho(glo(1)-ng_0:,glo(2)-ng_0:,:) ! density; last dimension for species
     real(kind=dp_t)  ::       rhotot(glo(1)-ng_1:,glo(2)-ng_1:)   ! total density in each cell 
     real(kind=dp_t)  ::    molarconc(glo(1)-ng_2:,glo(2)-ng_2:,:) ! molar concentration 
-    real(kind=dp_t)  ::          chi(glo(1)-ng_3:,glo(2)-ng_3:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::      rhoWchi(glo(1)-ng_3:,glo(2)-ng_3:,:) ! last dimension for nspecies^2
     real(kind=dp_t)  ::        D_bar(glo(1)-ng_4:,glo(2)-ng_4:,:) ! MS diff-coefs 
 
     ! local variables
@@ -585,15 +585,15 @@ contains
     do j=tlo(2),thi(2)
        do i=tlo(1),thi(1)
     
-          call compute_chi_local(nspecies,molmass(:),rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
-                                 chi(i,j,:),D_bar(i,j,:))
+          call compute_rhoWchi_local(rho(i,j,:),rhotot(i,j),molarconc(i,j,:),&
+                                 rhoWchi(i,j,:),D_bar(i,j,:))
 
        end do
     end do
 
-  end subroutine compute_chi_2d
+  end subroutine compute_rhoWchi_2d
 
-  subroutine compute_chi_3d(rho,rhotot,molarconc,chi,D_bar, &
+  subroutine compute_rhoWchi_3d(rho,rhotot,molarconc,rhoWchi,D_bar, &
                             ng_0,ng_1,ng_2,ng_3,ng_4,glo,ghi,tlo,thi)
    
     integer          :: glo(3), ghi(3), ng_0,ng_1,ng_2,ng_3,ng_4
@@ -601,7 +601,7 @@ contains
     real(kind=dp_t)  ::          rho(glo(1)-ng_0:,glo(2)-ng_0:,glo(3)-ng_0:,:) ! density; last dimension for species
     real(kind=dp_t)  ::       rhotot(glo(1)-ng_1:,glo(2)-ng_1:,glo(3)-ng_1:)   ! total density in each cell 
     real(kind=dp_t)  ::    molarconc(glo(1)-ng_2:,glo(2)-ng_2:,glo(3)-ng_2:,:) ! molar concentration; 
-    real(kind=dp_t)  ::          chi(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:) ! last dimension for nspecies^2
+    real(kind=dp_t)  ::      rhoWchi(glo(1)-ng_3:,glo(2)-ng_3:,glo(3)-ng_3:,:) ! last dimension for nspecies^2
     real(kind=dp_t)  ::        D_bar(glo(1)-ng_4:,glo(2)-ng_4:,glo(3)-ng_4:,:) ! SM diffusion constants 
     
     ! local variables
@@ -612,16 +612,206 @@ contains
        do j=tlo(2),thi(2)
           do i=tlo(1),thi(1)
        
-             call compute_chi_local(nspecies,molmass(:),rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
-                                    chi(i,j,k,:),D_bar(i,j,k,:))
+             call compute_rhoWchi_local(rho(i,j,k,:),rhotot(i,j,k),molarconc(i,j,k,:),&
+                                    rhoWchi(i,j,k,:),D_bar(i,j,k,:))
 
           end do
        end do
     end do
    
-  end subroutine compute_chi_3d
+  end subroutine compute_rhoWchi_3d
 
-  subroutine compute_chi_local(nspecies_in,molmass_in,rho,rhotot,molarconc,chi,D_bar)
+  subroutine compute_rhoWchi_local(rho,rhotot,molarconc,rhoWchi,D_bar)
+
+    real(kind=dp_t), intent(in   ) :: rho(nspecies)
+    real(kind=dp_t), intent(in   ) :: rhotot
+    real(kind=dp_t), intent(in   ) :: molarconc(nspecies)
+    real(kind=dp_t), intent(inout) :: rhoWchi(nspecies,nspecies)
+    real(kind=dp_t), intent(in   ) :: D_bar(nspecies,nspecies)
+
+    ! local variables
+    integer         :: row,column,k
+    real(kind=dp_t) :: W(nspecies)
+
+    real(kind=dp_t) :: chi(nspecies,nspecies)
+    real(kind=dp_t) :: Deff, tmp
+
+    integer         :: ntrace           ! number of trace species with w_k < fractional_tolerance
+    integer         :: nspecies_sub     ! dim of subsystem = nspecies-ntrace
+    real(kind=dp_t) :: molmtot_sub
+    real(kind=dp_t) :: rhotot_sub
+    real(kind=dp_t), allocatable :: molmass_sub(:), rho_sub(:), W_sub(:), molarconc_sub(:)
+    real(kind=dp_t), allocatable :: D_bar_sub(:,:), chi_sub(:,:)
+
+    ! this is a mapping used to eliminate elements in D_bar we don't need (for D_bar_sub)
+    ! and for expanding sqrtLonsager_sub into sqrtLonsager
+    ! it will contain the numbers 1, 2, ..., (nspecies-ntrace)
+    ! with zeros in elements corresponding to trace elements
+    ! (example) for a 5-species system having trace species 2 and 5:
+    !  species       1 2 3 4 5
+    !  dest(species) 1 0 2 3 0
+    integer :: dest(nspecies)
+
+    type(bl_prof_timer), save :: bpt
+
+    call build(bpt,"compute_rhoWchi_local")
+
+    ! compute the number of trace species
+    ! build the mapping for expanding/contracting arrays
+    ntrace = 0
+    do row=1, nspecies
+       W(row) = rho(row)/rhotot
+       if (W(row) .lt. fraction_tolerance) then
+          ntrace = ntrace + 1
+          dest(row) = 0
+       else
+          dest(row) = row - ntrace
+       end if
+    end do
+
+    if (ntrace .eq. nspecies-1) then
+
+       ! this is all trace species except for 1 (essentially pure solvent);
+       ! set rhoWchi to zero
+       rhoWchi(:,:) = 0.d0
+
+    else if (ntrace .eq. 0) then
+
+       ! there are no trace species
+       ! hence, chi = chi_sub
+
+       ! compute chi 
+       call compute_chi_sub(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
+
+       ! compute rho*W*chi
+       do row=1, nspecies
+          do column=1, nspecies
+             rhoWchi(row,column) = rho(row)*chi(row,column)
+          end do
+       end do
+
+    else
+
+       ! if there are trace species, we consider a subsystem 
+       ! consisting of non-trace species
+
+       nspecies_sub = nspecies - ntrace
+
+       allocate(  molmass_sub(nspecies_sub))
+       allocate(      rho_sub(nspecies_sub))
+       allocate(        W_sub(nspecies_sub))
+       allocate(molarconc_sub(nspecies_sub))
+
+       allocate(D_bar_sub(nspecies_sub,nspecies_sub))
+       allocate(  chi_sub(nspecies_sub,nspecies_sub))
+
+       ! create a vector of non-trace densities and molmass for the subsystem
+       do row=1, nspecies
+          if (dest(row) .ne. 0) then
+             molmass_sub(dest(row)) = molmass(row)
+             rho_sub(dest(row)) = rho(row)
+          end if
+       end do
+
+       ! renormalize total density and mass fractions
+       rhotot_sub = sum(rho_sub)
+       do row=1, nspecies_sub
+          W_sub(row) = rho_sub(row)/rhotot_sub
+       end do
+
+       ! construct D_bar_sub by mapping the full D_bar into D_bar_sub
+       ! you could read in only the lower diagonals, 
+       ! reflect, and set the diagnals to zero if you want
+
+       do row=1, nspecies
+          if (dest(row) .eq. 0) then
+             cycle
+          end if
+          do column=1, nspecies
+             if (dest(column) .ne. 0) then
+                D_bar_sub(dest(row),dest(column)) = D_bar(row,column)
+             end if
+          end do
+       end do
+
+       ! compute molarconc_sub and molmtot_sub
+       call compute_molconc_molmtot_local(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,molmtot_sub)
+
+       ! compute chi_sub
+       call compute_chi_sub(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,chi_sub,D_bar_sub)
+
+       ! compute full rho*W*chi
+       rhoWchi(:,:) = 0.d0
+       do column=1, nspecies
+          if (dest(column) .eq. 0) then         ! column of a trace species
+             ! compute Deff
+             Deff = 0.d0
+             do k=1, nspecies
+                if (dest(k) .ne. 0) then
+                   Deff = Deff + molarconc_sub(dest(k))/D_bar(k,column)
+                end if
+             end do
+             Deff = 1.d0/Deff
+
+             ! assign rhoWchi
+             do row=1, nspecies
+                if (row .eq. column) then
+                   rhoWchi(row,column) = rhotot_sub*Deff*molmass(row)/molmtot_sub
+                else if (dest(row) .eq. 0) then
+                   rhoWchi(row,column) = 0.d0
+                else
+                   tmp = 0.d0
+                   do k=1, nspecies
+                      if (dest(k) .ne. 0) then
+                         tmp = tmp + chi_sub(dest(row),dest(k))*molarconc_sub(dest(k))/D_bar(k,column)
+                      end if
+                   end do
+                   rhoWchi(row,column) = Deff*rho_sub(dest(row))*(tmp-molmass(column)/molmtot_sub)
+                end if
+             end do
+          else                                  ! column of a non-trace species
+             ! assign rhoWchi
+             do row=1, nspecies
+                if (dest(row) .eq. 0) then
+                   rhoWchi(row,column) = 0.d0
+                else
+                   rhoWchi(row,column) = rho_sub(dest(row))*chi_sub(dest(row),dest(column))
+                end if
+             end do 
+          end if
+       end do
+
+       deallocate(molmass_sub,rho_sub,W_sub,molarconc_sub)
+       deallocate(D_bar_sub,chi_sub)
+
+    end if
+
+    ! hack
+    !print*,'rhoWchi'
+    !do row=1, nspecies
+    !   print *,rhoWchi(row,1:nspecies)
+    !end do
+    !print*,'sum rhoWchi_col'
+    !select case (nspecies)
+    !   case (2)
+    !      print*,sum(rhoWchi(1:2,1)),sum(rhoWchi(1:2,2))
+    !   case (3)
+    !      print*,sum(rhoWchi(1:3,1)),sum(rhoWchi(1:3,2)),sum(rhoWchi(1:3,3))
+    !   case (4)
+    !      print*,sum(rhoWchi(1:4,1)),sum(rhoWchi(1:4,2)),sum(rhoWchi(1:4,3)),sum(rhoWchi(1:4,4))
+    !end select
+    !print*,'W*chi from rhoWchi/rhotot'
+    !do row=1, nspecies
+    !   print *,rhoWchi(row,1:nspecies)/rhotot
+    !end do
+    !stop
+    ! hack
+
+    call destroy(bpt)
+
+  end subroutine compute_rhoWchi_local
+
+  subroutine compute_chi_sub(nspecies_in,molmass_in,rho,rhotot,molarconc,chi,D_bar)
    
     integer,         intent(in   ) :: nspecies_in
     real(kind=dp_t), intent(in   ) :: molmass_in(nspecies_in)
@@ -671,106 +861,108 @@ contains
 
     end if
 
-  end subroutine compute_chi_local
+  contains
 
-  subroutine compute_chi_lapack(nspecies_in,Lambda,chi,W)
+    subroutine compute_chi_lapack(nspecies_in,Lambda,chi,W)
    
-    integer          :: nspecies_in
-    real(kind=dp_t)  :: Lambda(nspecies_in,nspecies_in)
-    real(kind=dp_t)  :: chi(nspecies_in,nspecies_in)
-    real(kind=dp_t)  :: W(nspecies_in)
+      integer          :: nspecies_in
+      real(kind=dp_t)  :: Lambda(nspecies_in,nspecies_in)
+      real(kind=dp_t)  :: chi(nspecies_in,nspecies_in)
+      real(kind=dp_t)  :: W(nspecies_in)
  
-    ! local variables
-    integer          :: row,column,info
-    real(kind=dp_t)  :: alpha    
+      ! local variables
+      integer          :: row,column,info
+      real(kind=dp_t)  :: alpha    
 
-    ! vectors and matrices to be used by LAPACK
-    real(kind=dp_t), dimension(nspecies_in,nspecies_in) :: Sdag,chilocal
-    real(kind=dp_t), dimension(nspecies_in,nspecies_in) :: U, UT, V, VT
-    real(kind=dp_t), dimension(nspecies_in)             :: S, work
-    integer,         dimension(nspecies_in)             :: ipiv
+      ! vectors and matrices to be used by LAPACK
+      real(kind=dp_t), dimension(nspecies_in,nspecies_in) :: Sdag,chilocal
+      real(kind=dp_t), dimension(nspecies_in,nspecies_in) :: U, UT, V, VT
+      real(kind=dp_t), dimension(nspecies_in)             :: S, work
+      integer,         dimension(nspecies_in)             :: ipiv
 
-    ! free up the memory  
-    Sdag     = 0.d0
-    U        = 0.d0
-    UT       = 0.d0
-    V        = 0.d0
-    VT       = 0.d0
-    S        = 0.d0
-    work     = 0.d0
-    alpha    = 0.d0
-    chilocal = 0.d0
+      ! free up the memory  
+      Sdag     = 0.d0
+      U        = 0.d0
+      UT       = 0.d0
+      V        = 0.d0
+      VT       = 0.d0
+      S        = 0.d0
+      work     = 0.d0
+      alpha    = 0.d0
+      chilocal = 0.d0
  
-    ! calculate trace(Lambda)
-    alpha = 0.d0
-    do row=1, nspecies_in
-       alpha = alpha + Lambda(row,row)
-    end do
+      ! calculate trace(Lambda)
+      alpha = 0.d0
+      do row=1, nspecies_in
+         alpha = alpha + Lambda(row,row)
+      end do
  
-    ! calculate Lambda + alpha*W*WT (Equation 6) 
-    do row=1, nspecies_in
-       do column=1, nspecies_in
-          chilocal(row,column) = alpha*W(row)*W(column) + Lambda(row,column)
-       end do
-    end do
+      ! calculate Lambda + alpha*W*WT (Equation 6) 
+      do row=1, nspecies_in
+         do column=1, nspecies_in
+            chilocal(row,column) = alpha*W(row)*W(column) + Lambda(row,column)
+         end do
+      end do
 
-    !===============================================================          
-    ! select LAPACK inversion type, 1=inverse, 2=pseudo inverse 
-    !===============================================================          
-    select case(inverse_type) 
+      !===============================================================          
+      ! select LAPACK inversion type, 1=inverse, 2=pseudo inverse 
+      !===============================================================          
+      select case(inverse_type) 
            
-    case(1)
-    !==========================================================
-    ! Using Inverse 
-    !==========================================================
+      case(1)
+      !==========================================================
+      ! Using Inverse 
+      !==========================================================
  
-    ! compute chilocal inverse
-    call dgetrf(nspecies_in, nspecies_in, chilocal, nspecies_in, ipiv, info)
-    call dgetri(nspecies_in, chilocal, nspecies_in, ipiv, work, nspecies_in, info)
-    !stop "LAPACK95 dget? disabled"
+      ! compute chilocal inverse
+      call dgetrf(nspecies_in, nspecies_in, chilocal, nspecies_in, ipiv, info)
+      call dgetri(nspecies_in, chilocal, nspecies_in, ipiv, work, nspecies_in, info)
+      !stop "LAPACK95 dget? disabled"
 
-    ! populate chi with B^(-1)
-    chi = chilocal   
+      ! populate chi with B^(-1)
+      chi = chilocal   
  
-    case(2) 
-    !==========================================================
-    ! Using pseudoinverse 
-    !==========================================================
+      case(2) 
+      !==========================================================
+      ! Using pseudoinverse 
+      !==========================================================
 
-    ! SVD decomposition of chilocal = U * S * VTranspose; note that chilocal 
-    ! is changed. also V=(VT)T, UT = (U)T are needed for pseudoinverse of chilocal.
-    !stop "LAPACK95 la_gesvd disabled"
-    call la_gesvd(chilocal, S, U, VT)
-    V = transpose(VT)
-    UT = transpose(U)
+      ! SVD decomposition of chilocal = U * S * VTranspose; note that chilocal 
+      ! is changed. also V=(VT)T, UT = (U)T are needed for pseudoinverse of chilocal.
+      !stop "LAPACK95 la_gesvd disabled"
+      call la_gesvd(chilocal, S, U, VT)
+      V = transpose(VT)
+      UT = transpose(U)
    
-    ! populate diagonal matrix Sdag = 1/S with diagonal=0 below a chosen tolerance
-    do row=1, nspecies_in
-       do column=1,nspecies_in
-          Sdag(row,column) = 0.0d0
-       end do
+      ! populate diagonal matrix Sdag = 1/S with diagonal=0 below a chosen tolerance
+      do row=1, nspecies_in
+         do column=1,nspecies_in
+            Sdag(row,column) = 0.0d0
+         end do
        
-       if(S(row).gt.fraction_tolerance*sum(S)) then 
-          Sdag(row,row) = 1.0d0/S(row)
-       else
-          Sdag(row,row) = 0.0d0
-       end if 
-    end do
+         if(S(row).gt.fraction_tolerance*sum(S)) then 
+            Sdag(row,row) = 1.0d0/S(row)
+         else
+            Sdag(row,row) = 0.0d0
+         end if 
+      end do
 
-    ! compute chi = V*Sdag*UT, the pseudoinverse of chilocal 
-    chi = matmul(V, matmul(Sdag, UT))
+      ! compute chi = V*Sdag*UT, the pseudoinverse of chilocal 
+      chi = matmul(V, matmul(Sdag, UT))
 
-    end select
-    !===============================================================          
+      end select
+      !===============================================================          
  
-    ! compute chi as equation (6) 
-    do row=1, nspecies_in
-       do column=1, nspecies_in
-          chi(row,column) = chi(row,column) - 1.0d0/alpha
-       end do
-    end do
+      ! compute chi as equation (6) 
+      do row=1, nspecies_in
+         do column=1, nspecies_in
+            chi(row,column) = chi(row,column) - 1.0d0/alpha
+         end do
+      end do
           
-  end subroutine compute_chi_lapack
+    end subroutine compute_chi_lapack
+
+  end subroutine compute_chi_sub
 
   subroutine compute_zeta_by_Temp(mla,molarconc,D_bar,D_therm,Temp,zeta_by_Temp)
    
@@ -1183,9 +1375,9 @@ contains
     integer :: ntrace                   ! number of trace species with w_k < fractional_tolerance
     integer :: nspecies_sub             ! dim of subsystem = nspecies-ntrace 
     real(kind=dp_t) :: molmtot_sub
-    real(kind=dp_t), allocatable :: molmass_sub(:),rho_sub(:), W_sub(:), molarconc_sub(:)
-    real(kind=dp_t), allocatable :: D_bar_sub(:,:), chi_sub(:,:), sqrtLonsager_sub(:,:)
     real(kind=dp_t) :: rhotot_sub
+    real(kind=dp_t), allocatable :: molmass_sub(:), rho_sub(:), W_sub(:), molarconc_sub(:)
+    real(kind=dp_t), allocatable :: D_bar_sub(:,:), chi_sub(:,:), sqrtLonsager_sub(:,:)
 
     ! this is a mapping used to eliminate elements in D_bar we don't need (for D_bar_sub)
     ! and for expanding sqrtLonsager_sub into sqrtLonsager
@@ -1230,7 +1422,7 @@ contains
        call compute_D_bar_local(rho,rhotot,D_bar)
 
        ! compute chi
-       call compute_chi_local(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
+       call compute_chi_sub(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
 
        ! hack
        !do column=1, nspecies
@@ -1261,6 +1453,7 @@ contains
        end if
 
     else
+
        ! if there are trace species, we consider a subsystem 
        ! consisting of non-trace species
 
@@ -1296,11 +1489,11 @@ contains
 
        call compute_D_bar_local(rho,rhotot,D_bar)
 
-       do row = 1, nspecies
+       do row=1, nspecies
           if (dest(row) .eq. 0) then
              cycle
           end if
-          do column = 1, nspecies
+          do column=1, nspecies
              if (dest(column) .ne. 0) then
                 D_bar_sub(dest(row),dest(column)) = D_bar(row,column)
              end if
@@ -1311,7 +1504,7 @@ contains
        call compute_molconc_molmtot_local(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,molmtot_sub)
 
        ! compute chi_sub
-       call compute_chi_local(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,chi_sub,D_bar_sub)
+       call compute_chi_sub(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,chi_sub,D_bar_sub)
 
        ! hack
        !do column=1, nspecies_sub
@@ -1375,7 +1568,7 @@ contains
     !      print*,sum(sqrtLonsager(1:4,1)),sum(sqrtLonsager(1:4,2)),sum(sqrtLonsager(1:4,3)),sum(sqrtLonsager(1:4,4))
     !end select
     !stop
-    !hack
+    ! hack
 
     call destroy(bpt)
 
@@ -1393,10 +1586,10 @@ contains
       ! remove all upper-triangular entries and NXN entry that lapack doesn't set to zero 
       do row=1, nspecies_in
         do column=row+1, nspecies_in
-          sqrtL(row,column) = 0.0d0
+          sqrtL(row,column) = 0.d0
         end do
       end do
-      sqrtL(nspecies_in,nspecies_in) = 0.0d0
+      sqrtL(nspecies_in,nspecies_in) = 0.d0
     end subroutine chol_lapack 
        
   end subroutine compute_sqrtLonsager_local
@@ -1520,7 +1713,7 @@ contains
     real(kind=dp_t), intent(out)  :: rhoWchi(nspecies,nspecies) 
  
     ! local variables
-    integer                              :: row,column
+    integer                       :: row,column
 
     ! populate rho*W*chi = rho_i*chi
     do row=1, nspecies
