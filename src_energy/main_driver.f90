@@ -1,7 +1,7 @@
 subroutine main_driver()
 
   use bl_IO_module
-  use init_lowmach_module
+  use init_energy_module
   use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfile_module
@@ -25,9 +25,8 @@ subroutine main_driver()
   use compute_HSE_pres_module
   use convert_m_to_umac_module
   use sum_momenta_module
-  use restart_module
-  use checkpoint_module
   use reservoir_bc_fill_module
+  use eos_model_module
   use probin_common_module, only: prob_lo, prob_hi, n_cells, dim_in, hydro_grid_int, &
                                   max_grid_size, n_steps_save_stats, n_steps_skip, &
                                   plot_int, chk_int, seed, stats_int, bc_lo, bc_hi, restart, &
@@ -35,7 +34,7 @@ subroutine main_driver()
                                   advection_type, fixed_dt, max_step, cfl, &
                                   algorithm_type, variance_coef_mom, &
                                   variance_coef_mass, barodiffusion_type, use_bl_rng
-  use probin_multispecies_module, only: Dbar, start_time, probin_multispecies_init
+  use probin_multispecies_module, only: probin_multispecies_init, Dbar, start_time, is_nonisothermal
   use probin_gmres_module, only: probin_gmres_init
   use probin_charged_module, only: probin_charged_init, use_charged_fluid
   use probin_chemistry_module, only: probin_chemistry_init, nreactions
@@ -72,15 +71,11 @@ subroutine main_driver()
   type(multifab), allocatable  :: rhotot_fc(:,:)
   type(multifab), allocatable  :: gradp_baro(:,:)
   type(multifab), allocatable  :: pi(:)
-  type(multifab), allocatable  :: eta(:)
-  type(multifab), allocatable  :: eta_ed(:,:)
-  type(multifab), allocatable  :: kappa(:)
 
   ! For HydroGrid
-  integer :: narg, farg, un, n_rngs
+  integer :: narg, farg, un
   character(len=128) :: fname
   logical :: lexist
-  logical :: nodal_temp(3)
 
   real(kind=dp_t) :: p0_old, p0_new
 
@@ -116,10 +111,6 @@ subroutine main_driver()
      call bl_error("energy code does not support barodiffusion")
   end if
 
-  if (is_nonisothermal) then
-     call bl_error("energy code does not support is_nonisothermal")
-  end if
-
   ! in this example we fix nlevs to be 1
   ! for adaptive simulations where the grids change, cells at finer
   ! resolution don't necessarily exist depending on your tagging criteria,
@@ -137,10 +128,6 @@ subroutine main_driver()
   allocate(diff_mass_fluxdiv(nlevs))
   allocate(umac_old(nlevs,dm),umac_new(nlevs,dm))
   allocate(mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
-  allocate(eta(nlevs),kappa(nlevs))
-
-  ! 1 component in 2D, 3 components in 3D
-  allocate(eta_ed(nlevs,2*dm-3))
 
   ! energy specific
   allocate(rhoh_old(nlevs),rhoh_new(nlevs))
@@ -292,7 +279,7 @@ subroutine main_driver()
 
      ! initialize rho and umac in valid region only
      ! also initialize rhoh, Temp, p0
-     call init_lowmach(mla,umac_old,rhotot_old,rho_old,rhoh_old,Temp_old,p0_old)
+     call init_energy(mla,umac_old,rhotot_old,rho_old,rhoh_old,Temp_old,p0_old)
 
      ! initialize pi, including ghost cells
      do n=1,nlevs
@@ -308,9 +295,6 @@ subroutine main_driver()
   call compute_rhotot(mla,rho_old,rhotot_old)
 
   ! fill rho and rhotot ghost cells
-  ! FIXME - different EOS; won't work for physical boundaries
-  ! we need to write a different version that computes rhotot from the EOS
-  ! which means this needs p0, Temp, and c
   call fill_rho_rhotot_ghost(mla,rho_old,rhotot_old,dx,the_bc_tower)
 
   ! fill rhoh ghost cells - note that rhotot needs filled ghost cells
@@ -325,8 +309,6 @@ subroutine main_driver()
      call multifab_build(rhotot_new(n)       ,mla%la(n),1       ,ng_s) 
      call multifab_build(rhoh_new(n)         ,mla%la(n),1       ,ng_s) 
      call multifab_build(Temp_new(n)         ,mla%la(n),1       ,ng_s) 
-     call multifab_build(eta(n)              ,mla%la(n),1       ,1)
-     call multifab_build(kappa(n)            ,mla%la(n),1       ,1)
      call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
      do i=1,dm
         call multifab_build_edge(  umac_new(n,i),mla%la(n),1,1,i)
@@ -336,49 +318,20 @@ subroutine main_driver()
      end do
   end do
 
-  do n=1,nlevs
-     ! eta and Temp on nodes (2d) or edges (3d)
-     if (dm .eq. 2) then
-        call multifab_build_nodal(eta_ed(n,1),mla%la(n),1,0)
-     else
-        nodal_temp(1) = .true.
-        nodal_temp(2) = .true.
-        nodal_temp(3) = .false.
-        call multifab_build(eta_ed(n,1),mla%la(n),1,0,nodal_temp)
-        nodal_temp(1) = .true.
-        nodal_temp(2) = .false.
-        nodal_temp(3) = .true.
-        call multifab_build(eta_ed(n,2),mla%la(n),1,0,nodal_temp)
-        nodal_temp(1) = .false.
-        nodal_temp(2) = .true.
-        nodal_temp(3) = .true.
-        call multifab_build(eta_ed(n,3),mla%la(n),1,0,nodal_temp)
-     end if
-  end do
-
   !=====================================================================
   ! Initialize values
   !=====================================================================
-
-  ! initialize eta and kappa
-  call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp_old,dx, &
-                         the_bc_tower%bc_tower_array)
-
-  ! now that we have eta, we can initialize the inhomogeneous velocity bcs
-  ! set inhomogeneous bc conditions
-  call set_inhomogeneous_vel_bcs(mla,vel_bc_n,vel_bc_t,eta_ed,dx,time, &
-                                 the_bc_tower%bc_tower_array)
 
   do n=1,nlevs
      do i=1,dm
         ! set normal velocity on physical domain boundaries
         call multifab_physbc_domainvel(umac_old(n,i),vel_bc_comp+i-1, &
                                        the_bc_tower%bc_tower_array(n), &
-                                       dx(n,:),vel_bc_n(n,:))
+                                       dx(n,:))
         ! set transverse velocity behind physical boundaries
         call multifab_physbc_macvel(umac_old(n,i),vel_bc_comp+i-1, &
                                     the_bc_tower%bc_tower_array(n), &
-                                    dx(n,:),vel_bc_t(n,:))
+                                    dx(n,:))
         ! fill periodic and interior ghost cells
         call multifab_fill_boundary(umac_old(n,i))
      end do
@@ -395,7 +348,6 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_old,.false.)
         call sum_momenta(mla,mtemp)
-        ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
 
      if (fixed_dt .gt. 0.d0) then
@@ -437,29 +389,15 @@ subroutine main_driver()
      end if
   end if
 
-  ! this routine is only called for all inertial simulations (both restart and non-restart)
-  ! it does the following:
-  ! 1. fill mass random numbers
-  ! 2. computes mass fluxes and flux divergences
-  ! if restarting, the subroutine ends; otherwise
-  ! 3. perform an initial projection
-  !
-  ! overdamped schemes need to do 1. and 2. within the advance_timestep routine
-  ! in principle, performing an initial projection for overdamped will change
-  ! the reference state for the GMRES solver
-  ! For overdamped the first ever solve cannot have a good reference state
-  ! so in general there is the danger it will be less accurate than subsequent solves
-  ! but I do not see how one can avoid that
-  ! From this perspective it may be useful to keep initial_projection even in overdamped
-  ! because different gmres tolerances may be needed in the first step than in the rest
-  if (algorithm_type .ne. 2) then
-     call initial_projection(mla,umac_old,rho_old,rhotot_old,gradp_baro, &
-                             diff_mass_fluxdiv, &
-                             Temp_old,eta,eta_ed,dt,dx,the_bc_tower, &
-                             charge_old,grad_Epot_old,Epot,permittivity)
-  end if
-
   if (restart .lt. 0) then
+
+     if (algorithm_type .eq. 0) then
+        call initial_projection(mla,umac_old,rho_old,rhotot_old,gradp_baro, &
+                                diff_mass_fluxdiv, &
+                                Temp_old,p0_old,dt,dx,the_bc_tower)
+     else
+        call bl_error("Error: invalid algorithm_type")
+     end if
 
      !=====================================================================
      ! Process initial conditions (non-restart runs)
@@ -474,7 +412,6 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_old,.false.)
         call sum_momenta(mla,mtemp)
-        ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
 
      !=====================================================================
@@ -545,12 +482,11 @@ subroutine main_driver()
      ! but for now we pass them around (it does save a few flops)
      ! diff _mass_fluxdiv could be built locally within the overdamped
      ! routine, but since we have them around anyway for inertial we pass them in
-     if (algorithm_type .eq. 1) then
-        call advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new,rhotot_old,rhotot_new, &
-                                       rhoh_old,rhoh_new,Temp_old,Temp_new,p0_old,p0_new, &
-                                       gradp_baro,pi,eta,eta_ed,kappa, &
-                                       diff_mass_fluxdiv, &
-                                       dx,dt,time,the_bc_tower,istep)
+     if (algorithm_type .eq. 0) then
+        call advance_timestep_inertial(mla,umac_old,umac_new,rho_old,rho_new, &
+                                       rhotot_old,rhotot_new,rhoh_old,rhoh_new, &
+                                       Temp_old,Temp_new,p0_old,p0_new,gradp_baro, &
+                                       pi,dx,dt,the_bc_tower)
      else
         call bl_error("Error: invalid algorithm_type")
      end if
@@ -580,7 +516,6 @@ subroutine main_driver()
         ! compute momentum
         call convert_m_to_umac(mla,rhotot_fc,mtemp,umac_new,.false.)
         call sum_momenta(mla,mtemp)
-        ! FIXME - need to write a custom eos_check using compute_p() and subtracting p0
      end if
 
      ! write plotfile at specific intervals
@@ -588,7 +523,7 @@ subroutine main_driver()
         if (parallel_IOProcessor()) then
            write(*,*), 'writing plotfiles after timestep =', istep 
         end if
-        call write_plotfile(mla,"plt",rho_new,rhotot_new,rhoh_new,Temp_new, &
+        call write_plotfile(mla,rho_new,rhotot_new,rhoh_new,Temp_new, &
                             umac_new,pi,p0_new,istep,dx,time)
      end if
 
@@ -628,7 +563,7 @@ subroutine main_driver()
         call multifab_copy_c(  rhoh_old(n),1,rhoh_new(n)  ,1       ,1,  rhoh_old(n)%ng)
         call multifab_copy_c(  Temp_old(n),1,Temp_new(n)  ,1       ,1,  Temp_old(n)%ng)
         do i=1,dm
-           call multifab_copy_c(umac_old(n,i),1,umac_new(n,1),1,1,umac_old(n)%ng)
+           call multifab_copy_c(umac_old(n,i),1,umac_new(n,i),1,1,umac_old(n,i)%ng)
         end do
      end do
 
@@ -660,17 +595,12 @@ subroutine main_driver()
      call multifab_destroy(rhoh_new(n))
      call multifab_destroy(Temp_old(n))
      call multifab_destroy(Temp_new(n))
-     call multifab_destroy(eta(n))
-     call multifab_destroy(kappa(n))
      call multifab_destroy(diff_mass_fluxdiv(n))
      do i=1,dm
         call multifab_destroy(umac_new(n,i))
         call multifab_destroy(mtemp(n,i))
         call multifab_destroy(rhotot_fc(n,i))
         call multifab_destroy(gradp_baro(n,i))
-     end do
-     do i=1,size(eta_ed,dim=2)
-        call multifab_destroy(eta_ed(n,i))
      end do
   end do
 
@@ -680,14 +610,6 @@ subroutine main_driver()
   deallocate(Temp_old,Temp_new)
   deallocate(diff_mass_fluxdiv)
   deallocate(umac_old,mtemp,rhotot_fc,gradp_baro)
-  deallocate(eta,kappa)
-  deallocate(eta_ed)
-
-  deallocate(charge_old,charge_new)
-  deallocate(permittivity)
-  deallocate(grad_Epot_old,grad_Epot_new)
-  deallocate(Epot)
-  deallocate(gradPhiApprox)
 
   deallocate(rhoh_old,rhoh_new)
 

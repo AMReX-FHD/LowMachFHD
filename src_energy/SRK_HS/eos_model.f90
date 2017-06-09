@@ -3,8 +3,7 @@ module eos_model_module
   use bl_types
   use bl_IO_module
   use bl_constants_module
-  use probin_common_module, only: k_B, Runiv, molmass
-  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: k_B, Runiv, molmass, nspecies
   use probin_energy_module, only: use_fake_diff, fake_diff_coeff, fake_soret_factor, &
                                   heating_type, p0_in, dia_in, int_deg_free_in, &
                                   acentric_factor, Tcrit, Pcrit

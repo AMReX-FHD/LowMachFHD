@@ -140,7 +140,7 @@ contains
     !                  1 component for Epot
     !                  1 component for Temperature
     ! (since Epot_bc_comp is the "last" scalar this is indexed much larger than it has to be)
-    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp:temp_bc_comp))
+    allocate(bct%bc_tower_array(n)%ell_bc_level_array(0:ngrids,dm,2,pres_bc_comp:Epot_bc_comp))
     default_value = BC_INT
     call ell_bc_level_build(bct%bc_tower_array(n)%ell_bc_level_array, &
                             bct%bc_tower_array(n)%phys_bc_level_array,default_value)

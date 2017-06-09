@@ -1,4 +1,4 @@
-module diffusive_rhoh_fluxdiv_module
+module compute_rhoh_fluxdiv_module
 
   use ml_layout_module
   use define_bc_module
@@ -6,25 +6,25 @@ module diffusive_rhoh_fluxdiv_module
   use convert_stag_module
   use div_and_grad_module
   use bc_module
-  use probin_multispecies_module, only: nspecies
+  use probin_common_module, only: nspecies
 
   implicit none
 
   private
 
-  public :: diffusive_rhoh_fluxdiv
+  public :: compute_rhoh_fluxdiv
 
 contains
 
-  subroutine diffusive_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,rhoh_fluxdiv, &
-                                    dx,time,the_bc_tower)
+  subroutine compute_rhoh_fluxdiv(mla,lambda,Temp,diff_mass_flux,rhotot,diff_rhoh_fluxdiv, &
+                                  dx,time,the_bc_tower)
        
     type(ml_layout), intent(in   ) :: mla
     type(multifab) , intent(in   ) :: lambda(:)
     type(multifab) , intent(in   ) :: Temp(:)
     type(multifab) , intent(in   ) :: diff_mass_flux(:,:)
     type(multifab) , intent(in   ) :: rhotot(:)
-    type(multifab) , intent(inout) :: rhoh_fluxdiv(:)
+    type(multifab) , intent(inout) :: diff_rhoh_fluxdiv(:)
     real(kind=dp_t), intent(in   ) :: dx(:,:),time
     type(bc_tower) , intent(in   ) :: the_bc_tower
 
@@ -60,8 +60,8 @@ contains
        end do
     end do
 
-    ! set rhoh_fluxdiv = div(lambda grad T)
-    call compute_div(mla,misc_fc,rhoh_fluxdiv,dx,1,1,1)
+    ! set diff_rhoh_fluxdiv = div(lambda grad T)
+    call compute_div(mla,misc_fc,diff_rhoh_fluxdiv,dx,1,1,1)
 
     ! compute a multifab holding h_k
     call compute_hk(mla,Temp,hk)
@@ -77,16 +77,16 @@ contains
        end do
     end do
 
-    ! add sum (div (-h_k F_k)) to rhoh_fluxdiv
+    ! add sum (div (-h_k F_k)) to diff_rhoh_fluxdiv
     do comp=1,nspecies
 
        ! add divergence
-       call compute_div(mla,misc_fc,rhoh_fluxdiv,dx,comp,1,1,increment_in=.true.)
+       call compute_div(mla,misc_fc,diff_rhoh_fluxdiv,dx,comp,1,1,increment_in=.true.)
 
     end do
 
     ! add external heating
-    call add_external_heating(mla,rhotot,rhoh_fluxdiv,dx,time)
+    call add_external_heating(mla,rhotot,diff_rhoh_fluxdiv,dx,time)
 
     do n=1,nlevs
        call multifab_destroy(hk(n))
@@ -96,6 +96,6 @@ contains
        end do
     end do
 
-  end subroutine diffusive_rhoh_fluxdiv
+  end subroutine compute_rhoh_fluxdiv
   
-end module diffusive_rhoh_fluxdiv_module
+end module compute_rhoh_fluxdiv_module

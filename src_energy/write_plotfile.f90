@@ -7,8 +7,8 @@ module write_plotfile_module
   use convert_rhoc_to_c_module
   use convert_rhoh_to_h_module
   use eos_model_wrapper_module
-  use probin_multispecies_module, only: nspecies, plot_stag
-  use probin_common_module, only: prob_lo, prob_hi
+  use probin_multispecies_module, only: plot_stag
+  use probin_common_module, only: prob_lo, prob_hi, nspecies, plot_base_name
 
   implicit none
 
