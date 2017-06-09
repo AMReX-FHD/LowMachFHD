@@ -420,7 +420,6 @@ contains
     type(multifab) :: molmtot     (mla%nlevel)
     type(multifab) :: D_therm     (mla%nlevel)
     type(multifab) :: Hessian     (mla%nlevel)
-    type(multifab) :: chi         (mla%nlevel)
     type(multifab) :: D_bar       (mla%nlevel)
     type(multifab) :: rhoWchi     (mla%nlevel)
     type(multifab) :: rhoWchi_face(mla%nlevel,mla%dim)
@@ -438,7 +437,6 @@ contains
        call multifab_build(molmtot(n),      mla%la(n), 1,           rho(n)%ng)
        call multifab_build(D_therm(n),      mla%la(n), nspecies,    rho(n)%ng)
        call multifab_build(Hessian(n),      mla%la(n), nspecies**2, rho(n)%ng)
-       call multifab_build(chi(n),          mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(D_bar(n),        mla%la(n), nspecies**2, rho(n)%ng)
        call multifab_build(rhoWchi(n),      mla%la(n), nspecies**2, rho(n)%ng)
        do i=1,dm
@@ -460,8 +458,7 @@ contains
     ! compute rhoWchi on cell centers
     call compute_molconc_molmtot(mla,rho,rhotot_temp,molarconc,molmtot)
     call compute_mixture_properties(mla,rho,rhotot_temp,D_bar,D_therm,Hessian)
-    call compute_chi(mla,rho,rhotot_temp,molarconc,chi,D_bar)
-    call compute_rhoWchi_from_chi(mla,rho,chi,rhoWchi)
+    call compute_rhoWchi(mla,rho,rhotot_temp,molarconc,rhoWchi,D_bar)
 
     ! average rhoWchi to faces
     call average_cc_to_face(nlevs, rhoWchi, rhoWchi_face, 1, tran_bc_comp, &
@@ -486,7 +483,6 @@ contains
        call multifab_destroy(charge_coef(n))
        call multifab_destroy(molarconc(n))
        call multifab_destroy(molmtot(n))
-       call multifab_destroy(chi(n))
        call multifab_destroy(rhoWchi(n))
        call multifab_destroy(D_bar(n))
        call multifab_destroy(D_therm(n))
