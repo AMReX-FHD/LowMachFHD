@@ -31,10 +31,10 @@ contains
     character(len=20)               :: plot_names_stagx(1)
     character(len=20)               :: plot_names_stagy(1)
     character(len=20)               :: plot_names_stagz(1)
-    character(len=20)               :: plotfile_name
-    character(len=20)               :: plotfile_namex
-    character(len=20)               :: plotfile_namey
-    character(len=20)               :: plotfile_namez
+    character(len=128)              :: plotfile_name
+    character(len=128)              :: plotfile_namex
+    character(len=128)              :: plotfile_namey
+    character(len=128)              :: plotfile_namez
     integer                         :: i,dm,n,nlevs
 
     ! multifab of size nlevs  
@@ -168,6 +168,7 @@ contains
     
     ! define the name of the plotfile that will be written
     write(unit=plotfile_name,fmt='(a,i8.8)') trim(plot_base_name), istep
+
     if ( parallel_IOProcessor() ) then
       write(*,'(2A)') "Saving PLOT FILEs to directory ", trim(plotfile_name)
       write(*,*)
