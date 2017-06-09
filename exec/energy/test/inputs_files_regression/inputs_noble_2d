@@ -6,21 +6,21 @@
  
   ! Problem specification
   !----------------------
-  dim_in = 3                       ! 2D or 3D  
-  prob_lo(1:3) = 0.d0 0.d0 0.d0    ! physical lo coordinate
-  prob_hi(1:3) = 1.d0 1.d0 1.d0    ! physical hi coordinate
-  n_cells(1:3) = 32 32 32          ! number of cells in domain
-  max_grid_size(1:3) = 32 32 32    ! max number of cells in a box
+  dim_in = 2                       ! 2D or 3D  
+  prob_lo(1:2) = 0.d0 0.d0         ! physical lo coordinate
+  prob_hi(1:2) = 1.d0 1.d0         ! physical hi coordinate
+  n_cells(1:2) = 64 64             ! number of cells in domain
+  max_grid_size(1:2) = 64 64       ! max number of cells in a box
 
   ! Time-step control
   !----------------------
-  fixed_dt = 1.d-4                  ! time step (if positive, fixed)
+  fixed_dt = 1.d-4                 ! time step (if positive, fixed)
 !  cfl = 0.5d0                      ! advective cfl number (used if fixed_dt<0) to determine time step
 
   ! Controls for number of steps between actions (for HydroGrid see below)
   !----------------------
   max_step = 10                    ! maximum number of time steps
-  plot_int = 1                     ! Interval for writing a plotfile (for visit/amrvis)
+  plot_int = 10                    ! Interval for writing a plotfile (for visit/amrvis)
   chk_int = 0                      ! Interval for writing a checkpoint
   prob_type = 1                    ! sets scalars, m, coefficients (see init.f90)
   restart = -1                     ! checkpoint restart number
@@ -29,7 +29,8 @@
 
   ! Physical parameters
   !--------------------
-  grav(1:3) = 0.d0 0.d0 0.d0          ! gravity vector (negative is downwards)
+  grav(1:2) = 0.d0 0.d0               ! gravity vector (negative is downwards)
+  nspecies = 4
   ! molecular masses for nspecies (mass per molecule, *not* molar mass)
   molmass(1:4) = 6.6464731243d-24 3.35091774613d-23 6.63352092064d-23 1.39153162399d-22
 !  rhobar(1:2) = 1.d0 1.d0             ! pure component densities for all species
@@ -91,8 +92,8 @@
   ! 200 = slip wall         (Dir condition for normal vel; Dir traction condition for trans vel)
   ! 201 = slip reservoir    (Dir condition for normal vel; Dir traction condition for trans vel)
   ! For a complete list see bc.f90
-  bc_lo(1:3) = 100 100 100
-  bc_hi(1:3) = 100 100 100
+  bc_lo(1:2) = -1 -1
+  bc_hi(1:2) = -1 -1
 
   ! Each no-slip wall may be moving with a specified tangential 
   ! velocity along the tangential directions
@@ -106,12 +107,8 @@
   ! wallspeed_lo/hi(2,2) - zvel on y-face
   ! wallspeed_lo/hi(1,3) - xvel on z-face
   ! wallspeed_lo/hi(2,3) - yvel on z-face
-  wallspeed_lo(1:2,1) = 0.d0 0.d0
-  wallspeed_lo(1:2,2) = 0.d0 0.d0
-  wallspeed_lo(1:2,3) = 0.d0 0.d0
-  wallspeed_hi(1:2,1) = 0.d0 0.d0
-  wallspeed_hi(1:2,2) = 0.d0 0.d0
-  wallspeed_hi(1:2,3) = 0.d0 0.d0
+  wallspeed_lo(1,1:2) = 0.d0 0.d0
+  wallspeed_hi(1,1:2) = 0.d0 0.d0
 
   ! Control for analyze_spectra.90 for calling HydroGrid
   !----------------------
@@ -144,16 +141,14 @@
 
   ! Physical properties:
   !----------------------
-  nspecies = 4
   fraction_tolerance = 1.d-13 ! For roundoff errors in mass and mole fractions
   start_time = 0.d0
 
   inverse_type = 1       ! Only for LAPACK:  1=inverse, 2=pseudo inverse
-  timeinteg_type = 1
   correct_flux = T       ! Manually ensure mass is conserved to roundoff 
   print_error_norms = T
   is_ideal_mixture = T   ! If T assume Gamma=I (H=0) and simplify
-  is_nonisothermal = T   ! If T Soret effect will be included
+  is_nonisothermal = F   ! If T Soret effect will be included
   use_lapack = F         ! Use LAPACK or iterative method for diffusion matrix (recommend False)
   chi_iterations = 10    ! number of iterations used in Dbar2chi_iterative
   
@@ -171,8 +166,6 @@
   c_bc(1,2,1:4) = 0.d0 0.d0 0.d0 0.d0
   c_bc(2,1,1:4) = 0.d0 0.d0 0.d0 0.d0
   c_bc(2,2,1:4) = 0.d0 0.d0 0.d0 0.d0
-  c_bc(3,1,1:4) = 0.d0 0.d0 0.d0 0.d0
-  c_bc(3,2,1:4) = 0.d0 0.d0 0.d0 0.d0
   
   ! Thermodynamic and transport properties:
   !----------------------
@@ -188,6 +181,32 @@
 
   plot_stag = F            ! plot staggered velocities in separate plotfile
  
+/
+
+&probin_energy
+
+ dia_in(1:4) = 2.18d-8, 2.58d-8, 3.63d-8, 4.16d-8  ! diameters of molecules
+ int_deg_free_in(1:4) = 0 0 0 0                    ! internal degrees of freedom
+ p0_in = 1013250.d0                                ! initial background pressure, p0
+ heating_type = 1            ! form of external heating
+ use_fake_diff = 0           ! force diffusion coefficients to constant
+ fake_diff_coeff = -1.d0     ! Adjust transport coefficients artificially
+ fake_soret_factor = 1.0d0   ! Adjust transport coefficients artificially
+ dpdt_iters = 5              ! Loops over volume discrepancy correction
+ dpdt_factor = 2.d0          ! scaling factor for volume discrepancy correction
+ deltaT_iters = 5            ! Loops over deltaT iterative solve
+ Tcrit(1:4) = 5.19d0 44.4d0 150.8d0 209.3d0     ! critical temperatures
+ Pcrit(1:4) = 2.27d6 2.72d7 4.81d7 5.43d7       ! critical pressures
+ acentric_factor(1:4) = -0.390d0 0.d0 0.d0 0.d0 ! acentric factors
+
+/
+
+&probin_charged
+
+/
+
+&probin_chemistry
+
 /
 
 ! Stokes solver for velocity
@@ -253,24 +272,5 @@
   gmres_max_inner = 5   ! max number of inner iterations, or restart number
   gmres_max_iter = 100  ! max number of gmres iterations
   gmres_min_iter = 1    ! min number of gmres iterations
-
-/
-
-! Stokes solver for velocity
-&probin_energy
-
- dia_in(1:4) = 2.18d-8, 2.58d-8, 3.63d-8, 4.16d-8  ! diameters of molecules
- int_deg_free_in(1:4) = 0 0 0 0                    ! internal degrees of freedom
- p0_in = 1013250.d0                                ! initial background pressure, p0
- heating_type = 1            ! form of external heating
- use_fake_diff = 0           ! force diffusion coefficients to constant
- fake_diff_coeff = -1.d0     ! Adjust transport coefficients artificially
- fake_soret_factor = 1.0d0   ! Adjust transport coefficients artificially
- dpdt_iters = 10             ! Loops over volume discrepancy correction
- dpdt_factor = 2.d0          ! scaling factor for volume discrepancy correction
- deltaT_iters = 5            ! Loops over deltaT iterative solve
- Tcrit(1:4) = 5.19d0 44.4d0 150.8d0 209.3d0     ! critical temperatures
- Pcrit(1:4) = 2.27d6 2.72d7 4.81d7 5.43d7       ! critical pressures
- acentric_factor(1:4) = -0.390d0 0.d0 0.d0 0.d0 ! acentric factors
 
 /
