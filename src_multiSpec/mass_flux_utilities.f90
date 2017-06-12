@@ -554,7 +554,7 @@ contains
        ! hence, chi = chi_sub
 
        ! compute chi 
-       call compute_chi_sub(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
+       call compute_chi(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
 
        ! compute rho*W*chi
        do row=1, nspecies
@@ -569,14 +569,43 @@ contains
        ! consisting of non-trace species
 
        nspecies_sub = nspecies - ntrace
+       call compute_chi_sub()
+      
+    end if
 
-       allocate(  molmass_sub(nspecies_sub))
-       allocate(      rho_sub(nspecies_sub))
-       allocate(        W_sub(nspecies_sub))
-       allocate(molarconc_sub(nspecies_sub))
+    ! hack
+    !print*,'rhoWchi'
+    !do row=1, nspecies
+    !   print *,rhoWchi(row,1:nspecies)
+    !end do
+    !print*,'sum rhoWchi_col'
+    !select case (nspecies)
+    !   case (2)
+    !      print*,sum(rhoWchi(1:2,1)),sum(rhoWchi(1:2,2))
+    !   case (3)
+    !      print*,sum(rhoWchi(1:3,1)),sum(rhoWchi(1:3,2)),sum(rhoWchi(1:3,3))
+    !   case (4)
+    !      print*,sum(rhoWchi(1:4,1)),sum(rhoWchi(1:4,2)),sum(rhoWchi(1:4,3)),sum(rhoWchi(1:4,4))
+    !end select
+    !print*,'W*chi from rhoWchi/rhotot'
+    !do row=1, nspecies
+    !   print *,rhoWchi(row,1:nspecies)/rhotot
+    !end do
+    !stop
+    ! hack
 
-       allocate(D_bar_sub(nspecies_sub,nspecies_sub))
-       allocate(  chi_sub(nspecies_sub,nspecies_sub))
+    call destroy(bpt)
+    
+  contains
+  
+    subroutine compute_chi_sub() ! We make this a subroutine to put local arrays on the stack and not heap
+       real(kind=dp_t) :: molmass_sub(nspecies_sub)
+       real(kind=dp_t) :: rho_sub(nspecies_sub)
+       real(kind=dp_t) :: W_sub(nspecies_sub)
+       real(kind=dp_t) :: molarconc_sub(nspecies_sub)
+
+       real(kind=dp_t) :: D_bar_sub(nspecies_sub,nspecies_sub)
+       real(kind=dp_t) :: chi_sub(nspecies_sub,nspecies_sub)
 
        ! create a vector of non-trace densities and molmass for the subsystem
        do row=1, nspecies
@@ -611,7 +640,7 @@ contains
        call compute_molconc_molmtot_local(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,molmtot_sub)
 
        ! compute chi_sub
-       call compute_chi_sub(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,chi_sub,D_bar_sub)
+       call compute_chi(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,chi_sub,D_bar_sub)
 
        ! compute full rho*W*chi
        rhoWchi(:,:) = 0.d0
@@ -653,38 +682,12 @@ contains
              end do 
           end if
        end do
-
-       deallocate(molmass_sub,rho_sub,W_sub,molarconc_sub)
-       deallocate(D_bar_sub,chi_sub)
-
-    end if
-
-    ! hack
-    !print*,'rhoWchi'
-    !do row=1, nspecies
-    !   print *,rhoWchi(row,1:nspecies)
-    !end do
-    !print*,'sum rhoWchi_col'
-    !select case (nspecies)
-    !   case (2)
-    !      print*,sum(rhoWchi(1:2,1)),sum(rhoWchi(1:2,2))
-    !   case (3)
-    !      print*,sum(rhoWchi(1:3,1)),sum(rhoWchi(1:3,2)),sum(rhoWchi(1:3,3))
-    !   case (4)
-    !      print*,sum(rhoWchi(1:4,1)),sum(rhoWchi(1:4,2)),sum(rhoWchi(1:4,3)),sum(rhoWchi(1:4,4))
-    !end select
-    !print*,'W*chi from rhoWchi/rhotot'
-    !do row=1, nspecies
-    !   print *,rhoWchi(row,1:nspecies)/rhotot
-    !end do
-    !stop
-    ! hack
-
-    call destroy(bpt)
+    
+    end subroutine compute_chi_sub
 
   end subroutine compute_rhoWchi_local
 
-  subroutine compute_chi_sub(nspecies_in,molmass_in,rho,rhotot,molarconc,chi,D_bar)
+  subroutine compute_chi(nspecies_in,molmass_in,rho,rhotot,molarconc,chi,D_bar)
    
     integer,         intent(in   ) :: nspecies_in
     real(kind=dp_t), intent(in   ) :: molmass_in(nspecies_in)
@@ -835,7 +838,7 @@ contains
           
     end subroutine compute_chi_lapack
 
-  end subroutine compute_chi_sub
+  end subroutine compute_chi
 
   subroutine compute_zeta_by_Temp(mla,molarconc,D_bar,D_therm,Temp,zeta_by_Temp)
    
@@ -1295,21 +1298,7 @@ contains
        call compute_D_bar_local(rho,rhotot,D_bar)
 
        ! compute chi
-       call compute_chi_sub(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
-
-       ! hack
-       !do column=1, nspecies
-       !   do row=1, nspecies
-       !      sqrtLonsager(row, column) = W(row)*chi(row,column)
-       !   end do
-       !end do
-       !print *,"W chi"
-       !do row=1, nspecies
-       !   print *,sqrtLonsager(row,1:nspecies)
-       !end do
-       !print *,"molmtot=",molmtot
-       !print *,"rhotot=",rhotot
-       ! hack
+       call compute_chi(nspecies,molmass,rho,rhotot,molarconc,chi,D_bar)
 
        ! compute Onsager matrix L (store in sqrtLonsager)
        do column=1, nspecies
@@ -1331,15 +1320,24 @@ contains
        ! consisting of non-trace species
 
        nspecies_sub = nspecies - ntrace
+       call compute_sqrtLonsager_sub()
 
-       allocate(  molmass_sub(nspecies_sub))
-       allocate(      rho_sub(nspecies_sub))
-       allocate(        W_sub(nspecies_sub))
-       allocate(molarconc_sub(nspecies_sub))
+    end if
 
-       allocate(       D_bar_sub(nspecies_sub,nspecies_sub))
-       allocate(         chi_sub(nspecies_sub,nspecies_sub))
-       allocate(sqrtLonsager_sub(nspecies_sub,nspecies_sub))
+    call destroy(bpt)
+
+  contains
+  
+    subroutine compute_sqrtLonsager_sub() ! We make this a subroutine to use stack instead of heap
+    
+       real(kind=dp_t) :: molmass_sub(nspecies_sub)
+       real(kind=dp_t) :: rho_sub(nspecies_sub)
+       real(kind=dp_t) :: W_sub(nspecies_sub)
+       real(kind=dp_t) :: molarconc_sub(nspecies_sub)
+
+       real(kind=dp_t) :: D_bar_sub(nspecies_sub,nspecies_sub)
+       real(kind=dp_t) :: chi_sub(nspecies_sub,nspecies_sub)
+       real(kind=dp_t) :: sqrtLonsager_sub(nspecies_sub,nspecies_sub)
 
        ! create a vector of non-trace densities and molmass for the subsystem
        do row=1, nspecies
@@ -1377,21 +1375,7 @@ contains
        call compute_molconc_molmtot_local(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,molmtot_sub)
 
        ! compute chi_sub
-       call compute_chi_sub(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,chi_sub,D_bar_sub)
-
-       ! hack
-       !do column=1, nspecies_sub
-       !   do row=1, nspecies_sub
-       !      sqrtLonsager_sub(row, column) = W_sub(row)*chi_sub(row,column)
-       !   end do
-       !end do
-       !print *,"W_sub chi_sub"
-       !do row=1, nspecies_sub
-       !   print *,sqrtLonsager_sub(row,1:nspecies_sub)
-       !end do
-       !print *,"molmtot_sub=",molmtot_sub
-       !print *,"rhotot_sub=",rhotot_sub
-       ! hack
+       call compute_chi(nspecies_sub,molmass_sub,rho_sub,rhotot_sub,molarconc_sub,chi_sub,D_bar_sub)
 
        ! compute Onsager matrix L_sub (store in sqrtLonsager_sub)
        do column=1, nspecies_sub
@@ -1420,32 +1404,8 @@ contains
              end if
           end do
        end do
-
-       deallocate(molmass_sub,rho_sub,W_sub,molarconc_sub)
-       deallocate(D_bar_sub,chi_sub,sqrtLonsager_sub)
-
-    end if
-
-    ! hack
-    !print*,'L^1/2'
-    !do row=1, nspecies
-    !   print *,sqrtLonsager(row,1:nspecies)
-    !end do
-    !print*,'sumL^1/2_col'
-    !select case (nspecies)
-    !   case (2)
-    !      print*,sum(sqrtLonsager(1:2,1)),sum(sqrtLonsager(1:2,2))
-    !   case (3)
-    !      print*,sum(sqrtLonsager(1:3,1)),sum(sqrtLonsager(1:3,2)),sum(sqrtLonsager(1:3,3))
-    !   case (4)
-    !      print*,sum(sqrtLonsager(1:4,1)),sum(sqrtLonsager(1:4,2)),sum(sqrtLonsager(1:4,3)),sum(sqrtLonsager(1:4,4))
-    !end select
-    !stop
-    ! hack
-
-    call destroy(bpt)
-
-  contains
+       
+    end subroutine compute_sqrtLonsager_sub
 
     subroutine chol_lapack(sqrtL,nspecies_in)
       integer, intent (in)            :: nspecies_in
