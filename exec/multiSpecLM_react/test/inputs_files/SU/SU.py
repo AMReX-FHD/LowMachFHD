@@ -27,10 +27,10 @@ dx = 1.e-6
 dz = 1.e-5
 dv = dx**2*dz
 print "D = %e" % D
-print "dx = %e, dz = %e" % (dx,dx)
+print "dx = %e, dz = %e" % (dx,dz)
 
-ratio1 = 2.	# k2/k1
-ratio2 = 10.	# pen_dep/dx
+ratio1 = 2.             # k2/k1
+ratio2 = math.sqrt(10.) # pen_dep/dx
 
 k1 = D/(ratio1-1)/ratio2**2/dx**2
 k2 = ratio1*k1

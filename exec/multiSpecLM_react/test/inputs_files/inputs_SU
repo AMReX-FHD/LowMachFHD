@@ -248,7 +248,7 @@
   stoichiometric_factors(1:2,1,3) = 0 2
   stoichiometric_factors(1:2,2,3) = 1 1
 
-  rate_const(1:3) = 1.e5 2.e5 3.3333333e25      ! for exclude_solvent_comput_rates = 2
+  rate_const(1:3) = 1.e6 2.e6 3.3333333e26      ! for exclude_solvent_comput_rates = 2
   rate_multiplier = 1.
 
   include_discrete_LMA_correction = T
