@@ -8,7 +8,7 @@ module compute_mixture_properties_module
   use ml_layout_module
   use bc_module
   use convert_stag_module
-  use probin_common_module, only: molmass, prob_type, visc_coef, nspecies
+  use probin_common_module, only: molmass, visc_coef, nspecies
   use probin_multispecies_module, only: is_ideal_mixture, Dbar, mixture_type, &
                                         Dtherm, H_offdiag, H_diag
  
@@ -17,6 +17,12 @@ module compute_mixture_properties_module
   private
 
   public :: compute_mixture_properties, compute_eta_kappa, compute_D_bar_local
+  
+  ! The values for mixture_type distinguished at present have a constant H matrix for the thermodynamics and:
+  ! 0 - no dependence of transport coefficients on composition
+  ! 1 - binary mixture of water and glycerol
+  ! 2 - dilute binary electrolyte solution (3 species) with solvent as last species
+  !     including counter-ion cross-diffusion coefficient ~sqrt(w)  
     
 contains
   
@@ -219,9 +225,8 @@ contains
     integer :: n,row,column
 
     select case (abs(mixture_type))
-    case (1)
-
-       ! water-glycerol
+    case (1)  ! water-glycerol
+    
        ! we require nspecies=2
        ! Dbar(1) = chi0 in the binary notation
        if (nspecies .ne. 2) then
@@ -230,22 +235,23 @@ contains
        
        call chi_water_glycerol(D_bar_local(1), rho, rhotot)
 
-    case (2)
-       ! This is where formula for chi as a function of concentration goes
-       ! We assume nspecies=2
-       ! Dbar(1) = chi0 in the binary notation
+    case (2) ! Electrolyte mixture
+    
        if (nspecies .ne. 3) then
           call bl_error("mixture_properties_mass_local assumes nspecies=3 if mixture_type=2 (water-glycerol)")
        end if
 
-       D_bar_local(1) = Dbar(1)*sqrt(rho(1)/rhotot)
-       D_bar_local(2) = Dbar(2)
-       D_bar_local(3) = Dbar(3)
+       ! This is the leading-order correction for dilute solutions
+       ! In particular, the cross-diffusion coefficient ~sqrt(concentration) as per renormalization theory
+       ! The ordering of the values is D_12; D_13, D_23
+
+       D_bar_local(1) = Dbar(1)*sqrt(rho(1)/rhotot) ! counter-ion cross coefficient D_12~sqrt(w)
+       D_bar_local(2) = Dbar(2) ! D_13 = self diffusion of first ion
+       D_bar_local(3) = Dbar(3) ! D_23 = self diffusion of second ion
 
     case default
 
        D_bar_local(1:nspecies*(nspecies-1)/2) = Dbar(1:nspecies*(nspecies-1)/2) ! Keep it constant
-
 
     end select
 

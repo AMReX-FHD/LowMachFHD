@@ -48,7 +48,7 @@ module probin_multispecies_module
 
   ! These are lower-triangules of symmetric matrices represented as vectors
   ! Number of elements is (nspecies*(nspecies-1)/2)
-  ! The values are red row by row starting from top going down (this allows easy addition/deletion of new species/rows)
+  ! The values are read row by row starting from top going down (this allows easy addition/deletion of new species/rows)
   ! So D_12; D_13, D_23; D_14, D_24, D_34; ...
   namelist /probin_multispecies/ Dbar       ! Maxwell-Stefan diffusion constant  
   namelist /probin_multispecies/ Dtherm     ! thermo-diffusion coefficients, only differences among elements matter
@@ -67,7 +67,9 @@ module probin_multispecies_module
                                             ! 11=arithmetic average with C1-smoothed Heaviside function
                                             ! 12=arithmetic average with C2-smoothed Heaviside function
 
-  namelist /probin_multispecies/ mixture_type
+  namelist /probin_multispecies/ mixture_type ! Model for how transport and thermodynamic coefficients depend on composition
+                                              ! See compute_mixture_properties.f90 for values supported at present
+                                              ! The default mixture_type=0 means no dependence on composition
 
 contains
 

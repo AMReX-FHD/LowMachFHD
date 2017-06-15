@@ -36,6 +36,7 @@
      ! c_init(1) in lower half of domain (in y)
      ! c_init(2) in upper half  
   prob_type = -3  ! negative since we enforce low mach constraint by overwriting final rho_i
+  ! Donev: In the new codes mixture_type=1 means water-glycerol mixture
 
   ! random number seed
   ! 0        = unpredictable seed based on clock
