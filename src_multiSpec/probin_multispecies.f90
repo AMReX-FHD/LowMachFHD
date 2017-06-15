@@ -22,6 +22,7 @@ module probin_multispecies_module
   real(kind=dp_t)    :: alpha1,beta,delta,sigma     ! manufactured solution parameters populated in init
   integer            :: midpoint_stoch_mass_flux_type
   integer            :: avg_type
+  integer            :: mixture_type
 
   ! Physical properties:
   !----------------------
@@ -66,6 +67,8 @@ module probin_multispecies_module
                                             ! 11=arithmetic average with C1-smoothed Heaviside function
                                             ! 12=arithmetic average with C2-smoothed Heaviside function
 
+  namelist /probin_multispecies/ mixture_type
+
 contains
 
   subroutine probin_multispecies_init()
@@ -106,6 +109,7 @@ contains
     plot_stag          = .false.
     midpoint_stoch_mass_flux_type = 1
     avg_type           = 1
+    mixture_type       = 0
  
     ! read from input file 
     need_inputs = .true.
@@ -232,6 +236,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) avg_type
+
+       case ('--mixture_type')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) mixture_type
 
        case ('--')
           farg = farg + 1

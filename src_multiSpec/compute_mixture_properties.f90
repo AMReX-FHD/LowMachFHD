@@ -9,7 +9,7 @@ module compute_mixture_properties_module
   use bc_module
   use convert_stag_module
   use probin_common_module, only: molmass, prob_type, visc_coef, nspecies
-  use probin_multispecies_module, only: is_ideal_mixture, Dbar, &
+  use probin_multispecies_module, only: is_ideal_mixture, Dbar, mixture_type, &
                                         Dtherm, H_offdiag, H_diag
  
   implicit none
@@ -218,24 +218,38 @@ contains
     
     integer :: n,row,column
 
-    select case (abs(prob_type))
-    case (9)
+    select case (abs(mixture_type))
+    case (3)
 
        ! This is where formula for chi as a function of concentration goes
        ! We assume nspecies=2
        ! Dbar(1) = chi0 in the binary notation
        if (nspecies .ne. 2) then
-          call bl_error("mixture_properties_mass_local assumes nspecies=2 if prob_type=9 (water-glycerol)")
+          call bl_error("mixture_properties_mass_local assumes nspecies=2 if mixture_type=3 (water-glycerol)")
        end if
        
        call chi_water_glycerol(D_bar_local(1), rho, rhotot)
-       
+
+    case (2)
+       ! This is where formula for chi as a function of concentration goes
+       ! We assume nspecies=2
+       ! Dbar(1) = chi0 in the binary notation
+       if (nspecies .ne. 3) then
+          call bl_error("mixture_properties_mass_local assumes nspecies=3 if mixture_type=2 (water-glycerol)")
+       end if
+
+       D_bar_local(1) = Dbar(1)*sqrt(rho(1)/rhotot)
+       D_bar_local(2) = Dbar(2)
+       D_bar_local(3) = Dbar(3)
+
     case default
 
        D_bar_local(1:nspecies*(nspecies-1)/2) = Dbar(1:nspecies*(nspecies-1)/2) ! Keep it constant
 
+
     end select
 
+    
     ! Complete the process by filling the matrices using generic formulae -- this part should not change
     ! populate D_bar and Hessian matrix 
     n=0; 
