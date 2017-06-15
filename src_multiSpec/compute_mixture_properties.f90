@@ -219,10 +219,10 @@ contains
     integer :: n,row,column
 
     select case (abs(mixture_type))
-    case (3)
+    case (1)
 
-       ! This is where formula for chi as a function of concentration goes
-       ! We assume nspecies=2
+       ! water-glycerol
+       ! we require nspecies=2
        ! Dbar(1) = chi0 in the binary notation
        if (nspecies .ne. 2) then
           call bl_error("mixture_properties_mass_local assumes nspecies=2 if mixture_type=3 (water-glycerol)")
@@ -345,8 +345,8 @@ contains
     ! local
     integer :: i,j
 
-    select case (abs(prob_type))
-    case (9)
+    select case (mixture_type)
+    case (1)
        
        do j=lo(2)-ng_e,hi(2)+ng_e
           do i=lo(1)-ng_e,hi(1)+ng_e
@@ -355,24 +355,6 @@ contains
 
           end do
        end do
-
-    case (12)
-
-       if (prob_type .eq. 12) then
-
-          eta = visc_coef
-
-       else if (prob_type .eq. -12) then
-
-          do j=lo(2)-ng_e,hi(2)+ng_e
-             do i=lo(1)-ng_e,hi(1)+ng_e
-
-                eta(i,j) = visc_coef*(-5.d0 + 6.d0*rhotot(i,j))
-                
-             end do
-          end do
-
-       end if
 
     case default
 
@@ -397,8 +379,8 @@ contains
     ! local
     integer :: i,j,k
 
-    select case (abs(prob_type))
-    case (9)
+    select case (mixture_type)
+    case (1)
 
        do k=lo(3)-ng_e,hi(3)+ng_e
           do j=lo(2)-ng_e,hi(2)+ng_e
@@ -409,26 +391,6 @@ contains
              end do
           end do
        end do
-
-    case (12)
-
-       if (prob_type .eq. 12) then
-
-          eta = visc_coef
-
-       else if (prob_type .eq. -12) then
-
-          do k=lo(3)-ng_e,hi(3)+ng_e
-             do j=lo(2)-ng_e,hi(2)+ng_e
-                do i=lo(1)-ng_e,hi(1)+ng_e
-
-                   eta(i,j,k) = visc_coef*(-5.d0 + 6.d0*rhotot(i,j,k))
-                
-                end do
-             end do
-          end do
-
-       end if
 
     case default
 
