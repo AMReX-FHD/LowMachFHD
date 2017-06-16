@@ -23,6 +23,7 @@ module compute_mixture_properties_module
   ! 1 - binary mixture of water and glycerol
   ! 2 - dilute binary electrolyte solution (3 species) with solvent as last species
   !     including counter-ion cross-diffusion coefficient ~sqrt(w)  
+  ! 3 - density dependent viscosity (used for bubble regression tests)
     
 contains
   
@@ -362,6 +363,16 @@ contains
           end do
        end do
 
+    case (3)
+
+       do j=lo(2)-ng_e,hi(2)+ng_e
+          do i=lo(1)-ng_e,hi(1)+ng_e
+
+             eta(i,j) = visc_coef*(-5.d0 + 6.d0*rhotot(i,j))
+                
+          end do
+       end do
+
     case default
 
        eta = visc_coef
@@ -397,6 +408,18 @@ contains
              end do
           end do
        end do
+
+       case (3)
+
+          do k=lo(3)-ng_e,hi(3)+ng_e
+             do j=lo(2)-ng_e,hi(2)+ng_e
+                do i=lo(1)-ng_e,hi(1)+ng_e
+
+                   eta(i,j,k) = visc_coef*(-5.d0 + 6.d0*rhotot(i,j,k))
+                
+                end do
+             end do
+          end do
 
     case default
 
