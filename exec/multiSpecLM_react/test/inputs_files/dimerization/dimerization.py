@@ -2,13 +2,16 @@ import math
 
 # mass density and number density
 
-rho = 1.
 m = 3.e-23
-print "rhobar1 = rhobar2 = %e" % rho
-print "m1 = m2 = %e" % m 
+m1 = m
+m2 = 2*m
+print "m1 = %e, m2 = %e" % (m1,m2) 
 
-c1 = 0.01
-c2 = 1.-c1
+rho = 1.
+c0 = 0.5
+c1 = c0 
+c2 = 1.-c0
+print "rhobar1 = rhobar2 = %e" % rho
 print "w1 = %e, w2 = %e" % (c1,c2)
 
 rho1 = rho*c1
@@ -16,29 +19,27 @@ rho2 = rho*c2
 print "rho = %e" % rho
 print "rho1 = %e, rho2 = %e" % (rho1,rho2)
 
-n1 = rho1/m
-n2 = rho2/m
+n1 = rho1/m1
+n2 = rho2/m2
+n0 = n1+2*n2
 print "n1 = %e, n2 = %e" % (n1,n2)
+print "n0 = %e" % n0
 
 # rate const
 
 D = 1.e-5
 dx = 1.e-6
-dz = 1.e-5
+dz = 1.
 dv = dx**2*dz
 print "D = %e" % D
 print "dx = %e, dz = %e" % (dx,dz)
 
-ratio1 = 2.             # k2/k1
-ratio2 = math.sqrt(10.) # pen_dep/dx
-
-k1 = D/(ratio1-1)/ratio2**2/dx**2
-k2 = ratio1*k1
-k3 = n1*(k2-k1)
-r = k2-k1
-Gamma = k3/2*(1+(k1+k2)/(k2-k1))
-print "k1 = %e, k2 = %e, k3 = %e" % (k1,k2,k3)
-print "r = %e, Gamma = %e" % (r,Gamma)
+ratio1 = math.sqrt(10.)
+k2 = D*c0/(2-c0)/(ratio1*dx)**2 
+k1 = k2/n0*(1-c0)/2/c0**2 
+r = (2-c0)/c0*k2
+print "k1 = %e, k2 = %e" % (k1,k2)
+print "r = %e, Gamma = " % (r)
 
 pen_dep = math.sqrt(D/r)
 print "pen_dep = %e" % pen_dep

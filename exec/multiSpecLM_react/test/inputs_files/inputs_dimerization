@@ -1,9 +1,8 @@
-! species 1: U (solute)
-! species 2: S (solvent)
+! species 1: A (monomer)
+! species 2: A2 (dimer)
 !
-! reaction 1: U + S -> 2U
-! reaction 2: U + S -> 2S
-! reaction 3: 2S -> U + S
+! reaction 1: A + A -> A2 
+! reaction 2: A2 -> A + A
 
 &probin_common
  
@@ -13,7 +12,7 @@
   prob_type = 2                         ! see src_lowmach/init_lowmach.f90
                                         ! 2 = const conc grad along y
   prob_lo(1:3) = 0. 0. 0.               ! physical lo coordinate
-  prob_hi(1:3) = 6.4e-5 6.4e-5 1.e-5    ! physical hi coordinate
+  prob_hi(1:3) = 6.4e-5 6.4e-5 1.       ! physical hi coordinate
   n_cells(1:3) = 64 64 1                ! number of cells in domain
   max_grid_size(1:3) = 32 32 1          ! max number of cells in a box
 
@@ -36,7 +35,7 @@
   !--------------------
   grav(1:2) = 0. 0.                     ! gravity vector (negative is downwards)
   nspecies = 2
-  molmass(1:2) = 3.e-23 3.e-23          ! molecular masses for nspecies (mass per molecule, *not* molar mass)
+  molmass(1:2) = 3.e-23 6.e-23          ! molecular masses for nspecies (mass per molecule, *not* molar mass)
   rhobar(1:2) = 1. 1.                   ! pure component densities for all species (chosen from EOS)
 
   ! stochastic forcing amplitudes (1 for physical values, 0 to run them off)
@@ -198,8 +197,8 @@
 
   ! initial values for w
   ! These are MASS FRACTIONS (concentrations), not partial densities
-  c_init(1,1:2) = 1.e-2 0.99
-  c_init(2,1:2) = 1.e-2 0.99
+  c_init(1,1:2) = 0.5 0.5 
+  c_init(2,1:2) = 0.5 0.5
 
   ! w_i boundary conditions (dir,lohi,species)
   ! These are MASS FRACTIONS (concentrations), not partial densities
@@ -232,23 +231,20 @@
   ! Reactions
   !----------
 
-  nreactions = 3 
+  nreactions = 2 
 
   ! stoichiometric factors for each reaction (species,LHS(1)/RHS(2),reaction)
   ! Example: For N1 + 2*N2 -> N3 use
   ! stoichiometric_factors(1:3,1,1) = 1 2 0
   ! stoichiometric_factors(1:3,2,1) = 0 0 1
-  ! U + S -> 2U
-  ! U + S -> 2S
-  ! 2S -> U + S
-  stoichiometric_factors(1:2,1,1) = 1 1
-  stoichiometric_factors(1:2,2,1) = 2 0
-  stoichiometric_factors(1:2,1,2) = 1 1
-  stoichiometric_factors(1:2,2,2) = 0 2
-  stoichiometric_factors(1:2,1,3) = 0 2
-  stoichiometric_factors(1:2,2,3) = 1 1
+  ! 2A -> A_2 
+  ! A_2 -> 2A
+  stoichiometric_factors(1:2,1,1) = 2 0 
+  stoichiometric_factors(1:2,2,1) = 0 1 
+  stoichiometric_factors(1:2,1,2) = 0 1 
+  stoichiometric_factors(1:2,2,2) = 2 0
 
-  rate_const(1:3) = 1.e6 2.e6 3.3333333e26      ! for exclude_solvent_comput_rates = 2
+  rate_const(1:2) = 1.e-17 3.3333333e5
   rate_multiplier = 1.
 
   include_discrete_LMA_correction = T
@@ -259,7 +255,7 @@
   ! if 0, no species is excluded
   ! e.g. U + S -> 2U, if exclude_solvent_comput_rates=0, rate=k*n_U*n_S
   !                   if exclude_solvent_comput_rates=2, rate=k_new*n_U where k_new=k*n_S
-  exclude_solvent_comput_rates = 2
+  exclude_solvent_comput_rates = 0 
 
   use_Poisson_rng = 1                   ! how to calculate chemical production rates
                                         ! 1=do tau leaping (Poisson increments)
@@ -378,7 +374,7 @@
    nSavedSnapshots=5                    ! Maximum time in S(k,t) will be (nSavedSnapshots/2)*dt*hydro_grid_int
       
    outputFolder = "."
-   filePrefix = "SU"
+   filePrefix = "dimerization"
    axisToPrint = 2                      ! 1=x, 2=y, 3=z axis
    periodic = T                         ! Is the system periodic along the y axes
 /
@@ -416,7 +412,7 @@
    nSavedSnapshots=200
       
    outputFolder = "."
-   filePrefix = "SU_vstat"
+   filePrefix = "dimerization_vstat"
    axisToPrint = 1                      ! 1=x, 2=y, 3=z axis
    periodic = T                         ! Is the system periodic along the y axes
 /
@@ -454,7 +450,7 @@
    nSavedSnapshots=100
       
    outputFolder = "."
-   filePrefix = "SU_hstat"
+   filePrefix = "dimerization_hstat"
    axisToPrint = 1                      ! 1=x, 2=y, 3=z axis
    periodic = T                         ! Is the system periodic along the y axes
 /
