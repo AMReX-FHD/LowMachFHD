@@ -63,3 +63,23 @@ print "nu = %e" % nu
 
 print "D*dt/dx^2 = %e" % (D*dt/dx**2)
 print "nu*dt/dx^2 = %e" % (nu*dt/dx**2)
+
+###########################
+# mole fraction based LMA #
+###########################
+
+x1 = 2*c0/(1+c0)
+x2 = 1-x1
+print "x1 = %e, x2 = %e" % (x1,x2)
+
+ratio1 = math.sqrt(10.)
+kx2 = 0.25*rho/m*c0*(1+c0)**2*D/(ratio1*dx)**2
+kx1 = 0.25*(1-c0**2)/c0**2*kx2
+
+r = 4*m/rho/c0/(1+c0)**2*kx2
+pen_dep = math.sqrt(D/r)
+
+print "kx1 = %e, kx2 = %e" % (kx1,kx2)
+print "r = %e, pen_dep = %e" % (r,pen_dep)
+print "kx1*x1^2 = %e" % (kx1*x1**2)
+print "kx2*x2 = %e" % (kx2*x2)
