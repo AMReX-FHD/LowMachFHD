@@ -244,10 +244,17 @@
   stoichiometric_factors(1:2,1,2) = 0 1 
   stoichiometric_factors(1:2,2,2) = 2 0
 
-  rate_const(1:2) = 1.e-17 3.3333333e5
-  rate_multiplier = 1.
+  ! for mole fraction based LMA
+  use_mole_frac_LMA = T
+  rate_const(1:2) = 7.031250e+27 9.375000e+27
+  include_discrete_LMA_correction = F
 
-  include_discrete_LMA_correction = T
+  ! for number density based LMA
+  !use_mole_frac_LMA = F
+  !rate_const(1:2) = 1.e-17 3.3333333e5
+  !include_discrete_LMA_correction = T
+
+  rate_multiplier = 1.
 
   ! if positive n, exclude species n (=solvent) when computing reaction rates
   ! in this case, the concentration of the solvent is assumed to be constant,
@@ -261,7 +268,6 @@
                                         ! 1=do tau leaping (Poisson increments)
                                         ! 0= do CLE (Gaussian increments)
                                         ! -1=do deterministic chemistry
-
 /
 
 ! Stokes solver for velocity

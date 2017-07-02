@@ -214,4 +214,5 @@
                                         ! 0= do CLE (Gaussian increments)
                                         ! -1=do deterministic chemistry
 
+  use_mole_frac_LMA = F                 ! use mole fraction based LMA
 /
