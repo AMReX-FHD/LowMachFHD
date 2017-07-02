@@ -27,8 +27,8 @@ subroutine main_driver()
                                       inhomogeneous_bc_fix, temporal_integrator, &
                                       n_steps_write_avg, &
                                       model_file_init, model_file, integer_populations
-   use probin_chemistry_module, only: probin_chemistry_init, nreactions
-
+   use probin_chemistry_module, only: probin_chemistry_init, nreactions, include_discrete_LMA_correction, &
+                                      exclude_solvent_comput_rates, use_mole_frac_LMA
 
    use fabio_module
 
@@ -82,6 +82,15 @@ subroutine main_driver()
       ! Initialize random numbers *after* the global (root) seed has been set:
       ! This is for the RNG module that sits in Hydrogrid
       call SeedParallelRNG(seed)
+   end if
+
+   if (nreactions > 0 .and. use_mole_frac_LMA) then
+      if (include_discrete_LMA_correction) then
+         call bl_error('Error: currently use_mole_frac_LMA can be used only with include_discrete_LMA_correction=F')
+      end if
+      if (exclude_solvent_comput_rates .ne. 0) then
+         call bl_error('Error: currently use_mole_frac_LMA can be used only with exclude_solvent_comput_rates=0')
+      end if
    end if
 
    ! in this example we fix nlevs to be 1

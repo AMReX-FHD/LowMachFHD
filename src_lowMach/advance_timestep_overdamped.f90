@@ -30,8 +30,9 @@ module advance_timestep_overdamped_module
                                   molmass, nspecies, project_eos_int, use_bl_rng
   use probin_gmres_module, only: gmres_abs_tol, gmres_rel_tol
   use probin_charged_module, only: use_charged_fluid
-  use probin_chemistry_module, only: nreactions, use_Poisson_rng
-  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type
+  use probin_chemistry_module, only: nreactions, use_Poisson_rng, include_discrete_LMA_correction, &
+                                     exclude_solvent_comput_rates, use_mole_frac_LMA
+  use probin_multispecies_module, only: midpoint_stoch_mass_flux_type, is_ideal_mixture
 
   implicit none
 
@@ -115,7 +116,19 @@ contains
 
     if (nreactions > 0) then
        if (use_Poisson_rng .eq. 2) then
-          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=2 and nreactions>0')
+          call bl_error('Error: currently use_Poisson_rng=2 not allowed for algorith_type=5 and nreactions>0')
+       end if
+
+       if (use_mole_frac_LMA) then
+          if (.not. is_ideal_mixture) then
+             call bl_error('Error: use_mole_frac_LMA should be used with is_ideal_mixture = T')
+          end if
+          if (include_discrete_LMA_correction) then
+             call bl_error('Error: currently use_mole_frac_LMA can be used only with include_discrete_LMA_correction=F')
+          end if
+          if (exclude_solvent_comput_rates .ne. 0) then
+             call bl_error('Error: currently use_mole_frac_LMA can be used only with exclude_solvent_comput_rates=0')
+          end if
        end if
     end if
 

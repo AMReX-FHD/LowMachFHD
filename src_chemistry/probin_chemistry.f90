@@ -37,9 +37,13 @@ module probin_chemistry_module
                                                     ! 0=do CLE (Gaussian increments)
                                                     ! -1=do deterministic chemistry
 
+  ! use mole fraction based LMA
+  logical, save         :: use_mole_frac_LMA = .false.
+
   namelist /probin_chemistry/ nreactions, stoichiometric_factors, rate_const, rate_multiplier
   namelist /probin_chemistry/ include_discrete_LMA_correction, exclude_solvent_comput_rates
   namelist /probin_chemistry/ use_Poisson_rng
+  namelist /probin_chemistry/ use_mole_frac_LMA
 
 contains
 
@@ -108,6 +112,11 @@ contains
           farg = farg + 1
           call get_command_argument(farg, value = fname)
           read(fname, *) use_Poisson_rng
+
+       case ('--use_mole_frac_LMA')
+          farg = farg + 1
+          call get_command_argument(farg, value = fname)
+          read(fname, *) use_mole_frac_LMA
 
        case default
           if (parallel_IOProcessor() ) then

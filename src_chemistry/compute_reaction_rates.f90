@@ -4,7 +4,8 @@ module compute_reaction_rates_module
   use bl_error_module
   use probin_common_module, only: nspecies
   use probin_chemistry_module, only: nreactions, stoichiometric_factors, rate_const, rate_multiplier, &
-                                     include_discrete_LMA_correction, exclude_solvent_comput_rates
+                                     include_discrete_LMA_correction, exclude_solvent_comput_rates, &
+                                     use_mole_frac_LMA
 
   implicit none
 
@@ -27,6 +28,11 @@ contains
     n_nonneg(1:nspecies) = max(0.d0,n_in(1:nspecies))
 
     if ((.not. include_discrete_LMA_correction) .and. (exclude_solvent_comput_rates .eq. 0)) then
+       ! if mole fraction based LMA is used, convert number densities into mole fractions
+       if (use_mole_frac_LMA) then
+          n_nonneg(1:nspecies) = n_nonneg(1:nspecies)/sum(n_nonneg(1:nspecies))
+       end if
+
        ! Use traditional LMA without accounting for discrete/integer nature of the molecules involved
        ! no species is excluded for calculating rates
        do reaction=1, nreactions
