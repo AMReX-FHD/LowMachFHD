@@ -4,9 +4,25 @@ datafile = "fort.10"
 nspecies = 2
 massratio = [1.,2.]
 spec_analysis = 0
+output = "res.hist"
+
+# dz=1
 xmin = 0.66665
 xmax = 0.66668
-Nbin = 50
+# dz=1e-1
+#xmin = 0.66662
+#xmax = 0.66672
+# dz=1e-2
+#xmin = 0.6665
+#xmax = 0.6668
+# dz=1e-3
+#xmin = 0.666
+#xmax = 0.6672
+# dz = 1e-4
+#xmin = 0.665
+#xmax = 0.668
+
+Nbin = 51
 
 # read data
 wvec = np.loadtxt(datafile,usecols=range(1,nspecies+1),unpack=True)
@@ -31,4 +47,4 @@ dx = (xmax-xmin)/(Nbin-1)
 bins = bin_edges[0:Nbin]+dx/2
 
 # write histogram
-np.savetxt("res.hist",np.c_[bins,hist])
+np.savetxt(output,np.c_[bins,hist])

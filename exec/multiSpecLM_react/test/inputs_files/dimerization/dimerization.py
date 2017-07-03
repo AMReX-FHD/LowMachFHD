@@ -92,17 +92,31 @@ print "kx2*x2 = %e" % (kx2*x2)
 Mbar = n1*dv
 Nbar = n2*dv
 x0 = Mbar/(Mbar+Nbar)
-print Mbar,Nbar,x0
+print "dz=%e, Mbar=%e, Nbar=%e, x0=%f" % (dz,Mbar,Nbar,x0)
 
+# dz = 1
 xmin = 0.66665
 xmax = 0.66668
-Nbin = 100
+# dz = 1e-1
+#xmin = 0.66662
+#xmax = 0.66672
+# dz = 1e-2
+#xmin = 0.6665
+#xmax = 0.6668
+# dz = 1e-3
+#xmin = 0.666
+#xmax = 0.6672
+# dz = 1e-4
+#xmin = 0.665
+#xmax = 0.668
+
+Nbin = 101
 output = "theo.hist"
 
 xx = []
 pp = []
 for i in range(Nbin):
-   x = xmin+(xmax-xmin)/Nbin*i
+   x = xmin+(xmax-xmin)/(Nbin-1)*i
    A = (1-x)**2/(1-x0)+x**2/x0
    xx.append(x)
    pp.append(math.exp(-0.5*(Mbar+Nbar)*(1-1/A))/math.sqrt(2*math.pi*Mbar*Nbar)*math.sqrt((Mbar+Nbar)/A)**3)
