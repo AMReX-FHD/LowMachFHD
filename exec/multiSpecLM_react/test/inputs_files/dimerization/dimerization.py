@@ -1,3 +1,4 @@
+import numpy as np
 import math
 
 # mass density and number density
@@ -83,3 +84,28 @@ print "kx1 = %e, kx2 = %e" % (kx1,kx2)
 print "r = %e, pen_dep = %e" % (r,pen_dep)
 print "kx1*x1^2 = %e" % (kx1*x1**2)
 print "kx2*x2 = %e" % (kx2*x2)
+
+######################
+# distribution of x1 #
+######################
+
+Mbar = n1*dv
+Nbar = n2*dv
+x0 = Mbar/(Mbar+Nbar)
+print Mbar,Nbar,x0
+
+xmin = 0.66665
+xmax = 0.66668
+Nbin = 100
+output = "theo.hist"
+
+xx = []
+pp = []
+for i in range(Nbin):
+   x = xmin+(xmax-xmin)/Nbin*i
+   A = (1-x)**2/(1-x0)+x**2/x0
+   xx.append(x)
+   pp.append(math.exp(-0.5*(Mbar+Nbar)*(1-1/A))/math.sqrt(2*math.pi*Mbar*Nbar)*math.sqrt((Mbar+Nbar)/A)**3)
+
+np.savetxt(output,np.c_[xx,pp])
+print "** %s generated" % output
