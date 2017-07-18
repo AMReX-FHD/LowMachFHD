@@ -208,6 +208,9 @@ module HydroGridModule
          ! If set to a negative value, the input is a range of wavenumbers to output on a grid so one does not need to list them all
       integer :: correlationWavenumber = -1 ! If positive, this calculates temporal correlations
          ! Between each of the tracked wavenumbers and the selected wavenumber
+      integer :: writeDynamicFiles=1 ! If 1 then S(k,w) is written in addition to S(k,t) as individual files
+                                     ! If 0 then S(k,t) is written as individual files
+                                     ! If -1 then S(k,t) is written as one big file with columns
       integer :: minWavefrequency, maxWavefrequency
       integer, allocatable :: selectedWavenumbers(:, :) ! Dimension (2/3,nWavenumbers): Indexes in k-grid of selected wavenumbers
       integer, allocatable :: selectedWaveindices(:, :) ! Conversion to FFT indices
@@ -216,10 +219,11 @@ module HydroGridModule
       complex (r_fft), allocatable :: dynamicFactors(:, :, :)
          ! Dimension (nSavedSnapshots,nWavenumbers,nStructureFactors)
          ! Time-averaged dynamic structure factors, <SpatioTemporalFT(A)*CONJ(SpatioTemporalFT(B))>
-         ! What is actually output is the covariance:
-         ! <SpatioTemporalFT(A)*CONJ(SpatioTemporalFT(B))> - <SpatioTemporalFT(A)>*CONJ(<SpatioTemporalFT(B)>)
       complex (r_fft), allocatable :: meanDynamicFactors(:, :, :) ! Dimension (nSavedSnapshots,nWavenumbers,nVariablesToFFT)
          ! The mean of the spatio-temporal FT for each of the needed variables, <SpatioTemporalFT(A)>
+         ! The intent is to in the future output:
+         ! <SpatioTemporalFT(A)*CONJ(SpatioTemporalFT(B))> - <SpatioTemporalFT(A)>*CONJ(<SpatioTemporalFT(B)>)
+         ! But this is not yet implemented, so for now meanDynamicFactors is NOT COMPUTED
 
    end type HydroGrid
    
@@ -227,6 +231,7 @@ module HydroGridModule
    logical, public, save :: writeSpectrumHistory=.false. ! Write out a history of the structure factors
    integer, public, save :: writeTheory=-1 ! Write the theoretical prediction for incompressible hydro (-2=for MD analysis, -1=none, 0=continuum, 1=MAC)
    integer, public, save :: useRelativeVelocity=-1 ! Calculate v12 to test two-fluid models
+   integer, public, save :: paddDynamicFFT=0 ! -1=no padding, 0=padd with zeros (recommended), 1=padd with mirror image
    
 contains
 
@@ -256,7 +261,7 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
    integer :: nStructureFactors
    character (nMaxCharacters) :: structureFactorPairs, vectorStructureFactor
 
-   integer :: nWavenumbers
+   integer :: nWavenumbers, writeDynamicFiles
    character (32*nMaxCharacters) :: selectedWavenumbers ! There may be lots of these
    integer :: nSavedSnapshots
 
@@ -402,9 +407,16 @@ subroutine createHydroAnalysis (grid, nCells, nSpecies, nVelocityDimensions, isS
    !---------------------------      
    grid%nStructureFactors = nStructureFactors
    grid%nWavenumbers = nWavenumbers
+   grid%writeDynamicFiles = writeDynamicFiles
    grid%nSavedRawSnapshots = nSavedSnapshots
-   !grid%nSavedSnapshots = nSavedSnapshots ! No doubling for FFTs
-   grid%nSavedSnapshots = 2*nSavedSnapshots-2 ! In order to minimize periodic artifacts, we double the length
+   select case(paddDynamicFFT)
+   case(1) ! Padd with mirror image of signal -- this introduces a strong bias including nonzero asymptotic value, and is not recommended
+      grid%nSavedSnapshots = 2*nSavedSnapshots-2 ! In order to minimize periodic artifacts, we double the length
+   case(0) ! Padd with zeros -- this computes the same ACF as a double loop
+      grid%nSavedSnapshots = 2*nSavedSnapshots ! To compute true periodic convolution   
+   case default ! Don't padd, and pretend the signal is periodic -- also introduces a bias and not recommended
+      grid%nSavedSnapshots = nSavedSnapshots ! No doubling for FFTs
+   end select   
    grid%correlationWavenumber = correlationWavenumber
 
    call createStaticFactors(grid, structureFactorPairs, vectorStructureFactor)
@@ -424,7 +436,8 @@ contains
          nWavenumbers, selectedWavenumbers, nSavedSnapshots, axisToPrint, staggeredVelocities, &
          outputFolder, filePrefix, writeSpectrumVTK, writeVariancesVTK, writeMeansVTK, writeSnapshotVTK, &
          estimateCovariances, topConcentration, bottomConcentration, useRelativeVelocity, &
-         writeTheory, periodic, subtractMeanFT, correlationWavenumber, writeSpectrumHistory
+         writeTheory, periodic, subtractMeanFT, correlationWavenumber, writeSpectrumHistory, &
+         paddDynamicFFT, writeDynamicFiles
 
       ! Setup default values:
       storeConserved=.true.
@@ -582,7 +595,6 @@ subroutine createDynamicFactors(grid, wavenumbersString)
          read(wavenumbersString, *) waveSubGrid
       end if 
       grid%nWavenumbers = product(waveSubGrid(2,:)-waveSubGrid(1,:)+1)
-      write(*,*) "Keeping track of S(k,omega) and S(k,t) for ", grid%nWavenumbers, " wavenumbers"
 
       allocate(grid%selectedWavenumbers(3, grid%nWavenumbers))
       allocate(grid%selectedWaveindices(3, grid%nWavenumbers))
@@ -591,12 +603,15 @@ subroutine createDynamicFactors(grid, wavenumbersString)
       do k=waveSubGrid(1,3), waveSubGrid(2,3)
       do j=waveSubGrid(1,2), waveSubGrid(2,2)
       do i=waveSubGrid(1,1), waveSubGrid(2,1)
+         if((i==0).and.(j==0).and.(k==0)) cycle ! Do not include k=0 here due to conservation
          iWavenumber=iWavenumber+1
          grid%selectedWavenumbers(:,iWavenumber)=(/i,j,k/)
          write(*,*) "Tracking wavenumber index=", iWavenumber, " k_index=", grid%selectedWavenumbers(:,iWavenumber)
       end do
       end do
       end do         
+      grid%nWavenumbers = iWavenumber ! In case we skipped zero
+      write(*,*) "Keeping track of S(k,omega) and S(k,t) for ", grid%nWavenumbers, " wavenumbers"      
    
    else
 
@@ -617,7 +632,9 @@ subroutine createDynamicFactors(grid, wavenumbersString)
       if( (iDimension/=2) .or. (grid%periodic)) then
          if ( (grid%selectedWavenumbers(iDimension, iWavenumber) < grid%minWavenumber(iDimension)) .or. &
               (grid%selectedWavenumbers(iDimension, iWavenumber) > grid%maxWavenumber(iDimension)) ) then
-              write(*,*) "Error: Selected wavenumber = ", iDimension, iWavenumber , " out of possible range"
+              write(*,*) "Error: Selected wavenumber k=", iWavenumber, " dim= ", iDimension, " out of possible range"
+              write(*,*) "Requested ", grid%selectedWavenumbers(iDimension, iWavenumber), " but range is ", &
+                 grid%minWavenumber(iDimension), grid%maxWavenumber(iDimension)
               stop
          end if
          grid%selectedWaveindices(iDimension, iWavenumber) = frequencyToArrayIndex( &
@@ -631,7 +648,7 @@ subroutine createDynamicFactors(grid, wavenumbersString)
    ! And for each of the selected wavenumbers, we keep a history (record) for some number of steps,
    ! and then do a temporal FFT and average the result over time:
    allocate(grid%savedStructureFactors(grid%nSavedSnapshots, grid%nWavenumbers, grid%nVariablesToFFT))
-   allocate(grid%meanDynamicFactors(grid%nSavedSnapshots, grid%nWavenumbers, grid%nVariablesToFFT))
+   if(.false.) allocate(grid%meanDynamicFactors(grid%nSavedSnapshots, grid%nWavenumbers, grid%nVariablesToFFT)) ! NOT FINISHED
    allocate(grid%dynamicFactors(grid%nSavedSnapshots, grid%nWavenumbers, grid%nStructureFactors))
 
    ! Prepare FFTWs internal stuff:
@@ -676,7 +693,7 @@ subroutine resetHydroAnalysis(grid)
 
    if(grid%nWavenumbers>0) then
       grid%dynamicFactors = 0.0_wp
-      grid%meanDynamicFactors = 0.0_wp
+      if(.false.) grid%meanDynamicFactors = 0.0_wp ! UNFINISHED
    end if
 
 end subroutine resetHydroAnalysis
@@ -1208,14 +1225,24 @@ subroutine updateStructureFactors(grid)
          do iWavenumber = 1, grid%nWavenumbers
             grid%dynamicFFTarray(1:grid%nSavedRawSnapshots) = &
                grid%savedStructureFactors(1:grid%nSavedRawSnapshots, iWavenumber, iVariable)
-            ! For the second half, invert the time so the result is periodic:
-            grid%dynamicFFTarray(grid%nSavedRawSnapshots+1 : 2*grid%nSavedRawSnapshots-2) = &
-               grid%savedStructureFactors(grid%nSavedRawSnapshots-1:2:-1, iWavenumber, iVariable)               
+
+            select case(paddDynamicFFT)
+            case(1) ! Padd with mirror image of signal   
+               ! For the second half, invert the time so the result is periodic:
+               grid%dynamicFFTarray(grid%nSavedRawSnapshots+1 : 2*grid%nSavedRawSnapshots-2) = &
+               grid%savedStructureFactors(grid%nSavedRawSnapshots-1:2:-1, iWavenumber, iVariable)
+            case(0) ! Padd with zeros
+               ! For the second half, invert the time so the result is periodic:
+               grid%dynamicFFTarray(grid%nSavedRawSnapshots+1 : 2*grid%nSavedRawSnapshots) = 0.0_wp               
+            case default ! Don't padd
+               if(ubound(grid%dynamicFFTarray,1)>grid%nSavedRawSnapshots) stop "Mismatch in size of dynamicFFTarray"
+            end select               
+               
             call FFTW_Execute(grid%dynamicFFTplan)
             grid%savedStructureFactors(:, iWavenumber, iVariable) = grid%dynamicFFTarray ! Use this as temporary storage
 
-            ! Also keep track of the mean of the FT:
-            grid%meanDynamicFactors(:, iWavenumber, iVariable) = &
+            ! Also keep track of the mean of the FT -- UNFINISHED (not yet used for output)
+            if(.false.) grid%meanDynamicFactors(:, iWavenumber, iVariable) = &
                ( (grid%iTimeSeries - 1) * grid%meanDynamicFactors(:, iWavenumber, iVariable) + &
                grid%savedStructureFactors(:, iWavenumber, iVariable) ) / grid%iTimeSeries
          end do
@@ -2283,7 +2310,7 @@ subroutine writeDynamicFactors(grid,filenameBase)
    integer :: i, j, k, iSpecies, species, species1, species2, nTemps, dim, &
               iVariable, variable, variable1, variable2, iVariance
    integer :: iCell, jCell, kCell, wCell, iDimension, iFile, &
-      iStructureFactor, jStructureFactor, iWave, iWavenumber
+      iStructureFactor, jStructureFactor, iWave, iWavenumber, iTime
    real(wp) :: wavevector(nMaxDims), wavefrequency
    
    character(25) :: id_string
@@ -2306,6 +2333,8 @@ subroutine writeDynamicFactors(grid,filenameBase)
       
    ! For projecting the velocity onto solenoidal modes:
    nModes=grid%nDimensions ! We do not compute cross-correlations here
+
+if(grid%writeDynamicFiles>0) then ! Write S(k,w) to files
    
    do iWavenumber = 1, grid%nWavenumbers
    
@@ -2423,59 +2452,92 @@ subroutine writeDynamicFactors(grid,filenameBase)
       close (structureFactorFile(1))
       close (structureFactorFile(2))
    end do    
-   
+
+end if
+
    ! Now also write the correlation functions in real time
    !-----------------------------
    
-   ! Unfo the normalization:
-   grid%dynamicFactors = grid%dynamicFactors / grid%timestep / grid%nSavedSnapshots
-   
+   ! Undo part of the normalization:
+   grid%dynamicFactors = grid%dynamicFactors / grid%timestep
+      
    ! Temporarily set the plan to inverse transform:
    call FFTW_PlanDFT(grid%dynamicFFTplan, grid%nSavedSnapshots, &
       grid%dynamicFFTarray, grid%dynamicFFTarray, FFTW_BACKWARD, FFTW_ESTIMATE)
    
    do iWavenumber = 1, grid%nWavenumbers
-
       do iStructureFactor = 1, grid%nStructureFactors
          grid%dynamicFFTarray = grid%dynamicFactors(:, iWavenumber, iStructureFactor)
          call FFTW_Execute(grid%dynamicFFTplan)
-         ! These will be reset anyway, so we can use them as temporary storage:
-         grid%dynamicFactors(:, iWavenumber, iStructureFactor) = grid%dynamicFFTarray
-      end do
-   
-      write(id_string,"(I25)") iWavenumber
-      filename=trim(filenameBase) // ".S_k_t.k=" // trim(ADJUSTL(id_string))
-      
-      write(*,*) "Writing dynamic structure factor S(k,t) for k=", grid%selectedWavenumbers(:, iWavenumber), &
-         " to file ", trim(filename) // ".{Re,Im}.dat"
-      open (file = trim(filename) // ".Re.dat", unit=structureFactorFile(1), status = "unknown", action = "write")
-      open (file = trim(filename) // ".Im.dat", unit=structureFactorFile(2), status = "unknown", action = "write")
-      
-      ! This only works if the selected wavenumbers are positive, but this is always the case anyway:
-      do iFile=1,2
-         write(structureFactorFile(iFile), '(A,100G17.9)')  "# k=", &
-            2 * pi * (grid%selectedWavenumbers(:, iWavenumber)) / grid%systemLength
-      end do   
 
-      wCell = frequencyToArrayIndex(grid%minWavefrequency, grid%nSavedSnapshots)
-      do iWave=grid%minWavefrequency, grid%maxWavefrequency         
-         
-         write(structureFactorFile(1), '(1000g17.9)') iWave * grid%timestep, &
-            real(grid%dynamicFactors(wCell, iWavenumber, :))
-         write(structureFactorFile(2), '(1000g17.9)') iWave * grid%timestep, &
-            aimag(grid%dynamicFactors(wCell, iWavenumber, :))
-      
-         wCell = wCell + 1 ; if (wCell > grid%nSavedSnapshots) wCell = 1
+         ! grid%dynamicFactors will be reset anyway, so we can use them as temporary storage:
+         if(paddDynamicFFT==0) then ! To get an unbiased result it is important to add a proper normalization
+            ! This is the same normalization one would use for the double loop
+            do iTime=0, grid%nSavedRawSnapshots-1
+               grid%dynamicFactors(iTime+1, iWavenumber, iStructureFactor) = grid%dynamicFFTarray(iTime+1) / (grid%nSavedRawSnapshots-iTime)
+            end do
+         else ! This is biased but it is not clear to me it can be made unbiased
+            grid%dynamicFactors(:, iWavenumber, iStructureFactor) = grid%dynamicFFTarray / grid%nSavedSnapshots
+         end if
       end do      
-      
-      close (structureFactorFile(1))
-      close (structureFactorFile(2))
    end do
 
    ! Reset the plan back to forward transform
    call FFTW_PlanDFT(grid%dynamicFFTplan, grid%nSavedSnapshots, &
       grid%dynamicFFTarray, grid%dynamicFFTarray, FFTW_FORWARD, FFTW_ESTIMATE)
+         
+if(grid%writeDynamicFiles>=0) then ! Write S(k,w) to individual files
+   ! Note these are always purely real numbers
+
+   do iWavenumber = 1, grid%nWavenumbers   
+   
+      write(id_string,"(I25)") iWavenumber
+      filename=trim(filenameBase) // ".S_k_t.k=" // trim(ADJUSTL(id_string)) // ".dat"
       
+      write(*,*) "Writing dynamic structure factor S(k,t) for k=", grid%selectedWavenumbers(:, iWavenumber), &
+         " to file ", trim(filename)
+      open (file = trim(filename), unit=structureFactorFile(1), status = "unknown", action = "write")
+      
+      do iFile=1,1 ! Only real here
+         write(structureFactorFile(iFile), '(A,100G17.9)')  "# k=", &
+            2 * pi * (grid%selectedWavenumbers(:, iWavenumber)) / grid%systemLength
+      end do   
+      
+      do iTime=0, grid%nSavedRawSnapshots-1
+         write(structureFactorFile(1), '(1000g17.9)') iTime * grid%timestep, &
+            real(grid%dynamicFactors(iTime+1, iWavenumber, :))
+      
+      end do
+      
+      close (structureFactorFile(1))
+   end do
+
+else ! Write all k vectors to a single file, one per structure factor pair
+
+   do iStructureFactor = 1, grid%nStructureFactors
+   
+      write(id_string,"(I25)") iStructureFactor
+      filename=trim(filenameBase) // ".S_k_t.pair=" // trim(ADJUSTL(id_string)) // ".dat"
+      
+      write(*,*) "Writing dynamic structure factor S(k,t) for pair=", iStructureFactor, &
+         " to file ", trim(filename) 
+      open (file = trim(filename), unit=structureFactorFile(1), status = "unknown", action = "write")
+      
+      do iTime=0, grid%nSavedRawSnapshots-1
+         
+         write(structureFactorFile(1), fmt='(1g17.9)', advance="no") iTime * grid%timestep
+         do iWavenumber = 1, grid%nWavenumbers
+            write(structureFactorFile(1), fmt='(1g17.9)', advance="no") &
+               real(grid%dynamicFactors(iTime+1, iWavenumber, iStructureFactor))
+         end do
+         write(structureFactorFile(1),*) ! New line      
+      
+      end do      
+   
+   end do
+
+end if   
+
 end subroutine
 
 !------------------------------------------------------------------------
