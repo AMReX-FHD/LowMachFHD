@@ -2474,7 +2474,8 @@ end if
          if(paddDynamicFFT==0) then ! To get an unbiased result it is important to add a proper normalization
             ! This is the same normalization one would use for the double loop
             do iTime=0, grid%nSavedRawSnapshots-1
-               grid%dynamicFactors(iTime+1, iWavenumber, iStructureFactor) = grid%dynamicFFTarray(iTime+1) / (grid%nSavedRawSnapshots-iTime)
+               grid%dynamicFactors(iTime+1, iWavenumber, iStructureFactor) = grid%dynamicFFTarray(iTime+1) &
+                    / (grid%nSavedRawSnapshots-iTime)
             end do
          else ! This is biased but it is not clear to me it can be made unbiased
             grid%dynamicFactors(:, iWavenumber, iStructureFactor) = grid%dynamicFFTarray / grid%nSavedSnapshots
