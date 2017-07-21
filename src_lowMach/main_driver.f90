@@ -5,6 +5,7 @@ subroutine main_driver()
   use compute_mixture_properties_module
   use initial_projection_module
   use write_plotfile_module
+  use advance_timestep_bousq_AB2_module
   use advance_timestep_inertial_module
   use advance_timestep_overdamped_module
   use advance_timestep_iterative_module
@@ -94,7 +95,7 @@ subroutine main_driver()
   type(multifab), allocatable  :: chem_rate(:)
 
   ! For HydroGrid
-  integer :: narg, farg, un, n_rngs
+  integer :: narg, farg, un, n_rngs_mass, n_rngs_mom
   character(len=128) :: fname
   logical :: lexist
   logical :: nodal_temp(3)
@@ -395,13 +396,18 @@ subroutine main_driver()
   end if
 
   ! allocate and build multifabs that will contain random numbers
-  if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5 ) then
-     n_rngs = 2
+  if (algorithm_type .eq. 2 .or. algorithm_type .eq. 5) then
+     n_rngs_mass = 2
+     n_rngs_mom  = 2
+  else if (algorithm_type .eq. 6) then
+     n_rngs_mass = 2
+     n_rngs_mom  = 1
   else
-     n_rngs = 1
+     n_rngs_mass = 1
+     n_rngs_mom  = 1
   end if
-  call init_mass_stochastic(mla,n_rngs)
-  call init_m_stochastic(mla,n_rngs)
+  call init_mass_stochastic(mla,n_rngs_mass)
+  call init_m_stochastic(mla,n_rngs_mom)
 
   if (use_bl_rng) then
      ! save random state for writing checkpoint
@@ -684,8 +690,7 @@ subroutine main_driver()
         ! algorithm_type=0: inertial
         call advance_timestep_inertial(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                       diff_mass_fluxdiv, &
-                                       stoch_mass_fluxdiv,stoch_mass_flux, &
+                                       diff_mass_fluxdiv, stoch_mass_fluxdiv,stoch_mass_flux, &
                                        dx,dt,time,the_bc_tower,istep, &
                                        grad_Epot_old,grad_Epot_new, &
                                        charge_old,charge_new,Epot, &
@@ -708,12 +713,11 @@ subroutine main_driver()
                                         charge_old,charge_new,Epot, &
                                         permittivity,gradPhiApprox)
      else if (algorithm_type .eq. 4) then
-        ! algorithm_type=4: implicit boussineq
+        ! algorithm_type=4: implicit boussinesq
         call advance_timestep_imp_bousq(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         Epot_mass_fluxdiv, &
-                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, &
-                                        stoch_mass_flux, &
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, stoch_mass_flux, &
                                         dx,dt,time,the_bc_tower,istep, &
                                         grad_Epot_old,grad_Epot_new, &
                                         charge_old,charge_new,Epot, &
@@ -722,12 +726,22 @@ subroutine main_driver()
         ! algorithm_type=5: inertial midpoint
         call advance_timestep_inertial_midpoint(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
                                                 gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
-                                                diff_mass_fluxdiv, &
-                                                stoch_mass_fluxdiv,stoch_mass_flux,chem_rate, &
+                                                diff_mass_fluxdiv, stoch_mass_fluxdiv,stoch_mass_flux, &
+                                                chem_rate, &
                                                 dx,dt,time,the_bc_tower,istep, &
                                                 grad_Epot_old,grad_Epot_new, &
                                                 charge_old,charge_new,Epot, &
                                                 permittivity)
+     else if (algorithm_type .eq. 6) then
+        ! algorithm_type=6: boussinesq
+        call advance_timestep_bousq_AB2(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                        gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
+                                        Epot_mass_fluxdiv, &
+                                        diff_mass_fluxdiv,stoch_mass_fluxdiv, stoch_mass_flux, &
+                                        dx,dt,time,the_bc_tower,istep, &
+                                        grad_Epot_old,grad_Epot_new, &
+                                        charge_old,charge_new,Epot, &
+                                        permittivity)
      else
         call bl_error("Error: invalid algorithm_type")
      end if
