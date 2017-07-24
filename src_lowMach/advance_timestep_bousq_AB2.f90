@@ -45,7 +45,8 @@ module advance_timestep_bousq_AB2_module
 
 contains
 
-  subroutine advance_timestep_bousq_AB2(mla,umac,rho_old,rho_new,rho0,adv_mom_fluxdiv_nm1, &
+  subroutine advance_timestep_bousq_AB2(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                        rho0,adv_mom_fluxdiv_nm1, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         Epot_mass_fluxdiv, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, &
@@ -58,6 +59,8 @@ contains
     type(multifab) , intent(inout) :: umac(:,:)             ! persistent - enters as v^n, leaves as v^{n+1}
     type(multifab) , intent(inout) :: rho_old(:)
     type(multifab) , intent(inout) :: rho_new(:)
+    type(multifab) , intent(inout) :: rhotot_old(:)
+    type(multifab) , intent(inout) :: rhotot_new(:)
     real(kind=dp_t), intent(in   ) :: rho0
     type(multifab) , intent(inout) :: adv_mom_fluxdiv_nm1(:,:) ! persistent - enters as ()^{n-1}, leaves as ()^n
     type(multifab) , intent(inout) :: gradp_baro(:,:)
@@ -84,7 +87,6 @@ contains
     type(multifab) , intent(inout) :: permittivity(:)
 
     ! local
-    type(multifab) ::           rhotot(mla%nlevel)
     type(multifab) :: adv_mass_fluxdiv(mla%nlevel)
     type(multifab) ::      gmres_rhs_p(mla%nlevel)
     type(multifab) ::              dpi(mla%nlevel)
@@ -97,7 +99,6 @@ contains
     type(multifab) ::             dumac(mla%nlevel,mla%dim)
     type(multifab) ::            gradpi(mla%nlevel,mla%dim)
     type(multifab) ::            rho_fc(mla%nlevel,mla%dim)
-    type(multifab) ::         rhotot_fc(mla%nlevel,mla%dim)
     type(multifab) ::           rho0_fc(mla%nlevel,mla%dim)
     type(multifab) ::    diff_mass_flux(mla%nlevel,mla%dim)
     type(multifab) ::    mom_grav_force(mla%nlevel,mla%dim)
@@ -118,6 +119,10 @@ contains
        call bl_error("advance_timestep_bousq_AB2 does not support charges yet")
     end if
 
+    if (nreactions .gt. 0) then
+       call bl_error("advance_timestep_bousq_AB2 does not support reactions yet")
+    end if
+
     if (barodiffusion_type .ne. 0) then
        call bl_error("advance_timestep_bousq_AB2: barodiffusion not supported yet")
     end if
@@ -128,7 +133,6 @@ contains
     theta_alpha = 1.d0/dt
     
     do n=1,nlevs
-       call multifab_build(          rhotot(n),mla%la(n),1       ,rho_old(n)%ng)
        call multifab_build(adv_mass_fluxdiv(n),mla%la(n),nspecies,0)
        call multifab_build(     gmres_rhs_p(n),mla%la(n),1       ,0)
        call multifab_build(             dpi(n),mla%la(n),1       ,1)
@@ -142,7 +146,6 @@ contains
           call multifab_build_edge(           gradpi(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(          rho0_fc(n,i),mla%la(n),1       ,1,i)
           call multifab_build_edge(           rho_fc(n,i),mla%la(n),nspecies,0,i)
-          call multifab_build_edge(        rhotot_fc(n,i),mla%la(n),1       ,0,i)
           call multifab_build_edge(   diff_mass_flux(n,i),mla%la(n),nspecies,0,i)
           call multifab_build_edge(   mom_grav_force(n,i),mla%la(n),1       ,0,i)
        end do
@@ -170,11 +173,10 @@ contains
     ! compute advective mass flux at t^n
     call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
 
-
     ! compute diffusive, stochastic, potential mass fluxes
     ! with barodiffusion and thermodiffusion
     ! this computes "-F = rho W chi [Gamma grad x... ]"
-    call compute_mass_fluxdiv(mla,rho_new,rhotot,gradp_baro,Temp, &
+    call compute_mass_fluxdiv(mla,rho_old,rhotot_old,gradp_baro,Temp, &
                               diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                               diff_mass_flux,stoch_mass_flux, &
                               dt,time,dx,weights,the_bc_tower, &
@@ -184,9 +186,6 @@ contains
     ! FIXME compute reactions at t^n
     !
     !
-    if (nreactions .gt. 0) then
-       call bl_warn("advance_timestep_bousq_AB2 does not support reactions yet")
-    end if
 
     ! compute rho_i^{n+1/2} (store in rho_new)
     do n=1,nlevs
@@ -199,20 +198,21 @@ contains
     end do
 
     ! compute rhotot^{n+1/2} from rho^{n+1/2} in VALID REGION
-    call compute_rhotot(mla,rho_new,rhotot)
+    call compute_rhotot(mla,rho_new,rhotot_new)
 
     ! fill rho and rhotot ghost cells
-    call fill_rho_rhotot_ghost(mla,rho_new,rhotot,dx,the_bc_tower)
+    call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
     ! average rho_i^{n+1/2} to faces
     call average_cc_to_face(nlevs,rho_new,rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
 
     ! compute (eta,kappa)^{n+1/2}
-    call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot,Temp,dx, &
+    call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
 
     !!!!!!!!!
     ! set up GMRES solve for v^{n+1} and pi^{n+1/2}
+    ! (or v^{n+1,*} and pi^{n+1/2,*} if this is the first time step)
 
     ! compute mtemp = (rho0*v)^n
     call convert_m_to_umac(mla,rho0_fc,mtemp,umac,.false.)
@@ -259,7 +259,6 @@ contains
        end do
     end do
 
-
     if (variance_coef_mom .ne. 0.d0) then
 
        ! fill the stochastic momentum multifabs with new sets of random numbers
@@ -283,7 +282,7 @@ contains
     if (any(grav(1:dm) .ne. 0.d0)) then
 
        ! put rho^{n+1/2} on faces (store in mom_grav_force)
-       call average_cc_to_face(nlevs,rhotot,mom_grav_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
+       call average_cc_to_face(nlevs,rhotot_new,mom_grav_force,1,scal_bc_comp,1,the_bc_tower%bc_tower_array)
        do n=1,nlevs
           do i=1,dm
              ! compute (rho^{n+1/2}-rho0)*g
@@ -410,6 +409,9 @@ contains
     ! do corrector velocity solve if this is the first time step
     if (istep .eq. 1) then
 
+       !!!!!!!!!
+       ! set up GMRES solve for v^{n+1} and pi^{n+1/2}
+
        ! subtract (1/2)*adv_mom_fluxdiv from gmres_rhs_v
        do n=1,nlevs
           do i=1,dm
@@ -501,7 +503,7 @@ contains
        ! with barodiffusion and thermodiffusion
        ! this computes "-F = rho W chi [Gamma grad x... ]"
        weights(:) = 1.d0/sqrt(2.d0)
-       call compute_mass_fluxdiv(mla,rho_new,rhotot,gradp_baro,Temp, &
+       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                  diff_mass_flux,stoch_mass_flux, &
                                  dt,time,dx,weights,the_bc_tower, &
@@ -527,7 +529,7 @@ contains
        ! this computes "-F = rho W chi [Gamma grad x... ]"
        weights(1) = 0.d0
        weights(2) = 1.d0
-       call compute_mass_fluxdiv(mla,rho_new,rhotot,gradp_baro,Temp, &
+       call compute_mass_fluxdiv(mla,rho_new,rhotot_new,gradp_baro,Temp, &
                                  diff_mass_fluxdiv,stoch_mass_fluxdiv, &
                                  diff_mass_flux,stoch_mass_flux, &
                                  0.5d0*dt,time,dx,weights,the_bc_tower, &
@@ -547,9 +549,6 @@ contains
     ! FIXME compute reactions at t^n
     !
     !
-    if (nreactions .gt. 0) then
-       call bl_warn("advance_timestep_bousq_AB2 does not support reactions yet")
-    end if
 
     ! compute rho_i^{n+1}
     do n=1,nlevs
@@ -562,13 +561,12 @@ contains
     end do
 
     ! compute rhotot^{n+1} from rho^{n+1} in VALID REGION
-    call compute_rhotot(mla,rho_new,rhotot)
+    call compute_rhotot(mla,rho_new,rhotot_new)
 
     ! fill rho and rhotot ghost cells
-    call fill_rho_rhotot_ghost(mla,rho_new,rhotot,dx,the_bc_tower)
+    call fill_rho_rhotot_ghost(mla,rho_new,rhotot_new,dx,the_bc_tower)
 
     do n=1,nlevs
-       call multifab_destroy(rhotot(n))
        call multifab_destroy(adv_mass_fluxdiv(n))
        call multifab_destroy(gmres_rhs_p(n))
        call multifab_destroy(dpi(n))
@@ -581,7 +579,6 @@ contains
           call multifab_destroy(dumac(n,i))
           call multifab_destroy(gradpi(n,i))
           call multifab_destroy(rho_fc(n,i))
-          call multifab_destroy(rhotot_fc(n,i))
           call multifab_destroy(rho0_fc(n,i))
           call multifab_destroy(diff_mass_flux(n,i))
           call multifab_destroy(mom_grav_force(n,i))

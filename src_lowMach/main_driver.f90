@@ -748,13 +748,14 @@ subroutine main_driver()
                                                 permittivity)
      else if (algorithm_type .eq. 6) then
         ! algorithm_type=6: boussinesq
-        
+
         ! set rho0 to be the average or rho_old
         do n=1,nlevs
            rho0 = multifab_sum_c(rho_old(n),1,nspecies) / product(n_cells(1:dm))
         end do
 
-        call advance_timestep_bousq_AB2(mla,umac,rho_old,rho_new,rho0,adv_mom_fluxdiv_nm1, &
+        call advance_timestep_bousq_AB2(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+                                        rho0,adv_mom_fluxdiv_nm1, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         Epot_mass_fluxdiv, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, stoch_mass_flux, &
