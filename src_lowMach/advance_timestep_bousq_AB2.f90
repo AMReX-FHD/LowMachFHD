@@ -8,7 +8,6 @@ module advance_timestep_bousq_AB2_module
   use diffusive_m_fluxdiv_module
   use stochastic_m_fluxdiv_module
   use stochastic_mass_fluxdiv_module
-  use electrodiffusive_mass_fluxdiv_module
   use compute_mass_fluxdiv_module
   use compute_HSE_pres_module
   use convert_m_to_umac_module
@@ -17,7 +16,6 @@ module advance_timestep_bousq_AB2_module
   use reservoir_bc_fill_module
   use gmres_module
   use div_and_grad_module
-  use mk_grav_force_module
   use compute_mixture_properties_module
   use mass_flux_utilities_module
   use multifab_physbc_module
@@ -25,8 +23,6 @@ module advance_timestep_bousq_AB2_module
   use zero_edgeval_module
   use fill_rho_ghost_cells_module
   use ml_solve_module
-  use bndry_reg_module
-  use bl_rng_module
   use bl_random_module
   use probin_common_module, only: advection_type, grav, rhobar, variance_coef_mass, &
                                   variance_coef_mom, barodiffusion_type, project_eos_int, &
@@ -170,7 +166,7 @@ contains
     ! average rho_i^n to faces
     call average_cc_to_face(nlevs,rho_old,rho_fc,1,c_bc_comp,nspecies,the_bc_tower%bc_tower_array)
 
-    ! compute advective mass flux at t^n
+    ! compute adv_mass_fluxdiv = -rho_i^n * v^n
     call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
 
     ! compute diffusive, stochastic, potential mass fluxes
@@ -209,6 +205,9 @@ contains
     ! compute (eta,kappa)^{n+1/2}
     call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_new,rhotot_new,Temp,dx, &
                            the_bc_tower%bc_tower_array)
+
+    ! compute adv_mass_fluxdiv = -rho_i^{n+1/2} * v^n (for use in corrector)
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.false.,dx,1,nspecies)
 
     !!!!!!!!!
     ! set up GMRES solve for v^{n+1} and pi^{n+1/2}
@@ -546,6 +545,9 @@ contains
 
     end if
 
+    ! increment adv_mass_fluxdiv by -rho_i^{n+1/2} * v^{n+1}
+    call mk_advective_s_fluxdiv(mla,umac,rho_fc,adv_mass_fluxdiv,.true.,dx,1,nspecies)
+
     ! FIXME compute reactions at t^n
     !
     !
@@ -553,8 +555,9 @@ contains
     ! compute rho_i^{n+1}
     do n=1,nlevs
        call multifab_copy_c(rho_new(n),1,rho_old(n),1,nspecies,0)
-       call multifab_saxpy_3_cc(rho_new(n),1,dt, adv_mass_fluxdiv(n),1,nspecies)
-       call multifab_saxpy_3_cc(rho_new(n),1,dt,diff_mass_fluxdiv(n),1,nspecies)
+       ! multiply adv_mass_fluxdiv by (1/2) since it contains -rho_i^{n+1/2} * (v^n + v^{n+1})
+       call multifab_saxpy_3_cc(rho_new(n),1,0.5d0*dt, adv_mass_fluxdiv(n),1,nspecies)
+       call multifab_saxpy_3_cc(rho_new(n),1,      dt,diff_mass_fluxdiv(n),1,nspecies)
        if (variance_coef_mass .ne. 0.d0) then
           call multifab_saxpy_3_cc(rho_new(n),1,dt,stoch_mass_fluxdiv(n),1,nspecies)
        end if
