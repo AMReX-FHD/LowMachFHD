@@ -378,7 +378,7 @@ contains
                eta,eta_ed,kappa,theta_alpha,norm_pre_rhs)
        
     ! compute v^{n+1} = v^n + dumac
-    ! compute pi^{n+1}= pi^n + dpi
+    ! compute pi^{n+1/2}= pi^{n-1/2} + dpi
     do n=1,nlevs
        do i=1,dm
           call multifab_plus_plus_c(umac(n,i),1,dumac(n,i),1,1,0)
@@ -409,7 +409,7 @@ contains
     if (istep .eq. 1) then
 
        !!!!!!!!!
-       ! set up GMRES solve for v^{n+1} and pi^{n+1/2}
+       ! set up correct GMRES solve for v^{n+1} and pi^{n+1/2} if this is the first time step
 
        ! subtract (1/2)*adv_mom_fluxdiv from gmres_rhs_v
        do n=1,nlevs
@@ -430,6 +430,14 @@ contains
           do i=1,dm
              call multifab_saxpy_3_cc(gmres_rhs_v(n,i),1,0.5d0,adv_mom_fluxdiv_nm1(n,i),1,1)
           end do
+       end do
+
+       ! revert umac and pi
+       do n=1,nlevs
+          do i=1,dm
+             call multifab_sub_sub_c(umac(n,i),1,dumac(n,i),1,1,0)
+          end do
+          call multifab_sub_sub_c(pi(n),1,dpi(n),1,1,0)
        end do
 
        ! set the initial guess to zero
@@ -476,7 +484,7 @@ contains
           end do
        end do
 
-    end if
+    end if ! end corrector velocity solve for first time step
 
     ! restore eta and kappa
     do n=1,nlevs
