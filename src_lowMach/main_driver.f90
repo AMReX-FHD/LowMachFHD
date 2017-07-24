@@ -82,6 +82,10 @@ subroutine main_driver()
   type(multifab), allocatable  :: eta_ed(:,:)
   type(multifab), allocatable  :: kappa(:)
 
+  ! for use in bousinnesq AB2 algorithm
+  real(kind=dp_t)              :: rho0
+  type(multifab), allocatable  :: adv_mom_fluxdiv_nm1(:,:)
+
   real(kind=dp_t)              :: total_charge
   type(multifab), allocatable  :: Epot_mass_fluxdiv(:)
   type(multifab), allocatable  :: charge_old(:)
@@ -138,6 +142,9 @@ subroutine main_driver()
   allocate(stoch_mass_flux(nlevs,dm))
   allocate(umac(nlevs,dm),mtemp(nlevs,dm),rhotot_fc(nlevs,dm),gradp_baro(nlevs,dm))
   allocate(eta(nlevs),kappa(nlevs))
+
+  ! for use in bousineesq AB2 algorithm
+  allocate(adv_mom_fluxdiv_nm1(nlevs,dm))
 
   ! 1 component in 2D, 3 components in 3D
   allocate(eta_ed(nlevs,2*dm-3))
@@ -332,13 +339,14 @@ subroutine main_driver()
      call multifab_build(rho_new(n)          ,mla%la(n),nspecies,ng_s)
      call multifab_build(rhotot_new(n)       ,mla%la(n),1       ,ng_s) 
      call multifab_build(Temp(n)             ,mla%la(n),1       ,ng_s)
+     call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
      call multifab_build(eta(n)              ,mla%la(n),1       ,1)
      call multifab_build(kappa(n)            ,mla%la(n),1       ,1)
-     call multifab_build(diff_mass_fluxdiv(n),mla%la(n),nspecies,0) 
      do i=1,dm
-        call multifab_build_edge     (mtemp(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge( rhotot_fc(n,i),mla%la(n),1,0,i)
-        call multifab_build_edge(gradp_baro(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(              mtemp(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(          rhotot_fc(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(         gradp_baro(n,i),mla%la(n),1,0,i)
+        call multifab_build_edge(adv_mom_fluxdiv_nm1(n,i),mla%la(n),1,0,i)
      end do
   end do
 
@@ -474,6 +482,12 @@ subroutine main_driver()
   ! initialize eta and kappa
   call compute_eta_kappa(mla,eta,eta_ed,kappa,rho_old,rhotot_old,Temp,dx, &
                          the_bc_tower%bc_tower_array)
+
+  do n=1,nlevs
+     do i=1,dm
+        call multifab_setval(adv_mom_fluxdiv_nm1(n,i),0.d0)
+     end do
+  end do
 
   ! now that we have eta, we can initialize the inhomogeneous velocity bcs
   ! set inhomogeneous bc conditions
@@ -734,7 +748,12 @@ subroutine main_driver()
                                                 permittivity)
      else if (algorithm_type .eq. 6) then
         ! algorithm_type=6: boussinesq
-        call advance_timestep_bousq_AB2(mla,umac,rho_old,rho_new,rhotot_old,rhotot_new, &
+        
+        ! FIXME
+        ! set rho0 to be the average or rho_old
+        rho0 = 1.d0
+
+        call advance_timestep_bousq_AB2(mla,umac,rho_old,rho_new,rho0,adv_mom_fluxdiv_nm1, &
                                         gradp_baro,pi,eta,eta_ed,kappa,Temp,Temp_ed, &
                                         Epot_mass_fluxdiv, &
                                         diff_mass_fluxdiv,stoch_mass_fluxdiv, stoch_mass_flux, &
@@ -874,6 +893,7 @@ subroutine main_driver()
         call multifab_destroy(mtemp(n,i))
         call multifab_destroy(rhotot_fc(n,i))
         call multifab_destroy(gradp_baro(n,i))
+        call multifab_destroy(adv_mom_fluxdiv_nm1(n,i))
      end do
      do i=1,size(eta_ed,dim=2)
         call multifab_destroy(eta_ed(n,i))
